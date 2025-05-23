@@ -11,6 +11,7 @@ use std::time::Instant;
 use types::RepoPath;
 use types::RepoPathBuf;
 
+use crate::DEFAULT_WALK_RATIO;
 use crate::Detector;
 use crate::Walk;
 use crate::WalkType;
@@ -163,9 +164,21 @@ fn test_advanced_remainder() {
 fn test_walk_node_insert() {
     let mut node = WalkNode::default();
 
-    node.insert_walk(WalkType::File, &p("foo"), Walk::new(1), TEST_WALK_THRESHOLD);
+    node.insert_walk(
+        WalkType::File,
+        &p("foo"),
+        Walk::new(1),
+        TEST_WALK_THRESHOLD,
+        DEFAULT_WALK_RATIO,
+    );
     // Can re-insert.
-    node.insert_walk(WalkType::File, &p("foo"), Walk::new(1), TEST_WALK_THRESHOLD);
+    node.insert_walk(
+        WalkType::File,
+        &p("foo"),
+        Walk::new(1),
+        TEST_WALK_THRESHOLD,
+        DEFAULT_WALK_RATIO,
+    );
     assert_eq!(node.list_walks(WalkType::File), vec![(p("foo"), 1)]);
 
     // Don't insert since it is fully contained by "foo" walk.
@@ -174,6 +187,7 @@ fn test_walk_node_insert() {
         &p("foo/bar"),
         Walk::new(0),
         TEST_WALK_THRESHOLD,
+        DEFAULT_WALK_RATIO,
     );
     assert_eq!(node.list_walks(WalkType::File), vec![(p("foo"), 1)]);
 
@@ -183,6 +197,7 @@ fn test_walk_node_insert() {
         &p("foo/bar/baz"),
         baz_walk,
         TEST_WALK_THRESHOLD,
+        DEFAULT_WALK_RATIO,
     );
     assert_eq!(
         node.list_walks(WalkType::File),
@@ -190,7 +205,13 @@ fn test_walk_node_insert() {
     );
 
     let root_walk = Walk::new(0);
-    node.insert_walk(WalkType::File, &p(""), root_walk, TEST_WALK_THRESHOLD);
+    node.insert_walk(
+        WalkType::File,
+        &p(""),
+        root_walk,
+        TEST_WALK_THRESHOLD,
+        DEFAULT_WALK_RATIO,
+    );
     assert_eq!(
         node.list_walks(WalkType::File),
         vec![(p(""), 0), (p("foo"), 1), (p("foo/bar/baz"), 2)]
@@ -198,7 +219,13 @@ fn test_walk_node_insert() {
 
     // depth=1 doesn't contain any descendant walks - don't clear anything out.
     let root_walk = Walk::new(1);
-    node.insert_walk(WalkType::File, &p(""), root_walk, TEST_WALK_THRESHOLD);
+    node.insert_walk(
+        WalkType::File,
+        &p(""),
+        root_walk,
+        TEST_WALK_THRESHOLD,
+        DEFAULT_WALK_RATIO,
+    );
     assert_eq!(
         node.list_walks(WalkType::File),
         vec![(p(""), 1), (p("foo"), 1), (p("foo/bar/baz"), 2)]
@@ -206,7 +233,13 @@ fn test_walk_node_insert() {
 
     // depth=2 contains the "foo" walk - clear "foo" out.
     let root_walk = Walk::new(2);
-    node.insert_walk(WalkType::File, &p(""), root_walk, TEST_WALK_THRESHOLD);
+    node.insert_walk(
+        WalkType::File,
+        &p(""),
+        root_walk,
+        TEST_WALK_THRESHOLD,
+        DEFAULT_WALK_RATIO,
+    );
     assert_eq!(
         node.list_walks(WalkType::File),
         vec![(p(""), 2), (p("foo/bar/baz"), 2)]
@@ -214,7 +247,13 @@ fn test_walk_node_insert() {
 
     // Contains the "foo/bar/baz" walk.
     let root_walk = Walk::new(5);
-    node.insert_walk(WalkType::File, &p(""), root_walk, TEST_WALK_THRESHOLD);
+    node.insert_walk(
+        WalkType::File,
+        &p(""),
+        root_walk,
+        TEST_WALK_THRESHOLD,
+        DEFAULT_WALK_RATIO,
+    );
     assert_eq!(node.list_walks(WalkType::File), vec![(p(""), 5)]);
 }
 
@@ -232,7 +271,13 @@ fn test_walk_node_get() {
     assert!(get_depth(&mut node, &p("foo/bar")).is_none());
 
     let foo_walk = Walk::new(1);
-    node.insert_walk(WalkType::File, &p("foo"), foo_walk, TEST_WALK_THRESHOLD);
+    node.insert_walk(
+        WalkType::File,
+        &p("foo"),
+        foo_walk,
+        TEST_WALK_THRESHOLD,
+        DEFAULT_WALK_RATIO,
+    );
 
     assert!(get_depth(&mut node, &p("")).is_none());
     assert_eq!(get_depth(&mut node, &p("foo")), Some(1));
@@ -244,6 +289,7 @@ fn test_walk_node_get() {
         &p("foo/bar"),
         foo_bar_walk,
         TEST_WALK_THRESHOLD,
+        DEFAULT_WALK_RATIO,
     );
 
     assert!(get_depth(&mut node, &p("")).is_none());
@@ -251,7 +297,13 @@ fn test_walk_node_get() {
     assert_eq!(get_depth(&mut node, &p("foo/bar")), Some(2));
 
     let root_walk = Walk::new(0);
-    node.insert_walk(WalkType::File, &p(""), root_walk, TEST_WALK_THRESHOLD);
+    node.insert_walk(
+        WalkType::File,
+        &p(""),
+        root_walk,
+        TEST_WALK_THRESHOLD,
+        DEFAULT_WALK_RATIO,
+    );
 
     assert_eq!(get_depth(&mut node, &p("")), Some(0));
     assert_eq!(get_depth(&mut node, &p("foo")), Some(1));
@@ -271,6 +323,7 @@ fn test_walk_get_containing_node() {
         &p("foo/bar"),
         Walk::new(0),
         TEST_WALK_THRESHOLD,
+        DEFAULT_WALK_RATIO,
     );
 
     // Still not containing due to depth.
@@ -281,6 +334,7 @@ fn test_walk_get_containing_node() {
         &p("foo/bar"),
         Walk::new(1),
         TEST_WALK_THRESHOLD,
+        DEFAULT_WALK_RATIO,
     );
 
     let (containing_node, suffix) = node.get_owning_node(WalkType::File, &dir).unwrap();
@@ -663,5 +717,49 @@ fn test_stricter_threshold() {
     detector.file_loaded(p("dir4/b"));
 
     // Still eventually gets propagated.
+    assert_eq!(detector.file_walks(), vec![(p(""), 1)]);
+}
+
+#[test]
+fn test_huge_directory() {
+    let detector = Detector::new();
+    detector.set_walk_threshold(TEST_WALK_THRESHOLD);
+    detector.set_walk_ratio(0.1);
+
+    // Huge directory.
+    detector.dir_loaded(p("dir1"), 100, 100);
+
+    detector.file_loaded(p("dir1/a"));
+    detector.file_loaded(p("dir1/b"));
+
+    // No walks yet - 2/100 has not reached out threshold of 10%.
+    assert!(detector.file_walks().is_empty());
+
+    for i in 0..5 {
+        detector.file_loaded(p(format!("dir1/{i}")));
+    }
+
+    // Still not enough.
+    assert!(detector.file_walks().is_empty());
+
+    for i in 0..10 {
+        detector.file_loaded(p(format!("dir1/{i}")));
+    }
+
+    // Now we hit the 10% threshold.
+    assert_eq!(detector.file_walks(), vec![(p("dir1"), 0)]);
+
+    // Root directory needs 30*0.1=3 walked children to become walked.
+    detector.dir_loaded(p(""), 0, 30);
+
+    detector.file_loaded(p("dir2/a"));
+    detector.file_loaded(p("dir2/b"));
+
+    // Didn't bubble up yet even though we met the base walk threshold of 2.
+    assert_eq!(detector.file_walks(), vec![(p("dir1"), 0), (p("dir2"), 0)]);
+
+    // Now we meet the 10% limit.
+    detector.file_loaded(p("dir3/a"));
+    detector.file_loaded(p("dir3/b"));
     assert_eq!(detector.file_walks(), vec![(p(""), 1)]);
 }

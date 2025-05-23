@@ -167,6 +167,7 @@ impl WalkNode {
         walk_root: &RepoPath,
         mut walk: Walk,
         threshold: usize,
+        walk_ratio: f64,
     ) -> &mut Self {
         // If we completely overlap with the walk to be inserted, skip it. This shouldn't
         // happen, but I want to guarantee there are no overlapping walks.
@@ -183,23 +184,24 @@ impl WalkNode {
                     self.children
                         .get_mut(head)
                         .unwrap()
-                        .insert_walk(walk_type, tail, walk, threshold)
+                        .insert_walk(walk_type, tail, walk, threshold, walk_ratio)
                 } else {
                     self.children
                         .entry(head.to_owned())
                         .or_default()
-                        .insert_walk(walk_type, tail, walk, threshold)
+                        .insert_walk(walk_type, tail, walk, threshold, walk_ratio)
                 }
             }
             None => {
                 self.clear_advanced_children(walk_type);
 
                 // This can have a side effect of adding to self.advanced_children.
-                self.remove_contained(walk_type, &walk, threshold);
+                self.remove_contained(walk_type, &walk, threshold, walk_ratio);
 
-                if self.advanced_children_len(walk_type) >= threshold {
+                let seen_count = self.advanced_children_len(walk_type);
+                if self.is_walked(WalkType::Directory, seen_count, threshold, walk_ratio) {
                     walk.depth += 1;
-                    self.insert_walk(walk_type, walk_root, walk, threshold)
+                    self.insert_walk(walk_type, walk_root, walk, threshold, walk_ratio)
                 } else {
                     self.set_walk_for_type(walk_type, Some(walk));
                     self
@@ -310,7 +312,13 @@ impl WalkNode {
     }
 
     /// Recursively remove all walks contained within a walk of depth `depth`.
-    fn remove_contained(&mut self, walk_type: WalkType, new_walk: &Walk, threshold: usize) {
+    fn remove_contained(
+        &mut self,
+        walk_type: WalkType,
+        new_walk: &Walk,
+        threshold: usize,
+        ratio: f64,
+    ) {
         // Returns whether a walk exists at depth+1.
         fn inner(
             new_walk: &Walk,
@@ -319,6 +327,7 @@ impl WalkNode {
             depth: usize,
             top: bool,
             threshold: usize,
+            ratio: f64,
         ) -> bool {
             let mut any_child_advanced = false;
             let mut new_advanced_children = Vec::new();
@@ -335,7 +344,15 @@ impl WalkNode {
                 }
 
                 if depth > 0 {
-                    if inner(new_walk, child, walk_type, depth - 1, false, threshold) {
+                    if inner(
+                        new_walk,
+                        child,
+                        walk_type,
+                        depth - 1,
+                        false,
+                        threshold,
+                        ratio,
+                    ) {
                         child_advanced = true;
                     }
                 }
@@ -352,7 +369,7 @@ impl WalkNode {
                 child.has_walk()
                     || !child.children.is_empty()
                     // Keep node around if it has total file/dir hints that are likely to be useful.
-                    || interesting_metadata(threshold, child.total_files, child.total_dirs)
+                    || interesting_metadata(threshold, ratio, child.total_files, child.total_dirs)
             });
 
             for advanced in new_advanced_children {
@@ -362,7 +379,15 @@ impl WalkNode {
             any_child_advanced
         }
 
-        inner(new_walk, self, walk_type, new_walk.depth, true, threshold);
+        inner(
+            new_walk,
+            self,
+            walk_type,
+            new_walk.depth,
+            true,
+            threshold,
+            ratio,
+        );
     }
 
     /// Reports whether self has a walk and the walk fully contains a descendant walk
@@ -373,17 +398,40 @@ impl WalkNode {
     }
 
     /// Return whether this Dir should be considered "walked".
-    pub(crate) fn is_walked(&self, walk_type: WalkType, walk_threshold: usize) -> bool {
-        match walk_type {
-            WalkType::File => {
-                self.seen_files.len() >= walk_threshold
-                    || self.total_files.is_some_and(|total| total < walk_threshold)
+    pub(crate) fn is_walked(
+        &self,
+        walk_type: WalkType,
+        seen_count: usize,
+        mut walk_threshold: usize,
+        walk_ratio: f64,
+    ) -> bool {
+        if seen_count == 0 {
+            return false;
+        }
+
+        let total_count = match walk_type {
+            WalkType::File => self.total_files,
+            WalkType::Directory => self.total_dirs,
+        };
+
+        // If we have the total size hint, adjust the threshold for extreme cases.
+        if let Some(total) = total_count {
+            // If dir is too small we know we will never reach the threshold. Adjust threshold down
+            // until it is smaller than dir size.
+            while walk_threshold > total {
+                walk_threshold /= 2;
             }
-            WalkType::Directory => {
-                self.seen_dirs.len() >= walk_threshold
-                    || self.total_dirs.is_some_and(|total| total < walk_threshold)
+
+            // Conversely, if directory is very large we don't want to detect a walk too
+            // aggressively. Ensure the threshold is at least `walk_ratio` of the total directory
+            // size. For example, a if `walk_ratio` is 0.1 and the directory size is 10_000, we will
+            // raise the `walk_threshold` to 1_000.
+            if total > 0 && (walk_threshold as f64) / (total as f64) < walk_ratio {
+                walk_threshold = ((total as f64) * walk_ratio) as usize;
             }
         }
+
+        seen_count >= walk_threshold
     }
 
     pub(crate) fn iter(&self, mut cb: impl FnMut(&WalkNode, usize) -> bool) {

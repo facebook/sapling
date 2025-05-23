@@ -39,6 +39,9 @@ struct Inner {
     lax_depth: usize,
     // Walk threshold multiplier for walks shallower than lax_depth.
     strict_multiplier: usize,
+    // A minimum walk threshold as ratio of total directory size. This only applies when we know the
+    // size of the directory. This slows down walk detection in humongous directories.
+    walk_ratio: f64,
     // Last time we ran GC.
     last_gc_time: Instant,
     // How often we want to run GC.
@@ -57,6 +60,7 @@ impl Default for Inner {
             walk_threshold: DEFAULT_WALK_THRESHOLD,
             lax_depth: DEFAULT_LAX_DEPTH,
             strict_multiplier: DEFAULT_STRICT_MULTIPLIER,
+            walk_ratio: DEFAULT_WALK_RATIO,
             last_gc_time: Instant::now(),
             gc_interval: DEFAULT_GC_INTERVAL,
             gc_timeout: DEFAULT_GC_TIMEOUT,
@@ -74,6 +78,9 @@ const DEFAULT_STRICT_MULTIPLIER: usize = 10;
 
 // Depth at which we no longer get the strict multiplier. 0 means we never get the multiplier.
 const DEFAULT_LAX_DEPTH: usize = 0;
+
+// If we know the total dir size, make sure walk threshold is at least 5% of dir size.
+const DEFAULT_WALK_RATIO: f64 = 0.05;
 
 // How often we garbage collect stale walks.
 const DEFAULT_GC_INTERVAL: Duration = Duration::from_secs(5);
@@ -98,6 +105,13 @@ impl Detector {
 
     pub fn set_strict_multiplier(&self, multiplier: usize) {
         self.inner.write().strict_multiplier = multiplier;
+    }
+
+    pub fn set_walk_ratio(&self, threshold: f64) {
+        if threshold <= 0.0 {
+            return;
+        }
+        self.inner.write().walk_ratio = threshold;
     }
 
     #[cfg(test)]
@@ -162,6 +176,7 @@ impl Detector {
         let mut walk_changed = inner.maybe_gc(time);
 
         let walk_threshold = inner.walk_threshold(dir_path.components().count());
+        let walk_ratio = inner.walk_ratio;
 
         let (owner, suffix) = inner
             .node
@@ -179,13 +194,13 @@ impl Detector {
 
         my_dir.seen_files.insert(base_name.to_owned());
 
-        if my_dir.is_walked(WalkType::File, walk_threshold) {
-            let file_count = my_dir.seen_files.len();
+        let seen_count = my_dir.seen_files.len();
+        if my_dir.is_walked(WalkType::File, seen_count, walk_threshold, walk_ratio) {
             my_dir.seen_files.clear();
             inner.insert_walk(
                 time,
                 WalkType::File,
-                Walk::for_type(WalkType::File, 0, file_count as u64),
+                Walk::for_type(WalkType::File, 0, seen_count as u64),
                 dir_path,
             );
             walk_changed = true;
@@ -229,7 +244,12 @@ impl Detector {
         let mut walk_changed = inner.maybe_gc(time);
 
         // Fill in interesting metadata that informs detection of file content walks.
-        if interesting_metadata(inner.walk_threshold, Some(num_files), Some(num_dirs)) {
+        if interesting_metadata(
+            inner.walk_threshold,
+            inner.walk_ratio,
+            Some(num_files),
+            Some(num_dirs),
+        ) {
             let node = inner.node.get_or_create_node(path);
             node.last_access.store(time);
             node.total_dirs = Some(num_dirs);
@@ -242,6 +262,7 @@ impl Detector {
         };
 
         let walk_threshold = inner.walk_threshold(dir_path.components().count());
+        let walk_ratio = inner.walk_ratio;
 
         let (owner, suffix) = inner
             .node
@@ -259,13 +280,13 @@ impl Detector {
 
         my_dir.seen_dirs.insert(base_name.to_owned());
 
-        if my_dir.is_walked(WalkType::Directory, walk_threshold) {
-            let dir_count = my_dir.seen_dirs.len();
+        let seen_count = my_dir.seen_dirs.len();
+        if my_dir.is_walked(WalkType::Directory, seen_count, walk_threshold, walk_ratio) {
             my_dir.seen_dirs.clear();
             inner.insert_walk(
                 time,
                 WalkType::Directory,
-                Walk::for_type(WalkType::Directory, 0, dir_count as u64),
+                Walk::for_type(WalkType::Directory, 0, seen_count as u64),
                 dir_path,
             );
 
@@ -343,11 +364,19 @@ impl Detector {
 
 fn interesting_metadata(
     threshold: usize,
+    walk_ratio: f64,
     num_files: Option<usize>,
     num_dirs: Option<usize>,
 ) -> bool {
-    num_dirs.is_some_and(|dirs| dirs > 0 && dirs < threshold)
-        || num_files.is_some_and(|files| files > 0 && files < threshold)
+    // "interesting" means the directory size metadata might influence our walk detection decisions.
+    // Basically, we care about very small or very large directories.
+
+    // Work backwards from walk threshold and walk ratio to calculate what size of directory would
+    // start to increase our walk threshold (due to the walk ratio).
+    let big_dir_threshold: usize = (threshold as f64 / walk_ratio) as usize;
+
+    num_dirs.is_some_and(|dirs| dirs < threshold || dirs >= big_dir_threshold)
+        || num_files.is_some_and(|files| files < threshold || files > big_dir_threshold)
 }
 
 impl Inner {
@@ -362,6 +391,7 @@ impl Inner {
             dir,
             walk,
             self.walk_threshold(dir.components().count()),
+            self.walk_ratio,
         );
         walk_node.last_access.store(time);
 
@@ -373,7 +403,7 @@ impl Inner {
         }
 
         // Check if we should merge with cousins (into grandparent). This is similar to
-        // maybe_merge_into_grandparent in that it can insert a new walk.
+        // maybe_merge_into_parent in that it can insert a new walk.
         if self
             .maybe_merge_into_grandparent(time, walk_type, dir)
             .is_some()
@@ -401,6 +431,7 @@ impl Inner {
 
         let walk_depth = should_merge_into_ancestor(
             self.walk_threshold(parent_dir.components().count()),
+            self.walk_ratio,
             walk_type,
             dir,
             parent_node,
@@ -420,7 +451,7 @@ impl Inner {
         walk_type: WalkType,
         dir: &RepoPath,
     ) -> Option<()> {
-        tracing::trace!(%dir, "maybe_merge_into_parent");
+        tracing::trace!(%dir, "maybe_merge_into_grandparent");
 
         let parent_dir = dir.parent()?;
         let grandparent_dir = parent_dir.parent()?;
@@ -437,6 +468,7 @@ impl Inner {
         let grandparent_node = ancestor.get_node(suffix.parent()?)?;
         let walk_depth = should_merge_into_ancestor(
             self.walk_threshold(grandparent_dir.components().count()),
+            self.walk_ratio,
             walk_type,
             dir,
             grandparent_node,
@@ -472,7 +504,13 @@ impl Inner {
         // expanding a huge walk deeper, so we wait until we've seen depth
         // advancements that bubble up to at least N different children of the walk
         // root.
-        if ancestor.insert_advanced_child(walk_type, head.to_owned()) >= walk_threshold {
+        let advanced_count = ancestor.insert_advanced_child(walk_type, head.to_owned());
+        if ancestor.is_walked(
+            WalkType::Directory,
+            advanced_count,
+            walk_threshold,
+            self.walk_ratio,
+        ) {
             let depth = ancestor
                 .get_dominating_walk(walk_type)
                 .map_or(0, |w| w.depth)
@@ -538,6 +576,7 @@ fn walk_threshold(
 /// new walk at `ancestor`. Returns depth of new walk to be inserted, if any.
 fn should_merge_into_ancestor(
     walk_threshold: usize,
+    walk_ratio: f64,
     walk_type: WalkType,
     dir: &RepoPath,
     ancestor: &WalkNode,
@@ -556,14 +595,13 @@ fn should_merge_into_ancestor(
         depth < ancestor_distance
     });
 
-    if kin_count >= walk_threshold {
-        tracing::debug!(%dir, kin_count, ancestor_distance, "combining with collateral kin");
-        Some(walk_depth + ancestor_distance)
-    } else if ancestor
-        .total_dirs
-        .is_some_and(|total| total < walk_threshold)
-    {
-        tracing::debug!(%dir, ancestor_distance, "promoting collateral kin due to few dirs");
+    if ancestor.is_walked(
+        WalkType::Directory, // We are combining directories here, so always use directory count.
+        kin_count,
+        walk_threshold,
+        walk_ratio,
+    ) {
+        tracing::debug!(%dir, kin_count, ancestor_distance, walk_threshold, walk_ratio, ?ancestor.total_dirs, "combining with collateral kin");
         Some(walk_depth + ancestor_distance)
     } else {
         None
