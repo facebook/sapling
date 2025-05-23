@@ -547,7 +547,7 @@ mod test {
     #[test]
     fn test_prefetch_manager() -> anyhow::Result<()> {
         let detector = Arc::new(walkdetector::Detector::new());
-        detector.set_min_dir_walk_threshold(2);
+        detector.set_walk_threshold(2);
 
         let store = Arc::new(TestStore::new());
 

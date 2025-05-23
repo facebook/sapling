@@ -50,7 +50,7 @@ pub fn run(ctx: ReqCtx<DebugWalkDetectorOpts>) -> Result<u8> {
     let detector = Arc::new(walkdetector::Detector::new());
 
     if let Some(threshold) = ctx.opts.dir_walk_threshold {
-        detector.set_min_dir_walk_threshold(threshold as usize);
+        detector.set_walk_threshold(threshold as usize);
     }
 
     let mut seen_dirs = HashSet::new();

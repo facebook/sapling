@@ -20,12 +20,12 @@ fn p(p: impl AsRef<str>) -> RepoPathBuf {
     p.as_ref().to_string().try_into().unwrap()
 }
 
-const TEST_MIN_DIR_WALK_THRESHOLD: usize = 2;
+const TEST_WALK_THRESHOLD: usize = 2;
 
 #[test]
 fn test_walk_big_dir() {
     let detector = Detector::new();
-    detector.set_min_dir_walk_threshold(TEST_MIN_DIR_WALK_THRESHOLD);
+    detector.set_walk_threshold(TEST_WALK_THRESHOLD);
 
     assert_eq!(detector.file_walks().len(), 0);
 
@@ -48,7 +48,7 @@ fn test_walk_big_dir() {
 #[test]
 fn test_bfs_walk() {
     let detector = Detector::new();
-    detector.set_min_dir_walk_threshold(TEST_MIN_DIR_WALK_THRESHOLD);
+    detector.set_walk_threshold(TEST_WALK_THRESHOLD);
 
     detector.file_loaded(p("root/dir1/a"));
     detector.file_loaded(p("root/dir1/b"));
@@ -124,7 +124,7 @@ fn test_bfs_walk() {
 #[test]
 fn test_advanced_remainder() {
     let detector = Detector::new();
-    detector.set_min_dir_walk_threshold(TEST_MIN_DIR_WALK_THRESHOLD);
+    detector.set_walk_threshold(TEST_WALK_THRESHOLD);
 
     detector.file_loaded(p("root/dir1/a"));
     detector.file_loaded(p("root/dir1/b"));
@@ -163,19 +163,9 @@ fn test_advanced_remainder() {
 fn test_walk_node_insert() {
     let mut node = WalkNode::default();
 
-    node.insert_walk(
-        WalkType::File,
-        &p("foo"),
-        Walk::new(1),
-        TEST_MIN_DIR_WALK_THRESHOLD,
-    );
+    node.insert_walk(WalkType::File, &p("foo"), Walk::new(1), TEST_WALK_THRESHOLD);
     // Can re-insert.
-    node.insert_walk(
-        WalkType::File,
-        &p("foo"),
-        Walk::new(1),
-        TEST_MIN_DIR_WALK_THRESHOLD,
-    );
+    node.insert_walk(WalkType::File, &p("foo"), Walk::new(1), TEST_WALK_THRESHOLD);
     assert_eq!(node.list_walks(WalkType::File), vec![(p("foo"), 1)]);
 
     // Don't insert since it is fully contained by "foo" walk.
@@ -183,7 +173,7 @@ fn test_walk_node_insert() {
         WalkType::File,
         &p("foo/bar"),
         Walk::new(0),
-        TEST_MIN_DIR_WALK_THRESHOLD,
+        TEST_WALK_THRESHOLD,
     );
     assert_eq!(node.list_walks(WalkType::File), vec![(p("foo"), 1)]);
 
@@ -192,7 +182,7 @@ fn test_walk_node_insert() {
         WalkType::File,
         &p("foo/bar/baz"),
         baz_walk,
-        TEST_MIN_DIR_WALK_THRESHOLD,
+        TEST_WALK_THRESHOLD,
     );
     assert_eq!(
         node.list_walks(WalkType::File),
@@ -200,12 +190,7 @@ fn test_walk_node_insert() {
     );
 
     let root_walk = Walk::new(0);
-    node.insert_walk(
-        WalkType::File,
-        &p(""),
-        root_walk,
-        TEST_MIN_DIR_WALK_THRESHOLD,
-    );
+    node.insert_walk(WalkType::File, &p(""), root_walk, TEST_WALK_THRESHOLD);
     assert_eq!(
         node.list_walks(WalkType::File),
         vec![(p(""), 0), (p("foo"), 1), (p("foo/bar/baz"), 2)]
@@ -213,12 +198,7 @@ fn test_walk_node_insert() {
 
     // depth=1 doesn't contain any descendant walks - don't clear anything out.
     let root_walk = Walk::new(1);
-    node.insert_walk(
-        WalkType::File,
-        &p(""),
-        root_walk,
-        TEST_MIN_DIR_WALK_THRESHOLD,
-    );
+    node.insert_walk(WalkType::File, &p(""), root_walk, TEST_WALK_THRESHOLD);
     assert_eq!(
         node.list_walks(WalkType::File),
         vec![(p(""), 1), (p("foo"), 1), (p("foo/bar/baz"), 2)]
@@ -226,12 +206,7 @@ fn test_walk_node_insert() {
 
     // depth=2 contains the "foo" walk - clear "foo" out.
     let root_walk = Walk::new(2);
-    node.insert_walk(
-        WalkType::File,
-        &p(""),
-        root_walk,
-        TEST_MIN_DIR_WALK_THRESHOLD,
-    );
+    node.insert_walk(WalkType::File, &p(""), root_walk, TEST_WALK_THRESHOLD);
     assert_eq!(
         node.list_walks(WalkType::File),
         vec![(p(""), 2), (p("foo/bar/baz"), 2)]
@@ -239,12 +214,7 @@ fn test_walk_node_insert() {
 
     // Contains the "foo/bar/baz" walk.
     let root_walk = Walk::new(5);
-    node.insert_walk(
-        WalkType::File,
-        &p(""),
-        root_walk,
-        TEST_MIN_DIR_WALK_THRESHOLD,
-    );
+    node.insert_walk(WalkType::File, &p(""), root_walk, TEST_WALK_THRESHOLD);
     assert_eq!(node.list_walks(WalkType::File), vec![(p(""), 5)]);
 }
 
@@ -262,12 +232,7 @@ fn test_walk_node_get() {
     assert!(get_depth(&mut node, &p("foo/bar")).is_none());
 
     let foo_walk = Walk::new(1);
-    node.insert_walk(
-        WalkType::File,
-        &p("foo"),
-        foo_walk,
-        TEST_MIN_DIR_WALK_THRESHOLD,
-    );
+    node.insert_walk(WalkType::File, &p("foo"), foo_walk, TEST_WALK_THRESHOLD);
 
     assert!(get_depth(&mut node, &p("")).is_none());
     assert_eq!(get_depth(&mut node, &p("foo")), Some(1));
@@ -278,7 +243,7 @@ fn test_walk_node_get() {
         WalkType::File,
         &p("foo/bar"),
         foo_bar_walk,
-        TEST_MIN_DIR_WALK_THRESHOLD,
+        TEST_WALK_THRESHOLD,
     );
 
     assert!(get_depth(&mut node, &p("")).is_none());
@@ -286,12 +251,7 @@ fn test_walk_node_get() {
     assert_eq!(get_depth(&mut node, &p("foo/bar")), Some(2));
 
     let root_walk = Walk::new(0);
-    node.insert_walk(
-        WalkType::File,
-        &p(""),
-        root_walk,
-        TEST_MIN_DIR_WALK_THRESHOLD,
-    );
+    node.insert_walk(WalkType::File, &p(""), root_walk, TEST_WALK_THRESHOLD);
 
     assert_eq!(get_depth(&mut node, &p("")), Some(0));
     assert_eq!(get_depth(&mut node, &p("foo")), Some(1));
@@ -310,7 +270,7 @@ fn test_walk_get_containing_node() {
         WalkType::File,
         &p("foo/bar"),
         Walk::new(0),
-        TEST_MIN_DIR_WALK_THRESHOLD,
+        TEST_WALK_THRESHOLD,
     );
 
     // Still not containing due to depth.
@@ -320,7 +280,7 @@ fn test_walk_get_containing_node() {
         WalkType::File,
         &p("foo/bar"),
         Walk::new(1),
-        TEST_MIN_DIR_WALK_THRESHOLD,
+        TEST_WALK_THRESHOLD,
     );
 
     let (containing_node, suffix) = node.get_owning_node(WalkType::File, &dir).unwrap();
@@ -337,7 +297,7 @@ fn test_walk_get_containing_node() {
 #[test]
 fn test_dir_hints() {
     let detector = Detector::new();
-    detector.set_min_dir_walk_threshold(TEST_MIN_DIR_WALK_THRESHOLD);
+    detector.set_walk_threshold(TEST_WALK_THRESHOLD);
 
     // Hint that "dir" has 0 files and 1 directory.
     detector.dir_loaded(p("dir"), 0, 1);
@@ -356,7 +316,7 @@ fn test_advance_while_advancing() {
     // Test that we can "advance" the walk depth twice in a row when
     // the descendant walks have depths greater than zero.
     let detector = Detector::new();
-    detector.set_min_dir_walk_threshold(TEST_MIN_DIR_WALK_THRESHOLD);
+    detector.set_walk_threshold(TEST_WALK_THRESHOLD);
 
     // Walk at root/, depth=1.
     detector.file_loaded(p("root/dir1/a"));
@@ -389,7 +349,7 @@ fn test_advance_while_advancing() {
 #[test]
 fn test_retain_interesting_metadata() {
     let detector = Detector::new();
-    detector.set_min_dir_walk_threshold(TEST_MIN_DIR_WALK_THRESHOLD);
+    detector.set_walk_threshold(TEST_WALK_THRESHOLD);
 
     // "interesting" metadata saying root/dir1 only has one directory
     detector.dir_loaded(p("root/dir1"), 2, 1);
@@ -414,7 +374,7 @@ fn test_retain_interesting_metadata() {
 #[test]
 fn test_merge_cousins() {
     let detector = Detector::new();
-    detector.set_min_dir_walk_threshold(TEST_MIN_DIR_WALK_THRESHOLD);
+    detector.set_walk_threshold(TEST_WALK_THRESHOLD);
 
     detector.dir_loaded(p("root"), 0, 1);
 
@@ -435,7 +395,7 @@ fn test_merge_cousins() {
 #[test]
 fn test_gc() {
     let detector = Detector::new();
-    detector.set_min_dir_walk_threshold(TEST_MIN_DIR_WALK_THRESHOLD);
+    detector.set_walk_threshold(TEST_WALK_THRESHOLD);
     detector.set_gc_interval(Duration::from_secs(1));
     detector.set_gc_timeout(Duration::from_secs(2));
 
@@ -490,7 +450,7 @@ fn test_gc() {
 #[test]
 fn test_gc_stats() {
     let detector = Detector::new();
-    detector.set_min_dir_walk_threshold(TEST_MIN_DIR_WALK_THRESHOLD);
+    detector.set_walk_threshold(TEST_WALK_THRESHOLD);
 
     // Don't run GC automatically.
     detector.set_gc_interval(Duration::from_secs(10));
@@ -531,7 +491,7 @@ fn test_gc_stats() {
 #[test]
 fn test_dir_walk() {
     let detector = Detector::new();
-    detector.set_min_dir_walk_threshold(TEST_MIN_DIR_WALK_THRESHOLD);
+    detector.set_walk_threshold(TEST_WALK_THRESHOLD);
 
     detector.dir_loaded(p(""), 2, 2);
     assert_eq!(detector.dir_walks(), vec![]);
@@ -578,7 +538,7 @@ fn test_dir_walk() {
 #[test]
 fn test_walk_changed() {
     let detector = Detector::new();
-    detector.set_min_dir_walk_threshold(TEST_MIN_DIR_WALK_THRESHOLD);
+    detector.set_walk_threshold(TEST_WALK_THRESHOLD);
     detector.set_gc_interval(Duration::from_secs(1));
     detector.set_gc_timeout(Duration::from_secs(2));
 
@@ -604,7 +564,7 @@ fn test_walk_changed() {
 #[test]
 fn test_touched() {
     let detector = Detector::new();
-    detector.set_min_dir_walk_threshold(TEST_MIN_DIR_WALK_THRESHOLD);
+    detector.set_walk_threshold(TEST_WALK_THRESHOLD);
     detector.set_gc_interval(Duration::from_secs(1));
     detector.set_gc_timeout(Duration::from_secs(2));
 
@@ -645,7 +605,7 @@ fn test_touched() {
 #[test]
 fn test_counters() {
     let detector = Detector::new();
-    detector.set_min_dir_walk_threshold(TEST_MIN_DIR_WALK_THRESHOLD);
+    detector.set_walk_threshold(TEST_WALK_THRESHOLD);
 
     let get_counters = |p: RepoPathBuf, wt: WalkType| {
         detector

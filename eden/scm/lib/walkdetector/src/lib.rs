@@ -32,7 +32,7 @@ pub struct Detector {
 }
 
 struct Inner {
-    min_dir_walk_threshold: usize,
+    walk_threshold: usize,
     last_gc_time: Instant,
     gc_interval: Duration,
     gc_timeout: Duration,
@@ -43,7 +43,7 @@ struct Inner {
 impl Default for Inner {
     fn default() -> Self {
         Self {
-            min_dir_walk_threshold: DEFAULT_MIN_DIR_WALK_THRESHOLD,
+            walk_threshold: DEFAULT_WALK_THRESHOLD,
             last_gc_time: Instant::now(),
             gc_interval: DEFAULT_GC_INTERVAL,
             gc_timeout: DEFAULT_GC_TIMEOUT,
@@ -200,7 +200,7 @@ pub enum WalkType {
 }
 
 // How many children must be accessed in a directory to consider the directory "walked".
-const DEFAULT_MIN_DIR_WALK_THRESHOLD: usize = 2;
+const DEFAULT_WALK_THRESHOLD: usize = 2;
 
 // How often we garbage collect stale walks.
 const DEFAULT_GC_INTERVAL: Duration = Duration::from_secs(5);
@@ -215,8 +215,8 @@ impl Detector {
         }
     }
 
-    pub fn set_min_dir_walk_threshold(&self, threshold: usize) {
-        self.inner.write().min_dir_walk_threshold = threshold;
+    pub fn set_walk_threshold(&self, threshold: usize) {
+        self.inner.write().walk_threshold = threshold;
     }
 
     #[cfg(test)]
@@ -280,7 +280,7 @@ impl Detector {
 
         let mut walk_changed = inner.maybe_gc(time);
 
-        let dir_threshold = inner.min_dir_walk_threshold;
+        let dir_threshold = inner.walk_threshold;
 
         let (owner, suffix) = inner
             .node
@@ -348,11 +348,7 @@ impl Detector {
         let mut walk_changed = inner.maybe_gc(time);
 
         // Fill in interesting metadata that informs detection of file content walks.
-        if interesting_metadata(
-            inner.min_dir_walk_threshold,
-            Some(num_files),
-            Some(num_dirs),
-        ) {
+        if interesting_metadata(inner.walk_threshold, Some(num_files), Some(num_dirs)) {
             let node = inner.node.get_or_create_node(path);
             node.last_access.store(time);
             node.total_dirs = Some(num_dirs);
@@ -364,7 +360,7 @@ impl Detector {
             Some((dir, base)) => (dir, base),
         };
 
-        let dir_threshold = inner.min_dir_walk_threshold;
+        let dir_threshold = inner.walk_threshold;
 
         let (owner, suffix) = inner
             .node
@@ -482,7 +478,7 @@ impl Inner {
 
         let walk_node = self
             .node
-            .insert_walk(walk_type, dir, walk, self.min_dir_walk_threshold);
+            .insert_walk(walk_type, dir, walk, self.walk_threshold);
         walk_node.last_access.store(time);
 
         // Check if we should immediately promote this walk to parent directory. This is
@@ -519,13 +515,8 @@ impl Inner {
         let parent_dir = dir.parent()?;
         let parent_node = self.node.get_node(parent_dir)?;
 
-        let walk_depth = should_merge_into_ancestor(
-            self.min_dir_walk_threshold,
-            walk_type,
-            dir,
-            parent_node,
-            1,
-        )?;
+        let walk_depth =
+            should_merge_into_ancestor(self.walk_threshold, walk_type, dir, parent_node, 1)?;
 
         self.insert_walk(time, walk_type, Walk::new(walk_depth), parent_dir);
 
@@ -555,13 +546,8 @@ impl Inner {
         }
 
         let grandparent_node = ancestor.get_node(suffix.parent()?)?;
-        let walk_depth = should_merge_into_ancestor(
-            self.min_dir_walk_threshold,
-            walk_type,
-            dir,
-            grandparent_node,
-            2,
-        )?;
+        let walk_depth =
+            should_merge_into_ancestor(self.walk_threshold, walk_type, dir, grandparent_node, 2)?;
 
         self.insert_walk(time, walk_type, Walk::new(walk_depth), grandparent_dir);
 
@@ -585,8 +571,7 @@ impl Inner {
         // expanding a huge walk deeper, so we wait until we've seen depth
         // advancements that bubble up to at least N different children of the walk
         // root.
-        if ancestor.insert_advanced_child(walk_type, head.to_owned()) >= self.min_dir_walk_threshold
-        {
+        if ancestor.insert_advanced_child(walk_type, head.to_owned()) >= self.walk_threshold {
             let depth = ancestor
                 .get_dominating_walk(walk_type)
                 .map_or(0, |w| w.depth)
@@ -627,7 +612,7 @@ impl Inner {
 /// Check if existing walks at nodes `ancestor_distance` below `ancestor` should be "merged" into a
 /// new walk at `ancestor`. Returns depth of new walk to be inserted, if any.
 fn should_merge_into_ancestor(
-    min_dir_walk_threshold: usize,
+    walk_threshold: usize,
     walk_type: WalkType,
     dir: &RepoPath,
     ancestor: &WalkNode,
@@ -646,12 +631,12 @@ fn should_merge_into_ancestor(
         depth < ancestor_distance
     });
 
-    if kin_count >= min_dir_walk_threshold {
+    if kin_count >= walk_threshold {
         tracing::debug!(%dir, kin_count, ancestor_distance, "combining with collateral kin");
         Some(walk_depth + ancestor_distance)
     } else if ancestor
         .total_dirs
-        .is_some_and(|total| total < min_dir_walk_threshold)
+        .is_some_and(|total| total < walk_threshold)
     {
         tracing::debug!(%dir, ancestor_distance, "promoting collateral kin due to few dirs");
         Some(walk_depth + ancestor_distance)

@@ -373,19 +373,15 @@ impl WalkNode {
     }
 
     /// Return whether this Dir should be considered "walked".
-    pub(crate) fn is_walked(&self, walk_type: WalkType, dir_walk_threshold: usize) -> bool {
+    pub(crate) fn is_walked(&self, walk_type: WalkType, walk_threshold: usize) -> bool {
         match walk_type {
             WalkType::File => {
-                self.seen_files.len() >= dir_walk_threshold
-                    || self
-                        .total_files
-                        .is_some_and(|total| total < dir_walk_threshold)
+                self.seen_files.len() >= walk_threshold
+                    || self.total_files.is_some_and(|total| total < walk_threshold)
             }
             WalkType::Directory => {
-                self.seen_dirs.len() >= dir_walk_threshold
-                    || self
-                        .total_dirs
-                        .is_some_and(|total| total < dir_walk_threshold)
+                self.seen_dirs.len() >= walk_threshold
+                    || self.total_dirs.is_some_and(|total| total < walk_threshold)
             }
         }
     }

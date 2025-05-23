@@ -200,7 +200,7 @@ impl BackingStore {
         let walk_detector = Arc::new(walkdetector::Detector::new());
 
         if let Some(threshold) = config.get_opt("backingstore", "walk-threshold")? {
-            walk_detector.set_min_dir_walk_threshold(threshold);
+            walk_detector.set_walk_threshold(threshold);
         }
 
         if let Some(threshold) = config.get_opt("backingstore", "walk-gc-interval")? {
