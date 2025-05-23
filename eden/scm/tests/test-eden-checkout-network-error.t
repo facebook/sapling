@@ -42,7 +42,15 @@ Restart eden without injected network error.
 
 We are still in interrupted checkout state:
   $ hg st
-  abort: EdenError: cannot compute status while a checkout is in progress - please run 'hg update --clean 62236523d20eb09473170bc922c224800a9ec819' to resume it
+  abort: EdenError: a previous checkout was interrupted - please run `hg go 62236523d20eb09473170bc922c224800a9ec819` to resume it.
+  If there are conflicts, run `hg go --clean 62236523d20eb09473170bc922c224800a9ec819` to discard changes, or `hg go --merge 62236523d20eb09473170bc922c224800a9ec819` to merge.
+  [255]
+
+Try without --clean:
+  $ hg go 62236523d20eb09473170bc922c224800a9ec819
+  abort: 1 conflicting file changes:
+   dir/file
+  (commit, shelve, goto --clean to discard all your changes, or goto --merge to merge them)
   [255]
 
 Complete the checkout:

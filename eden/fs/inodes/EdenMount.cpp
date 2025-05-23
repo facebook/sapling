@@ -1389,6 +1389,10 @@ ImmediateFuture<folly::Unit> EdenMount::waitForPendingWrites() const {
   }
 }
 
+constexpr const char* interruptedCheckoutAdvice =
+    "a previous checkout was interrupted - please run `hg go {0}` to resume it"
+    ".\nIf there are conflicts, run `hg go --clean {0}` to discard changes, or `hg go --merge {0}` to merge.";
+
 ImmediateFuture<CheckoutResult> EdenMount::checkout(
     TreeInodePtr rootInode,
     const RootId& snapshotHash,
@@ -1421,8 +1425,7 @@ ImmediateFuture<CheckoutResult> EdenMount::checkout(
           return makeFuture<CheckoutResult>(newEdenError(
               EdenErrorType::CHECKOUT_IN_PROGRESS,
               fmt::format(
-                  "a previous checkout was interrupted - please run 'hg update --clean {}' first",
-                  interruptedCheckout.toCommit)));
+                  interruptedCheckoutAdvice, interruptedCheckout.toCommit)));
         } else {
           oldParent = interruptedCheckout.fromCommit;
           oldState = interruptedCheckout;
@@ -1876,9 +1879,7 @@ ImmediateFuture<Unit> EdenMount::diff(
                   &parentInfo->checkoutState)) {
         return makeImmediateFuture<Unit>(newEdenError(
             EdenErrorType::CHECKOUT_IN_PROGRESS,
-            fmt::format(
-                "cannot compute status while a checkout is in progress - please run 'hg update --clean {}' to resume it",
-                interrupted->toCommit)));
+            fmt::format(interruptedCheckoutAdvice, interrupted->toCommit)));
       }
 
       if (currentWorkingCopyParentRootId != commitHash) {
