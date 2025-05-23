@@ -203,6 +203,18 @@ impl BackingStore {
             walk_detector.set_walk_threshold(threshold);
         }
 
+        if let Some(depth) = config.get_opt("backingstore", "walk-lax-depth")? {
+            walk_detector.set_lax_depth(depth);
+        }
+
+        if let Some(depth) = config.get_opt("backingstore", "walk-strict-multiplier")? {
+            walk_detector.set_strict_multiplier(depth);
+        }
+
+        if let Some(threshold) = config.get_opt("backingstore", "walk-ratio")? {
+            walk_detector.set_walk_ratio(threshold);
+        }
+
         if let Some(threshold) = config.get_opt("backingstore", "walk-gc-interval")? {
             walk_detector.set_gc_interval(threshold);
         }
