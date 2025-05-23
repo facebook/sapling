@@ -53,7 +53,7 @@ impl Default for Inner {
     }
 }
 
-#[derive(Default, Debug)]
+#[derive(Default)]
 pub struct Walk {
     depth: usize,
     file_loads: AtomicU64,
@@ -62,6 +62,13 @@ pub struct Walk {
     dir_loads: AtomicU64,
     dir_reads: AtomicU64,
     logged_start: AtomicBool,
+}
+
+impl std::fmt::Debug for Walk {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        // Don't include all the counters - they are very noisy in traces.
+        f.debug_struct("Walk").field("depth", &self.depth).finish()
+    }
 }
 
 impl Walk {

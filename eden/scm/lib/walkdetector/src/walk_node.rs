@@ -466,14 +466,18 @@ impl WalkNode {
             // We don't actually delete the root node, so take one off.
             deleted -= 1;
 
-            // At top level we have no parent to remove us, so just unset our fields.
-            tracing::trace!("GCing root node");
+            // Log root GC event only if the root node had some activity (and hence had last_access
+            // set).
+            if self.last_access.load().is_some() {
+                tracing::trace!("GCing root node");
+            }
 
             if self.has_walk() {
                 walks_deleted += 1;
                 self.log_walk_end(RepoPath::empty());
             }
 
+            // At top level we have no parent to remove us, so just unset our fields.
             self.clear_except_children();
         }
 
