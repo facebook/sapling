@@ -31,6 +31,7 @@ mod du;
 #[cfg(target_os = "macos")]
 mod file_access_monitor;
 mod gc;
+mod glob;
 mod handles;
 mod list;
 mod minitop;
@@ -152,6 +153,7 @@ pub enum TopLevelSubcommand {
     Uptime(crate::uptime::UptimeCmd),
     #[cfg(target_os = "macos")]
     FileAccessMonitor(crate::file_access_monitor::FileAccessMonitorCmd),
+    // Glob(crate::glob::GlobCmd),
 }
 
 impl TopLevelSubcommand {
@@ -180,6 +182,7 @@ impl TopLevelSubcommand {
             Uptime(cmd) => cmd,
             #[cfg(target_os = "macos")]
             FileAccessMonitor(cmd) => cmd,
+            // Glob(cmd) => cmd,
         }
     }
 
@@ -191,7 +194,7 @@ impl TopLevelSubcommand {
             TopLevelSubcommand::Debug(_) => "debug",
             TopLevelSubcommand::Du(_) => "du",
             TopLevelSubcommand::Fsconfig(_) => "fsconfig",
-            //TopLevelSubcommand::Gc(_) => "gc",
+            // TopLevelSubcommand::Gc(_) => "gc",
             #[cfg(target_os = "windows")]
             TopLevelSubcommand::Handles(_) => "handles",
             TopLevelSubcommand::List(_) => "list",
@@ -208,6 +211,7 @@ impl TopLevelSubcommand {
             TopLevelSubcommand::Uptime(_) => "uptime",
             #[cfg(target_os = "macos")]
             TopLevelSubcommand::FileAccessMonitor(_) => "file-access-monitor",
+            // TopLevelSubcommand::Glob(_) => "glob",
         }
     }
 }
