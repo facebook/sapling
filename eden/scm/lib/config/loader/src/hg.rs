@@ -589,11 +589,11 @@ fn read_set_repo_name(
         let mut name: String = input_config.get_or_default("remotefilelog", "reponame")?;
         let mut source = "remotefilelog.reponame";
         if name.is_empty() {
-            tracing::warn!("repo name: no remotefilelog.reponame");
+            tracing::debug!("repo name: no remotefilelog.reponame");
             let path: String = input_config.get_or_default("paths", "default")?;
             name = repo_name_from_url(input_config, &path).unwrap_or_default();
             if name.is_empty() {
-                tracing::warn!("repo name: no path.default reponame: {}", &path);
+                tracing::debug!("repo name: no path.default reponame: {}", &path);
             }
             source = "paths.default";
         }
@@ -604,7 +604,7 @@ fn read_set_repo_name(
                     source = "reponame file";
                 }
                 Err(e) => {
-                    tracing::warn!("repo name: no reponame file: {:?}", &e);
+                    tracing::debug!("repo name: no reponame file: {:?}", &e);
                 }
             };
         }

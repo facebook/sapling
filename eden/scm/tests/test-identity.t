@@ -60,7 +60,6 @@ Clone can create a ".sl" repo.
 Status works in ".sl" repo
   $ LOG=configloader::hg=info hg status -A
    INFO configloader::hg: loading config repo_path=* (glob)
-   WARN configloader::hg: repo name: no remotefilelog.reponame
   C foo
   $ cd ..
 
