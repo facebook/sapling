@@ -267,9 +267,8 @@ def _setupupdates(_ui) -> None:
     ):
         """Filter updates to only lay out files that match the sparse rules."""
         ui = to_repo.ui
-        if from_repo is None:
-            from_repo = to_repo
-        is_crossrepo = from_repo != to_repo
+        from_repo = from_repo or to_repo
+        is_crossrepo = not to_repo.is_same_repo(from_repo)
 
         actions = orig(
             to_repo,

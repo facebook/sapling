@@ -3197,6 +3197,13 @@ class localrepository:
     def metalog(self):
         return self.svfs.metalog
 
+    def is_same_repo(self, other):
+        """returns true if both repos have the same root directory"""
+        if self is other:
+            return True
+        else:
+            return other and self.root == other.root
+
 
 # used to avoid circular references so destructors work
 # This function is passed as the `after` function to `transaction`, and is

@@ -2632,7 +2632,7 @@ def _dograft(ui, to_repo, *revs, from_repo=None, **opts):
         revs = [from_repo[node].rev() for node in nodes]
         from_paths = [m["from_path"] for m in ms.subtree_merges]
         to_paths = [m["to_path"] for m in ms.subtree_merges]
-        is_crossrepo = from_repo != to_repo
+        is_crossrepo = not to_repo.is_same_repo(from_repo)
     else:
         cmdutil.checkunfinished(to_repo)
         cmdutil.bailifchanged(to_repo)
@@ -2640,7 +2640,7 @@ def _dograft(ui, to_repo, *revs, from_repo=None, **opts):
             raise error.Abort(_("no revisions specified"))
         revs = scmutil.revrange(from_repo, revs)
 
-        is_crossrepo = from_repo != to_repo
+        is_crossrepo = not to_repo.is_same_repo(from_repo)
         if is_crossrepo:
             # In cross-repo grafts, from_paths are expected to be root-relative already
             from_paths = opts.get("from_path", [])
@@ -2773,7 +2773,7 @@ def _makegraftmessage(to_repo, ctx, opts, from_paths, to_paths, from_repo):
     description = cmdutil.logmessage(to_repo, opts)
     is_from_user = description != ctx.description()
 
-    is_crossrepo = from_repo != to_repo
+    is_crossrepo = not to_repo.is_same_repo(from_repo)
     message = []
     if from_paths:
         # For xdir grafts, include "grafted from" breadcrumb by default.

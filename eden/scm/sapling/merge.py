@@ -990,7 +990,7 @@ def manifestmerge(
 
     if from_repo is None:
         from_repo = to_repo
-    is_crossrepo = from_repo != to_repo
+    is_crossrepo = not to_repo.is_same_repo(from_repo)
 
     ui = to_repo.ui
     copy = {}
@@ -1539,9 +1539,8 @@ def applyupdates(
     """
     perftrace.tracevalue("Actions", sum(len(v) for k, v in actions.items()))
 
-    if from_repo is None:
-        from_repo = to_repo
-    is_crossrepo = from_repo != to_repo
+    from_repo = from_repo or to_repo
+    is_crossrepo = not to_repo.is_same_repo(from_repo)
     ui = to_repo.ui
 
     updated, merged, removed = 0, 0, 0
@@ -2312,9 +2311,8 @@ def merge(
     wc=None,
     from_repo=None,
 ):
-    if from_repo is None:
-        from_repo = to_repo
-    is_crossrepo = from_repo != to_repo
+    from_repo = from_repo or to_repo
+    is_crossrepo = not to_repo.is_same_repo(from_repo)
     if not is_crossrepo:
         _prefetchlazychildren(to_repo, node)
 
@@ -2396,11 +2394,10 @@ def _update(
     """
 
     assert node is not None
-    if from_repo is None:
-        from_repo = to_repo
 
     ui = to_repo.ui
-    is_crossrepo = from_repo != to_repo
+    from_repo = from_repo or to_repo
+    is_crossrepo = not to_repo.is_same_repo(from_repo)
 
     # Positive indication we aren't using eden fastpath for eden integration tests.
     if edenfs.requirement in to_repo.requirements:
@@ -2811,9 +2808,8 @@ def graft(to_repo, ctx, pctx, labels, keepparent=False, from_repo=None):
     labels - merge labels eg ['local', 'graft']
     keepparent - keep second parent if any
     """
-    if from_repo is None:
-        from_repo = to_repo
-    is_crossrepo = from_repo != to_repo
+    from_repo = from_repo or to_repo
+    is_crossrepo = not to_repo.is_same_repo(from_repo)
     # If we're grafting a descendant onto an ancestor, be sure to pass
     # mergeancestor=True to update. This does two things: 1) allows the merge if
     # the destination is the same as the parent of the ctx (so we can use graft

@@ -102,9 +102,8 @@ def wrapmerge(
     from_repo=None,
     **kwargs,
 ):
-    if from_repo is None:
-        from_repo = to_repo
-    is_crossrepo = from_repo != to_repo
+    from_repo = from_repo or to_repo
+    is_crossrepo = not to_repo.is_same_repo(from_repo)
     if (wc and wc.isinmemory()) or is_crossrepo:
         # Skip Watchman integration in the following cases:
         # - The working context (wc) is not on disk.
