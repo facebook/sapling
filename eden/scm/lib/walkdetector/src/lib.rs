@@ -35,6 +35,10 @@ struct Inner {
     // "How many children must be accessed before we consider parent walked?"
     // This is the main threshold to tune detector aggro.
     walk_threshold: usize,
+    // Walks with depth < lax_depth will use a stricter walk_threshold.
+    lax_depth: usize,
+    // Walk threshold multiplier for walks shallower than lax_depth.
+    strict_multiplier: usize,
     // Last time we ran GC.
     last_gc_time: Instant,
     // How often we want to run GC.
@@ -51,6 +55,8 @@ impl Default for Inner {
     fn default() -> Self {
         Self {
             walk_threshold: DEFAULT_WALK_THRESHOLD,
+            lax_depth: DEFAULT_LAX_DEPTH,
+            strict_multiplier: DEFAULT_STRICT_MULTIPLIER,
             last_gc_time: Instant::now(),
             gc_interval: DEFAULT_GC_INTERVAL,
             gc_timeout: DEFAULT_GC_TIMEOUT,
@@ -62,6 +68,12 @@ impl Default for Inner {
 
 // How many children must be accessed in a directory to consider the directory "walked".
 const DEFAULT_WALK_THRESHOLD: usize = 2;
+
+// Walk threshold multiplier for shallow walks.
+const DEFAULT_STRICT_MULTIPLIER: usize = 10;
+
+// Depth at which we no longer get the strict multiplier. 0 means we never get the multiplier.
+const DEFAULT_LAX_DEPTH: usize = 0;
 
 // How often we garbage collect stale walks.
 const DEFAULT_GC_INTERVAL: Duration = Duration::from_secs(5);
@@ -78,6 +90,14 @@ impl Detector {
 
     pub fn set_walk_threshold(&self, threshold: usize) {
         self.inner.write().walk_threshold = threshold;
+    }
+
+    pub fn set_lax_depth(&self, depth: usize) {
+        self.inner.write().lax_depth = depth;
+    }
+
+    pub fn set_strict_multiplier(&self, multiplier: usize) {
+        self.inner.write().strict_multiplier = multiplier;
     }
 
     #[cfg(test)]
@@ -141,7 +161,7 @@ impl Detector {
 
         let mut walk_changed = inner.maybe_gc(time);
 
-        let dir_threshold = inner.walk_threshold;
+        let walk_threshold = inner.walk_threshold(dir_path.components().count());
 
         let (owner, suffix) = inner
             .node
@@ -159,7 +179,7 @@ impl Detector {
 
         my_dir.seen_files.insert(base_name.to_owned());
 
-        if my_dir.is_walked(WalkType::File, dir_threshold) {
+        if my_dir.is_walked(WalkType::File, walk_threshold) {
             let file_count = my_dir.seen_files.len();
             my_dir.seen_files.clear();
             inner.insert_walk(
@@ -221,7 +241,7 @@ impl Detector {
             Some((dir, base)) => (dir, base),
         };
 
-        let dir_threshold = inner.walk_threshold;
+        let walk_threshold = inner.walk_threshold(dir_path.components().count());
 
         let (owner, suffix) = inner
             .node
@@ -239,7 +259,7 @@ impl Detector {
 
         my_dir.seen_dirs.insert(base_name.to_owned());
 
-        if my_dir.is_walked(WalkType::Directory, dir_threshold) {
+        if my_dir.is_walked(WalkType::Directory, walk_threshold) {
             let dir_count = my_dir.seen_dirs.len();
             my_dir.seen_dirs.clear();
             inner.insert_walk(
@@ -337,9 +357,12 @@ impl Inner {
         // TODO: consider moving "should merge" logic into `WalkNode::insert_walk` to do
         // more work in a single traversal.
 
-        let walk_node = self
-            .node
-            .insert_walk(walk_type, dir, walk, self.walk_threshold);
+        let walk_node = self.node.insert_walk(
+            walk_type,
+            dir,
+            walk,
+            self.walk_threshold(dir.components().count()),
+        );
         walk_node.last_access.store(time);
 
         // Check if we should immediately promote this walk to parent directory. This is
@@ -376,8 +399,13 @@ impl Inner {
         let parent_dir = dir.parent()?;
         let parent_node = self.node.get_node(parent_dir)?;
 
-        let walk_depth =
-            should_merge_into_ancestor(self.walk_threshold, walk_type, dir, parent_node, 1)?;
+        let walk_depth = should_merge_into_ancestor(
+            self.walk_threshold(parent_dir.components().count()),
+            walk_type,
+            dir,
+            parent_node,
+            1,
+        )?;
 
         self.insert_walk(time, walk_type, Walk::new(walk_depth), parent_dir);
 
@@ -407,8 +435,13 @@ impl Inner {
         }
 
         let grandparent_node = ancestor.get_node(suffix.parent()?)?;
-        let walk_depth =
-            should_merge_into_ancestor(self.walk_threshold, walk_type, dir, grandparent_node, 2)?;
+        let walk_depth = should_merge_into_ancestor(
+            self.walk_threshold(grandparent_dir.components().count()),
+            walk_type,
+            dir,
+            grandparent_node,
+            2,
+        )?;
 
         self.insert_walk(time, walk_type, Walk::new(walk_depth), grandparent_dir);
 
@@ -427,12 +460,19 @@ impl Inner {
         let ancestor_dir = parent_dir.strip_suffix(suffix, true)?;
         let (head, _) = suffix.split_first_component()?;
 
+        let walk_threshold = walk_threshold(
+            self.walk_threshold,
+            self.lax_depth,
+            self.strict_multiplier,
+            ancestor_dir.components().count(),
+        );
+
         // Check if the containing walk's node has N children with descendants that
         // have pushed to the next depth. The idea is we want some confidence before
         // expanding a huge walk deeper, so we wait until we've seen depth
         // advancements that bubble up to at least N different children of the walk
         // root.
-        if ancestor.insert_advanced_child(walk_type, head.to_owned()) >= self.walk_threshold {
+        if ancestor.insert_advanced_child(walk_type, head.to_owned()) >= walk_threshold {
             let depth = ancestor
                 .get_dominating_walk(walk_type)
                 .map_or(0, |w| w.depth)
@@ -467,6 +507,30 @@ impl Inner {
         self.last_gc_time = time;
 
         deleted_walks > 0
+    }
+
+    fn walk_threshold(&self, walk_root_depth: usize) -> usize {
+        walk_threshold(
+            self.walk_threshold,
+            self.lax_depth,
+            self.strict_multiplier,
+            walk_root_depth,
+        )
+    }
+}
+
+fn walk_threshold(
+    base_threshold: usize,
+    lax_depth: usize,
+    strict_multiplier: usize,
+    walk_root_depth: usize,
+) -> usize {
+    // Add a threshold multiplier for walk roots that are shallower than `lax_depth`. This
+    // makes it harder for walks to percolate "too high".
+    if walk_root_depth < lax_depth {
+        (strict_multiplier * base_threshold).max(base_threshold)
+    } else {
+        base_threshold
     }
 }
 

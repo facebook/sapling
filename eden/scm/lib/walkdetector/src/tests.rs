@@ -639,3 +639,29 @@ fn test_counters() {
     detector.file_loaded(p("dir2/b"));
     assert_eq!(get_counters(p(""), WalkType::File), (4, 0, 1, 3, 1));
 }
+
+#[test]
+fn test_stricter_threshold() {
+    let detector = Detector::new();
+    detector.set_walk_threshold(TEST_WALK_THRESHOLD);
+    detector.set_lax_depth(1);
+    detector.set_strict_multiplier(2);
+
+    detector.file_loaded(p("dir1/a"));
+    detector.file_loaded(p("dir1/b"));
+
+    detector.file_loaded(p("dir2/a"));
+    detector.file_loaded(p("dir2/b"));
+
+    // Walk didn't get propagated to root due to stricter threshold above depth 1.
+    assert_eq!(detector.file_walks(), vec![(p("dir1"), 0), (p("dir2"), 0)]);
+
+    detector.file_loaded(p("dir3/a"));
+    detector.file_loaded(p("dir3/b"));
+
+    detector.file_loaded(p("dir4/a"));
+    detector.file_loaded(p("dir4/b"));
+
+    // Still eventually gets propagated.
+    assert_eq!(detector.file_walks(), vec![(p(""), 1)]);
+}
