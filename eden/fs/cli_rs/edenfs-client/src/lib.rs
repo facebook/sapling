@@ -24,6 +24,7 @@ pub mod journal;
 pub mod local_store;
 pub mod methods;
 mod mounttable;
+pub mod prefetch_files;
 pub mod readdir;
 pub mod redirect;
 pub mod request_factory;

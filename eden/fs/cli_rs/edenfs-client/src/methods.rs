@@ -20,6 +20,7 @@ pub enum EdenThriftMethod {
     GetCounter,
     PredictiveGlobFiles,
     PrefetchFiles,
+    PrefetchFilesV2,
     GlobFiles,
     ReadDir,
     GetAccessCounts,
