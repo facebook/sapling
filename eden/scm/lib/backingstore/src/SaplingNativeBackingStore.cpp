@@ -78,7 +78,7 @@ folly::Try<std::shared_ptr<Tree>> SaplingNativeBackingStore::getTree(
         rust::Slice<const uint8_t>{node.data(), node.size()},
         fetch_mode);
 
-    if (tree) {
+    if (tree && cause != FetchCause::Prefetch) {
       sapling_backingstore_witness_dir_read(
           *store_.get(),
           rust::Slice<const uint8_t>{
@@ -187,7 +187,7 @@ folly::Try<std::unique_ptr<folly::IOBuf>> SaplingNativeBackingStore::getBlob(
         rust::Slice<const uint8_t>{node.data(), node.size()},
         fetch_mode);
 
-    if (blob) {
+    if (blob && cause != FetchCause::Prefetch) {
       sapling_backingstore_witness_file_read(
           *store_.get(),
           rust::Str{path.view().data(), path.view().size()},
@@ -225,10 +225,12 @@ void SaplingNativeBackingStore::getBlobBatch(
         request.cause,
     });
 
-    sapling_backingstore_witness_file_read(
-        *store_.get(),
-        rust::Str{request.path.view().data(), request.path.view().size()},
-        fetch_mode == FetchMode::LocalOnly);
+    if (request.cause != FetchCause::Prefetch) {
+      sapling_backingstore_witness_file_read(
+          *store_.get(),
+          rust::Str{request.path.view().data(), request.path.view().size()},
+          fetch_mode == FetchMode::LocalOnly);
+    }
   }
 
   sapling_backingstore_get_blob_batch(

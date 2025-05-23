@@ -359,7 +359,9 @@ pub fn sapling_backingstore_get_tree_batch(
                 Err(error) => (format!("{:?}", error), SharedPtr::null()),
             };
 
-            if !requests[idx].path_data.is_null() {
+            if requests[idx].cause != ffi::FetchCause::Prefetch
+                && !requests[idx].path_data.is_null()
+            {
                 if let Some(tree) = tree.as_ref() {
                     let path_bytes: &[u8] = unsafe {
                         std::slice::from_raw_parts(
