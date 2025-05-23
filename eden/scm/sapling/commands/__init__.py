@@ -2746,7 +2746,7 @@ def _dograft(ui, to_repo, *revs, from_repo=None, **opts):
         # commit
         editor = cmdutil.getcommiteditor(editform="graft", **opts)
         message, _is_from_user = _makegraftmessage(
-            to_repo, ctx, opts, from_paths, to_paths
+            to_repo, ctx, opts, from_paths, to_paths, from_repo
         )
         node = to_repo.commit(
             text=message, user=user, date=date, extra=extra, editor=editor
@@ -2764,20 +2764,25 @@ def _dograft(ui, to_repo, *revs, from_repo=None, **opts):
     return 0
 
 
-def _makegraftmessage(repo, ctx, opts, from_paths, to_paths):
+def _makegraftmessage(to_repo, ctx, opts, from_paths, to_paths, from_repo):
     opts = dict(opts)
 
     if not opts.get("logfile") and not opts.get("message"):
         opts["message"] = ctx.description()
 
-    description = cmdutil.logmessage(repo, opts)
+    description = cmdutil.logmessage(to_repo, opts)
     is_from_user = description != ctx.description()
 
+    is_crossrepo = from_repo != to_repo
     message = []
     if from_paths:
         # For xdir grafts, include "grafted from" breadcrumb by default.
         if opts.get("log") is not False:
-            message.append("Grafted from %s" % ctx.hex())
+            if is_crossrepo:
+                from_repo_url = from_repo.ui.config("paths", "default")
+                message.append("Grafted %s from %s" % (ctx.hex(), from_repo_url))
+            else:
+                message.append("Grafted %s" % ctx.hex())
             for f, t in zip(from_paths, to_paths):
                 message.append("- Grafted %s to %s" % (f or "root directory", t))
 

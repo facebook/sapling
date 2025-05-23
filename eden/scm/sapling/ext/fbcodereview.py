@@ -83,8 +83,8 @@ DESCRIPTION_REGEX: Pattern[str] = re.compile(
     "(?P<id>[a-f0-9]+)"  # rev
 )
 
-# e.g.: Grafted from e8470334d2058106534ac7d72485e6bfaa76ca01
-GRAFT_INFO_REGEX: Pattern[str] = re.compile("(?m)^(Grafted from [a-f0-9]+)")
+# e.g.: Grafted e8470334d2058106534ac7d72485e6bfaa76ca01
+GRAFT_INFO_REGEX: Pattern[str] = re.compile("(?m)^(Grafted [a-f0-9]+)$")
 
 DEFAULT_TIMEOUT = 60
 MAX_CONNECT_RETRIES = 3
@@ -155,8 +155,8 @@ def makebackoutmessage(orig, repo, message: str, node):
     return message
 
 
-def makegraftmessage(orig, repo, ctx, opts, from_paths, to_paths):
-    message, is_from_user = orig(repo, ctx, opts, from_paths, to_paths)
+def makegraftmessage(orig, repo, ctx, opts, from_paths, to_paths, from_repo):
+    message, is_from_user = orig(repo, ctx, opts, from_paths, to_paths, from_repo)
     if not from_paths:
         return message, is_from_user
 

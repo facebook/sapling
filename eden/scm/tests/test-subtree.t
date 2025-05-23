@@ -276,7 +276,7 @@ test subtree graft
   grafting 78072751cf70 "C"
   merging bar/x and foo/x to bar/x
   $ hg log -G -T '{node|short} {desc|firstline}\n'
-  @  d123f5ccb323 Graft "C"
+  @  4e260db10c28 Graft "C"
   │
   o  5e3aa22b08c2 subtree copy foo -> bar
   │
@@ -286,14 +286,14 @@ test subtree graft
   │
   o  2f10237b4399 A
   $ hg show
-  commit:      d123f5ccb323
+  commit:      4e260db10c28
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
   files:       bar/x
   description:
   Graft "C"
   
-  Grafted from 78072751cf70f1ca47671c625f3b2d7f86f45f00
+  Grafted 78072751cf70f1ca47671c625f3b2d7f86f45f00
   - Grafted foo to bar
   
   
@@ -324,14 +324,14 @@ test 'subtree graft -m'
   grafting 78072751cf70 "C"
   merging bar/x and foo/x to bar/x
   $ hg show
-  commit:      992bd7fe6e47
+  commit:      6592d0497ef7
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
   files:       bar/x
   description:
   new C
   
-  Grafted from 78072751cf70f1ca47671c625f3b2d7f86f45f00
+  Grafted 78072751cf70f1ca47671c625f3b2d7f86f45f00
   - Grafted foo to bar
   
   
@@ -366,14 +366,14 @@ test 'subtree graft -m' with test plan
   grafting 78072751cf70 "C"
   merging bar/x and foo/x to bar/x
   $ hg show
-  commit:      29c0d2953e8e
+  commit:      a92251181d99
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
   files:       bar/x
   description:
   new C
   
-  Grafted from 78072751cf70f1ca47671c625f3b2d7f86f45f00
+  Grafted 78072751cf70f1ca47671c625f3b2d7f86f45f00
   - Grafted foo to bar
   
   Test Plan:
