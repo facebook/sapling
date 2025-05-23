@@ -763,3 +763,51 @@ fn test_huge_directory() {
     detector.file_loaded(p("dir3/b"));
     assert_eq!(detector.file_walks(), vec![(p(""), 1)]);
 }
+
+#[test]
+fn test_slow_walk() {
+    let detector = Detector::new();
+    detector.set_walk_threshold(3);
+    detector.set_gc_interval(Duration::from_secs(1));
+    detector.set_gc_timeout(Duration::from_secs(3));
+
+    let mut epoch = Instant::now();
+    detector.set_now(epoch);
+
+    detector.file_loaded(p("dir/a"));
+    detector.file_loaded(p("dir/b"));
+    detector.file_loaded(p("dir/c"));
+    assert_eq!(detector.file_walks(), vec![(p("dir"), 0)]);
+
+    // Slowly (relative to GC timeout) advance the walk. Make sure the "dir" walk doesn't time out
+    // while we are making progress.
+    epoch += Duration::from_secs(2);
+    detector.set_now(epoch);
+
+    detector.file_loaded(p("dir/dir_1/a"));
+    detector.file_loaded(p("dir/dir_1/b"));
+    detector.file_loaded(p("dir/dir_1/c"));
+    assert_eq!(
+        detector.file_walks(),
+        vec![(p("dir"), 0), (p("dir/dir_1"), 0)]
+    );
+
+    epoch += Duration::from_secs(2);
+    detector.set_now(epoch);
+
+    detector.file_loaded(p("dir/dir_2/a"));
+    detector.file_loaded(p("dir/dir_2/b"));
+    detector.file_loaded(p("dir/dir_2/c"));
+    assert_eq!(
+        detector.file_walks(),
+        vec![(p("dir"), 0), (p("dir/dir_1"), 0), (p("dir/dir_2"), 0)]
+    );
+
+    epoch += Duration::from_secs(2);
+    detector.set_now(epoch);
+
+    detector.file_loaded(p("dir/dir_3/a"));
+    detector.file_loaded(p("dir/dir_3/b"));
+    detector.file_loaded(p("dir/dir_3/c"));
+    assert_eq!(detector.file_walks(), vec![(p("dir"), 1)]);
+}

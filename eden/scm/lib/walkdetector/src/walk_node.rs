@@ -487,7 +487,7 @@ impl WalkNode {
 
             if expired && has_walk {
                 walks_removed += 1;
-                node.log_walk_end(&path);
+                node.log_walk_end(path);
             }
 
             if expired && keep_me {

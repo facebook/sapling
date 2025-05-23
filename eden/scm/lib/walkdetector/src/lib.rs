@@ -412,7 +412,9 @@ impl Inner {
         }
 
         // Check if we have a containing walk whose depth boundary should be increased.
-        if let Some((ancestor_dir, new_depth)) = self.should_advance_ancestor_walk(walk_type, dir) {
+        if let Some((ancestor_dir, new_depth)) =
+            self.should_advance_ancestor_walk(time, walk_type, dir)
+        {
             self.insert_walk(time, walk_type, Walk::new(new_depth), ancestor_dir);
         }
     }
@@ -428,6 +430,10 @@ impl Inner {
 
         let parent_dir = dir.parent()?;
         let parent_node = self.node.get_node(parent_dir)?;
+
+        // Touch the ancestor's last access time. We don't want the ancestor's walk to GC while we
+        // are still "making progress" towards advancing its walk.
+        parent_node.last_access.store(time);
 
         let walk_depth = should_merge_into_ancestor(
             self.walk_threshold(parent_dir.components().count()),
@@ -465,6 +471,10 @@ impl Inner {
             return None;
         }
 
+        // Touch the ancestor's last access time. We don't want the ancestor's walk to GC while we
+        // are still "making progress" towards advancing its walk.
+        ancestor.last_access.store(time);
+
         let grandparent_node = ancestor.get_node(suffix.parent()?)?;
         let walk_depth = should_merge_into_ancestor(
             self.walk_threshold(grandparent_dir.components().count()),
@@ -484,13 +494,27 @@ impl Inner {
     /// (containing_dir, new_depth).
     fn should_advance_ancestor_walk<'a>(
         &mut self,
+        time: Instant,
         walk_type: WalkType,
         dir: &'a RepoPath,
     ) -> Option<(&'a RepoPath, usize)> {
         let parent_dir = dir.parent()?;
         let (ancestor, suffix) = self.node.get_owning_node_mut(walk_type, parent_dir)?;
         let ancestor_dir = parent_dir.strip_suffix(suffix, true)?;
-        let (head, _) = suffix.split_first_component()?;
+
+        let head = if suffix.is_empty() {
+            // If we have no suffix, then `ancestor_dir == parent_dir`. Tha name of the advanced
+            // child is the last part of `dir`.
+            dir.split_last_component()?.1
+        } else {
+            // If we have a suffix, that means `ancestor_dir != parent_dir`. The name of the
+            // advanced child is the first part of the suffix.
+            suffix.split_first_component()?.0
+        };
+
+        // Touch the ancestor's last access time. We don't want the ancestor's walk to GC while we
+        // are still "making progress" towards advancing its walk.
+        ancestor.last_access.store(time);
 
         let walk_threshold = walk_threshold(
             self.walk_threshold,
