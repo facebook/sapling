@@ -18,15 +18,14 @@ use std::time::Instant;
 use manifest::Manifest;
 use parking_lot::RwLock;
 use pathmatcher::DepthMatcher;
-use pathmatcher::IntersectMatcher;
-use pathmatcher::TreeMatcher;
-use pathmatcher::make_glob_recursive;
-use pathmatcher::plain_to_glob;
+use pathmatcher::DirectoryMatch;
+use pathmatcher::Matcher;
 use repo::ReadTreeManifest;
 use storemodel::FileStore;
 use types::FetchContext;
 use types::HgId;
 use types::Key;
+use types::RepoPath;
 use types::RepoPathBuf;
 use types::fetch_cause::FetchCause;
 use types::fetch_mode::FetchMode;
@@ -251,17 +250,6 @@ pub(crate) fn prefetch(
         let mut file_count = 0;
         let start_time = Instant::now();
 
-        let dir_matcher = match TreeMatcher::from_rules(
-            std::iter::once(make_glob_recursive(&plain_to_glob(walk_root.as_str()))),
-            true,
-        ) {
-            Ok(matcher) => matcher,
-            Err(err) => {
-                tracing::error!(?err, "error constructing TreeMatcher");
-                return;
-            }
-        };
-
         let walk_depth = if want_file_content {
             walk_depth
         } else {
@@ -270,16 +258,7 @@ pub(crate) fn prefetch(
             walk_depth + 1
         };
 
-        let start_depth = walk_root.components().count();
-        let depth_matcher = DepthMatcher::new(
-            // If we have a starting depth offset, increase the matcher's min_depth. This is so we
-            // skip prefetching work that is already being handled by another active prefetch for
-            // the same root at a shallow depth.
-            Some(start_depth + depth_offset.unwrap_or_default()),
-            Some(start_depth + walk_depth),
-        );
-
-        let matcher = IntersectMatcher::new(vec![Arc::new(dir_matcher), Arc::new(depth_matcher)]);
+        let matcher = WalkMatcher::new(walk_root.to_owned(), walk_depth, depth_offset);
 
         // This iterator is populated async by the manifest iterator.
         let files = manifest.files(matcher);
@@ -379,6 +358,47 @@ pub(crate) fn prefetch(
     });
 
     handle
+}
+
+// A pathmatcher::Matcher impl that matches a simple directory prefix along with a depth filter.
+struct WalkMatcher {
+    depth_matcher: DepthMatcher,
+    dir: RepoPathBuf,
+}
+
+impl WalkMatcher {
+    fn new(dir: RepoPathBuf, walk_depth: usize, depth_offset: Option<usize>) -> Self {
+        let start_depth = dir.components().count();
+        Self {
+            depth_matcher: DepthMatcher::new(
+                // If we have a starting depth offset, increase the matcher's min_depth. This is so we
+                // skip prefetching work that is already being handled by another active prefetch for
+                // the same root at a shallow depth.
+                Some(start_depth + depth_offset.unwrap_or_default()),
+                Some(start_depth + walk_depth),
+            ),
+            dir,
+        }
+    }
+}
+
+impl Matcher for WalkMatcher {
+    fn matches_directory(&self, path: &RepoPath) -> anyhow::Result<DirectoryMatch> {
+        // Check that either path is a prefix of self.dir (i.e. later might be under self.dir), or
+        // self.dir is a prefix of path (i.e. we are under self.dir).
+        if !path.starts_with(&self.dir, true) && !self.dir.starts_with(path, true) {
+            return Ok(DirectoryMatch::Nothing);
+        }
+
+        self.depth_matcher.matches_directory(path)
+    }
+
+    fn matches_file(&self, path: &RepoPath) -> anyhow::Result<bool> {
+        if !path.starts_with(&self.dir, true) {
+            return Ok(false);
+        }
+        self.depth_matcher.matches_file(path)
+    }
 }
 
 #[derive(Clone, Default, Debug)]
