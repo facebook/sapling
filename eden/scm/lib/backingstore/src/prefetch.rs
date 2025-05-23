@@ -64,6 +64,11 @@ pub(crate) fn prefetch_manager(
         // detector witnesses deeper accesses and expands the depth boundary.
         let mut prefetches = HashMap::<(RepoPathBuf, bool), Vec<(usize, PrefetchHandle)>>::new();
 
+        // Big batches of shallow depth directory prefetches. We don't address the prefetches
+        // per-walk because, since they are batched, there is no way to cancel individual
+        // prefetches, anyway.
+        let mut batch_dir_prefetches = Vec::<PrefetchHandle>::new();
+
         // Remember which active walks we have already finished prefetching (so we don't kick of a
         // new prefetch).
         let mut handled_prefetches = HashSet::<((RepoPathBuf, bool), usize)>::new();
@@ -108,6 +113,7 @@ pub(crate) fn prefetch_manager(
                 // doing pointless prefetching based on the old commit.
                 prefetches.clear();
                 handled_prefetches.clear();
+                batch_dir_prefetches.clear();
                 current_manifest.take();
             }
 
@@ -164,6 +170,8 @@ pub(crate) fn prefetch_manager(
                 }
             });
 
+            batch_dir_prefetches.retain(|handle| !handle.is_canceled());
+
             // Re-use a cached TreeManifest if available. It is thread safe and cheaply cloneable
             // when used read-only.
             let mf: TreeManifest = match current_manifest {
@@ -180,9 +188,44 @@ pub(crate) fn prefetch_manager(
                 },
             };
 
+            const SHALLOW_PREFETCH_BATCH_SIZE: usize = 100;
+            let mut batchable_walks = Vec::<(RepoPathBuf, usize)>::new();
+            let mut batch_prefetch =
+                |batch: &mut Vec<(RepoPathBuf, usize)>, handled: &mut HashSet<_>| {
+                    if batch.is_empty() {
+                        return;
+                    }
+
+                    if batch_dir_prefetches.len() >= MAX_CONCURRENT_PREFETCHES {
+                        tracing::debug!(
+                            batch_size = batch.len(),
+                            "not kicking off new batch of shallow dir walks - prefetches full"
+                        );
+                    } else {
+                        for (root, depth) in batch.iter() {
+                            handled.insert(((root.clone(), false), *depth));
+                        }
+                        batch_dir_prefetches.push(prefetch(
+                            mf.clone(),
+                            file_store.clone(),
+                            detector.clone(),
+                            PrefetchWork::DirectoriesOnly(std::mem::take(batch)),
+                        ));
+                    }
+                };
+
             for new_walk in active_walks {
                 // We have already previously handled this walk.
                 if handled_prefetches.contains(&new_walk) {
+                    continue;
+                }
+
+                // Shallow, directory-only walk - batch them together for better throughput.
+                if !new_walk.0.1 && new_walk.1 <= 2 {
+                    batchable_walks.push((new_walk.0.0, new_walk.1));
+                    if batchable_walks.len() >= SHALLOW_PREFETCH_BATCH_SIZE {
+                        batch_prefetch(&mut batchable_walks, &mut handled_prefetches);
+                    }
                     continue;
                 }
 
@@ -237,6 +280,8 @@ pub(crate) fn prefetch_manager(
                 // Make sure the prefetches stay ordered by depth.
                 prefetches_for_this_root.sort_by_key(|(depth, _handle)| *depth);
             }
+
+            batch_prefetch(&mut batchable_walks, &mut handled_prefetches);
         }
     });
 
@@ -705,6 +750,84 @@ mod test {
                 Key::new(RepoPathBuf::new(), foo_hgid),
                 Key::new(RepoPathBuf::new(), bar_hgid)
             ]
+        );
+
+        Ok(())
+    }
+
+    #[test]
+    fn test_batch_prefetch_dirs() -> anyhow::Result<()> {
+        let store = Arc::new(TestStore::new());
+
+        let file_store = store.clone() as Arc<dyn FileStore>;
+
+        let foo_path: RepoPathBuf = "dir1/foo".to_string().try_into()?;
+        let bar_path: RepoPathBuf = "dir2/bar".to_string().try_into()?;
+
+        let foo_hgid = file_store.insert_data(Default::default(), &foo_path, b"foo content")?;
+        let bar_hgid = file_store.insert_data(Default::default(), &bar_path, b"bar content")?;
+
+        let mut mf = TreeManifest::ephemeral(store.clone());
+
+        // Create corresponding manifest entries.
+        mf.insert(
+            foo_path.clone(),
+            FileMetadata::new(foo_hgid, types::FileType::Regular),
+        )?;
+
+        mf.insert(
+            bar_path.clone(),
+            FileMetadata::new(bar_hgid, types::FileType::Regular),
+        )?;
+
+        for (path, _id, text, _p1, _p2) in mf.finalize(Vec::new())? {
+            store.insert_data(Default::default(), &path, text.as_ref())?;
+        }
+
+        let detector = Arc::new(walkdetector::Detector::new());
+        detector.set_walk_threshold(2);
+
+        let mut rng = ChaChaRng::from_seed([0u8; 32]);
+        let stub_commit_id = HgId::random(&mut rng);
+
+        let tree_resolver = StubTreeResolver([(stub_commit_id, mf)].into());
+
+        let kick_manager = prefetch_manager(
+            Arc::new(tree_resolver),
+            file_store,
+            Arc::new(RwLock::new(Some(stub_commit_id.to_hex()))),
+            detector.clone(),
+        );
+
+        // Trigger a directory walk for each of "dir1" and "dir2".
+        detector.dir_loaded(RepoPath::from_static_str("dir1/a"), 0, 0);
+        detector.dir_loaded(RepoPath::from_static_str("dir1/b"), 0, 0);
+        detector.dir_loaded(RepoPath::from_static_str("dir2/a"), 0, 0);
+        detector.dir_loaded(RepoPath::from_static_str("dir2/b"), 0, 0);
+
+        kick_manager.send(())?;
+
+        // Wait for prefetch to finish.
+        for _ in 0..10 {
+            if store.prefetches().is_empty() {
+                std::thread::sleep(Duration::from_millis(1));
+            }
+        }
+
+        // Check that we fetched both "dir1" and "dir2" in the same batch.
+        assert_eq!(
+            store
+                .prefetches()
+                .into_iter()
+                .map(|batch| batch.into_iter().map(|k| k.path).collect())
+                .collect::<Vec<Vec<RepoPathBuf>>>(),
+            vec![
+                vec!["".to_string().try_into()?],
+                vec![
+                    "dir1".to_string().try_into()?,
+                    "dir2".to_string().try_into()?
+                ],
+            ],
         );
 
         Ok(())
