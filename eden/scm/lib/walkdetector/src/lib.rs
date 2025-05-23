@@ -32,11 +32,18 @@ pub struct Detector {
 }
 
 struct Inner {
+    // "How many children must be accessed before we consider parent walked?"
+    // This is the main threshold to tune detector aggro.
     walk_threshold: usize,
+    // Last time we ran GC.
     last_gc_time: Instant,
+    // How often we want to run GC.
     gc_interval: Duration,
+    // How long after a node was last accessed until we GC it.
     gc_timeout: Duration,
+    // Root node used to track walks.
     node: WalkNode,
+    // Stub "now" value used by tests.
     stub_now: Option<Instant>,
 }
 
@@ -51,152 +58,6 @@ impl Default for Inner {
             stub_now: None,
         }
     }
-}
-
-#[derive(Default)]
-pub struct Walk {
-    depth: usize,
-    file_loads: AtomicU64,
-    file_reads: AtomicU64,
-    file_preloads: AtomicU64,
-    dir_loads: AtomicU64,
-    dir_reads: AtomicU64,
-    logged_start: AtomicBool,
-}
-
-impl std::fmt::Debug for Walk {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        // Don't include all the counters - they are very noisy in traces.
-        f.debug_struct("Walk").field("depth", &self.depth).finish()
-    }
-}
-
-impl Walk {
-    const BIG_WALK_THRESHOLD: u64 = 10_000;
-
-    fn new(depth: usize) -> Self {
-        Self {
-            depth,
-            ..Default::default()
-        }
-    }
-
-    fn for_type(t: WalkType, depth: usize, initial_loads: u64) -> Self {
-        let w = Self::new(depth);
-        let counter = match t {
-            WalkType::Directory => &w.dir_loads,
-            WalkType::File => &w.file_loads,
-        };
-        counter.fetch_add(initial_loads, Ordering::Relaxed);
-        w
-    }
-
-    fn absorb_counters(&self, other: &Self) {
-        // Race conditions are not a big deal.
-        if other.logged_start.load(Ordering::Relaxed) {
-            self.logged_start.store(true, Ordering::Relaxed);
-        }
-
-        // Will not notice beginning of "big walk", but next file access (or GC) will.
-        self.file_loads
-            .fetch_add(other.file_loads.load(Ordering::Relaxed), Ordering::AcqRel);
-        self.dir_loads
-            .fetch_add(other.dir_loads.load(Ordering::Relaxed), Ordering::AcqRel);
-        self.file_reads
-            .fetch_add(other.file_reads.load(Ordering::Relaxed), Ordering::AcqRel);
-        self.dir_reads
-            .fetch_add(other.dir_reads.load(Ordering::Relaxed), Ordering::AcqRel);
-        self.file_preloads.fetch_add(
-            other.file_preloads.load(Ordering::Relaxed),
-            Ordering::AcqRel,
-        );
-    }
-
-    fn inc_file_load(&self, root: &RepoPath, val: u64) {
-        if self.file_loads.fetch_add(val, Ordering::AcqRel) == Self::BIG_WALK_THRESHOLD - 1 {
-            self.maybe_log_big_walk(root);
-        }
-    }
-
-    fn inc_file_read(&self, root: &RepoPath, val: u64) {
-        if self.file_reads.fetch_add(val, Ordering::Relaxed) == Self::BIG_WALK_THRESHOLD - 1 {
-            self.maybe_log_big_walk(root);
-        }
-    }
-
-    fn inc_dir_load(&self, root: &RepoPath, val: u64) {
-        if self.dir_loads.fetch_add(val, Ordering::AcqRel) == Self::BIG_WALK_THRESHOLD - 1 {
-            self.maybe_log_big_walk(root);
-        }
-    }
-
-    fn inc_dir_read(&self, root: &RepoPath, val: u64) {
-        if self.dir_reads.fetch_add(val, Ordering::Relaxed) == Self::BIG_WALK_THRESHOLD - 1 {
-            self.maybe_log_big_walk(root);
-        }
-    }
-
-    fn maybe_log_big_walk(&self, root: &RepoPath) {
-        if self.logged_start.swap(true, Ordering::AcqRel) {
-            return;
-        }
-
-        tracing::info!(
-            %root,
-            file_loads = self.file_loads.load(Ordering::Relaxed),
-            file_reads = self.file_reads.load(Ordering::Relaxed),
-            file_preloads = self.file_preloads.load(Ordering::Relaxed),
-            dir_loads = self.dir_loads.load(Ordering::Relaxed),
-            dir_reads = self.dir_reads.load(Ordering::Relaxed),
-            "big walk started",
-        );
-    }
-
-    fn log_end(&self, root: &RepoPath) {
-        if self.file_loads.load(Ordering::Relaxed) >= Self::BIG_WALK_THRESHOLD
-            || self.file_reads.load(Ordering::Relaxed) >= Self::BIG_WALK_THRESHOLD
-            || self.file_preloads.load(Ordering::Relaxed) >= Self::BIG_WALK_THRESHOLD
-            || self.dir_loads.load(Ordering::Relaxed) >= Self::BIG_WALK_THRESHOLD
-            || self.dir_reads.load(Ordering::Relaxed) >= Self::BIG_WALK_THRESHOLD
-        {
-            tracing::info!(
-                %root,
-                file_loads = self.file_loads.load(Ordering::Relaxed),
-                file_reads = self.file_reads.load(Ordering::Relaxed),
-                file_preloads = self.file_preloads.load(Ordering::Relaxed),
-                dir_loads = self.dir_loads.load(Ordering::Relaxed),
-                dir_reads = self.dir_reads.load(Ordering::Relaxed),
-                "big walk ended",
-            );
-
-            tracing::debug!(
-                target: "big_walk",
-                walk_root = %root,
-                file_loads = self.file_loads.load(Ordering::Relaxed),
-                file_reads = self.file_reads.load(Ordering::Relaxed),
-                file_preloads = self.file_preloads.load(Ordering::Relaxed),
-                dir_loads = self.dir_loads.load(Ordering::Relaxed),
-                dir_reads = self.dir_reads.load(Ordering::Relaxed),
-            );
-        }
-    }
-
-    #[cfg(test)]
-    fn counters(&self) -> (u64, u64, u64, u64, u64) {
-        (
-            self.file_loads.load(Ordering::Relaxed),
-            self.file_reads.load(Ordering::Relaxed),
-            self.file_preloads.load(Ordering::Relaxed),
-            self.dir_loads.load(Ordering::Relaxed),
-            self.dir_reads.load(Ordering::Relaxed),
-        )
-    }
-}
-
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
-pub enum WalkType {
-    File,
-    Directory,
 }
 
 // How many children must be accessed in a directory to consider the directory "walked".
@@ -642,6 +503,162 @@ fn should_merge_into_ancestor(
         Some(walk_depth + ancestor_distance)
     } else {
         None
+    }
+}
+
+#[derive(Default)]
+pub struct Walk {
+    // Depth of this walk (relative to the root directory of the walk).
+    depth: usize,
+
+    // How many heavy/remote file fetches we've observed under this walk.
+    file_loads: AtomicU64,
+    // How many light/cached file fetches we've observed under this walk.
+    file_reads: AtomicU64,
+    // How many remote file prefetches we've been informed about for this walk.
+    file_preloads: AtomicU64,
+    // How many heavy/remote dir fetches we've observed under this walk.
+    dir_loads: AtomicU64,
+    // How many light/cached dir fetches we've observed under this walk.
+    dir_reads: AtomicU64,
+
+    // Whether we have already logged the start of this walk.
+    logged_start: AtomicBool,
+}
+
+impl std::fmt::Debug for Walk {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        // Don't include all the counters - they are very noisy in traces.
+        f.debug_struct("Walk").field("depth", &self.depth).finish()
+    }
+}
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum WalkType {
+    File,
+    Directory,
+}
+
+impl Walk {
+    /// Arbitrary threshold for logging a "big" walk.
+    const BIG_WALK_THRESHOLD: u64 = 10_000;
+
+    fn new(depth: usize) -> Self {
+        Self {
+            depth,
+            ..Default::default()
+        }
+    }
+
+    fn for_type(t: WalkType, depth: usize, initial_loads: u64) -> Self {
+        let w = Self::new(depth);
+        let counter = match t {
+            WalkType::Directory => &w.dir_loads,
+            WalkType::File => &w.file_loads,
+        };
+        counter.fetch_add(initial_loads, Ordering::Relaxed);
+        w
+    }
+
+    fn absorb_counters(&self, other: &Self) {
+        // Race conditions are not a big deal.
+        if other.logged_start.load(Ordering::Relaxed) {
+            self.logged_start.store(true, Ordering::Relaxed);
+        }
+
+        // Will not notice beginning of "big walk", but next file access (or GC) will.
+        self.file_loads
+            .fetch_add(other.file_loads.load(Ordering::Relaxed), Ordering::AcqRel);
+        self.dir_loads
+            .fetch_add(other.dir_loads.load(Ordering::Relaxed), Ordering::AcqRel);
+        self.file_reads
+            .fetch_add(other.file_reads.load(Ordering::Relaxed), Ordering::AcqRel);
+        self.dir_reads
+            .fetch_add(other.dir_reads.load(Ordering::Relaxed), Ordering::AcqRel);
+        self.file_preloads.fetch_add(
+            other.file_preloads.load(Ordering::Relaxed),
+            Ordering::AcqRel,
+        );
+    }
+
+    fn inc_file_load(&self, root: &RepoPath, val: u64) {
+        if self.file_loads.fetch_add(val, Ordering::AcqRel) == Self::BIG_WALK_THRESHOLD - 1 {
+            self.maybe_log_big_walk(root);
+        }
+    }
+
+    fn inc_file_read(&self, root: &RepoPath, val: u64) {
+        if self.file_reads.fetch_add(val, Ordering::Relaxed) == Self::BIG_WALK_THRESHOLD - 1 {
+            self.maybe_log_big_walk(root);
+        }
+    }
+
+    fn inc_dir_load(&self, root: &RepoPath, val: u64) {
+        if self.dir_loads.fetch_add(val, Ordering::AcqRel) == Self::BIG_WALK_THRESHOLD - 1 {
+            self.maybe_log_big_walk(root);
+        }
+    }
+
+    fn inc_dir_read(&self, root: &RepoPath, val: u64) {
+        if self.dir_reads.fetch_add(val, Ordering::Relaxed) == Self::BIG_WALK_THRESHOLD - 1 {
+            self.maybe_log_big_walk(root);
+        }
+    }
+
+    fn maybe_log_big_walk(&self, root: &RepoPath) {
+        if self.logged_start.swap(true, Ordering::AcqRel) {
+            return;
+        }
+
+        tracing::info!(
+            %root,
+            file_loads = self.file_loads.load(Ordering::Relaxed),
+            file_reads = self.file_reads.load(Ordering::Relaxed),
+            file_preloads = self.file_preloads.load(Ordering::Relaxed),
+            dir_loads = self.dir_loads.load(Ordering::Relaxed),
+            dir_reads = self.dir_reads.load(Ordering::Relaxed),
+            "big walk started",
+        );
+    }
+
+    fn log_end(&self, root: &RepoPath) {
+        if self.file_loads.load(Ordering::Relaxed) >= Self::BIG_WALK_THRESHOLD
+            || self.file_reads.load(Ordering::Relaxed) >= Self::BIG_WALK_THRESHOLD
+            || self.file_preloads.load(Ordering::Relaxed) >= Self::BIG_WALK_THRESHOLD
+            || self.dir_loads.load(Ordering::Relaxed) >= Self::BIG_WALK_THRESHOLD
+            || self.dir_reads.load(Ordering::Relaxed) >= Self::BIG_WALK_THRESHOLD
+        {
+            tracing::info!(
+                %root,
+                file_loads = self.file_loads.load(Ordering::Relaxed),
+                file_reads = self.file_reads.load(Ordering::Relaxed),
+                file_preloads = self.file_preloads.load(Ordering::Relaxed),
+                dir_loads = self.dir_loads.load(Ordering::Relaxed),
+                dir_reads = self.dir_reads.load(Ordering::Relaxed),
+                "big walk ended",
+            );
+
+            tracing::debug!(
+                target: "big_walk",
+                walk_root = %root,
+                file_loads = self.file_loads.load(Ordering::Relaxed),
+                file_reads = self.file_reads.load(Ordering::Relaxed),
+                file_preloads = self.file_preloads.load(Ordering::Relaxed),
+                dir_loads = self.dir_loads.load(Ordering::Relaxed),
+                dir_reads = self.dir_reads.load(Ordering::Relaxed),
+            );
+        }
+    }
+
+    #[cfg(test)]
+    fn counters(&self) -> (u64, u64, u64, u64, u64) {
+        (
+            self.file_loads.load(Ordering::Relaxed),
+            self.file_reads.load(Ordering::Relaxed),
+            self.file_preloads.load(Ordering::Relaxed),
+            self.dir_loads.load(Ordering::Relaxed),
+            self.dir_reads.load(Ordering::Relaxed),
+        )
     }
 }
 
