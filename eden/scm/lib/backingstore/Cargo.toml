@@ -29,6 +29,7 @@ sapling-edenapi = { version = "0.1.0", path = "../edenapi" }
 sapling-identity = { version = "0.1.0", path = "../identity" }
 sapling-indexedlog = { version = "0.1.0", path = "../indexedlog", features = ["configurable"] }
 sapling-manifest = { version = "0.1.0", path = "../manifest" }
+sapling-manifest-tree = { version = "0.1.0", path = "../manifest-tree" }
 sapling-metrics = { version = "0.1.0", path = "../metrics" }
 sapling-pathmatcher = { version = "0.1.0", path = "../pathmatcher" }
 sapling-progress-model = { version = "0.1.0", path = "../progress/model" }
@@ -42,7 +43,6 @@ tracing-subscriber = { version = "0.3.18", features = ["chrono", "env-filter", "
 
 [dev-dependencies]
 rand_chacha = "0.3"
-sapling-manifest-tree = { version = "0.1.0", path = "../manifest-tree" }
 
 [features]
 fb = ["sapling-configloader/fb"]

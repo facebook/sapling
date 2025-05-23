@@ -16,6 +16,7 @@ use std::time::Duration;
 use std::time::Instant;
 
 use manifest::Manifest;
+use manifest_tree::TreeManifest;
 use parking_lot::RwLock;
 use pathmatcher::DepthMatcher;
 use pathmatcher::DirectoryMatch;
@@ -71,6 +72,9 @@ pub(crate) fn prefetch_manager(
         // a new commit), we drop our existing state to start fresh on the new commit.
         let mut prev_commit_id = None;
 
+        // Shared TreeManifest object to avoid duplicative tree fetching/deserialization.
+        let mut current_manifest: Option<TreeManifest> = None;
+
         // Wait for kicks, or otherwise check every second. The intermittent check is important
         // to notice that walks have stopped (because the kicks only happen on file/dir access,
         // which could altogether stop).
@@ -104,6 +108,7 @@ pub(crate) fn prefetch_manager(
                 // doing pointless prefetching based on the old commit.
                 prefetches.clear();
                 handled_prefetches.clear();
+                current_manifest.take();
             }
 
             prev_commit_id = Some(current_commit_id);
@@ -123,6 +128,12 @@ pub(crate) fn prefetch_manager(
                         .map(|(path, depth)| ((path, false), depth)),
                 )
                 .collect();
+
+            if active_walks.is_empty() {
+                // If we are done with walks (for now), then drop our cached manifest. It could be
+                // holding a lot of trees in memory.
+                current_manifest.take();
+            }
 
             // Clear entries out of `handles_prefetches` once they disappear from active walks. If
             // the walk resumes later, we should prefetch again, not assume it is "handled".
@@ -152,6 +163,22 @@ pub(crate) fn prefetch_manager(
                     true
                 }
             });
+
+            // Re-use a cached TreeManifest if available. It is thread safe and cheaply cloneable
+            // when used read-only.
+            let mf: TreeManifest = match current_manifest {
+                Some(ref mf) => mf.clone(),
+                None => match tree_resolver.get(&current_commit_id) {
+                    Ok(mf) => {
+                        current_manifest = Some(mf.clone());
+                        mf
+                    }
+                    Err(err) => {
+                        tracing::error!(?err, %current_commit_id, "error fetching root manifest");
+                        continue;
+                    }
+                },
+            };
 
             for new_walk in active_walks {
                 // We have already previously handled this walk.
@@ -188,14 +215,6 @@ pub(crate) fn prefetch_manager(
                     continue;
                 }
 
-                let mf = match tree_resolver.get(&current_commit_id) {
-                    Ok(mf) => mf,
-                    Err(err) => {
-                        tracing::error!(?err, %current_commit_id, "error fetching root manifest");
-                        continue;
-                    }
-                };
-
                 handled_prefetches.insert(new_walk.clone());
 
                 let prefetches_for_this_root = prefetches.entry(new_walk.0.clone()).or_default();
@@ -212,7 +231,7 @@ pub(crate) fn prefetch_manager(
                 // when we drop its handle.
                 prefetches_for_this_root.push((
                     new_walk.1,
-                    prefetch(mf, file_store.clone(), detector.clone(), work),
+                    prefetch(mf.clone(), file_store.clone(), detector.clone(), work),
                 ));
 
                 // Make sure the prefetches stay ordered by depth.

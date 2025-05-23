@@ -88,7 +88,6 @@ rust_library(
     }),
     test_deps = [
         "fbsource//third-party/rust:rand_chacha",
-        "//eden/scm/lib/manifest-tree:manifest-tree",
     ],
     deps = [
         "fbsource//third-party/rust:anyhow",
@@ -110,6 +109,7 @@ rust_library(
         "//eden/scm/lib/identity:identity",
         "//eden/scm/lib/indexedlog:indexedlog",
         "//eden/scm/lib/manifest:manifest",
+        "//eden/scm/lib/manifest-tree:manifest-tree",
         "//eden/scm/lib/metrics:metrics",
         "//eden/scm/lib/pathmatcher:pathmatcher",
         "//eden/scm/lib/progress/model:progress-model",
