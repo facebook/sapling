@@ -19,7 +19,9 @@ use manifest::Manifest;
 use parking_lot::RwLock;
 use pathmatcher::DepthMatcher;
 use pathmatcher::DirectoryMatch;
+use pathmatcher::DynMatcher;
 use pathmatcher::Matcher;
+use pathmatcher::UnionMatcher;
 use repo::ReadTreeManifest;
 use storemodel::FileStore;
 use types::FetchContext;
@@ -200,17 +202,17 @@ pub(crate) fn prefetch_manager(
 
                 tracing::debug!(?new_walk, "kicking off prefetch");
 
+                let work = if new_walk.0.1 {
+                    PrefetchWork::FileContent(new_walk.0.0, new_walk.1, depth_offset)
+                } else {
+                    PrefetchWork::DirectoriesOnly(vec![(new_walk.0.0, new_walk.1)])
+                };
+
                 // Kick off the actual prefetch and store its handle. The prefetch will be canceled
                 // when we drop its handle.
                 prefetches_for_this_root.push((
                     new_walk.1,
-                    prefetch(
-                        mf,
-                        file_store.clone(),
-                        detector.clone(),
-                        new_walk,
-                        depth_offset,
-                    ),
+                    prefetch(mf, file_store.clone(), detector.clone(), work),
                 ));
 
                 // Make sure the prefetches stay ordered by depth.
@@ -222,18 +224,23 @@ pub(crate) fn prefetch_manager(
     send
 }
 
-// Arbitrary cutoff for more verbose logging.
+// Arbitrary cutoffs for more verbose logging.
 const INTERESTING_DEPTH: usize = 7;
+const INTERESTING_NUMBER_OF_SMALL_WALKS: usize = 50;
+
+enum PrefetchWork {
+    DirectoriesOnly(Vec<(RepoPathBuf, usize)>),
+    FileContent(RepoPathBuf, usize, Option<usize>),
+}
 
 /// Start an async prefetch of file content by walking `manifest` using `matcher`,
 /// fetching file content of resultant files via `file_store`. Returns a handle
 /// that will cancel the prefetch on drop.
-pub(crate) fn prefetch(
+fn prefetch(
     manifest: impl Manifest + Send + Sync + 'static,
     file_store: Arc<dyn FileStore>,
     walk_detector: Arc<walkdetector::Detector>,
-    ((walk_root, want_file_content), walk_depth): ((RepoPathBuf, bool), usize),
-    depth_offset: Option<usize>,
+    work: PrefetchWork,
 ) -> PrefetchHandle {
     // The cancelation works by making our thread below return early when the handle has been
     // dropped. When it returns, it drops its manifest/file iterators, which will cause those
@@ -243,22 +250,59 @@ pub(crate) fn prefetch(
     let my_handle = handle.clone();
     // Sapling APIs are not async, so to achieve asynchronicity we create a new thread.
     std::thread::spawn(move || {
-        let interesting_walk = walk_depth >= INTERESTING_DEPTH;
+        let (file_content_root, matcher, span) = match work {
+            PrefetchWork::DirectoriesOnly(walks) => {
+                let Some((first_root, first_depth)) = walks.first() else {
+                    return;
+                };
 
-        let _span = info_if!(interesting_walk, span, "prefetch", %walk_root, walk_depth, want_file_content, ?depth_offset).entered();
+                let span = info_if!(
+                    walks.len() >= INTERESTING_NUMBER_OF_SMALL_WALKS || *first_depth >= INTERESTING_DEPTH,
+                    span,
+                    "dir prefetch",
+                    num_dir_walks=walks.len(),
+                    %first_root,
+                    first_depth,
+                )
+                .entered();
+
+                let mut matchers = Vec::new();
+                for (walk_root, walk_depth) in walks {
+                    matchers.push(Arc::new(WalkMatcher::new(
+                        walk_root,
+                        // The DepthMatcher is relative to file path depth. To fetch directories at depth=N, we
+                        // need to pretend we are fetching files at depth=N+1.
+                        walk_depth + 1,
+                        None,
+                    )) as DynMatcher);
+                }
+                (None, UnionMatcher::new_or_single(matchers), span)
+            }
+            PrefetchWork::FileContent(walk_root, depth, depth_offset) => {
+                let span = info_if!(
+                    depth >= INTERESTING_DEPTH,
+                    span,
+                    "file prefetch",
+                    %walk_root,
+                    depth,
+                )
+                .entered();
+
+                (
+                    Some(walk_root.clone()),
+                    Arc::new(WalkMatcher::new(walk_root, depth, depth_offset)) as DynMatcher,
+                    span,
+                )
+            }
+        };
+
+        // Piggy back on the original decision of whether this is an interesting (info level) prefetch or not.
+        let interesting_walk = span
+            .metadata()
+            .is_some_and(|m| m.level() == &tracing::Level::INFO);
 
         let mut file_count = 0;
         let start_time = Instant::now();
-
-        let walk_depth = if want_file_content {
-            walk_depth
-        } else {
-            // The DepthMatcher is relative to file path depth. To fetch directories at depth=N, we
-            // need to pretend we are fetching files at depth=N+1.
-            walk_depth + 1
-        };
-
-        let matcher = WalkMatcher::new(walk_root.to_owned(), walk_depth, depth_offset);
 
         // This iterator is populated async by the manifest iterator.
         let files = manifest.files(matcher);
@@ -273,7 +317,9 @@ pub(crate) fn prefetch(
 
         let consume_file_fetch = |(fctx, iter): (FetchContext, Box<dyn Iterator<Item = _>>)| {
             iter.for_each(drop);
-            walk_detector.files_preloaded(&walk_root, fctx.remote_fetch_count());
+            if let Some(walk_root) = &file_content_root {
+                walk_detector.files_preloaded(walk_root, fctx.remote_fetch_count());
+            }
         };
 
         let mut fetch_batch = |batch: &mut Vec<Key>| {
@@ -320,7 +366,7 @@ pub(crate) fn prefetch(
             }
 
             // Skip the file content fetching if we are only prefetching directories.
-            if !want_file_content {
+            if file_content_root.is_none() {
                 continue;
             }
 
@@ -465,8 +511,7 @@ mod test {
             mf.clone(),
             file_store.clone(),
             detector.clone(),
-            (("dir".to_string().try_into()?, true), 0),
-            None,
+            PrefetchWork::FileContent("dir".to_string().try_into()?, 0, None),
         );
 
         // Wait for prefetch to complete.
@@ -485,8 +530,7 @@ mod test {
             mf,
             file_store,
             detector,
-            (("dir".to_string().try_into()?, true), 1),
-            Some(1),
+            PrefetchWork::FileContent("dir".to_string().try_into()?, 1, Some(1)),
         );
 
         // Wait for prefetch to complete.
@@ -543,8 +587,7 @@ mod test {
             mf.clone(),
             file_store.clone(),
             detector.clone(),
-            (("".to_string().try_into()?, false), 0),
-            None,
+            PrefetchWork::DirectoriesOnly(vec![("".to_string().try_into()?, 0)]),
         );
 
         // Wait for prefetch to complete.
