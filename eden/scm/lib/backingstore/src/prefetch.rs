@@ -58,7 +58,7 @@ pub(crate) fn prefetch_manager(
 
     std::thread::spawn(move || {
         // Map in-progress walks to corresponding in-progress prefetch. We allow multiple
-        // in-prefetches for the same root path at different depths. This happens as the walk
+        // in-progress prefetches for the same root path at different depths. This happens as the walk
         // detector witnesses deeper accesses and expands the depth boundary.
         let mut prefetches = HashMap::<(RepoPathBuf, bool), Vec<(usize, PrefetchHandle)>>::new();
 
@@ -94,6 +94,11 @@ pub(crate) fn prefetch_manager(
                 .as_ref()
                 .is_some_and(|id| *id != current_commit_id)
             {
+                tracing::info!(
+                    ?prev_commit_id,
+                    ?current_commit_id,
+                    "clearing out state for new commit id"
+                );
                 // Our "current" commit has changed. Clear existing prefetches out - they are likely
                 // doing pointless prefetching based on the old commit.
                 prefetches.clear();
@@ -103,8 +108,9 @@ pub(crate) fn prefetch_manager(
             prev_commit_id = Some(current_commit_id);
 
             // Currently active walks according to the walk detector. Note that it will only report
-            // a single walk for any given root (e.g. as depth deepnds, [(root="foo", depth=1)] will
+            // a single walk for any given root (e.g. as depth deepens, [(root="foo", depth=1)] will
             // become [(root="foo", depth=2)], _not_ including the depth=1 walk anymore).
+            // Each walk is represented as `((root_path, wants_file_content), depth)`.
             let active_walks: HashMap<(RepoPathBuf, bool), usize> = detector
                 .file_walks()
                 .into_iter()
@@ -128,6 +134,7 @@ pub(crate) fn prefetch_manager(
             // Cancel prefetches that are done or don't correspond to an active walk anymore.
             prefetches.retain(|walk, handles| {
                 if !active_walks.contains_key(walk) {
+                    tracing::debug!(?walk, "canceling prefetch with no corresponding walk");
                     // If there is no active walk for this root, clear out all prefetches (there
                     // could be multiple at different depths). This cancels the prefetches when the
                     // walk has stopped.
@@ -137,7 +144,12 @@ pub(crate) fn prefetch_manager(
                 // Clear out prefetches at depths that have completed.
                 handles.retain(|(_, handle)| !handle.is_canceled());
 
-                !handles.is_empty()
+                if handles.is_empty() {
+                    tracing::debug!(?walk, "removing complete prefetch");
+                    false
+                } else {
+                    true
+                }
             });
 
             for new_walk in active_walks {
@@ -148,7 +160,7 @@ pub(crate) fn prefetch_manager(
 
                 let mut depth_offset = None;
 
-                // Check if we are already prefetching this root at a shallow depth.
+                // Check if we are already prefetching this root at a shallower depth.
                 let existing_but_shallower = prefetches.get(&new_walk.0).and_then(|handles| {
                     handles.last().and_then(|(depth, _)| {
                         if depth < &new_walk.1 {
@@ -163,7 +175,7 @@ pub(crate) fn prefetch_manager(
                     // Keep the existing prefetch around and start the deeper prefetch so that the
                     // two don't overlap. For example, if we are currently prefetching (root="foo",
                     // depth=1) and we now see (root="foo", depth=2), we keep the first prefetch and
-                    // create a new prefetch (root="foo", min_depth=1, max_depth=2).
+                    // create a new prefetch (root="foo", min_depth=2, max_depth=2).
                     depth_offset = Some(shallower_depth + 1);
                     tracing::debug!(
                         ?depth_offset,
@@ -186,6 +198,8 @@ pub(crate) fn prefetch_manager(
                 handled_prefetches.insert(new_walk.clone());
 
                 let prefetches_for_this_root = prefetches.entry(new_walk.0.clone()).or_default();
+
+                tracing::debug!(?new_walk, "kicking off prefetch");
 
                 // Kick off the actual prefetch and store its handle. The prefetch will be canceled
                 // when we drop its handle.
@@ -367,7 +381,7 @@ pub(crate) fn prefetch(
     handle
 }
 
-#[derive(Clone, Default)]
+#[derive(Clone, Default, Debug)]
 pub(crate) struct PrefetchHandle {
     canceled: Arc<AtomicBool>,
 }
