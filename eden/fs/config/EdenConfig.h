@@ -1450,8 +1450,9 @@ class EdenConfig : private ConfigSettingManager {
    * Controls whether EdenFS will periodically garbage collect the working
    * directory.
    *
-   * For now, periodic GC only makes sense on Windows, with unknown behavior on
-   * Linux and macOS. For that reason, setting this on non-Windows is a no-op.
+   * For now, periodic GC only makes sense on Windows. On macOS, it is
+   * currently in a limited dogfooding phase and its behavior is not
+   * yet fully defined. Behavior on Linux is unknown.
    */
   ConfigSetting<bool> enableGc{
       "experimental:enable-garbage-collection",

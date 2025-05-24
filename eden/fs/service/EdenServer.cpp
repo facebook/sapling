@@ -976,10 +976,10 @@ void EdenServer::updatePeriodicTaskIntervals(const EdenConfig& config) {
       std::chrono::duration_cast<std::chrono::milliseconds>(
           config.localStoreManagementInterval.getValue()));
   /**
-   * For now, periodic GC only makes sense on Windows, with unknown behavior on
-   * Linux and macOS.
+   * For now, periodic GC only makes sense on Windows and macOS, with unknown
+   * behavior on Linux.
    */
-  if (config.enableGc.getValue() && folly::kIsWindows) {
+  if (config.enableGc.getValue()) {
     gcTask_.updateInterval(
         std::chrono::duration_cast<std::chrono::milliseconds>(
             config.gcPeriod.getValue()));
@@ -2783,10 +2783,11 @@ void EdenServer::garbageCollectAllMounts() {
               ObjectFetchContext::getNullContextWithCauseDetail(
                   "EdenServer::garbageCollectAllMounts");
           return garbageCollectWorkingCopy(
-              mountHandle.getEdenMount(),
-              mountHandle.getRootInode(),
-              cutoff,
-              context);
+                     mountHandle.getEdenMount(),
+                     mountHandle.getRootInode(),
+                     cutoff,
+                     context)
+              .semi();
         })
         .ensure([mountHandle] {});
   }
