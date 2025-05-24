@@ -133,7 +133,7 @@ impl TreeState {
         case_sensitive: bool,
     ) -> Result<Self> {
         let store =
-            FileStore::in_memory_with_lock_path(&overlay_dirstate_path.with_extension(".lock"))?;
+            FileStore::in_memory_with_lock_path(&overlay_dirstate_path.with_extension("lock"))?;
         let root = TreeStateRoot::default();
         let tree = Tree::new();
 
@@ -168,7 +168,7 @@ impl TreeState {
         edit_func: &dyn Fn(&mut Self) -> Result<()>,
     ) -> Result<Self> {
         let mut store =
-            FileStore::in_memory_with_lock_path(&overlay_dirstate_path.with_extension(".lock"))?;
+            FileStore::in_memory_with_lock_path(&overlay_dirstate_path.with_extension("lock"))?;
         let _locked = store.lock()?;
 
         let root = TreeStateRoot::default();
