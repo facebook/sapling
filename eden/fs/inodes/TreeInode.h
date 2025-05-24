@@ -880,16 +880,14 @@ class TreeInode final : public InodeBaseMetadata<DirContents> {
 
 #ifdef __APPLE__
   /**
-   * Sends a request to the kernel to invalidate its cache for the specified
-   * child and then deletes the inode. In NFS, this function is distinct from
-   * `invalidateChannelEntryCache` and is used exclusively for
-   * garbage collection because inodes need to be deleted after invalidation
-   * during NFS garbage collection.
+   * Sends a request to the kernel to invalidate its cache for this tree and
+   * then deletes all its children's inode. In NFS, this function is distinct
+   * from `invalidateChannelEntryCache` and is used exclusively for garbage
+   * collection because inodes need to be deleted after invalidation during NFS
+   * garbage collection.
    */
   FOLLY_NODISCARD folly::Try<folly::Unit> nfsInvalidateCacheEntryForGC(
-      TreeInodeState& state,
-      PathComponentPiece name,
-      std::optional<InodeNumber> ino);
+      TreeInodeState& state);
 #endif
 
   /**
