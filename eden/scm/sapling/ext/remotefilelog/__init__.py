@@ -327,9 +327,15 @@ def onetimeclientsetup(ui):
 
     # Prefetch merge checkunknownfiles
     def checkunknownfiles(orig, repo, wctx, mctx, force, actions, *args, **kwargs):
-        # Don't prefetch file content for in-memory merge. We likely don't need the file
-        # content at all.
-        if shallowrepo.requirement in repo.requirements and not wctx.isinmemory():
+        # Don't prefetch file content for:
+        # 1. in-memory merge. We likely don't need the file content at all.
+        # 2. cross-repo merge. The filenode is not valid in the current repo.
+        is_crossrepo = not repo.is_same_repo(mctx.repo())
+        if (
+            shallowrepo.requirement in repo.requirements
+            and not wctx.isinmemory()
+            and not is_crossrepo
+        ):
             files = []
             sparsematch = repo.maybesparsematch(mctx.rev())
             for f, (m, actionargs, msg) in actions.items():
