@@ -16,8 +16,8 @@ use std::path::PathBuf;
 use anyhow::Result;
 use async_trait::async_trait;
 use clap::Parser;
-use edenfs_utils::is_active_eden_mount;
 use edenfs_utils::mount_point_for_path;
+use glob::Pattern;
 use hg_util::path::expand_path;
 use serde::Deserialize;
 use serde::Serialize;
@@ -191,6 +191,14 @@ struct ReadCmd {
     fam_file: String,
 
     #[clap(
+        help = "Path prefix to filter the output events even more. This is useful when you know what subfolders you are interested in.",
+        short = 'p',
+        long = "path",
+        required = false
+    )]
+    maybe_path: Option<String>,
+
+    #[clap(
         help = "Print verbose information about parsed events.",
         long = "verbose",
         required = false
@@ -249,7 +257,7 @@ struct FilterContext {
     pid: Option<u64>,
 }
 
-fn parse_events<R: BufRead>(reader: R) -> Result<Vec<Event>> {
+fn parse_events<R: BufRead>(reader: R, filter_context: FilterContext) -> Result<Vec<Event>> {
     let mut objects: Vec<Event> = Vec::new();
     let mut new_object = String::new();
     for line in reader.lines().map_while(Result::ok) {
@@ -259,6 +267,31 @@ fn parse_events<R: BufRead>(reader: R) -> Result<Vec<Event>> {
             new_object.clear();
         }
     }
+
+    match &filter_context.path_pattern {
+        Some(pattern) => {
+            let glob_pattern = Pattern::new(pattern).unwrap();
+            let is_glob = pattern.contains('*');
+
+            objects.retain(|event| {
+                // This should be impossible, but just in case
+                if event.file.target.is_none() && event.file.source.is_none() {
+                    return false;
+                }
+
+                let target_file_path = event.file.target.as_ref().map_or("", |f| &f.path);
+                let source_file_path = event.file.source.as_ref().map_or("", |f| &f.path);
+                if is_glob {
+                    glob_pattern.matches(target_file_path) || glob_pattern.matches(source_file_path)
+                } else {
+                    // Handle exact path matching
+                    target_file_path == pattern || source_file_path == pattern
+                }
+            });
+        }
+        None => {}
+    }
+
     Ok(objects)
 }
 
@@ -323,9 +356,16 @@ impl crate::Subcommand for ReadCmd {
         // construct the path
         let fam_file = PathBuf::from(&self.fam_file);
         let file = FsFile::open(fam_file)?;
+        let path_pattern = self.maybe_path.clone();
         let reader = BufReader::new(file);
 
-        let events = parse_events(reader)?;
+        let events = parse_events(
+            reader,
+            FilterContext {
+                path_pattern,
+                pid: None,
+            },
+        )?;
 
         if self.verbose {
             println!("Parsed {} objects", events.len());
@@ -387,7 +427,7 @@ mod tests {
   "event_timestamp": 1740024705
 }
         "#;
-        let parsed = parse_events(BufReader::new(Cursor::new(event)));
+        let parsed = parse_events(BufReader::new(Cursor::new(event)), FilterContext::default());
         assert!(parsed.is_ok());
         assert_eq!(parsed.unwrap().len(), 1);
     }
@@ -433,7 +473,7 @@ mod tests {
   "event_timestamp": 1740024705
 }
         "#;
-        let parsed = parse_events(BufReader::new(Cursor::new(event)));
+        let parsed = parse_events(BufReader::new(Cursor::new(event)), FilterContext::default());
         assert!(parsed.is_ok());
         assert_eq!(parsed.unwrap().len(), 2);
     }
@@ -473,7 +513,7 @@ mod tests {
     "args": [],
     "command": "/usr/local/bin/pyth
         "#;
-        let parsed = parse_events(BufReader::new(Cursor::new(event)));
+        let parsed = parse_events(BufReader::new(Cursor::new(event)), FilterContext::default());
         assert!(parsed.is_ok());
         assert_eq!(parsed.unwrap().len(), 1);
     }
@@ -521,5 +561,175 @@ mod tests {
         assert_eq!(sorted_pids[0].pid, 980066);
         assert_eq!(sorted_pids[1].pid, 1);
         assert_eq!(sorted_pids[2].pid, 66778);
+    }
+
+    #[test]
+    fn test_filtering_event_paths_with_pattern() {
+        let events = r#"
+{
+  "event_type": "NOTIFY_OPEN",
+  "file": {
+    "target": {
+      "path": "/tmp/test_dir/file1.txt",
+      "truncated": false
+    }
+  },
+  "process": {
+    "ancestors": [],
+    "args": [],
+    "command": "/usr/local/bin/python3",
+    "pid": 11111,
+    "ppid": 99999,
+    "uid": 67890
+  },
+  "event_timestamp": 1740024701
+}
+{
+  "event_type": "NOTIFY_WRITE",
+  "file": {
+    "target": {
+      "path": "/tmp/test_dir/subdir/file2.txt",
+      "truncated": false
+    }
+  },
+  "process": {
+    "ancestors": [],
+    "args": [],
+    "command": "/usr/bin/vim",
+    "pid": 22222,
+    "ppid": 99999,
+    "uid": 67890
+  },
+  "event_timestamp": 1740024702
+}
+{
+  "event_type": "NOTIFY_READ",
+  "file": {
+    "target": {
+      "path": "/tmp/other_dir/file3.log",
+      "truncated": false
+    }
+  },
+  "process": {
+    "ancestors": [],
+    "args": [],
+    "command": "/usr/bin/cat",
+    "pid": 33333,
+    "ppid": 99999,
+    "uid": 67890
+  },
+  "event_timestamp": 1740024703
+}
+{
+  "event_type": "NOTIFY_RENAME",
+  "file": {
+    "source": {
+      "path": "/tmp/test_dir/old.txt",
+      "truncated": false
+    },
+    "target": {
+      "path": "/tmp/test_dir/new.txt",
+      "truncated": false
+    }
+  },
+  "process": {
+    "ancestors": [],
+    "args": [],
+    "command": "/bin/mv",
+    "pid": 44444,
+    "ppid": 99999,
+    "uid": 67890
+  },
+  "event_timestamp": 1740024704
+}
+{
+  "event_type": "NOTIFY_OPEN",
+  "file": {
+    "target": {
+      "path": "/var/log/system.log",
+      "truncated": false
+    }
+  },
+  "process": {
+    "ancestors": [],
+    "args": [],
+    "command": "/usr/bin/tail",
+    "pid": 55555,
+    "ppid": 99999,
+    "uid": 67890
+  },
+  "event_timestamp": 1740024705
+}
+"#;
+
+        // Test cases:
+
+        // 1. Exact path matching
+        let exact_path = "/tmp/test_dir/file1.txt";
+        let parsed = parse_events(
+            BufReader::new(Cursor::new(events)),
+            FilterContext {
+                path_pattern: Some(exact_path.to_string()),
+                pid: None,
+            },
+        );
+        assert!(parsed.is_ok());
+        assert_eq!(parsed.unwrap().len(), 1);
+
+        // 2. Glob pattern matching - all files in test_dir
+        let glob_pattern = "/tmp/test_dir/*";
+        let parsed = parse_events(
+            BufReader::new(Cursor::new(events)),
+            FilterContext {
+                path_pattern: Some(glob_pattern.to_string()),
+                pid: None,
+            },
+        );
+        assert!(parsed.is_ok());
+        assert_eq!(parsed.unwrap().len(), 3); // file1.txt, new.txt, old.txt->new.txt
+
+        // 3. Glob pattern matching - all txt files
+        let glob_pattern = "*.txt";
+        let parsed = parse_events(
+            BufReader::new(Cursor::new(events)),
+            FilterContext {
+                path_pattern: Some(glob_pattern.to_string()),
+                pid: None,
+            },
+        );
+        assert!(parsed.is_ok());
+        assert_eq!(parsed.unwrap().len(), 3); // All .txt files
+
+        // 4. Glob pattern matching - nested directories
+        let glob_pattern = "/tmp/test_dir/*/file2.txt";
+        let parsed = parse_events(
+            BufReader::new(Cursor::new(events)),
+            FilterContext {
+                path_pattern: Some(glob_pattern.to_string()),
+                pid: None,
+            },
+        );
+        assert!(parsed.is_ok());
+        assert_eq!(parsed.unwrap().len(), 1); // Only file2.txt in subdir
+
+        // 5. No matches
+        let no_match_pattern = "/non/existent/path";
+        let parsed = parse_events(
+            BufReader::new(Cursor::new(events)),
+            FilterContext {
+                path_pattern: Some(no_match_pattern.to_string()),
+                pid: None,
+            },
+        );
+        assert!(parsed.is_ok());
+        assert_eq!(parsed.unwrap().len(), 0);
+
+        // 6. No pattern (should return all events)
+        let parsed = parse_events(
+            BufReader::new(Cursor::new(events)),
+            FilterContext::default(),
+        );
+        assert!(parsed.is_ok());
+        assert_eq!(parsed.unwrap().len(), 5);
     }
 }

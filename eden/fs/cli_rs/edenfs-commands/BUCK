@@ -19,6 +19,7 @@ rust_library(
             "macos",
             [
                 "fbsource//third-party/rust:shlex",
+                "fbsource//third-party/rust:glob",
             ],
         ),
     ],
