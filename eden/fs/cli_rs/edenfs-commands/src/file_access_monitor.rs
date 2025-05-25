@@ -243,6 +243,12 @@ struct Event {
     event_timestamp: u64,
 }
 
+#[derive(Default)]
+struct FilterContext {
+    path_pattern: Option<String>,
+    pid: Option<u64>,
+}
+
 fn parse_events<R: BufRead>(reader: R) -> Result<Vec<Event>> {
     let mut objects: Vec<Event> = Vec::new();
     let mut new_object = String::new();
