@@ -199,14 +199,22 @@ struct ReadCmd {
     maybe_path: Option<String>,
 
     #[clap(
+        help = "PID prefix to filter the output events by process. This is useful when you know what processes you are interested in.",
+        long = "pid",
+        required = false
+    )]
+    pid: Option<u64>,
+
+    #[clap(
         help = "Print verbose information about parsed events.",
+        short = 'v',
         long = "verbose",
         required = false
     )]
     verbose: bool,
 
     #[clap(
-        help = "Specify the maximum number of PIDs to be displayed in the output. If set to 0, all PIDs will be displayed.",
+        help = "Specify the maximum number of PIDs to be displayed in the output. If set to 0, all PIDs will be displayed.\nWhen used with '--pid', it specifies the minimum number of accesses to be printed.",
         short = 'k',
         required = false,
         default_value = "10"
@@ -221,13 +229,13 @@ struct ReadCmd {
     sort_process: bool,
 }
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 struct FileItem {
     path: String,
     truncated: bool,
 }
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 struct File {
     source: Option<FileItem>,
     target: Option<FileItem>,
@@ -292,6 +300,13 @@ fn parse_events<R: BufRead>(reader: R, filter_context: FilterContext) -> Result<
         None => {}
     }
 
+    match filter_context.pid {
+        Some(pid) => {
+            objects.retain(|event| event.process.pid == pid);
+        }
+        None => {}
+    }
+
     Ok(objects)
 }
 
@@ -350,6 +365,44 @@ fn print_process_info(events: &[Event], k: usize) {
     print_sorted_process_info(&sorted_process_info);
 }
 
+fn print_path_access_for_pid(events: &[Event], k: usize) {
+    let mut counts = HashMap::new();
+
+    // Count occurrences of each path
+    for event in events {
+        if event.file.source.is_some() {
+            *counts
+                .entry(event.file.source.clone().unwrap().path)
+                .or_insert(0) += 1;
+        }
+        if event.file.target.is_some() {
+            *counts
+                .entry(event.file.target.clone().unwrap().path)
+                .or_insert(0) += 1;
+        }
+    }
+
+    // Sort paths by count and then lexicographically
+    let mut sorted_paths: Vec<_> = counts.into_iter().filter(|(_, count)| *count > k).collect();
+    sorted_paths.sort_by(|a, b| b.1.cmp(&a.1).then(a.0.cmp(&b.0)));
+
+    // Find the longest path to determine the column width
+    let max_path_len = sorted_paths
+        .iter()
+        .map(|(path, _)| path.len())
+        .max()
+        .unwrap_or(0);
+
+    // Print the title
+    println!("{:<width$} | Count", "Path", width = max_path_len);
+    // Print a separator line (optional)
+    println!("{}", "-".repeat(max_path_len + 7));
+    // Print the sorted paths with their counts
+    for (path, count) in sorted_paths {
+        println!("{:<width$} | {}", path, count, width = max_path_len);
+    }
+}
+
 #[async_trait]
 impl crate::Subcommand for ReadCmd {
     async fn run(&self) -> Result<ExitCode> {
@@ -357,24 +410,27 @@ impl crate::Subcommand for ReadCmd {
         let fam_file = PathBuf::from(&self.fam_file);
         let file = FsFile::open(fam_file)?;
         let path_pattern = self.maybe_path.clone();
+        let pid = self.pid.clone();
         let reader = BufReader::new(file);
 
-        let events = parse_events(
-            reader,
-            FilterContext {
-                path_pattern,
-                pid: None,
-            },
-        )?;
+        let events = parse_events(reader, FilterContext { path_pattern, pid })?;
 
         if self.verbose {
             println!("Parsed {} objects", events.len());
             println!("{:#?}", events);
         }
 
-        if self.sort_process {
-            print_process_info(&events, self.count);
+        match self.pid {
+            Some(_) => {
+                print_path_access_for_pid(&events, self.count);
+            }
+            None => {
+                if self.sort_process {
+                    print_process_info(&events, self.count);
+                }
+            }
         }
+
         Ok(0)
     }
 }
