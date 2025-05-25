@@ -49,10 +49,10 @@ struct StartCmd {
     #[clap(
         help = "A list of paths that FAM should use as filters when monitoring file access events.\nIf no path is provided, the eden mount point will be used if FAM is run under an eden repo. Otherwise, FAM exits.",
         short = 'p',
-        long = "paths",
+        long = "path-filters",
         required = false
     )]
-    paths: Vec<String>,
+    path_filters: Vec<String>,
 
     #[clap(
         help = "The path of the output file where the file access events are logged.",
@@ -96,7 +96,7 @@ impl crate::Subcommand for StartCmd {
 
         let mut monitor_paths: Vec<PathBuf> = Vec::new();
 
-        for path in &self.paths {
+        for path in &self.path_filters {
             monitor_paths.push(expand_path(path));
         }
 
@@ -191,19 +191,29 @@ struct ReadCmd {
     fam_file: String,
 
     #[clap(
-        help = "Path prefix to filter the output events even more. This is useful when you know what subfolders you are interested in.",
+        help = "Path filters to filter the output events. This is useful when you know what subfolders you are interested in.",
         short = 'p',
-        long = "path",
+        long = "path-filters",
+        value_delimiter = ',',
         required = false
     )]
-    maybe_path: Option<String>,
+    path_filters: Option<Vec<String>>,
 
     #[clap(
-        help = "PID prefix to filter the output events by process. This is useful when you know what processes you are interested in.",
-        long = "pid",
+        help = "Process ID filters to filter the output events. This is useful when you know what processes you are interested in.",
+        long = "pids",
+        value_delimiter = ',',
         required = false
     )]
-    pid: Option<u64>,
+    pids: Option<Vec<u64>>,
+
+    #[clap(
+        help = "Process ID filters to filter the output events. This is useful when you know what processes you are interested in.",
+        long = "count-by",
+        value_parser = ["process", "path"],
+        default_value = "process",
+    )]
+    count_by: String,
 
     #[clap(
         help = "Print verbose information about parsed events.",
@@ -220,13 +230,6 @@ struct ReadCmd {
         default_value = "10"
     )]
     count: usize,
-
-    #[clap(
-        help = "Sort the PIDs by the number of file access events they have generated.",
-        required = false,
-        default_value = "true"
-    )]
-    sort_process: bool,
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
@@ -261,8 +264,8 @@ struct Event {
 
 #[derive(Default)]
 struct FilterContext {
-    path_pattern: Option<String>,
-    pid: Option<u64>,
+    path_patterns: Option<Vec<String>>,
+    pids: Option<Vec<u64>>,
 }
 
 fn parse_events<R: BufRead>(reader: R, filter_context: FilterContext) -> Result<Vec<Event>> {
@@ -276,11 +279,8 @@ fn parse_events<R: BufRead>(reader: R, filter_context: FilterContext) -> Result<
         }
     }
 
-    match &filter_context.path_pattern {
-        Some(pattern) => {
-            let glob_pattern = Pattern::new(pattern).unwrap();
-            let is_glob = pattern.contains('*');
-
+    match &filter_context.path_patterns {
+        Some(patterns) => {
             objects.retain(|event| {
                 // This should be impossible, but just in case
                 if event.file.target.is_none() && event.file.source.is_none() {
@@ -289,20 +289,40 @@ fn parse_events<R: BufRead>(reader: R, filter_context: FilterContext) -> Result<
 
                 let target_file_path = event.file.target.as_ref().map_or("", |f| &f.path);
                 let source_file_path = event.file.source.as_ref().map_or("", |f| &f.path);
-                if is_glob {
-                    glob_pattern.matches(target_file_path) || glob_pattern.matches(source_file_path)
-                } else {
-                    // Handle exact path matching
-                    target_file_path == pattern || source_file_path == pattern
+
+                for pattern in patterns {
+                    let is_glob = pattern.contains('*');
+                    if is_glob {
+                        // Handle potential error from Pattern::new instead of using ? operator
+                        match Pattern::new(&pattern) {
+                            Ok(glob_pattern) => {
+                                if glob_pattern.matches(target_file_path)
+                                    || glob_pattern.matches(source_file_path)
+                                {
+                                    return true;
+                                }
+                            }
+                            Err(_) => {
+                                // Skip invalid patterns
+                                continue;
+                            }
+                        }
+                    } else {
+                        // Handle exact path matching
+                        if target_file_path == pattern || source_file_path == pattern {
+                            return true;
+                        }
+                    }
                 }
+                false
             });
         }
         None => {}
     }
 
-    match filter_context.pid {
-        Some(pid) => {
-            objects.retain(|event| event.process.pid == pid);
+    match filter_context.pids {
+        Some(pids) => {
+            objects.retain(|event| pids.contains(&event.process.pid));
         }
         None => {}
     }
@@ -365,7 +385,7 @@ fn print_process_info(events: &[Event], k: usize) {
     print_sorted_process_info(&sorted_process_info);
 }
 
-fn print_path_access_for_pid(events: &[Event], k: usize) {
+fn print_path_access_info(events: &[Event], k: usize) {
     let mut counts = HashMap::new();
 
     // Count occurrences of each path
@@ -409,25 +429,29 @@ impl crate::Subcommand for ReadCmd {
         // construct the path
         let fam_file = PathBuf::from(&self.fam_file);
         let file = FsFile::open(fam_file)?;
-        let path_pattern = self.maybe_path.clone();
-        let pid = self.pid.clone();
+        let path_patterns = self.path_filters.clone();
+        let pids = self.pids.clone();
         let reader = BufReader::new(file);
 
-        let events = parse_events(reader, FilterContext { path_pattern, pid })?;
+        let events = parse_events(
+            reader,
+            FilterContext {
+                path_patterns,
+                pids,
+            },
+        )?;
 
         if self.verbose {
             println!("Parsed {} objects", events.len());
             println!("{:#?}", events);
         }
 
-        match self.pid {
-            Some(_) => {
-                print_path_access_for_pid(&events, self.count);
+        match self.count_by.as_str() {
+            "process" => {
+                print_process_info(&events, self.count);
             }
-            None => {
-                if self.sort_process {
-                    print_process_info(&events, self.count);
-                }
+            &_ => {
+                print_path_access_info(&events, self.count);
             }
         }
 
@@ -725,8 +749,8 @@ mod tests {
         let parsed = parse_events(
             BufReader::new(Cursor::new(events)),
             FilterContext {
-                path_pattern: Some(exact_path.to_string()),
-                pid: None,
+                path_patterns: Some(vec![exact_path.to_string()]),
+                pids: None,
             },
         );
         assert!(parsed.is_ok());
@@ -737,8 +761,8 @@ mod tests {
         let parsed = parse_events(
             BufReader::new(Cursor::new(events)),
             FilterContext {
-                path_pattern: Some(glob_pattern.to_string()),
-                pid: None,
+                path_patterns: Some(vec![glob_pattern.to_string()]),
+                pids: None,
             },
         );
         assert!(parsed.is_ok());
@@ -749,8 +773,8 @@ mod tests {
         let parsed = parse_events(
             BufReader::new(Cursor::new(events)),
             FilterContext {
-                path_pattern: Some(glob_pattern.to_string()),
-                pid: None,
+                path_patterns: Some(vec![glob_pattern.to_string()]),
+                pids: None,
             },
         );
         assert!(parsed.is_ok());
@@ -761,8 +785,8 @@ mod tests {
         let parsed = parse_events(
             BufReader::new(Cursor::new(events)),
             FilterContext {
-                path_pattern: Some(glob_pattern.to_string()),
-                pid: None,
+                path_patterns: Some(vec![glob_pattern.to_string()]),
+                pids: None,
             },
         );
         assert!(parsed.is_ok());
@@ -773,8 +797,8 @@ mod tests {
         let parsed = parse_events(
             BufReader::new(Cursor::new(events)),
             FilterContext {
-                path_pattern: Some(no_match_pattern.to_string()),
-                pid: None,
+                path_patterns: Some(vec![no_match_pattern.to_string()]),
+                pids: None,
             },
         );
         assert!(parsed.is_ok());
