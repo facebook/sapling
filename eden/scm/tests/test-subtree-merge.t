@@ -711,9 +711,12 @@ test deleted/changed conflict
   copying foo to foo2
   $ echo "foo2" >> foo2/x
   $ hg ci -m "update foo2/x"
-tofix: should not abort
   $ hg subtree merge --from-path foo2 --to-path foo
   computing merge base (timeout: 120 seconds)...
   merge base: f7de0a4f3e86
-  abort: foo/x@b3155d28797a: not found in manifest!
-  [255]
+  other [merge rev] changed foo/x which local [working copy] is missing
+  hint: if this is due to a renamed file, you can manually input the renamed path
+  use (c)hanged version, leave (d)eleted, or leave (u)nresolved, or input (r)enamed path? u
+  0 files updated, 0 files merged, 0 files removed, 1 files unresolved
+  use 'hg resolve' to retry unresolved file merges or 'hg goto -C .' to abandon
+  [1]

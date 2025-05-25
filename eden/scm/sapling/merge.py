@@ -1268,13 +1268,11 @@ def _resolvetrivial(wctx, mctx, ancestor, actions):
         ):
             # local did change but ended up with same content
             actions[f] = "r", None, "prompt same"
-        elif (
-            m == ACTION_DELETED_CHANGED
-            and f in ancestor
-            and not mctx[f].cmp(ancestor[f])
-        ):
-            # remote did change but ended up with same content
-            del actions[f]  # don't get = keep local deleted
+        elif m == ACTION_DELETED_CHANGED:
+            f2, fa = args[1], args[2]
+            if fa in ancestor and not mctx[f2].cmp(ancestor[fa]):
+                # remote did change but ended up with same content
+                del actions[f]  # don't get = keep local deleted
 
 
 @perftrace.tracefunc("Calculate Updates")
