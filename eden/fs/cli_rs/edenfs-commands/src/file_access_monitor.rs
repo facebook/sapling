@@ -224,12 +224,13 @@ struct ReadCmd {
     verbose: bool,
 
     #[clap(
-        help = "Specify the maximum number of PIDs to be displayed in the output. If set to 0, all PIDs will be displayed.\nWhen used with '--pid', it specifies the minimum number of accesses to be printed.",
-        short = 'k',
+        help = "The minimum number of access events to list in the results. If counting by process, PIDs with access counts fewer than this number will be ommitted.\nIf counting by path, paths accessed with a number smaller than threshold will be omitted.",
+        short = 't',
+        long = "threshold",
         required = false,
-        default_value = "10"
+        default_value = "100"
     )]
-    count: usize,
+    count_threshold: u64,
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
@@ -338,7 +339,7 @@ struct ProcessInfo {
     counter: u64,
 }
 
-fn sort_process_info(events: &[Event], k: usize) -> Vec<ProcessInfo> {
+fn sort_process_info(events: &[Event], threshold: u64) -> Vec<ProcessInfo> {
     let mut process_info: HashMap<u64, ProcessInfo> = HashMap::new();
     for event in events {
         let process = &event.process;
@@ -351,14 +352,12 @@ fn sort_process_info(events: &[Event], k: usize) -> Vec<ProcessInfo> {
         count.counter += 1;
     }
 
-    let mut sorted_info: Vec<ProcessInfo> = process_info.into_values().collect();
+    let mut sorted_info: Vec<ProcessInfo> = process_info
+        .into_values()
+        .filter(|p| p.counter > threshold)
+        .collect();
     sorted_info.sort_by_key(|p| Reverse(p.counter));
-
-    if k == 0 {
-        sorted_info
-    } else {
-        sorted_info[..k.min(sorted_info.len())].to_vec()
-    }
+    sorted_info
 }
 
 fn print_sorted_process_info(sorted_process_info_slice: &[ProcessInfo]) {
@@ -380,12 +379,12 @@ fn print_sorted_process_info(sorted_process_info_slice: &[ProcessInfo]) {
     }
 }
 
-fn print_process_info(events: &[Event], k: usize) {
-    let sorted_process_info = sort_process_info(events, k);
+fn print_process_info(events: &[Event], threshold: u64) {
+    let sorted_process_info = sort_process_info(events, threshold);
     print_sorted_process_info(&sorted_process_info);
 }
 
-fn print_path_access_info(events: &[Event], k: usize) {
+fn print_path_access_info(events: &[Event], threshold: u64) {
     let mut counts = HashMap::new();
 
     // Count occurrences of each path
@@ -403,7 +402,10 @@ fn print_path_access_info(events: &[Event], k: usize) {
     }
 
     // Sort paths by count and then lexicographically
-    let mut sorted_paths: Vec<_> = counts.into_iter().filter(|(_, count)| *count > k).collect();
+    let mut sorted_paths: Vec<_> = counts
+        .into_iter()
+        .filter(|(_, count)| *count > threshold)
+        .collect();
     sorted_paths.sort_by(|a, b| b.1.cmp(&a.1).then(a.0.cmp(&b.0)));
 
     // Find the longest path to determine the column width
@@ -448,10 +450,10 @@ impl crate::Subcommand for ReadCmd {
 
         match self.count_by.as_str() {
             "process" => {
-                print_process_info(&events, self.count);
+                print_process_info(&events, self.count_threshold);
             }
             &_ => {
-                print_path_access_info(&events, self.count);
+                print_path_access_info(&events, self.count_threshold);
             }
         }
 
