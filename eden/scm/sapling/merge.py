@@ -1260,7 +1260,6 @@ def manifestmerge(
 def _resolvetrivial(wctx, mctx, ancestor, actions):
     """Resolves false conflicts where the nodeid changed but the content
     remained the same."""
-
     for f, (m, args, msg) in list(actions.items()):
         if (
             m == ACTION_CHANGED_DELETED
