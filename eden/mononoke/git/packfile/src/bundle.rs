@@ -50,6 +50,7 @@ where
     pub refs: Vec<(String, ObjectId)>,
     /// Packfile writer created over the underlying raw writer
     pub pack_writer: PackfileWriter<T>,
+    bytes_written: usize,
 }
 
 impl<T: AsyncWrite + Unpin> BundleWriter<T> {
@@ -63,30 +64,34 @@ impl<T: AsyncWrite + Unpin> BundleWriter<T> {
         concurrency: usize,
         delta_form: DeltaForm,
     ) -> Result<Self> {
+        let mut bytes_written = 0;
         // Append the bundle header
-        writer
-            .write_all(format!("{}", BundleVersion::V2).as_bytes())
-            .await?;
+        let bundle_header = format!("{}", BundleVersion::V2);
+        writer.write_all(bundle_header.as_bytes()).await?;
+        bytes_written += bundle_header.len();
+
         // Append the pre-requisite objects, if present
         for prereq in prereqs.iter() {
-            writer
-                .write_all(format!("-{} {}\n", prereq, BUNDLE_PREREQ_MSG).as_bytes())
-                .await?;
+            let line = format!("-{} {}\n", prereq, BUNDLE_PREREQ_MSG);
+            writer.write_all(line.as_bytes()).await?;
+            bytes_written += line.len();
         }
         // Append the refs
         for (ref_name, id) in &refs {
-            writer
-                .write_all(format!("{} {}\n", id, ref_name).as_bytes())
-                .await?;
+            let line = format!("{} {}\n", id, ref_name);
+            writer.write_all(line.as_bytes()).await?;
+            bytes_written += line.len();
         }
         // Newline before starting packfile
         writer.write_all(b"\n").await?;
+        bytes_written += 1;
         let pack_writer = PackfileWriter::new(writer, num_objects, concurrency, delta_form);
         Ok(Self {
             version: BundleVersion::V2,
             refs,
             prereqs,
             pack_writer,
+            bytes_written,
         })
     }
 
@@ -96,6 +101,10 @@ impl<T: AsyncWrite + Unpin> BundleWriter<T> {
         objects_stream: impl Stream<Item = Result<PackfileItem>>,
     ) -> Result<()> {
         self.pack_writer.write(objects_stream).await
+    }
+
+    pub fn bytes_written(&self) -> usize {
+        self.bytes_written + self.pack_writer.size as usize
     }
 
     /// Finish the bundle and flush it to the underlying writer
