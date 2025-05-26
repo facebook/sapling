@@ -7,24 +7,29 @@
 
 //! edenfsctl glob
 
+use std::fs::File;
+use std::io::BufRead;
+use std::io::BufReader;
+use std::path::Path;
 use std::path::PathBuf;
 
+use anyhow::Context;
 use anyhow::Result;
 use async_trait::async_trait;
 use clap::Parser;
+use edenfs_client::utils::locate_repo_root;
+use hg_util::path::expand_path;
 
 use crate::ExitCode;
 use crate::get_edenfs_instance;
 
 #[derive(Parser, Debug)]
-#[clap(
-    about = "Print matching filenames. Glob patterns can be provided via a pattern file. This command does not do any filtering based on source control state or gitignore files."
-)]
-pub struct GlobCmd {
+pub struct CommonArgs {
     #[clap(
         long,
         alias = "repo",
-        help = "Specify path to repo root (default: root of cwd)"
+        help = "Specify path to mount point (default: root of cwd)",
+        parse(from_str = expand_path)
     )]
     mount_point: Option<PathBuf>,
 
@@ -52,8 +57,39 @@ pub struct GlobCmd {
         help = "When printing the list of matching files, exclude directories."
     )]
     include_dot_files: bool,
+}
 
-    #[clap(long, help = "Return results as JSON")]
+impl CommonArgs {
+    fn load_patterns(&self) -> Result<Vec<String>> {
+        let mut pattern = self
+            .pattern
+            .iter()
+            .map(|p| clean_pattern(p.to_string()))
+            .collect::<Vec<String>>();
+        match &self.pattern_file {
+            Some(pattern_file) => {
+                let file = File::open(pattern_file)?;
+                let reader = BufReader::new(file);
+                for line in reader.lines() {
+                    pattern.push(clean_pattern(line?));
+                }
+
+                Ok(pattern)
+            }
+            None => Ok(pattern),
+        }
+    }
+}
+
+#[derive(Parser, Debug)]
+#[clap(
+    about = "Print matching filenames. Glob patterns can be provided via a pattern file. This command does not do any filtering based on source control state or gitignore files."
+)]
+pub struct GlobCmd {
+    #[clap(flatten)]
+    common: CommonArgs,
+
+    #[clap(long, help = "Print the output in JSON format")]
     json: bool,
 
     #[clap(long, help = "Display additional data")]
@@ -73,6 +109,43 @@ pub struct GlobCmd {
 impl crate::Subcommand for GlobCmd {
     async fn run(&self) -> Result<ExitCode> {
         let _instance = get_edenfs_instance();
+
+        // Get cwd mount_point if not provided.
+        let current_dir: PathBuf;
+        let mount_point = match &self.common.mount_point {
+            Some(ref mount_point) => mount_point,
+            None => {
+                current_dir = std::env::current_dir()
+                    .context("Unable to retrieve current working directory")?;
+                &current_dir
+            }
+        };
+
+        // Get mount_point as just repo root
+        let repo_root = locate_repo_root(mount_point);
+
+        // Get relative root (search root)
+        let prefix = repo_root.unwrap_or_else(|| Path::new(""));
+        let search_root = mount_point.strip_prefix(prefix);
+
+        // Load patterns
+        let patterns = self.common.load_patterns();
+
+        // TEMP: debugging code
+        println!(
+            "mount_point = {:?}\nrepo_root = {:?}\nprefix = {:?}\nsearch_root = {:?}\npatterns = {:?}",
+            mount_point, repo_root, prefix, search_root, patterns
+        );
         Ok(0)
     }
+}
+
+#[cfg(target_os = "windows")]
+fn clean_pattern(pattern: String) -> String {
+    pattern.replace("\\", "/")
+}
+
+#[cfg(not(target_os = "windows"))]
+fn clean_pattern(pattern: String) -> String {
+    pattern
 }

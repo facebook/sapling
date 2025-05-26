@@ -21,7 +21,7 @@ use crate::instance::DEFAULT_ETC_EDEN_DIR;
 /// Traverse up and locate the repository root
 pub fn locate_repo_root(path: &Path) -> Option<&Path> {
     path.ancestors()
-        .find(|p| p.join(".hg").is_dir() || p.join(".git").is_dir())
+        .find(|p| p.join(".hg").is_dir() || p.join(".git").is_dir() || p.join(".sl").is_dir())
 }
 
 pub fn get_mount_point(mount_point: &Option<PathBuf>) -> Result<PathBuf> {
