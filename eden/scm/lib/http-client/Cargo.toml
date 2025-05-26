@@ -21,7 +21,7 @@ anyhow = "1.0.95"
 async-compression = { version = "0.4.9", features = ["brotli", "bzip2", "deflate", "futures-io", "gzip", "tokio", "zlib", "zstd", "zstdmt"] }
 auto_impl = "1.2.1"
 curl = { version = "0.4.41", features = ["http2"] }
-curl-sys = "0.4.68"
+curl-sys = "0.4.80"
 env_logger = "0.10"
 flume = "0.11.1"
 futures = { version = "0.3.30", features = ["async-await", "compat"] }
