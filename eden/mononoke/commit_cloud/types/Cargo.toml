@@ -19,4 +19,4 @@ mysql_common = { version = "0.29.0", features = ["chrono", "default"] }
 serde = { version = "1.0.185", features = ["derive", "rc"] }
 serde_derive = "1.0.185"
 sql = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
-thiserror = "2"
+thiserror = "2.0.12"

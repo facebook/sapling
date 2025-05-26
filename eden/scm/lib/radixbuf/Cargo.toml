@@ -18,7 +18,7 @@ harness = false
 
 [dependencies]
 sapling-vlqencoding = { version = "0.1.0", path = "../vlqencoding" }
-thiserror = "2"
+thiserror = "2.0.12"
 
 [dev-dependencies]
 quickcheck = "1.0"

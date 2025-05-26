@@ -13,7 +13,7 @@ anyhow = "1.0.95"
 futures = { version = "0.3.30", features = ["async-await", "compat"] }
 governor = "0.3.2"
 mononoke_macros = { version = "0.1.0", path = "../../mononoke_macros" }
-thiserror = "2"
+thiserror = "2.0.12"
 
 [dev-dependencies]
 nonzero_ext = "0.2"

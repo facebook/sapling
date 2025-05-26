@@ -23,7 +23,7 @@ manifest = { version = "0.1.0", path = "../../manifest" }
 maplit = "1.0"
 mononoke_macros = { version = "0.1.0", path = "../../mononoke_macros" }
 mononoke_types = { version = "0.1.0", path = "../../mononoke_types" }
-thiserror = "2"
+thiserror = "2.0.12"
 unodes = { version = "0.1.0", path = "../unodes" }
 
 [dev-dependencies]

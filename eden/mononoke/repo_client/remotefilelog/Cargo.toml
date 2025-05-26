@@ -26,7 +26,7 @@ redactedblobstore = { version = "0.1.0", path = "../../blobstore/redactedblobsto
 repo_blobstore = { version = "0.1.0", path = "../../blobrepo/repo_blobstore" }
 repo_identity = { version = "0.1.0", path = "../../repo_attributes/repo_identity" }
 sapling-revisionstore_types = { version = "0.1.0", path = "../../../scm/lib/revisionstore/types" }
-thiserror = "2"
+thiserror = "2.0.12"
 
 [dev-dependencies]
 assert_matches = "1.5"

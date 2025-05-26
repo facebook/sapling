@@ -12,7 +12,7 @@ anyhow = "1.0.95"
 mercurial_types = { version = "0.1.0", path = "../../mercurial/types" }
 metaconfig_types = { version = "0.1.0", path = "../../metaconfig/types" }
 mononoke_types = { version = "0.1.0", path = "../../mononoke_types" }
-thiserror = "2"
+thiserror = "2.0.12"
 
 [dev-dependencies]
 maplit = "1.0"

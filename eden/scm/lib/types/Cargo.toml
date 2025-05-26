@@ -27,7 +27,7 @@ serde = { version = "1.0.185", features = ["derive", "rc"] }
 serde_bytes = "0.11"
 serde_derive = "1.0.185"
 sha1 = "0.10.5"
-thiserror = "2"
+thiserror = "2.0.12"
 
 [dev-dependencies]
 lazy_static = { version = "1.5", features = ["spin_no_std"], default-features = false }

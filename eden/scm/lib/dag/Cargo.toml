@@ -33,7 +33,7 @@ sapling-renderdag = { version = "0.1.0", path = "../renderdag", optional = true 
 sapling-vlqencoding = { version = "0.1.0", path = "../vlqencoding" }
 serde = { version = "1.0.185", features = ["derive", "rc"] }
 tempfile = { version = "3.15", optional = true }
-thiserror = "2"
+thiserror = "2.0.12"
 tracing = { version = "0.1.41", features = ["attributes", "valuable"] }
 
 [dev-dependencies]

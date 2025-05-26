@@ -36,4 +36,4 @@ repo_derived_data = { version = "0.1.0", path = "../../repo_attributes/repo_deri
 scuba_ext = { version = "0.1.0", path = "../../common/scuba_ext" }
 sha1 = "0.10.5"
 slog = { package = "tracing_slog_compat", version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
-thiserror = "2"
+thiserror = "2.0.12"

@@ -23,4 +23,4 @@ sapling-metalog = { version = "0.1.0", path = "../metalog" }
 sapling-refencode = { version = "0.1.0", path = "../refencode" }
 sapling-treestate = { version = "0.1.0", path = "../treestate" }
 sapling-types = { version = "0.1.0", path = "../types" }
-thiserror = "2"
+thiserror = "2.0.12"

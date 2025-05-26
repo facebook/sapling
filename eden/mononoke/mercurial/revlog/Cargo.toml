@@ -22,7 +22,7 @@ memmap2 = "0.9.5"
 mercurial_types = { version = "0.1.0", path = "../types" }
 nom = { version = "3", features = ["verbose-errors"] }
 sapling-lz4-pyframe = { version = "0.1.0", path = "../../../scm/lib/lz4-pyframe" }
-thiserror = "2"
+thiserror = "2.0.12"
 
 [dev-dependencies]
 assert_matches = "1.5"

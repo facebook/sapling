@@ -40,7 +40,7 @@ regex = "1.11.1"
 repo_derived_data = { version = "0.1.0", path = "../../repo_attributes/repo_derived_data" }
 sha1 = "0.10.5"
 sorted_vector_map = { version = "0.2.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
-thiserror = "2"
+thiserror = "2.0.12"
 tokio = { version = "1.45.0", features = ["full", "test-util", "tracing"] }
 
 [dev-dependencies]
