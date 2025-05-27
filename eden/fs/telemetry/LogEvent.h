@@ -826,12 +826,6 @@ struct FileAccessEvent : public EdenFSFileAccessEvent {
     event.addString("filename", filename);
     event.addString("source", source);
     event.addString("source_detail", source_detail);
-
-    if (auto alias = std::getenv("SANDCASTLE_ALIAS")) {
-      // Log the Sandcastle job alias if set. If we decide to use predictive
-      // prefetch profiles on sandcastle, we will want the sandcastle alias.
-      event.addString("sandcastle_alias", alias);
-    }
   }
 };
 
