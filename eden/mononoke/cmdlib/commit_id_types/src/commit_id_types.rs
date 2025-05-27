@@ -15,10 +15,6 @@ use std::num::NonZeroU64;
 
 use anyhow::Error;
 use anyhow::Result;
-use bonsai_git_mapping::BonsaiGitMappingRef;
-use bonsai_globalrev_mapping::BonsaiGlobalrevMappingRef;
-use bonsai_hg_mapping::BonsaiHgMappingRef;
-use bonsai_svnrev_mapping::BonsaiSvnrevMappingRef;
 use clap::Arg;
 use clap::ArgAction;
 use clap::ArgGroup;
@@ -36,9 +32,6 @@ pub(crate) const ARG_GLOBALREV: &str = "globalrev";
 pub(crate) const ARG_SVNREV: &str = "svnrev";
 pub(crate) const ARG_BUBBLE_ID: &str = "bubble-id";
 pub(crate) const ARG_SNAPSHOT_ID: &str = "snapshot-id";
-
-pub trait Repo =
-    BonsaiHgMappingRef + BonsaiGitMappingRef + BonsaiGlobalrevMappingRef + BonsaiSvnrevMappingRef;
 
 // Unfortunately we can't use clap derive API here directly because we care about
 // the order of arguments, but we still implement proper clap traits so that it

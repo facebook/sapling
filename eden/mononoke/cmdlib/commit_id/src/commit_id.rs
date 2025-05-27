@@ -11,6 +11,10 @@ use anyhow::Context;
 use anyhow::Error;
 use anyhow::Result;
 use anyhow::anyhow;
+use bonsai_git_mapping::BonsaiGitMappingRef;
+use bonsai_globalrev_mapping::BonsaiGlobalrevMappingRef;
+use bonsai_hg_mapping::BonsaiHgMappingRef;
+use bonsai_svnrev_mapping::BonsaiSvnrevMappingRef;
 use bookmarks::BookmarkKey;
 use bookmarks::BookmarksRef;
 use clap::ValueEnum;
@@ -25,6 +29,9 @@ use mononoke_types::Globalrev;
 use mononoke_types::Svnrev;
 use mononoke_types::hash::GitSha1;
 use strum::Display;
+
+pub trait Repo =
+    BonsaiHgMappingRef + BonsaiGitMappingRef + BonsaiGlobalrevMappingRef + BonsaiSvnrevMappingRef;
 
 #[derive(Copy, Clone, Eq, PartialEq, ValueEnum, Display)]
 #[strum(serialize_all = "kebab_case")]
