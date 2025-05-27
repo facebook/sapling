@@ -31,7 +31,7 @@ mod du;
 #[cfg(target_os = "macos")]
 mod file_access_monitor;
 mod gc;
-mod glob;
+mod glob_and_prefetch;
 mod handles;
 mod list;
 mod minitop;
@@ -153,7 +153,7 @@ pub enum TopLevelSubcommand {
     Uptime(crate::uptime::UptimeCmd),
     #[cfg(target_os = "macos")]
     FileAccessMonitor(crate::file_access_monitor::FileAccessMonitorCmd),
-    Glob(crate::glob::GlobCmd),
+    Glob(crate::glob_and_prefetch::GlobCmd),
 }
 
 impl TopLevelSubcommand {
