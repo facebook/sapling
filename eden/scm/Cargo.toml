@@ -72,6 +72,7 @@ members = [
   "lib/config/hgrc-parser",
   "lib/config/loader",
   "lib/config/model",
+  "lib/config/remote-loader",
   "lib/config/set",
   "lib/config/static",
   "lib/config/static/macros",

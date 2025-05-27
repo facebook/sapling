@@ -25,6 +25,7 @@ filetime = { version = "0.2.25", optional = true }
 hostcaps = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 hostname = "0.3"
 regex = { version = "1.11.1", optional = true }
+sapling-config-remote-loader = { version = "0.1.0", path = "../remote-loader" }
 sapling-configmodel = { version = "0.1.0", path = "../model" }
 sapling-configset = { version = "0.1.0", path = "../set" }
 sapling-gitcompat = { version = "0.1.0", path = "../../gitcompat" }
@@ -55,5 +56,5 @@ tempfile = "3.15"
 
 [features]
 default = []
-fb = ["filetime", "regex", "sapling-hgtime", "sapling-http-client", "sapling-identity/fb", "sapling-types", "serde", "serde_json", "serde_urlencoded"]
+fb = ["filetime", "regex", "sapling-config-remote-loader/fb", "sapling-hgtime", "sapling-http-client", "sapling-identity/fb", "sapling-types", "serde", "serde_json", "serde_urlencoded"]
 sl_oss = []

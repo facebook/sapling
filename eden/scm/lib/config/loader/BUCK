@@ -24,6 +24,7 @@ rust_library(
                 "fb": [
                     "sapling-types",
                     "sapling-identity/fb",
+                    "sapling-config-remote-loader/fb",
                     "filetime",
                     "sapling-hgtime",
                     "sapling-http-client",
@@ -81,7 +82,7 @@ rust_library(
         "fbsource//third-party/rust:url",
         "//common/rust/fbwhoami:fbwhoami",
         "//common/rust/shed/hostcaps:hostcaps",
-        "//eden/scm/lib/config/fb/remote-loader:remote-loader",
+        "//eden/scm/lib/config/remote-loader:remote-loader",
         "//eden/scm/lib/hgtime:hgtime",
         "//eden/scm/lib/http-client:http-client",
         "//eden/scm/lib/spawn-ext:spawn-ext",

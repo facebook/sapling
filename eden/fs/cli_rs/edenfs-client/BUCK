@@ -67,7 +67,7 @@ rust_library(
         "//eden/fs/service:thrift-streaming-rust-clients",
         "//eden/fs/service:thrift-streaming-rust-thriftclients",
         "//eden/scm/lib/atomicfile:atomicfile",
-        "//eden/scm/lib/config/fb/remote-loader:remote-loader",
+        "//eden/scm/lib/config/remote-loader:remote-loader",
         "//eden/scm/lib/http-client:http-client",
         "//eden/scm/lib/thrift-types:thrift-types",
         "//eden/scm/lib/util:util",
