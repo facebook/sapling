@@ -73,7 +73,7 @@ class SubmitWorkflow(Enum):
             "github", "pr-workflow", ui.config("github", "pr_workflow")
         )
         if not workflow or workflow == "single":
-            # For now, default to OVERLAP.
+            # For now, default to SINGLE.
             return SubmitWorkflow.SINGLE
         elif workflow == "overlap":
             return SubmitWorkflow.OVERLAP
