@@ -8,7 +8,6 @@
 # A library function to call a phabricator graphql RPC.
 # This replaces the Conduit methods
 
-from __future__ import absolute_import
 
 import os
 

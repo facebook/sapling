@@ -5,7 +5,6 @@
 
 # mutation.py - commit mutation tracking
 
-from __future__ import absolute_import
 
 from collections import defaultdict
 from typing import Dict, List, Optional

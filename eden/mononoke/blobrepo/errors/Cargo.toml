@@ -11,4 +11,4 @@ license = "GPLv2+"
 ascii = "1.0"
 mercurial_types = { version = "0.1.0", path = "../../mercurial/types" }
 mononoke_types = { version = "0.1.0", path = "../../mononoke_types" }
-thiserror = "2"
+thiserror = "2.0.12"

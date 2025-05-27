@@ -203,7 +203,7 @@ mononoke_queries! {
 
 // Approximating a big duration to max chrono duration (~10^11 years) is good enough
 fn to_chrono(duration: Duration) -> ChronoDuration {
-    ChronoDuration::from_std(duration).unwrap_or_else(|_| ChronoDuration::max_value())
+    ChronoDuration::from_std(duration).unwrap_or(ChronoDuration::MAX)
 }
 
 impl RepoEphemeralStoreInner {

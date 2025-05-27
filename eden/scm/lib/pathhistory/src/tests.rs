@@ -15,6 +15,7 @@ use std::sync::Mutex;
 use anyhow::Result;
 use anyhow::bail;
 use async_trait::async_trait;
+use blob::Blob;
 use dag::MemDag;
 use dag::Set;
 use dag::Vertex;
@@ -24,7 +25,6 @@ use manifest::FileMetadata;
 use manifest::FileType;
 use manifest::Manifest;
 use manifest_tree::TreeManifest;
-use scm_blob::ScmBlob;
 use sha1::Digest;
 use sha1::Sha1;
 use storemodel::InsertOpts;
@@ -232,14 +232,14 @@ fn compute_sha1(content: &[u8]) -> HgId {
 
 #[async_trait]
 impl KeyStore for TestHistory {
-    fn get_local_content(&self, path: &RepoPath, hgid: HgId) -> anyhow::Result<Option<ScmBlob>> {
+    fn get_local_content(&self, path: &RepoPath, hgid: HgId) -> anyhow::Result<Option<Blob>> {
         let key = Key::new(path.to_owned(), hgid);
         let inner = self.inner.lock().unwrap();
         if !inner.prefetched_trees.contains(&key) {
             bail!("not prefetched: {:?}", &key);
         }
         match inner.trees.get(&hgid) {
-            Some(v) => Ok(Some(ScmBlob::Bytes(v.clone()))),
+            Some(v) => Ok(Some(Blob::Bytes(v.clone()))),
             None => bail!("{:?} not found", &key),
         }
     }

@@ -5,16 +5,15 @@
  * GNU General Public License version 2.
  */
 
-use mercurial_types::HgChangesetId;
-
 use super::WorkspaceRemoteBookmark;
+use crate::changeset::CloudChangesetId;
 pub struct SmartlogNode {
-    pub node: HgChangesetId,
+    pub node: CloudChangesetId,
     pub phase: String,
     pub author: String,
     pub date: i64,
     pub message: String,
-    pub parents: Vec<HgChangesetId>,
+    pub parents: Vec<CloudChangesetId>,
     pub bookmarks: Vec<String>,
     pub remote_bookmarks: Option<Vec<WorkspaceRemoteBookmark>>,
 }

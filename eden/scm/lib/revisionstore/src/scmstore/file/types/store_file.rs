@@ -10,9 +10,9 @@ use std::ops::BitOr;
 use anyhow::Result;
 use anyhow::anyhow;
 use anyhow::bail;
+use blob::Blob;
 use format_util::parse_copy_from_hg_file_metadata;
 use minibytes::Bytes;
-use scm_blob::ScmBlob;
 use types::Key;
 
 use crate::scmstore::FileAttributes;
@@ -78,7 +78,7 @@ impl StoreFile {
     }
 
     // Pure file content without hg copy info.
-    pub fn file_content(&self) -> Result<ScmBlob> {
+    pub fn file_content(&self) -> Result<Blob> {
         self.content
             .as_ref()
             .ok_or_else(|| anyhow!("no content available"))?

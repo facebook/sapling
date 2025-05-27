@@ -5,7 +5,6 @@
 
 # connectionpool.py - class for pooling peer connections for reuse
 
-from __future__ import absolute_import
 
 import os
 import time

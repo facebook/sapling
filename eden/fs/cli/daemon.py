@@ -110,12 +110,14 @@ def start_edenfs_service(
     instance: EdenInstance,
     daemon_binary: Optional[str] = None,
     edenfs_args: Optional[List[str]] = None,
+    preserved_env: Optional[List[str]] = None,
 ) -> int:
     """Start the edenfs daemon."""
     return _start_edenfs_service(
         instance=instance,
         daemon_binary=daemon_binary,
         edenfs_args=edenfs_args,
+        preserved_env=preserved_env,
         takeover=False,
     )
 
@@ -124,20 +126,36 @@ def gracefully_restart_edenfs_service(
     instance: EdenInstance,
     daemon_binary: Optional[str] = None,
     edenfs_args: Optional[List[str]] = None,
+    preserved_env: Optional[List[str]] = None,
 ) -> int:
-    """Gracefully restart the EdenFS service"""
-    return _start_edenfs_service(
+    """
+    Gracefully restart the EdenFS service
+    This function ensures a seamless transition from the old EdenFS instance to the new one.
+    It prevents the auto unmount recovery task from interfering with the restart process.
+    """
+    # Set the intentionally unmounted flag for all mounts to prevent auto unmount recovery
+    # during the restart process. This ensures that the old EdenFS mounts are not recovered
+    # while the new instance is taking over.
+    instance.set_intentionally_unmounted_for_all_mounts()
+    # Start the new EdenFS service, taking over from the old instance.
+    result = _start_edenfs_service(
         instance=instance,
         daemon_binary=daemon_binary,
         edenfs_args=edenfs_args,
+        preserved_env=preserved_env,
         takeover=True,
     )
+    # Clear the intentionally unmounted flag after the restart is complete.
+    # This allows the auto unmount recovery task to resume its normal operation.
+    instance.clear_intentionally_unmounted_for_all_mounts()
+    return result
 
 
 def _start_edenfs_service(
     instance: EdenInstance,
     daemon_binary: Optional[str] = None,
     edenfs_args: Optional[List[str]] = None,
+    preserved_env: Optional[List[str]] = None,
     takeover: bool = False,
 ) -> int:
     """Get the command and environment to use to start edenfs."""
@@ -149,7 +167,7 @@ def _start_edenfs_service(
     if edenfs_args:
         cmd.extend(edenfs_args)
 
-    eden_env = get_edenfs_environment()
+    eden_env = get_edenfs_environment(preserved_env)
 
     # Wrap the command in sudo, if necessary. See help text in
     # prepare_edenfs_privileges for more info.
@@ -273,12 +291,16 @@ def prepare_edenfs_privileges(
     return cmd, env
 
 
-def get_edenfs_environment() -> Dict[str, str]:
+def get_edenfs_environment(
+    extra_preserve: Optional[List[str]],
+) -> Dict[str, str]:
     """Get the environment to use to start the edenfs daemon."""
     eden_env = {}
 
     # Errors from Rust will be logged to the edenfs log.
-    eden_env["EDENSCM_LOG"] = "error"
+    eden_env["SL_LOG"] = (
+        "clienttelemetry=info,error,walkdetector=info,backingstore::prefetch=info"
+    )
 
     if sys.platform != "win32":
         # Reset $PATH to the following contents, so that everyone has the
@@ -297,7 +319,16 @@ def get_edenfs_environment() -> Dict[str, str]:
         # another thread when fork() was called.
         eden_env["OBJC_DISABLE_INITIALIZE_FORK_SAFETY"] = "YES"
 
+    # Setup EdenFs service id
+    eden_env["FB_SERVICE_ID"] = "scm/edenfs"
+
     # Preserve the following environment settings
+    #
+    # NOTE: This list should be expanded sparingly. Prefer ad-hoc passing of
+    # preserved environment variables via the Eden CLI. For example:
+    #   edenfsctl --preserved-vars EXAMPE_VAR EXAMPLE_VAR2 start
+    # This will ensure that environment variables are only preserved when
+    # explicitly requested.
     preserve = [
         "USER",
         "LOGNAME",
@@ -344,11 +375,16 @@ def get_edenfs_environment() -> Dict[str, str]:
         # The following are used to identify RE platform
         "REMOTE_EXECUTION_SCM_REPO",
         "INSIDE_RE_WORKER",
-        # Allow jemalloc heap profiling env vars to be passed through
-        "MALLOC_CONF",
         # Used by tests to trigger error conditions in instrumented Rust code.
         "FAILPOINTS",
     ]
+
+    # Add user-specified environment variables to preserve
+    #
+    # TODO: If users specify problematic environment variables, we may consider
+    # adding a blocklist to prevent them from being preserved.
+    if extra_preserve is not None:
+        preserve.extend(extra_preserve)
 
     if sys.platform == "win32":
         preserve += [
@@ -378,6 +414,4 @@ def get_edenfs_environment() -> Dict[str, str]:
             # Drop any environment variable not matching the above cases
             pass
 
-    # Setup EdenFs service id
-    eden_env["FB_SERVICE_ID"] = "scm/edenfs"
     return eden_env

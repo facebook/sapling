@@ -25,7 +25,7 @@ sapling-types = { version = "0.1.0", path = "../types" }
 sapling-util = { version = "0.1.0", path = "../util" }
 sapling-vlqencoding = { version = "0.1.0", path = "../vlqencoding" }
 sha2 = "0.10.6"
-thiserror = "2"
+thiserror = "2.0.12"
 tracing = { version = "0.1.41", features = ["attributes", "valuable"] }
 twox-hash = "1.6.1"
 uuid = { version = "1.2", features = ["serde", "v4", "v5", "v6", "v7", "v8"] }

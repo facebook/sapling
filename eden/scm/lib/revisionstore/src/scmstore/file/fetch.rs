@@ -16,6 +16,7 @@ use anyhow::anyhow;
 use async_runtime::block_on;
 use async_runtime::spawn_blocking;
 use async_runtime::stream_to_iter;
+use blob::Blob;
 use cas_client::CasClient;
 use edenapi_types::FileResponse;
 use edenapi_types::FileSpec;
@@ -24,7 +25,6 @@ use futures::StreamExt;
 use futures::TryFutureExt;
 use minibytes::Bytes;
 use progress_model::ProgressBar;
-use scm_blob::ScmBlob;
 use storemodel::SerializationFormat;
 use tracing::debug;
 use tracing::field;
@@ -832,7 +832,7 @@ impl FetchState {
                                 self.found_attributes(
                                     key,
                                     StoreFile {
-                                        content: Some(LazyFile::Cas(ScmBlob::Bytes(minibytes::Bytes::new()))),
+                                        content: Some(LazyFile::Cas(Blob::Bytes(minibytes::Bytes::new()))),
                                         aux_data: None,
                                     },
                                 );

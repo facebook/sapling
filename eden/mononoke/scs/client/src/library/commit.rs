@@ -95,7 +95,7 @@ impl TryFrom<&thrift::CommitInfo> for CommitInfo {
         });
         let committer_date = commit
             .committer_date
-            .map(|timestamp| timestamp_to_date(timezone, timestamp));
+            .map(|timestamp| timestamp_to_date(commit.committer_tz.unwrap_or(timezone), timestamp));
         Ok(CommitInfo {
             r#type: "commit".to_string(),
             ids,

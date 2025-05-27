@@ -18,19 +18,14 @@ from sapling import (
     localrepo,
     merge as mergemod,
     node as nodeutil,
-    registrar,
     scmutil,
+    util,
 )
 from sapling.error import Abort
 from sapling.extensions import wrapcommand
 from sapling.i18n import _
 
 UPDATEARGS = "updateargs"
-
-configtable = {}
-configitem = registrar.configitem(configtable)
-
-configitem("morestatus", "show", default=False)
 
 
 def prefixlines(raw):
@@ -235,18 +230,28 @@ def extsetup(ui):
 def reposetup(ui, repo):
     # Write down `hg update` args to show the continue command in
     # interrupted update state.
-    ui.setconfig("hooks", "pre-update.morestatus", saveupdateargs)
-    ui.setconfig("hooks", "post-update.morestatus", cleanupdateargs)
+    ui.setconfig(
+        "hooks", "pre-update.morestatus", "python:sapling.ext.morestatus.saveupdateargs"
+    )
+    ui.setconfig(
+        "hooks",
+        "post-update.morestatus",
+        "python:sapling.ext.morestatus.cleanupdateargs",
+    )
 
 
-def saveupdateargs(repo, args: str, **kwargs) -> None:
+def saveupdateargs(repo, args, **kwargs) -> None:
     # args is a string containing all flags and arguments
-    with repo.localvfs(UPDATEARGS, "wb", atomictemp=True) as fp:
+    if isinstance(args, list):
+        args = " ".join(map(util.shellquote, args))
+    repo = getattr(repo, "_rsrepo", repo)
+    with util.atomictempfile(os.path.join(repo.dot_path, UPDATEARGS), "wb") as fp:
         fp.write(args.encode("utf-8"))
 
 
 def cleanupdateargs(repo, **kwargs) -> None:
-    repo.localvfs.tryunlink(UPDATEARGS)
+    repo = getattr(repo, "_rsrepo", repo)
+    util.tryunlink(os.path.join(repo.dot_path, UPDATEARGS))
 
 
 def statuscmd(orig, ui, repo, *pats, **opts):

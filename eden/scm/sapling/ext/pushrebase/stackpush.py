@@ -35,8 +35,6 @@ stackpush tries to minimize steps inside the critical section:
      Do not read E::F in the critical section.
 """
 
-from __future__ import absolute_import
-
 from sapling import context, error, mutation
 from sapling.node import hex, nullrev
 

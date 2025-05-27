@@ -5,18 +5,20 @@
  * LICENSE file in the root directory of this source tree.
  */
 
+#![allow(unexpected_cfgs)]
+
 use bytes::Buf;
 use types::Blake3;
 use types::Sha1;
 
 #[derive(Clone, Debug)]
-pub enum ScmBlob {
+pub enum Blob {
     Bytes(minibytes::Bytes),
     #[cfg(fbcode_build)]
     IOBuf(iobuf::IOBufShared),
 }
 
-impl ScmBlob {
+impl Blob {
     pub fn to_bytes(&self) -> minibytes::Bytes {
         match self {
             Self::Bytes(bytes) => bytes.clone(),
@@ -30,6 +32,14 @@ impl ScmBlob {
             Self::Bytes(bytes) => bytes,
             #[cfg(fbcode_build)]
             Self::IOBuf(buf) => minibytes::Bytes::from(Vec::<u8>::from(buf)),
+        }
+    }
+
+    pub fn into_vec(self) -> Vec<u8> {
+        match self {
+            Self::Bytes(bytes) => bytes.into(),
+            #[cfg(fbcode_build)]
+            Self::IOBuf(buf) => Vec::<u8>::from(buf),
         }
     }
 
@@ -120,12 +130,12 @@ mod test {
     #[cfg(fbcode_build)]
     #[test]
     fn test_iobuf_sha1_and_blake3() {
-        let blob1 = ScmBlob::Bytes(minibytes::Bytes::from("hello world!"));
+        let blob1 = Blob::Bytes(minibytes::Bytes::from("hello world!"));
 
         let blob2 = {
             let mut iobuf = iobuf::IOBufShared::from("hello");
             iobuf.append_to_end(iobuf::IOBufShared::from(" world!"));
-            ScmBlob::IOBuf(iobuf)
+            Blob::IOBuf(iobuf)
         };
 
         assert_eq!(blob1.sha1(), blob2.sha1());

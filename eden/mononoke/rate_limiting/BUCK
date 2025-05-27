@@ -12,6 +12,7 @@ rust_library(
         "fbsource//third-party/rust:anyhow",
         "fbsource//third-party/rust:async-trait",
         "fbsource//third-party/rust:serde",
+        "fbsource//third-party/rust:strum",
         "fbsource//third-party/rust:thiserror",
         "//common/rust/fbwhoami:fbwhoami",
         "//common/rust/ratelim:ratelim",

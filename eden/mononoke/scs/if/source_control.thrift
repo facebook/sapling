@@ -231,6 +231,12 @@ struct CommitInfo {
   /// This can be useful when using the commit_linear_history method. For example commit_linear_history(commit.id, skip=commit.linear_depth, limit=1)
   /// will return the root commit of the repository.
   13: optional i64 linear_depth;
+
+  /// The timezone the commit was committed in, in seconds after UTC.
+  14: optional i32 committer_tz;
+
+  /// The number of subtree changes in the commit.
+  15: optional i64 subtree_change_count;
 }
 
 struct BookmarkInfo {
@@ -1417,6 +1423,11 @@ struct CommitRunHooksParams {
   2: optional map<string, binary> pushvars;
 }
 
+struct CommitSubtreeChangesParams {
+  /// Commit identity schemes to return.
+  1: set<CommitIdentityScheme> identity_schemes;
+}
+
 struct CommitPathExistsParams {}
 
 struct CommitPathInfoParams {}
@@ -2043,6 +2054,35 @@ union HookOutcome {
 
 struct CommitRunHooksResponse {
   1: map<string, HookOutcome> outcomes;
+}
+
+struct SubtreeCopy {
+  1: Path source_path;
+  2: map<CommitIdentityScheme, CommitId> source_commit_ids;
+}
+
+struct SubtreeMerge {
+  1: Path source_path;
+  2: map<CommitIdentityScheme, CommitId> source_commit_ids;
+}
+
+struct SubtreeImport {
+  1: Path source_path;
+  2: string source_commit_id;
+  3: string source_url;
+}
+
+union SubtreeChange {
+  1: SubtreeCopy subtree_copy;
+
+  2: SubtreeMerge subtree_merge;
+
+  3: SubtreeImport subtree_import;
+}
+
+struct CommitSubtreeChangesResponse {
+  /// Map from destination path to the change that was performed on it.
+  1: map<Path, SubtreeChange> subtree_changes;
 }
 
 struct CommitPathExistsResponse {
@@ -2818,6 +2858,15 @@ service SourceControlService extends fb303_core.BaseService {
   ) throws (
     1: RequestError request_error,
     2: InternalError interal_error,
+    3: OverloadError overload_error,
+  );
+
+  CommitSubtreeChangesResponse commit_subtree_changes(
+    1: CommitSpecifier commit,
+    2: CommitSubtreeChangesParams params,
+  ) throws (
+    1: RequestError request_error,
+    2: InternalError internal_error,
     3: OverloadError overload_error,
   );
 

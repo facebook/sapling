@@ -86,16 +86,12 @@ impl Middleware for ThrottleMiddleware {
 
         let category = rate_limiter.category();
         let counter = build_counter(&ctx, category, EDENAPI_QPS_LIMIT, &client_main_id);
-        let max_value = limit.body.raw_config.limit;
-        let time_window = limit.fci_metric.window.as_secs() as u32;
 
         match counter_check_and_bump(
             &ctx,
             counter,
             1.0,
-            EDENAPI_QPS_LIMIT,
-            max_value,
-            time_window,
+            limit,
             enforced,
             hashmap! {"client_main_id" => client_main_id.as_str() },
         )

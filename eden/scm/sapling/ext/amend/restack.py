@@ -5,7 +5,6 @@
 
 # restack.py - rebase to make a stack connected again
 
-from __future__ import absolute_import
 
 from sapling import commands
 

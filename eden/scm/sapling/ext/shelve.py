@@ -22,8 +22,6 @@ shelved change has a distinct name. For details, see the help for "hg
 shelve".
 """
 
-from __future__ import absolute_import
-
 import collections
 import errno
 import itertools
@@ -56,9 +54,6 @@ from sapling.i18n import _
 
 from . import rebase
 
-configtable = {}
-configitem = registrar.configitem(configtable)
-configitem("shelve", "maxbackups", default=10)
 
 cmdtable = {}
 command = registrar.command(cmdtable)

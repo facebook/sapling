@@ -71,6 +71,7 @@ use futures::TryStreamExt;
 use futures::future;
 use futures::stream;
 use futures_stats::TimedTryFutureExt;
+use git_source_of_truth::GitSourceOfTruthConfig;
 use metaconfig_types::RepoConfig;
 use metaconfig_types::RepoConfigRef;
 use mononoke_macros::mononoke;
@@ -89,8 +90,11 @@ use repo_cross_repo::RepoCrossRepo;
 use repo_derived_data::RepoDerivedData;
 use repo_identity::RepoIdentity;
 use repo_identity::RepoIdentityRef;
+use repo_update_logger::BookmarkInfo;
+use repo_update_logger::BookmarkOperation;
 use repo_update_logger::CommitInfo;
 use repo_update_logger::find_draft_ancestors;
+use repo_update_logger::log_bookmark_operation;
 use repo_update_logger::log_new_commits;
 use scuba_ext::MononokeScubaSampleBuilder;
 use slog::debug;
@@ -125,6 +129,7 @@ pub struct Repo(
     dyn CommitGraphWriter,
     dyn Filenodes,
     SqlQueryConfig,
+    dyn GitSourceOfTruthConfig,
 );
 
 #[cfg(test)]
@@ -442,7 +447,7 @@ where
         sync_commit(
             &ctx,
             to_cs_id,
-            &commit_syncer,
+            commit_syncer,
             CandidateSelectionHint::Only,
             sync_context,
             disable_lease,
@@ -550,7 +555,6 @@ where
     let prev_counter: Option<i64> = prev_counter.map(|x| x.try_into()).transpose()?;
     let target_repo_id = commit_syncer.get_target_repo().repo_identity().id();
     let source_repo_id = commit_syncer.get_source_repo().repo_identity().id();
-
     debug!(ctx.logger(), "preparing to backsync {:?}", log_entry);
 
     let new_counter = log_entry.id;
@@ -605,6 +609,12 @@ where
 
         let from_cs_id = get_remapped_cs_id(from_sync_outcome)?;
         let to_cs_id = get_remapped_cs_id(to_sync_outcome)?;
+        let bookmark_info = BookmarkInfo {
+            bookmark_name: bookmark.clone(),
+            bookmark_kind: BookmarkKind::Publishing, // Only publishing bookmarks are back synced
+            operation: BookmarkOperation::new(from_cs_id, to_cs_id)?,
+            reason: BookmarkUpdateReason::Backsyncer,
+        };
 
         if from_cs_id != to_cs_id {
             let target_repo = commit_syncer.get_target_repo();
@@ -748,7 +758,7 @@ where
                 commits_to_log,
             )
             .await;
-
+            log_bookmark_operation(&ctx, target_repo, &bookmark_info).await;
             return Ok(res);
         } else {
             debug!(

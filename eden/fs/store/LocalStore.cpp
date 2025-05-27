@@ -10,7 +10,6 @@
 #include <folly/ExceptionWrapper.h>
 #include <folly/io/Cursor.h>
 #include <folly/io/IOBuf.h>
-#include <folly/lang/Bits.h>
 #include <folly/logging/xlog.h>
 #include <array>
 

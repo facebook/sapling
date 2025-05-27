@@ -5,7 +5,6 @@
 
 # undo.py: records data in revlog for future undo functionality
 
-from __future__ import absolute_import
 
 import bindings
 from bindings import cliparser
@@ -1151,7 +1150,8 @@ def _undoto(ui, repo, reverseindex, keep=False, branch=None):
             command = "amend"
         oldcommithash = _readnode(repo, "workingparent.i", nodedict["workingparent"])
         shorthash = short(bin(oldcommithash))
-        hintutil.trigger("undo-uncommit-unamend", command, shorthash)
+        if not keep:
+            hintutil.trigger("undo-uncommit-unamend", command, shorthash)
     repo.ui.status(uimessage)
 
 

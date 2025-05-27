@@ -5,8 +5,6 @@
 
 """commit cloud errors"""
 
-from __future__ import absolute_import
-
 import traceback
 
 from sapling import error
@@ -15,7 +13,7 @@ from sapling.i18n import _
 
 def getsupportcontact(ui):
     return ui.label(
-        ui.config("ui", "supportcontact", "the Source Control Team"),
+        ui.config("ui", "supportcontact") or "the Source Control Team",
         "commitcloud.team",
     )
 

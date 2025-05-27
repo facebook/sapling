@@ -191,6 +191,7 @@ TreeInode::~TreeInode() = default;
 
 ImmediateFuture<struct stat> TreeInode::stat(
     const ObjectFetchContextPtr& context) {
+  logAccess(*context);
   notifyParentOfStat(/*isFile=*/false, *context);
 
   auto st = getMount()->initStatData();
@@ -247,6 +248,7 @@ std::optional<ImmediateFuture<VirtualInode>> TreeInode::rlockGetOrFindChild(
   // Check to see if the entry is already loaded
   auto& entry = iter->second;
   if (auto inodePtr = entry.getInodePtr()) {
+    logAccess(*context);
     return VirtualInode{std::move(inodePtr)};
   }
 
@@ -257,6 +259,7 @@ std::optional<ImmediateFuture<VirtualInode>> TreeInode::rlockGetOrFindChild(
     return std::nullopt;
   }
 
+  logAccess(*context);
   // Note that a child's inode may be currently loading. If it's
   // currently being loaded there's no chance it's been
   // modified/materialized yet (it has to have been loaded prior),
@@ -286,6 +289,7 @@ TreeInode::loadChild(
     folly::Synchronized<TreeInodeState>::LockedPtr& contents,
     PathComponentPiece name,
     const ObjectFetchContextPtr& context) {
+  logAccess(*context);
   auto inodeLoadFuture = Future<unique_ptr<InodeBase>>::makeEmpty();
   InodePtr childInodePtr;
   InodeMap::PromiseVector promises;
@@ -918,7 +922,7 @@ void TreeInode::childMaterialized(
     const RenameLock& renameLock,
     PathComponentPiece childName) {
   auto startTime = std::chrono::system_clock::now();
-  bool wasAlreadyMaterialized;
+  bool wasAlreadyMaterialized = false;
   {
     auto contents = contents_.wlock();
     wasAlreadyMaterialized = contents->isMaterialized();
@@ -976,7 +980,7 @@ void TreeInode::childDematerialized(
     PathComponentPiece childName,
     ObjectId childScmHash) {
   auto startTime = std::chrono::system_clock::now();
-  bool wasAlreadyMaterialized;
+  bool wasAlreadyMaterialized = false;
   {
     auto contents = contents_.wlock();
     wasAlreadyMaterialized = contents->isMaterialized();
@@ -1224,6 +1228,7 @@ std::optional<ObjectId> TreeInode::getObjectId() const {
 
 ImmediateFuture<std::optional<Hash32>> TreeInode::getDigestHash(
     const ObjectFetchContextPtr& fetchContext) {
+  logAccess(*fetchContext);
   auto state = contents_.rlock();
 
   if (!state->isMaterialized()) {
@@ -1237,6 +1242,7 @@ ImmediateFuture<std::optional<Hash32>> TreeInode::getDigestHash(
 
 ImmediateFuture<std::optional<uint64_t>> TreeInode::getDigestSize(
     const ObjectFetchContextPtr& fetchContext) {
+  logAccess(*fetchContext);
   auto state = contents_.rlock();
 
   if (!state->isMaterialized()) {
@@ -1250,6 +1256,7 @@ ImmediateFuture<std::optional<uint64_t>> TreeInode::getDigestSize(
 
 ImmediateFuture<std::optional<TreeAuxData>> TreeInode::getTreeAuxData(
     const ObjectFetchContextPtr& fetchContext) {
+  logAccess(*fetchContext);
   auto state = contents_.rlock();
 
   if (!state->isMaterialized()) {
@@ -3034,6 +3041,7 @@ ImmediateFuture<Unit> TreeInode::computeDiff(
 
   // Now process all of the deferred work.
   std::vector<ImmediateFuture<Unit>> deferredFutures;
+  deferredFutures.reserve(deferredEntries.size());
   for (auto& entry : deferredEntries) {
     deferredFutures.push_back(entry->run());
   }
@@ -3051,7 +3059,7 @@ ImmediateFuture<Unit> TreeInode::computeDiff(
             return collectAll(std::move(deferredFutures));
           })
       .thenValue([self = std::move(self),
-                  currentPath = RelativePath{std::move(currentPath)},
+                  currentPath = RelativePath{currentPath},
                   context,
                   // Capture ignore to ensure it remains valid until all of our
                   // children's diff operations complete.
@@ -3900,7 +3908,7 @@ ImmediateFuture<InvalidationRequired> TreeInode::checkoutUpdateEntry(
                   CaseSensitivity::Insensitive);
             }
 
-            bool inserted;
+            bool inserted = false;
             {
               auto contents = parentInode->contents_.wlock();
               auto ret = contents->entries.emplace(
@@ -3948,22 +3956,25 @@ bool needDecFsRefcount(InodeMap& inodeMap, InodeNumber ino) {
 
 #ifdef __APPLE__
 folly::Try<folly::Unit> TreeInode::nfsInvalidateCacheEntryForGC(
-    TreeInodeState& state,
-    PathComponentPiece name,
-    std::optional<InodeNumber> ino) {
+    TreeInodeState& state) {
   if (auto* nfsdChannel = getMount()->getNfsdChannel()) {
     const auto path = getPath();
     if (path.has_value()) {
-      // The contents lock is held by nfsInvalidateCacheEntryForGC
+      // The contents lock is held by invalidateChildrenNotMaterialized
       auto mode = getMetadataLocked(state.entries).mode;
       nfsdChannel->invalidate(
-          getMount()->getPath() + *path + name,
+          getMount()->getPath() + *path,
           mode,
-          [inodeMapWeak = getInodeMapWeak(), ino]() {
+          [inodeMapWeak = getInodeMapWeak(), &state]() {
             // Code to run after successful invalidation
             if (auto inodeMap = inodeMapWeak.lock()) {
-              if (ino && inodeMap->isInodeLoadedOrRemembered(ino.value())) {
-                inodeMap->decFsRefcount(ino.value());
+              // The directory got invalidated, now we can dereference all of
+              // its contents
+              for (auto& entry : state.entries) {
+                auto ino = entry.second.getInodeNumber();
+                if (inodeMap->isInodeLoadedOrRemembered(ino)) {
+                  inodeMap->decFsRefcount(ino);
+                }
               }
             } else {
               XLOG(WARN) << "InodeMap is killed before GC completes";
@@ -4397,9 +4408,10 @@ ImmediateFuture<uint64_t> TreeInode::invalidateChildrenNotMaterialized(
 
   return getLoadedOrRememberedTreeChildren(this, getInodeMap(), context)
       .thenValue([context = context.copy(),
-                  cutoff](std::vector<TreeInodePtr> treeChildren) {
+                  cutoff](const std::vector<TreeInodePtr>& treeChildren) {
         std::vector<ImmediateFuture<uint64_t>> futures;
 
+        futures.reserve(treeChildren.size());
         for (auto& tree : treeChildren) {
           futures.push_back(
               tree->invalidateChildrenNotMaterialized(cutoff, context));
@@ -4424,8 +4436,37 @@ ImmediateFuture<uint64_t> TreeInode::invalidateChildrenNotMaterialized(
             return numInvalidated;
           }
 
-          auto* inodeMap = self->getInodeMap();
           auto contents = self->contents_.wlock();
+#ifdef __APPLE__
+          if (!contents->isMaterialized()) {
+            // if cutoff is max, we should invalidate everything, so we don't
+            // need to check the atime
+            bool shouldInvalidate =
+                (cutoff == std::chrono::system_clock::time_point::max());
+            if (!shouldInvalidate) {
+              auto atime = std::chrono::system_clock::from_time_t(
+                  self->getMetadataLocked(contents->entries)
+                      .timestamps.atime.toTimespec()
+                      .tv_sec);
+              shouldInvalidate = (atime < cutoff);
+            }
+            if (shouldInvalidate) {
+              // Attempt to invalidate the directory, and then delete all of its
+              // children's inodes. The call order here is recursively
+              // bottom-up. At each level, the contents_'s lock is held by the
+              // invalidateChildrenNotMaterialized() until the
+              // completeInvalidations() returns and all of the children's inode
+              // get deleted.
+              // The directory itself will be deleted later in the parent's
+              // invalidation.
+
+              auto invalidateResult =
+                  self->nfsInvalidateCacheEntryForGC(*contents);
+              numInvalidated++;
+            }
+          }
+#elif defined(_WIN32)
+          auto* inodeMap = self->getInodeMap();
           for (auto& entry : contents->entries) {
             if (entry.second.isMaterialized()) {
               continue;
@@ -4446,7 +4487,6 @@ ImmediateFuture<uint64_t> TreeInode::invalidateChildrenNotMaterialized(
               // Let's focus only on files as directories will get their atime
               // updated when we query the atime of the files contained in it.
               if (!entry.second.isDirectory()) {
-#ifdef _WIN32
                 auto entryPath = selfPath + entry.first;
                 auto wEntryPath = entryPath.wide();
                 struct __stat64 buf;
@@ -4460,13 +4500,6 @@ ImmediateFuture<uint64_t> TreeInode::invalidateChildrenNotMaterialized(
 
                 auto atime =
                     std::chrono::system_clock::from_time_t(buf.st_atime);
-#else
-                auto atime = std::chrono::system_clock::from_time_t(
-                    entry.second.getInode()
-                        ->getMetadata()
-                        .timestamps.atime.toTimespec()
-                        .tv_sec);
-#endif
                 if (atime > cutoff) {
                   // That file has been touched too recently, continue.
                   continue;
@@ -4474,25 +4507,20 @@ ImmediateFuture<uint64_t> TreeInode::invalidateChildrenNotMaterialized(
               }
             }
 
-        // TODO: In the case where the file becomes materialized on disk
-        // now, invalidateChannelEntryCache will happily remove it, leading
-        // to a potential loss of user data. To avoid this, we could try
-        // not passing PRJ_UPDATE_ALLOW_DIRTY_DATA and dealing with the
-        // side effects to close that race.
+            // TODO: In the case where the file becomes materialized on disk
+            // now, invalidateChannelEntryCache will happily remove it, leading
+            // to a potential loss of user data. To avoid this, we could try
+            // not passing PRJ_UPDATE_ALLOW_DIRTY_DATA and dealing with the
+            // side effects to close that race.
 
-        // Here, we rely on invalidateChannelEntryCache failing for
-        // non-empty directories to guarantee that we're not losing user
-        // data in the case where a user writes a file in a directory that
-        // we're attempting to invalidate. For directories with not
-        // invalidated childrens due to being read too recently, we also
-        // rely on invalidateChannelEntryCache failing.
-#ifdef __APPLE__
-            auto invalidateResult = self->nfsInvalidateCacheEntryForGC(
-                *contents, entry.first, inodeNumber);
-#else
+            // Here, we rely on invalidateChannelEntryCache failing for
+            // non-empty directories to guarantee that we're not losing user
+            // data in the case where a user writes a file in a directory that
+            // we're attempting to invalidate. For directories with not
+            // invalidated children due to being read too recently, we also
+            // rely on invalidateChannelEntryCache failing.
             auto invalidateResult = self->invalidateChannelEntryCache(
                 *contents, entry.first, inodeNumber, nullptr);
-#endif
             if (invalidateResult.hasException()) {
               XLOG(DBG5) << "Couldn't invalidate: " << self->getLogPath() << "/"
                          << entry.first << ": " << invalidateResult.exception();
@@ -4500,6 +4528,11 @@ ImmediateFuture<uint64_t> TreeInode::invalidateChildrenNotMaterialized(
               numInvalidated++;
             }
           }
+#else
+          // For now, there is no need for a inode GC on Linux, so let's not
+          // bother implementing it. only silence unused variable warning
+          (void)cutoff;
+#endif
         }
 
         return numInvalidated;
@@ -4509,8 +4542,7 @@ ImmediateFuture<uint64_t> TreeInode::invalidateChildrenNotMaterialized(
       .thenTry(
           [this](folly::Try<uint64_t>&& result) -> ImmediateFuture<uint64_t> {
             auto* nfsdChannel = getMount()->getNfsdChannel();
-            if (nfsdChannel &&
-                getMount()->getEdenConfig()->enableGc.getValue()) {
+            if (nfsdChannel) {
               return nfsdChannel->completeInvalidations().thenTry(
                   [result = std::move(result)](auto&&) mutable {
                     return std::move(result);

@@ -114,7 +114,9 @@ impl<R: MononokeRepo> TreeContext<R> {
         Ok(summary)
     }
 
-    pub async fn list(&self) -> Result<impl Iterator<Item = (String, TreeEntry)>, MononokeError> {
+    pub async fn list(
+        &self,
+    ) -> Result<impl Iterator<Item = (String, TreeEntry)> + use<R>, MononokeError> {
         let fsnode = self.fsnode().await?;
         let entries = fsnode
             .into_subentries()

@@ -13,8 +13,8 @@ use anyhow::Result;
 use anyhow::anyhow;
 use lmdb::Txn;
 
-use super::gen::RandomData;
-use super::gen::TestDir;
+use super::r#gen::RandomData;
+use super::r#gen::TestDir;
 use super::types;
 use super::types::Benchmark;
 use super::types::BenchmarkType;
@@ -46,18 +46,28 @@ pub fn bench_rocksdb_write_mfmd(test_dir: &TestDir, random_data: &RandomData) ->
     let mut result = Benchmark::new(BenchmarkType::RocksDbWriteMultipleFiles);
 
     // Add throughput metrics
-    result.add_metric("write() + flush()", mb_per_second_e2e, "MiB/s", None);
-    result.add_metric("write()", mb_per_second_write, "MiB/s", None);
+    result.add_metric(
+        "write() + flush()",
+        mb_per_second_e2e,
+        types::Unit::MiBps,
+        None,
+    );
+    result.add_metric("write()", mb_per_second_write, types::Unit::MiBps, None);
 
     // Add latency metrics
     let chunk_size_kb = random_data.chunk_size as f64 / types::BYTES_IN_KILOBYTE as f64;
     result.add_metric(
         &format!("write() {:.0} KiB latency", chunk_size_kb),
         avg_write_dur * 1000.0,
-        "ms",
+        types::Unit::Ms,
         Some(4),
     );
-    result.add_metric("flush() latency", avg_flush_dur * 1000.0, "ms", Some(4));
+    result.add_metric(
+        "flush() latency",
+        avg_flush_dur * 1000.0,
+        types::Unit::Ms,
+        Some(4),
+    );
 
     Ok(result)
 }
@@ -86,14 +96,14 @@ pub fn bench_rocksdb_read_mfmd(test_dir: &TestDir, random_data: &RandomData) -> 
     let mut result = Benchmark::new(BenchmarkType::RocksDbReadMultipleFiles);
 
     // Add throughput metrics
-    result.add_metric("read()", mb_per_second, "MiB/s", None);
+    result.add_metric("read()", mb_per_second, types::Unit::MiBps, None);
 
     // Add latency metrics
     let chunk_size_kb = random_data.chunk_size as f64 / types::BYTES_IN_KILOBYTE as f64;
     result.add_metric(
         &format!("read() {:.0} KiB latency", chunk_size_kb),
         avg_read_dur * 1000.0,
-        "ms",
+        types::Unit::Ms,
         Some(4),
     );
 
@@ -131,18 +141,28 @@ pub fn bench_lmdb_write_mfmd(test_dir: &TestDir, random_data: &RandomData) -> Re
     let mut result = Benchmark::new(BenchmarkType::LmdbWriteMultipleFiles);
 
     // Add throughput metrics
-    result.add_metric("write() + sync()", mb_per_second_e2e, "MiB/s", None);
-    result.add_metric("write()", mb_per_second_write, "MiB/s", None);
+    result.add_metric(
+        "write() + sync()",
+        mb_per_second_e2e,
+        types::Unit::MiBps,
+        None,
+    );
+    result.add_metric("write()", mb_per_second_write, types::Unit::MiBps, None);
 
     // Add latency metrics
     let chunk_size_kb = random_data.chunk_size as f64 / types::BYTES_IN_KILOBYTE as f64;
     result.add_metric(
         &format!("write() {:.0} KiB latency", chunk_size_kb),
         avg_write_dur * 1000.0,
-        "ms",
+        types::Unit::Ms,
         Some(4),
     );
-    result.add_metric("sync() latency", avg_sync_dur * 1000.0, "ms", Some(4));
+    result.add_metric(
+        "sync() latency",
+        avg_sync_dur * 1000.0,
+        types::Unit::Ms,
+        Some(4),
+    );
 
     Ok(result)
 }
@@ -173,14 +193,14 @@ pub fn bench_lmdb_read_mfmd(test_dir: &TestDir, random_data: &RandomData) -> Res
     let mut result = Benchmark::new(BenchmarkType::LmdbReadMultipleFiles);
 
     // Add throughput metrics
-    result.add_metric("read()", mb_per_second, "MiB/s", None);
+    result.add_metric("read()", mb_per_second, types::Unit::MiBps, None);
 
     // Add latency metrics
     let chunk_size_kb = random_data.chunk_size as f64 / types::BYTES_IN_KILOBYTE as f64;
     result.add_metric(
         &format!("read() {:.0} KiB latency", chunk_size_kb),
         avg_read_dur * 1000.0,
-        "ms",
+        types::Unit::Ms,
         Some(4),
     );
 
@@ -210,14 +230,14 @@ pub fn bench_sqlite_write_mfmd(test_dir: &TestDir, random_data: &RandomData) -> 
     let mut result = Benchmark::new(BenchmarkType::SqliteWriteMultipleFiles);
 
     // Add throughput metrics
-    result.add_metric("write()", mb_per_second, "MiB/s", None);
+    result.add_metric("write()", mb_per_second, types::Unit::MiBps, None);
 
     // Add latency metrics
     let chunk_size_kb = random_data.chunk_size as f64 / types::BYTES_IN_KILOBYTE as f64;
     result.add_metric(
         &format!("write() {:.0} KiB latency", chunk_size_kb),
         avg_write_dur * 1000.0,
-        "ms",
+        types::Unit::Ms,
         Some(4),
     );
 
@@ -247,14 +267,14 @@ pub fn bench_sqlite_read_mfmd(test_dir: &TestDir, random_data: &RandomData) -> R
     let mut result = Benchmark::new(BenchmarkType::SqliteReadMultipleFiles);
 
     // Add throughput metrics
-    result.add_metric("read()", mb_per_second, "MiB/s", None);
+    result.add_metric("read()", mb_per_second, types::Unit::MiBps, None);
 
     // Add latency metrics
     let chunk_size_kb = random_data.chunk_size as f64 / types::BYTES_IN_KILOBYTE as f64;
     result.add_metric(
         &format!("read() {:.0} KiB latency", chunk_size_kb),
         avg_read_dur * 1000.0,
-        "ms",
+        types::Unit::Ms,
         Some(4),
     );
 

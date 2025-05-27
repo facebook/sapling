@@ -58,7 +58,7 @@ impl Logger {
 
         // Probabilistically clean up old entries to avoid doing the work every time.
         let cleanup_chance = config.get_or("runlog", "cleanup-chance", || 0.01)?;
-        if cleanup_chance > rand::thread_rng().gen::<f64>() {
+        if cleanup_chance > rand::thread_rng().r#gen::<f64>() {
             let threshold = config.get_or("runlog", "cleanup-threshold", || 3600.0)?;
             FileStore::cleanup(shared_path, Duration::from_secs_f64(threshold))?;
         }
@@ -188,7 +188,7 @@ impl Entry {
     pub fn update_status(&mut self, progress: Vec<Progress>) -> bool {
         let (download_bytes, upload_bytes, _) = hg_http::current_progress();
         macro_rules! try_to_update {
-            ($original_stat:expr,$new_stat:expr) => {{
+            ($original_stat:expr_2021,$new_stat:expr_2021) => {{
                 if $original_stat == $new_stat {
                     false
                 } else {

@@ -34,16 +34,6 @@ const EXAMPLE_HEADER = String.raw`
 # hide end
 `;
 
-// Compatibility for internal systems where sl is not installed but hg can be
-// used as an alternative.
-const HG_COMPAT_HEADER = String.raw`
-# hide begin
-  $ sl() {
-  >   HGIDENTITY=sl hg "$@"
-  > }
-# hide end
-`;
-
 // Replace each line with lineFunc(line).
 // Skip a line if lineFunc(line) returns null.
 function processLines(text: string, lineFunc: (line: string) => string | null): string {
@@ -67,9 +57,7 @@ function processInput(text: string): string {
       newLine = `  ${line}`;
     }
     if (firstLine) {
-      let header = EXAMPLE_HEADER;
-      // Currently debugruntest only knows about "hg".
-      header += HG_COMPAT_HEADER;
+      const header = EXAMPLE_HEADER;
       newLine = header + newLine;
       firstLine = false;
     }
@@ -193,10 +181,6 @@ module.exports = function (options: any) {
 };
 
 function getSaplingCLI(): string {
-  let cli;
-  // @fb-only
-  if (!cli) {
-    cli = 'sl';
-  }
+  const cli = process.env.SL ?? 'sl';
   return cli;
 }

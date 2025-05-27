@@ -20,13 +20,11 @@ from .metalog import fetchlatestbubble, storelatest
 def _backupparents(repo, wctx) -> None:
     """make sure this commit's ancestors are backed up in commitcloud"""
     parents = (wctx.p1().node(), wctx.p2().node())
-    draftrevs = repo.changelog.torevset(
-        # pyre-fixme[10]: Name `ancestors` is used but not defined.
-        # pyre-fixme[10]: Name `draft` is used but not defined.
-        repo.dageval(lambda: draft() & ancestors(parents))
-    )
+    # pyre-fixme[10]: Name `ancestors` is used but not defined.
+    # pyre-fixme[10]: Name `draft` is used but not defined.
+    draftnodes = repo.dageval(lambda: draft() & ancestors(parents))
 
-    (success, failed) = uploadhgchangesets(repo, draftrevs)
+    (success, failed) = uploadhgchangesets(repo, draftnodes)
     if failed:
         raise error.Abort(
             _("failed to upload ancestors to commit cloud: {}").format(

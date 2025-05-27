@@ -24,7 +24,7 @@ repo_blobstore = { version = "0.1.0", path = "../repo_blobstore" }
 repo_identity = { version = "0.1.0", path = "../../repo_attributes/repo_identity" }
 slog = { package = "tracing_slog_compat", version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 stats = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
-thiserror = "2"
+thiserror = "2.0.12"
 
 [dev-dependencies]
 mononoke_macros = { version = "0.1.0", path = "../../mononoke_macros" }

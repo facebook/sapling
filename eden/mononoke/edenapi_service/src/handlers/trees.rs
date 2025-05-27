@@ -90,7 +90,7 @@ pub struct TreeParams {
 }
 
 /// Fetch the tree nodes requested by the client.
-pub async fn trees(state: &mut State) -> Result<impl TryIntoResponse, HttpError> {
+pub async fn trees(state: &mut State) -> Result<impl TryIntoResponse + use<>, HttpError> {
     let params = TreeParams::take_from(state);
 
     state.put(HandlerInfo::new(

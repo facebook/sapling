@@ -24,7 +24,7 @@ autopullpattern=re:^[A-Za-z0-9._/-]+/\S+$
 disallowedto=^remote/
 disallowhint=please don't specify 'remote/' prefix in remote bookmark's name
 hoist=remote
-publicheads=remote/master,remote/main
+publicheads=remote/master,remote/main,m/*
 rename.default=remote
 selectivepulldefault=main,master
 
@@ -47,7 +47,7 @@ pub static DOTGIT_OVERRIDE_CONFIG: StaticConfig = static_config!("builtin:dotgit
 disallowedto=^origin/
 disallowhint=please don't specify 'origin/' prefix in remote bookmark's name
 hoist=origin
-publicheads=origin/master,origin/main
+publicheads=origin/master,origin/main,m/*
 rename.default=origin
 
 [smartlog]
@@ -55,4 +55,7 @@ repos=origin/
 
 [extensions]
 sparse=!
+
+[git]
+import-remote-refs=m/*
 "#);

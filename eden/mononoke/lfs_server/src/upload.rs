@@ -365,7 +365,7 @@ async fn sync_internal_and_upstream(
     Ok(())
 }
 
-pub async fn upload(state: &mut State) -> Result<impl TryIntoResponse, HttpError> {
+pub async fn upload(state: &mut State) -> Result<impl TryIntoResponse + use<>, HttpError> {
     let UploadParams {
         repository,
         oid,

@@ -64,7 +64,7 @@ fn tzset() -> Option<i32> {
     #[cfg(unix)]
     {
         use std::os::raw::c_long;
-        extern "C" {
+        unsafe extern "C" {
             // See https://www.gnu.org/software/libc/manual/html_node/Time-Zone-Functions.html#Time-Zone-Functions
             fn tzset();
             static timezone: c_long;

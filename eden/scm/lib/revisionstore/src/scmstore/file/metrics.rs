@@ -76,7 +76,7 @@ impl AddAssign for FileStoreWriteMetrics {
 }
 
 impl FileStoreWriteMetrics {
-    fn metrics(&self) -> impl Iterator<Item = (String, usize)> {
+    fn metrics(&self) -> impl Iterator<Item = (String, usize)> + use<> {
         namespaced("lfs", self.lfs.metrics())
             .chain(namespaced("nonlfs", self.nonlfs.metrics()))
             .chain(namespaced("lfsptr", self.lfsptr.metrics()))
@@ -119,7 +119,7 @@ impl AddAssign for FileStoreApiMetrics {
 }
 
 impl FileStoreApiMetrics {
-    fn metrics(&self) -> impl Iterator<Item = (String, usize)> {
+    fn metrics(&self) -> impl Iterator<Item = (String, usize)> + use<> {
         namespaced("hg_getfilecontent", self.hg_getfilecontent.metrics())
             .chain(namespaced("hg_addpending", self.hg_addpending.metrics()))
             .chain(namespaced(
@@ -155,7 +155,7 @@ impl FileStoreMetrics {
         Arc::new(RwLock::new(FileStoreMetrics::default()))
     }
 
-    pub fn metrics(&self) -> impl Iterator<Item = (String, usize)> {
+    pub fn metrics(&self) -> impl Iterator<Item = (String, usize)> + use<> {
         namespaced(
             "scmstore.file",
             namespaced("write", self.write.metrics()).chain(namespaced("api", self.api.metrics())),

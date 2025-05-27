@@ -352,7 +352,7 @@ async fn calculate_delay(
     commit_syncer: &CommitSyncer<Repo>,
     target_repo_dbs: &TargetRepoDbs,
 ) -> Result<Delay, Error> {
-    let TargetRepoDbs { ref counters, .. } = target_repo_dbs;
+    let TargetRepoDbs { counters, .. } = target_repo_dbs;
     let source_repo_id = commit_syncer.get_source_repo().repo_identity().id();
 
     let counter_name = format_counter(&source_repo_id);

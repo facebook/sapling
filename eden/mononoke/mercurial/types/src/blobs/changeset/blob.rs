@@ -328,7 +328,7 @@ impl Display for HgBlobChangeset {
         let title_end = message
             .iter()
             .enumerate()
-            .find(|(_, &c)| c == b'\n')
+            .find(|&(_, &c)| c == b'\n')
             .map_or(message.len(), |(i, _)| i);
 
         write!(

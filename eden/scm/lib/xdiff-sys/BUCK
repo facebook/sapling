@@ -18,8 +18,8 @@ rust_library(
             "repository": "https://github.com/facebook/sapling",
         },
     }},
-    cpp_deps = ["//eden/scm/lib/third-party/xdiff:xdiff"],
     crate_root = "src/lib.rs",
+    deps = ["//eden/scm/lib/third-party/xdiff:xdiff"],
 )
 
 # small demo binary using the bindings

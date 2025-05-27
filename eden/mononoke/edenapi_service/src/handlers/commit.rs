@@ -236,8 +236,6 @@ async fn bump_counter_check_ratelimit(
         RateLimitStatus::Enforced => true,
         _ => panic!("Invalid limit status: {:?}", limit.body.raw_config.status),
     };
-    let max_value = limit.body.raw_config.limit;
-    let time_window = limit.fci_metric.window.as_secs() as u32;
 
     let client_main_id = match &client_request_info.main_id {
         Some(client_main_id) => client_main_id,
@@ -252,9 +250,7 @@ async fn bump_counter_check_ratelimit(
         &ctx,
         counter,
         bump_value,
-        rate_limit_name,
-        max_value,
-        time_window,
+        limit,
         enforced,
         hashmap! {"client_main_id" => client_main_id.as_str() },
     )
@@ -294,7 +290,9 @@ impl SaplingRemoteApiHandler for LocationToHashHandler {
     }
 }
 
-pub async fn hash_to_location(state: &mut State) -> Result<impl TryIntoResponse, HttpError> {
+pub async fn hash_to_location(
+    state: &mut State,
+) -> Result<impl TryIntoResponse + use<>, HttpError> {
     async fn hg_hash_to_location_chunk<R: MononokeRepo>(
         hg_repo_ctx: HgRepoContext<R>,
         master_heads: Vec<HgChangesetId>,
@@ -413,7 +411,7 @@ pub async fn hash_to_location(state: &mut State) -> Result<impl TryIntoResponse,
     Ok(cbor_response)
 }
 
-pub async fn revlog_data(state: &mut State) -> Result<impl TryIntoResponse, HttpError> {
+pub async fn revlog_data(state: &mut State) -> Result<impl TryIntoResponse + use<>, HttpError> {
     let params = RevlogDataParams::take_from(state);
 
     state.put(HandlerInfo::new(

@@ -36,8 +36,8 @@ define_stats! {
     cloud_rename_workspace_duration_ms: histogram(100, 0, 5000, Average, Sum, Count; P 50; P 75; P 95; P 99),
     cloud_rollback_workspace_duration_ms: histogram(100, 0, 5000, Average, Sum, Count; P 50; P 75; P 95; P 99),
     cloud_share_workspace_duration_ms: histogram(100, 0, 5000, Average, Sum, Count; P 50; P 75; P 75; P 95; P 99),
-    cloud_smartlog_duration_ms: histogram(100, 0, 5000, Average, Sum, Count; P 50; P 75; P 75; P 95; P 99),
     cloud_smartlog_by_version: histogram(100, 0, 5000, Average, Sum, Count; P 50; P 75; P 75; P 95; P 99),
+    cloud_smartlog_duration_ms: histogram(100, 0, 5000, Average, Sum, Count; P 50; P 75; P 75; P 95; P 99),
     cloud_update_archive_duration_ms: histogram(100, 0, 5000, Average, Sum, Count; P 50; P 75; P 95; P 99),
     cloud_update_references_duration_ms: histogram(100, 0, 5000, Average, Sum, Count; P 50; P 75; P 95; P 95; P 99),
     cloud_workspace_duration_ms: histogram(100, 0, 5000, Average, Sum, Count; P 50; P 75; P 95; P 99),
@@ -61,10 +61,12 @@ define_stats! {
     history_duration_ms: histogram(100, 0, 5000, Average, Sum, Count; P 50; P 75; P 95; P 99),
     land_stack_duration_ms: histogram(10, 0, 500, Average, Sum, Count; P 50; P 75; P 95; P 99),
     lookup_duration_ms: histogram(100, 0, 5000, Average, Sum, Count; P 50; P 75; P 95; P 99),
+    path_history_duration_ms: histogram(100, 0, 5000, Average, Sum, Count; P 50; P 75; P 95; P 99),
     request_load: histogram(100, 0, 5000, Average; P 50; P 75; P 95; P 99),
     requests: dynamic_timeseries("{}.requests", (method: String); Rate, Sum),
     response_bytes_sent: dynamic_histogram("{}.response_bytes_sent", (method: String); 1_500_000, 0, 150_000_000, Average, Sum, Count; P 50; P 75; P 95; P 99),
     set_bookmark_duration_ms: histogram(10, 0, 500, Average, Sum, Count; P 50; P 75; P 95; P 99),
+    streaming_clone_duration_ms:  histogram(100, 0, 5000, Average, Sum, Count; P 50; P 75; P 95; P 99),
     success: dynamic_timeseries("{}.success", (method: String); Rate, Sum),
     suffix_query_duration_ms: histogram(100, 0, 5000, Average, Sum, Count; P 50; P 75; P 95; P 99),
     trees_duration_ms: histogram(100, 0, 5000, Average, Sum, Count; P 50; P 75; P 95; P 99),
@@ -72,8 +74,8 @@ define_stats! {
     upload_file_duration_ms: histogram(100, 0, 5000, Average, Sum, Count; P 50; P 75; P 95; P 99),
     upload_hg_changesets_duration_ms: histogram(100, 0, 5000, Average, Sum, Count; P 50; P 75; P 95; P 99),
     upload_hg_filenodes_duration_ms: histogram(100, 0, 5000, Average, Sum, Count; P 50; P 75; P 95; P 99),
-    upload_trees_duration_ms: histogram(100, 0, 5000, Average, Sum, Count; P 50; P 75; P 95; P 99),
     upload_identical_changesets_duration_ms: histogram(100, 0, 5000, Average, Sum, Count; P 50; P 75; P 95; P 99),
+    upload_trees_duration_ms: histogram(100, 0, 5000, Average, Sum, Count; P 50; P 75; P 95; P 99),
 }
 
 fn log_stats(state: &mut State, status: StatusCode) -> Option<()> {
@@ -141,7 +143,9 @@ fn log_stats(state: &mut State, status: StatusCode) -> Option<()> {
                 History => STATS::history_duration_ms.add_value(dur_ms),
                 LandStack => STATS::land_stack_duration_ms.add_value(dur_ms),
                 Lookup => STATS::lookup_duration_ms.add_value(dur_ms),
+                PathHistory => STATS::path_history_duration_ms.add_value(dur_ms),
                 SetBookmark => STATS::set_bookmark_duration_ms.add_value(dur_ms),
+                StreamingClone => STATS::streaming_clone_duration_ms.add_value(dur_ms),
                 SuffixQuery => STATS::suffix_query_duration_ms.add_value(dur_ms),
                 Trees => STATS::trees_duration_ms.add_value(dur_ms),
                 UploadBonsaiChangeset => {

@@ -297,7 +297,7 @@ void showWinNotification(HWND hwnd, const WindowsNotification& notif) {
 
 void executeShellCommand(
     std::string_view cmd,
-    std::string_view params,
+    std::string_view params = "",
     std::string_view cwd = "") {
   SHELLEXECUTEINFOW pExecInfo = {};
   pExecInfo.cbSize = sizeof(pExecInfo);
@@ -399,7 +399,7 @@ WndProc(HWND hwnd, UINT message, WPARAM wParam, LPARAM lParam) noexcept {
 
           case IDM_REPORT_BUG: {
             executeShellCommand(
-                "edenfsctl", "--press-to-continue rage --report");
+                "https://www.internalfb.com/support/sourcecontrol");
             return 0;
           }
 

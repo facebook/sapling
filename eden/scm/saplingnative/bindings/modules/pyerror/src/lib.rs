@@ -104,7 +104,7 @@ fn register_error_handlers() {
 
         if let Some(e) = dag_error {
             match e {
-                dag::Error::Backend(ref backend_error) => match backend_error.as_ref() {
+                dag::Error::Backend(backend_error) => match backend_error.as_ref() {
                     dag::errors::BackendError::Io(e) => {
                         return Some(cpython_ext::error::translate_io_error(py, e));
                     }
@@ -175,7 +175,7 @@ fn register_error_handlers() {
             Some(PyErr::new::<CertificateError, _>(py, format!("{}", e)))
         } else if let Some(e) = e.downcast_ref::<revisionstore::scmstore::KeyFetchError>() {
             use revisionstore::scmstore::KeyFetchError::*;
-            if let Other(ref e) = e {
+            if let Other(e) = e {
                 specific_error_handler(py, e)
             } else {
                 Some(PyErr::new::<FetchError, _>(py, format!("{}", e)))

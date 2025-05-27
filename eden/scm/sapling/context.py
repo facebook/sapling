@@ -10,7 +10,6 @@
 # This software may be used and distributed according to the terms of the
 # GNU General Public License version 2 or any later version.
 
-from __future__ import absolute_import
 
 import errno
 import filecmp
@@ -38,7 +37,6 @@ from . import (
     revlog,
     scmutil,
     util,
-    visibility,
 )
 from .i18n import _
 from .node import (
@@ -1154,6 +1152,54 @@ class basefilectx:
         return zip(annotatedlines, text.splitlines(True))
 
     def _edenapi_annotate(self, linenumber=False, diffopts=None):
+        def inner(filectx, linenumber):
+            repo = filectx.repo()
+            blame_response = repo.edenapi.blame(
+                [{"path": filectx.path(), "node": filectx.hex()}]
+            )
+            blame = next(iter(blame_response))["data"]
+
+            if not "Ok" in blame:
+                repo.ui.note_err(
+                    _("EdenAPI blame error for %s@%s: %s")
+                    % (filectx.path(), filectx.hex(), blame["Err"])
+                )
+                return None
+
+            blame = blame["Ok"]
+
+            # Prefetch commit and parent nodes.
+            tofetch = bindings.dag.nameset(blame["commits"])
+            lastnode = tofetch.last()
+
+            tofetch += repo.changelog.dag.parents(tofetch)
+            repo.changelog.filternodes(tofetch)
+
+            # Prefetch commit text.
+            repo.changelog.inner.getcommitrawtextlist([n for n in blame["commits"]])
+
+            lines = []
+            for rng in blame["line_ranges"]:
+                ctx = repo[blame["commits"][rng["commit_index"]]]
+                path = blame["paths"][rng["path_index"]]
+                for i in range(rng["line_count"]):
+                    lineno = bool(linenumber) and rng["origin_line_offset"] + i + 1
+                    lines.append(annotateline(ctx=ctx, lineno=lineno, path=path))
+
+            curr = (lines, filectx.data())
+
+            if subtree_copy := subtreeutil.find_subtree_copy(
+                repo, lastnode, filectx.path()
+            ):
+                from_commit, from_path = subtree_copy
+                copysource = inner(repo[from_commit][from_path], linenumber)
+            else:
+                copysource = None
+            copies = [copysource] if copysource else []
+            curr = annotate.annotatepair(copies, curr, diffopts=None)
+
+            return curr
+
         if diffopts and any(
             getattr(diffopts, wsopt)
             for wsopt in [
@@ -1177,47 +1223,11 @@ class basefilectx:
             # Working copy blame not supported.
             return None
 
-        repo = self.repo()
-
-        blame = next(
-            iter(
-                repo.edenapi.blame(
-                    [
-                        {
-                            "path": self.path(),
-                            "node": self.hex(),
-                        }
-                    ]
-                )
-            )
-        )["data"]
-
-        if not "Ok" in blame:
-            repo.ui.note_err(
-                _("EdenAPI blame error for %s@%s: %s")
-                % (self.path(), self.hex(), blame["Err"])
-            )
+        if res := inner(self, linenumber):
+            lines, text = res
+            return zip(lines, text.splitlines(True))
+        else:
             return None
-
-        blame = blame["Ok"]
-
-        # Prefetch commit and parent nodes.
-        tofetch = bindings.dag.nameset(blame["commits"])
-        tofetch += repo.changelog.dag.parents(tofetch)
-        repo.changelog.filternodes(tofetch)
-
-        # Prefetch commit text.
-        repo.changelog.inner.getcommitrawtextlist([n for n in blame["commits"]])
-
-        lines = []
-        for rng in blame["line_ranges"]:
-            ctx = repo[blame["commits"][rng["commit_index"]]]
-            path = blame["paths"][rng["path_index"]]
-            for i in range(rng["line_count"]):
-                lineno = bool(linenumber) and rng["origin_line_offset"] + i + 1
-                lines.append(annotateline(ctx=ctx, lineno=lineno, path=path))
-
-        return zip(lines, self.data().splitlines(True))
 
     def topologicalancestors(self, followfirst=False):
         return self.ancestors(followfirst=followfirst)

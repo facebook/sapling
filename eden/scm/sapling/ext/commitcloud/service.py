@@ -3,13 +3,12 @@
 # This software may be used and distributed according to the terms of the
 # GNU General Public License version 2.
 
-from __future__ import absolute_import
 
 import socket
 
 from sapling import error
 
-from . import localservice, saplingremoteapiservice
+from . import gitservice, localservice, saplingremoteapiservice
 
 
 def get(ui, repo=None):
@@ -25,6 +24,8 @@ def get(ui, repo=None):
             ui,
             repo,
         )
+    elif servicetype == "git":
+        return gitservice.GitService(ui, repo)
     else:
         msg = "Unrecognized commitcloud.servicetype: %s" % servicetype
         raise error.Abort(msg)

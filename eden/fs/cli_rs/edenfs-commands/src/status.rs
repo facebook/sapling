@@ -23,6 +23,7 @@ use tracing::Level;
 use tracing::event;
 
 use crate::ExitCode;
+use crate::get_edenfs_instance;
 
 #[derive(Parser, Debug)]
 #[clap(about = "Check the health of the EdenFS service")]
@@ -170,7 +171,7 @@ impl StatusCmd {
 #[async_trait]
 impl crate::Subcommand for StatusCmd {
     async fn run(&self) -> Result<ExitCode> {
-        let instance = EdenFsInstance::global();
+        let instance = get_edenfs_instance();
         let status = self.get_status(instance).await;
         event!(Level::TRACE, ?status, "get_health");
         let display_result = self.interpret_status(instance, status);

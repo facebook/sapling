@@ -78,7 +78,7 @@ where
     Ok(())
 }
 
-pub async fn git_upload_blob(state: &mut State) -> Result<impl TryIntoResponse, HttpError> {
+pub async fn git_upload_blob(state: &mut State) -> Result<impl TryIntoResponse + use<>, HttpError> {
     let GitBlobParams {
         repository,
         oid,

@@ -47,7 +47,7 @@ use crate::walker::Walker;
 use crate::workingcopy::WorkingCopy;
 
 type ArcFileStore = Arc<dyn FileStore>;
-type ArcReadTreeManifest = Arc<dyn ReadTreeManifest + Send + Sync>;
+type ArcReadTreeManifest = Arc<dyn ReadTreeManifest>;
 
 pub struct PhysicalFileSystem {
     // TODO: Make this an Arc<Mutex<VFS>> so we can persist the vfs pathauditor cache

@@ -7,6 +7,8 @@
 
 #pragma once
 
+#include <utility>
+
 #include "eden/fs/model/git/GitIgnore.h"
 #include "eden/fs/model/git/GitIgnoreStack.h"
 
@@ -22,8 +24,8 @@ class TopLevelIgnores {
    * Construct from provided user and system GitIgnore objects.
    */
   TopLevelIgnores(GitIgnore userIgnore, GitIgnore systemIgnore)
-      : systemIgnoreStack_{nullptr, systemIgnore},
-        userIgnoreStack_{&systemIgnoreStack_, userIgnore} {}
+      : systemIgnoreStack_{nullptr, std::move(systemIgnore)},
+        userIgnoreStack_{&systemIgnoreStack_, std::move(userIgnore)} {}
   /**
    * Construct from user and system gitIgnore file contents.
    * Intended for testing purposes.

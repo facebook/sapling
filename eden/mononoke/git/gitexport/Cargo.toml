@@ -24,7 +24,7 @@ blobstore = { version = "0.1.0", path = "../../blobstore" }
 bookmarks_types = { version = "0.1.0", path = "../../bookmarks/bookmarks_types" }
 borrowed = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 changeset_info = { version = "0.1.0", path = "../../derived_data/changeset_info" }
-clap = { version = "4.5.30", features = ["derive", "env", "string", "unicode", "wrap_help"] }
+clap = { version = "4.5.38", features = ["derive", "env", "string", "unicode", "wrap_help"] }
 cloned = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 commit_id = { version = "0.1.0", path = "../../cmdlib/commit_id" }
 commit_transformation = { version = "0.1.0", path = "../../megarepo_api/commit_transformation" }
@@ -59,7 +59,7 @@ serde_json = { version = "1.0.140", features = ["float_roundtrip", "unbounded_de
 slog = { package = "tracing_slog_compat", version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 sql = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 test_repo_factory = { version = "0.1.0", path = "../../repo_factory/test_repo_factory" }
-tokio = { version = "1.41.0", features = ["full", "test-util", "tracing"] }
+tokio = { version = "1.45.0", features = ["full", "test-util", "tracing"] }
 unodes = { version = "0.1.0", path = "../../derived_data/unodes" }
 warm_bookmarks_cache = { version = "0.1.0", path = "../../bookmarks/warm_bookmarks_cache" }
 

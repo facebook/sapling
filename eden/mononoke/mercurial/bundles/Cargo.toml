@@ -34,9 +34,9 @@ sapling-revisionstore_types = { version = "0.1.0", path = "../../../scm/lib/revi
 sapling-types = { version = "0.1.0", path = "../../../scm/lib/types" }
 sapling-vlqencoding = { version = "0.1.0", path = "../../../scm/lib/vlqencoding" }
 slog = { package = "tracing_slog_compat", version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
-thiserror = "2"
-tokio = { version = "1.41.0", features = ["full", "test-util", "tracing"] }
-tokio-util = { version = "0.7.12", features = ["full"] }
+thiserror = "2.0.12"
+tokio = { version = "1.45.0", features = ["full", "test-util", "tracing"] }
+tokio-util = { version = "0.7.15", features = ["full"] }
 
 [dev-dependencies]
 assert_matches = "1.5"

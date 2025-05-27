@@ -25,8 +25,6 @@
 #include <vector>
 
 #ifndef _WIN32
-#include <sys/time.h>
-#include <unistd.h>
 #endif
 
 typedef int lineno_t;

@@ -8,7 +8,7 @@
 use cpython::*;
 use python3_sys as ffi;
 
-extern "C" {
+unsafe extern "C" {
     fn PyInit_bdiff() -> *mut ffi::PyObject;
     fn PyInit_mpatch() -> *mut ffi::PyObject;
     fn PyInit_osutil() -> *mut ffi::PyObject;

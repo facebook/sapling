@@ -67,7 +67,7 @@ def annotate(
         if ready:
             visit.pop()
             curr = decorate(f)
-            curr = _annotatepair([hist[p] for p in pl], curr, diffopts)
+            curr = annotatepair([hist[p] for p in pl], curr, diffopts)
             for p in pl:
                 if needed[p] == 1:
                     del hist[p]
@@ -81,7 +81,7 @@ def annotate(
     return hist[base]
 
 
-def _annotatepair(parents, child, diffopts):
+def annotatepair(parents, child, diffopts):
     r"""
     Given parent and child fctxes and annotate data for parents, for all lines
     in either parent that match the child, annotate the child with the parent's
@@ -89,6 +89,9 @@ def _annotatepair(parents, child, diffopts):
 
     See test-annotate.py for unit tests.
     """
+    if not parents:
+        return child
+
     pblocks = [
         (parent, mdiff.allblocks(parent[1], child[1], opts=diffopts))
         for parent in parents

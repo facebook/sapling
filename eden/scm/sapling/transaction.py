@@ -16,14 +16,13 @@
 # This software may be used and distributed according to the terms of the
 # GNU General Public License version 2 or any later version.
 
-from __future__ import absolute_import
 
 import errno
 import sys
 
 import bindings
 
-from . import encoding, error, json, util
+from . import error, json, util
 from .i18n import _
 from .node import bin, hex
 

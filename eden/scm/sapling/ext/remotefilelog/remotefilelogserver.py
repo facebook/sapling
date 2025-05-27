@@ -4,7 +4,7 @@
 # GNU General Public License version 2.
 
 # remotefilelogserver.py - server logic for a remotefilelog server
-from __future__ import absolute_import
+
 
 import errno
 import json

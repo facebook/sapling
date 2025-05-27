@@ -107,8 +107,6 @@ pub struct Identity {
 pub struct RedactionConfig {
     /// Which blobstore should be used to fetch the redacted key lists
     pub blobstore: BlobConfig,
-    /// Blobstore used for backups. Only used by admin to save new blobs.
-    pub darkstorm_blobstore: Option<BlobConfig>,
     /// Configerator location where RedactionSets object is stored
     pub redaction_sets_location: String,
 }
@@ -320,6 +318,8 @@ pub enum ShardedService {
     ModernSync,
     /// Bookmark Service
     BookmarkService,
+    /// GitBundleGenerator
+    GitBundleGenerator,
 }
 
 /// Indicates types of commit hashes used in a repo context.
@@ -571,8 +571,8 @@ impl BookmarkOrRegex {
     /// Checks whether a given Bookmark matches this bookmark or regex
     pub fn matches(&self, bookmark: &BookmarkKey) -> bool {
         match self {
-            BookmarkOrRegex::Bookmark(ref bm) => bm.eq(bookmark),
-            BookmarkOrRegex::Regex(ref re) => re.is_match(&bookmark.to_string()),
+            BookmarkOrRegex::Bookmark(bm) => bm.eq(bookmark),
+            BookmarkOrRegex::Regex(re) => re.is_match(&bookmark.to_string()),
         }
     }
 }
@@ -1085,12 +1085,10 @@ impl BlobConfig {
     pub fn apply_sampling_multiplier(&mut self, multiplier: NonZeroU64) {
         match self {
             Self::MultiplexedWal {
-                ref mut scuba_sample_rate,
-                ..
+                scuba_sample_rate, ..
             }
             | Self::Logging {
-                ref mut scuba_sample_rate,
-                ..
+                scuba_sample_rate, ..
             } => {
                 // NOTE: We unwrap here because we're multiplying two non zero numbers.
                 *scuba_sample_rate =
@@ -1897,6 +1895,8 @@ pub struct UpdateLoggingConfig {
     pub bookmark_logging_destination: Option<LoggingDestination>,
     /// Destination where new commits are logged to
     pub new_commit_logging_destination: Option<LoggingDestination>,
+    /// Destination where updates to git content refs are logged to
+    pub git_content_refs_logging_destination: Option<LoggingDestination>,
 }
 
 /// Configuration for the commit graph
@@ -2094,6 +2094,14 @@ impl MetadataCacheConfig {
     /// Returns the scribe category to tail for tags cache updates if it exists
     pub fn tags_scribe_category(&self) -> Option<String> {
         match &self.tags_update_mode {
+            Some(MetadataCacheUpdateMode::Tailing { category }) => Some(category.to_string()),
+            _ => None,
+        }
+    }
+
+    /// Returns the scribe category to tail for content refs cache updates if it exists
+    pub fn content_refs_scribe_category(&self) -> Option<String> {
+        match &self.content_refs_update_mode {
             Some(MetadataCacheUpdateMode::Tailing { category }) => Some(category.to_string()),
             _ => None,
         }

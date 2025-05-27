@@ -45,8 +45,8 @@ slog = { package = "tracing_slog_compat", version = "0.1.0", git = "https://gith
 sorted_vector_map = { version = "0.2.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 sql = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 stats = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
-thiserror = "2"
-tokio = { version = "1.41.0", features = ["full", "test-util", "tracing"] }
+thiserror = "2.0.12"
+tokio = { version = "1.45.0", features = ["full", "test-util", "tracing"] }
 
 [dev-dependencies]
 bonsai_hg_mapping = { version = "0.1.0", path = "../../bonsai_hg_mapping" }
@@ -56,6 +56,7 @@ facet = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust
 fbinit = { version = "0.2.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 fbinit-tokio = { version = "0.1.2", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 fixtures = { version = "0.1.0", path = "../../tests/fixtures" }
+manifest-augmented-tree = { version = "0.1.0", path = "../../../scm/lib/manifest-augmented-tree" }
 mononoke_macros = { version = "0.1.0", path = "../../mononoke_macros" }
 mononoke_types_serialization = { version = "0.1.0", path = "../../mononoke_types/serialization" }
 repo_blobstore = { version = "0.1.0", path = "../../blobrepo/repo_blobstore" }

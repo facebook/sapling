@@ -231,8 +231,6 @@ If you wish to use autoverb, you will need to enable it:
 
 """
 
-from __future__ import absolute_import
-
 import errno
 import os
 
@@ -267,13 +265,6 @@ release = lock.release
 cmdtable = {}
 command = registrar.command(cmdtable)
 
-configtable = {}
-configitem = registrar.configitem(configtable)
-configitem("experimental", "histedit.autoverb", default=False)
-configitem("histedit", "defaultrev", default=configitem.dynamicdefault)
-configitem("histedit", "dropmissing", default=False)
-configitem("histedit", "linelen", default=80)
-configitem("histedit", "singletransaction", default=False)
 
 # Note for extension authors: ONLY specify testedwith = 'ships-with-hg-core' for
 # extensions which SHIP WITH MERCURIAL. Non-mainline extensions should

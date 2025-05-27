@@ -6,7 +6,7 @@
 'false'
 None
 ---
-values.string is not a boolean ('string value')
+invalid config values.string=string value: invalid bool: string value
 True
 False
 False

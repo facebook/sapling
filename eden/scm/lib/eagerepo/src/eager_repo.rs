@@ -18,6 +18,7 @@ use std::path::PathBuf;
 use std::sync::Arc;
 
 use anyhow::anyhow;
+use blob::Blob;
 use dag::Dag;
 use dag::Group;
 use dag::Vertex;
@@ -32,6 +33,11 @@ use format_util::hg_sha1_serialize;
 use format_util::split_hg_file_metadata;
 use futures::lock::Mutex;
 use futures::lock::MutexGuard;
+use manifest_augmented_tree::AugmentedDirectoryNode;
+use manifest_augmented_tree::AugmentedFileNode;
+use manifest_augmented_tree::AugmentedTree;
+use manifest_augmented_tree::AugmentedTreeEntry;
+use manifest_augmented_tree::AugmentedTreeWithDigest;
 use manifest_tree::FileType;
 use manifest_tree::Flag;
 use manifest_tree::PathComponentBuf;
@@ -45,17 +51,11 @@ use parking_lot::RawRwLock;
 use parking_lot::RwLock;
 use parking_lot::lock_api::RwLockReadGuard;
 use repourl::RepoUrl;
-use scm_blob::ScmBlob;
 use sha1::Digest;
 use sha1::Sha1;
 use storemodel::FileAuxData;
 use storemodel::ReadRootTreeIds;
 use storemodel::SerializationFormat;
-use storemodel::types::AugmentedDirectoryNode;
-use storemodel::types::AugmentedFileNode;
-use storemodel::types::AugmentedTree;
-use storemodel::types::AugmentedTreeEntry;
-use storemodel::types::AugmentedTreeWithDigest;
 use storemodel::types::CasDigest;
 use storemodel::types::HgId;
 use storemodel::types::Parents;
@@ -539,7 +539,7 @@ impl EagerRepo {
                                 return Ok(None); // Can't calculate because file is missing.
                             }
                             let (raw_data, copy_from) = Self::parse_file_blob_hg(bytes.unwrap());
-                            let aux_data = FileAuxData::from_content(&ScmBlob::Bytes(raw_data));
+                            let aux_data = FileAuxData::from_content(&Blob::Bytes(raw_data));
 
                             // Store a mapping from CasDigest to hg id so we can query augmented data by CasDigest.
                             self.add_cas_mapping(

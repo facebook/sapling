@@ -370,6 +370,7 @@ impl<'a> FileStoreBuilder<'a> {
             .as_str()
         {
             "files" | "on" => true,
+            _ if std::env::var("EDEN_USE_PASSTHROUGH").is_ok() => true,
             _ => false,
         };
         let cas_client = if is_casc_enabled {
@@ -674,6 +675,7 @@ impl<'a> TreeStoreBuilder<'a> {
             .as_str()
         {
             "trees" | "on" => true,
+            _ if std::env::var("EDEN_USE_PASSTHROUGH").is_ok() => true,
             _ => false,
         };
 

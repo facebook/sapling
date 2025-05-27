@@ -1551,10 +1551,10 @@ mod test {
         map.assert_example_map().await
     }
 
-    async fn get_all_keys(
+    async fn get_all_keys<T: BlobstoreKeySource>(
         ctx: &CoreContext,
-        blobstore: &impl BlobstoreKeySource,
-    ) -> Result<impl Iterator<Item = String>> {
+        blobstore: &T,
+    ) -> Result<impl Iterator<Item = String> + use<T>> {
         let data = blobstore
             .enumerate(
                 ctx,
@@ -2162,13 +2162,13 @@ mod test {
 
         struct Roundtrip(Runtime, CoreContext, Memblob);
         impl Testable for Roundtrip {
-            fn result(&self, gen: &mut Gen) -> TestResult {
+            fn result(&self, r#gen: &mut Gen) -> TestResult {
                 let res = self.0.block_on(async {
-                    let values: BTreeMap<String, i32> = Arbitrary::arbitrary(gen);
-                    let mut queries: Vec<String> = Arbitrary::arbitrary(gen);
+                    let values: BTreeMap<String, i32> = Arbitrary::arbitrary(r#gen);
+                    let mut queries: Vec<String> = Arbitrary::arbitrary(r#gen);
                     let keys: Vec<&String> = values.keys().collect();
                     for _ in 0..values.len() / 2 {
-                        queries.push(gen.choose(&keys).unwrap().to_string());
+                        queries.push(r#gen.choose(&keys).unwrap().to_string());
                     }
                     let mut map = MapHelper(Default::default(), self.1.clone(), self.2.clone());
                     let adds = values

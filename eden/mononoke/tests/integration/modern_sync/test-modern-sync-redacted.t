@@ -82,7 +82,7 @@ Restart mononoke server to pick up the redaction config without relying on timin
   $ start_and_wait_for_mononoke_server
 
 Sync all bookmarks moves
-  $ RUST_LOG="INFO,http_client::handler::streaming=OFF,mononoke_modern_sync_job::sender::manager=OFF,mononoke_modern_sync_job::sender::manager::content=WARN" \
+  $ RUST_LOG="INFO,http_client::handler::streaming=OFF,mononoke_modern_sync_job::sender::edenapi::retry=OFF,mononoke_modern_sync_job::sender::manager=OFF,mononoke_modern_sync_job::sender::manager::content=WARN" \
   > mononoke_modern_sync "" sync-once orig dest --start-id 0
   [INFO] Running sync-once loop
   [INFO] Connecting to https://localhost:$LOCAL_PORT/edenapi/, timeout 300s
@@ -96,42 +96,6 @@ Sync all bookmarks moves
   [INFO] Resuming from latest entry checkpoint 0
   [INFO] Skipping 0 batches from entry 1
   [INFO] Starting sync of 3 missing commits, 0 were already synced
-  [WARN] Found error: collecting contents entries
-  
-  Caused by:
-      server responded 500 Internal Server Error for https://localhost:$LOCAL_PORT/edenapi/dest/upload/file/content_id/896ad5879a5df0403bfc93fc96507ad9c93b31b11f3d0fa05445da7918241e5d?content_size=1: {"message":"internal error: The blob content.blake2.896ad5879a5df0403bfc93fc96507ad9c93b31b11f3d0fa05445da7918241e5d is censored.\n Task/Sev: T0: The blob content.blake2.896ad5879a5df0403bfc93fc96507ad9c93b31b11f3d0fa05445da7918241e5d is censored.\n Task/Sev: T0: The blob content.blake2.896ad5879a5df0403bfc93fc96507ad9c93b31b11f3d0fa05445da7918241e5d is censored.\n Task/Sev: T0","request_id":"*"}. Headers: { (glob)
-          "x-request-id": "*", (glob)
-          "content-type": "application/json",
-          "x-load": "*", (glob)
-          "server": "edenapi_server",
-          "x-mononoke-host": "*", (glob)
-          "content-length": "406",
-          "date": "*", (glob)
-      }, retrying attempt #0
-  [WARN] Found error: collecting contents entries
-  
-  Caused by:
-      server responded 500 Internal Server Error for https://localhost:$LOCAL_PORT/edenapi/dest/upload/file/content_id/896ad5879a5df0403bfc93fc96507ad9c93b31b11f3d0fa05445da7918241e5d?content_size=1: {"message":"internal error: The blob content.blake2.896ad5879a5df0403bfc93fc96507ad9c93b31b11f3d0fa05445da7918241e5d is censored.\n Task/Sev: T0: The blob content.blake2.896ad5879a5df0403bfc93fc96507ad9c93b31b11f3d0fa05445da7918241e5d is censored.\n Task/Sev: T0: The blob content.blake2.896ad5879a5df0403bfc93fc96507ad9c93b31b11f3d0fa05445da7918241e5d is censored.\n Task/Sev: T0","request_id":"*"}. Headers: { (glob)
-          "x-request-id": "*", (glob)
-          "content-type": "application/json",
-          "x-load": "*", (glob)
-          "server": "edenapi_server",
-          "x-mononoke-host": "*", (glob)
-          "content-length": "406",
-          "date": "*", (glob)
-      }, retrying attempt #1
-  [WARN] Found error: collecting contents entries
-  
-  Caused by:
-      server responded 500 Internal Server Error for https://localhost:$LOCAL_PORT/edenapi/dest/upload/file/content_id/896ad5879a5df0403bfc93fc96507ad9c93b31b11f3d0fa05445da7918241e5d?content_size=1: {"message":"internal error: The blob content.blake2.896ad5879a5df0403bfc93fc96507ad9c93b31b11f3d0fa05445da7918241e5d is censored.\n Task/Sev: T0: The blob content.blake2.896ad5879a5df0403bfc93fc96507ad9c93b31b11f3d0fa05445da7918241e5d is censored.\n Task/Sev: T0: The blob content.blake2.896ad5879a5df0403bfc93fc96507ad9c93b31b11f3d0fa05445da7918241e5d is censored.\n Task/Sev: T0","request_id":"*"}. Headers: { (glob)
-          "x-request-id": "*", (glob)
-          "content-type": "application/json",
-          "x-load": "*", (glob)
-          "server": "edenapi_server",
-          "x-mononoke-host": "*", (glob)
-          "content-length": "406",
-          "date": "*", (glob)
-      }, retrying attempt #2
   [ERROR] Error processing content: collecting contents entries
   
   Caused by:

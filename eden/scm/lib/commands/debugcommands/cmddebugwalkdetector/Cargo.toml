@@ -12,4 +12,5 @@ license = "GPL-2.0-only"
 [dependencies]
 cmdutil = { version = "0.1.0", path = "../../cmdutil" }
 sapling-clidispatch = { version = "0.1.0", path = "../../../clidispatch" }
+sapling-types = { version = "0.1.0", path = "../../../types" }
 sapling-walkdetector = { version = "0.1.0", path = "../../../walkdetector" }

@@ -37,8 +37,6 @@ This module is package-private. It is not expected that these will
 have any clients outside of httpplus.
 """
 
-from __future__ import absolute_import
-
 import http.client as httplib
 import logging
 

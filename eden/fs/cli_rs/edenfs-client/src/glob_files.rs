@@ -12,13 +12,33 @@ use anyhow::anyhow;
 use edenfs_error::EdenFsError;
 use edenfs_error::Result;
 use edenfs_utils::bytes_from_path;
+use edenfs_utils::path_from_bytes;
+use serde::ser::Serialize;
+use serde::ser::SerializeStruct;
+use serde::ser::Serializer;
 use thrift_types::edenfs::GlobParams;
 use thrift_types::edenfs::OsDtype;
 
 use crate::client::Client;
 use crate::client::EdenFsClient;
+use crate::methods::EdenThriftMethod;
 use crate::types::OSName;
 use crate::types::SyncBehavior;
+
+pub fn dtype_to_str(dtype: &OsDtype) -> &str {
+    match dtype {
+        0 => "Unknown",
+        1 => "Fifo",
+        2 => "Char",
+        4 => "Dir",
+        6 => "Block",
+        8 => "Regular",
+        10 => "Symlink",
+        12 => "Socket",
+        14 => "Whiteout",
+        _ => "Unknown",
+    }
+}
 
 #[derive(Clone, Debug)]
 pub struct Glob {
@@ -36,6 +56,31 @@ impl From<thrift_types::edenfs::Glob> for Glob {
         }
     }
 }
+
+impl Serialize for Glob {
+    fn serialize<S>(&self, serializer: S) -> std::result::Result<S::Ok, S::Error>
+    where
+        S: Serializer,
+    {
+        let mut state = serializer.serialize_struct("Glob", 3)?;
+        let mut matching_files = Vec::new();
+        for matching_file in &self.matching_files {
+            matching_files.push(path_from_bytes(matching_file).map_err(serde::ser::Error::custom)?);
+        }
+        let dtypes = self.dtypes.iter().map(dtype_to_str).collect::<Vec<&str>>();
+        let origin_hashes = self
+            .origin_hashes
+            .iter()
+            .map(hex::encode)
+            .collect::<Vec<String>>();
+        state.serialize_field("matching_files", &matching_files)?;
+        // NOTE: this should be called dtypes, but to maintain compat with the previous python code we are using dtype instead
+        state.serialize_field("dtype", &dtypes)?;
+        state.serialize_field("origin_hashes", &origin_hashes)?;
+        state.end()
+    }
+}
+
 pub struct PredictiveFetchParams {
     pub num_top_directories: Option<i32>,
     pub user: Option<String>,
@@ -98,7 +143,7 @@ impl EdenFsClient {
             sync: sync.map(Into::into).unwrap_or_default(),
             ..Default::default()
         };
-        self.with_thrift(|thrift| thrift.globFiles(&glob_params))
+        self.with_thrift(|thrift| (thrift.globFiles(&glob_params), EdenThriftMethod::GlobFiles))
             .await
             .map_err(|err| {
                 EdenFsError::Other(anyhow!(

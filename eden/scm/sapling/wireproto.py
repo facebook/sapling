@@ -10,7 +10,6 @@
 # This software may be used and distributed according to the terms of the
 # GNU General Public License version 2 or any later version.
 
-from __future__ import absolute_import
 
 import functools
 import hashlib
@@ -812,7 +811,7 @@ def bundle1allowed(repo, action):
         return v
 
     if gd:
-        v = ui.configbool("server", "bundle1gd")
+        v = ui.configbool("server", "bundle1gd", None)
         if v is not None:
             return v
 

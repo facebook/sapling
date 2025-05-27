@@ -5,8 +5,6 @@
 
 """custom merge drivers for autoresolved files"""
 
-from __future__ import absolute_import
-
 import errno
 import sys
 import weakref

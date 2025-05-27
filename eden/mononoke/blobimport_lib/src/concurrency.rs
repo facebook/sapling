@@ -61,18 +61,18 @@ where
         Ok(Self { sender })
     }
 
-    pub fn process(&self, input: In) -> impl Future<Item = Out, Error = Error> {
+    pub fn process(&self, input: In) -> impl Future<Item = Out, Error = Error> + use<In, Out> {
         let (sender, receiver) = oneshot::channel::<Result<Out>>();
 
         match self.sender.unbounded_send((input, sender)) {
-            Ok(()) => receiver
-                .into_future()
+            Ok(()) => IntoFuture::into_future(receiver)
                 .map_err(|e| format_err!("JobProcessor: Receiver failed: {:?}", e))
                 .and_then(|r| r)
                 .left_future(),
-            Err(e) => Err(format_err!("JobProcessor Sender failed: {:?}", e))
-                .into_future()
-                .right_future(),
+            Err(e) => {
+                IntoFuture::into_future(Err(format_err!("JobProcessor Sender failed: {:?}", e)))
+                    .right_future()
+            }
         }
     }
 }

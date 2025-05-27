@@ -66,32 +66,10 @@ from sapling.node import bin, hex, short
 cmdtable = {}
 command = registrar.command(cmdtable)
 
-configtable = {}
-configitem = registrar.configitem(configtable)
-
-configitem("remotenames", "alias.default", default=False)
-configitem("remotenames", "allownonfastforward", default=False)
-configitem("remotenames", "bookmarks", default=True)
-configitem("remotenames", "calculatedistance", default=True)
-configitem("remotenames", "disallowedbookmarks", default=[])
-configitem("remotenames", "disallowedhint", default=None)
-configitem("remotenames", "disallowedto", default=None)
-configitem("remotenames", "forcecompat", default=False)
-configitem("remotenames", "forceto", default=False)
-configitem("remotenames", "precachecurrent", default=True)
-configitem("remotenames", "precachedistance", default=True)
-configitem("remotenames", "pushanonheads", default=False)
-configitem("remotenames", "pushrev", default=None)
-configitem("remotenames", "resolvenodes", default=True)
-configitem("remotenames", "syncbookmarks", default=False)
-configitem("remotenames", "tracking", default=True)
-configitem("remotenames", "transitionbookmarks", default=[])
-configitem("remotenames", "transitionmessage", default=None)
-configitem("remotenames", "upstream", default=[])
 
 # Perform a pull of remotenames for "push" command. This is racy and does not
 # always update remote bookmarks! The config option exists for testing purpose.
-configitem("remotenames", "racy-pull-on-push", default=True)
+
 
 revsetpredicate = registrar.revsetpredicate()
 
@@ -859,7 +837,7 @@ def expushcmd(orig, ui, repo, dest=None, **opts):
             to = opts.get("to") or _guesspushtobookmark(repo, pushnode, remotename)
             if not to:
                 raise error.Abort(_("use '--to' to specify destination bookmark"))
-        return git.push(repo, dest, pushnode, to, force=force)
+        return git.push(repo, dest, [(pushnode, to)], force=force)
 
     # during the upgrade from old to new remotenames, tooling that uses --force
     # will continue working if remotenames.forcecompat is enabled

@@ -462,30 +462,53 @@ impl RepoPath {
 
     /// If `base` is a prefix of `self`, return suffix of `self`.
     pub fn strip_prefix(&self, base: &Self, case_sensitive: bool) -> Option<&Self> {
-        let mut self_components = self.components();
-        let mut base_components = base.components();
-        loop {
-            let self_pos = self_components.position;
-            match (self_components.next(), base_components.next()) {
-                (Some(s), Some(b)) => {
-                    if s == b {
-                        continue;
-                    }
+        self.strip(base, case_sensitive, true)
+    }
 
-                    if !case_sensitive
-                        && (s.0.eq_ignore_ascii_case(&b.0)
-                            || s.0.to_lowercase() == b.0.to_lowercase())
-                    {
-                        continue;
-                    }
+    /// If `base` is a suffix of `self`, return prefix of `self`.
+    pub fn strip_suffix(&self, base: &Self, case_sensitive: bool) -> Option<&Self> {
+        self.strip(base, case_sensitive, false)
+    }
 
-                    return None;
-                }
-                (Some(_) | None, None) => {
-                    return Some(Self::from_str_unchecked(&self.0[self_pos..]));
-                }
-                (None, Some(_)) => return None,
+    fn strip(&self, base: &Self, case_sensitive: bool, prefix: bool) -> Option<&Self> {
+        if self.0.len() < base.0.len() {
+            return None;
+        }
+
+        if base.is_empty() {
+            return Some(self);
+        }
+
+        let (start, end) = if prefix {
+            (0, base.0.len())
+        } else {
+            (self.0.len() - base.0.len(), self.0.len())
+        };
+
+        if start != 0 && self.0.as_bytes()[start - 1] != SEPARATOR_BYTE
+            || end != self.0.len() && self.0.as_bytes()[end] != SEPARATOR_BYTE
+        {
+            return None;
+        }
+
+        let shared = &self.0[start..end];
+
+        if shared == &base.0
+            || (!case_sensitive
+                && (shared.eq_ignore_ascii_case(&base.0)
+                    || shared.to_lowercase() == base.0.to_lowercase()))
+        {
+            if self.0.len() == base.0.len() {
+                Some(Self::empty())
+            } else {
+                Some(Self::from_str_unchecked(if prefix {
+                    &self.0[end + 1..]
+                } else {
+                    &self.0[..start - 1]
+                }))
             }
+        } else {
+            None
         }
     }
 
@@ -1640,6 +1663,83 @@ mod tests {
         assert!(
             repo_path("foo/bar/baz")
                 .strip_prefix(repo_path("foo/bar/baz/qux"), false)
+                .is_none()
+        );
+    }
+
+    #[test]
+    fn test_strip_suffix() {
+        assert_eq!(
+            repo_path("").strip_suffix(repo_path(""), true),
+            Some(repo_path(""))
+        );
+        assert_eq!(
+            repo_path("").strip_suffix(repo_path(""), false),
+            Some(repo_path(""))
+        );
+
+        assert!(repo_path("").strip_suffix(repo_path("foo"), true).is_none());
+        assert!(
+            repo_path("")
+                .strip_suffix(repo_path("foo"), false)
+                .is_none()
+        );
+
+        assert_eq!(
+            repo_path("foo").strip_suffix(repo_path(""), true),
+            Some(repo_path("foo"))
+        );
+        assert_eq!(
+            repo_path("foo").strip_suffix(repo_path(""), false),
+            Some(repo_path("foo"))
+        );
+
+        assert_eq!(
+            repo_path("foo").strip_suffix(repo_path("foo"), true),
+            Some(repo_path(""))
+        );
+        assert_eq!(
+            repo_path("foo").strip_suffix(repo_path("foo"), false),
+            Some(repo_path(""))
+        );
+
+        assert!(
+            repo_path("foobar")
+                .strip_suffix(repo_path("bar"), true)
+                .is_none()
+        );
+        assert!(
+            repo_path("foobar")
+                .strip_suffix(repo_path("bar"), false)
+                .is_none()
+        );
+
+        assert_eq!(
+            repo_path("foo/bar/baz").strip_suffix(repo_path("bar/baz"), true),
+            Some(repo_path("foo"))
+        );
+        assert!(
+            repo_path("foo/bAr/baz")
+                .strip_suffix(repo_path("bar/baz"), true)
+                .is_none()
+        );
+        assert_eq!(
+            repo_path("foo/bAr/baz").strip_suffix(repo_path("bar/baz"), false),
+            Some(repo_path("foo"))
+        );
+        assert_eq!(
+            repo_path("foo/bÄr/baz").strip_suffix(repo_path("bär/baz"), false),
+            Some(repo_path("foo"))
+        );
+
+        assert!(
+            repo_path("foo/bar/baz")
+                .strip_suffix(repo_path("foo/bar/baz/qux"), true)
+                .is_none()
+        );
+        assert!(
+            repo_path("foo/bar/baz")
+                .strip_suffix(repo_path("foo/bar/baz/qux"), false)
                 .is_none()
         );
     }

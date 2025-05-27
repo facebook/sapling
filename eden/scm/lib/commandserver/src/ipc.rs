@@ -102,11 +102,13 @@ impl Server<'_> {
         let new_key_set: HashSet<_> = env.iter().map(|(k, _)| k).collect();
         for (k, _) in std::env::vars() {
             if !new_key_set.contains(&k) {
-                std::env::remove_var(k);
+                // TODO: Audit that the environment access only happens in single-threaded code.
+                unsafe { std::env::remove_var(k) };
             }
         }
         for (k, v) in &env {
-            std::env::set_var(k, v);
+            // TODO: Audit that the environment access only happens in single-threaded code.
+            unsafe { std::env::set_var(k, v) };
         }
         if let Some(umask) = umask {
             #[cfg(unix)]

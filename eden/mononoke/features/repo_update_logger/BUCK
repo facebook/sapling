@@ -33,6 +33,7 @@ rust_library(
         "//common/rust/shed/hostname:hostname",
         "//dsi/logger/configs/GitRefLoggerConfig:git_ref_rust_logger",
         "//dsi/logger/configs/MononokeBookmarkLoggerConfig:mononoke_bookmark_rust_logger",
+        "//dsi/logger/configs/MononokeGitContentRefsLoggerConfig:mononoke_git_content_refs_rust_logger",
         "//dsi/logger/configs/MononokeNewCommitLoggerConfig:mononoke_new_commit_rust_logger",
         "//dsi/logger/cpp/interface:whence_logged-rust",
         "//eden/mononoke/blobrepo:repo_blobstore",

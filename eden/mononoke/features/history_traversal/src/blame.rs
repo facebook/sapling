@@ -156,7 +156,7 @@ async fn fetch_mutable_blame(
         possible_mutable_ancestors =
             stream::iter(possible_mutable_ancestors.into_iter().map(anyhow::Ok))
                 .try_filter_map({
-                    move |(gen, csid)| async move {
+                    move |(r#gen, csid)| async move {
                         // Yield to avoid long polls with large numbers of ancestors.
                         tokio::task::yield_now().await;
                         if repo
@@ -166,7 +166,7 @@ async fn fetch_mutable_blame(
                         {
                             anyhow::Ok(None)
                         } else {
-                            Ok(Some((gen, csid)))
+                            Ok(Some((r#gen, csid)))
                         }
                     }
                 })

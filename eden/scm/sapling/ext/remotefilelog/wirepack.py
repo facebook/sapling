@@ -4,7 +4,7 @@
 # GNU General Public License version 2.
 
 # wirepack.py - wireprotocol for exchanging packs
-from __future__ import absolute_import
+
 
 import io
 import struct

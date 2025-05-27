@@ -59,7 +59,6 @@ use workingcopy::workingcopy::WorkingCopy;
 
 use crate::errors;
 use crate::init;
-use crate::trees::CachingTreeStore;
 use crate::trees::TreeManifestResolver;
 
 #[derive(Clone)]
@@ -87,7 +86,7 @@ pub struct Repo {
     eager_store: Option<EagerRepoStore>,
     locker: Arc<RepoLocker>,
     cas_client: OnceCell<Option<Arc<dyn CasClient>>>,
-    tree_resolver: OnceCell<Arc<dyn ReadTreeManifest + Send + Sync>>,
+    tree_resolver: OnceCell<Arc<dyn ReadTreeManifest>>,
 }
 
 impl Repo {
@@ -329,10 +328,6 @@ impl Repo {
     pub fn optional_eden_api(
         &self,
     ) -> Result<Option<Arc<dyn SaplingRemoteApi>>, SaplingRemoteApiError> {
-        if self.store_requirements.contains("git-store") {
-            tracing::trace!(target: "repo::eden_api", "disabled because of gitstore");
-            return Ok(None);
-        }
         if matches!(
             self.config.get_opt::<bool>("edenapi", "enable"),
             Ok(Some(false))
@@ -402,15 +397,18 @@ impl Repo {
     }
 
     pub fn remote_bookmarks(&self) -> Result<BTreeMap<RefName, HgId>> {
-        self.metalog()?.read().get_remotenames()
+        let x = self.metalog()?.read().get_remotenames();
+        x
     }
 
     pub fn set_remote_bookmarks(&self, names: &BTreeMap<RefName, HgId>) -> Result<()> {
-        self.metalog()?.write().set_remotenames(names)
+        let x = self.metalog()?.write().set_remotenames(names);
+        x
     }
 
     pub fn local_bookmarks(&self) -> Result<BTreeMap<RefName, HgId>> {
-        self.metalog()?.read().get_bookmarks()
+        let x = self.metalog()?.read().get_bookmarks();
+        x
     }
 
     pub fn add_requirement(&mut self, requirement: &str) -> Result<()> {
@@ -547,28 +545,9 @@ impl Repo {
 
         let ts = Arc::new(tree_builder.build()?);
         let _ = self.tree_scm_store.set(ts.clone());
+        let _ = self.tree_store.set(ts.clone());
 
-        self.set_tree_store(ts)
-    }
-
-    // Set self.tree_store, optionally wrapping in CachingTreeStore. Returns self.tree_store.
-    fn set_tree_store(&self, store: Arc<dyn TreeStore>) -> Result<Arc<dyn TreeStore>> {
-        self.tree_store
-            .get_or_try_init(|| {
-                let cache_size = self
-                    .config
-                    // Trees are typically pretty small (and they are often kept in memory
-                    // anyway within a TreeManifest object), so let's pick a sizable
-                    // default. Set to 0 to disable caching.
-                    .get_or("experimental", "tree-resolver-cache-size", || 10_000)?;
-
-                if cache_size == 0 {
-                    return Ok::<_, anyhow::Error>(store);
-                }
-
-                Ok(Arc::new(CachingTreeStore::new(store, cache_size)))
-            })
-            .cloned()
+        Ok(ts)
     }
 
     // This should only be used to share stores with Python.
@@ -655,7 +634,8 @@ impl Repo {
                 let file_store = out.file_store();
                 let tree_store = out.tree_store();
                 let _ = self.file_store.set(file_store.clone());
-                Ok(Some((file_store, self.set_tree_store(tree_store)?)))
+                let _ = self.tree_store.set(tree_store.clone());
+                Ok(Some((file_store, tree_store)))
             }
         }
     }

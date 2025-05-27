@@ -17,18 +17,23 @@ EdenStructuredLogger::EdenStructuredLogger(
 DynamicEvent EdenStructuredLogger::populateDefaultFields(
     std::optional<const char*> type) {
   DynamicEvent event = StructuredLogger::populateDefaultFields(type);
-  if (sessionInfo_.ciInstanceId.has_value()) {
-    event.addInt("sandcastle_instance_id", *sessionInfo_.ciInstanceId);
-  }
   event.addString("edenver", sessionInfo_.appVersion);
   event.addString("logged_by", "edenfs");
 
-  if (!sessionInfo_.crossEnvSessionId.empty()) {
-    event.addString("ces_id", sessionInfo_.crossEnvSessionId);
-  }
-
-  if (!sessionInfo_.systemFingerprint.empty()) {
-    event.addString("system_fingerprint", sessionInfo_.systemFingerprint);
+  const auto& fbInfo = sessionInfo_.fbInfo;
+  for (const auto& info : fbInfo) {
+    const auto& key = info.first;
+    const auto& value = info.second;
+    std::visit(
+        [&](const auto& v) {
+          using T = std::decay_t<decltype(v)>;
+          if constexpr (std::is_same_v<T, std::string>) {
+            event.addString(key, v);
+          } else if constexpr (std::is_same_v<T, uint64_t>) {
+            event.addInt(key, v);
+          }
+        },
+        value);
   }
 
   return event;

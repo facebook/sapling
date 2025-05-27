@@ -90,7 +90,6 @@ use mononoke_api::Repo;
 use mononoke_app::MononokeApp;
 use mononoke_app::args::MultiRepoArgs;
 use mononoke_app::monitoring::AliveService;
-use mononoke_hg_sync_job_helper_lib::wait_for_latest_log_id_to_be_synced;
 use mononoke_types::ChangesetId;
 use mononoke_types::DerivableType;
 use mutable_counters::ArcMutableCounters;
@@ -538,9 +537,6 @@ async fn maybe_apply_backpressure(
         }
     }
 
-    if backpressure_params.wait_for_target_repo_hg_sync {
-        wait_for_latest_log_id_to_be_synced(ctx, large_repo, sleep_duration).await?;
-    }
     Ok(())
 }
 
@@ -594,7 +590,6 @@ async fn async_main(app: MononokeApp, ctx: CoreContext) -> Result<(), Error> {
 
 struct BackpressureParams {
     backsync_repos: Vec<CrossRepo>,
-    wait_for_target_repo_hg_sync: bool,
 }
 
 impl BackpressureParams {
@@ -604,12 +599,8 @@ impl BackpressureParams {
             repo_name: vec![],
         };
         let backsync_repos = app.open_repos(&multi_repo_args).await?;
-        let wait_for_target_repo_hg_sync = tail_cmd_args.hg_sync_backpressure;
 
-        Ok(Self {
-            backsync_repos,
-            wait_for_target_repo_hg_sync,
-        })
+        Ok(Self { backsync_repos })
     }
 }
 

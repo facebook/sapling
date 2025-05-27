@@ -10,11 +10,11 @@ use std::collections::HashMap;
 use anyhow::Result;
 use edenapi_types::TreeChildEntry;
 use edenapi_types::TreeEntry;
+use manifest_augmented_tree::AugmentedTreeEntry;
+use manifest_augmented_tree::AugmentedTreeWithDigest;
 use manifest_tree::TreeEntry as ManifestTreeEntry;
 use minibytes::Bytes;
 use storemodel::SerializationFormat;
-use types::AugmentedTreeEntry;
-use types::AugmentedTreeWithDigest;
 use types::HgId;
 use types::Id20;
 use types::Parents;
@@ -24,13 +24,15 @@ use crate::Metadata;
 use crate::indexedlogdatastore::Entry;
 use crate::scmstore::file::FileAuxData;
 use crate::scmstore::tree::TreeAuxData;
+use crate::scmstore::tree::TreeEntryWithAux;
 
 /// A minimal tree enum that simply wraps the possible underlying tree types,
 /// with no processing.
 #[derive(Debug, Clone)]
 pub(crate) enum LazyTree {
     /// An entry from a local IndexedLog. The contained Key's path might not match the requested Key's path.
-    IndexedLog(Entry),
+    /// It may include the tree aux data if available
+    IndexedLog(TreeEntryWithAux),
 
     /// An SaplingRemoteApi TreeEntry.
     SaplingRemoteApi(TreeEntry),
@@ -53,7 +55,7 @@ impl LazyTree {
     fn hgid(&self) -> Option<HgId> {
         use LazyTree::*;
         match self {
-            IndexedLog(entry) => Some(entry.node()),
+            IndexedLog(entry_with_aux) => Some(entry_with_aux.node()),
             SaplingRemoteApi(entry) => Some(entry.key().hgid),
             Cas(entry) => Some(entry.augmented_tree.hg_node_id),
             Null => Some(NULL_ID),
@@ -64,7 +66,7 @@ impl LazyTree {
     pub(crate) fn hg_content(&self) -> Result<Bytes> {
         use LazyTree::*;
         Ok(match self {
-            IndexedLog(entry) => entry.content()?,
+            IndexedLog(entry_with_aux) => entry_with_aux.content()?,
             SaplingRemoteApi(entry) => entry.data()?,
             Cas(entry) => {
                 let tree = &entry.augmented_tree;
@@ -80,20 +82,20 @@ impl LazyTree {
     pub(crate) fn indexedlog_cache_entry(&self, node: Id20) -> Result<Option<Entry>> {
         use LazyTree::*;
         Ok(match self {
-            IndexedLog(ref entry) => Some(entry.clone()),
-            SaplingRemoteApi(ref entry) => {
-                Some(Entry::new(node, entry.data()?, Metadata::default()))
-            }
+            IndexedLog(entry_with_aux) => Some(entry_with_aux.entry.clone()),
+            SaplingRemoteApi(entry) => Some(Entry::new(node, entry.data()?, Metadata::default())),
             // Don't write CAS entries to local cache.
             Cas(_) => None,
             Null => None,
         })
     }
 
-    pub fn manifest_tree_entry(&mut self) -> Result<ManifestTreeEntry> {
+    pub fn manifest_tree_entry(&self) -> Result<ManifestTreeEntry> {
         // Currently revisionstore is only for hg format.
-        let format = SerializationFormat::Hg;
-        Ok(ManifestTreeEntry(self.hg_content()?, format))
+        Ok(ManifestTreeEntry(
+            self.hg_content()?,
+            SerializationFormat::Hg,
+        ))
     }
 
     pub(crate) fn parents(&self) -> Option<Parents> {
@@ -109,6 +111,7 @@ impl LazyTree {
 
     pub(crate) fn aux_data(&self) -> Option<TreeAuxData> {
         match &self {
+            Self::IndexedLog(entry_with_aux) => entry_with_aux.tree_aux.clone(),
             Self::SaplingRemoteApi(entry) => entry.tree_aux_data.clone(),
             Self::Cas(entry) => Some(TreeAuxData {
                 augmented_manifest_id: entry.augmented_manifest_id,

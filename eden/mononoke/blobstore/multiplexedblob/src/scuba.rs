@@ -28,6 +28,7 @@ const MULTIPLEX_ID: &str = "multiplex_id";
 const BLOB_SIZE: &str = "blob_size";
 const SUCCESS: &str = "success";
 const SYNC_QUEUE: &str = "mysql_sync_queue";
+const BLOBSTORE_ID: &str = "blobstore_id";
 
 fn record_scuba_common(
     mut ctx: CoreContext,
@@ -102,7 +103,7 @@ pub fn record_get(
     multiplex_id: &MultiplexId,
     key: &str,
     stats: FutureStats,
-    result: &Result<Option<BlobstoreGetData>>,
+    result: &Result<Option<(BlobstoreId, BlobstoreGetData)>>,
 ) {
     let op = OperationType::Get;
     record_scuba_common(ctx.clone(), scuba, multiplex_id, key, stats, op);
@@ -116,7 +117,8 @@ pub fn record_get(
             let blob_present = mb_blob.is_some();
             scuba.add(BLOB_PRESENT, blob_present).add(SUCCESS, true);
 
-            if let Some(blob) = mb_blob.as_ref() {
+            if let Some((bs_id, blob)) = mb_blob.as_ref() {
+                scuba.add(BLOBSTORE_ID, *bs_id);
                 scuba.add(BLOB_SIZE, blob.len());
             }
         }

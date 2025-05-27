@@ -65,8 +65,6 @@ needed files, so running the external diff program will actually be
 pretty fast (at least faster than having to compare the entire tree).
 """
 
-from __future__ import absolute_import
-
 import os
 import re
 import shlex
@@ -80,12 +78,6 @@ from sapling.node import nullid, short
 cmdtable = {}
 command = registrar.command(cmdtable)
 
-configtable = {}
-configitem = registrar.configitem(configtable)
-
-configitem("extdiff", r"opts\..*", default="", generic=True)
-
-configitem("diff-tools", r".*\.diffargs$", default=None, generic=True)
 
 # Note for extension authors: ONLY specify testedwith = 'ships-with-hg-core' for
 # extensions which SHIP WITH MERCURIAL. Non-mainline extensions should

@@ -14,6 +14,7 @@ use edenfs_utils::bytes_from_path;
 
 use crate::client::Client;
 use crate::client::EdenFsClient;
+use crate::methods::EdenThriftMethod;
 
 #[derive(Clone, Debug)]
 pub struct CurrentSnapshotInfo {
@@ -43,10 +44,15 @@ impl EdenFsClient {
             ..Default::default()
         };
 
-        self.with_thrift(|thrift| thrift.getCurrentSnapshotInfo(&snapshot_info_params))
-            .await
-            .with_context(|| "failed to get snapshot info ")
-            .map(|snapshot_info| snapshot_info.into())
-            .map_err(EdenFsError::from)
+        self.with_thrift(|thrift| {
+            (
+                thrift.getCurrentSnapshotInfo(&snapshot_info_params),
+                EdenThriftMethod::GetCurrentSnapshotInfo,
+            )
+        })
+        .await
+        .with_context(|| "failed to get snapshot info ")
+        .map(|snapshot_info| snapshot_info.into())
+        .map_err(EdenFsError::from)
     }
 }

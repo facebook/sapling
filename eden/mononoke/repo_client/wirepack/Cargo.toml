@@ -14,9 +14,9 @@ futures = { version = "0.3.30", features = ["async-await", "compat"] }
 mercurial_bundles = { version = "0.1.0", path = "../../mercurial/bundles" }
 mercurial_revlog = { version = "0.1.0", path = "../../mercurial/revlog" }
 mercurial_types = { version = "0.1.0", path = "../../mercurial/types" }
-thiserror = "2"
+thiserror = "2.0.12"
 
 [dev-dependencies]
 maplit = "1.0"
 mercurial_types-mocks = { version = "0.1.0", path = "../../mercurial/types/mocks" }
-tokio = { version = "1.41.0", features = ["full", "test-util", "tracing"] }
+tokio = { version = "1.45.0", features = ["full", "test-util", "tracing"] }

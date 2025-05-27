@@ -767,7 +767,7 @@ pub(crate) async fn _find_possible_mutable_ancestors(
             .try_collect()
             .await?;
     // And turn the list of possible mutable ancestors into a stack sorted by generation
-    possible_mutable_ancestors.sort_unstable_by_key(|(gen, _)| *gen);
+    possible_mutable_ancestors.sort_unstable_by_key(|(r#gen, _)| *r#gen);
 
     Ok(possible_mutable_ancestors)
 }

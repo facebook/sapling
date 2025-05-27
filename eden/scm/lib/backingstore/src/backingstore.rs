@@ -9,6 +9,7 @@ use std::collections::HashMap;
 use std::fmt;
 use std::path::Path;
 use std::path::PathBuf;
+use std::str::FromStr;
 use std::sync::Arc;
 use std::sync::atomic::AtomicBool;
 use std::sync::atomic::Ordering;
@@ -19,6 +20,7 @@ use std::time::SystemTime;
 use anyhow::Result;
 use anyhow::anyhow;
 use arc_swap::ArcSwap;
+use blob::Blob;
 use configloader::Config;
 use configloader::hg::PinnedConfig;
 use configloader::hg::RepoInfo;
@@ -29,9 +31,9 @@ use edenapi::configmodel::config::ContentHash;
 use edenapi::types::CommitId;
 use log::warn;
 use metrics::ods;
+use parking_lot::RwLock;
 use repo::RepoMinimalInfo;
 use repo::repo::Repo;
-use scm_blob::ScmBlob;
 use storemodel::BoxIterator;
 use storemodel::FileAuxData;
 use storemodel::FileStore;
@@ -44,9 +46,13 @@ use types::HgId;
 use types::Key;
 use types::RepoPath;
 
+use crate::prefetch::prefetch_manager;
+
 pub struct BackingStore {
     // ArcSwap is similar to RwLock, but has lower overhead for read operations.
     inner: ArcSwap<Inner>,
+
+    parent_hint: Arc<RwLock<Option<String>>>,
 }
 
 struct Inner {
@@ -55,7 +61,6 @@ struct Inner {
     repo: Arc<Repo>,
 
     // We store these so we can maintain them when reloading ourself.
-    allow_retries: bool,
     extra_configs: Vec<PinnedConfig>,
 
     // State used to track the touch file and determine if we need to reload ourself.
@@ -75,12 +80,38 @@ struct Inner {
     // Controlled by config "backingstore.reload-interval-secs".
     // Sets the maximum time since last reload until we force a reload (defaults to 5m).
     reload_interval: Duration,
+
+    prefetch_send: flume::Sender<()>,
+    walk_mode: WalkMode,
+    walk_detector: Arc<walkdetector::Detector>,
+}
+
+#[derive(Debug, Copy, Clone, PartialEq)]
+enum WalkMode {
+    // Don't observe walks.
+    Off,
+    // Watch for walks, but don't take any action.
+    Monitor,
+    // Prefetch files/trees based on observed walks.
+    Prefetch,
+}
+
+impl FromStr for WalkMode {
+    type Err = anyhow::Error;
+
+    fn from_str(s: &str) -> std::result::Result<Self, Self::Err> {
+        match s {
+            "monitor" => Ok(Self::Monitor),
+            "prefetch" => Ok(Self::Prefetch),
+            _ => Ok(Self::Off),
+        }
+    }
 }
 
 impl BackingStore {
-    /// Initialize `BackingStore` with the `allow_retries` setting.
-    pub fn new<P: AsRef<Path>>(root: P, allow_retries: bool) -> Result<Self> {
-        Self::new_with_config(root.as_ref(), allow_retries, &[])
+    /// Initialize `BackingStore`.
+    pub fn new<P: AsRef<Path>>(root: P) -> Result<Self> {
+        Self::new_with_config(root.as_ref(), &[])
     }
 
     pub fn name(&self) -> Result<String> {
@@ -90,45 +121,37 @@ impl BackingStore {
         }
     }
 
-    /// Initialize `BackingStore` with the `allow_retries` setting and extra configs.
+    /// Initialize `BackingStore` with extra configs.
     /// This is used by benches/ to set cache path to control warm/code test cases.
-    pub fn new_with_config(
-        root: impl AsRef<Path>,
-        allow_retries: bool,
-        extra_configs: &[String],
-    ) -> Result<Self> {
+    pub fn new_with_config(root: impl AsRef<Path>, extra_configs: &[String]) -> Result<Self> {
         let extra_configs = extra_configs
             .iter()
             .map(|c| PinnedConfig::Raw(c.to_string().into(), "backingstore".into()))
             .collect::<Vec<_>>();
 
+        let parent_hint = Arc::new(RwLock::default());
+
         Ok(Self {
             inner: ArcSwap::new(Arc::new(Self::new_inner(
                 root.as_ref(),
-                allow_retries,
                 &extra_configs,
                 touch_file_mtime(),
+                parent_hint.clone(),
             )?)),
+            parent_hint,
         })
     }
 
     fn new_inner(
         root: &Path,
-        allow_retries: bool,
         extra_configs: &[PinnedConfig],
         touch_file_mtime: Option<SystemTime>,
+        parent_hint: Arc<RwLock<Option<String>>>,
     ) -> Result<Inner> {
         constructors::init();
 
         let info = RepoMinimalInfo::from_repo_root(root.to_path_buf())?;
         let mut config = configloader::hg::embedded_load(RepoInfo::Disk(&info), extra_configs)?;
-
-        let source = "backingstore".into();
-        if !allow_retries {
-            config.set("lfs", "backofftimes", Some(""), &source);
-            config.set("lfs", "throttlebackofftimes", Some(""), &source);
-            config.set("edenapi", "max-retry-per-request", Some("0"), &source);
-        }
 
         // Allow overrideing scmstore.tree-metadata-mode for eden only.
         if let Some(mode) = config.get_nonempty("eden", "tree-metadata-mode") {
@@ -139,6 +162,16 @@ impl BackingStore {
                 &"backingstore".into(),
             );
         }
+
+        #[cfg(feature = "scuba")]
+        edenfs_telemetry::tracing_logger::set_logged_targets(
+            config
+                .get_or::<Vec<String>>("backingstore", "logged-tracing-targets", || {
+                    vec!["big_walk".to_string()]
+                })?
+                .into_iter()
+                .collect(),
+        );
 
         // Apply indexed log configs, which can affect edenfs behavior.
         indexedlog::config::configure(&config)?;
@@ -156,11 +189,56 @@ impl BackingStore {
             }
         }
 
+        let walk_mode = WalkMode::from_str(
+            config
+                .get("backingstore", "walk-mode")
+                .unwrap_or_default()
+                .as_ref(),
+        )?;
+
+        let repo = Arc::new(repo);
+        let walk_detector = Arc::new(walkdetector::Detector::new());
+
+        if let Some(threshold) = config.get_opt("backingstore", "walk-threshold")? {
+            walk_detector.set_walk_threshold(threshold);
+        }
+
+        if let Some(depth) = config.get_opt("backingstore", "walk-lax-depth")? {
+            walk_detector.set_lax_depth(depth);
+        }
+
+        if let Some(depth) = config.get_opt("backingstore", "walk-strict-multiplier")? {
+            walk_detector.set_strict_multiplier(depth);
+        }
+
+        if let Some(threshold) = config.get_opt("backingstore", "walk-ratio")? {
+            walk_detector.set_walk_ratio(threshold);
+        }
+
+        if let Some(threshold) = config.get_opt("backingstore", "walk-gc-interval")? {
+            walk_detector.set_gc_interval(threshold);
+        }
+
+        if let Some(timeout) = config.get_opt("backingstore", "walk-gc-timeout")? {
+            walk_detector.set_gc_timeout(timeout);
+        }
+
+        let prefetch_send = if walk_mode == WalkMode::Prefetch {
+            prefetch_manager(
+                repo.tree_resolver()?,
+                filestore.clone(),
+                parent_hint,
+                walk_detector.clone(),
+            )
+        } else {
+            // Stick a dummy channel in so we don't need to fuss with Option.
+            flume::bounded(0).0
+        };
+
         Ok(Inner {
             treestore,
             filestore,
-            repo: Arc::new(repo),
-            allow_retries,
+            repo,
             extra_configs: extra_configs.to_vec(),
             create_time: Instant::now(),
             touch_file_mtime,
@@ -172,11 +250,14 @@ impl BackingStore {
             reload_interval: config
                 .get_opt("backingstore", "reload-interval-secs")?
                 .unwrap_or(Duration::from_secs(300)),
+            prefetch_send,
+            walk_mode,
+            walk_detector,
         })
     }
 
     #[instrument(level = "trace", skip(self))]
-    pub fn get_blob(&self, fctx: FetchContext, node: &[u8]) -> Result<Option<ScmBlob>> {
+    pub fn get_blob(&self, fctx: FetchContext, node: &[u8]) -> Result<Option<Blob>> {
         self.maybe_reload().filestore.single(fctx, node)
     }
 
@@ -186,7 +267,7 @@ impl BackingStore {
     #[instrument(level = "trace", skip(self, resolve))]
     pub fn get_blob_batch<F>(&self, fctx: FetchContext, keys: Vec<Key>, resolve: F)
     where
-        F: Fn(usize, Result<Option<ScmBlob>>),
+        F: Fn(usize, Result<Option<Blob>>),
     {
         self.maybe_reload()
             .filestore
@@ -301,6 +382,62 @@ impl BackingStore {
         Ok(Some(result))
     }
 
+    #[instrument(level = "trace", skip(self))]
+    pub fn witness_file_read(&self, path: &RepoPath, local: bool) {
+        let inner = self.inner.load();
+
+        if inner.walk_mode == WalkMode::Off {
+            return;
+        }
+
+        let walk_changed = if local {
+            inner.walk_detector.file_read(path);
+            false
+        } else {
+            inner.walk_detector.file_loaded(path)
+        };
+        if !walk_changed {
+            return;
+        }
+
+        inner.notify_prefetch();
+    }
+
+    #[instrument(level = "trace", skip(self))]
+    pub fn witness_dir_read(
+        &self,
+        path: &RepoPath,
+        local: bool,
+        num_files: usize,
+        num_dirs: usize,
+    ) {
+        let inner = self.inner.load();
+
+        if inner.walk_mode == WalkMode::Off {
+            return;
+        }
+
+        let walk_changed = if local {
+            inner.walk_detector.dir_read(path);
+            false
+        } else {
+            inner.walk_detector.dir_loaded(path, num_files, num_dirs)
+        };
+        if !walk_changed {
+            return;
+        }
+
+        inner.notify_prefetch();
+    }
+
+    pub fn set_parent_hint(&self, parent_id: &str) {
+        tracing::info!(parent_id, "setting parent hint");
+
+        *self.parent_hint.write() = Some(parent_id.to_string());
+
+        self.maybe_reload().notify_prefetch();
+    }
+
     // Fully reload the stores if:
     //   - a touch file has a newer mtime than last time we checked, or
     //   - the touch file exists and didn't exist last time, or
@@ -375,9 +512,9 @@ impl BackingStore {
 
             match Self::new_inner(
                 inner.repo.path(),
-                inner.allow_retries,
                 &inner.extra_configs,
                 new_mtime,
+                self.parent_hint.clone(),
             ) {
                 Ok(mut new_inner) => {
                     new_inner.last_reload = Instant::now();
@@ -443,7 +580,6 @@ impl Inner {
             filestore: self.filestore.clone(),
             treestore: self.treestore.clone(),
             repo: self.repo.clone(),
-            allow_retries: self.allow_retries,
             extra_configs: self.extra_configs.clone(),
 
             touch_file_mtime,
@@ -452,12 +588,24 @@ impl Inner {
             already_reloading: AtomicBool::new(false),
             reload_check_interval: self.reload_check_interval,
             reload_interval: self.reload_interval,
+
+            prefetch_send: self.prefetch_send.clone(),
+            walk_mode: self.walk_mode,
+            walk_detector: self.walk_detector.clone(),
         }
     }
 
     fn flush(&self) {
         self.filestore.flush().ok();
         self.treestore.flush().ok();
+    }
+
+    fn notify_prefetch(&self) {
+        if self.walk_mode != WalkMode::Prefetch {
+            return;
+        }
+
+        let _ = self.prefetch_send.try_send(());
     }
 }
 
@@ -567,18 +715,18 @@ where
 }
 
 /// Read file content.
-impl LocalRemoteImpl<ScmBlob> for Arc<dyn FileStore> {
-    fn get_local_single(&self, path: &RepoPath, id: HgId) -> Result<Option<ScmBlob>> {
+impl LocalRemoteImpl<Blob> for Arc<dyn FileStore> {
+    fn get_local_single(&self, path: &RepoPath, id: HgId) -> Result<Option<Blob>> {
         self.get_local_content(path, id)
     }
-    fn get_single(&self, fctx: FetchContext, path: &RepoPath, id: HgId) -> Result<ScmBlob> {
+    fn get_single(&self, fctx: FetchContext, path: &RepoPath, id: HgId) -> Result<Blob> {
         self.get_content(fctx, path, id)
     }
     fn get_batch_iter(
         &self,
         fctx: FetchContext,
         keys: Vec<Key>,
-    ) -> Result<BoxIterator<Result<(Key, ScmBlob)>>> {
+    ) -> Result<BoxIterator<Result<(Key, Blob)>>> {
         Ok(Box::new(self.get_content_iter(fctx, keys)?))
     }
 }

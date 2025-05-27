@@ -105,8 +105,6 @@ Note: old client behave as a publishing server with draft only content
 
 """
 
-from __future__ import absolute_import
-
 import errno
 import struct
 from typing import Dict

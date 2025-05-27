@@ -136,10 +136,10 @@ impl FileStateV2 {
 #[cfg(test)]
 impl rand::distributions::Distribution<FileStateV2> for rand::distributions::Standard {
     fn sample<R: rand::Rng + ?Sized>(&self, rng: &mut R) -> FileStateV2 {
-        let mode = rng.gen();
-        let size = rng.gen();
-        let mtime = rng.gen();
-        let state = StateFlags::from_bits_truncate(rng.gen());
+        let mode = rng.r#gen();
+        let size = rng.r#gen();
+        let mtime = rng.r#gen();
+        let state = StateFlags::from_bits_truncate(rng.r#gen());
         let copied = if state.contains(StateFlags::COPIED) {
             Some(b"copied_source".to_vec().into_boxed_slice())
         } else {

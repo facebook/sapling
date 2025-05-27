@@ -9,12 +9,14 @@ use std::collections::BTreeMap;
 use std::sync::Arc;
 
 use anyhow::Result;
-use async_runtime::block_unless_interrupted as block_on;
+use anyhow::bail;
+use async_runtime::block_on;
 use commits::DagCommits;
 use dag::CloneData;
 use dag::Group;
 use dag::Vertex;
 use dag::VertexListWithOptions;
+use dag::ops::IdConvert;
 use edenapi::SaplingRemoteApi;
 use edenapi::configmodel::Config;
 use edenapi::configmodel::ConfigExt;
@@ -27,13 +29,12 @@ use types::HgId;
 
 // TODO: move to a bookmarks crate
 pub fn convert_to_remote(config: &dyn Config, bookmark: &str) -> Result<RefName> {
-    // FIXME: "hoist" is not the right config here.
-    Ok(format!(
-        "{}/{}",
-        config.must_get::<String>("remotenames", "hoist")?,
-        bookmark
-    )
-    .try_into()?)
+    let rename = config.get_opt::<String>("remotenames", "rename.default")?;
+    let name = match rename.as_ref() {
+        Some(s) if !s.trim().is_empty() => s.trim(),
+        _ => "default",
+    };
+    Ok(format!("{}/{}", name, bookmark).try_into()?)
 }
 
 /// Download initial commit data via fast pull endpoint. Returns hash of bookmarks, if any.
@@ -50,7 +51,7 @@ pub fn clone(
 ) -> Result<BTreeMap<String, HgId>> {
     // The "bookmarks" API result is unordered.
     let bookmarks =
-        block_on(edenapi.bookmarks(bookmark_names.clone()))?.map_err(|e| e.tag_network())?;
+        block_on(edenapi.bookmarks(bookmark_names.clone())).map_err(|e| e.tag_network())?;
     let bookmarks = bookmarks
         .into_iter()
         .filter_map(|bm| bm.hgid.map(|id| (bm.bookmark, id)))
@@ -67,32 +68,60 @@ pub fn clone(
         .collect();
 
     let segments =
-        block_on(edenapi.commit_graph_segments(heads, vec![]))?.map_err(|e| e.tag_network())?;
+        block_on(edenapi.commit_graph_segments(heads, vec![])).map_err(|e| e.tag_network())?;
     let clone_data = CommitGraphSegments { segments }.try_into()?;
 
     if config.get_or_default::<bool>("clone", "use-import-clone")? {
-        block_on(commits.import_clone_data(clone_data))??;
+        block_on(commits.import_clone_data(clone_data))?;
     } else {
         // All lazy heads should be in the MASTER group.
         let head_opts =
             VertexListWithOptions::from(head_vertexes).with_desired_group(Group::MASTER);
-        block_on(commits.import_pull_data(clone_data, &head_opts))??;
+        block_on(commits.import_pull_data(clone_data, &head_opts))?;
     }
 
-    let all = block_on(commits.all())??;
-    let tip = block_on(all.first())??;
+    let bookmarks_refnames: BTreeMap<RefName, HgId> = bookmarks
+        .iter()
+        .map(|(bm, id)| Ok((convert_to_remote(config, bm)?, id.clone())))
+        .collect::<Result<_>>()?;
+
+    if !config.get_or_default("experimental", "skip-verify-references-on-clone")? {
+        verify_references(commits.as_ref(), &bookmarks_refnames)?;
+    }
+
+    let all = block_on(commits.all())?;
+    let tip = block_on(all.first())?;
     if let Some(tip) = tip {
         metalog.set("tip", tip.as_ref())?;
     }
-    metalog.set_remotenames(
-        &bookmarks
-            .iter()
-            .map(|(bm, id)| Ok((convert_to_remote(config, bm)?, id.clone())))
-            .collect::<Result<_>>()?,
-    )?;
+    metalog.set_remotenames(&bookmarks_refnames)?;
     metalog.commit(CommitOptions::default())?;
 
     Ok(bookmarks)
+}
+
+fn verify_references(commits: &dyn IdConvert, references: &BTreeMap<RefName, HgId>) -> Result<()> {
+    let vertexes: Vec<Vertex> = references
+        .values()
+        .map(|id| Vertex::copy_from(id.as_ref()))
+        .collect();
+    if block_on(commits.vertex_id_batch(&vertexes)).is_err() {
+        // Figure out which ref is bad.
+        let mut bad_ref_messages = Vec::new();
+        for (name, id) in references {
+            let vertex = Vertex::copy_from(id.as_ref());
+            if !block_on(commits.contains_vertex_name(&vertex))? {
+                bad_ref_messages.push(format!("{}={}", name, id.to_hex()));
+            }
+        }
+        if !bad_ref_messages.is_empty() {
+            bail!(
+                "unexpected pull: missing {} in commit graph",
+                bad_ref_messages.join(", ")
+            );
+        }
+    }
+    Ok(())
 }
 
 /// Download an update of the main bookmark via fast pull endpoint.  Returns
@@ -110,7 +139,7 @@ pub fn fast_pull(
         .collect::<Vec<_>>();
 
     let segments =
-        block_on(edenapi.commit_graph_segments(missing, common))?.map_err(|e| e.tag_network())?;
+        block_on(edenapi.commit_graph_segments(missing, common)).map_err(|e| e.tag_network())?;
     let pull_data: CloneData<Vertex> = CommitGraphSegments { segments }.try_into()?;
 
     let commit_count = pull_data.flat_segments.vertex_count();
@@ -118,6 +147,6 @@ pub fn fast_pull(
     block_on(commits.import_pull_data(
         pull_data,
         &VertexListWithOptions::from(missing_vertexes).with_desired_group(Group::MASTER),
-    ))??;
+    ))?;
     Ok((commit_count, segment_count as u64))
 }

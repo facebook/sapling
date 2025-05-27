@@ -866,10 +866,10 @@ pub fn parse_disabled_hooks_no_repo_prefix<'a>(
 /// Fixed macro from clap2 so it refers to clap_old
 #[macro_export]
 macro_rules! value_t {
-    ($m:ident, $v:expr, $t:ty) => {
+    ($m:ident, $v:expr_2021, $t:ty) => {
         value_t!($m.value_of($v), $t)
     };
-    ($m:ident.value_of($v:expr), $t:ty) => {
+    ($m:ident.value_of($v:expr_2021), $t:ty) => {
         if let Some(v) = $m.value_of($v) {
             match v.parse::<$t>() {
                 Ok(val) => Ok(val),

@@ -12,6 +12,11 @@
 
 namespace facebook::eden {
 
+folly::Future<UnixSocket::Message> receiveTakeoverDataMessage(
+    FutureUnixSocket& socket,
+    UnixSocket::Message&& msg,
+    const std::chrono::seconds& takeoverReceiveTimeout);
+
 /**
  * Request to take over mount points from an existing edenfs process.
  *
@@ -19,6 +24,7 @@ namespace facebook::eden {
  */
 TakeoverData takeoverMounts(
     AbsolutePathPiece socketPath,
+    const std::chrono::seconds& takeoverReceiveTimeout,
     // the following parameters are present for testing purposes and should not
     // normally be used in the production build.
     bool shouldThrowDuringTakeover = false,

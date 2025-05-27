@@ -15,14 +15,12 @@ function findAssetWithFilenameSubstr(searchString: string) {
       return asset;
     }
   }
-  return null;
+  throw new Error(`Releases (rawReleaseData.ts) do not include ${searchString}`);
 }
 
 export const latestReleaseVersion = latestReleaseAssets.name;
 
 export const macArmAsset = findAssetWithFilenameSubstr('arm64_ventura.bottle.tar.gz');
-
-export const ubuntu20 = findAssetWithFilenameSubstr('Ubuntu20.04.deb');
 
 export const ubuntu22 = findAssetWithFilenameSubstr('Ubuntu22.04.deb');
 

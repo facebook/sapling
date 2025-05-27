@@ -2,9 +2,7 @@
 
 name: Mononoke Mac
 
-on:
-  schedule:
-    - cron: '0 2 * * MON'
+on: {}
 
 permissions:
   contents: read  #  to fetch code (actions/checkout)

@@ -55,7 +55,7 @@ fn pushrebased_changesets_to_hg_stream(
     ctx: &CoreContext,
     repo_derived_data: Arc<RepoDerivedData>,
     pushrebased_changesets: Vec<pushrebase::PushrebaseChangesetPair>,
-) -> impl Stream<Item = Result<(HgChangesetId, Vec<HgChangesetId>)>> {
+) -> impl Stream<Item = Result<(HgChangesetId, Vec<HgChangesetId>)>> + use<> {
     pushrebased_changesets
         .into_iter()
         .map(move |p| {

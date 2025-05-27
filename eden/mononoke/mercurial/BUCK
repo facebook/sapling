@@ -63,6 +63,7 @@ rust_library(
         "//eden/mononoke/repo_attributes/repo_derived_data:repo_derived_data",
         "//eden/mononoke/repo_attributes/repo_identity:repo_identity",
         "//eden/mononoke/tests/fixtures:fixtures",
+        "//eden/scm/lib/manifest-augmented-tree:manifest-augmented-tree",
     ],
     test_srcs = glob([
         "types/src/blobs/*/*.bin",

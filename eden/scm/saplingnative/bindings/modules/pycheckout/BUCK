@@ -7,11 +7,6 @@ rust_python_library(
     srcs = glob(["src/**/*.rs"]),
     autocargo = {"cargo_toml_config": {
         "dependencies_override": {"dependencies": {
-            "cpython": {
-                "features": [],
-                "git": None,
-                "rev": None,
-            },
             "sapling-io": {"optional": True},
             "sapling-workingcopy": {"optional": True},
         }},

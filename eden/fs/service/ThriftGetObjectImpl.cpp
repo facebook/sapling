@@ -68,6 +68,12 @@ ScmTreeWithOrigin transformToTreeFromOrigin(
         out.id_ref() =
             edenMount->getObjectStore()->renderObjectId(treeEntry.getHash());
       }
+
+      if (tree.value()->getAuxData()) {
+        XLOGF(DBG7, "Tree id={} returned aux data", id);
+      } else {
+        XLOGF(DBG7, "Tree id={} does not return aux data", id);
+      }
     }
   } else {
     treeOrError.error_ref() = newEdenError(tree.exception());
@@ -75,6 +81,20 @@ ScmTreeWithOrigin transformToTreeFromOrigin(
   ScmTreeWithOrigin result;
   result.scmTreeData() = std::move(treeOrError);
   result.origin() = std::move(origin);
+  if (tree.hasValue() && tree.value() && tree.value()->getAuxData()) {
+    TreeAux treeAux;
+
+    DigestSizeOrError digestSize;
+    digestSize.digestSize_ref() = tree.value()->getAuxData()->digestSize;
+    treeAux.digestSize() = std::move(digestSize);
+
+    DigestHashOrError digestHash;
+    digestHash.digestHash_ref() =
+        thriftHash32(tree.value()->getAuxData()->digestHash.value());
+    treeAux.digestHash() = std::move(digestHash);
+
+    result.treeAux() = std::move(treeAux);
+  }
   return result;
 }
 

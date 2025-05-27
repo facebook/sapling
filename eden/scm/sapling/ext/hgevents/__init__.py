@@ -20,18 +20,11 @@ to support SCM-aware subscriptions:
 https://facebook.github.io/watchman/docs/scm-query.html.
 """
 
-from __future__ import absolute_import
-
-from sapling import extensions, filemerge, merge, perftrace, registrar
+from sapling import extensions, filemerge, merge, perftrace
 from sapling.i18n import _
 
 from ..extlib import watchmanclient
 
-
-configtable = {}
-configitem = registrar.configitem(configtable)
-
-configitem("experimental", "fsmonitor.transaction_notify", default=False)
 
 # This extension is incompatible with the following extensions
 # and will disable itself when encountering one of these:
@@ -103,27 +96,33 @@ def reposetup(ui, repo):
 # https://facebook.github.io/watchman/docs/cmd/subscribe.html#advanced-settling
 def wrapmerge(
     orig,
-    repo,
+    to_repo,
     node,
     wc=None,
+    from_repo=None,
     **kwargs,
 ):
-    if wc and wc.isinmemory():
-        # If the working context isn't on disk, there's no need to invoke
-        # watchman.
+    from_repo = from_repo or to_repo
+    is_crossrepo = not to_repo.is_same_repo(from_repo)
+    if (wc and wc.isinmemory()) or is_crossrepo:
+        # Skip Watchman integration in the following cases:
+        # - The working context (wc) is not on disk.
+        # - This is a cross-repo merge, where computing path distance may not
+        #   be meaningful.
         return orig(
-            repo,
+            to_repo,
             node,
             wc=wc,
+            from_repo=from_repo,
             **kwargs,
         )
     distance = 0
-    oldnode = repo["."].node()
-    newnode = repo[node].node()
-    distance = watchmanclient.calcdistance(repo, oldnode, newnode)
+    oldnode = to_repo["."].node()
+    newnode = to_repo[node].node()
+    distance = watchmanclient.calcdistance(to_repo, oldnode, newnode)
 
     with watchmanclient.state_update(
-        repo,
+        to_repo,
         name="hg.update",
         oldnode=oldnode,
         newnode=newnode,
@@ -131,9 +130,10 @@ def wrapmerge(
         metadata={"merge": True},
     ):
         return orig(
-            repo,
+            to_repo,
             node,
             wc=wc,
+            from_repo=from_repo,
             **kwargs,
         )
 

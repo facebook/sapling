@@ -8,7 +8,7 @@
 pub(crate) static VERSION_TEXT: &str = r#"
 Sapling is also known as "Mercurial" or "hg" internally at Meta.
 
-User guide: https://www.internalfb.com/intern/wiki/Mercurial-workflow/
-Support group: https://fb.workplace.com/groups/mercurialusers/
-Sapling developer guide: https://www.internalfb.com/intern/wiki/Mercurial/dev/Contributing/
+User guide: https://www.internalfb.com/wiki/Source-Control-Users/
+Support group: https://fb.workplace.com/groups/saplingusers
+Sapling developer guide: https://www.internalfb.com/wiki/Sapling-Internal/dev/Contributing/
 "#;

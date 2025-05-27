@@ -15,9 +15,11 @@ name = "eagerepo"
 [dependencies]
 anyhow = "1.0.95"
 async-trait = "0.1.86"
+blob = { version = "0.1.0", path = "../blob" }
 fail = { version = "0.4", features = ["failpoints"] }
 futures = { version = "0.3.30", features = ["async-await", "compat"] }
 http = "0.2"
+manifest-augmented-tree = { version = "0.1.0", path = "../manifest-augmented-tree" }
 parking_lot = { version = "0.12.1", features = ["send_guard"] }
 sapling-cas-client = { version = "0.1.0", path = "../cas-client" }
 sapling-configmodel = { version = "0.1.0", path = "../config/model" }
@@ -36,11 +38,10 @@ sapling-pathmatcher = { version = "0.1.0", path = "../pathmatcher" }
 sapling-repourl = { version = "0.1.0", path = "../repo/url" }
 sapling-storemodel = { version = "0.1.0", path = "../storemodel" }
 sapling-zstore = { version = "0.1.0", path = "../zstore" }
-scm-blob = { version = "0.1.0", path = "../blob" }
 sha1 = "0.10.5"
-thiserror = "2"
+thiserror = "2.0.12"
 tracing = { version = "0.1.41", features = ["attributes", "valuable"] }
 
 [dev-dependencies]
 tempfile = "3.15"
-tokio = { version = "1.41.0", features = ["full", "test-util", "tracing"] }
+tokio = { version = "1.45.0", features = ["full", "test-util", "tracing"] }

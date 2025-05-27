@@ -29,8 +29,6 @@
 
 """command to delete untracked files from the working directory"""
 
-from __future__ import absolute_import
-
 from .. import cmdutil, error, scmutil
 from ..i18n import _
 from .cmdtable import command

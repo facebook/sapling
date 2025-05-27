@@ -16,6 +16,6 @@ rust_library(
             "repository": "https://github.com/facebook/sapling",
         },
     }},
-    cpp_deps = ["//eden/scm:libmpatch"],
     crate_root = "src/lib.rs",
+    deps = ["//eden/scm:libmpatch"],
 )

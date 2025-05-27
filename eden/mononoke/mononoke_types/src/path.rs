@@ -614,7 +614,7 @@ impl Extend<MPathElement> for MPath {
 impl Extend<MPathElement> for Option<NonRootMPath> {
     fn extend<T: IntoIterator<Item = MPathElement>>(&mut self, iter: T) {
         match self {
-            Some(ref mut path) => path.0.extend(iter),
+            Some(path) => path.0.extend(iter),
             None => {
                 let elements = Vec::from_iter(iter);
                 if elements.is_empty() {

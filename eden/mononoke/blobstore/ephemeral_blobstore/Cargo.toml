@@ -16,7 +16,7 @@ async-trait = "0.1.86"
 bincode = { version = "2", features = ["serde"] }
 blobstore = { version = "0.1.0", path = ".." }
 bonsai_globalrev_mapping = { version = "0.1.0", path = "../../bonsai_globalrev_mapping" }
-chrono = { version = "0.4", features = ["clock", "serde", "std"], default-features = false }
+chrono = { version = "=0.4.39", features = ["clock", "serde", "std"], default-features = false }
 commit_graph = { version = "0.1.0", path = "../../repo_attributes/commit_graph/commit_graph" }
 commit_graph_types = { version = "0.1.0", path = "../../repo_attributes/commit_graph/commit_graph_types" }
 context = { version = "0.1.0", path = "../../server/context" }
@@ -38,8 +38,8 @@ sql = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-s
 sql_construct = { version = "0.1.0", path = "../../common/sql_construct" }
 sql_ext = { version = "0.1.0", path = "../../common/rust/sql_ext" }
 sql_query_config = { version = "0.1.0", path = "../../repo_attributes/sql_query_config" }
-thiserror = "2"
-tokio = { version = "1.41.0", features = ["full", "test-util", "tracing"] }
+thiserror = "2.0.12"
+tokio = { version = "1.45.0", features = ["full", "test-util", "tracing"] }
 vec1 = { version = "1", features = ["serde"] }
 
 [dev-dependencies]

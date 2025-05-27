@@ -113,7 +113,7 @@ variable a bit, you can do so in `facebook/generate_manifest.py`).
 ## dott_test targets
 Tests are grouped into targets of `dott_test` type. Each `dott_test` target specifies:
 - The name of the target
-- `disable_all_network_access_target` which, if false, will not run the test a second time with a wrapper that blocks network access. Keep this enabled to the extent that it is possible, if you must disable it explaining the services it's connecting to.
+- `disable_all_network_access_target` which, if true, will run the test a second time with a wrapper that blocks network access. Enabling this introduces a maintenance cost as well as increasing CI load and diff testing latency. We prefer to enable it only for a small set of high-signal tests.
 - A glob expression representing the test files included in the target.
 - A list of its dependencies
 

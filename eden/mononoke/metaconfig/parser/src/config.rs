@@ -495,10 +495,6 @@ fn parse_common_config(
     let redaction_config = common.redaction_config;
     let redaction_config = RedactionConfig {
         blobstore: get_blobstore(&redaction_config.blobstore)?,
-        darkstorm_blobstore: match &redaction_config.darkstorm_blobstore {
-            Some(storage) => Some(get_blobstore(storage)?),
-            None => None,
-        },
         redaction_sets_location: redaction_config.redaction_sets_location,
     };
 
@@ -955,6 +951,7 @@ mod test {
 
             [update_logging_config]
             new_commit_logging_destination = { scribe = { scribe_category = "cat" } }
+            git_content_refs_logging_destination = { logger = {} }
 
             [commit_graph_config]
             scuba_table = "commit_graph"
@@ -1351,6 +1348,7 @@ mod test {
                     new_commit_logging_destination: Some(LoggingDestination::Scribe {
                         scribe_category: "cat".to_string(),
                     }),
+                    git_content_refs_logging_destination: Some(LoggingDestination::Logger),
                 },
                 commit_graph_config: CommitGraphConfig {
                     scuba_table: Some("commit_graph".to_string()),
@@ -1505,7 +1503,6 @@ mod test {
                 },
                 redaction_config: RedactionConfig {
                     blobstore: main_storage_config.blobstore,
-                    darkstorm_blobstore: None,
                     redaction_sets_location: "loc".to_string(),
                 },
                 internal_identity: Identity {

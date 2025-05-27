@@ -12,15 +12,6 @@ rust_python_library(
                     "bindings": {
                         "default-features": False,
                     },
-                    "cpython": {
-                        "features": ["python3-sys"],
-                        "git": None,
-                        "rev": None,
-                    },
-                    "python3-sys": {
-                        "git": None,
-                        "rev": None,
-                    },
                 },
             },
             "features": {

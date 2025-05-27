@@ -38,6 +38,8 @@ use mononoke_types::ChangesetId;
 use mononoke_types::DerivableType;
 use mononoke_types::hash::GitSha1;
 use repo_identity::RepoIdentityRef;
+use repo_update_logger::GitContentRefInfo;
+use repo_update_logger::log_git_content_ref;
 use slog::info;
 use topo_sort::sort_topological;
 
@@ -250,6 +252,7 @@ async fn process_tags<Uploader: GitUploader>(
 /// that are part of this push
 async fn upload_content_ref_objects<Uploader: GitUploader, Reader: GitReader>(
     ctx: &CoreContext,
+    repo: Arc<Repo>,
     uploader: Arc<Uploader>,
     reader: Arc<Reader>,
     ref_updates: &[RefUpdate],
@@ -258,8 +261,9 @@ async fn upload_content_ref_objects<Uploader: GitUploader, Reader: GitReader>(
     stream::iter(ref_updates.to_vec())
         .map(anyhow::Ok)
         .map_ok(|ref_update| {
-            cloned!(uploader, reader, ctx, content_tags);
+            cloned!(uploader, reader, ctx, content_tags, repo);
             async move {
+                let repo_name = repo.repo_identity().name().to_string();
                 let (ref_name, mut git_hash) = (ref_update.ref_name.clone(), ref_update.to.clone());
                 let delete_ref = git_hash.is_null();
                 // If the ref is getting deleted, use the old value of the ref
@@ -293,6 +297,12 @@ async fn upload_content_ref_objects<Uploader: GitUploader, Reader: GitReader>(
                         .strip_prefix("refs/")
                         .unwrap_or(&ref_name)
                         .to_string();
+                    let content_ref_info = GitContentRefInfo {
+                        repo_name,
+                        ref_name: ref_for_content_mapping.clone(),
+                        git_hash: git_hash.to_hex().to_string(),
+                        object_type: obj_kind.to_string(),
+                    };
                     uploader
                         .generate_ref_content_mapping(
                             &ctx,
@@ -301,6 +311,7 @@ async fn upload_content_ref_objects<Uploader: GitUploader, Reader: GitReader>(
                             obj_kind.is_tree(),
                         )
                         .await?;
+                    log_git_content_ref(&ctx, &repo, &content_ref_info).await;
                 }
 
                 anyhow::Ok(RefUpdate::new(
@@ -371,9 +382,15 @@ pub async fn upload_objects(
     .await
     .context("Error during process_tags")?;
     // Upload all the content refs that are part of this push
-    let ref_updates =
-        upload_content_ref_objects(ctx, uploader, object_store, ref_updates, content_tags)
-            .await
-            .context("Error during upload_content_ref_objects")?;
+    let ref_updates = upload_content_ref_objects(
+        ctx,
+        repo.clone(),
+        uploader,
+        object_store,
+        ref_updates,
+        content_tags,
+    )
+    .await
+    .context("Error during upload_content_ref_objects")?;
     Ok((ref_map, ref_updates))
 }

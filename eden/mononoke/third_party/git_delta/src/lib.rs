@@ -2,7 +2,7 @@ use anyhow::Error;
 use std::os::raw::c_ulong;
 use std::os::raw::c_void;
 
-extern {
+unsafe extern "C" {
     fn git_delta_from_buffers(
         src_buf: *const c_void,
         src_len: c_ulong,

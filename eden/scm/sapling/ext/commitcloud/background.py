@@ -21,8 +21,6 @@ The output from background backup or sync operations is logged to a directory
 configured in the 'infinitepushbackup.logdir' config option.
 """
 
-from __future__ import absolute_import
-
 import errno
 import json
 import os

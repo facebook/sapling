@@ -9,7 +9,6 @@
 
 //! Common types used by sibling crates
 
-pub mod augmented_tree;
 pub mod blake3;
 pub mod cas;
 pub mod errors;
@@ -32,11 +31,6 @@ pub mod sha;
 pub mod tree;
 pub mod workingcopy_client;
 
-pub use crate::augmented_tree::AugmentedDirectoryNode;
-pub use crate::augmented_tree::AugmentedFileNode;
-pub use crate::augmented_tree::AugmentedTree;
-pub use crate::augmented_tree::AugmentedTreeEntry;
-pub use crate::augmented_tree::AugmentedTreeWithDigest;
 pub use crate::blake3::Blake3;
 pub use crate::cas::CasDigest;
 pub use crate::cas::CasDigestType;

@@ -66,7 +66,7 @@ pub fn build_mononoke_cas_client<'a>(
     repo: &str,
     verbose: bool,
     use_case: &str,
-) -> Result<impl CasClient + 'a, Error> {
+) -> Result<impl CasClient + use<'a>, Error> {
     #[cfg(fbcode_build)]
     {
         RemoteExecutionCasdClient::new(fb, ctx, repo.to_owned(), verbose, use_case.to_owned())

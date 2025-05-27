@@ -44,10 +44,12 @@ use mononoke_types::ChangesetId;
 use mononoke_types::ContentMetadataV2;
 /// Metadata about a file.
 pub use mononoke_types::ContentMetadataV2 as FileMetadata;
+use mononoke_types::FileChange;
 use mononoke_types::FileType;
 use mononoke_types::FileUnodeId;
 use mononoke_types::FsnodeId;
 use mononoke_types::ManifestUnodeId;
+use mononoke_types::NonRootMPath;
 use mononoke_types::blame_v2::BlameV2;
 use mononoke_types::deleted_manifest_common::DeletedManifestCommon;
 use mononoke_types::fsnode::FsnodeFile;
@@ -299,6 +301,16 @@ impl<R: MononokeRepo> ChangesetPathContentContext<R> {
             None => None,
         };
         Ok(metadata)
+    }
+
+    pub async fn file_change(&self) -> Result<Option<FileChange>, MononokeError> {
+        let non_root_mpath = NonRootMPath::try_from(self.path.clone())?;
+        let file_changes = self.changeset.file_changes().await?;
+        let file_change = file_changes.get(&non_root_mpath);
+        match file_change {
+            Some(file_change) => Ok(Some(file_change.clone())),
+            None => Ok(None),
+        }
     }
 
     /// Returns a `TreeContext` or `FileContext` and `FileType` for the tree

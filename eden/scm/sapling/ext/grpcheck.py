@@ -26,16 +26,9 @@ import os
 if os.name != "nt":
     import grp
 
-    from sapling import registrar
-
     testedwith = "ships-with-fb-ext"
 
     _missinggroup = None
-
-    configtable = {}
-    configitem = registrar.configitem(configtable)
-
-    configitem("grpcheck", "groups", default=[])
 
     def _grpname2gid(name):
         try:

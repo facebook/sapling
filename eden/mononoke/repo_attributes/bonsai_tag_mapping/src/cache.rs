@@ -131,7 +131,13 @@ impl BonsaiTagMapping for CachedBonsaiTagMapping {
 
     /// Fetch all the tag mapping entries for the given repo
     async fn get_all_entries(&self) -> Result<Vec<BonsaiTagMappingEntry>> {
-        Ok(self.entries.load_full().to_vec())
+        if justknobs::eval("scm/mononoke:enable_bonsai_tag_mapping_caching", None, None)
+            .unwrap_or(false)
+        {
+            Ok(self.entries.load_full().to_vec())
+        } else {
+            self.inner.get_all_entries().await
+        }
     }
 
     /// Fetch the tag mapping entries corresponding to the input changeset ids
@@ -140,14 +146,20 @@ impl BonsaiTagMapping for CachedBonsaiTagMapping {
         &self,
         changeset_ids: Vec<ChangesetId>,
     ) -> Result<Vec<BonsaiTagMappingEntry>> {
-        let changeset_ids = changeset_ids.into_iter().collect::<HashSet<_>>();
-        Ok(self
-            .entries
-            .load()
-            .iter()
-            .filter(|&entry| changeset_ids.contains(&entry.changeset_id))
-            .cloned()
-            .collect())
+        if justknobs::eval("scm/mononoke:enable_bonsai_tag_mapping_caching", None, None)
+            .unwrap_or(false)
+        {
+            let changeset_ids = changeset_ids.into_iter().collect::<HashSet<_>>();
+            Ok(self
+                .entries
+                .load()
+                .iter()
+                .filter(|&entry| changeset_ids.contains(&entry.changeset_id))
+                .cloned()
+                .collect())
+        } else {
+            self.inner.get_entries_by_changesets(changeset_ids).await
+        }
     }
 
     /// Fetch the tag mapping entry corresponding to the tag name in the
@@ -162,13 +174,19 @@ impl BonsaiTagMapping for CachedBonsaiTagMapping {
             // instead of relying on the cache
             Freshness::Latest => self.inner.get_entry_by_tag_name(tag_name, freshness).await,
             Freshness::MaybeStale => {
-                let entry = self
-                    .entries
-                    .load()
-                    .iter()
-                    .find(|&entry| entry.tag_name == tag_name)
-                    .cloned();
-                Ok(entry)
+                if justknobs::eval("scm/mononoke:enable_bonsai_tag_mapping_caching", None, None)
+                    .unwrap_or(false)
+                {
+                    let entry = self
+                        .entries
+                        .load()
+                        .iter()
+                        .find(|&entry| entry.tag_name == tag_name)
+                        .cloned();
+                    Ok(entry)
+                } else {
+                    self.inner.get_entry_by_tag_name(tag_name, freshness).await
+                }
             }
         }
     }
@@ -178,14 +196,20 @@ impl BonsaiTagMapping for CachedBonsaiTagMapping {
         &self,
         tag_hashes: Vec<GitSha1>,
     ) -> Result<Vec<BonsaiTagMappingEntry>> {
-        let tag_hashes = tag_hashes.into_iter().collect::<HashSet<_>>();
-        Ok(self
-            .entries
-            .load()
-            .iter()
-            .filter(|&entry| tag_hashes.contains(&entry.tag_hash))
-            .cloned()
-            .collect())
+        if justknobs::eval("scm/mononoke:enable_bonsai_tag_mapping_caching", None, None)
+            .unwrap_or(false)
+        {
+            let tag_hashes = tag_hashes.into_iter().collect::<HashSet<_>>();
+            Ok(self
+                .entries
+                .load()
+                .iter()
+                .filter(|&entry| tag_hashes.contains(&entry.tag_hash))
+                .cloned()
+                .collect())
+        } else {
+            self.inner.get_entries_by_tag_hashes(tag_hashes).await
+        }
     }
 
     /// Add new tag name to bonsai changeset mappings

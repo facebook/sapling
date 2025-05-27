@@ -87,9 +87,11 @@ impl NodeIpc {
             Self::from_libc_fd(libc_fd).ok()?.with_libuv_compat()
         };
 
-        env::remove_var("NODE_CHANNEL_FD");
+        // TODO: Audit that the environment access only happens in single-threaded code.
+        unsafe { env::remove_var("NODE_CHANNEL_FD") };
         if serialization_mode.is_some() {
-            env::remove_var("NODE_CHANNEL_SERIALIZATION_MODE");
+            // TODO: Audit that the environment access only happens in single-threaded code.
+            unsafe { env::remove_var("NODE_CHANNEL_SERIALIZATION_MODE") };
         }
 
         Some(ipc)

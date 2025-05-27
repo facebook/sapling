@@ -52,6 +52,9 @@
 
 
 
+
+
+
 # Setup git repository
   $ mkdir "$GIT_REPO"
   $ cd "$GIT_REPO"
@@ -88,6 +91,9 @@
   Date:   Sat Jan 1 00:00:00 2000 +0000
   
       Add file1 and file2
+
+
+
 
 
 
@@ -131,7 +137,6 @@
   > --bookmark-suffix "new_repo" \
   > --commit-date-rfc3339 "2005-04-02T21:37:00+01:00" \
   > --disable-phabricator-check \
-  > --disable-hg-sync-check \
   > --dest-bookmark master_bookmark \
   > --commit-author user \
   > --commit-message "merging" \
@@ -251,6 +256,7 @@
   3 directories, 5 files
 
 
+
 Normal log works
   $ log -r "ancestors(master_bookmark)"
   @    merging [public;rev=5;db39bf064f10] remote/master_bookmark
@@ -334,6 +340,18 @@ But using --stat crashes
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
   $ hg show 4ad443ff73f01bf1762918fa2be9c21cbdf038ea
   commit:      4ad443ff73f0
   user:        mononoke <mononoke@mononoke>
@@ -354,6 +372,9 @@ But using --stat crashes
   @@ -0,0 +1,1 @@
   +this is file2
   
+
+
+
 
   $ ls
   A

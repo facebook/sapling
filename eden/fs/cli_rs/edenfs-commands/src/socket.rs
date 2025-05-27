@@ -10,9 +10,9 @@
 use anyhow::Result;
 use async_trait::async_trait;
 use clap::Parser;
-use edenfs_client::instance::EdenFsInstance;
 
 use crate::ExitCode;
+use crate::get_edenfs_instance;
 
 #[derive(Parser, Debug)]
 #[clap(about = "Print the daemon's socket path if it exists")]
@@ -24,7 +24,8 @@ pub struct SocketCmd {
 #[async_trait]
 impl crate::Subcommand for SocketCmd {
     async fn run(&self) -> Result<ExitCode> {
-        let socket = EdenFsInstance::global().get_socket_path(!self.no_check);
+        let instance = get_edenfs_instance();
+        let socket = instance.get_socket_path(!self.no_check);
 
         Ok(match socket {
             Ok(socket) => {

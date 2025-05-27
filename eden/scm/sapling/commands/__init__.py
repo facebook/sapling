@@ -12,7 +12,6 @@
 
 # @lint-ignore-every SPELL
 
-from __future__ import absolute_import
 
 import difflib
 import errno
@@ -66,6 +65,7 @@ from .. import (
     sshserver,
     streamclone,
     templatekw,
+    templater,
     ui as uimod,
     util,
 )
@@ -2581,7 +2581,13 @@ def graft(ui, repo, *revs, **opts):
         return _dograft(ui, repo, *revs, **opts)
 
 
-def _dograft(ui, repo, *revs, **opts):
+def _dograft(ui, to_repo, *revs, from_repo=None, **opts):
+    """copy commits from a different location
+
+    * from_repo: The source repo. This may be an external Git repo (e.g., in subtree graft).
+    * to_repo: The destination repo (typically the current working repo).
+    """
+    from_repo = from_repo or to_repo
     if revs and opts.get("rev"):
         ui.warn(
             _(
@@ -2604,70 +2610,82 @@ def _dograft(ui, repo, *revs, **opts):
             raise error.Abort(_("can't specify --continue and revisions"))
         if revs and opts.get("abort"):
             raise error.Abort(_("can't specify --abort and revisions"))
+        if opts.get("from_path") or opts.get("to_path"):
+            raise error.Abort(
+                _("--from-path/--to-path cannot be used with --continue or --abort")
+            )
 
-        # read in unfinished revisions
-        try:
-            nodes = repo.localvfs.readutf8("graftstate").splitlines()
-            revs = [repo[node].rev() for node in nodes]
-        except IOError as inst:
-            if inst.errno != errno.ENOENT:
-                raise
-            cmdutil.wrongtooltocontinue(repo, _("graft"))
+        if not to_repo.localvfs.exists("graftstate"):
+            cmdutil.wrongtooltocontinue(to_repo, _("graft"))
 
-        if opts.get("continue"):
-            cont = True
         if opts.get("abort"):
-            repo.localvfs.tryunlink("graftstate")
-            return update(ui, repo, node=".", clean=True)
+            to_repo.localvfs.tryunlink("graftstate")
+            return update(ui, to_repo, node=".", clean=True)
+
+        cont = True
+
+        ms = mergemod.mergestate.read(to_repo)
+        from_repo = ms.from_repo()
+        # read in unfinished revisions
+        nodes = to_repo.localvfs.readutf8("graftstate").splitlines()
+        revs = [from_repo[node].rev() for node in nodes]
+        from_paths = [m["from_path"] for m in ms.subtree_merges]
+        to_paths = [m["to_path"] for m in ms.subtree_merges]
+        is_crossrepo = not to_repo.is_same_repo(from_repo)
     else:
-        cmdutil.checkunfinished(repo)
-        cmdutil.bailifchanged(repo)
+        cmdutil.checkunfinished(to_repo)
+        cmdutil.bailifchanged(to_repo)
         if not revs:
             raise error.Abort(_("no revisions specified"))
-        revs = scmutil.revrange(repo, revs)
+        revs = scmutil.revrange(from_repo, revs)
+
+        is_crossrepo = not to_repo.is_same_repo(from_repo)
+        if is_crossrepo:
+            # In cross-repo grafts, from_paths are expected to be root-relative already
+            from_paths = opts.get("from_path", [])
+        else:
+            from_paths = scmutil.rootrelpaths(from_repo["."], opts.get("from_path", []))
+        to_paths = scmutil.rootrelpaths(to_repo["."], opts.get("to_path", []))
 
     skipped = set()
     # check for merges
-    for rev in repo.revs("%ld and merge()", revs):
+    for rev in from_repo.revs("%ld and merge()", revs):
         ui.warn(_("skipping ungraftable merge revision %d\n") % rev)
         skipped.add(rev)
     # check subtree copy, import and merge commit
     for rev in revs:
         if rev in skipped:
             continue
-        if not subtreeutil.is_commit_graftable(repo, rev):
+        if not subtreeutil.is_commit_graftable(from_repo, rev):
             skipped.add(rev)
     revs = [r for r in revs if r not in skipped]
     if not revs:
         raise error.Abort(_("empty revision set was specified"))
 
-    # Don't check in the --continue case, in effect retaining --force across
-    # --continues. That's because without --force, any revisions we decided to
-    # skip would have been filtered out here, so they wouldn't have made their
-    # way to the graftstate. With --force, any revisions we would have otherwise
-    # skipped would not have been filtered out, and if they hadn't been applied
-    # already, they'd have been in the graftstate.
+    # When continuing an in-progress graft (--continue), or running in forced mode (--force),
+    # or using --from-path (e.g., for subtree grafts), skip the ancestor check.
+    #
+    # Normally, we skip grafting any revisions that are already ancestors of the destination
+    # commit. But in --continue or --force mode, the user has explicitly asked to apply
+    # everything, including commits that may have already been in history.
     if not (cont or opts.get("force") or opts.get("from_path")):
         # check for ancestors of dest branch
-        crev = repo["."].rev()
-        ancestors = repo.changelog.ancestors([crev], inclusive=True)
+        crev = to_repo["."].rev()
+        ancestors = to_repo.changelog.ancestors([crev], inclusive=True)
         # XXX make this lazy in the future
         # don't mutate while iterating, create a copy
         for rev in list(revs):
             if rev in ancestors:
-                ui.warn(_("skipping ancestor revision %s\n") % (repo[rev]))
+                ui.warn(_("skipping ancestor revision %s\n") % (to_repo[rev]))
                 # XXX remove on list is slow
                 revs.remove(rev)
 
         if not revs:
             return -1
 
-    from_paths = scmutil.rootrelpaths(repo["."], opts.get("from_path", []))
-    to_paths = scmutil.rootrelpaths(repo["."], opts.get("to_path", []))
-
-    for pos, ctx in enumerate(repo.set("%ld", revs)):
+    for pos, ctx in enumerate(from_repo.set("%ld", revs)):
         desc = '%s "%s"' % (ctx, ctx.description().split("\n", 1)[0])
-        names = repo.nodebookmarks(ctx.node())
+        names = from_repo.nodebookmarks(ctx.node())
         if names:
             desc += " (%s)" % " ".join(names)
         ui.status(_("grafting %s\n") % desc)
@@ -2690,25 +2708,28 @@ def _dograft(ui, repo, *revs, **opts):
 
         # Apply --from-path/--to-path mappings to manifest being grafted, and its
         # parent manifest.
-        cmdutil.registerdiffgrafts(from_paths, to_paths, ctx, ctx.p1())
+        cmdutil.registerdiffgrafts(
+            from_paths, to_paths, ctx, ctx.p1(), is_crossrepo=is_crossrepo
+        )
 
         # we don't merge the first commit when continuing
         if not cont:
             # perform the graft merge with p1(rev) as 'ancestor'
-            with repo.ui.configoverride(
+            with to_repo.ui.configoverride(
                 {("ui", "forcemerge"): opts.get("tool", "")}, "graft"
             ):
                 stats = mergemod.graft(
-                    repo,
+                    to_repo,
                     ctx,
                     ctx.p1(),
                     ["local", "graft"],
+                    from_repo=from_repo,
                 )
             # report any conflicts
             if stats and stats[3] > 0:
                 # write out state for --continue
-                nodelines = [repo[rev].hex() + "\n" for rev in revs[pos:]]
-                repo.localvfs.writeutf8("graftstate", "".join(nodelines))
+                nodelines = [from_repo[rev].hex() + "\n" for rev in revs[pos:]]
+                to_repo.localvfs.writeutf8("graftstate", "".join(nodelines))
                 extra = ""
                 if opts.get("user"):
                     extra += " --user %s" % util.shellquote(opts["user"])
@@ -2723,8 +2744,10 @@ def _dograft(ui, repo, *revs, **opts):
 
         # commit
         editor = cmdutil.getcommiteditor(editform="graft", **opts)
-        message, _is_from_user = _makegraftmessage(repo, ctx, opts)
-        node = repo.commit(
+        message, _is_from_user = _makegraftmessage(
+            to_repo, ctx, opts, from_paths, to_paths, from_repo
+        )
+        node = to_repo.commit(
             text=message, user=user, date=date, extra=extra, editor=editor
         )
         if node is None:
@@ -2735,27 +2758,32 @@ def _dograft(ui, repo, *revs, **opts):
 
     # remove state when we complete successfully
     if not opts.get("dry_run"):
-        repo.localvfs.unlinkpath("graftstate", ignoremissing=True)
+        to_repo.localvfs.unlinkpath("graftstate", ignoremissing=True)
 
     return 0
 
 
-def _makegraftmessage(repo, ctx, opts):
+def _makegraftmessage(to_repo, ctx, opts, from_paths, to_paths, from_repo):
     opts = dict(opts)
 
     if not opts.get("logfile") and not opts.get("message"):
         opts["message"] = ctx.description()
 
-    description = cmdutil.logmessage(repo, opts)
+    description = cmdutil.logmessage(to_repo, opts)
     is_from_user = description != ctx.description()
 
+    is_crossrepo = not to_repo.is_same_repo(from_repo)
     message = []
-    if opts.get("from_path"):
+    if from_paths:
         # For xdir grafts, include "grafted from" breadcrumb by default.
         if opts.get("log") is not False:
-            message.append("Grafted from %s" % ctx.hex())
-            for f, t in zip(opts.get("from_path"), opts.get("to_path")):
-                message.append("- Grafted path %s to %s" % (f, t))
+            if is_crossrepo:
+                from_repo_url = from_repo.ui.config("paths", "default")
+                message.append("Grafted %s from %s" % (ctx.hex(), from_repo_url))
+            else:
+                message.append("Grafted %s" % ctx.hex())
+            for f, t in zip(from_paths, to_paths):
+                message.append("- Grafted %s to %s" % (f or "root directory", t))
 
             # don't update the user provided title
             if not is_from_user:
@@ -3983,13 +4011,17 @@ def init(ui, dest=".", **opts):
     """
     destpath = ui.expandpath(dest)
     usegit = opts.get("git")
+    if usegit is None and ui.configbool("init", "prefer-git"):
+        # In the OSS build, non-git mode doesn't give you a usable repo.
+        ui.status_err(
+            _(
+                """Creating a ".sl" repo with Git compatible storage. For full "git" compatibility, create repo using "git init". See https://sapling-scm.com/docs/git/git_support_modes for more information."""
+            )
+        )
+        usegit = True
+
     if usegit:
         git.clone(ui, "", destpath)
-    elif usegit is None and ui.configbool("init", "prefer-git"):
-        # In the OSS build, non-git mode doesn't give you a usable repo.
-        raise error.Abort(
-            _("please use '@prog@ init --git %s' for a better experience") % dest
-        )
     elif ui.configbool("format", "use-eager-repo"):
         bindings.eagerepo.EagerRepo.open(destpath)
     else:
@@ -4297,7 +4329,13 @@ def log(ui, repo, *pats, **opts):
     displayer = cmdutil.show_changeset(ui, repo, opts, buffered=True)
 
     template = opts.get("template") or ""
-    ctxstream = revs.prefetchbytemplate(repo, template).iterctx()
+    symbols = templater.extractsymbols(repo, template)
+    subdag = None
+    if symbols is not None and "grandparents" in symbols:
+        cl = repo.changelog
+        subdag = cl.dag.subdag(cl.tonodes(revs))
+        ui.debug("commands.log(): finished computing subdag\n")
+    ctxstream = revs.prefetchbysymbols(symbols).iterctx()
     for ctx in ctxstream:
         if count == limit:
             break
@@ -4317,8 +4355,12 @@ def log(ui, repo, *pats, **opts):
             revhunksfilter = hunksfilter(rev)
         else:
             revhunksfilter = None
+        revcache = {"copies": copies, "subdag": subdag}
         displayer.show(
-            ctx, copies=copies, matchfn=revmatchfn, hunksfilterfn=revhunksfilter
+            ctx,
+            revcache=revcache,
+            matchfn=revmatchfn,
+            hunksfilterfn=revhunksfilter,
         )
         if displayer.flush(ctx):
             count += 1
@@ -5655,7 +5697,6 @@ def rollback(ui, repo, **opts):
         ("", "style", "", _("template style to use"), _("STYLE")),
         ("6", "ipv6", None, _("use IPv6 in addition to IPv4")),
         ("", "certificate", "", _("SSL certificate file"), _("FILE")),
-        ("", "read-only", None, _("only allow read operations")),
     ],
     _("[OPTION]..."),
     optionalrepo=True,

@@ -23,7 +23,7 @@ bookmarks = { version = "0.1.0", path = "../bookmarks" }
 bounded_traversal = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 bytes = { version = "1.9.0", features = ["serde"] }
 changeset_info = { version = "0.1.0", path = "../derived_data/changeset_info" }
-clap = { version = "4.5.30", features = ["derive", "env", "string", "unicode", "wrap_help"] }
+clap = { version = "4.5.38", features = ["derive", "env", "string", "unicode", "wrap_help"] }
 cloned = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 cmdlib_caching = { version = "0.1.0", path = "../cmdlib/caching" }
 cmdlib_scrubbing = { version = "0.1.0", path = "../cmdlib/scrubbing" }
@@ -40,7 +40,7 @@ fbinit = { version = "0.2.0", git = "https://github.com/facebookexperimental/rus
 filenodes = { version = "0.1.0", path = "../filenodes" }
 filenodes_derivation = { version = "0.1.0", path = "../derived_data/filenodes_derivation" }
 filestore = { version = "0.1.0", path = "../filestore" }
-filetime = "0.2.9"
+filetime = "0.2.25"
 fsnodes = { version = "0.1.0", path = "../derived_data/fsnodes" }
 futures = { version = "0.3.30", features = ["async-await", "compat"] }
 hash_memo = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
@@ -78,8 +78,8 @@ sql_construct = { version = "0.1.0", path = "../common/sql_construct" }
 sql_ext = { version = "0.1.0", path = "../common/rust/sql_ext" }
 stats = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 strum = { version = "0.26.2", features = ["derive"] }
-thiserror = "2"
-tokio = { version = "1.41.0", features = ["full", "test-util", "tracing"] }
+thiserror = "2.0.12"
+tokio = { version = "1.45.0", features = ["full", "test-util", "tracing"] }
 unodes = { version = "0.1.0", path = "../derived_data/unodes" }
 yield_stream = { version = "0.1.0", path = "../common/yield_stream" }
 zstd = { version = "0.13", features = ["experimental", "zstdmt"] }

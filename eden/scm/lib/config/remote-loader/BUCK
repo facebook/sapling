@@ -1,0 +1,55 @@
+load("@fbcode_macros//build_defs:rust_library.bzl", "rust_library")
+
+oncall("sapling")
+
+rust_library(
+    name = "remote-loader",
+    srcs = glob(["src/**/*.rs"]),
+    autocargo = {
+        "cargo_toml_config": {
+            "features": {
+                "default": [],
+                "fb": [
+                    "sapling-types",
+                    "sapling-io",
+                    "sapling-http-client",
+                    "anyhow",
+                    "base64",
+                    "filetime",
+                    "serde",
+                    "serde_urlencoded",
+                    "sha2",
+                    "tracing",
+                    "url",
+                    "zstd",
+                ],
+                "sl_oss": [],
+            },
+            "lib": {"name": "remote-loader"},
+            "package": {
+                "authors": ["Meta Source Control Team <sourcecontrol-dev@meta.com>"],
+                "homepage": "https://sapling-scm.com/",
+                "license": "MIT",
+                "name": "sapling-config-remote-loader",
+                "repository": "https://github.com/facebook/sapling",
+            },
+        },
+    },
+    crate_root = "src/lib.rs",
+    features = ["fb"],
+    deps = [
+        "fbsource//third-party/rust:anyhow",
+        "fbsource//third-party/rust:base64",
+        "fbsource//third-party/rust:filetime",
+        "fbsource//third-party/rust:serde",
+        "fbsource//third-party/rust:serde_json",
+        "fbsource//third-party/rust:serde_urlencoded",
+        "fbsource//third-party/rust:sha2",
+        "fbsource//third-party/rust:tracing",
+        "fbsource//third-party/rust:url",
+        "fbsource//third-party/rust:zstd",
+        "//eden/scm/lib/http-client:http-client",
+        "//eden/scm/lib/io:io",
+        "//eden/scm/lib/types:types",
+    ],
+)

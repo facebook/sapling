@@ -366,7 +366,7 @@ impl RepositoryRequestContext {
     pub async fn dispatch(
         &self,
         mut request: Request<Body>,
-    ) -> Result<HttpClientResponse<impl Stream<Item = Result<Bytes, Error>>>, Error> {
+    ) -> Result<HttpClientResponse<impl Stream<Item = Result<Bytes, Error>> + use<>>, Error> {
         #[allow(clippy::infallible_destructuring_match)]
         let client = match self.client {
             HttpClient::Enabled(ref client) => client,

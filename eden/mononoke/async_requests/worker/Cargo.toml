@@ -15,7 +15,7 @@ async_requests = { version = "0.1.0", path = "../lib" }
 async_requests_client = { version = "0.1.0", path = "../async_requests_client" }
 async_requests_types_thrift = { version = "0.1.0", path = "../if" }
 blobstore = { version = "0.1.0", path = "../../blobstore" }
-clap = { version = "4.5.30", features = ["derive", "env", "string", "unicode", "wrap_help"] }
+clap = { version = "4.5.38", features = ["derive", "env", "string", "unicode", "wrap_help"] }
 cloned = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 cmdlib_logging = { version = "0.1.0", path = "../../cmdlib/log" }
 context = { version = "0.1.0", path = "../../server/context" }
@@ -42,7 +42,7 @@ sharding_ext = { version = "0.1.0", path = "../../cmdlib/sharding_ext" }
 slog = { package = "tracing_slog_compat", version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 source_control = { version = "0.1.0", path = "../../scs/if" }
 stats = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
-tokio = { version = "1.41.0", features = ["full", "test-util", "tracing"] }
+tokio = { version = "1.45.0", features = ["full", "test-util", "tracing"] }
 
 [dev-dependencies]
 fbinit-tokio = { version = "0.1.2", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }

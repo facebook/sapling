@@ -12,6 +12,7 @@
 #include "eden/common/utils/CaseSensitivity.h"
 #include "eden/common/utils/PathMap.h"
 #include "eden/fs/model/Hash.h"
+#include "eden/fs/model/TreeAuxDataFwd.h"
 #include "eden/fs/model/TreeEntry.h"
 #include "eden/fs/model/TreeFwd.h"
 
@@ -42,8 +43,17 @@ class Tree {
   explicit Tree(container entries, ObjectId hash)
       : hash_{std::move(hash)}, entries_{std::move(entries)} {}
 
+  explicit Tree(ObjectId hash, container entries, TreeAuxDataPtr auxData)
+      : hash_{std::move(hash)},
+        entries_{std::move(entries)},
+        auxData_(std::move(auxData)) {}
+
   const ObjectId& getHash() const {
     return hash_;
+  }
+
+  const TreeAuxDataPtr getAuxData() const {
+    return auxData_;
   }
 
   /**
@@ -92,6 +102,13 @@ class Tree {
   folly::IOBuf serialize() const;
 
   /**
+   * Serialize tree using custom format for version 1.
+   * This is used for testing and and should be removed when
+   * version 2 is fully rolled out. TODO: (lxw)
+   */
+  folly::IOBuf serialize_v1() const;
+
+  /**
    * Deserialize tree if possible.
    * Returns nullptr if serialization format is not supported.
    *
@@ -107,8 +124,10 @@ class Tree {
 
   ObjectId hash_;
   container entries_;
+  TreeAuxDataPtr auxData_;
 
   static constexpr uint32_t V1_VERSION = 1u;
+  static constexpr uint32_t V2_VERSION = 2u;
 };
 
 } // namespace facebook::eden

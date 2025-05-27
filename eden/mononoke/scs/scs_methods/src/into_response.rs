@@ -36,6 +36,13 @@ use mononoke_api::TreeEntry;
 use mononoke_api::TreeId;
 use mononoke_api::TreeSummary;
 use mononoke_api::UnifiedDiff;
+use mononoke_types::MPath;
+use mononoke_types::SubtreeChange;
+use mononoke_types::subtree_change::SubtreeCopy;
+use mononoke_types::subtree_change::SubtreeDeepCopy;
+use mononoke_types::subtree_change::SubtreeImport;
+use mononoke_types::subtree_change::SubtreeMerge;
+use sorted_vector_map::SortedVectorMap;
 use source_control as thrift;
 
 use crate::commit_id::map_commit_identities;
@@ -385,6 +392,7 @@ impl AsyncIntoResponseWith<thrift::CommitInfo> for ChangesetContext<Repo> {
             committer_date,
             committer,
             linear_depth,
+            subtree_change_count,
         ) = try_join!(
             map_commit_identity(&self, identity_schemes),
             self.message(),
@@ -397,6 +405,7 @@ impl AsyncIntoResponseWith<thrift::CommitInfo> for ChangesetContext<Repo> {
             self.committer_date(),
             self.committer(),
             self.linear_depth(),
+            self.subtree_change_count(),
         )?;
         Ok(thrift::CommitInfo {
             ids,
@@ -414,8 +423,10 @@ impl AsyncIntoResponseWith<thrift::CommitInfo> for ChangesetContext<Repo> {
             }),
             generation: generation.value() as i64,
             committer_date: committer_date.map(|date| date.timestamp()),
+            committer_tz: committer_date.map(|date| date.offset().local_minus_utc()),
             committer,
             linear_depth: Some(linear_depth as i64),
+            subtree_change_count: Some(subtree_change_count as i64),
             ..Default::default()
         })
     }
@@ -572,5 +583,65 @@ impl AsyncIntoResponseWith<thrift::BookmarkInfo> for BookmarkInfo<Repo> {
             last_update_timestamp_ns: self.last_update_timestamp.timestamp_nanos(),
             ..Default::default()
         })
+    }
+}
+
+#[async_trait]
+impl AsyncIntoResponseWith<BTreeMap<String, thrift::SubtreeChange>>
+    for SortedVectorMap<MPath, SubtreeChange>
+{
+    /// The additional data is the repo context and the set of commit identity
+    /// schemes to be returned in the response.
+    type Additional = (RepoContext<Repo>, BTreeSet<thrift::CommitIdentityScheme>);
+
+    async fn into_response_with(
+        self,
+        additional: &Self::Additional,
+    ) -> Result<BTreeMap<String, thrift::SubtreeChange>, scs_errors::ServiceError> {
+        let (repo, identity_schemes) = additional;
+        let cs_ids: HashSet<_> = self
+            .iter()
+            .flat_map(|(_, change)| change.source())
+            .collect();
+        let id_map =
+            map_commit_identities(repo, cs_ids.into_iter().collect(), identity_schemes).await?;
+
+        self.into_iter()
+            .map(|(path, change)| {
+                let change = match change {
+                    SubtreeChange::SubtreeCopy(SubtreeCopy {
+                        from_cs_id,
+                        from_path,
+                    })
+                    | SubtreeChange::SubtreeDeepCopy(SubtreeDeepCopy {
+                        from_cs_id,
+                        from_path,
+                    }) => thrift::SubtreeChange::subtree_copy(thrift::SubtreeCopy {
+                        source_path: from_path.to_string(),
+                        source_commit_ids: id_map.get(&from_cs_id).cloned().unwrap_or_default(),
+                        ..Default::default()
+                    }),
+                    SubtreeChange::SubtreeMerge(SubtreeMerge {
+                        from_cs_id,
+                        from_path,
+                    }) => thrift::SubtreeChange::subtree_merge(thrift::SubtreeMerge {
+                        source_path: from_path.to_string(),
+                        source_commit_ids: id_map.get(&from_cs_id).cloned().unwrap_or_default(),
+                        ..Default::default()
+                    }),
+                    SubtreeChange::SubtreeImport(SubtreeImport {
+                        from_path,
+                        from_commit,
+                        from_repo_url,
+                    }) => thrift::SubtreeChange::subtree_import(thrift::SubtreeImport {
+                        source_path: from_path.to_string(),
+                        source_commit_id: from_commit,
+                        source_url: from_repo_url,
+                        ..Default::default()
+                    }),
+                };
+                Ok((path.to_string(), change))
+            })
+            .collect()
     }
 }

@@ -17,6 +17,10 @@ pub fn increment_counter(key: impl Key, value: u64) {
     METRICS.increment_counter(key, value)
 }
 
+pub fn max_counter(key: impl Key, value: u64) {
+    METRICS.max_counter(key, value)
+}
+
 pub fn summarize() -> HashMap<String, u64> {
     METRICS.summarize()
 }
@@ -42,22 +46,40 @@ impl Metrics {
     }
 
     fn increment_counter(&self, key: impl Key, value: u64) {
-        {
-            let counters = self.counters.read();
-            if let Some(counter) = counters.get(key.borrow()) {
-                // We could use Relaxed ordering but it makes tests awkward if we were to run on a
-                // weakly ordered system, (stress) tests are nice for this code.
-                counter.fetch_add(value, Ordering::Release);
-                return;
+        self.get_or_create_counter(key, |counter| {
+            // We could use Relaxed ordering but it makes tests awkward if we were to run on a
+            // weakly ordered system, (stress) tests are nice for this code.
+            counter.fetch_add(value, Ordering::Release);
+        });
+    }
+
+    fn max_counter(&self, key: impl Key, new_value: u64) {
+        self.get_or_create_counter(key, |counter| {
+            let mut current_value = counter.load(Ordering::Relaxed);
+            while current_value < new_value {
+                match counter.compare_exchange(
+                    current_value,
+                    new_value,
+                    Ordering::Relaxed,
+                    Ordering::Relaxed,
+                ) {
+                    Ok(_) => break,
+                    Err(updated_value) => current_value = updated_value,
+                }
             }
+        });
+    }
+
+    fn get_or_create_counter(&self, key: impl Key, cb: impl Fn(&AtomicU64)) {
+        let counters = self.counters.read();
+        if let Some(counter) = counters.get(key.borrow()) {
+            cb(counter);
+            return;
         }
+        drop(counters);
+
         let mut counters = self.counters.write();
-        counters
-            .entry(key.into())
-            .and_modify(|c| {
-                c.fetch_add(value, Ordering::Release);
-            })
-            .or_insert_with(|| AtomicU64::new(value));
+        cb(counters.entry(key.into()).or_default());
     }
 
     fn summarize(&self) -> HashMap<String, u64> {
@@ -118,6 +140,29 @@ mod tests {
         assert_eq!(
             MY_METRICS.summarize(),
             HashMap::from([(String::from("key"), 50000)])
+        );
+    }
+
+    #[test]
+    fn test_max_counter() {
+        let metrics = Metrics::new();
+
+        metrics.max_counter(String::from("hello"), 2);
+        assert_eq!(
+            metrics.summarize(),
+            HashMap::from([(String::from("hello"), 2)]),
+        );
+
+        metrics.max_counter(String::from("hello"), 4);
+        assert_eq!(
+            metrics.summarize(),
+            HashMap::from([(String::from("hello"), 4)]),
+        );
+
+        metrics.max_counter(String::from("hello"), 3);
+        assert_eq!(
+            metrics.summarize(),
+            HashMap::from([(String::from("hello"), 4)]),
         );
     }
 }

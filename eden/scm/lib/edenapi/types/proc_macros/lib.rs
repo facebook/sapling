@@ -39,8 +39,8 @@ pub fn auto_wire(
     let mut item = parse_macro_input!(item as Item);
 
     let result = match &mut item {
-        Item::Struct(ref mut item) => get_wire_struct(item),
-        Item::Enum(ref mut item) => get_wire_enum(item),
+        Item::Struct(item) => get_wire_struct(item),
+        Item::Enum(item) => get_wire_enum(item),
         item => Err(Error::new(item.span(), "Only struct or enum is supported")),
     };
     match result {
@@ -150,7 +150,7 @@ fn get_wire_struct(original: &mut ItemStruct) -> Result<TokenStream> {
 
     let mut ids = HashSet::new();
     match &mut item.fields {
-        Fields::Named(ref mut fs) => fs.named.iter_mut().try_for_each(|ref mut field| {
+        Fields::Named(fs) => fs.named.iter_mut().try_for_each(|ref mut field| {
             let name = field.ident.clone().unwrap();
             fields.push(name.clone());
             let (id, other_attrs) = extract_id(std::mem::take(&mut field.attrs), &field, &mut ids)?;
@@ -197,7 +197,7 @@ fn get_wire_struct(original: &mut ItemStruct) -> Result<TokenStream> {
 
     // remove id() attribute from original struct
     match &mut original.fields {
-        Fields::Named(ref mut fs) => fs.named.iter_mut().for_each(|ref mut field| {
+        Fields::Named(fs) => fs.named.iter_mut().for_each(|ref mut field| {
             remove_id(&mut field.attrs);
             extract_no_default(&mut field.attrs);
             extract_wire_option(&mut field.attrs);

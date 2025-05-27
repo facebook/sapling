@@ -13,7 +13,10 @@ use std::process::Command;
 struct PythonSysConfig {
     cflags: String,
     ldflags: String,
+    // ex. ~/cpython/Include, or /usr/local/include/python3.10
     include_dir: String,
+    // ex. /usr/local/include/python3.10, or empty
+    headers: String,
 }
 
 impl PythonSysConfig {
@@ -31,6 +34,7 @@ impl PythonSysConfig {
             "print((sysconfig.get_config_var('CFLAGS') or '').strip());",
             "print((sysconfig.get_config_var('LDFLAGS') or '').strip());",
             "print(sysconfig.get_paths()['include'].strip());",
+            "print((sysconfig.get_paths().get('headers') or '').strip());",
         );
 
         let out = Command::new(&python)
@@ -40,7 +44,7 @@ impl PythonSysConfig {
             .expect("Failed to get CFLAGS from Python");
         let out_str = String::from_utf8_lossy(&out.stdout);
         let lines: Vec<&str> = out_str.lines().collect();
-        if lines.len() < 3 {
+        if lines.len() < 4 {
             println!(
                 "cargo:warning=Python sysconfig output is incomplete: {:?} Python: {:?}",
                 out_str, python
@@ -50,6 +54,7 @@ impl PythonSysConfig {
             cflags: lines[0].to_string(),
             ldflags: lines[1].to_string(),
             include_dir: lines[2].to_string(),
+            headers: lines[3].to_string(),
         }
     }
 
@@ -60,7 +65,12 @@ impl PythonSysConfig {
         for flag in self.ldflags.split_whitespace().filter(|s| pick_flag(s)) {
             c.flag(flag);
         }
-        c.include(&self.include_dir);
+        if !self.headers.is_empty() {
+            c.include(&self.headers);
+        }
+        if !self.include_dir.is_empty() {
+            c.include(&self.include_dir);
+        }
     }
 }
 

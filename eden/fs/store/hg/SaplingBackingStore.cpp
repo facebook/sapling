@@ -74,18 +74,6 @@ ObjectId hashFromRootId(const RootId& root) {
   return ObjectId::fromHex(root.value());
 }
 
-sapling::SaplingNativeBackingStoreOptions computeSaplingOptions() {
-  sapling::SaplingNativeBackingStoreOptions options{};
-  options.allow_retries = false;
-  return options;
-}
-
-sapling::SaplingNativeBackingStoreOptions computeTestSaplingOptions() {
-  sapling::SaplingNativeBackingStoreOptions options{};
-  options.allow_retries = false;
-  return options;
-}
-
 std::unique_ptr<SaplingBackingStoreOptions> computeRuntimeOptions(
     std::unique_ptr<SaplingBackingStoreOptions> options) {
   // No options are currently set. See D64436672 for an example on how to add
@@ -160,6 +148,21 @@ TreePtr fromRawTree(
       XLOGF(WARN, "Ignoring directory entry: {}", ex.what());
     }
   }
+  if (tree->aux_data.digest_size != 0) {
+    XLOGF(
+        DBG5,
+        "Tree aux data returned from Sapling backing store when tree(id={}) is queried",
+        edenTreeId);
+    return std::make_shared<TreePtr::element_type>(
+        edenTreeId,
+        std::move(entries),
+        std::make_shared<TreeAuxDataPtr::element_type>(
+            Hash32{tree->aux_data.digest_hash}, tree->aux_data.digest_size));
+  }
+  XLOGF(
+      DBG5,
+      "No tree aux data returned from Sapling backing store when tree(id={}) is queried",
+      edenTreeId);
   return std::make_shared<TreePtr::element_type>(
       std::move(entries), edenTreeId);
 }
@@ -216,7 +219,7 @@ SaplingBackingStore::SaplingBackingStore(
       traceBus_{TraceBus<HgImportTraceEvent>::create(
           "hg",
           config_->getEdenConfig()->HgTraceBusCapacity.getValue())},
-      store_{repository.view(), computeSaplingOptions()} {
+      store_{repository.view()} {
   uint8_t numberThreads =
       config_->getEdenConfig()->numBackingstoreThreads.getValue();
   if (!numberThreads) {
@@ -269,7 +272,7 @@ SaplingBackingStore::SaplingBackingStore(
       traceBus_{TraceBus<HgImportTraceEvent>::create(
           "hg",
           config_->getEdenConfig()->HgTraceBusCapacity.getValue())},
-      store_{repository.view(), computeTestSaplingOptions()} {
+      store_{repository.view()} {
   uint8_t numberThreads =
       config_->getEdenConfig()->numBackingstoreThreads.getValue();
   if (!numberThreads) {
@@ -316,6 +319,17 @@ void SaplingBackingStore::initializeOBCCounters() {
 
 BackingStore::LocalStoreCachingPolicy
 SaplingBackingStore::constructLocalStoreCachingPolicy() {
+  using PolicyType =
+      std::underlying_type_t<BackingStore::LocalStoreCachingPolicy>;
+  PolicyType result =
+      static_cast<PolicyType>(BackingStore::LocalStoreCachingPolicy::NoCaching);
+
+  if (config_->getEdenConfig()->hgForceDisableLocalStoreCaching.getValue()) {
+    // TODO: Instead of returning a NoCaching policy, we should just avoid
+    // creating the LocalStore object if this config is set
+    return static_cast<BackingStore::LocalStoreCachingPolicy>(result);
+  }
+
   bool shouldCacheTrees =
       config_->getEdenConfig()->hgEnableTreeLocalStoreCaching.getValue();
   bool shouldCacheBlobs =
@@ -324,11 +338,6 @@ SaplingBackingStore::constructLocalStoreCachingPolicy() {
       config_->getEdenConfig()->hgEnableBlobMetaLocalStoreCaching.getValue();
   bool shouldCacheTreeAuxData =
       config_->getEdenConfig()->hgEnableTreeMetaLocalStoreCaching.getValue();
-
-  using PolicyType =
-      std::underlying_type_t<BackingStore::LocalStoreCachingPolicy>;
-  PolicyType result =
-      static_cast<PolicyType>(BackingStore::LocalStoreCachingPolicy::NoCaching);
 
   if (shouldCacheTrees) {
     result |=
@@ -533,8 +542,10 @@ void SaplingBackingStore::getBlobBatch(
 
 folly::Try<BlobPtr> SaplingBackingStore::getBlobFromBackingStore(
     const HgProxyHash& hgInfo,
+    const ObjectFetchContextPtr& context,
     sapling::FetchMode fetchMode) {
-  auto blob = store_.getBlob(hgInfo.byteHash(), fetchMode);
+  auto blob = store_.getBlob(
+      hgInfo.byteHash(), hgInfo.path(), context->getCause(), fetchMode);
 
   using GetBlobResult = folly::Try<BlobPtr>;
 
@@ -745,8 +756,11 @@ SaplingBackingStore::prepareRequests(
         importRequestsIdPair.second.first;
     ObjectFetchContext::Cause fetchCause =
         getHighestPriorityFetchCause(importRequestsForId);
-    requests.push_back(
-        sapling::SaplingRequest{importRequestsIdPair.first, fetchCause});
+    requests.push_back(sapling::SaplingRequest{
+        importRequestsIdPair.first,
+        importRequestsForId[0]->getRequest<T>()->proxyHash.path(),
+        fetchCause,
+    });
   }
 
   return std::make_pair(std::move(importRequestsMap), std::move(requests));
@@ -1226,7 +1240,7 @@ folly::SemiFuture<BackingStore::GetTreeResult> SaplingBackingStore::getTree(
       folly::Range{&proxyHash, 1},
       ObjectFetchContext::ObjectType::Tree);
 
-  if (auto tree = getTreeLocal(id, proxyHash)) {
+  if (auto tree = getTreeLocal(id, context, proxyHash)) {
     XLOGF(
         DBG5,
         "imported tree of '{}', {} from hgcache",
@@ -1295,9 +1309,13 @@ SaplingBackingStore::getTreeEnqueue(
 
 TreePtr SaplingBackingStore::getTreeLocal(
     const ObjectId& edenTreeId,
+    const ObjectFetchContextPtr& context,
     const HgProxyHash& proxyHash) {
-  auto tree =
-      store_.getTree(proxyHash.byteHash(), sapling::FetchMode::LocalOnly);
+  auto tree = store_.getTree(
+      proxyHash.byteHash(),
+      proxyHash.path(),
+      context->getCause(),
+      sapling::FetchMode::LocalOnly);
 
   if (tree.hasValue() && tree.value()) {
     auto hgObjectIdFormat =
@@ -1313,9 +1331,11 @@ folly::Try<TreePtr> SaplingBackingStore::getTreeRemote(
     const RelativePath& path,
     const Hash20& manifestId,
     const ObjectId& edenTreeId,
-    const ObjectFetchContextPtr& /*context*/) {
+    const ObjectFetchContextPtr& context) {
   auto tree = store_.getTree(
       manifestId.getBytes(),
+      path,
+      context->getCause(),
       sapling::FetchMode::RemoteOnly /*, sapling::ClientRequestInfo(context)*/);
 
   using GetTreeResult = folly::Try<TreePtr>;
@@ -1352,7 +1372,7 @@ folly::SemiFuture<BackingStore::GetBlobResult> SaplingBackingStore::getBlob(
       folly::Range{&proxyHash, 1},
       ObjectFetchContext::ObjectType::Blob);
 
-  auto blob = getBlobLocal(proxyHash);
+  auto blob = getBlobLocal(proxyHash, context);
   if (blob.hasValue() && blob.value()) {
     stats_->increment(&SaplingBackingStoreStats::fetchBlobSuccess);
     if (store_.dogfoodingHost()) {
@@ -1716,14 +1736,16 @@ folly::Try<TreePtr> SaplingBackingStore::getTreeFromBackingStore(
   if (path.empty()) {
     fetch_mode = sapling::FetchMode::LocalOnly;
   }
-  tree = store_.getTree(manifestId.getBytes(), fetch_mode);
+  tree = store_.getTree(
+      manifestId.getBytes(), path, context->getCause(), fetch_mode);
   if (tree.hasValue() && !tree.value() &&
       fetch_mode == sapling::FetchMode::LocalOnly) {
     // Mercurial might have just written the tree to the store. Refresh the
     // store and try again, this time allowing remote fetches.
     store_.flush();
     fetch_mode = sapling::FetchMode::AllowRemote;
-    tree = store_.getTree(manifestId.getBytes(), fetch_mode);
+    tree = store_.getTree(
+        manifestId.getBytes(), path, context->getCause(), fetch_mode);
   }
 
   using GetTreeResult = folly::Try<TreePtr>;
@@ -1746,7 +1768,6 @@ folly::Try<TreePtr> SaplingBackingStore::getTreeFromBackingStore(
             ObjectFetchContext::FetchedSource::Remote, type, stats_.copy());
         break;
       case sapling::FetchMode::AllowRemote:
-      case sapling::FetchMode::AllowRemotePrefetch:
         context->setFetchedSource(
             ObjectFetchContext::FetchedSource::Unknown, type, stats_.copy());
         break;

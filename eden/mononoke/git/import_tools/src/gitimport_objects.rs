@@ -27,6 +27,7 @@ use futures::stream::BoxStream;
 use futures::stream::Stream;
 use futures::stream::StreamExt;
 use futures::stream::TryStreamExt;
+use gix_date::parse::TimeBuf;
 use gix_hash::ObjectId;
 use gix_object::Commit;
 use gix_object::Tag;
@@ -117,13 +118,6 @@ impl<const SUBMODULES: bool, Store: Send + Sync> Manifest<Store> for GitManifest
     }
 }
 
-fn non_standard_mode(mode: tree::EntryMode) -> bool {
-    match mode.0 {
-        0o040000u16 | 0o100644 | 0o100755 | 0o120000 | 0o160000 => false,
-        _ => true,
-    }
-}
-
 async fn load_git_tree<const SUBMODULES: bool, Reader: GitReader>(
     oid: &gix_hash::oid,
     reader: &Reader,
@@ -143,14 +137,6 @@ async fn load_git_tree<const SUBMODULES: bool, Reader: GitReader>(
                     Ok(name) => name,
                     Err(e) => return Some(Err(e)),
                 };
-                if non_standard_mode(mode) && !reader.allow_non_standard_file_mode() {
-                    return Some(Err(anyhow::anyhow!(
-                        "Encountered non-standard file mode {:#o} for file {} with Object ID {}",
-                        mode.0,
-                        filename,
-                        oid.to_hex()
-                    )));
-                }
                 let r = match mode.into() {
                     tree::EntryKind::Blob => {
                         Some((name, Entry::Leaf((FileType::Regular, GitLeaf(oid)))))
@@ -211,8 +197,6 @@ pub struct GitimportPreferences {
     pub concurrency: usize,
     /// Whether submodules should be imported instead of dropped.
     pub submodules: bool,
-    /// Whether we should allow non-standard file mode.
-    pub allow_non_standard_file_mode: bool,
     /// Whether we should allow refs pointing to blobs or trees
     pub allow_content_refs: bool,
     /// Flag for controlling whether we should stream changed trees per commit. In case of deep-nested
@@ -234,7 +218,6 @@ impl Default for GitimportPreferences {
             git_command_path: PathBuf::from("/usr/bin/git.real"),
             backfill_derivation: BackfillDerivation::No,
             stream_for_changed_trees: true,
-            allow_non_standard_file_mode: false,
             allow_content_refs: false,
         }
     }
@@ -377,7 +360,7 @@ impl TagMetadata {
             .transpose()?;
         let author = tagger
             .take()
-            .map(|tagger| format_signature(tagger.to_ref()));
+            .map(|tagger| format_signature(tagger.to_ref(&mut TimeBuf::default())));
         let message = decode_message(&message, &None, ctx.logger())?;
         let name = match maybe_tag_name {
             Some(name) => name,
@@ -520,8 +503,8 @@ impl ExtractedCommit {
 
         let author_date = DateTime::from_gix(author.time)?;
         let committer_date = DateTime::from_gix(committer.time)?;
-        let author = format_signature(author.to_ref());
-        let committer = format_signature(committer.to_ref());
+        let author = format_signature(author.to_ref(&mut TimeBuf::default()));
+        let committer = format_signature(committer.to_ref(&mut TimeBuf::default()));
         let message = decode_message(&message, &encoding, ctx.logger())?;
         let parents = parents.into_vec();
         let git_extra_headers = extra_headers
@@ -557,7 +540,8 @@ impl ExtractedCommit {
         &self,
         ctx: &CoreContext,
         reader: &Reader,
-    ) -> impl Stream<Item = Result<BonsaiDiffFileChange<(FileType, GitLeaf)>, Error>> {
+    ) -> impl Stream<Item = Result<BonsaiDiffFileChange<(FileType, GitLeaf)>, Error>>
+    + use<SUBMODULES, Reader> {
         let tree = GitTree::<SUBMODULES>(self.tree_oid);
         let parent_trees = self
             .parent_tree_oids
@@ -575,7 +559,8 @@ impl ExtractedCommit {
         ctx: &CoreContext,
         reader: &Reader,
         submodules: bool,
-    ) -> impl Stream<Item = Result<BonsaiDiffFileChange<(FileType, GitLeaf)>, Error>> {
+    ) -> impl Stream<Item = Result<BonsaiDiffFileChange<(FileType, GitLeaf)>, Error>> + use<Reader>
+    {
         if submodules {
             self.diff_for_submodules::<true, Reader>(ctx, reader)
                 .left_stream()
@@ -591,7 +576,7 @@ impl ExtractedCommit {
         &self,
         ctx: &CoreContext,
         reader: &Reader,
-    ) -> impl Stream<Item = Result<GitTree<true>, Error>> {
+    ) -> impl Stream<Item = Result<GitTree<true>, Error>> + use<Reader> {
         // When doing manifest diff over trees, submodules enabled or disabled doesn't matter
         let tree = GitTree::<true>(self.tree_oid);
         let parent_trees = self
@@ -617,7 +602,8 @@ impl ExtractedCommit {
         &self,
         ctx: &CoreContext,
         reader: &GitRepoReader,
-    ) -> impl Stream<Item = Result<BonsaiDiffFileChange<(FileType, GitLeaf)>, Error>> {
+    ) -> impl Stream<Item = Result<BonsaiDiffFileChange<(FileType, GitLeaf)>, Error>> + use<SUBMODULES>
+    {
         let tree = GitTree::<SUBMODULES>(self.tree_oid);
         bonsai_diff(ctx.clone(), reader.clone(), tree, HashSet::new())
     }
@@ -629,7 +615,7 @@ impl ExtractedCommit {
         ctx: &CoreContext,
         reader: &GitRepoReader,
         submodules: bool,
-    ) -> impl Stream<Item = Result<BonsaiDiffFileChange<(FileType, GitLeaf)>, Error>> {
+    ) -> impl Stream<Item = Result<BonsaiDiffFileChange<(FileType, GitLeaf)>, Error>> + use<> {
         if submodules {
             self.diff_root_for_submodules::<true>(ctx, reader)
                 .left_stream()

@@ -17,6 +17,7 @@ use edenfs_utils::path_from_bytes;
 
 use crate::client::Client;
 use crate::client::EdenFsClient;
+use crate::methods::EdenThriftMethod;
 
 #[derive(Debug, Clone)]
 pub struct StartFileAccessMonitor {
@@ -74,16 +75,26 @@ impl EdenFsClient {
             shouldUpload: should_upload,
             ..Default::default()
         };
-        self.with_thrift(|thrift| thrift.startFileAccessMonitor(&start_file_access_monitor_params))
-            .await
-            .map(|res| res.into())
-            .map_err(|e| EdenFsError::from(anyhow!("failed to start file access monitor: {}", e)))
+        self.with_thrift(|thrift| {
+            (
+                thrift.startFileAccessMonitor(&start_file_access_monitor_params),
+                EdenThriftMethod::StartFileAccessMonitor,
+            )
+        })
+        .await
+        .map(|res| res.into())
+        .map_err(|e| EdenFsError::from(anyhow!("failed to start file access monitor: {}", e)))
     }
 
     pub async fn stop_file_access_monitor(&self) -> Result<StopFileAccessMonitor> {
-        self.with_thrift(|thrift| thrift.stopFileAccessMonitor())
-            .await
-            .map(|res| res.into())
-            .map_err(|e| EdenFsError::from(anyhow!("failed to stop file access monitor: {}", e)))
+        self.with_thrift(|thrift| {
+            (
+                thrift.stopFileAccessMonitor(),
+                EdenThriftMethod::StopFileAccessMonitor,
+            )
+        })
+        .await
+        .map(|res| res.into())
+        .map_err(|e| EdenFsError::from(anyhow!("failed to stop file access monitor: {}", e)))
     }
 }

@@ -17,7 +17,7 @@ anyhow = "1.0.95"
 bitflags = { version = "2.6", features = ["serde", "std"], default-features = false }
 fancy-regex = "0.14.0"
 fs-err = { version = "3", features = ["tokio"] }
-glob = "0.3"
+glob = "0.3.2"
 globset = { version = "0.4.13", features = ["serde1"] }
 ignore = "0.4"
 parking_lot = { version = "0.12.1", features = ["send_guard"] }
@@ -25,7 +25,7 @@ regex-automata = "0.3.8"
 sapling-pathmatcher-types = { version = "0.1.0", path = "types" }
 sapling-types = { version = "0.1.0", path = "../types" }
 sapling-util = { version = "0.1.0", path = "../util" }
-thiserror = "2"
+thiserror = "2.0.12"
 tracing = { version = "0.1.41", features = ["attributes", "valuable"] }
 
 [dev-dependencies]

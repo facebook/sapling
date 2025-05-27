@@ -17,6 +17,7 @@ use tracing::event;
 
 use crate::client::Client;
 use crate::client::EdenFsClient;
+use crate::methods::EdenThriftMethod;
 use crate::types::DaemonInfo;
 use crate::types::Fb303Status;
 
@@ -37,7 +38,7 @@ impl EdenFsClient {
         self.with_thrift_with_timeouts(
             timeout.or_else(|| Some(Duration::from_secs(3))),
             None,
-            |thrift| thrift.getDaemonInfo(),
+            |thrift| (thrift.getDaemonInfo(), EdenThriftMethod::GetDaemonInfo),
         )
         .await
         .with_context(|| "failed to get default eden daemon info")
@@ -50,7 +51,12 @@ impl EdenFsClient {
         timeout: Duration,
     ) -> Result<(DaemonInfo, BoxStream<'static, Result<Vec<u8>>>)> {
         let (daemon_info, stream) = self
-            .with_thrift_with_timeouts(Some(timeout), None, |thrift| thrift.streamStartStatus())
+            .with_thrift_with_timeouts(Some(timeout), None, |thrift| {
+                (
+                    thrift.streamStartStatus(),
+                    EdenThriftMethod::StreamStartStatus,
+                )
+            })
             .await
             .with_context(|| "failed to get start status stream")
             .map(|(daemon_info, stream)| (daemon_info.into(), stream))

@@ -146,7 +146,8 @@ where
         ctx: &CoreContext,
         prefix: &BookmarkPrefix,
         return_max: u64,
-    ) -> Result<impl Stream<Item = Result<(BookmarkKey, HgChangesetId), Error>> + '_, Error> {
+    ) -> Result<impl Stream<Item = Result<(BookmarkKey, HgChangesetId), Error>> + use<'_, R>, Error>
+    {
         let mut kinds = vec![BookmarkKind::Scratch];
 
         let mut result = HashMap::new();

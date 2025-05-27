@@ -10,7 +10,6 @@
 # This software may be used and distributed according to the terms of the
 # GNU General Public License version 2 or any later version.
 
-from __future__ import absolute_import
 
 import hashlib
 import posixpath
@@ -94,57 +93,70 @@ class mergestate:
 
     statepath = "merge/state2"
 
-    @staticmethod
-    def clean(repo, node=None, other=None, labels=None, ancestors=None, inmemory=False):
-        """Initialize a brand new merge state, removing any existing state on
-        disk."""
-        ms = mergestate(repo)
-        ms.reset(
-            node=node,
-            other=other,
-            labels=labels,
+    @classmethod
+    def clean(
+        cls,
+        repo,
+        node=None,
+        other=None,
+        labels=None,
+        ancestors=None,
+        inmemory=False,
+        from_repo=None,
+    ) -> "mergestate":
+        """Initialize a brand new merge state, removing any existing state on disk."""
+        shutil.rmtree(repo.localvfs.join("merge"), True)
+        rust_ms = rustworkingcopy.mergestate(node, other, labels)
+        obj = cls.__new__(cls)
+        obj._init(
+            repo=repo,
+            rust_ms=rust_ms,
             ancestors=ancestors,
             inmemory=inmemory,
+            from_repo=from_repo,
         )
-        return ms
+        return obj
 
-    @staticmethod
-    def read(repo):
+    @classmethod
+    def read(cls, repo) -> "mergestate":
         """Initialize the merge state, reading it from disk."""
-        ms = mergestate(repo)
-        ms._read(repo._rsrepo.workingcopy().mergestate())
-        return ms
+        rust_ms = repo._rsrepo.workingcopy().mergestate()
 
-    def __init__(self, repo):
-        """Initialize the merge state.
+        # Note: ancestors isn't written into the state file since the current
+        # state file predates it.
+        #
+        # It's only needed during `applyupdates` in the initial call to merge,
+        # so it's set transiently there. It isn't read during `hg resolve`.
+        ancestors = None
 
-        Do not use this directly! Instead call read() or clean()."""
-        self._repo = repo
-        self._dirty = False
+        from_repo = None
+        if subtree_merges := rust_ms.subtree_merges():
+            from_repo_url = subtree_merges[0]["from_url"]
+            if from_repo_url:
+                with repo.ui.configoverride({("ui", "quiet"): True}):
+                    from_repo = subtreeutil.get_or_clone_git_repo(
+                        repo.ui, from_repo_url
+                    )
 
-        # Optimize various aspects during "in-memory" merges.
-        self._optimize_inmemory = repo.ui.configbool(
-            "experimental", "optimize-in-memory-merge-state", True
+        obj = cls.__new__(cls)
+        obj._init(
+            repo=repo,
+            rust_ms=rust_ms,
+            ancestors=ancestors,
+            inmemory=False,
+            from_repo=from_repo,
         )
+        return obj
 
-    def reset(self, node=None, other=None, labels=None, ancestors=None, inmemory=False):
-        shutil.rmtree(self._repo.localvfs.join("merge"), True)
+    def __init__(self, repo, rust_ms, ancestors, inmemory, from_repo=None):
+        raise RuntimeError("Use mergestate.read() or mergestate.clean()")
 
-        self._read(rustworkingcopy.mergestate(node, other, labels))
-
-        if ancestors:
-            self._ancestors = ancestors
-
+    def _init(self, repo, rust_ms, ancestors, inmemory, from_repo=None):
+        self._repo = repo
+        self._from_repo = from_repo or repo
+        self._ancestors = ancestors
         self._inmemory = inmemory
-
-    def _read(self, rust_ms):
-        """Analyse each record content to restore a serialized state from disk
-
-        This function process "record" entry produced by the de-serialization
-        of on disk file.
-        """
         self._rust_ms = rust_ms
-
         if md := rust_ms.mergedriver():
             self._readmergedriver = md[0]
             self._mdstate = md[1]
@@ -152,18 +164,33 @@ class mergestate:
             self._readmergedriver = None
             self._mdstate = "s"
 
-        self._results = {}
         self._dirty = False
-        self._inmemory = False
-
+        self._results = {}
         self._inmemory_to_be_merged = {}
 
-        # Note: _ancestors isn't written into the state file since the current
-        # state file predates it.
-        #
-        # It's only needed during `applyupdates` in the initial call to merge,
-        # so it's set transiently there. It isn't read during `hg resolve`.
-        self._ancestors = None
+        # Optimize various aspects during "in-memory" merges.
+        self._optimize_inmemory = repo.ui.configbool(
+            "experimental", "optimize-in-memory-merge-state", True
+        )
+
+    def reset(
+        self,
+        node=None,
+        other=None,
+        labels=None,
+        ancestors=None,
+        inmemory=False,
+        from_repo=None,
+    ):
+        shutil.rmtree(self._repo.localvfs.join("merge"), True)
+        rust_ms = rustworkingcopy.mergestate(node, other, labels)
+        self._init(
+            repo=self._repo,
+            rust_ms=rust_ms,
+            ancestors=ancestors,
+            inmemory=inmemory,
+            from_repo=from_repo,
+        )
         for var in ("localctx", "otherctx", "ancestorctxs"):
             if var in vars(self):
                 delattr(self, var)
@@ -234,9 +261,12 @@ class mergestate:
         """
         return self._rust_ms.subtree_merges()
 
-    def add_subtree_merge(self, from_node, from_path, to_path):
+    def from_repo(self):
+        return self._from_repo
+
+    def add_subtree_merge(self, from_node, from_path, to_path, from_repo_url=None):
         """Add a subtree merge record"""
-        self._rust_ms.add_subtree_merge(from_node, from_path, to_path)
+        self._rust_ms.add_subtree_merge(from_node, from_path, to_path, from_repo_url)
         self._dirty = True
 
     def active(self):
@@ -354,11 +384,11 @@ class mergestate:
         dnode = bin(hexdnode)
         onode = bin(hexonode)
         anode = bin(hexanode)
-        octx = self._repo[self._other]
+        octx = self._from_repo[self._other]
         extras = self.extras(dfile)
         anccommitnode = extras.get("ancestorlinknode")
         if anccommitnode:
-            actx = self._repo[anccommitnode]
+            actx = self._from_repo[anccommitnode]
         else:
             actx = None
 
@@ -368,7 +398,7 @@ class mergestate:
         fcd = self._filectxorabsent(dnode, wctx, dfile)
         fco = self._filectxorabsent(onode, octx, ofile)
         # TODO: move this to filectxorabsent
-        fca = self._repo.filectx(afile, fileid=anode, changeid=actx)
+        fca = self._from_repo.filectx(afile, fileid=anode, changeid=actx)
         # "premerge" x flags
         flo = fco.flags()
         fla = fca.flags()
@@ -905,7 +935,7 @@ def checkpathconflicts(repo, wctx, mctx, actions):
 
 
 def manifestmerge(
-    repo,
+    to_repo,
     wctx,
     p2,
     pa,
@@ -914,6 +944,7 @@ def manifestmerge(
     acceptremote,
     followcopies,
     forcefulldiff=False,
+    from_repo=None,
 ):
     """
     Merge wctx and p2 with ancestor pa and generate merge action list
@@ -945,23 +976,43 @@ def manifestmerge(
                 continue
         return False
 
+    def files_equal(node1, node2, ctx1, ctx2, f1, f2) -> bool:
+        if ctx1.repo() == ctx2.repo():
+            return node1 == node2
+        elif node1 and node2:
+            # PERF: compare file content hash instead of file content and
+            # consider moving this to fctx.cmp()
+            return ctx1[f1].data() == ctx2[f2].data()
+        elif node1 is None and node2 is None:
+            return True
+        else:
+            return False
+
+    from_repo = from_repo or to_repo
+    is_crossrepo = not to_repo.is_same_repo(from_repo)
+
+    ui = to_repo.ui
     copy = {}
 
     # manifests fetched in order are going to be faster, so prime the caches
     [x.manifest() for x in sorted(wctx.parents() + [p2, pa], key=scmutil.intrev)]
 
-    if followcopies:
-        copy = copies.mergecopies(repo, wctx, p2, pa)
+    # XXX: handle copy tracing for crossrepo merges
+    if followcopies and not is_crossrepo:
+        copy = copies.mergecopies(to_repo, wctx, p2, pa)
 
     boolbm = str(bool(branchmerge))
     boolf = str(bool(force))
-    shouldsparsematch = hasattr(repo, "sparsematch") and (
-        "eden" not in repo.requirements or "edensparse" in repo.requirements
+    # XXX: handle sparsematch for cross-repo merges
+    shouldsparsematch = (
+        hasattr(to_repo, "sparsematch")
+        and ("eden" not in to_repo.requirements or "edensparse" in to_repo.requirements)
+        and not is_crossrepo
     )
-    sparsematch = getattr(repo, "sparsematch", None) if shouldsparsematch else None
-    repo.ui.note(_("resolving manifests\n"))
-    repo.ui.debug(" branchmerge: %s, force: %s\n" % (boolbm, boolf))
-    repo.ui.debug(" ancestor: %s, local: %s, remote: %s\n" % (pa, wctx, p2))
+    sparsematch = getattr(to_repo, "sparsematch", None) if shouldsparsematch else None
+    ui.note(_("resolving manifests\n"))
+    ui.debug(" branchmerge: %s, force: %s\n" % (boolbm, boolf))
+    ui.debug(" ancestor: %s, local: %s, remote: %s\n" % (pa, wctx, p2))
 
     m1, m2, ma = wctx.manifest(), p2.manifest(), pa.manifest()
 
@@ -981,7 +1032,7 @@ def manifestmerge(
         for copykey, copyvalue in copy.items():
             if copyvalue in relevantfiles:
                 relevantfiles.add(copykey)
-        matcher = scmutil.matchfiles(repo, relevantfiles)
+        matcher = scmutil.matchfiles(to_repo, relevantfiles)
 
     # For sparse repos, attempt to use the sparsematcher to narrow down
     # calculation.  Consider a typical rebase:
@@ -1002,11 +1053,11 @@ def manifestmerge(
             for copykey, copyvalue in copy.items():
                 if copyvalue in relevantfiles:
                     relevantfiles.add(copykey)
-            filesmatcher = scmutil.matchfiles(repo, relevantfiles)
+            filesmatcher = scmutil.matchfiles(to_repo, relevantfiles)
         else:
             filesmatcher = None
 
-        revs = {repo.dirstate.p1(), repo.dirstate.p2(), pa.node(), p2.node()}
+        revs = {to_repo.dirstate.p1(), to_repo.dirstate.p2(), pa.node(), p2.node()}
         revs -= {nullid, None}
         sparsematcher = sparsematch(*list(revs))
 
@@ -1016,12 +1067,12 @@ def manifestmerge(
         matcher = matchmod.intersectmatchers(matcher, sparsematcher)
 
     with perftrace.trace("Manifest Diff"):
-        if hasattr(repo, "resettreefetches"):
-            repo.resettreefetches()
+        if hasattr(to_repo, "resettreefetches"):
+            to_repo.resettreefetches()
         diff = _diff_manifests(m1, m2, matcher=matcher)
         perftrace.tracevalue("Differences", len(diff))
-        if hasattr(repo, "resettreefetches"):
-            perftrace.tracevalue("Tree Fetches", repo.resettreefetches())
+        if hasattr(to_repo, "resettreefetches"):
+            perftrace.tracevalue("Tree Fetches", to_repo.resettreefetches())
 
     if matcher is None:
         matcher = matchmod.always("", "")
@@ -1030,7 +1081,11 @@ def manifestmerge(
     for k, v in copy.items():
         reverse_copies[v].append(k)
 
-    subtree_branches = subtreeutil.get_subtree_branches(repo, p2)
+    # skip changed/subtree-copied conflict check for cross repo cases
+    if is_crossrepo:
+        subtree_branches = []
+    else:
+        subtree_branches = subtreeutil.get_subtree_branches(to_repo, p2)
     subtree_branch_dests = [b.to_path for b in subtree_branches]
 
     actions = {}
@@ -1049,7 +1104,7 @@ def manifestmerge(
         subtree_copy_dest = subtreeutil.find_enclosing_dest(f1, subtree_branch_dests)
         if subtree_copy_dest and (n1 != na or fl1 != fla):
             hint = _("use '@prog@ subtree copy' to re-create the directory branch")
-            if extra_hint := repo.ui.config("subtree", "copy-conflict-hint"):
+            if extra_hint := ui.config("subtree", "copy-conflict-hint"):
                 hint = f"{hint}. {extra_hint}"
             raise error.Abort(
                 _(
@@ -1074,12 +1129,14 @@ def manifestmerge(
                         "both created",
                     )
             else:
-                a = ma[fa]
-                fla = ma.flags(fa)
                 nol = "l" not in fl1 + fl2 + fla
-                if n2 == a and fl2 == fla:  # remote unchanged
+                if (
+                    files_equal(n2, na, p2, pa, f2, fa) and fl2 == fla
+                ):  # remote unchanged
                     actions[f1] = (ACTION_KEEP, (), "remote unchanged")
-                elif n1 == a and fl1 == fla:  # local unchanged - use remote
+                elif (
+                    files_equal(n1, na, wctx, pa, f1, fa) and fl1 == fla
+                ):  # local unchanged - use remote
                     if fl1 == fl2:
                         actions[f1] = (ACTION_GET, (f2, fl2, False), "remote is newer")
                     else:
@@ -1088,9 +1145,13 @@ def manifestmerge(
                             (f2, fl2, False),
                             "flag differ",
                         )
-                elif nol and n2 == a:  # remote only changed 'x' (file executable)
+                elif nol and files_equal(
+                    n2, na, p2, pa, f2, fa
+                ):  # remote only changed 'x' (file executable)
                     actions[f1] = (ACTION_EXEC, (fl2,), "update permissions")
-                elif nol and n1 == a:  # local only changed 'x' (file executable)
+                elif nol and files_equal(
+                    n1, na, wctx, pa, f1, fa
+                ):  # local only changed 'x' (file executable)
                     actions[f1] = (ACTION_GET, (f2, fl1, False), "remote is newer")
                 else:  # both changed something
                     actions[f1] = (
@@ -1119,7 +1180,7 @@ def manifestmerge(
                         "prompt changed/deleted copy source",
                     )
             elif fa in ma:  # clean, a different, no remote
-                if n1 != ma[fa]:
+                if not files_equal(n1, na, wctx, pa, f1, fa):
                     if acceptremote:
                         actions[f1] = (ACTION_REMOVE, None, "remote delete")
                     else:
@@ -1175,7 +1236,7 @@ def manifestmerge(
                         (f2, fl2, pa.node()),
                         "remote created, get or merge",
                     )
-            elif n2 != ma[fa]:
+            elif not files_equal(n2, na, p2, pa, f2, fa):
                 if acceptremote:
                     actions[f1] = (
                         ACTION_CREATED,
@@ -1189,17 +1250,16 @@ def manifestmerge(
                         "prompt deleted/changed",
                     )
 
-    if repo.ui.configbool("experimental", "merge.checkpathconflicts"):
+    if ui.configbool("experimental", "merge.checkpathconflicts"):
         # If we are merging, look for path conflicts.
-        checkpathconflicts(repo, wctx, p2, actions)
+        checkpathconflicts(to_repo, wctx, p2, actions)
 
     return actions
 
 
-def _resolvetrivial(repo, wctx, mctx, ancestor, actions):
+def _resolvetrivial(wctx, mctx, ancestor, actions):
     """Resolves false conflicts where the nodeid changed but the content
     remained the same."""
-
     for f, (m, args, msg) in list(actions.items()):
         if (
             m == ACTION_CHANGED_DELETED
@@ -1208,19 +1268,17 @@ def _resolvetrivial(repo, wctx, mctx, ancestor, actions):
         ):
             # local did change but ended up with same content
             actions[f] = "r", None, "prompt same"
-        elif (
-            m == ACTION_DELETED_CHANGED
-            and f in ancestor
-            and not mctx[f].cmp(ancestor[f])
-        ):
-            # remote did change but ended up with same content
-            del actions[f]  # don't get = keep local deleted
+        elif m == ACTION_DELETED_CHANGED:
+            f2, fa = args[1], args[2]
+            if fa in ancestor and not mctx[f2].cmp(ancestor[fa]):
+                # remote did change but ended up with same content
+                del actions[f]  # don't get = keep local deleted
 
 
 @perftrace.tracefunc("Calculate Updates")
 @util.timefunction("calculateupdates", 0, "ui")
 def calculateupdates(
-    repo,
+    to_repo,
     wctx,
     mctx,
     ancestors,
@@ -1228,12 +1286,15 @@ def calculateupdates(
     force,
     acceptremote,
     followcopies,
+    from_repo=None,
 ):
     """Calculate the actions needed to merge mctx into wctx using ancestors"""
+    from_repo = from_repo or to_repo
+    ui = to_repo.ui
 
     if len(ancestors) == 1:  # default
         actions = manifestmerge(
-            repo,
+            to_repo,
             wctx,
             mctx,
             ancestors[0],
@@ -1241,11 +1302,12 @@ def calculateupdates(
             force,
             acceptremote,
             followcopies,
+            from_repo=from_repo,
         )
-        _checkunknownfiles(repo, wctx, mctx, force, actions)
+        _checkunknownfiles(to_repo, wctx, mctx, force, actions)
 
     else:  # only when merge.preferancestor=* - the default
-        repo.ui.note(
+        ui.note(
             _("note: merging %s and %s using bids from ancestors %s\n")
             % (wctx, mctx, _(" and ").join(str(anc) for anc in ancestors))
         )
@@ -1253,9 +1315,9 @@ def calculateupdates(
         # Call for bids
         fbids = {}  # mapping filename to bids (action method to list af actions)
         for ancestor in ancestors:
-            repo.ui.note(_("\ncalculating bids for ancestor %s\n") % ancestor)
+            ui.note(_("\ncalculating bids for ancestor %s\n") % ancestor)
             actions = manifestmerge(
-                repo,
+                to_repo,
                 wctx,
                 mctx,
                 ancestor,
@@ -1264,12 +1326,13 @@ def calculateupdates(
                 acceptremote,
                 followcopies,
                 forcefulldiff=True,
+                from_repo=from_repo,
             )
-            _checkunknownfiles(repo, wctx, mctx, force, actions)
+            _checkunknownfiles(to_repo, wctx, mctx, force, actions)
 
             for f, a in sorted(actions.items()):
                 m, args, msg = a
-                repo.ui.debug(" %s: %s -> %s\n" % (f, msg, m))
+                ui.debug(" %s: %s -> %s\n" % (f, msg, m))
                 if f in fbids:
                     d = fbids[f]
                     if m in d:
@@ -1280,7 +1343,7 @@ def calculateupdates(
                     fbids[f] = {m: [a]}
 
         # Pick the best bid for each file
-        repo.ui.note(_("\nauction for merging merge bids\n"))
+        ui.note(_("\nauction for merging merge bids\n"))
         actions = {}
         dms = []  # filenames that have dm actions
         for f, bids in sorted(fbids.items()):
@@ -1289,39 +1352,39 @@ def calculateupdates(
             if len(bids) == 1:  # all bids are the same kind of method
                 m, l = list(bids.items())[0]
                 if all(a == l[0] for a in l[1:]):  # len(bids) is > 1
-                    repo.ui.note(_(" %s: consensus for %s\n") % (f, m))
+                    ui.note(_(" %s: consensus for %s\n") % (f, m))
                     actions[f] = l[0]
                     if m == ACTION_DIR_RENAME_MOVE_LOCAL:
                         dms.append(f)
                     continue
             # If keep is an option, just do it.
             if ACTION_KEEP in bids:
-                repo.ui.note(_(" %s: picking 'keep' action\n") % f)
+                ui.note(_(" %s: picking 'keep' action\n") % f)
                 actions[f] = bids[ACTION_KEEP][0]
                 continue
             # If there are gets and they all agree [how could they not?], do it.
             if ACTION_GET in bids:
                 ga0 = bids[ACTION_GET][0]
                 if all(a == ga0 for a in bids[ACTION_GET][1:]):
-                    repo.ui.note(_(" %s: picking 'get' action\n") % f)
+                    ui.note(_(" %s: picking 'get' action\n") % f)
                     actions[f] = ga0
                     continue
             # Same for symlink->file change
             if ACTION_REMOVE_GET in bids:
                 ga0 = bids[ACTION_REMOVE_GET][0]
                 if all(a == ga0 for a in bids[ACTION_REMOVE_GET][1:]):
-                    repo.ui.note(_(" %s: picking 'remove-then-get' action\n") % f)
+                    ui.note(_(" %s: picking 'remove-then-get' action\n") % f)
                     actions[f] = ga0
                     continue
             # TODO: Consider other simple actions such as mode changes
             # Handle inefficient democrazy.
-            repo.ui.note(_(" %s: multiple bids for merge action:\n") % f)
+            ui.note(_(" %s: multiple bids for merge action:\n") % f)
             for m, l in sorted(bids.items()):
                 for _f, args, msg in l:
-                    repo.ui.note("  %s -> %s\n" % (msg, m))
+                    ui.note("  %s -> %s\n" % (msg, m))
             # Pick random action. TODO: Instead, prompt user when resolving
             m, l = list(bids.items())[0]
-            repo.ui.warn(_(" %s: ambiguous merge - picked %s action\n") % (f, m))
+            ui.warn(_(" %s: ambiguous merge - picked %s action\n") % (f, m))
             actions[f] = l[0]
             if m == ACTION_DIR_RENAME_MOVE_LOCAL:
                 dms.append(f)
@@ -1335,9 +1398,9 @@ def calculateupdates(
                 # These two could be merged as first move and then delete ...
                 # but instead drop moving and just delete.
                 del actions[f]
-        repo.ui.note(_("end of auction\n\n"))
+        ui.note(_("end of auction\n\n"))
 
-    _resolvetrivial(repo, wctx, mctx, ancestors[0], actions)
+    _resolvetrivial(wctx, mctx, ancestors[0], actions)
 
     if wctx.rev() is None and not wctx.isinmemory():
         fractions = _forgetremoved(wctx, mctx, branchmerge)
@@ -1458,7 +1521,9 @@ def batchget(repo, mctx, wctx, actions):
 
 @perftrace.tracefunc("Apply Updates")
 @util.timefunction("applyupdates", 0, "ui")
-def applyupdates(repo, actions, wctx, mctx, overwrite, labels=None, ancestors=None):
+def applyupdates(
+    to_repo, actions, wctx, mctx, overwrite, labels=None, ancestors=None, from_repo=None
+):
     """apply the merge action list to the working directory
 
     wctx is the working copy context
@@ -1469,11 +1534,15 @@ def applyupdates(repo, actions, wctx, mctx, overwrite, labels=None, ancestors=No
     """
     perftrace.tracevalue("Actions", sum(len(v) for k, v in actions.items()))
 
+    from_repo = from_repo or to_repo
+    is_crossrepo = not to_repo.is_same_repo(from_repo)
+    ui = to_repo.ui
+
     updated, merged, removed = 0, 0, 0
     other_node = mctx.node()
 
     ms = mergestate.clean(
-        repo,
+        to_repo,
         node=wctx.p1().node(),
         other=other_node,
         # Ancestor can include the working copy, so we use this helper:
@@ -1484,10 +1553,14 @@ def applyupdates(repo, actions, wctx, mctx, overwrite, labels=None, ancestors=No
         ),
         labels=labels,
         inmemory=wctx.isinmemory(),
+        from_repo=from_repo,
     )
 
+    from_repo_url = None
+    if is_crossrepo:
+        from_repo_url = from_repo.ui.config("paths", "default")
     for from_path, to_path in mctx.manifest().diffgrafts():
-        ms.add_subtree_merge(other_node, from_path, to_path)
+        ms.add_subtree_merge(other_node, from_path, to_path, from_repo_url)
 
     moves = []
     for m, l in actions.items():
@@ -1503,13 +1576,17 @@ def applyupdates(repo, actions, wctx, mctx, overwrite, labels=None, ancestors=No
         f1, f2, fa, move, anc = args
         if f1 is not None:
             merge_prefetch.append(wctx[f1])
+        if is_crossrepo:
+            # For cross-repo merges the external git repo is not a lazy repo,
+            # so there’s no need to prefetch the files.
+            continue
         if f2 is not None:
             merge_prefetch.append(mctx[f2])
-        actx = repo[anc]
+        actx = from_repo[anc]
         if fa in actx:
             merge_prefetch.append(actx[fa])
-    if merge_prefetch and hasattr(repo, "fileservice"):
-        repo.fileservice.prefetch(
+    if merge_prefetch and hasattr(to_repo, "fileservice"):
+        to_repo.fileservice.prefetch(
             [
                 (fc.path(), fc.filenode())
                 for fc in merge_prefetch
@@ -1535,18 +1612,18 @@ def applyupdates(repo, actions, wctx, mctx, overwrite, labels=None, ancestors=No
         if f1 is None:
             fcl = filemerge.absentfilectx(wctx, fa)
         else:
-            repo.ui.debug(" preserving %s for resolve of %s\n" % (f1, f))
+            ui.debug(" preserving %s for resolve of %s\n" % (f1, f))
             fcl = wctx[f1]
         if f2 is None:
             fco = filemerge.absentfilectx(mctx, fa)
         else:
             fco = mctx[f2]
-        actx = repo[anc]
+        actx = from_repo[anc]
         if fa in actx:
             fca = actx[fa]
         else:
             # TODO: move to absentfilectx
-            fca = repo.filectx(f1, changeid=nullid, fileid=nullid)
+            fca = to_repo.filectx(f1, changeid=nullid, fileid=nullid)
         # Skip submodules for now
         if fcl.flags() == "m" or fco.flags() == "m":
             continue
@@ -1572,7 +1649,7 @@ def applyupdates(repo, actions, wctx, mctx, overwrite, labels=None, ancestors=No
     # remove renamed files after safely stored
     for f in moves:
         if wctx[f].lexists():
-            repo.ui.debug("removing %s\n" % f)
+            ui.debug("removing %s\n" % f)
             wctx[f].audit()
             wctx[f].remove()
 
@@ -1580,18 +1657,18 @@ def applyupdates(repo, actions, wctx, mctx, overwrite, labels=None, ancestors=No
     z = 0
 
     def userustworker():
-        return "remotefilelog" in repo.requirements and not wctx.isinmemory()
+        return "remotefilelog" in to_repo.requirements and not wctx.isinmemory()
 
     rustworkers = userustworker()
 
     # record path conflicts
     with (
-        progress.bar(repo.ui, _("updating"), _("files"), numupdates) as prog,
-        repo.ui.timesection("updateworker"),
+        progress.bar(ui, _("updating"), _("files"), numupdates) as prog,
+        ui.timesection("updateworker"),
     ):
         for f, args, msg in actions[ACTION_PATH_CONFLICT]:
             f1, fo = args
-            s = repo.ui.status
+            s = ui.status
             s(
                 _(
                     "%s: path conflict - a file or link has the same name as a "
@@ -1613,7 +1690,7 @@ def applyupdates(repo, actions, wctx, mctx, overwrite, labels=None, ancestors=No
         if rustworkers:
             # Flush any pending data to disk before forking workers, so the workers
             # don't all flush duplicate data.
-            repo.commitpending()
+            to_repo.commitpending()
 
             # Removing lots of files very quickly is known to cause FSEvents to
             # lose events which forces watchman to recrwawl the entire
@@ -1621,10 +1698,10 @@ def applyupdates(repo, actions, wctx, mctx, overwrite, labels=None, ancestors=No
             # minutes, slowing down all the other tools that rely on it. Thus
             # add a config that can be tweaked to specifically reduce the
             # amount of concurrency.
-            numworkers = repo.ui.configint(
-                "experimental", "numworkersremover", worker._numworkers(repo.ui)
+            numworkers = ui.configint(
+                "experimental", "numworkersremover", worker._numworkers(ui)
             )
-            remover = rustworker.removerworker(repo.wvfs.base, numworkers)
+            remover = rustworker.removerworker(to_repo.wvfs.base, numworkers)
             for f, args, msg in actions[ACTION_REMOVE] + actions[ACTION_REMOVE_GET]:
                 # The remove method will either return immediately or block if
                 # the internal worker queue is full.
@@ -1633,11 +1710,11 @@ def applyupdates(repo, actions, wctx, mctx, overwrite, labels=None, ancestors=No
                 prog.value = (z, f)
             retry = remover.wait()
             for f in retry:
-                repo.ui.debug("retrying %s\n" % f)
-                removeone(repo, wctx, f)
+                ui.debug("retrying %s\n" % f)
+                removeone(to_repo, wctx, f)
         else:
             for i, size, item in batchremove(
-                repo, wctx, actions[ACTION_REMOVE] + actions[ACTION_REMOVE_GET]
+                to_repo, wctx, actions[ACTION_REMOVE] + actions[ACTION_REMOVE_GET]
             ):
                 z += i
                 prog.value = (z, item)
@@ -1646,10 +1723,10 @@ def applyupdates(repo, actions, wctx, mctx, overwrite, labels=None, ancestors=No
 
         # resolve path conflicts (must come before getting)
         for f, args, msg in actions[ACTION_PATH_CONFLICT_RESOLVE]:
-            repo.ui.debug(" %s: %s -> pr\n" % (f, msg))
+            ui.debug(" %s: %s -> pr\n" % (f, msg))
             (f0,) = args
             if wctx[f0].lexists():
-                repo.ui.note(_("moving %s to %s\n") % (f0, f))
+                ui.note(_("moving %s to %s\n") % (f0, f))
                 wctx[f].audit()
                 wctx[f].write(wctx.filectx(f0), wctx.filectx(f0).flags())
                 wctx[f0].remove()
@@ -1662,15 +1739,15 @@ def applyupdates(repo, actions, wctx, mctx, overwrite, labels=None, ancestors=No
         get_actions = actions[ACTION_GET] + actions[ACTION_REMOVE_GET] + extra_gets
 
         if rustworkers:
-            numworkers = repo.ui.configint(
-                "experimental", "numworkerswriter", worker._numworkers(repo.ui)
+            numworkers = ui.configint(
+                "experimental", "numworkerswriter", worker._numworkers(ui)
             )
 
             writer = rustworker.writerworker(
-                repo.fileslog.filestore, repo.wvfs.base, numworkers
+                to_repo.fileslog.filestore, to_repo.wvfs.base, numworkers
             )
             fctx = mctx.filectx
-            slinkfix = util.iswindows and repo.wvfs._cansymlink
+            slinkfix = util.iswindows and to_repo.wvfs._cansymlink
             slinks = []
             ftof2 = {}
             for f, (f2, flags, backup), msg in get_actions:
@@ -1688,12 +1765,12 @@ def applyupdates(repo, actions, wctx, mctx, overwrite, labels=None, ancestors=No
 
             writesize, retry = writer.wait()
             for f, flag in retry:
-                repo.ui.debug("retrying %s\n" % f)
-                writesize += updateone(repo, fctx, wctx, f, ftof2.get(f, f), flag)
+                ui.debug("retrying %s\n" % f)
+                writesize += updateone(to_repo, fctx, wctx, f, ftof2.get(f, f), flag)
             if slinkfix:
-                nativecheckout.fixsymlinks(slinks, repo.wvfs.base)
+                nativecheckout.fixsymlinks(slinks, to_repo.wvfs.base)
         else:
-            for i, size, item in batchget(repo, mctx, wctx, get_actions):
+            for i, size, item in batchget(to_repo, mctx, wctx, get_actions):
                 z += i
                 writesize += size
                 prog.value = (z, item)
@@ -1702,34 +1779,34 @@ def applyupdates(repo, actions, wctx, mctx, overwrite, labels=None, ancestors=No
 
         # forget (manifest only, just log it) (must come first)
         for f, args, msg in actions[ACTION_FORGET]:
-            repo.ui.debug(" %s: %s -> f\n" % (f, msg))
+            ui.debug(" %s: %s -> f\n" % (f, msg))
             z += 1
             prog.value = (z, f)
 
         # re-add (manifest only, just log it)
         for f, args, msg in actions[ACTION_ADD]:
-            repo.ui.debug(" %s: %s -> a\n" % (f, msg))
+            ui.debug(" %s: %s -> a\n" % (f, msg))
             z += 1
             prog.value = (z, f)
 
         # re-add/mark as modified (manifest only, just log it)
         for f, args, msg in actions[ACTION_ADD_MODIFIED]:
-            repo.ui.debug(" %s: %s -> am\n" % (f, msg))
+            ui.debug(" %s: %s -> am\n" % (f, msg))
             z += 1
             prog.value = (z, f)
 
         # keep (noop, just log it)
         for f, args, msg in actions[ACTION_KEEP]:
-            repo.ui.debug(" %s: %s -> k\n" % (f, msg))
+            ui.debug(" %s: %s -> k\n" % (f, msg))
             # no progress
 
         # directory rename, move local
         for f, args, msg in actions[ACTION_DIR_RENAME_MOVE_LOCAL]:
-            repo.ui.debug(" %s: %s -> dm\n" % (f, msg))
+            ui.debug(" %s: %s -> dm\n" % (f, msg))
             z += 1
             prog.value = (z, f)
             f0, flags = args
-            repo.ui.note(_("moving %s to %s\n") % (f0, f))
+            ui.note(_("moving %s to %s\n") % (f0, f))
             wctx[f].audit()
             wctx[f].write(wctx.filectx(f0), flags)
             wctx[f0].remove()
@@ -1737,17 +1814,17 @@ def applyupdates(repo, actions, wctx, mctx, overwrite, labels=None, ancestors=No
 
         # local directory rename, get
         for f, args, msg in actions[ACTION_LOCAL_DIR_RENAME_GET]:
-            repo.ui.debug(" %s: %s -> dg\n" % (f, msg))
+            ui.debug(" %s: %s -> dg\n" % (f, msg))
             z += 1
             prog.value = (z, f)
             f0, flags = args
-            repo.ui.note(_("getting %s to %s\n") % (f0, f))
+            ui.note(_("getting %s to %s\n") % (f0, f))
             wctx[f].write(mctx.filectx(f0), flags)
             updated += 1
 
         # exec
         for f, args, msg in actions[ACTION_EXEC]:
-            repo.ui.debug(" %s: %s -> e\n" % (f, msg))
+            ui.debug(" %s: %s -> e\n" % (f, msg))
             z += 1
             prog.value = (z, f)
             (flags,) = args
@@ -1765,12 +1842,12 @@ def applyupdates(repo, actions, wctx, mctx, overwrite, labels=None, ancestors=No
 
         if usemergedriver:
             ms.commit()
-            with repo.ui.timesection("mergedriver"):
+            with ui.timesection("mergedriver"):
                 # This will return False if the function raises an exception.
-                failed = not driverpreprocess(repo, ms, wctx, labels=labels)
+                failed = not driverpreprocess(to_repo, ms, wctx, labels=labels)
             driverresolved = [f for f in ms.driverresolved()]
 
-            repo.ui.log("command_metrics", mergedriver_num_files=len(driverresolved))
+            ui.log("command_metrics", mergedriver_num_files=len(driverresolved))
 
             # If preprocess() marked any files as driver-resolved and we're
             # merging in-memory, abort on the assumption that driver scripts
@@ -1813,7 +1890,7 @@ def applyupdates(repo, actions, wctx, mctx, overwrite, labels=None, ancestors=No
             tocomplete = []
             completed = []
             for f, args, msg in mergeactions:
-                repo.ui.debug(" %s: %s -> m (premerge)\n" % (f, msg))
+                ui.debug(" %s: %s -> m (premerge)\n" % (f, msg))
                 z += 1
                 prog.value = (z, f)
                 wfctx = wctx[f]
@@ -1836,14 +1913,14 @@ def applyupdates(repo, actions, wctx, mctx, overwrite, labels=None, ancestors=No
             # merge
             files = []
             for f, args, msg in tocomplete:
-                repo.ui.debug(" %s: %s -> m (merge)\n" % (f, msg))
+                ui.debug(" %s: %s -> m (merge)\n" % (f, msg))
                 z += 1
                 prog.value = (z, f)
                 ms.resolve(f, wctx)
                 files.append(f)
-            reponame = repo.ui.config("fbscmquery", "reponame")
+            reponame = ui.config("fbscmquery", "reponame")
             command = " ".join(util.shellquote(a) for a in sys.argv)
-            repo.ui.log(
+            ui.log(
                 "manualmergefiles",
                 manual_merge_files=",".join(files),
                 auto_merge_files=",".join(completed),
@@ -1851,9 +1928,9 @@ def applyupdates(repo, actions, wctx, mctx, overwrite, labels=None, ancestors=No
                 repo=reponame,
             )
             if files:
-                repo.ui.log(
+                ui.log(
                     "merge_conflicts",
-                    command=repo.ui.cmdname,
+                    command=ui.cmdname,
                     full_command=command,
                     dest_hex=_gethex(wctx),
                     src_hex=_gethex(mctx),
@@ -1867,8 +1944,8 @@ def applyupdates(repo, actions, wctx, mctx, overwrite, labels=None, ancestors=No
         unresolved = ms.unresolvedcount()
 
         if usemergedriver and not unresolved and ms.mdstate() != "s":
-            with repo.ui.timesection("mergedriver"):
-                if not driverconclude(repo, ms, wctx, labels=labels):
+            with ui.timesection("mergedriver"):
+                if not driverconclude(to_repo, ms, wctx, labels=labels):
                     # XXX setting unresolved to at least 1 is a hack to make
                     # sure we error out
                     unresolved = max(unresolved, 1)
@@ -2220,18 +2297,22 @@ def goto(
 
 
 def merge(
-    repo,
+    to_repo,
     node,
     force=False,
     ancestor=None,
     mergeancestor=False,
     labels=None,
     wc=None,
+    from_repo=None,
 ):
-    _prefetchlazychildren(repo, node)
+    from_repo = from_repo or to_repo
+    is_crossrepo = not to_repo.is_same_repo(from_repo)
+    if not is_crossrepo:
+        _prefetchlazychildren(to_repo, node)
 
     return _update(
-        repo,
+        to_repo,
         node,
         branchmerge=True,
         ancestor=ancestor,
@@ -2239,13 +2320,14 @@ def merge(
         force=force,
         labels=labels,
         wc=wc,
+        from_repo=from_repo,
     )
 
 
 @perftrace.tracefunc("Update")
 @util.timefunction("mergeupdate", 0, "ui")
 def _update(
-    repo,
+    to_repo,
     node,
     branchmerge=False,
     force=False,
@@ -2254,6 +2336,7 @@ def _update(
     labels=None,
     updatecheck=None,
     wc=None,
+    from_repo=None,
 ):
     """
     Perform a merge between the working directory and the given node
@@ -2307,29 +2390,37 @@ def _update(
 
     assert node is not None
 
-    # Positive indication we aren't using eden fastpath for eden integration tests.
-    if edenfs.requirement in repo.requirements:
-        repo.ui.debug("falling back to non-eden update code path: merge\n")
+    ui = to_repo.ui
+    from_repo = from_repo or to_repo
+    is_crossrepo = not to_repo.is_same_repo(from_repo)
 
-    with repo.wlock():
+    # Positive indication we aren't using eden fastpath for eden integration tests.
+    if edenfs.requirement in to_repo.requirements:
+        ui.debug("falling back to non-eden update code path: merge\n")
+
+    with to_repo.wlock():
         if wc is None:
-            wc = repo[None]
+            wc = to_repo[None]
         pl = wc.parents()
         p1 = pl[0]
         pas = [None]
         if ancestor is not None:
-            pas = [repo[ancestor]]
+            # XXX: For cross-repo grafts, we only support the case where the merge ancestor
+            # belongs to from_repo.
+            pas = [from_repo[ancestor]]
 
         overwrite = force and not branchmerge
 
-        p2 = repo[node]
+        p2 = from_repo[node]
 
         fp1, fp2, xp1, xp2 = p1.node(), p2.node(), str(p1), str(p2)
 
         if pas[0] is None:
-            if repo.ui.configlist("merge", "preferancestor") == ["*"]:
-                cahs = repo.changelog.commonancestorsheads(p1.node(), p2.node())
-                pas = [repo[anc] for anc in (sorted(cahs) or [nullid])]
+            if is_crossrepo:
+                pas = [from_repo[nullid]]
+            elif ui.configlist("merge", "preferancestor") == ["*"]:
+                cahs = to_repo.changelog.commonancestorsheads(p1.node(), p2.node())
+                pas = [to_repo[anc] for anc in (sorted(cahs) or [nullid])]
             else:
                 pas = [p1.ancestor(p2, warn=branchmerge)]
 
@@ -2337,7 +2428,7 @@ def _update(
         if not overwrite:
             if len(pl) > 1:
                 raise error.Abort(_("outstanding uncommitted merge"))
-            ms = mergestate.read(repo)
+            ms = mergestate.read(to_repo)
             if list(ms.unresolved()):
                 raise error.Abort(_("outstanding merge conflicts"))
         if branchmerge:
@@ -2362,8 +2453,8 @@ def _update(
             if p1 == p2:  # no-op update
                 # call the hooks and exit early
                 if not wc.isinmemory():
-                    repo.hook("preupdate", throw=True, parent1=xp2, parent2="")
-                    repo.hook("update", parent1=xp2, parent2="", error=0)
+                    to_repo.hook("preupdate", throw=True, parent1=xp2, parent2="")
+                    to_repo.hook("update", parent1=xp2, parent2="", error=0)
                 return 0, 0, 0, 0
 
         if overwrite:
@@ -2371,7 +2462,7 @@ def _update(
         elif not branchmerge:
             pas = [p1]
 
-        followcopies = repo.ui.configbool("merge", "followcopies")
+        followcopies = ui.configbool("merge", "followcopies")
         if overwrite:
             followcopies = False
         elif not pas[0]:
@@ -2380,9 +2471,9 @@ def _update(
             followcopies = False
 
         ### calculate phase
-        with progress.spinner(repo.ui, "calculating merge actions"):
+        with progress.spinner(ui, "calculating merge actions"):
             actionbyfile = calculateupdates(
-                repo,
+                to_repo,
                 wc,
                 p2,
                 pas,
@@ -2390,11 +2481,12 @@ def _update(
                 force,
                 mergeancestor,
                 followcopies,
+                from_repo=from_repo,
             )
 
         if updatecheck == "noconflict":
             paths = []
-            cwd = repo.getcwd()
+            cwd = to_repo.getcwd()
             for f, (m, args, msg) in actionbyfile.items():
                 if m not in (
                     ACTION_GET,
@@ -2404,10 +2496,10 @@ def _update(
                     ACTION_REMOVE_GET,
                     ACTION_PATH_CONFLICT_RESOLVE,
                 ):
-                    paths.append(repo.pathto(f, cwd))
+                    paths.append(to_repo.pathto(f, cwd))
 
-            paths = sorted(paths)
-            if len(paths) > 0:
+            if paths:
+                paths = sorted(paths)
                 abort_on_conflicts(paths)
 
         # Convert to dictionary-of-lists format
@@ -2440,9 +2532,10 @@ def _update(
         if not branchmerge:  # just jump to the new rev
             fp1, fp2, xp1, xp2 = fp2, nullid, xp2, ""
         if not wc.isinmemory():
-            repo.hook("preupdate", throw=True, parent1=xp1, parent2=xp2)
+            # XXX: extend preupdate hook to support cross repo merge case
+            to_repo.hook("preupdate", throw=True, parent1=xp1, parent2=xp2)
             # note that we're in the middle of an update
-            repo.localvfs.writeutf8("updatestate", p2.hex())
+            to_repo.localvfs.writeutf8("updatestate", p2.hex())
 
         # Advertise fsmonitor when its presence could be useful.
         #
@@ -2454,11 +2547,11 @@ def _update(
         #
         # We only allow on Linux and MacOS because that's where fsmonitor is
         # considered stable.
-        fsmonitorwarning = repo.ui.configbool("fsmonitor", "warn_when_unused")
-        fsmonitorthreshold = repo.ui.configint("fsmonitor", "warn_update_file_count")
+        fsmonitorwarning = ui.configbool("fsmonitor", "warn_when_unused")
+        fsmonitorthreshold = ui.configint("fsmonitor", "warn_update_file_count")
         try:
             extensions.find("fsmonitor")
-            fsmonitorenabled = repo.ui.config("fsmonitor", "mode") != "off"
+            fsmonitorenabled = ui.config("fsmonitor", "mode") != "off"
             # We intentionally don't look at whether fsmonitor has disabled
             # itself because a) fsmonitor may have already printed a warning
             # b) we only care about the config state here.
@@ -2472,7 +2565,7 @@ def _update(
             and len(actions[ACTION_GET]) >= fsmonitorthreshold
             and sys.platform.startswith(("linux", "darwin"))
         ):
-            repo.ui.warn(
+            ui.warn(
                 _(
                     "(warning: large working directory being used without "
                     "fsmonitor enabled; enable fsmonitor to improve performance; "
@@ -2481,15 +2574,22 @@ def _update(
             )
 
         stats = applyupdates(
-            repo, actions, wc, p2, overwrite, labels=labels, ancestors=pas
+            to_repo,
+            actions,
+            wc,
+            p2,
+            overwrite,
+            labels=labels,
+            ancestors=pas,
+            from_repo=from_repo,
         )
 
         if not wc.isinmemory():
-            with repo.dirstate.parentchange():
-                repo.setparents(fp1, fp2)
-                recordupdates(repo, actions, branchmerge)
+            with to_repo.dirstate.parentchange():
+                to_repo.setparents(fp1, fp2)
+                recordupdates(to_repo, actions, branchmerge)
                 # update completed, clear state
-                util.unlink(repo.localvfs.join("updatestate"))
+                util.unlink(to_repo.localvfs.join("updatestate"))
 
                 # After recordupdates has finished, the checkout is considered
                 # finished and we should persist the sparse profile config
@@ -2498,10 +2598,10 @@ def _update(
                 # Ideally this would be part of some wider transaction framework
                 # that ensures these things all happen atomically, but that
                 # doesn't exist for the dirstate right now.
-                if hasattr(repo, "_persistprofileconfigs"):
-                    repo._persistprofileconfigs()
+                if hasattr(to_repo, "_persistprofileconfigs"):
+                    to_repo._persistprofileconfigs()
 
-    if git.isgitformat(repo) and not wc.isinmemory():
+    if git.isgitformat(to_repo) and not wc.isinmemory() and not is_crossrepo:
         if branchmerge:
             ctx = p1
             mctx = p2
@@ -2511,10 +2611,11 @@ def _update(
         git.submodulecheckout(ctx, force=force, mctx=mctx)
 
     if not wc.isinmemory():
-        repo.hook("update", parent1=xp1, parent2=xp2, error=stats[3])
+        # XXX: extend preupdate hook to support cross repo merge case
+        to_repo.hook("update", parent1=xp1, parent2=xp2, error=stats[3])
 
     # Log the number of files updated.
-    repo.ui.log("update_size", update_filecount=sum(stats))
+    ui.log("update_size", update_filecount=sum(stats))
 
     return stats
 
@@ -2686,7 +2787,7 @@ def donativecheckout(repo, p1, p2, force, wc):
     return stats
 
 
-def graft(repo, ctx, pctx, labels, keepparent=False):
+def graft(to_repo, ctx, pctx, labels, keepparent=False, from_repo=None):
     """Do a graft-like merge.
 
     This is a merge where the merge ancestor is chosen such that one
@@ -2695,27 +2796,34 @@ def graft(repo, ctx, pctx, labels, keepparent=False):
     a single parent (if keepparent is False) and tries to duplicate any
     renames/copies appropriately.
 
+    from_repo - the source repo. This may be an external Git repo.
+    to_repo - the destination repo (typically the current working repo).
     ctx - changeset to rebase
     pctx - merge base, usually ctx.p1()
     labels - merge labels eg ['local', 'graft']
     keepparent - keep second parent if any
-
     """
+    from_repo = from_repo or to_repo
+    is_crossrepo = not to_repo.is_same_repo(from_repo)
     # If we're grafting a descendant onto an ancestor, be sure to pass
     # mergeancestor=True to update. This does two things: 1) allows the merge if
     # the destination is the same as the parent of the ctx (so we can use graft
     # to copy commits), and 2) informs update that the incoming changes are
     # newer than the destination so it doesn't prompt about "remote changed foo
     # which local deleted".
-    mergeancestor = repo.changelog.isancestor(repo["."].node(), ctx.node())
+    if is_crossrepo:
+        mergeancestor = False
+    else:
+        mergeancestor = to_repo.changelog.isancestor(to_repo["."].node(), ctx.node())
 
     stats = merge(
-        repo,
+        to_repo,
         ctx,
         force=True,
         ancestor=pctx,
         mergeancestor=mergeancestor and not ctx.manifest().hasgrafts(),
         labels=labels,
+        from_repo=from_repo,
     )
 
     pother = nullid
@@ -2724,11 +2832,12 @@ def graft(repo, ctx, pctx, labels, keepparent=False):
         parents.remove(pctx)
         pother = parents[0].node()
 
-    with repo.dirstate.parentchange():
-        repo.setparents(repo["."].node(), pother)
-        repo.dirstate.write(repo.currenttransaction())
-        # fix up dirstate for copies and renames
-        copies.duplicatecopies(repo, repo[None], ctx.rev(), pctx.rev())
+    with to_repo.dirstate.parentchange():
+        to_repo.setparents(to_repo["."].node(), pother)
+        to_repo.dirstate.write(to_repo.currenttransaction())
+        if not is_crossrepo:
+            # fix up dirstate for copies and renames
+            copies.duplicatecopies(to_repo, to_repo[None], ctx.rev(), pctx.rev())
     return stats
 
 

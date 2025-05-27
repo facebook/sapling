@@ -48,6 +48,7 @@ use subprocess::Exec;
 use subprocess::Redirection as SubprocessRedirection;
 
 use crate::ExitCode;
+use crate::get_edenfs_instance;
 
 #[cfg(target_os = "macos")]
 const PURGEABLE_DATA_UTIL: &str =
@@ -273,7 +274,7 @@ async fn ignored_usage_counts_for_mount(checkout: &EdenFsCheckout) -> Result<u64
     // FilteredFS mounts require a filterId to be passed into status calls
     let mut root_id_options = RootIdOptions::default();
 
-    let instance = EdenFsInstance::global();
+    let instance = get_edenfs_instance();
     let client = instance.get_client();
     let snapshot_info = client.get_current_snapshot_info(checkout.path()).await;
 
@@ -435,22 +436,26 @@ fn get_backing_repos(checkouts: &[EdenFsCheckout]) -> HashSet<PathBuf> {
 fn get_redirections(
     checkouts: &[EdenFsCheckout],
 ) -> Result<(BTreeSet<(PathBuf, PathBuf)>, HashSet<PathBuf>)> {
+    let instance = get_edenfs_instance();
     let mut redirections = BTreeSet::new();
     let mut buck_redirections = HashSet::new();
 
     for checkout in checkouts.iter() {
-        for (_, redir) in get_effective_redirections(checkout).with_context(|| {
+        for (_, redir) in get_effective_redirections(instance, checkout).with_context(|| {
             format!(
                 "Failed to get redirections for {}",
                 checkout.path().display()
             )
         })? {
-            if let Some(target) = redir.expand_target_abspath(checkout).with_context(|| {
-                format!(
-                    "Failed to get redirection destination for {}",
-                    redir.repo_path.display()
-                )
-            })? {
+            if let Some(target) = redir
+                .expand_target_abspath(instance, checkout)
+                .with_context(|| {
+                    format!(
+                        "Failed to get redirection destination for {}",
+                        redir.repo_path.display()
+                    )
+                })?
+            {
                 redirections.insert((redir.repo_path(), target));
             }
 
@@ -552,7 +557,7 @@ fn clean_buck_redirections(buck_redirections: HashSet<PathBuf>) -> Result<()> {
 
 #[cfg(target_os = "macos")]
 fn get_purgeable_size() -> Result<u64> {
-    let instance = EdenFsInstance::global();
+    let instance = get_edenfs_instance();
     let home_dir = instance
         .get_user_home_dir()
         .and_then(|x| x.to_str())
@@ -593,7 +598,7 @@ fn get_purgeable_size() -> Result<u64> {
 
 #[cfg(target_os = "macos")]
 fn clear_purgeable_space(purgeable_space: String) -> Result<()> {
-    let instance = EdenFsInstance::global();
+    let instance = get_edenfs_instance();
     let home_dir = instance
         .get_user_home_dir()
         .and_then(|x| x.to_str())
@@ -660,7 +665,7 @@ fn get_redirect_usage_count(
 #[async_trait]
 impl crate::Subcommand for DiskUsageCmd {
     async fn run(&self) -> Result<ExitCode> {
-        let instance = EdenFsInstance::global();
+        let instance = get_edenfs_instance();
 
         let mounts = self
             .get_mounts(instance)

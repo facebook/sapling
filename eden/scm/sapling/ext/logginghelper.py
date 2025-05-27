@@ -19,11 +19,7 @@ by SCM wrappers
 
 from typing import Optional
 
-from sapling import extensions, localrepo, registrar
-
-
-configtable = {}
-configitem = registrar.configitem(configtable)
+from sapling import extensions, localrepo
 
 
 def _localrepoinit(

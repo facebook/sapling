@@ -1,10 +1,6 @@
 name: EdenSCM Rust Libraries
 
-on:
-  push:
-    branches: [ main ]
-  pull_request:
-    branches: [ main ]
+on: {}
 
 jobs:
   build:

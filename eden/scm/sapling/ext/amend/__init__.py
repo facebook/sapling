@@ -47,8 +47,6 @@ following advice for resolution will be shown::
     nextpreferdraft = true
 """
 
-from __future__ import absolute_import
-
 import io
 
 from bindings import checkout as nativecheckout
@@ -84,14 +82,6 @@ cmdtable.update(movement.cmdtable)
 cmdtable.update(split.cmdtable)
 cmdtable.update(unamend.cmdtable)
 
-configtable = {}
-configitem = registrar.configitem(configtable)
-
-configitem("amend", "alwaysnewest", default=False)
-configitem("amend", "date", default=None)
-configitem("amend", "education", default=None)
-configitem("commands", "amend.autorebase", default=True)
-configitem("update", "nextpreferdraft", default=True)
 
 testedwith = "ships-with-fb-ext"
 
@@ -379,15 +369,15 @@ def amend(ui, repo, *pats, **opts):
         noconflict = None
 
         # RESTACK_NO_CONFLICT requires IMM.
-        if conf == RESTACK_NO_CONFLICT and not ui.config(
-            "rebase", "experimental.inmemory", False
+        if conf == RESTACK_NO_CONFLICT and not ui.configbool(
+            "rebase", "experimental.inmemory"
         ):
             conf = RESTACK_DEFAULT
 
         # If they explicitly disabled the old behavior, disable the new behavior
         # too, for now.
         # internal config: commands.amend.autorebase
-        if ui.configbool("commands", "amend.autorebase") is False:
+        if ui.configbool("commands", "amend.autorebase", True) is False:
             # In the future we'll add a nag message here.
             conf = RESTACK_NEVER
 

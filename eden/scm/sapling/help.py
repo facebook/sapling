@@ -10,11 +10,12 @@
 # This software may be used and distributed according to the terms of the
 # GNU General Public License version 2 or any later version.
 
-from __future__ import absolute_import
 
 import itertools
 import textwrap
 from typing import List, Set
+
+import bindings
 
 from bindings import cliparser
 
@@ -48,6 +49,9 @@ _exclkeywords: Set[str] = {
     _("(EXPERIMENTAL)"),
 }
 
+# Exclude even with --verbose
+_forced_exclude_keywords = [] if bindings.version.IS_FBCODE else ["(FBCODE)"]
+
 
 def listexts(header, exts, indent: int = 1, showdeprecated: bool = False) -> List[str]:
     """return a text listing of the given extensions"""
@@ -56,6 +60,7 @@ def listexts(header, exts, indent: int = 1, showdeprecated: bool = False) -> Lis
         for name, desc in sorted(exts.items()):
             if not showdeprecated and any(w in desc for w in _exclkeywords):
                 continue
+
             rst.append("%s:%s: %s\n" % (" " * indent, name, desc))
     if rst:
         rst.insert(0, "\n%s\n\n" % header)
@@ -124,6 +129,8 @@ def optrst(header: str, options, verbose) -> str:
             optlabel = _("VALUE")  # default label
 
         if not verbose and any(w in desc for w in _exclkeywords):
+            continue
+        if any(w in desc for w in _forced_exclude_keywords):
             continue
 
         so = ""

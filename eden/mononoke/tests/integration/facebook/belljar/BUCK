@@ -19,7 +19,7 @@ python_library(
 #     fbcode_path_prefix_triggers = [
 #         "eden/mononoke/scs/client",
 #     ],
-#     oncall = "scm_server_infra",
+#     oncall = "scm_server_treehugger",
 #     rpms = ["fb-scsc"],
 #     deps = [":scsc_allowlist"],
 # )

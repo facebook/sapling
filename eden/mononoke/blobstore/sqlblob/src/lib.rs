@@ -397,7 +397,10 @@ impl Sqlblob {
         &self.data_store
     }
 
-    pub fn get_keys_from_shard(&self, shard_num: usize) -> impl Stream<Item = Result<String>> {
+    pub fn get_keys_from_shard(
+        &self,
+        shard_num: usize,
+    ) -> impl Stream<Item = Result<String>> + use<> {
         self.data_store.get_keys_from_shard(shard_num)
     }
 

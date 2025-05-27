@@ -243,6 +243,26 @@ class EdenConfig : private ConfigSettingManager {
       false,
       this};
 
+  /**
+   * Takeover receive timeout in seconds. This is the time that the client will
+   * wait for the server to send the takeover data. This timeout applies to each
+   * chunk of data when sending data in chunks.
+   */
+  ConfigSetting<std::chrono::nanoseconds> takeoverReceiveTimeout{
+      "core:takeover-receive-timeout",
+      std::chrono::seconds(150),
+      this};
+
+  /**
+   * Temporary config to control roll out of
+   * TakeoverCapabilities::CHUNKED_MESSAGE protocol
+   * Delete this config when rollout is 100% complete
+   */
+  ConfigSetting<bool> shouldChunkTakeoverData{
+      "core:should-chunk-takeover-data",
+      false,
+      this};
+
   // [config]
 
   /**
@@ -558,6 +578,20 @@ class EdenConfig : private ConfigSettingManager {
       false,
       this};
 
+  ConfigSetting<bool> warmTreeAuxCacheIfTreeFromLocalStore{
+      "store:warm-aux-cache-tree-local-store",
+      false,
+      this};
+
+  ConfigSetting<bool> warmTreeAuxLocalCacheIfTreeFromBackingStore{
+      "store:warm-aux-local-cache-tree-backing-store",
+      false,
+      this};
+
+  ConfigSetting<bool> warmTreeAuxMemCacheIfTreeFromBackingStore{
+      "store:warm-aux-mem-cache-tree-backing-store",
+      false,
+      this};
   // [fuse]
 
   /**
@@ -1094,6 +1128,11 @@ class EdenConfig : private ConfigSettingManager {
       100,
       this};
 
+  ConfigSetting<bool> hgForceDisableLocalStoreCaching{
+      "hg:force-disable-localstore",
+      false,
+      this};
+
   ConfigSetting<bool> hgEnableBlobMetaLocalStoreCaching{
       "hg:cache-blob-metadata-in-localstore",
       true,
@@ -1411,8 +1450,9 @@ class EdenConfig : private ConfigSettingManager {
    * Controls whether EdenFS will periodically garbage collect the working
    * directory.
    *
-   * For now, periodic GC only makes sense on Windows, with unknown behavior on
-   * Linux and macOS. For that reason, setting this on non-Windows is a no-op.
+   * For now, periodic GC only makes sense on Windows. On macOS, it is
+   * currently in a limited dogfooding phase and its behavior is not
+   * yet fully defined. Behavior on Linux is unknown.
    */
   ConfigSetting<bool> enableGc{
       "experimental:enable-garbage-collection",
@@ -1587,6 +1627,15 @@ class EdenConfig : private ConfigSettingManager {
   ConfigSetting<bool> notifyHealthReportIssues{
       "notifications:notify-health-report-issues",
       false,
+      this};
+
+  /**
+   * The age threshold that the health-report command should utilize to check if
+   * the running EdenFS version is stale.
+   */
+  ConfigSetting<size_t> healthReportStaleVersionThresholdDays{
+      "notifications:health-report-stale-version-threshold-days",
+      45,
       this};
 
   /**

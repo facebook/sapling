@@ -446,7 +446,7 @@ impl ScubaMiddlewareState {
         K: Into<String>,
         V: Into<ScubaValue>,
     {
-        if let Some(ref mut scuba) = scuba {
+        if let Some(scuba) = scuba {
             scuba.add(key, value);
         }
     }

@@ -5,14 +5,7 @@ oncall("sapling")
 rust_python_library(
     name = "pycliparser",
     srcs = glob(["src/**/*.rs"]),
-    autocargo = {"cargo_toml_config": {"dependencies_override": {"dependencies": {
-        "cpython": {
-            "features": [],
-            "git": None,
-            "rev": None,
-        },
-        "sapling-cliparser": {"features": ["python"]},
-    }}}},
+    autocargo = {"cargo_toml_config": {"dependencies_override": {"dependencies": {"sapling-cliparser": {"features": ["python"]}}}}},
     crate_root = "src/lib.rs",
     deps = [
         "//eden/scm/lib/clidispatch:clidispatch",

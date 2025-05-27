@@ -557,11 +557,6 @@ class ChangesTestCommon(testBase):
 
 @testcase.eden_repo_test
 class ChangesTestNix(JournalTestBase):
-    def setUp(self) -> None:
-        if sys.platform == "win32":
-            self.skipTest("Non-Windows test")
-        return super().setUp()
-
     def test_add_file(self):
         # When adding a file, it is technically written to so there's an additional modified operation
         changes = self.setup_test_add_file()
@@ -694,6 +689,22 @@ class ChangesTestNix(JournalTestBase):
         ]
         self.assertTrue(self.check_changes(changes.changes, expected_changes))
         self.assertEqual("test_contents", self.read_file("gone_file"))
+
+    def test_replace_folder(self):
+        self.eden_repo.mkdir("test_folder")
+        self.eden_repo.mkdir("gone_folder")
+        position = self.client.getCurrentJournalPosition(self.mount_path_bytes)
+        self.rename("test_folder", "gone_folder")
+        changes = self.getChangesSinceV2(position=position)
+        expected_changes = [
+            buildSmallChange(
+                SmallChangeNotification.REPLACED,
+                Dtype.DIR,
+                from_path=b"test_folder",
+                to_path=b"gone_folder",
+            ),
+        ]
+        self.assertTrue(self.check_changes(changes.changes, expected_changes))
 
     def test_copy_file_different_folder(self):
         # Copying a file over a different file shows up as a "Modify"
@@ -943,11 +954,6 @@ class ChangesTestNix(JournalTestBase):
 
 @testcase.eden_repo_test
 class ChangesTestWin(WindowsJournalTestBase):
-    def setUp(self) -> None:
-        if sys.platform != "win32":
-            self.skipTest("Windows only test")
-        return super().setUp()
-
     def test_add_file(self):
         # In windows, the file is created and then modified in projfs, then eden gets
         # a single ADDED notification

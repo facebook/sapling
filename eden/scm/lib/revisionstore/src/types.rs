@@ -82,8 +82,8 @@ impl StoreKey {
 
     pub fn maybe_as_key(&self) -> Option<&Key> {
         match self {
-            StoreKey::HgId(ref key) => Some(key),
-            StoreKey::Content(_, ref k) => k.as_ref(),
+            StoreKey::HgId(key) => Some(key),
+            StoreKey::Content(_, k) => k.as_ref(),
         }
     }
 }

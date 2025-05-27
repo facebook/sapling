@@ -485,7 +485,7 @@ fn path_complete(inp: &[u8]) -> IResult<&[u8], MPath> {
 }
 
 macro_rules! replace_expr {
-    ($_t:tt $sub:expr) => {
+    ($_t:tt $sub:expr_2021) => {
         $sub
     };
 }
@@ -499,13 +499,13 @@ macro_rules! count_tts {
 /// fixed number of named parameters.
 macro_rules! command_common {
     // No parameters
-    ( $i:expr, $name:expr, $req:ident, $star:expr, $parseparam:expr, { } ) => {
+    ( $i:expr_2021, $name:expr_2021, $req:ident, $star:expr_2021, $parseparam:expr_2021, { } ) => {
         call!($i, parse_command, $name, $parseparam, $star, |_| Ok($req))
     };
 
     // One key/parser pair for each parameter
-    ( $i:expr, $name:expr, $req:ident, $star:expr, $parseparam:expr,
-            { $( ($key:ident, $parser:expr) )+ } ) => {
+    ( $i:expr_2021, $name:expr_2021, $req:ident, $star:expr_2021, $parseparam:expr_2021,
+            { $( ($key:ident, $parser:expr_2021) )+ } ) => {
         call!($i, parse_command, $name, $parseparam, $star+count_tts!( $($key)+ ),
             |kv| Ok($req {
                 $( $key: parseval(&kv, stringify!($key), $parser)?, )*
@@ -515,15 +515,15 @@ macro_rules! command_common {
 }
 
 macro_rules! command {
-    ( $i:expr, $name:expr, $req:ident, $parseparam:expr,
-            { $( $key:ident => $parser:expr, )* } ) => {
+    ( $i:expr_2021, $name:expr_2021, $req:ident, $parseparam:expr_2021,
+            { $( $key:ident => $parser:expr_2021, )* } ) => {
         command_common!($i, $name, $req, 0, $parseparam, { $(($key, $parser))* } )
     };
 }
 
 macro_rules! command_star {
-    ( $i:expr, $name:expr, $req:ident, $parseparam:expr,
-            { $( $key:ident => $parser:expr, )* } ) => {
+    ( $i:expr_2021, $name:expr_2021, $req:ident, $parseparam:expr_2021,
+            { $( $key:ident => $parser:expr_2021, )* } ) => {
         command_common!($i, $name, $req, 1, $parseparam, { $(($key, $parser))* } )
     };
 }

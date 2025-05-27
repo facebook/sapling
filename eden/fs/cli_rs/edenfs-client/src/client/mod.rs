@@ -8,12 +8,14 @@
 mod connector;
 pub mod mock_client;
 pub mod mock_service;
+pub mod thrift;
 pub mod thrift_client;
 
 use std::fmt::Debug;
 use std::fmt::Display;
 use std::future::Future;
 use std::path::PathBuf;
+use std::sync::Arc;
 use std::time::Duration;
 
 use async_trait::async_trait;
@@ -21,12 +23,13 @@ use edenfs_error::ConnectAndRequestError;
 use edenfs_error::HasErrorHandlingStrategy;
 use edenfs_error::Result;
 use fbinit::FacebookInit;
-use tokio::sync::Semaphore;
 
 use crate::client::connector::Connector;
 use crate::client::connector::StreamingEdenFsConnector;
 #[cfg(not(test))]
 use crate::client::thrift_client::ThriftClient;
+use crate::methods::EdenThriftMethod;
+use crate::use_case::UseCase;
 #[cfg(test)]
 pub type ThriftClient = crate::client::mock_client::MockThriftClient;
 
@@ -66,13 +69,13 @@ pub trait Client: Send + Sync {
     /// # Parameters
     ///
     /// * `fb` - Facebook initialization context
+    /// * `use_case` - Use case configuration settings
     /// * `socket_file` - Path to the EdenFS socket file
-    /// * `semaphore` - Optional semaphore to limit concurrent requests
     ///
     /// # Returns
     ///
     /// Returns a new `Client` instance.
-    fn new(fb: FacebookInit, socket_file: PathBuf, semaphore: Option<Semaphore>) -> Self;
+    fn new(fb: FacebookInit, use_case: Arc<UseCase>, socket_file: PathBuf) -> Self;
 
     /// Sets a custom stats handler for the client.
     ///
@@ -103,7 +106,9 @@ pub trait Client: Send + Sync {
         f: F,
     ) -> std::result::Result<T, ConnectAndRequestError<E>>
     where
-        F: Fn(&<StreamingEdenFsConnector as Connector>::Client) -> Fut + Send + Sync,
+        F: Fn(&<StreamingEdenFsConnector as Connector>::Client) -> (Fut, EdenThriftMethod)
+            + Send
+            + Sync,
         Fut: Future<Output = Result<T, E>> + Send,
         T: Send,
         E: HasErrorHandlingStrategy + Debug + Display,
@@ -134,7 +139,9 @@ pub trait Client: Send + Sync {
         f: F,
     ) -> std::result::Result<T, ConnectAndRequestError<E>>
     where
-        F: Fn(&<StreamingEdenFsConnector as Connector>::Client) -> Fut + Send + Sync,
+        F: Fn(&<StreamingEdenFsConnector as Connector>::Client) -> (Fut, EdenThriftMethod)
+            + Send
+            + Sync,
         Fut: Future<Output = Result<T, E>> + Send,
         T: Send,
         E: HasErrorHandlingStrategy + Debug + Display;
@@ -158,18 +165,14 @@ impl EdenFsClient {
     /// # Parameters
     ///
     /// * `fb` - Facebook initialization context
-    /// * `socket_file` - Path to the EdenFS socket file
-    /// * `semaphore` - Optional semaphore to limit concurrent requests
     ///
+    /// * `use_case_id` - A unique identifier for a use case - used to access configuration settings and attribute usage to a given use case.
+    /// * `socket_file` - Path to the EdenFS socket file
     /// # Returns
     ///
     /// Returns a new `EdenFsClient` instance.
-    pub(crate) fn new(
-        fb: FacebookInit,
-        socket_file: PathBuf,
-        semaphore: Option<Semaphore>,
-    ) -> Self {
-        Self(ThriftClient::new(fb, socket_file, semaphore))
+    pub(crate) fn new(fb: FacebookInit, use_case: Arc<UseCase>, socket_file: PathBuf) -> Self {
+        Self(ThriftClient::new(fb, use_case, socket_file))
     }
 }
 

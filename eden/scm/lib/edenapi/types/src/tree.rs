@@ -5,6 +5,9 @@
  * LICENSE file in the root directory of this source tree.
  */
 
+use manifest_augmented_tree::AugmentedTree;
+use manifest_augmented_tree::AugmentedTreeEntry;
+use manifest_augmented_tree::AugmentedTreeWithDigest;
 use minibytes::Bytes;
 #[cfg(any(test, feature = "for-tests"))]
 use quickcheck::Arbitrary;
@@ -14,9 +17,6 @@ use serde_derive::Deserialize;
 use serde_derive::Serialize;
 use thiserror::Error;
 use type_macros::auto_wire;
-use types::AugmentedTree;
-use types::AugmentedTreeEntry;
-use types::AugmentedTreeWithDigest;
 use types::hgid::HgId;
 use types::hgid::NULL_ID;
 use types::key::Key;

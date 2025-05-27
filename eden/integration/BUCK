@@ -486,6 +486,7 @@ python_unittest(
     env = artifacts["env"],
     supports_static_listing = False,
     deps = [
+        "fbsource//third-party/pypi/psutil:psutil",
         "//eden/fs/cli:lib",
         "//eden/integration/lib:lib",
         "//fb303/thrift:fb303_core-py-deprecated",

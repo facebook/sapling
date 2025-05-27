@@ -11,6 +11,7 @@ use std::str::FromStr;
 
 use mercurial_types::HgChangesetId;
 use mercurial_types::HgNodeHash;
+use mononoke_types::hash::GitSha1;
 use mononoke_types::sha1_hash::Sha1;
 use mysql_common::value::convert::ConvIr;
 use mysql_common::value::convert::FromValue;
@@ -80,5 +81,17 @@ impl From<CloudChangesetId> for HgChangesetId {
 impl From<HgChangesetId> for CloudChangesetId {
     fn from(cs: HgChangesetId) -> Self {
         CloudChangesetId(*cs.into_nodehash().sha1())
+    }
+}
+
+impl From<GitSha1> for CloudChangesetId {
+    fn from(cs: GitSha1) -> Self {
+        CloudChangesetId(Sha1::from_byte_array(cs.into_inner()))
+    }
+}
+
+impl From<CloudChangesetId> for GitSha1 {
+    fn from(cs: CloudChangesetId) -> Self {
+        GitSha1::from_byte_array(cs.0.into_byte_array())
     }
 }

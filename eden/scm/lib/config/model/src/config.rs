@@ -91,14 +91,20 @@ pub trait ConfigExt: Config {
     /// Get a config item. Convert to type `T`.
     fn get_opt<T: FromConfig>(&self, section: &str, name: &str) -> Result<Option<T>> {
         self.get(section, name)
-            .map(|bytes| T::try_from_str_with_config(&self, &bytes))
+            .map(|bytes| {
+                T::try_from_str_with_config(&self, &bytes)
+                    .map_err(|e| Error::Invalid(section.into(), name.into(), Box::new(e)))
+            })
             .transpose()
     }
 
     /// Get a nonempty config item. Convert to type `T`.
     fn get_nonempty_opt<T: FromConfig>(&self, section: &str, name: &str) -> Result<Option<T>> {
         self.get_nonempty(section, name)
-            .map(|bytes| T::try_from_str_with_config(&self, &bytes))
+            .map(|bytes| {
+                T::try_from_str_with_config(&self, &bytes)
+                    .map_err(|e| Error::Invalid(section.into(), name.into(), Box::new(e)))
+            })
             .transpose()
     }
 
@@ -311,5 +317,13 @@ mod tests {
             map.must_get::<Vec<String>>("foo", "nope"),
             Err(Error::NotSet(_, _))
         ));
+    }
+
+    #[test]
+    fn test_config_name_in_convert_error() {
+        let map: BTreeMap<&str, &str> = vec![("foo.bar", "1.2")].into_iter().collect();
+        let e = map.must_get::<u32>("foo", "bar").unwrap_err();
+        let e = e.to_string();
+        assert!(e.contains("foo.bar"));
     }
 }

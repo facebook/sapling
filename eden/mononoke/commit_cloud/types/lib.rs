@@ -5,10 +5,12 @@
  * GNU General Public License version 2.
  */
 
+use metaconfig_types::CommitIdentityScheme;
 pub mod changeset;
 pub mod error;
 pub mod references;
 pub mod smartlog;
+
 pub use error::CommitCloudError;
 pub use error::CommitCloudInternalError;
 pub use error::CommitCloudUserError;
@@ -26,6 +28,24 @@ pub use smartlog::SmartlogData;
 pub use smartlog::SmartlogFilter;
 pub use smartlog::SmartlogFlag;
 pub use smartlog::SmartlogNode;
+
+#[derive(Debug, Clone)]
+pub enum ChangesetScheme {
+    Hg,
+    Git,
+}
+
+impl TryFrom<CommitIdentityScheme> for ChangesetScheme {
+    type Error = anyhow::Error;
+    fn try_from(scheme: CommitIdentityScheme) -> Result<Self, Self::Error> {
+        let res = match scheme {
+            CommitIdentityScheme::HG => ChangesetScheme::Hg,
+            CommitIdentityScheme::GIT => ChangesetScheme::Git,
+            _ => anyhow::bail!("commit cloud: repo has unsupported scheme: {:?}", scheme),
+        };
+        Ok(res)
+    }
+}
 
 pub struct WorkspaceSharingData {
     pub acl_name: String,

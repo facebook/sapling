@@ -38,8 +38,6 @@ Configs:
     in a json format.
 """
 
-from __future__ import absolute_import
-
 import errno
 import io
 import mmap
@@ -90,10 +88,6 @@ testedwith = "ships-with-fb-ext"
 cmdtable = {}
 command = registrar.command(cmdtable)
 
-configtable = {}
-configitem = registrar.configitem(configtable)
-
-configitem("pushrebase", "blocknonpushrebase", default=False)
 
 rebaseparttype = "b2x:rebase"
 rebasepackparttype = "b2x:rebasepackpart"
@@ -211,7 +205,9 @@ def extsetup(ui):
 def reposetup(ui, repo):
     if isnonpushrebaseblocked(repo):
         repo.ui.setconfig(
-            "hooks", "prechangegroup.blocknonpushrebase", blocknonpushrebase
+            "hooks",
+            "prechangegroup.blocknonpushrebase",
+            "python:sapling.ext.pushrebase.blocknonpushrebase",
         )
 
     # https://www.mercurial-scm.org/repo/hg/rev/a1e70c1dbec0
@@ -228,8 +224,8 @@ def isnonpushrebaseblocked(repo):
     return repo.ui.configbool("pushrebase", "blocknonpushrebase")
 
 
-def blocknonpushrebase(ui, repo, **kwargs):
-    if not repo.ui.configbool("pushrebase", pushrebasemarker):
+def blocknonpushrebase(repo, **kwargs):
+    if not repo.volatile_state.get(pushrebasemarker, False):
         raise error.Abort(
             _(
                 "this repository requires that you enable the "
@@ -716,7 +712,7 @@ def _exchangesetup():
 
                 ontoctx = resolveonto(op.repo, ontoparam)
 
-                ui.setconfig("pushrebase", pushrebasemarker, True)
+                op.repo.volatile_state[pushrebasemarker] = True
                 verbose = ontoctx is not None and ui.configbool("pushrebase", "verbose")
                 usestackpush = ontoctx is not None and ui.configbool(
                     "pushrebase", "trystackpush", True

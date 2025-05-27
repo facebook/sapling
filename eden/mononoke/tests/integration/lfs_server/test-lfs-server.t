@@ -57,7 +57,7 @@
   ab02c2a1923c8eb11cb3ddab70320746d71d32ad63f255698dc67c3295757746  -
 
   $ wc -c gzip
-  36 gzip
+  43 gzip
   $ gunzip < gzip | sha256sum
   ab02c2a1923c8eb11cb3ddab70320746d71d32ad63f255698dc67c3295757746  -
 

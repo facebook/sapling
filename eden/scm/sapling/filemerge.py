@@ -10,7 +10,6 @@
 # This software may be used and distributed according to the terms of the
 # GNU General Public License version 2 or any later version.
 
-from __future__ import absolute_import
 
 import os
 import re
@@ -284,7 +283,7 @@ def _picktool(repo, ui, mctx):
     for k, v in ui.configitems("merge-tools"):
         t = k.split(".")[0]
         if t not in tools:
-            tools[t] = int(_toolstr(ui, t, "priority"))
+            tools[t] = int(_toolstr(ui, t, "priority") or 0)
         if _toolbool(ui, t, "disabled"):
             disabled.add(t)
     names = tools.keys()
@@ -921,6 +920,8 @@ def _xmerge(repo, mynode, orig, fcd, fco, fca, toolconf, files, labels=None):
         ui = repo.ui
 
         args = _toolstr(ui, tool, "args")
+        if args is None:
+            args = "$local $base $other"
         if "$output" in args:
             # read input from backup, write to original
             out = a

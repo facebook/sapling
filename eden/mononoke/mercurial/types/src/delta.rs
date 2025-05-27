@@ -193,21 +193,21 @@ impl Arbitrary for Fragment {
 }
 
 struct GenRngWrapper<'a> {
-    gen: &'a mut Gen,
+    r#gen: &'a mut Gen,
 }
 
 impl<'a> rand::RngCore for GenRngWrapper<'a> {
     fn next_u32(&mut self) -> u32 {
-        u32::arbitrary(self.gen)
+        u32::arbitrary(self.r#gen)
     }
 
     fn next_u64(&mut self) -> u64 {
-        u64::arbitrary(self.gen)
+        u64::arbitrary(self.r#gen)
     }
 
     fn fill_bytes(&mut self, dest: &mut [u8]) {
         for b in dest {
-            *b = u8::arbitrary(self.gen);
+            *b = u8::arbitrary(self.r#gen);
         }
     }
 
@@ -228,7 +228,7 @@ fn arbitrary_frag_content(g: &mut Gen) -> Vec<u8> {
     // TODO: make this more rigorous, e.g. by using params such that p95 = size.
 
     let lognormal = LogNormal::new(-3.0, 2.0).expect("Failed to make LogNormal");
-    let content_len = ((size as f64) * lognormal.sample(&mut GenRngWrapper { gen: g })) as usize;
+    let content_len = ((size as f64) * lognormal.sample(&mut GenRngWrapper { r#gen: g })) as usize;
 
     let mut v = Vec::with_capacity(content_len);
     for b in v.iter_mut() {

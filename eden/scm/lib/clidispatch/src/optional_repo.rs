@@ -75,8 +75,8 @@ impl OptionalRepo {
 
     pub fn config(&self) -> &Arc<dyn Config> {
         match self {
-            OptionalRepo::Some(ref repo) => repo.config(),
-            OptionalRepo::None(ref config) => config,
+            OptionalRepo::Some(repo) => repo.config(),
+            OptionalRepo::None(config) => config,
         }
     }
 

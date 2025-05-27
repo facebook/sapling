@@ -4,7 +4,7 @@
 # GNU General Public License version 2.
 
 # shallowutil.py -- remotefilelog utilities
-from __future__ import absolute_import
+
 
 import errno
 import os

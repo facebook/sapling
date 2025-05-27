@@ -19,13 +19,18 @@ edenfs-error = { version = "0.1.0", path = "../edenfs-error" }
 edenfs-utils = { version = "0.1.0", path = "../edenfs-utils" }
 fbinit = { version = "0.2.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 futures = { version = "0.3.30", features = ["async-await", "compat"] }
+futures_stats = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 hex = { version = "0.4.3", features = ["alloc"] }
 hg_util = { package = "sapling-util", version = "0.1.0", path = "../../../scm/lib/util" }
+lazy_static = { version = "1.5", features = ["spin_no_std"], default-features = false }
 libc = "0.2.139"
 parking_lot = { version = "0.12.1", features = ["send_guard"] }
 pathdiff = "0.2"
+rand = { version = "0.8", features = ["small_rng"] }
 regex = "1.11.1"
 sapling-atomicfile = { version = "0.1.0", path = "../../../scm/lib/atomicfile" }
+sapling-config-remote-loader = { version = "0.1.0", path = "../../../scm/lib/config/remote-loader" }
+sapling-http-client = { version = "0.1.0", path = "../../../scm/lib/http-client" }
 sapling-thrift-types = { version = "0.1.0", path = "../../../scm/lib/thrift-types" }
 sapling-util = { version = "0.1.0", path = "../../../scm/lib/util" }
 serde = { version = "1.0.185", features = ["derive", "rc"] }
@@ -35,8 +40,8 @@ strum = { version = "0.26.2", features = ["derive"] }
 subprocess = "0.2.9"
 sysinfo = "0.30.11"
 thrift_streaming_clients = { version = "0.1.0", path = "../../service/thrift_streaming/clients" }
-tokio = { version = "1.41.0", features = ["full", "test-util", "tracing"] }
-toml = "0.8.19"
+tokio = { version = "1.45.0", features = ["full", "test-util", "tracing"] }
+toml = "0.8.22"
 tracing = { version = "0.1.41", features = ["attributes", "valuable"] }
 uuid = { version = "1.2", features = ["serde", "v4", "v5", "v6", "v7", "v8"] }
 
@@ -44,7 +49,6 @@ uuid = { version = "1.2", features = ["serde", "v4", "v5", "v6", "v7", "v8"] }
 fb303_core_clients = { version = "0.0.0", git = "https://github.com/facebook/fb303.git", branch = "main" }
 fbinit-tokio = { version = "0.1.2", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 mockall = "0.13.1"
-rand = { version = "0.8", features = ["small_rng"] }
 serde_test = "1.0.167"
 tempfile = "3.15"
 

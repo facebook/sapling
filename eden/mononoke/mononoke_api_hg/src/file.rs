@@ -86,7 +86,7 @@ impl<R: MononokeRepo> HgFileContext<R> {
         &self,
         path: NonRootMPath,
         max_length: Option<u32>,
-    ) -> impl TryStream<Ok = HgFileHistoryEntry, Error = MononokeError> {
+    ) -> impl TryStream<Ok = HgFileHistoryEntry, Error = MononokeError> + use<R> {
         let ctx = self.repo_ctx.ctx().clone();
         let repo = self.repo_ctx.repo().clone();
         let filenode_id = self.node_id();

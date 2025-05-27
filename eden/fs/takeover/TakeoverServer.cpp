@@ -82,7 +82,7 @@ class TakeoverServer::ConnHandler {
   template <typename... Args>
   [[noreturn]] void fail(Args&&... args) {
     auto msg = folly::to<std::string>(std::forward<Args>(args)...);
-    XLOG(ERR) << "takeover socket error: " << msg;
+    XLOGF(ERR, "takeover socket error: {}", msg);
     throw std::runtime_error(msg);
   }
 
@@ -90,13 +90,27 @@ class TakeoverServer::ConnHandler {
     State(folly::EventBase* evb, folly::File socket)
         : socket{evb, std::move(socket)} {}
 
+    // TakeoverCapabilities::PING is set if the server should send a
+    // "ready" ping to the client.
     bool shouldPing = false;
+
+    // TakeoverCapabilities::CHUNKED_MESSAGE is set if the server supports
+    // chunked messages.
+    bool shouldChunk = false;
+
     // FutureUnixSocket must always be accessed on the EventBase.
     FutureUnixSocket socket;
     int32_t protocolVersion =
         TakeoverData::kTakeoverProtocolVersionNeverSupported;
     uint64_t protocolCapabilities = 0;
   };
+
+  FOLLY_NODISCARD folly::Future<folly::Unit> sendTakeoverDataMessage(
+      State& state,
+      UnixSocket::Message&& msg);
+  FOLLY_NODISCARD folly::Future<folly::Unit> sendTakeoverDataMessageInChunks(
+      State& state,
+      std::unique_ptr<folly::IOBuf> msgData);
 
   TakeoverServer* const server_;
   const uint64_t supportedCapabilities_;
@@ -134,11 +148,13 @@ Future<Unit> TakeoverServer::ConnHandler::start() noexcept {
           // an error message back to the peer.  However, for the sake
           // of clarity in the control flow we bubble up the error
           // as if we could do that.
-          XLOG(ERR) << "Exception while waiting for takeover version from "
-                       "the client.  Most likely reason is a client version "
-                       "mismatch, you may need to perform a full "
-                       "`eden shutdown ; eden daemon` restart to migrate."
-                    << msg.exception();
+          XLOGF(
+              ERR,
+              "Exception while waiting for takeover version from "
+              "the client.  Most likely reason is a client version "
+              "mismatch, you may need to perform a full "
+              "`eden shutdown ; eden daemon` restart to migrate. {}",
+              folly::exceptionStr(msg.exception()));
           return folly::makeFuture<TakeoverData>(msg.exception());
         }
 
@@ -175,11 +191,21 @@ Future<Unit> TakeoverServer::ConnHandler::start() noexcept {
           state.protocolCapabilities = protocolCapabilities;
         }
 
-        XLOG(DBG7) << "Protocol version: " << state.protocolVersion
-                   << "; Protocol Capabilities: " << state.protocolCapabilities;
+        XLOGF(
+            DBG7,
+            "Protocol version: {}; Protocol Capabilities: {}",
+            state.protocolVersion,
+            state.protocolCapabilities);
 
         state.shouldPing =
             (state.protocolCapabilities & TakeoverCapabilities::PING);
+        state.shouldChunk =
+            (state.protocolCapabilities &
+             TakeoverCapabilities::CHUNKED_MESSAGE);
+
+        state.shouldChunk =
+            server_->getTakeoverHandler()->shouldChunkTakeoverData();
+
         return server_->getTakeoverHandler()->startTakeoverShutdown();
       })
       .via(server_->eventBase_)
@@ -188,10 +214,10 @@ Future<Unit> TakeoverServer::ConnHandler::start() noexcept {
           return sendError(data.exception());
         }
         if (state_.get().shouldPing) {
-          XLOG(DBG7) << "sending ready ping to takeover client";
+          XLOGF(DBG7, "sending ready ping to takeover client");
           return pingThenSendTakeoverData(std::move(data.value()));
         } else {
-          XLOG(DBG7) << "not sending ready ping to takeover client";
+          XLOGF(DBG7, "not sending ready ping to takeover client");
           return sendTakeoverData(std::move(data.value()));
         }
       });
@@ -199,7 +225,10 @@ Future<Unit> TakeoverServer::ConnHandler::start() noexcept {
 
 Future<Unit> TakeoverServer::ConnHandler::sendError(
     const folly::exception_wrapper& error) {
-  XLOG(ERR) << "error while performing takeover shutdown: " << error;
+  XLOGF(
+      ERR,
+      "error while performing takeover shutdown: {}",
+      folly::exceptionStr(error));
   auto& state = state_.get();
   if (state.socket) {
     // Send the error to the client.
@@ -272,7 +301,7 @@ Future<Unit> TakeoverServer::ConnHandler::sendTakeoverData(
     server_->faultInjector_.check("takeover", "error during send");
     data.serialize(state.protocolCapabilities, msg);
     for (auto& file : msg.files) {
-      XLOG(DBG7) << "sending fd for takeover: " << file.fd();
+      XLOGF(DBG7, "sending fd for takeover: {}", file.fd());
     }
   } catch (...) {
     auto ew = folly::exception_wrapper{std::current_exception()};
@@ -281,10 +310,12 @@ Future<Unit> TakeoverServer::ConnHandler::sendTakeoverData(
         TakeoverData::serializeError(state.protocolCapabilities, ew));
   }
 
-  XLOG(INFO) << "Sending takeover data to new process: "
-             << msg.data.computeChainDataLength() << " bytes";
+  XLOGF(
+      INFO,
+      "Sending takeover data to new process: {} bytes",
+      msg.data.computeChainDataLength());
 
-  return state.socket.send(std::move(msg))
+  return sendTakeoverDataMessage(state, std::move(msg))
       .thenTry([promise = std::move(data.takeoverComplete)](
                    folly::Try<Unit>&& sendResult) mutable {
         if (sendResult.hasException()) {
@@ -293,6 +324,62 @@ Future<Unit> TakeoverServer::ConnHandler::sendTakeoverData(
           // Set an uninitialized optional here to avoid an attempted recovery
           promise.setValue(std::nullopt);
         }
+      });
+}
+
+Future<Unit> TakeoverServer::ConnHandler::sendTakeoverDataMessage(
+    State& state,
+    UnixSocket::Message&& msg) {
+  if (state.shouldChunk) {
+    UnixSocket::Message firstChunkFlagMsg;
+    firstChunkFlagMsg.data = TakeoverData::serializeFirstChunk();
+
+    return state.socket.send(std::move(firstChunkFlagMsg))
+        .thenValue([this, &msg, &state](auto&&) {
+          XLOGF(DBG7, "first chunk FLAG msg sent");
+
+          // Create a new message with the first chunk
+          // Only the first chunk of message has msg.files
+          // The rest of the chunks will have empty msg.files
+          UnixSocket::Message fisrtChunkMsgWithFiles{
+              *(msg.data.cloneOne()), std::move(msg.files)};
+
+          return state.socket.send(std::move(fisrtChunkMsgWithFiles))
+              .thenValue([this, msg = std::move(msg), &state](auto&&) {
+                return sendTakeoverDataMessageInChunks(
+                    state, std::make_unique<folly::IOBuf>(msg.data));
+              });
+        })
+        .thenValue([&state](auto&&) mutable {
+          UnixSocket::Message lastChunckMsg;
+          lastChunckMsg.data = TakeoverData::serializeLastChunk();
+          return state.socket.send(std::move(lastChunckMsg));
+        });
+  } else {
+    return state.socket.send(std::move(msg));
+  }
+}
+
+Future<Unit> TakeoverServer::ConnHandler::sendTakeoverDataMessageInChunks(
+    State& state,
+    std::unique_ptr<folly::IOBuf> msgData) {
+  // Pop the first chunk from the msgData because it was already sent
+  msgData = msgData->pop();
+  if (!msgData) {
+    return folly::makeFuture();
+  }
+
+  // Create a new message chunk. Note: these message chunks don't have files
+  UnixSocket::Message chunkMsg(std::move(*(msgData->cloneOne())));
+  return state.socket
+      .send(std::move(chunkMsg))
+      // Recursively send the rest of the data
+      .thenValue([this, msgData = std::move(msgData), &state](auto&&) mutable {
+        return sendTakeoverDataMessageInChunks(state, std::move(msgData));
+      })
+      .thenError([](folly::exception_wrapper&& ew) {
+        XLOGF(ERR, "error while sending takeover data chunks: {}", ew.what());
+        return folly::makeFuture<Unit>(std::move(ew));
       });
 }
 
@@ -344,24 +431,28 @@ void TakeoverServer::connectionAccepted(
     handler.reset(new ConnHandler{
         this, std::move(socket), supportedVersions_, supportedCapabilities_});
   } catch (const std::exception& ex) {
-    XLOG(ERR) << "error allocating connection handler for new takeover "
-                 "connection: "
-              << exceptionStr(ex);
+    XLOGF(
+        ERR,
+        "error allocating connection handler for new takeover "
+        "connection: {}",
+        exceptionStr(ex));
     return;
   }
 
-  XLOG(INFO) << "takeover socket connection received";
+  XLOGF(INFO, "takeover socket connection received");
   auto* handlerRawPtr = handler.get();
   folly::makeFutureWith([&] { return handlerRawPtr->start(); })
       .thenError([](const folly::exception_wrapper& ew) {
-        XLOG(ERR) << "error processing takeover connection request: "
-                  << folly::exceptionStr(ew);
+        XLOGF(
+            ERR,
+            "error processing takeover connection request: {}",
+            folly::exceptionStr(ew));
       })
       .ensure([h = std::move(handler)] {});
 }
 
 void TakeoverServer::acceptError(folly::exception_wrapper ex) noexcept {
-  XLOG(ERR) << "accept() error on takeover socket: " << exceptionStr(ex);
+  XLOGF(ERR, "accept() error on takeover socket: {}", exceptionStr(ex));
 }
 } // namespace facebook::eden
 

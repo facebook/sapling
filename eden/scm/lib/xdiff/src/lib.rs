@@ -560,6 +560,8 @@ where
     Omitted {
         /// The hash of the file contents.
         content_hash: String,
+        /// The formatted LFS pointer if it's applicable to the file.
+        git_lfs_pointer: Option<String>,
     },
     Inline(C),
     /// The file refers to a submodule, and a corresponding placeholder should be generated for
@@ -596,6 +598,16 @@ impl<C: AsRef<[u8]>> FileContent<C> {
         match self {
             FileContent::Inline(c) => c.as_ref().is_empty(),
             _ => false,
+        }
+    }
+
+    fn git_lfs_pointer(&self) -> Option<&[u8]> {
+        match self {
+            FileContent::Omitted {
+                content_hash: _,
+                git_lfs_pointer: Some(git_lfs_pointer),
+            } => Some(git_lfs_pointer.as_bytes()),
+            _ => None,
         }
     }
 }
@@ -650,6 +662,17 @@ where
 {
     match file {
         Some(file) => file.contents.is_omitted(),
+        None => false,
+    }
+}
+
+fn file_has_git_lfs_pointer<P, C>(file: &Option<DiffFile<P, C>>) -> bool
+where
+    P: AsRef<[u8]>,
+    C: AsRef<[u8]>,
+{
+    match file {
+        Some(file) => file.contents.git_lfs_pointer().is_some(),
         None => false,
     }
 }
@@ -788,11 +811,15 @@ where
         }
     }
 
+    let old_file_has_git_lfs_pointer = file_has_git_lfs_pointer(&old_file);
+    let new_file_has_git_lfs_pointer = file_has_git_lfs_pointer(&new_file);
+
     // Header for binary files
-    if file_is_binary(&old_file)
+    if (file_is_binary(&old_file)
         || file_is_binary(&new_file)
         || file_is_omitted(&old_file)
-        || file_is_omitted(&new_file)
+        || file_is_omitted(&new_file))
+        && !(old_file_has_git_lfs_pointer && new_file_has_git_lfs_pointer)
     {
         match (old_file, new_file) {
             (Some(old_file), None) => state.emit_binary_has_changed(old_file.path.as_ref()),
@@ -860,6 +887,28 @@ where
                 context: diff_opts.context,
             };
             gen_diff_unified_headerless(old_file, new_file, opts, seed, reduce)
+        }
+        (
+            Some(FileContent::Omitted {
+                content_hash: _,
+                git_lfs_pointer: Some(old_git_lfs_pointer),
+            }),
+            Some(FileContent::Omitted {
+                content_hash: _,
+                git_lfs_pointer: Some(new_git_lfs_pointer),
+            }),
+        ) => {
+            // Both files use Git LFS pointers, we diff the pointer.
+            let opts = HeaderlessDiffOpts {
+                context: diff_opts.context,
+            };
+            gen_diff_unified_headerless(
+                old_git_lfs_pointer,
+                new_git_lfs_pointer,
+                opts,
+                seed,
+                reduce,
+            )
         }
         (Some(FileContent::Inline(old_file)), None) => {
             // Degenerated case of all-minus diff.
@@ -1125,10 +1174,12 @@ consectetur
         let hash1 = "hash1".to_string();
         let content_type_first: FileContent<Vec<u8>> = FileContent::Omitted {
             content_hash: hash1,
+            git_lfs_pointer: None,
         };
         let hash2 = "hash2".to_string();
         let content_type_second: FileContent<Vec<u8>> = FileContent::Omitted {
             content_hash: hash2,
+            git_lfs_pointer: None,
         };
         assert_eq!(
             String::from_utf8_lossy(&diff_unified(
@@ -1139,6 +1190,100 @@ consectetur
                 }),
                 Some(DiffFile {
                     contents: content_type_second,
+                    path: "x",
+                    file_type: FileType::Regular,
+                }),
+                DiffOpts {
+                    context: 10,
+                    copy_info: CopyInfo::None,
+                }
+            )),
+            r"diff --git a/x b/x
+Binary file x has changed
+"
+        );
+    }
+
+    #[test]
+    fn test_diff_unified_with_git_lfs_pointer() {
+        let content_with_lfs_1: FileContent<Vec<u8>> = FileContent::Omitted {
+            content_hash: "hash1".to_string(),
+            git_lfs_pointer: Some(
+                "version https://git-lfs.github.com/spec/v1\noid sha256:hash1\nsize 123\n"
+                    .to_string(),
+            ),
+        };
+        let content_with_lfs_2: FileContent<Vec<u8>> = FileContent::Omitted {
+            content_hash: "hash2".to_string(),
+            git_lfs_pointer: Some(
+                "version https://git-lfs.github.com/spec/v1\noid sha256:hash2\nsize 456\n"
+                    .to_string(),
+            ),
+        };
+        let content_no_lfs: FileContent<Vec<u8>> = FileContent::Omitted {
+            content_hash: "hash3".to_string(),
+            git_lfs_pointer: None,
+        };
+
+        assert_eq!(
+            String::from_utf8_lossy(&diff_unified(
+                Some(DiffFile {
+                    contents: content_with_lfs_1.clone(),
+                    path: "x",
+                    file_type: FileType::Regular,
+                }),
+                Some(DiffFile {
+                    contents: content_with_lfs_2.clone(),
+                    path: "x",
+                    file_type: FileType::Regular,
+                }),
+                DiffOpts {
+                    context: 10,
+                    copy_info: CopyInfo::None,
+                }
+            )),
+            r"diff --git a/x b/x
+--- a/x
++++ b/x
+@@ -1,3 +1,3 @@
+ version https://git-lfs.github.com/spec/v1
+-oid sha256:hash1
+-size 123
++oid sha256:hash2
++size 456
+"
+        );
+
+        // Only one file exists
+        assert_eq!(
+            String::from_utf8_lossy(&diff_unified(
+                Some(DiffFile {
+                    contents: content_with_lfs_1.clone(),
+                    path: "x",
+                    file_type: FileType::Regular,
+                }),
+                None,
+                DiffOpts {
+                    context: 10,
+                    copy_info: CopyInfo::None,
+                }
+            )),
+            r"diff --git a/x b/x
+deleted file mode 100644
+Binary file x has changed
+"
+        );
+
+        // Both sides exist but only one has git lfs pointer
+        assert_eq!(
+            String::from_utf8_lossy(&diff_unified(
+                Some(DiffFile {
+                    contents: content_with_lfs_1.clone(),
+                    path: "x",
+                    file_type: FileType::Regular,
+                }),
+                Some(DiffFile {
+                    contents: content_no_lfs.clone(),
                     path: "x",
                     file_type: FileType::Regular,
                 }),

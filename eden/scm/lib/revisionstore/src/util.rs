@@ -52,7 +52,7 @@ pub fn get_cache_path(
         res => return res,
     };
 
-    if let Some(ref suffix) = suffix {
+    if let Some(suffix) = suffix {
         path.push(suffix);
         create_shared_dir(&path)?;
     }
@@ -64,7 +64,7 @@ pub fn get_cache_path(
 pub fn get_local_path(mut path: PathBuf, suffix: &Option<impl AsRef<Path>>) -> Result<PathBuf> {
     create_dir(&path)?;
 
-    if let Some(ref suffix) = suffix {
+    if let Some(suffix) = suffix {
         path.push(suffix);
         create_dir(&path)?;
     }

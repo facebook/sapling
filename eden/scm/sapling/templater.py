@@ -10,7 +10,6 @@
 # This software may be used and distributed according to the terms of the
 # GNU General Public License version 2 or any later version.
 
-from __future__ import absolute_import, print_function
 
 import os
 import re
@@ -341,6 +340,27 @@ def gettemplate(exp, context):
         # by web templates, e.g. 'changelogtag' is redefined in map file.
         return context._load(exp[1])
     raise error.ParseError(_("expected template specifier"))
+
+
+def extractsymbols(repo, templ):
+    """Parse template and extract symbols for smartset to prefetch.
+
+    Returns None for empty templates,
+    so that callers can fallback to the default template;
+
+    Returns a set of symbols otherwise -
+    Note that the set can be empty iff no symbols are found.
+    """
+    ast = parseexpandaliases(repo, templ)
+    if not ast:
+        # empty template
+        return None
+    symbols = set()
+    for t in parser.walktree(ast):
+        if len(t) < 2 or t[0] != "symbol":
+            continue
+        symbols.add(t[1])
+    return symbols
 
 
 def findsymbolicname(arg):

@@ -6,8 +6,6 @@
 # detectissues.py - detect various issues with the repository
 
 
-from __future__ import absolute_import
-
 import os
 
 from .i18n import _

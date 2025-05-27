@@ -19,13 +19,14 @@ harness = false
 
 [dependencies]
 anyhow = "1.0.95"
-base64 = { version = "0.21", features = ["alloc"] }
 dirs = "6.0"
 faccess = "0.2.4"
-filetime = { version = "0.2.9", optional = true }
+filetime = { version = "0.2.25", optional = true }
 hostcaps = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 hostname = "0.3"
+parking_lot = { version = "0.12.1", features = ["send_guard"] }
 regex = { version = "1.11.1", optional = true }
+sapling-config-remote-loader = { version = "0.1.0", path = "../remote-loader" }
 sapling-configmodel = { version = "0.1.0", path = "../model" }
 sapling-configset = { version = "0.1.0", path = "../set" }
 sapling-gitcompat = { version = "0.1.0", path = "../../gitcompat" }
@@ -33,7 +34,6 @@ sapling-hgplain = { version = "0.1.0", path = "../../util/hgplain" }
 sapling-hgtime = { version = "0.1.0", path = "../../hgtime", optional = true }
 sapling-http-client = { version = "0.1.0", path = "../../http-client", optional = true }
 sapling-identity = { version = "0.1.0", path = "../../identity" }
-sapling-io = { version = "0.1.0", path = "../../io" }
 sapling-minibytes = { version = "0.1.0", path = "../../minibytes" }
 sapling-repo-minimal-info = { version = "0.1.0", path = "../../repo/repo-minimal-info" }
 sapling-repourl = { version = "0.1.0", path = "../../repo/url" }
@@ -46,10 +46,8 @@ sapling-version = { version = "0.1.0", path = "../../version" }
 serde = { version = "1.0.185", features = ["derive", "rc"], optional = true }
 serde_json = { version = "1.0.140", features = ["float_roundtrip", "unbounded_depth"], optional = true }
 serde_urlencoded = { version = "0.7", optional = true }
-sha2 = { version = "0.10.6", optional = true }
 tracing = { version = "0.1.41", features = ["attributes", "valuable"] }
 url = "2.5.2"
-zstd = { version = "0.13", features = ["experimental", "zstdmt"], optional = true }
 
 [dev-dependencies]
 once_cell = "1.12"
@@ -59,5 +57,5 @@ tempfile = "3.15"
 
 [features]
 default = []
-fb = ["filetime", "regex", "sapling-hgtime", "sapling-http-client", "sapling-identity/fb", "sapling-types", "serde", "serde_json", "serde_urlencoded", "sha2", "sha2", "zstd"]
+fb = ["filetime", "regex", "sapling-config-remote-loader/fb", "sapling-hgtime", "sapling-http-client", "sapling-identity/fb", "sapling-types", "serde", "serde_json", "serde_urlencoded"]
 sl_oss = []

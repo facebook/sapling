@@ -132,7 +132,7 @@ impl<R: MononokeRepo> ChangesetContext<R> {
         basenames: Option<Vec1<String>>,
         basename_suffixes: Option<Vec1<String>>,
         ordering: ChangesetFileOrdering,
-    ) -> Result<impl Stream<Item = Result<MPath, MononokeError>>, MononokeError> {
+    ) -> Result<impl Stream<Item = Result<MPath, MononokeError>> + use<R>, MononokeError> {
         // First, find the entries, and filter by file prefix.
 
         let mpaths = if justknobs::eval(

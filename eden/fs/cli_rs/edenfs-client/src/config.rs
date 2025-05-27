@@ -15,6 +15,7 @@ use edenfs_utils::path_from_bytes;
 
 use crate::client::Client;
 use crate::client::EdenFsClient;
+use crate::methods::EdenThriftMethod;
 
 #[derive(Copy, Clone, Debug, Eq, PartialEq, Ord, PartialOrd, Hash)]
 pub enum ConfigSourceType {
@@ -77,7 +78,7 @@ impl From<thrift_types::edenfs_config::EdenConfigData> for ConfigData {
 impl EdenFsClient {
     pub async fn get_config_default(&self) -> Result<ConfigData> {
         let params: thrift_types::edenfs::GetConfigParams = Default::default();
-        self.with_thrift(|thrift| thrift.getConfig(&params))
+        self.with_thrift(|thrift| (thrift.getConfig(&params), EdenThriftMethod::GetConfig))
             .await
             .with_context(|| "failed to get default eden config data")
             .map(|config_data| config_data.into())

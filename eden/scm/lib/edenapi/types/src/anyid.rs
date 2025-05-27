@@ -15,6 +15,7 @@ use type_macros::auto_wire;
 use types::HgId;
 
 use crate::AnyFileContentId;
+use crate::GitSha1;
 use crate::IndexableId;
 use crate::UploadToken;
 use crate::commitid::BonsaiChangesetId;
@@ -33,6 +34,8 @@ pub enum AnyId {
     HgChangesetId(HgId),
     #[id(5)]
     BonsaiChangesetId(BonsaiChangesetId),
+    #[id(6)]
+    GitChangesetId(GitSha1),
 }
 
 impl Default for AnyId {

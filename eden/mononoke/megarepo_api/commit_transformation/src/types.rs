@@ -128,7 +128,7 @@ impl MegarepoMultiMover {
     pub fn new(mapping_rules: SourceMappingRules) -> Result<Self> {
         // We apply the longest prefix first
         let mut overrides = mapping_rules.overrides.into_iter().collect::<Vec<_>>();
-        overrides.sort_unstable_by_key(|(ref prefix, _)| prefix.len());
+        overrides.sort_unstable_by_key(|(prefix, _)| prefix.len());
         overrides.reverse();
         let prefix = NonRootMPath::new_opt(mapping_rules.default_prefix)?;
         Ok(Self { overrides, prefix })

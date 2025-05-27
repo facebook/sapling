@@ -115,8 +115,6 @@ The following options can be used to tune the behaviour of tree prefetching when
     force_full_prefetch_on_sparse_profile_change = False
 """
 
-from __future__ import division
-
 import collections
 import functools
 import hashlib
@@ -153,8 +151,6 @@ from sapling.thirdparty import attr
 
 cmdtable = {}
 command = registrar.command(cmdtable)
-configtable = {}
-configitem = registrar.configitem(configtable)
 testedwith = "ships-with-fb-ext"
 colortable = {
     "sparse.profile.active": "brightyellow:yellow+bold",
@@ -166,20 +162,6 @@ colortable = {
 }
 
 cwdrealtivepatkinds = ("glob", "relpath")
-
-
-configitem(
-    "sparse",
-    "largecheckouthint",
-    default=False,
-    alias=[("perftweaks", "largecheckouthint")],
-)
-configitem(
-    "sparse",
-    "largecheckoutcount",
-    default=0,
-    alias=[("perftweaks", "largecheckoutcount")],
-)
 
 profilecachefile = "sparseprofileconfigs"
 
@@ -272,16 +254,38 @@ def _hassparse(repo):
 
 def _setupupdates(_ui) -> None:
     def _calculateupdates(
-        orig, repo, wctx, mctx, ancestors, branchmerge, *arg, **kwargs
+        orig,
+        to_repo,
+        wctx,
+        mctx,
+        ancestors,
+        branchmerge,
+        force,
+        acceptremote,
+        followcopies,
+        from_repo=None,
     ):
         """Filter updates to only lay out files that match the sparse rules."""
-        ui = repo.ui
-        actions = orig(repo, wctx, mctx, ancestors, branchmerge, *arg, **kwargs)
+        ui = to_repo.ui
+        from_repo = from_repo or to_repo
+        is_crossrepo = not to_repo.is_same_repo(from_repo)
+
+        actions = orig(
+            to_repo,
+            wctx,
+            mctx,
+            ancestors,
+            branchmerge,
+            force,
+            acceptremote,
+            followcopies,
+            from_repo=from_repo,
+        )
 
         # If the working context is in memory (virtual), there's no need to
         # apply the user's sparse rules at all (and in fact doing so would
         # cause unexpected behavior in the real working copy).
-        if not _hassparse(repo) or wctx.isinmemory():
+        if not _hassparse(to_repo) or wctx.isinmemory():
             return actions
 
         files = set()
@@ -296,21 +300,23 @@ def _setupupdates(_ui) -> None:
             None,
             None,
         )
-        if not _isedensparse(repo):
-            oldrevs = [pctx.rev() for pctx in wctx.parents()]
-            oldsparsematch = repo.sparsematch(*oldrevs)
-            repo._clearpendingprofileconfig(all=True)
-            oldprofileconfigs = _getcachedprofileconfigs(repo)
-            newprofileconfigs = repo._creatependingprofileconfigs()
+        if not _isedensparse(to_repo):
+            # Skip the p2 ctx for cross repo merge
+            parents = [wctx.p1()] if is_crossrepo else wctx.parents()
+            oldrevs = [pctx.rev() for pctx in parents]
+            oldsparsematch = to_repo.sparsematch(*oldrevs)
+            to_repo._clearpendingprofileconfig(all=True)
+            oldprofileconfigs = _getcachedprofileconfigs(to_repo)
+            newprofileconfigs = to_repo._creatependingprofileconfigs()
 
         if branchmerge:
             # If we're merging, use the wctx filter, since we're merging into
             # the wctx.
-            sparsematch = repo.sparsematch(wctx.p1().rev())
+            sparsematch = to_repo.sparsematch(wctx.p1().rev())
         else:
             # If we're updating, use the target context's filter, since we're
             # moving to the target context.
-            sparsematch = repo.sparsematch(mctx.rev())
+            sparsematch = to_repo.sparsematch(mctx.rev())
 
         temporaryfiles = []
         for file, action in actions.items():
@@ -338,30 +344,37 @@ def _setupupdates(_ui) -> None:
                 )
                 % len(temporaryfiles)
             )
-            repo.addtemporaryincludes(temporaryfiles)
+            to_repo.addtemporaryincludes(temporaryfiles)
 
             # Add the new files to the working copy so they can be merged, etc
             actions = []
             message = "temporarily adding to sparse checkout"
-            wctxmanifest = repo[None].manifest()
+            wctxmanifest = to_repo[None].manifest()
             for file in temporaryfiles:
                 if file in wctxmanifest:
-                    fctx = repo[None][file]
+                    fctx = to_repo[None][file]
                     actions.append((file, (file, fctx.flags(), False), message))
 
             typeactions = collections.defaultdict(list)
             typeactions[mergemod.ACTION_GET] = actions
-            mergemod.applyupdates(repo, typeactions, repo[None], repo["."], False)
+            mergemod.applyupdates(
+                to_repo,
+                typeactions,
+                to_repo[None],
+                to_repo["."],
+                False,
+                from_repo=from_repo,
+            )
 
-            dirstate = repo.dirstate
+            dirstate = to_repo.dirstate
             for file, flags, msg in actions:
                 dirstate.normal(file)
 
         # Eden handles refreshing the checkout on its own. This logic is only
         # needed for non-Eden sparse checkouts where Mercurial must refresh the
         # checkout when the sparse profile changes.
-        if not _isedensparse(repo):
-            profiles = repo.getactiveprofiles()
+        if not _isedensparse(to_repo):
+            profiles = to_repo.getactiveprofiles()
             changedprofiles = (profiles & files) or (
                 oldprofileconfigs != newprofileconfigs
             )
@@ -385,8 +398,8 @@ def _setupupdates(_ui) -> None:
                             # use, we should prefetch. Since our tree might be incomplete
                             # (and its root could be unknown to the server if this is a
                             # local commit), we use BFS prefetching to "complete" our tree.
-                            if hasattr(repo, "forcebfsprefetch"):
-                                repo.forcebfsprefetch([mctx.manifestnode()])
+                            if hasattr(to_repo, "forcebfsprefetch"):
+                                to_repo.forcebfsprefetch([mctx.manifestnode()])
 
                             iter = mf
                         else:
@@ -528,7 +541,7 @@ def _trackdirstatesizes(lui: "uimod.ui", repo: "localrepo.localrepository") -> N
         lui.log("dirstate_size", dirstate_size=dirstatesize)
         if (
             repo.ui.configbool("sparse", "largecheckouthint")
-            and dirstatesize >= repo.ui.configint("sparse", "largecheckoutcount")
+            and dirstatesize >= (repo.ui.configint("sparse", "largecheckoutcount") or 0)
             and (_hassparse(repo) and not _isedensparse(repo))
         ):
             hintutil.trigger("sparse-largecheckout", dirstatesize, repo)
@@ -2066,9 +2079,9 @@ def _showsubcmdlogic(ui, repo, opts) -> None:
         if not ui.plain():
             ui.status(_(f"No {flavortext} profile enabled\n"))
         return
-
     raw = repo.localvfs.readutf8("sparse")
     rawconfig = readsparseconfig(repo, raw)
+
     profiles = rawconfig.profiles
     include, exclude = rawconfig.toincludeexclude()
 

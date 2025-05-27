@@ -89,11 +89,11 @@ impl IoTimeSeries {
     ///
     /// This function can only be called once per time series.
     /// Panic if called multiple times.
-    pub fn async_sampling(
+    pub fn async_sampling<T: Fn() -> IoSample + Send + Sync + 'static>(
         &self,
-        sample_func: impl Fn() -> IoSample + Send + Sync + 'static,
+        sample_func: T,
         interval: Duration,
-    ) -> impl Future<Output = ()> {
+    ) -> impl Future<Output = ()> + use<T> {
         let len = self.samples.len();
         let samples = Arc::downgrade(&self.samples);
         let head = Arc::clone(&self.samples_head);

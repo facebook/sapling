@@ -9,6 +9,7 @@ use std::sync::Arc;
 use std::time::Duration;
 
 use anyhow::Result;
+use blob::Blob;
 use cas_client::CasClient;
 use cas_client::CasSuccessTracker;
 use cas_client::CasSuccessTrackerConfig;
@@ -17,6 +18,7 @@ use configmodel::ConfigExt;
 use configmodel::convert::ByteCount;
 use configmodel::convert::FromConfigValue;
 use re_client_lib::CASDaemonClientCfg;
+use re_client_lib::ClientBuilderCommonMethods;
 use re_client_lib::EmbeddedCASDaemonClientCfg;
 #[cfg(not(target_os = "linux"))]
 use re_client_lib::REClient;
@@ -31,7 +33,6 @@ use re_client_lib::RemoteFetchPolicy;
 use re_client_lib::create_default_config;
 #[cfg(target_os = "linux")]
 use rich_cas_client_wrapper::CASClientWrapper as REClient;
-use scm_blob::ScmBlob;
 
 pub const CAS_SOCKET_PATH: &str = "/run/casd/casd.socket";
 pub const CAS_SESSION_TTL: i64 = 600; // 10 minutes
@@ -80,6 +81,8 @@ pub struct RichCasClient {
     private_cache_path: Option<String>,
     /// The size of the private cache (local cache).
     private_cache_size: ByteCount,
+    /// Whether to use persistent caches or not.
+    use_persistent_caches: bool,
 }
 
 pub fn init() {
@@ -186,6 +189,7 @@ impl RichCasClient {
                 downtime_on_failure: config
                     .get_or("cas", "downtime-on-failure", || Duration::from_secs(1))?,
             }),
+            use_persistent_caches: config.get_or("cas", "use-persistent-caches", || true)?,
         }))
     }
 
@@ -246,10 +250,15 @@ impl RichCasClient {
             embedded_config.cache_config.writable_cache = true;
         }
         embedded_config.rich_client_config.enable_rich_client = true;
+
+        if self.use_persistent_caches {
+            embedded_config.client_label = "pc_enabled".to_string();
+        }
+
         re_config.cas_client_config = CASDaemonClientCfg::embedded_config(embedded_config);
 
         #[cfg(target_os = "linux")]
-        let client = REClient::new(self.session_id.clone(), CAS_SESSION_TTL, re_config);
+        let client = REClient::new(self.session_id.clone(), CAS_SESSION_TTL, re_config)?;
         #[cfg(not(target_os = "linux"))]
         let client = REClientBuilder::new(fbinit::expect_init())
             .with_config(re_config)

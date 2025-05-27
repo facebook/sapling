@@ -13,8 +13,6 @@
 #include <fb303/ServiceData.h>
 #include <folly/String.h>
 #include <folly/futures/Future.h>
-#include <folly/io/Cursor.h>
-#include <folly/lang/Bits.h>
 #include <folly/logging/xlog.h>
 #include <rocksdb/convenience.h>
 #include <rocksdb/db.h>

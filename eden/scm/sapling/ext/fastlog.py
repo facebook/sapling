@@ -27,6 +27,7 @@ from collections import deque
 from sapling import error, extensions, match as matchmod, revset, smartset
 from sapling.i18n import _
 from sapling.node import bin, hex, nullrev
+from sapling.utils import subtreeutil
 
 from .extlib.phabricator import graphql
 
@@ -48,8 +49,8 @@ def extsetup(ui) -> None:
     extensions.wrapfunction(revset, "_follow", fastlogfollow)
 
 
-def lazyparents(rev, public, parentfunc):
-    """lazyparents(rev, public)
+def lazyparents(rev, path, public, parentfunc):
+    """lazyparents(rev, path, public, parentfunc)
     Lazily yield parents of rev in reverse order until all nodes
     in public have been reached or all revs have been exhausted
 
@@ -85,65 +86,26 @@ def lazyparents(rev, public, parentfunc):
     10 9 8 7 6 5 4 3 2 1
     """
     seen = set()
-    heap = [-rev]
+    heap = [(-rev, path)]
 
     while heap:
-        cur = -(heapq.heappop(heap))
-        if cur not in seen:
-            seen.add(cur)
-            yield cur
+        cur, cur_path = heapq.heappop(heap)
+        cur = -cur
+        if (cur, cur_path) not in seen:
+            seen.add((cur, cur_path))
+            yield (cur, cur_path)
 
             published = cur in public
             if published:
                 # Down to one public ancestor; end generation
                 if len(public) == 1:
                     return
-                public.remove(cur)
+                del public[cur]
 
-            for p in parentfunc(cur):
-                if p != nullrev:
-                    heapq.heappush(heap, -p)
-                    if published:
-                        public.add(p)
-
-
-def dirmatches(files, paths) -> bool:
-    """dirmatches(files, paths)
-    Return true if any files match directories in paths
-    Expects paths to end in '/' if they are directories.
-
-    >>> dirmatches(['holy/grail'], ['holy/'])
-    True
-    >>> dirmatches(['holy/grail'], ['holly/'])
-    False
-    >>> dirmatches(['holy/grail'], ['holy/grail'])
-    True
-    >>> dirmatches(['holy/grail'], ['holy/grail1'])
-    False
-    >>> dirmatches(['holy/grail1'], ['holy/grail'])
-    False
-    """
-    assert paths
-    for path in paths:
-        if path[-1] == "/":
-            for f in files:
-                if f.startswith(path):
-                    return True
-        else:
-            for f in files:
-                if f == path:
-                    return True
-    return False
-
-
-def originator(parentfunc, rev):
-    """originator(repo, rev)
-    Yield parents of rev from repo in reverse order
-    """
-    # Use set(nullrev, rev) to iterate until termination
-    for p in lazyparents(rev, set([nullrev, rev]), parentfunc):
-        if rev != p:
-            yield p
+            for p_rev, p_path in parentfunc(cur, cur_path):
+                heapq.heappush(heap, (-p_rev, p_path))
+                if published:
+                    public[p_rev] = p_path
 
 
 def fastlogfollow(orig, repo, subset, x, name, followfirst: bool = False):
@@ -214,7 +176,7 @@ def fastlogfollow(orig, repo, subset, x, name, followfirst: bool = False):
     wvfs = repo.wvfs
 
     if wvfs.isdir(path) and not wvfs.islink(path):
-        dirs.add(path + "/")
+        dirs.add(path)
     else:
         if repo.ui.configbool("fastlog", "files"):
             files.add(path)
@@ -229,71 +191,91 @@ def fastlogfollow(orig, repo, subset, x, name, followfirst: bool = False):
 
     rev = startrev
 
-    parents = repo.changelog.parentrevs
-    public = set()
-
-    # Our criterion for invoking fastlog is finding a single
-    # common public ancestor from the current head.  First we
-    # have to walk back through drafts to find all interesting
-    # public parents.  Typically this will just be one, but if
-    # there are merged drafts, we may have multiple parents.
-    if repo[rev].ispublic():
-        public.add(rev)
-    else:
-        queue = deque()
-        queue.append(rev)
-        seen = set()
-        while queue:
-            cur = queue.popleft()
-            if cur not in seen:
-                seen.add(cur)
-                if repo[cur].mutable():
-                    for p in parents(cur):
-                        if p != nullrev:
-                            queue.append(p)
-                else:
-                    public.add(cur)
-
-    def fastlog(repo, startrev, dirs, files, localmatch):
-        if len(dirs) + len(files) != 1:
-            raise MultiPathError()
-        draft_revs = []
-        for parent in lazyparents(startrev, public, parents):
-            # Undo relevant file renames in parent so we end up
-            # passing the renamee to scmquery. Note that this will not
-            # work for non-linear drafts where a file does not have
-            # linear rename history.
-            undorenames(repo[parent], files)
-
-            if dirmatches(repo[parent].files(), dirs.union(files)):
-                draft_revs.append(parent)
-
-        repo.ui.debug("found common parent at %s\n" % repo[parent].hex())
-
+    def fastlog(repo, startrev, dirs, files):
         if len(dirs) + len(files) != 1:
             raise MultiPathError()
 
         path = next(iter(dirs.union(files)))
-        yield from draft_revs
+        public = findpublic(startrev, path, parents)
+        matched_revs = []
+        for parent, path in lazyparents(startrev, path, public, parents):
+            if any(subtreeutil.path_starts_with(f, path) for f in repo[parent].files()):
+                matched_revs.append(parent)
+
+        repo.ui.debug(
+            "found common parent at %s with path '%s'\n" % (repo[parent].hex(), path)
+        )
+
+        # avoid duplicates, as `Fastlog` below will include it as well.
+        if matched_revs and matched_revs[-1] == parent:
+            matched_revs.pop()
+
+        yield from matched_revs
 
         start_node = repo[parent].node()
-        log = FastLog(reponame, "hg", start_node, path, repo)
-        for node in log.generate_nodes():
-            yield repo.changelog.rev(node)
+        while True:
+            log = FastLog(reponame, "hg", start_node, path, repo)
+            last_rev = None
+            for node in log.generate_nodes():
+                last_rev = repo.changelog.rev(node)
+                yield last_rev
 
-    def undorenames(ctx, files):
-        """mutate files to undo any file renames in ctx"""
-        renamed = []
-        for f in files:
-            r = f in ctx and ctx[f].renamed()
-            if r:
-                renamed.append((r[0], f))
-        for src, dst in renamed:
-            files.remove(dst)
-            files.add(src)
+            # log history returned by server (via `FastLog`) does not follow copy, the following
+            # logic handle the copy on Sapling side.
+            if last_rev is not None:
+                next_parents = list(parents(last_rev, path))
+                # XXX: only handle non-merge commits
+                if len(next_parents) == 1:
+                    next_rev, next_path = next_parents[0]
+                    # copy -- continue query server with new start_node and path
+                    if next_path != path:
+                        start_node = repo[next_rev].node()
+                        path = next_path
+                        continue
+            break
+
+    def findpublic(rev, path, parentfunc):
+        public = dict()
+        # Our criterion for invoking fastlog is finding a single
+        # common public ancestor from the current head.  First we
+        # have to walk back through drafts to find all interesting
+        # public parents.  Typically this will just be one, but if
+        # there are merged drafts, we may have multiple parents.
+        if repo[rev].ispublic():
+            public[rev] = path
+        else:
+            queue = deque()
+            queue.append((rev, path))
+            seen = set((rev, path))
+            while queue:
+                cur, cur_path = queue.popleft()
+                if (cur, cur_path) not in seen:
+                    seen.add((cur, cur_path))
+                    if repo[cur].mutable():
+                        for p_rev, p_path in parentfunc(cur, cur_path):
+                            queue.append((p_rev, p_path))
+                    else:
+                        public[cur] = cur_path
+        return public
+
+    def parents(rev, path):
+        # XXX: handle subtree merge
+
+        # subtree copy
+        if copy_source := subtreeutil.find_subtree_copy(repo, rev, path):
+            source_commit, source_path = copy_source
+            yield repo[source_commit].rev(), source_path
+        else:
+            ctx = repo[rev]
+            # regular copy
+            if r := (path in ctx and ctx[path].renamed()):
+                path = r[0]
+            for p in repo.changelog.parentrevs(rev):
+                if p != nullrev:
+                    yield p, path
 
     try:
-        revgen = fastlog(repo, rev, dirs, files, dirmatches)
+        revgen = fastlog(repo, rev, dirs, files)
     except MultiPathError:
         repo.ui.debug("fastlog: not used for multiple paths\n")
         return orig(repo, subset, x, name, followfirst)

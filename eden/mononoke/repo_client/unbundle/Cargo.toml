@@ -55,7 +55,7 @@ scuba_ext = { version = "0.1.0", path = "../../common/scuba_ext" }
 slog = { package = "tracing_slog_compat", version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 stats = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 synced_commit_mapping = { version = "0.1.0", path = "../../commit_rewriting/synced_commit_mapping" }
-thiserror = "2"
+thiserror = "2.0.12"
 topo_sort = { version = "0.1.0", path = "../../common/topo_sort" }
 wirepack = { version = "0.1.0", path = "../wirepack" }
 wireproto_handler = { version = "0.1.0", path = "../../wireproto_handler" }
@@ -70,4 +70,4 @@ mononoke_macros = { version = "0.1.0", path = "../../mononoke_macros" }
 quickcheck_async = "0.1.1"
 quickcheck_macros = "1.0"
 test_repo_factory = { version = "0.1.0", path = "../../repo_factory/test_repo_factory" }
-tokio = { version = "1.41.0", features = ["full", "test-util", "tracing"] }
+tokio = { version = "1.45.0", features = ["full", "test-util", "tracing"] }

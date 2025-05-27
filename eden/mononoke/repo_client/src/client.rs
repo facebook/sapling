@@ -470,7 +470,7 @@ impl<R: Repo> RepoClient<R> {
     fn get_publishing_bookmarks_maybe_stale(
         &self,
         ctx: CoreContext,
-    ) -> impl Future<Output = Result<HashMap<Bookmark, HgChangesetId>>> {
+    ) -> impl Future<Output = Result<HashMap<Bookmark, HgChangesetId>>> + use<R> {
         let session_bookmarks_cache = self.session_bookmarks_cache.clone();
         async move { session_bookmarks_cache.get_publishing_bookmarks(ctx).await }
     }
@@ -478,7 +478,7 @@ impl<R: Repo> RepoClient<R> {
     fn get_pull_default_bookmarks_maybe_stale(
         &self,
         ctx: CoreContext,
-    ) -> impl Future<Output = Result<HashMap<Vec<u8>, Vec<u8>>>> {
+    ) -> impl Future<Output = Result<HashMap<Vec<u8>, Vec<u8>>>> + use<R> {
         let publishing_bookmarks = self.get_publishing_bookmarks_maybe_stale(ctx);
 
         async move {
@@ -1016,7 +1016,7 @@ fn throttle_stream<F, S, V>(
     request_name: &'static str,
     func: F,
     mut scuba: MononokeScubaSampleBuilder,
-) -> impl Stream<Item = Result<V, Error>>
+) -> impl Stream<Item = Result<V, Error>> + use<F, S, V>
 where
     F: FnOnce() -> S + Send + 'static,
     S: Stream<Item = Result<V, Error>> + Send + 'static,
@@ -1883,7 +1883,8 @@ impl<R: Repo> HgCommands for RepoClient<R> {
                         name: &str,
                         size: usize,
                         data: Vec<BoxFuture<'static, Result<Bytes, Error>>>,
-                    ) -> impl Stream<Item = Result<Bytes, Error>> + Send {
+                    ) -> impl Stream<Item = Result<Bytes, Error>> + Send + use<>
+                    {
                         let header = format!("{}\0{}\n", name, size);
 
                         stream::once(future::ready(Ok(header.into_bytes().into())))

@@ -144,7 +144,7 @@ impl GitImportLfs {
     ) -> Result<
         (
             StoreRequest,
-            impl Stream<Item = Result<Bytes, Error>> + Unpin,
+            impl Stream<Item = Result<Bytes, Error>> + Unpin + use<>,
             GitLfsFetchResult,
         ),
         Error,
@@ -208,7 +208,7 @@ impl GitImportLfs {
     ) -> Result<
         (
             StoreRequest,
-            impl Stream<Item = Result<Bytes, Error>>,
+            impl Stream<Item = Result<Bytes, Error>> + use<>,
             GitLfsFetchResult,
         ),
         Error,

@@ -36,6 +36,9 @@ Client 1
   $ echo data > file
   $ hg commit -Aqm "draft-commit
   > Differential Revision: https://phabricator.fb.com/D1234"
+  $ setconfig 'commitcloud.ignored-bookmarks=bar,*z'
+  $ hg book bar
+  $ hg book baz
   $ hg book foo
   $ hg prev -q
   [df4f53] base
@@ -53,6 +56,7 @@ Client 1
   searching for changes
   commitcloud: commits synchronized
   finished in * (glob)
+- note: "bar", and "baz" are ignored from uploading, so they are not synced to client2.
   $ tglogp
   o  00422fad0026 draft 'draft-commit
   │  Differential Revision: https://phabricator.fb.com/D1234' foo
@@ -110,7 +114,7 @@ Fake land the commit
   marked 1 commit as landed
   $ tglogp
   x  00422fad0026 draft 'draft-commit
-  │  Differential Revision: https://phabricator.fb.com/D1234' foo
+  │  Differential Revision: https://phabricator.fb.com/D1234' bar baz foo
   │ o  67d363c9001e public 'public-commit-2'
   │ │
   │ o  441f69264760 public 'landed-commit
@@ -131,30 +135,28 @@ Rebasing the bookmark will make the draft commit disappear.
 
   $ cd ../client1
   $ hg rebase -b foo -d 67d363c9001e1d7227625f0fa5004aca4572d214
-  note: not rebasing 00422fad0026 "draft-commit" (foo), already in destination as 441f69264760 "landed-commit"
+  note: not rebasing 00422fad0026 "draft-commit" (bar baz foo), already in destination as 441f69264760 "landed-commit"
   $ tglogp
-  o  67d363c9001e public 'public-commit-2' foo
+  o  67d363c9001e public 'public-commit-2' bar baz foo
   │
   o  441f69264760 public 'landed-commit
   │  Differential Revision: https://phabricator.fb.com/D1234'
   o  031d760782fb public 'public-commit-1'
   │
   @  df4f53cec30a public 'base'
-  
   $ hg cloud sync
   commitcloud: synchronizing 'server' with 'user/test/default'
   commitcloud: nothing to upload
   commitcloud: commits synchronized
   finished in * (glob)
   $ tglogp
-  o  67d363c9001e public 'public-commit-2' foo
+  o  67d363c9001e public 'public-commit-2' bar baz foo
   │
   o  441f69264760 public 'landed-commit
   │  Differential Revision: https://phabricator.fb.com/D1234'
   o  031d760782fb public 'public-commit-1'
   │
   @  df4f53cec30a public 'base'
-  
 Sync in client2.   This will omit the bookmark because we don't have the landed commit.
 
   $ cd ../client2
@@ -187,11 +189,10 @@ The draft commit is also gone from here, and the workspace is stable.
   $ cd ../client1
   $ hg cloud sync -q
   $ tglogp
-  o  67d363c9001e public 'public-commit-2' foo
+  o  67d363c9001e public 'public-commit-2' bar baz foo
   │
   o  441f69264760 public 'landed-commit
   │  Differential Revision: https://phabricator.fb.com/D1234'
   o  031d760782fb public 'public-commit-1'
   │
   @  df4f53cec30a public 'base'
-  

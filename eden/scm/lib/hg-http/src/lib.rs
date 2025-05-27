@@ -18,6 +18,7 @@ use std::sync::atomic::Ordering::Relaxed;
 use auth::AuthSection;
 use clientinfo::ClientInfo;
 use configmodel::ConfigExt;
+use configmodel::convert::ByteCount;
 use hg_metrics::increment_counter;
 use http_client::HttpClient;
 use http_client::Request;
@@ -72,6 +73,14 @@ pub fn http_config(
     let mut hc = http_client::Config {
         client_info: ClientInfo::new().and_then(|i| i.to_json()).ok(),
         disable_tls_verification: INSECURE_MODE.load(Relaxed),
+        read_buffer_size: config
+            .get_opt::<ByteCount>("http", "read-buffer-size")
+            .unwrap_or_default()
+            .map(ByteCount::value),
+        write_buffer_size: config
+            .get_opt::<ByteCount>("http", "write-buffer-size")
+            .unwrap_or_default()
+            .map(ByteCount::value),
         unix_socket_path: config
             .get_nonempty_opt("auth_proxy", "unix_socket_path")
             .expect("Can't get auth_proxy.unix_socket_path config"),
@@ -97,6 +106,13 @@ pub fn http_config(
         .unwrap_or_default()
     {
         hc.limit_response_buffering = limit;
+    }
+
+    if let Some(follow) = config
+        .get_opt("http", "follow-redirects")
+        .unwrap_or_default()
+    {
+        hc.follow_redirects = follow;
     }
 
     let using_auth_proxy = hc.unix_socket_path.is_some()

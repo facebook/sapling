@@ -93,7 +93,7 @@ fn test_invariants(fb: FacebookInit) -> Result<()> {
     // right for a store() call to succeed (all the chunks need to be saved, then we need to write
     // 3 aliases, and then the content).
     let rt = tokio::runtime::Runtime::new()?;
-    let mut gen = Gen::new(128);
+    let mut r#gen = Gen::new(128);
 
     let memblob = Arc::new(memblob::Memblob::default());
     let blob = FailingBlobstore::new(memblob.clone(), 0.75, 0.75);
@@ -105,7 +105,7 @@ fn test_invariants(fb: FacebookInit) -> Result<()> {
     borrowed!(ctx, blob, memblob: &Arc<_>);
 
     for _ in 0..1000 {
-        let bytes = Bytes::from(Vec::arbitrary(&mut gen));
+        let bytes = Bytes::from(Vec::arbitrary(&mut r#gen));
         let req = request(&bytes);
 
         // Try to store with a broken blobstore. It doesn't matter if we succeed or not.
@@ -133,14 +133,14 @@ fn test_invariants(fb: FacebookInit) -> Result<()> {
 
 #[mononoke::fbinit_test]
 async fn test_store_bytes_consistency(fb: FacebookInit) -> Result<(), Error> {
-    let mut gen = Gen::new(128);
+    let mut r#gen = Gen::new(128);
 
     let memblob = Arc::new(memblob::Memblob::default());
     let ctx = CoreContext::test_mock(fb);
     borrowed!(ctx, memblob: &Arc<_>);
 
     for _ in 0..100usize {
-        let bytes = Bytes::from(Vec::arbitrary(&mut gen));
+        let bytes = Bytes::from(Vec::arbitrary(&mut r#gen));
 
         let no_chunking = FilestoreConfig {
             chunk_size: None,

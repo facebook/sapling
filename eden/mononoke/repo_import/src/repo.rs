@@ -16,6 +16,7 @@ use commit_graph::CommitGraphWriter;
 use filenodes::Filenodes;
 use filestore::FilestoreConfig;
 use git_ref_content_mapping::GitRefContentMapping;
+use git_source_of_truth::GitSourceOfTruthConfig;
 use metaconfig_types::RepoConfig;
 use mononoke_types::RepositoryId;
 use mutable_counters::MutableCounters;
@@ -102,6 +103,9 @@ pub struct Repo {
 
     #[facet]
     sql_query_config: SqlQueryConfig,
+
+    #[facet]
+    git_source_of_truth_config: dyn GitSourceOfTruthConfig,
 }
 
 impl Repo {

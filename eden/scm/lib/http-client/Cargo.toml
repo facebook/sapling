@@ -21,7 +21,7 @@ anyhow = "1.0.95"
 async-compression = { version = "0.4.9", features = ["brotli", "bzip2", "deflate", "futures-io", "gzip", "tokio", "zlib", "zstd", "zstdmt"] }
 auto_impl = "1.2.1"
 curl = { version = "0.4.41", features = ["http2"] }
-curl-sys = "0.4.68"
+curl-sys = "0.4.80"
 env_logger = "0.10"
 flume = "0.11.1"
 futures = { version = "0.3.30", features = ["async-await", "compat"] }
@@ -40,9 +40,9 @@ serde = { version = "1.0.185", features = ["derive", "rc"] }
 serde_cbor = "0.11"
 serde_json = { version = "1.0.140", features = ["float_roundtrip", "unbounded_depth"] }
 structopt = "0.3.26"
-thiserror = "2"
-tokio = { version = "1.41.0", features = ["full", "test-util", "tracing"] }
-tokio-util = { version = "0.7.12", features = ["full"] }
+thiserror = "2.0.12"
+tokio = { version = "1.45.0", features = ["full", "test-util", "tracing"] }
+tokio-util = { version = "0.7.15", features = ["full"] }
 tracing = { version = "0.1.41", features = ["attributes", "valuable"] }
 url = "2.5.2"
 

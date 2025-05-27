@@ -25,6 +25,7 @@ use anyhow::Result;
 use anyhow::anyhow;
 use anyhow::bail;
 use anyhow::ensure;
+use blob::Blob;
 use cas_client::CasClient;
 use flume::bounded;
 use flume::unbounded;
@@ -39,7 +40,6 @@ use progress_model::AggregatingProgressBar;
 use progress_model::ProgressBar;
 use progress_model::Registry;
 use rand::Rng;
-use scm_blob::ScmBlob;
 use storemodel::SerializationFormat;
 use tracing::debug;
 
@@ -141,7 +141,7 @@ static INDEXEDLOG_ROTATE_COUNT: Counter = Counter::new_counter("scmstore.indexed
 
 impl FileStore {
     /// Get the "local content" without going through the heavyweight "fetch" API.
-    pub(crate) fn get_local_content_direct(&self, id: &HgId) -> Result<Option<ScmBlob>> {
+    pub(crate) fn get_local_content_direct(&self, id: &HgId) -> Result<Option<Blob>> {
         let m = &FILE_STORE_FETCH_METRICS;
 
         if let Ok(Some(blob)) = self.get_local_content_cas_cache(id) {
@@ -154,11 +154,18 @@ impl FileStore {
         Ok(None)
     }
 
-    fn get_local_content_cas_cache(&self, id: &HgId) -> Result<Option<ScmBlob>> {
+    fn get_local_content_cas_cache(&self, id: &HgId) -> Result<Option<Blob>> {
         if let (Some(aux_cache), Some(cas_client)) = (&self.aux_cache, &self.cas_client) {
             let aux_data = aux_cache.get(id)?;
             if let Some(aux_data) = aux_data {
-                let (stats, maybe_blob) = cas_client.fetch_single_local_direct(&CasDigest {
+                if let Some(cas_threshold) = self.cas_cache_threshold_bytes {
+                    if aux_data.total_size > cas_threshold {
+                        // If the file's size exceeds the configured threshold, don't fetch it from CAS.
+                        return Ok(None);
+                    }
+                }
+
+                let (stats, maybe_blob) = cas_client.fetch_single_locally_cached(&CasDigest {
                     hash: aux_data.blake3,
                     size: aux_data.total_size,
                 })?;
@@ -308,11 +315,19 @@ impl FileStore {
             let span = tracing::span!(
                 tracing::Level::DEBUG,
                 "file fetch",
-                id = rand::thread_rng().gen::<u16>()
+                id = rand::thread_rng().r#gen::<u16>()
             );
             let _enter = span.enter();
 
             let fetch_from_cas = fetch_remote && cas_client.is_some();
+
+            let mut prev_pending = state.pending_len();
+            let mut fetched_since_last_time = |state: &FetchState| -> u64 {
+                let new_pending = state.pending_len();
+                let diff = prev_pending.saturating_sub(new_pending);
+                prev_pending = new_pending;
+                diff as u64
+            };
 
             if fetch_local || fetch_from_cas {
                 if let Some(ref aux_cache) = aux_cache {
@@ -338,10 +353,14 @@ impl FileStore {
                     }
                 }
 
+                fctx.inc_local(fetched_since_last_time(&state));
+
                 // Then fetch from CAS since we essentially always expect a hit.
                 if let (Some(cas_client), true) = (&cas_client, fetch_remote) {
                     state.fetch_cas(cas_client);
                 }
+
+                fctx.inc_remote(fetched_since_last_time(&state));
 
                 // Finally fetch from local cache (shouldn't normally get here).
                 if fetch_local {
@@ -353,6 +372,8 @@ impl FileStore {
                         state.fetch_lfs(lfs_cache, StoreLocation::Cache);
                     }
                 }
+
+                fctx.inc_local(fetched_since_last_time(&state));
             } else if fetch_local {
                 // If not using CAS, fetch from cache first then local (hit rate in cache
                 // is typically much higher).
@@ -363,6 +384,8 @@ impl FileStore {
                 if let Some(ref indexedlog_local) = indexedlog_local {
                     state.fetch_indexedlog(indexedlog_local, StoreLocation::Local);
                 }
+
+                fctx.inc_local(fetched_since_last_time(&state));
 
                 if let Some(ref lfs_cache) = lfs_cache {
                     assert!(
@@ -379,6 +402,8 @@ impl FileStore {
                     );
                     state.fetch_lfs(lfs_local, StoreLocation::Local);
                 }
+
+                fctx.inc_local(fetched_since_last_time(&state));
             }
 
             if fetch_remote {
@@ -402,6 +427,8 @@ impl FileStore {
                         lfs_cache.clone(),
                     );
                 }
+
+                fctx.inc_remote(fetched_since_last_time(&state));
             }
 
             state.derive_computable(aux_cache.as_ref().map(|s| s.as_ref()));
@@ -425,6 +452,10 @@ impl FileStore {
         };
 
         // Only kick off a thread if there's a substantial amount of work.
+        //
+        // NB: callers such as backingstore::prefetch assume asynchronous behavior when fetching
+        // more than 1k keys. If you change how this works, consider callers' expectations
+        // carefully.
         if keys_len > 1000 {
             let active_bar = Registry::main().get_active_progress_bar();
             std::thread::spawn(move || {
@@ -670,6 +701,45 @@ impl FileStore {
     pub fn format(&self) -> SerializationFormat {
         self.format
     }
+
+    pub fn prefetch(&self, keys: Vec<Key>) -> Result<Vec<Key>> {
+        self.metrics.write().api.hg_prefetch.call(keys.len());
+
+        let mut attrs = FileAttributes::CONTENT;
+        if self.prefetch_aux_data {
+            attrs |= FileAttributes::AUX;
+        }
+
+        self.fetch(
+            FetchContext::new_with_cause(
+                FetchMode::AllowRemote | FetchMode::IGNORE_RESULT,
+                FetchCause::SaplingPrefetch,
+            ),
+            keys,
+            attrs,
+        )
+        .missing()
+    }
+
+    pub fn metadata(&self, key: StoreKey) -> Result<StoreResult<ContentMetadata>> {
+        self.metrics.write().api.contentdatastore_metadata.call(0);
+
+        if let Some(cache) = &self.lfs_cache {
+            let result = cache.metadata(key.clone())?;
+            if matches!(result, StoreResult::Found(_)) {
+                return Ok(result);
+            }
+        }
+
+        if let Some(local) = &self.lfs_local {
+            let result = local.metadata(key.clone())?;
+            if matches!(result, StoreResult::Found(_)) {
+                return Ok(result);
+            }
+        }
+
+        Ok(StoreResult::NotFound(key))
+    }
 }
 
 impl HgIdDataStore for FileStore {
@@ -692,27 +762,6 @@ impl HgIdDataStore for FileStore {
 
     fn refresh(&self) -> Result<()> {
         self.refresh()
-    }
-}
-
-impl FileStore {
-    pub fn prefetch(&self, keys: Vec<Key>) -> Result<Vec<Key>> {
-        self.metrics.write().api.hg_prefetch.call(keys.len());
-
-        let mut attrs = FileAttributes::CONTENT;
-        if self.prefetch_aux_data {
-            attrs |= FileAttributes::AUX;
-        }
-
-        self.fetch(
-            FetchContext::new_with_cause(
-                FetchMode::AllowRemote | FetchMode::IGNORE_RESULT,
-                FetchCause::SaplingPrefetch,
-            ),
-            keys,
-            attrs,
-        )
-        .missing()
     }
 }
 
@@ -751,27 +800,5 @@ impl HgIdMutableDeltaStore for FileStore {
         self.metrics.write().api.hg_flush.call(0);
         self.flush()?;
         Ok(None)
-    }
-}
-
-impl FileStore {
-    pub fn metadata(&self, key: StoreKey) -> Result<StoreResult<ContentMetadata>> {
-        self.metrics.write().api.contentdatastore_metadata.call(0);
-
-        if let Some(cache) = &self.lfs_cache {
-            let result = cache.metadata(key.clone())?;
-            if matches!(result, StoreResult::Found(_)) {
-                return Ok(result);
-            }
-        }
-
-        if let Some(local) = &self.lfs_local {
-            let result = local.metadata(key.clone())?;
-            if matches!(result, StoreResult::Found(_)) {
-                return Ok(result);
-            }
-        }
-
-        Ok(StoreResult::NotFound(key))
     }
 }

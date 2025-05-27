@@ -21,6 +21,14 @@ export type DiffCommit = {
   files: ReadonlyArray<DiffFile>;
 };
 
+/**
+ * Additional args.
+ */
+export type Args = {
+  /** User specified prompt. */
+  user_prompt?: string | null;
+};
+
 /** Unified diff represent in a JSON-friendly format. */
 export type DiffFile = {
   /** File path on the left side (previous version). */

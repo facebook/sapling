@@ -11,8 +11,7 @@ use std::sync::Arc;
 use std::time::Instant;
 
 use ::metrics::Counter;
-use ::types::AugmentedTree;
-use ::types::AugmentedTreeEntry;
+use ::types::Blake3;
 use ::types::CasDigest;
 use ::types::FetchContext;
 use ::types::HgId;
@@ -29,24 +28,28 @@ use ::types::tree::TreeItemFlag;
 use anyhow::Result;
 use anyhow::anyhow;
 use anyhow::bail;
+use blob::Blob;
 use cas_client::CasClient;
 use edenapi_types::FileAuxData;
 use edenapi_types::TreeAuxData;
 use fetch::FetchState;
 use flume::bounded;
 use flume::unbounded;
+use manifest_augmented_tree::AugmentedTree;
+use manifest_augmented_tree::AugmentedTreeEntry;
+use manifest_augmented_tree::AugmentedTreeWithDigest;
 use metrics::TREE_STORE_FETCH_METRICS;
 use minibytes::Bytes;
 use once_cell::sync::OnceCell;
 use progress_model::AggregatingProgressBar;
 use progress_model::ProgressBar;
 use progress_model::Registry;
-use scm_blob::ScmBlob;
 use storemodel::BoxIterator;
 use storemodel::InsertOpts;
 use storemodel::KeyStore;
 use storemodel::SerializationFormat;
 use storemodel::TreeEntry;
+use storemodel::basic_parse_tree;
 use types::AuxData;
 
 use super::util::try_local_content;
@@ -87,6 +90,22 @@ pub enum TreeMetadataMode {
 }
 
 static TREESTORE_FLUSH_COUNT: Counter = Counter::new_counter("scmstore.tree.flush");
+
+#[derive(Debug, Clone)]
+pub struct TreeEntryWithAux {
+    entry: Entry,
+    tree_aux: Option<TreeAuxData>,
+}
+
+impl TreeEntryWithAux {
+    pub fn content(&self) -> Result<Bytes> {
+        self.entry.content()
+    }
+
+    pub fn node(&self) -> HgId {
+        self.entry.node()
+    }
+}
 
 #[derive(Clone)]
 pub struct TreeStore {
@@ -147,8 +166,10 @@ impl Drop for TreeStore {
 }
 
 impl TreeStore {
-    pub(crate) fn get_local_content_direct(&self, id: &HgId) -> Result<Option<ScmBlob>> {
+    pub(crate) fn get_local_content_direct(&self, id: &HgId) -> Result<Option<Blob>> {
         let m = &TREE_STORE_FETCH_METRICS;
+
+        tracing::trace!(target: "tree_fetches", %id, "direct_content");
 
         if let Ok(Some(blob)) = self.get_local_content_cas_cache(id) {
             return Ok(Some(blob));
@@ -158,11 +179,49 @@ impl TreeStore {
         Ok(None)
     }
 
-    fn get_local_content_cas_cache(&self, id: &HgId) -> Result<Option<ScmBlob>> {
+    pub(crate) fn get_indexedlog_caches_content_direct(
+        &self,
+        id: &HgId,
+    ) -> anyhow::Result<Option<Blob>> {
+        let m = &TREE_STORE_FETCH_METRICS;
+        try_local_content!(id, self.indexedlog_cache, m.indexedlog.cache);
+        try_local_content!(id, self.indexedlog_local, m.indexedlog.local);
+        Ok(None)
+    }
+
+    /// Fetch a tree from the local caches. If the tree is not found, return None.
+    pub fn get_local_tree_direct(&self, node: HgId) -> anyhow::Result<Option<Box<dyn TreeEntry>>> {
+        if node.is_null() {
+            return Ok(Some(basic_parse_tree(Bytes::default(), self.format())?));
+        }
+
+        if let Ok(Some(tree)) = self.get_local_tree_cas_cache(&node) {
+            return Ok(Some(tree));
+        }
+
+        match self.get_indexedlog_caches_content_direct(&node)? {
+            None => Ok(None),
+            Some(blob) => {
+                let res: Box<ScmStoreTreeEntry> = Box::new(
+                    LazyTree::IndexedLog(TreeEntryWithAux {
+                        entry: Entry::new(node, blob.into_bytes(), Metadata::default()),
+                        tree_aux: self.get_local_aux_direct(&node)?,
+                    })
+                    .into(),
+                );
+                Ok(Some(res))
+            }
+        }
+    }
+
+    fn fetch_local_tree_cas_cache(
+        &self,
+        id: &HgId,
+    ) -> Result<Option<(AugmentedTree, Blake3, u64)>> {
         if let (Some(tree_aux_store), Some(cas_client)) = (&self.tree_aux_store, &self.cas_client) {
             let aux_data = tree_aux_store.get(id)?;
             if let Some(aux_data) = aux_data {
-                let (stats, maybe_blob) = cas_client.fetch_single_local_direct(&CasDigest {
+                let (stats, maybe_blob) = cas_client.fetch_single_locally_cached(&CasDigest {
                     hash: aux_data.augmented_manifest_id,
                     size: aux_data.augmented_manifest_size,
                 })?;
@@ -174,39 +233,53 @@ impl TreeStore {
 
                 if let Some(blob) = maybe_blob {
                     TREE_STORE_FETCH_METRICS.cas.hit(1);
-
                     let augmented_tree = match blob {
-                        ScmBlob::Bytes(bytes) => AugmentedTree::try_deserialize(bytes.as_ref())?,
+                        Blob::Bytes(bytes) => AugmentedTree::try_deserialize(bytes.as_ref())?,
+                        #[allow(unexpected_cfgs)]
                         #[cfg(fbcode_build)]
-                        ScmBlob::IOBuf(buf) => AugmentedTree::try_deserialize(buf.cursor())?,
+                        Blob::IOBuf(buf) => AugmentedTree::try_deserialize(buf.cursor())?,
                     };
-
-                    return self
-                        .convert_augmented_tree_to_sapling_tree_blob(augmented_tree, tree_aux_store)
-                        .map(Some);
+                    self.cache_child_aux_data(tree_aux_store, &augmented_tree)?;
+                    return Ok(Some((
+                        augmented_tree,
+                        aux_data.augmented_manifest_id,
+                        aux_data.augmented_manifest_size,
+                    )));
                 }
             }
         }
         Ok(None)
     }
 
-    fn convert_augmented_tree_to_sapling_tree_blob(
-        &self,
-        augmented_tree: AugmentedTree,
-        tree_aux_store: &Arc<TreeAuxStore>,
-    ) -> Result<ScmBlob> {
-        let mut sapling_tree_blob = Vec::<u8>::with_capacity(augmented_tree.sapling_tree_blob_size);
-        augmented_tree.write_sapling_tree_blob(&mut sapling_tree_blob)?;
+    /// Fetch a tree from the local caches and convert it to a sapling tree blob.
+    fn get_local_content_cas_cache(&self, id: &HgId) -> Result<Option<Blob>> {
+        match self.fetch_local_tree_cas_cache(id)? {
+            Some((augmented_tree, _, _)) => {
+                Ok(Some(Blob::Bytes(augmented_tree.into_sapling_tree_blob()?)))
+            }
+            None => Ok(None),
+        }
+    }
 
-        self.cache_child_aux_data(tree_aux_store, augmented_tree)?;
-
-        Ok(ScmBlob::Bytes(sapling_tree_blob.into()))
+    /// Fetch a tree from the local caches and return it as a TreeEntry.
+    fn get_local_tree_cas_cache(&self, id: &HgId) -> Result<Option<Box<dyn TreeEntry>>> {
+        if let Some((augmented_tree, augmented_manifest_id, augmented_manifest_size)) =
+            self.fetch_local_tree_cas_cache(id)?
+        {
+            let tree = LazyTree::Cas(AugmentedTreeWithDigest {
+                augmented_manifest_id,
+                augmented_manifest_size,
+                augmented_tree,
+            });
+            return Ok(Some(Box::<ScmStoreTreeEntry>::new(tree.into())));
+        }
+        Ok(None)
     }
 
     fn cache_child_aux_data(
         &self,
         tree_aux_store: &Arc<TreeAuxStore>,
-        augmented_tree: AugmentedTree,
+        augmented_tree: &AugmentedTree,
     ) -> Result<()> {
         let filestore = if let Some(filestore) = &self.filestore {
             filestore
@@ -219,7 +292,7 @@ impl TreeStore {
             return Ok(());
         };
 
-        for (_path, entry) in augmented_tree.entries {
+        for (_path, entry) in augmented_tree.entries.iter() {
             match entry {
                 AugmentedTreeEntry::FileNode(file) => {
                     if !aux_cache.contains(file.filenode)? {
@@ -230,7 +303,7 @@ impl TreeStore {
                                 sha1: file.content_sha1,
                                 blake3: file.content_blake3,
                                 file_header_metadata: Some(
-                                    file.file_header_metadata.unwrap_or_default(),
+                                    file.file_header_metadata.clone().unwrap_or_default(),
                                 ),
                             },
                         )?;
@@ -451,7 +524,14 @@ impl TreeStore {
                     for key in pending.into_iter() {
                         if let Some(entry) = log.get_entry(&key.hgid)? {
                             tracing::trace!("{:?} found in {:?}", key, location);
-                            state.common.found(key, LazyTree::IndexedLog(entry).into());
+                            state.common.found(
+                                key,
+                                LazyTree::IndexedLog(TreeEntryWithAux {
+                                    entry,
+                                    tree_aux: None,
+                                })
+                                .into(),
+                            );
                             found_count += 1;
                         }
                         bar.increase_position(1);
@@ -836,23 +916,35 @@ impl HistoryStore for TreeStore {
 }
 
 impl storemodel::KeyStore for TreeStore {
-    fn get_local_content(&self, _path: &RepoPath, node: HgId) -> anyhow::Result<Option<ScmBlob>> {
+    fn get_local_content(&self, _path: &RepoPath, node: HgId) -> anyhow::Result<Option<Blob>> {
         if node.is_null() {
-            return Ok(Some(ScmBlob::Bytes(Default::default())));
+            return Ok(Some(Blob::Bytes(Default::default())));
         }
         self.get_local_content_direct(&node)
     }
 
-    fn get_content(&self, fctx: FetchContext, path: &RepoPath, node: Node) -> Result<ScmBlob> {
+    fn get_content(&self, mut fctx: FetchContext, path: &RepoPath, node: Node) -> Result<Blob> {
         if node.is_null() {
-            return Ok(ScmBlob::Bytes(Default::default()));
+            return Ok(Blob::Bytes(Default::default()));
         }
+
+        // This path is hot for code paths such as manifest-tree iter/diff. They tend to do big prefetches and then do single fetches.
+        // Optimize the single fetches by optimistically checking local caches directly (which skips the overhead of fetch_batch).
+        if fctx.mode().contains(FetchMode::LOCAL) {
+            if let Some(blob) = self.get_local_content(path, node)? {
+                return Ok(blob);
+            }
+
+            // Don't need to check local anymore, so remove from fetch mode.
+            fctx = FetchContext::new_with_cause(*fctx.mode() - FetchMode::LOCAL, *fctx.cause());
+        }
+
         let key = Key::new(path.to_owned(), node);
         match self
             .fetch_batch(fctx, std::iter::once(key.clone()), TreeAttributes::CONTENT)
             .single()?
         {
-            Some(entry) => Ok(ScmBlob::Bytes(
+            Some(entry) => Ok(Blob::Bytes(
                 entry.content.expect("no tree content").hg_content()?,
             )),
             None => Err(anyhow!("key {:?} not found in manifest", key)),
@@ -863,16 +955,16 @@ impl storemodel::KeyStore for TreeStore {
         &self,
         fctx: FetchContext,
         keys: Vec<Key>,
-    ) -> anyhow::Result<BoxIterator<anyhow::Result<(Key, ScmBlob)>>> {
+    ) -> anyhow::Result<BoxIterator<anyhow::Result<(Key, Blob)>>> {
         let fetched = self.fetch_batch(fctx, keys.into_iter(), TreeAttributes::CONTENT);
         let iter = fetched
             .into_iter()
-            .map(|entry| -> anyhow::Result<(Key, ScmBlob)> {
+            .map(|entry| -> anyhow::Result<(Key, Blob)> {
                 let (key, store_tree) = entry?;
                 let content = store_tree
                     .content
                     .ok_or_else(|| anyhow::format_err!("no content available"))?;
-                Ok((key, ScmBlob::Bytes(content.hg_content()?)))
+                Ok((key, Blob::Bytes(content.hg_content()?)))
             });
         Ok(Box::new(iter))
     }
@@ -924,16 +1016,13 @@ struct ScmStoreTreeEntry {
 impl ScmStoreTreeEntry {
     fn basic_tree_entry(&self) -> Result<&dyn TreeEntry> {
         self.basic_tree_entry
-            .get_or_try_init(|| {
-                let data = self.tree.hg_content()?;
-                let entry = storemodel::basic_parse_tree(data, SerializationFormat::Hg)?;
-                Ok(entry)
-            })
+            .get_or_try_init(|| Ok(Box::new(self.tree.manifest_tree_entry()?)))
             .map(Borrow::borrow)
     }
 }
 
 impl TreeEntry for ScmStoreTreeEntry {
+    // TODO (liubovd): We should support iter directly for CAS.
     fn iter(&self) -> Result<BoxIterator<Result<(PathComponentBuf, HgId, TreeItemFlag)>>> {
         self.basic_tree_entry()?.iter()
     }
@@ -970,21 +1059,37 @@ impl TreeEntry for ScmStoreTreeEntry {
 
     /// Get the directory aux data of the tree.
     fn aux_data(&self) -> anyhow::Result<Option<TreeAuxData>> {
-        let entry = match &self.tree {
-            LazyTree::SaplingRemoteApi(entry) => entry,
-            // TODO: We should also support fetching tree metadata from local cache
-            _ => return Ok(None),
-        };
-        Ok(entry.tree_aux_data)
+        Ok(self.tree.aux_data())
+    }
+}
+
+/// ScmStoreTreeEntry is a wrapper around a LazyTree that implements `TreeEntry` with aux data support.
+/// Basic tree entry is used to avoid multiple coversions of the same tree into the mercurial format.
+impl Into<ScmStoreTreeEntry> for LazyTree {
+    fn into(self) -> ScmStoreTreeEntry {
+        ScmStoreTreeEntry {
+            tree: self,
+            basic_tree_entry: OnceCell::new(),
+        }
     }
 }
 
 impl storemodel::TreeStore for TreeStore {
+    fn get_local_tree(
+        &self,
+        _path: &RepoPath,
+        id: HgId,
+    ) -> anyhow::Result<Option<Box<dyn TreeEntry>>> {
+        self.get_local_tree_direct(id)
+    }
+
     fn get_tree_iter(
         &self,
         fctx: FetchContext,
         keys: Vec<Key>,
     ) -> anyhow::Result<BoxIterator<anyhow::Result<(Key, Box<dyn TreeEntry>)>>> {
+        // TreeAttributes::CONTENT means at least the content attribute is requested.
+        // In practice, files/trees aux data may be requested as well, but we don't know that here as it depends on the configs.
         let fetched = self.fetch_batch(fctx, keys.into_iter(), TreeAttributes::CONTENT);
         let iter = fetched
             .into_iter()
@@ -993,12 +1098,8 @@ impl storemodel::TreeStore for TreeStore {
                 let tree: LazyTree = store_tree
                     .content
                     .ok_or_else(|| anyhow::format_err!("no content available"))?;
-                // ScmStoreTreeEntry supports aux data.
-                let tree_entry = ScmStoreTreeEntry {
-                    tree,
-                    basic_tree_entry: OnceCell::new(),
-                };
-                Ok((key, Box::new(tree_entry)))
+                // returns ScmStoreTreeEntry that supports both file and tree aux data.
+                Ok((key, Box::<ScmStoreTreeEntry>::new(tree.into())))
             });
         Ok(Box::new(iter))
     }
@@ -1014,7 +1115,7 @@ impl storemodel::TreeStore for TreeStore {
             .map(|entry| -> anyhow::Result<(Key, TreeAuxData)> {
                 let (key, store_tree) = entry?;
                 let aux = store_tree
-                    .aux_data
+                    .aux_data()
                     .ok_or_else(|| anyhow::anyhow!("aux data is missing from store tree"))?;
                 Ok((key, aux))
             });

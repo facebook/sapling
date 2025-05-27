@@ -60,43 +60,45 @@ unsafe fn pybytearray_from_slice(
     value: &mut [u8],
     alloc_size: Option<usize>,
 ) -> RustPyObject {
-    let ptr: *mut PyObject = ffi::PyByteArray_FromStringAndSize(std::ptr::null(), 0);
-    let typed: *mut PyByteArrayObject = mem::transmute(ptr);
+    unsafe {
+        let ptr: *mut PyObject = ffi::PyByteArray_FromStringAndSize(std::ptr::null(), 0);
+        let typed: *mut PyByteArrayObject = mem::transmute(ptr);
 
-    // We want to rewrite ob_alloc and ob_bytes directly. Ensure that
-    // they are not allocated by cpython.
-    assert_eq!(
-        (*typed).ob_alloc,
-        0,
-        "PyByteArray_FromStringAndSize(size=0) should not alloc"
-    );
-    assert!(
-        (*typed).ob_bytes.is_null(),
-        "PyByteArray_FromStringAndSize(size=0) should not alloc"
-    );
+        // We want to rewrite ob_alloc and ob_bytes directly. Ensure that
+        // they are not allocated by cpython.
+        assert_eq!(
+            (*typed).ob_alloc,
+            0,
+            "PyByteArray_FromStringAndSize(size=0) should not alloc"
+        );
+        assert!(
+            (*typed).ob_bytes.is_null(),
+            "PyByteArray_FromStringAndSize(size=0) should not alloc"
+        );
 
-    // There are no public cpython APIs to update these fields.
-    // So we update them directly based on our understanding of
-    // the PyByteArrayObject struct.
-    (*typed).ob_alloc = alloc_size.unwrap_or(value.len()) as Py_ssize_t;
-    (*typed).ob_bytes = value.as_mut_ptr();
-    {
-        (*typed).ob_base.ob_size = value.len() as Py_ssize_t;
-        (*typed).ob_start = (*typed).ob_bytes;
+        // There are no public cpython APIs to update these fields.
+        // So we update them directly based on our understanding of
+        // the PyByteArrayObject struct.
+        (*typed).ob_alloc = alloc_size.unwrap_or(value.len()) as Py_ssize_t;
+        (*typed).ob_bytes = value.as_mut_ptr();
+        {
+            (*typed).ob_base.ob_size = value.len() as Py_ssize_t;
+            (*typed).ob_start = (*typed).ob_bytes;
+        }
+
+        // Sanity check: cpython's understanding of the bytes matches ours.
+        let ptr: *mut PyObject = typed as *mut PyObject;
+        assert_eq!(
+            PyByteArray_Size(ptr) as usize,
+            value.len(),
+            "PyByteArray struct mismatch (ob_size)"
+        );
+        assert_eq!(
+            ffi::PyByteArray_AsString(ptr) as *const u8,
+            value.as_ptr(),
+            "PyByteArray struct mismatch (ob_bytes)"
+        );
+
+        RustPyObject::from_owned_ptr(py, ptr)
     }
-
-    // Sanity check: cpython's understanding of the bytes matches ours.
-    let ptr: *mut PyObject = typed as *mut PyObject;
-    assert_eq!(
-        PyByteArray_Size(ptr) as usize,
-        value.len(),
-        "PyByteArray struct mismatch (ob_size)"
-    );
-    assert_eq!(
-        ffi::PyByteArray_AsString(ptr) as *const u8,
-        value.as_ptr(),
-        "PyByteArray struct mismatch (ob_bytes)"
-    );
-
-    RustPyObject::from_owned_ptr(py, ptr)
 }

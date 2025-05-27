@@ -261,7 +261,7 @@ class VersionCmd(Subcmd):
 class InfoCmd(Subcmd):
     def setup_parser(self, parser: argparse.ArgumentParser) -> None:
         parser.add_argument(
-            "client", default=None, nargs="?", help="Path to the checkout"
+            "client", default=None, nargs=argparse.OPTIONAL, help="Path to the checkout"
         )
 
     def run(self, args: argparse.Namespace) -> int:
@@ -297,7 +297,10 @@ class DiskUsageCmd(Subcmd):
 
     def setup_parser(self, parser: argparse.ArgumentParser) -> None:
         parser.add_argument(
-            "mounts", default=[], nargs="*", help="Names of the mount points"
+            "mounts",
+            default=[],
+            nargs=argparse.ZERO_OR_MORE,
+            help="Names of the mount points",
         )
         group = parser.add_mutually_exclusive_group()
         group.add_argument(
@@ -832,6 +835,12 @@ class CloneCmd(Subcmd):
             nargs=argparse.REMAINDER,
             help=argparse.SUPPRESS,
         )
+        parser.add_argument(
+            "--preserved-vars",
+            "-p",
+            nargs=argparse.ZERO_OR_MORE,
+            help=argparse.SUPPRESS,
+        )
 
         parser.add_argument(
             "--nfs",
@@ -1098,7 +1107,10 @@ is case-sensitive. This is not recommended and is intended only for testing."""
             # Sometimes this returns a non-zero exit code if it does not finish
             # startup within the default timeout.
             exit_code = daemon.start_edenfs_service(
-                instance, args.daemon_binary, args.edenfs_args
+                instance,
+                args.daemon_binary,
+                args.edenfs_args,
+                args.preserved_vars,
             )
             if exit_code != 0:
                 return exit_code
@@ -1283,6 +1295,8 @@ class HealthReportCmd(Subcmd):
             return remediation[self]
 
     running_version: str = ""
+    # a value of 0 turns off the stale version check
+    running_version_days_threshold = 45
     version_info: VersionInfo = VersionInfo()
     error_codes: Dict[ErrorCode, str] = {}
 
@@ -1290,7 +1304,7 @@ class HealthReportCmd(Subcmd):
         parser.add_argument(
             "--mounts",
             default=[],
-            nargs="*",
+            nargs=argparse.ZERO_OR_MORE,
             help="path of the mount points",
             dest="mounts",
         )
@@ -1337,16 +1351,20 @@ class HealthReportCmd(Subcmd):
         return True
 
     def is_eden_up_to_date(self) -> bool:
+        """Checks if running version is newer than a pre-configured threshold.
+        If provided threshold is 0, the check is skipped and returns True."""
         if (
-            self.version_info.ages_deltas is not None
-            and self.version_info.ages_deltas >= 30
+            sys.platform == "win32"
+            and self.running_version_days_threshold != 0
+            and self.version_info.ages_deltas is not None
+            and self.version_info.ages_deltas >= self.running_version_days_threshold
         ):
             self.error_codes[HealthReportCmd.ErrorCode.STALE_EDEN_VERSION] = (
                 "Running EdenFS version: "
                 + (self.version_info.running_version or "")
                 + ", installed EdenFS version: "
                 + (self.version_info.installed_version or "")
-                + ". The running EdenFS daemon is over 30 days out-of-date."
+                + f". The running EdenFS daemon is over {self.running_version_days_threshold} days out-of-date."
             )
             return False
         return True
@@ -1497,6 +1515,10 @@ class HealthReportCmd(Subcmd):
     def run(self, args: argparse.Namespace) -> int:
         instance = get_eden_instance(args)
         mounts = args.mounts or []
+        self.running_version_days_threshold = instance.get_config_int(
+            "notifications.health-report-stale-version-threshold-days",
+            self.running_version_days_threshold,
+        )
 
         # don't run health-report if there are no eden mounts
         if not instance.get_mount_paths():
@@ -1564,7 +1586,10 @@ class HealthReportCmd(Subcmd):
 class StraceCmd(Subcmd):
     def setup_parser(self, parser: argparse.ArgumentParser) -> None:
         parser.add_argument(
-            "checkout", default=None, nargs="?", help="Path to the checkout"
+            "checkout",
+            default=None,
+            nargs=argparse.OPTIONAL,
+            help="Path to the checkout",
         )
         parser.add_argument(
             "--reads",
@@ -1669,7 +1694,7 @@ class FsckCmd(Subcmd):
         parser.add_argument(
             "path",
             metavar="CHECKOUT_PATH",
-            nargs="*",
+            nargs=argparse.ZERO_OR_MORE,
             help="The path to an EdenFS checkout to verify.",
         )
         parser.add_argument(
@@ -1845,7 +1870,10 @@ class ChownCmd(Subcmd):
 class MountCmd(Subcmd):
     def setup_parser(self, parser: argparse.ArgumentParser) -> None:
         parser.add_argument(
-            "paths", nargs="*", metavar="path", help="The checkout mount path"
+            "paths",
+            nargs=argparse.ZERO_OR_MORE,
+            metavar="path",
+            help="The checkout mount path",
         )
         parser.add_argument(
             "--read-only", action="store_true", dest="read_only", help="Read only mount"
@@ -1946,7 +1974,10 @@ class RemoveCmd(Subcmd):
             help=argparse.SUPPRESS,
         )
         parser.add_argument(
-            "paths", nargs="+", metavar="path", help="The EdenFS checkout(s) to remove"
+            "paths",
+            nargs=argparse.ONE_OR_MORE,
+            metavar="path",
+            help="The EdenFS checkout(s) to remove",
         )
         parser.add_argument(
             "--no-force",
@@ -2203,7 +2234,7 @@ class UnmountCmd(Subcmd):
         parser.add_argument("--destroy", action="store_true", help=argparse.SUPPRESS)
         parser.add_argument(
             "paths",
-            nargs="+",
+            nargs=argparse.ONE_OR_MORE,
             metavar="path",
             help="Path where checkout should be unmounted from",
         )
@@ -2269,6 +2300,18 @@ class StartCmd(Subcmd):
             "-F",
             action="store_true",
             help="Run edenfs in the foreground, rather than daemonizing",
+        )
+        parser.add_argument(
+            "--preserved-vars",
+            "-p",
+            nargs=argparse.ZERO_OR_MORE,
+            help=(
+                "By default, the EdenFS daemon is started with a limited set "
+                "of environment variables. This option specifies additional "
+                "environment variables that should be preserved (or passed) "
+                "when starting a new daemon. NOTE: this should only contain "
+                "the names of the env vars, not their desired values."
+            ),
         )
         if sys.platform != "win32":
             parser.add_argument(
@@ -2351,14 +2394,16 @@ class StartCmd(Subcmd):
 
         if is_takeover and health_info.is_healthy():
             daemon.gracefully_restart_edenfs_service(
-                instance, daemon_binary, args.edenfs_args
+                instance, daemon_binary, args.edenfs_args, args.preserved_vars
             )
 
         if config_mod.should_migrate_mount_protocol_to_nfs(instance):
             config_mod._do_nfs_migration(instance, get_migration_success_message)
         if config_mod.should_migrate_inode_catalog_to_in_memory(instance):
             config_mod._do_in_memory_inode_catalog_migration(instance)
-        result = daemon.start_edenfs_service(instance, daemon_binary, args.edenfs_args)
+        result = daemon.start_edenfs_service(
+            instance, daemon_binary, args.edenfs_args, args.preserved_vars
+        )
 
         # show Eden ready notification only if there are any active eden mounts
         if instance.get_mount_paths():
@@ -2428,7 +2473,7 @@ class StartCmd(Subcmd):
                 cmd = ["strace", "-fttT", "-o", args.strace] + cmd
 
         # Wrap the command in sudo, if necessary
-        eden_env = daemon.get_edenfs_environment()
+        eden_env = daemon.get_edenfs_environment(args.preserved_vars)
         cmd, eden_env = daemon.prepare_edenfs_privileges(
             daemon_binary, cmd, eden_env, privhelper
         )
@@ -2547,6 +2592,18 @@ class RestartCmd(Subcmd):
             default=None,
             choices=["fuse", "nfs"],
             help=migration_restart_help,
+        )
+        parser.add_argument(
+            "--preserved-vars",
+            "-p",
+            nargs=argparse.ZERO_OR_MORE,
+            help=(
+                "By default, the EdenFS daemon is started with a limited set "
+                "of environment variables. This option specifies additional "
+                "environment variables that should be preserved (or passed) "
+                "when starting a new daemon. NOTE: this should only contain "
+                "the names of the env vars, not their desired values."
+            ),
         )
 
     def run(self, args: argparse.Namespace) -> int:
@@ -2700,7 +2757,9 @@ class RestartCmd(Subcmd):
             # the process didn't start up correctly and continue directly to
             # our recovery logic.
             status = daemon.gracefully_restart_edenfs_service(
-                instance, daemon_binary=self.args.daemon_binary
+                instance,
+                daemon_binary=self.args.daemon_binary,
+                preserved_env=self.args.preserved_vars,
             )
             success = status == 0
             if success:
@@ -2717,11 +2776,16 @@ class RestartCmd(Subcmd):
     def _start(self, instance: EdenInstance) -> int:
         print("edenfs daemon is not currently running. Starting...")
         return daemon.start_edenfs_service(
-            instance, daemon_binary=self.args.daemon_binary
+            instance,
+            daemon_binary=self.args.daemon_binary,
+            preserved_env=self.args.preserved_vars,
         )
 
     def _full_restart(
-        self, instance: EdenInstance, old_pid: int, migrate_to: Optional[str]
+        self,
+        instance: EdenInstance,
+        old_pid: int,
+        migrate_to: Optional[str],
     ) -> int:
         print(
             """\
@@ -2783,7 +2847,9 @@ re-open these files after EdenFS is restarted.
 
     def _finish_restart(self, instance: EdenInstance) -> int:
         exit_code = daemon.start_edenfs_service(
-            instance, daemon_binary=self.args.daemon_binary
+            instance,
+            daemon_binary=self.args.daemon_binary,
+            preserved_env=self.args.preserved_vars,
         )
         if exit_code != 0:
             print("Failed to start edenfs daemon!", file=sys.stderr)

@@ -34,6 +34,7 @@ if sys.platform == "win32":
         "clone_test.CloneFakeEdenFSTestManaged": True,
         "clone_test.CloneTestHg": True,
         "config_test.ConfigTest": True,
+        "changes_test.ChangesTestNix": True,
         "corrupt_overlay_test.CorruptOverlayTest": True,  # Corrupts the file overlay that isn't available on Windows
         "debug_getpath_test.DebugGetPathTestHg": True,
         "doteden_test.DotEdenTestHg": [
@@ -327,6 +328,7 @@ elif sys.platform.startswith("darwin"):
 if sys.platform != "win32":
     TEST_DISABLED.update(
         {
+            "changes_test.ChangesTestWin": True,
             "corrupt_overlay_test.CorruptSqliteOverlayTest": True,
             "invalidate_test.InvalidateTest": True,
             "windows_fsck_test.WindowsFsckTest": True,
@@ -447,9 +449,11 @@ if "SANDCASTLE" in os.environ:
             class_skipped.append(method_name)
 
     # We don't have passwordless sudo on sandcastle
-    TEST_DISABLED["changes_test.ChangesTestNix"] = [
-        "test_modify_folder_chown",
-    ]
+    # Disable if it's not already disabled
+    if TEST_DISABLED.get("changes_test.ChangesTestNix") is None:
+        TEST_DISABLED["changes_test.ChangesTestNix"] = [
+            "test_modify_folder_chown",
+        ]
 
 try:
     from eden.integration.facebook.lib.skip import add_fb_specific_skips

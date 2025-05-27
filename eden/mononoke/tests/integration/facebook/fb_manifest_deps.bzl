@@ -16,7 +16,6 @@ MONONOKE_TARGETS_TO_ENV = {
     "//eden/mononoke/cmds/copy_blobstore_keys:copy_blobstore_keys": "COPY_BLOBSTORE_KEYS",
     "//eden/mononoke/commit_rewriting/backsyncer:backsyncer_cmd": "BACKSYNCER",
     "//eden/mononoke/commit_rewriting/commit_validator:commit_validator": "COMMIT_VALIDATOR",
-    "//eden/mononoke/commit_rewriting/megarepo:megarepotool": "MEGAREPO_TOOL",
     "//eden/mononoke/commit_rewriting/mononoke_x_repo_sync_job:mononoke_x_repo_sync_job": "MONONOKE_X_REPO_SYNC",
     "//eden/mononoke/facebook/bookmark_service:bookmark_service_client_cli": "MONONOKE_BOOKMARK_SERVICE_CLIENT",
     "//eden/mononoke/facebook/bookmark_service:bookmark_service_server": "MONONOKE_BOOKMARK_SERVICE_SERVER",
@@ -159,7 +158,7 @@ def custom_manifest_rule(name, manifest_file, targets):
 
     return list(targets.values())
 
-def dott_test(name, dott_files, deps, use_mysql = False, disable_all_network_access_target = True, enable_async_requests_worker = False, labels = ()):
+def dott_test(name, dott_files, deps, use_mysql = False, disable_all_network_access_target = False, enable_async_requests_worker = False, labels = ()):
     _dott_test(name, dott_files, deps, use_mysql, False, enable_async_requests_worker = enable_async_requests_worker, labels = labels)
 
     if use_mysql:

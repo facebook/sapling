@@ -24,6 +24,7 @@ export default function openFile(
   line?: number,
   preview?: boolean,
   onOpened?: (editor: vscode.TextEditor) => void,
+  disableScroll: boolean = false,
 ) {
   if (repo == null) {
     return;
@@ -43,7 +44,7 @@ export default function openFile(
     })
     .then(
       editor => {
-        if (line != null) {
+        if (!disableScroll && line != null) {
           const lineZeroIndexed = line - 1; // vscode uses 0-indexed line numbers
           editor.selections = [new vscode.Selection(lineZeroIndexed, 0, lineZeroIndexed, 0)]; // move cursor to line
           editor.revealRange(

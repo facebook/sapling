@@ -22,7 +22,7 @@ rust_library(
         "fbsource//third-party/rust:auto_impl",
         "fbsource//third-party/rust:futures",
         "fbsource//third-party/rust:tracing",
-        "//eden/scm/lib/blob:scm-blob",
+        "//eden/scm/lib/blob:blob",
         "//eden/scm/lib/config/model:configmodel",
         "//eden/scm/lib/types:types",
         "//eden/scm/lib/util/factory:factory",

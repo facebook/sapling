@@ -12,7 +12,6 @@ oncall("scm_server_treehugger")
 # TODO(liubovd): fix flaky LFS test
 dott_test(
     name = "mononoke_re_cas",
-    disable_all_network_access_target = False,
     dott_files = glob(
         [
             "*.t",

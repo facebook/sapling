@@ -51,10 +51,7 @@ pub struct ImportArgs {
     ///Disable x_repo sync check after moving the bookmark
     #[clap(long)]
     pub disable_x_repo_check: bool,
-    ///Disable hg sync check after moving the bookmark
-    #[clap(long)]
-    pub disable_hg_sync_check: bool,
-    ///Sleep time in seconds, if we fail dependent system (phabricator, hg_sync ...) checkers
+    ///Sleep time in seconds, if we fail dependent system (phabricator, etc.) checkers
     #[clap(long, default_value_t = 5)]
     pub sleep_time_secs: u64,
     ///commit author to use

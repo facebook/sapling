@@ -52,8 +52,10 @@ impl ScopedEnvVar {
 
     pub fn set(&self, val: Option<impl AsRef<OsStr>>) {
         match val {
-            None => env::remove_var(&self.name),
-            Some(val) => env::set_var(&self.name, val),
+            // TODO: Audit that the environment access only happens in single-threaded code.
+            None => unsafe { env::remove_var(&self.name) },
+            // TODO: Audit that the environment access only happens in single-threaded code.
+            Some(val) => unsafe { env::set_var(&self.name, val) },
         }
     }
 }

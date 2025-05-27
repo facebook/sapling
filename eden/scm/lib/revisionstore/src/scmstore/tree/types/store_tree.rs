@@ -35,12 +35,9 @@ impl StoreTree {
             .manifest_tree_entry()
     }
 
-    pub fn aux_data(&self) -> Result<HashMap<HgId, AuxData>> {
-        Ok(self
-            .content
-            .as_ref()
-            .ok_or_else(|| anyhow!("no content available"))?
-            .children_aux_data())
+    pub fn aux_data(&self) -> Option<TreeAuxData> {
+        self.aux_data
+            .or_else(|| self.content.as_ref().and_then(|c| c.aux_data()))
     }
 }
 

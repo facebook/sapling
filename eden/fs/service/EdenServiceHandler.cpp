@@ -723,43 +723,6 @@ EdenServiceHandler::EdenServiceHandler(
           server_->getServerState()
               ->getEdenConfig()
               ->ThriftTraceBusCapacity.getValue())) {
-  struct HistConfig {
-    int64_t bucketSize{250};
-    int64_t min{0};
-    int64_t max{25000};
-  };
-
-  static constexpr std::pair<StringPiece, HistConfig> customMethodConfigs[] = {
-      {"listMounts", {20, 0, 1000}},
-      {"resetParentCommits", {20, 0, 1000}},
-      {"getCurrentJournalPosition", {20, 0, 1000}},
-      {"flushStatsNow", {20, 0, 1000}},
-      {"reloadConfig", {200, 0, 10000}},
-  };
-
-  apache::thrift::metadata::ThriftServiceMetadataResponse metadataResponse;
-  getProcessor()->getServiceMetadata(metadataResponse);
-  auto& edenService =
-      metadataResponse.metadata_ref()->services_ref()->at("eden.EdenService");
-  for (auto& function : *edenService.functions_ref()) {
-    HistConfig hc;
-    for (auto& [name, customHistConfig] : customMethodConfigs) {
-      if (*function.name_ref() == name) {
-        hc = customHistConfig;
-        break;
-      }
-    }
-    // For now, only register EdenService methods, but we could traverse up
-    // parent services too.
-    static constexpr StringPiece prefix = "EdenService.";
-    exportThriftFuncHist(
-        folly::to<std::string>(prefix, *function.name_ref()),
-        facebook::fb303::PROCESS,
-        folly::small_vector<int>({50, 90, 99}), // percentiles to record
-        hc.bucketSize,
-        hc.min,
-        hc.max);
-  }
   thriftRequestTraceHandle_ = thriftRequestTraceBus_->subscribeFunction(
       "Outstanding Thrift request tracing",
       [this](const ThriftRequestTraceEvent& event) {
@@ -4170,7 +4133,7 @@ EdenServiceHandler::semifuture_globFiles(std::unique_ptr<GlobParams> params) {
 
       auto searchRoot = params->searchRoot_ref().value();
       size_t pos = 0;
-      while ((pos = searchRoot.find("\\", pos)) != std::string::npos) {
+      while ((pos = searchRoot.find('\\', pos)) != std::string::npos) {
         searchRoot.replace(pos, 1, "/");
       }
 
@@ -4860,6 +4823,9 @@ EdenServiceHandler::semifuture_debugGetBlob(
               edenMount, id, std::move(blob), DataFetchOrigin::DISK_CACHE);
         }));
   }
+
+  auto& context = helper->getFetchContext();
+
   if (originFlags.contains(FROMWHERE_LOCAL_BACKING_STORE)) {
     auto proxyHash = HgProxyHash::load(
         server_->getLocalStore().get(),
@@ -4873,7 +4839,7 @@ EdenServiceHandler::semifuture_debugGetBlob(
     blobFutures.emplace_back(transformToBlobFromOrigin(
         edenMount,
         id,
-        saplingBackingStore->getBlobLocal(proxyHash),
+        saplingBackingStore->getBlobLocal(proxyHash, context),
         DataFetchOrigin::LOCAL_BACKING_STORE));
   }
   if (originFlags.contains(FROMWHERE_REMOTE_BACKING_STORE)) {
@@ -4888,16 +4854,15 @@ EdenServiceHandler::semifuture_debugGetBlob(
     blobFutures.emplace_back(transformToBlobFromOrigin(
         edenMount,
         id,
-        saplingBackingStore->getBlobRemote(proxyHash),
+        saplingBackingStore->getBlobRemote(proxyHash, context),
         DataFetchOrigin::REMOTE_BACKING_STORE));
   }
   if (originFlags.contains(FROMWHERE_ANYWHERE)) {
     blobFutures.emplace_back(
-        store->getBlob(id, helper->getFetchContext())
-            .thenTry([edenMount, id](auto&& blob) {
-              return transformToBlobFromOrigin(
-                  edenMount, id, std::move(blob), DataFetchOrigin::ANYWHERE);
-            }));
+        store->getBlob(id, context).thenTry([edenMount, id](auto&& blob) {
+          return transformToBlobFromOrigin(
+              edenMount, id, std::move(blob), DataFetchOrigin::ANYWHERE);
+        }));
   }
 
   return wrapImmediateFuture(
@@ -5044,6 +5009,8 @@ EdenServiceHandler::semifuture_debugGetTree(
         }));
   }
 
+  auto& context = helper->getFetchContext();
+
   if (originFlags.contains(FROMWHERE_LOCAL_BACKING_STORE)) {
     auto proxyHash = HgProxyHash::load(
         server_->getLocalStore().get(),
@@ -5059,7 +5026,7 @@ EdenServiceHandler::semifuture_debugGetTree(
         edenMount,
         id,
         folly::Try<std::shared_ptr<const Tree>>{
-            saplingBackingStore->getTreeLocal(id, proxyHash)},
+            saplingBackingStore->getTreeLocal(id, context, proxyHash)},
         DataFetchOrigin::LOCAL_BACKING_STORE));
   }
 
@@ -5076,10 +5043,7 @@ EdenServiceHandler::semifuture_debugGetTree(
         edenMount,
         id,
         saplingBackingStore->getTreeRemote(
-            proxyHash.path().copy(),
-            proxyHash.revHash(),
-            id,
-            helper->getFetchContext()),
+            proxyHash.path().copy(), proxyHash.revHash(), id, context),
         DataFetchOrigin::REMOTE_BACKING_STORE));
   }
 

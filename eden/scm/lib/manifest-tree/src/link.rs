@@ -183,8 +183,8 @@ impl LinkData {
         loop {
             match self {
                 Leaf(_) => bail!("Path {} is a file but a directory was expected.", parent),
-                Ephemeral(ref mut links) => return Ok(links),
-                Durable(ref entry) => {
+                Ephemeral(links) => return Ok(links),
+                &mut Durable(ref entry) => {
                     let durable_links = entry.materialize_links(store, parent)?;
                     *self = Ephemeral(durable_links.clone());
                 }
@@ -325,10 +325,10 @@ impl DirLink {
     pub fn links(
         &self,
         store: &InnerStore,
-    ) -> Result<impl Iterator<Item = (&PathComponentBuf, &Link)>> {
+    ) -> Result<impl Iterator<Item = (&PathComponentBuf, &Link)> + use<'_>> {
         let links = match self.link.as_ref() {
             Leaf(_) => panic!("programming error: directory cannot be a leaf node"),
-            Ephemeral(ref links) => links,
+            Ephemeral(links) => links,
             Durable(entry) => entry.materialize_links(store, &self.path)?,
         };
         Ok(links.iter())

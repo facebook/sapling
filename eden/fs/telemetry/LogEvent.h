@@ -604,15 +604,20 @@ struct WorkingCopyGc : public EdenFSEvent {
 struct AccidentalUnmountRecovery : public EdenFSEvent {
   std::string error;
   bool success = false;
-  std::string repo;
+  std::string repo_source;
 
-  AccidentalUnmountRecovery(std::string error, bool success, std::string repo)
-      : error(std::move(error)), success(success), repo(std::move(repo)) {}
+  AccidentalUnmountRecovery(
+      std::string error,
+      bool success,
+      std::string repo_source)
+      : error(std::move(error)),
+        success(success),
+        repo_source(std::move(repo_source)) {}
 
   void populate(DynamicEvent& event) const override {
     event.addString("remount_error", error);
     event.addBool("success", success);
-    event.addString("repo", repo);
+    event.addString("repo_source", repo_source);
   }
 
   const char* getType() const override {
@@ -821,12 +826,6 @@ struct FileAccessEvent : public EdenFSFileAccessEvent {
     event.addString("filename", filename);
     event.addString("source", source);
     event.addString("source_detail", source_detail);
-
-    if (auto alias = std::getenv("SANDCASTLE_ALIAS")) {
-      // Log the Sandcastle job alias if set. If we decide to use predictive
-      // prefetch profiles on sandcastle, we will want the sandcastle alias.
-      event.addString("sandcastle_alias", alias);
-    }
   }
 };
 

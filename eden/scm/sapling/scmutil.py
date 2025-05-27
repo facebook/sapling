@@ -10,7 +10,6 @@
 # This software may be used and distributed according to the terms of the
 # GNU General Public License version 2 or any later version.
 
-from __future__ import absolute_import
 
 import errno
 import glob
@@ -382,6 +381,8 @@ def _uploadtraceback(ui, message, trace):
     # blackbox instead.
     ui.log("errortrace", "Trace:\n%s\n", trace, key=key, payload=payload)
     ui.log("errortracekey", "Trace key:%s\n", key, errortracekey=key)
+    error_prefix = payload[:100]
+    ui.log("error_prefix", "%s", error_prefix, error_prefix=error_prefix)
 
 
 def _printstat(ui, path):

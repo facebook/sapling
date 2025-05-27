@@ -13,7 +13,7 @@ async-trait = "0.1.86"
 blobstore = { version = "0.1.0", path = "../blobstore" }
 bytes = { version = "1.9.0", features = ["serde"] }
 cached_config = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
-clap = { version = "4.5.30", features = ["derive", "env", "string", "unicode", "wrap_help"] }
+clap = { version = "4.5.38", features = ["derive", "env", "string", "unicode", "wrap_help"] }
 cloned = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 cmdlib_caching = { version = "0.1.0", path = "../cmdlib/caching" }
 connection_security_checker = { version = "0.1.0", path = "../common/connection_security_checker" }
@@ -61,10 +61,10 @@ serde = { version = "1.0.185", features = ["derive", "rc"] }
 serde_json = { version = "1.0.140", features = ["float_roundtrip", "unbounded_depth"] }
 slog = { package = "tracing_slog_compat", version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 stats = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
-thiserror = "2"
+thiserror = "2.0.12"
 time_ext = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 time_window_counter = { version = "0.1.0", path = "../time_window_counter" }
-tokio = { version = "1.41.0", features = ["full", "test-util", "tracing"] }
+tokio = { version = "1.45.0", features = ["full", "test-util", "tracing"] }
 
 [dev-dependencies]
 chaosblob = { version = "0.1.0", path = "../blobstore/chaosblob" }

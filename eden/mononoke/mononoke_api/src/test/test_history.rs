@@ -69,6 +69,8 @@ async fn init_repo(
         "a1",
         CreateCommitContext::new_root(ctx, &repo)
             .add_file("a", "1")
+            .add_file("aa", "11")
+            .add_file("aaa", "111")
             .set_author_date(DateTime::from_timestamp(1000, 0)?)
             .commit()
             .await?,
@@ -78,6 +80,9 @@ async fn init_repo(
         CreateCommitContext::new(ctx, &repo, vec![changesets["a1"]])
             .add_file("a", "2")
             .add_file("dir1/a", "2")
+            .add_file_with_copy_info("renamed_aa", "22", (changesets["a1"], "aa"))
+            .delete_file("aa")
+            .add_file_with_copy_info("copied_aaa", "222", (changesets["a1"], "aaa"))
             .set_author_date(DateTime::from_timestamp(2000, 0)?)
             .commit()
             .await?,
@@ -88,6 +93,8 @@ async fn init_repo(
             .add_file("a", "3")
             .add_file("dir1/a", "3")
             .add_file("dir3/a", "3")
+            .add_file("renamed_aa", "33")
+            .add_file("copied_aaa", "333")
             .set_author_date(DateTime::from_timestamp(3000, 0)?)
             .commit()
             .await?,
@@ -236,6 +243,72 @@ async fn commit_path_history(fb: FacebookInit) -> Result<()> {
         ]
     );
 
+    // History of file "renamed_aa" doesn't include commits before the rename.
+    let renamed_aa_path = cs.path_with_history("renamed_aa").await?;
+    let renamed_aa_history: Vec<_> = renamed_aa_path
+        .history(
+            &ctx,
+            ChangesetPathHistoryOptions {
+                follow_history_across_deletions: true,
+                ..Default::default()
+            },
+        )
+        .await?
+        .and_then(|cs| async move { Ok(cs.id()) })
+        .try_collect()
+        .await?;
+    assert_eq!(
+        renamed_aa_history,
+        vec![
+            changesets["a3"], // This commit modified renamed_aa
+            changesets["a2"], // This commit renamed aa to renamed_aa
+        ]
+    );
+
+    // History of deleted file "aa"
+    let aa_path = cs.path_with_history("aa").await?;
+    let aa_history: Vec<_> = aa_path
+        .history(
+            &ctx,
+            ChangesetPathHistoryOptions {
+                follow_history_across_deletions: true,
+                ..Default::default()
+            },
+        )
+        .await?
+        .and_then(|cs| async move { Ok(cs.id()) })
+        .try_collect()
+        .await?;
+    assert_eq!(
+        aa_history,
+        vec![
+            changesets["a2"], // This commit renamed aa to renamed_aa
+            changesets["a1"], // This commit added aa
+        ]
+    );
+
+    // History of file "copied_aaa" doesn't include commits before the copy.
+    let copied_aaa_path = cs.path_with_history("copied_aaa").await?;
+    let copied_aaa_history: Vec<_> = copied_aaa_path
+        .history(
+            &ctx,
+            ChangesetPathHistoryOptions {
+                follow_history_across_deletions: true,
+                ..Default::default()
+            },
+        )
+        .await?
+        .and_then(|cs| async move { Ok(cs.id()) })
+        .try_collect()
+        .await?;
+    assert_eq!(
+        copied_aaa_history,
+        vec![
+            changesets["a3"], // This commit modified copied_aaa
+            changesets["a2"], // This commit copied aaa to copied_aaa
+        ]
+    );
+
     // History of directory "dir2" includes commits that modified "dir2/b".
     let dir2_path = cs.path_with_history("dir2").await?;
     let dir2_history: Vec<_> = dir2_path
@@ -312,8 +385,8 @@ async fn commit_path_history(fb: FacebookInit) -> Result<()> {
             changesets["c1"],
             changesets["m1"],
             changesets["a3"],
-            changesets["a2"],
             changesets["b2"],
+            changesets["a2"],
             changesets["a1"],
             changesets["b1"],
         ]

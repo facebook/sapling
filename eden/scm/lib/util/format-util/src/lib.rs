@@ -27,6 +27,7 @@ mod utils;
 pub(crate) use byte_count::ByteCount;
 pub use commit_fields::CommitFields;
 pub use git_commit::git_commit_text_to_root_tree_id;
+pub use git_commit::resolve_git_tag;
 pub use git_commit_fields::GitCommitFields;
 pub use git_commit_fields::GitCommitLazyFields;
 pub use git_sha1::git_sha1_deserialize;

@@ -5,23 +5,35 @@ cbindgen = { git = "https://github.com/mozilla/cbindgen.git", rev = "cf94b56ef35
 cxx = { package = "cxx", git = "https://github.com/facebookexperimental/cxx.git", rev = "fbe91091fd26aea4a30fd08b8f0230078f4db2ce" }
 cxx-build = { package = "cxx-build", git = "https://github.com/facebookexperimental/cxx.git", rev = "fbe91091fd26aea4a30fd08b8f0230078f4db2ce" }
 displaydoc = { git = "https://github.com/yaahc/displaydoc", rev = "7dc6e324b1788a6b7fb9f3a1953c512923a3e9f0" }
+google-cloud-gax = { git = "https://github.com/googleapis/google-cloud-rust.git", rev = "e8e19354a374b673afa00c34ceb0a589cb2e25ff" }
+google-cloud-gax-internal = { git = "https://github.com/googleapis/google-cloud-rust.git", rev = "e8e19354a374b673afa00c34ceb0a589cb2e25ff" }
+google-cloud-rpc = { git = "https://github.com/googleapis/google-cloud-rust.git", rev = "e8e19354a374b673afa00c34ceb0a589cb2e25ff" }
+google-cloud-wkt = { git = "https://github.com/googleapis/google-cloud-rust.git", rev = "e8e19354a374b673afa00c34ceb0a589cb2e25ff" }
 graphql-parser = { git = "https://github.com/graphql-rust/graphql-parser", rev = "8d76425d83c40670570cc325f57c730262f07456" }
 imgui = { git = "https://github.com/imgui-rs/imgui-rs.git", rev = "2abba18c08fb5e70c699ba7992342e7ff8573b09" }
 imgui-sys = { git = "https://github.com/imgui-rs/imgui-rs.git", rev = "2abba18c08fb5e70c699ba7992342e7ff8573b09" }
 lru-disk-cache = { git = "https://github.com/mozilla/sccache", rev = "fdbf843d174c6796d736b2b61dab0297670390f8" }
 pcap = { git = "https://github.com/qrnch-jan/pcap", rev = "0c6ed076c84ef0c63198d384a24d66b737b24e4a" }
-perf-event = { version = "0.4", git = "https://github.com/krallin/perf-event.git", rev = "86224a9bc025d5d19f719542f27c8c629a08b167" }
-perf-event-open-sys = { version = "4.0", git = "https://github.com/krallin/perf-event.git", rev = "86224a9bc025d5d19f719542f27c8c629a08b167" }
+perf-event = { version = "0.4", git = "https://github.com/Nero5023/perf-event.git", rev = "6dae86b6d4807acec081e6dc0a53167f57f8c0f4" }
+perf-event-open-sys = { version = "5.0", git = "https://github.com/Nero5023/perf-event.git", rev = "6dae86b6d4807acec081e6dc0a53167f57f8c0f4" }
 plexi-core = { version = "0.1.2", git = "https://github.com/markbt/plexi", rev = "9d459b7fb26101e5c9c2489c220cbae03d1d7afe" }
 profiling = { version = "1.0.16", git = "https://github.com/aclysma/profiling.git", rev = "1b3e20c8e59eddbb6ae0d64fff849d07a903dd0c" }
 protobuf-build = { git = "https://github.com/fbsource/protobuf-build", rev = "ee1de946ce2fd7d06a7a4fab7141e02c49f0981f" }
 quickcheck = { git = "https://github.com/jakoschiko/quickcheck", rev = "6ecdf5bb4b0132ce66670b4d46453aa022ea892c" }
 rinja = { git = "https://github.com/fbsource/askama", rev = "2fc6173c98034c148f46330fc39a006cf0b09efe" }
+rusqlite_migration = { git = "https://github.com/cljoly/rusqlite_migration", rev = "34e29bdcb02e3489d9ab625d84bc648ca6587dcb" }
+sqlx = { git = "https://github.com/launchbadge/sqlx", rev = "75d5787581c2d58cc23984704e2fe267711dd603" }
 stabby = { git = "https://github.com/fbsource/stabby", rev = "22db1dda19938ff7725a93db64012a5730325c5d" }
 uefisettings = { git = "https://github.com/linuxboot/uefisettings", rev = "f16daed1d2bd1216204fd24e876c6477d03aebb3" }
 uefisettings_backend_thrift = { git = "https://github.com/linuxboot/uefisettings", rev = "f16daed1d2bd1216204fd24e876c6477d03aebb3" }
 vm-allocator = { git = "https://github.com/rust-vmm/vm-allocator", rev = "5fb545cc6e41fdc9f27d48d97ed26274a35bc6c6" }
 warp = { git = "https://github.com/jdthomas/warp.git", rev = "c794232d182abaa3add8184e7d661e084cc516c5" }
+zenoh = { git = "https://github.com/eclipse-zenoh/zenoh", rev = "cd9655fdb521ad13504a2ef9e0dff5b985b521ea" }
+zenoh-ext = { git = "https://github.com/eclipse-zenoh/zenoh", rev = "cd9655fdb521ad13504a2ef9e0dff5b985b521ea" }
+zenoh-protocol = { git = "https://github.com/eclipse-zenoh/zenoh", rev = "cd9655fdb521ad13504a2ef9e0dff5b985b521ea" }
+zenoh-runtime = { git = "https://github.com/eclipse-zenoh/zenoh", rev = "cd9655fdb521ad13504a2ef9e0dff5b985b521ea" }
+zenoh-util = { git = "https://github.com/eclipse-zenoh/zenoh", rev = "cd9655fdb521ad13504a2ef9e0dff5b985b521ea" }
+zenohd = { git = "https://github.com/eclipse-zenoh/zenoh", rev = "cd9655fdb521ad13504a2ef9e0dff5b985b521ea" }
 
 [workspace]
 members = [

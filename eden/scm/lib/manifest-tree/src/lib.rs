@@ -166,7 +166,7 @@ impl Manifest for TreeManifest {
                     InsertErrorCause::ParentFileExists(parent.to_owned()),
                 ))?,
                 Ephemeral(links) => links.get(component),
-                Durable(ref entry) => {
+                Durable(entry) => {
                     let links = entry.materialize_links(&self.store, parent)?;
                     links.get(component)
                 }
@@ -210,7 +210,7 @@ impl Manifest for TreeManifest {
                 entry.insert(Link::leaf(file_metadata));
             }
             Entry::Occupied(mut entry) => {
-                if let Leaf(ref mut store_ref) = entry.get_mut().as_mut_ref()? {
+                if let Leaf(store_ref) = entry.get_mut().as_mut_ref()? {
                     *store_ref = file_metadata;
                 } else {
                     unreachable!("Unexpected directory found while insert.");
@@ -437,7 +437,7 @@ impl TreeManifest {
     pub fn finalize(
         &mut self,
         parent_trees: Vec<&TreeManifest>,
-    ) -> Result<impl Iterator<Item = (RepoPathBuf, HgId, Bytes, HgId, HgId)>> {
+    ) -> Result<impl Iterator<Item = (RepoPathBuf, HgId, Bytes, HgId, HgId)> + use<>> {
         fn compute_hgid(
             parent_tree_nodes: &[HgId],
             content: &[u8],
@@ -794,7 +794,7 @@ impl TreeManifest {
             let child = match cursor.as_ref() {
                 Leaf(_) => return Ok(None),
                 Ephemeral(links) => links.get(component),
-                Durable(ref entry) => {
+                Durable(entry) => {
                     let links = entry.materialize_links(&self.store, parent)?;
                     links.get(component)
                 }
@@ -808,7 +808,7 @@ impl TreeManifest {
     }
 }
 
-pub trait ReadTreeManifest {
+pub trait ReadTreeManifest: Send + Sync + 'static {
     fn get(&self, commit_id: &HgId) -> Result<TreeManifest>;
     fn get_root_id(&self, commit_id: &HgId) -> Result<HgId>;
 }
@@ -976,7 +976,7 @@ mod tests {
     fn get_hgid(tree: &TreeManifest, path: &RepoPath) -> HgId {
         match tree.get_link(path).unwrap().unwrap().as_ref() {
             Leaf(file_metadata) => file_metadata.hgid,
-            Durable(ref entry) => entry.hgid,
+            Durable(entry) => entry.hgid,
             Ephemeral(_) => {
                 panic!("Asked for hgid on path {} but found ephemeral hgid.", path)
             }

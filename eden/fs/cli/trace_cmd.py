@@ -90,7 +90,10 @@ Fetched Source in Sapling (--verbose):
 
     def setup_parser(self, parser: argparse.ArgumentParser) -> None:
         parser.add_argument(
-            "checkout", default=None, nargs="?", help="Path to the checkout"
+            "checkout",
+            default=None,
+            nargs=argparse.OPTIONAL,
+            help="Path to the checkout",
         )
         parser.add_argument(
             "--verbose",
@@ -124,7 +127,10 @@ Fetched Source in Sapling (--verbose):
 class TraceFsCommand(Subcmd):
     def setup_parser(self, parser: argparse.ArgumentParser) -> None:
         parser.add_argument(
-            "checkout", default=None, nargs="?", help="Path to the checkout"
+            "checkout",
+            default=None,
+            nargs=argparse.OPTIONAL,
+            help="Path to the checkout",
         )
         parser.add_argument(
             "--reads",
@@ -201,7 +207,10 @@ M MATERIALIZE
 
     def setup_parser(self, parser: argparse.ArgumentParser) -> None:
         parser.add_argument(
-            "checkout", default=None, nargs="?", help="Path to the checkout"
+            "checkout",
+            default=None,
+            nargs=argparse.OPTIONAL,
+            help="Path to the checkout",
         )
         parser.add_argument(
             "--retroactive",
@@ -246,7 +255,10 @@ class TraceThriftCmd(Subcmd):
 
     def setup_parser(self, parser: argparse.ArgumentParser) -> None:
         parser.add_argument(
-            "checkout", default=None, nargs="?", help="Path to the checkout"
+            "checkout",
+            default=None,
+            nargs=argparse.OPTIONAL,
+            help="Path to the checkout",
         )
         parser.add_argument(
             "--retroactive",
@@ -284,7 +296,10 @@ class TraceTaskCmd(Subcmd):
 
     def setup_parser(self, parser: argparse.ArgumentParser) -> None:
         parser.add_argument(
-            "checkout", default=None, nargs="?", help="Path to the checkout"
+            "checkout",
+            default=None,
+            nargs=argparse.OPTIONAL,
+            help="Path to the checkout",
         )
         parser.add_argument(
             "--chrome-trace",

@@ -61,12 +61,12 @@ pub fn cs_id_name(cs_id: ChangesetId) -> String {
 /// bytes of the changeset name, padded with zeroes.
 pub fn name_cs_node(
     name: &str,
-    gen: u64,
+    r#gen: u64,
     skip_tree_depth: u64,
     p1_linear_depth: u64,
 ) -> ChangesetNode {
     let cs_id = name_cs_id(name);
-    let generation = Generation::new(gen);
+    let generation = Generation::new(r#gen);
     ChangesetNode {
         cs_id,
         generation,

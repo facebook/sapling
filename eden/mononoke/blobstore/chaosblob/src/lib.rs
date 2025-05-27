@@ -99,7 +99,7 @@ impl<T: Blobstore + BlobstorePutOps> Blobstore for ChaosBlobstore<T> {
         ctx: &'a CoreContext,
         key: &'a str,
     ) -> Result<Option<BlobstoreGetData>> {
-        let should_error = thread_rng().gen::<f32>() > self.sample_threshold_read;
+        let should_error = thread_rng().r#gen::<f32>() > self.sample_threshold_read;
         let get = self.blobstore.get(ctx, key);
         if should_error {
             Err(ErrorKind::InjectedChaosGet(key.to_owned()).into())
@@ -125,7 +125,7 @@ impl<T: Blobstore + BlobstorePutOps> Blobstore for ChaosBlobstore<T> {
         ctx: &'a CoreContext,
         key: &'a str,
     ) -> Result<BlobstoreIsPresent> {
-        let should_error = thread_rng().gen::<f32>() > self.sample_threshold_read;
+        let should_error = thread_rng().r#gen::<f32>() > self.sample_threshold_read;
         let is_present = self.blobstore.is_present(ctx, key);
         if should_error {
             Err(ErrorKind::InjectedChaosIsPresent(key.to_owned()).into())
@@ -143,7 +143,7 @@ impl<T: BlobstorePutOps> ChaosBlobstore<T> {
         value: BlobstoreBytes,
         put_behaviour: Option<PutBehaviour>,
     ) -> Result<OverwriteStatus> {
-        let should_error = thread_rng().gen::<f32>() > self.sample_threshold_write;
+        let should_error = thread_rng().r#gen::<f32>() > self.sample_threshold_write;
         let put = if should_error {
             None
         } else {
@@ -166,7 +166,7 @@ impl<T: BlobstorePutOps> ChaosBlobstore<T> {
 impl<T: BlobstoreUnlinkOps> BlobstoreUnlinkOps for ChaosBlobstore<T> {
     #[inline]
     async fn unlink<'a>(&'a self, ctx: &'a CoreContext, key: &'a str) -> Result<()> {
-        let should_error = thread_rng().gen::<f32>() > self.sample_threshold_read;
+        let should_error = thread_rng().r#gen::<f32>() > self.sample_threshold_read;
         let unlink = self.blobstore.unlink(ctx, key);
         if should_error {
             Err(ErrorKind::InjectedChaosUnlink(key.to_owned()).into())

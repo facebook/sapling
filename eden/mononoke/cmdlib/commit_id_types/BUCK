@@ -1,0 +1,14 @@
+load("@fbcode_macros//build_defs:rust_library.bzl", "rust_library")
+
+oncall("scm_server_infra")
+
+rust_library(
+    name = "commit_id_types",
+    srcs = glob(["src/*.rs"]),
+    crate_root = "src/commit_id_types.rs",
+    deps = [
+        "fbsource//third-party/rust:anyhow",
+        "fbsource//third-party/rust:clap",
+        "fbsource//third-party/rust:faster-hex",
+    ],
+)

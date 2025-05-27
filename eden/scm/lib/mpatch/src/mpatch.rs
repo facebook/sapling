@@ -13,24 +13,26 @@ use libc::ssize_t;
 use mpatch_sys::*;
 
 unsafe extern "C" fn get_next_link(deltas: *mut c_void, index: ssize_t) -> *mut mpatch_flist {
-    let deltas = (deltas as *const Vec<&[u8]>).as_ref().unwrap();
-    if index < 0 || index as usize >= deltas.len() {
-        return ptr::null_mut();
+    unsafe {
+        let deltas = (deltas as *const Vec<&[u8]>).as_ref().unwrap();
+        if index < 0 || index as usize >= deltas.len() {
+            return ptr::null_mut();
+        }
+
+        let delta: &[u8] = deltas[index as usize];
+
+        let mut res: *mut mpatch_flist = ptr::null_mut();
+        if mpatch_decode(
+            delta.as_ptr() as *const c_char,
+            delta.len() as isize,
+            &mut res,
+        ) < 0
+        {
+            return ptr::null_mut();
+        }
+
+        res
     }
-
-    let delta: &[u8] = deltas[index as usize];
-
-    let mut res: *mut mpatch_flist = ptr::null_mut();
-    if mpatch_decode(
-        delta.as_ptr() as *const c_char,
-        delta.len() as isize,
-        &mut res,
-    ) < 0
-    {
-        return ptr::null_mut();
-    }
-
-    res
 }
 
 pub fn get_full_text(base_text: &[u8], deltas: &Vec<&[u8]>) -> Result<Vec<u8>, &'static str> {

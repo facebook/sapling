@@ -24,8 +24,6 @@ amend modified chunks into the corresponding non-public changesets.
     absorb.path = bold
 """
 
-from __future__ import absolute_import
-
 import bisect
 import collections
 import io
@@ -55,11 +53,6 @@ testedwith = "ships-with-fb-ext"
 cmdtable = {}
 command = registrar.command(cmdtable)
 
-configtable = {}
-configitem = registrar.configitem(configtable)
-
-configitem("absorb", "amendflag", default=None)
-configitem("absorb", "maxdescwidth", default=50)
 
 colortable = {
     "absorb.description": "yellow",

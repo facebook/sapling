@@ -5,7 +5,7 @@
 
 # checkserverbookmark.py - check whether the bookmark is where we expect
 # it to be on a server
-from __future__ import absolute_import
+
 
 from sapling import error, hg
 from sapling.commands import command

@@ -15,10 +15,12 @@ pub fn setup() {
         let mut root = std::path::PathBuf::from(file!());
         assert!(root.pop());
         assert!(root.pop());
-        std::env::set_var(WORKSPACE, root);
+        // TODO: Audit that the environment access only happens in single-threaded code.
+        unsafe { std::env::set_var(WORKSPACE, root) };
     }
     if std::env::var(UPDATE).is_err() {
-        std::env::set_var(UPDATE, "no");
+        // TODO: Audit that the environment access only happens in single-threaded code.
+        unsafe { std::env::set_var(UPDATE, "no") };
     }
 }
 
@@ -64,7 +66,7 @@ pub fn run(
 /// stored on disk.
 #[macro_export]
 macro_rules! assert_json {
-    ($value: expr, $test_name: ident) => {{
+    ($value: expr_2021, $test_name: ident) => {{
         $crate::setup();
 
         $crate::run(

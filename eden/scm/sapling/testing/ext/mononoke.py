@@ -164,7 +164,7 @@ def mononoke(args: List[str], stderr: BinaryIO, fs: ShellFS, env: Env) -> int:
     # Execute the command in the background
     with open(f"{test_tmp}/mononoke.out", "w") as outfile:
         try:
-            mononoke_pid = subprocess.Popen(
+            mononoke_proc = subprocess.Popen(
                 mononoke_command,
                 stdout=outfile,
                 stderr=outfile,
@@ -174,10 +174,10 @@ def mononoke(args: List[str], stderr: BinaryIO, fs: ShellFS, env: Env) -> int:
             stderr.write(
                 f"Error when running mononoke with command {mononoke_command} and stdout file {test_tmp}/mononoke.out\n".encode()
             )
-    env.setenv("MONONOKE_PID", str(mononoke_pid.pid))
+    env.setenv("MONONOKE_PID", str(mononoke_proc.pid))
     daemon_pids = env.getenv("DAEMON_PIDS")
     with fs.open(daemon_pids, "a") as f:
-        f.write(f"{mononoke_pid}\n".encode())
+        f.write(f"{mononoke_proc.pid}\n".encode())
 
     return 0
 
@@ -596,7 +596,6 @@ identity_data = "proxy"
 
 [redaction_config]
 blobstore = "{blobstorename}"
-darkstorm_blobstore = "{blobstorename}"
 redaction_sets_location = "scm/mononoke/redaction/redaction_sets"
 
 [[trusted_parties_allowlist]]
@@ -1020,7 +1019,11 @@ sparse_profiles_location="{sparse_profiles_location}"
 """
         )
 
-    if env.getenv("COMMIT_SCRIBE_CATEGORY") or env.getenv("BOOKMARK_SCRIBE_CATEGORY"):
+    if (
+        env.getenv("COMMIT_SCRIBE_CATEGORY")
+        or env.getenv("BOOKMARK_SCRIBE_CATEGORY")
+        or env.getenv("GIT_CONTENT_REFS_SCRIBE_CATEGORY")
+    ):
         append_config("[update_logging_config]")
 
     if env.getenv("BOOKMARK_SCRIBE_CATEGORY"):
@@ -1036,6 +1039,16 @@ bookmark_logging_destination = {{ scribe = {{ scribe_category = "{bookmark_scrib
         append_config(
             f"""
 new_commit_logging_destination = {{ scribe = {{ scribe_category = "{commit_scribe_category}" }} }}
+"""
+        )
+
+    if env.getenv("GIT_CONTENT_REFS_SCRIBE_CATEGORY"):
+        git_content_refs_scribe_category = env.getenv(
+            "GIT_CONTENT_REFS_SCRIBE_CATEGORY"
+        )
+        append_config(
+            f"""
+git_content_refs_logging_destination = {{ scribe = {{ scribe_category = "{git_content_refs_scribe_category}" }} }}
 """
         )
 

@@ -576,7 +576,7 @@ impl CommitGraph {
 
         loop {
             let u_gen = match u_frontier.last_key_value() {
-                Some((gen, _)) => *gen,
+                Some((r#gen, _)) => *r#gen,
                 // if u_frontier is empty then there are no common ancestors.
                 None => return Ok(vec![]),
             };
@@ -666,7 +666,7 @@ impl CommitGraph {
         let mut frontier = self.frontier(ctx, heads).await?;
 
         let max_gen = match frontier.last_key_value() {
-            Some((gen, _)) => gen,
+            Some((r#gen, _)) => r#gen,
             None => return Ok(vec![]),
         };
 

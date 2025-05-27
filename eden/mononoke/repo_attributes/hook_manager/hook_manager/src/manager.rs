@@ -213,7 +213,7 @@ impl HookManager {
     fn hooks_for_bookmark<'a>(
         &'a self,
         bookmark: &BookmarkKey,
-    ) -> impl Iterator<Item = &'a str> + Clone {
+    ) -> impl Iterator<Item = &'a str> + Clone + use<'a> {
         let mut hooks: Vec<&'a str> = match self.bookmark_hooks.get(bookmark) {
             Some(hooks) => hooks.iter().map(|a| a.as_str()).collect(),
             None => Vec::new(),

@@ -1,0 +1,20 @@
+load("@fbcode_macros//build_defs:rust_library.bzl", "rust_library")
+
+oncall("sapling")
+
+rust_library(
+    name = "manifest-augmented-tree",
+    srcs = glob(["src/**/*.rs"]),
+    crate_root = "src/lib.rs",
+    named_deps = {
+        "blake3-constants": "//blake3:blake3-constants-rust-nothrift",
+    },
+    test_deps = ["fbsource//third-party/rust:assert_matches"],
+    deps = [
+        "fbsource//third-party/rust:anyhow",
+        "fbsource//third-party/rust:base64",
+        "fbsource//third-party/rust:blake3",
+        "//eden/scm/lib/minibytes:minibytes",
+        "//eden/scm/lib/types:types",
+    ],
+)

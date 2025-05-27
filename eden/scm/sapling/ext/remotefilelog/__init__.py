@@ -89,8 +89,6 @@ Configs:
     ``remotefilelog.http`` use HTTP (EdenAPI) instead of SSH to fetch data.
 """
 
-from __future__ import absolute_import
-
 import os
 import sys
 import time
@@ -150,16 +148,6 @@ except Exception:
 cmdtable = {}
 command = registrar.command(cmdtable)
 
-configtable = {}
-configitem = registrar.configitem(configtable)
-
-configitem("remotefilelog", "descendantrevfastpath", default=False)
-configitem("remotefilelog", "updatesharedcache", default=True)
-configitem("remotefilelog", "servercachepath", default=None)
-configitem("remotefilelog", "server", default=None)
-configitem("remotefilelog", "getpackversion", default=1)
-configitem("remotefilelog", "http", default=True)
-configitem("edenapi", "url", default=None)
 
 testedwith = "ships-with-fb-ext"
 
@@ -303,29 +291,51 @@ def onetimeclientsetup(ui):
 
     # prefetch files before update
     def applyupdates(
-        orig, repo, actions, wctx, mctx, overwrite, labels=None, ancestors=None
+        orig,
+        to_repo,
+        actions,
+        wctx,
+        mctx,
+        overwrite,
+        labels=None,
+        ancestors=None,
+        from_repo=None,
     ):
         # Don't prefetch GETs for in-memory merge. We likely don't need the file content
         # at all.
-        if shallowrepo.requirement in repo.requirements and not wctx.isinmemory():
+        from_repo = from_repo or to_repo
+        if shallowrepo.requirement in from_repo.requirements and not wctx.isinmemory():
             manifest = mctx.manifest()
             files = []
             for _f, args, msg in actions[merge.ACTION_GET]:
                 f2 = args[0]
                 files.append((f2, manifest[f2]))
             # batch fetch the needed files from the server
-            repo.fileservice.prefetch(files, fetchhistory=False)
+            from_repo.fileservice.prefetch(files, fetchhistory=False)
         return orig(
-            repo, actions, wctx, mctx, overwrite, labels=labels, ancestors=ancestors
+            to_repo,
+            actions,
+            wctx,
+            mctx,
+            overwrite,
+            labels=labels,
+            ancestors=ancestors,
+            from_repo=from_repo,
         )
 
     wrapfunction(merge, "applyupdates", applyupdates)
 
     # Prefetch merge checkunknownfiles
     def checkunknownfiles(orig, repo, wctx, mctx, force, actions, *args, **kwargs):
-        # Don't prefetch file content for in-memory merge. We likely don't need the file
-        # content at all.
-        if shallowrepo.requirement in repo.requirements and not wctx.isinmemory():
+        # Don't prefetch file content for:
+        # 1. in-memory merge. We likely don't need the file content at all.
+        # 2. cross-repo merge. The filenode is not valid in the current repo.
+        is_crossrepo = not repo.is_same_repo(mctx.repo())
+        if (
+            shallowrepo.requirement in repo.requirements
+            and not wctx.isinmemory()
+            and not is_crossrepo
+        ):
             files = []
             sparsematch = repo.maybesparsematch(mctx.rev())
             for f, (m, actionargs, msg) in actions.items():

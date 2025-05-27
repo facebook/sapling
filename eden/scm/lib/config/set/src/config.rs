@@ -1011,7 +1011,8 @@ pub(crate) mod tests {
     #[test]
     fn test_parse_include_expand() {
         use std::env;
-        env::set_var("FOO", "f");
+        // TODO: Audit that the environment access only happens in single-threaded code.
+        unsafe { env::set_var("FOO", "f") };
 
         let dir = TempDir::with_prefix("test_parse_include_expand.").unwrap();
         write_file(
@@ -1170,7 +1171,7 @@ x = 2
         assert!(cfg.get_or("foo", "bool1", || false).unwrap());
         assert_eq!(
             format!("{}", cfg.get_or("foo", "bool2", || true).unwrap_err()),
-            "invalid bool: unknown"
+            "config foo.bool2 is invalid: invalid bool: unknown"
         );
         assert_eq!(cfg.get_or("foo", "int1", || 42).unwrap(), -33);
         assert_eq!(

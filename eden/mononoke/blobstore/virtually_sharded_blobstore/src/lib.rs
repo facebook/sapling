@@ -719,8 +719,8 @@ mod test {
             /// Obtain a handle for a new get
             fn handle(&self) -> BlobDataHandle {
                 match self {
-                    BlobData::Bytes(ref b) => BlobDataHandle::Bytes(b.clone()),
-                    BlobData::Channel(ref s) => BlobDataHandle::Channel(s.subscribe()),
+                    BlobData::Bytes(b) => BlobDataHandle::Bytes(b.clone()),
+                    BlobData::Channel(s) => BlobDataHandle::Channel(s.subscribe()),
                 }
             }
         }

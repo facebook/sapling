@@ -3,7 +3,6 @@
 # This software may be used and distributed according to the terms of the
 # GNU General Public License version 2.
 
-from __future__ import absolute_import
 
 import bindings
 
@@ -188,13 +187,6 @@ def _gettrees(repo, nodes):
             yield treenode, p1, p2, treetext
 
 
-def _torevs(repo, uploadednodes, failednodes):
-    """Convert nodes back to revs"""
-    return set([repo[node].rev() for node in uploadednodes]), set(
-        [repo[node].rev() for node in failednodes]
-    )
-
-
 def filetypefromfile(f):
     if f.isexec():
         return "Executable"
@@ -215,8 +207,8 @@ def parentsfromctx(ctx):
         return None
 
 
-def uploadhgchangesets(repo, revs, force=False, skipknowncheck=False):
-    """Upload list of revs via EdenApi Uploads protocol
+def uploadhgchangesets(repo, nodes, force=False, skipknowncheck=False):
+    """Upload list of nodes via EdenApi Uploads protocol
 
     EdenApi Uploads API consists of the following:
 
@@ -244,10 +236,8 @@ def uploadhgchangesets(repo, revs, force=False, skipknowncheck=False):
     If ``skipknowncheck`` is True (the default is False) the lookup check isn't performed to filter out already uploaded commits.
     Assumed it is known already that they are missing on the server.
 
-    Returns newly uploaded revs and failed revs.
+    Returns newly uploaded nodes and failed nodes.
     """
-
-    nodes = [repo[r].node() for r in revs]
 
     # Build a queue of commits to upload
     uploadcommitqueue = (
@@ -351,4 +341,4 @@ def uploadhgchangesets(repo, revs, force=False, skipknowncheck=False):
         for mut in mutations
     ]
 
-    return _torevs(repo, *_uploadchangesets(repo, changesets, mutations))
+    return _uploadchangesets(repo, changesets, mutations)

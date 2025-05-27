@@ -19,6 +19,7 @@ rust_library(
             "macos",
             [
                 "fbsource//third-party/rust:shlex",
+                "fbsource//third-party/rust:glob",
             ],
         ),
     ],
@@ -56,7 +57,7 @@ rust_library(
         "//eden/fs/cli_rs/edenfs-client:edenfs-client",
         "//eden/fs/cli_rs/edenfs-error:edenfs-error",
         "//eden/fs/cli_rs/edenfs-utils:edenfs-utils",
-        "//eden/fs/cli_rs/facebook/edenfs-telemetry:edenfs-telemetry",
+        "//eden/fs/rust/facebook/edenfs-telemetry:edenfs-telemetry",
         "//eden/scm/lib/io:io",
         "//eden/scm/lib/io/term/logger:termlogger",
         "//eden/scm/lib/thrift-types:thrift-types",

@@ -399,7 +399,7 @@ mononoke_queries! {
     write InsertChangeset(
         repo_id: RepositoryId,
         cs_id: ChangesetId,
-        gen: u64,
+        r#gen: u64,
         subtree_source_gen: Option<u64>,
         skip_tree_depth: u64,
         p1_linear_depth: u64,
@@ -460,7 +460,7 @@ mononoke_queries! {
     write InsertChangesetsNoEdges(values: (
         repo_id: RepositoryId,
         cs_id: ChangesetId,
-        gen: u64,
+        r#gen: u64,
         subtree_source_gen: Option<u64>,
         skip_tree_depth: u64,
         p1_linear_depth: u64,
@@ -490,7 +490,7 @@ mononoke_queries! {
         cs_id: ChangesetId,
         // We need the depths otherwise we get an error on sqlite. Though this won't be used because we
         // always replace the edges only.
-        gen: u64,
+        r#gen: u64,
         subtree_source_gen: Option<u64>,
         skip_tree_depth: u64,
         p1_linear_depth: u64,
@@ -1064,22 +1064,22 @@ impl SqlCommitGraphStorage {
     ) -> HashMap<(ChangesetId, Option<ChangesetId>), FetchedChangesetEdges> {
         let option_fields_to_option_node =
             |cs_id,
-             gen,
+             r#gen,
              subtree_source_gen: Option<u64>,
              skip_tree_depth,
              p1_linear_depth,
              subtree_source_depth: Option<u64>| match (
                 cs_id,
-                gen,
+                r#gen,
                 skip_tree_depth,
                 p1_linear_depth,
             ) {
-                (Some(cs_id), Some(gen), Some(skip_tree_depth), Some(p1_linear_depth)) => {
+                (Some(cs_id), Some(r#gen), Some(skip_tree_depth), Some(p1_linear_depth)) => {
                     let subtree_source_depth = subtree_source_depth.unwrap_or(skip_tree_depth);
-                    let subtree_source_gen = subtree_source_gen.unwrap_or(gen);
+                    let subtree_source_gen = subtree_source_gen.unwrap_or(r#gen);
                     Some(ChangesetNode {
                         cs_id,
-                        generation: Generation::new(gen),
+                        generation: Generation::new(r#gen),
                         subtree_source_generation: Generation::new(subtree_source_gen),
                         skip_tree_depth,
                         p1_linear_depth,
@@ -1094,7 +1094,7 @@ impl SqlCommitGraphStorage {
                 (
                     cs_id,
                     origin_cs_id,
-                    Some(gen),
+                    Some(r#gen),
                     subtree_source_gen,
                     Some(skip_tree_depth),
                     Some(p1_linear_depth),
@@ -1219,9 +1219,9 @@ impl SqlCommitGraphStorage {
                             ChangesetEdges {
                                 node: ChangesetNode {
                                     cs_id,
-                                    generation: Generation::new(gen),
+                                    generation: Generation::new(r#gen),
                                     subtree_source_generation: Generation::new(
-                                        subtree_source_gen.unwrap_or(gen),
+                                        subtree_source_gen.unwrap_or(r#gen),
                                     ),
                                     skip_tree_depth,
                                     p1_linear_depth,
@@ -1622,7 +1622,7 @@ impl SqlCommitGraphStorage {
                     e.node.cs_id,
                     e.node.generation.value(),
                     Some(e.node.subtree_source_generation.value())
-                        .filter(|gen| *gen != e.node.generation.value()),
+                        .filter(|r#gen| *r#gen != e.node.generation.value()),
                     e.node.skip_tree_depth,
                     e.node.p1_linear_depth,
                     Some(e.node.subtree_source_depth)
@@ -1687,7 +1687,7 @@ impl SqlCommitGraphStorage {
                     e.node.cs_id,
                     e.node.generation.value(),
                     Some(e.node.subtree_source_generation.value())
-                        .filter(|gen| *gen != e.node.generation.value()),
+                        .filter(|r#gen| *r#gen != e.node.generation.value()),
                     e.node.skip_tree_depth,
                     e.node.p1_linear_depth,
                     Some(e.node.subtree_source_depth)
@@ -1874,7 +1874,7 @@ impl CommitGraphStorage for SqlCommitGraphStorage {
             &edges.node.cs_id,
             &edges.node.generation.value(),
             &Some(edges.node.subtree_source_generation.value())
-                .filter(|gen| *gen != edges.node.generation.value()),
+                .filter(|r#gen| *r#gen != edges.node.generation.value()),
             &edges.node.skip_tree_depth,
             &edges.node.p1_linear_depth,
             &Some(edges.node.subtree_source_depth)

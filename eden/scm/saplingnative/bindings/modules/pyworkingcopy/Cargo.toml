@@ -7,7 +7,7 @@ edition = "2021"
 
 [dependencies]
 anyhow = "1.0.95"
-cpython = { version = "0.7.2", default-features = false }
+cpython = { version = "0.7.2", features = ["python3-sys"], default-features = false }
 fs-err = { version = "3", features = ["tokio"] }
 parking_lot = { version = "0.12.1", features = ["send_guard"] }
 pypathmatcher = { version = "0.1.0", path = "../pypathmatcher" }

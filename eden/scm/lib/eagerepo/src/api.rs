@@ -13,6 +13,7 @@ use std::num::NonZeroU64;
 use std::sync::Arc;
 
 use anyhow::anyhow;
+use blob::Blob;
 use configmodel::Config;
 use configmodel::ConfigExt;
 use dag::Location;
@@ -91,6 +92,7 @@ use http::StatusCode;
 use http::Version;
 use manifest::DiffType;
 use manifest::Manifest;
+use manifest_augmented_tree::AugmentedTreeWithDigest;
 use manifest_tree::Flag;
 use manifest_tree::TreeManifest;
 use minibytes::Bytes;
@@ -98,12 +100,10 @@ use mutationstore::MutationEntry;
 use nonblocking::non_blocking_result;
 use pathmatcher::AlwaysMatcher;
 use repourl::RepoUrl;
-use scm_blob::ScmBlob;
 use storemodel::InsertOpts;
 use storemodel::KeyStore;
 use storemodel::Kind;
 use storemodel::SerializationFormat;
-use storemodel::types::AugmentedTreeWithDigest;
 use storemodel::types::FetchContext;
 use tracing::debug;
 use tracing::error;
@@ -211,7 +211,7 @@ impl SaplingRemoteApi for EagerRepo {
                 let (pure_content, copy_from) =
                     file_body_to_file_content_and_copy_from(&body, self.format());
 
-                let mut aux_data = FileAuxData::from_content(&ScmBlob::Bytes(pure_content));
+                let mut aux_data = FileAuxData::from_content(&Blob::Bytes(pure_content));
                 aux_data.file_header_metadata = Some(copy_from);
 
                 entry.aux_data = Some(aux_data);
@@ -391,7 +391,7 @@ impl SaplingRemoteApi for EagerRepo {
                                     );
 
                                 let mut aux_data =
-                                    FileAuxData::from_content(&ScmBlob::Bytes(file_body));
+                                    FileAuxData::from_content(&Blob::Bytes(file_body));
                                 aux_data.file_header_metadata = Some(copy_from);
 
                                 children.push(Ok(TreeChildEntry::File(TreeChildFileEntry {

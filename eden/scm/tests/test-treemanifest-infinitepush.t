@@ -132,9 +132,7 @@ Pull a treeonly scratch branch into a treeonly client (non-rebundling)
   │  summary:     add subdir/a
   │
   @  commit:      085784c01c08
-     bookmark:    default/master
      bookmark:    remote/master
-     hoistedname: master
      user:        test
      date:        Thu Jan 01 00:00:00 1970 +0000
      summary:     add x

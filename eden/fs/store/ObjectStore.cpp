@@ -290,6 +290,62 @@ ImmediateFuture<shared_ptr<const Tree>> ObjectStore::getTree(
       });
 }
 
+void ObjectStore::maybeCacheTreeAndAuxInLocalStore(
+    const ObjectId& id,
+    const BackingStore::GetTreeResult& treeResult) const {
+  auto shouldCacheTree =
+      shouldCacheOnDisk(BackingStore::LocalStoreCachingPolicy::Trees);
+  auto shouldCacheBlobAuxData =
+      shouldCacheOnDisk(BackingStore::LocalStoreCachingPolicy::BlobAuxData);
+  auto shouldCacheTreeAuxData =
+      shouldCacheOnDisk(BackingStore::LocalStoreCachingPolicy::TreeAuxData);
+
+  if (!shouldCacheTree && !shouldCacheBlobAuxData && !shouldCacheTreeAuxData) {
+    return;
+  }
+
+  auto batch = localStore_->beginWrite();
+  if (shouldCacheTree) {
+    batch->putTree(*treeResult.tree);
+  }
+
+  if (shouldCacheBlobAuxData) {
+    // Let's cache all the entries in the LocalStore.
+    for (const auto& [name, treeEntry] : *treeResult.tree) {
+      const auto& size = treeEntry.getSize();
+      const auto& sha1 = treeEntry.getContentSha1();
+      const auto& blake3 = treeEntry.getContentBlake3();
+      if (treeEntry.getType() == TreeEntryType::REGULAR_FILE && size && sha1) {
+        batch->putBlobAuxData(
+            treeEntry.getHash(), BlobAuxData{*sha1, blake3, *size});
+      }
+    }
+  }
+
+  // Pre-warm the cache if there is tree aux data available
+  if (treeResult.tree && treeResult.tree->getAuxData()) {
+    if (shouldCacheTreeAuxData &&
+        edenConfig_->warmTreeAuxLocalCacheIfTreeFromBackingStore.getValue()) {
+      stats_->increment(
+          &ObjectStoreStats::prewarmTreeAuxLocalCacheForTreeFromBackingStore);
+      localStore_->putTreeAuxData(id, *treeResult.tree->getAuxData());
+    }
+  }
+
+  batch->flush();
+}
+
+void ObjectStore::maybeCacheTreeAuxInMemCache(
+    const ObjectId& id,
+    const BackingStore::GetTreeResult& treeResult) const {
+  if (treeResult.tree && treeResult.tree->getAuxData() &&
+      edenConfig_->warmTreeAuxMemCacheIfTreeFromBackingStore.getValue()) {
+    stats_->increment(
+        &ObjectStoreStats::prewarmTreeAuxMemCacheForTreeFromBackingStore);
+    treeAuxDataCache_.wlock()->set(id, *treeResult.tree->getAuxData());
+  }
+}
+
 folly::SemiFuture<BackingStore::GetTreeResult> ObjectStore::getTreeImpl(
     const ObjectId& id,
     const ObjectFetchContextPtr& context,
@@ -309,6 +365,31 @@ folly::SemiFuture<BackingStore::GetTreeResult> ObjectStore::getTreeImpl(
               self->stats_->addDuration(
                   &ObjectStoreStats::getTreeLocalstoreDuration,
                   watch.elapsed());
+              if (tree->getAuxData() == nullptr &&
+                  self->edenConfig_->warmTreeAuxCacheIfTreeFromLocalStore
+                      .getValue()) {
+                // The tree stored locally does not have Tree Aux Data attached.
+                // This means the Tree was fetched before Tree serialization V2
+                // and before we support TreeAuxData included in Tree response
+                // from SaplingBackingStore. Otherwise, we would have the Tree
+                // Aux Data pre-cached already.
+                // So, it's very likely that we don't have Tree Aux Data cached.
+                // Triggering a getTreeAuxData request to warm the cache
+                self->stats_->increment(
+                    &ObjectStoreStats::
+                        prewarmTreeAuxCacheForTreeFetchedFromLocalStore);
+                return self->getTreeAuxData(id, context)
+                    .thenValue([tree = tree](TreeAuxData&&) {
+                      return BackingStore::GetTreeResult{
+                          tree, ObjectFetchContext::FromDiskCache};
+                    });
+              }
+              // Maybe there is Tree Aux Data attached to this Tree?
+              // If that' the case, we should've already populated
+              // Tree aux data into the local cache when the tree was
+              // fetched from sapling backing store.
+              // So we should not bother warming it into the in-memory
+              // cache since that requires a write lock.
               return BackingStore::GetTreeResult{
                   std::move(tree), ObjectFetchContext::FromDiskCache};
             }
@@ -318,36 +399,17 @@ folly::SemiFuture<BackingStore::GetTreeResult> ObjectStore::getTreeImpl(
                 // to ensure the tree is cached even if the resulting future is
                 // never consumed. Before changing, see eden/fs/docs/Futures.md
                 // for more details on possible pitfalls of InlineExecutor.
-                .thenValue([self, watch](BackingStore::GetTreeResult result) {
-                  auto batch = self->localStore_->beginWrite();
-                  if (self->shouldCacheOnDisk(
-                          BackingStore::LocalStoreCachingPolicy::Trees)) {
-                    batch->putTree(*result.tree);
-                  }
-
-                  if (self->shouldCacheOnDisk(
-                          BackingStore::LocalStoreCachingPolicy::BlobAuxData)) {
-                    // Let's cache all the entries in the LocalStore.
-                    for (const auto& [name, treeEntry] : *result.tree) {
-                      const auto& size = treeEntry.getSize();
-                      const auto& sha1 = treeEntry.getContentSha1();
-                      const auto& blake3 = treeEntry.getContentBlake3();
-                      if (treeEntry.getType() == TreeEntryType::REGULAR_FILE &&
-                          size && sha1) {
-                        batch->putBlobAuxData(
-                            treeEntry.getHash(),
-                            BlobAuxData{*sha1, blake3, *size});
-                      }
-                    }
-                  }
-                  batch->flush();
-                  self->stats_->increment(
-                      &ObjectStoreStats::getTreeFromBackingStore);
-                  self->stats_->addDuration(
-                      &ObjectStoreStats::getTreeBackingstoreDuration,
-                      watch.elapsed());
-                  return result;
-                })
+                .thenValue(
+                    [self, id, watch](BackingStore::GetTreeResult result) {
+                      self->maybeCacheTreeAndAuxInLocalStore(id, result);
+                      self->maybeCacheTreeAuxInMemCache(id, result);
+                      self->stats_->increment(
+                          &ObjectStoreStats::getTreeFromBackingStore);
+                      self->stats_->addDuration(
+                          &ObjectStoreStats::getTreeBackingstoreDuration,
+                          watch.elapsed());
+                      return result;
+                    })
                 .thenError(
                     [self, id](const folly::exception_wrapper& ew)
                         -> ImmediateFuture<BackingStore::GetTreeResult> {
@@ -502,7 +564,7 @@ ImmediateFuture<folly::Unit> ObjectStore::prefetchBlobs(
   // to load all the blocks of those keys into memory.
   // So for the moment we are committing a layering violation in the
   // interest of making things faster in practice by just asking the
-  // mercurial backing store to ensure that its local hgcache storage
+  // sapling backing store to ensure that its local cache storage
   // has entries for all of the requested keys.
   if (ids.empty()) {
     return folly::unit;

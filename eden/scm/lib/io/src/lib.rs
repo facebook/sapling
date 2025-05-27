@@ -486,7 +486,7 @@ impl IO {
     pub fn reset_term(&self) -> Result<(), io::Error> {
         let mut inner = self.inner.io_state.lock();
         match &mut inner.term {
-            Some(ref mut term) => term.reset(),
+            Some(term) => term.reset(),
             None => Ok(()),
         }
     }

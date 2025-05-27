@@ -120,7 +120,13 @@ SUPPORTED_MOUNT_PROTOCOLS: Set[str] = {
     PRJFS_MOUNT_PROTOCOL_STRING,
 }
 
-SUPPORTED_INODE_CATALOG_TYPES: Set[str] = {"legacy", "sqlite", "inmemory", "lmdb"}
+SUPPORTED_INODE_CATALOG_TYPES: Set[str] = {
+    "legacy",
+    "sqlite",
+    "inmemory",
+    "lmdb",
+    "legacydev",
+}
 
 # Create a readme file with this name in the mount point directory.
 # The intention is for this to contain instructions telling users what to do if their
@@ -936,10 +942,27 @@ Do you want to run `eden mount %s` instead?"""
             # If the unmount succeeded, create a file in the client directory
             # to indicate that the unmount was intentional. This will prevent
             # periodic unmount recovery from remount this repo.
-            mount_path = Path(path).resolve(strict=False)
-            client_dir = self._get_client_dir_for_mount_point(mount_path)
-            intentionally_unmounted_dir = client_dir / INTENTIONALLY_UNMOUNTED
-            intentionally_unmounted_dir.touch()
+            self._set_intentionally_unmounted(path)
+
+    def _set_intentionally_unmounted(self, path: str) -> None:
+        mount_path = Path(path).resolve(strict=False)
+        client_dir = self._get_client_dir_for_mount_point(mount_path)
+        intentionally_unmounted_file = client_dir / INTENTIONALLY_UNMOUNTED
+        intentionally_unmounted_file.touch()
+
+    def set_intentionally_unmounted_for_all_mounts(self) -> None:
+        clients_dir = self._get_clients_dir()
+        intentionally_unmounted_files = [
+            p / INTENTIONALLY_UNMOUNTED for p in clients_dir.glob("*")
+        ]
+        for f in intentionally_unmounted_files:
+            f.touch()
+
+    def clear_intentionally_unmounted_for_all_mounts(self) -> None:
+        clients_dir = self._get_clients_dir()
+        intentionally_unmounted_files = clients_dir.glob(f"*/{INTENTIONALLY_UNMOUNTED}")
+        for f in intentionally_unmounted_files:
+            f.unlink(missing_ok=True)
 
     def destroy_mount(
         self, path: Union[Path, str], preserve_mount_point: bool = False
@@ -1591,7 +1614,10 @@ class EdenCheckout:
                     f'{", ".join(sorted(SUPPORTED_INODE_CATALOG_TYPES))}.'
                 )
             inode_catalog_type = inode_catalog_type.lower()
-            if sys.platform == "win32" and inode_catalog_type == "legacy":
+            if sys.platform == "win32" and inode_catalog_type in [
+                "legacy",
+                "legacydev",
+            ]:
                 raise CheckoutConfigCorruptedError(
                     "Legacy inode catalog (overlay) type not supported on Windows. "
                     "Use Sqlite or InMemory on Windows."
@@ -2203,7 +2229,7 @@ def create_checkout_config(
                 f'{", ".join(sorted(SUPPORTED_INODE_CATALOG_TYPES))}.'
             )
     overlay_type = overlay_type.lower()
-    if sys.platform == "win32" and overlay_type == "legacy":
+    if sys.platform == "win32" and overlay_type in ["legacy", "legacydev"]:
         raise Exception(
             "Legacy overlay (inode catalog) type not supported on Windows. "
             "Use Sqlite or InMemory on Windows."

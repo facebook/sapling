@@ -34,6 +34,7 @@ macro_rules! re_client {
         use re_client_lib::DownloadStreamRequest;
         use re_client_lib::REClientError;
         use re_client_lib::TCode;
+        use re_client_lib::UploadRequest;
         use re_client_lib::TDigest;
         use re_client_lib::THashAlgo;
         use re_client_lib::TStorageBackendType;
@@ -89,38 +90,90 @@ macro_rules! re_client {
 
         #[$crate::async_trait]
         impl $crate::CasClient for $struct {
-            fn fetch_single_local_direct(
+            /// Fetch a single blob from local CAS caches.
+            fn fetch_single_locally_cached(
                 &self,
                 digest: &$crate::CasDigest,
-            ) -> Result<($crate::CasFetchedStats, Option<ScmBlob>)> {
+            ) -> Result<($crate::CasFetchedStats, Option<Blob>)> {
+
+                $crate::tracing::trace!(target: "cas", concat!(stringify!($struct), " fetching {:?} digest from local cache"), digest);
+
                 #[cfg(target_os = "linux")]{
                     let (stats, data) = self.client()?
-                    .low_level_lookup_cache(self.metadata.clone(), to_re_digest(digest))?.unpack();
+                        .low_level_lookup_cache(self.metadata.clone(), to_re_digest(digest))?.unpack();
 
                     let parsed_stats = parse_stats(std::iter::empty(), stats);
 
                     if data.is_null() {
                         return Ok((parsed_stats, None));
                     } else {
-                        return Ok((parsed_stats, Some(ScmBlob::IOBuf(data.into()))));
+                        return Ok((parsed_stats, Some(Blob::IOBuf(data.into()))));
                     }
                 }
 
                 #[cfg(not(target_os = "linux"))]
                 return Ok(($crate::CasFetchedStats::default(), None));
             }
+
+
+            /// Upload blobs to CAS.
+            async fn upload(
+                &self,
+                blobs: Vec<Blob>,
+            ) -> Result<Vec<$crate::CasDigest>> {
+
+                $crate::tracing::debug!(target: "cas", concat!(stringify!($struct), " uploading {} blobs"), blobs.len());
+
+                #[cfg(target_os = "linux")] {
+                    self.client()?
+                        .co_upload_inlined_blobs(
+                            self.metadata.clone(),
+                            blobs.into_iter().map(|blob| {
+                                blob.into_vec()
+                            }).collect()
+                        )
+                        .await??
+                        .digests
+                        .into_iter()
+                        .map(|digest_with_status| from_re_digest(&digest_with_status.digest))
+                        .collect::<$crate::Result<Vec<_>>>()
+                }
+
+                #[cfg(not(target_os = "linux"))] {
+                    self.client()?
+                    .upload(
+                        self.metadata.clone(),
+                        UploadRequest {
+                            inlined_blobs: Some(blobs.into_iter().map(|blob| {
+                                    blob.into_vec()
+                            }).collect()),
+                            upload_only_missing: true,
+                            ..Default::default()
+                        },
+                    )
+                    .await?
+                    .inlined_blobs_status
+                    .unwrap_or_default()
+                    .into_iter()
+                    .map(|digest_with_status| from_re_digest(&digest_with_status.digest))
+                    .collect::<$crate::Result<Vec<_>>>()
+                }
+            }
+
+
+            /// Fetch blobs from CAS.
             async fn fetch<'a>(
                 &'a self,
                 _fctx: $crate::FetchContext,
                 digests: &'a [$crate::CasDigest],
                 log_name: $crate::CasDigestType,
-            ) -> BoxStream<'a, $crate::Result<($crate::CasFetchedStats, Vec<($crate::CasDigest, Result<Option<ScmBlob>>)>)>>
+            ) -> BoxStream<'a, $crate::Result<($crate::CasFetchedStats, Vec<($crate::CasDigest, Result<Option<Blob>>)>)>>
             {
                 stream::iter(split_up_to_max_bytes(digests, self.fetch_limit.value()))
                     .map(move |digests| async move {
                         if !self.cas_success_tracker.allow_request()? {
                             $crate::tracing::debug!(target: "cas", concat!(stringify!($struct), " skip fetching {} {}(s)"), digests.len(), log_name);
-                            return Err($crate::anyhow!("skip cas prefetching due to cas success tracker error rate limiting vioaltion"));
+                            return Err($crate::anyhow!("skip cas fetching due to cas success tracker error rate limiting vioaltion"));
                         }
                         if self.use_streaming_dowloads && digests.len() == 1 && digests.first().unwrap().size >= self.fetch_limit.value() {
                             // Single large file, fetch it via the streaming API to avoid memory issues on CAS side.
@@ -169,7 +222,7 @@ macro_rules! re_client {
                             }
 
                             self.cas_success_tracker.record_success();
-                            return Ok((stats, vec![(digest.to_owned(), Ok(Some(ScmBlob::Bytes(bytes.into()))))]));
+                            return Ok((stats, vec![(digest.to_owned(), Ok(Some(Blob::Bytes(bytes.into()))))]));
                         }
 
                         // Fetch digests via the regular API (download inlined digests).
@@ -179,7 +232,8 @@ macro_rules! re_client {
                         #[cfg(target_os = "linux")]
                         let (data, stats) = {
                             let response = self.client()?
-                                .low_level_download_inline(self.metadata.clone(), digests.iter().map(to_re_digest).collect());
+                                .co_low_level_download_inline(self.metadata.clone(), digests.iter().map(to_re_digest).collect()).await;
+
                             if let Err(ref err) = response {
                                 if (err.code == TCode::NOT_FOUND) {
                                     $crate::tracing::warn!(target: "cas", "digest not found and can not be fetched: {:?}", digests);
@@ -224,10 +278,10 @@ macro_rules! re_client {
                                 #[cfg(target_os = "linux")]
                                 let (digest, status, data) = {
                                     let (digest, status, data) = blob.unpack();
-                                    (digest, status, ScmBlob::IOBuf(data.into()))
+                                    (digest, status, Blob::IOBuf(data.into()))
                                 };
                                 #[cfg(not(target_os = "linux"))]
-                                let (digest, status, data) = (blob.digest, blob.status, ScmBlob::Bytes(blob.blob.into()));
+                                let (digest, status, data) = (blob.digest, blob.status, Blob::Bytes(blob.blob.into()));
 
                                 let digest = from_re_digest(&digest)?;
                                 match status.code {
@@ -261,7 +315,7 @@ macro_rules! re_client {
                     .boxed()
             }
 
-        /// Prefetch digests into the cache.
+        /// Prefetch blobs into the CAS local caches.
         /// Returns a stream of (stats, digests_prefetched, digests_not_found) tuples.
         async fn prefetch<'a>(
             &'a self,
@@ -281,7 +335,8 @@ macro_rules! re_client {
 
                     #[cfg(target_os = "linux")]
                     let response = self.client()?
-                        .download_digests_into_cache(self.metadata.clone(), digests.into_iter().map(to_re_digest).collect())
+                        .co_download_digests_into_cache(self.metadata.clone(), digests.into_iter().map(to_re_digest).collect())
+                        .await
                         .map_err(|err| {
                             // Unfortunately, the "download_digests_into_cache" failed entirely, record a failure.
                             let _failure_error = self.cas_success_tracker.record_failure();
@@ -297,7 +352,8 @@ macro_rules! re_client {
                         };
                         self.client()?
                         .download_digests_into_cache(self.metadata.clone(), request)
-                        .await.map_err(|err| {
+                        .await
+                        .map_err(|err| {
                             // Unfortunately, the "download_digests_into_cache" failed entirely, record a failure.
                             let _failure_error = self.cas_success_tracker.record_failure();
                             err

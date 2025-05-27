@@ -33,7 +33,6 @@ from facebook.eden.ttypes import (
     UnblockFaultArg,
 )
 
-
 if sys.platform == "win32":
     from eden.fs.cli import prjfs
     from eden.integration.lib.util import open_locked
@@ -868,7 +867,7 @@ class UpdateTest(EdenHgTestCase):
         self.kill_eden_during_checkout_and_restart(bottom, "dir2, false")
 
         with self.assertRaisesRegex(
-            hgrepo.HgError, f"checkout is in progress.*{bottom}"
+            hgrepo.HgError, f"a previous checkout was interrupted.*{bottom}"
         ):
             self.assert_status_empty()
 

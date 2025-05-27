@@ -60,7 +60,7 @@ mononoke_queries! {
     }
 
     write InsertChangeset(
-        values: (repo_id: RepositoryId, cs_id: ChangesetId, bubble_id: BubbleId, gen: u64)
+        values: (repo_id: RepositoryId, cs_id: ChangesetId, bubble_id: BubbleId, r#gen: u64)
     ) {
         insert_or_ignore,
         "{insert_or_ignore} INTO ephemeral_bubble_changeset_mapping

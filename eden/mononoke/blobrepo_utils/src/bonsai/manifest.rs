@@ -89,7 +89,7 @@ impl<R: Repo> BonsaiMFVerifyDifference<R> {
     pub fn changes(
         &self,
         ctx: CoreContext,
-    ) -> impl Stream<Item = Result<Diff<Entry<HgManifestId, (FileType, HgFileNodeId)>>>> + Send
+    ) -> impl Stream<Item = Result<Diff<Entry<HgManifestId, (FileType, HgFileNodeId)>>>> + Send + use<R>
     {
         let lookup_mf_id = HgManifestId::new(self.lookup_mf_id);
         let roundtrip_mf_id = HgManifestId::new(self.roundtrip_mf_id);

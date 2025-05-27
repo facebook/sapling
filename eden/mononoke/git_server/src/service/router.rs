@@ -28,6 +28,7 @@ use crate::model::GitServerContext;
 use crate::model::RepositoryParams;
 use crate::model::ServiceType;
 use crate::read;
+use crate::service::slapi_compat::GitHandlers;
 use crate::write;
 
 fn capability_advertisement_handler(mut state: State) -> Pin<Box<HandlerFuture>> {
@@ -120,5 +121,11 @@ pub fn build_router(context: GitServerContext) -> Router {
             .to(receive_pack_handler);
 
         route.get("/health_check").to(health_handler);
+        GitHandlers::setup::<edenapi_service::handlers::commit_cloud::CommitCloudWorkspace>(route);
+        GitHandlers::setup::<edenapi_service::handlers::commit_cloud::CommitCloudReferences>(route);
+        GitHandlers::setup::<edenapi_service::handlers::commit_cloud::CommitCloudUpdateReferences>(
+            route,
+        );
+        GitHandlers::setup::<edenapi_service::handlers::lookup::LookupHandler>(route);
     })
 }

@@ -13,7 +13,7 @@ path = "lib.rs"
 [dependencies]
 blobstore_factory = { version = "0.1.0", path = "../../blobstore/factory" }
 cached_config = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
-clap = { version = "4.5.30", features = ["derive", "env", "string", "unicode", "wrap_help"] }
+clap = { version = "4.5.38", features = ["derive", "env", "string", "unicode", "wrap_help"] }
 commit_graph_types = { version = "0.1.0", path = "../../repo_attributes/commit_graph/commit_graph_types" }
 derived_data_remote = { version = "0.1.0", path = "../../derived_data/remote" }
 fbinit = { version = "0.2.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
@@ -27,4 +27,4 @@ scuba_ext = { version = "0.1.0", path = "../../common/scuba_ext" }
 slog = { package = "tracing_slog_compat", version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 sql_ext = { version = "0.1.0", path = "../../common/rust/sql_ext" }
 strum = { version = "0.26.2", features = ["derive"] }
-tokio = { version = "1.41.0", features = ["full", "test-util", "tracing"] }
+tokio = { version = "1.45.0", features = ["full", "test-util", "tracing"] }

@@ -70,7 +70,6 @@
           time: Time {
               seconds: 946684800,
               offset: 0,
-              sign: Plus,
           },
       },
       committer: Signature {
@@ -79,7 +78,6 @@
           time: Time {
               seconds: 946684800,
               offset: 0,
-              sign: Plus,
           },
       },
       encoding: None,
@@ -219,15 +217,19 @@
 # Generating bookmarks should also capture the tag mapping in bonsai_tag_mapping table
   $ sqlite3 "$TESTTMP/monsql/sqlite_dbs" "SELECT tag_name, hex(changeset_id) as cs_id, hex(tag_hash) as tag_hash, target_is_tag FROM bonsai_tag_mapping ORDER BY tag_name"
   tags/changing_tag|68710F4158EB1188BBAC3955AEA66A944818578BCE93514E68CD627752243BE9|5733F87F2AA7E68C86273960497F2D81E11C6C8E|0
-  tags/empty_tag|D5BE6FDF77FC73EE5E3A4BAB1ADBB4772829E06C0F104E6CC0D70CABF1EBFF4B|FB02ED046A1E75FE2ABB8763F7C715496AE36353|0
+  tags/empty_tag|1910A71753B6A3F0A308C44E85AE28EB57272D5519D53C4577AF4395784EFDB3|FB02ED046A1E75FE2ABB8763F7C715496AE36353|0
   tags/first_tag|5CA579C0E3EBEA708371B65CE559E5A51B231AD1B6F3CDFD874CA27362A2A6A8|8963E1F55D1346A07C3AEC8C8FC72BF87D0452B1|0
   tags/recursive_tag|1AB4E7C855BE1F10B2A3E48A398B7B068EFB96EE81A75B8F74654B521D28A988|18B57EB6E2869701C04EE36399FCDE1A824A00DD|1
 
 # Generating bookmarks should also create the changeset corresponding to the
 # git tag at Mononoke end
-  $ ls $TESTTMP/blobstore/blobs | grep -e d5be6fdf77fc73ee5e3a4bab1adbb4772829e06c0f104e6cc0d70cabf1ebff4b -e 5ca579c0e3ebea708371b65ce559e5a51b231ad1b6f3cdfd874ca27362a2a6a8
+  $ ls $TESTTMP/blobstore/blobs | grep -e changeset.blake2
+  blob-repo0000.changeset.blake2.032cd4dce0406f1c1dd1362b6c3c9f9bdfa82f2fc5615e237a890be4fe08b044
+  blob-repo0000.changeset.blake2.1910a71753b6a3f0a308c44e85ae28eb57272d5519d53c4577af4395784efdb3
+  blob-repo0000.changeset.blake2.1ab4e7c855be1f10b2a3e48a398b7b068efb96ee81a75b8f74654b521d28a988
   blob-repo0000.changeset.blake2.5ca579c0e3ebea708371b65ce559e5a51b231ad1b6f3cdfd874ca27362a2a6a8
-  blob-repo0000.changeset.blake2.d5be6fdf77fc73ee5e3a4bab1adbb4772829e06c0f104e6cc0d70cabf1ebff4b
+  blob-repo0000.changeset.blake2.68710f4158eb1188bbac3955aea66a944818578bce93514e68cd627752243be9
+  blob-repo0000.changeset.blake2.da93dc81badd8d407db0f3219ec0ec78f1ef750ebfa95735bb483310371af80c
 
 # Validate if the mapping from git tag to its metadata changeset was created
 # at Mononoke end
@@ -239,7 +241,7 @@
 
   $ mononoke_admin bookmarks -R repo get tags/empty_tag
   Metadata changeset for tag bookmark tags/empty_tag: 
-  d5be6fdf77fc73ee5e3a4bab1adbb4772829e06c0f104e6cc0d70cabf1ebff4b
+  1910a71753b6a3f0a308c44e85ae28eb57272d5519d53c4577af4395784efdb3
   Changeset pointed to by the tag bookmark tags/empty_tag
   da93dc81badd8d407db0f3219ec0ec78f1ef750ebfa95735bb483310371af80c
 
@@ -279,7 +281,7 @@
 # Generating bookmarks should also capture the tag mapping in bonsai_tag_mapping table. Note that changing_tag has changed in hash
   $ sqlite3 "$TESTTMP/monsql/sqlite_dbs" "SELECT tag_name, hex(changeset_id) as cs_id, hex(tag_hash) as tag_hash, target_is_tag FROM bonsai_tag_mapping ORDER BY tag_name"
   tags/changing_tag|3EA206D29D695D32C490FF0B2E8136B7ACF63783467515DB9C5DDB86122AD025|E73C25830B102663DB6F17C054C0EE3F9A93C04A|0
-  tags/empty_tag|D5BE6FDF77FC73EE5E3A4BAB1ADBB4772829E06C0F104E6CC0D70CABF1EBFF4B|FB02ED046A1E75FE2ABB8763F7C715496AE36353|0
+  tags/empty_tag|1910A71753B6A3F0A308C44E85AE28EB57272D5519D53C4577AF4395784EFDB3|FB02ED046A1E75FE2ABB8763F7C715496AE36353|0
   tags/first_tag|5CA579C0E3EBEA708371B65CE559E5A51B231AD1B6F3CDFD874CA27362A2A6A8|8963E1F55D1346A07C3AEC8C8FC72BF87D0452B1|0
   tags/recursive_tag|1AB4E7C855BE1F10B2A3E48A398B7B068EFB96EE81A75B8F74654B521D28A988|18B57EB6E2869701C04EE36399FCDE1A824A00DD|1
 

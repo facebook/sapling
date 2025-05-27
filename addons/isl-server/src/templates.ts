@@ -42,6 +42,7 @@ export const FIELDS = {
   bookmarks: `{bookmarks % '{bookmark}${ESCAPED_NULL_CHAR}'}`,
   remoteBookmarks: `{remotenames % '{remotename}${ESCAPED_NULL_CHAR}'}`,
   parents: `{parents % "{node}${ESCAPED_NULL_CHAR}"}`,
+  grandparents: `{grandparents % "{node}${ESCAPED_NULL_CHAR}"}`,
   isDot: `{ifcontains(rev, revset('.'), '${WDIR_PARENT_MARKER}')}`,
   // We don't need files for public commits, and public commits are sometimes gigantic codemods without you realizing.
   // No need to fetch if not draft.
@@ -91,6 +92,7 @@ export function parseCommitInfoOutput(
         author: lines[FIELD_INDEX.author],
         date: new Date(lines[FIELD_INDEX.date]),
         parents: splitLine(lines[FIELD_INDEX.parents]) as string[],
+        grandparents: splitLine(lines[FIELD_INDEX.grandparents]) as string[],
         phase: lines[FIELD_INDEX.phase] as CommitPhaseType,
         bookmarks: splitLine(lines[FIELD_INDEX.bookmarks]),
         remoteBookmarks: splitLine(lines[FIELD_INDEX.remoteBookmarks]),

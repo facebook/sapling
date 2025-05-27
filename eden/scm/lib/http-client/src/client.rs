@@ -65,6 +65,13 @@ pub struct Config {
     // library to limit the number of in-flight requests separately, _before_ the
     // requests are given to curl.
     pub max_concurrent_requests: Option<usize>,
+
+    // Limit the number of concurrent requests for a "batch" of requests passed at once to
+    // client.send_async(). This allows us to have a high global request limit for small
+    // "random" requests, while having lower limits for heavy requests (e.g. fetch 10m
+    // files across 1000 requests).
+    pub max_concurrent_requests_per_batch: Option<usize>,
+
     // Escape hatch to turn off our request limiting.
     pub limit_requests: bool,
     // Escape hatch to turn off our response body limiting.
@@ -73,6 +80,10 @@ pub struct Config {
     pub unix_socket_path: Option<String>,
     pub verbose: bool,
     pub verbose_stats: bool,
+
+    pub read_buffer_size: Option<u64>,
+    pub write_buffer_size: Option<u64>,
+    pub follow_redirects: bool,
 }
 
 impl Default for Config {
@@ -95,12 +106,17 @@ impl Default for Config {
             client_info: None,
             disable_tls_verification: false,
             max_concurrent_requests: None, // No limit by default
+            max_concurrent_requests_per_batch: None,
             limit_requests: true,
             limit_response_buffering: true,
             unix_socket_domains: HashSet::new(),
             unix_socket_path: None,
             verbose: false,
             verbose_stats: false,
+
+            read_buffer_size: None,
+            write_buffer_size: None,
+            follow_redirects: true,
         }
     }
 }
@@ -245,23 +261,37 @@ impl HttpClient {
     /// until all of the transfers are complete, and will return
     /// the total stats across all transfers when complete.
     pub fn stream(&self, requests: Vec<StreamRequest>) -> Result<Stats, HttpClientError> {
+        // This is a "local" limit for how many concurrent requests we allow for a single
+        // batch of requests. Requests are still subject to the global limit via self.claimer.
+        let mut allowed_requests = self
+            .config
+            .max_concurrent_requests_per_batch
+            .unwrap_or(requests.len());
+
         // Add as many of remaining requests to the handle as we can, limited by the claimer.
-        let try_add =
-            |h: &MultiDriver, reqs: &mut IntoIter<StreamRequest>| -> Result<(), HttpClientError> {
-                for claim in self.claimer.try_claim_requests(reqs.len()) {
-                    let mut request = match reqs.next() {
-                        Some(request) => request,
-                        // Shouldn't happen, but just in case.
-                        None => break,
-                    };
+        let try_add = |h: &MultiDriver,
+                       reqs: &mut IntoIter<StreamRequest>,
+                       allowed_requests: &mut usize|
+         -> Result<(), HttpClientError> {
+            for claim in self
+                .claimer
+                .try_claim_requests((*allowed_requests).min(reqs.len()))
+            {
+                let mut request = match reqs.next() {
+                    Some(request) => request,
+                    // Shouldn't happen, but just in case.
+                    None => break,
+                };
 
-                    self.event_listeners
-                        .trigger_new_request(request.request.ctx_mut());
-                    h.add(request.into_easy(claim)?)?;
-                }
+                self.event_listeners
+                    .trigger_new_request(request.request.ctx_mut());
+                h.add(request.into_easy(claim)?)?;
 
-                Ok(())
-            };
+                *allowed_requests -= 1;
+            }
+
+            Ok(())
+        };
 
         let mut requests = requests.into_iter();
         let mut stats = Stats::default();
@@ -276,7 +306,7 @@ impl HttpClient {
             let driver = MultiDriver::new(multi.get(), self.config.verbose_stats);
 
             // Add requests to the driver. This can add anywhere from zero to all the requests.
-            try_add(&driver, &mut requests)?;
+            try_add(&driver, &mut requests, &mut allowed_requests)?;
 
             let mut tls_error = false;
             let result = driver
@@ -290,6 +320,8 @@ impl HttpClient {
 
                     self.report_result_and_drop_receiver(res)?;
 
+                    allowed_requests += 1;
+
                     // A request finished - let's see if there are pending requests we can now add
                     // to this multi. This allows pending requests to proceed without needing to
                     // wait for _all_ in-progress requests to finish. Note that there may be other
@@ -297,7 +329,8 @@ impl HttpClient {
                     // for our pending requests to wait longer than they need to (i.e. when a
                     // request finishes on a different multi, our loop here will still wait for one
                     // of our requests to finish before trying to enqueue new requests).
-                    try_add(&driver, &mut requests).map_err(|err| Abort::WithReason(err.into()))
+                    try_add(&driver, &mut requests, &mut allowed_requests)
+                        .map_err(|err| Abort::WithReason(err.into()))
                 })
                 .inspect(|stats| {
                     self.event_listeners.trigger_stats(stats);
@@ -430,6 +463,9 @@ impl HttpClient {
         req.set_verify_tls_host(!self.config.disable_tls_verification);
 
         req.set_limit_response_buffering(self.config.limit_response_buffering);
+
+        req.set_read_buffer_size(self.config.read_buffer_size);
+        req.set_write_buffer_size(self.config.write_buffer_size);
 
         req
     }

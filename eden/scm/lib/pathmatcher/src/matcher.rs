@@ -261,7 +261,7 @@ mod tests {
     use crate::Matcher;
 
     macro_rules! path {
-        ($s:expr) => {
+        ($s:expr_2021) => {
             RepoPath::from_str($s).unwrap()
         };
     }

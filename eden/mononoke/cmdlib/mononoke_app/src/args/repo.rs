@@ -57,7 +57,7 @@ fn augment_args(
 
 #[macro_export]
 macro_rules! repo_args {
-    ($ident:ident, $name_arg:literal, $maybe_short_name_arg:expr, $name_help:literal, $id_arg:literal, $id_help:literal) => {
+    ($ident:ident, $name_arg:literal, $maybe_short_name_arg:expr_2021, $name_help:literal, $id_arg:literal, $id_help:literal) => {
         #[derive(Debug, Clone)]
         pub struct $ident(RepoArg);
 
@@ -118,7 +118,7 @@ macro_rules! repo_args {
 
 #[macro_export]
 macro_rules! repo_args_optional {
-    ($ident:ident, $name_arg:literal, $maybe_short_name_arg:expr, $name_help:literal, $id_arg:literal, $id_help:literal) => {
+    ($ident:ident, $name_arg:literal, $maybe_short_name_arg:expr_2021, $name_help:literal, $id_arg:literal, $id_help:literal) => {
         #[derive(Debug, Clone)]
         pub struct $ident(Option<RepoArg>);
 

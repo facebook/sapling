@@ -29,10 +29,10 @@ sapling-storemodel = { version = "0.1.0", path = "../storemodel" }
 sapling-types = { version = "0.1.0", path = "../types" }
 sapling-xdiff = { version = "0.1.0", path = "../xdiff" }
 serde = { version = "1.0.185", features = ["derive", "rc"] }
-thiserror = "2"
+thiserror = "2.0.12"
 tracing = { version = "0.1.41", features = ["attributes", "valuable"] }
 
 [dev-dependencies]
 sapling-manifest-tree = { version = "0.1.0", path = "../manifest-tree", features = ["for-tests"] }
-tokio = { version = "1.41.0", features = ["full", "test-util", "tracing"] }
+tokio = { version = "1.45.0", features = ["full", "test-util", "tracing"] }
 tracing-test = { version = "0.2.3", features = ["no-env-filter"] }

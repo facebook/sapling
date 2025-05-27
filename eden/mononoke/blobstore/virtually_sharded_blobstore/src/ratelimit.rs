@@ -99,9 +99,7 @@ impl<'a> Ticket<'a> {
         match self {
             Self::NoTicket => Ok(true),
             Self::Pending {
-                ref mut access,
-                ref mut awaited,
-                ..
+                access, awaited, ..
             } => {
                 // Race access future against one that is always ready. Since the select is biased, it will
                 // favor the access future if it is indeed ready.

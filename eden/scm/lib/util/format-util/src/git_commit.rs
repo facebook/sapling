@@ -33,3 +33,30 @@ pub fn git_commit_text_to_root_tree_id(text: &[u8]) -> Result<Id20> {
 pub(crate) fn normalize_git_tree_id(id: Id20) -> Id20 {
     if id == GIT_EMPTY_TREE_ID { NULL_ID } else { id }
 }
+
+/// Resolve a git tag object to a hash.
+pub fn resolve_git_tag(data: &[u8]) -> Option<Id20> {
+    // See `parse_tag_buffer` in git's `tag.c`.
+    let rest = data.strip_prefix(b"object ")?;
+    let hex = rest.get(0..Id20::hex_len())?;
+    Id20::from_hex(hex).ok()
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_resolve_tag() {
+        let data = concat!(
+            "object 3c05e56adf5b268ec5b20bf8aec460815e45161c\n",
+            "type commit\n",
+            "tag android-14.0.0_r2\n"
+        );
+        let resolved = resolve_git_tag(data.as_bytes());
+        assert_eq!(
+            resolved.unwrap().to_hex(),
+            "3c05e56adf5b268ec5b20bf8aec460815e45161c"
+        );
+    }
+}

@@ -10,16 +10,8 @@
 # This software may be used and distributed according to the terms of the
 # GNU General Public License version 2 or any later version.
 
-from __future__ import absolute_import
 
-from . import configitems, error, identity, util
-
-# unlike the other registered items, config options are neither functions or
-# classes. Registering the option is just small function call.
-#
-# We still add the official API to the registrar module for consistency with
-# the other items extensions want might to register.
-configitem = configitems.getitemregister
+from . import error, identity, util
 
 
 class _funcregistrarbase:

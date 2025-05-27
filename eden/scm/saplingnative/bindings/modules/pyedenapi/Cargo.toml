@@ -7,7 +7,7 @@ edition = "2021"
 
 [dependencies]
 anyhow = "1.0.95"
-cpython = { version = "0.7.2", default-features = false }
+cpython = { version = "0.7.2", features = ["python3-sys"], default-features = false }
 futures = { version = "0.3.30", features = ["async-await", "compat"] }
 pyconfigloader = { version = "0.1.0", path = "../pyconfigloader" }
 pyrevisionstore = { version = "0.1.0", path = "../pyrevisionstore" }

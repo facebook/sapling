@@ -28,7 +28,6 @@ cpp_binary(
         "//folly/io/async:async_socket",
         "//folly/io/async:event_base_manager",
         "//folly/json:dynamic",
-        "//folly/logging:logging",
         "//folly/portability:windows",
         "//thrift/lib/cpp2/async:header_client_channel",
     ],

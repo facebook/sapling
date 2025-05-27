@@ -194,10 +194,7 @@ impl FilenodeDiff {
     }
 
     pub fn as_tuple(&self) -> (&NonRootMPath, &FilenodeDiffPayload) {
-        let Self {
-            ref mpath,
-            ref payload,
-        } = self;
+        let Self { mpath, payload } = self;
         (mpath, payload)
     }
 }
@@ -722,7 +719,7 @@ pub async fn unfold_bookmarks_update_log_entry(
     ctx: &CoreContext,
     (entry, queue_size): (BookmarkUpdateLogEntry, QueueSize),
     validation_helpers: &ValidationHelpers,
-) -> Result<impl Stream<Item = Result<CommitEntry, Error>>, Error> {
+) -> Result<impl Stream<Item = Result<CommitEntry, Error>> + use<>, Error> {
     let bookmarks_update_log_entry_id = entry.id;
     let is_master_entry = entry.bookmark_name == validation_helpers.large_repo_master_bookmark;
     let master_cs_id = validation_helpers

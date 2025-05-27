@@ -11,7 +11,7 @@ use std::collections::HashSet;
 use std::io::Write;
 
 use anyhow::Result;
-use commit_id::CommitIdsArgs;
+use commit_id_types::CommitIdsArgs;
 use futures::stream;
 use futures::stream::Stream;
 use futures::stream::StreamExt;
@@ -205,7 +205,7 @@ pub(super) async fn run(app: ScscApp, args: CommandArgs) -> Result<()> {
 
     let conn = app.get_connection(Some(&repo.name))?;
     let bookmarks = match args.commit_ids_args.clone().into_commit_ids().as_slice() {
-        [ref commit_id] => {
+        [commit_id] => {
             let id = resolve_commit_id(&conn, &repo, commit_id).await?;
             let commit = thrift::CommitSpecifier {
                 repo,

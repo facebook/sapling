@@ -85,7 +85,6 @@
   > --bookmark-suffix "new_repo" \
   > --commit-date-rfc3339 "2005-04-02T21:37:00+01:00" \
   > --disable-phabricator-check \
-  > --disable-hg-sync-check \
   > --dest-bookmark master_bookmark \
   > --commit-author user \
   > --commit-message "merging" \

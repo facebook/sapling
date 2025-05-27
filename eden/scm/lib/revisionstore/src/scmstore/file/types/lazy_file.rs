@@ -8,10 +8,10 @@
 use anyhow::Error;
 use anyhow::Result;
 use anyhow::bail;
+use blob::Blob;
 use edenapi_types::FileEntry;
 use format_util::split_file_metadata;
 use minibytes::Bytes;
-use scm_blob::ScmBlob;
 use storemodel::SerializationFormat;
 use types::HgId;
 use types::Id20;
@@ -36,7 +36,7 @@ pub(crate) enum LazyFile {
     SaplingRemoteApi(FileEntry, SerializationFormat),
 
     /// File content read from CAS (no hg header).
-    Cas(ScmBlob),
+    Cas(Blob),
 }
 
 impl std::fmt::Debug for LazyFile {
@@ -71,9 +71,9 @@ impl LazyFile {
     fn hgid(&self) -> Option<HgId> {
         use LazyFile::*;
         match self {
-            IndexedLog(ref entry, _) => Some(entry.node()),
-            Lfs(_, ref ptr, _) => Some(ptr.hgid()),
-            SaplingRemoteApi(ref entry, _) => Some(entry.key().hgid),
+            IndexedLog(entry, _) => Some(entry.node()),
+            Lfs(_, ptr, _) => Some(ptr.hgid()),
+            SaplingRemoteApi(entry, _) => Some(entry.key().hgid),
             Cas(_) => None,
         }
     }
@@ -101,23 +101,23 @@ impl LazyFile {
 
     /// The file content, as would be found in the working copy (stripped of copy header), and the content header.
     /// Content header is `None` iff not available. If available but not set, content header is `Some(b"")`.
-    pub(crate) fn file_content(&self) -> Result<(ScmBlob, Option<Bytes>)> {
+    pub(crate) fn file_content(&self) -> Result<(Blob, Option<Bytes>)> {
         use LazyFile::*;
         Ok(match self {
             IndexedLog(entry, format) => {
                 let (content, header) = split_file_metadata(&entry.content()?, *format);
-                (ScmBlob::Bytes(content), header)
+                (Blob::Bytes(content), header)
             }
             Lfs(blob, ptr, format) => {
                 let content_header = match format {
                     SerializationFormat::Hg => Some(content_header_from_pointer(ptr)),
                     SerializationFormat::Git => None,
                 };
-                (ScmBlob::Bytes(blob.clone()), content_header)
+                (Blob::Bytes(blob.clone()), content_header)
             }
-            SaplingRemoteApi(ref entry, format) => {
+            SaplingRemoteApi(entry, format) => {
                 let (content, header) = split_file_metadata(&entry.data()?, *format);
-                (ScmBlob::Bytes(content), header)
+                (Blob::Bytes(content), header)
             }
             Cas(data) => (data.clone(), None),
         })
@@ -127,9 +127,9 @@ impl LazyFile {
     pub(crate) fn hg_content(&self) -> Result<Bytes> {
         use LazyFile::*;
         Ok(match self {
-            IndexedLog(ref entry, _) => entry.content()?,
-            Lfs(ref blob, ref ptr, _) => rebuild_metadata(blob.clone(), ptr),
-            SaplingRemoteApi(ref entry, _) => entry.data()?,
+            IndexedLog(entry, _) => entry.content()?,
+            Lfs(blob, ptr, _) => rebuild_metadata(blob.clone(), ptr),
+            SaplingRemoteApi(entry, _) => entry.data()?,
             Cas(_) => bail!("CAS data has no copy info"),
         })
     }
@@ -137,12 +137,12 @@ impl LazyFile {
     pub(crate) fn metadata(&self) -> Result<Metadata> {
         use LazyFile::*;
         Ok(match self {
-            IndexedLog(ref entry, _) => entry.metadata().clone(),
-            Lfs(_, ref ptr, _) => Metadata {
+            IndexedLog(entry, _) => entry.metadata().clone(),
+            Lfs(_, ptr, _) => Metadata {
                 size: Some(ptr.size()),
                 flags: None,
             },
-            SaplingRemoteApi(ref entry, _) => entry.metadata()?.clone(),
+            SaplingRemoteApi(entry, _) => entry.metadata()?.clone(),
             Cas(data) => Metadata {
                 size: Some(data.len() as u64),
                 flags: None,
@@ -154,8 +154,8 @@ impl LazyFile {
     pub(crate) fn indexedlog_cache_entry(&self, node: Id20) -> Result<Option<Entry>> {
         use LazyFile::*;
         Ok(match self {
-            IndexedLog(ref entry, _) => Some(entry.clone()),
-            SaplingRemoteApi(ref entry, _) => {
+            IndexedLog(entry, _) => Some(entry.clone()),
+            SaplingRemoteApi(entry, _) => {
                 Some(Entry::new(node, entry.data()?, entry.metadata()?.clone()))
             }
             // LFS Files should be written to LfsCache instead

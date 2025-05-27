@@ -350,7 +350,7 @@ impl DataSqlStore {
     pub(crate) fn get_keys_from_shard(
         &self,
         shard_num: usize,
-    ) -> impl Stream<Item = Result<String, Error>> {
+    ) -> impl Stream<Item = Result<String, Error>> + use<> {
         let conn = self.read_master_connection[shard_num].clone();
         async move {
             let keys = GetAllKeys::query(&conn).await?;
@@ -619,7 +619,7 @@ impl ChunkSqlStore {
             .await
             .map(|s| {
                 s.into_iter()
-                    .map(|(gen, size, count)| (gen, (size, count)))
+                    .map(|(r#gen, size, count)| (r#gen, (size, count)))
                     .collect::<HashMap<_, (_, _)>>()
             })
     }

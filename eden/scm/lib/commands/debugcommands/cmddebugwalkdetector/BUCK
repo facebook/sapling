@@ -19,6 +19,7 @@ rust_library(
     deps = [
         "//eden/scm/lib/clidispatch:clidispatch",
         "//eden/scm/lib/commands/cmdutil:cmdutil",
+        "//eden/scm/lib/types:types",
         "//eden/scm/lib/walkdetector:walkdetector",
     ],
 )

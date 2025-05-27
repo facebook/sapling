@@ -53,7 +53,7 @@ pub enum SaplingError {
 }
 
 macro_rules! impl_from_error {
-    ($from:ty, $to:expr) => {
+    ($from:ty, $to:expr_2021) => {
         impl From<$from> for SaplingError {
             fn from(from: $from) -> Self {
                 $to(from)

@@ -60,6 +60,7 @@ use mononoke_types::FileChange;
 pub use mononoke_types::Generation;
 use mononoke_types::NonRootMPath;
 use mononoke_types::SkeletonManifestId;
+use mononoke_types::SubtreeChange;
 use mononoke_types::Svnrev;
 use mononoke_types::path::MPath;
 use mononoke_types::skeleton_manifest_v2::SkeletonManifestV2;
@@ -314,7 +315,8 @@ impl<R: MononokeRepo> ChangesetContext<R> {
     // Desugared async syntax so we can return a future with static lifetime.
     fn derive<Derivable: BonsaiDerivable>(
         &self,
-    ) -> impl Future<Output = Result<Derivable, MononokeError>> + Send + 'static {
+    ) -> impl Future<Output = Result<Derivable, MononokeError>> + Send + 'static + use<Derivable, R>
+    {
         let ctx = self.ctx().clone();
         let repo_derived_data = self.repo_ctx.repo().repo_derived_data_arc();
         let id = self.id;
@@ -444,11 +446,11 @@ impl<R: MononokeRepo> ChangesetContext<R> {
     ///
     /// This performs an efficient manifest traversal, and as such returns
     /// contexts only for **paths which exist**.
-    pub async fn paths_with_history(
+    pub async fn paths_with_history<T: Iterator<Item = MPath>>(
         &self,
-        paths: impl Iterator<Item = MPath>,
+        paths: T,
     ) -> Result<
-        impl Stream<Item = Result<ChangesetPathHistoryContext<R>, MononokeError>>,
+        impl Stream<Item = Result<ChangesetPathHistoryContext<R>, MononokeError>> + use<R, T>,
         MononokeError,
     > {
         Ok(self
@@ -477,11 +479,11 @@ impl<R: MononokeRepo> ChangesetContext<R> {
     ///
     /// This performs an efficient manifest traversal, and as such returns
     /// contexts only for **paths which exist**.
-    pub async fn paths_with_content(
+    pub async fn paths_with_content<T: Iterator<Item = MPath>>(
         &self,
-        paths: impl Iterator<Item = MPath>,
+        paths: T,
     ) -> Result<
-        impl Stream<Item = Result<ChangesetPathContentContext<R>, MononokeError>>,
+        impl Stream<Item = Result<ChangesetPathContentContext<R>, MononokeError>> + use<R, T>,
         MononokeError,
     > {
         Ok(self
@@ -514,11 +516,13 @@ impl<R: MononokeRepo> ChangesetContext<R> {
     ///
     /// This performs an efficient manifest traversal, and as such returns
     /// contexts only for **paths which exist**.
-    pub async fn paths(
+    pub async fn paths<T: Iterator<Item = MPath>>(
         &self,
-        paths: impl Iterator<Item = MPath>,
-    ) -> Result<impl Stream<Item = Result<ChangesetPathContext<R>, MononokeError>>, MononokeError>
-    {
+        paths: T,
+    ) -> Result<
+        impl Stream<Item = Result<ChangesetPathContext<R>, MononokeError>> + use<R, T>,
+        MononokeError,
+    > {
         if justknobs::eval(
             "scm/mononoke:changeset_path_context_use_skeleton_manifest_v2",
             None,
@@ -743,6 +747,18 @@ impl<R: MononokeRepo> ChangesetContext<R> {
         let bonsai = self.bonsai_changeset().await?;
         let bonsai = bonsai.into_mut();
         Ok(bonsai.file_changes)
+    }
+
+    pub async fn subtree_change_count(&self) -> Result<usize, MononokeError> {
+        Ok(self.changeset_info().await?.subtree_change_count())
+    }
+
+    pub async fn subtree_changes(
+        &self,
+    ) -> Result<SortedVectorMap<MPath, SubtreeChange>, MononokeError> {
+        let bonsai = self.bonsai_changeset().await?;
+        let bonsai = bonsai.into_mut();
+        Ok(bonsai.subtree_changes)
     }
 
     /// Returns `true` if this commit is an ancestor of `other_commit`.  A commit is considered its
@@ -1171,7 +1187,8 @@ impl<R: MononokeRepo> ChangesetContext<R> {
         prefixes: Option<Vec1<MPath>>,
         ordering: ChangesetFileOrdering,
     ) -> Result<
-        impl Stream<Item = Result<(MPath, ManifestEntry<SkeletonManifestId, ()>), anyhow::Error>>,
+        impl Stream<Item = Result<(MPath, ManifestEntry<SkeletonManifestId, ()>), anyhow::Error>>
+        + use<R>,
         MononokeError,
     > {
         let root = self.root_skeleton_manifest_id().await?;
@@ -1206,7 +1223,8 @@ impl<R: MononokeRepo> ChangesetContext<R> {
         prefixes: Option<Vec1<MPath>>,
         ordering: ChangesetFileOrdering,
     ) -> Result<
-        impl Stream<Item = Result<(MPath, ManifestEntry<SkeletonManifestV2, ()>), anyhow::Error>>,
+        impl Stream<Item = Result<(MPath, ManifestEntry<SkeletonManifestV2, ()>), anyhow::Error>>
+        + use<R>,
         MononokeError,
     > {
         let root = self.root_skeleton_manifest_v2_id().await?;

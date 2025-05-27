@@ -12,14 +12,14 @@ use std::time::Instant;
 
 use anyhow::Result;
 use async_runtime::block_on;
+use blob::Blob;
 use cas_client::CasClient;
 use flume::Sender;
 use futures::StreamExt;
+use manifest_augmented_tree::AugmentedTree;
+use manifest_augmented_tree::AugmentedTreeWithDigest;
 use progress_model::ProgressBar;
-use scm_blob::ScmBlob;
 use tracing::field;
-use types::AugmentedTree;
-use types::AugmentedTreeWithDigest;
 use types::CasDigest;
 use types::CasDigestType;
 use types::CasFetchedStats;
@@ -204,7 +204,7 @@ impl FetchState {
             .filter_map(|(key, store_tree)| {
                 bar.increase_position(1);
 
-                let aux_data = match store_tree.aux_data.as_ref() {
+                let aux_data = match store_tree.aux_data() {
                     Some(aux_data) => {
                         tracing::trace!(target: "cas", ?key, ?aux_data, "found aux data for tree digest");
                         aux_data
@@ -281,9 +281,10 @@ impl FetchState {
                                 }
                                 Ok(Some(data)) => {
                                     let deserialization_result = match data {
-                                        ScmBlob::Bytes(bytes) => AugmentedTree::try_deserialize(bytes.as_ref()),
+                                        Blob::Bytes(bytes) => AugmentedTree::try_deserialize(bytes.as_ref()),
+                                        #[allow(unexpected_cfgs)]
                                         #[cfg(fbcode_build)]
-                                        ScmBlob::IOBuf(buf) => AugmentedTree::try_deserialize(buf.cursor()),
+                                        Blob::IOBuf(buf) => AugmentedTree::try_deserialize(buf.cursor()),
                                     };
                                     match deserialization_result {
                                         Ok(tree) => {

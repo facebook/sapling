@@ -83,7 +83,7 @@ impl EdenFsClient {
 }
 
 type ArcFileStore = Arc<dyn FileStore>;
-type ArcReadTreeManifest = Arc<dyn ReadTreeManifest + Send + Sync>;
+type ArcReadTreeManifest = Arc<dyn ReadTreeManifest>;
 type BoxFileSystem = Box<dyn FileSystem + Send>;
 
 pub struct WorkingCopy {

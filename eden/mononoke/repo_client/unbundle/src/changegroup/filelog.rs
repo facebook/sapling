@@ -205,7 +205,7 @@ impl<R: Repo> DeltaCache<R> {
         node: HgNodeHash,
         base: Option<HgNodeHash>,
         delta: Delta,
-    ) -> impl Future<Output = Result<Bytes>> {
+    ) -> impl Future<Output = Result<Bytes>> + use<R> {
         let bytes = self.bytes_cache.get(&node).cloned().unwrap_or_else(|| {
             let bytes = {
                 let vec_u8 = match base {
@@ -251,7 +251,7 @@ impl<R: Repo> DeltaCache<R> {
         ctx: &CoreContext,
         base: HgNodeHash,
         delta: Delta,
-    ) -> impl Future<Output = Result<Vec<u8>>> {
+    ) -> impl Future<Output = Result<Vec<u8>>> + use<R> {
         let cache_entry = self.bytes_cache.get(&base).cloned();
         cloned!(ctx, self.repo);
         async move {

@@ -83,8 +83,6 @@ pub struct TailCommandArgs {
     pub catch_up_once: bool,
     #[clap(long, required = false)]
     pub backsync_pressure_repo_ids: Vec<i32>,
-    #[clap(long)]
-    pub hg_sync_backpressure: bool,
     #[clap(long, required = false)]
     pub derived_data_types: Vec<String>,
     #[clap(long)]

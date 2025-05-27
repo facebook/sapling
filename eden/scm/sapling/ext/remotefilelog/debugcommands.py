@@ -4,7 +4,7 @@
 # GNU General Public License version 2.
 
 # debugcommands.py - debug logic for remotefilelog
-from __future__ import absolute_import
+
 
 import hashlib
 import os

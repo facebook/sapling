@@ -55,6 +55,7 @@ rust_binary(
         "//eden/mononoke/git/import_direct:import_direct",
         "//eden/mononoke/git/import_tools:import_tools",
         "//eden/mononoke/git_ref_content_mapping:git_ref_content_mapping",
+        "//eden/mononoke/git_source_of_truth:git_source_of_truth",
         "//eden/mononoke/manifest:manifest",
         "//eden/mononoke/megarepo_api:pushredirect",
         "//eden/mononoke/mercurial:mercurial_types",

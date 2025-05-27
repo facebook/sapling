@@ -51,7 +51,7 @@ pub async fn file_to_async_key_stream(path: PathBuf) -> Result<impl Stream<Item 
 }
 
 macro_rules! try_local_content {
-    ($id:ident, $e:expr, $m:expr) => {
+    ($id:ident, $e:expr_2021, $m:expr_2021) => {
         if let Some(store) = $e.as_ref() {
             $m.requests.increment();
             $m.keys.increment();
@@ -62,7 +62,7 @@ macro_rules! try_local_content {
                 }
                 Ok(Some(data)) => {
                     $m.hits.increment();
-                    return Ok(Some(ScmBlob::Bytes(data)));
+                    return Ok(Some(Blob::Bytes(data)));
                 }
                 Err(err) => {
                     $m.errors.increment();

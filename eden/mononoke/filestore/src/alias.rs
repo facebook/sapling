@@ -53,7 +53,7 @@ impl RedeemableAliases {
 pub fn add_aliases_to_multiplexer<T: AsRef<[u8]> + Send + Sync + Clone + 'static>(
     multiplexer: &mut Multiplexer<T>,
     expected_size: ExpectedSize,
-) -> impl Future<Output = Result<RedeemableAliases, Error>> + std::marker::Unpin {
+) -> impl Future<Output = Result<RedeemableAliases, Error>> + std::marker::Unpin + use<T> {
     let sha1 = multiplexer.add(|stream| hash_stream(Sha1IncrementalHasher::new(), stream));
     let sha256 = multiplexer.add(|stream| hash_stream(Sha256IncrementalHasher::new(), stream));
     let git_sha1 = multiplexer

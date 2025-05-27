@@ -341,8 +341,8 @@ TEST_F(PrivHelperTest, fuseMountCustomVfsType) {
 }
 
 TEST_F(PrivHelperTest, fuseMountPermissions) {
-  if (getuid() != 0) {
-    auto path = folly::kIsApple ? "/var/root/bar" : "/root/bar";
+  if (!folly::kIsApple && getuid() != 0) {
+    auto path = "/root/bar";
     EXPECT_THROW_RE(
         client_->fuseMount(path, false, "fuse").get(),
         std::exception,

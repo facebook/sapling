@@ -336,7 +336,7 @@ impl SqlBookmarks {
         kinds: &[BookmarkKind],
         pagination: &BookmarkPagination,
         limit: u64,
-    ) -> impl Future<Output = Result<Vec<(BookmarkKey, BookmarkKind, ChangesetId, Option<u64>)>>>
+    ) -> impl Future<Output = Result<Vec<(BookmarkKey, BookmarkKind, ChangesetId, Option<u64>)>>> + use<>
     {
         let is_wbc = matches!(
             ctx.session().session_class(),
@@ -376,7 +376,7 @@ impl SqlBookmarks {
                         // Sorting is only useful for pagination. If the query returns all bookmark
                         // names, then skip the sorting.
                         if limit == u64::MAX {
-                            let tok: i32 = rand::thread_rng().gen();
+                            let tok: i32 = rand::thread_rng().r#gen();
                             SelectAllUnordered::maybe_traced_query(
                                 &conn,
                                 cri,
@@ -523,7 +523,7 @@ impl SqlBookmarks {
         &self,
         ctx: CoreContext,
         key: &BookmarkKey,
-    ) -> impl Future<Output = Result<Option<(ChangesetId, Option<u64>)>>> + 'static {
+    ) -> impl Future<Output = Result<Option<(ChangesetId, Option<u64>)>>> + 'static + use<> {
         STATS::get_bookmark.add_value(1);
         ctx.perf_counters()
             .increment_counter(PerfCounterType::SqlReadsMaster);
@@ -624,7 +624,7 @@ impl BookmarkUpdateLog for SqlBookmarks {
         let repo_id = self.repo_id;
 
         async move {
-            let tok: i32 = rand::thread_rng().gen();
+            let tok: i32 = rand::thread_rng().r#gen();
             let cri = ctx.client_request_info();
 
             let rows = match offset {

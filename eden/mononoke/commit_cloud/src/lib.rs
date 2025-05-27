@@ -10,6 +10,8 @@ pub mod ctx;
 pub mod references;
 pub mod smartlog;
 pub mod sql;
+pub mod utils;
+
 use std::collections::HashMap;
 use std::collections::HashSet;
 use std::fmt::Display;
@@ -18,6 +20,7 @@ use std::sync::Arc;
 use anyhow::Context;
 use anyhow::bail;
 use anyhow::ensure;
+use bonsai_git_mapping::BonsaiGitMapping;
 use bonsai_hg_mapping::BonsaiHgMapping;
 use commit_cloud_helpers::make_workspace_acl_name;
 #[cfg(fbcode_build)]
@@ -68,6 +71,7 @@ use crate::sql::ops::Update;
 pub struct CommitCloud {
     pub storage: SqlCommitCloud,
     pub bonsai_hg_mapping: Arc<dyn BonsaiHgMapping>,
+    pub bonsai_git_mapping: Arc<dyn BonsaiGitMapping>,
     pub repo_derived_data: ArcRepoDerivedData,
     pub ctx: CoreContext,
     pub acl_provider: Arc<dyn AclProvider>,
@@ -78,6 +82,7 @@ impl CommitCloud {
     pub fn new(
         storage: SqlCommitCloud,
         bonsai_hg_mapping: Arc<dyn BonsaiHgMapping>,
+        bonsai_git_mapping: Arc<dyn BonsaiGitMapping>,
         repo_derived_data: ArcRepoDerivedData,
         ctx: CoreContext,
         acl_provider: Arc<dyn AclProvider>,
@@ -86,6 +91,7 @@ impl CommitCloud {
         CommitCloud {
             storage,
             bonsai_hg_mapping,
+            bonsai_git_mapping,
             repo_derived_data,
             ctx,
             acl_provider,
@@ -209,8 +215,10 @@ impl CommitCloud {
             latest_version,
             version_timestamp,
             self.bonsai_hg_mapping.clone(),
+            self.bonsai_git_mapping.clone(),
             self.repo_derived_data.clone(),
             &self.ctx,
+            cc_ctx,
         )
         .await
         .map_err(CommitCloudInternalError::Error)?;
@@ -244,8 +252,10 @@ impl CommitCloud {
                 latest_version,
                 version_timestamp,
                 self.bonsai_hg_mapping.clone(),
+                self.bonsai_git_mapping.clone(),
                 self.repo_derived_data.clone(),
                 &self.ctx,
+                cc_ctx,
             )
             .await
             .map_err(CommitCloudError::internal_error);

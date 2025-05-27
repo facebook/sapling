@@ -25,8 +25,6 @@ special cases. For instance, merge tools don't support symlinks, delete/update
 conflicts.
 """
 
-from __future__ import absolute_import
-
 import copy
 from typing import Any, Dict, Optional, Union
 

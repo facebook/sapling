@@ -10,7 +10,6 @@
 # This software may be used and distributed according to the terms of the
 # GNU General Public License version 2 or any later version.
 
-from __future__ import absolute_import
 
 import itertools
 import weakref
@@ -264,16 +263,18 @@ class abstractsmartset:
         """parse a template string and decide what to prefetch"""
         from . import templater  # avoid cycle
 
-        ast = templater.parseexpandaliases(repo, templ)
+        symbols = templater.extractsymbols(repo, templ)
+        return self.prefetchbysymbols(symbols)
+
+    def prefetchbysymbols(self, symbols):
+        """get symbols extracted from template ast and decide what to prefetch"""
         fields = []
-        if not ast:
-            # empty template, use default
+        if symbols is None:
+            # indicates empty template, use default
             fields += prefetchtemplatekw.get("", [])
         else:
-            for t in parser.walktree(ast):
-                if len(t) < 2 or t[0] != "symbol":
-                    continue
-                fields += prefetchtemplatekw.get(t[1], [])
+            for symbol in symbols:
+                fields += prefetchtemplatekw.get(symbol, [])
         return self.prefetch(*fields)
 
     def prefetchfields(self):

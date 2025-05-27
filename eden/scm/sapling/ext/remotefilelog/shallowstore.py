@@ -4,7 +4,6 @@
 # GNU General Public License version 2.
 
 # shallowstore.py - shallow store for interacting with shallow repos
-from __future__ import absolute_import
 
 
 def wrapstore(store):

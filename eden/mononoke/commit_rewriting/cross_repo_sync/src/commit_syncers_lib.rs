@@ -809,7 +809,7 @@ pub(crate) fn strip_removed_parents(
 
     for (_, file_change) in source_cs.file_changes.iter_mut() {
         match file_change {
-            FileChange::Change(ref mut tc) => match tc.copy_from() {
+            FileChange::Change(tc) => match tc.copy_from() {
                 Some((_, parent)) if !new_source_parents.contains(&parent) => {
                     *tc = tc.with_new_copy_from(None);
                 }

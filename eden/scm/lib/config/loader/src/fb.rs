@@ -21,6 +21,7 @@ pub(crate) mod static_system;
 
 /// Supporting libraries.
 pub(crate) mod internalconfig;
+pub(crate) mod internalconfigs;
 pub(crate) mod thrift_types;
 
 mod mode;

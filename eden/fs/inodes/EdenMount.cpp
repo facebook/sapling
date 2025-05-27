@@ -389,11 +389,12 @@ FOLLY_NODISCARD ImmediateFuture<folly::Unit> EdenMount::initialize(
                       ParentCommit::RootIdPreference::To)};
             }
 
+            auto wcParent = parentCommit.getWorkingCopyParent();
+
             *parentState_.wlock() = ParentCommitState{
-                parent,
-                parentTree.tree,
-                parentCommit.getWorkingCopyParent(),
-                std::move(checkoutState)};
+                parent, parentTree.tree, wcParent, std::move(checkoutState)};
+
+            objectStore_->workingCopyParentHint(wcParent);
 
             // Record the transition from no snapshot to the current snapshot in
             // the journal.  This also sets things up so that we can carry the
@@ -1388,6 +1389,10 @@ ImmediateFuture<folly::Unit> EdenMount::waitForPendingWrites() const {
   }
 }
 
+constexpr const char* interruptedCheckoutAdvice =
+    "a previous checkout was interrupted - please run `hg go {0}` to resume it"
+    ".\nIf there are conflicts, run `hg go --clean {0}` to discard changes, or `hg go --merge {0}` to merge.";
+
 ImmediateFuture<CheckoutResult> EdenMount::checkout(
     TreeInodePtr rootInode,
     const RootId& snapshotHash,
@@ -1420,8 +1425,7 @@ ImmediateFuture<CheckoutResult> EdenMount::checkout(
           return makeFuture<CheckoutResult>(newEdenError(
               EdenErrorType::CHECKOUT_IN_PROGRESS,
               fmt::format(
-                  "a previous checkout was interrupted - please run 'hg update --clean {}' first",
-                  interruptedCheckout.toCommit)));
+                  interruptedCheckoutAdvice, interruptedCheckout.toCommit)));
         } else {
           oldParent = interruptedCheckout.fromCommit;
           oldState = interruptedCheckout;
@@ -1466,6 +1470,8 @@ ImmediateFuture<CheckoutResult> EdenMount::checkout(
   // get the current checkout time, rather than the time from the previous
   // checkout
   setLastCheckoutTime(EdenTimestamp{clock_->getRealtime()});
+
+  objectStore_->workingCopyParentHint(snapshotHash);
 
   auto journalDiffCallback = std::make_shared<JournalDiffCallback>();
 
@@ -1873,9 +1879,7 @@ ImmediateFuture<Unit> EdenMount::diff(
                   &parentInfo->checkoutState)) {
         return makeImmediateFuture<Unit>(newEdenError(
             EdenErrorType::CHECKOUT_IN_PROGRESS,
-            fmt::format(
-                "cannot compute status while a checkout is in progress - please run 'hg update --clean {}' to resume it",
-                interrupted->toCommit)));
+            fmt::format(interruptedCheckoutAdvice, interrupted->toCommit)));
       }
 
       if (currentWorkingCopyParentRootId != commitHash) {
@@ -2079,6 +2083,7 @@ void EdenMount::resetParent(const RootId& parent) {
 
   checkoutConfig_->setWorkingCopyParentCommit(parent);
   parentLock->workingCopyParentRootId = parent;
+  objectStore_->workingCopyParentHint(parent);
 
   journal_->recordHashUpdate(oldParent, parent);
 }

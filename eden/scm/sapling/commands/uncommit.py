@@ -21,8 +21,6 @@ removed in the changeset will be left unchanged, and so will remain modified,
 added and removed in the working directory.
 """
 
-from __future__ import absolute_import
-
 from typing import Optional
 
 from .. import cmdutil, context, copies, error, rewriteutil, scmutil, treestate

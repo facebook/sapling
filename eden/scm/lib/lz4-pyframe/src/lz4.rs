@@ -36,7 +36,7 @@ const HEADER_LEN: usize = 4;
 // int LZ4_freeStreamHC (LZ4_streamHC_t* streamHCPtr);
 #[repr(C)]
 struct LZ4_streamHC_t(c_void);
-extern "C" {
+unsafe extern "C" {
     fn LZ4_compress_HC_continue(
         LZ4_stream: *mut LZ4_streamHC_t,
         src: *const u8,

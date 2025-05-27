@@ -1752,13 +1752,13 @@ mod test {
     use anyhow::Context;
     #[cfg(unix)]
     use anyhow::ensure;
+    use blob::Blob;
     use fs::create_dir;
     use manifest_tree::testutil::TestStore;
     use manifest_tree::testutil::make_tree_manifest_from_meta;
     use pathmatcher::AlwaysMatcher;
     use quickcheck::Arbitrary;
     use quickcheck::Gen;
-    use scm_blob::ScmBlob;
     use storemodel::KeyStore;
     use tempfile::TempDir;
     use types::testutil::generate_repo_paths;
@@ -1835,13 +1835,13 @@ mod test {
 
     fn generate_trees(tree_size: usize, count: usize) -> Vec<Vec<(RepoPathBuf, FileMetadata)>> {
         let mut result = vec![];
-        let mut gen = Gen::new(5);
-        let paths = generate_repo_paths(tree_size * count, &mut gen);
+        let mut r#gen = Gen::new(5);
+        let paths = generate_repo_paths(tree_size * count, &mut r#gen);
 
         for i in 0..count {
             let mut tree = vec![];
             for idx in 0..tree_size {
-                let meta = FileMetadata::arbitrary(&mut gen);
+                let meta = FileMetadata::arbitrary(&mut r#gen);
                 let path = paths.get(i * tree_size / 2 + idx).unwrap().clone();
                 tree.push((path, meta));
             }
@@ -2042,12 +2042,8 @@ mod test {
 
     #[async_trait::async_trait]
     impl KeyStore for DummyFileContentStore {
-        fn get_local_content(
-            &self,
-            _path: &RepoPath,
-            hgid: HgId,
-        ) -> anyhow::Result<Option<ScmBlob>> {
-            Ok(Some(ScmBlob::Bytes(hgid_file(&hgid).into())))
+        fn get_local_content(&self, _path: &RepoPath, hgid: HgId) -> anyhow::Result<Option<Blob>> {
+            Ok(Some(Blob::Bytes(hgid_file(&hgid).into())))
         }
 
         fn clone_key_store(&self) -> Box<dyn KeyStore> {

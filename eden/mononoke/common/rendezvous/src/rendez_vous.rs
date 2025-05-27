@@ -113,7 +113,7 @@ where
         fb: FacebookInit,
         keys: HashSet<K>,
         f0: F0,
-    ) -> impl Future<Output = Result<HashMap<K, Option<V>>, Error>>
+    ) -> impl Future<Output = Result<HashMap<K, Option<V>>, Error>> + use<F0, F1, Fut, K, V, C>
     where
         F0: FnOnce() -> F1, // Can construct a F1 if we are the first caller here
         F1: FnOnce(HashSet<K>) -> Fut + Send + 'static, // Actually makes the call
@@ -131,7 +131,7 @@ where
         fb: FacebookInit,
         keys: HashSet<K>,
         f0: F0,
-    ) -> impl Future<Output = Result<HashMap<K, Option<V>>, Error>>
+    ) -> impl Future<Output = Result<HashMap<K, Option<V>>, Error>> + use<F0, F1, Fut, K, V, C>
     where
         F0: FnOnce() -> F1,
         F1: FnOnce(HashSet<K>) -> Fut + Send + 'static,
@@ -191,7 +191,7 @@ where
 
                 fut
             }
-            Some((ref mut staged_keys, ref fut, ref notify)) => {
+            &mut Some((ref mut staged_keys, ref fut, ref notify)) => {
                 for k in keys.iter().cloned() {
                     if !staged_keys.insert(k) {
                         deduplicated += 1;
@@ -228,7 +228,7 @@ where
         fb: FacebookInit,
         keys: HashSet<K>,
         f0: F0,
-    ) -> impl Future<Output = Result<HashMap<K, Option<V>>, Error>>
+    ) -> impl Future<Output = Result<HashMap<K, Option<V>>, Error>> + use<F0, F1, Fut, K, V, C>
     where
         F0: FnOnce() -> F1,
         F1: FnOnce(HashSet<K>) -> Fut + Send + 'static,

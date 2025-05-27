@@ -38,7 +38,7 @@ use crate::service::uploader::peel_tag_target;
 use crate::util::mononoke_source_of_truth;
 
 const HOOK_WIKI_LINK: &str = "https://fburl.com/wiki/mb4wtk1j";
-const COMMIT_CLOUD_REF: &str = "refs/commitcloud/upload";
+const COMMIT_CLOUD_REF_PREFIX: &str = "refs/commitcloud/upload";
 
 /// Method responsible for creating, moving or deleting a git ref
 pub async fn set_ref(
@@ -157,12 +157,23 @@ async fn set_ref_inner(
         request_context.repo.clone(),
         request_context.mononoke_repos.clone(),
     );
-    // Check if the push is to a commit cloud ref, if yes then reject it with proper message
-    if ref_update.ref_name == COMMIT_CLOUD_REF {
-        return Err(anyhow::anyhow!(
-            "Commit-cloud upload succeeded. Your commit is now backed up in Mononoke"
-        ));
+    // Check if the push is to a commit cloud ref, if yes return early as we don't need to actually create/move the ref
+    if ref_update.ref_name.starts_with(COMMIT_CLOUD_REF_PREFIX) {
+        if justknobs::eval(
+            "scm/mononoke:git_commit_cloud_accept",
+            None,
+            Some(repo.repo_identity().name()),
+        )
+        .unwrap_or(false)
+        {
+            return Ok(());
+        } else {
+            return Err(anyhow::anyhow!(
+                "Commit-cloud upload succeeded. Your commit is now backed up in Mononoke"
+            ));
+        }
     }
+
     // Check if push redirector is enabled, if it is then reject the push
     if push_redirector_enabled(&ctx, repo.clone()).await? {
         return Err(anyhow::anyhow!(

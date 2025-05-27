@@ -445,7 +445,7 @@ impl WalMultiplexedBlobstore {
         ctx: &'a CoreContext,
         key: &'a str,
         scuba: &Scuba,
-    ) -> Result<Option<BlobstoreGetData>> {
+    ) -> Result<Option<(BlobstoreId, BlobstoreGetData)>> {
         ctx.perf_counters()
             .increment_counter(PerfCounterType::BlobGets);
 
@@ -466,7 +466,7 @@ impl WalMultiplexedBlobstore {
             while let Some((bs_id, result)) = get_futs.next().await {
                 match result {
                     Ok(Some(get_data)) => {
-                        return Ok(Some(get_data));
+                        return Ok(Some((bs_id, get_data)));
                     }
                     Ok(None) => {
                         quorum = quorum.saturating_sub(1);
@@ -504,7 +504,7 @@ impl WalMultiplexedBlobstore {
         });
 
         match result {
-            Ok(Some(ref data)) => {
+            Ok(Some((_bs_id, ref data))) => {
                 ctx.perf_counters()
                     .set_max_counter(PerfCounterType::BlobGetsMaxSize, data.len() as i64);
                 ctx.perf_counters()
@@ -624,7 +624,7 @@ impl Blobstore for WalMultiplexedBlobstore {
             stats,
             &result,
         );
-        result
+        Ok(result?.map(|(_, data)| data))
     }
 
     async fn is_present<'a>(
@@ -744,7 +744,7 @@ fn inner_multi_put(
     put_behaviour: Option<PutBehaviour>,
     scuba: &Scuba,
     counter: Arc<AtomicU64>,
-) -> FuturesUnordered<impl Future<Output = Result<OverwriteStatus, (BlobstoreId, Error)>>> {
+) -> FuturesUnordered<impl Future<Output = Result<OverwriteStatus, (BlobstoreId, Error)>> + use<>> {
     let put_futs: FuturesUnordered<_> = blobstores
         .iter()
         .map(|bs| {
@@ -778,7 +778,7 @@ fn inner_multi_unlink<'a>(
     key: &'a str,
     scuba: &Scuba,
     counter: Arc<AtomicU64>,
-) -> FuturesUnordered<impl Future<Output = Result<(), (BlobstoreId, Error)>> + 'a> {
+) -> FuturesUnordered<impl Future<Output = Result<(), (BlobstoreId, Error)>> + use<'a>> {
     let unlink_futs: FuturesUnordered<_> = blobstores
         .iter()
         .map(|bs| {
@@ -816,7 +816,7 @@ pub(crate) fn inner_multi_get<'a>(
     operation: OperationType,
     scuba: &Scuba,
     counter: Arc<AtomicU64>,
-) -> FuturesUnordered<impl Future<Output = GetResult> + 'a> {
+) -> FuturesUnordered<impl Future<Output = GetResult> + use<'a>> {
     let get_futs: FuturesUnordered<_> = blobstores
         .iter()
         .map(|bs| {
@@ -840,7 +840,9 @@ fn inner_multi_is_present<'a>(
     key: &'a str,
     scuba: &Scuba,
     counter: Arc<AtomicU64>,
-) -> FuturesUnordered<impl Future<Output = (BlobstoreId, Result<BlobstoreIsPresent, Error>)> + 'a> {
+) -> FuturesUnordered<
+    impl Future<Output = (BlobstoreId, Result<BlobstoreIsPresent, Error>)> + use<'a>,
+> {
     let futs: FuturesUnordered<_> = blobstores
         .iter()
         .map(|bs| {

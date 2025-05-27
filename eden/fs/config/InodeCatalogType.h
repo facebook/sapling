@@ -16,6 +16,7 @@ enum class InodeCatalogType : uint8_t {
   Sqlite = 1,
   InMemory = 2,
   LMDB = 3,
+  LegacyDev = 4,
 };
 
 constexpr InodeCatalogType kInodeCatalogTypeDefault =

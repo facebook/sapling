@@ -151,9 +151,9 @@ fn hg_node_id_hash_context(parents: &HgParents) -> Context {
 
     let (h1, h2) = match parents {
         HgParents::None => (&null, &null),
-        HgParents::One(ref p1) => (&null, &p1.0),
-        HgParents::Two(ref p1, ref p2) if p1 > p2 => (&p2.0, &p1.0),
-        HgParents::Two(ref p1, ref p2) => (&p1.0, &p2.0),
+        HgParents::One(p1) => (&null, &p1.0),
+        HgParents::Two(p1, p2) if p1 > p2 => (&p2.0, &p1.0),
+        HgParents::Two(p1, p2) => (&p1.0, &p2.0),
     };
 
     let mut ctxt = Context::new();

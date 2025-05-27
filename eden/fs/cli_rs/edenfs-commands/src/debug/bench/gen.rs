@@ -29,10 +29,18 @@ pub struct TestDir {
 impl TestDir {
     /// Validates and prepares a test directory.
     /// Returns a TestDir instance if successful.
-    pub fn validate(test_dir: &str) -> Result<Self> {
+    pub fn validate(test_dir: &str, fbsource_required: bool) -> Result<Self> {
         let test_dir_path = Path::new(test_dir);
         if !test_dir_path.exists() {
             return Err(anyhow!("The directory {} does not exist.", test_dir));
+        }
+        if fbsource_required
+            && test_dir_path
+                .canonicalize()?
+                .iter()
+                .all(|component| component != "fbsource")
+        {
+            return Err(anyhow!("The directory {} is not under fbsource.", test_dir));
         }
         let bench_dir_path = test_dir_path.join(types::BENCH_DIR_NAME);
         if bench_dir_path.exists() {

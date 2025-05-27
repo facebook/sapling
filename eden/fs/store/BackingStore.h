@@ -301,6 +301,8 @@ class BackingStore : public RootIdCodec, public ObjectIdCodec {
       const ObjectFetchContextPtr& /*context*/) {
     return folly::unit;
   }
+
+  virtual void workingCopyParentHint(const RootId&) {}
 };
 
 /**

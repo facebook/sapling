@@ -5,7 +5,6 @@
 
 # metrics.py - generic metrics framework
 
-from __future__ import absolute_import
 
 from bindings import hgmetrics
 

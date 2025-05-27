@@ -12,6 +12,7 @@ rust_library(
     deps = [
         "fbsource//third-party/rust:anyhow",
         "fbsource//third-party/rust:cxx",
+        "fbsource//third-party/rust:tokio",
         "//eden/fs/cli_rs/edenfs-client:edenfs-client",
     ],
 )

@@ -10,23 +10,23 @@ use pathmatcher_types::DirectoryMatch;
 use pathmatcher_types::Matcher;
 use types::RepoPath;
 
-/// Git reference matcher to select what references to read when syncing
-/// between Git (references) and Sapling (metalog).
+/// Decide whether a Git ref should be read/parsed from disk.
 ///
-/// Note: The references to read is a super set of references to sync to
-/// metalog. For example, we read "refs/remotes/origin/HEAD" to figure out the
-/// main branch. If both "refs/heads/x" with "refs/remotes/origin/x" exist,
-/// treat "refs/heads/x" as a visiblehead instead of a bookmark.
-/// "refs/remotes/origin/x" is read, but might not get imported to metalog.
-pub(crate) struct GitRefMatcher;
+/// Implemented as a `Matcher`. Happens before `GitRefMetaLogFilter`.
+///
+/// Basically, select `refs/{heads/,remotes/,remotetags/,visibleheads/,HEAD}`,
+/// and ignore others like `refs/{notes/,tags/,FETCH_HEAD}`.
+///
+/// `GitRefMetaLogFilter` will further filter refs out.
+pub(crate) struct GitRefPreliminaryMatcher;
 
-impl GitRefMatcher {
+impl GitRefPreliminaryMatcher {
     pub(crate) fn new() -> Self {
         Self
     }
 }
 
-impl Matcher for GitRefMatcher {
+impl Matcher for GitRefPreliminaryMatcher {
     fn matches_directory(&self, path: &RepoPath) -> Result<DirectoryMatch> {
         let mut components = path.components();
         let first_component = components.next().map_or("", |c| c.as_str());
@@ -65,7 +65,7 @@ mod tests {
 
     #[test]
     fn test_basic() -> Result<()> {
-        let m = GitRefMatcher::new();
+        let m = GitRefPreliminaryMatcher::new();
         assert!(m.matches_file(p("refs/heads/foo/bar"))?);
         assert!(m.matches_file(p("refs/remotes/foo/bar"))?);
         assert!(m.matches_file(p("HEAD"))?);

@@ -10,12 +10,14 @@
 use std::fs::File;
 use std::io::BufReader;
 use std::path::PathBuf;
+use std::sync::OnceLock;
 
 use anyhow::Context;
 use anyhow::Result;
 use async_trait::async_trait;
 use clap::Parser;
 use edenfs_client::instance::EdenFsInstance;
+use edenfs_client::use_case::UseCaseId;
 use edenfs_client::utils::get_config_dir;
 use edenfs_client::utils::get_etc_eden_dir;
 use edenfs_client::utils::get_home_dir;
@@ -29,6 +31,7 @@ mod du;
 #[cfg(target_os = "macos")]
 mod file_access_monitor;
 mod gc;
+mod glob_and_prefetch;
 mod handles;
 mod list;
 mod minitop;
@@ -45,7 +48,34 @@ mod util;
 
 // Used to determine whether we should gate off certain oxidized edenfsctl commands
 const ROLLOUT_JSON: &str = "edenfsctl_rollout.json";
-const EXPERIMENTAL_COMMANDS: &[&str] = &["remove"];
+const EXPERIMENTAL_COMMANDS: &[&str] = &["glob", "remove"];
+
+// We create a single EdenFsInstance when starting up
+static EDENFS_INSTANCE: OnceLock<EdenFsInstance> = OnceLock::new();
+
+pub(crate) fn get_edenfs_instance() -> &'static EdenFsInstance {
+    EDENFS_INSTANCE
+        .get()
+        .expect("EdenFsInstance is not initialized")
+}
+
+fn init_edenfs_instance(config_dir: PathBuf, etc_eden_dir: PathBuf, home_dir: Option<PathBuf>) {
+    event!(
+        Level::TRACE,
+        ?config_dir,
+        ?etc_eden_dir,
+        ?home_dir,
+        "Creating EdenFsInstance"
+    );
+    EDENFS_INSTANCE
+        .set(EdenFsInstance::new(
+            UseCaseId::EdenFsCtl,
+            config_dir,
+            etc_eden_dir,
+            home_dir,
+        ))
+        .expect("should be able to initialize EdenfsInstance")
+}
 
 type ExitCode = i32;
 
@@ -107,7 +137,7 @@ pub enum TopLevelSubcommand {
     Notify(crate::notify::NotifyCmd),
     Pid(crate::pid::PidCmd),
     #[clap(subcommand, alias = "pp")]
-    PrefetchProfile(crate::prefetch_profile::PrefetchCmd),
+    PrefetchProfile(crate::prefetch_profile::PrefetchProfileCmd),
     #[clap(subcommand, alias = "redir")]
     Redirect(crate::redirect::RedirectCmd),
     #[clap(alias = "rm")]
@@ -123,6 +153,7 @@ pub enum TopLevelSubcommand {
     Uptime(crate::uptime::UptimeCmd),
     #[cfg(target_os = "macos")]
     FileAccessMonitor(crate::file_access_monitor::FileAccessMonitorCmd),
+    Glob(crate::glob_and_prefetch::GlobCmd),
 }
 
 impl TopLevelSubcommand {
@@ -151,6 +182,7 @@ impl TopLevelSubcommand {
             Uptime(cmd) => cmd,
             #[cfg(target_os = "macos")]
             FileAccessMonitor(cmd) => cmd,
+            Glob(cmd) => cmd,
         }
     }
 
@@ -162,7 +194,7 @@ impl TopLevelSubcommand {
             TopLevelSubcommand::Debug(_) => "debug",
             TopLevelSubcommand::Du(_) => "du",
             TopLevelSubcommand::Fsconfig(_) => "fsconfig",
-            //TopLevelSubcommand::Gc(_) => "gc",
+            // TopLevelSubcommand::Gc(_) => "gc",
             #[cfg(target_os = "windows")]
             TopLevelSubcommand::Handles(_) => "handles",
             TopLevelSubcommand::List(_) => "list",
@@ -179,6 +211,7 @@ impl TopLevelSubcommand {
             TopLevelSubcommand::Uptime(_) => "uptime",
             #[cfg(target_os = "macos")]
             TopLevelSubcommand::FileAccessMonitor(_) => "file-access-monitor",
+            TopLevelSubcommand::Glob(_) => "glob",
         }
     }
 }
@@ -230,12 +263,12 @@ impl MainCommand {
     async fn dispatch(self) -> Result<ExitCode> {
         event!(Level::TRACE, cmd = ?self, "Dispatching");
 
-        EdenFsInstance::init(
+        init_edenfs_instance(
             get_config_dir(&self.config_dir, &self.subcommand.get_mount_path_override())?,
             get_etc_eden_dir(&self.etc_eden_dir),
             get_home_dir(&self.home_dir),
         );
-        // Use EdenFsInstance::global() to access the instance from now on
+        // Use get_edenfs_instance() to access the instance from now on
         self.subcommand.run().await
     }
 }

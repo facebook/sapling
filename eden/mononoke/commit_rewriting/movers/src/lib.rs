@@ -179,7 +179,7 @@ impl CrossRepoMover {
         // prefix first, as it's more specific.
         let prefix_map: Vec<(NonRootMPath, PrefixAction)> = {
             let mut v: Vec<(NonRootMPath, PrefixAction)> = prefix_map.into_iter().collect();
-            v.sort_unstable_by_key(|(ref mpath, _)| mpath.len());
+            v.sort_unstable_by_key(|(mpath, _)| mpath.len());
             v.reverse();
             v
         };
@@ -205,7 +205,7 @@ impl CrossRepoMover {
         // prefix first, as it's more specific.
         let prefix_map: Vec<(NonRootMPath, PrefixAction)> = {
             let mut v: Vec<(NonRootMPath, PrefixAction)> = prefix_map.into_iter().collect();
-            v.sort_unstable_by_key(|(ref mpath, _)| mpath.len());
+            v.sort_unstable_by_key(|(mpath, _)| mpath.len());
             v.reverse();
             v
         };

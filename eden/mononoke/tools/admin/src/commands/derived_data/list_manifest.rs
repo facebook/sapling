@@ -232,7 +232,7 @@ impl Listable for Entry<GitTreeId, GitLeaf> {
     fn list_item(self) -> String {
         match self {
             Entry::Tree(GitTreeId(oid)) => oid.to_string(),
-            Entry::Leaf(GitLeaf(oid, mode)) => format!("{}\tmode={:06o}", oid, mode.0),
+            Entry::Leaf(GitLeaf(oid, mode)) => format!("{}\tmode={:06o}", oid, mode),
         }
     }
 }

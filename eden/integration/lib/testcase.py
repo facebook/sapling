@@ -613,6 +613,9 @@ class EdenRepoTest(EdenTestCase):
 
     enable_logview: bool = False
 
+    # Run Git versions of tests, if on a compatible platform.
+    git_test_supported: bool = True
+
     # Override is_case_sensitive to True in subclasses to force a case-sensitive
     # clone regardless of the OS, or to False to force a case-insensitive clone.
     # Leave this as None to get the current OS's default case-sensitivity
@@ -832,7 +835,7 @@ def _replicate_eden_repo_test(
 
     scm_variants: MixinList = [("Hg", [HgRepoTestMixin])]
     # Gate some tests on whether EdenFS was built to support them.
-    if eden.config.HAVE_GIT:
+    if eden.config.HAVE_GIT and test_class.git_test_supported:
         scm_variants.append(("Git", [GitRepoTestMixin]))
     if eden.config.HAVE_FILTEREDHG:
         scm_variants.append(("FilteredHg", [FilteredHgTestMixin]))

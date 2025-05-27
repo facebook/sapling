@@ -5,24 +5,11 @@ oncall("sapling")
 rust_python_library(
     name = "pyrevisionstore",
     srcs = glob(["src/**/*.rs"]),
-    autocargo = {
-        "cargo_toml_config": {
-            "dependencies_override": {
-                "dependencies": {
-                    "cpython": {
-                        "features": [],
-                        "git": None,
-                        "rev": None,
-                    },
-                },
-            },
-        },
-    },
     crate_root = "src/lib.rs",
     deps = [
         "fbsource//third-party/rust:anyhow",
         "fbsource//third-party/rust:tracing",
-        "//eden/scm/lib/blob:scm-blob",
+        "//eden/scm/lib/blob:blob",
         "//eden/scm/lib/config/model:configmodel",
         "//eden/scm/lib/cpython-ext:cpython-ext",
         "//eden/scm/lib/revisionstore:revisionstore",

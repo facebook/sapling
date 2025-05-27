@@ -712,42 +712,43 @@ EOF
   function createfile { mkdir -p "$(dirname  "$1")" && echo "$1" > "$1" && hg add -q "$1"; }
   function createfile_with_content { mkdir -p "$(dirname  "$1")" && echo "$2" > "$1" && hg add -q "$1"; }
 
+  cd "$TESTTMP" || exit 1
   # init fbsource
-  cd "$TESTTMP" || exit 1
-  hginit_treemanifest fbs-mon
-  cd fbs-mon || exit 1
-  # create an initial commit, which will be the last_synced_commit
-  createfile fbcode/fbcodefile_fbsource
-  createfile arvr/arvrfile_fbsource
-  createfile otherfile_fbsource
-  hg -q ci -m "fbsource commit 1" && hg book -ir . "${MASTER_BOOKMARK:-master_bookmark}"
+  testtool_drawdag --print-hg-hashes -R fbs-mon --derive-all --no-default-files <<EOF
+A
+# message: A "fbsource commit 1"
+# modify: A "fbcode/fbcodefile_fbsource" "fbcode/fbcodefile_fbsource"
+# modify: A "arvr/arvrfile_fbsource" "arvr/arvrfile_fbsource"
+# modify: A "otherfile_fbsource" "otherfile_fbsource"
+# bookmark: A master_bookmark
+EOF
+
   # init ovrsource
-  cd "$TESTTMP" || exit 1
-  hginit_treemanifest ovr-mon
-  cd ovr-mon || exit 1
-  createfile fbcode/fbcodefile_ovrsource
-  createfile arvr/arvrfile_ovrsource
-  createfile otherfile_ovrsource
-  createfile Research/researchfile_ovrsource
-  hg -q ci -m "ovrsource commit 1" && hg book -r . "${MASTER_BOOKMARK:-master_bookmark}"
-  # init megarepo - note that some paths are shifted, but content stays the same
-  cd "$TESTTMP" || exit 1
-  hginit_treemanifest meg-mon
-  cd meg-mon || exit 1
-  createfile fbcode/fbcodefile_fbsource
-  createfile_with_content .fbsource-rest/arvr/arvrfile_fbsource arvr/arvrfile_fbsource
-  createfile otherfile_fbsource
-  createfile_with_content .ovrsource-rest/fbcode/fbcodefile_ovrsource fbcode/fbcodefile_ovrsource
-  createfile arvr/arvrfile_ovrsource
-  createfile_with_content arvr-legacy/otherfile_ovrsource otherfile_ovrsource
-  createfile_with_content arvr-legacy/Research/researchfile_ovrsource Research/researchfile_ovrsource
-  hg -q ci -m "megarepo commit 1"
-  hg book -r . "${MASTER_BOOKMARK:-master_bookmark}"
-  # blobimport hg servers repos into Mononoke repos
-  cd "$TESTTMP" || exit 1
-  REPOID=0 blobimport meg-mon/.hg meg-mon
-  REPOID=1 blobimport fbs-mon/.hg fbs-mon
-  REPOID=2 blobimport ovr-mon/.hg ovr-mon
+  testtool_drawdag --print-hg-hashes -R ovr-mon --derive-all --no-default-files <<EOF
+A
+# message: A "ovrsource commit 1"
+# modify: A "fbcode/fbcodefile_ovrsource" "fbcode/fbcodefile_ovrsource"
+# modify: A "arvr/arvrfile_ovrsource" "arvr/arvrfile_ovrsource"
+# modify: A "otherfile_ovrsource" "otherfile_ovrsource"
+# modify: A "Research/researchfile_ovrsource" "Research/researchfile_ovrsource"
+# bookmark: A master_bookmark
+EOF
+
+
+  # init megarepo
+  testtool_drawdag --print-hg-hashes -R meg-mon --derive-all --no-default-files <<EOF
+A
+# message: A "megarepo commit 1"
+# modify: A "fbcode/fbcodefile_fbsource" "fbcode/fbcodefile_fbsource"
+# modify: A ".fbsource-rest/arvr/arvrfile_fbsource" "arvr/arvrfile_fbsource"
+# modify: A "otherfile_fbsource" "otherfile_fbsource"
+# modify: A ".ovrsource-rest/fbcode/fbcodefile_ovrsource" "fbcode/fbcodefile_ovrsource"
+# modify: A "arvr/arvrfile_ovrsource" "arvr/arvrfile_ovrsource"
+# modify: A "arvr-legacy/otherfile_ovrsource" "otherfile_ovrsource"
+# modify: A "arvr-legacy/Research/researchfile_ovrsource" "Research/researchfile_ovrsource"
+# bookmark: A master_bookmark
+EOF
+
 }
 
 function enable_pushredirect {

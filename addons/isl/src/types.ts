@@ -17,7 +17,7 @@ import type {ExportStack, ImportedStack, ImportStack} from 'shared/types/stack';
 import type {TypeaheadKind} from './CommitInfoView/types';
 import type {InternalTypes} from './InternalTypes';
 import type {Serializable} from './serialize';
-import type {DiffCommit, PartiallySelectedDiffCommit} from './stackEdit/diffSplitTypes';
+import type {Args, DiffCommit, PartiallySelectedDiffCommit} from './stackEdit/diffSplitTypes';
 
 export type Result<T> = {value: T; error?: undefined} | {value?: undefined; error: Error};
 
@@ -313,6 +313,13 @@ export type CommitInfo = {
    * other merged-in repos) have no parents.
    */
   parents: ReadonlyArray<Hash>;
+  /**
+   * Grandparents are the closest but indirect ancestors in a set of commits .
+   * In ISL, this is used for connecting nodes whose direct parents are NOT present.
+   * Note that this field will be empty by design when direct parents are already present in the set.
+   * See eden/scm/tests/test-template-grandparents.t for examples.
+   */
+  grandparents: ReadonlyArray<Hash>;
   phase: CommitPhaseType;
   /**
    * Whether this commit is the "." (working directory parent).
@@ -866,7 +873,7 @@ export type ClientToServerMessage =
       latestFields: InternalCommitMessageFields;
       suggestionId: string;
     }
-  | {type: 'splitCommitWithAI'; id: string; diffCommit: DiffCommit}
+  | {type: 'splitCommitWithAI'; id: string; diffCommit: DiffCommit; args: Args}
   | {type: 'gotUiState'; state: string}
   | CodeReviewProviderSpecificClientToServerMessages
   | PlatformSpecificClientToServerMessages

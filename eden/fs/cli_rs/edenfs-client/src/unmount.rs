@@ -21,9 +21,15 @@ use thrift_types::fbthrift::ApplicationExceptionErrorCode;
 use crate::client::Client;
 use crate::client::EdenFsClient;
 use crate::instance::EdenFsInstance;
+use crate::methods::EdenThriftMethod;
 
 impl EdenFsClient {
-    pub async fn unmount(&self, path: &Path, no_force: bool) -> Result<()> {
+    pub async fn unmount(
+        &self,
+        instance: &EdenFsInstance,
+        path: &Path,
+        no_force: bool,
+    ) -> Result<()> {
         let encoded_path = bytes_from_path(path.to_path_buf())
             .with_context(|| format!("Failed to encode path {}", path.display()))?;
 
@@ -35,9 +41,13 @@ impl EdenFsClient {
             useForce: !no_force,
             ..Default::default()
         };
-        let instance = EdenFsInstance::global();
         match self
-            .with_thrift(|thrift| thrift.unmountV2(&unmount_argument))
+            .with_thrift(|thrift| {
+                (
+                    thrift.unmountV2(&unmount_argument),
+                    EdenThriftMethod::UnmountV2,
+                )
+            })
             .await
         {
             Ok(_) => {
@@ -50,14 +60,16 @@ impl EdenFsClient {
                 if e.type_ == ApplicationExceptionErrorCode::UnknownMethod {
                     let encoded_path = bytes_from_path(path.to_path_buf())
                         .with_context(|| format!("Failed to encode path {}", path.display()))?;
-                    self.with_thrift(|thrift| thrift.unmount(&encoded_path))
-                        .await
-                        .with_context(|| {
-                            format!(
-                                "Failed to unmount (legacy Thrift unmount endpoint) {}",
-                                path.display()
-                            )
-                        })?;
+                    self.with_thrift(|thrift| {
+                        (thrift.unmount(&encoded_path), EdenThriftMethod::Unmount)
+                    })
+                    .await
+                    .with_context(|| {
+                        format!(
+                            "Failed to unmount (legacy Thrift unmount endpoint) {}",
+                            path.display()
+                        )
+                    })?;
                     instance.create_intentional_unmount_flag(path)?;
                     Ok(())
                 } else {

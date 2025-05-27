@@ -3,23 +3,17 @@
 # This software may be used and distributed according to the terms of the
 # GNU General Public License version 2.
 
-import hashlib
 import json
 import os
-import shutil
 import time
 from collections import defaultdict
-
-import bindings
 
 from .. import (
     cloneuri,
     cmdutil,
     context,
     error,
-    git,
     hg,
-    localrepo,
     match as matchmod,
     merge as mergemod,
     node,
@@ -27,7 +21,6 @@ from .. import (
     progress,
     registrar,
     scmutil,
-    util,
 )
 from ..cmdutil import (
     commitopts,
@@ -45,6 +38,7 @@ from ..utils import subtreeutil
 from ..utils.subtreeutil import (
     BranchType,
     gen_branch_info,
+    get_or_clone_git_repo,
     get_subtree_branches,
     get_subtree_imports,
     get_subtree_merges,
@@ -152,6 +146,44 @@ def subtree_import(ui, repo, *args, **opts):
 
 
 @subtree_subcmd(
+    "prefetch",
+    [
+        (
+            "",
+            "url",
+            "",
+            _("external repository url"),
+            _("URL"),
+        ),
+        (
+            "r",
+            "rev",
+            "",
+            _("external repository commit hash"),
+            _("REV"),
+        ),
+        ("f", "force", None, _("overwrite existing path")),
+    ],
+    _("-r REV [--from-path PATH] --to-path PATH ..."),
+)
+def subtree_prefetch(ui, repo, *args, **opts):
+    """prefetch commits from the external repository
+
+    Prefetches commits from the external repository and stores them in the
+    local cache.
+    """
+    from_rev = opts.get("rev")
+    if not from_rev:
+        raise error.Abort(_("must specify the external repository commit hash"))
+    url = opts.get("url")
+    if not url:
+        raise error.Abort(_("must specify the external repository url"))
+    giturl = cloneuri.determine_git_uri(None, url)
+
+    get_or_clone_git_repo(ui, giturl, from_rev)
+
+
+@subtree_subcmd(
     "graft",
     [
         ("r", "rev", [], _("revisions to graft"), _("REV")),
@@ -166,6 +198,13 @@ def subtree_import(ui, repo, *args, **opts):
             "currentuser",
             False,
             _("record the current user as committer"),
+        ),
+        (
+            "",
+            "url",
+            "",
+            _("external repository url (EXPERIMENTAL)"),
+            _("URL"),
         ),
     ]
     + commitopts
@@ -186,8 +225,16 @@ def subtree_graft(ui, repo, **opts):
         if not (from_paths and to_paths):
             raise error.Abort(_("must provide --from-path and --to-path"))
 
+    if url := opts.get("url"):
+        giturl = cloneuri.determine_git_uri(None, url)
+        if giturl is None:
+            raise error.Abort(_("unable to determine git url from '%s'") % url)
+        from_repo = get_or_clone_git_repo(ui, giturl)
+    else:
+        from_repo = repo
+
     with repo.wlock():
-        return _dograft(ui, repo, **opts)
+        return _dograft(ui, repo, from_repo=from_repo, **opts)
 
 
 @subtree_subcmd(
@@ -583,8 +630,8 @@ def _gen_import_commit_msg(url, from_commit, from_paths, to_paths):
 
 def gen_merge_commit_msg(subtree_merges):
     groups = defaultdict(list)
-    for from_node, from_path, to_path in subtree_merges:
-        groups[from_node].append((from_path, to_path))
+    for m in subtree_merges:
+        groups[m["from_commit"]].append((m["from_path"], m["to_path"]))
 
     msgs = []
     for from_node, paths in groups.items():
@@ -663,42 +710,3 @@ def abort_or_remove_paths(ui, repo, paths, subcmd, opts):
             cmdutil.remove(ui, repo, matcher, mark=False, force=True)
             if repo.wvfs.lexists(path):
                 repo.wvfs.rmtree(path)
-
-
-def get_or_clone_git_repo(ui, url, from_rev):
-    def try_reuse_git_repo(git_repo_dir):
-        """try to reuse an existing git repo, otherwise return None"""
-        if not os.path.exists(git_repo_dir):
-            return None
-        if not os.path.isdir(git_repo_dir):
-            # should not happen, but just in case
-            os.unlink(git_repo_dir)
-            return None
-
-        try:
-            git_repo = localrepo.localrepository(ui, git_repo_dir)
-        except Exception:
-            # invalid git repo directory, remove it
-            shutil.rmtree(git_repo_dir)
-            return None
-
-        ui.status(_("using cached git repo at %s\n") % git_repo_dir)
-        nodes = [git_repo[from_rev].node()]
-        git.pull(git_repo, "default", nodes=nodes)
-        return git_repo
-
-    url_hash = hashlib.sha256(url.encode("utf-8")).hexdigest()
-    if cache_dir := ui.config("remotefilelog", "cachepath"):
-        cache_dir = util.expandpath(cache_dir)
-        git_repo_dir = os.path.join(cache_dir, "gitrepos", url_hash)
-    else:
-        user_cache_dir = bindings.dirs.cache_dir()
-        git_repo_dir = os.path.join(user_cache_dir, "Sapling", "gitrepos", url_hash)
-
-    if git_repo := try_reuse_git_repo(git_repo_dir):
-        return git_repo
-    else:
-        ui.status(_("creating git repo at %s\n") % git_repo_dir)
-        # PERF: shallow clone, then partial checkout
-        git_repo = git.clone(ui, url, git_repo_dir, update=from_rev)
-        return git_repo

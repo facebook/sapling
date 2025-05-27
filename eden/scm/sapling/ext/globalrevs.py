@@ -45,8 +45,6 @@ template.
     scmquerylookup = False
 """
 
-from __future__ import absolute_import
-
 import re
 from typing import Optional
 
@@ -64,16 +62,6 @@ from sapling.namespaces import namespace
 
 from .pushrebase import isnonpushrebaseblocked
 
-
-configtable = {}
-configitem = registrar.configitem(configtable)
-configitem("format", "useglobalrevs", default=False)
-configitem("globalrevs", "onlypushrebase", default=True)
-configitem("globalrevs", "readonly", default=False)
-configitem("globalrevs", "reponame", default=None)
-configitem("globalrevs", "scmquerylookup", default=False)
-configitem("globalrevs", "edenapilookup", default=False)
-configitem("globalrevs", "startrev", default=0)
 
 cmdtable = {}
 command = registrar.command(cmdtable)

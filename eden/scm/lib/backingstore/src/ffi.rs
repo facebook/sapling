@@ -19,10 +19,13 @@ use iobuf::IOBuf;
 use storemodel::FileAuxData as ScmStoreFileAuxData;
 use types::FetchContext;
 use types::Key;
+use types::RepoPath;
 use types::fetch_cause::FetchCause;
 use types::fetch_mode::FetchMode;
 
 use crate::backingstore::BackingStore;
+use crate::ffi::ffi::Tree;
+use crate::ffi::ffi::TreeEntryType;
 
 #[cxx::bridge(namespace = sapling)]
 pub(crate) mod ffi {
@@ -48,10 +51,6 @@ pub(crate) mod ffi {
         type FetchCause;
     }
 
-    pub struct SaplingNativeBackingStoreOptions {
-        allow_retries: bool,
-    }
-
     #[repr(u8)]
     pub enum FetchMode {
         /// The fetch may hit remote servers.
@@ -60,10 +59,6 @@ pub(crate) mod ffi {
         LocalOnly,
         /// The fetch is only hits remote servers.
         RemoteOnly,
-        /// The fetch may hit remote servers and should prefetch optional data. For trees,
-        /// this means request optional child metadata. This will not trigger a remote child
-        /// metadata fetch if the tree is already available locally.
-        AllowRemotePrefetch,
     }
 
     #[repr(u8)]
@@ -88,6 +83,7 @@ pub(crate) mod ffi {
 
     pub struct Tree {
         entries: Vec<TreeEntry>,
+        aux_data: TreeAuxData,
     }
 
     #[derive(Debug)]
@@ -99,6 +95,9 @@ pub(crate) mod ffi {
     pub struct Request {
         node: *const u8,
         cause: FetchCause,
+
+        path_data: *const c_char,
+        path_len: usize,
         // TODO: mode: FetchMode
         // TODO: cri: ClientRequestInfo
     }
@@ -156,10 +155,7 @@ pub(crate) mod ffi {
     extern "Rust" {
         type BackingStore;
 
-        pub unsafe fn sapling_backingstore_new(
-            repository: &[c_char],
-            options: &SaplingNativeBackingStoreOptions,
-        ) -> Result<Box<BackingStore>>;
+        pub unsafe fn sapling_backingstore_new(repository: &[c_char]) -> Result<Box<BackingStore>>;
 
         pub unsafe fn sapling_backingstore_get_name(store: &BackingStore) -> Result<String>;
 
@@ -229,7 +225,22 @@ pub(crate) mod ffi {
             prefixes: Vec<String>,
         ) -> Result<SharedPtr<GlobFilesResponse>>;
 
+        pub fn sapling_backingstore_witness_file_read(
+            store: &BackingStore,
+            path: &str,
+            local: bool,
+        );
+
+        pub fn sapling_backingstore_witness_dir_read(
+            store: &BackingStore,
+            path: &[u8],
+            tree: &Tree,
+            local: bool,
+        );
+
         pub fn sapling_dogfooding_host(store: &BackingStore) -> Result<bool>;
+
+        pub fn sapling_backingstore_set_parent_hint(store: &BackingStore, parent_id: &str);
     }
 }
 
@@ -237,7 +248,6 @@ impl From<ffi::FetchMode> for FetchMode {
     fn from(fetch_mode: ffi::FetchMode) -> Self {
         match fetch_mode {
             ffi::FetchMode::AllowRemote => FetchMode::AllowRemote,
-            ffi::FetchMode::AllowRemotePrefetch => FetchMode::AllowRemotePrefetch,
             ffi::FetchMode::RemoteOnly => FetchMode::RemoteOnly,
             ffi::FetchMode::LocalOnly => FetchMode::LocalOnly,
             _ => panic!("unknown fetch mode"),
@@ -292,16 +302,14 @@ fn select_cause(fetch_causes_iter: impl Iterator<Item = ffi::FetchCause>) -> Fet
     }
 }
 
-pub unsafe fn sapling_backingstore_new(
-    repository: &[c_char],
-    options: &ffi::SaplingNativeBackingStoreOptions,
-) -> Result<Box<BackingStore>> {
-    super::init::backingstore_global_init();
+pub unsafe fn sapling_backingstore_new(repository: &[c_char]) -> Result<Box<BackingStore>> {
+    unsafe {
+        super::init::backingstore_global_init();
 
-    let repo = CStr::from_ptr(repository.as_ptr()).to_str()?;
-    let store =
-        BackingStore::new(repo, options.allow_retries).map_err(|err| anyhow!("{:?}", err))?;
-    Ok(Box::new(store))
+        let repo = CStr::from_ptr(repository.as_ptr()).to_str()?;
+        let store = BackingStore::new(repo).map_err(|err| anyhow!("{:?}", err))?;
+        Ok(Box::new(store))
+    }
 }
 
 pub unsafe fn sapling_backingstore_get_name(store: &BackingStore) -> Result<String> {
@@ -337,18 +345,39 @@ pub fn sapling_backingstore_get_tree_batch(
 ) {
     let keys: Vec<Key> = requests.iter().map(|req| req.key()).collect();
     let cause = select_cause(requests.iter().map(|req| req.cause));
+    let fetch_mode = FetchMode::from(fetch_mode);
 
     store.get_tree_batch(
-        FetchContext::new_with_cause(FetchMode::from(fetch_mode), cause),
+        FetchContext::new_with_cause(fetch_mode, cause),
         keys,
         |idx, result| {
             let result: Result<Box<dyn storemodel::TreeEntry>> =
                 result.and_then(|opt| opt.ok_or_else(|| Error::msg("no tree found")));
             let resolver = resolver.clone();
             let (error, tree) = match result.and_then(|list| list.try_into()) {
-                Ok(tree) => (String::default(), SharedPtr::new(tree)),
+                Ok(tree) => (String::default(), SharedPtr::<Tree>::new(tree)),
                 Err(error) => (format!("{:?}", error), SharedPtr::null()),
             };
+
+            if requests[idx].cause != ffi::FetchCause::Prefetch
+                && !requests[idx].path_data.is_null()
+            {
+                if let Some(tree) = tree.as_ref() {
+                    let path_bytes: &[u8] = unsafe {
+                        std::slice::from_raw_parts(
+                            requests[idx].path_data as *const u8,
+                            requests[idx].path_len,
+                        )
+                    };
+                    sapling_backingstore_witness_dir_read(
+                        store,
+                        path_bytes,
+                        tree,
+                        fetch_mode.is_local(),
+                    );
+                }
+            }
+
             unsafe { ffi::sapling_backingstore_get_tree_batch_handler(resolver, idx, error, tree) };
         },
     );
@@ -480,6 +509,10 @@ pub fn sapling_dogfooding_host(store: &BackingStore) -> Result<bool> {
     store.dogfooding_host()
 }
 
+pub fn sapling_backingstore_set_parent_hint(store: &BackingStore, parent_id: &str) {
+    store.set_parent_hint(parent_id);
+}
+
 pub fn sapling_backingstore_flush(store: &BackingStore) {
     store.flush();
     store.refresh();
@@ -499,6 +532,42 @@ pub fn sapling_backingstore_get_glob_files(
         .get_glob_files(commit_id, suffixes, prefix_opt)
         .and_then(|opt| opt.ok_or_else(|| Error::msg("failed to retrieve glob file")))?;
     Ok(SharedPtr::new(ffi::GlobFilesResponse { files }))
+}
+
+pub fn sapling_backingstore_witness_file_read(store: &BackingStore, path: &str, local: bool) {
+    match RepoPath::from_str(path) {
+        Ok(path) => {
+            store.witness_file_read(path, local);
+        }
+        Err(err) => {
+            tracing::warn!("invalid witnessed file path {path}: {err:?}");
+        }
+    }
+}
+
+pub fn sapling_backingstore_witness_dir_read(
+    store: &BackingStore,
+    path: &[u8],
+    tree: &Tree,
+    local: bool,
+) {
+    match RepoPath::from_utf8(path) {
+        Ok(path) => {
+            let (mut num_files, mut num_dirs) = (0, 0);
+            if !local {
+                for entry in tree.entries.iter() {
+                    match entry.ttype {
+                        TreeEntryType::Tree => num_dirs += 1,
+                        _ => num_files += 1,
+                    }
+                }
+            }
+            store.witness_dir_read(path, local, num_files, num_dirs);
+        }
+        Err(err) => {
+            tracing::warn!("invalid witnessed dir path {path:?}: {err:?}");
+        }
+    }
 }
 
 #[cfg(test)]

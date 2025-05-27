@@ -53,8 +53,6 @@ cpp_library(
         "//fb303:service_data",
         "//folly:string",
         "//folly/futures:core",
-        "//folly/io:iobuf",
-        "//folly/lang:bits",
         "//folly/logging:logging",
         "//rocksdb:rocksdb",
     ],

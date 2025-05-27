@@ -12,6 +12,7 @@ use std::fmt::Display;
 use std::future::Future;
 use std::path::PathBuf;
 use std::result::Result;
+use std::sync::Arc;
 use std::time::Duration;
 
 use async_trait::async_trait;
@@ -24,7 +25,6 @@ use futures::stream;
 use futures::stream::BoxStream;
 use futures::stream::StreamExt;
 pub use thrift_thriftclients::EdenService;
-use tokio::sync::Semaphore;
 
 use crate::client::Client;
 use crate::client::Connector;
@@ -32,6 +32,8 @@ use crate::client::EdenFsClientStatsHandler;
 use crate::client::NoopEdenFsClientStatsHandler;
 use crate::client::connector::StreamingEdenFsConnector;
 use crate::client::connector::StreamingEdenFsThriftClient;
+use crate::methods::EdenThriftMethod;
+use crate::use_case::UseCase;
 
 pub struct MockThriftClient {
     thrift_service: Option<StreamingEdenFsThriftClient>,
@@ -46,7 +48,7 @@ impl MockThriftClient {
 
 #[async_trait]
 impl Client for MockThriftClient {
-    fn new(_fb: FacebookInit, _socket_file: PathBuf, _semaphore: Option<Semaphore>) -> Self {
+    fn new(_fb: FacebookInit, _use_case: Arc<UseCase>, _socket_file: PathBuf) -> Self {
         Self {
             thrift_service: None,
             stats_handler: Box::new(NoopEdenFsClientStatsHandler {}),
@@ -67,13 +69,16 @@ impl Client for MockThriftClient {
         f: F,
     ) -> std::result::Result<T, ConnectAndRequestError<E>>
     where
-        F: Fn(&<StreamingEdenFsConnector as Connector>::Client) -> Fut + Send + Sync,
+        F: Fn(&<StreamingEdenFsConnector as Connector>::Client) -> (Fut, EdenThriftMethod)
+            + Send
+            + Sync,
         Fut: Future<Output = Result<T, E>> + Send,
         T: Send,
         E: HasErrorHandlingStrategy + Debug + Display,
     {
         let service = self.thrift_service.clone().unwrap();
-        f(&service).await.map_err(|e| e.into())
+        let (fut, _method) = f(&service);
+        fut.await.map_err(|e| e.into())
     }
 }
 

@@ -51,7 +51,7 @@ pub fn py_main(args: &[String]) -> u8 {
 }
 
 macro_rules! check_status {
-    ($status: expr, $config: expr) => {
+    ($status: expr_2021, $config: expr_2021) => {
         let status = $status;
         if ffi::PyStatus_Exception(status) != 0 {
             if let Some(mut config) = $config {
@@ -93,8 +93,10 @@ pub fn py_initialize(args: &[String], sapling_home: Option<&String>) {
         // This assumes Python has been pre-initialized, and filesystem encoding
         // is utf-8 (both done above).
         unsafe fn to_wide(s: impl AsRef<str>) -> *const PyChar {
-            let s = CString::new(s.as_ref()).unwrap();
-            ffi::Py_DecodeLocale(s.as_ptr(), std::ptr::null_mut())
+            unsafe {
+                let s = CString::new(s.as_ref()).unwrap();
+                ffi::Py_DecodeLocale(s.as_ptr(), std::ptr::null_mut())
+            }
         }
 
         check_status!(

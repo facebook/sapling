@@ -147,7 +147,8 @@ pub fn run_command(args: Vec<String>, io: &IO) -> i32 {
         Some((var_name, var_value)) => {
             // Unset environment variable so processes forked by this command
             // wouldn't rewrite the trace.
-            std::env::remove_var(var_name);
+            // TODO: Audit that the environment access only happens in single-threaded code.
+            unsafe { std::env::remove_var(var_name) };
             Some(var_value)
         }
         None => None,

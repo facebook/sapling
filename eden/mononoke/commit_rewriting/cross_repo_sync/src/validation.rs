@@ -170,7 +170,7 @@ pub async fn verify_working_copy_with_version<'a, R: Repo>(
         .collect::<Vec<_>>();
     let large_in_memory_repo = InMemoryRepo::from_repo(large_repo, fallback_repos)?;
     let sm_exp_data = match submodule_deps {
-        SubmoduleDeps::ForSync(ref deps) => Some(SubmoduleExpansionData {
+        SubmoduleDeps::ForSync(deps) => Some(SubmoduleExpansionData {
             submodule_deps: deps,
             x_repo_submodule_metadata_file_prefix: &x_repo_submodule_metadata_file_prefix,
             small_repo_id: small_repo.repo_identity().id(),

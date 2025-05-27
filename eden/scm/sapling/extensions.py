@@ -10,7 +10,6 @@
 # This software may be used and distributed according to the terms of the
 # GNU General Public License version 2 or any later version.
 
-from __future__ import absolute_import
 
 import errno
 import functools
@@ -19,7 +18,7 @@ import inspect
 import os
 import sys
 
-from . import cmdutil, configitems, error, util
+from . import cmdutil, error, util
 from .i18n import _, gettext
 
 _preimported = {}
@@ -78,6 +77,7 @@ _ignoreextensions = {
     "phabdiff",
     "phabstatus",
     "phrevset",
+    "preventpremegarepoupdateshook",
     "progress",
     "pullcreatemarkers",
     "purge",
@@ -90,6 +90,7 @@ _ignoreextensions = {
     "treedirstate",
     "uncommit",
     "upgradegeneraldelta",
+    "win32mbcs",
     "win32text",
 }
 _exclude_list = {"extlib"}
@@ -520,17 +521,6 @@ def loadall(ui, include_list=None):
             ui.traceback()
 
     newextensions = list(name for name in _order if name not in alreadyenabled)
-
-    # list of (objname, loadermod, loadername) tuple:
-    # - objname is the name of an object in extension module,
-    #   from which extra information is loaded
-    # - loadermod is the module where loader is placed
-    # - loadername is the name of the function,
-    #   which takes (ui, extensionname, extraobj) arguments
-    #
-    # This one is for the list of item that must be run before running any setup
-    earlyextraloaders = [("configtable", configitems, "loadconfigtable")]
-    _loadextra(ui, newextensions, earlyextraloaders)
 
     broken = set()
     for name in newextensions:

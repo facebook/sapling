@@ -19,8 +19,8 @@ blobstore_factory = { version = "0.1.0", path = "../blobstore/factory" }
 blobstore_sync_queue = { version = "0.1.0", path = "../blobstore_sync_queue" }
 borrowed = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 cached_config = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
-chrono = { version = "0.4", features = ["clock", "serde", "std"], default-features = false }
-clap = { version = "4.5.30", features = ["derive", "env", "string", "unicode", "wrap_help"] }
+chrono = { version = "=0.4.39", features = ["clock", "serde", "std"], default-features = false }
+clap = { version = "4.5.38", features = ["derive", "env", "string", "unicode", "wrap_help"] }
 cloned = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 context = { version = "0.1.0", path = "../server/context" }
 fbinit = { version = "0.2.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
@@ -34,7 +34,7 @@ rand = { version = "0.8", features = ["small_rng"] }
 slog = { package = "tracing_slog_compat", version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 sql_construct = { version = "0.1.0", path = "../common/sql_construct" }
 sql_ext = { version = "0.1.0", path = "../common/rust/sql_ext" }
-tokio = { version = "1.41.0", features = ["full", "test-util", "tracing"] }
+tokio = { version = "1.45.0", features = ["full", "test-util", "tracing"] }
 wait_for_replication = { version = "0.1.0", path = "../common/wait_for_replication" }
 
 [dev-dependencies]

@@ -7,7 +7,6 @@
 
 use std::fmt;
 use std::path::PathBuf;
-use std::pin::Pin;
 use std::time::Duration;
 use std::time::Instant;
 
@@ -17,14 +16,15 @@ use edenfs_utils::bytes_from_path;
 use edenfs_utils::path_from_bytes;
 use edenfs_utils::prefix_paths;
 use edenfs_utils::strip_prefix_from_bytes;
-use futures::Stream;
 use futures::StreamExt;
 use futures::stream;
+use futures::stream::BoxStream;
 use serde::Serialize;
 use tokio::time;
 
 use crate::client::Client;
 use crate::client::EdenFsClient;
+use crate::methods::EdenThriftMethod;
 use crate::types::Dtype;
 use crate::types::JournalPosition;
 use crate::utils::get_mount_point;
@@ -626,16 +626,19 @@ impl EdenFsClient {
             ..Default::default()
         };
         let mut result: ChangesSinceV2Result = self
-            .with_thrift(|thrift| thrift.changesSinceV2(&params))
+            .with_thrift(|thrift| {
+                (
+                    thrift.changesSinceV2(&params),
+                    EdenThriftMethod::ChangesSinceV2,
+                )
+            })
             .await
             .map(|r| r.into())
             .from_err()?;
         // Temporary code to strip prefix from paths - will be removed when implemented in daemon
         if root.is_some() {
             result.changes.iter_mut().for_each(|c| match c {
-                ChangeNotification::LargeChange(LargeChangeNotification::DirectoryRenamed(
-                    ref mut d,
-                )) => {
+                ChangeNotification::LargeChange(LargeChangeNotification::DirectoryRenamed(d)) => {
                     d.from = strip_prefix_from_bytes(root, &d.from);
                     d.to = strip_prefix_from_bytes(root, &d.to);
                 }
@@ -703,8 +706,7 @@ impl EdenFsClient {
     /// use futures::StreamExt;
     ///
     /// // This example doesn't actually run the client, but demonstrates the API usage
-    /// async fn example_usage() {
-    ///     let instance = EdenFsInstance::global();
+    /// async fn example_usage(instance: &EdenFsInstance) {
     ///     let client = instance.get_client();
     ///
     ///     // Start monitoring from the current journal position
@@ -763,8 +765,8 @@ impl EdenFsClient {
         excluded_roots: &Option<Vec<PathBuf>>,
         excluded_suffixes: &Option<Vec<String>>,
         include_vcs_roots: bool,
-    ) -> Result<Pin<Box<dyn Stream<Item = Result<ChangesSinceV2Result>> + Send + 'a>>> {
-        struct State {
+    ) -> Result<BoxStream<'a, Result<ChangesSinceV2Result>>> {
+        struct State<'a> {
             mount_point: Option<PathBuf>,
             position: JournalPosition,
             root: Option<PathBuf>,
@@ -773,7 +775,7 @@ impl EdenFsClient {
             excluded_roots: Option<Vec<PathBuf>>,
             excluded_suffixes: Option<Vec<String>>,
             include_vcs_roots: bool,
-            subscription: Pin<Box<dyn Stream<Item = Result<JournalPosition>> + Send>>,
+            subscription: BoxStream<'a, Result<JournalPosition>>,
             last: Instant,
             throttle: Duration,
             pending_updates: bool,
@@ -895,6 +897,9 @@ mod tests {
     use crate::client::mock_client::make_boxed_future_result;
     use crate::client::mock_client::make_boxed_stream_result;
     use crate::client::mock_service::MockEdenFsService;
+    use crate::use_case::UseCase;
+    use crate::use_case::UseCaseId;
+    use crate::utils::get_config_dir;
 
     fn make_changes_since_result() -> ChangesSinceV2Result {
         ChangesSinceV2Result {
@@ -918,7 +923,9 @@ mod tests {
     #[fbinit::test]
     async fn test_get_changes_since(fb: FacebookInit) -> Result<()> {
         // create client and mock_service
-        let mut client = EdenFsClient::new(fb, PathBuf::new(), None);
+        let config_dir = get_config_dir(&None, &None)?;
+        let use_case = Arc::new(UseCase::new(&config_dir, UseCaseId::EdenFsTests));
+        let mut client = EdenFsClient::new(fb, use_case, PathBuf::new());
         let mock_client = &mut *client;
         let mut mock_service = MockEdenFsService::new();
 
@@ -950,7 +957,9 @@ mod tests {
     #[fbinit::test]
     async fn test_stream_changes_since(fb: FacebookInit) -> Result<()> {
         // create client and mock_service
-        let mut client = EdenFsClient::new(fb, PathBuf::new(), None);
+        let config_dir = get_config_dir(&None, &None)?;
+        let use_case = Arc::new(UseCase::new(&config_dir, UseCaseId::EdenFsTests));
+        let mut client = EdenFsClient::new(fb, use_case, PathBuf::new());
         let mock_client = &mut *client;
         let mut mock_service = MockEdenFsService::new();
 

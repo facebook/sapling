@@ -82,7 +82,7 @@ async fn rebase_single_changeset(
     for file_change in rebased.file_changes.values_mut() {
         match file_change {
             FileChange::Change(fc) => {
-                if let Some((_, ref mut parent)) = fc.copy_from_mut() {
+                if let Some((_, parent)) = fc.copy_from_mut() {
                     *parent = dest;
                 }
             }

@@ -13,7 +13,7 @@ from __future__ import absolute_import, print_function
 import unittest
 
 from sapling import mdiff
-from sapling.annotate import _annotatepair
+from sapling.annotate import annotatepair
 
 
 try:
@@ -46,14 +46,14 @@ class AnnotateTests(unittest.TestCase):
 
         oldann = decorate(olddata, oldfctx)
         p1ann = decorate(p1data, p1fctx)
-        p1ann = _annotatepair([oldann], p1ann, diffopts)
+        p1ann = annotatepair([oldann], p1ann, diffopts)
         self.assertEqual(
             p1ann[0],
             [("old", 1), ("old", 2), ("p1", 3)],
         )
 
         p2ann = decorate(p2data, p2fctx)
-        p2ann = _annotatepair([oldann], p2ann, diffopts)
+        p2ann = annotatepair([oldann], p2ann, diffopts)
         self.assertEqual(
             p2ann[0],
             [("old", 1), ("p2", 2), ("p2", 3)],
@@ -62,7 +62,7 @@ class AnnotateTests(unittest.TestCase):
         # Test with multiple parents (note the difference caused by ordering)
 
         childann = decorate(childdata, childfctx)
-        childann = _annotatepair([p1ann, p2ann], childann, diffopts)
+        childann = annotatepair([p1ann, p2ann], childann, diffopts)
         self.assertEqual(
             childann[0],
             [
@@ -75,7 +75,7 @@ class AnnotateTests(unittest.TestCase):
         )
 
         childann = decorate(childdata, childfctx)
-        childann = _annotatepair([p2ann, p1ann], childann, diffopts)
+        childann = annotatepair([p2ann, p1ann], childann, diffopts)
         self.assertEqual(
             childann[0],
             [

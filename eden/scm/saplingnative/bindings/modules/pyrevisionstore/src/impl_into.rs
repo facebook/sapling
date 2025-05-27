@@ -10,6 +10,7 @@
 use std::sync::Arc;
 
 use anyhow::Result;
+use blob::Blob;
 use cpython::*;
 use cpython_ext::ExtractInner;
 use cpython_ext::convert::register_into;
@@ -18,7 +19,6 @@ use revisionstore::RemoteDataStore;
 use revisionstore::StoreKey;
 use revisionstore::StoreResult;
 use revisionstore::trait_impls::ArcFileStore;
-use scm_blob::ScmBlob;
 use storemodel::FileStore;
 use storemodel::KeyStore;
 use storemodel::SerializationFormat;
@@ -90,14 +90,14 @@ impl KeyStore for ManifestStore {
         &self,
         path: &RepoPath,
         node: types::HgId,
-    ) -> anyhow::Result<Option<ScmBlob>> {
+    ) -> anyhow::Result<Option<Blob>> {
         if node.is_null() {
-            return Ok(Some(ScmBlob::Bytes(Default::default())));
+            return Ok(Some(Blob::Bytes(Default::default())));
         }
         let key = Key::new(path.to_owned(), node);
         match self.underlying.get(StoreKey::hgid(key))? {
             StoreResult::NotFound(_key) => Ok(None),
-            StoreResult::Found(data) => Ok(Some(ScmBlob::Bytes(data.into()))),
+            StoreResult::Found(data) => Ok(Some(Blob::Bytes(data.into()))),
         }
     }
 

@@ -29,6 +29,7 @@ struct ChangesetInfo {
   7: ChangesetMessage message;
   8: HgExtras hg_extra;
   9: optional GitExtraHeaders git_extra_headers;
+  10: optional i64 subtree_change_count;
 }
 
 // Commit message is represented by a separate union of formats for the future

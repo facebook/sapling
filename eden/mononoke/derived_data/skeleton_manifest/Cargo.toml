@@ -26,7 +26,7 @@ manifest = { version = "0.1.0", path = "../../manifest" }
 mononoke_types = { version = "0.1.0", path = "../../mononoke_types" }
 sorted_vector_map = { version = "0.2.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 stats = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
-thiserror = "2"
+thiserror = "2.0.12"
 
 [dev-dependencies]
 bonsai_hg_mapping = { version = "0.1.0", path = "../../bonsai_hg_mapping" }
@@ -47,4 +47,4 @@ repo_derived_data = { version = "0.1.0", path = "../../repo_attributes/repo_deri
 repo_identity = { version = "0.1.0", path = "../../repo_attributes/repo_identity" }
 test_repo_factory = { version = "0.1.0", path = "../../repo_factory/test_repo_factory" }
 tests_utils = { version = "0.1.0", path = "../../tests/utils" }
-tokio = { version = "1.41.0", features = ["full", "test-util", "tracing"] }
+tokio = { version = "1.45.0", features = ["full", "test-util", "tracing"] }

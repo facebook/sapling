@@ -48,7 +48,7 @@ struct Inner {
     /// The "generation number", distance to root (the parentless `VerLink`).
     /// If `x.compatible(y)` returns `x`, then `x.gen` must be >= `y.gen`.
     /// Used as an optimization to exit `compatible` early.
-    gen: u32,
+    r#gen: u32,
 }
 
 impl VerLink {
@@ -58,7 +58,7 @@ impl VerLink {
         let inner = Inner {
             parent: None,
             base: next_id(),
-            gen: 0,
+            r#gen: 0,
         };
         Self {
             inner: Arc::new(inner),
@@ -83,7 +83,7 @@ impl VerLink {
                 let next_inner = Inner {
                     parent: Some(self.clone()),
                     base: self.inner.base,
-                    gen: self.inner.gen + 1,
+                    r#gen: self.inner.r#gen + 1,
                 };
                 let next = Self {
                     inner: Arc::new(next_inner),
@@ -101,16 +101,16 @@ impl PartialOrd for VerLink {
             // reachable from each other.
             return None;
         }
-        if self.inner.gen < other.inner.gen {
+        if self.inner.r#gen < other.inner.r#gen {
             other.partial_cmp(self).map(|o| o.reverse())
         } else {
-            debug_assert!(self.inner.gen >= other.inner.gen);
+            debug_assert!(self.inner.r#gen >= other.inner.r#gen);
             if Arc::ptr_eq(&self.inner, &other.inner) {
                 return Some(cmp::Ordering::Equal);
             }
             let mut cur = self.inner.parent.as_ref();
             while let Some(this) = cur {
-                if this.inner.gen < other.inner.gen {
+                if this.inner.r#gen < other.inner.r#gen {
                     // Fast path: not possible to reach other from here.
                     return None;
                 }

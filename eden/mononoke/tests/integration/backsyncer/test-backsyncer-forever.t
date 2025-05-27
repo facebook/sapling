@@ -6,10 +6,15 @@
 
   $ export COMMIT_SCRIBE_CATEGORY=mononoke_commits
   $ export BOOKMARK_SCRIBE_CATEGORY=mononoke_bookmark
+  $ export MONONOKE_TEST_SCRIBE_LOGGING_DIRECTORY=$TESTTMP/scribe_logs/
   $ . "${TEST_FIXTURES}/library-push-redirector.sh"
 
 We use multiplex blobstore here as this one provides logging that we test later.
   $ export MULTIPLEXED=1
+
+-- Enable logging of bookmark updates
+  $ mkdir -p $TESTTMP/scribe_logs
+  $ touch $TESTTMP/scribe_logs/$BOOKMARK_SCRIBE_CATEGORY
 
 -- Init Mononoke thingies
   $ PUSHREBASE_REWRITE_DATES=1 create_large_small_repo
@@ -159,4 +164,36 @@ Config change
     "source_repo_name": "large-mon",
     "target_repo_name": "small-mon",
     "to_csid": "*" (glob)
+  }
+
+  $ cat "$TESTTMP/scribe_logs/$BOOKMARK_SCRIBE_CATEGORY" | sort | jq '{repo_name,bookmark_name,operation}'
+  {
+    "repo_name": "large-mon",
+    "bookmark_name": "master_bookmark",
+    "operation": "pushrebase"
+  }
+  {
+    "repo_name": "large-mon",
+    "bookmark_name": "master_bookmark",
+    "operation": "pushrebase"
+  }
+  {
+    "repo_name": "large-mon",
+    "bookmark_name": "master_bookmark",
+    "operation": "pushrebase"
+  }
+  {
+    "repo_name": "small-mon",
+    "bookmark_name": "master_bookmark",
+    "operation": "update"
+  }
+  {
+    "repo_name": "small-mon",
+    "bookmark_name": "master_bookmark",
+    "operation": "update"
+  }
+  {
+    "repo_name": "small-mon",
+    "bookmark_name": "master_bookmark",
+    "operation": "update"
   }

@@ -49,6 +49,8 @@ use gitstore::ObjectType;
 use metalog::MetaLog;
 use minibytes::Bytes;
 use paste::paste;
+use pathmatcher::Matcher;
+use pathmatcher::TreeMatcher;
 use refencode::RefName;
 use spawn_ext::CommandError;
 use storemodel::ReadRootTreeIds;
@@ -56,8 +58,8 @@ use storemodel::SerializationFormat;
 use types::HgId;
 use types::fetch_mode::FetchMode;
 
-use crate::ref_filter::GitRefFilter;
-use crate::ref_matcher::GitRefMatcher;
+use crate::ref_filter::GitRefMetaLogFilter;
+use crate::ref_matcher::GitRefPreliminaryMatcher;
 use crate::utils;
 
 /// Git commits with segments index.
@@ -116,10 +118,23 @@ pub struct GitSegmentedCommits {
     dag: GitDag,
     dag_path: PathBuf,
     git: BareGit,
-    is_dotgit: bool,
     // Read from config
-    config_hoist: Option<Text>,
-    config_selective_pull_default: HashSet<String>,
+    relevant_config: RelevantConfig,
+}
+
+enum RelevantConfig {
+    /// ".sl" mode does not need those configs.
+    DotSl,
+    /// ".git" mode need those configs.
+    DotGit {
+        hoist: Option<Text>,
+        /// Matched remote refs (ex. "main") will be imported.
+        /// Implicit ref prefix: refs/remotes/{something}/
+        selective_pull_default: HashSet<String>,
+        /// Matched remote refs (ex. "m/*") will be imported.
+        /// Implicit ref prefix: refs/remotes/
+        import_remote_refs: Option<Box<dyn Matcher + Send + Sync>>,
+    },
 }
 
 impl DagCommits for GitSegmentedCommits {}
@@ -136,17 +151,27 @@ impl GitSegmentedCommits {
         let dag_path = dag_dir.to_path_buf();
         let git_path = git_dir.to_path_buf();
         let git = BareGit::from_git_dir_and_config(git_path, config);
-        let config_hoist = config.get("remotenames", "hoist");
-        let config_selective_pull_default =
-            config.get_or_default("remotenames", "selectivepulldefault")?;
+        let relevant_config = if is_dotgit {
+            let hoist = config.get("remotenames", "hoist");
+            let selective_pull_default =
+                config.get_or_default("remotenames", "selectivepulldefault")?;
+            let import_remote_refs = config
+                .get_opt::<TreeMatcher>("git", "import-remote-refs")?
+                .map(|v| Box::new(v) as Box<dyn Matcher + Send + Sync>);
+            RelevantConfig::DotGit {
+                hoist,
+                selective_pull_default,
+                import_remote_refs,
+            }
+        } else {
+            RelevantConfig::DotSl
+        };
         Ok(Self {
             git_store,
             dag,
             dag_path,
-            is_dotgit,
             git,
-            config_hoist,
-            config_selective_pull_default,
+            relevant_config,
         })
     }
 
@@ -163,7 +188,7 @@ impl GitSegmentedCommits {
     pub fn import_from_git(&mut self, metalog: &mut MetaLog) -> Result<()> {
         tracing::info!("updating metalog from git refs");
 
-        let matcher = GitRefMatcher::new();
+        let matcher = GitRefPreliminaryMatcher::new();
 
         let refs: BTreeMap<String, ReferenceValue> = self.git.list_references(Some(&matcher))?;
 
@@ -181,37 +206,72 @@ impl GitSegmentedCommits {
         let mut heads = Vec::new();
         let head_opts = VertexOptions::default();
 
-        let remote_name_filter: GitRefFilter = if self.is_dotgit {
-            GitRefFilter::new_for_dotgit(
+        let remote_name_filter: GitRefMetaLogFilter = match &self.relevant_config {
+            RelevantConfig::DotGit {
+                hoist,
+                selective_pull_default,
+                import_remote_refs,
+            } => GitRefMetaLogFilter::new_for_dotgit(
                 &refs,
                 &existing_remotenames,
-                self.config_hoist.as_deref(),
-                &self.config_selective_pull_default,
-            )?
-        } else {
-            GitRefFilter::new_for_dotsl(&refs)?
+                hoist.as_deref(),
+                selective_pull_default,
+                import_remote_refs.as_deref(),
+            )?,
+            RelevantConfig::DotSl => GitRefMetaLogFilter::new_for_dotsl(&refs)?,
         };
 
         for (ref_name, value) in &refs {
-            // Ignore symlink refs (usually just "*/HEAD"). They are handled elsewhere.
-            let id = match value {
-                ReferenceValue::Sym(_) => continue,
+            // Resolve symlink refs.
+            let mut id = match value {
+                ReferenceValue::Sym(name) => match self.git.lookup_reference_follow_links(name)? {
+                    None => continue,
+                    Some(id) => id,
+                },
                 ReferenceValue::Id(id) => *id,
             };
             let names: Vec<&str> = ref_name.splitn(3, '/').collect();
             match &names[..] {
                 ["refs", "remotes", name] => {
-                    if remote_name_filter.should_import_remote_name(name) {
-                        let should_import_to_dag = match existing_remotenames.get(*name) {
+                    if remote_name_filter.should_import_remote_name(name)? {
+                        let mut should_import_to_dag = match existing_remotenames.get(*name) {
                             Some(&existing_id) => existing_id != id,
                             None => true,
                         };
                         if should_import_to_dag {
-                            let mut opts = head_opts.clone();
-                            if remote_name_filter.is_main_remote_name(name) {
-                                opts.desired_group = Group::MASTER;
+                            // Resolve tags recursively.
+                            // Metalog references should not contain tags. Most users of metalog
+                            // expect references to be commits.
+                            let mut is_tag = false;
+                            while let Some(tag_data) = self
+                                .git_store
+                                .read_local_obj_optional(id, ObjectType::Tag)?
+                            {
+                                if let Some(target_id) = format_util::resolve_git_tag(&tag_data) {
+                                    is_tag = true;
+                                    id = target_id;
+                                } else {
+                                    break;
+                                }
                             }
-                            heads.push((Vertex::copy_from(id.as_ref()), opts));
+
+                            // If `id` is changed because of tag, re-calculate `should_import_to_dag`.
+                            // We caluclate `should_import_to_dag` first before reading tags, to
+                            // reduce overhead reading (known) non-tag objects.
+                            if is_tag {
+                                should_import_to_dag = match existing_remotenames.get(*name) {
+                                    Some(&existing_id) => existing_id != id,
+                                    None => true,
+                                };
+                            }
+
+                            if should_import_to_dag {
+                                let mut opts = head_opts.clone();
+                                if remote_name_filter.is_main_remote_name(name) {
+                                    opts.desired_group = Group::MASTER;
+                                }
+                                heads.push((Vertex::copy_from(id.as_ref()), opts));
+                            }
                         }
                         remotenames.insert(RefName::try_from(*name)?, id);
                     }

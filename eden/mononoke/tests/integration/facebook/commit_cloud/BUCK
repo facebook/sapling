@@ -7,7 +7,6 @@ oncall("scm_server_treehugger")
 
 dott_test(
     name = "commitcloud",
-    disable_all_network_access_target = False,
     dott_files =
         glob([
             "*.t",
@@ -15,6 +14,8 @@ dott_test(
     deps = [
         "//eden/mononoke:blobimport",
         "//eden/mononoke:mononoke",
+        "//eden/mononoke/git/gitimport:gitimport",
+        "//eden/mononoke/git_server:git_server",
         "//eden/mononoke/tools/admin:admin",
         "//eden/mononoke/tools/testtool:testtool",
     ],

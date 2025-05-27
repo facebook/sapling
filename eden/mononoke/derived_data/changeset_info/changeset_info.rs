@@ -69,6 +69,7 @@ pub struct ChangesetInfo {
     message: ChangesetMessage,
     hg_extra: SortedVectorMap<String, Vec<u8>>,
     git_extra_headers: Option<SortedVectorMap<SmallVec<[u8; 24]>, Bytes>>,
+    subtree_change_count: usize,
 }
 
 /// At some point we may like to store large commit messages as separate blobs
@@ -114,6 +115,7 @@ impl ChangesetInfo {
             message,
             hg_extra,
             git_extra_headers,
+            subtree_changes,
             ..
         } = changeset.into_mut();
 
@@ -127,6 +129,7 @@ impl ChangesetInfo {
             message: ChangesetMessage::Message(message),
             hg_extra,
             git_extra_headers,
+            subtree_change_count: subtree_changes.len(),
         }
     }
 
@@ -188,6 +191,11 @@ impl ChangesetInfo {
             .map(|extra| extra.iter().map(|(k, v)| (k.as_slice(), v.as_ref())))
     }
 
+    /// Get the count of subtree changes for this changeset.
+    pub fn subtree_change_count(&self) -> usize {
+        self.subtree_change_count
+    }
+
     pub(crate) fn from_thrift(tc: thrift::changeset_info::ChangesetInfo) -> Result<Self> {
         let catch_block = || -> Result<_> {
             Ok(ChangesetInfo {
@@ -209,6 +217,7 @@ impl ChangesetInfo {
                 git_extra_headers: tc
                     .git_extra_headers
                     .map(|extra| extra.into_iter().map(|(k, v)| (k.0, v)).collect()),
+                subtree_change_count: tc.subtree_change_count.map_or(0, |count| count as usize),
             })
         };
 
@@ -240,6 +249,7 @@ impl ChangesetInfo {
                     .map(|(k, v)| (thrift::data::SmallBinary(k), v))
                     .collect()
             }),
+            subtree_change_count: Some(self.subtree_change_count as i64).filter(|count| *count > 0),
         }
     }
 

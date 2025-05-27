@@ -58,8 +58,8 @@ impl ChangesetFrontier {
     }
 
     pub fn is_disjoint(&self, other_frontier: &ChangesetFrontier) -> bool {
-        for (gen, cs_ids) in self.iter().rev() {
-            if let Some(other_cs_ids) = other_frontier.get(gen) {
+        for (r#gen, cs_ids) in self.iter().rev() {
+            if let Some(other_cs_ids) = other_frontier.get(r#gen) {
                 if !cs_ids.is_disjoint(other_cs_ids) {
                     return false;
                 }
@@ -73,7 +73,7 @@ impl ChangesetFrontier {
     pub fn into_flat_iter(self) -> impl Iterator<Item = (ChangesetId, Generation)> {
         self.0
             .into_iter()
-            .flat_map(|(gen, cs_ids)| cs_ids.into_iter().map(move |cs_id| (cs_id, gen)))
+            .flat_map(|(r#gen, cs_ids)| cs_ids.into_iter().map(move |cs_id| (cs_id, r#gen)))
     }
 
     /// Returns a vec of all changesets in the frontier.
@@ -114,8 +114,8 @@ impl FromIterator<(ChangesetId, Generation)> for ChangesetFrontier {
     fn from_iter<T: IntoIterator<Item = (ChangesetId, Generation)>>(iter: T) -> Self {
         let mut frontier = Self::new();
 
-        for (cs_id, gen) in iter {
-            frontier.entry(gen).or_default().insert(cs_id);
+        for (cs_id, r#gen) in iter {
+            frontier.entry(r#gen).or_default().insert(cs_id);
         }
 
         frontier
@@ -124,8 +124,8 @@ impl FromIterator<(ChangesetId, Generation)> for ChangesetFrontier {
 
 impl Extend<(ChangesetId, Generation)> for ChangesetFrontier {
     fn extend<T: IntoIterator<Item = (ChangesetId, Generation)>>(&mut self, iter: T) {
-        for (cs_id, gen) in iter {
-            self.entry(gen).or_default().insert(cs_id);
+        for (cs_id, r#gen) in iter {
+            self.entry(r#gen).or_default().insert(cs_id);
         }
     }
 }
@@ -181,8 +181,8 @@ impl FromIterator<(ChangesetId, Generation, u64)> for ChangesetFrontierWithinDis
     fn from_iter<T: IntoIterator<Item = (ChangesetId, Generation, u64)>>(iter: T) -> Self {
         let mut frontier = Self::new();
 
-        for (cs_id, gen, distance) in iter {
-            let entry = frontier.entry(gen).or_default().entry(cs_id).or_default();
+        for (cs_id, r#gen, distance) in iter {
+            let entry = frontier.entry(r#gen).or_default().entry(cs_id).or_default();
             *entry = std::cmp::max(*entry, distance);
         }
 

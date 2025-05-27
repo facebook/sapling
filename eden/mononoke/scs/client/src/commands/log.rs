@@ -9,8 +9,8 @@ use std::collections::HashSet;
 use std::io::Write;
 
 use anyhow::Result;
-use commit_id::CommitIdNames;
-use commit_id::NamedCommitIdsArgs;
+use commit_id_types::CommitIdNames;
+use commit_id_types::NamedCommitIdsArgs;
 use scs_client_raw::thrift;
 
 use crate::ScscApp;

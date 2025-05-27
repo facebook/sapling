@@ -137,6 +137,7 @@ export const emptyCommit: CommitInfo = {
   title: 'title',
   hash: '0',
   parents: [],
+  grandparents: [],
   phase: 'draft',
   isDot: false,
   author: 'author',

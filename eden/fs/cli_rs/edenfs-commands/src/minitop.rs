@@ -33,7 +33,7 @@ use crossterm::style;
 use crossterm::terminal;
 use edenfs_client::client::Client;
 use edenfs_client::client::EdenFsClient;
-use edenfs_client::instance::EdenFsInstance;
+use edenfs_client::methods::EdenThriftMethod;
 use edenfs_utils::humantime::HumanTime;
 use edenfs_utils::humantime::TimeUnit;
 use edenfs_utils::path_from_bytes;
@@ -50,6 +50,7 @@ use self::unix::trim_cmd_binary_path;
 #[cfg(windows)]
 use self::windows::trim_cmd_binary_path;
 use crate::ExitCode;
+use crate::get_edenfs_instance;
 
 #[derive(Parser, Debug)]
 #[clap(about = "Simple monitoring of EdenFS accesses by process.")]
@@ -413,7 +414,7 @@ impl Cursor {
 #[async_trait]
 impl crate::Subcommand for MinitopCmd {
     async fn run(&self) -> Result<ExitCode> {
-        let instance = EdenFsInstance::global();
+        let instance = get_edenfs_instance();
         let client = instance.get_client();
         let mut tracked_processes = TrackedProcesses::new();
 
@@ -449,7 +450,12 @@ impl crate::Subcommand for MinitopCmd {
             // Update currently tracked processes (and add new ones if they haven't been tracked yet)
             let refresh_rate_secs = self.refresh_rate.as_secs().try_into()?;
             let counts = client
-                .with_thrift(|thrift| thrift.getAccessCounts(refresh_rate_secs))
+                .with_thrift(|thrift| {
+                    (
+                        thrift.getAccessCounts(refresh_rate_secs),
+                        EdenThriftMethod::GetAccessCounts,
+                    )
+                })
                 .await?;
 
             for (mount, accesses) in &counts.accessesByMount {

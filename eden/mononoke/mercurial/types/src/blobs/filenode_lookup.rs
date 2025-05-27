@@ -91,7 +91,7 @@ pub fn store_filenode_id<'a, B: Blobstore>(
     blobstore: &'a B,
     key: FileNodeIdPointer,
     filenode_id: &HgFileNodeId,
-) -> impl Future<Output = Result<()>> + 'a {
+) -> impl Future<Output = Result<()>> + use<'a, B> {
     let contents = BlobstoreBytes::from_bytes(Bytes::copy_from_slice(filenode_id.as_bytes()));
     blobstore.put(ctx, key.0, contents)
 }

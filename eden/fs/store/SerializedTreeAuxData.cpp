@@ -11,7 +11,6 @@
 
 #include <folly/Range.h>
 #include <folly/Varint.h>
-#include <folly/lang/Bits.h>
 #include <folly/logging/xlog.h>
 #include <cstddef>
 

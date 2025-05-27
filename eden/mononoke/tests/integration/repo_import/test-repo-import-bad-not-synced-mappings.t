@@ -42,7 +42,6 @@ Setup configuration
   > --batch-size 3 \
   > --bookmark-suffix "imported" \
   > --disable-phabricator-check \
-  > --disable-hg-sync-check \
   > --dest-bookmark master_bookmark \
   > --git-merge-rev-id master_bookmark \
   > --commit-author user \
@@ -65,7 +64,6 @@ Setup configuration
   > --batch-size 3 \
   > --bookmark-suffix "imported" \
   > --disable-phabricator-check \
-  > --disable-hg-sync-check \
   > --dest-bookmark master_bookmark \
   > --git-merge-rev-id master_bookmark \
   > --commit-author user \

@@ -58,7 +58,7 @@ impl EdenFsClient {
 
     pub fn get_active_filter_id(&self, commit: HgId) -> Result<Option<String>, anyhow::Error> {
         match &self.filter_generator {
-            Some(gen) => gen.active_filter_id(commit),
+            Some(r#gen) => r#gen.active_filter_id(commit),
             None => Ok(None),
         }
     }
@@ -126,6 +126,13 @@ impl EdenFsClient {
             "edenclientstatus_time",
             start_time.elapsed().as_millis() as u64,
         );
+
+        hg_metrics::max_counter(
+            "edenclientstatus_length",
+            thrift_result.status.entries.len() as u64,
+        );
+
+        tracing::debug!(target: "eden_info", eden_version=thrift_result.version);
 
         let mut result = BTreeMap::new();
         for (path_bytes, status) in thrift_result.status.entries {

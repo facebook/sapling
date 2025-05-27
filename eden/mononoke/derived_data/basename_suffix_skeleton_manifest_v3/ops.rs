@@ -61,14 +61,14 @@ impl BasenameOrSuffix {
 
 impl RootBssmV3DirectoryId {
     /// Finds all files with given basenames in the given directories.
-    pub async fn find_files_filter_basenames<'a>(
+    pub async fn find_files_filter_basenames<'a, T: Blobstore + Clone + 'static>(
         &self,
         ctx: &'a CoreContext,
-        blobstore: impl Blobstore + Clone + 'static,
+        blobstore: T,
         prefixes: Vec<MPath>,
         basenames_and_suffixes: EitherOrBoth<Vec1<String>, Vec1<String>>,
         ordered: Option<Option<MPath>>,
-    ) -> Result<impl Stream<Item = Result<MPath>> + 'a> {
+    ) -> Result<impl Stream<Item = Result<MPath>> + use<'a, T>> {
         let (basenames, suffixes) = basenames_and_suffixes
             .map_any(Vec1::into_vec, Vec1::into_vec)
             .or_default();

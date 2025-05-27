@@ -47,26 +47,28 @@ unsafe extern "C" fn signal_handler(
     info: *mut libc::siginfo_t,
     _ucontext: usize,
 ) {
-    if let Some(info) = info.as_ref() {
-        let addr = info.si_addr() as usize;
-        // ASYNC SIGNAL SAFETY: This is not "async signal safe" in theory. However, to make
-        // it async signal safe it typically means extra pipes, threads, more complexity with
-        // `fork`, etc. We're crashing (and in relatively rare cases) anyway, so don't bother
-        // async signal safety for now.
-        if crate::page_out::find_region(addr).is_some() && zero_fill_page(addr).is_ok() {
-            // Retry, since zero_fill_page probably made it readable.
-            return;
+    unsafe {
+        if let Some(info) = info.as_ref() {
+            let addr = info.si_addr() as usize;
+            // ASYNC SIGNAL SAFETY: This is not "async signal safe" in theory. However, to make
+            // it async signal safe it typically means extra pipes, threads, more complexity with
+            // `fork`, etc. We're crashing (and in relatively rare cases) anyway, so don't bother
+            // async signal safety for now.
+            if crate::page_out::find_region(addr).is_some() && zero_fill_page(addr).is_ok() {
+                // Retry, since zero_fill_page probably made it readable.
+                return;
+            }
         }
-    }
 
-    // Fallback to the original handler. Restore the old handler and re-raise the signal.
-    // This can happen when (but not limited to):
-    // - The address in question is not tracked by indexedlog's (file-backed) mmap buffers.
-    // - Already tried fixing the same page before, to prevent infinite loop.
-    #[expect(static_mut_refs)]
-    if let Some(old_handler_mut) = ORIG_HANDLER.as_mut() {
-        libc::sigaction(sig, old_handler_mut, std::ptr::null_mut());
-        // Retry as a way to re-raise.
+        // Fallback to the original handler. Restore the old handler and re-raise the signal.
+        // This can happen when (but not limited to):
+        // - The address in question is not tracked by indexedlog's (file-backed) mmap buffers.
+        // - Already tried fixing the same page before, to prevent infinite loop.
+        #[expect(static_mut_refs)]
+        if let Some(old_handler_mut) = ORIG_HANDLER.as_mut() {
+            libc::sigaction(sig, old_handler_mut, std::ptr::null_mut());
+            // Retry as a way to re-raise.
+        }
     }
 }
 

@@ -119,6 +119,8 @@ impl AddScubaResponse for thrift::CommitListDescendantBookmarksResponse {}
 
 impl AddScubaResponse for thrift::CommitRunHooksResponse {}
 
+impl AddScubaResponse for thrift::CommitSubtreeChangesResponse {}
+
 impl AddScubaResponse for thrift::CommitPathBlameResponse {}
 
 impl AddScubaResponse for thrift::CommitPathHistoryResponse {}

@@ -976,10 +976,10 @@ void EdenServer::updatePeriodicTaskIntervals(const EdenConfig& config) {
       std::chrono::duration_cast<std::chrono::milliseconds>(
           config.localStoreManagementInterval.getValue()));
   /**
-   * For now, periodic GC only makes sense on Windows, with unknown behavior on
-   * Linux and macOS.
+   * For now, periodic GC only makes sense on Windows and macOS, with unknown
+   * behavior on Linux.
    */
-  if (config.enableGc.getValue() && folly::kIsWindows) {
+  if (config.enableGc.getValue()) {
     gcTask_.updateInterval(
         std::chrono::duration_cast<std::chrono::milliseconds>(
             config.gcPeriod.getValue()));
@@ -1154,6 +1154,11 @@ namespace {
 bool shouldThrowDuringTakeover(const EdenConfig& config) {
   return config.clientThrowsDuringTakeover.getValue();
 }
+
+std::chrono::seconds getTakeoverTimeoutSeconds(const EdenConfig& config) {
+  return std::chrono::duration_cast<std::chrono::seconds>(
+      config.takeoverReceiveTimeout.getValue());
+}
 } // namespace
 
 Future<Unit> EdenServer::prepareImpl(std::shared_ptr<StartupLogger> logger) {
@@ -1190,9 +1195,11 @@ Future<Unit> EdenServer::prepareImpl(std::shared_ptr<StartupLogger> logger) {
     logger->log(
         "Requesting existing edenfs process to gracefully "
         "transfer its mount points...");
+    auto edenConfig = serverState_->getEdenConfig();
     takeoverData = takeoverMounts(
         takeoverPath,
-        shouldThrowDuringTakeover(*serverState_->getEdenConfig()));
+        getTakeoverTimeoutSeconds(*edenConfig),
+        shouldThrowDuringTakeover(*edenConfig));
     logger->log(
         "Received takeover information for ",
         takeoverData.mountPoints.size(),
@@ -2521,6 +2528,10 @@ void EdenServer::stop() {
   server_->stop();
 }
 
+bool EdenServer::shouldChunkTakeoverData() {
+  return serverState_->getEdenConfig()->shouldChunkTakeoverData.getValue();
+}
+
 folly::Future<TakeoverData> EdenServer::startTakeoverShutdown() {
 #ifndef _WIN32
   // Make sure we aren't already shutting down, then update our state
@@ -2772,10 +2783,11 @@ void EdenServer::garbageCollectAllMounts() {
               ObjectFetchContext::getNullContextWithCauseDetail(
                   "EdenServer::garbageCollectAllMounts");
           return garbageCollectWorkingCopy(
-              mountHandle.getEdenMount(),
-              mountHandle.getRootInode(),
-              cutoff,
-              context);
+                     mountHandle.getEdenMount(),
+                     mountHandle.getRootInode(),
+                     cutoff,
+                     context)
+              .semi();
         })
         .ensure([mountHandle] {});
   }
@@ -2827,7 +2839,6 @@ void EdenServer::accidentalUnmountRecovery() {
           INFO,
           "Mount point {} is not currently mounted, attempting to remount.",
           mountPath);
-      // TODO: Make sure the mount path exists
 
       folly::via(
           getServerState()->getThreadPool().get(),
@@ -2835,16 +2846,17 @@ void EdenServer::accidentalUnmountRecovery() {
            initialConfig = std::move(initialConfig),
            structuredLogger = structuredLogger_,
            mountPath,
-           &client]() mutable {
-            // TODO: Make sure the mount path exists
+           repoName = client.second.asString()]() mutable {
             return mount(std::move(initialConfig), /*readOnly=*/false)
-                .thenTry([mountPath, structuredLogger, &client](
+                .thenTry([mountPath,
+                          structuredLogger,
+                          repoName = std::move(repoName)](
                              folly::Try<std::shared_ptr<EdenMount>>&& result) {
                   bool success = result.hasValue();
                   std::string exceptionMessage =
                       success ? "" : result.exception().what().toStdString();
                   structuredLogger->logEvent(AccidentalUnmountRecovery{
-                      exceptionMessage, success, client.second.asString()});
+                      exceptionMessage, success, repoName});
                   if (success) {
                     XLOGF(
                         DBG3,

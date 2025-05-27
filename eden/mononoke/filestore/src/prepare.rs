@@ -232,7 +232,7 @@ where
 
 pub fn add_partial_metadata_to_multiplexer(
     multiplexer: &mut Multiplexer<Bytes>,
-) -> impl Future<Output = Result<PartialMetadata, Error>> + std::marker::Unpin {
+) -> impl Future<Output = Result<PartialMetadata, Error>> + std::marker::Unpin + use<> {
     let is_ascii = multiplexer.add(is_ascii).map_err(Error::from);
     let is_utf8 = multiplexer.add(is_utf8).map_err(Error::from);
     let is_binary = multiplexer.add(is_binary).map_err(Error::from);

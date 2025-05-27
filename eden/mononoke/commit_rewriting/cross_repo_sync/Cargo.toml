@@ -32,6 +32,7 @@ filenodes = { version = "0.1.0", path = "../../filenodes" }
 filestore = { version = "0.1.0", path = "../../filestore" }
 fsnodes = { version = "0.1.0", path = "../../derived_data/fsnodes" }
 futures = { version = "0.3.30", features = ["async-await", "compat"] }
+git_source_of_truth = { version = "0.1.0", path = "../../git_source_of_truth" }
 justknobs = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 live_commit_sync_config = { version = "0.1.0", path = "../live_commit_sync_config" }
 manifest = { version = "0.1.0", path = "../../manifest" }
@@ -64,8 +65,8 @@ synced_commit_mapping = { version = "0.1.0", path = "../synced_commit_mapping" }
 synced_commit_mapping_pushrebase_hook = { version = "0.1.0", path = "../synced_commit_mapping/pushrebase_hook" }
 test_repo_factory = { version = "0.1.0", path = "../../repo_factory/test_repo_factory" }
 tests_utils = { version = "0.1.0", path = "../../tests/utils" }
-thiserror = "2"
-tokio = { version = "1.41.0", features = ["full", "test-util", "tracing"] }
+thiserror = "2.0.12"
+tokio = { version = "1.45.0", features = ["full", "test-util", "tracing"] }
 topo_sort = { version = "0.1.0", path = "../../common/topo_sort" }
 
 [dev-dependencies]

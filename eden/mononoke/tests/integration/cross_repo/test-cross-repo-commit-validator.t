@@ -26,49 +26,10 @@ Disable bookmarks cache because bookmarks are modified by two separate processes
   $ setup_commitsyncmap
   $ setup_configerator_configs
 
--- setup hg server repos
-
-  $ function createfile { mkdir -p "$(dirname  $1)" && echo "$1" > "$1" && hg add -q "$1"; }
-  $ function createfile_with_content { mkdir -p "$(dirname  $1)" && echo "$2" > "$1" && hg add -q "$1"; }
-
--- init fbsource
-  $ cd $TESTTMP
-  $ hginit_treemanifest fbs-mon
-  $ cd fbs-mon
--- create an initial commit, which will be the last_synced_commit
-  $ createfile fbcode/fbcodefile_fbsource
-  $ createfile arvr/arvrfile_fbsource
-  $ createfile otherfile_fbsource
-  $ hg -q ci -m "fbsource commit 1" && hg book -ir . master_bookmark
-
--- init ovrsource
-  $ cd $TESTTMP
-  $ hginit_treemanifest ovr-hg-srv
-  $ cd ovr-hg-srv
-  $ createfile fbcode/fbcodefile_ovrsource
-  $ createfile arvr/arvrfile_ovrsource
-  $ createfile otherfile_ovrsource
-  $ createfile Research/researchfile_ovrsource
-  $ hg -q ci -m "ovrsource commit 1" && hg book -r . master_bookmark
-
--- init megarepo - note that some paths are shifted, but content stays the same
-  $ cd $TESTTMP
-  $ hginit_treemanifest meg-mon
-  $ cd meg-mon
-  $ createfile fbcode/fbcodefile_fbsource
-  $ createfile_with_content .fbsource-rest/arvr/arvrfile_fbsource arvr/arvrfile_fbsource
-  $ createfile otherfile_fbsource
-  $ createfile_with_content .ovrsource-rest/fbcode/fbcodefile_ovrsource fbcode/fbcodefile_ovrsource
-  $ createfile arvr/arvrfile_ovrsource
-  $ createfile_with_content arvr-legacy/otherfile_ovrsource otherfile_ovrsource
-  $ createfile_with_content arvr-legacy/Research/researchfile_ovrsource Research/researchfile_ovrsource
-  $ hg -q ci -m "megarepo commit 1"
-  $ hg book -r . master_bookmark
-
--- blobimport hg servers repos into Mononoke repos
-  $ cd "$TESTTMP"
-  $ REPOID=0 blobimport meg-mon/.hg meg-mon
-  $ REPOID=1 blobimport fbs-mon/.hg fbs-mon
+  $ init_two_small_one_large_repo
+  A=e258521a78f8e12bee03bda35489701d887c41fd
+  A=8ca76aa82bf928df58db99489fa17938e39774e4
+  A=6ebc043d84761f4b77f73e4a2034cf5669bb6a54
 
 -- get some bonsai hashes to avoid magic strings later
   $ FBSOURCE_MASTER_BONSAI=$(mononoke_admin bookmarks --repo-id 1 get master_bookmark)
@@ -77,13 +38,14 @@ Disable bookmarks cache because bookmarks are modified by two separate processes
 -- insert sync mapping entry
   $ add_synced_commit_mapping_entry 1 $FBSOURCE_MASTER_BONSAI 0 $MEGAREPO_MERGE_BONSAI TEST_VERSION_NAME
 
+-- start mononoke
+  $ start_and_wait_for_mononoke_server
+
 -- setup hg client repos
   $ cd "$TESTTMP"
   $ hg clone -q mono:fbs-mon fbs-hg-cnt --noupdate
   $ hg clone -q mono:meg-mon meg-hg-cnt --noupdate
 
--- start mononoke
-  $ start_and_wait_for_mononoke_server
 -- create an older version of fbsource_master, with a single simple change
   $ cd "$TESTTMP"/fbs-hg-cnt
   $ hg up -q master_bookmark

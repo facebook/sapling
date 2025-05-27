@@ -445,14 +445,14 @@ fn route_download_for_object<'a>(
 
     match upstream {
         // If our upstream succeeded, then we try to get the object from there.
-        Ok(ref upstream) => {
+        Ok(upstream) => {
             if let Some((obj, action)) = upstream.download_action(oid) {
                 return Ok(Some((Source::Upstream, obj, action)));
             }
         }
         // If our upstream failed, then we don't know whether the object is available anywhere, so
         // that's an error.
-        Err(ref cause) => {
+        Err(cause) => {
             let err =
                 Error::new(ErrorKind::ObjectNotInternallyAvailableAndUpstreamUnavailable(*oid))
                     .context(cause.to_string());
@@ -610,7 +610,7 @@ async fn batch_download(
 }
 
 // TODO: Do we want to validate the client's Accept & Content-Type headers here?
-pub async fn batch(state: &mut State) -> Result<impl TryIntoResponse, HttpError> {
+pub async fn batch(state: &mut State) -> Result<impl TryIntoResponse + use<>, HttpError> {
     let BatchParams { repository } = state.take();
     let start_time = state
         .try_borrow::<RequestStartTime>()

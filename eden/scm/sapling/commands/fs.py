@@ -5,7 +5,6 @@
 
 # commands/fs.py - commands for controlling the edenfs daemon
 
-from __future__ import absolute_import
 
 import errno
 import subprocess

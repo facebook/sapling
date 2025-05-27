@@ -118,7 +118,7 @@ async fn fetch_by_key(
     content_encoding: ContentEncoding,
     range: Option<Range>,
     scuba: &mut Option<&mut ScubaMiddlewareState>,
-) -> Result<impl TryIntoResponse, HttpError> {
+) -> Result<impl TryIntoResponse + use<>, HttpError> {
     // Query a stream out of the Filestore
     let fetched = filestore::fetch_range_with_size(
         ctx.repo.repo_blobstore().clone(),
@@ -181,7 +181,7 @@ async fn download_inner(
     repository: String,
     key: FetchKey,
     method: LfsMethod,
-) -> Result<impl TryIntoResponse, HttpError> {
+) -> Result<impl TryIntoResponse + use<>, HttpError> {
     let range = extract_range(state).map_err(HttpError::e400)?;
 
     let ctx = RepositoryRequestContext::instantiate(state, repository.clone(), method).await?;
@@ -200,7 +200,7 @@ async fn download_inner(
     fetch_by_key(ctx, key, content_encoding, range, &mut scuba).await
 }
 
-pub async fn download(state: &mut State) -> Result<impl TryIntoResponse, HttpError> {
+pub async fn download(state: &mut State) -> Result<impl TryIntoResponse + use<>, HttpError> {
     let DownloadParamsContentId {
         repository,
         content_id,
@@ -215,7 +215,7 @@ pub async fn download(state: &mut State) -> Result<impl TryIntoResponse, HttpErr
     download_inner(state, repository, key, LfsMethod::Download).await
 }
 
-pub async fn download_sha256(state: &mut State) -> Result<impl TryIntoResponse, HttpError> {
+pub async fn download_sha256(state: &mut State) -> Result<impl TryIntoResponse + use<>, HttpError> {
     let DownloadParamsSha256 { repository, oid } = state.take();
 
     let oid = Sha256::from_str(&oid)

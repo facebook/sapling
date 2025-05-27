@@ -7,9 +7,9 @@
 
 use std::sync::Arc;
 use std::time::Duration;
-use std::time::Instant;
 
 use anyhow::Result;
+use blob::Blob;
 use cas_client::CasClient;
 use cas_client::CasSuccessTracker;
 use cas_client::CasSuccessTrackerConfig;
@@ -17,6 +17,8 @@ use configmodel::Config;
 use configmodel::ConfigExt;
 use configmodel::convert::ByteCount;
 use configmodel::convert::FromConfigValue;
+use re_client_lib::CASDaemonClientCfg;
+use re_client_lib::ClientBuilderCommonMethods;
 use re_client_lib::ExternalCASDaemonAddress;
 use re_client_lib::ExternalCASDaemonCfg;
 #[cfg(not(target_os = "linux"))]
@@ -26,7 +28,6 @@ use re_client_lib::REClientBuilder;
 use re_client_lib::RESessionID;
 use re_client_lib::RemoteExecutionMetadata;
 use re_client_lib::create_default_config;
-use scm_blob::ScmBlob;
 #[cfg(target_os = "linux")]
 use thin_cas_client_wrapper::CASClientWrapper as REClient;
 
@@ -43,6 +44,7 @@ pub struct ThinCasClient {
     fetch_concurrency: usize,
     use_streaming_dowloads: bool,
     session_id: String,
+    use_persistent_caches: bool,
 }
 
 const DEFAULT_SCM_CAS_LOGS_DIR: &str = "scm_cas";
@@ -132,6 +134,7 @@ impl ThinCasClient {
                 downtime_on_failure: config
                     .get_or("cas", "downtime-on-failure", || Duration::from_secs(1))?,
             }),
+            use_persistent_caches: config.get_or("cas", "use-persistent-caches", || true)?,
         }))
     }
 
@@ -146,63 +149,42 @@ impl ThinCasClient {
         re_config.enable_scuba_logging = false;
         re_config.enable_cancellation = true;
 
-        let server_address = match re_config.cas_client_config {
-            re_client_lib::CASDaemonClientCfg::external_config(ref mut external_config) => {
-                external_config.address.clone()
+        let mut external_config = if let Some(port) = self.port {
+            ExternalCASDaemonCfg {
+                cas_daemon_port: port,
+                cas_daemon_address: ExternalCASDaemonAddress::port(port),
+                address: None,
+                connection_count: self.connection_count as i32,
+                ..Default::default()
             }
-            re_client_lib::CASDaemonClientCfg::embedded_config(ref mut embedded_config) => {
-                embedded_config.address.clone()
-            }
-            _ => None,
-        };
-
-        if let Some(port) = self.port {
-            re_config.cas_client_config =
-                re_client_lib::CASDaemonClientCfg::external_config(ExternalCASDaemonCfg {
-                    cas_daemon_port: port,
-                    cas_daemon_address: ExternalCASDaemonAddress::port(port),
-                    address: server_address,
-                    connection_count: self.connection_count as i32,
-                    ..Default::default()
-                });
         } else if let Some(uds_path) = self.uds_path.clone() {
-            re_config.cas_client_config =
-                re_client_lib::CASDaemonClientCfg::external_config(ExternalCASDaemonCfg {
-                    cas_daemon_port: 0,
-                    cas_daemon_address: ExternalCASDaemonAddress::uds_path(uds_path.clone()),
-                    address: server_address,
-                    connection_count: self.connection_count as i32,
-                    ..Default::default()
-                });
+            ExternalCASDaemonCfg {
+                cas_daemon_port: 0,
+                cas_daemon_address: ExternalCASDaemonAddress::uds_path(uds_path),
+                address: None,
+                connection_count: self.connection_count as i32,
+                ..Default::default()
+            }
         } else {
             let socket_path = std::env::var("CASD_SOCKET_PATH")
                 .unwrap_or(re_client_lib::DEFAULT_CASD_SOCKET.to_string());
-            let config = ExternalCASDaemonCfg {
+            ExternalCASDaemonCfg {
                 address: None,
                 connection_count: self.connection_count as i32,
                 cas_daemon_address: ExternalCASDaemonAddress::uds_path(socket_path),
                 socket_activation: true,
                 ..Default::default()
-            };
-            match &mut re_config.cas_client_config {
-                re_client_lib::CASDaemonClientCfg::external_config(ref mut external_config) => {
-                    *external_config = config.to_owned()
-                }
-                re_client_lib::CASDaemonClientCfg::external_with_fallback_config(
-                    ref mut external_with_fallback_config,
-                ) => external_with_fallback_config.external_cfg = config,
-                re_client_lib::CASDaemonClientCfg::embedded_config(_) => {
-                    // There's not any fields we can meaningfully carry over from the embedded config.
-                    // Clients could mistakenly set fields on embedded config then drop them here.
-                    re_config.cas_client_config =
-                        re_client_lib::CASDaemonClientCfg::external_config(config)
-                }
-                _ => {}
-            };
+            }
+        };
+
+        if self.use_persistent_caches {
+            external_config.client_label = "pc_enabled".to_string();
         }
 
+        re_config.cas_client_config = CASDaemonClientCfg::external_config(external_config);
+
         #[cfg(target_os = "linux")]
-        let client = REClient::new(self.session_id.clone(), 0, re_config);
+        let client = REClient::new(self.session_id.clone(), 0, re_config)?;
         #[cfg(not(target_os = "linux"))]
         let client = REClientBuilder::new(fbinit::expect_init())
             .with_config(re_config)

@@ -696,3 +696,27 @@ test subtree merge with different merge tools
   -y
   +yfoo
   $ hg go -C . -q && hg clean
+
+test deleted/changed conflict
+
+  $ newclientrepo
+  $ drawdag <<'EOS'
+  > B    # B/foo/x = (removed)
+  > |
+  > A    # A/foo/x = 1\n2\n3\n
+  > |    # A/foo/y = y\n
+  > EOS
+  $ hg go -q $B
+  $ hg subtree copy -r $A --from-path foo --to-path foo2 -m "subtree copy foo -> foo2"
+  copying foo to foo2
+  $ echo "foo2" >> foo2/x
+  $ hg ci -m "update foo2/x"
+  $ hg subtree merge --from-path foo2 --to-path foo
+  computing merge base (timeout: 120 seconds)...
+  merge base: f7de0a4f3e86
+  other [merge rev] changed foo/x which local [working copy] is missing
+  hint: if this is due to a renamed file, you can manually input the renamed path
+  use (c)hanged version, leave (d)eleted, or leave (u)nresolved, or input (r)enamed path? u
+  0 files updated, 0 files merged, 0 files removed, 1 files unresolved
+  use 'hg resolve' to retry unresolved file merges or 'hg goto -C .' to abandon
+  [1]

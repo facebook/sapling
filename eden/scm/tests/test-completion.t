@@ -105,7 +105,6 @@ Show the options for the "serve" command
   --prefix
   --profile
   --quiet
-  --read-only
   --reason
   --repository
   --stdio

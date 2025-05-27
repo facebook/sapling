@@ -12,7 +12,7 @@ use std::io::Write;
 use anyhow::Result;
 use clap::Parser;
 use cloned::cloned;
-use commit_id::CommitIdArgs;
+use commit_id_types::CommitIdArgs;
 use futures::TryFutureExt;
 use futures::future;
 use futures::stream;

@@ -54,7 +54,7 @@ impl<R> MononokeRepos<R> {
 
     /// Returns an iterator over the set of repos currently loaded
     /// for the service/command.
-    pub fn iter(&self) -> impl Iterator<Item = Arc<R>> {
+    pub fn iter(&self) -> impl Iterator<Item = Arc<R>> + use<R> {
         let result: Vec<_> = self
             .name_to_repo_map
             .load()
@@ -66,7 +66,7 @@ impl<R> MononokeRepos<R> {
 
     /// Returns an iterator over the set of repo-names corresponding
     /// to the repos currently loaded for the service / command.
-    pub fn iter_names(&self) -> impl Iterator<Item = String> {
+    pub fn iter_names(&self) -> impl Iterator<Item = String> + use<R> {
         let result: Vec<_> = self
             .id_to_name_map
             .load()
@@ -78,7 +78,7 @@ impl<R> MononokeRepos<R> {
 
     /// Returns an iterator over the set of repo-ids corresponding
     /// to the repos currently loaded for the service / command.
-    pub fn iter_ids(&self) -> impl Iterator<Item = i32> {
+    pub fn iter_ids(&self) -> impl Iterator<Item = i32> + use<R> {
         let result: Vec<_> = self
             .id_to_name_map
             .load()

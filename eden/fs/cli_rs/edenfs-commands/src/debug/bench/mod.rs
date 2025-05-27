@@ -10,6 +10,6 @@
 pub mod cmd;
 pub mod dbio;
 pub mod fsio;
-pub mod gen;
+pub mod r#gen;
 pub mod traversal;
 pub mod types;

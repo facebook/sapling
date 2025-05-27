@@ -3,9 +3,8 @@
 # This software may be used and distributed according to the terms of the
 # GNU General Public License version 2.
 
-from __future__ import absolute_import
 
-from sapling import edenapi_upload, node as nodemod
+from sapling import edenapi_upload, git, node as nodemod
 from sapling.i18n import _, _n
 
 
@@ -45,8 +44,6 @@ def upload(repo, revs, force=False, localbackupstate=None):
         ui.status(_("nothing to upload\n"), component="commitcloud")
         return heads, []
 
-    edenapi_upload.checkcapable(repo)
-
     # Check with the server what heads have been already uploaded and what heads are missing
     missingheads = (
         maybemissingheads
@@ -79,20 +76,28 @@ def upload(repo, revs, force=False, localbackupstate=None):
             component="commitcloud",
         )
 
-    draftrevs = list(
-        repo.changelog.torevset(repo.dageval(lambda: draft() & ancestors(missingheads)))
-    )
+    if git.isgitformat(repo):
+        # Use `git push` to upload the commits.
+        pairs = [
+            (h, f"refs/commitcloud/upload{i}")
+            for i, h in enumerate(sorted(missingheads))
+        ]
+        ret = git.push(repo, "default", pairs)
+        if ret == 0:
+            newuploaded, failednodes = missingheads, []
+        else:
+            newuploaded, failednodes = [], missingheads
+    else:
+        draftnodes = list(repo.dageval(lambda: draft() & ancestors(missingheads)))
 
-    # If the only draft revs are the missing heads then we can skip the
-    # known checks, as we know they are all missing.
-    skipknowncheck = len(draftrevs) == len(missingheads)
-    newuploaded, failed = edenapi_upload.uploadhgchangesets(
-        repo, draftrevs, force, skipknowncheck
-    )
+        # If the only draft nodes are the missing heads then we can skip the
+        # known checks, as we know they are all missing.
+        skipknowncheck = len(draftnodes) == len(missingheads)
+        newuploaded, failednodes = edenapi_upload.uploadhgchangesets(
+            repo, draftnodes, force, skipknowncheck
+        )
 
-    failednodes = {repo[r].node() for r in failed}
-
-    # Uploaded heads are all heads that have been filtered or uploaded and also heads of the 'newuploaded' revs.
+    # Uploaded heads are all heads that have been filtered or uploaded and also heads of the 'newuploaded' nodes.
 
     # Example (5e4faf031 must be included in uploadedheads):
     #  o  4bb40f883 (failed)
@@ -100,7 +105,7 @@ def upload(repo, revs, force=False, localbackupstate=None):
     #  @  5e4faf031 (uploaded)
 
     uploadedheads = list(
-        repo.nodes("heads(%ld) + %ln - heads(%ln)", newuploaded, heads, failednodes)
+        repo.nodes("heads(%ln) + %ln - heads(%ln)", newuploaded, heads, failednodes)
     )
 
     if localbackupstate:

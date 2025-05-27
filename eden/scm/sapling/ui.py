@@ -10,7 +10,6 @@
 # This software may be used and distributed according to the terms of the
 # GNU General Public License version 2 or any later version.
 
-from __future__ import absolute_import
 
 import collections
 import contextlib
@@ -383,7 +382,7 @@ class ui:
         >>> u.setconfig(s, 'invalid', 'somevalue')
         >>> try: u.configbool(s, 'invalid')
         ... except Exception as e: print(e)
-        foo.invalid is not a boolean ('somevalue')
+        invalid config foo.invalid=somevalue: invalid bool: somevalue
         """
         return self._uiconfig.configbool(section, name, default)
 
@@ -429,7 +428,7 @@ class ui:
         >>> u.setconfig(s, 'invalid', 'somevalue')
         >>> try: u.configint(s, 'invalid')
         ... except Exception as e: print(e)
-        foo.invalid is not a valid integer ('somevalue')
+        invalid config foo.invalid=somevalue: invalid digit found in string
         """
         return self._uiconfig.configint(section, name, default)
 
@@ -451,7 +450,7 @@ class ui:
         >>> u.setconfig(s, 'invalid', 'somevalue')
         >>> try: u.configbytes(s, 'invalid')
         ... except Exception as e: print(e)
-        foo.invalid is not a byte quantity ('somevalue')
+        invalid config foo.invalid=somevalue: invalid float literal
         """
         return self._uiconfig.configbytes(section, name, default)
 
@@ -535,7 +534,7 @@ class ui:
         """
         user = encoding.environ.get("HGUSER")
         if user is None:
-            user = self.config("ui", "username")
+            user = self.config("ui", "username") or self.config("ui", "user")
             if user is not None:
                 user = os.path.expandvars(user)
         if user is None and acceptempty:
@@ -961,7 +960,7 @@ class ui:
 
         This function refers to input only; for output, see `ui.formatted()'.
         """
-        i = self.configbool("ui", "interactive")
+        i = self.configbool("ui", "interactive", None)
         if i is None:
             # some environments replace stdin without implementing isatty
             # usually those are non-interactive
@@ -1006,7 +1005,7 @@ class ui:
         if self.plain():
             return False
 
-        i = self.configbool("ui", "formatted")
+        i = self.configbool("ui", "formatted", None)
         if i is None:
             # some environments replace stdout without implementing isatty
             # usually those are non-interactive

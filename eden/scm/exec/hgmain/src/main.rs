@@ -5,6 +5,8 @@
  * GNU General Public License version 2.
  */
 
+#![allow(unexpected_cfgs)]
+
 use clidispatch::dispatch;
 
 mod buildinfo;
@@ -37,7 +39,8 @@ fn main() {
         // directory in $PATH. This avoids a class of security issues
         // where we might accidentally prefer an executable (such as
         // "watchman") from the working copy.
-        std::env::set_var("NoDefaultCurrentDirectoryInExePath", "1")
+        // TODO: Audit that the environment access only happens in single-threaded code.
+        unsafe { std::env::set_var("NoDefaultCurrentDirectoryInExePath", "1") }
     }
 
     // This code path is used by `open Sapling.app` on macOS.
@@ -172,12 +175,16 @@ pub fn drop_root(user: &str, group: &str) {
     // Set $HOME and $USER for convenience since various things depend on those.
     let home_dir = unsafe { (*libc_user).pw_dir };
     if !home_dir.is_null() {
-        std::env::set_var(
-            "HOME",
-            unsafe { CStr::from_ptr(home_dir) }.to_str().unwrap(),
-        );
+        // TODO: Audit that the environment access only happens in single-threaded code.
+        unsafe {
+            std::env::set_var(
+                "HOME",
+                unsafe { CStr::from_ptr(home_dir) }.to_str().unwrap(),
+            )
+        };
     }
-    std::env::set_var("USER", user);
+    // TODO: Audit that the environment access only happens in single-threaded code.
+    unsafe { std::env::set_var("USER", user) };
 
     eprintln!("switched user/group to {}/{}", user, group);
 }

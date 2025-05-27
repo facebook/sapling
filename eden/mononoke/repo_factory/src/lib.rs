@@ -114,6 +114,7 @@ use filestore::ArcFilestoreConfig;
 use filestore::FilestoreConfig;
 use futures_watchdog::WatchdogExt;
 use git_ref_content_mapping::ArcGitRefContentMapping;
+use git_ref_content_mapping::CachedGitRefContentMapping;
 use git_ref_content_mapping::SqlGitRefContentMappingBuilder;
 use git_source_of_truth::ArcGitSourceOfTruthConfig;
 use git_source_of_truth::SqlGitSourceOfTruthConfigBuilder;
@@ -1122,14 +1123,39 @@ impl RepoFactory {
         &self,
         repo_config: &ArcRepoConfig,
         repo_identity: &ArcRepoIdentity,
+        repo_event_publisher: &ArcRepoEventPublisher,
     ) -> Result<ArcGitRefContentMapping> {
         let git_ref_content_mapping = self
             .open_sql::<SqlGitRefContentMappingBuilder>(repo_config)
             .await
             .context(RepoFactoryError::GitRefContentMapping)?
             .build(repo_identity.id());
-        // TODO(rajshar): Add caching for git_ref_content_mapping
-        Ok(Arc::new(git_ref_content_mapping))
+        let repo_name = repo_identity.name();
+        if justknobs::eval(
+            "scm/mononoke:enable_git_ref_content_mapping_caching",
+            None,
+            Some(repo_name),
+        )
+        .unwrap_or(false)
+        {
+            let logger = self.env.logger.clone();
+            match repo_event_publisher.subscribe_for_content_refs_updates(&repo_name.to_string()) {
+                Ok(update_notification_receiver) => {
+                    let cached_git_ref_content_mapping = CachedGitRefContentMapping::new(
+                        Arc::new(git_ref_content_mapping),
+                        update_notification_receiver,
+                        logger,
+                    )
+                    .await?;
+                    Ok(Arc::new(cached_git_ref_content_mapping))
+                }
+                // The scribe configuration does not exist for content ref updates for this repo, so use the non-cached
+                // version of git_ref_content_mapping
+                Err(_) => Ok(Arc::new(git_ref_content_mapping)),
+            }
+        } else {
+            Ok(Arc::new(git_ref_content_mapping))
+        }
     }
 
     pub async fn git_bundle_uri(
@@ -2021,6 +2047,7 @@ impl RepoFactory {
         &self,
         repo_config: &ArcRepoConfig,
         bonsai_hg_mapping: &ArcBonsaiHgMapping,
+        bonsai_git_mapping: &ArcBonsaiGitMapping,
         repo_derived_data: &ArcRepoDerivedData,
     ) -> Result<ArcCommitCloud> {
         let sql_commit_cloud = self
@@ -2030,6 +2057,7 @@ impl RepoFactory {
         Ok(Arc::new(CommitCloud::new(
             sql_commit_cloud.new(),
             bonsai_hg_mapping.clone(),
+            bonsai_git_mapping.clone(),
             repo_derived_data.clone(),
             self.ctx(None),
             self.env.acl_provider.clone(),

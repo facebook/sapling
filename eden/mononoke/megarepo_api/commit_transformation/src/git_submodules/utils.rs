@@ -161,12 +161,12 @@ pub fn get_x_repo_submodule_metadata_file_path(
 }
 
 // Returns the differences between a submodule commit and its parents.
-pub async fn submodule_diff(
+pub async fn submodule_diff<T: Repo>(
     ctx: &CoreContext,
-    sm_repo: &impl Repo,
+    sm_repo: &T,
     cs_id: ChangesetId,
     parents: Vec<ChangesetId>,
-) -> Result<impl Stream<Item = Result<BonsaiDiffFileChange<(FileType, ContentId, u64)>>>> {
+) -> Result<impl Stream<Item = Result<BonsaiDiffFileChange<(FileType, ContentId, u64)>>> + use<T>> {
     let fsnode_id = sm_repo
         .repo_derived_data()
         .derive::<RootFsnodeId>(ctx, cs_id)
@@ -263,7 +263,7 @@ pub async fn list_non_submodule_files_under<R>(
     repo: &R,
     cs_id: ChangesetId,
     submodule_path: SubmodulePath,
-) -> Result<impl Stream<Item = Result<NonRootMPath>>>
+) -> Result<impl Stream<Item = Result<NonRootMPath>> + use<R>>
 where
     R: RepoDerivedDataRef + RepoBlobstoreArc + RepoIdentityRef,
 {

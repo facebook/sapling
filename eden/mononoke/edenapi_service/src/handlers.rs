@@ -69,13 +69,15 @@ mod blame;
 mod bookmarks;
 mod capabilities;
 mod commit;
-mod commit_cloud;
+pub mod commit_cloud;
 mod files;
 mod git_objects;
-mod handler;
+pub mod handler;
 mod history;
 mod land;
-mod lookup;
+mod legacy;
+pub mod lookup;
+mod path_history;
 mod repos;
 mod suffix_query;
 mod trees;
@@ -99,6 +101,7 @@ pub enum SaplingRemoteApiMethod {
     CloudHistoricalVersions,
     CloudReferences,
     CloudRenameWorkspace,
+    CloudRollbackWorkspace,
     CloudShareWorkspace,
     CloudSmartlog,
     CloudSmartlogByVersion,
@@ -106,7 +109,6 @@ pub enum SaplingRemoteApiMethod {
     CloudUpdateReferences,
     CloudWorkspace,
     CloudWorkspaces,
-    CloudRollbackWorkspace,
     CommitGraphSegments,
     CommitGraphV2,
     CommitHashLookup,
@@ -123,7 +125,9 @@ pub enum SaplingRemoteApiMethod {
     History,
     LandStack,
     Lookup,
+    PathHistory,
     SetBookmark,
+    StreamingClone,
     SuffixQuery,
     Trees,
     UploadBonsaiChangeset,
@@ -145,6 +149,7 @@ impl fmt::Display for SaplingRemoteApiMethod {
             Self::CloudHistoricalVersions => "cloud_historical_versions",
             Self::CloudReferences => "cloud_references",
             Self::CloudRenameWorkspace => "cloud_rename_workspace",
+            Self::CloudRollbackWorkspace => "cloud_rollback_workspace",
             Self::CloudShareWorkspace => "cloud_share_workspace",
             Self::CloudSmartlog => "cloud_smartlog",
             Self::CloudSmartlogByVersion => "cloud_smartlog_by_version",
@@ -152,7 +157,6 @@ impl fmt::Display for SaplingRemoteApiMethod {
             Self::CloudUpdateReferences => "cloud_update_references",
             Self::CloudWorkspace => "cloud_workspace",
             Self::CloudWorkspaces => "cloud_workspaces",
-            Self::CloudRollbackWorkspace => "cloud_rollback_workspace",
             Self::CommitGraphSegments => "commit_graph_segments",
             Self::CommitGraphV2 => "commit_graph_v2",
             Self::CommitHashLookup => "commit_hash_lookup",
@@ -169,7 +173,9 @@ impl fmt::Display for SaplingRemoteApiMethod {
             Self::History => "history",
             Self::LandStack => "land_stack",
             Self::Lookup => "lookup",
+            Self::PathHistory => "path_history",
             Self::SetBookmark => "set_bookmark",
+            Self::StreamingClone => "streaming_clone",
             Self::SuffixQuery => "suffix_query",
             Self::Trees => "trees",
             Self::UploadBonsaiChangeset => "upload_bonsai_changeset",
@@ -209,7 +215,7 @@ struct JsonError {
     request_id: String,
 }
 
-struct JsonErrorFomatter;
+pub struct JsonErrorFomatter;
 
 impl ErrorFormatter for JsonErrorFomatter {
     type Body = Vec<u8>;
@@ -365,7 +371,10 @@ where
     build_response(res, state, &JsonErrorFomatter)
 }
 
-pub fn monitor_request<S, T>(state: &State, stream: S) -> impl Stream<Item = T> + Send + 'static
+pub fn monitor_request<S, T>(
+    state: &State,
+    stream: S,
+) -> impl Stream<Item = T> + Send + 'static + use<S, T>
 where
     S: Stream<Item = T> + Send + 'static,
 {
@@ -504,6 +513,7 @@ pub fn build_router<R: Send + Sync + Clone + 'static>(ctx: ServerContext<R>) -> 
         Handlers::setup::<files::UploadHgFilenodesHandler>(route);
         Handlers::setup::<git_objects::GitObjectsHandler>(route);
         Handlers::setup::<history::HistoryHandler>(route);
+        Handlers::setup::<path_history::PathHistoryHandler>(route);
         Handlers::setup::<land::LandStackHandler>(route);
         Handlers::setup::<lookup::LookupHandler>(route);
         Handlers::setup::<suffix_query::SuffixQueryHandler>(route);

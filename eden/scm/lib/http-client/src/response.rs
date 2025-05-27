@@ -154,7 +154,7 @@ impl TryFrom<&mut Box<dyn HandlerExt>> for Response {
 }
 
 macro_rules! decode {
-    ($decoder:tt, $body_stream:expr) => {{
+    ($decoder:tt, $body_stream:expr_2021) => {{
         let body = $body_stream
             .map_ok(Cursor::new)
             .map_err(|e| futures::io::Error::new(futures::io::ErrorKind::Other, e));

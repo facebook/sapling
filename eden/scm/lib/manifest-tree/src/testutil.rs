@@ -11,11 +11,11 @@ use std::sync::atomic::AtomicU64;
 use std::sync::atomic::Ordering;
 
 use anyhow::Result;
+use blob::Blob;
 use manifest::Manifest;
 use manifest::testutil::*;
 use minibytes::Bytes;
 use parking_lot::RwLock;
-use scm_blob::ScmBlob;
 use storemodel::FileStore;
 use storemodel::InsertOpts;
 use storemodel::KeyStore;
@@ -61,8 +61,11 @@ pub struct TestStore {
 
 #[derive(Default)]
 pub struct TestStoreInner {
-    entries: HashMap<RepoPathBuf, HashMap<HgId, Bytes>>,
+    entries: HashMap<HgId, Bytes>,
+    // Calls to prefetch().
     pub prefetched: Vec<Vec<Key>>,
+    // Calls to get_local_content().
+    fetched: Vec<Key>,
     format: SerializationFormat,
     key_fetch_count: AtomicU64,
     insert_count: AtomicU64,
@@ -79,8 +82,13 @@ impl TestStore {
     }
 
     #[allow(unused)]
-    pub fn fetches(&self) -> Vec<Vec<Key>> {
+    pub fn prefetches(&self) -> Vec<Vec<Key>> {
         self.inner.read().prefetched.clone()
+    }
+
+    #[allow(unused)]
+    pub fn fetches(&self) -> Vec<Key> {
+        self.inner.read().fetched.clone()
     }
 
     pub fn key_fetch_count(&self) -> u64 {
@@ -97,18 +105,16 @@ fn compute_sha1(content: &[u8]) -> HgId {
 }
 
 impl KeyStore for TestStore {
-    fn get_local_content(&self, path: &RepoPath, hgid: HgId) -> anyhow::Result<Option<ScmBlob>> {
+    fn get_local_content(&self, path: &RepoPath, hgid: HgId) -> anyhow::Result<Option<Blob>> {
         let mut inner = self.inner.write();
         inner.key_fetch_count.fetch_add(1, Ordering::Relaxed);
+        inner.fetched.push(Key::new(path.to_owned(), hgid));
         let underlying = &mut inner.entries;
-        let result = underlying
-            .get(path)
-            .and_then(|hgid_hash| hgid_hash.get(&hgid))
-            .cloned();
-        Ok(result.map(ScmBlob::Bytes))
+        let result = underlying.get(&hgid).cloned();
+        Ok(result.map(Blob::Bytes))
     }
 
-    fn insert_data(&self, opts: InsertOpts, path: &RepoPath, data: &[u8]) -> anyhow::Result<HgId> {
+    fn insert_data(&self, opts: InsertOpts, _path: &RepoPath, data: &[u8]) -> anyhow::Result<HgId> {
         let mut inner = self.inner.write();
         inner.insert_count.fetch_add(1, Ordering::Relaxed);
         let underlying = &mut inner.entries;
@@ -116,10 +122,7 @@ impl KeyStore for TestStore {
             Some(id) => *id,
             None => compute_sha1(data),
         };
-        underlying
-            .entry(path.to_owned())
-            .or_insert(HashMap::new())
-            .insert(hgid, Bytes::copy_from_slice(data));
+        underlying.insert(hgid, Bytes::copy_from_slice(data));
         Ok(hgid)
     }
 

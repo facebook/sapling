@@ -13,6 +13,7 @@
 
 #include "eden/fs/inodes/EdenMount.h"
 #include "eden/fs/model/ObjectId.h"
+#include "eden/fs/service/ThriftUtil.h"
 #include "eden/fs/service/gen-cpp2/eden_types.h"
 #include "eden/fs/store/ObjectStore.h"
 #include "eden/fs/utils/EdenError.h"

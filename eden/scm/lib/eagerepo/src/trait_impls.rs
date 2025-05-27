@@ -7,6 +7,7 @@
 
 //! Implement traits from other crates.
 
+use blob::Blob;
 use cas_client::CasClient;
 use cas_client::CasFetchedStats;
 use format_util::commit_text_to_root_tree_id;
@@ -17,7 +18,6 @@ use format_util::strip_file_metadata;
 use futures::StreamExt;
 use futures::stream;
 use futures::stream::BoxStream;
-use scm_blob::ScmBlob;
 use storemodel::BoxIterator;
 use storemodel::FileStore;
 use storemodel::InsertOpts;
@@ -39,14 +39,14 @@ use crate::EagerRepoStore;
 // storemodel traits
 
 impl KeyStore for EagerRepoStore {
-    fn get_local_content(&self, _path: &RepoPath, id: HgId) -> anyhow::Result<Option<ScmBlob>> {
+    fn get_local_content(&self, _path: &RepoPath, id: HgId) -> anyhow::Result<Option<Blob>> {
         match self.get_content(id)? {
             Some(data) => {
                 let data = match self.format {
                     SerializationFormat::Hg => split_hg_file_metadata(&data).0,
                     SerializationFormat::Git => data,
                 };
-                Ok(Some(ScmBlob::Bytes(data)))
+                Ok(Some(Blob::Bytes(data)))
             }
             None => Ok(None),
         }
@@ -183,14 +183,20 @@ impl ReadRootTreeIds for EagerRepoStore {
 #[async_trait::async_trait]
 impl CasClient for EagerRepoStore {
     /// Fetch a single blob from local CAS caches.
-    fn fetch_single_local_direct(
+    fn fetch_single_locally_cached(
         &self,
         digest: &CasDigest,
-    ) -> anyhow::Result<(CasFetchedStats, Option<ScmBlob>)> {
+    ) -> anyhow::Result<(CasFetchedStats, Option<Blob>)> {
         self.get_cas_blob(*digest)
             .map_err(Into::into)
-            .map(|data| (CasFetchedStats::default(), data.map(ScmBlob::Bytes)))
+            .map(|data| (CasFetchedStats::default(), data.map(Blob::Bytes)))
     }
+
+    /// Upload blobs to CAS.
+    async fn upload(&self, _blobs: Vec<Blob>) -> anyhow::Result<Vec<CasDigest>> {
+        unimplemented!("EagerRepoStore does not support uploading blobs to CAS")
+    }
+
     async fn fetch<'a>(
         &'a self,
         _fctx: FetchContext,
@@ -200,7 +206,7 @@ impl CasClient for EagerRepoStore {
         'a,
         anyhow::Result<(
             CasFetchedStats,
-            Vec<(CasDigest, anyhow::Result<Option<ScmBlob>>)>,
+            Vec<(CasDigest, anyhow::Result<Option<Blob>>)>,
         )>,
     > {
         stream::once(async move {
@@ -213,7 +219,7 @@ impl CasClient for EagerRepoStore {
                         *digest,
                         self.get_cas_blob(*digest)
                             .map_err(Into::into)
-                            .map(|data| data.map(ScmBlob::Bytes)),
+                            .map(|data| data.map(Blob::Bytes)),
                     )
                 })
                 .collect()))

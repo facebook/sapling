@@ -32,8 +32,6 @@ Both blobs and trees are lazy:
   $ LOG=gitstore::fetch=trace sl prev -q
   TRACE gitstore::fetch::detail: fetch object hex="b4600ac31e67dcf7d490a149b0e27981a2ee7088"
   DEBUG gitstore::fetch: fetch objects count=1
-  TRACE gitstore::fetch::detail: fetch object hex="b4600ac31e67dcf7d490a149b0e27981a2ee7088"
-  DEBUG gitstore::fetch: fetch objects count=1
   TRACE gitstore::fetch::detail: fetch object hex="d00491fd7e5bb6fa28c517a0bb32b8b506539d4d"
   DEBUG gitstore::fetch: fetch objects count=1
   TRACE gitstore::fetch::detail: fetch object hex="d00491fd7e5bb6fa28c517a0bb32b8b506539d4d"

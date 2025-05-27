@@ -11,7 +11,7 @@ use std::io::Write;
 use anyhow::Result;
 use anyhow::anyhow;
 use anyhow::bail;
-use commit_id::CommitIdsArgs;
+use commit_id_types::CommitIdsArgs;
 use maplit::btreeset;
 use scs_client_raw::thrift;
 use serde::Serialize;

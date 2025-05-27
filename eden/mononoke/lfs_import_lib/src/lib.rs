@@ -34,7 +34,7 @@ use tokio_util::codec::FramedRead;
 fn lfs_stream(
     lfs_helper: &str,
     lfs: &LFSContent,
-) -> Result<(Child, impl Stream<Item = Result<Bytes, Error>>)> {
+) -> Result<(Child, impl Stream<Item = Result<Bytes, Error>> + use<>)> {
     let mut cmd = Command::new(lfs_helper)
         .arg(format!("{}", lfs.oid().to_hex()))
         .arg(format!("{}", lfs.size()))

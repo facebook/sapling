@@ -10,7 +10,6 @@
 # This software may be used and distributed according to the terms of the
 # GNU General Public License version 2 or any later version.
 
-from __future__ import absolute_import
 
 from typing import Dict, Optional, Sized, Union
 
@@ -892,6 +891,41 @@ def showparents(**args) -> _hybrid:
         f,
         prevs,
         lambda x: {"ctx": repo[x], "revcache": {}},
+        lambda x: scmutil.formatchangeid(repo[x]),
+        keytype=int,
+    )
+
+
+@templatekeyword("grandparents")
+def showgrandparents(**args) -> _hybrid:
+    """List of strings. The grandparents of the changeset in "rev:node" format."""
+    repo, ctx, revcache = args["repo"], args["ctx"], args["revcache"]
+    cl = repo.changelog
+
+    gpnodes = revcache.get("gpnodes")
+    if gpnodes is None:
+        subdag = revcache.get("subdag")
+        if subdag is None:
+            raise error.ProgrammingError("no gpnodes or subdag in revcache")
+        node = ctx.node()
+        direct_pnodes = cl.dag.parents([node])
+        indirect_pnodes = subdag.parents([node])
+        gpnodes = indirect_pnodes - direct_pnodes
+    gprevs = cl.torevs(gpnodes)
+    gpctxs = [repo[n] for n in gpnodes]
+    grandparents = [
+        [
+            ("rev", scmutil.revf64encode(gpctx.rev())),
+            ("node", gpctx.hex()),
+            ("phase", gpctx.phasestr()),
+        ]
+        for gpctx in gpctxs
+    ]
+    f = _showlist("grandparent", grandparents, args)
+    return _hybrid(
+        f,
+        gprevs,
+        lambda x: {"ctx": repo[x]},
         lambda x: scmutil.formatchangeid(repo[x]),
         keytype=int,
     )

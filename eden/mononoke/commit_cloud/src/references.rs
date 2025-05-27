@@ -8,10 +8,11 @@
 use std::collections::HashMap;
 use std::sync::Arc;
 
+use bonsai_git_mapping::BonsaiGitMapping;
 use bonsai_hg_mapping::BonsaiHgMapping;
-use bonsai_hg_mapping::BonsaiHgMappingEntry;
 use changeset_info::ChangesetInfo;
 use clientinfo::ClientRequestInfo;
+use cloned::cloned;
 use commit_cloud_types::ReferencesData;
 use commit_cloud_types::UpdateReferencesParams;
 use commit_cloud_types::WorkspaceCheckoutLocation;
@@ -26,7 +27,6 @@ use futures::future;
 use futures::stream;
 use futures::stream::TryStreamExt;
 use history::WorkspaceHistory;
-use mercurial_types::HgChangesetId;
 use repo_derived_data::ArcRepoDerivedData;
 use sql::Transaction;
 use versions::WorkspaceVersion;
@@ -41,6 +41,7 @@ use crate::sql::ops::Get;
 use crate::sql::ops::SqlCommitCloud;
 use crate::sql::ops::Update;
 use crate::sql::versions_ops::UpdateVersionArgs;
+use crate::utils;
 
 pub mod heads;
 pub mod history;
@@ -88,8 +89,10 @@ pub(crate) async fn cast_references_data(
     latest_version: u64,
     version_timestamp: i64,
     bonsai_hg_mapping: Arc<dyn BonsaiHgMapping>,
+    bonsai_git_mapping: Arc<dyn BonsaiGitMapping>,
     repo_derived_data: ArcRepoDerivedData,
     core_ctx: &CoreContext,
+    cc_ctx: &CommitCloudContext,
 ) -> Result<ReferencesData, anyhow::Error> {
     let mut bookmarks: HashMap<String, CloudChangesetId> = HashMap::new();
     let remote_bookmarks: Vec<WorkspaceRemoteBookmark> = raw_references_data.remote_bookmarks;
@@ -97,35 +100,40 @@ pub(crate) async fn cast_references_data(
 
     // Start the pipeline with batches of 1000 heads.
     let chunks_iter = raw_references_data.heads.chunks(1000).map(|chunk| {
-        let chunk_heads: Vec<HgChangesetId> = chunk.iter().map(|head| head.commit.into()).collect();
+        let chunk_heads: Vec<CloudChangesetId> = chunk.iter().map(|head| head.commit).collect();
         Ok::<_, anyhow::Error>(chunk_heads)
     });
 
     let repo_derived_data = &repo_derived_data;
-    let bonsai_hg_mapping = &bonsai_hg_mapping;
 
-    let heads_dates: HashMap<HgChangesetId, i64> = stream::iter(chunks_iter)
-        // map [HgChangesetId] to [(HgChangesetId, BonsaiChangesetId)]
-        .and_then(|heads| async move {
-            Ok(stream::iter(
-                bonsai_hg_mapping
-                    .get(core_ctx, heads.into())
+    let heads_dates: HashMap<CloudChangesetId, i64> = stream::iter(chunks_iter)
+        // map [CloudChangesetId] to [(CloudChangesetId, BonsaiChangesetId)]
+        .and_then(|heads| {
+            cloned!(bonsai_hg_mapping, bonsai_git_mapping);
+            async move {
+                Ok(stream::iter(
+                    utils::get_bonsai_from_cloud_ids(
+                        core_ctx,
+                        cc_ctx,
+                        bonsai_hg_mapping,
+                        bonsai_git_mapping,
+                        heads,
+                    )
                     .await?
                     .into_iter()
                     .map(Ok::<_, anyhow::Error>),
-            ))
+                ))
+            }
         })
         // do up to 10 hg->bonsai mappings concurrently, flattening out results
         .try_flatten_unordered(10)
-        // map (HgChangesetId, BonsaiChangesetId) to (HgChangesetId, unix_timestamp)
-        .and_then(|BonsaiHgMappingEntry { hg_cs_id, bcs_id }| async move {
+        // map (CloudChangesetId, BonsaiChangesetId) to (CloudChangesetId, unix_timestamp)
+        .and_then(|(cid, bcs_id)| async move {
             repo_derived_data
                 .derive::<ChangesetInfo>(core_ctx, bcs_id)
                 .await
                 .map_err(Into::into)
-                .map(|cs_info| {
-                    future::ok((hg_cs_id, cs_info.author_date().as_chrono().timestamp()))
-                })
+                .map(|cs_info| future::ok((cid, cs_info.author_date().as_chrono().timestamp())))
         })
         // do up to 100 derived data fetches concurrently
         .try_buffer_unordered(100)

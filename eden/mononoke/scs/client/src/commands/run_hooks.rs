@@ -9,7 +9,7 @@ use std::collections::BTreeMap;
 use std::io::Write;
 
 use anyhow::Result;
-use commit_id::CommitIdArgs;
+use commit_id_types::CommitIdArgs;
 use scs_client_raw::thrift;
 use serde::Serialize;
 

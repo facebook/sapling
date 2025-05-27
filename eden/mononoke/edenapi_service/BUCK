@@ -13,6 +13,7 @@ rust_library(
     }),
     test_deps = [
         "//common/rust/shed/fbinit:fbinit-tokio",
+        "//configerator/structs/scm/mononoke/ratelimiting:rate_limiting_config-rust",
         "//eden/mononoke/mononoke_macros:mononoke_macros",
     ],
     deps = ([

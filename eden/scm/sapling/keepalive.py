@@ -87,8 +87,6 @@ EXTRA ATTRIBUTES AND METHODS
 
 # $Id: keepalive.py,v 1.14 2006/04/04 21:00:32 mstenner Exp $
 
-from __future__ import absolute_import, print_function
-
 import email
 import errno
 import hashlib

@@ -13,10 +13,10 @@ use anyhow::Result;
 use async_trait::async_trait;
 use clap::Parser;
 use edenfs_client::daemon_info::DaemonHealthy;
-use edenfs_client::instance::EdenFsInstance;
 use edenfs_utils::humantime::HumanTime;
 
 use crate::ExitCode;
+use crate::get_edenfs_instance;
 
 #[derive(Parser, Debug)]
 #[clap(about = "Determine uptime of running edenfs daemon")]
@@ -25,7 +25,7 @@ pub struct UptimeCmd {}
 #[async_trait]
 impl crate::Subcommand for UptimeCmd {
     async fn run(&self) -> Result<ExitCode> {
-        let instance = EdenFsInstance::global();
+        let instance = get_edenfs_instance();
         let client = instance.get_client();
         let health = client.get_health(None).await;
 

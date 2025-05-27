@@ -252,7 +252,7 @@ impl BlobstoreKeySource for Fileblob {
         range: &'a BlobstoreKeyParam,
     ) -> Result<BlobstoreEnumerationData> {
         match range {
-            BlobstoreKeyParam::Start(ref range) => {
+            BlobstoreKeyParam::Start(range) => {
                 let mut enum_data = BlobstoreEnumerationData {
                     keys: HashSet::new(),
                     next_token: None,

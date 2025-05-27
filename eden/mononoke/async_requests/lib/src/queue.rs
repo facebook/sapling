@@ -496,9 +496,9 @@ mod tests {
         {
             $fn_name: ident,
             $request_struct: ident,
-            $thrift_params: expr,
+            $thrift_params: expr_2021,
             $result: ident,
-            $request_type: expr,
+            $request_type: expr_2021,
         } => {
             #[mononoke::fbinit_test]
             async fn $fn_name(fb: FacebookInit) -> Result<(), Error> {

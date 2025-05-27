@@ -12,7 +12,7 @@ use std::ops::Range;
 
 use cpython::*;
 use cpython_ext::ResultPyErrExt;
-use regex::Regex;
+pub use regex::Regex;
 use regex::bytes::Regex as BinaryRegex;
 
 pub fn init_module(py: Python, package: &str) -> PyResult<PyModule> {
@@ -41,7 +41,7 @@ fn escape(_py: Python, s: &str) -> PyResult<String> {
     Ok(regex::escape(s))
 }
 
-py_class!(class StringPattern |py| {
+py_class!(pub class StringPattern |py| {
     data re: Regex;
     data match_re: Regex;
     data raw_pattern: String;
@@ -49,11 +49,7 @@ py_class!(class StringPattern |py| {
     @staticmethod
     def compile(s: &str) -> PyResult<Self> {
         let re = Regex::new(s).map_pyerr(py)?;
-        // match_re is used for the Python "match" API, which aligns the start, but not the end.
-        // (Rust regex does not have such equivalent).
-        let match_re = Regex::new(&format!(r"\A{}", s)).map_pyerr(py)?;
-        let raw_pattern = s.to_string();
-        Self::create_instance(py, re, match_re, raw_pattern)
+        Self::from_native(py, re)
     }
 
     def search(&self, s: PyString) -> PyResult<Option<StringMatchObject>> {
@@ -68,6 +64,17 @@ py_class!(class StringPattern |py| {
         Ok(format!("<StringPattern {:?}>", self.raw_pattern(py)))
     }
 });
+
+impl StringPattern {
+    pub fn from_native(py: Python, re: Regex) -> PyResult<Self> {
+        let raw_pattern = re.as_str();
+        // match_re is used for the Python "match" API, which aligns the start, but not the end.
+        // (Rust regex does not have such equivalent).
+        let match_re = Regex::new(&format!(r"\A{}", raw_pattern)).map_pyerr(py)?;
+        let raw_pattern = raw_pattern.to_owned();
+        Self::create_instance(py, re, match_re, raw_pattern)
+    }
+}
 
 py_class!(class StringMatchObject |py| {
     data ranges: Vec<Option<Range<usize>>>;

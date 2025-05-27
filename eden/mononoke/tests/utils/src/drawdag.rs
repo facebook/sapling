@@ -696,7 +696,7 @@ pub async fn create_from_dag<R: Repo>(
 /// ```
 #[macro_export]
 macro_rules! __drawdag_changes {
-    ( $( $key:expr => | $c:ident | $body:expr ),* $( , )? ) => {
+    ( $( $key:expr_2021 => | $c:ident | $body:expr_2021 ),* $( , )? ) => {
         {
             let mut changes: std::collections::BTreeMap<String, Box<$crate::drawdag::ChangeFn<_>>> =
                 std::collections::BTreeMap::new();
@@ -706,7 +706,7 @@ macro_rules! __drawdag_changes {
             changes
         }
     };
-    ( $( $key:expr => | $c:ident, $d: ident | $body:expr ),* $( , )? ) => {
+    ( $( $key:expr_2021 => | $c:ident, $d: ident | $body:expr_2021 ),* $( , )? ) => {
         {
             let mut changes: std::collections::BTreeMap<String, Box<$crate::drawdag::ChangeFn<_>>> =
                 std::collections::BTreeMap::new();

@@ -66,13 +66,6 @@ mononoke_fbpkg(
 )
 
 mononoke_fbpkg(
-    name = "mononoke.megarepotool",
-    path_actions = {
-        "megarepotool": "//eden/mononoke/commit_rewriting/megarepo:megarepotool",
-    },
-)
-
-mononoke_fbpkg(
     name = "mononoke.microwave",
     compress_type = None,
     path_actions = {

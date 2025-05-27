@@ -14,6 +14,7 @@ use edenfs_client::redirect::Redirection;
 use edenfs_client::redirect::RedirectionState;
 use edenfs_client::redirect::RedirectionType;
 use edenfs_client::redirect::get_effective_redirs_for_mount;
+use edenfs_client::use_case::UseCaseId;
 
 #[cxx::bridge]
 mod ffi {
@@ -81,13 +82,30 @@ pub fn list_redirections(
     config_dir: String,
     etc_eden_dir: String,
 ) -> Result<Vec<ffi::RedirectionFFI>, anyhow::Error> {
-    let instance = EdenFsInstance::new(config_dir.into(), etc_eden_dir.into(), None);
-    let redirs = get_effective_redirs_for_mount(&instance, mount.into())?;
-    let redirs_ffi = redirs
-        .values()
-        .map(ffi::RedirectionFFI::try_from)
-        .collect::<Result<Vec<_>>>()?;
-    Ok(redirs_ffi)
+    // EdenFsInstance depends on having an initialized tokio runtime, but the
+    // FFI layer does not guarantee this. As such, we create one here to
+    // create and invoke methods on EdenFsInstnace.
+    use tokio::runtime;
+    let rt = runtime::Builder::new_current_thread()
+        .enable_all()
+        .build()?;
+    // Execute code from within the new runtime
+    let handle = rt.spawn_blocking(|| {
+        let instance = EdenFsInstance::new(
+            UseCaseId::RedirectFfi,
+            config_dir.into(),
+            etc_eden_dir.into(),
+            None,
+        );
+        let redirs = get_effective_redirs_for_mount(&instance, mount.into())?;
+        let redirs_ffi = redirs
+            .values()
+            .map(ffi::RedirectionFFI::try_from)
+            .collect::<Result<Vec<_>>>()?;
+        Ok(redirs_ffi)
+    });
+    // Block on future until it completes
+    rt.block_on(handle)?
 }
 
 // ============================================================================

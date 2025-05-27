@@ -67,11 +67,11 @@ impl Value {
 
         match self {
             Value::Bool(_) => unreachable!(),
-            Value::Str(ref mut s) => {
+            Value::Str(s) => {
                 *s = Some(token.to_string());
                 Ok(())
             }
-            Value::Int(ref mut i) => {
+            Value::Int(i) => {
                 *i = Some(
                     token
                         .parse::<i64>()
@@ -83,7 +83,7 @@ impl Value {
                 );
                 Ok(())
             }
-            Value::List(ref mut vec) => {
+            Value::List(vec) => {
                 vec.push(token.to_string());
                 Ok(())
             }
@@ -586,7 +586,7 @@ impl Parser {
             let name = self.parsing_options.flags[known_flag_id].long_name.as_ref();
             specified_opts.insert(name.to_string());
             match opts.get_mut(name) {
-                Some(Value::Bool(ref mut b)) => *b = Some(positive_flag),
+                Some(Value::Bool(b)) => *b = Some(positive_flag),
                 Some(ref mut value) => {
                     let next = parts.next().or_else(|| iter.next().map(|(_i, arg)| arg));
                     value
@@ -604,7 +604,7 @@ impl Parser {
             let name = self.parsing_options.flags[known_flag_id].long_name.as_ref();
             specified_opts.insert(name.to_string());
             match opts.get_mut(name) {
-                Some(Value::Bool(ref mut b)) => *b = Some(!positive_flag),
+                Some(Value::Bool(b)) => *b = Some(!positive_flag),
                 Some(ref mut value) => {
                     let next = parts.next().or_else(|| iter.next().map(|(_i, arg)| arg));
                     value
@@ -642,7 +642,7 @@ impl Parser {
             let name = matched_flag.long_name.as_ref();
             specified_opts.insert(name.to_string());
             match opts.get_mut(name) {
-                Some(Value::Bool(ref mut b)) => *b = Some(positive_flag),
+                Some(Value::Bool(b)) => *b = Some(positive_flag),
                 Some(ref mut value) => {
                     let next = parts.next().or_else(|| iter.next().map(|(_i, arg)| arg));
                     value
@@ -672,7 +672,7 @@ impl Parser {
                     .to_string();
                 specified_opts.insert(flag_name.clone());
                 match opts.get_mut(&flag_name) {
-                    Some(Value::Bool(ref mut b)) => *b = Some(true),
+                    Some(Value::Bool(b)) => *b = Some(true),
                     Some(ref mut value) => {
                         if char_iter.peek().is_none() {
                             let next = iter.next().map(|(_i, arg)| arg);

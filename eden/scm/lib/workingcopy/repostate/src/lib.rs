@@ -11,4 +11,5 @@ mod merge_state;
 pub use merge_state::ConflictState;
 pub use merge_state::MergeDriverState;
 pub use merge_state::MergeState;
+pub use merge_state::SubtreeMerge;
 pub use merge_state::UnsupportedMergeRecords;

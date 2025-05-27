@@ -17,6 +17,7 @@ use futures::stream::BoxStream;
 
 use crate::client::Client;
 use crate::client::EdenFsClient;
+use crate::methods::EdenThriftMethod;
 use crate::types::JournalPosition;
 use crate::utils::get_mount_point;
 
@@ -27,10 +28,15 @@ impl EdenFsClient {
     ) -> Result<JournalPosition> {
         let mount_point_path = get_mount_point(mount_point)?;
         let mount_point = bytes_from_path(mount_point_path)?;
-        self.with_thrift(|thrift| thrift.getCurrentJournalPosition(&mount_point))
-            .await
-            .map(|p| p.into())
-            .from_err()
+        self.with_thrift(|thrift| {
+            (
+                thrift.getCurrentJournalPosition(&mount_point),
+                EdenThriftMethod::GetCurrentJournalPosition,
+            )
+        })
+        .await
+        .map(|p| p.into())
+        .from_err()
     }
 
     pub async fn stream_journal_changed(
@@ -39,7 +45,12 @@ impl EdenFsClient {
     ) -> Result<BoxStream<'static, Result<JournalPosition>>> {
         let mount_point_vec = bytes_from_path(get_mount_point(mount_point)?)?;
         Ok(self
-            .with_thrift(|thrift| thrift.streamJournalChanged(&mount_point_vec))
+            .with_thrift(|thrift| {
+                (
+                    thrift.streamJournalChanged(&mount_point_vec),
+                    EdenThriftMethod::StreamJournalChanged,
+                )
+            })
             .await
             .from_err()?
             .map(|item| match item {

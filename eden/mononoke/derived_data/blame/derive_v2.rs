@@ -184,6 +184,8 @@ async fn create_blame_v2(
     )
     .await?;
 
+    let blame_parents = blame_parents.into_iter().flatten().collect();
+
     let blame = match content {
         FetchOutcome::Rejected(rejected) => BlameV2::rejected(rejected),
         FetchOutcome::Fetched(content) => BlameV2::new(csid, path, content, blame_parents)?,
@@ -203,6 +205,8 @@ enum BlameParentSource {
     ReplacementParent(ChangesetId),
 }
 
+/// Fetch a blame parent.  Result may be None in the case of a subtree
+/// copy/merge where the specific file was actually added.
 async fn fetch_blame_parent(
     ctx: &CoreContext,
     derivation_ctx: &DerivationContext,
@@ -210,7 +214,7 @@ async fn fetch_blame_parent(
     parent_info: BlameParentSource,
     path: NonRootMPath,
     filesize_limit: u64,
-) -> Result<BlameParent<Bytes>, Error> {
+) -> Result<Option<BlameParent<Bytes>>, Error> {
     let (parent, unode_id) = match parent_info {
         BlameParentSource::ChangesetParent {
             parent_index,
@@ -220,13 +224,18 @@ async fn fetch_blame_parent(
             let root = derivation_ctx
                 .fetch_dependency::<RootUnodeManifestId>(ctx, csid)
                 .await?;
-            let unode_id = root
+            let entry = root
                 .manifest_unode_id()
                 .find_entry(ctx.clone(), blobstore.clone(), path.clone().into())
-                .await?
-                .ok_or_else(|| anyhow!("Missing entry for {}", path))?
-                .into_leaf()
-                .ok_or_else(|| anyhow!("Entry for {} is not a leaf", path))?;
+                .await?;
+            let leaf = match entry {
+                Some(entry) => entry.into_leaf(),
+                None => return Ok(None),
+            };
+            let unode_id = match leaf {
+                Some(leaf) => leaf,
+                None => return Ok(None),
+            };
             (BlameParentId::ReplacementParent(csid), unode_id)
         }
     };
@@ -237,10 +246,10 @@ async fn fetch_blame_parent(
     )
     .await?;
 
-    Ok(BlameParent::new(
+    Ok(Some(BlameParent::new(
         parent,
         path,
         content.into_bytes().ok(),
         blame,
-    ))
+    )))
 }

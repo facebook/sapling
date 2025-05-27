@@ -302,6 +302,7 @@ logcolumns = (
 
 defaulttempl = {
     "parent": "{node|formatnode} ",
+    "grandparent": "{node|formatnode} ",
     "manifest": "{node|formatnode}",
     "file_copy": "{name} ({source})",
     "envvar": "{key}={value}",

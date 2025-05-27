@@ -7,6 +7,7 @@
 
 #include "eden/fs/model/Tree.h"
 #include <folly/io/IOBuf.h>
+#include "eden/fs/model/TreeAuxData.h"
 
 namespace facebook::eden {
 
@@ -24,10 +25,16 @@ size_t Tree::getSizeBytes() const {
   for (auto& entry : entries_) {
     indirect_size += estimateIndirectMemoryUsage(entry.first.value());
   }
-  return internal_size + indirect_size;
+
+  size_t auxDataSize = 0;
+  if (auxData_) {
+    auxDataSize = sizeof(uint64_t) +
+        (auxData_->digestHash.has_value() ? Hash32::RAW_SIZE : 0);
+  }
+  return internal_size + indirect_size + auxDataSize;
 }
 
-IOBuf Tree::serialize() const {
+IOBuf Tree::serialize_v1() const {
   size_t serialized_size = sizeof(uint32_t) + sizeof(uint32_t);
   for (auto& entry : entries_) {
     serialized_size += entry.second.serializedSize(entry.first);
@@ -43,6 +50,44 @@ IOBuf Tree::serialize() const {
   for (auto& entry : entries_) {
     entry.second.serialize(entry.first, appender);
   }
+
+  return buf;
+}
+
+IOBuf Tree::serialize() const {
+  size_t serialized_size = sizeof(uint32_t) + sizeof(uint32_t);
+  for (auto& entry : entries_) {
+    serialized_size += entry.second.serializedSize(entry.first);
+  }
+
+  if (auxData_) {
+    // digestSize + (maybe) digestHash
+    serialized_size += sizeof(uint64_t);
+    if (auxData_->digestHash.has_value()) {
+      serialized_size += Hash32::RAW_SIZE;
+    }
+  }
+
+  IOBuf buf(IOBuf::CREATE, serialized_size);
+  Appender appender(&buf, 0);
+
+  XCHECK_LE(entries_.size(), std::numeric_limits<uint32_t>::max());
+  uint32_t numberOfEntries = static_cast<uint32_t>(entries_.size());
+
+  appender.write<uint32_t>(V2_VERSION);
+  appender.write<uint32_t>(numberOfEntries);
+  for (auto& entry : entries_) {
+    entry.second.serialize(entry.first, appender);
+  }
+
+  if (auxData_) {
+    // Serialize the digestSize so we can save a few bytes
+    // if there is no digestHash.
+    appender.write<uint64_t>(auxData_->digestSize);
+    if (auxData_->digestHash.has_value()) {
+      appender.push(auxData_->digestHash.value().getBytes());
+    }
+  }
   return buf;
 }
 
@@ -54,7 +99,8 @@ TreePtr Tree::tryDeserialize(ObjectId hash, folly::StringPiece data) {
   uint32_t version;
   memcpy(&version, data.data(), sizeof(uint32_t));
   data.advance(sizeof(uint32_t));
-  if (version != V1_VERSION) {
+  if (version != V1_VERSION && version != V2_VERSION) {
+    XLOG(WARN) << "Git tree version? " << version;
     return nullptr;
   }
 
@@ -76,13 +122,64 @@ TreePtr Tree::tryDeserialize(ObjectId hash, folly::StringPiece data) {
     entries.emplace(entry->first, std::move(entry->second));
   }
 
-  if (!data.empty()) {
-    XLOG(ERR) << "Corrupted tree data, extra bytes remaining " << data.size();
+  if (version == V1_VERSION && !data.empty()) {
+    XLOGF(
+        ERR,
+        "Corrupted version {} tree data, extra {} bytes remaining",
+        version,
+        data.size());
     return nullptr;
   }
 
+  // backwards compatibility for V1 Tree version
+  if (version == V1_VERSION || data.empty()) {
+    return std::make_shared<TreePtr::element_type>(std::move(entries), hash);
+  }
+
+  // V2 Tree version
+  if (data.size() < (sizeof(uint64_t))) {
+    XLOGF(
+        ERR, "Corrupted version 2 tree data, {} bytes remaining", data.size());
+    return nullptr;
+  }
+
+  // deserialize the tree aux data
+  uint64_t digestSize;
+  memcpy(&digestSize, data.data(), sizeof(uint64_t));
+  data.advance(sizeof(uint64_t));
+
+  std::optional<Hash32> digestHash;
+
+  if (data.empty()) {
+    digestHash = std::nullopt;
+  } else {
+    if (data.size() < Hash32::RAW_SIZE) {
+      XLOGF(
+          ERR,
+          "Corrupted version 2 tree data, {} bytes remaining",
+          data.size());
+      return nullptr;
+    }
+
+    Hash32::Storage digest_hash_bytes;
+    memcpy(&digest_hash_bytes, data.data(), Hash32::RAW_SIZE);
+    data.advance(Hash32::RAW_SIZE);
+    if (!data.empty()) {
+      XLOGF(
+          ERR,
+          "Corrupted version 2 tree data, {} bytes remaining",
+          data.size());
+      return nullptr;
+    }
+    digestHash.emplace(digest_hash_bytes);
+  }
+
+  // All good for V2 Tree version, append the aux data
   return std::make_shared<TreePtr::element_type>(
-      std::move(entries), std::move(hash));
+      std::move(hash),
+      std::move(entries),
+      std::make_shared<TreeAuxDataPtr::element_type>(
+          std::move(digestHash), digestSize));
 }
 
 } // namespace facebook::eden

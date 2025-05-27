@@ -13,7 +13,7 @@ use clap::Parser;
 
 use super::dbio;
 use super::fsio;
-use super::gen;
+use super::r#gen;
 use super::traversal;
 use super::types;
 use crate::ExitCode;
@@ -21,7 +21,7 @@ use crate::ExitCode;
 #[derive(Parser, Debug)]
 #[clap(about = "Run benchmarks for EdenFS and OS-native file systems on Linux, macOS, and Windows")]
 pub enum BenchCmd {
-    #[clap(about = "Run filesystem I/O benchmarks")]
+    #[clap(about = "Run filesystem/thrift I/O benchmarks")]
     FsIo {
         /// Directory to use for testing
         #[clap(long, default_value_t = std::env::temp_dir().to_str().unwrap().to_string())]
@@ -34,6 +34,19 @@ pub enum BenchCmd {
         /// Size of each chunk in bytes
         #[clap(long, default_value_t = types::DEFAULT_CHUNK_SIZE)]
         chunk_size: usize,
+
+        /// Read file content through file system or via thrift.
+        #[clap(long, value_enum, default_value_t = types::ReadFileMethod::Fs)]
+        read_file_via: types::ReadFileMethod,
+
+        /// Whether to drop memory caches after writes.
+        /// Only supported on linux and needs root privilege to run.
+        #[clap(long)]
+        drop_kernel_caches: bool,
+
+        /// Disable progress bars in benchmarks
+        #[clap(long)]
+        no_progress: bool,
     },
 
     #[clap(about = "Run database I/O benchmarks")]
@@ -49,13 +62,29 @@ pub enum BenchCmd {
         /// Size of each chunk in bytes
         #[clap(long, default_value_t = types::DEFAULT_CHUNK_SIZE)]
         chunk_size: usize,
+
+        /// Disable progress bars in benchmarks
+        #[clap(long)]
+        no_progress: bool,
     },
 
-    #[clap(about = "Run filesystem traversal benchmark")]
-    FsTraversal {
+    #[clap(about = "Run traversal benchmark")]
+    Traversal {
         /// Directory to traverse
         #[clap(long)]
         dir: String,
+
+        /// Read file content through file system or via thrift during the traversal.
+        #[clap(long, value_enum, default_value_t = types::ReadFileMethod::Fs, help="read via fs or thrift")]
+        read_file_via: types::ReadFileMethod,
+
+        /// Whether to follow symbolic links during traversal
+        #[clap(long, default_value_t = false)]
+        follow_symlinks: bool,
+
+        /// Disable progress bars in benchmarks
+        #[clap(long)]
+        no_progress: bool,
     },
 }
 
@@ -67,19 +96,48 @@ impl crate::Subcommand for BenchCmd {
                 test_dir,
                 number_of_files,
                 chunk_size,
-            } => match gen::TestDir::validate(test_dir) {
+                read_file_via,
+                drop_kernel_caches,
+                no_progress: _,
+            } => match r#gen::TestDir::validate(
+                test_dir,
+                *read_file_via == types::ReadFileMethod::Thrift,
+            ) {
                 Ok(test_dir) => {
-                    let random_data = gen::RandomData::new(*number_of_files, *chunk_size);
+                    let random_data = r#gen::RandomData::new(*number_of_files, *chunk_size);
                     println!(
                         "The random data generated with {} chunks with {:.0} KiB each, with the total size of {:.2} GiB.",
                         random_data.number_of_files,
                         random_data.chunk_size as f64 / types::BYTES_IN_KILOBYTE as f64,
                         random_data.total_size() as f64 / types::BYTES_IN_GIGABYTE as f64
                     );
-                    println!("{}", fsio::bench_write_mfmd(&test_dir, &random_data)?);
-                    println!("{}", fsio::bench_read_mfmd(&test_dir, &random_data)?);
-                    println!("{}", fsio::bench_write_sfmd(&test_dir, &random_data)?);
-                    println!("{}", fsio::bench_read_sfmd(&test_dir, &random_data)?);
+                    println!(
+                        "{}",
+                        fsio::bench_write_mfmd(&test_dir, &random_data, *drop_kernel_caches)?
+                    );
+                    match read_file_via {
+                        types::ReadFileMethod::Fs => {
+                            println!("{}", fsio::bench_fs_read_mfmd(&test_dir, &random_data)?);
+                        }
+                        types::ReadFileMethod::Thrift => {
+                            println!(
+                                "{}",
+                                fsio::bench_thrift_read_mfmd(&test_dir, &random_data).await?
+                            );
+                        }
+                    }
+                    println!(
+                        "{}",
+                        fsio::bench_write_sfmd(&test_dir, &random_data, *drop_kernel_caches)?
+                    );
+                    match read_file_via {
+                        types::ReadFileMethod::Fs => {
+                            println!("{}", fsio::bench_fs_read_sfmd(&test_dir, &random_data)?);
+                        }
+                        types::ReadFileMethod::Thrift => {
+                            println!("{}", fsio::bench_thrift_read_sfmd(&test_dir).await?);
+                        }
+                    }
                     test_dir.remove()?;
                 }
                 Err(e) => return Err(e),
@@ -88,9 +146,10 @@ impl crate::Subcommand for BenchCmd {
                 test_dir,
                 number_of_files,
                 chunk_size,
-            } => match gen::TestDir::validate(test_dir) {
+                no_progress: _,
+            } => match r#gen::TestDir::validate(test_dir, false) {
                 Ok(test_dir) => {
-                    let random_data = gen::RandomData::new(*number_of_files, *chunk_size);
+                    let random_data = r#gen::RandomData::new(*number_of_files, *chunk_size);
                     println!(
                         "The random data generated with {} chunks with {:.0} KiB each, with the total size of {:.2} GiB.",
                         random_data.number_of_files,
@@ -116,12 +175,39 @@ impl crate::Subcommand for BenchCmd {
                 }
                 Err(e) => return Err(e),
             },
-            Self::FsTraversal { dir } => {
+            Self::Traversal {
+                dir,
+                read_file_via,
+                follow_symlinks,
+                no_progress,
+            } => {
                 println!(
                     "Running filesystem traversal benchmark on directory: {}",
                     dir
                 );
-                println!("{}", traversal::bench_fs_traversal(dir)?);
+                match read_file_via {
+                    types::ReadFileMethod::Fs => {
+                        println!(
+                            "{}",
+                            traversal::bench_traversal_fs_read(
+                                dir,
+                                *follow_symlinks,
+                                *no_progress
+                            )?
+                        );
+                    }
+                    types::ReadFileMethod::Thrift => {
+                        println!(
+                            "{}",
+                            traversal::bench_traversal_thrift_read(
+                                dir,
+                                *follow_symlinks,
+                                *no_progress
+                            )
+                            .await?
+                        );
+                    }
+                }
             }
         }
 

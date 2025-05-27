@@ -9,6 +9,7 @@
 //!
 //! Trait outlining the interface for generating value out of json scuba data.
 
+use repo_update_logger::GitContentRefInfo;
 use repo_update_logger::PlainBookmarkInfo;
 
 /// Trait outlining the interface for generating value out of json scuba data
@@ -37,6 +38,23 @@ impl FromScubaJson for PlainBookmarkInfo {
             repo_name,
             operation,
             update_reason,
+        })
+    }
+}
+
+impl FromScubaJson for GitContentRefInfo {
+    type Output = Self;
+
+    fn from_scuba_json(json: serde_json::Value) -> anyhow::Result<Self> {
+        let repo_name = get_normal(&json, "repo_name")?;
+        let ref_name = get_normal(&json, "ref_name")?;
+        let git_hash = get_normal(&json, "git_hash")?;
+        let object_type = get_normal(&json, "object_type")?;
+        Ok(Self {
+            repo_name,
+            ref_name,
+            git_hash,
+            object_type,
         })
     }
 }

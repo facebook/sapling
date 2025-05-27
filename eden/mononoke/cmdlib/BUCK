@@ -125,28 +125,6 @@ rust_library(
 )
 
 rust_library(
-    name = "cmdlib_x_repo",
-    srcs = glob(["x_repo/src/**/*.rs"]),
-    autocargo = {"cargo_toml_dir": "x_repo"},
-    deps = [
-        "fbsource//third-party/rust:anyhow",
-        "fbsource//third-party/rust:futures-util",
-        ":cmdlib",
-        "//common/rust/shed/facet:facet",
-        "//eden/mononoke/blobstore:blobstore_factory",
-        "//eden/mononoke/commit_rewriting/cross_repo_sync:cross_repo_sync",
-        "//eden/mononoke/commit_rewriting/live_commit_sync_config:live_commit_sync_config",
-        "//eden/mononoke/commit_rewriting/synced_commit_mapping:synced_commit_mapping",
-        "//eden/mononoke/common/sql_construct:sql_construct",
-        "//eden/mononoke/megarepo_api:pushredirect",
-        "//eden/mononoke/mononoke_types:mononoke_types",
-        "//eden/mononoke/repo_attributes/sql_query_config:sql_query_config",
-        "//eden/mononoke/repo_factory:repo_factory",
-        "//eden/mononoke/server/context:context",
-    ],
-)
-
-rust_library(
     name = "cmdlib_cross_repo",
     srcs = glob(["cross_repo/src/**/*.rs"]),
     autocargo = {"cargo_toml_dir": "cross_repo"},

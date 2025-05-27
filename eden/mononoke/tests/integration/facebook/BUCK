@@ -51,7 +51,6 @@ buck_sh_binary(
 
 dott_test(
     name = "derived-data-service",
-    disable_all_network_access_target = False,
     dott_files = glob(["test-derived-data-service*.t"]),
     deps = [
         "//eden/mononoke:mononoke",
@@ -69,7 +68,6 @@ dott_test(
 
 dott_test(
     name = "derived-data-tailer",
-    disable_all_network_access_target = False,
     dott_files = glob(["test-derived-data-tailer*.t"]),
     deps = [
         "//eden/mononoke/tools/admin:admin",
@@ -80,7 +78,6 @@ dott_test(
 
 dott_test(
     name = "test-bookmark-service",
-    disable_all_network_access_target = False,
     dott_files = glob(["test-bookmark-service*.t"]),
     deps = [
         "//eden/mononoke/facebook/bookmark_service:bookmark_service_client_cli",
@@ -91,7 +88,6 @@ dott_test(
 
 dott_test(
     name = "test-server-and-bookmark-service",
-    disable_all_network_access_target = False,
     dott_files = glob(["test-server-and-bookmark-service-*.t"]),
     deps = [
         "//eden/mononoke:mononoke",
@@ -103,7 +99,6 @@ dott_test(
 
 dott_test(
     name = "gitbundle",
-    disable_all_network_access_target = False,
     dott_files =
         glob([
             "test-gitbundle*.t",
@@ -122,7 +117,6 @@ dott_test(
 
 dott_test(
     name = "verify-integrity",
-    disable_all_network_access_target = False,
     dott_files = [
         "test-hook-verify-integrity.t",
     ],
@@ -158,6 +152,8 @@ dott_test(
 
 dott_test(
     name = "lfs-server",
+    # These tests have been vetted to run well without network access. Please investigate any failure thoroughly before disabling.
+    disable_all_network_access_target = True,
     dott_files = glob(["test-lfs-server*.t"]),
     deps = [
         "//eden/mononoke:blobimport",
@@ -167,7 +163,6 @@ dott_test(
 
 dott_test(
     name = "server-needs-network",
-    disable_all_network_access_target = False,
     dott_files = [
         # Purposely not disabling network as this tests reverse dns lookups
         "test-metadata-fb-host.t",
@@ -183,6 +178,7 @@ dott_test(
 
 dott_test(
     name = "server",
+    disable_all_network_access_target = True,
     dott_files = glob(
         [
             "test-metadata*.t",
@@ -220,7 +216,6 @@ dott_test(
 
 dott_test(
     name = "scs",
-    disable_all_network_access_target = False,
     dott_files = glob(
         ["test-scs*.t"],
         exclude = [
@@ -244,7 +239,6 @@ dott_test(
 
 dott_test(
     name = "scs-git",
-    disable_all_network_access_target = False,
     dott_files = glob(["test-scs-git*.t"]),
     deps = [
         "//eden/mononoke:mononoke",
@@ -258,7 +252,6 @@ dott_test(
 
 dott_test(
     name = "scs-land-service",
-    disable_all_network_access_target = False,
     dott_files = glob(["test-scs-land-service*.t"]),
     deps = [
         "//eden/mononoke:mononoke",
@@ -273,7 +266,6 @@ dott_test(
 
 dott_test(
     name = "land_service",
-    disable_all_network_access_target = False,
     dott_files = glob(["test-land-service*.t"]),
     deps = [
         "//eden/mononoke:backfill_mapping",
@@ -287,7 +279,6 @@ dott_test(
 
 dott_test(
     name = "snapshot",
-    disable_all_network_access_target = False,
     dott_files = glob(["test-snapshot*.t"]),
     deps = [
         "//eden/mononoke:mononoke",
@@ -306,7 +297,6 @@ dott_test(
     deps = [
         "//eden/mononoke:bonsai_verify",
         "//eden/mononoke:mononoke",
-        "//eden/mononoke/commit_rewriting/megarepo:megarepotool",
         "//eden/mononoke/facebook/slow_bookmark_mover:slow_bookmark_mover",
         "//eden/mononoke/tools/admin:admin",
         "//eden/mononoke/tools/testtool:testtool",
@@ -315,7 +305,6 @@ dott_test(
 
 dott_test(
     name = "remote-gitimport",
-    disable_all_network_access_target = False,
     dott_files = glob(["test-remote-gitimport*.t"]),
     deps = [
         "//eden/mononoke:mononoke",
@@ -331,7 +320,6 @@ dott_test(
 
 dott_test(
     name = "cross-repo-and-scs",
-    disable_all_network_access_target = False,
     dott_files = glob([
         "test-cross-repo-and-scs-*.t",
     ]),
@@ -339,7 +327,6 @@ dott_test(
         "//eden/mononoke:mononoke",
         "//eden/mononoke/commit_rewriting/backsyncer:backsyncer_cmd",
         "//eden/mononoke/commit_rewriting/commit_validator:commit_validator",
-        "//eden/mononoke/commit_rewriting/megarepo:megarepotool",
         "//eden/mononoke/commit_rewriting/mononoke_x_repo_sync_job:mononoke_x_repo_sync_job",
         "//eden/mononoke/git/gitimport:gitimport",
         "//eden/mononoke/git_server:git_server",
@@ -352,7 +339,6 @@ dott_test(
 
 dott_test(
     name = "admin",
-    disable_all_network_access_target = False,
     dott_files = glob(["test-admin-*.t"]),
     deps = [
         "//eden/mononoke:mononoke",
@@ -364,7 +350,6 @@ dott_test(
 
 dott_test(
     name = "backfill-bonsai-blob-mapping",
-    disable_all_network_access_target = False,
     dott_files = glob(["test-backfill-bonsai-blob-mapping-*.t"]),
     deps = [
         "//eden/mononoke:mononoke",
@@ -376,7 +361,6 @@ dott_test(
 
 dott_test(
     name = "repo_metadata_logger",
-    disable_all_network_access_target = False,
     dott_files = glob(["test-repo-metadata-logger-*.t"]),
     deps = [
         "//eden/mononoke/tools/facebook/repo_metadata_logger:repo_metadata_logger",

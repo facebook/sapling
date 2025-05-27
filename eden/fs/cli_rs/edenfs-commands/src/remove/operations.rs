@@ -10,7 +10,7 @@ use std::path::PathBuf;
 use anyhow::Context;
 use anyhow::Result;
 use anyhow::anyhow;
-use edenfs_client::instance::EdenFsInstance;
+use edenfs_utils::is_active_eden_mount;
 use fail::fail_point;
 use tracing::debug;
 use tracing::warn;
@@ -18,6 +18,7 @@ use tracing::warn;
 use super::types::PathType;
 use super::types::RemoveContext;
 use super::utils;
+use crate::get_edenfs_instance;
 
 // Validate and canonicalize the given path into absolute path with the type of PathBuf.
 // Then determine a type for this path.
@@ -47,7 +48,7 @@ pub async fn classify_path(path: &str) -> Result<(PathBuf, PathType)> {
 
             debug!("{} is determined as a directory", path.display());
 
-            if utils::is_active_eden_mount(path) {
+            if is_active_eden_mount(path) {
                 debug!(
                     "path {} is determined to be an active EdenFS mount",
                     path.display()
@@ -81,11 +82,11 @@ pub async fn remove_active_eden_mount(context: &RemoveContext) -> Result<()> {
         .io
         .info(format!("Unmounting repo at {} ...", context.original_path));
 
-    let instance = EdenFsInstance::global();
+    let instance = get_edenfs_instance();
     let client = instance.get_client();
 
     match client
-        .unmount(&context.canonical_path, context.no_force)
+        .unmount(instance, &context.canonical_path, context.no_force)
         .await
     {
         Ok(_) => {

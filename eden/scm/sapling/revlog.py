@@ -16,8 +16,6 @@ This provides efficient delta storage with O(1) retrieve and append
 and O(changes) merge between branches.
 """
 
-from __future__ import absolute_import
-
 import errno
 import hashlib
 import heapq
@@ -177,82 +175,6 @@ def _trimchunk(revlog, revs, startidx, endidx=None):
     return revs[startidx:endidx]
 
 
-def _slicechunk(revlog, revs):
-    """slice revs to reduce the amount of unrelated data to be read from disk.
-
-    ``revs`` is sliced into groups that should be read in one time.
-    Assume that revs are sorted.
-    """
-    start = revlog.start
-    length = revlog.length
-
-    if len(revs) <= 1:
-        yield revs
-        return
-
-    startbyte = start(revs[0])
-    endbyte = start(revs[-1]) + length(revs[-1])
-    readdata = deltachainspan = endbyte - startbyte
-
-    chainpayload = sum(length(r) for r in revs)
-
-    if deltachainspan:
-        density = chainpayload / float(deltachainspan)
-    else:
-        density = 1.0
-
-    # Store the gaps in a heap to have them sorted by decreasing size
-    gapsheap = []
-    heapq.heapify(gapsheap)
-    prev_end = None
-    for i, rev in enumerate(revs):
-        revstart = start(rev)
-        revlen = length(rev)
-
-        # Skip empty revisions to form larger holes
-        if revlen == 0:
-            continue
-
-        if prev_end is not None:
-            gapsize = revstart - prev_end
-            # only consider holes that are large enough
-            if gapsize > revlog._srmingapsize:
-                heapq.heappush(gapsheap, (-gapsize, i))
-
-        prev_end = revstart + revlen
-
-    # Collect the indices of the largest holes until the density is acceptable
-    indicesheap = []
-    heapq.heapify(indicesheap)
-    while gapsheap and density < revlog._srdensitythreshold:
-        oppgapsize, gapidx = heapq.heappop(gapsheap)
-
-        heapq.heappush(indicesheap, gapidx)
-
-        # the gap sizes are stored as negatives to be sorted decreasingly
-        # by the heap
-        readdata -= -oppgapsize
-        if readdata > 0:
-            density = chainpayload / float(readdata)
-        else:
-            density = 1.0
-
-    # Cut the revs at collected indices
-    previdx = 0
-    while indicesheap:
-        idx = heapq.heappop(indicesheap)
-
-        chunk = _trimchunk(revlog, revs, previdx, idx)
-        if chunk:
-            yield chunk
-
-        previdx = idx
-
-    chunk = _trimchunk(revlog, revs, previdx)
-    if chunk:
-        yield chunk
-
-
 # index ng:
 #  6 bytes: offset
 #  2 bytes: flags
@@ -362,9 +284,6 @@ class revlog:
         self._nodepos = None
         self._compengine = "zlib"
         self._maxdeltachainspan = -1
-        self._withsparseread = False
-        self._srdensitythreshold = 0.25
-        self._srmingapsize = 262144
 
         mmapindexthreshold = None
         v = REVLOG_DEFAULT_VERSION
@@ -386,11 +305,6 @@ class revlog:
                 self._compengine = opts["compengine"]
             if mmaplargeindex and "mmapindexthreshold" in opts:
                 mmapindexthreshold = opts["mmapindexthreshold"]
-            self._withsparseread = bool(opts.get("with-sparse-read", False))
-            if "sparse-read-density-threshold" in opts:
-                self._srdensitythreshold = opts["sparse-read-density-threshold"]
-            if "sparse-read-min-gap-size" in opts:
-                self._srmingapsize = opts["sparse-read-min-gap-size"]
 
         if self._chunkcachesize <= 0:
             raise RevlogError(
@@ -887,10 +801,7 @@ class revlog:
         l = []
         ladd = l.append
 
-        if not self._withsparseread:
-            slicedchunks = (revs,)
-        else:
-            slicedchunks = _slicechunk(self, revs)
+        slicedchunks = (revs,)
 
         for revschunk in slicedchunks:
             firstrev = revschunk[0]

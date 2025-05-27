@@ -14,6 +14,8 @@
 #include <optional>
 #include <string_view>
 
+#include "eden/common/utils/PathFuncs.h"
+#include "eden/fs/model/RootId.h"
 #include "eden/fs/store/ObjectFetchContext.h"
 #include "eden/scm/lib/backingstore/src/ffi.rs.h"
 
@@ -31,9 +33,15 @@ namespace sapling {
  */
 using NodeId = folly::ByteRange;
 using FetchCause = facebook::eden::ObjectFetchContext::Cause;
+using RepoPath = facebook::eden::RelativePathPiece;
+using RootId = facebook::eden::RootId;
 
 struct SaplingRequest {
+  // These two fields are typically borrowed from a
+  // SaplingImportRequest - be cognizant of lifetimes.
   NodeId node;
+  RepoPath path;
+
   FetchCause cause;
   // TODO: sapling::FetchMode mode;
   // TODO: sapling::ClientRequestInfo cri;
@@ -64,9 +72,7 @@ using ManifestId = std::array<uint8_t, 20>;
  */
 class SaplingNativeBackingStore {
  public:
-  SaplingNativeBackingStore(
-      std::string_view repository,
-      const SaplingNativeBackingStoreOptions& options);
+  explicit SaplingNativeBackingStore(std::string_view repository);
 
   std::string_view getRepoName() const {
     return repoName_;
@@ -78,6 +84,8 @@ class SaplingNativeBackingStore {
 
   folly::Try<std::shared_ptr<Tree>> getTree(
       NodeId node,
+      RepoPath path,
+      FetchCause cause,
       sapling::FetchMode fetch_mode);
 
   void getTreeBatch(
@@ -98,6 +106,8 @@ class SaplingNativeBackingStore {
 
   folly::Try<std::unique_ptr<folly::IOBuf>> getBlob(
       NodeId node,
+      RepoPath path,
+      FetchCause cause,
       sapling::FetchMode fetchMode);
 
   void getBlobBatch(
@@ -120,6 +130,8 @@ class SaplingNativeBackingStore {
       std::string_view commit_id,
       const std::vector<std::string>& suffixes,
       const std::vector<std::string>& prefixes);
+
+  void workingCopyParentHint(const RootId& parent);
 
   void flush();
 

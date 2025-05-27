@@ -25,7 +25,7 @@ cpp_unittest(
         "//remote_execution/cas/client:stubs-manager",
         "//remote_execution/cas/client:stubs-resolver",
         "//remote_execution/cas/daemon:cas-daemon-lib",
-        "//remote_execution/cas/daemon:test-cas-daemon-builder",
+        "//remote_execution/cas/daemon/tests:test-cas-daemon-builder",
         "//remote_execution/lib/cpp:cas_daemon_client_builder",
         "//remote_execution/lib/cpp:icounters",
         "//remote_execution/lib/cpp:noop-monitoring",

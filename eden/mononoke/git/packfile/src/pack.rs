@@ -18,6 +18,7 @@ use gix_pack::data::header;
 use gix_pack::data::output::Entry;
 use rustc_hash::FxBuildHasher;
 use rustc_hash::FxHashMap;
+use sha1_checked::Digest;
 use thiserror::Error;
 use tokio::io::AsyncWrite;
 use tokio::io::AsyncWriteExt;
@@ -162,14 +163,14 @@ impl<T: AsyncWrite + Unpin> PackfileWriter<T> {
     /// hash of the generated file.
     pub async fn finish(&mut self) -> Result<ObjectId> {
         // Get the hash of all the content written so far
-        let digest = self.hash_writer.hasher.clone().digest();
+        let digest = self.hash_writer.hasher.clone().finalize();
         // Append the hash to the end of the packfile as a checksum
         self.hash_writer.inner.write_all(&digest[..]).await?;
         self.size += digest.len() as u64;
         self.hash_writer.inner.flush().await?;
         // Update the hash for the writer indicating that we have finished writing
-        self.hash = Some(ObjectId::from(digest));
-        Ok(ObjectId::from(digest))
+        self.hash = Some(ObjectId::from_bytes_or_panic(digest.as_slice()));
+        Ok(ObjectId::from_bytes_or_panic(digest.as_slice()))
     }
 
     /// Consumes the instance after writing the packfile and returns

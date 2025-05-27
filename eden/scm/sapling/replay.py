@@ -5,7 +5,6 @@
 
 # replay.py - types and utils for unbundle replays.
 
-from __future__ import absolute_import
 
 from . import json
 

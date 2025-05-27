@@ -9,6 +9,7 @@
 import argparse
 import json
 import os
+import sys
 
 import tempfile
 import time
@@ -24,10 +25,10 @@ from eden.test_support.temporary_directory import TemporaryDirectoryMixin
 from ..main import HealthReportCmd
 
 # The version "20241030-165642" is the latest version.
-# The version "20240928-144752" is over 30 days old, which is considered stale.
-# The version "20241010-189752" is less than 30 days old, which is considered acceptable.
+# The version "20240910-144752" is over 45 days old, which is considered stale.
+# The version "20241010-189752" is less than 45 days old, which is considered acceptable.
 LATEST_VERSION_STR = "20241030-165642"
-STALE_VERSION_STR = "20240928-144752"
+STALE_VERSION_STR = "20240910-144752"
 ACCEPTABLE_VERSION_STR = "20241010-189752"
 
 
@@ -72,6 +73,8 @@ acceptable_running_version_info = VersionInfo(
     True,  # is eden running
     True,  # is dev version
 )
+
+windows_only: bool = sys.platform == "win32"
 
 
 class HealthReportTest(unittest.TestCase, TemporaryDirectoryMixin):
@@ -240,6 +243,7 @@ class HealthReportTest(unittest.TestCase, TemporaryDirectoryMixin):
 
         self.assertEqual(result, 1)
 
+    @unittest.skipUnless(windows_only, "Test only runs on Windows")
     @patch("eden.fs.cli.config.EdenInstance.get_mount_paths")
     @patch("eden.fs.cli.util.get_chef_log_path")
     @patch("eden.fs.cli.doctor.facebook.check_x509.find_x509_path")
@@ -278,11 +282,56 @@ class HealthReportTest(unittest.TestCase, TemporaryDirectoryMixin):
         self.assertEqual(
             HealthReportCmd.error_codes,
             {
-                HealthReportCmd.ErrorCode.STALE_EDEN_VERSION: "Running EdenFS version: 20240928-144752, installed EdenFS version: 20241030-165642. The running EdenFS daemon is over 30 days out-of-date."
+                HealthReportCmd.ErrorCode.STALE_EDEN_VERSION: "Running EdenFS version: 20240910-144752, installed EdenFS version: 20241030-165642. The running EdenFS daemon is over 45 days out-of-date."
             },
         )
         self.assertEqual(result, 1)
 
+    @unittest.skipUnless(windows_only, "Test only runs on Windows")
+    @patch("eden.fs.cli.config.EdenInstance.get_mount_paths")
+    @patch("eden.fs.cli.config.EdenInstance.get_config_int")
+    @patch("eden.fs.cli.util.get_chef_log_path")
+    @patch("eden.fs.cli.doctor.facebook.check_x509.find_x509_path")
+    @patch("eden.fs.cli.doctor.facebook.check_x509.validate_x509")
+    @patch("eden.fs.cli.config.EdenInstance.get_running_version")
+    @patch("eden.fs.cli.version.get_version_info")
+    @patch("eden.fs.cli.util.HealthStatus.is_starting")
+    @patch("eden.fs.cli.util.HealthStatus.is_healthy")
+    def test_health_report_stale_version_check_disabled(
+        self,
+        mock_is_healthy: MagicMock,
+        mock_is_starting: MagicMock,
+        mock_get_version_info: MagicMock,
+        mock_get_running_version: MagicMock,
+        mock_validate_x509: MagicMock,
+        mock_find_x509_path: MagicMock,
+        mock_get_chef_log_path: MagicMock,
+        mock_get_config_int: MagicMock,
+        mock_get_mount_paths: MagicMock,
+    ) -> None:
+        mock_argument_parser, args, file_path = self.setup()
+        mock_get_mount_paths.return_value = [
+            "/data/users/vinigupta/configerator_test",
+            "/data/users/vinigupta/fbsource_test",
+            "/data/users/vinigupta/opsfiles_test",
+        ]
+        mock_get_chef_log_path.return_value = file_path
+        mock_get_running_version.return_value = stale_version
+        mock_get_version_info.return_value = stale_running_version_info
+        mock_is_starting.return_value = False
+        mock_is_healthy.return_value = True
+        mock_find_x509_path.return_value = ("some_cert_path",)
+        mock_validate_x509.return_value = True
+        mock_get_config_int.return_value = 0
+
+        test_health_report_cmd = HealthReportCmd(mock_argument_parser)
+        test_health_report_cmd.run(args)
+        self.assertNotIn(
+            HealthReportCmd.ErrorCode.STALE_EDEN_VERSION,
+            HealthReportCmd.error_codes,
+        )
+
+    @unittest.skipUnless(windows_only, "Test only runs on Windows")
     @patch("eden.fs.cli.config.EdenInstance.get_mount_paths")
     @patch("eden.fs.cli.util.get_chef_log_path")
     @patch("eden.fs.cli.doctor.facebook.check_x509.find_x509_path")

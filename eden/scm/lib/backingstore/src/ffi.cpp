@@ -56,13 +56,16 @@ void sapling_backingstore_get_blob_batch_handler(
   using ResolveResult = folly::Try<std::unique_ptr<folly::IOBuf>>;
 
   resolver->resolve(
-      index, folly::makeTryWith([&] {
-        if (error.empty()) {
-          return ResolveResult{std::move(blob)};
-        } else {
-          return ResolveResult{SaplingFetchError{std::string(error)}};
-        }
-      }));
+      index,
+      folly::makeTryWith(
+          [blob = std::move(blob), error = std::move(error)]() mutable {
+            if (error.empty()) {
+              return ResolveResult{std::move(blob)};
+            } else {
+              return ResolveResult{
+                  SaplingFetchError{std::string(std::move(error))}};
+            }
+          }));
 }
 
 void sapling_backingstore_get_file_aux_batch_handler(
