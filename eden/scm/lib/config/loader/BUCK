@@ -75,6 +75,7 @@ rust_library(
         "fbsource//third-party/rust:faccess",
         "fbsource//third-party/rust:filetime",
         "fbsource//third-party/rust:hostname",
+        "fbsource//third-party/rust:parking_lot",
         "fbsource//third-party/rust:regex",
         "fbsource//third-party/rust:serde",
         "fbsource//third-party/rust:serde_json",
