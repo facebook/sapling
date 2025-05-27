@@ -18,6 +18,7 @@ eden/mononoke/mononoke_types/serialization/deleted_manifest.thrift crate //eden/
 eden/mononoke/mononoke_types/serialization/fastlog.thrift crate //eden/mononoke/mononoke_types/serialization:mononoke_types_serialization-rust
 eden/mononoke/mononoke_types/serialization/fsnodes.thrift crate //eden/mononoke/mononoke_types/serialization:mononoke_types_serialization-rust
 eden/mononoke/mononoke_types/serialization/id.thrift crate //eden/mononoke/mononoke_types/serialization:mononoke_types_serialization-rust
+eden/mononoke/mononoke_types/serialization/inferred_copy_from.thrift crate //eden/mononoke/mononoke_types/serialization:mononoke_types_serialization-rust
 eden/mononoke/mononoke_types/serialization/path.thrift crate //eden/mononoke/mononoke_types/serialization:mononoke_types_serialization-rust
 eden/mononoke/mononoke_types/serialization/raw_bundle2.thrift crate //eden/mononoke/mononoke_types/serialization:mononoke_types_serialization-rust
 eden/mononoke/mononoke_types/serialization/redaction.thrift crate //eden/mononoke/mononoke_types/serialization:mononoke_types_serialization-rust
@@ -53,6 +54,7 @@ fn main() {
             "../fastlog.thrift",
             "../fsnodes.thrift",
             "../id.thrift",
+            "../inferred_copy_from.thrift",
             "../path.thrift",
             "../raw_bundle2.thrift",
             "../redaction.thrift",

@@ -77,6 +77,8 @@ typedef Id FileUnodeId
 @rust.NewType
 typedef Id FsnodeId
 @rust.NewType
+typedef Id InferredCopyFromId
+@rust.NewType
 typedef Id MPathHash
 @rust.NewType
 typedef Id ManifestUnodeId
