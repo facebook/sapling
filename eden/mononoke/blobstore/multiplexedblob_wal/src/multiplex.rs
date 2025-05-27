@@ -445,7 +445,7 @@ impl WalMultiplexedBlobstore {
         ctx: &'a CoreContext,
         key: &'a str,
         scuba: &Scuba,
-    ) -> Result<Option<BlobstoreGetData>> {
+    ) -> Result<Option<(BlobstoreId, BlobstoreGetData)>> {
         ctx.perf_counters()
             .increment_counter(PerfCounterType::BlobGets);
 
@@ -466,7 +466,7 @@ impl WalMultiplexedBlobstore {
             while let Some((bs_id, result)) = get_futs.next().await {
                 match result {
                     Ok(Some(get_data)) => {
-                        return Ok(Some(get_data));
+                        return Ok(Some((bs_id, get_data)));
                     }
                     Ok(None) => {
                         quorum = quorum.saturating_sub(1);
@@ -504,7 +504,7 @@ impl WalMultiplexedBlobstore {
         });
 
         match result {
-            Ok(Some(ref data)) => {
+            Ok(Some((_bs_id, ref data))) => {
                 ctx.perf_counters()
                     .set_max_counter(PerfCounterType::BlobGetsMaxSize, data.len() as i64);
                 ctx.perf_counters()
@@ -624,7 +624,7 @@ impl Blobstore for WalMultiplexedBlobstore {
             stats,
             &result,
         );
-        result
+        Ok(result?.map(|(_, data)| data))
     }
 
     async fn is_present<'a>(
