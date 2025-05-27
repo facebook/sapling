@@ -93,7 +93,7 @@ pub struct FetchOptions {
     to do so. Fetching files in advance helps warm caches and leads to faster \
     file operations. This command is primarily for use in automation."
 )]
-pub enum PrefetchCmd {
+pub enum PrefetchProfileCmd {
     #[clap(about = "Stop recording fetched file paths and save previously \
         collected fetched file paths in the output prefetch profile")]
     Finish {
@@ -196,7 +196,7 @@ pub enum PrefetchCmd {
     },
 }
 
-impl PrefetchCmd {
+impl PrefetchProfileCmd {
     async fn finish(&self, output_path: &PathBuf) -> Result<ExitCode> {
         let instance = get_edenfs_instance();
         let client = instance.get_client();
@@ -574,7 +574,7 @@ impl PrefetchCmd {
 }
 
 #[async_trait]
-impl Subcommand for PrefetchCmd {
+impl Subcommand for PrefetchProfileCmd {
     async fn run(&self) -> Result<ExitCode> {
         match self {
             Self::Finish { output_path } => self.finish(output_path).await,

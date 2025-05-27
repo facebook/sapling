@@ -137,7 +137,7 @@ pub enum TopLevelSubcommand {
     Notify(crate::notify::NotifyCmd),
     Pid(crate::pid::PidCmd),
     #[clap(subcommand, alias = "pp")]
-    PrefetchProfile(crate::prefetch_profile::PrefetchCmd),
+    PrefetchProfile(crate::prefetch_profile::PrefetchProfileCmd),
     #[clap(subcommand, alias = "redir")]
     Redirect(crate::redirect::RedirectCmd),
     #[clap(alias = "rm")]
