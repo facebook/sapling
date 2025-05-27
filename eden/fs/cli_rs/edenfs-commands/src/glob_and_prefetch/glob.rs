@@ -7,7 +7,6 @@
 
 //! edenfsctl glob
 
-use std::path::Path;
 use std::path::PathBuf;
 
 use anyhow::Context;
@@ -16,6 +15,7 @@ use async_trait::async_trait;
 use clap::Parser;
 use edenfs_client::glob_files::Glob;
 use edenfs_client::glob_files::dtype_to_str;
+use edenfs_client::utils::get_mount_point;
 use edenfs_client::utils::locate_repo_root;
 use edenfs_utils::path_from_bytes;
 
@@ -94,36 +94,41 @@ impl crate::Subcommand for GlobCmd {
         let instance = get_edenfs_instance();
         let client = instance.get_client();
 
-        // Get cwd mount_point if not provided.
-        let current_dir: PathBuf;
-        let mount_point = match &self.common.mount_point {
-            Some(ref mount_point) => mount_point,
-            None => {
-                current_dir = std::env::current_dir()
-                    .context("Unable to retrieve current working directory")?;
-                &current_dir
+        // Use absolute mount_point if provided (i.e. no search_root) else use
+        // cwd as mount_point and compute search_root.
+        let mount_point = get_mount_point(&self.common.mount_point)?;
+        let mut search_root = PathBuf::new();
+
+        // If mount_point is based on cwd - compute search_root
+        if self.common.mount_point.is_none() {
+            let cwd = std::env::current_dir()
+                .with_context(|| "Unable to retrieve current working directory")?;
+            search_root = cwd.strip_prefix(&mount_point)?.to_path_buf();
+        } else {
+            // validate absolute mount_point is point to root
+            let repo_root =
+                locate_repo_root(&mount_point).with_context(|| "Unable to locate repo root")?;
+            if mount_point != repo_root {
+                eprintln!(
+                    "{} is not the root of an EdenFS repo",
+                    mount_point.display()
+                );
+                return Ok(1);
             }
-        };
-
-        // Get mount_point as just repo root
-        let repo_root = locate_repo_root(mount_point);
-
-        // Get relative root (search root)
-        let repo_root = repo_root.unwrap_or_else(|| Path::new(""));
-        let search_root = mount_point.strip_prefix(repo_root)?;
+        }
 
         // Load patterns
         let patterns = self.common.load_patterns()?;
 
         let glob = client
             .glob_files(
-                repo_root,
+                &mount_point,
                 patterns,
                 self.common.include_dot_files,
                 false,
                 false,
                 self.dtype,
-                search_root,
+                &search_root,
                 false,
                 self.common.list_only_files,
             )
