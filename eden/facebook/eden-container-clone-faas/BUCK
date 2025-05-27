@@ -1,0 +1,24 @@
+load("//fbpkg:fbpkg.bzl", "fbpkg")
+load(
+    "//serverless/faas/container/rust:buck.bzl",
+    "faas_rust_binary",
+)
+
+oncall("source_control")
+
+faas_rust_binary(
+    name = "eden-container-clone-faas",
+    srcs = ["main.rs"],
+    thrift_service_name = "EdenContainerCloneExample",
+    thrift_src = "api.thrift",
+    deps = [
+        "//eden/scm/lib/shell:shell",
+        "//thrift/lib/rust:fbthrift",
+    ],
+)
+
+fbpkg.builder(
+    name = "eden-container-clone-faas-pkg",
+    expire_days = 14,
+    path_actions = {"server": ":eden-container-clone-faas"},
+)
