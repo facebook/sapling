@@ -17,7 +17,11 @@ use anyhow::Context;
 use anyhow::Result;
 use async_trait::async_trait;
 use clap::Parser;
+use edenfs_client::client;
+use edenfs_client::glob_files::Glob;
+use edenfs_client::glob_files::dtype_to_str;
 use edenfs_client::utils::locate_repo_root;
+use edenfs_utils::path_from_bytes;
 use hg_util::path::expand_path;
 
 use crate::ExitCode;
@@ -105,10 +109,52 @@ pub struct GlobCmd {
     revision: Option<Vec<String>>,
 }
 
+impl GlobCmd {
+    fn print_result(&self, result: &Glob) -> Result<()> {
+        if self.json {
+            println!(
+                "{}\n",
+                serde_json::to_string(&result)
+                    .with_context(|| "Failed to serialize result to JSON.")?
+            );
+        } else {
+            if result.matching_files.len() != result.origin_hashes.len()
+                || (self.dtype && result.matching_files.len() != result.dtypes.len())
+            {
+                println!("Error globbing files: mismatched results")
+            }
+
+            for i in 0..result.matching_files.len() {
+                print!(
+                    "{:?}",
+                    path_from_bytes(result.matching_files[i].as_ref())?
+                        .to_string_lossy()
+                        .to_string()
+                );
+                if self.list_origin_hash {
+                    print!("@{}", hex::encode(&result.origin_hashes[i]));
+                }
+                if self.dtype {
+                    print!(" {}", dtype_to_str(&result.dtypes[i]));
+                }
+                println!();
+            }
+
+            if self.verbose {
+                println!("Num matching files: {}", result.matching_files.len());
+                println!("Num dtypes: {}", result.dtypes.len());
+                println!("Num origin hashes: {}", result.origin_hashes.len());
+            }
+        }
+        Ok(())
+    }
+}
+
 #[async_trait]
 impl crate::Subcommand for GlobCmd {
     async fn run(&self) -> Result<ExitCode> {
-        let _instance = get_edenfs_instance();
+        let instance = get_edenfs_instance();
+        let client = instance.get_client();
 
         // Get cwd mount_point if not provided.
         let current_dir: PathBuf;
@@ -125,17 +171,28 @@ impl crate::Subcommand for GlobCmd {
         let repo_root = locate_repo_root(mount_point);
 
         // Get relative root (search root)
-        let prefix = repo_root.unwrap_or_else(|| Path::new(""));
-        let search_root = mount_point.strip_prefix(prefix);
+        let repo_root = repo_root.unwrap_or_else(|| Path::new(""));
+        let search_root = mount_point.strip_prefix(repo_root)?;
 
         // Load patterns
-        let patterns = self.common.load_patterns();
+        let patterns = self.common.load_patterns()?;
 
-        // TEMP: debugging code
-        println!(
-            "mount_point = {:?}\nrepo_root = {:?}\nprefix = {:?}\nsearch_root = {:?}\npatterns = {:?}",
-            mount_point, repo_root, prefix, search_root, patterns
-        );
+        let glob = client
+            .glob_files(
+                repo_root,
+                patterns,
+                self.common.include_dot_files,
+                false,
+                false,
+                self.dtype,
+                search_root,
+                false,
+                self.common.list_only_files,
+            )
+            .await?;
+
+        self.print_result(&glob)?;
+
         Ok(0)
     }
 }
