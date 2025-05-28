@@ -166,4 +166,14 @@ fn normalize(s: &str) -> String {
 }
 
 static THREAD_LOCK: Lazy<Mutex<()>> = Lazy::new(Default::default);
-static IDENTIFIER_RE: Lazy<Regex> = Lazy::new(|| Regex::new("Identifier\\([^)]*\\)").unwrap());
+static IDENTIFIER_RE: Lazy<Regex> = Lazy::new(|| {
+    // tracing_core::callsite::Identifier is Debug-printed using "Identifier({:p})"
+    // on a dyn Callsite.
+    //
+    // On Rust older than 1.87, it prints as:
+    //   Identifier(0x503000001960)
+    //
+    // and on 1.87+ as:
+    //   Identifier(Pointer { addr: 0x503000001960, metadata: DynMetadata(0x55aa5a3b14c8) })
+    Regex::new(r#"Identifier\((0x[0-9a-f]+|Pointer \{ addr: 0x[0-9a-f]+, metadata: DynMetadata\(0x[0-9a-f]+\) \})\)"#).unwrap()
+});
