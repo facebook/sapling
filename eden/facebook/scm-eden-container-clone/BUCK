@@ -10,6 +10,7 @@ rust_binary(
         "fbsource//third-party/rust:anyhow",
         "fbsource//third-party/rust:chrono",
         "fbsource//third-party/rust:clap",
+        "fbsource//third-party/rust:dirs",
         "fbsource//third-party/rust:serde",
         "fbsource//third-party/rust:serde_json",
         "fbsource//third-party/rust:tokio",
