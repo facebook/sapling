@@ -86,7 +86,7 @@ pub fn diff(base: &[u8], data: &[u8]) -> io::Result<Vec<u8>> {
     unsafe {
         let cctx = ZSTD_createCCtx();
         if cctx.is_null() {
-            return Err(io::Error::new(io::ErrorKind::Other, "cannot create CCtx"));
+            return Err(io::Error::other("cannot create CCtx"));
         }
 
         let max_outsize = ZSTD_compressBound(data.len());
@@ -107,7 +107,7 @@ pub fn diff(base: &[u8], data: &[u8]) -> io::Result<Vec<u8>> {
 
         if ZSTD_isError(outsize) != 0 {
             let msg = format!("cannot compress ({})", explain_error(outsize));
-            Err(io::Error::new(io::ErrorKind::Other, msg))
+            Err(io::Error::other(msg))
         } else {
             buf.set_len(outsize);
             Ok(buf)
@@ -120,7 +120,7 @@ pub fn apply(base: &[u8], delta: &[u8]) -> io::Result<Vec<u8>> {
     unsafe {
         let dctx = ZSTD_createDCtx();
         if dctx.is_null() {
-            return Err(io::Error::new(io::ErrorKind::Other, "cannot create DCtx"));
+            return Err(io::Error::other("cannot create DCtx"));
         }
         ZSTD_DCtx_setMaxWindowSize(dctx, 1 << ZSTD_WINDOWLOG_MAX);
 
@@ -128,10 +128,11 @@ pub fn apply(base: &[u8], delta: &[u8]) -> io::Result<Vec<u8>> {
         if size == ZSTD_CONTENTSIZE_ERROR as usize || size == ZSTD_CONTENTSIZE_UNKNOWN as usize {
             ZSTD_freeDCtx(dctx);
             let msg = "cannot get decompress size";
-            return Err(io::Error::new(io::ErrorKind::Other, msg));
+            return Err(io::Error::other(msg));
         }
 
         let mut buf: Vec<u8> = Vec::with_capacity(size);
+        let _remaining = buf.spare_capacity_mut();
         buf.set_len(size);
 
         let outsize = ZSTD_decompress_usingDict(
@@ -147,13 +148,13 @@ pub fn apply(base: &[u8], delta: &[u8]) -> io::Result<Vec<u8>> {
 
         if ZSTD_isError(outsize) != 0 {
             let msg = format!("cannot decompress ({})", explain_error(outsize));
-            Err(io::Error::new(io::ErrorKind::Other, msg))
+            Err(io::Error::other(msg))
         } else if outsize != size {
             let msg = format!(
                 "decompress size mismatch (expected {}, got {})",
                 size, outsize
             );
-            Err(io::Error::new(io::ErrorKind::Other, msg))
+            Err(io::Error::other(msg))
         } else {
             Ok(buf)
         }
