@@ -10,8 +10,11 @@ use std::str::FromStr;
 use anyhow::Context;
 use anyhow::Result;
 use clap::Args;
+use context::CoreContext;
 use git_ref_content_mapping::GitRefContentMappingEntry;
 use mononoke_types::hash::GitSha1;
+use repo_update_logger::GitContentRefInfo;
+use repo_update_logger::log_git_content_ref;
 
 use super::Repo;
 
@@ -28,7 +31,11 @@ pub struct CreateContentRefArgs {
     is_tree: bool,
 }
 
-pub async fn create(repo: &Repo, create_args: CreateContentRefArgs) -> Result<()> {
+pub async fn create(
+    repo: &Repo,
+    ctx: &CoreContext,
+    create_args: CreateContentRefArgs,
+) -> Result<()> {
     // Check if the content ref being added already exists
     let git_ref_content_mapping = repo.git_ref_content_mapping.clone();
     if let Some(content_ref_entry) = git_ref_content_mapping
@@ -51,11 +58,22 @@ pub async fn create(repo: &Repo, create_args: CreateContentRefArgs) -> Result<()
         "Content ref {} pointing to {} (is_tree: {}) has been added",
         create_args.ref_name, git_hash, create_args.is_tree
     );
-    let entry = GitRefContentMappingEntry::new(create_args.ref_name, git_hash, create_args.is_tree);
+    let entry =
+        GitRefContentMappingEntry::new(create_args.ref_name.clone(), git_hash, create_args.is_tree);
 
     git_ref_content_mapping
         .add_or_update_mappings(vec![entry])
         .await?;
+    let info = GitContentRefInfo {
+        repo_name: repo.repo_identity.name().to_string(),
+        ref_name: create_args.ref_name,
+        git_hash: create_args.git_hash,
+        object_type: match create_args.is_tree {
+            true => "tree".to_string(),
+            false => "blob".to_string(),
+        },
+    };
+    log_git_content_ref(ctx, &repo, &info).await;
     println!("{}", success_msg);
     Ok(())
 }
