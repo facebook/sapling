@@ -21,6 +21,7 @@ rust_binary(
         "fbsource//third-party/rust:gix-hash",
         "fbsource//third-party/rust:sha1",
         "fbsource//third-party/rust:tokio",
+        "fbsource//third-party/rust:uuid",
         "//common/rust/shed/cloned:cloned",
         "//common/rust/shed/fbinit:fbinit",
         "//common/rust/shed/futures_stats:futures_stats",
@@ -52,6 +53,10 @@ tw.container(
                     "git_bundle_generator": ":git_bundle_generator",
                 },
             ),
+        ),
+        tw.fetch_fbpkg(
+            name = "manifold.cli",
+            repo_committed_tag = "prod",
         ),
     ],
     oncall = "scm_server_infra",
