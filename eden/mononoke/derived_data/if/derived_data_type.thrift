@@ -36,4 +36,5 @@ enum DerivedDataType {
   SKELETON_MANIFEST_V2 = 20,
   CCSM = 21,
   CONTENT_MANIFEST = 22,
+  INFERRED_COPY_FROM = 23,
 }

@@ -33,6 +33,7 @@ futures = { version = "0.3.30", features = ["async-await", "compat"] }
 futures_stats = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 futures_watchdog = { version = "0.1.0", path = "../../common/futures_watchdog" }
 git_types = { version = "0.1.0", path = "../../git/git_types" }
+inferred_copy_from = { version = "0.1.0", path = "../../derived_data/inferred_copy_from" }
 itertools = "0.14.0"
 justknobs = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 lazy_static = { version = "1.5", features = ["spin_no_std"], default-features = false }

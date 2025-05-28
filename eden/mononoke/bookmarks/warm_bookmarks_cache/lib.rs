@@ -66,6 +66,7 @@ use futures_stats::TimedFutureExt;
 use futures_watchdog::WatchdogExt;
 use git_types::MappedGitCommitId;
 use git_types::RootGitDeltaManifestV2Id;
+use inferred_copy_from::RootInferredCopyFromId;
 use itertools::Itertools;
 #[cfg(fbcode_build)]
 use lazy_static::lazy_static;
@@ -319,6 +320,11 @@ impl WarmBookmarksCacheBuilder {
             DerivableType::GitCommits => Some(create_derived_data_warmer::<MappedGitCommitId>(
                 &self.ctx,
                 repo_derived_data.clone(),
+            )),
+            DerivableType::InferredCopyFrom => Some(create_derived_data_warmer::<
+                RootInferredCopyFromId,
+            >(
+                &self.ctx, repo_derived_data.clone()
             )),
             DerivableType::TestManifests => None,
             DerivableType::TestShardedManifests => None,
