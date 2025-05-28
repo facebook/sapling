@@ -184,6 +184,14 @@ async fn set_ref_inner(
     // If the ref is a content ref, then we have already processed it in the uploader. There is no
     // bookmark to move in this case
     if ref_update.is_content() {
+        // If the ref is a content ref, we do not allow for deletions
+        if ref_update.to.is_null() {
+            return Err(anyhow::anyhow!(
+                "Deletion of refs pointing to trees or blobs (e.g. {}) is not permitted in Mononoke Git for repo {}",
+                ref_update.ref_name,
+                repo.repo_identity().name()
+            ));
+        }
         return Ok(());
     }
     // Create the repo context which is the pre-requisite for moving bookmarks
