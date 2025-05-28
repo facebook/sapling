@@ -571,7 +571,7 @@ Merge conflict - delete/modified:
   > EOS
   $ hg go -q $B
   $ hg subtree graft -qr $B --from-path foo --to-path bar
-  local [local] changed bar/file which other [graft] deleted
+  local [local] changed bar/file which other [graft] deleted (as foo/file)
   use (c)hanged version, (d)elete, or leave (u)nresolved? u
   abort: unresolved conflicts, can't continue
   (use 'hg resolve' and 'hg graft --continue')

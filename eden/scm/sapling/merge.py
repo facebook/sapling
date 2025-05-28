@@ -1186,7 +1186,7 @@ def manifestmerge(
                     else:
                         actions[f1] = (
                             ACTION_CHANGED_DELETED,
-                            (f1, None, f1, False, pa.node()),
+                            (f1, None, fa, False, pa.node()),
                             "prompt changed/deleted",
                         )
                 elif n1 == addednodeid:
@@ -1261,13 +1261,14 @@ def _resolvetrivial(wctx, mctx, ancestor, actions):
     """Resolves false conflicts where the nodeid changed but the content
     remained the same."""
     for f, (m, args, msg) in list(actions.items()):
-        if (
-            m == ACTION_CHANGED_DELETED
-            and f in ancestor
-            and not wctx[f].cmp(ancestor[f])
-        ):
-            # local did change but ended up with same content
-            actions[f] = "r", None, "prompt same"
+        if m == ACTION_CHANGED_DELETED:
+            fa = args[2]
+            if msg == "prompt changed/deleted copy source":
+                # TODO: handle copy case
+                continue
+            if fa in ancestor and not wctx[f].cmp(ancestor[fa]):
+                # local did change but ended up with same content
+                actions[f] = "r", None, "prompt same"
         elif m == ACTION_DELETED_CHANGED:
             f2, fa = args[1], args[2]
             if fa in ancestor and not mctx[f2].cmp(ancestor[fa]):
