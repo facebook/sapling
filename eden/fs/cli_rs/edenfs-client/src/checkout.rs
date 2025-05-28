@@ -117,6 +117,12 @@ enum InodeCatalogType {
     LegacyDev,
 }
 
+#[derive(Debug)]
+pub enum PrefetchProfilesResult {
+    Prefetched,
+    Skipped(String),
+}
+
 #[derive(Deserialize, Serialize, Debug)]
 struct Repository {
     path: PathBuf,
@@ -1086,7 +1092,7 @@ impl EdenFsCheckout {
         predict_revisions: bool,
         predictive: bool,
         predictive_num_dirs: u32,
-    ) -> Result<()> {
+    ) -> Result<PrefetchProfilesResult> {
         let mut profiles_to_fetch = profiles.to_owned();
 
         let config = instance
@@ -1094,26 +1100,20 @@ impl EdenFsCheckout {
             .context("unable to load configuration")?;
 
         if predictive && !EdenFsCheckout::should_prefetch_predictive_profiles(&config) {
-            if !silent {
-                eprintln!(
-                    "Skipping Predictive Prefetch Profiles fetch due to global kill switch. \
+            let reason = "Skipping Predictive Prefetch Profiles fetch due to global kill switch. \
                     This means prefetch-profiles.predictive-prefetching-enabled is not set in \
-                    the EdenFS configs.",
-                );
-            }
+                    the EdenFS configs."
+                .to_string();
 
-            return Ok(());
+            return Ok(PrefetchProfilesResult::Skipped(reason));
         }
 
         if !EdenFsCheckout::should_prefetch_profiles(&config) && !predictive {
-            if !silent {
-                eprintln!(
-                    "Skipping Prefetch Profiles fetch due to global kill switch. \
+            let reason = "Skipping Prefetch Profiles fetch due to global kill switch. \
                     This means prefetch-profiles.prefetching-enabled is not set in \
                     the EdenFS configs."
-                );
-            }
-            return Ok(());
+                .to_string();
+            return Ok(PrefetchProfilesResult::Skipped(reason));
         }
 
         let mut profile_contents = HashSet::new();
@@ -1162,7 +1162,7 @@ impl EdenFsCheckout {
                 .await
                 .with_context(|| anyhow!("make_prefetch_request() failed, returning early"))?;
                 if profiles_to_fetch.is_empty() {
-                    return Ok(());
+                    return Ok(PrefetchProfilesResult::Prefetched);
                 }
             }
 
@@ -1188,7 +1188,7 @@ impl EdenFsCheckout {
         )
         .await
         .with_context(|| anyhow!("make_prefetch_request() failed, returning early"))?;
-        Ok(())
+        Ok(PrefetchProfilesResult::Prefetched)
     }
 }
 

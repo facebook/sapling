@@ -19,6 +19,7 @@ use anyhow::anyhow;
 use async_trait::async_trait;
 use clap::Parser;
 use edenfs_client::checkout::CheckoutConfig;
+use edenfs_client::checkout::PrefetchProfilesResult;
 use edenfs_client::checkout::find_checkout;
 use edenfs_client::utils::expand_path_or_cwd;
 #[cfg(fbcode_build)]
@@ -476,7 +477,7 @@ impl PrefetchProfileCmd {
             );
         }
 
-        checkout
+        let result = checkout
             .prefetch_profiles(
                 instance,
                 profiles_to_prefetch,
@@ -490,7 +491,13 @@ impl PrefetchProfileCmd {
             )
             .await?;
 
-        Ok(0)
+        match result {
+            PrefetchProfilesResult::Prefetched => Ok(0),
+            PrefetchProfilesResult::Skipped(reason) => {
+                eprintln!("{}", reason);
+                Ok(0)
+            }
+        }
     }
 
     async fn fetch_predictive(
@@ -548,7 +555,7 @@ impl PrefetchProfileCmd {
         if options.foreground {
             println!("Starting predictive prefetching in the foreground.")
         }
-        checkout
+        let result = checkout
             .prefetch_profiles(
                 instance,
                 &[],
@@ -562,14 +569,22 @@ impl PrefetchProfileCmd {
             )
             .await?;
 
-        if options.foreground {
-            println!("Finished predictive prefetching.")
-        } else {
-            println!(
-                "Started predictive prefetching in the background. Use 'eden trace hg' to monitor prefetch progress."
-            );
+        match result {
+            PrefetchProfilesResult::Prefetched => {
+                if options.foreground {
+                    println!("Finished predictive prefetching.");
+                } else {
+                    println!(
+                        "Started predictive prefetching in the background. Use 'eden trace hg' to monitor prefetch progress."
+                    );
+                }
+                Ok(0)
+            }
+            PrefetchProfilesResult::Skipped(reason) => {
+                eprintln!("{}", reason);
+                Ok(0)
+            }
         }
-        Ok(0)
     }
 }
 
