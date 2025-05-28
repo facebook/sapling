@@ -25,6 +25,8 @@ use hg_util::path::expand_path;
 use tracing::Level;
 use tracing::event;
 
+use crate::gc::GcCmd;
+
 mod config;
 mod debug;
 mod du;
@@ -48,7 +50,7 @@ mod util;
 
 // Used to determine whether we should gate off certain oxidized edenfsctl commands
 const ROLLOUT_JSON: &str = "edenfsctl_rollout.json";
-const EXPERIMENTAL_COMMANDS: &[&str] = &["glob", "remove"];
+const EXPERIMENTAL_COMMANDS: &[&str] = &["glob", "prefetch", "remove"];
 
 // We create a single EdenFsInstance when starting up
 static EDENFS_INSTANCE: OnceLock<EdenFsInstance> = OnceLock::new();
@@ -154,6 +156,7 @@ pub enum TopLevelSubcommand {
     #[cfg(target_os = "macos")]
     FileAccessMonitor(crate::file_access_monitor::FileAccessMonitorCmd),
     Glob(crate::glob_and_prefetch::GlobCmd),
+    Prefetch(crate::glob_and_prefetch::PrefetchCmd),
 }
 
 impl TopLevelSubcommand {
@@ -183,6 +186,7 @@ impl TopLevelSubcommand {
             #[cfg(target_os = "macos")]
             FileAccessMonitor(cmd) => cmd,
             Glob(cmd) => cmd,
+            Prefetch(cmd) => cmd,
         }
     }
 
@@ -212,6 +216,7 @@ impl TopLevelSubcommand {
             #[cfg(target_os = "macos")]
             TopLevelSubcommand::FileAccessMonitor(_) => "file-access-monitor",
             TopLevelSubcommand::Glob(_) => "glob",
+            TopLevelSubcommand::Prefetch(_) => "prefetch",
         }
     }
 }
