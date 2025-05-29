@@ -1066,8 +1066,6 @@ impl sm::ShardManagerHandler for ShardedProcessHandler {
 /// sharded repos for a given process. Responsible for managing
 /// the ShardedProcessHandler for the given process.
 pub struct ShardedProcessExecutor {
-    /// The name of the service
-    service_name: &'static str,
     /// The ShardManager client handle
     client: sm::client::ShardManagerClient,
     /// The core process executor handle responsible for maintaining the state
@@ -1127,7 +1125,6 @@ impl ShardedProcessExecutor {
         Ok(Self {
             client: sm::client::ShardManagerClient::with_handler(fb, config, handler.clone())?,
             handler,
-            service_name,
         })
     }
 
@@ -1146,27 +1143,14 @@ impl ShardedProcessExecutor {
         terminate_process: Arc<AtomicBool>,
     ) -> Result<()> {
         info!(logger, "Initiating sharded execution for service");
-        if justknobs::eval(
-            "scm/mononoke:skip_initial_shards_setup",
-            None,
-            Some(self.service_name),
-        )
-        .unwrap_or(false)
-        {
-            info!(
-                logger,
-                "Skipping initial shard setup. Will wait for SM to assign shards instead"
-            );
-        } else {
-            let shards = self.client.get_my_shards()?;
-            let shard_ids = shards
-                .iter()
-                .map(|s| Ok(format!("{}", RepoShard::from_shard_id(&s.id.domain)?)))
-                .collect::<Result<Vec<_>>>()?
-                .join(", ");
-            info!(logger, "Got initial Shard Set: {}", shard_ids);
-            self.handler.set_shards(shards).await?;
-        }
+        let shards = self.client.get_my_shards()?;
+        let shard_ids = shards
+            .iter()
+            .map(|s| Ok(format!("{}", RepoShard::from_shard_id(&s.id.domain)?)))
+            .collect::<Result<Vec<_>>>()?
+            .join(", ");
+        info!(logger, "Got initial Shard Set: {}", shard_ids);
+        self.handler.set_shards(shards).await?;
         self.client.start_callbacks_server();
         // Periodically keep checking if termination is requested. If not, then
         // sleep for a while (to provide a yield point) and try again.

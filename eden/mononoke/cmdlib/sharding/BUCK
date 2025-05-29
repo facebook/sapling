@@ -21,6 +21,5 @@ rust_library(
     ] + ([] if rust_oss.is_oss_build() else [
         "fbsource//third-party/rust:futures",
         "//common/rust/shed/stats:stats",
-        "//common/rust/shed/justknobs_stub:justknobs",
     ]),
 )
