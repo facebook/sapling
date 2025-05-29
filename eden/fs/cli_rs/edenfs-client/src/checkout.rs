@@ -1078,7 +1078,7 @@ impl EdenFsCheckout {
         config
             .prefetch_profiles
             .predictive_prefetching_enabled
-            .unwrap_or(false)
+            .unwrap_or(true)
     }
 
     pub async fn prefetch_profiles(
