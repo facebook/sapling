@@ -18,7 +18,7 @@ faas_rust_binary(
     thrift_src = "api.thrift",
     deps = [
         "fbsource//third-party/rust:const_format",
-        "//eden/scm/lib/shell:shell",
+        "//eden/scm/lib/spawn-ext:spawn-ext",
         "//thrift/lib/rust:fbthrift",
     ],
 )
