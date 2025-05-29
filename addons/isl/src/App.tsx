@@ -11,7 +11,7 @@ import {Button} from 'isl-components/Button';
 import {ErrorBoundary, ErrorNotice} from 'isl-components/ErrorNotice';
 import {Icon} from 'isl-components/Icon';
 import {atom, useAtomValue, useSetAtom} from 'jotai';
-import {Suspense, useMemo} from 'react';
+import {Suspense, useEffect, useMemo} from 'react';
 import {useThrottledEffect} from 'shared/hooks';
 import {AllProviders} from './AppWrapper';
 import {CommandHistoryAndProgress} from './CommandHistoryAndProgress';
@@ -33,6 +33,7 @@ import platform from './platform';
 import {useMainContentWidth} from './responsive';
 import {repositoryInfoOrError} from './serverAPIState';
 
+import clientToServerAPI from './ClientToServerAPI';
 import './index.css';
 
 declare global {
@@ -44,9 +45,17 @@ declare global {
     islAppMode?: AppMode;
   }
 }
-
+let hasInitialized = false;
 export default function App() {
   const mode = window.islAppMode ?? {mode: 'isl'};
+
+  useEffect(() => {
+    if (!hasInitialized) {
+      clientToServerAPI.postMessage({type: 'clientReady'});
+      hasInitialized = true;
+    }
+  }, []);
+
   return (
     <AllProviders>
       {mode.mode === 'isl' ? (
