@@ -26,9 +26,5 @@
   adding manifests
   adding file changes
   $ hg go -q 5b61e1ea02bb
-FIXME: should be contents, not pointer
   $ cat big
-  version https://git-lfs.github.com/spec/v1
-  oid sha256:e3ade2183b2c023f2f431dacfe0c39617c224c8c21e223ef667b4ee2b3633cb6
-  size 10
-  x-is-binary 0
+  reallybig

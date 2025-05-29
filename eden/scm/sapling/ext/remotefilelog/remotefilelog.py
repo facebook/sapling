@@ -181,7 +181,13 @@ class remotefilelog:
 
         dpack, hpack = self.repo.fileslog.getmutablelocalpacks()
 
-        dpack.add(self.filename, node, revlog.nullid, rawtext)
+        dpack.add(
+            self.filename,
+            node,
+            revlog.nullid,
+            rawtext,
+            metadata={constants.METAKEYFLAG: flags},
+        )
 
         copyfrom = ""
         realp1node = p1
