@@ -17,6 +17,7 @@ faas_rust_binary(
     thrift_service_name = "EdenContainerCloneExample",
     thrift_src = "api.thrift",
     deps = [
+        "fbsource//third-party/rust:const_format",
         "//eden/scm/lib/shell:shell",
         "//thrift/lib/rust:fbthrift",
     ],
