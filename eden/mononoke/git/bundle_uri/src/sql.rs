@@ -20,9 +20,9 @@ use crate::BundleList;
 
 mononoke_queries! {
     read GetLatestBundleListForRepo(repo_id: RepositoryId) -> (
-        String, u64, u64, String
+        String, u64, u64, String, u64
     ) {
-    "SELECT bundle_handle, in_bundle_list_order, bundle_list, bundle_fingerprint
+    "SELECT bundle_handle, in_bundle_list_order, bundle_list, bundle_fingerprint, generation_start_timestamp
     FROM git_bundles
     WHERE repo_id = {repo_id}
     AND
@@ -40,9 +40,9 @@ mononoke_queries! {
     }
 
     read GetLatestBundleLists() -> (
-        RepositoryId, String, u64, u64, String
+        RepositoryId, String, u64, u64, String, u64
     ) {
-    "SELECT git_bundles.repo_id, bundle_handle, in_bundle_list_order, bundle_list, bundle_fingerprint
+    "SELECT git_bundles.repo_id, bundle_handle, in_bundle_list_order, bundle_list, bundle_fingerprint, generation_start_timestamp
     FROM git_bundles
     JOIN (
         SELECT repo_id, max(bundle_list) as newest_bundle_list
@@ -60,9 +60,10 @@ mononoke_queries! {
         bundle_list: u64,
         in_bundle_list_order: u64,
         bundle_fingerprint: String,
+        generation_start_timestamp: u64,
     ))  {
         none,
-    "INSERT INTO git_bundles (repo_id, bundle_handle, bundle_list, in_bundle_list_order, bundle_fingerprint) VALUES {values}"
+    "INSERT INTO git_bundles (repo_id, bundle_handle, bundle_list, in_bundle_list_order, bundle_fingerprint, generation_start_timestamp) VALUES {values}"
     }
 }
 
@@ -125,6 +126,7 @@ impl SqlGitBundleMetadataStorage {
                     &new_bundle_list_num,
                     &bundle.in_bundle_list_order,
                     &bundle.fingerprint,
+                    &bundle.generation_start_timestamp,
                 )
             })
             .collect();
@@ -149,10 +151,17 @@ impl SqlGitBundleMetadataStorage {
         let bundles = rows
             .into_iter()
             .map(
-                |(handle, in_bundle_list_order, _bundle_list, fingerprint)| Bundle {
+                |(
+                    handle,
+                    in_bundle_list_order,
+                    _bundle_list,
+                    fingerprint,
+                    generation_start_timestamp,
+                )| Bundle {
                     in_bundle_list_order,
                     handle,
                     fingerprint,
+                    generation_start_timestamp,
                 },
             )
             .collect();
@@ -185,11 +194,13 @@ mod test {
                 in_bundle_list_order: 1,
                 handle: String::from("handle2137.1.1"),
                 fingerprint: String::from("fingerprint2137.1.1"),
+                generation_start_timestamp: 0,
             },
             Bundle {
                 in_bundle_list_order: 2,
                 handle: String::from("handle2137.1.2"),
                 fingerprint: String::from("fingerprint2137.1.2"),
+                generation_start_timestamp: 0,
             },
         ];
         static ref TEST_BUNDLE_LIST_3: [Bundle; 3] = [
@@ -197,16 +208,19 @@ mod test {
                 in_bundle_list_order: 1,
                 handle: String::from("handle2137.2.1"),
                 fingerprint: String::from("fingerprint2137.2.1"),
+                generation_start_timestamp: 0,
             },
             Bundle {
                 in_bundle_list_order: 2,
                 handle: String::from("handle2137.2.2"),
                 fingerprint: String::from("fingerprint2137.2.2"),
+                generation_start_timestamp: 0,
             },
             Bundle {
                 in_bundle_list_order: 3,
                 handle: String::from("handle2137.2.3"),
                 fingerprint: String::from("fingerprint2137.2.3"),
+                generation_start_timestamp: 0,
             },
         ];
     }

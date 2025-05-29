@@ -12,5 +12,6 @@ CREATE TABLE IF NOT EXISTS `git_bundles` (
   `bundle_list` INTEGER NOT NULL,
   `in_bundle_list_order` INTEGER NOT NULL,
   `bundle_fingerprint` VARCHAT(255) NOT NULL,
+  `generation_start_timestamp` bigint(20) NOT NULL DEFAULT 0,
   UNIQUE (`repo_id`, `bundle_list`, `in_bundle_list_order`)
 );

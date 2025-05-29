@@ -106,6 +106,7 @@ pub struct Bundle {
     pub handle: String,
     pub fingerprint: String,
     pub in_bundle_list_order: u64,
+    pub generation_start_timestamp: u64,
 }
 
 #[derive(Clone, Debug)]
