@@ -22,6 +22,7 @@ rust_binary(
         "fbsource//third-party/rust:sha1",
         "fbsource//third-party/rust:tokio",
         "fbsource//third-party/rust:uuid",
+        "//cerberus/client/rust:cerberus_client",
         "//common/rust/shed/cloned:cloned",
         "//common/rust/shed/fbinit:fbinit",
         "//common/rust/shed/futures_stats:futures_stats",
