@@ -276,7 +276,7 @@ impl Arbitrary for FileAuxData {
 }
 
 #[auto_wire]
-#[derive(Clone, Default, Debug, Eq, PartialEq)]
+#[derive(Clone, Default, Serialize, Deserialize, Debug, Eq, PartialEq)]
 #[cfg_attr(any(test, feature = "for-tests"), derive(Arbitrary))]
 pub struct HgFilenodeData {
     #[id(0)]
