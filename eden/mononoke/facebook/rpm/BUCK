@@ -1,0 +1,43 @@
+load("//registry:defs.bzl", "rpm")
+
+oncall("scm_server_infra")
+
+rpm.builder(
+    name = "fb-mononoke-admin",
+    buck_opts = rpm.buck_opts(
+        config = {
+            "fbcode.build_dwp_targets": "false",
+            "fbcode.dwp": "false",
+            "fbcode.package_dwp_targets": "false",
+        },
+        mode = "opt",
+    ),
+    configurations = [
+        rpm.configuration(arch = "x86_64"),
+        rpm.configuration(arch = "aarch64"),
+    ],
+    features = [
+        rpm.install(
+            src = "//eden/mononoke/tools/admin:admin",
+            dst = "/bin/mononoke_admin",
+        ),
+        rpm.file_symlink(
+            link = "/bin/monad",
+            target = "mononoke_admin",
+        ),
+        rpm.install(
+            src = "//eden/mononoke/facebook/mononoke_config:mononoke_find_repo_id",
+            dst = "/bin/mononoke_find_repo_id",
+        ),
+        rpm.install(
+            src = "//eden/mononoke/walker:walker",
+            dst = "/bin/mononoke_walker",
+        ),
+        rpm.install(
+            src = "//eden/mononoke/cmds/copy_blobstore_keys:copy_blobstore_keys",
+            dst = "/bin/copy_blobstore_keys",
+        ),
+    ],
+    strip_debuginfo_without_saving_symbols = True,
+    summary = "Administration tools for Mononoke",
+)
