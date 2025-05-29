@@ -20,7 +20,7 @@ rust_binary(
         "//common/rust/tracing-scuba:tracing-scuba",
         "//eden/facebook/scm-eden-container-clone/eden_config:eden_config",
         "//eden/fs/cli_rs/edenfs-client:edenfs-client",
-        "//eden/scm/lib/shell:shell",
+        "//eden/scm/lib/spawn-ext:spawn-ext",
     ],
 )
 
