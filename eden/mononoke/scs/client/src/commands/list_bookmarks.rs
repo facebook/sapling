@@ -131,7 +131,7 @@ fn repo_list_bookmarks(
                 let next_state = response
                     .continue_after
                     .map(|after| (Some(after), remaining))
-                    .filter(|_| remaining.map_or(true, |r| r > 0));
+                    .filter(|_| remaining.is_none_or(|r| r > 0));
 
                 anyhow::Ok(Some((stream::iter(bookmarks), next_state)))
             } else {
@@ -216,8 +216,8 @@ pub(super) async fn run(app: ScscApp, args: CommandArgs) -> Result<()> {
                 conn.clone(),
                 commit,
                 Some(limit),
-                after.map(String::from),
-                prefix.map(String::from),
+                after,
+                prefix,
                 include_scratch,
                 args.scheme_args.clone().into_request_schemes(),
             )
@@ -227,8 +227,8 @@ pub(super) async fn run(app: ScscApp, args: CommandArgs) -> Result<()> {
             conn.clone(),
             repo,
             Some(limit),
-            after.map(String::from),
-            prefix.map(String::from),
+            after,
+            prefix,
             include_scratch,
             args.scheme_args.clone().into_request_schemes(),
         )

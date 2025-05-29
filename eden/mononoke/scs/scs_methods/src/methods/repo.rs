@@ -931,7 +931,6 @@ impl SourceControlServiceImpl {
                     .context("Git commit hash encoding")?;
                 // TODO(T179531912): support other hashes
                 let git_commit_id_bytes = GitSha1::from_str(commit_hash_string.as_str())
-                    .map_err(anyhow::Error::from)
                     .map_err(MononokeError::from)
                     .context("GitSha1 creation")?;
                 SubmoduleExpansionUpdate::UpdateCommit(git_commit_id_bytes)

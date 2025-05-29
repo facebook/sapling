@@ -35,7 +35,7 @@ pub(super) struct ConnectionArgs {
 impl ConnectionArgs {
     pub fn get_connection(&self, fb: FacebookInit, repo: Option<&str>) -> Result<ScsClient, Error> {
         let disable_sr =
-            std::env::var("MONONOKE_INTEGRATION_TEST_DISABLE_SR").map_or(false, |v| v == "true");
+            std::env::var("MONONOKE_INTEGRATION_TEST_DISABLE_SR").is_ok_and(|v| v == "true");
         if self.host.is_some() && disable_sr {
             ScsClientHostBuilder::new().build_from_host_port(fb, self.host.clone().unwrap())
         } else {
