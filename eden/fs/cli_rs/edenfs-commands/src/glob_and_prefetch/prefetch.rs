@@ -9,12 +9,11 @@
 
 use std::path::PathBuf;
 
-use anyhow::Context;
 use anyhow::Result;
 use async_trait::async_trait;
 use clap::Parser;
 use edenfs_client::glob_files::Glob;
-use edenfs_client::utils::locate_repo_root;
+use edenfs_utils::path_from_bytes;
 
 use crate::ExitCode;
 use crate::get_edenfs_instance;
@@ -58,26 +57,47 @@ impl crate::Subcommand for PrefetchCmd {
     async fn run(&self) -> Result<ExitCode> {
         // TODO: add in telemetry support
         let instance = get_edenfs_instance();
-        let _client = instance.get_client();
+        let client = instance.get_client();
+        let (mount_point, _search_root) = self.common.get_mount_point_and_seach_root()?;
+        let patterns = self.common.load_patterns()?;
 
-        // Get cwd mount_point if not provided.
-        let current_dir: PathBuf;
-        let mount_point = match &self.common.mount_point {
-            Some(ref mount_point) => mount_point,
-            None => {
-                current_dir = std::env::current_dir()
-                    .context("Unable to retrieve current working directory")?;
-                &current_dir
+        let silent = self.silent || !self.debug_print;
+        let return_prefetched_files = !(self.background || silent);
+        let result = client
+            .prefetch_files(
+                &mount_point,
+                patterns.clone(),
+                self.directories_only,
+                None,
+                None::<PathBuf>,
+                Some(self.background),
+                None,
+                return_prefetched_files,
+            )
+            .await?;
+
+        if return_prefetched_files {
+            if !patterns.is_empty()
+                && result
+                    .prefetched_files
+                    .as_ref()
+                    .is_none_or(|pf| pf.matching_files.is_empty())
+            {
+                eprint!("No files were matched by the pattern");
+                if !patterns.is_empty() {
+                    eprint!("s");
+                }
+                eprintln!(" specified.\nSee `eden prefetch -h` for docs on pattern matching.");
             }
-        };
 
-        // Get mount_point as just repo root
-        let _repo_root = locate_repo_root(mount_point);
-
-        // Load patterns
-        let _patterns = self.common.load_patterns()?;
-
-        // TODO: invoke prefetch or glob based on params and fallback
+            if let Some(prefetched_files) = &result.prefetched_files {
+                if self.debug_print {
+                    for file in &prefetched_files.matching_files {
+                        println!("{}", path_from_bytes(file)?.display());
+                    }
+                }
+            }
+        }
 
         Ok(0)
     }

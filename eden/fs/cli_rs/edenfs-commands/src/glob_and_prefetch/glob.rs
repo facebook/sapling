@@ -7,16 +7,12 @@
 
 //! edenfsctl glob
 
-use std::path::PathBuf;
-
 use anyhow::Context;
 use anyhow::Result;
 use async_trait::async_trait;
 use clap::Parser;
 use edenfs_client::glob_files::Glob;
 use edenfs_client::glob_files::dtype_to_str;
-use edenfs_client::utils::get_mount_point;
-use edenfs_client::utils::locate_repo_root;
 use edenfs_utils::path_from_bytes;
 
 use crate::ExitCode;
