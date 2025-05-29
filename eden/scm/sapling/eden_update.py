@@ -164,14 +164,18 @@ def _handle_update_conflicts(repo, wctx, src, dest, labels, conflicts, force):
 
 def _abort_on_eden_conflict_error(repo, conflicts):
     """abort if there is a ConflictType.ERROR type of conflicts"""
-    if not _is_abort_on_eden_conflict_error_enabled(repo):
-        return
+    propagate_error = _is_abort_on_eden_conflict_error_enabled(repo)
 
     for conflict in conflicts:
         if conflict["conflict_type"] == "ERROR":
-            repo.ui.metrics.gauge("abort_on_eden_conflict_error", 1)
-            path = conflict["path"]
-            raise error.Abort(_("error updating %s: %s") % (path, conflict["message"]))
+            if propagate_error:
+                repo.ui.metrics.gauge("abort_on_eden_conflict_error", 1)
+                path = conflict["path"]
+                raise error.Abort(
+                    _("error updating %s: %s") % (path, conflict["message"])
+                )
+            else:
+                repo.ui.metrics.gauge("ignore_eden_conflict_error", 1)
 
 
 def _is_abort_on_eden_conflict_error_enabled(repo) -> bool:

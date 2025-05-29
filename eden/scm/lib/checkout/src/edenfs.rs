@@ -541,19 +541,21 @@ pub fn abort_on_eden_conflict_error(
     config: &dyn Config,
     conflicts: Vec<CheckoutConflict>,
 ) -> Result<(), EdenConflictError> {
-    if !config
+    let propagate_error = config
         .get_or_default::<bool>("experimental", "abort-on-eden-conflict-error")
-        .unwrap_or_default()
-    {
-        return Ok(());
-    }
+        .unwrap_or_default();
+
     for conflict in conflicts {
         if ConflictType::Error == conflict.conflict_type {
-            hg_metrics::increment_counter("abort_on_eden_conflict_error", 1);
-            return Err(EdenConflictError {
-                path: conflict.path.into_string(),
-                message: conflict.message,
-            });
+            if propagate_error {
+                hg_metrics::increment_counter("abort_on_eden_conflict_error", 1);
+                return Err(EdenConflictError {
+                    path: conflict.path.into_string(),
+                    message: conflict.message,
+                });
+            } else {
+                hg_metrics::increment_counter("ignore_eden_conflict_error", 1);
+            }
         }
     }
     Ok(())
