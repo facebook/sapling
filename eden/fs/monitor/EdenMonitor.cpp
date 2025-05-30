@@ -16,7 +16,6 @@
 #include <thrift/lib/cpp2/async/HeaderClientChannel.h>
 
 #include "eden/fs/config/EdenConfig.h"
-#include "eden/fs/eden-config.h"
 #include "eden/fs/monitor/EdenInstance.h"
 #include "eden/fs/monitor/LogFile.h"
 #include "eden/fs/monitor/LogRotation.h"
