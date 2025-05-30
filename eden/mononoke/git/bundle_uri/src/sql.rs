@@ -33,6 +33,16 @@ mononoke_queries! {
     "
     }
 
+    read GetBundleListsForRepo(repo_id: RepositoryId) -> (
+        String, u64, u64, String, u64
+    ) {
+    "SELECT bundle_handle, in_bundle_list_order, bundle_list, bundle_fingerprint, generation_start_timestamp
+    FROM git_bundles
+    WHERE repo_id = {repo_id}
+    ORDER BY bundle_list DESC, in_bundle_list_order ASC;
+    "
+    }
+
     read GetLatestBundleListNumForRepo(repo_id: RepositoryId) -> (
         u64
     ) {
@@ -64,6 +74,11 @@ mononoke_queries! {
     ))  {
         none,
     "INSERT INTO git_bundles (repo_id, bundle_handle, bundle_list, in_bundle_list_order, bundle_fingerprint, generation_start_timestamp) VALUES {values}"
+    }
+
+    write RemoveBundleList(repo_id: RepositoryId, bundle_list: u64) {
+        none,
+    "DELETE FROM git_bundles WHERE repo_id = {repo_id} and bundle_list = {bundle_list}"
     }
 }
 
@@ -173,6 +188,81 @@ impl SqlGitBundleMetadataStorage {
 
         Ok(Some(bundle_list))
     }
+
+    pub async fn remove_bundle_list(&self, bundle_list_num: u64) -> Result<()> {
+        RemoveBundleList::query(
+            &self.connections.write_connection,
+            &self.repo_id,
+            &bundle_list_num,
+        )
+        .await?;
+        Ok(())
+    }
+
+    pub async fn get_bundle_lists(&self) -> Result<Vec<BundleList>> {
+        let rows =
+            GetBundleListsForRepo::query(&self.connections.read_connection, &self.repo_id).await?;
+
+        // +----------------------+-------------+
+        // | in_bundle_list_order | bundle_list |
+        // +----------------------+-------------+
+        // |                    1 |           3 |
+        // |                    1 |           2 |
+        // |                    2 |           2 |
+        // |                    3 |           2 |
+        // |                    1 |           1 |
+        // +----------------------+-------------+
+        let mut bundle_lists = vec![];
+        let mut rows_iter = rows.into_iter().peekable();
+        while let Some((
+            handle,
+            in_bundle_list_order,
+            first_seen_bundle_list,
+            fingerprint,
+            generation_start_timestamp,
+        )) = rows_iter.next()
+        {
+            let current_bundle_list_num = first_seen_bundle_list;
+            // First bundle for a new bundle-list.
+            let mut bundles = vec![Bundle {
+                in_bundle_list_order,
+                handle,
+                fingerprint,
+                generation_start_timestamp,
+            }];
+
+            // Rest of the bundles for the new bundle-list.
+            while let Some((
+                handle,
+                in_bundle_list_order,
+                bundle_list,
+                fingerprint,
+                generation_start_timestamp,
+            )) = rows_iter.peek()
+            {
+                if current_bundle_list_num == *bundle_list {
+                    // This bundle belongs to the current bundle-list.
+                    bundles.push(Bundle {
+                        in_bundle_list_order: *in_bundle_list_order,
+                        handle: handle.clone(),
+                        fingerprint: fingerprint.clone(),
+                        generation_start_timestamp: generation_start_timestamp.clone(),
+                    });
+                    rows_iter.next();
+                } else {
+                    // This bundle is the first elem of the next bundle-list. Do not consume it.
+                    // Break the loop to finish processing current bundle.
+                    break;
+                }
+            }
+            bundle_lists.push(BundleList {
+                bundle_list_num: current_bundle_list_num,
+                bundles,
+            });
+        }
+
+        Ok(bundle_lists)
+    }
 }
 
 #[cfg(test)]
@@ -274,6 +364,51 @@ mod test {
         for (p, n) in bundle_list.bundles.iter().tuple_windows() {
             assert!(p.in_bundle_list_order < n.in_bundle_list_order)
         }
+
+        Ok(())
+    }
+
+    #[mononoke::fbinit_test]
+    async fn test_get_bundle_lists(_: FacebookInit) -> Result<()> {
+        let repo_id = RepositoryId::new(2137);
+        let storage = SqlGitBundleMetadataStorageBuilder::with_sqlite_in_memory()?.build(repo_id);
+
+        storage.add_new_bundles(&TEST_BUNDLE_LIST_2[..]).await?;
+        storage.add_new_bundles(&TEST_BUNDLE_LIST_3[..]).await?;
+
+        let bundle_lists = storage.get_bundle_lists().await?;
+        assert_eq!(bundle_lists.len(), 2);
+        for bundle_list in bundle_lists.iter() {
+            for (p, n) in bundle_list.bundles.iter().tuple_windows() {
+                assert!(p.in_bundle_list_order < n.in_bundle_list_order)
+            }
+        }
+        for (p, n) in bundle_lists.iter().tuple_windows() {
+            assert!(p.bundle_list_num > n.bundle_list_num)
+        }
+
+        Ok(())
+    }
+
+    #[mononoke::fbinit_test]
+    async fn test_remove_bundle_list(_: FacebookInit) -> Result<()> {
+        let repo_id = RepositoryId::new(2137);
+        let storage = SqlGitBundleMetadataStorageBuilder::with_sqlite_in_memory()?.build(repo_id);
+
+        let bundle_list_num_2 = storage.add_new_bundles(&TEST_BUNDLE_LIST_2[..]).await?;
+        let bundle_list_num_3 = storage.add_new_bundles(&TEST_BUNDLE_LIST_3[..]).await?;
+
+        let bundle_lists = storage.get_bundle_lists().await?;
+        assert_eq!(bundle_lists.len(), 2);
+        assert_eq!(bundle_lists[0].bundle_list_num, bundle_list_num_3);
+        assert_eq!(bundle_lists[1].bundle_list_num, bundle_list_num_2);
+        storage.remove_bundle_list(bundle_list_num_2).await?;
+        let bundle_lists = storage.get_bundle_lists().await?;
+        assert_eq!(bundle_lists.len(), 1);
+        assert_eq!(bundle_lists[0].bundle_list_num, bundle_list_num_3);
+        storage.remove_bundle_list(bundle_list_num_3).await?;
+        let bundle_lists = storage.get_bundle_lists().await?;
+        assert_eq!(bundle_lists.len(), 0);
 
         Ok(())
     }

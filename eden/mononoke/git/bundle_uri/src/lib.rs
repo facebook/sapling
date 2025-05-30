@@ -86,6 +86,12 @@ pub trait GitBundleUri: Send + Sync {
     /// There might be None.
     async fn get_latest_bundle_list(&self) -> Result<Option<BundleList>>;
 
+    /// Get all available bundle lists for a repo.
+    async fn get_bundle_lists(&self) -> Result<Vec<BundleList>>;
+
+    /// Remove all bundles in a given bundle list from the metadata db.
+    async fn remove_bundle_list_from_metadata_db(&self, bundle_list_num: u64) -> Result<()>;
+
     async fn get_url_for_bundle_handle(
         &self,
         ctx: &CoreContext,
@@ -194,6 +200,16 @@ impl<U: Clone + Send + GitBundleUrlGenerator + Sync> GitBundleUri for BundleUri<
 
     async fn get_latest_bundle_list(&self) -> Result<Option<BundleList>> {
         self.bundle_metadata_storage.get_latest_bundle_list().await
+    }
+
+    async fn get_bundle_lists(&self) -> Result<Vec<BundleList>> {
+        self.bundle_metadata_storage.get_bundle_lists().await
+    }
+
+    async fn remove_bundle_list_from_metadata_db(&self, bundle_list_num: u64) -> Result<()> {
+        self.bundle_metadata_storage
+            .remove_bundle_list(bundle_list_num)
+            .await
     }
 
     async fn add_new_bundles(&self, bundles: &[Bundle]) -> Result<u64> {
