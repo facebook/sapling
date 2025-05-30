@@ -36,7 +36,7 @@ pub enum UseCaseId {
     ExampleUseCase,
     Flow,
     Hack,
-    MeerakatCli,
+    MeerkatCli,
     ScmEdenContainer,
     RedirectFfi,
     #[strum(serialize = "testifyd")]
