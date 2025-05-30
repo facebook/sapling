@@ -43,6 +43,7 @@ rust_library(
             "version": "0.11.0",
         },
     }},
+    edition = "2021",
     features = ["toml_config"],
     deps = [
         "fbsource//third-party/rust:dirs",

@@ -153,14 +153,14 @@ fn forward_signals(props: &ProcessProps) {
     static PID: AtomicU32 = AtomicU32::new(0);
     static PGID: AtomicU32 = AtomicU32::new(0);
 
-    extern "C" fn forward_signal_process(sig: libc::c_int) {
+    unsafe extern "C" fn forward_signal_process(sig: libc::c_int) {
         let pid = PID.load(Ordering::Acquire);
         if pid > 0 {
             unsafe { libc::kill(pid as i32, sig) };
         }
     }
 
-    extern "C" fn forward_signal_group(sig: libc::c_int) {
+    unsafe extern "C" fn forward_signal_group(sig: libc::c_int) {
         let pgid = PGID.load(Ordering::Acquire);
         if pgid > 1 {
             unsafe { libc::kill(-(pgid as i32), sig) };

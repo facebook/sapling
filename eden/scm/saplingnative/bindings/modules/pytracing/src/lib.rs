@@ -510,7 +510,7 @@ fn impl_getsetattr<T: PythonTypeWithInner>(py: Python) {
     let type_object: PyType = T::type_object(py);
     let type_ptr: *mut ffi::PyTypeObject = type_object.as_type_ptr();
 
-    extern "C" fn getattr<T: PythonTypeWithInner>(
+    unsafe extern "C" fn getattr<T: PythonTypeWithInner>(
         this: *mut ffi::PyObject,
         name: *mut ffi::PyObject,
     ) -> *mut ffi::PyObject {
@@ -532,7 +532,7 @@ fn impl_getsetattr<T: PythonTypeWithInner>(py: Python) {
         }
     }
 
-    extern "C" fn setattr<T: PythonTypeWithInner>(
+    unsafe extern "C" fn setattr<T: PythonTypeWithInner>(
         this: *mut ffi::PyObject,
         name: *mut ffi::PyObject,
         value: *mut ffi::PyObject,
@@ -556,7 +556,7 @@ fn impl_getsetattr<T: PythonTypeWithInner>(py: Python) {
 
     // `__get__`, useful to bind `self` to a free function.
     // See https://docs.python.org/2/howto/descriptor.html.
-    extern "C" fn descr_get<T: PythonTypeWithInner>(
+    unsafe extern "C" fn descr_get<T: PythonTypeWithInner>(
         this: *mut ffi::PyObject,
         obj: *mut ffi::PyObject,
         typeobj: *mut ffi::PyObject,

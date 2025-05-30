@@ -54,6 +54,7 @@ rust_library(
         "ovr_config//os:macos",
     ],
     doctests = False,
+    edition = "2021",
     os_deps = [
         (
             "macos",
@@ -100,5 +101,6 @@ rust_binary(
         "ovr_config//os:macos",
     ],
     crate_root = "examples/example.rs",
+    edition = "2021",
     deps = [":webview-sys"],
 )

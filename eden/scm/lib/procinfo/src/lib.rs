@@ -6,7 +6,7 @@
  */
 
 #[cfg(target_os = "macos")]
-extern "C" {
+unsafe extern "C" {
     fn darwin_ppid(pid: u32) -> u32;
     fn darwin_exepath(pid: u32) -> *const libc::c_char;
 }

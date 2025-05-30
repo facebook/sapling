@@ -22,7 +22,7 @@ use xdiff_sys::xdemitconf_t;
 use xdiff_sys::xdl_diff_vendored;
 use xdiff_sys::xpparam_t;
 
-extern "C" fn hunk_func(a1: i64, a2: i64, b1: i64, b2: i64, _priv: *mut c_void) -> c_int {
+unsafe extern "C" fn hunk_func(a1: i64, a2: i64, b1: i64, b2: i64, _priv: *mut c_void) -> c_int {
     println!("@@ -{},{} +{},{} @@", a1, a2, b1, b2);
     0
 }
