@@ -2587,7 +2587,11 @@ def _update(
 
         if not wc.isinmemory():
             with to_repo.dirstate.parentchange():
-                to_repo.setparents(fp1, fp2)
+                if is_crossrepo:
+                    to_repo.setparents(fp1)
+                    to_repo.dirstate.set_xrepo_merge()
+                else:
+                    to_repo.setparents(fp1, fp2)
                 recordupdates(to_repo, actions, branchmerge)
                 # update completed, clear state
                 util.unlink(to_repo.localvfs.join("updatestate"))
