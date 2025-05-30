@@ -5,9 +5,6 @@ oncall("scm_client_infra")
 rust_library(
     name = "cmdlib",
     srcs = glob(["src/**/*.rs"]),
-    visibility = [
-        "//eden/facebook/scm-eden-container-clone/...",
-    ],
     deps = [
         "fbsource//third-party/rust:anyhow",
         "fbsource//third-party/rust:chrono",
