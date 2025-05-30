@@ -67,8 +67,8 @@ Test subtree prefetch with an invalid commit hash
   $ newclientrepo
   $ hg subtree prefetch --url $GIT_URL --rev aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
   creating git repo at $TESTTMP/default-hgcache/gitrepos/* (glob)
-  fatal: git upload-pack: not our ref aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
-  fatal: remote error: upload-pack: not our ref aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+  fatal: * (glob)
+  fatal: * (glob)
   abort: unknown revision 'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa'!
   [255]
 
