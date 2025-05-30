@@ -219,13 +219,19 @@ def subtree_graft(ui, repo, **opts):
     """move commits from one path to another"""
     from sapling.commands import _dograft
 
+    url = opts.get("url")
     from_paths = opts.get("from_path")
     to_paths = opts.get("to_path")
     if not (opts.get("continue") or opts.get("abort")):
+        if url and not from_paths:
+            from_paths = [""]
+            opts["from_path"] = from_paths
         if not (from_paths and to_paths):
-            raise error.Abort(_("must provide --from-path and --to-path"))
+            raise error.Abort(
+                _("must provide --from-path and --to-path for same-repo grafts")
+            )
 
-    if url := opts.get("url"):
+    if url:
         giturl = cloneuri.determine_git_uri(None, url)
         if giturl is None:
             raise error.Abort(_("unable to determine git url from '%s'") % url)

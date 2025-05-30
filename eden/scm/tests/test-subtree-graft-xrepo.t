@@ -248,3 +248,28 @@ Test subtree graft with merge conflicts
   +3a
    4
    5
+
+Test subtree graft without --from-path
+  $ newclientrepo
+  $ drawdag <<'EOS'
+  > A   # A/foo/a.txt = 1\n2\n3\n4\n5\n
+  >     # drawdag.defaultfiles=false
+  > EOS
+  $ hg go $A -q
+  $ hg subtree graft --url $GIT_URL --rev 0e0bbd7f53d7f8dfa9ef6283f68e2aa5d274a185 --to-path foo
+  using cached git repo at $TESTTMP/default-hgcache/gitrepos/* (glob)
+  grafting 0e0bbd7f53d7 "G2"
+  $ hg log -G -T '{desc}\n' -p -r .
+  @  Graft "G2"
+  │
+  ~  Grafted 0e0bbd7f53d7f8dfa9ef6283f68e2aa5d274a185 from file:/*/$TESTTMP/gitrepo (glob)
+     - Grafted root directory to foo
+     diff --git a/foo/a.txt b/foo/a.txt
+     --- a/foo/a.txt
+     +++ b/foo/a.txt
+     @@ -1,4 +1,4 @@
+     -1
+     +1a
+      2
+      3
+      4

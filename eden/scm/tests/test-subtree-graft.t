@@ -8,11 +8,11 @@ Test validation of --from-path and --to-path
   $ echo "A" | drawdag
   $ hg subtree graft -r $A --from-path foo --to-path bar --from-path foo2
   grafting 7b3f3d5e5faf "A"
-  abort: must provide same number of --from-path and --to-path
+  abort: must provide same number of --from-path ['foo', 'foo2'] and --to-path ['bar']
   [255]
   $ hg subtree graft -r $A --from-path foo --to-path bar --to-path bar2
   grafting 7b3f3d5e5faf "A"
-  abort: must provide same number of --from-path and --to-path
+  abort: must provide same number of --from-path ['foo'] and --to-path ['bar', 'bar2']
   [255]
   $ hg subtree graft -r $A --from-path foo --from-path bar --to-path baz --to-path baz/qux
   grafting 7b3f3d5e5faf "A"

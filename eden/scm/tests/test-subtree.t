@@ -19,10 +19,10 @@ test subtree copy paths validation
   abort: must provide --from-path and --to-path
   [255]
   $ hg subtree copy -r $A --from-path foo
-  abort: must provide same number of --from-path and --to-path
+  abort: must provide same number of --from-path ['foo'] and --to-path []
   [255]
   $ hg subtree copy -r $A --from-path bar
-  abort: must provide same number of --from-path and --to-path
+  abort: must provide same number of --from-path ['bar'] and --to-path []
   [255]
   $ hg subtree copy -r $A --from-path foo --to-path bar --from-path foo --to-path ""
   abort: overlapping --to-path entries
@@ -263,13 +263,13 @@ test subtree graft
   copying foo to bar
 
   $ hg subtree graft -r $C
-  abort: must provide --from-path and --to-path
+  abort: must provide --from-path and --to-path for same-repo grafts
   [255]
   $ hg subtree graft -r $C --from-path foo
-  abort: must provide --from-path and --to-path
+  abort: must provide --from-path and --to-path for same-repo grafts
   [255]
   $ hg subtree graft -r $C --to-path bar
-  abort: must provide --from-path and --to-path
+  abort: must provide --from-path and --to-path for same-repo grafts
   [255]
 
   $ hg subtree graft -r $C --from-path foo --to-path bar

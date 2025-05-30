@@ -533,7 +533,10 @@ def validate_file_count(repo, ctx, paths):
 
 def validate_path_size(from_paths, to_paths, abort_on_empty=False):
     if len(from_paths) != len(to_paths):
-        raise error.Abort(_("must provide same number of --from-path and --to-path"))
+        raise error.Abort(
+            _("must provide same number of --from-path %s and --to-path %s")
+            % (from_paths, to_paths)
+        )
 
     if abort_on_empty and not from_paths:
         raise error.Abort(_("must provide --from-path and --to-path"))
