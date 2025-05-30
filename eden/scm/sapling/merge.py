@@ -539,8 +539,11 @@ class mergestate:
 
     def recordactions(self):
         """record remove/add/get actions in the dirstate"""
-        branchmerge = self._repo.dirstate.p2() != nullid
-        recordupdates(self._repo, self.actions(), branchmerge)
+        ds = self._repo.dirstate
+        branchmerge = ds.is_merge()
+        recordupdates(
+            self._repo, self.actions(), branchmerge, from_repo=self._from_repo
+        )
 
     def queueremove(self, f):
         """queues a file to be removed from the dirstate
@@ -1996,54 +1999,58 @@ def applyupdates(
     return updated, merged, removed, unresolved
 
 
-def recordupdates(repo, actions, branchmerge):
+def recordupdates(to_repo, actions, branchmerge, from_repo=None):
     "record merge actions to the dirstate"
+
+    ui = to_repo.ui
+    from_repo = from_repo or to_repo
+    is_crossrepo = not from_repo.is_same_repo(to_repo)
 
     total = sum(map(len, actions.values()))
 
-    with progress.bar(repo.ui, _("recording"), _("files"), total) as prog:
+    with progress.bar(ui, _("recording"), _("files"), total) as prog:
         # remove (must come first)
         for f, args, msg in actions.get(ACTION_REMOVE, []):
             if branchmerge:
-                repo.dirstate.remove(f)
+                to_repo.dirstate.remove(f)
             else:
-                repo.dirstate.delete(f)
+                to_repo.dirstate.delete(f)
             prog.value += 1
 
         # forget (must come first)
         for f, args, msg in actions.get(ACTION_FORGET, []):
-            repo.dirstate.untrack(f)
+            to_repo.dirstate.untrack(f)
             prog.value += 1
 
         # resolve path conflicts
-        copied = repo.dirstate.copies()
+        copied = to_repo.dirstate.copies()
         for f, args, msg in actions.get(ACTION_PATH_CONFLICT_RESOLVE, []):
             (f0,) = args
             origf0 = copied.get(f0, f0)
-            repo.dirstate.add(f)
-            repo.dirstate.copy(origf0, f)
+            to_repo.dirstate.add(f)
+            to_repo.dirstate.copy(origf0, f)
             if f0 == origf0:
-                repo.dirstate.remove(f0)
+                to_repo.dirstate.remove(f0)
             else:
-                repo.dirstate.delete(f0)
+                to_repo.dirstate.delete(f0)
             prog.value += 1
 
         # re-add
         for f, args, msg in actions.get(ACTION_ADD, []):
-            repo.dirstate.add(f)
+            to_repo.dirstate.add(f)
             prog.value += 1
 
         # re-add/mark as modified
         for f, args, msg in actions.get(ACTION_ADD_MODIFIED, []):
             if branchmerge:
-                repo.dirstate.normallookup(f)
+                to_repo.dirstate.normallookup(f)
             else:
-                repo.dirstate.add(f)
+                to_repo.dirstate.add(f)
             prog.value += 1
 
         # exec change
         for f, args, msg in actions.get(ACTION_EXEC, []):
-            repo.dirstate.normallookup(f)
+            to_repo.dirstate.normallookup(f)
             prog.value += 1
 
         # keep
@@ -2055,9 +2062,9 @@ def recordupdates(repo, actions, branchmerge):
             ACTION_REMOVE_GET, []
         ):
             if branchmerge:
-                repo.dirstate.otherparent(f)
+                to_repo.dirstate.otherparent(f)
             else:
-                repo.dirstate.normal(f)
+                to_repo.dirstate.normal(f)
             prog.value += 1
 
         # merge
@@ -2066,14 +2073,15 @@ def recordupdates(repo, actions, branchmerge):
             if branchmerge:
                 # We've done a branch merge, mark this file as merged
                 # so that we properly record the merger later
-                repo.dirstate.merge(f)
-                if f1 != f2:  # copy/rename
+                to_repo.dirstate.merge(f)
+                # XXX: handle cross-repo copy
+                if not is_crossrepo and f1 != f2:  # copy/rename
                     if move:
-                        repo.dirstate.remove(f1)
+                        to_repo.dirstate.remove(f1)
                     if f1 != f:
-                        repo.dirstate.copy(f1, f)
+                        to_repo.dirstate.copy(f1, f)
                     else:
-                        repo.dirstate.copy(f2, f)
+                        to_repo.dirstate.copy(f2, f)
             else:
                 # We've update-merged a locally modified file, so
                 # we set the dirstate to emulate a normal checkout
@@ -2081,31 +2089,31 @@ def recordupdates(repo, actions, branchmerge):
                 # merge will appear as a normal local file
                 # modification.
                 if f2 == f:  # file not locally copied/moved
-                    repo.dirstate.normallookup(f)
+                    to_repo.dirstate.normallookup(f)
                 if move:
-                    repo.dirstate.delete(f1)
+                    to_repo.dirstate.delete(f1)
             prog.value += 1
 
         # directory rename, move local
         for f, args, msg in actions.get(ACTION_DIR_RENAME_MOVE_LOCAL, []):
             f0, flag = args
             if branchmerge:
-                repo.dirstate.add(f)
-                repo.dirstate.remove(f0)
-                repo.dirstate.copy(f0, f)
+                to_repo.dirstate.add(f)
+                to_repo.dirstate.remove(f0)
+                to_repo.dirstate.copy(f0, f)
             else:
-                repo.dirstate.normal(f)
-                repo.dirstate.delete(f0)
+                to_repo.dirstate.normal(f)
+                to_repo.dirstate.delete(f0)
             prog.value += 1
 
         # directory rename, get
         for f, args, msg in actions.get(ACTION_LOCAL_DIR_RENAME_GET, []):
             f0, flag = args
             if branchmerge:
-                repo.dirstate.add(f)
-                repo.dirstate.copy(f0, f)
+                to_repo.dirstate.add(f)
+                to_repo.dirstate.copy(f0, f)
             else:
-                repo.dirstate.normal(f)
+                to_repo.dirstate.normal(f)
             prog.value += 1
 
 
@@ -2592,7 +2600,7 @@ def _update(
                     to_repo.dirstate.set_xrepo_merge()
                 else:
                     to_repo.setparents(fp1, fp2)
-                recordupdates(to_repo, actions, branchmerge)
+                recordupdates(to_repo, actions, branchmerge, from_repo=from_repo)
                 # update completed, clear state
                 util.unlink(to_repo.localvfs.join("updatestate"))
 

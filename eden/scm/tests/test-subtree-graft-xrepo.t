@@ -1,5 +1,10 @@
 #require git no-windows
 
+#testcases sparse non-sparse
+#if sparse
+  $ enable sparse
+#endif
+
   $ enable morestatus
   $ setconfig morestatus.show=True
   $ eagerepo
@@ -225,10 +230,8 @@ Test subtree graft with merge conflicts
   $ hg resolve --all --mark
   (no more unresolved files)
   continue: hg graft --continue
-tofix: fix the copy warning
   $ hg graft --continue
   grafting 0e0bbd7f53d7 "G2"
-  warning: can't find ancestor for 'foo/a.txt' copied from 'a.txt'!
   $ hg log -T '{desc}\n' -p -r .
   Graft "G2"
   
