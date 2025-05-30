@@ -273,3 +273,90 @@ Test subtree graft without --from-path
       2
       3
       4
+
+test subtree graft with renames on the destination side (not optimal)
+  $ newclientrepo
+  $ drawdag <<'EOS'
+  > B   # B/foo/a2.txt = 1\n2\n3\n4\n5\n (renamed from foo/a.txt)
+  > |
+  > A   # A/foo/a.txt = 1\n2\n3\n4\n5\n
+  >     # drawdag.defaultfiles=false
+  > EOS
+  $ hg go $B -q
+  $ hg subtree graft --url $GIT_URL --rev 0e0bbd7f53d7f8dfa9ef6283f68e2aa5d274a185 --to-path foo --config ui.interactive=true -- << EOF
+  > r
+  > foo/a2.txt
+  > EOF
+  using cached git repo at $TESTTMP/default-hgcache/gitrepos/* (glob)
+  grafting 0e0bbd7f53d7 "G2"
+  other [graft] changed foo/a.txt which local [local] is missing
+  hint: if this is due to a renamed file, you can manually input the renamed path
+  use (c)hanged version, leave (d)eleted, or leave (u)nresolved, or input (r)enamed path? r
+  path 'foo/a.txt' in commit 0e0bbd7f53d7 was renamed to [what path relative to repo root] in commit 7d4ce3aba011 ? foo/a2.txt
+  merging foo/a2.txt
+  $ hg log -G -T '{desc}\n' -p -r .
+  @  Graft "G2"
+  │
+  ~  Grafted 0e0bbd7f53d7f8dfa9ef6283f68e2aa5d274a185 from file:/*/$TESTTMP/gitrepo (glob)
+     - Grafted root directory to foo
+     diff --git a/foo/a2.txt b/foo/a2.txt
+     --- a/foo/a2.txt
+     +++ b/foo/a2.txt
+     @@ -1,4 +1,4 @@
+     -1
+     +1a
+      2
+      3
+      4
+
+test subtree graft with renames on the source side
+  $ newclientrepo
+  $ drawdag <<'EOS'
+  > A   # A/foo/a.txt = 1a\n2\n3a\n4\n5\n
+  >     # drawdag.defaultfiles=false
+  > EOS
+  $ hg go $A -q
+  $ hg subtree graft --url $GIT_URL --rev e815a5c1f80404f40f8fe492f461e91b4cc0e976 --to-path foo
+  using cached git repo at $TESTTMP/default-hgcache/gitrepos/* (glob)
+  grafting e815a5c1f804 "G4"
+  $ hg log -G -T '{desc}\n' -p -r .
+  @  Graft "G4"
+  │
+  ~  Grafted e815a5c1f80404f40f8fe492f461e91b4cc0e976 from file:/*/$TESTTMP/gitrepo (glob)
+     - Grafted root directory to foo
+     diff --git a/foo/a.txt b/foo/a.txt
+     deleted file mode 100644
+     --- a/foo/a.txt
+     +++ /dev/null
+     @@ -1,5 +0,0 @@
+     -1a
+     -2
+     -3a
+     -4
+     -5
+     diff --git a/foo/b.txt b/foo/b.txt
+     new file mode 100644
+     --- /dev/null
+     +++ b/foo/b.txt
+     @@ -0,0 +1,5 @@
+     +1a
+     +2
+     +3a
+     +4
+     +5
+
+test subtree graft with renames on the source side and changes on the destination side (not optimal)
+  $ newclientrepo
+  $ drawdag <<'EOS'
+  > A   # A/foo/a.txt = 1\n2\n3\n4\n5d\n
+  >     # drawdag.defaultfiles=false
+  > EOS
+  $ hg go $A -q
+  $ hg subtree graft --url $GIT_URL --rev e815a5c1f80404f40f8fe492f461e91b4cc0e976 --to-path foo
+  using cached git repo at $TESTTMP/default-hgcache/gitrepos/* (glob)
+  grafting e815a5c1f804 "G4"
+  local [local] changed foo/a.txt which other [graft] deleted (as a.txt)
+  use (c)hanged version, (d)elete, or leave (u)nresolved? u
+  abort: unresolved conflicts, can't continue
+  (use 'hg resolve' and 'hg graft --continue')
+  [255]
