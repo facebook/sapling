@@ -368,7 +368,7 @@ def print_diagnostic_info(
         print_recent_events(out, processor, dry_run)
 
     if sys.platform == "win32":
-        print_counters(instance, "Prjfs", r"prjfs\..*", out)
+        print_counters(out, instance, "Prjfs", r"prjfs\..*")
 
     print_eden_config(out, instance, processor, dry_run)
 
