@@ -5,14 +5,16 @@
  * GNU General Public License version 2.
  */
 
-//! edenfsctl glob
+//! edenfsctl prefetch
 
+use std::path::Path;
 use std::path::PathBuf;
 
 use anyhow::Result;
 use async_trait::async_trait;
 use clap::Parser;
-use edenfs_client::glob_files::Glob;
+use edenfs_telemetry::collect_system_info;
+use edenfs_telemetry::edenfs_events_mapper;
 use edenfs_utils::path_from_bytes;
 
 use crate::ExitCode;
@@ -47,22 +49,44 @@ pub struct PrefetchCmd {
 }
 
 impl PrefetchCmd {
-    fn _print_result(&self, _result: &Glob) -> Result<()> {
-        Ok(())
+    fn new_sample(&self, mount_point: &Path) -> edenfs_telemetry::EdenSample {
+        let mut sample = edenfs_telemetry::EdenSample::new();
+        collect_system_info(&mut sample, edenfs_events_mapper);
+        sample.add_string("logged_by", "cli_rs");
+        sample.add_string("type", "prefetch");
+        sample.add_string(
+            "checkout",
+            mount_point
+                .file_name()
+                .unwrap_or_default()
+                .to_str()
+                .unwrap_or_default(),
+        );
+        sample.add_bool("directories_only", self.directories_only);
+        sample.add_bool("background", self.background);
+        if let Some(pattern_file) = self.common.pattern_file.as_ref() {
+            sample.add_string("pattern_file", pattern_file.to_str().unwrap_or_default());
+        }
+        if !self.common.pattern.is_empty() {
+            sample.add_string_list("patterns", self.common.pattern.clone());
+        }
+        sample
     }
 }
 
 #[async_trait]
 impl crate::Subcommand for PrefetchCmd {
     async fn run(&self) -> Result<ExitCode> {
-        // TODO: add in telemetry support
         let instance = get_edenfs_instance();
         let client = instance.get_client();
         let (mount_point, _search_root) = self.common.get_mount_point_and_seach_root()?;
-        let patterns = self.common.load_patterns()?;
 
+        let mut sample = self.new_sample(&mount_point);
+
+        let patterns = self.common.load_patterns()?;
         let silent = self.silent || !self.debug_print;
         let return_prefetched_files = !(self.background || silent);
+
         let result = client
             .prefetch_files(
                 &mount_point,
@@ -75,6 +99,8 @@ impl crate::Subcommand for PrefetchCmd {
                 return_prefetched_files,
             )
             .await?;
+        // NOTE: Is the really still needed? We should not be falling back at all anymore.
+        sample.add_bool("prefetchV2_fallback", false);
 
         if return_prefetched_files {
             if !patterns.is_empty()
@@ -91,6 +117,11 @@ impl crate::Subcommand for PrefetchCmd {
             }
 
             if let Some(prefetched_files) = &result.prefetched_files {
+                sample.add_int(
+                    "files_fetched",
+                    prefetched_files.matching_files.len() as i64,
+                );
+
                 if self.debug_print {
                     for file in &prefetched_files.matching_files {
                         println!("{}", path_from_bytes(file)?.display());
@@ -99,6 +130,7 @@ impl crate::Subcommand for PrefetchCmd {
             }
         }
 
+        edenfs_telemetry::send(edenfs_telemetry::EDEN_EVENTS_SCUBA.to_string(), sample);
         Ok(0)
     }
 }
