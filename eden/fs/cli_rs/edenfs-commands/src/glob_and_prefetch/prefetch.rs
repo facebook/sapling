@@ -87,7 +87,7 @@ impl crate::Subcommand for PrefetchCmd {
         let silent = self.silent || !self.debug_print;
         let return_prefetched_files = !(self.background || silent);
 
-        let result = client
+        let result = match client
             .prefetch_files(
                 &mount_point,
                 patterns.clone(),
@@ -98,7 +98,19 @@ impl crate::Subcommand for PrefetchCmd {
                 None,
                 return_prefetched_files,
             )
-            .await?;
+            .await
+        {
+            Ok(r) => {
+                sample.add_bool("success", true);
+                Ok(r)
+            }
+            Err(e) => {
+                sample.add_bool("success", false);
+                sample.add_string("error", format!("{:#}", e).as_str());
+                Err(e)
+            }
+        }?;
+
         // NOTE: Is the really still needed? We should not be falling back at all anymore.
         sample.add_bool("prefetchV2_fallback", false);
 
