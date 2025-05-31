@@ -6,8 +6,8 @@
  */
 
 use anyhow::Error;
-use env_logger::filter::Builder;
-use env_logger::filter::Filter;
+use env_filter::Builder;
+use env_filter::Filter;
 use slog::BorrowedKV;
 use slog::Level;
 use slog::Logger;
@@ -81,7 +81,7 @@ impl log::Log for LinkedLogger {
     fn flush(&self) {}
 }
 
-/// Wire up a slog Logger as the destination for std logs as per an env_logger filter spec. This
+/// Wire up a slog Logger as the destination for std logs as per an env\_filter spec. This
 /// sets the global logger, so it'll error if called more than once.
 pub fn init_stdlog_once(logger: Logger, var: &str) -> Result<log::LevelFilter, Error> {
     // NOTE: The default level is ERROR, which should be fairly reasonable.
