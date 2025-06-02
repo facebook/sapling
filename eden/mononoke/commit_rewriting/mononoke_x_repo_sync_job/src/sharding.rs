@@ -312,23 +312,10 @@ impl RepoShardedProcessExecutor for XRepoSyncProcessExecutor {
         let guard = self.maybe_become_leader(mode, self.ctx.logger().clone())
             .await.with_context(|| format!("Failed to become leader for X Repo Sync from small repo {small_repo_name} to large repo {large_repo_name}"))?;
         if guard.is_some() {
-            let use_sharded_job = justknobs::eval(
-                "scm/mononoke:use_sharded_x_repo_sync_job",
-                None,
-                Some(small_repo_name),
-            )?;
-            if !use_sharded_job {
-                info!(
-                    self.ctx.logger(),
-                    "Skipping X Repo Sync from small repo {small_repo_name} to large repo {large_repo_name} because of JK"
-                );
-                return Ok(());
-            } else {
-                info!(
-                    self.ctx.logger(),
-                    "Became leader for X Repo Sync from small repo {small_repo_name} to large repo {large_repo_name}"
-                );
-            }
+            info!(
+                self.ctx.logger(),
+                "Became leader for X Repo Sync from small repo {small_repo_name} to large repo {large_repo_name}"
+            );
         }
         let result = self.process_command()
         .await
