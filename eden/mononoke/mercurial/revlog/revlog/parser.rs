@@ -14,19 +14,20 @@ use bitflags::bitflags;
 use flate2::read::ZlibDecoder;
 use mercurial_types::HgNodeHash;
 use mercurial_types::bdiff::Delta;
-use nom::Context;
 use nom::Err;
 use nom::IResult;
 use nom::Needed;
 use nom::alt;
-use nom::apply;
-use nom::be_u16;
-use nom::be_u32;
+use nom::call;
 use nom::do_parse;
-use nom::length_bytes;
+use nom::error::ErrorKind;
+use nom::error::ParseError;
+use nom::length_data;
 use nom::many0;
 use nom::map;
 use nom::named;
+use nom::number::streaming::be_u16;
+use nom::number::streaming::be_u32;
 use nom::peek;
 use nom::tag;
 use nom::take;
@@ -42,16 +43,30 @@ use crate::revlog::revidx::RevIdx;
 // }
 //
 
-pub type Error = u32;
+#[derive(Debug, PartialEq)]
+pub enum Error {
+    Custom(u32),
+    Nom(ErrorKind),
+}
+
+impl ParseError<&[u8]> for Error {
+    fn from_error_kind(_input: &[u8], kind: ErrorKind) -> Self {
+        Error::Nom(kind)
+    }
+
+    fn append(_input: &[u8], _kind: ErrorKind, other: Self) -> Self {
+        other
+    }
+}
 
 // hack until I work out how to propagate proper E type
 #[allow(non_upper_case_globals, non_snake_case, dead_code)]
 pub mod Badness {
     use super::Error;
-    pub const Version: Error = 1;
-    pub const Features: Error = 2;
-    pub const BadZlib: Error = 3;
-    pub const BadLZ4: Error = 4;
+    pub const Version: Error = Error::Custom(1);
+    pub const Features: Error = Error::Custom(2);
+    pub const BadZlib: Error = Error::Custom(3);
+    pub const BadLZ4: Error = Error::Custom(4);
 }
 
 // `Revlog` features
@@ -108,7 +123,7 @@ impl Entry {
 }
 
 // Parse the revlog header
-named!(pub header<Header>,
+named!(pub header<&[u8], Header, ()>,
     do_parse!(
         features: be_u16 >>
         version: be_u16 >>
@@ -128,7 +143,8 @@ named!(pub header<Header>,
                 version: vers,
                 features,
             }
-        }))
+        })
+    )
 );
 
 pub fn indexng_size() -> usize {
@@ -136,7 +152,7 @@ pub fn indexng_size() -> usize {
 }
 
 // Parse an "NG" revlog entry
-named!(pub indexng<Entry>,
+named!(pub indexng<&[u8], Entry, ()>,
     do_parse!(
         offset: be_u48 >>    // XXX if first, then only 2 bytes, implied 0 in top 4
         flags: be_u16 >>     // ?
@@ -168,7 +184,7 @@ pub fn index0_size() -> usize {
 }
 
 // Parse an original revlog entry
-named!(pub index0<Entry>,
+named!(pub index0<&[u8], Entry, ()>,
     do_parse!(
         _header: header >>
         offset: be_u32 >>
@@ -195,11 +211,11 @@ named!(pub index0<Entry>,
 );
 
 // Parse a single Delta
-named!(pub delta<Delta>,
+named!(pub delta<&[u8], Delta, Error>,
     do_parse!(
         start: be_u32 >>
         end: be_u32 >>
-        content: length_bytes!(be_u32) >>
+        content: length_data!(be_u32) >>
         ({
             Delta {
                 start: start as usize,
@@ -211,35 +227,35 @@ named!(pub delta<Delta>,
 );
 
 // Parse 0 or more deltas
-named!(deltas<Vec<Delta>>, many0!(delta));
+named!(deltas<&[u8], Vec<Delta>, Error>, many0!(delta));
 
 // A chunk of data data that contains some Deltas; the caller defines the framing bytes
 // bounding the input.
-named!(pub deltachunk<Vec<Delta>>,
+named!(pub deltachunk<&[u8], Vec<Delta>, Error>,
     map!(
         many0!(
             alt!(
                 do_parse!(tag!(b"u") >> d: deltas >> (d)) |                                  // uncompressed with explicit 'u' header
                 do_parse!(peek!(tag!(b"\0")) >> d: deltas >> (d)) |                          // uncompressed with included initial 0x00
-                do_parse!(peek!(tag!(b"x")) >> d: apply!(zlib_decompress, deltas) >> (d)) |  // compressed; 'x' part of the zlib stream
-                do_parse!(tag!(b"4") >> d: apply!(lz4::lz4_decompress, deltas) >> (d))       // compressed w/ lz4
+                do_parse!(peek!(tag!(b"x")) >> d: call!(zlib_decompress, deltas) >> (d)) |  // compressed; 'x' part of the zlib stream
+                do_parse!(tag!(b"4") >> d: call!(lz4::lz4_decompress, deltas) >> (d))       // compressed w/ lz4
             )
         ),
         |dv: Vec<_>| dv.into_iter().flatten().collect())
 );
 
-fn remains(i: &[u8]) -> IResult<&[u8], &[u8]> {
+fn remains(i: &[u8]) -> IResult<&[u8], &[u8], Error> {
     Ok((&i[..0], i))
 }
 
-named!(remains_owned<Vec<u8>>, map!(remains, |x: &[u8]| x.into()));
+named!(remains_owned<&[u8], Vec<u8>, Error>, map!(remains, |x: &[u8]| x.into()));
 
 // Parse some literal data, possibly compressed
-named!(pub literal<Vec<u8>>,
+named!(pub literal<&[u8], Vec<u8>, Error>,
     alt!(
         do_parse!(peek!(tag!(b"\0")) >> d: remains >> (d.into())) |
-        do_parse!(peek!(tag!(b"x")) >> d: apply!(zlib_decompress, remains_owned) >> (d)) |
-        do_parse!(tag!(b"4") >> d: apply!(lz4::lz4_decompress, remains_owned) >> (d)) |
+        do_parse!(peek!(tag!(b"x")) >> d: call!(zlib_decompress, remains_owned) >> (d)) |
+        do_parse!(tag!(b"4") >> d: call!(lz4::lz4_decompress, remains_owned) >> (d)) |
         do_parse!(tag!(b"u") >> d: remains >> (d.into()))
     )
 );
@@ -251,15 +267,7 @@ pub fn detach_result<'inp, 'out, O: 'out, E: 'out>(
 ) -> IResult<&'out [u8], O, E> {
     match res {
         Ok((_, o)) => Ok((rest, o)),
-        Err(Err::Incomplete(n)) => Err(Err::Incomplete(n)),
-        Err(Err::Error(Context::Code(_, e))) => Err(Err::Error(Context::Code(rest, e))),
-        Err(Err::Error(Context::List(e))) => Err(Err::Error(Context::List(
-            e.into_iter().map(|(_, e)| (rest, e)).collect(),
-        ))),
-        Err(Err::Failure(Context::Code(_, e))) => Err(Err::Failure(Context::Code(rest, e))),
-        Err(Err::Failure(Context::List(e))) => Err(Err::Failure(Context::List(
-            e.into_iter().map(|(_, e)| (rest, e)).collect(),
-        ))),
+        Err(err) => Err(err),
     }
 }
 
@@ -287,7 +295,7 @@ where
 /// Parse a 6 byte big-endian offset
 #[inline]
 #[allow(clippy::identity_op)]
-fn be_u48(i: &[u8]) -> IResult<&[u8], u64> {
+fn be_u48(i: &[u8]) -> IResult<&[u8], u64, ()> {
     if i.len() < 6 {
         Err(Err::Incomplete(Needed::Size(6)))
     } else {
