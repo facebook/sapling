@@ -144,6 +144,8 @@ class dirstate:
         self._pendingfilename: str = "%s.pending" % self._filename
         self._plchangecallbacks: "Dict[str, ParentChangeCallback]" = {}
         self._origpl: "Optional[Tuple[bytes, bytes]]" = None
+        # graft or merge from external repos (e.g. GitHub repos)
+        self._is_xrepo_merge: bool = False
 
         self._initfs()
 
@@ -384,6 +386,12 @@ class dirstate:
                     self.add(f)
         return copies
 
+    def set_xrepo_merge(self, is_xrepo_merge: bool = True) -> None:
+        self._is_xrepo_merge = is_xrepo_merge
+
+    def is_merge(self) -> bool:
+        return self._pl[1] != nullid or self._is_xrepo_merge
+
     def invalidate(self) -> None:
         """Causes the next access to reread the dirstate.
 
@@ -397,6 +405,7 @@ class dirstate:
         self._dirty = False
         self._parentwriters = 0
         self._origpl = None
+        self._is_xrepo_merge = False
 
     def copy(self, source: str, dest: str) -> None:
         """Mark dest as a copy of source. Unmark dest if source is None."""
@@ -478,7 +487,7 @@ class dirstate:
 
     def normallookup(self, f: str) -> None:
         """Mark a file normal, but possibly dirty."""
-        if self._pl[1] != nullid:
+        if self.is_merge():
             # if there is a merge going on and the file was either
             # in state 'm' (-1) or coming from other parent (-2) before
             # being removed, restore that state.
@@ -499,7 +508,7 @@ class dirstate:
 
     def otherparent(self, f: str) -> None:
         """Mark as coming from the other parent, always dirty."""
-        if self._pl[1] == nullid:
+        if not self.is_merge():
             raise error.Abort(
                 _("setting %r to other parent only allowed in merges") % f
             )
@@ -521,7 +530,7 @@ class dirstate:
         self._dirty = True
         oldstate = self[f]
         size = 0
-        if self._pl[1] != nullid:
+        if self.is_merge():
             entry = self._map.get(f)
             if entry is not None:
                 # backup the previous state
@@ -533,7 +542,7 @@ class dirstate:
 
     def merge(self, f: str) -> None:
         """Mark a file merged."""
-        if self._pl[1] == nullid:
+        if not self.is_merge():
             return self.normallookup(f)
         return self.otherparent(f)
 

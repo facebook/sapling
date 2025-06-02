@@ -14,6 +14,7 @@ import serverAPI from '../ClientToServerAPI';
 import {successionTracker} from '../SuccessionTracker';
 import {tracker} from '../analytics';
 import {latestCommitMessageFields} from '../codeReview/CodeReviewInfo';
+import {islDrawerState} from '../drawerState';
 import {atomFamilyWeak, localStorageBackedAtomFamily, readAtom, writeAtom} from '../jotaiUtils';
 import {AmendMessageOperation} from '../operations/AmendMessageOperation';
 import {AmendOperation, PartialAmendOperation} from '../operations/AmendOperation';
@@ -110,6 +111,21 @@ export const __TEST__ = {
   },
 };
 registerCleanup(successionTracker, updateEditedCommitMessagesFromSuccessions, import.meta.hot);
+
+// Handle updateDraftCommitMessage messages
+registerDisposable(
+  serverAPI,
+  serverAPI.onMessageOfType('updateDraftCommitMessage', event => {
+    const title = event.title;
+    const description = event.description;
+
+    writeAtom(islDrawerState, val => ({...val, right: {...val.right, collapsed: false}}));
+    const schema = readAtom(commitMessageFieldsSchema);
+    const fields = parseCommitMessageFields(schema, title, description);
+    writeAtom(editedCommitMessages('head'), fields);
+    writeAtom(rawCommitMode, 'commit');
+  }),
+);
 
 registerDisposable(
   serverAPI,

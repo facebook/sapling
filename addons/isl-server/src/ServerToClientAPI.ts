@@ -56,6 +56,7 @@ type GeneralMessage = IncomingMessage &
     | {type: 'requestApplicationInfo'}
     | {type: 'fileBugReport'}
     | {type: 'track'}
+    | {type: 'clientReady'}
   );
 type WithRepoMessage = Exclude<IncomingMessage, GeneralMessage>;
 
@@ -250,6 +251,10 @@ export default class ServerToClientAPI {
       }
       case 'track': {
         this.tracker.trackData(data.data);
+        break;
+      }
+      case 'clientReady': {
+        this.connection.readySignal?.resolve();
         break;
       }
       case 'changeCwd': {

@@ -14,6 +14,7 @@ rust_library(
             },
         },
     },
+    edition = "2021",
     deps = [
         "fbsource//third-party/rust:serde",
         "fbsource//third-party/rust:void",

@@ -76,7 +76,7 @@ fn tzset() -> Option<i32> {
     {
         use std::os::raw::c_int;
         use std::os::raw::c_long;
-        extern "C" {
+        unsafe extern "C" {
             // See https://docs.microsoft.com/en-us/cpp/c-runtime-library/daylight-dstbias-timezone-and-tzname?view=vs-2019
             fn _tzset();
             fn _get_timezone(seconds: *mut c_long) -> c_int;

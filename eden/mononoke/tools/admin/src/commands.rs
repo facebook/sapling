@@ -45,6 +45,7 @@ mononoke_app::subcommands! {
     mod fetch;
     mod filestore;
     mod git_bundle;
+    mod git_content_ref;
     mod git_objects;
     mod git_symref;
     mod list_repos;

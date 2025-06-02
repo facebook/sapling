@@ -60,8 +60,22 @@ InodeBase::InodeBase(
 #ifndef _WIN32
   mount_->getInodeMetadataTable()->populateIfNotSet(ino_, [&] {
     auto metadata = mount_->getInitialInodeMetadata(initialMode);
+    auto now = getNow();
     if (initialTimestamps) {
       metadata.timestamps = *initialTimestamps;
+      XLOGF(
+          DBG9,
+          "Setting initial timestamps for inode {} atime: {} while now time: {}",
+          ino_,
+          metadata.timestamps.atime.toTimespec().tv_sec,
+          now.toTimespec().tv_sec);
+    } else {
+      XLOGF(
+          DBG9,
+          "Initial timestamps was NULL for inode {} then the atime remains unchanged. atime: {} while now time: {}",
+          ino_,
+          metadata.timestamps.atime.toTimespec().tv_sec,
+          now.toTimespec().tv_sec);
     }
     return metadata;
   });
@@ -357,6 +371,11 @@ void InodeBase::updateAtime() {
   auto now = getNow();
   getMount()->getInodeMetadataTable()->modifyOrThrow(
       getNodeId(), [&](auto& metadata) { metadata.timestamps.atime = now; });
+  XLOGF(
+      DBG9,
+      "Updated atime for inode {} to now: {}",
+      ino_,
+      now.toTimespec().tv_sec);
 #endif
 }
 

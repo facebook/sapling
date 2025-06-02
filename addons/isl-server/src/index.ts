@@ -9,6 +9,7 @@ import type {AppMode} from 'isl/src/types';
 import type {Logger} from './logger';
 import type {ServerPlatform} from './serverPlatform';
 
+import type {Deferred} from 'shared/utils';
 import {FileLogger} from './FileLogger';
 import {Internal} from './Internal';
 import ServerToClientAPI from './ServerToClientAPI';
@@ -49,6 +50,11 @@ export interface ClientConnection {
 
   platform?: ServerPlatform;
   appMode: AppMode;
+
+  /**
+   * A deferred promise that resolves when the client signals it's ready
+   */
+  readySignal?: Deferred<void>;
 }
 
 export function onClientConnection(connection: ClientConnection): () => void {

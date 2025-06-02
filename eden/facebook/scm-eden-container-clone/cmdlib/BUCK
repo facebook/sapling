@@ -1,0 +1,21 @@
+load("@fbcode_macros//build_defs:rust_library.bzl", "rust_library")
+
+oncall("scm_client_infra")
+
+rust_library(
+    name = "cmdlib",
+    srcs = glob(["src/**/*.rs"]),
+    deps = [
+        "fbsource//third-party/rust:anyhow",
+        "fbsource//third-party/rust:chrono",
+        "fbsource//third-party/rust:dirs",
+        "fbsource//third-party/rust:serde",
+        "fbsource//third-party/rust:serde_json",
+        "fbsource//third-party/rust:tokio",
+        "fbsource//third-party/rust:tracing",
+        "fbsource//third-party/rust:tracing-subscriber",
+        "//eden/facebook/scm-eden-container-clone/eden_config:eden_config",
+        "//eden/fs/cli_rs/edenfs-client:edenfs-client",
+        "//eden/scm/lib/spawn-ext:spawn-ext",
+    ],
+)

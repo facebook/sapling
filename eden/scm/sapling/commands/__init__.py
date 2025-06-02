@@ -2694,11 +2694,13 @@ def _dograft(ui, to_repo, *revs, from_repo=None, **opts):
 
         source = ctx.extra().get("source")
         extra = {}
-        if source:
-            extra["source"] = source
-            extra["intermediate-source"] = ctx.hex()
-        else:
-            extra["source"] = ctx.hex()
+        # TODO: add cross-repo graft source to subtree metadata
+        if not is_crossrepo:
+            if source:
+                extra["source"] = source
+                extra["intermediate-source"] = ctx.hex()
+            else:
+                extra["source"] = ctx.hex()
         user = ctx.user()
         if opts.get("user"):
             user = opts["user"]

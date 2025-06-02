@@ -3973,6 +3973,14 @@ folly::Try<folly::Unit> TreeInode::nfsInvalidateCacheEntryForGC(
               for (auto& entry : state.entries) {
                 auto ino = entry.second.getInodeNumber();
                 if (inodeMap->isInodeLoadedOrRemembered(ino)) {
+                  XLOGF(
+                      DBG5,
+                      "GC invalidated inode {} with atime: {}",
+                      ino,
+                      entry.second.getInode()
+                          ->getMetadata()
+                          .timestamps.atime.toTimespec()
+                          .tv_sec);
                   inodeMap->decFsRefcount(ino);
                 }
               }
@@ -4449,6 +4457,15 @@ ImmediateFuture<uint64_t> TreeInode::invalidateChildrenNotMaterialized(
                       .timestamps.atime.toTimespec()
                       .tv_sec);
               shouldInvalidate = (atime < cutoff);
+              XLOGF(
+                  DBG5,
+                  "For path: {}, atime: {}, cutoff: {}, shouldInvalidate by GC is {}",
+                  self->getPath().value().asString(),
+                  self->getMetadataLocked(contents->entries)
+                      .timestamps.atime.toTimespec()
+                      .tv_sec,
+                  cutoff.time_since_epoch().count(),
+                  shouldInvalidate);
             }
             if (shouldInvalidate) {
               // Attempt to invalidate the directory, and then delete all of its

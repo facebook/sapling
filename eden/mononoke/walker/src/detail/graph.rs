@@ -1203,6 +1203,7 @@ mod tests {
             DerivableType::HgAugmentedManifests,
             DerivableType::SkeletonManifestsV2,
             DerivableType::ContentManifests,
+            DerivableType::InferredCopyFrom,
         ]);
         let mut missing = HashSet::new();
         for t in a {

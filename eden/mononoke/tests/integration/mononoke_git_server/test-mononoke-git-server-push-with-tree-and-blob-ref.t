@@ -89,6 +89,15 @@
   $ git rev-list --objects --all | git cat-file --batch-check='%(objectname) %(objecttype) %(rest)' | sort > $TESTTMP/new_object_list
   $ diff -w $TESTTMP/new_object_list $TESTTMP/object_list
 
+# Attempt to delete the content refs. The server should error out with the message that the operation is not supported
+  $ cd "$TESTTMP"/repo
+  $ git_client push origin --delete push_tag new_branch
+  To https://localhost:$LOCAL_PORT/repos/git/ro/repo.git
+   ! [remote rejected] new_branch (Deletion of refs pointing to trees or blobs (e.g. refs/heads/new_branch) is not permitted in Mononoke Git for repo repo)
+   ! [remote rejected] push_tag (Deletion of refs pointing to trees or blobs (e.g. refs/tags/push_tag) is not permitted in Mononoke Git for repo repo)
+  error: failed to push some refs to 'https://localhost:$LOCAL_PORT/repos/git/ro/repo.git'
+  [1]
+
 # Validate if the content refs moves got logged by Mononoke Git Content Refs logger
   $ cat "$TESTTMP/scribe_logs/$GIT_CONTENT_REFS_SCRIBE_CATEGORY" | sort | jq '{repo_name,ref_name,git_hash,object_type}'
   {

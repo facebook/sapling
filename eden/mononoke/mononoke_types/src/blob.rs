@@ -27,6 +27,7 @@ use crate::typed_hash::DeletedManifestV2Id;
 use crate::typed_hash::FastlogBatchId;
 use crate::typed_hash::FileUnodeId;
 use crate::typed_hash::FsnodeId;
+use crate::typed_hash::InferredCopyFromId;
 use crate::typed_hash::ManifestUnodeId;
 use crate::typed_hash::RawBundle2Id;
 use crate::typed_hash::RedactionKeyListId;
@@ -100,6 +101,7 @@ pub type TestManifestBlob = Blob<TestManifestId>;
 pub type TestShardedManifestBlob = Blob<TestShardedManifestId>;
 pub type SkeletonManifestV2Blob = Blob<SkeletonManifestV2Id>;
 pub type CaseConflictSkeletonManifestBlob = Blob<CaseConflictSkeletonManifestId>;
+pub type InferredCopyFromBlob = Blob<InferredCopyFromId>;
 
 impl<Id: BlobstoreKey> From<Blob<Id>> for BlobstoreBytes {
     #[inline]

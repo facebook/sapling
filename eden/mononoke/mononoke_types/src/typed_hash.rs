@@ -44,6 +44,8 @@ use crate::file_contents::FileContents;
 use crate::fsnode::Fsnode;
 use crate::hash::Blake2;
 use crate::hash::Blake2Prefix;
+use crate::inferred_copy_from::InferredCopyFrom;
+use crate::inferred_copy_from::InferredCopyFromEntry;
 use crate::rawbundle2::RawBundle2;
 use crate::redaction_key_list::RedactionKeyList;
 use crate::sharded_map::ShardedMapNode;
@@ -213,6 +215,12 @@ pub struct FastlogBatchId(Blake2);
 
 #[derive(Clone, Copy, Eq, PartialEq, Ord, PartialOrd, Debug, Hash)]
 pub struct RedactionKeyListId(Blake2);
+
+#[derive(Clone, Copy, Eq, PartialEq, Ord, PartialOrd, Debug, Hash)]
+pub struct InferredCopyFromId(Blake2);
+
+#[derive(Clone, Copy, Eq, PartialEq, Ord, PartialOrd, Debug, Hash)]
+pub struct ShardedMapV2NodeInferredCopyFromId(Blake2);
 
 #[derive(Clone, Copy, Eq, PartialEq, Ord, PartialOrd, Debug, Hash)]
 pub struct TestManifestId(Blake2);
@@ -735,6 +743,22 @@ impl_typed_hash! {
 }
 
 impl_typed_hash! {
+    hash_type => InferredCopyFromId,
+    thrift_hash_type => thrift::id::InferredCopyFromId,
+    value_type => InferredCopyFrom,
+    context_type => InferredCopyFromContext,
+    context_key => "icf",
+}
+
+impl_typed_hash! {
+    hash_type => ShardedMapV2NodeInferredCopyFromId,
+    thrift_hash_type => thrift::id::ShardedMapV2NodeId,
+    value_type => ShardedMapV2Node<InferredCopyFromEntry>,
+    context_type => ShardedMapV2NodeInferredCopyFromContext,
+    context_key => "icf.map2node",
+}
+
+impl_typed_hash! {
     hash_type => TestManifestId,
     thrift_hash_type => thrift::id::TestManifestId,
     value_type => TestManifest,
@@ -963,6 +987,12 @@ mod test {
             id.blobstore_key(),
             format!("redactionkeylist.blake2.{}", id)
         );
+
+        let id = ShardedMapV2NodeInferredCopyFromId::from_byte_array([1; 32]);
+        assert_eq!(id.blobstore_key(), format!("icf.map2node.blake2.{}", id));
+
+        let id = InferredCopyFromId::from_byte_array([1; 32]);
+        assert_eq!(id.blobstore_key(), format!("icf.blake2.{}", id));
     }
 
     #[mononoke::test]
@@ -1058,6 +1088,11 @@ mod test {
         assert_eq!(id, deserialized);
 
         let id = RedactionKeyListId::from_byte_array([1; 32]);
+        let serialized = serde_json::to_string(&id).unwrap();
+        let deserialized = serde_json::from_str(&serialized).unwrap();
+        assert_eq!(id, deserialized);
+
+        let id = InferredCopyFromId::from_byte_array([1; 32]);
         let serialized = serde_json::to_string(&id).unwrap();
         let deserialized = serde_json::from_str(&serialized).unwrap();
         assert_eq!(id, deserialized);

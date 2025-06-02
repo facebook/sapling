@@ -1081,8 +1081,7 @@ impl BlameData {
                     && Some(line.path) == maybe_range_path
                     && line.offset == range.offset + range.length
                     && line.origin_offset == range.origin_offset + range.length
-                    && line.parent.zip(range.parent.as_ref()).map_or(
-                        true,
+                    && line.parent.zip(range.parent.as_ref()).is_none_or(
                         |(line_parent, range_parent)| {
                             line_parent.matches_range_parent_index(
                                 range_parent,

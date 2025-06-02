@@ -9,12 +9,23 @@ import type {Logger} from 'isl-server/src/logger';
 import type {ServerPlatform} from 'isl-server/src/serverPlatform';
 import type {AppMode, ClientToServerMessage, ServerToClientMessage} from 'isl/src/types';
 import type {Comparison} from 'shared/Comparison';
+import type {WebviewPanel, WebviewView} from 'vscode';
 import type {VSCodeServerPlatform} from './vscodePlatform';
+
+/**
+ * Interface representing the result of creating or focusing an ISL webview.
+ * Contains both the panel/view and a promise that resolves when the client is ready.
+ */
+interface ISLWebviewResult<W extends WebviewPanel | WebviewView> {
+  panel: W;
+  readySignal: Deferred<void>;
+}
 
 import {onClientConnection} from 'isl-server/src';
 import {deserializeFromString, serializeToString} from 'isl/src/serialize';
 import {ComparisonType, isComparison, labelForComparison} from 'shared/Comparison';
-import {nullthrows} from 'shared/utils';
+import type {Deferred} from 'shared/utils';
+import {defer} from 'shared/utils';
 import * as vscode from 'vscode';
 import {executeVSCodeCommand} from './commands';
 import {getCLICommand, PERSISTED_STORAGE_KEY_PREFIX, shouldOpenBeside} from './config';
@@ -22,28 +33,34 @@ import {getWebviewOptions, htmlForWebview} from './htmlForWebview';
 import {locale, t} from './i18n';
 import {extensionVersion} from './utils';
 
-let islPanelOrView: vscode.WebviewPanel | vscode.WebviewView | undefined = undefined;
+let islPanelOrViewResult: ISLWebviewResult<vscode.WebviewPanel | vscode.WebviewView> | undefined =
+  undefined;
 let hasOpenedISLWebviewBeforeState = false;
 
 const islViewType = 'sapling.isl';
 const comparisonViewType = 'sapling.comparison';
 
+/**
+ * Creates or focuses the ISL webview and returns both the panel/view and a promise that resolves when the client is ready.
+ */
 function createOrFocusISLWebview(
   context: vscode.ExtensionContext,
   platform: VSCodeServerPlatform,
   logger: Logger,
   column?: vscode.ViewColumn,
-): vscode.WebviewPanel | vscode.WebviewView {
+): ISLWebviewResult<vscode.WebviewPanel | vscode.WebviewView> {
   // Try to reuse existing ISL panel/view
-  if (islPanelOrView) {
-    isPanel(islPanelOrView) ? islPanelOrView.reveal() : islPanelOrView.show();
-    return islPanelOrView;
+  if (islPanelOrViewResult) {
+    isPanel(islPanelOrViewResult.panel)
+      ? islPanelOrViewResult.panel.reveal()
+      : islPanelOrViewResult.panel.show();
+    return islPanelOrViewResult;
   }
   // Otherwise, create a new panel/view
 
   const viewColumn = column ?? vscode.window.activeTextEditor?.viewColumn ?? vscode.ViewColumn.One;
 
-  islPanelOrView = populateAndSetISLWebview(
+  islPanelOrViewResult = populateAndSetISLWebview(
     context,
     vscode.window.createWebviewPanel(
       islViewType,
@@ -55,7 +72,8 @@ function createOrFocusISLWebview(
     {mode: 'isl'},
     logger,
   );
-  return nullthrows(islPanelOrView);
+
+  return islPanelOrViewResult;
 }
 
 function createComparisonWebview(
@@ -63,10 +81,13 @@ function createComparisonWebview(
   platform: VSCodeServerPlatform,
   comparison: Comparison,
   logger: Logger,
-): vscode.WebviewPanel {
+): ISLWebviewResult<vscode.WebviewPanel> {
   // always create a new comparison webview
   const column =
-    shouldOpenBeside() && islPanelOrView != null && isPanel(islPanelOrView) && islPanelOrView.active
+    shouldOpenBeside() &&
+    islPanelOrViewResult != null &&
+    isPanel(islPanelOrViewResult.panel) &&
+    islPanelOrViewResult.panel.active
       ? vscode.ViewColumn.Beside
       : vscode.window.activeTextEditor?.viewColumn ?? vscode.ViewColumn.One;
 
@@ -142,7 +163,6 @@ export function registerISLCommands(
   logger: Logger,
 ): vscode.Disposable {
   const webviewViewProvider = new ISLWebviewViewProvider(context, platform, logger);
-
   replaceExistingOrphanedISLWindows(context, platform, logger);
 
   const createComparisonWebviewCommand = (comparison: Comparison) => {
@@ -167,12 +187,44 @@ export function registerISLCommands(
         vscode.window.showErrorMessage(`error opening isl: ${err}`);
       }
     }),
+    vscode.commands.registerCommand(
+      'sapling.open-isl-with-commit-message',
+      async (title: string, description: string) => {
+        try {
+          let readySignal: Deferred<void>;
+
+          if (shouldUseWebviewView()) {
+            executeVSCodeCommand('sapling.isl.focus');
+            // For webview views, use the readySignal from the provider
+            readySignal = webviewViewProvider.readySignal;
+          } else {
+            const result = createOrFocusISLWebview(context, platform, logger);
+            readySignal = result.readySignal;
+          }
+
+          await readySignal.promise;
+
+          const currentPanelOrViewResult = islPanelOrViewResult;
+          if (currentPanelOrViewResult) {
+            const message: ServerToClientMessage = {
+              type: 'updateDraftCommitMessage',
+              title,
+              description,
+            };
+
+            currentPanelOrViewResult.panel.webview.postMessage(serializeToString(message));
+          }
+        } catch (err: unknown) {
+          vscode.window.showErrorMessage(`Error opening ISL with commit message: ${err}`);
+        }
+      },
+    ),
     vscode.commands.registerCommand('sapling.close-isl', () => {
-      if (!islPanelOrView) {
+      if (!islPanelOrViewResult) {
         return;
       }
-      if (isPanel(islPanelOrView)) {
-        islPanelOrView.dispose();
+      if (isPanel(islPanelOrViewResult.panel)) {
+        islPanelOrViewResult.panel.dispose();
       } else {
         // close sidebar entirely
         executeVSCodeCommand('workbench.action.closeSidebar');
@@ -203,8 +255,8 @@ export function registerISLCommands(
     vscode.workspace.onDidChangeConfiguration(e => {
       // if we start using ISL as a view, dispose the panel
       if (e.affectsConfiguration('sapling.isl.showInSidebar')) {
-        if (islPanelOrView && isPanel(islPanelOrView) && shouldUseWebviewView()) {
-          islPanelOrView.dispose();
+        if (islPanelOrViewResult && isPanel(islPanelOrViewResult.panel) && shouldUseWebviewView()) {
+          islPanelOrViewResult.panel.dispose();
         }
       }
     }),
@@ -239,6 +291,9 @@ function registerDeserializer(
  * that shows this view.
  */
 class ISLWebviewViewProvider implements vscode.WebviewViewProvider {
+  // Signal that resolves when the webview view is ready
+  public readySignal: Deferred<void> = defer<void>();
+
   constructor(
     private extensionContext: vscode.ExtensionContext,
     private platform: VSCodeServerPlatform,
@@ -247,13 +302,15 @@ class ISLWebviewViewProvider implements vscode.WebviewViewProvider {
 
   resolveWebviewView(webviewView: vscode.WebviewView): void | Thenable<void> {
     webviewView.webview.options = getWebviewOptions(this.extensionContext, 'dist/webview');
-    populateAndSetISLWebview(
+    const result = populateAndSetISLWebview(
       this.extensionContext,
       webviewView,
       this.platform,
       {mode: 'isl'},
       this.logger,
     );
+
+    this.readySignal = result.readySignal;
   }
 }
 
@@ -264,17 +321,22 @@ function isPanel(
   return (panelOrView as vscode.WebviewPanel).reveal !== undefined;
 }
 
+/**
+ * Populates and sets up an ISL webview panel or view.
+ * Returns both the panel/view and a Deferred that resolves when the client signals it's ready.
+ */
 function populateAndSetISLWebview<W extends vscode.WebviewPanel | vscode.WebviewView>(
   context: vscode.ExtensionContext,
   panelOrView: W,
   platform: VSCodeServerPlatform,
   mode: AppMode,
   logger: Logger,
-): W {
+): ISLWebviewResult<W> {
+  const readySignal = defer<void>();
   logger.info(`Populating ISL webview ${isPanel(panelOrView) ? 'panel' : 'view'}`);
   hasOpenedISLWebviewBeforeState = true;
-  if (mode.mode === 'isl' && isPanel(panelOrView)) {
-    islPanelOrView = panelOrView;
+  if (mode.mode === 'isl') {
+    islPanelOrViewResult = {panel: panelOrView, readySignal};
   }
   if (isPanel(panelOrView)) {
     panelOrView.iconPath = vscode.Uri.joinPath(
@@ -317,29 +379,30 @@ function populateAndSetISLWebview<W extends vscode.WebviewPanel | vscode.Webview
     logger,
     command: getCLICommand(),
     version: extensionVersion,
+    readySignal,
   });
 
   panelOrView.onDidDispose(() => {
     if (isPanel(panelOrView)) {
       logger.info('Disposing ISL panel');
-      islPanelOrView = undefined;
+      islPanelOrViewResult = undefined;
     } else {
       logger.info('Disposing ISL view');
     }
     disposeConnection();
   });
 
-  return panelOrView;
+  return {panel: panelOrView, readySignal};
 }
 
 export function fetchUIState(): Promise<{state: string} | undefined> {
-  if (islPanelOrView == null) {
+  if (islPanelOrViewResult == null) {
     return Promise.resolve(undefined);
   }
 
   return new Promise(resolve => {
-    let dispose: vscode.Disposable | undefined = islPanelOrView?.webview.onDidReceiveMessage(
-      (m: string) => {
+    let dispose: vscode.Disposable | undefined =
+      islPanelOrViewResult?.panel.webview.onDidReceiveMessage((m: string) => {
         try {
           const data = deserializeFromString(m) as ClientToServerMessage;
           if (data.type === 'gotUiState') {
@@ -348,10 +411,9 @@ export function fetchUIState(): Promise<{state: string} | undefined> {
             resolve({state: data.state});
           }
         } catch {}
-      },
-    );
+      });
 
-    islPanelOrView?.webview.postMessage(
+    islPanelOrViewResult?.panel.webview.postMessage(
       serializeToString({type: 'getUiState'} as ServerToClientMessage),
     );
   });

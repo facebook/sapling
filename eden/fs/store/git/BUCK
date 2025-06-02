@@ -12,12 +12,10 @@ cpp_library(
     deps = [
         "//eden/common/utils:enum",
         "//eden/common/utils:throw",
-        "//eden/fs/model/git:git",
         "//eden/fs/model:model",
         "//eden/fs/service:thrift_util",
         "//folly/futures:core",
         "//folly/logging:logging",
-        "//folly:conv",
         "//folly:string",
         # TODO(T168360028): This dependency comes from third-party/rust/BUCK
         # which includes a bunch of buck-built libgit2 targets for each

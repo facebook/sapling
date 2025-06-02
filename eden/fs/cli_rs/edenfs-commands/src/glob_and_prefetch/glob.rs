@@ -7,16 +7,12 @@
 
 //! edenfsctl glob
 
-use std::path::PathBuf;
-
 use anyhow::Context;
 use anyhow::Result;
 use async_trait::async_trait;
 use clap::Parser;
 use edenfs_client::glob_files::Glob;
 use edenfs_client::glob_files::dtype_to_str;
-use edenfs_client::utils::get_mount_point;
-use edenfs_client::utils::locate_repo_root;
 use edenfs_utils::path_from_bytes;
 
 use crate::ExitCode;
@@ -93,29 +89,7 @@ impl crate::Subcommand for GlobCmd {
     async fn run(&self) -> Result<ExitCode> {
         let instance = get_edenfs_instance();
         let client = instance.get_client();
-
-        // Use absolute mount_point if provided (i.e. no search_root) else use
-        // cwd as mount_point and compute search_root.
-        let mount_point = get_mount_point(&self.common.mount_point)?;
-        let mut search_root = PathBuf::new();
-
-        // If mount_point is based on cwd - compute search_root
-        if self.common.mount_point.is_none() {
-            let cwd = std::env::current_dir()
-                .with_context(|| "Unable to retrieve current working directory")?;
-            search_root = cwd.strip_prefix(&mount_point)?.to_path_buf();
-        } else {
-            // validate absolute mount_point is point to root
-            let repo_root =
-                locate_repo_root(&mount_point).with_context(|| "Unable to locate repo root")?;
-            if mount_point != repo_root {
-                eprintln!(
-                    "{} is not the root of an EdenFS repo",
-                    mount_point.display()
-                );
-                return Ok(1);
-            }
-        }
+        let (mount_point, search_root) = self.common.get_mount_point_and_seach_root()?;
 
         // Load patterns
         let patterns = self.common.load_patterns()?;

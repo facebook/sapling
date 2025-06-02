@@ -46,6 +46,9 @@ use crate::thrift;
 // as the default implementation uses a list of integers.  If you need to
 // serialize or deserialize these hashes, implement the traits directly.
 
+pub const BLAKE2_HASH_LENGTH_BYTES: usize = 32;
+pub const BLAKE2_HASH_LENGTH_HEX: usize = BLAKE2_HASH_LENGTH_BYTES * 2;
+
 /// Raw BLAKE2b hash.
 ///
 /// Mononoke's internal hashes are based on the BLAKE2b format, used to generate 256-bit (32-byte)
@@ -55,10 +58,6 @@ use crate::thrift;
 /// hashes.
 ///
 /// For more on BLAKE2b, see <https://blake2.net/>
-
-pub const BLAKE2_HASH_LENGTH_BYTES: usize = 32;
-pub const BLAKE2_HASH_LENGTH_HEX: usize = BLAKE2_HASH_LENGTH_BYTES * 2;
-
 #[derive(Clone, Copy, Eq, PartialEq, Ord, PartialOrd, Hash)]
 #[derive(Abomonation, mysql::OptTryFromRowField)]
 #[derive(bincode::Encode, bincode::Decode)]

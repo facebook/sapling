@@ -89,6 +89,7 @@ union DerivedData {
   20: DerivedDataSkeletonManifestV2 skeleton_manifest_v2;
   21: DerivedDataCcsm ccsm;
   22: DerivedDataContentManifest content_manifest;
+  23: DerivedDataInferredCopyFrom inferred_copy_from;
 }
 
 union DerivedDataFsnode {
@@ -177,6 +178,10 @@ union DerivedDataGitDeltaManifestV2 {
 
 union DerivedDataContentManifest {
   1: id.ContentManifestId root_content_manifest_id;
+}
+
+union DerivedDataInferredCopyFrom {
+  1: id.InferredCopyFromId root_inferred_copy_from_id;
 }
 
 @rust.Exhaustive

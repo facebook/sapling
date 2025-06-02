@@ -651,7 +651,7 @@ async fn archive_writer<W: AsyncWrite + Unpin + Send + Sync + 'static>(
     Ok(())
 }
 
-async fn filesystem_writer<'a, 'b>(
+async fn filesystem_writer(
     mut receiver: mpsc::Receiver<(FileMetadata, FileChunk)>,
     bytes_written: Arc<AtomicU64>,
 ) -> anyhow::Result<()> {
@@ -692,7 +692,7 @@ async fn filesystem_writer<'a, 'b>(
     Ok(())
 }
 
-async fn filesystem_write_file<'a, 'b>(
+async fn filesystem_write_file(
     file_writes_tx: &mpsc::Sender<
         Box<tokio::task::JoinHandle<std::result::Result<(), anyhow::Error>>>,
     >,

@@ -199,7 +199,7 @@ class eden_dirstate(dirstate.dirstate):
 
     def normallookup(self, f):  # override
         """Mark a file normal, but possibly dirty."""
-        if self._pl[1] != nullid:
+        if self.is_merge():
             # if there is a merge going on and the file was either
             # in state 'm' (-1) or coming from other parent (-2) before
             # being removed, restore that state.

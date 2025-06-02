@@ -7,6 +7,6 @@
 
 #[cfg(feature = "buildinfo")]
 #[link(name = "buildinfo", kind = "static")]
-extern "C" {
+unsafe extern "C" {
     pub fn print_buildinfo();
 }

@@ -305,7 +305,7 @@ thread_local! {
         #[cfg(target_os = "macos")]
         {
             #[link(name = "pthread")]
-            extern "C" {
+            unsafe extern "C" {
                 fn pthread_threadid_np(
                     thread: libc::pthread_t,
                     thread_id: *mut u64,

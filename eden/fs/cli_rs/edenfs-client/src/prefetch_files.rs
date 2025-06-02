@@ -23,7 +23,7 @@ use crate::methods::EdenThriftMethod;
 
 #[derive(Clone, Debug)]
 pub struct PrefetchResult {
-    prefetched_files: Option<Glob>,
+    pub prefetched_files: Option<Glob>,
 }
 
 impl From<thrift_types::edenfs::PrefetchResult> for PrefetchResult {

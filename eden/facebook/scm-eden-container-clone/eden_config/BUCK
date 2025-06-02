@@ -8,5 +8,7 @@ rust_library(
     visibility = [
         "//eden/facebook/scm-eden-container-clone/...",
     ],
-    deps = [],
+    deps = [
+        "//eden/scm/lib/spawn-ext:spawn-ext",
+    ],
 )

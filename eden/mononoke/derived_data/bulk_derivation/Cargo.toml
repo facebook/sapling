@@ -27,6 +27,7 @@ filenodes_derivation = { version = "0.1.0", path = "../filenodes_derivation" }
 fsnodes = { version = "0.1.0", path = "../fsnodes" }
 futures = { version = "0.3.30", features = ["async-await", "compat"] }
 git_types = { version = "0.1.0", path = "../../git/git_types" }
+inferred_copy_from = { version = "0.1.0", path = "../inferred_copy_from" }
 mercurial_derivation = { version = "0.1.0", path = "../mercurial_derivation" }
 mononoke_macros = { version = "0.1.0", path = "../../mononoke_macros" }
 mononoke_types = { version = "0.1.0", path = "../../mononoke_types" }

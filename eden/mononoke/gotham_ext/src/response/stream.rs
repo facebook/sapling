@@ -68,7 +68,7 @@ impl<'a> CompressedResponseStream<'a> {
         // 2MiB, for LFS that's at least once every content chunk.
         const YIELD_EVERY: usize = 2 * 1024 * 1024;
 
-        let inner = inner.map_err(|e| io::Error::new(io::ErrorKind::Other, e));
+        let inner = inner.map_err(io::Error::other);
         let inner = YieldStream::new(inner, YIELD_EVERY, |data| {
             data.as_ref().map_or(0, |b| b.len())
         });

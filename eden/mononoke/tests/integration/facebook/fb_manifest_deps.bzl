@@ -22,6 +22,7 @@ MONONOKE_TARGETS_TO_ENV = {
     "//eden/mononoke/facebook/derived_data_service:2ds_client": "DERIVED_DATA_CLIENT",
     "//eden/mononoke/facebook/derived_data_service:derivation_worker": "DERIVED_DATA_WORKER",
     "//eden/mononoke/facebook/derived_data_service:derived_data_service": "DERIVED_DATA_SERVICE",
+    "//eden/mononoke/facebook/git_bundle_generator:git_bundle_generator": "GIT_BUNDLE_GENERATOR",
     "//eden/mononoke/facebook/slow_bookmark_mover:slow_bookmark_mover": "MONONOKE_SLOW_BOOKMARK_MOVER",
     "//eden/mononoke/git/facebook/git_move_bookmark:git_move_bookmark": "MONONOKE_GIT_MOVE_BOOKMARK",
     "//eden/mononoke/git/facebook/pushrebase:git_pushrebase": "GIT_PUSHREBASE",

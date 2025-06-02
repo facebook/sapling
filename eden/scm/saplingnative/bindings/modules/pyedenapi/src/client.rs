@@ -52,6 +52,7 @@ use edenapi_types::GetReferencesParams;
 use edenapi_types::GetSmartlogByVersionParams;
 use edenapi_types::GetSmartlogParams;
 use edenapi_types::HgChangesetContent;
+use edenapi_types::HgFilenodeData;
 use edenapi_types::HgMutationEntryContent;
 use edenapi_types::HistoricalVersionsParams;
 use edenapi_types::HistoricalVersionsResponse;
@@ -75,6 +76,7 @@ use edenapi_types::UpdateArchiveResponse;
 use edenapi_types::UpdateReferencesParams;
 use edenapi_types::UploadSnapshotResponse;
 use edenapi_types::UploadToken;
+use edenapi_types::UploadTokensResponse;
 use edenapi_types::WorkspaceDataResponse;
 use edenapi_types::WorkspacesDataResponse;
 use edenapi_types::cloud::SmartlogDataResponse;
@@ -528,6 +530,21 @@ py_class!(pub class client |py| {
         let bubble_id = bubbleid.and_then(NonZeroU64::new);
         let entries = py
             .allow_threads(|| block_unless_interrupted(api.process_files_upload(data.0, bubble_id, None, UploadLookupPolicy::PerformLookup)))
+            .map_pyerr(py)?
+            .map_pyerr(py)?
+            .entries;
+        Ok(entries.map_ok(Serde).map_err(Into::into).into())
+    }
+
+    /// uploadfilecontents(data: [(AnyFileContentId, Bytes)], bubbleid: int | None)
+    /// -> Iterable[UploadToken]
+    def uploadfilenodes(
+        &self,
+        data: Serde<Vec<HgFilenodeData>>,
+    ) -> PyResult<TStream<anyhow::Result<Serde<UploadTokensResponse>>>> {
+        let api = self.inner(py).as_ref();
+        let entries = py
+            .allow_threads(|| block_unless_interrupted(api.upload_filenodes_batch(data.0)))
             .map_pyerr(py)?
             .map_pyerr(py)?
             .entries;

@@ -266,7 +266,7 @@ impl CaseConflictSkeletonManifest {
                             && difference_item.previous_values.iter().all(|parent_entry| {
                                 parent_entry
                                     .dir()
-                                    .map_or(true, |dir| dir.subentries.size() <= 1)
+                                    .is_none_or(|dir| dir.subentries.size() <= 1)
                             })
                         {
                             // Load the first two children of the child manifest as

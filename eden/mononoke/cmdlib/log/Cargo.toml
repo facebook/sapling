@@ -15,7 +15,7 @@ anyhow = "1.0.95"
 arg_extensions = { version = "0.1.0", path = "../extensions" }
 cached_config = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 clap = { version = "4.5.38", features = ["derive", "env", "string", "unicode", "wrap_help"] }
-env_logger = "0.10"
+env_filter = "0.1.3"
 fbinit = { version = "0.2.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 hostname = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 justknobs = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }

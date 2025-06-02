@@ -53,6 +53,16 @@ pub trait CommandExt {
     /// Similar to `checked_output`, but takes `Output`. Useful with custom
     /// stdin.
     fn report_failure_with_output(&mut self, output: &Output) -> io::Result<()>;
+
+    /// Extract stdout content as a String from an Output.
+    /// This is a convenience function to avoid having to convert stdout bytes to a string.
+    /// The result is trimmed to remove trailing newlines.
+    fn stdout_str(output: &Output) -> String;
+
+    /// Extract stderr content as a String from an Output.
+    /// This is a convenience function to avoid having to convert stderr bytes to a string.
+    /// The result is trimmed to remove trailing newlines.
+    fn stderr_str(output: &Output) -> String;
 }
 
 #[derive(Debug)]
@@ -215,6 +225,14 @@ impl CommandExt for Command {
                 .into_io_error());
         }
         Ok(())
+    }
+
+    fn stdout_str(output: &Output) -> String {
+        String::from_utf8_lossy(&output.stdout).trim().to_string()
+    }
+
+    fn stderr_str(output: &Output) -> String {
+        String::from_utf8_lossy(&output.stderr).trim().to_string()
     }
 }
 

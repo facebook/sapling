@@ -8,16 +8,13 @@ rust_binary(
     srcs = glob(["src/**/*.rs"]),
     deps = [
         "fbsource//third-party/rust:anyhow",
-        "fbsource//third-party/rust:chrono",
         "fbsource//third-party/rust:clap",
         "fbsource//third-party/rust:tokio",
         "fbsource//third-party/rust:tracing",
         "fbsource//third-party/rust:tracing-subscriber",
         "//common/rust/shed/fbinit:fbinit",
         "//common/rust/tracing-scuba:tracing-scuba",
-        "//eden/facebook/scm-eden-container-clone/eden_config:eden_config",
-        "//eden/fs/cli_rs/edenfs-client:edenfs-client",
-        "//eden/scm/lib/shell:shell",
+        "//eden/facebook/scm-eden-container-clone/cmdlib:cmdlib",
     ],
 )
 

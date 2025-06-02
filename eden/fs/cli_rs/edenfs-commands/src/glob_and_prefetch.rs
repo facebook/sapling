@@ -7,5 +7,7 @@
 
 mod common;
 pub mod glob;
+pub mod prefetch;
 
 pub use glob::*;
+pub use prefetch::*;

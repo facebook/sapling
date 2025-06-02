@@ -488,6 +488,10 @@ def _hint_for_missing_file(repo, fcd, fco, fd):
     default_hint = _(
         "if this is due to a renamed file, you can manually input the renamed path"
     )
+    if not repo.is_same_repo(fco._repo):
+        # skip copytrace for cross-repo case
+        return default_hint
+
     # enable it in tests by default
     if not repo.ui.configbool("copytrace", "hint-with-commit", util.istest()):
         return default_hint

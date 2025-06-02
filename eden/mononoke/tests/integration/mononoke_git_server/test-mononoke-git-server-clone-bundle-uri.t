@@ -52,10 +52,10 @@
   $ mononoke_git_service
 
 # Put the metadata about the bundle in the DB
-  $ sqlite3 "$TESTTMP/monsql/sqlite_dbs" "INSERT INTO git_bundles (repo_id, bundle_handle, bundle_list, in_bundle_list_order, bundle_fingerprint) VALUES (0, '$BUNDLE_PATH', 1, 1, 'bundle_fingerprint')"
+  $ sqlite3 "$TESTTMP/monsql/sqlite_dbs" "INSERT INTO git_bundles (repo_id, bundle_handle, bundle_list, in_bundle_list_order, bundle_fingerprint, generation_start_timestamp) VALUES (0, '$BUNDLE_PATH', 1, 1, 'bundle_fingerprint', 0)"
 
   $ sqlite3 "$TESTTMP/monsql/sqlite_dbs" "select * from git_bundles"
-  1|0|$TESTTMP/repo_bundle.bundle|1|1|bundle_fingerprint
+  1|0|$TESTTMP/repo_bundle.bundle|1|1|bundle_fingerprint|0
 
 # Clone the Git repo from Mononoke
   $ GIT_TRACE_PACKET=1 git_client -c transfer.bundleURI=true clone $MONONOKE_GIT_SERVICE_BASE_URL/$REPONAME.git 2>&1 | grep -oE 'packet:.+bundle.*$'

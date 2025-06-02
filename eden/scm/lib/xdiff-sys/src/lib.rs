@@ -23,7 +23,13 @@ mod tests {
 
     #[test]
     fn test_xdl_diff_vendored() {
-        extern "C" fn hunk_func(a1: i64, a2: i64, b1: i64, b2: i64, _priv: *mut c_void) -> c_int {
+        unsafe extern "C" fn hunk_func(
+            a1: i64,
+            a2: i64,
+            b1: i64,
+            b2: i64,
+            _priv: *mut c_void,
+        ) -> c_int {
             let mut _priv = unsafe { (_priv as *mut Vec<(i64, i64, i64, i64)>).as_mut() };
             if let Some(result) = _priv {
                 result.push((a1, a2, b1, b2));

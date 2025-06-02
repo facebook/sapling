@@ -5,4 +5,7 @@
  * GNU General Public License version 2.
  */
 
-pub mod usecases_thrift_types;
+mod mapping;
+
+pub use mapping::RootInferredCopyFromId;
+pub use mapping::format_key;

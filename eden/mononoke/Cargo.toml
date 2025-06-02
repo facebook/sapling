@@ -292,6 +292,7 @@ members = [
   "derived_data/if/clients",
   "derived_data/if/mocks",
   "derived_data/if/services",
+  "derived_data/inferred_copy_from",
   "derived_data/manager",
   "derived_data/mercurial_derivation",
   "derived_data/remote",

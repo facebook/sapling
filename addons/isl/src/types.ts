@@ -809,6 +809,7 @@ export type ClientToServerMessage =
   | {type: 'heartbeat'; id: string}
   | {type: 'stress'; id: number; time: number; message: string}
   | {type: 'refresh'}
+  | {type: 'clientReady'}
   | {type: 'getConfig'; name: ConfigName}
   | {type: 'setConfig'; name: SettableConfigName; value: string}
   | {type: 'setDebugLogging'; name: 'debug' | 'verbose'; enabled: boolean}
@@ -963,6 +964,7 @@ export type ServerToClientMessage =
   | {type: 'gotSuggestedReviewers'; reviewers: Array<string>; key: string}
   | {type: 'gotConfiguredMergeTool'; tool: string | undefined}
   | {type: 'updatedRemoteDiffMessage'; diffId: DiffId; error?: string}
+  | {type: 'updateDraftCommitMessage'; title: string; description: string}
   | {type: 'uploadFileResult'; id: string; result: Result<string>}
   | {type: 'gotRepoUrlAtHash'; url: Result<string>}
   | {type: 'comparison'; comparison: Comparison; data: ComparisonData}

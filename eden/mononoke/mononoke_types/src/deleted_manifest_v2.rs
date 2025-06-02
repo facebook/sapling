@@ -100,9 +100,9 @@ pub use crate::typed_hash::ShardedMapNodeDMv2Id;
 /// 1. Check deleted manifest from node B: the file was deleted with linknode to B.
 /// 2. Need to consider all ancestors of B:
 ///    * check unodes for the parents: if the file exists,
-///        traverse the history
+///      traverse the history
 ///    * if not, check the deleted manifest whether the file
-///        existed and was deleted
+///      existed and was deleted
 #[derive(Debug, Clone, Eq, PartialEq)]
 pub struct DeletedManifestV2 {
     linknode: Option<ChangesetId>,

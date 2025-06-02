@@ -5,6 +5,8 @@
  * LICENSE file in the root directory of this source tree.
  */
 
+import * as pathModule from 'path';
+import type {Comparison} from '../../../shared/Comparison';
 import type {Platform} from '../platform';
 import type {OneIndexedLineNumber, RepoRelativePath} from '../types';
 
@@ -14,6 +16,7 @@ declare global {
   interface Window {
     __vsIdeBridge: {
       openFileInVisualStudio: (path: string, line?: number, col?: number) => void;
+      openDiffInVisualStudio: (path: string, comparison: Comparison) => void;
     };
   }
 }
@@ -45,6 +48,16 @@ const visualStudioPlatform: Platform = {
           const fullPath = `${repoRoot}/${path}`;
           window.__vsIdeBridge.openFileInVisualStudio(fullPath, _options?.line);
         }
+      }
+    }
+  },
+  openDiff: async (path: RepoRelativePath, comparison: Comparison) => {
+    if (window.__vsIdeBridge && window.__vsIdeBridge.openDiffInVisualStudio) {
+      const helpers = await import('./platformHelpers');
+      const repoRoot = helpers.getRepoRoot();
+      if (repoRoot) {
+        const fullPath = pathModule.join(repoRoot, path);
+        window.__vsIdeBridge.openDiffInVisualStudio(fullPath, comparison);
       }
     }
   },

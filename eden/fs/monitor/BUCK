@@ -44,7 +44,6 @@ cpp_library(
     ],
     deps = [
         "fbsource//third-party/fmt:fmt",
-        "//eden/fs:config",
         "//eden/fs/config:config",
         "//eden/fs/service:init",
         "//eden/fs/service:thrift-cpp2-clients",

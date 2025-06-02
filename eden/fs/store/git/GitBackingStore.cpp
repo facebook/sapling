@@ -7,7 +7,6 @@
 
 #include "eden/fs/store/git/GitBackingStore.h"
 
-#include <folly/Conv.h>
 #include <folly/futures/Future.h>
 #include <folly/logging/xlog.h>
 // TODO(T168360028)
@@ -19,7 +18,6 @@
 #include "eden/fs/model/Hash.h"
 #include "eden/fs/model/Tree.h"
 #include "eden/fs/model/TreeEntry.h"
-#include "eden/fs/model/git/GitTree.h"
 #include "eden/fs/service/ThriftUtil.h"
 #include "eden/fs/store/ObjectFetchContext.h"
 #include "folly/String.h"

@@ -10,8 +10,12 @@ use std::io::BufRead;
 use std::io::BufReader;
 use std::path::PathBuf;
 
+use anyhow::Context;
 use anyhow::Result;
+use anyhow::anyhow;
 use clap::Parser;
+use edenfs_client::utils::get_mount_point;
+use edenfs_client::utils::locate_repo_root;
 use hg_util::path::expand_path;
 
 #[derive(Parser, Debug)]
@@ -51,6 +55,32 @@ pub(crate) struct CommonArgs {
 }
 
 impl CommonArgs {
+    pub(crate) fn get_mount_point_and_seach_root(&self) -> Result<(PathBuf, PathBuf)> {
+        // Use absolute mount_point if provided (i.e. no search_root) else use
+        // cwd as mount_point and compute search_root.
+        let mount_point = get_mount_point(&self.mount_point)?;
+        let mut search_root = PathBuf::new();
+
+        // If mount_point is based on cwd - compute search_root
+        if self.mount_point.is_none() {
+            let cwd = std::env::current_dir()
+                .with_context(|| "Unable to retrieve current working directory")?;
+            search_root = cwd.strip_prefix(&mount_point)?.to_path_buf();
+        } else {
+            // validate absolute mount_point is point to root
+            let repo_root =
+                locate_repo_root(&mount_point).with_context(|| "Unable to locate repo root")?;
+            if mount_point != repo_root {
+                eprintln!(
+                    "{} is not the root of an EdenFS repo",
+                    mount_point.display()
+                );
+                return Err(anyhow!("Invalid mount point"));
+            }
+        }
+        Ok((mount_point, search_root))
+    }
+
     pub(crate) fn load_patterns(&self) -> Result<Vec<String>> {
         let mut pattern = self
             .pattern

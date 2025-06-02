@@ -68,7 +68,13 @@ pub fn diff_hunks<T>(old_text: T, new_text: T) -> Vec<Hunk>
 where
     T: AsRef<[u8]>,
 {
-    extern "C" fn hunk_consumer(a1: i64, a2: i64, b1: i64, b2: i64, _priv: *mut c_void) -> c_int {
+    unsafe extern "C" fn hunk_consumer(
+        a1: i64,
+        a2: i64,
+        b1: i64,
+        b2: i64,
+        _priv: *mut c_void,
+    ) -> c_int {
         let mut _priv = unsafe { (_priv as *mut Vec<Hunk>).as_mut() };
         let a1 = a1 as usize;
         let a2 = a2 as usize;
@@ -116,7 +122,13 @@ where
 /// Produce matching blocks, in (a1, a2, b1, b2) format.
 /// `a_lines[a1:a2]` matches `b_lines[b1:b2]`.
 pub fn blocks(a: &[u8], b: &[u8]) -> Vec<(u64, u64, u64, u64)> {
-    extern "C" fn hunk_consumer(a1: i64, a2: i64, b1: i64, b2: i64, blocks: *mut c_void) -> c_int {
+    unsafe extern "C" fn hunk_consumer(
+        a1: i64,
+        a2: i64,
+        b1: i64,
+        b2: i64,
+        blocks: *mut c_void,
+    ) -> c_int {
         let blocks = unsafe { (blocks as *mut Vec<(u64, u64, u64, u64)>).as_mut() };
         if let Some(blocks) = blocks {
             blocks.push((a1 as _, a2 as _, b1 as _, b2 as _));
