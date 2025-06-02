@@ -17,22 +17,19 @@ use mercurial_types::bdiff::Delta;
 use nom::Err;
 use nom::IResult;
 use nom::Needed;
-use nom::alt;
-use nom::call;
-use nom::do_parse;
+use nom::branch::alt;
+use nom::bytes::streaming::tag;
+use nom::bytes::streaming::take;
+use nom::combinator::peek;
 use nom::error::ErrorKind;
 use nom::error::ParseError;
-use nom::length_data;
-use nom::many0;
-use nom::map;
-use nom::named;
+use nom::multi::length_data;
+use nom::multi::many0;
 use nom::number::streaming::be_u16;
 use nom::number::streaming::be_u32;
-use nom::peek;
-use nom::tag;
-use nom::take;
+use nom::sequence::preceded;
 
-use super::lz4;
+use crate::revlog::lz4::lz4_decompress;
 use crate::revlog::revidx::RevIdx;
 
 // #[derive(Copy, Clone, Debug, Eq, PartialEq)]
@@ -123,142 +120,148 @@ impl Entry {
 }
 
 // Parse the revlog header
-named!(pub header<&[u8], Header, ()>,
-    do_parse!(
-        features: be_u16 >>
-        version: be_u16 >>
-        ({
-            let vers = match version {
-                0 => Version::Revlog0,
-                1 => Version::RevlogNG,
-                _ => panic!("bad version"),
-            };
+pub fn header(input: &[u8]) -> IResult<&[u8], Header, ()> {
+    let (input, features) = be_u16(input)?;
+    let (input, version) = be_u16(input)?;
 
-            let features = match Features::from_bits(features) {
-                Some(f) => f,
-                None => panic!("bad features"),
-            };
+    let vers = match version {
+        0 => Version::Revlog0,
+        1 => Version::RevlogNG,
+        _ => panic!("bad version"),
+    };
 
-            Header {
-                version: vers,
-                features,
-            }
-        })
-    )
-);
+    let features = match Features::from_bits(features) {
+        Some(f) => f,
+        None => panic!("bad features"),
+    };
+
+    let header = Header {
+        version: vers,
+        features,
+    };
+
+    Ok((input, header))
+}
 
 pub fn indexng_size() -> usize {
     6 + 2 + 4 + 4 + 4 + 4 + 4 + 4 + 32
 }
 
 // Parse an "NG" revlog entry
-named!(pub indexng<&[u8], Entry, ()>,
-    do_parse!(
-        offset: be_u48 >>    // XXX if first, then only 2 bytes, implied 0 in top 4
-        flags: be_u16 >>     // ?
-        compressed_length: be_u32 >>
-        uncompressed_length: be_u32 >>
-        baserev: be_u32 >>
-        linkrev: be_u32 >>
-        p1: be_u32 >>
-        p2: be_u32 >>
-        hash: take!(32) >>
-        ({
-            Entry {
-                offset,
-                flags: IdxFlags::from_bits(flags).expect("bad rev idx flags"),
-                compressed_len: compressed_length,
-                len: Some(uncompressed_length),
-                baserev: if baserev == !0 { None } else { Some(baserev.into()) },
-                linkrev: linkrev.into(),
-                p1: if p1 == !0 { None } else { Some(p1.into()) },
-                p2: if p2 == !0 { None } else { Some(p2.into()) },
-                nodeid: HgNodeHash::from_bytes(&hash[..20]).expect("bad bytes for sha"),
-            }
-        })
-    )
-);
+pub fn indexng(input: &[u8]) -> IResult<&[u8], Entry, ()> {
+    let (input, offset) = be_u48(input)?; // XXX if first, then only 2 bytes, implied 0 in top 4
+    let (input, flags) = be_u16(input)?; // ?
+    let (input, compressed_length) = be_u32(input)?;
+    let (input, uncompressed_length) = be_u32(input)?;
+    let (input, baserev) = be_u32(input)?;
+    let (input, linkrev) = be_u32(input)?;
+    let (input, p1) = be_u32(input)?;
+    let (input, p2) = be_u32(input)?;
+    let (input, hash) = take(32usize)(input)?;
+
+    let entry = Entry {
+        offset,
+        flags: IdxFlags::from_bits(flags).expect("bad rev idx flags"),
+        compressed_len: compressed_length,
+        len: Some(uncompressed_length),
+        baserev: if baserev == !0 {
+            None
+        } else {
+            Some(baserev.into())
+        },
+        linkrev: linkrev.into(),
+        p1: if p1 == !0 { None } else { Some(p1.into()) },
+        p2: if p2 == !0 { None } else { Some(p2.into()) },
+        nodeid: HgNodeHash::from_bytes(&hash[..20]).expect("bad bytes for sha"),
+    };
+
+    Ok((input, entry))
+}
 
 pub fn index0_size() -> usize {
     4 + 4 + 4 + 4 + 4 + 4 + 4 + 20
 }
 
 // Parse an original revlog entry
-named!(pub index0<&[u8], Entry, ()>,
-    do_parse!(
-        _header: header >>
-        offset: be_u32 >>
-        compressed_length: be_u32 >>
-        baserev: be_u32 >>
-        linkrev: be_u32 >>
-        p1: be_u32 >>
-        p2: be_u32 >>
-        hash: take!(20) >>
-        ({
-            Entry {
-                offset: offset as u64,
-                flags: IdxFlags::empty(),
-                compressed_len: compressed_length,
-                len: None,
-                baserev: if baserev == !0 { None } else { Some(baserev.into()) },
-                linkrev: linkrev.into(),
-                p1: if p1 == !0 { None } else { Some(p1.into()) },
-                p2: if p2 == !0 { None } else { Some(p2.into()) },
-                nodeid: HgNodeHash::from_bytes(&hash[..20]).expect("bad bytes for sha"),
-            }
-        })
-    )
-);
+pub fn index0(input: &[u8]) -> IResult<&[u8], Entry, ()> {
+    let (input, _header) = header(input)?;
+    let (input, offset) = be_u32(input)?;
+    let (input, compressed_length) = be_u32(input)?;
+    let (input, baserev) = be_u32(input)?;
+    let (input, linkrev) = be_u32(input)?;
+    let (input, p1) = be_u32(input)?;
+    let (input, p2) = be_u32(input)?;
+    let (input, hash) = take(20usize)(input)?;
+
+    let entry = Entry {
+        offset: offset as u64,
+        flags: IdxFlags::empty(),
+        compressed_len: compressed_length,
+        len: None,
+        baserev: if baserev == !0 {
+            None
+        } else {
+            Some(baserev.into())
+        },
+        linkrev: linkrev.into(),
+        p1: if p1 == !0 { None } else { Some(p1.into()) },
+        p2: if p2 == !0 { None } else { Some(p2.into()) },
+        nodeid: HgNodeHash::from_bytes(&hash[..20]).expect("bad bytes for sha"),
+    };
+
+    Ok((input, entry))
+}
 
 // Parse a single Delta
-named!(pub delta<&[u8], Delta, Error>,
-    do_parse!(
-        start: be_u32 >>
-        end: be_u32 >>
-        content: length_data!(be_u32) >>
-        ({
-            Delta {
-                start: start as usize,
-                end: end as usize,
-                content: content.into(),
-            }
-        })
-    )
-);
+pub fn delta(input: &[u8]) -> IResult<&[u8], Delta, Error> {
+    let (input, start) = be_u32(input)?;
+    let (input, end) = be_u32(input)?;
+    let (input, content) = length_data(be_u32)(input)?;
+
+    let delta = Delta {
+        start: start as usize,
+        end: end as usize,
+        content: content.into(),
+    };
+
+    Ok((input, delta))
+}
 
 // Parse 0 or more deltas
-named!(deltas<&[u8], Vec<Delta>, Error>, many0!(delta));
+fn deltas(input: &[u8]) -> IResult<&[u8], Vec<Delta>, Error> {
+    many0(delta)(input)
+}
 
 // A chunk of data data that contains some Deltas; the caller defines the framing bytes
 // bounding the input.
-named!(pub deltachunk<&[u8], Vec<Delta>, Error>,
-    map!(
-        many0!(
-            alt!(
-                do_parse!(tag!(b"u") >> d: deltas >> (d)) |                                  // uncompressed with explicit 'u' header
-                do_parse!(peek!(tag!(b"\0")) >> d: deltas >> (d)) |                          // uncompressed with included initial 0x00
-                do_parse!(peek!(tag!(b"x")) >> d: call!(zlib_decompress, deltas) >> (d)) |  // compressed; 'x' part of the zlib stream
-                do_parse!(tag!(b"4") >> d: call!(lz4::lz4_decompress, deltas) >> (d))       // compressed w/ lz4
-            )
-        ),
-        |dv: Vec<_>| dv.into_iter().flatten().collect())
-);
+pub fn deltachunk(input: &[u8]) -> IResult<&[u8], Vec<Delta>, Error> {
+    let (input, dv) = many0(alt((
+        // uncompressed with explicit 'u' header
+        preceded(tag("u"), deltas),
+        // uncompressed with included initial 0x00
+        preceded(peek(tag("\0")), deltas),
+        // compressed; 'x' part of the zlib stream
+        preceded(peek(tag("x")), |i| zlib_decompress(i, deltas)),
+        // compressed w/ lz4
+        preceded(tag("4"), |i| lz4_decompress(i, deltas)),
+    )))(input)?;
 
-fn remains(i: &[u8]) -> IResult<&[u8], &[u8], Error> {
-    Ok((&i[..0], i))
+    Ok((input, dv.into_iter().flatten().collect()))
 }
 
-named!(remains_owned<&[u8], Vec<u8>, Error>, map!(remains, |x: &[u8]| x.into()));
+fn remains_owned(input: &[u8]) -> IResult<&[u8], Vec<u8>, Error> {
+    Ok((&[], input.to_owned()))
+}
 
 // Parse some literal data, possibly compressed
-named!(pub literal<&[u8], Vec<u8>, Error>,
-    alt!(
-        do_parse!(peek!(tag!(b"\0")) >> d: remains >> (d.into())) |
-        do_parse!(peek!(tag!(b"x")) >> d: call!(zlib_decompress, remains_owned) >> (d)) |
-        do_parse!(tag!(b"4") >> d: call!(lz4::lz4_decompress, remains_owned) >> (d)) |
-        do_parse!(tag!(b"u") >> d: remains >> (d.into()))
-    )
-);
+pub fn literal(input: &[u8]) -> IResult<&[u8], Vec<u8>, Error> {
+    alt((
+        preceded(peek(tag("\0")), remains_owned),
+        preceded(peek(tag("x")), |i| zlib_decompress(i, remains_owned)),
+        preceded(tag("4"), |i| lz4_decompress(i, remains_owned)),
+        preceded(tag("u"), remains_owned),
+    ))(input)
+}
 
 // Remap error to remove reference to `data`
 pub fn detach_result<'inp, 'out, O: 'out, E: 'out>(
