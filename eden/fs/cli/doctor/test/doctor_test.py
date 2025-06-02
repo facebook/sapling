@@ -1327,12 +1327,12 @@ Checking {mount}
         mock_debugInodeStatus.return_value = [
             # Pretend that a/b is a file (it's a directory)
             TreeInodeDebugInfo(
-                1,
-                b"a",
-                True,
-                b"abcd",
-                [],
-                1,
+                inodeNumber=1,
+                path=b"a",
+                materialized=True,
+                treeHash=b"abcd",
+                entries=[],
+                refcount=1,
             ),
             # a/b is now missing from inodes
         ]
@@ -1363,12 +1363,21 @@ Checking {mount}
 
         mock_debugInodeStatus.return_value = [
             TreeInodeDebugInfo(
-                1,
-                b"a",
-                True,
-                b"abcd",
-                [TreeInodeEntryDebugInfo(b"b", 2, stat.S_IFREG, True, True, b"dcba")],
-                1,
+                inodeNumber=1,
+                path=b"a",
+                materialized=True,
+                treeHash=b"abcd",
+                entries=[
+                    TreeInodeEntryDebugInfo(
+                        name=b"b",
+                        inodeNumber=2,
+                        mode=stat.S_IFREG,
+                        loaded=True,
+                        materialized=True,
+                        hash=b"dcba",
+                    )
+                ],
+                refcount=1,
             ),
         ]
 
@@ -1401,31 +1410,55 @@ Checking {mount}
         mock_debugInodeStatus.return_value = [
             # Pretend that a/b is a file (it's a directory)
             TreeInodeDebugInfo(
-                1,
-                b"a",
-                True,
-                b"abcd",
-                [
+                inodeNumber=1,
+                path=b"a",
+                materialized=True,
+                treeHash=b"abcd",
+                entries=[
                     TreeInodeEntryDebugInfo(
-                        b"b", 2, stat.S_IFREG, False, True, b"dcba"
+                        name=b"b",
+                        inodeNumber=2,
+                        mode=stat.S_IFREG,
+                        loaded=False,
+                        materialized=True,
+                        hash=b"dcba",
                     ),
                     TreeInodeEntryDebugInfo(
-                        b"d", 4, stat.S_IFREG, False, False, b"efgh"
+                        name=b"d",
+                        inodeNumber=4,
+                        mode=stat.S_IFREG,
+                        loaded=False,
+                        materialized=False,
+                        hash=b"efgh",
                     ),
                     TreeInodeEntryDebugInfo(
-                        b"d", 5, stat.S_IFREG, False, False, b"efgh"
+                        name=b"d",
+                        inodeNumber=5,
+                        mode=stat.S_IFREG,
+                        loaded=False,
+                        materialized=False,
+                        hash=b"efgh",
                     ),
                 ],
-                1,
+                refcount=1,
             ),
             # Pretend that a/b/c is a directory (it doesn't exist)
             TreeInodeDebugInfo(
-                2,
-                b"a/b",
-                True,
-                b"dcba",
-                [TreeInodeEntryDebugInfo(b"c", 3, stat.S_IFREG, False, True, b"1234")],
-                1,
+                inodeNumber=2,
+                path=b"a/b",
+                materialized=True,
+                treeHash=b"dcba",
+                entries=[
+                    TreeInodeEntryDebugInfo(
+                        name=b"c",
+                        inodeNumber=3,
+                        mode=stat.S_IFREG,
+                        loaded=False,
+                        materialized=True,
+                        hash=b"1234",
+                    )
+                ],
+                refcount=1,
             ),
         ]
 
@@ -1464,31 +1497,41 @@ Checking {mount}
             # Pretend that a/b is a file (it's a directory)
             [
                 TreeInodeDebugInfo(
-                    1,
-                    b"a",
-                    True,
-                    b"abcd",
-                    [
+                    inodeNumber=1,
+                    path=b"a",
+                    materialized=True,
+                    treeHash=b"abcd",
+                    entries=[
                         TreeInodeEntryDebugInfo(
-                            b"b", 2, stat.S_IFREG, False, True, b"dcba"
+                            name=b"b",
+                            inodeNumber=2,
+                            mode=stat.S_IFREG,
+                            loaded=False,
+                            materialized=True,
+                            hash=b"dcba",
                         ),
                     ],
-                    1,
+                    refcount=1,
                 )
             ],
             # now report it as a directory
             [
                 TreeInodeDebugInfo(
-                    1,
-                    b"a",
-                    True,
-                    b"abcd",
-                    [
+                    inodeNumber=1,
+                    path=b"a",
+                    materialized=True,
+                    treeHash=b"abcd",
+                    entries=[
                         TreeInodeEntryDebugInfo(
-                            b"b", 2, stat.S_IFDIR, False, True, b"dcba"
+                            name=b"b",
+                            inodeNumber=2,
+                            mode=stat.S_IFDIR,
+                            loaded=False,
+                            materialized=True,
+                            hash=b"dcba",
                         ),
                     ],
-                    1,
+                    refcount=1,
                 )
             ],
         ]
@@ -1525,16 +1568,21 @@ Fixing mismatched files/directories in {Path(mount)}...<green>fixed<reset>
         # Pretend that a/b is a file (it's a directory)
         mock_debugInodeStatus.return_value = [
             TreeInodeDebugInfo(
-                1,
-                b"a",
-                True,
-                b"abcd",
-                [
+                inodeNumber=1,
+                path=b"a",
+                materialized=True,
+                treeHash=b"abcd",
+                entries=[
                     TreeInodeEntryDebugInfo(
-                        b"b", 2, stat.S_IFREG, False, True, b"dcba"
+                        name=b"b",
+                        inodeNumber=2,
+                        mode=stat.S_IFREG,
+                        loaded=False,
+                        materialized=True,
+                        hash=b"dcba",
                     ),
                 ],
-                1,
+                refcount=1,
             )
         ]
 
@@ -1577,16 +1625,21 @@ Path .* is a directory on disk but file in eden
         mock_debugInodeStatus.return_value = [
             # Pretend that a/d is a file (it doesn't exist)
             TreeInodeDebugInfo(
-                1,
-                b"a",
-                True,
-                b"abcd",
-                [
+                inodeNumber=1,
+                path=b"a",
+                materialized=True,
+                treeHash=b"abcd",
+                entries=[
                     TreeInodeEntryDebugInfo(
-                        b"d", 4, stat.S_IFREG, False, False, b"efgh"
+                        name=b"d",
+                        inodeNumber=4,
+                        mode=stat.S_IFREG,
+                        loaded=False,
+                        materialized=False,
+                        hash=b"efgh",
                     ),
                 ],
-                1,
+                refcount=1,
             ),
         ]
 
@@ -1622,12 +1675,12 @@ Fixing files known to EdenFS but not present on disk in {Path(mount)}...<green>f
         mock_debugInodeStatus.return_value = [
             # Pretend that a/b is a file (it's a directory)
             TreeInodeDebugInfo(
-                1,
-                b"a",
-                True,
-                b"abcd",
-                [],
-                1,
+                inodeNumber=1,
+                path=b"a",
+                materialized=True,
+                treeHash=b"abcd",
+                entries=[],
+                refcount=1,
             ),
             # a/b is now missing from inodes
         ]
@@ -1672,16 +1725,21 @@ Fixing files present on disk but not known to EdenFS in {Path(mount)}...<green>f
             mock_debugInodeStatus.return_value = [
                 # Pretend that a/d is a file (it doesn't exist)
                 TreeInodeDebugInfo(
-                    1,
-                    b"a",
-                    True,
-                    b"abcd",
-                    [
+                    inodeNumber=1,
+                    path=b"a",
+                    materialized=True,
+                    treeHash=b"abcd",
+                    entries=[
                         TreeInodeEntryDebugInfo(
-                            b"d", 4, stat.S_IFREG, False, False, b"efgh"
+                            name=b"d",
+                            inodeNumber=4,
+                            mode=stat.S_IFREG,
+                            loaded=False,
+                            materialized=False,
+                            hash=b"efgh",
                         ),
                     ],
-                    1,
+                    refcount=1,
                 ),
             ]
 
@@ -1725,12 +1783,12 @@ Fixing files known to EdenFS but not present on disk in {Path(mount)}...<green>f
 
             mock_debugInodeStatus.return_value = [
                 TreeInodeDebugInfo(
-                    3,
-                    b"unmaterialized",
-                    False,
-                    b"bcde",
-                    [],
-                    1,
+                    inodeNumber=3,
+                    path=b"unmaterialized",
+                    materialized=False,
+                    treeHash=b"bcde",
+                    entries=[],
+                    refcount=1,
                 ),
             ]
 
@@ -1770,16 +1828,21 @@ Fixing files present on disk but not known to EdenFS in {Path(mount)}...<green>f
 
             mock_debugInodeStatus.return_value = [
                 TreeInodeDebugInfo(
-                    1,
-                    b"a",
-                    True,
-                    b"abcd",
-                    [
+                    inodeNumber=1,
+                    path=b"a",
+                    materialized=True,
+                    treeHash=b"abcd",
+                    entries=[
                         TreeInodeEntryDebugInfo(
-                            b"b", 2, stat.S_IFREG, False, True, b"dcba"
+                            name=b"b",
+                            inodeNumber=2,
+                            mode=stat.S_IFREG,
+                            loaded=False,
+                            materialized=True,
+                            hash=b"dcba",
                         )
                     ],
-                    1,
+                    refcount=1,
                 ),
             ]
 
@@ -1807,19 +1870,29 @@ Fixing files present on disk but not known to EdenFS in {Path(mount)}...<green>f
             os.symlink("b", mount / "a" / "c")
             mock_debugInodeStatus.return_value = [
                 TreeInodeDebugInfo(
-                    1,
-                    b"a",
-                    True,
-                    b"abcd",
-                    [
+                    inodeNumber=1,
+                    path=b"a",
+                    materialized=True,
+                    treeHash=b"abcd",
+                    entries=[
                         TreeInodeEntryDebugInfo(
-                            b"b", 2, stat.S_IFREG, False, True, b"dcba"
+                            name=b"b",
+                            inodeNumber=2,
+                            mode=stat.S_IFREG,
+                            loaded=False,
+                            materialized=True,
+                            hash=b"dcba",
                         ),
                         TreeInodeEntryDebugInfo(
-                            b"c", 3, stat.S_IFREG, False, True, b"dcba"
+                            name=b"c",
+                            inodeNumber=3,
+                            mode=stat.S_IFREG,
+                            loaded=False,
+                            materialized=True,
+                            hash=b"dcba",
                         ),
                     ],
-                    1,
+                    refcount=1,
                 ),
             ]
             tracker = ProblemCollector(instance)
@@ -1850,19 +1923,29 @@ Fixing files present on disk but not known to EdenFS in {Path(mount)}...<green>f
                 f.write(b"b")
             mock_debugInodeStatus.return_value = [
                 TreeInodeDebugInfo(
-                    1,
-                    b"a",
-                    True,
-                    b"abcd",
-                    [
+                    inodeNumber=1,
+                    path=b"a",
+                    materialized=True,
+                    treeHash=b"abcd",
+                    entries=[
                         TreeInodeEntryDebugInfo(
-                            b"b", 2, stat.S_IFREG, False, True, b"dcba"
+                            name=b"b",
+                            inodeNumber=2,
+                            mode=stat.S_IFREG,
+                            loaded=False,
+                            materialized=True,
+                            hash=b"dcba",
                         ),
                         TreeInodeEntryDebugInfo(
-                            b"c", 3, stat.S_IFLNK, False, True, b"dcba"
+                            name=b"c",
+                            inodeNumber=3,
+                            mode=stat.S_IFLNK,
+                            loaded=False,
+                            materialized=True,
+                            hash=b"dcba",
                         ),
                     ],
-                    1,
+                    refcount=1,
                 ),
             ]
             tracker = ProblemCollector(instance)
@@ -1895,38 +1978,53 @@ Fixing files present on disk but not known to EdenFS in {Path(mount)}...<green>f
 
             mock_debugInodeStatus.return_value = [
                 TreeInodeDebugInfo(
-                    1,
-                    b"a",
-                    True,
-                    b"abcd",
-                    [
+                    inodeNumber=1,
+                    path=b"a",
+                    materialized=True,
+                    treeHash=b"abcd",
+                    entries=[
                         TreeInodeEntryDebugInfo(
-                            b"c", 4, stat.S_IFREG, False, True, b"12ef"
+                            name=b"c",
+                            inodeNumber=4,
+                            mode=stat.S_IFREG,
+                            loaded=False,
+                            materialized=True,
+                            hash=b"12ef",
                         ),
                         TreeInodeEntryDebugInfo(
-                            b"b", 2, stat.S_IFDIR, False, False, b"12ef"
+                            name=b"b",
+                            inodeNumber=2,
+                            mode=stat.S_IFDIR,
+                            loaded=False,
+                            materialized=False,
+                            hash=b"12ef",
                         ),
                         TreeInodeEntryDebugInfo(
-                            b"d", 3, stat.S_IFDIR, False, True, b"12ef"
+                            name=b"d",
+                            inodeNumber=3,
+                            mode=stat.S_IFDIR,
+                            loaded=False,
+                            materialized=True,
+                            hash=b"12ef",
                         ),
                     ],
-                    1,
+                    refcount=1,
                 ),
                 TreeInodeDebugInfo(
-                    2,
-                    b"a/b",
-                    True,
-                    b"dcba",
-                    [],
-                    1,
+                    inodeNumber=2,
+                    path=b"a/b",
+                    materialized=True,
+                    treeHash=b"dcba",
+                    entries=[],
+                    refcount=1,
                 ),
                 TreeInodeDebugInfo(
-                    2,
-                    b"a/d",
-                    True,
-                    b"dcba",
-                    [],
-                    1,
+                    inodeNumber=2,
+                    path=b"a/d",
+                    materialized=True,
+                    treeHash=b"dcba",
+                    entries=[],
+                    refcount=1,
                 ),
             ]
 
@@ -2003,24 +2101,33 @@ Running chef may fix this.*""",
         with open(unmaterialized / "extra", "wb") as f:
             f.write(b"read all about it")
 
-        mock_getSHA1.return_value = [SHA1Result(b"\x01\x02\x03\x04")]
+        mock_getSHA1.return_value = [SHA1Result(sha1=b"\x01\x02\x03\x04")]
 
         mock_debugInodeStatus.return_value = [
             TreeInodeDebugInfo(
-                1,
-                b"",
-                True,
-                b"abcd",
-                [TreeInodeEntryDebugInfo(b"a", 2, stat.S_IFREG, True, False, b"1234")],
-                1,
+                inodeNumber=1,
+                path=b"",
+                materialized=True,
+                treeHash=b"abcd",
+                entries=[
+                    TreeInodeEntryDebugInfo(
+                        name=b"a",
+                        inodeNumber=2,
+                        mode=stat.S_IFREG,
+                        loaded=True,
+                        materialized=False,
+                        hash=b"1234",
+                    )
+                ],
+                refcount=1,
             ),
             TreeInodeDebugInfo(
-                3,
-                b"unmaterialized",
-                False,
-                b"bcde",
-                [],
-                1,
+                inodeNumber=3,
+                path=b"unmaterialized",
+                materialized=False,
+                treeHash=b"bcde",
+                entries=[],
+                refcount=1,
             ),
         ]
 
@@ -2808,7 +2915,9 @@ To remove the corrupted repo, run: `eden rm {checkout.path}`
             backing_repo=checkout.get_backing_repo_path(),
             running_state_dir=path,
             configured_state_dir=path,
-            mount_inode_info=MountInodeInfo(1, 1, 1),
+            mount_inode_info=MountInodeInfo(
+                unloadedInodeCount=1, loadedFileCount=1, loadedTreeCount=1
+            ),
         )
 
         fixer, out = self.create_fixer(dry_run=False)
