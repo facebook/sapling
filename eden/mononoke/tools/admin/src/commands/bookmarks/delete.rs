@@ -18,6 +18,9 @@ use bookmarks_movement::check_bookmark_sync_config;
 use clap::Args;
 use commit_id::parse_commit_id;
 use context::CoreContext;
+use repo_update_logger::BookmarkInfo;
+use repo_update_logger::BookmarkOperation;
+use repo_update_logger::log_bookmark_operation;
 
 use super::Repo;
 
@@ -107,5 +110,15 @@ pub async fn delete(
         }
     }
     transaction.commit().await?;
+
+    // Log the bookmark operation
+    let bookmark_info = BookmarkInfo {
+        bookmark_name: delete_args.name.clone(),
+        bookmark_kind: kind,
+        operation: BookmarkOperation::Delete(old_value),
+        reason: BookmarkUpdateReason::ManualMove,
+    };
+    log_bookmark_operation(ctx, repo, &bookmark_info).await;
+
     Ok(())
 }

@@ -5,7 +5,13 @@
 # directory of this source tree.
 #require slow
 
+  $ export BOOKMARK_SCRIBE_CATEGORY=mononoke_bookmark
+  $ export MONONOKE_TEST_SCRIBE_LOGGING_DIRECTORY=$TESTTMP/scribe_logs/
   $ . "${TEST_FIXTURES}/library.sh"
+
+Enable logging of bookmark updates
+  $ mkdir -p $TESTTMP/scribe_logs
+  $ touch $TESTTMP/scribe_logs/$BOOKMARK_SCRIBE_CATEGORY
 
 setup configuration
   $ setup_common_config "blob_files"
@@ -57,3 +63,27 @@ setup configuration
 
   $ mononoke_admin bookmarks -R repo get other -S bonsai,hg
   (not set)
+
+Validate that the bookmark updates are logged to scribe
+  $ cat "$TESTTMP/scribe_logs/$BOOKMARK_SCRIBE_CATEGORY" | sort | jq '{repo_name,bookmark_name,old_bookmark_value,new_bookmark_value,operation}'
+  {
+    "repo_name": "repo",
+    "bookmark_name": "other",
+    "old_bookmark_value": null,
+    "new_bookmark_value": "3c4fe767283b1574d1872a6af9975da0d409da671ad9e3e26c06aef687170371",
+    "operation": "create"
+  }
+  {
+    "repo_name": "repo",
+    "bookmark_name": "other",
+    "old_bookmark_value": "3c4fe767283b1574d1872a6af9975da0d409da671ad9e3e26c06aef687170371",
+    "new_bookmark_value": "7bf3f69aa62ffa25186bbb6e6869f0cc297f556bce05a3c639b56f1e3f6f0cf4",
+    "operation": "update"
+  }
+  {
+    "repo_name": "repo",
+    "bookmark_name": "other",
+    "old_bookmark_value": "7bf3f69aa62ffa25186bbb6e6869f0cc297f556bce05a3c639b56f1e3f6f0cf4",
+    "new_bookmark_value": null,
+    "operation": "delete"
+  }

@@ -24,8 +24,10 @@ use clap::Parser;
 use clap::Subcommand;
 use delete::BookmarksDeleteArgs;
 use get::BookmarksGetArgs;
+use git_source_of_truth::GitSourceOfTruthConfig;
 use list::BookmarksListArgs;
 use log::BookmarksLogArgs;
+use metaconfig_types::RepoConfig;
 use mononoke_app::MononokeApp;
 use mononoke_app::args::RepoArgs;
 use repo_cross_repo::RepoCrossRepo;
@@ -76,6 +78,12 @@ pub struct Repo {
 
     #[facet]
     repo_cross_repo: RepoCrossRepo,
+
+    #[facet]
+    repo_config: RepoConfig,
+
+    #[facet]
+    git_source_of_truth_config: dyn GitSourceOfTruthConfig,
 }
 
 #[derive(Subcommand)]
