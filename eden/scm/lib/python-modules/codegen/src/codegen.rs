@@ -81,7 +81,10 @@ pub fn generate_code(python: &Path, sys_path: Option<&Path>) -> String {
 
     if is_cargo {
         for m in &module_infos {
-            println!("cargo:rerun-if-changed={}", m.path);
+            // `m.path` could be dummy values like "frozen". Skip them.
+            if Path::new(&m.path).exists() {
+                println!("cargo:rerun-if-changed={}", m.path);
+            }
         }
     }
 
