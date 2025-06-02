@@ -31,12 +31,13 @@ use nom::combinator::rest;
 use nom::complete;
 use nom::do_parse;
 use nom::error::ErrorKind;
+use nom::error::FromExternalError;
 use nom::error::ParseError;
 use nom::many0;
 use nom::map;
 use nom::map_res;
 use nom::named;
-use nom::separated_list;
+use nom::separated_list0;
 use nom::tag;
 use nom::take;
 use nom::take_while;
@@ -59,6 +60,12 @@ pub enum Error {
     Nom(ErrorKind),
 }
 
+impl<E> FromExternalError<&[u8], E> for Error {
+    fn from_external_error(input: &[u8], kind: ErrorKind, _e: E) -> Self {
+        Self::from_error_kind(input, kind)
+    }
+}
+
 impl ParseError<&[u8]> for Error {
     fn from_error_kind(_input: &[u8], kind: ErrorKind) -> Self {
         Error::Nom(kind)
@@ -77,7 +84,7 @@ macro_rules! take_until1 {
 
         match $substr {
             substr => match $i.find_substring(substr) {
-                None => Err(nom::Err::Incomplete(Needed::Size(1 + substr.input_len()))),
+                None => Err(nom::Err::Incomplete(Needed::new(1 + substr.input_len()))),
                 Some(0) => Err(nom::Err::Error(ParseError::from_error_kind(
                     $i,
                     ErrorKind::TakeUntil,
@@ -96,7 +103,7 @@ macro_rules! take_until_and_consume1 {
 
 macro_rules! separated_list_complete {
     ($i:expr, $sep:ident!($($args:tt)*), $element:expr) => {
-        separated_list!($i, complete!($sep!($($args)*)), complete!($element))
+        separated_list0!($i, complete!($sep!($($args)*)), complete!($element))
     };
 }
 
@@ -337,7 +344,7 @@ named!(
 // A space-separated list of strings
 named!(
     stringlist<&[u8], Vec<String>, Error>,
-    separated_list!(
+    separated_list0!(
         complete!(tag!(" ")),
         map_res!(
             map_res!(
@@ -398,7 +405,7 @@ named!(
 // A list of batched commands - the list is delimited by ';'.
 named!(
     cmdlist<&[u8], Vec<(Vec<u8>, Vec<u8>)>, Error>,
-    separated_list!(complete!(tag!(";")), cmd)
+    separated_list0!(complete!(tag!(";")), cmd)
 );
 
 /// Given a hash of parameters, look up a parameter by name, and if it exists,
@@ -1041,7 +1048,7 @@ mod test {
 
         assert_eq!(
             nodehash(b"000000000000000000000000000000000000000"),
-            Err(Err::Incomplete(Needed::Size(40))),
+            Err(Err::Incomplete(Needed::new(1))),
         );
     }
 
@@ -1085,11 +1092,11 @@ mod test {
             )),
         );
 
-        assert_eq!(pair(&p[..80]), Err(Err::Incomplete(Needed::Size(40))));
+        assert_eq!(pair(&p[..80]), Err(Err::Incomplete(Needed::new(1))));
 
-        assert_eq!(pair(&p[..41]), Err(Err::Incomplete(Needed::Size(40))));
+        assert_eq!(pair(&p[..41]), Err(Err::Incomplete(Needed::new(40))));
 
-        assert_eq!(pair(&p[..40]), Err(Err::Incomplete(Needed::Size(1))));
+        assert_eq!(pair(&p[..40]), Err(Err::Incomplete(Needed::new(1))));
     }
 
     #[mononoke::test]

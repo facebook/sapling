@@ -297,7 +297,7 @@ where
 #[allow(clippy::identity_op)]
 fn be_u48(i: &[u8]) -> IResult<&[u8], u64, ()> {
     if i.len() < 6 {
-        Err(Err::Incomplete(Needed::Size(6)))
+        Err(Err::Incomplete(Needed::new(6)))
     } else {
         let res = ((i[0] as u64) << 40)
             + ((i[1] as u64) << 32)
