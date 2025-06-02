@@ -525,25 +525,46 @@ describe('Dag', () => {
     });
   });
 
-  it('forceConnectPublic()', () => {
-    // z-w x y => z-x-y
-    //             \
-    //              w
-    const dag = new Dag()
-      .add(
+  describe('connect public commits', () => {
+    it('connect with grandparents info', () => {
+      // z-w x y => z-x-y
+      //             \
+      //              w
+      const dag = new Dag().add(
         [
-          {...info, hash: 'z', phase: PUBLIC, date: new Date(1)},
-          {...info, hash: 'x', phase: PUBLIC, date: new Date(2)},
-          {...info, hash: 'y', phase: PUBLIC, date: new Date(3)},
-          {...info, hash: 'w', phase: PUBLIC, date: new Date(3), parents: ['z']},
+          {...info, hash: 'z', phase: PUBLIC},
+          {...info, hash: 'x', phase: PUBLIC, parents: ['a'], grandparents: ['z']},
+          {...info, hash: 'y', phase: PUBLIC, parents: ['b'], grandparents: ['x']},
+          {...info, hash: 'w', phase: PUBLIC, parents: ['z']},
         ].map(toInfo),
-      )
-      .forceConnectPublic();
-    expect(dag.children('z').toSortedArray()).toEqual(['w', 'x']);
-    expect(dag.children('x').toSortedArray()).toEqual(['y']);
-    expect(dag.children('y').toSortedArray()).toEqual([]);
-    // w is not a root so it does not need fix.
-    expect(dag.children('w').toSortedArray()).toEqual([]);
+      );
+      expect(dag.children('z').toSortedArray()).toEqual(['w', 'x']);
+      expect(dag.children('x').toSortedArray()).toEqual(['y']);
+      expect(dag.children('y').toSortedArray()).toEqual([]);
+      expect(dag.children('w').toSortedArray()).toEqual([]);
+    });
+
+    it('forceConnectPublic() without grandparents info', () => {
+      // z-w x y => z-x-y
+      //             \
+      //              w
+      const dag = new Dag()
+        .add(
+          [
+            {...info, hash: 'z', phase: PUBLIC, date: new Date(1)},
+            {...info, hash: 'x', phase: PUBLIC, date: new Date(2)},
+            {...info, hash: 'y', phase: PUBLIC, date: new Date(3)},
+            {...info, hash: 'w', phase: PUBLIC, date: new Date(3), parents: ['z']},
+          ].map(toInfo),
+        )
+        .maybeForceConnectPublic();
+      // Without grandparents info, fallback to chronological connections.
+      expect(dag.children('z').toSortedArray()).toEqual(['w', 'x']);
+      expect(dag.children('x').toSortedArray()).toEqual(['y']);
+      expect(dag.children('y').toSortedArray()).toEqual([]);
+      // w is not a root so it does not need fix.
+      expect(dag.children('w').toSortedArray()).toEqual([]);
+    });
   });
 
   it('renders to ASCII text', () => {

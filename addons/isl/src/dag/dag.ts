@@ -64,11 +64,16 @@ export class Dag extends SelfUpdate<CommitDagRecord> {
 
   add(commits: Iterable<DagCommitInfo>): Dag {
     // When adding commits, also update the mutationDag.
-    // Assign `seqNumber` (insertion order) to help sorting commits later.
-    // The seqNumber is the same for all `commits` so the order does not matter.
     const seqNumber = this.inner.nextSeqNumber;
     const commitArray = [...commits].map(c =>
-      c.seqNumber === undefined ? c.set('seqNumber', seqNumber) : c,
+      c
+        // Assign `seqNumber` (insertion order) to help sorting commits later.
+        // The seqNumber is the same for all `commits` so the order does not matter.
+        .set('seqNumber', c.seqNumber ?? seqNumber)
+        // Extend `parents` for dagwalkerForRendering to properly connect public commits
+        .set('parents', [...c.parents, ...c.grandparents])
+        // Assign `ancestors` for dagWalkerForRendering to connect public commits properly
+        .set('ancestors', c.grandparents.length > 0 ? List(c.grandparents) : c.ancestors),
     );
     const oldNewPairs = new Array<[Hash, Hash]>();
     for (const info of commitArray) {
@@ -417,7 +422,7 @@ export class Dag extends SelfUpdate<CommitDagRecord> {
    * we want ancestors(rebase_src) to include public commits like
    * remote/stable.
    */
-  forceConnectPublic(): Dag {
+  private forceConnectPublic(): Dag {
     // Not all public commits need this "fix". Only consider the "roots".
     const toFix = this.roots(this.public_());
     const sorted = toFix
@@ -437,6 +442,30 @@ export class Dag extends SelfUpdate<CommitDagRecord> {
         m.set('parents', [...c.parents, newParent]).set('ancestors', List([newParent])),
       );
     });
+  }
+
+  /**
+   * A backward compatible solution to connect public commits
+   * using grandparents info from sapling.
+   *
+   * If an older version of sapling that doesn't support "grandparents"
+   * is running, all the grandparents fields will be empty. Fallback
+   * to chronological connections (forceConnectPublic) in this case.
+   *
+   * The function needs to be manually called to connect the nodes,
+   * in order to work with forceConnectPublic() to ensure backward compatibility.
+   * After the sapling patch gets fully released, we should consider consuming
+   * "grandparents" naturally, without having to explicitly update other commit fields.
+   */
+  maybeForceConnectPublic(): Dag {
+    const toConnect = this.roots(this.public_());
+    for (const h of toConnect) {
+      const c = this.get(h);
+      if (c != null && c.grandparents.length > 0) {
+        return this;
+      }
+    }
+    return this.forceConnectPublic();
   }
 
   // Query APIs that are less generic, require `C` to be `CommitInfo`.

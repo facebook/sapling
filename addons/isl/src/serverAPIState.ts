@@ -293,7 +293,7 @@ export const latestDag = atom(get => {
         return DagCommitInfo.fromCommitInfo(removeHiddenBookmarks(hiddenRemoteBookmarks, c));
       }),
     )
-    .forceConnectPublic();
+    .maybeForceConnectPublic();
   return dag;
 });
 
