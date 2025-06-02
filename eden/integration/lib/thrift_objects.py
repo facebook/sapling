@@ -51,12 +51,16 @@ def buildSmallChange(
     if changeType == SmallChangeNotification.ADDED:
         assert path
         return ChangeNotification(
-            SmallChangeNotification(added=Added(fileType=fileType, path=path))
+            smallChange=SmallChangeNotification(
+                added=Added(fileType=fileType, path=path)
+            )
         )
     elif changeType == SmallChangeNotification.MODIFIED:
         assert path
         return ChangeNotification(
-            SmallChangeNotification(modified=Modified(fileType=fileType, path=path))
+            smallChange=SmallChangeNotification(
+                modified=Modified(fileType=fileType, path=path)
+            )
         )
     elif changeType == SmallChangeNotification.RENAMED:
         assert from_path
@@ -86,7 +90,9 @@ def buildSmallChange(
     elif changeType == SmallChangeNotification.REMOVED:
         assert path
         return ChangeNotification(
-            SmallChangeNotification(removed=Removed(fileType=fileType, path=path))
+            smallChange=SmallChangeNotification(
+                removed=Removed(fileType=fileType, path=path)
+            )
         )
     return ChangeNotification()
 

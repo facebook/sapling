@@ -1044,7 +1044,15 @@ class Process:
         self.pid = pid
         self.cmd = format_cmd(cmd)
         self.mount = format_mount(mount)
-        self.access_counts = AccessCounts(0, 0, 0, 0, 0, 0, 0)
+        self.access_counts = AccessCounts(
+            fsChannelTotal=0,
+            fsChannelReads=0,
+            fsChannelWrites=0,
+            fsChannelBackingStoreImports=0,
+            fsChannelDurationNs=0,
+            fsChannelMemoryCacheImports=0,
+            fsChannelDiskCacheImports=0,
+        )
         self.fuseFetch = 0
         self.last_access = time.monotonic()
         self.is_running = True

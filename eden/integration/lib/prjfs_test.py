@@ -98,7 +98,7 @@ class PrjFSTestBase(testcase.EdenRepoTest):
                 self.mount_path_bytes,
                 b"",
                 DIS_REQUIRE_MATERIALIZED,
-                SyncBehavior(waitTime),
+                SyncBehavior(syncTimeoutSeconds=waitTime),
             )
 
         for tree_inode in inodes:

@@ -148,7 +148,9 @@ filtered
 
         with self.get_thrift_client_legacy() as client:
             result = client.getCurrentSnapshotInfo(
-                GetCurrentSnapshotInfoRequest(MountId(os.fsencode(path)))
+                GetCurrentSnapshotInfoRequest(
+                    mountId=MountId(mountPoint=os.fsencode(path))
+                )
             )
             self.assertEqual("null", result.filterId)
 
@@ -159,7 +161,9 @@ filtered
 
         with self.get_thrift_client_legacy() as client:
             result = client.getCurrentSnapshotInfo(
-                GetCurrentSnapshotInfoRequest(MountId(os.fsencode(path)))
+                GetCurrentSnapshotInfoRequest(
+                    mountId=MountId(mountPoint=os.fsencode(path))
+                )
             )
             self.assertNotEqual(None, result.filterId)
             if result.filterId is not None:
@@ -192,6 +196,8 @@ class NonFilteredTestCase(EdenHgTestCase):
 
         with self.get_thrift_client_legacy() as client:
             result = client.getCurrentSnapshotInfo(
-                GetCurrentSnapshotInfoRequest(MountId(os.fsencode(path)))
+                GetCurrentSnapshotInfoRequest(
+                    mountId=MountId(mountPoint=os.fsencode(path))
+                )
             )
             self.assertEqual(None, result.filterId)

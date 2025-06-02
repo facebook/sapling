@@ -270,9 +270,9 @@ class TreeCmd(Subcmd):
         with instance.get_thrift_client_legacy() as client:
             resp = client.debugGetTree(
                 DebugGetScmTreeRequest(
-                    MountId(bytes(checkout.path)),
-                    tree_id,
-                    origin_flags,
+                    mountId=MountId(mountPoint=bytes(checkout.path)),
+                    id=tree_id,
+                    origins=origin_flags,
                 )
             )
             if args.all:
@@ -566,9 +566,9 @@ class BlobCmd(Subcmd):
         with instance.get_thrift_client_legacy() as client:
             data = client.debugGetBlob(
                 DebugGetScmBlobRequest(
-                    MountId(bytes(checkout.path)),
-                    blob_id,
-                    origin_flags,
+                    mountId=MountId(mountPoint=bytes(checkout.path)),
+                    id=blob_id,
+                    origins=origin_flags,
                 )
             )
             if args.all:
@@ -617,9 +617,9 @@ class BlobMetaCmd(Subcmd):
         with instance.get_thrift_client_legacy() as client:
             info = client.debugGetBlobMetadata(
                 DebugGetBlobMetadataRequest(
-                    MountId(bytes(checkout.path)),
-                    blob_id,
-                    origin_flags,
+                    mountId=MountId(mountPoint=bytes(checkout.path)),
+                    id=blob_id,
+                    origins=origin_flags,
                 )
             )
 
@@ -646,7 +646,7 @@ def check_blob_and_size_match(
     try:
         response = client.debugGetBlob(
             DebugGetScmBlobRequest(
-                mountId=MountId(bytes(checkout)),
+                mountId=MountId(mountPoint=bytes(checkout)),
                 id=identifying_hash,
                 origins=DataFetchOrigin.LOCAL_BACKING_STORE,  # We don't want to cause any network fetches.
             )
@@ -664,9 +664,9 @@ def check_blob_and_size_match(
             blobmeta = (
                 client.debugGetBlobMetadata(
                     DebugGetBlobMetadataRequest(
-                        MountId(bytes(checkout)),
-                        identifying_hash,
-                        DataFetchOrigin.DISK_CACHE,
+                        mountId=MountId(mountPoint=bytes(checkout)),
+                        id=identifying_hash,
+                        origins=DataFetchOrigin.DISK_CACHE,
                     )
                 )
                 .metadatas[0]

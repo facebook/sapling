@@ -34,7 +34,9 @@ class EdenServerInspector:
         """path: relative path to a directory under the mount."""
         with self.create_thrift_client() as client:
             client.unloadInodeForPath(
-                os.fsencode(self._mount_point), os.fsencode(path), age=TimeSpec(0, 0)
+                os.fsencode(self._mount_point),
+                os.fsencode(path),
+                age=TimeSpec(seconds=0, nanoSeconds=0),
             )
 
     def get_inode_count(self, path: str = "") -> int:
