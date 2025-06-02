@@ -176,10 +176,7 @@ pub struct TestRepoFactory {
 /// This configuration enables all derived data types at the latest version.
 pub fn default_test_repo_derived_data_types_config() -> DerivedDataTypesConfig {
     DerivedDataTypesConfig {
-        types: DerivableType::iter()
-            // TODO(lyang) Remove once the new type impl is ready
-            .filter(|t| *t != DerivableType::InferredCopyFrom)
-            .collect(),
+        types: DerivableType::iter().collect(),
         unode_version: UnodeVersion::V2,
         blame_version: BlameVersion::V2,
         git_delta_manifest_v2_config: Some(GitDeltaManifestV2Config {

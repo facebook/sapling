@@ -551,8 +551,6 @@ pub(crate) fn submodule_repo_derived_data_types_config() -> HashMap<String, Deri
                 DerivableType::HgChangesets,
                 DerivableType::HgAugmentedManifests,
                 DerivableType::FileNodes,
-                // TODO(lyang) Remove once the new type impl is ready
-                DerivableType::InferredCopyFrom,
             ]
             .contains(t)
         })

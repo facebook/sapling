@@ -7,22 +7,29 @@
 
 use std::collections::HashMap;
 
+use anyhow::Context;
 use anyhow::Error;
 use anyhow::Result;
 use anyhow::anyhow;
 use async_trait::async_trait;
 use blobstore::BlobstoreGetData;
+use blobstore::Storable;
 use context::CoreContext;
 use derived_data_manager::BonsaiDerivable;
 use derived_data_manager::DerivableType;
 use derived_data_manager::DerivationContext;
 use derived_data_manager::dependencies;
 use derived_data_service_if as thrift;
+use fsnodes::RootFsnodeId;
 use mononoke_types::BlobstoreBytes;
+use mononoke_types::BlobstoreValue;
 use mononoke_types::BonsaiChangeset;
 use mononoke_types::ChangesetId;
 use mononoke_types::InferredCopyFromId;
 use mononoke_types::ThriftConvert;
+use mononoke_types::inferred_copy_from::InferredCopyFrom;
+
+use crate::derive::derive_impl;
 
 #[derive(Debug, Clone, Eq, PartialEq, Hash)]
 pub struct RootInferredCopyFromId(pub(crate) InferredCopyFromId);
@@ -66,17 +73,34 @@ impl RootInferredCopyFromId {
 impl BonsaiDerivable for RootInferredCopyFromId {
     const VARIANT: DerivableType = DerivableType::InferredCopyFrom;
 
-    type Dependencies = dependencies![];
+    type Dependencies = dependencies![RootFsnodeId];
     type PredecessorDependencies = dependencies![];
 
     async fn derive_single(
-        _ctx: &CoreContext,
-        _derivation_ctx: &DerivationContext,
-        _bonsai: BonsaiChangeset,
+        ctx: &CoreContext,
+        derivation_ctx: &DerivationContext,
+        bonsai: BonsaiChangeset,
         _parents: Vec<Self>,
         _known: Option<&HashMap<ChangesetId, Self>>,
     ) -> Result<Self> {
-        unimplemented!("InferredCopyFrom derivation is not implemented")
+        let root_icf = derive_impl(ctx, derivation_ctx, &bonsai).await?;
+
+        Ok(RootInferredCopyFromId(match root_icf {
+            Some(root_icf) => {
+                let blob = root_icf.into_blob();
+                blob.store(ctx, derivation_ctx.blobstore())
+                    .await
+                    .context("Failed to store InferredCopyFrom blob")?
+            }
+            None => {
+                let empty = InferredCopyFrom::empty();
+                empty
+                    .into_blob()
+                    .store(ctx, derivation_ctx.blobstore())
+                    .await
+                    .context("Failed to store empty InferredCopyFrom blob")?
+            }
+        }))
     }
 
     async fn store_mapping(

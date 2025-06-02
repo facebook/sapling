@@ -5,7 +5,10 @@
  * GNU General Public License version 2.
  */
 
+mod derive;
 mod mapping;
+#[cfg(test)]
+mod tests;
 
 pub use mapping::RootInferredCopyFromId;
 pub use mapping::format_key;
