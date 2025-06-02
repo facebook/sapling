@@ -21,7 +21,7 @@ pub use types::CasPrefetchOutcome;
 pub use types::FetchContext;
 
 #[macro_export]
-macro_rules! re_client {
+macro_rules! cas_client {
     ( $struct:tt ) => {
         use futures::stream;
         use futures::stream::BoxStream;
@@ -29,20 +29,20 @@ macro_rules! re_client {
         use futures::TryStreamExt;
         use re_cas_common::split_up_to_max_bytes;
         use re_cas_common::Itertools;
-        use re_client_lib::DownloadRequest;
-        use re_client_lib::DownloadDigestsIntoCacheRequest;
-        use re_client_lib::DownloadStreamRequest;
-        use re_client_lib::REClientError;
-        use re_client_lib::TCode;
-        use re_client_lib::UploadRequest;
-        use re_client_lib::TDigest;
-        use re_client_lib::THashAlgo;
-        use re_client_lib::TStorageBackendType;
-        use re_client_lib::TStorageBackendStats;
-        use re_client_lib::TLocalCacheStats;
+        use cas_client_lib::DownloadRequest;
+        use cas_client_lib::DownloadDigestsIntoCacheRequest;
+        use cas_client_lib::DownloadStreamRequest;
+        use cas_client_lib::REClientError;
+        use cas_client_lib::TCode;
+        use cas_client_lib::UploadRequest;
+        use cas_client_lib::TDigest;
+        use cas_client_lib::THashAlgo;
+        use cas_client_lib::TStorageBackendType;
+        use cas_client_lib::TStorageBackendStats;
+        use cas_client_lib::TLocalCacheStats;
 
         impl $struct {
-            fn client(&self) -> Result<&REClient> {
+            fn client(&self) -> Result<&CASClientBundle> {
                 self.client.get_or_try_init(|| self.build())
             }
         }

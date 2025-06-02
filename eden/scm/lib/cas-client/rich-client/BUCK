@@ -45,6 +45,6 @@ rust_library(
         "//eden/scm/lib/clientinfo:clientinfo",
         "//eden/scm/lib/config/model:configmodel",
         "//eden/scm/lib/util/factory:factory",
-        "//remote_execution/client_lib/wrappers/rust:re_client_lib",
+        "//remote_execution/cas/client_lib/wrappers/rust:cas_client_lib",
     ],
 )

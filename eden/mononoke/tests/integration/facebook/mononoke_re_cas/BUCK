@@ -30,8 +30,8 @@ dott_test(
 # This adds some artificial direct dependencies to CI graph to make it look like deps are closer
 ci_hint(
     ci_deps = [
-        "fbcode//remote_execution/client_lib/wrappers/rust:re_client_lib",
-        "fbcode//remote_execution/client_lib/wrappers/rust/casd_only_client:re_client_lib",
+        "fbcode//remote_execution/cas/client_lib/wrappers/rust:cas_client_lib",
+        "fbcode//remote_execution/cas/client_lib/wrappers/rust/casd_only_client:cas_client_lib",
     ],
     ci_srcs = ["fbcode/eden/scm/**"],
     reason = "Those tests should be triggered on sapling and RE diffs despite the longer CI distance",

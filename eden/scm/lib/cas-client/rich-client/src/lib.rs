@@ -13,26 +13,27 @@ use blob::Blob;
 use cas_client::CasClient;
 use cas_client::CasSuccessTracker;
 use cas_client::CasSuccessTrackerConfig;
+#[cfg(not(target_os = "linux"))]
+use cas_client_lib::CASClientBuilder;
+#[cfg(not(target_os = "linux"))]
+use cas_client_lib::CASClientBundle;
+use cas_client_lib::CASDaemonClientCfg;
+#[cfg(not(target_os = "linux"))]
+use cas_client_lib::ClientBuilderCommonMethods;
+use cas_client_lib::EmbeddedCASDaemonClientCfg;
+use cas_client_lib::RESessionID;
+use cas_client_lib::RemoteCASdAddress;
+use cas_client_lib::RemoteCacheConfig;
+use cas_client_lib::RemoteCacheManagerMode;
+use cas_client_lib::RemoteExecutionMetadata;
+use cas_client_lib::RemoteFetchPolicy;
+use cas_client_lib::create_default_config;
 use configmodel::Config;
 use configmodel::ConfigExt;
 use configmodel::convert::ByteCount;
 use configmodel::convert::FromConfigValue;
-use re_client_lib::CASDaemonClientCfg;
-use re_client_lib::ClientBuilderCommonMethods;
-use re_client_lib::EmbeddedCASDaemonClientCfg;
-#[cfg(not(target_os = "linux"))]
-use re_client_lib::REClient;
-#[cfg(not(target_os = "linux"))]
-use re_client_lib::REClientBuilder;
-use re_client_lib::RESessionID;
-use re_client_lib::RemoteCASdAddress;
-use re_client_lib::RemoteCacheConfig;
-use re_client_lib::RemoteCacheManagerMode;
-use re_client_lib::RemoteExecutionMetadata;
-use re_client_lib::RemoteFetchPolicy;
-use re_client_lib::create_default_config;
 #[cfg(target_os = "linux")]
-use rich_cas_client_wrapper::CASClientWrapper as REClient;
+use rich_cas_client_wrapper::CASClientWrapper as CASClientBundle;
 
 pub const CAS_SOCKET_PATH: &str = "/run/casd/casd.socket";
 pub const CAS_SESSION_TTL: i64 = 600; // 10 minutes
@@ -48,7 +49,7 @@ pub enum CasCacheModeLocalFetch {
 }
 
 pub struct RichCasClient {
-    client: re_cas_common::OnceCell<REClient>,
+    client: re_cas_common::OnceCell<CASClientBundle>,
     cas_success_tracker: CasSuccessTracker,
     /// Verbose logging will disable quiet mode in REClient.
     verbose: bool,
@@ -193,7 +194,7 @@ impl RichCasClient {
         }))
     }
 
-    fn build(&self) -> Result<REClient> {
+    fn build(&self) -> Result<CASClientBundle> {
         let mut re_config = create_default_config();
 
         re_config.client_name = Some("sapling".to_string());
@@ -258,9 +259,9 @@ impl RichCasClient {
         re_config.cas_client_config = CASDaemonClientCfg::embedded_config(embedded_config);
 
         #[cfg(target_os = "linux")]
-        let client = REClient::new(self.session_id.clone(), CAS_SESSION_TTL, re_config)?;
+        let client = CASClientBundle::new(self.session_id.clone(), CAS_SESSION_TTL, re_config)?;
         #[cfg(not(target_os = "linux"))]
-        let client = REClientBuilder::new(fbinit::expect_init())
+        let client = CASClientBuilder::new(fbinit::expect_init())
             .with_config(re_config)
             .with_session_ttl(CAS_SESSION_TTL)
             .build()?;
@@ -269,4 +270,4 @@ impl RichCasClient {
     }
 }
 
-re_cas_common::re_client!(RichCasClient);
+re_cas_common::cas_client!(RichCasClient);

@@ -13,26 +13,27 @@ use blob::Blob;
 use cas_client::CasClient;
 use cas_client::CasSuccessTracker;
 use cas_client::CasSuccessTrackerConfig;
+#[cfg(not(target_os = "linux"))]
+use cas_client_lib::CASClientBuilder;
+#[cfg(not(target_os = "linux"))]
+use cas_client_lib::CASClientBundle;
+use cas_client_lib::CASDaemonClientCfg;
+#[cfg(not(target_os = "linux"))]
+use cas_client_lib::ClientBuilderCommonMethods;
+use cas_client_lib::ExternalCASDaemonAddress;
+use cas_client_lib::ExternalCASDaemonCfg;
+use cas_client_lib::RESessionID;
+use cas_client_lib::RemoteExecutionMetadata;
+use cas_client_lib::create_default_config;
 use configmodel::Config;
 use configmodel::ConfigExt;
 use configmodel::convert::ByteCount;
 use configmodel::convert::FromConfigValue;
-use re_client_lib::CASDaemonClientCfg;
-use re_client_lib::ClientBuilderCommonMethods;
-use re_client_lib::ExternalCASDaemonAddress;
-use re_client_lib::ExternalCASDaemonCfg;
-#[cfg(not(target_os = "linux"))]
-use re_client_lib::REClient;
-#[cfg(not(target_os = "linux"))]
-use re_client_lib::REClientBuilder;
-use re_client_lib::RESessionID;
-use re_client_lib::RemoteExecutionMetadata;
-use re_client_lib::create_default_config;
 #[cfg(target_os = "linux")]
-use thin_cas_client_wrapper::CASClientWrapper as REClient;
+use thin_cas_client_wrapper::CASClientWrapper as CASClientBundle;
 
 pub struct ThinCasClient {
-    client: re_cas_common::OnceCell<REClient>,
+    client: re_cas_common::OnceCell<CASClientBundle>,
     cas_success_tracker: CasSuccessTracker,
     metadata: RemoteExecutionMetadata,
     connection_count: u32,
@@ -138,7 +139,7 @@ impl ThinCasClient {
         }))
     }
 
-    fn build(&self) -> Result<REClient> {
+    fn build(&self) -> Result<CASClientBundle> {
         let mut re_config = create_default_config();
 
         re_config.client_name = Some("sapling".to_string());
@@ -167,7 +168,7 @@ impl ThinCasClient {
             }
         } else {
             let socket_path = std::env::var("CASD_SOCKET_PATH")
-                .unwrap_or(re_client_lib::DEFAULT_CASD_SOCKET.to_string());
+                .unwrap_or(cas_client_lib::DEFAULT_CASD_SOCKET.to_string());
             ExternalCASDaemonCfg {
                 address: None,
                 connection_count: self.connection_count as i32,
@@ -184,9 +185,9 @@ impl ThinCasClient {
         re_config.cas_client_config = CASDaemonClientCfg::external_config(external_config);
 
         #[cfg(target_os = "linux")]
-        let client = REClient::new(self.session_id.clone(), 0, re_config)?;
+        let client = CASClientBundle::new(self.session_id.clone(), 0, re_config)?;
         #[cfg(not(target_os = "linux"))]
-        let client = REClientBuilder::new(fbinit::expect_init())
+        let client = CASClientBuilder::new(fbinit::expect_init())
             .with_config(re_config)
             .build()?;
 
@@ -194,4 +195,4 @@ impl ThinCasClient {
     }
 }
 
-re_cas_common::re_client!(ThinCasClient);
+re_cas_common::cas_client!(ThinCasClient);
