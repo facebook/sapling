@@ -51,7 +51,7 @@ impl HandlesCmd {
         // We only want to initialize sys if we're going to kill processes, because getting the process tree is expensive.
         let sys: Option<System> = if kill {
             Some(System::new_with_specifics(
-                RefreshKind::new().with_processes(ProcessRefreshKind::everything()),
+                RefreshKind::nothing().with_processes(ProcessRefreshKind::everything()),
             ))
         } else {
             None

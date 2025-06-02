@@ -17,6 +17,7 @@ use anyhow::anyhow;
 use edenfs_error::EdenFsError;
 use edenfs_error::Result;
 use edenfs_error::ResultExt;
+use sysinfo::ProcessesToUpdate;
 use tracing::trace;
 
 pub mod humantime;
@@ -160,7 +161,7 @@ pub fn get_env_with_buck_version(path: &Path) -> Result<Vec<(OsString, OsString)
 pub fn get_executable(pid: sysinfo::Pid) -> Option<PathBuf> {
     let mut system = sysinfo::System::new();
 
-    if system.refresh_process(pid) {
+    if system.refresh_processes(ProcessesToUpdate::Some(&[pid]), true) > 0 {
         if let Some(process) = system.process(pid) {
             let executable = process.exe();
             trace!(%pid, ?executable, "found process executable");

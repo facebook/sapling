@@ -40,6 +40,7 @@ use edenfs_utils::path_from_bytes;
 use futures::FutureExt;
 use futures::StreamExt;
 use sysinfo::Pid;
+use sysinfo::ProcessesToUpdate;
 use sysinfo::System;
 use thrift_types::edenfs::AccessCounts;
 use thrift_types::edenfs::GetAccessCountsResult;
@@ -438,7 +439,7 @@ impl crate::Subcommand for MinitopCmd {
                 queue!(stdout, terminal::Clear(terminal::ClearType::All))?;
             }
             client.flush_stats_now().await?;
-            system.refresh_processes();
+            system.refresh_processes(ProcessesToUpdate::All, true);
             cursor.refresh_terminal_size()?;
 
             // Update pending imports summary stats
