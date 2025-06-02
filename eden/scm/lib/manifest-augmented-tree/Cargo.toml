@@ -7,7 +7,7 @@ edition = "2021"
 
 [dependencies]
 anyhow = "1.0.95"
-base64 = { version = "0.21", features = ["alloc"] }
+base64 = "0.22.1"
 blake3 = { version = "=1.5.5", features = ["mmap", "rayon", "traits-preview"] }
 sapling-minibytes = { version = "0.1.0", path = "../minibytes" }
 sapling-types = { version = "0.1.0", path = "../types" }

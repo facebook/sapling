@@ -26,7 +26,7 @@ name = "commitcloudsubscriber"
 
 [dependencies]
 anyhow = "1.0.95"
-base64 = { version = "0.21", features = ["alloc"] }
+base64 = "0.22.1"
 filetime = "0.2.25"
 hostcaps = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 lazy_static = { version = "1.5", features = ["spin_no_std"], default-features = false }
