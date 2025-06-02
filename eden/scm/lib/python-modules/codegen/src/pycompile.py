@@ -229,7 +229,6 @@ STDLIB_MODULE_NAMES = [
     "pathlib",
     "pdb",
     "pickle",
-    "pipes",
     "platform",
     "posixpath",
     "pprint",
@@ -267,12 +266,15 @@ STDLIB_MODULE_NAMES = [
     "typing",
     "unittest",
     "urllib",
-    "uu",
     "uuid",
     "warnings",
     "weakref",
     "zipfile",
 ]
+
+if sys.version_info < (3, 13):
+    # https://docs.python.org/3/whatsnew/3.13.html#whatsnew313-pep594
+    STDLIB_MODULE_NAMES += ["pipes", "uu"]
 
 
 def main():
