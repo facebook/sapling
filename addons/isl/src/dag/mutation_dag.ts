@@ -62,7 +62,11 @@ export class MutationDag extends BaseDag<HashWithParents> {
       // Insert `hash` to the infoMap on demand.
       let info = infoMap.get(hash);
       if (info == null) {
-        info = {hash, parents: this.get(hash)?.parents ?? []};
+        info = {
+          hash,
+          parents: this.get(hash)?.parents ?? [],
+          grandparents: this.get(hash)?.grandparents ?? [],
+        };
         infoMap.set(hash, info);
       }
       // Append parents.

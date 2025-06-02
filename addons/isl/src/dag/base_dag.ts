@@ -369,8 +369,7 @@ function nullableWithinContains(set?: SetLike): (h: Hash) => boolean {
 export interface HashWithParents {
   hash: Hash;
   parents: ReadonlyArray<Hash>;
-  // TODO: We might want "ancestors" to express distant parent relationships.
-  // However, sl does not yet have a way to expose that information.
+  grandparents: ReadonlyArray<Hash>;
 }
 
 type BaseDagProps<C extends HashWithParents> = {

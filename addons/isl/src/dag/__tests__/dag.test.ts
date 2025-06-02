@@ -38,9 +38,9 @@ describe('Dag', () => {
 
   describe('basic queries', () => {
     const dagAbc = new BaseDag().add([
-      {hash: 'a', parents: ['z']},
-      {hash: 'b', parents: ['a']},
-      {hash: 'c', parents: ['b', 'a']},
+      {hash: 'a', parents: ['z'], grandparents: []},
+      {hash: 'b', parents: ['a'], grandparents: []},
+      {hash: 'c', parents: ['b', 'a'], grandparents: []},
     ]);
 
     it('maintains parent<->child mappings', () => {
@@ -66,7 +66,7 @@ describe('Dag', () => {
     });
 
     it('removes conflicted commits', () => {
-      const dag = dagAbc.add([{hash: 'c', parents: []}]);
+      const dag = dagAbc.add([{hash: 'c', parents: [], grandparents: []}]);
       expect(dag.parentHashes('c')).toEqual([]);
       expect(dag.childHashes('b').toArray()).toEqual([]);
     });
@@ -186,9 +186,9 @@ describe('Dag', () => {
 
     it('does not infinite loop on cyclic graphs', () => {
       const dag = new BaseDag().add([
-        {hash: 'a', parents: ['b']},
-        {hash: 'b', parents: ['c']},
-        {hash: 'c', parents: ['a']},
+        {hash: 'a', parents: ['b'], grandparents: []},
+        {hash: 'b', parents: ['c'], grandparents: []},
+        {hash: 'c', parents: ['a'], grandparents: []},
       ]);
       expect(dag.ancestors('b').toSortedArray()).toEqual(['a', 'b', 'c']);
       expect(dag.descendants('b').toSortedArray()).toEqual(['a', 'b', 'c']);
@@ -227,7 +227,7 @@ describe('Dag', () => {
         v: 'w',
         u: 'v',
       }).map(([hash, v]) => {
-        return {hash, parents: v.split(' ')};
+        return {hash, parents: v.split(' '), grandparents: []};
       }),
     );
 
