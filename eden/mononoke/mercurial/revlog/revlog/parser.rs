@@ -15,7 +15,6 @@ use flate2::read::ZlibDecoder;
 use mercurial_types::HgNodeHash;
 use mercurial_types::bdiff::Delta;
 use nom::Err;
-use nom::ErrorKind;
 use nom::IResult;
 use nom::Needed;
 use nom::be_u16;
@@ -27,7 +26,6 @@ use crate::revlog::revidx::RevIdx;
 
 // #[derive(Copy, Clone, Debug, Eq, PartialEq)]
 // pub enum Badness {
-// IO,
 // Version,
 // Features,
 // BadZlib,
@@ -40,7 +38,6 @@ pub type Error = u32;
 #[allow(non_upper_case_globals, non_snake_case, dead_code)]
 pub mod Badness {
     use super::Error;
-    pub const IO: Error = 0;
     pub const Version: Error = 1;
     pub const Features: Error = 2;
     pub const BadZlib: Error = 3;
@@ -103,8 +100,8 @@ impl Entry {
 // Parse the revlog header
 named!(pub header<Header>,
     do_parse!(
-        features: return_error!(ErrorKind::Custom(Badness::IO), be_u16) >>
-        version: return_error!(ErrorKind::Custom(Badness::IO), be_u16) >>
+        features: be_u16 >>
+        version: be_u16 >>
         ({
             let vers = match version {
                 0 => Version::Revlog0,
@@ -131,14 +128,14 @@ pub fn indexng_size() -> usize {
 // Parse an "NG" revlog entry
 named!(pub indexng<Entry>,
     do_parse!(
-        offset: return_error!(ErrorKind::Custom(Badness::IO), be_u48) >>    // XXX if first, then only 2 bytes, implied 0 in top 4
-        flags: return_error!(ErrorKind::Custom(Badness::IO), be_u16) >>     // ?
-        compressed_length: return_error!(ErrorKind::Custom(Badness::IO), be_u32) >>
-        uncompressed_length: return_error!(ErrorKind::Custom(Badness::IO), be_u32) >>
-        baserev: return_error!(ErrorKind::Custom(Badness::IO), be_u32) >>
-        linkrev: return_error!(ErrorKind::Custom(Badness::IO), be_u32) >>
-        p1: return_error!(ErrorKind::Custom(Badness::IO), be_u32) >>
-        p2: return_error!(ErrorKind::Custom(Badness::IO), be_u32) >>
+        offset: be_u48 >>    // XXX if first, then only 2 bytes, implied 0 in top 4
+        flags: be_u16 >>     // ?
+        compressed_length: be_u32 >>
+        uncompressed_length: be_u32 >>
+        baserev: be_u32 >>
+        linkrev: be_u32 >>
+        p1: be_u32 >>
+        p2: be_u32 >>
         hash: take!(32) >>
         ({
             Entry {
@@ -164,12 +161,12 @@ pub fn index0_size() -> usize {
 named!(pub index0<Entry>,
     do_parse!(
         _header: header >>
-        offset: return_error!(ErrorKind::Custom(Badness::IO), be_u32) >>
-        compressed_length: return_error!(ErrorKind::Custom(Badness::IO), be_u32) >>
-        baserev: return_error!(ErrorKind::Custom(Badness::IO), be_u32) >>
-        linkrev: return_error!(ErrorKind::Custom(Badness::IO), be_u32) >>
-        p1: return_error!(ErrorKind::Custom(Badness::IO), be_u32) >>
-        p2: return_error!(ErrorKind::Custom(Badness::IO), be_u32) >>
+        offset: be_u32 >>
+        compressed_length: be_u32 >>
+        baserev: be_u32 >>
+        linkrev: be_u32 >>
+        p1: be_u32 >>
+        p2: be_u32 >>
         hash: take!(20) >>
         ({
             Entry {
