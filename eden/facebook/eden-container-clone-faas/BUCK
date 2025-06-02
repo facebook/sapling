@@ -14,12 +14,16 @@ oncall("source_control")
 faas_rust_binary(
     name = "eden-container-clone-faas",
     srcs = ["main.rs"],
+    named_deps = {
+        "scm_setup_lib": "//eden/facebook/scm-eden-container-clone/cmdlib:cmdlib",
+    },
     thrift_service_name = "EdenContainerCloneExample",
     thrift_src = "api.thrift",
     deps = [
         "fbsource//third-party/rust:const_format",
         "fbsource//third-party/rust:dirs",
         "fbsource//third-party/rust:maplit",
+        "fbsource//third-party/rust:serde_json",
         "//eden/scm/lib/spawn-ext:spawn-ext",
         "//thrift/lib/rust:fbthrift",
     ],
