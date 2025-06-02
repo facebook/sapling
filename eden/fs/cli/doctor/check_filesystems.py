@@ -512,8 +512,8 @@ class MissingInodesForFiles(PathsProblem, FixableProblem):
         with self._instance.get_thrift_client_legacy() as client:
             result = client.matchFilesystem(
                 MatchFileSystemRequest(
-                    MountId(str(self._mount).encode()),
-                    [str(path).encode() for path in self._paths],
+                    mountPoint=MountId(mountPoint=str(self._mount).encode()),
+                    paths=[str(path).encode() for path in self._paths],
                 )
             )
             return [
@@ -1072,7 +1072,9 @@ def get_modified_files(instance: EdenInstance, checkout: EdenCheckout) -> List[P
         # We are required to pass the active FilterId to getScmStatusV2. We
         # can find the active FilterId with GetCurrentSnapshotInfo
         snapshot_info = client.getCurrentSnapshotInfo(
-            GetCurrentSnapshotInfoRequest(MountId(bytes(checkout.path)))
+            GetCurrentSnapshotInfoRequest(
+                mountId=MountId(mountPoint=bytes(checkout.path))
+            )
         )
         active_filter = snapshot_info.filterId
         rootId = RootIdOptions()
