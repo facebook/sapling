@@ -14,12 +14,22 @@ use bitflags::bitflags;
 use flate2::read::ZlibDecoder;
 use mercurial_types::HgNodeHash;
 use mercurial_types::bdiff::Delta;
+use nom::Context;
 use nom::Err;
 use nom::IResult;
 use nom::Needed;
+use nom::alt;
+use nom::apply;
 use nom::be_u16;
 use nom::be_u32;
-use nom::*;
+use nom::do_parse;
+use nom::length_bytes;
+use nom::many0;
+use nom::map;
+use nom::named;
+use nom::peek;
+use nom::tag;
+use nom::take;
 
 use super::lz4;
 use crate::revlog::revidx::RevIdx;
@@ -205,7 +215,7 @@ named!(deltas<Vec<Delta>>, many0!(delta));
 
 // A chunk of data data that contains some Deltas; the caller defines the framing bytes
 // bounding the input.
-named!(pub deltachunk<Vec<Delta> >,
+named!(pub deltachunk<Vec<Delta>>,
     map!(
         many0!(
             alt!(
@@ -219,13 +229,13 @@ named!(pub deltachunk<Vec<Delta> >,
 );
 
 fn remains(i: &[u8]) -> IResult<&[u8], &[u8]> {
-    IResult::Done(&i[..0], i)
+    Ok((&i[..0], i))
 }
 
 named!(remains_owned<Vec<u8>>, map!(remains, |x: &[u8]| x.into()));
 
 // Parse some literal data, possibly compressed
-named!(pub literal<Vec<u8> >,
+named!(pub literal<Vec<u8>>,
     alt!(
         do_parse!(peek!(tag!(b"\0")) >> d: remains >> (d.into())) |
         do_parse!(peek!(tag!(b"x")) >> d: apply!(zlib_decompress, remains_owned) >> (d)) |
@@ -240,12 +250,16 @@ pub fn detach_result<'inp, 'out, O: 'out, E: 'out>(
     rest: &'out [u8],
 ) -> IResult<&'out [u8], O, E> {
     match res {
-        IResult::Done(_, o) => IResult::Done(rest, o),
-        IResult::Incomplete(n) => IResult::Incomplete(n),
-        IResult::Error(Err::Code(e))
-        | IResult::Error(Err::Node(e, _))
-        | IResult::Error(Err::Position(e, _))
-        | IResult::Error(Err::NodePosition(e, ..)) => IResult::Error(Err::Code(e)),
+        Ok((_, o)) => Ok((rest, o)),
+        Err(Err::Incomplete(n)) => Err(Err::Incomplete(n)),
+        Err(Err::Error(Context::Code(_, e))) => Err(Err::Error(Context::Code(rest, e))),
+        Err(Err::Error(Context::List(e))) => Err(Err::Error(Context::List(
+            e.into_iter().map(|(_, e)| (rest, e)).collect(),
+        ))),
+        Err(Err::Failure(Context::Code(_, e))) => Err(Err::Failure(Context::Code(rest, e))),
+        Err(Err::Failure(Context::List(e))) => Err(Err::Failure(Context::List(
+            e.into_iter().map(|(_, e)| (rest, e)).collect(),
+        ))),
     }
 }
 
@@ -275,7 +289,7 @@ where
 #[allow(clippy::identity_op)]
 fn be_u48(i: &[u8]) -> IResult<&[u8], u64> {
     if i.len() < 6 {
-        IResult::Incomplete(Needed::Size(6))
+        Err(Err::Incomplete(Needed::Size(6)))
     } else {
         let res = ((i[0] as u64) << 40)
             + ((i[1] as u64) << 32)
@@ -283,14 +297,13 @@ fn be_u48(i: &[u8]) -> IResult<&[u8], u64> {
             + ((i[3] as u64) << 16)
             + ((i[4] as u64) << 8)
             + ((i[5] as u64) << 0);
-        IResult::Done(&i[6..], res)
+        Ok((&i[6..], res))
     }
 }
 
 #[cfg(test)]
 mod test {
     use mononoke_macros::mononoke;
-    use nom::IResult;
 
     use super::Features;
     use super::Header;
@@ -302,13 +315,13 @@ mod test {
         let d = [0x00, 0x00, 0x00, 0x00];
         assert_eq!(
             header(&d[..]),
-            IResult::Done(
+            Ok((
                 &b""[..],
                 Header {
                     version: Version::Revlog0,
                     features: Features::empty(),
                 }
-            )
+            )),
         )
     }
 
@@ -317,13 +330,13 @@ mod test {
         let d = [0x00, 0x00, 0x00, 0x01];
         assert_eq!(
             header(&d[..]),
-            IResult::Done(
+            Ok((
                 &b""[..],
                 Header {
                     version: Version::RevlogNG,
                     features: Features::empty(),
                 }
-            )
+            )),
         )
     }
 
@@ -332,13 +345,13 @@ mod test {
         let d = [0x00, 0x01, 0x00, 0x01];
         assert_eq!(
             header(&d[..]),
-            IResult::Done(
+            Ok((
                 &b""[..],
                 Header {
                     version: Version::RevlogNG,
                     features: Features::INLINE,
                 }
-            )
+            )),
         )
     }
 
@@ -347,13 +360,13 @@ mod test {
         let d = [0x00, 0x02, 0x00, 0x01];
         assert_eq!(
             header(&d[..]),
-            IResult::Done(
+            Ok((
                 &b""[..],
                 Header {
                     version: Version::RevlogNG,
                     features: Features::GENERAL_DELTA,
                 }
-            )
+            )),
         )
     }
 
@@ -362,13 +375,13 @@ mod test {
         let d = [0x00, 0x03, 0x00, 0x01];
         assert_eq!(
             header(&d[..]),
-            IResult::Done(
+            Ok((
                 &b""[..],
                 Header {
                     version: Version::RevlogNG,
                     features: Features::INLINE | Features::GENERAL_DELTA,
                 }
-            )
+            )),
         )
     }
 }

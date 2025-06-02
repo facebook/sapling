@@ -28,7 +28,6 @@ pub use mercurial_types::HgParents;
 pub use mercurial_types::bdiff;
 pub use mercurial_types::bdiff::Delta;
 pub use mercurial_types::delta;
-use nom::IResult;
 
 use crate::errors::ErrorKind;
 
@@ -114,8 +113,10 @@ impl Eq for Revlog {}
 impl Revlog {
     fn init(idx: Datafile, data: Option<Datafile>) -> Result<Self> {
         let hdr = match parser::header(idx.as_slice()) {
-            IResult::Done(_, hdr) => hdr,
-            err => return Err(ErrorKind::Revlog(format!("Header parse failed: {:?}", err)).into()),
+            Ok((_, hdr)) => hdr,
+            Err(err) => {
+                return Err(ErrorKind::Revlog(format!("Header parse failed: {:?}", err)).into());
+            }
         };
 
         let mut data = data;
@@ -277,13 +278,13 @@ impl RevlogInner {
         };
 
         match res {
-            IResult::Done(_, mut res) => {
+            Ok((_, mut res)) => {
                 if off == 0 {
                     res.offset &= 0xffff;
                 }
                 Ok(res)
             }
-            err => Err(ErrorKind::Revlog(format!(
+            Err(err) => Err(ErrorKind::Revlog(format!(
                 "failed to parse entry offset {}: {:?}",
                 off, err
             ))
@@ -391,28 +392,32 @@ impl RevlogInner {
                 Ok(Chunk::Literal(vec![]))
             } else {
                 match parser::literal(chunkdata) {
-                    IResult::Done(rest, _) if !rest.is_empty() => Err(ErrorKind::Revlog(format!(
+                    Ok((rest, _)) if !rest.is_empty() => Err(ErrorKind::Revlog(format!(
                         "Failed to unpack literal: {} remains, {:?}",
                         rest.len(),
                         &rest[..16]
                     ))
                     .into()),
-                    IResult::Done(_, literal) => Ok(Chunk::Literal(literal)),
-                    err => Err(
-                        ErrorKind::Revlog(format!("Failed to unpack literal: {:?}", err)).into(),
-                    ),
+                    Ok((_, literal)) => Ok(Chunk::Literal(literal)),
+                    Err(err) => Err(ErrorKind::Revlog(format!(
+                        "Failed to unpack literal: {:?}",
+                        err
+                    ))
+                    .into()),
                 }
             }
         } else {
             match parser::deltachunk(chunkdata) {
-                IResult::Done(rest, _) if !rest.is_empty() => Err(ErrorKind::Revlog(format!(
+                Ok((rest, _)) if !rest.is_empty() => Err(ErrorKind::Revlog(format!(
                     "Failed to unpack details: {} remains, {:?}",
                     rest.len(),
                     &rest[..16]
                 ))
                 .into()),
-                IResult::Done(_, deltas) => Ok(Chunk::Deltas(deltas)),
-                err => Err(ErrorKind::Revlog(format!("Failed to unpack deltas: {:?}", err)).into()),
+                Ok((_, deltas)) => Ok(Chunk::Deltas(deltas)),
+                Err(err) => {
+                    Err(ErrorKind::Revlog(format!("Failed to unpack deltas: {:?}", err)).into())
+                }
             }
         }
     }

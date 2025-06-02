@@ -7,7 +7,10 @@
 
 // Support for lz4revlog
 
+use nom::Err;
+use nom::ErrorKind;
 use nom::IResult;
+use nom::verbose_errors::Context;
 
 use super::parser::Error;
 use super::parser::detach_result;
@@ -26,8 +29,9 @@ where
 
     match lz4_pyframe::decompress(i) {
         Ok(decompressed) => detach_result(parse(&decompressed[..]), remains),
-        Err(_err) => IResult::Error(nom::Err::Code(nom::ErrorKind::Custom(
-            super::parser::Badness::BadLZ4,
+        Err(_err) => Err(Err::Failure(Context::Code(
+            remains,
+            ErrorKind::Custom(super::parser::Badness::BadLZ4),
         ))),
     }
 }

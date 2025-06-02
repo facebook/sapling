@@ -23,18 +23,15 @@ use mercurial_types::HgManifestId;
 use mononoke_types::path::MPath;
 use nom::Err;
 use nom::ErrorKind;
-use nom::FindSubstring;
 use nom::IResult;
 use nom::Needed;
-use nom::Slice;
 use nom::alt;
+use nom::alt_complete;
 use nom::apply;
 use nom::call;
 use nom::closure;
 use nom::complete;
 use nom::do_parse;
-use nom::eof;
-use nom::error_position;
 use nom::is_alphanumeric;
 use nom::is_digit;
 use nom::many0;
@@ -42,6 +39,7 @@ use nom::map;
 use nom::map_res;
 use nom::named;
 use nom::named_args;
+use nom::rest;
 use nom::separated_list;
 use nom::separated_list_complete;
 use nom::tag;
@@ -50,6 +48,7 @@ use nom::take_until_and_consume1;
 use nom::take_while;
 use nom::take_while1;
 use nom::try_parse;
+use nom::verbose_errors::Context;
 
 use crate::GetbundleArgs;
 use crate::GettreepackArgs;
@@ -67,13 +66,13 @@ fn digit<F: Fn(u8) -> bool>(input: &[u8], isdigit: F) -> IResult<&[u8], &[u8]> {
     for (idx, item) in input.iter().enumerate() {
         if !isdigit(*item) {
             if idx == 0 {
-                return IResult::Error(Err::Code(ErrorKind::Digit));
+                return Err(Err::Error(Context::Code(input, ErrorKind::Digit)));
             } else {
-                return IResult::Done(&input[idx..], &input[0..idx]);
+                return Ok((&input[idx..], &input[0..idx]));
             }
         }
     }
-    IResult::Incomplete(Needed::Unknown)
+    Err(Err::Incomplete(Needed::Unknown))
 }
 
 named!(
@@ -93,21 +92,21 @@ fn ident(input: &[u8]) -> IResult<&[u8], &[u8]> {
             '0'..='9' if idx > 0 => continue,
             _ => {
                 if idx > 0 {
-                    return IResult::Done(&input[idx..], &input[0..idx]);
+                    return Ok((&input[idx..], &input[0..idx]));
                 } else {
-                    return IResult::Error(Err::Code(ErrorKind::AlphaNumeric));
+                    return Err(Err::Error(Context::Code(input, ErrorKind::AlphaNumeric)));
                 }
             }
         }
     }
-    IResult::Incomplete(Needed::Unknown)
+    Err(Err::Incomplete(Needed::Unknown))
 }
 
 /// As above, but assumes input is complete, so reaching the end of input means
 /// the identifier is the entire input.
 fn ident_complete(input: &[u8]) -> IResult<&[u8], &[u8]> {
     match ident(input) {
-        IResult::Incomplete(_) => IResult::Done(b"", input),
+        Err(Err::Incomplete(_)) => Ok((b"", input)),
         other => other,
     }
 }
@@ -116,7 +115,9 @@ fn ident_complete(input: &[u8]) -> IResult<&[u8], &[u8]> {
 // We can't use 'integer' defined above as it reads until a non digit character
 named!(
     boolean<bool>,
-    map_res!(take_while1!(is_digit), |s| -> Result<bool> {
+    map_res!(alt_complete!(take_while1!(is_digit) | rest), |s| -> Result<
+        bool,
+    > {
         let s = str::from_utf8(s)?;
         Ok(u32::from_str(s)? != 0)
     })
@@ -133,7 +134,7 @@ named!(
 // List of comma-separated values, each of which is encoded using batch param encoding.
 named!(
     gettreepack_directories<Vec<Bytes>>,
-    complete!(many0!(batch_param_comma_separated))
+    many0!(complete!(batch_param_comma_separated))
 );
 
 // A "*" parameter is a meta-parameter - its argument is a count of
@@ -180,17 +181,17 @@ fn params_ref(inp: &[u8], count: usize) -> IResult<&[u8], HashMap<&[u8], &[u8]>>
         );
 
         match res {
-            IResult::Done(rest, val) => {
+            Ok((rest, val)) => {
                 for (k, v) in val.into_iter() {
                     ret.insert(k, v);
                 }
                 inp = rest;
             }
-            failed => return failed,
+            Err(failed) => return Err(failed),
         }
     }
 
-    IResult::Done(inp, ret)
+    Ok((inp, ret))
 }
 
 fn params(inp: &[u8], count: usize) -> IResult<&[u8], HashMap<Vec<u8>, Vec<u8>>> {
@@ -202,16 +203,15 @@ fn params(inp: &[u8], count: usize) -> IResult<&[u8], HashMap<Vec<u8>, Vec<u8>>>
     // data is received (e.g. ~8KiB intervals, since that is the buffer size).
     match params_ref(inp, count) {
         // Convert to owned if successful.
-        IResult::Done(rest, ret) => {
+        Ok((rest, ret)) => {
             let ret = ret
                 .into_iter()
                 .map(|(k, v)| (k.to_vec(), v.to_vec()))
                 .collect();
-            IResult::Done(rest, ret)
+            Ok((rest, ret))
         }
         // Re-emit errors otherwise
-        IResult::Incomplete(err) => IResult::Incomplete(err),
-        IResult::Error(err) => IResult::Error(err),
+        Err(err) => Err(err),
     }
 }
 
@@ -226,7 +226,11 @@ fn notcomma(b: u8) -> bool {
 named!(
     batch_param_escaped<(Vec<u8>, Vec<u8>)>,
     map_res!(
-        do_parse!(key: take_until_and_consume1!("=") >> val: take_while!(notcomma) >> ((key, val))),
+        do_parse!(
+            key: take_until_and_consume1!("=") >>
+            val: alt_complete!(take_while!(notcomma) | rest) >>
+            ((key, val))
+        ),
         |(k, v)| Ok::<_, Error>((batch::unescape(k)?, batch::unescape(v)?))
     )
 );
@@ -295,7 +299,10 @@ named!(
     separated_list!(
         complete!(tag!(" ")),
         map_res!(
-            map_res!(take_while!(is_alphanumeric), str::from_utf8),
+            map_res!(
+                alt_complete!(take_while!(is_alphanumeric) | rest),
+                str::from_utf8
+            ),
             FromStr::from_str
         )
     )
@@ -320,15 +327,15 @@ fn commavalues(input: &[u8]) -> IResult<&[u8], Vec<Vec<u8>>> {
     if input.is_empty() {
         // Need to handle this separately because the below will return
         // vec![vec![]] on an empty input.
-        IResult::Done(b"", vec![])
+        Ok((b"", vec![]))
     } else {
-        IResult::Done(
+        Ok((
             b"",
             input
                 .split(|c| *c == b',')
                 .map(|val| val.to_vec())
                 .collect(),
-        )
+        ))
     }
 }
 
@@ -342,7 +349,7 @@ named!(
     cmd<(Vec<u8>, Vec<u8>)>,
     do_parse!(
         cmd: take_until_and_consume1!(" ")
-            >> args: take_while!(notsemi)
+            >> args: alt_complete!(take_while!(notsemi) | rest)
             >> ((cmd.to_vec(), args.to_vec()))
     )
 );
@@ -353,7 +360,6 @@ named!(
     separated_list!(complete!(tag!(";")), cmd)
 );
 
-named!(match_eof<&'a [u8]>, eof!());
 /// Given a hash of parameters, look up a parameter by name, and if it exists,
 /// apply a parser to its value. If it doesn't, error out.
 fn parseval<'a, F, T>(params: &'a HashMap<Vec<u8>, Vec<u8>>, key: &str, parser: F) -> Result<T>
@@ -363,12 +369,12 @@ where
     match params.get(key.as_bytes()) {
         None => bail!("missing param {}", key),
         Some(v) => match parser(v.as_ref()) {
-            IResult::Done(rest, v) => match match_eof(rest) {
-                IResult::Done(..) => Ok(v),
-                _ => bail!("Unconsumed characters remain after parsing param"),
+            Ok((rest, v)) => match rest {
+                [] => Ok(v),
+                [..] => bail!("Unconsumed characters remain after parsing param"),
             },
-            IResult::Incomplete(err) => bail!("param parse incomplete: {:?}", err),
-            IResult::Error(err) => bail!("param parse failed: {:?}", err),
+            Err(Err::Incomplete(err)) => bail!("param parse incomplete: {:?}", err),
+            Err(Err::Error(err) | Err::Failure(err)) => bail!("param parse failed: {:?}", err),
         },
     }
 }
@@ -387,15 +393,15 @@ where
     match params.get(key.as_bytes()) {
         None => Ok(T::default()),
         Some(v) => match parser(v.as_ref()) {
-            IResult::Done(unparsed, v) => match match_eof(unparsed) {
-                IResult::Done(..) => Ok(v),
-                _ => bail!(
+            Ok((unparsed, v)) => match unparsed {
+                [] => Ok(v),
+                [..] => bail!(
                     "Unconsumed characters remain after parsing param: {:?}",
                     unparsed
                 ),
             },
-            IResult::Incomplete(err) => bail!("param parse incomplete: {:?}", err),
-            IResult::Error(err) => bail!("param parse failed: {:?}", err),
+            Err(Err::Incomplete(err)) => bail!("param parse incomplete: {:?}", err),
+            Err(Err::Error(err) | Err::Failure(err)) => bail!("param parse failed: {:?}", err),
         },
     }
 }
@@ -413,15 +419,15 @@ where
     match params.get(key.as_bytes()) {
         None => Ok(None),
         Some(v) => match parser(v.as_ref()) {
-            IResult::Done(unparsed, v) => match match_eof(unparsed) {
-                IResult::Done(..) => Ok(Some(v)),
-                _ => bail!(
+            Ok((unparsed, v)) => match unparsed {
+                [] => Ok(Some(v)),
+                [..] => bail!(
                     "Unconsumed characters remain after parsing param: {:?}",
                     unparsed
                 ),
             },
-            IResult::Incomplete(err) => bail!("param parse incomplete: {:?}", err),
-            IResult::Error(err) => bail!("param parse failed: {:?}", err),
+            Err(Err::Incomplete(err)) => bail!("param parse incomplete: {:?}", err),
+            Err(Err::Error(err) | Err::Failure(err)) => bail!("param parse failed: {:?}", err),
         },
     }
 }
@@ -448,39 +454,43 @@ where
     );
 
     match res {
-        IResult::Done(rest, v) => {
+        Ok((rest, v)) => {
             match func(v) {
-                Ok(t) => IResult::Done(rest, t),
-                Err(_e) => IResult::Error(Err::Code(ErrorKind::Custom(999999))), // ugh
+                Ok(t) => Ok((rest, t)),
+                Err(_e) => Err(Err::Error(Context::Code(inp, ErrorKind::Custom(999999)))), // ugh
             }
         }
-        IResult::Error(e) => IResult::Error(e),
-        IResult::Incomplete(n) => IResult::Incomplete(n),
+        Err(err) => Err(err),
     }
 }
 
 /// Parse an ident, and map it to `String`.
 fn ident_string(inp: &[u8]) -> IResult<&[u8], String> {
     match ident_complete(inp) {
-        IResult::Done(rest, s) => IResult::Done(rest, String::from_utf8_lossy(s).into_owned()),
-        IResult::Incomplete(n) => IResult::Incomplete(n),
-        IResult::Error(e) => IResult::Error(e),
+        Ok((rest, s)) => Ok((rest, String::from_utf8_lossy(s).into_owned())),
+        Err(err) => Err(err),
     }
 }
 
 /// Parse utf8 string, assumes that input is complete
 fn utf8_string_complete(inp: &[u8]) -> IResult<&[u8], String> {
     match String::from_utf8(Vec::from(inp)) {
-        Ok(s) => IResult::Done(b"", s),
-        Err(_) => IResult::Error(Err::Code(ErrorKind::Custom(BAD_UTF8_ERR_CODE))),
+        Ok(s) => Ok((b"", s)),
+        Err(_) => Err(Err::Error(Context::Code(
+            inp,
+            ErrorKind::Custom(BAD_UTF8_ERR_CODE),
+        ))),
     }
 }
 
 /// Parse an MPath; assumes that input is complete.
 fn path_complete(inp: &[u8]) -> IResult<&[u8], MPath> {
     match MPath::new(inp) {
-        Ok(path) => IResult::Done(b"", path),
-        Err(_) => IResult::Error(Err::Code(ErrorKind::Custom(BAD_PATH_ERR_CODE))),
+        Ok(path) => Ok((b"", path)),
+        Err(_) => Err(Err::Error(Context::Code(
+            inp,
+            ErrorKind::Custom(BAD_PATH_ERR_CODE),
+        ))),
     }
 }
 
@@ -555,18 +565,23 @@ fn parse_batchrequest(inp: &[u8]) -> IResult<&[u8], Vec<SingleRequest>> {
         // Jump through hoops to prevent the lifetime of `full_cmd` from leaking into the IResult
         // via errors.
         let cmd = match complete!(&full_cmd[..], parse_cmd) {
-            IResult::Done(rest, out) => {
+            Ok((rest, out)) => {
                 if !rest.is_empty() {
-                    return IResult::Error(Err::Code(ErrorKind::Eof));
+                    return Err(Err::Error(Context::Code(b"", ErrorKind::Eof)));
                 };
                 out
             }
-            IResult::Incomplete(need) => return IResult::Incomplete(need),
-            IResult::Error(err) => return IResult::Error(Err::Code(err.into_error_kind())),
+            Err(Err::Incomplete(need)) => return Err(Err::Incomplete(need)),
+            Err(Err::Error(err)) => {
+                return Err(Err::Error(Context::Code(b"", err.into_error_kind())));
+            }
+            Err(Err::Failure(err)) => {
+                return Err(Err::Failure(Context::Code(b"", err.into_error_kind())));
+            }
         };
         parsed_cmds.push(cmd);
     }
-    IResult::Done(rest, parsed_cmds)
+    Ok((rest, parsed_cmds))
 }
 
 pub fn parse_request(buf: &mut BytesMut) -> Result<Option<Request>> {
@@ -578,13 +593,13 @@ pub fn parse_request(buf: &mut BytesMut) -> Result<Option<Request>> {
         );
 
         match parse_res {
-            IResult::Done(rest, val) => Some((origlen - rest.len(), val)),
-            IResult::Incomplete(_) => None,
-            IResult::Error(err) => {
+            Ok((rest, val)) => Some((origlen - rest.len(), val)),
+            Err(Err::Incomplete(_)) => None,
+            Err(Err::Error(err) | Err::Failure(err)) => {
                 println!("parse_request parsing error: {:?}", err);
-                Err(errors::ErrorKind::CommandParse(
+                bail!(errors::ErrorKind::CommandParse(
                     String::from_utf8_lossy(buf.as_ref()).into_owned(),
-                ))?
+                ));
             }
         }
     };
@@ -668,7 +683,7 @@ fn parse_with_params(
                 directories: parseval(&kv, "directories", gettreepack_directories)?,
                 depth: parseval_option(&kv, "depth", closure!(
                     map_res!(
-                        map_res!(take_while1!(is_digit), str::from_utf8),
+                        map_res!(alt_complete!(take_while1!(is_digit) | rest), str::from_utf8),
                         usize::from_str
                     )
                 ))?,
@@ -697,40 +712,45 @@ mod test {
 
     #[mononoke::test]
     fn test_integer() {
-        assert_eq!(integer(b"1234 "), IResult::Done(&b" "[..], 1234));
-        assert_eq!(integer(b"1234"), IResult::Incomplete(Needed::Unknown));
+        assert_eq!(integer(b"1234 "), Ok((&b" "[..], 1234)));
+        assert_eq!(integer(b"1234"), Err(Err::Incomplete(Needed::Unknown)));
     }
 
     #[mononoke::test]
     fn test_ident() {
+        let input = b"1234 ".as_slice();
         assert_eq!(
-            ident(b"1234 "),
-            IResult::Error(Err::Code(ErrorKind::AlphaNumeric))
+            ident(input),
+            Err(Err::Error(Context::Code(input, ErrorKind::AlphaNumeric))),
         );
+
+        let input = b" 1234 ".as_slice();
         assert_eq!(
-            ident(b" 1234 "),
-            IResult::Error(Err::Code(ErrorKind::AlphaNumeric))
+            ident(input),
+            Err(Err::Error(Context::Code(input, ErrorKind::AlphaNumeric))),
         );
-        assert_eq!(ident(b"foo"), IResult::Incomplete(Needed::Unknown));
-        assert_eq!(ident(b"foo "), IResult::Done(&b" "[..], &b"foo"[..]));
+
+        assert_eq!(ident(b"foo"), Err(Err::Incomplete(Needed::Unknown)));
+
+        assert_eq!(ident(b"foo "), Ok((&b" "[..], &b"foo"[..])));
     }
 
     #[mononoke::test]
     fn test_param_star() {
         let p = b"* 0\ntrailer";
-        assert_eq!(param_star(p), IResult::Done(&b"trailer"[..], hashmap! {}));
+        assert_eq!(param_star(p), Ok((&b"trailer"[..], hashmap! {})));
 
         let p = b"* 1\n\
                   foo 12\n\
                   hello world!trailer";
         assert_eq!(
             param_star(p),
-            IResult::Done(
+            Ok((
                 &b"trailer"[..],
                 hashmap! {
                     b"foo".as_ref() => b"hello world!".as_ref(),
                 }
-            )
+            )),
         );
 
         let p = b"* 2\n\
@@ -740,30 +760,30 @@ mod test {
                   bloptrailer";
         assert_eq!(
             param_star(p),
-            IResult::Done(
+            Ok((
                 &b"trailer"[..],
                 hashmap! {
                     b"foo".as_ref() => b"hello world!".as_ref(),
                     b"bar".as_ref() => b"blop".as_ref(),
                 }
-            )
+            )),
         );
 
         // no trailer
         let p = b"* 0\n";
-        assert_eq!(param_star(p), IResult::Done(&b""[..], hashmap! {}));
+        assert_eq!(param_star(p), Ok((&b""[..], hashmap! {})));
 
         let p = b"* 1\n\
                   foo 12\n\
                   hello world!";
         assert_eq!(
             param_star(p),
-            IResult::Done(
+            Ok((
                 &b""[..],
                 hashmap! {
                     b"foo".as_ref() => b"hello world!".as_ref(),
                 }
-            )
+            )),
         );
     }
 
@@ -773,24 +793,24 @@ mod test {
                   hello world!trailer";
         assert_eq!(
             param_kv(p),
-            IResult::Done(
+            Ok((
                 &b"trailer"[..],
                 hashmap! {
                     b"foo".as_ref() => b"hello world!".as_ref(),
                 }
-            )
+            )),
         );
 
         let p = b"foo 12\n\
                   hello world!";
         assert_eq!(
             param_kv(p),
-            IResult::Done(
+            Ok((
                 &b""[..],
                 hashmap! {
                     b"foo".as_ref() => b"hello world!".as_ref(),
                 }
-            )
+            )),
         );
     }
 
@@ -806,28 +826,28 @@ mod test {
                   badly formatted thing ";
 
         match params(p, 1) {
-            IResult::Done(_, v) => assert_eq!(
+            Ok((_, v)) => assert_eq!(
                 v,
                 hashmap! {
                     b"bar".to_vec() => b"hello world!".to_vec(),
                 }
             ),
-            bad => panic!("bad result {:?}", bad),
+            Err(bad) => panic!("bad result {:?}", bad),
         }
 
         match params(p, 2) {
-            IResult::Done(_, v) => assert_eq!(
+            Ok((_, v)) => assert_eq!(
                 v,
                 hashmap! {
                     b"bar".to_vec() => b"hello world!".to_vec(),
                     b"foo".to_vec() => b"blibble".to_vec(),
                 }
             ),
-            bad => panic!("bad result {:?}", bad),
+            Err(bad) => panic!("bad result {:?}", bad),
         }
 
         match params(p, 4) {
-            IResult::Done(b"\nbadly formatted thing ", v) => assert_eq!(
+            Ok((b"\nbadly formatted thing ", v)) => assert_eq!(
                 v,
                 hashmap! {
                     b"bar".to_vec() => b"hello world!".to_vec(),
@@ -840,19 +860,19 @@ mod test {
         }
 
         match params(p, 5) {
-            IResult::Error(Err::Position(ErrorKind::Alt, _)) => {}
+            Err(Err::Error(Context::Code(_, ErrorKind::Alt))) => {}
             bad => panic!("bad result {:?}", bad),
         }
 
         match params(&p[..3], 1) {
-            IResult::Incomplete(_) => {}
+            Err(Err::Incomplete(_)) => {}
             bad => panic!("bad result {:?}", bad),
         }
 
         for l in 0..p.len() {
             match params(&p[..l], 4) {
-                IResult::Incomplete(_) => {}
-                IResult::Done(remain, ref kv) => {
+                Err(Err::Incomplete(_)) => {}
+                Ok((remain, ref kv)) => {
                     assert_eq!(kv.len(), 4);
                     assert!(
                         b"\nbadly formatted thing ".starts_with(remain),
@@ -871,8 +891,8 @@ mod test {
                      foo 0\n\
                      bar 0\n";
         match params(star, 2) {
-            IResult::Incomplete(_) => panic!("unexpectedly incomplete"),
-            IResult::Done(remain, kv) => {
+            Err(Err::Incomplete(_)) => panic!("unexpectedly incomplete"),
+            Ok((remain, kv)) => {
                 assert_eq!(remain, b"");
                 assert_eq!(
                     kv,
@@ -882,7 +902,7 @@ mod test {
                     }
                 );
             }
-            IResult::Error(err) => panic!("unexpected error {:?}", err),
+            Err(Err::Error(err) | Err::Failure(err)) => panic!("unexpected error {:?}", err),
         }
 
         let star = b"* 2\n\
@@ -890,8 +910,8 @@ mod test {
                      plugh 0\n\
                      bar 0\n";
         match params(star, 2) {
-            IResult::Incomplete(_) => panic!("unexpectedly incomplete"),
-            IResult::Done(remain, kv) => {
+            Err(Err::Incomplete(_)) => panic!("unexpectedly incomplete"),
+            Ok((remain, kv)) => {
                 assert_eq!(remain, b"");
                 assert_eq!(
                     kv,
@@ -902,14 +922,14 @@ mod test {
                     }
                 );
             }
-            IResult::Error(err) => panic!("unexpected error {:?}", err),
+            Err(Err::Error(err) | Err::Failure(err)) => panic!("unexpected error {:?}", err),
         }
 
         let star = b"* 0\n\
                      bar 0\n";
         match params(star, 2) {
-            IResult::Incomplete(_) => panic!("unexpectedly incomplete"),
-            IResult::Done(remain, kv) => {
+            Err(Err::Incomplete(_)) => panic!("unexpectedly incomplete"),
+            Ok((remain, kv)) => {
                 assert_eq!(remain, b"");
                 assert_eq!(
                     kv,
@@ -918,13 +938,13 @@ mod test {
                     }
                 );
             }
-            IResult::Error(err) => panic!("unexpected error {:?}", err),
+            Err(Err::Error(err) | Err::Failure(err)) => panic!("unexpected error {:?}", err),
         }
 
         match params(&star[..4], 2) {
-            IResult::Incomplete(_) => {}
-            IResult::Done(remain, kv) => panic!("unexpected Done remain {:?} kv {:?}", remain, kv),
-            IResult::Error(err) => panic!("unexpected error {:?}", err),
+            Err(Err::Incomplete(_)) => {}
+            Ok((remain, kv)) => panic!("unexpected Done remain {:?} kv {:?}", remain, kv),
+            Err(Err::Error(err) | Err::Failure(err)) => panic!("unexpected error {:?}", err),
         }
     }
 
@@ -934,7 +954,7 @@ mod test {
 
         assert_eq!(
             batch_param_escaped(p),
-            IResult::Done(&b""[..], (b"foo".to_vec(), b"b=ar".to_vec()))
+            Ok((&b""[..], (b"foo".to_vec(), b"b=ar".to_vec()))),
         );
     }
 
@@ -944,37 +964,37 @@ mod test {
 
         assert_eq!(
             batch_params(p, 0),
-            IResult::Done(
+            Ok((
                 &b""[..],
                 hashmap! {
                     b"foo".to_vec() => b"bar".to_vec(),
                 }
-            )
+            )),
         );
 
         let p = b"foo=bar,biff=bop,esc:c:o:s:e=esc:c:o:s:e";
 
         assert_eq!(
             batch_params(p, 0),
-            IResult::Done(
+            Ok((
                 &b""[..],
                 hashmap! {
                     b"foo".to_vec() => b"bar".to_vec(),
                     b"biff".to_vec() => b"bop".to_vec(),
                     b"esc:,;=".to_vec() => b"esc:,;=".to_vec(),
                 }
-            )
+            )),
         );
 
         let p = b"";
 
-        assert_eq!(batch_params(p, 0), IResult::Done(&b""[..], hashmap! {}));
+        assert_eq!(batch_params(p, 0), Ok((&b""[..], hashmap! {})));
 
         let p = b"foo=";
 
         assert_eq!(
             batch_params(p, 0),
-            IResult::Done(&b""[..], hashmap! {b"foo".to_vec() => b"".to_vec()})
+            Ok((&b""[..], hashmap! {b"foo".to_vec() => b"".to_vec()})),
         );
     }
 
@@ -982,18 +1002,18 @@ mod test {
     fn test_nodehash() {
         assert_eq!(
             nodehash(b"0000000000000000000000000000000000000000"),
-            IResult::Done(&b""[..], HgChangesetId::new(NULL_HASH))
+            Ok((&b""[..], HgChangesetId::new(NULL_HASH))),
         );
 
+        let input = b"000000000000000000000000000000x000000000".as_slice();
         assert_eq!(
-            nodehash(b"000000000000000000000000000000x000000000")
-                .map_err(|err| Err::Code(err.into_error_kind())),
-            IResult::Error(Err::Code(ErrorKind::MapRes,))
+            nodehash(input),
+            Err(Err::Error(Context::Code(input, ErrorKind::MapRes))),
         );
 
         assert_eq!(
             nodehash(b"000000000000000000000000000000000000000"),
-            IResult::Incomplete(Needed::Size(40))
+            Err(Err::Incomplete(Needed::Size(40))),
         );
     }
 
@@ -1031,17 +1051,17 @@ mod test {
             b"0000000000000000000000000000000000000000-0000000000000000000000000000000000000000";
         assert_eq!(
             pair(p),
-            IResult::Done(
+            Ok((
                 &b""[..],
                 (HgChangesetId::new(NULL_HASH), HgChangesetId::new(NULL_HASH))
-            )
+            )),
         );
 
-        assert_eq!(pair(&p[..80]), IResult::Incomplete(Needed::Size(81)));
+        assert_eq!(pair(&p[..80]), Err(Err::Incomplete(Needed::Size(40))));
 
-        assert_eq!(pair(&p[..41]), IResult::Incomplete(Needed::Size(81)));
+        assert_eq!(pair(&p[..41]), Err(Err::Incomplete(Needed::Size(40))));
 
-        assert_eq!(pair(&p[..40]), IResult::Incomplete(Needed::Size(41)));
+        assert_eq!(pair(&p[..40]), Err(Err::Incomplete(Needed::Size(1))));
     }
 
     #[mononoke::test]
@@ -1051,35 +1071,35 @@ mod test {
               0000000000000000000000000000000000000000-0000000000000000000000000000000000000000";
         assert_eq!(
             pairlist(p),
-            IResult::Done(
+            Ok((
                 &b""[..],
                 vec![
                     (HgChangesetId::new(NULL_HASH), HgChangesetId::new(NULL_HASH)),
                     (HgChangesetId::new(NULL_HASH), HgChangesetId::new(NULL_HASH))
                 ]
-            )
+            )),
         );
 
         let p =
             b"0000000000000000000000000000000000000000-0000000000000000000000000000000000000000";
         assert_eq!(
             pairlist(p),
-            IResult::Done(
+            Ok((
                 &b""[..],
                 vec![(HgChangesetId::new(NULL_HASH), HgChangesetId::new(NULL_HASH))]
-            )
+            )),
         );
 
         let p = b"";
-        assert_eq!(pairlist(p), IResult::Done(&b""[..], vec![]));
+        assert_eq!(pairlist(p), Ok((&b""[..], vec![])));
 
         let p = b"0000000000000000000000000000000000000000-00000000000000";
         assert_eq!(
             pairlist(p),
-            IResult::Done(
+            Ok((
                 &b"0000000000000000000000000000000000000000-00000000000000"[..],
                 vec![]
-            )
+            )),
         );
     }
 
@@ -1090,7 +1110,7 @@ mod test {
               0000000000000000000000000000000000000000 0000000000000000000000000000000000000000";
         assert_eq!(
             hashlist(p),
-            IResult::Done(
+            Ok((
                 &b""[..],
                 vec![
                     HgChangesetId::new(NULL_HASH),
@@ -1098,23 +1118,23 @@ mod test {
                     HgChangesetId::new(NULL_HASH),
                     HgChangesetId::new(NULL_HASH)
                 ]
-            )
+            )),
         );
 
         let p = b"0000000000000000000000000000000000000000";
         assert_eq!(
             hashlist(p),
-            IResult::Done(&b""[..], vec![HgChangesetId::new(NULL_HASH)])
+            Ok((&b""[..], vec![HgChangesetId::new(NULL_HASH)])),
         );
 
         let p = b"";
-        assert_eq!(hashlist(p), IResult::Done(&b""[..], vec![]));
+        assert_eq!(hashlist(p), Ok((&b""[..], vec![])));
 
         // incomplete should leave bytes on the wire
         let p = b"00000000000000000000000000000";
         assert_eq!(
             hashlist(p),
-            IResult::Done(&b"00000000000000000000000000000"[..], vec![])
+            Ok((&b"00000000000000000000000000000"[..], vec![])),
         );
     }
 
@@ -1122,20 +1142,17 @@ mod test {
     fn test_commavalues() {
         // Empty list
         let p = b"";
-        assert_eq!(commavalues(p), IResult::Done(&b""[..], vec![]));
+        assert_eq!(commavalues(p), Ok((&b""[..], vec![])));
 
         // Single entry
         let p = b"abc";
-        assert_eq!(
-            commavalues(p),
-            IResult::Done(&b""[..], vec![b"abc".to_vec()])
-        );
+        assert_eq!(commavalues(p), Ok((&b""[..], vec![b"abc".to_vec()])));
 
         // Multiple entries
         let p = b"123,abc,test,456";
         assert_eq!(
             commavalues(p),
-            IResult::Done(
+            Ok((
                 &b""[..],
                 vec![
                     b"123".to_vec(),
@@ -1143,7 +1160,7 @@ mod test {
                     b"test".to_vec(),
                     b"456".to_vec(),
                 ]
-            )
+            )),
         );
     }
 
@@ -1151,16 +1168,10 @@ mod test {
     fn test_cmd() {
         let p = b"foo bar";
 
-        assert_eq!(
-            cmd(p),
-            IResult::Done(&b""[..], (b"foo".to_vec(), b"bar".to_vec()))
-        );
+        assert_eq!(cmd(p), Ok((&b""[..], (b"foo".to_vec(), b"bar".to_vec()))));
 
         let p = b"noparam ";
-        assert_eq!(
-            cmd(p),
-            IResult::Done(&b""[..], (b"noparam".to_vec(), b"".to_vec()))
-        );
+        assert_eq!(cmd(p), Ok((&b""[..], (b"noparam".to_vec(), b"".to_vec()))));
     }
 
     #[mononoke::test]
@@ -1169,20 +1180,20 @@ mod test {
 
         assert_eq!(
             cmdlist(p),
-            IResult::Done(&b""[..], vec![(b"foo".to_vec(), b"bar".to_vec())])
+            Ok((&b""[..], vec![(b"foo".to_vec(), b"bar".to_vec())])),
         );
 
         let p = b"foo bar;biff blop";
 
         assert_eq!(
             cmdlist(p),
-            IResult::Done(
+            Ok((
                 &b""[..],
                 vec![
                     (b"foo".to_vec(), b"bar".to_vec()),
                     (b"biff".to_vec(), b"blop".to_vec()),
-                ]
-            )
+                ],
+            )),
         );
     }
 }
@@ -1622,12 +1633,12 @@ mod test_parse {
     #[mononoke::test]
     fn test_batch_parse_heads() {
         match parse_with_params(b"heads\n", batch_params) {
-            IResult::Done(rest, val) => {
+            Ok((rest, val)) => {
                 assert!(rest.is_empty());
                 assert_eq!(val, SingleRequest::Heads {});
             }
-            IResult::Incomplete(_) => panic!("unexpected incomplete input"),
-            IResult::Error(err) => panic!("failed with {:?}", err),
+            Err(Err::Incomplete(_)) => panic!("unexpected incomplete input"),
+            Err(Err::Error(err) | Err::Failure(err)) => panic!("failed with {:?}", err),
         }
     }
 
