@@ -14,6 +14,7 @@ use std::str::FromStr;
 
 use anyhow::Result;
 use anyhow::bail;
+use bytes::Buf as _;
 use bytes::Bytes;
 use bytes::BytesMut;
 use hex::FromHex;
@@ -23,27 +24,27 @@ use mononoke_types::path::MPath;
 use nom::Err;
 use nom::IResult;
 use nom::Needed;
-use nom::alt;
-use nom::call;
+use nom::Parser;
+use nom::branch::alt;
+use nom::bytes::streaming::tag;
+use nom::bytes::streaming::take;
+use nom::bytes::streaming::take_while;
+use nom::bytes::streaming::take_while1;
 use nom::character::is_alphanumeric;
 use nom::character::is_digit;
+use nom::character::streaming::digit1;
+use nom::combinator::complete;
+use nom::combinator::map;
+use nom::combinator::map_res;
 use nom::combinator::rest;
-use nom::complete;
-use nom::do_parse;
 use nom::error::ErrorKind;
 use nom::error::FromExternalError;
 use nom::error::ParseError;
-use nom::many0;
-use nom::map;
-use nom::map_res;
-use nom::named;
-use nom::separated_list0;
-use nom::tag;
-use nom::take;
-use nom::take_while;
-use nom::take_while1;
-use nom::terminated;
-use nom::try_parse;
+use nom::multi::many0;
+use nom::multi::separated_list0;
+use nom::sequence::separated_pair;
+use nom::sequence::terminated;
+use nom::sequence::tuple;
 
 use crate::GetbundleArgs;
 use crate::GettreepackArgs;
@@ -76,59 +77,41 @@ impl ParseError<&[u8]> for Error {
     }
 }
 
-macro_rules! take_until1 {
-    ($i:expr, $substr:expr) => {{
+fn take_until1(substr: &str) -> impl Fn(&[u8]) -> IResult<&[u8], &[u8], Error> {
+    move |input: &[u8]| {
         use nom::FindSubstring as _;
-        use nom::InputLength as _;
         use nom::InputTake as _;
 
-        match $substr {
-            substr => match $i.find_substring(substr) {
-                None => Err(nom::Err::Incomplete(Needed::new(1 + substr.input_len()))),
-                Some(0) => Err(nom::Err::Error(ParseError::from_error_kind(
-                    $i,
-                    ErrorKind::TakeUntil,
-                ))),
-                Some(index) => Ok($i.take_split(index)),
-            },
-        }
-    }};
-}
-
-macro_rules! take_until_and_consume1 {
-    ($i:expr, $substr:expr) => {
-        terminated!($i, take_until1!($substr), tag!($substr))
-    };
-}
-
-macro_rules! separated_list_complete {
-    ($i:expr, $sep:ident!($($args:tt)*), $element:expr) => {
-        separated_list0!($i, complete!($sep!($($args)*)), complete!($element))
-    };
-}
-
-/// Parse an unsigned decimal integer. If it reaches the end of input, it returns Incomplete,
-/// as there may be more digits following
-fn digit<F: Fn(u8) -> bool>(input: &[u8], isdigit: F) -> IResult<&[u8], &[u8], Error> {
-    for (idx, item) in input.iter().enumerate() {
-        if !isdigit(*item) {
-            if idx == 0 {
-                return Err(Err::Error(Error::Nom(ErrorKind::Digit)));
-            } else {
-                return Ok((&input[idx..], &input[0..idx]));
-            }
+        match input.find_substring(substr) {
+            None => Err(nom::Err::Incomplete(Needed::new(1 + substr.len()))),
+            Some(0) => Err(nom::Err::Error(ParseError::from_error_kind(
+                input,
+                ErrorKind::TakeUntil,
+            ))),
+            Some(index) => Ok(input.take_split(index)),
         }
     }
-    Err(Err::Incomplete(Needed::Unknown))
 }
 
-named!(
-    integer<&[u8], usize, Error>,
-    map_res!(
-        map_res!(call!(digit, is_digit), str::from_utf8),
-        FromStr::from_str
-    )
-);
+fn take_until_and_consume1<'a>(
+    substr: &str,
+) -> impl FnMut(&'a [u8]) -> IResult<&'a [u8], &'a [u8], Error> {
+    terminated(take_until1(substr), tag(substr))
+}
+
+fn separated_list_complete<'a, F, O>(
+    sep: &str,
+    element: F,
+) -> impl FnMut(&'a [u8]) -> IResult<&'a [u8], Vec<O>, Error>
+where
+    F: Parser<&'a [u8], O, Error>,
+{
+    separated_list0(complete(tag(sep)), complete(element))
+}
+
+fn integer(input: &[u8]) -> IResult<&[u8], usize, Error> {
+    map_res(map_res(digit1, str::from_utf8), usize::from_str)(input)
+}
 
 /// Return an identifier of the form [a-zA-Z_][a-zA-Z0-9_]*. Returns Incomplete
 /// if it manages to reach the end of input, as there may be more identifier coming.
@@ -160,95 +143,72 @@ fn ident_complete(input: &[u8]) -> IResult<&[u8], &[u8], Error> {
 
 // Assumption: input is complete
 // We can't use 'integer' defined above as it reads until a non digit character
-named!(
-    boolean<&[u8], bool, Error>,
-    map_res!(alt!(complete!(take_while1!(is_digit)) | rest), |s| -> Result<
-        bool,
-    > {
+fn boolean(input: &[u8]) -> IResult<&[u8], bool, Error> {
+    map_res(alt((complete(take_while1(is_digit)), rest)), |s| {
         let s = str::from_utf8(s)?;
-        Ok(u32::from_str(s)? != 0)
-    })
-);
+        anyhow::Ok(u32::from_str(s)? != 0)
+    })(input)
+}
 
-named!(
-    batch_param_comma_separated<&[u8], Bytes, Error>,
-    map_res!(
-        do_parse!(key: take_while!(notcomma) >> take!(1) >> (key)),
-        |k: &[u8]| { anyhow::Ok(Bytes::from(batch::unescape(k)?)) }
-    )
-);
+fn batch_param_comma_separated(input: &[u8]) -> IResult<&[u8], Bytes, Error> {
+    map_res(terminated(take_while(notcomma), take(1usize)), |k| {
+        batch::unescape(k).map(Bytes::from)
+    })(input)
+}
 
 // List of comma-separated values, each of which is encoded using batch param encoding.
-named!(
-    gettreepack_directories<&[u8], Vec<Bytes>, Error>,
-    many0!(complete!(batch_param_comma_separated))
-);
+fn gettreepack_directories(input: &[u8]) -> IResult<&[u8], Vec<Bytes>, Error> {
+    many0(complete(batch_param_comma_separated))(input)
+}
 
 // A "*" parameter is a meta-parameter - its argument is a count of
 // a number of other parameters. (We accept nested/recursive star parameters,
 // but I don't know if that ever happens in practice.)
-named!(
-    param_star<&[u8], HashMap<&[u8], &[u8]>, Error>,
-    do_parse!(
-        tag!(b"* ") >> count: integer >> tag!(b"\n") >> res: call!(params_ref, count) >> (res)
-    )
-);
+fn param_star(input: &[u8]) -> IResult<&[u8], HashMap<&[u8], &[u8]>, Error> {
+    let (input, _) = tag("* ")(input)?;
+    let (input, count) = integer(input)?;
+    let (input, _) = tag("\n")(input)?;
+    params_ref(input, count)
+}
 
 // A named parameter is a name followed by a decimal integer of the number of
 // bytes in the parameter, followed by newline. The parameter value has no terminator.
 // ident <bytelen>\n
 // <bytelen bytes>
-named!(
-    param_kv<&[u8], HashMap<&[u8], &[u8]>, Error>,
-    do_parse!(
-        key: ident
-            >> tag!(b" ")
-            >> len: integer
-            >> tag!(b"\n")
-            >> val: take!(len)
-            >> (iter::once((key, val)).collect())
-    )
-);
+fn param_kv(input: &[u8]) -> IResult<&[u8], HashMap<&[u8], &[u8]>, Error> {
+    let (input, key) = ident(input)?;
+    let (input, _) = tag(" ")(input)?;
+    let (input, len) = integer(input)?;
+    let (input, _) = tag("\n")(input)?;
+    let (input, val) = take(len)(input)?;
+    Ok((input, iter::once((key, val)).collect()))
+}
 
 /// Normal ssh protocol params:
 /// either a "*", which indicates a number of following parameters,
 /// or a named parameter whose value bytes follow.
 /// "count" is the number of required parameters, including the "*" parameter - but *not*
 /// the parameters that the "*" parameter expands to.
-fn params_ref(inp: &[u8], count: usize) -> IResult<&[u8], HashMap<&[u8], &[u8]>, Error> {
-    let mut inp = inp;
-    let mut have = 0;
-
+fn params_ref(mut input: &[u8], count: usize) -> IResult<&[u8], HashMap<&[u8], &[u8]>, Error> {
     let mut ret = HashMap::with_capacity(count);
 
-    while have < count {
-        let res = alt!(inp,
-              param_star => { |kv: HashMap<_, _>| { have += 1; kv } }
-            | param_kv => { |kv: HashMap<_, _>| { have += kv.len(); kv } }
-        );
-
-        match res {
-            Ok((rest, val)) => {
-                for (k, v) in val.into_iter() {
-                    ret.insert(k, v);
-                }
-                inp = rest;
-            }
-            Err(failed) => return Err(failed),
-        }
+    for _ in 0..count {
+        let (rest, val) = alt((param_star, param_kv))(input)?;
+        ret.extend(val);
+        input = rest;
     }
 
-    Ok((inp, ret))
+    Ok((input, ret))
 }
 
-fn params(inp: &[u8], count: usize) -> IResult<&[u8], HashMap<Vec<u8>, Vec<u8>>, Error> {
+fn params(input: &[u8], count: usize) -> IResult<&[u8], HashMap<Vec<u8>, Vec<u8>>, Error> {
     // Parsing of params is down first by extracting references, then converting them to owned
     // Vecs, if successful. This ensures that validating inputs (i.e. making sure we have all the
     // data we need) is not dependent on the length of the arguments, and instead is only dependent
     // on the complexity of what is being parsed (i.e. the count of arguments). This is important
     // because this is hooked into a Tokio decoder, so it'll get called in a loop every time new
     // data is received (e.g. ~8KiB intervals, since that is the buffer size).
-    match params_ref(inp, count) {
+    match params_ref(input, count) {
         // Convert to owned if successful.
         Ok((rest, ret)) => {
             let ret = ret
@@ -270,95 +230,88 @@ fn notcomma(b: u8) -> bool {
 // scheme to protect ',', ';', '=', ':'. The value ends either at the end of the input
 // (which is actually from the "batch" command "cmds" parameter), or at a ',', as they're
 // comma-delimited.
-named!(
-    batch_param_escaped<&[u8], (Vec<u8>, Vec<u8>), Error>,
-    map_res!(
-        do_parse!(
-            key: take_until_and_consume1!("=") >>
-            val: alt!(complete!(take_while!(notcomma)) | rest) >>
-            ((key, val))
-        ),
-        |(k, v)| anyhow::Ok((batch::unescape(k)?, batch::unescape(v)?))
-    )
-);
+fn batch_param_escaped(input: &[u8]) -> IResult<&[u8], (Vec<u8>, Vec<u8>), Error> {
+    tuple((
+        map_res(take_until_and_consume1("="), batch::unescape),
+        map_res(alt((complete(take_while(notcomma)), rest)), batch::unescape),
+    ))(input)
+}
 
 // Extract parameters from batch - same signature as params
 // Batch parameters are a comma-delimited list of parameters; count is unused
 // and there's no notion of star params.
 fn batch_params(input: &[u8], _count: usize) -> IResult<&[u8], HashMap<Vec<u8>, Vec<u8>>, Error> {
-    map!(
-        input,
-        separated_list_complete!(tag!(","), batch_param_escaped),
-        |v: Vec<_>| v.into_iter().collect()
-    )
+    map(
+        separated_list_complete(",", batch_param_escaped),
+        HashMap::from_iter,
+    )(input)
 }
 
 // A nodehash is simply 40 hex digits.
-named!(
-    nodehash<&[u8], HgChangesetId, Error>,
-    map_res!(take!(40), |v: &[u8]| str::parse(str::from_utf8(v)?))
-);
+fn nodehash(input: &[u8]) -> IResult<&[u8], HgChangesetId, Error> {
+    map_res(
+        map_res(take(40usize), str::from_utf8),
+        HgChangesetId::from_str,
+    )(input)
+}
 
 // A manifestid is simply 40 hex digits.
-named!(
-    manifestid<&[u8], HgManifestId, Error>,
-    map_res!(take!(40), |v: &[u8]| str::parse(str::from_utf8(v)?))
-);
+fn manifestid(input: &[u8]) -> IResult<&[u8], HgManifestId, Error> {
+    map_res(
+        map_res(take(40usize), str::from_utf8),
+        HgManifestId::from_str,
+    )(input)
+}
 
 // A pair of nodehashes, separated by '-'
-named!(
-    pair<&[u8], (HgChangesetId, HgChangesetId), Error>,
-    do_parse!(a: nodehash >> tag!("-") >> b: nodehash >> ((a, b)))
-);
+fn pair(input: &[u8]) -> IResult<&[u8], (HgChangesetId, HgChangesetId), Error> {
+    separated_pair(nodehash, tag("-"), nodehash)(input)
+}
 
 // A space-separated list of pairs.
-named!(
-    pairlist<&[u8], Vec<(HgChangesetId, HgChangesetId)>, Error>,
-    separated_list_complete!(tag!(" "), pair)
-);
+fn pairlist(input: &[u8]) -> IResult<&[u8], Vec<(HgChangesetId, HgChangesetId)>, Error> {
+    separated_list_complete(" ", pair)(input)
+}
 
 // A space-separated list of changeset IDs
-named!(
-    hashlist<&[u8], Vec<HgChangesetId>, Error>,
-    separated_list_complete!(tag!(" "), nodehash)
-);
+fn hashlist(input: &[u8]) -> IResult<&[u8], Vec<HgChangesetId>, Error> {
+    separated_list_complete(" ", nodehash)(input)
+}
 
 // A changeset is simply 40 hex digits.
-named!(
-    hg_changeset_id<&[u8], HgChangesetId, Error>,
-    map_res!(take!(40), |v: &[u8]| str::parse(str::from_utf8(v)?))
-);
+fn hg_changeset_id(input: &[u8]) -> IResult<&[u8], HgChangesetId, Error> {
+    map_res(
+        map_res(take(40usize), str::from_utf8),
+        HgChangesetId::from_str,
+    )(input)
+}
 
 // A space-separated list of hg changesets
-named!(
-    hg_changeset_list<&[u8], Vec<HgChangesetId>, Error>,
-    separated_list_complete!(tag!(" "), hg_changeset_id)
-);
+fn hg_changeset_list(input: &[u8]) -> IResult<&[u8], Vec<HgChangesetId>, Error> {
+    separated_list_complete(" ", hg_changeset_id)(input)
+}
 
 // A space-separated list of manifest IDs
-named!(
-    manifestlist<&[u8], Vec<HgManifestId>, Error>,
-    separated_list_complete!(tag!(" "), manifestid)
-);
+fn manifestlist(input: &[u8]) -> IResult<&[u8], Vec<HgManifestId>, Error> {
+    separated_list_complete(" ", manifestid)(input)
+}
 
 // A space-separated list of strings
-named!(
-    stringlist<&[u8], Vec<String>, Error>,
-    separated_list0!(
-        complete!(tag!(" ")),
-        map_res!(
-            map_res!(
-                alt!(complete!(take_while!(is_alphanumeric)) | rest),
-                str::from_utf8
+fn stringlist(input: &[u8]) -> IResult<&[u8], Vec<String>, Error> {
+    separated_list0(
+        complete(tag(" ")),
+        map_res(
+            map_res(
+                alt((complete(take_while(is_alphanumeric)), rest)),
+                str::from_utf8,
             ),
-            FromStr::from_str
-        )
-    )
-);
+            FromStr::from_str,
+        ),
+    )(input)
+}
 
-named!(
-    hex_stringlist<&[u8], Vec<String>, Error>,
-    map_res!(stringlist, |vs: Vec<String>| {
+fn hex_stringlist(input: &[u8]) -> IResult<&[u8], Vec<String>, Error> {
+    map_res(stringlist, |vs| {
         vs.into_iter()
             .map(|v| {
                 Vec::from_hex(v)
@@ -366,8 +319,8 @@ named!(
                     .and_then(|v| String::from_utf8(v).map_err(anyhow::Error::from))
             })
             .collect::<Result<Vec<String>>>()
-    })
-);
+    })(input)
+}
 
 /// A comma-separated list of arbitrary values. The input is assumed to be
 /// complete and exact.
@@ -393,20 +346,16 @@ fn notsemi(b: u8) -> bool {
 
 // A command in a batch. Commands are represented as "command parameters". The parameters
 // end either at the end of the buffer or at ';'.
-named!(
-    cmd<&[u8], (Vec<u8>, Vec<u8>), Error>,
-    do_parse!(
-        cmd: take_until_and_consume1!(" ")
-            >> args: alt!(complete!(take_while!(notsemi)) | rest)
-            >> ((cmd.to_vec(), args.to_vec()))
-    )
-);
+fn cmd(input: &[u8]) -> IResult<&[u8], (Vec<u8>, Vec<u8>), Error> {
+    let (input, cmd) = take_until_and_consume1(" ")(input)?;
+    let (input, args) = alt((complete(take_while(notsemi)), rest))(input)?;
+    Ok((input, (cmd.to_vec(), args.to_vec())))
+}
 
 // A list of batched commands - the list is delimited by ';'.
-named!(
-    cmdlist<&[u8], Vec<(Vec<u8>, Vec<u8>)>, Error>,
-    separated_list0!(complete!(tag!(";")), cmd)
-);
+fn cmdlist(input: &[u8]) -> IResult<&[u8], Vec<(Vec<u8>, Vec<u8>)>, Error> {
+    separated_list0(complete(tag(";")), cmd)(input)
+}
 
 /// Given a hash of parameters, look up a parameter by name, and if it exists,
 /// apply a parser to its value. If it doesn't, error out.
@@ -459,10 +408,10 @@ where
 fn parseval_option<'a, F, T>(
     params: &'a HashMap<Vec<u8>, Vec<u8>>,
     key: &str,
-    parser: F,
+    mut parser: F,
 ) -> Result<Option<T>>
 where
-    F: Fn(&'a [u8]) -> IResult<&'a [u8], T, Error>,
+    F: FnMut(&'a [u8]) -> IResult<&'a [u8], T, Error>,
 {
     match params.get(key.as_bytes()) {
         None => Ok(None),
@@ -485,52 +434,46 @@ where
 /// number of args (since each command has a fixed number of expected parameters,
 /// not withstanding '*'), and a function to actually produce a parsed `SingleRequest`.
 fn parse_command<'a, C, F, T>(
-    inp: &'a [u8],
     cmd: C,
     parse_params: fn(&[u8], usize) -> IResult<&[u8], HashMap<Vec<u8>, Vec<u8>>, Error>,
     nargs: usize,
     func: F,
-) -> IResult<&'a [u8], T, Error>
+) -> impl FnMut(&'a [u8]) -> IResult<&'a [u8], T, Error>
 where
     F: Fn(HashMap<Vec<u8>, Vec<u8>>) -> Result<T>,
     C: AsRef<[u8]>,
 {
-    let cmd = cmd.as_ref();
-    let res = do_parse!(
-        inp,
-        tag!(cmd) >> tag!("\n") >> p: call!(parse_params, nargs) >> (p)
-    );
+    move |input| {
+        let (input, _) = tag(cmd.as_ref())(input)?;
+        let (input, _) = tag("\n")(input)?;
+        let (input, v) = parse_params(input, nargs)?;
 
-    match res {
-        Ok((rest, v)) => {
-            match func(v) {
-                Ok(t) => Ok((rest, t)),
-                Err(_e) => Err(Err::Error(Error::Custom(999999))), // ugh
-            }
+        match func(v) {
+            Ok(t) => Ok((input, t)),
+            Err(_e) => Err(Err::Error(Error::Custom(999999))), // ugh
         }
-        Err(err) => Err(err),
     }
 }
 
 /// Parse an ident, and map it to `String`.
-fn ident_string(inp: &[u8]) -> IResult<&[u8], String, Error> {
-    match ident_complete(inp) {
+fn ident_string(input: &[u8]) -> IResult<&[u8], String, Error> {
+    match ident_complete(input) {
         Ok((rest, s)) => Ok((rest, String::from_utf8_lossy(s).into_owned())),
         Err(err) => Err(err),
     }
 }
 
 /// Parse utf8 string, assumes that input is complete
-fn utf8_string_complete(inp: &[u8]) -> IResult<&[u8], String, Error> {
-    match String::from_utf8(Vec::from(inp)) {
+fn utf8_string_complete(input: &[u8]) -> IResult<&[u8], String, Error> {
+    match String::from_utf8(Vec::from(input)) {
         Ok(s) => Ok((b"", s)),
         Err(_) => Err(Err::Error(Error::BadUtf8)),
     }
 }
 
 /// Parse an MPath; assumes that input is complete.
-fn path_complete(inp: &[u8]) -> IResult<&[u8], MPath, Error> {
-    match MPath::new(inp) {
+fn path_complete(input: &[u8]) -> IResult<&[u8], MPath, Error> {
+    match MPath::new(input) {
         Ok(path) => Ok((b"", path)),
         Err(_) => Err(Err::Error(Error::BadPath)),
     }
@@ -551,69 +494,58 @@ macro_rules! count_tts {
 /// fixed number of named parameters.
 macro_rules! command_common {
     // No parameters
-    ( $i:expr_2021, $name:expr_2021, $req:ident, $star:expr_2021, $parseparam:expr_2021, { } ) => {
-        call!($i, parse_command, $name, $parseparam, $star, |_| Ok($req))
+    ($name:expr_2021, $req:ident, $star:expr_2021, $parseparam:expr_2021, { }) => {
+        parse_command($name, $parseparam, $star, |_| Ok($req))
     };
 
     // One key/parser pair for each parameter
-    ( $i:expr_2021, $name:expr_2021, $req:ident, $star:expr_2021, $parseparam:expr_2021,
-            { $( ($key:ident, $parser:expr_2021) )+ } ) => {
-        call!($i, parse_command, $name, $parseparam, $star+count_tts!( $($key)+ ),
-            |kv| Ok($req {
+    ($name:expr_2021, $req:ident, $star:expr_2021, $parseparam:expr_2021,
+            { $( ($key:ident, $parser:expr_2021) )+ }) => {
+        parse_command($name, $parseparam, $star+count_tts!( $($key)+ ), |kv| {
+            Ok($req {
                 $( $key: parseval(&kv, stringify!($key), $parser)?, )*
             })
-        )
+        })
     };
 }
 
 macro_rules! command {
-    ( $i:expr_2021, $name:expr_2021, $req:ident, $parseparam:expr_2021,
-            { $( $key:ident => $parser:expr_2021, )* } ) => {
-        command_common!($i, $name, $req, 0, $parseparam, { $(($key, $parser))* } )
+    ($name:expr_2021, $req:ident, $parseparam:expr_2021,
+            { $( $key:ident => $parser:expr_2021, )* }) => {
+        command_common!($name, $req, 0, $parseparam, { $(($key, $parser))* })
     };
 }
 
 macro_rules! command_star {
-    ( $i:expr_2021, $name:expr_2021, $req:ident, $parseparam:expr_2021,
-            { $( $key:ident => $parser:expr_2021, )* } ) => {
-        command_common!($i, $name, $req, 1, $parseparam, { $(($key, $parser))* } )
+    ($name:expr_2021, $req:ident, $parseparam:expr_2021,
+            { $( $key:ident => $parser:expr_2021, )* }) => {
+        command_common!($name, $req, 1, $parseparam, { $(($key, $parser))* })
     };
 }
 
 /// Parse a non-batched command
-fn parse_singlerequest(inp: &[u8]) -> IResult<&[u8], SingleRequest, Error> {
-    parse_with_params(inp, params)
+fn parse_singlerequest(input: &[u8]) -> IResult<&[u8], SingleRequest, Error> {
+    parse_with_params(input, params)
 }
 
 struct Batch {
     cmds: Vec<(Vec<u8>, Vec<u8>)>,
 }
 
-fn parse_batchrequest(inp: &[u8]) -> IResult<&[u8], Vec<SingleRequest>, Error> {
-    fn parse_cmd(inp: &[u8]) -> IResult<&[u8], SingleRequest, Error> {
-        parse_with_params(inp, batch_params)
+fn parse_batchrequest(input: &[u8]) -> IResult<&[u8], Vec<SingleRequest>, Error> {
+    fn parse_cmd(input: &[u8]) -> IResult<&[u8], SingleRequest, Error> {
+        parse_with_params(input, batch_params)
     }
 
-    let (rest, batch) = try_parse!(
-        inp,
-        command_star!("batch", Batch, params, {
-            cmds => cmdlist,
-        })
-    );
+    let (rest, batch) = command_star!("batch", Batch, params, {
+        cmds => cmdlist,
+    })(input)?;
 
     let mut parsed_cmds = Vec::with_capacity(batch.cmds.len());
     for cmd in batch.cmds {
         let full_cmd = Bytes::from([cmd.0, cmd.1].join(&b'\n'));
-        // Jump through hoops to prevent the lifetime of `full_cmd` from leaking into the IResult
-        // via errors.
-        let cmd = match complete!(&full_cmd[..], parse_cmd) {
-            Ok((rest, out)) => {
-                if !rest.is_empty() {
-                    return Err(Err::Error(Error::Nom(ErrorKind::Eof)));
-                };
-                out
-            }
-            Err(err) => return Err(err),
+        let ([], cmd) = complete(parse_cmd)(&full_cmd)? else {
+            return Err(Err::Error(Error::Nom(ErrorKind::Eof)));
         };
         parsed_cmds.push(cmd);
     }
@@ -621,59 +553,56 @@ fn parse_batchrequest(inp: &[u8]) -> IResult<&[u8], Vec<SingleRequest>, Error> {
 }
 
 pub fn parse_request(buf: &mut BytesMut) -> Result<Option<Request>> {
-    let res = {
-        let origlen = buf.len();
-        let parse_res = alt!(
-            &buf[..],
-            map!(parse_batchrequest, Request::Batch) | map!(parse_singlerequest, Request::Single)
-        );
+    let res = alt((
+        map(parse_batchrequest, Request::Batch),
+        map(parse_singlerequest, Request::Single),
+    ))(buf);
 
-        match parse_res {
-            Ok((rest, val)) => Some((origlen - rest.len(), val)),
-            Err(Err::Incomplete(_)) => None,
-            Err(Err::Error(err) | Err::Failure(err)) => {
-                println!("parse_request parsing error: {:?}", err);
-                bail!(errors::ErrorKind::CommandParse(
-                    String::from_utf8_lossy(buf.as_ref()).into_owned(),
-                ));
-            }
+    match res {
+        Ok((rest, val)) => {
+            buf.advance(buf.len() - rest.len());
+            Ok(Some(val))
         }
-    };
-
-    Ok(res.map(|(consume, val)| {
-        let _ = buf.split_to(consume);
-        val
-    }))
+        Err(Err::Incomplete(_)) => Ok(None),
+        Err(Err::Error(err) | Err::Failure(err)) => {
+            println!("parse_request parsing error: {:?}", err);
+            bail!(errors::ErrorKind::CommandParse(
+                String::from_utf8_lossy(buf.as_ref()).into_owned(),
+            ));
+        }
+    }
 }
 
 /// Common parser, generalized over how to parse parameters (either unbatched or
 /// batched syntax.)
 #[rustfmt::skip]
 fn parse_with_params(
-    inp: &[u8],
+    input: &[u8],
     parse_params: fn(&[u8], usize)
         -> IResult<&[u8], HashMap<Vec<u8>, Vec<u8>>, Error>,
 ) -> IResult<&[u8], SingleRequest, Error> {
     use SingleRequest::*;
 
-    alt!(inp,
-          command!("between", Between, parse_params, {
-              pairs => pairlist,
-          })
-        | command!("branchmap", Branchmap, parse_params, {})
-        | command!("capabilities", Capabilities, parse_params, {})
-        | call!(parse_command, "debugwireargs", parse_params, 2+1,
-            |kv| Ok(Debugwireargs {
+    alt((
+        command!("between", Between, parse_params, {
+            pairs => pairlist,
+        }),
+        command!("branchmap", Branchmap, parse_params, {}),
+        command!("capabilities", Capabilities, parse_params, {}),
+        parse_command("debugwireargs", parse_params, 2+1, |kv| {
+            Ok(Debugwireargs {
                 one: parseval(&kv, "one", ident_complete)?.to_vec(),
                 two: parseval(&kv, "two", ident_complete)?.to_vec(),
                 all_args: kv,
-            }))
-        | call!(parse_command, "clienttelemetry", parse_params, 1,
-            |kv| Ok(ClientTelemetry{
+            })
+        }),
+        parse_command("clienttelemetry", parse_params, 1, |kv| {
+            Ok(ClientTelemetry{
                 args: kv,
-            }))
-        | call!(parse_command, "getbundle", parse_params, 1,
-            |kv| Ok(Getbundle(GetbundleArgs {
+            })
+        }),
+        parse_command("getbundle", parse_params, 1, |kv| {
+            Ok(Getbundle(GetbundleArgs {
                 // Some params are currently ignored, like:
                 // - obsmarkers
                 // - cg
@@ -684,56 +613,57 @@ fn parse_with_params(
                 bundlecaps: parseval_default(&kv, "bundlecaps", commavalues)?.into_iter().collect(),
                 listkeys: parseval_default(&kv, "listkeys", commavalues)?,
                 phases: parseval_default(&kv, "phases", boolean)?,
-            })))
-        | command!("heads", Heads, parse_params, {})
-        | command!("hello", Hello, parse_params, {})
-        | command!("listkeys", Listkeys, parse_params, {
-              namespace => ident_string,
-        })
-        | command!("listkeyspatterns", ListKeysPatterns, parse_params, {
-             namespace => ident_string,
-             patterns => hex_stringlist,
-        })
-        | command!("lookup", Lookup, parse_params, {
-              key => utf8_string_complete,
-          })
-        | command_star!("known", Known, parse_params, {
-              nodes => hashlist,
-          })
-        | command_star!("knownnodes", Knownnodes, parse_params, {
-              nodes => hg_changeset_list,
-          })
-        | command!("unbundle", Unbundle, parse_params, {
-              heads => stringlist,
-          })
-        | command!("unbundlereplay", UnbundleReplay, parse_params, {
-              heads => stringlist,
-              replaydata => utf8_string_complete,
-              respondlightly => boolean,
-          })
-        | call!(parse_command, "gettreepack", parse_params, 1,
-            |kv| Ok(Gettreepack(GettreepackArgs {
+            }))
+        }),
+        command!("heads", Heads, parse_params, {}),
+        command!("hello", Hello, parse_params, {}),
+        command!("listkeys", Listkeys, parse_params, {
+            namespace => ident_string,
+        }),
+        command!("listkeyspatterns", ListKeysPatterns, parse_params, {
+            namespace => ident_string,
+            patterns => hex_stringlist,
+        }),
+        command!("lookup", Lookup, parse_params, {
+            key => utf8_string_complete,
+        }),
+        command_star!("known", Known, parse_params, {
+            nodes => hashlist,
+        }),
+        command_star!("knownnodes", Knownnodes, parse_params, {
+            nodes => hg_changeset_list,
+        }),
+        command!("unbundle", Unbundle, parse_params, {
+            heads => stringlist,
+        }),
+        command!("unbundlereplay", UnbundleReplay, parse_params, {
+            heads => stringlist,
+            replaydata => utf8_string_complete,
+            respondlightly => boolean,
+        }),
+        parse_command("gettreepack", parse_params, 1, |kv| {
+            Ok(Gettreepack(GettreepackArgs {
                 rootdir: parseval(&kv, "rootdir", path_complete)?,
                 mfnodes: parseval(&kv, "mfnodes", manifestlist)?,
                 basemfnodes: parseval(&kv, "basemfnodes", manifestlist)?.into_iter().collect(),
                 directories: parseval(&kv, "directories", gettreepack_directories)?,
-                depth: parseval_option(&kv, "depth", |i| map_res!(
-                    i,
-                    map_res!(alt!(complete!(take_while1!(is_digit)) | rest), str::from_utf8),
+                depth: parseval_option(&kv, "depth", map_res(
+                    map_res(alt((complete(take_while1(is_digit)), rest)), str::from_utf8),
                     usize::from_str
                 ))?,
-            })))
-        | call!(parse_command, "stream_out_shallow", parse_params, 1, |kv| {
+            }))
+        }),
+        parse_command("stream_out_shallow", parse_params, 1, |kv| {
             Ok(StreamOutShallow {
                 tag: parseval_option(&kv, "tag", utf8_string_complete)?
             })
-        })
-        | command_star!("getpackv1", GetpackV1, parse_params, {})
-        | command_star!("getpackv2", GetpackV2, parse_params, {})
-        | command!("getcommitdata", GetCommitData, parse_params, {
+        }),
+        command_star!("getpackv1", GetpackV1, parse_params, {}),
+        command_star!("getpackv2", GetpackV2, parse_params, {}),
+        command!("getcommitdata", GetCommitData, parse_params, {
             nodes => hg_changeset_list,
-        })
-    )
+        }),
+    ))(input)
 }
 
 /// Test individual combinators
@@ -748,7 +678,7 @@ mod test {
     #[mononoke::test]
     fn test_integer() {
         assert_eq!(integer(b"1234 "), Ok((&b" "[..], 1234)));
-        assert_eq!(integer(b"1234"), Err(Err::Incomplete(Needed::Unknown)));
+        assert_eq!(integer(b"1234"), Err(Err::Incomplete(Needed::new(1))));
     }
 
     #[mononoke::test]
@@ -895,7 +825,7 @@ mod test {
         }
 
         match params(p, 5) {
-            Err(Err::Error(Error::Nom(ErrorKind::Alt))) => {}
+            Err(Err::Error(Error::Nom(ErrorKind::AlphaNumeric))) => {}
             bad => panic!("bad result {:?}", bad),
         }
 
