@@ -4,7 +4,7 @@
 name = "sapling-dag-types"
 version = "0.1.0"
 authors = ["Meta Source Control Team <sourcecontrol-dev@meta.com>"]
-edition = "2021"
+edition = "2024"
 description = "A subset of types used by sapling-dag"
 homepage = "https://sapling-scm.com/"
 repository = "https://github.com/facebook/sapling"

@@ -4,7 +4,7 @@
 name = "sapling-vlqencoding"
 version = "0.1.0"
 authors = ["Meta Source Control Team <sourcecontrol-dev@meta.com>"]
-edition = "2021"
+edition = "2024"
 description = "VLQ encoding (https://en.wikipedia.org/wiki/Variable-length_quantity)."
 homepage = "https://sapling-scm.com/"
 repository = "https://github.com/facebook/sapling"

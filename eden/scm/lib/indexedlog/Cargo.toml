@@ -4,7 +4,7 @@
 name = "sapling-indexedlog"
 version = "0.1.0"
 authors = ["Meta Source Control Team <sourcecontrol-dev@meta.com>"]
-edition = "2021"
+edition = "2024"
 description = "Append-only on-disk storage with integrity checks and radix tree indexing."
 homepage = "https://sapling-scm.com/"
 repository = "https://github.com/facebook/sapling"

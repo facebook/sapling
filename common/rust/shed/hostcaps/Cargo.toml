@@ -4,7 +4,7 @@
 name = "hostcaps"
 version = "0.1.0"
 authors = ["Facebook <opensource+rust-shed@fb.com>"]
-edition = "2021"
+edition = "2024"
 readme = "../../README.md"
 repository = "https://github.com/facebookexperimental/rust-shed"
 license = "MIT OR Apache-2.0"

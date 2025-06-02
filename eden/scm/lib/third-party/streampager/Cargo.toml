@@ -4,7 +4,7 @@
 name = "sapling-streampager"
 version = "0.11.0"
 authors = ["Mark Juggurnauth-Thomas <markbt@efaref.net>", "Facebook Source Control Team <sourcecontrol-dev@fb.com>"]
-edition = "2021"
+edition = "2024"
 description = "streampager is a pager for command output or large files"
 license = "MIT"
 keywords = ["less", "more", "pager"]
@@ -12,6 +12,7 @@ categories = ["command-line-utilities", "text-processing"]
 
 [lib]
 name = "streampager"
+edition = "2021"
 
 [dependencies]
 dirs = "6.0"

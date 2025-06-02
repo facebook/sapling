@@ -4,7 +4,7 @@
 name = "sapling-commitcloudsubscriber"
 version = "0.1.0"
 authors = ["Meta Source Control Team <sourcecontrol-dev@meta.com>"]
-edition = "2021"
+edition = "2024"
 description = """
     Cross platform client for subscribing to Commit Cloud eventsource (http server-sent events)
     The workflow is the following:

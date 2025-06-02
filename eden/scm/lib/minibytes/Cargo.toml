@@ -4,7 +4,7 @@
 name = "sapling-minibytes"
 version = "0.1.0"
 authors = ["Meta Source Control Team <sourcecontrol-dev@meta.com>"]
-edition = "2021"
+edition = "2024"
 description = "Shared reference-counted bytes and str with zero-copy slicing support."
 homepage = "https://sapling-scm.com/"
 repository = "https://github.com/facebook/sapling"

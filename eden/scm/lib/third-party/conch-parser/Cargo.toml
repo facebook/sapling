@@ -4,8 +4,11 @@
 name = "conch-parser"
 version = "0.1.1"
 authors = ["Ivan Petkov <ivanppetkov@gmail.com>"]
-edition = "2021"
+edition = "2024"
 license = "MIT"
+
+[lib]
+edition = "2021"
 
 [dependencies]
 serde = { version = "1.0.185", features = ["derive", "rc"] }

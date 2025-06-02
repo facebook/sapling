@@ -3,7 +3,7 @@
 [package]
 name = "sapling-cpython-ext"
 version = "0.1.0"
-edition = "2021"
+edition = "2024"
 
 [lib]
 name = "cpython_ext"
