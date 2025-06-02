@@ -67,6 +67,7 @@ macro_rules! check_status {
 /// `args[0]` is the executable name to be used. If specified, `sapling_home`
 /// points to the directory containing the "sapling" Python package. This allows
 /// Sapling Python modules to be loaded from disk during development.
+#[allow(unexpected_cfgs)]
 pub fn py_initialize(args: &[String], sapling_home: Option<&String>) {
     unsafe {
         let mut pre_config = ffi::PyPreConfig::default();
@@ -107,6 +108,22 @@ pub fn py_initialize(args: &[String], sapling_home: Option<&String>) {
         for arg in args.iter() {
             check_status!(
                 ffi::PyWideStringList_Append(&mut config.argv, to_wide(arg)),
+                Some(config)
+            );
+        }
+
+        // For static libpython, set prefix be the current exe directory. This allows us to package
+        // the main binary with Python stdlib (ex. python312.zip, and native modules) to not
+        // dependent on a particular version of the system python.
+        #[cfg(static_libpython)]
+        {
+            let exe_path = std::env::current_exe().unwrap();
+            let exe_dir = exe_path.parent().unwrap();
+            let exe_dir = exe_dir.to_str().expect("utf-8 exe dir");
+            // "prefix" affects many other paths.
+            // See https://docs.python.org/3/c-api/init_config.html#init-path-config
+            check_status!(
+                ffi::PyConfig_SetString(&mut config, &mut config.prefix, to_wide(exe_dir)),
                 Some(config)
             );
         }
