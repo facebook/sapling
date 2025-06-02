@@ -27,6 +27,6 @@ where
 
     match lz4_pyframe::decompress(i) {
         Ok(decompressed) => detach_result(parse(&decompressed[..]), remains),
-        Err(_err) => Err(Err::Failure(super::parser::Badness::BadLZ4)),
+        Err(err) => Err(Err::Failure(Error::BadLZ4(err.to_string()))),
     }
 }

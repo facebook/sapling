@@ -32,17 +32,12 @@ use nom::sequence::preceded;
 use crate::revlog::lz4::lz4_decompress;
 use crate::revlog::revidx::RevIdx;
 
-// #[derive(Copy, Clone, Debug, Eq, PartialEq)]
-// pub enum Badness {
-// Version,
-// Features,
-// BadZlib,
-// }
-//
-
 #[derive(Debug, PartialEq)]
 pub enum Error {
-    Custom(u32),
+    BadVersion,
+    BadFeatures,
+    BadZlib(String),
+    BadLZ4(String),
     Nom(ErrorKind),
 }
 
@@ -54,16 +49,6 @@ impl ParseError<&[u8]> for Error {
     fn append(_input: &[u8], _kind: ErrorKind, other: Self) -> Self {
         other
     }
-}
-
-// hack until I work out how to propagate proper E type
-#[allow(non_upper_case_globals, non_snake_case, dead_code)]
-pub mod Badness {
-    use super::Error;
-    pub const Version: Error = Error::Custom(1);
-    pub const Features: Error = Error::Custom(2);
-    pub const BadZlib: Error = Error::Custom(3);
-    pub const BadLZ4: Error = Error::Custom(4);
 }
 
 // `Revlog` features
@@ -120,19 +105,19 @@ impl Entry {
 }
 
 // Parse the revlog header
-pub fn header(input: &[u8]) -> IResult<&[u8], Header, ()> {
+pub fn header(input: &[u8]) -> IResult<&[u8], Header, Error> {
     let (input, features) = be_u16(input)?;
     let (input, version) = be_u16(input)?;
 
     let vers = match version {
         0 => Version::Revlog0,
         1 => Version::RevlogNG,
-        _ => panic!("bad version"),
+        _ => return Err(Err::Failure(Error::BadVersion)),
     };
 
     let features = match Features::from_bits(features) {
         Some(f) => f,
-        None => panic!("bad features"),
+        None => return Err(Err::Failure(Error::BadFeatures)),
     };
 
     let header = Header {
@@ -148,7 +133,7 @@ pub fn indexng_size() -> usize {
 }
 
 // Parse an "NG" revlog entry
-pub fn indexng(input: &[u8]) -> IResult<&[u8], Entry, ()> {
+pub fn indexng(input: &[u8]) -> IResult<&[u8], Entry, Error> {
     let (input, offset) = be_u48(input)?; // XXX if first, then only 2 bytes, implied 0 in top 4
     let (input, flags) = be_u16(input)?; // ?
     let (input, compressed_length) = be_u32(input)?;
@@ -183,7 +168,7 @@ pub fn index0_size() -> usize {
 }
 
 // Parse an original revlog entry
-pub fn index0(input: &[u8]) -> IResult<&[u8], Entry, ()> {
+pub fn index0(input: &[u8]) -> IResult<&[u8], Entry, Error> {
     let (input, _header) = header(input)?;
     let (input, offset) = be_u32(input)?;
     let (input, compressed_length) = be_u32(input)?;
@@ -275,9 +260,9 @@ pub fn detach_result<'inp, 'out, O: 'out, E: 'out>(
 }
 
 /// Unpack a chunk of data and apply a parse function to the output.
-fn zlib_decompress<'a, P, R: 'a, E: Debug + 'a>(i: &'a [u8], parse: P) -> IResult<&'a [u8], R, E>
+fn zlib_decompress<'a, P, R: 'a>(i: &'a [u8], parse: P) -> IResult<&'a [u8], R, Error>
 where
-    for<'p> P: Fn(&'p [u8]) -> IResult<&'p [u8], R, E>,
+    for<'p> P: Fn(&'p [u8]) -> IResult<&'p [u8], R, Error>,
 {
     let mut data = Vec::new();
 
@@ -286,7 +271,7 @@ where
 
         match zdec.read_to_end(&mut data) {
             Ok(_) => zdec.total_in() as usize,
-            Err(err) => panic!("zdec failed {:?}", err),
+            Err(err) => return Err(Err::Failure(Error::BadZlib(err.to_string()))),
         }
     };
 
@@ -298,7 +283,7 @@ where
 /// Parse a 6 byte big-endian offset
 #[inline]
 #[allow(clippy::identity_op)]
-fn be_u48(i: &[u8]) -> IResult<&[u8], u64, ()> {
+fn be_u48(i: &[u8]) -> IResult<&[u8], u64, Error> {
     if i.len() < 6 {
         Err(Err::Incomplete(Needed::new(6)))
     } else {
