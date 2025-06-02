@@ -7,6 +7,7 @@
 
 use std::ops::Add;
 
+use anyhow::Context;
 use mysql_client::DbLocator;
 use mysql_client::InstanceRequirement;
 use mysql_client::MysqlCppClient;
@@ -86,18 +87,31 @@ impl SavedStateClient {
         let locator = DbLocator::new(XDB_SAVED_STATE, InstanceRequirement::Master)?;
         let query = self.get_query(timestamp, commit_id, project_metadata);
         let result = self.xdb_client.query(&locator, query).await?;
-        let row: Vec<(String, String, String, String)> = result.into_rows()?;
+        let row: Vec<(
+            Option<String>,
+            Option<String>,
+            Option<String>,
+            Option<String>,
+        )> = result
+            .into_rows()
+            .context("saved state query result did not match expected schema")?;
         let saved_state_info =
             row.into_iter()
                 .next()
                 .map(
                     |(hash, synced_hash, manifold_bucket, project_metadata)| SavedStateInfo {
-                        hash,
-                        synced_hash,
-                        manifold_bucket,
-                        project_metadata,
+                        hash: hash.unwrap_or_default(),
+                        synced_hash: synced_hash.unwrap_or_default(),
+                        manifold_bucket: manifold_bucket.unwrap_or_default(),
+                        project_metadata: project_metadata.unwrap_or_default(),
                     },
                 );
+        // Throw an error if both hash and synced_hash are empty
+        if let Some(info) = &saved_state_info {
+            if info.hash.is_empty() && info.synced_hash.is_empty() {
+                return Err(anyhow::anyhow!("Both hash and synced_hash are empty"));
+            }
+        }
         saved_state_info.ok_or_else(|| anyhow::anyhow!("No saved state found"))
     }
 
@@ -154,8 +168,7 @@ mod tests {
         let saved_state_info = saved_state
             .get_saved_state_info(timestamp, FBSOURCE_COMMIT_ID, "")
             .await?;
-        assert!(!saved_state_info.hash.is_empty());
-        assert!(!saved_state_info.synced_hash.is_empty());
+        assert!(!(saved_state_info.hash.is_empty() && saved_state_info.synced_hash.is_empty()));
         assert_eq!(saved_state_info.manifold_bucket, MANIFOLD_BUCKET);
         Ok(())
     }
