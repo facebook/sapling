@@ -26,7 +26,6 @@ mononoke  local commit cloud backend
   > servicetype = local
   > servicelocation = $TESTTMP
   > owner_team = The Test Team
-  > usehttpupload = True
   > [visibility]
   > enabled = True
   > [mutation]
