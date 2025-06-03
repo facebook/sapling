@@ -208,6 +208,7 @@ impl IndexedLogHgIdHistoryStore {
             .max_log_count(4)
             .max_bytes_per_log(500 * 1000 * 1000)
             .auto_sync_threshold(10 * 1024 * 1024)
+            .load_specific_config(config, "history")
             .create(true)
             .index("node_and_path", |_| {
                 vec![IndexOutput::Reference(0..(HgId::len() * 2) as u64)]

@@ -14,6 +14,7 @@ use std::sync::atomic::AtomicU64;
 use anyhow::Result;
 use configmodel::Config;
 use configmodel::ConfigExt;
+use configmodel::convert::ByteCount;
 use indexedlog::OpenWithRepair;
 use indexedlog::Result as IndexedlogResult;
 use indexedlog::log;
@@ -232,6 +233,25 @@ impl StoreOpenOptions {
                 .must_get("scmstore", "sync-logs-if-changed-on-disk")
                 .unwrap_or_default(),
         }
+    }
+
+    /// Load specific configs `indexedlog.{prefix}-...`.
+    pub(crate) fn load_specific_config(mut self, config: &dyn Config, prefix: &str) -> Self {
+        if let Ok(Some(v)) =
+            config.get_opt::<ByteCount>("indexedlog", &format!("{prefix}.auto-sync-threshold"))
+        {
+            self.auto_sync_threshold = Some(v.value());
+        }
+        if let Ok(Some(v)) =
+            config.get_opt::<ByteCount>("indexedlog", &format!("{prefix}.max-bytes-per-log"))
+        {
+            self.max_bytes_per_log = Some(v.value());
+        }
+        if let Ok(Some(v)) = config.get_opt::<u8>("indexedlog", &format!("{prefix}.max-log-count"))
+        {
+            self.max_log_count = Some(v)
+        }
+        self
     }
 
     /// When the store is rotated, control how many logs will be kept in the `RotateLog`.

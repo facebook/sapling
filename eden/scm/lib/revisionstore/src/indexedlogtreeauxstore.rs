@@ -92,6 +92,7 @@ impl TreeAuxStore {
             .max_log_count(4)
             .max_bytes_per_log(150_000_000)
             .auto_sync_threshold(1_000_000)
+            .load_specific_config(config, "treeaux")
             .create(true)
             .index("node", |_| {
                 vec![IndexOutput::Reference(0..HgId::len() as u64)]

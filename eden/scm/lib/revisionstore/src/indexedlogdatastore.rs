@@ -225,6 +225,7 @@ impl IndexedLogHgIdDataStore {
             .max_log_count(4)
             .max_bytes_per_log(2500 * 1000 * 1000)
             .auto_sync_threshold(50 * 1024 * 1024)
+            .load_specific_config(config, "hgdata")
             .create(true)
             .index("node", |_| {
                 vec![IndexOutput::Reference(0..HgId::len() as u64)]
