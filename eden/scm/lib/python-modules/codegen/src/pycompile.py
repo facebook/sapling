@@ -68,7 +68,7 @@ def find_modules(modules):
             #   >>> importlib.util.find_spec('sapling')
             #   ModuleSpec(name='sapling', origin='.../sapling/__init__.py',
             #              submodule_search_locations=['.../sapling'])
-            #   >>> importlib.util.find_spec('sapling.mercurial')
+            #   >>> importlib.util.find_spec('sapling.ext')
             #   ModuleSpec(name='sapling.ext', origin='.../sapling/ext/__init__.py',
             #              submodule_search_locations=['.../sapling/ext'])
             #   >>> importlib.util.find_spec('saplingercurial.revset')
@@ -84,6 +84,15 @@ def find_modules(modules):
             #   ModuleSpec(name='xml.dom.minidom', origin='.../python311.zip/xml/dom/minidom.pyc')
 
             if spec is None:
+                name = root_module_name
+                if (
+                    "." not in name
+                    and name in STDLIB_MODULE_NAMES
+                    and name not in ESSENTIAL_STDLIB_MODULE_NAMES
+                ):
+                    # Skip non-essential stdlib modules, such as
+                    # platform-dependent modules like "_msi".
+                    continue
                 raise RuntimeError(
                     f"cannot locate Python module {root_module_name} in {sys.path}"
                 )
@@ -138,8 +147,17 @@ def find_modules(modules):
                         )
         elif spec.origin is not None:
             # not a package - a file on filesystem or inside a zip
-            source = (spec.loader.get_source(spec.name) or "").encode()
-            code_obj = spec.loader.get_code(spec.name)
+            try:
+                source = (spec.loader.get_source(spec.name) or "").encode()
+                code_obj = spec.loader.get_code(spec.name)
+            except Exception as ex:
+                # Skip known bad modules. `distutils` on buck Windows might fail:
+                # 'DistutilsLoader' object has no attribute 'get_source'
+                if spec.name in {"distutils"}:
+                    continue
+                raise RuntimeError(
+                    f"While processing module {spec.name} (loader: {repr(spec.loader)})"
+                ) from ex
             if code_obj:
                 code = marshal.dumps(code_obj)
                 result.append((root_module_name, spec.origin, source, code))
@@ -153,12 +171,13 @@ def hex(s: bytes) -> str:
 
 def default_root_modules() -> "list[str]":
     modules = ["sapling", "ghstack"]
-    modules += STDLIB_MODULE_NAMES
+    modules += list(STDLIB_MODULE_NAMES | ESSENTIAL_STDLIB_MODULE_NAMES)
     return modules
 
 
+# A subset of stdlib modules used by sapling. Must be included.
 # use `debuglistpythonstd` on Windows and Linux to get the list of modules
-STDLIB_MODULE_NAMES = [
+ESSENTIAL_STDLIB_MODULE_NAMES = {
     "__future__",
     "_collections_abc",
     "_compat_pickle",
@@ -270,11 +289,17 @@ STDLIB_MODULE_NAMES = [
     "warnings",
     "weakref",
     "zipfile",
-]
+}
 
 if sys.version_info < (3, 13):
     # https://docs.python.org/3/whatsnew/3.13.html#whatsnew313-pep594
-    STDLIB_MODULE_NAMES += ["pipes", "uu"]
+    ESSENTIAL_STDLIB_MODULE_NAMES |= {"pipes", "uu"}
+
+
+# sys.stdlib_module_names requires Python 3.10
+STDLIB_MODULE_NAMES = (
+    getattr(sys, "stdlib_module_names", None) or ESSENTIAL_STDLIB_MODULE_NAMES
+)
 
 
 def main():
@@ -285,7 +310,7 @@ def main():
 
     print(sys.version_info.major)
     print(sys.version_info.minor)
-    stdlib_names = set(STDLIB_MODULE_NAMES)
+    stdlib_names = STDLIB_MODULE_NAMES
 
     for module_name, path, source, code in find_modules(root_modules):
         if code is None:
