@@ -262,8 +262,14 @@ impl HgPython {
     pub fn run_python(&mut self, args: &[String], io: &clidispatch::io::IO) -> u8 {
         let args = Self::prepare_args(args);
         if self.is_python_initialized_by_us() {
-            // Note Py_Main will call Py_Finalize too. `PythonKeepAlive::drop`
-            // detects that and avoids calling `Py_Finalize` again.
+            let keep_alive = self.keep_alive.take();
+            // Command flags like `--help` and `--version` go through a code path that
+            // *partially* finalizes the Python runtime. They called `_PyRuntime_Finalize` [1]
+            // but not `Py_Finalize`. There is no public API like `Py_IsInitialized` to detect
+            // this situation. Calling `Py_Finalize` by `keep_alive::drop` will segfault.
+            // So let's forget the `keep_alive`.
+            // [1]: https://github.com/python/cpython/commit/f5f336a819a3d881bb217bf8f9b5cacba03a4e45
+            std::mem::forget(keep_alive);
             py_main(&args)
         } else {
             // If Python is not initialized by us, it's expected that this
