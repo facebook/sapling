@@ -5,9 +5,17 @@
  * LICENSE file in the root directory of this source tree.
  */
 
+import type {CodeReviewSystem} from 'isl/src/types';
 import path from 'path';
 import {mockLogger} from 'shared/testUtils';
 import {COMMIT_END_MARK, findMaxCommonPathPrefix, parseCommitInfoOutput} from '../templates';
+
+const MOCK_GITHUB_REVIEW_SYSTEM: CodeReviewSystem = {
+  type: 'github',
+  repo: 'eden',
+  hostname: 'github.com',
+  owner: 'facebook',
+};
 
 describe('template parsing', () => {
   it('parses normal commits', () => {
@@ -56,6 +64,7 @@ false
 |
 Commit B
 `,
+        MOCK_GITHUB_REVIEW_SYSTEM,
         null,
       ),
     ).toEqual([
@@ -128,6 +137,7 @@ false
 |
 ${COMMIT_END_MARK}
 `,
+        MOCK_GITHUB_REVIEW_SYSTEM,
         null,
       ),
     ).toEqual([

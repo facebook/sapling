@@ -7,6 +7,7 @@
 
 import type {
   ChangedFile,
+  CodeReviewSystem,
   CommitInfo,
   CommitPhaseType,
   Hash,
@@ -31,7 +32,7 @@ export const WDIR_PARENT_MARKER = '@';
 
 ///// Main commits fetch /////
 
-export const FIELDS = {
+export const mainFetchTemplateFields = (codeReviewSystem: CodeReviewSystem) => ({
   hash: '{node}',
   title: '{desc|firstline}',
   author: '{author}',
@@ -51,17 +52,21 @@ export const FIELDS = {
   successorInfo: '{mutations % "{operation}:{successors % "{node}"},"}',
   closestPredecessors: '{predecessors % "{node},"}',
   // This would be more elegant as a new built-in template
-  diffId: '{if(phabdiff, phabdiff, github_pull_request_number)}',
+  diffId:
+    codeReviewSystem.type === 'phabricator'
+      ? '{phabdiff}'
+      : codeReviewSystem.type === 'github'
+      ? '{github_pull_request_number}'
+      : '',
   isFollower: '{sapling_pr_follower|json}',
   stableCommitMetadata: Internal.stableCommitConfig?.template ?? '',
   // Description must be last
   description: '{desc}',
-};
+});
 
-export const FIELD_INDEX = fromEntries(Object.keys(FIELDS).map((key, i) => [key, i])) as {
-  [key in Required<keyof typeof FIELDS>]: number;
-};
-export const FETCH_TEMPLATE = [...Object.values(FIELDS), COMMIT_END_MARK].join('\n');
+export function getMainFetchTemplate(codeReviewSystem: CodeReviewSystem): string {
+  return [...Object.values(mainFetchTemplateFields(codeReviewSystem)), COMMIT_END_MARK].join('\n');
+}
 
 /**
  * Extract CommitInfos from log calls that use FETCH_TEMPLATE.
@@ -69,17 +74,23 @@ export const FETCH_TEMPLATE = [...Object.values(FIELDS), COMMIT_END_MARK].join('
 export function parseCommitInfoOutput(
   logger: Logger,
   output: string,
+  reviewSystem: CodeReviewSystem,
   stableCommitConfig = Internal.stableCommitConfig as StableCommitFetchConfig | null,
 ): SmartlogCommits {
+  const fields = mainFetchTemplateFields(reviewSystem);
+  const index = fromEntries(Object.keys(fields).map((key, i) => [key, i])) as {
+    [key in Required<keyof typeof fields>]: number;
+  };
+
   const revisions = output.split(COMMIT_END_MARK);
   const commitInfos: Array<CommitInfo> = [];
   for (const chunk of revisions) {
     try {
       const lines = chunk.trimStart().split('\n');
-      if (lines.length < Object.keys(FIELDS).length) {
+      if (lines.length < Object.keys(fields).length) {
         continue;
       }
-      const files = lines[FIELD_INDEX.files].split(NULL_CHAR).filter(e => e.length > 0);
+      const files = lines[index.files].split(NULL_CHAR).filter(e => e.length > 0);
 
       // Find if the commit is entirely within the cwd and therefore more relevant to the user.
       // Note: this must be done on the server using the full list of files, not just the sample that the client gets.
@@ -87,34 +98,34 @@ export function parseCommitInfoOutput(
       const maxCommonPathPrefix = findMaxCommonPathPrefix(files);
 
       commitInfos.push({
-        hash: lines[FIELD_INDEX.hash],
-        title: lines[FIELD_INDEX.title],
-        author: lines[FIELD_INDEX.author],
-        date: new Date(lines[FIELD_INDEX.date]),
-        parents: splitLine(lines[FIELD_INDEX.parents]) as string[],
-        grandparents: splitLine(lines[FIELD_INDEX.grandparents]) as string[],
-        phase: lines[FIELD_INDEX.phase] as CommitPhaseType,
-        bookmarks: splitLine(lines[FIELD_INDEX.bookmarks]),
-        remoteBookmarks: splitLine(lines[FIELD_INDEX.remoteBookmarks]),
-        isDot: lines[FIELD_INDEX.isDot] === WDIR_PARENT_MARKER,
+        hash: lines[index.hash],
+        title: lines[index.title],
+        author: lines[index.author],
+        date: new Date(lines[index.date]),
+        parents: splitLine(lines[index.parents]) as string[],
+        grandparents: splitLine(lines[index.grandparents]) as string[],
+        phase: lines[index.phase] as CommitPhaseType,
+        bookmarks: splitLine(lines[index.bookmarks]),
+        remoteBookmarks: splitLine(lines[index.remoteBookmarks]),
+        isDot: lines[index.isDot] === WDIR_PARENT_MARKER,
         filePathsSample: files.slice(0, MAX_FETCHED_FILES_PER_COMMIT),
-        totalFileCount: parseInt(lines[FIELD_INDEX.totalFileCount], 10),
-        successorInfo: parseSuccessorData(lines[FIELD_INDEX.successorInfo]),
-        closestPredecessors: splitLine(lines[FIELD_INDEX.closestPredecessors], ','),
+        totalFileCount: parseInt(lines[index.totalFileCount], 10),
+        successorInfo: parseSuccessorData(lines[index.successorInfo]),
+        closestPredecessors: splitLine(lines[index.closestPredecessors], ','),
         description: lines
-          .slice(FIELD_INDEX.description + 1 /* first field of description is title; skip it */)
+          .slice(index.description + 1 /* first field of description is title; skip it */)
           .join('\n')
           .trim(),
-        diffId: lines[FIELD_INDEX.diffId] != '' ? lines[FIELD_INDEX.diffId] : undefined,
-        isFollower: JSON.parse(lines[FIELD_INDEX.isFollower]) as boolean,
+        diffId: lines[index.diffId] != '' ? lines[index.diffId] : undefined,
+        isFollower: JSON.parse(lines[index.isFollower]) as boolean,
         stableCommitMetadata:
-          lines[FIELD_INDEX.stableCommitMetadata] != ''
-            ? stableCommitConfig?.parse(lines[FIELD_INDEX.stableCommitMetadata])
+          lines[index.stableCommitMetadata] != ''
+            ? stableCommitConfig?.parse(lines[index.stableCommitMetadata])
             : undefined,
         maxCommonPathPrefix,
       });
     } catch (err) {
-      logger.error('failed to parse commit');
+      logger.error('failed to parse commit', err);
     }
   }
   return commitInfos;

@@ -83,9 +83,9 @@ import {
   CHANGED_FILES_INDEX,
   CHANGED_FILES_TEMPLATE,
   COMMIT_END_MARK,
-  FETCH_TEMPLATE,
   SHELVE_FETCH_TEMPLATE,
   attachStableLocations,
+  getMainFetchTemplate,
   parseCommitInfoOutput,
   parseShelvedCommitsOutput,
 } from './templates';
@@ -928,14 +928,17 @@ export class Repository {
         .filter(notEmpty)
         .join(' + ')})`;
 
+      const template = getMainFetchTemplate(this.info.codeReviewSystem);
+
       const proc = await this.runCommand(
-        ['log', '--template', FETCH_TEMPLATE, '--rev', revset],
+        ['log', '--template', template, '--rev', revset],
         'LogCommand',
         this.initialConnectionContext,
       );
       const commits = parseCommitInfoOutput(
         this.initialConnectionContext.logger,
         proc.stdout.trim(),
+        this.info.codeReviewSystem,
       );
       if (commits.length === 0) {
         throw new Error(ErrorShortMessages.NoCommitsFetched);
@@ -1165,11 +1168,21 @@ export class Repository {
       hashesToFetch.length === 0
         ? [] // don't bother running log
         : await this.runCommand(
-            ['log', '--template', FETCH_TEMPLATE, '--rev', hashesToFetch.join('+')],
+            [
+              'log',
+              '--template',
+              getMainFetchTemplate(this.info.codeReviewSystem),
+              '--rev',
+              hashesToFetch.join('+'),
+            ],
             'LookupCommitsCommand',
             ctx,
           ).then(output => {
-            return parseCommitInfoOutput(ctx.logger, output.stdout.trim());
+            return parseCommitInfoOutput(
+              ctx.logger,
+              output.stdout.trim(),
+              this.info.codeReviewSystem,
+            );
           });
 
     const result = new Map();
