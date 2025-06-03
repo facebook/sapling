@@ -26,6 +26,7 @@ use blobstore::Loadable;
 use blobstore::LoadableError;
 use context::CoreContext;
 use fbthrift::compact_protocol;
+use fn_error_context::context;
 use futures_watchdog::WatchdogExt;
 use sorted_vector_map::SortedVectorMap;
 use thiserror::Error;
@@ -321,19 +322,25 @@ pub enum BlameParentId<Id> {
 impl<Id: Eq + Hash> BlameParentId<Id> {
     /// Convert this blame parent into an indexed blame parent, using the provided
     /// mapping from changeset id to index.
-    pub fn indexed<IdKey: Eq + Hash>(
+    pub fn indexed<IdKey: Eq + Hash + std::fmt::Debug>(
         &self,
         replacement_parent_indexes: &HashMap<IdKey, u32>,
-    ) -> BlameParentIndex
+    ) -> Result<BlameParentIndex>
     where
         Id: Borrow<IdKey>,
     {
         match self {
             BlameParentId::ChangesetParent(index) => {
-                BlameParentIndex::ChangesetParent(*index as u32)
+                Ok(BlameParentIndex::ChangesetParent(*index as u32))
             }
             BlameParentId::ReplacementParent(csid) => {
-                BlameParentIndex::ReplacementParent(replacement_parent_indexes[csid.borrow()])
+                let csid = csid.borrow();
+                Ok(BlameParentIndex::ReplacementParent(
+                    replacement_parent_indexes
+                        .get(csid)
+                        .copied()
+                        .ok_or_else(|| anyhow!("No replacement parent index for {csid:?}"))?,
+                ))
             }
         }
     }
@@ -626,6 +633,7 @@ impl BlameData {
     }
 
     /// Merge other blame data into this blame for a merge changeset.
+    #[context("Failed to merge blame data for {merge_csid}")]
     fn merge(&mut self, merge_csid: ChangesetId, others: &[BlameData]) -> Result<()> {
         // Remove the csid index for the merge changeset; we will re-assign it
         // once all other blames have been merged in.
@@ -708,7 +716,14 @@ impl BlameData {
         for blame_line in self.merge_lines(merge_csid, others) {
             let path_index = path_indexes[blame_line.path];
             let csid_index = csid_indexes[blame_line.changeset_id];
-            let parent = blame_line.parent(&path_indexes, &replacement_parent_indexes);
+            let parent = blame_line
+                .parent(&path_indexes, &replacement_parent_indexes)
+                .with_context(|| {
+                    format!(
+                        "Failed to get parent for blame range at offset {}",
+                        blame_line.offset
+                    )
+                })?;
             match merged_ranges.last_mut() {
                 None if blame_line.offset != 0 => {
                     return Err(anyhow!(
@@ -962,6 +977,7 @@ impl BlameData {
         Ok(result)
     }
 
+    #[context("Failed to apply mutable change to blame")]
     fn apply_mutable_change(&mut self, original_blame: &Self, mutated_blame: &Self) -> Result<()> {
         // Sort order of changesets is not guaranteed to be the same, which rules out Iterator::eq
         let my_csids: HashSet<_> = self.csids.values().collect();
@@ -1116,10 +1132,18 @@ impl BlameData {
                             format!("Unknown path {} - should not be possible", line.path)
                         })?;
                         let offset = offset as u32;
-                        let parent = line.parent.map(|parent| {
-                            parent
-                                .to_range_parent_index(&path_to_index, &replacement_parent_to_index)
-                        });
+                        let parent = line
+                            .parent
+                            .map(|parent| {
+                                parent.to_range_parent_index(
+                                    &path_to_index,
+                                    &replacement_parent_to_index,
+                                )
+                            })
+                            .transpose()
+                            .with_context(|| {
+                                format!("Failed to get parent index for range at offset {offset}")
+                            })?;
 
                         let range = BlameRangeIndex {
                             offset,
@@ -1391,13 +1415,13 @@ impl<'a> BlameLineParent<'a> {
         &self,
         path_indexes: &HashMap<NonRootMPath, u32>,
         replacement_parent_indexes: &HashMap<&ChangesetId, u32>,
-    ) -> BlameRangeParentIndex {
-        BlameRangeParentIndex {
-            parent_index: self.parent.indexed(replacement_parent_indexes),
+    ) -> Result<BlameRangeParentIndex> {
+        Ok(BlameRangeParentIndex {
+            parent_index: self.parent.indexed(replacement_parent_indexes)?,
             offset: self.offset,
             length: self.length,
             renamed_from_path_index: self.renamed_from_path.map(|p| path_indexes[p]),
-        }
+        })
     }
 
     /// Returns true if this parent matches the parent of another range.
@@ -1464,15 +1488,25 @@ impl<'a> BlameLine<'a> {
         &self,
         path_indexes: &HashMap<NonRootMPath, u32>,
         replacement_parent_indexes: &HashMap<&ChangesetId, u32>,
-    ) -> Option<BlameRangeParentIndex> {
+    ) -> Result<Option<BlameRangeParentIndex>> {
         self.parent
             .as_ref()
-            .map(|parent_range| BlameRangeParentIndex {
-                parent_index: parent_range.parent.indexed(replacement_parent_indexes),
-                offset: parent_range.offset,
-                length: parent_range.length,
-                renamed_from_path_index: parent_range.renamed_from_path.map(|p| path_indexes[p]),
+            .map(|parent_range| {
+                Ok(BlameRangeParentIndex {
+                    parent_index: parent_range.parent.indexed(replacement_parent_indexes)?,
+                    offset: parent_range.offset,
+                    length: parent_range.length,
+                    renamed_from_path_index: parent_range
+                        .renamed_from_path
+                        .map(|p| {
+                            path_indexes.get(p).copied().ok_or_else(|| {
+                                anyhow!("Failed to get path index for renamed-from path {p}")
+                            })
+                        })
+                        .transpose()?,
+                })
             })
+            .transpose()
     }
 }
 

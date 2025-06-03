@@ -378,9 +378,9 @@ impl SourceControlServiceImpl {
             .map_err(|e| MononokeError::InvalidRequest(e.to_string()))?;
         let lines = stream::iter(lines.enumerate())
             .yield_periodically()
-            .map(|(line, blame_line)| -> Result<_, thrift::RequestError> {
-                let commit_id_index =
-                    commit_id_indexes
+            .map(
+                |(line, blame_line)| -> Result<_, scs_errors::ServiceError> {
+                    let commit_id_index = commit_id_indexes
                         .get(blame_line.changeset_id)
                         .ok_or_else(|| {
                             scs_errors::commit_not_found(format!(
@@ -388,56 +388,61 @@ impl SourceControlServiceImpl {
                                 blame_line.changeset_id
                             ))
                         })?;
-                let (author, date, message, title) =
-                    info.get(blame_line.changeset_id).ok_or_else(|| {
-                        scs_errors::commit_not_found(format!(
-                            "failed to resolve commit: {}",
-                            blame_line.changeset_id
-                        ))
-                    })?;
-                let mut thrift_blame_line = thrift::BlameCompactLine {
-                    line: (line + 1) as i32,
-                    contents: None,
-                    commit_id_index: *commit_id_index as i32,
-                    path_index: paths.insert(&blame_line.path.to_string()) as i32,
-                    author_index: authors.insert(author) as i32,
-                    date_index: dates.insert(Cow::Borrowed(date)) as i32,
-                    origin_line: (blame_line.origin_offset + 1) as i32,
-                    title_index: None,
-                    message_index: None,
-                    ..Default::default()
-                };
-                if option_include_contents {
-                    if let Some(content_line) = content_iter.next() {
-                        thrift_blame_line.contents =
-                            Some(String::from_utf8_lossy(content_line).into_owned());
-                    }
-                }
-                if option_include_title {
-                    thrift_blame_line.title_index = Some(titles.insert(title) as i32);
-                }
-                if option_include_message {
-                    thrift_blame_line.message_index = Some(messages.insert(message) as i32);
-                }
-                if option_include_parent {
-                    if let Some(parent) = &blame_line.parent {
-                        match parent.parent.indexed(&replacement_parents) {
-                            BlameParentIndex::ChangesetParent(index) => {
-                                thrift_blame_line.parent_index = Some(index as i32);
-                            }
-                            BlameParentIndex::ReplacementParent(index) => {
-                                thrift_blame_line.replacement_parent_index = Some(index as i32);
-                            }
+                    let (author, date, message, title) =
+                        info.get(blame_line.changeset_id).ok_or_else(|| {
+                            scs_errors::commit_not_found(format!(
+                                "failed to resolve commit: {}",
+                                blame_line.changeset_id
+                            ))
+                        })?;
+                    let mut thrift_blame_line = thrift::BlameCompactLine {
+                        line: (line + 1) as i32,
+                        contents: None,
+                        commit_id_index: *commit_id_index as i32,
+                        path_index: paths.insert(&blame_line.path.to_string()) as i32,
+                        author_index: authors.insert(author) as i32,
+                        date_index: dates.insert(Cow::Borrowed(date)) as i32,
+                        origin_line: (blame_line.origin_offset + 1) as i32,
+                        title_index: None,
+                        message_index: None,
+                        ..Default::default()
+                    };
+                    if option_include_contents {
+                        if let Some(content_line) = content_iter.next() {
+                            thrift_blame_line.contents =
+                                Some(String::from_utf8_lossy(content_line).into_owned());
                         }
-                        thrift_blame_line.parent_start_line = Some((parent.offset + 1) as i32);
-                        thrift_blame_line.parent_range_length = Some(parent.length as i32);
-                        thrift_blame_line.parent_path_index = parent
-                            .renamed_from_path
-                            .map(|path| paths.insert(&path.to_string()) as i32);
                     }
-                }
-                Ok(thrift_blame_line)
-            })
+                    if option_include_title {
+                        thrift_blame_line.title_index = Some(titles.insert(title) as i32);
+                    }
+                    if option_include_message {
+                        thrift_blame_line.message_index = Some(messages.insert(message) as i32);
+                    }
+                    if option_include_parent {
+                        if let Some(parent) = &blame_line.parent {
+                            match parent
+                                .parent
+                                .indexed(&replacement_parents)
+                                .map_err(scs_errors::internal_error)?
+                            {
+                                BlameParentIndex::ChangesetParent(index) => {
+                                    thrift_blame_line.parent_index = Some(index as i32);
+                                }
+                                BlameParentIndex::ReplacementParent(index) => {
+                                    thrift_blame_line.replacement_parent_index = Some(index as i32);
+                                }
+                            }
+                            thrift_blame_line.parent_start_line = Some((parent.offset + 1) as i32);
+                            thrift_blame_line.parent_range_length = Some(parent.length as i32);
+                            thrift_blame_line.parent_path_index = parent
+                                .renamed_from_path
+                                .map(|path| paths.insert(&path.to_string()) as i32);
+                        }
+                    }
+                    Ok(thrift_blame_line)
+                },
+            )
             .try_collect::<Vec<_>>()
             .await?;
 

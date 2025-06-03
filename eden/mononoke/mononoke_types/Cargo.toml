@@ -30,6 +30,7 @@ derived_data_type_if = { version = "0.1.0", path = "../derived_data/if" }
 either = "1.5"
 faster-hex = "0.6.1"
 fbthrift = { version = "0.0.1+unstable", git = "https://github.com/facebook/fbthrift.git", branch = "main" }
+fn-error-context = "0.2"
 futures = { version = "0.3.30", features = ["async-await", "compat"] }
 futures_watchdog = { version = "0.1.0", path = "../common/futures_watchdog" }
 gix-date = "0.10.1"
