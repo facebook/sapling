@@ -33,7 +33,7 @@ rust_library(
         "fbsource//third-party/rust:bytes",
         "fbsource//third-party/rust:flate2",
         "fbsource//third-party/rust:memmap2",
-        "fbsource//third-party/rust:nom",
+        "fbsource//third-party/rust:nom-old",
         "fbsource//third-party/rust:thiserror",
         ":mercurial_types",
         "//eden/scm/lib/lz4-pyframe:lz4-pyframe",
