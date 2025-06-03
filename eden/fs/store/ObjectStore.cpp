@@ -18,6 +18,7 @@
 #include "eden/common/utils/ImmediateFuture.h"
 #include "eden/common/utils/ProcessInfoCache.h"
 #include "eden/common/utils/Throw.h"
+#include "eden/fs/config/ReloadableConfig.h"
 #include "eden/fs/model/Blob.h"
 #include "eden/fs/model/Tree.h"
 #include "eden/fs/model/TreeAuxData.h"
@@ -48,7 +49,7 @@ std::shared_ptr<ObjectStore> ObjectStore::create(
     EdenStatsPtr stats,
     std::shared_ptr<ProcessInfoCache> processInfoCache,
     std::shared_ptr<StructuredLogger> structuredLogger,
-    std::shared_ptr<const EdenConfig> edenConfig,
+    std::shared_ptr<ReloadableConfig> edenConfig,
     bool windowsSymlinksEnabled,
     CaseSensitivity caseSensitive) {
   return std::shared_ptr<ObjectStore>{new ObjectStore{
@@ -70,13 +71,13 @@ ObjectStore::ObjectStore(
     EdenStatsPtr stats,
     std::shared_ptr<ProcessInfoCache> processInfoCache,
     std::shared_ptr<StructuredLogger> structuredLogger,
-    std::shared_ptr<const EdenConfig> edenConfig,
+    std::shared_ptr<ReloadableConfig> edenConfig,
     bool windowsSymlinksEnabled,
     CaseSensitivity caseSensitive)
-    : blobAuxDataCache_{std::in_place, edenConfig->metadataCacheSize.getValue()},
+    : blobAuxDataCache_{std::in_place, edenConfig->getEdenConfig()->metadataCacheSize.getValue()},
       treeAuxDataCache_{
           std::in_place,
-          edenConfig->metadataCacheSize.getValue()},
+          edenConfig->getEdenConfig()->metadataCacheSize.getValue()},
       treeCache_{std::move(treeCache)},
       backingStore_{std::move(backingStore)},
       localStore_{std::move(localStore)},
@@ -98,7 +99,8 @@ void ObjectStore::updateProcessFetch(
     const ObjectFetchContext& fetchContext) const {
   if (auto pid = fetchContext.getClientPid()) {
     auto fetch_count = pidFetchCounts_->recordProcessFetch(pid.value());
-    auto threshold = edenConfig_->fetchHeavyThreshold.getValue();
+    auto threshold =
+        edenConfig_->getEdenConfig()->fetchHeavyThreshold.getValue();
     // indicate heavy event when fetch_count reaches multiple of threshold
     if (fetch_count && threshold && (fetch_count % threshold) == 0) {
       sendFetchHeavyEvent(pid.value(), fetch_count);
@@ -134,7 +136,8 @@ void ObjectStore::deprioritizeWhenFetchHeavy(
     ObjectFetchContext& context) const {
   if (auto pid = context.getClientPid()) {
     auto fetch_count = pidFetchCounts_->getCountByPid(pid.value());
-    auto threshold = edenConfig_->fetchHeavyThreshold.getValue();
+    auto threshold =
+        edenConfig_->getEdenConfig()->fetchHeavyThreshold.getValue();
     if (threshold && fetch_count >= threshold) {
       context.deprioritize(kImportPriorityDeprioritizeAmount);
     }
@@ -325,7 +328,8 @@ void ObjectStore::maybeCacheTreeAndAuxInLocalStore(
   // Pre-warm the cache if there is tree aux data available
   if (treeResult.tree && treeResult.tree->getAuxData()) {
     if (shouldCacheTreeAuxData &&
-        edenConfig_->warmTreeAuxLocalCacheIfTreeFromBackingStore.getValue()) {
+        edenConfig_->getEdenConfig()
+            ->warmTreeAuxLocalCacheIfTreeFromBackingStore.getValue()) {
       stats_->increment(
           &ObjectStoreStats::prewarmTreeAuxLocalCacheForTreeFromBackingStore);
       localStore_->putTreeAuxData(id, *treeResult.tree->getAuxData());
@@ -339,7 +343,8 @@ void ObjectStore::maybeCacheTreeAuxInMemCache(
     const ObjectId& id,
     const BackingStore::GetTreeResult& treeResult) const {
   if (treeResult.tree && treeResult.tree->getAuxData() &&
-      edenConfig_->warmTreeAuxMemCacheIfTreeFromBackingStore.getValue()) {
+      edenConfig_->getEdenConfig()
+          ->warmTreeAuxMemCacheIfTreeFromBackingStore.getValue()) {
     stats_->increment(
         &ObjectStoreStats::prewarmTreeAuxMemCacheForTreeFromBackingStore);
     treeAuxDataCache_.wlock()->set(id, *treeResult.tree->getAuxData());
@@ -366,8 +371,8 @@ folly::SemiFuture<BackingStore::GetTreeResult> ObjectStore::getTreeImpl(
                   &ObjectStoreStats::getTreeLocalstoreDuration,
                   watch.elapsed());
               if (tree->getAuxData() == nullptr &&
-                  self->edenConfig_->warmTreeAuxCacheIfTreeFromLocalStore
-                      .getValue()) {
+                  self->edenConfig_->getEdenConfig()
+                      ->warmTreeAuxCacheIfTreeFromLocalStore.getValue()) {
                 // The tree stored locally does not have Tree Aux Data attached.
                 // This means the Tree was fetched before Tree serialization V2
                 // and before we support TreeAuxData included in Tree response
@@ -883,7 +888,10 @@ ImmediateFuture<Hash20> ObjectStore::getBlobSha1(
 
 Hash32 ObjectStore::computeBlake3(const Blob& blob) const {
   const auto content = blob.getContents();
-  const auto& maybeBlakeKey = edenConfig_->blake3Key.getValue();
+  // This should maybe be read at startup and saved in a member variable, but in
+  // practice this key should never change.
+  const auto& maybeBlakeKey =
+      edenConfig_->getEdenConfig()->blake3Key.getValue();
   return maybeBlakeKey ? Hash32::keyedBlake3(
                              folly::ByteRange{folly::StringPiece{
                                  maybeBlakeKey->data(), maybeBlakeKey->size()}},

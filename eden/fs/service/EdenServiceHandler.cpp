@@ -2844,7 +2844,7 @@ EdenServiceHandler::streamSelectedChangesSince(
         server_->getServerState()->getStats().copy(),
         server_->getServerState()->getProcessInfoCache(),
         server_->getServerState()->getStructuredLogger(),
-        server_->getServerState()->getEdenConfig(),
+        server_->getServerState()->getReloadableConfig(),
         mountHandle.getEdenMount()
             .getCheckoutConfig()
             ->getEnableWindowsSymlinks(),

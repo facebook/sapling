@@ -83,7 +83,7 @@ class DiffTest : public ::testing::Test {
         makeRefPtr<EdenStats>(),
         std::make_shared<ProcessInfoCache>(),
         std::make_shared<NullStructuredLogger>(),
-        rawEdenConfig,
+        edenConfig,
         true,
         kPathMapDefaultCaseSensitive);
   }

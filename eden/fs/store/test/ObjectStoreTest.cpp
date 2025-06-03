@@ -54,7 +54,8 @@ struct ObjectStoreTest : public ::testing::TestWithParam<CaseSensitivity> {
         stats.copy(),
         std::make_shared<ProcessInfoCache>(),
         std::make_shared<NullStructuredLogger>(),
-        EdenConfig::createTestEdenConfig(),
+        std::make_shared<ReloadableConfig>(
+            EdenConfig::createTestEdenConfig(), ConfigReloadBehavior::NoReload),
         true,
         GetParam());
 
@@ -72,7 +73,8 @@ struct ObjectStoreTest : public ::testing::TestWithParam<CaseSensitivity> {
         stats.copy(),
         std::make_shared<ProcessInfoCache>(),
         std::make_shared<NullStructuredLogger>(),
-        std::move(configWithBlake3Key),
+        std::make_shared<ReloadableConfig>(
+            configWithBlake3Key, ConfigReloadBehavior::NoReload),
         true,
         GetParam());
 
@@ -330,7 +332,8 @@ TEST_P(ObjectStoreTest, getBlobSizeFromLocalStore) {
       stats.copy(),
       std::make_shared<ProcessInfoCache>(),
       std::make_shared<NullStructuredLogger>(),
-      EdenConfig::createTestEdenConfig(),
+      std::make_shared<ReloadableConfig>(
+          EdenConfig::createTestEdenConfig(), ConfigReloadBehavior::NoReload),
       true,
       GetParam());
 
@@ -574,7 +577,8 @@ TEST_P(ObjectStoreTest, get_tree_with_different_sensitivities) {
       stats.copy(),
       std::make_shared<ProcessInfoCache>(),
       std::make_shared<NullStructuredLogger>(),
-      EdenConfig::createTestEdenConfig(),
+      std::make_shared<ReloadableConfig>(
+          EdenConfig::createTestEdenConfig(), ConfigReloadBehavior::NoReload),
       true,
       getOppositeCaseSensitivity());
 

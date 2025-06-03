@@ -274,7 +274,8 @@ void TestMount::createMount(
       stats_.copy(),
       std::make_shared<ProcessInfoCache>(),
       std::make_shared<NullStructuredLogger>(),
-      edenConfig_,
+      std::make_shared<ReloadableConfig>(
+          edenConfig_, ConfigReloadBehavior::NoReload),
       config_->getEnableWindowsSymlinks(),
       config_->getCaseSensitive());
   auto journal = std::make_unique<Journal>(stats_.copy());
@@ -389,7 +390,8 @@ void TestMount::remount() {
       stats_.copy(),
       std::make_shared<ProcessInfoCache>(),
       std::make_shared<NullStructuredLogger>(),
-      edenConfig_,
+      std::make_shared<ReloadableConfig>(
+          edenConfig_, ConfigReloadBehavior::NoReload),
       config->getEnableWindowsSymlinks(),
       config->getCaseSensitive());
 
@@ -432,7 +434,8 @@ void TestMount::remountGracefully() {
       stats_.copy(),
       std::make_shared<ProcessInfoCache>(),
       std::make_shared<NullStructuredLogger>(),
-      edenConfig_,
+      std::make_shared<ReloadableConfig>(
+          edenConfig_, ConfigReloadBehavior::NoReload),
       config->getEnableWindowsSymlinks(),
       config->getCaseSensitive());
 
