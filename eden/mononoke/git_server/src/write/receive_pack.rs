@@ -58,6 +58,7 @@ const REF_OK: &str = "ok";
 const REF_ERR: &str = "ng";
 const REF_UPDATE_CONCURRENCY: usize = 20;
 const MAX_LFS_RETRIES: u32 = 2;
+const MAX_PACKETLINE_TEXT: usize = 65_000;
 
 pub async fn receive_pack(state: &mut State) -> Result<Response<Body>, HttpError> {
     let repo_name = RepositoryParams::borrow_from(state).repo_name();
@@ -206,8 +207,13 @@ async fn push(
                     validation_errors
                         .add_error(updated_ref.ref_name.clone(), e.root_cause().to_string());
                     write_text_packetline(
-                        format!("{} {} {}", REF_ERR, updated_ref.ref_name, e.root_cause())
-                            .as_bytes(),
+                        format!(
+                            "{} {} {}",
+                            REF_ERR,
+                            updated_ref.ref_name,
+                            packetline_truncated_string(e.root_cause().to_string())
+                        )
+                        .as_bytes(),
                         &mut output,
                     )
                     .await?;
@@ -351,6 +357,7 @@ async fn reject_push_with_message(
     error_message: String,
 ) -> anyhow::Result<Response<Body>> {
     let mut output = vec![];
+    let error_message = packetline_truncated_string(error_message);
     write_text_packetline(error_message.as_bytes(), &mut output).await?;
     for ref_update in ref_updates {
         write_text_packetline(
@@ -361,4 +368,15 @@ async fn reject_push_with_message(
     }
     flush_to_write(&mut output).await?;
     BytesBody::new(Bytes::from(output), mime::TEXT_PLAIN).try_into_response(state)
+}
+
+fn packetline_truncated_string(s: String) -> String {
+    if s.len() > MAX_PACKETLINE_TEXT {
+        format!(
+            "{}...truncated due to message too long",
+            &s[..MAX_PACKETLINE_TEXT]
+        )
+    } else {
+        s
+    }
 }
