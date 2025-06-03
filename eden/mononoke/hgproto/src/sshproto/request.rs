@@ -21,8 +21,10 @@ use hex::FromHex;
 use mercurial_types::HgChangesetId;
 use mercurial_types::HgManifestId;
 use mononoke_types::path::MPath;
+use nom::AsChar as _;
 use nom::Err;
 use nom::IResult;
+use nom::Input as _;
 use nom::Needed;
 use nom::Parser;
 use nom::branch::alt;
@@ -30,8 +32,6 @@ use nom::bytes::streaming::tag;
 use nom::bytes::streaming::take;
 use nom::bytes::streaming::take_while;
 use nom::bytes::streaming::take_while1;
-use nom::character::is_alphanumeric;
-use nom::character::is_digit;
 use nom::character::streaming::digit1;
 use nom::combinator::complete;
 use nom::combinator::map;
@@ -44,7 +44,6 @@ use nom::multi::many0;
 use nom::multi::separated_list0;
 use nom::sequence::separated_pair;
 use nom::sequence::terminated;
-use nom::sequence::tuple;
 
 use crate::GetbundleArgs;
 use crate::GettreepackArgs;
@@ -80,7 +79,6 @@ impl ParseError<&[u8]> for Error {
 fn take_until1(substr: &str) -> impl Fn(&[u8]) -> IResult<&[u8], &[u8], Error> {
     move |input: &[u8]| {
         use nom::FindSubstring as _;
-        use nom::InputTake as _;
 
         match input.find_substring(substr) {
             None => Err(nom::Err::Incomplete(Needed::new(1 + substr.len()))),
@@ -95,22 +93,22 @@ fn take_until1(substr: &str) -> impl Fn(&[u8]) -> IResult<&[u8], &[u8], Error> {
 
 fn take_until_and_consume1<'a>(
     substr: &str,
-) -> impl FnMut(&'a [u8]) -> IResult<&'a [u8], &'a [u8], Error> {
+) -> impl Parser<&'a [u8], Output = &'a [u8], Error = Error> {
     terminated(take_until1(substr), tag(substr))
 }
 
-fn separated_list_complete<'a, F, O>(
+fn separated_list_complete<'a, F>(
     sep: &str,
     element: F,
-) -> impl FnMut(&'a [u8]) -> IResult<&'a [u8], Vec<O>, Error>
+) -> impl Parser<&'a [u8], Output = Vec<F::Output>, Error = F::Error>
 where
-    F: Parser<&'a [u8], O, Error>,
+    F: Parser<&'a [u8]>,
 {
     separated_list0(complete(tag(sep)), complete(element))
 }
 
 fn integer(input: &[u8]) -> IResult<&[u8], usize, Error> {
-    map_res(map_res(digit1, str::from_utf8), usize::from_str)(input)
+    map_res(map_res(digit1, str::from_utf8), usize::from_str).parse(input)
 }
 
 /// Return an identifier of the form [a-zA-Z_][a-zA-Z0-9_]*. Returns Incomplete
@@ -144,30 +142,32 @@ fn ident_complete(input: &[u8]) -> IResult<&[u8], &[u8], Error> {
 // Assumption: input is complete
 // We can't use 'integer' defined above as it reads until a non digit character
 fn boolean(input: &[u8]) -> IResult<&[u8], bool, Error> {
-    map_res(alt((complete(take_while1(is_digit)), rest)), |s| {
+    map_res(alt((complete(take_while1(u8::is_dec_digit)), rest)), |s| {
         let s = str::from_utf8(s)?;
         anyhow::Ok(u32::from_str(s)? != 0)
-    })(input)
+    })
+    .parse(input)
 }
 
 fn batch_param_comma_separated(input: &[u8]) -> IResult<&[u8], Bytes, Error> {
     map_res(terminated(take_while(notcomma), take(1usize)), |k| {
         batch::unescape(k).map(Bytes::from)
-    })(input)
+    })
+    .parse(input)
 }
 
 // List of comma-separated values, each of which is encoded using batch param encoding.
 fn gettreepack_directories(input: &[u8]) -> IResult<&[u8], Vec<Bytes>, Error> {
-    many0(complete(batch_param_comma_separated))(input)
+    many0(complete(batch_param_comma_separated)).parse(input)
 }
 
 // A "*" parameter is a meta-parameter - its argument is a count of
 // a number of other parameters. (We accept nested/recursive star parameters,
 // but I don't know if that ever happens in practice.)
 fn param_star(input: &[u8]) -> IResult<&[u8], HashMap<&[u8], &[u8]>, Error> {
-    let (input, _) = tag("* ")(input)?;
+    let (input, _) = tag("* ").parse(input)?;
     let (input, count) = integer(input)?;
-    let (input, _) = tag("\n")(input)?;
+    let (input, _) = tag("\n").parse(input)?;
     params_ref(input, count)
 }
 
@@ -177,10 +177,10 @@ fn param_star(input: &[u8]) -> IResult<&[u8], HashMap<&[u8], &[u8]>, Error> {
 // <bytelen bytes>
 fn param_kv(input: &[u8]) -> IResult<&[u8], HashMap<&[u8], &[u8]>, Error> {
     let (input, key) = ident(input)?;
-    let (input, _) = tag(" ")(input)?;
+    let (input, _) = tag(" ").parse(input)?;
     let (input, len) = integer(input)?;
-    let (input, _) = tag("\n")(input)?;
-    let (input, val) = take(len)(input)?;
+    let (input, _) = tag("\n").parse(input)?;
+    let (input, val) = take(len).parse(input)?;
     Ok((input, iter::once((key, val)).collect()))
 }
 
@@ -193,7 +193,7 @@ fn params_ref(mut input: &[u8], count: usize) -> IResult<&[u8], HashMap<&[u8], &
     let mut ret = HashMap::with_capacity(count);
 
     for _ in 0..count {
-        let (rest, val) = alt((param_star, param_kv))(input)?;
+        let (rest, val) = alt((param_star, param_kv)).parse(input)?;
         ret.extend(val);
         input = rest;
     }
@@ -231,10 +231,11 @@ fn notcomma(b: u8) -> bool {
 // (which is actually from the "batch" command "cmds" parameter), or at a ',', as they're
 // comma-delimited.
 fn batch_param_escaped(input: &[u8]) -> IResult<&[u8], (Vec<u8>, Vec<u8>), Error> {
-    tuple((
+    (
         map_res(take_until_and_consume1("="), batch::unescape),
         map_res(alt((complete(take_while(notcomma)), rest)), batch::unescape),
-    ))(input)
+    )
+        .parse(input)
 }
 
 // Extract parameters from batch - same signature as params
@@ -244,7 +245,8 @@ fn batch_params(input: &[u8], _count: usize) -> IResult<&[u8], HashMap<Vec<u8>, 
     map(
         separated_list_complete(",", batch_param_escaped),
         HashMap::from_iter,
-    )(input)
+    )
+    .parse(input)
 }
 
 // A nodehash is simply 40 hex digits.
@@ -252,7 +254,8 @@ fn nodehash(input: &[u8]) -> IResult<&[u8], HgChangesetId, Error> {
     map_res(
         map_res(take(40usize), str::from_utf8),
         HgChangesetId::from_str,
-    )(input)
+    )
+    .parse(input)
 }
 
 // A manifestid is simply 40 hex digits.
@@ -260,22 +263,23 @@ fn manifestid(input: &[u8]) -> IResult<&[u8], HgManifestId, Error> {
     map_res(
         map_res(take(40usize), str::from_utf8),
         HgManifestId::from_str,
-    )(input)
+    )
+    .parse(input)
 }
 
 // A pair of nodehashes, separated by '-'
 fn pair(input: &[u8]) -> IResult<&[u8], (HgChangesetId, HgChangesetId), Error> {
-    separated_pair(nodehash, tag("-"), nodehash)(input)
+    separated_pair(nodehash, tag("-"), nodehash).parse(input)
 }
 
 // A space-separated list of pairs.
 fn pairlist(input: &[u8]) -> IResult<&[u8], Vec<(HgChangesetId, HgChangesetId)>, Error> {
-    separated_list_complete(" ", pair)(input)
+    separated_list_complete(" ", pair).parse(input)
 }
 
 // A space-separated list of changeset IDs
 fn hashlist(input: &[u8]) -> IResult<&[u8], Vec<HgChangesetId>, Error> {
-    separated_list_complete(" ", nodehash)(input)
+    separated_list_complete(" ", nodehash).parse(input)
 }
 
 // A changeset is simply 40 hex digits.
@@ -283,17 +287,18 @@ fn hg_changeset_id(input: &[u8]) -> IResult<&[u8], HgChangesetId, Error> {
     map_res(
         map_res(take(40usize), str::from_utf8),
         HgChangesetId::from_str,
-    )(input)
+    )
+    .parse(input)
 }
 
 // A space-separated list of hg changesets
 fn hg_changeset_list(input: &[u8]) -> IResult<&[u8], Vec<HgChangesetId>, Error> {
-    separated_list_complete(" ", hg_changeset_id)(input)
+    separated_list_complete(" ", hg_changeset_id).parse(input)
 }
 
 // A space-separated list of manifest IDs
 fn manifestlist(input: &[u8]) -> IResult<&[u8], Vec<HgManifestId>, Error> {
-    separated_list_complete(" ", manifestid)(input)
+    separated_list_complete(" ", manifestid).parse(input)
 }
 
 // A space-separated list of strings
@@ -302,12 +307,13 @@ fn stringlist(input: &[u8]) -> IResult<&[u8], Vec<String>, Error> {
         complete(tag(" ")),
         map_res(
             map_res(
-                alt((complete(take_while(is_alphanumeric)), rest)),
+                alt((complete(take_while(u8::is_alphanum)), rest)),
                 str::from_utf8,
             ),
             FromStr::from_str,
         ),
-    )(input)
+    )
+    .parse(input)
 }
 
 fn hex_stringlist(input: &[u8]) -> IResult<&[u8], Vec<String>, Error> {
@@ -319,7 +325,8 @@ fn hex_stringlist(input: &[u8]) -> IResult<&[u8], Vec<String>, Error> {
                     .and_then(|v| String::from_utf8(v).map_err(anyhow::Error::from))
             })
             .collect::<Result<Vec<String>>>()
-    })(input)
+    })
+    .parse(input)
 }
 
 /// A comma-separated list of arbitrary values. The input is assumed to be
@@ -347,14 +354,14 @@ fn notsemi(b: u8) -> bool {
 // A command in a batch. Commands are represented as "command parameters". The parameters
 // end either at the end of the buffer or at ';'.
 fn cmd(input: &[u8]) -> IResult<&[u8], (Vec<u8>, Vec<u8>), Error> {
-    let (input, cmd) = take_until_and_consume1(" ")(input)?;
-    let (input, args) = alt((complete(take_while(notsemi)), rest))(input)?;
+    let (input, cmd) = take_until_and_consume1(" ").parse(input)?;
+    let (input, args) = alt((complete(take_while(notsemi)), rest)).parse(input)?;
     Ok((input, (cmd.to_vec(), args.to_vec())))
 }
 
 // A list of batched commands - the list is delimited by ';'.
 fn cmdlist(input: &[u8]) -> IResult<&[u8], Vec<(Vec<u8>, Vec<u8>)>, Error> {
-    separated_list0(complete(tag(";")), cmd)(input)
+    separated_list0(complete(tag(";")), cmd).parse(input)
 }
 
 /// Given a hash of parameters, look up a parameter by name, and if it exists,
@@ -411,11 +418,11 @@ fn parseval_option<'a, F, T>(
     mut parser: F,
 ) -> Result<Option<T>>
 where
-    F: FnMut(&'a [u8]) -> IResult<&'a [u8], T, Error>,
+    F: Parser<&'a [u8], Output = T, Error = Error>,
 {
     match params.get(key.as_bytes()) {
         None => Ok(None),
-        Some(v) => match parser(v.as_ref()) {
+        Some(v) => match parser.parse(v.as_ref()) {
             Ok((unparsed, v)) => match unparsed {
                 [] => Ok(Some(v)),
                 [..] => bail!(
@@ -444,8 +451,8 @@ where
     C: AsRef<[u8]>,
 {
     move |input| {
-        let (input, _) = tag(cmd.as_ref())(input)?;
-        let (input, _) = tag("\n")(input)?;
+        let (input, _) = tag(cmd.as_ref()).parse(input)?;
+        let (input, _) = tag("\n").parse(input)?;
         let (input, v) = parse_params(input, nargs)?;
 
         match func(v) {
@@ -539,12 +546,13 @@ fn parse_batchrequest(input: &[u8]) -> IResult<&[u8], Vec<SingleRequest>, Error>
 
     let (rest, batch) = command_star!("batch", Batch, params, {
         cmds => cmdlist,
-    })(input)?;
+    })
+    .parse(input)?;
 
     let mut parsed_cmds = Vec::with_capacity(batch.cmds.len());
     for cmd in batch.cmds {
         let full_cmd = Bytes::from([cmd.0, cmd.1].join(&b'\n'));
-        let ([], cmd) = complete(parse_cmd)(&full_cmd)? else {
+        let ([], cmd) = complete(parse_cmd).parse(&full_cmd)? else {
             return Err(Err::Error(Error::Nom(ErrorKind::Eof)));
         };
         parsed_cmds.push(cmd);
@@ -556,7 +564,8 @@ pub fn parse_request(buf: &mut BytesMut) -> Result<Option<Request>> {
     let res = alt((
         map(parse_batchrequest, Request::Batch),
         map(parse_singlerequest, Request::Single),
-    ))(buf);
+    ))
+    .parse(buf);
 
     match res {
         Ok((rest, val)) => {
@@ -648,7 +657,7 @@ fn parse_with_params(
                 basemfnodes: parseval(&kv, "basemfnodes", manifestlist)?.into_iter().collect(),
                 directories: parseval(&kv, "directories", gettreepack_directories)?,
                 depth: parseval_option(&kv, "depth", map_res(
-                    map_res(alt((complete(take_while1(is_digit)), rest)), str::from_utf8),
+                    map_res(alt((complete(take_while1(u8::is_dec_digit)), rest)), str::from_utf8),
                     usize::from_str
                 ))?,
             }))
@@ -663,7 +672,7 @@ fn parse_with_params(
         command!("getcommitdata", GetCommitData, parse_params, {
             nodes => hg_changeset_list,
         }),
-    ))(input)
+    )).parse(input)
 }
 
 /// Test individual combinators
