@@ -766,7 +766,7 @@ impl Walk {
 
             tracing::debug!(
                 target: "big_walk",
-                walk_root = %root,
+                walk_root = root.as_str(),
                 file_loads = self.file_loads.load(Ordering::Relaxed),
                 file_reads = self.file_reads.load(Ordering::Relaxed),
                 file_preloads = self.file_preloads.load(Ordering::Relaxed),
