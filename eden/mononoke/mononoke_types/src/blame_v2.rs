@@ -156,6 +156,7 @@ pub enum BlameV2 {
 }
 
 impl BlameV2 {
+    #[context("Failed to create blame data for {csid}:{path}")]
     pub fn new<C: AsRef<[u8]>>(
         csid: ChangesetId,
         path: NonRootMPath,
@@ -181,7 +182,11 @@ impl BlameV2 {
             blame_data.compact();
             Ok(BlameV2::Blame(blame_data))
         } else {
-            Ok(BlameV2::Blame(BlameData::new_root(csid, path, content)))
+            Ok(BlameV2::Blame(BlameData::new_root(
+                csid,
+                path.clone(),
+                content,
+            )))
         }
     }
 
