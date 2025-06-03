@@ -45,8 +45,7 @@ class PrjfsMatchFsTest(prjfs_test.PrjFSTestBase):
         with self.eden.get_thrift_client_legacy() as client:
             errors = client.matchFilesystem(
                 MatchFileSystemRequest(
-                    MountId(self.mount.encode()),
-                    files,
+                    mountPoint=MountId(mountPoint=self.mount.encode()), paths=files
                 )
             )
             for error in errors.results:
@@ -143,8 +142,8 @@ class PrjfsMatchFsTest(prjfs_test.PrjFSTestBase):
             )
             errors = client.matchFilesystem(
                 MatchFileSystemRequest(
-                    MountId(self.mount.encode()),
-                    [b"adir/file"],
+                    mountPoint=MountId(mountPoint=self.mount.encode()),
+                    paths=[b"adir/file"],
                 )
             )
             print(errors)

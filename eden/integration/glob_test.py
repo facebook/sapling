@@ -120,8 +120,8 @@ class GlobFilesTestBase(GlobTestBase):
         msg: Optional[str] = None,
     ) -> None:
         params = GlobParams(
-            self.mount_path_bytes,
-            globs,
+            mountPoint=self.mount_path_bytes,
+            globs=globs,
             includeDotfiles=include_dotfiles,
             wantDtype=True,
         )
@@ -418,14 +418,23 @@ class GlobTest(GlobFilesTestBase, GlobTestCasesBase):
         self.assertEqual(EdenErrorType.POSIX_ERROR, ctx.exception.errorType)
 
         with self.assertRaises(EdenError) as ctx:
-            self.client.globFiles(GlobParams(self.mount_path_bytes, ["adir["], True))
+            self.client.globFiles(
+                GlobParams(
+                    mountPoint=self.mount_path_bytes,
+                    globs=["adir["],
+                    includeDotfiles=True,
+                )
+            )
         self.assertIn("unterminated bracket sequence", str(ctx.exception))
         self.assertEqual(EdenErrorType.POSIX_ERROR, ctx.exception.errorType)
 
     def test_globs_may_not_include_dotdot(self) -> None:
         with self.assertRaises(EdenError) as ctx:
             self.client.globFiles(
-                GlobParams(self.mount_path_bytes, ["java/../java/com/**/*.java"])
+                GlobParams(
+                    mountPoint=self.mount_path_bytes,
+                    globs=["java/../java/com/**/*.java"],
+                )
             )
         self.assertEqual(
             "Invalid glob (PathComponent must not be ..): java/../java/com/**/*.java",
@@ -482,14 +491,18 @@ class PrefetchTest(PrefetchTestBase, GlobTestCasesBase):
     def test_malformed_query(self) -> None:
         with self.assertRaises(EdenError) as ctx:
             self.client.prefetchFilesV2(
-                PrefetchParams(self.mount_path_bytes, globs=["adir["])
+                PrefetchParams(mountPoint=self.mount_path_bytes, globs=["adir["])
             )
         self.assertIn("unterminated bracket sequence", str(ctx.exception))
         self.assertEqual(EdenErrorType.POSIX_ERROR, ctx.exception.errorType)
 
         with self.assertRaises(EdenError) as ctx:
             self.client.prefetchFilesV2(
-                PrefetchParams(self.mount_path_bytes, ["adir["], True)
+                PrefetchParams(
+                    mountPoint=self.mount_path_bytes,
+                    globs=["adir["],
+                    directoriesOnly=True,
+                )
             )
         self.assertIn("unterminated bracket sequence", str(ctx.exception))
         self.assertEqual(EdenErrorType.POSIX_ERROR, ctx.exception.errorType)
@@ -497,7 +510,10 @@ class PrefetchTest(PrefetchTestBase, GlobTestCasesBase):
     def test_globs_may_not_include_dotdot(self) -> None:
         with self.assertRaises(EdenError) as ctx:
             self.client.prefetchFilesV2(
-                PrefetchParams(self.mount_path_bytes, ["java/../java/com/**/*.java"])
+                PrefetchParams(
+                    mountPoint=self.mount_path_bytes,
+                    globs=["java/../java/com/**/*.java"],
+                )
             )
         self.assertEqual(
             "Invalid glob (PathComponent must not be ..): java/../java/com/**/*.java",

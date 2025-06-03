@@ -294,8 +294,8 @@ via-profile = "bind"
             os.path.join("edenfs", "redirections", "a", "new-one"),
         )
         # Thrift request
-        thrift_mount = MountId(self.mount.encode("utf-8"))
-        thrift_req = ListRedirectionsRequest(thrift_mount)
+        thrift_mount = MountId(mountPoint=self.mount.encode("utf-8"))
+        thrift_req = ListRedirectionsRequest(mount=thrift_mount)
 
         # List via thrift
         with self.get_thrift_client_legacy() as client:

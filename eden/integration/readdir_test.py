@@ -234,8 +234,8 @@ class ReaddirTest(testcase.EdenRepoTest):
         adir_digest_size = 207
         adir_blake3 = b"\x73\xf0\xc6\xe3\x6b\x3c\xb9\xfc\x64\xa8\xa3\x39\x24\x57\xd3\xc9\xd0\x2d\x11\xfd\x22\xe5\x36\x71\x94\x5d\x95\x3f\xfa\xc3\x8c\x92"
         self.adir_digest_size_result = {
-            "hg": DigestSizeOrError(adir_digest_size),
-            "filteredhg": DigestSizeOrError(adir_digest_size),
+            "hg": DigestSizeOrError(digestSize=adir_digest_size),
+            "filteredhg": DigestSizeOrError(digestSize=adir_digest_size),
             "git": DigestSizeOrError(
                 error=EdenError(
                     message="std::domain_error: getTreeAuxData is not implemented for GitBackingStores",
@@ -245,8 +245,8 @@ class ReaddirTest(testcase.EdenRepoTest):
         }[self.repo_type]
 
         self.adir_digest_hash_result = {
-            "hg": DigestHashOrError(adir_blake3),
-            "filteredhg": DigestHashOrError(adir_blake3),
+            "hg": DigestHashOrError(digestHash=adir_blake3),
+            "filteredhg": DigestHashOrError(digestHash=adir_blake3),
             "git": DigestHashOrError(
                 error=EdenError(
                     message="std::domain_error: getTreeAuxData is not implemented for GitBackingStores",
@@ -270,8 +270,8 @@ class ReaddirTest(testcase.EdenRepoTest):
         cdir_subdir_digest_size = 211
         cdir_subdir_blake3 = b"\x2f\xe0\x36\xd6\xf0\x6a\xf6\xb5\x60\xe7\xe1\xf4\x95\x1c\x9c\xd7\xf1\x62\x08\x32\xa2\xee\xb8\x42\x16\x9b\xd4\xe7\x7b\x83\x0a\x94"
         self.cdir_subdir_digest_size_result = {
-            "hg": DigestSizeOrError(cdir_subdir_digest_size),
-            "filteredhg": DigestSizeOrError(cdir_subdir_digest_size),
+            "hg": DigestSizeOrError(digestSize=cdir_subdir_digest_size),
+            "filteredhg": DigestSizeOrError(digestSize=cdir_subdir_digest_size),
             "git": DigestSizeOrError(
                 error=EdenError(
                     message="std::domain_error: getTreeAuxData is not implemented for GitBackingStores",
@@ -281,8 +281,8 @@ class ReaddirTest(testcase.EdenRepoTest):
         }[self.repo_type]
 
         self.cdir_subdir_digest_hash_result = {
-            "hg": DigestHashOrError(cdir_subdir_blake3),
-            "filteredhg": DigestHashOrError(cdir_subdir_blake3),
+            "hg": DigestHashOrError(digestHash=cdir_subdir_blake3),
+            "filteredhg": DigestHashOrError(digestHash=cdir_subdir_blake3),
             "git": DigestHashOrError(
                 error=EdenError(
                     message="std::domain_error: getTreeAuxData is not implemented for GitBackingStores",
@@ -306,9 +306,9 @@ class ReaddirTest(testcase.EdenRepoTest):
     ) -> GetAttributesFromFilesResult:
         with self.get_thrift_client_legacy() as client:
             thrift_params = GetAttributesFromFilesParams(
-                self.mount_path_bytes,
-                files,
-                req_attr,
+                mountPoint=self.mount_path_bytes,
+                paths=files,
+                requestedAttributes=req_attr,
             )
             return client.getAttributesFromFiles(thrift_params)
 
@@ -317,9 +317,9 @@ class ReaddirTest(testcase.EdenRepoTest):
     ) -> GetAttributesFromFilesResultV2:
         with self.get_thrift_client_legacy() as client:
             thrift_params = GetAttributesFromFilesParams(
-                self.mount_path_bytes,
-                files,
-                req_attr,
+                mountPoint=self.mount_path_bytes,
+                paths=files,
+                requestedAttributes=req_attr,
             )
             return client.getAttributesFromFilesV2(thrift_params)
 
@@ -357,31 +357,33 @@ class ReaddirTest(testcase.EdenRepoTest):
 
         if raw_sha1 is not None:
             data.sha1 = raw_sha1
-            data_v2.sha1 = Sha1OrError(raw_sha1)
+            data_v2.sha1 = Sha1OrError(sha1=raw_sha1)
 
         if raw_blake3 is not None:
-            data_v2.blake3 = Blake3OrError(raw_blake3)
+            data_v2.blake3 = Blake3OrError(blake3=raw_blake3)
 
         if raw_size is not None:
             data.fileSize = raw_size
-            data_v2.size = SizeOrError(raw_size)
+            data_v2.size = SizeOrError(size=raw_size)
 
         if raw_type is not None:
             data.type = raw_type
-            data_v2.sourceControlType = SourceControlTypeOrError(raw_type)
+            data_v2.sourceControlType = SourceControlTypeOrError(
+                sourceControlType=raw_type
+            )
 
         if raw_object_id is not None:
-            data_v2.objectId = ObjectIdOrError(raw_object_id)
+            data_v2.objectId = ObjectIdOrError(objectId=raw_object_id)
 
         if digest_size is not None:
-            data_v2.digestSize = DigestSizeOrError(digest_size)
+            data_v2.digestSize = DigestSizeOrError(digestSize=digest_size)
 
         if digest_hash is not None:
-            data_v2.digestHash = DigestHashOrError(digest_hash)
+            data_v2.digestHash = DigestHashOrError(digestHash=digest_hash)
 
         return (
-            FileAttributeDataOrError(data),
-            FileAttributeDataOrErrorV2(data_v2),
+            FileAttributeDataOrError(data=data),
+            FileAttributeDataOrErrorV2(fileAttributeData=data_v2),
         )
 
     def assert_attributes_result(
@@ -431,13 +433,13 @@ class ReaddirTest(testcase.EdenRepoTest):
 
         # list of expected_results
         expected_result = GetAttributesFromFilesResult(
-            [
+            res=[
                 expected_hello_result,
                 expected_adir_result,
             ]
         )
         expected_result_v2 = GetAttributesFromFilesResultV2(
-            [
+            res=[
                 expected_hello_result_v2,
                 expected_adir_result_v2,
             ]
@@ -459,12 +461,12 @@ class ReaddirTest(testcase.EdenRepoTest):
 
         # create result object for "hello"
         expected_result = GetAttributesFromFilesResult(
-            [
+            res=[
                 expected_hello_result,
             ]
         )
         expected_result_v2 = GetAttributesFromFilesResultV2(
-            [
+            res=[
                 expected_hello_result_v2,
             ]
         )
@@ -485,12 +487,12 @@ class ReaddirTest(testcase.EdenRepoTest):
 
         # create result object for "hello"
         expected_result = GetAttributesFromFilesResult(
-            [
+            res=[
                 expected_hello_result,
             ]
         )
         expected_result_v2 = GetAttributesFromFilesResultV2(
-            [
+            res=[
                 expected_hello_result_v2,
             ]
         )
@@ -527,12 +529,12 @@ class ReaddirTest(testcase.EdenRepoTest):
 
         # create result object for "hello"
         expected_result = GetAttributesFromFilesResult(
-            [
+            res=[
                 expected_hello_result,
             ]
         )
         expected_result_v2 = GetAttributesFromFilesResultV2(
-            [
+            res=[
                 expected_hello_result_v2,
             ]
         )
@@ -556,12 +558,12 @@ class ReaddirTest(testcase.EdenRepoTest):
 
         # create result object for "hello"
         expected_result = GetAttributesFromFilesResult(
-            [
+            res=[
                 expected_hello_result,
             ]
         )
         expected_result_v2 = GetAttributesFromFilesResultV2(
-            [
+            res=[
                 expected_hello_result_v2,
             ]
         )
@@ -605,37 +607,39 @@ class ReaddirTest(testcase.EdenRepoTest):
         self.assert_attribute_error(results, "adir: Is a directory", 0)
 
         expected_adir_result_v2 = FileAttributeDataOrErrorV2(
-            FileAttributeDataV2(
-                Sha1OrError(
+            fileAttributeData=FileAttributeDataV2(
+                sha1=Sha1OrError(
                     error=EdenError(
                         message="adir: Is a directory",
                         errorCode=21,
                         errorType=EdenErrorType.POSIX_ERROR,
                     )
                 ),
-                SizeOrError(
+                size=SizeOrError(
                     error=EdenError(
                         message="adir: Is a directory",
                         errorCode=21,
                         errorType=EdenErrorType.POSIX_ERROR,
                     )
                 ),
-                SourceControlTypeOrError(SourceControlType.TREE),
-                ObjectIdOrError(self.adir_id),
-                Blake3OrError(
+                sourceControlType=SourceControlTypeOrError(
+                    sourceControlType=SourceControlType.TREE
+                ),
+                objectId=ObjectIdOrError(objectId=self.adir_id),
+                blake3=Blake3OrError(
                     error=EdenError(
                         message="adir: Is a directory",
                         errorCode=21,
                         errorType=EdenErrorType.POSIX_ERROR,
                     )
                 ),
-                self.adir_digest_size_result,
-                self.adir_digest_hash_result,
+                digestSize=self.adir_digest_size_result,
+                digestHash=self.adir_digest_hash_result,
             )
         )
 
         expected_result_v2 = GetAttributesFromFilesResultV2(
-            [
+            res=[
                 expected_adir_result_v2,
             ]
         )
@@ -661,23 +665,25 @@ class ReaddirTest(testcase.EdenRepoTest):
             )
 
             expected_adir_result_v2 = FileAttributeDataOrErrorV2(
-                FileAttributeDataV2(
-                    Sha1OrError(
+                fileAttributeData=FileAttributeDataV2(
+                    sha1=Sha1OrError(
                         error=EdenError(
                             message="adir/asock: file is a non-source-control type: 12: Invalid argument",
                             errorCode=22,
                             errorType=EdenErrorType.POSIX_ERROR,
                         )
                     ),
-                    SizeOrError(
+                    size=SizeOrError(
                         error=EdenError(
                             message="adir/asock: file is a non-source-control type: 12: Invalid argument",
                             errorCode=22,
                             errorType=EdenErrorType.POSIX_ERROR,
                         )
                     ),
-                    SourceControlTypeOrError(SourceControlType.UNKNOWN),
-                    ObjectIdOrError(None),
+                    sourceControlType=SourceControlTypeOrError(
+                        sourceControlType=SourceControlType.UNKNOWN
+                    ),
+                    objectId=ObjectIdOrError(objectId=None),
                     blake3=Blake3OrError(
                         error=EdenError(
                             message="adir/asock: file is a non-source-control type: 12: Invalid argument",
@@ -703,7 +709,7 @@ class ReaddirTest(testcase.EdenRepoTest):
             )
 
             expected_result_v2 = GetAttributesFromFilesResultV2(
-                [
+                res=[
                     expected_adir_result_v2,
                 ]
             )
@@ -720,23 +726,25 @@ class ReaddirTest(testcase.EdenRepoTest):
             results, "slink: file is a symlink: Invalid argument", 0
         )
         expected_slink_result_v2 = FileAttributeDataOrErrorV2(
-            FileAttributeDataV2(
-                Sha1OrError(
+            fileAttributeData=FileAttributeDataV2(
+                sha1=Sha1OrError(
                     error=EdenError(
                         message="slink: file is a symlink: Invalid argument",
                         errorCode=22,
                         errorType=EdenErrorType.POSIX_ERROR,
                     )
                 ),
-                SizeOrError(
+                size=SizeOrError(
                     error=EdenError(
                         message="slink: file is a symlink: Invalid argument",
                         errorCode=22,
                         errorType=EdenErrorType.POSIX_ERROR,
                     )
                 ),
-                SourceControlTypeOrError(SourceControlType.SYMLINK),
-                ObjectIdOrError(self.slink_id),
+                sourceControlType=SourceControlTypeOrError(
+                    sourceControlType=SourceControlType.SYMLINK
+                ),
+                objectId=ObjectIdOrError(objectId=self.slink_id),
                 blake3=Blake3OrError(
                     error=EdenError(
                         message="slink: file is a symlink: Invalid argument",
@@ -762,7 +770,7 @@ class ReaddirTest(testcase.EdenRepoTest):
         )
 
         expected_result_v2 = GetAttributesFromFilesResultV2(
-            [
+            res=[
                 expected_slink_result_v2,
             ]
         )
@@ -780,17 +788,19 @@ class ReaddirTest(testcase.EdenRepoTest):
         self.assertEqual(0, len(results.res))
 
     def test_get_no_attributes(self) -> None:
-        expected_hello_result = FileAttributeDataOrError(FileAttributeData())
-        expected_hello_result_v2 = FileAttributeDataOrErrorV2(FileAttributeDataV2())
+        expected_hello_result = FileAttributeDataOrError(data=FileAttributeData())
+        expected_hello_result_v2 = FileAttributeDataOrErrorV2(
+            fileAttributeData=FileAttributeDataV2()
+        )
 
         # create result object for "hello"
         expected_result = GetAttributesFromFilesResult(
-            [
+            res=[
                 expected_hello_result,
             ]
         )
         expected_result_v2 = GetAttributesFromFilesResultV2(
-            [
+            res=[
                 expected_hello_result_v2,
             ]
         )
@@ -926,7 +936,7 @@ class ReaddirTest(testcase.EdenRepoTest):
 
         objectId = None
         if req_attr & FileAttributes.OBJECT_ID:
-            objectId = ObjectIdOrError(expected_attributes[3])
+            objectId = ObjectIdOrError(objectId=expected_attributes[3])
 
         blake3 = None
         if (req_attr & FileAttributes.BLAKE3_HASH) and expected_attributes[
@@ -942,7 +952,7 @@ class ReaddirTest(testcase.EdenRepoTest):
         if (req_attr & FileAttributes.DIGEST_HASH) and expected_attributes[
             6
         ] is not None:
-            digestHash = DigestHashOrError(expected_attributes[6])
+            digestHash = DigestHashOrError(digestHash=expected_attributes[6])
 
         return FileAttributeDataOrErrorV2(
             fileAttributeData=FileAttributeDataV2(
@@ -983,11 +993,11 @@ class ReaddirTest(testcase.EdenRepoTest):
                 }
             )
 
-            expected = ReaddirResult([adir_result, bdir_result])
+            expected = ReaddirResult(dirLists=[adir_result, bdir_result])
             actual_result = client.readdir(
                 ReaddirParams(
-                    self.mount_path_bytes,
-                    [b"adir", b"bdir"],
+                    mountPoint=self.mount_path_bytes,
+                    directoryPaths=[b"adir", b"bdir"],
                     requestedAttributes=ALL_ATTRIBUTES,
                     sync=SyncBehavior(),
                 )
@@ -1007,12 +1017,12 @@ class ReaddirTest(testcase.EdenRepoTest):
             os.mkdir(path)
 
             expected = ReaddirResult(
-                [DirListAttributeDataOrError(dirListAttributeData={})]
+                dirLists=[DirListAttributeDataOrError(dirListAttributeData={})]
             )
             actual = client.readdir(
                 ReaddirParams(
-                    self.mount_path_bytes,
-                    [b"emptydir"],
+                    mountPoint=self.mount_path_bytes,
+                    directoryPaths=[b"emptydir"],
                     sync=SyncBehavior(),
                 )
             )
@@ -1022,7 +1032,7 @@ class ReaddirTest(testcase.EdenRepoTest):
 
             # non existent directory
             expected = ReaddirResult(
-                [
+                dirLists=[
                     DirListAttributeDataOrError(
                         error=EdenError(
                             message="ddir: No such file or directory",
@@ -1034,8 +1044,8 @@ class ReaddirTest(testcase.EdenRepoTest):
             )
             actual = client.readdir(
                 ReaddirParams(
-                    self.mount_path_bytes,
-                    [b"ddir"],
+                    mountPoint=self.mount_path_bytes,
+                    directoryPaths=[b"ddir"],
                     sync=SyncBehavior(),
                 )
             )
@@ -1045,7 +1055,7 @@ class ReaddirTest(testcase.EdenRepoTest):
 
             # file
             expected = ReaddirResult(
-                [
+                dirLists=[
                     DirListAttributeDataOrError(
                         error=EdenError(
                             message="hello: path must be a directory",
@@ -1057,8 +1067,8 @@ class ReaddirTest(testcase.EdenRepoTest):
             )
             actual = client.readdir(
                 ReaddirParams(
-                    self.mount_path_bytes,
-                    [b"hello"],
+                    mountPoint=self.mount_path_bytes,
+                    directoryPaths=[b"hello"],
                     sync=SyncBehavior(),
                 )
             )
@@ -1069,8 +1079,8 @@ class ReaddirTest(testcase.EdenRepoTest):
             # empty string
             actual = client.readdir(
                 ReaddirParams(
-                    self.mount_path_bytes,
-                    [b""],
+                    mountPoint=self.mount_path_bytes,
+                    directoryPaths=[b""],
                     sync=SyncBehavior(),
                 )
             )
@@ -1104,11 +1114,11 @@ class ReaddirTest(testcase.EdenRepoTest):
                 }
             )
 
-            expected = ReaddirResult([adir_result, bdir_result])
+            expected = ReaddirResult(dirLists=[adir_result, bdir_result])
             actual_result = client.readdir(
                 ReaddirParams(
-                    self.mount_path_bytes,
-                    [b"adir", b"bdir"],
+                    mountPoint=self.mount_path_bytes,
+                    directoryPaths=[b"adir", b"bdir"],
                     requestedAttributes=req_attr,
                     sync=SyncBehavior(),
                 )
@@ -1161,8 +1171,8 @@ class ReaddirTest(testcase.EdenRepoTest):
 
             actual = client.readdir(
                 ReaddirParams(
-                    self.mount_path_bytes,
-                    [parent_name],
+                    mountPoint=self.mount_path_bytes,
+                    directoryPaths=[parent_name],
                     requestedAttributes=ALL_ATTRIBUTES,
                     sync=SyncBehavior(),
                 )
@@ -1190,8 +1200,8 @@ class ReaddirTest(testcase.EdenRepoTest):
 
             actual = client.readdir(
                 ReaddirParams(
-                    self.mount_path_bytes,
-                    [parent_name],
+                    mountPoint=self.mount_path_bytes,
+                    directoryPaths=[parent_name],
                     requestedAttributes=FileAttributes.SOURCE_CONTROL_TYPE,
                     sync=SyncBehavior(),
                 )
@@ -1298,6 +1308,8 @@ class ReaddirTest(testcase.EdenRepoTest):
         actual = self.get_attributes_v2([b"adir/file"], FileAttributes.OBJECT_ID)
         self.assertEqual(1, len(actual.res))
         expected = FileAttributeDataOrErrorV2(
-            fileAttributeData=FileAttributeDataV2(objectId=ObjectIdOrError(None))
+            fileAttributeData=FileAttributeDataV2(
+                objectId=ObjectIdOrError(objectId=None)
+            )
         )
         self.assertEqual(expected, actual.res[0])

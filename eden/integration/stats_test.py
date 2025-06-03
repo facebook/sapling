@@ -204,7 +204,7 @@ class ObjectCacheStatsTest(testcase.EdenRepoTest):
         # entries) and OS kernel caches.
         with self.get_thrift_client_legacy() as thrift_client:
             thrift_client.unloadInodeForPath(
-                self.mount.encode("utf-8"), b"", TimeSpec(0, 0)
+                self.mount.encode("utf-8"), b"", TimeSpec(seconds=0, nanoSeconds=0)
             )
 
             thrift_client.invalidateKernelInodeCache(self.mount.encode("utf-8"), b"dir")

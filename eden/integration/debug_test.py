@@ -72,9 +72,9 @@ class DebugBlobHgTest(testcase.HgRepoTestMixin, testcase.EdenRepoTest):
     ) -> None:
         response = client.debugGetBlob(
             DebugGetScmBlobRequest(
-                MountId(self.mount.encode()),
-                blob_id,
-                origin,
+                mountId=MountId(mountPoint=self.mount.encode()),
+                id=blob_id,
+                origins=origin,
             )
         )
         print(response)
@@ -90,15 +90,15 @@ class DebugBlobHgTest(testcase.HgRepoTestMixin, testcase.EdenRepoTest):
     ) -> None:
         response = client.debugGetBlob(
             DebugGetScmBlobRequest(
-                MountId(self.mount.encode()),
-                blob_id,
-                origin,
+                mountId=MountId(mountPoint=self.mount.encode()),
+                id=blob_id,
+                origins=origin,
             )
         )
         print(response)
         self.assertEqual(
             DebugGetScmBlobResponse(
-                [ScmBlobWithOrigin(blob=ScmBlobOrError(blob=data), origin=origin)]
+                blobs=[ScmBlobWithOrigin(blob=ScmBlobOrError(blob=data), origin=origin)]
             ),
             response,
         )
@@ -157,9 +157,9 @@ class DebugBlobHgTest(testcase.HgRepoTestMixin, testcase.EdenRepoTest):
             # check a request from multiple places:
             response = client.debugGetBlob(
                 DebugGetScmBlobRequest(
-                    MountId(self.mount.encode()),
-                    file.hash,
-                    DataFetchOrigin.MEMORY_CACHE
+                    mountId=MountId(mountPoint=self.mount.encode()),
+                    id=file.hash,
+                    origins=DataFetchOrigin.MEMORY_CACHE
                     | DataFetchOrigin.DISK_CACHE
                     | DataFetchOrigin.LOCAL_BACKING_STORE
                     | DataFetchOrigin.REMOTE_BACKING_STORE
@@ -206,9 +206,9 @@ class DebugBlobMetadataHgTest(testcase.HgRepoTestMixin, testcase.EdenRepoTest):
     ) -> None:
         response = client.debugGetBlobMetadata(
             DebugGetBlobMetadataRequest(
-                MountId(self.mount.encode()),
-                blob_id,
-                origin,
+                mountId=MountId(mountPoint=self.mount.encode()),
+                id=blob_id,
+                origins=origin,
             )
         )
         print(response)
@@ -225,15 +225,15 @@ class DebugBlobMetadataHgTest(testcase.HgRepoTestMixin, testcase.EdenRepoTest):
     ) -> None:
         response = client.debugGetBlobMetadata(
             DebugGetBlobMetadataRequest(
-                MountId(self.mount.encode()),
-                blob_id,
-                origin,
+                mountId=MountId(mountPoint=self.mount.encode()),
+                id=blob_id,
+                origins=origin,
             )
         )
         print(response)
         self.assertEqual(
             DebugGetBlobMetadataResponse(
-                [
+                metadatas=[
                     BlobMetadataWithOrigin(
                         metadata=BlobMetadataOrError(
                             metadata=ScmBlobMetadata(size=size, contentsSha1=sha1)
@@ -303,9 +303,9 @@ class DebugBlobMetadataHgTest(testcase.HgRepoTestMixin, testcase.EdenRepoTest):
             # check a request from multiple places:
             response = client.debugGetBlobMetadata(
                 DebugGetBlobMetadataRequest(
-                    MountId(self.mount.encode()),
-                    file.hash,
-                    DataFetchOrigin.MEMORY_CACHE
+                    mountId=MountId(mountPoint=self.mount.encode()),
+                    id=file.hash,
+                    origins=DataFetchOrigin.MEMORY_CACHE
                     | DataFetchOrigin.DISK_CACHE
                     | DataFetchOrigin.LOCAL_BACKING_STORE
                     | DataFetchOrigin.REMOTE_BACKING_STORE
@@ -339,9 +339,9 @@ class DebugTreeHgTest(testcase.HgRepoTestMixin, testcase.EdenRepoTest):
     ) -> None:
         response = client.debugGetTree(
             DebugGetScmTreeRequest(
-                MountId(self.mount.encode()),
-                tree_id,
-                origin,
+                mountId=MountId(mountPoint=self.mount.encode()),
+                id=tree_id,
+                origins=origin,
             )
         )
         print(response)
@@ -359,18 +359,20 @@ class DebugTreeHgTest(testcase.HgRepoTestMixin, testcase.EdenRepoTest):
     ) -> None:
         response = client.debugGetTree(
             DebugGetScmTreeRequest(
-                MountId(self.mount.encode()),
-                tree_id,
-                origin,
+                mountId=MountId(mountPoint=self.mount.encode()),
+                id=tree_id,
+                origins=origin,
             )
         )
         print(f"response of debugGetTree: {response}")
         self.assertEqual(
             DebugGetScmTreeResponse(
-                [
+                trees=[
                     ScmTreeWithOrigin(
                         scmTreeData=ScmTreeOrError(
-                            [ScmTreeEntry(name=name, mode=mode, id=thrift_obj_id)]
+                            treeEntries=[
+                                ScmTreeEntry(name=name, mode=mode, id=thrift_obj_id)
+                            ]
                         ),
                         origin=origin,
                     )
@@ -455,9 +457,9 @@ class DebugTreeHgTest(testcase.HgRepoTestMixin, testcase.EdenRepoTest):
             # check a request from multiple places:
             response = client.debugGetTree(
                 DebugGetScmTreeRequest(
-                    MountId(self.mount.encode()),
-                    treeInfo.treeHash,
-                    DataFetchOrigin.MEMORY_CACHE
+                    mountId=MountId(mountPoint=self.mount.encode()),
+                    id=treeInfo.treeHash,
+                    origins=DataFetchOrigin.MEMORY_CACHE
                     | DataFetchOrigin.DISK_CACHE
                     | DataFetchOrigin.LOCAL_BACKING_STORE
                     | DataFetchOrigin.REMOTE_BACKING_STORE
@@ -483,7 +485,7 @@ class DebugTreeHgTest(testcase.HgRepoTestMixin, testcase.EdenRepoTest):
                 else:
                     self.assertEqual(
                         ScmTreeOrError(
-                            [
+                            treeEntries=[
                                 ScmTreeEntry(
                                     name=treeEntry.name,
                                     mode=treeEntry.mode | 0o644,

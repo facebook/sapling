@@ -146,11 +146,13 @@ class ThriftTest(testcase.EdenRepoTest):
         return inode_count
 
     def test_get_file_content(self) -> None:
-        thrift_mount = MountId(self.mount.encode("utf-8"))
+        thrift_mount = MountId(mountPoint=self.mount.encode("utf-8"))
 
         # Unmaterialized file
         with self.eden.get_thrift_client_legacy() as client:
-            thrift_req = GetFileContentRequest(thrift_mount, b"hello", SyncBehavior())
+            thrift_req = GetFileContentRequest(
+                mount=thrift_mount, filePath=b"hello", sync=SyncBehavior()
+            )
             response = client.getFileContent(thrift_req)
             self.assertEqual(
                 ScmBlobOrError.BLOB,
@@ -163,7 +165,7 @@ class ThriftTest(testcase.EdenRepoTest):
         self.write_file("tmpdir/file", "hola\n")
         with self.eden.get_thrift_client_legacy() as client:
             thrift_req = GetFileContentRequest(
-                thrift_mount, b"tmpdir/file", SyncBehavior()
+                mount=thrift_mount, filePath=b"tmpdir/file", sync=SyncBehavior()
             )
             self.assertEqual(
                 ScmBlobOrError.BLOB,
@@ -177,7 +179,7 @@ class ThriftTest(testcase.EdenRepoTest):
         self.rm("tmpdir/file")
         with self.eden.get_thrift_client_legacy() as client:
             thrift_req = GetFileContentRequest(
-                thrift_mount, b"tmpdir/file", SyncBehavior()
+                mount=thrift_mount, filePath=b"tmpdir/file", sync=SyncBehavior()
             )
             response = client.getFileContent(thrift_req)
             self.assertEqual(
@@ -187,7 +189,9 @@ class ThriftTest(testcase.EdenRepoTest):
                 response.blob.get_error().message,
                 "tmpdir/file: No such file or directory",
             )
-            thrift_req = GetFileContentRequest(thrift_mount, b"tmpdir", SyncBehavior())
+            thrift_req = GetFileContentRequest(
+                mount=thrift_mount, filePath=b"tmpdir", sync=SyncBehavior()
+            )
             response = client.getFileContent(thrift_req)
             self.assertEqual(
                 ScmBlobOrError.ERROR, response.blob.getType(), "expect error"
@@ -230,10 +234,10 @@ class ThriftTest(testcase.EdenRepoTest):
 
     def test_get_sha1(self) -> None:
         expected_sha1_for_hello = hashlib.sha1(b"hola\n").digest()
-        result_for_hello = SHA1Result(expected_sha1_for_hello)
+        result_for_hello = SHA1Result(sha1=expected_sha1_for_hello)
 
         expected_sha1_for_adir_file = hashlib.sha1(b"foo!\n").digest()
-        result_for_adir_file = SHA1Result(expected_sha1_for_adir_file)
+        result_for_adir_file = SHA1Result(sha1=expected_sha1_for_adir_file)
 
         with self.get_thrift_client_legacy() as client:
             self.assertEqual(
@@ -246,8 +250,8 @@ class ThriftTest(testcase.EdenRepoTest):
             )
 
     def test_get_blake3(self) -> None:
-        result_for_hello = Blake3Result(self.expected_hello_blake3)
-        result_for_adir_file = Blake3Result(self.expected_adir_file_blake3)
+        result_for_hello = Blake3Result(blake3=self.expected_hello_blake3)
+        result_for_adir_file = Blake3Result(blake3=self.expected_adir_file_blake3)
 
         with self.get_thrift_client_legacy() as client:
             self.assertEqual(
@@ -262,28 +266,32 @@ class ThriftTest(testcase.EdenRepoTest):
     def test_get_digest_hash_for_file(self) -> None:
         with self.get_thrift_client_legacy() as client:
             results = client.getDigestHash(
-                self.mount_path_bytes, [b"hello", b"adir/file"], sync=SyncBehavior(60)
+                self.mount_path_bytes,
+                [b"hello", b"adir/file"],
+                sync=SyncBehavior(syncTimeoutSeconds=60),
             )
 
         self.assertEqual(2, len(results))
         self.assertEqual(
             results,
             [
-                DigestHashResult(self.expected_hello_blake3),
-                DigestHashResult(self.expected_adir_file_blake3),
+                DigestHashResult(digestHash=self.expected_hello_blake3),
+                DigestHashResult(digestHash=self.expected_adir_file_blake3),
             ],
         )
 
     def test_get_digest_hash_for_directory(self) -> None:
         with self.get_thrift_client_legacy() as client:
             results = client.getDigestHash(
-                self.mount_path_bytes, [b"adir"], sync=SyncBehavior(60)
+                self.mount_path_bytes,
+                [b"adir"],
+                sync=SyncBehavior(syncTimeoutSeconds=60),
             )
 
         self.assertEqual(1, len(results))
         if self.repo.get_type() in ["hg", "filteredhg"]:
             self.assertEqual(
-                results, [DigestHashResult(self.expected_adir_digest_hash)]
+                results, [DigestHashResult(digestHash=self.expected_adir_digest_hash)]
             )
         else:
             self.assert_digest_hash_error(
@@ -355,7 +363,9 @@ class ThriftTest(testcase.EdenRepoTest):
     def test_get_sha1_throws_for_directory(self) -> None:
         with self.get_thrift_client_legacy() as client:
             results = client.getSHA1(
-                self.mount_path_bytes, [b"adir"], sync=SyncBehavior(60)
+                self.mount_path_bytes,
+                [b"adir"],
+                sync=SyncBehavior(syncTimeoutSeconds=60),
             )
         self.assertEqual(1, len(results))
         self.assert_sha1_error(results[0], "adir: Is a directory")
@@ -363,7 +373,9 @@ class ThriftTest(testcase.EdenRepoTest):
     def test_get_blake3_throws_for_directory(self) -> None:
         with self.get_thrift_client_legacy() as client:
             results = client.getBlake3(
-                self.mount_path_bytes, [b"adir"], sync=SyncBehavior(60)
+                self.mount_path_bytes,
+                [b"adir"],
+                sync=SyncBehavior(syncTimeoutSeconds=60),
             )
         self.assertEqual(1, len(results))
         self.assert_blake3_error(results[0], "adir: Is a directory")
@@ -433,7 +445,7 @@ class ThriftTest(testcase.EdenRepoTest):
         )
         self.assertEqual(
             results[1],
-            DigestHashResult(self.expected_hello_blake3),
+            DigestHashResult(digestHash=self.expected_hello_blake3),
         )
 
     def test_get_digest_hash_throws_for_local_directory(self) -> None:
@@ -466,7 +478,7 @@ class ThriftTest(testcase.EdenRepoTest):
 
         self.assertEqual(
             results[1],
-            DigestHashResult(self.expected_hello_blake3),
+            DigestHashResult(digestHash=self.expected_hello_blake3),
         )
 
     def assert_eden_error(
