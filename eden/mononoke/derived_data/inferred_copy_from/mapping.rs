@@ -12,6 +12,7 @@ use anyhow::Error;
 use anyhow::Result;
 use anyhow::anyhow;
 use async_trait::async_trait;
+use basename_suffix_skeleton_manifest_v3::RootBssmV3DirectoryId;
 use blobstore::BlobstoreGetData;
 use blobstore::Storable;
 use context::CoreContext;
@@ -73,7 +74,7 @@ impl RootInferredCopyFromId {
 impl BonsaiDerivable for RootInferredCopyFromId {
     const VARIANT: DerivableType = DerivableType::InferredCopyFrom;
 
-    type Dependencies = dependencies![RootFsnodeId];
+    type Dependencies = dependencies![RootFsnodeId, RootBssmV3DirectoryId];
     type PredecessorDependencies = dependencies![];
 
     async fn derive_single(

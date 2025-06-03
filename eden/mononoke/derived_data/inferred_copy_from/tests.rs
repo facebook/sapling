@@ -71,6 +71,39 @@ async fn init_repo(ctx: &CoreContext) -> Result<(Repo, HashMap<&'static str, Cha
             .await?,
     );
 
+    changesets.insert(
+        "d",
+        CreateCommitContext::new(ctx, &repo, vec![changesets["c"]])
+            .add_file("path/to/basename1", "aabbcc\n")
+            .add_file("path/to/basename2", "ddeeff\n")
+            .set_author_date(DateTime::from_timestamp(1000, 0)?)
+            .commit()
+            .await?,
+    );
+    changesets.insert(
+        "e",
+        CreateCommitContext::new(ctx, &repo, vec![changesets["d"]])
+            // Inferred copies:
+            // d:path/to/basename1 -> path/basename1
+            // d:path/to/basename2 -> path/basename2
+            // d:path/to/basename2 -> another/path/basename2
+            .add_file("path/basename1", "aabbcc\n")
+            .add_file("path/basename2", "ddeeff\n")
+            .add_file("another/path/basename2", "ddeeff\n")
+            .set_author_date(DateTime::from_timestamp(1000, 0)?)
+            .commit()
+            .await?,
+    );
+    changesets.insert(
+        "f",
+        CreateCommitContext::new(ctx, &repo, vec![changesets["d"]])
+            // Not detected due to the directory constraint.
+            .add_file("another/path/basename2", "ddeeff\n")
+            .set_author_date(DateTime::from_timestamp(1000, 0)?)
+            .commit()
+            .await?,
+    );
+
     Ok((repo, changesets))
 }
 
@@ -123,6 +156,44 @@ async fn derive_single_test(fb: FacebookInit) -> Result<()> {
                 },
             ),
         ],
+    )
+    .await?;
+
+    assert_entries(
+        &ctx,
+        &repo,
+        repo_ctx.changeset(changesets["e"]).await?.unwrap().id(),
+        &[
+            (
+                MPath::new("another/path/basename2")?,
+                InferredCopyFromEntry {
+                    from_csid: changesets["d"],
+                    from_path: MPath::new("path/to/basename2")?,
+                },
+            ),
+            (
+                MPath::new("path/basename1")?,
+                InferredCopyFromEntry {
+                    from_csid: changesets["d"],
+                    from_path: MPath::new("path/to/basename1")?,
+                },
+            ),
+            (
+                MPath::new("path/basename2")?,
+                InferredCopyFromEntry {
+                    from_csid: changesets["d"],
+                    from_path: MPath::new("path/to/basename2")?,
+                },
+            ),
+        ],
+    )
+    .await?;
+
+    assert_entries(
+        &ctx,
+        &repo,
+        repo_ctx.changeset(changesets["f"]).await?.unwrap().id(),
+        &[],
     )
     .await?;
 

@@ -13,6 +13,7 @@ path = "lib.rs"
 [dependencies]
 anyhow = "1.0.95"
 async-trait = "0.1.86"
+basename_suffix_skeleton_manifest_v3 = { version = "0.1.0", path = "../basename_suffix_skeleton_manifest_v3" }
 blobstore = { version = "0.1.0", path = "../../blobstore" }
 cloned = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 context = { version = "0.1.0", path = "../../server/context" }
@@ -20,8 +21,10 @@ derived_data_manager = { version = "0.1.0", path = "../manager" }
 derived_data_service_if = { version = "0.1.0", path = "../remote/if" }
 fsnodes = { version = "0.1.0", path = "../fsnodes" }
 futures = { version = "0.3.30", features = ["async-await", "compat"] }
+itertools = "0.14.0"
 manifest = { version = "0.1.0", path = "../../manifest" }
 mononoke_types = { version = "0.1.0", path = "../../mononoke_types" }
+vec1 = { version = "1", features = ["serde"] }
 
 [dev-dependencies]
 facet = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
