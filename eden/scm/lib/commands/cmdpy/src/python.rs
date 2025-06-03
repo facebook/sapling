@@ -7,6 +7,7 @@
 
 use std::ffi::CStr;
 use std::ffi::CString;
+use std::sync::LazyLock;
 
 use ffi::Py_DECREF;
 use ffi::Py_IsInitialized;
@@ -62,6 +63,49 @@ macro_rules! check_status {
         }
     };
 }
+
+fn frozen_module(cname: &'static [u8]) -> ffi::_frozen {
+    let name = std::str::from_utf8(cname).unwrap().trim_end_matches('\0');
+    let module = match python_modules::find_module(name) {
+        None => panic!("module {} should be included", name),
+        Some(v) => v,
+    };
+    let code = module.byte_code();
+    let mut frozen = unsafe { std::mem::zeroed::<ffi::_frozen>() };
+    frozen.name = cname.as_ptr() as _;
+    frozen.code = code.as_ptr() as _;
+    frozen.size = code.len() as _;
+    // `is_package` requires Python 3.12
+    // frozen.is_package = module.is_package() as _;
+    frozen
+}
+
+struct ForceSend<T>(T);
+unsafe impl<T> Send for ForceSend<T> {}
+unsafe impl<T> Sync for ForceSend<T> {}
+
+// Pure Python modules imported from disk during `Py_Initialize`.
+//
+// Modern Pythons uses "frozen" modules to reduce startup overhead by not importing from disk.
+// However, they have some left-overs for compatibility reasons. Namely, the `encodings` modules
+// aren't frozen (https://github.com/python/cpython/issues/89816).
+//
+// We don't care about the compatibility. Provide those modules to avoid disk access.
+//
+// To get a list of the modules loaded from disk, run:
+//
+// ```bash,ignore
+// python -S -v -c pass |& grep 'code object from'
+// ```
+static EXTRA_FROZEN_MODULES: LazyLock<ForceSend<[ffi::_frozen; 5]>> = LazyLock::new(|| {
+    ForceSend([
+        frozen_module(b"encodings\0"),
+        frozen_module(b"encodings.aliases\0"),
+        frozen_module(b"encodings.utf_8\0"),
+        frozen_module(b"linecache\0"), // used by Python >= 3.13
+        unsafe { std::mem::zeroed::<ffi::_frozen>() },
+    ])
+});
 
 /// Initialize Python interpreter given args and optional Sapling Python home.
 /// `args[0]` is the executable name to be used. If specified, `sapling_home`
@@ -153,6 +197,12 @@ pub fn py_initialize(args: &[String], sapling_home: Option<&String>) {
                     Some(config)
                 );
             }
+        }
+
+        // NOTE: Fails with fbcode buck build that links to libpython3.10: P1830059652.
+        // Try again after upgrading to Python 3.12.
+        if cfg!(static_libpython) {
+            ffi::PyImport_FrozenModules = EXTRA_FROZEN_MODULES.0.as_ptr() as _;
         }
 
         check_status!(ffi::Py_InitializeFromConfig(&config), Some(config));
