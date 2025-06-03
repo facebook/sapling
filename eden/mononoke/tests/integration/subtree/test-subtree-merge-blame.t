@@ -110,12 +110,3 @@ Create a complex merge that includes lines that were copied from a path that is 
   $ merge=$(hg whereami)
 
   $ mononoke_admin derived-data -R repo derive -T blame -i $merge
-  Error: failed to derive blame batch (start:2294785a16c42ec2fa431baa6410b9c778d2d452df8a81a61e21b4f2ca81eb88, end:3e92d1e7e4fa3edf0d0411f74c7af4bb95207de6ec2234b93f37bb6ca415c2d7)
-  
-  Caused by:
-      0: failed to derive blame_v2 for 3e92d1e7e4fa3edf0d0411f74c7af4bb95207de6ec2234b93f37bb6ca415c2d7, index 0 in stack of 1 from batch of 7
-      1: Failed to create blame data for 3e92d1e7e4fa3edf0d0411f74c7af4bb95207de6ec2234b93f37bb6ca415c2d7:foo/file1
-      2: Failed to merge blame data for 3e92d1e7e4fa3edf0d0411f74c7af4bb95207de6ec2234b93f37bb6ca415c2d7
-      3: Failed to get parent for blame range at offset 3
-      4: Failed to get path index for renamed-from path bar/file1
-  [1]

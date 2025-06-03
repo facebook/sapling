@@ -680,6 +680,13 @@ impl BlameData {
             if !path_indexes.contains_key(blame_line.path) && !new_paths.contains(blame_line.path) {
                 new_paths.insert(blame_line.path.clone());
             }
+            if let Some(parent) = &blame_line.parent {
+                if let Some(path) = parent.renamed_from_path {
+                    if !path_indexes.contains_key(path) && !new_paths.contains(path) {
+                        new_paths.insert(path.clone());
+                    }
+                }
+            }
         }
 
         // Assign indexes to the new changesets and paths, in the order they
