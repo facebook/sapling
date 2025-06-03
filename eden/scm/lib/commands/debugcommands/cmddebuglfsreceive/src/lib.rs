@@ -13,6 +13,7 @@ use clidispatch::abort;
 use clidispatch::abort_if;
 use cmdutil::ConfigSet;
 use cmdutil::Error;
+use cmdutil::Repo;
 use cmdutil::Result;
 use cmdutil::define_flags;
 use revisionstore::LfsRemote;
@@ -26,7 +27,7 @@ define_flags! {
     }
 }
 
-pub fn run(ctx: ReqCtx<DebugLfsReceiveOpts>) -> Result<u8> {
+pub fn run(ctx: ReqCtx<DebugLfsReceiveOpts>, repo: Option<&Repo>) -> Result<u8> {
     let mut config = ConfigSet::wrap(ctx.config().clone());
 
     abort_if!(
@@ -50,7 +51,7 @@ pub fn run(ctx: ReqCtx<DebugLfsReceiveOpts>) -> Result<u8> {
     lfs_remote.batch_fetch(
         FetchContext::default(),
         &HashSet::from([(sha256, size)]),
-        |_sha, data| output.write(data.as_ref()).map_err(Into::into).map(|_| ()),
+        |_sha, data| Ok(output.write_all(data.as_ref())?),
         |_sha, err| error = Some(err),
     )?;
 
