@@ -17,6 +17,7 @@ use mercurial_types::bdiff::Delta;
 use nom::Err;
 use nom::IResult;
 use nom::Needed;
+use nom::Parser as _;
 use nom::branch::alt;
 use nom::bytes::streaming::tag;
 use nom::bytes::streaming::take;
@@ -142,7 +143,7 @@ pub fn indexng(input: &[u8]) -> IResult<&[u8], Entry, Error> {
     let (input, linkrev) = be_u32(input)?;
     let (input, p1) = be_u32(input)?;
     let (input, p2) = be_u32(input)?;
-    let (input, hash) = take(32usize)(input)?;
+    let (input, hash) = take(32usize).parse(input)?;
 
     let entry = Entry {
         offset,
@@ -201,7 +202,7 @@ pub fn index0(input: &[u8]) -> IResult<&[u8], Entry, Error> {
 pub fn delta(input: &[u8]) -> IResult<&[u8], Delta, Error> {
     let (input, start) = be_u32(input)?;
     let (input, end) = be_u32(input)?;
-    let (input, content) = length_data(be_u32)(input)?;
+    let (input, content) = length_data(be_u32).parse(input)?;
 
     let delta = Delta {
         start: start as usize,
@@ -214,7 +215,7 @@ pub fn delta(input: &[u8]) -> IResult<&[u8], Delta, Error> {
 
 // Parse 0 or more deltas
 fn deltas(input: &[u8]) -> IResult<&[u8], Vec<Delta>, Error> {
-    many0(delta)(input)
+    many0(delta).parse(input)
 }
 
 // A chunk of data data that contains some Deltas; the caller defines the framing bytes
@@ -229,7 +230,8 @@ pub fn deltachunk(input: &[u8]) -> IResult<&[u8], Vec<Delta>, Error> {
         preceded(peek(tag("x")), |i| zlib_decompress(i, deltas)),
         // compressed w/ lz4
         preceded(tag("4"), |i| lz4_decompress(i, deltas)),
-    )))(input)?;
+    )))
+    .parse(input)?;
 
     Ok((input, dv.into_iter().flatten().collect()))
 }
@@ -245,7 +247,8 @@ pub fn literal(input: &[u8]) -> IResult<&[u8], Vec<u8>, Error> {
         preceded(peek(tag("x")), |i| zlib_decompress(i, remains_owned)),
         preceded(tag("4"), |i| lz4_decompress(i, remains_owned)),
         preceded(tag("u"), remains_owned),
-    ))(input)
+    ))
+    .parse(input)
 }
 
 // Remap error to remove reference to `data`
