@@ -1,0 +1,55 @@
+name: Release - Linux x64
+'on':
+  workflow_dispatch: null
+  push:
+    tags:
+    - v*
+    - test-release-*
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    container:
+      image: ${{ format('ghcr.io/{0}/manylinux_2_34:latest', github.repository) }}
+    steps:
+    - name: Checkout Code
+      uses: actions/checkout@v3
+    - name: Grant Access
+      run: git config --global --add safe.directory "$PWD"
+    - name: rustup
+      run: rustup default stable
+    - name: set-env SAPLING_VERSION
+      shell: bash
+      run: echo "SAPLING_VERSION=$(ci/tag-name.sh)" >> $GITHUB_ENV
+    - name: Build
+      working-directory: ./eden/scm
+      run: ${{ format('VERSION={0} python3 ./packaging/manylinux/build.py', env.SAPLING_VERSION) }}
+    - name: Rename .tar.xz
+      working-directory: ./eden/scm
+      run: ${{ format('mv sapling-manylinux.tar.xz sapling-{0}-linux-x64.tar.xz', env.SAPLING_VERSION) }}
+    - name: Upload Artifact
+      uses: actions/upload-artifact@v4
+      with:
+        name: linux-x64-tarball
+        path: ./eden/scm/sapling_*.tar.xz
+  publish:
+    runs-on: ubuntu-latest
+    needs: build
+    steps:
+    - name: Checkout Code
+      uses: actions/checkout@v3
+    - name: Grant Access
+      run: git config --global --add safe.directory "$PWD"
+    - name: Download Artifact
+      uses: actions/download-artifact@v4.1.7
+      with:
+        name: linux-x64-tarball
+    - name: Create pre-release
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      shell: bash
+      run: bash ci/retry.sh bash ci/create-release.sh $(ci/tag-name.sh)
+    - name: Upload Release
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      shell: bash
+      run: bash ci/retry.sh gh release upload --clobber $(ci/tag-name.sh) sapling*.tar.xz
