@@ -361,7 +361,11 @@ async fn bundle_uri(
     request_context: &RepositoryRequestContext,
     git_host: GitHost,
 ) -> Result<impl TryIntoResponse + use<>, Error> {
-    let mut out: Vec<u8> = b"bundle.version=1\nbundle.mode=all".into();
+    let mut out: Vec<u8> = br#"bundle.version=1
+bundle.mode=all
+bundle.heuristic=creationToken
+"#
+    .into();
 
     if !request_context.ctx.metadata().client_untrusted() {
         let bundle_uri = &request_context.repo.git_bundle_uri;
@@ -370,7 +374,7 @@ async fn bundle_uri(
         if let Some(bundle_list) = bundle_list {
             let bundle_list_out: Result<Vec<u8>, anyhow::Error> = try {
                 let mut bundle_list_out_buf: Vec<u8> = vec![];
-                for bundle in bundle_list.bundles.iter() {
+                for (i, bundle) in bundle_list.bundles.iter().enumerate() {
                     let uri = bundle_uri
                         .get_url_for_bundle_handle(
                             &request_context.ctx,
@@ -380,7 +384,14 @@ async fn bundle_uri(
                         )
                         .await?;
 
-                    let str = format!("\nbundle.bundle_{}.uri={}", bundle.fingerprint, uri,);
+                    let str = format!(
+                        r#"bundle.bundle_{}.uri={}
+bundle.bundle_{}.creationtoken={}"#,
+                        bundle.fingerprint,
+                        uri,
+                        bundle.fingerprint,
+                        i + 1
+                    );
                     bundle_list_out_buf.extend_from_slice(str.as_bytes());
                 }
                 bundle_list_out_buf
