@@ -315,7 +315,7 @@ impl CopyTrace for DagCopyTrace {
         dst: Vertex,
         matcher: Option<Arc<dyn Matcher + Send + Sync>>,
     ) -> Result<HashMap<RepoPathBuf, RepoPathBuf>> {
-        tracing::trace!(?src, ?dst, "path_copies");
+        tracing::debug!(?src, ?dst, "path_copies");
 
         let start_time = Instant::now();
         let msrc = self.vertex_to_tree_manifest(&src).await?;
@@ -358,7 +358,7 @@ impl CopyTrace for DagCopyTrace {
         let mut result = HashMap::new();
         let distance = self.compute_distance(src.clone(), dst.clone()).await?;
         let max_commit_limit = get_path_copies_commit_limit(&self.config)?;
-        tracing::trace!(?distance, ?max_commit_limit, "distance between src and dst");
+        tracing::debug!(?distance, ?max_commit_limit, "distance between src and dst");
         if distance > max_commit_limit {
             // skip calculating path copies if too many commits
             tracing::debug!(
@@ -370,8 +370,9 @@ impl CopyTrace for DagCopyTrace {
 
         let find_count_limit = get_max_missing_files(&self.config)?;
         let missing = compute_missing_files(&msrc, &mdst, matcher, Some(find_count_limit))?;
-        tracing::trace!(missing_len = missing.len(), "missing files");
-        for dst_path in missing {
+        tracing::debug!(missing_len = missing.len(), "missing files");
+        for (i, dst_path) in missing.into_iter().enumerate() {
+            tracing::debug!(?i, ?dst_path, "path_copies - missing file");
             let src_path = self
                 .trace_rename(dst.clone(), src.clone(), dst_path.clone())
                 .await?;

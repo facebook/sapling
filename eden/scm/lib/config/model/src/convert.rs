@@ -142,7 +142,7 @@ impl FromConfigValue for Cow<'_, str> {
 }
 
 /// Byte count specified with a unit. For example: `1.5 MB`.
-#[derive(Copy, Clone, Default)]
+#[derive(Copy, Clone, Debug, Default)]
 pub struct ByteCount(u64);
 
 impl ByteCount {

@@ -16,6 +16,7 @@ use async_runtime::spawn_blocking;
 use async_trait::async_trait;
 use configmodel::Config;
 use configmodel::ConfigExt;
+use configmodel::convert::ByteCount;
 use dag::Vertex;
 use hg_metrics::increment_counter;
 use lru_cache::LruCache;
@@ -44,6 +45,9 @@ const DEFAULT_MAX_RENAME_CANDIDATES: usize = 1000;
 const DEFAULT_FALLBACK_TO_CONTENT_SIMILARITY: bool = false;
 /// Default Rename cache size
 const DEFAULT_RENAME_CACHE_SIZE: usize = 1000;
+/// Default large file threshold. This is used for skipping content‑similarity
+/// on large files to avoid expensive computation.
+const DEFAULT_LARGE_FILE_THRESHOLD: u64 = 10 << 20; // 10MB
 
 /// Finding rename between old and new trees (commits).
 /// old_tree is a parent of new_tree
@@ -483,6 +487,27 @@ impl RenameFinderInner {
         })
         .await??
         .into_bytes();
+
+        let large_file_threshold = self
+            .config
+            .get_opt::<ByteCount>("copytrace", "large-file-threshold")?
+            .unwrap_or(ByteCount::from(DEFAULT_LARGE_FILE_THRESHOLD));
+        if large_file_threshold.value() > 0
+            && (source_content.len() as u64) > large_file_threshold.value()
+        {
+            tracing::debug!(
+                ?large_file_threshold,
+                source_content_len = source_content.len(),
+                "file too large, skipping content similarity check"
+            );
+            return Ok(None);
+        }
+
+        tracing::trace!(
+            source_content_len = source_content.len(),
+            keys_len = keys.len(),
+            " found"
+        );
 
         block_in_place(move || {
             let iter = self
