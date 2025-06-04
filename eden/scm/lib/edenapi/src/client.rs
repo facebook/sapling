@@ -1018,6 +1018,7 @@ impl Client {
         scheme: CommitIdScheme,
         from_repo: Option<String>,
         to_repo: Option<String>,
+        lookup_behavior: Option<String>,
     ) -> Result<Response<CommitTranslateIdResponse>, SaplingRemoteApiError> {
         tracing::info!(
             "Requesting commit id translation for {} commits into {:?}",
@@ -1036,6 +1037,7 @@ impl Client {
                     scheme,
                     from_repo: from_repo.clone(),
                     to_repo: to_repo.clone(),
+                    lookup_behavior: lookup_behavior.clone(),
                 };
                 self.log_request(&req, "commit_translate_id");
                 req
@@ -1953,6 +1955,7 @@ impl SaplingRemoteApi for Client {
         scheme: CommitIdScheme,
         from_repo: Option<String>,
         to_repo: Option<String>,
+        lookup_behavior: Option<String>,
     ) -> Result<Response<CommitTranslateIdResponse>, SaplingRemoteApiError> {
         self.with_retry(|this| {
             this.commit_translate_id_attempt(
@@ -1960,6 +1963,7 @@ impl SaplingRemoteApi for Client {
                 scheme.clone(),
                 from_repo.clone(),
                 to_repo.clone(),
+                lookup_behavior.clone(),
             )
             .boxed()
         })

@@ -402,8 +402,9 @@ pub trait SaplingRemoteApi: Send + Sync + 'static {
         scheme: CommitIdScheme,
         from_repo: Option<String>,
         to_repo: Option<String>,
+        lookup_behavior: Option<String>,
     ) -> Result<Response<CommitTranslateIdResponse>, SaplingRemoteApiError> {
-        let _ = (commits, scheme, from_repo, to_repo);
+        let _ = (commits, scheme, from_repo, to_repo, lookup_behavior);
         Err(SaplingRemoteApiError::NotSupported)
     }
 

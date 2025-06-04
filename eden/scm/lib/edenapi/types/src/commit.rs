@@ -501,6 +501,8 @@ pub struct CommitTranslateIdRequest {
     pub from_repo: Option<String>,
     #[id(4)]
     pub to_repo: Option<String>,
+    #[id(5)]
+    pub lookup_behavior: Option<String>,
 }
 
 #[auto_wire]

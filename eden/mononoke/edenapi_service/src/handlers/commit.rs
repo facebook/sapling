@@ -1086,6 +1086,17 @@ impl SaplingRemoteApiHandler for CommitTranslateId {
         let mut git_ids = Vec::new();
         let mut globalrevs = Vec::new();
 
+        let lookup_behavior = match request.lookup_behavior.as_deref() {
+            Some("exact") => XRepoLookupExactBehaviour::OnlyExactMapping,
+            None | Some("equivalent") => XRepoLookupExactBehaviour::WorkingCopyEquivalence,
+            Some(behavior) => {
+                return Err(HttpError::e400(MononokeError::InvalidRequest(format!(
+                    "invalid lookup behavior '{behavior}'"
+                )))
+                .into());
+            }
+        };
+
         for commit in &request.commits {
             match commit {
                 CommitId::Hg(hg_id) => hg_ids.push(HgChangesetId::from(*hg_id)),
@@ -1126,7 +1137,7 @@ impl SaplingRemoteApiHandler for CommitTranslateId {
                                     bs.clone(),
                                     None,
                                     XRepoLookupSyncBehaviour::SyncIfAbsent,
-                                    XRepoLookupExactBehaviour::WorkingCopyEquivalence,
+                                    lookup_behavior,
                                 )
                                 .await,
                         )
