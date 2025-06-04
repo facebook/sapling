@@ -258,6 +258,7 @@ from sapling import (
     visibility,
 )
 from sapling.i18n import _
+from sapling.utils import subtreeutil
 
 # pyre-fixme[11]: Annotation `pickle` is not defined as a type.
 pickle = util.pickle
@@ -1173,9 +1174,21 @@ def _histedit(ui, repo, state, *freeargs, **opts):
         # goal == goalnew
         _newhistedit(ui, repo, state, revs, freeargs, opts)
 
+    _abort_if_fold_subtree_commits(state)
     _continuehistedit(ui, repo, state)
     _finishhistedit(ui, repo, state, fm)
     fm.end()
+
+
+def _abort_if_fold_subtree_commits(state):
+    for action in state.actions:
+        if isinstance(action, fold):
+            extra = action.repo[action.node].extra()
+            if subtreeutil.get_subtree_metadata(extra):
+                raise error.Abort(
+                    _("histedit cannot fold/roll subtree commits"),
+                    hint=_("use '@prog@ fold' to combine subtree commits"),
+                )
 
 
 def _continuehistedit(ui, repo, state):
