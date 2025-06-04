@@ -6,12 +6,14 @@
  */
 
 mod create;
+mod inspect;
 
 use anyhow::Result;
 use bonsai_git_mapping::BonsaiGitMapping;
 use bonsai_tag_mapping::BonsaiTagMapping;
 use bookmarks::Bookmarks;
 use bookmarks_cache::BookmarksCache;
+use bundle_uri::GitBundleUri;
 use clap::Args;
 use clap::Parser;
 use clap::Subcommand;
@@ -28,6 +30,7 @@ use repo_identity::RepoIdentity;
 
 use self::create::FromPathArgs;
 use self::create::FromRepoArgs;
+use self::inspect::InspectArgs;
 
 /// Perform git related operations.
 #[derive(Parser)]
@@ -64,12 +67,16 @@ pub struct Repo {
     repo_config: RepoConfig,
     #[facet]
     pub filestore_config: FilestoreConfig,
+    #[facet]
+    pub git_bundle_uri: dyn GitBundleUri,
 }
 
 #[derive(Subcommand)]
 pub enum GitBundleSubcommand {
     /// Create Git bundle
     Create(CreateBundleArgs),
+    /// Inspect bundle-uri's state for a repo
+    Inspect(InspectArgs),
 }
 
 #[derive(Args)]
@@ -96,5 +103,8 @@ pub async fn run(app: MononokeApp, args: CommandArgs) -> Result<()> {
                 create::create_from_mononoke_repo(&ctx, &app, create_args).await
             }
         },
+        GitBundleSubcommand::Inspect(inspect_args) => {
+            inspect::inspect_bundle_uri(&ctx, &app, inspect_args).await
+        }
     }
 }
