@@ -86,6 +86,8 @@ pub enum Unit {
     Files,
     /// Count of directories
     Dirs,
+    /// Count of symlinks
+    Symlinks,
     /// Kilobytes (file size)
     KiB,
     /// Megabytes (total data)
@@ -100,6 +102,7 @@ impl std::fmt::Display for Unit {
             Unit::FilesPerSecond => write!(f, "files/s"),
             Unit::Files => write!(f, "files"),
             Unit::Dirs => write!(f, "dirs"),
+            Unit::Symlinks => write!(f, "symlinks"),
             Unit::KiB => write!(f, "KiB"),
             Unit::MiB => write!(f, "MiB"),
         }

@@ -31,6 +31,8 @@ use crate::get_edenfs_instance;
 struct TraversalProgress {
     file_count: usize,
     dir_count: usize,
+    symlink_skipped_count: usize,
+    symlink_traversed_count: usize,
     start_time: Instant,
     progress_bar: Option<ProgressBar>,
     file_paths: Vec<PathBuf>,
@@ -56,6 +58,8 @@ impl TraversalProgress {
         Self {
             file_count: 0,
             dir_count: 0,
+            symlink_skipped_count: 0,
+            symlink_traversed_count: 0,
             start_time: Instant::now(),
             progress_bar,
             file_paths: Vec::new(),
@@ -79,6 +83,14 @@ impl TraversalProgress {
         }
     }
 
+    fn add_traversed_symlink(&mut self) {
+        self.symlink_traversed_count += 1;
+    }
+
+    fn add_skipped_symlink(&mut self) {
+        self.symlink_skipped_count += 1;
+    }
+
     fn add_read_dir_stats(&mut self, duration: std::time::Duration, entry_count: usize) {
         self.total_read_dir_time += duration;
         self.total_dir_entries += entry_count;
@@ -98,7 +110,18 @@ impl TraversalProgress {
         }
     }
 
-    fn finalize(&self) -> (usize, usize, f64, &Vec<PathBuf>, std::time::Duration, usize) {
+    fn finalize(
+        &self,
+    ) -> (
+        usize,
+        usize,
+        usize,
+        usize,
+        f64,
+        &Vec<PathBuf>,
+        std::time::Duration,
+        usize,
+    ) {
         let elapsed = self.start_time.elapsed().as_secs_f64();
         if let Some(pb) = &self.progress_bar {
             pb.finish_and_clear();
@@ -107,6 +130,8 @@ impl TraversalProgress {
         (
             self.file_count,
             self.dir_count,
+            self.symlink_skipped_count,
+            self.symlink_traversed_count,
             elapsed,
             &self.file_paths,
             self.total_read_dir_time,
@@ -145,7 +170,15 @@ fn traverse_directory(
             let path = entry.path();
 
             if path.is_dir() {
-                if !path.is_symlink() || follow_symlinks {
+                if path.is_symlink() {
+                    if follow_symlinks {
+                        metrics.add_traversed_symlink();
+                        traverse_directory(&path, metrics, follow_symlinks)?;
+                    } else {
+                        metrics.add_skipped_symlink();
+                    }
+                } else {
+                    // Regular directory, ie, non symlink
                     traverse_directory(&path, metrics, follow_symlinks)?;
                 }
             } else if path.is_file() {
@@ -168,8 +201,16 @@ pub async fn bench_traversal_thrift_read(
 
     let mut traverse_progress = TraversalProgress::new(no_progress);
     traverse_directory(path, &mut traverse_progress, follow_symlinks)?;
-    let (file_count, dir_count, duration, file_paths, total_read_dir_time, total_dir_entries) =
-        traverse_progress.finalize();
+    let (
+        file_count,
+        dir_count,
+        symlink_skipped_count,
+        symlink_traversed_count,
+        duration,
+        file_paths,
+        total_read_dir_time,
+        total_dir_entries,
+    ) = traverse_progress.finalize();
 
     let avg_read_dir_latency = if dir_count > 0 {
         total_read_dir_time.as_secs_f64() * 1000.0 / dir_count as f64
@@ -340,8 +381,16 @@ pub fn bench_traversal_fs_read(
 
     traverse_directory(path, &mut traverse_progress, follow_symlinks)?;
 
-    let (file_count, dir_count, duration, file_paths, total_read_dir_time, total_dir_entries) =
-        traverse_progress.finalize();
+    let (
+        file_count,
+        dir_count,
+        symlink_skipped_count,
+        symlink_traversed_count,
+        duration,
+        file_paths,
+        total_read_dir_time,
+        total_dir_entries,
+    ) = traverse_progress.finalize();
 
     let avg_read_dir_latency = if dir_count > 0 {
         total_read_dir_time.as_secs_f64() * 1000.0 / dir_count as f64
@@ -385,6 +434,18 @@ pub fn bench_traversal_fs_read(
         "Total files",
         file_count as f64,
         types::Unit::Files,
+        Some(0),
+    );
+    result.add_metric(
+        "Total symlinks skipped",
+        symlink_skipped_count as f64,
+        types::Unit::Symlinks,
+        Some(0),
+    );
+    result.add_metric(
+        "Total symlinks traversed",
+        symlink_traversed_count as f64,
+        types::Unit::Symlinks,
         Some(0),
     );
     result.add_metric(

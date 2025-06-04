@@ -79,7 +79,7 @@ pub enum BenchCmd {
         read_file_via: types::ReadFileMethod,
 
         /// Whether to follow symbolic links during traversal
-        #[clap(long, default_value_t = false)]
+        #[clap(long)]
         follow_symlinks: bool,
 
         /// Disable progress bars in benchmarks
