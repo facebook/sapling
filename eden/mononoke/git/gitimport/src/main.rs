@@ -10,6 +10,7 @@ mod repo;
 use std::collections::HashMap;
 use std::path::Path;
 use std::path::PathBuf;
+use std::str::FromStr;
 use std::sync::Arc;
 
 use anyhow::Context;
@@ -227,6 +228,10 @@ enum GitimportSubcommand {
     ImportTreeAsSingleBonsaiChangeset {
         git_commit: String,
     },
+    /// Import a single tag object into Mononoke data store
+    UploadTag {
+        tag_sha1: String,
+    },
 }
 
 #[fbinit::main]
@@ -328,7 +333,7 @@ async fn async_main(app: MononokeApp) -> Result<(), Error> {
     }
 
     let uploader = Arc::new(import_direct::DirectUploader::new(repo.clone(), reupload));
-
+    let reader = Arc::new(GitRepoReader::new(&prefs.git_command_path, path).await?);
     let target = match args.subcommand {
         GitimportSubcommand::FullRepo {} => GitimportTarget::full(),
         GitimportSubcommand::GitRange { git_from, git_to } => {
@@ -355,6 +360,15 @@ async fn async_main(app: MononokeApp) -> Result<(), Error> {
             if args.derive_hg {
                 derive_hg(&ctx, &repo, [(&commit, &bcs_id)].into_iter()).await?;
             }
+            return Ok(());
+        }
+        GitimportSubcommand::UploadTag { tag_sha1 } => {
+            let tag_sha1 = ObjectId::from_str(&tag_sha1)
+                .with_context(|| format!("Invalid SHA1 hash provided for Git Tag {}", tag_sha1))?;
+            upload_git_tag(&ctx, uploader.clone(), reader.clone(), &tag_sha1)
+                .await
+                .with_context(|| format!("Error in uploading tag with ID {}", tag_sha1))?;
+            info!(ctx.logger(), "Uploaded tag with ID {}", tag_sha1);
             return Ok(());
         }
     };
@@ -425,7 +439,6 @@ async fn async_main(app: MononokeApp) -> Result<(), Error> {
                 .into_iter()
                 .map(|entry| (entry.tag_name, entry.tag_hash))
                 .collect::<HashMap<_, _>>();
-            let reader = Arc::new(GitRepoReader::new(&prefs.git_command_path, path).await?);
             let pushvars = if args.bypass_readonly {
                 Some(HashMap::from_iter([(
                     "BYPASS_READONLY".to_string(),
