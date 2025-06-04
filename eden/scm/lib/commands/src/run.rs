@@ -280,6 +280,10 @@ fn dispatch_command(
                 // code.
                 let _ = env::set_current_dir(cwd);
 
+                // We don't know for sure so assume we need CAS
+                #[cfg(feature = "cas")]
+                cas_client::init();
+
                 if !IS_COMMANDSERVER.load(Ordering::Acquire)
                     && config
                         .get_or_default::<bool>("commandserver", "enabled")

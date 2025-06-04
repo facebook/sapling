@@ -205,3 +205,7 @@ fn should_retry(error: &anyhow::Error, error_start: &mut Option<Instant>) -> boo
 
     false
 }
+
+pub fn enable_cas() -> bool {
+    false
+}

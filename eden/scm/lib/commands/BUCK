@@ -1,4 +1,6 @@
+load("@fbcode//eden/scm:targets.bzl", "fetch_as_eden")
 load("@fbcode_macros//build_defs:rust_library.bzl", "rust_library")
+load("@fbcode_macros//build_defs/lib:rust_oss.bzl", "rust_oss")
 
 oncall("sapling")
 
@@ -51,7 +53,14 @@ rust_library(
     features = [
         "eden",
         "fb",
-    ],
+    ] + select({
+        "DEFAULT": [],
+        "ovr_config//os:linux": [] if rust_oss.is_oss_build() else ["cas"],
+    }),
+    named_deps = select({
+        "DEFAULT": {},
+        "ovr_config//os:linux": {} if rust_oss.is_oss_build() else ({"cas_client": "//eden/scm/lib/cas-client/rich-client:rich-cas-client"} if fetch_as_eden() else {"cas_client": "//eden/scm/lib/cas-client/thin-client:thin-cas-client"}),
+    }),
     deps = [
         "fbsource//third-party/rust:anyhow",
         "fbsource//third-party/rust:ctrlc",

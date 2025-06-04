@@ -294,3 +294,7 @@ Returns 0 on success, 1 if there are unresolved files."#
 pub fn synopsis() -> Option<&'static str> {
     Some("[OPTION]... [REV]")
 }
+
+pub fn enable_cas() -> bool {
+    true
+}

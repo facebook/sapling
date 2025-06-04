@@ -110,9 +110,6 @@ fn main() {
     #[cfg(windows)]
     windows::enable_vt_processing().unwrap();
 
-    #[cfg(feature = "cas")]
-    cas_client::init();
-
     let mut io = clidispatch::io::IO::stdio();
 
     let _ = io.setup_term();
@@ -176,12 +173,7 @@ pub fn drop_root(user: &str, group: &str) {
     let home_dir = unsafe { (*libc_user).pw_dir };
     if !home_dir.is_null() {
         // TODO: Audit that the environment access only happens in single-threaded code.
-        unsafe {
-            std::env::set_var(
-                "HOME",
-                unsafe { CStr::from_ptr(home_dir) }.to_str().unwrap(),
-            )
-        };
+        unsafe { std::env::set_var("HOME", CStr::from_ptr(home_dir).to_str().unwrap()) };
     }
     // TODO: Audit that the environment access only happens in single-threaded code.
     unsafe { std::env::set_var("USER", user) };

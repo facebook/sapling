@@ -3,7 +3,7 @@
 # fix the mercurial code to use fbcode-relative includes.
 #
 
-load("@fbcode//eden/scm:targets.bzl", "fetch_as_eden", "gen_hgpython", "hg_binary")
+load("@fbcode//eden/scm:targets.bzl", "gen_hgpython", "hg_binary")
 load("@fbcode_macros//build_defs:cpp_binary.bzl", "cpp_binary")
 load("@fbcode_macros//build_defs:cpp_library.bzl", "cpp_library")
 load("@fbcode_macros//build_defs:export_files.bzl", "export_file")
@@ -181,10 +181,6 @@ hg_binary(
     link_group_min_binary_node_count = select({
         "DEFAULT": None,
         "ovr_config//build_mode/constraints:dev": PYTHON_EXTREME_LINK_GROUP_THRESHOLD,
-    }),
-    named_deps = select({
-        "DEFAULT": {},
-        "ovr_config//os:linux": {} if rust_oss.is_oss_build() else ({"cas_client": "//eden/scm/lib/cas-client/rich-client:rich-cas-client"} if fetch_as_eden() else {"cas_client": "//eden/scm/lib/cas-client/thin-client:thin-cas-client"}),
     }),
 )
 

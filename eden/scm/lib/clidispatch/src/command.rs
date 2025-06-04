@@ -34,6 +34,7 @@ pub struct CommandDefinition {
     flags_func: fn() -> Vec<Flag>,
     func: CommandFunc,
     synopsis: Option<String>,
+    enable_cas: bool,
 }
 
 impl CommandDefinition {
@@ -43,6 +44,7 @@ impl CommandDefinition {
         flags_func: fn() -> Vec<Flag>,
         func: CommandFunc,
         synopsis: Option<impl ToString>,
+        enable_cas: bool,
     ) -> Self {
         CommandDefinition {
             aliases: aliases.to_string(),
@@ -50,6 +52,7 @@ impl CommandDefinition {
             flags_func,
             func,
             synopsis: synopsis.map(|s| s.to_string()),
+            enable_cas,
         }
     }
 
@@ -77,6 +80,10 @@ impl CommandDefinition {
         self.aliases
             .split('|')
             .find_map(|a| a.strip_prefix("legacy:"))
+    }
+
+    pub fn enable_cas(&self) -> bool {
+        self.enable_cas
     }
 }
 
@@ -129,7 +136,14 @@ impl Deref for CommandTable {
 }
 
 pub trait Register<FN, T> {
-    fn register(&mut self, f: FN, aliases: &str, doc: &str, synopsis: Option<&str>);
+    fn register(
+        &mut self,
+        f: FN,
+        aliases: &str,
+        doc: &str,
+        synopsis: Option<&str>,
+        enable_cas: bool,
+    );
 }
 
 // OptionalRepo commands.
@@ -138,7 +152,14 @@ where
     S: TryFrom<ParseOutput, Error = anyhow::Error> + StructFlags,
     FN: Fn(ReqCtx<S>, Option<&Repo>) -> Result<u8> + 'static,
 {
-    fn register(&mut self, f: FN, aliases: &str, doc: &str, synopsis: Option<&str>) {
+    fn register(
+        &mut self,
+        f: FN,
+        aliases: &str,
+        doc: &str,
+        synopsis: Option<&str>,
+        enable_cas: bool,
+    ) {
         self.insert_aliases(aliases);
         let func = move |opts: ParseOutput, io: &IO, repo: &OptionalRepo| {
             f(
@@ -147,7 +168,7 @@ where
             )
         };
         let func = CommandFunc::OptionalRepo(Box::new(func));
-        let def = CommandDefinition::new(aliases, doc, S::flags, func, synopsis);
+        let def = CommandDefinition::new(aliases, doc, S::flags, func, synopsis, enable_cas);
         self.commands.insert(aliases.to_string(), def);
     }
 }
@@ -158,13 +179,20 @@ where
     S: TryFrom<ParseOutput, Error = anyhow::Error> + StructFlags,
     FN: Fn(ReqCtx<S>, &Repo) -> Result<u8> + 'static,
 {
-    fn register(&mut self, f: FN, aliases: &str, doc: &str, synopsis: Option<&str>) {
+    fn register(
+        &mut self,
+        f: FN,
+        aliases: &str,
+        doc: &str,
+        synopsis: Option<&str>,
+        enable_cas: bool,
+    ) {
         self.insert_aliases(aliases);
         let func = move |opts: ParseOutput, io: &IO, repo: &Repo| {
             f(ReqCtx::new(repo.config().clone(), opts, io.clone())?, repo)
         };
         let func = CommandFunc::Repo(Box::new(func));
-        let def = CommandDefinition::new(aliases, doc, S::flags, func, synopsis);
+        let def = CommandDefinition::new(aliases, doc, S::flags, func, synopsis, enable_cas);
         self.commands.insert(aliases.to_string(), def);
     }
 }
@@ -175,13 +203,20 @@ where
     S: TryFrom<ParseOutput, Error = anyhow::Error> + StructFlags,
     FN: Fn(ReqCtx<S>) -> Result<u8> + 'static,
 {
-    fn register(&mut self, f: FN, aliases: &str, doc: &str, synopsis: Option<&str>) {
+    fn register(
+        &mut self,
+        f: FN,
+        aliases: &str,
+        doc: &str,
+        synopsis: Option<&str>,
+        enable_cas: bool,
+    ) {
         self.insert_aliases(aliases);
         let func = move |opts: ParseOutput, io: &IO, config: &Arc<dyn Config>| {
             f(ReqCtx::new(config.clone(), opts, io.clone())?)
         };
         let func = CommandFunc::NoRepo(Box::new(func));
-        let def = CommandDefinition::new(aliases, doc, S::flags, func, synopsis);
+        let def = CommandDefinition::new(aliases, doc, S::flags, func, synopsis, enable_cas);
         self.commands.insert(aliases.to_string(), def);
     }
 }
@@ -192,7 +227,14 @@ where
     S: TryFrom<ParseOutput, Error = anyhow::Error> + StructFlags,
     FN: Fn(ReqCtx<S>, &Repo, &WorkingCopy) -> Result<u8> + 'static,
 {
-    fn register(&mut self, f: FN, aliases: &str, doc: &str, synopsis: Option<&str>) {
+    fn register(
+        &mut self,
+        f: FN,
+        aliases: &str,
+        doc: &str,
+        synopsis: Option<&str>,
+        enable_cas: bool,
+    ) {
         self.insert_aliases(aliases);
         let func = move |opts: ParseOutput, io: &IO, repo: &Repo, working_copy: &WorkingCopy| {
             f(
@@ -202,7 +244,7 @@ where
             )
         };
         let func = CommandFunc::WorkingCopy(Box::new(func));
-        let def = CommandDefinition::new(aliases, doc, S::flags, func, synopsis);
+        let def = CommandDefinition::new(aliases, doc, S::flags, func, synopsis, enable_cas);
         self.commands.insert(aliases.to_string(), def);
     }
 }

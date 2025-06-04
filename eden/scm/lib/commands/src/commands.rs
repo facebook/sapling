@@ -14,7 +14,8 @@ macro_rules! external_commands {
                 let command_aliases = m::aliases();
                 let doc = m::doc();
                 let synopsis = m::synopsis();
-                ::clidispatch::command::Register::register(table, m::run, &command_aliases, &doc, synopsis.as_deref());
+                let enable_cas = m::enable_cas();
+                ::clidispatch::command::Register::register(table, m::run, &command_aliases, &doc, synopsis.as_deref(), enable_cas);
             }
             )*
         }

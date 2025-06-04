@@ -450,6 +450,11 @@ impl Dispatcher {
                 self.convert_to_repoless_config()?;
             }
 
+            #[cfg(feature = "cas")]
+            if handler.enable_cas() {
+                cas_client::init();
+            }
+
             hooks.run_pre(self.repo(), &self.args[1..])?;
 
             let res = match handler.func() {

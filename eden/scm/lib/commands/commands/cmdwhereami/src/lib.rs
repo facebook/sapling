@@ -42,3 +42,7 @@ If there are two parents, both will be emitted, newline separated.
 pub fn synopsis() -> Option<&'static str> {
     None
 }
+
+pub fn enable_cas() -> bool {
+    false
+}
