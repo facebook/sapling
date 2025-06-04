@@ -375,7 +375,7 @@ pub fn split_fbsource_file_path(file_path: &Path) -> (PathBuf, PathBuf) {
     let parts: Vec<_> = file_path.iter().collect();
     let fbsource_idx = file_path
         .iter()
-        .position(|s| s == "fbsource")
+        .position(|s| s.to_string_lossy().starts_with("fbsource"))
         .expect("fbsource not found in path");
     let repo_path: PathBuf = parts[..=fbsource_idx].iter().collect();
     let rel_file_path: PathBuf = parts[fbsource_idx + 1..].iter().collect();
