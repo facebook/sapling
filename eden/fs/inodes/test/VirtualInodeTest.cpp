@@ -9,7 +9,6 @@
 #include <folly/Random.h>
 #include <folly/executors/ManualExecutor.h>
 #include <folly/test/TestUtils.h>
-#include <gflags/gflags.h>
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
 

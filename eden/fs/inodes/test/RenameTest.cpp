@@ -17,7 +17,6 @@
 #include "eden/fs/store/ObjectFetchContext.h"
 #include "eden/fs/testharness/FakeTreeBuilder.h"
 #include "eden/fs/testharness/TestMount.h"
-#include "eden/fs/testharness/TestUtil.h"
 
 using namespace std::chrono_literals;
 using namespace facebook::eden;

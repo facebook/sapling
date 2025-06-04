@@ -38,7 +38,6 @@
 #include "eden/fs/testharness/FakeTreeBuilder.h"
 #include "eden/fs/testharness/TestChecks.h"
 #include "eden/fs/testharness/TestMount.h"
-#include "eden/fs/testharness/TestUtil.h"
 
 using namespace folly::string_piece_literals;
 

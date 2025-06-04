@@ -318,7 +318,6 @@ cpp_unittest(
         "//eden/fs/testharness:fake_backing_store_and_tree_builder",
         "//eden/fs/testharness:test_checks",
         "//eden/fs/testharness:test_mount",
-        "//eden/fs/testharness:test_util",
         "//folly:exception",
         "//folly:expected",
         "//folly:file_util",
@@ -375,7 +374,6 @@ cpp_unittest(
         "//eden/fs/store:context",
         "//eden/fs/testharness:fake_backing_store_and_tree_builder",
         "//eden/fs/testharness:test_mount",
-        "//eden/fs/testharness:test_util",
         "//folly:string",
         "//folly/test:test_utils",
     ],
@@ -391,7 +389,6 @@ cpp_unittest(
         "//eden/fs/store:context",
         "//eden/fs/testharness:fake_backing_store_and_tree_builder",
         "//eden/fs/testharness:test_mount",
-        "//eden/fs/testharness:test_util",
         "//folly:string",
         "//folly/test:test_utils",
     ],
@@ -431,9 +428,6 @@ cpp_unittest(
         "//folly/executors:manual_executor",
         "//folly/test:test_utils",
     ],
-    external_deps = [
-        "gflags",
-    ],
 )
 
 cpp_unittest(
@@ -461,9 +455,6 @@ cpp_unittest(
         "//folly:random",
         "//folly/executors:manual_executor",
         "//folly/test:test_utils",
-    ],
-    external_deps = [
-        "gflags",
     ],
 )
 

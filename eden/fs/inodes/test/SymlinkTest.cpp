@@ -20,7 +20,6 @@
 #include "eden/fs/testharness/FakeBackingStore.h"
 #include "eden/fs/testharness/FakeTreeBuilder.h"
 #include "eden/fs/testharness/TestMount.h"
-#include "eden/fs/testharness/TestUtil.h"
 
 using namespace facebook::eden;
 using folly::StringPiece;
