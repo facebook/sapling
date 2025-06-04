@@ -36,7 +36,7 @@ Set up fake cert paths so we don't hit "missing certs" error.
     no server connectivity: TCP error: test
   
   Original error:
-  [6] Couldn't resolve host name (Could not resolve host: test_fail)
+  \[6\] (Could not|Couldn't) resolve (hostname|host name) \(Could not resolve host: test_fail\) (re)
   [1]
 
 
@@ -53,9 +53,9 @@ Works for native rust commands as well.
   
   Original error:
   
-  Network Error: [6] Couldn't resolve host name (Could not resolve host: test_fail)
+  Network Error: \[6\] (Could not|Couldn't) resolve (hostname|host name) \(Could not resolve host: test_fail\) (re)
   
   Caused by:
-      [6] Couldn't resolve host name (Could not resolve host: test_fail)
+      \[6\] (Could not|Couldn't) resolve (hostname|host name) \(Could not resolve host: test_fail\) (re)
   
   Stack backtrace:
