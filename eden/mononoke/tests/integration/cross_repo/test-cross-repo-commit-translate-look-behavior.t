@@ -77,10 +77,6 @@ Before the change
 
 # Show the initial small commit mapped to large repo and the second commit made in large repo 
 # point to the same small repo commit
-  $ x_repo_lookup large-mon small-mon $LARGE_REPO_ONLY_COMMIT
-  fe2cc102ee42147f9f2f2095f649efe7aa559f0d
-  $ x_repo_lookup large-mon small-mon $LARGE_REPO_MAPPED_COMMIT
-  fe2cc102ee42147f9f2f2095f649efe7aa559f0d
 # No lookup behavior specified; defaults to None
   $ hg debugapi -e committranslateids -i "[{'Hg': '$LARGE_REPO_ONLY_COMMIT'}]" -i "'Hg'" -i "'large-mon'" -i "'small-mon'"
   [{"commit": {"Hg": bin("54ab50dcc6a97355f6ccbe8bdcd64c2ebb7d82d0")},
@@ -108,3 +104,10 @@ Before the change
       "content-length": "*", (glob)
   }
   [255]
+# x_repo_lookup
+  $ x_repo_lookup large-mon small-mon $LARGE_REPO_ONLY_COMMIT "exact"
+  []
+  $ x_repo_lookup large-mon small-mon $LARGE_REPO_MAPPED_COMMIT "equivalent"
+  fe2cc102ee42147f9f2f2095f649efe7aa559f0d
+  $ x_repo_lookup large-mon small-mon $LARGE_REPO_MAPPED_COMMIT None
+  fe2cc102ee42147f9f2f2095f649efe7aa559f0d

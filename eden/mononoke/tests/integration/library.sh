@@ -1738,10 +1738,21 @@ function x_repo_lookup() {
   SOURCE_REPO="$1"
   TARGET_REPO="$2"
   HASH="$3"
-  TRANSLATED=$(hg debugapi -e committranslateids -i "[{'Hg': '$HASH'}]" -i "'Hg'" -i "'$SOURCE_REPO'" -i "'$TARGET_REPO'" -i "'equivalent'")
-  hg debugshell <<EOF
+  LOOKUP_BEHAVIOR="${4:-}"
+  if [ -z "$LOOKUP_BEHAVIOR" ]; then
+    TRANSLATED=$(hg debugapi -e committranslateids -i "[{'Hg': '$HASH'}]" -i "'Hg'" -i "'$SOURCE_REPO'" -i "'$TARGET_REPO'")
+  elif [ "$LOOKUP_BEHAVIOR" = "None" ]; then
+    TRANSLATED=$(hg debugapi -e committranslateids -i "[{'Hg': '$HASH'}]" -i "'Hg'" -i "'$SOURCE_REPO'" -i "'$TARGET_REPO'" -i None)
+  else
+    TRANSLATED=$(hg debugapi -e committranslateids -i "[{'Hg': '$HASH'}]" -i "'Hg'" -i "'$SOURCE_REPO'" -i "'$TARGET_REPO'" -i "'$LOOKUP_BEHAVIOR'")
+  fi
+  if [ -n "$TRANSLATED" ] && [ "${TRANSLATED}" != "[]" ]; then
+    hg debugshell <<EOF
 print(hex(${TRANSLATED}[0]["translated"]["Hg"]))
 EOF
+  else
+    echo "[]"
+  fi
 }
 
 function async_worker_enqueue() {
