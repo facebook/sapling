@@ -8,7 +8,7 @@ rust_library(
     deps = [
         "fbsource//third-party/rust:anyhow",
         "fbsource//third-party/rust:gotham",
-        "fbsource//third-party/rust:hyper",
+        "fbsource//third-party/rust:hyper-0-14",
         "fbsource//third-party/rust:tokio",
         "//common/rust/gflags:gflags",
         "//common/rust/shed/fbinit:fbinit",

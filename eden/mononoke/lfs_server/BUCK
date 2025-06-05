@@ -27,7 +27,7 @@ rust_binary(
         "fbsource//third-party/rust:gotham",
         "fbsource//third-party/rust:gotham_derive",
         "fbsource//third-party/rust:http",
-        "fbsource//third-party/rust:hyper",
+        "fbsource//third-party/rust:hyper-0-14",
         "fbsource//third-party/rust:hyper-openssl",
         "fbsource//third-party/rust:maplit",
         "fbsource//third-party/rust:mime",

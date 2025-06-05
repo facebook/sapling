@@ -35,7 +35,7 @@ rust_library(
         "fbsource//third-party/rust:bytes",
         "fbsource//third-party/rust:fancy-regex",
         "fbsource//third-party/rust:futures",
-        "fbsource//third-party/rust:hyper",
+        "fbsource//third-party/rust:hyper-0-14",
         "fbsource//third-party/rust:hyper-tls",
         "fbsource//third-party/rust:ipnetwork",
         "fbsource//third-party/rust:itertools",
