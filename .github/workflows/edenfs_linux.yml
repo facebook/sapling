@@ -2,7 +2,8 @@
 
 name: EdenFS Linux
 
-on: {}
+on:
+  workflow_dispatch
 
 permissions:
   contents: read  #  to fetch code (actions/checkout)

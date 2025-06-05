@@ -1,6 +1,7 @@
 name: EdenSCM Rust Libraries
 
-on: {}
+on:
+  workflow_dispatch
 
 jobs:
   build:

@@ -2,7 +2,8 @@ name: Verify addons/ folder
 env:
   CI: false
 
-on: {}
+on:
+  public
 
 jobs:
   verify-addons:

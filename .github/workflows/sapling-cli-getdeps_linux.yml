@@ -2,7 +2,8 @@
 
 name: Sapling CLI Getdeps Linux
 
-on: {}
+on:
+  public
 
 permissions:
   contents: read  #  to fetch code (actions/checkout)
