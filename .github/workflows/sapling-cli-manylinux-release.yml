@@ -9,39 +9,34 @@ jobs:
   build:
     strategy:
       matrix:
-        runs-on: [ubuntu-latest, ubuntu-24.04-arm]
+        include:
+          - runs-on: ubuntu-latest
+            arch: x64
+          - runs-on: ubuntu-24.04-arm
+            arch: arm64
     runs-on: ${{ matrix.runs-on }}
     container:
       image: ${{ format('ghcr.io/{0}/manylinux_2_34:latest', github.repository) }}
     steps:
     - name: Checkout Code
-      uses: actions/checkout@v3
-    - name: Grant Access
+      uses: actions/checkout@v4
+    - name: Configure Git
       run: git config --global --add safe.directory "$PWD"
     - name: rustup
       run: rustup default stable
     - name: Set SAPLING_VERSION
       shell: bash
       run: echo "SAPLING_VERSION=$(ci/tag-name.sh)" >> $GITHUB_ENV
-    - name: Set ARCH
-      shell: bash
-      run: |
-        case "${{ matrix.runs-on }}" in
-          "ubuntu-latest")
-            echo "ARCH=x64" ;;
-          "ubuntu-24.04-arm")
-            echo "ARCH=arm64" ;;
-        esac >> $GITHUB_ENV
     - name: Build
       working-directory: ./eden/scm
       run: ${{ format('VERSION={0} python3 ./packaging/manylinux/build.py', env.SAPLING_VERSION) }}
     - name: Rename .tar.xz
       working-directory: ./eden/scm
-      run: ${{ format('mv sapling-manylinux.tar.xz sapling-{0}-linux-{1}.tar.xz', env.SAPLING_VERSION, env.ARCH) }}
+      run: ${{ format('mv sl-manylinux.tar.xz sapling-{0}-linux-{1}.tar.xz', env.SAPLING_VERSION, matrix.arch) }}
     - name: Upload Artifact
       uses: actions/upload-artifact@v4
       with:
-        name: linux-${{ env.ARCH }}-tarball
+        name: sapling-linux-${{ matrix.arch }}
         path: ./eden/scm/sapling*.tar.xz
   publish:
     runs-on: ubuntu-latest
@@ -52,9 +47,10 @@ jobs:
     - name: Grant Access
       run: git config --global --add safe.directory "$PWD"
     - name: Download Artifacts
-      uses: actions/download-artifact@v4.1.7
+      uses: actions/download-artifact@v4
       with:
-        pattern: sapling*.tar.xz
+        pattern: sapling-linux-*
+        merge-multiple: true
     - name: Create pre-release
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -64,4 +60,6 @@ jobs:
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       shell: bash
-      run: bash ci/retry.sh gh release upload --clobber $(ci/tag-name.sh) sapling*.tar.xz
+      run: |
+        find . | grep tar.xz
+        bash ci/retry.sh gh release upload --clobber $(ci/tag-name.sh) sapling*.tar.xz
