@@ -13,6 +13,7 @@ export default async function queryGraphQL<TData, TVariables>(
   query: string,
   variables: TVariables,
   hostname: string,
+  timeoutMs?: number,
 ): Promise<TData> {
   if (Object.prototype.hasOwnProperty.call(variables, 'query')) {
     throw Error('cannot have a variable named query');
@@ -38,12 +39,29 @@ export default async function queryGraphQL<TData, TVariables>(
   args.push('--hostname', hostname);
   args.push('-f', `query=${query}`);
 
+  let timedOut = false;
+
   try {
-    const {stdout} = await ejeca('gh', args, {
+    const proc = ejeca('gh', args, {
       env: {
         ...((await Internal.additionalGhEnvVars?.()) ?? {}),
       },
     });
+
+    // TODO: move this into ejeca itself
+    let timeoutId: NodeJS.Timeout | undefined;
+    if (timeoutMs != null && timeoutMs > 0) {
+      timeoutId = setTimeout(() => {
+        proc.kill('SIGTERM', {forceKillAfterTimeout: 5_000});
+        timedOut = true;
+      }, timeoutMs);
+      proc.on('exit', () => {
+        clearTimeout(timeoutId);
+      });
+    }
+
+    const {stdout} = await proc;
+
     const json = JSON.parse(stdout);
 
     if (Array.isArray(json.errors)) {
@@ -63,6 +81,9 @@ export default async function queryGraphQL<TData, TVariables>(
         // `gh` CLI exit code 4 => authentication issue
         throw new Error(`NotAuthenticatedError: ${(error as Error).stack}`);
       }
+    }
+    if (timedOut) {
+      throw new Error(`TimedOutError: ${(error as Error).stack}`);
     }
     throw error;
   }

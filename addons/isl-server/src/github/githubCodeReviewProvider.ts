@@ -90,6 +90,7 @@ export class GitHubCodeReviewProvider implements CodeReviewProvider {
         const data = await this.query<MergeQueueSupportQueryData, MergeQueueSupportQueryVariables>(
           MergeQueueSupportQuery,
           {},
+          10_000,
         ).catch(err => {
           this.logger.info('failed to detect merge queue support', err);
           return undefined;
@@ -232,8 +233,8 @@ export class GitHubCodeReviewProvider implements CodeReviewProvider {
     );
   }
 
-  private query<D, V>(query: string, variables: V): Promise<D | undefined> {
-    return queryGraphQL<D, V>(query, variables, this.codeReviewSystem.hostname);
+  private query<D, V>(query: string, variables: V, timeoutMs?: number): Promise<D | undefined> {
+    return queryGraphQL<D, V>(query, variables, this.codeReviewSystem.hostname, timeoutMs);
   }
 
   public dispose() {
