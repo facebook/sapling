@@ -16,3 +16,4 @@ sapling-zstdelta = { version = "0.1.0", path = "../zstdelta" }
 
 [build-dependencies]
 codegen = { version = "0.1.0", path = "codegen" }
+sapling-python-sysconfig = { version = "0.1.0", path = "../util/python-sysconfig" }
