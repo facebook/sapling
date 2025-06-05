@@ -2738,14 +2738,22 @@ ImmediateFuture<uint64_t> EdenServer::garbageCollectWorkingCopy(
   }
 
   auto mountPath = mount.getPath();
-  XLOGF(DBG1, "Starting GC for: {}", mountPath);
+  auto inodeCountsBeforeGC = mount.getInodeMap()->getInodeCounts();
+  auto totalNumberOfInodesBeforeGC = inodeCountsBeforeGC.fileCount +
+      inodeCountsBeforeGC.treeCount + inodeCountsBeforeGC.unloadedInodeCount;
+  XLOGF(
+      DBG1,
+      "Starting GC for: {} total number of inodes {}",
+      mountPath,
+      totalNumberOfInodesBeforeGC);
   return inode->invalidateChildrenNotMaterialized(cutoff, context)
       .ensure([inode, lease = std::move(lease)] {
         inode->unloadChildrenUnreferencedByFs();
       })
       .thenTry([workingCopyRuntime,
                 structuredLogger = structuredLogger_,
-                mountPath = std::move(mountPath)](
+                mountPath,
+                inodeMap = mount.getInodeMap()](
                    folly::Try<uint64_t> numInvalidatedTry) {
         auto runtime =
             std::chrono::duration<double>{workingCopyRuntime.elapsed()};
@@ -2755,13 +2763,17 @@ ImmediateFuture<uint64_t> EdenServer::garbageCollectWorkingCopy(
             success ? folly::to_signed(numInvalidatedTry.value()) : 0;
         structuredLogger->logEvent(
             WorkingCopyGc{runtime.count(), numInvalidated, success});
-
+        auto inodeCountsAfterGC = inodeMap->getInodeCounts();
+        auto totalNumberOfInodesAfterGC = inodeCountsAfterGC.fileCount +
+            inodeCountsAfterGC.treeCount +
+            inodeCountsAfterGC.unloadedInodeCount;
         XLOGF(
             DBG1,
-            "GC for: {}, completed in: {} seconds and invalidated {} inodes",
+            "GC for: {}, completed in: {} seconds and invalidated {} inodes, total number of inodes {}",
             mountPath,
             runtime.count(),
-            numInvalidated);
+            numInvalidated,
+            totalNumberOfInodesAfterGC);
 
         return numInvalidatedTry;
       });
