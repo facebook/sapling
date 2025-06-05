@@ -66,7 +66,7 @@ type GitHubCodeReviewSystem = CodeReviewSystem & {type: 'github'};
 export class GitHubCodeReviewProvider implements CodeReviewProvider {
   constructor(private codeReviewSystem: GitHubCodeReviewSystem, private logger: Logger) {}
   private diffSummaries = new TypedEventEmitter<'data', Map<DiffId, GitHubDiffSummary>>();
-  private hasMergeQueueSupport: boolean | null = null;
+  private hasMergeQueueSupport: Promise<boolean> | null = null;
 
   onChangeDiffSummaries(
     callback: (result: Result<Map<DiffId, GitHubDiffSummary>>) => unknown,
@@ -83,12 +83,23 @@ export class GitHubCodeReviewProvider implements CodeReviewProvider {
     };
   }
 
-  private async detectMergeQueueSupport(): Promise<boolean> {
-    const data = await this.query<MergeQueueSupportQueryData, MergeQueueSupportQueryVariables>(
-      MergeQueueSupportQuery,
-      {},
-    );
-    return data?.__type != null;
+  private detectMergeQueueSupport(): Promise<boolean> {
+    if (this.hasMergeQueueSupport == null) {
+      this.hasMergeQueueSupport = (async (): Promise<boolean> => {
+        this.logger.info('detecting if merge queue is supported');
+        const data = await this.query<MergeQueueSupportQueryData, MergeQueueSupportQueryVariables>(
+          MergeQueueSupportQuery,
+          {},
+        ).catch(err => {
+          this.logger.info('failed to detect merge queue support', err);
+          return undefined;
+        });
+        const hasMergeQueueSupport = data?.__type != null;
+        this.logger.info('set merge queue support to ' + hasMergeQueueSupport);
+        return hasMergeQueueSupport;
+      })();
+    }
+    return this.hasMergeQueueSupport;
   }
 
   private fetchYourPullRequestsGraphQL(
@@ -117,13 +128,9 @@ export class GitHubCodeReviewProvider implements CodeReviewProvider {
   triggerDiffSummariesFetch = debounce(
     async () => {
       try {
-        if (this.hasMergeQueueSupport == null) {
-          this.logger.info('detecting if merge queue is supported');
-          this.hasMergeQueueSupport = (await this.detectMergeQueueSupport()) ?? false;
-          this.logger.info('set merge queue support to ' + this.hasMergeQueueSupport);
-        }
+        const hasMergeQueueSupport = await this.detectMergeQueueSupport();
         this.logger.info('fetching github PR summaries');
-        const allSummaries = await this.fetchYourPullRequestsGraphQL(this.hasMergeQueueSupport);
+        const allSummaries = await this.fetchYourPullRequestsGraphQL(hasMergeQueueSupport);
         if (allSummaries?.search.nodes == null) {
           this.diffSummaries.emit('data', new Map());
           return;
