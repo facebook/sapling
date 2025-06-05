@@ -7,6 +7,7 @@
 
 mod derive;
 mod mapping;
+mod similarity;
 #[cfg(test)]
 mod tests;
 
