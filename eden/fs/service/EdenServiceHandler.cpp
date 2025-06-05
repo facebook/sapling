@@ -5590,18 +5590,8 @@ EdenServiceHandler::semifuture_debugInvalidateNonMaterialized(
               })
           .thenValue([this, mountHandle, cutoff, &fetchContext](
                          TreeInodePtr inode) mutable {
-            if (inode == mountHandle.getRootInode()) {
-              return server_->garbageCollectWorkingCopy(
-                  mountHandle.getEdenMount(),
-                  mountHandle.getRootInode(),
-                  cutoff,
-                  fetchContext);
-            } else {
-              return inode
-                  ->invalidateChildrenNotMaterialized(cutoff, fetchContext)
-                  .ensure(
-                      [inode]() { inode->unloadChildrenUnreferencedByFs(); });
-            }
+            return server_->garbageCollectWorkingCopy(
+                mountHandle.getEdenMount(), inode, cutoff, fetchContext);
           })
           .thenValue([](uint64_t numInvalidated) {
             auto ret = std::make_unique<DebugInvalidateResponse>();

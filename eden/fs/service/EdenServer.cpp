@@ -2723,12 +2723,12 @@ void EdenServer::manageOverlay() {
 
 ImmediateFuture<uint64_t> EdenServer::garbageCollectWorkingCopy(
     EdenMount& mount,
-    TreeInodePtr rootInode,
+    TreeInodePtr inode,
     std::chrono::system_clock::time_point cutoff,
     const ObjectFetchContextPtr& context) {
   folly::stop_watch<> workingCopyRuntime;
 
-  auto lease = mount.tryStartWorkingCopyGC(rootInode);
+  auto lease = mount.tryStartWorkingCopyGC(inode);
   if (!lease) {
     XLOGF(
         DBG6,
@@ -2739,9 +2739,9 @@ ImmediateFuture<uint64_t> EdenServer::garbageCollectWorkingCopy(
 
   auto mountPath = mount.getPath();
   XLOGF(DBG1, "Starting GC for: {}", mountPath);
-  return rootInode->invalidateChildrenNotMaterialized(cutoff, context)
-      .ensure([rootInode, lease = std::move(lease)] {
-        rootInode->unloadChildrenUnreferencedByFs();
+  return inode->invalidateChildrenNotMaterialized(cutoff, context)
+      .ensure([inode, lease = std::move(lease)] {
+        inode->unloadChildrenUnreferencedByFs();
       })
       .thenTry([workingCopyRuntime,
                 structuredLogger = structuredLogger_,
