@@ -1,5 +1,5 @@
 # https://github.com/pypa/manylinux base image that work in many Linux distros
-FROM quay.io/pypa/manylinux_2_34_x86_64 AS base
+FROM quay.io/pypa/manylinux_2_34 AS base
 
 # Paths used by the below scripts.
 ENV PYTHON_SYS_EXECUTABLE=/opt/python/cp312-cp312/bin/python3.12
