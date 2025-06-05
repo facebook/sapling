@@ -26,6 +26,9 @@ sapling-hook = { version = "0.1.0", path = "../../hook" }
 sapling-nodeipc = { version = "0.1.0", path = "../../util/nodeipc" }
 tracing = { version = "0.1.41", features = ["attributes", "valuable"] }
 
+[build-dependencies]
+sapling-python-sysconfig = { version = "0.1.0", path = "../../util/python-sysconfig" }
+
 [features]
 default = []
 fb = []
