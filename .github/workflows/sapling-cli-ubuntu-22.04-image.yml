@@ -27,3 +27,17 @@ jobs:
         push: true
         platforms: linux/amd64,linux/arm64
         tags: ${{ format('ghcr.io/{0}/build_ubuntu_22_04:latest', github.repository) }}
+    - name: Delete unused images
+      uses: actions/delete-package-versions@v5
+      with:
+        package-name: sapling/build_ubuntu_22_04
+        package-type: container
+        min-versions-to-keep: 0
+        delete-only-untagged-versions: true
+    - name: Delete unused images (Ubuntu 20.04)
+      uses: actions/delete-package-versions@v5
+      with:
+        package-name: sapling/build_ubuntu_20_04
+        package-type: container
+        min-versions-to-keep: 0
+        delete-only-untagged-versions: true
