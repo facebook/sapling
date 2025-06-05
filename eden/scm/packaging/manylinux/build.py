@@ -46,11 +46,10 @@ def is_dynamic_linked_to_python(sl_path):
     return "libpython" in ldd_out
 
 
-def get_sl_python_version(sl_path):
+def get_python_version(python_exe_path):
     out = subprocess.check_output(
         [
-            sl_path,
-            "debugpython",
+            python_exe_path,
             "-c",
             "import sys; print(f'{sys.version_info.major}.{sys.version_info.minor}')",
         ]
@@ -58,15 +57,16 @@ def get_sl_python_version(sl_path):
     return out.decode("utf-8").strip()
 
 
-def add_python_native_stdlib(sl_path, src, tar):
+def add_python_native_stdlib(python_prefix, tar):
     # ex. "3.12"
-    version = get_sl_python_version(sl_path)
-    src_python_native_lib_dir = os.path.join(src, f"lib/python{version}/lib-dynload")
+    version = get_python_version(os.path.join(python_prefix, "bin/python"))
+    rel_python_native_lib_dir = f"lib/python{version}/lib-dynload"
+    src_python_native_lib_dir = os.path.join(python_prefix, rel_python_native_lib_dir)
     if not os.path.isdir(src_python_native_lib_dir):
         raise RuntimeError(
             f"Missing native python library at {src_python_native_lib_dir}"
         )
-    tar.add(src_python_native_lib_dir, arcname=f"lib/python{version}/lib-dynload")
+    tar.add(src_python_native_lib_dir, arcname=rel_python_native_lib_dir)
 
 
 def build_sl_and_isl(python_prefix):
@@ -114,8 +114,9 @@ def main():
         add_stripped_sl_binary(sl_path, tar)
         if not is_dynamic_linked_to_python(sl_path):
             # Pure Python modules are part of the binary (lib/python-modules).
-            # Only add native modules.
-            add_python_native_stdlib(sl_path, python_prefix, tar)
+            # Only add native modules. This is to make the main binary run on
+            # other systems where the original python prefix doesn't exist.
+            add_python_native_stdlib(python_prefix, tar)
         tar.add(isl_path, arcname="isl-dist.tar.xz")
 
     os.rename(tmp_output_path, output_path)
