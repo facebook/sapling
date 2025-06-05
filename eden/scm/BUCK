@@ -137,10 +137,13 @@ hg_binary(
                     }},
                 },
             },
-            "extra_buck_dependencies": {"dependencies": [
-                (None, "//common/rust/shed/fbinit:fbinit"),
-                ("configparser", "//eden/scm/lib/config/loader:configloader"),
-            ]},
+            "extra_buck_dependencies": {
+                "build-dependencies": ["//eden/scm/lib/util/python-sysconfig:python-sysconfig"],
+                "dependencies": [
+                    (None, "//common/rust/shed/fbinit:fbinit"),
+                    ("configparser", "//eden/scm/lib/config/loader:configloader"),
+                ],
+            },
             "features": {
                 "buildinfo": [],
                 "default": [],
