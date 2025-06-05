@@ -76,7 +76,17 @@ fn frozen_module(cname: &'static [u8]) -> ffi::_frozen {
     frozen.code = code.as_ptr() as _;
     frozen.size = code.len() as _;
     // `is_package` requires Python 3.12
-    // frozen.is_package = module.is_package() as _;
+    #[cfg(python_since_3_12)]
+    {
+        frozen.is_package = module.is_package() as _;
+    }
+    // Python < 3.12 uses a negative "size" to indicate a package.
+    #[cfg(not(python_since_3_12))]
+    {
+        if module.is_package() {
+            frozen.size = -frozen.size;
+        }
+    }
     frozen
 }
 

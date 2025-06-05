@@ -12,5 +12,9 @@ fn main() {
             // Tell cmdpy to configure Python to use relative stdlib.
             println!("cargo:rustc-cfg=static_libpython");
         }
+        let version = sysconfig.version();
+        if version >= (3, 12) {
+            println!("cargo:rustc-cfg=python_since_3_12");
+        }
     }
 }
