@@ -95,6 +95,7 @@ export type TrackEventName =
   | 'PhabricatorCommentsShowInEditor'
   | 'PhabricatorCommentsInsetHide'
   | 'PhabricatorCommentsInsetShow'
+  | 'PhabricatorCommentsAIResolve'
   | 'PhabricatorRollbackPlanEvent'
   | 'PrSubmitOperation'
   | 'PullOperation'
