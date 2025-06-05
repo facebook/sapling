@@ -27,27 +27,51 @@ use mononoke_types::ChangesetId;
 use mononoke_types::ContentId;
 use mononoke_types::MPath;
 use mononoke_types::NonRootMPath;
+use mononoke_types::fsnode::FsnodeFile;
 use mononoke_types::inferred_copy_from::InferredCopyFrom;
 use mononoke_types::inferred_copy_from::InferredCopyFromEntry;
 use vec1::Vec1;
 
 const BASENAME_MATCH_MAX_CANDIDATES: usize = 10_000;
 
-// It's possible to have multiple source files that match,
-// pick the one with the smallest path
-fn pick_source_from_candidates(
-    candidates: &[(ChangesetId, MPath)],
-) -> Option<&(ChangesetId, MPath)> {
-    candidates.iter().min_by_key(|(_, mpath)| mpath.clone())
+struct CopyFromCandidate {
+    cs_id: ChangesetId,
+    path: MPath,
+    #[allow(unused)]
+    fsnode: FsnodeFile,
 }
 
-async fn get_content_to_paths_from_changeset(
+// It's possible to have multiple source files that match,
+// pick the one with the smallest path
+fn pick_source_from_candidates(candidates: &[CopyFromCandidate]) -> &CopyFromCandidate {
+    candidates
+        .iter()
+        .min_by_key(|c| c.path.clone())
+        .unwrap_or_else(|| panic!("There should be at least one candidate"))
+}
+
+fn flatten_candidates(
+    maps: Vec<HashMap<ContentId, Vec<CopyFromCandidate>>>,
+) -> HashMap<ContentId, Vec<CopyFromCandidate>> {
+    let mut merged = HashMap::new();
+    for map in maps {
+        for (content_id, candidates) in map {
+            merged
+                .entry(content_id)
+                .or_insert(vec![])
+                .extend(candidates)
+        }
+    }
+    merged
+}
+
+async fn get_candidates_from_changeset(
     ctx: &CoreContext,
     derivation_ctx: &DerivationContext,
     cs_id: ChangesetId,
     paths: Vec<NonRootMPath>,
-) -> Result<HashMap<ContentId, Vec<(ChangesetId, MPath)>>> {
-    let mut content_to_paths = HashMap::new();
+) -> Result<HashMap<ContentId, Vec<CopyFromCandidate>>> {
+    let mut content_to_candidates = HashMap::new();
 
     let entries = derivation_ctx
         .fetch_dependency::<RootFsnodeId>(ctx, cs_id)
@@ -58,14 +82,18 @@ async fn get_content_to_paths_from_changeset(
         .await?;
 
     for (path, entry) in entries {
-        if let Some(content_id) = entry.into_leaf().map(|f| f.content_id().clone()) {
-            content_to_paths
-                .entry(content_id)
+        if let Some(fsnode) = entry.into_leaf() {
+            content_to_candidates
+                .entry(fsnode.content_id().clone())
                 .or_insert(vec![])
-                .push((cs_id, path));
+                .push(CopyFromCandidate {
+                    cs_id,
+                    path,
+                    fsnode,
+                });
         }
     }
-    Ok(content_to_paths)
+    Ok(content_to_candidates)
 }
 
 async fn get_matched_paths_by_basenames_from_changeset(
@@ -91,11 +119,18 @@ async fn get_matched_paths_by_basenames_from_changeset(
 // Find exact renames by comparing the content of deleted vs new/changed files
 // in the current changeset. If they have the same content, the path pair is
 // a rename.
+//
+// Return a list of inferred renames and the remaining candidates we gathered that
+// failed the exact match check. They will be reconsidered for partial content
+// matching later.
 async fn find_exact_renames(
     ctx: &CoreContext,
     derivation_ctx: &DerivationContext,
     bonsai: &BonsaiChangeset,
-) -> Result<Vec<(MPath, InferredCopyFromEntry)>> {
+) -> Result<(
+    Vec<(MPath, InferredCopyFromEntry)>,
+    HashMap<ContentId, Vec<CopyFromCandidate>>,
+)> {
     let mut content_to_paths = HashMap::new();
     for (path, file_change) in bonsai.simplified_file_changes() {
         if let Some(fc) = file_change {
@@ -116,10 +151,10 @@ async fn find_exact_renames(
             }
         })
         .collect::<Vec<_>>();
-    let content_to_deleted_paths = try_join_all(bonsai.parents().map(|parent_cs_id| {
+    let content_to_candidates_vec = try_join_all(bonsai.parents().map(|parent_cs_id| {
         cloned!(deleted_paths);
         async move {
-            get_content_to_paths_from_changeset(ctx, derivation_ctx, parent_cs_id, deleted_paths)
+            get_candidates_from_changeset(ctx, derivation_ctx, parent_cs_id, deleted_paths)
                 .await
                 .with_context(|| {
                     format!(
@@ -129,38 +164,49 @@ async fn find_exact_renames(
                 })
         }
     }))
-    .await?
-    .into_iter()
-    .flatten()
-    .collect::<HashMap<_, _>>();
+    .await?;
+    let mut content_to_candidates = flatten_candidates(content_to_candidates_vec);
 
     let mut renames = vec![];
-    for (content_id, paths) in content_to_paths {
-        if let Some(deleted_paths) = content_to_deleted_paths.get(&content_id) {
-            let from = pick_source_from_candidates(deleted_paths).unwrap();
+    for (content_id, paths) in &content_to_paths {
+        if let Some(candidates) = content_to_candidates.get(content_id) {
+            let from = pick_source_from_candidates(candidates);
             for path in paths {
                 renames.push((
-                    MPath::from(path),
+                    MPath::from(path.clone()),
                     InferredCopyFromEntry {
-                        from_csid: from.0,
-                        from_path: from.1.clone(),
+                        from_csid: from.cs_id,
+                        from_path: from.path.clone(),
                     },
                 ));
             }
         }
     }
-    Ok(renames)
+
+    // Remove any exact-matched content from the candidate list
+    // The remaining will be used for partial matching later
+    for content_id in content_to_paths.keys() {
+        content_to_candidates.remove(content_id);
+    }
+    Ok((renames, content_to_candidates))
 }
 
 // Infer copies by matching basenames between new/changed files in the
 // current changeset and other files in the same repo (with some constraints).
 // If the basenames match and the content are the same, the path pair is a copy.
+//
+// Return a list of inferred copies and the remaining candidates we gathered that
+// failed the exact match check. They will be reconsidered for partial content
+// matching later.
 async fn find_basename_matched_copies(
     ctx: &CoreContext,
     derivation_ctx: &DerivationContext,
     bonsai: &BonsaiChangeset,
     paths_to_ignore: &HashSet<MPath>,
-) -> Result<Vec<(MPath, InferredCopyFromEntry)>> {
+) -> Result<(
+    Vec<(MPath, InferredCopyFromEntry)>,
+    HashMap<ContentId, Vec<CopyFromCandidate>>,
+)> {
     let mut content_to_paths = HashMap::new();
     let mut basenames = HashSet::new();
     let mut path_prefixes = HashSet::new();
@@ -181,15 +227,15 @@ async fn find_basename_matched_copies(
         }
     }
     if basenames.is_empty() {
-        return Ok(vec![]);
+        return Ok((vec![], HashMap::new()));
     }
 
     let basenames_vec = basenames.into_iter().collect::<Vec<_>>();
     let path_prefixes_vec = path_prefixes.into_iter().collect::<Vec<_>>();
-    let mut content_to_matched_paths = HashMap::new();
+    let mut content_to_candidates_vec = vec![];
 
     for parent_cs_id in bonsai.parents() {
-        content_to_matched_paths.extend(
+        content_to_candidates_vec.push(
             get_matched_paths_by_basenames_from_changeset(
                 ctx,
                 derivation_ctx,
@@ -203,34 +249,41 @@ async fn find_basename_matched_copies(
             .try_chunks(100)
             .try_fold(HashMap::new(), |mut acc, paths| async move {
                 let hashmap =
-                    get_content_to_paths_from_changeset(ctx, derivation_ctx, parent_cs_id, paths)
-                        .await;
+                    get_candidates_from_changeset(ctx, derivation_ctx, parent_cs_id, paths).await;
                 if let Ok(hashmap) = hashmap {
-                    acc.extend(hashmap.into_iter());
+                    for (k, v) in hashmap {
+                        acc.entry(k).or_insert(vec![]).extend(v);
+                    }
                 }
                 Ok(acc)
             })
-            .await?
-            .into_iter(),
+            .await?,
         );
     }
+    let mut content_to_candidates = flatten_candidates(content_to_candidates_vec);
 
     let mut copies = vec![];
-    for (content_id, paths) in content_to_paths {
-        if let Some(matched_paths) = content_to_matched_paths.get(&content_id) {
-            let from = pick_source_from_candidates(matched_paths).unwrap();
+    for (content_id, paths) in &content_to_paths {
+        if let Some(candidates) = content_to_candidates.get(content_id) {
+            let from = pick_source_from_candidates(candidates);
             for path in paths {
                 copies.push((
-                    MPath::from(path),
+                    MPath::from(path.clone()),
                     InferredCopyFromEntry {
-                        from_csid: from.0,
-                        from_path: from.1.clone(),
+                        from_csid: from.cs_id,
+                        from_path: from.path.clone(),
                     },
                 ));
             }
         }
     }
-    Ok(copies)
+
+    // Remove any exact-matched content from the candidate list
+    // The remaining will be used for partial matching later
+    for content_id in content_to_paths.keys() {
+        content_to_candidates.remove(content_id);
+    }
+    Ok((copies, content_to_candidates))
 }
 
 // TODO: add more cases
@@ -242,10 +295,10 @@ pub(crate) async fn derive_impl(
 ) -> Result<Option<InferredCopyFrom>> {
     let mut resolved_paths = HashSet::new();
 
-    let exact_renames = find_exact_renames(ctx, derivation_ctx, bonsai).await?;
+    let (exact_renames, _leftover0) = find_exact_renames(ctx, derivation_ctx, bonsai).await?;
     resolved_paths.extend(exact_renames.iter().map(|(path, _)| path.clone()));
 
-    let basename_matched_copies =
+    let (basename_matched_copies, _leftover1) =
         find_basename_matched_copies(ctx, derivation_ctx, bonsai, &resolved_paths).await?;
     resolved_paths.extend(basename_matched_copies.iter().map(|(path, _)| path.clone()));
 
