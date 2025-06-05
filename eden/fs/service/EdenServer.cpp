@@ -2753,7 +2753,8 @@ ImmediateFuture<uint64_t> EdenServer::garbageCollectWorkingCopy(
       .thenTry([workingCopyRuntime,
                 structuredLogger = structuredLogger_,
                 mountPath,
-                inodeMap = mount.getInodeMap()](
+                inodeMap = mount.getInodeMap(),
+                totalNumberOfInodesBeforeGC](
                    folly::Try<uint64_t> numInvalidatedTry) {
         auto runtime =
             std::chrono::duration<double>{workingCopyRuntime.elapsed()};
@@ -2761,12 +2762,17 @@ ImmediateFuture<uint64_t> EdenServer::garbageCollectWorkingCopy(
         bool success = numInvalidatedTry.hasValue();
         int64_t numInvalidated =
             success ? folly::to_signed(numInvalidatedTry.value()) : 0;
-        structuredLogger->logEvent(
-            WorkingCopyGc{runtime.count(), numInvalidated, success});
         auto inodeCountsAfterGC = inodeMap->getInodeCounts();
         auto totalNumberOfInodesAfterGC = inodeCountsAfterGC.fileCount +
             inodeCountsAfterGC.treeCount +
             inodeCountsAfterGC.unloadedInodeCount;
+
+        structuredLogger->logEvent(WorkingCopyGc{
+            runtime.count(),
+            numInvalidated,
+            success,
+            static_cast<int64_t>(
+                (totalNumberOfInodesBeforeGC - totalNumberOfInodesAfterGC))});
         XLOGF(
             DBG1,
             "GC for: {}, completed in: {} seconds and invalidated {} inodes, total number of inodes {}",

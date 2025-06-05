@@ -586,14 +586,23 @@ struct WorkingCopyGc : public EdenFSEvent {
   double duration = 0.0;
   int64_t numInvalidated = 0;
   bool success = false;
+  int64_t numOfDeletedInodes = 0;
 
-  WorkingCopyGc(double duration, int64_t numInvalidated, bool success)
-      : duration(duration), numInvalidated(numInvalidated), success(success) {}
+  WorkingCopyGc(
+      double duration,
+      int64_t numInvalidated,
+      bool success,
+      int64_t numOfDeletedInodes)
+      : duration(duration),
+        numInvalidated(numInvalidated),
+        success(success),
+        numOfDeletedInodes(numOfDeletedInodes) {}
 
   void populate(DynamicEvent& event) const override {
     event.addDouble("duration", duration);
     event.addInt("num_invalidated", numInvalidated);
     event.addBool("success", success);
+    event.addInt("num_deleted_inodes", numOfDeletedInodes);
   }
 
   const char* getType() const override {
