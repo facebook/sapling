@@ -62,6 +62,8 @@ export type GitHubDiffSummary = {
   branchName?: string;
 };
 
+const DEFAULT_GH_FETCH_TIMEOUT = 60_000; // 1 minute
+
 type GitHubCodeReviewSystem = CodeReviewSystem & {type: 'github'};
 export class GitHubCodeReviewProvider implements CodeReviewProvider {
   constructor(private codeReviewSystem: GitHubCodeReviewSystem, private logger: Logger) {}
@@ -234,7 +236,12 @@ export class GitHubCodeReviewProvider implements CodeReviewProvider {
   }
 
   private query<D, V>(query: string, variables: V, timeoutMs?: number): Promise<D | undefined> {
-    return queryGraphQL<D, V>(query, variables, this.codeReviewSystem.hostname, timeoutMs);
+    return queryGraphQL<D, V>(
+      query,
+      variables,
+      this.codeReviewSystem.hostname,
+      timeoutMs ?? DEFAULT_GH_FETCH_TIMEOUT,
+    );
   }
 
   public dispose() {
