@@ -188,6 +188,7 @@ members = [
   "lib/util/nodeipc/derive",
   "lib/util/procutil",
   "lib/util/pubsub",
+  "lib/util/python-sysconfig",
   "lib/util/redacted",
   "lib/util/rewrite-macros",
   "lib/util/rewrite-macros/tree-pattern-match",
