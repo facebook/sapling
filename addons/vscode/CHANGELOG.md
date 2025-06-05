@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.1.69
+
+- More efficient queries for information from Github
+
 ## 0.1.68
 
 - Add a setting to completely hide cwd-irrelevant commits
