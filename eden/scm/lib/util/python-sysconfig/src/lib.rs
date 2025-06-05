@@ -76,6 +76,30 @@ impl PythonSysConfig {
         out.starts_with("0")
     }
 
+    pub fn cflags(&mut self) -> String {
+        let repl = self.reader();
+        repl.exec("print(__import__('sysconfig').get_config_var('CFLAGS') or '');\n");
+        repl.read_next_line()
+    }
+
+    pub fn ldflags(&mut self) -> String {
+        let repl = self.reader();
+        repl.exec("print(__import__('sysconfig').get_config_var('LDFLAGS') or '');\n");
+        repl.read_next_line()
+    }
+
+    pub fn include(&mut self) -> String {
+        let repl = self.reader();
+        repl.exec("print(__import__('sysconfig').get_paths()['include'].strip());\n");
+        repl.read_next_line()
+    }
+
+    pub fn headers(&mut self) -> String {
+        let repl = self.reader();
+        repl.exec("print(__import__('sysconfig').get_paths().get('headers') or '');\n");
+        repl.read_next_line()
+    }
+
     fn repl(&mut self) -> &mut PythonREPL {
         self.repl.get_or_init(|| PythonREPL::new(&self.python));
         self.repl.get_mut().unwrap()

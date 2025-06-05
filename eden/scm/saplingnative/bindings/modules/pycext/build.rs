@@ -5,10 +5,7 @@
  * GNU General Public License version 2.
  */
 
-use std::env;
-use std::ffi::OsString;
 use std::path::Path;
-use std::process::Command;
 
 struct PythonSysConfig {
     cflags: String,
@@ -21,40 +18,12 @@ struct PythonSysConfig {
 
 impl PythonSysConfig {
     fn load() -> Self {
-        println!("cargo:rerun-if-env-changed=PYTHON_SYS_EXECUTABLE");
-        let python = match env::var_os("PYTHON_SYS_EXECUTABLE") {
-            Some(python) => python,
-            None => {
-                println!("cargo:warning=PYTHON_SYS_EXECUTABLE is recommended at build time");
-                OsString::from("python3")
-            }
-        };
-        let script = concat!(
-            "import sysconfig;",
-            "print((sysconfig.get_config_var('CFLAGS') or '').strip());",
-            "print((sysconfig.get_config_var('LDFLAGS') or '').strip());",
-            "print(sysconfig.get_paths()['include'].strip());",
-            "print((sysconfig.get_paths().get('headers') or '').strip());",
-        );
-
-        let out = Command::new(&python)
-            .arg("-c")
-            .arg(script)
-            .output()
-            .expect("Failed to get CFLAGS from Python");
-        let out_str = String::from_utf8_lossy(&out.stdout);
-        let lines: Vec<&str> = out_str.lines().collect();
-        if lines.len() < 4 {
-            println!(
-                "cargo:warning=Python sysconfig output is incomplete: {:?} Python: {:?}",
-                out_str, python
-            );
-        }
+        let mut sysconfig = python_sysconfig::PythonSysConfig::new();
         Self {
-            cflags: lines[0].to_string(),
-            ldflags: lines[1].to_string(),
-            include_dir: lines[2].to_string(),
-            headers: lines[3].to_string(),
+            cflags: sysconfig.cflags(),
+            ldflags: sysconfig.ldflags(),
+            include_dir: sysconfig.include(),
+            headers: sysconfig.headers(),
         }
     }
 

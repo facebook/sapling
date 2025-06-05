@@ -5,7 +5,10 @@ oncall("sapling")
 rust_python_library(
     name = "pycext",
     srcs = glob(["src/**/*.rs"]),
-    autocargo = {"cargo_toml_config": {"extra_buck_dependencies": {"build-dependencies": ["fbsource//third-party/rust:cc"]}}},
+    autocargo = {"cargo_toml_config": {"extra_buck_dependencies": {"build-dependencies": [
+        "fbsource//third-party/rust:cc",
+        "//eden/scm/lib/util/python-sysconfig:python-sysconfig",
+    ]}}},
     crate_root = "src/lib.rs",
     include_python_sys = True,
     os_deps = [
