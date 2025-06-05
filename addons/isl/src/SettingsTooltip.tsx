@@ -19,7 +19,7 @@ import {Tooltip} from 'isl-components/Tooltip';
 import {useAtom, useAtomValue} from 'jotai';
 import {Suspense} from 'react';
 import {nullthrows, tryJsonParse} from 'shared/utils';
-import {rebaseOffWarmWarningEnabled} from './Commit';
+import {distantRebaseWarningEnabled, rebaseOffWarmWarningEnabled} from './Commit';
 import {condenseObsoleteStacks} from './CommitTreeList';
 import {Column, Row} from './ComponentUtils';
 import {confirmShouldSubmitEnabledAtom} from './ConfirmSubmitStack';
@@ -131,6 +131,7 @@ function SettingsDropdown({
           <RenderCompactSetting />
           <CondenseObsoleteSetting />
           <RebaseOffWarmWarningSetting />
+          <DistantRebaseWarningSetting />
           <DeemphasizeIrrelevantCommitsSetting />
         </Column>
       </Setting>
@@ -315,6 +316,25 @@ function RebaseOffWarmWarningSetting() {
           setValue(checked);
         }}>
         <T>Show Warning on Rebase Off Warm</T>
+      </Checkbox>
+    </Tooltip>
+  );
+}
+
+function DistantRebaseWarningSetting() {
+  const [value, setValue] = useAtom(distantRebaseWarningEnabled);
+  return (
+    <Tooltip
+      title={t(
+        'Show a warning when rebasing onto a commit that is significantly older than the current commit.',
+      )}>
+      <Checkbox
+        data-testid="distant-rebase-warning-enabled"
+        checked={value}
+        onChange={checked => {
+          setValue(checked);
+        }}>
+        <T>Show Warning on Distant Rebase</T>
       </Checkbox>
     </Tooltip>
   );

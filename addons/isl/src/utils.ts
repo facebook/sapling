@@ -80,3 +80,10 @@ export function registerDisposable(
 ): void {
   registerCleanup(obj, () => disposable.dispose(), hot);
 }
+
+/** Calculate hour difference between two dates (date1 - date2) */
+export function calculateHourDifference(date1: Date, date2: Date): number {
+  const msDifference = date1.getTime() - date2.getTime();
+  const hoursDifference = msDifference / (1000 * 60 * 60);
+  return hoursDifference;
+}

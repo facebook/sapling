@@ -170,6 +170,7 @@ export type TrackEventName =
   | 'PendingSlocCommand'
   | 'SplitSuggestionsDismissedForSevenDays'
   | 'WarnAboutRebaseOffWarm'
+  | 'WarnAboutDistantRebase'
   | 'SaplingISLUriHandlerHandle'
   | 'CommitInfoFieldEditFieldClick';
 

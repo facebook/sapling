@@ -84,6 +84,11 @@ export const rebaseOffWarmWarningEnabled = localStorageBackedAtom<boolean>(
   true,
 );
 
+export const distantRebaseWarningEnabled = localStorageBackedAtom<boolean>(
+  'isl.distant-rebase-warning-enabled',
+  true,
+);
+
 /**
  * Some preview types should not allow actions on top of them
  * For example, you can't click goto on the preview of dragging a rebase,
@@ -303,18 +308,7 @@ export const Commit = memo(
           <Button
             primary
             onClick={() => {
-              handlePreviewedOperation(/* cancel */ false);
-
-              const dag = readAtom(dagWithPreviews);
-              const onto = dag.get(commit.parents[0]);
-              if (onto) {
-                tracker.track('ConfirmDragAndDropRebase', {
-                  extras: {
-                    remoteBookmarks: onto.remoteBookmarks,
-                    locations: onto.stableCommitMetadata?.map(s => s.value),
-                  },
-                });
-              }
+              return handleRebaseConfirmation(commit, handlePreviewedOperation);
             }}>
             <T>Run Rebase</T>
           </Button>
@@ -761,3 +755,76 @@ async function gotoAction(runOperation: ReturnType<typeof useRunOperation>, comm
   writeAtom(selectedCommits, new Set());
 }
 const ObsoleteTip = React.memo(ObsoleteTipInner);
+
+function handleRebaseConfirmation(
+  commit: CommitInfo,
+  handlePreviewedOperation: (cancel: boolean) => void,
+): Promise<void> {
+  return maybeWarnAboutDistantRebase(commit).then(shouldProceed => {
+    if (shouldProceed) {
+      handlePreviewedOperation(/* cancel */ false);
+
+      const dag = readAtom(dagWithPreviews);
+      const onto = dag.get(commit.parents[0]);
+      if (onto) {
+        tracker.track('ConfirmDragAndDropRebase', {
+          extras: {
+            remoteBookmarks: onto.remoteBookmarks,
+            locations: onto.stableCommitMetadata?.map(s => s.value),
+          },
+        });
+      }
+    }
+  });
+}
+
+async function maybeWarnAboutDistantRebase(commit: CommitInfo): Promise<boolean> {
+  const isDistantRebaseWarningEnabled = readAtom(distantRebaseWarningEnabled);
+  if (!isDistantRebaseWarningEnabled) {
+    return true;
+  }
+  const dag = readAtom(dagWithPreviews);
+  const onto = dag.get(commit.parents[0]);
+  if (!onto) {
+    return true; // If there's no target commit, proceed without warning
+  }
+  const currentBase = findPublicBaseAncestor(dag);
+  const destBase = findPublicBaseAncestor(dag, onto.hash);
+  if (!currentBase || !destBase) {
+    // can't determine if we can show warning
+    return Promise.resolve(true);
+  }
+  const warning = Promise.resolve(
+    Internal.maybeWarnAboutDistantRebase?.(currentBase, destBase) ?? false,
+  );
+
+  if (await warning) {
+    tracker.track('WarnAboutDistantRebase');
+    const buttons = [t('Opt Out of Future Warnings'), t('Cancel'), t('Rebase Anyway')];
+    const answer = await showModal({
+      type: 'confirm',
+      buttons,
+      title: <T>Distant Rebase Warning</T>,
+      message: t(
+        Internal.warnAboutDistantRebaseReason ??
+          'The target commit is $age away from your current commit. ' +
+            'Rebasing across a large time gap may cause slower builds and performance. ' +
+            "It's recommended to rebase the destination commit(s) to the nearest stable or warm commit first and then attempt this rebase. " +
+            'Do you want to `rebase` anyway?',
+        {
+          replace: {
+            $age: relativeDate(onto.date, {reference: commit.date, useRelativeForm: true}),
+          },
+        },
+      ),
+    });
+
+    if (answer === buttons[0]) {
+      writeAtom(distantRebaseWarningEnabled, false);
+      return true;
+    }
+    return answer === buttons[2];
+  }
+
+  return true;
+}

@@ -107,26 +107,27 @@ describe('rebase operation', () => {
     expect(screen.queryAllByTestId('commit-1')).toHaveLength(1);
   });
 
-  it('runs rebase operation', () => {
+  it('runs rebase operation', async () => {
     dragAndDropCommits('d', '2');
 
     const runRebaseButton = screen.getByText('Run Rebase');
     expect(runRebaseButton).toBeInTheDocument();
 
     fireEvent.click(runRebaseButton);
-
-    expectMessageSentToServer({
-      type: 'runOperation',
-      operation: {
-        args: ['rebase', '-s', succeedableRevset('d'), '-d', succeedableRevset('remote/master')],
-        id: expect.anything(),
-        runner: CommandRunner.Sapling,
-        trackEventName: 'RebaseOperation',
-      },
+    await waitFor(() => {
+      expectMessageSentToServer({
+        type: 'runOperation',
+        operation: {
+          args: ['rebase', '-s', succeedableRevset('d'), '-d', succeedableRevset('remote/master')],
+          id: expect.anything(),
+          runner: CommandRunner.Sapling,
+          trackEventName: 'RebaseOperation',
+        },
+      });
     });
   });
 
-  it('shows optimistic preview of rebase', () => {
+  it('shows optimistic preview of rebase', async () => {
     dragAndDropCommits('d', '2');
 
     fireEvent.click(screen.getByText('Run Rebase'));
@@ -136,14 +137,16 @@ describe('rebase operation', () => {
     // also includes descendants
     expect(screen.queryAllByTestId('commit-e')).toHaveLength(1);
 
-    expect(screen.getByText('rebasing...')).toBeInTheDocument();
+    await waitFor(() => {
+      expect(screen.getByText('rebasing...')).toBeInTheDocument();
+    });
 
     expect(
       screen.queryByTestId('commit-d')?.querySelector('.commit-preview-rebase-optimistic-root'),
     ).toBeInTheDocument();
   });
 
-  it('allows re-dragging a previously dragged commit back onto the same parent', () => {
+  it('allows re-dragging a previously dragged commit back onto the same parent', async () => {
     // Drag and drop 'e' normally onto 'c'
     dragCommits('e', 'd');
     expect(screen.queryByText('Run Rebase')).not.toBeInTheDocument(); // dragging on original parent is noop
@@ -158,15 +161,16 @@ describe('rebase operation', () => {
     dropCommits(getCommitWithPreview('e', CommitPreview.REBASE_ROOT), 'c');
 
     fireEvent.click(screen.getByText('Run Rebase'));
-
-    expectMessageSentToServer({
-      type: 'runOperation',
-      operation: {
-        args: ['rebase', '-s', succeedableRevset('e'), '-d', succeedableRevset('c')],
-        id: expect.anything(),
-        runner: CommandRunner.Sapling,
-        trackEventName: 'RebaseOperation',
-      },
+    await waitFor(() => {
+      expectMessageSentToServer({
+        type: 'runOperation',
+        operation: {
+          args: ['rebase', '-s', succeedableRevset('e'), '-d', succeedableRevset('c')],
+          id: expect.anything(),
+          runner: CommandRunner.Sapling,
+          trackEventName: 'RebaseOperation',
+        },
+      });
     });
   });
 
@@ -276,7 +280,7 @@ describe('rebase operation', () => {
       expect(scanForkedBranchHashes('b')).toEqual(['d', 'e']);
     });
 
-    it('can preview drag drop while previous rebase running', () => {
+    it('can preview drag drop while previous rebase running', async () => {
       //              c
       //       c      | e
       // e     b      |/
@@ -286,6 +290,9 @@ describe('rebase operation', () => {
       // a     a      a
       dragAndDropCommits('d', 'a');
       fireEvent.click(screen.getByText('Run Rebase'));
+      await waitFor(() => {
+        expect(screen.getByText('rebasing...')).toBeInTheDocument();
+      });
 
       dragAndDropCommits(
         getCommitWithPreview('e', CommitPreview.REBASE_OPTIMISTIC_DESCENDANT),
@@ -298,7 +305,7 @@ describe('rebase operation', () => {
       expect(scanForkedBranchHashes('b')).toEqual(['e']);
     });
 
-    it('can see optimistic drag drop while previous rebase running', () => {
+    it('can see optimistic drag drop while previous rebase running', async () => {
       //              c
       //       c      | e
       // e     b      |/
@@ -308,7 +315,9 @@ describe('rebase operation', () => {
       // a     a      a
       dragAndDropCommits('d', 'a');
       fireEvent.click(screen.getByText('Run Rebase'));
-
+      await waitFor(() => {
+        expect(screen.getByText('rebasing...')).toBeInTheDocument();
+      });
       dragAndDropCommits(
         getCommitWithPreview('e', CommitPreview.REBASE_OPTIMISTIC_DESCENDANT),
         'b',

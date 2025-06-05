@@ -5,7 +5,7 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-import {act, fireEvent, render, screen, within} from '@testing-library/react';
+import {act, fireEvent, render, screen, waitFor, within} from '@testing-library/react';
 import * as utils from 'shared/utils';
 import App from '../App';
 import {Internal} from '../Internal';
@@ -501,6 +501,9 @@ describe('operations', () => {
 
       dragAndDropCommits('c', 'a');
       fireEvent.click(screen.getByText('Run Rebase'));
+      await waitFor(() => {
+        expect(screen.getByText('rebasing...')).toBeInTheDocument();
+      });
       await clickGoto('d'); // checkout d, which is now optimistic from the rebase, since it'll actually become d2.
 
       act(() =>
