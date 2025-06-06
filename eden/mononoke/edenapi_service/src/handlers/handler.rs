@@ -30,17 +30,23 @@ use crate::context::ServerContext;
 use crate::utils::get_repo;
 
 pub trait PathExtractorWithRepo: PathExtractor<Body> + Send + Sync {
-    fn repo(&self) -> &str;
+    fn repo(&self) -> String;
 }
 
 #[derive(Debug, Deserialize, StateData, StaticResponseExtender)]
 pub struct BasicPathExtractor {
-    repo: String,
+    /// The name of the repository. It is a vec of strings because repo with `/` in their
+    /// names are captured as multiple segments in the path.
+    pub repo: Vec<String>,
 }
 
 impl PathExtractorWithRepo for BasicPathExtractor {
-    fn repo(&self) -> &str {
-        &self.repo
+    fn repo(&self) -> String {
+        let repo = self.repo.join("/");
+        match repo.strip_suffix(".git") {
+            Some(repo) => repo.to_string(),
+            None => repo,
+        }
     }
 }
 
