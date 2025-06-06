@@ -14,21 +14,25 @@ use types::RepoPath;
 use types::RepoPathBuf;
 
 use crate::AtomicInstant;
+use crate::Config;
 use crate::Walk;
 use crate::WalkType;
 use crate::interesting_metadata;
+use crate::walk_threshold;
 
 /// Tree structure to track active walks. This makes it efficient to find a file's
 /// "containing" walk, and to efficiently discover a walk's siblings, cousins, etc. in
 /// order to merge walks.
-#[derive(Default)]
 pub(crate) struct WalkNode {
     // File content walk, if any, rooted at this node.
+    // The Duration is the GC timeout.
     pub(crate) file_walk: Option<Walk>,
     // Directory content walk, if any, rooted at this node.
+    // The Duration is the GC timeout.
     pub(crate) dir_walk: Option<Walk>,
 
     pub(crate) last_access: AtomicInstant,
+    pub(crate) gc_timeout: Duration,
     pub(crate) children: HashMap<PathComponentBuf, WalkNode>,
 
     // Child directories that have a walked descendant "advanced" past our current
@@ -47,6 +51,22 @@ pub(crate) struct WalkNode {
 }
 
 impl WalkNode {
+    pub(crate) fn new(gc_timeout: Duration) -> Self {
+        Self {
+            gc_timeout,
+            file_walk: Default::default(),
+            dir_walk: Default::default(),
+            last_access: Default::default(),
+            children: Default::default(),
+            advanced_file_children: Default::default(),
+            advanced_dir_children: Default::default(),
+            total_files: Default::default(),
+            total_dirs: Default::default(),
+            seen_files: Default::default(),
+            seen_dirs: Default::default(),
+        }
+    }
+
     /// Get existing WalkNode entry for specified dir, if any.
     pub(crate) fn get_node(&self, dir: &RepoPath) -> Option<&Self> {
         match dir.split_first_component() {
@@ -115,6 +135,7 @@ impl WalkNode {
     /// traversal.
     pub(crate) fn get_or_create_owning_node<'a>(
         &'a mut self,
+        config: &Config,
         walk_type: WalkType,
         dir: &'a RepoPath,
     ) -> (&'a mut Self, &'a RepoPath) {
@@ -126,12 +147,12 @@ impl WalkNode {
                     self.children
                         .get_mut(head)
                         .unwrap()
-                        .get_or_create_owning_node(walk_type, tail)
+                        .get_or_create_owning_node(config, walk_type, tail)
                 } else {
                     self.children
                         .entry(head.to_owned())
-                        .or_default()
-                        .get_or_create_owning_node(walk_type, tail)
+                        .or_insert_with(|| Self::new(config.gc_timeout))
+                        .get_or_create_owning_node(config, walk_type, tail)
                 }
             }
             None => (self, dir),
@@ -139,19 +160,23 @@ impl WalkNode {
     }
 
     /// Find or create node for `dir`.
-    pub(crate) fn get_or_create_node<'a>(&'a mut self, dir: &'a RepoPath) -> &'a mut Self {
+    pub(crate) fn get_or_create_node<'a>(
+        &'a mut self,
+        config: &Config,
+        dir: &'a RepoPath,
+    ) -> &'a mut Self {
         match dir.split_first_component() {
             Some((head, tail)) => {
                 if self.children.contains_key(head) {
                     self.children
                         .get_mut(head)
                         .unwrap()
-                        .get_or_create_node(tail)
+                        .get_or_create_node(config, tail)
                 } else {
                     self.children
                         .entry(head.to_owned())
-                        .or_default()
-                        .get_or_create_node(tail)
+                        .or_insert_with(|| Self::new(config.gc_timeout))
+                        .get_or_create_node(config, tail)
                 }
             }
             None => self,
@@ -162,11 +187,11 @@ impl WalkNode {
     /// be inserted if it is contained by an ancestor walk.
     pub(crate) fn insert_walk(
         &mut self,
+        config: &Config,
         walk_type: WalkType,
         walk_root: &RepoPath,
         mut walk: Walk,
-        threshold: usize,
-        walk_ratio: f64,
+        root_depth: usize,
     ) -> &mut Self {
         // If we completely overlap with the walk to be inserted, skip it. This shouldn't
         // happen, but I want to guarantee there are no overlapping walks.
@@ -183,15 +208,18 @@ impl WalkNode {
                     self.children
                         .get_mut(head)
                         .unwrap()
-                        .insert_walk(walk_type, tail, walk, threshold, walk_ratio)
+                        .insert_walk(config, walk_type, tail, walk, root_depth)
                 } else {
                     self.children
                         .entry(head.to_owned())
-                        .or_default()
-                        .insert_walk(walk_type, tail, walk, threshold, walk_ratio)
+                        .or_insert_with(|| Self::new(config.gc_timeout))
+                        .insert_walk(config, walk_type, tail, walk, root_depth)
                 }
             }
             None => {
+                let threshold = walk_threshold(config, root_depth);
+                let walk_ratio = config.walk_ratio;
+
                 self.clear_advanced_children(walk_type);
 
                 // This can have a side effect of adding to self.advanced_children.
@@ -200,7 +228,7 @@ impl WalkNode {
                 let seen_count = self.advanced_children_len(walk_type);
                 if self.is_walked(WalkType::Directory, seen_count, threshold, walk_ratio) {
                     walk.depth += 1;
-                    self.insert_walk(walk_type, walk_root, walk, threshold, walk_ratio)
+                    self.insert_walk(config, walk_type, walk_root, walk, root_depth)
                 } else {
                     self.set_walk_for_type(walk_type, Some(walk));
                     self
@@ -451,13 +479,9 @@ impl WalkNode {
 
     /// Delete nodes not accessed within timeout.
     /// Returns (nodes_deleted, nodes_remaining, walks_deleted).
-    pub(crate) fn gc(&mut self, timeout: Duration) -> (usize, usize, usize) {
+    pub(crate) fn gc(&mut self) -> (usize, usize, usize) {
         // Return (nodes_deleted, nodes_remaining, walks_deleted, keep_me)
-        fn inner(
-            path: &mut RepoPathBuf,
-            node: &mut WalkNode,
-            timeout: Duration,
-        ) -> (usize, usize, usize, bool) {
+        fn inner(path: &mut RepoPathBuf, node: &mut WalkNode) -> (usize, usize, usize, bool) {
             let mut walks_removed = 0;
             let mut deleted = 0;
             let mut retained = 0;
@@ -465,7 +489,7 @@ impl WalkNode {
             node.children.retain(|name, child| {
                 path.push(name);
 
-                let (d, r, w, keep) = inner(path, child, timeout);
+                let (d, r, w, keep) = inner(path, child);
 
                 deleted += d;
                 retained += r;
@@ -480,7 +504,7 @@ impl WalkNode {
                 keep
             });
 
-            let expired = node.expired(timeout);
+            let expired = node.expired();
 
             let keep_me = !expired || !node.children.is_empty();
             let has_walk = node.has_walk();
@@ -505,7 +529,7 @@ impl WalkNode {
         }
 
         let (mut deleted, remaining, mut walks_deleted, keep_me) =
-            inner(&mut RepoPathBuf::new(), self, timeout);
+            inner(&mut RepoPathBuf::new(), self);
         if !keep_me {
             // We don't actually delete the root node, so take one off.
             deleted -= 1;
@@ -554,9 +578,9 @@ impl WalkNode {
         self.file_walk.is_some() || self.dir_walk.is_some()
     }
 
-    pub(crate) fn expired(&self, timeout: Duration) -> bool {
+    pub(crate) fn expired(&self) -> bool {
         self.last_access
             .load()
-            .is_none_or(|accessed| accessed.elapsed() >= timeout)
+            .is_none_or(|accessed| accessed.elapsed() >= self.gc_timeout)
     }
 }

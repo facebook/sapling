@@ -11,7 +11,7 @@ use mock_instant::MockClock;
 use types::RepoPath;
 use types::RepoPathBuf;
 
-use crate::DEFAULT_WALK_RATIO;
+use crate::Config;
 use crate::Detector;
 use crate::Walk;
 use crate::WalkType;
@@ -162,56 +162,27 @@ fn test_advanced_remainder() {
 
 #[test]
 fn test_walk_node_insert() {
-    let mut node = WalkNode::default();
+    let config = Config::default();
+    let mut node = WalkNode::new(config.gc_timeout);
 
-    node.insert_walk(
-        WalkType::File,
-        &p("foo"),
-        Walk::new(1),
-        TEST_WALK_THRESHOLD,
-        DEFAULT_WALK_RATIO,
-    );
+    node.insert_walk(&config, WalkType::File, &p("foo"), Walk::new(1), 0);
     // Can re-insert.
-    node.insert_walk(
-        WalkType::File,
-        &p("foo"),
-        Walk::new(1),
-        TEST_WALK_THRESHOLD,
-        DEFAULT_WALK_RATIO,
-    );
+    node.insert_walk(&config, WalkType::File, &p("foo"), Walk::new(1), 0);
     assert_eq!(node.list_walks(WalkType::File), vec![(p("foo"), 1)]);
 
     // Don't insert since it is fully contained by "foo" walk.
-    node.insert_walk(
-        WalkType::File,
-        &p("foo/bar"),
-        Walk::new(0),
-        TEST_WALK_THRESHOLD,
-        DEFAULT_WALK_RATIO,
-    );
+    node.insert_walk(&config, WalkType::File, &p("foo/bar"), Walk::new(0), 0);
     assert_eq!(node.list_walks(WalkType::File), vec![(p("foo"), 1)]);
 
     let baz_walk = Walk::new(2);
-    node.insert_walk(
-        WalkType::File,
-        &p("foo/bar/baz"),
-        baz_walk,
-        TEST_WALK_THRESHOLD,
-        DEFAULT_WALK_RATIO,
-    );
+    node.insert_walk(&config, WalkType::File, &p("foo/bar/baz"), baz_walk, 0);
     assert_eq!(
         node.list_walks(WalkType::File),
         vec![(p("foo"), 1), (p("foo/bar/baz"), 2)]
     );
 
     let root_walk = Walk::new(0);
-    node.insert_walk(
-        WalkType::File,
-        &p(""),
-        root_walk,
-        TEST_WALK_THRESHOLD,
-        DEFAULT_WALK_RATIO,
-    );
+    node.insert_walk(&config, WalkType::File, &p(""), root_walk, 0);
     assert_eq!(
         node.list_walks(WalkType::File),
         vec![(p(""), 0), (p("foo"), 1), (p("foo/bar/baz"), 2)]
@@ -219,13 +190,7 @@ fn test_walk_node_insert() {
 
     // depth=1 doesn't contain any descendant walks - don't clear anything out.
     let root_walk = Walk::new(1);
-    node.insert_walk(
-        WalkType::File,
-        &p(""),
-        root_walk,
-        TEST_WALK_THRESHOLD,
-        DEFAULT_WALK_RATIO,
-    );
+    node.insert_walk(&config, WalkType::File, &p(""), root_walk, 0);
     assert_eq!(
         node.list_walks(WalkType::File),
         vec![(p(""), 1), (p("foo"), 1), (p("foo/bar/baz"), 2)]
@@ -233,13 +198,7 @@ fn test_walk_node_insert() {
 
     // depth=2 contains the "foo" walk - clear "foo" out.
     let root_walk = Walk::new(2);
-    node.insert_walk(
-        WalkType::File,
-        &p(""),
-        root_walk,
-        TEST_WALK_THRESHOLD,
-        DEFAULT_WALK_RATIO,
-    );
+    node.insert_walk(&config, WalkType::File, &p(""), root_walk, 0);
     assert_eq!(
         node.list_walks(WalkType::File),
         vec![(p(""), 2), (p("foo/bar/baz"), 2)]
@@ -247,19 +206,14 @@ fn test_walk_node_insert() {
 
     // Contains the "foo/bar/baz" walk.
     let root_walk = Walk::new(5);
-    node.insert_walk(
-        WalkType::File,
-        &p(""),
-        root_walk,
-        TEST_WALK_THRESHOLD,
-        DEFAULT_WALK_RATIO,
-    );
+    node.insert_walk(&config, WalkType::File, &p(""), root_walk, 0);
     assert_eq!(node.list_walks(WalkType::File), vec![(p(""), 5)]);
 }
 
 #[test]
 fn test_walk_node_get() {
-    let mut node = WalkNode::default();
+    let config = Config::default();
+    let mut node = WalkNode::new(config.gc_timeout);
 
     let get_depth = |node: &mut WalkNode, path: &RepoPath| -> Option<usize> {
         node.get_node(path)
@@ -271,39 +225,21 @@ fn test_walk_node_get() {
     assert!(get_depth(&mut node, &p("foo/bar")).is_none());
 
     let foo_walk = Walk::new(1);
-    node.insert_walk(
-        WalkType::File,
-        &p("foo"),
-        foo_walk,
-        TEST_WALK_THRESHOLD,
-        DEFAULT_WALK_RATIO,
-    );
+    node.insert_walk(&config, WalkType::File, &p("foo"), foo_walk, 0);
 
     assert!(get_depth(&mut node, &p("")).is_none());
     assert_eq!(get_depth(&mut node, &p("foo")), Some(1));
     assert!(get_depth(&mut node, &p("foo/bar")).is_none());
 
     let foo_bar_walk = Walk::new(2);
-    node.insert_walk(
-        WalkType::File,
-        &p("foo/bar"),
-        foo_bar_walk,
-        TEST_WALK_THRESHOLD,
-        DEFAULT_WALK_RATIO,
-    );
+    node.insert_walk(&config, WalkType::File, &p("foo/bar"), foo_bar_walk, 0);
 
     assert!(get_depth(&mut node, &p("")).is_none());
     assert_eq!(get_depth(&mut node, &p("foo")), Some(1));
     assert_eq!(get_depth(&mut node, &p("foo/bar")), Some(2));
 
     let root_walk = Walk::new(0);
-    node.insert_walk(
-        WalkType::File,
-        &p(""),
-        root_walk,
-        TEST_WALK_THRESHOLD,
-        DEFAULT_WALK_RATIO,
-    );
+    node.insert_walk(&config, WalkType::File, &p(""), root_walk, 0);
 
     assert_eq!(get_depth(&mut node, &p("")), Some(0));
     assert_eq!(get_depth(&mut node, &p("foo")), Some(1));
@@ -312,30 +248,19 @@ fn test_walk_node_get() {
 
 #[test]
 fn test_walk_get_containing_node() {
-    let mut node = WalkNode::default();
+    let config = Config::default();
+    let mut node = WalkNode::new(config.gc_timeout);
 
     let dir = p("foo/bar/baz");
 
     assert!(node.get_owning_node(WalkType::File, &dir).is_none());
 
-    node.insert_walk(
-        WalkType::File,
-        &p("foo/bar"),
-        Walk::new(0),
-        TEST_WALK_THRESHOLD,
-        DEFAULT_WALK_RATIO,
-    );
+    node.insert_walk(&config, WalkType::File, &p("foo/bar"), Walk::new(0), 0);
 
     // Still not containing due to depth.
     assert!(node.get_owning_node(WalkType::File, &dir).is_none());
 
-    node.insert_walk(
-        WalkType::File,
-        &p("foo/bar"),
-        Walk::new(1),
-        TEST_WALK_THRESHOLD,
-        DEFAULT_WALK_RATIO,
-    );
+    node.insert_walk(&config, WalkType::File, &p("foo/bar"), Walk::new(1), 0);
 
     let (containing_node, suffix) = node.get_owning_node(WalkType::File, &dir).unwrap();
     assert_eq!(
@@ -538,6 +463,8 @@ fn test_gc_stats() {
     // Don't run GC automatically.
     detector.set_gc_interval(Duration::from_secs(10));
 
+    detector.set_gc_timeout(Duration::from_secs(1));
+
     detector.file_loaded(p("dir1/a"));
     detector.file_loaded(p("dir1/b"));
 
@@ -551,8 +478,7 @@ fn test_gc_stats() {
     detector.file_loaded(p("dir3/dir4/b"));
 
     // Manually run GC to check stats.
-    let (nodes_removed, nodes_remaining, walks_removed) =
-        detector.inner.write().node.gc(Duration::from_secs(1));
+    let (nodes_removed, nodes_remaining, walks_removed) = detector.inner.write().node.gc();
 
     // "dir1" and "dir2"
     assert_eq!(nodes_removed, 2);

@@ -47,7 +47,7 @@ impl Default for Inner {
     fn default() -> Self {
         Self {
             last_gc_time: Instant::now(),
-            node: WalkNode::default(),
+            node: WalkNode::new(DEFAULT_GC_TIMEOUT),
         }
     }
 }
@@ -82,6 +82,9 @@ impl Detector {
 
     pub fn set_gc_timeout(&mut self, timeout: Duration) {
         self.config.gc_timeout = timeout;
+        // Update root node's timeout as a special case. The root node is never deleted, so has no
+        // chance to get current gc_timeout on creation.
+        self.inner.write().node.gc_timeout = timeout;
     }
 
     /// Return list of (walk root dir, walk depth) representing active file content walks.
@@ -132,9 +135,10 @@ impl Detector {
         let walk_threshold = walk_threshold(&self.config, dir_path.components().count());
         let walk_ratio = self.config.walk_ratio;
 
-        let (owner, suffix) = inner
-            .node
-            .get_or_create_owning_node(WalkType::File, dir_path);
+        let (owner, suffix) =
+            inner
+                .node
+                .get_or_create_owning_node(&self.config, WalkType::File, dir_path);
 
         owner.last_access.bump();
 
@@ -198,7 +202,7 @@ impl Detector {
             if is_interesting_metadata {
                 // Fill in interesting metadata that informs detection of file content walks.
                 let mut inner = self.inner.write();
-                inner.set_metadata(path, num_files, num_dirs);
+                inner.set_metadata(&self.config, path, num_files, num_dirs);
             }
             return false;
         }
@@ -209,7 +213,7 @@ impl Detector {
 
         if is_interesting_metadata {
             // Fill in interesting metadata that informs detection of file content walks.
-            inner.set_metadata(path, num_files, num_dirs);
+            inner.set_metadata(&self.config, path, num_files, num_dirs);
         }
 
         let (dir_path, base_name) = match path.split_last_component() {
@@ -220,9 +224,10 @@ impl Detector {
         let walk_threshold = walk_threshold(&self.config, dir_path.components().count());
         let walk_ratio = self.config.walk_ratio;
 
-        let (owner, suffix) = inner
-            .node
-            .get_or_create_owning_node(WalkType::Directory, dir_path);
+        let (owner, suffix) =
+            inner
+                .node
+                .get_or_create_owning_node(&self.config, WalkType::Directory, dir_path);
 
         owner.last_access.bump();
 
@@ -292,7 +297,7 @@ impl Detector {
 
         // Bump last_access, but don't insert any new nodes/walks.
         if let Some((walk_node, suffix)) = inner.node.get_owning_node(wt, dir) {
-            if walk_node.expired(self.config.gc_timeout) {
+            if walk_node.expired() {
                 // Don't resurrect a node that should be expired by GC.
                 return None;
             }
@@ -344,13 +349,9 @@ impl Inner {
         // TODO: consider moving "should merge" logic into `WalkNode::insert_walk` to do
         // more work in a single traversal.
 
-        let walk_node = self.node.insert_walk(
-            walk_type,
-            dir,
-            walk,
-            walk_threshold(config, dir.components().count()),
-            config.walk_ratio,
-        );
+        let walk_node =
+            self.node
+                .insert_walk(config, walk_type, dir, walk, dir.components().count());
         walk_node.last_access.bump();
 
         // Check if we should immediately promote this walk to parent directory. This is
@@ -510,7 +511,7 @@ impl Inner {
 
         let start = Instant::now();
 
-        let (deleted_nodes, remaining_nodes, deleted_walks) = self.node.gc(config.gc_timeout);
+        let (deleted_nodes, remaining_nodes, deleted_walks) = self.node.gc();
 
         let elapsed = start.elapsed();
 
@@ -523,8 +524,14 @@ impl Inner {
         deleted_walks > 0
     }
 
-    fn set_metadata(&mut self, path: &RepoPath, num_files: usize, num_dirs: usize) {
-        let node = self.node.get_or_create_node(path);
+    fn set_metadata(
+        &mut self,
+        config: &Config,
+        path: &RepoPath,
+        num_files: usize,
+        num_dirs: usize,
+    ) {
+        let node = self.node.get_or_create_node(config, path);
         node.last_access.bump();
         node.total_dirs = Some(num_dirs);
         node.total_files = Some(num_files);
