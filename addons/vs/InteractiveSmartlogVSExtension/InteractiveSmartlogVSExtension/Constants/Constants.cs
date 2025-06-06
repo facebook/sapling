@@ -44,6 +44,8 @@ namespace InteractiveSmartlogVSExtension
         // Check if the cached URL is fresh based on the staleness threshold
         public const int StalenessThresholdMinutes = 5;
 
+        public const string SlInstallationUrl = "https://sapling-scm.com/docs/introduction/installation";
+
         /// <summary>
         /// Command ID.
         /// </summary>
@@ -71,6 +73,11 @@ namespace InteractiveSmartlogVSExtension
         public static string NoRepoMountedErrorTitle = "Repository is not mounted.";
         public static string NoRepoMountedErrorDetail = $"Check if EdenFS is running and ensure repository is mounted.";
         public static string NoRepoMountedErrorRemediation = "Try running `edenfsctl doctor` and reload view via Tools -> Reload ISL.";
+
+
+        public static string SaplingExeNotFoundTitle = "Sapling (sl.exe) Not Found.";
+        public static string SaplingExeNotFoundDetail = "The Sapling command-line tool sl.exe was not found on your system PATH.";
+        public static string SaplingExeNotFoundRemediation = $"Please install Sapling from {SlInstallationUrl} and ensure sl.exe is accessible from your command line. After installation, restart Visual Studio and try loading ISL view again.";
 
         public static readonly HashSet<ErrorCodes> ErrorCodesThatShouldCloseToolWindow = new HashSet<ErrorCodes>
         {

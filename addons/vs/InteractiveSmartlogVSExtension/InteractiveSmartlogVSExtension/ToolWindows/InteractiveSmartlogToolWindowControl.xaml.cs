@@ -5,14 +5,6 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-using System;
-using System.Diagnostics;
-using System.IO;
-using System.Runtime.InteropServices;
-using System.Threading;
-using System.Threading.Tasks;
-using System.Windows;
-using System.Windows.Markup;
 using EnvDTE;
 using EnvDTE80;
 using InteractiveSmartlogVSExtension.Enums;
@@ -22,6 +14,15 @@ using Microsoft.VisualStudio.Shell;
 using Microsoft.VisualStudio.Shell.Interop;
 using Microsoft.VisualStudio.Threading;
 using Microsoft.Web.WebView2.Core;
+using System;
+using System.ComponentModel;
+using System.Diagnostics;
+using System.IO;
+using System.Runtime.InteropServices;
+using System.Threading;
+using System.Threading.Tasks;
+using System.Windows;
+using System.Windows.Markup;
 
 namespace InteractiveSmartlogVSExtension
 {
@@ -225,6 +226,14 @@ namespace InteractiveSmartlogVSExtension
                 webView.Source = new Uri(url);
                 await CommonHelper.LogSuccessAsync(ActionType.RenderISLView);
                 await LoggingHelper.WriteAsync("Computed URL: " + url + " at " + DateTime.Now);
+            }
+            catch (FileNotFoundException ex) when (ex.Message.Contains("sl.exe"))
+            {
+                // Show a custom error page with a link to Sapling installation docs
+                await DisplayErrorPageAsync(Constants.SaplingExeNotFoundTitle, Constants.SaplingExeNotFoundDetail, Constants.SaplingExeNotFoundRemediation);
+                await CommonHelper.LogAndHandleErrorAsync(_package, ActionType.RenderISLView, ErrorCodes.SlWebFailed, ex.Message, false);
+                return;
+
             }
             catch (Exception ex)
             {
