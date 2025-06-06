@@ -354,6 +354,7 @@ fn test_retain_interesting_metadata() {
 fn test_retain_interesting_metadata_when_covered_by_walk() {
     let mut detector = Detector::new();
     detector.set_walk_threshold(TEST_WALK_THRESHOLD);
+    detector.set_walk_ratio(0.1);
 
     // Start off with a directory walk at root/ triggered by un-interesting directories.
     detector.dir_loaded(p("root/dir1"), 0, 0);

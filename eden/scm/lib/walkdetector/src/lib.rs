@@ -638,20 +638,21 @@ fn should_merge_into_ancestor(
 const DEFAULT_WALK_THRESHOLD: usize = 3;
 
 // Walk threshold multiplier for walks near the top of the repo.
-const DEFAULT_STRICT_MULTIPLIER: usize = 10;
+const DEFAULT_STRICT_MULTIPLIER: usize = 20;
 
 // Depth at which we no longer get the strict multiplier. 0 means we never get the multiplier.
 const DEFAULT_LAX_DEPTH: usize = 0;
 
-// If we know the total dir size, make sure walk threshold is at least 5% of dir size.
-const DEFAULT_WALK_RATIO: f64 = 0.05;
+// If we know the total dir size, make sure walk threshold is at least 1% of dir size.
+// This avoids detecting walks for enormous directories too quickly.
+const DEFAULT_WALK_RATIO: f64 = 0.01;
 
 // How often we garbage collect stale nodes.
 // We do not rely on running a full GC to expire old walks, only to clean up memory.
 const DEFAULT_GC_INTERVAL: Duration = Duration::from_secs(10);
 
 // How stale a walk must be before we remove it.
-const DEFAULT_GC_TIMEOUT: Duration = Duration::from_secs(2);
+const DEFAULT_GC_TIMEOUT: Duration = Duration::from_secs(5);
 
 struct Config {
     // "How many children must be accessed before we consider parent walked?"
