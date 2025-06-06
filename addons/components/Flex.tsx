@@ -57,18 +57,21 @@ export type ColumnAlignmentProps =
 
 /** Vertical flex layout */
 export function Column(props: ContainerProps & ColumnAlignmentProps) {
-  const {xstyle, alignStart, alignCenter, alignItems, ...rest} = props;
+  const {xstyle, alignStart, alignCenter, alignItems, className, ...rest} = props;
+
+  const {className: stylexClassName, ...otherStylex} = stylex.props(
+    styles.flex,
+    styles.column,
+    xstyle,
+    alignStart && styles.alignStart,
+    alignCenter && styles.alignCenter,
+    alignItems && styles.alignCustom(alignItems),
+  );
   return (
     <div
       {...rest}
-      {...stylex.props(
-        styles.flex,
-        styles.column,
-        xstyle,
-        alignStart && styles.alignStart,
-        alignCenter && styles.alignCenter,
-        alignItems && styles.alignCustom(alignItems),
-      )}
+      className={stylexClassName + (className ? ' ' + className : '')}
+      {...otherStylex}
     />
   );
 }
