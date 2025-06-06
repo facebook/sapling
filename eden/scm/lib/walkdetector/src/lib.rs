@@ -137,7 +137,7 @@ impl Detector {
 
         let mut walk_changed = inner.maybe_gc(&self.config);
 
-        let walk_threshold = walk_threshold(&self.config, dir_path.components().count());
+        let walk_threshold = walk_threshold(&self.config, dir_path.depth());
         let walk_ratio = self.config.walk_ratio;
 
         let (owner, suffix) =
@@ -226,7 +226,7 @@ impl Detector {
             Some((dir, base)) => (dir, base),
         };
 
-        let walk_threshold = walk_threshold(&self.config, dir_path.components().count());
+        let walk_threshold = walk_threshold(&self.config, dir_path.depth());
         let walk_ratio = self.config.walk_ratio;
 
         let (owner, suffix) =
@@ -349,9 +349,9 @@ impl Inner {
         // TODO: consider moving "should merge" logic into `WalkNode::insert_walk` to do
         // more work in a single traversal.
 
-        let walk_node =
-            self.node
-                .insert_walk(config, walk_type, dir, walk, dir.components().count());
+        let walk_node = self
+            .node
+            .insert_walk(config, walk_type, dir, walk, dir.depth());
         walk_node.last_access.bump();
 
         // Check if we should immediately promote this walk to parent directory. This is
@@ -398,7 +398,7 @@ impl Inner {
         parent_node.last_access.bump();
 
         let walk_depth = should_merge_into_ancestor(
-            walk_threshold(config, parent_dir.components().count()),
+            walk_threshold(config, parent_dir.depth()),
             config.walk_ratio,
             walk_type,
             dir,
@@ -445,14 +445,14 @@ impl Inner {
         {
             // This heuristic is only intended to advance/insert the grandparent's walk one level to contain us.
             // If the grandparent's walk already contains us, we shouldn't advance it.
-            if grandparent_walk_depth > suffix.components().count() {
+            if grandparent_walk_depth > suffix.depth() {
                 tracing::trace!(%dir, grandparent_walk_depth, "grandparent walk too deep");
                 return None;
             }
         }
 
         let walk_depth = should_merge_into_ancestor(
-            walk_threshold(config, grandparent_dir.components().count()),
+            walk_threshold(config, grandparent_dir.depth()),
             config.walk_ratio,
             walk_type,
             dir,
@@ -491,7 +491,7 @@ impl Inner {
         // are still "making progress" towards advancing its walk.
         ancestor.last_access.bump();
 
-        let ancestor_depth = ancestor_dir.components().count();
+        let ancestor_depth = ancestor_dir.depth();
         let threshold = walk_threshold(config, ancestor_depth);
 
         // Check if the containing walk's node has N children with descendants that

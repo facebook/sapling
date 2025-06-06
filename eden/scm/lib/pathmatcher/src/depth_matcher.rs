@@ -33,7 +33,7 @@ impl DepthMatcher {
 
 impl Matcher for DepthMatcher {
     fn matches_directory(&self, path: &RepoPath) -> Result<DirectoryMatch> {
-        let path_depth = path.components().count();
+        let path_depth = path.depth();
 
         Ok(match (self.min_depth, self.max_depth) {
             (None, None) => DirectoryMatch::Everything,
@@ -45,7 +45,7 @@ impl Matcher for DepthMatcher {
     }
 
     fn matches_file(&self, path: &RepoPath) -> Result<bool> {
-        let path_depth = path.components().count().saturating_sub(1);
+        let path_depth = path.depth().saturating_sub(1);
 
         Ok(self.min_depth.is_none_or(|min| path_depth >= min)
             && self.max_depth.is_none_or(|max| path_depth <= max))

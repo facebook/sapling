@@ -478,7 +478,7 @@ struct WalkMatcher {
 
 impl WalkMatcher {
     fn new(dir: RepoPathBuf, walk_depth: usize, depth_offset: Option<usize>) -> Self {
-        let start_depth = dir.components().count();
+        let start_depth = dir.depth();
         Self {
             depth_matcher: DepthMatcher::new(
                 // If we have a starting depth offset, increase the matcher's min_depth. This is so we

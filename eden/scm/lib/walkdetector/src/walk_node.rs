@@ -458,7 +458,7 @@ impl WalkNode {
     /// rooted at `path` of depth `depth`.
     fn contains(&self, walk_type: WalkType, path: &RepoPath, depth: usize) -> bool {
         self.get_dominating_walk(walk_type)
-            .is_some_and(|w| w.depth >= (path.components().count() + depth))
+            .is_some_and(|w| w.depth >= (path.depth() + depth))
     }
 
     /// Return whether this Dir should be considered "walked".
