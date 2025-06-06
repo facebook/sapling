@@ -1624,7 +1624,7 @@ function merge_just_knobs() {
 }
 
 function packer() {
-  "$MONONOKE_PACKER" \
+  GLOG_minloglevel=5 "$MONONOKE_PACKER" \
     "${CACHE_ARGS[@]}" \
     "${COMMON_ARGS[@]}" \
     --mononoke-config-path "${TESTTMP}/mononoke-config" \

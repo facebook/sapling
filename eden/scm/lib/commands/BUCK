@@ -147,5 +147,8 @@ rust_library(
         "//eden/scm/lib/commands/debugcommands/cmddebugwait:cmddebugwait",
         "//eden/scm/lib/commands/debugcommands/cmddebugwalkdetector:cmddebugwalkdetector",
         # [[[end]]]
-    ],
+    ] + ([] if rust_oss.is_oss_build() else [
+        "//common/rust/cpp_log_spew:cpp_log_spew",
+        "//common/rust/shed/fbinit:fbinit",
+    ]),
 )

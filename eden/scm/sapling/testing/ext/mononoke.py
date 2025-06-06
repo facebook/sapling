@@ -119,10 +119,6 @@ def mononoke(args: List[str], stderr: BinaryIO, fs: ShellFS, env: Env) -> int:
     mononoke_server_addr_file = env.getenv("MONONOKE_SERVER_ADDR_FILE")
     fs.rm(mononoke_server_addr_file)
 
-    # Set environment variables
-    env.setenv("PYTHONWARNINGS", "ignore:::requests,ignore::SyntaxWarning")
-    env.setenv("GLOG_minloglevel", "5")
-
     # Prepare command and arguments
     mononoke_server = env.getenv("MONONOKE_SERVER")
     test_tmp = env.getenv("TESTTMP")
@@ -161,6 +157,13 @@ def mononoke(args: List[str], stderr: BinaryIO, fs: ShellFS, env: Env) -> int:
     if not env.getenv("ENABLE_BOOKMARK_CACHE"):
         mononoke_command.append("--disable-bookmark-cache-warming")
 
+    # These variables have a very wide blast radius; setting them in the environment makes it
+    # very hard to debug any errors. Instead, pass them explicitly only to this binary. This also mirrors
+    # what we do in library.sh.
+    localenv = env.getexportedenv()
+    localenv["PYTHONWARNINGS"] = "ignore:::requests,ignore::SyntaxWarning"
+    localenv["GLOG_minloglevel"] = "5"
+
     # Execute the command in the background
     with open(f"{test_tmp}/mononoke.out", "w") as outfile:
         try:
@@ -168,7 +171,7 @@ def mononoke(args: List[str], stderr: BinaryIO, fs: ShellFS, env: Env) -> int:
                 mononoke_command,
                 stdout=outfile,
                 stderr=outfile,
-                env=env.getexportedenv(),
+                env=localenv,
             )
         except:
             stderr.write(

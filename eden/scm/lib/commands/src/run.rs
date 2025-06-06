@@ -68,6 +68,9 @@ pub fn run_command(args: Vec<String>, io: &IO) -> i32 {
     // Ensure HgPython can initialize.
     crate::init();
 
+    #[cfg(feature = "fb")]
+    cpp_log_spew::disable(fbinit::expect_init());
+
     // The pfcserver or commandserver do not want tracing or blackbox or ctrlc setup,
     // or going through the Rust command table. Bypass them.
     if let Some(arg1) = args.get(1).map(|s| s.as_ref()) {

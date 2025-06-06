@@ -48,6 +48,7 @@ cmdstatus = { version = "0.1.0", path = "commands/cmdstatus" }
 cmdversion = { version = "0.1.0", path = "commands/cmdversion" }
 cmdwhereami = { version = "0.1.0", path = "commands/cmdwhereami" }
 ctrlc = { version = "3.4.5", features = ["termination"] }
+fbinit = { version = "0.2.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 flate2 = { version = "1.0.33", features = ["rust_backend"], default-features = false }
 hostname = "0.3"
 libc = "0.2.139"
