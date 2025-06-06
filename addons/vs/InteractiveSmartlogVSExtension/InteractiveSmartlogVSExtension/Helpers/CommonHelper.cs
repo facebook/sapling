@@ -25,7 +25,7 @@ namespace InteractiveSmartlogVSExtension.Helpers
 {
     public class CommonHelper
     {
-        private static TelemetryLogger telemetryLogger = new TelemetryLogger(); // fb-only
+        // @fb-only
 
         public struct WindowId
         {
@@ -50,7 +50,7 @@ namespace InteractiveSmartlogVSExtension.Helpers
             }
             catch (Exception ex)
             {
-                LoggingHelper.WriteToDebug("Failed to get current window ID: " + ex.Message); // fb-only
+                LoggingHelper.WriteToDebug("Failed to get current window ID: " + ex.Message);
             }
             return null;
         }
@@ -111,7 +111,7 @@ namespace InteractiveSmartlogVSExtension.Helpers
             }
             catch (Exception ex)
             {
-                LoggingHelper.WriteAsync($"Failed to get the IDE version: {ex.Message}"); // fb-only
+                LoggingHelper.WriteAsync($"Failed to get the IDE version: {ex.Message}");
             }
 
             return iDEVersion;
@@ -204,10 +204,10 @@ namespace InteractiveSmartlogVSExtension.Helpers
             string errorMessage = $"Error code: {errorCode}, Message: {message}";
 
             // Log the error to the output window
-            await LoggingHelper.WriteAsync(errorMessage); // fb-only
+            await LoggingHelper.WriteAsync(errorMessage);
 
             // Send telemetry for the error
-            telemetryLogger.logError(action, errorCode, message); // fb-only
+            // @fb-only
 
             // Show a message box to the user
             if (showNotification && package != null)
@@ -236,7 +236,7 @@ namespace InteractiveSmartlogVSExtension.Helpers
         /// <returns></returns>
         public static async Task LogSuccessAsync(ActionType action)
         {
-            telemetryLogger.logInfo(action); // fb-only
+            // @fb-only
         }
 
         /// <summary>
