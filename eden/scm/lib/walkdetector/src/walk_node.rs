@@ -215,7 +215,7 @@ impl WalkNode {
         fn inner(
             node: &WalkNode,
             walk_type: WalkType,
-            path: RepoPathBuf,
+            path: &mut RepoPathBuf,
             list: &mut Vec<(RepoPathBuf, usize)>,
         ) {
             if let Some(walk) = node.get_walk_for_type(walk_type) {
@@ -223,12 +223,14 @@ impl WalkNode {
             }
 
             for (name, child) in node.children.iter() {
-                inner(child, walk_type, path.join(name.as_path_component()), list);
+                path.push(name.as_path_component());
+                inner(child, walk_type, path, list);
+                path.pop();
             }
         }
 
         let mut list = Vec::new();
-        inner(self, walk_type, RepoPathBuf::new(), &mut list);
+        inner(self, walk_type, &mut RepoPathBuf::new(), &mut list);
         list
     }
 
