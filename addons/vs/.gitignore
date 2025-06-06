@@ -1,0 +1,57 @@
+# Build results
+[Bb]in/
+[Oo]bj/
+# VS Code workspace
+.vscode/
+# Visual Studio 2015/2017/2019/2022 cache/options directory
+.vs/
+# Uncomment if you have tasks that create the directory at the solution root
+# .vs/
+# VSIX build artifacts
+*.vsix
+*.vsixmanifest.user
+# WebView2 cache
+WebView2/
+# Windows image file caches
+Thumbs.db
+ehthumbs.db
+# User-specific files
+*.userprefs
+*.user.config
+# Auto-generated files
+*.Designer.cs
+*.g.cs
+*.g.i.cs
+# NuGet packages
+*.nupkg
+# The packages folder can be ignored because of PackageReference
+*/packages/*
+!\*/packages/build/
+!\*/packages/repositories.config
+# NPM packages (if any web assets)
+node_modules/
+# Logs
+*.log
+# Temporary files
+*.tmp
+*.temp
+*.bak
+# Additions for VS C# Extension
+# Ignore VSPackage files
+*.vspackage
+# Ignore VSIX manifest files
+*.vsixmanifest
+# Ignore VSIX package files
+*.vsixpkg
+# Ignore MEF cache
+MEF/
+# Ignore Roslyn cache
+roslyn/
+# Ignore TypeScript cache
+.ts-cache/
+# Ignore ESLint cache
+.eslintcache/
+# Ignore CSS/JS bundles
+bundles/
+# Ignore compiled web assets
+dist/

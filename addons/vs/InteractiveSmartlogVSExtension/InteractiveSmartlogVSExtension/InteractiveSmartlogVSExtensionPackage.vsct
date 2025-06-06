@@ -1,0 +1,167 @@
+<?xml version="1.0" encoding="utf-8"?>
+<CommandTable xmlns="http://schemas.microsoft.com/VisualStudio/2005-10-18/CommandTable" xmlns:xs="http://www.w3.org/2001/XMLSchema">
+
+  <!--  This is the file that defines the actual layout and type of the commands.
+        It is divided in different sections (e.g. command definition, command
+        placement, ...), with each defining a specific set of properties.
+        See the comment before each section for more details about how to
+        use it. -->
+
+  <!--  The VSCT compiler (the tool that translates this file into the binary
+        format that VisualStudio will consume) has the ability to run a preprocessor
+        on the vsct file; this preprocessor is (usually) the C++ preprocessor, so
+        it is possible to define includes and macros with the same syntax used
+        in C++ files. Using this ability of the compiler here, we include some files
+        defining some of the constants that we will use inside the file. -->
+
+  <!--This
+  is the file that defines the IDs for all the commands exposed by VisualStudio. -->
+  <Extern href="stdidcmd.h" />
+
+  <!--This
+  header contains the command ids for the menus provided by the shell. -->
+  <Extern href="vsshlids.h" />
+
+  <KeyBindings>
+        <KeyBinding guid="guidIslPackageOtherWindowsCmdSet"
+                    id="InteractiveSmartlogToolWindowCommandId"
+                    editor="guidVSStd97"
+                    key1="I"
+                    mod1="Control Shift"/>
+        <KeyBinding guid="guidIslPackageToolsMenuCmdSet" 
+                    id="ReloadCommandId"
+                    editor="guidVSStd97"
+                    key1="R"
+                    mod1="Control"/>
+  </KeyBindings>
+
+  <CommandPlacements>
+      <!-- XAML editor context menu -->
+      <CommandPlacement guid="guidIslPackageContextMenuCmdSet" id="MyMenuGroup" priority="0x0600">
+          <Parent guid="guidXamlUiCmds" id="IDM_XAML_EDITOR" />
+      </CommandPlacement>
+  </CommandPlacements>
+
+  <!--The
+  Commands section is where commands, menus, and menu groups are defined.
+      This section uses a Guid to identify the package that provides the command defined inside it. -->
+  <Commands package="guidInteractiveSmartlogVSExtensionPackage">
+    <!-- Inside this section we have different sub-sections: one for the menus, another
+    for the menu groups, one for the buttons (the actual commands), one for the combos
+    and the last one for the bitmaps used. Each element is identified by a command id that
+    is a unique pair of guid and numeric identifier; the guid part of the identifier is usually
+    called "command set" and is used to group different command inside a logically related
+    group; your package should define its own command set in order to avoid collisions
+    with command ids defined by other packages. -->
+
+    <!--Buttons
+    section. -->
+    <!--This
+    section defines the elements the user can interact with, like a menu command or a button
+        or combo box in a toolbar. -->
+    <Buttons>
+      <!--To
+      define a menu group you have to specify its ID, the parent menu and its display priority.
+          The command is visible and enabled by default. If you need to change the visibility, status, etc,
+      you can use
+          the CommandFlag node.
+          You can add more than one CommandFlag node e.g.:
+              <CommandFlag>DefaultInvisible</CommandFlag>
+              <CommandFlag>DynamicVisibility</CommandFlag>
+          If you do not want an image next to your command, remove the Icon node /> -->
+      <Button guid="guidIslPackageOtherWindowsCmdSet" id="InteractiveSmartlogToolWindowCommandId" priority="0x0100" type="Button">
+        <Parent guid="guidSHLMainMenu" id="IDG_VS_WNDO_OTRWNDWS1" />
+        <Icon guid="guidImages" id="slPic" />
+        <Strings>
+          <ButtonText>Interactive Smartlog</ButtonText>
+        </Strings>
+      </Button>
+      <Button guid="guidIslPackageToolsMenuCmdSet" id="ReloadCommandId" priority="0x0100" type="Button">
+        <Parent guid="guidIslPackageToolsMenuCmdSet" id="IslMenuGroup" />
+        <Icon guid="guidImages" id="slPic" />
+        <Strings>
+          <ButtonText>Reload ISL</ButtonText>
+        </Strings>
+      </Button>
+      <Button guid="guidIslPackageContextMenuCmdSet" id="DiffUncommittedChangesId" priority="0x0100" type="Button">
+          <Parent guid="guidIslPackageContextMenuCmdSet" id="MyMenuGroup" />
+          <Icon guid="guidImages" id="slPic" />
+          <Strings>
+              <ButtonText>SL Show Diff of Uncommitted Changes</ButtonText>
+          </Strings>
+      </Button>
+      <Button guid="guidIslPackageContextMenuCmdSet" id="DiffStackChangesId" priority="0x0100" type="Button">
+          <Parent guid="guidIslPackageContextMenuCmdSet" id="MyMenuGroup" />
+          <Icon guid="guidImages" id="slPic" />
+          <Strings>
+              <ButtonText>SL Show Diff of Stack Changes</ButtonText>
+          </Strings>
+      </Button>
+      <Button guid="guidIslPackageContextMenuCmdSet" id="DiffHeadChangesId" priority="0x0100" type="Button">
+          <Parent guid="guidIslPackageContextMenuCmdSet" id="MyMenuGroup" />
+          <Icon guid="guidImages" id="slPic" />
+          <Strings>
+              <ButtonText>SL Show Diff of Head Changes</ButtonText>
+          </Strings>
+      </Button>
+      <Button guid="guidIslPackageContextMenuCmdSet" id="RevertUncommittedChangesId" priority="0x0100" type="Button">
+          <Parent guid="guidIslPackageContextMenuCmdSet" id="MyMenuGroup" />
+          <Icon guid="guidImages" id="slPic" />
+          <Strings>
+              <ButtonText>SL Revert Uncommitted Changes</ButtonText>
+          </Strings>
+      </Button>
+    </Buttons>
+
+    <!--The
+    bitmaps section is used to define the bitmaps that are used for the commands.-->
+    <Bitmaps>
+      <!--  The bitmap id is defined in a way that is a little bit different from the others:
+            the declaration starts with a guid for the bitmap strip, then there is the resource id of the
+            bitmap strip containing the bitmaps and then there are the numeric ids of the elements used
+            inside a button definition. An important aspect of this declaration is that the element id
+            must be the actual index (1-based) of the bitmap inside the bitmap strip. -->
+      <Bitmap guid="guidImages" href="Resources\Sapling.png" usedList="slPic" />
+    </Bitmaps>
+    <Groups>
+      <Group guid="guidIslPackageToolsMenuCmdSet" id="IslMenuGroup" priority="0x0600">
+        <Parent guid="guidSHLMainMenu" id="IDM_VS_MENU_TOOLS" />
+      </Group>
+        <Group guid="guidIslPackageContextMenuCmdSet" id="MyMenuGroup" priority="0x0600">
+            <Parent guid="guidSHLMainMenu" id="IDM_VS_CTXT_CODEWIN" />
+        </Group>
+    </Groups>
+  </Commands>
+
+  <Symbols>
+    <!-- This is the package guid. -->
+    <GuidSymbol name="guidInteractiveSmartlogVSExtensionPackage" value="{ebb7f508-ce81-4d97-8805-ec46d95e7473}" />
+
+    <!-- This is the guid used to group the menu commands together -->
+    <GuidSymbol name="guidIslPackageOtherWindowsCmdSet" value="{ea6d6b22-8b69-45e5-a008-60e544350cbf}">
+      <IDSymbol name="InteractiveSmartlogToolWindowCommandId" value="0x0100" />
+    </GuidSymbol>
+
+    <GuidSymbol name="guidImages" value="{9ff7004a-39fd-4bb3-8f76-d77d0a908106}">
+      <IDSymbol name="slPic" value="1" />
+    </GuidSymbol>
+
+    <GuidSymbol name="guidIslPackageToolsMenuCmdSet" value="{e403bf7c-0df0-4f85-8c38-0c100aec6d36}">
+      <IDSymbol value="4128" name="IslMenuGroup" />
+      <IDSymbol value="0x0101" name="ReloadCommandId" />
+    </GuidSymbol>
+
+    <GuidSymbol name="guidIslPackageContextMenuCmdSet" value="{de9ba81f-a1bf-456a-91af-3d495add8add}">
+        <IDSymbol name="MyMenuGroup" value="0x1020" />
+        <IDSymbol name="DiffUncommittedChangesId" value="0x0102" />
+        <IDSymbol name="DiffStackChangesId" value="0x0103" />
+        <IDSymbol name="DiffHeadChangesId" value="0x0104" />
+        <IDSymbol name="RevertUncommittedChangesId" value="0x0105" />
+    </GuidSymbol>
+
+    <GuidSymbol name="guidXamlUiCmds" value="{4c87b692-1202-46aa-b64c-ef01faec53da}">
+        <IDSymbol name="IDM_XAML_EDITOR" value="0x103" />
+    </GuidSymbol>
+
+  </Symbols>
+</CommandTable>
