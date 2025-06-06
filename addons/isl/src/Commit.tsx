@@ -89,6 +89,11 @@ export const distantRebaseWarningEnabled = localStorageBackedAtom<boolean>(
   true,
 );
 
+export const rebaseOntoMasterWarningEnabled = localStorageBackedAtom<boolean>(
+  'isl.rebase-onto-master-warning-enabled',
+  true,
+);
+
 /**
  * Some preview types should not allow actions on top of them
  * For example, you can't click goto on the preview of dragging a rebase,
@@ -733,6 +738,52 @@ async function maybeWarnAboutRebaseOffWarm(dest: CommitInfo): Promise<boolean> {
   return true;
 }
 
+async function maybeWarnAboutRebaseOntoMaster(commit: CommitInfo): Promise<boolean> {
+  const isRebaseOntoMasterWarningEnabled = readAtom(rebaseOntoMasterWarningEnabled);
+  if (!isRebaseOntoMasterWarningEnabled) {
+    return true;
+  }
+
+  const dag = readAtom(dagWithPreviews);
+  const onto = dag.get(commit.parents[0]);
+  if (!onto) {
+    return true;
+  }
+
+  const destBase = findPublicBaseAncestor(dag, onto.hash);
+  if (!destBase) {
+    // can't determine if we can show warning
+    return Promise.resolve(true);
+  }
+
+  const warning = Promise.resolve(Internal.maybeWarnAboutRebaseOntoMaster?.(destBase) ?? false);
+
+  if (await warning) {
+    tracker.track('WarnAboutRebaseOntoMaster');
+    const buttons = [t('Opt Out of Future Warnings'), t('Cancel'), t('Rebase Anyway')];
+    const answer = await showModal({
+      type: 'confirm',
+      buttons,
+      title: <T>Rebase onto Master Warning</T>,
+      message: t(
+        Internal.warnAboutRebaseOntoMasterReason ??
+          'You are about to rebase directly onto master/main. ' +
+            'This is generally not recommended as it can cause unexpected failures and slower builds. ' +
+            'Consider rebasing onto a stable or warm branch instead. ' +
+            'Do you want to `rebase` anyway?',
+      ),
+    });
+
+    if (answer === buttons[0]) {
+      writeAtom(rebaseOntoMasterWarningEnabled, false);
+      return true;
+    }
+    return answer === buttons[2];
+  }
+
+  return true;
+}
+
 async function gotoAction(runOperation: ReturnType<typeof useRunOperation>, commit: CommitInfo) {
   const dest =
     // If the commit has a remote bookmark, use that instead of the hash. This is easier to read in the command history
@@ -760,22 +811,29 @@ function handleRebaseConfirmation(
   commit: CommitInfo,
   handlePreviewedOperation: (cancel: boolean) => void,
 ): Promise<void> {
-  return maybeWarnAboutDistantRebase(commit).then(shouldProceed => {
-    if (shouldProceed) {
-      handlePreviewedOperation(/* cancel */ false);
-
-      const dag = readAtom(dagWithPreviews);
-      const onto = dag.get(commit.parents[0]);
-      if (onto) {
-        tracker.track('ConfirmDragAndDropRebase', {
-          extras: {
-            remoteBookmarks: onto.remoteBookmarks,
-            locations: onto.stableCommitMetadata?.map(s => s.value),
-          },
-        });
+  return maybeWarnAboutDistantRebase(commit)
+    .then(shouldProceed => {
+      if (!shouldProceed) {
+        return false;
       }
-    }
-  });
+      return maybeWarnAboutRebaseOntoMaster(commit);
+    })
+    .then(shouldProceed => {
+      if (shouldProceed) {
+        handlePreviewedOperation(/* cancel */ false);
+
+        const dag = readAtom(dagWithPreviews);
+        const onto = dag.get(commit.parents[0]);
+        if (onto) {
+          tracker.track('ConfirmDragAndDropRebase', {
+            extras: {
+              remoteBookmarks: onto.remoteBookmarks,
+              locations: onto.stableCommitMetadata?.map(s => s.value),
+            },
+          });
+        }
+      }
+    });
 }
 
 async function maybeWarnAboutDistantRebase(commit: CommitInfo): Promise<boolean> {

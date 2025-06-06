@@ -171,6 +171,7 @@ export type TrackEventName =
   | 'SplitSuggestionsDismissedForSevenDays'
   | 'WarnAboutRebaseOffWarm'
   | 'WarnAboutDistantRebase'
+  | 'WarnAboutRebaseOntoMaster'
   | 'SaplingISLUriHandlerHandle'
   | 'CommitInfoFieldEditFieldClick';
 

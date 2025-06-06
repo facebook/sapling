@@ -801,6 +801,7 @@ export type LocalStorageName =
   | 'isl.hide-non-blocking-diagnostics'
   | 'isl.rebase-off-warm-warning-enabled'
   | 'isl.distant-rebase-warning-enabled'
+  | 'isl.rebase-onto-master-warning-enabled'
   | 'isl.experimental-features-local-override'
   // These keys are prefixes, with further dynamic keys appended afterwards
   | 'isl.edited-commit-messages:'

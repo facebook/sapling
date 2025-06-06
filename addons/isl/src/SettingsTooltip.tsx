@@ -19,7 +19,11 @@ import {Tooltip} from 'isl-components/Tooltip';
 import {useAtom, useAtomValue} from 'jotai';
 import {Suspense} from 'react';
 import {nullthrows, tryJsonParse} from 'shared/utils';
-import {distantRebaseWarningEnabled, rebaseOffWarmWarningEnabled} from './Commit';
+import {
+  distantRebaseWarningEnabled,
+  rebaseOffWarmWarningEnabled,
+  rebaseOntoMasterWarningEnabled,
+} from './Commit';
 import {condenseObsoleteStacks} from './CommitTreeList';
 import {Column, Row} from './ComponentUtils';
 import {confirmShouldSubmitEnabledAtom} from './ConfirmSubmitStack';
@@ -132,6 +136,7 @@ function SettingsDropdown({
           <CondenseObsoleteSetting />
           <RebaseOffWarmWarningSetting />
           <DistantRebaseWarningSetting />
+          <RebaseOntoMasterWarningSetting />
           <DeemphasizeIrrelevantCommitsSetting />
         </Column>
       </Setting>
@@ -335,6 +340,25 @@ function DistantRebaseWarningSetting() {
           setValue(checked);
         }}>
         <T>Show Warning on Distant Rebase</T>
+      </Checkbox>
+    </Tooltip>
+  );
+}
+
+function RebaseOntoMasterWarningSetting() {
+  const [value, setValue] = useAtom(rebaseOntoMasterWarningEnabled);
+  return (
+    <Tooltip
+      title={t(
+        'Show a warning when rebasing directly onto master branch, which can cause unexpected failures and slower builds.',
+      )}>
+      <Checkbox
+        data-testid="rebase-master-warning-enabled"
+        checked={value}
+        onChange={checked => {
+          setValue(checked);
+        }}>
+        <T>Show Warning on Rebase onto Master</T>
       </Checkbox>
     </Tooltip>
   );
