@@ -15,9 +15,11 @@ use std::sync::atomic::AtomicI64;
 use std::sync::atomic::AtomicU64;
 use std::sync::atomic::Ordering;
 use std::time::Duration;
-#[cfg(not(test))]
-use std::time::Instant;
 
+#[cfg(test)]
+use coarsetime as _; // silence "unused dependency" warning
+#[cfg(not(test))]
+use coarsetime::Instant;
 #[cfg(test)]
 use mock_instant::Instant;
 use parking_lot::RwLock;
@@ -552,8 +554,9 @@ impl Inner {
         None
     }
 
+    #[allow(clippy::useless_conversion)]
     fn needs_gc(&self, config: &Config) -> bool {
-        self.last_gc_time.elapsed() >= config.gc_interval
+        self.last_gc_time.elapsed() >= config.gc_interval.into()
     }
 
     /// Returns whether a walk was removed.
@@ -562,14 +565,20 @@ impl Inner {
             return false;
         }
 
-        let start = Instant::now();
+        let start = std::time::Instant::now();
 
         let (deleted_nodes, remaining_nodes, deleted_walks) = self.node.gc();
 
         let elapsed = start.elapsed();
 
-        if deleted_nodes > 0 || deleted_walks > 0 || elapsed > Duration::from_millis(5) {
-            tracing::debug!(elapsed=?start.elapsed(), deleted_nodes, remaining_nodes, deleted_walks, "GC complete");
+        if deleted_nodes > 0 || deleted_walks > 0 || elapsed.as_millis() > 5 {
+            tracing::debug!(
+                ?elapsed,
+                deleted_nodes,
+                remaining_nodes,
+                deleted_walks,
+                "GC complete"
+            );
         }
 
         self.last_gc_time = Instant::now();
@@ -870,22 +879,23 @@ impl AtomicInstant {
     }
 
     fn store(&self, value: Instant) {
-        self.0.store(
-            // It is theoretically possible for `value`` to be smaller than EPOCH. Do a saturating
-            // subtraction to 0, just in case. `duration_since` says it may panic in this case
-            // in the future.
-            value
-                .checked_duration_since(*EPOCH)
-                .unwrap_or_default()
-                .as_millis() as i64,
-            Ordering::Relaxed,
-        );
+        let epoch = *EPOCH;
+
+        // It is theoretically possible for `value` to be smaller than EPOCH.
+        let int_value = if value < epoch {
+            0
+        } else {
+            value.duration_since(epoch).as_millis() as i64
+        };
+
+        self.0.store(int_value, Ordering::Relaxed);
     }
 
+    #[allow(clippy::useless_conversion)]
     fn load(&self) -> Option<Instant> {
         match self.0.load(Ordering::Relaxed) {
             v if v < 0 => None,
-            v => Some(*EPOCH + Duration::from_millis(v as u64)),
+            v => Some(*EPOCH + Duration::from_millis(v as u64).into()),
         }
     }
 

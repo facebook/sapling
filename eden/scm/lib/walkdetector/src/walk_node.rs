@@ -614,9 +614,10 @@ impl WalkNode {
         self.file_walk.is_some() || self.dir_walk.is_some()
     }
 
+    #[allow(clippy::useless_conversion)]
     pub(crate) fn expired(&self) -> bool {
         self.last_access
             .load()
-            .is_none_or(|accessed| accessed.elapsed() >= self.gc_timeout)
+            .is_none_or(|accessed| accessed.elapsed() >= self.gc_timeout.into())
     }
 }
