@@ -46,6 +46,7 @@ struct GetStatusParams {
     limit_results: usize,
     case_insensitive_suffix_compares: bool,
     root: Option<PathBuf>,
+    repository_root: Option<PathBuf>,
     included_roots: Option<Vec<PathBuf>>,
     included_suffixes: Option<Vec<String>>,
     excluded_roots: Option<Vec<PathBuf>>,
@@ -57,6 +58,7 @@ pub async fn get_status_with_includes(
     second: Option<&str>,
     limit_results: usize,
     case_insensitive_suffix_compares: bool,
+    repository_root: &Option<PathBuf>,
     root: &Option<PathBuf>,
     included_roots: Vec<PathBuf>,
     included_suffixes: Vec<String>,
@@ -66,6 +68,7 @@ pub async fn get_status_with_includes(
         second,
         limit_results,
         case_insensitive_suffix_compares,
+        repository_root,
         root,
         &Some(included_roots),
         &Some(included_suffixes),
@@ -78,11 +81,13 @@ pub async fn get_status_with_includes(
 // Get status between two revisions. If second is None, then it is the working copy.
 // Limit the number of results to limit_results. If the number of results is greater than
 // limit_results return TooManyResults. Apply root and suffix filters if provided.
+// If repository_root is None, default to the current working directory.
 pub async fn get_status(
     first: &str,
     second: Option<&str>,
     limit_results: usize,
     case_insensitive_suffix_compares: bool,
+    repository_root: &Option<PathBuf>,
     root: &Option<PathBuf>,
     included_roots: &Option<Vec<PathBuf>>,
     included_suffixes: &Option<Vec<String>>,
@@ -94,6 +99,7 @@ pub async fn get_status(
         second: second.map(|s| s.to_string()),
         limit_results,
         case_insensitive_suffix_compares,
+        repository_root: repository_root.clone(),
         root: root.clone(),
         included_roots: included_roots.clone(),
         included_suffixes: included_suffixes.clone(),
@@ -156,6 +162,13 @@ where
             args.push("--rev");
             args.push(&second);
         }
+
+        let repository_root_arg: String;
+        if let Some(repository_root) = &params.repository_root {
+            repository_root_arg = format!("{}", repository_root.display());
+            args.push("--repository");
+            args.push(&repository_root_arg);
+        };
 
         let root_path_arg: String;
         if let Some(root) = &params.root {
@@ -282,6 +295,7 @@ A fbcode/buck2/app/buck2_audit_server/src/perf/configured_graph_size.rs
             second: Some(SECOND_COMMIT_ID.to_string()),
             limit_results: 1000,
             case_insensitive_suffix_compares: false,
+            repository_root: None,
             root: None,
             included_roots: None,
             included_suffixes: None,
