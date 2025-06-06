@@ -690,8 +690,10 @@ mod test {
 
     #[test]
     fn test_prefetch_manager() -> anyhow::Result<()> {
-        let detector = Arc::new(walkdetector::Detector::new());
+        let mut detector = walkdetector::Detector::new();
         detector.set_walk_threshold(2);
+
+        let detector = Arc::new(detector);
 
         let store = Arc::new(TestStore::new());
 
@@ -784,8 +786,10 @@ mod test {
             store.insert_data(Default::default(), &path, text.as_ref())?;
         }
 
-        let detector = Arc::new(walkdetector::Detector::new());
+        let mut detector = walkdetector::Detector::new();
         detector.set_walk_threshold(2);
+
+        let detector = Arc::new(detector);
 
         let mut rng = ChaChaRng::from_seed([0u8; 32]);
         let stub_commit_id = HgId::random(&mut rng);

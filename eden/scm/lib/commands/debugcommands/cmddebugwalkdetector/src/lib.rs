@@ -47,11 +47,13 @@ enum Work {
 }
 
 pub fn run(ctx: ReqCtx<DebugWalkDetectorOpts>) -> Result<u8> {
-    let detector = Arc::new(walkdetector::Detector::new());
+    let mut detector = walkdetector::Detector::new();
 
     if let Some(threshold) = ctx.opts.dir_walk_threshold {
         detector.set_walk_threshold(threshold as usize);
     }
+
+    let detector = Arc::new(detector);
 
     let mut seen_dirs = HashSet::new();
     let cwd = std::env::current_dir()?;

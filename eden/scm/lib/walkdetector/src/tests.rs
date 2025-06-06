@@ -25,7 +25,7 @@ const TEST_WALK_THRESHOLD: usize = 2;
 
 #[test]
 fn test_walk_big_dir() {
-    let detector = Detector::new();
+    let mut detector = Detector::new();
     detector.set_walk_threshold(TEST_WALK_THRESHOLD);
 
     assert_eq!(detector.file_walks().len(), 0);
@@ -48,7 +48,7 @@ fn test_walk_big_dir() {
 
 #[test]
 fn test_bfs_walk() {
-    let detector = Detector::new();
+    let mut detector = Detector::new();
     detector.set_walk_threshold(TEST_WALK_THRESHOLD);
 
     detector.file_loaded(p("root/dir1/a"));
@@ -124,7 +124,7 @@ fn test_bfs_walk() {
 
 #[test]
 fn test_advanced_remainder() {
-    let detector = Detector::new();
+    let mut detector = Detector::new();
     detector.set_walk_threshold(TEST_WALK_THRESHOLD);
 
     detector.file_loaded(p("root/dir1/a"));
@@ -350,7 +350,7 @@ fn test_walk_get_containing_node() {
 
 #[test]
 fn test_dir_hints() {
-    let detector = Detector::new();
+    let mut detector = Detector::new();
     detector.set_walk_threshold(TEST_WALK_THRESHOLD);
 
     // Hint that "dir" has 0 files and 1 directory.
@@ -369,7 +369,7 @@ fn test_dir_hints() {
 fn test_advance_while_advancing() {
     // Test that we can "advance" the walk depth twice in a row when
     // the descendant walks have depths greater than zero.
-    let detector = Detector::new();
+    let mut detector = Detector::new();
     detector.set_walk_threshold(TEST_WALK_THRESHOLD);
 
     // Walk at root/, depth=1.
@@ -402,7 +402,7 @@ fn test_advance_while_advancing() {
 
 #[test]
 fn test_retain_interesting_metadata() {
-    let detector = Detector::new();
+    let mut detector = Detector::new();
     detector.set_walk_threshold(TEST_WALK_THRESHOLD);
 
     // "interesting" metadata saying root/dir1 only has one directory
@@ -427,7 +427,7 @@ fn test_retain_interesting_metadata() {
 
 #[test]
 fn test_merge_cousins() {
-    let detector = Detector::new();
+    let mut detector = Detector::new();
     detector.set_walk_threshold(TEST_WALK_THRESHOLD);
 
     detector.dir_loaded(p("root"), 0, 1);
@@ -448,7 +448,7 @@ fn test_merge_cousins() {
 
 #[test]
 fn test_gc() {
-    let detector = Detector::new();
+    let mut detector = Detector::new();
     detector.set_walk_threshold(TEST_WALK_THRESHOLD);
     detector.set_gc_interval(Duration::from_secs(1));
     detector.set_gc_timeout(Duration::from_secs(2));
@@ -503,7 +503,7 @@ fn test_gc() {
 
 #[test]
 fn test_gc_stats() {
-    let detector = Detector::new();
+    let mut detector = Detector::new();
     detector.set_walk_threshold(TEST_WALK_THRESHOLD);
 
     // Don't run GC automatically.
@@ -544,7 +544,7 @@ fn test_gc_stats() {
 
 #[test]
 fn test_dir_walk() {
-    let detector = Detector::new();
+    let mut detector = Detector::new();
     detector.set_walk_threshold(TEST_WALK_THRESHOLD);
 
     detector.dir_loaded(p(""), 2, 2);
@@ -591,7 +591,7 @@ fn test_dir_walk() {
 
 #[test]
 fn test_walk_changed() {
-    let detector = Detector::new();
+    let mut detector = Detector::new();
     detector.set_walk_threshold(TEST_WALK_THRESHOLD);
     detector.set_gc_interval(Duration::from_secs(1));
     detector.set_gc_timeout(Duration::from_secs(2));
@@ -617,7 +617,7 @@ fn test_walk_changed() {
 
 #[test]
 fn test_touched() {
-    let detector = Detector::new();
+    let mut detector = Detector::new();
     detector.set_walk_threshold(TEST_WALK_THRESHOLD);
     detector.set_gc_interval(Duration::from_secs(1));
     detector.set_gc_timeout(Duration::from_secs(2));
@@ -658,7 +658,7 @@ fn test_touched() {
 
 #[test]
 fn test_counters() {
-    let detector = Detector::new();
+    let mut detector = Detector::new();
     detector.set_walk_threshold(TEST_WALK_THRESHOLD);
 
     let get_counters = |p: RepoPathBuf, wt: WalkType| {
@@ -696,7 +696,7 @@ fn test_counters() {
 
 #[test]
 fn test_stricter_threshold() {
-    let detector = Detector::new();
+    let mut detector = Detector::new();
     detector.set_walk_threshold(TEST_WALK_THRESHOLD);
     detector.set_lax_depth(1);
     detector.set_strict_multiplier(2);
@@ -722,7 +722,7 @@ fn test_stricter_threshold() {
 
 #[test]
 fn test_huge_directory() {
-    let detector = Detector::new();
+    let mut detector = Detector::new();
     detector.set_walk_threshold(TEST_WALK_THRESHOLD);
     detector.set_walk_ratio(0.1);
 
@@ -766,7 +766,7 @@ fn test_huge_directory() {
 
 #[test]
 fn test_slow_walk() {
-    let detector = Detector::new();
+    let mut detector = Detector::new();
     detector.set_walk_threshold(3);
     detector.set_gc_interval(Duration::from_secs(1));
     detector.set_gc_timeout(Duration::from_secs(3));
