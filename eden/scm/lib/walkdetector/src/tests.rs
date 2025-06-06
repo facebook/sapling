@@ -411,48 +411,52 @@ fn test_merge_cousins() {
 
 #[test]
 fn test_gc() {
-    let mut detector = Detector::new();
-    detector.set_walk_threshold(TEST_WALK_THRESHOLD);
-    detector.set_gc_interval(Duration::from_secs(1));
-    detector.set_gc_timeout(Duration::from_secs(2));
+    // Test with a low interval so full GC is invoked often, and test with a large interval so full
+    // GC is not invoked.
+    for interval in [1, 100] {
+        let mut detector = Detector::new();
+        detector.set_walk_threshold(TEST_WALK_THRESHOLD);
+        detector.set_gc_interval(Duration::from_secs(interval));
+        detector.set_gc_timeout(Duration::from_secs(2));
 
-    detector.file_loaded(p("dir1/a"));
-    assert_eq!(detector.file_walks(), vec![]);
+        detector.file_loaded(p("dir1/a"));
+        assert_eq!(detector.file_walks(), vec![]);
 
-    MockClock::advance(Duration::from_secs(1));
+        MockClock::advance(Duration::from_secs(1));
 
-    // GC should run but not remove anything.
-    detector.file_loaded(p("dir1/b"));
-    assert_eq!(detector.file_walks(), vec![(p("dir1"), 0)]);
+        // GC should run but not remove anything.
+        detector.file_loaded(p("dir1/b"));
+        assert_eq!(detector.file_walks(), vec![(p("dir1"), 0)]);
 
-    MockClock::advance(Duration::from_secs(1));
+        MockClock::advance(Duration::from_secs(1));
 
-    // This should keep dir1 walk alive.
-    detector.file_loaded(p("dir1/c"));
-    detector.file_loaded(p("dir2/a"));
-    detector.file_loaded(p("some/deep/dir/a"));
-    assert_eq!(detector.file_walks(), vec![(p("dir1"), 0)]);
+        // This should keep dir1 walk alive.
+        detector.file_loaded(p("dir1/c"));
+        detector.file_loaded(p("dir2/a"));
+        detector.file_loaded(p("some/deep/dir/a"));
+        assert_eq!(detector.file_walks(), vec![(p("dir1"), 0)]);
 
-    MockClock::advance(Duration::from_secs(1));
+        MockClock::advance(Duration::from_secs(1));
 
-    detector.file_loaded(p("dir2/b"));
-    assert_eq!(detector.file_walks(), vec![(p(""), 1)]);
+        detector.file_loaded(p("dir2/b"));
+        assert_eq!(detector.file_walks(), vec![(p(""), 1)]);
 
-    MockClock::advance(Duration::from_secs(1));
+        MockClock::advance(Duration::from_secs(1));
 
-    // GC should clear out some/deep/dir, so this should not result in walk.
-    detector.file_loaded(p("some/deep/dir/b"));
-    // This should update access time for root walk.
-    detector.file_loaded(p("dir3/a"));
-    assert_eq!(detector.file_walks(), vec![(p(""), 1)]);
+        // GC should clear out some/deep/dir, so this should not result in walk.
+        detector.file_loaded(p("some/deep/dir/b"));
+        // This should update access time for root walk.
+        detector.file_loaded(p("dir3/a"));
+        assert_eq!(detector.file_walks(), vec![(p(""), 1)]);
 
-    // Root walk still here since dir3/a refreshed access time.
-    MockClock::advance(Duration::from_secs(1));
-    assert_eq!(detector.file_walks(), vec![(p(""), 1)]);
+        // Root walk still here since dir3/a refreshed access time.
+        MockClock::advance(Duration::from_secs(1));
+        assert_eq!(detector.file_walks(), vec![(p(""), 1)]);
 
-    // Everything is GC'd.
-    MockClock::advance(Duration::from_secs(1));
-    assert_eq!(detector.file_walks(), vec![]);
+        // Everything is GC'd.
+        MockClock::advance(Duration::from_secs(1));
+        assert_eq!(detector.file_walks(), vec![]);
+    }
 }
 
 #[test]

@@ -52,7 +52,7 @@ pub(crate) struct WalkNode {
 
 impl WalkNode {
     pub(crate) fn new(gc_timeout: Duration) -> Self {
-        Self {
+        let node = Self {
             gc_timeout,
             file_walk: Default::default(),
             dir_walk: Default::default(),
@@ -64,7 +64,9 @@ impl WalkNode {
             total_dirs: Default::default(),
             seen_files: Default::default(),
             seen_dirs: Default::default(),
-        }
+        };
+        node.last_access.bump();
+        node
     }
 
     /// Get existing WalkNode entry for specified dir, if any.
@@ -155,7 +157,13 @@ impl WalkNode {
                         .get_or_create_owning_node(config, walk_type, tail)
                 }
             }
-            None => (self, dir),
+            None => {
+                // Perform a JIT "light" GC.
+                if self.expired() {
+                    self.clear_except_children();
+                }
+                (self, dir)
+            }
         }
     }
 
@@ -179,7 +187,13 @@ impl WalkNode {
                         .get_or_create_node(config, tail)
                 }
             }
-            None => self,
+            None => {
+                // Perform a JIT "light" GC.
+                if self.expired() {
+                    self.clear_except_children();
+                }
+                self
+            }
         }
     }
 
@@ -265,17 +279,21 @@ impl WalkNode {
     /// directory walk, so if walk_type=Directory, we return `self.file_walk ||
     /// self.dir_walk`.
     pub(crate) fn get_dominating_walk(&self, walk_type: WalkType) -> Option<&Walk> {
-        match walk_type {
+        let walk = match walk_type {
             WalkType::File => self.file_walk.as_ref(),
             WalkType::Directory => self.file_walk.as_ref().or(self.dir_walk.as_ref()),
-        }
+        };
+
+        walk.and_then(|walk| if self.expired() { None } else { Some(walk) })
     }
 
     pub(crate) fn get_walk_for_type(&self, walk_type: WalkType) -> Option<&Walk> {
-        match walk_type {
+        let walk = match walk_type {
             WalkType::File => self.file_walk.as_ref(),
             WalkType::Directory => self.dir_walk.as_ref(),
-        }
+        };
+
+        walk.and_then(|walk| if self.expired() { None } else { Some(walk) })
     }
 
     /// Set walk of `walk_type` to new_walk. Returns old walk, if any.
@@ -395,7 +413,7 @@ impl WalkNode {
 
                 any_child_advanced = any_child_advanced || child_advanced;
 
-                child.has_walk()
+                (child.has_walk() && !child.expired())
                     || !child.children.is_empty()
                     // Keep node around if it has total file/dir hints that are likely to be useful.
                     || interesting_metadata(threshold, ratio, child.total_files, child.total_dirs)
@@ -574,6 +592,7 @@ impl WalkNode {
         self.seen_files.clear();
     }
 
+    // NB: does not check if self.expired(), so caller must check if appropriate.
     fn has_walk(&self) -> bool {
         self.file_walk.is_some() || self.dir_walk.is_some()
     }

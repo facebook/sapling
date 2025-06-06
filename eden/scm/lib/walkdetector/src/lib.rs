@@ -297,11 +297,6 @@ impl Detector {
 
         // Bump last_access, but don't insert any new nodes/walks.
         if let Some((walk_node, suffix)) = inner.node.get_owning_node(wt, dir) {
-            if walk_node.expired() {
-                // Don't resurrect a node that should be expired by GC.
-                return None;
-            }
-
             walk_node.last_access.bump();
 
             if let Some(walk) = walk_node.get_dominating_walk(wt) {
