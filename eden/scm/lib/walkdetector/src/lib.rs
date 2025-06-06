@@ -491,29 +491,62 @@ impl Inner {
         // are still "making progress" towards advancing its walk.
         ancestor.last_access.bump();
 
-        let walk_threshold = walk_threshold(config, ancestor_dir.components().count());
+        let ancestor_depth = ancestor_dir.components().count();
+        let threshold = walk_threshold(config, ancestor_depth);
 
         // Check if the containing walk's node has N children with descendants that
         // have pushed to the next depth. The idea is we want some confidence before
         // expanding a huge walk deeper, so we wait until we've seen depth
         // advancements that bubble up to at least N different children of the walk
         // root.
-        let advanced_count = ancestor.insert_advanced_child(walk_type, head.to_owned());
+        let (num_advanced_children, child_seen_count) =
+            ancestor.insert_advanced_child(walk_type, head.to_owned());
 
-        tracing::trace!(%ancestor_dir, advanced_count, walk_threshold, ?ancestor.total_dirs, "should_advance_ancestor_walk");
+        tracing::trace!(%ancestor_dir, num_advanced_children, child_seen_count, threshold, ?ancestor.total_dirs, "should_advance_ancestor_walk");
+
+        let ancestor_walk_depth = ancestor
+            .get_dominating_walk(walk_type)
+            .map_or(0, |w| w.depth);
 
         if ancestor.is_walked(
             WalkType::Directory,
-            advanced_count,
-            walk_threshold,
+            num_advanced_children,
+            threshold,
             config.walk_ratio,
         ) {
-            let depth = ancestor
-                .get_dominating_walk(walk_type)
-                .map_or(0, |w| w.depth)
-                + 1;
+            let depth = ancestor_walk_depth + 1;
             tracing::debug!(dir=%ancestor_dir, depth, "expanding walk boundary");
             return Some((ancestor_dir, depth));
+        } else if !suffix.is_empty() {
+            // If suffix isn't empty (i.e. dir isn't a direct child of ancestor), check if
+            // ancestor's direct child `name` should be split off into a separate walk. This helps
+            // in cases such as root directory "foo" has a child directory "foo/bar" that is very
+            // wide and deep. Ideally the walk at "foo" could advance to cover everything, but at
+            // some point "foo/bar" will be its only child with activity. Splitting off a walk for
+            // "foo/bar" allows all the activity under "foo/bar" to be consolidated easily to a
+            // single walk.
+
+            let threshold = walk_threshold(config, ancestor_depth + 1);
+            let split_off_child = match ancestor.get_node(head.as_ref()) {
+                // If we have directory size hints, use them.
+                Some(child) => child.is_walked(
+                    WalkType::Directory,
+                    child_seen_count,
+                    threshold,
+                    config.walk_ratio,
+                ),
+                // Otherwise use default threhsold.
+                None => child_seen_count >= threshold,
+            };
+
+            if split_off_child {
+                // If parent=ancestor/foo/bar/parent and suffix=foo/bar/parent,
+                // we want "ancestor/foo", so strip suffix[1:] from parent.
+                let child_path =
+                    parent_dir.strip_suffix(suffix.split_first_component()?.1, true)?;
+                tracing::debug!(%child_path, depth=ancestor_walk_depth, "splitting off walk for child");
+                return Some((child_path, ancestor_walk_depth));
+            }
         }
 
         None

@@ -783,3 +783,55 @@ fn test_slow_walk() {
     detector.file_loaded(p("dir/dir_3/c"));
     assert_eq!(detector.file_walks(), vec![(p("dir"), 1)]);
 }
+
+#[test]
+fn test_split_off_child_walk() {
+    let mut detector = Detector::new();
+    detector.set_walk_threshold(TEST_WALK_THRESHOLD);
+    detector.set_walk_ratio(0.1);
+
+    detector.dir_loaded(p("big"), 5, 30);
+
+    detector.file_loaded(p("small/a"));
+    detector.file_loaded(p("small/b"));
+    detector.file_loaded(p("big/a"));
+    detector.file_loaded(p("big/b"));
+    assert_eq!(detector.file_walks(), vec![(p(""), 1)]);
+
+    detector.file_loaded(p("small/dir1/a"));
+    detector.file_loaded(p("small/dir1/b"));
+    detector.file_loaded(p("big/dir1/a"));
+    detector.file_loaded(p("big/dir1/b"));
+    assert_eq!(detector.file_walks(), vec![(p(""), 2)]);
+
+    detector.file_loaded(p("small/dir1/dir1_1/a"));
+    detector.file_loaded(p("small/dir1/dir1_1/b"));
+    detector.file_loaded(p("big/dir1/dir1_1/a"));
+    detector.file_loaded(p("big/dir1/dir1_1/b"));
+    assert_eq!(detector.file_walks(), vec![(p(""), 3)]);
+
+    // Now "small" has run out of depth, but "big" still has a lot left.
+
+    detector.file_loaded(p("big/dir2/dir2_1/dir2_1_1/a"));
+    detector.file_loaded(p("big/dir2/dir2_1/dir2_1_1/b"));
+
+    detector.file_loaded(p("big/dir3/dir3_1/dir3_1_1/a"));
+    detector.file_loaded(p("big/dir3/dir3_1/dir3_1_1/b"));
+
+    // Haven't hit the threshold of 3 yet (0.1*30=3)
+    assert_eq!(
+        detector.file_walks(),
+        vec![
+            (p(""), 3),
+            (p("big/dir2/dir2_1/dir2_1_1"), 0),
+            (p("big/dir3/dir3_1/dir3_1_1"), 0)
+        ]
+    );
+
+    detector.file_loaded(p("big/dir4/dir4_1/dir4_1_1/a"));
+    detector.file_loaded(p("big/dir4/dir4_1/dir4_1_1/b"));
+
+    // No matter how much we see at depth=3, we won't advance the root walk since all advancements are under a single child "big".
+    // But if we break off a separate walk for "big", then it can deepen on its own.
+    assert_eq!(detector.file_walks(), vec![(p(""), 3), (p("big"), 3)]);
+}

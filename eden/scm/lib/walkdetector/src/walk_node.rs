@@ -37,8 +37,8 @@ pub(crate) struct WalkNode {
 
     // Child directories that have a walked descendant "advanced" past our current
     // walk.depth.
-    pub(crate) advanced_file_children: HashSet<PathComponentBuf>,
-    pub(crate) advanced_dir_children: HashSet<PathComponentBuf>,
+    pub(crate) advanced_file_children: HashMap<PathComponentBuf, usize>,
+    pub(crate) advanced_dir_children: HashMap<PathComponentBuf, usize>,
 
     // Total file count in this directory (if hint available).
     pub(crate) total_files: Option<usize>,
@@ -327,21 +327,25 @@ impl WalkNode {
         std::mem::replace(old_walk, new_walk)
     }
 
+    /// Mark name as an advanced child of self (i.e. a descendant under name has a walk that has advanced one level deeper than our walk).
+    /// Returns (total advanced children, name advanced count).
     pub(crate) fn insert_advanced_child(
         &mut self,
         walk_type: WalkType,
         name: PathComponentBuf,
-    ) -> usize {
-        match walk_type {
-            WalkType::File => {
-                self.advanced_file_children.insert(name);
-                self.advanced_file_children.len()
-            }
-            WalkType::Directory => {
-                self.advanced_dir_children.insert(name);
-                self.advanced_dir_children.len()
-            }
-        }
+    ) -> (usize, usize) {
+        let map = match walk_type {
+            WalkType::File => &mut self.advanced_file_children,
+            WalkType::Directory => &mut self.advanced_dir_children,
+        };
+
+        let counter = {
+            let counter = map.entry(name).or_default();
+            *counter += 1;
+            *counter
+        };
+
+        (map.len(), counter)
     }
 
     fn advanced_children_len(&self, walk_type: WalkType) -> usize {
