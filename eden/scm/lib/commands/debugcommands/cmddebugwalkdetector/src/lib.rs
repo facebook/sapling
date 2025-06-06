@@ -12,6 +12,7 @@ use std::io::BufReader;
 use std::io::Read;
 use std::io::Write;
 use std::sync::Arc;
+use std::time::Duration;
 
 use clidispatch::ReqCtx;
 use cmdutil::Result;
@@ -34,6 +35,9 @@ define_flags! {
 
         /// File to read input file paths from. Defaults to stdin.
         input_file: Option<String>,
+
+        /// Wait for GC to collect everything at the end.
+        wait_for_gc: bool = true,
 
         #[args]
         args: Vec<String>,
@@ -129,6 +133,13 @@ pub fn run(ctx: ReqCtx<DebugWalkDetectorOpts>) -> Result<u8> {
     writeln!(output, "\nDir walks:")?;
     for (root, depth) in detector.dir_walks() {
         writeln!(output, "root: {root}, depth: {depth}")?;
+    }
+
+    if ctx.opts.wait_for_gc {
+        while !detector.file_walks().is_empty() || !detector.dir_walks().is_empty() {
+            std::thread::sleep(Duration::from_secs(1));
+        }
+        writeln!(output, "\nGC done!")?;
     }
 
     Ok(0)
