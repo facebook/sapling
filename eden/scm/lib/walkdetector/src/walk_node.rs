@@ -369,6 +369,7 @@ impl WalkNode {
         // Returns whether a walk exists at depth+1.
         fn inner(
             new_walk: &Walk,
+            path: &mut RepoPathBuf,
             node: &mut WalkNode,
             walk_type: WalkType,
             depth: usize,
@@ -380,6 +381,8 @@ impl WalkNode {
             let mut new_advanced_children = Vec::new();
             node.children.retain(|name, child| {
                 let mut child_advanced = false;
+
+                path.push(name);
 
                 if child
                     .get_walk_for_type(walk_type)
@@ -393,6 +396,7 @@ impl WalkNode {
                 if depth > 0 {
                     if inner(
                         new_walk,
+                        path,
                         child,
                         walk_type,
                         depth - 1,
@@ -407,19 +411,27 @@ impl WalkNode {
                 if top && child_advanced {
                     // Record if this top-level child has advanced children, meaning a
                     // descendant walk that has pushed to depth+1.
-                    tracing::trace!(%name, "inserting advanced child during removal");
                     new_advanced_children.push(name.to_owned());
                 }
 
                 any_child_advanced = any_child_advanced || child_advanced;
 
-                (child.has_walk() && !child.expired())
+                let retain = child.has_walk() && !child.expired()
                     || !child.children.is_empty()
                     // Keep node around if it has total file/dir hints that are likely to be useful.
-                    || interesting_metadata(threshold, ratio, child.total_files, child.total_dirs)
+                    || interesting_metadata(threshold, ratio, child.total_files, child.total_dirs);
+
+                if !retain {
+                    tracing::trace!(%path, "dropping node during insert");
+                }
+
+                path.pop();
+
+                retain
             });
 
             for advanced in new_advanced_children {
+                tracing::trace!(dir=%path, child=%advanced, "inserting advanced child during removal");
                 node.insert_advanced_child(walk_type, advanced);
             }
 
@@ -428,6 +440,7 @@ impl WalkNode {
 
         inner(
             new_walk,
+            &mut RepoPathBuf::new(),
             self,
             walk_type,
             new_walk.depth,
