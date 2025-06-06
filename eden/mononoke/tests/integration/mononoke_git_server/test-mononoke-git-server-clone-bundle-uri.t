@@ -437,8 +437,8 @@
   packet:        fetch> 0000
   packet:          git< command=fetch
   packet:        fetch< acknowledgments
-  packet:        fetch< ACK 7c91d03d49849309acaf941ece272619e246b922
-  packet:        fetch< ACK e8615d6f149b876be0a2f30a1c5bf0c42bf8e136
+  packet:        fetch< ACK (7c91d03d49849309acaf941ece272619e246b922|e8615d6f149b876be0a2f30a1c5bf0c42bf8e136) (re)
+  packet:        fetch< ACK (7c91d03d49849309acaf941ece272619e246b922|e8615d6f149b876be0a2f30a1c5bf0c42bf8e136) (re)
   packet:        fetch< 0000
   packet:        fetch< 0002
   packet:        fetch> command=fetch
@@ -448,9 +448,9 @@
   packet:        fetch> no-progress
   packet:        fetch> include-tag
   packet:        fetch> ofs-delta
-  packet:        fetch> want 4f541acd9f7598f86f96b444b9040a83cdda6456
-  packet:        fetch> have 7c91d03d49849309acaf941ece272619e246b922
-  packet:        fetch> have e8615d6f149b876be0a2f30a1c5bf0c42bf8e136
+  packet:        fetch> (want 4f541acd9f7598f86f96b444b9040a83cdda6456|have 7c91d03d49849309acaf941ece272619e246b922|have e8615d6f149b876be0a2f30a1c5bf0c42bf8e136) (re)
+  packet:        fetch> (want 4f541acd9f7598f86f96b444b9040a83cdda6456|have 7c91d03d49849309acaf941ece272619e246b922|have e8615d6f149b876be0a2f30a1c5bf0c42bf8e136) (re)
+  packet:        fetch> (want 4f541acd9f7598f86f96b444b9040a83cdda6456|have 7c91d03d49849309acaf941ece272619e246b922|have e8615d6f149b876be0a2f30a1c5bf0c42bf8e136) (re)
   packet:        fetch> done
   packet:        fetch> 0000
   packet:          git< command=fetch
