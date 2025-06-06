@@ -426,6 +426,26 @@ fn test_retain_interesting_metadata() {
 }
 
 #[test]
+fn test_retain_interesting_metadata_when_covered_by_walk() {
+    let mut detector = Detector::new();
+    detector.set_walk_threshold(TEST_WALK_THRESHOLD);
+
+    // Start off with a directory walk at root/ triggered by un-interesting directories.
+    detector.dir_loaded(p("root/dir1"), 0, 0);
+    detector.dir_loaded(p("root/dir2"), 0, 0);
+    assert_eq!(detector.dir_walks(), vec![(p("root"), 0)]);
+
+    // Now we see a massive root/dir3, but it is already covered by root/ walk.
+    // Be sure to remember metadata in this case.
+    detector.dir_loaded(p("root/dir3"), 100, 0);
+
+    // Don't create a file walk since we remembered that root/dir3 is very large.
+    detector.file_loaded(p("root/dir3/a"));
+    detector.file_loaded(p("root/dir3/b"));
+    assert_eq!(detector.file_walks(), vec![]);
+}
+
+#[test]
 fn test_merge_cousins() {
     let mut detector = Detector::new();
     detector.set_walk_threshold(TEST_WALK_THRESHOLD);

@@ -194,9 +194,22 @@ impl Detector {
 
         tracing::trace!(%path, num_files, num_dirs, "dir_loaded");
 
+        let is_interesting_metadata = interesting_metadata(
+            self.config.walk_threshold,
+            self.config.walk_ratio,
+            Some(num_files),
+            Some(num_dirs),
+        );
+
         // Try lightweight read-only path.
         if let Some(walk_root) = self.mark_read(path, WalkType::Directory, true) {
             tracing::trace!(%walk_root, dir=%path, "dir already in walk (fastpath)");
+            if is_interesting_metadata {
+                // Fill in interesting metadata that informs detection of file content walks.
+                let mut inner = self.inner.write();
+                let time = inner.now();
+                inner.set_metadata(time, path, num_files, num_dirs);
+            }
             return false;
         }
 
@@ -206,17 +219,9 @@ impl Detector {
 
         let mut walk_changed = inner.maybe_gc(&self.config, time);
 
-        // Fill in interesting metadata that informs detection of file content walks.
-        if interesting_metadata(
-            self.config.walk_threshold,
-            self.config.walk_ratio,
-            Some(num_files),
-            Some(num_dirs),
-        ) {
-            let node = inner.node.get_or_create_node(path);
-            node.last_access.store(time);
-            node.total_dirs = Some(num_dirs);
-            node.total_files = Some(num_files);
+        if is_interesting_metadata {
+            // Fill in interesting metadata that informs detection of file content walks.
+            inner.set_metadata(time, path, num_files, num_dirs);
         }
 
         let (dir_path, base_name) = match path.split_last_component() {
@@ -547,6 +552,13 @@ impl Inner {
         self.last_gc_time = time;
 
         deleted_walks > 0
+    }
+
+    fn set_metadata(&mut self, time: Instant, path: &RepoPath, num_files: usize, num_dirs: usize) {
+        let node = self.node.get_or_create_node(path);
+        node.last_access.store(time);
+        node.total_dirs = Some(num_dirs);
+        node.total_files = Some(num_files);
     }
 }
 
