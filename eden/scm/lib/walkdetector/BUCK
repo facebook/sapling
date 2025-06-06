@@ -16,6 +16,9 @@ rust_library(
         },
     }},
     crate_root = "src/lib.rs",
+    test_deps = [
+        "fbsource//third-party/rust:mock_instant",
+    ],
     deps = [
         "fbsource//third-party/rust:parking_lot",
         "fbsource//third-party/rust:tracing",

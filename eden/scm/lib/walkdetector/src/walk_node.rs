@@ -8,8 +8,11 @@
 use std::collections::HashMap;
 use std::collections::HashSet;
 use std::time::Duration;
+#[cfg(not(test))]
 use std::time::Instant;
 
+#[cfg(test)]
+use mock_instant::Instant;
 use types::PathComponentBuf;
 use types::RepoPath;
 use types::RepoPathBuf;

@@ -6,8 +6,9 @@
  */
 
 use std::time::Duration;
-use std::time::Instant;
 
+use mock_instant::Instant;
+use mock_instant::MockClock;
 use types::RepoPath;
 use types::RepoPathBuf;
 
@@ -491,21 +492,16 @@ fn test_gc() {
     detector.set_gc_interval(Duration::from_secs(1));
     detector.set_gc_timeout(Duration::from_secs(2));
 
-    let mut epoch = Instant::now();
-    detector.set_now(epoch);
-
     detector.file_loaded(p("dir1/a"));
     assert_eq!(detector.file_walks(), vec![]);
 
-    epoch += Duration::from_secs(1);
-    detector.set_now(epoch);
+    MockClock::advance(Duration::from_secs(1));
 
     // GC should run but not remove anything.
     detector.file_loaded(p("dir1/b"));
     assert_eq!(detector.file_walks(), vec![(p("dir1"), 0)]);
 
-    epoch += Duration::from_secs(1);
-    detector.set_now(epoch);
+    MockClock::advance(Duration::from_secs(1));
 
     // This should keep dir1 walk alive.
     detector.file_loaded(p("dir1/c"));
@@ -513,14 +509,12 @@ fn test_gc() {
     detector.file_loaded(p("some/deep/dir/a"));
     assert_eq!(detector.file_walks(), vec![(p("dir1"), 0)]);
 
-    epoch += Duration::from_secs(1);
-    detector.set_now(epoch);
+    MockClock::advance(Duration::from_secs(1));
 
     detector.file_loaded(p("dir2/b"));
     assert_eq!(detector.file_walks(), vec![(p(""), 1)]);
 
-    epoch += Duration::from_secs(1);
-    detector.set_now(epoch);
+    MockClock::advance(Duration::from_secs(1));
 
     // GC should clear out some/deep/dir, so this should not result in walk.
     detector.file_loaded(p("some/deep/dir/b"));
@@ -529,13 +523,11 @@ fn test_gc() {
     assert_eq!(detector.file_walks(), vec![(p(""), 1)]);
 
     // Root walk still here since dir3/a refreshed access time.
-    epoch += Duration::from_secs(1);
-    detector.set_now(epoch);
+    MockClock::advance(Duration::from_secs(1));
     assert_eq!(detector.file_walks(), vec![(p(""), 1)]);
 
     // Everything is GC'd.
-    epoch += Duration::from_secs(1);
-    detector.set_now(epoch);
+    MockClock::advance(Duration::from_secs(1));
     assert_eq!(detector.file_walks(), vec![]);
 }
 
@@ -547,9 +539,6 @@ fn test_gc_stats() {
     // Don't run GC automatically.
     detector.set_gc_interval(Duration::from_secs(10));
 
-    let mut epoch = Instant::now();
-    detector.set_now(epoch);
-
     detector.file_loaded(p("dir1/a"));
     detector.file_loaded(p("dir1/b"));
 
@@ -557,8 +546,7 @@ fn test_gc_stats() {
 
     detector.file_loaded(p("dir3/dir4/a"));
 
-    epoch += Duration::from_secs(2);
-    detector.set_now(epoch);
+    MockClock::advance(Duration::from_secs(2));
 
     // Refresh access time on dir3.
     detector.file_loaded(p("dir3/dir4/b"));
@@ -568,7 +556,7 @@ fn test_gc_stats() {
         .inner
         .write()
         .node
-        .gc(Duration::from_secs(1), epoch);
+        .gc(Duration::from_secs(1), Instant::now());
 
     // "dir1" and "dir2"
     assert_eq!(nodes_removed, 2);
@@ -634,9 +622,6 @@ fn test_walk_changed() {
     detector.set_gc_interval(Duration::from_secs(1));
     detector.set_gc_timeout(Duration::from_secs(2));
 
-    let mut epoch = Instant::now();
-    detector.set_now(epoch);
-
     // No walk.
     assert!(!detector.file_loaded(p("dir1/a")));
 
@@ -646,8 +631,7 @@ fn test_walk_changed() {
     // No walk changes.
     assert!(!detector.file_loaded(p("dir2/a")));
 
-    epoch += Duration::from_secs(5);
-    detector.set_now(epoch);
+    MockClock::advance(Duration::from_secs(5));
 
     // GC removes walk
     assert!(detector.file_loaded(p("dir2/a")));
@@ -660,9 +644,6 @@ fn test_touched() {
     detector.set_gc_interval(Duration::from_secs(1));
     detector.set_gc_timeout(Duration::from_secs(2));
 
-    let mut epoch = Instant::now();
-    detector.set_now(epoch);
-
     detector.file_loaded(p("dir1/a"));
     detector.file_loaded(p("dir1/b"));
     assert_eq!(detector.file_walks().len(), 1);
@@ -672,8 +653,7 @@ fn test_touched() {
     assert_eq!(detector.dir_walks().len(), 1);
 
     for _ in 0..10 {
-        epoch += Duration::from_secs(1);
-        detector.set_now(epoch);
+        MockClock::advance(Duration::from_secs(1));
 
         assert!(detector.file_read(p("dir1/c")));
         assert!(detector.dir_read(p("dir2/c")));
@@ -687,8 +667,7 @@ fn test_touched() {
     assert_eq!(detector.dir_walks().len(), 1);
 
     // Test that the touched methods don't resurrect expired (but not collected) nodes.
-    epoch += Duration::from_secs(5);
-    detector.set_now(epoch);
+    MockClock::advance(Duration::from_secs(5));
     assert!(!detector.file_read(p("dir1/c")));
     assert!(detector.file_walks().is_empty());
     assert!(detector.dir_walks().is_empty());
@@ -809,9 +788,6 @@ fn test_slow_walk() {
     detector.set_gc_interval(Duration::from_secs(1));
     detector.set_gc_timeout(Duration::from_secs(3));
 
-    let mut epoch = Instant::now();
-    detector.set_now(epoch);
-
     detector.file_loaded(p("dir/a"));
     detector.file_loaded(p("dir/b"));
     detector.file_loaded(p("dir/c"));
@@ -819,8 +795,7 @@ fn test_slow_walk() {
 
     // Slowly (relative to GC timeout) advance the walk. Make sure the "dir" walk doesn't time out
     // while we are making progress.
-    epoch += Duration::from_secs(2);
-    detector.set_now(epoch);
+    MockClock::advance(Duration::from_secs(2));
 
     detector.file_loaded(p("dir/dir_1/a"));
     detector.file_loaded(p("dir/dir_1/b"));
@@ -830,8 +805,7 @@ fn test_slow_walk() {
         vec![(p("dir"), 0), (p("dir/dir_1"), 0)]
     );
 
-    epoch += Duration::from_secs(2);
-    detector.set_now(epoch);
+    MockClock::advance(Duration::from_secs(2));
 
     detector.file_loaded(p("dir/dir_2/a"));
     detector.file_loaded(p("dir/dir_2/b"));
@@ -841,8 +815,7 @@ fn test_slow_walk() {
         vec![(p("dir"), 0), (p("dir/dir_1"), 0), (p("dir/dir_2"), 0)]
     );
 
-    epoch += Duration::from_secs(2);
-    detector.set_now(epoch);
+    MockClock::advance(Duration::from_secs(2));
 
     detector.file_loaded(p("dir/dir_3/a"));
     detector.file_loaded(p("dir/dir_3/b"));

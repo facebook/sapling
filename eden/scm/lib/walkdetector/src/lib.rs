@@ -15,8 +15,11 @@ use std::sync::atomic::AtomicI64;
 use std::sync::atomic::AtomicU64;
 use std::sync::atomic::Ordering;
 use std::time::Duration;
+#[cfg(not(test))]
 use std::time::Instant;
 
+#[cfg(test)]
+use mock_instant::Instant;
 use parking_lot::RwLock;
 use types::RepoPath;
 use types::RepoPathBuf;
@@ -38,8 +41,6 @@ struct Inner {
     last_gc_time: Instant,
     // Root node used to track walks.
     node: WalkNode,
-    // Stub "now" value used by tests.
-    stub_now: Option<Instant>,
 }
 
 impl Default for Inner {
@@ -47,7 +48,6 @@ impl Default for Inner {
         Self {
             last_gc_time: Instant::now(),
             node: WalkNode::default(),
-            stub_now: None,
         }
     }
 }
@@ -76,11 +76,6 @@ impl Detector {
         self.config.walk_ratio = threshold;
     }
 
-    #[cfg(test)]
-    pub fn set_now(&self, now: Instant) {
-        self.inner.write().stub_now = Some(now);
-    }
-
     pub fn set_gc_interval(&mut self, interval: Duration) {
         self.config.gc_interval = interval;
     }
@@ -102,7 +97,7 @@ impl Detector {
     fn walks(&self, walk_type: WalkType) -> Vec<(RepoPathBuf, usize)> {
         let mut inner = self.inner.write();
 
-        let time = inner.now();
+        let time = Instant::now();
         inner.maybe_gc(&self.config, time);
 
         let mut walks = inner.node.list_walks(walk_type);
@@ -133,7 +128,7 @@ impl Detector {
 
         let mut inner = self.inner.write();
 
-        let time = inner.now();
+        let time = Instant::now();
 
         let mut walk_changed = inner.maybe_gc(&self.config, time);
 
@@ -207,7 +202,7 @@ impl Detector {
             if is_interesting_metadata {
                 // Fill in interesting metadata that informs detection of file content walks.
                 let mut inner = self.inner.write();
-                let time = inner.now();
+                let time = Instant::now();
                 inner.set_metadata(time, path, num_files, num_dirs);
             }
             return false;
@@ -215,7 +210,7 @@ impl Detector {
 
         let mut inner = self.inner.write();
 
-        let time = inner.now();
+        let time = Instant::now();
 
         let mut walk_changed = inner.maybe_gc(&self.config, time);
 
@@ -303,7 +298,7 @@ impl Detector {
 
         let inner = self.inner.read();
 
-        let time = inner.now();
+        let time = Instant::now();
 
         // Bump last_access, but don't insert any new nodes/walks.
         if let Some((walk_node, suffix)) = inner.node.get_owning_node(wt, dir) {
@@ -533,17 +528,13 @@ impl Inner {
         None
     }
 
-    fn now(&self) -> Instant {
-        self.stub_now.unwrap_or_else(Instant::now)
-    }
-
     /// Returns whether a walk was removed.
     fn maybe_gc(&mut self, config: &Config, time: Instant) -> bool {
         if time - self.last_gc_time < config.gc_interval {
             return false;
         }
 
-        let start = self.now();
+        let start = Instant::now();
 
         let (deleted_nodes, remaining_nodes, deleted_walks) = self.node.gc(config.gc_timeout, time);
 
