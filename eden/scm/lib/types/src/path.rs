@@ -534,6 +534,15 @@ impl RepoPath {
         buf.push(other);
         buf
     }
+
+    /// Return depth of self. Equivalent to `path.components().count()`, but faster.
+    pub fn depth(&self) -> usize {
+        if self.is_empty() {
+            0
+        } else {
+            bytecount::count(self.0.as_bytes(), SEPARATOR_BYTE) + 1
+        }
+    }
 }
 
 impl Ord for RepoPath {
@@ -1783,5 +1792,17 @@ mod tests {
     fn test_join_empty() {
         let p = repo_path("foo");
         assert_eq!(p.join(repo_path("")), repo_path_buf("foo"));
+    }
+
+    #[test]
+    fn test_depth() {
+        fn check(p: &RepoPath, expected: usize) {
+            assert_eq!(p.depth(), expected);
+            assert_eq!(p.components().count(), expected);
+        }
+
+        check(repo_path(""), 0);
+        check(repo_path("foo"), 1);
+        check(repo_path("foo/bar"), 2);
     }
 }

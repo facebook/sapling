@@ -9,6 +9,7 @@ use criterion::Criterion;
 use sha1::Digest;
 use sha1::Sha1;
 use types::HgId;
+use types::RepoPathBuf;
 
 fn hgid_from_hex(hash: &[u8]) -> [u8; HgId::len()] {
     HgId::from_hex(hash).unwrap().into_byte_array()
@@ -101,6 +102,28 @@ fn main() {
             for hash in hashes.iter() {
                 criterion::black_box(from_hex_bitwise(hash.as_bytes()));
             }
+        })
+    });
+
+    let mut path_depth_group = criterion.benchmark_group("RepoPathBuf depth");
+
+    path_depth_group.bench_function("RepoPathBuf naive depth", |b| {
+        let path: RepoPathBuf = "some/pretty/decently/long/path/file_name.ext"
+            .to_string()
+            .try_into()
+            .unwrap();
+        b.iter(|| {
+            criterion::black_box(path.components().count());
+        })
+    });
+
+    path_depth_group.bench_function("RepoPathBuf optimized depth", |b| {
+        let path: RepoPathBuf = "some/pretty/decently/long/path/file_name.ext"
+            .to_string()
+            .try_into()
+            .unwrap();
+        b.iter(|| {
+            criterion::black_box(path.depth());
         })
     });
 }
