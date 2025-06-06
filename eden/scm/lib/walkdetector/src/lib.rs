@@ -600,8 +600,9 @@ const DEFAULT_LAX_DEPTH: usize = 0;
 // If we know the total dir size, make sure walk threshold is at least 5% of dir size.
 const DEFAULT_WALK_RATIO: f64 = 0.05;
 
-// How often we garbage collect stale walks.
-const DEFAULT_GC_INTERVAL: Duration = Duration::from_secs(1);
+// How often we garbage collect stale nodes.
+// We do not rely on running a full GC to expire old walks, only to clean up memory.
+const DEFAULT_GC_INTERVAL: Duration = Duration::from_secs(10);
 
 // How stale a walk must be before we remove it.
 const DEFAULT_GC_TIMEOUT: Duration = Duration::from_secs(2);
@@ -617,7 +618,8 @@ struct Config {
     // A minimum walk threshold as ratio of total directory size. This only applies when we know the
     // size of the directory. This slows down walk detection in humongous directories.
     walk_ratio: f64,
-    // How often we want to run GC.
+    // How often we run a full GC to clean up memory. We do not rely on a full GC to functionally
+    // expire inactive walks.
     gc_interval: Duration,
     // How long after a node was last accessed until we GC it.
     gc_timeout: Duration,
