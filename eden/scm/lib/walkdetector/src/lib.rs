@@ -98,11 +98,16 @@ impl Detector {
     }
 
     fn walks(&self, walk_type: WalkType) -> Vec<(RepoPathBuf, usize)> {
-        let mut inner = self.inner.write();
+        let inner = self.inner.read();
 
-        inner.maybe_gc(&self.config);
-
-        let mut walks = inner.node.list_walks(walk_type);
+        let mut walks = if inner.needs_gc(&self.config) {
+            // Only grab write lock if we need to GC.
+            drop(inner);
+            self.inner.write().maybe_gc(&self.config);
+            self.inner.read().node.list_walks(walk_type)
+        } else {
+            inner.node.list_walks(walk_type)
+        };
 
         walks.sort_by(|a, b| a.0.as_str().cmp(b.0.as_str()));
 
@@ -498,9 +503,13 @@ impl Inner {
         None
     }
 
+    fn needs_gc(&self, config: &Config) -> bool {
+        self.last_gc_time.elapsed() >= config.gc_interval
+    }
+
     /// Returns whether a walk was removed.
     fn maybe_gc(&mut self, config: &Config) -> bool {
-        if self.last_gc_time.elapsed() < config.gc_interval {
+        if !self.needs_gc(config) {
             return false;
         }
 
