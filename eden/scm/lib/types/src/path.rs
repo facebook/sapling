@@ -214,23 +214,15 @@ impl RepoPathBuf {
         self.append(&path.as_ref().0);
     }
 
-    /// Removed the last component from the `RepoPathBuf` and return it.
-    pub fn pop(&mut self) -> Option<PathComponentBuf> {
+    /// Removed the last component from the `RepoPathBuf`, returning whether self was empty.
+    pub fn pop(&mut self) -> bool {
         if self.0.is_empty() {
-            return None;
+            return false;
         }
-        match self.0.rfind(SEPARATOR) {
-            None => {
-                let result = PathComponentBuf::from_string_unchecked(self.0.clone());
-                self.0 = String::new();
-                Some(result)
-            }
-            Some(pos) => {
-                let result = PathComponentBuf::from_string_unchecked(self.0.split_off(pos + 1));
-                self.0.pop(); // remove SEPARATOR
-                Some(result)
-            }
-        }
+
+        self.0.truncate(self.0.rfind(SEPARATOR).unwrap_or(0));
+
+        true
     }
 
     pub fn to_lower_case(&self) -> Self {
@@ -241,6 +233,11 @@ impl RepoPathBuf {
         if s.is_empty() {
             return;
         }
+
+        // Make sure we don't need two allocations below.
+        self.0
+            .reserve(s.len() + if self.0.is_empty() { 0 } else { 1 });
+
         if !self.0.is_empty() {
             self.0.push(SEPARATOR);
         }
@@ -1200,13 +1197,13 @@ mod tests {
     #[test]
     fn test_repo_path_buf_pop() {
         let mut out = repo_path_buf("one/two/three");
-        assert_eq!(out.pop(), Some(path_component_buf("three")));
+        assert!(out.pop());
         assert_eq!(out, repo_path_buf("one/two"));
-        assert_eq!(out.pop(), Some(path_component_buf("two")));
+        assert!(out.pop());
         assert_eq!(out, repo_path_buf("one"));
-        assert_eq!(out.pop(), Some(path_component_buf("one")));
+        assert!(out.pop());
         assert_eq!(out, RepoPathBuf::new());
-        assert_eq!(out.pop(), None);
+        assert!(!out.pop());
     }
 
     #[test]
