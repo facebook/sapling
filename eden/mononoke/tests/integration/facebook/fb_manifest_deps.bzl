@@ -166,10 +166,9 @@ def dott_test(name, dott_files, deps, use_mysql = False, disable_all_network_acc
         # NOTE: We need network to talk to MySQL
         disable_all_network_access_target = False
 
-    # TODO(acampi) temporarily disabled to unblock failing Conveyors: https://fb.workplace.com/groups/1708850869939124/permalink/1984143442409864/
-    # if disable_all_network_access_target:
-    #    # there's not much sense in blocking network for OSS builds
-    #    _dott_test(name + "-disable-all-network-access", dott_files, deps, use_mysql, disable_all_network_access = True, rust_allow_oss_build = False, enable_async_requests_worker = enable_async_requests_worker)
+    if disable_all_network_access_target:
+        # there's not much sense in blocking network for OSS builds
+        _dott_test(name + "-disable-all-network-access", dott_files, deps, use_mysql, disable_all_network_access = True, rust_allow_oss_build = False, enable_async_requests_worker = enable_async_requests_worker)
 
 def _dott_test(name, dott_files, deps, use_mysql = False, disable_all_network_access = True, rust_allow_oss_build = None, enable_async_requests_worker = False, labels = ()):
     manifest_target = name + "-manifest"
