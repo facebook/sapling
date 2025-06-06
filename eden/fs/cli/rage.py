@@ -50,7 +50,12 @@ from . import (
     util as util_mod,
     version as version_mod,
 )
-from .config import CheckoutPathProblemType, detect_checkout_path_problem, EdenInstance
+from .config import (
+    CheckoutPathProblemType,
+    detect_checkout_path_problem,
+    EdenInstance,
+    MOUNT_CONFIG,
+)
 
 try:
     from .facebook.rage import (
@@ -144,6 +149,20 @@ def print_top_5_items(input_dict: Dict[str, str], out: IOWithRedaction) -> None:
 
     for key, value in top_5_dict.items():
         out.write(f"{key}: {value}\n")
+
+
+def format_stat_value(stat: os.stat_result) -> Dict[str, str]:
+    def format_timestamp(value: float) -> str:
+        try:
+            return datetime.fromtimestamp(value).strftime("%Y-%m-%d %H:%M:%S")
+        except (ValueError, OSError, OverflowError):
+            # Just return original value if timestamp conversion fails
+            return str(value)
+
+    return {
+        "Accessed": format_timestamp(stat.st_atime),
+        "Modified": format_timestamp(stat.st_mtime),
+    }
 
 
 T = TypeVar("T")
@@ -436,6 +455,29 @@ def print_eden_mounts(out: IOWithRedaction, instance: EdenInstance) -> None:
         checkout_data.update(mount_data)
         for k, v in checkout_data.items():
             out.write("{:>20} : {}\n".format(k, v))
+
+        # We've been getting reports of malformed config files, so let's print
+        # the stat information to aid debugging. When that bug is fixed, we can
+        # remove this code if it's not useful.
+        out.write(f"\nMount config file stats for path {checkout_path}:\n")
+
+        state_dir = checkout_data.get("state_dir")
+        if not isinstance(state_dir, str) or not os.path.isdir(state_dir):
+            out.write(f"Unable to find state directory for {checkout_path}\n")
+            return
+
+        mount_config_path = Path(state_dir) / MOUNT_CONFIG
+        if mount_config_path.exists():
+            try:
+                file_stat = mount_config_path.stat()
+                for k, v in format_stat_value(file_stat).items():
+                    out.write("{:>20} : {}\n".format(k, v))
+            except Exception as e:
+                out.write(
+                    f"Error getting mount config file stats for {mount_config_path}: {e}\n"
+                )
+        else:
+            out.write(f"Mount config file does not exist at {mount_config_path}\n")
 
 
 @timer_decorator
