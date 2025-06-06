@@ -446,6 +446,24 @@ fn test_retain_interesting_metadata_when_covered_by_walk() {
 }
 
 #[test]
+fn test_dont_retain_empty_directory_metadata() {
+    let mut detector = Detector::new();
+    detector.set_walk_threshold(TEST_WALK_THRESHOLD);
+
+    detector.dir_loaded(p("root/dir1"), 0, 0);
+
+    // Check we didn't create a node for root/dir1. Empty is not interesting.
+    assert!(
+        detector
+            .inner
+            .read()
+            .node
+            .get_node(&p("root/dir1"))
+            .is_none()
+    );
+}
+
+#[test]
 fn test_merge_cousins() {
     let mut detector = Detector::new();
     detector.set_walk_threshold(TEST_WALK_THRESHOLD);

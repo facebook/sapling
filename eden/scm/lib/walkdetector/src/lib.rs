@@ -344,8 +344,12 @@ fn interesting_metadata(
     // start to increase our walk threshold (due to the walk ratio).
     let big_dir_threshold: usize = (threshold as f64 / walk_ratio) as usize;
 
-    num_dirs.is_some_and(|dirs| dirs < threshold || dirs >= big_dir_threshold)
-        || num_files.is_some_and(|files| files < threshold || files > big_dir_threshold)
+    // We don't care about empty directories because we will never see "activity" for an empty
+    // directory, so probably won't ever make use of the size hint. Marking empty directories as
+    // "not interesting" significantly reduces the number of nodes we create during big walks.
+    num_dirs.is_some_and(|dirs| dirs > 0 && dirs < threshold || dirs >= big_dir_threshold)
+        || num_files
+            .is_some_and(|files| files > 0 && files < threshold || files > big_dir_threshold)
 }
 
 impl Inner {
