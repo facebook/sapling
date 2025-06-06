@@ -78,6 +78,10 @@ pub enum BenchCmd {
         #[clap(long, value_enum, default_value_t = types::ReadFileMethod::Fs, help="read via fs or thrift")]
         read_file_via: types::ReadFileMethod,
 
+        /// Max number of files to read when traversing the file system
+        #[clap(long, default_value_t = types::MAX_NUMBER_OF_FILES)]
+        max_files_to_read: isize,
+
         /// Whether to follow symbolic links during traversal
         #[clap(long)]
         follow_symlinks: bool,
@@ -178,6 +182,7 @@ impl crate::Subcommand for BenchCmd {
             Self::Traversal {
                 dir,
                 read_file_via,
+                max_files_to_read,
                 follow_symlinks,
                 no_progress,
             } => {
@@ -191,6 +196,7 @@ impl crate::Subcommand for BenchCmd {
                             "{}",
                             traversal::bench_traversal_fs_read(
                                 dir,
+                                *max_files_to_read,
                                 *follow_symlinks,
                                 *no_progress
                             )?
@@ -201,6 +207,7 @@ impl crate::Subcommand for BenchCmd {
                             "{}",
                             traversal::bench_traversal_thrift_read(
                                 dir,
+                                *max_files_to_read,
                                 *follow_symlinks,
                                 *no_progress
                             )

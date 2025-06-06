@@ -14,6 +14,7 @@ pub const LMDB_FILE_NAME: &str = "__lmdb__";
 pub const SQLITE_FILE_NAME: &str = "__sqlite__";
 pub const COMBINED_DATA_FILE_NAME: &str = "__combined_data__";
 pub const DEFAULT_NUMBER_OF_FILES: usize = 64 * 1024;
+pub const MAX_NUMBER_OF_FILES: isize = isize::MAX;
 pub const DEFAULT_CHUNK_SIZE: usize = 4 * 1024;
 pub const NUMBER_OF_SUB_DIRS: usize = 256;
 pub const BYTES_IN_KILOBYTE: usize = 1024;
