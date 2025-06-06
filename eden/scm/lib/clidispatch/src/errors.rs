@@ -128,7 +128,7 @@ pub fn upload_traceback(err: &anyhow::Error, start_time_epoch_ms: u64) {
     tracing::info!(target: "errortracekey", errortracekey=tk);
     tracing::info!(target: "errortrace", key=tk, payload=traceback);
     let start = prefix.len();
-    let end = traceback.len().min(start + 100);
+    let end = traceback.len().min(start + 500);
     let error_prefix = &traceback[start..end];
     tracing::info!(target: "error_prefix", error_prefix=error_prefix);
 }
