@@ -7,6 +7,7 @@ import collections
 import errno
 import os
 import shutil
+import subprocess
 import sys
 import tempfile
 import zipapp
@@ -136,10 +137,22 @@ def build_zipapp(args, path_map):
         inst_dir = os.path.join(tmpdir, "tree")
         populate_install_tree(inst_dir, path_map)
 
-        tmp_output = os.path.join(tmpdir, "output.exe")
-        zipapp.create_archive(
-            inst_dir, target=tmp_output, interpreter=args.python, main=args.main
-        )
+        if os.path.exists(os.path.join(inst_dir, "__main__.py")):
+            os.rename(
+                os.path.join(inst_dir, "__main__.py"),
+                os.path.join(inst_dir, "main.py"),
+            )
+            args.main = "main"
+
+        tmp_output = os.path.abspath(os.path.join(tmpdir, "output.exe"))
+        subprocess.check_call(
+            ["pex"] +
+            ["--output-file", tmp_output]+
+            ["--python", args.python] +
+            ["--sources-directory", inst_dir] +
+            ["-e", args.main]
+            )
+
         os.replace(tmp_output, args.output)
 
 

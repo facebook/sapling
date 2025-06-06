@@ -279,12 +279,12 @@ void TakeoverData::serializeFd(
           "Unexpected FileDescriptorType {}", fmt::underlying(type));
   }
 
-  XLOGF(DBG7, "serializing file type: {} fd: {}", type, fileToSerialize->fd());
+  XLOGF(DBG7, "serializing file type: {} fd: {}", fmt::underlying(type), fileToSerialize->fd());
   files.push_back(std::move(*fileToSerialize));
 }
 
 void TakeoverData::deserializeFd(FileDescriptorType type, folly::File& file) {
-  XLOGF(DBG7, "deserializing file type: {} fd: {}", type, file.fd());
+  XLOGF(DBG7, "deserializing file type: {} fd: {}", fmt::underlying(type), file.fd());
   switch (type) {
     case FileDescriptorType::LOCK_FILE:
       lockFile = std::move(file);
