@@ -395,18 +395,53 @@ fn test_merge_cousins() {
 
     detector.dir_loaded(p("root"), 0, 1);
 
-    // Walk at root/, depth=1.
+    // Walk at root/, depth=2.
     detector.file_loaded(p("root/foo/dir1/a"));
     detector.file_loaded(p("root/foo/dir1/b"));
     detector.file_loaded(p("root/foo/dir2/a"));
     detector.file_loaded(p("root/foo/dir2/b"));
     assert_eq!(detector.file_walks(), vec![(p("root"), 2)]);
 
+    // These two cousin directories get merged to advance the root/ walk.
     detector.file_loaded(p("root/foo/dir1/dir1_1/a"));
     detector.file_loaded(p("root/foo/dir1/dir1_1/b"));
     detector.file_loaded(p("root/foo/dir2/dir2_1/a"));
     detector.file_loaded(p("root/foo/dir2/dir2_1/b"));
     assert_eq!(detector.file_walks(), vec![(p("root"), 3)]);
+}
+
+#[test]
+fn test_dont_merge_into_containg_walk() {
+    let mut detector = Detector::new();
+    detector.set_walk_threshold(1);
+
+    detector.file_loaded(p("a"));
+    detector.file_loaded(p("dir1/a"));
+    detector.file_loaded(p("dir1/dir1_1/a"));
+    assert_eq!(detector.file_walks(), vec![(p(""), 2)]);
+
+    detector.set_walk_threshold(TEST_WALK_THRESHOLD);
+
+    detector.dir_loaded(p("dir2"), 0, 1000);
+    detector.dir_loaded(p("dir2/dir2_1"), 0, 1);
+    detector.dir_loaded(p("dir2/dir2_1/dir2_1_1"), 1, 0);
+    detector.file_loaded(p("dir2/dir2_1/dir2_1_1/a"));
+    assert_eq!(
+        detector.file_walks(),
+        vec![(p(""), 2), (p("dir2/dir2_1"), 1)]
+    );
+
+    detector.dir_loaded(p("dir2/dir2_2"), 0, 1);
+    detector.dir_loaded(p("dir2/dir2_2/dir2_2_1"), 1, 0);
+    detector.file_loaded(p("dir2/dir2_2/dir2_2_1/a"));
+
+    // Be careful to not let the latter two walks merge into the root walk. "dir2" is a large
+    // directory, so we shouldn't let "dir2/dir2_1" and "dir2/dir2_2" jump across it and deepen the
+    // root walk.
+    assert_eq!(
+        detector.file_walks(),
+        vec![(p(""), 2), (p("dir2/dir2_1"), 1), (p("dir2/dir2_2"), 1)]
+    );
 }
 
 #[test]

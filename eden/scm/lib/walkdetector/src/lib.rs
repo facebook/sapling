@@ -438,6 +438,19 @@ impl Inner {
         ancestor.last_access.bump();
 
         let grandparent_node = ancestor.get_node(suffix.parent()?)?;
+
+        if let Some(grandparent_walk_depth) = grandparent_node
+            .get_dominating_walk(walk_type)
+            .map(|w| w.depth)
+        {
+            // This heuristic is only intended to advance/insert the grandparent's walk one level to contain us.
+            // If the grandparent's walk already contains us, we shouldn't advance it.
+            if grandparent_walk_depth > suffix.components().count() {
+                tracing::trace!(%dir, grandparent_walk_depth, "grandparent walk too deep");
+                return None;
+            }
+        }
+
         let walk_depth = should_merge_into_ancestor(
             walk_threshold(config, grandparent_dir.components().count()),
             config.walk_ratio,
