@@ -52,6 +52,7 @@ use super::handler::SaplingRemoteApiContext;
 use crate::handlers::handler::PathExtractorWithRepo;
 use crate::utils::commit_cloud_types::FromCommitCloudType;
 use crate::utils::commit_cloud_types::IntoCommitCloudType;
+use crate::utils::commit_cloud_types::strip_git_suffix;
 pub struct CommitCloudWorkspace;
 pub struct CommitCloudWorkspaces;
 pub struct CommitCloudReferences;
@@ -94,7 +95,7 @@ async fn get_workspace<R: MononokeRepo>(
 ) -> anyhow::Result<WorkspaceDataResponse> {
     let cc_res = repo
         .repo_ctx()
-        .cloud_workspace(&request.workspace, &request.reponame)
+        .cloud_workspace(&request.workspace, strip_git_suffix(&request.reponame))
         .await;
 
     let res = match cc_res {
@@ -135,7 +136,7 @@ async fn get_workspaces<R: MononokeRepo>(
 ) -> anyhow::Result<WorkspacesDataResponse> {
     let cc_res = repo
         .repo_ctx()
-        .cloud_workspaces(&request.prefix, &request.reponame)
+        .cloud_workspaces(&request.prefix, strip_git_suffix(&request.reponame))
         .await;
     let res = match cc_res {
         Ok(res) => Ok(res
@@ -167,10 +168,10 @@ impl SaplingRemoteApiHandler for CommitCloudReferences {
         ectx: SaplingRemoteApiContext<Self::PathExtractor, Self::QueryStringExtractor, Repo>,
         request: Self::Request,
     ) -> HandlerResult<'async_trait, Self::Response> {
-        let repo = if ectx.path().repo() == request.reponame {
+        let repo = if ectx.path().repo() == strip_git_suffix(&request.reponame) {
             ectx.repo()
         } else {
-            ectx.other_repo(&request.reponame).await?
+            ectx.other_repo(strip_git_suffix(&request.reponame)).await?
         };
         let res = get_references(request, repo).boxed();
         Ok(stream::once(res).boxed())
@@ -187,7 +188,12 @@ async fn get_references<R: MononokeRepo>(
         .transpose()?;
     let cc_res = repo
         .repo_ctx()
-        .cloud_references(&request.workspace, &request.reponame, request.version, ci)
+        .cloud_references(
+            &request.workspace,
+            strip_git_suffix(&request.reponame),
+            request.version,
+            ci,
+        )
         .await;
     let res = match cc_res {
         Ok(res) => Ok(ReferencesData::from_cc_type(res)?),
@@ -288,7 +294,11 @@ async fn get_smartlog<R: MononokeRepo>(
         .collect::<anyhow::Result<Vec<_>>>()?;
     let cc_res = repo
         .repo_ctx()
-        .cloud_smartlog(&request.workspace, &request.reponame, &flags)
+        .cloud_smartlog(
+            &request.workspace,
+            strip_git_suffix(&request.reponame),
+            &flags,
+        )
         .await;
     let res = match cc_res {
         Ok(res) => Ok(SmartlogData::from_cc_type(res)?),
@@ -328,7 +338,7 @@ async fn share_workspace<R: MononokeRepo>(
 ) -> anyhow::Result<CloudShareWorkspaceResponse, Error> {
     let cc_res = repo
         .repo_ctx()
-        .cloud_share_workspace(&request.workspace, &request.reponame)
+        .cloud_share_workspace(&request.workspace, strip_git_suffix(&request.reponame))
         .await;
     let res = match cc_res {
         Ok(res) => Ok(WorkspaceSharingData::from_cc_type(res)?),
@@ -369,7 +379,11 @@ async fn update_archive<R: MononokeRepo>(
     Ok(UpdateArchiveResponse {
         data: repo
             .repo_ctx()
-            .cloud_update_archive(&request.workspace, &request.reponame, request.archived)
+            .cloud_update_archive(
+                &request.workspace,
+                strip_git_suffix(&request.reponame),
+                request.archived,
+            )
             .await
             .map_err(ServerError::from),
     })
@@ -407,7 +421,7 @@ async fn rename_workspace<R: MononokeRepo>(
             .repo_ctx()
             .cloud_rename_workspace(
                 &request.workspace,
-                &request.reponame,
+                strip_git_suffix(&request.reponame),
                 &request.new_workspace,
             )
             .await
@@ -450,7 +464,12 @@ async fn get_smartlog_by_version<R: MononokeRepo>(
     let filter = request.filter.into_cc_type()?;
     let cc_res = repo
         .repo_ctx()
-        .cloud_smartlog_by_version(&request.workspace, &request.reponame, &filter, &flags)
+        .cloud_smartlog_by_version(
+            &request.workspace,
+            strip_git_suffix(&request.reponame),
+            &filter,
+            &flags,
+        )
         .await;
     let res = match cc_res {
         Ok(res) => Ok(SmartlogData::from_cc_type(res)?),
@@ -490,7 +509,7 @@ async fn historical_versions<R: MononokeRepo>(
 ) -> anyhow::Result<HistoricalVersionsResponse, Error> {
     let cc_res = repo
         .repo_ctx()
-        .cloud_historical_versions(&request.workspace, &request.reponame)
+        .cloud_historical_versions(&request.workspace, strip_git_suffix(&request.reponame))
         .await;
     let res = match cc_res {
         Ok(res) => Ok(HistoricalVersionsData {
@@ -537,7 +556,11 @@ async fn rollback_workspace<R: MononokeRepo>(
     Ok(RollbackWorkspaceResponse {
         data: repo
             .repo_ctx()
-            .cloud_rollback_workspace(&request.workspace, &request.reponame, request.version)
+            .cloud_rollback_workspace(
+                &request.workspace,
+                strip_git_suffix(&request.reponame),
+                request.version,
+            )
             .await
             .map_err(ServerError::from),
     })

@@ -46,7 +46,7 @@ impl IntoCommitCloudType<CloudUpdateReferencesParams> for UpdateReferencesParams
     fn into_cc_type(self) -> Result<CloudUpdateReferencesParams> {
         Ok(CloudUpdateReferencesParams {
             workspace: self.workspace,
-            reponame: self.reponame,
+            reponame: strip_git_suffix(&self.reponame).to_owned(),
             version: self.version,
             removed_heads: map_id_into_cloud_ids(self.removed_heads)?,
             new_heads: map_id_into_cloud_ids(self.new_heads)?,
@@ -228,4 +228,11 @@ fn rbs_into_cc_type(rbs: Vec<RemoteBookmark>) -> Result<Vec<WorkspaceRemoteBookm
 
 fn rbs_from_cc_type(fbs: Vec<WorkspaceRemoteBookmark>) -> Result<Vec<RemoteBookmark>> {
     fbs.into_iter().map(RemoteBookmark::from_cc_type).collect()
+}
+
+pub(crate) fn strip_git_suffix(reponame: &str) -> &str {
+    match reponame.strip_suffix(".git") {
+        Some(reponame) => reponame,
+        None => reponame,
+    }
 }
