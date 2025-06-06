@@ -97,8 +97,7 @@ impl Detector {
     fn walks(&self, walk_type: WalkType) -> Vec<(RepoPathBuf, usize)> {
         let mut inner = self.inner.write();
 
-        let time = Instant::now();
-        inner.maybe_gc(&self.config, time);
+        inner.maybe_gc(&self.config);
 
         let mut walks = inner.node.list_walks(walk_type);
 
@@ -128,9 +127,7 @@ impl Detector {
 
         let mut inner = self.inner.write();
 
-        let time = Instant::now();
-
-        let mut walk_changed = inner.maybe_gc(&self.config, time);
+        let mut walk_changed = inner.maybe_gc(&self.config);
 
         let walk_threshold = walk_threshold(&self.config, dir_path.components().count());
         let walk_ratio = self.config.walk_ratio;
@@ -139,7 +136,7 @@ impl Detector {
             .node
             .get_or_create_owning_node(WalkType::File, dir_path);
 
-        owner.last_access.store(time);
+        owner.last_access.bump();
 
         if let Some(walk) = owner.get_dominating_walk(WalkType::File) {
             tracing::trace!(walk_root=%path.strip_suffix(suffix, true).unwrap_or_default(), file=%path, "file already in walk");
@@ -156,7 +153,6 @@ impl Detector {
             my_dir.seen_files.clear();
             inner.insert_walk(
                 &self.config,
-                time,
                 WalkType::File,
                 Walk::for_type(WalkType::File, 0, seen_count as u64),
                 dir_path,
@@ -202,21 +198,18 @@ impl Detector {
             if is_interesting_metadata {
                 // Fill in interesting metadata that informs detection of file content walks.
                 let mut inner = self.inner.write();
-                let time = Instant::now();
-                inner.set_metadata(time, path, num_files, num_dirs);
+                inner.set_metadata(path, num_files, num_dirs);
             }
             return false;
         }
 
         let mut inner = self.inner.write();
 
-        let time = Instant::now();
-
-        let mut walk_changed = inner.maybe_gc(&self.config, time);
+        let mut walk_changed = inner.maybe_gc(&self.config);
 
         if is_interesting_metadata {
             // Fill in interesting metadata that informs detection of file content walks.
-            inner.set_metadata(time, path, num_files, num_dirs);
+            inner.set_metadata(path, num_files, num_dirs);
         }
 
         let (dir_path, base_name) = match path.split_last_component() {
@@ -231,7 +224,7 @@ impl Detector {
             .node
             .get_or_create_owning_node(WalkType::Directory, dir_path);
 
-        owner.last_access.store(time);
+        owner.last_access.bump();
 
         if let Some(walk) = owner.get_dominating_walk(WalkType::Directory) {
             tracing::trace!(walk_root=%dir_path.strip_suffix(suffix, true).unwrap_or_default(), dir=%path, "dir already in walk");
@@ -248,7 +241,6 @@ impl Detector {
             my_dir.seen_dirs.clear();
             inner.insert_walk(
                 &self.config,
-                time,
                 WalkType::Directory,
                 Walk::for_type(WalkType::Directory, 0, seen_count as u64),
                 dir_path,
@@ -298,16 +290,14 @@ impl Detector {
 
         let inner = self.inner.read();
 
-        let time = Instant::now();
-
         // Bump last_access, but don't insert any new nodes/walks.
         if let Some((walk_node, suffix)) = inner.node.get_owning_node(wt, dir) {
-            if walk_node.expired(time, self.config.gc_timeout) {
+            if walk_node.expired(self.config.gc_timeout) {
                 // Don't resurrect a node that should be expired by GC.
                 return None;
             }
 
-            walk_node.last_access.store(time);
+            walk_node.last_access.bump();
 
             if let Some(walk) = walk_node.get_dominating_walk(wt) {
                 let walk_root = dir.strip_suffix(suffix, true).unwrap_or_default();
@@ -349,15 +339,8 @@ fn interesting_metadata(
 
 impl Inner {
     /// Insert a new Walk rooted at `dir`.
-    #[tracing::instrument(level = "debug", skip(self, config, time))]
-    fn insert_walk(
-        &mut self,
-        config: &Config,
-        time: Instant,
-        walk_type: WalkType,
-        walk: Walk,
-        dir: &RepoPath,
-    ) {
+    #[tracing::instrument(level = "debug", skip(self, config))]
+    fn insert_walk(&mut self, config: &Config, walk_type: WalkType, walk: Walk, dir: &RepoPath) {
         // TODO: consider moving "should merge" logic into `WalkNode::insert_walk` to do
         // more work in a single traversal.
 
@@ -368,13 +351,13 @@ impl Inner {
             walk_threshold(config, dir.components().count()),
             config.walk_ratio,
         );
-        walk_node.last_access.store(time);
+        walk_node.last_access.bump();
 
         // Check if we should immediately promote this walk to parent directory. This is
         // similar to the ancestor advancement below, except that it can insert a new
         // walk.
         if self
-            .maybe_merge_into_parent(config, time, walk_type, dir)
+            .maybe_merge_into_parent(config, walk_type, dir)
             .is_some()
         {
             return;
@@ -383,7 +366,7 @@ impl Inner {
         // Check if we should merge with cousins (into grandparent). This is similar to
         // maybe_merge_into_parent in that it can insert a new walk.
         if self
-            .maybe_merge_into_grandparent(config, time, walk_type, dir)
+            .maybe_merge_into_grandparent(config, walk_type, dir)
             .is_some()
         {
             return;
@@ -391,9 +374,9 @@ impl Inner {
 
         // Check if we have a containing walk whose depth boundary should be increased.
         if let Some((ancestor_dir, new_depth)) =
-            self.should_advance_ancestor_walk(config, time, walk_type, dir)
+            self.should_advance_ancestor_walk(config, walk_type, dir)
         {
-            self.insert_walk(config, time, walk_type, Walk::new(new_depth), ancestor_dir);
+            self.insert_walk(config, walk_type, Walk::new(new_depth), ancestor_dir);
         }
     }
 
@@ -401,7 +384,6 @@ impl Inner {
     fn maybe_merge_into_parent<'a>(
         &mut self,
         config: &Config,
-        time: Instant,
         walk_type: WalkType,
         dir: &'a RepoPath,
     ) -> Option<()> {
@@ -412,7 +394,7 @@ impl Inner {
 
         // Touch the ancestor's last access time. We don't want the ancestor's walk to GC while we
         // are still "making progress" towards advancing its walk.
-        parent_node.last_access.store(time);
+        parent_node.last_access.bump();
 
         let walk_depth = should_merge_into_ancestor(
             walk_threshold(config, parent_dir.components().count()),
@@ -423,7 +405,7 @@ impl Inner {
             1,
         )?;
 
-        self.insert_walk(config, time, walk_type, Walk::new(walk_depth), parent_dir);
+        self.insert_walk(config, walk_type, Walk::new(walk_depth), parent_dir);
 
         Some(())
     }
@@ -433,7 +415,6 @@ impl Inner {
     fn maybe_merge_into_grandparent(
         &mut self,
         config: &Config,
-        time: Instant,
         walk_type: WalkType,
         dir: &RepoPath,
     ) -> Option<()> {
@@ -453,7 +434,7 @@ impl Inner {
 
         // Touch the ancestor's last access time. We don't want the ancestor's walk to GC while we
         // are still "making progress" towards advancing its walk.
-        ancestor.last_access.store(time);
+        ancestor.last_access.bump();
 
         let grandparent_node = ancestor.get_node(suffix.parent()?)?;
         let walk_depth = should_merge_into_ancestor(
@@ -465,13 +446,7 @@ impl Inner {
             2,
         )?;
 
-        self.insert_walk(
-            config,
-            time,
-            walk_type,
-            Walk::new(walk_depth),
-            grandparent_dir,
-        );
+        self.insert_walk(config, walk_type, Walk::new(walk_depth), grandparent_dir);
 
         Some(())
     }
@@ -481,7 +456,6 @@ impl Inner {
     fn should_advance_ancestor_walk<'a>(
         &mut self,
         config: &Config,
-        time: Instant,
         walk_type: WalkType,
         dir: &'a RepoPath,
     ) -> Option<(&'a RepoPath, usize)> {
@@ -501,7 +475,7 @@ impl Inner {
 
         // Touch the ancestor's last access time. We don't want the ancestor's walk to GC while we
         // are still "making progress" towards advancing its walk.
-        ancestor.last_access.store(time);
+        ancestor.last_access.bump();
 
         let walk_threshold = walk_threshold(config, ancestor_dir.components().count());
 
@@ -529,14 +503,14 @@ impl Inner {
     }
 
     /// Returns whether a walk was removed.
-    fn maybe_gc(&mut self, config: &Config, time: Instant) -> bool {
-        if time - self.last_gc_time < config.gc_interval {
+    fn maybe_gc(&mut self, config: &Config) -> bool {
+        if self.last_gc_time.elapsed() < config.gc_interval {
             return false;
         }
 
         let start = Instant::now();
 
-        let (deleted_nodes, remaining_nodes, deleted_walks) = self.node.gc(config.gc_timeout, time);
+        let (deleted_nodes, remaining_nodes, deleted_walks) = self.node.gc(config.gc_timeout);
 
         let elapsed = start.elapsed();
 
@@ -544,14 +518,14 @@ impl Inner {
             tracing::debug!(elapsed=?start.elapsed(), deleted_nodes, remaining_nodes, deleted_walks, "GC complete");
         }
 
-        self.last_gc_time = time;
+        self.last_gc_time = Instant::now();
 
         deleted_walks > 0
     }
 
-    fn set_metadata(&mut self, time: Instant, path: &RepoPath, num_files: usize, num_dirs: usize) {
+    fn set_metadata(&mut self, path: &RepoPath, num_files: usize, num_dirs: usize) {
         let node = self.node.get_or_create_node(path);
-        node.last_access.store(time);
+        node.last_access.bump();
         node.total_dirs = Some(num_dirs);
         node.total_files = Some(num_files);
     }
@@ -828,6 +802,11 @@ impl AtomicInstant {
         let _ = *EPOCH;
 
         Self(AtomicI64::new(i64::MIN))
+    }
+
+    /// Set time to "now".
+    fn bump(&self) {
+        self.store(Instant::now());
     }
 
     fn store(&self, value: Instant) {

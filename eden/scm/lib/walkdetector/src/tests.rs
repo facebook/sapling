@@ -7,7 +7,6 @@
 
 use std::time::Duration;
 
-use mock_instant::Instant;
 use mock_instant::MockClock;
 use types::RepoPath;
 use types::RepoPathBuf;
@@ -552,11 +551,8 @@ fn test_gc_stats() {
     detector.file_loaded(p("dir3/dir4/b"));
 
     // Manually run GC to check stats.
-    let (nodes_removed, nodes_remaining, walks_removed) = detector
-        .inner
-        .write()
-        .node
-        .gc(Duration::from_secs(1), Instant::now());
+    let (nodes_removed, nodes_remaining, walks_removed) =
+        detector.inner.write().node.gc(Duration::from_secs(1));
 
     // "dir1" and "dir2"
     assert_eq!(nodes_removed, 2);

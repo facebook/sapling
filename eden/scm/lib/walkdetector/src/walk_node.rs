@@ -8,11 +8,7 @@
 use std::collections::HashMap;
 use std::collections::HashSet;
 use std::time::Duration;
-#[cfg(not(test))]
-use std::time::Instant;
 
-#[cfg(test)]
-use mock_instant::Instant;
 use types::PathComponentBuf;
 use types::RepoPath;
 use types::RepoPathBuf;
@@ -455,13 +451,12 @@ impl WalkNode {
 
     /// Delete nodes not accessed within timeout.
     /// Returns (nodes_deleted, nodes_remaining, walks_deleted).
-    pub(crate) fn gc(&mut self, timeout: Duration, now: Instant) -> (usize, usize, usize) {
+    pub(crate) fn gc(&mut self, timeout: Duration) -> (usize, usize, usize) {
         // Return (nodes_deleted, nodes_remaining, walks_deleted, keep_me)
         fn inner(
             path: &mut RepoPathBuf,
             node: &mut WalkNode,
             timeout: Duration,
-            now: Instant,
         ) -> (usize, usize, usize, bool) {
             let mut walks_removed = 0;
             let mut deleted = 0;
@@ -470,7 +465,7 @@ impl WalkNode {
             node.children.retain(|name, child| {
                 path.push(name);
 
-                let (d, r, w, keep) = inner(path, child, timeout, now);
+                let (d, r, w, keep) = inner(path, child, timeout);
 
                 deleted += d;
                 retained += r;
@@ -485,7 +480,7 @@ impl WalkNode {
                 keep
             });
 
-            let expired = node.expired(now, timeout);
+            let expired = node.expired(timeout);
 
             let keep_me = !expired || !node.children.is_empty();
             let has_walk = node.has_walk();
@@ -510,7 +505,7 @@ impl WalkNode {
         }
 
         let (mut deleted, remaining, mut walks_deleted, keep_me) =
-            inner(&mut RepoPathBuf::new(), self, timeout, now);
+            inner(&mut RepoPathBuf::new(), self, timeout);
         if !keep_me {
             // We don't actually delete the root node, so take one off.
             deleted -= 1;
@@ -559,9 +554,9 @@ impl WalkNode {
         self.file_walk.is_some() || self.dir_walk.is_some()
     }
 
-    pub(crate) fn expired(&self, now: Instant, timeout: Duration) -> bool {
+    pub(crate) fn expired(&self, timeout: Duration) -> bool {
         self.last_access
             .load()
-            .is_none_or(|accessed| now - accessed >= timeout)
+            .is_none_or(|accessed| accessed.elapsed() >= timeout)
     }
 }
