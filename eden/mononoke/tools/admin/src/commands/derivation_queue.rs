@@ -54,7 +54,7 @@ pub async fn run(app: MononokeApp, args: CommandArgs) -> Result<()> {
     let repo: Repo = app.open_repo(&args.repo).await?;
 
     let manager = if let Some(ref config_name) = args.config_name {
-        repo.repo_derived_data().manager_for_config(&config_name)?
+        repo.repo_derived_data().manager_for_config(config_name)?
     } else {
         repo.repo_derived_data().manager()
     };
@@ -66,7 +66,7 @@ pub async fn run(app: MononokeApp, args: CommandArgs) -> Result<()> {
 
     match args.subcommand {
         DerivationQueueSubcommand::Summary(args) => {
-            summary::summary(&ctx, &repo, config_name, args, &manager).await
+            summary::summary(&ctx, &repo, config_name, args, manager).await
         }
     }
 }

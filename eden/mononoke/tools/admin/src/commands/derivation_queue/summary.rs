@@ -10,6 +10,7 @@ use anyhow::anyhow;
 use clap::Args;
 use context::CoreContext;
 use derived_data_manager::DerivedDataManager;
+use futures::StreamExt;
 use mononoke_app::args::MultiDerivedDataArgs;
 use prettytable::Table;
 use prettytable::cell;
@@ -59,8 +60,10 @@ pub async fn summary(
         .multi_derived_data_args
         .resolve_types(manager.config())?;
 
-    println!("Number of items in the queue: {}", summary.items.len());
-    for item in summary.items.into_iter().take(args.limit) {
+    println!("Number of items in the queue: {}", summary.queue_size);
+    let mut item_stream = summary.items.take(args.limit);
+    while let Some(result) = item_stream.next().await {
+        let item = result?;
         let dd_type = item.derived_data_type();
         if derived_data_types.contains(&dd_type) {
             let timestamp = item

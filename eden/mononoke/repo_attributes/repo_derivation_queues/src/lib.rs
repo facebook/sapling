@@ -115,6 +115,7 @@ pub enum DequeueResponse {
     Items(BoxStream<'static, Result<DerivationDagItem, InternalError>>),
 }
 
-pub struct DerivationQueueSummary {
-    pub items: Vec<DerivationDagItem>,
+pub struct DerivationQueueSummary<'a> {
+    pub queue_size: usize,
+    pub items: BoxStream<'a, Result<DerivationDagItem, InternalError>>,
 }
