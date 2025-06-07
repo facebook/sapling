@@ -50,6 +50,7 @@ add_fb_python_unittest(
     edenfsctl.real.main_lib
     eden_integration_lib
     eden_hg_integration_lib
+    python-psutil::python-psutil
   ENV
     "CMAKE_SOURCE_DIR=${CMAKE_SOURCE_DIR}"
 )
