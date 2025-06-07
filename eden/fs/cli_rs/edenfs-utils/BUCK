@@ -5,6 +5,9 @@ oncall("scm_client_infra")
 rust_library(
     name = "edenfs-utils",
     srcs = glob(["src/**/*.rs"]),
+    env = {
+        "TEST_DATA": "$(location //eden/facebook/test-data:normalized-hostname)",
+    },
     os_deps = [
         (
             "macos",
@@ -26,6 +29,7 @@ rust_library(
         ),
     ],
     test_deps = [
+        "fbsource//third-party/rust:csv",
         "fbsource//third-party/rust:lazy_static",
     ],
     test_os_deps = [
@@ -40,6 +44,7 @@ rust_library(
     deps = [
         "fbsource//third-party/rust:anyhow",
         "fbsource//third-party/rust:byteorder",
+        "fbsource//third-party/rust:regex",
         "fbsource//third-party/rust:sysinfo",
         "fbsource//third-party/rust:tracing",
         "//eden/fs/cli_rs/edenfs-error:edenfs-error",

@@ -20,6 +20,7 @@ use edenfs_error::ResultExt;
 use sysinfo::ProcessesToUpdate;
 use tracing::trace;
 
+pub mod hostname;
 pub mod humantime;
 pub mod metadata;
 pub mod varint;
