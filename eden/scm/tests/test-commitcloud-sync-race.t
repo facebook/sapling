@@ -18,8 +18,8 @@
   >    if cc is not None:
   >        extensions.wrapfunction(cc.sync, "_hashrepostate", delayhash)
   > 
-  > def delayhash(orig, repo):
-  >    ret = orig(repo)
+  > def delayhash(orig, repo, besteffort):
+  >    ret = orig(repo, besteffort)
   >    filename = os.environ.get("CCWAITFILE")
   >    if filename:
   >         while os.path.exists(filename):
@@ -115,7 +115,6 @@ While that is getting started, create a new commit locally.
   o  1292cc1f1c17 draft 'commit2'
   │
   @  df4f53cec30a public 'base'
-  
 
 Let the background sync we started earlier continue, and start a concurrent cloud sync.
 
@@ -130,13 +129,13 @@ Let the background sync we started earlier continue, and start a concurrent clou
   edenapi: uploaded 1 tree
   edenapi: uploaded 1 changeset
   visibility: read 1 heads: 1292cc1f1c17
+  visibility: removed 0 heads []; added 1 heads [79089e97b9e7] (?)
+  visibility: wrote 2 heads: 79089e97b9e7, 1292cc1f1c17 (?)
   pulling 79089e97b9e7 from ssh://user@dummy/server
   searching for changes
   visibility: removed 0 heads []; added 1 heads [79089e97b9e7]
-  visibility: removed 0 heads []; added 1 heads [79089e97b9e7] (?)
   commitcloud_sync: synced to workspace user/test/default version 2: 1 heads (0 omitted), 0 bookmarks (0 omitted), 0 remote bookmarks (0 omitted)
   visibility: wrote 2 heads: 79089e97b9e7, 1292cc1f1c17
-  visibility: wrote 2 heads: 79089e97b9e7, 1292cc1f1c17 (?)
   commitcloud_sync: synced to workspace user/test/default version 3: 2 heads (0 omitted), 0 bookmarks (0 omitted), 0 remote bookmarks (0 omitted)
   commitcloud: commits synchronized
   finished in 0.00 sec
@@ -148,7 +147,6 @@ Let the background sync we started earlier continue, and start a concurrent clou
   │ o  1292cc1f1c17 draft 'commit2'
   ├─╯
   @  df4f53cec30a public 'base'
-  
 
 Wait for the background backup to finish and check its output.
 
