@@ -10,6 +10,8 @@ use std::fmt::Display;
 use anyhow::Result;
 use futures::Stream;
 use gix_hash::ObjectId;
+use sha1::Digest;
+use sha1::Sha1;
 use tokio::io::AsyncWrite;
 use tokio::io::AsyncWriteExt;
 
@@ -24,6 +26,13 @@ const BUNDLE_PREREQ_MSG: &str = "bundled object";
 /// Currently only version 2 is supported.
 pub enum BundleVersion {
     V2,
+}
+
+/// Enum representing the naming strategy for the refs in the bundle
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum RefNaming {
+    AsIs,
+    RenameToHeads,
 }
 
 impl Display for BundleVersion {
@@ -50,7 +59,10 @@ where
     pub refs: Vec<(String, ObjectId)>,
     /// Packfile writer created over the underlying raw writer
     pub pack_writer: PackfileWriter<T>,
+    /// Number of bytes written to the underlying writer
     bytes_written: usize,
+    /// Fingerprint of the bundle based on the included refs in sorted order
+    bundle_fingerprint: String,
 }
 
 impl<T: AsyncWrite + Unpin> BundleWriter<T> {
@@ -63,7 +75,26 @@ impl<T: AsyncWrite + Unpin> BundleWriter<T> {
         num_objects: u32,
         concurrency: usize,
         delta_form: DeltaForm,
+        ref_naming: RefNaming,
     ) -> Result<Self> {
+        // Git can't parse tag and remote refs in bundles, so we need to replace them with heads
+        // TODO(rajshar): Remove this once Git version in Meta includes https://github.com/git/git/pull/1897
+        let mut refs: Vec<(String, ObjectId)> = match ref_naming {
+            RefNaming::AsIs => refs,
+            RefNaming::RenameToHeads => refs
+                .into_iter()
+                .map(|(ref_name, ref_target)| {
+                    let ref_name = ref_name.replacen("refs/tags/", "refs/heads/replaced_tags/", 1);
+                    let ref_name =
+                        ref_name.replacen("refs/remotes/", "refs/heads/replaced_remotes/", 1);
+                    (ref_name, ref_target)
+                })
+                .collect(),
+        };
+        refs.sort_by(|a, b| a.0.cmp(&b.0));
+        // Calculate the bundle fingerprint based on the included refs to uniquely identify the bundle
+        let bundle_fingerprint = calculate_bundle_fingerprint(&refs);
+
         let mut bytes_written = 0;
         // Append the bundle header
         let bundle_header = format!("{}", BundleVersion::V2);
@@ -92,6 +123,7 @@ impl<T: AsyncWrite + Unpin> BundleWriter<T> {
             prereqs,
             pack_writer,
             bytes_written,
+            bundle_fingerprint,
         })
     }
 
@@ -103,8 +135,14 @@ impl<T: AsyncWrite + Unpin> BundleWriter<T> {
         self.pack_writer.write(objects_stream).await
     }
 
+    /// Returns the number of bytes written to the underlying writer
     pub fn bytes_written(&self) -> usize {
         self.bytes_written + self.pack_writer.size as usize
+    }
+
+    /// Returns the bundle fingerprint
+    pub fn bundle_fingerprint(&self) -> &str {
+        &self.bundle_fingerprint
     }
 
     /// Finish the bundle and flush it to the underlying writer
@@ -118,4 +156,14 @@ impl<T: AsyncWrite + Unpin> BundleWriter<T> {
     pub fn into_write(self) -> T {
         self.pack_writer.into_write()
     }
+}
+
+fn calculate_bundle_fingerprint(refs: &Vec<(String, ObjectId)>) -> String {
+    let mut hasher = Sha1::new();
+    for (r, id) in refs {
+        hasher.update(r);
+        hasher.update(id.as_bytes());
+    }
+    // Return the hash as a hexadecimal string
+    format!("{:x}", hasher.finalize())
 }

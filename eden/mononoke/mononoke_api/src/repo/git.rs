@@ -33,6 +33,7 @@ use mononoke_types::DateTime as MononokeDateTime;
 use mononoke_types::bonsai_changeset::BonsaiAnnotatedTag;
 use mononoke_types::hash::GitSha1;
 use packfile::bundle::BundleWriter;
+use packfile::bundle::RefNaming;
 use packfile::pack::DeltaForm;
 use protocol::generator::generate_pack_item_stream;
 use protocol::types::DeltaInclusion;
@@ -441,6 +442,7 @@ pub async fn repo_stack_git_bundle(
         response.num_items as u32,
         concurrency,
         DeltaForm::RefAndOffset,
+        RefNaming::AsIs,
     )
     .await
     .map_err(|e| {

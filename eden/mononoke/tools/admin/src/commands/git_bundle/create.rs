@@ -26,6 +26,7 @@ use mononoke_api::ChangesetId;
 use mononoke_app::MononokeApp;
 use mononoke_app::args::RepoArgs;
 use packfile::bundle::BundleWriter;
+use packfile::bundle::RefNaming;
 use packfile::pack::DeltaForm;
 use packfile::types::PackfileItem;
 use protocol::generator::generate_pack_item_stream;
@@ -203,6 +204,7 @@ pub async fn create_from_mononoke_repo(
         response.num_items as u32,
         create_args.concurrency,
         DeltaForm::RefAndOffset, // Ref deltas are supported by Git when cloning from a bundle
+        RefNaming::AsIs,         // Do not rename refs
     )
     .await?;
 
@@ -283,6 +285,7 @@ async fn create_from_on_disk_repo(path: PathBuf, output_file: tokio::fs::File) -
         object_count as u32,
         1000,
         DeltaForm::RefAndOffset,
+        RefNaming::AsIs, // Do not rename refs
     )
     .await?;
     let object_stream =

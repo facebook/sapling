@@ -12,6 +12,7 @@ use anyhow::Result;
 use git_symbolic_refs::GitSymbolicRefsEntry;
 use mononoke_api::CoreContext;
 use packfile::bundle::BundleWriter;
+use packfile::bundle::RefNaming;
 use packfile::pack::DeltaForm;
 use protocol::Repo;
 use protocol::generator::generate_pack_item_stream;
@@ -81,6 +82,7 @@ pub async fn create_git_repo_on_disk(
         response.num_items as u32,
         concurrency,
         DeltaForm::RefAndOffset, // Ref deltas are supported by Git when cloning from a bundle
+        RefNaming::AsIs,         // Do not rename refs
     )
     .await?;
 

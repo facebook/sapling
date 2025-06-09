@@ -20,6 +20,7 @@ use gix_object::ObjectRef;
 use gix_object::Tag;
 use mononoke_macros::mononoke;
 use packfile::bundle::BundleWriter;
+use packfile::bundle::RefNaming;
 use packfile::pack::DeltaForm;
 use packfile::pack::PackfileWriter;
 use packfile::thrift;
@@ -369,6 +370,7 @@ async fn validate_basic_bundle_generation() -> anyhow::Result<()> {
         3,
         concurrency,
         DeltaForm::RefAndOffset,
+        RefNaming::AsIs,
     )
     .await
     .expect("Expected successful creation of BundleWriter");
@@ -400,6 +402,7 @@ async fn validate_staggered_bundle_generation() -> anyhow::Result<()> {
         3,
         concurrency,
         DeltaForm::RefAndOffset,
+        RefNaming::RenameToHeads,
     )
     .await
     .expect("Expected successful creation of BundleWriter");

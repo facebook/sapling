@@ -20,7 +20,6 @@ rust_binary(
         "fbsource//third-party/rust:futures",
         "fbsource//third-party/rust:gix-hash",
         "fbsource//third-party/rust:rand",
-        "fbsource//third-party/rust:sha1",
         "fbsource//third-party/rust:tokio",
         "fbsource//third-party/rust:uuid",
         "//cerberus/client/rust:cerberus_client",
