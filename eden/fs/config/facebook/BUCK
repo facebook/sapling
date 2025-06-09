@@ -75,10 +75,22 @@ rust_library(
     name = "edenfs_config_manager_lib_rust",
     srcs = ["edenfs_config_manager_lib.rs"],
     crate_root = "edenfs_config_manager_lib.rs",
+    os_deps = [
+        (
+            "linux",
+            [
+                "fbsource//third-party/rust:sys-info",
+            ],
+        ),
+    ],
     deps = [
         "fbsource//third-party/rust:anyhow",
         "fbsource//third-party/rust:const_format",
+        "fbsource//third-party/rust:serde_json",
+        "//common/rust/shed/hostcaps:hostcaps",
+        "//common/rust/shed/hostname:hostname",
         "//configerator/structs/scm/eden/config:edenfs_config-rust",
+        "//eden/fs/cli_rs/edenfs-utils:edenfs-utils",
     ],
 )
 
