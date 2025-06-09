@@ -5,7 +5,7 @@
 
 from __future__ import absolute_import
 
-from . import baseservice, saplingremoteapiservice
+from . import baseservice, error, saplingremoteapiservice
 
 
 class GitService(
@@ -21,20 +21,20 @@ class GitService(
         return True
 
     def getsmartlog(self, reponame, workspace, repo, limit, flags=[]):
-        raise NotImplementedError  # Not supported for git repos yet
+        raise error.GitUnsupportedError(self.ui)
 
     def getsmartlogbyversion(
         self, reponame, workspace, repo, date, version, limit, flags=[]
     ):
-        raise NotImplementedError  # Not supported for git repos yet
+        raise error.GitUnsupportedError(self.ui)
 
     def updatecheckoutlocations(
         self, reponame, workspace, hostname, commit, checkoutpath, sharedpath, unixname
     ):
-        raise NotImplementedError  # Not supported for git repos yet
+        raise error.GitUnsupportedError(self.ui)
 
     def getworkspaces(self, reponame, prefix):
-        raise NotImplementedError  # Not supported for git repos yet
+        raise error.GitUnsupportedError(self.ui)
 
     def getworkspace(self, reponame, workspacename):
         self.ui.debug("Calling 'cloudworkspace' on edenapi\n", component="commitcloud")
@@ -43,11 +43,11 @@ class GitService(
 
     def updateworkspacearchive(self, reponame, workspace, archived):
         """Archive or Restore the given workspace"""
-        raise NotImplementedError  # Not supported for git repos yet
+        raise error.GitUnsupportedError(self.ui)
 
     def renameworkspace(self, reponame, workspace, new_workspace):
         """Rename the given workspace"""
-        raise NotImplementedError  # Not supported for git repos yet
+        raise error.GitUnsupportedError(self.ui)
 
     def shareworkspace(self, reponame, workspace):
         """Enable sharing for the given workspace"""

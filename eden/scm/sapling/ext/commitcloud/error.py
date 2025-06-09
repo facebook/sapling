@@ -134,3 +134,12 @@ class TLSAccessError(error.Abort):
         message += "\n" + contact
         ui.log("commitcloud_error", commitcloud_sync_error="TLS access error")
         super(TLSAccessError, self).__init__(message, *args, component="commitcloud")
+
+
+class GitUnsupportedError(error.Abort):
+    def __init__(self, ui, *args):
+        super(GitUnsupportedError, self).__init__(
+            "this operation is not supported for git repos yet",
+            *args,
+            component="commitcloud",
+        )
