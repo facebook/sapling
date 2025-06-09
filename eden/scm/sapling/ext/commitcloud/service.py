@@ -6,7 +6,7 @@
 
 import socket
 
-from sapling import error
+from sapling import error, git
 
 from . import gitservice, localservice, saplingremoteapiservice
 
@@ -15,6 +15,8 @@ def get(ui, repo=None):
     servicetype = ui.config("commitcloud", "servicetype")
     if servicetype == "local":
         return localservice.LocalService(ui)
+    elif git.isgitformat(repo):
+        return gitservice.GitService(ui, repo)
     elif (
         servicetype == "remote"
         or servicetype == "saplingremoteapi"
@@ -24,8 +26,6 @@ def get(ui, repo=None):
             ui,
             repo,
         )
-    elif servicetype == "git":
-        return gitservice.GitService(ui, repo)
     else:
         msg = "Unrecognized commitcloud.servicetype: %s" % servicetype
         raise error.Abort(msg)
