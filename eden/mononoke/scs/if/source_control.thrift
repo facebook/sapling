@@ -700,6 +700,10 @@ enum HistoryFormat {
   COMMIT_ID = 2,
 }
 
+enum MutationHistoryFormat {
+  COMMIT_ID = 1,
+}
+
 union History {
   1: list<CommitInfo> commit_infos;
   2: list<map<CommitIdentityScheme, CommitId>> commit_ids;
@@ -1428,6 +1432,11 @@ struct CommitSubtreeChangesParams {
   1: set<CommitIdentityScheme> identity_schemes;
 }
 
+struct CommitHgMutationHistoryParams {
+  /// The format of the mutation history to return.
+  1: MutationHistoryFormat format;
+}
+
 struct CommitPathExistsParams {}
 
 struct CommitPathInfoParams {}
@@ -2083,6 +2092,14 @@ union SubtreeChange {
 struct CommitSubtreeChangesResponse {
   /// Map from destination path to the change that was performed on it.
   1: map<Path, SubtreeChange> subtree_changes;
+}
+
+struct CommitHgMutationHistoryResponse {
+  1: HgMutationHistory hg_mutation_history;
+}
+
+union HgMutationHistory {
+  1: list<CommitId> commit_ids;
 }
 
 struct CommitPathExistsResponse {
@@ -2864,6 +2881,15 @@ service SourceControlService extends fb303_core.BaseService {
   CommitSubtreeChangesResponse commit_subtree_changes(
     1: CommitSpecifier commit,
     2: CommitSubtreeChangesParams params,
+  ) throws (
+    1: RequestError request_error,
+    2: InternalError internal_error,
+    3: OverloadError overload_error,
+  );
+
+  CommitHgMutationHistoryResponse commit_hg_mutation_history(
+    1: CommitSpecifier commit,
+    2: CommitHgMutationHistoryParams params,
   ) throws (
     1: RequestError request_error,
     2: InternalError internal_error,
