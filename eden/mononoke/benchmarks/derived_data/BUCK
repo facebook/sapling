@@ -36,3 +36,14 @@ rust_binary(
         "//eden/mononoke/tests/utils:tests_utils",
     ],
 )
+
+rust_binary(
+    name = "benchmark_estimate_similarity",
+    srcs = ["benchmark_estimate_similarity.rs"],
+    deps = [
+        "fbsource//third-party/rust:anyhow",
+        "fbsource//third-party/rust:criterion",
+        "//common/rust/shed/fbinit:fbinit",
+        "//eden/mononoke/derived_data:inferred_copy_from",
+    ],
+)
