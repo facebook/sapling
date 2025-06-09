@@ -84,25 +84,27 @@ fn file_decision(path: Option<impl AsRef<Path>>) -> Option<bool> {
 ///       which would provide us with command names
 ///       to always skip
 fn should_call_chg(args: &[String]) -> (bool, &'static str) {
+    // First check conditions we _never_ want to run chg.
+
     if cfg!(target_os = "windows") {
         return (false, "windows");
     }
-    if !cfg!(feature = "fb") && cfg!(target_os = "macos") {
-        return (false, "macos");
-    }
+
     // This means we're already inside the chg call chain
     if std::env::var_os("CHGINTERNALMARK").is_some() {
         return (false, "CHGINTERNALMARK");
     }
 
     // debugpython is incompatible with chg.
-    if args.get(1).map_or(false, |x| x == "debugpython") {
+    if args.get(1).is_some_and(|x| x == "debugpython") {
         return (false, "debugpython");
     }
 
-    // do not use chg in dev build, unless in tests
-    if ::version::VERSION.ends_with("dev") && std::env::var_os("TESTTMP").is_none() {
-        return (false, "dev");
+    // stdin is not a tty but stdout is a tty. Interactive pager is used
+    // but lack of ctty makes it impossible to control the interactive
+    // pager via keys.
+    if cfg!(unix) && !std::io::stdin().is_tty() && std::io::stdout().is_tty() {
+        return (false, "!stdin.is_tty() && stdout.is_tty()");
     }
 
     // Bash might translate `<(...)` to `/dev/fd/x` instead of using a real fifo. That
@@ -115,12 +117,7 @@ fn should_call_chg(args: &[String]) -> (bool, &'static str) {
         return (false, "arg starts with /dev/fd|/proc/self/");
     }
 
-    // stdin is not a tty but stdout is a tty. Interactive pager is used
-    // but lack of ctty makes it impossible to control the interactive
-    // pager via keys.
-    if cfg!(unix) && !std::io::stdin().is_tty() && std::io::stdout().is_tty() {
-        return (false, "!stdin.is_tty() && stdout.is_tty()");
-    }
+    // Now check CHGDISABLE. We check this first since it allows us to force enablement (using CHGDISABLE=never).
 
     // CHGDISABLE=1 means that we want to disable it
     // regardless of the other conditions, but CHGDISABLE=0
@@ -133,6 +130,15 @@ fn should_call_chg(args: &[String]) -> (bool, &'static str) {
         if val == "1" {
             return (false, "CHGDISABLE=1");
         }
+    }
+
+    if !cfg!(feature = "fb") && cfg!(target_os = "macos") {
+        return (false, "macos");
+    }
+
+    // do not use chg in dev build, unless in tests
+    if ::version::VERSION.ends_with("dev") && std::env::var_os("TESTTMP").is_none() {
+        return (false, "dev");
     }
 
     if cfg!(fbcode_build) {
@@ -156,7 +162,7 @@ fn should_call_chg(args: &[String]) -> (bool, &'static str) {
 pub fn maybe_call_chg(args: &[String]) {
     let (should_use, reason) = should_call_chg(args);
 
-    if std::env::var_os("CHGDEBUG").map_or(false, |x| x == "1") {
+    if std::env::var_os("CHGDEBUG").is_some_and(|x| x == "1") {
         eprintln!("using chg: {}, because {}", should_use, reason);
     }
 
