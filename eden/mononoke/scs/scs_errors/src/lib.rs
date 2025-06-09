@@ -350,6 +350,7 @@ impl_into_thrift_error!(service::CommitFindFilesExn);
 impl_into_thrift_error!(service::CommitFindFilesStreamExn);
 impl_into_thrift_error!(service::CommitFindFilesStreamStreamExn);
 impl_into_thrift_error!(service::CommitHistoryExn);
+impl_into_thrift_error!(service::CommitHgMutationHistoryExn);
 impl_into_thrift_error!(service::CommitLinearHistoryExn);
 impl_into_thrift_error!(service::CommitListDescendantBookmarksExn);
 impl_into_thrift_error!(service::CommitRunHooksExn);

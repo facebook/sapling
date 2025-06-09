@@ -429,6 +429,8 @@ impl AddScubaParams for thrift::CommitPathHistoryParams {
     }
 }
 
+impl AddScubaParams for thrift::CommitHgMutationHistoryParams {}
+
 impl AddScubaParams for thrift::CommitPathExistsParams {}
 
 impl AddScubaParams for thrift::CommitPathInfoParams {}

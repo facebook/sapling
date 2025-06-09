@@ -8,6 +8,7 @@
 use std::collections::BTreeMap;
 use std::collections::BTreeSet;
 use std::collections::HashMap;
+use std::collections::HashSet;
 use std::sync::Arc;
 
 use bytes::Bytes;
@@ -46,6 +47,7 @@ use mononoke_api::UnifiedDiff;
 use mononoke_api::UnifiedDiffMode;
 use mononoke_api::XRepoLookupExactBehaviour;
 use mononoke_api::XRepoLookupSyncBehaviour;
+use mononoke_api_hg::RepoContextHgExt;
 use mononoke_macros::mononoke;
 use mononoke_types::path::MPath;
 use scs_errors::ServiceErrorResultExt;
@@ -1267,5 +1269,36 @@ impl SourceControlServiceImpl {
                 ..Default::default()
             }),
         }
+    }
+
+    /// Returns the mutation history of a commit
+    pub(crate) async fn commit_hg_mutation_history(
+        &self,
+        ctx: CoreContext,
+        commit: thrift::CommitSpecifier,
+        _params: thrift::CommitHgMutationHistoryParams,
+    ) -> Result<thrift::CommitHgMutationHistoryResponse, scs_errors::ServiceError> {
+        let (repo, changeset) = self.repo_changeset(ctx.clone(), &commit).await?;
+        let changeset_id = changeset
+            .hg_id()
+            .await?
+            .ok_or_else(|| scs_errors::invalid_request("commit is not a hg commit".to_string()))?;
+
+        let commit_ids = repo
+            .hg()
+            .fetch_mutations(HashSet::from_iter([changeset_id]))
+            .await?
+            .into_iter()
+            .flat_map(|mutation| {
+                mutation
+                    .predecessors()
+                    .map(|pred| thrift::CommitId::hg(pred.as_bytes().to_vec()))
+                    .collect::<Vec<_>>()
+            })
+            .collect();
+        Ok(thrift::CommitHgMutationHistoryResponse {
+            hg_mutation_history: thrift::HgMutationHistory::commit_ids(commit_ids),
+            ..Default::default()
+        })
     }
 }

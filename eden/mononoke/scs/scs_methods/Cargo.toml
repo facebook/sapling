@@ -45,6 +45,7 @@ memory = { version = "0.1.0", path = "../../common/memory" }
 metaconfig_types = { version = "0.1.0", path = "../../metaconfig/types" }
 metadata = { version = "0.1.0", path = "../../server/metadata" }
 mononoke_api = { version = "0.1.0", path = "../../mononoke_api" }
+mononoke_api_hg = { version = "0.1.0", path = "../../mononoke_api_hg" }
 mononoke_app = { version = "0.1.0", path = "../../cmdlib/mononoke_app" }
 mononoke_configs = { version = "0.1.0", path = "../../mononoke_configs" }
 mononoke_macros = { version = "0.1.0", path = "../../mononoke_macros" }

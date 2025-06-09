@@ -1313,6 +1313,11 @@ impl SourceControlService for SourceControlServiceThriftImpl {
             params: thrift::CommitLinearHistoryParams,
         ) -> Result<thrift::CommitLinearHistoryResponse, service::CommitLinearHistoryExn>;
 
+        async fn commit_hg_mutation_history(
+            commit: thrift::CommitSpecifier,
+            params: thrift::CommitHgMutationHistoryParams,
+        ) -> Result<thrift::CommitHgMutationHistoryResponse, service::CommitHgMutationHistoryExn>;
+
         async fn commit_list_descendant_bookmarks(
             commit: thrift::CommitSpecifier,
             params: thrift::CommitListDescendantBookmarksParams,
