@@ -2755,13 +2755,13 @@ ImmediateFuture<uint64_t> EdenServer::garbageCollectWorkingCopy(
                 mountPath,
                 inodeMap = mount.getInodeMap(),
                 totalNumberOfInodesBeforeGC](
-                   folly::Try<uint64_t> numInvalidatedTry) {
+                   folly::Try<std::pair<uint64_t, bool>> invalidatedTry) {
         auto runtime =
             std::chrono::duration<double>{workingCopyRuntime.elapsed()};
 
-        bool success = numInvalidatedTry.hasValue();
+        bool success = invalidatedTry.hasValue();
         int64_t numInvalidated =
-            success ? folly::to_signed(numInvalidatedTry.value()) : 0;
+            success ? folly::to_signed(invalidatedTry.value().first) : 0;
         auto inodeCountsAfterGC = inodeMap->getInodeCounts();
         auto totalNumberOfInodesAfterGC = inodeCountsAfterGC.fileCount +
             inodeCountsAfterGC.treeCount +
@@ -2781,7 +2781,7 @@ ImmediateFuture<uint64_t> EdenServer::garbageCollectWorkingCopy(
             numInvalidated,
             totalNumberOfInodesAfterGC);
 
-        return numInvalidatedTry;
+        return invalidatedTry.value().first;
       });
 }
 

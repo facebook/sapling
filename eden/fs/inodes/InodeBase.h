@@ -388,6 +388,14 @@ class InodeBase {
     return location_.rlock()->parent;
   }
 
+  /**
+   * This is used only by NFS Garbage Collection (GC) to determine if an inode
+   * is unused for the cutoff time and can be deleted
+   */
+  EdenTimestamp getNfsLastUsedTime() const {
+    return nfsLastUsedTime_.load(std::memory_order_relaxed);
+  }
+
   struct LocationInfo {
     LocationInfo(TreeInodePtr p, PathComponentPiece n)
         : parent(std::move(p)), name(n) {}

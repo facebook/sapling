@@ -475,9 +475,14 @@ class TreeInode final : public InodeBaseMetadata<DirContents> {
    * inodes will also be invalidated if all of their childrens have been
    * invalidated.
    *
-   * Returns the number of inodes invalidated.
+   * Returns the number of tree inodes invalidated underneath this tree (for
+   * logging purposes) and if this inode and all of its descendants were
+   * invalidated (for use as an unloading parameter)
    */
-  ImmediateFuture<uint64_t> invalidateChildrenNotMaterialized(
+  ImmediateFuture<std::pair<
+      uint64_t /* numInvalidated */,
+      bool /* allDescendantsInvalidated */>>
+  invalidateChildrenNotMaterialized(
       std::chrono::system_clock::time_point cutoff,
       const ObjectFetchContextPtr& context);
 

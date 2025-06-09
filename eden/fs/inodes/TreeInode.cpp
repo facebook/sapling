@@ -3974,12 +3974,12 @@ folly::Try<folly::Unit> TreeInode::nfsInvalidateCacheEntryForGC(
                 auto ino = entry.second.getInodeNumber();
                 if (inodeMap->isInodeLoadedOrRemembered(ino)) {
                   XLOGF(
-                      DBG5,
-                      "GC invalidated inode {} with atime: {}",
+                      DBG9,
+                      "GC invalidated inode {} with last used time: {}",
                       ino,
                       entry.second.getInode()
-                          ->getMetadata()
-                          .timestamps.atime.toTimespec()
+                          ->getNfsLastUsedTime()
+                          .toTimespec()
                           .tv_sec);
                   inodeMap->decFsRefcount(ino);
                 }
@@ -4405,19 +4405,22 @@ ImmediateFuture<std::vector<TreeInodePtr>> getLoadedOrRememberedTreeChildren(
 }
 } // namespace
 
-ImmediateFuture<uint64_t> TreeInode::invalidateChildrenNotMaterialized(
+ImmediateFuture<std::pair<
+    uint64_t /* numInvalidated */,
+    bool /* allDescendantsInvalidated */>>
+TreeInode::invalidateChildrenNotMaterialized(
     std::chrono::system_clock::time_point cutoff,
     const ObjectFetchContextPtr& context) {
   // When the mount is shutting down, let's make sure to terminate quickly so
   // unmount is not blocked for a potential very long amount of time.
   if (getMount()->getState() == EdenMount::State::SHUTTING_DOWN) {
-    return 0u;
+    return std::make_pair(0u, false);
   }
 
   return getLoadedOrRememberedTreeChildren(this, getInodeMap(), context)
       .thenValue([context = context.copy(),
                   cutoff](const std::vector<TreeInodePtr>& treeChildren) {
-        std::vector<ImmediateFuture<uint64_t>> futures;
+        std::vector<ImmediateFuture<std::pair<uint64_t, bool>>> futures;
 
         futures.reserve(treeChildren.size());
         for (auto& tree : treeChildren) {
@@ -4428,10 +4431,17 @@ ImmediateFuture<uint64_t> TreeInode::invalidateChildrenNotMaterialized(
         return collectAllSafe(std::move(futures));
       })
       .thenValue([self = inodePtrFromThis(),
-                  cutoff](const std::vector<uint64_t>& invalidatedCounts) {
+                  cutoff](const std::vector<std::pair<uint64_t, bool>>&
+                              invalidations) {
         uint64_t numInvalidated = 0;
-        for (auto invalidated : invalidatedCounts) {
-          numInvalidated += invalidated;
+        bool allDescendantsInvalidated = true;
+        bool isThisTreeInvalidated = false;
+
+        for (auto invalidation : invalidations) {
+          numInvalidated += invalidation.first;
+          if (!invalidation.second) {
+            allDescendantsInvalidated = false;
+          }
         }
 
         std::vector<InodePtr> deletedInodes;
@@ -4441,29 +4451,44 @@ ImmediateFuture<uint64_t> TreeInode::invalidateChildrenNotMaterialized(
             selfPath = self->getMount()->getPath() + path.value();
           } else {
             // This directory was removed, no need to do anything.
-            return numInvalidated;
+            return std::make_pair(numInvalidated, true);
           }
 
           auto contents = self->contents_.wlock();
 #ifdef __APPLE__
+          if (!allDescendantsInvalidated) {
+            // If any of the children are not invalidated, we should skip
+            // invalidation of this directory.
+            return std::make_pair(numInvalidated, false);
+          }
           if (!contents->isMaterialized()) {
             // if cutoff is max, we should invalidate everything, so we don't
-            // need to check the atime
+            // need to check the last used time
             bool shouldInvalidate =
                 (cutoff == std::chrono::system_clock::time_point::max());
             if (!shouldInvalidate) {
-              auto atime = std::chrono::system_clock::from_time_t(
-                  self->getMetadataLocked(contents->entries)
-                      .timestamps.atime.toTimespec()
-                      .tv_sec);
-              shouldInvalidate = (atime < cutoff);
+              auto lastUsedTime = std::chrono::system_clock::from_time_t(
+                  self->getNfsLastUsedTime().toTimespec().tv_sec);
+              // As we didn't update parent last used time when children are
+              // updated in NFS Dispatcher, we need to check the children's last
+              // used time here.
+              for (auto& entry : contents->entries) {
+                auto* entryInode = entry.second.getInode();
+                if (!entryInode) {
+                  continue;
+                }
+                auto childLastUsedTime = std::chrono::system_clock::from_time_t(
+                    entryInode->getNfsLastUsedTime().toTimespec().tv_sec);
+                if (lastUsedTime < childLastUsedTime) {
+                  lastUsedTime = childLastUsedTime;
+                }
+              }
+              shouldInvalidate = (lastUsedTime < cutoff);
               XLOGF(
-                  DBG5,
-                  "For path: {}, atime: {}, cutoff: {}, shouldInvalidate by GC is {}",
+                  DBG9,
+                  "For path: {}, last used time: {}, cutoff: {}, shouldInvalidate by GC is {}",
                   self->getPath().value().asString(),
-                  self->getMetadataLocked(contents->entries)
-                      .timestamps.atime.toTimespec()
-                      .tv_sec,
+                  self->getNfsLastUsedTime().toTimespec().tv_sec,
                   cutoff.time_since_epoch().count(),
                   shouldInvalidate);
             }
@@ -4480,6 +4505,7 @@ ImmediateFuture<uint64_t> TreeInode::invalidateChildrenNotMaterialized(
               auto invalidateResult =
                   self->nfsInvalidateCacheEntryForGC(*contents);
               numInvalidated++;
+              isThisTreeInvalidated = true;
             }
           }
 #elif defined(_WIN32)
@@ -4543,6 +4569,7 @@ ImmediateFuture<uint64_t> TreeInode::invalidateChildrenNotMaterialized(
                          << entry.first << ": " << invalidateResult.exception();
             } else {
               numInvalidated++;
+              isThisTreeInvalidated = true;
             }
           }
 #else
@@ -4550,14 +4577,18 @@ ImmediateFuture<uint64_t> TreeInode::invalidateChildrenNotMaterialized(
           // bother implementing it. only silence unused variable warning
           (void)cutoff;
 #endif
+          // As we have accurate atime for non-mac platforms, we don't need to
+          // use allDescendantsInvalidated. Only silence unused variable warning
+          (void)allDescendantsInvalidated;
         }
 
-        return numInvalidated;
+        return std::make_pair(numInvalidated, isThisTreeInvalidated);
       })
 
 #ifdef __APPLE__
       .thenTry(
-          [this](folly::Try<uint64_t>&& result) -> ImmediateFuture<uint64_t> {
+          [this](folly::Try<std::pair<uint64_t, bool>>&& result)
+              -> ImmediateFuture<std::pair<uint64_t, bool>> {
             auto* nfsdChannel = getMount()->getNfsdChannel();
             if (nfsdChannel) {
               return nfsdChannel->completeInvalidations().thenTry(
