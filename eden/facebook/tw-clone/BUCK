@@ -7,7 +7,7 @@ oncall("scm_client_infra")
 python_binary(
     name = "fb-eden-tw-clone",
     srcs = ["fb_eden_tw_clone.py"],
-    main_function = "eden.facebook.fb_eden_tw_clone.main_2",
+    main_function = "eden.facebook.tw-clone.fb_eden_tw_clone.main_2",
 )
 
 make_rule_compatible_with(
