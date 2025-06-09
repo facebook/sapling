@@ -13,7 +13,6 @@ license = "MIT"
 name = "network_doctor"
 
 [dependencies]
-curl = { version = "0.4.41", features = ["http2"] }
 http = "0.2"
 sapling-auth = { version = "0.1.0", path = "../../auth" }
 sapling-configmodel = { version = "0.1.0", path = "../../config/model" }

@@ -56,6 +56,7 @@ use http_client::MinTransferSpeed;
 use http_client::Request;
 use http_client::TlsError;
 use http_client::TlsErrorKind;
+use http_client::curl;
 use indexedlog::DefaultOpenOptions;
 use indexedlog::Repair;
 use indexedlog::log::IndexOutput;

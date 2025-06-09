@@ -17,6 +17,7 @@ use auth::AuthSection;
 use configmodel::Config;
 use configmodel::ConfigExt;
 use http_client::HttpClientError;
+use http_client::curl;
 use thiserror::Error;
 use url::Host;
 use url::Url;

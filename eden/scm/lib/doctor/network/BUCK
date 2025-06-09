@@ -17,7 +17,6 @@ rust_library(
     }},
     test_deps = ["fbsource//third-party/rust:tempfile"],
     deps = [
-        "fbsource//third-party/rust:curl",
         "fbsource//third-party/rust:http",
         "fbsource//third-party/rust:thiserror",
         "fbsource//third-party/rust:tracing",
