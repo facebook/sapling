@@ -836,7 +836,10 @@ class EdenCheckoutConfigCorruption(FixableProblem):
             f"This config is created using default values. If further issues persist consider recloning {get_reclone_advice_link()}"
         )
         if os.path.exists(config_path):
-            os.rename(config_path, backup_path)
+            # Create a copy instead of renaming so it is impossible to end up with a missing config
+            # file.
+            with open(config_path, "rb") as config_file:
+                util_mod.write_file_atomically(backup_path, config_file.read())
         checkout.save_config(checkout_config)
 
     def check_fix(self) -> bool:
