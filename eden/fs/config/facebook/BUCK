@@ -76,6 +76,7 @@ rust_library(
     srcs = ["edenfs_config_manager_lib.rs"],
     crate_root = "edenfs_config_manager_lib.rs",
     deps = [
+        "fbsource//third-party/rust:anyhow",
         "fbsource//third-party/rust:const_format",
     ],
 )
