@@ -78,6 +78,7 @@ rust_library(
     deps = [
         "fbsource//third-party/rust:anyhow",
         "fbsource//third-party/rust:const_format",
+        "//configerator/structs/scm/eden/config:edenfs_config-rust",
     ],
 )
 
