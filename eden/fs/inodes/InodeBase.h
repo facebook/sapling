@@ -500,7 +500,16 @@ class InodeBase {
   InodeMetadata getMetadataLocked() const;
 #endif
 
+  /**
+   * Updates atime for this inode to now. The value is only updated for this
+   * inode, it is not propagated to its parents.
+   */
   void updateAtime();
+
+  /**
+   * Updates mtime and ctime for this inode. The value is only updated for this
+   * inode, it is not propagated to its parents.
+   */
   void updateMtimeAndCtime(EdenTimestamp now);
 
   template <typename InodeType>
@@ -576,6 +585,12 @@ class InodeBase {
   uint32_t debugGetPtrRef() const {
     return ptrRefcount_.load(std::memory_order_acquire);
   }
+
+  /**
+   * Updates the NFS last time used for this inode. The value is only updated
+   * for this inode, it is not propagated to its parents.
+   */
+  void updateNfsLastUsedTime();
 
  private:
   ParentInodeInfo getParentInfo() const;
@@ -705,6 +720,19 @@ class InodeBase {
    * (acquire the mount-point rename lock first).
    */
   folly::Synchronized<LocationInfo> location_;
+
+  /**
+   * The last time this inode was used with any NFS command.
+   * This is used only by NFS Garbage Collection (GC) to determine if an inode
+   * is unused for the cutoff time and can be deleted.
+   *
+   * Note1: This field is distinct from atime and is not persisted to disk via
+   * InodeTable.
+   *
+   * Note2: This field get updated for the inode itself and not propagate to its
+   * parent.
+   */
+  std::atomic<EdenTimestamp> nfsLastUsedTime_{getNow()};
 
   template <typename InodeState>
   friend class InodeBaseMetadata;
