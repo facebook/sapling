@@ -99,6 +99,7 @@ const fillCommitMessageMethods: Array<{
       return template as CommitMessageFields | undefined;
     },
   },
+  ...(Internal.fillCommitMessageMethods ?? []),
 ];
 
 export function FillCommitMessage({commit, mode}: {commit: CommitInfo; mode: CommitInfoMode}) {

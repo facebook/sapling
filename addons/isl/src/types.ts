@@ -912,6 +912,11 @@ export type ClientToServerMessage =
       type: 'fetchQeDetails';
       id: string;
       name: string;
+    }
+  | {
+      type: 'fetchTaskDetails';
+      id: string;
+      taskNumber: number;
     };
 
 export type SubscriptionResultsData = {
@@ -1035,6 +1040,11 @@ export type ServerToClientMessage =
       type: 'fetchedQeDetails';
       id: string;
       result: Result<InternalTypes['InternalQuickExperiment']>;
+    }
+  | {
+      type: 'fetchedTaskDetails';
+      id: string;
+      result: Result<InternalTypes['InternalTaskDetails']>;
     };
 
 export type Disposable = {

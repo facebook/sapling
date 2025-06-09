@@ -1080,6 +1080,14 @@ export default class ServerToClientAPI {
           });
         break;
       }
+      case 'fetchTaskDetails': {
+        Internal.getTask?.(ctx, data.taskNumber).then(
+          (task: InternalTypes['InternalTaskDetails']) => {
+            this.postMessage({type: 'fetchedTaskDetails', id: data.id, result: {value: task}});
+          },
+        );
+        break;
+      }
       default: {
         if (
           repo.codeReviewProvider?.handleClientToServerMessage?.(data, message =>
