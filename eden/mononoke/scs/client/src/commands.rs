@@ -30,6 +30,7 @@ base_app::subcommands! {
     mod move_bookmark if "SCSC_WRITES_ENABLED";
     mod prepare_commits if "SCSC_WRITES_ENABLED";
     mod pushrebase_history;
+    mod hg_mutation_history;
     mod repo_info;
     mod repos;
     mod run_hooks;
