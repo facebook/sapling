@@ -391,6 +391,7 @@ rust_library(
         "//common/rust/shed/cloned:cloned",
         "//common/rust/shed/fbinit:fbinit",
         "//common/rust/shed/futures_stats:futures_stats",
+        "//common/rust/shed/justknobs_stub:justknobs",
         "//common/rust/shed/time_ext:time_ext",
         "//eden/mononoke/blobstore_sync_queue:blobstore_sync_queue",
         "//eden/mononoke/common/scuba_ext:scuba_ext",

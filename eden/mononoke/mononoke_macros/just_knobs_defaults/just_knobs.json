@@ -45,7 +45,8 @@
     "scm/mononoke:enable_subtree_changes": true,
     "scm/mononoke:enable_manifest_altering_subtree_changes": false,
     "scm/mononoke:use_repo_default_id_scheme_in_scs": true,
-    "scm/mononoke:git_commit_cloud_accept": true
+    "scm/mononoke:git_commit_cloud_accept": true,
+    "scm/mononoke:disable_xdb_blobstore_reads": false
   },
   "ints": {
     "scm/mononoke_timeouts:repo_client_clone_timeout_secs": 14400,

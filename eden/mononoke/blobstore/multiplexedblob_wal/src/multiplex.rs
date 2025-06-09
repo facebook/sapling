@@ -479,9 +479,11 @@ impl WalMultiplexedBlobstore {
             self.inflight_ops_counter.clone(),
         );
 
+        let num_blobstores_used = get_futs.len();
+
         // Wait for the quorum successful "Not Found" reads before
         // returning Ok(None).
-        let mut quorum: usize = self.quorum.read.get();
+        let mut quorum: usize = std::cmp::min(self.quorum.read.get(), num_blobstores_used);
         let mut get_errors = HashMap::with_capacity(get_futs.len());
         let (stats, result) = async move {
             while let Some((bs_id, result)) = get_futs.next().await {
@@ -514,7 +516,7 @@ impl WalMultiplexedBlobstore {
 
         let result = result.map_err(|get_errors| {
             let errors = Arc::new(get_errors);
-            let result_err = if errors.len() == self.blobstores.len() {
+            let result_err = if errors.len() == num_blobstores_used {
                 // all main reads failed
                 ErrorKind::AllFailed(errors)
             } else {
@@ -840,6 +842,15 @@ pub(crate) fn inner_multi_get<'a>(
 ) -> FuturesUnordered<impl Future<Output = GetResult> + use<'a>> {
     let get_futs: FuturesUnordered<_> = blobstores
         .iter()
+        .filter(|(_bs, bs_id_str)| {
+            // If the blobstore is temporarily disabled, don't create a future for it.
+            !justknobs::eval(
+                "scm/mononoke:disable_blobstore_reads",
+                None,
+                Some(&bs_id_str),
+            )
+            .unwrap_or(false)
+        })
         .map(|(bs, _)| {
             cloned!(bs, scuba.inner_blobstores_scuba, counter);
             async move {
@@ -852,6 +863,7 @@ pub(crate) fn inner_multi_get<'a>(
             }
         })
         .collect();
+
     get_futs
 }
 

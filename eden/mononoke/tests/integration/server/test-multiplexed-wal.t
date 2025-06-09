@@ -45,3 +45,47 @@ Count number of entries the blobstore sync queue
   0
   $ cat "$TESTTMP/blobstore_trace_scuba.json" | jq 'select(.normal.operation=="put" and (.normal.key | contains(".changeset."))) | 1' | wc -l
   6
+
+Fetch blob with monad
+  $ mononoke_admin fetch -R repo -B master_bookmark 
+  BonsaiChangesetId: b7f8e4ac0f4cd74eb44dcace531fc23608e428f0ae71213a6734ec4ae54641fb
+  Author: test
+  Message: 1
+  FileChanges:
+  	 ADDED/MODIFIED: 1 b354ba2566c63fedc28780add52b066d6428ef596f57fa2e50c094d0fcf41c00
+  
+
+Disable all blobstores
+  $ merge_just_knobs <<EOF
+  > {
+  >   "bools": {
+  >     "scm/mononoke:disable_blobstore_reads": true
+  >   }
+  > }
+  > EOF
+
+Try again and fail because reads for all blobstores will be disabled
+  $ mononoke_admin fetch -R repo -B master_bookmark 
+  Error: Failed to load changeset b7f8e4ac0f4cd74eb44dcace531fc23608e428f0ae71213a6734ec4ae54641fb
+  
+  Caused by:
+      All blobstores failed: {}
+  [1]
+
+Enable all blobstores again
+  $ merge_just_knobs <<EOF
+  > {
+  >   "bools": {
+  >     "scm/mononoke:disable_blobstore_reads": false
+  >   }
+  > }
+  > EOF
+
+Everything should work again
+  $ mononoke_admin fetch -R repo -B master_bookmark 
+  BonsaiChangesetId: b7f8e4ac0f4cd74eb44dcace531fc23608e428f0ae71213a6734ec4ae54641fb
+  Author: test
+  Message: 1
+  FileChanges:
+  	 ADDED/MODIFIED: 1 b354ba2566c63fedc28780add52b066d6428ef596f57fa2e50c094d0fcf41c00
+  
