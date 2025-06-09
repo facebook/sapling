@@ -7,6 +7,7 @@
 
 use std::collections::HashMap;
 use std::fmt;
+use std::iter::zip;
 use std::num::NonZeroU64;
 use std::num::NonZeroUsize;
 use std::sync::Arc;
@@ -156,10 +157,10 @@ pub struct WalMultiplexedBlobstore {
     pub(crate) quorum: MultiplexQuorum,
     /// These are the "normal" blobstores, which are read from on `get`, and written to on `put`
     /// as part of normal operation.
-    pub(crate) blobstores: Arc<[TimedStore]>,
+    pub(crate) blobstores: Arc<[(TimedStore, String)]>,
     /// Write-mostly blobstores are not normally read from on `get`, but take part in writes
     /// like a normal blobstore.
-    pub(crate) write_only_blobstores: Arc<[TimedStore]>,
+    pub(crate) write_only_blobstores: Arc<[(TimedStore, String)]>,
 
     /// Scuba table to log status of the underlying single blobstore queries.
     pub(crate) scuba: Scuba,
@@ -190,14 +191,14 @@ impl std::fmt::Display for WalMultiplexedBlobstore {
 }
 
 impl fmt::Debug for WalMultiplexedBlobstore {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         write!(
             f,
             "WalMultiplexedBlobstore: multiplex_id: {}",
             &self.multiplex_id
         )?;
         f.debug_map()
-            .entries(self.blobstores.iter().map(|v| (v.id(), v)))
+            .entries(self.blobstores.iter().map(|(v, _)| (v.id(), v)))
             .finish()
     }
 }
@@ -215,8 +216,28 @@ impl WalMultiplexedBlobstore {
         let quorum = MultiplexQuorum::new(blobstores.len(), write_quorum)?;
 
         let to = timeout.unwrap_or_default();
-        let blobstores = with_timed_stores(blobstores, to.clone()).into();
-        let write_only_blobstores = with_timed_stores(write_only_blobstores, to).into();
+
+        let blobstore_id_strs: Vec<String> =
+            blobstores.iter().map(|(id, _)| id.to_string()).collect();
+
+        let write_only_blobstore_id_strs: Vec<String> = write_only_blobstores
+            .iter()
+            .map(|(id, _)| id.to_string())
+            .collect();
+
+        let timed_blobstores = with_timed_stores(blobstores, to.clone());
+        assert_eq!(blobstore_id_strs.len(), timed_blobstores.len());
+
+        let blobstores = zip(timed_blobstores, blobstore_id_strs)
+            .collect::<Vec<_>>()
+            .into();
+        let write_only_blobstores = zip(
+            with_timed_stores(write_only_blobstores, to),
+            write_only_blobstore_id_strs,
+        )
+        .collect::<Vec<_>>()
+        .into();
+
         let inflight_ops_counter = Arc::new(AtomicU64::new(0));
         Ok(Self {
             multiplex_id,
@@ -738,7 +759,7 @@ fn spawn_stream_completion<T>(
 
 fn inner_multi_put(
     ctx: &CoreContext,
-    blobstores: Arc<[TimedStore]>,
+    blobstores: Arc<[(TimedStore, String)]>,
     key: &str,
     value: &BlobstoreBytes,
     put_behaviour: Option<PutBehaviour>,
@@ -747,7 +768,7 @@ fn inner_multi_put(
 ) -> FuturesUnordered<impl Future<Output = Result<OverwriteStatus, (BlobstoreId, Error)>> + use<>> {
     let put_futs: FuturesUnordered<_> = blobstores
         .iter()
-        .map(|bs| {
+        .map(|(bs, _)| {
             // Note: the key used to be passed in as a `&String` and `cloned!` and that triggered
             // a clippy crash for some reason. See D44027145 for context.
             let key = key.to_string();
@@ -774,14 +795,14 @@ fn inner_multi_put(
 
 fn inner_multi_unlink<'a>(
     ctx: &'a CoreContext,
-    blobstores: Arc<[TimedStore]>,
+    blobstores: Arc<[(TimedStore, String)]>,
     key: &'a str,
     scuba: &Scuba,
     counter: Arc<AtomicU64>,
 ) -> FuturesUnordered<impl Future<Output = Result<(), (BlobstoreId, Error)>> + use<'a>> {
     let unlink_futs: FuturesUnordered<_> = blobstores
         .iter()
-        .map(|bs| {
+        .map(|(bs, _)| {
             cloned!(bs, ctx, scuba.inner_blobstores_scuba, counter);
             async move {
                 counter.fetch_add(1, Ordering::Relaxed);
@@ -811,7 +832,7 @@ pub(crate) type GetResult = (BlobstoreId, Result<Option<BlobstoreGetData>, Error
 
 pub(crate) fn inner_multi_get<'a>(
     ctx: &'a CoreContext,
-    blobstores: Arc<[TimedStore]>,
+    blobstores: Arc<[(TimedStore, String)]>,
     key: &'a str,
     operation: OperationType,
     scuba: &Scuba,
@@ -819,7 +840,7 @@ pub(crate) fn inner_multi_get<'a>(
 ) -> FuturesUnordered<impl Future<Output = GetResult> + use<'a>> {
     let get_futs: FuturesUnordered<_> = blobstores
         .iter()
-        .map(|bs| {
+        .map(|(bs, _)| {
             cloned!(bs, scuba.inner_blobstores_scuba, counter);
             async move {
                 (*bs.id(), {
@@ -836,7 +857,7 @@ pub(crate) fn inner_multi_get<'a>(
 
 fn inner_multi_is_present<'a>(
     ctx: &'a CoreContext,
-    blobstores: Arc<[TimedStore]>,
+    blobstores: Arc<[(TimedStore, String)]>,
     key: &'a str,
     scuba: &Scuba,
     counter: Arc<AtomicU64>,
@@ -845,7 +866,7 @@ fn inner_multi_is_present<'a>(
 > {
     let futs: FuturesUnordered<_> = blobstores
         .iter()
-        .map(|bs| {
+        .map(|(bs, _)| {
             cloned!(bs, scuba.inner_blobstores_scuba, counter);
             async move {
                 counter.fetch_add(1, Ordering::Relaxed);

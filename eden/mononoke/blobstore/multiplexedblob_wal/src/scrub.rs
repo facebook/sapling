@@ -69,12 +69,15 @@ impl WalMultiplexedBlobstore {
                 )
                 .collect::<Vec<_>>()
             },
-            self.write_only_blobstores.iter().map(|b| *b.id()),
+            self.write_only_blobstores.iter().map(|(b, _)| *b.id()),
             write_only,
         )
         .await;
 
-        multiplexedblob::base::scrub_parse_results(results, self.blobstores.iter().map(|b| *b.id()))
+        multiplexedblob::base::scrub_parse_results(
+            results,
+            self.blobstores.iter().map(|(b, _)| *b.id()),
+        )
     }
 }
 
