@@ -89,6 +89,11 @@ class NfsDispatcher {
       const ObjectFetchContextPtr& context) = 0;
 
   /**
+   * Update the last used time of the inode. Parents won't be updated.
+   */
+  virtual ImmediateFuture<folly::Unit> updateLastUsedTime(InodeNumber ino) = 0;
+
+  /**
    * Find the given file in the passed in directory. It's InodeNumber and
    * attributes are returned.
    */

@@ -2050,6 +2050,8 @@ ImmediateFuture<folly::Unit> Nfsd3ServerProcessor::dispatchRpc(
       handlerEntry.name,
       handlerEntry.formatArgs(deser).str);
 
+  auto inodeNumber = handlerEntry.formatArgs(deser).inode;
+
   auto liveRequest = LiveRequest{
       traceBus_, traceDetailedArguments_, handlerEntry, deser, xid, procNumber};
 
@@ -2071,6 +2073,14 @@ ImmediateFuture<folly::Unit> Nfsd3ServerProcessor::dispatchRpc(
            return (this->*handlerEntry.handler)(
                std::move(deser), std::move(ser), contextRef);
          })
+      .thenValue([this, &inodeNumber](auto&&) {
+        if (inodeNumber.has_value()) {
+          XLOGF(
+              DBG9, "Update last used time for inode: {}", inodeNumber.value());
+          return dispatcher_->updateLastUsedTime(inodeNumber.value());
+        }
+        return ImmediateFuture<folly::Unit>(folly::unit);
+      })
       .thenTry([this, &handlerEntry](folly::Try<folly::Unit>&& res) {
         if (res.hasException()) {
           if (dispatcher_->getStats() && handlerEntry.countFailure) {

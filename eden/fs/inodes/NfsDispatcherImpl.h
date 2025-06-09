@@ -30,6 +30,8 @@ class NfsDispatcherImpl : public NfsDispatcher {
       InodeNumber ino,
       const ObjectFetchContextPtr& context) override;
 
+  ImmediateFuture<folly::Unit> updateLastUsedTime(InodeNumber ino) override;
+
   ImmediateFuture<std::tuple<InodeNumber, struct stat>> lookup(
       InodeNumber dir,
       PathComponent name,

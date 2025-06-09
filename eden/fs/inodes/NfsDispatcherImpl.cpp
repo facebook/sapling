@@ -76,6 +76,23 @@ ImmediateFuture<InodeNumber> NfsDispatcherImpl::getParent(
       });
 }
 
+ImmediateFuture<folly::Unit> NfsDispatcherImpl::updateLastUsedTime(
+    InodeNumber ino) {
+  return inodeMap_->lookupInode(ino)
+      .thenValue([](const InodePtr& inode) {
+        inode->updateNfsLastUsedTime();
+        return folly::unit;
+      })
+      .thenError([&ino](folly::exception_wrapper&& ew) {
+        XLOGF(
+            DBG9,
+            "Cannot update the last access time for inode: {} error: {}",
+            ino,
+            ew.what());
+        return folly::unit;
+      });
+}
+
 ImmediateFuture<std::tuple<InodeNumber, struct stat>> NfsDispatcherImpl::lookup(
     InodeNumber dir,
     PathComponent name,
