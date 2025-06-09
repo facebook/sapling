@@ -104,6 +104,32 @@ async fn init_repo(ctx: &CoreContext) -> Result<(Repo, HashMap<&'static str, Cha
             .await?,
     );
 
+    changesets.insert(
+        "g",
+        CreateCommitContext::new(ctx, &repo, vec![changesets["f"]])
+            .add_file("test/file1", "hello\nworld\n")
+            .add_file("test/file2", "one\ntwo\nthree\n")
+            .set_author_date(DateTime::from_timestamp(1000, 0)?)
+            .commit()
+            .await?,
+    );
+    changesets.insert(
+        "h",
+        CreateCommitContext::new(ctx, &repo, vec![changesets["g"]])
+            // Rename with modification
+            // g:test/file1 -> test/partial/match/file1
+            .add_file("test/partial/match/file1", "hello\nworld!\n")
+            .delete_file("test/file1")
+            // Copy with modification
+            // g:test/file2 -> test/partial/match/file2
+            .add_file("test/partial/match/file2", "one\ntwo\nfour\n")
+            // Non-match due to content being too different
+            .add_file("test/another/file2", "one\ntwo\nthree\nfour\nfive\nsix\n")
+            .set_author_date(DateTime::from_timestamp(1000, 0)?)
+            .commit()
+            .await?,
+    );
+
     Ok((repo, changesets))
 }
 
@@ -194,6 +220,29 @@ async fn derive_single_test(fb: FacebookInit) -> Result<()> {
         &repo,
         repo_ctx.changeset(changesets["f"]).await?.unwrap().id(),
         &[],
+    )
+    .await?;
+
+    assert_entries(
+        &ctx,
+        &repo,
+        repo_ctx.changeset(changesets["h"]).await?.unwrap().id(),
+        &[
+            (
+                MPath::new("test/partial/match/file1")?,
+                InferredCopyFromEntry {
+                    from_csid: changesets["g"],
+                    from_path: MPath::new("test/file1")?,
+                },
+            ),
+            (
+                MPath::new("test/partial/match/file2")?,
+                InferredCopyFromEntry {
+                    from_csid: changesets["g"],
+                    from_path: MPath::new("test/file2")?,
+                },
+            ),
+        ],
     )
     .await?;
 

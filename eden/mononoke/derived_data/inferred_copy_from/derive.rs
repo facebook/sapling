@@ -12,6 +12,8 @@ use anyhow::Context;
 use anyhow::Error;
 use anyhow::Result;
 use basename_suffix_skeleton_manifest_v3::RootBssmV3DirectoryId;
+use blobstore::Loadable;
+use blobstore::LoadableError;
 use cloned::cloned;
 use context::CoreContext;
 use derived_data_manager::DerivationContext;
@@ -19,12 +21,16 @@ use fsnodes::RootFsnodeId;
 use futures::Stream;
 use futures::StreamExt;
 use futures::future::try_join_all;
+use futures::stream;
 use futures::stream::TryStreamExt;
 use itertools::EitherOrBoth;
 use manifest::ManifestOps;
+use mononoke_types::BasicFileChange;
 use mononoke_types::BonsaiChangeset;
 use mononoke_types::ChangesetId;
 use mononoke_types::ContentId;
+use mononoke_types::FileContents;
+use mononoke_types::FileType;
 use mononoke_types::MPath;
 use mononoke_types::NonRootMPath;
 use mononoke_types::fsnode::FsnodeFile;
@@ -32,20 +38,28 @@ use mononoke_types::inferred_copy_from::InferredCopyFrom;
 use mononoke_types::inferred_copy_from::InferredCopyFromEntry;
 use vec1::Vec1;
 
-const BASENAME_MATCH_MAX_CANDIDATES: usize = 10_000;
+use crate::similarity::estimate_similarity;
 
+const BASENAME_MATCH_MAX_CANDIDATES: usize = 10_000;
+// This roughly follows our file content chunk size
+// Ref: https://fburl.com/code/qudh1g07
+const PARTIAL_MATCH_MAX_FILE_SIZE: u64 = 4 * 1024 * 1024; // 4MB
+// Ref: https://fburl.com/lkfjeka4
+const CONTENT_SIMILARITY_RATIO_THRESHOLD: f64 = 0.5;
+
+#[derive(Clone, Debug)]
 struct CopyFromCandidate {
     cs_id: ChangesetId,
     path: MPath,
-    #[allow(unused)]
     fsnode: FsnodeFile,
 }
 
 // It's possible to have multiple source files that match,
 // pick the one with the smallest path
-fn pick_source_from_candidates(candidates: &[CopyFromCandidate]) -> &CopyFromCandidate {
+fn pick_source_from_candidates<'a>(
+    candidates: impl Iterator<Item = &'a CopyFromCandidate>,
+) -> &'a CopyFromCandidate {
     candidates
-        .iter()
         .min_by_key(|c| c.path.clone())
         .unwrap_or_else(|| panic!("There should be at least one candidate"))
 }
@@ -63,6 +77,97 @@ fn flatten_candidates(
         }
     }
     merged
+}
+
+fn should_skip_file_type(file_type: &FileType) -> bool {
+    matches!(file_type, FileType::GitSubmodule | FileType::Symlink)
+}
+
+// Basic file metadata check to filter out pairs that are unlikely to match.
+fn filter_by_metadata(
+    dst_file_change: &BasicFileChange,
+    src_candidate: &CopyFromCandidate,
+) -> bool {
+    // Skip LFS files
+    // Note that we are only checking dest file as we don't have this
+    // info for the source candidate (fsnode doesn't have it)
+    if dst_file_change.git_lfs().is_lfs_pointer() {
+        return false;
+    }
+
+    // Skip submodules or symlinks
+    if should_skip_file_type(&dst_file_change.file_type())
+        || should_skip_file_type(src_candidate.fsnode.file_type())
+    {
+        return false;
+    }
+
+    let dst_file_size = dst_file_change.size();
+    let candidate_file_size = src_candidate.fsnode.size();
+    let max_size = dst_file_size.max(candidate_file_size);
+    let min_size = dst_file_size.min(candidate_file_size);
+    // Skip if files are too large or too different in sizes
+    max_size <= PARTIAL_MATCH_MAX_FILE_SIZE
+        && (max_size - min_size) as f64 / (max_size as f64) < CONTENT_SIMILARITY_RATIO_THRESHOLD
+}
+
+async fn load_file_content(
+    ctx: &CoreContext,
+    derivation_ctx: &DerivationContext,
+    content_id: &ContentId,
+) -> Result<FileContents, LoadableError> {
+    content_id.load(ctx, derivation_ctx.blobstore()).await
+}
+
+async fn find_best_candidate_by_partial_content_match(
+    ctx: &CoreContext,
+    derivation_ctx: &DerivationContext,
+    dst_content_id: ContentId,
+    src_content_to_candidates: &HashMap<ContentId, Vec<&CopyFromCandidate>>,
+) -> Result<Option<CopyFromCandidate>> {
+    let dst_bytes = match load_file_content(ctx, derivation_ctx, &dst_content_id).await {
+        Ok(FileContents::Bytes(v)) => v,
+        // TODO(lyang): Evaluate whether we need to compare bigger files
+        _ => return Ok::<_, Error>(None),
+    };
+    let similarities = stream::iter(src_content_to_candidates.keys())
+        .map(|src_content_id| {
+            cloned!(dst_bytes);
+            async move {
+                let src_bytes = match load_file_content(ctx, derivation_ctx, src_content_id).await {
+                    Ok(FileContents::Bytes(v)) => v,
+                    _ => return Ok::<_, Error>(None),
+                };
+
+                let similarity = estimate_similarity(&src_bytes, &dst_bytes);
+                Ok(similarity
+                    .ok()
+                    .filter(|&s| s >= CONTENT_SIMILARITY_RATIO_THRESHOLD)
+                    .map(|s| (src_content_id, s)))
+            }
+        })
+        .boxed()
+        .buffer_unordered(20)
+        .try_collect::<Vec<_>>()
+        .await?;
+
+    let mut best_matched: Option<(f64, Vec<&CopyFromCandidate>)> = None;
+    for entry in similarities.into_iter().flatten() {
+        match best_matched {
+            Some((best_similarity, _)) if best_similarity > entry.1 => {
+                // Do nothing, best is still the best
+            }
+            Some((best_similarity, mut candidates)) if best_similarity == entry.1 => {
+                // On tie, merge the candidates so we can consider them together later
+                candidates.extend(src_content_to_candidates[entry.0].clone());
+                best_matched = Some((best_similarity, candidates));
+            }
+            _ => best_matched = Some((entry.1, src_content_to_candidates[entry.0].clone())),
+        }
+    }
+
+    Ok(best_matched
+        .map(|(_, candidates)| pick_source_from_candidates(candidates.into_iter()).clone()))
 }
 
 async fn get_candidates_from_changeset(
@@ -170,7 +275,7 @@ async fn find_exact_renames(
     let mut renames = vec![];
     for (content_id, paths) in &content_to_paths {
         if let Some(candidates) = content_to_candidates.get(content_id) {
-            let from = pick_source_from_candidates(candidates);
+            let from = pick_source_from_candidates(candidates.iter());
             for path in paths {
                 renames.push((
                     MPath::from(path.clone()),
@@ -265,7 +370,7 @@ async fn find_basename_matched_copies(
     let mut copies = vec![];
     for (content_id, paths) in &content_to_paths {
         if let Some(candidates) = content_to_candidates.get(content_id) {
-            let from = pick_source_from_candidates(candidates);
+            let from = pick_source_from_candidates(candidates.iter());
             for path in paths {
                 copies.push((
                     MPath::from(path.clone()),
@@ -286,6 +391,73 @@ async fn find_basename_matched_copies(
     Ok((copies, content_to_candidates))
 }
 
+// Infer copy/renames by comparing file contents.
+// Candidates are the files collected during the previous exact matching attempts.
+async fn find_partial_matches(
+    ctx: &CoreContext,
+    derivation_ctx: &DerivationContext,
+    bonsai: &BonsaiChangeset,
+    paths_to_ignore: &HashSet<MPath>,
+    content_to_candidates: &HashMap<ContentId, Vec<CopyFromCandidate>>,
+) -> Result<Vec<(MPath, InferredCopyFromEntry)>> {
+    let mut content_to_paths = HashMap::new();
+    let mut content_to_metadata = HashMap::new();
+    for (path, file_change) in bonsai.simplified_file_changes() {
+        if !paths_to_ignore.contains(path.into()) {
+            if let Some(fc) = file_change {
+                content_to_paths
+                    .entry(fc.content_id())
+                    .or_insert(vec![])
+                    .push(path.clone());
+                content_to_metadata.entry(fc.content_id()).or_insert(fc);
+            }
+        }
+    }
+
+    let mut matched = vec![];
+    for (dst_content_id, fc) in content_to_metadata {
+        // Trim candidate list by comparing file metadata (e.g. type, size)
+        let filtered_content_to_candidates = content_to_candidates
+            .iter()
+            .filter_map(|(src_content_id, candidates)| {
+                let filtered = candidates
+                    .iter()
+                    .filter(|candidate| filter_by_metadata(fc, candidate))
+                    .collect::<Vec<_>>();
+                if filtered.is_empty() {
+                    None
+                } else {
+                    Some((src_content_id.clone(), filtered))
+                }
+            })
+            .collect::<HashMap<_, _>>();
+
+        if filtered_content_to_candidates.is_empty() {
+            continue;
+        }
+
+        let candidate = find_best_candidate_by_partial_content_match(
+            ctx,
+            derivation_ctx,
+            dst_content_id,
+            &filtered_content_to_candidates,
+        )
+        .await?;
+        if let Some(from) = candidate {
+            for path in &content_to_paths[&dst_content_id] {
+                matched.push((
+                    MPath::from(path.clone()),
+                    InferredCopyFromEntry {
+                        from_csid: from.cs_id,
+                        from_path: from.path.clone(),
+                    },
+                ));
+            }
+        }
+    }
+    Ok(matched)
+}
+
 // TODO: add more cases
 // Ref: https://github.com/git/git/blob/master/diffcore-rename.c
 pub(crate) async fn derive_impl(
@@ -295,14 +467,24 @@ pub(crate) async fn derive_impl(
 ) -> Result<Option<InferredCopyFrom>> {
     let mut resolved_paths = HashSet::new();
 
-    let (exact_renames, _leftover0) = find_exact_renames(ctx, derivation_ctx, bonsai).await?;
+    let (exact_renames, leftover0) = find_exact_renames(ctx, derivation_ctx, bonsai).await?;
     resolved_paths.extend(exact_renames.iter().map(|(path, _)| path.clone()));
 
-    let (basename_matched_copies, _leftover1) =
+    let (basename_matched_copies, leftover1) =
         find_basename_matched_copies(ctx, derivation_ctx, bonsai, &resolved_paths).await?;
     resolved_paths.extend(basename_matched_copies.iter().map(|(path, _)| path.clone()));
 
-    let entries = [exact_renames, basename_matched_copies].concat();
+    let partial_match_candidates = flatten_candidates(vec![leftover0, leftover1]);
+    let partially_matched = find_partial_matches(
+        ctx,
+        derivation_ctx,
+        bonsai,
+        &resolved_paths,
+        &partial_match_candidates,
+    )
+    .await?;
+
+    let entries = [exact_renames, basename_matched_copies, partially_matched].concat();
     if entries.is_empty() {
         Ok(None)
     } else {
