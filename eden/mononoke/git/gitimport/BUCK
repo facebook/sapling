@@ -13,6 +13,7 @@ rust_binary(
         "fbsource//third-party/rust:futures",
         "fbsource//third-party/rust:gix-hash",
         "fbsource//third-party/rust:linked-hash-map",
+        "//common/rust/shed/cloned:cloned",
         "//common/rust/shed/facet:facet",
         "//common/rust/shed/fbinit:fbinit",
         "//eden/mononoke/blobrepo:blobrepo_override",

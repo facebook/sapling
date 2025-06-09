@@ -34,10 +34,12 @@ use clap::Parser;
 use clap::Subcommand;
 use clientinfo::ClientEntryPoint;
 use clientinfo::ClientInfo;
+use cloned::cloned;
 use context::CoreContext;
 use fbinit::FacebookInit;
 use futures::TryStreamExt;
 use futures::future;
+use futures::stream;
 use git_symbolic_refs::GitSymbolicRefsRef;
 use gix_hash::ObjectId;
 use import_tools::BackfillDerivation;
@@ -229,8 +231,8 @@ enum GitimportSubcommand {
         git_commit: String,
     },
     /// Import a single tag object into Mononoke data store
-    UploadTag {
-        tag_sha1: String,
+    UploadTags {
+        tag_sha1s: Vec<String>,
     },
 }
 
@@ -362,13 +364,27 @@ async fn async_main(app: MononokeApp) -> Result<(), Error> {
             }
             return Ok(());
         }
-        GitimportSubcommand::UploadTag { tag_sha1 } => {
-            let tag_sha1 = ObjectId::from_str(&tag_sha1)
-                .with_context(|| format!("Invalid SHA1 hash provided for Git Tag {}", tag_sha1))?;
-            upload_git_tag(&ctx, uploader.clone(), reader.clone(), &tag_sha1)
-                .await
-                .with_context(|| format!("Error in uploading tag with ID {}", tag_sha1))?;
-            info!(ctx.logger(), "Uploaded tag with ID {}", tag_sha1);
+        GitimportSubcommand::UploadTags { tag_sha1s } => {
+            stream::iter(tag_sha1s.into_iter().map(Ok))
+                .map_ok(|tag_sha1| {
+                    cloned!(ctx, uploader, reader);
+                    async move {
+                        let tag_sha1 = ObjectId::from_str(&tag_sha1).with_context(|| {
+                            format!("Invalid SHA1 hash provided for Git Tag {}", tag_sha1)
+                        })?;
+                        upload_git_tag(&ctx, uploader.clone(), reader.clone(), &tag_sha1)
+                            .await
+                            .with_context(|| {
+                                format!("Error in uploading tag with ID {}", tag_sha1)
+                            })?;
+                        info!(ctx.logger(), "Uploaded tag with ID {}", tag_sha1);
+                        anyhow::Ok(())
+                    }
+                })
+                .try_buffer_unordered(100)
+                .try_collect::<Vec<_>>()
+                .await?;
+
             return Ok(());
         }
     };
