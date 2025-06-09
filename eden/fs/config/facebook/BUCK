@@ -93,6 +93,7 @@ rust_library(
         "fbsource//third-party/rust:md-5",
         "fbsource//third-party/rust:rand",
         "fbsource//third-party/rust:serde_json",
+        "fbsource//third-party/rust:toml",
         "//common/rust/shed/fbinit:fbinit",
         "//common/rust/shed/hostcaps:hostcaps",
         "//common/rust/shed/hostname:hostname",
