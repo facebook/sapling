@@ -148,6 +148,10 @@ You can run "eden doctor" to check for problems with EdenFS and try to have it
 automatically remount your checkouts.
 """
 
+# Thrift client timeout values (in seconds)
+MOUNT_TIMEOUT_SECONDS = 20
+UNMOUNT_TIMEOUT_SECONDS = 60
+
 
 class CheckoutPathProblemType(Enum):
     NESTED_CHECKOUT = "nested_checkout"
@@ -697,7 +701,7 @@ Do you want to run `eden mount %s` instead?"""
             edenClientPath=os.fsencode(client_dir),
             readOnly=False,
         )
-        with self.get_thrift_client_legacy() as client:
+        with self.get_thrift_client_legacy(timeout=MOUNT_TIMEOUT_SECONDS) as client:
             client.mount(mount_info)
 
         self._post_clone_checkout_setup(checkout, snapshot_id, filter_path)
@@ -920,7 +924,7 @@ Do you want to run `eden mount %s` instead?"""
         #
         # For now at least time out here so the CLI commands do not hang in this
         # case.
-        with self.get_thrift_client_legacy(timeout=60) as client:
+        with self.get_thrift_client_legacy(timeout=UNMOUNT_TIMEOUT_SECONDS) as client:
             mountPoint = os.fsencode(path)
             unmount_arg = eden_ttypes.UnmountArgument(
                 mountId=eden_ttypes.MountId(mountPoint=mountPoint),
