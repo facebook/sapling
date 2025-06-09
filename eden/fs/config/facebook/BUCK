@@ -1,6 +1,7 @@
 load("@fbcode_macros//build_defs:python_binary.bzl", "python_binary")
 load("@fbcode_macros//build_defs:python_library.bzl", "python_library")
 load("@fbcode_macros//build_defs:rust_binary.bzl", "rust_binary")
+load("@fbcode_macros//build_defs:rust_library.bzl", "rust_library")
 
 oncall("scm_client_infra")
 
@@ -70,6 +71,15 @@ python_binary(
     ],
 )
 
+rust_library(
+    name = "edenfs_config_manager_lib_rust",
+    srcs = ["edenfs_config_manager_lib.rs"],
+    crate_root = "edenfs_config_manager_lib.rs",
+    deps = [
+        "fbsource//third-party/rust:const_format",
+    ],
+)
+
 rust_binary(
     name = "edenfs_config_manager_rust",
     srcs = ["edenfs_config_manager.rs"],
@@ -77,7 +87,7 @@ rust_binary(
     deps = [
         "fbsource//third-party/rust:anyhow",
         "fbsource//third-party/rust:clap",
-        "fbsource//third-party/rust:const_format",
+        ":edenfs_config_manager_lib_rust",
         "//cli/rust/cli:cli",
         "//common/rust/shed/fbinit:fbinit",
     ],
