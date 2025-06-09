@@ -85,7 +85,12 @@ rust_library(
     ],
     deps = [
         "fbsource//third-party/rust:anyhow",
+        "fbsource//third-party/rust:chrono",
+        "fbsource//third-party/rust:chrono-tz",
         "fbsource//third-party/rust:const_format",
+        "fbsource//third-party/rust:hex",
+        "fbsource//third-party/rust:md-5",
+        "fbsource//third-party/rust:rand",
         "fbsource//third-party/rust:serde_json",
         "//common/rust/shed/hostcaps:hostcaps",
         "//common/rust/shed/hostname:hostname",
