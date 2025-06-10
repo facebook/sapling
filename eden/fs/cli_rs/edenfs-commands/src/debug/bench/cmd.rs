@@ -80,7 +80,7 @@ pub enum BenchCmd {
 
         /// Max number of files to read when traversing the file system
         #[clap(long, default_value_t = types::MAX_NUMBER_OF_FILES)]
-        max_files_to_read: usize,
+        max_files: usize,
 
         /// Whether to follow symbolic links during traversal
         #[clap(long)]
@@ -182,7 +182,7 @@ impl crate::Subcommand for BenchCmd {
             Self::Traversal {
                 dir,
                 read_file_via,
-                max_files_to_read,
+                max_files,
                 follow_symlinks,
                 no_progress,
             } => {
@@ -196,7 +196,7 @@ impl crate::Subcommand for BenchCmd {
                             "{}",
                             traversal::bench_traversal_fs_read(
                                 dir,
-                                *max_files_to_read,
+                                *max_files,
                                 *follow_symlinks,
                                 *no_progress
                             )?
@@ -207,7 +207,7 @@ impl crate::Subcommand for BenchCmd {
                             "{}",
                             traversal::bench_traversal_thrift_read(
                                 dir,
-                                *max_files_to_read,
+                                *max_files,
                                 *follow_symlinks,
                                 *no_progress
                             )
