@@ -63,9 +63,9 @@ class HgRepository(repobase.Repository):
         # Set HGRCPATH to make sure we aren't affected by the local system's
         # mercurial settings from /etc/mercurial/
         if system_hgrc:
-            self.hg_environment["HGRCPATH"] = system_hgrc
+            self.hg_environment["HGRCPATH"] = "fb=static;" + system_hgrc
         else:
-            self.hg_environment["HGRCPATH"] = ""
+            self.hg_environment["HGRCPATH"] = "fb=static"
         self.hg_bin = FindExe.HG
         self.staged_files = []
         self.filtered = filtered
