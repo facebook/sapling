@@ -19,6 +19,8 @@ use edenfs_client::client::Client;
 use edenfs_client::methods::EdenThriftMethod;
 use indicatif::ProgressBar;
 use indicatif::ProgressStyle;
+use sysinfo::Pid;
+use sysinfo::System;
 use thrift_types::edenfs::ScmBlobOrError;
 
 use super::fsio::get_thrift_request;
@@ -40,6 +42,8 @@ struct InProgressTraversal {
     total_dir_entries: usize,
     max_files: usize,
     follow_symlinks: bool,
+    system: System,
+    pid: Pid,
 }
 
 // Define a struct for the results from the finalize step
@@ -70,6 +74,10 @@ impl InProgressTraversal {
             Some(pb)
         };
 
+        let mut system = System::new_all();
+        let pid = sysinfo::get_current_pid().expect("Failed to get current process ID");
+        system.refresh_all();
+
         Self {
             file_count: 0,
             dir_count: 0,
@@ -82,6 +90,8 @@ impl InProgressTraversal {
             total_dir_entries: 0,
             max_files,
             follow_symlinks,
+            system,
+            pid,
         }
     }
 
@@ -119,10 +129,22 @@ impl InProgressTraversal {
             if elapsed <= 0.0 {
                 return;
             }
+
+            self.system
+                .refresh_processes(sysinfo::ProcessesToUpdate::Some(&[self.pid]), false);
+
             let files_per_second = self.file_count as f64 / elapsed;
+            let (memory_usage_mb, cpu_usage) = match self.system.process(self.pid) {
+                Some(process) => (
+                    process.memory() as f64 / 1024.0 / 1024.0,
+                    process.cpu_usage(),
+                ),
+                None => (0.0, 0.0),
+            };
+
             pb.set_message(format!(
-                "{} files | {} dirs | {:.0} files/s",
-                self.file_count, self.dir_count, files_per_second
+                "{} files | {} dirs | {:.0} files/s | {:.2} MiB memory usage | {:.2}% CPU usage",
+                self.file_count, self.dir_count, files_per_second, memory_usage_mb, cpu_usage
             ));
         }
     }
