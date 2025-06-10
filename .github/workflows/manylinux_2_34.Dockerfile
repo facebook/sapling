@@ -30,8 +30,9 @@ RUN curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y --de
 
 # Rust related build dependencies.
 # - clang-devel: used by bindgen, used by zstd-sys
-# - openssl-devel: used by curl-sys
-RUN dnf install -y clang-devel openssl-devel
+# - openssl-devel: used by curl-sys (non-static openssl)
+# - perl: openssl build dependency (static openssl)
+RUN dnf install -y clang-devel perl
 
 
 # Populate the Yarn offline mirror in a "fork".
