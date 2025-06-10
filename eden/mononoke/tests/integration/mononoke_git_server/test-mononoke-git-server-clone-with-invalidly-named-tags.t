@@ -42,8 +42,8 @@
 # Start up the Mononoke Git Service
   $ mononoke_git_service
 # Clone the Git repo from Mononoke
-  $ git_client clone $MONONOKE_GIT_SERVICE_BASE_URL/$REPONAME.git
-  Cloning into 'repo'...
+  $ git_client clone --mirror $MONONOKE_GIT_SERVICE_BASE_URL/$REPONAME.git repo
+  Cloning into bare repository 'repo'...
   remote: Converting HAVE Git commits to Bonsais        
   remote: Converting WANT Git commits to Bonsais        
   remote: Collecting Bonsai commits to send to client        
@@ -52,16 +52,14 @@
   remote: Generating commits stream        
   remote: Generating tags stream        
   remote: Sending packfile stream        
-# Verify that we get the same Git repo back that we started with. Notice that the incorrectly named tag is not present.
+# Verify that we get the same Git repo back that we started with
   $ cd $REPONAME  
   $ git rev-list --objects --all | git cat-file --batch-check='%(objectname) %(objecttype) %(rest)' | sort > $TESTTMP/new_object_list
   $ diff -w $TESTTMP/new_object_list $TESTTMP/object_list
-  1a2
-  * 6f5d55eb96433995aca8f272263ae2ea50e40ec7 tag incorrect_tag (glob)
-  [1]
 
 # List the set of refs known by the server. Even here the server doesn't return incorrect_tag as an annotated tag
   $ git_client ls-remote $MONONOKE_GIT_SERVICE_BASE_URL/$REPONAME.git
   e8615d6f149b876be0a2f30a1c5bf0c42bf8e136	HEAD
   e8615d6f149b876be0a2f30a1c5bf0c42bf8e136	refs/heads/master_bookmark
-  8ce3eae44760b500bf3f2c3922a95dcd3c908e9e	refs/incorrect_tag
+  6f5d55eb96433995aca8f272263ae2ea50e40ec7	refs/incorrect_tag
+  8ce3eae44760b500bf3f2c3922a95dcd3c908e9e	refs/incorrect_tag^{}

@@ -280,7 +280,10 @@ pub(crate) async fn refs_to_include(
         .entries
         .iter()
         .map(|(bookmark, git_objectid)| {
-            if bookmark.is_tag() {
+            let is_annotated_tag = bonsai_tag_map.contains_key(&bookmark.to_string());
+            // A bookmark is a tag if it matches the tag naming convention or if it is an annotated tag, i.e.
+            // if it has an entry in the bonsai_tag_mapping table
+            if bookmark.is_tag() || is_annotated_tag {
                 match tag_inclusion {
                     TagInclusion::AsIs => {
                         if let Some(git_objectid) = bonsai_tag_map.get(&bookmark.to_string()) {

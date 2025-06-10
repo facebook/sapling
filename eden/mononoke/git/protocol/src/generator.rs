@@ -531,25 +531,21 @@ async fn tag_packfile_stream<'a>(
         .filter_map(|bookmark| async move {
             // If the bookmark is actually a tag but there is no mapping in bonsai_tag_mapping table for it, then it
             // means that its a simple tag and won't be included in the packfile as an object. If a mapping exists, then
-            // it will be included in the packfile as a raw Git object
-            if bookmark.is_tag() {
-                let tag_name = bookmark.name().to_string();
-                repo.bonsai_tag_mapping()
-                    .get_entry_by_tag_name(
-                        tag_name.clone(),
-                        bonsai_tag_mapping::Freshness::MaybeStale,
+            // it will be included in the packfile as a raw Git
+
+            // NOTE: There is no need to check if the bookmark is a tag. If its present in bonsai_tag_mapping table, then it
+            // is an annotated tag
+            let tag_name = bookmark.name().to_string();
+            repo.bonsai_tag_mapping()
+                .get_entry_by_tag_name(tag_name.clone(), bonsai_tag_mapping::Freshness::MaybeStale)
+                .await
+                .with_context(|| {
+                    format!(
+                        "Error in getting bonsai_tag_mapping entry for tag name {}",
+                        tag_name
                     )
-                    .await
-                    .with_context(|| {
-                        format!(
-                            "Error in getting bonsai_tag_mapping entry for tag name {}",
-                            tag_name
-                        )
-                    })
-                    .transpose()
-            } else {
-                None
-            }
+                })
+                .transpose()
         })
         .try_collect::<Vec<_>>()
         .await?;
