@@ -166,55 +166,52 @@ impl InProgressTraversal {
             total_dir_entries: self.total_dir_entries,
         }
     }
-}
 
-/// Recursively traverses a directory and collects file paths, displaying progress
-///
-/// Uses the follow_symlinks field in the in_progress_traversal struct to determine whether
-/// symbolic links will be followed during traversal.
-fn traverse_directory(path: &Path, in_progress_traversal: &mut InProgressTraversal) -> Result<()> {
-    if path.is_dir() {
-        in_progress_traversal.add_dir();
+    /// Recursively traverses a directory and collects file paths, displaying progress
+    pub fn traverse_path(&mut self, path: &Path) -> Result<()> {
+        if path.is_dir() {
+            self.add_dir();
 
-        // Measure read_dir latency
-        let start_time = Instant::now();
-        let read_dir_result = fs::read_dir(path);
-        let read_dir_duration = start_time.elapsed();
+            // Measure read_dir latency
+            let start_time = Instant::now();
+            let read_dir_result = fs::read_dir(path);
+            let read_dir_duration = start_time.elapsed();
 
-        let entries = read_dir_result?;
+            let entries = read_dir_result?;
 
-        // Count entries in this directory
-        let entries: Vec<_> = entries.collect::<Result<Vec<_>, _>>()?;
-        let entry_count = entries.len();
+            // Count entries in this directory
+            let entries: Vec<_> = entries.collect::<Result<Vec<_>, _>>()?;
+            let entry_count = entries.len();
 
-        // Add stats for this directory
-        in_progress_traversal.add_read_dir_stats(read_dir_duration, entry_count);
+            // Add stats for this directory
+            self.add_read_dir_stats(read_dir_duration, entry_count);
 
-        for entry in entries {
-            let path = entry.path();
+            for entry in entries {
+                let path = entry.path();
 
-            if path.is_dir() {
-                if path.is_symlink() {
-                    if in_progress_traversal.follow_symlinks {
-                        in_progress_traversal.add_traversed_symlink();
-                        traverse_directory(&path, in_progress_traversal)?;
+                if path.is_dir() {
+                    if path.is_symlink() {
+                        if self.follow_symlinks {
+                            self.add_traversed_symlink();
+                            self.traverse_path(&path)?;
+                        } else {
+                            self.add_skipped_symlink();
+                        }
                     } else {
-                        in_progress_traversal.add_skipped_symlink();
+                        // Regular directory, ie, non symlink
+                        self.traverse_path(&path)?;
                     }
-                } else {
-                    // Regular directory, ie, non symlink
-                    traverse_directory(&path, in_progress_traversal)?;
-                }
-            } else if path.is_file() {
-                if in_progress_traversal.file_count < in_progress_traversal.max_files {
-                    in_progress_traversal.add_file(path);
-                } else {
-                    return Ok(());
+                } else if path.is_file() {
+                    if self.file_count < self.max_files {
+                        self.add_file(path);
+                    } else {
+                        return Ok(());
+                    }
                 }
             }
         }
+        Ok(())
     }
-    Ok(())
 }
 
 pub async fn bench_traversal_thrift_read(
@@ -230,7 +227,7 @@ pub async fn bench_traversal_thrift_read(
 
     let mut in_progress_traversal =
         InProgressTraversal::new(no_progress, max_files, follow_symlinks);
-    traverse_directory(path, &mut in_progress_traversal)?;
+    in_progress_traversal.traverse_path(path)?;
 
     let ft = in_progress_traversal.finalize();
 
@@ -403,7 +400,7 @@ pub fn bench_traversal_fs_read(
     let mut in_progress_traversal =
         InProgressTraversal::new(no_progress, max_files, follow_symlinks);
 
-    traverse_directory(path, &mut in_progress_traversal)?;
+    in_progress_traversal.traverse_path(path)?;
 
     let ft = in_progress_traversal.finalize();
 
