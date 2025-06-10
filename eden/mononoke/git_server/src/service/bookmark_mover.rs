@@ -159,19 +159,7 @@ async fn set_ref_inner(
     );
     // Check if the push is to a commit cloud ref, if yes return early as we don't need to actually create/move the ref
     if ref_update.ref_name.starts_with(COMMIT_CLOUD_REF_PREFIX) {
-        if justknobs::eval(
-            "scm/mononoke:git_commit_cloud_accept",
-            None,
-            Some(repo.repo_identity().name()),
-        )
-        .unwrap_or(false)
-        {
-            return Ok(());
-        } else {
-            return Err(anyhow::anyhow!(
-                "Commit-cloud upload succeeded. Your commit is now backed up in Mononoke"
-            ));
-        }
+        return Ok(());
     }
 
     // Check if push redirector is enabled, if it is then reject the push
