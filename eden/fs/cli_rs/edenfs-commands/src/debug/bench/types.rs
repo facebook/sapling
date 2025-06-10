@@ -59,7 +59,7 @@ impl std::fmt::Display for BenchmarkType {
     }
 }
 
-#[derive(Debug, Clone, PartialEq, clap::ValueEnum)]
+#[derive(Debug, Copy, Clone, PartialEq, clap::ValueEnum)]
 pub enum ReadFileMethod {
     Fs,
     Thrift,
