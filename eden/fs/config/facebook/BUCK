@@ -110,6 +110,7 @@ rust_binary(
     deps = [
         "fbsource//third-party/rust:anyhow",
         "fbsource//third-party/rust:clap",
+        "fbsource//third-party/rust:serde_json",
         ":edenfs_config_manager_lib_rust",
         "//cli/rust/cli:cli",
         "//common/rust/shed/fbinit:fbinit",
