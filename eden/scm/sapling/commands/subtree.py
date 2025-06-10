@@ -110,7 +110,19 @@ subtree_subcmd = subtree.subcommand(
     _("[-r REV] --from-path PATH --to-path PATH ..."),
 )
 def subtree_copy(ui, repo, *args, **opts):
-    """create a directory or file branching"""
+    """create a directory or file branching
+
+    To create a branch from the directory "my-project" at commit A into the
+    directory "my-branch", use::
+
+      @prog@ subtree cp -r A --from-path my-project --to-path my-branch
+
+    Subtree copy also supports multiple "--from-path"/"--to-path" mappings::
+
+      @prog@ subtree cp \\
+        --from-path my-project --to-path my-branch1 \\
+        --from-path my-project --to-path my-branch2
+    """
     with repo.wlock(), repo.lock():
         return _docopy(ui, repo, *args, **opts)
 
