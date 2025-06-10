@@ -1804,6 +1804,12 @@ class EdenConfig : private ConfigSettingManager {
    */
   ConfigSetting<bool> offMountRepoDir{"clone:off-mount-repo-dir", false, this};
 
+  /**
+   * Controls the timeout (in seconds) that is set when calling the Thrift mount
+   * endpoint from the CLI during clone. A value of 0 means no timeout.
+   */
+  ConfigSetting<size_t> cloneMountTimeout{"clone:mount-timeout", 20, this};
+
   // [fsck]
 
   /**

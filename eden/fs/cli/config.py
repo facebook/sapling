@@ -148,7 +148,8 @@ You can run "eden doctor" to check for problems with EdenFS and try to have it
 automatically remount your checkouts.
 """
 
-# Thrift client timeout values (in seconds)
+# Default Thrift client timeout values (in seconds). Some of these might be
+# overridden or turned off by configs.
 MOUNT_TIMEOUT_SECONDS = 20
 UNMOUNT_TIMEOUT_SECONDS = 60
 
@@ -701,7 +702,15 @@ Do you want to run `eden mount %s` instead?"""
             edenClientPath=os.fsencode(client_dir),
             readOnly=False,
         )
-        with self.get_thrift_client_legacy(timeout=MOUNT_TIMEOUT_SECONDS) as client:
+
+        mount_timeout = self.get_config_int(
+            "clone.mount-timeout", default=MOUNT_TIMEOUT_SECONDS
+        )
+        # Treat a value of zero as no timeout
+        if mount_timeout == 0:
+            mount_timeout = None
+
+        with self.get_thrift_client_legacy(timeout=mount_timeout) as client:
             client.mount(mount_info)
 
         self._post_clone_checkout_setup(checkout, snapshot_id, filter_path)
