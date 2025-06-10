@@ -173,7 +173,8 @@ export type TrackEventName =
   | 'WarnAboutDistantRebase'
   | 'WarnAboutRebaseOntoMaster'
   | 'SaplingISLUriHandlerHandle'
-  | 'CommitInfoFieldEditFieldClick';
+  | 'CommitInfoFieldEditFieldClick'
+  | 'ReadWarmCommit';
 
 export type TrackErrorName =
   | 'BlameError'
@@ -194,4 +195,5 @@ export type TrackErrorName =
   | 'UploadImageError'
   | 'VSCodeCommandError'
   | 'VSCodeActivationError'
-  | 'SplitSuggestionError';
+  | 'SplitSuggestionError'
+  | 'FileReadError';
