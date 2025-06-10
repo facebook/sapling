@@ -425,8 +425,14 @@ impl ShardedProcessHandler {
 }
 
 impl ShardedProcessHandler {
-    pub async fn set_shards(&self, shards: Vec<smtypes::Shard>) -> Result<()> {
-        let shard_count = shards.len();
+    /// Method that sets up repos corresponding to the provided set of shards. If best_effort_setup is set to true,
+    /// errors while setting up individual errors will be ignored
+    pub async fn set_shards(
+        &self,
+        shards: Vec<smtypes::Shard>,
+        best_effort_setup: bool,
+    ) -> Result<()> {
+        let input_shard_count = shards.len();
         // Create map from Shard Domain (i.e. Repo Name) to Shard.
         let new_repo_shards: HashMap<RepoShard, smtypes::Shard> = shards
             .into_iter()
@@ -439,7 +445,7 @@ impl ShardedProcessHandler {
         // The core repo allocation and removal logic is still contained
         // in a single place within Repo Setup, Executor & Cleanup process.
 
-        info!(self.logger, "Setting up {} shards", shard_count);
+        info!(self.logger, "Setting up {} shards", input_shard_count);
 
         // Ensure we are the only ones updating the repos.
         let mut guarded_repo_map = self.repo_map.write().await;
@@ -498,17 +504,28 @@ impl ShardedProcessHandler {
                 Ok(())
             })
             .await?;
-
+            // Count of the actual number of shards setup
+            let mut shard_setup_count = 0;
             // Assign new repos to this Process based on the incoming Shards.
             let mut setups = FuturesUnordered::new();
             for (new_repo, new_shard) in new_repo_shards {
                 while setups.len() >= 20 {
+                    let setup_result = match setups.try_next().await {
+                        Ok(setup) => setup,
+                        Err(e) if best_effort_setup => {
+                            error!(
+                                self.logger,
+                                "Failure in setting up shard/repo so skipping it. Error: {:?}", e
+                            );
+                            continue;
+                        }
+                        err => err?,
+                    };
                     // Limit the number of concurrent setups.
-                    let (new_repo, execution_process) = setups
-                        .try_next()
-                        .await?
-                        .ok_or_else(|| anyhow!("Unexpected empty setup"))?;
+                    let (new_repo, execution_process) =
+                        setup_result.ok_or_else(|| anyhow!("Unexpected empty setup"))?;
                     guarded_repo_map.insert(new_repo, RepoProcess::Execution(execution_process));
+                    shard_setup_count += 1;
                 }
                 if !guarded_repo_map.contains_key(&new_repo) {
                     let setup_process = RepoSetupProcess::new(
@@ -526,11 +543,30 @@ impl ShardedProcessHandler {
                     setups.push(setup.boxed());
                 }
             }
-            while let Some((new_repo, execution_process)) = setups.try_next().await? {
-                guarded_repo_map.insert(new_repo, RepoProcess::Execution(execution_process));
+            while let Some(setup_result) = setups.next().await {
+                match setup_result {
+                    Ok((new_repo, execution_process)) => {
+                        guarded_repo_map
+                            .insert(new_repo, RepoProcess::Execution(execution_process));
+                        shard_setup_count += 1;
+                    }
+                    Err(e) if best_effort_setup => {
+                        error!(
+                            self.logger,
+                            "Failure in setting up shard/repo so skipping it. Error: {:?}", e
+                        );
+                        continue;
+                    }
+                    Err(e) => anyhow::bail!("Error while setting up shard: {:?}", e),
+                }
             }
-
-            info!(self.logger, "Completed setup for {} shards", shard_count);
+            if shard_setup_count == 0 && input_shard_count > 0 {
+                anyhow::bail!("Failed to setup any shards during initial setup");
+            }
+            info!(
+                self.logger,
+                "Completed setup for {} shards", shard_setup_count
+            );
 
             Ok(())
         }
@@ -1021,7 +1057,7 @@ impl sm::ShardManagerHandler for ShardedProcessHandler {
         // SM callbacks are sync so async calls need to be transformed to support
         // the callback contract.
         self.runtime_handle
-            .block_on(self.set_shards(shards_to_serve))
+            .block_on(self.set_shards(shards_to_serve, false))
             .with_context(|| {
                 format!(
                     "Error while setting shards for {} repos: {}",
@@ -1150,7 +1186,9 @@ impl ShardedProcessExecutor {
             .collect::<Result<Vec<_>>>()?
             .join(", ");
         info!(logger, "Got initial Shard Set: {}", shard_ids);
-        self.handler.set_shards(shards).await?;
+        let best_effort_setup =
+            justknobs::eval("scm/mononoke:best_effort_shard_setup", None, None).unwrap_or(false);
+        self.handler.set_shards(shards, best_effort_setup).await?;
         self.client.start_callbacks_server();
         // Periodically keep checking if termination is requested. If not, then
         // sleep for a while (to provide a yield point) and try again.
