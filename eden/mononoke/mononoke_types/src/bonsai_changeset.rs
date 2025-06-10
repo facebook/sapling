@@ -13,6 +13,7 @@ use anyhow::Error;
 use anyhow::Result;
 use anyhow::bail;
 use bytes::Bytes;
+use derivative::Derivative;
 use fbthrift::compact_protocol;
 use quickcheck::Arbitrary;
 use quickcheck::Gen;
@@ -38,7 +39,8 @@ use crate::typed_hash::ChangesetId;
 use crate::typed_hash::ChangesetIdContext;
 
 /// A struct callers can use to build up a `BonsaiChangeset`.
-#[derive(Debug, Clone, Eq, PartialEq, Hash)]
+#[derive(Derivative, Clone, Eq, PartialEq, Hash)]
+#[derivative(Debug)]
 pub struct BonsaiChangesetMut {
     pub parents: Vec<ChangesetId>,
     pub author: String,
@@ -46,7 +48,9 @@ pub struct BonsaiChangesetMut {
     pub committer: Option<String>,
     pub committer_date: Option<DateTime>,
     pub message: String,
+    #[derivative(Debug(format_with = "debug_format_hg_extra"))]
     pub hg_extra: SortedVectorMap<String, Vec<u8>>,
+    #[derivative(Debug(format_with = "debug_format_git_extra_headers"))]
     pub git_extra_headers: Option<SortedVectorMap<SmallVec<[u8; 24]>, Bytes>>,
     pub file_changes: SortedVectorMap<NonRootMPath, FileChange>,
     pub is_snapshot: bool,
@@ -73,6 +77,41 @@ impl Default for BonsaiChangesetMut {
             subtree_changes: SortedVectorMap::default(),
         }
     }
+}
+
+fn debug_format_hg_extra(
+    hg_extra: &SortedVectorMap<String, Vec<u8>>,
+    f: &mut std::fmt::Formatter<'_>,
+) -> std::fmt::Result {
+    let mut d = f.debug_map();
+    for (k, v) in hg_extra {
+        d.key(k);
+        d.value_with(|f| crate::debug::format_byte_string(v, f));
+    }
+    d.finish()?;
+    Ok(())
+}
+
+fn debug_format_git_extra_headers(
+    git_extra_headers: &Option<SortedVectorMap<SmallVec<[u8; 24]>, Bytes>>,
+    f: &mut std::fmt::Formatter<'_>,
+) -> std::fmt::Result {
+    if let Some(git_extra_headers) = git_extra_headers {
+        f.debug_tuple("Some")
+            .field_with(|f| {
+                let mut d = f.debug_map();
+                for (k, v) in git_extra_headers {
+                    d.key_with(|f| crate::debug::format_byte_string(k, f));
+                    d.value(v);
+                }
+                d.finish()?;
+                Ok(())
+            })
+            .finish()?;
+    } else {
+        f.write_str("None")?;
+    }
+    Ok(())
 }
 
 impl BonsaiChangesetMut {
