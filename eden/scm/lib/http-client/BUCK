@@ -7,6 +7,14 @@ rust_library(
     name = "http-client",
     srcs = glob(["src/**/*.rs"]),
     autocargo = {"cargo_toml_config": {
+        "dependencies_override": {
+            "dependencies": {
+                "curl": {"features": [
+                    "http2",
+                    "static-ssl",
+                ]},
+            },
+        },
         "lib": {"name": "http-client"},
         "package": {
             "authors": ["Meta Source Control Team <sourcecontrol-dev@meta.com>"],

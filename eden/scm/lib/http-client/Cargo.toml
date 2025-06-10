@@ -20,7 +20,7 @@ path = "src/bin/cli.rs"
 anyhow = "1.0.95"
 async-compression = { version = "0.4.9", features = ["brotli", "bzip2", "deflate", "futures-io", "gzip", "tokio", "zlib", "zstd", "zstdmt"] }
 auto_impl = "1.2.1"
-curl = { version = "0.4.41", features = ["http2"] }
+curl = { version = "0.4.41", features = ["http2", "static-ssl"] }
 curl-sys = "0.4.80"
 env_logger = { version = "0.11.8", features = ["color"] }
 flume = "0.11.1"
