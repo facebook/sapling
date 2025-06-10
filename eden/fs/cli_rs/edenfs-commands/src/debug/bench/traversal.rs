@@ -28,7 +28,7 @@ use super::types::Benchmark;
 use super::types::BenchmarkType;
 use crate::get_edenfs_instance;
 
-struct TraversalProgress {
+struct InProgressTraversal {
     file_count: usize,
     dir_count: usize,
     symlink_skipped_count: usize,
@@ -53,7 +53,7 @@ pub struct FinalizedTraversal {
     total_dir_entries: usize,
 }
 
-impl TraversalProgress {
+impl InProgressTraversal {
     fn new(no_progress: bool) -> Self {
         let progress_bar = if no_progress {
             None
@@ -149,7 +149,7 @@ impl TraversalProgress {
 fn traverse_directory(
     path: &Path,
     max_files: usize,
-    metrics: &mut TraversalProgress,
+    metrics: &mut InProgressTraversal,
     follow_symlinks: bool,
 ) -> Result<()> {
     if path.is_dir() {
@@ -207,28 +207,28 @@ pub async fn bench_traversal_thrift_read(
         return Err(anyhow::anyhow!("Invalid directory path: {}", dir_path));
     }
 
-    let mut traverse_progress = TraversalProgress::new(no_progress);
-    traverse_directory(path, max_files, &mut traverse_progress, follow_symlinks)?;
+    let mut in_progress_traversal = InProgressTraversal::new(no_progress);
+    traverse_directory(path, max_files, &mut in_progress_traversal, follow_symlinks)?;
 
-    let fres = traverse_progress.finalize();
+    let ft = in_progress_traversal.finalize();
 
-    let avg_read_dir_latency = if fres.dir_count > 0 {
-        fres.total_read_dir_time.as_secs_f64() * 1000.0 / fres.dir_count as f64
+    let avg_read_dir_latency = if ft.dir_count > 0 {
+        ft.total_read_dir_time.as_secs_f64() * 1000.0 / ft.dir_count as f64
     } else {
         0.0
     };
 
-    let avg_dir_size = if fres.dir_count > 0 {
-        fres.total_dir_entries as f64 / fres.dir_count as f64
+    let avg_dir_size = if ft.dir_count > 0 {
+        ft.total_dir_entries as f64 / ft.dir_count as f64
     } else {
         0.0
     };
 
-    if fres.duration <= 0.0 {
+    if ft.duration <= 0.0 {
         return Err(anyhow::anyhow!("Duration is less or equal to zero."));
     }
 
-    let files_per_second = fres.file_count as f64 / fres.duration;
+    let files_per_second = ft.file_count as f64 / ft.duration;
 
     let mut result = Benchmark::new(BenchmarkType::FsTraversal);
 
@@ -252,13 +252,13 @@ pub async fn bench_traversal_thrift_read(
     );
     result.add_metric(
         "Total files",
-        fres.file_count as f64,
+        ft.file_count as f64,
         types::Unit::Files,
         Some(0),
     );
     result.add_metric(
         "Total directories",
-        fres.dir_count as f64,
+        ft.dir_count as f64,
         types::Unit::Dirs,
         Some(0),
     );
@@ -266,7 +266,7 @@ pub async fn bench_traversal_thrift_read(
     let read_progress = if no_progress {
         None
     } else {
-        let pb = ProgressBar::new(fres.file_count as u64);
+        let pb = ProgressBar::new(ft.file_count as u64);
         pb.set_style(
             ProgressStyle::default_bar()
                 .template("[{elapsed_precise}] {pos}/{len} files | {msg}")
@@ -280,7 +280,7 @@ pub async fn bench_traversal_thrift_read(
     let mut successful_reads = 0;
 
     let client = get_edenfs_instance().get_client();
-    for path in fres.file_paths {
+    for path in ft.file_paths {
         if !path.is_file() {
             if let Some(pb) = &read_progress {
                 pb.inc(1);
@@ -378,29 +378,29 @@ pub fn bench_traversal_fs_read(
         return Err(anyhow::anyhow!("Invalid directory path: {}", dir_path));
     }
 
-    let mut traverse_progress = TraversalProgress::new(no_progress);
+    let mut in_progress_traversal = InProgressTraversal::new(no_progress);
 
-    traverse_directory(path, max_files, &mut traverse_progress, follow_symlinks)?;
+    traverse_directory(path, max_files, &mut in_progress_traversal, follow_symlinks)?;
 
-    let fres = traverse_progress.finalize();
+    let ft = in_progress_traversal.finalize();
 
-    let avg_read_dir_latency = if fres.dir_count > 0 {
-        fres.total_read_dir_time.as_secs_f64() * 1000.0 / fres.dir_count as f64
+    let avg_read_dir_latency = if ft.dir_count > 0 {
+        ft.total_read_dir_time.as_secs_f64() * 1000.0 / ft.dir_count as f64
     } else {
         0.0
     };
 
-    let avg_dir_size = if fres.dir_count > 0 {
-        fres.total_dir_entries as f64 / fres.dir_count as f64
+    let avg_dir_size = if ft.dir_count > 0 {
+        ft.total_dir_entries as f64 / ft.dir_count as f64
     } else {
         0.0
     };
 
-    if fres.duration <= 0.0 {
+    if ft.duration <= 0.0 {
         return Err(anyhow::anyhow!("Duration is less or equal to zero."));
     }
 
-    let files_per_second = fres.file_count as f64 / fres.duration;
+    let files_per_second = ft.file_count as f64 / ft.duration;
 
     let mut result = Benchmark::new(BenchmarkType::FsTraversal);
 
@@ -424,25 +424,25 @@ pub fn bench_traversal_fs_read(
     );
     result.add_metric(
         "Total files",
-        fres.file_count as f64,
+        ft.file_count as f64,
         types::Unit::Files,
         Some(0),
     );
     result.add_metric(
         "Total symlinks skipped",
-        fres.symlink_skipped_count as f64,
+        ft.symlink_skipped_count as f64,
         types::Unit::Symlinks,
         Some(0),
     );
     result.add_metric(
         "Total symlinks traversed",
-        fres.symlink_traversed_count as f64,
+        ft.symlink_traversed_count as f64,
         types::Unit::Symlinks,
         Some(0),
     );
     result.add_metric(
         "Total directories",
-        fres.dir_count as f64,
+        ft.dir_count as f64,
         types::Unit::Dirs,
         Some(0),
     );
@@ -450,7 +450,7 @@ pub fn bench_traversal_fs_read(
     let read_progress = if no_progress {
         None
     } else {
-        let pb = ProgressBar::new(fres.file_count as u64);
+        let pb = ProgressBar::new(ft.file_count as u64);
         pb.set_style(
             ProgressStyle::default_bar()
                 .template("[{elapsed_precise}] {pos}/{len} files | {msg}")
@@ -465,7 +465,7 @@ pub fn bench_traversal_fs_read(
     let mut successful_reads = 0;
     let mut buffer = Vec::new();
 
-    for path in fres.file_paths {
+    for path in ft.file_paths {
         if !path.is_file() {
             if let Some(pb) = &read_progress {
                 pb.inc(1);
