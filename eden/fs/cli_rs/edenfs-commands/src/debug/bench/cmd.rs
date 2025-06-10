@@ -79,7 +79,7 @@ pub enum BenchCmd {
         read_file_via: types::ReadFileMethod,
 
         /// Max number of files to read when traversing the file system
-        #[clap(long, default_value_t = types::MAX_NUMBER_OF_FILES)]
+        #[clap(long, default_value_t = types::DEFAULT_MAX_NUMBER_OF_FILES_FOR_TRAVERSAL)]
         max_files: usize,
 
         /// Whether to follow symbolic links during traversal
