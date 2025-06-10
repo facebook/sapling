@@ -148,7 +148,7 @@ impl TraversalProgress {
 /// Otherwise, symbolic links will be ignored.
 fn traverse_directory(
     path: &Path,
-    max_files_to_read: &mut isize,
+    max_files_to_read: &mut usize,
     metrics: &mut TraversalProgress,
     follow_symlinks: bool,
 ) -> Result<()> {
@@ -187,7 +187,7 @@ fn traverse_directory(
             } else if path.is_file() {
                 metrics.add_file(path);
                 *max_files_to_read -= 1;
-                if *max_files_to_read <= 0 {
+                if *max_files_to_read == 0 {
                     break;
                 }
             }
@@ -198,7 +198,7 @@ fn traverse_directory(
 
 pub async fn bench_traversal_thrift_read(
     dir_path: &str,
-    mut max_files_to_read: isize,
+    mut max_files_to_read: usize,
     follow_symlinks: bool,
     no_progress: bool,
 ) -> Result<Benchmark> {
@@ -374,7 +374,7 @@ pub async fn bench_traversal_thrift_read(
 /// Runs the filesystem traversal benchmark and returns the benchmark results
 pub fn bench_traversal_fs_read(
     dir_path: &str,
-    mut max_files_to_read: isize,
+    mut max_files_to_read: usize,
     follow_symlinks: bool,
     no_progress: bool,
 ) -> Result<Benchmark> {
