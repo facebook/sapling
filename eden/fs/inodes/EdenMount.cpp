@@ -1623,6 +1623,7 @@ ImmediateFuture<CheckoutResult> EdenMount::checkout(
       .thenValue(
           [this,
            ctx,
+           checkoutMode,
            checkoutTimes,
            stopWatch,
            oldParent,
@@ -1657,6 +1658,56 @@ ImmediateFuture<CheckoutResult> EdenMount::checkout(
             journal_->recordUncleanPaths(
                 oldParent, snapshotHash, std::move(uncleanPaths));
 
+            // Record journal entries for file changes caused by
+            // a force checkout. Do this here after the checkout finishes
+            // in case there are any errors during the checkout.
+            if (checkoutMode == CheckoutMode::FORCE) {
+              for (const auto& conflict : result.conflicts) {
+                switch (conflict.type().value()) {
+                  case ConflictType::ERROR:
+                    // Ignore
+                    break;
+                  case ConflictType::MODIFIED_REMOVED:
+                    journal_->recordRemoved(
+                        RelativePathPiece(conflict.path().value()),
+                        static_cast<dtype_t>(conflict.dtype().value()));
+                    break;
+                  case ConflictType::UNTRACKED_ADDED:
+                    // An untracked file in current differs from a tracked file
+                    // inside the target commit.
+                    // Basically a modify
+                    journal_->recordChanged(
+                        RelativePathPiece(conflict.path().value()),
+                        static_cast<dtype_t>(conflict.dtype().value()));
+                    break;
+                  case ConflictType::REMOVED_MODIFIED:
+                    // Not sure if the created is required
+                    journal_->recordCreated(
+                        RelativePathPiece(conflict.path().value()),
+                        static_cast<dtype_t>(conflict.dtype().value()));
+                    journal_->recordChanged(
+                        RelativePathPiece(conflict.path().value()),
+                        static_cast<dtype_t>(conflict.dtype().value()));
+                    break;
+                  case ConflictType::MISSING_REMOVED:
+                    // By the comment in MISSING_REMOVED, the file should
+                    // have already been removed from the filesystem so it
+                    // should already be recorded
+                    break;
+                  case ConflictType::MODIFIED_MODIFIED:
+                    journal_->recordChanged(
+                        RelativePathPiece(conflict.path().value()),
+                        static_cast<dtype_t>(conflict.dtype().value()));
+                    break;
+                  case ConflictType::DIRECTORY_NOT_EMPTY:
+                    // Ignore
+                    break;
+                  default:
+                    // Ignore
+                    break;
+                }
+              }
+            }
             return result;
           })
       .thenTry([this, ctx, stopWatch, oldParent, snapshotHash, checkoutMode](
@@ -1692,7 +1743,9 @@ ImmediateFuture<CheckoutResult> EdenMount::checkout(
                            << " more checkout conflicts";
                 break;
               }
-              XLOG(DBG2) << "Checkout conflict on: " << conflict;
+              XLOG(DBG2) << "Checkout conflict on: " << conflict << " of type "
+                         << conflict.type().value() << " with dtype "
+                         << static_cast<int>(conflict.dtype().value());
               printedConflicts++;
             }
           }
