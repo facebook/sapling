@@ -22,14 +22,14 @@ export const serverCwd = atom<string>(get => {
   return data?.cwd ?? platform.initialUrlParams?.get('cwd') ?? '';
 });
 
-const repoRoot = atom(get => {
+export const repoRootAtom = atom(get => {
   const data = get(repositoryData);
   return data.info?.type === 'success' ? data.info.repoRoot : '';
 });
 
 export const repoRelativeCwd = atom<RepoRelativePath>(get => {
   const cwd = get(serverCwd);
-  const root = get(repoRoot);
+  const root = get(repoRootAtom);
   return cwd.startsWith(root) ? cwd.slice(root.length + 1) + '/' : cwd;
 });
 
@@ -117,7 +117,7 @@ export const irrelevantCwdDisplayModeAtom = atom(
  * A string of repo root and the "cwd". Note a same "cwd" does not infer the same repo,
  * when there are nested (ex. submodule) repos.
  */
-export const repoRootAndCwd = atom<string>(get => `${get(serverCwd)}\n${get(repoRoot)}`);
+export const repoRootAndCwd = atom<string>(get => `${get(serverCwd)}\n${get(repoRootAtom)}`);
 
 /** A specific version of `atomResetOnDepChange`. */
 export function atomResetOnCwdChange<T>(defaultValue: T) {
