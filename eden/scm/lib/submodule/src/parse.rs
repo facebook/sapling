@@ -5,6 +5,7 @@
  * LICENSE file in the root directory of this source tree.
  */
 
+use std::fmt;
 use std::sync::OnceLock;
 
 use configmodel::Config;
@@ -24,6 +25,19 @@ pub struct Submodule {
 impl Submodule {
     fn is_complete(&self) -> bool {
         !self.name.is_empty() && !self.url.is_empty() && !self.path.is_empty()
+    }
+}
+
+impl fmt::Display for Submodule {
+    // human-readable format similar to .gitmodules
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        writeln!(f, "[submodule \"{}\"]", self.name)?;
+        writeln!(f, "\turl={}", self.url)?;
+        writeln!(f, "\tpath={}", self.path)?;
+        if let Some(ref r) = self.r#ref {
+            writeln!(f, "\tref={}", r)?;
+        }
+        writeln!(f, "\tactive={}", self.active)
     }
 }
 
