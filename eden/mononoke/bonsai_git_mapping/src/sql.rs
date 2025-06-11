@@ -244,7 +244,7 @@ impl BonsaiGitMapping for SqlBonsaiGitMapping {
         ctx.perf_counters()
             .increment_counter(PerfCounterType::SqlReadsReplica);
         let cri = ctx.client_request_info();
-        let rows = SelectGitSha1sByRange::maybe_traced_query(
+        let rows = SelectGitSha1sByRange::query(
             &self.connections.read_connection,
             cri,
             &self.repo_id,
@@ -257,7 +257,7 @@ impl BonsaiGitMapping for SqlBonsaiGitMapping {
         if fetched.is_empty() {
             ctx.perf_counters()
                 .increment_counter(PerfCounterType::SqlReadsMaster);
-            let rows = SelectGitSha1sByRange::maybe_traced_query(
+            let rows = SelectGitSha1sByRange::query(
                 &self.connections.read_master_connection,
                 cri,
                 &self.repo_id,
@@ -351,12 +351,10 @@ async fn select_mapping(
     let cri = ctx.client_request_info();
     let rows = match objects {
         BonsaisOrGitShas::Bonsai(bcs_ids) => {
-            SelectMappingByBonsai::maybe_traced_query(connection, cri, repo_id, &bcs_ids[..])
-                .await?
+            SelectMappingByBonsai::query(connection, cri, repo_id, &bcs_ids[..]).await?
         }
         BonsaisOrGitShas::GitSha1(git_sha1s) => {
-            SelectMappingByGitSha1::maybe_traced_query(connection, cri, repo_id, &git_sha1s[..])
-                .await?
+            SelectMappingByGitSha1::query(connection, cri, repo_id, &git_sha1s[..]).await?
         }
     };
 

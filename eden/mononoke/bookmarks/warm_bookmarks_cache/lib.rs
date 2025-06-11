@@ -2017,7 +2017,7 @@ mod tests {
             BookmarkKind::PullDefaultPublishing,
         );
 
-        ClearBookmarkUpdateLog::maybe_traced_query(
+        ClearBookmarkUpdateLog::query(
             &factory.metadata_db().write_connection,
             None,
             &repo.repo_identity().id(),

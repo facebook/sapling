@@ -238,11 +238,9 @@ impl DataSqlStore {
         let shard_id = self.shard(key);
 
         let rows = {
-            let rows =
-                SelectData::maybe_traced_query(&self.read_connection[shard_id], None, &key).await?;
+            let rows = SelectData::query(&self.read_connection[shard_id], None, &key).await?;
             if rows.is_empty() {
-                SelectData::maybe_traced_query(&self.read_master_connection[shard_id], None, &key)
-                    .await?
+                SelectData::query(&self.read_master_connection[shard_id], None, &key).await?
             } else {
                 rows
             }
@@ -271,14 +269,14 @@ impl DataSqlStore {
 
         self.delay.delay(shard_id).await;
 
-        let res = InsertData::maybe_traced_query(
+        let res = InsertData::query(
             &self.write_connection[shard_id],
             None,
             &[(&key, &ctime, &chunk_id, &chunk_count, &chunking_method)],
         )
         .await?;
         if res.affected_rows() == 0 {
-            UpdateData::maybe_traced_query(
+            UpdateData::query(
                 &self.write_connection[shard_id],
                 None,
                 &key,
@@ -306,7 +304,7 @@ impl DataSqlStore {
         let shard_id = self.shard(key);
         self.delay.delay(shard_id).await;
 
-        UpdateDataOptimistic::maybe_traced_query(
+        UpdateDataOptimistic::query(
             &self.write_connection[shard_id],
             None,
             &key,
@@ -327,8 +325,7 @@ impl DataSqlStore {
         self.delay.delay(shard_id).await;
 
         // Deleting from data table does not remove the chunks as they are content addressed.  GC checks for orphaned chunks and removes them.
-        let res =
-            DeleteData::maybe_traced_query(&self.write_connection[shard_id], None, &key).await?;
+        let res = DeleteData::query(&self.write_connection[shard_id], None, &key).await?;
         if res.affected_rows() != 1 {
             bail!(
                 "Unexpected row_count {} from sqlblob unlink for {}",
@@ -343,19 +340,11 @@ impl DataSqlStore {
         let shard_id = self.shard(key);
 
         let rows = {
-            let rows = SelectIsDataPresent::maybe_traced_query(
-                &self.read_connection[shard_id],
-                None,
-                &key,
-            )
-            .await?;
+            let rows =
+                SelectIsDataPresent::query(&self.read_connection[shard_id], None, &key).await?;
             if rows.is_empty() {
-                SelectIsDataPresent::maybe_traced_query(
-                    &self.read_master_connection[shard_id],
-                    None,
-                    &key,
-                )
-                .await?
+                SelectIsDataPresent::query(&self.read_master_connection[shard_id], None, &key)
+                    .await?
             } else {
                 rows
             }
@@ -369,7 +358,7 @@ impl DataSqlStore {
     ) -> impl Stream<Item = Result<String, Error>> + use<> {
         let conn = self.read_master_connection[shard_num].clone();
         async move {
-            let keys = GetAllKeys::maybe_traced_query(&conn, None).await?;
+            let keys = GetAllKeys::query(&conn, None).await?;
             Ok(stream::iter(
                 keys.into_iter()
                     .map(|(id,)| Ok(String::from_utf8_lossy(&id).to_string())),
@@ -426,15 +415,11 @@ impl ChunkSqlStore {
     ) -> Result<BytesMut, Error> {
         if let Some(shard_id) = self.shard(id, chunk_num, chunking_method) {
             let rows = {
-                let rows = SelectChunk::maybe_traced_query(
-                    &self.read_connection[shard_id],
-                    None,
-                    &id,
-                    &chunk_num,
-                )
-                .await?;
+                let rows =
+                    SelectChunk::query(&self.read_connection[shard_id], None, &id, &chunk_num)
+                        .await?;
                 if rows.is_empty() {
-                    SelectChunk::maybe_traced_query(
+                    SelectChunk::query(
                         &self.read_master_connection[shard_id],
                         None,
                         &id,
@@ -473,15 +458,9 @@ impl ChunkSqlStore {
             let generation = self.gc_generations.get().put_generation as u64;
             let conn = &self.write_connection[shard_id];
             // Update generation in case it already exists
-            let updated = UpdateGeneration::maybe_traced_query(
-                conn,
-                None,
-                &key,
-                &generation,
-                &full_value_len,
-            )
-            .await?;
-            InsertChunk::maybe_traced_query(conn, None, &[(&key, &chunk_num, &value)]).await?;
+            let updated =
+                UpdateGeneration::query(conn, None, &key, &generation, &full_value_len).await?;
+            InsertChunk::query(conn, None, &[(&key, &chunk_num, &value)]).await?;
             if updated.affected_rows() > 0 {
                 Ok(Some(ChunkGenerationState::Updated))
             } else {
@@ -506,8 +485,7 @@ impl ChunkSqlStore {
     ) -> Result<(), Error> {
         let generation = self.gc_generations.get().put_generation as u64;
         let conn = &self.write_connection[shard_id];
-        InsertGeneration::maybe_traced_query(conn, None, &[(&key, &generation, &full_value_len)])
-            .await?;
+        InsertGeneration::query(conn, None, &[(&key, &generation, &full_value_len)]).await?;
         Ok(())
     }
 
@@ -520,7 +498,7 @@ impl ChunkSqlStore {
     ) -> Result<(), Error> {
         if let Some(shard_id) = self.shard(key, chunk_num, chunking_method) {
             self.delay.delay(shard_id).await;
-            UpdateGeneration::maybe_traced_query(
+            UpdateGeneration::query(
                 &self.write_connection[shard_id],
                 None,
                 &key,
@@ -541,19 +519,11 @@ impl ChunkSqlStore {
     ) -> Result<Option<u64>, Error> {
         if let Some(shard_id) = self.shard(key, chunk_num, chunking_method) {
             let rows = {
-                let rows = GetChunkGeneration::maybe_traced_query(
-                    &self.read_connection[shard_id],
-                    None,
-                    &key,
-                )
-                .await?;
+                let rows =
+                    GetChunkGeneration::query(&self.read_connection[shard_id], None, &key).await?;
                 if rows.is_empty() {
-                    GetChunkGeneration::maybe_traced_query(
-                        &self.read_master_connection[shard_id],
-                        None,
-                        &key,
-                    )
-                    .await?
+                    GetChunkGeneration::query(&self.read_master_connection[shard_id], None, &key)
+                        .await?
                 } else {
                     rows
                 }
@@ -566,16 +536,9 @@ impl ChunkSqlStore {
 
     async fn get_len(&self, shard_id: usize, key: &str) -> Result<u64, Error> {
         let rows = {
-            let rows =
-                SelectChunkLen::maybe_traced_query(&self.read_connection[shard_id], None, &key)
-                    .await?;
+            let rows = SelectChunkLen::query(&self.read_connection[shard_id], None, &key).await?;
             if rows.is_empty() {
-                SelectChunkLen::maybe_traced_query(
-                    &self.read_master_connection[shard_id],
-                    None,
-                    &key,
-                )
-                .await?
+                SelectChunkLen::query(&self.read_master_connection[shard_id], None, &key).await?
             } else {
                 rows
             }
@@ -601,35 +564,33 @@ impl ChunkSqlStore {
 
             // Short-circuit if we have a generation and that generation is >= mark_generation
             let found_generation =
-                GetChunkGeneration::maybe_traced_query(&self.read_connection[shard_id], None, &key)
+                GetChunkGeneration::query(&self.read_connection[shard_id], None, &key)
                     .await?
                     .into_iter()
                     .next();
-            let (found_generation, value_len) =
+            let (found_generation, value_len) = if let Some((found_generation, value_len)) =
+                found_generation
+            {
+                if found_generation >= mark_generation {
+                    return Ok(Some(value_len));
+                }
+                (Some(found_generation), Some(value_len))
+            } else {
+                let found_generation =
+                    GetChunkGeneration::query(&self.read_master_connection[shard_id], None, &key)
+                        .await?
+                        .into_iter()
+                        .next();
+
                 if let Some((found_generation, value_len)) = found_generation {
                     if found_generation >= mark_generation {
                         return Ok(Some(value_len));
                     }
                     (Some(found_generation), Some(value_len))
                 } else {
-                    let found_generation = GetChunkGeneration::maybe_traced_query(
-                        &self.read_master_connection[shard_id],
-                        None,
-                        &key,
-                    )
-                    .await?
-                    .into_iter()
-                    .next();
-
-                    if let Some((found_generation, value_len)) = found_generation {
-                        if found_generation >= mark_generation {
-                            return Ok(Some(value_len));
-                        }
-                        (Some(found_generation), Some(value_len))
-                    } else {
-                        (None, None)
-                    }
-                };
+                    (None, None)
+                }
+            };
 
             // Make sure we know how large the value is
             let value_len: u64 = if let Some(value_len) = value_len {
@@ -644,7 +605,7 @@ impl ChunkSqlStore {
 
             if found_generation.is_none() {
                 // First set the generation if unset, so that future writers will update it.
-                InsertGeneration::maybe_traced_query(
+                InsertGeneration::query(
                     &self.write_connection[shard_id],
                     None,
                     &[(&key, &put_generation, &value_len)],
@@ -652,7 +613,7 @@ impl ChunkSqlStore {
                 .await?;
             }
             // Then update it in case it already existed
-            UpdateGeneration::maybe_traced_query(
+            UpdateGeneration::query(
                 &self.write_connection[shard_id],
                 None,
                 &key,
@@ -673,7 +634,7 @@ impl ChunkSqlStore {
         &self,
         shard_num: usize,
     ) -> Result<HashMap<Option<u64>, (u64, u64)>, Error> {
-        GetGenerationSizes::maybe_traced_query(&self.read_master_connection[shard_num], None)
+        GetGenerationSizes::query(&self.read_master_connection[shard_num], None)
             .await
             .map(|s| {
                 s.into_iter()
@@ -686,8 +647,7 @@ impl ChunkSqlStore {
         loop {
             self.delay.delay(shard_num).await;
             let conn = &self.write_connection[shard_num];
-            let chunks_needing_gen =
-                GetNeedsInitialGeneration::maybe_traced_query(conn, None, &10000).await?;
+            let chunks_needing_gen = GetNeedsInitialGeneration::query(conn, None, &10000).await?;
             if chunks_needing_gen.is_empty() {
                 return Ok(());
             }
@@ -702,12 +662,8 @@ impl ChunkSqlStore {
                     self.get_len(shard_num, &id).await?
                 };
 
-                InsertGeneration::maybe_traced_query(
-                    conn,
-                    None,
-                    &[(&id.as_ref(), &generation, &value_len)],
-                )
-                .await?;
+                InsertGeneration::query(conn, None, &[(&id.as_ref(), &generation, &value_len)])
+                    .await?;
             }
         }
     }

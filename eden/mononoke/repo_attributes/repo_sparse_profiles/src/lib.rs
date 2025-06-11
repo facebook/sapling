@@ -103,8 +103,7 @@ impl SqlSparseProfilesSizes {
         cs_id: ChangesetId,
         profiles: Vec<String>,
     ) -> Result<Vec<(String, u64)>> {
-        GetProfilesSize::maybe_traced_query(&self.read_connection, None, &cs_id, &profiles[..])
-            .await
+        GetProfilesSize::query(&self.read_connection, None, &cs_id, &profiles[..]).await
     }
 
     pub async fn insert_profiles_sizes(
@@ -116,7 +115,7 @@ impl SqlSparseProfilesSizes {
             .iter()
             .map(|(profile, size)| (&cs_id, profile, size))
             .collect();
-        InsertProfilesSizes::maybe_traced_query(&self.write_connection, None, &v[..])
+        InsertProfilesSizes::query(&self.write_connection, None, &v[..])
             .await
             .map(|res| res.affected_rows() > 0)
     }

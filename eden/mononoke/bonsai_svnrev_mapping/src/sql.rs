@@ -108,12 +108,7 @@ impl BonsaiSvnrevMapping for SqlBonsaiSvnrevMapping {
             .map(|entry| (&self.repo_id, &entry.bcs_id, &entry.svnrev))
             .collect();
 
-        DangerouslyAddSvnrevs::maybe_traced_query(
-            &self.connections.write_connection,
-            cri,
-            &entries[..],
-        )
-        .await?;
+        DangerouslyAddSvnrevs::query(&self.connections.write_connection, cri, &entries[..]).await?;
 
         Ok(())
     }
@@ -208,12 +203,10 @@ async fn select_mapping(
     let cri = ctx.client_request_info();
     let rows = match objects {
         BonsaisOrSvnrevs::Bonsai(bcs_ids) => {
-            SelectMappingByBonsai::maybe_traced_query(connection, cri, &repo_id, &bcs_ids[..])
-                .await?
+            SelectMappingByBonsai::query(connection, cri, &repo_id, &bcs_ids[..]).await?
         }
         BonsaisOrSvnrevs::Svnrev(svnrevs) => {
-            SelectMappingBySvnrev::maybe_traced_query(connection, cri, &repo_id, &svnrevs[..])
-                .await?
+            SelectMappingBySvnrev::query(connection, cri, &repo_id, &svnrevs[..]).await?
         }
     };
 

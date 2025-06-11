@@ -136,12 +136,11 @@ async fn ensure_paths_exists(
 
     ctx.perf_counters()
         .increment_counter(PerfCounterType::SqlReadsMaster);
-    let mut paths_present =
-        SelectAllPaths::maybe_traced_query(read_conn, None, &repo_id, &path_hashes[..])
-            .await?
-            .into_iter()
-            .map(|r| r.0)
-            .collect::<HashSet<_>>();
+    let mut paths_present = SelectAllPaths::query(read_conn, None, &repo_id, &path_hashes[..])
+        .await?
+        .into_iter()
+        .map(|r| r.0)
+        .collect::<HashSet<_>>();
 
     let mut paths_to_insert = filenodes
         .iter()
@@ -161,7 +160,7 @@ async fn ensure_paths_exists(
 
     ctx.perf_counters()
         .increment_counter(PerfCounterType::SqlWrites);
-    InsertPaths::maybe_traced_query(write_conn, None, &paths_to_insert[..])
+    InsertPaths::query(write_conn, None, &paths_to_insert[..])
         .await
         .with_context(|| format!("Error inserting {} filenode paths", paths_to_insert.len()))?;
 
@@ -228,15 +227,15 @@ async fn insert_filenodes(
     ctx.perf_counters()
         .increment_counter(PerfCounterType::SqlWrites);
     if replace {
-        ReplaceFilenodes::maybe_traced_query(write_conn, None, &filenode_rows[..]).await?;
+        ReplaceFilenodes::query(write_conn, None, &filenode_rows[..]).await?;
     } else {
-        InsertFilenodes::maybe_traced_query(write_conn, None, &filenode_rows[..]).await?;
+        InsertFilenodes::query(write_conn, None, &filenode_rows[..]).await?;
     }
 
     if !copydata_rows.is_empty() {
         ctx.perf_counters()
             .increment_counter(PerfCounterType::SqlWrites);
-        InsertFixedcopyinfo::maybe_traced_query(write_conn, None, &copydata_rows[..]).await?;
+        InsertFixedcopyinfo::query(write_conn, None, &copydata_rows[..]).await?;
     }
 
     Ok(())

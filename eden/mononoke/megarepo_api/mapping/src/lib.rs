@@ -318,7 +318,7 @@ impl MegarepoMapping {
         connection: &Connection,
     ) -> Result<Option<MegarepoMappingEntry>, Error> {
         ctx.perf_counters().increment_counter(sql_perf_counter);
-        let mut rows = GetMappingEntry::maybe_traced_query(
+        let mut rows = GetMappingEntry::query(
             connection,
             ctx.client_request_info(),
             &target.repo_id,
@@ -384,7 +384,7 @@ impl MegarepoMapping {
         connection: &Connection,
     ) -> Result<Vec<MegarepoMappingEntry>, Error> {
         ctx.perf_counters().increment_counter(sql_perf_counter);
-        let rows = GetReverseMappingEntry::maybe_traced_query(
+        let rows = GetReverseMappingEntry::query(
             connection,
             ctx.client_request_info(),
             &target.repo_id,
@@ -419,7 +419,7 @@ impl MegarepoMapping {
         ctx.perf_counters()
             .increment_counter(PerfCounterType::SqlWrites);
 
-        let res = InsertMapping::maybe_traced_query(
+        let res = InsertMapping::query(
             &self.connections.write_connection,
             ctx.client_request_info(),
             &[(

@@ -1359,7 +1359,7 @@ impl SqlCommitGraphStorage {
                             move |cs_ids| async move {
                                 let cs_ids = cs_ids.into_iter().collect::<Vec<_>>();
                                 let fetched_rows =
-                                    SelectManyChangesetsWithFirstParentPrefetch::maybe_traced_query(
+                                    SelectManyChangesetsWithFirstParentPrefetch::query(
                                         &conn,
                                         cri.as_ref(),
                                         &repo_id,
@@ -1384,7 +1384,7 @@ impl SqlCommitGraphStorage {
                             move |cs_ids| async move {
                                 let cs_ids = cs_ids.into_iter().collect::<Vec<_>>();
                                 let fetched_rows =
-                                    SelectManyChangesetsWithExactSkipTreeAncestorPrefetch::maybe_traced_query(
+                                    SelectManyChangesetsWithExactSkipTreeAncestorPrefetch::query(
                                         &conn,
                                         cri.as_ref(),
                                         &repo_id,
@@ -1414,7 +1414,7 @@ impl SqlCommitGraphStorage {
 
                     move |cs_ids| async move {
                         let cs_ids = cs_ids.into_iter().collect::<Vec<_>>();
-                        let fetched_edges = SelectManyChangesets::maybe_traced_query(
+                        let fetched_edges = SelectManyChangesets::query(
                             &conn,
                             cri.as_ref(),
                             &repo_id,
@@ -1452,7 +1452,7 @@ impl SqlCommitGraphStorage {
         read_from_master: bool,
     ) -> Result<HashMap<ChangesetId, ChangesetEdges>> {
         Ok(Self::collect_changeset_edges(
-            &SelectManyChangesetsInIdRange::maybe_traced_query(
+            &SelectManyChangesetsInIdRange::query(
                 self.read_conn(read_from_master),
                 ctx.client_request_info(),
                 &self.repo_id,
@@ -1477,7 +1477,7 @@ impl SqlCommitGraphStorage {
         limit: u64,
         read_from_master: bool,
     ) -> Result<Vec<ChangesetId>> {
-        Ok(SelectManyChangesetsIdsInIdRange::maybe_traced_query(
+        Ok(SelectManyChangesetsIdsInIdRange::query(
             self.read_conn(read_from_master),
             ctx.client_request_info(),
             &self.repo_id,
@@ -1494,7 +1494,7 @@ impl SqlCommitGraphStorage {
     /// Returns the maximum auto-increment id for any changeset in the repo,
     /// or `None` if there are no changesets.
     pub async fn max_id(&self, ctx: &CoreContext, read_from_master: bool) -> Result<Option<u64>> {
-        Ok(SelectMaxId::maybe_traced_query(
+        Ok(SelectMaxId::query(
             self.read_conn(read_from_master),
             ctx.client_request_info(),
             &self.repo_id,
@@ -1514,7 +1514,7 @@ impl SqlCommitGraphStorage {
         limit: u64,
         read_from_master: bool,
     ) -> Result<Option<u64>> {
-        Ok(SelectMaxIdInRange::maybe_traced_query(
+        Ok(SelectMaxIdInRange::query(
             self.read_conn(read_from_master),
             ctx.client_request_info(),
             &self.repo_id,
@@ -1537,12 +1537,8 @@ impl SqlCommitGraphStorage {
         read_from_master: bool,
     ) -> Result<Option<Range<u64>>> {
         let conn = self.read_conn(read_from_master);
-        let rows = SelectChangesetsIdsBounds::maybe_traced_query(
-            conn,
-            ctx.client_request_info(),
-            &self.repo_id,
-        )
-        .await?;
+        let rows = SelectChangesetsIdsBounds::query(conn, ctx.client_request_info(), &self.repo_id)
+            .await?;
         Ok(rows.first().map(|(lo, hi)| *lo..*hi + 1))
     }
 
@@ -1558,7 +1554,7 @@ impl SqlCommitGraphStorage {
         read_from_master: bool,
     ) -> Result<Vec<(ChangesetId, u64)>> {
         let conn = self.read_conn(read_from_master);
-        SelectOldestChangesetsIdsInRange::maybe_traced_query(
+        SelectOldestChangesetsIdsInRange::query(
             conn,
             ctx.client_request_info(),
             &self.repo_id,
@@ -1581,7 +1577,7 @@ impl SqlCommitGraphStorage {
         read_from_master: bool,
     ) -> Result<Vec<(ChangesetId, u64)>> {
         let conn = self.read_conn(read_from_master);
-        SelectNewestChangesetsIdsInRange::maybe_traced_query(
+        SelectNewestChangesetsIdsInRange::query(
             conn,
             ctx.client_request_info(),
             &self.repo_id,
@@ -1595,8 +1591,7 @@ impl SqlCommitGraphStorage {
     // Returns the amount of commits in a repo.  Only to be used for ad-hoc internal operations
     pub async fn fetch_commit_count(&self, ctx: &CoreContext, id: RepositoryId) -> Result<u64> {
         let conn = self.read_conn(true);
-        let result =
-            GetCommitCount::maybe_traced_query(conn, ctx.client_request_info(), &id).await?;
+        let result = GetCommitCount::query(conn, ctx.client_request_info(), &id).await?;
         Ok(result.first().map_or(0, |(count,)| *count))
     }
 
@@ -1827,7 +1822,7 @@ impl CommitGraphStorage for SqlCommitGraphStorage {
         let merge_parent_cs_id_to_id: HashMap<ChangesetId, u64> = if edges.parents.len() >= 2 {
             ctx.perf_counters()
                 .increment_counter(PerfCounterType::SqlReadsReplica);
-            SelectManyIds::maybe_traced_query(
+            SelectManyIds::query(
                 &self.read_connection.conn,
                 cri,
                 &self.repo_id,
@@ -1850,7 +1845,7 @@ impl CommitGraphStorage for SqlCommitGraphStorage {
             } else {
                 ctx.perf_counters()
                     .increment_counter(PerfCounterType::SqlReadsReplica);
-                SelectManyIds::maybe_traced_query(
+                SelectManyIds::query(
                     &self.read_connection.conn,
                     cri,
                     &self.repo_id,
@@ -2057,7 +2052,7 @@ impl CommitGraphStorage for SqlCommitGraphStorage {
     ) -> Result<ChangesetIdsResolvedFromPrefix> {
         ctx.perf_counters()
             .increment_counter(PerfCounterType::SqlReadsReplica);
-        let fetched_ids = SelectChangesetsInRange::maybe_traced_query(
+        let fetched_ids = SelectChangesetsInRange::query(
             &self.read_connection.conn,
             ctx.client_request_info(),
             &self.repo_id,
@@ -2081,7 +2076,7 @@ impl CommitGraphStorage for SqlCommitGraphStorage {
         ctx: &CoreContext,
         cs_id: ChangesetId,
     ) -> Result<Vec<ChangesetId>> {
-        Ok(SelectChildren::maybe_traced_query(
+        Ok(SelectChildren::query(
             &self.read_master_connection.conn,
             ctx.client_request_info(),
             &self.repo_id,

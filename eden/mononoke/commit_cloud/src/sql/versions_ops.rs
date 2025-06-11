@@ -74,7 +74,7 @@ impl Get<WorkspaceVersion> for SqlCommitCloud {
         reponame: String,
         workspace: String,
     ) -> anyhow::Result<Vec<WorkspaceVersion>> {
-        let rows = GetVersion::maybe_traced_query(
+        let rows = GetVersion::query(
             &self.connections.read_connection,
             None,
             &reponame,
@@ -165,7 +165,7 @@ pub async fn get_version_by_prefix(
     reponame: String,
     prefix: String,
 ) -> anyhow::Result<Vec<WorkspaceVersion>> {
-    let rows = GetVersionByPrefix::maybe_traced_query(
+    let rows = GetVersionByPrefix::query(
         &connections.read_connection,
         None,
         &reponame,

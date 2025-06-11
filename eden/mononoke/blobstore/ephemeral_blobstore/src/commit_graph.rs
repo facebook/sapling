@@ -140,7 +140,7 @@ impl EphemeralOnlyChangesetStorage {
     }
 
     async fn add(&self, ctx: &CoreContext, edges: &ChangesetEdges) -> Result<bool> {
-        let result = InsertChangeset::maybe_traced_query(
+        let result = InsertChangeset::query(
             &self.connections.write_connection,
             ctx.client_request_info(),
             &[(
@@ -160,7 +160,7 @@ impl EphemeralOnlyChangesetStorage {
         ctx: &CoreContext,
         cs_ids: Vec<ChangesetId>,
     ) -> Result<Vec<ChangesetId>> {
-        let found_cs_ids = SelectChangesets::maybe_traced_query(
+        let found_cs_ids = SelectChangesets::query(
             &self.connections.read_connection,
             ctx.client_request_info(),
             &self.repo_id,
@@ -177,7 +177,7 @@ impl EphemeralOnlyChangesetStorage {
             .partition(|cs_id| found_cs_ids.contains(cs_id));
 
         if !missing_ids.is_empty() {
-            let found_in_master = SelectChangesets::maybe_traced_query(
+            let found_in_master = SelectChangesets::query(
                 &self.connections.read_master_connection,
                 ctx.client_request_info(),
                 &self.repo_id,
@@ -200,7 +200,7 @@ impl EphemeralOnlyChangesetStorage {
         cs_prefix: ChangesetIdPrefix,
         limit: usize,
     ) -> Result<ChangesetIdsResolvedFromPrefix> {
-        let fetched_ids = SelectChangesetsInRange::maybe_traced_query(
+        let fetched_ids = SelectChangesetsInRange::query(
             &self.connections.read_connection,
             ctx.client_request_info(),
             &self.repo_id,

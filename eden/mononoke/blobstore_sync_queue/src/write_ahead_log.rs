@@ -242,7 +242,7 @@ impl SqlBlobstoreWal {
                     let del_entries: Vec<String> =
                         batch.iter().map(|(_, key)| (*key).clone()).collect();
                     for chunk in del_entries.chunks(DEL_CHUNK) {
-                        WalDeleteKeys::maybe_traced_query(
+                        WalDeleteKeys::query(
                             &write_connections[shard_id],
                             None,
                             &multiplex_id,
@@ -351,7 +351,7 @@ impl BlobstoreWal for SqlBlobstoreWal {
         let shards = self.read_master_connections.len();
         for _ in 0..shards {
             let cur_shard = self.conn_idx.fetch_add(1, Ordering::Relaxed) % shards;
-            let rows = WalReadEntries::maybe_traced_query(
+            let rows = WalReadEntries::query(
                 &self.read_master_connections[cur_shard],
                 None,
                 multiplex_id,
@@ -393,12 +393,8 @@ impl BlobstoreWal for SqlBlobstoreWal {
                     let shard_id: usize = batch[0].1;
                     let ids: Vec<u64> = batch.iter().map(|(id, _)| *id).collect();
                     for chunk in ids.chunks(10_000) {
-                        WalDeleteEntries::maybe_traced_query(
-                            &self.write_connections[shard_id],
-                            None,
-                            chunk,
-                        )
-                        .await?;
+                        WalDeleteEntries::query(&self.write_connections[shard_id], None, chunk)
+                            .await?;
                     }
                     anyhow::Ok(())
                 })
@@ -490,7 +486,7 @@ async fn insert_entries(
         .map(|(a, b, c, d, e)| (a, b, c, d, e)) // &(a, b, ...) into (&a, &b, ...)
         .collect();
 
-    WalInsertEntry::maybe_traced_query(write_connection, None, &entries_ref).await
+    WalInsertEntry::query(write_connection, None, &entries_ref).await
 }
 
 mononoke_queries! {

@@ -142,7 +142,7 @@ impl BookmarksSubscription for SqlBookmarksSubscription {
 
         let conn = self.sql_bookmarks.connection(ctx, self.freshness);
 
-        let changes = SelectUpdatedBookmarks::maybe_traced_query(
+        let changes = SelectUpdatedBookmarks::query(
             conn,
             ctx.client_request_info(),
             &self.sql_bookmarks.repo_id,

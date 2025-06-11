@@ -130,8 +130,7 @@ impl MutableCounters for SqlMutableCounters {
             .increment_counter(PerfCounterType::SqlReadsMaster);
         let conn = &self.connections.read_master_connection;
         let counter =
-            GetCounter::maybe_traced_query(conn, ctx.client_request_info(), &self.repo_id, &name)
-                .await?;
+            GetCounter::query(conn, ctx.client_request_info(), &self.repo_id, &name).await?;
         Ok(counter.first().map(|entry| entry.0))
     }
 
@@ -140,8 +139,7 @@ impl MutableCounters for SqlMutableCounters {
             .increment_counter(PerfCounterType::SqlReadsReplica);
         let conn = &self.connections.read_connection;
         let counter =
-            GetCounter::maybe_traced_query(conn, ctx.client_request_info(), &self.repo_id, &name)
-                .await?;
+            GetCounter::query(conn, ctx.client_request_info(), &self.repo_id, &name).await?;
         Ok(counter.first().map(|entry| entry.0))
     }
 
@@ -171,8 +169,7 @@ impl MutableCounters for SqlMutableCounters {
             .increment_counter(PerfCounterType::SqlReadsMaster);
         let conn = &self.connections.read_master_connection;
         let counters =
-            GetCountersForRepo::maybe_traced_query(conn, ctx.client_request_info(), &self.repo_id)
-                .await?;
+            GetCountersForRepo::query(conn, ctx.client_request_info(), &self.repo_id).await?;
         Ok(counters.into_iter().collect())
     }
 }

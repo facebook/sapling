@@ -392,7 +392,7 @@ impl SqlBonsaiHgMapping {
 
         let cri = ctx.client_request_info();
         let hg_ids = &[hg_cs_id];
-        let by_hg = SelectMappingByHg::maybe_traced_query(
+        let by_hg = SelectMappingByHg::query(
             &self.read_master_connection.conn,
             cri,
             &self.repo_id,
@@ -400,7 +400,7 @@ impl SqlBonsaiHgMapping {
         );
         let bcs_ids = &[bcs_id];
 
-        let by_bcs = SelectMappingByBonsai::maybe_traced_query(
+        let by_bcs = SelectMappingByBonsai::query(
             &self.read_master_connection.conn,
             cri,
             &self.repo_id,
@@ -436,7 +436,7 @@ impl BonsaiHgMapping for SqlBonsaiHgMapping {
         let BonsaiHgMappingEntry { hg_cs_id, bcs_id } = entry.clone();
         let cri = ctx.client_request_info();
         if self.overwrite {
-            let result = ReplaceMapping::maybe_traced_query(
+            let result = ReplaceMapping::query(
                 &self.write_connection,
                 cri,
                 &[(&self.repo_id, &hg_cs_id, &bcs_id)],
@@ -444,7 +444,7 @@ impl BonsaiHgMapping for SqlBonsaiHgMapping {
             .await?;
             Ok(result.affected_rows() >= 1)
         } else {
-            let result = InsertMapping::maybe_traced_query(
+            let result = InsertMapping::query(
                 &self.write_connection,
                 cri,
                 &[(&self.repo_id, &hg_cs_id, &bcs_id)],
@@ -511,7 +511,7 @@ impl BonsaiHgMapping for SqlBonsaiHgMapping {
         let cri = ctx.client_request_info();
         ctx.perf_counters()
             .increment_counter(PerfCounterType::SqlReadsReplica);
-        let rows = SelectHgChangesetsByRange::maybe_traced_query(
+        let rows = SelectHgChangesetsByRange::query(
             &self.read_connection.conn,
             cri,
             &self.repo_id,
@@ -524,7 +524,7 @@ impl BonsaiHgMapping for SqlBonsaiHgMapping {
         if fetched.is_empty() {
             ctx.perf_counters()
                 .increment_counter(PerfCounterType::SqlReadsMaster);
-            let rows = SelectHgChangesetsByRange::maybe_traced_query(
+            let rows = SelectHgChangesetsByRange::query(
                 &self.read_master_connection.conn,
                 cri,
                 &self.repo_id,
@@ -559,7 +559,7 @@ async fn select_mapping(
                     move |bcs_ids| async move {
                         let bcs_ids = bcs_ids.into_iter().collect::<Vec<_>>();
 
-                        let res = SelectMappingByBonsai::maybe_traced_query(
+                        let res = SelectMappingByBonsai::query(
                             &conn,
                             cri.as_ref(),
                             &repo_id,
@@ -596,15 +596,12 @@ async fn select_mapping(
                     let conn = connection.conn.clone();
                     move |hg_cs_ids| async move {
                         let hg_cs_ids = hg_cs_ids.into_iter().collect::<Vec<_>>();
-                        Ok(SelectMappingByHg::maybe_traced_query(
-                            &conn,
-                            cri.as_ref(),
-                            &repo_id,
-                            &hg_cs_ids[..],
+                        Ok(
+                            SelectMappingByHg::query(&conn, cri.as_ref(), &repo_id, &hg_cs_ids[..])
+                                .await?
+                                .into_iter()
+                                .collect(),
                         )
-                        .await?
-                        .into_iter()
-                        .collect())
                     }
                 })
                 .await?;

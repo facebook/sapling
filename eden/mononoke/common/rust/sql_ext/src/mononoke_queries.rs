@@ -154,7 +154,7 @@ macro_rules! mononoke_queries {
                 }
 
                 #[allow(dead_code)]
-                pub async fn maybe_traced_query(
+                pub async fn query(
                     connection: &Connection,
                     cri: Option<&ClientRequestInfo>,
                     $( $pname: & $ptype, )*
@@ -292,7 +292,7 @@ macro_rules! mononoke_queries {
                 }
 
                 #[allow(dead_code)]
-                pub async fn maybe_traced_query(
+                pub async fn query(
                     config: &SqlQueryConfig,
                     cache_ttl: Option<std::time::Duration>,
                     connection: &Connection,
@@ -409,7 +409,7 @@ macro_rules! mononoke_queries {
                 }
 
                 #[allow(dead_code)]
-                pub async fn maybe_traced_query(
+                pub async fn query(
                     connection: &Connection,
                     cri: Option<&ClientRequestInfo>,
                     values: &[($( & $vtype, )*)],
@@ -523,7 +523,7 @@ macro_rules! mononoke_queries {
                 }
 
                 #[allow(dead_code)]
-                pub async fn maybe_traced_query(
+                pub async fn query(
                     connection: &Connection,
                     cri: Option<&ClientRequestInfo>,
                     $( $pname: & $ptype, )*
@@ -758,10 +758,10 @@ mod tests {
         let config: &SqlQueryConfig = todo!();
         let connection: &sql::Connection = todo!();
         let cri = ClientRequestInfo::new(ClientEntryPoint::Sapling);
-        TestQuery::maybe_traced_query(connection, None, todo!(), todo!()).await?;
+        TestQuery::query(connection, None, todo!(), todo!()).await?;
         TestQuery::maybe_traced_query_with_transaction(todo!(), None, todo!(), todo!()).await?;
-        TestQuery2::maybe_traced_query(config, None, connection, None).await?;
-        TestQuery2::maybe_traced_query(
+        TestQuery2::query(config, None, connection, None).await?;
+        TestQuery2::query(
             config,
             Some(std::time::Duration::from_secs(60)),
             connection,
@@ -769,21 +769,21 @@ mod tests {
         )
         .await?;
         TestQuery2::maybe_traced_query_with_transaction(todo!(), None).await?;
-        TestQuery3::maybe_traced_query(connection, None, &[(&12,)]).await?;
+        TestQuery3::query(connection, None, &[(&12,)]).await?;
         TestQuery3::maybe_traced_query_with_transaction(todo!(), None, &[(&12,)]).await?;
-        TestQuery4::maybe_traced_query(connection, None, &"hello").await?;
+        TestQuery4::query(connection, None, &"hello").await?;
         TestQuery::traced_query(connection, &cri, todo!(), todo!()).await?;
         TestQuery2::traced_query(config, None, connection, &cri).await?;
         TestQuery3::traced_query(connection, &cri, &[(&12,)]).await?;
         TestQuery4::traced_query(connection, &cri, &"hello").await?;
-        TestQuery::maybe_traced_query(connection, Some(&cri), todo!(), todo!()).await?;
-        TestQuery2::maybe_traced_query(config, None, connection, Some(&cri)).await?;
-        TestQuery3::maybe_traced_query(connection, Some(&cri), &[(&12,)]).await?;
-        TestQuery4::maybe_traced_query(connection, Some(&cri), &"hello").await?;
-        TestQuery::maybe_traced_query(connection, None, todo!(), todo!()).await?;
-        TestQuery2::maybe_traced_query(config, None, connection, None).await?;
-        TestQuery3::maybe_traced_query(connection, None, &[(&12,)]).await?;
-        TestQuery4::maybe_traced_query(connection, None, &"hello").await?;
+        TestQuery::query(connection, Some(&cri), todo!(), todo!()).await?;
+        TestQuery2::query(config, None, connection, Some(&cri)).await?;
+        TestQuery3::query(connection, Some(&cri), &[(&12,)]).await?;
+        TestQuery4::query(connection, Some(&cri), &"hello").await?;
+        TestQuery::query(connection, None, todo!(), todo!()).await?;
+        TestQuery2::query(config, None, connection, None).await?;
+        TestQuery3::query(connection, None, &[(&12,)]).await?;
+        TestQuery4::query(connection, None, &"hello").await?;
         Ok(())
     }
 }

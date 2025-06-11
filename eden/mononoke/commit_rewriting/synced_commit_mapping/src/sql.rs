@@ -272,7 +272,7 @@ impl SqlSyncedCommitMapping {
 
                 move |bcs_ids| async move {
                     let bcs_ids = bcs_ids.into_iter().collect::<Vec<_>>();
-                    let rows = SelectManyMappings::maybe_traced_query(
+                    let rows = SelectManyMappings::query(
                         &conn,
                         cri.as_ref(),
                         &source_repo_id,
@@ -340,7 +340,7 @@ impl SqlSyncedCommitMapping {
             .await?;
         }
         let result = if should_overwrite {
-            ReplaceWorkingCopyEquivalence::maybe_traced_query(
+            ReplaceWorkingCopyEquivalence::query(
                 &self.write_connection,
                 ctx.client_request_info(),
                 &[(
@@ -353,7 +353,7 @@ impl SqlSyncedCommitMapping {
             )
             .await?
         } else {
-            InsertWorkingCopyEquivalence::maybe_traced_query(
+            InsertWorkingCopyEquivalence::query(
                 &self.write_connection,
                 ctx.client_request_info(),
                 &[(
@@ -408,14 +408,14 @@ impl SqlSyncedCommitMapping {
         should_overwrite: bool,
     ) -> Result<bool, Error> {
         let result = if should_overwrite {
-            ReplaceVersionForLargeRepoCommit::maybe_traced_query(
+            ReplaceVersionForLargeRepoCommit::query(
                 write_connection,
                 ctx.client_request_info(),
                 &[(&large_repo_id, &large_cs_id, version_name)],
             )
             .await?
         } else {
-            InsertVersionForLargeRepoCommit::maybe_traced_query(
+            InsertVersionForLargeRepoCommit::query(
                 write_connection,
                 ctx.client_request_info(),
                 &[(&large_repo_id, &large_cs_id, version_name)],
@@ -576,7 +576,7 @@ impl SyncedCommitMapping for SqlSyncedCommitMapping {
         ctx.perf_counters()
             .increment_counter(PerfCounterType::SqlReadsReplica);
 
-        let rows = SelectWorkingCopyEquivalence::maybe_traced_query(
+        let rows = SelectWorkingCopyEquivalence::query(
             &self.read_connection.conn,
             ctx.client_request_info(),
             &source_repo_id,
@@ -589,7 +589,7 @@ impl SyncedCommitMapping for SqlSyncedCommitMapping {
         } else {
             ctx.perf_counters()
                 .increment_counter(PerfCounterType::SqlReadsMaster);
-            SelectWorkingCopyEquivalence::maybe_traced_query(
+            SelectWorkingCopyEquivalence::query(
                 &self.read_master_connection.conn,
                 ctx.client_request_info(),
                 &source_repo_id,
@@ -677,7 +677,7 @@ impl SyncedCommitMapping for SqlSyncedCommitMapping {
     ) -> Result<Option<CommitSyncConfigVersion>, Error> {
         ctx.perf_counters()
             .increment_counter(PerfCounterType::SqlReadsReplica);
-        let maybe_version = SelectVersionForLargeRepoCommit::maybe_traced_query(
+        let maybe_version = SelectVersionForLargeRepoCommit::query(
             &self.read_connection.conn,
             ctx.client_request_info(),
             &large_repo_id,
@@ -693,7 +693,7 @@ impl SyncedCommitMapping for SqlSyncedCommitMapping {
 
         ctx.perf_counters()
             .increment_counter(PerfCounterType::SqlReadsMaster);
-        Ok(SelectVersionForLargeRepoCommit::maybe_traced_query(
+        Ok(SelectVersionForLargeRepoCommit::query(
             &self.read_master_connection.conn,
             ctx.client_request_info(),
             &large_repo_id,

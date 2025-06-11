@@ -422,7 +422,7 @@ async fn select_partial_filenode(
 
     recorder.increment();
 
-    let rows = enforce_sql_timeout(SelectFilenode::maybe_traced_query(
+    let rows = enforce_sql_timeout(SelectFilenode::query(
         connection,
         None,
         &repo_id,
@@ -492,7 +492,7 @@ async fn select_partial_history(
     let limit = limit.map(|l| l + 1);
     let rows = match limit {
         Some(limit) => {
-            let rows = enforce_sql_timeout(SelectLimitedFilenodes::maybe_traced_query(
+            let rows = enforce_sql_timeout(SelectLimitedFilenodes::query(
                 connection,
                 None,
                 &repo_id,
@@ -508,7 +508,7 @@ async fn select_partial_history(
             rows
         }
         None => {
-            enforce_sql_timeout(SelectAllFilenodes::maybe_traced_query(
+            enforce_sql_timeout(SelectAllFilenodes::query(
                 connection,
                 None,
                 &repo_id,
@@ -630,15 +630,11 @@ async fn select_paths<I: Iterator<Item = PathHashBytes>>(
 
                 let connection = connections.checkout_by_shard_id(shard_id, AcquireReason::Paths);
 
-                let output = enforce_sql_timeout(SelectPaths::maybe_traced_query(
-                    connection,
-                    None,
-                    &repo_id,
-                    &group[..],
-                ))
-                .await?
-                .into_iter()
-                .collect::<HashMap<_, _>>();
+                let output =
+                    enforce_sql_timeout(SelectPaths::query(connection, None, &repo_id, &group[..]))
+                        .await?
+                        .into_iter()
+                        .collect::<HashMap<_, _>>();
 
                 Result::<_, ErrorKind>::Ok(output)
             }

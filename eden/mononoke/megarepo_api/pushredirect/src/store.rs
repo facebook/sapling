@@ -109,7 +109,7 @@ impl PushRedirectionConfig for SqlPushRedirectionConfig {
         draft_push: bool,
         public_push: bool,
     ) -> Result<()> {
-        Set::maybe_traced_query(
+        Set::query(
             &self.connections.write_connection,
             ctx.client_request_info(),
             &repo_id,
@@ -128,7 +128,7 @@ impl PushRedirectionConfig for SqlPushRedirectionConfig {
         let ttl =
             justknobs::get_as::<u64>("scm/mononoke:pushredirection_config_cache_ttl_secs", None)?;
 
-        let rows = Get::maybe_traced_query(
+        let rows = Get::query(
             self.sql_query_config.as_ref(),
             if ttl == 0 {
                 None

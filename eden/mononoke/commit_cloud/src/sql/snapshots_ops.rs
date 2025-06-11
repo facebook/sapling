@@ -55,7 +55,7 @@ impl Get<WorkspaceSnapshot> for SqlCommitCloud {
         reponame: String,
         workspace: String,
     ) -> anyhow::Result<Vec<WorkspaceSnapshot>> {
-        let rows = GetSnapshots::maybe_traced_query(
+        let rows = GetSnapshots::query(
             &self.connections.read_connection,
             None,
             &reponame,

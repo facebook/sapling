@@ -94,7 +94,7 @@ impl Get<WorkspaceCheckoutLocation> for SqlCommitCloud {
         reponame: String,
         workspace: String,
     ) -> anyhow::Result<Vec<WorkspaceCheckoutLocation>> {
-        let rows = GetCheckoutLocations::maybe_traced_query(
+        let rows = GetCheckoutLocations::query(
             &self.connections.read_connection,
             None,
             &reponame,

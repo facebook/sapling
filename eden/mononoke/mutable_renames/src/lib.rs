@@ -215,7 +215,7 @@ impl MutableRenames {
             ));
         }
 
-        AddPaths::maybe_traced_query(
+        AddPaths::query(
             &self.store.write_connection,
             ctx.client_request_info(),
             &rows[..],
@@ -239,7 +239,7 @@ impl MutableRenames {
             ));
         }
 
-        AddRenames::maybe_traced_query(
+        AddRenames::query(
             &self.store.write_connection,
             ctx.client_request_info(),
             &rows[..],
@@ -257,7 +257,7 @@ impl MutableRenames {
         ctx.perf_counters()
             .increment_counter(PerfCounterType::SqlReadsReplica);
 
-        let rename_targets = HasRenameCheck::maybe_traced_query(
+        let rename_targets = HasRenameCheck::query(
             &self.store.read_connection,
             ctx.client_request_info(),
             &self.repo_id,
@@ -302,7 +302,7 @@ impl MutableRenames {
 
         let dst_path_bytes = path_bytes_from_mpath(&dst_path);
         let dst_path_hash = PathHashBytes::new(&dst_path_bytes);
-        let mut rows = GetRename::maybe_traced_query(
+        let mut rows = GetRename::query(
             &self.store.read_connection,
             ctx.client_request_info(),
             &self.repo_id,
@@ -362,7 +362,7 @@ impl MutableRenames {
 
         let dst_path_bytes = path_bytes_from_mpath(&dst_path);
         let dst_path_hash = PathHashBytes::new(&dst_path_bytes);
-        let rows = FindRenames::maybe_traced_query(
+        let rows = FindRenames::query(
             &self.store.read_connection,
             ctx.client_request_info(),
             &self.repo_id,
@@ -400,7 +400,7 @@ impl MutableRenames {
     ) -> Result<Vec<MutableRenameEntry>, Error> {
         ctx.perf_counters()
             .increment_counter(PerfCounterType::SqlReadsReplica);
-        let rows = ListRenamesByDstChangeset::maybe_traced_query(
+        let rows = ListRenamesByDstChangeset::query(
             &self.store.read_connection,
             ctx.client_request_info(),
             &self.repo_id,

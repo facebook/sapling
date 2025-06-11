@@ -583,7 +583,7 @@ impl LongRunningRequestsQueue for SqlLongRunningRequestsQueue {
     ) -> Result<RowId> {
         let res = match &repo_id {
             Some(repo_id) => {
-                AddRequestWithRepo::maybe_traced_query(
+                AddRequestWithRepo::query(
                     &self.connections.write_connection,
                     None,
                     request_type,
@@ -594,7 +594,7 @@ impl LongRunningRequestsQueue for SqlLongRunningRequestsQueue {
                 .await?
             }
             None => {
-                AddRequest::maybe_traced_query(
+                AddRequest::query(
                     &self.connections.write_connection,
                     None,
                     request_type,
@@ -622,10 +622,8 @@ impl LongRunningRequestsQueue for SqlLongRunningRequestsQueue {
         loop {
             let connection = &self.connections.read_master_connection; // reaching DB master improves our chances.
             let rows = match supported_repos {
-                Some(repos) => {
-                    GetOneNewRequestForRepos::maybe_traced_query(connection, None, repos).await
-                }
-                None => GetOneNewRequestForGlobalQueue::maybe_traced_query(connection, None).await,
+                Some(repos) => GetOneNewRequestForRepos::query(connection, None, repos).await,
+                None => GetOneNewRequestForGlobalQueue::query(connection, None).await,
             }
             .context("claiming new request")?;
             let mut entry = match rows.into_iter().next() {
@@ -655,8 +653,7 @@ impl LongRunningRequestsQueue for SqlLongRunningRequestsQueue {
         _ctx: &CoreContext,
         id: &RowId,
     ) -> Result<Option<LongRunningRequestEntry>> {
-        let rows =
-            TestGetRequest::maybe_traced_query(&self.connections.read_connection, None, id).await?;
+        let rows = TestGetRequest::query(&self.connections.read_connection, None, id).await?;
         match rows.into_iter().next() {
             None => Ok(None),
             Some(row) => Ok(Some(row_to_entry(row))),
@@ -669,7 +666,7 @@ impl LongRunningRequestsQueue for SqlLongRunningRequestsQueue {
         req_id: &RequestId,
         claimed_by: &ClaimedBy,
     ) -> Result<bool> {
-        let res = MarkRequestInProgress::maybe_traced_query(
+        let res = MarkRequestInProgress::query(
             &self.connections.write_connection,
             None,
             &req_id.0,
@@ -686,7 +683,7 @@ impl LongRunningRequestsQueue for SqlLongRunningRequestsQueue {
         _ctx: &CoreContext,
         req_id: &RequestId,
     ) -> Result<bool> {
-        let res = UpdateInProgressTimestamp::maybe_traced_query(
+        let res = UpdateInProgressTimestamp::query(
             &self.connections.write_connection,
             None,
             &req_id.0,
@@ -705,7 +702,7 @@ impl LongRunningRequestsQueue for SqlLongRunningRequestsQueue {
     ) -> Result<Vec<RequestId>> {
         let rows = match repo_ids {
             Some(repos) => {
-                FindAbandonedRequestsForRepos::maybe_traced_query(
+                FindAbandonedRequestsForRepos::query(
                     &self.connections.write_connection,
                     None,
                     &abandoned_timestamp,
@@ -714,7 +711,7 @@ impl LongRunningRequestsQueue for SqlLongRunningRequestsQueue {
                 .await
             }
             None => {
-                FindAbandonedRequestsForAnyRepo::maybe_traced_query(
+                FindAbandonedRequestsForAnyRepo::query(
                     &self.connections.write_connection,
                     None,
                     &abandoned_timestamp,
@@ -732,7 +729,7 @@ impl LongRunningRequestsQueue for SqlLongRunningRequestsQueue {
         request_id: RequestId,
         abandoned_timestamp: Timestamp,
     ) -> Result<bool> {
-        let res = MarkRequestAsNewAgainIfAbandoned::maybe_traced_query(
+        let res = MarkRequestAsNewAgainIfAbandoned::query(
             &self.connections.write_connection,
             None,
             &request_id.0,
@@ -750,7 +747,7 @@ impl LongRunningRequestsQueue for SqlLongRunningRequestsQueue {
         req_id: &RequestId,
         blobstore_result_key: BlobstoreKey,
     ) -> Result<bool> {
-        let res = MarkRequestReady::maybe_traced_query(
+        let res = MarkRequestReady::query(
             &self.connections.write_connection,
             None,
             &req_id.0,
@@ -764,7 +761,7 @@ impl LongRunningRequestsQueue for SqlLongRunningRequestsQueue {
     }
 
     async fn mark_new(&self, _ctx: &CoreContext, req_id: &RequestId) -> Result<bool> {
-        let res = MarkRequestAsNew::maybe_traced_query(
+        let res = MarkRequestAsNew::query(
             &self.connections.write_connection,
             None,
             &req_id.0,
@@ -782,8 +779,7 @@ impl LongRunningRequestsQueue for SqlLongRunningRequestsQueue {
         status: RequestStatus,
     ) -> Result<bool> {
         let res =
-            TestMark::maybe_traced_query(&self.connections.write_connection, None, row_id, &status)
-                .await?;
+            TestMark::query(&self.connections.write_connection, None, row_id, &status).await?;
         Ok(res.affected_rows() > 0)
     }
 
@@ -843,7 +839,7 @@ impl LongRunningRequestsQueue for SqlLongRunningRequestsQueue {
     ) -> Result<Vec<LongRunningRequestEntry>> {
         let entries = match repo_ids {
             Some(repos) => {
-                ListRequestsForRepos::maybe_traced_query(
+                ListRequestsForRepos::query(
                     &self.connections.read_connection,
                     None,
                     last_update_newer_than.unwrap_or(&Timestamp::from_timestamp_nanos(0)),
@@ -852,7 +848,7 @@ impl LongRunningRequestsQueue for SqlLongRunningRequestsQueue {
                 .await
             }
             None => {
-                ListRequestsForAnyRepo::maybe_traced_query(
+                ListRequestsForAnyRepo::query(
                     &self.connections.read_connection,
                     None,
                     last_update_newer_than.unwrap_or(&Timestamp::from_timestamp_nanos(0)),
@@ -949,8 +945,8 @@ async fn get_queue_length(
     repo_ids: Option<&[RepositoryId]>,
 ) -> Result<Vec<(RequestStatus, u64)>> {
     Ok(match repo_ids {
-        Some(repos) => GetQueueLengthForRepos::maybe_traced_query(conn, None, repos).await,
-        None => GetQueueLengthForAllRepos::maybe_traced_query(conn, None).await,
+        Some(repos) => GetQueueLengthForRepos::query(conn, None, repos).await,
+        None => GetQueueLengthForAllRepos::query(conn, None).await,
     }
     .context("fetching queue length stats")?
     .into_iter()
@@ -962,8 +958,8 @@ async fn get_queue_length_by_repo(
     repo_ids: Option<&[RepositoryId]>,
 ) -> Result<Vec<(QueueStatsEntry, u64)>> {
     Ok(match repo_ids {
-        Some(repos) => GetQueueLengthByRepoForRepos::maybe_traced_query(conn, None, repos).await,
-        None => GetQueueLengthByRepoForAllRepos::maybe_traced_query(conn, None).await,
+        Some(repos) => GetQueueLengthByRepoForRepos::query(conn, None, repos).await,
+        None => GetQueueLengthByRepoForAllRepos::query(conn, None).await,
     }
     .context("fetching queue length stats")?
     .into_iter()
@@ -975,8 +971,8 @@ async fn get_queue_age(
     repo_ids: Option<&[RepositoryId]>,
 ) -> Result<Vec<(RequestStatus, Timestamp)>> {
     Ok(match repo_ids {
-        Some(repos) => GetQueueAgeForRepos::maybe_traced_query(conn, None, repos).await,
-        None => GetQueueAgeForAllRepos::maybe_traced_query(conn, None).await,
+        Some(repos) => GetQueueAgeForRepos::query(conn, None, repos).await,
+        None => GetQueueAgeForAllRepos::query(conn, None).await,
     }
     .context("fetching queue age stats")?
     .into_iter()
@@ -999,8 +995,8 @@ async fn get_queue_age_by_repo(
     repo_ids: Option<&[RepositoryId]>,
 ) -> Result<Vec<(QueueStatsEntry, Timestamp)>> {
     Ok(match repo_ids {
-        Some(repos) => GetQueueAgeByRepoForRepos::maybe_traced_query(conn, None, repos).await,
-        None => GetQueueAgeByRepoForAllRepos::maybe_traced_query(conn, None).await,
+        Some(repos) => GetQueueAgeByRepoForRepos::query(conn, None, repos).await,
+        None => GetQueueAgeByRepoForAllRepos::query(conn, None).await,
     }
     .context("fetching queue age stats")?
     .into_iter()

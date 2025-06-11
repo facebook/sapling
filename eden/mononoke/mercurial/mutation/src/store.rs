@@ -229,7 +229,7 @@ impl SqlHgMutationStore {
 
         ctx.perf_counters()
             .increment_counter(PerfCounterType::SqlReadsReplica);
-        let count = CountChangesets::maybe_traced_query(
+        let count = CountChangesets::query(
             &self.connections.read_connection,
             ctx.client_request_info(),
             &self.repo_id,
@@ -307,7 +307,7 @@ impl SqlHgMutationStore {
         }
         if !to_fetch_split.is_empty() {
             ctx.perf_counters().increment_counter(sql_perf_counter);
-            let rows = SelectSplitsBySuccessor::maybe_traced_query(
+            let rows = SelectSplitsBySuccessor::query(
                 connection,
                 ctx.client_request_info(),
                 &self.repo_id,
@@ -346,7 +346,7 @@ impl SqlHgMutationStore {
         let cri = ctx.client_request_info();
         let rows = stream::iter(chunks.into_iter().map(|changesets| async move {
             ctx.perf_counters().increment_counter(sql_perf_counter);
-            SelectBySuccessorChain::maybe_traced_query(
+            SelectBySuccessorChain::query(
                 connection,
                 cri,
                 &self.repo_id,

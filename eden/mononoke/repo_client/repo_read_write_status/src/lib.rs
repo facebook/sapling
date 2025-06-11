@@ -104,7 +104,7 @@ impl SqlRepoReadWriteStatus {
         &self,
         hgsql_name: &HgsqlName,
     ) -> Result<Option<(HgMononokeReadWrite, Option<String>)>, Error> {
-        GetReadWriteStatus::maybe_traced_query(&self.read_connection, None, hgsql_name.as_ref())
+        GetReadWriteStatus::query(&self.read_connection, None, hgsql_name.as_ref())
             .await
             .map(|rows| rows.into_iter().next())
     }
@@ -115,7 +115,7 @@ impl SqlRepoReadWriteStatus {
         state: &HgMononokeReadWrite,
         reason: &String,
     ) -> Result<bool, Error> {
-        SetReadWriteStatus::maybe_traced_query(
+        SetReadWriteStatus::query(
             &self.write_connection,
             None,
             &[(hgsql_name.as_ref(), state, reason)],
@@ -259,7 +259,7 @@ mod test {
             ReadOnly(DEFAULT_MSG.to_string())
         );
 
-        InsertState::maybe_traced_query(
+        InsertState::query(
             &fetcher
                 .sql_repo_read_write_status
                 .clone()
@@ -273,7 +273,7 @@ mod test {
 
         assert_eq!(fetcher.readonly().await.unwrap(), ReadWrite);
 
-        InsertState::maybe_traced_query(
+        InsertState::query(
             &fetcher
                 .sql_repo_read_write_status
                 .clone()
@@ -300,7 +300,7 @@ mod test {
             HgsqlName("repo".to_string()),
         );
 
-        InsertStateWithReason::maybe_traced_query(
+        InsertStateWithReason::query(
             &fetcher
                 .sql_repo_read_write_status
                 .clone()
@@ -332,7 +332,7 @@ mod test {
             ReadOnly(DEFAULT_MSG.to_string())
         );
 
-        InsertState::maybe_traced_query(
+        InsertState::query(
             &fetcher
                 .sql_repo_read_write_status
                 .clone()
@@ -349,7 +349,7 @@ mod test {
             ReadOnly(DEFAULT_MSG.to_string())
         );
 
-        InsertState::maybe_traced_query(
+        InsertState::query(
             &fetcher
                 .sql_repo_read_write_status
                 .clone()

@@ -107,7 +107,7 @@ impl GitSymbolicRefs for SqlGitSymbolicRefs {
     /// Fetch the symbolic ref entry corresponding to the symref name in the
     /// given repo, if one exists
     async fn get_ref_by_symref(&self, symref: String) -> Result<Option<GitSymbolicRefsEntry>> {
-        let results = SelectRefBySymref::maybe_traced_query(
+        let results = SelectRefBySymref::query(
             &self.connections.read_connection,
             None,
             &self.repo_id,
@@ -143,7 +143,7 @@ impl GitSymbolicRefs for SqlGitSymbolicRefs {
         ref_name: String,
         ref_type: RefType,
     ) -> Result<Option<Vec<String>>> {
-        let results = SelectSymrefsByRef::maybe_traced_query(
+        let results = SelectSymrefsByRef::query(
             &self.connections.read_connection,
             None,
             &self.repo_id,
@@ -187,7 +187,7 @@ impl GitSymbolicRefs for SqlGitSymbolicRefs {
                 (repo_id, symref_name, ref_name, ref_type)
             })
             .collect();
-        AddOrUpdateGitSymbolicRefs::maybe_traced_query(
+        AddOrUpdateGitSymbolicRefs::query(
             &self.connections.write_connection,
             None,
             entries.as_slice(),
@@ -204,7 +204,7 @@ impl GitSymbolicRefs for SqlGitSymbolicRefs {
 
     /// Delete the entry corresponding to the given symref if its exists
     async fn delete_symrefs(&self, symref: Vec<String>) -> Result<()> {
-        DeleteGitSymbolicRefs::maybe_traced_query(
+        DeleteGitSymbolicRefs::query(
             &self.connections.write_connection,
             None,
             &self.repo_id,
@@ -222,18 +222,15 @@ impl GitSymbolicRefs for SqlGitSymbolicRefs {
 
     /// List all symrefs for a given repo
     async fn list_all_symrefs(&self) -> Result<Vec<GitSymbolicRefsEntry>> {
-        let results = SelectAllGitSymbolicRefs::maybe_traced_query(
-            &self.connections.read_connection,
-            None,
-            &self.repo_id,
-        )
-        .await
-        .with_context(|| {
-            format!(
-                "Failure in fetching git symbolic refs in repo {}",
-                self.repo_id
-            )
-        })?;
+        let results =
+            SelectAllGitSymbolicRefs::query(&self.connections.read_connection, None, &self.repo_id)
+                .await
+                .with_context(|| {
+                    format!(
+                        "Failure in fetching git symbolic refs in repo {}",
+                        self.repo_id
+                    )
+                })?;
         results
             .into_iter()
             .map(|(symref_name, ref_name, ref_type)| {

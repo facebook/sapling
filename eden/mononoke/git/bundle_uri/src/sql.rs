@@ -154,7 +154,7 @@ impl SqlGitBundleMetadataStorage {
     }
 
     pub async fn get_latest_bundle_list(&self) -> Result<Option<BundleList>> {
-        let rows = GetLatestBundleListForRepo::maybe_traced_query(
+        let rows = GetLatestBundleListForRepo::query(
             &self.connections.read_connection,
             None,
             &self.repo_id,
@@ -193,7 +193,7 @@ impl SqlGitBundleMetadataStorage {
     }
 
     pub async fn remove_bundle_list(&self, bundle_list_num: u64) -> Result<()> {
-        RemoveBundleList::maybe_traced_query(
+        RemoveBundleList::query(
             &self.connections.write_connection,
             None,
             &self.repo_id,
@@ -204,12 +204,9 @@ impl SqlGitBundleMetadataStorage {
     }
 
     pub async fn get_bundle_lists(&self) -> Result<Vec<BundleList>> {
-        let rows = GetBundleListsForRepo::maybe_traced_query(
-            &self.connections.read_connection,
-            None,
-            &self.repo_id,
-        )
-        .await?;
+        let rows =
+            GetBundleListsForRepo::query(&self.connections.read_connection, None, &self.repo_id)
+                .await?;
 
         // +----------------------+-------------+
         // | in_bundle_list_order | bundle_list |

@@ -72,9 +72,7 @@ pub async fn get_prepushrebase_ids(
     repo_id: RepositoryId,
     successor_bcs_id: ChangesetId,
 ) -> Result<Vec<ChangesetId>> {
-    let rows =
-        SelectPrepushrebaseIds::maybe_traced_query(connection, None, &repo_id, &successor_bcs_id)
-            .await?;
+    let rows = SelectPrepushrebaseIds::query(connection, None, &repo_id, &successor_bcs_id).await?;
 
     Ok(rows.into_iter().map(|r| r.0).collect())
 }
