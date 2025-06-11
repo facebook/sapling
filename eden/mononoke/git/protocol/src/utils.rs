@@ -37,6 +37,7 @@ use crate::Repo;
 use crate::TAGS_PREFIX;
 use crate::bookmarks_provider::bookmarks;
 use crate::store::fetch_nested_tags;
+use crate::types::ChainBreakingMode;
 use crate::types::DeltaInclusion;
 use crate::types::FetchFilter;
 use crate::types::RefTarget;
@@ -98,13 +99,16 @@ pub(crate) fn delta_base(
     entry: &(dyn GitDeltaManifestEntryOps + Send),
     delta_inclusion: DeltaInclusion,
     filter: Arc<Option<FetchFilter>>,
+    chain_breaking_mode: ChainBreakingMode,
 ) -> Option<&(dyn ObjectDeltaOps + Sync)> {
-    // Periodically break delta chains since resolving very long delta chains
-    // is expensive on client side
-    let byte_sum = entry.full_object_oid().first_byte() as u16
-        + entry.full_object_oid().as_bytes().last_byte().unwrap_or(0) as u16;
-    if byte_sum % 250 == 0 {
-        return None;
+    if let ChainBreakingMode::Stochastic = chain_breaking_mode {
+        // Periodically break delta chains since resolving very long delta chains
+        // is expensive on client side
+        let byte_sum = entry.full_object_oid().first_byte() as u16
+            + entry.full_object_oid().as_bytes().last_byte().unwrap_or(0) as u16;
+        if byte_sum % 250 == 0 {
+            return None;
+        }
     }
     match delta_inclusion {
         DeltaInclusion::Include {
@@ -139,8 +143,9 @@ pub(crate) fn entry_weight(
     entry: &(dyn GitDeltaManifestEntryOps + Send),
     delta_inclusion: DeltaInclusion,
     filter: Arc<Option<FetchFilter>>,
+    chain_breaking_mode: ChainBreakingMode,
 ) -> usize {
-    let delta = delta_base(entry, delta_inclusion, filter);
+    let delta = delta_base(entry, delta_inclusion, filter, chain_breaking_mode);
     let weight = delta.as_ref().map_or(entry.full_object_size(), |delta| {
         delta.instructions_compressed_size()
     });

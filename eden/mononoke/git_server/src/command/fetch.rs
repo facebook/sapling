@@ -13,6 +13,7 @@ use gix_object::Kind;
 use gix_packetline::PacketLineRef;
 use gix_packetline::StreamingPeekableIter;
 use gix_transport::bstr::ByteSlice;
+use protocol::types::ChainBreakingMode;
 use protocol::types::FetchFilter;
 use protocol::types::FetchRequest;
 use protocol::types::PackfileConcurrency;
@@ -349,6 +350,7 @@ impl FetchArgs {
             filter: self.filter.map(FilterArgs::into_fetch_filter),
             concurrency,
             shallow_info,
+            chain_breaking_mode: ChainBreakingMode::Stochastic,
         }
     }
 

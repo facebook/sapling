@@ -151,6 +151,7 @@ async fn trees_and_blobs_count(
         blobstore,
         filter,
         concurrency,
+        chain_breaking_mode,
         ..
     } = fetch_container.clone();
     let boundary_stream = stream::once(async move {
@@ -191,7 +192,12 @@ async fn trees_and_blobs_count(
                             if !filter_object(filter.clone(), &path, kind, size) {
                                 return Ok(None);
                             }
-                            let delta = delta_base(entry.as_ref(), delta_inclusion, filter);
+                            let delta = delta_base(
+                                entry.as_ref(),
+                                delta_inclusion,
+                                filter,
+                                chain_breaking_mode,
+                            );
                             let output = (
                                 entry.full_object_oid(),
                                 delta.map(|delta| delta.base_object_oid()),
@@ -271,6 +277,7 @@ fn packfile_stream_from_changesets<'a>(
         delta_inclusion,
         filter,
         concurrency,
+        chain_breaking_mode,
         ..
     } = fetch_container.clone();
 
@@ -340,6 +347,7 @@ fn packfile_stream_from_changesets<'a>(
                         entry.as_ref(),
                         delta_inclusion,
                         filter.clone(),
+                        chain_breaking_mode,
                     ))
                 {
                     break;
@@ -649,6 +657,7 @@ pub async fn generate_pack_item_stream<'a>(
         request.concurrency,
         request.packfile_item_inclusion,
         Arc::new(None),
+        request.chain_breaking_mode,
     )?;
     // Get all the commits that are reachable from the bookmarks
     let mut target_commits = repo
@@ -791,6 +800,7 @@ pub async fn fetch_response<'a>(
         request.concurrency,
         packfile_item_inclusion,
         shallow_info.clone(),
+        request.chain_breaking_mode,
     )?;
     // Convert the base commits and head commits, which are represented as Git hashes, into Bonsai hashes
     // If the input contains tag object Ids, fetch the corresponding tag names

@@ -203,6 +203,7 @@ pub(crate) async fn packfile_item_for_delta_manifest_entry(
         delta_inclusion,
         filter,
         packfile_item_inclusion,
+        chain_breaking_mode,
         ..
     } = fetch_container;
 
@@ -217,7 +218,7 @@ pub(crate) async fn packfile_item_for_delta_manifest_entry(
         return Ok(None);
     }
 
-    let delta = delta_base(entry.as_ref(), delta_inclusion, filter);
+    let delta = delta_base(entry.as_ref(), delta_inclusion, filter, chain_breaking_mode);
     match delta {
         Some(delta) => {
             let instruction_bytes = delta

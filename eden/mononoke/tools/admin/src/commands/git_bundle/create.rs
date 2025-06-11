@@ -30,6 +30,7 @@ use packfile::bundle::RefNaming;
 use packfile::pack::DeltaForm;
 use packfile::types::PackfileItem;
 use protocol::generator::generate_pack_item_stream;
+use protocol::types::ChainBreakingMode;
 use protocol::types::DeltaInclusion;
 use protocol::types::PackItemStreamRequest;
 use protocol::types::PackfileItemInclusion;
@@ -172,6 +173,7 @@ pub async fn create_from_mononoke_repo(
         delta_inclusion,
         TagInclusion::AsIs,
         create_args.packfile_item_inclusion,
+        ChainBreakingMode::Stochastic,
     );
     let response = generate_pack_item_stream(ctx.clone(), &repo, request)
         .await

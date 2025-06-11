@@ -268,6 +268,8 @@ pub struct PackItemStreamRequest {
     pub concurrency: PackfileConcurrency,
     /// The source to be used to fetch the refs
     pub refs_source: RefsSource,
+    /// The mode to be used to break chains of delta packfile items
+    pub chain_breaking_mode: ChainBreakingMode,
 }
 
 impl PackItemStreamRequest {
@@ -278,6 +280,7 @@ impl PackItemStreamRequest {
         delta_inclusion: DeltaInclusion,
         tag_inclusion: TagInclusion,
         packfile_item_inclusion: PackfileItemInclusion,
+        chain_breaking_mode: ChainBreakingMode,
     ) -> Self {
         Self {
             requested_symrefs,
@@ -286,6 +289,7 @@ impl PackItemStreamRequest {
             delta_inclusion,
             tag_inclusion,
             packfile_item_inclusion,
+            chain_breaking_mode,
             concurrency: PackfileConcurrency::standard(),
             // Packfile generation should always use the latest state of refs
             refs_source: RefsSource::DatabaseMaster,
@@ -307,6 +311,7 @@ impl PackItemStreamRequest {
             concurrency: PackfileConcurrency::standard(),
             // Packfile generation should always use the latest state of refs
             refs_source: RefsSource::DatabaseMaster,
+            chain_breaking_mode: ChainBreakingMode::Stochastic,
         }
     }
 }
@@ -378,6 +383,8 @@ pub struct FetchRequest {
     /// The concurrency setting to be used for generating the packfile items for the
     /// fetch request
     pub concurrency: PackfileConcurrency,
+    /// The mode to be used to break chains of delta packfile items
+    pub chain_breaking_mode: ChainBreakingMode,
 }
 
 /// Struct representing the filtering options that can be used during fetch / clone
@@ -674,6 +681,16 @@ impl PartialEq for FullObjectEntry {
 
 impl Eq for FullObjectEntry {}
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum ChainBreakingMode {
+    // Do not break any delta chains
+    None,
+    // Break chains stochastically but deteministically with a random function
+    Stochastic,
+    // Break any chain that goes beyond the configured threshold for trees and blobs respectively
+    Threshold { tree: u64, blob: u64 },
+}
+
 /// Set of parameters that are needed by the generators used for constructing
 /// response for fetch request
 #[derive(Clone)]
@@ -687,6 +704,7 @@ pub(crate) struct FetchContainer {
     pub(crate) concurrency: PackfileConcurrency,
     pub(crate) packfile_item_inclusion: PackfileItemInclusion,
     pub(crate) shallow_info: Arc<Option<ShallowInfoResponse>>,
+    pub(crate) chain_breaking_mode: ChainBreakingMode,
 }
 
 impl FetchContainer {
@@ -698,6 +716,7 @@ impl FetchContainer {
         concurrency: PackfileConcurrency,
         packfile_item_inclusion: PackfileItemInclusion,
         shallow_info: Arc<Option<ShallowInfoResponse>>,
+        chain_breaking_mode: ChainBreakingMode,
     ) -> Result<Self> {
         let git_delta_manifest_version = repo
             .repo_config()
@@ -715,6 +734,7 @@ impl FetchContainer {
             shallow_info,
             blobstore: repo.repo_blobstore_arc(),
             derived_data: repo.repo_derived_data_arc(),
+            chain_breaking_mode,
         })
     }
 }

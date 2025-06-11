@@ -36,6 +36,7 @@ use packfile::bundle::BundleWriter;
 use packfile::bundle::RefNaming;
 use packfile::pack::DeltaForm;
 use protocol::generator::generate_pack_item_stream;
+use protocol::types::ChainBreakingMode;
 use protocol::types::DeltaInclusion;
 use protocol::types::PackItemStreamRequest;
 use protocol::types::PackfileItemInclusion;
@@ -408,6 +409,7 @@ pub async fn repo_stack_git_bundle(
         DeltaInclusion::Exclude, // We don't need deltas for this bundle
         TagInclusion::AsIs,
         PackfileItemInclusion::Generate,
+        ChainBreakingMode::Stochastic,
     );
     let response = generate_pack_item_stream(ctx.clone(), repo, request)
         .await
