@@ -247,7 +247,7 @@ function FileActions({
           icon
           data-testid="file-revert-button"
           onClick={async () => {
-            if (!(await confirmSuggestedEditsForFiles('reject', [file.path]))) {
+            if (!(await confirmSuggestedEditsForFiles('revert', 'reject', [file.path]))) {
               return;
             }
 

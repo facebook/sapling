@@ -6,6 +6,7 @@
  */
 
 import {atom} from 'jotai';
+import {tracker} from './analytics';
 import {Column, Row} from './ComponentUtils';
 import {T, t} from './i18n';
 import {Internal} from './Internal';
@@ -47,8 +48,11 @@ const currentSuggestedEdits = atom<Array<RepoRelativePath>>(get => {
  *
  * We intentionally don't expose all possible ways of resolving edits for simplicity as a user.
  * We don't give any option to leave edits pending, because that should almost never be what you want.
+ *
+ * `source` is used for analytics purposes.
  */
 export async function confirmSuggestedEditsForFiles(
+  source: string,
   action: 'accept' | 'reject',
   files?: PartialSelection | Array<RepoRelativePath>,
 ): Promise<boolean> {
@@ -93,6 +97,12 @@ export async function confirmSuggestedEditsForFiles(
         </Row>
       </Column>
     ),
+  });
+  tracker.track('WarnAboutSuggestedEdits', {
+    extras: {
+      source,
+      answer: typeof answer === 'string' ? answer : answer?.label,
+    },
   });
 
   switch (answer) {

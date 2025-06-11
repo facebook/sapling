@@ -51,6 +51,7 @@ import {FileTree, FileTreeFolderHeader} from './FileTree';
 import {useGeneratedFileStatuses} from './GeneratedFile';
 import {Internal} from './Internal';
 import {AbsorbButton} from './StackActions';
+import {confirmSuggestedEditsForFiles} from './SuggestedEdits';
 import {UnsavedFilesCount, confirmUnsavedFiles} from './UnsavedFiles';
 import {tracker} from './analytics';
 import {latestCommitMessageFields} from './codeReview/CodeReviewInfo';
@@ -90,7 +91,6 @@ import {selectedCommits} from './selection';
 import {latestHeadCommit, uncommittedChangesFetchError} from './serverAPIState';
 import {GeneratedStatus} from './types';
 
-import {confirmSuggestedEditsForFiles} from './SuggestedEdits';
 import './UncommittedChanges.css';
 
 export type UIChangedFile = {
@@ -537,7 +537,7 @@ export function UncommittedChanges({place}: {place: Place}) {
       return;
     }
 
-    if (!(await confirmSuggestedEditsForFiles('accept', selection.selection))) {
+    if (!(await confirmSuggestedEditsForFiles('quick-commit', 'accept', selection.selection))) {
       return;
     }
 
@@ -599,7 +599,7 @@ export function UncommittedChanges({place}: {place: Place}) {
   ) : null;
 
   const onShelve = async () => {
-    if (!(await confirmSuggestedEditsForFiles('accept', selection.selection))) {
+    if (!(await confirmSuggestedEditsForFiles('shelve', 'accept', selection.selection))) {
       return;
     }
 
@@ -814,7 +814,13 @@ export function UncommittedChanges({place}: {place: Place}) {
                     return;
                   }
 
-                  if (!(await confirmSuggestedEditsForFiles('accept', selection.selection))) {
+                  if (
+                    !(await confirmSuggestedEditsForFiles(
+                      'quick-amend',
+                      'accept',
+                      selection.selection,
+                    ))
+                  ) {
                     return;
                   }
 

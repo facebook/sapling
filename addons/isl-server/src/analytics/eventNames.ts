@@ -172,6 +172,7 @@ export type TrackEventName =
   | 'WarnAboutRebaseOffWarm'
   | 'WarnAboutDistantRebase'
   | 'WarnAboutRebaseOntoMaster'
+  | 'WarnAboutSuggestedEdits'
   | 'SaplingISLUriHandlerHandle'
   | 'CommitInfoFieldEditFieldClick'
   | 'ReadWarmCommit';
