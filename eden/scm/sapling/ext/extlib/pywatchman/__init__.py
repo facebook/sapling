@@ -1043,7 +1043,18 @@ class client:
         except OSError as e:
             raise WatchmanError('"watchman" executable not in PATH (%s)', e)
 
-        stdout, stderr = p.communicate()
+        timed_out = False
+        try:
+            # Apply the timeout so we don't wait indefinitely when watchman is in a bad state.
+            stdout, stderr = p.communicate(timeout=self.timeout)
+        except subprocess.TimeoutExpired:
+            # Timed out - kill the "watchman" invocation and collect output. Note that if the
+            # watchman daemon is being started, it will still start up even though we killed the
+            # client.
+            timed_out = True
+            p.kill()
+            stdout, stderr = p.communicate()
+
         exitcode = p.poll()
 
         if exitcode:
@@ -1054,9 +1065,11 @@ class client:
                 return s
 
             raise WatchmanError(
-                "watchman exited with code %d (stdout=%s stderr=%s)"
+                "watchman get-sockname exited with code %d (timed_out=%s timeout=%f stdout=%s stderr=%s)"
                 % (
                     exitcode,
+                    timed_out,
+                    self.timeout,
                     maybe_truncate(stdout.decode(errors="replace"), 256),
                     maybe_truncate(stderr.decode(errors="replace"), 256),
                 )
