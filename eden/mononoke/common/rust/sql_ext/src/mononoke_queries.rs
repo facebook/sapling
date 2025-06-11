@@ -99,12 +99,6 @@ macro_rules! mononoke_queries {
                 #[allow(unused_imports)]
                 use $crate::_macro_internal::*;
 
-                // Not possible to retry query with transaction
-                #[allow(unused_imports)]
-                pub use [<$name Impl>]::query_with_transaction;
-                #[allow(unused_imports)]
-                use [<$name Impl>]::commented_query_with_transaction;
-
                 #[allow(dead_code)]
                 pub async fn traced_query_with_transaction(
                     transaction: Transaction,
@@ -113,7 +107,7 @@ macro_rules! mononoke_queries {
                     $( $lname: & [ $ltype ], )*
                 ) -> Result<(Transaction, Vec<($( $rtype, )*)>)> {
                     let cri = serde_json::to_string(cri)?;
-                    commented_query_with_transaction(transaction, cri.as_str(), $( $pname, )* $( $lname, )*).await
+                    [<$name Impl>]::commented_query_with_transaction(transaction, cri.as_str(), $( $pname, )* $( $lname, )*).await
                 }
 
                 #[allow(dead_code)]
@@ -125,7 +119,8 @@ macro_rules! mononoke_queries {
                 ) -> Result<(Transaction, Vec<($( $rtype, )*)>)> {
                     match cri {
                         Some(cri) => traced_query_with_transaction(transaction, &cri, $( $pname, )* $( $lname, )*).await,
-                        None => query_with_transaction(transaction, $( $pname, )* $( $lname, )*).await
+                        // Not possible to retry query with transaction
+                        None => [<$name Impl>]::commented_query_with_transaction(transaction, None, $( $pname, )* $( $lname, )*).await
                     }
                 }
 
@@ -195,13 +190,6 @@ macro_rules! mononoke_queries {
                 #[allow(unused_imports)]
                 use $crate::_macro_internal::*;
 
-                // Not possible to retry query with transaction
-                #[allow(unused_imports)]
-                pub use [<$name Impl>]::query_with_transaction;
-                #[allow(unused_imports)]
-                use [<$name Impl>]::commented_query_with_transaction;
-
-
                 #[allow(dead_code)]
                 pub async fn traced_query_with_transaction(
                     transaction: Transaction,
@@ -210,7 +198,8 @@ macro_rules! mononoke_queries {
                     $( $lname: & [ $ltype ], )*
                 ) -> Result<(Transaction, Vec<($( $rtype, )*)>)> {
                     let cri = serde_json::to_string(cri)?;
-                    commented_query_with_transaction(transaction, cri.as_str(), $( $pname, )* $( $lname, )*).await
+                    // Not possible to retry query with transaction
+                    [<$name Impl>]::commented_query_with_transaction(transaction, cri.as_str(), $( $pname, )* $( $lname, )*).await
                 }
 
                 #[allow(dead_code)]
@@ -222,7 +211,7 @@ macro_rules! mononoke_queries {
                 ) -> Result<(Transaction, Vec<($( $rtype, )*)>)> {
                     match cri {
                         Some(cri) => traced_query_with_transaction(transaction, &cri, $( $pname, )* $( $lname, )*).await,
-                        None => query_with_transaction(transaction, $( $pname, )* $( $lname, )*).await
+                        None => [<$name Impl>]::commented_query_with_transaction(transaction, None, $( $pname, )* $( $lname, )*).await
                     }
                 }
 
@@ -352,13 +341,6 @@ macro_rules! mononoke_queries {
                 #[allow(unused_imports)]
                 use $crate::_macro_internal::*;
 
-                // Not possible to retry query with transaction
-                #[allow(unused_imports)]
-                pub use [<$name Impl>]::query_with_transaction;
-                #[allow(unused_imports)]
-                use [<$name Impl>]::commented_query_with_transaction;
-
-
                 #[allow(dead_code)]
                 pub async fn traced_query_with_transaction(
                     transaction: Transaction,
@@ -367,7 +349,7 @@ macro_rules! mononoke_queries {
                     $( $pname: & $ptype ),*
                 ) -> Result<(Transaction, WriteResult)> {
                     let cri = serde_json::to_string(cri)?;
-                    commented_query_with_transaction(transaction, cri.as_str(), values $( , $pname )*)
+                    [<$name Impl>]::commented_query_with_transaction(transaction, cri.as_str(), values $( , $pname )*)
                         .await
                 }
 
@@ -380,7 +362,8 @@ macro_rules! mononoke_queries {
                 ) -> Result<(Transaction, WriteResult)> {
                     match cri {
                         Some(cri) => traced_query_with_transaction(transaction, &cri, values $( , $pname )*).await,
-                        None => query_with_transaction(transaction, values $( , $pname )*).await
+                        // Not possible to retry query with transaction
+                        None => [<$name Impl>]::commented_query_with_transaction(transaction, None, values $( , $pname )*).await
                     }
                 }
 
@@ -467,12 +450,6 @@ macro_rules! mononoke_queries {
                 #[allow(unused_imports)]
                 use $crate::_macro_internal::*;
 
-                // Not possible to retry query with transaction
-                #[allow(unused_imports)]
-                pub use [<$name Impl>]::query_with_transaction;
-                #[allow(unused_imports)]
-                use [<$name Impl>]::commented_query_with_transaction;
-
                 #[allow(dead_code)]
                 pub async fn traced_query_with_transaction(
                     transaction: Transaction,
@@ -481,7 +458,7 @@ macro_rules! mononoke_queries {
                     $( $lname: & [ $ltype ], )*
                 ) -> Result<(Transaction, WriteResult)> {
                     let cri = serde_json::to_string(cri)?;
-                    commented_query_with_transaction(transaction, cri.as_str() $( , $pname )* $( , $lname )*)
+                    [<$name Impl>]::commented_query_with_transaction(transaction, cri.as_str() $( , $pname )* $( , $lname )*)
                         .await
                 }
 
@@ -494,7 +471,7 @@ macro_rules! mononoke_queries {
                 ) -> Result<(Transaction, WriteResult)> {
                     match cri {
                         Some(cri) => traced_query_with_transaction(transaction, &cri $( , $pname )* $( , $lname )*).await,
-                        None => query_with_transaction(transaction $( , $pname )* $( , $lname )*).await
+                        None => [<$name Impl>]::commented_query_with_transaction(transaction, None $( , $pname )* $( , $lname )*).await
                     }
                 }
 
