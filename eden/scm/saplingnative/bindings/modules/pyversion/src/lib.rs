@@ -13,5 +13,6 @@ pub fn init_module(py: Python, package: &str) -> PyResult<PyModule> {
     m.add(py, "VERSION", ::version::VERSION)?;
     m.add(py, "VERSION_HASH", ::version::VERSION_HASH)?;
     m.add(py, "IS_FBCODE", cfg!(fbcode_build))?;
+    m.add(py, "DATE_INT", *::version::DATE_INT)?;
     Ok(m)
 }
