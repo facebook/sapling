@@ -677,52 +677,53 @@ export function UncommittedChanges({place}: {place: Place}) {
                 icon
                 disabled={noFilesSelected}
                 data-testid={'discard-all-selected-button'}
-                onClick={() => {
-                  platform.confirm(t('confirmDiscardChanges')).then(ok => {
-                    if (!ok) {
-                      return;
-                    }
-                    if (allFilesSelected) {
-                      // all changes selected -> use clean goto rather than reverting each file. This is generally faster.
+                onClick={async () => {
+                  if (
+                    !(await confirmSuggestedEditsForFiles('discard', 'reject', selection.selection))
+                  ) {
+                    return;
+                  }
+                  if (!(await platform.confirm(t('confirmDiscardChanges')))) {
+                    return;
+                  }
+                  if (allFilesSelected) {
+                    // all changes selected -> use clean goto rather than reverting each file. This is generally faster.
 
-                      // to "discard", we need to both remove uncommitted changes
-                      runOperation(new DiscardOperation());
-                      // ...and delete untracked files.
-                      // Technically we only need to do the purge when we have untracked files, though there's a chance there's files we don't know about yet while status is running.
-                      runOperation(new PurgeOperation());
-                    } else if (selection.hasChunkSelection()) {
-                      // TODO(quark): Make PartialDiscardOperation replace the above and below cases.
-                      const allFiles = uncommittedChanges.map(file => file.path);
-                      const operation = new PartialDiscardOperation(selection.selection, allFiles);
-                      selection.discardPartialSelections();
-                      runOperation(operation);
-                    } else {
-                      const selectedFiles = uncommittedChanges.filter(file =>
-                        selection.isFullyOrPartiallySelected(file.path),
-                      );
-                      const [selectedTrackedFiles, selectedUntrackedFiles] = partition(
-                        selectedFiles,
-                        file => file.status !== '?', // only untracked, not missing
-                      );
-                      // Added files should be first reverted, then purged, so they are not tracked and also deleted.
-                      // This way, the partial selection discard matches the non-partial discard.
-                      const addedFilesToAlsoPurge = selectedFiles.filter(
-                        file => file.status === 'A',
-                      );
-                      if (selectedTrackedFiles.length > 0) {
-                        // only a subset of files selected -> we need to revert selected tracked files individually
-                        runOperation(new RevertOperation(selectedTrackedFiles.map(f => f.path)));
-                      }
-                      if (selectedUntrackedFiles.length > 0 || addedFilesToAlsoPurge.length > 0) {
-                        // untracked files must be purged separately to delete from disk.
-                        runOperation(
-                          new PurgeOperation(
-                            [...selectedUntrackedFiles, ...addedFilesToAlsoPurge].map(f => f.path),
-                          ),
-                        );
-                      }
+                    // to "discard", we need to both remove uncommitted changes
+                    runOperation(new DiscardOperation());
+                    // ...and delete untracked files.
+                    // Technically we only need to do the purge when we have untracked files, though there's a chance there's files we don't know about yet while status is running.
+                    runOperation(new PurgeOperation());
+                  } else if (selection.hasChunkSelection()) {
+                    // TODO(quark): Make PartialDiscardOperation replace the above and below cases.
+                    const allFiles = uncommittedChanges.map(file => file.path);
+                    const operation = new PartialDiscardOperation(selection.selection, allFiles);
+                    selection.discardPartialSelections();
+                    runOperation(operation);
+                  } else {
+                    const selectedFiles = uncommittedChanges.filter(file =>
+                      selection.isFullyOrPartiallySelected(file.path),
+                    );
+                    const [selectedTrackedFiles, selectedUntrackedFiles] = partition(
+                      selectedFiles,
+                      file => file.status !== '?', // only untracked, not missing
+                    );
+                    // Added files should be first reverted, then purged, so they are not tracked and also deleted.
+                    // This way, the partial selection discard matches the non-partial discard.
+                    const addedFilesToAlsoPurge = selectedFiles.filter(file => file.status === 'A');
+                    if (selectedTrackedFiles.length > 0) {
+                      // only a subset of files selected -> we need to revert selected tracked files individually
+                      runOperation(new RevertOperation(selectedTrackedFiles.map(f => f.path)));
                     }
-                  });
+                    if (selectedUntrackedFiles.length > 0 || addedFilesToAlsoPurge.length > 0) {
+                      // untracked files must be purged separately to delete from disk.
+                      runOperation(
+                        new PurgeOperation(
+                          [...selectedUntrackedFiles, ...addedFilesToAlsoPurge].map(f => f.path),
+                        ),
+                      );
+                    }
+                  }
                 }}>
                 <Icon slot="start" icon="trashcan" />
                 <T>Discard</T>
