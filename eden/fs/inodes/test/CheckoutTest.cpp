@@ -225,12 +225,16 @@ void loadInodes(
   loadInodes(testMount, RelativePathPiece{path}, loadType, std::nullopt, 0644);
 }
 
-CheckoutConflict
-makeConflict(ConflictType type, StringPiece path, StringPiece message = "") {
+CheckoutConflict makeConflict(
+    ConflictType type,
+    StringPiece path,
+    StringPiece message = "",
+    Dtype dtype = Dtype::UNKNOWN) {
   CheckoutConflict conflict;
   conflict.type_ref() = type;
   conflict.path_ref() = path.str();
   conflict.message_ref() = message.str();
+  conflict.dtype_ref() = dtype;
   return conflict;
 }
 
@@ -541,8 +545,8 @@ TEST(Checkout, modifyLoadedButNotReadyFileWithConflict) {
   auto result = std::move(waitedCheckoutFuture).get();
   EXPECT_THAT(
       result.conflicts,
-      UnorderedElementsAre(
-          makeConflict(ConflictType::MODIFIED_MODIFIED, "a/test.txt")));
+      UnorderedElementsAre(makeConflict(
+          ConflictType::MODIFIED_MODIFIED, "a/test.txt", "", Dtype::REGULAR)));
 
   // Verify that the inode was not updated
   auto postInode = mount.getFileInode("a/test.txt");
@@ -730,8 +734,8 @@ TEST(Checkout, modifyThenRevert) {
   // The checkout should report a/test.txt as a conflict
   EXPECT_THAT(
       std::move(checkoutResult).get().conflicts,
-      UnorderedElementsAre(
-          makeConflict(ConflictType::MODIFIED_MODIFIED, "a/test.txt")));
+      UnorderedElementsAre(makeConflict(
+          ConflictType::MODIFIED_MODIFIED, "a/test.txt", "", Dtype::REGULAR)));
 
 #ifndef _WIN32
   // The checkout operation updates files by replacing them, so
@@ -782,8 +786,8 @@ TEST(Checkout, modifyThenCheckoutRevisionWithoutFile) {
 
   EXPECT_THAT(
       std::move(checkoutTo1).get().conflicts,
-      UnorderedElementsAre(
-          makeConflict(ConflictType::MODIFIED_REMOVED, "src/test.c")));
+      UnorderedElementsAre(makeConflict(
+          ConflictType::MODIFIED_REMOVED, "src/test.c", "", Dtype::REGULAR)));
 }
 
 TEST(Checkout, createUntrackedFileAndCheckoutAsTrackedFile) {
@@ -823,8 +827,8 @@ TEST(Checkout, createUntrackedFileAndCheckoutAsTrackedFile) {
 
   EXPECT_THAT(
       std::move(checkoutTo2).get().conflicts,
-      UnorderedElementsAre(
-          makeConflict(ConflictType::UNTRACKED_ADDED, "src/test.c")));
+      UnorderedElementsAre(makeConflict(
+          ConflictType::UNTRACKED_ADDED, "src/test.c", "", Dtype::REGULAR)));
 }
 
 /*
@@ -872,8 +876,11 @@ TEST(
 
   EXPECT_THAT(
       std::move(checkoutTo2).get().conflicts,
-      UnorderedElementsAre(
-          makeConflict(ConflictType::UNTRACKED_ADDED, "src/test/test.c")));
+      UnorderedElementsAre(makeConflict(
+          ConflictType::UNTRACKED_ADDED,
+          "src/test/test.c",
+          "",
+          Dtype::REGULAR)));
 }
 
 void testAddSubdirectory(folly::StringPiece newDirPath, LoadBehavior loadType) {
@@ -1397,7 +1404,10 @@ TEST(Checkout, testSetPathObjectIdConflict) {
   EXPECT_THAT(
       std::move(result).result.conflicts_ref().value(),
       UnorderedElementsAre(makeConflict(
-          ConflictType::UNTRACKED_ADDED, "dir/dir2/dir3/file.txt")));
+          ConflictType::UNTRACKED_ADDED,
+          "dir/dir2/dir3/file.txt",
+          "",
+          Dtype::REGULAR)));
 }
 
 TEST(Checkout, testSetPathObjectIdLastCheckoutTime) {
@@ -2018,8 +2028,8 @@ TEST(Checkout, concurrent_file_to_directory_during_checkout) {
   auto result = std::move(fut).get(0ms);
   EXPECT_THAT(
       result.conflicts,
-      UnorderedElementsAre(
-          makeConflict(ConflictType::MODIFIED_REMOVED, "b.txt")));
+      UnorderedElementsAre(makeConflict(
+          ConflictType::MODIFIED_REMOVED, "b.txt", "", Dtype::REGULAR)));
 
   mount.getEdenMount()->getPrjfsChannel()->unmount({}).get();
 }
@@ -2074,8 +2084,8 @@ TEST(Checkout, concurrent_new_file_during_checkout) {
   auto result = std::move(fut).get(0ms);
   EXPECT_THAT(
       result.conflicts,
-      UnorderedElementsAre(
-          makeConflict(ConflictType::UNTRACKED_ADDED, "a/2.txt")));
+      UnorderedElementsAre(makeConflict(
+          ConflictType::UNTRACKED_ADDED, "a/2.txt", "", Dtype::REGULAR)));
 
   mount.getEdenMount()->getPrjfsChannel()->unmount({}).get();
 }
@@ -2133,8 +2143,10 @@ TEST(Checkout, concurrent_recreation_during_checkout) {
   EXPECT_THAT(
       result.conflicts,
       UnorderedElementsAre(
-          makeConflict(ConflictType::REMOVED_MODIFIED, "a/1.txt"),
-          makeConflict(ConflictType::MODIFIED_MODIFIED, "a/1.txt")));
+          makeConflict(
+              ConflictType::REMOVED_MODIFIED, "a/1.txt", "", Dtype::REGULAR),
+          makeConflict(
+              ConflictType::MODIFIED_MODIFIED, "a/1.txt", "", Dtype::REGULAR)));
 
   mount.getEdenMount()->getPrjfsChannel()->unmount({}).get();
 }

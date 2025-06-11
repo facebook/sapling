@@ -3532,7 +3532,7 @@ std::shared_ptr<CheckoutAction> TreeInode::processCheckoutEntryImpl(
     }
 
     // Report the conflict, and then bail out if we aren't doing a force update
-    ctx->addConflict(conflictType, this, name);
+    ctx->addConflict(conflictType, this, name, entry.getDtype());
     if (!ctx->forceUpdate()) {
       return nullptr;
     }
@@ -3620,6 +3620,8 @@ std::shared_ptr<CheckoutAction> TreeInode::processAbsentCheckoutEntry(
     const Tree::value_type* newScmEntry,
     bool& wasDirectoryListModified) {
   const auto& name = oldScmEntry ? oldScmEntry->first : newScmEntry->first;
+  const auto dtype = oldScmEntry ? oldScmEntry->second.getDtype()
+                                 : newScmEntry->second.getDtype();
   auto& contents = state.entries;
   bool contentsUpdated = false;
 
@@ -3636,10 +3638,12 @@ std::shared_ptr<CheckoutAction> TreeInode::processAbsentCheckoutEntry(
     // we are already in the desired state.
     //
     // We can proceed, but we still flag this as a conflict.
-    ctx->addConflict(ConflictType::MISSING_REMOVED, this, oldScmEntry->first);
+    ctx->addConflict(
+        ConflictType::MISSING_REMOVED, this, oldScmEntry->first, dtype);
   } else {
     // The file was removed locally, but modified in the new tree.
-    ctx->addConflict(ConflictType::REMOVED_MODIFIED, this, oldScmEntry->first);
+    ctx->addConflict(
+        ConflictType::REMOVED_MODIFIED, this, oldScmEntry->first, dtype);
     if (ctx->forceUpdate()) {
       XDCHECK(!ctx->isDryRun());
       contentsUpdated = true;
@@ -3671,9 +3675,10 @@ std::shared_ptr<CheckoutAction> TreeInode::processAbsentCheckoutEntry(
               << "entry was created on disk while checkout is in progress: "
               << getLogPath() << "/" << name;
           if (oldScmEntry) {
-            ctx->addConflict(ConflictType::MODIFIED_MODIFIED, this, name);
+            ctx->addConflict(
+                ConflictType::MODIFIED_MODIFIED, this, name, dtype);
           } else {
-            ctx->addConflict(ConflictType::UNTRACKED_ADDED, this, name);
+            ctx->addConflict(ConflictType::UNTRACKED_ADDED, this, name, dtype);
           }
           return nullptr;
         }
@@ -3750,9 +3755,16 @@ ImmediateFuture<InvalidationRequired> TreeInode::checkoutUpdateEntry(
                        << inode->getLogPath();
             if (newScmEntry) {
               ctx->addConflict(
-                  ConflictType::MODIFIED_MODIFIED, this, it->first);
+                  ConflictType::MODIFIED_MODIFIED,
+                  this,
+                  it->first,
+                  it->second.getDtype());
             } else {
-              ctx->addConflict(ConflictType::MODIFIED_REMOVED, this, it->first);
+              ctx->addConflict(
+                  ConflictType::MODIFIED_REMOVED,
+                  this,
+                  it->first,
+                  it->second.getDtype());
             }
             return InvalidationRequired::No;
           }

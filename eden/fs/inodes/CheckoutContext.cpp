@@ -127,7 +127,10 @@ ImmediateFuture<vector<CheckoutConflict>> CheckoutContext::flush() {
   return std::move(*conflicts_.wlock());
 }
 
-void CheckoutContext::addConflict(ConflictType type, RelativePathPiece path) {
+void CheckoutContext::addConflict(
+    ConflictType type,
+    RelativePathPiece path,
+    dtype_t dtype) {
   // Errors should be added using addError()
   XCHECK(type != ConflictType::ERROR)
       << "attempted to add error using addConflict(): " << path;
@@ -135,13 +138,15 @@ void CheckoutContext::addConflict(ConflictType type, RelativePathPiece path) {
   CheckoutConflict conflict;
   conflict.path_ref() = std::string{path.value()};
   conflict.type_ref() = type;
+  conflict.dtype_ref() = static_cast<Dtype>(dtype);
   conflicts_.wlock()->push_back(std::move(conflict));
 }
 
 void CheckoutContext::addConflict(
     ConflictType type,
     TreeInode* parent,
-    PathComponentPiece name) {
+    PathComponentPiece name,
+    dtype_t dtype) {
   // During checkout, updated files and directories are first unlinked before
   // being removed and/or replaced in the DirContents of their parent
   // TreeInode. In between these two, calling addConflict would lead to an
@@ -151,13 +156,13 @@ void CheckoutContext::addConflict(
   // files from being renamed or removed.
   auto parentPath = parent->getUnsafePath();
 
-  addConflict(type, parentPath + name);
+  addConflict(type, parentPath + name, dtype);
 }
 
 void CheckoutContext::addConflict(ConflictType type, InodeBase* inode) {
   // See above for why getUnsafePath must be used.
   auto path = inode->getUnsafePath();
-  addConflict(type, path);
+  addConflict(type, path, inode->getType());
 }
 
 void CheckoutContext::addError(

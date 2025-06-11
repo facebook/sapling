@@ -121,9 +121,12 @@ class CheckoutContext {
    */
   ImmediateFuture<std::vector<CheckoutConflict>> flush();
 
-  void addConflict(ConflictType type, RelativePathPiece path);
-  void
-  addConflict(ConflictType type, TreeInode* parent, PathComponentPiece name);
+  void addConflict(ConflictType type, RelativePathPiece path, dtype_t dtype);
+  void addConflict(
+      ConflictType type,
+      TreeInode* parent,
+      PathComponentPiece name,
+      dtype_t dtype);
   void addConflict(ConflictType type, InodeBase* inode);
 
   void addError(
