@@ -62,7 +62,8 @@ pub async fn add_pushrebase_mapping(
         .collect();
 
     let (transaction, _) =
-        InsertMappingEntries::query_with_transaction(transaction, &entries).await?;
+        InsertMappingEntries::maybe_traced_query_with_transaction(transaction, None, &entries)
+            .await?;
 
     Ok(transaction)
 }
