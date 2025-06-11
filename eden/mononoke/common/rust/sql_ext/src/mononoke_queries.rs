@@ -113,7 +113,7 @@ macro_rules! mononoke_queries {
                     $( $lname: & [ $ltype ], )*
                 ) -> Result<(Transaction, Vec<($( $rtype, )*)>)> {
                     let cri = serde_json::to_string(cri)?;
-                    commented_query_with_transaction(transaction, &cri, $( $pname, )* $( $lname, )*).await
+                    commented_query_with_transaction(transaction, cri.as_str(), $( $pname, )* $( $lname, )*).await
                 }
 
                 #[allow(dead_code)]
@@ -149,7 +149,7 @@ macro_rules! mononoke_queries {
                 ) -> Result<Vec<($( $rtype, )*)>> {
                     let cri = serde_json::to_string(cri)?;
                     query_with_retry_no_cache(
-                        || [<$name Impl>]::commented_query(connection, &cri, $( $pname, )* $( $lname, )*),
+                        || [<$name Impl>]::commented_query(connection, cri.as_str(), $( $pname, )* $( $lname, )*),
                     ).await
                 }
 
@@ -210,7 +210,7 @@ macro_rules! mononoke_queries {
                     $( $lname: & [ $ltype ], )*
                 ) -> Result<(Transaction, Vec<($( $rtype, )*)>)> {
                     let cri = serde_json::to_string(cri)?;
-                    commented_query_with_transaction(transaction, &cri, $( $pname, )* $( $lname, )*).await
+                    commented_query_with_transaction(transaction, cri.as_str(), $( $pname, )* $( $lname, )*).await
                 }
 
                 #[allow(dead_code)]
@@ -285,7 +285,7 @@ macro_rules! mononoke_queries {
                         || {
                         let cri = cri.clone();
                         async move {
-                            Ok(CachedQueryResult([<$name Impl>]::commented_query(connection, &cri, $( $pname, )* $( $lname, )*).await?))
+                            Ok(CachedQueryResult([<$name Impl>]::commented_query(connection, cri.as_str(), $( $pname, )* $( $lname, )*).await?))
                         }
         },
                     ).await?.0)
@@ -367,7 +367,7 @@ macro_rules! mononoke_queries {
                     $( $pname: & $ptype ),*
                 ) -> Result<(Transaction, WriteResult)> {
                     let cri = serde_json::to_string(cri)?;
-                    commented_query_with_transaction(transaction, &cri, values $( , $pname )*)
+                    commented_query_with_transaction(transaction, cri.as_str(), values $( , $pname )*)
                         .await
                 }
 
@@ -404,7 +404,7 @@ macro_rules! mononoke_queries {
                 ) -> Result<WriteResult> {
                     let cri = serde_json::to_string(cri)?;
                     query_with_retry_no_cache(
-                        || [<$name Impl>]::commented_query(connection, &cri, values $( , $pname )* ),
+                        || [<$name Impl>]::commented_query(connection, cri.as_str(), values $( , $pname )* ),
                     ).await
                 }
 
@@ -481,7 +481,7 @@ macro_rules! mononoke_queries {
                     $( $lname: & [ $ltype ], )*
                 ) -> Result<(Transaction, WriteResult)> {
                     let cri = serde_json::to_string(cri)?;
-                    commented_query_with_transaction(transaction, &cri $( , $pname )* $( , $lname )*)
+                    commented_query_with_transaction(transaction, cri.as_str() $( , $pname )* $( , $lname )*)
                         .await
                 }
 
@@ -518,7 +518,7 @@ macro_rules! mononoke_queries {
                 ) -> Result<WriteResult> {
                     let cri = serde_json::to_string(cri)?;
                     query_with_retry_no_cache(
-                        || [<$name Impl>]::commented_query(connection, &cri, $( $pname, )* $( $lname, )*),
+                        || [<$name Impl>]::commented_query(connection, cri.as_str(), $( $pname, )* $( $lname, )*),
                     ).await
                 }
 
