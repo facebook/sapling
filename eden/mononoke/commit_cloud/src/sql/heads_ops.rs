@@ -51,8 +51,13 @@ mononoke_queries! {
 #[async_trait]
 impl Get<WorkspaceHead> for SqlCommitCloud {
     async fn get(&self, reponame: String, workspace: String) -> anyhow::Result<Vec<WorkspaceHead>> {
-        let rows =
-            GetHeads::query(&self.connections.read_connection, &reponame, &workspace).await?;
+        let rows = GetHeads::maybe_traced_query(
+            &self.connections.read_connection,
+            None,
+            &reponame,
+            &workspace,
+        )
+        .await?;
         rows.into_iter()
             .map(|(_reponame, commit)| Ok(WorkspaceHead { commit }))
             .collect::<anyhow::Result<Vec<WorkspaceHead>>>()

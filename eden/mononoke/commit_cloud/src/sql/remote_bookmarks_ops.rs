@@ -55,8 +55,9 @@ impl Get<WorkspaceRemoteBookmark> for SqlCommitCloud {
         reponame: String,
         workspace: String,
     ) -> anyhow::Result<Vec<WorkspaceRemoteBookmark>> {
-        let rows = GetRemoteBookmarks::query(
+        let rows = GetRemoteBookmarks::maybe_traced_query(
             &self.connections.read_connection,
+            None,
             &reponame.clone(),
             &workspace,
         )
@@ -74,8 +75,9 @@ impl GetAsMap<RemoteBookmarksMap> for SqlCommitCloud {
         reponame: String,
         workspace: String,
     ) -> anyhow::Result<RemoteBookmarksMap> {
-        let rows = GetRemoteBookmarks::query(
+        let rows = GetRemoteBookmarks::maybe_traced_query(
             &self.connections.read_connection,
+            None,
             &reponame.clone(),
             &workspace,
         )

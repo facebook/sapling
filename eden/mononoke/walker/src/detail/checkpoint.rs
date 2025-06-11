@@ -233,16 +233,18 @@ impl SqlCheckpoints {
     ) -> Result<Option<Checkpoint>, Error> {
         let rows = match version {
             CheckpointsVersion::V1 => {
-                SelectCheckpoint::query(
+                SelectCheckpoint::maybe_traced_query(
                     &self.connections.read_master_connection,
+                    None,
                     &repo_id,
                     &checkpoint_name,
                 )
                 .await?
             }
             CheckpointsVersion::V2 => {
-                SelectCheckpointV2::query(
+                SelectCheckpointV2::maybe_traced_query(
                     &self.connections.read_master_connection,
+                    None,
                     &repo_id,
                     &checkpoint_name,
                 )
@@ -271,8 +273,9 @@ impl SqlCheckpoints {
     ) -> Result<(), Error> {
         match version {
             CheckpointsVersion::V1 => {
-                InsertCheckpoint::query(
+                InsertCheckpoint::maybe_traced_query(
                     &self.connections.write_connection,
+                    None,
                     &[(
                         &repo_id,
                         checkpoint_name,
@@ -287,8 +290,9 @@ impl SqlCheckpoints {
                 .await?
             }
             CheckpointsVersion::V2 => {
-                InsertCheckpointV2::query(
+                InsertCheckpointV2::maybe_traced_query(
                     &self.connections.write_connection,
+                    None,
                     &[(
                         &repo_id,
                         checkpoint_name,
@@ -316,8 +320,9 @@ impl SqlCheckpoints {
     ) -> Result<(), Error> {
         match version {
             CheckpointsVersion::V1 => {
-                UpdateCheckpoint::query(
+                UpdateCheckpoint::maybe_traced_query(
                     &self.connections.write_connection,
+                    None,
                     &repo_id,
                     checkpoint_name,
                     &checkpoint.lower_bound,
@@ -330,8 +335,9 @@ impl SqlCheckpoints {
                 .await?
             }
             CheckpointsVersion::V2 => {
-                UpdateCheckpointV2::query(
+                UpdateCheckpointV2::maybe_traced_query(
                     &self.connections.write_connection,
+                    None,
                     &repo_id,
                     checkpoint_name,
                     &checkpoint.lower_bound,
@@ -357,8 +363,9 @@ impl SqlCheckpoints {
     ) -> Result<(), Error> {
         match version {
             CheckpointsVersion::V1 => {
-                FinishCheckpoint::query(
+                FinishCheckpoint::maybe_traced_query(
                     &self.connections.write_connection,
+                    None,
                     &repo_id,
                     checkpoint_name,
                     &checkpoint.lower_bound,
@@ -370,8 +377,9 @@ impl SqlCheckpoints {
                 .await?
             }
             CheckpointsVersion::V2 => {
-                FinishCheckpointV2::query(
+                FinishCheckpointV2::maybe_traced_query(
                     &self.connections.write_connection,
+                    None,
                     &repo_id,
                     checkpoint_name,
                     &checkpoint.lower_bound,

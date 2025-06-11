@@ -92,11 +92,13 @@ impl GitRefContentMapping for SqlGitRefContentMapping {
     }
 
     async fn get_all_entries(&self) -> Result<Vec<GitRefContentMappingEntry>> {
-        let results = SelectAllMappings::query(&self.connections.read_connection, &self.repo_id)
-            .await
-            .with_context(|| {
-                format!("Failure in fetching all entries for repo {}", self.repo_id)
-            })?;
+        let results = SelectAllMappings::maybe_traced_query(
+            &self.connections.read_connection,
+            None,
+            &self.repo_id,
+        )
+        .await
+        .with_context(|| format!("Failure in fetching all entries for repo {}", self.repo_id))?;
 
         let values = results
             .into_iter()
@@ -111,8 +113,9 @@ impl GitRefContentMapping for SqlGitRefContentMapping {
         &self,
         ref_name: String,
     ) -> Result<Option<GitRefContentMappingEntry>> {
-        let results = SelectMappingByRefName::query(
+        let results = SelectMappingByRefName::maybe_traced_query(
             &self.connections.read_connection,
+            None,
             &self.repo_id,
             &ref_name,
         )
@@ -151,8 +154,9 @@ impl GitRefContentMapping for SqlGitRefContentMapping {
                 )
             })
             .collect();
-        AddOrUpdateGitRefContentMapping::query(
+        AddOrUpdateGitRefContentMapping::maybe_traced_query(
             &self.connections.write_connection,
+            None,
             converted_entries.as_slice(),
         )
         .await
@@ -166,8 +170,9 @@ impl GitRefContentMapping for SqlGitRefContentMapping {
     }
 
     async fn delete_mappings_by_name(&self, ref_names: Vec<String>) -> Result<()> {
-        DeleteGitRefContentMappingsByName::query(
+        DeleteGitRefContentMappingsByName::maybe_traced_query(
             &self.connections.write_connection,
+            None,
             &self.repo_id,
             ref_names.as_slice(),
         )

@@ -110,8 +110,9 @@ impl GenericGet<WorkspaceHistory> for SqlCommitCloud {
     ) -> anyhow::Result<Vec<Self::GetOutput>> {
         match args {
             GetType::GetHistoryVersionTimestamp => {
-                let rows = GetHistoryVersionTimestamp::query(
+                let rows = GetHistoryVersionTimestamp::maybe_traced_query(
                     &self.connections.read_connection,
+                    None,
                     &reponame,
                     &workspace,
                 )
@@ -127,8 +128,9 @@ impl GenericGet<WorkspaceHistory> for SqlCommitCloud {
                     .collect::<anyhow::Result<Vec<GetOutput>>>();
             }
             GetType::GetHistoryDate { timestamp, limit } => {
-                let rows = GetHistoryDate::query(
+                let rows = GetHistoryDate::maybe_traced_query(
                     &self.connections.read_connection,
+                    None,
                     &reponame,
                     &workspace,
                     &timestamp.timestamp_seconds(),
@@ -155,8 +157,9 @@ impl GenericGet<WorkspaceHistory> for SqlCommitCloud {
                     .collect::<anyhow::Result<Vec<GetOutput>>>();
             }
             GetType::GetHistoryVersion { version } => {
-                let rows = GetHistoryVersion::query(
+                let rows = GetHistoryVersion::maybe_traced_query(
                     &self.connections.read_connection,
+                    None,
                     &reponame,
                     &workspace,
                     &version,

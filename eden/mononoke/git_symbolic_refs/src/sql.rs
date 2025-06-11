@@ -107,15 +107,19 @@ impl GitSymbolicRefs for SqlGitSymbolicRefs {
     /// Fetch the symbolic ref entry corresponding to the symref name in the
     /// given repo, if one exists
     async fn get_ref_by_symref(&self, symref: String) -> Result<Option<GitSymbolicRefsEntry>> {
-        let results =
-            SelectRefBySymref::query(&self.connections.read_connection, &self.repo_id, &symref)
-                .await
-                .with_context(|| {
-                    format!(
-                        "Failure in fetching ref for symref {} in repo {}",
-                        symref, self.repo_id
-                    )
-                })?;
+        let results = SelectRefBySymref::maybe_traced_query(
+            &self.connections.read_connection,
+            None,
+            &self.repo_id,
+            &symref,
+        )
+        .await
+        .with_context(|| {
+            format!(
+                "Failure in fetching ref for symref {} in repo {}",
+                symref, self.repo_id
+            )
+        })?;
         // This should not happen but since this is new code, extra checks dont hurt.
         if results.len() > 1 {
             anyhow::bail!(
@@ -139,8 +143,9 @@ impl GitSymbolicRefs for SqlGitSymbolicRefs {
         ref_name: String,
         ref_type: RefType,
     ) -> Result<Option<Vec<String>>> {
-        let results = SelectSymrefsByRef::query(
+        let results = SelectSymrefsByRef::maybe_traced_query(
             &self.connections.read_connection,
+            None,
             &self.repo_id,
             &ref_name,
             &ref_type.to_string(),
@@ -182,21 +187,26 @@ impl GitSymbolicRefs for SqlGitSymbolicRefs {
                 (repo_id, symref_name, ref_name, ref_type)
             })
             .collect();
-        AddOrUpdateGitSymbolicRefs::query(&self.connections.write_connection, entries.as_slice())
-            .await
-            .with_context(|| {
-                format!(
-                    "Failed to add mappings in repo {} for entries {:?}",
-                    self.repo_id, entries,
-                )
-            })?;
+        AddOrUpdateGitSymbolicRefs::maybe_traced_query(
+            &self.connections.write_connection,
+            None,
+            entries.as_slice(),
+        )
+        .await
+        .with_context(|| {
+            format!(
+                "Failed to add mappings in repo {} for entries {:?}",
+                self.repo_id, entries,
+            )
+        })?;
         Ok(())
     }
 
     /// Delete the entry corresponding to the given symref if its exists
     async fn delete_symrefs(&self, symref: Vec<String>) -> Result<()> {
-        DeleteGitSymbolicRefs::query(
+        DeleteGitSymbolicRefs::maybe_traced_query(
             &self.connections.write_connection,
+            None,
             &self.repo_id,
             symref.as_slice(),
         )
@@ -212,15 +222,18 @@ impl GitSymbolicRefs for SqlGitSymbolicRefs {
 
     /// List all symrefs for a given repo
     async fn list_all_symrefs(&self) -> Result<Vec<GitSymbolicRefsEntry>> {
-        let results =
-            SelectAllGitSymbolicRefs::query(&self.connections.read_connection, &self.repo_id)
-                .await
-                .with_context(|| {
-                    format!(
-                        "Failure in fetching git symbolic refs in repo {}",
-                        self.repo_id
-                    )
-                })?;
+        let results = SelectAllGitSymbolicRefs::maybe_traced_query(
+            &self.connections.read_connection,
+            None,
+            &self.repo_id,
+        )
+        .await
+        .with_context(|| {
+            format!(
+                "Failure in fetching git symbolic refs in repo {}",
+                self.repo_id
+            )
+        })?;
         results
             .into_iter()
             .map(|(symref_name, ref_name, ref_type)| {

@@ -96,11 +96,13 @@ impl RepoMetadataCheckpoint for SqlRepoMetadataCheckpoint {
 
     /// Fetch all the metadata info entries for the given repo
     async fn get_all_entries(&self) -> Result<Vec<RepoMetadataCheckpointEntry>> {
-        let results = SelectAllEntries::query(&self.connections.read_connection, &self.repo_id)
-            .await
-            .with_context(|| {
-                format!("Failure in fetching all entries for repo {}", self.repo_id)
-            })?;
+        let results = SelectAllEntries::maybe_traced_query(
+            &self.connections.read_connection,
+            None,
+            &self.repo_id,
+        )
+        .await
+        .with_context(|| format!("Failure in fetching all entries for repo {}", self.repo_id))?;
 
         let values = results
             .into_iter()
@@ -121,8 +123,9 @@ impl RepoMetadataCheckpoint for SqlRepoMetadataCheckpoint {
         &self,
         bookmark_name: String,
     ) -> Result<Option<RepoMetadataCheckpointEntry>> {
-        let results = SelectEntryByBookmark::query(
+        let results = SelectEntryByBookmark::maybe_traced_query(
             &self.connections.read_connection,
+            None,
             &self.repo_id,
             &bookmark_name,
         )
@@ -165,8 +168,9 @@ impl RepoMetadataCheckpoint for SqlRepoMetadataCheckpoint {
                 )
             })
             .collect();
-        AddOrUpdateRepoMetadataCheckpoint::query(
+        AddOrUpdateRepoMetadataCheckpoint::maybe_traced_query(
             &self.connections.write_connection,
+            None,
             converted_entries.as_slice(),
         )
         .await

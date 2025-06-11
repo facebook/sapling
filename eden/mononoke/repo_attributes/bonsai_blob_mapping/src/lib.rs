@@ -105,8 +105,9 @@ impl SqlBonsaiBlobMapping {
     ) -> Result<Vec<(ChangesetId, String)>> {
         let mut res = vec![];
         for shard_id in 0..self.shard_count {
-            let rows = GetBlobKeysForChangesets::query(
+            let rows = GetBlobKeysForChangesets::maybe_traced_query(
                 &self.read_connections[shard_id],
+                None,
                 &repo_id,
                 &cs_ids[..],
             )
@@ -129,8 +130,9 @@ impl SqlBonsaiBlobMapping {
             .collect::<Vec<_>>();
         Ok(stream::iter(shard_to_blobs)
             .map(|(shard_id, blob_keys)| async move {
-                GetChangesetsForBlobKeys::query(
+                GetChangesetsForBlobKeys::maybe_traced_query(
                     &self.read_connections[shard_id],
+                    None,
                     &repo_id,
                     &blob_keys[..],
                 )
@@ -164,8 +166,9 @@ impl SqlBonsaiBlobMapping {
                     // This pattern is used to convert a ref to tuple into a tuple of refs.
                     #[allow(clippy::map_identity)]
                     let chunk: Vec<_> = chunk.iter().map(|(a, b, c)| (a, b, c)).collect();
-                    let result = InsertBlobKeysForChangesets::query(
+                    let result = InsertBlobKeysForChangesets::maybe_traced_query(
                         &self.write_connections[shard_id],
+                        None,
                         &chunk[..],
                     )
                     .await?;

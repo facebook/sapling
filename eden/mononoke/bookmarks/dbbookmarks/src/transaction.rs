@@ -812,6 +812,6 @@ pub(crate) async fn insert_bookmarks(
         .into_iter()
         .map(|(r, b, c, k)| (r, &none, b.name(), b.category(), c, k))
         .collect::<Vec<_>>();
-    InsertBookmarks::query(conn, rows.as_slice()).await?;
+    InsertBookmarks::maybe_traced_query(conn, None, rows.as_slice()).await?;
     Ok(())
 }

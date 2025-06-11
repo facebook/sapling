@@ -56,8 +56,9 @@ impl Get<WorkspaceLocalBookmark> for SqlCommitCloud {
         reponame: String,
         workspace: String,
     ) -> anyhow::Result<Vec<WorkspaceLocalBookmark>> {
-        let rows = GetLocalBookmarks::query(
+        let rows = GetLocalBookmarks::maybe_traced_query(
             &self.connections.read_connection,
+            None,
             &reponame.clone(),
             &workspace,
         )
@@ -75,9 +76,13 @@ impl GetAsMap<LocalBookmarksMap> for SqlCommitCloud {
         reponame: String,
         workspace: String,
     ) -> anyhow::Result<LocalBookmarksMap> {
-        let rows =
-            GetLocalBookmarks::query(&self.connections.read_connection, &reponame, &workspace)
-                .await?;
+        let rows = GetLocalBookmarks::maybe_traced_query(
+            &self.connections.read_connection,
+            None,
+            &reponame,
+            &workspace,
+        )
+        .await?;
         let mut map = LocalBookmarksMap::new();
         for (name, node) in rows {
             let hgid = node.into();

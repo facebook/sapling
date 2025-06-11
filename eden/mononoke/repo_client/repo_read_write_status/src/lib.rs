@@ -104,7 +104,7 @@ impl SqlRepoReadWriteStatus {
         &self,
         hgsql_name: &HgsqlName,
     ) -> Result<Option<(HgMononokeReadWrite, Option<String>)>, Error> {
-        GetReadWriteStatus::query(&self.read_connection, hgsql_name.as_ref())
+        GetReadWriteStatus::maybe_traced_query(&self.read_connection, None, hgsql_name.as_ref())
             .await
             .map(|rows| rows.into_iter().next())
     }
@@ -115,8 +115,9 @@ impl SqlRepoReadWriteStatus {
         state: &HgMononokeReadWrite,
         reason: &String,
     ) -> Result<bool, Error> {
-        SetReadWriteStatus::query(
+        SetReadWriteStatus::maybe_traced_query(
             &self.write_connection,
+            None,
             &[(hgsql_name.as_ref(), state, reason)],
         )
         .await
@@ -258,12 +259,13 @@ mod test {
             ReadOnly(DEFAULT_MSG.to_string())
         );
 
-        InsertState::query(
+        InsertState::maybe_traced_query(
             &fetcher
                 .sql_repo_read_write_status
                 .clone()
                 .unwrap()
                 .write_connection,
+            None,
             &[("repo", &HgMononokeReadWrite::MononokeWrite)],
         )
         .await
@@ -271,12 +273,13 @@ mod test {
 
         assert_eq!(fetcher.readonly().await.unwrap(), ReadWrite);
 
-        InsertState::query(
+        InsertState::maybe_traced_query(
             &fetcher
                 .sql_repo_read_write_status
                 .clone()
                 .unwrap()
                 .write_connection,
+            None,
             &[("repo", &HgMononokeReadWrite::HgWrite)],
         )
         .await
@@ -297,12 +300,13 @@ mod test {
             HgsqlName("repo".to_string()),
         );
 
-        InsertStateWithReason::query(
+        InsertStateWithReason::maybe_traced_query(
             &fetcher
                 .sql_repo_read_write_status
                 .clone()
                 .unwrap()
                 .write_connection,
+            None,
             &[("repo", &HgMononokeReadWrite::HgWrite, "reason123")],
         )
         .await
@@ -328,12 +332,13 @@ mod test {
             ReadOnly(DEFAULT_MSG.to_string())
         );
 
-        InsertState::query(
+        InsertState::maybe_traced_query(
             &fetcher
                 .sql_repo_read_write_status
                 .clone()
                 .unwrap()
                 .write_connection,
+            None,
             &[("other_repo", &HgMononokeReadWrite::MononokeWrite)],
         )
         .await
@@ -344,12 +349,13 @@ mod test {
             ReadOnly(DEFAULT_MSG.to_string())
         );
 
-        InsertState::query(
+        InsertState::maybe_traced_query(
             &fetcher
                 .sql_repo_read_write_status
                 .clone()
                 .unwrap()
                 .write_connection,
+            None,
             &[("repo", &HgMononokeReadWrite::MononokeWrite)],
         )
         .await

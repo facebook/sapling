@@ -120,7 +120,9 @@ impl MegarepoSyncConfig for SqlMegarepoSyncConfig {
         _ctx: &CoreContext,
         id: &RowId,
     ) -> Result<Option<MegarepoSyncConfigEntry>> {
-        let rows = TestGetRepoConfigById::query(&self.connections.read_connection, id).await?;
+        let rows =
+            TestGetRepoConfigById::maybe_traced_query(&self.connections.read_connection, None, id)
+                .await?;
         match rows.into_iter().next() {
             None => Ok(None),
             Some(row) => Ok(Some(row_to_entry(row)?)),
