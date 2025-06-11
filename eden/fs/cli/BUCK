@@ -65,7 +65,7 @@ python_binary(
 python_binary(
     name = "edenfsctl",
     enable_lazy_imports = True,
-    imports_monitor = "log:0.0005%",
+    imports_monitor = "log_time:0.0005%",
     lazy_imports_strategy = "edenfsctl_strategy+full.marshal",
     main_function = "eden.fs.cli.main.zipapp_main",
     deps = [
