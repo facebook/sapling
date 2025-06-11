@@ -433,6 +433,7 @@ class state_update:
             return True
         except Exception as ex:
             # Swallow any errors; fire and forget
+            self.repo.ui.debug(f"error sending watchman {cmd} for {self.name}: {ex}\n")
             self.repo.ui.log(
                 "hgerrors",
                 "watchman '%s' event has failed: %s",

@@ -1047,7 +1047,20 @@ class client:
         exitcode = p.poll()
 
         if exitcode:
-            raise WatchmanError("watchman exited with code %d" % exitcode)
+
+            def maybe_truncate(s, max_len):
+                if len(s) > max_len:
+                    s = s[:256] + " (truncated)"
+                return s
+
+            raise WatchmanError(
+                "watchman exited with code %d (stdout=%s stderr=%s)"
+                % (
+                    exitcode,
+                    maybe_truncate(stdout.decode(errors="replace"), 256),
+                    maybe_truncate(stderr.decode(errors="replace"), 256),
+                )
+            )
 
         result = bser.loads(stdout)
         if "error" in result:
