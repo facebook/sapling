@@ -7,7 +7,7 @@
 
 import type {Platform} from 'isl/src/platform';
 import type {ThemeColor} from 'isl/src/theme';
-import type {MessageBusStatus, RepoRelativePath} from 'isl/src/types';
+import type {AbsolutePath, MessageBusStatus, RepoRelativePath} from 'isl/src/types';
 import type {Comparison} from 'shared/Comparison';
 import type {Json} from 'shared/typeUtils';
 import type {VSCodeAPI} from './vscodeApi';
@@ -136,6 +136,26 @@ const vscodeWebviewPlatform: Platform = {
       });
       observer.observe(document.body, {attributes: true, childList: false, subtree: false});
       return {dispose: () => observer.disconnect()};
+    },
+  },
+
+  suggestedEdits: {
+    onDidChangeSuggestedEdits(callback) {
+      window.clientToServerAPI?.postMessage({
+        type: 'platform/subscribeToSuggestedEdits',
+      });
+      return (
+        window.clientToServerAPI?.onMessageOfType('platform/onDidChangeSuggestedEdits', event => {
+          callback(event.files);
+        }) ?? {dispose: () => {}}
+      );
+    },
+    resolveSuggestedEdits: (action: 'accept' | 'reject', files: Array<AbsolutePath>) => {
+      window.clientToServerAPI?.postMessage({
+        type: 'platform/resolveSuggestedEdits',
+        action,
+        files,
+      });
     },
   },
 

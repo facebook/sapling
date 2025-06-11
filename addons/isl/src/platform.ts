@@ -11,6 +11,7 @@ import type {Json} from 'shared/typeUtils';
 import type {MessageBus} from './MessageBus';
 import type {ThemeColor} from './theme';
 import type {
+  AbsolutePath,
   Disposable,
   OneIndexedLineNumber,
   PlatformName,
@@ -78,6 +79,14 @@ export interface Platform {
     getThemeName?(): string | undefined;
     onDidChangeTheme(callback: (theme: ThemeColor) => unknown): Disposable;
     resetCSS?: string;
+  };
+
+  /** If the platform has a notion of pending edits (typically from an AI), methods for listening and resolving them. */
+  suggestedEdits?: {
+    /** listen for changes to edits so ISL can confirm edits before taking actions. */
+    onDidChangeSuggestedEdits(callback: (suggestedEdits: Array<AbsolutePath>) => void): Disposable;
+    /** Accepts/Rejects edits */
+    resolveSuggestedEdits(action: 'accept' | 'reject', files?: Array<AbsolutePath>): void;
   };
 
   messageBus: MessageBus;

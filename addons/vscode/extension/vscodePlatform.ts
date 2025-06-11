@@ -24,6 +24,7 @@ import * as vscode from 'vscode';
 import {executeVSCodeCommand} from './commands';
 import {PERSISTED_STORAGE_KEY_PREFIX} from './config';
 import {t} from './i18n';
+import {Internal} from './Internal';
 import openFile from './openFile';
 
 export type VSCodeServerPlatform = ServerPlatform & {
@@ -160,6 +161,22 @@ export const getVSCodePlatform = (context: vscode.ExtensionContext): VSCodeServe
           ];
           postUnsavedFiles();
           onDispose(() => disposables.forEach(d => d.dispose()));
+          break;
+        }
+        case 'platform/subscribeToSuggestedEdits': {
+          const dispose = Internal.suggestedEdits?.onDidChangeSuggestedEdits(
+            (files: Array<AbsolutePath>) => {
+              postMessage({
+                type: 'platform/onDidChangeSuggestedEdits',
+                files,
+              });
+            },
+          );
+          onDispose(() => dispose?.dispose());
+          break;
+        }
+        case 'platform/resolveSuggestedEdits': {
+          Internal.suggestedEdits?.resolveSuggestedEdits(message.action, message.files);
           break;
         }
         case 'platform/saveAllUnsavedFiles': {

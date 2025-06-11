@@ -664,6 +664,12 @@ export type PlatformSpecificClientToServerMessages =
   | {type: 'platform/subscribeToUnsavedFiles'}
   | {type: 'platform/saveAllUnsavedFiles'}
   | {type: 'platform/setPersistedState'; key: string; data?: string}
+  | {type: 'platform/subscribeToSuggestedEdits'}
+  | {
+      type: 'platform/resolveSuggestedEdits';
+      action: 'accept' | 'reject';
+      files: Array<AbsolutePath>;
+    }
   | {
       type: 'platform/setVSCodeConfig';
       config: string;
@@ -693,6 +699,7 @@ export type PlatformSpecificServerToClientMessages =
       type: 'platform/gotDiagnostics';
       diagnostics: Map<RepoRelativePath, Array<Diagnostic>>;
     }
+  | {type: 'platform/onDidChangeSuggestedEdits'; files: Array<AbsolutePath>}
   | {
       type: 'platform/vscodeConfigChanged';
       config: string;
