@@ -40,10 +40,10 @@ fn print_sizes(sizes: &HashMap<Option<u64>, u64>) {
             None => "NULL".to_string(),
             Some(g) => g.to_string(),
         };
-        println!("{:>10} | {}", generation, size.to_string_as(true));
+        println!("{:>10} | {}", generation, size.display().iec());
         total_size += size;
     }
-    println!("Total size: {}", total_size.to_string_as(true));
+    println!("Total size: {}", total_size.display().iec());
 }
 
 pub async fn run(app: MononokeApp, _args: CommandArgs) -> Result<()> {

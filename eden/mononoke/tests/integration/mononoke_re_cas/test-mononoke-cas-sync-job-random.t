@@ -51,7 +51,7 @@ Sync all bookmarks moves and test the "stats" output. This should be stable due 
   syncing log entries [1, 2, 3, 4, 5] ..., repo: repo
   log entry BookmarkUpdateLogEntry * is a creation of bookmark, repo: repo (glob)
   log entry BookmarkUpdateLogEntry * is a creation of bookmark, repo: repo (glob)
-  log entries [1, 2, 3, 4, 5] synced (5 commits uploaded, upload stats: uploaded digests: 10, already present digests: 0, uploaded bytes: 2.8 kiB, the largest uploaded blob: 875 B), took overall * sec, repo: repo (glob)
+  log entries [1, 2, 3, 4, 5] synced (5 commits uploaded, upload stats: uploaded digests: 10, already present digests: 0, uploaded bytes: 2.8 KiB, the largest uploaded blob: 875 B), took overall * sec, repo: repo (glob)
   queue size after processing: 0, repo: repo
   successful sync of entries [1, 2, 3, 4, 5], repo: repo
   Finished mononoke RE CAS sync command execution for repo repo, repo: repo

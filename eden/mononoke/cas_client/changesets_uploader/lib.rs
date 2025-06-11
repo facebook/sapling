@@ -94,8 +94,12 @@ impl Display for UploadCounters {
             "uploaded digests: {}, already present digests: {}, uploaded bytes: {}, the largest uploaded blob: {}",
             self.uploaded.get(),
             self.already_present.get(),
-            ByteSize::b(self.uploaded_bytes.get() as u64).to_string_as(true),
-            ByteSize::b(self.largest_uploaded_blob_bytes.get() as u64).to_string_as(true)
+            ByteSize::b(self.uploaded_bytes.get() as u64)
+                .display()
+                .iec(),
+            ByteSize::b(self.largest_uploaded_blob_bytes.get() as u64)
+                .display()
+                .iec(),
         )
     }
 }

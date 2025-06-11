@@ -945,8 +945,8 @@ pub(super) async fn run(app: ScscApp, args: CommandArgs) -> Result<()> {
             "Exported {:>5}/{:>5} files, {:>8}/{:>8}",
             files_written,
             file_count,
-            ByteSize::b(bytes_written).to_string_as(true),
-            ByteSize::b(total_size).to_string_as(true),
+            ByteSize::b(bytes_written).display().iec().to_string(),
+            ByteSize::b(total_size).display().iec().to_string(),
         );
         ProgressOutput::new(message, bytes_written, total_size)
     });
