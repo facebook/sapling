@@ -749,6 +749,10 @@ fn get_config_dir(info: Option<&RepoMinimalInfo>) -> Result<PathBuf, Error> {
 }
 
 #[cfg(feature = "fb")]
+/// Calculate internal-only config.
+/// Might download the remote script (hgrc.remote_cache).
+/// Does not write the config file (hgrc.dynamic).
+/// Used by the debugdumpinternalconfig command.
 pub fn calculate_internalconfig(
     mode: FbConfigMode,
     config_dir: PathBuf,
@@ -778,7 +782,10 @@ pub fn calculate_internalconfig(
 }
 
 #[cfg(feature = "fb")]
-pub fn generate_internalconfig(
+/// If the on-disk internal-only config (hgrc.dynamic) is outdated, update it.
+/// Might download the remote script (hgrc.remote_cache).
+/// Used by the debugrefreshconfig command.
+pub fn maybe_refresh_internalconfig_on_disk(
     mode: FbConfigMode,
     info: Option<&RepoMinimalInfo>,
     repo_name: Option<impl AsRef<str>>,
@@ -799,7 +806,7 @@ pub fn generate_internalconfig(
         repo_path = ?info.map(|i| &i.path),
         canary = ?canary,
         has_info = info.is_some(),
-        "generate_internalconfig",
+        "maybe_refresh_internalconfig_on_disk",
     );
 
     // Resolve sharedpath
@@ -980,7 +987,7 @@ fn load_dynamic(
         };
 
         // Regen inline
-        let res = generate_internalconfig(
+        let res = maybe_refresh_internalconfig_on_disk(
             mode,
             info.as_disk(),
             repo_name,

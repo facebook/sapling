@@ -16,8 +16,6 @@ use cmdutil::ConfigExt;
 use cmdutil::Repo;
 use cmdutil::Result;
 use cmdutil::define_flags;
-#[cfg(feature = "fb")]
-use configloader::hg::generate_internalconfig;
 
 define_flags! {
     pub struct DebugDynamicConfigOpts {
@@ -48,7 +46,7 @@ pub fn run(ctx: ReqCtx<DebugDynamicConfigOpts>, repo: Option<&Repo>) -> Result<u
 
         let mode = FbConfigMode::default();
 
-        generate_internalconfig(
+        configloader::hg::maybe_refresh_internalconfig_on_disk(
             mode,
             info.as_ref(),
             repo_name,
