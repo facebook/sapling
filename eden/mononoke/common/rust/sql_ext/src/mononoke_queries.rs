@@ -121,11 +121,8 @@ macro_rules! mononoke_queries {
                 ) -> Result<(Transaction, Vec<($( $rtype, )*)>)>
                 where
                     C: Into<Option<&'a ClientRequestInfo>> {
-                    match cri.into() {
-                        Some(cri) => traced_query_with_transaction(transaction, &cri, $( $pname, )* $( $lname, )*).await,
-                        // Not possible to retry query with transaction
-                        None => [<$name Impl>]::commented_query_with_transaction(transaction, None, $( $pname, )* $( $lname, )*).await
-                    }
+                    let cri_str = cri.into().map(|cri| serde_json::to_string(cri)).transpose()?;
+                    [<$name Impl>]::commented_query_with_transaction(transaction, cri_str.as_deref(), $( $pname, )* $( $lname, )*).await
                 }
 
 
@@ -151,17 +148,6 @@ macro_rules! mononoke_queries {
                     query_with_retry_no_cache(
                         || [<$name Impl>]::commented_query(connection, cri.as_str(), $( $pname, )* $( $lname, )*),
                     ).await
-                }
-
-                #[allow(dead_code)]
-                async fn traced_query_with_transaction(
-                    transaction: Transaction,
-                    cri: &ClientRequestInfo,
-                    $( $pname: & $ptype, )*
-                    $( $lname: & [ $ltype ], )*
-                ) -> Result<(Transaction, Vec<($( $rtype, )*)>)> {
-                    let cri = serde_json::to_string(cri)?;
-                    [<$name Impl>]::commented_query_with_transaction(transaction, cri.as_str(), $( $pname, )* $( $lname, )*).await
                 }
 
             }
@@ -210,16 +196,17 @@ macro_rules! mononoke_queries {
                 }
 
                 #[allow(dead_code)]
-                pub async fn query_with_transaction(
+                pub async fn query_with_transaction<'a, C>(
                     transaction: Transaction,
-                    cri: Option<&ClientRequestInfo>,
-                    $( $pname: & $ptype, )*
-                    $( $lname: & [ $ltype ], )*
-                ) -> Result<(Transaction, Vec<($( $rtype, )*)>)> {
-                    match cri {
-                        Some(cri) => traced_query_with_transaction(transaction, &cri, $( $pname, )* $( $lname, )*).await,
-                        None => [<$name Impl>]::commented_query_with_transaction(transaction, None, $( $pname, )* $( $lname, )*).await
-                    }
+                    cri: C,
+                    $( $pname: &'a $ptype, )*
+                    $( $lname: &'a [ $ltype ], )*
+                ) -> Result<(Transaction, Vec<($( $rtype, )*)>)>
+                where
+                    C: Into<Option<&'a ClientRequestInfo>>
+                {
+                    let cri_str = cri.into().map(|cri| serde_json::to_string(cri)).transpose()?;
+                    [<$name Impl>]::commented_query_with_transaction(transaction, cri_str.as_deref(), $( $pname, )* $( $lname, )*).await
                 }
 
                 #[allow(dead_code)]
@@ -286,19 +273,6 @@ macro_rules! mononoke_queries {
         },
                     ).await?.0)
                 }
-
-
-                #[allow(dead_code)]
-                async fn traced_query_with_transaction(
-                    transaction: Transaction,
-                    cri: &ClientRequestInfo,
-                    $( $pname: & $ptype, )*
-                    $( $lname: & [ $ltype ], )*
-                ) -> Result<(Transaction, Vec<($( $rtype, )*)>)> {
-                    let cri = serde_json::to_string(cri)?;
-                    [<$name Impl>]::commented_query_with_transaction(transaction, cri.as_str(), $( $pname, )* $( $lname, )*).await
-                }
-
 
             }
 
@@ -369,12 +343,10 @@ macro_rules! mononoke_queries {
                     $( $pname: &'a $ptype ),*
                 ) -> Result<(Transaction, WriteResult)>
                 where
-                    C: Into<Option<&'a ClientRequestInfo>> {
-                    match cri.into() {
-                        Some(cri) => traced_query_with_transaction(transaction, &cri, values $( , $pname )*).await,
-                        // Not possible to retry query with transaction
-                        None => [<$name Impl>]::commented_query_with_transaction(transaction, None, values $( , $pname )*).await
-                    }
+                    C: Into<Option<&'a ClientRequestInfo>>
+                {
+                    let cri_str = cri.into().map(|cri| serde_json::to_string(cri)).transpose()?;
+                    [<$name Impl>]::commented_query_with_transaction(transaction, cri_str.as_deref(), values $( , $pname )*).await
                 }
 
                 #[allow(dead_code)]
@@ -399,18 +371,6 @@ macro_rules! mononoke_queries {
                     query_with_retry_no_cache(
                         || [<$name Impl>]::commented_query(connection, cri.as_str(), values $( , $pname )* ),
                     ).await
-                }
-
-                #[allow(dead_code)]
-                async fn traced_query_with_transaction(
-                    transaction: Transaction,
-                    cri: &ClientRequestInfo,
-                    values: &[($( & $vtype, )*)],
-                    $( $pname: & $ptype ),*
-                ) -> Result<(Transaction, WriteResult)> {
-                    let cri = serde_json::to_string(cri)?;
-                    [<$name Impl>]::commented_query_with_transaction(transaction, cri.as_str(), values $( , $pname )*)
-                        .await
                 }
             }
 
@@ -473,16 +433,17 @@ macro_rules! mononoke_queries {
                 }
 
                 #[allow(dead_code)]
-                pub async fn query_with_transaction(
+                pub async fn query_with_transaction<'a, C>(
                     transaction: Transaction,
-                    cri: Option<&ClientRequestInfo>,
-                    $( $pname: & $ptype, )*
-                    $( $lname: & [ $ltype ], )*
-                ) -> Result<(Transaction, WriteResult)> {
-                    match cri {
-                        Some(cri) => traced_query_with_transaction(transaction, &cri $( , $pname )* $( , $lname )*).await,
-                        None => [<$name Impl>]::commented_query_with_transaction(transaction, None $( , $pname )* $( , $lname )*).await
-                    }
+                    cri: C,
+                    $( $pname: &'a $ptype, )*
+                    $( $lname: &'a [ $ltype ], )*
+                ) -> Result<(Transaction, WriteResult)>
+                where
+                    C: Into<Option<&'a ClientRequestInfo>>
+                {
+                    let cri_str = cri.into().map(|cri| serde_json::to_string(cri)).transpose()?;
+                    [<$name Impl>]::commented_query_with_transaction(transaction, cri_str.as_deref() $( , $pname )* $( , $lname )*).await
                 }
 
                 #[allow(dead_code)]
@@ -507,18 +468,6 @@ macro_rules! mononoke_queries {
                     query_with_retry_no_cache(
                         || [<$name Impl>]::commented_query(connection, cri.as_str(), $( $pname, )* $( $lname, )*),
                     ).await
-                }
-
-                #[allow(dead_code)]
-                async fn traced_query_with_transaction(
-                    transaction: Transaction,
-                    cri: &ClientRequestInfo,
-                    $( $pname: & $ptype, )*
-                    $( $lname: & [ $ltype ], )*
-                ) -> Result<(Transaction, WriteResult)> {
-                    let cri = serde_json::to_string(cri)?;
-                    [<$name Impl>]::commented_query_with_transaction(transaction, cri.as_str() $( , $pname )* $( , $lname )*)
-                        .await
                 }
             }
 
