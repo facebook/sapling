@@ -81,6 +81,8 @@ rust_library(
             [
                 "fbsource//third-party/rust:sys-info",
                 "//common/rust/configerator:configerator_client",
+                "//manifold/clients/rust:manifold_client",
+                "//thrift/lib/rust:fbthrift",
             ],
         ),
     ],
@@ -95,6 +97,7 @@ rust_library(
         "fbsource//third-party/rust:serde_json",
         "fbsource//third-party/rust:tempfile",
         "fbsource//third-party/rust:toml",
+        "fbsource//third-party/rust:tracing",
         "//common/rust/shed/fbinit:fbinit",
         "//common/rust/shed/hostcaps:hostcaps",
         "//common/rust/shed/hostname:hostname",
