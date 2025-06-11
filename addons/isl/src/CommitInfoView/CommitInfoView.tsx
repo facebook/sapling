@@ -107,6 +107,7 @@ import {CommitTitleByline, getFieldToAutofocus, Section, SmallCapsTitle} from '.
 
 import {useFeatureFlagSync} from '../featureFlags';
 import {Internal} from '../Internal';
+import {confirmSuggestedEditsForFiles} from '../SuggestedEdits';
 import './CommitInfoView.css';
 
 export function CommitInfoSidebar() {
@@ -781,6 +782,17 @@ function ActionsBar({
 
                 {
                   const shouldContinue = await confirmUnsavedFiles();
+                  if (!shouldContinue) {
+                    return;
+                  }
+                }
+
+                {
+                  const shouldContinue = await confirmSuggestedEditsForFiles(
+                    isCommitMode ? 'commit' : 'amend',
+                    'accept',
+                    selection.selection,
+                  );
                   if (!shouldContinue) {
                     return;
                   }
