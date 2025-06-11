@@ -762,7 +762,7 @@ pub fn calculate_internalconfig(
     proxy_sock_path: Option<String>,
     allow_remote_snapshot: bool,
     domain_override: Option<crate::fb::internalconfig::Domain>,
-    is_git: bool,
+    info: Option<&RepoMinimalInfo>,
 ) -> Result<ConfigSet> {
     use crate::fb::internalconfig::Generator;
 
@@ -773,7 +773,7 @@ pub fn calculate_internalconfig(
         user_name,
         proxy_sock_path,
         allow_remote_snapshot,
-        is_git,
+        info,
     )?;
     if let Some(domain) = domain_override {
         g.domain = domain;
@@ -875,7 +875,7 @@ pub fn maybe_refresh_internalconfig_on_disk(
         proxy_sock_path,
         allow_remote_snapshot,
         domain_override,
-        info.is_some_and(|i| i.store_requirements.contains("git")),
+        info,
     )?;
     let config_str = format!("{}{}", header, config);
 

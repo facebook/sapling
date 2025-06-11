@@ -11,6 +11,7 @@ use std::str::FromStr;
 use clidispatch::ReqCtx;
 #[cfg(feature = "fb")]
 use cmdutil::ConfigExt;
+use cmdutil::Repo;
 use cmdutil::Result;
 use cmdutil::define_flags;
 #[cfg(feature = "fb")]
@@ -35,9 +36,11 @@ define_flags! {
     }
 }
 
-pub fn run(ctx: ReqCtx<DebugDumpConfigOpts>) -> Result<u8> {
+pub fn run(ctx: ReqCtx<DebugDumpConfigOpts>, repo: Option<&Repo>) -> Result<u8> {
     #[cfg(feature = "fb")]
     {
+        use std::ops::Deref;
+
         use configloader::fb::FbConfigMode;
 
         let config = ctx.config().clone();
@@ -66,7 +69,7 @@ pub fn run(ctx: ReqCtx<DebugDumpConfigOpts>) -> Result<u8> {
             config
                 .get("experimental", "dynamic-config-domain-override")
                 .and_then(|d| configloader::fb::Domain::from_str(d.as_ref()).ok()),
-            false,
+            repo.map(|r| r.deref()),
         )?;
 
         if ctx.opts.args.is_empty() {
@@ -82,7 +85,7 @@ pub fn run(ctx: ReqCtx<DebugDumpConfigOpts>) -> Result<u8> {
         }
     }
     #[cfg(not(feature = "fb"))]
-    let _ = ctx;
+    let _ = (ctx, repo);
 
     Ok(0)
 }
