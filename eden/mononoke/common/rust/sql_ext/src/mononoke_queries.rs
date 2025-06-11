@@ -136,7 +136,7 @@ macro_rules! mononoke_queries {
                 }
 
                 #[allow(dead_code)]
-                pub async fn traced_query(
+                async fn traced_query_impl(
                     connection: &Connection,
                     cri: &ClientRequestInfo,
                     $( $pname: & $ptype, )*
@@ -156,7 +156,7 @@ macro_rules! mononoke_queries {
                     $( $lname: & [ $ltype ], )*
                 ) -> Result<Vec<($( $rtype, )*)>> {
                     match cri {
-                        Some(cri) => traced_query(connection, &cri, $( $pname, )* $( $lname, )*).await,
+                        Some(cri) => traced_query_impl(connection, &cri, $( $pname, )* $( $lname, )*).await,
                         None => query_impl(connection, $( $pname, )* $( $lname, )*).await
                     }
                 }
@@ -245,7 +245,7 @@ macro_rules! mononoke_queries {
                 }
 
                 #[allow(dead_code)]
-                pub async fn traced_query(
+                async fn traced_query_impl(
                     config: &SqlQueryConfig,
                     cache_ttl: Option<std::time::Duration>,
                     connection: &Connection,
@@ -290,7 +290,7 @@ macro_rules! mononoke_queries {
                     $( $lname: & [ $ltype ], )*
                 ) -> Result<Vec<($( $rtype, )*)>> {
                     match cri {
-                        Some(cri) => traced_query(config, cache_ttl, connection, &cri, $( $pname, )* $( $lname, )*).await,
+                        Some(cri) => traced_query_impl(config, cache_ttl, connection, &cri, $( $pname, )* $( $lname, )*).await,
                         None => query_impl(config, cache_ttl, connection, $( $pname, )* $( $lname, )*).await
                     }
                 }
@@ -379,7 +379,7 @@ macro_rules! mononoke_queries {
                 }
 
                 #[allow(dead_code)]
-                pub async fn traced_query(
+                async fn traced_query_impl(
                     connection: &Connection,
                     cri: &ClientRequestInfo,
                     values: &[($( & $vtype, )*)],
@@ -399,7 +399,7 @@ macro_rules! mononoke_queries {
                     $( $pname: & $ptype ),*
                 ) -> Result<WriteResult> {
                     match cri {
-                        Some(cri) => traced_query(connection, &cri, values $( , $pname )*).await,
+                        Some(cri) => traced_query_impl(connection, &cri, values $( , $pname )*).await,
                         None => query_impl(connection, values $( , $pname )*).await
                     }
                 }
@@ -487,7 +487,7 @@ macro_rules! mononoke_queries {
                 }
 
                 #[allow(dead_code)]
-                pub async fn traced_query(
+                async fn traced_query_impl(
                     connection: &Connection,
                     cri: &ClientRequestInfo,
                     $( $pname: & $ptype, )*
@@ -507,7 +507,7 @@ macro_rules! mononoke_queries {
                     $( $lname: & [ $ltype ], )*
                 ) -> Result<WriteResult> {
                     match cri {
-                        Some(cri) => traced_query(connection, &cri, $( $pname, )* $( $lname, )*).await,
+                        Some(cri) => traced_query_impl(connection, &cri, $( $pname, )* $( $lname, )*).await,
                         None => query_impl(connection, $( $pname, )* $( $lname, )*).await
                     }
                 }
@@ -749,10 +749,6 @@ mod tests {
         TestQuery3::query(connection, None, &[(&12,)]).await?;
         TestQuery3::maybe_traced_query_with_transaction(todo!(), None, &[(&12,)]).await?;
         TestQuery4::query(connection, None, &"hello").await?;
-        TestQuery::traced_query(connection, &cri, todo!(), todo!()).await?;
-        TestQuery2::traced_query(config, None, connection, &cri).await?;
-        TestQuery3::traced_query(connection, &cri, &[(&12,)]).await?;
-        TestQuery4::traced_query(connection, &cri, &"hello").await?;
         TestQuery::query(connection, Some(&cri), todo!(), todo!()).await?;
         TestQuery2::query(config, None, connection, Some(&cri)).await?;
         TestQuery3::query(connection, Some(&cri), &[(&12,)]).await?;
