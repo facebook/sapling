@@ -6,6 +6,7 @@
  */
 
 use std::collections::BTreeMap;
+use std::ops::Deref;
 use std::path::Path;
 use std::path::PathBuf;
 use std::sync::Arc;
@@ -63,16 +64,8 @@ use crate::trees::TreeManifestResolver;
 
 #[derive(Clone)]
 pub struct Repo {
-    path: PathBuf,
-    ident: identity::Identity,
+    info: RepoMinimalInfo,
     config: Arc<dyn Config>,
-    shared_path: PathBuf,
-    shared_ident: identity::Identity,
-    pub(crate) store_path: PathBuf,
-    dot_hg_path: PathBuf,
-    shared_dot_hg_path: PathBuf,
-    pub requirements: Requirements,
-    pub store_requirements: Requirements,
     repo_name: Option<String>,
     metalog: OnceCell<Arc<RwLock<MetaLog>>>,
     eden_api: OnceCell<Arc<dyn SaplingRemoteApi>>,
@@ -87,6 +80,14 @@ pub struct Repo {
     locker: Arc<RepoLocker>,
     cas_client: OnceCell<Option<Arc<dyn CasClient>>>,
     tree_resolver: OnceCell<Arc<dyn ReadTreeManifest>>,
+}
+
+impl Deref for Repo {
+    type Target = RepoMinimalInfo;
+
+    fn deref(&self) -> &Self::Target {
+        &self.info
+    }
 }
 
 impl Repo {
@@ -150,19 +151,7 @@ impl Repo {
             None => configloader::hg::load(RepoInfo::Disk(&info), pinned_config)?,
         };
 
-        let RepoMinimalInfo {
-            path,
-            ident,
-            shared_path,
-            shared_ident,
-            store_path,
-            dot_hg_path,
-            shared_dot_hg_path,
-            requirements,
-            store_requirements,
-        } = info;
-
-        let repo_name = configloader::hg::read_repo_name_from_disk(&shared_dot_hg_path)
+        let repo_name = configloader::hg::read_repo_name_from_disk(&info.shared_dot_hg_path)
             .ok()
             .or_else(|| {
                 config
@@ -170,19 +159,11 @@ impl Repo {
                     .map(|v| v.to_string())
             });
 
-        let locker = Arc::new(RepoLocker::new(&config, store_path.clone())?);
+        let locker = Arc::new(RepoLocker::new(&config, info.store_path.clone())?);
 
         Ok(Repo {
-            path,
-            ident,
+            info,
             config: Arc::new(config),
-            shared_path,
-            shared_ident,
-            store_path,
-            dot_hg_path,
-            shared_dot_hg_path,
-            requirements,
-            store_requirements,
             repo_name,
             metalog: Default::default(),
             eden_api: Default::default(),
@@ -207,8 +188,8 @@ impl Repo {
     pub fn reload_requires(&mut self) -> Result<()> {
         let requirements = Requirements::load_repo_requirements(&self.dot_hg_path)?;
         let store_requirements = Requirements::load_store_requirements(&self.store_path)?;
-        self.requirements = requirements;
-        self.store_requirements = store_requirements;
+        self.info.requirements = requirements;
+        self.info.store_requirements = store_requirements;
         Ok(())
     }
 
@@ -412,14 +393,14 @@ impl Repo {
     }
 
     pub fn add_requirement(&mut self, requirement: &str) -> Result<()> {
-        self.requirements.add(requirement);
-        self.requirements.flush()?;
+        self.info.requirements.add(requirement);
+        self.info.requirements.flush()?;
         Ok(())
     }
 
     pub fn add_store_requirement(&mut self, requirement: &str) -> Result<()> {
-        self.store_requirements.add(requirement);
-        self.store_requirements.flush()?;
+        self.info.store_requirements.add(requirement);
+        self.info.store_requirements.flush()?;
         Ok(())
     }
 

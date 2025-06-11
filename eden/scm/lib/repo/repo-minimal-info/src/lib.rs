@@ -24,6 +24,7 @@ pub use requirements::Requirements;
 ///
 /// It can be useful by the config loader to decide extra config
 /// per requirement.
+#[derive(Clone)]
 pub struct RepoMinimalInfo {
     pub path: PathBuf,
     pub ident: identity::Identity,
