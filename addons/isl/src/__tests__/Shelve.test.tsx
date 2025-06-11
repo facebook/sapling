@@ -53,27 +53,31 @@ describe('Shelve', () => {
   });
 
   describe('Shelve button', () => {
-    it('Runs shelve when clicking button', () => {
+    it('Runs shelve when clicking button', async () => {
       const shelveButton = screen.getByText('Shelve');
       expect(shelveButton).toBeInTheDocument();
 
       fireEvent.click(shelveButton);
-      expectMessageSentToServer({
-        type: 'runOperation',
-        operation: expect.objectContaining({
-          args: ['shelve', '--unknown'],
+      await waitFor(() =>
+        expectMessageSentToServer({
+          type: 'runOperation',
+          operation: expect.objectContaining({
+            args: ['shelve', '--unknown'],
+          }),
         }),
-      });
+      );
     });
 
-    it('Optimistic state hides all files when shelve running', () => {
+    it('Optimistic state hides all files when shelve running', async () => {
       expect(screen.queryAllByTestId(/changed-file-src\/file.\.js/)).toHaveLength(3);
       const shelveButton = screen.getByText('Shelve');
       fireEvent.click(shelveButton);
-      expect(screen.queryAllByTestId(/changed-file-src\/file.\.js/)).toHaveLength(0);
+      await waitFor(() =>
+        expect(screen.queryAllByTestId(/changed-file-src\/file.\.js/)).toHaveLength(0),
+      );
     });
 
-    it('includes name for shelved change if typed', () => {
+    it('includes name for shelved change if typed', async () => {
       const shelveButton = screen.getByText('Shelve');
       expect(shelveButton).toBeInTheDocument();
 
@@ -84,15 +88,17 @@ describe('Shelve', () => {
       });
 
       fireEvent.click(shelveButton);
-      expectMessageSentToServer({
-        type: 'runOperation',
-        operation: expect.objectContaining({
-          args: ['shelve', '--unknown', '--name', 'My Shelf'],
+      await waitFor(() =>
+        expectMessageSentToServer({
+          type: 'runOperation',
+          operation: expect.objectContaining({
+            args: ['shelve', '--unknown', '--name', 'My Shelf'],
+          }),
         }),
-      });
+      );
     });
 
-    it('only shelves selected files', () => {
+    it('only shelves selected files', async () => {
       const shelveButton = screen.getByText('Shelve');
       expect(shelveButton).toBeInTheDocument();
 
@@ -105,32 +111,36 @@ describe('Shelve', () => {
 
       fireEvent.click(shelveButton);
 
-      expectMessageSentToServer({
-        type: 'runOperation',
-        operation: expect.objectContaining({
-          args: [
-            'shelve',
-            '--unknown',
-            {type: 'repo-relative-file', path: 'src/file1.js'},
-            {type: 'repo-relative-file', path: 'src/file3.js'},
-          ],
+      await waitFor(() =>
+        expectMessageSentToServer({
+          type: 'runOperation',
+          operation: expect.objectContaining({
+            args: [
+              'shelve',
+              '--unknown',
+              {type: 'repo-relative-file', path: 'src/file1.js'},
+              {type: 'repo-relative-file', path: 'src/file3.js'},
+            ],
+          }),
         }),
-      });
+      );
     });
 
-    it('Optimistic state hides selected files when shelve running', () => {
+    it('Optimistic state hides selected files when shelve running', async () => {
       expect(screen.queryAllByTestId(/src\/file.\.js/)).toHaveLength(3);
       const shelveButton = screen.getByText('Shelve');
       fireEvent.click(shelveButton);
-      expect(screen.queryAllByTestId(/src\/file.\.js/)).toHaveLength(0);
+      await waitFor(() => expect(screen.queryAllByTestId(/src\/file.\.js/)).toHaveLength(0));
     });
 
-    it('shelve button disabled if no files selected', () => {
+    it('shelve button disabled if no files selected', async () => {
       fireEvent.click(screen.getByText('Deselect All'));
 
       const shelveButton = screen.getByText('Shelve');
-      expect(shelveButton).toBeInTheDocument();
-      expect(shelveButton).toBeDisabled();
+      await waitFor(() => {
+        expect(shelveButton).toBeInTheDocument();
+        expect(shelveButton).toBeDisabled();
+      });
     });
   });
 

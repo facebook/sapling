@@ -598,7 +598,11 @@ export function UncommittedChanges({place}: {place: Place}) {
     </Tooltip>
   ) : null;
 
-  const onShelve = () => {
+  const onShelve = async () => {
+    if (!(await confirmSuggestedEditsForFiles('accept', selection.selection))) {
+      return;
+    }
+
     const title = commitTitleRef.current?.value || undefined;
     const allFiles = uncommittedChanges.map(file => file.path);
     const operation = getShelveOperation(title, selection.selection, allFiles);
@@ -807,6 +811,10 @@ export function UncommittedChanges({place}: {place: Place}) {
                 onClick={async () => {
                   const shouldContinue = await confirmUnsavedFiles();
                   if (!shouldContinue) {
+                    return;
+                  }
+
+                  if (!(await confirmSuggestedEditsForFiles('accept', selection.selection))) {
                     return;
                   }
 
