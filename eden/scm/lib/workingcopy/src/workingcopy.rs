@@ -586,7 +586,7 @@ impl WorkingCopy {
     ///
     /// Respect submodule related configs. If git.submodules=false, or the repo
     /// does not use git format, return an empty list.
-    fn parse_submodule_config(&self) -> Result<Vec<Submodule>> {
+    pub fn parse_submodule_config(&self) -> Result<Vec<Submodule>> {
         if !self.support_submodules {
             tracing::debug!(target: "workingcopy::submodule", "submodules are disabled");
             return Ok(Vec::new());
