@@ -50,7 +50,7 @@ const currentSuggestedEdits = atom<Array<RepoRelativePath>>(get => {
  */
 export async function confirmSuggestedEditsForFiles(
   action: 'accept' | 'reject',
-  files?: PartialSelection,
+  files?: PartialSelection | Array<RepoRelativePath>,
 ): Promise<boolean> {
   const suggestedEdits = readAtom(currentSuggestedEdits);
   if (suggestedEdits == null || suggestedEdits.length === 0) {
@@ -60,6 +60,8 @@ export async function confirmSuggestedEditsForFiles(
   const toWarnAbout =
     files == null
       ? suggestedEdits
+      : Array.isArray(files)
+      ? suggestedEdits.filter(filepath => files.includes(filepath))
       : suggestedEdits.filter(filepath => files.isFullyOrPartiallySelected(filepath));
   if (toWarnAbout.length === 0) {
     return true; // nothing to warn about

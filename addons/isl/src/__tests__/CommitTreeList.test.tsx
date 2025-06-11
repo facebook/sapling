@@ -138,8 +138,8 @@ describe('CommitTreeList', () => {
         act(() => {
           fireEvent.click(revertButtons[0]);
         });
-        expect(window.confirm).toHaveBeenCalled();
         await waitFor(() => {
+          expect(window.confirm).toHaveBeenCalled();
           expectMessageSentToServer({
             type: 'runOperation',
             operation: {

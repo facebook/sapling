@@ -26,6 +26,7 @@ import {copyUrlForFile, supportsBrowseUrlForHash} from './BrowseRepo';
 import {type ChangedFilesDisplayType} from './ChangedFileDisplayTypePicker';
 import {generatedStatusDescription, generatedStatusToLabel} from './GeneratedFile';
 import {PartialFileSelectionWithMode} from './PartialFileSelection';
+import {confirmSuggestedEditsForFiles} from './SuggestedEdits';
 import {SuspenseBoundary} from './SuspenseBoundary';
 import {holdingAltAtom, holdingCtrlAtom} from './atoms/keyboardAtoms';
 import {externalMergeToolAtom} from './externalMergeTool';
@@ -245,29 +246,30 @@ function FileActions({
           key={file.path}
           icon
           data-testid="file-revert-button"
-          onClick={() => {
-            platform
-              .confirm(
-                comparison.type === ComparisonType.UncommittedChanges
-                  ? t('Are you sure you want to revert $file?', {replace: {$file: file.path}})
-                  : t(
-                      'Are you sure you want to revert $file back to how it was just before the last commit? Uncommitted changes to this file will be lost.',
-                      {replace: {$file: file.path}},
-                    ),
-              )
-              .then(ok => {
-                if (!ok) {
-                  return;
-                }
-                runOperation(
-                  new RevertOperation(
-                    [file.path],
-                    comparison.type === ComparisonType.UncommittedChanges
-                      ? undefined
-                      : succeedableRevset(revsetForComparison(comparison)),
+          onClick={async () => {
+            if (!(await confirmSuggestedEditsForFiles('reject', [file.path]))) {
+              return;
+            }
+
+            const ok = await platform.confirm(
+              comparison.type === ComparisonType.UncommittedChanges
+                ? t('Are you sure you want to revert $file?', {replace: {$file: file.path}})
+                : t(
+                    'Are you sure you want to revert $file back to how it was just before the last commit? Uncommitted changes to this file will be lost.',
+                    {replace: {$file: file.path}},
                   ),
-                );
-              });
+            );
+            if (!ok) {
+              return;
+            }
+            runOperation(
+              new RevertOperation(
+                [file.path],
+                comparison.type === ComparisonType.UncommittedChanges
+                  ? undefined
+                  : succeedableRevset(revsetForComparison(comparison)),
+              ),
+            );
           }}>
           <Icon icon="discard" />
         </Button>
