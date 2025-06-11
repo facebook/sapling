@@ -64,7 +64,7 @@ export function File({
 }: {
   file: UIChangedFile;
   displayType: ChangedFilesDisplayType;
-  comparison: Comparison;
+  comparison?: Comparison;
   selection?: UseUncommittedSelection;
   place?: Place;
   generatedStatus?: GeneratedStatus;
@@ -91,7 +91,7 @@ export function File({
         onClick: () => platform.openContainingFolder?.(file.path),
       });
     }
-    if (platform.openDiff != null) {
+    if (comparison != null && platform.openDiff != null) {
       options.push({
         label: t('Open Diff View ($comparison)', {
           replace: {$comparison: labelForComparison(comparison)},
@@ -100,7 +100,7 @@ export function File({
       });
     }
 
-    if (readAtom(supportsBrowseUrlForHash)) {
+    if (comparison != null && readAtom(supportsBrowseUrlForHash)) {
       options.push({
         label: t('Copy file URL'),
         onClick: () => {
@@ -179,7 +179,7 @@ export function File({
             </span>
           </Tooltip>
         </span>
-        <FileActions file={file} comparison={comparison} place={place} />
+        {comparison != null && <FileActions file={file} comparison={comparison} place={place} />}
       </div>
       {place === 'main' && selection?.isExpanded(file.path) && (
         <MaybePartialSelection file={file} />

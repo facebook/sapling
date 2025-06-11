@@ -6,7 +6,9 @@
  */
 
 import {atom} from 'jotai';
+import {minimalDisambiguousPaths} from 'shared/minimalDisambiguousPaths';
 import {tracker} from './analytics';
+import {File} from './ChangedFile';
 import {Column, Row} from './ComponentUtils';
 import {T, t} from './i18n';
 import {Internal} from './Internal';
@@ -17,6 +19,8 @@ import {repoRootAtom} from './repositoryData';
 import type {AbsolutePath, RepoRelativePath} from './types';
 import {showModal} from './useModal';
 import {registerDisposable} from './utils';
+
+import './UncommittedChanges.css';
 
 /** All known suggested edits, if applicable.
  * n.b. we get absolute paths from the suggested edits API */
@@ -54,7 +58,7 @@ const currentSuggestedEdits = atom<Array<RepoRelativePath>>(get => {
 export async function confirmSuggestedEditsForFiles(
   source: string,
   action: 'accept' | 'reject',
-  files?: PartialSelection | Array<RepoRelativePath>,
+  files: PartialSelection | Array<RepoRelativePath>,
 ): Promise<boolean> {
   const suggestedEdits = readAtom(currentSuggestedEdits);
   if (suggestedEdits == null || suggestedEdits.length === 0) {
@@ -84,9 +88,7 @@ export async function confirmSuggestedEditsForFiles(
     message: (
       <Column alignStart>
         <Column alignStart>
-          {toWarnAbout.map(filepath => (
-            <Row key={filepath}>{filepath}</Row>
-          ))}
+          <SimpleChangedFilesList files={toWarnAbout} />
         </Column>
         <Row>
           {action === 'accept' ? (
@@ -118,4 +120,31 @@ export async function confirmSuggestedEditsForFiles(
       return true;
     }
   }
+}
+
+/** Simplified list of changed files, for rendering a list of files when we don't have the full context of the file.
+ * Just pretend everything is modified and hide extra actions like opening diff views.
+ */
+function SimpleChangedFilesList({files}: {files: Array<string>}) {
+  const disambiguated = minimalDisambiguousPaths(files);
+  return (
+    <div className="changed-files-list-container">
+      <div className="changed-files-list">
+        {files.map((path, i) => (
+          <File
+            file={{
+              label: disambiguated[i],
+              path,
+              tooltip: path,
+              // These are wrong, but we don't have the full context of the file to know if it's added, removed, etc
+              visualStatus: 'M',
+              status: 'M',
+            }}
+            key={path}
+            displayType="short"
+          />
+        ))}
+      </div>
+    </div>
+  );
 }
