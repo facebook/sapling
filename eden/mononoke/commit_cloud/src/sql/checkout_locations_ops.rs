@@ -129,7 +129,7 @@ impl Insert<WorkspaceCheckoutLocation> for SqlCommitCloud {
         workspace: String,
         data: WorkspaceCheckoutLocation,
     ) -> anyhow::Result<Transaction> {
-        let (txn, _) = InsertCheckoutLocations::maybe_traced_query_with_transaction(
+        let (txn, _) = InsertCheckoutLocations::query_with_transaction(
             txn,
             cri,
             &reponame,
@@ -156,7 +156,7 @@ impl Update<WorkspaceCheckoutLocation> for SqlCommitCloud {
         cc_ctx: CommitCloudContext,
         args: Self::UpdateArgs,
     ) -> anyhow::Result<(Transaction, u64)> {
-        let (txn, result) = UpdateWorkspaceName::maybe_traced_query_with_transaction(
+        let (txn, result) = UpdateWorkspaceName::query_with_transaction(
             txn,
             cri,
             &cc_ctx.reponame,

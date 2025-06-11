@@ -107,7 +107,7 @@ impl Insert<WorkspaceRemoteBookmark> for SqlCommitCloud {
         workspace: String,
         data: WorkspaceRemoteBookmark,
     ) -> anyhow::Result<Transaction> {
-        let (txn, _) = InsertRemoteBookmark::maybe_traced_query_with_transaction(
+        let (txn, _) = InsertRemoteBookmark::query_with_transaction(
             txn,
             cri,
             &reponame,
@@ -131,7 +131,7 @@ impl Update<WorkspaceRemoteBookmark> for SqlCommitCloud {
         cc_ctx: CommitCloudContext,
         args: Self::UpdateArgs,
     ) -> anyhow::Result<(Transaction, u64)> {
-        let (txn, result) = UpdateWorkspaceName::maybe_traced_query_with_transaction(
+        let (txn, result) = UpdateWorkspaceName::query_with_transaction(
             txn,
             cri,
             &cc_ctx.reponame,
@@ -154,7 +154,7 @@ impl Delete<WorkspaceRemoteBookmark> for SqlCommitCloud {
         workspace: String,
         args: Self::DeleteArgs,
     ) -> anyhow::Result<Transaction> {
-        let (txn, _) = DeleteRemoteBookmark::maybe_traced_query_with_transaction(
+        let (txn, _) = DeleteRemoteBookmark::query_with_transaction(
             txn,
             cri,
             &reponame,

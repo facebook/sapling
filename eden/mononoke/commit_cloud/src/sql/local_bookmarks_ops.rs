@@ -106,7 +106,7 @@ impl Insert<WorkspaceLocalBookmark> for SqlCommitCloud {
         workspace: String,
         data: WorkspaceLocalBookmark,
     ) -> anyhow::Result<Transaction> {
-        let (txn, _) = InsertLocalBookmark::maybe_traced_query_with_transaction(
+        let (txn, _) = InsertLocalBookmark::query_with_transaction(
             txn,
             cri,
             &reponame,
@@ -129,7 +129,7 @@ impl Update<WorkspaceLocalBookmark> for SqlCommitCloud {
         cc_ctx: CommitCloudContext,
         args: Self::UpdateArgs,
     ) -> anyhow::Result<(Transaction, u64)> {
-        let (txn, result) = UpdateWorkspaceName::maybe_traced_query_with_transaction(
+        let (txn, result) = UpdateWorkspaceName::query_with_transaction(
             txn,
             cri,
             &cc_ctx.reponame,
@@ -152,7 +152,7 @@ impl Delete<WorkspaceLocalBookmark> for SqlCommitCloud {
         workspace: String,
         args: Self::DeleteArgs,
     ) -> anyhow::Result<Transaction> {
-        let (txn, _) = DeleteLocalBookmark::maybe_traced_query_with_transaction(
+        let (txn, _) = DeleteLocalBookmark::query_with_transaction(
             txn,
             cri,
             &reponame,

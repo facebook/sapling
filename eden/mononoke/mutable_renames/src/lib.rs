@@ -447,15 +447,12 @@ impl MutableRenames {
         let txn = self.store.write_connection.start_transaction().await?;
 
         // Delete renames
-        let (txn, delete_renames_result) = DeleteRenames::maybe_traced_query_with_transaction(
-            txn,
-            ctx.client_request_info(),
-            &rows[..],
-        )
-        .await?;
+        let (txn, delete_renames_result) =
+            DeleteRenames::query_with_transaction(txn, ctx.client_request_info(), &rows[..])
+                .await?;
 
         // Compute orphan paths
-        let (txn, used_path_hashes) = FindUsedPathHashes::maybe_traced_query_with_transaction(
+        let (txn, used_path_hashes) = FindUsedPathHashes::query_with_transaction(
             txn,
             ctx.client_request_info(),
             &path_hashes.clone().into_iter().collect::<Vec<_>>()[..],
@@ -467,7 +464,7 @@ impl MutableRenames {
         }
 
         // Delete orphan paths
-        let (txn, delete_paths_result) = DeletePaths::maybe_traced_query_with_transaction(
+        let (txn, delete_paths_result) = DeletePaths::query_with_transaction(
             txn,
             ctx.client_request_info(),
             &path_hashes.into_iter().collect::<Vec<_>>()[..],

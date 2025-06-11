@@ -233,12 +233,9 @@ impl SqlBookmarksTransactionPayload {
         txn: SqlTransaction,
         repo_id: RepositoryId,
     ) -> Result<(SqlTransaction, u64)> {
-        let (txn, max_id_entries) = FindMaxBookmarkLogId::maybe_traced_query_with_transaction(
-            txn,
-            ctx.client_request_info(),
-            &repo_id,
-        )
-        .await?;
+        let (txn, max_id_entries) =
+            FindMaxBookmarkLogId::query_with_transaction(txn, ctx.client_request_info(), &repo_id)
+                .await?;
 
         let next_id = match &max_id_entries[..] {
             [(None,)] => 1,
@@ -272,13 +269,9 @@ impl SqlBookmarksTransactionPayload {
                 &log_entry.reason,
                 &timestamp,
             )];
-            txn = AddBookmarkLog::maybe_traced_query_with_transaction(
-                txn,
-                ctx.client_request_info(),
-                &data[..],
-            )
-            .await?
-            .0;
+            txn = AddBookmarkLog::query_with_transaction(txn, ctx.client_request_info(), &data[..])
+                .await?
+                .0;
         }
         Ok(txn)
     }
@@ -306,7 +299,7 @@ impl SqlBookmarksTransactionPayload {
                 )
             })
             .collect::<Vec<_>>();
-        let (txn, _) = ReplaceBookmarks::maybe_traced_query_with_transaction(
+        let (txn, _) = ReplaceBookmarks::query_with_transaction(
             txn,
             ctx.client_request_info(),
             data.as_slice(),
@@ -342,7 +335,7 @@ impl SqlBookmarksTransactionPayload {
             })
             .collect::<Vec<_>>();
         let rows_to_insert = data.len() as u64;
-        let (txn, result) = InsertBookmarks::maybe_traced_query_with_transaction(
+        let (txn, result) = InsertBookmarks::query_with_transaction(
             txn,
             ctx.client_request_info(),
             data.as_slice(),
@@ -381,7 +374,7 @@ impl SqlBookmarksTransactionPayload {
             })
             .collect::<Vec<_>>();
         let rows_to_insert = data.len() as u64;
-        let (txn, result) = InsertOrUpdateBookmarks::maybe_traced_query_with_transaction(
+        let (txn, result) = InsertOrUpdateBookmarks::query_with_transaction(
             txn,
             ctx.client_request_info(),
             data.as_slice(),
@@ -408,7 +401,7 @@ impl SqlBookmarksTransactionPayload {
                 // This is a no-op update.  Check if the bookmark already points to the correct
                 // commit.  If it doesn't, abort the transaction. We need to make this a select
                 // query instead of an update, since affected_rows() would otherwise return 0.
-                let (txn_, result) = SelectBookmark::maybe_traced_query_with_transaction(
+                let (txn_, result) = SelectBookmark::query_with_transaction(
                     txn,
                     ctx.client_request_info(),
                     &self.repo_id,
@@ -421,7 +414,7 @@ impl SqlBookmarksTransactionPayload {
                     return Err(BookmarkTransactionError::LogicError);
                 }
             } else {
-                let (txn_, result) = UpdateBookmark::maybe_traced_query_with_transaction(
+                let (txn_, result) = UpdateBookmark::query_with_transaction(
                     txn,
                     ctx.client_request_info(),
                     &self.repo_id,
@@ -450,7 +443,7 @@ impl SqlBookmarksTransactionPayload {
     ) -> Result<SqlTransaction, BookmarkTransactionError> {
         for (bookmark, log_entry) in self.force_deletes.iter() {
             log.push_log_entry(bookmark, log_entry);
-            let (txn_, _) = DeleteBookmark::maybe_traced_query_with_transaction(
+            let (txn_, _) = DeleteBookmark::query_with_transaction(
                 txn,
                 ctx.client_request_info(),
                 &self.repo_id,
@@ -473,7 +466,7 @@ impl SqlBookmarksTransactionPayload {
             maybe_log_entry
                 .as_ref()
                 .map(|log_entry| log.push_log_entry(bookmark, log_entry));
-            let (txn_, result) = DeleteBookmarkIf::maybe_traced_query_with_transaction(
+            let (txn_, result) = DeleteBookmarkIf::query_with_transaction(
                 txn,
                 ctx.client_request_info(),
                 &self.repo_id,

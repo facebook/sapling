@@ -115,10 +115,9 @@ impl TransactionRepoLock {
         &self,
         txn: Transaction,
     ) -> Result<(Transaction, RepoLockState), Error> {
-        let (txn, row) =
-            GetRepoLockStatus::maybe_traced_query_with_transaction(txn, None, &self.repo_id)
-                .await
-                .context("Failed to query repo lock status")?;
+        let (txn, row) = GetRepoLockStatus::query_with_transaction(txn, None, &self.repo_id)
+            .await
+            .context("Failed to query repo lock status")?;
 
         let state = row
             .first()

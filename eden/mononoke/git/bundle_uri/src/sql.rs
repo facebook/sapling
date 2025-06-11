@@ -128,12 +128,8 @@ impl SqlGitBundleMetadataStorage {
         let conn = &self.connections.write_connection;
         let txn = conn.start_transaction().await?;
 
-        let (txn, rows) = GetLatestBundleListNumForRepo::maybe_traced_query_with_transaction(
-            txn,
-            None,
-            &self.repo_id,
-        )
-        .await?;
+        let (txn, rows) =
+            GetLatestBundleListNumForRepo::query_with_transaction(txn, None, &self.repo_id).await?;
 
         let new_bundle_list_num = rows.first().map_or(1, |val| val.0 + 1);
         let values: Vec<_> = bundles
@@ -150,9 +146,7 @@ impl SqlGitBundleMetadataStorage {
             })
             .collect();
 
-        let (txn, _) =
-            AddNewBundles::maybe_traced_query_with_transaction(txn, None, values.as_slice())
-                .await?;
+        let (txn, _) = AddNewBundles::query_with_transaction(txn, None, values.as_slice()).await?;
 
         txn.commit().await?;
 

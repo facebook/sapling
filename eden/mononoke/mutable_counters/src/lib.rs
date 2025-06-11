@@ -186,7 +186,7 @@ impl SqlMutableCounters {
         ctx.perf_counters()
             .increment_counter(PerfCounterType::SqlWrites);
         let (txn, result) = if let Some(prev_value) = prev_value {
-            SetCounterConditionally::maybe_traced_query_with_transaction(
+            SetCounterConditionally::query_with_transaction(
                 txn,
                 ctx.client_request_info(),
                 &repo_id,
@@ -196,7 +196,7 @@ impl SqlMutableCounters {
             )
             .await?
         } else {
-            SetCounter::maybe_traced_query_with_transaction(
+            SetCounter::query_with_transaction(
                 txn,
                 ctx.client_request_info(),
                 &repo_id,

@@ -1627,7 +1627,7 @@ impl SqlCommitGraphStorage {
                 )
             })
             .collect::<Vec<_>>();
-        let (transaction, result) = InsertChangesetsNoEdges::maybe_traced_query_with_transaction(
+        let (transaction, result) = InsertChangesetsNoEdges::query_with_transaction(
             transaction,
             cri,
             // This pattern is used to convert a ref to tuple into a tuple of refs.
@@ -1655,7 +1655,7 @@ impl SqlCommitGraphStorage {
         }
         let (transaction, cs_to_ids) = if !need_ids.is_empty() {
             // Use the same transaction to make sure we see the new values
-            let (transaction, result) = SelectManyIds::maybe_traced_query_with_transaction(
+            let (transaction, result) = SelectManyIds::query_with_transaction(
                 transaction,
                 cri,
                 &self.repo_id,
@@ -1720,7 +1720,7 @@ impl SqlCommitGraphStorage {
             }
         };
 
-        let (transaction, _) = FixEdges::maybe_traced_query_with_transaction(
+        let (transaction, _) = FixEdges::query_with_transaction(
             transaction,
             cri,
             // This pattern is used to convert a ref to tuple into a tuple of refs.
@@ -1746,7 +1746,7 @@ impl SqlCommitGraphStorage {
             })
             .collect::<Result<Vec<_>>>()?;
 
-        let (transaction, result) = InsertMergeParents::maybe_traced_query_with_transaction(
+        let (transaction, result) = InsertMergeParents::query_with_transaction(
             transaction,
             cri,
             // This pattern is used to convert a ref to tuple into a tuple of refs.
@@ -1772,7 +1772,7 @@ impl SqlCommitGraphStorage {
             })
             .collect::<Result<Vec<_>>>()?;
 
-        let (transaction, result) = InsertSubtreeSources::maybe_traced_query_with_transaction(
+        let (transaction, result) = InsertSubtreeSources::query_with_transaction(
             transaction,
             cri,
             // This pattern is used to convert a ref to tuple into a tuple of refs.
@@ -1862,7 +1862,7 @@ impl CommitGraphStorage for SqlCommitGraphStorage {
 
         let transaction = self.write_connection.start_transaction().await?;
 
-        let (transaction, result) = InsertChangeset::maybe_traced_query_with_transaction(
+        let (transaction, result) = InsertChangeset::query_with_transaction(
             transaction,
             cri,
             &self.repo_id,
@@ -1914,19 +1914,18 @@ impl CommitGraphStorage for SqlCommitGraphStorage {
                     })
                     .collect::<Result<Vec<_>>>()?;
 
-                let (transaction, result) =
-                    InsertMergeParents::maybe_traced_query_with_transaction(
-                        transaction,
-                        cri,
-                        // This pattern is used to convert a ref to tuple into a tuple of refs.
-                        #[allow(clippy::map_identity)]
-                        merge_parent_rows
-                            .iter()
-                            .map(|(a, b, c)| (a, b, c))
-                            .collect::<Vec<_>>()
-                            .as_slice(),
-                    )
-                    .await?;
+                let (transaction, result) = InsertMergeParents::query_with_transaction(
+                    transaction,
+                    cri,
+                    // This pattern is used to convert a ref to tuple into a tuple of refs.
+                    #[allow(clippy::map_identity)]
+                    merge_parent_rows
+                        .iter()
+                        .map(|(a, b, c)| (a, b, c))
+                        .collect::<Vec<_>>()
+                        .as_slice(),
+                )
+                .await?;
 
                 let subtree_source_rows = edges
                     .subtree_sources
@@ -1943,19 +1942,18 @@ impl CommitGraphStorage for SqlCommitGraphStorage {
                     })
                     .collect::<Result<Vec<_>>>()?;
 
-                let (transaction, result) =
-                    InsertSubtreeSources::maybe_traced_query_with_transaction(
-                        transaction,
-                        cri,
-                        // This pattern is used to convert a ref to tuple into a tuple of refs.
-                        #[allow(clippy::map_identity)]
-                        subtree_source_rows
-                            .iter()
-                            .map(|(a, b, c)| (a, b, c))
-                            .collect::<Vec<_>>()
-                            .as_slice(),
-                    )
-                    .await?;
+                let (transaction, result) = InsertSubtreeSources::query_with_transaction(
+                    transaction,
+                    cri,
+                    // This pattern is used to convert a ref to tuple into a tuple of refs.
+                    #[allow(clippy::map_identity)]
+                    subtree_source_rows
+                        .iter()
+                        .map(|(a, b, c)| (a, b, c))
+                        .collect::<Vec<_>>()
+                        .as_slice(),
+                )
+                .await?;
 
                 transaction.commit().await?;
                 ctx.perf_counters()

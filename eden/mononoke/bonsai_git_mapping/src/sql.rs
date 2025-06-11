@@ -125,13 +125,13 @@ impl BonsaiGitMapping for SqlBonsaiGitMapping {
             .collect();
 
         let (transaction, res) =
-            InsertMapping::maybe_traced_query_with_transaction(transaction, cri, &rows[..]).await?;
+            InsertMapping::query_with_transaction(transaction, cri, &rows[..]).await?;
 
         let transaction = if res.affected_rows() != rows.len() as u64 {
             // Let's see if there are any conflicting entries in DB.
             let git_shas = entries.iter().map(|x| x.git_sha1).collect::<Vec<_>>();
             let (transaction, git2bonsai_mapping_from_db) =
-                SelectMappingByGitSha1::maybe_traced_query_with_transaction(
+                SelectMappingByGitSha1::query_with_transaction(
                     transaction,
                     cri,
                     &self.repo_id,
@@ -143,7 +143,7 @@ impl BonsaiGitMapping for SqlBonsaiGitMapping {
 
             let bcs_ids = entries.iter().map(|x| x.bcs_id).collect::<Vec<_>>();
             let (transaction, bonsai2git_mapping_from_db) =
-                SelectMappingByBonsai::maybe_traced_query_with_transaction(
+                SelectMappingByBonsai::query_with_transaction(
                     transaction,
                     cri,
                     &self.repo_id,

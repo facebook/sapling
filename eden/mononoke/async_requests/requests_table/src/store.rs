@@ -794,8 +794,7 @@ impl LongRunningRequestsQueue for SqlLongRunningRequestsQueue {
             .start_transaction()
             .await?;
         let (mut txn, rows) =
-            GetRequest::maybe_traced_query_with_transaction(txn, None, &req_id.0, &req_id.1)
-                .await?;
+            GetRequest::query_with_transaction(txn, None, &req_id.0, &req_id.1).await?;
         let entry = match rows.into_iter().next() {
             None => bail!("unknown request polled: {:?}", req_id),
             Some(row) => {
@@ -812,7 +811,7 @@ impl LongRunningRequestsQueue for SqlLongRunningRequestsQueue {
                         );
                     }
                     RequestStatus::Ready => {
-                        txn = MarkRequestPolled::maybe_traced_query_with_transaction(
+                        txn = MarkRequestPolled::query_with_transaction(
                             txn,
                             None,
                             &req_id.0,
@@ -901,8 +900,7 @@ impl LongRunningRequestsQueue for SqlLongRunningRequestsQueue {
             .await?;
 
         let (mut txn, rows) =
-            GetRequest::maybe_traced_query_with_transaction(txn, None, &req_id.0, &req_id.1)
-                .await?;
+            GetRequest::query_with_transaction(txn, None, &req_id.0, &req_id.1).await?;
         let will_retry = match rows.into_iter().next() {
             None => bail!("Failed to get request: {:?}", req_id),
             Some(row) => {
@@ -911,7 +909,7 @@ impl LongRunningRequestsQueue for SqlLongRunningRequestsQueue {
                     RequestStatus::InProgress => {
                         let next_retry = entry.num_retries.unwrap_or(0) + 1;
                         if next_retry > max_retry_allowed {
-                            txn = MarkRequestFailed::maybe_traced_query_with_transaction(
+                            txn = MarkRequestFailed::query_with_transaction(
                                 txn,
                                 None,
                                 &req_id.0,
@@ -922,7 +920,7 @@ impl LongRunningRequestsQueue for SqlLongRunningRequestsQueue {
                             .0;
                             Ok(false)
                         } else {
-                            txn = MarkRequestAsNewForRetry::maybe_traced_query_with_transaction(
+                            txn = MarkRequestAsNewForRetry::query_with_transaction(
                                 txn,
                                 None,
                                 &req_id.0,

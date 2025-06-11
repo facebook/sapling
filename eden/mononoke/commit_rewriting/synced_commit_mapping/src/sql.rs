@@ -726,12 +726,9 @@ pub async fn add_many_in_txn(
         })
         .collect();
 
-    let (txn, _result) = InsertMapping::maybe_traced_query_with_transaction(
-        txn,
-        ctx.client_request_info(),
-        &insert_entries,
-    )
-    .await?;
+    let (txn, _result) =
+        InsertMapping::query_with_transaction(txn, ctx.client_request_info(), &insert_entries)
+            .await?;
     let owned_entries: Vec<_> = entries
         .into_iter()
         .map(|entry| entry.into_equivalent_working_copy_entry())
@@ -747,7 +744,7 @@ pub async fn add_many_in_txn(
             ));
         }
     }
-    let (txn, _result) = InsertVersionForLargeRepoCommit::maybe_traced_query_with_transaction(
+    let (txn, _result) = InsertVersionForLargeRepoCommit::query_with_transaction(
         txn,
         ctx.client_request_info(),
         &large_repo_commit_versions,
@@ -767,7 +764,7 @@ pub async fn add_many_in_txn(
         })
         .collect();
 
-    let (txn, result) = InsertWorkingCopyEquivalence::maybe_traced_query_with_transaction(
+    let (txn, result) = InsertWorkingCopyEquivalence::query_with_transaction(
         txn,
         ctx.client_request_info(),
         &ref_entries,
@@ -781,7 +778,7 @@ pub async fn add_many_large_repo_commit_versions_in_txn(
     txn: Transaction,
     large_repo_commit_versions: &[(RepositoryId, ChangesetId, CommitSyncConfigVersion)],
 ) -> Result<(Transaction, u64), Error> {
-    let (txn, result) = InsertVersionForLargeRepoCommit::maybe_traced_query_with_transaction(
+    let (txn, result) = InsertVersionForLargeRepoCommit::query_with_transaction(
         txn,
         ctx.client_request_info(),
         &large_repo_commit_versions

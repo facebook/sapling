@@ -224,7 +224,7 @@ impl RepoEphemeralStoreInner {
             .write_connection
             .start_transaction()
             .await?;
-        let (txn, res) = CreateBubble::maybe_traced_query_with_transaction(
+        let (txn, res) = CreateBubble::query_with_transaction(
             txn,
             ctx.client_request_info(),
             &Timestamp::from(created_at),
@@ -244,7 +244,7 @@ impl RepoEphemeralStoreInner {
                         .iter()
                         .map(|label| (&bubble_id, label as &str))
                         .collect::<Vec<_>>();
-                    let (txn, _res) = AddBubbleLabels::maybe_traced_query_with_transaction(
+                    let (txn, _res) = AddBubbleLabels::query_with_transaction(
                         txn,
                         ctx.client_request_info(),
                         bubble_labels.as_slice(),

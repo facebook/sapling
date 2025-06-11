@@ -539,7 +539,7 @@ pub async fn add_globalrevs(
     // crate doesn't allow us to reach into this yet, so for now we check the number of affected
     // rows.
 
-    let (transaction, res) = DangerouslyAddGlobalrevs::maybe_traced_query_with_transaction(
+    let (transaction, res) = DangerouslyAddGlobalrevs::query_with_transaction(
         transaction,
         ctx.client_request_info(),
         &rows[..],
