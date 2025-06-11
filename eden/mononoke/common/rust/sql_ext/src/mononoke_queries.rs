@@ -136,7 +136,7 @@ macro_rules! mononoke_queries {
                     $( $lname: & [ $ltype ], )*
                 ) -> Result<Vec<($( $rtype, )*)>> {
                     query_with_retry_no_cache(
-                        || [<$name Impl>]::query(connection, $( $pname, )* $( $lname, )*),
+                        || [<$name Impl>]::commented_query(connection, None, $( $pname, )* $( $lname, )*),
                     ).await
                 }
 
@@ -251,7 +251,7 @@ macro_rules! mononoke_queries {
 
                     Ok(query_with_retry(
                         data,
-                        || async move { Ok(CachedQueryResult([<$name Impl>]::query(connection, $( $pname, )* $( $lname, )*).await?)) },
+                        || async move { Ok(CachedQueryResult([<$name Impl>]::commented_query(connection, None, $( $pname, )* $( $lname, )*).await?)) },
                     ).await?.0)
                 }
 
@@ -391,7 +391,7 @@ macro_rules! mononoke_queries {
                     $( $pname: & $ptype ),*
                 ) -> Result<WriteResult> {
                     query_with_retry_no_cache(
-                        || [<$name Impl>]::query(connection, values $( , $pname )* ),
+                        || [<$name Impl>]::commented_query(connection, None, values $( , $pname )* ),
                     ).await
                 }
 
@@ -505,7 +505,7 @@ macro_rules! mononoke_queries {
                     $( $lname: & [ $ltype ], )*
                 ) -> Result<WriteResult> {
                     query_with_retry_no_cache(
-                        || [<$name Impl>]::query(connection, $( $pname, )* $( $lname, )*),
+                        || [<$name Impl>]::commented_query(connection, None, $( $pname, )* $( $lname, )*),
                     ).await
                 }
 
