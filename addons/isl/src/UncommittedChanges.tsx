@@ -90,6 +90,7 @@ import {selectedCommits} from './selection';
 import {latestHeadCommit, uncommittedChangesFetchError} from './serverAPIState';
 import {GeneratedStatus} from './types';
 
+import {confirmSuggestedEditsForFiles} from './SuggestedEdits';
 import './UncommittedChanges.css';
 
 export type UIChangedFile = {
@@ -533,6 +534,10 @@ export function UncommittedChanges({place}: {place: Place}) {
   const onConfirmQuickCommit = async () => {
     const shouldContinue = await confirmUnsavedFiles();
     if (!shouldContinue) {
+      return;
+    }
+
+    if (!(await confirmSuggestedEditsForFiles('accept', selection.selection))) {
       return;
     }
 

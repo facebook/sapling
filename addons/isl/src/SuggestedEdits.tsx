@@ -1,0 +1,109 @@
+/**
+ * Copyright (c) Meta Platforms, Inc. and affiliates.
+ *
+ * This source code is licensed under the MIT license found in the
+ * LICENSE file in the root directory of this source tree.
+ */
+
+import {atom} from 'jotai';
+import {Column, Row} from './ComponentUtils';
+import {T, t} from './i18n';
+import {Internal} from './Internal';
+import {readAtom, writeAtom} from './jotaiUtils';
+import type {PartialSelection} from './partialSelection';
+import platform from './platform';
+import {repoRootAtom} from './repositoryData';
+import type {AbsolutePath, RepoRelativePath} from './types';
+import {showModal} from './useModal';
+import {registerDisposable} from './utils';
+
+/** All known suggested edits, if applicable.
+ * n.b. we get absolute paths from the suggested edits API */
+const allSuggestedEdits = atom<Array<AbsolutePath>>([]);
+registerDisposable(
+  allSuggestedEdits,
+  platform.suggestedEdits?.onDidChangeSuggestedEdits(edits => {
+    writeAtom(allSuggestedEdits, edits);
+  }) ?? {dispose: () => {}},
+  import.meta.hot,
+);
+
+/** Filter all known suggested edits to relevant repo-relative paths */
+const currentSuggestedEdits = atom<Array<RepoRelativePath>>(get => {
+  const allEdits = get(allSuggestedEdits);
+  const repoRoot = get(repoRootAtom);
+  return allEdits
+    .filter(path => path.startsWith(repoRoot))
+    .map(path => path.slice(repoRoot.length + 1));
+});
+
+/**
+ * If there are pending suggested edits as determined by the platform (typically suggestions from an AI),
+ * and they intersect with the given files,
+ * show a modal to confirm how to resolve those edits before proceeding.
+ * Different operations may have a different behavior for resolving.
+ * For example, `commit` should accept the edits before continuing,
+ * but `revert` should reject the edits before continuing.
+ *
+ * We intentionally don't expose all possible ways of resolving edits for simplicity as a user.
+ * We don't give any option to leave edits pending, because that should almost never be what you want.
+ */
+export async function confirmSuggestedEditsForFiles(
+  action: 'accept' | 'reject',
+  files?: PartialSelection,
+): Promise<boolean> {
+  const suggestedEdits = readAtom(currentSuggestedEdits);
+  if (suggestedEdits == null || suggestedEdits.length === 0) {
+    return true; // nothing to warn about
+  }
+
+  const toWarnAbout =
+    files == null
+      ? suggestedEdits
+      : suggestedEdits.filter(filepath => files.isFullyOrPartiallySelected(filepath));
+  if (toWarnAbout.length === 0) {
+    return true; // nothing to warn about
+  }
+
+  const buttons = [
+    t('Cancel'),
+    action === 'accept'
+      ? {label: t('Accept Edits and Continue'), primary: true}
+      : {label: t('Discard Edits and Continue'), primary: true},
+  ];
+  const answer = await showModal({
+    type: 'confirm',
+    buttons,
+    title: Internal.PendingSuggestedEditsMessage ?? <T>You have pending suggested edits</T>,
+    message: (
+      <Column alignStart>
+        <Column alignStart>
+          {toWarnAbout.map(filepath => (
+            <Row key={filepath}>{filepath}</Row>
+          ))}
+        </Column>
+        <Row>
+          {action === 'accept' ? (
+            <T>Do you want to accept these suggested edits and continue?</T>
+          ) : (
+            <T>Do you want to discard these suggested edits and continue?</T>
+          )}
+        </Row>
+      </Column>
+    ),
+  });
+
+  switch (answer) {
+    default:
+    case buttons[0]:
+      return false;
+    case buttons[1]: {
+      const fullEdits = readAtom(allSuggestedEdits);
+      const absolutePaths = fullEdits.filter(path =>
+        toWarnAbout.find(filepath => path.endsWith(filepath)),
+      );
+      platform.suggestedEdits?.resolveSuggestedEdits(action, absolutePaths);
+      return true;
+    }
+  }
+}
