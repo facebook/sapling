@@ -40,7 +40,6 @@ cpp_library(
         "//folly:file",
         "//folly:file_util",
         "//folly:network_address",
-        "//folly:scope_guard",
         "//folly/futures:core",
         "//folly/logging:logging",
         "//folly/portability:sockets",
@@ -52,9 +51,6 @@ cpp_library(
         "//eden/common/utils:io",
         "//folly:range",
         "//folly/io:iobuf",
-    ],
-    external_deps = [
-        "gflags",
     ],
 )
 

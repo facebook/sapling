@@ -9,12 +9,10 @@
 
 #include "eden/fs/privhelper/PrivHelperConn.h"
 
-#include <fcntl.h>
 #include <folly/Demangle.h>
 #include <folly/Exception.h>
 #include <folly/File.h>
 #include <folly/FileUtil.h>
-#include <folly/ScopeGuard.h>
 #include <folly/SocketAddress.h>
 #include <folly/futures/Future.h>
 #include <folly/io/Cursor.h>
@@ -22,8 +20,6 @@
 #include <folly/logging/xlog.h>
 #include <folly/portability/Sockets.h>
 #include <folly/portability/Unistd.h>
-#include <gflags/gflags.h>
-#include <sys/types.h>
 
 #include "eden/common/utils/Bug.h"
 #include "eden/common/utils/SystemError.h"
