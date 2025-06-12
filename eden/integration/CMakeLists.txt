@@ -44,6 +44,7 @@ endif()
 
 add_fb_python_unittest(
   integration_tests
+  TYPE "pex"
   SOURCES ${INTEGRATION_SRCS}
   WORKING_DIRECTORY "${CMAKE_BINARY_DIR}"
   DEPENDS
