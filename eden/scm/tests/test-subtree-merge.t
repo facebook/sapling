@@ -59,6 +59,7 @@ test subtree merge from copy source -> copy dest
   $ echo "dest" >> foo2/y && hg ci -m "update foo2"
   $ hg subtree merge --from-path foo --to-path foo2
   computing merge base (timeout: 120 seconds)...
+  found the last subtree copy commit 39067344b0b6
   merge base: 9998a5c40732
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
   (subtree merge, don't forget to commit)
@@ -87,6 +88,7 @@ test subtree merge from copy dest -> copy source
   $ echo "dest" >> foo2/y && hg ci -m "update foo2"
   $ hg subtree merge --from-path foo2 --to-path foo
   computing merge base (timeout: 120 seconds)...
+  found the last subtree copy commit 39067344b0b6
   merge base: 9998a5c40732
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
   (subtree merge, don't forget to commit)
@@ -256,6 +258,7 @@ test subtree merge from copy dest -> copy source, with new file in copy dest
   $ hg ci -Aqm "add foo2/new"
   $ hg subtree merge --from-path foo2 --to-path foo
   computing merge base (timeout: 120 seconds)...
+  found the last subtree copy commit 39067344b0b6
   merge base: 9998a5c40732
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
   (subtree merge, don't forget to commit)
@@ -284,6 +287,7 @@ test subtree merge from copy dest -> copy source with conflicts
   $ echo "dest" >> foo2/x && hg ci -m "update foo2/x"
   $ hg subtree merge --from-path foo2 --to-path foo -t :merge3
   computing merge base (timeout: 120 seconds)...
+  found the last subtree copy commit 39067344b0b6
   merge base: 9998a5c40732
   merging foo/x and foo2/x to foo/x
   warning: 1 conflicts while merging foo/x! (edit, then use 'hg resolve --mark')
@@ -317,6 +321,7 @@ test multiple subtree merge from source -> dest
   $ echo "dest" >> foo2/y && hg ci -m "update foo2"
   $ hg subtree merge --from-path foo --to-path foo2
   computing merge base (timeout: 120 seconds)...
+  found the last subtree copy commit 39067344b0b6
   merge base: 9998a5c40732
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
   (subtree merge, don't forget to commit)
@@ -324,6 +329,7 @@ test multiple subtree merge from source -> dest
   $ echo "source2" >> foo/x && hg ci -m "update foo again"
   $ hg subtree merge --from-path foo --to-path foo2
   computing merge base (timeout: 120 seconds)...
+  found the last subtree merge commit a26d75b3506f
   merge base: a1e3d459ad62
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
   (subtree merge, don't forget to commit)
@@ -352,6 +358,7 @@ test multiple subtree merge from dest -> source
   $ echo "dest" >> foo2/y && hg ci -m "update foo2"
   $ hg subtree merge --from-path foo2 --to-path foo
   computing merge base (timeout: 120 seconds)...
+  found the last subtree copy commit 39067344b0b6
   merge base: 9998a5c40732
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
   (subtree merge, don't forget to commit)
@@ -359,6 +366,7 @@ test multiple subtree merge from dest -> source
   $ echo "dest2" >> foo2/y && hg ci -m "update foo2 again"
   $ hg subtree merge --from-path foo2 --to-path foo
   computing merge base (timeout: 120 seconds)...
+  found the last subtree merge commit cd2a696dab0f
   merge base: a1e3d459ad62
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
   (subtree merge, don't forget to commit)
@@ -386,6 +394,7 @@ test multiple subtree merge from source -> dest, then dest -> source
   $ echo "dest" >> foo2/y && hg ci -m "update foo2"
   $ hg subtree merge --from-path foo --to-path foo2
   computing merge base (timeout: 120 seconds)...
+  found the last subtree copy commit 39067344b0b6
   merge base: 9998a5c40732
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
   (subtree merge, don't forget to commit)
@@ -393,6 +402,7 @@ test multiple subtree merge from source -> dest, then dest -> source
   $ echo "dest2" >> foo2/y && hg ci -m "update foo2 again"
   $ hg subtree merge --from-path foo2 --to-path foo
   computing merge base (timeout: 120 seconds)...
+  found the last subtree merge commit a26d75b3506f
   merge base: a1e3d459ad62
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
   (subtree merge, don't forget to commit)
@@ -421,6 +431,7 @@ test multiple subtree merge from dest -> source, then source -> dest
   $ echo "dest" >> foo2/y && hg ci -m "update foo2"
   $ hg subtree merge --from-path foo2 --to-path foo
   computing merge base (timeout: 120 seconds)...
+  found the last subtree copy commit 39067344b0b6
   merge base: 9998a5c40732
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
   (subtree merge, don't forget to commit)
@@ -428,6 +439,7 @@ test multiple subtree merge from dest -> source, then source -> dest
   $ echo "source2" >> foo/x && hg ci -m "update foo again"
   $ hg subtree merge --from-path foo --to-path foo2
   computing merge base (timeout: 120 seconds)...
+  found the last subtree merge commit cd2a696dab0f
   merge base: a1e3d459ad62
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
   (subtree merge, don't forget to commit)
@@ -445,6 +457,7 @@ test multiple subtree merge from dest -> source, then source -> dest
 to fix: show a better message when there is no changes for subtree merge
   $ hg subtree merge --from-path foo --to-path foo2
   computing merge base (timeout: 120 seconds)...
+  found the last subtree merge commit 62391083dc84
   merge base: eeb423c321b3
   0 files updated, 0 files merged, 0 files removed, 0 files unresolved
   (subtree merge, don't forget to commit)
@@ -538,6 +551,7 @@ test subtree merge source commit validation
   (hint: see 'hg help subtree' for the impacts on subtree merge and log)
   Continue with subtree merge (y/n)?  y
   computing merge base (timeout: 120 seconds)...
+  found the last subtree copy commit 39067344b0b6
   merge base: 9998a5c40732
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
   (subtree merge, don't forget to commit)
@@ -609,6 +623,7 @@ test subtree merge with different merge tools
 
   $ hg subtree merge --from-path foo --to-path foo2 -t :other
   computing merge base (timeout: 120 seconds)...
+  found the last subtree copy commit dfb7e4c6a0af
   merge base: d1c0dec1161c
   1 files updated, 1 files merged, 0 files removed, 0 files unresolved
   (subtree merge, don't forget to commit)
@@ -635,6 +650,7 @@ test subtree merge with different merge tools
 
   $ hg subtree merge --from-path foo --to-path foo2 -t :merge-other
   computing merge base (timeout: 120 seconds)...
+  found the last subtree copy commit dfb7e4c6a0af
   merge base: d1c0dec1161c
   merging foo2/x and foo/x to foo2/x
   1 files updated, 1 files merged, 0 files removed, 0 files unresolved
@@ -661,6 +677,7 @@ test subtree merge with different merge tools
 
   $ hg subtree merge --from-path foo --to-path foo2 -t :local
   computing merge base (timeout: 120 seconds)...
+  found the last subtree copy commit dfb7e4c6a0af
   merge base: d1c0dec1161c
   1 files updated, 1 files merged, 0 files removed, 0 files unresolved
   (subtree merge, don't forget to commit)
@@ -675,6 +692,7 @@ test subtree merge with different merge tools
 
   $ hg subtree merge --from-path foo --to-path foo2 -t :merge-local
   computing merge base (timeout: 120 seconds)...
+  found the last subtree copy commit dfb7e4c6a0af
   merge base: d1c0dec1161c
   merging foo2/x and foo/x to foo2/x
   1 files updated, 1 files merged, 0 files removed, 0 files unresolved
@@ -713,6 +731,7 @@ test deleted/changed conflict
   $ hg ci -m "update foo2/x"
   $ hg subtree merge --from-path foo2 --to-path foo
   computing merge base (timeout: 120 seconds)...
+  found the last subtree copy commit 7cc73f2f18dc
   merge base: f7de0a4f3e86
   other [merge rev] changed foo/x which local [working copy] is missing
   hint: if this is due to a renamed file, you can manually input the renamed path
@@ -720,3 +739,98 @@ test deleted/changed conflict
   0 files updated, 0 files merged, 0 files removed, 1 files unresolved
   use 'hg resolve' to retry unresolved file merges or 'hg goto -C .' to abandon
   [1]
+
+test merge base strategy: only search to-path history
+  $ newclientrepo
+  $ drawdag <<'EOS'
+  > B   # B/foo/y = bbb\n
+  > |
+  > A   # A/foo/x = aaa\n
+  >     # drawdag.defaultfiles=false
+  > EOS
+  $ hg go -q $B
+  $ hg subtree copy --from-path foo --to-path foo2 -m "subtree copy foo to foo2"
+  copying foo to foo2
+  $ echo "source" >> foo/x && hg ci -m "update foo"
+  $ echo "dest" >> foo2/y && hg ci -m "update foo2"
+  $ hg log -G -T '{node|short} {desc|firstline}\n'
+  @  fff853b992f4 update foo2
+  │
+  o  ae493dfc8f2a update foo
+  │
+  o  28f8d78804e0 subtree copy foo to foo2
+  │
+  o  9998a5c40732 B
+  │
+  o  d908813f0f7c A
+  $ hg subtree merge --from-path foo --to-path foo2 --verbose
+  computing merge base (timeout: 120 seconds)...
+  checking commit fff853b992f4
+  checking commit ae493dfc8f2a
+  checking commit 28f8d78804e0
+  found the last subtree copy commit 28f8d78804e0
+  merge base: 9998a5c40732
+  resolving manifests
+  1 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  (subtree merge, don't forget to commit)
+  $ hg go -C . -q
+  $ hg subtree merge --from-path foo --to-path foo2 --merge-base-strategy only-to --verbose
+  computing merge base (timeout: 120 seconds)...
+  checking commit fff853b992f4
+  checking commit 28f8d78804e0
+  found the last subtree copy commit 28f8d78804e0
+  merge base: 9998a5c40732
+  resolving manifests
+  1 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  (subtree merge, don't forget to commit)
+
+test merge base strategy: only search from-path history
+  $ newclientrepo
+  $ drawdag <<'EOS'
+  > B   # B/foo/y = bbb\n
+  > |
+  > A   # A/foo/x = aaa\n
+  >     # drawdag.defaultfiles=false
+  > EOS
+  $ hg go -q $B
+  $ hg subtree copy --from-path foo --to-path foo2 -m "subtree copy foo to foo2"
+  copying foo to foo2
+  $ echo "source" >> foo/x && hg ci -m "update foo"
+  $ echo "dest" >> foo2/y && hg ci -m "update foo2"
+  $ hg log -G -T '{node|short} {desc|firstline}\n'
+  @  fff853b992f4 update foo2
+  │
+  o  ae493dfc8f2a update foo
+  │
+  o  28f8d78804e0 subtree copy foo to foo2
+  │
+  o  9998a5c40732 B
+  │
+  o  d908813f0f7c A
+  $ hg subtree merge --from-path foo2 --to-path foo --verbose
+  computing merge base (timeout: 120 seconds)...
+  checking commit fff853b992f4
+  checking commit ae493dfc8f2a
+  checking commit 28f8d78804e0
+  found the last subtree copy commit 28f8d78804e0
+  merge base: 9998a5c40732
+  resolving manifests
+  1 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  (subtree merge, don't forget to commit)
+  $ hg diff
+  diff --git a/foo/y b/foo/y
+  --- a/foo/y
+  +++ b/foo/y
+  @@ -1,1 +1,2 @@
+   bbb
+  +dest
+  $ hg go -C . -q
+  $ hg subtree merge --from-path foo2 --to-path foo --merge-base-strategy only-from --verbose
+  computing merge base (timeout: 120 seconds)...
+  checking commit fff853b992f4
+  checking commit 28f8d78804e0
+  found the last subtree copy commit 28f8d78804e0
+  merge base: 9998a5c40732
+  resolving manifests
+  1 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  (subtree merge, don't forget to commit)

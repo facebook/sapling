@@ -49,6 +49,13 @@ MAX_SUBTREE_COPY_FILE_COUNT = 10_000
 MERGE_BASE_TIMEOUT_SECS = 120
 COPY_REUSE_TREE = False
 
+MERGE_BASE_STRATEGIES = [
+    # Walk only the from‑path’s history when searching for a merge base.
+    "only-from",
+    # Walk only the to‑path’s history when searching for a merge base.
+    "only-to",
+]
+
 readonly = registrar.command.readonly
 
 
@@ -259,13 +266,34 @@ def subtree_graft(ui, repo, **opts):
     "merge",
     [
         ("r", "rev", "", _("revisions to merge"), _("REV")),
+        (
+            "",
+            "merge-base-strategy",
+            "",
+            _("strategy for searching merge‑base: %s")
+            % ", ".join(MERGE_BASE_STRATEGIES),
+        ),
     ]
     + mergetoolopts
     + subtree_path_opts,
     _("[OPTION]... --from-path PATH --to-path PATH"),
 )
 def subtree_merge(ui, repo, **opts):
-    """merge a path of the specified commit into a different path of the current commit"""
+    """merge a path of the specified commit into a different path of the current commit
+
+    To merge the directory branch "my-branch" at commit A into "my-project", run::
+
+      @prog@ subtree merge -r A --from-path my-branch --to-path my-project
+
+    If "-r/--rev" option is not specified, "-r ." is used as the default value.
+
+    By default @Product@ scans the history of both "--from-path" and "to-path" to
+    find the best merge base. If one side’s history is massive, that can get slow.
+    Narrow the search with "--merge-base-strategy":
+
+    - only-from: walk only the from-path's history
+    - only-to: walk only the to-path's history
+    """
     ctx = repo["."]
     from_ctx = scmutil.revsingle(repo, opts.get("rev"))
     from_paths = scmutil.rootrelpaths(ctx, opts.get("from_path"))
@@ -281,7 +309,7 @@ def subtree_merge(ui, repo, **opts):
     subtreeutil.validate_file_count(repo, from_ctx, from_paths)
 
     merge_base_ctx = _subtree_merge_base(
-        repo, ctx, to_paths[0], from_ctx, from_paths[0]
+        repo, ctx, to_paths[0], from_ctx, from_paths[0], opts
     )
     ui.status("merge base: %s\n" % merge_base_ctx)
     cmdutil.registerdiffgrafts(from_paths, to_paths, ctx, from_ctx)
@@ -367,7 +395,7 @@ def subtree_inspect(ui, repo, *args, **opts):
     ui.write(f"{result_json}\n")
 
 
-def _subtree_merge_base(repo, to_ctx, to_path, from_ctx, from_path):
+def _subtree_merge_base(repo, to_ctx, to_path, from_ctx, from_path, opts):
     """get the best merge base for subtree merge
 
     There are two major use cases for subtree merge:
@@ -398,6 +426,13 @@ def _subtree_merge_base(repo, to_ctx, to_path, from_ctx, from_path):
             return dag.parentnames(node)[0]
         except IndexError:
             return None
+
+    strategy = opts.get("merge_base_strategy")
+    if strategy and strategy not in MERGE_BASE_STRATEGIES:
+        raise error.Abort(
+            _("invalid merge base strategy: %s") % strategy,
+            hint=_("valid strategies: %s") % ", ".join(MERGE_BASE_STRATEGIES),
+        )
 
     dag = repo.changelog.dag
     if from_path == to_path:
@@ -434,25 +469,39 @@ def _subtree_merge_base(repo, to_ctx, to_path, from_ctx, from_path):
             p.value += 1
             if int(time.time() - start_time) >= mergebase_timeout_secs:
                 break
-            # check the other one by default
-            i = 1 - i
-            # if they have direct ancestor relationship, then selects the newer one
-            if has_ancestor_relation:
-                if isancestor(heads[0], heads[1]):
-                    i = 1
-                elif isancestor(heads[1], heads[0]):
-                    i = 0
+            if strategy == "only-to":
+                i = 0
+            elif strategy == "only-from":
+                i = 1
+            else:
+                # check the other one by default
+                i = 1 - i
+                # if they have direct ancestor relationship, then selects the newer one
+                if has_ancestor_relation:
+                    if isancestor(heads[0], heads[1]):
+                        i = 1
+                    elif isancestor(heads[1], heads[0]):
+                        i = 0
 
             # check merge info
             curr_node = heads[i]
+            ui.note("checking commit %s\n" % node.short(curr_node))
             for merge in get_subtree_merges(repo, curr_node):
                 if merge.to_path == paths[i] and merge.from_path == paths[1 - i]:
+                    ui.status(
+                        _("found the last subtree merge commit %s\n")
+                        % node.short(curr_node)
+                    )
                     merge_base_ctx = repo[merge.from_commit]
                     return registerdiffgrafts(merge_base_ctx, i)
 
             # check branch info
             for branch in get_subtree_branches(repo, curr_node):
                 if branch.to_path == paths[i] and branch.from_path == paths[1 - i]:
+                    ui.status(
+                        _("found the last subtree copy commit %s\n")
+                        % node.short(curr_node)
+                    )
                     merge_base_ctx = repo[branch.from_commit]
                     return registerdiffgrafts(merge_base_ctx, i)
 

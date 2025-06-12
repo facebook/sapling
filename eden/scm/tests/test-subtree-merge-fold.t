@@ -133,6 +133,7 @@ Make a copy.  Note that this is not a subtree copy.
 
   $ hg subtree merge --from-path proj1/bar --to-path proj1/foo
   computing merge base (timeout: 120 seconds)...
+  found the last subtree merge commit a6d4fe868877
   merge base: 2ef2c3679bcb
   0 files updated, 0 files merged, 0 files removed, 0 files unresolved
   (subtree merge, don't forget to commit)
@@ -141,6 +142,7 @@ Make a copy.  Note that this is not a subtree copy.
   [1]
   $ hg subtree merge --from-path proj2/bar --to-path proj2/foo -r .^
   computing merge base (timeout: 120 seconds)...
+  found the last subtree merge commit a6d4fe868877
   merge base: 2ef2c3679bcb
   0 files updated, 0 files merged, 0 files removed, 0 files unresolved
   (subtree merge, don't forget to commit)

@@ -450,6 +450,7 @@ test subtree merge
   copying foo to bar
   $ hg subtree merge -r $D --from-path foo --to-path bar
   computing merge base (timeout: 120 seconds)...
+  found the last subtree copy commit 0f9175ec4003
   merge base: 55ff286fb56f
   merging bar/x and foo/x to bar/x
   0 files updated, 1 files merged, 0 files removed, 0 files unresolved
