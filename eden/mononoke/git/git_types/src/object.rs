@@ -5,11 +5,23 @@
  * GNU General Public License version 2.
  */
 
+use std::hash::Hash;
+use std::hash::Hasher;
+use std::sync::Arc;
+
 use bytes::Bytes;
 use digest::Digest;
+use gix_object::BlobRef;
+use gix_object::CommitRef;
 use gix_object::Object;
+use gix_object::ObjectRef;
+use gix_object::TagRef;
+use gix_object::TreeRef;
 use mononoke_types::hash::RichGitSha1;
+use ouroboros::self_referencing;
 use sha1::Sha1;
+
+use crate::errors::GitError;
 
 #[derive(Debug, Copy, Clone, Hash, Eq, PartialEq)]
 pub enum ObjectKind {
@@ -72,3 +84,96 @@ impl OwnedObjectContent {
         self.parsed.as_blob().is_some()
     }
 }
+
+#[self_referencing]
+#[derive(Debug)]
+pub struct ObjectContentInner {
+    raw: Bytes,
+    #[borrows(raw)]
+    #[not_covariant]
+    parsed: ObjectRef<'this>,
+}
+
+#[derive(Debug, Clone)]
+pub struct ObjectContent(Arc<ObjectContentInner>);
+
+impl ObjectContent {
+    pub fn try_from_loose(identifier: String, raw: Bytes) -> Result<Self, GitError> {
+        Ok(Self(Arc::new(
+            ObjectContentInnerTryBuilder {
+                raw,
+                parsed_builder: |raw| {
+                    ObjectRef::from_loose(raw).map_err(|e| {
+                        GitError::InvalidContent(identifier, anyhow::anyhow!(e.to_string()).into())
+                    })
+                },
+            }
+            .try_build()?,
+        )))
+    }
+
+    fn inner(&self) -> &'_ ObjectContentInner {
+        &self.0
+    }
+    pub fn raw(&self) -> &'_ Bytes {
+        self.inner().borrow_raw()
+    }
+
+    pub fn is_tree(&self) -> bool {
+        self.inner()
+            .with_parsed(move |parsed| parsed.as_tree().is_some())
+    }
+    pub fn is_blob(&self) -> bool {
+        self.inner()
+            .with_parsed(move |parsed| parsed.as_blob().is_some())
+    }
+    pub fn is_tag(&self) -> bool {
+        self.inner()
+            .with_parsed(move |parsed| parsed.as_tag().is_some())
+    }
+    pub fn is_commit(&self) -> bool {
+        self.inner()
+            .with_parsed(move |parsed| parsed.as_commit().is_some())
+    }
+
+    pub fn with_parsed<Out>(&self, f: impl FnOnce(&ObjectRef<'_>) -> Out) -> Out {
+        self.inner().with_parsed(f)
+    }
+    pub fn with_parsed_as_tree<Out>(&self, f: impl FnOnce(&TreeRef<'_>) -> Out) -> Option<Out> {
+        self.inner().with_parsed(|parsed| {
+            let tree = parsed.as_tree()?;
+            Some(f(tree))
+        })
+    }
+    pub fn with_parsed_as_blob<Out>(&self, f: impl FnOnce(&BlobRef<'_>) -> Out) -> Option<Out> {
+        self.inner().with_parsed(|parsed| {
+            let blob = parsed.as_blob()?;
+            Some(f(blob))
+        })
+    }
+    pub fn with_parsed_as_tag<Out>(&self, f: impl FnOnce(&TagRef<'_>) -> Out) -> Option<Out> {
+        self.inner().with_parsed(|parsed| {
+            let tag = parsed.as_tag()?;
+            Some(f(tag))
+        })
+    }
+    pub fn with_parsed_as_commit<Out>(&self, f: impl FnOnce(&CommitRef<'_>) -> Out) -> Option<Out> {
+        self.inner().with_parsed(|parsed| {
+            let commit = parsed.as_commit()?;
+            Some(f(commit))
+        })
+    }
+}
+impl Hash for ObjectContent {
+    fn hash<H: Hasher>(&self, state: &mut H) {
+        self.raw().hash(state);
+    }
+}
+
+impl PartialEq for ObjectContent {
+    fn eq(&self, other: &Self) -> bool {
+        self.raw() == other.raw()
+    }
+}
+
+impl Eq for ObjectContent {}

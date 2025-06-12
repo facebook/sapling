@@ -35,6 +35,7 @@ metaconfig_types = { version = "0.1.0", path = "../../metaconfig/types" }
 mononoke_macros = { version = "0.1.0", path = "../../mononoke_macros" }
 mononoke_types = { version = "0.1.0", path = "../../mononoke_types" }
 mononoke_types_serialization = { version = "0.1.0", path = "../../mononoke_types/serialization" }
+ouroboros = "0.18.5"
 packfile = { version = "0.1.0", path = "../packfile" }
 regex = "1.11.1"
 repo_derived_data = { version = "0.1.0", path = "../../repo_attributes/repo_derived_data" }

@@ -39,6 +39,7 @@ rust_library(
         "fbsource//third-party/rust:gix-object",
         "fbsource//third-party/rust:itertools",
         "fbsource//third-party/rust:lazy_static",
+        "fbsource//third-party/rust:ouroboros",
         "fbsource//third-party/rust:regex",
         "fbsource//third-party/rust:sha1",
         "fbsource//third-party/rust:thiserror",
