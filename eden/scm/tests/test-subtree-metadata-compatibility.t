@@ -75,7 +75,7 @@ merge should use commit B (9998a5c40732) as the merge base
   $ echo "source" >> foo/x && hg ci -m "update foo"
   $ echo "dest" >> foo2/y && hg ci -m "update foo2"
   $ hg subtree merge --from-path foo --to-path foo2 -t :merge3
-  computing merge base (timeout: 120 seconds)...
+  searching for merge base ...
   found the last subtree copy commit 2b794ff58e31
   merge base: 9998a5c40732
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved

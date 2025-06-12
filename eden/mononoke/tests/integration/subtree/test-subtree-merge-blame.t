@@ -84,7 +84,7 @@
 
 Create a complex merge that includes lines that were copied from a path that is not in the destination history.
   $ hg subtree merge -r .^ --from-path baz --to-path foo
-  computing merge base (timeout: 120 seconds)...
+  searching for merge base ...
   merge base: aa7c579b9d86
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
   (subtree merge, don't forget to commit)

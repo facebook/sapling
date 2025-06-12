@@ -41,7 +41,7 @@ Make a copy.  Note that this is not a subtree copy.
   o  7b1f8515a385 'A'
 
   $ hg subtree merge --from-path proj1/bar --to-path proj1/foo
-  computing merge base (timeout: 120 seconds)...
+  searching for merge base ...
   merge base: 545926ee9897
   merging proj1/foo/x and proj1/bar/x to proj1/foo/x
   warning: 1 conflicts while merging proj1/foo/x! (edit, then use 'hg resolve --mark')
@@ -66,7 +66,7 @@ Make a copy.  Note that this is not a subtree copy.
   }
 
   $ hg subtree merge --from-path proj2/bar --to-path proj2/foo -r .^
-  computing merge base (timeout: 120 seconds)...
+  searching for merge base ...
   merge base: 545926ee9897
   merging proj2/foo/x and proj2/bar/x to proj2/foo/x
   warning: 1 conflicts while merging proj2/foo/x! (edit, then use 'hg resolve --mark')
@@ -132,7 +132,7 @@ Make a copy.  Note that this is not a subtree copy.
   o  7b1f8515a385 'A'
 
   $ hg subtree merge --from-path proj1/bar --to-path proj1/foo
-  computing merge base (timeout: 120 seconds)...
+  searching for merge base ...
   found the last subtree merge commit a6d4fe868877
   merge base: 2ef2c3679bcb
   0 files updated, 0 files merged, 0 files removed, 0 files unresolved
@@ -141,7 +141,7 @@ Make a copy.  Note that this is not a subtree copy.
   nothing changed
   [1]
   $ hg subtree merge --from-path proj2/bar --to-path proj2/foo -r .^
-  computing merge base (timeout: 120 seconds)...
+  searching for merge base ...
   found the last subtree merge commit a6d4fe868877
   merge base: 2ef2c3679bcb
   0 files updated, 0 files merged, 0 files removed, 0 files unresolved

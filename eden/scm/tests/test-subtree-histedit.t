@@ -20,14 +20,14 @@ test histedit to fold subtree merge commits
   $ hg subtree copy -r $A --from-path foo --to-path foo3 -m "subtree copy foo to foo3"
   copying foo to foo3
   $ hg subtree merge -r $B --from-path foo --to-path foo2
-  computing merge base (timeout: 120 seconds)...
+  searching for merge base ...
   found the last subtree copy commit 44d9b171824f
   merge base: b4cb27eee4e2
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
   (subtree merge, don't forget to commit)
   $ hg ci -m "merge B from foo to foo2"
   $ hg subtree merge -r $C --from-path foo --to-path foo3
-  computing merge base (timeout: 120 seconds)...
+  searching for merge base ...
   found the last subtree copy commit f6ef74a89a69
   merge base: b4cb27eee4e2
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
