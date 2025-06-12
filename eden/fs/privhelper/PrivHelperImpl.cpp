@@ -12,13 +12,10 @@
 #include <folly/File.h>
 #include <folly/FileUtil.h>
 #include <folly/SocketAddress.h>
-#include <folly/String.h>
 #include <folly/Synchronized.h>
 #include <folly/futures/Future.h>
-#include <folly/init/Init.h>
 #include <folly/io/Cursor.h>
 #include <folly/io/async/EventBase.h>
-#include <folly/logging/Init.h>
 #include <folly/logging/xlog.h>
 #include <folly/portability/SysTypes.h>
 #include <folly/portability/Unistd.h>
@@ -31,7 +28,6 @@
 #include "eden/fs/privhelper/PrivHelper.h"
 #include "eden/fs/privhelper/PrivHelperConn.h"
 #include "eden/fs/privhelper/PrivHelperFlags.h"
-#include "eden/fs/privhelper/PrivHelperServer.h"
 #include "eden/fs/utils/NotImplemented.h"
 
 using folly::checkUnixError;
