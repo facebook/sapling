@@ -129,6 +129,8 @@ ChronoParseError conversionCodeToParseError(ConversionCode code) {
     case ConversionCode::BOOL_INVALID_VALUE:
     case ConversionCode::STRING_TO_FLOAT_ERROR:
     case ConversionCode::ARITH_LOSS_OF_PRECISION:
+    case ConversionCode::CUSTOM:
+    case ConversionCode::SPLIT_ERROR:
     case ConversionCode::NUM_ERROR_CODES:
       return ChronoParseError::OtherError;
       // We intentionally do not have a default case so we will get
