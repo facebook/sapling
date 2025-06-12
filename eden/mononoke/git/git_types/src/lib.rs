@@ -34,8 +34,8 @@ use gix_hash::ObjectId;
 use gix_hash::oid;
 use gix_object::Object;
 use gix_object::WriteTo;
-pub use object::ObjectContent;
 pub use object::ObjectKind;
+pub use object::OwnedObjectContent;
 use sha1::Digest;
 use sha1::Sha1;
 

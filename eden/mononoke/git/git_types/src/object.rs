@@ -54,12 +54,12 @@ impl ObjectKind {
 }
 
 #[derive(Clone, Debug, Hash, Eq, PartialEq)]
-pub struct ObjectContent {
+pub struct OwnedObjectContent {
     pub parsed: Object,
     pub raw: Bytes,
 }
 
-impl ObjectContent {
+impl OwnedObjectContent {
     pub fn new(parsed: Object, raw: Bytes) -> Self {
         Self { parsed, raw }
     }

@@ -24,7 +24,7 @@ use futures::future;
 use futures::stream;
 use futures_stats::TimedTryFutureExt;
 use git_types::GitIdentifier;
-use git_types::ObjectContent;
+use git_types::OwnedObjectContent;
 use git_types::fetch_git_object;
 use gix_features::progress::Discard;
 use gix_hash::Kind;
@@ -50,12 +50,12 @@ use tempfile::Builder;
 use crate::PACKFILE_SUFFIX;
 
 const MAX_ALLOWED_DEPTH: u8 = 30;
-type ObjectMap = HashMap<ObjectId, ObjectContent>;
+type ObjectMap = HashMap<ObjectId, OwnedObjectContent>;
 
 #[derive(Debug, Clone, Hash, PartialEq, Eq)]
 enum PackEntry {
     Pending(InputEntry),
-    Processed((ObjectId, ObjectContent)),
+    Processed((ObjectId, OwnedObjectContent)),
 }
 
 #[derive(Debug, Clone, Default)]
@@ -93,7 +93,7 @@ impl PackEntries {
         (pending, processed)
     }
 
-    fn into_processed(self) -> Result<FxHashMap<ObjectId, ObjectContent>> {
+    fn into_processed(self) -> Result<FxHashMap<ObjectId, OwnedObjectContent>> {
         let mut object_map = FxHashMap::default();
         for entry in self.entries {
             match entry {
@@ -177,7 +177,7 @@ async fn fetch_prereq_objects(
                         object.write_to(git_bytes.by_ref())?;
                         anyhow::Ok(Some((
                             object_id,
-                            ObjectContent::new(object, Bytes::from(git_bytes)),
+                            OwnedObjectContent::new(object, Bytes::from(git_bytes)),
                         )))
                     }
                     // The object might not be present in the data store since its an inpack object
@@ -198,7 +198,7 @@ pub async fn parse_pack(
     ctx: &CoreContext,
     blobstore: Arc<RepoBlobstore>,
     concurrency: usize,
-) -> Result<FxHashMap<ObjectId, ObjectContent>> {
+) -> Result<FxHashMap<ObjectId, OwnedObjectContent>> {
     // If the packfile is empty, return an empty object map. This can happen when the push only has ref create/update
     // pointing to existing commit or just ref deletes
     if pack_bytes.is_empty() {
@@ -239,7 +239,7 @@ fn process_pack_entries(pack_file: &data::File, entries: PackEntries) -> Result<
                     let base_object = BaseObject::new(object_bytes.clone())
                         .context("Error in converting bytes to git object")?;
                     let id = base_object.hash;
-                    let object = ObjectContent::new(base_object.object, object_bytes);
+                    let object = OwnedObjectContent::new(base_object.object, object_bytes);
                     let processed_entry = PackEntry::Processed((id, object));
                     anyhow::Ok(processed_entry)
                 }
@@ -264,7 +264,7 @@ async fn parse_stored_pack(
     ctx: &CoreContext,
     blobstore: Arc<RepoBlobstore>,
     concurrency: usize,
-) -> Result<FxHashMap<ObjectId, ObjectContent>> {
+) -> Result<FxHashMap<ObjectId, OwnedObjectContent>> {
     let pack_file = Arc::new(File::at(pack_path, Kind::Sha1).with_context(|| {
         format!(
             "Error while opening packfile for push at {}",

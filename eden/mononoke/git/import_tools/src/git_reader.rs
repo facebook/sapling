@@ -20,7 +20,7 @@ use anyhow::format_err;
 use async_trait::async_trait;
 use auto_impl::auto_impl;
 use bytes::Bytes;
-use git_types::ObjectContent;
+use git_types::OwnedObjectContent;
 use gix_hash::ObjectId;
 use gix_object::Commit;
 use gix_object::Kind;
@@ -37,12 +37,12 @@ use tokio::process::Command;
 use tokio::sync::mpsc;
 use tokio::sync::oneshot;
 
-type ObjectSender = oneshot::Sender<Result<ObjectContent>>;
+type ObjectSender = oneshot::Sender<Result<OwnedObjectContent>>;
 
 #[async_trait]
 #[auto_impl(&, Arc, Box)]
 pub trait GitReader: Clone + Send + Sync + 'static {
-    async fn get_object(&self, oid: &gix_hash::oid) -> Result<ObjectContent>;
+    async fn get_object(&self, oid: &gix_hash::oid) -> Result<OwnedObjectContent>;
 
     async fn read_tag(&self, oid: &gix_hash::oid) -> Result<Tag> {
         let object = self.get_object(oid).await?;
@@ -178,7 +178,7 @@ impl GitRepoReader {
     pub fn get_object(
         &self,
         oid: &gix_hash::oid,
-    ) -> impl Future<Output = Result<ObjectContent>> + use<> {
+    ) -> impl Future<Output = Result<OwnedObjectContent>> + use<> {
         let outstanding_requests = self.outstanding_requests.clone();
         let send_request = self.send_request.clone();
         let oid = oid.to_owned();
@@ -204,7 +204,7 @@ impl GitRepoReader {
 
 #[async_trait]
 impl GitReader for GitRepoReader {
-    async fn get_object(&self, oid: &gix_hash::oid) -> Result<ObjectContent> {
+    async fn get_object(&self, oid: &gix_hash::oid) -> Result<OwnedObjectContent> {
         self.get_object(oid).await
     }
 }
@@ -236,7 +236,7 @@ fn parse_cat_header(header: &str) -> Result<(ObjectId, Result<(Kind, usize)>)> {
     Ok((oid.parse()?, parse_kind_and_size(content_type)))
 }
 
-fn convert_to_object(kind: Kind, size: usize, bytes: Vec<u8>) -> Result<ObjectContent> {
+fn convert_to_object(kind: Kind, size: usize, bytes: Vec<u8>) -> Result<OwnedObjectContent> {
     let object_ref = ObjectRef::from_bytes(kind, &bytes).with_context(|| {
         format!(
             "Failed to parse:\n```\n{}\n```\ninto object of kind {:?}",
@@ -247,7 +247,7 @@ fn convert_to_object(kind: Kind, size: usize, bytes: Vec<u8>) -> Result<ObjectCo
     let mut raw = format!("{} {}\x00", kind, size).into_bytes();
     raw.append(&mut bytes.clone());
 
-    Ok(ObjectContent {
+    Ok(OwnedObjectContent {
         parsed: object_ref.into_owned(),
         raw: Bytes::from(raw),
     })

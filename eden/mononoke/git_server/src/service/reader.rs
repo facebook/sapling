@@ -14,7 +14,7 @@ use bonsai_git_mapping::BonsaiGitMapping;
 use context::CoreContext;
 use git_types::GitIdentifier;
 use git_types::HeaderState;
-use git_types::ObjectContent;
+use git_types::OwnedObjectContent;
 use git_types::fetch_git_object_bytes;
 use gix_hash::ObjectId;
 use gix_object::ObjectRef;
@@ -28,14 +28,14 @@ use super::uploader::RefMap;
 
 #[derive(Clone)]
 pub struct GitObjectStore {
-    pub(crate) object_map: FxHashMap<ObjectId, ObjectContent>,
+    pub(crate) object_map: FxHashMap<ObjectId, OwnedObjectContent>,
     ctx: CoreContext,
     blobstore: Arc<RepoBlobstore>,
 }
 
 impl GitObjectStore {
     pub fn new(
-        object_map: FxHashMap<ObjectId, ObjectContent>,
+        object_map: FxHashMap<ObjectId, OwnedObjectContent>,
         ctx: &CoreContext,
         blobstore: Arc<RepoBlobstore>,
     ) -> Self {
@@ -49,7 +49,7 @@ impl GitObjectStore {
 
 #[async_trait]
 impl GitReader for GitObjectStore {
-    async fn get_object(&self, oid: &gix_hash::oid) -> Result<ObjectContent> {
+    async fn get_object(&self, oid: &gix_hash::oid) -> Result<OwnedObjectContent> {
         if let Some(content) = self.object_map.get(oid).cloned() {
             Ok(content)
         } else {
@@ -67,7 +67,7 @@ impl GitReader for GitObjectStore {
             let parsed = ObjectRef::from_loose(&bytes)
                 .context("Failed to convert bytes into git object")?
                 .into_owned();
-            Ok(ObjectContent { raw: bytes, parsed })
+            Ok(OwnedObjectContent { raw: bytes, parsed })
         }
     }
 }
