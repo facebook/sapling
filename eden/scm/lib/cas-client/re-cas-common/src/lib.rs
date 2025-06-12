@@ -51,7 +51,7 @@ macro_rules! cas_client {
             TDigest {
                 hash: d.hash.to_hex(),
                 size_in_bytes: d.size as i64,
-                hash_algo: Some(THashAlgo::BLAKE3),
+                hash_algo: Some(THashAlgo::KEYED_BLAKE3),
                 ..Default::default()
             }
         }
