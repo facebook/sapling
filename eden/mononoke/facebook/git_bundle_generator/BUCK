@@ -26,6 +26,7 @@ rust_binary(
         "//common/rust/shed/cloned:cloned",
         "//common/rust/shed/fbinit:fbinit",
         "//common/rust/shed/futures_stats:futures_stats",
+        "//common/rust/shed/justknobs_stub:justknobs",
         "//eden/mononoke/cmdlib:environment",
         "//eden/mononoke/cmdlib/caching:cmdlib_caching",
         "//eden/mononoke/cmdlib/mononoke_app:mononoke_app",
