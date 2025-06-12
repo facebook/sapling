@@ -23,6 +23,7 @@ use git_types::DeltaObjectKind;
 use git_types::GDMV2Entry;
 use git_types::GDMV2ObjectEntry;
 use gix_hash::ObjectId;
+use metaconfig_types::GitConcurrencyParams;
 use metaconfig_types::GitDeltaManifestVersion;
 use mononoke_types::ChangesetId;
 use mononoke_types::path::MPath;
@@ -77,6 +78,17 @@ impl PackfileConcurrency {
             trees_and_blobs: 18_000,
             commits: 20_000,
             tags: 20_000,
+            memory_bound: MEMORY_BOUND,
+        }
+    }
+}
+
+impl From<GitConcurrencyParams> for PackfileConcurrency {
+    fn from(value: GitConcurrencyParams) -> Self {
+        Self {
+            trees_and_blobs: value.trees_and_blobs,
+            commits: value.commits,
+            tags: value.tags,
             memory_bound: MEMORY_BOUND,
         }
     }
