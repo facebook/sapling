@@ -66,4 +66,5 @@ test_file="$arg"
 dott_target="$(buck2 uquery -v 0 --no-interactive-console --flagfile "$mode" "owner('$test_file')" | grep -- -dott | head -n 1)"
 test_target=${dott_target%"-dott"}
 echo "$(tput bold)"'$' buck run --flagfile "$mode" "$test_target" -- "$(basename "$test_file")" "$@" "$(tput sgr0)"
+unset http_proxy https_proxy
 buck run --flagfile "$mode" "$test_target" -- "$(basename "$test_file")" "$@"
