@@ -6,6 +6,7 @@
  */
 
 use context::CoreContext;
+use edenapi_service::handlers::HandlerInfo as SlapiHandlerInfo;
 use gotham::state::State;
 use gotham_ext::middleware::MetadataState;
 use gotham_ext::middleware::PostResponseInfo;
@@ -70,6 +71,7 @@ pub struct MononokeGitScubaHandler {
     push_validation_errors: Option<PushValidationErrors>,
     bundle_uri_outcome: Option<BundleUriOutcome>,
     client_username: Option<String>,
+    slapi_handler_info: Option<SlapiHandlerInfo>,
 }
 
 pub(crate) fn scuba_from_state(ctx: &CoreContext, state: &State) -> MononokeScubaSampleBuilder {
@@ -113,6 +115,7 @@ impl MononokeGitScubaHandler {
                 .try_borrow::<MetadataState>()
                 .and_then(|metadata_state| metadata_state.metadata().identities().username())
                 .map(ToString::to_string),
+            slapi_handler_info: state.try_borrow::<SlapiHandlerInfo>().cloned(),
         }
     }
 
@@ -137,6 +140,15 @@ impl MononokeGitScubaHandler {
                 push_validation_errors.to_string(),
             );
         }
+
+        if let Some(slapi_handler_info) = self.slapi_handler_info {
+            scuba.add_opt(MononokeGitScubaKey::Repo, slapi_handler_info.repo.clone());
+            scuba.add_opt(
+                MononokeGitScubaKey::Method,
+                slapi_handler_info.method.map(|m| m.to_string()),
+            );
+        }
+
         if let Some(outcome) = self.bundle_uri_outcome {
             match outcome {
                 BundleUriOutcome::Success(success_msg) => {

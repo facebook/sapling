@@ -119,6 +119,7 @@ where
     }
     .timed()
     .await;
+
     ScubaMiddlewareState::try_set_future_stats(&mut state, &future_stats);
 
     build_response(res, state, &JsonErrorFomatter)
