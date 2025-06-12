@@ -16,6 +16,7 @@ from sapling import (
     blackbox,
     bookmarks,
     error,
+    git,
     hg,
     hintutil,
     node as nodemod,
@@ -52,10 +53,11 @@ def _isremotebookmarkssyncenabled(ui):
 
 
 def _getheads(repo):
-    if visibility.enabled(repo):
+    if visibility.enabled(repo) and not git.isgitformat(repo):
         # Visible heads can contain public heads in some cases due to a known issue.
         # TODO (liubovd): remove the filter once the issue is fixed.
-        return [nodemod.hex(n) for n in visibility.heads(repo) if repo[n].mutable()]
+        heads = [nodemod.hex(n) for n in visibility.heads(repo) if repo[n].mutable()]
+        return heads
     else:
         # Select the commits to sync.  To match previous behaviour, this is
         # all draft but not obsolete commits, plus any bookmarked commits,
