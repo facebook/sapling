@@ -23,5 +23,6 @@ rust_library(
         "fbsource//third-party/rust:tracing",
         "//eden/scm/lib/cas-client:cas-client",
         "//eden/scm/lib/types:types",
+        "//remote_execution/lib/if:common-rust",
     ],
 )

@@ -32,6 +32,9 @@ use configmodel::Config;
 use configmodel::ConfigExt;
 use configmodel::convert::ByteCount;
 use configmodel::convert::FromConfigValue;
+use re_cas_common::from_re_digest;
+use re_cas_common::parse_stats;
+use re_cas_common::to_re_digest;
 #[cfg(target_os = "linux")]
 use rich_cas_client_wrapper::CASClientWrapper as CASClientBundle;
 

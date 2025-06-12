@@ -12,6 +12,11 @@ pub use cas_client::CasClient;
 pub use itertools::Either;
 pub use itertools::Itertools;
 pub use once_cell::sync::OnceCell;
+use remote_execution_common::TDigest;
+use remote_execution_common::THashAlgo;
+use remote_execution_common::TLocalCacheStats;
+use remote_execution_common::TStorageBackendStats;
+use remote_execution_common::TStorageBackendType;
 pub use tracing;
 pub use types::Blake3;
 pub use types::CasDigest;
@@ -19,6 +24,62 @@ pub use types::CasDigestType;
 pub use types::CasFetchedStats;
 pub use types::CasPrefetchOutcome;
 pub use types::FetchContext;
+
+pub fn to_re_digest(d: &CasDigest) -> remote_execution_common::TDigest {
+    TDigest {
+        hash: d.hash.to_hex(),
+        size_in_bytes: d.size as i64,
+        hash_algo: Some(THashAlgo::KEYED_BLAKE3),
+        ..Default::default()
+    }
+}
+
+pub fn from_re_digest(d: &TDigest) -> Result<CasDigest> {
+    Ok(CasDigest {
+        hash: Blake3::from_hex(d.hash.as_bytes())?,
+        size: d.size_in_bytes as u64,
+    })
+}
+
+pub fn parse_stats(
+    stats_entries: impl Iterator<Item = (TStorageBackendType, TStorageBackendStats)>,
+    local_cache_stats: TLocalCacheStats,
+) -> CasFetchedStats {
+    let mut stats = CasFetchedStats::default();
+    for (backend, dstats) in stats_entries {
+        match backend {
+            TStorageBackendType::ZDB => {
+                stats.total_bytes_zdb += dstats.bytes as u64;
+                stats.queries_zdb += dstats.queries_count as u64
+            }
+            TStorageBackendType::ZGATEWAY => {
+                stats.total_bytes_zgw += dstats.bytes as u64;
+                stats.queries_zgw += dstats.queries_count as u64
+            }
+            TStorageBackendType::MANIFOLD => {
+                stats.total_bytes_manifold += dstats.bytes as u64;
+                stats.queries_manifold += dstats.queries_count as u64
+            }
+            TStorageBackendType::HEDWIG => {
+                stats.total_bytes_hedwig += dstats.bytes as u64;
+                stats.queries_hedwig += dstats.queries_count as u64
+            }
+            _ => {}
+        }
+    }
+    stats.hits_files_local_cache = local_cache_stats.hits_files as u64;
+    stats.hits_bytes_local_cache = local_cache_stats.hits_bytes as u64;
+    stats.misses_files_local_cache = local_cache_stats.misses_files as u64;
+    stats.misses_bytes_local_cache = local_cache_stats.misses_bytes as u64;
+    stats.hits_blobs_local_lmdb_cache = local_cache_stats.hits_count_lmdb as u64;
+    stats.hits_bytes_local_lmdb_cache = local_cache_stats.hits_bytes_lmdb as u64;
+    stats.misses_blobs_local_lmdb_cache = local_cache_stats.misses_count_lmdb as u64;
+    stats.misses_bytes_local_lmdb_cache = local_cache_stats.misses_bytes_lmdb as u64;
+    stats.cloom_false_positives = local_cache_stats.cloom_false_positives as u64;
+    stats.cloom_true_positives = local_cache_stats.cloom_true_positives as u64;
+    stats.cloom_misses = local_cache_stats.cloom_miss_count as u64;
+    stats
+}
 
 #[macro_export]
 macro_rules! cas_client {
@@ -35,57 +96,11 @@ macro_rules! cas_client {
         use cas_client_lib::REClientError;
         use cas_client_lib::TCode;
         use cas_client_lib::UploadRequest;
-        use cas_client_lib::TDigest;
-        use cas_client_lib::THashAlgo;
-        use cas_client_lib::TStorageBackendType;
-        use cas_client_lib::TStorageBackendStats;
-        use cas_client_lib::TLocalCacheStats;
 
         impl $struct {
             fn client(&self) -> Result<&CASClientBundle> {
                 self.client.get_or_try_init(|| self.build())
             }
-        }
-
-        fn to_re_digest(d: &$crate::CasDigest) -> TDigest {
-            TDigest {
-                hash: d.hash.to_hex(),
-                size_in_bytes: d.size as i64,
-                hash_algo: Some(THashAlgo::KEYED_BLAKE3),
-                ..Default::default()
-            }
-        }
-
-        fn from_re_digest(d: &TDigest) -> $crate::Result<$crate::CasDigest> {
-            Ok($crate::CasDigest {
-                hash: $crate::Blake3::from_hex(d.hash.as_bytes())?,
-                size: d.size_in_bytes as u64,
-            })
-        }
-
-        fn parse_stats(stats_entries: impl Iterator<Item=(TStorageBackendType, TStorageBackendStats)>, local_cache_stats: TLocalCacheStats) -> $crate::CasFetchedStats {
-            let mut stats = $crate::CasFetchedStats::default();
-            for (backend, dstats) in stats_entries {
-                match backend {
-                        TStorageBackendType::ZDB => {stats.total_bytes_zdb += dstats.bytes as u64; stats.queries_zdb += dstats.queries_count as u64}
-                        TStorageBackendType::ZGATEWAY => {stats.total_bytes_zgw += dstats.bytes as u64; stats.queries_zgw += dstats.queries_count as u64}
-                        TStorageBackendType::MANIFOLD => {stats.total_bytes_manifold += dstats.bytes as u64; stats.queries_manifold += dstats.queries_count as u64}
-                        TStorageBackendType::HEDWIG => {stats.total_bytes_hedwig += dstats.bytes as u64; stats.queries_hedwig += dstats.queries_count as u64 }
-                        _ => {}
-                }
-            }
-            stats.hits_files_local_cache = local_cache_stats.hits_files as u64;
-            stats.hits_bytes_local_cache = local_cache_stats.hits_bytes as u64;
-            stats.misses_files_local_cache = local_cache_stats.misses_files as u64;
-            stats.misses_bytes_local_cache = local_cache_stats.misses_bytes as u64;
-            stats.hits_blobs_local_lmdb_cache = local_cache_stats.hits_count_lmdb as u64;
-            stats.hits_bytes_local_lmdb_cache = local_cache_stats.hits_bytes_lmdb as u64;
-            stats.misses_blobs_local_lmdb_cache = local_cache_stats.misses_count_lmdb as u64;
-            stats.misses_bytes_local_lmdb_cache = local_cache_stats.misses_bytes_lmdb as u64;
-            stats.cloom_false_positives = local_cache_stats.cloom_false_positives as u64;
-            stats.cloom_true_positives = local_cache_stats.cloom_true_positives as u64;
-            stats.cloom_misses = local_cache_stats.cloom_miss_count as u64;
-            stats
         }
 
         #[$crate::async_trait]
