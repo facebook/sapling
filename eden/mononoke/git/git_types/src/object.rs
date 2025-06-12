@@ -13,7 +13,6 @@ use bytes::Bytes;
 use digest::Digest;
 use gix_object::BlobRef;
 use gix_object::CommitRef;
-use gix_object::Object;
 use gix_object::ObjectRef;
 use gix_object::TagRef;
 use gix_object::TreeRef;
@@ -62,26 +61,6 @@ impl ObjectKind {
         let hash: [u8; 20] = sha1.finalize().into();
 
         RichGitSha1::from_byte_array(hash, self.as_str(), size)
-    }
-}
-
-#[derive(Clone, Debug, Hash, Eq, PartialEq)]
-pub struct OwnedObjectContent {
-    pub parsed: Object,
-    pub raw: Bytes,
-}
-
-impl OwnedObjectContent {
-    pub fn new(parsed: Object, raw: Bytes) -> Self {
-        Self { parsed, raw }
-    }
-
-    pub fn is_tree(&self) -> bool {
-        self.parsed.as_tree().is_some()
-    }
-
-    pub fn is_blob(&self) -> bool {
-        self.parsed.as_blob().is_some()
     }
 }
 
