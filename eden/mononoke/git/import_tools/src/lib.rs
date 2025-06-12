@@ -7,6 +7,7 @@
 
 #![feature(try_blocks)]
 #![feature(trait_alias)]
+#![feature(string_from_utf8_lossy_owned)]
 
 pub mod bookmark;
 pub mod git_reader;
@@ -27,6 +28,7 @@ use std::sync::atomic::Ordering;
 use anyhow::Context;
 use anyhow::Error;
 use anyhow::Result;
+use anyhow::bail;
 use anyhow::format_err;
 use bytes::Bytes;
 use cloned::cloned;
@@ -45,7 +47,7 @@ use git_symbolic_refs::GitSymbolicRefsEntry;
 pub use git_types::git_lfs::LfsPointerData;
 use gix_hash::ObjectId;
 use gix_object::Kind;
-use gix_object::Object;
+use gix_object::ObjectRef;
 use linked_hash_map::LinkedHashMap;
 use manifest::BonsaiDiffFileChange;
 use manifest::find_intersection_of_diffs;
@@ -120,12 +122,16 @@ where
                                 let object =
                                     reader.get_object(&oid).await.context("reader.get_object")?;
                                 let blob = object
-                                    .parsed
-                                    .try_into_blob()
-                                    .map_err(|_| format_err!("{} is not a blob", oid))?;
+                                    .with_parsed(|parsed| {
+                                        parsed.as_blob().map(|blob_ref| blob_ref.into_owned())
+                                    })
+                                    .ok_or_else(|| format_err!("{} is not a blob", oid))?;
 
-                                let upload_packfile =
-                                    uploader.upload_packfile_base_item(&ctx, oid, object.raw);
+                                let upload_packfile = uploader.upload_packfile_base_item(
+                                    &ctx,
+                                    oid,
+                                    object.raw().clone(),
+                                );
                                 let upload_git_blob = uploader.upload_file(
                                     &ctx,
                                     &lfs,
@@ -311,18 +317,21 @@ pub fn upload_git_tag<'a, Uploader: GitUploader, Reader: GitReader>(
     tag_id: &'a ObjectId,
 ) -> BoxFuture<'a, Result<()>> {
     async move {
-        let tag = reader
-            .read_tag(tag_id)
+        if let Some((target_kind, target)) = reader
+            .get_object(tag_id)
             .await
-            .with_context(|| format_err!("Invalid tag {:?}", tag_id))?;
-        // Note: If we support tags pointing to blobs and trees later, we'll need to upload the
-        // appropriate git objects here too
-        if tag.target_kind == Kind::Tag {
-            let target = tag.target;
-            upload_git_tag(ctx, uploader.clone(), reader.clone(), &target).await?;
+            .with_context(|| format_err!("Invalid object {:?}", tag_id))?
+            .with_parsed_as_tag(|tag| (tag.target_kind, tag.target()))
+        {
+            upload_git_object(ctx, uploader.clone(), reader.clone(), tag_id).await?;
+            // Note: If we support tags pointing to blobs and trees later, we'll need to upload the
+            // appropriate git objects here too
+            if target_kind == Kind::Tag {
+                upload_git_tag(ctx, uploader.clone(), reader.clone(), &target).await?;
+            }
+        } else {
+            bail!("Not a tag: {:?}", tag_id);
         }
-
-        upload_git_object(ctx, uploader, reader, tag_id).await?;
         Ok(())
     }
     .boxed()
@@ -750,7 +759,7 @@ pub struct GitRefMetadata {
 }
 
 /// Object representing Git refs
-#[derive(Debug, Hash, PartialEq, Eq, PartialOrd, Ord)]
+#[derive(Debug, Hash, PartialEq, Eq, PartialOrd, Ord, Clone)]
 pub struct GitRef {
     /// Name of the ref
     pub name: Vec<u8>,
@@ -873,41 +882,48 @@ pub async fn read_git_refs(
                 let object = reader.get_object(&oid).await.with_context(|| {
                     format!("unable to read git object: {oid} for ref: {ref_name}")
                 })?;
-                match object.parsed {
-                    Object::Commit(_) => {
-                        git_ref.metadata.target = RefTarget::Commit;
-                        refs.insert(git_ref, oid);
-                        break;
-                    }
-                    Object::Blob(_) => {
-                        if !prefs.allow_content_refs {
-                            anyhow::bail!("Ref: {ref_name} points to a blob");
+                let should_break = object.with_parsed(|parsed| {
+                    let mut should_break = false;
+                    match parsed {
+                        ObjectRef::Commit(_) => {
+                            git_ref.metadata.target = RefTarget::Commit;
+                            refs.insert(git_ref.clone(), oid);
+                            should_break = true;
                         }
-                        git_ref.metadata.target = RefTarget::Blob(oid);
-                        refs.insert(git_ref, oid);
-                        break;
-                    }
-                    Object::Tree(_) => {
-                        if !prefs.allow_content_refs {
-                            anyhow::bail!("Ref: {ref_name} points to a tree");
+                        ObjectRef::Blob(_) => {
+                            if !prefs.allow_content_refs {
+                                anyhow::bail!("Ref: {ref_name} points to a blob");
+                            }
+                            git_ref.metadata.target = RefTarget::Blob(oid);
+                            refs.insert(git_ref.clone(), oid);
+                            should_break = true;
                         }
-                        git_ref.metadata.target = RefTarget::Tree(oid);
-                        refs.insert(git_ref, oid);
-                        break;
-                    }
-                    // If the ref is a tag, then we capture the object id of the tag.
-                    // The loop is designed to peel the tag but we want the outermost
-                    // tag object so only get the ID if we haven't already done it before.
-                    Object::Tag(tag) => {
-                        if git_ref.metadata.maybe_tag_id.is_none() {
-                            git_ref.metadata.maybe_tag_id = Some(oid);
-                        } else {
-                            // We have already captured the tag id, which means this is at least the
-                            // second tag in the chain. We want to mark this as a nested tag.
-                            git_ref.metadata.nested_tag = true;
+                        ObjectRef::Tree(_) => {
+                            if !prefs.allow_content_refs {
+                                anyhow::bail!("Ref: {ref_name} points to a tree");
+                            }
+                            git_ref.metadata.target = RefTarget::Tree(oid);
+                            refs.insert(git_ref.clone(), oid);
+                            should_break = true;
                         }
-                        oid = tag.target;
+                        // If the ref is a tag, then we capture the object id of the tag.
+                        // The loop is designed to peel the tag but we want the outermost
+                        // tag object so only get the ID if we haven't already done it before.
+                        ObjectRef::Tag(tag) => {
+                            if git_ref.metadata.maybe_tag_id.is_none() {
+                                git_ref.metadata.maybe_tag_id = Some(oid);
+                            } else {
+                                // We have already captured the tag id, which means this is at least the
+                                // second tag in the chain. We want to mark this as a nested tag.
+                                git_ref.metadata.nested_tag = true;
+                            }
+                            oid = tag.target();
+                        }
                     }
+                    Ok(should_break)
+                })?;
+                if should_break {
+                    break;
                 }
             }
         }

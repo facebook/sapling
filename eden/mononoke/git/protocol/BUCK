@@ -17,6 +17,7 @@ rust_library(
         "fbsource//third-party/rust:gix-pack",
         "fbsource//third-party/rust:rayon",
         "fbsource//third-party/rust:rustc-hash",
+        "fbsource//third-party/rust:sha1",
         "fbsource//third-party/rust:tempfile",
         "fbsource//third-party/rust:tokio",
         "//common/rust/shed/buffered_weighted:buffered_weighted",

@@ -14,7 +14,6 @@ rust_binary(
     test_deps = ["//eden/mononoke/mononoke_macros:mononoke_macros"],
     deps = [
         "fbsource//third-party/rust:anyhow",
-        "fbsource//third-party/rust:async-recursion",
         "fbsource//third-party/rust:async-stream",
         "fbsource//third-party/rust:async-trait",
         "fbsource//third-party/rust:bytes",

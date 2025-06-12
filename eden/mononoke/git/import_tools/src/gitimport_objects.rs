@@ -27,10 +27,7 @@ use futures::stream::BoxStream;
 use futures::stream::Stream;
 use futures::stream::StreamExt;
 use futures::stream::TryStreamExt;
-use gix_date::parse::TimeBuf;
 use gix_hash::ObjectId;
-use gix_object::Commit;
-use gix_object::Tag;
 use gix_object::bstr::BString;
 use gix_object::tree;
 use manifest::BonsaiDiffFileChange;
@@ -122,52 +119,59 @@ async fn load_git_tree<const SUBMODULES: bool, Reader: GitReader>(
     oid: &gix_hash::oid,
     reader: &Reader,
 ) -> Result<GitManifest<SUBMODULES>, Error> {
-    let tree = reader.read_tree(oid).await?;
+    reader
+        .get_object(oid)
+        .await?
+        .with_parsed_as_tree(|tree| {
+            let elements = tree
+                .entries
+                .iter()
+                .filter_map(
+                    |tree::EntryRef {
+                         mode,
+                         filename,
+                         oid,
+                     }| {
+                        let name = match MPathElement::new((*filename).to_owned().into()) {
+                            Ok(name) => name,
+                            Err(e) => return Some(Err(e)),
+                        };
+                        let oid = (*oid).to_owned();
+                        let r = match (*mode).into() {
+                            tree::EntryKind::Blob => {
+                                Some((name, Entry::Leaf((FileType::Regular, GitLeaf(oid)))))
+                            }
+                            tree::EntryKind::BlobExecutable => {
+                                Some((name, Entry::Leaf((FileType::Executable, GitLeaf(oid)))))
+                            }
+                            tree::EntryKind::Link => {
+                                Some((name, Entry::Leaf((FileType::Symlink, GitLeaf(oid)))))
+                            }
+                            tree::EntryKind::Tree => Some((name, Entry::Tree(GitTree(oid)))),
 
-    let elements = tree
-        .entries
-        .into_iter()
-        .filter_map(
-            |tree::Entry {
-                 mode,
-                 filename,
-                 oid,
-             }| {
-                let name = match MPathElement::new(filename.clone().into()) {
-                    Ok(name) => name,
-                    Err(e) => return Some(Err(e)),
-                };
-                let r = match mode.into() {
-                    tree::EntryKind::Blob => {
-                        Some((name, Entry::Leaf((FileType::Regular, GitLeaf(oid)))))
-                    }
-                    tree::EntryKind::BlobExecutable => {
-                        Some((name, Entry::Leaf((FileType::Executable, GitLeaf(oid)))))
-                    }
-                    tree::EntryKind::Link => {
-                        Some((name, Entry::Leaf((FileType::Symlink, GitLeaf(oid)))))
-                    }
-                    tree::EntryKind::Tree => Some((name, Entry::Tree(GitTree(oid)))),
-
-                    // Git submodules are represented as ObjectType::Commit inside the tree.
-                    //
-                    // Depending on the repository configuration, we may or may not wish to
-                    // include submodules in the imported manifest.  Generate a leaf on the
-                    // basis of the SUBMODULES parameter.
-                    tree::EntryKind::Commit => {
-                        if SUBMODULES {
-                            Some((name, Entry::Leaf((FileType::GitSubmodule, GitLeaf(oid)))))
-                        } else {
-                            None
-                        }
-                    }
-                };
-                anyhow::Ok(r).transpose()
-            },
-        )
-        .collect::<Result<_, Error>>()?;
-
-    anyhow::Ok(GitManifest(elements))
+                            // Git submodules are represented as ObjectType::Commit inside the tree.
+                            //
+                            // Depending on the repository configuration, we may or may not wish to
+                            // include submodules in the imported manifest.  Generate a leaf on the
+                            // basis of the SUBMODULES parameter.
+                            tree::EntryKind::Commit => {
+                                if SUBMODULES {
+                                    Some((
+                                        name,
+                                        Entry::Leaf((FileType::GitSubmodule, GitLeaf(oid))),
+                                    ))
+                                } else {
+                                    None
+                                }
+                            }
+                        };
+                        anyhow::Ok(r).transpose()
+                    },
+                )
+                .collect::<Result<_, Error>>()?;
+            anyhow::Ok(GitManifest(elements))
+        })
+        .unwrap_or_else(|| bail!("Not a tree: {oid}"))
 }
 
 #[async_trait]
@@ -345,40 +349,54 @@ impl TagMetadata {
         maybe_tag_name: Option<String>,
         reader: &Reader,
     ) -> Result<Self, Error> {
-        let Tag {
-            name,
-            target_kind,
-            mut tagger,
-            message,
-            mut pgp_signature,
-            ..
-        } = reader.read_tag(&oid).await?;
+        reader
+            .get_object(&oid)
+            .await?
+            .with_parsed_as_tag(|tag| {
+                let author_date = tag
+                    .tagger
+                    .and_then(|tagger| {
+                        if let Ok(time) = tagger.time() {
+                            Some(DateTime::from_gix(time))
+                        } else {
+                            None
+                        }
+                    })
+                    .transpose()?;
+                // This maintains a pre-existing bug where we used to double-take. I don't want to
+                // fix it in the middle of this diff and potentially hit unexpected side-effects.
+                // The old code looked like this:
+                //     let author_date = tagger
+                //            .take()
+                //            .map(|tagger| DateTime::from_gix(tagger.time))
+                //            .transpose()?;
+                //     let author = tagger
+                //            .take()
+                //            .map(|tagger| format_signature(tagger.to_ref(&mut TimeBuf::default())));
+                // So after the first `tagger.take()`, tagger would be `None` and `author` would
+                // only be set to `None`
+                let author = None;
 
-        let author_date = tagger
-            .take()
-            .map(|tagger| DateTime::from_gix(tagger.time))
-            .transpose()?;
-        let author = tagger
-            .take()
-            .map(|tagger| format_signature(tagger.to_ref(&mut TimeBuf::default())));
-        let message = decode_message(&message, &None, ctx.logger())?;
-        let name = match maybe_tag_name {
-            Some(name) => name,
-            None => decode_message(&name, &None, ctx.logger())?,
-        };
-        let pgp_signature = pgp_signature
-            .take()
-            .map(|signature| Bytes::from(signature.to_vec()));
-        let target_is_tag = target_kind == gix_object::Kind::Tag;
-        Result::<_, Error>::Ok(TagMetadata {
-            oid,
-            author,
-            author_date,
-            name,
-            message,
-            pgp_signature,
-            target_is_tag,
-        })
+                let message = decode_message(tag.message, &None, ctx.logger())?;
+                let name = match maybe_tag_name {
+                    Some(name) => name,
+                    None => decode_message(tag.name, &None, ctx.logger())?,
+                };
+                let pgp_signature = tag
+                    .pgp_signature
+                    .map(|signature| Bytes::from(signature.to_vec()));
+                let target_is_tag = tag.target_kind == gix_object::Kind::Tag;
+                Result::<_, Error>::Ok(TagMetadata {
+                    oid,
+                    author,
+                    author_date,
+                    name,
+                    message,
+                    pgp_signature,
+                    target_is_tag,
+                })
+            })
+            .unwrap_or_else(|| bail!("Not a tag: {oid}"))
     }
 }
 
@@ -480,58 +498,68 @@ impl ExtractedCommit {
         oid: ObjectId,
         reader: &Reader,
     ) -> Result<Self, Error> {
-        let Commit {
-            tree,
-            parents,
-            author,
-            committer,
-            encoding,
-            message,
-            extra_headers,
-            ..
-        } = reader.read_commit(&oid).await?;
-
-        let tree_oid = tree;
+        let object = reader.get_object(&oid).await?;
+        let original_commit = object.raw().clone();
+        let parents = object
+            .with_parsed_as_commit(|commit| {
+                commit
+                    .parents
+                    .iter()
+                    .map(|parent| ObjectId::from_hex(parent).map_err(|e| e.into()))
+                    .collect::<Result<Vec<ObjectId>, _>>()
+            })
+            .unwrap_or_else(|| bail!("Not a commit: {oid}"))?;
         let parent_tree_oids = {
             let mut trees = HashSet::new();
-            for parent in &parents {
-                let commit = reader.read_commit(parent).await?;
-                trees.insert(commit.tree);
+            for parent in parents {
+                reader
+                    .get_object(&parent)
+                    .await?
+                    .with_parsed_as_commit(|parent| trees.insert(parent.tree()));
             }
             trees
         };
 
-        let author_date = DateTime::from_gix(author.time)?;
-        let committer_date = DateTime::from_gix(committer.time)?;
-        let author = format_signature(author.to_ref(&mut TimeBuf::default()));
-        let committer = format_signature(committer.to_ref(&mut TimeBuf::default()));
-        let message = decode_message(&message, &encoding, ctx.logger())?;
-        let parents = parents.into_vec();
-        let git_extra_headers = extra_headers
-            .into_iter()
-            .map(|(k, v)| {
-                (
-                    SmallVec::from(k.as_slice()),
-                    Bytes::copy_from_slice(v.as_slice()),
-                )
+        object
+            .with_parsed_as_commit(|commit| {
+                let tree_oid = commit.tree();
+                let author_date = DateTime::from_gix(commit.author.time()?)?;
+                let committer_date = DateTime::from_gix(commit.committer.time()?)?;
+                let author = format_signature(commit.author);
+                let committer = format_signature(commit.committer);
+                let message = decode_message(
+                    commit.message,
+                    &commit.encoding.map(|e| e.to_owned()),
+                    ctx.logger(),
+                )?;
+                let parents = commit.parents().collect();
+                let git_extra_headers = commit
+                    .extra_headers
+                    .iter()
+                    .map(|(k, v)| {
+                        (
+                            SmallVec::from(k.as_ref()),
+                            Bytes::copy_from_slice(v.as_ref()),
+                        )
+                    })
+                    .collect();
+                Result::<_, Error>::Ok(ExtractedCommit {
+                    original_commit,
+                    metadata: CommitMetadata {
+                        oid,
+                        parents,
+                        message,
+                        author,
+                        author_date,
+                        committer,
+                        committer_date,
+                        git_extra_headers,
+                    },
+                    tree_oid,
+                    parent_tree_oids,
+                })
             })
-            .collect();
-        let original_commit = reader.read_raw_object(&oid).await?;
-        Result::<_, Error>::Ok(ExtractedCommit {
-            original_commit,
-            metadata: CommitMetadata {
-                oid,
-                parents,
-                message,
-                author,
-                author_date,
-                committer,
-                committer_date,
-                git_extra_headers,
-            },
-            tree_oid,
-            parent_tree_oids,
-        })
+            .unwrap_or_else(|| bail!("Not a commit: {oid}"))
     }
 
     /// Generic version of `diff` based on whether submodules are

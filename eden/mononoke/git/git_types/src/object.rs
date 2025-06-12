@@ -98,13 +98,24 @@ pub struct ObjectContentInner {
 pub struct ObjectContent(Arc<ObjectContentInner>);
 
 impl ObjectContent {
-    pub fn try_from_loose(identifier: String, raw: Bytes) -> Result<Self, GitError> {
+    pub fn try_from_loose(raw: Bytes) -> Result<Self, GitError> {
         Ok(Self(Arc::new(
             ObjectContentInnerTryBuilder {
                 raw,
                 parsed_builder: |raw| {
                     ObjectRef::from_loose(raw).map_err(|e| {
-                        GitError::InvalidContent(identifier, anyhow::anyhow!(e.to_string()).into())
+                        let mut hasher = Sha1::new();
+                        hasher.update(raw);
+                        let hash = hasher.finalize();
+                        let num_bytes_to_show = raw.len().min(100);
+                        let error_context = format!(
+                            "{hash:x}\n{}",
+                            String::from_utf8_lossy_owned(raw.slice(..num_bytes_to_show).into())
+                        );
+                        GitError::InvalidContent(
+                            error_context,
+                            anyhow::anyhow!(e.to_string()).into(),
+                        )
                     })
                 },
             }

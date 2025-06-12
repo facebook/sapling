@@ -69,11 +69,11 @@ pub async fn missing_for_commit(
                 known.insert(id, changeset);
             } else {
                 let object = reader.get_object(&id).await?;
-                let commit = object
-                    .parsed
-                    .try_into_commit()
-                    .map_err(|_| format_err!("oid {} is not a commit", id))?;
-                q.extend(commit.parents);
+                object
+                    .with_parsed_as_commit(|commit| {
+                        q.extend(commit.parents());
+                    })
+                    .ok_or_else(|| format_err!("oid {} is not a commit", id))?;
             }
         }
     }

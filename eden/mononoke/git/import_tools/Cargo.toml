@@ -31,7 +31,6 @@ futures_stats = { version = "0.1.0", git = "https://github.com/facebookexperimen
 git_symbolic_refs = { version = "0.1.0", path = "../../git_symbolic_refs" }
 git_types = { version = "0.1.0", path = "../git_types" }
 gix-actor = "0.35.1"
-gix-date = "0.10.1"
 gix-hash = "0.18.0"
 gix-object = "0.49.1"
 http = "0.2"

@@ -10,7 +10,6 @@ use std::sync::Arc;
 
 use anyhow::Context;
 use anyhow::Result;
-use async_recursion::async_recursion;
 use bonsai_git_mapping::BonsaiGitMappingRef;
 use bonsai_git_mapping::BonsaisOrGitShas;
 use cloned::cloned;
@@ -20,7 +19,6 @@ use futures::TryStreamExt;
 use futures::stream;
 use gix_hash::ObjectId;
 use gix_object::Kind;
-use gix_object::Tag;
 use import_direct::DirectUploader;
 use import_tools::BackfillDerivation;
 use import_tools::GitImportLfs;
@@ -116,12 +114,18 @@ fn sorted_commits(object_store: &GitObjectStore) -> Result<Vec<ObjectId>> {
         .object_map
         .iter()
         .filter_map(|(oid, object)| {
-            object
-                .parsed
-                .as_commit()
-                .map(|commit| (oid.clone(), commit.parents.clone().to_vec()))
+            object.with_parsed_as_commit(|commit| {
+                Ok::<_, anyhow::Error>((
+                    *oid,
+                    commit
+                        .parents
+                        .iter()
+                        .map(|id| ObjectId::from_hex(id))
+                        .collect::<Result<Vec<ObjectId>, _>>()?,
+                ))
+            })
         })
-        .collect::<HashMap<_, _>>();
+        .collect::<Result<HashMap<_, _>, _>>()?;
     sort_topological(&commits_with_parents).ok_or_else(|| {
         anyhow::anyhow!("Unable to sort git commits from packfile due to the existence of a cycle")
     })
@@ -154,20 +158,6 @@ async fn git_to_bonsai(
         })
 }
 
-#[async_recursion]
-pub(crate) async fn peel_tag_target(
-    tag: &Tag,
-    object_store: &GitObjectStore,
-) -> Result<(ObjectId, Kind)> {
-    // If the target is a tag, keep recursing
-    if tag.target_kind == Kind::Tag {
-        let target_tag = object_store.read_tag(&tag.target).await?;
-        peel_tag_target(&target_tag, object_store).await
-    } else {
-        Ok((tag.target.clone(), tag.target_kind))
-    }
-}
-
 /// Method responsible for fetching all tags from the object store
 async fn tags(
     ctx: &CoreContext,
@@ -177,8 +167,9 @@ async fn tags(
 ) -> Result<HashMap<ObjectId, TagMetadata>> {
     let mut result = HashMap::new();
     for (id, object) in object_store.object_map.iter() {
-        if let Some(tag) = object.parsed.as_tag() {
-            let (target_id, kind) = peel_tag_target(tag, object_store).await?;
+        if object.is_tag()
+            && let Ok((kind, target_id)) = object_store.peel_to_target(*id).await
+        {
             let bonsai_id = if let Some(bonsai_id) = ref_map.commit_bonsai_by_oid(&target_id) {
                 Some(bonsai_id)
             } else if kind != Kind::Commit {
@@ -274,7 +265,10 @@ async fn upload_content_ref_objects<Uploader: GitUploader, Reader: GitReader>(
                 if let Some(tag_id) = content_tags.get(&ref_name) {
                     git_hash = tag_id.clone();
                 }
-                let obj_kind = reader.get_object(git_hash.as_ref()).await?.parsed.kind();
+                let obj_kind = reader
+                    .get_object(git_hash.as_ref())
+                    .await?
+                    .with_parsed(|parsed| parsed.kind());
                 let is_content_ref = obj_kind.is_tree() || obj_kind.is_blob();
                 // If the ref is a content ref, then upload the objects pointed at by the ref. Nothing needs to
                 // be uploaded if the ref is getting deleted.

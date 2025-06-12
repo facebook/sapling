@@ -34,7 +34,6 @@ use super::GitMappingsStore;
 use super::GitObjectStore;
 use crate::command::RefUpdate;
 use crate::model::RepositoryRequestContext;
-use crate::service::uploader::peel_tag_target;
 use crate::util::mononoke_source_of_truth;
 
 const HOOK_WIKI_LINK: &str = "https://fburl.com/wiki/mb4wtk1j";
@@ -249,8 +248,8 @@ async fn get_bonsai(
         result @ Ok(_) => result,
         err => match object_store.get_object(git_oid.as_ref()).await {
             Ok(obj_content) => {
-                if let Some(tag) = obj_content.parsed.as_tag() {
-                    let (oid, kind) = peel_tag_target(tag, object_store).await?;
+                if obj_content.is_tag() {
+                    let (kind, oid) = object_store.peel_to_target(*git_oid).await?;
                     if kind == Kind::Commit {
                         return mappings_store.get_bonsai(&oid).await;
                     }
