@@ -21,8 +21,7 @@
   $ tag2_hash=$(git rev-parse tags/tag2)
 
 # Import just the tag into Mononoke
-  $ with_stripped_logs gitimport "$GIT_REPO" upload-tags $tag_hash $tag2_hash
-  using repo "repo" repoid RepositoryId(0)
+  $ with_stripped_logs gitimport "$GIT_REPO" upload-tags $tag_hash $tag2_hash | grep Uploaded | sort
   Uploaded tag with ID 929a3a6ccd846af11aa4384cc99d63691b480d9d
   Uploaded tag with ID ec2d3c28a6524f5bd4d16b21020b4cffec95db15
 
