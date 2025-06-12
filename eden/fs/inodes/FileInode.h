@@ -60,6 +60,19 @@ struct FileInodeState {
     MATERIALIZED_IN_OVERLAY,
   };
 
+  friend inline auto format_as(Tag t) {
+    switch (t) {
+      case BLOB_NOT_LOADING:
+        return "BLOB_NOT_LOADING";
+      case BLOB_LOADING:
+        return "BLOB_LOADING";
+      case MATERIALIZED_IN_OVERLAY:
+        return "MATERIALIZED_IN_OVERLAY";
+      default:
+        return "UNKNOWN";
+    }
+  }
+
   explicit FileInodeState(const ObjectId* id);
   explicit FileInodeState();
   ~FileInodeState();

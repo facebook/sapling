@@ -691,7 +691,7 @@ void runModifyConflictTests(CheckoutMode checkoutMode) {
   for (StringPiece path : {"a/b/aaa.txt", "a/b/mmm.txt", "a/b/zzz.tzt"}) {
     for (auto loadType : kAllLoadTypes) {
       SCOPED_TRACE(fmt::format(
-          "path {} load type {} force={}", path, loadType, checkoutMode));
+          "path {} load type {} force={}", path, loadType, static_cast<int>(checkoutMode)));
       testModifyConflict(
           path,
           loadType,

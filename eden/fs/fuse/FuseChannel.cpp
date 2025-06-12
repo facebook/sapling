@@ -9,7 +9,7 @@
 
 #include "eden/fs/fuse/FuseChannel.h"
 #include <boost/cast.hpp>
-#include <fmt/core.h>
+#include <fmt/base.h>
 #include <folly/futures/Future.h>
 #include <folly/logging/xlog.h>
 #include <folly/system/ThreadName.h>
