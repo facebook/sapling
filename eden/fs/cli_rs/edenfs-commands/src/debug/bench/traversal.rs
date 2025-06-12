@@ -483,7 +483,7 @@ pub fn bench_traversal_fs_read(
     let mut agg_read_dur = std::time::Duration::new(0, 0);
     let mut total_bytes_read: u64 = 0;
     let mut successful_reads = 0;
-    let mut buffer = Vec::new();
+    let mut buffer = Vec::with_capacity(types::BYTES_IN_MEGABYTE);
 
     for path in ft.file_paths {
         if !path.is_file() {
@@ -511,6 +511,7 @@ pub fn bench_traversal_fs_read(
             successful_reads += 1;
         }
         agg_read_dur += start.elapsed();
+        buffer.clear();
         if let Some(pb) = &read_progress {
             pb.inc(1);
         }
