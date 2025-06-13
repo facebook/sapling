@@ -21,7 +21,7 @@ sapling-hgplain = { version = "0.1.0", path = "../util/hgplain" }
 sapling-spawn-ext = { version = "0.1.0", path = "../spawn-ext" }
 sapling-streampager = { version = "0.11.0", path = "../third-party/streampager" }
 sapling-time-interval = { version = "0.1.0", path = "../util/time-interval" }
-terminal_size = "0.3"
+terminal_size = "0.4.2"
 termwiz = { version = "0.23", features = ["widgets"] }
 
 [target.'cfg(target_os = "linux")'.dependencies]

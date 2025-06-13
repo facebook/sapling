@@ -6,6 +6,7 @@
  */
 
 use std::io;
+use std::os::fd::BorrowedFd;
 use std::os::unix::prelude::AsRawFd;
 
 use termwiz::render::RenderTty;
@@ -33,7 +34,8 @@ impl UnixTty {
 
 impl RenderTty for UnixTty {
     fn get_size_in_cells(&mut self) -> termwiz::Result<(usize, usize)> {
-        match terminal_size::terminal_size_using_fd(self.write.as_raw_fd()) {
+        let fd = unsafe { BorrowedFd::borrow_raw(self.write.as_raw_fd()) };
+        match terminal_size::terminal_size_of(fd) {
             Some((width, height)) => Ok((width.0 as _, height.0 as _)),
             // Fallback size, just in case.
             None => Ok((super::DEFAULT_TERM_WIDTH, super::DEFAULT_TERM_HEIGHT)),

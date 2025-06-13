@@ -7,6 +7,7 @@
 
 use std::io;
 use std::os::windows::io::AsRawHandle;
+use std::os::windows::prelude::BorrowedHandle;
 
 use termwiz::render::RenderTty;
 
@@ -30,7 +31,8 @@ impl WindowsTty {
 
 impl RenderTty for WindowsTty {
     fn get_size_in_cells(&mut self) -> termwiz::Result<(usize, usize)> {
-        match terminal_size::terminal_size_using_handle(self.write.as_raw_handle()) {
+        let handle = unsafe { BorrowedHandle::borrow_raw(self.write.as_raw_handle()) };
+        match terminal_size::terminal_size_of(handle) {
             Some((width, height)) => Ok((width.0 as _, height.0 as _)),
             // Fallback size, just in case.
             None => Ok((super::DEFAULT_TERM_WIDTH, super::DEFAULT_TERM_HEIGHT)),
