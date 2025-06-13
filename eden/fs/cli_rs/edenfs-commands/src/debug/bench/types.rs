@@ -7,6 +7,8 @@
 
 //! Types for benchmarking
 
+use serde::Serialize;
+
 // Constants
 pub const BENCH_DIR_NAME: &str = "__fsiomicrobench__";
 pub const ROCKSDB_FILE_NAME: &str = "__rocksdb__";
@@ -22,7 +24,7 @@ pub const BYTES_IN_MEGABYTE: usize = 1024 * BYTES_IN_KILOBYTE;
 pub const BYTES_IN_GIGABYTE: usize = 1024 * BYTES_IN_MEGABYTE;
 
 /// Represents the type of benchmark being performed
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Serialize)]
 pub enum BenchmarkType {
     FsWriteMultipleFiles,
     FsReadMultipleFiles,
@@ -55,14 +57,14 @@ impl std::fmt::Display for BenchmarkType {
     }
 }
 
-#[derive(Debug, Copy, Clone, PartialEq, clap::ValueEnum)]
+#[derive(Debug, Copy, Clone, PartialEq, clap::ValueEnum, Serialize)]
 pub enum ReadFileMethod {
     Fs,
     Thrift,
 }
 
 /// Represents the result of a benchmark operation
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Serialize)]
 pub struct Benchmark {
     /// Type of the benchmark
     pub benchmark_type: BenchmarkType,
@@ -71,7 +73,7 @@ pub struct Benchmark {
 }
 
 /// Represents the unit of measurement for a metric
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, Serialize)]
 pub enum Unit {
     /// Megabytes per second (throughput)
     MiBps,
@@ -107,7 +109,7 @@ impl std::fmt::Display for Unit {
 }
 
 /// Represents a metric with a name, value, unit, and precision
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Serialize)]
 pub struct Metric {
     /// Name of the metric (e.g., "write()", "write() latency")
     pub name: String,

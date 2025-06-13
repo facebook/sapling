@@ -10,6 +10,7 @@
 use anyhow::Result;
 use async_trait::async_trait;
 use clap::Parser;
+use serde_json;
 
 use super::dbio;
 use super::fsio;
@@ -77,6 +78,10 @@ pub enum BenchCmd {
         /// Disable progress bars in benchmarks
         #[clap(long)]
         no_progress: bool,
+
+        /// Output results in JSON format
+        #[clap(long)]
+        json: bool,
     },
 }
 
@@ -153,35 +158,37 @@ impl crate::Subcommand for BenchCmd {
                 max_files,
                 follow_symlinks,
                 no_progress,
+                json,
             } => {
-                println!(
-                    "Running filesystem traversal benchmark on directory: {}",
-                    dir
-                );
-                match read_file_via {
-                    types::ReadFileMethod::Fs => {
-                        println!(
-                            "{}",
-                            traversal::bench_traversal_fs_read(
-                                dir,
-                                *max_files,
-                                *follow_symlinks,
-                                *no_progress
-                            )?
-                        );
-                    }
+                if !*json {
+                    println!(
+                        "Running filesystem traversal benchmark on directory: {}",
+                        dir
+                    );
+                }
+
+                let benchmark_result = match read_file_via {
+                    types::ReadFileMethod::Fs => traversal::bench_traversal_fs_read(
+                        dir,
+                        *max_files,
+                        *follow_symlinks,
+                        *no_progress,
+                    )?,
                     types::ReadFileMethod::Thrift => {
-                        println!(
-                            "{}",
-                            traversal::bench_traversal_thrift_read(
-                                dir,
-                                *max_files,
-                                *follow_symlinks,
-                                *no_progress
-                            )
-                            .await?
-                        );
+                        traversal::bench_traversal_thrift_read(
+                            dir,
+                            *max_files,
+                            *follow_symlinks,
+                            *no_progress,
+                        )
+                        .await?
                     }
+                };
+
+                if *json {
+                    println!("{}", serde_json::to_string_pretty(&benchmark_result)?);
+                } else {
+                    println!("{}", benchmark_result);
                 }
             }
         }
