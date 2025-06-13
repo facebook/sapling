@@ -2854,6 +2854,14 @@ void EdenServer::accidentalUnmountRecovery() {
       // in config.json.  This means that the client was unmounted.
       // We should attempt to remount it, if it is unmounted accidentally.
 
+      auto nfsServer = serverState_->getNfsServer();
+      if (nfsServer && nfsServer->isMountRegistered(mountPath)) {
+        // This mount point is registered with the NFS server, so it is
+        // probably in the process of being unmounted.  We should not
+        // attempt to remount it.
+        continue;
+      }
+
       auto edenClientPath =
           edenDir_.getCheckoutStateDir(client.second.stringPiece());
       auto initialConfig =

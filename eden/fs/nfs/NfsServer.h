@@ -113,6 +113,11 @@ class NfsServer {
   void tryUnregisterMount(AbsolutePathPiece path);
 
   /**
+   * Return true if the path is registered as a mount point.
+   */
+  bool isMountRegistered(AbsolutePathPiece path);
+
+  /**
    * Return the EventBase that the various NFS programs are running on.
    */
   folly::EventBase* getEventBase() const {

@@ -59,6 +59,7 @@ class MountdServerProcessor final : public RpcServerProcessor {
   void tryUnregisterMount(AbsolutePathPiece path) {
     unregisterMountImpl(path, /*enforceRemoval=*/false);
   }
+  bool isMountRegistered(AbsolutePathPiece path);
 
  private:
   folly::Synchronized<std::unordered_map<AbsolutePath, InodeNumber>>
@@ -226,6 +227,11 @@ void MountdServerProcessor::unregisterMountImpl(
   }
 }
 
+bool MountdServerProcessor::isMountRegistered(AbsolutePathPiece path) {
+  auto map = mountPoints_.rlock();
+  return map->contains(path.copy());
+}
+
 Mountd::Mountd(
     folly::EventBase* evb,
     std::shared_ptr<folly::Executor> threadPool,
@@ -271,6 +277,10 @@ void Mountd::unregisterMount(AbsolutePathPiece path) {
 
 void Mountd::tryUnregisterMount(AbsolutePathPiece path) {
   proc_->tryUnregisterMount(path);
+}
+
+bool Mountd::isMountRegistered(AbsolutePathPiece path) {
+  return proc_->isMountRegistered(path);
 }
 
 folly::SocketAddress Mountd::getAddr() const {

@@ -89,6 +89,11 @@ class Mountd {
   void tryUnregisterMount(AbsolutePathPiece path);
 
   /**
+   * Return true if the path is registered as a mount point.
+   */
+  bool isMountRegistered(AbsolutePathPiece path);
+
+  /**
    * Obtain the address that this mountd program is listening on.
    */
   folly::SocketAddress getAddr() const;

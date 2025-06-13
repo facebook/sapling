@@ -127,6 +127,10 @@ void NfsServer::tryUnregisterMount(AbsolutePathPiece path) {
   mountd_.tryUnregisterMount(path);
 }
 
+bool NfsServer::isMountRegistered(AbsolutePathPiece path) {
+  return mountd_.isMountRegistered(path);
+}
+
 folly::SemiFuture<folly::File> NfsServer::takeoverStop() {
   return mountd_.takeoverStop();
 }
