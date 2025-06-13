@@ -2156,6 +2156,7 @@ fn get_changed_manifests_stream(
                 }
                 Diff::Removed(..) => false,
             },
+            Default::default(),
         )
         .compat()
         .map(move |(path_no_root_path, hg_mf_id)| {

@@ -6,9 +6,11 @@
  */
 
 use std::cmp::Ordering;
+use std::collections::HashMap;
 use std::iter::Peekable;
 
 use anyhow::Error;
+use anyhow::anyhow;
 use borrowed::borrowed;
 use bounded_traversal::OrderedTraversal;
 use cloned::cloned;
@@ -32,6 +34,7 @@ use crate::OrderedManifest;
 use crate::PathOrPrefix;
 use crate::StoreLoadable;
 use crate::ops::Diff;
+use crate::ops::ReplacementsHolder;
 use crate::select::select_path_tree;
 
 /// Track where we are relative to the `after` parameter.
@@ -275,7 +278,16 @@ where
             Error,
         >,
     > {
-        self.filtered_diff_ordered(ctx, store.clone(), other, store, after, Some, |_| true)
+        self.filtered_diff_ordered(
+            ctx,
+            store.clone(),
+            other,
+            store,
+            after,
+            Some,
+            |_| true,
+            Default::default(),
+        )
     }
 
     /// Do a diff, but with knobs to filter_map output and prune some subtrees.
@@ -291,6 +303,10 @@ where
         after: Option<MPath>,
         output_filter: FilterMap,
         recurse_pruner: RecursePruner,
+        manifest_replacements: HashMap<
+            MPath,
+            Entry<(usize, Self), <<Self as StoreLoadable<Store>>::Value as Manifest<Store>>::Leaf>,
+        >,
     ) -> BoxStream<'static, Result<Out, Error>>
     where
         FilterMap: Fn(
@@ -302,7 +318,22 @@ where
         RecursePruner: Fn(&Diff<Self>) -> bool + Send + Sync + 'static,
         Out: Send + Unpin + 'static,
     {
-        if self == &other {
+        let (replacement, child_replacements) =
+            ReplacementsHolder::new(manifest_replacements).deconstruct();
+        let this = match replacement {
+            None => self.clone(),
+            Some(Entry::Tree((_weight, replacement))) => replacement,
+            Some(Entry::Leaf(_)) => {
+                return stream::once(async move {
+                    Err(anyhow!(
+                        "Manifest replacement at root which resolves to a leaf"
+                    ))
+                })
+                .boxed();
+            }
+        };
+
+        if this == other {
             return stream::empty().boxed();
         }
 
@@ -329,7 +360,11 @@ where
 
         let init = Some((
             queue_max.get(),
-            (Diff::Changed(MPath::ROOT, self.clone(), other), after),
+            (
+                Diff::Changed(MPath::ROOT, this, other),
+                after,
+                child_replacements,
+            ),
         ));
 
         (async_stream::stream! {
@@ -339,7 +374,7 @@ where
                 schedule_max,
                 queue_max,
                 init,
-                move |(input, after)| {
+                move |(input, after, mut replacements)| {
                     async move {
                         let mut output = Vec::new();
 
@@ -349,9 +384,9 @@ where
                             }
                         };
 
-                        let push_recurse = |output: &mut Vec<_>, weight, recurse, after| {
+                        let push_recurse = |output: &mut Vec<_>, weight, recurse, after, replacements| {
                             if recurse_pruner(&recurse) {
-                                output.push(OrderedTraversal::Recurse(weight, (recurse, after)));
+                                output.push(OrderedTraversal::Recurse(weight, (recurse, after, replacements)));
                             }
                         };
 
@@ -387,6 +422,8 @@ where
                                     if after.skip(&name) || left == right {
                                         continue;
                                     }
+                                    let (replacement, child_replacements) = replacements.remove(&name).unwrap_or_default().deconstruct();
+                                    let left = replacement.or(left);
                                     let path = path.join(&name);
                                     match (left, right) {
                                         (Some(Entry::Leaf(left)), Some(Entry::Leaf(right))) => {
@@ -419,6 +456,7 @@ where
                                                 weight,
                                                 Diff::Added(path, tree),
                                                 after.enter_dir(&name),
+                                                child_replacements,
                                             );
                                         }
                                         (Some(Entry::Leaf(left)), None) => {
@@ -446,6 +484,7 @@ where
                                                 weight,
                                                 Diff::Removed(path, tree),
                                                 after.enter_dir(&name),
+                                                child_replacements,
                                             );
                                         }
                                         (
@@ -463,6 +502,7 @@ where
                                                 weight,
                                                 Diff::Changed(path, left, right),
                                                 after.enter_dir(&name),
+                                                child_replacements,
                                             );
                                         }
                                         (Some(Entry::Tree((weight, tree))), None) => {
@@ -471,6 +511,7 @@ where
                                                 weight,
                                                 Diff::Removed(path, tree),
                                                 after.enter_dir(&name),
+                                                child_replacements,
                                             );
                                         }
                                         (None, Some(Entry::Leaf(right))) => {
@@ -487,11 +528,13 @@ where
                                                 weight,
                                                 Diff::Added(path, tree),
                                                 after.enter_dir(&name),
+                                                child_replacements,
                                             );
                                         }
                                         (None, None) => {}
                                     }
                                 }
+                                ReplacementsHolder::finalize(&path, replacements)?;
                             }
                             Diff::Added(path, tree) => {
                                 if after.include_self() {
@@ -514,6 +557,7 @@ where
                                                 weight,
                                                 Diff::Added(path, tree),
                                                 after.enter_dir(&name),
+                                                Default::default(),
                                             );
                                         }
                                         Entry::Leaf(leaf) => {
@@ -526,6 +570,7 @@ where
                                         }
                                     }
                                 }
+                                ReplacementsHolder::finalize(&path, replacements)?;
                             }
                             Diff::Removed(path, tree) => {
                                 if after.include_self() {
@@ -540,6 +585,8 @@ where
                                     if after.skip(&name) {
                                         continue;
                                     }
+                                    let (replacement, child_replacements) = replacements.remove(&name).unwrap_or_default().deconstruct();
+                                    let entry = replacement.unwrap_or(entry);
                                     let path = path.join(&name);
                                     match entry {
                                         Entry::Tree((weight, tree)) => {
@@ -548,6 +595,7 @@ where
                                                 weight,
                                                 Diff::Removed(path, tree),
                                                 after.enter_dir(&name),
+                                                child_replacements,
                                             );
                                         }
                                         Entry::Leaf(leaf) => {
@@ -560,6 +608,7 @@ where
                                         }
                                     }
                                 }
+                                ReplacementsHolder::finalize(&path, replacements)?;
                             }
                         }
                         Ok(output)

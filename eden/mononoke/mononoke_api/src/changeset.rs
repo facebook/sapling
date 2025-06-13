@@ -990,6 +990,7 @@ impl<R: MononokeRepo> ChangesetContext<R> {
                         self.repo_ctx().repo().repo_blobstore().clone(),
                         Some,
                         recurse_pruner,
+                        Default::default(),
                     )
                     .left_stream()
             }
@@ -1005,6 +1006,7 @@ impl<R: MononokeRepo> ChangesetContext<R> {
                         after,
                         Some,
                         recurse_pruner,
+                        Default::default(),
                     )
                     .right_stream()
             }

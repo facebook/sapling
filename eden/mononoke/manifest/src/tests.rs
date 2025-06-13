@@ -990,6 +990,7 @@ async fn test_diff(fb: FacebookInit) -> Result<()> {
                 let badpath = MPath::new("dir/removed_dir").unwrap();
                 &badpath != path
             },
+            Default::default(),
         )
         .try_collect()
         .await?;
@@ -1055,6 +1056,7 @@ async fn test_diff(fb: FacebookInit) -> Result<()> {
                 let badpath = MPath::new("dir/removed_dir").unwrap();
                 &badpath != path
             },
+            Default::default(),
         )
         .map_ok(describe_diff_item)
         .try_collect()
