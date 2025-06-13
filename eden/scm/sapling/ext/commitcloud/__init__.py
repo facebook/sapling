@@ -260,8 +260,7 @@ def hintcommitcloudswitch(ui, active):
 @revsetpredicate("backedup")
 def backedup(repo, subset, x):
     """draft changesets that have been backed up to Commit Cloud"""
-    path = ccutil.getnullableremotepath(repo.ui)
-    if not path:
+    if not ccutil.is_supported(repo):
         return smartset.baseset(repo=repo)
     heads = backupstate.BackupState(repo).heads
     cl = repo.changelog
@@ -275,8 +274,7 @@ def backedup(repo, subset, x):
 @revsetpredicate("notbackedup")
 def notbackedup(repo, subset, x):
     """changesets that have not yet been backed up to Commit Cloud"""
-    path = ccutil.getnullableremotepath(repo.ui)
-    if not path:
+    if not ccutil.is_supported(repo):
         # arguably this should return draft(). However, since there is no
         # remote, and no way to do backup, returning an empty set avoids
         # upsetting users with "not backed up" warnings.

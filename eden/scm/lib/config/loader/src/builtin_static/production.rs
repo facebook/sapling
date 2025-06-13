@@ -610,4 +610,7 @@ use-rust=true
 
 [status]
 use-rust=true
+
+[commitcloud]
+supported-url-regex = ^.*\.(facebook|tfbnw|mononoke)\..*$
 "###);

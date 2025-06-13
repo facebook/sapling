@@ -77,6 +77,24 @@ def getremotepath(ui):
     return path
 
 
+def is_supported(repo):
+    """Whether commit cloud is supported in the repo.
+    This function should make a fast local decision without network side effects.
+    """
+    path = getnullableremotepath(repo.ui)
+    if not path:
+        return False
+
+    supported_re = repo.config.get.as_regex("commitcloud", "supported-url-regex")
+    if supported_re:
+        from .. import schemes
+
+        path = schemes.expandscheme(path)
+        if not supported_re.match(path):
+            return False
+    return True
+
+
 def getcommandandoptions(command):
     cmd = commands.table[command][0]
     opts = dict(opt[1:3] for opt in commands.table[command][1])

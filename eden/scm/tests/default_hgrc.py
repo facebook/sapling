@@ -111,6 +111,7 @@ hostname=testhost
 servicetype=local
 servicelocation={testtmp}
 remotebookmarkssync=True
+supported-url-regex=.*
 
 [experimental]
 changegroup3=True
