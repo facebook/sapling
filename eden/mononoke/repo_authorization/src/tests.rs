@@ -27,6 +27,7 @@ use mononoke_macros::mononoke;
 use mononoke_types::PrefixTrie;
 use permission_checker::MononokeIdentitySet;
 use repo_bookmark_attrs::RepoBookmarkAttrs;
+use repo_identity::RepoIdentity;
 use repo_permission_checker::RepoPermissionChecker;
 
 use crate::AuthorizationContext;
@@ -36,6 +37,9 @@ use crate::RepoWriteOperation;
 struct Repo {
     #[facet]
     repo_config: RepoConfig,
+
+    #[facet]
+    repo_identity: RepoIdentity,
 
     #[facet]
     repo_permission_checker: dyn RepoPermissionChecker,

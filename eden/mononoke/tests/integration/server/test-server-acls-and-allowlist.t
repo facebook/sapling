@@ -39,7 +39,7 @@ Pull with the default certificate - this should work.
 
 Pull from Mononoke with a different identity, make sure it fails
   $ hg pull --config auth.mononoke.cert="$TEST_CERTDIR/client1.crt" --config auth.mononoke.key="$TEST_CERTDIR/client1.key" 2>&1 | grep permission
-  *Failed to load repository: repo: permission denied: Repo metadata read access is not permitted* (glob)
+  *Failed to load repository: repo: permission denied: Repo metadata read access in repo 'repo' is not permitted* (glob)
 
 Pull with the identity in the global allowlist - this works, too.
   $ hg pull --config auth.mononoke.cert="$TEST_CERTDIR/client2.crt" --config auth.mononoke.key="$TEST_CERTDIR/client2.key"

@@ -76,6 +76,7 @@ impl fmt::Display for DeniedAction {
 #[derive(Debug, Clone)]
 pub struct PermissionDenied {
     pub(crate) denied_action: DeniedAction,
+    pub(crate) denied_repo_name: String,
     pub(crate) context: AuthorizationContext,
     pub(crate) identities: MononokeIdentitySet,
 }
@@ -84,8 +85,8 @@ impl fmt::Display for PermissionDenied {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(
             f,
-            "{} is not permitted with {:?} for [",
-            self.denied_action, self.context
+            "{} in repo '{}' is not permitted with {:?} for [",
+            self.denied_action, self.denied_repo_name, self.context
         )?;
         let mut delim = "";
         for id in self.identities.iter() {
