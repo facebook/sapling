@@ -287,8 +287,6 @@ def onetimeclientsetup(ui):
 
     wrapfunction(store, "store", storewrapper)
 
-    extensions.wrapfunction(exchange, "pull", exchangepull)
-
     # prefetch files before update
     def applyupdates(
         orig,
@@ -770,25 +768,6 @@ def pull(orig, ui, repo, *pats, **opts):
             repo.prefetch(revs, base=base)
 
     return result
-
-
-def exchangepull(orig, repo, remote, *args, **kwargs):
-    # Hook into the callstream/getbundle to insert bundle capabilities
-    # during a pull.
-    def localgetbundle(
-        orig, source, heads=None, common=None, bundlecaps=None, **kwargs
-    ):
-        if not bundlecaps:
-            bundlecaps = set()
-        bundlecaps.add("remotefilelog")
-        return orig(source, heads=heads, common=common, bundlecaps=bundlecaps, **kwargs)
-
-    if hasattr(remote, "_callstream"):
-        remote._localrepo = repo
-    elif hasattr(remote, "getbundle"):
-        wrapfunction(remote, "getbundle", localgetbundle)
-
-    return orig(repo, remote, *args, **kwargs)
 
 
 def revert(orig, ui, repo, ctx, parents, *pats, **opts):
