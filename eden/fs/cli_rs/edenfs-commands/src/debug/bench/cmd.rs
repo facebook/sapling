@@ -63,9 +63,9 @@ pub enum BenchCmd {
         #[clap(long)]
         dir: String,
 
-        /// Read file content through file system or via thrift during the traversal.
-        #[clap(long, value_enum, default_value_t = types::ReadFileMethod::Fs, help="read via fs or thrift")]
-        read_file_via: types::ReadFileMethod,
+        /// Path to fbsource directory, required for thrift IO
+        #[clap(long)]
+        thrift_io: Option<String>,
 
         /// Max number of files to read when traversing the file system
         #[clap(long, default_value_t = types::DEFAULT_MAX_NUMBER_OF_FILES_FOR_TRAVERSAL)]
@@ -154,7 +154,7 @@ impl crate::Subcommand for BenchCmd {
             },
             Self::Traversal {
                 dir,
-                read_file_via,
+                thrift_io,
                 max_files,
                 follow_symlinks,
                 no_progress,
@@ -167,22 +167,22 @@ impl crate::Subcommand for BenchCmd {
                     );
                 }
 
-                let benchmark_result = match read_file_via {
-                    types::ReadFileMethod::Fs => traversal::bench_traversal_fs_read(
+                let benchmark_result = if thrift_io.is_some() {
+                    traversal::bench_traversal_thrift_read(
                         dir,
                         *max_files,
                         *follow_symlinks,
                         *no_progress,
-                    )?,
-                    types::ReadFileMethod::Thrift => {
-                        traversal::bench_traversal_thrift_read(
-                            dir,
-                            *max_files,
-                            *follow_symlinks,
-                            *no_progress,
-                        )
-                        .await?
-                    }
+                        thrift_io.as_deref(),
+                    )
+                    .await?
+                } else {
+                    traversal::bench_traversal_fs_read(
+                        dir,
+                        *max_files,
+                        *follow_symlinks,
+                        *no_progress,
+                    )?
                 };
 
                 if *json {

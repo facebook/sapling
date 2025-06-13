@@ -220,6 +220,7 @@ pub async fn bench_traversal_thrift_read(
     max_files: usize,
     follow_symlinks: bool,
     no_progress: bool,
+    fbsource_path: Option<&str>,
 ) -> Result<Benchmark> {
     let path = Path::new(dir_path);
     if !path.exists() || !path.is_dir() {
@@ -309,7 +310,27 @@ pub async fn bench_traversal_thrift_read(
         }
 
         let start = Instant::now();
-        let (repo_path, rel_file_path) = split_fbsource_file_path(&path);
+        let fbsource_path = fbsource_path
+            .ok_or_else(|| anyhow::anyhow!("fbsource path is required for thrift IO"))?;
+
+        // Convert both paths to absolute paths
+        let repo_path = PathBuf::from(fbsource_path)
+            .canonicalize()
+            .map_err(|e| anyhow::anyhow!("Failed to canonicalize fbsource path: {}", e))?;
+        let abs_path = path
+            .canonicalize()
+            .map_err(|e| anyhow::anyhow!("Failed to canonicalize file path: {}", e))?;
+
+        // Now strip the prefix using absolute paths
+        let rel_file_path = abs_path
+            .strip_prefix(&repo_path)
+            .map_err(|_| {
+                anyhow::anyhow!(
+                    "File path does not start with fbsource path (after canonicalization)"
+                )
+            })?
+            .to_path_buf();
+
         let request = get_thrift_request(repo_path, rel_file_path)?;
         let response = client
             .with_thrift(|thrift| {
@@ -595,15 +616,4 @@ pub fn get_thrift_request(
         ..Default::default()
     };
     Ok(req)
-}
-
-pub fn split_fbsource_file_path(file_path: &Path) -> (PathBuf, PathBuf) {
-    let parts: Vec<_> = file_path.iter().collect();
-    let fbsource_idx = file_path
-        .iter()
-        .position(|s| s.to_string_lossy().starts_with("fbsource"))
-        .expect("fbsource not found in path");
-    let repo_path: PathBuf = parts[..=fbsource_idx].iter().collect();
-    let rel_file_path: PathBuf = parts[fbsource_idx + 1..].iter().collect();
-    (repo_path, rel_file_path)
 }

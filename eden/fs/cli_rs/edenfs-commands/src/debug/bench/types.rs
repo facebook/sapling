@@ -57,12 +57,6 @@ impl std::fmt::Display for BenchmarkType {
     }
 }
 
-#[derive(Debug, Copy, Clone, PartialEq, clap::ValueEnum, Serialize)]
-pub enum ReadFileMethod {
-    Fs,
-    Thrift,
-}
-
 /// Represents the result of a benchmark operation
 #[derive(Debug, Clone, Serialize)]
 pub struct Benchmark {
