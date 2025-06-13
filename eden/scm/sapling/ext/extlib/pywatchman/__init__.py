@@ -1061,7 +1061,7 @@ class client:
 
             def maybe_truncate(s, max_len):
                 if len(s) > max_len:
-                    s = s[:256] + " (truncated)"
+                    s = s[:max_len] + " (truncated)"
                 return s
 
             raise WatchmanError(
