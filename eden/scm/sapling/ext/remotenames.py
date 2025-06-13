@@ -976,14 +976,6 @@ def expushcmd(orig, ui, repo, dest=None, **opts):
     # big can o' copypasta from commands.push
     dest = ui.expandpath(dest or "default-push", dest or "default")
     dest = hg.parseurl(dest)
-    try:
-        other = hg.peer(repo, opts, dest)
-    except error.RepoError:
-        if dest == "default-push":
-            hint = _('see the "path" section in "@prog@ help config"')
-            raise error.Abort(_("default repository not configured!"), hint=hint)
-        else:
-            raise
 
     # all checks pass, go for it!
     node = repo.lookup(rev)
@@ -1020,6 +1012,15 @@ def expushcmd(orig, ui, repo, dest=None, **opts):
         except error.UnsupportedEdenApiPush as e:
             ui.status_err(_("fallback reason: %s\n") % e)
             # fallback to old push
+
+    try:
+        other = hg.peer(repo, opts, dest)
+    except error.RepoError:
+        if dest == "default-push":
+            hint = _('see the "path" section in "@prog@ help config"')
+            raise error.Abort(_("default repository not configured!"), hint=hint)
+        else:
+            raise
 
     ui.status_err(
         _("pushing rev %s to destination %s bookmark %s\n")
