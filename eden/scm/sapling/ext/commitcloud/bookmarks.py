@@ -37,8 +37,6 @@ def _bookmarks(orig, ui, repo, *names, **opts):
     path = ui.paths.getpath(remotepath or None, default=("default",))
 
     if pattern:
-        destpath = path.pushloc or path.loc
-        other = hg.peer(repo, opts, destpath)
         if not names:
             raise error.Abort(
                 "--list-remote requires a bookmark pattern",
@@ -53,6 +51,8 @@ def _bookmarks(orig, ui, repo, *names, **opts):
             if usehttp:
                 fetchedbookmarks = _http_bookmark_fetch(repo, names)
             else:
+                destpath = path.pushloc or path.loc
+                other = hg.peer(repo, opts, destpath)
                 fetchedbookmarks = other.listkeyspatterns("bookmarks", patterns=names)
         _showbookmarks(ui, fetchedbookmarks, **opts)
         return
