@@ -25,8 +25,6 @@ use hg_util::path::expand_path;
 use tracing::Level;
 use tracing::event;
 
-use crate::gc::GcCmd;
-
 mod config;
 mod debug;
 mod du;
@@ -132,7 +130,6 @@ pub enum TopLevelSubcommand {
     Debug(crate::debug::DebugCmd),
     Du(crate::du::DiskUsageCmd),
     Fsconfig(crate::config::FsConfigCmd),
-    // Gc(crate::gc::GcCmd),
     List(crate::list::ListCmd),
     Minitop(crate::minitop::MinitopCmd),
     #[clap(alias = "notification")]
