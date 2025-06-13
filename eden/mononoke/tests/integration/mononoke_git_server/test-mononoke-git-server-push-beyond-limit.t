@@ -10,6 +10,14 @@
   $ GIT_REPO_ORIGIN="${TESTTMP}/origin/repo-git"
   $ GIT_REPO="${TESTTMP}/repo-git"
 
+  $ merge_just_knobs <<EOF
+  > {
+  >   "ints": {
+  >     "scm/mononoke:git_server_max_packfile_size": 10485760
+  >   }
+  > }
+  > EOF
+
 # Setup git repository
   $ mkdir -p "$GIT_REPO_ORIGIN"
   $ cd "$GIT_REPO_ORIGIN"
@@ -36,7 +44,7 @@
   $ set_mononoke_as_source_of_truth_for_git
 
 # Start up the Mononoke Git Service with max request size of 10 MBs
-  $ MAX_REQUEST_SIZE=10485760 mononoke_git_service
+  $ mononoke_git_service
 # Clone the Git repo from Mononoke
   $ quiet git_client clone $MONONOKE_GIT_SERVICE_BASE_URL/$REPONAME.git
 

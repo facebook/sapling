@@ -105,10 +105,12 @@ async fn push(
             return reject_non_sot_push(repo_name.as_str(), state, &ref_updates).await;
         }
         // If the pushed packfile is too large, then we need to prevent the push
-        if let Ok(max_request_size) = GitServerContext::borrow_from(state).max_request_size() {
-            if pack_file.get_ref().len() > max_request_size {
-                return reject_too_large_push(repo_name.as_str(), state, &ref_updates).await;
-            }
+        let max_request_size = justknobs::get_as::<usize>(
+            "scm/mononoke:git_server_max_packfile_size",
+            Some(repo_name.as_str()),
+        )?;
+        if pack_file.get_ref().len() > max_request_size {
+            return reject_too_large_push(repo_name.as_str(), state, &ref_updates).await;
         }
         let concurrency = request_context.pushvars.concurrency();
 
