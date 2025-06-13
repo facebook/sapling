@@ -39,10 +39,6 @@ pub enum BenchCmd {
         /// Only supported on linux and needs root privilege to run.
         #[clap(long)]
         drop_kernel_caches: bool,
-
-        /// Disable progress bars in benchmarks
-        #[clap(long)]
-        no_progress: bool,
     },
 
     #[clap(about = "Run database I/O benchmarks")]
@@ -97,7 +93,6 @@ impl crate::Subcommand for BenchCmd {
                 number_of_files,
                 chunk_size,
                 drop_kernel_caches,
-                no_progress: _,
             } => match r#gen::TestDir::validate(test_dir) {
                 Ok(test_dir) => {
                     let random_data = r#gen::RandomData::new(*number_of_files, *chunk_size);
