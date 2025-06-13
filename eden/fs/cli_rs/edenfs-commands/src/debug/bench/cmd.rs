@@ -54,10 +54,6 @@ pub enum BenchCmd {
         /// Size of each chunk in bytes
         #[clap(long, default_value_t = types::DEFAULT_CHUNK_SIZE)]
         chunk_size: usize,
-
-        /// Disable progress bars in benchmarks
-        #[clap(long)]
-        no_progress: bool,
     },
 
     #[clap(about = "Run traversal benchmark")]
@@ -123,7 +119,6 @@ impl crate::Subcommand for BenchCmd {
                 test_dir,
                 number_of_files,
                 chunk_size,
-                no_progress: _,
             } => match r#gen::TestDir::validate(test_dir) {
                 Ok(test_dir) => {
                     let random_data = r#gen::RandomData::new(*number_of_files, *chunk_size);
