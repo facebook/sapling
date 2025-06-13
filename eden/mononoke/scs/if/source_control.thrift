@@ -399,16 +399,39 @@ struct FileChunk {
   3: binary data;
 }
 
+/// If a file or tree was copied via a subtree change, this will contain the original commit and path
+/// that it was copied from.
+struct CommitCompareSubtreeSource {
+  /// Commit id for the "other" file if it came from a different location than in the request.
+  /// This may happen if the file was copied or merged due to a subtree change.
+  4: map<CommitIdentityScheme, CommitId> source_commit_ids;
+  /// Path for the "other" file if it came from a different location than in the request.
+  /// This may happen if the file was copied or merged due to a subtree change.
+  5: Path source_path;
+}
+
 struct CommitCompareFile {
   1: optional FilePathInfo base_file;
   2: optional FilePathInfo other_file;
-  3: CopyInfo copy_info; /// Different than NONE only when commit is compared with parent
+
+  /// Whether the file was copied or moved.  This is different than NONE only when a commit is compared with its parent
+  3: CopyInfo copy_info;
+
+  /// When a file was copied by a subtree copy, this contains the original commit and path that it was copied from.
+  /// Set only when compared with a parent and when compare_against_subtree_copy_sources is set to true.
+  4: optional CommitCompareSubtreeSource subtree_source;
 }
 
 struct CommitCompareTree {
   1: optional TreePathInfo base_tree;
   2: optional TreePathInfo other_tree;
-  3: CopyInfo copy_info; /// Different than NONE only when commit is compared with parent
+
+  /// Whether the file was copied or moved.  This is different than NONE only when a commit is compared with its parent
+  3: CopyInfo copy_info;
+
+  /// When a file was copied by a subtree copy, this contains the original commit and path that it was copied from.
+  /// Set only when compared with a parent and when compare_against_subtree_copy_sources is set to true.
+  4: optional CommitCompareSubtreeSource subtree_source;
 }
 
 enum CommitCompareItem {
@@ -1243,6 +1266,14 @@ struct CommitCompareParams {
   /// Whether to find parents via the commit ancestry, or via mutable copy
   /// information. If not supplied, a default will be chosen for you
   7: optional bool follow_mutable_file_history;
+  /// When performing a comparison against a parent, follow subtree
+  /// copy sources and show only the differences against those sources.
+  8: optional bool compare_with_subtree_copy_sources;
+}
+
+struct CommitFileDiffsParamsSubtreeSource {
+  1: CommitId commit_id;
+  2: Path path;
 }
 
 struct CommitFileDiffsParamsPathPair {
@@ -1258,6 +1289,9 @@ struct CommitFileDiffsParamsPathPair {
   /// useful to display diff for very large files (i.e. files that are above
   /// COMMIT_FILE_DIFFS_SIZE_LIMIT).
   4: optional bool generate_placeholder_diff;
+  /// If the file being diffed was copied by a subtree copy, this value should
+  /// be provided with the original subtree copy source.
+  5: optional CommitFileDiffsParamsSubtreeSource subtree_source;
 }
 
 const i64 COMMIT_FILE_DIFFS_SIZE_LIMIT = 0x4000000; /// 64MiB
@@ -1989,6 +2023,7 @@ struct CommitFileDiffsResponseElement {
   1: optional Path base_path;
   2: optional Path other_path;
   3: Diff diff;
+  4: optional CommitId other_commit_id;
 }
 
 struct CommitFileDiffsStoppedAtPair {
