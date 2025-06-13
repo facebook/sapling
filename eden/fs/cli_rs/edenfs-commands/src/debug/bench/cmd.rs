@@ -35,10 +35,6 @@ pub enum BenchCmd {
         #[clap(long, default_value_t = types::DEFAULT_CHUNK_SIZE)]
         chunk_size: usize,
 
-        /// Read file content through file system or via thrift.
-        #[clap(long, value_enum, default_value_t = types::ReadFileMethod::Fs)]
-        read_file_via: types::ReadFileMethod,
-
         /// Whether to drop memory caches after writes.
         /// Only supported on linux and needs root privilege to run.
         #[clap(long)]
@@ -100,13 +96,9 @@ impl crate::Subcommand for BenchCmd {
                 test_dir,
                 number_of_files,
                 chunk_size,
-                read_file_via,
                 drop_kernel_caches,
                 no_progress: _,
-            } => match r#gen::TestDir::validate(
-                test_dir,
-                *read_file_via == types::ReadFileMethod::Thrift,
-            ) {
+            } => match r#gen::TestDir::validate(test_dir) {
                 Ok(test_dir) => {
                     let random_data = r#gen::RandomData::new(*number_of_files, *chunk_size);
                     println!(
@@ -119,29 +111,15 @@ impl crate::Subcommand for BenchCmd {
                         "{}",
                         fsio::bench_write_mfmd(&test_dir, &random_data, *drop_kernel_caches)?
                     );
-                    match read_file_via {
-                        types::ReadFileMethod::Fs => {
-                            println!("{}", fsio::bench_fs_read_mfmd(&test_dir, &random_data)?);
-                        }
-                        types::ReadFileMethod::Thrift => {
-                            println!(
-                                "{}",
-                                fsio::bench_thrift_read_mfmd(&test_dir, &random_data).await?
-                            );
-                        }
-                    }
+                    println!("{}", fsio::bench_fs_read_mfmd(&test_dir, &random_data)?);
+
                     println!(
                         "{}",
                         fsio::bench_write_sfmd(&test_dir, &random_data, *drop_kernel_caches)?
                     );
-                    match read_file_via {
-                        types::ReadFileMethod::Fs => {
-                            println!("{}", fsio::bench_fs_read_sfmd(&test_dir, &random_data)?);
-                        }
-                        types::ReadFileMethod::Thrift => {
-                            println!("{}", fsio::bench_thrift_read_sfmd(&test_dir).await?);
-                        }
-                    }
+
+                    println!("{}", fsio::bench_fs_read_sfmd(&test_dir, &random_data)?);
+
                     test_dir.remove()?;
                 }
                 Err(e) => return Err(e),
@@ -151,7 +129,7 @@ impl crate::Subcommand for BenchCmd {
                 number_of_files,
                 chunk_size,
                 no_progress: _,
-            } => match r#gen::TestDir::validate(test_dir, false) {
+            } => match r#gen::TestDir::validate(test_dir) {
                 Ok(test_dir) => {
                     let random_data = r#gen::RandomData::new(*number_of_files, *chunk_size);
                     println!(

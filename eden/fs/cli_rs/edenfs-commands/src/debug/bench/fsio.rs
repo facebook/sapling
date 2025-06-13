@@ -12,8 +12,6 @@ use std::io::Read;
 use std::io::Write;
 #[cfg(target_os = "linux")]
 use std::os::unix::process::CommandExt;
-use std::path::Path;
-use std::path::PathBuf;
 #[cfg(target_os = "linux")]
 use std::process::Command;
 use std::time::Instant;
@@ -21,20 +19,12 @@ use std::time::Instant;
 use anyhow::Result;
 #[cfg(target_os = "linux")]
 use anyhow::anyhow;
-use edenfs_client::client::Client;
-use edenfs_client::methods::EdenThriftMethod;
-use edenfs_utils::bytes_from_path;
-use thrift_types::edenfs::GetFileContentResponse;
-use thrift_types::edenfs::MountId;
-use thrift_types::edenfs::ScmBlobOrError;
-use thrift_types::edenfs::SyncBehavior;
 
 use super::r#gen::RandomData;
 use super::r#gen::TestDir;
 use super::types;
 use super::types::Benchmark;
 use super::types::BenchmarkType;
-use crate::get_edenfs_instance;
 
 /// Runs the MFMD write benchmark and returns the benchmark results
 pub fn bench_write_mfmd(
@@ -183,70 +173,6 @@ pub fn bench_fs_read_mfmd(test_dir: &TestDir, random_data: &RandomData) -> Resul
     Ok(result)
 }
 
-pub async fn bench_thrift_read_mfmd(
-    test_dir: &TestDir,
-    random_data: &RandomData,
-) -> Result<Benchmark> {
-    let mut agg_req_build_dur = std::time::Duration::new(0, 0);
-    let mut agg_read_dur = std::time::Duration::new(0, 0);
-
-    let client = get_edenfs_instance().get_client();
-
-    for path in random_data.paths(test_dir) {
-        let start = Instant::now();
-        let (repo_path, rel_file_path) = split_fbsource_file_path(&path);
-        let request = get_thrift_request(repo_path, rel_file_path)?;
-        agg_req_build_dur += start.elapsed();
-
-        let start = Instant::now();
-        let response: GetFileContentResponse = client
-            .with_thrift(|thrift| {
-                (
-                    thrift.getFileContent(&request),
-                    EdenThriftMethod::GetFileContent,
-                )
-            })
-            .await?;
-        agg_read_dur += start.elapsed();
-        assert!(matches!(response.blob, ScmBlobOrError::blob(_)));
-    }
-    let avg_req_build_dur = agg_req_build_dur.as_secs_f64() / random_data.number_of_files as f64;
-    let avg_read_dur = agg_read_dur.as_secs_f64() / random_data.number_of_files as f64;
-    let avg_dur = avg_req_build_dur + avg_read_dur;
-    let mb_per_second = random_data.chunk_size as f64 / avg_dur / types::BYTES_IN_MEGABYTE as f64;
-
-    let mut result = Benchmark::new(BenchmarkType::ThriftReadMultipleFiles);
-
-    // Add throughput measurements
-    result.add_metric("throughput", mb_per_second, types::Unit::MiBps, None);
-
-    // Add latency measurements
-    result.add_metric(
-        "request build latency",
-        avg_req_build_dur * 1000.0,
-        types::Unit::Ms,
-        Some(4),
-    );
-
-    let chunk_size_kb = random_data.chunk_size as f64 / types::BYTES_IN_KILOBYTE as f64;
-    result.add_metric(
-        &format!("getFileContent() {:.0} KiB latency", chunk_size_kb),
-        avg_read_dur * 1000.0,
-        types::Unit::Ms,
-        Some(4),
-    );
-
-    let chunk_size_kb = random_data.chunk_size as f64 / types::BYTES_IN_KILOBYTE as f64;
-    result.add_metric(
-        &format!("total {:.0} KiB latency", chunk_size_kb),
-        (avg_read_dur + avg_req_build_dur) * 1000.0,
-        types::Unit::Ms,
-        Some(4),
-    );
-
-    Ok(result)
-}
-
 /// Runs the SFMD write benchmark and returns the benchmark results
 pub fn bench_write_sfmd(
     test_dir: &TestDir,
@@ -319,67 +245,6 @@ pub fn bench_fs_read_sfmd(test_dir: &TestDir, random_data: &RandomData) -> Resul
     );
 
     Ok(result)
-}
-
-/// Runs the SFMD read benchmark and returns the benchmark results
-pub async fn bench_thrift_read_sfmd(test_dir: &TestDir) -> Result<Benchmark> {
-    let file_path = test_dir.combined_data_path();
-    let start = Instant::now();
-    let (repo_path, rel_file_path) = split_fbsource_file_path(&file_path);
-    let request = get_thrift_request(repo_path, rel_file_path)?;
-    let response = get_edenfs_instance()
-        .get_client()
-        .with_thrift(|thrift| {
-            (
-                thrift.getFileContent(&request),
-                EdenThriftMethod::GetFileContent,
-            )
-        })
-        .await?;
-    let agg_dur = start.elapsed().as_secs_f64();
-    assert!(matches!(response.blob, ScmBlobOrError::blob(_)));
-
-    let file_size = match response.blob {
-        ScmBlobOrError::blob(blob) => blob.len(),
-        _ => 0,
-    };
-    let mb_per_second = file_size as f64 / types::BYTES_IN_MEGABYTE as f64 / agg_dur;
-
-    let mut result = Benchmark::new(BenchmarkType::ThriftReadSingleFile);
-
-    // Add throughput metrics
-    result.add_metric("throughput", mb_per_second, types::Unit::MiBps, None);
-
-    Ok(result)
-}
-
-pub fn get_thrift_request(
-    repo_path: PathBuf,
-    rel_file_path: PathBuf,
-) -> Result<thrift_types::edenfs::GetFileContentRequest> {
-    let req = thrift_types::edenfs::GetFileContentRequest {
-        mount: MountId {
-            mountPoint: bytes_from_path(repo_path)?,
-            ..Default::default()
-        },
-        filePath: bytes_from_path(rel_file_path)?,
-        sync: SyncBehavior {
-            ..Default::default()
-        },
-        ..Default::default()
-    };
-    Ok(req)
-}
-
-pub fn split_fbsource_file_path(file_path: &Path) -> (PathBuf, PathBuf) {
-    let parts: Vec<_> = file_path.iter().collect();
-    let fbsource_idx = file_path
-        .iter()
-        .position(|s| s.to_string_lossy().starts_with("fbsource"))
-        .expect("fbsource not found in path");
-    let repo_path: PathBuf = parts[..=fbsource_idx].iter().collect();
-    let rel_file_path: PathBuf = parts[fbsource_idx + 1..].iter().collect();
-    (repo_path, rel_file_path)
 }
 
 #[cfg(target_os = "linux")]

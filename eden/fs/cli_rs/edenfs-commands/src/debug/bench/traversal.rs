@@ -17,14 +17,15 @@ use std::time::Instant;
 use anyhow::Result;
 use edenfs_client::client::Client;
 use edenfs_client::methods::EdenThriftMethod;
+use edenfs_utils::bytes_from_path;
 use indicatif::ProgressBar;
 use indicatif::ProgressStyle;
 use sysinfo::Pid;
 use sysinfo::System;
+use thrift_types::edenfs::MountId;
 use thrift_types::edenfs::ScmBlobOrError;
+use thrift_types::edenfs::SyncBehavior;
 
-use super::fsio::get_thrift_request;
-use super::fsio::split_fbsource_file_path;
 use super::types;
 use super::types::Benchmark;
 use super::types::BenchmarkType;
@@ -576,4 +577,33 @@ pub fn bench_traversal_fs_read(
     );
 
     Ok(result)
+}
+
+pub fn get_thrift_request(
+    repo_path: PathBuf,
+    rel_file_path: PathBuf,
+) -> Result<thrift_types::edenfs::GetFileContentRequest> {
+    let req = thrift_types::edenfs::GetFileContentRequest {
+        mount: MountId {
+            mountPoint: bytes_from_path(repo_path)?,
+            ..Default::default()
+        },
+        filePath: bytes_from_path(rel_file_path)?,
+        sync: SyncBehavior {
+            ..Default::default()
+        },
+        ..Default::default()
+    };
+    Ok(req)
+}
+
+pub fn split_fbsource_file_path(file_path: &Path) -> (PathBuf, PathBuf) {
+    let parts: Vec<_> = file_path.iter().collect();
+    let fbsource_idx = file_path
+        .iter()
+        .position(|s| s.to_string_lossy().starts_with("fbsource"))
+        .expect("fbsource not found in path");
+    let repo_path: PathBuf = parts[..=fbsource_idx].iter().collect();
+    let rel_file_path: PathBuf = parts[fbsource_idx + 1..].iter().collect();
+    (repo_path, rel_file_path)
 }
