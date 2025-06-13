@@ -114,8 +114,9 @@ Setup config repo:
   pull failed: a38079aa278633d9e69eb2d90d393b7fec83b09a not found
   translated a38079aa278633d9e69eb2d90d393b7fec83b09a@large-mon to a61c0a2e580a4d7c742858d8ebf1a469a7de0839
   a61c0a2e580a4d7c742858d8ebf1a469a7de0839
-  $ hg log -r $LARGE_REPO_MAPPED_COMMIT -T '{node}\n' --config 'megarepo.transparent-lookup=small-mon large-mon' --config extensions.megarepo=
-  pulling 'a38079aa278633d9e69eb2d90d393b7fec83b09a' from 'mono:small-mon'
-  pull failed: a38079aa278633d9e69eb2d90d393b7fec83b09a not found
-  translated a38079aa278633d9e69eb2d90d393b7fec83b09a@large-mon to a61c0a2e580a4d7c742858d8ebf1a469a7de0839
+  $ hg log -r $LARGE_REPO_ONLY_COMMIT -T '{node}\n' --config 'megarepo.transparent-lookup=small-mon large-mon' --config extensions.megarepo=
+  pulling 'e6c6c1f94d10495f8c94d81ae5f125bd89f82b8a' from 'mono:small-mon'
+  pull failed: e6c6c1f94d10495f8c94d81ae5f125bd89f82b8a not found
+  translated e6c6c1f94d10495f8c94d81ae5f125bd89f82b8a@large-mon to a61c0a2e580a4d7c742858d8ebf1a469a7de0839
   a61c0a2e580a4d7c742858d8ebf1a469a7de0839
+
