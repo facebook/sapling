@@ -7,21 +7,26 @@
 
 //! Diff two commits
 
+use std::collections::BTreeMap;
+use std::collections::HashSet;
 use std::io::Write;
 
 use anyhow::Result;
 use anyhow::bail;
 use clap::ValueEnum;
 use commit_id_types::CommitIdsArgs;
+use futures::stream;
 use maplit::btreeset;
 use scs_client_raw::thrift;
 use serde::Serialize;
 
 use crate::ScscApp;
 use crate::args::commit_id::SchemeArgs;
+use crate::args::commit_id::map_commit_ids;
 use crate::args::commit_id::resolve_commit_ids;
 use crate::args::repo::RepoArgs;
 use crate::errors::SelectionErrorExt;
+use crate::library::commit_id::render_commit_id;
 use crate::library::diff::diff_files;
 use crate::render::Render;
 
@@ -32,9 +37,6 @@ enum DiffFormat {
 }
 
 #[derive(clap::Parser)]
-// Commit identity schemes to use as an intermediate step to resolve commit ids.
-// (default: bonsai) - should be good for all cases. Overriding is only good for debugging or testing.
-#[clap(mut_arg("schemes", |arg| arg.default_value("bonsai").hide(true)))]
 /// Diff files between two commits
 pub(super) struct CommandArgs {
     #[clap(flatten)]
@@ -47,6 +49,9 @@ pub(super) struct CommandArgs {
     #[clap(long)]
     /// Show copies/moves as adds/deletes.
     skip_copies_renames: bool,
+    #[clap(long)]
+    /// Compare against the source of subtree copies.
+    compare_with_subtree_copy_sources: bool,
     #[clap(long)]
     /// Only list differing paths instead of printing the diff.
     paths_only: bool,
@@ -112,6 +117,96 @@ impl Render for PathsOnlyOutput {
     }
 }
 
+#[derive(Serialize)]
+struct SubtreeChangeOutput {
+    change_type: String,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    source_url: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    source_commit_id: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    source_commit_ids: Option<BTreeMap<String, String>>,
+    source_path: String,
+    destination_path: String,
+    #[serde(skip)]
+    requested: String,
+    #[serde(skip)]
+    schemes: HashSet<String>,
+}
+
+impl SubtreeChangeOutput {
+    fn from_thrift(
+        requested: String,
+        schemes: HashSet<String>,
+        path: String,
+        change: thrift::SubtreeChange,
+    ) -> Option<Self> {
+        match change {
+            thrift::SubtreeChange::subtree_copy(copy) => Some(SubtreeChangeOutput {
+                change_type: String::from("copy"),
+                source_url: None,
+                source_commit_id: None,
+                source_commit_ids: Some(map_commit_ids(copy.source_commit_ids.values())),
+                source_path: copy.source_path.clone(),
+                destination_path: path,
+                requested: requested.clone(),
+                schemes: schemes.clone(),
+            }),
+            thrift::SubtreeChange::subtree_merge(merge) => Some(SubtreeChangeOutput {
+                change_type: String::from("merge"),
+                source_url: None,
+                source_commit_id: None,
+                source_commit_ids: Some(map_commit_ids(merge.source_commit_ids.values())),
+                source_path: merge.source_path.clone(),
+                destination_path: path,
+                requested: requested.clone(),
+                schemes: schemes.clone(),
+            }),
+            thrift::SubtreeChange::subtree_import(import) => Some(SubtreeChangeOutput {
+                change_type: String::from("import"),
+                source_url: Some(import.source_url.clone()),
+                source_commit_id: Some(import.source_commit_id.clone()),
+                source_commit_ids: None,
+                source_path: import.source_path.clone(),
+                destination_path: path,
+                requested: requested.clone(),
+                schemes: schemes.clone(),
+            }),
+            _ => None,
+        }
+    }
+}
+
+impl Render for SubtreeChangeOutput {
+    type Args = CommandArgs;
+
+    fn render(&self, _args: &Self::Args, w: &mut dyn Write) -> Result<()> {
+        write!(w, "subtree {} ", self.change_type)?;
+        if let Some(source_url) = &self.source_url {
+            write!(w, "{} ", source_url)?;
+        }
+        if let Some(source_commit_id) = &self.source_commit_id {
+            write!(w, "{}", source_commit_id)?;
+        }
+        if let Some(source_commit_ids) = &self.source_commit_ids {
+            render_commit_id(
+                None,
+                ",",
+                &self.requested,
+                source_commit_ids,
+                &self.schemes,
+                w,
+            )?;
+        }
+        writeln!(w, " {} {}", self.source_path, self.destination_path)?;
+        Ok(())
+    }
+
+    fn render_json(&self, _args: &Self::Args, w: &mut dyn Write) -> Result<()> {
+        Ok(serde_json::to_writer(w, self)?)
+    }
+}
+
 pub(super) async fn run(app: ScscApp, args: CommandArgs) -> Result<()> {
     let repo = args.repo_args.clone().into_repo_specifier();
     let commit_ids = args.commit_ids_args.clone().into_commit_ids();
@@ -124,10 +219,10 @@ pub(super) async fn run(app: ScscApp, args: CommandArgs) -> Result<()> {
     let identity_schemes = args.scheme_args.clone().into_request_schemes();
 
     let commits: Vec<_> = commit_ids
-        .into_iter()
+        .iter()
         .map(|id| thrift::CommitSpecifier {
             repo: repo.clone(),
-            id,
+            id: id.clone(),
             ..Default::default()
         })
         .collect();
@@ -136,6 +231,44 @@ pub(super) async fn run(app: ScscApp, args: CommandArgs) -> Result<()> {
     } else {
         (commits.first(), commits[1].clone())
     };
+
+    if args.compare_with_subtree_copy_sources {
+        // Fetch and display any subtree copy sources
+        let subtree_changes = conn
+            .commit_subtree_changes(
+                &base_commit,
+                &thrift::CommitSubtreeChangesParams {
+                    identity_schemes: identity_schemes.clone(),
+                    ..Default::default()
+                },
+            )
+            .await
+            .map_err(|e| e.handle_selection_error(&repo))?
+            .subtree_changes;
+
+        let requested = commit_ids.last().unwrap().to_string();
+        let schemes = args.scheme_args.scheme_string_set();
+
+        app.target
+            .render(
+                &args,
+                stream::iter(
+                    subtree_changes
+                        .into_iter()
+                        .filter_map(|(path, change)| {
+                            SubtreeChangeOutput::from_thrift(
+                                requested.clone(),
+                                schemes.clone(),
+                                path,
+                                change,
+                            )
+                        })
+                        .map(Ok),
+                ),
+            )
+            .await?;
+    }
+
     let ordered_params = if args.ordered {
         let after_path = args.after.clone();
         let limit: i64 = args.limit.try_into()?;
@@ -159,6 +292,7 @@ pub(super) async fn run(app: ScscApp, args: CommandArgs) -> Result<()> {
         paths,
         compare_items: btreeset! {thrift::CommitCompareItem::FILES},
         ordered_params,
+        compare_with_subtree_copy_sources: Some(args.compare_with_subtree_copy_sources),
         ..Default::default()
     };
     let response = conn
@@ -204,6 +338,18 @@ pub(super) async fn run(app: ScscApp, args: CommandArgs) -> Result<()> {
                 generate_placeholder_diff: Some(
                     placeholder_only || pair_size > thrift::COMMIT_FILE_DIFFS_SIZE_LIMIT,
                 ),
+                subtree_source: diff_file.subtree_source.as_ref().map(|source| {
+                    thrift::CommitFileDiffsParamsSubtreeSource {
+                        path: source.source_path.clone(),
+                        commit_id: source
+                            .source_commit_ids
+                            .values()
+                            .next()
+                            .expect("expected commit id")
+                            .clone(),
+                        ..Default::default()
+                    }
+                }),
                 ..Default::default()
             },
             pair_size,

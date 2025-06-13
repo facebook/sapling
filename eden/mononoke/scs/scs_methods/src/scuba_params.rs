@@ -253,6 +253,12 @@ impl AddScubaParams for thrift::CommitCompareParams {
             scuba.add("param_limit", ordered_params.limit);
         }
         scuba.add("param_skip_copies_renames", self.skip_copies_renames as i32);
+        if let Some(compare_with_subtree_copy_sources) = self.compare_with_subtree_copy_sources {
+            scuba.add(
+                "param_compare_with_subtree_copy_sources",
+                compare_with_subtree_copy_sources as i32,
+            );
+        }
         self.identity_schemes.add_scuba_params(scuba);
     }
 }

@@ -388,7 +388,7 @@ async fn get_bonsai_size_change<R: MononokeRepo>(
 ) -> Result<Vec<BonsaiSizeChange>> {
     let diff_items = btreeset! { ChangesetDiffItem::FILES };
     let diff = current
-        .diff_unordered(other, true, None, diff_items)
+        .diff_unordered(other, true, false, None, diff_items)
         .await?;
     let res = stream::iter(diff)
         .map(|diff| async move {

@@ -11,6 +11,7 @@ use std::collections::HashMap;
 use std::collections::HashSet;
 use std::sync::Arc;
 
+use borrowed::borrowed;
 use bytes::Bytes;
 use cloned::cloned;
 use context::CoreContext;
@@ -100,17 +101,39 @@ impl CommitComparePath {
 
     async fn from_path_diff(
         path_diff: ChangesetPathDiffContext<Repo>,
+        schemes: &BTreeSet<thrift::CommitIdentityScheme>,
     ) -> Result<Self, scs_errors::ServiceError> {
         if path_diff.is_file() {
-            let (base_file, other_file) = try_join!(
+            let (base_file, other_file): (_, Option<thrift::FilePathInfo>) = try_join!(
                 path_diff.base().into_response(),
                 path_diff.other().into_response()
             )?;
             let copy_info = path_diff.copy_info().into_response();
+            let (other_file, subtree_source) = match (
+                path_diff.other(),
+                path_diff.subtree_copy_dest_path(),
+                other_file,
+            ) {
+                (Some(other), Some(replacement_path), Some(mut other_file)) => {
+                    let source_commit_ids = map_commit_identity(other.changeset(), schemes).await?;
+                    let source_path =
+                        std::mem::replace(&mut other_file.path, replacement_path.to_string());
+                    (
+                        Some(other_file),
+                        Some(thrift::CommitCompareSubtreeSource {
+                            source_commit_ids,
+                            source_path,
+                            ..Default::default()
+                        }),
+                    )
+                }
+                (_, _, other_file) => (other_file, None),
+            };
             Ok(CommitComparePath::File(thrift::CommitCompareFile {
                 base_file,
                 other_file,
                 copy_info,
+                subtree_source,
                 ..Default::default()
             }))
         } else {
@@ -335,61 +358,80 @@ impl SourceControlServiceImpl {
         }
 
         // Resolve the CommitSpecfier into ChangesetContext
-        let (base_commit, other_commit) = match params.other_commit_id {
+        let (repo, base_commit, other_commit) = match params.other_commit_id {
             Some(other_commit_id) => {
-                let (_repo, base_commit, other_commit) = self
+                let (repo, base_commit, other_commit) = self
                     .repo_changeset_pair(ctx.clone(), &commit, &other_commit_id)
                     .await?;
-                (base_commit, Some(other_commit))
+                (repo, base_commit, Some(other_commit))
             }
             None => {
-                let (_repo, base_commit) = self.repo_changeset(ctx.clone(), &commit).await?;
-                (base_commit, None)
+                let (repo, base_commit) = self.repo_changeset(ctx.clone(), &commit).await?;
+                (repo, base_commit, None)
             }
         };
+        borrowed!(repo);
 
         // Resolve the paths into ChangesetPathContentContext
         // To make it more efficient we do a batch request
         // to resolve all paths into path contexts
-        let mut base_commit_paths = vec![];
-        let mut other_commit_paths = vec![];
-        let paths = params
-            .paths
-            .into_iter()
-            .map(|path_pair| {
-                Ok((
-                    match path_pair.base_path {
-                        Some(path) => {
-                            let mpath = MPath::try_from(&path)
-                                .map_err(|error| MononokeError::InvalidRequest(error.to_string()))
-                                .context("invalid base commit path")?;
-                            base_commit_paths.push(mpath.clone());
-                            Some(mpath)
-                        }
-                        None => None,
-                    },
-                    match &other_commit {
-                        Some(_other_commit) => match path_pair.other_path {
-                            Some(path) => {
-                                let mpath = MPath::try_from(&path)
-                                    .map_err(|error| {
-                                        MononokeError::InvalidRequest(error.to_string())
-                                    })
-                                    .context("invalid other commit path")?;
-                                other_commit_paths.push(mpath.clone());
-                                Some(mpath)
-                            }
-                            None => None,
-                        },
-                        None => None,
-                    },
-                    CopyInfo::from_request(&path_pair.copy_info)?,
-                    path_pair.generate_placeholder_diff.unwrap_or(false),
-                ))
-            })
-            .collect::<Result<Vec<_>, scs_errors::ServiceError>>()?;
+        let mut base_commit_paths = Vec::new();
+        let mut other_commit_paths = Vec::new();
+        let mut subtree_sources = HashMap::new();
+        let mut paths = Vec::with_capacity(params.paths.len());
+        for path_pair in params.paths {
+            let base_path = match path_pair.base_path {
+                Some(path) => {
+                    let mpath = MPath::try_from(&path)
+                        .map_err(|error| MononokeError::InvalidRequest(error.to_string()))
+                        .context("invalid base commit path")?;
+                    base_commit_paths.push(mpath.clone());
+                    Some(mpath)
+                }
+                None => None,
+            };
+            let (other_path, source_commit_id, replacement_path) = match (
+                &other_commit,
+                path_pair.other_path,
+                path_pair.subtree_source,
+            ) {
+                (Some(_other_commit), Some(other_path), Some(subtree_source)) => {
+                    let other_mpath = MPath::try_from(&other_path)
+                        .map_err(|error| MononokeError::InvalidRequest(error.to_string()))
+                        .context("invalid other commit path")?;
+                    let source_mpath = MPath::try_from(&subtree_source.path)
+                        .map_err(|error| MononokeError::InvalidRequest(error.to_string()))
+                        .context("invalid subtree source path")?;
+                    subtree_sources
+                        .entry(subtree_source.commit_id.clone())
+                        .or_insert_with(Vec::new)
+                        .push(source_mpath.clone());
+                    (
+                        Some(source_mpath),
+                        Some(subtree_source.commit_id),
+                        Some(other_mpath),
+                    )
+                }
+                (Some(_other_commit), Some(other_path), None) => {
+                    let mpath = MPath::try_from(&other_path)
+                        .map_err(|error| MononokeError::InvalidRequest(error.to_string()))
+                        .context("invalid other commit path")?;
+                    other_commit_paths.push(mpath.clone());
+                    (Some(mpath), None, None)
+                }
+                _ => (None, None, None),
+            };
+            paths.push((
+                base_path,
+                other_path,
+                source_commit_id,
+                replacement_path,
+                CopyInfo::from_request(&path_pair.copy_info)?,
+                path_pair.generate_placeholder_diff.unwrap_or(false),
+            ));
+        }
 
-        let (base_commit_contexts, other_commit_contexts) = try_join!(
+        let (base_path_contexts, other_path_contexts, subtree_source_path_contexts) = try_join!(
             async {
                 let base_commit_paths = base_commit
                     .paths_with_content(base_commit_paths.into_iter())
@@ -398,11 +440,11 @@ impl SourceControlServiceImpl {
                     .map_ok(|path_context| (path_context.path().clone(), path_context))
                     .try_collect::<HashMap<_, _>>()
                     .await?;
-                Ok::<_, MononokeError>(base_commit_contexts)
+                Ok::<_, scs_errors::ServiceError>(base_commit_contexts)
             },
             async {
                 match &other_commit {
-                    None => Ok(None),
+                    None => Ok(HashMap::new()),
                     Some(other_commit) => {
                         let other_commit_paths = other_commit
                             .paths_with_content(other_commit_paths.into_iter())
@@ -411,61 +453,101 @@ impl SourceControlServiceImpl {
                             .map_ok(|path_context| (path_context.path().clone(), path_context))
                             .try_collect::<HashMap<_, _>>()
                             .await?;
-                        Ok::<_, MononokeError>(Some(other_commit_contexts))
+                        Ok::<_, scs_errors::ServiceError>(other_commit_contexts)
                     }
                 }
+            },
+            async {
+                stream::iter(
+                    subtree_sources
+                        .into_iter()
+                        .map(Ok::<_, scs_errors::ServiceError>),
+                )
+                .try_filter_map(|(commit_id, paths)| async move {
+                    let changeset_specifier = ChangesetSpecifier::from_request(&commit_id)
+                        .map_err(|error| MononokeError::InvalidRequest(error.to_string()))
+                        .context("invalid target commit id")?;
+                    if let Some(changeset) = repo.changeset(changeset_specifier).await? {
+                        let path_contexts = changeset
+                            .paths_with_content(paths.into_iter())
+                            .await?
+                            .map_ok(|path_context| (path_context.path().clone(), path_context))
+                            .try_collect::<HashMap<_, _>>()
+                            .await?;
+                        Ok(Some((commit_id.clone(), (changeset, path_contexts))))
+                    } else {
+                        Ok::<_, scs_errors::ServiceError>(None)
+                    }
+                })
+                .try_collect::<HashMap<_, _>>()
+                .await
             }
         )?;
 
         let items = paths
             .into_iter()
-            .map(|(base_path, other_path, copy_info, placeholder)| {
-                let base_context = match base_path.as_ref() {
-                    Some(base_path) => {
-                        Some(base_commit_contexts.get(base_path).ok_or_else(|| {
-                            scs_errors::invalid_request(format!(
-                                "{} not found in {:?}",
-                                base_path, commit
-                            ))
-                        })?)
-                    }
-                    None => None,
-                };
+            .map(
+                |(
+                    base_path,
+                    other_path,
+                    source_commit_id,
+                    replacement_path,
+                    copy_info,
+                    placeholder,
+                )| {
+                    let base_context = match base_path.as_ref() {
+                        Some(base_path) => {
+                            Some(base_path_contexts.get(base_path).ok_or_else(|| {
+                                scs_errors::invalid_request(format!(
+                                    "{} not found in {:?}",
+                                    base_path, commit
+                                ))
+                            })?)
+                        }
+                        None => None,
+                    };
 
-                let other_context = match other_path.as_ref() {
-                    Some(other_path) => match &other_commit_contexts {
-                        Some(other_commit_contexts) => {
-                            Some(other_commit_contexts.get(other_path).ok_or_else(|| {
+                    let other_context = match (source_commit_id, other_path.as_ref()) {
+                        (Some(source_commit_id), Some(other_path)) => {
+                            Some(subtree_source_path_contexts.get(&source_commit_id).ok_or_else(|| {
+                                scs_errors::internal_error(format!("subtree source {source_commit_id:?} not found"))
+                            })?.1.get(other_path).ok_or_else(|| {
+                                scs_errors::invalid_request(format!("subtree source path {other_path:?} not found in {source_commit_id:?}"))
+                            })?)
+                        }
+                        (None, Some(other_path)) => {
+                            Some(other_path_contexts.get(other_path).ok_or_else(|| {
                                 scs_errors::invalid_request(format!(
                                     "{} not found in {:?}",
                                     other_path, other_commit
                                 ))
                             })?)
                         }
-                        None => None,
-                    },
-                    None => None,
-                };
+                        _ => None,
+                    };
 
-                let path = base_path
-                    .or(other_path)
-                    .ok_or_else(|| {
-                        scs_errors::invalid_request("at least one path must be provided")
-                    })?
-                    .clone();
+                    let path = base_path
+                        .or(replacement_path.clone())
+                        .or(other_path)
+                        .ok_or_else(|| {
+                            scs_errors::invalid_request("at least one path must be provided")
+                        })?
+                        .clone();
 
-                let path_diff_context = ChangesetPathDiffContext::new_file(
-                    base_commit.clone(),
-                    path,
-                    base_context.cloned(),
-                    other_context.cloned(),
-                    copy_info,
-                )?;
-                Ok(CommitFileDiffsItem {
-                    path_diff_context,
-                    placeholder,
-                })
-            })
+                    let path_diff_context = ChangesetPathDiffContext::new_file(
+                        base_commit.clone(),
+                        path,
+                        base_context.cloned(),
+                        other_context.cloned(),
+                        copy_info,
+                        replacement_path,
+                    )?;
+                    Ok(CommitFileDiffsItem {
+                        path_diff_context,
+                        placeholder,
+                    })
+                },
+            )
             .collect::<Result<Vec<_>, scs_errors::ServiceError>>()?;
 
         // Check the total file size limit
@@ -690,6 +772,7 @@ impl SourceControlServiceImpl {
                             .diff_unordered(
                                 other_changeset,
                                 !params.skip_copies_renames,
+                                params.compare_with_subtree_copy_sources.unwrap_or_default(),
                                 paths,
                                 diff_items,
                             )
@@ -704,7 +787,7 @@ impl SourceControlServiceImpl {
                     }
                 };
                 stream::iter(diff)
-                    .map(CommitComparePath::from_path_diff)
+                    .map(|diff| CommitComparePath::from_path_diff(diff, &params.identity_schemes))
                     .buffer_unordered(CONCURRENCY_LIMIT)
                     .try_collect::<Vec<_>>()
                     .watched(ctx.logger())
@@ -738,6 +821,7 @@ impl SourceControlServiceImpl {
                             .diff(
                                 other_changeset,
                                 !params.skip_copies_renames,
+                                params.compare_with_subtree_copy_sources.unwrap_or_default(),
                                 paths,
                                 diff_items,
                                 ChangesetFileOrdering::Ordered { after },
@@ -760,7 +844,7 @@ impl SourceControlServiceImpl {
                 };
                 let diff_items = diff
                     .into_iter()
-                    .map(CommitComparePath::from_path_diff)
+                    .map(|diff| CommitComparePath::from_path_diff(diff, &params.identity_schemes))
                     .collect::<FuturesOrdered<_>>()
                     .try_collect::<Vec<_>>()
                     .watched(ctx.logger())

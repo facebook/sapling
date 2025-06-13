@@ -88,6 +88,15 @@ impl SubtreeChange {
         }
     }
 
+    /// Source of this subtree change, for copy or deepcopy operations only.
+    pub fn copy_or_deep_copy_source(&self) -> Option<(ChangesetId, &MPath)> {
+        match self {
+            Self::SubtreeCopy(copy) => Some((copy.from_cs_id, &copy.from_path)),
+            Self::SubtreeDeepCopy(copy) => Some((copy.from_cs_id, &copy.from_path)),
+            _ => None,
+        }
+    }
+
     /// Returns true if this subtree change has an altering affect on the
     /// manifest.
     pub fn alters_manifest(&self) -> bool {

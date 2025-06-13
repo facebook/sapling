@@ -60,8 +60,9 @@ async fn test_diff_with_moves(fb: FacebookInit) -> Result<(), Error> {
     let diff = commit_with_move_ctx
         .diff_unordered(
             &repo.changeset(root).await?.context("commit not found")?,
-            true, /* include_copies_renames */
-            None, /* path_restrictions */
+            true,  /* include_copies_renames */
+            false, /* include_subtree_copies */
+            None,  /* path_restrictions */
             btreeset! {ChangesetDiffItem::FILES},
         )
         .await?;
@@ -117,8 +118,9 @@ async fn test_diff_with_multiple_copies(fb: FacebookInit) -> Result<(), Error> {
     let diff = commit_with_copies_ctx
         .diff_unordered(
             &repo.changeset(root).await?.context("commit not found")?,
-            true, /* include_copies_renames */
-            None, /* path_restrictions */
+            true,  /* include_copies_renames */
+            false, /* include_subtree_copies */
+            None,  /* path_restrictions */
             btreeset! {ChangesetDiffItem::FILES},
         )
         .await?;
@@ -193,8 +195,9 @@ async fn test_diff_with_multiple_moves(fb: FacebookInit) -> Result<(), Error> {
     let diff = commit_with_moves_ctx
         .diff_unordered(
             &repo.changeset(root).await?.context("commit not found")?,
-            true, /* include_copies_renames */
-            None, /* path_restrictions */
+            true,  /* include_copies_renames */
+            false, /* include_subtree_copies */
+            None,  /* path_restrictions */
             btreeset! {ChangesetDiffItem::FILES},
         )
         .await?;
@@ -280,7 +283,13 @@ async fn test_diff_with_dirs(fb: FacebookInit) -> Result<(), Error> {
         .expect("other changeset exists");
 
     let diff: Vec<_> = cs
-        .diff_unordered(&other_cs, false, None, btreeset! {ChangesetDiffItem::TREES})
+        .diff_unordered(
+            &other_cs,
+            false,
+            false,
+            None,
+            btreeset! {ChangesetDiffItem::TREES},
+        )
         .await?;
     assert_eq!(diff.len(), 6);
     match diff.first() {
@@ -313,7 +322,13 @@ async fn test_diff_with_dirs(fb: FacebookInit) -> Result<(), Error> {
 
     // Added
     let diff: Vec<_> = cs
-        .diff_unordered(&other_cs, false, None, btreeset! {ChangesetDiffItem::TREES})
+        .diff_unordered(
+            &other_cs,
+            false,
+            false,
+            None,
+            btreeset! {ChangesetDiffItem::TREES},
+        )
         .await?;
     assert_eq!(diff.len(), 5);
     match diff.first() {
@@ -408,6 +423,7 @@ async fn test_ordered_diff(fb: FacebookInit) -> Result<(), Error> {
         .diff(
             root_ctx,
             false, /* include_copies_renames */
+            false, /* include_subtree_copies */
             None,  /* path_restrictions */
             btreeset! {ChangesetDiffItem::FILES},
             ChangesetFileOrdering::Ordered { after: None },
@@ -422,6 +438,7 @@ async fn test_ordered_diff(fb: FacebookInit) -> Result<(), Error> {
         .diff(
             root_ctx,
             false, /* include_copies_renames */
+            false, /* include_subtree_copies */
             None,  /* path_restrictions */
             btreeset! {ChangesetDiffItem::FILES},
             ChangesetFileOrdering::Ordered { after: None },
@@ -433,6 +450,7 @@ async fn test_ordered_diff(fb: FacebookInit) -> Result<(), Error> {
         .diff(
             root_ctx,
             false, /* include_copies_renames */
+            false, /* include_subtree_copies */
             None,  /* path_restrictions */
             btreeset! {ChangesetDiffItem::FILES},
             ChangesetFileOrdering::Ordered {
@@ -446,6 +464,7 @@ async fn test_ordered_diff(fb: FacebookInit) -> Result<(), Error> {
         .diff(
             root_ctx,
             false, /* include_copies_renames */
+            false, /* include_subtree_copies */
             None,  /* path_restrictions */
             btreeset! {ChangesetDiffItem::FILES},
             ChangesetFileOrdering::Ordered {
@@ -487,8 +506,9 @@ async fn test_ordered_diff(fb: FacebookInit) -> Result<(), Error> {
     let diff = commit2_ctx
         .diff(
             &commit_ctx,
-            true, /* include_copies_renames */
-            None, /* path_restrictions */
+            true,  /* include_copies_renames */
+            false, /* include_subtree_copies */
+            None,  /* path_restrictions */
             btreeset! {ChangesetDiffItem::FILES},
             ChangesetFileOrdering::Ordered { after: None },
             None,
@@ -505,8 +525,9 @@ async fn test_ordered_diff(fb: FacebookInit) -> Result<(), Error> {
     let diff = commit2_ctx
         .diff(
             &commit_ctx,
-            true, /* include_copies_renames */
-            None, /* path_restrictions */
+            true,  /* include_copies_renames */
+            false, /* include_subtree_copies */
+            None,  /* path_restrictions */
             btreeset! {ChangesetDiffItem::FILES, ChangesetDiffItem::TREES},
             ChangesetFileOrdering::Ordered { after: None },
             None,
@@ -525,6 +546,7 @@ async fn test_ordered_diff(fb: FacebookInit) -> Result<(), Error> {
         .diff(
             root_ctx,
             false, /* include_copies_renames */
+            false, /* include_subtree_copies */
             None,  /* path_restrictions */
             btreeset! {ChangesetDiffItem::TREES},
             ChangesetFileOrdering::Ordered { after: None },
@@ -548,6 +570,7 @@ async fn test_ordered_diff(fb: FacebookInit) -> Result<(), Error> {
         .diff(
             root_ctx,
             false, /* include_copies_renames */
+            false, /* include_subtree_copies */
             path_restrictions.clone(),
             btreeset! {ChangesetDiffItem::FILES},
             ChangesetFileOrdering::Ordered { after: None },
@@ -562,6 +585,7 @@ async fn test_ordered_diff(fb: FacebookInit) -> Result<(), Error> {
         .diff(
             root_ctx,
             false, /* include_copies_renames */
+            false, /* include_subtree_copies */
             path_restrictions,
             btreeset! {ChangesetDiffItem::FILES},
             ChangesetFileOrdering::Ordered {

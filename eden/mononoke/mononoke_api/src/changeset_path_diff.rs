@@ -53,6 +53,8 @@ pub struct ChangesetPathDiffContext<R: MononokeRepo> {
     other: Option<ChangesetPathContentContext<R>>,
     /// Whether the file was marked as copied or moved.
     copy_info: CopyInfo,
+    /// If the path was copied via subtree copy, this is the new path or the "other" file.
+    subtree_copy_dest_path: Option<MPath>,
 }
 
 /// A diff between two files in extended unified diff format
@@ -396,6 +398,7 @@ impl<R: MononokeRepo> ChangesetPathDiffContext<R> {
         base: Option<ChangesetPathContentContext<R>>,
         other: Option<ChangesetPathContentContext<R>>,
         copy_info: CopyInfo,
+        subtree_copy_dest_path: Option<MPath>,
     ) -> Result<Self, MononokeError> {
         if copy_info != CopyInfo::None && (base.is_none() || other.is_none())
             || (base.is_none() && other.is_none())
@@ -413,6 +416,7 @@ impl<R: MononokeRepo> ChangesetPathDiffContext<R> {
             base,
             other,
             copy_info,
+            subtree_copy_dest_path,
         })
     }
 
@@ -423,6 +427,7 @@ impl<R: MononokeRepo> ChangesetPathDiffContext<R> {
         path: MPath,
         base: Option<ChangesetPathContentContext<R>>,
         other: Option<ChangesetPathContentContext<R>>,
+        subtree_copy_dest_path: Option<MPath>,
     ) -> Result<Self, MononokeError> {
         if base.is_none() && other.is_none() {
             return Err(anyhow!(
@@ -438,7 +443,17 @@ impl<R: MononokeRepo> ChangesetPathDiffContext<R> {
             base,
             other,
             copy_info: CopyInfo::None,
+            subtree_copy_dest_path,
         })
+    }
+
+    /// Return the changeset that this path is being compared in.
+    pub fn changeset(&self) -> &ChangesetContext<R> {
+        &self.changeset
+    }
+
+    pub fn subtree_copy_dest_path(&self) -> Option<&MPath> {
+        self.subtree_copy_dest_path.as_ref()
     }
 
     /// Return the base path that is being compared.  This is the
@@ -593,10 +608,16 @@ impl<R: MononokeRepo> ChangesetPathDiffContext<R> {
         context_lines: usize,
         mode: UnifiedDiffMode,
     ) -> Result<UnifiedDiff, MononokeError> {
-        let (base_file, other_file) = try_join!(
+        let (base_file, mut other_file) = try_join!(
             Self::get_file_data(ctx, self.base(), mode),
             Self::get_file_data(ctx, self.other(), mode)
         )?;
+        if let (Some(replacement_path), Some(other_file)) =
+            (&self.subtree_copy_dest_path, &mut other_file)
+        {
+            // Override the "other" path with the new path after the subtree copy.
+            other_file.path = replacement_path.to_string();
+        }
         let is_binary = xdiff::file_is_binary(&base_file) || xdiff::file_is_binary(&other_file);
         let copy_info = self.copy_info();
         let opts = xdiff::DiffOpts {

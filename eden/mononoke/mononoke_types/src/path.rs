@@ -456,6 +456,21 @@ impl MPath {
     pub fn depth(&self) -> u64 {
         self.elements.len() as u64
     }
+
+    pub fn reparent(&self, old_prefix: &MPath, new_prefix: &MPath) -> Result<Self> {
+        if !old_prefix.is_prefix_of(self) {
+            bail!(
+                "Cannot reparent path {:?} with old prefix {:?}",
+                self,
+                old_prefix
+            );
+        }
+        let mut new_path = new_prefix.clone();
+        new_path
+            .elements
+            .extend(self.elements[old_prefix.num_components()..].iter().cloned());
+        Ok(new_path)
+    }
 }
 
 impl From<Option<NonRootMPath>> for MPath {
