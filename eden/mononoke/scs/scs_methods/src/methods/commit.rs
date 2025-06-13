@@ -101,7 +101,7 @@ impl CommitComparePath {
     async fn from_path_diff(
         path_diff: ChangesetPathDiffContext<Repo>,
     ) -> Result<Self, scs_errors::ServiceError> {
-        if path_diff.path().is_file().await? {
+        if path_diff.is_file() {
             let (base_file, other_file) = try_join!(
                 path_diff.base().into_response(),
                 path_diff.other().into_response()
@@ -420,9 +420,9 @@ impl SourceControlServiceImpl {
         let items = paths
             .into_iter()
             .map(|(base_path, other_path, copy_info, placeholder)| {
-                let base_path = match base_path {
+                let base_context = match base_path.as_ref() {
                     Some(base_path) => {
-                        Some(base_commit_contexts.get(&base_path).ok_or_else(|| {
+                        Some(base_commit_contexts.get(base_path).ok_or_else(|| {
                             scs_errors::invalid_request(format!(
                                 "{} not found in {:?}",
                                 base_path, commit
@@ -432,10 +432,10 @@ impl SourceControlServiceImpl {
                     None => None,
                 };
 
-                let other_path = match other_path {
+                let other_context = match other_path.as_ref() {
                     Some(other_path) => match &other_commit_contexts {
                         Some(other_commit_contexts) => {
-                            Some(other_commit_contexts.get(&other_path).ok_or_else(|| {
+                            Some(other_commit_contexts.get(other_path).ok_or_else(|| {
                                 scs_errors::invalid_request(format!(
                                     "{} not found in {:?}",
                                     other_path, other_commit
@@ -447,9 +447,18 @@ impl SourceControlServiceImpl {
                     None => None,
                 };
 
-                let path_diff_context = ChangesetPathDiffContext::new(
-                    base_path.cloned(),
-                    other_path.cloned(),
+                let path = base_path
+                    .or(other_path)
+                    .ok_or_else(|| {
+                        scs_errors::invalid_request("at least one path must be provided")
+                    })?
+                    .clone();
+
+                let path_diff_context = ChangesetPathDiffContext::new_file(
+                    base_commit.clone(),
+                    path,
+                    base_context.cloned(),
+                    other_context.cloned(),
                     copy_info,
                 )?;
                 Ok(CommitFileDiffsItem {

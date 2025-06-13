@@ -35,12 +35,12 @@ use repo_sparse_profiles::RepoSparseProfiles;
 use slog::debug;
 use slog::warn;
 use types::RepoPath;
+use xdiff::CopyInfo;
 
 use crate::ChangesetContext;
 use crate::ChangesetDiffItem;
 use crate::ChangesetFileOrdering;
 use crate::ChangesetPathContentContext;
-use crate::ChangesetPathDiffContext;
 use crate::MononokeRepo;
 use crate::PathEntry;
 use crate::errors::MononokeError;
@@ -392,22 +392,35 @@ async fn get_bonsai_size_change<R: MononokeRepo>(
         .await?;
     let res = stream::iter(diff)
         .map(|diff| async move {
-            match diff {
-                ChangesetPathDiffContext::Added(content) => {
+            match (diff.base(), diff.other(), diff.copy_info()) {
+                (Some(copy_to), Some(_copy_from), CopyInfo::Copy) => {
                     anyhow::Ok(vec![BonsaiSizeChange::Added {
-                        path: content.path().clone(),
-                        size_change: get_entry_size(&content).await?,
+                        path: copy_to.path().clone(),
+                        size_change: get_entry_size(copy_to).await?,
                     }])
                 }
-                ChangesetPathDiffContext::Removed(content) => {
+                (Some(move_to), Some(move_from), CopyInfo::Move) => anyhow::Ok(vec![
+                    BonsaiSizeChange::Added {
+                        path: move_to.path().clone(),
+                        size_change: get_entry_size(move_to).await?,
+                    },
+                    BonsaiSizeChange::Removed {
+                        path: move_from.path().clone(),
+                        size_change: get_entry_size(move_from).await?,
+                    },
+                ]),
+                (Some(added), None, CopyInfo::None) => anyhow::Ok(vec![BonsaiSizeChange::Added {
+                    path: added.path().clone(),
+                    size_change: get_entry_size(added).await?,
+                }]),
+                (None, Some(removed), CopyInfo::None) => {
                     anyhow::Ok(vec![BonsaiSizeChange::Removed {
-                        path: content.path().clone(),
-                        size_change: get_entry_size(&content).await?,
+                        path: removed.path().clone(),
+                        size_change: get_entry_size(removed).await?,
                     }])
                 }
-                ChangesetPathDiffContext::Changed(new, old) => {
-                    let (new_size, old_size) =
-                        try_join!(get_entry_size(&new), get_entry_size(&old))?;
+                (Some(new), Some(old), CopyInfo::None) => {
+                    let (new_size, old_size) = try_join!(get_entry_size(new), get_entry_size(old))?;
 
                     let new_size = i64::try_from(new_size).with_context(|| {
                         format!(
@@ -427,22 +440,7 @@ async fn get_bonsai_size_change<R: MononokeRepo>(
                         size_change,
                     }])
                 }
-                ChangesetPathDiffContext::Copied(to, _from) => {
-                    anyhow::Ok(vec![BonsaiSizeChange::Added {
-                        path: to.path().clone(),
-                        size_change: get_entry_size(&to).await?,
-                    }])
-                }
-                ChangesetPathDiffContext::Moved(to, from) => anyhow::Ok(vec![
-                    BonsaiSizeChange::Added {
-                        path: to.path().clone(),
-                        size_change: get_entry_size(&to).await?,
-                    },
-                    BonsaiSizeChange::Removed {
-                        path: from.path().clone(),
-                        size_change: get_entry_size(&from).await?,
-                    },
-                ]),
+                _ => Err(anyhow!("Encountered invalid diff item: {:?}", diff)),
             }
         })
         .buffered(100)

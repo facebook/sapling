@@ -17,11 +17,13 @@ use futures::try_join;
 use git_types::git_lfs::format_lfs_pointer;
 use lazy_static::lazy_static;
 use mononoke_types::ContentMetadataV2;
+use mononoke_types::MPath;
 use mononoke_types::NonRootMPath;
 use mononoke_types::hash::GitSha1;
 use regex::Regex;
 pub use xdiff::CopyInfo;
 
+use crate::ChangesetContext;
 use crate::FileContext;
 use crate::MononokeRepo;
 use crate::changeset_path::ChangesetPathContentContext;
@@ -37,29 +39,20 @@ lazy_static! {
 
 /// A path difference between two commits.
 ///
-/// A ChangesetPathDiffContext shows the difference between two corresponding
-/// files in the commits.
-///
-/// The changed, copied and moved variants contain the items in the same
-/// order as the commits that were compared, i.e. in `a.diff(b)`, they
-/// will contain `(a, b)`.  This usually means the destination is first.
+/// A ChangesetPathDiffContext shows the difference between a path in a
+/// commit ("base") and its corresponding location in another commit ("other").
 #[derive(Derivative)]
 #[derivative(Clone, Debug(bound = ""))]
-pub enum ChangesetPathDiffContext<R: MononokeRepo> {
-    Added(ChangesetPathContentContext<R>),
-    Removed(ChangesetPathContentContext<R>),
-    Changed(
-        ChangesetPathContentContext<R>,
-        ChangesetPathContentContext<R>,
-    ),
-    Copied(
-        ChangesetPathContentContext<R>,
-        ChangesetPathContentContext<R>,
-    ),
-    Moved(
-        ChangesetPathContentContext<R>,
-        ChangesetPathContentContext<R>,
-    ),
+pub struct ChangesetPathDiffContext<R: MononokeRepo> {
+    changeset: ChangesetContext<R>,
+    path: MPath,
+    is_tree: bool,
+    /// If None, the path was deleted.
+    base: Option<ChangesetPathContentContext<R>>,
+    /// If None, the path was added.
+    other: Option<ChangesetPathContentContext<R>>,
+    /// Whether the file was marked as copied or moved.
+    copy_info: CopyInfo,
 }
 
 /// A diff between two files in extended unified diff format
@@ -397,69 +390,87 @@ impl<R: MononokeRepo> ChangesetPathDiffContext<R> {
     ///
     /// Copy information must be provided if the file has been copied or
     /// moved.
-    pub fn new(
+    pub fn new_file(
+        changeset: ChangesetContext<R>,
+        path: MPath,
         base: Option<ChangesetPathContentContext<R>>,
         other: Option<ChangesetPathContentContext<R>>,
         copy_info: CopyInfo,
     ) -> Result<Self, MononokeError> {
-        match (base, other, copy_info) {
-            (Some(base), None, CopyInfo::None) => Ok(Self::Added(base)),
-            (None, Some(other), CopyInfo::None) => Ok(Self::Removed(other)),
-            (Some(base), Some(other), CopyInfo::None) => Ok(Self::Changed(base, other)),
-            (Some(base), Some(other), CopyInfo::Copy) => Ok(Self::Copied(base, other)),
-            (Some(base), Some(other), CopyInfo::Move) => Ok(Self::Moved(base, other)),
-            invalid_args => Err(anyhow!(
+        if copy_info != CopyInfo::None && (base.is_none() || other.is_none())
+            || (base.is_none() && other.is_none())
+        {
+            return Err(anyhow!(
                 "Invalid changeset path diff context parameters: {:?}",
-                invalid_args
+                (base, other, copy_info)
             )
-            .into()),
+            .into());
         }
+        Ok(Self {
+            changeset,
+            path,
+            is_tree: false,
+            base,
+            other,
+            copy_info,
+        })
+    }
+
+    /// Create a new path diff context that compares the contents of two
+    /// changeset paths that are trees.
+    pub fn new_tree(
+        changeset: ChangesetContext<R>,
+        path: MPath,
+        base: Option<ChangesetPathContentContext<R>>,
+        other: Option<ChangesetPathContentContext<R>>,
+    ) -> Result<Self, MononokeError> {
+        if base.is_none() && other.is_none() {
+            return Err(anyhow!(
+                "Invalid changeset path diff context parameters: {:?}",
+                (base, other)
+            )
+            .into());
+        }
+        Ok(Self {
+            changeset,
+            path,
+            is_tree: true,
+            base,
+            other,
+            copy_info: CopyInfo::None,
+        })
     }
 
     /// Return the base path that is being compared.  This is the
     /// contents after modification.
     pub fn base(&self) -> Option<&ChangesetPathContentContext<R>> {
-        match self {
-            Self::Added(base)
-            | Self::Changed(base, _)
-            | Self::Copied(base, _)
-            | Self::Moved(base, _) => Some(base),
-            Self::Removed(_) => None,
-        }
+        self.base.as_ref()
     }
 
     /// Return the other path that is being compared against.  This
     /// is the contents before modification.
     pub fn other(&self) -> Option<&ChangesetPathContentContext<R>> {
-        match self {
-            Self::Removed(other)
-            | Self::Changed(_, other)
-            | Self::Copied(_, other)
-            | Self::Moved(_, other) => Some(other),
-            Self::Added(_) => None,
-        }
+        self.other.as_ref()
     }
 
     /// Return the main path for this difference.  This is the added or
     /// removed path, or the base (destination) in the case of modifications,
     /// copies, or moves.
-    pub fn path(&self) -> &ChangesetPathContentContext<R> {
-        match self {
-            Self::Added(base)
-            | Self::Changed(base, _)
-            | Self::Copied(base, _)
-            | Self::Moved(base, _) => base,
-            Self::Removed(other) => other,
-        }
+    pub fn path(&self) -> &MPath {
+        &self.path
     }
 
     /// Return the copy information for this difference.
     pub fn copy_info(&self) -> CopyInfo {
-        match self {
-            Self::Added(_) | Self::Removed(_) | Self::Changed(_, _) => CopyInfo::None,
-            Self::Copied(_, _) => CopyInfo::Copy,
-            Self::Moved(_, _) => CopyInfo::Move,
-        }
+        self.copy_info.clone()
+    }
+
+    pub fn is_tree(&self) -> bool {
+        self.is_tree
+    }
+
+    pub fn is_file(&self) -> bool {
+        !self.is_tree
     }
 
     // Helper for getting file information.
