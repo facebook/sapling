@@ -179,6 +179,45 @@ impl BareGit {
     }
 }
 
+// https://github.com/git/git/blob/9edff09aec9b5aaa3d5528129bb279a4d34cf5b3/refs.c#L171-L189
+fn is_refname_component_valid(name: &str) -> bool {
+    if name.is_empty() {
+        return false;
+    }
+
+    // - it begins with "."
+    if name.starts_with('.') {
+        return false;
+    }
+
+    let mut last_byte = b'_';
+    for b in name.as_bytes() {
+        // - it has ":", "?", "[", "\", "^", "~", SP, or TAB anywhere
+        // - it has "*" anywhere unless REFNAME_REFSPEC_PATTERN is set
+        if b":?[\\^~ \t*".contains(b) {
+            return false;
+        }
+        // - it has ASCII control characters
+        if *b == 127 /* DEL */ || *b < 32 {
+            return false;
+        }
+        // - it has double dots ".."
+        // - it contains a "@{" portion
+        if matches!((last_byte, *b), (b'.', b'.') | (b'@', b'{')) {
+            return false;
+        }
+        last_byte = *b;
+    }
+
+    // - it ends with a "/"
+    // - it ends with ".lock"
+    if ["/", ".lock"].iter().any(|p| name.ends_with(p)) {
+        return false;
+    }
+
+    true
+}
+
 // Implementation details used by list_references().
 impl BareGit {
     fn populate_loose_file_reference(
@@ -192,7 +231,8 @@ impl BareGit {
         }
         let path = self.git_dir().join(name.as_ref());
         let content = return_ok_if_not_found!(fs::read_to_string(path))?;
-        let value = ReferenceValue::from_content(&content)?;
+        let value = ReferenceValue::from_content(&content)
+            .with_context(|| format!("Resolving loose reference {name:?}"))?;
         insert(name.into_owned(), value);
         Ok(())
     }
@@ -210,7 +250,7 @@ impl BareGit {
         for entry in dir {
             let entry = entry?;
             let file_name = match entry.file_name().into_string() {
-                Ok(s) if s != "." && s != ".." => s,
+                Ok(s) if is_refname_component_valid(&s) => s,
                 // Ignore non-utf8 names.
                 _ => continue,
             };
@@ -357,8 +397,11 @@ mod tests {
                 // overrides the "packed" version.
                 "refs/heads/foo 2222222222222222222222222222222222222222",
                 "refs/heads/bar ref: refs/tags/v4",
+                "refs/heads/racy-ref-being-written.lock ",
+                "refs/heads/invalid~name~should~be~ignored aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
                 "refs/tags/v1 aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
                 "refs/tags/v2 bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+                "refs/tags/non-ascii-汉字 cccccccccccccccccccccccccccccccccccccccc",
             ],
             Some(concat!(
                 "# pack-refs with: peeled fully-peeled sorted\n",
@@ -379,6 +422,7 @@ mod tests {
                 "refs/heads/foo 2222222222222222222222222222222222222222",
                 "refs/remotes/origin/dev 4444444444444444444444444444444444444444",
                 "refs/remotes/origin/main 3333333333333333333333333333333333333333",
+                "refs/tags/non-ascii-汉字 cccccccccccccccccccccccccccccccccccccccc",
                 "refs/tags/v1 aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
                 "refs/tags/v2 bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
                 "refs/tags/v3 cccccccccccccccccccccccccccccccccccccccc",
@@ -408,7 +452,7 @@ mod tests {
                 "refs/heads/bar => refs/tags/v4",
                 "refs/heads/foo 2222222222222222222222222222222222222222",
                 "refs/remotes/origin/dev 4444444444444444444444444444444444444444",
-                "refs/remotes/origin/main 3333333333333333333333333333333333333333"
+                "refs/remotes/origin/main 3333333333333333333333333333333333333333",
             ]
         );
 
