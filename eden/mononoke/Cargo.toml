@@ -491,3 +491,6 @@ members = [
   "walker",
   "wireproto_handler",
 ]
+
+[workspace.package]
+license = "GPLv2+"

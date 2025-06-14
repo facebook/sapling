@@ -1,3 +1,7 @@
 [workspace]
 members = ["thrift", "thrift/clients", "thrift/mocks", "thrift/services"]
 resolver = "2"
+
+[workspace.package]
+license = "Apache-2.0"
+repository = "https://github.com/facebook/fb303"

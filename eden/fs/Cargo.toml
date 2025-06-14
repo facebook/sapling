@@ -68,3 +68,6 @@ members = [
   "service/thrift_streaming/services",
 ]
 resolver = "2"
+
+[workspace.package]
+license = "GPLv2+"
