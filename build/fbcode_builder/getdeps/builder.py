@@ -864,7 +864,7 @@ if __name__ == "__main__":
             self._invalidate_cache()
             self._run_cmd([cmake, self.src_dir] + define_args, env=env)
 
-        self._run_cmd(
+        rc = self._run_cmd(
             [
                 cmake,
                 "--build",
@@ -878,6 +878,8 @@ if __name__ == "__main__":
             ],
             env=env,
         )
+        if rc != 0:
+            raise Exception("CMake build failed with return code %d" % rc)
 
     def run_tests(
         self, schedule_type, owner, test_filter, retry: int, no_testpilot
