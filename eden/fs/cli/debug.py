@@ -1965,9 +1965,14 @@ class GCInodesCmd(Subcmd):
                         age=TimeSpec(seconds=seconds),
                     )
                 )
-                print(
-                    f"Invalidated {result.numInvalidated} inodes under {checkout.path}/{args.path}"
-                )
+                if sys.platform == "darwin":
+                    print(
+                        f"Invalidated {result.numInvalidated} tree inodes under {checkout.path}/{args.path}"
+                    )
+                else:
+                    print(
+                        f"Invalidated {result.numInvalidated} inodes under {checkout.path}/{args.path}"
+                    )
                 return 0
             except EdenError as err:
                 print(err, file=sys.stderr)

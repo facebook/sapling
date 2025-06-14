@@ -2801,13 +2801,23 @@ ImmediateFuture<uint64_t> EdenServer::garbageCollectWorkingCopy(
             success,
             static_cast<int64_t>(
                 (totalNumberOfInodesBeforeGC - totalNumberOfInodesAfterGC))});
+#ifdef __APPLE__
         XLOGF(
             DBG1,
-            "GC for: {}, completed in: {} seconds and invalidated {} inodes, total number of inodes {}",
+            "GC for: {}, completed in: {} seconds and invalidated {} tree inodes, total number of inodes after GC: {}",
             mountPath,
             runtime.count(),
             numInvalidated,
             totalNumberOfInodesAfterGC);
+#else
+        XLOGF(
+            DBG1,
+            "GC for: {}, completed in: {} seconds and invalidated {} inodes, total number of inodes after GC: {}",
+            mountPath,
+            runtime.count(),
+            numInvalidated,
+            totalNumberOfInodesAfterGC);
+#endif
 
         return invalidatedTry.value().first;
       });
