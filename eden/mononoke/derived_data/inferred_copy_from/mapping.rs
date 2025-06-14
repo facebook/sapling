@@ -7,14 +7,12 @@
 
 use std::collections::HashMap;
 
-use anyhow::Context;
 use anyhow::Error;
 use anyhow::Result;
 use anyhow::anyhow;
 use async_trait::async_trait;
 use basename_suffix_skeleton_manifest_v3::RootBssmV3DirectoryId;
 use blobstore::BlobstoreGetData;
-use blobstore::Storable;
 use context::CoreContext;
 use derived_data_manager::BonsaiDerivable;
 use derived_data_manager::DerivableType;
@@ -22,13 +20,14 @@ use derived_data_manager::DerivationContext;
 use derived_data_manager::dependencies;
 use derived_data_service_if as thrift;
 use fsnodes::RootFsnodeId;
+use futures::StreamExt;
+use futures::TryStreamExt;
+use futures::stream;
 use mononoke_types::BlobstoreBytes;
-use mononoke_types::BlobstoreValue;
 use mononoke_types::BonsaiChangeset;
 use mononoke_types::ChangesetId;
 use mononoke_types::InferredCopyFromId;
 use mononoke_types::ThriftConvert;
-use mononoke_types::inferred_copy_from::InferredCopyFrom;
 
 use crate::derive::derive_impl;
 
@@ -84,24 +83,23 @@ impl BonsaiDerivable for RootInferredCopyFromId {
         _parents: Vec<Self>,
         _known: Option<&HashMap<ChangesetId, Self>>,
     ) -> Result<Self> {
-        let root_icf = derive_impl(ctx, derivation_ctx, &bonsai).await?;
+        derive_impl(ctx, derivation_ctx, &bonsai).await
+    }
 
-        Ok(RootInferredCopyFromId(match root_icf {
-            Some(root_icf) => {
-                let blob = root_icf.into_blob();
-                blob.store(ctx, derivation_ctx.blobstore())
-                    .await
-                    .context("Failed to store InferredCopyFrom blob")?
-            }
-            None => {
-                let empty = InferredCopyFrom::empty();
-                empty
-                    .into_blob()
-                    .store(ctx, derivation_ctx.blobstore())
-                    .await
-                    .context("Failed to store empty InferredCopyFrom blob")?
-            }
-        }))
+    async fn derive_batch(
+        ctx: &CoreContext,
+        derivation_ctx: &DerivationContext,
+        bonsais: Vec<BonsaiChangeset>,
+    ) -> Result<HashMap<ChangesetId, Self>> {
+        stream::iter(bonsais)
+            .map(|bonsai| async move {
+                let csid = bonsai.get_changeset_id();
+                let root_icf = derive_impl(ctx, derivation_ctx, &bonsai).await?;
+                anyhow::Ok((csid, root_icf))
+            })
+            .buffer_unordered(20)
+            .try_collect::<HashMap<_, _>>()
+            .await
     }
 
     async fn store_mapping(

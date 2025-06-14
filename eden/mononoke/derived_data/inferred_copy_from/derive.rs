@@ -14,6 +14,7 @@ use anyhow::Result;
 use basename_suffix_skeleton_manifest_v3::RootBssmV3DirectoryId;
 use blobstore::Loadable;
 use blobstore::LoadableError;
+use blobstore::Storable;
 use cloned::cloned;
 use context::CoreContext;
 use derived_data_manager::DerivationContext;
@@ -26,6 +27,7 @@ use futures::stream::TryStreamExt;
 use itertools::EitherOrBoth;
 use manifest::ManifestOps;
 use mononoke_types::BasicFileChange;
+use mononoke_types::BlobstoreValue;
 use mononoke_types::BonsaiChangeset;
 use mononoke_types::ChangesetId;
 use mononoke_types::ContentId;
@@ -38,6 +40,7 @@ use mononoke_types::inferred_copy_from::InferredCopyFrom;
 use mononoke_types::inferred_copy_from::InferredCopyFromEntry;
 use vec1::Vec1;
 
+use crate::RootInferredCopyFromId;
 use crate::similarity::estimate_similarity;
 
 const BASENAME_MATCH_MAX_CANDIDATES: usize = 10_000;
@@ -464,7 +467,7 @@ pub(crate) async fn derive_impl(
     ctx: &CoreContext,
     derivation_ctx: &DerivationContext,
     bonsai: &BonsaiChangeset,
-) -> Result<Option<InferredCopyFrom>> {
+) -> Result<RootInferredCopyFromId> {
     let mut resolved_paths = HashSet::new();
 
     let (exact_renames, leftover0) = find_exact_renames(ctx, derivation_ctx, bonsai).await?;
@@ -486,10 +489,22 @@ pub(crate) async fn derive_impl(
 
     let entries = [exact_renames, basename_matched_copies, partially_matched].concat();
     if entries.is_empty() {
-        Ok(None)
+        let empty = InferredCopyFrom::empty();
+        Ok(RootInferredCopyFromId(
+            empty
+                .into_blob()
+                .store(ctx, derivation_ctx.blobstore())
+                .await
+                .context("Failed to store empty InferredCopyFrom blob")?,
+        ))
     } else {
-        Ok(Some(
-            InferredCopyFrom::from_subentries(ctx, derivation_ctx.blobstore(), entries).await?,
+        let icf =
+            InferredCopyFrom::from_subentries(ctx, derivation_ctx.blobstore(), entries).await?;
+        let blob = icf.into_blob();
+        Ok(RootInferredCopyFromId(
+            blob.store(ctx, derivation_ctx.blobstore())
+                .await
+                .context("Failed to store InferredCopyFrom blob")?,
         ))
     }
 }
