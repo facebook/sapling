@@ -921,14 +921,11 @@ def check_loaded_content(
 
 
 class HighInodeCountProblemDarwin(Problem):
-    def __init__(
-        self, info: CheckoutInfo, inode_count: int, additional_info: str
-    ) -> None:
+    def __init__(self, info: CheckoutInfo, inode_count: int) -> None:
         self._info = info
-        self._additional_info = additional_info
         self.fix_result: Optional[DebugInvalidateResponse] = None
         super().__init__(
-            description=f"Mount point {self._info.path} has {inode_count} loaded files{self._additional_info}. High inode count may impact EdenFS performance.\n",
+            description=f"Mount point {self._info.path} has {inode_count} loaded files. High inode count may impact EdenFS performance.\n",
             severity=ProblemSeverity.ADVICE,
         )
         self._remediation: str = get_inode_count_advice_darwin()
@@ -1018,43 +1015,7 @@ def check_inode_counts(
                 HighInodeCountProblemWindows(checkout, inode_count, threshold)
             )
         else:
-            # Determine if any known crawlers are potentially causing the high inode problem
-            (running, installed) = ([], [])
-            for name, install_location in get_darwin_known_crawlers().items():
-                pgrep_ret = subprocess.run(
-                    ["pgrep", "-i", name],
-                    stdout=subprocess.PIPE,
-                    text=True,
-                ).returncode
-                if pgrep_ret == 0:
-                    # Appends if:
-                    # 1) CrashPlan is not in the crawler name
-                    # 2) CrashPlan is in the crawler name AND repo is in the home directory.
-                    if "CrashPlan" not in name or checkout.path.is_relative_to(
-                        Path.home()
-                    ):
-                        running.append(name)
-                elif Path(install_location).exists():
-                    # Appends if:
-                    # 1) CrashPlan is not in the crawler name
-                    # 2) CrashPlan is in the crawler name AND repo is in the home directory.
-                    if "CrashPlan" not in name or checkout.path.is_relative_to(
-                        Path.home()
-                    ):
-                        installed.append(name)
-
-            additional_info = ""
-            if len(running) > 0:
-                # Running tools must also be installed
-                additional_info = f' and known crawling tools are running/installed ({", ".join(running + installed)})'
-            elif len(installed) > 0:
-                additional_info = (
-                    f' and known crawling tools are installed ({", ".join(installed)})'
-                )
-
-            tracker.add_problem(
-                HighInodeCountProblemDarwin(checkout, inode_count, additional_info)
-            )
+            tracker.add_problem(HighInodeCountProblemDarwin(checkout, inode_count))
 
 
 class HgStatusAndDiffMismatch(PathsProblem):
