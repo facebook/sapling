@@ -422,6 +422,12 @@ static constexpr folly::StringPiece kNfsReadDirPlusCount60{
 
 static constexpr folly::StringPiece kFsChannelTaskCount{"fs.task.count"};
 static constexpr folly::StringPiece kMemoryVmRssBytes{"memory_vm_rss_bytes"};
+#ifdef __APPLE__
+static constexpr folly::StringPiece kMemoryCompressedBytes{
+    "memory_compressed_bytes"};
+static constexpr folly::StringPiece kMemoryFootprintBytes{
+    "memory_footprint_bytes"};
+#endif
 
 EdenServer::EdenServer(
     std::vector<std::string> originalCommandLine,
@@ -554,6 +560,25 @@ EdenServer::EdenServer(
   });
 
 #ifdef __APPLE__
+  // On macOS, export extra memory counters
+  counters->registerCallback(kMemoryCompressedBytes, [] {
+    auto memoryStats = facebook::eden::proc_util::readMemoryStats();
+    if (memoryStats && memoryStats->compressed) {
+      return memoryStats->compressed.value();
+    } else {
+      return (size_t)0;
+    }
+  });
+
+  counters->registerCallback(kMemoryFootprintBytes, [] {
+    auto memoryStats = facebook::eden::proc_util::readMemoryStats();
+    if (memoryStats && memoryStats->footprint) {
+      return memoryStats->footprint.value();
+    } else {
+      return (size_t)0;
+    }
+  });
+
   // On macOS, export the NFS clients/servers counters
   if (config_->getEdenConfig()->updateNFSStatsInterval.getValue() > 0ms) {
     auto result = collectNFSUtilStats();
@@ -613,6 +638,9 @@ EdenServer::~EdenServer() {
   }
   counters->unregisterCallback(kFsChannelTaskCount);
 #ifdef __APPLE__
+  counters->unregisterCallback(kMemoryCompressedBytes);
+  counters->unregisterCallback(kMemoryFootprintBytes);
+
   for (const auto& nfsStatsCounter : kNfsStatsToEdenStatsMap_) {
     auto counterName = mapCounterNameForNFSStat(nfsStatsCounter);
     if (counterName.has_value()) {

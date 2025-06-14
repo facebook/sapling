@@ -39,20 +39,24 @@ namespace facebook::eden::proc_util {
 namespace {
 #ifdef __APPLE__
 optional<MemoryStats> readMemoryStatsApple() {
-  mach_task_basic_info_data_t taskinfo{};
-  mach_msg_type_number_t outCount = MACH_TASK_BASIC_INFO_COUNT;
+  // https://developer.apple.com/documentation/kernel/task_vm_info_data_t
+  task_vm_info_data_t vminfo{};
+  mach_msg_type_number_t vmCount = TASK_VM_INFO_COUNT;
   auto result = task_info(
       mach_task_self(),
-      MACH_TASK_BASIC_INFO,
-      reinterpret_cast<task_info_t>(&taskinfo),
-      &outCount);
+      TASK_VM_INFO,
+      reinterpret_cast<task_info_t>(&vminfo),
+      &vmCount);
   if (result != KERN_SUCCESS) {
     return std::nullopt;
   }
 
   MemoryStats ms;
-  ms.vsize = taskinfo.virtual_size;
-  ms.resident = taskinfo.resident_size;
+  ms.vsize = vminfo.virtual_size;
+  ms.resident = vminfo.resident_size;
+  ms.compressed = vminfo.compressed;
+  ms.footprint = vminfo.phys_footprint;
+
   return ms;
 }
 #endif

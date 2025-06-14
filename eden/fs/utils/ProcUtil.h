@@ -39,6 +39,12 @@ struct MemoryStats {
   /// data + stack bytes
   /// Only available on Linux
   std::optional<size_t> data;
+  /// Compressed memory in bytes
+  /// Only available on macOS
+  std::optional<size_t> compressed;
+  /// Total memory footprint in bytes
+  /// Only available on macOS
+  std::optional<size_t> footprint;
 };
 
 /**
