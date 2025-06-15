@@ -10,7 +10,7 @@ license = "GPLv2+"
 [dependencies]
 anyhow = "1.0.95"
 async-trait = "0.1.86"
-base64 = "0.22.1"
+base64 = { version = "0.22.1", features = ["alloc"] }
 context = { version = "0.1.0", path = "../../server/context" }
 facet = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 fbinit = { version = "0.2.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }

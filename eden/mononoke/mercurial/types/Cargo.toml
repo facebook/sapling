@@ -14,7 +14,7 @@ anyhow = "1.0.95"
 ascii = "1.0"
 async-stream = "0.3"
 async-trait = "0.1.86"
-base64 = "0.22.1"
+base64 = { version = "0.22.1", features = ["alloc"] }
 bincode = { version = "2", features = ["serde"] }
 bitflags = { version = "2.6", features = ["serde", "std"], default-features = false }
 blake3 = { version = "=1.5.5", features = ["mmap", "rayon", "traits-preview"] }

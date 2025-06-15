@@ -7,7 +7,7 @@ edition = "2024"
 
 [dependencies]
 anyhow = "1.0.95"
-base64 = "0.22.1"
+base64 = { version = "0.22.1", features = ["alloc"] }
 blake2 = "0.10"
 cpython = { version = "0.7.2", features = ["python3-sys"], default-features = false }
 erased-serde = "0.3.27"

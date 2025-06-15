@@ -12,7 +12,7 @@ anyhow = "1.0.95"
 async-compression = { version = "0.4.9", features = ["brotli", "bzip2", "deflate", "futures-io", "gzip", "tokio", "zlib", "zstd", "zstdmt"] }
 async-stream = "0.3"
 async-trait = "0.1.86"
-base64 = "0.22.1"
+base64 = { version = "0.22.1", features = ["alloc"] }
 blobstore = { version = "0.1.0", path = "../blobstore" }
 bonsai_hg_mapping = { version = "0.1.0", path = "../bonsai_hg_mapping" }
 bookmarks = { version = "0.1.0", path = "../bookmarks" }
