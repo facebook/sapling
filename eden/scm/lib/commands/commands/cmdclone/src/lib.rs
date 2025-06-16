@@ -5,7 +5,6 @@
  * GNU General Public License version 2.
  */
 
-use std::fs;
 use std::path::Path;
 use std::path::PathBuf;
 use std::sync::Arc;
@@ -446,23 +445,57 @@ fn try_clone_metadata(
     reponame: &str,
     destination: &Path,
 ) -> Result<Repo> {
-    let dest_preexists = destination.exists();
-    match clone_metadata(ctx, logger, config, reponame, destination) {
-        Err(err) => {
-            let removal_dir = if dest_preexists {
-                let ident = identity::sniff_dir(destination)?.unwrap_or_else(identity::default);
-                destination.join(ident.dot_dir())
-            } else {
-                destination.to_path_buf()
-            };
+    // Register cleanup function to clean up incomplete clone at exit (i.e. on error or on ctrl-c,
+    // etc.).
+    let cleanup_on_error = {
+        let logger = logger.clone();
+        let dest_preexists = destination.exists();
+        let destination = destination.to_owned();
+        let debug = ctx.global_opts.debug;
+        atexit::AtExit::new(Box::new(move || {
+            let cleanup_res = (|| -> Result<()> {
+                let removal_dir = if dest_preexists {
+                    let ident =
+                        identity::sniff_dir(&destination)?.unwrap_or_else(identity::default);
+                    destination.join(ident.dot_dir())
+                } else {
+                    destination.to_path_buf()
+                };
 
-            if !ctx.global_opts().debug {
-                fs::remove_dir_all(removal_dir)?;
+                if !debug {
+                    // Give some retries to clean up the failed repo. If we are running async in
+                    // another thread, the clone process could still be creating files while we are
+                    // deleting them.
+                    let mut attempt = 0;
+                    loop {
+                        attempt += 1;
+                        let res = fs_err::remove_dir_all(&removal_dir);
+                        if res.is_ok() || attempt >= 10 {
+                            break res;
+                        }
+                    }?;
+                }
+
+                Ok(())
+            })();
+
+            if let Err(err) = cleanup_res {
+                logger.warn(format!(
+                    "Error cleaning up incomplete clone {}: {err:?}",
+                    destination.to_string_lossy()
+                ));
             }
-            Err(err)
-        }
-        Ok(repo) => Ok(repo),
-    }
+        }))
+        .named("clone cleanup".into())
+        .queued()
+    };
+
+    let repo = clone_metadata(ctx, logger, config, reponame, destination)?;
+
+    // Clone was successful - cancel cleanup.
+    cleanup_on_error.cancel();
+
+    Ok(repo)
 }
 
 #[instrument(skip_all, fields(repo=reponame), err)]
