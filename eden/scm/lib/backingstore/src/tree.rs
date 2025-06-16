@@ -84,11 +84,18 @@ impl TryFrom<Box<dyn storemodel::TreeEntry>> for Tree {
     fn try_from(value: Box<dyn storemodel::TreeEntry>) -> Result<Self, Self::Error> {
         let aux_map: HashMap<HgId, FileAuxData> =
             value.file_aux_iter()?.collect::<Result<HashMap<_, _>>>()?;
+        let (mut num_files, mut num_dirs) = (0, 0);
         let entries = value
             .iter()?
             .filter_map(|fallible| match fallible {
                 Err(e) => Some(Err(e)),
-                Ok((path, id, flag)) => TreeEntry::try_from_path_node(path, id, flag, &aux_map),
+                Ok((path, id, flag)) => {
+                    match flag {
+                        TreeItemFlag::Directory => num_dirs += 1,
+                        TreeItemFlag::File(_) => num_files += 1,
+                    }
+                    TreeEntry::try_from_path_node(path, id, flag, &aux_map)
+                }
             })
             .collect::<Result<Vec<_>>>()?;
         let aux_data = match value.aux_data()? {
@@ -99,6 +106,11 @@ impl TryFrom<Box<dyn storemodel::TreeEntry>> for Tree {
             },
         };
 
-        Ok(Tree { entries, aux_data })
+        Ok(Tree {
+            entries,
+            aux_data,
+            num_files,
+            num_dirs,
+        })
     }
 }

@@ -84,6 +84,8 @@ pub(crate) mod ffi {
     pub struct Tree {
         entries: Vec<TreeEntry>,
         aux_data: TreeAuxData,
+        num_files: usize,
+        num_dirs: usize,
     }
 
     #[derive(Debug)]
@@ -553,16 +555,7 @@ pub fn sapling_backingstore_witness_dir_read(
 ) {
     match RepoPath::from_utf8(path) {
         Ok(path) => {
-            let (mut num_files, mut num_dirs) = (0, 0);
-            if !local {
-                for entry in tree.entries.iter() {
-                    match entry.ttype {
-                        TreeEntryType::Tree => num_dirs += 1,
-                        _ => num_files += 1,
-                    }
-                }
-            }
-            store.witness_dir_read(path, local, num_files, num_dirs);
+            store.witness_dir_read(path, local, tree.num_files, tree.num_dirs);
         }
         Err(err) => {
             tracing::warn!("invalid witnessed dir path {path:?}: {err:?}");
