@@ -60,6 +60,10 @@ impl Detector {
         Self::default()
     }
 
+    pub fn reset_config(&mut self) {
+        self.config = Config::default();
+    }
+
     pub fn set_walk_threshold(&mut self, threshold: usize) {
         self.config.walk_threshold = threshold;
     }

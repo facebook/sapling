@@ -137,6 +137,7 @@ impl BackingStore {
                 &extra_configs,
                 touch_file_mtime(),
                 parent_hint.clone(),
+                walkdetector::Detector::new(),
             )?)),
             parent_hint,
         })
@@ -147,6 +148,7 @@ impl BackingStore {
         extra_configs: &[PinnedConfig],
         touch_file_mtime: Option<SystemTime>,
         parent_hint: Arc<RwLock<Option<String>>>,
+        mut walk_detector: walkdetector::Detector,
     ) -> Result<Inner> {
         constructors::init();
 
@@ -197,7 +199,10 @@ impl BackingStore {
         )?;
 
         let repo = Arc::new(repo);
-        let mut walk_detector = walkdetector::Detector::new();
+
+        // First reset to default config values to handle the case when a config item was specified
+        // in the sl config, but is no longer present (i.e. need to revert to the in-code default).
+        walk_detector.reset_config();
 
         if let Some(threshold) = config.get_opt("backingstore", "walk-threshold")? {
             walk_detector.set_walk_threshold(threshold);
@@ -515,6 +520,7 @@ impl BackingStore {
                 &inner.extra_configs,
                 new_mtime,
                 self.parent_hint.clone(),
+                inner.walk_detector.clone(),
             ) {
                 Ok(mut new_inner) => {
                     new_inner.last_reload = Instant::now();
