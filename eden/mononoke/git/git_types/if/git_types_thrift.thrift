@@ -109,3 +109,20 @@ typedef id.Id GDMV2InstructionsChunkId
 /// The byte content of an individual chunk of delta instructions in GitDeltaManifestV2
 @rust.NewType
 typedef data.LargeBinary GDMV2InstructionsChunk
+
+/// Struct representing the raw packfile item for base objects in Git
+@rust.Exhaustive
+struct GitPackfileBaseItem {
+  1: binary id;
+  2: i64 decompressed_size;
+  3: binary compressed_data;
+  4: GitObjectKind kind;
+}
+
+/// Enum determining the type of Git base object
+enum GitObjectKind {
+  Tree = 0,
+  Blob = 1,
+  Commit = 2,
+  Tag = 3,
+}

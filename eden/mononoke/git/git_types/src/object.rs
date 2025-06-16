@@ -7,18 +7,22 @@
 
 use std::hash::Hash;
 use std::hash::Hasher;
+use std::io::Write;
 use std::sync::Arc;
 
 use bytes::Bytes;
 use digest::Digest;
 use gix_object::BlobRef;
 use gix_object::CommitRef;
+use gix_object::Kind;
 use gix_object::ObjectRef;
 use gix_object::TagRef;
 use gix_object::TreeRef;
+use gix_object::WriteTo;
 use mononoke_types::hash::RichGitSha1;
 use ouroboros::self_referencing;
 use sha1::Sha1;
+use smallvec::SmallVec;
 
 use crate::errors::GitError;
 
@@ -108,27 +112,35 @@ impl ObjectContent {
     pub fn raw(&self) -> &'_ Bytes {
         self.inner().borrow_raw()
     }
-
-    pub fn is_tree(&self) -> bool {
-        self.inner()
-            .with_parsed(move |parsed| parsed.as_tree().is_some())
-    }
-    pub fn is_blob(&self) -> bool {
-        self.inner()
-            .with_parsed(move |parsed| parsed.as_blob().is_some())
-    }
-    pub fn is_tag(&self) -> bool {
-        self.inner()
-            .with_parsed(move |parsed| parsed.as_tag().is_some())
-    }
-    pub fn is_commit(&self) -> bool {
-        self.inner()
-            .with_parsed(move |parsed| parsed.as_commit().is_some())
-    }
-
     pub fn with_parsed<Out>(&self, f: impl FnOnce(&ObjectRef<'_>) -> Out) -> Out {
         self.inner().with_parsed(f)
     }
+
+    pub fn is_tree(&self) -> bool {
+        self.with_parsed(move |parsed| parsed.as_tree().is_some())
+    }
+    pub fn is_blob(&self) -> bool {
+        self.with_parsed(move |parsed| parsed.as_blob().is_some())
+    }
+    pub fn is_tag(&self) -> bool {
+        self.with_parsed(move |parsed| parsed.as_tag().is_some())
+    }
+    pub fn is_commit(&self) -> bool {
+        self.with_parsed(move |parsed| parsed.as_commit().is_some())
+    }
+    pub fn kind(&self) -> Kind {
+        self.with_parsed(|parsed| parsed.kind())
+    }
+    pub fn loose_header(&self) -> SmallVec<[u8; 28]> {
+        self.with_parsed(|parsed| parsed.loose_header())
+    }
+    pub fn write_to(&self, out: &mut dyn Write) -> std::io::Result<()> {
+        self.with_parsed(|parsed| parsed.write_to(out))
+    }
+    pub fn size(&self) -> u64 {
+        self.with_parsed(|parsed| parsed.size())
+    }
+
     pub fn with_parsed_as_tree<Out>(&self, f: impl FnOnce(&TreeRef<'_>) -> Out) -> Option<Out> {
         self.inner().with_parsed(|parsed| {
             let tree = parsed.as_tree()?;
@@ -167,3 +179,18 @@ impl PartialEq for ObjectContent {
 }
 
 impl Eq for ObjectContent {}
+
+pub mod test_util {
+    use anyhow::Result;
+    use bytes::Bytes;
+    use gix_object::Object;
+    use gix_object::WriteTo;
+
+    use crate::ObjectContent;
+
+    pub fn object_content_from_owned_object(object: Object) -> Result<ObjectContent> {
+        let mut object_bytes = object.loose_header().into_vec();
+        object.write_to(&mut object_bytes)?;
+        Ok(ObjectContent::try_from_loose(Bytes::from(object_bytes))?)
+    }
+}

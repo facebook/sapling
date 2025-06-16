@@ -11,7 +11,7 @@
 
 pub mod mode;
 
-mod thrift {
+pub mod thrift {
     pub use git_types_thrift::*;
 }
 
@@ -23,6 +23,7 @@ mod derive_delta_manifest_v2;
 mod errors;
 pub mod git_lfs;
 mod object;
+mod packfile;
 mod store;
 pub mod tree;
 
@@ -37,6 +38,7 @@ use gix_object::Object;
 use gix_object::WriteTo;
 pub use object::ObjectContent;
 pub use object::ObjectKind;
+pub use object::test_util;
 use sha1::Digest;
 use sha1::Sha1;
 
@@ -50,6 +52,9 @@ pub use crate::delta_manifest_v2::GDMV2ObjectEntry;
 pub use crate::delta_manifest_v2::GitDeltaManifestV2;
 pub use crate::derive_delta_manifest_v2::RootGitDeltaManifestV2Id;
 pub use crate::errors::GitError;
+pub use crate::packfile::BaseObject;
+pub use crate::packfile::GitPackfileBaseItem;
+pub use crate::packfile::PackfileItem;
 pub use crate::store::GitIdentifier;
 pub use crate::store::HeaderState;
 pub use crate::store::fetch_git_object;

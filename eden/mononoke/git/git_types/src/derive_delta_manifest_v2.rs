@@ -44,10 +44,10 @@ use mononoke_types::BonsaiChangeset;
 use mononoke_types::ChangesetId;
 use mononoke_types::ThriftConvert;
 use mononoke_types::path::MPath;
-use packfile::types::BaseObject;
-use packfile::types::GitPackfileBaseItem;
 
+use crate::BaseObject;
 use crate::GitLeaf;
+use crate::GitPackfileBaseItem;
 use crate::GitTreeId;
 use crate::MappedGitCommitId;
 use crate::delta_manifest_v2::GDMV2DeltaEntry;

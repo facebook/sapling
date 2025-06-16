@@ -14,8 +14,12 @@ use flate2::Compression;
 use flate2::write::ZlibDecoder;
 use flate2::write::ZlibEncoder;
 use futures::stream;
+use git_types::BaseObject;
+use git_types::GitPackfileBaseItem;
+use git_types::PackfileItem;
+use git_types::test_util::object_content_from_owned_object;
+use git_types::thrift;
 use gix_hash::ObjectId;
-use gix_object::Object;
 use gix_object::ObjectRef;
 use gix_object::Tag;
 use mononoke_macros::mononoke;
@@ -23,11 +27,6 @@ use packfile::bundle::BundleWriter;
 use packfile::bundle::RefNaming;
 use packfile::pack::DeltaForm;
 use packfile::pack::PackfileWriter;
-use packfile::thrift;
-use packfile::types::BaseObject;
-use packfile::types::GitPackfileBaseItem;
-use packfile::types::PackfileItem;
-use packfile::types::to_vec_bytes;
 use quickcheck::quickcheck;
 use tempfile::NamedTempFile;
 
@@ -35,44 +34,47 @@ async fn get_objects_stream(
     with_delta: bool,
 ) -> anyhow::Result<impl stream::Stream<Item = anyhow::Result<PackfileItem>>> {
     // Create a few Git objects
-    let tag_bytes = Bytes::from(to_vec_bytes(&gix_object::Object::Tag(Tag {
+    let tag_object = object_content_from_owned_object(gix_object::Object::Tag(Tag {
         target: ObjectId::empty_tree(gix_hash::Kind::Sha1),
         target_kind: gix_object::Kind::Tree,
         name: "TreeTag".into(),
         tagger: None,
         message: "Tag pointing to a tree".into(),
         pgp_signature: None,
-    }))?);
-    let blob_bytes = Bytes::from(to_vec_bytes(&gix_object::Object::Blob(gix_object::Blob {
-        data: "Some file content".as_bytes().to_vec(),
-    }))?);
-    let tree_bytes = Bytes::from(to_vec_bytes(&gix_object::Object::Tree(gix_object::Tree {
-        entries: vec![gix_object::tree::Entry {
-            mode: gix_object::tree::EntryKind::Blob.into(),
-            filename: "JustAFile.txt".into(),
-            oid: ObjectId::empty_blob(gix_hash::Kind::Sha1),
-        }],
-    }))?);
+    }))?;
+    let blob_object =
+        object_content_from_owned_object(gix_object::Object::Blob(gix_object::Blob {
+            data: "Some file content".as_bytes().to_vec(),
+        }))?;
+    let tree_object =
+        object_content_from_owned_object(gix_object::Object::Tree(gix_object::Tree {
+            entries: vec![gix_object::tree::Entry {
+                mode: gix_object::tree::EntryKind::Blob.into(),
+                filename: "JustAFile.txt".into(),
+                oid: ObjectId::empty_blob(gix_hash::Kind::Sha1),
+            }],
+        }))?;
     let mut pack_items = vec![
-        PackfileItem::new_base(tag_bytes.clone()),
-        PackfileItem::new_base(blob_bytes),
-        PackfileItem::new_base(tree_bytes),
+        PackfileItem::new_base(tag_object.raw().clone()),
+        PackfileItem::new_base(blob_object.raw().clone()),
+        PackfileItem::new_base(tree_object.raw().clone()),
     ];
     if with_delta {
-        let another_tag_bytes = Bytes::from(to_vec_bytes(&gix_object::Object::Tag(Tag {
+        let another_tag_object = object_content_from_owned_object(gix_object::Object::Tag(Tag {
             target: ObjectId::empty_tree(gix_hash::Kind::Sha1),
             target_kind: gix_object::Kind::Tree,
             name: "BlobTag".into(),
             tagger: None,
             message: "Tag pointing to a blob".into(),
             pgp_signature: None,
-        }))?);
-        let another_tag_hash = BaseObject::new(another_tag_bytes.clone())?
+        }))?;
+        let another_tag_hash = BaseObject::new(another_tag_object.raw().clone())?
             .hash()
             .to_owned();
-        let tag_hash = BaseObject::new(tag_bytes.clone())?.hash().to_owned();
+        let tag_hash = BaseObject::new(tag_object.raw().clone())?.hash().to_owned();
 
-        let raw_instructions = git_delta::git_delta(&tag_bytes, &another_tag_bytes, 1_000_000)?;
+        let raw_instructions =
+            git_delta::git_delta(tag_object.raw(), another_tag_object.raw(), 1_000_000)?;
         let decompressed_size = raw_instructions.len() as u64;
         let mut encoder = ZlibEncoder::new(Vec::new(), Compression::default());
         encoder.write_all(&raw_instructions)?;
@@ -100,11 +102,9 @@ fn validate_packitem_creation() -> anyhow::Result<()> {
         message: "Tag pointing to a tree".into(),
         pgp_signature: None,
     };
-    // Get the bytes of the Git object
-    let bytes =
-        to_vec_bytes(&Object::Tag(tag)).expect("Expected successful Git object serialization");
     // Convert it into a packfile item
-    BaseObject::new(Bytes::from(bytes)).expect("Expected successful PackfileItem creation");
+    BaseObject::new(object_content_from_owned_object(tag.into())?.raw().clone())
+        .expect("Expected successful PackfileItem creation");
     Ok(())
 }
 
@@ -119,12 +119,9 @@ fn validate_packfile_item_encoding() -> anyhow::Result<()> {
         message: "Tag pointing to a tree".into(),
         pgp_signature: None,
     };
-    // Get the bytes of the Git object
-    let bytes =
-        to_vec_bytes(&Object::Tag(tag)).expect("Expected successful Git object serialization");
     // Convert it into a packfile item
-    let item =
-        BaseObject::new(Bytes::from(bytes)).expect("Expected successful PackfileItem creation");
+    let item = BaseObject::new(object_content_from_owned_object(tag.into())?.raw().clone())
+        .expect("Expected successful PackfileItem creation");
     let mut encoded_bytes = BytesMut::new();
     item.write_encoded(&mut encoded_bytes, true)
         .expect("Expected successful encoding of packfile item");
@@ -208,37 +205,45 @@ async fn validate_staggered_packfile_generation() -> anyhow::Result<()> {
     let mut packfile_writer =
         PackfileWriter::new(Vec::new(), 3, concurrency, DeltaForm::RefAndOffset);
     // Create Git objects and write them to a packfile one at a time
-    let tag_bytes = Bytes::from(to_vec_bytes(&gix_object::Object::Tag(Tag {
+    let tag_object = object_content_from_owned_object(gix_object::Object::Tag(Tag {
         target: ObjectId::empty_tree(gix_hash::Kind::Sha1),
         target_kind: gix_object::Kind::Tree,
         name: "TreeTag".into(),
         tagger: None,
         message: "Tag pointing to a tree".into(),
         pgp_signature: None,
-    }))?);
+    }))?;
     // Validate we are able to write the object to the packfile without errors
     packfile_writer
-        .write(stream::iter(vec![PackfileItem::new_base(tag_bytes)]))
+        .write(stream::iter(vec![PackfileItem::new_base(
+            tag_object.raw().clone(),
+        )]))
         .await
         .expect("Expected successful write of object to packfile");
-    let blob_bytes = Bytes::from(to_vec_bytes(&gix_object::Object::Blob(gix_object::Blob {
-        data: "Some file content".as_bytes().to_vec(),
-    }))?);
+    let blob_object =
+        object_content_from_owned_object(gix_object::Object::Blob(gix_object::Blob {
+            data: "Some file content".as_bytes().to_vec(),
+        }))?;
     // Validate we are able to write the object to the packfile without errors
     packfile_writer
-        .write(stream::iter(vec![PackfileItem::new_base(blob_bytes)]))
+        .write(stream::iter(vec![PackfileItem::new_base(
+            blob_object.raw().clone(),
+        )]))
         .await
         .expect("Expected successful write of object to packfile");
-    let tree_bytes = Bytes::from(to_vec_bytes(&gix_object::Object::Tree(gix_object::Tree {
-        entries: vec![gix_object::tree::Entry {
-            mode: gix_object::tree::EntryKind::Blob.into(),
-            filename: "JustAFile.txt".into(),
-            oid: ObjectId::empty_blob(gix_hash::Kind::Sha1),
-        }],
-    }))?);
+    let tree_object =
+        object_content_from_owned_object(gix_object::Object::Tree(gix_object::Tree {
+            entries: vec![gix_object::tree::Entry {
+                mode: gix_object::tree::EntryKind::Blob.into(),
+                filename: "JustAFile.txt".into(),
+                oid: ObjectId::empty_blob(gix_hash::Kind::Sha1),
+            }],
+        }))?;
     // Validate we are able to write the object to the packfile without errors
     packfile_writer
-        .write(stream::iter(vec![PackfileItem::new_base(tree_bytes)]))
+        .write(stream::iter(vec![PackfileItem::new_base(
+            tree_object.raw().clone(),
+        )]))
         .await
         .expect("Expected successful write of object to packfile");
 
@@ -407,33 +412,41 @@ async fn validate_staggered_bundle_generation() -> anyhow::Result<()> {
     .await
     .expect("Expected successful creation of BundleWriter");
     // Create a few Git objects
-    let tag_bytes = Bytes::from(to_vec_bytes(&gix_object::Object::Tag(Tag {
+    let tag_object = object_content_from_owned_object(gix_object::Object::Tag(Tag {
         target: ObjectId::empty_tree(gix_hash::Kind::Sha1),
         target_kind: gix_object::Kind::Tree,
         name: "TreeTag".into(),
         tagger: None,
         message: "Tag pointing to a tree".into(),
         pgp_signature: None,
-    }))?);
+    }))?;
     // Validate we are able to write the object to the bundle without errors
     bundle_writer
-        .write(stream::iter(vec![PackfileItem::new_base(tag_bytes)]))
+        .write(stream::iter(vec![PackfileItem::new_base(
+            tag_object.raw().clone(),
+        )]))
         .await
         .expect("Expected successful write of object to bundle");
-    let blob_bytes = Bytes::from(to_vec_bytes(&gix_object::Object::Blob(gix_object::Blob {
-        data: "Some file content".as_bytes().to_vec(),
-    }))?);
+    let blob_object =
+        object_content_from_owned_object(gix_object::Object::Blob(gix_object::Blob {
+            data: "Some file content".as_bytes().to_vec(),
+        }))?;
     // Validate we are able to write the object to the bundle without errors
     bundle_writer
-        .write(stream::iter(vec![PackfileItem::new_base(blob_bytes)]))
+        .write(stream::iter(vec![PackfileItem::new_base(
+            blob_object.raw().clone(),
+        )]))
         .await
         .expect("Expected successful write of object to bundle");
-    let tree_bytes = Bytes::from(to_vec_bytes(&gix_object::Object::Tree(gix_object::Tree {
-        entries: vec![],
-    }))?);
+    let tree_object =
+        object_content_from_owned_object(gix_object::Object::Tree(gix_object::Tree {
+            entries: vec![],
+        }))?;
     // Validate we are able to write the object to the bundle without errors
     bundle_writer
-        .write(stream::iter(vec![PackfileItem::new_base(tree_bytes)]))
+        .write(stream::iter(vec![PackfileItem::new_base(
+            tree_object.raw().clone(),
+        )]))
         .await
         .expect("Expected successful write of object to bundle");
     // Validate we are able to finish writing to the bundle

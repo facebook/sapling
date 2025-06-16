@@ -17,15 +17,13 @@ use flate2::Compression;
 use flate2::write::ZlibEncoder;
 use gix_hash::ObjectId;
 use gix_hash::oid;
-use gix_object::Object;
-use gix_object::ObjectRef;
-use gix_object::WriteTo;
 use gix_pack::data::output;
 use mononoke_types::private::MononokeTypeError;
 use quickcheck::Arbitrary;
 use sha1::Digest;
 use sha1::Sha1;
 
+use crate::ObjectContent;
 use crate::thrift;
 
 /// The type of items that can be present in a Git packfile. Does not include RefDelta currently
@@ -132,24 +130,21 @@ impl TryFrom<DeltaOidObject> for output::Entry {
 /// Struct representing a base Git object that can be included in packfiles
 #[derive(Debug)]
 pub struct BaseObject {
-    pub object: Object,
+    pub object: ObjectContent,
     pub hash: ObjectId,
 }
 
 impl BaseObject {
     /// Creates a new packfile item from the raw object bytes of the Git object.
     pub fn new(object_bytes: Bytes) -> Result<Self> {
-        // Get the hash of the Git object bytes
         let mut hasher = Sha1::new();
         hasher.update(&object_bytes);
         let hash_bytes = hasher.finalize();
-        // Create the Git object from raw bytes
-        let object = ObjectRef::from_loose(object_bytes.as_ref())
-            .map_err(|e| anyhow::anyhow!("Failed to parse packfile item: {}", e))?
-            .into();
         let hash = oid::try_from_bytes(hash_bytes.as_ref())
             .context("Failed to convert packfile item hash to Git Object ID")?
             .into();
+        // Create the Git object from raw bytes
+        let object = ObjectContent::try_from_loose(object_bytes)?;
         // Create the packfile item from the object and the hash
         anyhow::Ok(Self { object, hash })
     }
@@ -336,7 +331,7 @@ impl Arbitrary for GitPackfileBaseItem {
 
 /// Free function responsible for writing only the Git object data to a Vec
 /// without including the loose format headers
-pub(crate) fn to_vec_bytes_without_header(git_object: &Object) -> Result<Vec<u8>> {
+pub(crate) fn to_vec_bytes_without_header(git_object: &ObjectContent) -> Result<Vec<u8>> {
     let mut object_bytes = Vec::new();
     git_object.write_to(object_bytes.by_ref())?;
     anyhow::Ok(object_bytes)
@@ -344,7 +339,7 @@ pub(crate) fn to_vec_bytes_without_header(git_object: &Object) -> Result<Vec<u8>
 
 /// Free function responsible for writing Git object data to a Vec
 /// in loose format
-pub fn to_vec_bytes(git_object: &Object) -> Result<Vec<u8>> {
+pub fn to_vec_bytes(git_object: &ObjectContent) -> Result<Vec<u8>> {
     let mut object_bytes = git_object.loose_header().into_vec();
     git_object.write_to(object_bytes.by_ref())?;
     anyhow::Ok(object_bytes)

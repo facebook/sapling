@@ -9,6 +9,7 @@ use std::fmt::Display;
 
 use anyhow::Result;
 use futures::Stream;
+use git_types::PackfileItem;
 use gix_hash::ObjectId;
 use sha1::Digest;
 use sha1::Sha1;
@@ -17,7 +18,6 @@ use tokio::io::AsyncWriteExt;
 
 use crate::pack::DeltaForm;
 use crate::pack::PackfileWriter;
-use crate::types::PackfileItem;
 
 /// The message/comment associated with the pre-requisite objects
 const BUNDLE_PREREQ_MSG: &str = "bundled object";

@@ -12,6 +12,7 @@ use anyhow::Context;
 use anyhow::Result;
 use futures::Stream;
 use futures::StreamExt;
+use git_types::PackfileItem;
 use gix_hash::ObjectId;
 use gix_pack::data::Version;
 use gix_pack::data::header;
@@ -24,7 +25,6 @@ use tokio::io::AsyncWrite;
 use tokio::io::AsyncWriteExt;
 
 use crate::hash_writer::AsyncHashWriter;
-use crate::types::PackfileItem;
 
 #[derive(Error, Debug)]
 #[error(transparent)]
