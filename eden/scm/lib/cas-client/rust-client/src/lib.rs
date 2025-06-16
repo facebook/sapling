@@ -197,7 +197,21 @@ impl CasClient for RustCasClient {
     }
 
     async fn upload(&self, blobs: Vec<Blob>) -> Result<Vec<CasDigest>> {
-        unimplemented!("CasClient::upload is not implemented for RustCasClient")
+        tracing::debug!(target: "cas", "RustCasClient uploading {} blobs", blobs.len());
+
+        let request = UploadInlinedBlobsRequest {
+            blobs: blobs.into_iter().map(|blob| blob.into_vec()).collect(),
+            ctx: self.cas_call_context(),
+            ..Default::default()
+        };
+
+        self.client()?
+            .uploadInlinedBlobs(&request)
+            .await?
+            .digests
+            .into_iter()
+            .map(|digest_with_status| from_re_digest(&digest_with_status.digest))
+            .collect::<Result<Vec<_>>>()
     }
 
     async fn prefetch<'a>(
