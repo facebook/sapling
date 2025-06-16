@@ -18,5 +18,10 @@ rust_library(
         "//eden/facebook/scm-eden-container-clone/eden_config:eden_config",
         "//eden/fs/cli_rs/edenfs-client:edenfs-client",
         "//eden/scm/lib/spawn-ext:spawn-ext",
-    ],
+    ] + select({
+        "DEFAULT": [],
+        "ovr_config//os:linux": [
+            "fbsource//third-party/rust:sudo2",
+        ],
+    }),
 )
