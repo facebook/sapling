@@ -28,6 +28,8 @@ use configmodel::convert::FromConfigValue;
 use futures::stream;
 use futures::stream::BoxStream;
 use futures::stream::StreamExt;
+use itertools::Either;
+use itertools::Itertools;
 use once_cell::sync::OnceCell;
 use re_cas_common::from_re_digest;
 use re_cas_common::parse_stats;
@@ -201,9 +203,46 @@ impl CasClient for RustCasClient {
     async fn prefetch<'a>(
         &'a self,
         _fctx: FetchContext,
-        _digests: &'a [CasDigest],
-        _log_name: CasDigestType,
+        digests: &'a [CasDigest],
+        log_name: CasDigestType,
     ) -> BoxStream<'a, Result<(CasFetchedStats, Vec<CasDigest>, Vec<CasDigest>)>> {
-        unimplemented!("CasClient::prefetch is not implemented for RustCasClient")
+        stream::iter(split_up_to_max_bytes(digests, self.fetch_limit.value()))
+            .map(move |digests| async move {
+                tracing::debug!(target: "cas", "RustCasClient prefetching {} {}(s)", digests.len(), log_name);
+
+                let request = MaterializeDigestsRequest {
+                    digests: digests.iter().map(to_re_digest).collect(),
+                    ctx: self.cas_call_context(),
+                    throw_on_error: false,
+                    ..Default::default()
+                };
+                let response = self.client()?.materializeDigestsRemotely(&request).await?;
+                let digests = response
+                    .digests
+                    .into_iter()
+                    .map(|response| {
+                        let digest = from_re_digest(&response.digest)?;
+                        match response.status.code {
+                            TCode::OK => Ok(Either::Left(digest)),
+                            TCode::NOT_FOUND => Ok(Either::Right(digest)),
+                            _ => Err(anyhow!(
+                                "bad status (code={}, message={}, group={})",
+                                response.status.code,
+                                response.status.message,
+                                response.status.group
+                            )),
+                        }
+                    })
+                    .collect::<Result<Vec<_>>>()?;
+                let (digests_prefetched, digests_not_found) =
+                    digests.into_iter().partition_map(std::convert::identity);
+                let stats = parse_stats(
+                    response.storage_stats.per_backend_stats.into_iter(),
+                    response.local_cache_stats,
+                );
+                Ok((stats, digests_prefetched, digests_not_found))
+            })
+            .buffer_unordered(self.fetch_concurrency)
+            .boxed()
     }
 }
