@@ -118,9 +118,7 @@ impl BareGit {
         };
         self.populate_packed_references(matcher, insert)?;
         self.populate_loose_directory_references(matcher, "refs", insert)?;
-        for name in ["HEAD", "FETCH_HEAD", "MERGE_HEAD"] {
-            self.populate_loose_file_reference(matcher, Cow::Borrowed(name), insert)?;
-        }
+        self.populate_loose_file_reference(matcher, Cow::Borrowed("HEAD"), insert)?;
         Ok(result)
     }
 

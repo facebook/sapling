@@ -69,6 +69,7 @@ mod tests {
         assert!(m.matches_file(p("refs/heads/foo/bar"))?);
         assert!(m.matches_file(p("refs/remotes/foo/bar"))?);
         assert!(m.matches_file(p("HEAD"))?);
+        assert!(!m.matches_file(p("FETCH_HEAD"))?);
         assert!(m.matches_file(p("refs/visibleheads/123"))?);
         assert!(!m.matches_file(p("refs/notes/foo/bar"))?);
         assert_ne!(m.matches_directory(p("refs"))?, DirectoryMatch::Nothing);
