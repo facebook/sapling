@@ -153,13 +153,23 @@ impl SqlGitBundleMetadataStorage {
         Ok(new_bundle_list_num)
     }
 
+    pub async fn get_latest_bundle_list_from_primary(&self) -> Result<Option<BundleList>> {
+        self._get_latest_bundle_list(true).await
+    }
+
     pub async fn get_latest_bundle_list(&self) -> Result<Option<BundleList>> {
-        let rows = GetLatestBundleListForRepo::query(
-            &self.connections.read_connection,
-            None,
-            &self.repo_id,
-        )
-        .await?;
+        self._get_latest_bundle_list(false).await
+    }
+    pub async fn _get_latest_bundle_list(
+        &self,
+        read_from_primary: bool,
+    ) -> Result<Option<BundleList>> {
+        let conn = if read_from_primary {
+            &self.connections.write_connection
+        } else {
+            &self.connections.read_connection
+        };
+        let rows = GetLatestBundleListForRepo::query(conn, None, &self.repo_id).await?;
 
         let bundle_list_num = match rows.first() {
             Some(val) => val.2,

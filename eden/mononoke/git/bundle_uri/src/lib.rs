@@ -86,6 +86,10 @@ pub trait GitBundleUri: Send + Sync {
     /// There might be None.
     async fn get_latest_bundle_list(&self) -> Result<Option<BundleList>>;
 
+    /// Gets the latest list of git bundles which together comprise the whole repo.
+    /// There might be None. Provides read-after-write consistency.
+    async fn get_latest_bundle_list_from_primary(&self) -> Result<Option<BundleList>>;
+
     /// Get all available bundle lists for a repo.
     async fn get_bundle_lists(&self) -> Result<Vec<BundleList>>;
 
@@ -200,6 +204,12 @@ impl<U: Clone + Send + GitBundleUrlGenerator + Sync> GitBundleUri for BundleUri<
 
     async fn get_latest_bundle_list(&self) -> Result<Option<BundleList>> {
         self.bundle_metadata_storage.get_latest_bundle_list().await
+    }
+
+    async fn get_latest_bundle_list_from_primary(&self) -> Result<Option<BundleList>> {
+        self.bundle_metadata_storage
+            .get_latest_bundle_list_from_primary()
+            .await
     }
 
     async fn get_bundle_lists(&self) -> Result<Vec<BundleList>> {
