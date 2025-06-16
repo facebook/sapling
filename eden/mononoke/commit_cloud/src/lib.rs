@@ -44,6 +44,7 @@ use facet::facet;
 #[cfg(fbcode_build)]
 use futures_stats::futures03::TimedFutureExt;
 use metaconfig_types::CommitCloudConfig;
+use mononoke_macros::mononoke;
 use mononoke_types::DateTime;
 use mononoke_types::Timestamp;
 use permission_checker::AclProvider;
@@ -339,31 +340,33 @@ impl CommitCloud {
 
         #[cfg(fbcode_build)]
         if !self.config.disable_interngraph_notification && !initiate_workspace {
-            let notification =
-                NotificationData::from_update_references_params(params.clone(), new_version);
+            let mut scuba = self.ctx.scuba().clone();
+            let fb = self.ctx.fb.clone();
+            let cc_ctx = cc_ctx.clone();
+            let params = params.clone();
+            mononoke::spawn_task(async move {
+                let notification =
+                    NotificationData::from_update_references_params(params, new_version);
 
-            let (stats, res) = publish_single_update(
-                notification,
-                &cc_ctx.workspace.clone(),
-                &cc_ctx.reponame.clone(),
-                self.ctx.fb,
-            )
-            .timed()
-            .await;
+                let (stats, res) = publish_single_update(
+                    notification,
+                    &cc_ctx.workspace.clone(),
+                    &cc_ctx.reponame.clone(),
+                    fb,
+                )
+                .timed()
+                .await;
 
-            self.ctx
-                .scuba()
-                .clone()
-                .add_future_stats(&stats)
-                .log_with_msg(
+                scuba.add_future_stats(&stats).log_with_msg(
                     "commit cloud: sent interngraph notification",
                     format!(
-                        "For workspace {} in repo {} with response {}",
+                        "For workspace {} in repo {} with response {:?}",
                         cc_ctx.workspace,
                         cc_ctx.reponame,
-                        res.map_err(CommitCloudInternalError::Error)?
+                        res.map_err(CommitCloudInternalError::Error)
                     ),
                 );
+            });
         }
 
         Ok(ReferencesData {
