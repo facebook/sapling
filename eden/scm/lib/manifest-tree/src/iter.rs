@@ -50,8 +50,8 @@ impl BfsIterPool {
         for _ in 0..pool.max_count() {
             let work_recv = work_recv.clone();
             // Give worker a weak sender so the worker doesn't keep the work channel alive
-            // indefinitely (and will shut down properly when we the strong sender in BfsIterPool is
-            // dropped.
+            // indefinitely (and will shut down properly when the strong sender in BfsIterPool is
+            // dropped).
             let work_send = work_send.downgrade();
             pool.execute(move || {
                 let res = BfsIterPool::run(work_recv, work_send);
@@ -63,7 +63,7 @@ impl BfsIterPool {
     }
 }
 
-static BFS_POOL: Lazy<BfsIterPool> = Lazy::new(|| BfsIterPool::new(10));
+static BFS_POOL: Lazy<BfsIterPool> = Lazy::new(|| BfsIterPool::new(num_cpus::get().min(20)));
 
 pub fn bfs_iter<M: 'static + Matcher + Sync + Send>(
     store: InnerStore,
