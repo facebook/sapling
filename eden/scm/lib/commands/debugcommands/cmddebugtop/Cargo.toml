@@ -10,7 +10,7 @@ repository = "https://github.com/facebook/sapling"
 license = "GPL-2.0-only"
 
 [dependencies]
-chrono = { version = "=0.4.39", features = ["clock", "serde", "std"], default-features = false }
+chrono = { version = "0.4.41", features = ["clock", "serde", "std"], default-features = false }
 cmdutil = { version = "0.1.0", path = "../../cmdutil" }
 comfy-table = "7.1.4"
 sapling-clidispatch = { version = "0.1.0", path = "../../../clidispatch" }

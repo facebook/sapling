@@ -14,7 +14,7 @@ name = "runlog"
 
 [dependencies]
 anyhow = "1.0.95"
-chrono = { version = "=0.4.39", features = ["clock", "serde", "std"], default-features = false }
+chrono = { version = "0.4.41", features = ["clock", "serde", "std"], default-features = false }
 fs2 = "0.4"
 parking_lot = { version = "0.12.1", features = ["send_guard"] }
 rand = { version = "0.8", features = ["small_rng"] }
