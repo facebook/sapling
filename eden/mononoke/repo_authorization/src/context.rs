@@ -16,8 +16,6 @@ use commit_cloud_helpers::make_workspace_acl_name;
 #[cfg(fbcode_build)]
 use commit_cloud_intern_utils::acl_check::infer_workspace_identity;
 use context::CoreContext;
-#[cfg(fbcode_build)]
-use futures_stats::futures03::TimedFutureExt;
 use metaconfig_types::RepoConfigRef;
 use mononoke_types::BonsaiChangeset;
 use mononoke_types::ChangesetId;
@@ -625,21 +623,12 @@ impl AuthorizationContext {
                 #[cfg(fbcode_build)]
                 {
                     if cc_ctx.owner.is_none() {
-                        let (stats, inferred_owner) = infer_workspace_identity(
+                        let inferred_owner = infer_workspace_identity(
                             ctx.fb,
                             &cc_ctx.workspace,
                             repo.commit_cloud().config.mocked_employees.clone(),
                         )
-                        .timed()
                         .await;
-
-                        ctx.scuba().clone().add_future_stats(&stats).log_with_msg(
-                            "commit cloud: inferred owner ",
-                            format!(
-                                "inferred owner: got outcome {:?} for workspace {}",
-                                inferred_owner, cc_ctx.workspace
-                            ),
-                        );
 
                         match inferred_owner {
                             Ok(owner) => {
@@ -661,10 +650,6 @@ impl AuthorizationContext {
                     match &cc_ctx.owner {
                         Some(owner) => {
                             if ctx.metadata().identities().contains(owner) {
-                                ctx.scuba().clone().log_with_msg(
-                                    "commit cloud ACL check success",
-                                    Some("inferred owner check".to_owned()),
-                                );
                                 return AuthorizationCheckOutcome::from_permitted(true);
                             }
                         }
@@ -701,10 +686,6 @@ impl AuthorizationContext {
                             .check_set(ctx.metadata().identities(), &[action])
                             .await
                         {
-                            ctx.scuba().clone().log_with_msg(
-                                "commit cloud ACL check success",
-                                Some("global allow list".to_owned()),
-                            );
                             return AuthorizationCheckOutcome::from_permitted(true);
                         }
                     }

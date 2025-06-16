@@ -1,5 +1,4 @@
 load("@fbcode_macros//build_defs:rust_library.bzl", "rust_library")
-load("@fbcode_macros//build_defs/lib:rust_oss.bzl", "rust_oss")
 
 oncall("scm_server_infra")
 
@@ -32,7 +31,5 @@ rust_library(
         "//eden/mononoke/repo_attributes/repo_identity:repo_identity",
         "//eden/mononoke/repo_attributes/repo_permission_checker:repo_permission_checker",
         "//eden/mononoke/server/context:context",
-    ] + ([] if rust_oss.is_oss_build() else [
-        "//common/rust/shed/futures_stats:futures_stats",
-    ]),
+    ],
 )
