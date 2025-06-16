@@ -86,13 +86,14 @@ command = registrar.command(cmdtable)
 testedwith = "ships-with-hg-core"
 
 
-def snapshot(ui, repo, files, node, tmproot):
+def snapshot(ui, repo, files, ctx, tmproot):
     """snapshot files as of some revision
     if not using snapshot, -I/-X does not work and recursive diff
     in tools like kdiff3 and meld displays too many files."""
     dirname = os.path.basename(repo.root)
     if dirname == "":
         dirname = "root"
+    node = ctx.node()
     if node is not None:
         dirname = "%s.%s" % (dirname, short(node))
     base = os.path.join(tmproot, dirname)
@@ -111,7 +112,6 @@ def snapshot(ui, repo, files, node, tmproot):
     if files:
         repo.ui.setconfig("ui", "archivemeta", False)
 
-        ctx = repo[node]
         archival.archive(
             repo, base, ctx, "files", matchfn=scmutil.matchfiles(repo, files)
         )
@@ -153,18 +153,23 @@ def dodiff(ui, repo, cmdline, pats, opts):
         else:
             node1b = nullid
 
+    ctx1a, ctx1b, ctx2 = repo[node1a], repo[node1b], repo[node2]
+    from_paths = scmutil.rootrelpaths(ctx2, opts.get("from_path", []))
+    to_paths = scmutil.rootrelpaths(ctx2, opts.get("to_path", []))
+
     # Disable 3-way merge if there is only one parent
     if do3way:
         if node1b == nullid:
             do3way = False
 
-    matcher = scmutil.match(repo[node2], pats, opts)
+    matcher = scmutil.match(ctx2, pats, opts)
 
     if opts.get("patch"):
         if node2 is None:
             raise error.Abort(_("--patch requires two revisions"))
     else:
-        mod_a, add_a, rem_a = list(map(set, repo.status(node1a, node2, matcher)[:3]))
+        cmdutil.registerdiffgrafts(from_paths, to_paths, ctx1a)
+        mod_a, add_a, rem_a = list(map(set, ctx1a.status(node2, matcher)[:3]))
         if do3way:
             mod_b, add_b, rem_b = list(
                 map(set, repo.status(node1b, node2, matcher)[:3])
@@ -181,12 +186,14 @@ def dodiff(ui, repo, cmdline, pats, opts):
         if not opts.get("patch"):
             # Always make a copy of node1a (and node1b, if applicable)
             dir1a_files = mod_a | rem_a | ((mod_b | add_b) - add_a)
-            dir1a = snapshot(ui, repo, dir1a_files, node1a, tmproot)[0]
-            rev1a = "@%d" % repo[node1a].rev()
+            ma1a = ctx1a.manifest()
+            dir1a_files = [ma1a.ungraftedpath(f) or f for f in dir1a_files]
+            dir1a = snapshot(ui, repo, dir1a_files, ctx1a, tmproot)[0]
+            rev1a = "@%d" % ctx1a.rev()
             if do3way:
                 dir1b_files = mod_b | rem_b | ((mod_a | add_a) - add_b)
-                dir1b = snapshot(ui, repo, dir1b_files, node1b, tmproot)[0]
-                rev1b = "@%d" % repo[node1b].rev()
+                dir1b = snapshot(ui, repo, dir1b_files, ctx1b, tmproot)[0]
+                rev1b = "@%d" % ctx1b.rev()
             else:
                 dir1b = None
                 rev1b = ""
@@ -197,14 +204,14 @@ def dodiff(ui, repo, cmdline, pats, opts):
             dir2root = ""
             rev2 = ""
             if node2:
-                dir2 = snapshot(ui, repo, modadd, node2, tmproot)[0]
-                rev2 = "@%d" % repo[node2].rev()
+                dir2 = snapshot(ui, repo, modadd, ctx2, tmproot)[0]
+                rev2 = "@%d" % ctx2.rev()
             elif len(common) > 1:
                 # we only actually need to get the files to copy back to
                 # the working dir in this case (because the other cases
                 # are: diffing 2 revisions or single file -- in which case
                 # the file is already directly passed to the diff tool).
-                dir2, fnsandstat = snapshot(ui, repo, modadd, None, tmproot)
+                dir2, fnsandstat = snapshot(ui, repo, modadd, repo[None], tmproot)
             else:
                 # This lets the diff tool open the changed file directly
                 dir2 = ""
