@@ -76,6 +76,8 @@ impl StdError for InternalError {
 pub enum MononokeError {
     #[error("invalid request: {0}")]
     InvalidRequest(String),
+    #[error("Large repo '{0}' not found")]
+    LargeRepoNotFound(String),
     #[error("unresolved path conflicts in merge:\n {}", .conflict_paths.iter().join("\n"))]
     MergeConflicts { conflict_paths: Vec<MPath> },
     #[error("Conflicts while pushrebasing: {0:?}")]

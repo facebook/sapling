@@ -109,6 +109,7 @@ impl MononokeErrorExt for MononokeError {
             AuthorizationError(_) => HttpError::e403,
             InternalError(_) => HttpError::e500,
             MergeConflicts { .. } => HttpError::e400,
+            LargeRepoNotFound(_) => HttpError::e400,
         })(Error::from(self).context(context))
     }
 }

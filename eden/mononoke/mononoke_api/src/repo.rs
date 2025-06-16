@@ -399,9 +399,9 @@ async fn maybe_push_redirector<'a, R: MononokeRepo>(
         let submodule_deps = get_all_repo_submodule_deps(ctx, repo.clone(), repo_provider).await?;
 
         let large_repo_id = base.common_commit_sync_config.large_repo_id;
-        let large_repo = repos.get_by_id(large_repo_id.id()).ok_or_else(|| {
-            MononokeError::InvalidRequest(format!("Large repo '{}' not found", large_repo_id))
-        })?;
+        let large_repo = repos
+            .get_by_id(large_repo_id.id())
+            .ok_or_else(|| MononokeError::LargeRepoNotFound(format!("{large_repo_id}")))?;
         Ok(Some(
             PushRedirectorArgs::new(
                 large_repo,

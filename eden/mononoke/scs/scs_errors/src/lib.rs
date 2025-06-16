@@ -227,6 +227,11 @@ impl From<MononokeError> for ServiceError {
                 reason: error.to_string(),
                 ..Default::default()
             }),
+            error @ MononokeError::LargeRepoNotFound(_) => Self::Request(thrift::RequestError {
+                kind: thrift::RequestErrorKind::LARGE_REPO_NOT_FOUND,
+                reason: error.to_string(),
+                ..Default::default()
+            }),
             error @ MononokeError::ServicePermissionDenied { .. } => {
                 Self::Request(thrift::RequestError {
                     kind: thrift::RequestErrorKind::PERMISSION_DENIED,

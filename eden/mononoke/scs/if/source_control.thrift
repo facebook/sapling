@@ -2488,6 +2488,7 @@ enum RequestErrorKind {
   NOT_AVAILABLE = 9,
   NOT_IMPLEMENTED = 10,
   MERGE_CONFLICTS = 11,
+  LARGE_REPO_NOT_FOUND = 12,
 }
 
 stateful client exception RequestError {
