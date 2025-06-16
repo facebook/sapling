@@ -113,6 +113,20 @@ impl ServiceError {
             }
         }
     }
+
+    pub fn repo_not_found(&self) -> bool {
+        match self {
+            Self::Request(thrift::RequestError {
+                kind: thrift::RequestErrorKind::REPO_NOT_FOUND,
+                ..
+            }) => true,
+            Self::Request(thrift::RequestError {
+                kind: thrift::RequestErrorKind::LARGE_REPO_NOT_FOUND,
+                ..
+            }) => true,
+            _ => false,
+        }
+    }
 }
 
 pub trait ServiceErrorResultExt<T> {

@@ -61,6 +61,7 @@ use crate::from_request::check_range_and_convert;
 use crate::from_request::convert_pushvars;
 use crate::into_response::AsyncIntoResponseWith;
 use crate::source_control_impl::SourceControlServiceImpl;
+use crate::specifiers::SpecifierExt;
 
 mod land_stack;
 
@@ -75,12 +76,13 @@ impl SourceControlServiceImpl {
         _params: thrift::RepoInfoParams,
     ) -> Result<thrift::RepoInfo, scs_errors::ServiceError> {
         let authz = AuthorizationContext::new_bypass_access_control();
-        let repo = self
-            .repo_impl(ctx, &repo, authz, |_| async { Ok(None) })
-            .await?;
-        let repo_name = repo.name();
-
-        let default_commit_identity_scheme_conf = &repo.config().default_commit_identity_scheme;
+        let repo_configs = self.configs.repo_configs();
+        let repo_config = repo_configs
+            .repos
+            .get(repo.name.as_str())
+            .ok_or_else(|| scs_errors::repo_not_found(repo.description()))?;
+        let repo_name = repo.name.to_string();
+        let default_commit_identity_scheme_conf = &repo_config.default_commit_identity_scheme;
 
         let default_commit_identity_scheme = match default_commit_identity_scheme_conf {
             CommitIdentityScheme::HG => thrift::CommitIdentityScheme::HG,
@@ -88,10 +90,20 @@ impl SourceControlServiceImpl {
             CommitIdentityScheme::BONSAI => thrift::CommitIdentityScheme::BONSAI,
             CommitIdentityScheme::UNKNOWN => thrift::CommitIdentityScheme::UNKNOWN,
         };
-
-        let push_redirected_to = repo
-            .push_redirector()
-            .map(|prd| prd.repo.repo_identity().name().to_string());
+        let push_redirected_to = match self
+            .repo_impl(ctx, &repo, authz, |_| async { Ok(None) })
+            .await
+        {
+            Ok(repo) => repo
+                .push_redirector()
+                .map(|prd| prd.repo.repo_identity().name().to_string()),
+            // Repo might not be found due to deep sharding. However all push_redirected repos are shallow sharded, so this should be safe because
+            // 1. If the repo is push-redirected, we are forced to have it on every server cause we can't predict where the request might land
+            // 2. If the repo is not push-redirected, then the answer here would anyway be none
+            Err(e) if e.repo_not_found() => None,
+            // However, if there is any other form of error, let's surface that to the user
+            Err(e) => return Err(e),
+        };
 
         Ok(thrift::RepoInfo {
             name: repo_name.to_string(),
