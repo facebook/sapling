@@ -298,30 +298,19 @@ fn test_advance_while_advancing() {
     detector.set_walk_threshold(TEST_WALK_THRESHOLD);
 
     // Walk at root/, depth=1.
-    detector.file_loaded(p("root/dir1/a"));
-    detector.file_loaded(p("root/dir1/b"));
-    detector.file_loaded(p("root/dir2/a"));
-    detector.file_loaded(p("root/dir2/b"));
+    insert_walk(&detector, p("root"), WalkType::File, 1);
     assert_eq!(detector.file_walks(), vec![(p("root"), 1)]);
 
-    // Walk at root/dir1/dir1_1, depth=1.
-    // Adds "dir1" advanced child to root/ walk.
-    detector.file_loaded(p("root/dir1/dir1_1/dir1_1_1/a"));
-    detector.file_loaded(p("root/dir1/dir1_1/dir1_1_1/b"));
-    detector.file_loaded(p("root/dir1/dir1_1/dir1_1_2/a"));
-    detector.file_loaded(p("root/dir1/dir1_1/dir1_1_2/b"));
-    assert_eq!(
-        detector.file_walks(),
-        vec![(p("root"), 1), (p("root/dir1/dir1_1"), 1)]
-    );
+    // Deeper walks that already exist.
+    insert_walk(&detector, p("root/dir1/a/b"), WalkType::File, 0);
+    insert_walk(&detector, p("root/dir2/a/b"), WalkType::File, 0);
 
-    // Walk at root/dir2/dir2_1, depth=1.
-    // Adds "dir2" advanced child to root/ walk.
-    detector.file_loaded(p("root/dir2/dir2_1/dir2_1_1/a"));
-    detector.file_loaded(p("root/dir2/dir2_1/dir2_1_1/b"));
-    detector.file_loaded(p("root/dir2/dir2_1/dir2_1_2/a"));
-    detector.file_loaded(p("root/dir2/dir2_1/dir2_1_2/b"));
+    // Now isnsert two "advancing" walks.
+    insert_walk(&detector, p("root/dir1/a"), WalkType::File, 0);
+    insert_walk(&detector, p("root/dir2/a"), WalkType::File, 0);
 
+    // root/ walk is advanced to depth 2, and during insertion we notice we can advance again based
+    // on the deeper walks.
     assert_eq!(detector.file_walks(), vec![(p("root"), 3)]);
 }
 
@@ -389,39 +378,39 @@ fn test_dont_retain_empty_directory_metadata() {
     );
 }
 
+fn insert_walk(d: &Detector, p: impl AsRef<RepoPath>, wt: WalkType, depth: usize) {
+    d.inner
+        .write()
+        .insert_walk(&d.config, wt, Walk::new(depth), p.as_ref());
+}
+
 #[test]
 fn test_merge_cousins() {
     let mut detector = Detector::new();
     detector.set_walk_threshold(TEST_WALK_THRESHOLD);
 
-    detector.dir_loaded(p("root"), 0, 1);
+    insert_walk(&detector, p("root"), WalkType::File, 2);
 
-    // Walk at root/, depth=2.
-    detector.file_loaded(p("root/foo/dir1/a"));
-    detector.file_loaded(p("root/foo/dir1/b"));
-    detector.file_loaded(p("root/foo/dir2/a"));
-    detector.file_loaded(p("root/foo/dir2/b"));
-    assert_eq!(detector.file_walks(), vec![(p("root"), 2)]);
-
-    // These two cousin directories get merged to advance the root/ walk.
-    detector.file_loaded(p("root/foo/dir1/dir1_1/a"));
-    detector.file_loaded(p("root/foo/dir1/dir1_1/b"));
-    detector.file_loaded(p("root/foo/dir2/dir2_1/a"));
-    detector.file_loaded(p("root/foo/dir2/dir2_1/b"));
-    assert_eq!(detector.file_walks(), vec![(p("root"), 3)]);
+    // These cousins get merged into a new root/foo walk, but only with depth two.
+    insert_walk(&detector, p("root/foo/dir1/dir1_1"), WalkType::File, 0);
+    insert_walk(&detector, p("root/foo/dir2/dir2_1"), WalkType::File, 3);
+    assert_eq!(
+        detector.file_walks(),
+        vec![
+            (p("root"), 2),
+            (p("root/foo"), 2),
+            (p("root/foo/dir2/dir2_1"), 3)
+        ]
+    );
 }
 
 #[test]
 fn test_dont_merge_into_containg_walk() {
     let mut detector = Detector::new();
-    detector.set_walk_threshold(1);
-
-    detector.file_loaded(p("a"));
-    detector.file_loaded(p("dir1/a"));
-    detector.file_loaded(p("dir1/dir1_1/a"));
-    assert_eq!(detector.file_walks(), vec![(p(""), 2)]);
-
     detector.set_walk_threshold(TEST_WALK_THRESHOLD);
+
+    insert_walk(&detector, p(""), WalkType::File, 2);
+    assert_eq!(detector.file_walks(), vec![(p(""), 2)]);
 
     detector.dir_loaded(p("dir2"), 0, 1000);
     detector.dir_loaded(p("dir2/dir2_1"), 0, 1);

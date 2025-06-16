@@ -652,12 +652,10 @@ fn should_merge_into_ancestor(
     ancestor_distance: usize,
 ) -> Option<usize> {
     let mut kin_count = 0;
-    let mut walk_depth = 0;
     ancestor.iter(|node, depth| -> bool {
         if depth == ancestor_distance {
-            if let Some(walk) = node.get_walk_for_type(walk_type) {
+            if node.get_walk_for_type(walk_type).is_some() {
                 kin_count += 1;
-                walk_depth = walk_depth.max(walk.depth);
             }
         }
 
@@ -673,7 +671,7 @@ fn should_merge_into_ancestor(
         walk_ratio,
     ) {
         tracing::debug!(%dir, kin_count, ancestor_distance, walk_threshold, walk_ratio, ?ancestor.total_dirs, "combining with collateral kin");
-        Some(walk_depth + ancestor_distance)
+        Some(ancestor_distance)
     } else {
         None
     }
