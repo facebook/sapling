@@ -686,9 +686,9 @@ const DEFAULT_STRICT_MULTIPLIER: usize = 20;
 // Depth at which we no longer get the strict multiplier. 0 means we never get the multiplier.
 const DEFAULT_LAX_DEPTH: usize = 0;
 
-// If we know the total dir size, make sure walk threshold is at least 1% of dir size.
+// If we know the total dir size, make sure walk threshold is at least 3% of dir size.
 // This avoids detecting walks for enormous directories too quickly.
-const DEFAULT_WALK_RATIO: f64 = 0.01;
+const DEFAULT_WALK_RATIO: f64 = 0.03;
 
 // How often we garbage collect stale nodes.
 // We do not rely on running a full GC to expire old walks, only to clean up memory.
