@@ -589,6 +589,16 @@ class EdenConfig : private ConfigSettingManager {
       false,
       this};
 
+  /**
+   * Controls the number of threads to use when processing RocksDbLocalStore
+   * operations. At the time of writing, this is also used to drive the
+   * RocksDbLocalStore's periodic GC.
+   */
+  ConfigSetting<uint8_t> rocksDbIoPoolNumThreads{
+      "store:rocksdb-io-pool-num-threads",
+      12,
+      this};
+
   ConfigSetting<bool> warmTreeAuxCacheIfTreeFromLocalStore{
       "store:warm-aux-cache-tree-local-store",
       false,

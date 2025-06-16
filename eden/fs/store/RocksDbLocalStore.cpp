@@ -298,7 +298,9 @@ RocksDbLocalStore::RocksDbLocalStore(
     : LocalStore{std::move(edenStats)},
       structuredLogger_{std::move(structuredLogger)},
       faultInjector_(*faultInjector),
-      ioPool_(12, "RocksLocalStore"),
+      ioPool_(
+          config->getEdenConfig()->rocksDbIoPoolNumThreads.getValue(),
+          "RocksLocalStore"),
       pathToDb_{pathToRocksDb.copy()},
       mode_{mode},
       config_{std::move(config)},
