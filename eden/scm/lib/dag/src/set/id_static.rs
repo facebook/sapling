@@ -1122,6 +1122,21 @@ pub(crate) mod tests {
                 "<spans [F:G+5:6, B+1]>"
             );
 
+            let g: Set = "G".into();
+            let g_ancestors = r(dag.ancestors(g))?;
+            assert!(g_ancestors.hints().contains(Flags::ANCESTORS));
+
+            // g_ancestors.take(1) should lose the ANCESTORS hint.
+            // FIXME: Not the case, and it can mislead optimization path like first_ancestors.
+            assert!(g_ancestors.take(1).hints().contains(Flags::ANCESTORS));
+            assert_eq!(
+                dbg(r(dag.first_ancestors(g_ancestors.take(1)))?),
+                "<spans [G+6]>"
+            );
+
+            // g_ancestors.take(99) keeps the ANCESTORS hint because it preserves the entire set.
+            assert!(g_ancestors.take(99).hints().contains(Flags::ANCESTORS));
+
             Ok(())
         })
     }
