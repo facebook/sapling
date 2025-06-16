@@ -19,6 +19,7 @@ members = [
   "lib/cas-client",
   "lib/cas-client/re-cas-common",
   "lib/cas-client/rich-client",
+  "lib/cas-client/rust-client",
   "lib/cas-client/thin-client",
   "lib/cats",
   "lib/checkout",
