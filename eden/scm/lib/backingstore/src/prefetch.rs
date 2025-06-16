@@ -51,7 +51,7 @@ pub(crate) fn prefetch_manager(
     tree_resolver: Arc<dyn ReadTreeManifest>,
     file_store: Arc<dyn FileStore>,
     current_commit_id: Arc<RwLock<Option<String>>>,
-    detector: Arc<walkdetector::Detector>,
+    detector: walkdetector::Detector,
 ) -> flume::Sender<()> {
     // We don't need to queue up lots of kicks. A single one will suffice.
     let (send, recv) = flume::bounded(1);
@@ -303,7 +303,7 @@ enum PrefetchWork {
 fn prefetch(
     manifest: impl Manifest + Send + Sync + 'static,
     file_store: Arc<dyn FileStore>,
-    walk_detector: Arc<walkdetector::Detector>,
+    walk_detector: walkdetector::Detector,
     work: PrefetchWork,
 ) -> PrefetchHandle {
     // The cancelation works by making our thread below return early when the handle has been
@@ -568,7 +568,7 @@ mod test {
             FileMetadata::new(bar_hgid, types::FileType::Regular),
         )?;
 
-        let detector = Arc::new(walkdetector::Detector::new());
+        let detector = walkdetector::Detector::new();
 
         // Prefetch for "dir/" at depth=0 (i.e. "dir/*").
         let handle = prefetch(
@@ -644,7 +644,7 @@ mod test {
             store.insert_data(Default::default(), &path, text.as_ref())?;
         }
 
-        let detector = Arc::new(walkdetector::Detector::new());
+        let detector = walkdetector::Detector::new();
 
         // Prefetch directories for "" at depth=0 (i.e. "*"). This should fetch directory "dir".
         let handle = prefetch(
@@ -692,8 +692,6 @@ mod test {
     fn test_prefetch_manager() -> anyhow::Result<()> {
         let mut detector = walkdetector::Detector::new();
         detector.set_walk_threshold(2);
-
-        let detector = Arc::new(detector);
 
         let store = Arc::new(TestStore::new());
 
@@ -788,8 +786,6 @@ mod test {
 
         let mut detector = walkdetector::Detector::new();
         detector.set_walk_threshold(2);
-
-        let detector = Arc::new(detector);
 
         let mut rng = ChaChaRng::from_seed([0u8; 32]);
         let stub_commit_id = HgId::random(&mut rng);

@@ -9,6 +9,7 @@
 mod tests;
 mod walk_node;
 
+use std::sync::Arc;
 use std::sync::LazyLock;
 use std::sync::atomic::AtomicBool;
 use std::sync::atomic::AtomicI64;
@@ -32,10 +33,10 @@ use walk_node::WalkNode;
 //  - Passive - don't fetch or query any stores.
 //  - Minimize memory usage.
 
-#[derive(Default)]
+#[derive(Clone, Default)]
 pub struct Detector {
     config: Config,
-    inner: RwLock<Inner>,
+    inner: Arc<RwLock<Inner>>,
 }
 
 struct Inner {
@@ -694,6 +695,7 @@ const DEFAULT_GC_INTERVAL: Duration = Duration::from_secs(10);
 // How stale a walk must be before we remove it.
 const DEFAULT_GC_TIMEOUT: Duration = Duration::from_secs(5);
 
+#[derive(Clone)]
 struct Config {
     // "How many children must be accessed before we consider parent walked?"
     // This is the main threshold to tune detector aggro.

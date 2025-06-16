@@ -83,7 +83,7 @@ struct Inner {
 
     prefetch_send: flume::Sender<()>,
     walk_mode: WalkMode,
-    walk_detector: Arc<walkdetector::Detector>,
+    walk_detector: walkdetector::Detector,
 }
 
 #[derive(Debug, Copy, Clone, PartialEq)]
@@ -222,8 +222,6 @@ impl BackingStore {
         if let Some(timeout) = config.get_opt("backingstore", "walk-gc-timeout")? {
             walk_detector.set_gc_timeout(timeout);
         }
-
-        let walk_detector = Arc::new(walk_detector);
 
         let prefetch_send = if walk_mode == WalkMode::Prefetch {
             prefetch_manager(
