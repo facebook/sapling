@@ -11,23 +11,31 @@ use std::net::SocketAddr;
 use std::sync::Arc;
 
 use anyhow::Result;
+use anyhow::anyhow;
 use blob::Blob;
 use cas_client::CasClient;
 use cas_client::CasDigest;
 use cas_client::CasDigestType;
 use cas_client::CasFetchedStats;
 use cas_client::FetchContext;
+use cas_daemon_types::*;
 use cas_daemon_types_thriftclients::CASDaemonServiceClient;
 use cas_daemon_types_thriftclients::make_CASDaemonService_thriftclient;
 use configmodel::Config;
 use configmodel::ConfigExt;
 use configmodel::convert::ByteCount;
 use configmodel::convert::FromConfigValue;
+use futures::stream;
 use futures::stream::BoxStream;
+use futures::stream::StreamExt;
 use once_cell::sync::OnceCell;
+use re_cas_common::from_re_digest;
+use re_cas_common::parse_stats;
+use re_cas_common::split_up_to_max_bytes;
+use re_cas_common::to_re_digest;
+use remote_execution_common::TCode;
 use thriftclient::TransportType;
 
-#[allow(dead_code)]
 pub struct RustCasClient {
     client: OnceCell<CASDaemonServiceClient>,
     port: Option<u16>,
@@ -89,7 +97,6 @@ impl RustCasClient {
         }))
     }
 
-    #[allow(dead_code)]
     fn client(&self) -> Result<&CASDaemonServiceClient> {
         self.client.get_or_try_init(|| {
             if !fbinit::was_performed() {
@@ -119,6 +126,16 @@ impl RustCasClient {
             }
         })
     }
+
+    fn cas_call_context(&self) -> CASCallContext {
+        CASCallContext {
+            use_case_id: self.use_case.clone(),
+            session_id: self.session_id.clone(),
+            cache_session_uid: self.session_id.clone(),
+            ephemeral_cache_session: Some(true),
+            ..Default::default()
+        }
+    }
 }
 
 #[async_trait::async_trait]
@@ -133,10 +150,48 @@ impl CasClient for RustCasClient {
     async fn fetch<'a>(
         &'a self,
         _fctx: FetchContext,
-        _digests: &'a [CasDigest],
-        _log_name: CasDigestType,
+        digests: &'a [CasDigest],
+        log_name: CasDigestType,
     ) -> BoxStream<'a, Result<(CasFetchedStats, Vec<(CasDigest, Result<Option<Blob>>)>)>> {
-        unimplemented!("CasClient::fetch is not implemented for RustCasClient")
+        stream::iter(split_up_to_max_bytes(digests, self.fetch_limit.value()))
+            .map(move |digests| async move {
+                tracing::debug!(target: "cas", "RustCasClient fetching {} {}(s)", digests.len(), log_name);
+
+                let request = DownloadDigestsInlineRequest {
+                    digests: digests.iter().map(to_re_digest).collect(),
+                    ctx: self.cas_call_context(),
+                    throw_on_error: false,
+                    ..Default::default()
+                };
+                let response = self.client()?.downloadDigestsInline(&request).await?;
+                let blobs = response
+                    .digests
+                    .into_iter()
+                    .map(|response| {
+                        let digest = from_re_digest(&response.digest)?;
+                        match response.status.code {
+                            TCode::OK => Ok((digest, Ok(Some(Blob::Bytes(response.blob.into()))))),
+                            TCode::NOT_FOUND => Ok((digest, Ok(None))),
+                            _ => Ok((
+                                digest,
+                                Err(anyhow!(
+                                    "bad status (code={}, message={}, group={})",
+                                    response.status.code,
+                                    response.status.message,
+                                    response.status.group
+                                )),
+                            )),
+                        }
+                    })
+                    .collect::<Result<Vec<_>>>()?;
+                let stats = parse_stats(
+                    response.storage_stats.per_backend_stats.into_iter(),
+                    response.local_cache_stats,
+                );
+                Ok((stats, blobs))
+            })
+            .buffer_unordered(self.fetch_concurrency)
+            .boxed()
     }
 
     async fn upload(&self, blobs: Vec<Blob>) -> Result<Vec<CasDigest>> {

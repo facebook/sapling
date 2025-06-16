@@ -25,9 +25,12 @@ rust_library(
         "//common/rust/thrift/bareclient:thriftclient",
         "//eden/scm/lib/blob:blob",
         "//eden/scm/lib/cas-client:cas-client",
+        "//eden/scm/lib/cas-client/re-cas-common:re-cas-common",
         "//eden/scm/lib/clientinfo:clientinfo",
         "//eden/scm/lib/config/model:configmodel",
         "//eden/scm/lib/util/factory:factory",
+        "//remote_execution/lib/if:common-rust",
+        "//remote_execution/lib/if/cas:cas-daemon-service-rust",
         "//remote_execution/lib/if/cas:cas-daemon-service-rust-thriftclients",
     ],
 )
