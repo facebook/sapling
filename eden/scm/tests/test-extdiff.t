@@ -29,7 +29,7 @@ Should diff cloned directories:
   > EOF
 
   $ hg falabala
-  diffing a.000000000000 a
+  diffing a.000000000000.1a a
   [1]
 
   $ hg help falabala
@@ -66,8 +66,8 @@ Should diff cloned directories:
 Should diff cloned files directly:
 
   $ hg falabala -r 'desc(test1)':'desc(test2)'
-  diffing "*\\extdiff.*\\a.8a5febb7f867\\a" "a.34eed99112ab\\a" (glob) (windows !)
-  diffing */extdiff.*/a.8a5febb7f867/a a.34eed99112ab/a (glob) (no-windows !)
+  diffing "*\\extdiff.*\\a.8a5febb7f867.1a\\a" "a.34eed99112ab.2\\a" (glob) (windows !)
+  diffing */extdiff.*/a.8a5febb7f867.1a/a a.34eed99112ab.2/a (glob) (no-windows !)
   [1]
 
 Specifying an empty revision should abort.
@@ -90,8 +90,8 @@ Test diff during merge:
 Should diff cloned file against wc file:
 
   $ hg falabala
-  diffing "*\\extdiff.*\\a.2a13a4d2da36\\a" "*\\a\\a" (glob) (windows !)
-  diffing */extdiff.*/a.2a13a4d2da36/a */a/a (glob) (no-windows !)
+  diffing "*\\extdiff.*\\a.2a13a4d2da36.1a\\a" "*\\a\\a" (glob) (windows !)
+  diffing */extdiff.*/a.2a13a4d2da36.1a/a */a/a (glob) (no-windows !)
   [1]
 
 
@@ -100,15 +100,15 @@ Test --change option:
   $ hg ci -d '2 0' -mtest3
 
   $ hg falabala -c 'desc(test2)'
-  diffing "*\\extdiff.*\\a.8a5febb7f867\\a" "a.34eed99112ab\\a" (glob) (windows !)
-  diffing */extdiff.*/a.8a5febb7f867/a a.34eed99112ab/a (glob) (no-windows !)
+  diffing "*\\extdiff.*\\a.8a5febb7f867.1a\\a" "a.34eed99112ab.2\\a" (glob) (windows !)
+  diffing */extdiff.*/a.8a5febb7f867.1a/a a.34eed99112ab.2/a (glob) (no-windows !)
   [1]
 
 Check diff are made from the first parent:
 
   $ hg falabala -c 'desc(test3)' || echo "diff-like tools yield a non-zero exit code"
-  diffing "*\\extdiff.*\\a.2a13a4d2da36\\a" "a.46c0e4daeb72\\a" (glob) (windows !)
-  diffing */extdiff.*/a.2a13a4d2da36/a a.46c0e4daeb72/a (glob) (no-windows !)
+  diffing "*\\extdiff.*\\a.2a13a4d2da36.1a\\a" "a.46c0e4daeb72.2\\a" (glob) (windows !)
+  diffing */extdiff.*/a.2a13a4d2da36.1a/a a.46c0e4daeb72.2/a (glob) (no-windows !)
   diff-like tools yield a non-zero exit code
 
 issue4463: usage of command line configuration without additional quoting
@@ -194,8 +194,8 @@ Empty argument must be quoted
   > EOF
 
   $ hg --debug kdiff3 -r'desc(test1)' 2>&1 | grep '^running'
-  running 'echo --L1 "@0" --L2 "" a.8a5febb7f867 a' in * (glob) (windows !)
-  running "echo --L1 '@0' --L2 '' a.8a5febb7f867 a" in * (glob) (no-windows !)
+  running 'echo --L1 "@0" --L2 "" a.8a5febb7f867.1a a' in * (glob) (windows !)
+  running "echo --L1 '@0' --L2 '' a.8a5febb7f867.1a a" in * (glob) (no-windows !)
 
 
 Test extdiff of multiple files in tmp dir:
@@ -283,37 +283,37 @@ Diff in working directory, after:
 Test extdiff with --option:
 
   $ hg extdiff -p echo -o this -c 'desc(test2)'
-  this "*\\a.8a5febb7f867\\a" "a.34eed99112ab\\a" (glob) (windows !)
-  this */extdiff.*/a.8a5febb7f867/a a.34eed99112ab/a (glob) (no-windows !)
+  this "*\\a.8a5febb7f867.1a\\a" "a.34eed99112ab.2\\a" (glob) (windows !)
+  this */extdiff.*/a.8a5febb7f867.1a/a a.34eed99112ab.2/a (glob) (no-windows !)
   [1]
 
   $ hg falabala -o this -c 'desc(test2)'
-  diffing this "*\\a.8a5febb7f867\\a" "a.34eed99112ab\\a" (glob) (windows !)
-  diffing this */extdiff.*/a.8a5febb7f867/a a.34eed99112ab/a (glob) (no-windows !)
+  diffing this "*\\a.8a5febb7f867.1a\\a" "a.34eed99112ab.2\\a" (glob) (windows !)
+  diffing this */extdiff.*/a.8a5febb7f867.1a/a a.34eed99112ab.2/a (glob) (no-windows !)
   [1]
 
 Test extdiff's handling of options with spaces in them:
 
   $ hg edspace -c 'desc(test2)'
-  "name  <user@example.com>" "*\\a.8a5febb7f867\\a" "a.34eed99112ab\\a" (glob) (windows !)
-  name  <user@example.com> */extdiff.*/a.8a5febb7f867/a a.34eed99112ab/a (glob) (no-windows !)
+  "name  <user@example.com>" "*\\a.8a5febb7f867.1a\\a" "a.34eed99112ab.2\\a" (glob) (windows !)
+  name  <user@example.com> */extdiff.*/a.8a5febb7f867.1a/a a.34eed99112ab.2/a (glob) (no-windows !)
   [1]
 
   $ hg extdiff -p echo -o "name  <user@example.com>" -c 'desc(test2)'
-  "name  <user@example.com>" "*\\a.8a5febb7f867\\a" "a.34eed99112ab\\a" (glob) (windows !)
-  name  <user@example.com> */extdiff.*/a.8a5febb7f867/a a.34eed99112ab/a (glob) (no-windows !)
+  "name  <user@example.com>" "*\\a.8a5febb7f867.1a\\a" "a.34eed99112ab.2\\a" (glob) (windows !)
+  name  <user@example.com> */extdiff.*/a.8a5febb7f867.1a/a a.34eed99112ab.2/a (glob) (no-windows !)
   [1]
 
 Test with revsets:
 
   $ hg extdif -p echo -c "rev(1)"
-  "*\\a.8a5febb7f867\\a" "a.34eed99112ab\\a" (glob) (windows !)
-  */extdiff.*/a.8a5febb7f867/a a.34eed99112ab/a (glob) (no-windows !)
+  "*\\a.8a5febb7f867.1a\\a" "a.34eed99112ab.2\\a" (glob) (windows !)
+  */extdiff.*/a.8a5febb7f867.1a/a a.34eed99112ab.2/a (glob) (no-windows !)
   [1]
 
   $ hg extdif -p echo -r "desc(test1)::desc(test2)"
-  "*\\a.8a5febb7f867\\a" "a.34eed99112ab\\a" (glob) (windows !)
-  */extdiff.*/a.8a5febb7f867/a a.34eed99112ab/a (glob) (no-windows !)
+  "*\\a.8a5febb7f867.1a\\a" "a.34eed99112ab.2\\a" (glob) (windows !)
+  */extdiff.*/a.8a5febb7f867.1a/a a.34eed99112ab.2/a (glob) (no-windows !)
   [1]
 
 Fallback to merge-tools.tool.executable|regkey
@@ -406,7 +406,7 @@ Test symlinks handling (issue1909)
   $ ln -s missing linka
   $ hg add linka
   $ hg falabala -r 'desc(adda)' --traceback
-  diffing testsymlinks.07f494440405 testsymlinks
+  diffing testsymlinks.07f494440405.1a testsymlinks
   [1]
   $ cd ..
 
