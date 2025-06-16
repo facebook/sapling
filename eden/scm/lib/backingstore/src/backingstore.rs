@@ -420,7 +420,7 @@ impl BackingStore {
         }
 
         let walk_changed = if local {
-            inner.walk_detector.dir_read(path);
+            inner.walk_detector.dir_read(path, num_files, num_dirs);
             false
         } else {
             inner.walk_detector.dir_loaded(path, num_files, num_dirs)

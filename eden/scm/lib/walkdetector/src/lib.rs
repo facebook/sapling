@@ -183,9 +183,9 @@ impl Detector {
         self.mark_read(path, WalkType::File, false).is_some()
     }
 
-    /// Observe a directory being loaded (i.e. "heavy" or remote read). `num_files` and
-    /// `num_dirs` report the number of file and directory children of `path`,
-    /// respectively. Returns whether an active walk changed (either created or removed).
+    /// Observe a directory being loaded (i.e. "heavy" or remote read). `num_files` and `num_dirs`
+    /// report the number of file and directory children of `path`, respectively. Pass zero if you
+    /// don't know. Returns whether an active walk changed (either created or removed).
     pub fn dir_loaded(
         &self,
         path: impl AsRef<RepoPath>,
@@ -264,12 +264,27 @@ impl Detector {
         walk_changed
     }
 
-    /// Observe a "soft" or cached directory access of `path`.
-    /// This will not be tracked as a new walk, but will reset TTL of an existing walk.
-    /// Returns whether path was covered by an active walk.
-    pub fn dir_read(&self, path: impl AsRef<RepoPath>) -> bool {
+    /// Observe a "soft" or cached directory access of `path`. This will not be tracked as a new
+    /// walk, but will reset TTL of an existing walk. `num_files` and `num_dirs` report the number
+    /// of file and directory children of `path`, respectively. Pass zero if you don't know. Returns
+    /// whether path was covered by an active walk.
+    pub fn dir_read(&self, path: impl AsRef<RepoPath>, num_files: usize, num_dirs: usize) -> bool {
         let path = path.as_ref();
-        tracing::trace!(%path, "dir_read");
+        tracing::trace!(%path, num_files, num_dirs, "dir_read");
+
+        // Remember interesting directory metadata, even though directory is being loaded from cache.
+        // It could still be involved in ongoing or future walk activity that involves remote fetches.
+        if interesting_metadata(
+            self.config.walk_threshold,
+            self.config.walk_ratio,
+            Some(num_files),
+            Some(num_dirs),
+        ) {
+            self.inner
+                .write()
+                .set_metadata(&self.config, path, num_files, num_dirs);
+        }
+
         self.mark_read(path, WalkType::Directory, false).is_some()
     }
 

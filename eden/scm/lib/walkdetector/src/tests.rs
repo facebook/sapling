@@ -619,7 +619,7 @@ fn test_touched() {
         MockClock::advance(Duration::from_secs(1));
 
         assert!(detector.file_read(p("dir1/c")));
-        assert!(detector.dir_read(p("dir2/c")));
+        assert!(detector.dir_read(p("dir2/c"), 0, 0));
     }
 
     detector.file_loaded(p("something/else"));
@@ -656,7 +656,7 @@ fn test_counters() {
     detector.dir_loaded(p("dir1/dir1_1"), 0, 0);
     detector.dir_loaded(p("dir1/dir1_2"), 0, 0);
     detector.dir_loaded(p("dir1/dir1_2"), 0, 0);
-    detector.dir_read(p("dir1/dir1_2"));
+    detector.dir_read(p("dir1/dir1_2"), 0, 0);
     assert_eq!(
         get_counters(p("dir1"), WalkType::Directory),
         (0, 0, 0, 3, 1)
@@ -844,23 +844,25 @@ fn test_important_metadata() {
     detector.set_walk_threshold(TEST_WALK_THRESHOLD);
     detector.set_walk_ratio(0.1);
 
-    detector.dir_loaded(p("big"), 1000, 1000);
+    detector.dir_loaded(p("big_remote"), 1000, 1000);
+    detector.dir_read(p("big_cached"), 1000, 1000);
 
+    // Trigger a GC.
     MockClock::advance(Duration::from_secs(60));
-
     assert!(detector.file_walks().is_empty());
-    detector.dir_read(p("big"));
 
     // Make sure we remembered the important metadata.
-    assert_eq!(
-        detector
-            .inner
-            .read()
-            .node
-            .get_node(&p("big"))
-            .unwrap()
-            .total_dirs
-            .unwrap(),
-        1000
-    );
+    for dir in ["big_remote", "big_cached"] {
+        assert_eq!(
+            detector
+                .inner
+                .read()
+                .node
+                .get_node(&p(dir))
+                .unwrap()
+                .total_dirs
+                .unwrap(),
+            1000
+        );
+    }
 }
