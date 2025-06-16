@@ -17,6 +17,7 @@ use crate::AtomicInstant;
 use crate::Config;
 use crate::Walk;
 use crate::WalkType;
+use crate::important_metadata;
 use crate::interesting_metadata;
 use crate::walk_threshold;
 
@@ -160,7 +161,7 @@ impl WalkNode {
             None => {
                 // Perform a JIT "light" GC.
                 if self.expired() {
-                    self.clear_except_children();
+                    self.clear_except_children(config);
                 }
                 (self, dir)
             }
@@ -190,7 +191,7 @@ impl WalkNode {
             None => {
                 // Perform a JIT "light" GC.
                 if self.expired() {
-                    self.clear_except_children();
+                    self.clear_except_children(config);
                 }
                 self
             }
@@ -514,9 +515,13 @@ impl WalkNode {
 
     /// Delete nodes not accessed within timeout.
     /// Returns (nodes_deleted, nodes_remaining, walks_deleted).
-    pub(crate) fn gc(&mut self) -> (usize, usize, usize) {
+    pub(crate) fn gc(&mut self, config: &Config) -> (usize, usize, usize) {
         // Return (nodes_deleted, nodes_remaining, walks_deleted, keep_me)
-        fn inner(path: &mut RepoPathBuf, node: &mut WalkNode) -> (usize, usize, usize, bool) {
+        fn inner(
+            config: &Config,
+            path: &mut RepoPathBuf,
+            node: &mut WalkNode,
+        ) -> (usize, usize, usize, bool) {
             let mut walks_removed = 0;
             let mut deleted = 0;
             let mut retained = 0;
@@ -524,7 +529,7 @@ impl WalkNode {
             node.children.retain(|name, child| {
                 path.push(name);
 
-                let (d, r, w, keep) = inner(path, child);
+                let (d, r, w, keep) = inner(config, path, child);
 
                 deleted += d;
                 retained += r;
@@ -541,7 +546,13 @@ impl WalkNode {
 
             let expired = node.expired();
 
-            let keep_me = !expired || !node.children.is_empty();
+            let important_metadata = important_metadata(
+                config.walk_threshold,
+                config.walk_ratio,
+                node.total_files,
+                node.total_dirs,
+            );
+            let keep_me = !expired || !node.children.is_empty() || important_metadata;
             let has_walk = node.has_walk();
 
             if expired && has_walk {
@@ -551,7 +562,7 @@ impl WalkNode {
 
             if expired && keep_me {
                 tracing::trace!(%path, has_walk, "GCing node with children");
-                node.clear_except_children();
+                node.clear_except_children(config);
             }
 
             if keep_me {
@@ -564,7 +575,7 @@ impl WalkNode {
         }
 
         let (mut deleted, remaining, mut walks_deleted, keep_me) =
-            inner(&mut RepoPathBuf::new(), self);
+            inner(config, &mut RepoPathBuf::new(), self);
         if !keep_me {
             // We don't actually delete the root node, so take one off.
             deleted -= 1;
@@ -581,7 +592,7 @@ impl WalkNode {
             }
 
             // At top level we have no parent to remove us, so just unset our fields.
-            self.clear_except_children();
+            self.clear_except_children(config);
         }
 
         (deleted, remaining, walks_deleted)
@@ -598,15 +609,24 @@ impl WalkNode {
     }
 
     // Clear all fields except children.
-    fn clear_except_children(&mut self) {
+    fn clear_except_children(&mut self, config: &Config) {
         self.file_walk.take();
         self.dir_walk.take();
         self.last_access.reset();
         self.advanced_file_children.clear();
         self.advanced_dir_children.clear();
-        self.total_files.take();
-        self.total_dirs.take();
         self.seen_files.clear();
+
+        // Retain important metadata indefinintely.
+        if !important_metadata(
+            config.walk_threshold,
+            config.walk_ratio,
+            self.total_files,
+            self.total_dirs,
+        ) {
+            self.total_files.take();
+            self.total_dirs.take();
+        }
     }
 
     // NB: does not check if self.expired(), so caller must check if appropriate.

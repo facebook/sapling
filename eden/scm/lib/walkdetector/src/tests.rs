@@ -518,7 +518,8 @@ fn test_gc_stats() {
     detector.file_loaded(p("dir3/dir4/b"));
 
     // Manually run GC to check stats.
-    let (nodes_removed, nodes_remaining, walks_removed) = detector.inner.write().node.gc();
+    let (nodes_removed, nodes_remaining, walks_removed) =
+        detector.inner.write().node.gc(&Default::default());
 
     // "dir1" and "dir2"
     assert_eq!(nodes_removed, 2);
@@ -835,4 +836,31 @@ fn test_split_off_child_walk() {
     // No matter how much we see at depth=3, we won't advance the root walk since all advancements are under a single child "big".
     // But if we break off a separate walk for "big", then it can deepen on its own.
     assert_eq!(detector.file_walks(), vec![(p(""), 3), (p("big"), 3)]);
+}
+
+#[test]
+fn test_important_metadata() {
+    let mut detector = Detector::new();
+    detector.set_walk_threshold(TEST_WALK_THRESHOLD);
+    detector.set_walk_ratio(0.1);
+
+    detector.dir_loaded(p("big"), 1000, 1000);
+
+    MockClock::advance(Duration::from_secs(60));
+
+    assert!(detector.file_walks().is_empty());
+    detector.dir_read(p("big"));
+
+    // Make sure we remembered the important metadata.
+    assert_eq!(
+        detector
+            .inner
+            .read()
+            .node
+            .get_node(&p("big"))
+            .unwrap()
+            .total_dirs
+            .unwrap(),
+        1000
+    );
 }

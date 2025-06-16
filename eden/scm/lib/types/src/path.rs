@@ -214,7 +214,7 @@ impl RepoPathBuf {
         self.append(&path.as_ref().0);
     }
 
-    /// Removed the last component from the `RepoPathBuf`, returning whether self was empty.
+    /// Removed the last component from the `RepoPathBuf`, returning false if self was empty.
     pub fn pop(&mut self) -> bool {
         if self.0.is_empty() {
             return false;

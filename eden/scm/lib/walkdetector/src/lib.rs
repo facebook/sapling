@@ -332,16 +332,32 @@ fn interesting_metadata(
     // "interesting" means the directory size metadata might influence our walk detection decisions.
     // Basically, we care about very small or very large directories.
 
-    // Work backwards from walk threshold and walk ratio to calculate what size of directory would
-    // start to increase our walk threshold (due to the walk ratio).
-    let big_dir_threshold: usize = (threshold as f64 / walk_ratio) as usize;
+    if important_metadata(threshold, walk_ratio, num_files, num_dirs) {
+        return true;
+    }
 
     // We don't care about empty directories because we will never see "activity" for an empty
     // directory, so probably won't ever make use of the size hint. Marking empty directories as
     // "not interesting" significantly reduces the number of nodes we create during big walks.
-    num_dirs.is_some_and(|dirs| dirs > 0 && dirs < threshold || dirs >= big_dir_threshold)
-        || num_files
-            .is_some_and(|files| files > 0 && files < threshold || files > big_dir_threshold)
+    num_dirs.is_some_and(|dirs| dirs > 0 && dirs < threshold)
+        || num_files.is_some_and(|files| files > 0 && files < threshold)
+}
+
+fn important_metadata(
+    threshold: usize,
+    walk_ratio: f64,
+    num_files: Option<usize>,
+    num_dirs: Option<usize>,
+) -> bool {
+    // "important" means the directory size metadata should be retained indefinitely.
+    // Basically, we really care about very large directories.
+
+    // Work backwards from walk threshold and walk ratio to calculate what size of directory would
+    // start to increase our walk threshold (due to the walk ratio).
+    let big_dir_threshold: usize = (threshold as f64 / walk_ratio) as usize;
+
+    num_dirs.is_some_and(|dirs| dirs >= big_dir_threshold)
+        || num_files.is_some_and(|files| files > big_dir_threshold)
 }
 
 impl Inner {
@@ -567,7 +583,7 @@ impl Inner {
 
         let start = std::time::Instant::now();
 
-        let (deleted_nodes, remaining_nodes, deleted_walks) = self.node.gc();
+        let (deleted_nodes, remaining_nodes, deleted_walks) = self.node.gc(config);
 
         let elapsed = start.elapsed();
 
