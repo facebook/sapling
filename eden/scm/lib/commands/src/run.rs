@@ -127,7 +127,7 @@ pub fn run_command(args: Vec<String>, io: &IO) -> i32 {
     // Do important finalization tasks (even when ctrl-C'd).
     setup_atexit(start_time);
 
-    setup_ctrlc();
+    let exiting_via_signal = setup_ctrlc();
 
     let scenario = failpoint::setup_fail_points();
     constructors::init();
@@ -176,13 +176,20 @@ pub fn run_command(args: Vec<String>, io: &IO) -> i32 {
 
                 sampling::init(dispatcher.config());
 
-                dispatch_command(io, dispatcher, cwd, Arc::downgrade(&in_scope), start_time)
+                dispatch_command(
+                    io,
+                    dispatcher,
+                    cwd,
+                    Arc::downgrade(&in_scope),
+                    start_time,
+                    exiting_via_signal,
+                )
             }
             Err(err) => {
                 errors::print_error(
                     &err,
                     io,
-                    global_opts.as_ref().map_or(true, |opts| opts.traceback),
+                    global_opts.as_ref().is_none_or(|opts| opts.traceback),
                 );
                 255
             }
@@ -214,6 +221,7 @@ fn dispatch_command(
     cwd: PathBuf,
     in_scope: Weak<()>,
     start_time: StartTime,
+    exiting_via_signal: Arc<AtomicBool>,
 ) -> i32 {
     log_repo_path_and_exe_version(dispatcher.repo());
 
@@ -319,6 +327,16 @@ fn dispatch_command(
                     already_ran_pre_hooks,
                 )
             } else {
+                if exiting_via_signal.load(Ordering::Acquire) {
+                    // If were were interrupted (e.g. SIGINT), atexit handlers running async in
+                    // another thread could interfere with the normal command execution (e.g.
+                    // cleaning up repo directory during clone). Give the signal handler thread a
+                    // chance to finish cleaning up and exit before we show the user a potentially
+                    // confusing "abort: ..." error from the command.
+                    tracing::warn!(?err, "ignoring command error because we were interrupted");
+                    std::thread::sleep(Duration::from_secs(5));
+                }
+
                 errors::print_error(&err, io, dispatcher.global_opts().traceback);
                 errors::upload_traceback(&err, start_time.epoch_ms());
                 255
@@ -1020,7 +1038,8 @@ fn setup_atexit(start_time: StartTime) {
     .queued();
 }
 
-fn setup_ctrlc() {
+/// Returns bool whether the async ctlrc handler has started (i.e. we are probably exiting soon).
+fn setup_ctrlc() -> Arc<AtomicBool> {
     // ctrlc with the "termination" feature would register SIGINT, SIGTERM and
     // SIGHUP handlers.
     //
@@ -1031,7 +1050,12 @@ fn setup_ctrlc() {
     // - Rust: debugracyoutput
     // - Pager, block on `write`: log --pager=always
     // - Pager, block on `wait`: log -r . --pager=always --config pager.interface=full
-    let _ = ctrlc::set_handler(|| {
+
+    let exiting = Arc::new(AtomicBool::new(false));
+    let exiting_copy = exiting.clone();
+    let _ = ctrlc::set_handler(move || {
+        exiting_copy.store(true, Ordering::Release);
+
         // Minimal cleanup then just exit. Our main storage (indexedlog,
         // metalog) is SIGKILL-safe, if "finally" (Python) or "Drop" (Rust) does
         // not run, it won't corrupt the repo data.
@@ -1062,6 +1086,8 @@ fn setup_ctrlc() {
         // "exit" tries to call "Drop"s but we don't rely on "Drop" for data integrity.
         std::process::exit(128 | libc::SIGINT);
     });
+
+    exiting
 }
 
 fn setup_nodeipc() {
