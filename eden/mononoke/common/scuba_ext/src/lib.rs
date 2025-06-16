@@ -139,6 +139,20 @@ impl MononokeScubaSampleBuilder {
             .add("client_entry_point", client_info.entry_point.to_string());
         self.inner
             .add("client_correlator", client_info.correlator.as_str());
+
+        // For context, see D76728908 or https://fburl.com/workplace/et4ezqp3.
+        let disable_xdb_blobstore_reads = justknobs::eval(
+            "scm/mononoke:disable_blobstore_reads",
+            Some(client_info.correlator.as_str()),
+            Some("3"), // XDB blobstore ID
+        )
+        .ok();
+
+        if let Some(disable_xdb_blobstore_reads) = disable_xdb_blobstore_reads {
+            self.inner
+                .add("disable_xdb_blobstore_reads", disable_xdb_blobstore_reads);
+        }
+
         self
     }
 

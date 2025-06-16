@@ -840,14 +840,18 @@ pub(crate) fn inner_multi_get<'a>(
     scuba: &Scuba,
     counter: Arc<AtomicU64>,
 ) -> FuturesUnordered<impl Future<Output = GetResult> + use<'a>> {
+    let client_correlator = ctx
+        .metadata()
+        .client_info()
+        .and_then(|ci| ci.request_info.as_ref().map(|cri| cri.correlator.as_str()));
     let get_futs: FuturesUnordered<_> = blobstores
         .iter()
         .filter(|(_bs, bs_id_str)| {
             // If the blobstore is temporarily disabled, don't create a future for it.
             !justknobs::eval(
                 "scm/mononoke:disable_blobstore_reads",
-                None,
-                Some(&bs_id_str),
+                client_correlator,
+                Some(bs_id_str),
             )
             .unwrap_or(false)
         })
