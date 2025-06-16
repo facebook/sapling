@@ -258,19 +258,15 @@ archivers = {
 }
 
 
-def archive(repo, dest, node, kind, matchfn=None, prefix="", mtime=None):
+def archive(repo, dest, ctx, kind, matchfn=None, prefix="", mtime=None):
     """create archive of repo as it was at node.
 
-    dest can be name of directory, name of archive file, or file
+    - 'dest' can be name of directory, name of archive file, or file
     object to write archive to.
-
-    kind is type of archive to create.
-
-    matchfn is function to filter names of files to write to archive.
-
-    prefix is name of path to put before every archive member.
-
-    mtime is the modified time, in seconds, or None to use the changeset time.
+    - 'kind' is type of archive to create.
+    - 'matchfn' is function to filter names of files to write to archive.
+    - 'prefix' is name of path to put before every archive member.
+    - 'mtime' is the modified time, in seconds, or None to use the changeset time.
     """
 
     if kind == "files":
@@ -286,7 +282,6 @@ def archive(repo, dest, node, kind, matchfn=None, prefix="", mtime=None):
     if kind not in archivers:
         raise error.Abort(_("unknown archive type '%s'") % kind)
 
-    ctx = repo[node]
     archiver = archivers[kind](dest, mtime or ctx.date()[0])
 
     if repo.ui.configbool("ui", "archivemeta"):
@@ -299,9 +294,12 @@ def archive(repo, dest, node, kind, matchfn=None, prefix="", mtime=None):
     if total:
         files.sort()
         with progress.bar(repo.ui, _("archiving"), _("files"), total) as prog:
+            ma = ctx.manifest()
             for i, f in enumerate(files, 1):
+                dest_files = ma.graftedpaths(f) or [f]
                 ff = ctx.flags(f)
-                write(f, "x" in ff and 0o755 or 0o644, "l" in ff, ctx[f].data)
+                for dest_f in dest_files:
+                    write(dest_f, "x" in ff and 0o755 or 0o644, "l" in ff, ctx[f].data)
                 prog.value = (i, f)
 
     if total == 0:

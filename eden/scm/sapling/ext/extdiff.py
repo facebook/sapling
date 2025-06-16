@@ -111,8 +111,9 @@ def snapshot(ui, repo, files, node, tmproot):
     if files:
         repo.ui.setconfig("ui", "archivemeta", False)
 
+        ctx = repo[node]
         archival.archive(
-            repo, base, node, "files", matchfn=scmutil.matchfiles(repo, files)
+            repo, base, ctx, "files", matchfn=scmutil.matchfiles(repo, files)
         )
 
         for fn in sorted(files):

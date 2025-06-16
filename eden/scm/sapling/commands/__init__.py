@@ -619,7 +619,7 @@ def archive(ui, repo, dest, **opts):
                 "requires an explicit set of files to be archived"
             )
         )
-    archival.archive(repo, dest, node, kind, match, prefix)
+    archival.archive(repo, dest, ctx, kind, match, prefix)
 
 
 @command(
