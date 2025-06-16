@@ -595,13 +595,14 @@ pub async fn process_bookmark_update_log_entry(
         ))
         .await?;
 
-    bul_util::update_remaining_moves(
-        entry.id,
-        repo_name.clone(),
-        ctx.clone(),
-        repo.bookmark_update_log_arc(),
-    )
-    .await?;
+    // FIXME(acampi) Temporarily disable to fix stuck sync: https://fb.workplace.com/groups/1708850869939124/permalink/1994176751406533/
+    // bul_util::update_remaining_moves(
+    //     entry.id,
+    //     repo_name.clone(),
+    //     ctx.clone(),
+    //     repo.bookmark_update_log_arc(),
+    // )
+    // .await?;
 
     Ok(())
 }
