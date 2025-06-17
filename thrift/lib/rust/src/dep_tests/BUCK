@@ -1,0 +1,90 @@
+load("@fbcode_macros//build_defs:thrift_library.bzl", "thrift_library")
+load(
+    "@fbsource//xplat/thrift:defs.bzl",
+    "thrift_cxx_unittest",
+    "thrift_rust_unittest",
+)
+
+oncall("rust_foundation")
+
+thrift_library(
+    name = "test_if",
+    languages = [
+        "rust",
+        "cpp2",
+    ],
+    rust_autocargo = {"cargo_toml_dir": "cargo_thrift"},
+    thrift_cpp2_options = [
+        "json",
+    ],
+    thrift_rust_options = [
+        "deprecated_default_enum_min_i32",
+        "serde",
+    ],
+    thrift_srcs = {
+        "test_thrift.thrift": [],
+    },
+    deps = [
+        "//thrift/annotation:rust",
+        "//thrift/annotation:thrift",
+    ],
+)
+
+thrift_library(
+    name = "test_deprecated_optional_with_default_is_some_if",
+    languages = [
+        "rust",
+        "cpp2",
+    ],
+    rust_autocargo = {"cargo_toml_dir": "cargo_thrift_optdef"},
+    thrift_rust_options = [
+        "deprecated_optional_with_default_is_some",
+    ],
+    thrift_srcs = {
+        "test_deprecated_optional_with_default_is_some.thrift": [],
+    },
+)
+
+thrift_library(
+    name = "test_competing_defaults_if",
+    languages = [
+        "rust",
+        "cpp2",
+    ],
+    rust_autocargo = {"cargo_toml_dir": "cargo_thrift_comdef"},
+    thrift_srcs = {
+        "test_competing_defaults.thrift": [],
+    },
+)
+
+thrift_rust_unittest(
+    name = "fbthrift_test",
+    srcs = glob(["*.rs"]),
+    deps = [
+        "fbsource//third-party/rust:anyhow",
+        "fbsource//third-party/rust:approx",
+        "fbsource//third-party/rust:proptest",
+        "fbsource//third-party/rust:rstest",
+        "fbsource//third-party/rust:serde_json",
+        ":test_competing_defaults_if-rust",
+        ":test_deprecated_optional_with_default_is_some_if-rust",
+        ":test_if-rust",
+        ":test_if-rust-clients",
+        "//thrift/lib/rust:fbthrift",
+    ],
+)
+
+thrift_cxx_unittest(
+    name = "cpp_compat_test",
+    srcs = [
+        "cpp_compat_test.cpp",
+    ],
+    deps = [
+        "fbcode//common/gtest:gtest",
+        "fbcode//thrift/lib/cpp/util:enum_utils",
+        "fbcode//thrift/lib/cpp2/protocol:protocol",
+        "fbcode//thrift/lib/rust/src/dep_tests:test_if-cpp2-types",
+        "fbsource//third-party/googletest:gmock",
+        "fbsource//third-party/googletest:gtest",
+    ],
+)

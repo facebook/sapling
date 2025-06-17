@@ -1,0 +1,29 @@
+# (c) Meta Platforms, Inc. and affiliates. Confidential and proprietary.
+
+load("@fbsource//xplat/thrift:defs.bzl", "thrift_rust_library")
+
+oncall("rust_foundation")
+
+thrift_rust_library(
+    name = "fbthrift_conformance",
+    srcs = glob(
+        [
+            "src/*.rs",
+        ],
+    ),
+    allow_oss_build = False,
+    test_deps = [
+        "fbsource//third-party/rust:anyhow",
+        "fbsource//third-party/rust:maplit",
+        "//thrift/test/testset:testset-rust",
+    ],
+    deps = [
+        "fbsource//third-party/rust:anyhow",
+        "fbsource//third-party/rust:hex",
+        "fbsource//third-party/rust:itertools",
+        "//thrift/conformance/if:any-rust",
+        "//thrift/conformance/if:protocol-rust",
+        "//thrift/lib/rust:fbthrift",
+        "//thrift/lib/rust/universal_name:universal_name",
+    ],
+)

@@ -1,0 +1,57 @@
+load("@fbcode_macros//build_defs:rust_binary.bzl", "rust_binary")
+load("@fbcode_macros//build_defs:rust_library.bzl", "rust_library")
+
+oncall("autocargo")
+
+rust_library(
+    name = "tokio-uds-compat",
+    srcs = glob(["src/**/*.rs"]),
+    autocargo = {
+        "cargo_toml_config": {
+            "example": [
+                {
+                    "name": "server",
+                    "path": "examples/server.rs",
+                },
+            ],
+            "extra_buck_dependencies": {
+                "dev-dependencies": [
+                    "fbsource//third-party/rust:futures",
+                ],
+            },
+            "package": {
+                "description": "Provides a compatibile layer for using UNIX domain socket on UNIX-like systems and Windows with tokio",
+                "name": "tokio-uds-compat",
+            },
+        },
+    },
+    crate = "tokio-uds-compat",
+    os_deps = [
+        (
+            "windows",
+            [
+                "fbsource//third-party/rust:async-io",
+                "fbsource//third-party/rust:futures",
+                "fbsource//third-party/rust:uds_windows",
+                "fbsource//third-party/rust:tracing",
+            ],
+        ),
+    ],
+    deps = [
+        "fbsource//third-party/rust:tokio",
+    ],
+)
+
+rust_binary(
+    name = "example_server",
+    srcs = ["examples/server.rs"],
+    autocargo = {
+        "ignore_rule": True,
+    },
+    crate_root = "examples/server.rs",
+    deps = [
+        "fbsource//third-party/rust:futures",
+        "fbsource//third-party/rust:tokio",
+        ":tokio-uds-compat",
+    ],
+)

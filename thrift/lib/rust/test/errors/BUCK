@@ -1,0 +1,40 @@
+load("@fbcode_macros//build_defs:thrift_library.bzl", "thrift_library")
+load("@fbsource//tools/build_defs:fbsource_utils.bzl", "is_xplat")
+load(
+    "@fbsource//xplat/thrift:defs.bzl",
+    "thrift_ci_hint",
+    "thrift_rust_unittest",
+)
+
+oncall("rust_foundation")
+
+# buildifier: disable=no-effect
+thrift_library(
+    name = "thrift_test",
+    languages = ["rust"],
+    thrift_rust_options = ["deprecated_default_enum_min_i32"],
+    thrift_srcs = {
+        "test.thrift": [],
+    },
+    deps = [
+        "//thrift/annotation:thrift",
+    ],
+) if not is_xplat() else None
+
+thrift_rust_unittest(
+    name = "test",
+    srcs = ["test.rs"],
+    deps = [
+        "fbsource//third-party/rust:anyhow",
+        "fbsource//third-party/rust:k9",
+        ":thrift_test-rust",
+        ":thrift_test-rust-clients",
+        "//thrift/lib/rust:fbthrift",
+    ],
+)
+
+thrift_ci_hint(
+    ci_srcs = ["fbcode/thrift/compiler/generate/templates/rust/**"],
+    reason = "Test thrift-generated Rust code edge cases",
+    target = "test",
+)

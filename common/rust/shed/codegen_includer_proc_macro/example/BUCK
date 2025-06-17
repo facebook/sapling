@@ -1,0 +1,8 @@
+load("@fbcode_macros//build_defs:native_rules.bzl", "buck_filegroup")
+
+oncall("autocargo")
+
+buck_filegroup(
+    name = "doc_test_out_dir",
+    srcs = ["lib.rs"],
+)

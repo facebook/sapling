@@ -1,0 +1,35 @@
+load("@fbcode_macros//build_defs:rust_binary.bzl", "rust_binary")
+load("@fbcode_macros//build_defs:rust_library.bzl", "rust_library")
+
+oncall("autocargo")
+
+rust_binary(
+    name = "compiler",
+    srcs = ["src/main.rs"],
+    crate_root = "src/main.rs",
+    deps = [
+        "fbsource//third-party/rust:anyhow",
+        "fbsource//third-party/rust:clap",
+        ":lib",
+    ],
+)
+
+rust_library(
+    name = "lib",
+    srcs = ["src/lib.rs"],
+    autocargo = {
+        "cargo_toml_config": {
+            "package": {
+                "description": "Calls fbthrift compiler to produce unified lib.rs from thrift files",
+            },
+        },
+    },
+    crate = "thrift_compiler",
+    deps = [
+        "fbsource//third-party/rust:anyhow",
+        "fbsource//third-party/rust:clap",
+        "fbsource//third-party/rust:dunce",
+        "fbsource//third-party/rust:serde",
+        "fbsource//third-party/rust:which",
+    ],
+)

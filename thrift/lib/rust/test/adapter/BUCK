@@ -1,0 +1,58 @@
+load("@fbcode_macros//build_defs:thrift_library.bzl", "thrift_library")
+load(
+    "@fbsource//xplat/thrift:defs.bzl",
+    "thrift_ci_hint",
+    "thrift_rust_library",
+    "thrift_rust_unittest",
+)
+
+oncall("rust_foundation")
+
+thrift_library(
+    name = "thrift_test",
+    languages = ["rust"],
+    rust_deps = [
+        "fbsource//third-party/rust:anyhow",
+        "fbsource//third-party/rust:bytes",
+        ":adapters",
+        "//thrift/lib/rust:fbthrift",
+    ],
+    rust_include_srcs = [
+        "included_adapters.rs",
+    ],
+    rust_unittests = True,
+    thrift_rust_options = ["deprecated_default_enum_min_i32"],
+    thrift_srcs = {
+        "test.thrift": [],
+    },
+    deps = [
+        "//thrift/annotation:rust",
+        "//thrift/annotation:scope",
+    ],
+)
+
+thrift_rust_library(
+    name = "adapters",
+    srcs = ["lib.rs"],
+    deps = [
+        "fbsource//third-party/rust:anyhow",
+        "//thrift/lib/rust:fbthrift",
+    ],
+)
+
+thrift_rust_unittest(
+    name = "test",
+    srcs = ["test.rs"],
+    deps = [
+        "fbsource//third-party/rust:anyhow",
+        ":adapters",
+        ":thrift_test-rust",
+        "//thrift/lib/rust:fbthrift",
+    ],
+)
+
+thrift_ci_hint(
+    ci_srcs = ["fbcode/thrift/compiler/generate/templates/rust/**"],
+    reason = "Test thrift-generated Rust code edge cases",
+    target = "thrift_test-rust-unittest",
+)

@@ -1,0 +1,19 @@
+load("@fbcode_macros//build_defs:rust_library.bzl", "rust_library")
+
+oncall("autocargo")
+
+rust_library(
+    name = "ascii_ext",
+    srcs = ["src/lib.rs"],
+    autocargo = {
+        "cargo_toml_config": {
+            "package": {
+                "description": "ascii crate extensions",
+            },
+        },
+    },
+    deps = [
+        "fbsource//third-party/rust:ascii",
+        "fbsource//third-party/rust:quickcheck",
+    ],
+)

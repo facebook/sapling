@@ -1,0 +1,30 @@
+load("@fbcode_macros//build_defs:rust_binary.bzl", "rust_binary")
+load("@fbcode_macros//build_defs:rust_library.bzl", "rust_library")
+
+oncall("autocargo")
+
+rust_library(
+    name = "quickcheck_arbitrary_derive",
+    srcs = glob([
+        "src/**/*.rs",
+    ]),
+    doc_deps = [
+        "fbsource//third-party/rust:quickcheck",
+    ],
+    proc_macro = True,
+    deps = [
+        "fbsource//third-party/rust:proc-macro2",
+        "fbsource//third-party/rust:quote",
+        "fbsource//third-party/rust:syn",
+    ],
+)
+
+rust_binary(
+    name = "quickcheck_arbitrary_example",
+    srcs = ["examples/example.rs"],
+    crate_root = "examples/example.rs",
+    deps = [
+        "fbsource//third-party/rust:quickcheck",
+        ":quickcheck_arbitrary_derive",
+    ],
+)

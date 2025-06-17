@@ -1,0 +1,43 @@
+load(
+    "@fbsource//xplat/thrift:defs.bzl",
+    "thrift_cxx_library",
+    "thrift_rust_library",
+)
+
+oncall("rust_thrift")
+
+thrift_rust_library(
+    name = "universal_name",
+    srcs = glob(
+        [
+            "src/*.rs",
+        ],
+    ),
+    allow_oss_build = False,
+    cpp_deps = [
+        ":universal-name-cpp",
+    ],
+    crate_root = "src/lib.rs",
+    cxx_bridge = "src/bridge.rs",
+    deps = [
+        "fbsource//third-party/rust:anyhow",
+    ],
+)
+
+thrift_cxx_library(
+    name = "universal-name-cpp",
+    srcs = [
+        "src/UniversalName.cpp",
+    ],
+    headers = [
+        "src/UniversalName.h",
+    ],
+    preferred_linkage = "static",
+    deps = [
+        "//thrift/lib/cpp2/type:universal-name",
+    ],
+    exported_deps = [
+        "fbsource//third-party/rust:cxx-core",
+        "//thrift/lib/cpp2/type:universal-hash-algorithm",
+    ],
+)

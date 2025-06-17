@@ -1,0 +1,40 @@
+load("@fbcode_macros//build_defs:rust_library.bzl", "rust_library")
+load("@fbcode_macros//build_defs:rust_unittest.bzl", "rust_unittest")
+
+oncall("autocargo")
+
+rust_library(
+    name = "codegen_includer_proc_macro",
+    srcs = glob(["src/**/*.rs"]),
+    autocargo = {
+        "cargo_toml_config": {
+            "package": {
+                "build": "build.rs",
+                "description": "Workaround for https://github.com/rust-lang/rfcs/issues/752",
+            },
+        },
+    },
+    crate_root = "src/lib.rs",
+    doc_env = {
+        "OUT_DIR": "$(location //common/rust/shed/codegen_includer_proc_macro/example:doc_test_out_dir)",
+    },
+    proc_macro = True,
+    tests = [
+        ":tests",
+    ],
+    deps = [
+        "fbsource//third-party/rust:quote",
+    ],
+)
+
+rust_unittest(
+    name = "tests",
+    srcs = glob(["tests/**/*.rs"]),
+    crate_root = "tests/main.rs",
+    env = {
+        "OUT_DIR": "tests/fixtures/",
+    },
+    deps = [
+        ":codegen_includer_proc_macro",
+    ],
+)

@@ -1,0 +1,37 @@
+load("@fbcode_macros//build_defs:rust_library.bzl", "rust_library")
+load("@fbcode_macros//build_defs/lib:rust_oss.bzl", "rust_oss")
+
+oncall("autocargo")
+
+rust_library(
+    name = "hostname",
+    srcs = glob(["src/**/*.rs"]),
+    autocargo = {
+        "cargo_toml_config": {
+            "extra_buck_dependencies": {
+                "dependencies": [
+                    ("real_hostname", "fbsource//third-party/rust:hostname"),
+                ],
+            },
+            "lints": {
+                "rust": {
+                    "unexpected_cfgs": {
+                        "check-cfg": ["cfg(fbcode_build)"],
+                        "level": "warn",
+                    },
+                },
+            },
+            "package": {
+                "description": "Crate for getting hostname",
+            },
+        },
+    },
+    named_deps = {} | ({
+        "real_hostname": "fbsource//third-party/rust:hostname",
+    } if rust_oss.is_oss_build() else {}),
+    deps = [
+        "fbsource//third-party/rust:anyhow",
+    ] + ([] if rust_oss.is_oss_build() else [
+        "//common/rust/fbwhoami:fbwhoami",
+    ]),
+)

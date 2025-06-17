@@ -1,0 +1,57 @@
+load("@fbcode_macros//build_defs:rust_library.bzl", "rust_library")
+
+oncall("autocargo")
+
+rust_library(
+    name = "stats",
+    srcs = glob([
+        "src/**/*.rs",
+    ]),
+    autocargo = {
+        "cargo_toml_config": {
+            "lints": {
+                "rust": {
+                    "unexpected_cfgs": {
+                        "check-cfg": ["cfg(fbcode_build)"],
+                        "level": "warn",
+                    },
+                },
+            },
+            "package": {
+                "description": "Stats library",
+            },
+        },
+    },
+    deps = [
+        "fbsource//third-party/rust:futures",
+        "fbsource//third-party/rust:tokio",
+        "fbsource//third-party/rust:tokio-stream",
+        ":stats_traits",
+        "//common/rust/shed/fbinit:fbinit",
+        "//common/rust/shed/perthread:perthread",
+        "//common/rust/shed/stats/facebook:stats_facebook",
+    ],
+)
+
+rust_library(
+    name = "stats_traits",
+    srcs = glob([
+        "traits/**/*.rs",
+    ]),
+    autocargo = {
+        "cargo_toml_config": {
+            "package": {
+                "description": "Traits for stats crate",
+                "homepage": "https://github.com/facebookexperimental/rust-shed/",
+                "readme": "../../README.md",
+                "repository": "https://github.com/facebookexperimental/rust-shed/",
+            },
+        },
+        "cargo_toml_dir": "traits",
+    },
+    deps = [
+        "fbsource//third-party/rust:auto_impl",
+        "fbsource//third-party/rust:dashmap",
+        "//common/rust/shed/fbinit:fbinit",
+    ],
+)

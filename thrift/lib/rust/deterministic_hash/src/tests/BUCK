@@ -1,0 +1,39 @@
+load("@fbcode_macros//build_defs:thrift_library.bzl", "thrift_library")
+load("@fbsource//xplat/thrift:defs.bzl", "thrift_rust_unittest")
+
+oncall("rust_foundation")
+
+thrift_library(
+    name = "teststructs",
+    languages = [
+        "rust",
+        "cpp2",
+    ],
+    rust_deps = [
+        "fbsource//third-party/rust:indexmap",
+        "fbsource//third-party/rust:smallvec",
+    ],
+    thrift_srcs = {
+        "test_structs.thrift": [],
+    },
+)
+
+thrift_rust_unittest(
+    name = "deterministic_accumulator_test",
+    srcs = ["deterministic_accumulator_test.rs"],
+    deps = [
+        "//thrift/lib/rust:fbthrift",
+        "//thrift/lib/rust/deterministic_hash:fbthrift_deterministic_hash",
+    ],
+)
+
+thrift_rust_unittest(
+    name = "deterministic_hash_test",
+    srcs = ["deterministic_hash_test.rs"],
+    deps = [
+        "fbsource//third-party/rust:maplit",
+        ":teststructs-rust",
+        "//thrift/lib/rust:fbthrift",
+        "//thrift/lib/rust/deterministic_hash:fbthrift_deterministic_hash",
+    ],
+)
