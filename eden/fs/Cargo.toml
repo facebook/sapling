@@ -57,6 +57,7 @@ members = [
   "inodes/overlay/clients",
   "inodes/overlay/mocks",
   "inodes/overlay/services",
+  "rust/edenfs-asserted-states",
   "rust/redirect_ffi",
   "service",
   "service/clients",

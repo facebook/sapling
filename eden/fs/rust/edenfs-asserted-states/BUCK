@@ -1,0 +1,16 @@
+load("@fbcode_macros//build_defs:rust_library.bzl", "rust_library")
+
+oncall("scm_client_infra")
+
+rust_library(
+    name = "edenfs-asserted-states",
+    srcs = glob(["src/**/*.rs"]),
+    crate_root = "src/lib.rs",
+    test_deps = [
+        "fbsource//third-party/rust:anyhow",
+        "//common/rust/shed/fbinit:fbinit",
+    ],
+    deps = [
+        "//eden/fs/cli_rs/edenfs-error:edenfs-error",
+    ],
+)
