@@ -15,6 +15,7 @@ use anyhow::Result;
 use anyhow::anyhow;
 use cxx::SharedPtr;
 use cxx::UniquePtr;
+#[cfg(fbcode_build)]
 use iobuf::IOBuf;
 use storemodel::FileAuxData as ScmStoreFileAuxData;
 use types::FetchContext;
@@ -118,6 +119,7 @@ pub(crate) mod ffi {
     unsafe extern "C++" {
         include!("eden/scm/lib/backingstore/include/ffi.h");
 
+        #[cfg(fbcode_build)]
         #[namespace = "folly"]
         type IOBuf = iobuf::IOBuf;
 
@@ -140,6 +142,7 @@ pub(crate) mod ffi {
             tree: SharedPtr<TreeAuxData>,
         );
 
+        #[cfg(fbcode_build)]
         unsafe fn sapling_backingstore_get_blob_batch_handler(
             resolve_state: SharedPtr<GetBlobBatchResolver>,
             index: usize,
@@ -193,12 +196,14 @@ pub(crate) mod ffi {
             resolver: SharedPtr<GetTreeAuxBatchResolver>,
         );
 
+        #[cfg(fbcode_build)]
         pub fn sapling_backingstore_get_blob(
             store: &BackingStore,
             node: &[u8],
             fetch_mode: FetchMode,
         ) -> Result<UniquePtr<IOBuf>>;
 
+        #[cfg(fbcode_build)]
         pub fn sapling_backingstore_get_blob_batch(
             store: &BackingStore,
             requests: &[Request],
@@ -430,6 +435,7 @@ pub fn sapling_backingstore_get_tree_aux_batch(
     );
 }
 
+#[cfg(fbcode_build)]
 pub fn sapling_backingstore_get_blob(
     store: &BackingStore,
     node: &[u8],
@@ -445,6 +451,7 @@ pub fn sapling_backingstore_get_blob(
     }
 }
 
+#[cfg(fbcode_build)]
 pub fn sapling_backingstore_get_blob_batch(
     store: &BackingStore,
     requests: &[ffi::Request],
