@@ -1,0 +1,15 @@
+load("@fbcode_macros//build_defs:rust_library.bzl", "rust_library")
+
+oncall("autocargo")
+
+rust_library(
+    name = "cloned",
+    srcs = glob(["src/**/*.rs"]),
+    autocargo = {
+        "cargo_toml_config": {
+            "package": {
+                "description": "Cloned macro",
+            },
+        },
+    },
+)

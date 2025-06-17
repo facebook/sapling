@@ -1,0 +1,33 @@
+load("@fbcode_macros//build_defs:rust_binary.bzl", "rust_binary")
+load("@fbcode_macros//build_defs:rust_library.bzl", "rust_library")
+
+oncall("autocargo")
+
+rust_library(
+    name = "futures_stats",
+    srcs = glob(["src/**/*.rs"]),
+    autocargo = {
+        "cargo_toml_config": {
+            "package": {
+                "description": "Stats extension to futures crate",
+            },
+        },
+    },
+    test_deps = [
+        "fbsource//third-party/rust:tokio",
+    ],
+    deps = [
+        "fbsource//third-party/rust:futures",
+        "//common/rust/shed/futures_ext:futures_ext",
+    ],
+)
+
+rust_binary(
+    name = "futures_stats_test",
+    srcs = glob(["test/**/*.rs"]),
+    deps = [
+        "fbsource//third-party/rust:futures",
+        "fbsource//third-party/rust:tokio",
+        ":futures_stats",
+    ],
+)

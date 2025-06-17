@@ -1,0 +1,88 @@
+load("@fbcode_macros//build_defs:thrift_library.bzl", "thrift_library")
+load(
+    "@fbsource//xplat/thrift:defs.bzl",
+    "thrift_ci_hint",
+    "thrift_rust_library",
+    "thrift_rust_unittest",
+)
+
+oncall("rust_foundation")
+
+thrift_library(
+    name = "thrift_test",
+    languages = ["rust"],
+    rust_unittests = True,
+    thrift_srcs = {
+        "test.thrift": [],
+    },
+    deps = [
+        ":get_struct_name",
+    ],
+)
+
+thrift_library(
+    name = "get_struct_name",
+    languages = ["rust"],
+    rust_deps = [
+        "fbsource//third-party/rust:anyhow",
+        ":get_struct_name_derive",
+        ":get_struct_name_lib",
+        "//thrift/lib/rust:fbthrift",
+    ],
+    rust_include_srcs = ["include.rs"],
+    rust_unittests = True,
+    thrift_srcs = {
+        "get_struct_name.thrift": [],
+    },
+    deps = [
+        "//thrift/annotation:rust",
+        "//thrift/annotation:scope",
+    ],
+)
+
+thrift_rust_unittest(
+    name = "test",
+    srcs = ["test.rs"],
+    deps = [
+        ":get_struct_name-rust",
+        ":thrift_test-rust",
+    ],
+)
+
+thrift_rust_library(
+    name = "get_struct_name_derive",
+    srcs = ["macro.rs"],
+    crate_root = "macro.rs",
+    proc_macro = True,
+    deps = [
+        "fbsource//third-party/rust:quote",
+        "fbsource//third-party/rust:syn1",
+    ],
+)
+
+thrift_rust_library(
+    name = "get_struct_name_lib",
+    srcs = ["lib.rs"],
+    crate = "get_struct_name",
+    # visibility = [
+    #     ":get_struct_name-rust",
+    # ],
+)
+
+thrift_ci_hint(
+    ci_srcs = ["fbcode/thrift/compiler/generate/templates/rust/**"],
+    reason = "Test thrift-generated Rust code edge cases",
+    target = "thrift_test-rust-unittest",
+)
+
+thrift_ci_hint(
+    ci_srcs = ["fbcode/thrift/compiler/generate/templates/rust/**"],
+    reason = "Test thrift-generated Rust code edge cases",
+    target = "get_struct_name-rust-unittest",
+)
+
+thrift_ci_hint(
+    ci_srcs = ["fbcode/thrift/compiler/generate/templates/rust/**"],
+    reason = "Test thrift-generated Rust code edge cases",
+    target = "test",
+)

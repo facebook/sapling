@@ -1,0 +1,20 @@
+load("@fbcode_macros//build_defs:rust_library.bzl", "rust_library")
+
+oncall("autocargo")
+
+rust_library(
+    name = "shared_error",
+    srcs = glob(["src/**/*.rs"]),
+    autocargo = {
+        "cargo_toml_config": {
+            "package": {
+                "description": "Provides SharedError wrapper for cloneable Error",
+            },
+        },
+    },
+    deps = [
+        "fbsource//third-party/rust:anyhow",
+        "fbsource//third-party/rust:slog",
+        "fbsource//third-party/rust:thiserror",
+    ],
+)

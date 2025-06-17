@@ -1,0 +1,99 @@
+load("@fbcode_macros//build_defs:rust_library.bzl", "rust_library")
+load("@fbcode_macros//build_defs:rust_unittest.bzl", "rust_unittest")
+load("@fbcode_macros//build_defs/lib:rust_oss.bzl", "rust_oss")
+
+oncall("autocargo")
+
+rust_library(
+    name = "fbinit",
+    srcs = glob(["src/**/*.rs"]),
+    autocargo = {
+        "cargo_toml_config": {
+            "extra_buck_dependencies": {
+                "dependencies": [
+                    "fbsource//third-party/rust:quickcheck",
+                ],
+            },
+            "lints": {
+                "rust": {
+                    "unexpected_cfgs": {
+                        "check-cfg": ["cfg(fbcode_build)"],
+                        "level": "warn",
+                    },
+                },
+            },
+            "package": {
+                "description": "Facebook init token",
+                "version": "0.2.0",
+            },
+        },
+    },
+    doc_deps = [
+        "//common/rust/shed/fbinit:fbinit-tokio",
+    ],
+    named_deps = {
+        "real_fbinit": "//common/rust/fbinit:fbinit",
+    },
+    tests = [
+        ":fbinit_test",
+    ],
+    unittests = False,
+    deps = [
+        ":fbinit_macros",
+    ] + ([
+        "fbsource//third-party/rust:quickcheck",
+    ] if rust_oss.is_oss_build() else []),
+)
+
+rust_library(
+    name = "fbinit_macros",
+    srcs = glob(["fbinit_macros/**/*.rs"]),
+    autocargo = {
+        "cargo_toml_config": {
+            "package": {
+                "description": "Facebook init token macros",
+                "readme": "../../../README.md",
+                "version": "0.2.0",
+            },
+        },
+        "cargo_toml_dir": "fbinit_macros",
+    },
+    crate_root = "fbinit_macros/lib.rs",
+    doctests = False,
+    proc_macro = True,
+    unittests = False,
+    deps = [
+        "fbsource//third-party/rust:proc-macro2",
+        "fbsource//third-party/rust:quote",
+        "fbsource//third-party/rust:syn",
+    ],
+)
+
+rust_unittest(
+    name = "fbinit_test",
+    srcs = ["test/fbinit_test.rs"],
+    crate_root = "test/fbinit_test.rs",
+    deps = [
+        ":fbinit",
+        "//common/rust/shed/fbinit:fbinit-tokio",
+    ],
+)
+
+rust_library(
+    name = "fbinit-tokio",
+    srcs = glob(["fbinit-tokio/**/*.rs"]),
+    autocargo = {
+        "cargo_toml_config": {
+            "package": {
+                "name": "fbinit-tokio",
+                "version": "0.1.2",
+            },
+        },
+        "cargo_toml_dir": "fbinit-tokio",
+    },
+    crate = "fbinit_tokio",
+    deps = [
+        "fbsource//third-party/rust:futures",
+        "fbsource//third-party/rust:tokio",
+    ],
+)

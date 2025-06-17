@@ -1,0 +1,28 @@
+load("@fbsource//xplat/thrift:defs.bzl", "thrift_rust_library")
+
+oncall("rust_foundation")
+
+thrift_rust_library(
+    name = "fbthrift_deterministic_hash",
+    srcs = glob(
+        [
+            "src/*.rs",
+            "src/tests/*.rs",
+        ],
+    ),
+    autocargo = {
+        "cargo_toml_config": {
+            "package": {
+                "publish": False,
+                "version": "0.0.1+unstable",
+            },
+        },
+    },
+    crate_root = "src/lib.rs",
+    deps = [
+        "fbsource//third-party/rust:anyhow",
+        "fbsource//third-party/rust:ring",
+        "fbsource//third-party/rust:thiserror",
+        "//thrift/lib/rust:fbthrift",
+    ],
+)

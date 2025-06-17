@@ -1,0 +1,23 @@
+# (c) Meta Platforms, Inc. and affiliates. Confidential and proprietary.
+
+load("@fbcode_macros//build_defs:thrift_library.bzl", "thrift_library")
+
+oncall("icsp_infrastructure")
+
+thrift_library(
+    name = "test_structs",
+    languages = [
+        "rust",
+        "cpp2",
+    ],
+    rust_allow_oss_build = False,
+    rust_deps = [
+        "//thrift/lib/rust/any:any",
+    ],
+    thrift_cpp2_options = ["any"],
+    thrift_rust_options = ["deprecated_default_enum_min_i32"],
+    thrift_srcs = {"test_structs.thrift": []},
+    deps = [
+        "//thrift/annotation:thrift",
+    ],
+)

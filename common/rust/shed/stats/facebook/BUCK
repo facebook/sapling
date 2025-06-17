@@ -1,0 +1,55 @@
+load("@fbcode_macros//build_defs:cpp_library.bzl", "cpp_library")
+load("@fbcode_macros//build_defs:rust_library.bzl", "rust_library")
+load("@fbcode_macros//build_defs:rust_unittest.bzl", "rust_unittest")
+
+oncall("autocargo")
+
+rust_library(
+    name = "stats_facebook",
+    srcs = glob(["src/**/*.rs"]),
+    cpp_deps = [":stats-ffi"],
+    cxx_bridge = "src/ffi.rs",
+    deps = [
+        "fbsource//third-party/rust:cxx",
+        "fbsource//third-party/rust:libc",
+        "//common/rust/shed/fbinit:fbinit",
+        "//common/rust/shed/stats:stats_traits",
+    ],
+)
+
+# stats_facebook-unittest can't have a transient dependency on :stats_facebook
+# in that case symbols defined for 'extern "Rust"' types would be linked to both
+# stats_facebook-unittest and :stats_facebook
+# this would fail on Windows with "duplicate symbol" error during linking
+# the target below was created to accommodate tests that depend on both:
+# //common/rust/shed/stats:stats and :stats_facebook so the effect
+# mentioned above doesn't happen
+rust_unittest(
+    name = "stats_facebook-tests_with_stats",
+    srcs = glob(["test/*.rs"]),
+    crate_root = "test/tests.rs",
+    deps = [
+        "fbsource//third-party/rust:futures",
+        ":stats_facebook",
+        "//common/rust/shed/fbinit:fbinit",
+        "//common/rust/shed/fbinit:fbinit-tokio",
+        "//common/rust/shed/stats:stats",
+        "//common/rust/shed/stats:stats_traits",
+    ],
+)
+
+cpp_library(
+    name = "stats-ffi",
+    srcs = ["stats_sys/stats.cpp"],
+    headers = ["stats_sys/stats.h"],
+    preferred_linkage = "static",
+    undefined_symbols = True,
+    exported_deps = [
+        "fbsource//third-party/rust:cxx-core",
+        ":stats_facebook@header",
+        "//fb303:export_type",
+        "//fb303:service_data",
+        "//fb303:thread_local_stats",
+        "//folly:string",
+    ],
+)

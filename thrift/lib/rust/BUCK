@@ -1,0 +1,60 @@
+# BEWARE:
+# This is a TARGETS<->BUCK dirsync.
+#   - fbcode/thrift/lib/rust/TARGETS
+#   - xplat/thrift/lib/rust/BUCK
+
+load("@fbsource//tools/build_defs:default_platform_defs.bzl", "ANDROID", "APPLE", "CXX", "FBCODE", "WINDOWS")
+load("@fbsource//tools/build_defs:fb_native_wrapper.bzl", "fb_native")
+load("@fbsource//tools/build_defs:fbsource_utils.bzl", "is_arvr_mode", "is_xplat")
+load(":fbthrift_library.bzl", "fbthrift_library")
+
+oncall("thrift")
+
+# In order to avoid potentially bringing both fbcode//thrift/lib/rust:fbthrift
+# and fbsource//xplat/thrift/lib/rust:fbthrift into the same build, the
+# unsuffixed target redirects back to Fbcode. `fb_xplat_cxx_library` and
+# `cpp_library` have a more complex dependency remapping built-in, that does
+# not exist in rust yet.
+#
+# buildifier: disable=no-effect
+fb_native.alias(
+    name = "fbthrift",
+    actual = "fbcode//thrift/lib/rust:fbthrift",
+    visibility = ["PUBLIC"],
+) if is_xplat() else None
+
+# buildifier: disable=duplicated-name
+fbthrift_library(
+    name = "fbthrift",
+    srcs = glob([
+        "src/*.rs",
+        "src/tests/*.rs",
+    ]),
+    autocargo = {
+        "cargo_toml_config": {
+            "package": {
+                "publish": False,
+                "version": "0.0.1+unstable",
+            },
+        },
+    },
+    platforms = (APPLE, ANDROID, WINDOWS, FBCODE),
+    test_deps = ["fbsource//third-party/rust:quickcheck"],
+    visibility = ["PUBLIC"],
+    xplat_preexisting_target_flavors = [CXX],
+    deps = [
+        "fbsource//third-party/rust:anyhow",
+        "fbsource//third-party/rust:async-trait",
+        "fbsource//third-party/rust:base64",
+        "fbsource//third-party/rust:bufsize",
+        "fbsource//third-party/rust:bytes",
+        "fbsource//third-party/rust:futures",
+        "fbsource//third-party/rust:ghost",
+        "fbsource//third-party/rust:num-derive",
+        "fbsource//third-party/rust:num-traits",
+        "fbsource//third-party/rust:ordered-float",
+        "fbsource//third-party/rust:panic-message",
+        "fbsource//third-party/rust:serde_json",
+        "fbsource//third-party/rust:thiserror",
+    ],
+) if not is_xplat() or not is_arvr_mode() else None

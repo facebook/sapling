@@ -1,0 +1,64 @@
+load("@fbcode_macros//build_defs:export_files.bzl", "export_file")
+load("@fbcode_macros//build_defs:thrift_library.bzl", "thrift_library")
+load("//common/automock:automock.bzl", "thrift_plugin_automock")
+load("//common/memory/allocated/thrift:allocated.bzl", "thrift_plugin_allocated")
+load("//unicorn/thrift-plugins/merge_into:merge_into.bzl", "thrift_plugin_merge_into")
+load("//unicorn/thrift-plugins/privacy_proxy:privacy_proxy.bzl", "thrift_plugin_privacy_proxy")
+load("//unicorn/thrift-plugins/subtract_from:subtract_from.bzl", "thrift_plugin_subtract_from")
+
+oncall("thrift")
+
+# The main thrift_library()
+#
+# This automatically generates language-specific rules name "fb303_core-cpp2-*",
+# "fb303_core-py", "fb303_core-php", etc.
+#
+# For example, if you depend on this from a cpp_binary(), you need to list the
+# dependency as "fb303_core-cpp2-services".  However, if you depend on it from
+# another thrift_library() call, you can just use "fb303_core".
+thrift_library(
+    name = "fb303_core",
+    erlang_native_maps = False,
+    java_swift_maven_coords = "com.facebook.thrift:fb303_core-thrift",
+    javadeprecated_maven_coords = "com.facebook:fb303-thrift-fb303_core-java",
+    languages = [
+        "cpp2",
+        "javadeprecated",
+        "java-swift",
+        "py-deprecated",
+        "py3-deprecated",
+        "python",
+        "go",
+        "hs2",
+        "js",
+        "py-deprecated-asyncio",
+        "rust",
+        "erlang",
+    ],
+    plugins = [
+        thrift_plugin_allocated,
+        thrift_plugin_automock,
+        thrift_plugin_merge_into,
+        thrift_plugin_subtract_from,
+        thrift_plugin_privacy_proxy,
+    ],
+    py3_namespace = "",
+    py_asyncio_base_module = "fb303_asyncio",
+    py_base_module = "",
+    thrift_cpp2_options = "frozen2,reflection",
+    thrift_java_swift_options = ["deprecated_allow_leagcy_reflection_client"],
+    thrift_js_options = ["node"],
+    thrift_rust_options = [
+        "deprecated_default_enum_min_i32",
+        "serde",
+    ],
+    thrift_srcs = {"fb303_core.thrift": ["BaseService"]},
+    deps = [
+        "//thrift/annotation:cpp",
+        "//thrift/annotation:thrift",
+    ],
+)
+
+export_file(
+    name = "fb303_core.thrift",
+)

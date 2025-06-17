@@ -1,0 +1,53 @@
+# (c) Meta Platforms, Inc. and affiliates. Confidential and proprietary.
+
+load(
+    "@fbsource//xplat/thrift:defs.bzl",
+    "thrift_cxx_library",
+    "thrift_rust_unittest",
+)
+
+oncall("infra_cloud")
+
+thrift_cxx_library(
+    name = "cpp",
+    srcs = [
+        "src/cpp.cpp",
+    ],
+    headers = [
+        "src/cpp.h",
+    ],
+    deps = [
+        "//thrift/lib/cpp2/protocol:protocol",
+        "//thrift/lib/cpp2/type:any",
+        "//thrift/lib/cpp2/type:name",
+        "//thrift/lib/cpp2/type:runtime",
+        "//thrift/lib/rust/any/tests/if:test_structs-cpp2-types",
+    ],
+    exported_deps = [
+        "fbsource//third-party/rust:cxx",  # @manual
+        "fbsource//third-party/rust:cxx-core",
+    ],
+)
+
+thrift_rust_unittest(
+    name = "tests",
+    srcs = [
+        "src/bridge.rs",
+        "src/compare_with_cpp.rs",
+        "src/lib.rs",
+        "src/simple_tests.rs",
+    ],
+    allow_oss_build = False,
+    cpp_deps = [
+        ":cpp",
+    ],
+    crate_root = "src/lib.rs",
+    cxx_bridge = "src/bridge.rs",
+    deps = [
+        "fbsource//third-party/rust:anyhow",
+        "//thrift/lib/rust:fbthrift",
+        "//thrift/lib/rust/any:any",
+        "//thrift/lib/rust/any/tests/if:test_structs-rust",
+        "//thrift/lib/thrift:any-rust",
+    ],
+)

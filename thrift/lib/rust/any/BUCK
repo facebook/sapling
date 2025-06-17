@@ -1,0 +1,33 @@
+# (c) Meta Platforms, Inc. and affiliates. Confidential and proprietary.
+
+load("@fbsource//tools/build_defs:fbsource_utils.bzl", "is_fbcode")
+load("@fbsource//xplat/thrift:defs.bzl", "thrift_rust_library")
+
+oncall("infra_cloud")
+
+thrift_rust_library(
+    name = "any",
+    srcs = glob(
+        ["src/**/*.rs"],
+    ),
+    allow_oss_build = False,
+    crate = "thrift_any",
+    test_deps = [
+        "fbsource//third-party/rust:base64",
+        "//syx/artifact_builder/if/override:override-rust",
+        "//thrift/lib/rust/any/tests/if:test_structs-rust",
+    ] if is_fbcode() else [],
+    unittests = is_fbcode(),
+    deps = [
+        "fbsource//third-party/rust:anyhow",
+        "fbsource//third-party/rust:thiserror",
+        "fbsource//third-party/rust:zstd",
+        "//thrift/lib/rust:fbthrift",
+        "//thrift/lib/rust/universal_name:universal_name",
+        "//thrift/lib/thrift:any-rep-rust",
+        "//thrift/lib/thrift:any-rust",
+        "//thrift/lib/thrift:standard-rust",
+        "//thrift/lib/thrift:type-rep-rust",
+        "//thrift/lib/thrift:type-rust",
+    ],
+)

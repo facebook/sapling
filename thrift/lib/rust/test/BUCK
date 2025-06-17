@@ -1,0 +1,61 @@
+load("@fbcode_macros//build_defs:rust_binary.bzl", "rust_binary")
+load("@fbcode_macros//build_defs:thrift_library.bzl", "thrift_library")
+load(
+    "@fbsource//xplat/thrift:defs.bzl",
+    "thrift_ci_hint",
+    "thrift_rust_unittest",
+)
+
+oncall("rust_foundation")
+
+thrift_library(
+    name = "if",
+    languages = ["rust"],
+    rust_deps = [
+        "fbsource//third-party/rust:indexmap",
+        "fbsource//third-party/rust:smallvec",
+    ],
+    thrift_rust_options = ["deprecated_default_enum_min_i32"],
+    thrift_srcs = {
+        "if.thrift": [],
+    },
+    deps = [
+        "//thrift/annotation:rust",
+    ],
+)
+
+thrift_rust_unittest(
+    name = "test",
+    srcs = [
+        "test.rs",
+        "test_helper.rs",
+    ],
+    deps = [
+        "fbsource//third-party/rust:bytes",
+        "fbsource//third-party/rust:indexmap",
+        "fbsource//third-party/rust:smallvec",
+        ":if-rust",
+        "//thrift/lib/rust:fbthrift",
+    ],
+)
+
+rust_binary(
+    name = "bench",
+    srcs = [
+        "binary_skip.rs",
+        "test_helper.rs",
+    ],
+    crate_root = "binary_skip.rs",
+    deps = [
+        "fbcode//thrift/lib/rust:fbthrift",
+        "fbsource//third-party/rust:bytes",
+        "fbsource//third-party/rust:criterion",
+        ":if-rust",
+    ],
+)
+
+thrift_ci_hint(
+    ci_srcs = ["fbcode/thrift/compiler/generate/templates/rust/**"],
+    reason = "Test thrift-generated Rust code edge cases",
+    target = "test",
+)
