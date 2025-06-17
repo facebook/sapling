@@ -37,6 +37,7 @@ import importlib.util
 import marshal
 import os
 import sys
+import sysconfig
 
 dirname = os.path.dirname
 
@@ -297,9 +298,14 @@ if sys.version_info < (3, 13):
 
 
 # sys.stdlib_module_names requires Python 3.10
-STDLIB_MODULE_NAMES = (
+STDLIB_MODULE_NAMES = set(
     getattr(sys, "stdlib_module_names", None) or ESSENTIAL_STDLIB_MODULE_NAMES
 )
+
+# sysconfig relies on a special pure module, e.g. "_sysconfigdata__linux_x86_64-linux-gnu"
+# used by sysconfig.get_config_vars -> _init_config_vars -> _init_posix -> _generate_posix_vars
+if os.name != "nt":
+    STDLIB_MODULE_NAMES.add(sysconfig._get_sysconfigdata_name())
 
 
 def main():
