@@ -606,7 +606,7 @@ async fn check_addless_union_conflicts<R: MononokeRepo>(
                         let path = current_path.join_element(Some(&path_element));
                         let fix_exists = fix_paths
                             .get(&path)
-                            .map_or(false, CreateChangeType::is_modification);
+                            .is_some_and(CreateChangeType::is_modification);
                         let conflict_exists =
                             contents.len() > 1 || trees.contains_key(&path_element);
                         if !fix_exists && conflict_exists {
@@ -624,7 +624,7 @@ async fn check_addless_union_conflicts<R: MononokeRepo>(
                         let path = current_path.join_element(Some(&path_element));
                         let fix_exists = fix_paths
                             .get(&path)
-                            .map_or(false, CreateChangeType::is_modification);
+                            .is_some_and(CreateChangeType::is_modification);
 
                         if !fix_exists && fsnodes.len() > 1 {
                             Some((fsnodes.into_iter().collect(), path))

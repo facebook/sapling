@@ -1627,9 +1627,9 @@ impl<R: MononokeRepo> RepoContext<R> {
     /// Setting exact to true will return result only if there's exact match for the requested
     /// commit - rather than commit with equivalent working copy (which happens in case the source
     /// commit rewrites to nothing in target repo).
-    pub async fn xrepo_commit_lookup<'a, 'b>(
-        &'a self,
-        other: &'a Self,
+    pub async fn xrepo_commit_lookup(
+        &self,
+        other: &Self,
         specifier: impl Into<ChangesetSpecifier>,
         maybe_candidate_selection_hint_args: Option<CandidateSelectionHintArgs>,
         sync_behaviour: XRepoLookupSyncBehaviour,
@@ -1645,7 +1645,7 @@ impl<R: MononokeRepo> RepoContext<R> {
         let (_small_repo, _large_repo) =
             get_small_and_large_repos(self.repo.as_ref(), other.repo.as_ref())?;
 
-        let repo_provider: RepoProvider<'a, R> = Arc::new(move |repo_id| {
+        let repo_provider: RepoProvider<'_, R> = Arc::new(move |repo_id| {
             Box::pin({
                 let repos = self.repos.clone();
 

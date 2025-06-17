@@ -854,7 +854,7 @@ impl<R: MononokeRepo> ChangesetContext<R> {
     ) -> Result<Vec<ChangesetPathDiffContext<R>>, MononokeError> {
         // Helper to that checks if a path is within the givien path restrictions
         fn within_restrictions(path: &MPath, path_restrictions: &Option<Vec<MPath>>) -> bool {
-            path_restrictions.as_ref().map_or(true, |i| {
+            path_restrictions.as_ref().is_none_or(|i| {
                 i.iter()
                     .any(|path_restriction| path.is_related_to(path_restriction))
             })
