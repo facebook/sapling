@@ -481,7 +481,7 @@ impl TreeStore {
 
                             tracing::trace!(?key, ?entry, "found tree aux entry in cache");
                             if cas_client.is_some() {
-                                tracing::trace!(target: "cas", ?key, ?entry, "found tree aux data");
+                                tracing::trace!(target: "cas_client", ?key, ?entry, "found tree aux data");
                             }
                             state.common.found(
                                 key.clone(),

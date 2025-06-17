@@ -93,11 +93,11 @@ pub fn init() {
     fn construct(config: &dyn Config) -> Result<Option<Arc<dyn CasClient>>> {
         // Kill switch in case something unexpected happens during construction of client.
         if config.get_or_default("cas", "disable")? {
-            tracing::warn!(target: "cas", "disabled (cas.disable=true)");
+            tracing::warn!(target: "cas_client", "disabled (cas.disable=true)");
             return Ok(None);
         }
 
-        tracing::debug!(target: "cas", "creating rich client");
+        tracing::debug!(target: "cas_client", "creating rich client");
         RichCasClient::from_config(config).map(|c| c.map(|c| Arc::new(c) as Arc<dyn CasClient>))
     }
     factory::register_constructor("rich-client", construct);
@@ -108,14 +108,15 @@ impl RichCasClient {
         let use_case: String = match config.get("cas", "use-case") {
             Some(use_case) => use_case.to_string(),
             None => {
-                let repo_name =
-                    match config.get_nonempty_opt::<String>("remotefilelog", "reponame")? {
-                        Some(repo_name) => repo_name,
-                        None => {
-                            tracing::info!(target: "cas", "no use case or repo name configured");
-                            return Ok(None);
-                        }
-                    };
+                let repo_name = match config
+                    .get_nonempty_opt::<String>("remotefilelog", "reponame")?
+                {
+                    Some(repo_name) => repo_name,
+                    None => {
+                        tracing::info!(target: "cas_client", "no use case or repo name configured");
+                        return Ok(None);
+                    }
+                };
                 format!("source-control-{repo_name}")
             }
         };

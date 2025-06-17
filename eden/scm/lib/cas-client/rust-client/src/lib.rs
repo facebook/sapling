@@ -54,11 +54,11 @@ pub fn init() {
     fn construct(config: &dyn Config) -> Result<Option<Arc<dyn CasClient>>> {
         // Kill switch in case something unexpected happens during construction of client.
         if config.get_or_default("cas", "disable")? {
-            tracing::warn!(target: "cas", "disabled (cas.disable=true)");
+            tracing::warn!(target: "cas_client", "disabled (cas.disable=true)");
             return Ok(None);
         }
 
-        tracing::debug!(target: "cas", "creating rust client");
+        tracing::debug!(target: "cas_client", "creating rust client");
         RustCasClient::from_config(config).map(|c| c.map(|c| Arc::new(c) as Arc<dyn CasClient>))
     }
     factory::register_constructor("rust-cas-client", construct);
@@ -69,14 +69,15 @@ impl RustCasClient {
         let use_case: String = match config.get("cas", "use-case") {
             Some(use_case) => use_case.to_string(),
             None => {
-                let repo_name =
-                    match config.get_nonempty_opt::<String>("remotefilelog", "reponame")? {
-                        Some(repo_name) => repo_name,
-                        None => {
-                            tracing::info!(target: "cas", "no use case or repo name configured");
-                            return Ok(None);
-                        }
-                    };
+                let repo_name = match config
+                    .get_nonempty_opt::<String>("remotefilelog", "reponame")?
+                {
+                    Some(repo_name) => repo_name,
+                    None => {
+                        tracing::info!(target: "cas_client", "no use case or repo name configured");
+                        return Ok(None);
+                    }
+                };
                 format!("source-control-{repo_name}")
             }
         };
@@ -157,7 +158,7 @@ impl CasClient for RustCasClient {
     ) -> BoxStream<'a, Result<(CasFetchedStats, Vec<(CasDigest, Result<Option<Blob>>)>)>> {
         stream::iter(split_up_to_max_bytes(digests, self.fetch_limit.value()))
             .map(move |digests| async move {
-                tracing::debug!(target: "cas", "RustCasClient fetching {} {}(s)", digests.len(), log_name);
+                tracing::debug!(target: "cas_client", "RustCasClient fetching {} {}(s)", digests.len(), log_name);
 
                 let request = DownloadDigestsInlineRequest {
                     digests: digests.iter().map(to_re_digest).collect(),
@@ -197,7 +198,7 @@ impl CasClient for RustCasClient {
     }
 
     async fn upload(&self, blobs: Vec<Blob>) -> Result<Vec<CasDigest>> {
-        tracing::debug!(target: "cas", "RustCasClient uploading {} blobs", blobs.len());
+        tracing::debug!(target: "cas_client", "RustCasClient uploading {} blobs", blobs.len());
 
         let request = UploadInlinedBlobsRequest {
             blobs: blobs.into_iter().map(|blob| blob.into_vec()).collect(),
@@ -222,7 +223,7 @@ impl CasClient for RustCasClient {
     ) -> BoxStream<'a, Result<(CasFetchedStats, Vec<CasDigest>, Vec<CasDigest>)>> {
         stream::iter(split_up_to_max_bytes(digests, self.fetch_limit.value()))
             .map(move |digests| async move {
-                tracing::debug!(target: "cas", "RustCasClient prefetching {} {}(s)", digests.len(), log_name);
+                tracing::debug!(target: "cas_client", "RustCasClient prefetching {} {}(s)", digests.len(), log_name);
 
                 let request = MaterializeDigestsRequest {
                     digests: digests.iter().map(to_re_digest).collect(),

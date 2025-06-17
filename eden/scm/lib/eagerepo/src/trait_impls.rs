@@ -210,7 +210,7 @@ impl CasClient for EagerRepoStore {
         )>,
     > {
         stream::once(async move {
-            tracing::debug!(target: "cas", "EagerRepoStore fetching {} {}(s)", digests.len(), log_name);
+            tracing::debug!(target: "cas_client", "EagerRepoStore fetching {} {}(s)", digests.len(), log_name);
 
             Ok((CasFetchedStats::default(), digests
                 .iter()
@@ -235,7 +235,7 @@ impl CasClient for EagerRepoStore {
         log_name: CasDigestType,
     ) -> BoxStream<'a, anyhow::Result<(CasFetchedStats, Vec<CasDigest>, Vec<CasDigest>)>> {
         stream::once(async move {
-            tracing::debug!(target: "cas", "EagerRepoStore prefetching {} {}(s)", digests.len(), log_name);
+            tracing::debug!(target: "cas_client", "EagerRepoStore prefetching {} {}(s)", digests.len(), log_name);
             Ok((CasFetchedStats::default(), digests.to_owned(), vec![]))
         }).boxed()
     }

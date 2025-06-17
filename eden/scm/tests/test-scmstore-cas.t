@@ -144,13 +144,13 @@ Empty the caches
   $ setconfig remotefilelog.cachepath=$TESTTMP/cache4
 
 Make sure prefetch uses CAS:
-  $ LOG=cas=debug,eagerepo=debug hg prefetch -r $A .
-  DEBUG cas: creating eager remote client
-  DEBUG cas: created client
-  DEBUG cas: EagerRepoStore fetching 1 tree(s)
-  DEBUG cas: EagerRepoStore fetching 1 tree(s)
-  DEBUG cas: EagerRepoStore fetching 1 tree(s)
-  DEBUG cas: EagerRepoStore prefetching 2 file(s)
+  $ LOG=cas_client=debug,eagerepo=debug hg prefetch -r $A .
+  DEBUG cas_client: creating eager remote client
+  DEBUG cas_client: created client
+  DEBUG cas_client: EagerRepoStore fetching 1 tree(s)
+  DEBUG cas_client: EagerRepoStore fetching 1 tree(s)
+  DEBUG cas_client: EagerRepoStore fetching 1 tree(s)
+  DEBUG cas_client: EagerRepoStore prefetching 2 file(s)
 
 Don't rewrite aux data to cache:
   $ LOG=revisionstore=trace hg prefetch -r $A . 2>&1 | grep "writing to"

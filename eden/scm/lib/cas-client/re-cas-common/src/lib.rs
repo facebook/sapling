@@ -111,7 +111,7 @@ macro_rules! cas_client {
                 digest: &$crate::CasDigest,
             ) -> Result<($crate::CasFetchedStats, Option<Blob>)> {
 
-                $crate::tracing::trace!(target: "cas", concat!(stringify!($struct), " fetching {:?} digest from local cache"), digest);
+                $crate::tracing::trace!(target: "cas_client", concat!(stringify!($struct), " fetching {:?} digest from local cache"), digest);
 
                 #[cfg(target_os = "linux")]{
                     let (stats, data) = self.client()?
@@ -137,7 +137,7 @@ macro_rules! cas_client {
                 blobs: Vec<Blob>,
             ) -> Result<Vec<$crate::CasDigest>> {
 
-                $crate::tracing::debug!(target: "cas", concat!(stringify!($struct), " uploading {} blobs"), blobs.len());
+                $crate::tracing::debug!(target: "cas_client", concat!(stringify!($struct), " uploading {} blobs"), blobs.len());
 
                 #[cfg(target_os = "linux")] {
                     self.client()?
@@ -187,13 +187,13 @@ macro_rules! cas_client {
                 stream::iter(split_up_to_max_bytes(digests, self.fetch_limit.value()))
                     .map(move |digests| async move {
                         if !self.cas_success_tracker.allow_request()? {
-                            $crate::tracing::debug!(target: "cas", concat!(stringify!($struct), " skip fetching {} {}(s)"), digests.len(), log_name);
+                            $crate::tracing::debug!(target: "cas_client", concat!(stringify!($struct), " skip fetching {} {}(s)"), digests.len(), log_name);
                             return Err($crate::anyhow!("skip cas fetching due to cas success tracker error rate limiting vioaltion"));
                         }
                         if self.use_streaming_dowloads && digests.len() == 1 && digests.first().unwrap().size >= self.fetch_limit.value() {
                             // Single large file, fetch it via the streaming API to avoid memory issues on CAS side.
                             let digest = digests.first().unwrap();
-                            $crate::tracing::debug!(target: "cas", concat!(stringify!($struct), " streaming {} {}(s)"), digests.len(), log_name);
+                            $crate::tracing::debug!(target: "cas_client", concat!(stringify!($struct), " streaming {} {}(s)"), digests.len(), log_name);
 
 
                             // Unfortunately, the streaming API does not return the storage stats, so it won't be added to the stats.
@@ -242,7 +242,7 @@ macro_rules! cas_client {
 
                         // Fetch digests via the regular API (download inlined digests).
 
-                        $crate::tracing::debug!(target: "cas", concat!(stringify!($struct), " fetching {} {}(s)"), digests.len(), log_name);
+                        $crate::tracing::debug!(target: "cas_client", concat!(stringify!($struct), " fetching {} {}(s)"), digests.len(), log_name);
 
                         #[cfg(target_os = "linux")]
                         let (data, stats) = {
@@ -251,7 +251,7 @@ macro_rules! cas_client {
 
                             if let Err(ref err) = response {
                                 if (err.code == TCode::NOT_FOUND) {
-                                    $crate::tracing::warn!(target: "cas", "digest not found and can not be fetched: {:?}", digests);
+                                    $crate::tracing::warn!(target: "cas_client", "digest not found and can not be fetched: {:?}", digests);
                                 }
                             }
 
@@ -342,11 +342,11 @@ macro_rules! cas_client {
             stream::iter(split_up_to_max_bytes(digests, self.fetch_limit.value()))
                 .map(move |digests| async move {
                     if !self.cas_success_tracker.allow_request()? {
-                        $crate::tracing::debug!(target: "cas", concat!(stringify!($struct), " skip prefetching {} {}(s)"), digests.len(), log_name);
+                        $crate::tracing::debug!(target: "cas_client", concat!(stringify!($struct), " skip prefetching {} {}(s)"), digests.len(), log_name);
                         return Err($crate::anyhow!("skip cas prefetching due to cas success tracker error rate limiting vioaltion"));
                     }
 
-                    $crate::tracing::debug!(target: "cas", concat!(stringify!($struct), " prefetching {} {}(s)"), digests.len(), log_name);
+                    $crate::tracing::debug!(target: "cas_client", concat!(stringify!($struct), " prefetching {} {}(s)"), digests.len(), log_name);
 
                     #[cfg(target_os = "linux")]
                     let response = self.client()?
@@ -386,7 +386,7 @@ macro_rules! cas_client {
                             match blob.status.code {
                                 TCode::OK => Ok($crate::CasPrefetchOutcome::Prefetched(digest)),
                                 TCode::NOT_FOUND => {
-                                    $crate::tracing::warn!(target: "cas", "digest not found and can not be prefetched: {:?}", digest);
+                                    $crate::tracing::warn!(target: "cas_client", "digest not found and can not be prefetched: {:?}", digest);
                                     Ok($crate::CasPrefetchOutcome::Missing(digest))
                                 },
                                 _ => Err($crate::anyhow!(

@@ -20,7 +20,7 @@ use crate::EagerRepo;
 pub fn cas_client_from_config(config: &dyn Config) -> anyhow::Result<Option<Arc<dyn CasClient>>> {
     if let Ok(url) = config.must_get::<RepoUrl>("paths", "default") {
         if let Some(path) = EagerRepo::url_to_dir(&url) {
-            tracing::debug!(target: "cas", "creating eager remote client");
+            tracing::debug!(target: "cas_client", "creating eager remote client");
             let repo = EagerRepo::open(&path)?;
             return Ok(Some(Arc::new(repo.store) as Arc<dyn CasClient>));
         }

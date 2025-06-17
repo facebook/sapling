@@ -376,7 +376,7 @@ impl<'a> FileStoreBuilder<'a> {
         let cas_client = if is_casc_enabled {
             self.cas_client
         } else {
-            tracing::debug!(target: "cas", "scmstore disabled (scmstore.cas-mode!=files|on)");
+            tracing::debug!(target: "cas_client", "scmstore disabled (scmstore.cas-mode!=files|on)");
             None
         };
 
@@ -738,16 +738,16 @@ impl<'a> TreeStoreBuilder<'a> {
         let cas_client = if is_casc_enabled {
             if self.cas_client.is_some() {
                 if !fetch_tree_aux_data {
-                    tracing::warn!(target: "cas", "augmented tree fetching disabled (scmstore.fetch-tree-aux-data=false)");
+                    tracing::warn!(target: "cas_client", "augmented tree fetching disabled (scmstore.fetch-tree-aux-data=false)");
                 }
                 if tree_aux_store.is_none() {
-                    tracing::warn!(target: "cas", "tree aux store disabled (scmstore.store-tree-aux-data=false)");
+                    tracing::warn!(target: "cas_client", "tree aux store disabled (scmstore.store-tree-aux-data=false)");
                 }
             }
 
             self.cas_client
         } else {
-            tracing::debug!(target: "cas", "scmstore disabled (scmstore.cas-mode!=trees|on)");
+            tracing::debug!(target: "cas_client", "scmstore disabled (scmstore.cas-mode!=trees|on)");
             None
         };
 

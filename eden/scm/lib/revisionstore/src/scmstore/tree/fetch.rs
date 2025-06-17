@@ -206,11 +206,11 @@ impl FetchState {
 
                 let aux_data = match store_tree.aux_data() {
                     Some(aux_data) => {
-                        tracing::trace!(target: "cas", ?key, ?aux_data, "found aux data for tree digest");
+                        tracing::trace!(target: "cas_client", ?key, ?aux_data, "found aux data for tree digest");
                         aux_data
                     }
                     None => {
-                        tracing::trace!(target: "cas", ?key, "no aux data for tree digest");
+                        tracing::trace!(target: "cas_client", ?key, "no aux data for tree digest");
                         return None;
                     }
                 };
@@ -271,12 +271,12 @@ impl FetchState {
                             match data {
                                 Err(err) => {
                                     tracing::error!(?err, ?keys, ?digest, "CAS fetch error");
-                                    tracing::error!(target: "cas", ?err, ?keys, ?digest, "tree fetch error");
+                                    tracing::error!(target: "cas_client", ?err, ?keys, ?digest, "tree fetch error");
                                     error += keys.len();
                                     self.errors.multiple_keyed_error(keys, "CAS fetch error", err);
                                 }
                                 Ok(None) => {
-                                    tracing::trace!(target: "cas", ?keys, ?digest, "tree not in cas");
+                                    tracing::trace!(target: "cas_client", ?keys, ?digest, "tree not in cas");
                                     // miss
                                 }
                                 Ok(Some(data)) => {
@@ -289,7 +289,7 @@ impl FetchState {
                                     match deserialization_result {
                                         Ok(tree) => {
                                             keys_found_count += keys.len();
-                                            tracing::trace!(target: "cas", ?keys, ?digest, "tree found in cas");
+                                            tracing::trace!(target: "cas_client", ?keys, ?digest, "tree found in cas");
 
                                             let lazy_tree = LazyTree::Cas(AugmentedTreeWithDigest {
                                                 augmented_manifest_id: digest.hash,
@@ -332,7 +332,7 @@ impl FetchState {
                                         }
                                         Err(err) => {
                                             error += keys.len();
-                                            tracing::error!(target: "cas", ?err, ?keys, ?digest, "error deserializing tree");
+                                            tracing::error!(target: "cas_client", ?err, ?keys, ?digest, "error deserializing tree");
                                             self.errors.multiple_keyed_error(keys, "CAS tree deserialization failed", err);
                                         }
                                     }
@@ -343,7 +343,7 @@ impl FetchState {
                     }
                     Err(err) => {
                         tracing::error!(?err, "overall CAS error");
-                        tracing::error!(target: "cas", ?err, "CAS error fetching trees");
+                        tracing::error!(target: "cas_client", ?err, "CAS error fetching trees");
 
                         // Don't propagate CAS error - we want to fall back to SLAPI.
                         reqs += 1;

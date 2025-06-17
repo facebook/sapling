@@ -57,11 +57,11 @@ pub fn init() {
     fn construct(config: &dyn Config) -> Result<Option<Arc<dyn CasClient>>> {
         // Kill switch in case something unexpected happens during construction of client.
         if config.get_or_default("cas", "disable")? {
-            tracing::warn!(target: "cas", "disabled (cas.disable=true)");
+            tracing::warn!(target: "cas_client", "disabled (cas.disable=true)");
             return Ok(None);
         }
 
-        tracing::debug!(target: "cas", "creating thin client");
+        tracing::debug!(target: "cas_client", "creating thin client");
         ThinCasClient::from_config(config).map(|c| c.map(|c| Arc::new(c) as Arc<dyn CasClient>))
     }
     factory::register_constructor("thin-client", construct);
@@ -72,14 +72,15 @@ impl ThinCasClient {
         let use_case: String = match config.get("cas", "use-case") {
             Some(use_case) => use_case.to_string(),
             None => {
-                let repo_name =
-                    match config.get_nonempty_opt::<String>("remotefilelog", "reponame")? {
-                        Some(repo_name) => repo_name,
-                        None => {
-                            tracing::info!(target: "cas", "no use case or repo name configured");
-                            return Ok(None);
-                        }
-                    };
+                let repo_name = match config
+                    .get_nonempty_opt::<String>("remotefilelog", "reponame")?
+                {
+                    Some(repo_name) => repo_name,
+                    None => {
+                        tracing::info!(target: "cas_client", "no use case or repo name configured");
+                        return Ok(None);
+                    }
+                };
                 format!("source-control-{repo_name}")
             }
         };
@@ -92,7 +93,7 @@ impl ThinCasClient {
             if let Some(ref log_dir_path) = log_dir {
                 if !std::path::Path::new(log_dir_path).exists() {
                     if let Err(err) = std::fs::create_dir(log_dir_path) {
-                        tracing::warn!(target: "cas", "failed to create log dir with path {}: {}", log_dir_path, err);
+                        tracing::warn!(target: "cas_client", "failed to create log dir with path {}: {}", log_dir_path, err);
                         log_dir = None;
                     }
                 }
@@ -102,7 +103,7 @@ impl ThinCasClient {
                 log_dir = Some(log_dir_path.to_string_lossy().to_string());
                 if !std::path::Path::new(&log_dir_path).exists() {
                     if let Err(err) = std::fs::create_dir(&log_dir_path) {
-                        tracing::warn!(target: "cas", "failed to create log dir with path {:?}: {}", log_dir_path, err);
+                        tracing::warn!(target: "cas_client", "failed to create log dir with path {:?}: {}", log_dir_path, err);
                         log_dir = None;
                     }
                 }

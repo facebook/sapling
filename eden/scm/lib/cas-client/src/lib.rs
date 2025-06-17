@@ -91,7 +91,7 @@ impl CasSuccessTracker {
                 return Ok(true);
             }
             // otherwise, don't allow the request
-            tracing::warn!(target: "cas", "CAS is unhealthy, should not be used at this time");
+            tracing::warn!(target: "cas_client", "CAS is unhealthy, should not be used at this time");
             return Ok(false);
         }
         // CAS is considered healthy if it has not failed too many times
@@ -102,15 +102,15 @@ impl CasSuccessTracker {
 pub fn new(config: Arc<dyn Config>) -> anyhow::Result<Option<Arc<dyn CasClient>>> {
     match factory::call_constructor::<_, Arc<dyn CasClient>>(&config as &dyn Config) {
         Ok(client) => {
-            tracing::debug!(target: "cas", "created client");
+            tracing::debug!(target: "cas_client", "created client");
             Ok(Some(client))
         }
         Err(err) => {
             if factory::is_error_from_constructor(&err) {
-                tracing::debug!(target: "cas", ?err, "error creating client");
+                tracing::debug!(target: "cas_client", ?err, "error creating client");
                 Err(err)
             } else {
-                tracing::debug!(target: "cas", "no constructors produced a client");
+                tracing::debug!(target: "cas_client", "no constructors produced a client");
                 Ok(None)
             }
         }

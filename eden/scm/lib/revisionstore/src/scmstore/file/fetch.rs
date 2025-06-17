@@ -336,7 +336,7 @@ impl FetchState {
                 match res {
                     Ok(Some(aux)) => {
                         if have_cas {
-                            tracing::trace!(target: "cas", ?key, ?aux, "found file aux data");
+                            tracing::trace!(target: "cas_client", ?key, ?aux, "found file aux data");
                         }
                         self.metrics.aux.store(loc).hit(1);
                         found += 1;
@@ -344,7 +344,7 @@ impl FetchState {
                     }
                     Ok(None) => {
                         if have_cas {
-                            tracing::trace!(target: "cas", ?key, "no file aux data");
+                            tracing::trace!(target: "cas_client", ?key, "no file aux data");
                         }
                         self.metrics.aux.store(loc).miss(1);
                     }
@@ -745,11 +745,11 @@ impl FetchState {
 
                 let aux_data = match store_file.aux_data.as_ref() {
                     Some(aux_data) => {
-                        tracing::trace!(target: "cas", ?key, ?aux_data, "found aux data for file digest");
+                        tracing::trace!(target: "cas_client", ?key, ?aux_data, "found aux data for file digest");
                         aux_data
                     }
                     None => {
-                        tracing::trace!(target: "cas", ?key, "no aux data for file digest");
+                        tracing::trace!(target: "cas_client", ?key, "no aux data for file digest");
                         return None;
                     }
                 };
@@ -766,7 +766,7 @@ impl FetchState {
                 if self.common.request_attrs.content_header && !store_file.attrs().content_header {
                     // If the caller wants hg content header but the aux data didn't have it,
                     // we won't find it in CAS, so don't bother fetching content from CAS.
-                    tracing::trace!(target: "cas", ?key, "no content header in AUX data");
+                    tracing::trace!(target: "cas_client", ?key, "no content header in AUX data");
                     None
                 } else {
                     Some((
@@ -817,7 +817,7 @@ impl FetchState {
                         reqs += 1;
                         total_stats.add(&stats);
                         if !digests_not_found.is_empty() {
-                            tracing::trace!(target: "cas", "{} digests are missing in CAS", digests_not_found.len());
+                            tracing::trace!(target: "cas_client", "{} digests are missing in CAS", digests_not_found.len());
                         }
                         for digest in digests_prefetched {
                             bar.increase_position(1);
@@ -827,7 +827,7 @@ impl FetchState {
                                 continue;
                             };
                             keys_found_count += keys.len();
-                            tracing::trace!(target: "cas", ?keys, ?digest, "file(s) prefetched in cas");
+                            tracing::trace!(target: "cas_client", ?keys, ?digest, "file(s) prefetched in cas");
                             for key in keys {
                                 self.found_attributes(
                                     key,
@@ -842,7 +842,7 @@ impl FetchState {
                     }
                     Err(err) => {
                         tracing::error!(?err, "overall CAS error");
-                        tracing::error!(target: "cas", ?err, "CAS error prefetching files");
+                        tracing::error!(target: "cas_client", ?err, "CAS error prefetching files");
                         // Don't propagate CAS error - we want to fall back to SLAPI.
                         reqs += 1;
                         error += 1;
@@ -868,17 +868,17 @@ impl FetchState {
                             match data {
                                 Err(err) => {
                                     tracing::error!(?err, ?keys, ?digest, "CAS fetch error");
-                                    tracing::error!(target: "cas", ?err, ?keys, ?digest, "file(s) fetch error");
+                                    tracing::error!(target: "cas_client", ?err, ?keys, ?digest, "file(s) fetch error");
                                     error += keys.len();
                                     self.errors.multiple_keyed_error(keys, "CAS fetch error", err);
                                 }
                                 Ok(None) => {
-                                    tracing::trace!(target: "cas", ?keys, ?digest, "file(s) not in cas");
+                                    tracing::trace!(target: "cas_client", ?keys, ?digest, "file(s) not in cas");
                                     // miss
                                 }
                                 Ok(Some(data)) => {
                                     keys_found_count += keys.len();
-                                    tracing::trace!(target: "cas", ?keys, ?digest, "file(s) found in cas");
+                                    tracing::trace!(target: "cas_client", ?keys, ?digest, "file(s) found in cas");
                                     if !keys.is_empty() {
                                         let last = keys.pop().unwrap();
                                         for key in keys {
@@ -906,7 +906,7 @@ impl FetchState {
                     }
                     Err(err) => {
                         tracing::error!(?err, "overall CAS error");
-                        tracing::error!(target: "cas", ?err, "CAS error fetching files");
+                        tracing::error!(target: "cas_client", ?err, "CAS error fetching files");
 
                         // Don't propagate CAS error - we want to fall back to SLAPI.
                         reqs += 1;
