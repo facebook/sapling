@@ -22,5 +22,6 @@
   "isl.confirmModalOK": "OK",
   "isl.title": "Interactive Smartlog",
   "isl.loading-text": "Loading...",
-  "sapling.open-comments-command": "Open Code Review Comments Panel"
+  "sapling.open-comments-command": "Open Code Review Comments Panel",
+  "sapling.toggle-inline-comments-command": "Toggle Show/Hide Inline Code Review Comments"
 }

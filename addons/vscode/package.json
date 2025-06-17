@@ -184,7 +184,13 @@
       },
       {
         "command": "sapling.open-comments",
-        "title": "%sapling.open-comments-command%"
+        "title": "%sapling.open-comments-command%",
+        "enablement": "isl.inlineCommentSidePanelEnabled"
+      },
+      {
+        "command": "sapling.toggle-inline-comments",
+        "title": "%sapling.toggle-inline-comments-command%",
+        "enablement": "isl.inlineCommentSidePanelEnabled"
       }
     ],
     "keybindings": [
