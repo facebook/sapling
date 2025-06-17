@@ -40,7 +40,7 @@ lazy_static! {
 /// A path difference between two commits.
 ///
 /// A ChangesetPathDiffContext shows the difference between a path in a
-/// commit ("base") and its corresponding location in another commit ("other").
+/// commit ("new") and its corresponding location in another commit ("old").
 #[derive(Derivative)]
 #[derivative(Clone, Debug(bound = ""))]
 pub struct ChangesetPathDiffContext<R: MononokeRepo> {
@@ -48,12 +48,12 @@ pub struct ChangesetPathDiffContext<R: MononokeRepo> {
     path: MPath,
     is_tree: bool,
     /// If None, the path was deleted.
-    base: Option<ChangesetPathContentContext<R>>,
+    new_content: Option<ChangesetPathContentContext<R>>,
     /// If None, the path was added.
-    other: Option<ChangesetPathContentContext<R>>,
+    old_content: Option<ChangesetPathContentContext<R>>,
     /// Whether the file was marked as copied or moved.
     copy_info: CopyInfo,
-    /// If the path was copied via subtree copy, this is the new path or the "other" file.
+    /// If the path was copied via subtree copy, this is the replacement path for the "old" file.
     subtree_copy_dest_path: Option<MPath>,
 }
 
@@ -395,17 +395,17 @@ impl<R: MononokeRepo> ChangesetPathDiffContext<R> {
     pub fn new_file(
         changeset: ChangesetContext<R>,
         path: MPath,
-        base: Option<ChangesetPathContentContext<R>>,
-        other: Option<ChangesetPathContentContext<R>>,
+        new_content: Option<ChangesetPathContentContext<R>>,
+        old_content: Option<ChangesetPathContentContext<R>>,
         copy_info: CopyInfo,
         subtree_copy_dest_path: Option<MPath>,
     ) -> Result<Self, MononokeError> {
-        if copy_info != CopyInfo::None && (base.is_none() || other.is_none())
-            || (base.is_none() && other.is_none())
+        if copy_info != CopyInfo::None && (new_content.is_none() || old_content.is_none())
+            || (new_content.is_none() && old_content.is_none())
         {
             return Err(anyhow!(
                 "Invalid changeset path diff context parameters: {:?}",
-                (base, other, copy_info)
+                (new_content, old_content, copy_info)
             )
             .into());
         }
@@ -413,8 +413,8 @@ impl<R: MononokeRepo> ChangesetPathDiffContext<R> {
             changeset,
             path,
             is_tree: false,
-            base,
-            other,
+            new_content,
+            old_content,
             copy_info,
             subtree_copy_dest_path,
         })
@@ -425,14 +425,14 @@ impl<R: MononokeRepo> ChangesetPathDiffContext<R> {
     pub fn new_tree(
         changeset: ChangesetContext<R>,
         path: MPath,
-        base: Option<ChangesetPathContentContext<R>>,
-        other: Option<ChangesetPathContentContext<R>>,
+        new_content: Option<ChangesetPathContentContext<R>>,
+        old_content: Option<ChangesetPathContentContext<R>>,
         subtree_copy_dest_path: Option<MPath>,
     ) -> Result<Self, MononokeError> {
-        if base.is_none() && other.is_none() {
+        if new_content.is_none() && old_content.is_none() {
             return Err(anyhow!(
                 "Invalid changeset path diff context parameters: {:?}",
-                (base, other)
+                (new_content, old_content)
             )
             .into());
         }
@@ -440,8 +440,8 @@ impl<R: MononokeRepo> ChangesetPathDiffContext<R> {
             changeset,
             path,
             is_tree: true,
-            base,
-            other,
+            new_content,
+            old_content,
             copy_info: CopyInfo::None,
             subtree_copy_dest_path,
         })
@@ -456,26 +456,26 @@ impl<R: MononokeRepo> ChangesetPathDiffContext<R> {
         self.subtree_copy_dest_path.as_ref()
     }
 
-    /// Return the base path that is being compared.  This is the
+    /// Return the new path content that is being compared.  This is the
     /// contents after modification.
-    pub fn base(&self) -> Option<&ChangesetPathContentContext<R>> {
-        self.base.as_ref()
+    pub fn get_new_content(&self) -> Option<&ChangesetPathContentContext<R>> {
+        self.new_content.as_ref()
     }
 
-    /// Return the other path that is being compared against.  This
+    /// Return the old path content that is being compared against.  This
     /// is the contents before modification.
-    pub fn other(&self) -> Option<&ChangesetPathContentContext<R>> {
-        self.other.as_ref()
+    pub fn get_old_content(&self) -> Option<&ChangesetPathContentContext<R>> {
+        self.old_content.as_ref()
     }
 
-    /// Return the main path for this difference.  This is the added or
-    /// removed path, or the base (destination) in the case of modifications,
-    /// copies, or moves.
+    /// Return the main path for this difference.  This is the added,
+    /// removed or changed path, or the new path (destination) in the
+    /// case of copies, or moves.
     pub fn path(&self) -> &MPath {
         &self.path
     }
 
-    /// Return the copy information for this difference.
+    /// Return the file copy information for this difference.
     pub fn copy_info(&self) -> CopyInfo {
         self.copy_info.clone()
     }
@@ -608,26 +608,28 @@ impl<R: MononokeRepo> ChangesetPathDiffContext<R> {
         context_lines: usize,
         mode: UnifiedDiffMode,
     ) -> Result<UnifiedDiff, MononokeError> {
-        let (base_file, mut other_file) = try_join!(
-            Self::get_file_data(ctx, self.base(), mode),
-            Self::get_file_data(ctx, self.other(), mode)
+        let (new_file_data, mut old_file_data) = try_join!(
+            Self::get_file_data(ctx, self.get_new_content(), mode),
+            Self::get_file_data(ctx, self.get_old_content(), mode)
         )?;
-        if let (Some(replacement_path), Some(other_file)) =
-            (&self.subtree_copy_dest_path, &mut other_file)
+        if let (Some(replacement_path), Some(old_file_data)) =
+            (&self.subtree_copy_dest_path, &mut old_file_data)
         {
-            // Override the "other" path with the new path after the subtree copy.
-            other_file.path = replacement_path.to_string();
+            // Override the old path with the replacement path after the subtree copy.
+            old_file_data.path = replacement_path.to_string();
         }
-        let is_binary = xdiff::file_is_binary(&base_file) || xdiff::file_is_binary(&other_file);
+        let is_binary =
+            xdiff::file_is_binary(&new_file_data) || xdiff::file_is_binary(&old_file_data);
         let copy_info = self.copy_info();
         let opts = xdiff::DiffOpts {
             context: context_lines,
             copy_info,
         };
-        // The base is the target, so we diff in the opposite direction.
-        let raw_diff =
-            tokio::task::spawn_blocking(move || xdiff::diff_unified(other_file, base_file, opts))
-                .await?;
+        // Generate a unified diff from old to new.
+        let raw_diff = tokio::task::spawn_blocking(move || {
+            xdiff::diff_unified(old_file_data, new_file_data, opts)
+        })
+        .await?;
         Ok(UnifiedDiff {
             raw_diff,
             is_binary,
@@ -635,7 +637,7 @@ impl<R: MononokeRepo> ChangesetPathDiffContext<R> {
     }
 
     pub async fn metadata_diff(&self, _ctx: &CoreContext) -> Result<MetadataDiff, MononokeError> {
-        let (new_file_type, mut new_file) = match self.base() {
+        let (new_file_type, mut new_file) = match self.get_new_content() {
             Some(path) => try_join!(path.file_type(), path.file())?,
             None => (None, None),
         };
@@ -644,7 +646,7 @@ impl<R: MononokeRepo> ChangesetPathDiffContext<R> {
             _ => None,
         };
 
-        let (old_file_type, mut old_file) = match self.other() {
+        let (old_file_type, mut old_file) = match self.get_old_content() {
             Some(path) => try_join!(path.file_type(), path.file())?,
             None => (None, None),
         };

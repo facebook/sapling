@@ -392,7 +392,11 @@ async fn get_bonsai_size_change<R: MononokeRepo>(
         .await?;
     let res = stream::iter(diff)
         .map(|diff| async move {
-            match (diff.base(), diff.other(), diff.copy_info()) {
+            match (
+                diff.get_new_content(),
+                diff.get_old_content(),
+                diff.copy_info(),
+            ) {
                 (Some(copy_to), Some(_copy_from), CopyInfo::Copy) => {
                     anyhow::Ok(vec![BonsaiSizeChange::Added {
                         path: copy_to.path().clone(),

@@ -72,11 +72,11 @@ async fn test_diff_with_moves(fb: FacebookInit) -> Result<(), Error> {
         Some(diff) => {
             assert_eq!(diff.path(), &MPath::try_from("file_moved")?);
             assert_eq!(
-                diff.base().expect("Should have base").path(),
+                diff.get_new_content().expect("Should have new").path(),
                 &MPath::try_from("file_moved")?
             );
             assert_eq!(
-                diff.other().expect("Should have other").path(),
+                diff.get_old_content().expect("Should have old").path(),
                 &MPath::try_from("file_to_move")?
             );
             assert_eq!(diff.copy_info(), CopyInfo::Move);
@@ -130,11 +130,11 @@ async fn test_diff_with_multiple_copies(fb: FacebookInit) -> Result<(), Error> {
         Some(diff) => {
             assert_eq!(diff.path(), &MPath::try_from("copy_one")?);
             assert_eq!(
-                diff.base().expect("Should have base").path(),
+                diff.get_new_content().expect("Should have new").path(),
                 &MPath::try_from("copy_one")?
             );
             assert_eq!(
-                diff.other().expect("Should have other").path(),
+                diff.get_old_content().expect("Should have old").path(),
                 &MPath::try_from("file_to_copy")?
             );
             assert_eq!(diff.copy_info(), CopyInfo::Copy);
@@ -147,11 +147,11 @@ async fn test_diff_with_multiple_copies(fb: FacebookInit) -> Result<(), Error> {
         Some(diff) => {
             assert_eq!(diff.path(), &MPath::try_from("copy_two")?);
             assert_eq!(
-                diff.base().expect("Should have base").path(),
+                diff.get_new_content().expect("Should have new").path(),
                 &MPath::try_from("copy_two")?
             );
             assert_eq!(
-                diff.other().expect("Should have other").path(),
+                diff.get_old_content().expect("Should have old").path(),
                 &MPath::try_from("file_to_copy")?
             );
             assert_eq!(diff.copy_info(), CopyInfo::Copy);
@@ -208,11 +208,11 @@ async fn test_diff_with_multiple_moves(fb: FacebookInit) -> Result<(), Error> {
         Some(diff) => {
             assert_eq!(diff.path(), &MPath::try_from("copy_one")?);
             assert_eq!(
-                diff.base().expect("Should have base").path(),
+                diff.get_new_content().expect("Should have new").path(),
                 &MPath::try_from("copy_one")?
             );
             assert_eq!(
-                diff.other().expect("Should have other").path(),
+                diff.get_old_content().expect("Should have old").path(),
                 &MPath::try_from("file_to_move")?
             );
             assert_eq!(diff.copy_info(), CopyInfo::Move);
@@ -225,11 +225,11 @@ async fn test_diff_with_multiple_moves(fb: FacebookInit) -> Result<(), Error> {
         Some(diff) => {
             assert_eq!(diff.path(), &MPath::try_from("copy_two")?);
             assert_eq!(
-                diff.base().expect("Should have base").path(),
+                diff.get_new_content().expect("Should have new").path(),
                 &MPath::try_from("copy_two")?
             );
             assert_eq!(
-                diff.other().expect("Should have other").path(),
+                diff.get_old_content().expect("Should have old").path(),
                 &MPath::try_from("file_to_move")?
             );
             assert_eq!(diff.copy_info(), CopyInfo::Copy);
@@ -242,11 +242,11 @@ async fn test_diff_with_multiple_moves(fb: FacebookInit) -> Result<(), Error> {
         Some(diff) => {
             assert_eq!(diff.path(), &MPath::try_from("copy_zzz")?);
             assert_eq!(
-                diff.base().expect("Should have base").path(),
+                diff.get_new_content().expect("Should have new").path(),
                 &MPath::try_from("copy_zzz")?
             );
             assert_eq!(
-                diff.other().expect("Should have other").path(),
+                diff.get_old_content().expect("Should have old").path(),
                 &MPath::try_from("file_to_move")?
             );
             assert_eq!(diff.copy_info(), CopyInfo::Copy);
@@ -295,8 +295,14 @@ async fn test_diff_with_dirs(fb: FacebookInit) -> Result<(), Error> {
     match diff.first() {
         Some(diff) => {
             assert_eq!(diff.path(), &MPath::try_from("")?);
-            assert_eq!(diff.base().unwrap().path(), &MPath::try_from("")?);
-            assert_eq!(diff.other().unwrap().path(), &MPath::try_from("")?);
+            assert_eq!(
+                diff.get_new_content().unwrap().path(),
+                &MPath::try_from("")?
+            );
+            assert_eq!(
+                diff.get_old_content().unwrap().path(),
+                &MPath::try_from("")?
+            );
         }
         None => {
             panic!("expected a root dir diff");
@@ -334,8 +340,14 @@ async fn test_diff_with_dirs(fb: FacebookInit) -> Result<(), Error> {
     match diff.first() {
         Some(diff) => {
             assert_eq!(diff.path(), &MPath::try_from("")?);
-            assert_eq!(diff.base().unwrap().path(), &MPath::try_from("")?);
-            assert_eq!(diff.other().unwrap().path(), &MPath::try_from("")?);
+            assert_eq!(
+                diff.get_new_content().unwrap().path(),
+                &MPath::try_from("")?
+            );
+            assert_eq!(
+                diff.get_old_content().unwrap().path(),
+                &MPath::try_from("")?
+            );
         }
         None => {
             panic!("expected a root dir diff");
@@ -344,8 +356,11 @@ async fn test_diff_with_dirs(fb: FacebookInit) -> Result<(), Error> {
     match diff.get(1) {
         Some(diff) => {
             assert_eq!(diff.path(), &MPath::try_from("dir1")?);
-            assert!(diff.base().is_none());
-            assert_eq!(diff.other().unwrap().path(), &MPath::try_from("dir1")?);
+            assert!(diff.get_new_content().is_none());
+            assert_eq!(
+                diff.get_old_content().unwrap().path(),
+                &MPath::try_from("dir1")?
+            );
         }
         None => {
             panic!("expected a diff");
@@ -359,7 +374,8 @@ fn check_diff_paths<R: MononokeRepo>(diff_ctxs: &[ChangesetPathDiffContext<R>], 
     let diff_paths = diff_ctxs
         .iter()
         .map(|diff_ctx| {
-            if let (Some(to), Some(from)) = (diff_ctx.base(), diff_ctx.other()) {
+            if let (Some(to), Some(from)) = (diff_ctx.get_new_content(), diff_ctx.get_old_content())
+            {
                 if diff_ctx.copy_info() == CopyInfo::None {
                     assert_eq!(
                         from.path(),

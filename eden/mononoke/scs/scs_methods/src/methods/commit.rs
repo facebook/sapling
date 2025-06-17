@@ -105,12 +105,12 @@ impl CommitComparePath {
     ) -> Result<Self, scs_errors::ServiceError> {
         if path_diff.is_file() {
             let (base_file, other_file): (_, Option<thrift::FilePathInfo>) = try_join!(
-                path_diff.base().into_response(),
-                path_diff.other().into_response()
+                path_diff.get_new_content().into_response(),
+                path_diff.get_old_content().into_response()
             )?;
             let copy_info = path_diff.copy_info().into_response();
             let (other_file, subtree_source) = match (
-                path_diff.other(),
+                path_diff.get_old_content(),
                 path_diff.subtree_copy_dest_path(),
                 other_file,
             ) {
@@ -138,8 +138,8 @@ impl CommitComparePath {
             }))
         } else {
             let (base_tree, other_tree) = try_join!(
-                path_diff.base().into_response(),
-                path_diff.other().into_response()
+                path_diff.get_new_content().into_response(),
+                path_diff.get_old_content().into_response()
             )?;
             Ok(CommitComparePath::Tree(thrift::CommitCompareTree {
                 base_tree,
@@ -178,8 +178,14 @@ struct CommitFileDiffsItem {
 impl CommitFileDiffsItem {
     fn to_stopped_at_pair(&self) -> thrift::CommitFileDiffsStoppedAtPair {
         thrift::CommitFileDiffsStoppedAtPair {
-            base_path: self.path_diff_context.base().map(|p| p.path().to_string()),
-            other_path: self.path_diff_context.other().map(|p| p.path().to_string()),
+            base_path: self
+                .path_diff_context
+                .get_new_content()
+                .map(|p| p.path().to_string()),
+            other_path: self
+                .path_diff_context
+                .get_old_content()
+                .map(|p| p.path().to_string()),
             ..Default::default()
         }
     }
@@ -199,8 +205,8 @@ impl CommitFileDiffsItem {
                 Ok(0)
             }
             let (base_size, other_size) = try_join!(
-                file_size(self.path_diff_context.base()),
-                file_size(self.path_diff_context.other())
+                file_size(self.path_diff_context.get_new_content()),
+                file_size(self.path_diff_context.get_old_content())
             )?;
             Ok(base_size.saturating_add(other_size))
         }
@@ -268,14 +274,26 @@ impl CommitFileDiffsResponseElement {
     ) -> thrift::CommitFileDiffsResponseElement {
         match self {
             Self::RawDiff { diff } => thrift::CommitFileDiffsResponseElement {
-                base_path: item.path_diff_context.base().map(|p| p.path().to_string()),
-                other_path: item.path_diff_context.other().map(|p| p.path().to_string()),
+                base_path: item
+                    .path_diff_context
+                    .get_new_content()
+                    .map(|p| p.path().to_string()),
+                other_path: item
+                    .path_diff_context
+                    .get_old_content()
+                    .map(|p| p.path().to_string()),
                 diff: diff.into_response(),
                 ..Default::default()
             },
             Self::MetadataDiff { metadata_diff } => thrift::CommitFileDiffsResponseElement {
-                base_path: item.path_diff_context.base().map(|p| p.path().to_string()),
-                other_path: item.path_diff_context.other().map(|p| p.path().to_string()),
+                base_path: item
+                    .path_diff_context
+                    .get_new_content()
+                    .map(|p| p.path().to_string()),
+                other_path: item
+                    .path_diff_context
+                    .get_old_content()
+                    .map(|p| p.path().to_string()),
                 diff: metadata_diff.into_response(),
                 ..Default::default()
             },
