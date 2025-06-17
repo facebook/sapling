@@ -6,35 +6,48 @@
  */
 
 use std::collections::HashSet;
+use std::path::PathBuf;
 
 use edenfs_error::Result;
 
-pub fn state_enter(_mount: &str, _state: &str) -> Result<()> {
-    Ok(())
+#[allow(dead_code)]
+pub struct StreamingChangesClient {
+    mount_point: PathBuf,
 }
 
-pub fn state_leave(_mount: &str, _state: &str) -> Result<()> {
-    Ok(())
-}
+impl StreamingChangesClient {
+    pub fn new(mount_point: PathBuf) -> Self {
+        StreamingChangesClient { mount_point }
+    }
 
-pub fn get_asserted_states(_mount: &str) -> Result<HashSet<String>> {
-    Ok(HashSet::new())
-}
+    pub fn state_enter(&self, _state: &str) -> Result<()> {
+        Ok(())
+    }
 
-pub fn is_state_asserted(_mount: &str, _state: &str) -> Result<bool> {
-    Ok(false)
+    pub fn state_leave(&self, _state: &str) -> Result<()> {
+        Ok(())
+    }
+
+    pub fn get_asserted_states(&self) -> Result<HashSet<String>> {
+        Ok(HashSet::new())
+    }
+
+    pub fn is_state_asserted(&self, _state: &str) -> Result<bool> {
+        Ok(false)
+    }
 }
 
 #[cfg(test)]
 mod tests {
     use fbinit::FacebookInit;
 
-    use crate::get_asserted_states;
+    use crate::*;
 
     #[fbinit::test]
-    fn test_state_enter(_fb: FacebookInit) -> anyhow::Result<()> {
-        let mount = "test_mount1";
-        let asserted_states = get_asserted_states(mount)?;
+    fn test_get_asserted_states_empty(_fb: FacebookInit) -> anyhow::Result<()> {
+        let mount_point = std::env::temp_dir().join("test_mount");
+        let client = StreamingChangesClient::new(mount_point);
+        let asserted_states = client.get_asserted_states()?;
         assert!(asserted_states.is_empty());
         Ok(())
     }
