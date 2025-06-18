@@ -17,6 +17,7 @@ import type {
   DiffId,
   Disposable,
   FetchedCommits,
+  FetchedSubmodules,
   FetchedUncommittedChanges,
   Hash,
   MergeConflicts,
@@ -31,6 +32,7 @@ import type {
   SettableConfigName,
   ShelvedChange,
   StableInfo,
+  Submodules,
   UncommittedChanges,
   ValidatedRepoInfo,
 } from 'isl/src/types';
@@ -112,10 +114,12 @@ export class Repository {
   private mergeConflicts: MergeConflicts | undefined = undefined;
   private uncommittedChanges: FetchedUncommittedChanges | null = null;
   private smartlogCommits: FetchedCommits | null = null;
+  private submodules: Submodules | undefined = undefined;
 
   private mergeConflictsEmitter = new TypedEventEmitter<'change', MergeConflicts | undefined>();
   private uncommittedChangesEmitter = new TypedEventEmitter<'change', FetchedUncommittedChanges>();
   private smartlogCommitsChangesEmitter = new TypedEventEmitter<'change', FetchedCommits>();
+  private submodulesChangesEmitter = new TypedEventEmitter<'change', FetchedSubmodules>();
 
   private smartlogCommitsBeginFetchingEmitter = new TypedEventEmitter<'start', undefined>();
   private uncommittedChangesBeginFetchingEmitter = new TypedEventEmitter<'start', undefined>();
@@ -997,6 +1001,38 @@ export class Repository {
         this.smartlogCommitsChangesEmitter.off('change', onData);
       },
     };
+  }
+
+  getSubmodules(): Submodules | undefined {
+    return this.submodules;
+  }
+
+  async fetchSubmodules(): Promise<void> {
+    try {
+      const proc = await this.runCommand(
+        ['debuggitmodules', '--json'],
+        'LogCommand',
+        this.initialConnectionContext,
+      );
+      const submodules = JSON.parse(proc.stdout) as Submodules;
+      // debuggitmodules returns an empty vec
+      // when submodule is not supported by the repo at all
+      this.submodules = submodules?.length === 0 ? undefined : submodules;
+      this.submodulesChangesEmitter.emit('change', {value: this.submodules});
+    } catch (err) {
+      let error = err;
+      if (isEjecaError(error)) {
+        // debuggitmodules may not be supported by older versions of Sapling
+        error = error.stderr.includes('unknown command')
+          ? Error('debuggitmodules command is not supported by your sapling version.')
+          : simplifyEjecaError(error);
+      }
+      this.initialConnectionContext.logger.error('Error fetching submodules: ', error);
+
+      this.submodulesChangesEmitter.emit('change', {
+        error: error instanceof Error ? error : new Error(error as string),
+      });
+    }
   }
 
   private catLimiter = new RateLimiter(MAX_SIMULTANEOUS_CAT_CALLS, s =>
