@@ -25,90 +25,10 @@ mod windows {
     use winapi::shared::minwindef::PULONG;
     use winapi::shared::ntdef::ULONG;
     use winapi::um::handleapi::CloseHandle;
-    use winapi::um::handleapi::INVALID_HANDLE_VALUE;
     use winapi::um::processthreadsapi::OpenProcess;
     use winapi::um::psapi::GetProcessImageFileNameW;
-    use winapi::um::tlhelp32::CreateToolhelp32Snapshot;
-    use winapi::um::tlhelp32::PROCESSENTRY32W;
-    use winapi::um::tlhelp32::Process32FirstW;
-    use winapi::um::tlhelp32::Process32NextW;
-    use winapi::um::tlhelp32::TH32CS_SNAPPROCESS;
     use winapi::um::winnt::HANDLE;
     use winapi::um::winnt::PROCESS_QUERY_INFORMATION;
-
-    pub(crate) struct Snapshot {
-        handle: HANDLE,
-    }
-
-    impl Drop for Snapshot {
-        fn drop(&mut self) {
-            unsafe { CloseHandle(self.handle) };
-        }
-    }
-
-    impl Snapshot {
-        fn new_pe32() -> PROCESSENTRY32W {
-            let mut pe: PROCESSENTRY32W = unsafe { zeroed() };
-            pe.dwSize = size_of::<PROCESSENTRY32W>() as DWORD;
-            pe
-        }
-
-        pub(crate) fn new() -> Result<Snapshot, ()> {
-            let snapshot_handle: HANDLE =
-                unsafe { CreateToolhelp32Snapshot(TH32CS_SNAPPROCESS, 0) };
-
-            if snapshot_handle == INVALID_HANDLE_VALUE {
-                return Err(());
-            }
-
-            Ok(Snapshot {
-                handle: snapshot_handle,
-            })
-        }
-
-        fn find<F>(&self, condition: F) -> Result<PROCESSENTRY32W, ()>
-        where
-            F: Fn(&PROCESSENTRY32W) -> bool,
-        {
-            let mut pe32 = Snapshot::new_pe32();
-            if unsafe { Process32FirstW(self.handle, &mut pe32) } == 0 {
-                return Err(());
-            }
-
-            loop {
-                if condition(&pe32) {
-                    return Ok(pe32);
-                }
-
-                if unsafe { Process32NextW(self.handle, &mut pe32) } == 0 {
-                    break;
-                }
-            }
-
-            Err(())
-        }
-
-        fn find_by_pid(&self, pid: DWORD) -> Result<PROCESSENTRY32W, ()> {
-            self.find(|pe32| pe32.th32ProcessID == pid)
-        }
-
-        pub(crate) fn get_parent_process_id(&self, process_id: DWORD) -> Result<DWORD, ()> {
-            self.find_by_pid(process_id)
-                .map(|pe32| pe32.th32ParentProcessID)
-        }
-
-        pub(crate) fn get_process_executable_name(&self, process_id: DWORD) -> Result<String, ()> {
-            self.find_by_pid(process_id)
-                .map(|pe32| pe32.szExeFile)
-                .map(|cs| {
-                    cs.iter()
-                        .take_while(|&&i| i != 0)
-                        .map(|&i| i as u16)
-                        .collect::<Vec<u16>>()
-                })
-                .map(|ref v| OsString::from_wide(v).into_string().unwrap_or("".into()))
-        }
-    }
 
     pub(crate) fn exe_name(process_id: DWORD) -> Result<String, ()> {
         let process_handle = unsafe { OpenProcess(PROCESS_QUERY_INFORMATION, 0, process_id as _) };
