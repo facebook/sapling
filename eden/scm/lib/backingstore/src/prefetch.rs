@@ -80,12 +80,23 @@ pub(crate) fn prefetch_manager(
         // Shared TreeManifest object to avoid duplicative tree fetching/deserialization.
         let mut current_manifest: Option<TreeManifest> = None;
 
+        let mut last_iteration_time = None;
+
         // Wait for kicks, or otherwise check every second. The intermittent check is important
         // to notice that walks have stopped (because the kicks only happen on file/dir access,
         // which could altogether stop).
         while let Ok(_) | Err(flume::RecvTimeoutError::Timeout) =
             recv.recv_timeout(Duration::from_secs(1))
         {
+            // Add a small sleep to make sure we aren't busy looping when there is non-stop walk activity.
+            let now = Instant::now();
+            if last_iteration_time
+                .replace(now)
+                .is_some_and(|t| now.duration_since(t) < Duration::from_millis(1))
+            {
+                std::thread::sleep(Duration::from_millis(1));
+            }
+
             let current_commit_id = match current_commit_id.read().as_ref() {
                 Some(commit_hex) => match HgId::from_hex(commit_hex.as_bytes()) {
                     Ok(hgid) => hgid,
