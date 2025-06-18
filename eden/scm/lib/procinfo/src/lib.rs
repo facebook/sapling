@@ -5,6 +5,8 @@
  * LICENSE file in the root directory of this source tree.
  */
 
+use std::fmt::Write;
+
 #[cfg(target_os = "macos")]
 unsafe extern "C" {
     fn darwin_ppid(pid: u32) -> u32;
@@ -194,4 +196,48 @@ pub fn exe_name(pid: u32) -> String {
 
     #[allow(unreachable_code)]
     String::new()
+}
+
+/// Get a description of pid's ancestors, including pid itself.
+pub fn ancestors(mut pid: u32) -> String {
+    if pid == 0 {
+        pid = current_pid();
+    }
+
+    let mut buf = String::new();
+
+    let mut count = 0;
+    while pid > 0 {
+        count += 1;
+        if count >= 16 {
+            let _ = write!(&mut buf, "...");
+            break;
+        }
+
+        if !buf.is_empty() {
+            let _ = write!(&mut buf, " <- ");
+        }
+
+        let name = exe_name(pid);
+
+        // Trim to last part of path to keep compact.
+        let name = name
+            .rsplit(if cfg!(windows) {
+                &['/', '\\'][..]
+            } else {
+                &['/'][..]
+            })
+            .next()
+            .unwrap_or(&name);
+
+        if name.is_empty() {
+            let _ = write!(&mut buf, "{pid}");
+        } else {
+            let _ = write!(&mut buf, "{name}({pid})");
+        }
+
+        pid = parent_pid(pid);
+    }
+
+    buf
 }

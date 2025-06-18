@@ -12,4 +12,6 @@ fn main() {
         println!("Parent PID: {:8}  Name: {}", ppid, name);
         ppid = procinfo::parent_pid(ppid);
     }
+
+    println!("Compact:\n{}", procinfo::ancestors(0));
 }
