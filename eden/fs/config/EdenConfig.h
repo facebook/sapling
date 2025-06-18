@@ -407,6 +407,19 @@ class EdenConfig : private ConfigSettingManager {
       false,
       this};
 
+  /**
+   * Configures the amount of time workers should spend completing outstanding
+   * requests during Thrift server shutdown. If the timeout is reached, the
+   * server exits immediately (i.e. crashes).
+   *
+   * Must be used with thriftLeakOutstandingRequestsWhenServerStops to have any
+   * effect.
+   */
+  ConfigSetting<std::chrono::nanoseconds> thriftWorkersJoinTimeout{
+      "thrift:workers-join-timeout",
+      std::chrono::seconds(120),
+      this};
+
   // [ssl]
 
   ConfigSetting<AbsolutePath> clientCertificate{
