@@ -288,7 +288,7 @@ impl<'a, R: MononokeRepo> ChangeTargetConfig<'a, R> {
         );
 
         // Derive all the necessary data before moving the bookmark
-        derive_all_types(ctx, target_repo.repo(), final_merge).await?;
+        derive_all_types(ctx, target_repo.repo(), &[final_merge]).await?;
 
         // Move bookmark
         self.move_bookmark_conditionally(

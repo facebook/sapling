@@ -131,7 +131,7 @@ impl<'a, R: MononokeRepo> AddSyncTarget<'a, R> {
         // For now let's just retry a few times so that we don't have to start over
         // because of flakiness
         for attempt in 1.. {
-            let result = derive_all_types(ctx, repo.repo(), top_merge_cs_id).await;
+            let result = derive_all_types(ctx, repo.repo(), &[top_merge_cs_id]).await;
             match result {
                 Ok(()) => {
                     break;

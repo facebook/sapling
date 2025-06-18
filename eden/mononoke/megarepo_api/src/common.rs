@@ -599,12 +599,7 @@ pub trait MegarepoOp<R> {
             .iter()
             .map(|(_, css)| css.moved.get_changeset_id())
             .collect::<Vec<_>>();
-        let (stats, ()) = stream::iter(cs_ids)
-            .map(|cs_id| Ok(derive_all_types(ctx, repo, cs_id)))
-            .try_buffered(10)
-            .try_for_each(|_| async { Ok(()) })
-            .try_timed()
-            .await?;
+        let (stats, _) = derive_all_types(ctx, repo, &cs_ids).try_timed().await?;
         scuba.add_future_stats(&stats);
         scuba.log_with_msg("Derived move commits", None);
 
@@ -845,16 +840,9 @@ pub trait MegarepoOp<R> {
         let mut scuba = ctx.scuba().clone();
         scuba.add("merge_commits_count", merge_cs_ids.len());
         scuba.log_with_msg("Started deriving merge commits", None);
-        let (stats, ()) = async {
-            for cs_ids in merge_cs_ids.chunks(10) {
-                if let Some(cs_id) = cs_ids.last() {
-                    derive_all_types(ctx, repo, *cs_id).await?;
-                }
-            }
-            anyhow::Ok(())
-        }
-        .try_timed()
-        .await?;
+        let (stats, _) = derive_all_types(ctx, repo, &merge_cs_ids)
+            .try_timed()
+            .await?;
         scuba.add_future_stats(&stats);
         scuba.log_with_msg("Derived merge commits", None);
 
@@ -1286,7 +1274,7 @@ pub async fn save_sync_target_config_in_changeset(
 pub(crate) async fn derive_all_types(
     ctx: &CoreContext,
     repo: &impl Repo,
-    cs_id: ChangesetId,
+    csids: &[ChangesetId],
 ) -> Result<(), Error> {
     let derived_data_types = repo
         .repo_derived_data()
@@ -1301,7 +1289,7 @@ pub(crate) async fn derive_all_types(
         .collect::<Vec<_>>();
     repo.repo_derived_data()
         .manager()
-        .derive_bulk(ctx, &[cs_id], None, &derived_data_types, None)
+        .derive_bulk(ctx, csids, None, &derived_data_types, None)
         .await?;
     Ok(())
 }
