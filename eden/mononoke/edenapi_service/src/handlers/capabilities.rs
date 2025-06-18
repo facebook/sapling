@@ -29,7 +29,12 @@ pub struct CapabilitiesParams {
     repo: String,
 }
 
+/// Features frequently used by sapling operations like commit upload, megarepo, blame, etc
+static CAP_SAPLING_COMMON: &str = "sapling-common";
+/// These determine whether the server supports commit graph for clones
 static CAP_COMMIT_GRAPH_SEGMENTS: &str = "commit-graph-segments";
+/// This indicates the commit cloud family of endpoints are available
+static CAP_COMMIT_CLOUD: &str = "commit-cloud";
 
 /// Get capabilities as a vector of static strings.
 ///
@@ -42,7 +47,9 @@ async fn get_capabilities_vec<R>(
 ) -> Result<Vec<&'static str>, MononokeError> {
     let mut capabilities = Vec::new();
 
+    capabilities.push(CAP_SAPLING_COMMON);
     capabilities.push(CAP_COMMIT_GRAPH_SEGMENTS);
+    capabilities.push(CAP_COMMIT_CLOUD);
 
     Ok(capabilities)
 }

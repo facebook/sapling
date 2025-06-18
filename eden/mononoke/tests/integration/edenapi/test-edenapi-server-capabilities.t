@@ -12,4 +12,4 @@ Set up local hgrc and Mononoke config.
 
   $ start_and_wait_for_mononoke_server
   $ sslcurlas client0 -s "https://localhost:$MONONOKE_SOCKET/edenapi/repo/capabilities"
-  ["commit-graph-segments"] (no-eol)
+  ["sapling-common","commit-graph-segments","commit-cloud"] (no-eol)
