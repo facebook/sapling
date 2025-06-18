@@ -11,6 +11,7 @@ mod walk_node;
 
 use std::sync::Arc;
 use std::sync::LazyLock;
+use std::sync::OnceLock;
 use std::sync::atomic::AtomicBool;
 use std::sync::atomic::AtomicI64;
 use std::sync::atomic::AtomicU64;
@@ -25,6 +26,7 @@ use coarsetime::Instant;
 use mock_instant::Instant;
 use parking_lot::RwLock;
 use rand::Rng;
+use tracing::Level;
 use types::RepoPath;
 use types::RepoPathBuf;
 use walk_node::WalkNode;
@@ -759,6 +761,7 @@ pub struct Walk {
 
     // Most commonly seen pid for this walk.
     pid: AtomicU64,
+    pid_detail: OnceLock<String>,
 
     // Whether we have already logged the start of this walk.
     logged_start: AtomicBool,
@@ -800,8 +803,11 @@ impl Walk {
     }
 
     fn absorb_counters(&self, other: &Self) {
-        // Race conditions are not a big deal.
+        // If we are absorbing another walk whose start has already been logged, don't log the start
+        // again. There might be a lot of start events as walks coalesce; the important event is
+        // logged when the fully coalesced walk ends.
         if other.logged_start.load(Ordering::Relaxed) {
+            // Race conditions are not a big deal.
             self.logged_start.store(true, Ordering::Relaxed);
         }
 
@@ -819,32 +825,37 @@ impl Walk {
             Ordering::AcqRel,
         );
 
-        self.maybe_swap_pid(
+        if self.maybe_swap_pid(
             other.pid.load(Ordering::Relaxed) as u32,
             other.total_accesses(),
-        );
+        ) {
+            // If we took the other walk's pid, then also take its pid detail, if present.
+            if let Some(detail) = other.pid_detail.get() {
+                let _ = self.pid_detail.set(detail.to_string());
+            }
+        }
     }
 
     fn inc_file_load(&self, root: &RepoPath, val: u64) {
-        if self.file_loads.fetch_add(val, Ordering::AcqRel) == Self::BIG_WALK_THRESHOLD - 1 {
+        if self.file_loads.fetch_add(val, Ordering::AcqRel) >= Self::BIG_WALK_THRESHOLD - 1 {
             self.maybe_log_big_walk(root);
         }
     }
 
     fn inc_file_read(&self, root: &RepoPath, val: u64) {
-        if self.file_reads.fetch_add(val, Ordering::Relaxed) == Self::BIG_WALK_THRESHOLD - 1 {
+        if self.file_reads.fetch_add(val, Ordering::Relaxed) >= Self::BIG_WALK_THRESHOLD - 1 {
             self.maybe_log_big_walk(root);
         }
     }
 
     fn inc_dir_load(&self, root: &RepoPath, val: u64) {
-        if self.dir_loads.fetch_add(val, Ordering::AcqRel) == Self::BIG_WALK_THRESHOLD - 1 {
+        if self.dir_loads.fetch_add(val, Ordering::AcqRel) >= Self::BIG_WALK_THRESHOLD - 1 {
             self.maybe_log_big_walk(root);
         }
     }
 
     fn inc_dir_read(&self, root: &RepoPath, val: u64) {
-        if self.dir_reads.fetch_add(val, Ordering::Relaxed) == Self::BIG_WALK_THRESHOLD - 1 {
+        if self.dir_reads.fetch_add(val, Ordering::Relaxed) >= Self::BIG_WALK_THRESHOLD - 1 {
             self.maybe_log_big_walk(root);
         }
     }
@@ -857,14 +868,40 @@ impl Walk {
     }
 
     /// Probabilistically set self.pid=pid based on size of numerator relative to size of self.
-    fn maybe_swap_pid(&self, pid: u32, numerator: u64) {
+    /// Returns whether we took the new pid.
+    fn maybe_swap_pid(&self, pid: u32, numerator: u64) -> bool {
+        // If we already have pid detail filled in - don't swap to a new pid, lest they mismatch.
+        if self.pid_detail.get().is_some() {
+            return false;
+        }
+
         let denominator = self.total_accesses();
-        if rand::thread_rng().gen_range(0..denominator.max(1)) < numerator {
+        if pid != self.pid() && rand::thread_rng().gen_range(0..denominator.max(1)) < numerator {
             self.pid.store(pid as u64, Ordering::Relaxed);
+            true
+        } else {
+            false
         }
     }
 
     fn maybe_log_big_walk(&self, root: &RepoPath) {
+        // Init the pid detail at the start of the walk. If we wait until the walk ends, the walking
+        // process may have exited. We init pid_detail before checking logged_start because it is
+        // possible that logged_start is true before pid_detail is set due to absorbing a logged
+        // walk.
+        self.pid_detail.get_or_init(|| {
+            // Short circuit procinfo call if we aren't going to log it.
+            let tracing_enabled = tracing::enabled!(Level::INFO)
+                || tracing::enabled!(target: "big_walk", Level::DEBUG);
+
+            let pid = self.pid();
+            if tracing_enabled && pid > 0 {
+                procinfo::ancestors(pid)
+            } else {
+                String::new()
+            }
+        });
+
         if self.logged_start.swap(true, Ordering::AcqRel) {
             return;
         }
@@ -876,6 +913,7 @@ impl Walk {
             file_preloads = self.file_preloads.load(Ordering::Relaxed),
             dir_loads = self.dir_loads.load(Ordering::Relaxed),
             dir_reads = self.dir_reads.load(Ordering::Relaxed),
+            walker_detail = self.pid_detail.get(),
             "big walk started",
         );
     }
@@ -895,6 +933,7 @@ impl Walk {
                 dir_loads = self.dir_loads.load(Ordering::Relaxed),
                 dir_reads = self.dir_reads.load(Ordering::Relaxed),
                 walk_depth = self.depth,
+                walker_detail = self.pid_detail.get(),
                 "big walk ended",
             );
 
@@ -907,6 +946,7 @@ impl Walk {
                 dir_loads = self.dir_loads.load(Ordering::Relaxed),
                 dir_reads = self.dir_reads.load(Ordering::Relaxed),
                 walk_depth = self.depth,
+                walker_detail = self.pid_detail.get(),
             );
         }
     }
@@ -922,7 +962,6 @@ impl Walk {
         )
     }
 
-    #[cfg(test)]
     fn pid(&self) -> u32 {
         self.pid.load(Ordering::Relaxed) as u32
     }

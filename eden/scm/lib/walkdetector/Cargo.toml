@@ -16,6 +16,7 @@ name = "walkdetector"
 coarsetime = "0.1.36"
 parking_lot = { version = "0.12.1", features = ["send_guard"] }
 rand = { version = "0.8", features = ["small_rng"] }
+sapling-procinfo = { version = "0.1.0", path = "../procinfo" }
 sapling-types = { version = "0.1.0", path = "../types" }
 tracing = { version = "0.1.41", features = ["attributes", "valuable"] }
 
