@@ -10,6 +10,7 @@ import type {
   ApplicationInfo,
   ChangedFile,
   CommitInfo,
+  FetchedSubmodules,
   MergeConflicts,
   RepoInfo,
   SmartlogCommits,
@@ -426,6 +427,20 @@ registerDisposable(
     window.clientToServerAPI?.postMessage({
       type: 'gotUiState',
       state: JSON.stringify(serializeAtomsState(state), undefined, 2),
+    });
+  }),
+  import.meta.hot,
+);
+
+export const latestSubmodulesData = atom<FetchedSubmodules>({
+  value: undefined,
+});
+
+registerCleanup(
+  latestSubmodulesData,
+  subscriptionEffect('submodules', fetchedSubmodules => {
+    writeAtom(latestSubmodulesData, _prev_data => {
+      return fetchedSubmodules;
     });
   }),
   import.meta.hot,
