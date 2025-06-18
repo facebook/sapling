@@ -17,6 +17,7 @@
 Wtih crash traceback:
 
   $ hg debugshell -c 'raise RuntimeError("x")'
+  Traceback (most recent call last):
   ...
     File "<string>", line 1, in <module>
   RuntimeError: x
@@ -28,8 +29,11 @@ Wtih crash traceback:
   > f()
   > EOF
   $ hg debugshell a.py
+  Traceback (most recent call last):
   ...
-    File "<string>", line 3, in <module>
-    File "<string>", line 2, in f
+    File "a.py", line 3, in <module>
+      f()
+    File "a.py", line 2, in f
+      raise RuntimeError('x')
   RuntimeError: x
   [1]

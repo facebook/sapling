@@ -20,7 +20,7 @@ from typing import Any, Dict, List, Optional
 import bindings
 
 import sapling
-from sapling import ext, hgdemandimport, registrar, traceimport, util
+from sapling import error, ext, hgdemandimport, registrar, traceimport, util
 from sapling.ext import commitcloud as cc
 from sapling.i18n import _
 
@@ -92,21 +92,35 @@ def debugshell(ui, repo, *args, **opts):
     sys.argv = args
 
     if command:
-        exec(command, env, env)
-        return 0
+        return _exec(ui, command, env)
     if args:
         path = args[0]
         with open(path) as f:
-            command = f.read()
-        env["__file__"] = path
-        exec(command, env, env)
-        return 0
+            source = f.read()
+        return _exec(ui, source, env, path)
     elif not ui.interactive():
         command = ui.fin.read()
-        exec(command, env, env)
-        return 0
+        return _exec(ui, command, env)
 
     start_ipython(env, ui, repo)
+
+
+def _exec(ui, source, env, path=None):
+    """Like exec(), but show source code in traceback and reports exit code"""
+    code = compile(source, path or "<string>", "exec")
+    try:
+        exec(code, env, env)
+        return 0
+    except (IOError, error.Abort):
+        # Some tests (test-dirstate.t test-mkdir-broken-symlink.t
+        # test-bisect.t) depend on this behavior.
+        raise
+    except Exception:
+        # Emulate Python's default top-level error handling behavior (print
+        # backtrace, return 1), but avoid re-raise to avoid "sapling has
+        # crashed" error handling.
+        ui.traceback(force=True)
+        return 1
 
 
 def start_ipython(env=None, ui=None, repo=None) -> None:
