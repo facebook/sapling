@@ -24,6 +24,7 @@ use coarsetime::Instant;
 #[cfg(test)]
 use mock_instant::Instant;
 use parking_lot::RwLock;
+use rand::Rng;
 use types::RepoPath;
 use types::RepoPathBuf;
 use walk_node::WalkNode;
@@ -123,13 +124,13 @@ impl Detector {
 
     /// Observe a "heavy" or remote file (content) read of `path`.
     /// Returns whether an active walk changed (either created or removed).
-    pub fn file_loaded(&self, path: impl AsRef<RepoPath>) -> bool {
+    pub fn file_loaded(&self, path: impl AsRef<RepoPath>, pid: u32) -> bool {
         let path = path.as_ref();
 
         tracing::trace!(%path, "file_loaded");
 
         // Try lightweight read-only path.
-        if let Some(walk_root) = self.mark_read(path, WalkType::File, true) {
+        if let Some(walk_root) = self.mark_read(path, WalkType::File, true, pid) {
             tracing::trace!(%walk_root, file=%path, "file already in walk (fastpath)");
             return false;
         }
@@ -170,7 +171,7 @@ impl Detector {
             inner.insert_walk(
                 &self.config,
                 WalkType::File,
-                Walk::for_type(WalkType::File, 0, seen_count as u64),
+                Walk::for_type(WalkType::File, 0, seen_count as u64, pid),
                 dir_path,
             );
             walk_changed = true;
@@ -182,10 +183,10 @@ impl Detector {
     /// Observe a "soft" or cached file (content) access of `path`.
     /// This will not be tracked as a new walk, but will reset TTL of an existing walk.
     /// Returns whether path was covered by an active walk.
-    pub fn file_read(&self, path: impl AsRef<RepoPath>) -> bool {
+    pub fn file_read(&self, path: impl AsRef<RepoPath>, pid: u32) -> bool {
         let path = path.as_ref();
         tracing::trace!(%path, "file_read");
-        self.mark_read(path, WalkType::File, false).is_some()
+        self.mark_read(path, WalkType::File, false, pid).is_some()
     }
 
     /// Observe a directory being loaded (i.e. "heavy" or remote read). `num_files` and `num_dirs`
@@ -196,6 +197,7 @@ impl Detector {
         path: impl AsRef<RepoPath>,
         num_files: usize,
         num_dirs: usize,
+        pid: u32,
     ) -> bool {
         let path = path.as_ref();
 
@@ -209,7 +211,7 @@ impl Detector {
         );
 
         // Try lightweight read-only path.
-        if let Some(walk_root) = self.mark_read(path, WalkType::Directory, true) {
+        if let Some(walk_root) = self.mark_read(path, WalkType::Directory, true, pid) {
             tracing::trace!(%walk_root, dir=%path, "dir already in walk (fastpath)");
             if is_interesting_metadata {
                 // Fill in interesting metadata that informs detection of file content walks.
@@ -259,7 +261,7 @@ impl Detector {
             inner.insert_walk(
                 &self.config,
                 WalkType::Directory,
-                Walk::for_type(WalkType::Directory, 0, seen_count as u64),
+                Walk::for_type(WalkType::Directory, 0, seen_count as u64, pid),
                 dir_path,
             );
 
@@ -273,7 +275,13 @@ impl Detector {
     /// walk, but will reset TTL of an existing walk. `num_files` and `num_dirs` report the number
     /// of file and directory children of `path`, respectively. Pass zero if you don't know. Returns
     /// whether path was covered by an active walk.
-    pub fn dir_read(&self, path: impl AsRef<RepoPath>, num_files: usize, num_dirs: usize) -> bool {
+    pub fn dir_read(
+        &self,
+        path: impl AsRef<RepoPath>,
+        num_files: usize,
+        num_dirs: usize,
+        pid: u32,
+    ) -> bool {
         let path = path.as_ref();
         tracing::trace!(%path, num_files, num_dirs, "dir_read");
 
@@ -290,7 +298,8 @@ impl Detector {
                 .set_metadata(&self.config, path, num_files, num_dirs);
         }
 
-        self.mark_read(path, WalkType::Directory, false).is_some()
+        self.mark_read(path, WalkType::Directory, false, pid)
+            .is_some()
     }
 
     /// Record that a certain number of files have been preloaded. This has no functional purpose -
@@ -317,6 +326,7 @@ impl Detector {
         path: &'a RepoPath,
         wt: WalkType,
         heavy_read: bool,
+        pid: u32,
     ) -> Option<&'a RepoPath> {
         let dir = path.parent()?;
 
@@ -334,6 +344,8 @@ impl Detector {
                     (WalkType::Directory, false) => walk.inc_dir_read(walk_root, 1),
                     (WalkType::Directory, true) => walk.inc_dir_load(walk_root, 1),
                 };
+
+                walk.maybe_swap_pid(pid, 1);
             }
 
             return Some(dir.strip_suffix(suffix, true).unwrap_or_default());
@@ -745,6 +757,9 @@ pub struct Walk {
     // How many light/cached dir fetches we've observed under this walk.
     dir_reads: AtomicU64,
 
+    // Most commonly seen pid for this walk.
+    pid: AtomicU64,
+
     // Whether we have already logged the start of this walk.
     logged_start: AtomicBool,
 }
@@ -773,8 +788,9 @@ impl Walk {
         }
     }
 
-    fn for_type(t: WalkType, depth: usize, initial_loads: u64) -> Self {
+    fn for_type(t: WalkType, depth: usize, initial_loads: u64, pid: u32) -> Self {
         let w = Self::new(depth);
+        w.pid.store(pid as u64, Ordering::Relaxed);
         let counter = match t {
             WalkType::Directory => &w.dir_loads,
             WalkType::File => &w.file_loads,
@@ -802,6 +818,11 @@ impl Walk {
             other.file_preloads.load(Ordering::Relaxed),
             Ordering::AcqRel,
         );
+
+        self.maybe_swap_pid(
+            other.pid.load(Ordering::Relaxed) as u32,
+            other.total_accesses(),
+        );
     }
 
     fn inc_file_load(&self, root: &RepoPath, val: u64) {
@@ -825,6 +846,21 @@ impl Walk {
     fn inc_dir_read(&self, root: &RepoPath, val: u64) {
         if self.dir_reads.fetch_add(val, Ordering::Relaxed) == Self::BIG_WALK_THRESHOLD - 1 {
             self.maybe_log_big_walk(root);
+        }
+    }
+
+    fn total_accesses(&self) -> u64 {
+        self.dir_loads.load(Ordering::Relaxed)
+            + self.dir_reads.load(Ordering::Relaxed)
+            + self.file_loads.load(Ordering::Relaxed)
+            + self.file_reads.load(Ordering::Relaxed)
+    }
+
+    /// Probabilistically set self.pid=pid based on size of numerator relative to size of self.
+    fn maybe_swap_pid(&self, pid: u32, numerator: u64) {
+        let denominator = self.total_accesses();
+        if rand::thread_rng().gen_range(0..denominator.max(1)) < numerator {
+            self.pid.store(pid as u64, Ordering::Relaxed);
         }
     }
 
@@ -884,6 +920,11 @@ impl Walk {
             self.dir_loads.load(Ordering::Relaxed),
             self.dir_reads.load(Ordering::Relaxed),
         )
+    }
+
+    #[cfg(test)]
+    fn pid(&self) -> u32 {
+        self.pid.load(Ordering::Relaxed) as u32
     }
 }
 

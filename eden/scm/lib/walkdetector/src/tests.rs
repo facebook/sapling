@@ -30,18 +30,18 @@ fn test_walk_big_dir() {
 
     assert_eq!(detector.file_walks().len(), 0);
 
-    detector.file_loaded(p("dir/a"));
-    detector.file_loaded(p("dir/a"));
+    detector.file_loaded(p("dir/a"), 0);
+    detector.file_loaded(p("dir/a"), 0);
 
     assert_eq!(detector.file_walks().len(), 0);
 
-    detector.file_loaded(p("dir/b"));
+    detector.file_loaded(p("dir/b"), 0);
 
     assert_eq!(detector.file_walks(), vec![(p("dir"), 0)]);
 
-    detector.file_loaded(p("dir/c"));
-    detector.file_loaded(p("dir/d"));
-    detector.file_loaded(p("dir/e"));
+    detector.file_loaded(p("dir/c"), 0);
+    detector.file_loaded(p("dir/d"), 0);
+    detector.file_loaded(p("dir/e"), 0);
 
     assert_eq!(detector.file_walks(), vec![(p("dir"), 0)]);
 }
@@ -51,21 +51,21 @@ fn test_bfs_walk() {
     let mut detector = Detector::new();
     detector.set_walk_threshold(TEST_WALK_THRESHOLD);
 
-    detector.file_loaded(p("root/dir1/a"));
-    detector.file_loaded(p("root/dir1/b"));
+    detector.file_loaded(p("root/dir1/a"), 0);
+    detector.file_loaded(p("root/dir1/b"), 0);
 
     assert_eq!(detector.file_walks(), vec![(p("root/dir1"), 0)]);
 
-    detector.file_loaded(p("root/dir2/a"));
-    detector.file_loaded(p("root/dir2/b"));
+    detector.file_loaded(p("root/dir2/a"), 0);
+    detector.file_loaded(p("root/dir2/b"), 0);
 
     // Raised walk up to parent directory with depth=1.
     assert_eq!(detector.file_walks(), vec![(p("root"), 1)]);
 
     // Now walk proceeds to the next level.
 
-    detector.file_loaded(p("root/dir1/dir1_1/a"));
-    detector.file_loaded(p("root/dir1/dir1_1/b"));
+    detector.file_loaded(p("root/dir1/dir1_1/a"), 0);
+    detector.file_loaded(p("root/dir1/dir1_1/b"), 0);
 
     // Nothing combined yet.
     assert_eq!(
@@ -73,8 +73,8 @@ fn test_bfs_walk() {
         vec![(p("root"), 1), (p("root/dir1/dir1_1"), 0)]
     );
 
-    detector.file_loaded(p("root/dir1/dir1_2/a"));
-    detector.file_loaded(p("root/dir1/dir1_2/b"));
+    detector.file_loaded(p("root/dir1/dir1_2/a"), 0);
+    detector.file_loaded(p("root/dir1/dir1_2/b"), 0);
 
     // Now we get a second walk for root/dir1
     assert_eq!(
@@ -83,24 +83,24 @@ fn test_bfs_walk() {
     );
 
     // More reads in dir2 doesn't combine the walks
-    detector.file_loaded(p("root/dir2/c"));
-    detector.file_loaded(p("root/dir2/d"));
+    detector.file_loaded(p("root/dir2/c"), 0);
+    detector.file_loaded(p("root/dir2/d"), 0);
     assert_eq!(
         detector.file_walks(),
         vec![(p("root"), 1), (p("root/dir1"), 1)]
     );
 
     // Walking further in root/dir2 will combine up to root.
-    detector.file_loaded(p("root/dir2/dir2_1/a"));
-    detector.file_loaded(p("root/dir2/dir2_1/b"));
-    detector.file_loaded(p("root/dir2/dir2_2/a"));
-    detector.file_loaded(p("root/dir2/dir2_2/b"));
+    detector.file_loaded(p("root/dir2/dir2_1/a"), 0);
+    detector.file_loaded(p("root/dir2/dir2_1/b"), 0);
+    detector.file_loaded(p("root/dir2/dir2_2/a"), 0);
+    detector.file_loaded(p("root/dir2/dir2_2/b"), 0);
     assert_eq!(detector.file_walks(), vec![(p("root"), 2)]);
 
     // Walk boundary can advance after we see depth+1 access that bubbles up to 2
     // different children of root.
-    detector.file_loaded(p("root/dir2/dir2_1/dir2_1_1/a"));
-    detector.file_loaded(p("root/dir2/dir2_1/dir2_1_1/b"));
+    detector.file_loaded(p("root/dir2/dir2_1/dir2_1_1/a"), 0);
+    detector.file_loaded(p("root/dir2/dir2_1/dir2_1_1/b"), 0);
 
     // So far only one advancement - doesn't expand root walk yet.
     assert_eq!(
@@ -109,16 +109,16 @@ fn test_bfs_walk() {
     );
 
     // Doesn't bubble up since advancement is still only under a single child "dir2".
-    detector.file_loaded(p("root/dir2/dir2_2/dir2_2_1/a"));
-    detector.file_loaded(p("root/dir2/dir2_2/dir2_2_1/b"));
+    detector.file_loaded(p("root/dir2/dir2_2/dir2_2_1/a"), 0);
+    detector.file_loaded(p("root/dir2/dir2_2/dir2_2_1/b"), 0);
     assert_eq!(
         detector.file_walks(),
         vec![(p("root"), 2), (p("root/dir2"), 2)]
     );
 
     // Now we also see a depth=3 access under "dir1" - expand depth.
-    detector.file_loaded(p("root/dir1/dir1_1/dir1_1_1/a"));
-    detector.file_loaded(p("root/dir1/dir1_1/dir1_1_1/b"));
+    detector.file_loaded(p("root/dir1/dir1_1/dir1_1_1/a"), 0);
+    detector.file_loaded(p("root/dir1/dir1_1/dir1_1_1/b"), 0);
     assert_eq!(detector.file_walks(), vec![(p("root"), 3)]);
 }
 
@@ -127,20 +127,20 @@ fn test_advanced_remainder() {
     let mut detector = Detector::new();
     detector.set_walk_threshold(TEST_WALK_THRESHOLD);
 
-    detector.file_loaded(p("root/dir1/a"));
-    detector.file_loaded(p("root/dir1/b"));
-    detector.file_loaded(p("root/dir2/a"));
-    detector.file_loaded(p("root/dir2/b"));
-    detector.file_loaded(p("root/dir1/dir1_1/a"));
-    detector.file_loaded(p("root/dir1/dir1_1/b"));
+    detector.file_loaded(p("root/dir1/a"), 0);
+    detector.file_loaded(p("root/dir1/b"), 0);
+    detector.file_loaded(p("root/dir2/a"), 0);
+    detector.file_loaded(p("root/dir2/b"), 0);
+    detector.file_loaded(p("root/dir1/dir1_1/a"), 0);
+    detector.file_loaded(p("root/dir1/dir1_1/b"), 0);
 
-    detector.file_loaded(p("root/dir2/dir2_1/a"));
-    detector.file_loaded(p("root/dir2/dir2_1/b"));
+    detector.file_loaded(p("root/dir2/dir2_1/a"), 0);
+    detector.file_loaded(p("root/dir2/dir2_1/b"), 0);
     assert_eq!(detector.file_walks(), vec![(p("root"), 2)]);
 
     // This marks "root/dir1" as "advanced" child.
-    detector.file_loaded(p("root/dir1/dir1_1/dir1_1_1/a"));
-    detector.file_loaded(p("root/dir1/dir1_1/dir1_1_1/b"));
+    detector.file_loaded(p("root/dir1/dir1_1/dir1_1_1/a"), 0);
+    detector.file_loaded(p("root/dir1/dir1_1/dir1_1_1/b"), 0);
     assert_eq!(
         detector.file_walks(),
         vec![(p("root"), 2), (p("root/dir1/dir1_1/dir1_1_1"), 0)]
@@ -149,10 +149,10 @@ fn test_advanced_remainder() {
     // This marks "root/dir2" as "advanced" child, but the
     // root/dir2/dir2_1 walk extends deeper than the advanced walk -
     // don't remove it.
-    detector.file_loaded(p("root/dir2/dir2_1/dir2_1_1/dir2_1_1_1/a"));
-    detector.file_loaded(p("root/dir2/dir2_1/dir2_1_1/dir2_1_1_1/b"));
-    detector.file_loaded(p("root/dir2/dir2_1/dir2_1_1/dir2_1_1_2/a"));
-    detector.file_loaded(p("root/dir2/dir2_1/dir2_1_1/dir2_1_1_2/b"));
+    detector.file_loaded(p("root/dir2/dir2_1/dir2_1_1/dir2_1_1_1/a"), 0);
+    detector.file_loaded(p("root/dir2/dir2_1/dir2_1_1/dir2_1_1_1/b"), 0);
+    detector.file_loaded(p("root/dir2/dir2_1/dir2_1_1/dir2_1_1_2/a"), 0);
+    detector.file_loaded(p("root/dir2/dir2_1/dir2_1_1/dir2_1_1_2/b"), 0);
 
     assert_eq!(
         detector.file_walks(),
@@ -279,12 +279,12 @@ fn test_dir_hints() {
     detector.set_walk_threshold(TEST_WALK_THRESHOLD);
 
     // Hint that "dir" has 0 files and 1 directory.
-    detector.dir_loaded(p("dir"), 0, 1);
+    detector.dir_loaded(p("dir"), 0, 1, 0);
 
     // Hint that "dir/subdir" has 1 file and 0 directories.
-    detector.dir_loaded(p("dir/subdir"), 1, 0);
+    detector.dir_loaded(p("dir/subdir"), 1, 0, 0);
 
-    detector.file_loaded(p("dir/subdir/a"));
+    detector.file_loaded(p("dir/subdir/a"), 0);
 
     // The walk bubbled straight up to "dir".
     assert_eq!(detector.file_walks(), vec![(p("dir"), 1)]);
@@ -320,19 +320,19 @@ fn test_retain_interesting_metadata() {
     detector.set_walk_threshold(TEST_WALK_THRESHOLD);
 
     // "interesting" metadata saying root/dir1 only has one directory
-    detector.dir_loaded(p("root/dir1"), 2, 1);
+    detector.dir_loaded(p("root/dir1"), 2, 1, 0);
 
     // Walk at root/, depth=1.
-    detector.file_loaded(p("root/dir1/a"));
-    detector.file_loaded(p("root/dir1/b"));
-    detector.file_loaded(p("root/dir2/a"));
-    detector.file_loaded(p("root/dir2/b"));
+    detector.file_loaded(p("root/dir1/a"), 0);
+    detector.file_loaded(p("root/dir1/b"), 0);
+    detector.file_loaded(p("root/dir2/a"), 0);
+    detector.file_loaded(p("root/dir2/b"), 0);
     assert_eq!(detector.file_walks(), vec![(p("root"), 1)]);
 
     // Walk at root/dir1/dir1_1, depth=1.
     // Test that we "remembered" root/dir1 metadata, so doot/dir1/dir1_1 is instantly promoted into walk on root/dir1.
-    detector.file_loaded(p("root/dir1/dir1_1/a"));
-    detector.file_loaded(p("root/dir1/dir1_1/b"));
+    detector.file_loaded(p("root/dir1/dir1_1/a"), 0);
+    detector.file_loaded(p("root/dir1/dir1_1/b"), 0);
     assert_eq!(
         detector.file_walks(),
         vec![(p("root"), 1), (p("root/dir1"), 1)]
@@ -346,17 +346,17 @@ fn test_retain_interesting_metadata_when_covered_by_walk() {
     detector.set_walk_ratio(0.1);
 
     // Start off with a directory walk at root/ triggered by un-interesting directories.
-    detector.dir_loaded(p("root/dir1"), 0, 0);
-    detector.dir_loaded(p("root/dir2"), 0, 0);
+    detector.dir_loaded(p("root/dir1"), 0, 0, 0);
+    detector.dir_loaded(p("root/dir2"), 0, 0, 0);
     assert_eq!(detector.dir_walks(), vec![(p("root"), 0)]);
 
     // Now we see a massive root/dir3, but it is already covered by root/ walk.
     // Be sure to remember metadata in this case.
-    detector.dir_loaded(p("root/dir3"), 100, 0);
+    detector.dir_loaded(p("root/dir3"), 100, 0, 0);
 
     // Don't create a file walk since we remembered that root/dir3 is very large.
-    detector.file_loaded(p("root/dir3/a"));
-    detector.file_loaded(p("root/dir3/b"));
+    detector.file_loaded(p("root/dir3/a"), 0);
+    detector.file_loaded(p("root/dir3/b"), 0);
     assert_eq!(detector.file_walks(), vec![]);
 }
 
@@ -365,7 +365,7 @@ fn test_dont_retain_empty_directory_metadata() {
     let mut detector = Detector::new();
     detector.set_walk_threshold(TEST_WALK_THRESHOLD);
 
-    detector.dir_loaded(p("root/dir1"), 0, 0);
+    detector.dir_loaded(p("root/dir1"), 0, 0, 0);
 
     // Check we didn't create a node for root/dir1. Empty is not interesting.
     assert!(
@@ -412,18 +412,18 @@ fn test_dont_merge_into_containg_walk() {
     insert_walk(&detector, p(""), WalkType::File, 2);
     assert_eq!(detector.file_walks(), vec![(p(""), 2)]);
 
-    detector.dir_loaded(p("dir2"), 0, 1000);
-    detector.dir_loaded(p("dir2/dir2_1"), 0, 1);
-    detector.dir_loaded(p("dir2/dir2_1/dir2_1_1"), 1, 0);
-    detector.file_loaded(p("dir2/dir2_1/dir2_1_1/a"));
+    detector.dir_loaded(p("dir2"), 0, 1000, 0);
+    detector.dir_loaded(p("dir2/dir2_1"), 0, 1, 0);
+    detector.dir_loaded(p("dir2/dir2_1/dir2_1_1"), 1, 0, 0);
+    detector.file_loaded(p("dir2/dir2_1/dir2_1_1/a"), 0);
     assert_eq!(
         detector.file_walks(),
         vec![(p(""), 2), (p("dir2/dir2_1"), 1)]
     );
 
-    detector.dir_loaded(p("dir2/dir2_2"), 0, 1);
-    detector.dir_loaded(p("dir2/dir2_2/dir2_2_1"), 1, 0);
-    detector.file_loaded(p("dir2/dir2_2/dir2_2_1/a"));
+    detector.dir_loaded(p("dir2/dir2_2"), 0, 1, 0);
+    detector.dir_loaded(p("dir2/dir2_2/dir2_2_1"), 1, 0, 0);
+    detector.file_loaded(p("dir2/dir2_2/dir2_2_1/a"), 0);
 
     // Be careful to not let the latter two walks merge into the root walk. "dir2" is a large
     // directory, so we shouldn't let "dir2/dir2_1" and "dir2/dir2_2" jump across it and deepen the
@@ -444,34 +444,34 @@ fn test_gc() {
         detector.set_gc_interval(Duration::from_secs(interval));
         detector.set_gc_timeout(Duration::from_secs(2));
 
-        detector.file_loaded(p("dir1/a"));
+        detector.file_loaded(p("dir1/a"), 0);
         assert_eq!(detector.file_walks(), vec![]);
 
         MockClock::advance(Duration::from_secs(1));
 
         // GC should run but not remove anything.
-        detector.file_loaded(p("dir1/b"));
+        detector.file_loaded(p("dir1/b"), 0);
         assert_eq!(detector.file_walks(), vec![(p("dir1"), 0)]);
 
         MockClock::advance(Duration::from_secs(1));
 
         // This should keep dir1 walk alive.
-        detector.file_loaded(p("dir1/c"));
-        detector.file_loaded(p("dir2/a"));
-        detector.file_loaded(p("some/deep/dir/a"));
+        detector.file_loaded(p("dir1/c"), 0);
+        detector.file_loaded(p("dir2/a"), 0);
+        detector.file_loaded(p("some/deep/dir/a"), 0);
         assert_eq!(detector.file_walks(), vec![(p("dir1"), 0)]);
 
         MockClock::advance(Duration::from_secs(1));
 
-        detector.file_loaded(p("dir2/b"));
+        detector.file_loaded(p("dir2/b"), 0);
         assert_eq!(detector.file_walks(), vec![(p(""), 1)]);
 
         MockClock::advance(Duration::from_secs(1));
 
         // GC should clear out some/deep/dir, so this should not result in walk.
-        detector.file_loaded(p("some/deep/dir/b"));
+        detector.file_loaded(p("some/deep/dir/b"), 0);
         // This should update access time for root walk.
-        detector.file_loaded(p("dir3/a"));
+        detector.file_loaded(p("dir3/a"), 0);
         assert_eq!(detector.file_walks(), vec![(p(""), 1)]);
 
         // Root walk still here since dir3/a refreshed access time.
@@ -494,17 +494,17 @@ fn test_gc_stats() {
 
     detector.set_gc_timeout(Duration::from_secs(1));
 
-    detector.file_loaded(p("dir1/a"));
-    detector.file_loaded(p("dir1/b"));
+    detector.file_loaded(p("dir1/a"), 0);
+    detector.file_loaded(p("dir1/b"), 0);
 
-    detector.file_loaded(p("dir2/a"));
+    detector.file_loaded(p("dir2/a"), 0);
 
-    detector.file_loaded(p("dir3/dir4/a"));
+    detector.file_loaded(p("dir3/dir4/a"), 0);
 
     MockClock::advance(Duration::from_secs(2));
 
     // Refresh access time on dir3.
-    detector.file_loaded(p("dir3/dir4/b"));
+    detector.file_loaded(p("dir3/dir4/b"), 0);
 
     // Manually run GC to check stats.
     let (nodes_removed, nodes_remaining, walks_removed) =
@@ -525,43 +525,43 @@ fn test_dir_walk() {
     let mut detector = Detector::new();
     detector.set_walk_threshold(TEST_WALK_THRESHOLD);
 
-    detector.dir_loaded(p(""), 2, 2);
+    detector.dir_loaded(p(""), 2, 2, 0);
     assert_eq!(detector.dir_walks(), vec![]);
 
-    detector.dir_loaded(p("dir1"), 2, 2);
-    detector.dir_loaded(p("dir2"), 2, 2);
+    detector.dir_loaded(p("dir1"), 2, 2, 0);
+    detector.dir_loaded(p("dir2"), 2, 2, 0);
     assert_eq!(detector.dir_walks(), vec![(p(""), 0)]);
 
-    detector.dir_loaded(p("dir1/dir1_1"), 2, 2);
-    detector.dir_loaded(p("dir1/dir1_2"), 2, 2);
-    detector.dir_loaded(p("dir2/dir2_1"), 2, 2);
-    detector.dir_loaded(p("dir2/dir2_2"), 2, 2);
+    detector.dir_loaded(p("dir1/dir1_1"), 2, 2, 0);
+    detector.dir_loaded(p("dir1/dir1_2"), 2, 2, 0);
+    detector.dir_loaded(p("dir2/dir2_1"), 2, 2, 0);
+    detector.dir_loaded(p("dir2/dir2_2"), 2, 2, 0);
     assert_eq!(detector.dir_walks(), vec![(p(""), 1)]);
 
     // Now we start seeing files walked.
-    detector.file_loaded(p("a"));
-    detector.file_loaded(p("b"));
+    detector.file_loaded(p("a"), 0);
+    detector.file_loaded(p("b"), 0);
     assert_eq!(detector.file_walks(), vec![(p(""), 0)]);
     // Directory walk still around since it is deeper than file walk.
     assert_eq!(detector.dir_walks(), vec![(p(""), 1)]);
 
-    detector.file_loaded(p("dir1/a"));
-    detector.file_loaded(p("dir1/b"));
-    detector.file_loaded(p("dir2/a"));
-    detector.file_loaded(p("dir2/b"));
+    detector.file_loaded(p("dir1/a"), 0);
+    detector.file_loaded(p("dir1/b"), 0);
+    detector.file_loaded(p("dir2/a"), 0);
+    detector.file_loaded(p("dir2/b"), 0);
     assert_eq!(detector.file_walks(), vec![(p(""), 1)]);
     // Directory walk is redundant - remove it.
     assert_eq!(detector.dir_walks(), vec![]);
 
-    detector.file_loaded(p("dir1/dir1_1/a"));
-    detector.file_loaded(p("dir1/dir1_1/b"));
-    detector.file_loaded(p("dir2/dir2_1/a"));
-    detector.file_loaded(p("dir2/dir2_1/b"));
+    detector.file_loaded(p("dir1/dir1_1/a"), 0);
+    detector.file_loaded(p("dir1/dir1_1/b"), 0);
+    detector.file_loaded(p("dir2/dir2_1/a"), 0);
+    detector.file_loaded(p("dir2/dir2_1/b"), 0);
     assert_eq!(detector.file_walks(), vec![(p(""), 2)]);
     assert_eq!(detector.dir_walks(), vec![]);
 
-    detector.dir_loaded(p("dir1/dir1_1/dir1_1_1"), 2, 2);
-    detector.dir_loaded(p("dir1/dir1_1/dir1_1_2"), 2, 2);
+    detector.dir_loaded(p("dir1/dir1_1/dir1_1_1"), 2, 2, 0);
+    detector.dir_loaded(p("dir1/dir1_1/dir1_1_2"), 2, 2, 0);
     assert_eq!(detector.file_walks(), vec![(p(""), 2)]);
     // No dir walk - depth=2 is already covered by file walk.
     assert_eq!(detector.dir_walks(), vec![]);
@@ -575,18 +575,18 @@ fn test_walk_changed() {
     detector.set_gc_timeout(Duration::from_secs(2));
 
     // No walk.
-    assert!(!detector.file_loaded(p("dir1/a")));
+    assert!(!detector.file_loaded(p("dir1/a"), 0));
 
     // Yes walk.
-    assert!(detector.file_loaded(p("dir1/b")));
+    assert!(detector.file_loaded(p("dir1/b"), 0));
 
     // No walk changes.
-    assert!(!detector.file_loaded(p("dir2/a")));
+    assert!(!detector.file_loaded(p("dir2/a"), 0));
 
     MockClock::advance(Duration::from_secs(5));
 
     // GC removes walk
-    assert!(detector.file_loaded(p("dir2/a")));
+    assert!(detector.file_loaded(p("dir2/a"), 0));
 }
 
 #[test]
@@ -596,23 +596,23 @@ fn test_touched() {
     detector.set_gc_interval(Duration::from_secs(1));
     detector.set_gc_timeout(Duration::from_secs(2));
 
-    detector.file_loaded(p("dir1/a"));
-    detector.file_loaded(p("dir1/b"));
+    detector.file_loaded(p("dir1/a"), 0);
+    detector.file_loaded(p("dir1/b"), 0);
     assert_eq!(detector.file_walks().len(), 1);
 
-    detector.dir_loaded(p("dir2/a"), 0, 0);
-    detector.dir_loaded(p("dir2/b"), 0, 0);
+    detector.dir_loaded(p("dir2/a"), 0, 0, 0);
+    detector.dir_loaded(p("dir2/b"), 0, 0, 0);
     assert_eq!(detector.dir_walks().len(), 1);
 
     for _ in 0..10 {
         MockClock::advance(Duration::from_secs(1));
 
-        assert!(detector.file_read(p("dir1/c")));
-        assert!(detector.dir_read(p("dir2/c"), 0, 0));
+        assert!(detector.file_read(p("dir1/c"), 0));
+        assert!(detector.dir_read(p("dir2/c"), 0, 0, 0));
     }
 
-    detector.file_loaded(p("something/else"));
-    detector.dir_loaded(p("something/else"), 0, 0);
+    detector.file_loaded(p("something/else"), 0);
+    detector.dir_loaded(p("something/else"), 0, 0, 0);
 
     // Walks still around - not GC'd.
     assert_eq!(detector.file_walks().len(), 1);
@@ -620,7 +620,7 @@ fn test_touched() {
 
     // Test that the touched methods don't resurrect expired (but not collected) nodes.
     MockClock::advance(Duration::from_secs(5));
-    assert!(!detector.file_read(p("dir1/c")));
+    assert!(!detector.file_read(p("dir1/c"), 0));
     assert!(detector.file_walks().is_empty());
     assert!(detector.dir_walks().is_empty());
 }
@@ -642,24 +642,24 @@ fn test_counters() {
     };
 
     // Include initial counts when we first create the walk.
-    detector.dir_loaded(p("dir1/dir1_1"), 0, 0);
-    detector.dir_loaded(p("dir1/dir1_2"), 0, 0);
-    detector.dir_loaded(p("dir1/dir1_2"), 0, 0);
-    detector.dir_read(p("dir1/dir1_2"), 0, 0);
+    detector.dir_loaded(p("dir1/dir1_1"), 0, 0, 0);
+    detector.dir_loaded(p("dir1/dir1_2"), 0, 0, 0);
+    detector.dir_loaded(p("dir1/dir1_2"), 0, 0, 0);
+    detector.dir_read(p("dir1/dir1_2"), 0, 0, 0);
     assert_eq!(
         get_counters(p("dir1"), WalkType::Directory),
         (0, 0, 0, 3, 1)
     );
 
     // Propagate counts when we convert to file walk.
-    detector.file_loaded(p("dir1/a"));
-    detector.file_loaded(p("dir1/b"));
+    detector.file_loaded(p("dir1/a"), 0);
+    detector.file_loaded(p("dir1/b"), 0);
     detector.files_preloaded(p("dir1"), 1);
     assert_eq!(get_counters(p("dir1"), WalkType::File), (2, 0, 1, 3, 1));
 
     // Propagate when combining walks.
-    detector.file_loaded(p("dir2/a"));
-    detector.file_loaded(p("dir2/b"));
+    detector.file_loaded(p("dir2/a"), 0);
+    detector.file_loaded(p("dir2/b"), 0);
     assert_eq!(get_counters(p(""), WalkType::File), (4, 0, 1, 3, 1));
 }
 
@@ -670,20 +670,20 @@ fn test_stricter_threshold() {
     detector.set_lax_depth(1);
     detector.set_strict_multiplier(2);
 
-    detector.file_loaded(p("dir1/a"));
-    detector.file_loaded(p("dir1/b"));
+    detector.file_loaded(p("dir1/a"), 0);
+    detector.file_loaded(p("dir1/b"), 0);
 
-    detector.file_loaded(p("dir2/a"));
-    detector.file_loaded(p("dir2/b"));
+    detector.file_loaded(p("dir2/a"), 0);
+    detector.file_loaded(p("dir2/b"), 0);
 
     // Walk didn't get propagated to root due to stricter threshold above depth 1.
     assert_eq!(detector.file_walks(), vec![(p("dir1"), 0), (p("dir2"), 0)]);
 
-    detector.file_loaded(p("dir3/a"));
-    detector.file_loaded(p("dir3/b"));
+    detector.file_loaded(p("dir3/a"), 0);
+    detector.file_loaded(p("dir3/b"), 0);
 
-    detector.file_loaded(p("dir4/a"));
-    detector.file_loaded(p("dir4/b"));
+    detector.file_loaded(p("dir4/a"), 0);
+    detector.file_loaded(p("dir4/b"), 0);
 
     // Still eventually gets propagated.
     assert_eq!(detector.file_walks(), vec![(p(""), 1)]);
@@ -696,40 +696,40 @@ fn test_huge_directory() {
     detector.set_walk_ratio(0.1);
 
     // Huge directory.
-    detector.dir_loaded(p("dir1"), 100, 100);
+    detector.dir_loaded(p("dir1"), 100, 100, 0);
 
-    detector.file_loaded(p("dir1/a"));
-    detector.file_loaded(p("dir1/b"));
+    detector.file_loaded(p("dir1/a"), 0);
+    detector.file_loaded(p("dir1/b"), 0);
 
     // No walks yet - 2/100 has not reached out threshold of 10%.
     assert!(detector.file_walks().is_empty());
 
     for i in 0..5 {
-        detector.file_loaded(p(format!("dir1/{i}")));
+        detector.file_loaded(p(format!("dir1/{i}")), 0);
     }
 
     // Still not enough.
     assert!(detector.file_walks().is_empty());
 
     for i in 0..10 {
-        detector.file_loaded(p(format!("dir1/{i}")));
+        detector.file_loaded(p(format!("dir1/{i}")), 0);
     }
 
     // Now we hit the 10% threshold.
     assert_eq!(detector.file_walks(), vec![(p("dir1"), 0)]);
 
     // Root directory needs 30*0.1=3 walked children to become walked.
-    detector.dir_loaded(p(""), 0, 30);
+    detector.dir_loaded(p(""), 0, 30, 0);
 
-    detector.file_loaded(p("dir2/a"));
-    detector.file_loaded(p("dir2/b"));
+    detector.file_loaded(p("dir2/a"), 0);
+    detector.file_loaded(p("dir2/b"), 0);
 
     // Didn't bubble up yet even though we met the base walk threshold of 2.
     assert_eq!(detector.file_walks(), vec![(p("dir1"), 0), (p("dir2"), 0)]);
 
     // Now we meet the 10% limit.
-    detector.file_loaded(p("dir3/a"));
-    detector.file_loaded(p("dir3/b"));
+    detector.file_loaded(p("dir3/a"), 0);
+    detector.file_loaded(p("dir3/b"), 0);
     assert_eq!(detector.file_walks(), vec![(p(""), 1)]);
 }
 
@@ -740,18 +740,18 @@ fn test_slow_walk() {
     detector.set_gc_interval(Duration::from_secs(1));
     detector.set_gc_timeout(Duration::from_secs(3));
 
-    detector.file_loaded(p("dir/a"));
-    detector.file_loaded(p("dir/b"));
-    detector.file_loaded(p("dir/c"));
+    detector.file_loaded(p("dir/a"), 0);
+    detector.file_loaded(p("dir/b"), 0);
+    detector.file_loaded(p("dir/c"), 0);
     assert_eq!(detector.file_walks(), vec![(p("dir"), 0)]);
 
     // Slowly (relative to GC timeout) advance the walk. Make sure the "dir" walk doesn't time out
     // while we are making progress.
     MockClock::advance(Duration::from_secs(2));
 
-    detector.file_loaded(p("dir/dir_1/a"));
-    detector.file_loaded(p("dir/dir_1/b"));
-    detector.file_loaded(p("dir/dir_1/c"));
+    detector.file_loaded(p("dir/dir_1/a"), 0);
+    detector.file_loaded(p("dir/dir_1/b"), 0);
+    detector.file_loaded(p("dir/dir_1/c"), 0);
     assert_eq!(
         detector.file_walks(),
         vec![(p("dir"), 0), (p("dir/dir_1"), 0)]
@@ -759,9 +759,9 @@ fn test_slow_walk() {
 
     MockClock::advance(Duration::from_secs(2));
 
-    detector.file_loaded(p("dir/dir_2/a"));
-    detector.file_loaded(p("dir/dir_2/b"));
-    detector.file_loaded(p("dir/dir_2/c"));
+    detector.file_loaded(p("dir/dir_2/a"), 0);
+    detector.file_loaded(p("dir/dir_2/b"), 0);
+    detector.file_loaded(p("dir/dir_2/c"), 0);
     assert_eq!(
         detector.file_walks(),
         vec![(p("dir"), 0), (p("dir/dir_1"), 0), (p("dir/dir_2"), 0)]
@@ -769,9 +769,9 @@ fn test_slow_walk() {
 
     MockClock::advance(Duration::from_secs(2));
 
-    detector.file_loaded(p("dir/dir_3/a"));
-    detector.file_loaded(p("dir/dir_3/b"));
-    detector.file_loaded(p("dir/dir_3/c"));
+    detector.file_loaded(p("dir/dir_3/a"), 0);
+    detector.file_loaded(p("dir/dir_3/b"), 0);
+    detector.file_loaded(p("dir/dir_3/c"), 0);
     assert_eq!(detector.file_walks(), vec![(p("dir"), 1)]);
 }
 
@@ -781,33 +781,33 @@ fn test_split_off_child_walk() {
     detector.set_walk_threshold(TEST_WALK_THRESHOLD);
     detector.set_walk_ratio(0.1);
 
-    detector.dir_loaded(p("big"), 5, 30);
+    detector.dir_loaded(p("big"), 5, 30, 0);
 
-    detector.file_loaded(p("small/a"));
-    detector.file_loaded(p("small/b"));
-    detector.file_loaded(p("big/a"));
-    detector.file_loaded(p("big/b"));
+    detector.file_loaded(p("small/a"), 0);
+    detector.file_loaded(p("small/b"), 0);
+    detector.file_loaded(p("big/a"), 0);
+    detector.file_loaded(p("big/b"), 0);
     assert_eq!(detector.file_walks(), vec![(p(""), 1)]);
 
-    detector.file_loaded(p("small/dir1/a"));
-    detector.file_loaded(p("small/dir1/b"));
-    detector.file_loaded(p("big/dir1/a"));
-    detector.file_loaded(p("big/dir1/b"));
+    detector.file_loaded(p("small/dir1/a"), 0);
+    detector.file_loaded(p("small/dir1/b"), 0);
+    detector.file_loaded(p("big/dir1/a"), 0);
+    detector.file_loaded(p("big/dir1/b"), 0);
     assert_eq!(detector.file_walks(), vec![(p(""), 2)]);
 
-    detector.file_loaded(p("small/dir1/dir1_1/a"));
-    detector.file_loaded(p("small/dir1/dir1_1/b"));
-    detector.file_loaded(p("big/dir1/dir1_1/a"));
-    detector.file_loaded(p("big/dir1/dir1_1/b"));
+    detector.file_loaded(p("small/dir1/dir1_1/a"), 0);
+    detector.file_loaded(p("small/dir1/dir1_1/b"), 0);
+    detector.file_loaded(p("big/dir1/dir1_1/a"), 0);
+    detector.file_loaded(p("big/dir1/dir1_1/b"), 0);
     assert_eq!(detector.file_walks(), vec![(p(""), 3)]);
 
     // Now "small" has run out of depth, but "big" still has a lot left.
 
-    detector.file_loaded(p("big/dir2/dir2_1/dir2_1_1/a"));
-    detector.file_loaded(p("big/dir2/dir2_1/dir2_1_1/b"));
+    detector.file_loaded(p("big/dir2/dir2_1/dir2_1_1/a"), 0);
+    detector.file_loaded(p("big/dir2/dir2_1/dir2_1_1/b"), 0);
 
-    detector.file_loaded(p("big/dir3/dir3_1/dir3_1_1/a"));
-    detector.file_loaded(p("big/dir3/dir3_1/dir3_1_1/b"));
+    detector.file_loaded(p("big/dir3/dir3_1/dir3_1_1/a"), 0);
+    detector.file_loaded(p("big/dir3/dir3_1/dir3_1_1/b"), 0);
 
     // Haven't hit the threshold of 3 yet (0.1*30=3)
     assert_eq!(
@@ -819,8 +819,8 @@ fn test_split_off_child_walk() {
         ]
     );
 
-    detector.file_loaded(p("big/dir4/dir4_1/dir4_1_1/a"));
-    detector.file_loaded(p("big/dir4/dir4_1/dir4_1_1/b"));
+    detector.file_loaded(p("big/dir4/dir4_1/dir4_1_1/a"), 0);
+    detector.file_loaded(p("big/dir4/dir4_1/dir4_1_1/b"), 0);
 
     // No matter how much we see at depth=3, we won't advance the root walk since all advancements are under a single child "big".
     // But if we break off a separate walk for "big", then it can deepen on its own.
@@ -833,8 +833,8 @@ fn test_important_metadata() {
     detector.set_walk_threshold(TEST_WALK_THRESHOLD);
     detector.set_walk_ratio(0.1);
 
-    detector.dir_loaded(p("big_remote"), 1000, 1000);
-    detector.dir_read(p("big_cached"), 1000, 1000);
+    detector.dir_loaded(p("big_remote"), 1000, 1000, 0);
+    detector.dir_read(p("big_cached"), 1000, 1000, 0);
 
     // Trigger a GC.
     MockClock::advance(Duration::from_secs(60));
@@ -853,5 +853,36 @@ fn test_important_metadata() {
                 .unwrap(),
             1000
         );
+    }
+}
+
+#[test]
+fn test_pid_propagation() {
+    let mut detector = Detector::new();
+    detector.set_walk_threshold(TEST_WALK_THRESHOLD);
+
+    let get_pid = |path: &str| -> u32 {
+        detector
+            .inner
+            .read()
+            .node
+            .get_node(&p(path))
+            .unwrap()
+            .get_walk_for_type(WalkType::File)
+            .unwrap()
+            .pid()
+    };
+
+    detector.file_loaded(p("a"), 1);
+    detector.file_loaded(p("b"), 1);
+    assert_eq!(detector.file_walks(), vec![(p(""), 0)]);
+    assert_eq!(get_pid(""), 1);
+
+    // pid will eventually change if we see activity from another pid
+    loop {
+        detector.file_read(p("c"), 2);
+        if get_pid("") == 2 {
+            break;
+        }
     }
 }

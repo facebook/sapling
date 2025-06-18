@@ -130,10 +130,10 @@ pub fn run(ctx: ReqCtx<DebugWalkDetectorOpts>) -> Result<u8> {
             for work in chunk {
                 match work {
                     Work::File(file_path) => {
-                        detector.file_loaded(file_path);
+                        detector.file_loaded(file_path, 0);
                     }
                     Work::Dir(dir, num_files, num_dirs) => {
-                        detector.dir_loaded(dir, num_files, num_dirs);
+                        detector.dir_loaded(dir, num_files, num_dirs, 0);
                     }
                 }
             }

@@ -741,8 +741,8 @@ mod test {
         );
 
         // Trigger a walk.
-        detector.file_loaded(&foo_path);
-        detector.file_loaded(&bar_path);
+        detector.file_loaded(&foo_path, 0);
+        detector.file_loaded(&bar_path, 0);
 
         kick_manager.send(())?;
 
@@ -811,10 +811,10 @@ mod test {
         );
 
         // Trigger a directory walk for each of "dir1" and "dir2".
-        detector.dir_loaded(RepoPath::from_static_str("dir1/a"), 0, 0);
-        detector.dir_loaded(RepoPath::from_static_str("dir1/b"), 0, 0);
-        detector.dir_loaded(RepoPath::from_static_str("dir2/a"), 0, 0);
-        detector.dir_loaded(RepoPath::from_static_str("dir2/b"), 0, 0);
+        detector.dir_loaded(RepoPath::from_static_str("dir1/a"), 0, 0, 0);
+        detector.dir_loaded(RepoPath::from_static_str("dir1/b"), 0, 0, 0);
+        detector.dir_loaded(RepoPath::from_static_str("dir2/a"), 0, 0, 0);
+        detector.dir_loaded(RepoPath::from_static_str("dir2/b"), 0, 0, 0);
 
         kick_manager.send(())?;
 

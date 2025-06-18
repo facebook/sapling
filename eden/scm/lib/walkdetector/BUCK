@@ -22,6 +22,7 @@ rust_library(
     deps = [
         "fbsource//third-party/rust:coarsetime",
         "fbsource//third-party/rust:parking_lot",
+        "fbsource//third-party/rust:rand",
         "fbsource//third-party/rust:tracing",
         "//eden/scm/lib/types:types",
     ],

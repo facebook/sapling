@@ -396,10 +396,10 @@ impl BackingStore {
         }
 
         let walk_changed = if local {
-            inner.walk_detector.file_read(path);
+            inner.walk_detector.file_read(path, 0);
             false
         } else {
-            inner.walk_detector.file_loaded(path)
+            inner.walk_detector.file_loaded(path, 0)
         };
         if !walk_changed {
             return;
@@ -423,10 +423,10 @@ impl BackingStore {
         }
 
         let walk_changed = if local {
-            inner.walk_detector.dir_read(path, num_files, num_dirs);
+            inner.walk_detector.dir_read(path, num_files, num_dirs, 0);
             false
         } else {
-            inner.walk_detector.dir_loaded(path, num_files, num_dirs)
+            inner.walk_detector.dir_loaded(path, num_files, num_dirs, 0)
         };
         if !walk_changed {
             return;
