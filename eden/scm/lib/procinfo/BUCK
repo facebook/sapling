@@ -39,6 +39,7 @@ rust_library(
         (
             "windows",
             [
+                "fbsource//third-party/rust:ntapi",
                 "fbsource//third-party/rust:winapi",
             ],
         ),

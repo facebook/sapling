@@ -18,15 +18,23 @@ mod windows {
     use std::mem::zeroed;
     use std::os::windows::ffi::OsStringExt;
 
+    use ntapi::ntpsapi::NtQueryInformationProcess;
+    use ntapi::ntpsapi::PROCESS_BASIC_INFORMATION;
+    use ntapi::ntpsapi::ProcessBasicInformation;
     use winapi::shared::minwindef::DWORD;
+    use winapi::shared::minwindef::PULONG;
+    use winapi::shared::ntdef::ULONG;
     use winapi::um::handleapi::CloseHandle;
     use winapi::um::handleapi::INVALID_HANDLE_VALUE;
+    use winapi::um::processthreadsapi::OpenProcess;
+    use winapi::um::psapi::GetProcessImageFileNameW;
     use winapi::um::tlhelp32::CreateToolhelp32Snapshot;
     use winapi::um::tlhelp32::PROCESSENTRY32W;
     use winapi::um::tlhelp32::Process32FirstW;
     use winapi::um::tlhelp32::Process32NextW;
     use winapi::um::tlhelp32::TH32CS_SNAPPROCESS;
     use winapi::um::winnt::HANDLE;
+    use winapi::um::winnt::PROCESS_QUERY_INFORMATION;
 
     pub(crate) struct Snapshot {
         handle: HANDLE,
@@ -100,6 +108,58 @@ mod windows {
                 })
                 .map(|ref v| OsString::from_wide(v).into_string().unwrap_or("".into()))
         }
+    }
+
+    pub(crate) fn exe_name(process_id: DWORD) -> Result<String, ()> {
+        let process_handle = unsafe { OpenProcess(PROCESS_QUERY_INFORMATION, 0, process_id as _) };
+        if process_handle.is_null() {
+            return Err(());
+        }
+
+        let mut buffer: Vec<u16> = vec![0; 4096];
+        let path_len = unsafe {
+            GetProcessImageFileNameW(process_handle, buffer.as_mut_ptr(), buffer.len() as u32)
+        };
+
+        unsafe { CloseHandle(process_handle) };
+
+        if path_len == 0 {
+            return Err(());
+        }
+
+        let path = OsString::from_wide(&buffer[..path_len as usize]);
+        let name = path
+            .to_str()
+            .map(|s| s.rsplit(&['\\', '/']).next().unwrap_or("").to_string());
+        name.ok_or(())
+    }
+
+    pub(crate) fn parent_pid(process_id: DWORD) -> Result<DWORD, ()> {
+        let process_handle = unsafe { OpenProcess(PROCESS_QUERY_INFORMATION, 0, process_id as _) };
+        if process_handle.is_null() {
+            return Err(());
+        }
+
+        let mut pbi: PROCESS_BASIC_INFORMATION = unsafe { std::mem::zeroed() };
+        let mut return_length: ULONG = 0;
+
+        let status = unsafe {
+            NtQueryInformationProcess(
+                process_handle,
+                ProcessBasicInformation,
+                &mut pbi as *mut _ as *mut _,
+                std::mem::size_of::<PROCESS_BASIC_INFORMATION>() as u32,
+                &mut return_length as PULONG,
+            )
+        };
+
+        unsafe { CloseHandle(process_handle) };
+
+        if status < 0 {
+            return Err(());
+        }
+
+        Ok(pbi.InheritedFromUniqueProcessId as u32)
     }
 }
 
@@ -180,10 +240,8 @@ pub fn parent_pid(pid: u32) -> u32 {
 
     #[cfg(windows)]
     {
-        if let Ok(snapshot) = windows::Snapshot::new() {
-            if let Ok(ppid) = snapshot.get_parent_process_id(pid) {
-                return ppid;
-            }
+        if let Ok(ppid) = windows::parent_pid(pid) {
+            return ppid;
         }
     }
 
@@ -209,10 +267,8 @@ pub fn exe_name(pid: u32) -> String {
 
     #[cfg(windows)]
     {
-        if let Ok(snapshot) = windows::Snapshot::new() {
-            if let Ok(name) = snapshot.get_process_executable_name(pid) {
-                return name;
-            }
+        if let Ok(name) = windows::exe_name(pid) {
+            return name;
         }
     }
 
