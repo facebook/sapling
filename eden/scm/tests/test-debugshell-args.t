@@ -19,7 +19,8 @@ Wtih crash traceback:
   $ hg debugshell -c 'raise RuntimeError("x")'
   Traceback (most recent call last):
   ...
-    File "<string>", line 1, in <module>
+    File "debugshell:script", line 1, in <module>
+      raise RuntimeError("x")
   RuntimeError: x
   [1]
 

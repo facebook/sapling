@@ -107,7 +107,21 @@ def debugshell(ui, repo, *args, **opts):
 
 def _exec(ui, source, env, path=None):
     """Like exec(), but show source code in traceback and reports exit code"""
-    code = compile(source, path or "<string>", "exec")
+    if path is None:
+        # Provide "__loader__.get_source" for linecache to use in traceback.
+        # The filename cannot be "<...>". See linecache impl for details.
+        path = "debugshell:script"
+
+        class DebugShellLoader:
+            def __init__(self, source):
+                self.source = source
+
+            def get_source(self, _name):
+                return self.source
+
+        env["__loader__"] = DebugShellLoader(source)
+
+    code = compile(source, path, "exec")
     try:
         exec(code, env, env)
         return 0
