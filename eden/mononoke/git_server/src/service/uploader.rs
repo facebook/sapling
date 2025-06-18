@@ -49,13 +49,13 @@ type ContentTags = HashMap<String, ObjectId>;
 
 #[derive(Clone, Debug)]
 struct TagMetadata {
-    name: Option<String>,
+    name: String,
     bonsai_target: Option<ChangesetId>,
     git_target: ObjectId,
 }
 
 impl TagMetadata {
-    fn new(name: Option<String>, bonsai_target: Option<ChangesetId>, git_target: ObjectId) -> Self {
+    fn new(name: String, bonsai_target: Option<ChangesetId>, git_target: ObjectId) -> Self {
         Self {
             name,
             bonsai_target,
@@ -178,7 +178,13 @@ async fn tags(
             } else {
                 Some(git_to_bonsai(ctx, repo, &target_id).await?)
             };
-            result.insert(id.clone(), TagMetadata::new(None, bonsai_id, target_id));
+            let tag_name_from_object = object
+                .with_parsed_as_tag(|tag| tag.name.to_string())
+                .ok_or_else(|| anyhow::anyhow!("Expected {} to be a tag object", id.to_hex()))?;
+            result.insert(
+                id.clone(),
+                TagMetadata::new(tag_name_from_object, bonsai_id, target_id),
+            );
         }
     }
     Ok(result)
@@ -204,9 +210,17 @@ async fn process_tags<Uploader: GitUploader>(
         let ref_name = name
             .strip_prefix("refs/")
             .map_or(name.to_string(), |name| name.to_string());
-        tags.entry(oid.to_owned()).and_modify(|tag_metadata| {
-            tag_metadata.name = Some(ref_name);
-        });
+        if let Some(tag_metadata) = tags.get_mut(oid) {
+            // Only update the tag name based on the ref name if we are sure they refer to the same tag
+            // If they refer to the same tag, the names would either be identical or the ref name would
+            // would atleast end with the tag object name in case of namespaced tags
+            if ref_name.ends_with(tag_metadata.name.as_str()) {
+                tag_metadata.name = ref_name;
+            } else {
+                // Otherwise, remove the tag entry from the map
+                tags.remove(oid);
+            }
+        }
     }
     info!(ctx.logger(), "Uploading tags for repo {}", repo_name);
     // Upload the tags to the blobstore and also create bonsai mapping for it
@@ -220,7 +234,7 @@ async fn process_tags<Uploader: GitUploader>(
         // be used in bookmark movement
         if let Some(bonsai_target) = bonsai_target.as_ref() {
             ref_map.insert_tag(&tag_id, *bonsai_target);
-        } else if let Some(name) = name.as_ref() {
+        } else {
             content_tags.insert(format!("refs/{}", name), git_target);
         }
         // Store the raw tag object first
@@ -231,7 +245,7 @@ async fn process_tags<Uploader: GitUploader>(
             uploader.clone(),
             object_store.clone(),
             &tag_id,
-            name,
+            Some(name),
             bonsai_target,
         )
         .await?;
