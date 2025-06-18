@@ -28,7 +28,6 @@ use futures_watchdog::WatchdogExt;
 use gix_hash::ObjectId;
 use gix_object::Object;
 use gix_object::Tree;
-use gix_object::WriteTo;
 use gix_object::tree;
 use manifest::Entry;
 use manifest::Manifest;
@@ -328,8 +327,9 @@ impl Loadable for GitTreeId {
             .await
             .map_err(anyhow::Error::from)
             .map_err(LoadableError::Error)?
-            .try_into_tree()
-            .map_err(|_| LoadableError::Error(anyhow::anyhow!("Not a tree object: {}", self.0)))?
+            // TreeRef <-> Tree roundtrips, so it's OK to switch to owned here
+            .with_parsed_as_tree(|tree_ref| tree_ref.to_owned())
+            .ok_or_else(|| LoadableError::Error(anyhow::anyhow!("Not a tree object: {}", self.0)))?
             .try_into()
             .map_err(LoadableError::Error)
     }
@@ -407,13 +407,12 @@ pub(crate) async fn get_git_subtree_changes(
             cloned!(ctx);
             let blobstore = derivation_ctx.blobstore().clone();
             async move {
-                let root_oid = derivation_ctx
+                let root_tree_id = derivation_ctx
                     .fetch_unknown_dependency::<MappedGitCommitId>(&ctx, known, from_cs_id)
                     .await?
-                    .fetch_commit(&ctx, &blobstore)
-                    .await?
-                    .tree;
-                let entry = GitTreeId(root_oid)
+                    .fetch_root_tree(&ctx, &blobstore)
+                    .await?;
+                let entry = root_tree_id
                     .find_entry(ctx, blobstore, from_path.clone())
                     .await?
                     .ok_or_else(|| {

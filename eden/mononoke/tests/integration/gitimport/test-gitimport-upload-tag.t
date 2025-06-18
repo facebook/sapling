@@ -29,18 +29,15 @@
   $ mononoke_admin git-objects -R repo fetch --id $tag_hash
   The object is a Git Tag
   
-  Tag {
-      target: Sha1(15cc4e9575665b507ee372f97b716ff552842136),
+  TagRef {
+      target: "15cc4e9575665b507ee372f97b716ff552842136",
       target_kind: Commit,
       name: "tag1",
       tagger: Some(
-          Signature {
+          SignatureRef {
               name: "mononoke",
               email: "mononoke@mononoke",
-              time: Time {
-                  seconds: 946684800,
-                  offset: 0,
-              },
+              time: "946684800 +0000",
           },
       ),
       message: "Tag\n",
@@ -50,18 +47,15 @@
   $ mononoke_admin git-objects -R repo fetch --id $tag2_hash
   The object is a Git Tag
   
-  Tag {
-      target: Sha1(15cc4e9575665b507ee372f97b716ff552842136),
+  TagRef {
+      target: "15cc4e9575665b507ee372f97b716ff552842136",
       target_kind: Commit,
       name: "tag2",
       tagger: Some(
-          Signature {
+          SignatureRef {
               name: "mononoke",
               email: "mononoke@mononoke",
-              time: Time {
-                  seconds: 946684800,
-                  offset: 0,
-              },
+              time: "946684800 +0000",
           },
       ),
       message: "Another Tag\n",

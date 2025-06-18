@@ -80,19 +80,19 @@
   $ mononoke_admin git-objects -R repo fetch --id $root_tree_hash
   The object is a Git Tree
   
-  Tree {
+  TreeRef {
       entries: [
-          Entry {
+          EntryRef {
               mode: EntryMode(0o40000),
               filename: "dir1",
               oid: Sha1(1688a24aee0ac76cbb13bd72967339c13deae505),
           },
-          Entry {
+          EntryRef {
               mode: EntryMode(0o40000),
               filename: "dir2",
               oid: Sha1(5146666596d2520dfd1d3c2acdc4b1448745a349),
           },
-          Entry {
+          EntryRef {
               mode: EntryMode(0o100644),
               filename: "file1",
               oid: Sha1(433eb172726bc7b6d60e8d68efb0f0ef4e67a667),

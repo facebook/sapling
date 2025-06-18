@@ -17,13 +17,13 @@ use filestore::fetch_with_size;
 use filestore::hash_bytes;
 use futures::TryStreamExt;
 use gix_hash::ObjectId;
-use gix_object::WriteTo;
 use mononoke_types::BlobstoreBytes;
 use mononoke_types::hash::GitSha1;
 use mononoke_types::hash::RichGitSha1;
 
 use crate::BaseObject;
 use crate::GitPackfileBaseItem;
+use crate::ObjectContent;
 use crate::errors::GitError;
 
 const GIT_OBJECT_PREFIX: &str = "git_object";
@@ -92,23 +92,18 @@ pub async fn fetch_non_blob_git_object<B>(
     ctx: &CoreContext,
     blobstore: &B,
     git_hash: &gix_hash::oid,
-) -> Result<gix_object::Object, GitError>
+) -> Result<ObjectContent, GitError>
 where
     B: Blobstore,
 {
     // In git, empty tree is a special object: it's present in every git repo and not persisted in
     // the storage.
     if git_hash == ObjectId::empty_tree(gix_hash::Kind::Sha1) {
-        return Ok(gix_object::Object::Tree(gix_object::Tree::empty()));
+        return Ok(ObjectContent::empty_tree());
     }
     let raw_bytes = fetch_non_blob_git_object_bytes(ctx, blobstore, git_hash).await?;
-    let object = gix_object::ObjectRef::from_loose(raw_bytes.as_ref()).map_err(|e| {
-        GitError::InvalidContent(
-            git_hash.to_hex().to_string(),
-            anyhow::anyhow!(e.to_string()).into(),
-        )
-    })?;
-    Ok(object.into())
+    let object_content = ObjectContent::try_from_loose(raw_bytes)?;
+    Ok(object_content)
 }
 
 /// Enum determining the state of the git header in the raw
@@ -220,16 +215,11 @@ pub async fn fetch_git_object(
     ctx: &CoreContext,
     blobstore: Arc<dyn Blobstore>,
     identifier: &GitIdentifier,
-) -> Result<gix_object::Object> {
+) -> Result<ObjectContent> {
     let raw_bytes =
         fetch_git_object_bytes(ctx, blobstore, identifier, HeaderState::Included).await?;
-    let object = gix_object::ObjectRef::from_loose(raw_bytes.as_ref()).map_err(|e| {
-        GitError::InvalidContent(
-            identifier.basic_sha().to_hex().to_string(),
-            anyhow::anyhow!(e.to_string()).into(),
-        )
-    })?;
-    Ok(object.into())
+    let object_content = ObjectContent::try_from_loose(raw_bytes)?;
+    Ok(object_content)
 }
 
 /// Free function for uploading packfile item for git base object and

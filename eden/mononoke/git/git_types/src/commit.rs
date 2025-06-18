@@ -7,13 +7,13 @@
 
 use anyhow::Error;
 use anyhow::Result;
-use anyhow::anyhow;
 use blobstore::Blobstore;
 use context::CoreContext;
 use mononoke_types::hash::GitSha1;
 
 use crate::fetch_non_blob_git_object;
 use crate::thrift;
+use crate::tree::GitTreeId;
 
 #[derive(Debug, Copy, Clone, Hash, Eq, PartialEq)]
 pub struct MappedGitCommitId(GitSha1);
@@ -27,16 +27,21 @@ impl MappedGitCommitId {
         &self.0
     }
 
-    pub async fn fetch_commit(
+    pub async fn fetch_root_tree(
         &self,
         ctx: &CoreContext,
         blobstore: &impl Blobstore,
-    ) -> Result<gix_object::Commit> {
+    ) -> Result<GitTreeId> {
         let git_hash = self.oid().to_object_id()?;
         let git_object = fetch_non_blob_git_object(ctx, blobstore, &git_hash).await?;
         git_object
-            .try_into_commit()
-            .map_err(|_| anyhow!("Not a commit: {}", git_hash))
+            .with_parsed_as_commit(|commit| GitTreeId(commit.tree()))
+            .ok_or_else(|| {
+                anyhow::anyhow!(
+                    "fetch_commit_tree must be called on a commit, which {:?} is not",
+                    self.oid(),
+                )
+            })
     }
 }
 

@@ -273,7 +273,7 @@ pub(crate) async fn fetch_nested_tags(
     let mut nested_tags = vec![];
     while let Some(target_hash) = maybe_target {
         let target_object = fetch_non_blob_git_object(ctx, blobstore, target_hash.as_ref()).await?;
-        if let Some(next_target) = target_object.as_tag().map(|tag| tag.target) {
+        if let Some(next_target) = target_object.with_parsed_as_tag(|tag| tag.target()) {
             // The current object is tag so add it to the list of nested tags
             nested_tags.push(target_hash.clone());
             // The target of the tag is the next object to be fetched

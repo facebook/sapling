@@ -22,7 +22,6 @@ use fsnodes::RootFsnodeId;
 use futures::TryStreamExt;
 use futures::future::FutureExt;
 use futures::future::try_join_all;
-use git_types::GitTreeId;
 use git_types::MappedGitCommitId;
 use manifest::ManifestOps;
 use mercurial_derivation::DeriveHgChangeset;
@@ -335,11 +334,10 @@ async fn list_git_tree(
     cs_id: ChangesetId,
     fetch_derived: bool,
 ) -> Result<(ManifestType, HashMap<NonRootMPath, ManifestData>)> {
-    let git_commit = derive_or_fetch::<MappedGitCommitId>(ctx, repo, cs_id, fetch_derived)
+    let root_git_tree_id = derive_or_fetch::<MappedGitCommitId>(ctx, repo, cs_id, fetch_derived)
         .await?
-        .fetch_commit(ctx, repo.repo_blobstore())
+        .fetch_root_tree(ctx, repo.repo_blobstore())
         .await?;
-    let root_git_tree_id = GitTreeId(git_commit.tree);
 
     let map: HashMap<_, _> = root_git_tree_id
         .list_leaf_entries(ctx.clone(), repo.repo_blobstore().clone())

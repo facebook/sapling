@@ -61,24 +61,18 @@
   $ mononoke_admin git-objects -R repo fetch --id 8ce3eae44760b500bf3f2c3922a95dcd3c908e9e
   The object is a Git Commit
   
-  Commit {
-      tree: Sha1(cb2ef838eb24e4667fee3a8b89c930234ae6e4bb),
+  CommitRef {
+      tree: "cb2ef838eb24e4667fee3a8b89c930234ae6e4bb",
       parents: [],
-      author: Signature {
+      author: SignatureRef {
           name: "mononoke",
           email: "mononoke@mononoke",
-          time: Time {
-              seconds: 946684800,
-              offset: 0,
-          },
+          time: "946684800 +0000",
       },
-      committer: Signature {
+      committer: SignatureRef {
           name: "mononoke",
           email: "mononoke@mononoke",
-          time: Time {
-              seconds: 946684800,
-              offset: 0,
-          },
+          time: "946684800 +0000",
       },
       encoding: None,
       message: "Add file1\n",

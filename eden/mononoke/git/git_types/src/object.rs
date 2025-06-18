@@ -105,6 +105,10 @@ impl ObjectContent {
             .try_build()?,
         )))
     }
+    pub fn empty_tree() -> Self {
+        Self::try_from_loose(Bytes::from_static(b"tree 0\0"))
+            .expect("We know these bytes are valid")
+    }
 
     fn inner(&self) -> &'_ ObjectContentInner {
         &self.0

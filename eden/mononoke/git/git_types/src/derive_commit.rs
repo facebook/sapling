@@ -119,7 +119,7 @@ impl BonsaiDerivable for MappedGitCommitId {
             .map_ok(|oid| {
                 let blobstore = derivation_ctx.blobstore().clone();
                 async move {
-                    let git_commit = fetch_non_blob_git_object(ctx, &blobstore, oid.as_ref())
+                    fetch_non_blob_git_object(ctx, &blobstore, oid.as_ref())
                         .await
                         .with_context(|| {
                             format!(
@@ -127,9 +127,10 @@ impl BonsaiDerivable for MappedGitCommitId {
                                 oid.to_hex()
                             )
                         })?
-                        .try_into_commit()
-                        .map_err(|_| anyhow::anyhow!("Error converting commit into Git object"))?;
-                    Ok(GitTreeId(git_commit.tree))
+                        .with_parsed_as_commit(|commit| GitTreeId(commit.tree()))
+                        .ok_or_else(|| {
+                            anyhow::anyhow!("Expected {oid} to be a commit, but it is not")
+                        })
                 }
             })
             .try_buffered(10)
@@ -281,7 +282,12 @@ mod test {
         let bonsai_commit = bonsai_commit_id.load(ctx, blobstore).await?;
         let git_commit = fetch_non_blob_git_object(ctx, blobstore, git_hash)
             .await?
-            .into_commit();
+            .with_parsed_as_commit(|commit| {
+                // In this case, the original commit was created from a Bonsai, so we are
+                // shielded from non-roundtripping behaviours coming from original uses of Git
+                commit.to_owned().into_owned()
+            })
+            .ok_or_else(|| anyhow::anyhow!("Expected {git_hash} to be a commit, but it isn't"))?;
         // Validate that the parents match
         let bonsai_parent_set: HashSet<ChangesetId> = HashSet::from_iter(bonsai_commit.parents());
         assert_eq!(bonsai_parent_set.len(), git_commit.parents.len());

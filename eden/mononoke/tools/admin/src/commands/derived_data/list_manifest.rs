@@ -470,12 +470,10 @@ pub(super) async fn list_manifest(
             list_deleted(ctx, repo, root_id, path, args.directory, args.recursive).await?
         }
         ListManifestType::GitTrees => {
-            let git_commit =
-                fetch_or_derive_root::<MappedGitCommitId>(ctx, repo, cs_id, args.derive)
-                    .await?
-                    .fetch_commit(ctx, repo.repo_blobstore())
-                    .await?;
-            let root_id = GitTreeId(git_commit.tree);
+            let root_id = fetch_or_derive_root::<MappedGitCommitId>(ctx, repo, cs_id, args.derive)
+                .await?
+                .fetch_root_tree(ctx, repo.repo_blobstore())
+                .await?;
             list(ctx, repo, root_id, path, args.directory, args.recursive).await?
         }
     };

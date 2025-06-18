@@ -18,10 +18,10 @@ use git_types::HeaderState;
 use git_types::fetch_git_object;
 use git_types::fetch_git_object_bytes;
 use git_types::fetch_non_blob_git_object;
-use gix_object::Object::Blob;
-use gix_object::Object::Commit;
-use gix_object::Object::Tag;
-use gix_object::Object::Tree;
+use gix_object::ObjectRef::Blob;
+use gix_object::ObjectRef::Commit;
+use gix_object::ObjectRef::Tag;
+use gix_object::ObjectRef::Tree;
 use mononoke_types::hash::GitSha1;
 use mononoke_types::hash::RichGitSha1;
 
@@ -69,7 +69,7 @@ async fn fetch_object(repo: &Repo, ctx: &CoreContext, mut fetch_args: FetchArgs)
             fetch_non_blob_git_object(ctx, &repo.repo_blobstore, git_hash.as_ref()).await?
         }
     };
-    match git_object {
+    git_object.with_parsed(|object| match object {
         Tree(tree) => println!("The object is a Git Tree\n\n{:#?}", tree),
         Blob(blob) => println!(
             "The object is a Git Blob\n\n{:#?}",
@@ -77,7 +77,7 @@ async fn fetch_object(repo: &Repo, ctx: &CoreContext, mut fetch_args: FetchArgs)
         ),
         Commit(commit) => println!("The object is a Git Commit\n\n{:#?}", commit),
         Tag(tag) => println!("The object is a Git Tag\n\n{:#?}", tag),
-    };
+    });
     Ok(())
 }
 

@@ -101,14 +101,14 @@ Inspect bonsai change
   $ mononoke_admin git-objects -R repo fetch --id afae45be853e0e99e21ef1b1a0beba60e41d9753
   The object is a Git Tree
   
-  Tree {
+  TreeRef {
       entries: [
-          Entry {
+          EntryRef {
               mode: EntryMode(0o100644),
               filename: "large_file",
               oid: Sha1(1ab2b3357e304fef596198d92807d8d7e3580f0d),
           },
-          Entry {
+          EntryRef {
               mode: EntryMode(0o100644),
               filename: "small_file",
               oid: Sha1(8910fc3d7dae273e6ffd1d3982af8dfc418af416),

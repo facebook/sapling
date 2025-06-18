@@ -97,12 +97,11 @@ async fn boundary_trees_and_blobs(
         .map_ok(|(changeset_id, git_commit_id)| {
             cloned!(ctx, blobstore, filter);
             async move {
-                let commit_object = fetch_non_blob_git_object(&ctx, &blobstore, &git_commit_id)
+                let root_tree = fetch_non_blob_git_object(&ctx, &blobstore, &git_commit_id)
                     .await
                     .context("Error in fetching boundary commit")?
-                    .try_into_commit()
-                    .map_err(|_| anyhow::anyhow!("Git object {:?} is not a commit", git_commit_id))?;
-                let root_tree = GitTreeId(commit_object.tree);
+                    .with_parsed_as_commit(|commit| GitTreeId(commit.tree()))
+                    .ok_or_else(|| anyhow::anyhow!("Git object {:?} is not a commit", git_commit_id))?;
                 let objects = root_tree.list_all_entries((*ctx).clone(), blobstore.clone()).try_filter_map(|(path, entry)|{
                     cloned!(ctx, blobstore, filter);
                     async move {

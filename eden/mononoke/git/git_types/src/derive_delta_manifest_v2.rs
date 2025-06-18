@@ -108,12 +108,11 @@ async fn derive_single(
     let cs_id = bonsai.get_changeset_id();
 
     let fetch_tree = |bcs_id| async move {
-        let git_commit = derivation_ctx
+        derivation_ctx
             .fetch_dependency::<MappedGitCommitId>(ctx, bcs_id)
             .await?
-            .fetch_commit(ctx, blobstore)
-            .await?;
-        anyhow::Ok(GitTreeId(git_commit.tree))
+            .fetch_root_tree(ctx, blobstore)
+            .await
     };
 
     let (current_tree, parent_trees) = try_join!(
