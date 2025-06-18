@@ -25,7 +25,6 @@ use types::fetch_mode::FetchMode;
 
 use crate::backingstore::BackingStore;
 use crate::ffi::ffi::Tree;
-use crate::ffi::ffi::TreeEntryType;
 
 #[cxx::bridge(namespace = sapling)]
 pub(crate) mod ffi {
@@ -100,6 +99,8 @@ pub(crate) mod ffi {
 
         path_data: *const c_char,
         path_len: usize,
+
+        pid: u32,
         // TODO: mode: FetchMode
         // TODO: cri: ClientRequestInfo
     }
@@ -231,6 +232,7 @@ pub(crate) mod ffi {
             store: &BackingStore,
             path: &str,
             local: bool,
+            pid: u32,
         );
 
         pub fn sapling_backingstore_witness_dir_read(
@@ -238,6 +240,7 @@ pub(crate) mod ffi {
             path: &[u8],
             tree: &Tree,
             local: bool,
+            pid: u32,
         );
 
         pub fn sapling_dogfooding_host(store: &BackingStore) -> Result<bool>;
@@ -376,6 +379,7 @@ pub fn sapling_backingstore_get_tree_batch(
                         path_bytes,
                         tree,
                         fetch_mode.is_local(),
+                        requests[idx].pid,
                     );
                 }
             }
@@ -536,10 +540,15 @@ pub fn sapling_backingstore_get_glob_files(
     Ok(SharedPtr::new(ffi::GlobFilesResponse { files }))
 }
 
-pub fn sapling_backingstore_witness_file_read(store: &BackingStore, path: &str, local: bool) {
+pub fn sapling_backingstore_witness_file_read(
+    store: &BackingStore,
+    path: &str,
+    local: bool,
+    pid: u32,
+) {
     match RepoPath::from_str(path) {
         Ok(path) => {
-            store.witness_file_read(path, local);
+            store.witness_file_read(path, local, pid);
         }
         Err(err) => {
             tracing::warn!("invalid witnessed file path {path}: {err:?}");
@@ -552,10 +561,11 @@ pub fn sapling_backingstore_witness_dir_read(
     path: &[u8],
     tree: &Tree,
     local: bool,
+    pid: u32,
 ) {
     match RepoPath::from_utf8(path) {
         Ok(path) => {
-            store.witness_dir_read(path, local, tree.num_files, tree.num_dirs);
+            store.witness_dir_read(path, local, tree.num_files, tree.num_dirs, pid);
         }
         Err(err) => {
             tracing::warn!("invalid witnessed dir path {path:?}: {err:?}");

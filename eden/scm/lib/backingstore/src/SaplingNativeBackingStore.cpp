@@ -69,7 +69,7 @@ std::optional<ManifestId> SaplingNativeBackingStore::getManifestNode(
 folly::Try<std::shared_ptr<Tree>> SaplingNativeBackingStore::getTree(
     NodeId node,
     RepoPath path,
-    FetchCause cause,
+    const ObjectFetchContextPtr& context,
     FetchMode fetch_mode) {
   XLOGF(DBG7, "Importing tree node={} from hgcache", folly::hexlify(node));
   return folly::makeTryWith([&] {
@@ -78,14 +78,15 @@ folly::Try<std::shared_ptr<Tree>> SaplingNativeBackingStore::getTree(
         rust::Slice<const uint8_t>{node.data(), node.size()},
         fetch_mode);
 
-    if (tree && cause != FetchCause::Prefetch) {
+    if (tree && context->getCause() != FetchCause::Prefetch) {
       sapling_backingstore_witness_dir_read(
           *store_.get(),
           rust::Slice<const uint8_t>{
               reinterpret_cast<const uint8_t*>(path.view().data()),
               path.view().size()},
           *tree,
-          fetch_mode == FetchMode::LocalOnly);
+          fetch_mode == FetchMode::LocalOnly,
+          context->getClientPid().valueOrZero().get());
     }
 
     return tree;
@@ -119,6 +120,7 @@ void SaplingNativeBackingStore::getTreeBatch(
         request.cause,
         request.path.view().data(),
         request.path.view().size(),
+        request.context->getClientPid().valueOrZero().get(),
     });
   }
 
@@ -178,7 +180,7 @@ void SaplingNativeBackingStore::getTreeAuxDataBatch(
 folly::Try<std::unique_ptr<folly::IOBuf>> SaplingNativeBackingStore::getBlob(
     NodeId node,
     RepoPath path,
-    FetchCause cause,
+    const ObjectFetchContextPtr& context,
     FetchMode fetch_mode) {
   XLOGF(DBG7, "Importing blob node={} from hgcache", folly::hexlify(node));
   return folly::makeTryWith([&] {
@@ -187,11 +189,12 @@ folly::Try<std::unique_ptr<folly::IOBuf>> SaplingNativeBackingStore::getBlob(
         rust::Slice<const uint8_t>{node.data(), node.size()},
         fetch_mode);
 
-    if (blob && cause != FetchCause::Prefetch) {
+    if (blob && context->getCause() != FetchCause::Prefetch) {
       sapling_backingstore_witness_file_read(
           *store_.get(),
           rust::Str{path.view().data(), path.view().size()},
-          fetch_mode == FetchMode::LocalOnly);
+          fetch_mode == FetchMode::LocalOnly,
+          context->getClientPid().valueOrZero().get());
     }
 
     return blob;
@@ -229,7 +232,8 @@ void SaplingNativeBackingStore::getBlobBatch(
       sapling_backingstore_witness_file_read(
           *store_.get(),
           rust::Str{request.path.view().data(), request.path.view().size()},
-          fetch_mode == FetchMode::LocalOnly);
+          fetch_mode == FetchMode::LocalOnly,
+          request.context->getClientPid().valueOrZero().get());
     }
   }
 

@@ -35,6 +35,7 @@ using NodeId = folly::ByteRange;
 using FetchCause = facebook::eden::ObjectFetchContext::Cause;
 using RepoPath = facebook::eden::RelativePathPiece;
 using RootId = facebook::eden::RootId;
+using ObjectFetchContextPtr = facebook::eden::ObjectFetchContextPtr;
 
 struct SaplingRequest {
   // These two fields are typically borrowed from a
@@ -43,6 +44,7 @@ struct SaplingRequest {
   RepoPath path;
 
   FetchCause cause;
+  ObjectFetchContextPtr context;
   // TODO: sapling::FetchMode mode;
   // TODO: sapling::ClientRequestInfo cri;
 };
@@ -85,7 +87,7 @@ class SaplingNativeBackingStore {
   folly::Try<std::shared_ptr<Tree>> getTree(
       NodeId node,
       RepoPath path,
-      FetchCause cause,
+      const ObjectFetchContextPtr& context,
       sapling::FetchMode fetch_mode);
 
   void getTreeBatch(
@@ -107,7 +109,7 @@ class SaplingNativeBackingStore {
   folly::Try<std::unique_ptr<folly::IOBuf>> getBlob(
       NodeId node,
       RepoPath path,
-      FetchCause cause,
+      const ObjectFetchContextPtr& context,
       sapling::FetchMode fetchMode);
 
   void getBlobBatch(

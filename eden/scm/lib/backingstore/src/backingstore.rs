@@ -388,7 +388,7 @@ impl BackingStore {
     }
 
     #[instrument(level = "trace", skip(self))]
-    pub fn witness_file_read(&self, path: &RepoPath, local: bool) {
+    pub fn witness_file_read(&self, path: &RepoPath, local: bool, pid: u32) {
         let inner = self.inner.load();
 
         if inner.walk_mode == WalkMode::Off {
@@ -396,10 +396,10 @@ impl BackingStore {
         }
 
         let walk_changed = if local {
-            inner.walk_detector.file_read(path, 0);
+            inner.walk_detector.file_read(path, pid);
             false
         } else {
-            inner.walk_detector.file_loaded(path, 0)
+            inner.walk_detector.file_loaded(path, pid)
         };
         if !walk_changed {
             return;
@@ -415,6 +415,7 @@ impl BackingStore {
         local: bool,
         num_files: usize,
         num_dirs: usize,
+        pid: u32,
     ) {
         let inner = self.inner.load();
 
@@ -423,10 +424,12 @@ impl BackingStore {
         }
 
         let walk_changed = if local {
-            inner.walk_detector.dir_read(path, num_files, num_dirs, 0);
+            inner.walk_detector.dir_read(path, num_files, num_dirs, pid);
             false
         } else {
-            inner.walk_detector.dir_loaded(path, num_files, num_dirs, 0)
+            inner
+                .walk_detector
+                .dir_loaded(path, num_files, num_dirs, pid)
         };
         if !walk_changed {
             return;
