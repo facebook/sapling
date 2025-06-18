@@ -908,6 +908,15 @@ export class Repository {
     };
   }
 
+  subscribeToSubmodulesChanges(callback: (result: FetchedSubmodules) => unknown) {
+    this.submodulesChangesEmitter.on('change', callback);
+    return {
+      dispose: () => {
+        this.submodulesChangesEmitter.off('change', callback);
+      },
+    };
+  }
+
   fetchSmartlogCommits = serializeAsyncCall(async () => {
     const fetchStartTimestamp = Date.now();
     try {

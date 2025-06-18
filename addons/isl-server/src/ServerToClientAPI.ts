@@ -12,6 +12,7 @@ import type {
   CodeReviewProviderSpecificClientToServerMessages,
   Disposable,
   FetchedCommits,
+  FetchedSubmodules,
   FetchedUncommittedChanges,
   FileABugProgress,
   LandInfo,
@@ -418,6 +419,29 @@ export default class ServerToClientAPI {
             }
 
             this.subscriptions.set(subscriptionID, repo.onChangeConflictState(postMergeConflicts));
+            break;
+          }
+          case 'submodules': {
+            const postSubmodules = (submodules: FetchedSubmodules) => {
+              this.postMessage({
+                type: 'subscriptionResult',
+                kind: 'submodules',
+                subscriptionID,
+                data: submodules,
+              });
+            };
+            const submodules = repo.getSubmodules();
+            if (submodules !== undefined) {
+              postSubmodules({value: submodules});
+            }
+            repo.fetchSubmodules();
+
+            const disposable = repo.subscribeToSubmodulesChanges(postSubmodules);
+            this.subscriptions.set(subscriptionID, {
+              dispose: () => {
+                disposable.dispose();
+              },
+            });
             break;
           }
         }

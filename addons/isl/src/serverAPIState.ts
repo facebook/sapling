@@ -147,6 +147,7 @@ export const mostRecentSubscriptionIds: Record<SubscriptionKind, string> = {
   smartlogCommits: '',
   uncommittedChanges: '',
   mergeConflicts: '',
+  submodules: '',
 };
 
 /**

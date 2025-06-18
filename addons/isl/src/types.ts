@@ -741,7 +741,11 @@ export type FileABugProgress =
   | {status: 'error'; error: Error};
 export type FileABugProgressMessage = {type: 'fileBugReportProgress'} & FileABugProgress;
 
-export type SubscriptionKind = 'uncommittedChanges' | 'smartlogCommits' | 'mergeConflicts';
+export type SubscriptionKind =
+  | 'uncommittedChanges'
+  | 'smartlogCommits'
+  | 'mergeConflicts'
+  | 'submodules';
 
 export const allConfigNames = [
   // these config names are for compatibility.
@@ -944,6 +948,7 @@ export type SubscriptionResultsData = {
   uncommittedChanges: FetchedUncommittedChanges;
   smartlogCommits: FetchedCommits;
   mergeConflicts: MergeConflicts | undefined;
+  submodules: FetchedSubmodules;
 };
 
 export type SubscriptionResult<K extends SubscriptionKind> = {
@@ -957,6 +962,7 @@ export type ServerToClientMessage =
   | SubscriptionResult<'smartlogCommits'>
   | SubscriptionResult<'uncommittedChanges'>
   | SubscriptionResult<'mergeConflicts'>
+  | SubscriptionResult<'submodules'>
   | BeganFetchingSmartlogCommitsEvent
   | BeganFetchingUncommittedChangesEvent
   | FileABugProgressMessage
