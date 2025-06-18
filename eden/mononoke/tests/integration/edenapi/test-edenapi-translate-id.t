@@ -119,4 +119,14 @@ Setup config repo:
   pull failed: e6c6c1f94d10495f8c94d81ae5f125bd89f82b8a not found
   translated e6c6c1f94d10495f8c94d81ae5f125bd89f82b8a@large-mon to a61c0a2e580a4d7c742858d8ebf1a469a7de0839
   a61c0a2e580a4d7c742858d8ebf1a469a7de0839
+  $ hg log -r $LARGE_REPO_ONLY_COMMIT -T '{node}\n' --config 'megarepo.transparent-lookup=small-mon large-mon' --config extensions.megarepo= --config 'megarepo.cross-repo-lookup-behavior=equivalent'
+  pulling 'e6c6c1f94d10495f8c94d81ae5f125bd89f82b8a' from 'mono:small-mon'
+  pull failed: e6c6c1f94d10495f8c94d81ae5f125bd89f82b8a not found
+  translated e6c6c1f94d10495f8c94d81ae5f125bd89f82b8a@large-mon to a61c0a2e580a4d7c742858d8ebf1a469a7de0839
+  a61c0a2e580a4d7c742858d8ebf1a469a7de0839
+  $ hg log -r $LARGE_REPO_ONLY_COMMIT -T '{node}\n' --config 'megarepo.transparent-lookup=small-mon large-mon' --config extensions.megarepo= --config 'megarepo.cross-repo-lookup-behavior=exact'
+  pulling 'e6c6c1f94d10495f8c94d81ae5f125bd89f82b8a' from 'mono:small-mon'
+  pull failed: e6c6c1f94d10495f8c94d81ae5f125bd89f82b8a not found
+  abort: unknown revision 'e6c6c1f94d10495f8c94d81ae5f125bd89f82b8a'!
+  [255]
 

@@ -226,8 +226,16 @@ def xrepotranslate(repo, commitid):
         commit_ids.add(xnode)
 
         repo.ui.note_err(_("translating %s from repo %s\n") % (hex(xnode), xrepo))
+
+        # Determine the lookup behavior based on the configuration
+        lookup_behavior = repo.ui.config(
+            "megarepo", "cross-repo-lookup-behavior", default="equivalent"
+        )
+
         translated = list(
-            repo.edenapi.committranslateids([{"Hg": xnode}], "Hg", fromrepo=xrepo)
+            repo.edenapi.committranslateids(
+                [{"Hg": xnode}], "Hg", fromrepo=xrepo, lookup_behavior=lookup_behavior
+            )
         )
         if len(translated) == 1:
             localnode = translated[0]["translated"]["Hg"]
