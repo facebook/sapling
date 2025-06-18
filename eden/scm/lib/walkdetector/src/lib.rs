@@ -858,6 +858,7 @@ impl Walk {
                 file_preloads = self.file_preloads.load(Ordering::Relaxed),
                 dir_loads = self.dir_loads.load(Ordering::Relaxed),
                 dir_reads = self.dir_reads.load(Ordering::Relaxed),
+                walk_depth = self.depth,
                 "big walk ended",
             );
 
@@ -869,6 +870,7 @@ impl Walk {
                 file_preloads = self.file_preloads.load(Ordering::Relaxed),
                 dir_loads = self.dir_loads.load(Ordering::Relaxed),
                 dir_reads = self.dir_reads.load(Ordering::Relaxed),
+                walk_depth = self.depth,
             );
         }
     }
