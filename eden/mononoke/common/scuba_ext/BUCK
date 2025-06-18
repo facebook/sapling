@@ -11,6 +11,7 @@ rust_library(
         "//common/rust/shed/fbinit:fbinit",
         "//common/rust/shed/futures_stats:futures_stats",
         "//common/rust/shed/justknobs_stub:justknobs",
+        "//common/rust/shed/sampling:sampling",
         "//common/rust/shed/scuba_stub:scuba",
         "//common/rust/shed/time_ext:time_ext",
         "//eden/mononoke/common/memory:memory",
