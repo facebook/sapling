@@ -140,17 +140,24 @@ impl MononokeScubaSampleBuilder {
         self.inner
             .add("client_correlator", client_info.correlator.as_str());
 
-        // For context, see D76728908 or https://fburl.com/workplace/et4ezqp3.
-        let disable_xdb_blobstore_reads = justknobs::eval(
-            "scm/mononoke:disable_blobstore_reads",
-            Some(client_info.correlator.as_str()),
-            Some("3"), // XDB blobstore ID
-        )
-        .ok();
+        // For context, see D76895703 or https://fburl.com/workplace/et4ezqp3.
+        // Check the JK that disables reads for all blobstore ids being used
+        // and log the ones that were disabled in this request.
+        let disabled_reads_blobstore_ids = (1..4)
+            .map(|id| id.to_string())
+            .filter(|id| {
+                justknobs::eval(
+                    "scm/mononoke:disable_blobstore_reads",
+                    Some(client_info.correlator.as_str()),
+                    Some(id),
+                )
+                .unwrap_or(false)
+            })
+            .collect::<Vec<_>>();
 
-        if let Some(disable_xdb_blobstore_reads) = disable_xdb_blobstore_reads {
+        if !disabled_reads_blobstore_ids.is_empty() {
             self.inner
-                .add("disable_xdb_blobstore_reads", disable_xdb_blobstore_reads);
+                .add("disabled_reads_blobstore_ids", disabled_reads_blobstore_ids);
         }
 
         self

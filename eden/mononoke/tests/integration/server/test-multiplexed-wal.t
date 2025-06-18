@@ -79,10 +79,27 @@ Try again and fail because reads for all blobstores will be disabled
   $ hg clone -q mono:repo repo-clone
   abort: cannot resolve [523cda1e6192b3b1e4208793ee19bd67125c6a93] remotely
   [255]
-  $ jq . $TESTTMP/log.json | rg "disable_xdb_blobstore_reads"
-      "disable_xdb_blobstore_reads": "true",
-      "disable_xdb_blobstore_reads": "true",
-      "disable_xdb_blobstore_reads": "true",
+  $ jq . $TESTTMP/log.json | rg "disabled_reads_blobstore_ids" -A 5
+      "disabled_reads_blobstore_ids": [
+        "1",
+        "2",
+        "3"
+      ]
+    }
+  --
+      "disabled_reads_blobstore_ids": [
+        "1",
+        "2",
+        "3"
+      ]
+    }
+  --
+      "disabled_reads_blobstore_ids": [
+        "1",
+        "2",
+        "3"
+      ]
+    }
 
 
 Enable all blobstores again
