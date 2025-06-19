@@ -124,26 +124,7 @@ impl<'a, R: MononokeRepo> AddSyncTarget<'a, R> {
             Some(format!("{}", top_merge_cs_id)),
         );
 
-        // add_sync_target might need to derive a lot of data, and it takes a long time to
-        // do it. We don't have any resumability, so if it fails for any reason, then we'd
-        // need to start over.
-
-        // For now let's just retry a few times so that we don't have to start over
-        // because of flakiness
-        for attempt in 1.. {
-            let result = derive_all_types(ctx, repo.repo(), &[top_merge_cs_id]).await;
-            match result {
-                Ok(()) => {
-                    break;
-                }
-                Err(err) => {
-                    scuba.log_with_msg("Derived data failed, retrying", Some(format!("{:#}", err)));
-                    if attempt >= 5 {
-                        return Err(err.into());
-                    }
-                }
-            }
-        }
+        derive_all_types(ctx, repo.repo(), &[top_merge_cs_id]).await?;
 
         scuba.log_with_msg("Derived data", None);
 

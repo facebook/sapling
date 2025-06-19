@@ -149,6 +149,7 @@ rust_library(
         "//eden/mononoke/bookmarks:bookmarks",
         "//eden/mononoke/changesets/changesets_creation:changesets_creation",
         "//eden/mononoke/cmdlib/mononoke_app:mononoke_app",
+        "//eden/mononoke/common/retry:retry",
         "//eden/mononoke/derived_data:bulk_derivation",
         "//eden/mononoke/derived_data:fsnodes",
         "//eden/mononoke/derived_data/content_manifest_derivation:content_manifest_derivation",

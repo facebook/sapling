@@ -9,6 +9,7 @@ use std::collections::BTreeMap;
 use std::collections::HashMap;
 use std::collections::HashSet;
 use std::sync::Arc;
+use std::time::Duration;
 
 use anyhow::Context;
 use anyhow::Error;
@@ -71,6 +72,8 @@ use mononoke_types::content_manifest::compat::ContentManifestFile;
 use mononoke_types::content_manifest::compat::ContentManifestId;
 use mononoke_types::path::MPath;
 use repo_authorization::AuthorizationContext;
+use retry::RetryLogic;
+use retry::retry;
 use sorted_vector_map::SortedVectorMap;
 
 use crate::Repo;
@@ -1287,10 +1290,33 @@ pub(crate) async fn derive_all_types(
             *t != DerivableType::FileNodes
         })
         .collect::<Vec<_>>();
-    repo.repo_derived_data()
-        .manager()
-        .derive_bulk(ctx, csids, None, &derived_data_types, None)
-        .await?;
+    retry(
+        Some(ctx.logger()),
+        async |num_retry| {
+            if num_retry >= 1 {
+                let mut scuba = ctx.scuba().clone();
+                scuba.log_with_msg(
+                    "Derived data failed, retrying. Num retries",
+                    Some(format!("{num_retry}")),
+                );
+            }
+            repo.repo_derived_data()
+                .manager()
+                .derive_bulk(ctx, csids, None, &derived_data_types, None)
+                .await
+        },
+        |e| {
+            let description = format!("{e:?}").to_ascii_lowercase();
+            description.contains("blobstore") || description.contains("timeout")
+        },
+        RetryLogic::ExponentialWithJitter {
+            base: Duration::from_secs(1),
+            factor: 1.2,
+            jitter: Duration::from_secs(2),
+        },
+        5,
+    )
+    .await?;
     Ok(())
 }
 
