@@ -12,7 +12,7 @@ name = "packfile_test"
 path = "test/packfile_test.rs"
 
 [dependencies]
-anyhow = "1.0.95"
+anyhow = "1.0.98"
 futures = { version = "0.3.30", features = ["async-await", "compat"] }
 git_types = { version = "0.1.0", path = "../git_types" }
 gix-hash = "0.18.0"

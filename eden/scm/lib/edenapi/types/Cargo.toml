@@ -17,7 +17,7 @@ name = "macro_test"
 path = "test/basic_test.rs"
 
 [dependencies]
-anyhow = "1.0.95"
+anyhow = "1.0.98"
 blob = { version = "0.1.0", path = "../../blob" }
 bytes = { version = "1.9.0", features = ["serde"] }
 manifest-augmented-tree = { version = "0.1.0", path = "../../manifest-augmented-tree" }

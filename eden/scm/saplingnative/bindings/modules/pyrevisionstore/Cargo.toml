@@ -6,7 +6,7 @@ version = "0.1.0"
 edition = "2024"
 
 [dependencies]
-anyhow = "1.0.95"
+anyhow = "1.0.98"
 blob = { version = "0.1.0", path = "../../../../lib/blob" }
 cpython = { version = "0.7.2", features = ["python3-sys"], default-features = false }
 pyconfigloader = { version = "0.1.0", path = "../pyconfigloader" }

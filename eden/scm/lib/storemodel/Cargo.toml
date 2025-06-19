@@ -13,7 +13,7 @@ license = "MIT"
 name = "storemodel"
 
 [dependencies]
-anyhow = "1.0.95"
+anyhow = "1.0.98"
 async-trait = "0.1.86"
 blob = { version = "0.1.0", path = "../blob" }
 futures = { version = "0.3.30", features = ["async-await", "compat"] }

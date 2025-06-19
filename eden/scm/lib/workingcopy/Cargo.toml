@@ -13,7 +13,7 @@ license = "MIT"
 name = "workingcopy"
 
 [dependencies]
-anyhow = "1.0.95"
+anyhow = "1.0.98"
 bitflags = { version = "2.6", features = ["serde", "std"], default-features = false }
 crossbeam = "0.8"
 fs-err = { version = "3", features = ["tokio"] }

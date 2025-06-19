@@ -13,7 +13,7 @@ license = "MIT"
 name = "eagerepo"
 
 [dependencies]
-anyhow = "1.0.95"
+anyhow = "1.0.98"
 async-trait = "0.1.86"
 blob = { version = "0.1.0", path = "../blob" }
 fail = { version = "0.4", features = ["failpoints"] }

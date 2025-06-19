@@ -13,7 +13,7 @@ license = "MIT"
 name = "formatter"
 
 [dependencies]
-anyhow = "1.0.95"
+anyhow = "1.0.98"
 sapling-configmodel = { version = "0.1.0", path = "../config/model" }
 sapling-termstyle = { version = "0.1.0", path = "../io/term/style" }
 serde = { version = "1.0.185", features = ["derive", "rc"] }

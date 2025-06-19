@@ -13,7 +13,7 @@ license = "MIT"
 name = "exchange"
 
 [dependencies]
-anyhow = "1.0.95"
+anyhow = "1.0.98"
 sapling-async-runtime = { version = "0.1.0", path = "../async-runtime" }
 sapling-commits = { version = "0.1.0", path = "../commits" }
 sapling-dag = { version = "0.1.0", path = "../dag" }

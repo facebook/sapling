@@ -15,7 +15,7 @@ path = "test/main.rs"
 abomonable_string = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 abomonation = { version = "0.7", features = ["smallvec"] }
 abomonation_derive = "0.5"
-anyhow = "1.0.95"
+anyhow = "1.0.98"
 async-trait = "0.1.86"
 bincode = { version = "2", features = ["serde"] }
 bytes = { version = "1.9.0", features = ["serde"] }

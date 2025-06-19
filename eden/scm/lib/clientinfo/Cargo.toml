@@ -13,7 +13,7 @@ license = "MIT"
 name = "clientinfo"
 
 [dependencies]
-anyhow = "1.0.95"
+anyhow = "1.0.98"
 hostname = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 once_cell = "1.12"
 rand = { version = "0.8", features = ["small_rng"] }

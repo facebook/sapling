@@ -13,7 +13,7 @@ license = "MIT"
 name = "commandserver"
 
 [dependencies]
-anyhow = "1.0.95"
+anyhow = "1.0.98"
 dirs = "6.0"
 fn-error-context = "0.2"
 fs2 = "0.4"

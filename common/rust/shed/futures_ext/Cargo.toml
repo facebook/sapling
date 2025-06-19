@@ -11,7 +11,7 @@ repository = "https://github.com/facebookexperimental/rust-shed"
 license = "MIT OR Apache-2.0"
 
 [dependencies]
-anyhow = "1.0.95"
+anyhow = "1.0.98"
 futures = { version = "0.3.30", features = ["async-await", "compat"] }
 pin-project = "0.4.30"
 shared_error = { version = "0.1.0", path = "../shared_error" }

@@ -14,7 +14,7 @@ license = "MIT"
 name = "sysutil"
 
 [dependencies]
-anyhow = "1.0.95"
+anyhow = "1.0.98"
 shell-escape = "0.1.5"
 tracing = { version = "0.1.41", features = ["attributes", "valuable"] }
 whoami = "1.5"

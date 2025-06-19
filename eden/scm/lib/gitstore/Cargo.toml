@@ -17,7 +17,7 @@ name = "read_obj"
 harness = false
 
 [dependencies]
-anyhow = "1.0.95"
+anyhow = "1.0.98"
 async-trait = "0.1.86"
 blob = { version = "0.1.0", path = "../blob" }
 fs-err = { version = "3", features = ["tokio"] }

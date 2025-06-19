@@ -6,7 +6,7 @@ version = "0.1.0"
 edition = "2024"
 
 [dependencies]
-anyhow = "1.0.95"
+anyhow = "1.0.98"
 bindings = { version = "0.1.0", path = "../../../saplingnative/bindings", default-features = false }
 cpython = { version = "0.7.2", features = ["python3-sys"], default-features = false }
 libc = "0.2.139"

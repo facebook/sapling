@@ -14,7 +14,7 @@ license = "MIT"
 name = "util"
 
 [dependencies]
-anyhow = "1.0.95"
+anyhow = "1.0.98"
 dirs = "6.0"
 fn-error-context = "0.2"
 fs-err = { version = "3", features = ["tokio"] }

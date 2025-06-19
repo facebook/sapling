@@ -11,6 +11,6 @@ license = "GPLv2+"
 path = "src/commit_id_types.rs"
 
 [dependencies]
-anyhow = "1.0.95"
+anyhow = "1.0.98"
 clap = { version = "4.5.38", features = ["derive", "env", "string", "unicode", "wrap_help"] }
 faster-hex = "0.6.1"

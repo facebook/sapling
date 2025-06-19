@@ -13,7 +13,7 @@ license = "MIT"
 name = "gitdag"
 
 [dependencies]
-anyhow = "1.0.95"
+anyhow = "1.0.98"
 sapling-dag = { version = "0.1.0", path = ".." }
 sapling-format-util = { version = "0.1.0", path = "../../util/format-util" }
 sapling-gitstore = { version = "0.1.0", path = "../../gitstore" }

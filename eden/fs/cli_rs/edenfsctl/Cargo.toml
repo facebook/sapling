@@ -8,7 +8,7 @@ edition = "2024"
 license = "GPLv2+"
 
 [dependencies]
-anyhow = "1.0.95"
+anyhow = "1.0.98"
 clap = { version = "3.2.25", features = ["derive", "env", "regex", "unicode", "wrap_help"] }
 edenfs-commands = { version = "0.1.0", path = "../edenfs-commands" }
 fail = { version = "0.4", features = ["failpoints"] }

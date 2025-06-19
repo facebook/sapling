@@ -13,7 +13,7 @@ license = "MIT"
 name = "edenfs_client"
 
 [dependencies]
-anyhow = "1.0.95"
+anyhow = "1.0.98"
 fbthrift_socket = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 fs-err = { version = "3", features = ["tokio"] }
 sapling-async-runtime = { version = "0.1.0", path = "../async-runtime" }

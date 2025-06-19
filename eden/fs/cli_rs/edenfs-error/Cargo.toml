@@ -8,7 +8,7 @@ edition = "2024"
 license = "GPLv2+"
 
 [dependencies]
-anyhow = "1.0.95"
+anyhow = "1.0.98"
 sapling-thrift-types = { version = "0.1.0", path = "../../../scm/lib/thrift-types" }
 thiserror = "2.0.12"
 thrift_streaming_clients = { version = "0.1.0", path = "../../service/thrift_streaming/clients" }

@@ -13,7 +13,7 @@ license = "MIT"
 name = "journal"
 
 [dependencies]
-anyhow = "1.0.95"
+anyhow = "1.0.98"
 sapling-hgtime = { version = "0.1.0", path = "../hgtime" }
 sapling-repolock = { version = "0.1.0", path = "../repolock" }
 sapling-sysutil = { version = "0.1.0", path = "../util/sysutil" }

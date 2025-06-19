@@ -13,7 +13,7 @@ license = "MIT"
 name = "udsipc"
 
 [dependencies]
-anyhow = "1.0.95"
+anyhow = "1.0.98"
 fn-error-context = "0.2"
 fs-err = { version = "3", features = ["tokio"] }
 sapling-nodeipc = { version = "0.1.0", path = "../nodeipc" }

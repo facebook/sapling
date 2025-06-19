@@ -15,7 +15,7 @@ name = "compiler"
 path = "src/main.rs"
 
 [dependencies]
-anyhow = "1.0.95"
+anyhow = "1.0.98"
 clap = { version = "4.5.38", features = ["derive", "env", "string", "unicode", "wrap_help"] }
 dunce = "1.0.2"
 serde = { version = "1.0.185", features = ["derive", "rc"] }

@@ -11,5 +11,5 @@ license = "GPLv2+"
 path = "src/shutdown_timeout.rs"
 
 [dependencies]
-anyhow = "1.0.95"
+anyhow = "1.0.98"
 clap = { version = "4.5.38", features = ["derive", "env", "string", "unicode", "wrap_help"] }

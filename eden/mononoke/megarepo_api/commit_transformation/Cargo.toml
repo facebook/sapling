@@ -8,7 +8,7 @@ edition = "2024"
 license = "GPLv2+"
 
 [dependencies]
-anyhow = "1.0.95"
+anyhow = "1.0.98"
 async-recursion = "1.1.1"
 async-trait = "0.1.86"
 blobrepo_utils = { version = "0.1.0", path = "../../blobrepo_utils" }

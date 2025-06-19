@@ -10,7 +10,7 @@ edition = "2024"
 name = "cliparser"
 
 [dependencies]
-anyhow = "1.0.95"
+anyhow = "1.0.98"
 cpython = { version = "0.7.2", features = ["python3-sys"], optional = true, default-features = false }
 indexmap = { version = "2.9.0", features = ["arbitrary", "rayon", "serde"] }
 serde = { version = "1.0.185", features = ["derive", "rc"] }

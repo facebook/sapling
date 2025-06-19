@@ -13,7 +13,7 @@ license = "MIT"
 name = "types"
 
 [dependencies]
-anyhow = "1.0.95"
+anyhow = "1.0.98"
 bitflags = { version = "2.6", features = ["serde", "std"], default-features = false }
 bytecount = "0.6.8"
 byteorder = "1.3"

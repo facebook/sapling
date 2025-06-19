@@ -8,7 +8,7 @@ edition = "2024"
 license = "GPLv2+"
 
 [dependencies]
-anyhow = "1.0.95"
+anyhow = "1.0.98"
 arc-swap = { version = "1.5", features = ["weak"] }
 futures = { version = "0.3.30", features = ["async-await", "compat"] }
 parking_lot = { version = "0.12.1", features = ["send_guard"] }

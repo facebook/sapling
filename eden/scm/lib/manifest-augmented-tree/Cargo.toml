@@ -6,7 +6,7 @@ version = "0.1.0"
 edition = "2024"
 
 [dependencies]
-anyhow = "1.0.95"
+anyhow = "1.0.98"
 base64 = { version = "0.22.1", features = ["alloc"] }
 blake3 = { version = "=1.6.1", features = ["mmap", "rayon", "traits-preview"] }
 sapling-minibytes = { version = "0.1.0", path = "../minibytes" }

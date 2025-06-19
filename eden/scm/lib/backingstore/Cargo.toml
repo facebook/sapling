@@ -14,7 +14,7 @@ name = "backingstore"
 crate-type = ["lib", "staticlib"]
 
 [dependencies]
-anyhow = "1.0.95"
+anyhow = "1.0.98"
 arc-swap = { version = "1.5", features = ["weak"] }
 blob = { version = "0.1.0", path = "../blob" }
 cxx = "1.0.119"

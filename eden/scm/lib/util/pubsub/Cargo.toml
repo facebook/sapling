@@ -13,5 +13,5 @@ license = "MIT"
 name = "pubsub"
 
 [dependencies]
-anyhow = "1.0.95"
+anyhow = "1.0.98"
 tracing = { version = "0.1.41", features = ["attributes", "valuable"] }

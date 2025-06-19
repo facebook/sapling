@@ -8,7 +8,7 @@ edition = "2024"
 license = "GPLv2+"
 
 [dependencies]
-anyhow = "1.0.95"
+anyhow = "1.0.98"
 blobstore = { version = "0.1.0", path = ".." }
 blobstore_stats = { version = "0.1.0", path = "../blobstore_stats" }
 chrono = { version = "0.4.41", features = ["clock", "serde", "std"], default-features = false }

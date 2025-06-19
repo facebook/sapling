@@ -8,7 +8,7 @@ edition = "2024"
 license = "GPLv2+"
 
 [dependencies]
-anyhow = "1.0.95"
+anyhow = "1.0.98"
 byteorder = "1.3"
 edenfs-error = { version = "0.1.0", path = "../edenfs-error" }
 regex = "1.11.1"

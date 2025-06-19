@@ -11,7 +11,7 @@ license = "GPLv2+"
 path = "reporting.rs"
 
 [dependencies]
-anyhow = "1.0.95"
+anyhow = "1.0.98"
 context = { version = "0.1.0", path = "../../server/context" }
 mononoke_types = { version = "0.1.0", path = "../../mononoke_types" }
 scuba_ext = { version = "0.1.0", path = "../../common/scuba_ext" }

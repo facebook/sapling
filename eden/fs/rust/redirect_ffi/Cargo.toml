@@ -8,7 +8,7 @@ edition = "2024"
 license = "GPLv2+"
 
 [dependencies]
-anyhow = "1.0.95"
+anyhow = "1.0.98"
 cxx = "1.0.119"
 edenfs-client = { version = "0.1.0", path = "../../cli_rs/edenfs-client" }
 tokio = { version = "1.45.0", features = ["full", "test-util", "tracing"] }

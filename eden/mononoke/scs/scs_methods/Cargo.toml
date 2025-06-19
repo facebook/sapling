@@ -8,7 +8,7 @@ edition = "2024"
 license = "GPLv2+"
 
 [dependencies]
-anyhow = "1.0.95"
+anyhow = "1.0.98"
 async-stream = "0.3"
 async-trait = "0.1.86"
 async_requests = { version = "0.1.0", path = "../../async_requests/lib" }

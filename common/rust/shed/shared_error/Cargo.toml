@@ -11,6 +11,6 @@ repository = "https://github.com/facebookexperimental/rust-shed"
 license = "MIT OR Apache-2.0"
 
 [dependencies]
-anyhow = "1.0.95"
+anyhow = "1.0.98"
 slog = { version = "2.7", features = ["max_level_trace", "nested-values"] }
 thiserror = "2.0.12"

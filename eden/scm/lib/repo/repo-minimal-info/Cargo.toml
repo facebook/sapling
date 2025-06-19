@@ -13,7 +13,7 @@ license = "MIT"
 name = "repo_minimal_info"
 
 [dependencies]
-anyhow = "1.0.95"
+anyhow = "1.0.98"
 fs-err = { version = "3", features = ["tokio"] }
 phf = { version = "0.11", features = ["macros"] }
 sapling-identity = { version = "0.1.0", path = "../../identity" }
