@@ -9,10 +9,15 @@ use std::sync::Arc;
 use std::time::Duration;
 
 use anyhow::Result;
+use anyhow::anyhow;
 use blob::Blob;
 use cas_client::CasClient;
+use cas_client::CasDigest;
+use cas_client::CasDigestType;
+use cas_client::CasFetchedStats;
 use cas_client::CasSuccessTracker;
 use cas_client::CasSuccessTrackerConfig;
+use cas_client::FetchContext;
 #[cfg(not(target_os = "linux"))]
 use cas_client_lib::CASClientBuilder;
 #[cfg(not(target_os = "linux"))]
@@ -20,23 +25,42 @@ use cas_client_lib::CASClientBundle;
 use cas_client_lib::CASDaemonClientCfg;
 #[cfg(not(target_os = "linux"))]
 use cas_client_lib::ClientBuilderCommonMethods;
+#[cfg(not(target_os = "linux"))]
+use cas_client_lib::DownloadDigestsIntoCacheRequest;
+#[cfg(not(target_os = "linux"))]
+use cas_client_lib::DownloadRequest;
+#[cfg(not(target_os = "linux"))]
+use cas_client_lib::DownloadStreamRequest;
 use cas_client_lib::EmbeddedCASDaemonClientCfg;
+#[cfg(not(target_os = "linux"))]
+use cas_client_lib::REClientError;
 use cas_client_lib::RESessionID;
 use cas_client_lib::RemoteCASdAddress;
 use cas_client_lib::RemoteCacheConfig;
 use cas_client_lib::RemoteCacheManagerMode;
 use cas_client_lib::RemoteExecutionMetadata;
 use cas_client_lib::RemoteFetchPolicy;
+use cas_client_lib::TCode;
+#[cfg(not(target_os = "linux"))]
+use cas_client_lib::UploadRequest;
 use cas_client_lib::create_default_config;
 use configmodel::Config;
 use configmodel::ConfigExt;
 use configmodel::convert::ByteCount;
 use configmodel::convert::FromConfigValue;
+use futures::StreamExt;
+use futures::stream;
+use futures::stream::BoxStream;
+use itertools::Either;
+use itertools::Itertools;
+use once_cell::sync::OnceCell;
 use re_cas_common::from_re_digest;
 use re_cas_common::parse_stats;
+use re_cas_common::split_up_to_max_bytes;
 use re_cas_common::to_re_digest;
 #[cfg(target_os = "linux")]
 use rich_cas_client_wrapper::CASClientWrapper as CASClientBundle;
+use types::cas::CasPrefetchOutcome;
 
 pub const CAS_SOCKET_PATH: &str = "/run/casd/casd.socket";
 pub const CAS_SESSION_TTL: i64 = 600; // 10 minutes
@@ -52,7 +76,7 @@ pub enum CasCacheModeLocalFetch {
 }
 
 pub struct RichCasClient {
-    client: re_cas_common::OnceCell<CASClientBundle>,
+    client: OnceCell<CASClientBundle>,
     cas_success_tracker: CasSuccessTracker,
     /// Verbose logging will disable quiet mode in REClient.
     verbose: bool,
@@ -272,6 +296,319 @@ impl RichCasClient {
 
         Ok(client)
     }
+
+    fn client(&self) -> Result<&CASClientBundle> {
+        self.client.get_or_try_init(|| self.build())
+    }
 }
 
-re_cas_common::cas_client!(RichCasClient);
+#[async_trait::async_trait]
+impl CasClient for RichCasClient {
+    /// Fetch a single blob from local CAS caches.
+    fn fetch_single_locally_cached(
+        &self,
+        digest: &CasDigest,
+    ) -> Result<(CasFetchedStats, Option<Blob>)> {
+        tracing::trace!(target: "cas_client", concat!(stringify!($struct), " fetching {:?} digest from local cache"), digest);
+
+        #[cfg(target_os = "linux")]
+        {
+            let (stats, data) = self
+                .client()?
+                .low_level_lookup_cache(self.metadata.clone(), to_re_digest(digest))?
+                .unpack();
+
+            let parsed_stats = parse_stats(std::iter::empty(), stats);
+
+            if data.is_null() {
+                return Ok((parsed_stats, None));
+            } else {
+                return Ok((parsed_stats, Some(Blob::IOBuf(data.into()))));
+            }
+        }
+
+        #[cfg(not(target_os = "linux"))]
+        return Ok((CasFetchedStats::default(), None));
+    }
+
+    /// Upload blobs to CAS.
+    async fn upload(&self, blobs: Vec<Blob>) -> Result<Vec<CasDigest>> {
+        tracing::debug!(target: "cas_client", concat!(stringify!($struct), " uploading {} blobs"), blobs.len());
+
+        #[cfg(target_os = "linux")]
+        {
+            self.client()?
+                .co_upload_inlined_blobs(
+                    self.metadata.clone(),
+                    blobs.into_iter().map(|blob| blob.into_vec()).collect(),
+                )
+                .await??
+                .digests
+                .into_iter()
+                .map(|digest_with_status| from_re_digest(&digest_with_status.digest))
+                .collect::<Result<Vec<_>>>()
+        }
+
+        #[cfg(not(target_os = "linux"))]
+        {
+            self.client()?
+                .upload(
+                    self.metadata.clone(),
+                    UploadRequest {
+                        inlined_blobs: Some(
+                            blobs.into_iter().map(|blob| blob.into_vec()).collect(),
+                        ),
+                        upload_only_missing: true,
+                        ..Default::default()
+                    },
+                )
+                .await?
+                .inlined_blobs_status
+                .unwrap_or_default()
+                .into_iter()
+                .map(|digest_with_status| from_re_digest(&digest_with_status.digest))
+                .collect::<Result<Vec<_>>>()
+        }
+    }
+
+    /// Fetch blobs from CAS.
+    async fn fetch<'a>(
+        &'a self,
+        _fctx: FetchContext,
+        digests: &'a [CasDigest],
+        log_name: CasDigestType,
+    ) -> BoxStream<'a, Result<(CasFetchedStats, Vec<(CasDigest, Result<Option<Blob>>)>)>> {
+        stream::iter(split_up_to_max_bytes(digests, self.fetch_limit.value()))
+            .map(move |digests| async move {
+                if !self.cas_success_tracker.allow_request()? {
+                    tracing::debug!(target: "cas_client", concat!(stringify!($struct), " skip fetching {} {}(s)"), digests.len(), log_name);
+                    return Err(anyhow!("skip cas fetching due to cas success tracker error rate limiting vioaltion"));
+                }
+                if self.use_streaming_dowloads && digests.len() == 1 && digests.first().unwrap().size >= self.fetch_limit.value() {
+                    // Single large file, fetch it via the streaming API to avoid memory issues on CAS side.
+                    let digest = digests.first().unwrap();
+                    tracing::debug!(target: "cas_client", concat!(stringify!($struct), " streaming {} {}(s)"), digests.len(), log_name);
+
+
+                    // Unfortunately, the streaming API does not return the storage stats, so it won't be added to the stats.
+                    let stats = CasFetchedStats::default();
+
+                    #[cfg(target_os = "linux")]
+                    let mut response_stream = self.client()?
+                        .download_stream(self.metadata.clone(), to_re_digest(digest))
+                        .await;
+
+                    #[cfg(not(target_os = "linux"))]
+                    let mut response_stream = {
+                        let request =  DownloadStreamRequest {
+                            digest: to_re_digest(digest),
+                            ..Default::default()
+                        };
+                        let response = self.client()?
+                            .download_stream(self.metadata.clone(), request)
+                            .await;
+
+                        if let Err(ref err) = response {
+                            if let Some(inner) = err.downcast_ref::<REClientError>() {
+                                if inner.code == TCode::NOT_FOUND {
+                                    // Streaming download failed because the digest was not found, record a success.
+                                    self.cas_success_tracker.record_success();
+                                    return Ok((stats, vec![(digest.to_owned(), Ok(None))]));
+                                }
+                                // Unfortunately, the streaming download failed, record a failure.
+                                self.cas_success_tracker.record_failure()?;
+                            }
+                        }
+                        response
+                    }?;
+
+                    let mut bytes: Vec<u8> = Vec::with_capacity(digest.size as usize);
+                    while let Some(chunk) = response_stream.next().await {
+                        if let Err(ref _err) = chunk {
+                            self.cas_success_tracker.record_failure()?;
+                        }
+                        bytes.extend(chunk?.data);
+                    }
+
+                    self.cas_success_tracker.record_success();
+                    return Ok((stats, vec![(digest.to_owned(), Ok(Some(Blob::Bytes(bytes.into()))))]));
+                }
+
+                // Fetch digests via the regular API (download inlined digests).
+
+                tracing::debug!(target: "cas_client", concat!(stringify!($struct), " fetching {} {}(s)"), digests.len(), log_name);
+
+                #[cfg(target_os = "linux")]
+                let (data, stats) = {
+                    let response = self.client()?
+                        .co_low_level_download_inline(self.metadata.clone(), digests.iter().map(to_re_digest).collect()).await;
+
+                    if let Err(ref err) = response {
+                        if err.code == TCode::NOT_FOUND {
+                            tracing::warn!(target: "cas_client", "digest not found and can not be fetched: {:?}", digests);
+                        }
+                    }
+
+                    let response = response.map_err(|err| {
+                            // Unfortunately, the download failed entirely, record a failure.
+                            let _failure_error = self.cas_success_tracker.record_failure();
+                            err
+                        })?;
+
+                    let local_cache_stats = response.get_local_cache_stats();
+                    let storage_stats = response.get_storage_stats();
+                    (response.unpack_downloads(),  parse_stats(storage_stats.per_backend_stats.into_iter(), local_cache_stats))
+                };
+
+                #[cfg(not(target_os = "linux"))]
+                let (data, stats) = {
+                    let request = DownloadRequest {
+                        inlined_digests: Some(digests.iter().map(to_re_digest).collect()),
+                        throw_on_error: false,
+                        ..Default::default()
+                    };
+                    let response = self.client()?
+                    .download(self.metadata.clone(), request)
+                    .await
+                    .map_err(|err| {
+                        // Unfortunately, the download failed entirely, record a failure.
+                        let _failure_error = self.cas_success_tracker.record_failure();
+                        err
+                    })?;
+                    let local_cache_stats = response.local_cache_stats;
+
+                    (response.inlined_blobs.unwrap_or_default(), parse_stats(response.storage_stats.per_backend_stats.into_iter(), local_cache_stats))
+                };
+
+
+                let data = data
+                    .into_iter()
+                    .map(|blob| {
+                        #[cfg(target_os = "linux")]
+                        let (digest, status, data) = {
+                            let (digest, status, data) = blob.unpack();
+                            (digest, status, Blob::IOBuf(data.into()))
+                        };
+                        #[cfg(not(target_os = "linux"))]
+                        let (digest, status, data) = (blob.digest, blob.status, Blob::Bytes(blob.blob.into()));
+
+                        let digest = from_re_digest(&digest)?;
+                        match status.code {
+                            TCode::OK => Ok((digest, Ok(Some(data)))),
+                            TCode::NOT_FOUND => Ok((digest, Ok(None))),
+                            _ => Ok((
+                                digest,
+                                Err(anyhow!(
+                                    "bad status (code={}, message={}, group={})",
+                                    status.code,
+                                    status.message,
+                                    status.group
+                                )),
+                            )),
+                        }
+                    })
+                    .collect::<Result<Vec<_>>>()?;
+
+                // If all digests are failed, report a failure.
+                // Otherwise, report a success (could be a partial success)
+                let all_errors = data.iter().all(|(_, result)| result.is_err());
+                if all_errors {
+                    self.cas_success_tracker.record_failure()?;
+                } else {
+                    self.cas_success_tracker.record_success();
+                }
+
+                Ok((stats, data))
+            })
+            .buffer_unordered(self.fetch_concurrency)
+            .boxed()
+    }
+
+    /// Prefetch blobs into the CAS local caches.
+    /// Returns a stream of (stats, digests_prefetched, digests_not_found) tuples.
+    async fn prefetch<'a>(
+        &'a self,
+        _fctx: FetchContext,
+        digests: &'a [CasDigest],
+        log_name: CasDigestType,
+    ) -> BoxStream<'a, Result<(CasFetchedStats, Vec<CasDigest>, Vec<CasDigest>)>> {
+        stream::iter(split_up_to_max_bytes(digests, self.fetch_limit.value()))
+        .map(move |digests| async move {
+            if !self.cas_success_tracker.allow_request()? {
+                tracing::debug!(target: "cas_client", concat!(stringify!($struct), " skip prefetching {} {}(s)"), digests.len(), log_name);
+                return Err(anyhow!("skip cas prefetching due to cas success tracker error rate limiting vioaltion"));
+            }
+
+            tracing::debug!(target: "cas_client", concat!(stringify!($struct), " prefetching {} {}(s)"), digests.len(), log_name);
+
+            #[cfg(target_os = "linux")]
+            let response = self.client()?
+                .co_download_digests_into_cache(self.metadata.clone(), digests.into_iter().map(to_re_digest).collect())
+                .await
+                .map_err(|err| {
+                    // Unfortunately, the "download_digests_into_cache" failed entirely, record a failure.
+                    let _failure_error = self.cas_success_tracker.record_failure();
+                    err
+                })?;
+
+            #[cfg(not(target_os = "linux"))]
+            let response = {
+                let request = DownloadDigestsIntoCacheRequest {
+                    digests: digests.iter().map(to_re_digest).collect(),
+                    throw_on_error: false,
+                    ..Default::default()
+                };
+                self.client()?
+                .download_digests_into_cache(self.metadata.clone(), request)
+                .await
+                .map_err(|err| {
+                    // Unfortunately, the "download_digests_into_cache" failed entirely, record a failure.
+                    let _failure_error = self.cas_success_tracker.record_failure();
+                    err
+                })
+            }?;
+
+            let local_cache_stats = response.local_cache_stats;
+
+            let stats = parse_stats(response.storage_stats.per_backend_stats.into_iter(), local_cache_stats);
+
+            let data = response.digests_with_status
+                .into_iter()
+                .map(|blob| {
+                    let digest = from_re_digest(&blob.digest)?;
+                    match blob.status.code {
+                        TCode::OK => Ok(CasPrefetchOutcome::Prefetched(digest)),
+                        TCode::NOT_FOUND => {
+                            tracing::warn!(target: "cas_client", "digest not found and can not be prefetched: {:?}", digest);
+                            Ok(CasPrefetchOutcome::Missing(digest))
+                        },
+                        _ => Err(anyhow!(
+                                "bad status (code={}, message={}, group={})",
+                                blob.status.code,
+                                blob.status.message,
+                                blob.status.group
+                            )),
+                    }
+                })
+                .collect::<Result<Vec<_>>>();
+
+            // If all digests are failed, report a failure.
+            // Otherwise, report a success (could be a partial success)
+            if let Err(_) = data {
+                self.cas_success_tracker.record_failure()?;
+            } else {
+                self.cas_success_tracker.record_success();
+            }
+
+            let (digests_prefetched, digests_not_found) = data?.into_iter()
+                .partition_map(|outcome| match outcome {
+                    CasPrefetchOutcome::Prefetched(digest) => Either::Left(digest),
+                    CasPrefetchOutcome::Missing(digest) => Either::Right(digest),
+                });
+
+            Ok((stats, digests_prefetched, digests_not_found))
+        })
+        .buffer_unordered(self.fetch_concurrency)
+        .boxed()
+    }
+}

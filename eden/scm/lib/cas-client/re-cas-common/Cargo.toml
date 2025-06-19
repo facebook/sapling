@@ -14,9 +14,4 @@ name = "re_cas_common"
 
 [dependencies]
 anyhow = "1.0.98"
-async-trait = "0.1.86"
-itertools = "0.14.0"
-once_cell = "1.12"
-sapling-cas-client = { version = "0.1.0", path = ".." }
 sapling-types = { version = "0.1.0", path = "../../types" }
-tracing = { version = "0.1.41", features = ["attributes", "valuable"] }
