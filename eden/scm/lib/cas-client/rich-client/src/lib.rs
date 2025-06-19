@@ -321,14 +321,14 @@ impl CasClient for RichCasClient {
             let parsed_stats = parse_stats(std::iter::empty(), stats);
 
             if data.is_null() {
-                return Ok((parsed_stats, None));
+                Ok((parsed_stats, None))
             } else {
-                return Ok((parsed_stats, Some(Blob::IOBuf(data.into()))));
+                Ok((parsed_stats, Some(Blob::IOBuf(data.into()))))
             }
         }
 
         #[cfg(not(target_os = "linux"))]
-        return Ok((CasFetchedStats::default(), None));
+        Ok((CasFetchedStats::default(), None))
     }
 
     /// Upload blobs to CAS.
@@ -449,10 +449,9 @@ impl CasClient for RichCasClient {
                         }
                     }
 
-                    let response = response.map_err(|err| {
+                    let response = response.inspect_err(|_err| {
                             // Unfortunately, the download failed entirely, record a failure.
                             let _failure_error = self.cas_success_tracker.record_failure();
-                            err
                         })?;
 
                     let local_cache_stats = response.get_local_cache_stats();
@@ -543,12 +542,11 @@ impl CasClient for RichCasClient {
 
             #[cfg(target_os = "linux")]
             let response = self.client()?
-                .co_download_digests_into_cache(self.metadata.clone(), digests.into_iter().map(to_re_digest).collect())
+                .co_download_digests_into_cache(self.metadata.clone(), digests.iter().map(to_re_digest).collect())
                 .await
-                .map_err(|err| {
+                .inspect_err(|_err| {
                     // Unfortunately, the "download_digests_into_cache" failed entirely, record a failure.
                     let _failure_error = self.cas_success_tracker.record_failure();
-                    err
                 })?;
 
             #[cfg(not(target_os = "linux"))]
@@ -594,7 +592,7 @@ impl CasClient for RichCasClient {
 
             // If all digests are failed, report a failure.
             // Otherwise, report a success (could be a partial success)
-            if let Err(_) = data {
+            if data.is_err() {
                 self.cas_success_tracker.record_failure()?;
             } else {
                 self.cas_success_tracker.record_success();
