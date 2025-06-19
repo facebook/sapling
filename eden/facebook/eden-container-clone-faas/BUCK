@@ -1,4 +1,5 @@
 load("@fbcode_macros//build_defs:python_unittest.bzl", "python_unittest")
+load("@fbsource//tools/target_determinator/macros:ci.bzl", "ci")
 load("//fbpkg:fbpkg.bzl", "fbpkg")
 load(
     "//serverless/faas/container/py:buck.bzl",
@@ -47,6 +48,7 @@ python_unittest(
     srcs = [
         "py_client.py",
     ],
+    labels = [ci.skip_test()],
     deps = [
         ":eden-container-clone-faas-client-python-clients",  # @manual
         ":eden-container-clone-faas-client-python-types",  # @manual
