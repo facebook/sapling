@@ -19,7 +19,7 @@ clap = { version = "4.5.38", features = ["derive", "env", "string", "unicode", "
 cmdlib_cross_repo = { version = "0.1.0", path = "../../cmdlib/cross_repo" }
 commit_graph = { version = "0.1.0", path = "../../repo_attributes/commit_graph/commit_graph" }
 context = { version = "0.1.0", path = "../../server/context" }
-cross_repo_sync = { version = "0.1.0", path = "../cross_repo_sync" }
+cross_repo_sync = { version = "0.1.0", path = "../../features/cross_repo_sync" }
 executor_lib = { version = "0.1.0", path = "../../cmdlib/sharding" }
 fbinit = { version = "0.2.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 fsnodes = { version = "0.1.0", path = "../../derived_data/fsnodes" }

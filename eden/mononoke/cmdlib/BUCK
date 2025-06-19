@@ -132,7 +132,7 @@ rust_library(
         "fbsource//third-party/rust:anyhow",
         "//common/rust/shed/facet:facet",
         "//eden/mononoke/cmdlib/mononoke_app:mononoke_app",
-        "//eden/mononoke/commit_rewriting/cross_repo_sync:cross_repo_sync",
+        "//eden/mononoke/features/cross_repo_sync:cross_repo_sync",
         "//eden/mononoke/repo_attributes/sql_query_config:sql_query_config",
         "//eden/mononoke/repo_factory:repo_factory",
         "//eden/mononoke/server/context:context",

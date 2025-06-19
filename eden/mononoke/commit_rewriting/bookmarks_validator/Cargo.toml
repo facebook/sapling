@@ -15,7 +15,7 @@ bookmarks = { version = "0.1.0", path = "../../bookmarks" }
 clap = { version = "4.5.38", features = ["derive", "env", "string", "unicode", "wrap_help"] }
 cmdlib_cross_repo = { version = "0.1.0", path = "../../cmdlib/cross_repo" }
 context = { version = "0.1.0", path = "../../server/context" }
-cross_repo_sync = { version = "0.1.0", path = "../cross_repo_sync" }
+cross_repo_sync = { version = "0.1.0", path = "../../features/cross_repo_sync" }
 environment = { version = "0.1.0", path = "../../cmdlib/environment" }
 executor_lib = { version = "0.1.0", path = "../../cmdlib/sharding" }
 fbinit = { version = "0.2.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }

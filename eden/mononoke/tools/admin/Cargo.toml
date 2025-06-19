@@ -50,7 +50,7 @@ commit_id = { version = "0.1.0", path = "../../cmdlib/commit_id" }
 commit_transformation = { version = "0.1.0", path = "../../features/commit_transformation/commit_transformation" }
 content_manifest_derivation = { version = "0.1.0", path = "../../derived_data/content_manifest_derivation" }
 context = { version = "0.1.0", path = "../../server/context" }
-cross_repo_sync = { version = "0.1.0", path = "../../commit_rewriting/cross_repo_sync" }
+cross_repo_sync = { version = "0.1.0", path = "../../features/cross_repo_sync" }
 deleted_manifest = { version = "0.1.0", path = "../../derived_data/deleted_manifest" }
 deletion_log = { version = "0.1.0", path = "../../repo_attributes/deletion_log" }
 derived_data_manager = { version = "0.1.0", path = "../../derived_data/manager" }

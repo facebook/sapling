@@ -17,7 +17,7 @@ clap = { version = "4.5.38", features = ["derive", "env", "string", "unicode", "
 cloned = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 commit_graph = { version = "0.1.0", path = "../../repo_attributes/commit_graph/commit_graph" }
 context = { version = "0.1.0", path = "../../server/context" }
-cross_repo_sync = { version = "0.1.0", path = "../cross_repo_sync" }
+cross_repo_sync = { version = "0.1.0", path = "../../features/cross_repo_sync" }
 facet = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 fbinit = { version = "0.2.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 futures = { version = "0.3.30", features = ["async-await", "compat"] }

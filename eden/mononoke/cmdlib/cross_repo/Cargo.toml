@@ -10,7 +10,7 @@ license = "GPLv2+"
 [dependencies]
 anyhow = "1.0.98"
 context = { version = "0.1.0", path = "../../server/context" }
-cross_repo_sync = { version = "0.1.0", path = "../../commit_rewriting/cross_repo_sync" }
+cross_repo_sync = { version = "0.1.0", path = "../../features/cross_repo_sync" }
 facet = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 mononoke_app = { version = "0.1.0", path = "../mononoke_app" }
 repo_factory = { version = "0.1.0", path = "../../repo_factory" }
