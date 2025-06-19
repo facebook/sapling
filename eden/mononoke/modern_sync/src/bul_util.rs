@@ -80,6 +80,7 @@ pub async fn get_one_entry(
     stream::iter(entries)
 }
 
+#[allow(unused)]
 pub async fn update_remaining_moves(
     current_id: BookmarkUpdateLogId,
     repo_name: String,
