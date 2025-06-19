@@ -58,7 +58,7 @@ pub use reporting::log_error;
 pub use reporting::log_info;
 pub use reporting::log_trace;
 pub use reporting::log_warning;
-pub use sync_commit::CommitSyncer;
+pub use sync_commit::CommitSyncData;
 pub use sync_commit::sync_commit;
 pub use sync_commit::unsafe_always_rewrite_sync_commit;
 pub use sync_commit::unsafe_sync_commit;

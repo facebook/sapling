@@ -33,10 +33,10 @@ pub async fn map(
         .resolve_changeset(ctx, &source_repo)
         .await?;
 
-    let commit_syncer =
+    let commit_sync_data =
         create_single_direction_commit_syncer(ctx, app, source_repo, target_repo).await?;
 
-    let plural_commit_sync_outcome = commit_syncer
+    let plural_commit_sync_outcome = commit_sync_data
         .get_plural_commit_sync_outcome(ctx, source_cs_id)
         .await?;
     match plural_commit_sync_outcome {

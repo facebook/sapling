@@ -14,7 +14,7 @@ use anyhow::format_err;
 use blobstore_factory::MetadataSqlFactory;
 use bookmarks::BookmarkKey;
 use context::CoreContext;
-use cross_repo_sync::CommitSyncer;
+use cross_repo_sync::CommitSyncData;
 use live_commit_sync_config::CfgrLiveCommitSyncConfig;
 use megarepolib::common::ChangesetArgs as MegarepoNewChangesetArgs;
 use megarepolib::common::ChangesetArgsFactory;
@@ -147,11 +147,11 @@ pub(crate) async fn get_live_commit_sync_config(
 
 pub(crate) async fn process_stream_and_wait_for_replication<R: cross_repo_sync::Repo>(
     ctx: &CoreContext,
-    commit_syncer: &CommitSyncer<R>,
+    commit_sync_data: &CommitSyncData<R>,
     mut s: impl Stream<Item = Result<u64>> + std::marker::Unpin,
 ) -> Result<(), Error> {
-    let small_repo = commit_syncer.get_small_repo();
-    let large_repo = commit_syncer.get_large_repo();
+    let small_repo = commit_sync_data.get_small_repo();
+    let large_repo = commit_sync_data.get_large_repo();
     let small_repo_config = small_repo.repo_config();
     let large_repo_config = large_repo.repo_config();
     let small_storage_config_metadata = &small_repo_config.storage_config.metadata;

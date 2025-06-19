@@ -94,24 +94,28 @@ use crate::types::Source;
 use crate::types::Target;
 
 #[derive(Clone)]
-pub struct CommitSyncer<R> {
+pub struct CommitSyncData<R> {
     pub repos: CommitSyncRepos<R>,
     pub live_commit_sync_config: Arc<dyn LiveCommitSyncConfig>,
     pub scuba_sample: MononokeScubaSampleBuilder,
 }
 
-impl<R> fmt::Debug for CommitSyncer<R>
+impl<R> fmt::Debug for CommitSyncData<R>
 where
     R: Repo,
 {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         let source_repo_id = self.get_source_repo_id();
         let target_repo_id = self.get_target_repo_id();
-        write!(f, "CommitSyncer{{{}->{}}}", source_repo_id, target_repo_id)
+        write!(
+            f,
+            "CommitSyncData{{{}->{}}}",
+            source_repo_id, target_repo_id
+        )
     }
 }
 
-impl<R> CommitSyncer<R>
+impl<R> CommitSyncData<R>
 where
     R: Repo,
 {
@@ -138,7 +142,7 @@ where
 
     // Builds the syncer that can be used for opposite sync direction.
     // Note: doesn't support large-to-small as input right now
-    pub fn reverse(&self) -> CommitSyncer<R> {
+    pub fn reverse(&self) -> CommitSyncData<R> {
         Self {
             repos: self.repos.reverse(),
             live_commit_sync_config: self.live_commit_sync_config.clone(),
@@ -263,7 +267,7 @@ where
         .await
     }
 
-    // TODO(T182311609): delete this. It shouldn't be used by CommitSyncer clients.
+    // TODO(T182311609): delete this. It shouldn't be used by CommitSyncData clients.
     pub async fn get_movers_by_version(
         &self,
         version: &CommitSyncConfigVersion,
@@ -278,7 +282,7 @@ where
         .await
     }
 
-    // TODO(T182311609): delete this. It shouldn't be used by CommitSyncer clients.
+    // TODO(T182311609): delete this. It shouldn't be used by CommitSyncData clients.
     pub async fn get_reverse_mover_by_version(
         &self,
         version: &CommitSyncConfigVersion,
@@ -294,7 +298,7 @@ where
         .await
     }
 
-    // TODO(T182311609): delete this. It shouldn't be used by CommitSyncer clients.
+    // TODO(T182311609): delete this. It shouldn't be used by CommitSyncData clients.
     pub(crate) async fn get_reverse_bookmark_renamer(&self) -> Result<BookmarkRenamer, Error> {
         let (source_repo, target_repo) = self.get_source_target();
 
@@ -516,7 +520,7 @@ where
 pub async fn sync_commit<R: Repo>(
     ctx: &CoreContext,
     source_cs_id: ChangesetId,
-    commit_syncer: &CommitSyncer<R>,
+    commit_sync_data: &CommitSyncData<R>,
     ancestor_selection_hint: CandidateSelectionHint<R>,
     commit_sync_context: CommitSyncContext,
     disable_lease: bool,
@@ -524,7 +528,7 @@ pub async fn sync_commit<R: Repo>(
     let before = Instant::now();
     let res = sync_commit_impl(
         ctx,
-        commit_syncer,
+        commit_sync_data,
         source_cs_id,
         commit_sync_context,
         ancestor_selection_hint,
@@ -535,7 +539,7 @@ pub async fn sync_commit<R: Repo>(
     let elapsed = before.elapsed();
     log_rewrite(
         ctx,
-        commit_syncer.scuba_sample.clone(),
+        commit_sync_data.scuba_sample.clone(),
         source_cs_id,
         "sync_commit",
         commit_sync_context,
@@ -558,7 +562,7 @@ pub async fn sync_commit<R: Repo>(
 pub async fn unsafe_sync_commit<R: Repo>(
     ctx: &CoreContext,
     source_cs_id: ChangesetId,
-    commit_syncer: &CommitSyncer<R>,
+    commit_sync_data: &CommitSyncData<R>,
     parent_mapping_selection_hint: CandidateSelectionHint<R>,
     commit_sync_context: CommitSyncContext,
     // For commits that have at least a single parent it checks that these commits
@@ -574,7 +578,7 @@ pub async fn unsafe_sync_commit<R: Repo>(
     let res = unsafe_sync_commit_impl(
         ctx,
         source_cs_id,
-        commit_syncer,
+        commit_sync_data,
         parent_mapping_selection_hint,
         commit_sync_context,
         expected_version,
@@ -585,7 +589,7 @@ pub async fn unsafe_sync_commit<R: Repo>(
     let elapsed = before.elapsed();
     log_rewrite(
         ctx,
-        commit_syncer.scuba_sample.clone(),
+        commit_sync_data.scuba_sample.clone(),
         source_cs_id,
         "unsafe_sync_commit",
         commit_sync_context,
@@ -615,7 +619,7 @@ pub async fn unsafe_sync_commit<R: Repo>(
 pub async fn unsafe_always_rewrite_sync_commit<'a, R: Repo>(
     ctx: &'a CoreContext,
     source_cs_id: ChangesetId,
-    commit_syncer: &CommitSyncer<R>,
+    commit_sync_data: &CommitSyncData<R>,
     maybe_parents: Option<HashMap<ChangesetId, ChangesetId>>,
     sync_config_version: &CommitSyncConfigVersion,
     commit_sync_context: CommitSyncContext,
@@ -624,7 +628,7 @@ pub async fn unsafe_always_rewrite_sync_commit<'a, R: Repo>(
     let res = unsafe_always_rewrite_sync_commit_impl(
         ctx,
         source_cs_id,
-        commit_syncer,
+        commit_sync_data,
         maybe_parents,
         sync_config_version,
     )
@@ -633,7 +637,7 @@ pub async fn unsafe_always_rewrite_sync_commit<'a, R: Repo>(
     let elapsed = before.elapsed();
     log_rewrite(
         ctx,
-        commit_syncer.scuba_sample.clone(),
+        commit_sync_data.scuba_sample.clone(),
         source_cs_id,
         "unsafe_always_rewrite_sync_commit",
         commit_sync_context,
@@ -655,7 +659,7 @@ pub async fn unsafe_always_rewrite_sync_commit<'a, R: Repo>(
 pub async fn unsafe_sync_commit_pushrebase<'a, R: Repo>(
     ctx: &'a CoreContext,
     source_cs: BonsaiChangeset,
-    commit_syncer: &'a CommitSyncer<R>,
+    commit_sync_data: &'a CommitSyncData<R>,
     target_bookmark: Target<BookmarkKey>,
     commit_sync_context: CommitSyncContext,
     rewritedates: PushrebaseRewriteDates,
@@ -668,7 +672,7 @@ pub async fn unsafe_sync_commit_pushrebase<'a, R: Repo>(
     let res = unsafe_sync_commit_pushrebase_impl(
         ctx,
         source_cs,
-        commit_syncer,
+        commit_sync_data,
         target_bookmark,
         rewritedates,
         version,
@@ -681,7 +685,7 @@ pub async fn unsafe_sync_commit_pushrebase<'a, R: Repo>(
 
     log_rewrite(
         ctx,
-        commit_syncer.scuba_sample.clone(),
+        commit_sync_data.scuba_sample.clone(),
         source_cs_id,
         "unsafe_sync_commit_pushrebase",
         commit_sync_context,
@@ -696,19 +700,19 @@ pub async fn unsafe_sync_commit_pushrebase<'a, R: Repo>(
 
 async fn sync_commit_impl<R: Repo>(
     ctx: &CoreContext,
-    commit_syncer: &CommitSyncer<R>,
+    commit_sync_data: &CommitSyncData<R>,
     source_cs_id: ChangesetId,
     commit_sync_context: CommitSyncContext,
     ancestor_selection_hint: CandidateSelectionHint<R>,
     disable_lease: bool,
 ) -> Result<Option<ChangesetId>, Error> {
     let (unsynced_ancestors, synced_ancestors_versions) =
-        find_toposorted_unsynced_ancestors(ctx, commit_syncer, source_cs_id, None).await?;
+        find_toposorted_unsynced_ancestors(ctx, commit_sync_data, source_cs_id, None).await?;
 
-    let source_repo = commit_syncer.repos.get_source_repo();
-    let target_repo = commit_syncer.repos.get_target_repo();
+    let source_repo = commit_sync_data.repos.get_source_repo();
+    let target_repo = commit_sync_data.repos.get_target_repo();
 
-    let small_repo = commit_syncer.get_small_repo();
+    let small_repo = commit_sync_data.get_small_repo();
     let source_repo_is_small = source_repo.repo_identity().id() == small_repo.repo_identity().id();
 
     if source_repo_is_small {
@@ -738,19 +742,19 @@ async fn sync_commit_impl<R: Repo>(
         );
 
         let checker = || async {
-            let maybe_outcome = commit_syncer
+            let maybe_outcome = commit_sync_data
                 .get_commit_sync_outcome(ctx, source_cs_id)
                 .await?;
             Result::<_, Error>::Ok(maybe_outcome.is_some())
         };
         let sync = || async {
-            let parents = commit_syncer
+            let parents = commit_sync_data
                 .get_source_repo()
                 .commit_graph()
                 .changeset_parents(ctx, ancestor)
                 .await?;
             let expected_version = if parents.is_empty() {
-                let version = commit_syncer
+                let version = commit_sync_data
                     .get_version_for_syncing_commit_with_no_parent(
                         ctx,
                         ancestor,
@@ -769,7 +773,7 @@ async fn sync_commit_impl<R: Repo>(
             unsafe_sync_commit_impl(
                 ctx,
                 ancestor,
-                commit_syncer,
+                commit_sync_data,
                 ancestor_selection_hint.clone(),
                 commit_sync_context,
                 expected_version,
@@ -786,7 +790,7 @@ async fn sync_commit_impl<R: Repo>(
         } else {
             run_with_lease(
                 ctx,
-                commit_syncer.get_x_repo_sync_lease(),
+                commit_sync_data.get_x_repo_sync_lease(),
                 lease_key,
                 checker,
                 sync,
@@ -795,7 +799,7 @@ async fn sync_commit_impl<R: Repo>(
         }
     }
 
-    let commit_sync_outcome = commit_syncer
+    let commit_sync_outcome = commit_sync_data
         .get_commit_sync_outcome(ctx, source_cs_id)
         .await?
         .ok_or_else(|| format_err!("was not able to remap a commit {}", source_cs_id))?;
@@ -810,7 +814,7 @@ async fn sync_commit_impl<R: Repo>(
 async fn unsafe_sync_commit_impl<'a, R: Repo>(
     ctx: &'a CoreContext,
     source_cs_id: ChangesetId,
-    commit_syncer: &'a CommitSyncer<R>,
+    commit_sync_data: &'a CommitSyncData<R>,
     mut parent_mapping_selection_hint: CandidateSelectionHint<R>,
     commit_sync_context: CommitSyncContext,
     expected_version: Option<CommitSyncConfigVersion>,
@@ -820,17 +824,17 @@ async fn unsafe_sync_commit_impl<'a, R: Repo>(
     debug!(
         ctx.logger(),
         "{:?}: unsafe_sync_commit called for {}, with hint: {:?}",
-        commit_syncer,
+        commit_sync_data,
         source_cs_id,
         parent_mapping_selection_hint
     );
-    let source_repo = commit_syncer.get_source_repo();
+    let source_repo = commit_sync_data.get_source_repo();
     let cs = source_cs_id.load(ctx, source_repo.repo_blobstore()).await?;
     if cs.parents().count() > 1 {
         parent_mapping_selection_hint = CandidateSelectionHint::Only;
     }
     let mapped_parents = stream::iter(cs.parents().map(|p| {
-        commit_syncer
+        commit_sync_data
             .get_commit_sync_outcome_with_hint(
                 ctx,
                 Source(p),
@@ -845,25 +849,25 @@ async fn unsafe_sync_commit_impl<'a, R: Repo>(
     .try_collect()
     .await?;
 
-    let submodule_deps = commit_syncer.get_submodule_deps();
+    let submodule_deps = commit_sync_data.get_submodule_deps();
     let fallback_repos = vec![Arc::new(source_repo.clone())]
         .into_iter()
         .chain(submodule_deps.repos())
         .collect::<Vec<_>>();
-    let large_repo = commit_syncer.get_large_repo();
+    let large_repo = commit_sync_data.get_large_repo();
     let large_in_memory_repo = InMemoryRepo::from_repo(large_repo, fallback_repos)?;
-    let strip_commit_extras = commit_syncer.repos.get_strip_commit_extras()?;
-    let should_set_committer_info_to_author_info_if_empty = commit_syncer
+    let strip_commit_extras = commit_sync_data.repos.get_strip_commit_extras()?;
+    let should_set_committer_info_to_author_info_if_empty = commit_sync_data
         .repos
         .should_set_committer_info_to_author_info_if_empty()?;
 
     let in_memory_syncer = CommitInMemorySyncer {
         ctx,
-        source_repo: Source(commit_syncer.get_source_repo()),
+        source_repo: Source(commit_sync_data.get_source_repo()),
         mapped_parents: &mapped_parents,
-        target_repo_id: Target(commit_syncer.get_target_repo_id()),
-        live_commit_sync_config: Arc::clone(&commit_syncer.live_commit_sync_config),
-        small_to_large: commit_syncer.repos.get_direction() == CommitSyncDirection::Forward,
+        target_repo_id: Target(commit_sync_data.get_target_repo_id()),
+        live_commit_sync_config: Arc::clone(&commit_sync_data.live_commit_sync_config),
+        small_to_large: commit_sync_data.repos.get_direction() == CommitSyncDirection::Forward,
         submodule_deps,
         large_repo: large_in_memory_repo,
         strip_commit_extras,
@@ -878,14 +882,14 @@ async fn unsafe_sync_commit_impl<'a, R: Repo>(
         expected_version,
     )
     .await?
-    .write(ctx, commit_syncer)
+    .write(ctx, commit_sync_data)
     .await
 }
 
 async fn unsafe_sync_commit_pushrebase_impl<'a, R: Repo>(
     ctx: &'a CoreContext,
     source_cs: BonsaiChangeset,
-    commit_syncer: &'a CommitSyncer<R>,
+    commit_sync_data: &'a CommitSyncData<R>,
     target_bookmark: Target<BookmarkKey>,
     rewritedates: PushrebaseRewriteDates,
     version: CommitSyncConfigVersion,
@@ -893,18 +897,18 @@ async fn unsafe_sync_commit_pushrebase_impl<'a, R: Repo>(
     parent_mapping: HashMap<ChangesetId, ChangesetId>,
 ) -> Result<Option<ChangesetId>, Error> {
     let hash = source_cs.get_changeset_id();
-    let (source_repo, target_repo) = commit_syncer.get_source_target();
+    let (source_repo, target_repo) = commit_sync_data.get_source_target();
 
-    let source_repo_deps = commit_syncer.get_submodule_deps();
+    let source_repo_deps = commit_sync_data.get_submodule_deps();
 
     let parent_selection_hint = CandidateSelectionHint::AncestorOfBookmark(
         target_bookmark.clone(),
-        Target(commit_syncer.get_target_repo().clone()),
+        Target(commit_sync_data.get_target_repo().clone()),
     );
 
     let mut remapped_parents_outcome = vec![];
     for p in source_cs.parents() {
-        let maybe_commit_sync_outcome = commit_syncer
+        let maybe_commit_sync_outcome = commit_sync_data
             .get_commit_sync_outcome_with_hint(ctx, Source(p), parent_selection_hint.clone())
             .await?
             .map(|sync_outcome| (sync_outcome, p));
@@ -918,14 +922,22 @@ async fn unsafe_sync_commit_pushrebase_impl<'a, R: Repo>(
         remapped_parents_outcome.push(commit_sync_outcome);
     }
 
-    let movers = commit_syncer.get_movers_by_version(&version).await?;
+    let movers = commit_sync_data.get_movers_by_version(&version).await?;
 
     let git_submodules_action = get_git_submodule_action_by_version(
         ctx,
-        Arc::clone(&commit_syncer.live_commit_sync_config),
+        Arc::clone(&commit_sync_data.live_commit_sync_config),
         &version,
-        commit_syncer.repos.get_source_repo().repo_identity().id(),
-        commit_syncer.repos.get_target_repo().repo_identity().id(),
+        commit_sync_data
+            .repos
+            .get_source_repo()
+            .repo_identity()
+            .id(),
+        commit_sync_data
+            .repos
+            .get_target_repo()
+            .repo_identity()
+            .id(),
     )
     .await?;
     let mut source_cs_mut = source_cs.clone().into_mut();
@@ -933,7 +945,7 @@ async fn unsafe_sync_commit_pushrebase_impl<'a, R: Repo>(
         set_mapping_change_version(&mut source_cs_mut, change_mapping_version)?;
     }
     let remapped_parents =
-        remap_parents(ctx, &source_cs_mut, commit_syncer, parent_selection_hint).await?;
+        remap_parents(ctx, &source_cs_mut, commit_sync_data, parent_selection_hint).await?;
 
     let remapped_parents = remapped_parents
         .into_iter()
@@ -946,16 +958,16 @@ async fn unsafe_sync_commit_pushrebase_impl<'a, R: Repo>(
         })
         .collect();
 
-    let small_repo = commit_syncer.get_small_repo();
+    let small_repo = commit_sync_data.get_small_repo();
     let (x_repo_submodule_metadata_file_prefix, dangling_submodule_pointers) =
         submodule_metadata_file_prefix_and_dangling_pointers(
             small_repo.repo_identity().id(),
             &version,
-            commit_syncer.live_commit_sync_config.clone(),
+            commit_sync_data.live_commit_sync_config.clone(),
         )
         .await?;
 
-    let large_repo = commit_syncer.get_large_repo();
+    let large_repo = commit_sync_data.get_large_repo();
     let small_repo_id = small_repo.repo_identity().id();
     let fallback_repos = vec![Arc::new(source_repo.clone())]
         .into_iter()
@@ -989,7 +1001,7 @@ async fn unsafe_sync_commit_pushrebase_impl<'a, R: Repo>(
     match rewrite_res.rewritten {
         None => {
             if remapped_parents_outcome.is_empty() {
-                commit_syncer
+                commit_sync_data
                     .set_no_sync_candidate(ctx, hash, version)
                     .await?;
             } else if remapped_parents_outcome.len() == 1 {
@@ -997,12 +1009,12 @@ async fn unsafe_sync_commit_pushrebase_impl<'a, R: Repo>(
                 let (sync_outcome, _) = &remapped_parents_outcome[0];
                 match sync_outcome {
                     NotSyncCandidate(version) => {
-                        commit_syncer
+                        commit_sync_data
                             .set_no_sync_candidate(ctx, hash, version.clone())
                             .await?;
                     }
                     RewrittenAs(cs_id, version) | EquivalentWorkingCopyAncestor(cs_id, version) => {
-                        commit_syncer
+                        commit_sync_data
                             .update_wc_equivalence_with_version(
                                 ctx,
                                 hash,
@@ -1026,7 +1038,7 @@ async fn unsafe_sync_commit_pushrebase_impl<'a, R: Repo>(
             let frozen = rewritten.freeze()?;
             let rewritten_list = hashset![frozen];
             let submodule_content_ids = submodule_repos_with_content_ids(
-                commit_syncer.get_submodule_deps(),
+                commit_sync_data.get_submodule_deps(),
                 rewrite_res.submodule_expansion_content_ids,
             )?;
             upload_commits(
@@ -1056,8 +1068,16 @@ async fn unsafe_sync_commit_pushrebase_impl<'a, R: Repo>(
                 &target_repo.repo_config().pushrebase,
                 Some(ForwardSyncedCommitInfo {
                     small_bcs_id: hash,
-                    small_repo_id: commit_syncer.repos.get_source_repo().repo_identity().id(),
-                    large_repo_id: commit_syncer.repos.get_target_repo().repo_identity().id(),
+                    small_repo_id: commit_sync_data
+                        .repos
+                        .get_source_repo()
+                        .repo_identity()
+                        .id(),
+                    large_repo_id: commit_sync_data
+                        .repos
+                        .get_target_repo()
+                        .repo_identity()
+                        .id(),
                     version_name: version.clone(),
                 }),
             )
@@ -1090,23 +1110,31 @@ async fn unsafe_sync_commit_pushrebase_impl<'a, R: Repo>(
 async fn unsafe_always_rewrite_sync_commit_impl<'a, R: Repo>(
     ctx: &'a CoreContext,
     source_cs_id: ChangesetId,
-    commit_syncer: &'a CommitSyncer<R>,
+    commit_sync_data: &'a CommitSyncData<R>,
     maybe_parents: Option<HashMap<ChangesetId, ChangesetId>>,
     sync_config_version: &CommitSyncConfigVersion,
 ) -> Result<Option<ChangesetId>, Error> {
-    let (source_repo, target_repo) = commit_syncer.get_source_target();
+    let (source_repo, target_repo) = commit_sync_data.get_source_target();
 
-    let submodule_deps = commit_syncer.get_submodule_deps();
-    let movers = commit_syncer
+    let submodule_deps = commit_sync_data.get_submodule_deps();
+    let movers = commit_sync_data
         .get_movers_by_version(sync_config_version)
         .await?;
 
     let git_submodules_action = get_git_submodule_action_by_version(
         ctx,
-        Arc::clone(&commit_syncer.live_commit_sync_config),
+        Arc::clone(&commit_sync_data.live_commit_sync_config),
         sync_config_version,
-        commit_syncer.repos.get_source_repo().repo_identity().id(),
-        commit_syncer.repos.get_target_repo().repo_identity().id(),
+        commit_sync_data
+            .repos
+            .get_source_repo()
+            .repo_identity()
+            .id(),
+        commit_sync_data
+            .repos
+            .get_target_repo()
+            .repo_identity()
+            .id(),
     )
     .await?;
     let source_cs = source_cs_id.load(ctx, source_repo.repo_blobstore()).await?;
@@ -1114,18 +1142,26 @@ async fn unsafe_always_rewrite_sync_commit_impl<'a, R: Repo>(
     let source_cs = source_cs.clone().into_mut();
     let remapped_parents = match maybe_parents {
         Some(parents) => parents,
-        None => remap_parents(ctx, &source_cs, commit_syncer, CandidateSelectionHint::Only).await?, // TODO: check if only is ok
+        None => {
+            remap_parents(
+                ctx,
+                &source_cs,
+                commit_sync_data,
+                CandidateSelectionHint::Only,
+            )
+            .await?
+        } // TODO: check if only is ok
     };
 
-    let small_repo = commit_syncer.get_small_repo();
+    let small_repo = commit_sync_data.get_small_repo();
     let (x_repo_submodule_metadata_file_prefix, dangling_submodule_pointers) =
         submodule_metadata_file_prefix_and_dangling_pointers(
             small_repo.repo_identity().id(),
             sync_config_version,
-            commit_syncer.live_commit_sync_config.clone(),
+            commit_sync_data.live_commit_sync_config.clone(),
         )
         .await?;
-    let large_repo = commit_syncer.get_large_repo();
+    let large_repo = commit_sync_data.get_large_repo();
     let small_repo_id = small_repo.repo_identity().id();
     let fallback_repos = vec![Arc::new(source_repo.clone())]
         .into_iter()
@@ -1156,7 +1192,7 @@ async fn unsafe_always_rewrite_sync_commit_impl<'a, R: Repo>(
     .await?;
     match rewrite_res.rewritten {
         None => {
-            commit_syncer
+            commit_sync_data
                 .set_no_sync_candidate(ctx, source_cs_id, sync_config_version.clone())
                 .await?;
             Ok(None)
@@ -1166,7 +1202,7 @@ async fn unsafe_always_rewrite_sync_commit_impl<'a, R: Repo>(
             let frozen = rewritten.freeze()?;
             let frozen_cs_id = frozen.get_changeset_id();
             let submodule_content_ids = submodule_repos_with_content_ids(
-                commit_syncer.get_submodule_deps(),
+                commit_sync_data.get_submodule_deps(),
                 rewrite_res.submodule_expansion_content_ids,
             )?;
             upload_commits(
@@ -1181,7 +1217,7 @@ async fn unsafe_always_rewrite_sync_commit_impl<'a, R: Repo>(
             update_mapping_with_version(
                 ctx,
                 hashmap! { source_cs_id => frozen_cs_id },
-                commit_syncer,
+                commit_sync_data,
                 sync_config_version,
             )
             .await?;

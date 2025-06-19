@@ -50,7 +50,7 @@ pub struct MarkNotSyncedArgs {
 pub async fn run(ctx: &CoreContext, app: MononokeApp, args: MarkNotSyncedArgs) -> Result<()> {
     let small_repo: Repo = app.open_repo(&args.repo_args.source_repo).await?;
     let large_repo: Repo = app.open_repo(&args.repo_args.target_repo).await?;
-    let commit_syncer =
+    let commit_sync_data =
         create_single_direction_commit_syncer(ctx, &app, small_repo.clone(), large_repo.clone())
             .await?;
     info!(
@@ -60,9 +60,12 @@ pub async fn run(ctx: &CoreContext, app: MononokeApp, args: MarkNotSyncedArgs) -
         large_repo.repo_identity().name(),
     );
     let mapping_version_name = CommitSyncConfigVersion(args.mapping_version_name.to_string());
-    let mapping = commit_syncer.get_mapping();
+    let mapping = commit_sync_data.get_mapping();
 
-    if !commit_syncer.version_exists(&mapping_version_name).await? {
+    if !commit_sync_data
+        .version_exists(&mapping_version_name)
+        .await?
+    {
         return Err(format_err!("{} version is not found", mapping_version_name));
     }
 
@@ -122,6 +125,6 @@ pub async fn run(ctx: &CoreContext, app: MononokeApp, args: MarkNotSyncedArgs) -
         })
         .try_buffer_unordered(100);
 
-    process_stream_and_wait_for_replication(ctx, &commit_syncer, s).await?;
+    process_stream_and_wait_for_replication(ctx, &commit_sync_data, s).await?;
     Ok(())
 }

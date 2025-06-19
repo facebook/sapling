@@ -14,8 +14,8 @@ use anyhow::Error;
 use anyhow::Result;
 use anyhow::bail;
 use context::CoreContext;
+use cross_repo_sync::CommitSyncData;
 use cross_repo_sync::CommitSyncRepos;
-use cross_repo_sync::CommitSyncer;
 use cross_repo_sync::RepoProvider;
 use cross_repo_sync::Syncers;
 use cross_repo_sync::create_commit_syncers;
@@ -83,7 +83,7 @@ pub async fn create_single_direction_commit_syncer<R: CrossRepo>(
     app: &MononokeApp,
     source_repo: R,
     target_repo: R,
-) -> Result<CommitSyncer<R>, Error> {
+) -> Result<CommitSyncData<R>, Error> {
     let repo_provider = repo_provider_from_mononoke_app(app);
 
     let submodule_deps = get_all_submodule_deps_from_repo_pair(
@@ -101,7 +101,7 @@ pub async fn create_single_direction_commit_syncer<R: CrossRepo>(
     let commit_sync_repos =
         CommitSyncRepos::from_source_and_target_repos(source_repo, target_repo, submodule_deps)?;
 
-    Ok(CommitSyncer::new(
+    Ok(CommitSyncData::new(
         ctx,
         commit_sync_repos,
         live_commit_sync_config,

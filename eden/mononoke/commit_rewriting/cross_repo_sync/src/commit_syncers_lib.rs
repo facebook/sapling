@@ -64,7 +64,7 @@ use crate::commit_sync_outcome::CandidateSelectionHint;
 use crate::commit_sync_outcome::CommitSyncOutcome;
 use crate::commit_sync_outcome::DesiredRelationship;
 use crate::commit_sync_outcome::PluralCommitSyncOutcome;
-use crate::sync_commit::CommitSyncer;
+use crate::sync_commit::CommitSyncData;
 use crate::sync_commit::sync_commit;
 use crate::sync_config_version_utils::get_mapping_change_version;
 use crate::types::ErrorKind;
@@ -77,12 +77,12 @@ const LEASE_WARNING_THRESHOLD: Duration = Duration::from_secs(60);
 pub(crate) async fn remap_parents<'a, R: Repo>(
     ctx: &CoreContext,
     cs: &BonsaiChangesetMut,
-    commit_syncer: &'a CommitSyncer<R>,
+    commit_sync_data: &'a CommitSyncData<R>,
     hint: CandidateSelectionHint<R>,
 ) -> Result<HashMap<ChangesetId, ChangesetId>, Error> {
     let mut remapped_parents = HashMap::new();
     for commit in &cs.parents {
-        let maybe_sync_outcome = commit_syncer
+        let maybe_sync_outcome = commit_sync_data
             .get_commit_sync_outcome_with_hint(ctx, Source(*commit), hint.clone())
             .await?;
         let sync_outcome: Result<_, Error> =
@@ -144,7 +144,7 @@ impl SyncedAncestorsVersions {
 /// In this case we'll return [U1, U2] and \[V1\]
 pub async fn find_toposorted_unsynced_ancestors<R>(
     ctx: &CoreContext,
-    commit_syncer: &CommitSyncer<R>,
+    commit_sync_data: &CommitSyncData<R>,
     start_cs_id: ChangesetId,
     desired_relationship: Option<DesiredRelationship<R>>,
 ) -> Result<(Vec<ChangesetId>, SyncedAncestorsVersions), Error>
@@ -152,7 +152,7 @@ where
     R: Repo,
 {
     let mut synced_ancestors_versions = SyncedAncestorsVersions::default();
-    let source_repo = commit_syncer.get_source_repo();
+    let source_repo = commit_sync_data.get_source_repo();
 
     let mut visited = hashset! { start_cs_id };
     let mut q = VecDeque::new();
@@ -172,7 +172,7 @@ where
             );
         }
 
-        let maybe_plural_outcome = commit_syncer
+        let maybe_plural_outcome = commit_sync_data
             .get_plural_commit_sync_outcome(ctx, cs_id)
             .await?;
         let maybe_plural_outcome = match (maybe_plural_outcome.clone(), &desired_relationship) {
@@ -212,7 +212,7 @@ where
             None => {
                 let maybe_mapping_change = async move {
                     get_mapping_change_version(
-                        &commit_syncer
+                        &commit_sync_data
                             .get_source_repo()
                             .repo_derived_data()
                             .derive::<ChangesetInfo>(ctx, cs_id)
@@ -253,7 +253,7 @@ where
 /// hg extra metadata, as `find_toposorted_unsynced_ancestors` does.
 pub async fn find_toposorted_unsynced_ancestors_with_commit_graph<'a, R>(
     ctx: &'a CoreContext,
-    commit_syncer: &'a CommitSyncer<R>,
+    commit_sync_data: &'a CommitSyncData<R>,
     start_cs_id: ChangesetId,
 ) -> Result<(
     Vec<ChangesetId>,
@@ -264,17 +264,17 @@ pub async fn find_toposorted_unsynced_ancestors_with_commit_graph<'a, R>(
 where
     R: Repo,
 {
-    let source_repo = commit_syncer.get_source_repo();
+    let source_repo = commit_sync_data.get_source_repo();
 
     let commit_graph = source_repo.commit_graph();
 
     // Monotonic property function that will be used to traverse the commit
     // graph to find the latest synced ancestors (if any).
     let is_synced = |cs_id: ChangesetId| {
-        borrowed!(ctx, commit_syncer);
+        borrowed!(ctx, commit_sync_data);
 
         async move {
-            let maybe_plural_outcome = commit_syncer
+            let maybe_plural_outcome = commit_sync_data
                 .get_plural_commit_sync_outcome(ctx, cs_id)
                 .await?;
 
@@ -292,10 +292,10 @@ where
     // Get the config versions from all synced ancestors
     let synced_ancestors_list = stream::iter(&synced_ancestors_frontier)
         .then(|cs_id| {
-            borrowed!(ctx, commit_syncer);
+            borrowed!(ctx, commit_sync_data);
 
             async move {
-                let maybe_plural_outcome = commit_syncer
+                let maybe_plural_outcome = commit_sync_data
                     .get_plural_commit_sync_outcome(ctx, *cs_id)
                     .await?;
 
@@ -368,7 +368,7 @@ where
 /// other pieces of the infra).
 pub async fn get_version_and_parent_map_for_sync_via_pushrebase<'a, R>(
     ctx: &'a CoreContext,
-    commit_syncer: &CommitSyncer<R>,
+    commit_sync_data: &CommitSyncData<R>,
     target_bookmark: &Target<BookmarkKey>,
     parent_version: CommitSyncConfigVersion,
     synced_ancestors_versions: &SyncedAncestorsVersions,
@@ -392,7 +392,7 @@ where
     ) {
         return Ok((parent_version, HashMap::new()));
     }
-    let target_repo = commit_syncer.get_target_repo();
+    let target_repo = commit_sync_data.get_target_repo();
     // Value for the target bookmark. This is not a part of transaction and we're ok with the fact
     // it might be a bit stale.
     let target_bookmark_csid = target_repo
@@ -435,7 +435,7 @@ where
 
     // Let's first validate that the target bookmark is still working-copy equivalent to what the
     // parent of the commit we'd like to sync
-    let backsyncer = commit_syncer.reverse();
+    let backsyncer = commit_sync_data.reverse();
     let mb_small_csid_equivalent_to_target_bookmark = sync_commit(
         ctx,
         target_bookmark_csid,
@@ -519,7 +519,7 @@ where
 /// WORKING COPY EQUIVALENT TO THE COMMIT WE'RE SYNCING**.
 pub async fn unsafe_get_parent_map_for_target_bookmark_rewrite<'a, R>(
     ctx: &'a CoreContext,
-    commit_syncer: &CommitSyncer<R>,
+    commit_sync_data: &CommitSyncData<R>,
     target_bookmark: &Target<BookmarkKey>,
     synced_ancestors_versions: &SyncedAncestorsVersions,
 ) -> Result<HashMap<ChangesetId, ChangesetId>, Error>
@@ -534,7 +534,7 @@ where
         ),
     );
 
-    let target_repo = commit_syncer.get_target_repo();
+    let target_repo = commit_sync_data.get_target_repo();
     // Value for the target bookmark. This is not a part of transaction and we're ok with the fact
     // it might be a bit stale.
     let target_bookmark_csid = target_repo
@@ -842,7 +842,7 @@ pub(crate) async fn get_movers_by_version(
 pub async fn update_mapping_with_version<'a, R: Repo>(
     ctx: &'a CoreContext,
     mapped: HashMap<ChangesetId, ChangesetId>,
-    syncer: &'a CommitSyncer<R>,
+    syncer: &'a CommitSyncData<R>,
     version_name: &CommitSyncConfigVersion,
 ) -> Result<(), Error> {
     let xrepo_sync_disable_all_syncs =
@@ -903,12 +903,12 @@ pub fn create_synced_commit_mapping_entry<R: Repo>(
 
 #[derive(Clone)]
 pub struct Syncers<R: Repo> {
-    pub large_to_small: CommitSyncer<R>,
-    pub small_to_large: CommitSyncer<R>,
+    pub large_to_small: CommitSyncData<R>,
+    pub small_to_large: CommitSyncData<R>,
 }
 
 // TODO(T182311609): Remove circular dependency between commit_syncers_lib
-// and commit_syncer.
+// and commit_sync_data.
 
 // TODO(T182311609): move this out of commit_syncers_lib module.
 pub fn create_commit_syncers<R>(
@@ -936,12 +936,12 @@ where
         submodule_deps,
     );
 
-    let large_to_small_commit_syncer = CommitSyncer::new(
+    let large_to_small_commit_syncer = CommitSyncData::new(
         ctx,
         large_to_small_commit_sync_repos,
         live_commit_sync_config.clone(),
     );
-    let small_to_large_commit_syncer = CommitSyncer::new(
+    let small_to_large_commit_syncer = CommitSyncData::new(
         ctx,
         small_to_large_commit_sync_repos,
         live_commit_sync_config,

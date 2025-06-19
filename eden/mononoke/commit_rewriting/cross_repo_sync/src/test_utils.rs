@@ -71,7 +71,7 @@ use crate::commit_syncers_lib::CommitSyncRepos;
 use crate::commit_syncers_lib::Syncers;
 use crate::commit_syncers_lib::submodule_metadata_file_prefix_and_dangling_pointers;
 use crate::commit_syncers_lib::update_mapping_with_version;
-use crate::sync_commit::CommitSyncer;
+use crate::sync_commit::CommitSyncData;
 use crate::sync_commit::unsafe_always_rewrite_sync_commit;
 use crate::types::Repo;
 
@@ -147,7 +147,7 @@ pub fn xrepo_mapping_version_with_small_repo() -> CommitSyncConfigVersion {
 // in target repo
 pub async fn rebase_root_on_master<R>(
     ctx: CoreContext,
-    commit_syncer: &CommitSyncer<R>,
+    commit_sync_data: &CommitSyncData<R>,
     source_bcs_id: ChangesetId,
 ) -> Result<ChangesetId, Error>
 where
@@ -156,7 +156,7 @@ where
     let bookmark_name =
         BookmarkKey::new("master").context("Failed to create master bookmark key")?;
     let source_bcs = source_bcs_id
-        .load(&ctx, commit_syncer.get_source_repo().repo_blobstore())
+        .load(&ctx, commit_sync_data.get_source_repo().repo_blobstore())
         .await
         .context("Failed to load source bonsai")?;
 
@@ -164,35 +164,35 @@ where
         return Err(format_err!("not a root commit"));
     }
 
-    let maybe_bookmark_val = commit_syncer
+    let maybe_bookmark_val = commit_sync_data
         .get_target_repo()
         .bookmarks()
         .get(ctx.clone(), &bookmark_name)
         .await?;
 
-    let source_repo = commit_syncer.get_source_repo();
-    let target_repo = commit_syncer.get_target_repo();
+    let source_repo = commit_sync_data.get_source_repo();
+    let target_repo = commit_sync_data.get_target_repo();
 
     let bookmark_val = maybe_bookmark_val.ok_or_else(|| format_err!("master not found"))?;
     let source_bcs_mut = source_bcs.into_mut();
 
-    let submodule_deps = commit_syncer.get_submodule_deps();
+    let submodule_deps = commit_sync_data.get_submodule_deps();
 
     let rewrite_res = {
         let map = HashMap::new();
         let version = CommitSyncConfigVersion("TEST_VERSION_NAME".to_string());
-        let movers = commit_syncer.get_movers_by_version(&version).await?;
+        let movers = commit_sync_data.get_movers_by_version(&version).await?;
         let (x_repo_submodule_metadata_file_prefix, dangling_submodule_pointers) =
             submodule_metadata_file_prefix_and_dangling_pointers(
                 source_repo.repo_identity().id(),
                 &version,
-                commit_syncer.live_commit_sync_config.clone(),
+                commit_sync_data.live_commit_sync_config.clone(),
             )
             .await?;
 
-        let small_repo = commit_syncer.get_small_repo();
+        let small_repo = commit_sync_data.get_small_repo();
         let small_repo_id = small_repo.repo_identity().id();
-        let large_repo = commit_syncer.get_large_repo();
+        let large_repo = commit_sync_data.get_large_repo();
         let fallback_repos = vec![Arc::new(source_repo.clone())]
             .into_iter()
             .chain(submodule_deps.repos())
@@ -232,8 +232,8 @@ where
     upload_commits(
         &ctx,
         vec![target_bcs.clone()],
-        commit_syncer.get_source_repo(),
-        commit_syncer.get_target_repo(),
+        commit_sync_data.get_source_repo(),
+        commit_sync_data.get_target_repo(),
         submodule_content_ids,
     )
     .await?;
@@ -253,9 +253,9 @@ where
         source_repo.repo_identity().id(),
         source_bcs_id,
         CommitSyncConfigVersion("TEST_VERSION_NAME".to_string()),
-        commit_syncer.get_source_repo_type(),
+        commit_sync_data.get_source_repo_type(),
     );
-    commit_syncer.get_mapping().add(&ctx, entry).await?;
+    commit_sync_data.get_mapping().add(&ctx, entry).await?;
 
     Ok(target_bcs.get_changeset_id())
 }
@@ -335,7 +335,7 @@ where
     let live_commit_sync_config = sync_config.clone();
 
     let small_to_large_commit_syncer =
-        CommitSyncer::new(ctx, repos.clone(), live_commit_sync_config.clone());
+        CommitSyncData::new(ctx, repos.clone(), live_commit_sync_config.clone());
 
     let repos = CommitSyncRepos::new(
         smallrepo.clone(),
@@ -345,7 +345,7 @@ where
     );
 
     let large_to_small_commit_syncer =
-        CommitSyncer::new(ctx, repos.clone(), live_commit_sync_config);
+        CommitSyncData::new(ctx, repos.clone(), live_commit_sync_config);
 
     let first_bcs_id = CreateCommitContext::new_root(ctx, &smallrepo)
         .add_file("file", "content")

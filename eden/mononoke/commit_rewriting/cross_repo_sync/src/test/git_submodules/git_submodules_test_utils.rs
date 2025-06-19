@@ -70,7 +70,7 @@ use tests_utils::bookmark;
 use tests_utils::drawdag::extend_from_dag_with_actions;
 
 use crate::commit_syncers_lib::CommitSyncRepos;
-use crate::sync_commit::CommitSyncer;
+use crate::sync_commit::CommitSyncData;
 use crate::test::prepare_repos_mapping_and_config_with_repo_config_overrides;
 use crate::test::sync_to_master;
 use crate::test_utils::TestRepo;
@@ -81,7 +81,7 @@ pub const MASTER_BOOKMARK_NAME: &str = "master";
 pub(crate) struct SubmoduleSyncTestData {
     pub(crate) small_repo_info: (TestRepo, BTreeMap<String, ChangesetId>),
     pub(crate) large_repo_info: (TestRepo, ChangesetId),
-    pub(crate) commit_syncer: CommitSyncer<TestRepo>,
+    pub(crate) commit_sync_data: CommitSyncData<TestRepo>,
     pub(crate) live_commit_sync_config: Arc<dyn LiveCommitSyncConfig>,
     pub(crate) test_sync_config_source: TestLiveCommitSyncConfigSource,
 }
@@ -234,7 +234,7 @@ pub(crate) async fn build_submodule_sync_test_data(
         .get("A_A")
         .expect("Failed to get root changeset id in repo A");
 
-    let commit_syncer = create_forward_commit_syncer(
+    let commit_sync_data = create_forward_commit_syncer(
         &ctx,
         small_repo.clone(),
         large_repo.clone(),
@@ -247,13 +247,13 @@ pub(crate) async fn build_submodule_sync_test_data(
 
     println!("Created commit syncer");
 
-    rebase_root_on_master(ctx.clone(), &commit_syncer, *small_repo_root).await?;
+    rebase_root_on_master(ctx.clone(), &commit_sync_data, *small_repo_root).await?;
 
     println!("Synced A_A to large repo's master");
 
     let _ = sync_to_master(
         ctx.clone(),
-        &commit_syncer,
+        &commit_sync_data,
         *small_repo_cs_map.get("A_B").unwrap(),
     )
     .await
@@ -262,7 +262,7 @@ pub(crate) async fn build_submodule_sync_test_data(
 
     let large_repo_master = sync_to_master(
         ctx.clone(),
-        &commit_syncer,
+        &commit_sync_data,
         *small_repo_cs_map.get("A_C").unwrap(),
     )
     .await
@@ -272,7 +272,7 @@ pub(crate) async fn build_submodule_sync_test_data(
     Ok(SubmoduleSyncTestData {
         small_repo_info: (small_repo, small_repo_cs_map),
         large_repo_info: (large_repo, large_repo_master),
-        commit_syncer,
+        commit_sync_data,
         live_commit_sync_config,
         test_sync_config_source,
     })
@@ -402,7 +402,7 @@ pub(crate) fn create_forward_commit_syncer(
     // The submodules dependency map that should be used in the commit syncer
     submodule_deps: Vec<(NonRootMPath, TestRepo)>,
     known_dangling_pointers: Vec<&str>,
-) -> Result<CommitSyncer<TestRepo>, Error> {
+) -> Result<CommitSyncData<TestRepo>, Error> {
     let small_repo_id = small_repo.repo_identity().id();
     let large_repo_id = large_repo.repo_identity().id();
 
@@ -444,7 +444,7 @@ pub(crate) fn create_forward_commit_syncer(
         submodule_deps,
     );
 
-    Ok(CommitSyncer::new(ctx, repos, live_commit_sync_config))
+    Ok(CommitSyncData::new(ctx, repos, live_commit_sync_config))
 }
 
 /// Creates the commit sync config to setup the sync from repo A to the large repo,
@@ -517,7 +517,7 @@ pub(crate) fn add_new_commit_sync_config_version_with_submodule_deps(
     live_commit_sync_config: Arc<dyn LiveCommitSyncConfig>,
     test_sync_config_source: TestLiveCommitSyncConfigSource,
     known_dangling_pointers: Vec<&str>,
-) -> Result<CommitSyncer<TestRepo>, Error> {
+) -> Result<CommitSyncData<TestRepo>, Error> {
     let commit_sync_config = create_commit_sync_config(
         large_repo.repo_identity().id(),
         small_repo.repo_identity().id(),
@@ -526,7 +526,7 @@ pub(crate) fn add_new_commit_sync_config_version_with_submodule_deps(
         known_dangling_pointers.clone(),
     )?;
     test_sync_config_source.add_config(commit_sync_config);
-    let commit_syncer = create_forward_commit_syncer(
+    let commit_sync_data = create_forward_commit_syncer(
         ctx,
         small_repo.clone(),
         large_repo.clone(),
@@ -536,7 +536,7 @@ pub(crate) fn add_new_commit_sync_config_version_with_submodule_deps(
         submodule_deps,
         known_dangling_pointers,
     )?;
-    Ok(commit_syncer)
+    Ok(commit_sync_data)
 }
 
 // -----------------------------------------------------------------------------
@@ -820,9 +820,9 @@ pub(crate) async fn sync_changeset_and_derive_all_types(
     ctx: CoreContext,
     cs_id: ChangesetId,
     target_repo: &TestRepo,
-    commit_syncer: &CommitSyncer<TestRepo>,
+    commit_sync_data: &CommitSyncData<TestRepo>,
 ) -> Result<(ChangesetId, Vec<ChangesetData>)> {
-    let target_repo_cs_id = sync_to_master(ctx.clone(), commit_syncer, cs_id)
+    let target_repo_cs_id = sync_to_master(ctx.clone(), commit_sync_data, cs_id)
         .await
         .with_context(|| format!("Failed to sync commit {cs_id}"))?
         .ok_or(anyhow!("No commit was synced"))?;

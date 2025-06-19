@@ -24,8 +24,8 @@ use commit_graph::CommitGraphRef;
 use context::CoreContext;
 use cross_repo_sync::CandidateSelectionHint;
 use cross_repo_sync::CommitSyncContext;
+use cross_repo_sync::CommitSyncData;
 use cross_repo_sync::CommitSyncOutcome;
-use cross_repo_sync::CommitSyncer;
 use cross_repo_sync::PushrebaseRewriteDates;
 use cross_repo_sync::Source;
 use cross_repo_sync::Target;
@@ -88,7 +88,7 @@ pub enum SyncResult {
 /// Otherwise it will be synced without pushrebase.
 pub async fn sync_single_bookmark_update_log<R>(
     ctx: &CoreContext,
-    commit_syncer: &CommitSyncer<R>,
+    commit_sync_data: &CommitSyncData<R>,
     entry: BookmarkUpdateLogEntry,
     common_pushrebase_bookmarks: &HashSet<BookmarkKey>,
     mut scuba_sample: MononokeScubaSampleBuilder,
@@ -100,7 +100,7 @@ where
     log_info(ctx, format!("processing log entry #{}", entry.id));
     let source_bookmark = Source(entry.bookmark_name);
     let target_bookmark = Target(
-        commit_syncer
+        commit_sync_data
             .rename_bookmark(&source_bookmark)
             .await?
             .ok_or_else(|| format_err!("unexpected empty bookmark rename"))?,
@@ -116,7 +116,7 @@ where
             // no need to sync commits
             process_bookmark_deletion(
                 ctx,
-                commit_syncer,
+                commit_sync_data,
                 scuba_sample,
                 &source_bookmark,
                 &target_bookmark,
@@ -132,7 +132,7 @@ where
 
     sync_commit_and_ancestors(
         ctx,
-        commit_syncer,
+        commit_sync_data,
         entry.from_changeset_id,
         to_cs_id,
         &Some(target_bookmark),
@@ -155,7 +155,7 @@ where
 /// pushrebase bookmark.
 pub async fn sync_commit_and_ancestors<R>(
     ctx: &CoreContext,
-    commit_syncer: &CommitSyncer<R>,
+    commit_sync_data: &CommitSyncData<R>,
     from_cs_id: Option<ChangesetId>,
     to_cs_id: ChangesetId,
     // When provided, sync commits to this bookmark using pushrebase.
@@ -194,7 +194,7 @@ where
         Some(target_bookmark) if common_pushrebase_bookmarks.contains(target_bookmark) => Some(
             CandidateSelectionHint::AncestorOfBookmark(
                 target_bookmark.clone(),
-                Target(commit_syncer.get_target_repo().clone()),
+                Target(commit_sync_data.get_target_repo().clone()),
             )
             .try_into_desired_relationship(ctx)
             .boxed()
@@ -210,7 +210,7 @@ where
     log_debug(ctx, "finding unsynced ancestors from source repo...");
 
     let (unsynced_ancestors, synced_ancestors_versions) =
-        find_toposorted_unsynced_ancestors(ctx, commit_syncer, to_cs_id.clone(), hint)
+        find_toposorted_unsynced_ancestors(ctx, commit_sync_data, to_cs_id.clone(), hint)
             .boxed()
             .await?;
 
@@ -242,7 +242,7 @@ where
             // This is a commit that was introduced by common pushrebase bookmark (e.g. "master").
             // Use pushrebase to sync a commit.
             if let Some(from_cs_id) = from_cs_id {
-                check_forward_move(ctx, commit_syncer, to_cs_id, from_cs_id).await?;
+                check_forward_move(ctx, commit_sync_data, to_cs_id, from_cs_id).await?;
             }
 
             log_debug(ctx, "obtaining version for the sync...");
@@ -258,7 +258,7 @@ where
                 (Some(new_version), true) => {
                     let parent_map = unsafe_get_parent_map_for_target_bookmark_rewrite(
                         ctx,
-                        commit_syncer,
+                        commit_sync_data,
                         target_bookmark,
                         &synced_ancestors_versions,
                     )
@@ -269,7 +269,7 @@ where
                 _ => {
                     get_version_and_parent_map_for_sync_via_pushrebase(
                         ctx,
-                        commit_syncer,
+                        commit_sync_data,
                         target_bookmark,
                         version,
                         &synced_ancestors_versions,
@@ -281,7 +281,7 @@ where
 
             return sync_commits_via_pushrebase(
                 ctx,
-                commit_syncer,
+                commit_sync_data,
                 target_bookmark,
                 common_pushrebase_bookmarks,
                 scuba_sample.clone(),
@@ -302,7 +302,7 @@ where
     for cs_id in unsynced_ancestors {
         let synced = sync_commit_without_pushrebase(
             ctx,
-            commit_syncer,
+            commit_sync_data,
             scuba_sample.clone(),
             cs_id,
             common_pushrebase_bookmarks,
@@ -313,13 +313,13 @@ where
         .await?;
         res.extend(synced);
     }
-    let maybe_remapped_cs_id = find_remapped_cs_id(ctx, commit_syncer, to_cs_id).await?;
+    let maybe_remapped_cs_id = find_remapped_cs_id(ctx, commit_sync_data, to_cs_id).await?;
     let remapped_cs_id =
         maybe_remapped_cs_id.ok_or_else(|| format_err!("unknown sync outcome for {}", to_cs_id))?;
     if let Some(target_bookmark) = mb_target_bookmark {
         move_or_create_bookmark(
             ctx,
-            commit_syncer.get_target_repo(),
+            commit_sync_data.get_target_repo(),
             target_bookmark,
             remapped_cs_id,
         )
@@ -350,7 +350,7 @@ where
 /// ```
 async fn sync_commits_via_pushrebase<R>(
     ctx: &CoreContext,
-    commit_syncer: &CommitSyncer<R>,
+    commit_sync_data: &CommitSyncData<R>,
     target_bookmark: &Target<BookmarkKey>,
     common_pushrebase_bookmarks: &HashSet<BookmarkKey>,
     scuba_sample: MononokeScubaSampleBuilder,
@@ -380,7 +380,7 @@ where
             None
         };
 
-    let small_repo = commit_syncer.get_source_repo();
+    let small_repo = commit_sync_data.get_source_repo();
     // It stores commits that were introduced as part of current bookmark update, but that
     // shouldn't be pushrebased.
     let mut no_pushrebase = HashSet::new();
@@ -410,7 +410,7 @@ where
         let maybe_new_cs_id = if no_pushrebase.contains(&cs_id) {
             sync_commit_without_pushrebase(
                 ctx,
-                commit_syncer,
+                commit_sync_data,
                 scuba_sample.clone(),
                 cs_id,
                 common_pushrebase_bookmarks,
@@ -425,7 +425,7 @@ where
             );
             let (stats, result) = pushrebase_commit(
                 ctx,
-                commit_syncer,
+                commit_sync_data,
                 target_bookmark,
                 cs_id,
                 pushrebase_rewrite_dates,
@@ -454,7 +454,7 @@ where
 
 pub async fn sync_commit_without_pushrebase<R>(
     ctx: &CoreContext,
-    commit_syncer: &CommitSyncer<R>,
+    commit_sync_data: &CommitSyncData<R>,
     scuba_sample: MononokeScubaSampleBuilder,
     cs_id: ChangesetId,
     common_pushrebase_bookmarks: &HashSet<BookmarkKey>,
@@ -466,7 +466,7 @@ where
 {
     log_info(ctx, format!("syncing {}", cs_id));
     let bcs = cs_id
-        .load(ctx, commit_syncer.get_source_repo().repo_blobstore())
+        .load(ctx, commit_sync_data.get_source_repo().repo_blobstore())
         .await?;
 
     let (stats, result) = if bcs.is_merge() {
@@ -474,7 +474,7 @@ where
         // merge commit and ancestors of common pushrebase bookmark in target repo.
         // The code below does exactly that - it fetches common_pushrebase_bookmarks and parent
         // commits from the target repo, and then it checks if there are no intersection.
-        let large_repo = commit_syncer.get_target_repo();
+        let large_repo = commit_sync_data.get_target_repo();
         let mut book_values = vec![];
         for common_bookmark in common_pushrebase_bookmarks {
             book_values.push(large_repo.bookmarks().get(ctx.clone(), common_bookmark));
@@ -485,7 +485,7 @@ where
 
         let parents = try_join_all(
             bcs.parents()
-                .map(|p| find_remapped_cs_id(ctx, commit_syncer, p)),
+                .map(|p| find_remapped_cs_id(ctx, commit_sync_data, p)),
         )
         .await?;
         let maybe_independent_branch = check_if_independent_branch_and_return(
@@ -507,7 +507,7 @@ where
         unsafe_always_rewrite_sync_commit(
             ctx,
             cs_id,
-            &commit_syncer,
+            &commit_sync_data,
             None,
             version,
             CommitSyncContext::XRepoSyncJob,
@@ -527,7 +527,7 @@ where
             if let Some(bookmark) = common_pushrebase_bookmarks.iter().next() {
                 CandidateSelectionHint::AncestorOfBookmark(
                     Target(bookmark.clone()),
-                    Target(commit_syncer.get_target_repo().clone()),
+                    Target(commit_sync_data.get_target_repo().clone()),
                 )
             } else {
                 // XXX: in this case it should be "Any" rather than "Only"
@@ -537,7 +537,7 @@ where
         unsafe_sync_commit(
             ctx,
             cs_id,
-            &commit_syncer,
+            &commit_sync_data,
             parent_mapping_selection_hint,
             CommitSyncContext::XRepoSyncJob,
             Some(version.clone()),
@@ -565,7 +565,7 @@ where
 /// and optionally bookmark the head commit.
 pub async fn sync_commits_for_initial_import<R>(
     ctx: &CoreContext,
-    commit_syncer: &CommitSyncer<R>,
+    commit_sync_data: &CommitSyncData<R>,
     scuba_sample: MononokeScubaSampleBuilder,
     // Head commit to sync. All of its unsynced ancestors will be synced as well.
     cs_id: ChangesetId,
@@ -584,8 +584,8 @@ where
         ctx,
         format!(
             "Source repo: {} / Target repo: {}",
-            commit_syncer.get_source_repo().repo_identity().name(),
-            commit_syncer.get_target_repo().repo_identity().name(),
+            commit_sync_data.get_source_repo().repo_identity().name(),
+            commit_sync_data.get_target_repo().repo_identity().name(),
         ),
     );
     log_debug(
@@ -604,7 +604,7 @@ where
     // using the config version that was provided manually, or we can create
     // a broken set of commits.
     let (unsynced_ancestors, synced_ancestors_versions, _last_synced_ancestors) =
-        find_toposorted_unsynced_ancestors_with_commit_graph(ctx, commit_syncer, cs_id.clone())
+        find_toposorted_unsynced_ancestors_with_commit_graph(ctx, commit_sync_data, cs_id.clone())
             .try_timed()
             .await?
             .log_future_stats(
@@ -657,7 +657,7 @@ where
         Some(progress_bar)
     };
 
-    let large_repo = commit_syncer.get_target_repo();
+    let large_repo = commit_sync_data.get_target_repo();
 
     let mut res = vec![];
     let mut changesets_to_derive = vec![];
@@ -667,7 +667,7 @@ where
         let (stats, mb_synced) = unsafe_sync_commit(
             ctx,
             ancestor_cs_id,
-            &commit_syncer,
+            &commit_sync_data,
             CandidateSelectionHint::Only,
             CommitSyncContext::ForwardSyncerInitialImport,
             Some(config_version.clone()),
@@ -730,7 +730,7 @@ where
     let (stats, result) = unsafe_sync_commit(
         ctx,
         cs_id,
-        &commit_syncer,
+        &commit_sync_data,
         CandidateSelectionHint::Only,
         CommitSyncContext::ForwardSyncerInitialImport,
         Some(config_version),
@@ -778,7 +778,7 @@ where
 
 async fn process_bookmark_deletion<R>(
     ctx: &CoreContext,
-    commit_syncer: &CommitSyncer<R>,
+    commit_sync_data: &CommitSyncData<R>,
     scuba_sample: MononokeScubaSampleBuilder,
     source_bookmark: &Source<BookmarkKey>,
     target_bookmark: &Target<BookmarkKey>,
@@ -797,7 +797,7 @@ where
         log_info(ctx, format!("deleting bookmark {}", target_bookmark));
         let (stats, result) = delete_bookmark(
             ctx.clone(),
-            commit_syncer.get_target_repo(),
+            commit_sync_data.get_target_repo(),
             target_bookmark,
         )
         .timed()
@@ -809,14 +809,14 @@ where
 
 async fn check_forward_move<R>(
     ctx: &CoreContext,
-    commit_syncer: &CommitSyncer<R>,
+    commit_sync_data: &CommitSyncData<R>,
     to_cs_id: ChangesetId,
     from_cs_id: ChangesetId,
 ) -> Result<(), Error>
 where
     R: Repo,
 {
-    if !commit_syncer
+    if !commit_sync_data
         .get_source_repo()
         .commit_graph()
         .is_ancestor(ctx, from_cs_id, to_cs_id)
@@ -831,13 +831,13 @@ where
 
 async fn find_remapped_cs_id<R>(
     ctx: &CoreContext,
-    commit_syncer: &CommitSyncer<R>,
+    commit_sync_data: &CommitSyncData<R>,
     orig_cs_id: ChangesetId,
 ) -> Result<Option<ChangesetId>, Error>
 where
     R: Repo,
 {
-    let maybe_sync_outcome = commit_syncer
+    let maybe_sync_outcome = commit_sync_data
         .get_commit_sync_outcome(ctx, orig_cs_id)
         .await?;
     use CommitSyncOutcome::*;
@@ -852,7 +852,7 @@ where
 
 async fn pushrebase_commit<R>(
     ctx: &CoreContext,
-    commit_syncer: &CommitSyncer<R>,
+    commit_sync_data: &CommitSyncData<R>,
     target_bookmark: &Target<BookmarkKey>,
     cs_id: ChangesetId,
     pushrebase_rewrite_dates: PushrebaseRewriteDates,
@@ -863,13 +863,13 @@ async fn pushrebase_commit<R>(
 where
     R: Repo,
 {
-    let small_repo = commit_syncer.get_source_repo();
+    let small_repo = commit_sync_data.get_source_repo();
     let bcs = cs_id.load(ctx, small_repo.repo_blobstore()).await?;
 
     unsafe_sync_commit_pushrebase(
         ctx,
         bcs,
-        &commit_syncer,
+        &commit_sync_data,
         target_bookmark.clone(),
         CommitSyncContext::XRepoSyncJob,
         pushrebase_rewrite_dates,
@@ -1079,8 +1079,8 @@ mod test {
         runtime.block_on(async move {
             let ctx = CoreContext::test_mock(fb);
             let (syncers, _, _, _) = init_small_large_repo(&ctx).await?;
-            let commit_syncer = syncers.small_to_large;
-            let smallrepo = commit_syncer.get_source_repo();
+            let commit_sync_data = syncers.small_to_large;
+            let smallrepo = commit_sync_data.get_source_repo();
 
             // Single commit
             let new_master = CreateCommitContext::new(&ctx, &smallrepo, vec!["master"])
@@ -1091,7 +1091,7 @@ mod test {
                 .set_to(new_master)
                 .await?;
 
-            sync_and_validate(&ctx, &commit_syncer).await?;
+            sync_and_validate(&ctx, &commit_sync_data).await?;
 
             let non_master_commit = CreateCommitContext::new(&ctx, &smallrepo, vec!["master"])
                 .add_file("nonmasterfile", "nonmastercontent")
@@ -1101,7 +1101,7 @@ mod test {
                 .set_to(non_master_commit)
                 .await?;
 
-            sync_and_validate(&ctx, &commit_syncer).await?;
+            sync_and_validate(&ctx, &commit_sync_data).await?;
 
             // Create a stack of commits
             let first_in_stack = CreateCommitContext::new(&ctx, &smallrepo, vec!["master"])
@@ -1131,8 +1131,8 @@ mod test {
             bookmark(&ctx, &smallrepo, "newpremove")
                 .set_to("premove")
                 .await?;
-            sync_and_validate(&ctx, &commit_syncer).await?;
-            let commit_sync_outcome = commit_syncer
+            sync_and_validate(&ctx, &commit_sync_data).await?;
+            let commit_sync_outcome = commit_sync_data
                 .get_commit_sync_outcome(&ctx, premove)
                 .await?
                 .ok_or_else(|| format_err!("commit sync outcome not set"))?;
@@ -1151,7 +1151,7 @@ mod test {
                 .delete()
                 .await?;
 
-            sync_and_validate(&ctx, &commit_syncer).await?;
+            sync_and_validate(&ctx, &commit_sync_data).await?;
             Ok(())
         })
     }
@@ -1162,8 +1162,8 @@ mod test {
         runtime.block_on(async move {
             let ctx = CoreContext::test_mock(fb);
             let (syncers, _, _, _) = init_small_large_repo(&ctx).await?;
-            let commit_syncer = syncers.small_to_large;
-            let smallrepo = commit_syncer.get_source_repo();
+            let commit_sync_data = syncers.small_to_large;
+            let smallrepo = commit_sync_data.get_source_repo();
 
             // Merge new repo
             let first_new_repo = CreateCommitContext::new_root(&ctx, &smallrepo)
@@ -1181,7 +1181,7 @@ mod test {
 
             let res = sync(
                 &ctx,
-                &commit_syncer,
+                &commit_sync_data,
                 &hashset! {BookmarkKey::new("master")?},
                 PushrebaseRewriteDates::No,
             )
@@ -1196,7 +1196,7 @@ mod test {
 
             sync_and_validate_with_common_bookmarks(
                 &ctx,
-                &commit_syncer,
+                &commit_sync_data,
                 &hashset! {BookmarkKey::new("master")?},
                 &hashset! {BookmarkKey::new("newrepohead")?},
                 PushrebaseRewriteDates::No,
@@ -1211,7 +1211,7 @@ mod test {
             bookmark(&ctx, &smallrepo, "master")
                 .set_to(diamond_merge)
                 .await?;
-            assert!(sync_and_validate(&ctx, &commit_syncer,).await.is_err());
+            assert!(sync_and_validate(&ctx, &commit_sync_data,).await.is_err());
             Ok(())
         })
     }
@@ -1222,8 +1222,8 @@ mod test {
         runtime.block_on(async move {
             let ctx = CoreContext::test_mock(fb);
             let (syncers, _, _, _) = init_small_large_repo(&ctx).await?;
-            let commit_syncer = syncers.small_to_large;
-            let smallrepo = commit_syncer.get_source_repo();
+            let commit_sync_data = syncers.small_to_large;
+            let smallrepo = commit_sync_data.get_source_repo();
 
             // Merge new repo
             let first_new_repo = CreateCommitContext::new_root(&ctx, &smallrepo)
@@ -1242,7 +1242,7 @@ mod test {
                     .await?;
 
             bookmark(&ctx, &smallrepo, "master").set_to(merge).await?;
-            sync_and_validate(&ctx, &commit_syncer).await?;
+            sync_and_validate(&ctx, &commit_sync_data).await?;
 
             Ok(())
         })
@@ -1254,8 +1254,8 @@ mod test {
         runtime.block_on(async move {
             let ctx = CoreContext::test_mock(fb);
             let (syncers, _, _, _) = init_small_large_repo(&ctx).await?;
-            let commit_syncer = syncers.small_to_large;
-            let smallrepo = commit_syncer.get_source_repo();
+            let commit_sync_data = syncers.small_to_large;
+            let smallrepo = commit_sync_data.get_source_repo();
 
             // Merge new repo, which itself has a merge
             let first_new_repo = CreateCommitContext::new_root(&ctx, &smallrepo)
@@ -1279,7 +1279,7 @@ mod test {
                     .await?;
 
             bookmark(&ctx, &smallrepo, "master").set_to(merge).await?;
-            sync_and_validate(&ctx, &commit_syncer).await?;
+            sync_and_validate(&ctx, &commit_sync_data).await?;
 
             Ok(())
         })
@@ -1291,8 +1291,8 @@ mod test {
         runtime.block_on(async move {
             let ctx = CoreContext::test_mock(fb);
             let (syncers, _, _, _) = init_small_large_repo(&ctx).await?;
-            let commit_syncer = syncers.small_to_large;
-            let smallrepo = commit_syncer.get_source_repo();
+            let commit_sync_data = syncers.small_to_large;
+            let smallrepo = commit_sync_data.get_source_repo();
 
             // Merge new repo, which itself has a merge
             let first_new_repo = CreateCommitContext::new_root(&ctx, &smallrepo)
@@ -1313,7 +1313,7 @@ mod test {
                 .await?;
             let res = sync(
                 &ctx,
-                &commit_syncer,
+                &commit_sync_data,
                 &hashset! {BookmarkKey::new("master")?},
                 PushrebaseRewriteDates::No,
             )
@@ -1327,7 +1327,7 @@ mod test {
             bookmark(&ctx, &smallrepo, "master").set_to(merge).await?;
             sync_and_validate_with_common_bookmarks(
                 &ctx,
-                &commit_syncer,
+                &commit_sync_data,
                 &hashset! {BookmarkKey::new("master")?},
                 &hashset! {BookmarkKey::new("newrepoimport")?},
                 PushrebaseRewriteDates::No,
@@ -1345,8 +1345,8 @@ mod test {
             let ctx = CoreContext::test_mock(fb);
 
             let (syncers, _, _, _) = init_small_large_repo(&ctx).await?;
-            let commit_syncer = syncers.small_to_large;
-            let smallrepo = commit_syncer.get_source_repo();
+            let commit_sync_data = syncers.small_to_large;
+            let smallrepo = commit_sync_data.get_source_repo();
 
             let new_repo = CreateCommitContext::new_root(&ctx, &smallrepo)
                 .add_file("firstnewrepo", "newcontent")
@@ -1357,7 +1357,7 @@ mod test {
                 .await?;
             let res = sync(
                 &ctx,
-                &commit_syncer,
+                &commit_sync_data,
                 &hashset! {BookmarkKey::new("master")?},
                 PushrebaseRewriteDates::No,
             )
@@ -1372,7 +1372,7 @@ mod test {
             assert!(
                 sync_and_validate_with_common_bookmarks(
                     &ctx,
-                    &commit_syncer,
+                    &commit_sync_data,
                     &hashset! {BookmarkKey::new("master")?},
                     &hashset! {BookmarkKey::new("newrepohead")?, BookmarkKey::new("somebook")?},
                     PushrebaseRewriteDates::No,
@@ -1388,8 +1388,8 @@ mod test {
     async fn test_merge_different_versions(fb: FacebookInit) -> Result<(), Error> {
         let ctx = CoreContext::test_mock(fb);
         let (syncers, _, _, _) = init_small_large_repo(&ctx).await?;
-        let commit_syncer = syncers.small_to_large;
-        let smallrepo = commit_syncer.get_source_repo();
+        let commit_sync_data = syncers.small_to_large;
+        let smallrepo = commit_sync_data.get_source_repo();
 
         // Merge new repo
         let new_repo = CreateCommitContext::new_root(&ctx, &smallrepo)
@@ -1402,7 +1402,7 @@ mod test {
             .await?;
         sync_and_validate_with_common_bookmarks(
             &ctx,
-            &commit_syncer,
+            &commit_sync_data,
             &hashset! { BookmarkKey::new("master")?},
             &hashset! {},
             PushrebaseRewriteDates::No,
@@ -1419,7 +1419,7 @@ mod test {
             .await?;
 
         sync_and_validate_with_common_bookmarks(
-             &ctx, &commit_syncer,
+             &ctx, &commit_sync_data,
              &hashset!{ BookmarkKey::new("master")?, BookmarkKey::new("another_pushrebase_bookmark")?},
              &hashset!{},
                  PushrebaseRewriteDates::No,
@@ -1430,11 +1430,11 @@ mod test {
 
     async fn sync_and_validate(
         ctx: &CoreContext,
-        commit_syncer: &CommitSyncer<TestRepo>,
+        commit_sync_data: &CommitSyncData<TestRepo>,
     ) -> Result<(), Error> {
         sync_and_validate_with_common_bookmarks(
             ctx,
-            commit_syncer,
+            commit_sync_data,
             &hashset! {BookmarkKey::new("master")?},
             &hashset! {},
             PushrebaseRewriteDates::No,
@@ -1444,21 +1444,21 @@ mod test {
 
     async fn sync_and_validate_with_common_bookmarks(
         ctx: &CoreContext,
-        commit_syncer: &CommitSyncer<TestRepo>,
+        commit_sync_data: &CommitSyncData<TestRepo>,
         common_pushrebase_bookmarks: &HashSet<BookmarkKey>,
         should_be_missing: &HashSet<BookmarkKey>,
         pushrebase_rewrite_dates: PushrebaseRewriteDates,
     ) -> Result<(), Error> {
-        let smallrepo = commit_syncer.get_source_repo();
+        let smallrepo = commit_sync_data.get_source_repo();
         sync(
             ctx,
-            commit_syncer,
+            commit_sync_data,
             common_pushrebase_bookmarks,
             pushrebase_rewrite_dates,
         )
         .await?;
 
-        let actually_missing = find_bookmark_diff(ctx.clone(), commit_syncer)
+        let actually_missing = find_bookmark_diff(ctx.clone(), commit_sync_data)
             .await?
             .into_iter()
             .map(|diff| diff.target_bookmark().clone())
@@ -1475,9 +1475,9 @@ mod test {
             println!("verifying working copy for {}", head);
             verify_working_copy(
                 ctx,
-                commit_syncer,
+                commit_sync_data,
                 head,
-                commit_syncer.live_commit_sync_config.clone(),
+                commit_sync_data.live_commit_sync_config.clone(),
             )
             .await?;
         }
@@ -1487,14 +1487,14 @@ mod test {
 
     async fn sync(
         ctx: &CoreContext,
-        commit_syncer: &CommitSyncer<TestRepo>,
+        commit_sync_data: &CommitSyncData<TestRepo>,
         common_pushrebase_bookmarks: &HashSet<BookmarkKey>,
         pushrebase_rewrite_dates: PushrebaseRewriteDates,
     ) -> Result<Vec<SyncResult>, Error> {
-        let smallrepo = commit_syncer.get_source_repo();
-        let megarepo = commit_syncer.get_target_repo();
+        let smallrepo = commit_sync_data.get_source_repo();
+        let megarepo = commit_sync_data.get_target_repo();
 
-        let counter = crate::format_counter(commit_syncer);
+        let counter = crate::format_counter(commit_sync_data);
         let start_from = megarepo
             .mutable_counters()
             .get_counter(ctx, &counter)
@@ -1526,7 +1526,7 @@ mod test {
             let entry_id = entry.id.try_into()?;
             let single_res = sync_single_bookmark_update_log(
                 ctx,
-                commit_syncer,
+                commit_sync_data,
                 entry,
                 common_pushrebase_bookmarks,
                 MononokeScubaSampleBuilder::with_discard(),

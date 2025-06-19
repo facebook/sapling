@@ -41,7 +41,7 @@ use crate::commit_syncers_lib::get_movers_by_version;
 use crate::commit_syncers_lib::strip_removed_parents;
 use crate::commit_syncers_lib::submodule_metadata_file_prefix_and_dangling_pointers;
 use crate::commit_syncers_lib::submodule_repos_with_content_ids;
-use crate::sync_commit::CommitSyncer;
+use crate::sync_commit::CommitSyncData;
 use crate::sync_config_version_utils::get_mapping_change_version;
 use crate::sync_config_version_utils::get_mapping_change_version_from_hg_extra;
 use crate::sync_config_version_utils::get_version;
@@ -78,7 +78,7 @@ impl CommitSyncInMemoryResult {
     pub(crate) async fn write<R: Repo>(
         self,
         ctx: &CoreContext,
-        syncer: &CommitSyncer<R>,
+        syncer: &CommitSyncData<R>,
     ) -> Result<Option<ChangesetId>, Error> {
         use CommitSyncInMemoryResult::*;
         match self {

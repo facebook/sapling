@@ -36,9 +36,9 @@ use context::CoreContext;
 use cross_repo_sync::CHANGE_XREPO_MAPPING_EXTRA;
 use cross_repo_sync::CandidateSelectionHint;
 use cross_repo_sync::CommitSyncContext;
+use cross_repo_sync::CommitSyncData;
 use cross_repo_sync::CommitSyncOutcome;
 use cross_repo_sync::CommitSyncRepos;
-use cross_repo_sync::CommitSyncer;
 use cross_repo_sync::SubmoduleDeps;
 use cross_repo_sync::get_git_submodule_action_by_version;
 use cross_repo_sync::rewrite_commit;
@@ -110,14 +110,15 @@ const BRANCHMERGE_FILE: &str = "branchmerge";
 
 #[mononoke::fbinit_test]
 async fn backsync_linear_simple(fb: FacebookInit) -> Result<(), Error> {
-    let (commit_syncer, small_repo_dbs) =
+    let (commit_sync_data, small_repo_dbs) =
         init_repos(fb, MoverType::Noop, BookmarkRenamerType::Noop).await?;
-    backsync_and_verify_master_wc(fb, commit_syncer.clone(), small_repo_dbs).await?;
+    backsync_and_verify_master_wc(fb, commit_sync_data.clone(), small_repo_dbs).await?;
 
     let ctx = CoreContext::test_mock(fb);
-    let target_cs_id = resolve_cs_id(&ctx, commit_syncer.get_target_repo(), "master").await?;
+    let target_cs_id = resolve_cs_id(&ctx, commit_sync_data.get_target_repo(), "master").await?;
 
-    let map = list_working_copy_utf8(&ctx, commit_syncer.get_target_repo(), target_cs_id).await?;
+    let map =
+        list_working_copy_utf8(&ctx, commit_sync_data.get_target_repo(), target_cs_id).await?;
     assert_eq!(
         map.into_iter().collect::<BTreeMap<_, _>>(),
         btreemap! {
@@ -137,8 +138,9 @@ async fn backsync_linear_simple(fb: FacebookInit) -> Result<(), Error> {
     );
 
     let target_cs_id =
-        resolve_cs_id(&ctx, commit_syncer.get_target_repo(), "anotherbookmark").await?;
-    let map = list_working_copy_utf8(&ctx, commit_syncer.get_target_repo(), target_cs_id).await?;
+        resolve_cs_id(&ctx, commit_sync_data.get_target_repo(), "anotherbookmark").await?;
+    let map =
+        list_working_copy_utf8(&ctx, commit_sync_data.get_target_repo(), target_cs_id).await?;
     assert_eq!(
         map.into_iter().collect::<BTreeMap<_, _>>(),
         btreemap! {
@@ -175,7 +177,7 @@ fn test_sync_entries(fb: FacebookInit) -> Result<(), Error> {
 
     let runtime = Runtime::new()?;
     runtime.block_on(async move {
-        let (commit_syncer, small_repo_dbs) =
+        let (commit_sync_data, small_repo_dbs) =
             init_repos(fb, MoverType::Noop, BookmarkRenamerType::Noop).await?;
 
         let small_repo_dbs = Arc::new(small_repo_dbs);
@@ -183,7 +185,7 @@ fn test_sync_entries(fb: FacebookInit) -> Result<(), Error> {
         let ctx = CoreContext::test_mock(fb);
         let fut = backsync_latest(
             ctx.clone(),
-            commit_syncer.clone(),
+            commit_sync_data.clone(),
             small_repo_dbs.clone(),
             BacksyncLimit::Limit(2),
             Arc::new(AtomicBool::new(false)),
@@ -194,7 +196,7 @@ fn test_sync_entries(fb: FacebookInit) -> Result<(), Error> {
         .map_err(Error::from)
         .await?;
 
-        let large_repo = commit_syncer.get_source_repo();
+        let large_repo = commit_sync_data.get_source_repo();
 
         let next_log_entries: Vec<_> = large_repo
             .bookmark_update_log()
@@ -211,7 +213,7 @@ fn test_sync_entries(fb: FacebookInit) -> Result<(), Error> {
         // 2 first entries, and sync all entries after that
         sync_entries(
             ctx.clone(),
-            &commit_syncer,
+            &commit_sync_data,
             small_repo_dbs.clone(),
             next_log_entries.clone(),
             BookmarkUpdateLogId(0),
@@ -239,26 +241,28 @@ fn test_sync_entries(fb: FacebookInit) -> Result<(), Error> {
 
 #[mononoke::fbinit_test]
 async fn backsync_linear_with_mover_that_removes_some_files(fb: FacebookInit) -> Result<(), Error> {
-    let (commit_syncer, small_repo_dbs) = init_repos(
+    let (commit_sync_data, small_repo_dbs) = init_repos(
         fb,
         MoverType::Only("files".to_string()),
         BookmarkRenamerType::Noop,
     )
     .await?;
 
-    backsync_and_verify_master_wc(fb, commit_syncer.clone(), small_repo_dbs).await?;
+    backsync_and_verify_master_wc(fb, commit_sync_data.clone(), small_repo_dbs).await?;
     let ctx = CoreContext::test_mock(fb);
-    let target_cs_id = resolve_cs_id(&ctx, commit_syncer.get_target_repo(), "master").await?;
+    let target_cs_id = resolve_cs_id(&ctx, commit_sync_data.get_target_repo(), "master").await?;
 
-    let map = list_working_copy_utf8(&ctx, commit_syncer.get_target_repo(), target_cs_id).await?;
+    let map =
+        list_working_copy_utf8(&ctx, commit_sync_data.get_target_repo(), target_cs_id).await?;
     assert_eq!(
         map,
         hashmap! {NonRootMPath::new("files")? => "1\n2\n3\n4\n5\n6\n7\n8\n9\n10\n".to_string()}
     );
 
     let target_cs_id =
-        resolve_cs_id(&ctx, commit_syncer.get_target_repo(), "anotherbookmark").await?;
-    let map = list_working_copy_utf8(&ctx, commit_syncer.get_target_repo(), target_cs_id).await?;
+        resolve_cs_id(&ctx, commit_sync_data.get_target_repo(), "anotherbookmark").await?;
+    let map =
+        list_working_copy_utf8(&ctx, commit_sync_data.get_target_repo(), target_cs_id).await?;
     assert_eq!(
         map,
         hashmap! {NonRootMPath::new("files")? => "branchmerge files content".to_string()}
@@ -270,19 +274,20 @@ async fn backsync_linear_with_mover_that_removes_some_files(fb: FacebookInit) ->
 async fn backsync_linear_with_mover_that_removes_single_file(
     fb: FacebookInit,
 ) -> Result<(), Error> {
-    let (commit_syncer, small_repo_dbs) = init_repos(
+    let (commit_sync_data, small_repo_dbs) = init_repos(
         fb,
         MoverType::Except(vec!["10".to_string()]),
         BookmarkRenamerType::Noop,
     )
     .await?;
 
-    backsync_and_verify_master_wc(fb, commit_syncer.clone(), small_repo_dbs).await?;
+    backsync_and_verify_master_wc(fb, commit_sync_data.clone(), small_repo_dbs).await?;
 
     let ctx = CoreContext::test_mock(fb);
-    let target_cs_id = resolve_cs_id(&ctx, commit_syncer.get_target_repo(), "master").await?;
+    let target_cs_id = resolve_cs_id(&ctx, commit_sync_data.get_target_repo(), "master").await?;
 
-    let map = list_working_copy_utf8(&ctx, commit_syncer.get_target_repo(), target_cs_id).await?;
+    let map =
+        list_working_copy_utf8(&ctx, commit_sync_data.get_target_repo(), target_cs_id).await?;
     assert_eq!(
         map.into_iter().collect::<BTreeMap<_, _>>(),
         btreemap! {
@@ -301,8 +306,9 @@ async fn backsync_linear_with_mover_that_removes_single_file(
     );
 
     let target_cs_id =
-        resolve_cs_id(&ctx, commit_syncer.get_target_repo(), "anotherbookmark").await?;
-    let map = list_working_copy_utf8(&ctx, commit_syncer.get_target_repo(), target_cs_id).await?;
+        resolve_cs_id(&ctx, commit_sync_data.get_target_repo(), "anotherbookmark").await?;
+    let map =
+        list_working_copy_utf8(&ctx, commit_sync_data.get_target_repo(), target_cs_id).await?;
     assert_eq!(
         map.into_iter().collect::<BTreeMap<_, _>>(),
         btreemap! {
@@ -333,15 +339,16 @@ async fn backsync_linear_with_mover_that_removes_single_file(
 #[mononoke::fbinit_test]
 async fn backsync_linear_bookmark_renamer_only_master(fb: FacebookInit) -> Result<(), Error> {
     let master = BookmarkKey::new("master")?;
-    let (commit_syncer, small_repo_dbs) =
+    let (commit_sync_data, small_repo_dbs) =
         init_repos(fb, MoverType::Noop, BookmarkRenamerType::Only(master)).await?;
 
-    backsync_and_verify_master_wc(fb, commit_syncer.clone(), small_repo_dbs).await?;
+    backsync_and_verify_master_wc(fb, commit_sync_data.clone(), small_repo_dbs).await?;
 
     let ctx = CoreContext::test_mock(fb);
-    let target_cs_id = resolve_cs_id(&ctx, commit_syncer.get_target_repo(), "master").await?;
+    let target_cs_id = resolve_cs_id(&ctx, commit_sync_data.get_target_repo(), "master").await?;
 
-    let map = list_working_copy_utf8(&ctx, commit_syncer.get_target_repo(), target_cs_id).await?;
+    let map =
+        list_working_copy_utf8(&ctx, commit_sync_data.get_target_repo(), target_cs_id).await?;
     assert_eq!(
         map.into_iter().collect::<BTreeMap<_, _>>(),
         btreemap! {
@@ -362,7 +369,7 @@ async fn backsync_linear_bookmark_renamer_only_master(fb: FacebookInit) -> Resul
 
     // Bookmark should be deleted
     assert_eq!(
-        commit_syncer
+        commit_sync_data
             .get_target_repo()
             .get_bookmark_hg(ctx, &BookmarkKey::new("anotherbookmark")?)
             .await?,
@@ -374,15 +381,15 @@ async fn backsync_linear_bookmark_renamer_only_master(fb: FacebookInit) -> Resul
 
 #[mononoke::fbinit_test]
 async fn backsync_linear_bookmark_renamer_remove_all(fb: FacebookInit) -> Result<(), Error> {
-    let (commit_syncer, small_repo_dbs) =
+    let (commit_sync_data, small_repo_dbs) =
         init_repos(fb, MoverType::Noop, BookmarkRenamerType::RemoveAll).await?;
 
-    backsync_and_verify_master_wc(fb, commit_syncer.clone(), small_repo_dbs).await?;
+    backsync_and_verify_master_wc(fb, commit_sync_data.clone(), small_repo_dbs).await?;
 
     let ctx = CoreContext::test_mock(fb);
     // Bookmarks should be deleted
     assert_eq!(
-        commit_syncer
+        commit_sync_data
             .get_target_repo()
             .get_bookmark_hg(ctx.clone(), &BookmarkKey::new("master")?)
             .await?,
@@ -390,7 +397,7 @@ async fn backsync_linear_bookmark_renamer_remove_all(fb: FacebookInit) -> Result
     );
 
     assert_eq!(
-        commit_syncer
+        commit_sync_data
             .get_target_repo()
             .get_bookmark_hg(ctx, &BookmarkKey::new("anotherbookmark")?)
             .await?,
@@ -407,14 +414,14 @@ async fn backsync_two_small_repos(fb: FacebookInit) -> Result<(), Error> {
 
     let ctx = CoreContext::test_mock(fb);
 
-    for (commit_syncer, small_repo_dbs) in small_repos {
-        let small_repo_id = commit_syncer.get_target_repo().repo_identity().id();
+    for (commit_sync_data, small_repo_dbs) in small_repos {
+        let small_repo_id = commit_sync_data.get_target_repo().repo_identity().id();
         println!("backsyncing small repo#{}", small_repo_id.id());
         let small_repo_dbs = Arc::new(small_repo_dbs);
-        let small_repo_id = commit_syncer.get_target_repo().repo_identity().id();
+        let small_repo_id = commit_sync_data.get_target_repo().repo_identity().id();
         backsync_latest(
             ctx.clone(),
-            commit_syncer.clone(),
+            commit_sync_data.clone(),
             small_repo_dbs.clone(),
             BacksyncLimit::NoLimit,
             Arc::new(AtomicBool::new(false)),
@@ -429,7 +436,7 @@ async fn backsync_two_small_repos(fb: FacebookInit) -> Result<(), Error> {
         println!("verifying small repo#{}", small_repo_id.id());
         verify_mapping_and_all_wc(
             ctx.clone(),
-            commit_syncer.clone(),
+            commit_sync_data.clone(),
             dont_verify_commits.clone(),
         )
         .await?;
@@ -441,7 +448,7 @@ async fn backsync_two_small_repos(fb: FacebookInit) -> Result<(), Error> {
 #[mononoke::fbinit_test]
 async fn backsync_merge_new_repo_all_files_removed(fb: FacebookInit) -> Result<(), Error> {
     // Remove all files from new repo except for the file in the merge commit itself
-    let (commit_syncer, small_repo_dbs) = init_repos(
+    let (commit_sync_data, small_repo_dbs) = init_repos(
         fb,
         MoverType::Except(vec![
             REPOMERGE_FOLDER.to_string(),
@@ -451,12 +458,13 @@ async fn backsync_merge_new_repo_all_files_removed(fb: FacebookInit) -> Result<(
     )
     .await?;
 
-    backsync_and_verify_master_wc(fb, commit_syncer.clone(), small_repo_dbs).await?;
+    backsync_and_verify_master_wc(fb, commit_sync_data.clone(), small_repo_dbs).await?;
 
     let ctx = CoreContext::test_mock(fb);
-    let target_cs_id = resolve_cs_id(&ctx, commit_syncer.get_target_repo(), "master").await?;
+    let target_cs_id = resolve_cs_id(&ctx, commit_sync_data.get_target_repo(), "master").await?;
 
-    let map = list_working_copy_utf8(&ctx, commit_syncer.get_target_repo(), target_cs_id).await?;
+    let map =
+        list_working_copy_utf8(&ctx, commit_sync_data.get_target_repo(), target_cs_id).await?;
     assert_eq!(
         map.into_iter().collect::<BTreeMap<_, _>>(),
         btreemap! {
@@ -476,8 +484,9 @@ async fn backsync_merge_new_repo_all_files_removed(fb: FacebookInit) -> Result<(
     );
 
     let target_cs_id =
-        resolve_cs_id(&ctx, commit_syncer.get_target_repo(), "anotherbookmark").await?;
-    let map = list_working_copy_utf8(&ctx, commit_syncer.get_target_repo(), target_cs_id).await?;
+        resolve_cs_id(&ctx, commit_sync_data.get_target_repo(), "anotherbookmark").await?;
+    let map =
+        list_working_copy_utf8(&ctx, commit_sync_data.get_target_repo(), target_cs_id).await?;
     assert_eq!(
         map.into_iter().collect::<BTreeMap<_, _>>(),
         btreemap! {
@@ -503,19 +512,20 @@ async fn backsync_merge_new_repo_all_files_removed(fb: FacebookInit) -> Result<(
 #[mononoke::fbinit_test]
 async fn backsync_merge_new_repo_branch_removed(fb: FacebookInit) -> Result<(), Error> {
     // Remove all files from new repo except for the file in the merge commit itself
-    let (commit_syncer, small_repo_dbs) = init_repos(
+    let (commit_sync_data, small_repo_dbs) = init_repos(
         fb,
         MoverType::Except(vec![REPOMERGE_FOLDER.to_string()]),
         BookmarkRenamerType::Noop,
     )
     .await?;
 
-    backsync_and_verify_master_wc(fb, commit_syncer.clone(), small_repo_dbs).await?;
+    backsync_and_verify_master_wc(fb, commit_sync_data.clone(), small_repo_dbs).await?;
 
     let ctx = CoreContext::test_mock(fb);
-    let target_cs_id = resolve_cs_id(&ctx, commit_syncer.get_target_repo(), "master").await?;
+    let target_cs_id = resolve_cs_id(&ctx, commit_sync_data.get_target_repo(), "master").await?;
 
-    let map = list_working_copy_utf8(&ctx, commit_syncer.get_target_repo(), target_cs_id).await?;
+    let map =
+        list_working_copy_utf8(&ctx, commit_sync_data.get_target_repo(), target_cs_id).await?;
     assert_eq!(
         map.into_iter().collect::<BTreeMap<_, _>>(),
         btreemap! {
@@ -535,8 +545,9 @@ async fn backsync_merge_new_repo_branch_removed(fb: FacebookInit) -> Result<(), 
     );
 
     let target_cs_id =
-        resolve_cs_id(&ctx, commit_syncer.get_target_repo(), "anotherbookmark").await?;
-    let map = list_working_copy_utf8(&ctx, commit_syncer.get_target_repo(), target_cs_id).await?;
+        resolve_cs_id(&ctx, commit_sync_data.get_target_repo(), "anotherbookmark").await?;
+    let map =
+        list_working_copy_utf8(&ctx, commit_sync_data.get_target_repo(), target_cs_id).await?;
     assert_eq!(
         map.into_iter().collect::<BTreeMap<_, _>>(),
         btreemap! {
@@ -562,19 +573,20 @@ async fn backsync_merge_new_repo_branch_removed(fb: FacebookInit) -> Result<(), 
 
 #[mononoke::fbinit_test]
 async fn backsync_branch_merge_remove_branch_merge_file(fb: FacebookInit) -> Result<(), Error> {
-    let (commit_syncer, small_repo_dbs) = init_repos(
+    let (commit_sync_data, small_repo_dbs) = init_repos(
         fb,
         MoverType::Except(vec![BRANCHMERGE_FILE.to_string()]),
         BookmarkRenamerType::Noop,
     )
     .await?;
 
-    backsync_and_verify_master_wc(fb, commit_syncer.clone(), small_repo_dbs).await?;
+    backsync_and_verify_master_wc(fb, commit_sync_data.clone(), small_repo_dbs).await?;
 
     let ctx = CoreContext::test_mock(fb);
-    let target_cs_id = resolve_cs_id(&ctx, commit_syncer.get_target_repo(), "master").await?;
+    let target_cs_id = resolve_cs_id(&ctx, commit_sync_data.get_target_repo(), "master").await?;
 
-    let map = list_working_copy_utf8(&ctx, commit_syncer.get_target_repo(), target_cs_id).await?;
+    let map =
+        list_working_copy_utf8(&ctx, commit_sync_data.get_target_repo(), target_cs_id).await?;
     assert_eq!(
         map.into_iter().collect::<BTreeMap<_, _>>(),
         btreemap! {
@@ -594,8 +606,9 @@ async fn backsync_branch_merge_remove_branch_merge_file(fb: FacebookInit) -> Res
     );
 
     let target_cs_id =
-        resolve_cs_id(&ctx, commit_syncer.get_target_repo(), "anotherbookmark").await?;
-    let map = list_working_copy_utf8(&ctx, commit_syncer.get_target_repo(), target_cs_id).await?;
+        resolve_cs_id(&ctx, commit_sync_data.get_target_repo(), "anotherbookmark").await?;
+    let map =
+        list_working_copy_utf8(&ctx, commit_sync_data.get_target_repo(), target_cs_id).await?;
     assert_eq!(
         map.into_iter().collect::<BTreeMap<_, _>>(),
         btreemap! {
@@ -626,14 +639,14 @@ async fn backsync_branch_merge_remove_branch_merge_file(fb: FacebookInit) -> Res
 #[mononoke::fbinit_test]
 async fn backsync_unrelated_branch(fb: FacebookInit) -> Result<(), Error> {
     let master = BookmarkKey::new("master")?;
-    let (commit_syncer, small_repo_dbs) = init_repos(
+    let (commit_sync_data, small_repo_dbs) = init_repos(
         fb,
         MoverType::Except(vec!["unrelated_branch".to_string()]),
         BookmarkRenamerType::Only(master),
     )
     .await?;
     let small_repo_dbs = Arc::new(small_repo_dbs);
-    let large_repo = commit_syncer.get_source_repo();
+    let large_repo = commit_sync_data.get_source_repo();
 
     let ctx = CoreContext::test_mock(fb);
     let merge = build_unrelated_branch(ctx.clone(), large_repo).await;
@@ -648,7 +661,7 @@ async fn backsync_unrelated_branch(fb: FacebookInit) -> Result<(), Error> {
 
     let fut = backsync_latest(
         ctx.clone(),
-        commit_syncer.clone(),
+        commit_sync_data.clone(),
         small_repo_dbs.clone(),
         BacksyncLimit::NoLimit,
         Arc::new(AtomicBool::new(false)),
@@ -660,7 +673,9 @@ async fn backsync_unrelated_branch(fb: FacebookInit) -> Result<(), Error> {
 
     // Unrelated branch should be ignored until it's merged into already backsynced
     // branch
-    let maybe_outcome = commit_syncer.get_commit_sync_outcome(&ctx, merge).await?;
+    let maybe_outcome = commit_sync_data
+        .get_commit_sync_outcome(&ctx, merge)
+        .await?;
     assert!(maybe_outcome.is_none());
 
     println!("merging into master");
@@ -679,7 +694,7 @@ async fn backsync_unrelated_branch(fb: FacebookInit) -> Result<(), Error> {
 
     backsync_latest(
         ctx.clone(),
-        commit_syncer.clone(),
+        commit_sync_data.clone(),
         small_repo_dbs.clone(),
         BacksyncLimit::NoLimit,
         Arc::new(AtomicBool::new(false)),
@@ -689,11 +704,13 @@ async fn backsync_unrelated_branch(fb: FacebookInit) -> Result<(), Error> {
     )
     .await?
     .await;
-    let maybe_outcome = commit_syncer
+    let maybe_outcome = commit_sync_data
         .get_commit_sync_outcome(&ctx, new_master)
         .await?;
     assert!(maybe_outcome.is_some());
-    let maybe_outcome = commit_syncer.get_commit_sync_outcome(&ctx, merge).await?;
+    let maybe_outcome = commit_sync_data
+        .get_commit_sync_outcome(&ctx, merge)
+        .await?;
     assert!(maybe_outcome.is_some());
 
     Ok(())
@@ -773,7 +790,7 @@ async fn backsync_change_mapping(fb: FacebookInit) -> Result<(), Error> {
 
     let live_commit_sync_config = Arc::new(lv_cfg);
 
-    let commit_syncer = CommitSyncer::new(&ctx, repos, live_commit_sync_config);
+    let commit_sync_data = CommitSyncData::new(&ctx, repos, live_commit_sync_config);
 
     // Rewrite root commit with current version
     let root_cs_id = CreateCommitContext::new_root(&ctx, &large_repo)
@@ -783,7 +800,7 @@ async fn backsync_change_mapping(fb: FacebookInit) -> Result<(), Error> {
     unsafe_always_rewrite_sync_commit(
         &ctx,
         root_cs_id,
-        &commit_syncer,
+        &commit_sync_data,
         None,
         &current_version,
         CommitSyncContext::Tests,
@@ -823,7 +840,7 @@ async fn backsync_change_mapping(fb: FacebookInit) -> Result<(), Error> {
 
     let f = backsync_latest(
         ctx.clone(),
-        commit_syncer.clone(),
+        commit_sync_data.clone(),
         small_repo_dbs.clone(),
         BacksyncLimit::NoLimit,
         Arc::new(AtomicBool::new(false)),
@@ -833,7 +850,7 @@ async fn backsync_change_mapping(fb: FacebookInit) -> Result<(), Error> {
     );
     with_just_knobs_async(jk, f.boxed()).await?.await;
 
-    let commit_sync_outcome = commit_syncer
+    let commit_sync_outcome = commit_sync_data
         .get_commit_sync_outcome(&ctx, before_mapping_change)
         .await?
         .ok_or_else(|| anyhow!("unexpected missing commit sync outcome"))?;
@@ -842,7 +859,7 @@ async fn backsync_change_mapping(fb: FacebookInit) -> Result<(), Error> {
         assert_eq!(current_version, version);
     });
 
-    let commit_sync_outcome = commit_syncer
+    let commit_sync_outcome = commit_sync_data
         .get_commit_sync_outcome(&ctx, change_mapping_commit)
         .await?
         .ok_or_else(|| anyhow!("unexpected missing commit sync outcome"))?;
@@ -851,7 +868,7 @@ async fn backsync_change_mapping(fb: FacebookInit) -> Result<(), Error> {
         assert_eq!(new_version, version);
     });
 
-    let commit_sync_outcome = commit_syncer
+    let commit_sync_outcome = commit_sync_data
         .get_commit_sync_outcome(&ctx, after_mapping_change_commit)
         .await?
         .ok_or_else(|| anyhow!("unexpected missing commit sync outcome"))?;
@@ -861,7 +878,8 @@ async fn backsync_change_mapping(fb: FacebookInit) -> Result<(), Error> {
         target_cs_id
     });
 
-    let map = list_working_copy_utf8(&ctx, commit_syncer.get_target_repo(), target_cs_id).await?;
+    let map =
+        list_working_copy_utf8(&ctx, commit_sync_data.get_target_repo(), target_cs_id).await?;
     assert_eq!(
         map,
         hashmap! {NonRootMPath::new("file")? => "content".to_string()}
@@ -918,13 +936,13 @@ async fn new_commit<T: AsRef<str>>(
 
 async fn backsync_and_verify_master_wc(
     fb: FacebookInit,
-    commit_syncer: CommitSyncer<TestRepo>,
+    commit_sync_data: CommitSyncData<TestRepo>,
     small_repo_dbs: TargetRepoDbs,
 ) -> Result<(), Error> {
-    let large_repo = commit_syncer.get_source_repo();
+    let large_repo = commit_sync_data.get_source_repo();
 
     let ctx = CoreContext::test_mock(fb);
-    let next_log_entries: Vec<_> = commit_syncer
+    let next_log_entries: Vec<_> = commit_sync_data
         .get_source_repo()
         .bookmark_update_log()
         .read_next_bookmark_log_entries(
@@ -943,7 +961,7 @@ async fn backsync_and_verify_master_wc(
     for _ in 1..5 {
         let f = mononoke::spawn_task(backsync_latest(
             ctx.clone(),
-            commit_syncer.clone(),
+            commit_sync_data.clone(),
             small_repo_dbs.clone(),
             BacksyncLimit::NoLimit,
             Arc::new(AtomicBool::new(false)),
@@ -964,19 +982,19 @@ async fn backsync_and_verify_master_wc(
         .await?;
     assert_eq!(fetched_value, Some(latest_log_id));
 
-    verify_mapping_and_all_wc(ctx.clone(), commit_syncer, vec![]).await?;
+    verify_mapping_and_all_wc(ctx.clone(), commit_sync_data, vec![]).await?;
     Ok(())
 }
 
 async fn verify_mapping_and_all_wc(
     ctx: CoreContext,
-    commit_syncer: CommitSyncer<TestRepo>,
+    commit_sync_data: CommitSyncData<TestRepo>,
     dont_verify_commits: Vec<ChangesetId>,
 ) -> Result<(), Error> {
-    let large_repo = commit_syncer.get_source_repo();
-    let small_repo = commit_syncer.get_target_repo();
+    let large_repo = commit_sync_data.get_source_repo();
+    let small_repo = commit_sync_data.get_target_repo();
 
-    verify_bookmarks(ctx.clone(), commit_syncer.clone()).await?;
+    verify_bookmarks(ctx.clone(), commit_sync_data.clone()).await?;
 
     let heads: Vec<_> = large_repo
         .bookmarks()
@@ -995,7 +1013,7 @@ async fn verify_mapping_and_all_wc(
         if dont_verify_commits.contains(&source_cs_id) {
             continue;
         }
-        let csc = commit_syncer.clone();
+        let csc = commit_sync_data.clone();
         let outcome = csc.get_commit_sync_outcome(&ctx, source_cs_id).await?;
         let source_bcs = source_cs_id.load(&ctx, large_repo.repo_blobstore()).await?;
         let outcome = outcome.unwrap_or_else(|| {
@@ -1015,7 +1033,7 @@ async fn verify_mapping_and_all_wc(
                 println!("using mover for {:?}", version);
                 (
                     target_cs_id,
-                    commit_syncer.get_movers_by_version(version).await?,
+                    commit_sync_data.get_movers_by_version(version).await?,
                 )
             }
         };
@@ -1040,7 +1058,7 @@ async fn verify_mapping_and_all_wc(
             &ctx,
             source_hg_cs_id,
             target_hg_cs_id,
-            commit_syncer.clone(),
+            commit_sync_data.clone(),
             movers_to_use.clone(),
         )
         .await?;
@@ -1050,10 +1068,10 @@ async fn verify_mapping_and_all_wc(
 
 async fn verify_bookmarks(
     ctx: CoreContext,
-    commit_syncer: CommitSyncer<TestRepo>,
+    commit_sync_data: CommitSyncData<TestRepo>,
 ) -> Result<(), Error> {
-    let large_repo = commit_syncer.get_source_repo();
-    let small_repo = commit_syncer.get_target_repo();
+    let large_repo = commit_sync_data.get_source_repo();
+    let small_repo = commit_sync_data.get_target_repo();
 
     let bookmarks: Vec<_> = large_repo
         .get_publishing_bookmarks_maybe_stale_hg(ctx.clone())
@@ -1063,7 +1081,7 @@ async fn verify_bookmarks(
     // Check that bookmark point to corresponding working copies
     for (bookmark, source_hg_cs_id) in bookmarks {
         println!("checking bookmark: {}", bookmark.key());
-        match commit_syncer.rename_bookmark(bookmark.key()).await? {
+        match commit_sync_data.rename_bookmark(bookmark.key()).await? {
             Some(renamed_book) => {
                 if &renamed_book != bookmark.key() {
                     assert!(
@@ -1086,7 +1104,7 @@ async fn verify_bookmarks(
                     .await?
                     .unwrap();
 
-                let commit_sync_outcome = commit_syncer
+                let commit_sync_outcome = commit_sync_data
                     .get_commit_sync_outcome(&ctx, source_bcs_id)
                     .await?;
                 let commit_sync_outcome = commit_sync_outcome.expect("unsynced commit");
@@ -1103,7 +1121,7 @@ async fn verify_bookmarks(
                     }
                     EquivalentWorkingCopyAncestor(_, version) | RewrittenAs(_, version) => {
                         println!("using mover for {:?}", version);
-                        commit_syncer.get_movers_by_version(&version).await?
+                        commit_sync_data.get_movers_by_version(&version).await?
                     }
                 };
 
@@ -1111,7 +1129,7 @@ async fn verify_bookmarks(
                     &ctx,
                     source_hg_cs_id,
                     target_hg_cs_id,
-                    commit_syncer.clone(),
+                    commit_sync_data.clone(),
                     movers.clone(),
                 )
                 .await?;
@@ -1135,15 +1153,15 @@ async fn compare_contents(
     ctx: &CoreContext,
     source_hg_cs_id: HgChangesetId,
     target_hg_cs_id: HgChangesetId,
-    commit_syncer: CommitSyncer<TestRepo>,
+    commit_sync_data: CommitSyncData<TestRepo>,
     // TODO(T182311609): stop taking Movers and call a commit syncer method to
     // move paths.
     movers: Movers,
 ) -> Result<(), Error> {
     let source_content =
-        list_content(ctx, source_hg_cs_id, commit_syncer.get_source_repo()).await?;
+        list_content(ctx, source_hg_cs_id, commit_sync_data.get_source_repo()).await?;
     let target_content =
-        list_content(ctx, target_hg_cs_id, commit_syncer.get_target_repo()).await?;
+        list_content(ctx, target_hg_cs_id, commit_sync_data.get_target_repo()).await?;
 
     println!(
         "source content: {:?}, target content {:?}",
@@ -1309,7 +1327,7 @@ async fn init_repos(
     fb: FacebookInit,
     mover_type: MoverType,
     bookmark_renamer_type: BookmarkRenamerType,
-) -> Result<(CommitSyncer<TestRepo>, TargetRepoDbs), Error> {
+) -> Result<(CommitSyncData<TestRepo>, TargetRepoDbs), Error> {
     override_just_knobs(JustKnobsInMemory::new(hashmap! {
         "scm/mononoke:cross_repo_skip_backsyncing_ordinary_empty_commits".to_string() => KnobVal::Bool(false),
         "scm/mononoke:ignore_change_xrepo_mapping_extra".to_string() => KnobVal::Bool(false),
@@ -1385,7 +1403,7 @@ async fn init_repos(
     )
     .await?;
 
-    let commit_syncer = CommitSyncer::new(&ctx, repos, live_commit_sync_config.clone());
+    let commit_sync_data = CommitSyncData::new(&ctx, repos, live_commit_sync_config.clone());
 
     // Sync first commit manually
     let initial_bcs_id = large_repo
@@ -1419,7 +1437,7 @@ async fn init_repos(
             &ctx,
             first_bcs_mut,
             &empty_map,
-            commit_syncer.get_movers_by_version(&version).await?,
+            commit_sync_data.get_movers_by_version(&version).await?,
             &large_repo,
             Default::default(),
             git_submodules_action,
@@ -1445,9 +1463,12 @@ async fn init_repos(
         small_repo.repo_identity().id(),
         rewritten_first_bcs_id,
         CommitSyncConfigVersion("TEST_VERSION_NAME".to_string()),
-        commit_syncer.get_source_repo_type(),
+        commit_sync_data.get_source_repo_type(),
     );
-    commit_syncer.get_mapping().add(&ctx, first_entry).await?;
+    commit_sync_data
+        .get_mapping()
+        .add(&ctx, first_entry)
+        .await?;
 
     // Create a few new commits on top of master
 
@@ -1604,7 +1625,7 @@ async fn init_repos(
     )
     .await?;
 
-    Ok((commit_syncer, small_repo_dbs))
+    Ok((commit_sync_data, small_repo_dbs))
 }
 
 async fn init_target_repo(
@@ -1626,7 +1647,7 @@ async fn init_merged_repos(
     num_repos: usize,
 ) -> Result<
     (
-        Vec<(CommitSyncer<TestRepo>, TargetRepoDbs)>,
+        Vec<(CommitSyncData<TestRepo>, TargetRepoDbs)>,
         TestRepo,
         i64,
         Vec<ChangesetId>,
@@ -1714,8 +1735,8 @@ async fn init_merged_repos(
             SubmoduleDeps::ForSync(HashMap::new()),
         );
 
-        let commit_syncer = CommitSyncer::new(&ctx, repos, live_commit_sync_config);
-        output.push((commit_syncer, small_repo_dbs));
+        let commit_sync_data = CommitSyncData::new(&ctx, repos, live_commit_sync_config);
+        output.push((commit_sync_data, small_repo_dbs));
 
         let filename = format!("file_in_smallrepo{}", small_repo.repo_identity().id().id());
         let small_repo_cs_id = create_commit(
@@ -1988,7 +2009,7 @@ async fn preserve_premerge_commit(
         lv_cfg_src.add_common_config(common);
 
         let live_commit_sync_config = Arc::new(lv_cfg);
-        CommitSyncer::new(&ctx, repos, live_commit_sync_config)
+        CommitSyncData::new(&ctx, repos, live_commit_sync_config)
     };
 
     unsafe_sync_commit(

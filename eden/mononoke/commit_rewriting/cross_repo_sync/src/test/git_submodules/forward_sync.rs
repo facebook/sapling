@@ -51,7 +51,7 @@ async fn test_submodule_expansion_basic(fb: FacebookInit) -> Result<()> {
     let SubmoduleSyncTestData {
         small_repo_info: (small_repo, small_repo_cs_map),
         large_repo_info: (large_repo, _large_repo_master),
-        commit_syncer,
+        commit_sync_data,
         ..
     } = build_submodule_sync_test_data(
         fb,
@@ -64,7 +64,7 @@ async fn test_submodule_expansion_basic(fb: FacebookInit) -> Result<()> {
     // Check mappings from base commits
     check_mapping(
         ctx.clone(),
-        &commit_syncer,
+        &commit_sync_data,
         *small_repo_cs_map.get("A_A").unwrap(),
         ChangesetId::from_str("8e4c86fbb8af564753141502a96ae89f808b8ff3880b9d8fb82aa33ac055b7d8")
             .ok(),
@@ -73,7 +73,7 @@ async fn test_submodule_expansion_basic(fb: FacebookInit) -> Result<()> {
 
     check_mapping(
         ctx.clone(),
-        &commit_syncer,
+        &commit_sync_data,
         *small_repo_cs_map.get("A_B").unwrap(),
         ChangesetId::from_str("ff1c511380d99c88b484fa2b0cb742be44f6dca66e85a1c620fcf08454cd6ab6")
             .ok(),
@@ -82,7 +82,7 @@ async fn test_submodule_expansion_basic(fb: FacebookInit) -> Result<()> {
 
     check_mapping(
         ctx.clone(),
-        &commit_syncer,
+        &commit_sync_data,
         small_repo_cs_map["A_C"],
         ChangesetId::from_str("8d60517a2c3491ac2cbee5e254153037e9d7c6b83a5ab58a615b841421661bdc")
             .ok(),
@@ -119,13 +119,13 @@ async fn test_submodule_expansion_basic(fb: FacebookInit) -> Result<()> {
         ctx.clone(),
         small_repo_cs_id,
         &large_repo,
-        &commit_syncer,
+        &commit_sync_data,
     )
     .await?;
 
     check_mapping(
         ctx.clone(),
-        &commit_syncer,
+        &commit_sync_data,
         small_repo_cs_id,
         Some(large_repo_cs_id),
     )
@@ -178,7 +178,7 @@ async fn test_recursive_submodule_expansion_basic(fb: FacebookInit) -> Result<()
     let SubmoduleSyncTestData {
         small_repo_info: (small_repo, small_repo_cs_map),
         large_repo_info: (large_repo, _large_repo_master),
-        commit_syncer,
+        commit_sync_data,
         ..
     } = build_submodule_sync_test_data(
         fb,
@@ -241,7 +241,7 @@ async fn test_recursive_submodule_expansion_basic(fb: FacebookInit) -> Result<()
         ctx.clone(),
         small_repo_cs_id,
         &large_repo,
-        &commit_syncer,
+        &commit_sync_data,
     )
     .await?;
 
@@ -284,7 +284,7 @@ async fn test_recursive_submodule_expansion_basic(fb: FacebookInit) -> Result<()
 
     check_mapping(
         ctx.clone(),
-        &commit_syncer,
+        &commit_sync_data,
         small_repo_cs_id,
         Some(large_repo_cs_id),
     )
@@ -305,7 +305,7 @@ async fn test_submodule_deletion(fb: FacebookInit) -> Result<()> {
     let SubmoduleSyncTestData {
         small_repo_info: (small_repo, small_repo_cs_map),
         large_repo_info: (large_repo, _large_repo_master),
-        commit_syncer,
+        commit_sync_data,
         ..
     } = build_submodule_sync_test_data(
         fb,
@@ -323,10 +323,16 @@ async fn test_submodule_deletion(fb: FacebookInit) -> Result<()> {
         .await?;
 
     let (large_repo_cs_id, large_repo_changesets) =
-        sync_changeset_and_derive_all_types(ctx.clone(), cs_id, &large_repo, &commit_syncer)
+        sync_changeset_and_derive_all_types(ctx.clone(), cs_id, &large_repo, &commit_sync_data)
             .await?;
 
-    check_mapping(ctx.clone(), &commit_syncer, cs_id, Some(large_repo_cs_id)).await;
+    check_mapping(
+        ctx.clone(),
+        &commit_sync_data,
+        cs_id,
+        Some(large_repo_cs_id),
+    )
+    .await;
 
     compare_expected_changesets_from_basic_setup(
         &large_repo_changesets,
@@ -360,7 +366,7 @@ async fn test_recursive_submodule_deletion(fb: FacebookInit) -> Result<()> {
     let SubmoduleSyncTestData {
         small_repo_info: (small_repo, small_repo_cs_map),
         large_repo_info: (large_repo, _large_repo_master),
-        commit_syncer,
+        commit_sync_data,
         ..
     } = build_submodule_sync_test_data(
         fb,
@@ -400,7 +406,7 @@ async fn test_recursive_submodule_deletion(fb: FacebookInit) -> Result<()> {
         ctx.clone(),
         small_repo_cs_id,
         &large_repo,
-        &commit_syncer,
+        &commit_sync_data,
     )
     .await?;
 
@@ -440,7 +446,7 @@ async fn test_recursive_submodule_deletion(fb: FacebookInit) -> Result<()> {
 
     check_mapping(
         ctx.clone(),
-        &commit_syncer,
+        &commit_sync_data,
         small_repo_cs_id,
         Some(large_repo_cs_id),
     )
@@ -467,7 +473,7 @@ async fn test_submodule_with_recursive_submodule_deletion(fb: FacebookInit) -> R
     let SubmoduleSyncTestData {
         small_repo_info: (small_repo, small_repo_cs_map),
         large_repo_info: (large_repo, _large_repo_master),
-        commit_syncer,
+        commit_sync_data,
         ..
     } = build_submodule_sync_test_data(
         fb,
@@ -493,7 +499,7 @@ async fn test_submodule_with_recursive_submodule_deletion(fb: FacebookInit) -> R
         ctx.clone(),
         small_repo_cs_id,
         &large_repo,
-        &commit_syncer,
+        &commit_sync_data,
     )
     .await?;
 
@@ -528,7 +534,7 @@ async fn test_submodule_with_recursive_submodule_deletion(fb: FacebookInit) -> R
 
     check_mapping(
         ctx.clone(),
-        &commit_syncer,
+        &commit_sync_data,
         small_repo_cs_id,
         Some(large_repo_cs_id),
     )
@@ -554,7 +560,7 @@ async fn test_deleting_submodule_but_keeping_directory(fb: FacebookInit) -> Resu
     let SubmoduleSyncTestData {
         small_repo_info: (small_repo, small_repo_cs_map),
         large_repo_info: (large_repo, _large_repo_master),
-        commit_syncer,
+        commit_sync_data,
         ..
     } = build_submodule_sync_test_data(
         fb,
@@ -582,7 +588,7 @@ async fn test_deleting_submodule_but_keeping_directory(fb: FacebookInit) -> Resu
             .commit()
             .await?;
 
-    let large_repo_cs_id = sync_to_master(ctx.clone(), &commit_syncer, del_md_file_cs_id)
+    let large_repo_cs_id = sync_to_master(ctx.clone(), &commit_sync_data, del_md_file_cs_id)
         .await
         .context("sync_to_master failed")
         .and_then(|res| res.ok_or(anyhow!("No commit was synced")))?;
@@ -629,7 +635,7 @@ async fn test_deleting_submodule_but_keeping_directory(fb: FacebookInit) -> Resu
         ctx.clone(),
         chg_sm_path_cs_id,
         &large_repo,
-        &commit_syncer,
+        &commit_sync_data,
     )
     .await?;
 
@@ -685,14 +691,14 @@ async fn test_deleting_submodule_but_keeping_directory(fb: FacebookInit) -> Resu
     // Check mappings of both commits
     check_mapping(
         ctx.clone(),
-        &commit_syncer,
+        &commit_sync_data,
         del_md_file_cs_id,
         Some(first_expected_cs_id),
     )
     .await;
     check_mapping(
         ctx.clone(),
-        &commit_syncer,
+        &commit_sync_data,
         chg_sm_path_cs_id,
         Some(large_repo_cs_id),
     )
@@ -721,7 +727,7 @@ async fn test_deleting_recursive_submodule_but_keeping_directory(fb: FacebookIni
     let SubmoduleSyncTestData {
         small_repo_info: (small_repo, small_repo_cs_map),
         large_repo_info: (large_repo, _large_repo_master),
-        commit_syncer,
+        commit_sync_data,
         ..
     } = build_submodule_sync_test_data(
         fb,
@@ -770,7 +776,7 @@ async fn test_deleting_recursive_submodule_but_keeping_directory(fb: FacebookIni
             .commit()
             .await?;
 
-    let large_repo_cs_id = sync_to_master(ctx.clone(), &commit_syncer, del_md_file_cs_id)
+    let large_repo_cs_id = sync_to_master(ctx.clone(), &commit_sync_data, del_md_file_cs_id)
         .await
         .context("Failed to sync del_md_file_cs_id")
         .and_then(|res| res.ok_or(anyhow!("No commit was synced")))?;
@@ -838,7 +844,7 @@ async fn test_deleting_recursive_submodule_but_keeping_directory(fb: FacebookIni
         ctx.clone(),
         chg_sm_path_cs_id,
         &large_repo,
-        &commit_syncer,
+        &commit_sync_data,
     )
     .await?;
 
@@ -901,14 +907,14 @@ async fn test_deleting_recursive_submodule_but_keeping_directory(fb: FacebookIni
     // Check mappings of both commits
     check_mapping(
         ctx.clone(),
-        &commit_syncer,
+        &commit_sync_data,
         del_md_file_cs_id,
         Some(first_expected_cs_id),
     )
     .await;
     check_mapping(
         ctx.clone(),
-        &commit_syncer,
+        &commit_sync_data,
         chg_sm_path_cs_id,
         Some(large_repo_cs_id),
     )
@@ -940,7 +946,7 @@ async fn test_implicitly_deleting_submodule(fb: FacebookInit) -> Result<()> {
     let SubmoduleSyncTestData {
         small_repo_info: (small_repo, small_repo_cs_map),
         large_repo_info: (large_repo, _large_repo_master),
-        commit_syncer,
+        commit_sync_data,
         ..
     } = build_submodule_sync_test_data(
         fb,
@@ -959,7 +965,7 @@ async fn test_implicitly_deleting_submodule(fb: FacebookInit) -> Result<()> {
         .await?;
 
     let (large_repo_cs_id, large_repo_changesets) =
-        sync_changeset_and_derive_all_types(ctx.clone(), cs_id, &large_repo, &commit_syncer)
+        sync_changeset_and_derive_all_types(ctx.clone(), cs_id, &large_repo, &commit_sync_data)
             .await?;
 
     compare_expected_changesets_from_basic_setup(
@@ -997,7 +1003,13 @@ async fn test_implicitly_deleting_submodule(fb: FacebookInit) -> Result<()> {
     )
     .await?;
 
-    check_mapping(ctx.clone(), &commit_syncer, cs_id, Some(large_repo_cs_id)).await;
+    check_mapping(
+        ctx.clone(),
+        &commit_sync_data,
+        cs_id,
+        Some(large_repo_cs_id),
+    )
+    .await;
     Ok(())
 }
 
@@ -1011,7 +1023,7 @@ async fn test_implicit_deletions_inside_submodule_repo(fb: FacebookInit) -> Resu
     let SubmoduleSyncTestData {
         small_repo_info: (small_repo, small_repo_cs_map),
         large_repo_info: (large_repo, _large_repo_master),
-        commit_syncer,
+        commit_sync_data,
         ..
     } = build_submodule_sync_test_data(
         fb,
@@ -1052,10 +1064,16 @@ async fn test_implicit_deletions_inside_submodule_repo(fb: FacebookInit) -> Resu
         .await?;
 
     let (large_repo_cs_id, large_repo_changesets) =
-        sync_changeset_and_derive_all_types(ctx.clone(), cs_id, &large_repo, &commit_syncer)
+        sync_changeset_and_derive_all_types(ctx.clone(), cs_id, &large_repo, &commit_sync_data)
             .await?;
 
-    check_mapping(ctx.clone(), &commit_syncer, cs_id, Some(large_repo_cs_id)).await;
+    check_mapping(
+        ctx.clone(),
+        &commit_sync_data,
+        cs_id,
+        Some(large_repo_cs_id),
+    )
+    .await;
 
     compare_expected_changesets_from_basic_setup(
         &large_repo_changesets,
@@ -1136,7 +1154,7 @@ async fn test_implicitly_deleting_file_with_submodule(fb: FacebookInit) -> Resul
     // dependencies.
     // This config version will include the submodule that will be added in the
     // submodule deps.
-    let commit_syncer = add_new_commit_sync_config_version_with_submodule_deps(
+    let commit_sync_data = add_new_commit_sync_config_version_with_submodule_deps(
         &ctx,
         &small_repo,
         &large_repo,
@@ -1166,10 +1184,16 @@ async fn test_implicitly_deleting_file_with_submodule(fb: FacebookInit) -> Resul
         .await?;
 
     let (large_repo_cs_id, large_repo_changesets) =
-        sync_changeset_and_derive_all_types(ctx.clone(), cs_id, &large_repo, &commit_syncer)
+        sync_changeset_and_derive_all_types(ctx.clone(), cs_id, &large_repo, &commit_sync_data)
             .await?;
 
-    check_mapping(ctx.clone(), &commit_syncer, cs_id, Some(large_repo_cs_id)).await;
+    check_mapping(
+        ctx.clone(),
+        &commit_sync_data,
+        cs_id,
+        Some(large_repo_cs_id),
+    )
+    .await;
 
     compare_expected_changesets_from_basic_setup(
         &large_repo_changesets,
@@ -1213,7 +1237,7 @@ async fn test_adding_submodule_on_existing_directory(fb: FacebookInit) -> Result
     let SubmoduleSyncTestData {
         small_repo_info: (small_repo, small_repo_cs_map),
         large_repo_info: (large_repo, _large_repo_master),
-        commit_syncer,
+        commit_sync_data,
         live_commit_sync_config,
         test_sync_config_source,
         ..
@@ -1240,7 +1264,7 @@ async fn test_adding_submodule_on_existing_directory(fb: FacebookInit) -> Result
         .commit()
         .await?;
 
-    let _ = sync_to_master(ctx.clone(), &commit_syncer, add_dir_cs_id)
+    let _ = sync_to_master(ctx.clone(), &commit_sync_data, add_dir_cs_id)
         .await
         .context("Failed to sync commit creating normal directory with files")?;
 
@@ -1248,7 +1272,7 @@ async fn test_adding_submodule_on_existing_directory(fb: FacebookInit) -> Result
     // dependencies.
     // This config version will include the submodule that will be added in the
     // path of an existing directory.
-    let commit_syncer = add_new_commit_sync_config_version_with_submodule_deps(
+    let commit_sync_data = add_new_commit_sync_config_version_with_submodule_deps(
         &ctx,
         &small_repo,
         &large_repo,
@@ -1278,7 +1302,7 @@ async fn test_adding_submodule_on_existing_directory(fb: FacebookInit) -> Result
         .await?;
 
     let (large_repo_cs_id, large_repo_changesets) =
-        sync_changeset_and_derive_all_types(ctx.clone(), cs_id, &large_repo, &commit_syncer)
+        sync_changeset_and_derive_all_types(ctx.clone(), cs_id, &large_repo, &commit_sync_data)
             .await?;
 
     compare_expected_changesets_from_basic_setup(
@@ -1319,7 +1343,13 @@ async fn test_adding_submodule_on_existing_directory(fb: FacebookInit) -> Result
     )
     .await?;
 
-    check_mapping(ctx.clone(), &commit_syncer, cs_id, Some(large_repo_cs_id)).await;
+    check_mapping(
+        ctx.clone(),
+        &commit_sync_data,
+        cs_id,
+        Some(large_repo_cs_id),
+    )
+    .await;
 
     Ok(())
 }
@@ -1338,7 +1368,7 @@ async fn test_submodule_expansion_crashes_when_dep_not_available(fb: FacebookIni
     let SubmoduleSyncTestData {
         small_repo_info: (small_repo, small_repo_cs_map),
         large_repo_info: (large_repo, _large_repo_master),
-        commit_syncer,
+        commit_sync_data,
         ..
     } = build_submodule_sync_test_data(
         fb,
@@ -1365,7 +1395,7 @@ async fn test_submodule_expansion_crashes_when_dep_not_available(fb: FacebookIni
         .commit()
         .await?;
 
-    let sync_result = sync_to_master(ctx.clone(), &commit_syncer, cs_id).await;
+    let sync_result = sync_to_master(ctx.clone(), &commit_sync_data, cs_id).await;
 
     println!("sync_result: {0:#?}", &sync_result);
 
@@ -1405,7 +1435,7 @@ async fn test_submodule_validation_fails_with_file_on_metadata_file_path_in_smal
     let SubmoduleSyncTestData {
         small_repo_info: (small_repo, small_repo_cs_map),
         large_repo_info: (large_repo, _large_repo_master),
-        commit_syncer,
+        commit_sync_data,
         ..
     } = build_submodule_sync_test_data(
         fb,
@@ -1430,7 +1460,7 @@ async fn test_submodule_validation_fails_with_file_on_metadata_file_path_in_smal
 
     println!("Trying to sync changeset #1!");
 
-    let sync_result = sync_to_master(ctx.clone(), &commit_syncer, small_repo_cs_id)
+    let sync_result = sync_to_master(ctx.clone(), &commit_sync_data, small_repo_cs_id)
         .await
         .context("sync_to_master failed")
         .and_then(|res| res.ok_or(anyhow!("No commit was synced")));
@@ -1451,7 +1481,7 @@ async fn test_submodule_validation_fails_with_file_on_metadata_file_path_in_smal
     println!("large_repo_changesets: {:#?}\n\n", &large_repo_changesets);
 
     // When this is fixed, the commit sync should fail, instead of validation.
-    // check_mapping(ctx.clone(), &commit_syncer, small_repo_cs_id, None).await;
+    // check_mapping(ctx.clone(), &commit_sync_data, small_repo_cs_id, None).await;
 
     // Do the same thing, but adding a valid git commit has in the file
     // To see what happens if a user tries updating a submodule in a weird
@@ -1474,7 +1504,7 @@ async fn test_submodule_validation_fails_with_file_on_metadata_file_path_in_smal
             .await?;
 
     println!("Trying to sync changeset #2!");
-    let sync_result = sync_to_master(ctx.clone(), &commit_syncer, small_repo_cs_id)
+    let sync_result = sync_to_master(ctx.clone(), &commit_sync_data, small_repo_cs_id)
         .await
         .context("sync_to_master failed")
         .and_then(|res| res.ok_or(anyhow!("No commit was synced")));
@@ -1490,7 +1520,7 @@ async fn test_submodule_validation_fails_with_file_on_metadata_file_path_in_smal
     // }));
 
     // When this is fixed, the commit sync should fail, instead of validation.
-    // check_mapping(ctx.clone(), &commit_syncer, small_repo_cs_id, None).await;
+    // check_mapping(ctx.clone(), &commit_sync_data, small_repo_cs_id, None).await;
 
     Ok(())
 }
@@ -1516,7 +1546,7 @@ async fn test_submodule_validation_fails_with_file_on_metadata_file_path_in_recu
     let SubmoduleSyncTestData {
         small_repo_info: (small_repo, small_repo_cs_map),
         large_repo_info: (_large_repo, _large_repo_master),
-        commit_syncer,
+        commit_sync_data,
         ..
     } = build_submodule_sync_test_data(
         fb,
@@ -1556,7 +1586,7 @@ async fn test_submodule_validation_fails_with_file_on_metadata_file_path_in_recu
             .commit()
             .await?;
 
-    let sync_result = sync_to_master(ctx.clone(), &commit_syncer, small_repo_cs_id)
+    let sync_result = sync_to_master(ctx.clone(), &commit_sync_data, small_repo_cs_id)
         .await
         .context("sync_to_master failed")
         .and_then(|res| res.ok_or(anyhow!("No commit was synced")));
@@ -1574,7 +1604,7 @@ async fn test_submodule_validation_fails_with_file_on_metadata_file_path_in_recu
     // }));
 
     // When this is fixed, the commit sync should fail, instead of validation.
-    // check_mapping(ctx.clone(), &commit_syncer, small_repo_cs_id, None).await;
+    // check_mapping(ctx.clone(), &commit_sync_data, small_repo_cs_id, None).await;
 
     Ok(())
 }
@@ -1608,7 +1638,7 @@ async fn test_expanding_known_dangling_submodule_pointers(fb: FacebookInit) -> R
     let SubmoduleSyncTestData {
         small_repo_info: (small_repo, small_repo_cs_map),
         large_repo_info: (large_repo, _large_repo_master),
-        commit_syncer,
+        commit_sync_data,
         ..
     } = build_submodule_sync_test_data(
         fb,
@@ -1638,7 +1668,7 @@ async fn test_expanding_known_dangling_submodule_pointers(fb: FacebookInit) -> R
             .commit()
             .await?;
 
-    let large_repo_cs_id = sync_to_master(ctx.clone(), &commit_syncer, small_repo_cs_id)
+    let large_repo_cs_id = sync_to_master(ctx.clone(), &commit_sync_data, small_repo_cs_id)
         .await?
         .ok_or(anyhow!("Failed to sync commit"))?;
 
@@ -1680,7 +1710,7 @@ async fn test_expanding_known_dangling_submodule_pointers(fb: FacebookInit) -> R
 
     check_mapping(
         ctx.clone(),
-        &commit_syncer,
+        &commit_sync_data,
         small_repo_cs_id,
         Some(large_repo_cs_id),
     )
@@ -1709,7 +1739,7 @@ async fn test_expanding_known_dangling_submodule_pointers(fb: FacebookInit) -> R
         .commit()
         .await?;
 
-    let large_repo_cs_id = sync_to_master(ctx.clone(), &commit_syncer, small_repo_cs_id)
+    let large_repo_cs_id = sync_to_master(ctx.clone(), &commit_sync_data, small_repo_cs_id)
         .await?
         .ok_or(anyhow!("Failed to sync commit"))?;
 
@@ -1724,7 +1754,7 @@ async fn test_expanding_known_dangling_submodule_pointers(fb: FacebookInit) -> R
 
     check_mapping(
         ctx.clone(),
-        &commit_syncer,
+        &commit_sync_data,
         small_repo_cs_id,
         Some(large_repo_cs_id),
     )
@@ -1759,7 +1789,7 @@ async fn test_expanding_known_dangling_submodule_pointers(fb: FacebookInit) -> R
         .commit()
         .await?;
 
-    let large_repo_cs_id = sync_to_master(ctx.clone(), &commit_syncer, small_repo_cs_id)
+    let large_repo_cs_id = sync_to_master(ctx.clone(), &commit_sync_data, small_repo_cs_id)
         .await?
         .ok_or(anyhow!("Failed to sync commit"))?;
 
@@ -1774,7 +1804,7 @@ async fn test_expanding_known_dangling_submodule_pointers(fb: FacebookInit) -> R
 
     check_mapping(
         ctx.clone(),
-        &commit_syncer,
+        &commit_sync_data,
         small_repo_cs_id,
         Some(large_repo_cs_id),
     )
@@ -1805,7 +1835,7 @@ async fn test_expanding_known_dangling_submodule_pointers(fb: FacebookInit) -> R
         .commit()
         .await?;
 
-    let large_repo_cs_id = sync_to_master(ctx.clone(), &commit_syncer, small_repo_cs_id)
+    let large_repo_cs_id = sync_to_master(ctx.clone(), &commit_sync_data, small_repo_cs_id)
         .await?
         .ok_or(anyhow!("Failed to sync commit"))?;
 
@@ -1829,7 +1859,7 @@ async fn test_expanding_known_dangling_submodule_pointers(fb: FacebookInit) -> R
 
     check_mapping(
         ctx.clone(),
-        &commit_syncer,
+        &commit_sync_data,
         small_repo_cs_id,
         Some(large_repo_cs_id),
     )
@@ -1930,7 +1960,7 @@ async fn test_submodule_expansion_and_deletion_on_merge_commits(fb: FacebookInit
     let SubmoduleSyncTestData {
         small_repo_info: (small_repo, small_repo_cs_map),
         large_repo_info: (large_repo, _large_repo_master),
-        commit_syncer,
+        commit_sync_data,
         ..
     } = build_submodule_sync_test_data(
         fb,
@@ -1960,7 +1990,7 @@ async fn test_submodule_expansion_and_deletion_on_merge_commits(fb: FacebookInit
     let _large_p1_cs_id = unsafe_sync_commit(
         &ctx,
         p1_cs_id,
-        &commit_syncer,
+        &commit_sync_data,
         CandidateSelectionHint::Only,
         CommitSyncContext::XRepoSyncJob,
         Some(base_commit_sync_version_name()),
@@ -1972,7 +2002,7 @@ async fn test_submodule_expansion_and_deletion_on_merge_commits(fb: FacebookInit
     let _large_p2_cs_id = unsafe_sync_commit(
         &ctx,
         p2_cs_id,
-        &commit_syncer,
+        &commit_sync_data,
         CandidateSelectionHint::Only,
         CommitSyncContext::XRepoSyncJob,
         Some(base_commit_sync_version_name()),
@@ -1997,14 +2027,14 @@ async fn test_submodule_expansion_and_deletion_on_merge_commits(fb: FacebookInit
             .commit()
             .await?;
 
-    let large_repo_cs_id_1 = sync_to_master(ctx.clone(), &commit_syncer, cs_id_1)
+    let large_repo_cs_id_1 = sync_to_master(ctx.clone(), &commit_sync_data, cs_id_1)
         .await
         .context("Failed to sync del_md_file_cs_id")
         .and_then(|res| res.ok_or(anyhow!("No commit was synced")))?;
 
     check_mapping(
         ctx.clone(),
-        &commit_syncer,
+        &commit_sync_data,
         cs_id_1,
         Some(large_repo_cs_id_1),
     )
@@ -2019,12 +2049,12 @@ async fn test_submodule_expansion_and_deletion_on_merge_commits(fb: FacebookInit
         .await?;
 
     let (large_repo_cs_id_2, large_repo_changesets) =
-        sync_changeset_and_derive_all_types(ctx.clone(), cs_id_2, &large_repo, &commit_syncer)
+        sync_changeset_and_derive_all_types(ctx.clone(), cs_id_2, &large_repo, &commit_sync_data)
             .await?;
 
     check_mapping(
         ctx.clone(),
-        &commit_syncer,
+        &commit_sync_data,
         cs_id_2,
         Some(large_repo_cs_id_2),
     )
@@ -2068,7 +2098,7 @@ async fn test_expanding_existing_submdule_commits_as_dangling_pointers(
     let SubmoduleSyncTestData {
         small_repo_info: (small_repo, small_repo_cs_map),
         large_repo_info: (large_repo, _large_repo_master),
-        commit_syncer,
+        commit_sync_data,
         ..
     } = build_submodule_sync_test_data(
         fb,
@@ -2096,13 +2126,13 @@ async fn test_expanding_existing_submdule_commits_as_dangling_pointers(
         ctx.clone(),
         small_repo_cs_id_1,
         &large_repo,
-        &commit_syncer,
+        &commit_sync_data,
     )
     .await?;
 
     check_mapping(
         ctx.clone(),
-        &commit_syncer,
+        &commit_sync_data,
         small_repo_cs_id_1,
         Some(large_repo_cs_id),
     )
@@ -2173,7 +2203,7 @@ async fn test_expanding_existing_submdule_commits_as_dangling_pointers(
         .commit()
         .await?;
 
-    let sync_result = sync_to_master(ctx.clone(), &commit_syncer, small_repo_cs_id_2).await;
+    let sync_result = sync_to_master(ctx.clone(), &commit_sync_data, small_repo_cs_id_2).await;
 
     println!("sync_result: {0:#?}", &sync_result);
 

@@ -31,8 +31,8 @@ use commit_transformation::upload_commits;
 use context::CoreContext;
 use cross_repo_sync::CandidateSelectionHint;
 use cross_repo_sync::CommitSyncContext;
+use cross_repo_sync::CommitSyncData;
 use cross_repo_sync::CommitSyncOutcome;
-use cross_repo_sync::CommitSyncer;
 use cross_repo_sync::InMemoryRepo;
 use cross_repo_sync::SubmoduleDeps;
 use cross_repo_sync::SubmoduleExpansionData;
@@ -444,7 +444,7 @@ async fn generate_additional_file_changes(
     ctx: CoreContext,
     root: ChangesetId,
     large_repo: &Repo,
-    large_to_small: &CommitSyncer<Repo>,
+    large_to_small: &CommitSyncData<Repo>,
     onto_value: ChangesetId,
     version: &CommitSyncConfigVersion,
 ) -> Result<SortedVectorMap<NonRootMPath, FileChange>, Error> {
@@ -471,7 +471,7 @@ async fn generate_additional_file_changes(
 
 async fn remap_commit(
     ctx: CoreContext,
-    small_to_large_commit_syncer: &CommitSyncer<Repo>,
+    small_to_large_commit_syncer: &CommitSyncData<Repo>,
     cs_id: ChangesetId,
 ) -> Result<(ChangesetId, CommitSyncConfigVersion), Error> {
     let maybe_sync_outcome = small_to_large_commit_syncer

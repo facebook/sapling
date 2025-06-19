@@ -41,7 +41,7 @@ async fn test_valid_submodule_expansion_update_succeeds(fb: FacebookInit) -> Res
 
     let SubmoduleSyncTestData {
         large_repo_info: (large_repo, large_repo_master),
-        commit_syncer,
+        commit_sync_data,
         small_repo_info: (small_repo, _small_repo_cs_map),
         ..
     } = build_submodule_backsync_test_data(
@@ -72,10 +72,16 @@ async fn test_valid_submodule_expansion_update_succeeds(fb: FacebookInit) -> Res
         .context("Failed to create commit modifying small_repo directory")?;
 
     let (small_repo_cs_id, small_repo_changesets) =
-        sync_changeset_and_derive_all_types(ctx.clone(), cs_id, &small_repo, &commit_syncer)
+        sync_changeset_and_derive_all_types(ctx.clone(), cs_id, &small_repo, &commit_sync_data)
             .await?;
 
-    check_mapping(ctx.clone(), &commit_syncer, cs_id, Some(small_repo_cs_id)).await;
+    check_mapping(
+        ctx.clone(),
+        &commit_sync_data,
+        cs_id,
+        Some(small_repo_cs_id),
+    )
+    .await;
 
     compare_expected_changesets(
         small_repo_changesets.last_chunk::<1>().unwrap(),
@@ -140,7 +146,7 @@ async fn test_valid_recursive_submodule_expansion_update_succeeds(fb: FacebookIn
     let SubmoduleSyncTestData {
         small_repo_info: (small_repo, _small_repo_cs_map),
         large_repo_info: (large_repo, large_repo_master),
-        commit_syncer,
+        commit_sync_data,
         ..
     } = build_submodule_backsync_test_data(
         fb,
@@ -177,10 +183,16 @@ async fn test_valid_recursive_submodule_expansion_update_succeeds(fb: FacebookIn
         .context("Failed to create commit modifying small_repo directory")?;
 
     let (small_repo_cs_id, small_repo_changesets) =
-        sync_changeset_and_derive_all_types(ctx.clone(), cs_id, &small_repo, &commit_syncer)
+        sync_changeset_and_derive_all_types(ctx.clone(), cs_id, &small_repo, &commit_sync_data)
             .await?;
 
-    check_mapping(ctx.clone(), &commit_syncer, cs_id, Some(small_repo_cs_id)).await;
+    check_mapping(
+        ctx.clone(),
+        &commit_sync_data,
+        cs_id,
+        Some(small_repo_cs_id),
+    )
+    .await;
 
     compare_expected_changesets(
         small_repo_changesets.last_chunk::<1>().unwrap(),
@@ -206,7 +218,7 @@ async fn test_full_submodule_expansion_deletion_succeeds(fb: FacebookInit) -> Re
 
     let SubmoduleSyncTestData {
         large_repo_info: (large_repo, large_repo_master),
-        commit_syncer,
+        commit_sync_data,
         small_repo_info: (small_repo, _small_repo_cs_map),
         ..
     } = build_submodule_backsync_test_data(
@@ -229,10 +241,16 @@ async fn test_full_submodule_expansion_deletion_succeeds(fb: FacebookInit) -> Re
         .context("Failed to create commit modifying small_repo directory")?;
 
     let (small_repo_cs_id, small_repo_changesets) =
-        sync_changeset_and_derive_all_types(ctx.clone(), cs_id, &small_repo, &commit_syncer)
+        sync_changeset_and_derive_all_types(ctx.clone(), cs_id, &small_repo, &commit_sync_data)
             .await?;
 
-    check_mapping(ctx.clone(), &commit_syncer, cs_id, Some(small_repo_cs_id)).await;
+    check_mapping(
+        ctx.clone(),
+        &commit_sync_data,
+        cs_id,
+        Some(small_repo_cs_id),
+    )
+    .await;
     compare_expected_changesets(
         small_repo_changesets.last_chunk::<1>().unwrap(),
         &[ExpectedChangeset::new(MESSAGE).with_deletions(vec![
@@ -288,7 +306,7 @@ async fn test_valid_recursive_submodule_expansion_deletion_succeeds(
     let SubmoduleSyncTestData {
         small_repo_info: (small_repo, _small_repo_cs_map),
         large_repo_info: (large_repo, large_repo_master),
-        commit_syncer,
+        commit_sync_data,
         ..
     } = build_submodule_backsync_test_data(
         fb,
@@ -321,10 +339,16 @@ async fn test_valid_recursive_submodule_expansion_deletion_succeeds(
         .context("Failed to create commit modifying small_repo directory")?;
 
     let (small_repo_cs_id, small_repo_changesets) =
-        sync_changeset_and_derive_all_types(ctx.clone(), cs_id, &small_repo, &commit_syncer)
+        sync_changeset_and_derive_all_types(ctx.clone(), cs_id, &small_repo, &commit_sync_data)
             .await?;
 
-    check_mapping(ctx.clone(), &commit_syncer, cs_id, Some(small_repo_cs_id)).await;
+    check_mapping(
+        ctx.clone(),
+        &commit_sync_data,
+        cs_id,
+        Some(small_repo_cs_id),
+    )
+    .await;
 
     compare_expected_changesets(
         small_repo_changesets.last_chunk::<1>().unwrap(),
@@ -352,7 +376,7 @@ async fn test_atomic_submodule_updates_with_other_changes_backsync_successfully(
 
     let SubmoduleSyncTestData {
         large_repo_info: (large_repo, large_repo_master),
-        commit_syncer,
+        commit_sync_data,
         small_repo_info: (small_repo, _small_repo_cs_map),
         ..
     } = build_submodule_backsync_test_data(
@@ -385,10 +409,16 @@ async fn test_atomic_submodule_updates_with_other_changes_backsync_successfully(
         .context("Failed to create commit modifying small_repo directory")?;
 
     let (small_repo_cs_id, small_repo_changesets) =
-        sync_changeset_and_derive_all_types(ctx.clone(), cs_id, &small_repo, &commit_syncer)
+        sync_changeset_and_derive_all_types(ctx.clone(), cs_id, &small_repo, &commit_sync_data)
             .await?;
 
-    check_mapping(ctx.clone(), &commit_syncer, cs_id, Some(small_repo_cs_id)).await;
+    check_mapping(
+        ctx.clone(),
+        &commit_sync_data,
+        cs_id,
+        Some(small_repo_cs_id),
+    )
+    .await;
 
     compare_expected_changesets(
         small_repo_changesets.last_chunk::<1>().unwrap(),
@@ -427,7 +457,7 @@ async fn test_changing_submodule_expansion_without_metadata_file_fails(
 
     let SubmoduleSyncTestData {
         large_repo_info: (large_repo, large_repo_master),
-        commit_syncer,
+        commit_sync_data,
         small_repo_info: (_small_repo, _small_repo_cs_map),
         ..
     } = build_submodule_backsync_test_data(
@@ -448,7 +478,7 @@ async fn test_changing_submodule_expansion_without_metadata_file_fails(
         .commit()
         .await
         .context("Failed to create commit modifying small_repo directory")?;
-    let sync_result = sync_to_master(ctx.clone(), &commit_syncer, cs_id).await;
+    let sync_result = sync_to_master(ctx.clone(), &commit_sync_data, cs_id).await;
 
     let expected_err_msg = concat!(
         "Expansion of submodule submodules/repo_b changed without updating ",
@@ -480,7 +510,7 @@ async fn test_changing_submodule_metadata_pointer_without_expansion_fails(
 
     let SubmoduleSyncTestData {
         large_repo_info: (large_repo, large_repo_master),
-        commit_syncer,
+        commit_sync_data,
         small_repo_info: (_small_repo, _small_repo_cs_map),
         ..
     } = build_submodule_backsync_test_data(
@@ -507,7 +537,7 @@ async fn test_changing_submodule_metadata_pointer_without_expansion_fails(
         .await
         .context("Failed to create commit modifying small_repo directory")?;
 
-    let sync_result = sync_to_master(ctx.clone(), &commit_syncer, cs_id).await;
+    let sync_result = sync_to_master(ctx.clone(), &commit_sync_data, cs_id).await;
 
     let expected_err_msg = "Files present in expansion are unaccounted for";
 
@@ -536,7 +566,7 @@ async fn test_changing_submodule_metadata_pointer_to_git_commit_from_another_rep
 
     let SubmoduleSyncTestData {
         large_repo_info: (large_repo, large_repo_master),
-        commit_syncer,
+        commit_sync_data,
         small_repo_info: (_small_repo, _small_repo_cs_map),
         ..
     } = build_submodule_backsync_test_data(
@@ -564,7 +594,7 @@ async fn test_changing_submodule_metadata_pointer_to_git_commit_from_another_rep
         .await
         .context("Failed to create commit modifying small_repo directory")?;
 
-    let sync_result = sync_to_master(ctx.clone(), &commit_syncer, cs_id).await;
+    let sync_result = sync_to_master(ctx.clone(), &commit_sync_data, cs_id).await;
 
     println!("Sync result: {0:#?}", &sync_result);
 
@@ -599,7 +629,7 @@ async fn test_deleting_submodule_metadata_file_without_expansion_passes_fails(
 
     let SubmoduleSyncTestData {
         large_repo_info: (large_repo, large_repo_master),
-        commit_syncer,
+        commit_sync_data,
         small_repo_info: (_small_repo, _small_repo_cs_map),
         ..
     } = build_submodule_backsync_test_data(
@@ -618,7 +648,7 @@ async fn test_deleting_submodule_metadata_file_without_expansion_passes_fails(
         .await
         .context("Failed to create commit modifying small_repo directory")?;
 
-    let sync_result = sync_to_master(ctx.clone(), &commit_syncer, cs_id).await;
+    let sync_result = sync_to_master(ctx.clone(), &commit_sync_data, cs_id).await;
 
     println!("Sync result: {0:#?}", &sync_result);
 
@@ -635,7 +665,7 @@ async fn test_deleting_submodule_metadata_file_without_expansion_passes_fails(
         .await
         .context("Failed to create commit modifying small_repo directory")?;
 
-    let sync_result = sync_to_master(ctx.clone(), &commit_syncer, cs_id).await;
+    let sync_result = sync_to_master(ctx.clone(), &commit_sync_data, cs_id).await;
 
     println!("Sync result: {0:#?}", &sync_result);
 
@@ -658,7 +688,7 @@ async fn test_deleting_submodule_expansion_without_metadata_file_fails(
 
     let SubmoduleSyncTestData {
         large_repo_info: (large_repo, large_repo_master),
-        commit_syncer,
+        commit_sync_data,
         small_repo_info: (_small_repo, _small_repo_cs_map),
         ..
     } = build_submodule_backsync_test_data(
@@ -678,7 +708,7 @@ async fn test_deleting_submodule_expansion_without_metadata_file_fails(
         .await
         .context("Failed to create commit modifying small_repo directory")?;
 
-    let sync_result = sync_to_master(ctx.clone(), &commit_syncer, cs_id).await;
+    let sync_result = sync_to_master(ctx.clone(), &commit_sync_data, cs_id).await;
 
     println!("Sync result: {0:#?}", &sync_result);
 
@@ -723,10 +753,10 @@ pub(crate) async fn build_submodule_backsync_test_data(
         vec![], // Known dangling submodule pointers
     )
     .await?;
-    let reverse_syncer = test_data.commit_syncer.reverse();
+    let reverse_syncer = test_data.commit_sync_data.reverse();
 
     Ok(SubmoduleSyncTestData {
-        commit_syncer: reverse_syncer,
+        commit_sync_data: reverse_syncer,
         ..test_data
     })
 }

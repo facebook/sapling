@@ -64,7 +64,7 @@ use context::CoreContext;
 use context::SessionContainer;
 use cross_repo_sync::CandidateSelectionHint;
 use cross_repo_sync::CommitSyncContext;
-use cross_repo_sync::CommitSyncer;
+use cross_repo_sync::CommitSyncData;
 use cross_repo_sync::ConcreteRepo as CrossRepo;
 use cross_repo_sync::PushrebaseRewriteDates;
 use cross_repo_sync::Source;
@@ -124,7 +124,7 @@ const SM_CLEANUP_TIMEOUT_SECS: u64 = 60;
 async fn run_in_single_sync_mode(
     ctx: &CoreContext,
     bcs_ids: Vec<ChangesetId>,
-    commit_syncer: CommitSyncer<Arc<Repo>>,
+    commit_sync_data: CommitSyncData<Arc<Repo>>,
     scuba_sample: MononokeScubaSampleBuilder,
     mb_target_bookmark: Option<BookmarkKey>,
     common_bookmarks: HashSet<BookmarkKey>,
@@ -148,11 +148,19 @@ async fn run_in_single_sync_mode(
             format!(
                 "Checking if {} is already synced {}->{}",
                 bcs_id,
-                commit_syncer.repos.get_source_repo().repo_identity().id(),
-                commit_syncer.repos.get_target_repo().repo_identity().id(),
+                commit_sync_data
+                    .repos
+                    .get_source_repo()
+                    .repo_identity()
+                    .id(),
+                commit_sync_data
+                    .repos
+                    .get_target_repo()
+                    .repo_identity()
+                    .id(),
             ),
         );
-        if commit_syncer
+        if commit_sync_data
             .commit_sync_outcome_exists(ctx, Source(bcs_id))
             .await?
         {
@@ -162,7 +170,7 @@ async fn run_in_single_sync_mode(
 
         let res = sync_commit_and_ancestors(
             ctx,
-            &commit_syncer,
+            &commit_sync_data,
             None, // from_cs_id,
             bcs_id,
             &mb_target_bookmark,
@@ -187,7 +195,7 @@ async fn run_in_single_sync_mode(
 async fn run_in_initial_import_mode_for_single_head(
     ctx: &CoreContext,
     bcs: ChangesetId,
-    commit_syncer: &CommitSyncer<Arc<Repo>>,
+    commit_sync_data: &CommitSyncData<Arc<Repo>>,
     config_version: CommitSyncConfigVersion,
     scuba_sample: MononokeScubaSampleBuilder,
     disable_progress_bar: bool,
@@ -200,11 +208,19 @@ async fn run_in_initial_import_mode_for_single_head(
         format!(
             "Checking if {} is already synced {}->{}",
             bcs,
-            commit_syncer.repos.get_source_repo().repo_identity().id(),
-            commit_syncer.repos.get_target_repo().repo_identity().id()
+            commit_sync_data
+                .repos
+                .get_source_repo()
+                .repo_identity()
+                .id(),
+            commit_sync_data
+                .repos
+                .get_target_repo()
+                .repo_identity()
+                .id()
         ),
     );
-    if commit_syncer
+    if commit_sync_data
         .commit_sync_outcome_exists(ctx, Source(bcs))
         .await?
     {
@@ -213,7 +229,7 @@ async fn run_in_initial_import_mode_for_single_head(
     }
     let res = sync_commits_for_initial_import(
         ctx,
-        commit_syncer,
+        commit_sync_data,
         scuba_sample.clone(),
         bcs,
         config_version,
@@ -239,7 +255,7 @@ async fn run_in_initial_import_mode_for_single_head(
 async fn run_in_initial_import_mode(
     ctx: &CoreContext,
     bcs_ids: Vec<ChangesetId>,
-    commit_syncer: CommitSyncer<Arc<Repo>>,
+    commit_sync_data: CommitSyncData<Arc<Repo>>,
     config_version: CommitSyncConfigVersion,
     scuba_sample: MononokeScubaSampleBuilder,
     disable_progress_bar: bool,
@@ -251,7 +267,7 @@ async fn run_in_initial_import_mode(
         run_in_initial_import_mode_for_single_head(
             ctx,
             bcs_id,
-            &commit_syncer,
+            &commit_sync_data,
             config_version.clone(),
             scuba_sample.clone(),
             disable_progress_bar,
@@ -265,8 +281,8 @@ async fn run_in_initial_import_mode(
 }
 
 enum TailingArgs<R> {
-    CatchUpOnce(CommitSyncer<R>),
-    LoopForever(CommitSyncer<R>),
+    CatchUpOnce(CommitSyncData<R>),
+    LoopForever(CommitSyncData<R>),
 }
 
 async fn run_in_tailing_mode(
@@ -283,11 +299,11 @@ async fn run_in_tailing_mode(
     live_commit_sync_config: Arc<CfgrLiveCommitSyncConfig>,
 ) -> Result<(), Error> {
     match tailing_args {
-        TailingArgs::CatchUpOnce(commit_syncer) => {
+        TailingArgs::CatchUpOnce(commit_sync_data) => {
             let scuba_sample = MononokeScubaSampleBuilder::with_discard();
             tail(
                 ctx,
-                &commit_syncer,
+                &commit_sync_data,
                 &target_mutable_counters,
                 scuba_sample,
                 &common_pushrebase_bookmarks,
@@ -300,8 +316,8 @@ async fn run_in_tailing_mode(
             .boxed()
             .await?;
         }
-        TailingArgs::LoopForever(commit_syncer) => {
-            let source_repo_id = commit_syncer.get_source_repo().repo_identity().id();
+        TailingArgs::LoopForever(commit_sync_data) => {
+            let source_repo_id = commit_sync_data.get_source_repo().repo_identity().id();
 
             loop {
                 let scuba_sample = base_scuba_sample.clone();
@@ -320,7 +336,7 @@ async fn run_in_tailing_mode(
 
                 let synced_something = tail(
                     ctx,
-                    &commit_syncer,
+                    &commit_sync_data,
                     &target_mutable_counters,
                     scuba_sample.clone(),
                     &common_pushrebase_bookmarks,
@@ -337,7 +353,7 @@ async fn run_in_tailing_mode(
                     log_noop_iteration(scuba_sample);
                     // Maintain the working copy equivalence mapping so we don't build up a backlog
                     for target_bookmark in common_pushrebase_bookmarks.iter() {
-                        let target_bookmark_value = commit_syncer
+                        let target_bookmark_value = commit_sync_data
                             .get_large_repo()
                             .bookmarks()
                             .get(ctx.clone(), target_bookmark)
@@ -352,7 +368,7 @@ async fn run_in_tailing_mode(
                         sync_commit(
                             ctx,
                             target_bookmark_value,
-                            &commit_syncer.reverse(),
+                            &commit_sync_data.reverse(),
                             CandidateSelectionHint::Only,
                             CommitSyncContext::XRepoSyncJob,
                             false,
@@ -371,7 +387,7 @@ async fn run_in_tailing_mode(
 
 async fn tail(
     ctx: &CoreContext,
-    commit_syncer: &CommitSyncer<Arc<Repo>>,
+    commit_sync_data: &CommitSyncData<Arc<Repo>>,
     target_mutable_counters: &ArcMutableCounters,
     mut scuba_sample: MononokeScubaSampleBuilder,
     common_pushrebase_bookmarks: &HashSet<BookmarkKey>,
@@ -381,9 +397,9 @@ async fn tail(
     maybe_bookmark_regex: &Option<Regex>,
     pushrebase_rewrite_dates: PushrebaseRewriteDates,
 ) -> Result<bool, Error> {
-    let small_repo = commit_syncer.get_source_repo();
+    let small_repo = commit_sync_data.get_source_repo();
     let bookmark_update_log = small_repo.bookmark_update_log();
-    let counter = format_counter(commit_syncer);
+    let counter = format_counter(commit_sync_data);
 
     let maybe_start_id = target_mutable_counters.get_counter(ctx, &counter).await?;
     let start_id = maybe_start_id.ok_or_else(|| format_err!("counter not found"))?;
@@ -398,7 +414,7 @@ async fn tail(
         .try_collect::<Vec<_>>()
         .await?;
 
-    let remaining_entries = commit_syncer
+    let remaining_entries = commit_sync_data
         .get_source_repo()
         .bookmark_update_log()
         .count_further_bookmark_log_entries(ctx.clone(), start_id.try_into()?, None)
@@ -424,7 +440,7 @@ async fn tail(
         if !skip {
             let (stats, res) = sync_single_bookmark_update_log(
                 ctx,
-                commit_syncer,
+                commit_sync_data,
                 entry,
                 common_pushrebase_bookmarks,
                 scuba_sample.clone(),
@@ -437,7 +453,7 @@ async fn tail(
             let maybe_synced_css = res?;
 
             if let SyncResult::Synced(synced_css) = maybe_synced_css {
-                commit_syncer
+                commit_sync_data
                     .get_target_repo()
                     .repo_derived_data()
                     .manager()
@@ -447,7 +463,7 @@ async fn tail(
                 maybe_apply_backpressure(
                     ctx,
                     backpressure_params,
-                    commit_syncer.get_target_repo(),
+                    commit_sync_data.get_target_repo(),
                     scuba_sample.clone(),
                     sleep_duration,
                 )
@@ -540,11 +556,11 @@ async fn maybe_apply_backpressure(
     Ok(())
 }
 
-fn format_counter<R>(commit_syncer: &CommitSyncer<R>) -> String
+fn format_counter<R>(commit_sync_data: &CommitSyncData<R>) -> String
 where
     R: RepoIdentityRef + cross_repo_sync::Repo,
 {
-    let source_repo_id = commit_syncer.get_source_repo_id();
+    let source_repo_id = commit_sync_data.get_source_repo_id();
     format!("xreposync_from_{}", source_repo_id)
 }
 

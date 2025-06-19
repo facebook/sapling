@@ -16,8 +16,8 @@ use clap::Args;
 use cmdlib_cross_repo::repo_provider_from_mononoke_app;
 use commit_id::parse_commit_id;
 use context::CoreContext;
+use cross_repo_sync::CommitSyncData;
 use cross_repo_sync::CommitSyncRepos;
-use cross_repo_sync::CommitSyncer;
 use cross_repo_sync::Source;
 use cross_repo_sync::Target;
 use cross_repo_sync::get_all_submodule_deps_from_repo_pair;
@@ -125,11 +125,12 @@ pub async fn run(ctx: &CoreContext, app: MononokeApp, args: CheckPrereqsArgs) ->
     let commit_sync_repos =
         CommitSyncRepos::from_source_and_target_repos(source_repo, target_repo, submodule_deps)?;
 
-    let commit_syncer = CommitSyncer::new(ctx, commit_sync_repos, live_commit_sync_config.clone());
+    let commit_sync_data =
+        CommitSyncData::new(ctx, commit_sync_repos, live_commit_sync_config.clone());
 
     verify_working_copy_with_version(
         ctx,
-        &commit_syncer,
+        &commit_sync_data,
         Source(source_cs_id),
         Target(target_cs_id),
         &version,

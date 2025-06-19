@@ -31,7 +31,7 @@ async fn test_verify_working_copy_with_submodules(fb: FacebookInit) -> Result<()
     let SubmoduleSyncTestData {
         small_repo_info: (_small_repo, small_repo_cs_map),
         large_repo_info: (_large_repo, large_repo_master),
-        commit_syncer,
+        commit_sync_data,
         live_commit_sync_config,
         ..
     } = build_submodule_sync_test_data(
@@ -44,14 +44,14 @@ async fn test_verify_working_copy_with_submodules(fb: FacebookInit) -> Result<()
     let small_repo_master = small_repo_cs_map.get("A_C").unwrap();
     verify_working_copy(
         &ctx,
-        &commit_syncer,
+        &commit_sync_data,
         *small_repo_master,
         live_commit_sync_config.clone(),
     )
     .await?;
     verify_working_copy(
         &ctx,
-        &commit_syncer.reverse(),
+        &commit_sync_data.reverse(),
         large_repo_master,
         live_commit_sync_config,
     )
@@ -69,7 +69,7 @@ async fn test_verify_working_copy_with_submodules_simple_error_case(
     let SubmoduleSyncTestData {
         small_repo_info: (_small_repo, small_repo_cs_map),
         large_repo_info: (large_repo, large_repo_master),
-        commit_syncer,
+        commit_sync_data,
         live_commit_sync_config,
         ..
     } = build_submodule_sync_test_data(
@@ -91,7 +91,7 @@ async fn test_verify_working_copy_with_submodules_simple_error_case(
     assert!(
         verify_working_copy_with_version(
             &ctx,
-            &commit_syncer,
+            &commit_sync_data,
             Source(*small_repo_master),
             Target(large_repo_with_changed_expansion_csid),
             &base_commit_sync_version_name(),

@@ -29,20 +29,20 @@ pub async fn verify_working_copy(
     args: VerifyWorkingCopyArgs,
 ) -> Result<()> {
     let commit_syncers = create_commit_syncers_from_app(ctx, app, source_repo, target_repo).await?;
-    let commit_syncer = commit_syncers.large_to_small;
+    let commit_sync_data = commit_syncers.large_to_small;
 
     let large_repo_cs_id = parse_commit_id(
         ctx,
-        commit_syncer.get_large_repo(),
+        commit_sync_data.get_large_repo(),
         &args.large_repo_commit_id,
     )
     .await?;
 
     cross_repo_sync::verify_working_copy(
         ctx,
-        &commit_syncer,
+        &commit_sync_data,
         large_repo_cs_id,
-        commit_syncer.get_live_commit_sync_config().clone(),
+        commit_sync_data.get_live_commit_sync_config().clone(),
     )
     .await
 }

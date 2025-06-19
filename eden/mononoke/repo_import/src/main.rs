@@ -34,8 +34,8 @@ use cmdlib_cross_repo::repo_provider_from_mononoke_app;
 use context::CoreContext;
 use cross_repo_sync::CandidateSelectionHint;
 use cross_repo_sync::CommitSyncContext;
+use cross_repo_sync::CommitSyncData;
 use cross_repo_sync::CommitSyncOutcome;
-use cross_repo_sync::CommitSyncer;
 use cross_repo_sync::Repo as CrossRepo;
 use cross_repo_sync::Syncers;
 use cross_repo_sync::create_commit_syncers;
@@ -146,7 +146,7 @@ struct RepoImportSetting {
 
 #[derive(Clone)]
 struct SmallRepoBackSyncVars {
-    large_to_small_syncer: CommitSyncer<Repo>,
+    large_to_small_syncer: CommitSyncData<Repo>,
     target_repo_dbs: TargetRepoDbs,
     small_repo_bookmark: BookmarkKey,
     small_repo: Repo,
@@ -268,7 +268,7 @@ async fn rewrite_file_paths(
 
 async fn find_mapping_version(
     ctx: &CoreContext,
-    large_to_small_syncer: &CommitSyncer<Repo>,
+    large_to_small_syncer: &CommitSyncData<Repo>,
     dest_bookmark: &BookmarkKey,
 ) -> Result<Option<CommitSyncConfigVersion>, Error> {
     let bookmark_val = large_to_small_syncer
@@ -284,7 +284,7 @@ async fn find_mapping_version(
 async fn back_sync_commits_to_small_repo(
     ctx: &CoreContext,
     small_repo: &Repo,
-    large_to_small_syncer: &CommitSyncer<Repo>,
+    large_to_small_syncer: &CommitSyncData<Repo>,
     bcs_ids: &[ChangesetId],
     version: &CommitSyncConfigVersion,
 ) -> Result<Vec<ChangesetId>, Error> {
@@ -331,7 +331,7 @@ async fn back_sync_commits_to_small_repo(
 
 async fn wait_until_backsynced_and_return_version(
     ctx: &CoreContext,
-    large_to_small_syncer: &CommitSyncer<Repo>,
+    large_to_small_syncer: &CommitSyncData<Repo>,
     cs_id: ChangesetId,
 ) -> Result<Option<CommitSyncConfigVersion>, Error> {
     let sleep_time_secs = 10;
@@ -823,7 +823,7 @@ async fn get_large_repo_config_if_pushredirected(
 async fn get_large_repo_setting<R>(
     ctx: &CoreContext,
     small_repo_setting: &RepoImportSetting,
-    commit_syncer: &CommitSyncer<R>,
+    commit_sync_data: &CommitSyncData<R>,
 ) -> Result<RepoImportSetting, Error>
 where
     R: CrossRepo,
@@ -839,24 +839,24 @@ where
     } = small_repo_setting;
 
     let large_importing_bookmark =
-        commit_syncer
+        commit_sync_data
             .rename_bookmark(importing_bookmark).await?
             .ok_or_else(|| format_err!(
         "Bookmark {:?} unexpectedly dropped in {:?} when trying to generate large_importing_bookmark",
         importing_bookmark,
-        commit_syncer
+        commit_sync_data
     ))?;
     info!(
         ctx.logger(),
         "Set large repo's importing bookmark to {}", large_importing_bookmark
     );
-    let large_dest_bookmark = commit_syncer
+    let large_dest_bookmark = commit_sync_data
         .rename_bookmark(dest_bookmark).await?
         .ok_or_else(|| {
             format_err!(
         "Bookmark {:?} unexpectedly dropped in {:?} when trying to generate large_dest_bookmark",
         dest_bookmark,
-        commit_syncer
+        commit_sync_data
     )
         })?;
     info!(

@@ -13,7 +13,7 @@ use anyhow::Result;
 use anyhow::format_err;
 use cmdlib_cross_repo::create_commit_syncers_from_app;
 use context::CoreContext;
-use cross_repo_sync::CommitSyncer;
+use cross_repo_sync::CommitSyncData;
 use fsnodes::RootFsnodeId;
 use futures::TryStreamExt;
 use manifest::Entry;
@@ -135,7 +135,7 @@ pub async fn run(
 
 async fn find_mover_for_commit<R: cross_repo_sync::Repo>(
     ctx: &CoreContext,
-    commit_syncer: &CommitSyncer<R>,
+    commit_syncer: &CommitSyncData<R>,
     cs_id: ChangesetId,
 ) -> Result<Arc<dyn Mover>, Error> {
     let maybe_sync_outcome = commit_syncer.get_commit_sync_outcome(ctx, cs_id).await?;

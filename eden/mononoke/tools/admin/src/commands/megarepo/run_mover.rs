@@ -30,10 +30,10 @@ pub struct RunMoverArgs {
 pub async fn run(ctx: &CoreContext, app: MononokeApp, args: RunMoverArgs) -> Result<()> {
     let source_repo: Repo = app.open_repo(&args.repo_args.source_repo).await?;
     let target_repo: Repo = app.open_repo(&args.repo_args.target_repo).await?;
-    let commit_syncer =
+    let commit_sync_data =
         create_single_direction_commit_syncer(ctx, &app, source_repo, target_repo).await?;
     let version = CommitSyncConfigVersion(args.version);
-    let movers = commit_syncer.get_movers_by_version(&version).await?;
+    let movers = commit_sync_data.get_movers_by_version(&version).await?;
     let path = NonRootMPath::new(args.path)?;
     println!("{:?}", movers.mover.move_path(&path));
     Ok(())

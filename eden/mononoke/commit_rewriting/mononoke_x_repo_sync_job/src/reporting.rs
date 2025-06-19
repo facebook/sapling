@@ -8,7 +8,7 @@
 use anyhow::Error;
 use bookmarks::BookmarkUpdateLogId;
 use context::CoreContext;
-use cross_repo_sync::CommitSyncer;
+use cross_repo_sync::CommitSyncData;
 use cross_repo_sync::Repo as CrossRepo;
 use futures_stats::FutureStats;
 use mononoke_types::ChangesetId;
@@ -37,11 +37,11 @@ const SUCCESS: &str = "success";
 /// this tailer run
 pub fn add_common_fields<R: CrossRepo>(
     scuba_sample: &mut MononokeScubaSampleBuilder,
-    commit_syncer: &CommitSyncer<R>,
+    commit_sync_data: &CommitSyncData<R>,
 ) {
     scuba_sample
-        .add(SOURCE_REPO, commit_syncer.get_source_repo_id().id())
-        .add(TARGET_REPO, commit_syncer.get_target_repo_id().id());
+        .add(SOURCE_REPO, commit_sync_data.get_source_repo_id().id())
+        .add(TARGET_REPO, commit_sync_data.get_target_repo_id().id());
 }
 
 /// Log the fact of successful syncing of the single changeset to Scuba

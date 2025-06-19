@@ -29,8 +29,8 @@ use cmdlib_cross_repo::create_single_direction_commit_syncer;
 use context::CoreContext;
 use cross_repo_sync::CandidateSelectionHint;
 use cross_repo_sync::CommitSyncContext;
+use cross_repo_sync::CommitSyncData;
 use cross_repo_sync::CommitSyncOutcome;
-use cross_repo_sync::CommitSyncer;
 use cross_repo_sync::sync_commit;
 use futures::future;
 use futures::future::FutureExt;
@@ -75,7 +75,7 @@ pub(crate) async fn run_backsyncer(
 ) -> Result<(), Error> {
     let args: BacksyncerArgs = app.args()?;
     let logger = ctx.logger();
-    let commit_syncer =
+    let commit_sync_data =
         create_single_direction_commit_syncer(&ctx, &app, large_repo.clone(), small_repo.clone())
             .await?;
 
@@ -86,12 +86,12 @@ pub(crate) async fn run_backsyncer(
         small_repo.repo_identity().id(),
     );
 
-    let live_commit_sync_config = commit_syncer.live_commit_sync_config.clone();
+    let live_commit_sync_config = commit_sync_data.live_commit_sync_config.clone();
 
     match args.command {
         BacksyncerCommand::Once => {
             let target_repo_dbs = Arc::new(
-                open_backsyncer_dbs(commit_syncer.get_target_repo())
+                open_backsyncer_dbs(commit_sync_data.get_target_repo())
                     .boxed()
                     .await?,
             );
@@ -99,7 +99,7 @@ pub(crate) async fn run_backsyncer(
             // TODO(ikostia): why do we use discarding ScubaSample for BACKSYNC_ALL?
             backsync_latest(
                 ctx.as_ref().clone(),
-                commit_syncer,
+                commit_sync_data,
                 target_repo_dbs,
                 BacksyncLimit::NoLimit,
                 cancellation_requested,
@@ -113,14 +113,14 @@ pub(crate) async fn run_backsyncer(
         }
         BacksyncerCommand::Forever => {
             let target_repo_dbs = Arc::new(
-                open_backsyncer_dbs(commit_syncer.get_target_repo())
+                open_backsyncer_dbs(commit_sync_data.get_target_repo())
                     .boxed()
                     .await?,
             );
 
             let f = backsync_forever(
                 ctx.as_ref(),
-                commit_syncer,
+                commit_sync_data,
                 target_repo_dbs,
                 large_repo.repo_identity().name().to_string(),
                 small_repo.repo_identity().name().to_string(),
@@ -138,7 +138,7 @@ pub(crate) async fn run_backsyncer(
             let file = BufReader::new(&inputfile);
             let batch_size = mb_batch_size.unwrap_or(100);
 
-            let source_repo = commit_syncer.get_source_repo().clone();
+            let source_repo = commit_sync_data.get_source_repo().clone();
 
             let mut hg_cs_ids = vec![];
             for line in file.lines() {
@@ -147,7 +147,7 @@ pub(crate) async fn run_backsyncer(
             let total_to_backsync = hg_cs_ids.len();
             info!(ctx.logger(), "backsyncing {} commits", total_to_backsync);
 
-            let commit_syncer = &commit_syncer;
+            let commit_sync_data = &commit_sync_data;
 
             // Before processing each commit, check if cancellation has
             // been requested and exit if that's the case.
@@ -184,15 +184,16 @@ pub(crate) async fn run_backsyncer(
                                     sync_commit(
                                         ctx.as_ref(),
                                         bonsai.clone(),
-                                        commit_syncer,
+                                        commit_sync_data,
                                         CandidateSelectionHint::Only,
                                         CommitSyncContext::Backsyncer,
                                         false,
                                     )
                                     .await?;
 
-                                    let maybe_sync_outcome =
-                                        commit_syncer.get_commit_sync_outcome(&ctx, bonsai).await?;
+                                    let maybe_sync_outcome = commit_sync_data
+                                        .get_commit_sync_outcome(&ctx, bonsai)
+                                        .await?;
 
                                     info!(
                                         ctx.logger(),
@@ -207,7 +208,7 @@ pub(crate) async fn run_backsyncer(
                                     derive_target_hg_changesets(
                                         &ctx,
                                         maybe_target_cs_id,
-                                        commit_syncer,
+                                        commit_sync_data,
                                     )
                                     .await
                                 }
@@ -240,14 +241,14 @@ pub(crate) async fn run_backsyncer(
 
 async fn backsync_forever(
     ctx: &CoreContext,
-    commit_syncer: CommitSyncer<Repo>,
+    commit_sync_data: CommitSyncData<Repo>,
     target_repo_dbs: Arc<TargetRepoDbs>,
     source_repo_name: String,
     target_repo_name: String,
     live_commit_sync_config: Arc<dyn LiveCommitSyncConfig>,
     cancellation_requested: Arc<AtomicBool>,
 ) -> Result<(), Error> {
-    let target_repo_id = commit_syncer.get_target_repo_id();
+    let target_repo_id = commit_sync_data.get_target_repo_id();
     let mut commit_only_backsync_future: Box<dyn futures::Future<Output = ()> + Send + Unpin> =
         Box::new(future::ready(()));
 
@@ -265,7 +266,7 @@ async fn backsync_forever(
             .await?;
 
         if enabled {
-            let delay = calculate_delay(ctx, &commit_syncer, &target_repo_dbs).await?;
+            let delay = calculate_delay(ctx, &commit_sync_data, &target_repo_dbs).await?;
             log_delay(ctx, &delay, &source_repo_name, &target_repo_name);
             if delay.remaining_entries == 0 {
                 debug!(ctx.logger(), "no entries remained");
@@ -275,7 +276,7 @@ async fn backsync_forever(
 
                 commit_only_backsync_future = backsync_latest(
                     ctx.clone(),
-                    commit_syncer.clone(),
+                    commit_sync_data.clone(),
                     target_repo_dbs.clone(),
                     BacksyncLimit::NoLimit,
                     Arc::clone(&cancellation_requested),
@@ -314,11 +315,11 @@ fn extract_cs_id_from_sync_outcome(
 async fn derive_target_hg_changesets(
     ctx: &CoreContext,
     maybe_target_cs_id: Option<ChangesetId>,
-    commit_syncer: &CommitSyncer<Repo>,
+    commit_sync_data: &CommitSyncData<Repo>,
 ) -> Result<(), Error> {
     match maybe_target_cs_id {
         Some(target_cs_id) => {
-            let hg_cs_id = commit_syncer
+            let hg_cs_id = commit_sync_data
                 .get_target_repo()
                 .derive_hg_changeset(ctx, target_cs_id)
                 .await?;
@@ -349,18 +350,18 @@ impl Delay {
 // Returns logs delay and returns the number of remaining bookmark update log entries
 async fn calculate_delay(
     ctx: &CoreContext,
-    commit_syncer: &CommitSyncer<Repo>,
+    commit_sync_data: &CommitSyncData<Repo>,
     target_repo_dbs: &TargetRepoDbs,
 ) -> Result<Delay, Error> {
     let TargetRepoDbs { counters, .. } = target_repo_dbs;
-    let source_repo_id = commit_syncer.get_source_repo().repo_identity().id();
+    let source_repo_id = commit_sync_data.get_source_repo().repo_identity().id();
 
     let counter_name = format_counter(&source_repo_id);
     let maybe_counter = counters.get_counter(ctx, &counter_name).await?;
     let counter = maybe_counter
         .ok_or_else(|| format_err!("{} counter not found", counter_name))?
         .try_into()?;
-    let source_repo = commit_syncer.get_source_repo();
+    let source_repo = commit_sync_data.get_source_repo();
     let next_entry = source_repo
         .bookmark_update_log()
         .read_next_bookmark_log_entries(ctx.clone(), counter, 1, Freshness::MostRecent)

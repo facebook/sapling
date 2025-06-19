@@ -79,7 +79,7 @@ use crate::commit_sync_outcome::PluralCommitSyncOutcome;
 use crate::commit_syncers_lib::CommitSyncRepos;
 use crate::commit_syncers_lib::find_toposorted_unsynced_ancestors;
 use crate::commit_syncers_lib::update_mapping_with_version;
-use crate::sync_commit::CommitSyncer;
+use crate::sync_commit::CommitSyncData;
 use crate::sync_commit::sync_commit;
 use crate::sync_commit::unsafe_always_rewrite_sync_commit;
 use crate::sync_commit::unsafe_sync_commit;
@@ -167,7 +167,7 @@ async fn create_empty_commit(ctx: CoreContext, repo: &TestRepo) -> ChangesetId {
 
 pub(crate) async fn get_version(
     ctx: &CoreContext,
-    config: &CommitSyncer<TestRepo>,
+    config: &CommitSyncData<TestRepo>,
     source_bcs_id: ChangesetId,
 ) -> Result<CommitSyncConfigVersion, Error> {
     let (_unsynced_ancestors, unsynced_ancestors_versions) =
@@ -186,7 +186,7 @@ pub(crate) async fn get_version(
 /// It **expects all of the commit's ancestors to be synced**.
 pub(crate) async fn sync_to_master(
     ctx: CoreContext,
-    config: &CommitSyncer<TestRepo>,
+    config: &CommitSyncData<TestRepo>,
     source_bcs_id: ChangesetId,
 ) -> Result<Option<ChangesetId>, Error> {
     let bookmark_name = BookmarkKey::new("master").unwrap();
@@ -211,7 +211,7 @@ pub(crate) async fn sync_to_master(
 
 async fn get_bcs_id(
     ctx: &CoreContext,
-    config: &CommitSyncer<TestRepo>,
+    config: &CommitSyncData<TestRepo>,
     source_hg_cs: HgChangesetId,
 ) -> ChangesetId {
     config
@@ -225,7 +225,7 @@ async fn get_bcs_id(
 
 pub(crate) async fn check_mapping(
     ctx: CoreContext,
-    config: &CommitSyncer<TestRepo>,
+    config: &CommitSyncData<TestRepo>,
     source_bcs_id: ChangesetId,
     expected_bcs_id: Option<ChangesetId>,
 ) {
@@ -315,7 +315,7 @@ fn create_small_to_large_commit_syncer(
     small_repo: TestRepo,
     large_repo: TestRepo,
     live_commit_sync_config: Arc<dyn LiveCommitSyncConfig>,
-) -> Result<CommitSyncer<TestRepo>, Error> {
+) -> Result<CommitSyncData<TestRepo>, Error> {
     let submodule_deps = SubmoduleDeps::ForSync(HashMap::new());
     let repos = CommitSyncRepos::new(
         small_repo,
@@ -324,7 +324,7 @@ fn create_small_to_large_commit_syncer(
         submodule_deps,
     );
 
-    Ok(CommitSyncer::new(ctx, repos, live_commit_sync_config))
+    Ok(CommitSyncData::new(ctx, repos, live_commit_sync_config))
 }
 
 fn create_large_to_small_commit_syncer(
@@ -332,7 +332,7 @@ fn create_large_to_small_commit_syncer(
     small_repo: TestRepo,
     large_repo: TestRepo,
     live_commit_sync_config: Arc<dyn LiveCommitSyncConfig>,
-) -> Result<CommitSyncer<TestRepo>, Error> {
+) -> Result<CommitSyncData<TestRepo>, Error> {
     // Large to small has no submodule_deps
     let submodule_deps = SubmoduleDeps::NotNeeded;
     let repos = CommitSyncRepos::new(
@@ -342,7 +342,7 @@ fn create_large_to_small_commit_syncer(
         submodule_deps,
     );
 
-    Ok(CommitSyncer::new(ctx, repos, live_commit_sync_config))
+    Ok(CommitSyncData::new(ctx, repos, live_commit_sync_config))
 }
 
 #[mononoke::fbinit_test]
@@ -719,7 +719,7 @@ async fn test_sync_implicit_deletes(fb: FacebookInit) -> Result<(), Error> {
     ManyFilesDirs::init_repo(fb, &small_repo).await?;
     let repo = small_repo.clone();
 
-    let mut commit_syncer = create_small_to_large_commit_syncer(
+    let mut commit_sync_data = create_small_to_large_commit_syncer(
         &ctx,
         repo.clone(),
         megarepo.clone(),
@@ -769,15 +769,15 @@ async fn test_sync_implicit_deletes(fb: FacebookInit) -> Result<(), Error> {
     );
 
     let version = version_name_with_small_repo();
-    commit_syncer.live_commit_sync_config = live_commit_sync_config;
-    commit_syncer.repos = commit_sync_repos;
+    commit_sync_data.live_commit_sync_config = live_commit_sync_config;
+    commit_sync_data.repos = commit_sync_repos;
 
     let megarepo_initial_bcs_id = create_initial_commit(ctx.clone(), &megarepo).await;
 
     // Insert a fake mapping entry, so that syncs succeed
     let repo_initial_bcs_id = get_bcs_id(
         &ctx,
-        &commit_syncer,
+        &commit_sync_data,
         HgChangesetId::from_str("2f866e7e549760934e31bf0420a873f65100ad63").unwrap(),
     )
     .await;
@@ -787,7 +787,7 @@ async fn test_sync_implicit_deletes(fb: FacebookInit) -> Result<(), Error> {
         repo.repo_identity().id(),
         repo_initial_bcs_id,
         version,
-        commit_syncer.get_source_repo_type(),
+        commit_sync_data.get_source_repo_type(),
     );
     mapping.add(&ctx, entry).await?;
 
@@ -798,12 +798,12 @@ async fn test_sync_implicit_deletes(fb: FacebookInit) -> Result<(), Error> {
     // - "dir1/subdir1/subsubdir2/file_2"
     let repo_base_bcs_id = get_bcs_id(
         &ctx,
-        &commit_syncer,
+        &commit_sync_data,
         HgChangesetId::from_str("d261bc7900818dea7c86935b3fb17a33b2e3a6b4").unwrap(),
     )
     .await;
 
-    sync_to_master(ctx.clone(), &commit_syncer, repo_base_bcs_id)
+    sync_to_master(ctx.clone(), &commit_sync_data, repo_base_bcs_id)
         .await?
         .expect("Unexpectedly rewritten into nothingness");
 
@@ -812,12 +812,12 @@ async fn test_sync_implicit_deletes(fb: FacebookInit) -> Result<(), Error> {
     // "dir1/subdir1/subsubdir1" and "dir1/subdir1/subsubdir2".
     let repo_implicit_delete_bcs_id = get_bcs_id(
         &ctx,
-        &commit_syncer,
+        &commit_sync_data,
         HgChangesetId::from_str("051946ed218061e925fb120dac02634f9ad40ae2").unwrap(),
     )
     .await;
     let megarepo_implicit_delete_bcs_id =
-        sync_to_master(ctx.clone(), &commit_syncer, repo_implicit_delete_bcs_id)
+        sync_to_master(ctx.clone(), &commit_sync_data, repo_implicit_delete_bcs_id)
             .await?
             .expect("Unexpectedly rewritten into nothingness");
 
@@ -926,7 +926,7 @@ async fn test_sync_parent_search(fb: FacebookInit) -> Result<(), Error> {
 
 async fn check_rewritten_multiple(
     ctx: &CoreContext,
-    syncer: &CommitSyncer<TestRepo>,
+    syncer: &CommitSyncData<TestRepo>,
     cs_id: ChangesetId,
     expected_rewrite_count: usize,
 ) -> Result<(), Error> {
@@ -972,7 +972,7 @@ async fn get_multiple_master_mapping_setup(
         TestRepo,
         ChangesetId,
         ChangesetId,
-        CommitSyncer<TestRepo>,
+        CommitSyncData<TestRepo>,
     ),
     Error,
 > {
@@ -1634,7 +1634,7 @@ async fn prepare_commit_syncer_with_mapping_change(
     (
         CommitSyncConfigVersion,
         CommitSyncConfigVersion,
-        CommitSyncer<TestRepo>,
+        CommitSyncData<TestRepo>,
         Arc<dyn LiveCommitSyncConfig>,
     ),
     Error,
@@ -1837,7 +1837,7 @@ async fn merge_test_setup(
 ) -> Result<
     (
         CoreContext,
-        CommitSyncer<TestRepo>,
+        CommitSyncData<TestRepo>,
         HashMap<Option<CommitSyncConfigVersion>, Vec<ChangesetId>>,
     ),
     Error,
@@ -2085,8 +2085,8 @@ async fn test_no_accidental_preserved_roots(
     live_commit_sync_config: Arc<dyn LiveCommitSyncConfig>,
 ) -> Result<(), Error> {
     let version = version_name_with_small_repo();
-    let commit_syncer = {
-        let mut commit_syncer = match &commit_sync_repos.get_direction() {
+    let commit_sync_data = {
+        let mut commit_sync_data = match &commit_sync_repos.get_direction() {
             CommitSyncDirection::Backwards => create_large_to_small_commit_syncer(
                 &ctx,
                 commit_sync_repos.get_small_repo().clone(),
@@ -2118,10 +2118,10 @@ async fn test_no_accidental_preserved_roots(
             },
         };
         let commit_sync_config = CommitSyncConfig {
-            large_repo_id: commit_syncer.get_large_repo().repo_identity().id(),
+            large_repo_id: commit_sync_data.get_large_repo().repo_identity().id(),
             common_pushrebase_bookmarks: vec![BookmarkKey::new("master")?],
             small_repos: hashmap! {
-                commit_syncer.get_small_repo().repo_identity().id() => small_repo_config,
+                commit_sync_data.get_small_repo().repo_identity().id() => small_repo_config,
             },
             version_name: version.clone(),
         };
@@ -2129,12 +2129,12 @@ async fn test_no_accidental_preserved_roots(
         let common_config = CommonCommitSyncConfig {
             common_pushrebase_bookmarks: vec![BookmarkKey::new("master")?],
             small_repos: hashmap! {
-                commit_syncer.get_small_repo().repo_identity().id() => SmallRepoPermanentConfig {
+                commit_sync_data.get_small_repo().repo_identity().id() => SmallRepoPermanentConfig {
                     bookmark_prefix: AsciiString::new(),
                     common_pushrebase_bookmarks_map: HashMap::new(),
                 }
             },
-            large_repo_id: commit_syncer.get_large_repo().repo_identity().id(),
+            large_repo_id: commit_sync_data.get_large_repo().repo_identity().id(),
         };
 
         let (sync_config, source) = TestLiveCommitSyncConfig::new_with_source();
@@ -2143,10 +2143,10 @@ async fn test_no_accidental_preserved_roots(
 
         let live_commit_sync_config = Arc::new(sync_config);
 
-        commit_syncer.live_commit_sync_config = live_commit_sync_config;
-        commit_syncer.repos = commit_sync_repos.clone();
+        commit_sync_data.live_commit_sync_config = live_commit_sync_config;
+        commit_sync_data.repos = commit_sync_repos.clone();
 
-        commit_syncer
+        commit_sync_data
     };
 
     let root_commit = create_initial_commit(ctx.clone(), commit_sync_repos.get_source_repo()).await;
@@ -2154,14 +2154,14 @@ async fn test_no_accidental_preserved_roots(
     unsafe_sync_commit(
         &ctx,
         root_commit,
-        &commit_syncer,
+        &commit_sync_data,
         CandidateSelectionHint::Only,
         CommitSyncContext::Tests,
         Some(CommitSyncConfigVersion("TEST_VERSION_NAME".to_string())),
         false, // add_mapping_to_hg_extra
     )
     .await?;
-    let outcome = commit_syncer
+    let outcome = commit_sync_data
         .get_commit_sync_outcome(&ctx, root_commit)
         .await?;
     assert!(matches!(outcome, Some(CommitSyncOutcome::RewrittenAs(_, v)) if v == version));
@@ -2261,7 +2261,7 @@ async fn test_not_sync_candidate_if_mapping_does_not_have_small_repo(
     );
 
     let large_to_first_small_commit_syncer =
-        CommitSyncer::new(&ctx, repos.clone(), live_commit_sync_config.clone());
+        CommitSyncData::new(&ctx, repos.clone(), live_commit_sync_config.clone());
 
     let first_bcs_id = CreateCommitContext::new_root(&ctx, &large_repo)
         .add_file("file", "content")
@@ -2287,7 +2287,7 @@ async fn test_not_sync_candidate_if_mapping_does_not_have_small_repo(
     );
 
     let large_to_second_small_commit_syncer =
-        CommitSyncer::new(&ctx, repos.clone(), live_commit_sync_config.clone());
+        CommitSyncData::new(&ctx, repos.clone(), live_commit_sync_config.clone());
     sync_commit(
         &ctx,
         first_bcs_id,

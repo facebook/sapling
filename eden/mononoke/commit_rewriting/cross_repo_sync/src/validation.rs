@@ -68,7 +68,7 @@ use sorted_vector_map::SortedVectorMap;
 use crate::commit_sync_config_utils::get_git_submodule_action_by_version;
 use crate::commit_syncers_lib::Syncers;
 use crate::commit_syncers_lib::submodule_metadata_file_prefix_and_dangling_pointers;
-use crate::sync_commit::CommitSyncer;
+use crate::sync_commit::CommitSyncData;
 use crate::types::Repo;
 use crate::types::Source;
 use crate::types::Target;
@@ -87,14 +87,15 @@ use crate::types::Target;
 /// hack is mostly contained to wrap_mover_result function.
 pub async fn verify_working_copy<'a, R: Repo>(
     ctx: &'a CoreContext,
-    commit_syncer: &'a CommitSyncer<R>,
+    commit_sync_data: &'a CommitSyncData<R>,
     source_hash: ChangesetId,
     live_commit_sync_config: Arc<dyn LiveCommitSyncConfig>,
 ) -> Result<(), Error> {
-    let (target_hash, version) = get_synced_commit(ctx.clone(), commit_syncer, source_hash).await?;
+    let (target_hash, version) =
+        get_synced_commit(ctx.clone(), commit_sync_data, source_hash).await?;
     verify_working_copy_with_version(
         ctx,
-        commit_syncer,
+        commit_sync_data,
         Source(source_hash),
         Target(target_hash),
         &version,
@@ -105,7 +106,7 @@ pub async fn verify_working_copy<'a, R: Repo>(
 
 pub async fn verify_working_copy_with_version<'a, R: Repo>(
     ctx: &'a CoreContext,
-    commit_syncer: &'a CommitSyncer<R>,
+    commit_sync_data: &'a CommitSyncData<R>,
     source_hash: Source<ChangesetId>,
     target_hash: Target<ChangesetId>,
     version: &'a CommitSyncConfigVersion,
@@ -116,8 +117,8 @@ pub async fn verify_working_copy_with_version<'a, R: Repo>(
         "target repo cs id: {}, mapping version: {}", target_hash, version
     );
 
-    let source_repo = commit_syncer.get_source_repo();
-    let target_repo = commit_syncer.get_target_repo();
+    let source_repo = commit_sync_data.get_source_repo();
+    let target_repo = commit_sync_data.get_target_repo();
 
     let source_root_fsnode_id = source_repo
         .repo_derived_data()
@@ -130,21 +131,21 @@ pub async fn verify_working_copy_with_version<'a, R: Repo>(
         .await?
         .into_fsnode_id();
 
-    let (small_repo, large_repo, small_root_fsnode_id, large_root_fsnode_id, commit_syncer) =
-        match commit_syncer.repos.get_direction() {
+    let (small_repo, large_repo, small_root_fsnode_id, large_root_fsnode_id, commit_sync_data) =
+        match commit_sync_data.repos.get_direction() {
             CommitSyncDirection::Forward => (
                 source_repo,
                 target_repo,
                 source_root_fsnode_id,
                 target_root_fsnode_id,
-                commit_syncer.clone(),
+                commit_sync_data.clone(),
             ),
             CommitSyncDirection::Backwards => (
                 target_repo,
                 source_repo,
                 target_root_fsnode_id,
                 source_root_fsnode_id,
-                commit_syncer.reverse(),
+                commit_sync_data.reverse(),
             ),
         };
     let submodules_action = get_git_submodule_action_by_version(
@@ -156,7 +157,7 @@ pub async fn verify_working_copy_with_version<'a, R: Repo>(
     )
     .await?;
 
-    let submodule_deps = commit_syncer.get_submodule_deps();
+    let submodule_deps = commit_sync_data.get_submodule_deps();
     let (x_repo_submodule_metadata_file_prefix, dangling_submodule_pointers) =
         submodule_metadata_file_prefix_and_dangling_pointers(
             small_repo.repo_identity().id(),
@@ -179,7 +180,7 @@ pub async fn verify_working_copy_with_version<'a, R: Repo>(
         }),
         SubmoduleDeps::NotNeeded | SubmoduleDeps::NotAvailable => None,
     };
-    let movers = commit_syncer.get_movers_by_version(version).await?;
+    let movers = commit_sync_data.get_movers_by_version(version).await?;
     let exp_and_metadata_paths = list_possible_expansion_and_metadata_paths(
         movers.mover.as_ref(),
         submodules_action,
@@ -187,7 +188,8 @@ pub async fn verify_working_copy_with_version<'a, R: Repo>(
     )?;
 
     let large_repo_prefixes_to_visit =
-        get_large_repo_prefixes_to_visit(&commit_syncer, version, live_commit_sync_config).await?;
+        get_large_repo_prefixes_to_visit(&commit_sync_data, version, live_commit_sync_config)
+            .await?;
 
     info!(ctx.logger(), "###");
     info!(
@@ -1131,11 +1133,11 @@ async fn verify_dir<'a>(
 // Returns list of prefixes that need to be visited in both large and small
 // repositories to establish working copy equivalence.
 async fn get_large_repo_prefixes_to_visit<'a, R: Repo>(
-    commit_syncer: &'a CommitSyncer<R>,
+    commit_sync_data: &'a CommitSyncData<R>,
     version: &'a CommitSyncConfigVersion,
     live_commit_sync_config: Arc<dyn LiveCommitSyncConfig>,
 ) -> Result<Vec<Option<NonRootMPath>>, Error> {
-    let small_repo_id = commit_syncer.get_small_repo().repo_identity().id();
+    let small_repo_id = commit_sync_data.get_small_repo().repo_identity().id();
     let config = live_commit_sync_config
         .get_commit_sync_config_by_version(small_repo_id, version)
         .await?;
@@ -1183,10 +1185,10 @@ async fn get_large_repo_prefixes_to_visit<'a, R: Repo>(
 /// ```
 pub async fn find_bookmark_diff<R: Repo>(
     ctx: CoreContext,
-    commit_syncer: &CommitSyncer<R>,
+    commit_sync_data: &CommitSyncData<R>,
 ) -> Result<Vec<BookmarkDiff>, Error> {
-    let source_repo = commit_syncer.get_source_repo();
-    let target_repo = commit_syncer.get_target_repo();
+    let source_repo = commit_sync_data.get_source_repo();
+    let target_repo = commit_sync_data.get_target_repo();
 
     let target_bookmarks = target_repo
         .bookmarks()
@@ -1206,10 +1208,10 @@ pub async fn find_bookmark_diff<R: Repo>(
             .await?;
 
         // Renames bookmarks and also maps large cs ids to small cs ids
-        rename_and_remap_bookmarks(ctx.clone(), commit_syncer, source_bookmarks).await?
+        rename_and_remap_bookmarks(ctx.clone(), commit_sync_data, source_bookmarks).await?
     };
 
-    let reverse_bookmark_renamer = commit_syncer.get_reverse_bookmark_renamer().await?;
+    let reverse_bookmark_renamer = commit_sync_data.get_reverse_bookmark_renamer().await?;
     let mut diff = vec![];
     for (target_book, target_cs_id) in &target_bookmarks {
         if no_sync_outcome.contains(target_book) {
@@ -1314,12 +1316,12 @@ pub fn report_different<
 
 async fn get_synced_commit<R: Repo>(
     ctx: CoreContext,
-    commit_syncer: &CommitSyncer<R>,
+    commit_sync_data: &CommitSyncData<R>,
     hash: ChangesetId,
 ) -> Result<(ChangesetId, CommitSyncConfigVersion), Error> {
-    let maybe_sync_outcome = commit_syncer.get_commit_sync_outcome(&ctx, hash).await?;
+    let maybe_sync_outcome = commit_sync_data.get_commit_sync_outcome(&ctx, hash).await?;
     let sync_outcome = maybe_sync_outcome
-        .ok_or_else(|| format_err!("No sync outcome for {} in {:?}", hash, commit_syncer))?;
+        .ok_or_else(|| format_err!("No sync outcome for {} in {:?}", hash, commit_sync_data))?;
 
     use crate::commit_sync_outcome::CommitSyncOutcome::*;
     match sync_outcome {
@@ -1367,7 +1369,7 @@ struct CorrespondingChangesets {
 
 async fn rename_and_remap_bookmarks<R: Repo>(
     ctx: CoreContext,
-    commit_syncer: &CommitSyncer<R>,
+    commit_sync_data: &CommitSyncData<R>,
     bookmarks: impl IntoIterator<Item = (BookmarkKey, ChangesetId)>,
 ) -> Result<
     (
@@ -1378,9 +1380,9 @@ async fn rename_and_remap_bookmarks<R: Repo>(
 > {
     let mut renamed_and_remapped_bookmarks = vec![];
     for (bookmark, cs_id) in bookmarks {
-        let mb_renamed_bookmark = commit_syncer.rename_bookmark(&bookmark).await?;
+        let mb_renamed_bookmark = commit_sync_data.rename_bookmark(&bookmark).await?;
         if let Some(renamed_bookmark) = mb_renamed_bookmark {
-            let maybe_sync_outcome = commit_syncer
+            let maybe_sync_outcome = commit_sync_data
                 .get_commit_sync_outcome(&ctx, cs_id)
                 .map(move |maybe_sync_outcome| {
                     let maybe_sync_outcome = maybe_sync_outcome?;
@@ -1715,10 +1717,10 @@ mod test {
     async fn test_bookmark_diff_with_renamer(fb: FacebookInit) -> Result<(), Error> {
         let ctx = CoreContext::test_mock(fb);
         let (syncers, _config) = init(fb, CommitSyncDirection::Backwards).await?;
-        let commit_syncer = syncers.large_to_small;
+        let commit_sync_data = syncers.large_to_small;
 
-        let small_repo = commit_syncer.get_small_repo();
-        let large_repo = commit_syncer.get_large_repo();
+        let small_repo = commit_sync_data.get_small_repo();
+        let large_repo = commit_sync_data.get_large_repo();
 
         let another_hash = "607314ef579bd2407752361ba1b0c1729d08b281";
         bookmark(&ctx, &small_repo, "newbook")
@@ -1727,7 +1729,7 @@ mod test {
         bookmark(&ctx, &large_repo, "prefix/newbook")
             .set_to(another_hash)
             .await?;
-        let actual_diff = find_bookmark_diff(ctx.clone(), &commit_syncer).await?;
+        let actual_diff = find_bookmark_diff(ctx.clone(), &commit_sync_data).await?;
         assert!(actual_diff.is_empty());
 
         bookmark(&ctx, &small_repo, "somebook")
@@ -1737,7 +1739,7 @@ mod test {
             .set_to(another_hash)
             .await?;
 
-        let actual_diff = find_bookmark_diff(ctx.clone(), &commit_syncer).await?;
+        let actual_diff = find_bookmark_diff(ctx.clone(), &commit_sync_data).await?;
         assert!(!actual_diff.is_empty());
 
         Ok(())
@@ -1747,10 +1749,10 @@ mod test {
     async fn test_bookmark_diff_with_updates(fb: FacebookInit) -> Result<(), Error> {
         let ctx = CoreContext::test_mock(fb);
         let (syncers, live_commit_sync_config) = init(fb, CommitSyncDirection::Backwards).await?;
-        let commit_syncer = &syncers.large_to_small;
+        let commit_sync_data = &syncers.large_to_small;
 
-        let small_repo = commit_syncer.get_small_repo();
-        let large_repo = commit_syncer.get_large_repo();
+        let small_repo = commit_sync_data.get_small_repo();
+        let large_repo = commit_sync_data.get_large_repo();
 
         let master = BookmarkKey::new("master")?;
         let maybe_master_val = small_repo.bookmarks().get(ctx.clone(), &master).await?;
@@ -1758,7 +1760,7 @@ mod test {
 
         // Everything is identical - no diff at all
         {
-            let diff = find_bookmark_diff(ctx.clone(), commit_syncer).await?;
+            let diff = find_bookmark_diff(ctx.clone(), commit_sync_data).await?;
 
             assert!(diff.is_empty());
         }
@@ -1774,7 +1776,7 @@ mod test {
             .await?
             .expect("bonsai hg mapping not found for another_hash");
 
-        let actual_diff = find_bookmark_diff(ctx.clone(), commit_syncer).await?;
+        let actual_diff = find_bookmark_diff(ctx.clone(), commit_sync_data).await?;
 
         let mut expected_diff = hashset! {
             BookmarkDiff::InconsistentValue {
@@ -1795,7 +1797,7 @@ mod test {
             .set_to(another_hash)
             .await?;
 
-        let actual_diff = find_bookmark_diff(ctx.clone(), commit_syncer).await?;
+        let actual_diff = find_bookmark_diff(ctx.clone(), commit_sync_data).await?;
 
         expected_diff.insert(BookmarkDiff::InconsistentValue {
             target_bookmark: another_book,
@@ -1832,7 +1834,7 @@ mod test {
             )
             .await?;
 
-            let actual_diff = find_bookmark_diff(ctx.clone(), commit_syncer).await?;
+            let actual_diff = find_bookmark_diff(ctx.clone(), commit_sync_data).await?;
 
             // Master bookmark hasn't been updated because it's a common pushrebase bookmark
             let expected_diff = hashset! {
@@ -1862,7 +1864,7 @@ mod test {
                 None,
             )
             .await?;
-            let actual_diff = find_bookmark_diff(ctx.clone(), commit_syncer).await?;
+            let actual_diff = find_bookmark_diff(ctx.clone(), commit_sync_data).await?;
             assert!(actual_diff.is_empty());
         }
         Ok(())
@@ -1877,9 +1879,9 @@ mod test {
     async fn test_bookmark_small_to_large_impl(fb: FacebookInit) -> Result<(), Error> {
         let ctx = CoreContext::test_mock(fb);
         let (syncers, _config) = init(fb, CommitSyncDirection::Forward).await?;
-        let commit_syncer = syncers.small_to_large;
+        let commit_sync_data = syncers.small_to_large;
 
-        let large_repo = commit_syncer.get_large_repo();
+        let large_repo = commit_sync_data.get_large_repo();
 
         // This bookmark is not present in the small repo, and it shouldn't be.
         // In that case
@@ -1887,7 +1889,7 @@ mod test {
             .set_to("master")
             .await?;
 
-        let actual_diff = find_bookmark_diff(ctx.clone(), &commit_syncer).await?;
+        let actual_diff = find_bookmark_diff(ctx.clone(), &commit_sync_data).await?;
         assert_eq!(actual_diff, vec![]);
         Ok(())
     }
@@ -1901,9 +1903,9 @@ mod test {
     async fn test_bookmark_no_sync_outcome_impl(fb: FacebookInit) -> Result<(), Error> {
         let ctx = CoreContext::test_mock(fb);
         let (syncers, _config) = init(fb, CommitSyncDirection::Backwards).await?;
-        let commit_syncer = syncers.large_to_small;
+        let commit_sync_data = syncers.large_to_small;
 
-        let large_repo = commit_syncer.get_large_repo();
+        let large_repo = commit_sync_data.get_large_repo();
 
         let commit = CreateCommitContext::new(&ctx, &large_repo, vec!["master"])
             .add_file("somefile", "ololo")
@@ -1913,7 +1915,7 @@ mod test {
         // In that case
         bookmark(&ctx, &large_repo, "master").set_to(commit).await?;
 
-        let actual_diff = find_bookmark_diff(ctx.clone(), &commit_syncer).await?;
+        let actual_diff = find_bookmark_diff(ctx.clone(), &commit_sync_data).await?;
         assert_eq!(
             actual_diff,
             vec![BookmarkDiff::NoSyncOutcome {
@@ -1927,22 +1929,22 @@ mod test {
     async fn test_verify_working_copy(fb: FacebookInit) -> Result<(), Error> {
         let ctx = CoreContext::test_mock(fb);
         let (syncers, live_commit_sync_config) = init(fb, CommitSyncDirection::Backwards).await?;
-        let commit_syncer = syncers.large_to_small;
+        let commit_sync_data = syncers.large_to_small;
 
-        let source_cs_id = CreateCommitContext::new_root(&ctx, &commit_syncer.get_large_repo())
+        let source_cs_id = CreateCommitContext::new_root(&ctx, &commit_sync_data.get_large_repo())
             .add_file("prefix/file1", "1")
             .add_file("prefix/file2", "2")
             .commit()
             .await?;
 
-        let target_cs_id = CreateCommitContext::new_root(&ctx, &commit_syncer.get_small_repo())
+        let target_cs_id = CreateCommitContext::new_root(&ctx, &commit_sync_data.get_small_repo())
             .add_file("file1", "1")
             .commit()
             .await?;
 
         let res = verify_working_copy_with_version(
             &ctx,
-            &commit_syncer,
+            &commit_sync_data,
             Source(source_cs_id),
             Target(target_cs_id),
             &CommitSyncConfigVersion("prefix".to_string()),
@@ -1959,16 +1961,16 @@ mod test {
     async fn test_verify_working_copy_with_prefixes(fb: FacebookInit) -> Result<(), Error> {
         let ctx = CoreContext::test_mock(fb);
         let (syncers, live_commit_sync_config) = init(fb, CommitSyncDirection::Backwards).await?;
-        let commit_syncer = syncers.large_to_small;
+        let commit_sync_data = syncers.large_to_small;
 
-        let source_cs_id = CreateCommitContext::new_root(&ctx, &commit_syncer.get_large_repo())
+        let source_cs_id = CreateCommitContext::new_root(&ctx, &commit_sync_data.get_large_repo())
             .add_file("prefix/sub/file1", "1")
             .add_file("prefix/sub/file2", "2")
             .add_file("prefix/file1", "1")
             .commit()
             .await?;
 
-        let target_cs_id = CreateCommitContext::new_root(&ctx, &commit_syncer.get_small_repo())
+        let target_cs_id = CreateCommitContext::new_root(&ctx, &commit_sync_data.get_small_repo())
             .add_file("sub/file1", "1")
             .add_file("sub/file2", "2")
             .add_file("file1", "someothercontent")
@@ -1977,7 +1979,7 @@ mod test {
 
         let res = verify_working_copy_with_version(
             &ctx,
-            &commit_syncer,
+            &commit_sync_data,
             Source(source_cs_id),
             Target(target_cs_id),
             &CommitSyncConfigVersion("prefix".to_string()),
@@ -2034,14 +2036,14 @@ mod test {
 
         let live_commit_sync_config = get_live_commit_sync_config();
 
-        let commit_syncer = CommitSyncer::new(&ctx, repos, live_commit_sync_config.clone());
+        let commit_sync_data = CommitSyncData::new(&ctx, repos, live_commit_sync_config.clone());
 
         println!("checking root commit");
         for version in &["first_version", "second_version"] {
             println!("version: {}", version);
             verify_working_copy_with_version(
                 &ctx,
-                &commit_syncer,
+                &commit_sync_data,
                 Source(root_large_cs_id),
                 Target(root_small_cs_id),
                 &CommitSyncConfigVersion(version.to_string()),
@@ -2055,7 +2057,7 @@ mod test {
             println!("version: {}", version);
             verify_working_copy_with_version(
                 &ctx,
-                &commit_syncer,
+                &commit_sync_data,
                 Source(first_large_cs_id),
                 Target(first_small_cs_id),
                 &CommitSyncConfigVersion(version.to_string()),
@@ -2068,7 +2070,7 @@ mod test {
         println!("checking second commit, version: {}", version);
         verify_working_copy_with_version(
             &ctx,
-            &commit_syncer,
+            &commit_sync_data,
             Source(second_large_cs_id),
             Target(second_small_cs_id),
             &CommitSyncConfigVersion(version.to_string()),
@@ -2080,7 +2082,7 @@ mod test {
         println!("checking second commit, version: {}", version);
         let res = verify_working_copy_with_version(
             &ctx,
-            &commit_syncer,
+            &commit_sync_data,
             Source(second_large_cs_id),
             Target(second_small_cs_id),
             &CommitSyncConfigVersion(version.to_string()),
@@ -2093,7 +2095,7 @@ mod test {
         println!("checking first and second commit, version: {}", version);
         let res = verify_working_copy_with_version(
             &ctx,
-            &commit_syncer,
+            &commit_sync_data,
             Source(first_large_cs_id),
             Target(second_small_cs_id),
             &CommitSyncConfigVersion(version.to_string()),

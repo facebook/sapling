@@ -15,8 +15,8 @@ use bookmarks::BookmarkKey;
 use bytes::Bytes;
 use chrono::FixedOffset;
 use chrono::TimeZone;
+use cross_repo_sync::CommitSyncData;
 use cross_repo_sync::CommitSyncRepos;
-use cross_repo_sync::CommitSyncer;
 use cross_repo_sync::SubmoduleDeps;
 use cross_repo_sync::test_utils::init_small_large_repo;
 use cross_repo_sync::update_mapping_with_version;
@@ -817,13 +817,13 @@ async fn xrepo_commit_lookup_config_changing_live(fb: FacebookInit) -> Result<()
         SubmoduleDeps::ForSync(HashMap::new()),
     );
 
-    let commit_syncer =
-        CommitSyncer::new(&ctx, commit_sync_repos, largerepo.live_commit_sync_config());
+    let commit_sync_data =
+        CommitSyncData::new(&ctx, commit_sync_repos, largerepo.live_commit_sync_config());
 
     update_mapping_with_version(
         &ctx,
         hashmap! {change_mapping_large => change_mapping_small},
-        &commit_syncer,
+        &commit_sync_data,
         &new_version,
     )
     .await?;

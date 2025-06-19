@@ -52,7 +52,7 @@ pub struct BackfillNoopMappingArgs {
 pub async fn run(ctx: &CoreContext, app: MononokeApp, args: BackfillNoopMappingArgs) -> Result<()> {
     let small_repo: Repo = app.open_repo(&args.repo_args.source_repo).await?;
     let large_repo: Repo = app.open_repo(&args.repo_args.target_repo).await?;
-    let commit_syncer =
+    let commit_sync_data =
         create_single_direction_commit_syncer(ctx, &app, small_repo.clone(), large_repo.clone())
             .await?;
     info!(
@@ -82,14 +82,14 @@ pub async fn run(ctx: &CoreContext, app: MononokeApp, args: BackfillNoopMappingA
                 small_repo_id: small_repo.repo_identity().id(),
                 small_bcs_id: small_cs_id,
                 version_name: Some(mapping_version_name.clone()),
-                source_repo: Some(commit_syncer.get_source_repo_type()),
+                source_repo: Some(commit_sync_data.get_source_repo_type()),
             };
             Ok(entry)
         })
         .try_buffer_unordered(100)
         .chunks(100)
         .then(async |chunk| {
-            let mapping = commit_syncer.get_mapping();
+            let mapping = commit_sync_data.get_mapping();
             let chunk: Result<Vec<_>> = chunk.into_iter().collect();
             let chunk = chunk?;
             let len = chunk.len();
@@ -98,7 +98,7 @@ pub async fn run(ctx: &CoreContext, app: MononokeApp, args: BackfillNoopMappingA
         })
         .boxed();
 
-    process_stream_and_wait_for_replication(ctx, &commit_syncer, s).await?;
+    process_stream_and_wait_for_replication(ctx, &commit_sync_data, s).await?;
 
     Ok(())
 }

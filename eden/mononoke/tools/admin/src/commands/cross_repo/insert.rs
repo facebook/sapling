@@ -122,13 +122,13 @@ async fn insert_rewritten(
         parse_commit_id(ctx, &target_repo, &args.target_commit_id)
     )?;
 
-    let commit_syncer = commit_syncers.large_to_small;
+    let commit_sync_data = commit_syncers.large_to_small;
 
-    let small_repo_id = commit_syncer.get_small_repo().repo_identity().id();
-    let large_repo_id = commit_syncer.get_large_repo().repo_identity().id();
+    let small_repo_id = commit_sync_data.get_small_repo().repo_identity().id();
+    let large_repo_id = commit_sync_data.get_large_repo().repo_identity().id();
 
     let mapping_version = CommitSyncConfigVersion(args.version_name);
-    if !commit_syncer.version_exists(&mapping_version).await? {
+    if !commit_sync_data.version_exists(&mapping_version).await? {
         return Err(anyhow!("{} version does not exist", mapping_version));
     }
 
@@ -139,7 +139,7 @@ async fn insert_rewritten(
             small_bcs_id: source_cs_id,
             large_bcs_id: target_cs_id,
             version_name: Some(mapping_version),
-            source_repo: Some(commit_syncer.get_source_repo_type()),
+            source_repo: Some(commit_sync_data.get_source_repo_type()),
         }
     } else {
         SyncedCommitMappingEntry {
@@ -148,11 +148,14 @@ async fn insert_rewritten(
             small_bcs_id: target_cs_id,
             large_bcs_id: source_cs_id,
             version_name: Some(mapping_version),
-            source_repo: Some(commit_syncer.get_source_repo_type()),
+            source_repo: Some(commit_sync_data.get_source_repo_type()),
         }
     };
 
-    let res = commit_syncer.get_mapping().add(ctx, mapping_entry).await?;
+    let res = commit_sync_data
+        .get_mapping()
+        .add(ctx, mapping_entry)
+        .await?;
     if res {
         info!(
             ctx.logger(),
@@ -176,13 +179,13 @@ async fn insert_equivalent_working_copy(
         parse_commit_id(ctx, &target_repo, &args.target_commit_id)
     )?;
 
-    let commit_syncer = commit_syncers.large_to_small;
+    let commit_sync_data = commit_syncers.large_to_small;
 
-    let small_repo_id = commit_syncer.get_small_repo().repo_identity().id();
-    let large_repo_id = commit_syncer.get_large_repo().repo_identity().id();
+    let small_repo_id = commit_sync_data.get_small_repo().repo_identity().id();
+    let large_repo_id = commit_sync_data.get_large_repo().repo_identity().id();
 
     let mapping_version = CommitSyncConfigVersion(args.version_name);
-    if !commit_syncer.version_exists(&mapping_version).await? {
+    if !commit_sync_data.version_exists(&mapping_version).await? {
         return Err(anyhow!("{} version does not exist", mapping_version));
     }
 
@@ -204,7 +207,7 @@ async fn insert_equivalent_working_copy(
         }
     };
 
-    let res = commit_syncer
+    let res = commit_sync_data
         .get_mapping()
         .insert_equivalent_working_copy(ctx, mapping_entry)
         .await?;
@@ -224,17 +227,17 @@ async fn insert_not_sync_candidate(
     commit_syncers: Syncers<Arc<Repo>>,
     args: NotSyncCandidateArgs,
 ) -> Result<()> {
-    let commit_syncer = commit_syncers.large_to_small;
+    let commit_sync_data = commit_syncers.large_to_small;
 
-    let large_repo = commit_syncer.get_large_repo();
+    let large_repo = commit_sync_data.get_large_repo();
     let large_cs_id = parse_commit_id(ctx, large_repo, &args.large_commit_id).await?;
 
-    let small_repo_id = commit_syncer.get_small_repo().repo_identity().id();
-    let large_repo_id = commit_syncer.get_large_repo().repo_identity().id();
+    let small_repo_id = commit_sync_data.get_small_repo().repo_identity().id();
+    let large_repo_id = commit_sync_data.get_large_repo().repo_identity().id();
 
     let maybe_mapping_version = if let Some(version_name) = args.version_name {
         let mapping_version = CommitSyncConfigVersion(version_name);
-        if !commit_syncer.version_exists(&mapping_version).await? {
+        if !commit_sync_data.version_exists(&mapping_version).await? {
             return Err(anyhow!("{} version does not exist", mapping_version));
         }
         Some(mapping_version)
@@ -250,7 +253,7 @@ async fn insert_not_sync_candidate(
         version_name: maybe_mapping_version,
     };
 
-    let res = commit_syncer
+    let res = commit_sync_data
         .get_mapping()
         .insert_equivalent_working_copy(ctx, mapping_entry)
         .await?;

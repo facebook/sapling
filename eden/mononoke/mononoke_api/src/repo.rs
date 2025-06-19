@@ -63,8 +63,8 @@ use changeset_info::ChangesetInfo;
 use context::CoreContext;
 use cross_repo_sync::CandidateSelectionHint;
 use cross_repo_sync::CommitSyncContext;
+use cross_repo_sync::CommitSyncData;
 use cross_repo_sync::CommitSyncRepos;
-use cross_repo_sync::CommitSyncer;
 use cross_repo_sync::RepoProvider;
 use cross_repo_sync::Target;
 use cross_repo_sync::get_all_repo_submodule_deps;
@@ -1677,14 +1677,14 @@ impl<R: MononokeRepo> RepoContext<R> {
             MononokeError::InvalidRequest(format!("unknown commit specifier {}", specifier))
         })?;
 
-        let commit_syncer =
-            CommitSyncer::new(&self.ctx, commit_sync_repos, self.live_commit_sync_config());
+        let commit_sync_data =
+            CommitSyncData::new(&self.ctx, commit_sync_repos, self.live_commit_sync_config());
 
         if sync_behaviour == XRepoLookupSyncBehaviour::SyncIfAbsent {
             let _ = sync_commit(
                 &self.ctx,
                 changeset,
-                &commit_syncer,
+                &commit_sync_data,
                 candidate_selection_hint,
                 CommitSyncContext::ScsXrepoLookup,
                 false,
@@ -1692,7 +1692,7 @@ impl<R: MononokeRepo> RepoContext<R> {
             .await?;
         }
         use cross_repo_sync::CommitSyncOutcome::*;
-        let maybe_cs_id = commit_syncer
+        let maybe_cs_id = commit_sync_data
             .get_commit_sync_outcome(&self.ctx, changeset)
             .await?
             .and_then(|outcome| match outcome {

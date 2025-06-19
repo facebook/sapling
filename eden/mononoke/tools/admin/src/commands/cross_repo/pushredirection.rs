@@ -23,7 +23,7 @@ use cmdlib_cross_repo::create_commit_syncers_from_app;
 use context::CoreContext;
 use cross_repo_sync::CHANGE_XREPO_MAPPING_EXTRA;
 use cross_repo_sync::CommitSyncContext;
-use cross_repo_sync::CommitSyncer;
+use cross_repo_sync::CommitSyncData;
 use cross_repo_sync::Syncers;
 use cross_repo_sync::unsafe_always_rewrite_sync_commit;
 use filestore::FilestoreConfigRef;
@@ -133,13 +133,13 @@ async fn pushredirection_prepare_rollout(
     commit_syncers: Syncers<Arc<Repo>>,
     _args: PrepareRolloutArgs,
 ) -> Result<()> {
-    let commit_syncer = commit_syncers.large_to_small;
+    let commit_sync_data = commit_syncers.large_to_small;
 
-    if commit_syncer
+    if commit_sync_data
         .get_live_commit_sync_config()
         .push_redirector_enabled_for_public(
             ctx,
-            commit_syncer.get_small_repo().repo_identity().id(),
+            commit_sync_data.get_small_repo().repo_identity().id(),
         )
         .await?
     {
@@ -148,8 +148,8 @@ async fn pushredirection_prepare_rollout(
         ));
     }
 
-    let small_repo = commit_syncer.get_small_repo();
-    let large_repo = commit_syncer.get_large_repo();
+    let small_repo = commit_sync_data.get_small_repo();
+    let large_repo = commit_sync_data.get_large_repo();
 
     let largest_id = large_repo
         .bookmark_update_log()
@@ -188,13 +188,13 @@ async fn pushredirection_change_mapping_version(
     commit_syncers: Syncers<Arc<Repo>>,
     args: ChangeMappingVersionArgs,
 ) -> Result<()> {
-    let commit_syncer = commit_syncers.large_to_small;
+    let commit_sync_data = commit_syncers.large_to_small;
 
-    let large_repo = commit_syncer.get_large_repo();
-    let small_repo = commit_syncer.get_small_repo();
+    let large_repo = commit_sync_data.get_large_repo();
+    let small_repo = commit_sync_data.get_small_repo();
 
     let mapping_version = CommitSyncConfigVersion(args.version_name);
-    if !commit_syncer.version_exists(&mapping_version).await? {
+    if !commit_sync_data.version_exists(&mapping_version).await? {
         return Err(anyhow!("{} version does not exist", mapping_version));
     }
 
@@ -223,7 +223,7 @@ async fn pushredirection_change_mapping_version(
         .transpose()?;
 
     let large_bookmark = BookmarkKey::new(args.large_repo_bookmark)?;
-    let small_bookmark = commit_syncer
+    let small_bookmark = commit_sync_data
         .rename_bookmark(&large_bookmark)
         .await?
         .ok_or_else(|| anyhow!("{} bookmark doesn't remap to small repo", large_bookmark))?;
@@ -234,7 +234,7 @@ async fn pushredirection_change_mapping_version(
     if args.via_extra {
         return change_mapping_via_extras(
             ctx,
-            &commit_syncer,
+            &commit_sync_data,
             &mapping_version,
             large_bookmark,
             large_bookmark_value,
@@ -246,11 +246,11 @@ async fn pushredirection_change_mapping_version(
         .await;
     }
 
-    if commit_syncer
+    if commit_sync_data
         .get_live_commit_sync_config()
         .push_redirector_enabled_for_public(
             ctx,
-            commit_syncer.get_small_repo().repo_identity().id(),
+            commit_sync_data.get_small_repo().repo_identity().id(),
         )
         .await?
     {
@@ -261,7 +261,7 @@ async fn pushredirection_change_mapping_version(
 
     let large_cs_id = create_commit_for_mapping_change(
         ctx,
-        &commit_syncer,
+        &commit_sync_data,
         large_bookmark_value,
         &mapping_version,
         false,
@@ -275,7 +275,7 @@ async fn pushredirection_change_mapping_version(
     let maybe_rewritten_small_cs_id = unsafe_always_rewrite_sync_commit(
         ctx,
         large_cs_id,
-        &commit_syncer,
+        &commit_sync_data,
         Some(hashmap! {
           large_bookmark_value => small_bookmark_value,
         }),
@@ -310,7 +310,7 @@ async fn pushredirection_change_mapping_version(
 
 async fn change_mapping_via_extras(
     ctx: &CoreContext,
-    commit_syncer: &CommitSyncer<Arc<Repo>>,
+    commit_sync_data: &CommitSyncData<Arc<Repo>>,
     mapping_version: &CommitSyncConfigVersion,
     large_bookmark: BookmarkKey,
     large_bookmark_value: ChangesetId,
@@ -320,11 +320,11 @@ async fn change_mapping_via_extras(
     commit_msg: String,
 ) -> Result<()> {
     // XXX(mitrandir): remove this check once this mode works regardless of sync direction
-    if !commit_syncer
+    if !commit_sync_data
         .get_live_commit_sync_config()
         .push_redirector_enabled_for_public(
             ctx,
-            commit_syncer.get_small_repo().repo_identity().id(),
+            commit_sync_data.get_small_repo().repo_identity().id(),
         )
         .await?
         && std::env::var("MONONOKE_ADMIN_ALWAYS_ALLOW_MAPPING_CHANGE_VIA_EXTRA").is_err()
@@ -334,11 +334,11 @@ async fn change_mapping_via_extras(
         ));
     }
 
-    let large_repo = commit_syncer.get_large_repo();
+    let large_repo = commit_sync_data.get_large_repo();
 
     let large_cs_id = create_commit_for_mapping_change(
         ctx,
-        commit_syncer,
+        commit_sync_data,
         large_bookmark_value,
         mapping_version,
         true,
@@ -377,7 +377,7 @@ async fn change_mapping_via_extras(
 
 async fn create_commit_for_mapping_change(
     ctx: &CoreContext,
-    commit_syncer: &CommitSyncer<Arc<Repo>>,
+    commit_sync_data: &CommitSyncData<Arc<Repo>>,
     parent: ChangesetId,
     mapping_version: &CommitSyncConfigVersion,
     add_mapping_change_extra: bool,
@@ -397,7 +397,7 @@ async fn create_commit_for_mapping_change(
     }
 
     let file_changes =
-        create_file_changes(ctx, commit_syncer, mapping_version, dump_mapping_file).await?;
+        create_file_changes(ctx, commit_sync_data, mapping_version, dump_mapping_file).await?;
 
     // Create an empty commit on top of large bookmark
     let bcs = BonsaiChangesetMut {
@@ -412,14 +412,14 @@ async fn create_commit_for_mapping_change(
     .freeze()?;
 
     let large_cs_id = bcs.get_changeset_id();
-    save_changesets(ctx, &commit_syncer.get_large_repo(), vec![bcs]).await?;
+    save_changesets(ctx, &commit_sync_data.get_large_repo(), vec![bcs]).await?;
 
     Ok(large_cs_id)
 }
 
 async fn create_file_changes(
     ctx: &CoreContext,
-    commit_syncer: &CommitSyncer<Arc<Repo>>,
+    commit_sync_data: &CommitSyncData<Arc<Repo>>,
     mapping_version: &CommitSyncConfigVersion,
     dump_mapping_file: Option<NonRootMPath>,
 ) -> Result<BTreeMap<NonRootMPath, FileChange>> {
@@ -429,17 +429,19 @@ async fn create_file_changes(
         return Ok(Default::default());
     };
 
-    let large_repo = commit_syncer.get_large_repo();
-    let small_repo = commit_syncer.get_small_repo();
+    let large_repo = commit_sync_data.get_large_repo();
+    let small_repo = commit_sync_data.get_small_repo();
 
     // This "dump-mapping-file" is going to be created in the large repo,
     // but this file needs to rewrite to a small repo as well. If it doesn't
     // rewrite to a small repo, then the whole mapping change commit isn't
     // going to exist in the small repo.
 
-    let movers = commit_syncer.get_movers_by_version(mapping_version).await?;
+    let movers = commit_sync_data
+        .get_movers_by_version(mapping_version)
+        .await?;
 
-    let mover = if commit_syncer.get_source_repo().repo_identity().id()
+    let mover = if commit_sync_data.get_source_repo().repo_identity().id()
         == large_repo.repo_identity().id()
     {
         movers.mover
@@ -454,7 +456,7 @@ async fn create_file_changes(
     }
 
     // Now get the mapping and create json with it
-    let commit_sync_config = commit_syncer
+    let commit_sync_config = commit_sync_data
         .get_live_commit_sync_config()
         .get_commit_sync_config_by_version(large_repo.repo_identity().id(), mapping_version)
         .await?;

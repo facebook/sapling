@@ -58,8 +58,8 @@ use commit_graph::CommitGraphWriter;
 use context::CoreContext;
 use cross_repo_sync::CandidateSelectionHint;
 use cross_repo_sync::CommitSyncContext;
+use cross_repo_sync::CommitSyncData;
 use cross_repo_sync::CommitSyncOutcome;
-use cross_repo_sync::CommitSyncer;
 use cross_repo_sync::find_toposorted_unsynced_ancestors;
 use cross_repo_sync::sync_commit;
 use filenodes::Filenodes;
@@ -164,7 +164,7 @@ pub enum BacksyncLimit {
 /// lagging. Not having this timeout has caused SEVs in the past, blocking lands.
 pub async fn ensure_backsynced<R>(
     ctx: CoreContext,
-    commit_syncer: CommitSyncer<R>,
+    commit_sync_data: CommitSyncData<R>,
     target_repo_dbs: Arc<TargetRepoDbs>,
     log_id: BookmarkUpdateLogId,
 ) -> Result<(), Error>
@@ -179,7 +179,7 @@ where
         .unwrap_or(60),
     );
 
-    let source_repo_id = commit_syncer.get_source_repo().repo_identity().id();
+    let source_repo_id = commit_sync_data.get_source_repo().repo_identity().id();
     let counter_name = format_counter(&source_repo_id);
     let start_instant = Instant::now();
 
@@ -210,7 +210,7 @@ where
 
 pub async fn backsync_latest<R>(
     ctx: CoreContext,
-    commit_syncer: CommitSyncer<R>,
+    commit_sync_data: CommitSyncData<R>,
     target_repo_dbs: Arc<TargetRepoDbs>,
     limit: BacksyncLimit,
     cancellation_requested: Arc<AtomicBool>,
@@ -221,8 +221,8 @@ pub async fn backsync_latest<R>(
 where
     R: RepoLike + Send + Sync + Clone + 'static,
 {
-    // TODO(ikostia): start borrowing `CommitSyncer`, no reason to consume it
-    let large_repo_id = commit_syncer.get_source_repo().repo_identity().id();
+    // TODO(ikostia): start borrowing `CommitSyncData`, no reason to consume it
+    let large_repo_id = commit_sync_data.get_source_repo().repo_identity().id();
     let counter_name = format_counter(&large_repo_id);
 
     let counter: BookmarkUpdateLogId = target_repo_dbs
@@ -241,7 +241,7 @@ where
             u64::MAX
         }
     };
-    let next_entries: Vec<_> = commit_syncer
+    let next_entries: Vec<_> = commit_sync_data
         .get_source_repo()
         .bookmark_update_log()
         .read_next_bookmark_log_entries(
@@ -267,7 +267,7 @@ where
     } else {
         sync_entries(
             ctx,
-            &commit_syncer,
+            &commit_sync_data,
             target_repo_dbs,
             next_entries,
             counter,
@@ -283,7 +283,7 @@ where
 
 async fn sync_entries<R>(
     mut ctx: CoreContext,
-    commit_syncer: &CommitSyncer<R>,
+    commit_sync_data: &CommitSyncData<R>,
     target_repo_dbs: Arc<TargetRepoDbs>,
     entries: Vec<BookmarkUpdateLogEntry>,
     mut counter: BookmarkUpdateLogId,
@@ -307,7 +307,7 @@ where
         let mut scuba_log_tag = "Backsyncing".to_string();
         let (stats, new_commit_only_backsync_future) = do_sync_entry(
             ctx.clone(),
-            commit_syncer,
+            commit_sync_data,
             &target_repo_dbs,
             entry,
             &mut counter,
@@ -333,7 +333,7 @@ where
 // activity that we want to time and log.
 async fn do_sync_entry<R>(
     ctx: CoreContext,
-    commit_syncer: &CommitSyncer<R>,
+    commit_sync_data: &CommitSyncData<R>,
     target_repo_dbs: &Arc<TargetRepoDbs>,
     entry: BookmarkUpdateLogEntry,
     counter: &mut BookmarkUpdateLogId,
@@ -352,7 +352,7 @@ where
     }
     debug!(ctx.logger(), "backsyncing {} ...", entry_id);
 
-    if commit_syncer
+    if commit_sync_data
         .rename_bookmark(&entry.bookmark_name)
         .await?
         .is_none()
@@ -367,7 +367,7 @@ where
             .counters
             .set_counter(
                 &ctx,
-                &format_counter(&commit_syncer.get_source_repo().repo_identity().id()),
+                &format_counter(&commit_sync_data.get_source_repo().repo_identity().id()),
                 entry.id.try_into()?,
                 Some((*counter).try_into()?),
             )
@@ -375,13 +375,13 @@ where
         *counter = entry.id;
         if let Some(to_cs_id) = entry.to_changeset_id {
             commit_only_backsync_future = Box::new({
-                cloned!(ctx, sync_context, to_cs_id, commit_syncer);
+                cloned!(ctx, sync_context, to_cs_id, commit_sync_data);
                 mononoke::spawn_task(async move {
                     commit_only_backsync_future.await;
                     let res = sync_commit(
                         &ctx,
                         to_cs_id.clone(),
-                        &commit_syncer,
+                        &commit_sync_data,
                         // Backsyncer is always used in the large-to-small direction,
                         // therefore there can be at most one remapped candidate,
                         // so `CandidateSelectionHint::Only` is a safe choice
@@ -413,7 +413,7 @@ where
 
     if let Some(to_cs_id) = entry.to_changeset_id {
         let (_, unsynced_ancestors_versions) =
-            find_toposorted_unsynced_ancestors(&ctx, commit_syncer, to_cs_id, None).await?;
+            find_toposorted_unsynced_ancestors(&ctx, commit_sync_data, to_cs_id, None).await?;
 
         if !unsynced_ancestors_versions.has_ancestor_with_a_known_outcome() {
             // Not a single ancestor of to_cs_id was ever synced.
@@ -431,7 +431,7 @@ where
                 .counters
                 .set_counter(
                     &ctx,
-                    &format_counter(&commit_syncer.get_source_repo().repo_identity().id()),
+                    &format_counter(&commit_sync_data.get_source_repo().repo_identity().id()),
                     entry.id.try_into()?,
                     Some((*counter).try_into()?),
                 )
@@ -447,7 +447,7 @@ where
         sync_commit(
             &ctx,
             to_cs_id,
-            commit_syncer,
+            commit_sync_data,
             CandidateSelectionHint::Only,
             sync_context,
             disable_lease,
@@ -458,7 +458,7 @@ where
     let new_counter = entry.id;
     let maybe_log_id = backsync_bookmark(
         ctx.clone(),
-        commit_syncer,
+        commit_sync_data,
         target_repo_dbs.clone(),
         Some(*counter),
         &entry,
@@ -488,7 +488,7 @@ where
         // Transaction failed, it could be because another process already backsynced it
         // Verify that counter was moved and continue if that's the case
 
-        let source_repo_id = commit_syncer.get_source_repo().repo_identity().id();
+        let source_repo_id = commit_sync_data.get_source_repo().repo_identity().id();
         let counter_name = format_counter(&source_repo_id);
         let new_counter = target_repo_dbs
             .counters
@@ -544,7 +544,7 @@ async fn commits_added_by_bookmark_move(
 
 async fn backsync_bookmark<R>(
     ctx: CoreContext,
-    commit_syncer: &CommitSyncer<R>,
+    commit_sync_data: &CommitSyncData<R>,
     target_repo_dbs: Arc<TargetRepoDbs>,
     prev_counter: Option<BookmarkUpdateLogId>,
     log_entry: &BookmarkUpdateLogEntry,
@@ -553,12 +553,12 @@ where
     R: RepoLike + Send + Sync + Clone + 'static,
 {
     let prev_counter: Option<i64> = prev_counter.map(|x| x.try_into()).transpose()?;
-    let target_repo_id = commit_syncer.get_target_repo().repo_identity().id();
-    let source_repo_id = commit_syncer.get_source_repo().repo_identity().id();
+    let target_repo_id = commit_sync_data.get_target_repo().repo_identity().id();
+    let source_repo_id = commit_sync_data.get_source_repo().repo_identity().id();
     debug!(ctx.logger(), "preparing to backsync {:?}", log_entry);
 
     let new_counter = log_entry.id;
-    let bookmark = commit_syncer
+    let bookmark = commit_sync_data
         .rename_bookmark(&log_entry.bookmark_name)
         .await?;
     debug!(ctx.logger(), "bookmark was renamed into {:?}", bookmark);
@@ -570,7 +570,9 @@ where
         async move {
             match maybe_cs_id {
                 Some(cs_id) => {
-                    let maybe_outcome = commit_syncer.get_commit_sync_outcome(&ctx, cs_id).await?;
+                    let maybe_outcome = commit_sync_data
+                        .get_commit_sync_outcome(&ctx, cs_id)
+                        .await?;
                     match maybe_outcome {
                         Some(outcome) => Ok(Some((outcome, cs_id))),
                         None => Err(format_err!("{} hasn't been backsynced yet", cs_id)),
@@ -617,7 +619,7 @@ where
         };
 
         if from_cs_id != to_cs_id {
-            let target_repo = commit_syncer.get_target_repo();
+            let target_repo = commit_sync_data.get_target_repo();
             // This CANNOT be done after getting the bookmark transaction, because it accesses SQL without a
             // transaction and that causes a deadlock that blocks the syncing.
             let globalrev_entries: Vec<BonsaiGlobalrevMappingEntry> = if target_repo

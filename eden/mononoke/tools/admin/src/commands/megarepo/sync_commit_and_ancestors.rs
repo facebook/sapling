@@ -55,20 +55,20 @@ pub async fn run(
         target_repo.repo_identity().id()
     );
 
-    let commit_syncer =
+    let commit_sync_data =
         create_single_direction_commit_syncer(ctx, &app, source_repo.clone(), target_repo.clone())
             .await?;
     let source_cs = parse_commit_id(ctx, &source_repo, &args.commit_hash).await?;
     info!(ctx.logger(), "changeset resolved as: {:?}", source_cs);
 
     let (unsynced_ancestors, _) =
-        find_toposorted_unsynced_ancestors(ctx, &commit_syncer, source_cs, None).await?;
+        find_toposorted_unsynced_ancestors(ctx, &commit_sync_data, source_cs, None).await?;
 
     for ancestor in unsynced_ancestors {
         unsafe_sync_commit(
             ctx,
             ancestor,
-            &commit_syncer,
+            &commit_sync_data,
             CandidateSelectionHint::Only,
             CommitSyncContext::AdminChangeMapping,
             None,
@@ -77,7 +77,7 @@ pub async fn run(
         .await?;
     }
 
-    let commit_sync_outcome = commit_syncer
+    let commit_sync_outcome = commit_sync_data
         .get_commit_sync_outcome(ctx, source_cs)
         .await?
         .ok_or_else(|| format_err!("was not able to remap a commit {}", source_cs))?;

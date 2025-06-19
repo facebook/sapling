@@ -15,7 +15,7 @@ use cmdlib_cross_repo::create_single_direction_commit_syncer;
 use commit_id::parse_commit_id;
 use context::CoreContext;
 use cross_repo_sync::CommitSyncContext;
-use cross_repo_sync::CommitSyncer;
+use cross_repo_sync::CommitSyncData;
 use cross_repo_sync::Repo as CrossRepo;
 use cross_repo_sync::unsafe_always_rewrite_sync_commit;
 use futures::future::try_join_all;
@@ -45,13 +45,13 @@ use slog::info;
 /// ```
 pub async fn manual_commit_sync<R: CrossRepo>(
     ctx: &CoreContext,
-    commit_syncer: &CommitSyncer<R>,
+    commit_sync_data: &CommitSyncData<R>,
     source_cs_id: ChangesetId,
     target_repo_parents: Option<Vec<ChangesetId>>,
     mapping_version: CommitSyncConfigVersion,
 ) -> Result<Option<ChangesetId>, Error> {
     if let Some(target_repo_parents) = target_repo_parents {
-        let source_repo = commit_syncer.get_source_repo();
+        let source_repo = commit_sync_data.get_source_repo();
         let source_cs = source_cs_id.load(ctx, source_repo.repo_blobstore()).await?;
         let source_parents: Vec<_> = source_cs.parents().collect();
         if source_parents.len() != target_repo_parents.len() {
@@ -70,7 +70,7 @@ pub async fn manual_commit_sync<R: CrossRepo>(
         unsafe_always_rewrite_sync_commit(
             ctx,
             source_cs_id,
-            commit_syncer,
+            commit_sync_data,
             Some(remapped_parents),
             &mapping_version,
             CommitSyncContext::ManualCommitSync,
@@ -80,7 +80,7 @@ pub async fn manual_commit_sync<R: CrossRepo>(
         unsafe_always_rewrite_sync_commit(
             ctx,
             source_cs_id,
-            commit_syncer,
+            commit_sync_data,
             None,
             &mapping_version,
             CommitSyncContext::ManualCommitSync,
@@ -134,7 +134,7 @@ pub async fn run(ctx: &CoreContext, app: MononokeApp, args: ManualCommitSyncArgs
         target_repo.repo_identity().id()
     );
 
-    let commit_syncer =
+    let commit_sync_data =
         create_single_direction_commit_syncer(ctx, &app, source_repo.clone(), target_repo.clone())
             .await?;
     let target_repo_parents = if args.select_parents_automatically {
@@ -154,7 +154,7 @@ pub async fn run(ctx: &CoreContext, app: MononokeApp, args: ManualCommitSyncArgs
 
     let target_cs_id = manual_commit_sync(
         ctx,
-        &commit_syncer,
+        &commit_sync_data,
         source_cs,
         target_repo_parents,
         CommitSyncConfigVersion(args.mapping_version_name),

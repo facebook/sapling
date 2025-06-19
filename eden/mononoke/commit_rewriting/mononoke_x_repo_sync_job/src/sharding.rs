@@ -16,7 +16,7 @@ use blobstore_factory::MetadataSqlFactory;
 use bookmarks::BookmarkKey;
 use cmdlib_cross_repo::create_commit_syncers_from_app;
 use context::CoreContext;
-use cross_repo_sync::CommitSyncer;
+use cross_repo_sync::CommitSyncData;
 use cross_repo_sync::PushrebaseRewriteDates;
 use executor_lib::RepoShardedProcess;
 use executor_lib::RepoShardedProcessExecutor;
@@ -113,7 +113,7 @@ pub struct XRepoSyncProcessExecutor {
     common_bookmarks: HashSet<BookmarkKey>,
     target_mutable_counters: Arc<dyn MutableCounters + Send + Sync>,
     pushrebase_rewrite_dates: PushrebaseRewriteDates,
-    commit_syncer: CommitSyncer<Arc<Repo>>,
+    commit_sync_data: CommitSyncData<Arc<Repo>>,
     live_commit_sync_config: Arc<CfgrLiveCommitSyncConfig>,
 }
 
@@ -130,7 +130,7 @@ impl XRepoSyncProcessExecutor {
             create_commit_syncers_from_app(&ctx, &app, small_repo.clone(), large_repo.clone())
                 .await?;
         let config_store = app.environment().config_store.clone();
-        let commit_syncer = syncers.small_to_large;
+        let commit_sync_data = syncers.small_to_large;
         let mut scuba_sample = ctx.scuba().clone();
         let (_, repo_config) = app.repo_config(repo_args.source_repo.as_repo_arg())?;
         let sql_factory: MetadataSqlFactory = MetadataSqlFactory::new(
@@ -165,7 +165,7 @@ impl XRepoSyncProcessExecutor {
             PushrebaseRewriteDates::No
         };
 
-        add_common_fields(&mut scuba_sample, &commit_syncer);
+        add_common_fields(&mut scuba_sample, &commit_sync_data);
         Ok(Self {
             app,
             ctx,
@@ -176,7 +176,7 @@ impl XRepoSyncProcessExecutor {
             common_bookmarks,
             target_mutable_counters,
             pushrebase_rewrite_dates,
-            commit_syncer,
+            commit_sync_data,
             live_commit_sync_config,
         })
     }
@@ -196,7 +196,7 @@ impl XRepoSyncProcessExecutor {
                 run_in_initial_import_mode(
                     ctx,
                     resolved_csids,
-                    self.commit_syncer.clone(),
+                    self.commit_sync_data.clone(),
                     config_version,
                     self.scuba_sample.clone(),
                     initial_import_args.no_progress_bar,
@@ -227,7 +227,7 @@ impl XRepoSyncProcessExecutor {
                 run_in_single_sync_mode(
                     ctx,
                     resolved_csids,
-                    self.commit_syncer.clone(),
+                    self.commit_sync_data.clone(),
                     self.scuba_sample.clone(),
                     maybe_target_bookmark,
                     self.common_bookmarks.clone(),
@@ -240,9 +240,9 @@ impl XRepoSyncProcessExecutor {
             Tail(tail_cmd_args) => {
                 let sleep_duration = Duration::from_secs(tail_cmd_args.sleep_secs);
                 let tailing_args = if tail_cmd_args.catch_up_once {
-                    TailingArgs::CatchUpOnce(self.commit_syncer.clone())
+                    TailingArgs::CatchUpOnce(self.commit_sync_data.clone())
                 } else {
-                    TailingArgs::LoopForever(self.commit_syncer.clone())
+                    TailingArgs::LoopForever(self.commit_sync_data.clone())
                 };
 
                 let maybe_bookmark_regex =

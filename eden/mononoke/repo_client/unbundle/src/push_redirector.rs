@@ -25,8 +25,8 @@ use cloned::cloned;
 use context::CoreContext;
 use cross_repo_sync::CandidateSelectionHint;
 use cross_repo_sync::CommitSyncContext;
+use cross_repo_sync::CommitSyncData;
 use cross_repo_sync::CommitSyncOutcome;
-use cross_repo_sync::CommitSyncer;
 use cross_repo_sync::SubmoduleDeps;
 use cross_repo_sync::Target;
 use cross_repo_sync::create_commit_syncers;
@@ -159,10 +159,10 @@ pub struct PushRedirector<R> {
     pub repo: Arc<R>,
     // small repo to sync from
     pub small_repo: Arc<R>,
-    // `CommitSyncer` struct to do push redirecion
-    pub small_to_large_commit_syncer: CommitSyncer<R>,
-    // `CommitSyncer` struct for the backsyncer
-    pub large_to_small_commit_syncer: CommitSyncer<R>,
+    // `CommitSyncData` struct to do push redirecion
+    pub small_to_large_commit_syncer: CommitSyncData<R>,
+    // `CommitSyncData` struct for the backsyncer
+    pub large_to_small_commit_syncer: CommitSyncData<R>,
     // A struct, needed to backsync commits
     pub target_repo_dbs: Arc<TargetRepoDbs>,
 }
@@ -650,7 +650,7 @@ impl<R: Repo> PushRedirector<R> {
         //       catch up on non-public commits, created in the
         //       large repo. One proposal is to include those in
         //       `UnbundleInfinitePushResponse` and make this
-        //       method call some `CommitSyncer` method to sync
+        //       method call some `CommitSyncData` method to sync
         //       those commits.
         Err(format_err!(
             "convert_unbundle_infinite_push_response is not implemented"
@@ -699,7 +699,7 @@ impl<R: Repo> PushRedirector<R> {
     async fn remap_changeset_expect_rewritten_or_preserved(
         &self,
         ctx: &CoreContext,
-        syncer: &CommitSyncer<R>,
+        syncer: &CommitSyncData<R>,
         cs_id: ChangesetId,
     ) -> Result<ChangesetId, Error> {
         let maybe_commit_sync_outcome = syncer.get_commit_sync_outcome(ctx, cs_id).await?;
