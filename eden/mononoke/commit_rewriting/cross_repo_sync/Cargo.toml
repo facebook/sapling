@@ -23,7 +23,7 @@ cacheblob = { version = "0.1.0", path = "../../blobstore/cacheblob" }
 changeset_info = { version = "0.1.0", path = "../../derived_data/changeset_info" }
 cloned = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 commit_graph = { version = "0.1.0", path = "../../repo_attributes/commit_graph/commit_graph" }
-commit_transformation = { version = "0.1.0", path = "../../megarepo_api/commit_transformation" }
+commit_transformation = { version = "0.1.0", path = "../../features/commit_transformation/commit_transformation" }
 context = { version = "0.1.0", path = "../../server/context" }
 environment = { version = "0.1.0", path = "../../cmdlib/environment" }
 facet = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
