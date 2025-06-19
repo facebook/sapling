@@ -67,7 +67,6 @@ from sapling import (
     scmutil,
     util,
     visibility,
-    wireproto,
 )
 from sapling.extensions import unwrapfunction, wrapcommand, wrapfunction
 from sapling.i18n import _, _n

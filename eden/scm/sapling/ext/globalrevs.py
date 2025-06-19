@@ -48,15 +48,7 @@ template.
 import re
 from typing import Optional
 
-from sapling import (
-    autopull,
-    error,
-    extensions,
-    localrepo,
-    namespaces,
-    registrar,
-    revset,
-)
+from sapling import autopull, error, extensions, namespaces, registrar, revset
 from sapling.i18n import _
 from sapling.namespaces import namespace
 

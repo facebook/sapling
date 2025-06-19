@@ -9,7 +9,6 @@ import argparse
 import logging
 import os
 import socket
-import time
 
 from libfb.py import log
 from rfe.scubadata.scubadata_py3 import Sample, ScubaData

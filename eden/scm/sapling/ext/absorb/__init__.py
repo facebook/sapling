@@ -39,7 +39,6 @@ from sapling import (
     extensions,
     identity,
     mdiff,
-    mutation,
     node,
     patch,
     registrar,

@@ -18,7 +18,6 @@ and O(changes) merge between branches.
 
 import errno
 import hashlib
-import heapq
 import os
 import struct
 import zlib

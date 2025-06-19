@@ -39,7 +39,7 @@ config example::
 
 import json
 
-from sapling import progress, registrar, util
+from sapling import progress, util
 from sapling.extensions import wrapfunction
 
 

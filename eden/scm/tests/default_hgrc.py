@@ -9,7 +9,6 @@
 Default config file for testing
 """
 
-import os
 from typing import Optional
 
 

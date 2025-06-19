@@ -13,7 +13,6 @@ from . import (
     eden_dirstate_fs,
     eden_dirstate_map,
     EdenThriftClient as thrift,
-    encoding,
     localrepo,
     match as matchmod,
     scmutil,
@@ -21,7 +20,6 @@ from . import (
     util,
 )
 from .eden_dirstate_serializer import MERGE_STATE_BOTH_PARENTS, MERGE_STATE_OTHER_PARENT
-from .node import nullid
 
 propertycache = util.propertycache
 

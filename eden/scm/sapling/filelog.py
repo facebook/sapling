@@ -17,7 +17,7 @@ from typing import Dict, Pattern
 
 import bindings
 
-from . import eagerepo, error, git, mdiff, revlog, util
+from . import eagerepo, error, git, mdiff, revlog
 from .node import bin
 
 

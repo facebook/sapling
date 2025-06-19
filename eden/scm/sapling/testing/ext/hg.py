@@ -15,7 +15,7 @@ import os
 import subprocess
 import sys
 from functools import partial
-from typing import BinaryIO, Optional
+from typing import BinaryIO
 
 from ..sh import Env, Scope
 from ..sh.bufio import BufIO
