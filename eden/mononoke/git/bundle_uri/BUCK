@@ -36,7 +36,6 @@ rust_library(
         "//ti/urlgen/service:if-rust-clients",
         "//ti/urlgen/service:if-rust-srclients",
     ] + ([] if rust_oss.is_oss_build() else [
-        "fbsource//third-party/rust:base64",
         "fbsource//third-party/rust:serde_json",
     ])) + ["//configerator/structs/fi/common:context-rust"],
 )
