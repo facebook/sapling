@@ -15,6 +15,7 @@ use mysql_client::Query;
 use mysql_client::query;
 use sapling_client::commit::get_commit_timestamp;
 use sapling_client::commit::is_commit_in_repo;
+use serde::Deserialize;
 use serde::Serialize;
 
 const XDB_SAVED_STATE: &str = "xdb.devinfra_saved_state";
@@ -26,11 +27,24 @@ struct SavedStateInfo {
     project_metadata: String,
 }
 
-#[derive(Serialize)]
+#[derive(Serialize, Deserialize)]
 pub struct SavedState {
     pub commit_id: String,
     pub manifold_bucket: String,
     pub manifold_path: String,
+}
+
+// In repoless queries, we do not have access to the full repository,
+// so we cannot verify whether a given commit ID actually exists in the repo.
+// Therefore, we return both the saved state commit ID (the commit the saved state was generated from)
+// and the synced commit ID (1-repo)
+// This allows the client to make informed decisions and use appropriate hash.
+#[derive(Serialize, Deserialize)]
+pub struct RepolessSavedState {
+    pub commit_id: String,
+    pub manifold_bucket: String,
+    pub manifold_path: String,
+    pub synced_commit_id: Option<String>,
 }
 
 pub struct SavedStateClient {
@@ -53,6 +67,7 @@ impl SavedStateClient {
     pub async fn get_most_recent_saved_state(&self, commit_id: &str) -> anyhow::Result<SavedState> {
         self.get_most_recent_saved_state_with_timestamp(commit_id, None, true)
             .await
+            .map(|(saved_state, _)| saved_state)
     }
 
     /// Get the most recent saved state for a given commit ID, without repository checkout available.
@@ -61,17 +76,24 @@ impl SavedStateClient {
         &self,
         commit_id: &str,
         timestamp: u64,
-    ) -> anyhow::Result<SavedState> {
+    ) -> anyhow::Result<RepolessSavedState> {
         self.get_most_recent_saved_state_with_timestamp(commit_id, Some(timestamp), false)
             .await
+            .map(|(saved_state, sync_commit)| RepolessSavedState {
+                commit_id: saved_state.commit_id,
+                manifold_bucket: saved_state.manifold_bucket,
+                manifold_path: saved_state.manifold_path,
+                synced_commit_id: Some(sync_commit).filter(|s| !s.is_empty()),
+            })
     }
 
+    /// Internal helper method to get the most recent saved state for a given commit ID.
     async fn get_most_recent_saved_state_with_timestamp(
         &self,
         commit_id: &str,
         timestamp: Option<u64>,
         repo_check: bool,
-    ) -> anyhow::Result<SavedState> {
+    ) -> anyhow::Result<(SavedState, String)> {
         let timestamp = match timestamp {
             Some(timestamp) => timestamp,
             None => get_commit_timestamp(commit_id)
@@ -106,11 +128,14 @@ impl SavedStateClient {
         // NOTE: always use the saved state hash, even if it's not in the repo.
         let manifold_path =
             self.get_manifold_path(&saved_state_info.hash, &saved_state_info.project_metadata);
-        Ok(SavedState {
-            commit_id,
-            manifold_bucket: saved_state_info.manifold_bucket,
-            manifold_path,
-        })
+        Ok((
+            SavedState {
+                commit_id,
+                manifold_bucket: saved_state_info.manifold_bucket,
+                manifold_path,
+            },
+            saved_state_info.synced_hash,
+        ))
     }
 
     async fn get_saved_state_info(
