@@ -15,6 +15,7 @@ use mysql_client::Query;
 use mysql_client::query;
 use sapling_client::commit::get_commit_timestamp;
 use sapling_client::commit::is_commit_in_repo;
+use serde::Serialize;
 
 const XDB_SAVED_STATE: &str = "xdb.devinfra_saved_state";
 
@@ -25,6 +26,7 @@ struct SavedStateInfo {
     project_metadata: String,
 }
 
+#[derive(Serialize)]
 pub struct SavedState {
     pub commit_id: String,
     pub manifold_bucket: String,

@@ -10,6 +10,7 @@ rust_library(
     ],
     deps = [
         "fbsource//third-party/rust:anyhow",
+        "fbsource//third-party/rust:serde",
         "//common/rust/mysql:mysql_client",
         "//common/rust/shed/fbinit:fbinit",
         "//eden/fs/cli_rs/sapling-client:sapling-client",
