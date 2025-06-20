@@ -367,3 +367,14 @@ dott_test(
         "//eden/mononoke/tools/testtool:testtool",
     ],
 )
+
+dott_test(
+    name = "sql-telemetry",
+    dott_files = ["test-sql-telemetry.t"],
+    use_mysql = True,
+    deps = [
+        "//eden/mononoke:mononoke",
+        "//eden/mononoke/tools/admin:admin",
+        "//eden/mononoke/tools/testtool:testtool",
+    ],
+)
