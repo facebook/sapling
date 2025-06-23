@@ -36,6 +36,7 @@ use re_cas_common::parse_stats;
 use re_cas_common::split_up_to_max_bytes;
 use re_cas_common::to_re_digest;
 use remote_execution_common::TCode;
+use remote_execution_common::TQuotaPoolInfo;
 use thriftclient::TransportType;
 
 pub struct ThinCasClient {
@@ -133,6 +134,12 @@ impl ThinCasClient {
     fn cas_call_context(&self) -> CASCallContext {
         CASCallContext {
             use_case_id: self.use_case.clone(),
+            quota_pool_info: TQuotaPoolInfo {
+                // TODO(T228252905)
+                budget_entity: "3199644040305541".to_string(),
+                quota_pool: self.use_case.clone(),
+                ..Default::default()
+            },
             session_id: self.session_id.clone(),
             cache_session_uid: self.session_id.clone(),
             ephemeral_cache_session: Some(true),
