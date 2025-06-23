@@ -163,13 +163,6 @@ where
             args.push(&second);
         }
 
-        let repository_root_arg: String;
-        if let Some(repository_root) = &params.repository_root {
-            repository_root_arg = format!("{}", repository_root.display());
-            args.push("--repository");
-            args.push(&repository_root_arg);
-        };
-
         let root_path_arg: String;
         if let Some(root) = &params.root {
             root_path_arg = format!("path:{}", root.display());
@@ -181,7 +174,13 @@ where
             .envs(get_sapling_options())
             .args(args)
             .stdout(Stdio::piped());
-        let mut child = spawner.spawn(&mut command)?;
+        let command = if let Some(repository_root) = &params.repository_root {
+            command.current_dir(repository_root)
+        } else {
+            &mut command
+        };
+
+        let mut child = spawner.spawn(command)?;
         let stdout = child.stdout().take().ok_or_else(|| {
             SaplingError::Other("Failed to read stdout when invoking 'sl status'.".to_string())
         })?;
