@@ -309,7 +309,7 @@ impl CasClient for RichCasClient {
         &self,
         digest: &CasDigest,
     ) -> Result<(CasFetchedStats, Option<Blob>)> {
-        tracing::trace!(target: "cas_client", concat!(stringify!($struct), " fetching {:?} digest from local cache"), digest);
+        tracing::trace!(target: "cas_client", "RichCasClient fetching {:?} digest from local cache", digest);
 
         #[cfg(target_os = "linux")]
         {
@@ -333,7 +333,7 @@ impl CasClient for RichCasClient {
 
     /// Upload blobs to CAS.
     async fn upload(&self, blobs: Vec<Blob>) -> Result<Vec<CasDigest>> {
-        tracing::debug!(target: "cas_client", concat!(stringify!($struct), " uploading {} blobs"), blobs.len());
+        tracing::debug!(target: "cas_client", "RichCasClient uploading {} blobs", blobs.len());
 
         #[cfg(target_os = "linux")]
         {
@@ -381,13 +381,13 @@ impl CasClient for RichCasClient {
         stream::iter(split_up_to_max_bytes(digests, self.fetch_limit.value()))
             .map(move |digests| async move {
                 if !self.cas_success_tracker.allow_request()? {
-                    tracing::debug!(target: "cas_client", concat!(stringify!($struct), " skip fetching {} {}(s)"), digests.len(), log_name);
+                    tracing::debug!(target: "cas_client", "RichCasClient skip fetching {} {}(s)", digests.len(), log_name);
                     return Err(anyhow!("skip cas fetching due to cas success tracker error rate limiting vioaltion"));
                 }
                 if self.use_streaming_dowloads && digests.len() == 1 && digests.first().unwrap().size >= self.fetch_limit.value() {
                     // Single large file, fetch it via the streaming API to avoid memory issues on CAS side.
                     let digest = digests.first().unwrap();
-                    tracing::debug!(target: "cas_client", concat!(stringify!($struct), " streaming {} {}(s)"), digests.len(), log_name);
+                    tracing::debug!(target: "cas_client", "RichCasClient streaming {} {}(s)", digests.len(), log_name);
 
 
                     // Unfortunately, the streaming API does not return the storage stats, so it won't be added to the stats.
@@ -436,7 +436,7 @@ impl CasClient for RichCasClient {
 
                 // Fetch digests via the regular API (download inlined digests).
 
-                tracing::debug!(target: "cas_client", concat!(stringify!($struct), " fetching {} {}(s)"), digests.len(), log_name);
+                tracing::debug!(target: "cas_client", "RichCasClient fetching {} {}(s)", digests.len(), log_name);
 
                 #[cfg(target_os = "linux")]
                 let (data, stats) = {
@@ -534,11 +534,11 @@ impl CasClient for RichCasClient {
         stream::iter(split_up_to_max_bytes(digests, self.fetch_limit.value()))
         .map(move |digests| async move {
             if !self.cas_success_tracker.allow_request()? {
-                tracing::debug!(target: "cas_client", concat!(stringify!($struct), " skip prefetching {} {}(s)"), digests.len(), log_name);
+                tracing::debug!(target: "cas_client", "RichCasClient skip prefetching {} {}(s)", digests.len(), log_name);
                 return Err(anyhow!("skip cas prefetching due to cas success tracker error rate limiting vioaltion"));
             }
 
-            tracing::debug!(target: "cas_client", concat!(stringify!($struct), " prefetching {} {}(s)"), digests.len(), log_name);
+            tracing::debug!(target: "cas_client", "RichCasClient prefetching {} {}(s)", digests.len(), log_name);
 
             #[cfg(target_os = "linux")]
             let response = self.client()?
