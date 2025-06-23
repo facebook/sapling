@@ -73,8 +73,16 @@ python_binary(
 
 rust_library(
     name = "edenfs_config_manager_lib_rust",
-    srcs = ["edenfs_config_manager_lib.rs"],
-    crate_root = "edenfs_config_manager_lib.rs",
+    srcs = [
+        "edenfs_config_fetch.rs",
+        "edenfs_config_fetch_canary.rs",
+        "edenfs_config_fetch_configerator.rs",
+        "edenfs_config_fetch_local.rs",
+        "edenfs_config_fetch_manifold.rs",
+        "edenfs_config_manager_lib.rs",
+        "lib.rs",
+    ],
+    crate_root = "lib.rs",
     os_deps = [
         (
             "linux",
@@ -88,6 +96,7 @@ rust_library(
     ],
     deps = [
         "fbsource//third-party/rust:anyhow",
+        "fbsource//third-party/rust:async-trait",
         "fbsource//third-party/rust:chrono",
         "fbsource//third-party/rust:chrono-tz",
         "fbsource//third-party/rust:const_format",
