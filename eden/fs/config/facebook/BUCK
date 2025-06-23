@@ -127,5 +127,6 @@ rust_binary(
         ":edenfs_config_manager_lib_rust",
         "//cli/rust/cli:cli",
         "//common/rust/shed/fbinit:fbinit",
+        "//configerator/structs/scm/eden/config:edenfs_config-rust",
     ],
 )
