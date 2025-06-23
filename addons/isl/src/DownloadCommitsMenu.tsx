@@ -135,10 +135,11 @@ function DownloadCommitsTooltip({dismiss}: {dismiss: () => unknown}) {
 
     if (
       shouldGoto &&
-      // Goto for public commits will be handled by Graft.
+      // Goto for public commits will be handled by Graft, if a rebase/graft was performed.
       // Goto on max(latest_successors(revset)) would just yield the existing public commit,
       // but for non-landed commits, using succeedableRevset allows goto the newly rebased commit.
-      !isPublic
+      // If no rebase was performed, we will use goto even for public commits.
+      (!isPublic || rebaseType === null)
     ) {
       runOperation(
         new GotoOperation(
