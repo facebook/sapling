@@ -62,27 +62,27 @@ namespace InteractiveSmartlogVSExtension
 
         private void ReloadCommandHandler(object sender, EventArgs e)
         {
-            ThreadHelper.JoinableTaskFactory.Run(async () => await ExecuteAsync(sender, e));
+            package.JoinableTaskFactory.Run(async () => await ExecuteAsync(sender, e));
         }
 
         private void DiffUncommittedChangesCommandHandler(object sender, EventArgs e)
         {
-            ThreadHelper.JoinableTaskFactory.Run(async () => await ExecuteAsync(sender, e));
+            package.JoinableTaskFactory.Run(async () => await ExecuteAsync(sender, e));
         }
 
         private void DiffStackChangesCommandHandler(object sender, EventArgs e)
         {
-            ThreadHelper.JoinableTaskFactory.Run(async () => await ExecuteAsync(sender, e));
+            package.JoinableTaskFactory.Run(async () => await ExecuteAsync(sender, e));
         }
 
         private void DiffHeadChangesCommandHandler(object sender, EventArgs e)
         {
-            ThreadHelper.JoinableTaskFactory.Run(async () => await ExecuteAsync(sender, e));
+            package.JoinableTaskFactory.Run(async () => await ExecuteAsync(sender, e));
         }
 
         private void RevertUncommittedChangesCommandHandler(object sender, EventArgs e)
         {
-            ThreadHelper.JoinableTaskFactory.Run(async () => await ExecuteAsync(sender, e));
+            package.JoinableTaskFactory.Run(async () => await ExecuteAsync(sender, e));
         }
 
         /// <summary>

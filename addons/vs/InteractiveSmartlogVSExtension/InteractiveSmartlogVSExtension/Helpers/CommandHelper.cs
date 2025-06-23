@@ -79,7 +79,7 @@ namespace InteractiveSmartlogVSExtension
                         "To use a custom diff tool, you need to specify a tool executable and argument string.\n\n" +
                         "Please setup at Tools -> Options -> InteractiveSmartlog.");
                 }
-                await ShowExternalDiffAsync(package, diffToolExe, diffToolArgs, diffType, path, documentText);
+                package.JoinableTaskFactory.RunAsync(async () => await ShowExternalDiffAsync(package, diffToolExe, diffToolArgs, diffType, path, documentText));
             }
         }
 
@@ -219,8 +219,11 @@ namespace InteractiveSmartlogVSExtension
                             CreateNoWindow = true
                         });
 
-                        _ = Task.Delay(5000);
                         await CommonHelper.LogSuccessAsync(ActionType.OpenExternalDiffView);
+
+                        // Give our tool a little time to actually launch and read the temporary file before we try to delete it.
+                        // This is fine since we've scheduled the task on a worker thread.
+                        System.Threading.Thread.Sleep(5000);
                     }
                 }
             }
