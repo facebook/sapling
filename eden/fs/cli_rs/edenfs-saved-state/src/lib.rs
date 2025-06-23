@@ -25,6 +25,7 @@ struct SavedStateInfo {
     synced_hash: String,
     manifold_bucket: String,
     project_metadata: String,
+    cas_digest: String,
 }
 
 #[derive(Serialize, Deserialize)]
@@ -32,6 +33,7 @@ pub struct SavedState {
     pub commit_id: String,
     pub manifold_bucket: String,
     pub manifold_path: String,
+    pub cas_digest: Option<String>,
 }
 
 // In repoless queries, we do not have access to the full repository,
@@ -45,6 +47,7 @@ pub struct RepolessSavedState {
     pub manifold_bucket: String,
     pub manifold_path: String,
     pub synced_commit_id: Option<String>,
+    pub cas_digest: Option<String>,
 }
 
 pub struct SavedStateClient {
@@ -84,6 +87,7 @@ impl SavedStateClient {
                 manifold_bucket: saved_state.manifold_bucket,
                 manifold_path: saved_state.manifold_path,
                 synced_commit_id: Some(sync_commit).filter(|s| !s.is_empty()),
+                cas_digest: saved_state.cas_digest,
             })
     }
 
@@ -133,6 +137,7 @@ impl SavedStateClient {
                 commit_id,
                 manifold_bucket: saved_state_info.manifold_bucket,
                 manifold_path,
+                cas_digest: Some(saved_state_info.cas_digest).filter(|s| !s.is_empty()),
             },
             saved_state_info.synced_hash,
         ))
@@ -152,20 +157,19 @@ impl SavedStateClient {
             Option<String>,
             Option<String>,
             Option<String>,
+            Option<String>,
         )> = result
             .into_rows()
             .context("saved state query result did not match expected schema")?;
-        let saved_state_info =
-            row.into_iter()
-                .next()
-                .map(
-                    |(hash, synced_hash, manifold_bucket, project_metadata)| SavedStateInfo {
-                        hash: hash.unwrap_or_default(),
-                        synced_hash: synced_hash.unwrap_or_default(),
-                        manifold_bucket: manifold_bucket.unwrap_or_default(),
-                        project_metadata: project_metadata.unwrap_or_default(),
-                    },
-                );
+        let saved_state_info = row.into_iter().next().map(
+            |(hash, synced_hash, manifold_bucket, project_metadata, cas_digest)| SavedStateInfo {
+                hash: hash.unwrap_or_default(),
+                synced_hash: synced_hash.unwrap_or_default(),
+                manifold_bucket: manifold_bucket.unwrap_or_default(),
+                project_metadata: project_metadata.unwrap_or_default(),
+                cas_digest: cas_digest.unwrap_or_default(),
+            },
+        );
         // Throw an error if both hash and synced_hash are empty
         if let Some(info) = &saved_state_info {
             if info.hash.is_empty() && info.synced_hash.is_empty() {
@@ -177,7 +181,7 @@ impl SavedStateClient {
 
     fn get_query(&self, timestamp: u64, commit_id: &str, project_metadata: &str) -> Query {
         let mut query = query!(
-            r"SELECT `hash`, `synced_hash`, `manifold_bucket`, `project_metadata`
+            r"SELECT `hash`, `synced_hash`, `manifold_bucket`, `project_metadata`, `cas_digest`
              FROM `saved_states`
              WHERE `project` = {project} AND
                  (`timestamp` < {timestamp} OR
