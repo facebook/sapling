@@ -164,7 +164,7 @@ impl AuxStore {
         let mut open_options = StoreOpenOptions::new(config)
             .max_log_count(4)
             .max_bytes_per_log(250 * 1000 * 1000 / 4)
-            .auto_sync_threshold(10 * 1024 * 1024)
+            .auto_sync_threshold(1024 * 1024)
             .load_specific_config(config, "aux")
             .create(true)
             .index("node", |_| {
