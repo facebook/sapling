@@ -418,7 +418,7 @@ sb_active = "{label('sb.active', sb_item)}"
 sb = "{if(activebookmark, sb_active, sb_item)}"
 
 # Commit Cloud Templates
-sl_cloud_node = "{label(sl_phase_label, ifeq(phase, 'draft', hyperlink(separate('', 'https://www.internalfb.com/intern/commit/cloud/FBS/', node), truncatelonglines(node, sl_hash_minlen)), truncatelonglines(node, sl_hash_minlen)))}"
+sl_cloud_node = "{label(sl_phase_label, ifeq(phase, 'draft', hyperlink(separate('', 'https://www.internalfb.com/phabricator/commit/FBS/', node), truncatelonglines(node, sl_hash_minlen)), truncatelonglines(node, sl_hash_minlen)))}"
 sl_cloud_header_super = "{separate('  ', sl_userdefined_prefix, sl_cloud_node, sl_date, sl_user, sl_diff_super, sl_tasks, sl_cloud_books, sl_stablecommit, sl_userdefined_suffix)}"
 sl_cloud_header_normal = "{separate('  ', sl_userdefined_prefix, sl_cloud_node, sl_date, sl_user, sl_diff, sl_tasks, sl_cloud_books, sl_stablecommit, sl_userdefined_suffix)}"
 sl_cloud_header_short = "{separate('  ', sl_userdefined_prefix, sl_cloud_node, sl_date, sl_cloud_books, sl_userdefined_suffix)}"
