@@ -1867,41 +1867,6 @@ mod test {
     }
 
     #[mononoke::test]
-    fn test_stray_fields() {
-        const REPO: &str = r#"
-        storage_config = "randomstore"
-
-        [storage.randomstore.metadata.remote]
-        primary = { db_address = "other_other_db" }
-
-        [storage.randomstore.blobstore.blob_files]
-        path = "/tmp/foo"
-
-        # Should be above
-        readonly = true
-        "#;
-
-        const REPO_DEF: &str = r#"
-         repo_id = 123
-         readonly = true
-         "#;
-
-        let paths = btreemap! {
-            "common/commitsyncmap.toml" => "",
-            "repos/test/server.toml" => REPO,
-            "repo_definitions/test/server.toml" => REPO_DEF,
-        };
-
-        let config_store = ConfigStore::new(Arc::new(TestSource::new()), None, None);
-        let tmp_dir = write_files(&paths);
-        let res = load_repo_configs(tmp_dir.path(), &config_store);
-        let msg = format!("{:#?}", res);
-        println!("res = {}", msg);
-        assert!(res.is_err());
-        assert!(msg.contains("unknown keys in config parsing"));
-    }
-
-    #[mononoke::test]
     fn test_multiplexed_store_types() {
         const STORAGE: &str = r#"
         [multiplex_store.metadata.remote]

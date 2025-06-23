@@ -51,6 +51,7 @@ rust_library(
         "fbsource//third-party/rust:serde_json",
         "fbsource//third-party/rust:thiserror",
         "fbsource//third-party/rust:toml",
+        "fbsource//third-party/rust:tracing",
         ":metaconfig_types",
         "//common/rust/shed/cached_config:cached_config",
         "//configerator/structs/scm/mononoke/repos:commitsync-rust",

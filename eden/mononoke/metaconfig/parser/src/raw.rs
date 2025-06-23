@@ -184,7 +184,7 @@ where
             })?;
 
             if !unused.is_empty() {
-                return Err(anyhow!("unknown keys in config parsing: `{:?}`", unused));
+                tracing::warn!("unknown keys in config parsing: `{:?}`", unused);
             }
 
             Ok(t)

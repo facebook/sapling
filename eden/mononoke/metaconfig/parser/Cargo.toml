@@ -26,6 +26,7 @@ serde_ignored = "0.1.10"
 serde_json = { version = "1.0.140", features = ["float_roundtrip", "unbounded_depth"] }
 thiserror = "2.0.12"
 toml = "0.8.22"
+tracing = { version = "0.1.41", features = ["attributes", "valuable"] }
 
 [dev-dependencies]
 maplit = "1.0"
