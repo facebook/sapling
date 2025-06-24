@@ -263,8 +263,6 @@ class EdenConfig : private ConfigSettingManager {
       false,
       this};
 
-  // [config]
-
   /**
    * If EdenFS should auto migrate non inmemory inode catalogs to inmemory on
    * Windows.
@@ -273,6 +271,33 @@ class EdenConfig : private ConfigSettingManager {
       "core:migrate_existing_to_in_memory_catalog",
       true,
       this};
+
+  /**
+   * At startup, EdenFS will attempt to set its memory priority to the following
+   * value. If the value is null, EdenFS will not attempt to set its priority.
+   *
+   * On macOS, this corresponds to a Jetsam Priority value (as of June
+   * 2025, these values range between 0 (lowest, most likely to be killed), and
+   * 210 (highest, least likely to be killed).
+   *
+   * On Linux, this corresponds to the
+   * oom_score_adj value (as of June 2025, these values range between -1000
+   * (highest, least likely to be killed) and 1000 (most likely to be killed).
+   */
+  ConfigSetting<std::optional<int32_t>> daemonTargetMemoryPriority{
+      "core:daemon-target-memory-priority",
+      std::nullopt,
+      this};
+
+  /**
+   * Similar to the above config, but sets the PrivHelper's priority instead.
+   */
+  ConfigSetting<std::optional<int32_t>> privHelperTargetMemoryPriority{
+      "core:priv-helper-target-memory-priority",
+      std::nullopt,
+      this};
+
+  // [config]
 
   /**
    * How often the on-disk config information should be checked for changes.
