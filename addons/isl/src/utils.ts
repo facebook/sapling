@@ -6,7 +6,7 @@
  */
 
 import type {ViteHotContext} from 'vite/types/hot';
-import type {Disposable, Hash} from './types';
+import type {CommitInfo, Disposable, Hash} from './types';
 
 export function firstOfIterable<T>(it: IterableIterator<T>): T | undefined {
   return it.next().value;
@@ -86,4 +86,14 @@ export function calculateHourDifference(date1: Date, date2: Date): number {
   const msDifference = date1.getTime() - date2.getTime();
   const hoursDifference = msDifference / (1000 * 60 * 60);
   return hoursDifference;
+}
+
+/**
+ * Check if a commit is on the master branch
+ */
+export function isCommitMaster(commit: CommitInfo): boolean {
+  if (commit.remoteBookmarks == null) {
+    return false;
+  }
+  return commit.remoteBookmarks.some(bookmark => bookmark.includes('master'));
 }

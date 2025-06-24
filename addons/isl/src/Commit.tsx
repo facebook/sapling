@@ -749,14 +749,16 @@ async function maybeWarnAboutRebaseOntoMaster(commit: CommitInfo): Promise<boole
   if (!onto) {
     return true;
   }
-
+  const src = findPublicBaseAncestor(dag);
   const destBase = findPublicBaseAncestor(dag, onto.hash);
   if (!destBase) {
     // can't determine if we can show warning
     return Promise.resolve(true);
   }
 
-  const warning = Promise.resolve(Internal.maybeWarnAboutRebaseOntoMaster?.(destBase) ?? false);
+  const warning = Promise.resolve(
+    src ? Internal.maybeWarnAboutRebaseOntoMaster?.(src, destBase) : false,
+  );
 
   if (await warning) {
     tracker.track('WarnAboutRebaseOntoMaster');
