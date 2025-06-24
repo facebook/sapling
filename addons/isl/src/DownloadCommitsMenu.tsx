@@ -68,6 +68,13 @@ const downloadCommitShouldGoto = configBackedAtom<boolean>(
   false,
 );
 
+function maybeSupportedByPull(name: string): boolean {
+  return (
+    !name.includes('(') /* likely a revset */ &&
+    name.length < 42 /* likely an expression or rREPOhash Phabricator callsign */
+  );
+}
+
 function DownloadCommitsTooltip({dismiss}: {dismiss: () => unknown}) {
   const [enteredRevset, setEnteredRevset] = useState('');
   const runOperation = useRunOperation();
@@ -92,18 +99,23 @@ function DownloadCommitsTooltip({dismiss}: {dismiss: () => unknown}) {
     // This is not a correctness issue because we show no optimistically downloaded result to act on.
     // Worst case, the rebase/goto will be queued after some other unrelated actions which should be fine.
 
-    try {
-      await runOperation(new PullRevOperation(exactRevset(enteredRevset)), /* throwOnError */ true);
-    } catch (err) {
-      if (Internal.diffDownloadOperation != null) {
-        // Note: try backup diff download system internally
+    if (maybeSupportedByPull(enteredRevset)) {
+      try {
         await runOperation(
-          Internal.diffDownloadOperation(exactRevset(enteredRevset)),
+          new PullRevOperation(exactRevset(enteredRevset)),
           /* throwOnError */ true,
         );
-      } else {
-        // If there's no backup operation, respect the error and don't try further actions
-        throw err;
+      } catch (err) {
+        if (Internal.diffDownloadOperation != null) {
+          // Note: try backup diff download system internally
+          await runOperation(
+            Internal.diffDownloadOperation(exactRevset(enteredRevset)),
+            /* throwOnError */ true,
+          );
+        } else {
+          // If there's no backup operation, respect the error and don't try further actions
+          throw err;
+        }
       }
     }
 
