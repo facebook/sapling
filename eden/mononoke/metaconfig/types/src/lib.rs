@@ -450,6 +450,9 @@ pub struct DerivedDataTypesConfig {
 
     /// For each Derived Data Type, what batch size should we use during derivation?
     pub derivation_batch_sizes: HashMap<DerivableType, usize>,
+
+    /// Config for inferred copy from
+    pub inferred_copy_from_config: Option<InferredCopyFromConfig>,
 }
 
 /// What type of unode derived data to generate
@@ -485,6 +488,14 @@ pub struct GitDeltaManifestV2Config {
     pub max_inlined_delta_size: u64,
     /// Chunk size for delta instructions.
     pub delta_chunk_size: u64,
+}
+
+/// Config for inferred copy from
+#[derive(Eq, Clone, Copy, Debug, Default, PartialEq)]
+pub struct InferredCopyFromConfig {
+    /// When trying to find file copies using basename, how many levels of
+    /// directories from the repo root should we perform the search?
+    pub dir_level_for_basename_lookup: usize,
 }
 
 /// Config for remote derivation

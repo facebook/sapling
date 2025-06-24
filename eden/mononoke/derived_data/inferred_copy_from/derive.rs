@@ -318,6 +318,11 @@ async fn find_basename_matched_copies(
     let mut content_to_paths = HashMap::new();
     let mut basenames = HashSet::new();
     let mut path_prefixes = HashSet::new();
+    let dir_lookup_level = match derivation_ctx.config().inferred_copy_from_config {
+        Some(config) => config.dir_level_for_basename_lookup,
+        None => 1,
+    };
+
     for (path, file_change) in bonsai.simplified_file_changes() {
         if !paths_to_ignore.contains(path.into()) {
             if let Some(fc) = file_change {
@@ -327,8 +332,8 @@ async fn find_basename_matched_copies(
                     .push(path.clone());
 
                 basenames.insert(path.basename().to_string());
-                // Restrict search to any of the touched top-level directory
-                if let Some(path_prefix) = path.take_prefix_components(1)? {
+                // Restrict search to any of the touched N-level directory
+                if let Some(path_prefix) = path.take_prefix_components(dir_lookup_level)? {
                     path_prefixes.insert(MPath::from(path_prefix));
                 }
             }

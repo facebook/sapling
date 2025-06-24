@@ -73,6 +73,7 @@ use metaconfig_types::DerivedDataConfig;
 use metaconfig_types::DerivedDataTypesConfig;
 use metaconfig_types::GitDeltaManifestV2Config;
 use metaconfig_types::HookManagerParams;
+use metaconfig_types::InferredCopyFromConfig;
 use metaconfig_types::InfinitepushNamespace;
 use metaconfig_types::InfinitepushParams;
 use metaconfig_types::RepoConfig;
@@ -183,6 +184,9 @@ pub fn default_test_repo_derived_data_types_config() -> DerivedDataTypesConfig {
             max_inlined_object_size: 100,
             max_inlined_delta_size: 100,
             delta_chunk_size: 1000,
+        }),
+        inferred_copy_from_config: Some(InferredCopyFromConfig {
+            dir_level_for_basename_lookup: 1,
         }),
         ..Default::default()
     }

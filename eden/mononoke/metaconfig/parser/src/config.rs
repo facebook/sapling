@@ -1303,8 +1303,8 @@ mod test {
                             DerivableType::Fsnodes => 20,
                             DerivableType::Unodes => 20,
                             DerivableType::BlameV2 => 20,
-                        }
-
+                        },
+                        inferred_copy_from_config: Default::default(),
                     },],
                     scuba_table: None,
                     derivation_queue_scuba_table: None,
