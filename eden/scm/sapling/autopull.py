@@ -160,11 +160,13 @@ def calculate_attempts(repo, xs):
 
 def trypull(repo, xs):
     # Do not attempt to pull the same name twice, or names in the repo.
-    repo._autopulled = getattr(repo, "_autopulled", set())
-    xs = [x for x in xs if x not in repo._autopulled and x not in repo]
+    autopulled = repo.volatile_state.get("autopulled")
+    if autopulled is None:
+        autopulled = repo.volatile_state["autopulled"] = set()
+    xs = [x for x in xs if x not in autopulled and x not in repo]
     if not xs:
         return False
-    repo._autopulled.update(xs)
+    autopulled.update(xs)
 
     attempts = calculate_attempts(repo, xs)
 
