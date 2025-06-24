@@ -12,6 +12,8 @@ cpp_library(
     srcs = ["LinuxMemoryPriority.cpp"],
     headers = ["LinuxMemoryPriority.h"],
     deps = [
+        "//eden/common/utils:file_utils",
+        "//eden/common/utils:path",
         "//eden/common/utils:throw",
         "//folly/logging:logging",
     ],
