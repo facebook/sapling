@@ -113,7 +113,7 @@ folly::Future<folly::Unit> FakePrivHelper::nfsUnmount(
 
 Future<Unit> FakePrivHelper::fuseUnmount(
     folly::StringPiece mountPath,
-    UnmountOptions /* options */) {
+    const UnmountOptions& /* options */) {
   return folly::makeFutureWith(
       [&] { return getMountDelegate(mountPath)->fuseUnmount(); });
 }

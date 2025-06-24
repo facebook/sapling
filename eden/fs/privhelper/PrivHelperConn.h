@@ -116,7 +116,7 @@ class PrivHelperConn {
   static UnixSocket::Message serializeUnmountRequest(
       uint32_t xid,
       folly::StringPiece mountPoint,
-      UnmountOptions& options);
+      const UnmountOptions& options);
   static void parseUnmountRequest(
       folly::io::Cursor& cursor,
       std::string& mountPoint,

@@ -58,7 +58,7 @@ class FakePrivHelper final : public PrivHelper {
       NFSMountOptions options) override;
   folly::Future<folly::Unit> fuseUnmount(
       folly::StringPiece mountPath,
-      UnmountOptions options) override;
+      const UnmountOptions& options) override;
   folly::Future<folly::Unit> nfsUnmount(folly::StringPiece mountPath) override;
   folly::Future<folly::Unit> bindMount(
       folly::StringPiece clientPath,

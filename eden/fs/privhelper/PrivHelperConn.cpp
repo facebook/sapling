@@ -205,10 +205,6 @@ NFSMountOptions deserializeNFSMountOptions(Cursor& cursor) {
 }
 
 void serializeUnmountOptions(Appender& a, const UnmountOptions& options) {
-  // TODO[T214491519] clean up UnmountOptions compatibility logic
-  if (options.skip_serialize) {
-    return;
-  }
   uint32_t bitset = 0;
   bitset |= options.force ? UnmountOptionBits::FORCE : 0;
   bitset |= options.detach ? UnmountOptionBits::DETACH : 0;
@@ -364,7 +360,7 @@ void PrivHelperConn::parseMountNfsRequest(
 UnixSocket::Message PrivHelperConn::serializeUnmountRequest(
     uint32_t xid,
     StringPiece mountPoint,
-    UnmountOptions& options) {
+    const UnmountOptions& options) {
   auto msg = serializeRequestPacket(xid, REQ_UNMOUNT_FUSE);
 
   Appender appender(&msg.data, kDefaultBufferSize);

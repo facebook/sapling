@@ -124,7 +124,7 @@ class PrivHelper {
    */
   FOLLY_NODISCARD virtual folly::Future<folly::Unit> fuseUnmount(
       folly::StringPiece mountPath,
-      UnmountOptions options) = 0;
+      const UnmountOptions& options) = 0;
 
   FOLLY_NODISCARD virtual folly::Future<folly::Unit> nfsUnmount(
       folly::StringPiece mountPath) = 0;
