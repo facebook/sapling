@@ -130,7 +130,7 @@ async fn boundary_trees_and_blobs(
                 Ok(objects)
             }
         })
-        .try_buffered(concurrency.commits)
+        .try_buffered(concurrency.trees_and_blobs)
         .try_concat()
         .await
 }
