@@ -44,6 +44,7 @@ cloned = { version = "0.1.0", git = "https://github.com/facebookexperimental/rus
 cmdlib_cross_repo = { version = "0.1.0", path = "../../cmdlib/cross_repo" }
 cmdlib_displaying = { version = "0.1.0", path = "../../cmdlib/displaying" }
 cmdlib_scrubbing = { version = "0.1.0", path = "../../cmdlib/scrubbing" }
+colored = "2.1.0"
 commit_graph = { version = "0.1.0", path = "../../repo_attributes/commit_graph/commit_graph" }
 commit_graph_types = { version = "0.1.0", path = "../../repo_attributes/commit_graph/commit_graph_types" }
 commit_id = { version = "0.1.0", path = "../../cmdlib/commit_id" }
