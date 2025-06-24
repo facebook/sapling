@@ -179,9 +179,7 @@ impl RichCasClient {
         let session_id = format!("{}_{}", cri.entry_point, cri.correlator);
 
         let log_dir = config
-            .get_or("cas", "log-dir", || {
-                Some("/tmp/eden_cas_client_logs".to_owned())
-            })
+            .get_or("cas", "log-dir", || None)
             .ok()
             .flatten()
             .map(|log_dir| {
