@@ -715,7 +715,11 @@ async function maybeWarnAboutRebaseOffWarm(dest: CommitInfo): Promise<boolean> {
   );
   if (await warning) {
     tracker.track('WarnAboutRebaseOffWarm');
-    const buttons = [t('Opt Out of Future Warnings'), t('Cancel'), t('Goto Anyway')];
+    const buttons = [
+      t('Opt Out of Future Warnings'),
+      {label: t('Cancel'), primary: true},
+      t('Goto Anyway'),
+    ];
     const answer = await showModal({
       type: 'confirm',
       buttons,
@@ -762,7 +766,11 @@ async function maybeWarnAboutRebaseOntoMaster(commit: CommitInfo): Promise<boole
 
   if (await warning) {
     tracker.track('WarnAboutRebaseOntoMaster');
-    const buttons = [t('Opt Out of Future Warnings'), t('Cancel'), t('Rebase Anyway')];
+    const buttons = [
+      t('Opt Out of Future Warnings'),
+      {label: t('Cancel'), primary: true},
+      t('Rebase Anyway'),
+    ];
     const answer = await showModal({
       type: 'confirm',
       buttons,
@@ -860,7 +868,11 @@ async function maybeWarnAboutDistantRebase(commit: CommitInfo): Promise<boolean>
 
   if (await warning) {
     tracker.track('WarnAboutDistantRebase');
-    const buttons = [t('Opt Out of Future Warnings'), t('Cancel'), t('Rebase Anyway')];
+    const buttons = [
+      t('Opt Out of Future Warnings'),
+      {label: t('Cancel'), primary: true},
+      t('Rebase Anyway'),
+    ];
     const answer = await showModal({
       type: 'confirm',
       buttons,
