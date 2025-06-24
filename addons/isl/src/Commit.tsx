@@ -714,7 +714,6 @@ async function maybeWarnAboutRebaseOffWarm(dest: CommitInfo): Promise<boolean> {
     src ? Internal.maybeWarnAboutRebaseOffWarm?.(src, destBase) : src,
   );
   if (await warning) {
-    tracker.track('WarnAboutRebaseOffWarm');
     const buttons = [
       t('Opt Out of Future Warnings'),
       {label: t('Cancel'), primary: true},
@@ -731,6 +730,11 @@ async function maybeWarnAboutRebaseOffWarm(dest: CommitInfo): Promise<boolean> {
             "If you need fresher changes, it's recommended to reserve a new OD and work off the warm commit.\n" +
             'Do you want to `goto` anyway?',
       ),
+    });
+    tracker.track('WarnAboutRebaseOffWarm', {
+      extras: {
+        userAction: answer,
+      },
     });
     if (answer === buttons[0]) {
       writeAtom(rebaseOffWarmWarningEnabled, false);
@@ -765,7 +769,6 @@ async function maybeWarnAboutRebaseOntoMaster(commit: CommitInfo): Promise<boole
   );
 
   if (await warning) {
-    tracker.track('WarnAboutRebaseOntoMaster');
     const buttons = [
       t('Opt Out of Future Warnings'),
       {label: t('Cancel'), primary: true},
@@ -783,7 +786,11 @@ async function maybeWarnAboutRebaseOntoMaster(commit: CommitInfo): Promise<boole
             'Do you want to `rebase` anyway?',
       ),
     });
-
+    tracker.track('WarnAboutRebaseOntoMaster', {
+      extras: {
+        userAction: answer,
+      },
+    });
     if (answer === buttons[0]) {
       writeAtom(rebaseOntoMasterWarningEnabled, false);
       return true;
@@ -867,7 +874,6 @@ async function maybeWarnAboutDistantRebase(commit: CommitInfo): Promise<boolean>
   );
 
   if (await warning) {
-    tracker.track('WarnAboutDistantRebase');
     const buttons = [
       t('Opt Out of Future Warnings'),
       {label: t('Cancel'), primary: true},
@@ -890,7 +896,11 @@ async function maybeWarnAboutDistantRebase(commit: CommitInfo): Promise<boolean>
         },
       ),
     });
-
+    tracker.track('WarnAboutDistantRebase', {
+      extras: {
+        userAction: answer,
+      },
+    });
     if (answer === buttons[0]) {
       writeAtom(distantRebaseWarningEnabled, false);
       return true;
