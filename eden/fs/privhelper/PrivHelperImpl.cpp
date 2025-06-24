@@ -129,6 +129,8 @@ class PrivHelperClientImpl : public PrivHelper,
       const std::string& specifiedOutputPath,
       const bool shouldUpload) override;
   Future<StopFileAccessMonitorResponse> stopFam() override;
+  Future<folly::Unit> setMemoryPriorityForProcess(pid_t pid, int priority)
+      override;
   int stop() override;
   int getRawClientFd() const override {
     auto state = state_.rlock();
@@ -570,6 +572,34 @@ Future<StopFileAccessMonitorResponse> PrivHelperClientImpl::stopFam() {
       });
 }
 
+Future<Unit> PrivHelperClientImpl::setMemoryPriorityForProcess(
+    pid_t pid,
+    int priority) {
+  auto xid = getNextXid();
+  auto request = PrivHelperConn::serializeSetMemoryPriorityForProcessRequest(
+      xid, pid, priority);
+
+  return sendAndRecv(xid, std::move(request))
+      .thenValue([pid, priority](UnixSocket::Message&& response) {
+        try {
+          PrivHelperConn::parseEmptyResponse(
+              PrivHelperConn::REQ_SET_MEMORY_PRIORITY_FOR_PROCESS, response);
+        } catch (const PrivHelperError& e) {
+          // If the unmount failed, it likely means we are communicating
+          // with a PrivHelper server that doesn't understand how to set memory
+          // priority. Ignore the error for now.
+          // TODO[T214491519] remove this after 1-2 months.
+          XLOGF(
+              ERR,
+              "Failed to set memory priority to {} for process {}: {}",
+              priority,
+              pid,
+              e.what());
+        }
+        return folly::unit;
+      });
+}
+
 int PrivHelperClientImpl::stop() {
   const auto result = cleanup();
   if (result.hasError()) {
@@ -871,6 +901,14 @@ class StubPrivHelper final : public PrivHelper {
   }
 
   folly::Future<StopFileAccessMonitorResponse> stopFam() override {
+    NOT_IMPLEMENTED();
+  }
+
+  folly::Future<folly::Unit> setMemoryPriorityForProcess(
+      pid_t pid,
+      int priority) {
+    (void)pid;
+    (void)priority;
     NOT_IMPLEMENTED();
   }
 

@@ -148,6 +148,13 @@ Future<Unit> FakePrivHelper::setLogFile(folly::File /* logFile */) {
   return makeFuture();
 }
 
+Future<Unit> FakePrivHelper::setMemoryPriorityForProcess(
+    pid_t /* pid */,
+    int /* priority */) {
+  return makeFuture<Unit>(runtime_error(
+      "FakePrivHelper::setMemoryPriorityForProcess() not implemented"));
+}
+
 int FakePrivHelper::stop() {
   return 0;
 }

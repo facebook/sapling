@@ -37,16 +37,23 @@ ProcessPriority::ProcessPriority(std::optional<int> memoryPriority) {
 }
 
 int ProcessPriority::setPrioritiesForProcess(pid_t pid) {
+  int ret = 0;
   if (memoryPriority_.has_value()) {
+    XLOGF(
+        DBG2,
+        "Setting memory priority for process {} to {}",
+        pid,
+        memoryPriority_.value()->getTargetPriority());
     if (memoryPriority_.value()->setPriorityForProcess(pid)) {
       XLOGF(
           ERR,
           "Failed to set memory priority for process {} to {}",
           pid,
           memoryPriority_.value()->getTargetPriority());
+      ret = -1;
     }
   }
-  return 0;
+  return ret;
 }
 
 } // namespace facebook::eden

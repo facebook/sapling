@@ -47,6 +47,7 @@ int LinuxMemoryPriority::setPriorityForProcess(pid_t pid) {
         "Failed to set oom_score_adj for process {}: {}",
         pid,
         writeResult.exception().what());
+    return -1;
   }
   XLOGF(INFO, "The priority of {} was set to {} successfully.", pid, priority_);
   return 0;

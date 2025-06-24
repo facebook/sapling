@@ -78,6 +78,7 @@ cpp_library(
         "//eden/common/utils:path",
         "//eden/common/utils:sysctl_util",
         "//eden/common/utils:throw",
+        "//eden/fs/privhelper/priority:process_priority",
         "//folly:conv",
         "//folly:exception",
         "//folly:expected",

@@ -53,6 +53,7 @@ class PrivHelperConn {
     REQ_GET_PID = 13,
     REQ_START_FAM = 14,
     REQ_STOP_FAM = 15,
+    REQ_SET_MEMORY_PRIORITY_FOR_PROCESS = 16,
   };
 
   // This structure should never change. If fields need to be added to the
@@ -211,6 +212,15 @@ class PrivHelperConn {
       const std::string& tmpOutputPath,
       const std::string& specifiedOutputPath,
       const bool shouldUpload);
+
+  static UnixSocket::Message serializeSetMemoryPriorityForProcessRequest(
+      uint32_t xid,
+      pid_t pid,
+      int targetPriority);
+  static void parseSetMemoryPriorityForProcessRequest(
+      folly::io::Cursor& cursor,
+      pid_t& pid,
+      int& targetPriority);
 
   /**
    * Parse a response that is expected to be empty.

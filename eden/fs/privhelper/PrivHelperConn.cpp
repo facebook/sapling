@@ -666,6 +666,26 @@ void PrivHelperConn::parseSetLogFileRequest(folly::io::Cursor& cursor) {
   checkAtEnd(cursor, "set log file request");
 }
 
+UnixSocket::Message PrivHelperConn::serializeSetMemoryPriorityForProcessRequest(
+    uint32_t xid,
+    pid_t pid,
+    int targetPriority) {
+  auto msg = serializeRequestPacket(xid, REQ_SET_MEMORY_PRIORITY_FOR_PROCESS);
+  Appender appender(&msg.data, kDefaultBufferSize);
+  appender.write<pid_t>(pid);
+  appender.write<int>(targetPriority);
+  return msg;
+}
+
+void PrivHelperConn::parseSetMemoryPriorityForProcessRequest(
+    Cursor& cursor,
+    pid_t& pid,
+    int& targetPriority) {
+  pid = cursor.read<pid_t>();
+  targetPriority = cursor.read<int>();
+  checkAtEnd(cursor, "set memory priority for process request");
+}
+
 void PrivHelperConn::serializeErrorResponse(
     Appender& appender,
     const std::exception& ex) {

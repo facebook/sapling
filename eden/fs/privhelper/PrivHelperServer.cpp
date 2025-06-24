@@ -39,6 +39,7 @@
 #include "eden/common/utils/SysctlUtil.h"
 #include "eden/common/utils/Throw.h"
 #include "eden/fs/privhelper/NfsMountRpc.h"
+#include "eden/fs/privhelper/priority/ProcessPriority.h"
 
 #ifdef __APPLE__
 #include <CoreFoundation/CoreFoundation.h> // @manual
@@ -1245,6 +1246,28 @@ UnixSocket::Message PrivHelperServer::processStopFam() {
   return response;
 }
 
+UnixSocket::Message PrivHelperServer::processSetMemoryPriorityForProcess(
+    folly::io::Cursor& cursor) {
+  XLOG(DBG3, "set memory priority for process");
+  pid_t pid;
+  int priority;
+  PrivHelperConn::parseSetMemoryPriorityForProcessRequest(
+      cursor, pid, priority);
+
+  setMemoryPriorityForProcess(pid, priority);
+
+  return makeResponse();
+}
+
+void PrivHelperServer::setMemoryPriorityForProcess(pid_t pid, int priority) {
+  auto processPriority = ProcessPriority{priority};
+
+  if (processPriority.setPrioritiesForProcess(pid)) {
+    throwf<std::runtime_error>(
+        "failed to set memory priority for process {}", pid);
+  }
+}
+
 namespace {
 /// Get the file system ID, or an errno value on error
 folly::Expected<unsigned long, int> getFSID(const char* path) {
@@ -1442,6 +1465,8 @@ UnixSocket::Message PrivHelperServer::processMessage(
       return processStartFam(cursor);
     case PrivHelperConn::REQ_STOP_FAM:
       return processStopFam();
+    case PrivHelperConn::REQ_SET_MEMORY_PRIORITY_FOR_PROCESS:
+      return processSetMemoryPriorityForProcess(cursor);
     case PrivHelperConn::MSG_TYPE_NONE:
     case PrivHelperConn::RESP_ERROR:
       break;

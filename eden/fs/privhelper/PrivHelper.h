@@ -203,6 +203,12 @@ class PrivHelper {
   stopFam() = 0;
 
   /**
+   * Set the memory priority for a given process.
+   */
+  FOLLY_NODISCARD virtual folly::Future<folly::Unit>
+  setMemoryPriorityForProcess(pid_t pid, int targetPriority) = 0;
+
+  /**
    * setLogFileBlocking() is a wrapper around setLogFile() that blocks until
    * the call has completed.
    *
@@ -213,6 +219,7 @@ class PrivHelper {
    */
   void setLogFileBlocking(folly::File logFile);
   void setDaemonTimeoutBlocking(std::chrono::nanoseconds duration);
+  void setMemoryPriorityForProcessBlocking(pid_t pid, int targetPriority);
 
   /*
    * Explicitly stop the privhelper process.

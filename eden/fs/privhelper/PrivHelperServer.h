@@ -119,6 +119,8 @@ class PrivHelperServer : private UnixSocket::ReceiveCallback {
   UnixSocket::Message processGetPid();
   UnixSocket::Message processStartFam(folly::io::Cursor& cursor);
   UnixSocket::Message processStopFam();
+  UnixSocket::Message processSetMemoryPriorityForProcess(
+      folly::io::Cursor& cursor);
 
   void unmountStaleMount(const std::string& mountPoint);
 
@@ -151,6 +153,7 @@ class PrivHelperServer : private UnixSocket::ReceiveCallback {
   virtual void bindUnmount(const char* mountPath);
   virtual void setLogFile(folly::File logFile);
   virtual void setDaemonTimeout(std::chrono::nanoseconds duration);
+  virtual void setMemoryPriorityForProcess(pid_t pid, int priority);
 
   std::unique_ptr<folly::EventBase> eventBase_;
   UnixSocket::UniquePtr conn_;
