@@ -23,7 +23,10 @@ cpp_library(
 cpp_library(
     name = "darwin_memory_priority",
     srcs = ["DarwinMemoryPriority.cpp"],
-    headers = ["DarwinMemoryPriority.h"],
+    headers = [
+        "DarwinMemoryPriority.h",
+        "private_headers/kern_memorystatus.h",
+    ],
     deps = [
         "//eden/common/utils:throw",
         "//folly/logging:logging",
