@@ -44,7 +44,7 @@ int LinuxMemoryPriority::setPriorityForProcess(pid_t pid) {
   if (writeResult.hasException()) {
     XLOGF(
         ERR,
-        "Failed to set oomScoreAdj for process {}: {}",
+        "Failed to set oom_score_adj for process {}: {}",
         pid,
         writeResult.exception().what());
   }
@@ -52,9 +52,26 @@ int LinuxMemoryPriority::setPriorityForProcess(pid_t pid) {
   return 0;
 }
 
-std::optional<int> LinuxMemoryPriority::getPriorityForProcess(pid_t /*pid*/) {
-  XLOGF(ERR, "Getting memory priority is not yet supported for Linux.");
-  return std::nullopt;
+std::optional<int> LinuxMemoryPriority::getPriorityForProcess(pid_t pid) {
+  auto oomScoreAdjPath =
+      canonicalPath({fmt::format("/proc/{}/oom_score_adj", pid)});
+  auto readResult = readFile(oomScoreAdjPath);
+  if (readResult.hasException()) {
+    XLOGF(
+        ERR,
+        "Failed to read oom_score_adj for process {}: {}",
+        pid,
+        readResult.exception().what());
+    return std::nullopt;
+  } else {
+    try {
+      auto oomScoreAdj = folly::to<int>(readResult.value());
+      return oomScoreAdj;
+    } catch (const std::exception& e) {
+      XLOGF(ERR, "Failed to parse oom_score_adj as an int: {}", e.what());
+      return std::nullopt;
+    }
+  }
 }
 } // namespace facebook::eden
 
