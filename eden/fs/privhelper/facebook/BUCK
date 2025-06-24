@@ -6,3 +6,16 @@ cpp_library(
     name = "memory_priority",
     headers = ["MemoryPriority.h"],
 )
+
+cpp_library(
+    name = "linux_memory_priority",
+    srcs = ["LinuxMemoryPriority.cpp"],
+    headers = ["LinuxMemoryPriority.h"],
+    deps = [
+        "//eden/common/utils:throw",
+        "//folly/logging:logging",
+    ],
+    exported_deps = [
+        ":memory_priority",
+    ],
+)
