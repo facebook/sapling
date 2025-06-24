@@ -49,6 +49,18 @@ pub fn expand(mode: Mode, args: Args, mut function: ItemFn) -> Result<TokenStrea
         _ => None,
     };
 
+    let set_vars = args
+        .vars
+        .iter()
+        .map(|(key, var)| {
+            quote! {
+                unsafe { std::env::set_var(#key, #var) };
+            }
+        })
+        .collect::<Vec<_>>();
+
+    let set_vars = quote! { #(#set_vars)* };
+
     let assignment = function.sig.inputs.first().map(|arg| quote!(let #arg =));
     match mode {
         Mode::NestedTest => {
@@ -115,6 +127,7 @@ pub fn expand(mode: Mode, args: Args, mut function: ItemFn) -> Result<TokenStrea
 
     function.block = parse_quote!({
         #guard
+        #set_vars
         #assignment unsafe {
             #perform_init
         };

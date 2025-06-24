@@ -9,6 +9,7 @@
 
 use syn::Ident;
 use syn::LitInt;
+use syn::LitStr;
 use syn::meta::ParseNestedMeta;
 use syn::parse::Error;
 use syn::parse::Result;
@@ -17,6 +18,7 @@ use syn::parse::Result;
 pub struct Args {
     pub disable_fatal_signals: DisableFatalSignals,
     pub tokio_workers: Option<usize>,
+    pub vars: Vec<(String, String)>,
 }
 
 #[derive(Default)]
@@ -49,6 +51,14 @@ impl Args {
             let lit: LitInt = meta.value()?.parse()?;
             let tokio_workers: usize = lit.base10_parse()?;
             self.tokio_workers = Some(tokio_workers);
+            Ok(())
+        } else if meta.path.is_ident("set_var") {
+            let lit: LitStr = meta.value()?.parse()?;
+            let value = lit.value();
+            let Some((key, value)) = value.split_once('=') else {
+                return Err(Error::new(lit.span(), "expected a key=value pair"));
+            };
+            self.vars.push((key.to_owned(), value.to_owned()));
             Ok(())
         } else {
             Err(meta.error("unrecognized fbinit attribute"))
