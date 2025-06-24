@@ -359,11 +359,12 @@ int runEdenMain(EdenMain&& main, int argc, char** argv) {
     gflags::SetCommandLineOptionWithMode(
         "minloglevel", "1", gflags::SET_FLAGS_DEFAULT);
 
+    auto daemonPid = getpid();
     startupLogger->log(
         "Starting ",
         main.getEdenfsBuildName(),
         ", pid ",
-        getpid(),
+        daemonPid,
         ", session_id ",
         getSessionId());
 
@@ -371,6 +372,16 @@ int runEdenMain(EdenMain&& main, int argc, char** argv) {
         identity, main.getLocalHostname(), main.getEdenfsVersion());
 
     auto scribeLogger = main.getScribeLogger(sessionInfo, edenConfig);
+
+    // Set the memory priority for the EdenFS daemon process. On macOS, this
+    // modifies the process' Jetsam priority. On Linux, this modifies the value
+    // of /proc/<pid>/oom_score_adj.
+    auto daemonMemoryPriority =
+        edenConfig->daemonTargetMemoryPriority.getValue();
+    if (daemonMemoryPriority.has_value()) {
+      privHelper->setMemoryPriorityForProcessBlocking(
+          daemonPid, daemonMemoryPriority.value());
+    }
 
     server.emplace(
         std::move(originalCommandLine),
