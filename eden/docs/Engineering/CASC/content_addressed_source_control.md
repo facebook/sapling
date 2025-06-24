@@ -61,7 +61,7 @@ This duration also applies to the Sapling Cache COW mount data lifetime, EdenFS 
 In the absence of prefetched Sapling Cache and with the use of resource-intensive tools like meerkat, it implies that most of the repository's data (such as www) is refetched at least daily on every host from scratch. 
 Consequently, this would result in an unsustainable load on Mononoke, our Source Control backend.
 
-Persistent Caches, of CASC, would allow to deprecate the expensive full (www) repo prefetching and significanly simplify repo cloning mechanisms for Developer Environments.
+Persistent Caches, of CASC, would allow to deprecate the expensive full (www) repo prefetching and significantly simplify repo cloning mechanisms for Developer Environments.
 
 
 ![](px/6HWvs)
