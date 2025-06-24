@@ -32,3 +32,27 @@ cpp_library(
         ":memory_priority",
     ],
 )
+
+cpp_library(
+    name = "process_priority",
+    srcs = ["ProcessPriority.cpp"],
+    headers = ["ProcessPriority.h"],
+    os_deps = [
+        (
+            "linux",
+            [":linux_memory_priority"],
+        ),
+        (
+            "macos",
+            [":darwin_memory_priority"],
+        ),
+    ],
+    deps = [
+        "//folly/logging:logging",
+    ],
+    exported_deps = [
+        ":memory_priority",
+        "//folly:portability",
+        "//folly/portability:sys_types",
+    ],
+)
