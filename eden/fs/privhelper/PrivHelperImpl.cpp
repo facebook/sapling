@@ -107,8 +107,9 @@ class PrivHelperClientImpl : public PrivHelper,
       StringPiece vfsType) override;
   Future<Unit> fuseUnmount(StringPiece mountPath, const UnmountOptions& options)
       override;
-  Future<Unit> nfsMount(folly::StringPiece mountPath, NFSMountOptions options)
-      override;
+  Future<Unit> nfsMount(
+      folly::StringPiece mountPath,
+      const NFSMountOptions& options) override;
   Future<Unit> nfsUnmount(StringPiece mountPath) override;
   Future<Unit> bindMount(StringPiece clientPath, StringPiece mountPath)
       override;
@@ -399,51 +400,19 @@ Future<File> PrivHelperClientImpl::fuseMount(
       });
 }
 
-namespace {
-void removeNewMountOptions(NFSMountOptions& options) {
-  options.readIOSize = std::nullopt;
-  options.writeIOSize = std::nullopt;
-  options.directoryReadSize = std::nullopt;
-  options.readAheadSize = std::nullopt;
-  options.retransmitTimeoutTenthSeconds = std::nullopt;
-  options.retransmitAttempts = std::nullopt;
-  options.deadTimeoutSeconds = std::nullopt;
-  options.dumbtimer = std::nullopt;
-}
-} // namespace
-
 Future<Unit> PrivHelperClientImpl::nfsMount(
     folly::StringPiece mountPath,
-    NFSMountOptions options) {
+    const NFSMountOptions& options) {
   auto xid = getNextXid();
   auto request =
       PrivHelperConn::serializeMountNfsRequest(xid, mountPath, options);
 
   return sendAndRecv(xid, std::move(request))
-      .thenValue(
-          [this, mountPath = mountPath.str(), options](
-              UnixSocket::Message&& response) mutable -> Future<Unit> {
-            try {
-              PrivHelperConn::parseEmptyResponse(
-                  PrivHelperConn::REQ_MOUNT_NFS, response);
-              return folly::unit;
-            } catch (const PrivHelperError&) {
-              // If the mount failed, it likely means we are communicating with
-              // a PrivHelper server that doesn't understand the new
-              // NFSMountOption fields.  Retry the mount without the new fields.
-              // TODO(T213499633): Clean up compatibility logic in 2-3 months.
-              removeNewMountOptions(options);
-              auto retry_xid = getNextXid();
-              auto retry_request = PrivHelperConn::serializeMountNfsRequest(
-                  retry_xid, mountPath, options);
-              return sendAndRecv(retry_xid, std::move(retry_request))
-                  .thenValue([](UnixSocket::Message&& retry_response) {
-                    PrivHelperConn::parseEmptyResponse(
-                        PrivHelperConn::REQ_MOUNT_NFS, retry_response);
-                    return folly::unit;
-                  });
-            }
-          });
+      .thenValue([](UnixSocket::Message&& response) mutable -> Future<Unit> {
+        PrivHelperConn::parseEmptyResponse(
+            PrivHelperConn::REQ_MOUNT_NFS, response);
+        return folly::unit;
+      });
 }
 
 Future<Unit> PrivHelperClientImpl::fuseUnmount(
@@ -824,7 +793,7 @@ class StubPrivHelper final : public PrivHelper {
 
   folly::Future<folly::Unit> nfsMount(
       folly::StringPiece mountPath,
-      NFSMountOptions options) override {
+      const NFSMountOptions& options) override {
     (void)options;
     // TODO: We do support NFS on Windows. Should the mount flow be
     // implemented here?

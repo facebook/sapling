@@ -607,9 +607,9 @@ void PrivHelperServer::nfsMount(
   uint32_t dumbtimer_flag = 0;
   uint32_t unmask_dumbtimer = 0;
   std::string dumbtimerStr = "nodumbtimer,";
-  if (options.dumbtimer.has_value() && options.dumbtimer.value().has_value()) {
+  if (options.dumbtimer.has_value()) {
     unmask_dumbtimer = NFS_MFLAG_DUMBTIMER;
-    if (options.dumbtimer.value().value()) {
+    if (options.dumbtimer.value()) {
       dumbtimer_flag = NFS_MFLAG_DUMBTIMER;
       dumbtimerStr = "dumbtimer,";
     }
@@ -652,29 +652,21 @@ void PrivHelperServer::nfsMount(
 
   mattrFlags |= NFS_MATTR_READ_SIZE;
   mattrFlags |= NFS_MATTR_WRITE_SIZE;
-  uint32_t readSize, writeSize;
-  readSize = options.readIOSize.value_or(options.iosize);
-  writeSize = options.writeIOSize.value_or(options.iosize);
-  XdrTrait<nfs_mattr_rsize>::serialize(attrSer, readSize);
-  XdrTrait<nfs_mattr_wsize>::serialize(attrSer, writeSize);
+  XdrTrait<nfs_mattr_rsize>::serialize(attrSer, options.readIOSize);
+  XdrTrait<nfs_mattr_wsize>::serialize(attrSer, options.writeIOSize);
 
   std::string dsizeStr = "";
-  if (options.directoryReadSize.has_value() &&
-      options.directoryReadSize.value().has_value()) {
-    dsizeStr =
-        fmt::format("dsize={},", options.directoryReadSize.value().value());
+  if (options.directoryReadSize.has_value()) {
+    dsizeStr = fmt::format("dsize={},", options.directoryReadSize.value());
     mattrFlags |= NFS_MATTR_READDIR_SIZE;
     XdrTrait<nfs_mattr_readdirsize>::serialize(
-        attrSer, options.directoryReadSize.value().value());
+        attrSer, options.directoryReadSize.value());
   }
 
   std::string readAheadStr = "";
-  if (options.readAheadSize.has_value()) {
-    readAheadStr = fmt::format("readahead={},", options.readAheadSize.value());
-    mattrFlags |= NFS_MATTR_READAHEAD;
-    XdrTrait<nfs_mattr_readahead>::serialize(
-        attrSer, options.readAheadSize.value());
-  }
+  readAheadStr = fmt::format("readahead={},", options.readAheadSize);
+  mattrFlags |= NFS_MATTR_READAHEAD;
+  XdrTrait<nfs_mattr_readahead>::serialize(attrSer, options.readAheadSize);
 
   // For NFSv2/v3 mounts, perform all file locking operations locally on the NFS
   // client (in the VFS layer) instead of on the NFS server.  This option can
@@ -729,40 +721,31 @@ void PrivHelperServer::nfsMount(
   //
   // Initial RPC request timeout value in tenths of a second, so 10 = 1s.
   std::string retransTimeoutStr = "";
-  if (options.retransmitTimeoutTenthSeconds.has_value()) {
-    retransTimeoutStr =
-        fmt::format("timeo={},", options.retransmitTimeoutTenthSeconds.value());
-    mattrFlags |= NFS_MATTR_REQUEST_TIMEOUT;
-    int32_t retransSeconds = options.retransmitTimeoutTenthSeconds.value() / 10;
-    uint32_t retransRemainderNanoseconds =
-        (options.retransmitTimeoutTenthSeconds.value() % 10) * 100000000;
-    XdrTrait<nfs_mattr_request_timeout>::serialize(
-        attrSer,
-        nfstime32{
-            /*seconds=*/retransSeconds,
-            /*nseconds=*/retransRemainderNanoseconds});
-  }
+  retransTimeoutStr =
+      fmt::format("timeo={},", options.retransmitTimeoutTenthSeconds);
+  mattrFlags |= NFS_MATTR_REQUEST_TIMEOUT;
+  int32_t retransSeconds = options.retransmitTimeoutTenthSeconds / 10;
+  uint32_t retransRemainderNanoseconds =
+      (options.retransmitTimeoutTenthSeconds % 10) * 100000000;
+  XdrTrait<nfs_mattr_request_timeout>::serialize(
+      attrSer,
+      nfstime32{
+          /*seconds=*/retransSeconds,
+          /*nseconds=*/retransRemainderNanoseconds});
 
   // Indicates the max RPC retransmissions for soft mounts
   std::string retransAttemptsStr = "";
-  if (options.retransmitAttempts.has_value()) {
-    retransAttemptsStr =
-        fmt::format("retrans={},", options.retransmitAttempts.value());
-    mattrFlags |= NFS_MATTR_SOFT_RETRY_COUNT;
-    XdrTrait<nfs_mattr_soft_retry_count>::serialize(
-        attrSer, options.retransmitAttempts.value());
-  }
+  retransAttemptsStr = fmt::format("retrans={},", options.retransmitAttempts);
+  mattrFlags |= NFS_MATTR_SOFT_RETRY_COUNT;
+  XdrTrait<nfs_mattr_soft_retry_count>::serialize(
+      attrSer, options.retransmitAttempts);
 
   std::string deadTimeoutStr = "";
-  if (options.deadTimeoutSeconds.has_value()) {
-    deadTimeoutStr =
-        fmt::format("deadtimeout={}", options.deadTimeoutSeconds.value());
-    mattrFlags |= NFS_MATTR_DEAD_TIMEOUT;
-    XdrTrait<nfs_mattr_dead_timeout>::serialize(
-        attrSer,
-        nfstime32{
-            /*seconds=*/options.deadTimeoutSeconds.value(), /*nseconds=*/0});
-  }
+  deadTimeoutStr = fmt::format("deadtimeout={}", options.deadTimeoutSeconds);
+  mattrFlags |= NFS_MATTR_DEAD_TIMEOUT;
+  XdrTrait<nfs_mattr_dead_timeout>::serialize(
+      attrSer,
+      nfstime32{/*seconds=*/options.deadTimeoutSeconds, /*nseconds=*/0});
 
   mattrFlags |= NFS_MATTR_FS_LOCATIONS;
   auto path = canonicalPath(mountPath);
@@ -827,8 +810,8 @@ void PrivHelperServer::nfsMount(
       mountPath,
       options.mountdAddr.describe(),
       options.nfsdAddr.describe(),
-      readSize,
-      writeSize,
+      options.readIOSize,
+      options.writeIOSize,
       softStr,
       rdirplusStr,
       dumbtimerStr,
@@ -882,11 +865,6 @@ void PrivHelperServer::nfsMount(
     softOptionStr = "soft";
   }
 
-  uint32_t readSize, writeSize;
-  readSize = options.readIOSize.has_value() ? options.readIOSize.value()
-                                            : options.iosize;
-  writeSize = options.writeIOSize.has_value() ? options.writeIOSize.value()
-                                              : options.iosize;
   auto mountOpts = fmt::format(
       "addr={},vers=3,proto=tcp,port={},mountvers=3,mountproto=tcp,mountport={},"
       "noresvport,nolock{}{},retrans={},timeo={},rsize={},wsize={}",
@@ -895,10 +873,10 @@ void PrivHelperServer::nfsMount(
       options.mountdAddr.getPort(),
       noReaddirplusStr,
       softOptionStr,
-      options.retransmitAttempts.value_or(3),
-      options.retransmitTimeoutTenthSeconds.value_or(600),
-      readSize,
-      writeSize);
+      options.retransmitAttempts,
+      options.retransmitTimeoutTenthSeconds,
+      options.readIOSize,
+      options.writeIOSize);
 
   // The mount flags.
   // We do not use MS_NODEV.  MS_NODEV prevents mount points from being created

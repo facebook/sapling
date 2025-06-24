@@ -31,23 +31,19 @@ struct NFSMountOptions {
  public:
   folly::SocketAddress mountdAddr;
   folly::SocketAddress nfsdAddr;
-  bool readOnly;
+  bool readOnly = false;
   // DEPRECATED: use readIOSize and writeIOSize instead
-  uint32_t iosize;
-  bool useReaddirplus;
-  bool useSoftMount;
-
-  // New fields for specifying more NFS mount options. These can be made
-  // non-optional once all running daemons have been updated to pass these
-  // values.
-  std::optional<uint32_t> readIOSize;
-  std::optional<uint32_t> writeIOSize;
-  std::optional<std::optional<uint32_t>> directoryReadSize;
-  std::optional<uint8_t> readAheadSize;
-  std::optional<int32_t> retransmitTimeoutTenthSeconds;
-  std::optional<uint32_t> retransmitAttempts;
-  std::optional<int32_t> deadTimeoutSeconds;
-  std::optional<std::optional<bool>> dumbtimer;
+  uint32_t iosize{};
+  bool useReaddirplus = false;
+  bool useSoftMount = false;
+  uint32_t readIOSize{};
+  uint32_t writeIOSize{};
+  std::optional<uint32_t> directoryReadSize = std::nullopt;
+  uint8_t readAheadSize{};
+  int32_t retransmitTimeoutTenthSeconds{};
+  uint32_t retransmitAttempts{};
+  int32_t deadTimeoutSeconds{};
+  std::optional<bool> dumbtimer = std::nullopt;
 };
 
 /*
@@ -117,7 +113,7 @@ class PrivHelper {
 
   FOLLY_NODISCARD virtual folly::Future<folly::Unit> nfsMount(
       folly::StringPiece mountPath,
-      NFSMountOptions options) = 0;
+      const NFSMountOptions& options) = 0;
 
   /**
    * Ask the privileged helper process to perform a fuse unmount.

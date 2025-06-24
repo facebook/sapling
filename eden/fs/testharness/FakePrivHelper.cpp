@@ -100,7 +100,7 @@ Future<File> FakePrivHelper::fuseMount(
 
 Future<Unit> FakePrivHelper::nfsMount(
     folly::StringPiece /*mountPath*/,
-    NFSMountOptions /*options*/) {
+    const NFSMountOptions& /*options*/) {
   return makeFuture<Unit>(
       runtime_error("FakePrivHelper::nfsMount() not implemented"));
 }

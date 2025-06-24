@@ -164,19 +164,14 @@ void serializeNFSMountOptions(Appender& a, const NFSMountOptions& options) {
   serializeUint32(a, options.iosize);
   serializeBool(a, options.useReaddirplus);
   serializeBool(a, options.useSoftMount);
-
-  // NFS options readIOSize => dumbtimer were all added at the same time, and
-  // therefore will either all be present or all be absent.
-  if (options.readIOSize.has_value()) {
-    serializeUint32(a, options.readIOSize.value());
-    serializeUint32(a, options.writeIOSize.value());
-    serializeOption(a, options.directoryReadSize.value());
-    serializeUint8(a, options.readAheadSize.value());
-    serializeUint32(a, options.retransmitTimeoutTenthSeconds.value());
-    serializeUint32(a, options.retransmitAttempts.value());
-    serializeUint32(a, options.deadTimeoutSeconds.value());
-    serializeOption(a, options.dumbtimer.value());
-  }
+  serializeUint32(a, options.readIOSize);
+  serializeUint32(a, options.writeIOSize);
+  serializeOption(a, options.directoryReadSize);
+  serializeUint8(a, options.readAheadSize);
+  serializeUint32(a, options.retransmitTimeoutTenthSeconds);
+  serializeUint32(a, options.retransmitAttempts);
+  serializeUint32(a, options.deadTimeoutSeconds);
+  serializeOption(a, options.dumbtimer);
 }
 
 NFSMountOptions deserializeNFSMountOptions(Cursor& cursor) {
@@ -187,20 +182,14 @@ NFSMountOptions deserializeNFSMountOptions(Cursor& cursor) {
   options.iosize = deserializeUint32(cursor);
   options.useReaddirplus = deserializeBool(cursor);
   options.useSoftMount = deserializeBool(cursor);
-
-  // We must be reading from newer NFS options, which contains more fields.
-  if (!cursor.isAtEnd()) {
-    // NFS options readIOSize => dumbtimer were all added at the same time, and
-    // therefore will either all be present or all be absent.
-    options.readIOSize = deserializeUint32(cursor);
-    options.writeIOSize = deserializeUint32(cursor);
-    options.directoryReadSize = deserializeOption<uint32_t>(cursor);
-    options.readAheadSize = deserializeUint8(cursor);
-    options.retransmitTimeoutTenthSeconds = deserializeUint32(cursor);
-    options.retransmitAttempts = deserializeUint32(cursor);
-    options.deadTimeoutSeconds = deserializeUint32(cursor);
-    options.dumbtimer = deserializeOption<bool>(cursor);
-  }
+  options.readIOSize = deserializeUint32(cursor);
+  options.writeIOSize = deserializeUint32(cursor);
+  options.directoryReadSize = deserializeOption<uint32_t>(cursor);
+  options.readAheadSize = deserializeUint8(cursor);
+  options.retransmitTimeoutTenthSeconds = deserializeUint32(cursor);
+  options.retransmitAttempts = deserializeUint32(cursor);
+  options.deadTimeoutSeconds = deserializeUint32(cursor);
+  options.dumbtimer = deserializeOption<bool>(cursor);
   return options;
 }
 
