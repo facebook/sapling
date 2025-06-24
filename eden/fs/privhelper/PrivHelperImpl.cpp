@@ -824,6 +824,7 @@ class StubPrivHelper final : public PrivHelper {
   folly::Future<folly::Unit> nfsMount(
       folly::StringPiece mountPath,
       const NFSMountOptions& options) override {
+    (void)mountPath;
     (void)options;
     // TODO: We do support NFS on Windows. Should the mount flow be
     // implemented here?
@@ -832,8 +833,9 @@ class StubPrivHelper final : public PrivHelper {
 
   folly::Future<folly::Unit> fuseUnmount(
       folly::StringPiece mountPath,
-      const UnmountOptions& /* options */) override {
+      const UnmountOptions& options) override {
     (void)mountPath;
+    (void)options;
     NOT_IMPLEMENTED();
   }
 
@@ -897,6 +899,10 @@ class StubPrivHelper final : public PrivHelper {
       const std::string& tmpOutputPath,
       const std::string& specifiedOutputPath,
       const bool shouldUpload) override {
+    (void)paths;
+    (void)tmpOutputPath;
+    (void)specifiedOutputPath;
+    (void)shouldUpload;
     NOT_IMPLEMENTED();
   }
 
