@@ -2314,8 +2314,8 @@ def allsuccessors(repo, subset, x):
 
 @predicate("successors(set[, depth])", safe=True)
 def successors(repo, subset, x):
-    """Changesets that are successors of changesets in set, including the
-    given changesets themselves.
+    """Visible changesets that are successors of changesets in set, including
+    the given changesets themselves.
 
     If depth is specified, the result only includes changesets up to
     the specified iteration.
