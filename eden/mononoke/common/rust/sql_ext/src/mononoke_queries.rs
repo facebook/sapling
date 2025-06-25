@@ -111,7 +111,12 @@ macro_rules! mononoke_queries {
                 {
                     let cri_str = cri.into().map(|cri| serde_json::to_string(cri)).transpose()?;
                     query_with_retry_no_cache(
-                        || [<$name Impl>]::commented_query(connection, cri_str.as_deref(), $( $pname, )* $( $lname, )*),
+                        || async {
+                            let (res, _opt_stats) = [<$name Impl>]::commented_query(connection, cri_str.as_deref(), $( $pname, )* $( $lname, )*).await?;
+
+                            // TODO(T223577767): log stats
+                            Ok(res)
+                        },
                     ).await
                 }
 
@@ -196,7 +201,10 @@ macro_rules! mononoke_queries {
                                 || {
                                     let cri = cri.clone();
                                     async move {
-                                        Ok(CachedQueryResult([<$name Impl>]::commented_query(connection, cri.as_str(), $( $pname, )* $( $lname, )*).await?))
+                                        let (res, _opt_stats) = [<$name Impl>]::commented_query(connection, cri.as_str(), $( $pname, )* $( $lname, )*).await?;
+
+                                        // TODO(T223577767): log stats
+                                        Ok(CachedQueryResult(res))
                                     }
                                 },
                             ).await?.0)
@@ -204,7 +212,11 @@ macro_rules! mononoke_queries {
                         None => {
                             Ok(query_with_retry(
                                 data,
-                                || async move { Ok(CachedQueryResult([<$name Impl>]::commented_query(connection, None, $( $pname, )* $( $lname, )*).await?)) },
+                                || async move {
+                                    let (res, _opt_stats) = [<$name Impl>]::commented_query(connection, None, $( $pname, )* $( $lname, )*).await?;
+                                    // TODO(T223577767): log stats
+                                    Ok(CachedQueryResult(res))
+                                },
                             ).await?.0)
                         }
                     }
