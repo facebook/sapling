@@ -759,8 +759,8 @@ test merge base strategy: only search to-path history
   o  d908813f0f7c A
   $ hg subtree merge --from-path foo --to-path foo2 --verbose
   searching for merge base ...
-  pathlog stats for 'foo2': * (glob)
-  pathlog stats for 'foo': * (glob)
+  strategy_pathhisotry stats for 'foo2': * (glob)
+  strategy_pathhisotry stats for 'foo': * (glob)
   found the last subtree copy commit 28f8d78804e0
   merge base: 9998a5c40732
   resolving manifests
@@ -769,7 +769,7 @@ test merge base strategy: only search to-path history
   $ hg go -C . -q
   $ hg subtree merge --from-path foo --to-path foo2 --merge-base-strategy only-to --verbose
   searching for merge base ...
-  pathlog stats for 'foo2': * (glob)
+  strategy_pathhisotry stats for 'foo2': * (glob)
   found the last subtree copy commit 28f8d78804e0
   merge base: 9998a5c40732
   resolving manifests
@@ -801,8 +801,8 @@ test merge base strategy: only search from-path history
   o  d908813f0f7c A
   $ hg subtree merge --from-path foo2 --to-path foo --verbose
   searching for merge base ...
-  pathlog stats for 'foo': * (glob)
-  pathlog stats for 'foo2': * (glob)
+  strategy_pathhisotry stats for 'foo': * (glob)
+  strategy_pathhisotry stats for 'foo2': * (glob)
   found the last subtree copy commit 28f8d78804e0
   merge base: 9998a5c40732
   resolving manifests
@@ -818,7 +818,7 @@ test merge base strategy: only search from-path history
   $ hg go -C . -q
   $ hg subtree merge --from-path foo2 --to-path foo --merge-base-strategy only-from --verbose
   searching for merge base ...
-  pathlog stats for 'foo2': * (glob)
+  strategy_pathhisotry stats for 'foo2': * (glob)
   found the last subtree copy commit 28f8d78804e0
   merge base: 9998a5c40732
   resolving manifests

@@ -27,7 +27,7 @@ from collections import deque
 from sapling import extensions, match as matchmod, revset, smartset
 from sapling.i18n import _
 from sapling.node import nullrev
-from sapling.pathlog import FastLog, is_fastlog_enabled
+from sapling.pathlog import is_fastlog_enabled, strategy_fastlog
 from sapling.utils import subtreeutil
 
 
@@ -130,7 +130,6 @@ def fastlogfollow(orig, repo, subset, x, name, followfirst: bool = False):
     else:
         startrev = repo["."].rev()
 
-    reponame = repo.ui.config("fbscmquery", "reponame")
     if not is_fastlog_enabled(repo):
         return orig(repo, subset, x, name, followfirst)
 
@@ -195,9 +194,9 @@ def fastlogfollow(orig, repo, subset, x, name, followfirst: bool = False):
 
         start_node = repo[parent].node()
         while True:
-            log = FastLog(reponame, "hg", start_node, path, repo)
+            log = strategy_fastlog(repo, start_node, path)
             last_rev = None
-            for node in log.generate_nodes():
+            for node in log:
                 last_rev = repo.changelog.rev(node)
                 yield last_rev
 

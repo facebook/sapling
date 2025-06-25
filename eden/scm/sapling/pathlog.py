@@ -7,7 +7,6 @@ from dataclasses import dataclass
 from typing import Iterable, List
 
 from . import error, extensions
-
 from .ext.extlib.phabricator import graphql
 from .i18n import _
 from .node import bin, hex
@@ -17,7 +16,6 @@ from .util import timer
 BATCH_SIZE = 500
 
 FASTLOG_MAX = 100
-FASTLOG_QUEUE_SIZE = 1000
 FASTLOG_TIMEOUT = 50
 
 
@@ -30,14 +28,24 @@ class PathlogStats:
 
 
 def pathlog(repo, node, path, is_prefetch_commit_text=False) -> Iterable[bytes]:
-    return strategy_pathhisotry(
-        repo,
-        node,
-        path,
-        batch_size=BATCH_SIZE,
-        is_prefetch_commit_text=is_prefetch_commit_text,
-        stats=PathlogStats(),
-    )
+    if repo[node].ispublic() and is_fastlog_enabled(repo):
+        return strategy_fastlog(
+            repo,
+            node,
+            path,
+            batch_size=BATCH_SIZE,
+            is_prefetch_commit_text=is_prefetch_commit_text,
+            stats=PathlogStats(),
+        )
+    else:
+        return strategy_pathhisotry(
+            repo,
+            node,
+            path,
+            batch_size=BATCH_SIZE,
+            is_prefetch_commit_text=is_prefetch_commit_text,
+            stats=PathlogStats(),
+        )
 
 
 def strategy_pathhisotry(
@@ -72,7 +80,7 @@ def strategy_pathhisotry(
 
         if stats:
             stats.total_time = int(timer()) - start_time
-            repo.ui.note(f"pathlog stats for '{path}': {stats}\n")
+            repo.ui.note(f"strategy_pathhisotry stats for '{path}': {stats}\n")
 
         yield from nodes
 
@@ -80,72 +88,82 @@ def strategy_pathhisotry(
             break
 
 
-class FastLog:
-    """Class which talks to a remote SCMQuery
+def strategy_fastlog(
+    repo,
+    node,
+    path,
+    batch_size=FASTLOG_MAX,
+    is_prefetch_commit_text=False,
+    stats=None,
+    scm_type: str = "hg",
+) -> List[bytes]:
+    """Fetches the history of a path from SCMQuery.
 
-    We page results in windows of up to FASTLOG_MAX to avoid generating
+    We page results in windows of up to 'batch_size' to avoid generating
     too many results; this has been optimized on the server to cache
     fast continuations but this assumes service stickiness.
-
-    * reponame - repository name (str)
-    * scm - scm type (str)
-    * start_node - node to start logging from
-    * path - path to request logs
-    * repo - mercurial repository object
     """
+    reponame = repo.ui.config("fbscmquery", "reponame")
+    client = graphql.Client(repo=repo)
+    start_hex = hex(node)
+    skip = 0
+    use_mutable_history = repo.ui.configbool("fastlog", "followmutablehistory")
+    start_time = int(timer())
 
-    def __init__(self, reponame, scm, node, path, repo):
-        self.reponame = reponame
-        self.scm = scm
-        self.start_node = node
-        self.path = path
-        self.repo = repo
-        self.ui = repo.ui
+    while True:
+        loop_start_time = int(timer())
 
-    def gettodo(self):
-        return FASTLOG_MAX
+        results = client.scmquery_log(
+            reponame,
+            scm_type,
+            start_hex,
+            file_paths=[path],
+            skip=skip,
+            number=batch_size,
+            use_mutable_history=use_mutable_history,
+            timeout=FASTLOG_TIMEOUT,
+        )
+        if results is None:
+            raise error.Abort(_("ScmQuery fastlog returned nothing unexpectedly"))
 
-    def generate_nodes(self):
-        path = self.path
-        start_hex = hex(self.start_node)
-        reponame = self.reponame
-        skip = 0
-        usemutablehistory = self.ui.configbool("fastlog", "followmutablehistory")
+        batch_end_time = int(timer())
+        if stats:
+            stats.history_time += batch_end_time - loop_start_time
 
-        while True:
-            results = None
-            todo = self.gettodo()
-            client = graphql.Client(repo=self.repo)
-            results = client.scmquery_log(
-                reponame,
-                self.scm,
-                start_hex,
-                file_paths=[path],
-                skip=skip,
-                number=todo,
-                use_mutable_history=usemutablehistory,
-                timeout=FASTLOG_TIMEOUT,
+        server_nodes = [bin(commit["hash"]) for commit in results]
+
+        # `filternodes` has a desired side effect that fetches nodes
+        # (in lazy changelog) in batch.
+        nodes = repo.changelog.filternodes(server_nodes)
+        prefetch_commit_end_time = int(timer())
+        if stats:
+            stats.prefetch_commit_time += prefetch_commit_end_time - batch_end_time
+
+        if len(nodes) != len(server_nodes):
+            missing_nodes = set(server_nodes) - set(nodes)
+            repo.ui.status_err(
+                _("fastlog: server returned extra nodes unknown locally: %s\n")
+                % " ".join(sorted([hex(n) for n in missing_nodes]))
             )
 
-            if results is None:
-                raise error.Abort(_("ScmQuery fastlog returned nothing unexpectedly"))
-
-            server_nodes = [bin(commit["hash"]) for commit in results]
-
-            # `filternodes` has a desired side effect that fetches nodes
-            # (in lazy changelog) in batch.
-            nodes = self.repo.changelog.filternodes(server_nodes)
-            if len(nodes) != len(server_nodes):
-                missing_nodes = set(server_nodes) - set(nodes)
-                self.repo.ui.status_err(
-                    _("fastlog: server returned extra nodes unknown locally: %s\n")
-                    % " ".join(sorted([hex(n) for n in missing_nodes]))
+        if is_prefetch_commit_text:
+            # prefetch commit texts.
+            repo.changelog.inner.getcommitrawtextlist(nodes)
+            prefetch_commit_text_end_time = int(timer())
+            if stats:
+                stats.prefetch_commit_text_time += (
+                    prefetch_commit_text_end_time - prefetch_commit_end_time
                 )
-            yield from nodes
 
-            skip += todo
-            if len(results) < todo:
-                break
+        if stats:
+            stats.total_time = int(timer()) - start_time
+            repo.ui.note(f"strategy_fastlog stats for '{path}': {stats}\n")
+
+        yield from nodes
+
+        skip += batch_size
+        if len(results) < batch_size:
+            break
 
 
 def is_fastlog_enabled(repo) -> bool:
