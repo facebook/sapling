@@ -20,7 +20,7 @@ sapling-http-client = { version = "0.1.0", path = "../../http-client", optional 
 sapling-io = { version = "0.1.0", path = "../../io", optional = true }
 sapling-types = { version = "0.1.0", path = "../../types", optional = true }
 serde = { version = "1.0.185", features = ["derive", "rc"], optional = true }
-serde_json = { version = "1.0.140", features = ["float_roundtrip", "unbounded_depth"] }
+serde_json = { version = "1.0.140", features = ["alloc", "float_roundtrip", "unbounded_depth"] }
 serde_urlencoded = { version = "0.7", optional = true }
 sha2 = { version = "0.10.6", optional = true }
 tracing = { version = "0.1.41", features = ["attributes", "valuable"], optional = true }

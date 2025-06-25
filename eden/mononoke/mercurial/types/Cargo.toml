@@ -40,7 +40,7 @@ sapling-edenapi_types = { version = "0.1.0", path = "../../../scm/lib/edenapi/ty
 sapling-types = { version = "0.1.0", path = "../../../scm/lib/types" }
 serde = { version = "1.0.185", features = ["derive", "rc"] }
 serde_derive = "1.0.185"
-serde_json = { version = "1.0.140", features = ["float_roundtrip", "unbounded_depth"] }
+serde_json = { version = "1.0.140", features = ["alloc", "float_roundtrip", "unbounded_depth"] }
 slog = { package = "tracing_slog_compat", version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 sorted_vector_map = { version = "0.2.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 sql = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }

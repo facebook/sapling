@@ -38,7 +38,7 @@ reqwest = { version = "0.11.18", features = ["blocking", "cookies", "gzip", "jso
 sapling-configset = { version = "0.1.0", path = "../config/set" }
 sapling-identity = { version = "0.1.0", path = "../identity" }
 serde = { version = "1.0.185", features = ["derive", "rc"] }
-serde_json = { version = "1.0.140", features = ["float_roundtrip", "unbounded_depth"] }
+serde_json = { version = "1.0.140", features = ["alloc", "float_roundtrip", "unbounded_depth"] }
 thiserror = "2.0.12"
 tokio = { version = "1.45.0", features = ["full", "test-util", "tracing"] }
 

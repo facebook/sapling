@@ -36,7 +36,7 @@ sapling-types = { version = "0.1.0", path = "../types" }
 sapling-version = { version = "0.1.0", path = "../version" }
 serde = { version = "1.0.185", features = ["derive", "rc"] }
 serde_cbor = "0.11"
-serde_json = { version = "1.0.140", features = ["float_roundtrip", "unbounded_depth"] }
+serde_json = { version = "1.0.140", features = ["alloc", "float_roundtrip", "unbounded_depth"] }
 tokio = { version = "1.45.0", features = ["full", "test-util", "tracing"] }
 tracing = { version = "0.1.41", features = ["attributes", "valuable"] }
 url = "2.5.2"

@@ -17,7 +17,7 @@ edition = "2021"
 anyhow = "1.0.98"
 dirs = "6.0"
 serde = { version = "1.0.185", features = ["derive", "rc"] }
-serde_json = { version = "1.0.140", features = ["float_roundtrip", "unbounded_depth"] }
+serde_json = { version = "1.0.140", features = ["alloc", "float_roundtrip", "unbounded_depth"] }
 
 [target.'cfg(target_os = "macos")'.dependencies]
 base64 = { version = "0.22.1", features = ["alloc"] }

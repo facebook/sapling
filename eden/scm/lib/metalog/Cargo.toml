@@ -25,7 +25,7 @@ sapling-refencode = { version = "0.1.0", path = "../refencode" }
 sapling-types = { version = "0.1.0", path = "../types" }
 sapling-zstore = { version = "0.1.0", path = "../zstore" }
 serde = { version = "1.0.185", features = ["derive", "rc"] }
-serde_json = { version = "1.0.140", features = ["float_roundtrip", "unbounded_depth"] }
+serde_json = { version = "1.0.140", features = ["alloc", "float_roundtrip", "unbounded_depth"] }
 tracing = { version = "0.1.41", features = ["attributes", "valuable"] }
 
 [dev-dependencies]

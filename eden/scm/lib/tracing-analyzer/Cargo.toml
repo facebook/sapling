@@ -14,4 +14,4 @@ name = "tracing_analyzer"
 
 [dependencies]
 sapling-tracing-collector = { version = "0.1.0", path = "../tracing-collector" }
-serde_json = { version = "1.0.140", features = ["float_roundtrip", "unbounded_depth"] }
+serde_json = { version = "1.0.140", features = ["alloc", "float_roundtrip", "unbounded_depth"] }

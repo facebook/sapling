@@ -23,7 +23,7 @@ rusoto_core = "0.48.0"
 sapling-repourl = { version = "0.1.0", path = "../../../scm/lib/repo/url" }
 serde = { version = "1.0.185", features = ["derive", "rc"] }
 serde_ignored = "0.1.10"
-serde_json = { version = "1.0.140", features = ["float_roundtrip", "unbounded_depth"] }
+serde_json = { version = "1.0.140", features = ["alloc", "float_roundtrip", "unbounded_depth"] }
 thiserror = "2.0.12"
 toml = "0.8.22"
 tracing = { version = "0.1.41", features = ["attributes", "valuable"] }
