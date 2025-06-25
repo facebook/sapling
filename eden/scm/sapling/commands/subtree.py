@@ -426,6 +426,16 @@ def _subtree_merge_base(repo, to_ctx, to_path, from_ctx, from_path, opts):
         except IndexError:
             return None
 
+    def get_to_path_history(repo, node, path, strategy):
+        if strategy == "only-from":
+            return iter([])
+        return pathlog.pathlog(repo, node, path, is_prefetch_commit_text=True)
+
+    def get_from_path_history(repo, node, path, strategy):
+        if strategy == "only-to":
+            return iter([])
+        return pathlog.pathlog(repo, node, path, is_prefetch_commit_text=True)
+
     strategy = opts.get("merge_base_strategy")
     if strategy and strategy not in MERGE_BASE_STRATEGIES:
         raise error.Abort(
@@ -442,20 +452,20 @@ def _subtree_merge_base(repo, to_ctx, to_path, from_ctx, from_path, opts):
     ui = repo.ui
     ui.status(_("searching for merge base ...\n"))
     isancestor = dag.isancestor
-    to_hist = pathlog.pathlog(
-        repo, to_ctx.node(), to_path, is_prefetch_commit_text=True
-    )
-    from_hist = pathlog.pathlog(
-        repo, from_ctx.node(), from_path, is_prefetch_commit_text=True
-    )
+    to_hist = get_to_path_history(repo, to_ctx.node(), to_path, strategy)
+    from_hist = get_from_path_history(repo, from_ctx.node(), from_path, strategy)
 
     iters = [to_hist, from_hist]
     paths = [to_path, from_path]
 
     # we ensure that 'from_path' and 'to_path' exist, so it should be safe to call
     # next() on both iterators.
-    heads = [next(iters[0]), next(iters[1])]
-    has_ancestor_relation = dag.gcaone(heads) in heads
+    heads = [
+        # heads[0] is the head of the to_path history
+        None if strategy == "only-from" else next(iters[0]),
+        # heads[1] is the head of the from_path history
+        None if strategy == "only-to" else next(iters[1]),
+    ]
     i = 1
     with progress.bar(
         ui,
@@ -472,11 +482,10 @@ def _subtree_merge_base(repo, to_ctx, to_path, from_ctx, from_path, opts):
                 # check the other one by default
                 i = 1 - i
                 # if they have direct ancestor relationship, then selects the newer one
-                if has_ancestor_relation:
-                    if isancestor(heads[0], heads[1]):
-                        i = 1
-                    elif isancestor(heads[1], heads[0]):
-                        i = 0
+                if isancestor(heads[0], heads[1]):
+                    i = 1
+                elif isancestor(heads[1], heads[0]):
+                    i = 0
 
             # check merge info
             curr_node = heads[i]
