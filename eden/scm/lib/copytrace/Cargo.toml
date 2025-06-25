@@ -15,6 +15,7 @@ name = "copytrace"
 [dependencies]
 anyhow = "1.0.98"
 async-trait = "0.1.86"
+bytecount = "0.6.8"
 lru-cache = "0.1.2"
 parking_lot = { version = "0.12.1", features = ["send_guard"] }
 sapling-async-runtime = { version = "0.1.0", path = "../async-runtime" }
