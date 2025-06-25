@@ -76,6 +76,21 @@ fn receive_pack_handler(mut state: State) -> Pin<Box<HandlerFuture>> {
     .boxed()
 }
 
+fn clone_bundle_handler(mut state: State) -> Pin<Box<HandlerFuture>> {
+    async move {
+        let (future_stats, res) = read::clone_bundle(&mut state).timed().await;
+        ScubaMiddlewareState::try_set_future_stats(&mut state, &future_stats);
+        match res {
+            Ok(res) => Ok((state, res)),
+            Err(err) => {
+                println!("Encountered error {:?}", err);
+                build_error_response(err, state, &GitErrorFormatter)
+            }
+        }
+    }
+    .boxed()
+}
+
 fn health_handler(state: State) -> Pin<Box<HandlerFuture>> {
     async move {
         let headers = HeaderMap::borrow_from(&state);
@@ -119,6 +134,11 @@ pub fn build_router(context: GitServerContext) -> Router {
             .post("/repos/git/:server_type/*repository/git-receive-pack")
             .with_path_extractor::<RepositoryParams>()
             .to(receive_pack_handler);
+
+        route
+            .get("/repos/git/:server_type/*repository/clone.bundle")
+            .with_path_extractor::<RepositoryParams>()
+            .to(clone_bundle_handler);
 
         route.get("/health_check").to(health_handler);
         GitHandlers::setup::<edenapi_service::handlers::commit_cloud::CommitCloudWorkspace>(route);

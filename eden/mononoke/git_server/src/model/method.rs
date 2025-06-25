@@ -30,6 +30,8 @@ pub enum GitMethod {
     Push,
     /// Method responsible for serving bundle-uri command
     BundleURI,
+    /// Repo's clone_bundle
+    CloneBundle,
 }
 
 impl GitMethod {
@@ -49,6 +51,7 @@ impl fmt::Display for GitMethod {
             Self::AdvertiseWrite => "advertise-write",
             Self::Push => "push",
             Self::BundleURI => "bundle-uri",
+            Self::CloneBundle => "clone_bundle",
         };
         write!(f, "{}", name)
     }

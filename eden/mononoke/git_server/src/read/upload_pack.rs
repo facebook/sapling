@@ -29,6 +29,7 @@ use gotham_ext::response::ResponseStream;
 use gotham_ext::response::ResponseTryStreamExt;
 use gotham_ext::response::StreamBody;
 use gotham_ext::response::TryIntoResponse;
+use http::StatusCode;
 use hyper::Body;
 use hyper::Response;
 use mononoke_macros::mononoke;
@@ -312,6 +313,30 @@ impl Iterator for FetchResponseHeaders {
     }
 }
 
+pub async fn clone_bundle(state: &mut State) -> Result<Response<Body>, HttpError> {
+    let repo_name = RepositoryParams::borrow_from(state).repo_name();
+    ScubaMiddlewareState::try_borrow_add(state, "repo", repo_name.as_str());
+    ScubaMiddlewareState::try_borrow_add(state, "method", "clone_bundle");
+    let request_context = RepositoryRequestContext::instantiate(
+        state,
+        GitMethodInfo::standard(repo_name, crate::model::GitMethod::CloneBundle),
+    )
+    .await?;
+
+    let git_host = GitHost::from_state_mononoke_host(state)?;
+    if let Some(clone_bundle_url) = get_bundle_url(state, &request_context, git_host).await {
+        Ok(gotham::helpers::http::response::create_temporary_redirect(
+            state,
+            clone_bundle_url,
+        ))
+    } else {
+        Ok(gotham::helpers::http::response::create_empty_response(
+            state,
+            StatusCode::NOT_FOUND,
+        ))
+    }
+}
+
 pub async fn upload_pack(state: &mut State) -> Result<Response<Body>, HttpError> {
     let repo_name = RepositoryParams::borrow_from(state).repo_name();
     ScubaMiddlewareState::try_borrow_add(state, "repo", repo_name.as_str());
@@ -354,6 +379,34 @@ pub async fn upload_pack(state: &mut State) -> Result<Response<Body>, HttpError>
             "Push command directed to incorrect upload-pack handler"
         ))),
     }
+}
+
+async fn get_bundle_url(
+    state: &mut State,
+    request_context: &RepositoryRequestContext,
+    git_host: GitHost,
+) -> Option<String> {
+    if !request_context.ctx.metadata().client_untrusted() {
+        let bundle_uri = &request_context.repo.git_bundle_uri;
+        let bundle_list = bundle_uri.get_latest_bundle_list().await.ok()?;
+
+        if let Some(bundle_list) = bundle_list {
+            // TODO(mzr) we only generate full repo bundles at the moment so all bundle lists are
+            // of len 1. This might change once we implement incremental bundles at some point.
+            if let Some(bundle) = bundle_list.bundles.first() {
+                let url = bundle_uri
+                    .get_url_for_bundle_handle(&request_context.ctx, &git_host, 60, &bundle.handle)
+                    .await
+                    .ok()?;
+                return Some(url);
+            }
+        } else {
+            state.put(BundleUriOutcome::Success("bundle-list empty".to_string()));
+        }
+    } else {
+        state.put(BundleUriOutcome::Success("client untrusted".to_string()));
+    }
+    None
 }
 
 async fn bundle_uri(
