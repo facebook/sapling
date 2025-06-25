@@ -27,10 +27,8 @@ from collections import deque
 from sapling import extensions, match as matchmod, revset, smartset
 from sapling.i18n import _
 from sapling.node import nullrev
-from sapling.pathlog import FastLog
+from sapling.pathlog import FastLog, is_fastlog_enabled
 from sapling.utils import subtreeutil
-
-from .extlib.phabricator import graphql
 
 
 class MultiPathError(ValueError):
@@ -133,18 +131,7 @@ def fastlogfollow(orig, repo, subset, x, name, followfirst: bool = False):
         startrev = repo["."].rev()
 
     reponame = repo.ui.config("fbscmquery", "reponame")
-    if not reponame or not repo.ui.configbool("fastlog", "enabled"):
-        repo.ui.debug("fastlog: not used because fastlog is disabled\n")
-        return orig(repo, subset, x, name, followfirst)
-
-    try:
-        # Test that the GraphQL client can be constructed, to rule
-        # out configuration issues like missing `.arcrc` etc.
-        graphql.Client(repo=repo)
-    except Exception as ex:
-        repo.ui.debug(
-            "fastlog: not used because graphql client cannot be constructed: %r\n" % ex
-        )
+    if not is_fastlog_enabled(repo):
         return orig(repo, subset, x, name, followfirst)
 
     path = revset.getstring(args["file"], _("%s expected a pattern") % name)

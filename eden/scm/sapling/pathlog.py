@@ -6,7 +6,7 @@
 from dataclasses import dataclass
 from typing import Iterable, List
 
-from . import error
+from . import error, extensions
 
 from .ext.extlib.phabricator import graphql
 from .i18n import _
@@ -146,3 +146,25 @@ class FastLog:
             skip += todo
             if len(results) < todo:
                 break
+
+
+def is_fastlog_enabled(repo) -> bool:
+    reponame = repo.ui.config("fbscmquery", "reponame")
+    is_fastlog_ext_enabled = extensions.isenabled(repo.ui, "fastlog")
+    is_fastlog_config_enabled = repo.ui.configbool("fastlog", "enabled")
+
+    if not (reponame and is_fastlog_ext_enabled and is_fastlog_config_enabled):
+        repo.ui.debug("fastlog: not used because fastlog is disabled\n")
+        return False
+
+    try:
+        # Test that the GraphQL client can be constructed, to rule
+        # out configuration issues like missing `.arcrc` etc.
+        graphql.Client(repo=repo)
+    except Exception as ex:
+        repo.ui.debug(
+            "fastlog: not used because graphql client cannot be constructed: %r\n" % ex
+        )
+        return False
+
+    return True
