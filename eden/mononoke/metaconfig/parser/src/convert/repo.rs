@@ -717,6 +717,8 @@ impl Convert for RawCasSyncConfig {
         Ok(MononokeCasSyncConfig {
             main_bookmark_to_sync: self.main_bookmark_to_sync,
             sync_all_bookmarks: self.sync_all_bookmarks,
+            use_case_public: self.use_case_public,
+            use_case_draft: self.use_case_draft,
         })
     }
 }

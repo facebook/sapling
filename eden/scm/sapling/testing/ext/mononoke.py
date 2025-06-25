@@ -846,6 +846,8 @@ bookmarks=["master"]
 [mononoke_cas_sync_config]
 main_bookmark_to_sync="{main_bookmark}"
 sync_all_bookmarks=true
+use_case_public="source-control-testing"
+use_case_draft="source-control-testing"
 """
     )
 

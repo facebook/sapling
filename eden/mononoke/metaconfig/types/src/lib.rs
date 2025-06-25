@@ -1851,6 +1851,10 @@ pub struct MononokeCasSyncConfig {
     pub main_bookmark_to_sync: String,
     /// Enabling it would expand the sync to all the bookmarks
     pub sync_all_bookmarks: bool,
+    /// CAS use case to use for uploading public commits
+    pub use_case_public: String,
+    /// CAS use case to use for uploading draft commits
+    pub use_case_draft: String,
 }
 
 /// Repo-specific configuration parameters for modern sync job for a specific job variant
