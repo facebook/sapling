@@ -17,7 +17,7 @@
 
 namespace facebook::eden {
 
-ProcessPriority::ProcessPriority(std::optional<int> memoryPriority) {
+ProcessPriority::ProcessPriority(std::optional<int32_t> memoryPriority) {
   if (memoryPriority.has_value()) {
 #ifdef __linux__
     memoryPriority_ = std::make_shared<LinuxMemoryPriority>(

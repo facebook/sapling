@@ -16,7 +16,7 @@
 #include "eden/common/utils/Throw.h"
 
 namespace facebook::eden {
-LinuxMemoryPriority::LinuxMemoryPriority(int oomScoreAdj)
+LinuxMemoryPriority::LinuxMemoryPriority(int32_t oomScoreAdj)
     : MemoryPriority(oomScoreAdj) {
   // oom_score_adj ranges from -1000 to 1000, with 1000 being the most likely to
   // be killed, and -1000 being very unlikely to be killed.
@@ -53,7 +53,7 @@ int LinuxMemoryPriority::setPriorityForProcess(pid_t pid) {
   return 0;
 }
 
-std::optional<int> LinuxMemoryPriority::getPriorityForProcess(pid_t pid) {
+std::optional<int32_t> LinuxMemoryPriority::getPriorityForProcess(pid_t pid) {
   auto oomScoreAdjPath =
       canonicalPath({fmt::format("/proc/{}/oom_score_adj", pid)});
   auto readResult = readFile(oomScoreAdjPath);
@@ -66,7 +66,7 @@ std::optional<int> LinuxMemoryPriority::getPriorityForProcess(pid_t pid) {
     return std::nullopt;
   } else {
     try {
-      auto oomScoreAdj = folly::to<int>(readResult.value());
+      auto oomScoreAdj = folly::to<int32_t>(readResult.value());
       return oomScoreAdj;
     } catch (const std::exception& e) {
       XLOGF(ERR, "Failed to parse oom_score_adj as an int: {}", e.what());

@@ -22,7 +22,7 @@ namespace facebook::eden {
 // Implementation based on: https://github.com/asdfugil/overb0ard
 class DarwinMemoryPriority : public MemoryPriority {
  public:
-  explicit DarwinMemoryPriority(int jetsam_priority);
+  explicit DarwinMemoryPriority(int32_t jetsam_priority);
   ~DarwinMemoryPriority() override = default;
 
   int setPriorityForProcess(pid_t pid) override;

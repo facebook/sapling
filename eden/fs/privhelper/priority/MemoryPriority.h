@@ -18,7 +18,7 @@ namespace facebook::eden {
  */
 class MemoryPriority {
  public:
-  explicit MemoryPriority(int priority) : priority_(priority) {}
+  explicit MemoryPriority(int32_t priority) : priority_(priority) {}
   virtual ~MemoryPriority() = default;
 
   // Sets the memory priority for a given process to the value supplied at
@@ -27,19 +27,19 @@ class MemoryPriority {
 
   // Returns the target memory priority that was supplied at construction. This
   // value will be used for subsequent calls to setPriorityForProcess.
-  int getTargetPriority() {
+  int32_t getTargetPriority() {
     return priority_;
   }
 
   // Returns the actualy memory priority for the given process. This is fetched
   // from the appropriate source (e.g. /proc/<pid>/oom_score_adj on Linux, or
   // memstatus_control on macOS).
-  virtual std::optional<int> getPriorityForProcess(pid_t pid) = 0;
+  virtual std::optional<int32_t> getPriorityForProcess(pid_t pid) = 0;
 
   // TODO: Add support for querying the current memory priority of a process
 
  protected:
-  int priority_;
+  int32_t priority_;
 };
 
 } // namespace facebook::eden

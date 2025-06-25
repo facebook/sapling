@@ -22,7 +22,7 @@ namespace facebook::eden {
 
 class ProcessPriority {
  public:
-  explicit ProcessPriority(std::optional<int> memoryPriority);
+  explicit ProcessPriority(std::optional<int32_t> memoryPriority);
 
   // TODO: Add other priority types (ex. nice value)
 

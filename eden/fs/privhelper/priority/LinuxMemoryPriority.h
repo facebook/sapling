@@ -21,11 +21,11 @@ namespace facebook::eden {
 // TODO: this may need to be distro specific in the future
 class LinuxMemoryPriority : public MemoryPriority {
  public:
-  explicit LinuxMemoryPriority(int oomScoreAdj);
+  explicit LinuxMemoryPriority(int32_t oomScoreAdj);
   ~LinuxMemoryPriority() override = default;
 
   int setPriorityForProcess(pid_t pid) override;
-  std::optional<int> getPriorityForProcess(pid_t pid) override;
+  std::optional<int32_t> getPriorityForProcess(pid_t pid) override;
 };
 
 } // namespace facebook::eden

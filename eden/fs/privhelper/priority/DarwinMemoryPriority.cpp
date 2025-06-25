@@ -17,7 +17,7 @@
 
 namespace facebook::eden {
 
-DarwinMemoryPriority::DarwinMemoryPriority(int jetsam_priority)
+DarwinMemoryPriority::DarwinMemoryPriority(int32_t jetsam_priority)
     : MemoryPriority(jetsam_priority) {
   // Jetsam priorities range from 0 to 210, with 0 being the most likely to be
   // killed, and 210 being very unlikely to be killed.
@@ -78,7 +78,7 @@ int DarwinMemoryPriority::setPriorityForProcess(pid_t pid) {
   return 0;
 }
 
-std::optional<int> DarwinMemoryPriority::getPriorityForProcess(pid_t pid) {
+std::optional<int32_t> DarwinMemoryPriority::getPriorityForProcess(pid_t pid) {
   memorystatus_priority_entry_t prio_entry;
   if (__builtin_available(macOS 10.9, iOS 7.0, tvOS 9.0, watchOS 1.0, *)) {
     if (memorystatus_control(
