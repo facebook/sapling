@@ -16,6 +16,7 @@ from .. import (
     match as matchmod,
     merge as mergemod,
     node,
+    pathlog,
     pathutil,
     progress,
     registrar,
@@ -441,8 +442,12 @@ def _subtree_merge_base(repo, to_ctx, to_path, from_ctx, from_path, opts):
     ui = repo.ui
     ui.status(_("searching for merge base ...\n"))
     isancestor = dag.isancestor
-    to_hist = repo.pathhistory([to_path], dag.ancestors([to_ctx.node()]))
-    from_hist = repo.pathhistory([from_path], dag.ancestors([from_ctx.node()]))
+    to_hist = pathlog.pathlog(
+        repo, to_ctx.node(), to_path, is_prefetch_commit_text=True
+    )
+    from_hist = pathlog.pathlog(
+        repo, from_ctx.node(), from_path, is_prefetch_commit_text=True
+    )
 
     iters = [to_hist, from_hist]
     paths = [to_path, from_path]
