@@ -9,7 +9,7 @@
 import subprocess
 from dataclasses import dataclass, field
 from datetime import datetime
-from typing import cast, Optional, Tuple
+from typing import Optional, Tuple
 
 
 # We can live with version dates being a bit old relative to what dnf info shows for build since we're just working with differences
@@ -81,8 +81,7 @@ def get_installed_eden_rpm_version_parts() -> Optional[Tuple[str, str]]:
     proc = subprocess.run(cmd, stdout=subprocess.PIPE, encoding="utf-8")
     if proc.returncode != 0:
         return None
-    # pyre-fixme[22]: The cast is redundant.
-    parts = cast(str, proc.stdout).split("\n---\n")
+    parts = proc.stdout.split("\n---\n")
     assert len(parts) == 2, f"unexpected output: {proc.stdout!r}"
     return (parts[0], parts[1])
 
