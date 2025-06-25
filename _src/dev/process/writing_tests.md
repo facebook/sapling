@@ -225,7 +225,7 @@ looks like
 
 ```
 #require fsmonitor icasefs
-The test will be skipped if any of the requirement is not sastified.
+The test will be skipped if any of the requirement is not satisfied.
 
 #if symlink
 This block is skipped if symlink is not supported.

@@ -55,7 +55,7 @@ MetaLog's merge feature to detect races.
 In Sapling, code like:
 
 ```python
-with repo.lock(), repo.transaction("tranaction-name") as tr:
+with repo.lock(), repo.transaction("transaction-name") as tr:
     ...
 ```
 
