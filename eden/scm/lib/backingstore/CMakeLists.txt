@@ -10,7 +10,7 @@ if (IS_FB_BUILD)
     USE_CXX_INCLUDE
     FEATURES fb)
 else()
-  rust_static_library(rust_backingstore CRATE backingstore USE_CXX_INCLUDE)
+  rust_static_library(rust_backingstore CRATE sapling-backingstore USE_CXX_INCLUDE)
 endif()
 
 install_rust_static_library(
