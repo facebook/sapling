@@ -57,13 +57,6 @@ export interface Platform {
   openDedicatedComparison?: (comparison: Comparison) => Promise<boolean>;
 
   /**
-   * Component representing additional buttons/info in the help menu.
-   * Note: This should be lazy-loaded via `React.lazy()` so that implementations
-   * may import any files without worrying about the platform being set up yet or not.
-   */
-  AdditionalDebugContent?: LazyExoticComponent<() => JSX.Element>;
-
-  /**
    * Component representing additional buttons/info in the cwd menu,
    * used to show a button or hint about how to add more cwds.
    * Note: This should be lazy-loaded via `React.lazy()` so that implementations

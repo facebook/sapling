@@ -150,7 +150,6 @@ export type TrackEventName =
   | 'OptimisticFilesStateForceResolved'
   | 'OptimisticCommitsStateForceResolved'
   | 'OptimisticConflictsStateForceResolved'
-  | 'OptInToNewISLAgain'
   | 'OpenAllFiles'
   | 'OpenComments'
   | 'QueueOperation'

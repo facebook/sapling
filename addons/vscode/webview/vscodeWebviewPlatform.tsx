@@ -15,7 +15,6 @@ import type {VSCodeAPI} from './vscodeApi';
 import {browserClipboardCopy} from 'isl/src/platform/browerPlatformImpl';
 import {registerCleanup} from 'isl/src/utils';
 import {lazy} from 'react';
-import {Internal} from './Internal';
 import {vscodeApi} from './vscodeApi';
 
 const VSCodeSettings = lazy(() => import('./VSCodeSettings'));
@@ -159,7 +158,6 @@ const vscodeWebviewPlatform: Platform = {
     },
   },
 
-  AdditionalDebugContent: Internal.AdditionalDebugContent,
   AddMoreCwdsHint,
   Settings: VSCodeSettings,
 

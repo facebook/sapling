@@ -9,12 +9,10 @@ import type {Heartbeat} from './heartbeat';
 
 import * as stylex from '@stylexjs/stylex';
 import {Button} from 'isl-components/Button';
-import {Divider} from 'isl-components/Divider';
-import {ErrorBoundary, ErrorNotice} from 'isl-components/ErrorNotice';
+import {ErrorNotice} from 'isl-components/ErrorNotice';
 import {Icon} from 'isl-components/Icon';
 import {Tooltip} from 'isl-components/Tooltip';
 import {useAtomValue} from 'jotai';
-import {Suspense} from 'react';
 import {Copyable} from './Copyable';
 import {DropdownFields} from './DropdownFields';
 import {Internal} from './Internal';
@@ -48,7 +46,6 @@ export function BugButton() {
 function BugDropdown({dismiss}: {dismiss: () => void}) {
   const heartbeat = useHeartbeat();
 
-  const AdditionalDebugContent = platform.AdditionalDebugContent;
   return (
     <DropdownFields
       title={<T>Help</T>}
@@ -59,16 +56,6 @@ function BugDropdown({dismiss}: {dismiss: () => void}) {
       <HeartbeatWarning heartbeat={heartbeat} />
       <div className="bug-dropdown-actions">
         <FileABug dismissBugDropdown={dismiss} heartbeat={heartbeat} />
-        {AdditionalDebugContent && (
-          <div className="additional-debug-content">
-            <Divider />
-            <ErrorBoundary>
-              <Suspense>
-                <AdditionalDebugContent />
-              </Suspense>
-            </ErrorBoundary>
-          </div>
-        )}
       </div>
     </DropdownFields>
   );
