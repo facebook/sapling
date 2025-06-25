@@ -10,7 +10,6 @@
 import errno
 import os
 import subprocess
-import typing
 from typing import Dict, List, Optional, Set, Union
 
 from eden.fs.cli import mtab
@@ -120,8 +119,7 @@ class FakeMountTable(mtab.MountTable):
         if isinstance(result, BaseException):
             raise result
         else:
-            # pyre-fixme[22]: The cast is redundant.
-            return typing.cast(mtab.MTStat, result)
+            return result
 
     def check_path_access(self, path: bytes, mount_type: bytes) -> None:
         path_str = os.fsdecode(path)
