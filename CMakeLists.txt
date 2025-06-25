@@ -99,7 +99,7 @@ else()
 endif()
 
 if(NOT CMAKE_CXX_STANDARD)
-  set(CMAKE_CXX_STANDARD 17)
+  set(CMAKE_CXX_STANDARD 20)
   set(CMAKE_CXX_STANDARD_REQUIRED ON)
   message(STATUS "setting C++ standard to C++${CMAKE_CXX_STANDARD}")
 endif()
