@@ -129,8 +129,16 @@ void serializeUint32(Appender& a, uint64_t val) {
   a.write<uint32_t>(val);
 }
 
-uint64_t deserializeUint32(Cursor& cursor) {
+uint32_t deserializeUint32(Cursor& cursor) {
   return cursor.read<uint32_t>();
+}
+
+void serializeInt32(Appender& a, int32_t val) {
+  a.write<int32_t>(val);
+}
+
+int32_t deserializeInt32(Cursor& cursor) {
+  return cursor.read<int32_t>();
 }
 
 void serializeSocketAddress(Appender& a, const folly::SocketAddress& addr) {
@@ -168,9 +176,9 @@ void serializeNFSMountOptions(Appender& a, const NFSMountOptions& options) {
   serializeUint32(a, options.writeIOSize);
   serializeOption(a, options.directoryReadSize);
   serializeUint8(a, options.readAheadSize);
-  serializeUint32(a, options.retransmitTimeoutTenthSeconds);
+  serializeInt32(a, options.retransmitTimeoutTenthSeconds);
   serializeUint32(a, options.retransmitAttempts);
-  serializeUint32(a, options.deadTimeoutSeconds);
+  serializeInt32(a, options.deadTimeoutSeconds);
   serializeOption(a, options.dumbtimer);
 }
 
@@ -186,9 +194,9 @@ NFSMountOptions deserializeNFSMountOptions(Cursor& cursor) {
   options.writeIOSize = deserializeUint32(cursor);
   options.directoryReadSize = deserializeOption<uint32_t>(cursor);
   options.readAheadSize = deserializeUint8(cursor);
-  options.retransmitTimeoutTenthSeconds = deserializeUint32(cursor);
+  options.retransmitTimeoutTenthSeconds = deserializeInt32(cursor);
   options.retransmitAttempts = deserializeUint32(cursor);
-  options.deadTimeoutSeconds = deserializeUint32(cursor);
+  options.deadTimeoutSeconds = deserializeInt32(cursor);
   options.dumbtimer = deserializeOption<bool>(cursor);
   return options;
 }
