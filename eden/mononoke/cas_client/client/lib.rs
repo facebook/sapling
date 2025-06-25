@@ -20,9 +20,6 @@ pub use facebook::casd_client::RemoteExecutionCasdClient;
 use fbinit::FacebookInit;
 use futures::Stream;
 use mononoke_types::MononokeDigest;
-use slog::debug;
-
-const CONFIGURED_PROD_REPOS: [&str; 2] = ["fbsource", "www"];
 
 #[async_trait::async_trait]
 /// This trait provides an abstraction layer for pushing source control data to a CAS backend.
@@ -46,18 +43,6 @@ pub trait CasClient: Sync + Send {
     ) -> Result<Vec<MononokeDigest>, Error>;
     /// Get the name of the repo this client is for.
     fn repo_name(&self) -> &str;
-}
-
-pub fn get_prod_usecase_from_reponame(ctx: &CoreContext, repo_name: &str) -> String {
-    if CONFIGURED_PROD_REPOS.contains(&repo_name) {
-        format!("source-control-{}", repo_name).to_string()
-    } else {
-        debug!(
-            ctx.logger(),
-            "Prod 'use case' hasn't been set up for the repo '{}', using test use case", repo_name
-        );
-        "source-control-testing".to_string()
-    }
 }
 
 pub fn build_mononoke_cas_client<'a>(

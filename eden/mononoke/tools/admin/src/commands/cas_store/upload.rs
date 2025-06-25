@@ -11,7 +11,6 @@ use anyhow::anyhow;
 use bookmarks::BookmarkKey;
 use bookmarks::BookmarksRef;
 use cas_client::build_mononoke_cas_client;
-use cas_client::get_prod_usecase_from_reponame;
 use changesets_uploader::CasChangesetsUploader;
 use changesets_uploader::PriorLookupPolicy;
 use changesets_uploader::UploadPolicy;
@@ -19,9 +18,11 @@ use clap::Args;
 use context::CoreContext;
 use mercurial_derivation::RootHgAugmentedManifestId;
 use mercurial_types::HgChangesetId;
+use metaconfig_types::RepoConfigRef;
 use mononoke_types::ChangesetId;
 use mononoke_types::MPath;
 use repo_derived_data::RepoDerivedDataRef;
+use repo_identity::RepoIdentityRef;
 use scuba_ext::MononokeScubaSampleBuilder;
 use slog::info;
 
@@ -64,12 +65,25 @@ pub async fn cas_store_upload(
     repo: &Repo,
     args: CasStoreUploadArgs,
 ) -> Result<()> {
+    let use_case = repo
+        .repo_config()
+        .mononoke_cas_sync_config
+        .as_ref()
+        .ok_or_else(|| {
+            anyhow!(
+                "Missing mononoke_cas_sync_config config for repo: {}",
+                repo.repo_identity().name()
+            )
+        })?
+        .use_case_public
+        .as_ref();
+
     let cas_changesets_uploader = CasChangesetsUploader::new(build_mononoke_cas_client(
         ctx.fb,
         ctx.clone(),
-        repo.repo_identity.name(),
+        repo.repo_identity().name(),
         args.verbose,
-        &get_prod_usecase_from_reponame(ctx, repo.repo_identity.name()),
+        use_case,
     )?);
 
     // Resolve the changeset id

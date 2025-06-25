@@ -14,6 +14,7 @@ use bookmarks::Bookmarks;
 use clap::Parser;
 use clap::Subcommand;
 use info::CasStoreInfoArgs;
+use metaconfig_types::RepoConfig;
 use mononoke_app::MononokeApp;
 use mononoke_app::args::RepoArgs;
 use repo_blobstore::RepoBlobstore;
@@ -38,6 +39,9 @@ pub struct CommandArgs {
 pub struct Repo {
     #[facet]
     repo_identity: RepoIdentity,
+
+    #[facet]
+    repo_config: RepoConfig,
 
     #[facet]
     repo_blobstore: RepoBlobstore,

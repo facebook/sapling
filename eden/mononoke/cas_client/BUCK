@@ -9,7 +9,7 @@ rust_library(
     autocargo = {"cargo_toml_dir": "client"},
     named_deps = {
         "slog": "//common/rust/shed/tracing_slog_compat:tracing_slog_compat",
-    },
+    } if not rust_oss.is_oss_build() else {},
     deps = ([
         "fbsource//third-party/rust:async-trait",
         "fbsource//third-party/rust:bytes",
