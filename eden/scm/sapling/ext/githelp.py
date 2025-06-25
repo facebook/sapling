@@ -492,7 +492,7 @@ def deprecated(ui, repo, *args, **kwargs) -> None:
 
 def diff(ui, repo, *args, **kwargs) -> None:
     cmdoptions = [
-        ("a", "all", None, ""),
+        ("a", "text", None, ""),
         ("", "cached", None, ""),
         ("R", "reverse", None, ""),
     ]
