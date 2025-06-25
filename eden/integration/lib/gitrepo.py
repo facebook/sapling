@@ -10,7 +10,6 @@ import datetime
 import os
 import subprocess
 import time
-import typing
 from typing import Dict, List, Optional
 
 from eden.test_support.temporary_directory import TempFileManager
@@ -75,8 +74,7 @@ class GitRepository(repobase.Repository):
             )
         except subprocess.CalledProcessError as ex:
             raise GitError(ex) from ex
-        # pyre-fixme[22]: The cast is redundant.
-        return typing.cast(str, completed_process.stdout.decode(encoding))
+        return completed_process.stdout.decode(encoding)
 
     def init(self) -> None:
         self.git("init")
