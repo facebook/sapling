@@ -489,7 +489,7 @@ def _subtree_merge_base(repo, to_ctx, to_path, from_ctx, from_path, opts):
 
             # check merge info
             curr_node = heads[i]
-            ui.note("checking commit %s\n" % node.short(curr_node))
+            ui.debug("checking commit %s\n" % node.short(curr_node))
             for merge in get_subtree_merges(repo, curr_node):
                 if merge.to_path == paths[i] and merge.from_path == paths[1 - i]:
                     ui.status(
