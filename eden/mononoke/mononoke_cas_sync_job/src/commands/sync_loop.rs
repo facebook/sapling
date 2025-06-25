@@ -21,7 +21,6 @@ use async_trait::async_trait;
 use bookmarks::BookmarkUpdateLogArc;
 use borrowed::borrowed;
 use cas_client::build_mononoke_cas_client;
-use cas_client::get_prod_usecase_from_reponame;
 use changesets_uploader::CasChangesetsUploader;
 use clap::Parser;
 use clientinfo::ClientEntryPoint;
@@ -36,6 +35,7 @@ use futures::stream::StreamExt;
 use futures::stream::TryStreamExt;
 use futures_stats::futures03::TimedFutureExt;
 use futures_watchdog::WatchdogExt;
+use metaconfig_types::RepoConfigRef;
 use mononoke_app::MononokeApp;
 use mononoke_app::args::RepoArg;
 use repo_identity::RepoIdentityRef;
@@ -297,15 +297,26 @@ async fn run_sync(
     repo_name: String,
     cancellation_requested: Arc<AtomicBool>,
 ) -> Result<(), Error> {
+    let repo: Repo = app.open_repo(&RepoArg::Name(repo_name.clone())).await?;
+
+    let sync_config = repo
+        .repo_config()
+        .mononoke_cas_sync_config
+        .as_ref()
+        .ok_or_else(|| {
+            format_err!(
+                "mononoke_cas_sync_config is not found for the repo {}",
+                repo_name
+            )
+        })?;
+
     let re_cas_client = CasChangesetsUploader::new(build_mononoke_cas_client(
         fb,
         ctx.clone(),
         &repo_name,
         false,
-        &get_prod_usecase_from_reponame(ctx, &repo_name),
+        &sync_config.use_case_public,
     )?);
-
-    let repo: Repo = app.open_repo(&RepoArg::Name(repo_name.clone())).await?;
 
     info!(
         ctx.logger(),
@@ -330,15 +341,6 @@ async fn run_sync(
         attempt_num,
         repo.bookmark_update_log_arc(),
     );
-
-    let sync_config = repo
-        .repo_config
-        .mononoke_cas_sync_config
-        .clone()
-        .ok_or(format_err!(
-            "mononoke_cas_sync_config is not found for the repo {}",
-            repo_name
-        ))?;
 
     let main_bookmark_to_sync = sync_config.main_bookmark_to_sync.as_str();
     let sync_all_bookmarks = sync_config.sync_all_bookmarks;
