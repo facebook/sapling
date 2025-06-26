@@ -41,6 +41,7 @@ use cas_client_lib::RemoteCacheManagerMode;
 use cas_client_lib::RemoteExecutionMetadata;
 use cas_client_lib::RemoteFetchPolicy;
 use cas_client_lib::TCode;
+use cas_client_lib::THashAlgo;
 #[cfg(not(target_os = "linux"))]
 use cas_client_lib::UploadRequest;
 use cas_client_lib::create_default_config;
@@ -60,6 +61,8 @@ use re_cas_common::split_up_to_max_bytes;
 use re_cas_common::to_re_digest;
 #[cfg(target_os = "linux")]
 use rich_cas_client_wrapper::CASClientWrapper as CASClientBundle;
+#[cfg(target_os = "linux")]
+use rich_cas_client_wrapper::CASSharedCacheWrapper;
 use types::cas::CasPrefetchOutcome;
 
 pub const CAS_SOCKET_PATH: &str = "/run/casd/casd.socket";
@@ -77,6 +80,8 @@ pub enum CasCacheModeLocalFetch {
 
 pub struct RichCasClient {
     client: OnceCell<CASClientBundle>,
+    #[cfg(target_os = "linux")]
+    shared_cache: OnceCell<CASSharedCacheWrapper>,
     cas_success_tracker: CasSuccessTracker,
     /// Verbose logging will disable quiet mode in REClient.
     verbose: bool,
@@ -191,6 +196,8 @@ impl RichCasClient {
 
         Ok(Some(Self {
             client: Default::default(),
+            #[cfg(target_os = "linux")]
+            shared_cache: Default::default(),
             verbose: config.get_or_default("cas", "verbose")?,
             metadata: RemoteExecutionMetadata {
                 use_case_id: use_case,
@@ -298,6 +305,12 @@ impl RichCasClient {
     fn client(&self) -> Result<&CASClientBundle> {
         self.client.get_or_try_init(|| self.build())
     }
+
+    #[cfg(target_os = "linux")]
+    fn shared_cache_wrapper(&self) -> Result<&CASSharedCacheWrapper> {
+        self.shared_cache
+            .get_or_try_init(|| Ok(self.client()?.get_shared_cache_wrapper()?))
+    }
 }
 
 #[async_trait::async_trait]
@@ -312,8 +325,8 @@ impl CasClient for RichCasClient {
         #[cfg(target_os = "linux")]
         {
             let (stats, data) = self
-                .client()?
-                .low_level_lookup_cache(self.metadata.clone(), to_re_digest(digest))?
+                .shared_cache_wrapper()?
+                .lookup_cache(to_re_digest(digest), THashAlgo::KEYED_BLAKE3)?
                 .unpack();
 
             let parsed_stats = parse_stats(std::iter::empty(), stats);
