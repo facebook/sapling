@@ -31,7 +31,7 @@ class MemoryPriority {
     return priority_;
   }
 
-  // Returns the actualy memory priority for the given process. This is fetched
+  // Returns the actual memory priority for the given process. This is fetched
   // from the appropriate source (e.g. /proc/<pid>/oom_score_adj on Linux, or
   // memstatus_control on macOS).
   virtual std::optional<int32_t> getPriorityForProcess(pid_t pid) = 0;

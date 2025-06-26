@@ -177,7 +177,7 @@ class ObjectFetchContext : public RefCounted {
    * where null context should be replaces with a real context.
    *
    * Note that this function allocates and return a pointer to a newly allocated
-   * memory. This pointer is intented to be used as static variable i.e. static
+   * memory. This pointer is intended to be used as static variable i.e. static
    * auto ptr = ObjectFetchContext::getNullContextWithCauseDetail("someval");
    */
   static ObjectFetchContextPtr getNullContextWithCauseDetail(

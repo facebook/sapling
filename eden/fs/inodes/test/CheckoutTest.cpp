@@ -1018,7 +1018,7 @@ void testRemoveSubdirectory(LoadBehavior loadType) {
   destBuilder.setFile("src/main.c", "int main() { return 0; }\n");
   destBuilder.setFile("src/test/test.c", "testy tests");
 
-  // Prepare the soruce tree by adding a new subdirectory (which will be
+  // Prepare the source tree by adding a new subdirectory (which will be
   // removed when we checkout from the src to the dest tree).
   auto srcBuilder = destBuilder.clone();
   RelativePathPiece path{"src/todelete"};

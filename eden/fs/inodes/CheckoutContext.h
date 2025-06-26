@@ -174,7 +174,7 @@ class CheckoutContext {
   FRIEND_TEST(CheckoutContextTest, empty);
   FRIEND_TEST(CheckoutContextTest, overMax);
 
-  std::vector<InodeNumber> extractFilesToVerfy();
+  std::vector<InodeNumber> extractFilesToVerify();
 
   CheckoutMode checkoutMode_;
   EdenMount* const mount_;

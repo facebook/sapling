@@ -105,7 +105,7 @@ class ObjectInterestHandle {
  * InterestHandle flavor introduces  a quicker lookup scheme for duplicate
  * lookups. The Interesthandle returned by insert and get can be used to lookup
  * the data directly if its needed again within a short period of time.
- * InterestHandles can also give the cache exta eviction hints. Interest
+ * InterestHandles can also give the cache extra eviction hints. Interest
  * handles do not prevent entries from being evicted from the cache, but a lack
  * of InterestHandles for an object can mean it is evicted early.
  *

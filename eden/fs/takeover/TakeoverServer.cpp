@@ -339,19 +339,19 @@ Future<Unit> TakeoverServer::ConnHandler::sendTakeoverDataMessage(
           // Create a new message with the first chunk
           // Only the first chunk of message has msg.files
           // The rest of the chunks will have empty msg.files
-          UnixSocket::Message fisrtChunkMsgWithFiles{
+          UnixSocket::Message firstChunkMsgWithFiles{
               *(msg.data.cloneOne()), std::move(msg.files)};
 
-          return state.socket.send(std::move(fisrtChunkMsgWithFiles))
+          return state.socket.send(std::move(firstChunkMsgWithFiles))
               .thenValue([this, msg = std::move(msg), &state](auto&&) {
                 return sendTakeoverDataMessageInChunks(
                     state, std::make_unique<folly::IOBuf>(msg.data));
               });
         })
         .thenValue([&state](auto&&) mutable {
-          UnixSocket::Message lastChunckMsg;
-          lastChunckMsg.data = TakeoverData::serializeLastChunk();
-          return state.socket.send(std::move(lastChunckMsg));
+          UnixSocket::Message lastChunkMsg;
+          lastChunkMsg.data = TakeoverData::serializeLastChunk();
+          return state.socket.send(std::move(lastChunkMsg));
         });
   } else {
     return state.socket.send(std::move(msg));

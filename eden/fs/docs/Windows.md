@@ -232,7 +232,7 @@ faster than macOS these days.
 
 The PrjFS keeps it's own source of truth for file contents. FUSE's caches of
 file contents are just that, caches. EdenFS is the source of truth and FUSE
-state is derived from thar. However, PrjFS keeps a persistent copy of file
+state is derived from that. However, PrjFS keeps a persistent copy of file
 contents which it treats as a source of truth. This means there is a much larger
 class of bugs where EdenFS and the filesystem can get out of sync.
 

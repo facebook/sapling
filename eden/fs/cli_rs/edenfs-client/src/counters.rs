@@ -406,7 +406,7 @@ impl Sub for TreeMetadataTelemetry {
     }
 }
 
-/// EdenFS cummulative counters
+/// EdenFS cumulative counters
 /// This is a subset of the counters that are available as part of the EdenFS telemetry
 /// Only covers cumulative counters that are incremented on operations during the lifetime of the EdenFS daemon
 /// It is possible to snapshot the counters and compare them to a previous snapshot

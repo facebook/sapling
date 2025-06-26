@@ -589,7 +589,7 @@ TEST_F(EdenConfigTest, clientCertIsFirstAvailable) {
       edenConfig->getClientCertificate(),
       normalizeBestEffort(clientCertificate1.asString()));
   edenConfig->clientCertificateLocations.setValue(
-      {"${A_NON_EXISTANT_ENV_VAR}", clientCertificate1.asString()},
+      {"${A_NON_EXISTENT_ENV_VAR}", clientCertificate1.asString()},
       ConfigSourceType::UserConfig);
   EXPECT_EQ(
       edenConfig->getClientCertificate(),

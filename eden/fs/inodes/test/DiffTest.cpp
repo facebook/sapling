@@ -857,7 +857,7 @@ TEST(DiffTest, ignoreInSubdirectories) {
           std::make_pair("abc/test.log", ScmFileStatus::ADDED),
           std::make_pair("abc/def/test", ScmFileStatus::ADDED),
           std::make_pair("b/c/d.txt", ScmFileStatus::ADDED),
-          // Matches exlude rule in top-level .gitignore, but explicitly
+          // Matches exclude rule in top-level .gitignore, but explicitly
           // included by "!bar.txt" rule in foo/foo/.gitignore
           std::make_pair("foo/foo/bar.txt", ScmFileStatus::ADDED),
           std::make_pair("other/bar.txt", ScmFileStatus::ADDED),
@@ -890,7 +890,7 @@ TEST(DiffTest, ignoreInSubdirectories) {
 }
 
 // Test with a .gitignore in subdirectories and file exists both in mount and in
-// the Tree (so we should report the file modificiation)
+// the Tree (so we should report the file modification)
 TEST(DiffTest, ignoreInSubdirectoriesInMountAndInTree) {
   DiffTest test(
       {{".gitignore", "**/foo/bar.txt\n"},
@@ -934,7 +934,7 @@ TEST(DiffTest, ignoreInSubdirectoriesInMountAndInTree) {
           std::make_pair("abc/test.log", ScmFileStatus::ADDED),
           std::make_pair("abc/def/test", ScmFileStatus::ADDED),
           std::make_pair("b/c/d.txt", ScmFileStatus::ADDED),
-          // Matches exlude rule in top-level .gitignore, but explicitly
+          // Matches exclude rule in top-level .gitignore, but explicitly
           // included by "!bar.txt" rule in foo/foo/.gitignore
           std::make_pair("foo/foo/bar.txt", ScmFileStatus::ADDED),
           std::make_pair("other/bar.txt", ScmFileStatus::ADDED),
@@ -1012,7 +1012,7 @@ TEST(DiffTest, ignoreInSubdirectoriesNotInMountButInTree) {
           std::make_pair("abc/test.log", ScmFileStatus::ADDED),
           std::make_pair("abc/def/test", ScmFileStatus::ADDED),
           std::make_pair("b/c/d.txt", ScmFileStatus::ADDED),
-          // Matches exlude rule in top-level .gitignore, but explicitly
+          // Matches exclude rule in top-level .gitignore, but explicitly
           // included by "!bar.txt" rule in foo/foo/.gitignore
           std::make_pair("foo/foo/bar.txt", ScmFileStatus::ADDED),
           std::make_pair("other/bar.txt", ScmFileStatus::ADDED),

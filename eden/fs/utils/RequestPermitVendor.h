@@ -38,8 +38,8 @@ class RequestPermit {
 
   // Disallow default construction, coping, and moving to avoid accidental
   // permit creation/deletion. This class should be managed by a smart pointer.
-  // If RequestPermitVendor is extended to support a try_aquirePermit() or
-  // a co_aquirePermit() method, this class will likely need to be extended to
+  // If RequestPermitVendor is extended to support a try_acquirePermit() or
+  // a co_acquirePermit() method, this class will likely need to be extended to
   // offer alternative construction methods.
   RequestPermit() = delete;
   RequestPermit(const RequestPermit&) = delete;
@@ -60,10 +60,10 @@ class RequestPermit {
  * semaphore. This can be added to any class that wishes to implement rate
  * limiting
  *
- * This class currently only offers a blocking aquire method, but it can be
- * extended in the future to add a try_aquirePermit() method which can return
- * immediately if the semaphore is out of capacity. It can also be extened to
- * support a co_aquirePermit() method, see folly::fibers::Semaphore::co_wait()
+ * This class currently only offers a blocking acquire method, but it can be
+ * extended in the future to add a try_acquirePermit() method which can return
+ * immediately if the semaphore is out of capacity. It can also be extended to
+ * support a co_acquirePermit() method, see folly::fibers::Semaphore::co_wait()
  * for more information.
  */
 class RequestPermitVendor {

@@ -1908,7 +1908,7 @@ class TreeInode::TreeRenameLocks {
    * Locks for the contents of the source and destination directories.
    * If the source and destination directories are the same, only
    * srcContentsLock_ is set.  However, srcContents_ and destContents_ above are
-   * always both set, so that destContents_ can be used regardless of wether
+   * always both set, so that destContents_ can be used regardless of whether
    * the source and destination are both the same directory or not.
    */
   folly::Synchronized<TreeInodeState>::LockedPtr srcContentsLock_;

@@ -89,7 +89,7 @@ impl crate::Subcommand for GlobCmd {
     async fn run(&self) -> Result<ExitCode> {
         let instance = get_edenfs_instance();
         let client = instance.get_client();
-        let (mount_point, search_root) = self.common.get_mount_point_and_seach_root()?;
+        let (mount_point, search_root) = self.common.get_mount_point_and_search_root()?;
 
         // Load patterns
         let patterns = self.common.load_patterns()?;

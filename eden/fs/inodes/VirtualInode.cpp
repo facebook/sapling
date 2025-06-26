@@ -106,7 +106,7 @@ ImmediateFuture<Hash32> VirtualInode::getBlake3(
         if (hash.has_value()) {
           return ImmediateFuture<Hash32>(hash.value());
         }
-        // Revert to querying the objectStore for the file's medatadata
+        // Revert to querying the objectStore for the file's metadata
         return objectStore->getBlobBlake3(entry.getHash(), fetchContext);
       });
 }
@@ -203,7 +203,7 @@ ImmediateFuture<Hash20> VirtualInode::getSHA1(
         if (hash.has_value()) {
           return ImmediateFuture<Hash20>(hash.value());
         }
-        // Revert to querying the objectStore for the file's medatadata
+        // Revert to querying the objectStore for the file's metadata
         return objectStore->getBlobSha1(entry.getHash(), fetchContext);
       });
 }

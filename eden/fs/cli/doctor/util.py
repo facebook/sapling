@@ -103,8 +103,8 @@ def hg_doctor_in_backing_repo(
     )
 
     exitcode = result.returncode
-    formated_out = result.stdout.decode("utf-8")
-    formated_err = result.stderr.decode("utf-8")
+    formatted_out = result.stdout.decode("utf-8")
+    formatted_err = result.stderr.decode("utf-8")
     formatted_repos = ", ".join([str(repo) for repo in dependent_repos])
 
     if len(dependent_repos) == 0:
@@ -131,16 +131,16 @@ failed with exit code {exitcode}. This indicates
 {recommended_remediation}
 
 `hg doctor` stdout:
-{formated_out}
+{formatted_out}
 `hg doctor` stderr:
-{formated_err}
+{formatted_err}
 """
         )
 
     # hg doctor prints to stderr whenever it attempts to fix anything.
     # It is hard to determine if hg doctor was actually successful in
     # fixing the issue. So we will just forward this to the user.
-    if formated_err:
+    if formatted_err:
         return f"""\
 `hg doctor` attempted to fix something in the backing repo
 {backing_repo}.
@@ -148,9 +148,9 @@ It may or may not have succeeded. If it does not seem to have fixed things, then
 may be corrupted beyond repair and {recommended_remediation}
 
 `hg doctor` stdout:
-{formated_out}
+{formatted_out}
 `hg doctor` stderr:
-{formated_err}
+{formatted_err}
 
 """
 

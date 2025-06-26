@@ -90,7 +90,7 @@ where
     tokio::task::spawn(async move { result })
         .map(|r| match r {
             Ok(r) => r,
-            Err(_) => panic!("Error joing tokio task."),
+            Err(_) => panic!("Error joining tokio task."),
         })
         .boxed()
 }
@@ -111,7 +111,7 @@ where
     })
     .map(|r| match r {
         Ok(r) => r,
-        Err(_) => panic!("Error joing tokio task."),
+        Err(_) => panic!("Error joining tokio task."),
     })
     .boxed()
 }

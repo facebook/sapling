@@ -1960,7 +1960,7 @@ void publishFile(
 /**
  * This method computes all uncommitted changes and save the result to publisher
  */
-void sumUncommitedChanges(
+void sumUncommittedChanges(
     const JournalDeltaRange& range,
     const folly::Synchronized<ThriftStreamPublisherOwner<ChangedFileResult>>&
         publisher,
@@ -2137,7 +2137,7 @@ EdenServiceHandler::streamChangesSince(
       rootIdCodec.renderRootId(summed->snapshotTransitions.back());
   result.toPosition_ref() = toPosition;
 
-  sumUncommitedChanges(*summed, *sharedPublisherLock, std::nullopt);
+  sumUncommittedChanges(*summed, *sharedPublisherLock, std::nullopt);
 
   if (summed->snapshotTransitions.size() > 1) {
     auto callback =
@@ -2827,7 +2827,7 @@ EdenServiceHandler::streamSelectedChangesSince(
   auto filter =
       std::make_unique<GlobFilter>(params->globs().value(), caseSensitivity);
 
-  sumUncommitedChanges(
+  sumUncommittedChanges(
       *summed, *sharedPublisherLock, std::reference_wrapper(*filter));
 
   if (summed->snapshotTransitions.size() > 1) {

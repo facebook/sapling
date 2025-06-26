@@ -224,7 +224,7 @@ struct ReadCmd {
     verbose: bool,
 
     #[clap(
-        help = "The minimum number of access events to list in the results. If counting by process, PIDs with access counts fewer than this number will be ommitted.\nIf counting by path, paths accessed with a number smaller than threshold will be omitted.",
+        help = "The minimum number of access events to list in the results. If counting by process, PIDs with access counts fewer than this number will be omitted.\nIf counting by path, paths accessed with a number smaller than threshold will be omitted.",
         short = 't',
         long = "threshold",
         required = false,

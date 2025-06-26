@@ -147,7 +147,7 @@ folly::Try<TakeoverData> runTakeover(
     const std::set<int32_t>& serverSupportedVersions =
         kSupportedTakeoverVersions,
     const uint64_t clientSupportedCapabilities = kSupportedCapabilities,
-    const uint64_t serverSupportedCapabilties = kSupportedCapabilities) {
+    const uint64_t serverSupportedCapabilities = kSupportedCapabilities) {
   // Ignore SIGPIPE so that sendmsg() will fail with an error code instead
   // of terminating the program if the remote side has closed the connection.
   signal(SIGPIPE, SIG_IGN);
@@ -163,7 +163,7 @@ folly::Try<TakeoverData> runTakeover(
       handler,
       &faultInjector,
       serverSupportedVersions,
-      serverSupportedCapabilties);
+      serverSupportedCapabilities);
 
   auto future = takeoverViaEventBase(
                     &evb,
@@ -591,8 +591,8 @@ TEST(Takeover, manyInodes) {
   // Here we create a mount with 7 million inodes. The size of this
   // TakeoverData will be 1102721166 bytes.
 
-  // This size is larger than 1 GB (the maximum data lentgh that we chose for
-  // transfering eden TakeoverData over UnixSocket). The TakeoverServer should
+  // This size is larger than 1 GB (the maximum data length that we chose for
+  // transferring eden TakeoverData over UnixSocket). The TakeoverServer should
   // split the data into multiple chunks and send them in sequence.
 
   constexpr int64_t numInodes = 7000000;

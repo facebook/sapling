@@ -53,7 +53,7 @@ class RingBuffer {
 
   /**
    * Extracts the contents of the ring buffer. The order of the elements is
-   * not garunteed, and the ring buffer should not be used after this call.
+   * not guaranteed, and the ring buffer should not be used after this call.
    */
   std::vector<T> extractVector() &&;
 

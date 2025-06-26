@@ -481,7 +481,7 @@ class EdenConfig : private ConfigSettingManager {
       this};
 
   /**
-   * Mininum number of inodes that need to be loaded  before triggering the
+   * Minimum number of inodes that need to be loaded  before triggering the
    * periodic NFS Garbage Collector (GC). If the loaded inode count is below
    * this number, a GC will be skipped. A value of 0 will effectively skip this
    * check.
@@ -891,7 +891,7 @@ class EdenConfig : private ConfigSettingManager {
       this};
 
   /**
-   * Wether we should validate that files on disk match their inode state after
+   * Whether we should validate that files on disk match their inode state after
    * checkout. We won't validate all of the loaded files or even the ones
    * changed by checkout, but just a handful of the files that were loaded and
    * changed by checkout. The next few configs control how many files and how
@@ -1234,7 +1234,7 @@ class EdenConfig : private ConfigSettingManager {
   /**
    *  The minimum number of items to keep in SCM status cache
    */
-  ConfigSetting<size_t> scmStatusCacheMininumItems{
+  ConfigSetting<size_t> scmStatusCacheMinimumItems{
       "hg:scm-status-cache-min-items",
       3,
       this};
@@ -1243,6 +1243,7 @@ class EdenConfig : private ConfigSettingManager {
    *  The maximum number of entries we want to cache within a single status
    */
   ConfigSetting<size_t> scmStatusCacheMaxEntriesPerItem{
+      // @lint-ignore SPELL
       "hg:scm-status-cache-max-entires-per-item",
       10000,
       this};
@@ -1740,7 +1741,7 @@ class EdenConfig : private ConfigSettingManager {
 
   /**
    * A number from 0 - x to determine how often we should log file access
-   * events. This is currectly agnostic to the type of file access. If this
+   * events. This is currently agnostic to the type of file access. If this
    * is not at 100%, we will not log filenames and we will only log directory
    * paths. In the following equation, 1/x = percentage, x is this variable.
    * For 50% rollout, 1/x = .5, so x = 2, so this would be set to 2. 0
@@ -2004,7 +2005,7 @@ class EdenConfig : private ConfigSettingManager {
    * The key to use for blake3 hash computation.
    * The key must be exactly 32 bytes.
    *
-   * !!!IMPORATNT!!!
+   * !!!IMPORTANT!!!
    * The value of this config must be kept in sync with the source control
    * server as well as all the tools that will compute a Blake3 hash from file
    * content. To this effect, this config is overwritten early at startup in

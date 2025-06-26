@@ -55,7 +55,7 @@ pub(crate) struct CommonArgs {
 }
 
 impl CommonArgs {
-    pub(crate) fn get_mount_point_and_seach_root(&self) -> Result<(PathBuf, PathBuf)> {
+    pub(crate) fn get_mount_point_and_search_root(&self) -> Result<(PathBuf, PathBuf)> {
         // Use absolute mount_point if provided (i.e. no search_root) else use
         // cwd as mount_point and compute search_root.
         let mount_point = get_mount_point(&self.mount_point)?;

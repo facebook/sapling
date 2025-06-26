@@ -145,7 +145,7 @@ Each checkout has its own separate overlay storage. This data is stored in the
 
 The term "overlay" comes from the fact that it behaves like an
 [overlay filesystem](https://en.wikipedia.org/wiki/Union_mount) (also known as a
-union filesystem), where local modifications are overlayed on top of the
+union filesystem), where local modifications are overlaid on top of the
 underlying source control state.
 
 ### Repository

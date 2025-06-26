@@ -462,7 +462,7 @@ RpcConnectionHandler becomes the Write callback too.
       make sure it lives for the duration of any activity on the socket. It
       holds a reference to itself to keep it alive "forever". And finally
       relinquishes that reference here. We use DestructorGuard as that "self
-      reference" thing. I think we are likely using DesctructorGuard wrong.
+      reference" thing. I think we are likely using DestructorGuard wrong.
       DestructorGuard is meant to be used on the stack, but with all the future
       stuff in this code, I think we're potentially heaping it. It would
       probably be better to more simply use a shared_ptr and shared_from_this.

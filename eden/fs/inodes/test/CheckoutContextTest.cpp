@@ -35,7 +35,7 @@ TEST(CheckoutContextTest, empty) {
   ctx.maybeRecordInvalidation(InodeNumber{4});
   ctx.maybeRecordInvalidation(InodeNumber{5});
 
-  auto result = ctx.extractFilesToVerfy();
+  auto result = ctx.extractFilesToVerify();
   EXPECT_EQ(5, result.size());
   EXPECT_NE(
       result.end(), std::find(result.begin(), result.end(), InodeNumber{1}));
@@ -77,7 +77,7 @@ TEST(CheckoutContextTest, overMax) {
   ctx.maybeRecordInvalidation(InodeNumber{9}); // skipped
   ctx.maybeRecordInvalidation(InodeNumber{10}); // added removes 2
 
-  auto result = ctx.extractFilesToVerfy();
+  auto result = ctx.extractFilesToVerify();
   EXPECT_EQ(5, result.size());
 
   EXPECT_NE(

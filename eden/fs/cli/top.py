@@ -264,7 +264,7 @@ class Window:
     def get_remaining_columns(self) -> int:
         return self.width - self.current_x_offset
 
-    def write_new_line(self, scollable_ended: bool = False) -> None:
+    def write_new_line(self, scrollable_ended: bool = False) -> None:
         self.current_line += 1
         self.current_x_offset = 0
         if self.scrollable:
@@ -522,7 +522,7 @@ class Top:
                     cmd = counts.cmdsByPid.get(pid, b"<kernel>")
                     self.processes[pid] = Process(pid, cmd, mount)
 
-                self.processes[pid].set_fetchs(fetch_counts)
+                self.processes[pid].set_fetches(fetch_counts)
                 self.processes[pid].last_access = time.monotonic()
 
         for pid in self.processes.keys():
@@ -578,7 +578,7 @@ class Top:
             stage: {metric: [] for metric in RequestMetric} for stage in RequestStage
         }
         for key in counters:
-            pieces = self.parse_fuse_sumary_counter_name(key)
+            pieces = self.parse_fuse_summary_counter_name(key)
             if pieces is None:
                 continue
             stage = pieces[0]
@@ -613,7 +613,7 @@ class Top:
     # fuse.mount.stage.metric
     # returns a tuple of the parsed stage and metric if this counter
     # fits this form and None otherwise
-    def parse_fuse_sumary_counter_name(
+    def parse_fuse_summary_counter_name(
         self, counter_name: str
     ) -> Optional[Tuple[RequestStage, RequestMetric]]:
         pieces = counter_name.split(".")
@@ -1084,7 +1084,7 @@ class Process:
         )
         self.access_counts.fsChannelDurationNs += access_counts.fsChannelDurationNs
 
-    def set_fetchs(self, fetch_counts: int) -> None:
+    def set_fetches(self, fetch_counts: int) -> None:
         self.fuseFetch = fetch_counts
 
     def get_row(self) -> Row:

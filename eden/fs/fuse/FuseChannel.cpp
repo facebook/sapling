@@ -914,7 +914,7 @@ FuseChannel::FuseChannel(
   XCHECK_GE(numThreads_, 1ul);
   installSignalHandler();
 
-  initalizeInflightRequestsRateLimiter(maximumInFlightRequests);
+  initializeInflightRequestsRateLimiter(maximumInFlightRequests);
 
   traceSubscriptionHandles_.push_back(traceBus_->subscribeFunction(
       "FuseChannel request tracking",

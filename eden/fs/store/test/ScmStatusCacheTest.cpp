@@ -126,7 +126,7 @@ TEST_F(ScmStatusCacheTest, evict_on_update) {
 
   int maxItemCnt = 600 / totalItemSize;
 
-  rawEdenConfig->scmStatusCacheMininumItems.setValue(
+  rawEdenConfig->scmStatusCacheMinimumItems.setValue(
       maxItemCnt - 1, ConfigSourceType::CommandLine);
 
   auto cache = ScmStatusCache::create(

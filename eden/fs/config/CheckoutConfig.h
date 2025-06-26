@@ -33,7 +33,7 @@ constexpr BackingStoreType kSupportedRepositoryTypes[] = {
     BackingStoreType::HTTP,
 };
 
-constexpr BackingStoreType kUnsupportedRespositoryTypes[] = {
+constexpr BackingStoreType kUnsupportedRepositoryTypes[] = {
     BackingStoreType::FILTEREDHG,
 };
 

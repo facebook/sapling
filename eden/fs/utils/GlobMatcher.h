@@ -97,7 +97,7 @@ class GlobMatcher {
 
   /**
    * Returns true if the trailing section of the input text (starting at
-   * textIdx) is a mattern for the trailing portion of the pattern buffer
+   * textIdx) is a pattern for the trailing portion of the pattern buffer
    * (starting at patternIdx).
    */
   bool tryMatchAt(std::string_view text, size_t textIdx, size_t patternIdx)
@@ -110,7 +110,7 @@ class GlobMatcher {
    * Returns true if the character matches, and false otherwise.
    *
    * The patternIdx argument is updated to point to the next opcode after this
-   * character calss.
+   * character class.
    */
   bool charClassMatch(uint8_t ch, size_t* patternIdx) const;
 

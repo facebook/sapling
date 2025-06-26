@@ -455,7 +455,7 @@ class ReCasRepo(Repo):
 
     def get_commit_hash(self, commit: str) -> str:
         raise NotImplementedError(
-            "get_comit_hash is not supposed to be called for ReCasRepo"
+            "get_commit_hash is not supposed to be called for ReCasRepo"
         )
 
 
@@ -698,7 +698,7 @@ def format_cmd(cmd: bytes) -> str:
     args = os.fsdecode(cmd)
 
     # remove trailing null which would cause the command to show up with an
-    # exta empty string on the end
+    # extra empty string on the end
     args = re.sub("\x00$", "", args)
 
     args = args.split("\x00")

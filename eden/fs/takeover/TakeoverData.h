@@ -351,7 +351,7 @@ class TakeoverData {
    * we are serializing with. i.e. should we send takeover data for NFS mount
    * points and should we send the mountd socket.
    */
-  static bool shouldSerdeNFSInfo(uint32_t protocolVersionCapabilies);
+  static bool shouldSerdeNFSInfo(uint32_t protocolVersionCapabilities);
 
   /**
    * The main eden lock file that prevents two edenfs processes from running at

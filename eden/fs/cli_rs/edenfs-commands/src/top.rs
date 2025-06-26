@@ -271,9 +271,9 @@ struct BasePage {
 }
 
 impl BasePage {
-    pub fn new(inital_height: usize, initial_width: usize) -> Self {
+    pub fn new(initial_height: usize, initial_width: usize) -> Self {
         Self {
-            height: inital_height,
+            height: initial_height,
             width: initial_width,
         }
     }
@@ -387,7 +387,7 @@ impl TopCmd {
                 }
             }
         }
-        // clear the sceen before we exit because the terminal
+        // clear the screen before we exit because the terminal
         // prompt will write over the eden top stuff and then
         // the next command output and eden top output gets
         // jumbled together.

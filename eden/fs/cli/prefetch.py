@@ -103,7 +103,7 @@ class CheckoutAndPatterns(NamedTuple):
 # patterns, which use \. It's much more common to use \ as a path separator
 # instead of a special character on Windows. Many Windows tools will return the
 # path with \, so it would be nicer if we could be compatible with this.
-# Sould a user need to use special charters on windows we could have them escape
+# Should a user need to use special charters on windows we could have them escape
 # the backslash. Then we would turn '\\\\' into '\\' here instead of '//'.
 # However, changes would need to be made to the daemon as well to teach our
 # path abstractions to recognize this as a special character because

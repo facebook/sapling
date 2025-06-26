@@ -79,7 +79,7 @@ impl crate::Subcommand for PrefetchCmd {
     async fn run(&self) -> Result<ExitCode> {
         let instance = get_edenfs_instance();
         let client = instance.get_client();
-        let (mount_point, _search_root) = self.common.get_mount_point_and_seach_root()?;
+        let (mount_point, _search_root) = self.common.get_mount_point_and_search_root()?;
 
         let mut sample = self.new_sample(&mount_point);
 

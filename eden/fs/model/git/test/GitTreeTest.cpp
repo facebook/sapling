@@ -166,6 +166,7 @@ TEST(GitTree, deserializeEmpty) {
 TEST(GitTree, testBadDeserialize) {
   ObjectId zero = ObjectId::fromHex("0000000000000000000000000000000000000000");
   // Partial header
+  // @lint-ignore SPELL
   EXPECT_ANY_THROW(deserializeGitTree(zero, StringPiece("tre")));
   EXPECT_ANY_THROW(deserializeGitTree(zero, StringPiece("tree ")));
   EXPECT_ANY_THROW(deserializeGitTree(zero, StringPiece("tree 123")));

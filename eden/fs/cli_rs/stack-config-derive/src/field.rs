@@ -107,7 +107,7 @@ impl ConfigField {
                 merge,
             }
         } else {
-            abort!(meta, "uanble to parse attribute");
+            abort!(meta, "unable to parse attribute");
         }
     }
 

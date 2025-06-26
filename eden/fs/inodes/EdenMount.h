@@ -807,9 +807,10 @@ class EdenMount : public std::enable_shared_from_this<EdenMount> {
    *     directory parent.  If this is false the code will still compute a diff
    *     against the specified commitHash even the working directory parent
    *     points elsewhere, or when a checkout is currently in progress.
-   * @param request This ResposeChannelRequest is passed from the ServiceHandler
-   *     and is used to check if the request is still active, because if the
-   *     request is no longer active we will cancel this diff operation.
+   * @param request This ResponseChannelRequest is passed from the
+   *     ServiceHandler and is used to check if the request is still active,
+   *     because if the request is no longer active we will cancel this diff
+   *     operation.
    * @param the rootInode of this mount. Used to prevent the mount from being
    *     shut down.
    *
@@ -1117,7 +1118,7 @@ class EdenMount : public std::enable_shared_from_this<EdenMount> {
   /**
    * Should only be called before the EdenMount transitions to the INITIALIZING
    * state.
-   * We decide wether this mount should use nfs before initialization time and
+   * We decide whether this mount should use nfs before initialization time and
    * do not change the decision. This is so that we can consistently determine
    * if we are determining if we are using an nfs mount without checking if the
    * channel is an NFS mount. Needed because we need to know the type of mount

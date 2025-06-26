@@ -84,7 +84,7 @@ pub fn list_redirections(
 ) -> Result<Vec<ffi::RedirectionFFI>, anyhow::Error> {
     // EdenFsInstance depends on having an initialized tokio runtime, but the
     // FFI layer does not guarantee this. As such, we create one here to
-    // create and invoke methods on EdenFsInstnace.
+    // create and invoke methods on EdenFsInstance.
     use tokio::runtime;
     let rt = runtime::Builder::new_current_thread()
         .enable_all()

@@ -24,8 +24,9 @@ void StartupStatusChannel::subscribe(
   }
 
   // if we fell through then we did not add to the publishers list because
-  // startup has already completed. The publisher will be automaticall destroyed
-  // as we go out of scope. We throw an error to indicate startup has completed.
+  // startup has already completed. The publisher will be automatically
+  // destroyed as we go out of scope. We throw an error to indicate startup has
+  // completed.
   throw newEdenError(
       EALREADY,
       EdenErrorType::POSIX_ERROR,

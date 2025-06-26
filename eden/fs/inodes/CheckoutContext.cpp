@@ -101,7 +101,7 @@ CheckoutContext::finish(const RootId& newSnapshot) {
   renameLock_.unlock();
 
   return flush().thenValue(
-      [invalidations = extractFilesToVerfy()](auto&& conflicts) mutable {
+      [invalidations = extractFilesToVerify()](auto&& conflicts) mutable {
         CheckoutConflictsAndInvalidations result;
         result.conflicts = std::move(conflicts);
         result.invalidations = std::move(invalidations);
@@ -197,7 +197,7 @@ void CheckoutContext::maybeRecordInvalidation(InodeNumber inode) {
   }
 }
 
-std::vector<InodeNumber> CheckoutContext::extractFilesToVerfy() {
+std::vector<InodeNumber> CheckoutContext::extractFilesToVerify() {
   return std::move(**sampleInvalidations_.wlock()).extractVector();
 }
 } // namespace facebook::eden

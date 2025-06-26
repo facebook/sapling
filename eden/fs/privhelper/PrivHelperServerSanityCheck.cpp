@@ -167,7 +167,7 @@ void sanityCheckFs(const std::string& mountPoint) {
 void PrivHelperServer::unmountStaleMount(const std::string& mountPoint) {
   // Attempt to unmount the stale mount.
   // Error logging is done inside unmount.
-  // Always remove the mount point from mointPoints_ since it represents
+  // Always remove the mount point from mountPoints_ since it represents
   // valid mounts only.
   unmount(mountPoint.c_str(), {});
   mountPoints_.erase(mountPoint);

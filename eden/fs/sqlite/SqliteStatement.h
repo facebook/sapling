@@ -34,7 +34,7 @@ class SqliteStatement {
    * statement to execute them.
    *
    * Note: the `first` and `second` parameters are present to avoid a
-   * delegation cycle for the otherwise amgiguous case of a single parameter.
+   * delegation cycle for the otherwise ambiguous case of a single parameter.
    * It is desirable to do this because it saves an extraneous heap allocation
    * in the cases where the query string is known at compile time.
    */

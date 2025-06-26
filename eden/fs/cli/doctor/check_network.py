@@ -76,7 +76,7 @@ def form_network_speed_message(download_speed: float, upload_speed: float) -> st
 
 
 def parse_latency(latency: str) -> float:
-    # Latency is printed as a value of 4 digits in the closest order of magnitue separated by a space
+    # Latency is printed as a value of 4 digits in the closest order of magnitude separated by a space
     # e.g. 1000 s, 100.0 s, 10.00s, 1.000s, 100.0 ms, ... 1.000 us
     # We want to convert this to milliseconds
     magnitude = {"s": 1000, "ms": 1, "us": 1.0 / 1000.0}

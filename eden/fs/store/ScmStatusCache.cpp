@@ -28,7 +28,7 @@ ScmStatusCache::ScmStatusCache(
           ObjectCacheFlavor::Simple,
           ScmStatusCacheStats>{
           configPtr->scmStatusCacheMaxSize.getValue(),
-          configPtr->scmStatusCacheMininumItems.getValue(),
+          configPtr->scmStatusCacheMinimumItems.getValue(),
           std::move(stats)}, journal_(std::move(journal)) {}
 
 std::variant<StatusResultFuture, StatusResultPromise> ScmStatusCache::get(

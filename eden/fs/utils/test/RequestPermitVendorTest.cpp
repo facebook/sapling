@@ -159,13 +159,13 @@ TEST(RequestPermitVendorTest, PermitsAreMovable) {
   EXPECT_EQ(vendor->available(), 1);
   EXPECT_EQ(vendor->inflight(), 1);
 
-  // Reseting the original p1 pointer doesn't affect p1_moved
+  // Resetting the original p1 pointer doesn't affect p1_moved
   p1.reset();
   EXPECT_EQ(vendor->capacity(), 2);
   EXPECT_EQ(vendor->available(), 1);
   EXPECT_EQ(vendor->inflight(), 1);
 
-  // We should be able to aquire a second permit
+  // We should be able to acquire a second permit
   auto p2 = vendor->acquirePermit();
   EXPECT_EQ(vendor->capacity(), 2);
   EXPECT_EQ(vendor->available(), 0);

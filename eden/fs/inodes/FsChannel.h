@@ -46,7 +46,7 @@ class FsChannel {
 
   /**
    * A semaphore-based rate limiter used to limit the number of outstanding
-   * requests to the FsChannel. This is initalized in the constructors of the
+   * requests to the FsChannel. This is initialized in the constructors of the
    * derived classes. The size of the semaphore is controlled by
    * fschannel:max-inflight-requests. If the config is set to zero, rate
    * limiting is disabled and this will be nullptr.
@@ -59,7 +59,7 @@ class FsChannel {
    * constructor. If zero is passed, rate limiting is disabled and the permit
    * methods will be no-ops.
    */
-  void initalizeInflightRequestsRateLimiter(size_t maximumInFlightRequests) {
+  void initializeInflightRequestsRateLimiter(size_t maximumInFlightRequests) {
     if (maximumInFlightRequests > 0) {
       requestRateLimiter_ =
           std::make_unique<RequestPermitVendor>(maximumInFlightRequests);

@@ -20,7 +20,7 @@ namespace facebook::eden {
 class BackingStore;
 
 /**
- * Implementation of a BackingStore that allows filtering sets odf paths from
+ * Implementation of a BackingStore that allows filtering sets of paths from
  * the checkout.
  *
  * The FilteredBackingStore filters paths at the tree level, so much of the

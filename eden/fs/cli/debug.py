@@ -293,7 +293,7 @@ class Process:
         # pyre-fixme[4]: Attribute must be annotated.
         self.mount = format_mount(mount)
 
-    def set_fetchs(self, fetch_counts: int) -> None:
+    def set_fetches(self, fetch_counts: int) -> None:
         self.fetch_count = fetch_counts
 
 
@@ -356,7 +356,7 @@ class ProcessFetchCmd(Subcmd):
                             cmd = counts.cmdsByPid.get(pid, b"<unknown>")
                             processes[pid] = Process(pid, cmd, mount)
 
-                    processes[pid].set_fetchs(fetch_counts)
+                    processes[pid].set_fetches(fetch_counts)
 
         sorted_processes = sorted(
             processes.items(), key=lambda x: x[1].fetch_count, reverse=True
@@ -520,8 +520,8 @@ def print_all_objects(
     else:
         print(f"\n!!!!! {object_type} mismatch !!!!! \n")
         for obj in non_error_objects:
-            prety_fromwhere = origin_to_text(obj.origin)
-            print(f"{object_type} from {prety_fromwhere}\n")
+            pretty_fromwhere = origin_to_text(obj.origin)
+            print(f"{object_type} from {pretty_fromwhere}\n")
             print("-----------------------------\n")
             print_data(obj)
             print("\n-----------------------------\n\n")

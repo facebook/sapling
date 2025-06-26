@@ -312,7 +312,7 @@ Alright so what are the options.
     manually copy and delete (honestly thank goodness, because we can barely
     handle file renames 😅) . Since we are only talking about files here, we are
     not talking about crawling anything here, it’s just marking single files as
-    full. However, the biggest problem here is that this will be inherintly
+    full. However, the biggest problem here is that this will be inherently
     racy. “Marking files full” means issue a write to the file on disk. There
     will be some period when a file is renamed, but not full. And theoretically
     the bug would still exist in that period. Plus, there could be problems with
