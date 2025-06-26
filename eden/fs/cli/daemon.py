@@ -342,6 +342,7 @@ def get_edenfs_environment(
         "SSH_AUTH_SOCK",
         "SSH_AGENT_PID",
         "KRB5CCNAME",
+        "DEVCOMPUTE",
         "SANDCASTLE",
         "SANDCASTLE_ALIAS",
         "SANDCASTLE_INSTANCE_ID",
