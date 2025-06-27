@@ -166,31 +166,14 @@ pub async fn sync(
 
     let app_args = app.args::<ModernSyncArgs>()?;
 
-    let sender: Arc<dyn EdenapiSender + Send + Sync> = {
-        let url = if let Some(socket) = app_args.dest_socket {
-            // Only for integration tests
-            format!("{}:{}/edenapi/", &config.url, socket)
-        } else {
-            format!("{}/edenapi/", &config.url)
-        };
-
-        let tls_args = app_args
-            .tls_params
-            .clone()
-            .ok_or_else(|| format_err!("TLS params not found for repo {}", repo_name))?;
-
-        Arc::new(RetryEdenapiSender::new(Arc::new(
-            DefaultEdenapiSenderBuilder::new(
-                Url::parse(&url)?,
-                dest_repo_name.clone(),
-                tls_args,
-                ctx.clone(),
-                repo_blobstore.clone(),
-            )
-            .build()
-            .await?,
-        )))
-    };
+    let sender = build_edenfs_client(
+        ctx.clone(),
+        &app_args,
+        &dest_repo_name,
+        &config,
+        repo_blobstore,
+    )
+    .await?;
     let sender = if let Some(sender_decorator) = sender_decorator {
         sender_decorator(sender)
     } else {
@@ -331,6 +314,38 @@ pub async fn sync(
     let _ = finish_rx.await?;
 
     Ok(())
+}
+
+pub async fn build_edenfs_client(
+    ctx: CoreContext,
+    app_args: &ModernSyncArgs,
+    repo_name: &str,
+    config: &ModernSyncConfig,
+    repo_blobstore: &RepoBlobstore,
+) -> Result<Arc<dyn EdenapiSender + Send + Sync>> {
+    let url = if let Some(socket) = app_args.dest_socket {
+        // Only for integration tests
+        format!("{}:{}/edenapi/", &config.url, socket)
+    } else {
+        format!("{}/edenapi/", &config.url)
+    };
+
+    let tls_args = app_args
+        .tls_params
+        .clone()
+        .ok_or_else(|| format_err!("TLS params not found for repo {}", repo_name))?;
+
+    Ok(Arc::new(RetryEdenapiSender::new(Arc::new(
+        DefaultEdenapiSenderBuilder::new(
+            Url::parse(&url)?,
+            repo_name.to_string(),
+            tls_args,
+            ctx.clone(),
+            repo_blobstore.clone(),
+        )
+        .build()
+        .await?,
+    ))))
 }
 
 pub async fn process_bookmark_update_log_entry(
