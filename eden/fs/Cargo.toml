@@ -26,7 +26,6 @@ rusqlite_migration = { git = "https://github.com/cljoly/rusqlite_migration", rev
 sqlx = { git = "https://github.com/launchbadge/sqlx", rev = "75d5787581c2d58cc23984704e2fe267711dd603" }
 stabby = { git = "https://github.com/fbsource/stabby", rev = "22db1dda19938ff7725a93db64012a5730325c5d" }
 uefisettings = { git = "https://github.com/linuxboot/uefisettings", rev = "f16daed1d2bd1216204fd24e876c6477d03aebb3" }
-uefisettings_backend_thrift = { git = "https://github.com/linuxboot/uefisettings", rev = "f16daed1d2bd1216204fd24e876c6477d03aebb3" }
 vm-allocator = { git = "https://github.com/rust-vmm/vm-allocator", rev = "5fb545cc6e41fdc9f27d48d97ed26274a35bc6c6" }
 warp = { git = "https://github.com/jdthomas/warp.git", rev = "c794232d182abaa3add8184e7d661e084cc516c5" }
 zenoh = { git = "https://github.com/eclipse-zenoh/zenoh", rev = "cd9655fdb521ad13504a2ef9e0dff5b985b521ea" }
