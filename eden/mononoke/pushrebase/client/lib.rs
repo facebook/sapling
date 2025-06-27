@@ -5,6 +5,7 @@
  * GNU General Public License version 2.
  */
 
+#![feature(let_chains)]
 #[cfg(fbcode_build)]
 mod facebook;
 mod hybrid;
