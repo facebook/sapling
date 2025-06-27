@@ -12,11 +12,7 @@ use std::sync::atomic::AtomicBool;
 use anyhow::Result;
 use anyhow::format_err;
 use clap::Parser;
-use clientinfo::ClientEntryPoint;
-use clientinfo::ClientInfo;
-use context::SessionContainer;
 use futures::channel::oneshot;
-use metadata::Metadata;
 use mononoke_app::MononokeApp;
 use mononoke_types::ChangesetId;
 use mutable_counters::MutableCountersArc;
@@ -53,21 +49,7 @@ pub async fn run(app: MononokeApp, args: CommandArgs) -> Result<()> {
             repo_name
         ))?;
 
-    let mut metadata = Metadata::default();
-    metadata.add_client_info(ClientInfo::default_with_entry_point(
-        ClientEntryPoint::ModernSync,
-    ));
-
-    let mut scuba = app.environment().scuba_sample_builder.clone();
-    scuba.add_metadata(&metadata);
-
-    let session_container = SessionContainer::builder(app.fb)
-        .metadata(Arc::new(metadata))
-        .build();
-
-    let ctx = session_container
-        .new_context(app.logger().clone(), scuba)
-        .clone_with_repo_name(&repo_name.clone());
+    let ctx = crate::sync::build_context(Arc::new(app), &repo_name, false);
 
     let sender: Arc<dyn EdenapiSender + Send + Sync> = {
         let url = if let Some(socket) = app_args.dest_socket {

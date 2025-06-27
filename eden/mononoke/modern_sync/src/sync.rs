@@ -133,26 +133,13 @@ pub async fn sync(
             repo_name
         ))?;
 
-    let mut metadata = Metadata::default();
-    metadata.add_client_info(ClientInfo::default_with_entry_point(
-        ClientEntryPoint::ModernSync,
-    ));
+    let ctx = build_context(app.clone(), &repo_name, dry_run);
 
-    let scuba = stat::new(app.clone(), &metadata, &repo_name, dry_run);
-    let session_container = SessionContainer::builder(app.fb)
-        .metadata(Arc::new(metadata))
-        .build();
-
-    let ctx = session_container
-        .new_context(app.logger().clone(), scuba)
-        .clone_with_repo_name(&repo_name.clone());
-
-    borrowed!(ctx);
     let start_id = if let Some(id) = start_id_arg {
         id
     } else {
         repo.mutable_counters()
-            .get_counter(ctx, MODERN_SYNC_COUNTER_NAME)
+            .get_counter(&ctx, MODERN_SYNC_COUNTER_NAME)
             .await?
             .map(|val| val.try_into())
             .transpose()?
@@ -193,12 +180,12 @@ pub async fn sync(
         cancellation_requested,
     );
     tracing::info!("Initialized channels");
-    stat::log_sync_start(ctx, start_id);
+    stat::log_sync_start(&ctx, start_id);
 
     let bookmark = app_args.bookmark;
     let last_entry = Arc::new(RwLock::new(None));
     bul_util::read_bookmark_update_log(
-        ctx,
+        &ctx,
         BookmarkUpdateLogId(start_id),
         exec_type,
         repo.bookmark_update_log_arc(),
@@ -314,6 +301,22 @@ pub async fn sync(
     let _ = finish_rx.await?;
 
     Ok(())
+}
+
+pub fn build_context(app: Arc<MononokeApp>, repo_name: &str, dry_run: bool) -> CoreContext {
+    let mut metadata = Metadata::default();
+    metadata.add_client_info(ClientInfo::default_with_entry_point(
+        ClientEntryPoint::ModernSync,
+    ));
+
+    let scuba = stat::new(app.clone(), &metadata, repo_name, dry_run);
+    let session_container = SessionContainer::builder(app.fb)
+        .metadata(Arc::new(metadata))
+        .build();
+
+    session_container
+        .new_context(app.logger().clone(), scuba)
+        .clone_with_repo_name(repo_name)
 }
 
 pub async fn build_edenfs_client(
