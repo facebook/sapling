@@ -5,10 +5,12 @@
  * LICENSE file in the root directory of this source tree.
  */
 
+import type {ReactNode} from 'react';
 import type {AbsolutePath, CwdInfo} from './types';
 
+import * as stylex from '@stylexjs/stylex';
 import {Badge} from 'isl-components/Badge';
-import {Button} from 'isl-components/Button';
+import {Button, buttonStyles} from 'isl-components/Button';
 import {ButtonDropdown} from 'isl-components/ButtonDropdown';
 import {Divider} from 'isl-components/Divider';
 import {Icon} from 'isl-components/Icon';
@@ -20,6 +22,7 @@ import {Tooltip} from 'isl-components/Tooltip';
 import {atom, useAtomValue} from 'jotai';
 import {Suspense} from 'react';
 import {basename} from 'shared/utils';
+import {colors} from '../../components/theme/tokens.stylex';
 import serverAPI from './ClientToServerAPI';
 import {Row} from './ComponentUtils';
 import {DropdownField, DropdownFields} from './DropdownFields';
@@ -80,6 +83,35 @@ registerDisposable(
   ),
   import.meta.hot,
 );
+
+const styles = stylex.create({
+  hideRightBorder: {
+    borderRight: 0,
+    marginRight: 0,
+    borderTopRightRadius: 0,
+    borderBottomRightRadius: 0,
+  },
+  hideLeftBorder: {
+    borderLeft: 0,
+    marginLeft: 0,
+    borderTopLeftRadius: 0,
+    borderBottomLeftRadius: 0,
+  },
+  submoduleSelect: {
+    appearance: 'none', // remove default styling of <select/>
+    width: 'auto',
+    maxWidth: '96px',
+    textOverflow: 'ellipsis',
+    boxShadow: 'none',
+    outline: 'none',
+  },
+  submoduleSeparator: {
+    // Override background to disable hover effect
+    background: {
+      default: colors.subtleHoverDarken,
+    },
+  },
+});
 
 export function CwdSelector() {
   const info = useAtomValue(repositoryInfo);
@@ -234,4 +266,66 @@ export function CwdSelections({dismiss, divider}: {dismiss: () => unknown; divid
       {divider && <Divider />}
     </DropdownField>
   );
+}
+
+/**
+ * Dropdown selector for submodules in a breadcrumb style.
+ */
+function SubmoduleSelector<T extends {label: ReactNode; id: string}>({
+  options,
+  selected,
+  onChangeSelected,
+  hideRightBorder = true,
+}: {
+  options: ReadonlyArray<T>;
+  selected: T | undefined;
+  onChangeSelected: (newSelected: T) => unknown;
+  hideRightBorder?: boolean;
+}) {
+  const selectedValue = options.find(opt => opt.id === selected?.id)?.id;
+
+  return (
+    <Tooltip
+      trigger="hover"
+      placement="bottom"
+      component={() => <SubmoduleHint path={selectedValue} />}>
+      <Icon
+        icon="chevron-right"
+        {...stylex.props(
+          buttonStyles.icon,
+          styles.submoduleSeparator,
+          styles.hideLeftBorder,
+          styles.hideRightBorder,
+        )}
+      />
+      <select
+        {...stylex.props(
+          buttonStyles.button,
+          buttonStyles.icon,
+          styles.submoduleSelect,
+          styles.hideLeftBorder,
+          hideRightBorder && styles.hideRightBorder,
+        )}
+        value={selectedValue ?? ''}
+        onChange={event => {
+          const matching = options.find(opt => opt.id === (event.target.value as T['id']));
+          if (matching != null) {
+            onChangeSelected(matching);
+          }
+        }}>
+        <option value="" disabled hidden>
+          submodules ...
+        </option>
+        {options.map(option => (
+          <option key={option.id} value={option.id}>
+            {option.label}
+          </option>
+        ))}
+      </select>
+    </Tooltip>
+  );
+}
+
+function SubmoduleHint({path}: {path: string | undefined}) {
+  return <T>{path ? `Submodule at: ${path}` : 'Select a submodule'}</T>;
 }
