@@ -6,7 +6,7 @@
  */
 
 import type {ReactNode} from 'react';
-import type {AbsolutePath, CwdInfo, CwdRelativePath} from './types';
+import type {AbsolutePath, CwdInfo, CwdRelativePath, RepoRelativePath} from './types';
 
 import * as stylex from '@stylexjs/stylex';
 import {Badge} from 'isl-components/Badge';
@@ -32,7 +32,7 @@ import {T, t} from './i18n';
 import {writeAtom} from './jotaiUtils';
 import platform from './platform';
 import {serverCwd} from './repositoryData';
-import {repositoryInfo} from './serverAPIState';
+import {latestSubmodulesData, repositoryInfo} from './serverAPIState';
 import {registerCleanup, registerDisposable} from './utils';
 
 /**
@@ -96,6 +96,10 @@ registerDisposable(
 );
 
 const styles = stylex.create({
+  container: {
+    display: 'flex',
+    gap: 0,
+  },
   hideRightBorder: {
     borderRight: 0,
     marginRight: 0,
@@ -128,53 +132,76 @@ export function CwdSelector() {
   const info = useAtomValue(repositoryInfo);
   const currentCwd = useAtomValue(serverCwd);
   const additionalToggles = useCommandEvent('ToggleCwdDropdown');
-  const allOptions = useCwdOptions();
-  const options = allOptions.filter(opt => opt.valid);
+  const allCwdOptions = useCwdOptions();
+  const cwdOptions = allCwdOptions.filter(opt => opt.valid);
+  const allSubmoduleOptions = useSubmoduleOptions();
+  const submoduleOptions = allSubmoduleOptions?.filter(opt => opt.valid);
+  const hasSubmodules = submoduleOptions != null && submoduleOptions.length > 0;
   if (info == null) {
     return null;
   }
-  const repoLabel = getRepoLabel(info.repoRoot, currentCwd);
+  const repoRoot = info.repoRoot;
+  const repoLabel = getRepoLabel(repoRoot, currentCwd);
+
   return (
-    <Tooltip
-      trigger="click"
-      component={dismiss => <CwdDetails dismiss={dismiss} />}
-      additionalToggles={additionalToggles.asEventTarget()}
-      group="topbar"
-      placement="bottom"
-      title={
-        <T replace={{$shortcut: <Kbd keycode={KeyCode.C} modifiers={[Modifier.ALT]} />}}>
-          Repository info & cwd ($shortcut)
-        </T>
-      }>
-      {options.length < 2 ? (
-        <Button icon data-testid="cwd-dropdown-button">
-          <Icon icon="folder" />
-          {repoLabel}
-        </Button>
-      ) : (
-        // use a ButtonDropdown as a shortcut to quickly change cwd
-        <ButtonDropdown
-          data-testid="cwd-dropdown-button"
-          kind="icon"
-          options={options}
-          selected={
-            options.find(opt => opt.id === currentCwd) ?? {
-              id: currentCwd,
-              label: repoLabel,
-              valid: true,
+    <div {...stylex.props(styles.container)}>
+      <Tooltip
+        trigger="click"
+        component={dismiss => <CwdDetails dismiss={dismiss} />}
+        additionalToggles={additionalToggles.asEventTarget()}
+        group="topbar"
+        placement="bottom"
+        title={
+          <T replace={{$shortcut: <Kbd keycode={KeyCode.C} modifiers={[Modifier.ALT]} />}}>
+            Repository info & cwd ($shortcut)
+          </T>
+        }>
+        {hasSubmodules || cwdOptions.length < 2 ? (
+          <Button
+            icon
+            data-testid="cwd-dropdown-button"
+            {...stylex.props(hasSubmodules && styles.hideRightBorder)}>
+            <Icon icon="folder" />
+            {repoLabel}
+          </Button>
+        ) : (
+          // use a ButtonDropdown as a shortcut to quickly change cwd
+          <ButtonDropdown
+            data-testid="cwd-dropdown-button"
+            kind="icon"
+            options={cwdOptions}
+            selected={
+              cwdOptions.find(opt => opt.id === currentCwd) ?? {
+                id: currentCwd,
+                label: repoLabel,
+                valid: true,
+              }
             }
-          }
-          icon={<Icon icon="folder" />}
-          onClick={
-            () => null // fall through to the Tooltip
-          }
+            icon={<Icon icon="folder" />}
+            onClick={
+              () => null // fall through to the Tooltip
+            }
+            onChangeSelected={value => {
+              if (value.id !== currentCwd) {
+                changeCwd(value.id);
+              }
+            }}></ButtonDropdown>
+        )}
+      </Tooltip>
+      {/* Submodule dropdown if available */}
+      {hasSubmodules && (
+        <SubmoduleSelector
+          options={submoduleOptions}
+          selected={submoduleOptions.find(opt => opt.id === relativePath(repoRoot, currentCwd))}
           onChangeSelected={value => {
-            if (value.id !== currentCwd) {
-              changeCwd(value.id);
+            if (value.id !== relativePath(repoRoot, currentCwd)) {
+              changeCwd(joinPaths(repoRoot, value.id));
             }
-          }}></ButtonDropdown>
+          }}
+          hideRightBorder={false}
+        />
       )}
-    </Tooltip>
+    </div>
   );
 }
 
@@ -224,6 +251,18 @@ function useCwdOptions() {
     id: cwdOptions[index].cwd,
     label: cwd.repoRelativeCwdLabel ?? cwd.cwd,
     valid: cwd.repoRoot != null,
+  }));
+}
+
+function useSubmoduleOptions():
+  | {id: RepoRelativePath; label: string; valid: boolean}[]
+  | undefined {
+  const fetchedSubmodules = useAtomValue(latestSubmodulesData);
+
+  return fetchedSubmodules.value?.map(m => ({
+    id: m.path,
+    label: m.name,
+    valid: m.active,
   }));
 }
 
