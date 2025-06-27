@@ -6,7 +6,7 @@
  */
 
 import type {ReactNode} from 'react';
-import type {AbsolutePath, CwdInfo} from './types';
+import type {AbsolutePath, CwdInfo, CwdRelativePath} from './types';
 
 import * as stylex from '@stylexjs/stylex';
 import {Badge} from 'isl-components/Badge';
@@ -44,6 +44,17 @@ export function relativePath(root: AbsolutePath, path: AbsolutePath) {
     return '';
   }
   return path.replace(root, '');
+}
+
+/**
+ * Simple version of path.join()
+ * Expect an absolute root path and a relative path whose separators are '/'
+ * e.g.
+ * joinPaths('/home', 'user') -> '/home/user'
+ * joinPaths('/home/', 'user/.config') -> '/home/user/.config'
+ */
+export function joinPaths(root: AbsolutePath, path: CwdRelativePath): AbsolutePath {
+  return root.endsWith('/') ? root + path : root + '/' + path;
 }
 
 /**
