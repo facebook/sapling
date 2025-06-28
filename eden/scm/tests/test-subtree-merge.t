@@ -824,3 +824,32 @@ test merge base strategy: only search from-path history
   resolving manifests
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
   (subtree merge, don't forget to commit)
+
+test subtree merge from subtree copy commit
+
+  $ newclientrepo
+  $ drawdag <<'EOS'
+  > B   # B/foo/x = 1foo\n2\n3\n4\n5foo\n
+  > |
+  > A   # A/foo/x = 1\n2\n3\n4\n5\n
+  >     # drawdag.defaultfiles=false
+  > EOS
+  $ hg go -q $B
+  $ hg subtree copy -r $A --from-path foo --to-path foo2 -m "subtree copy foo -> foo2"
+  copying foo to foo2
+  $ cat > foo2/x <<EOF
+  > 1
+  > 2
+  > 3foo2
+  > 4
+  > 5
+  > EOF
+  $ hg ci -m "update foo2"
+tofix: merge should not fail
+  $ hg subtree merge -r .^ --from-path foo --to-path foo2
+  searching for merge base ...
+  found the last subtree copy commit 9b7364fcbb0b
+  merge base: 0a99ffb8a8f3
+  abort: subtree copy dest path 'foo2' of '9b7364fcbb0b' has been updated on the other side
+  (use 'hg subtree copy' to re-create the directory branch)
+  [255]
