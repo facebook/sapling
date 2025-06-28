@@ -314,7 +314,11 @@ def subtree_merge(ui, repo, **opts):
     cmdutil.registerdiffgrafts(from_paths, to_paths, ctx, from_ctx)
 
     with ui.configoverride(
-        {("ui", "forcemerge"): opts.get("tool", "")}, "subtree_merge"
+        {
+            ("ui", "forcemerge"): opts.get("tool", ""),
+            ("subtree", "allow-merge-subtree-copy-commit"): True,
+        },
+        "subtree_merge",
     ):
         labels = ["working copy", "merge rev"]
         stats = mergemod.merge(

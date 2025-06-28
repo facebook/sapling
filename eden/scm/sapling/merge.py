@@ -1105,7 +1105,14 @@ def manifestmerge(
         fla = ma.flags(fa)  # fla is '' when fa does not exist in ma
 
         subtree_copy_dest = subtreeutil.find_enclosing_dest(f1, subtree_branch_dests)
-        if subtree_copy_dest and (n1 != na or fl1 != fla):
+        allow_merge_subtree_copy = ui.configbool(
+            "subtree", "allow-merge-subtree-copy-commit"
+        )
+        if (
+            not allow_merge_subtree_copy
+            and subtree_copy_dest
+            and (n1 != na or fl1 != fla)
+        ):
             hint = _("use '@prog@ subtree copy' to re-create the directory branch")
             if extra_hint := ui.config("subtree", "copy-conflict-hint"):
                 hint = f"{hint}. {extra_hint}"
