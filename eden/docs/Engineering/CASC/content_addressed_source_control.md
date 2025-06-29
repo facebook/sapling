@@ -1,6 +1,6 @@
 # CASC
 
-CASC stands for **Content-Addressed-Source-Control**, the project aimimg to utilise CAS in Source Control to solve a class of problems, initially for the `fbsource` megarepo.
+CASC stands for **Content-Addressed-Source-Control**, the project aiming to utilise CAS in Source Control to solve a class of problems, initially for the `fbsource` megarepo.
 
 * **Sapling Cache Issues**:
     * Inefficient eviction strategy.
