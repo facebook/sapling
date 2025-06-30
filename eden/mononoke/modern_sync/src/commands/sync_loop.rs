@@ -8,7 +8,9 @@
 use std::sync::Arc;
 use std::sync::atomic::AtomicBool;
 
+use anyhow::Context;
 use anyhow::Result;
+use anyhow::anyhow;
 use anyhow::bail;
 use async_trait::async_trait;
 use clap::Parser;
@@ -16,6 +18,7 @@ use executor_lib::RepoShardedProcess;
 use executor_lib::RepoShardedProcessExecutor;
 use mononoke_app::MononokeApp;
 use mononoke_app::args::SourceRepoArgs;
+use repo_blobstore::RepoBlobstoreRef;
 use sharding_ext::RepoShard;
 
 use crate::ModernSyncArgs;
@@ -47,6 +50,7 @@ impl ModernSyncProcess {
 #[async_trait]
 impl RepoShardedProcess for ModernSyncProcess {
     async fn setup(&self, repo: &RepoShard) -> anyhow::Result<Arc<dyn RepoShardedProcessExecutor>> {
+        // we cannot trust the repo arguments from app arguments, we need to parse them from the shard
         let source_repo_name = repo.repo_name.clone();
         let target_repo_name = match repo.target_repo_name.clone() {
             Some(repo_name) => repo_name,
@@ -65,7 +69,28 @@ impl RepoShardedProcess for ModernSyncProcess {
             target_repo_name,
         );
 
+        let ctx =
+            crate::sync::build_context(self.app.clone(), &source_repo_name, self.sync_args.dry_run);
+
         let source_repo_args = SourceRepoArgs::with_name(source_repo_name.clone());
+        let repo: Repo = self.app.open_repo_unredacted(&source_repo_args).await?;
+        let config = repo.repo_config.modern_sync_config.clone().ok_or(anyhow!(
+            "No modern sync config found for repo {}",
+            source_repo_name
+        ))?;
+        let repo_blobstore = repo.repo_blobstore();
+
+        // Check that we can connect to the target repo
+        let app_args = self.app.args::<ModernSyncArgs>()?;
+        _ = crate::sync::build_edenfs_client(
+            ctx,
+            &app_args,
+            &target_repo_name,
+            &config,
+            repo_blobstore,
+        )
+        .await
+        .with_context(|| format!("checking that we can connect to {}", target_repo_name))?;
 
         Ok(Arc::new(ModernSyncProcessExecutor {
             app: self.app.clone(),
@@ -129,8 +154,9 @@ pub async fn run(app: MononokeApp, args: CommandArgs) -> Result<()> {
             .block_and_execute(&logger, Arc::new(AtomicBool::new(false)))
             .await?;
     } else {
-        tracing::info!("Running unsharded sync loop");
+        // we can trust the repo arguments
 
+        tracing::info!("Running unsharded sync loop");
         let source_repo: Repo = process.app.clone().open_repo(&app_args.repo).await?;
         let source_repo_name = source_repo.repo_identity.name().to_string();
         let target_repo_name = app_args
