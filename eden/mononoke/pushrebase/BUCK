@@ -114,7 +114,6 @@ rust_library(
         "//eden/mononoke/land_service/if:land_service_if-rust",
         "//eden/mononoke/land_service/if:land_service_if-rust-clients",
         "//eden/mononoke/repo_attributes/repo_identity:repo_identity",
-        "//common/rust/smc-thrift:smc-thrift",
-        "//dba/rust/common/smc_models:smc_models",
+        "//eden/mononoke/common/facebook/db_primary_region:db_primary_region",
     ])),
 )

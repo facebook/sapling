@@ -1,0 +1,16 @@
+load("@fbcode_macros//build_defs:rust_library.bzl", "rust_library")
+
+oncall("scm_server_infra")
+
+rust_library(
+    name = "db_primary_region",
+    srcs = glob([
+        "src/**/*.rs",
+    ]),
+    deps = [
+        "fbsource//third-party/rust:anyhow",
+        "//common/rust/smc-thrift:smc-thrift",
+        "//dba/rust/common/smc_models:smc_models",
+        "//eden/mononoke/server/context:context",
+    ],
+)
