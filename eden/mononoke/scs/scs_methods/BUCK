@@ -26,6 +26,7 @@ rust_library(
         "fbsource//third-party/rust:maplit",
         "fbsource//third-party/rust:serde_json",
         "fbsource//third-party/rust:tokio",
+        "fbsource//third-party/rust:tracing",
         "//common/rust/base_controller:factory_group",
         "//common/rust/everstore:everstore_client",
         "//common/rust/identity:identity",

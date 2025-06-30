@@ -15,6 +15,7 @@ rust_binary(
         "fbsource//third-party/rust:clap",
         "fbsource//third-party/rust:futures",
         "fbsource//third-party/rust:openssl",
+        "fbsource//third-party/rust:tracing",
         "//common/rust/shed/cloned:cloned",
         "//common/rust/shed/fbinit:fbinit",
         "//common/rust/shed/secure_utils:secure_utils",

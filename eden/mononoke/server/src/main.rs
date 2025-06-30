@@ -57,6 +57,7 @@ use slog::error;
 use slog::info;
 use slog::o;
 use slog::warn;
+use tracing::Instrument;
 
 const SM_CLEANUP_TIMEOUT_SECS: u64 = 120;
 
@@ -342,6 +343,7 @@ fn main(fb: FacebookInit) -> Result<()> {
                             cache_warmup_params,
                             CacheWarmupKind::MononokeServer,
                         )
+                        .instrument(tracing::info_span!("cache warmup", repo = %repo_name))
                         .await
                         .with_context(|| {
                             format!("Error while warming up cache for repo {}", repo_name)

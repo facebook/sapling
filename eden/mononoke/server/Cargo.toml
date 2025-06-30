@@ -30,3 +30,4 @@ scuba_ext = { version = "0.1.0", path = "../common/scuba_ext" }
 secure_utils = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 sharding_ext = { version = "0.1.0", path = "../cmdlib/sharding_ext" }
 slog = { package = "tracing_slog_compat", version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
+tracing = { version = "0.1.41", features = ["attributes", "valuable"] }

@@ -90,6 +90,7 @@ use source_control_services::errors::source_control_service as service;
 use srserver::RequestContext;
 use stats::prelude::*;
 use time_ext::DurationExt;
+use tracing::Instrument;
 
 use crate::from_request::FromRequest;
 use crate::scuba_params::AddScubaParams;
@@ -1172,6 +1173,10 @@ macro_rules! impl_thrift_stream_methods {
                     let (ctx, session_uuid, repo_name) = create_ctx!(svc, $method_name, req_ctxt, $( $param_name ),*).await?;
                     let handler = {
                         cloned!(ctx, repo_name);
+                        let span = tracing::info_span!("scs method", repo = tracing::field::Empty, method = %stringify!($method_name));
+                        if let Some(repo_name) = &repo_name {
+                            span.record("repo", repo_name);
+                        }
                         async move {
                             let start_mem_stats = log_start(&ctx, stringify!($method_name));
                             STATS::total_request_start.add_value(1);
@@ -1213,6 +1218,7 @@ macro_rules! impl_thrift_stream_methods {
                                 (res, stream)
                             })
                         }
+                        .instrument(span)
                     };
 
                     if let Some(factory_group) = &self.0.factory_group {

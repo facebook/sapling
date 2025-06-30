@@ -89,6 +89,7 @@ use skeleton_manifest_v2::RootSkeletonManifestV2Id;
 use stats::prelude::*;
 use tokio::sync::Notify;
 use tokio::task::JoinHandle;
+use tracing::Instrument;
 use unodes::RootUnodeManifestId;
 
 mod warmers;
@@ -423,7 +424,7 @@ impl WarmBookmarksCache {
         let notify_sync_start = Arc::new(Notify::new());
         let notify_sync_complete = Arc::new(Notify::new());
 
-        tracing::info!("Starting warm bookmark cache updater");
+        tracing::info!(repo = %repo_identity.name(), "Starting warm bookmark cache updater");
         let sub = bookmarks
             .create_subscription(ctx, Freshness::MaybeStale)
             .await
@@ -437,6 +438,7 @@ impl WarmBookmarksCache {
             &warmers,
             init_mode,
         )
+        .instrument(tracing::info_span!("init bookmarks", repo = %repo_identity.name()))
         .await?;
 
         let bookmarks_to_watch = Arc::new(RwLock::new(bookmarks_to_watch));
@@ -938,6 +940,7 @@ impl BookmarksCoordinator {
         notify_sync_start: Arc<Notify>,
         notify_sync_complete: Arc<Notify>,
     ) {
+        let span = tracing::info_span!("wbc", repo = %self.repo.repo_identity().name());
         let fut = async move {
             tracing::info!("Started warm bookmark cache updater");
             let repo_name: String = self.repo.repo_identity().name().to_string();
@@ -1033,7 +1036,8 @@ impl BookmarksCoordinator {
             let _ = select(infinite_loop, terminate).await;
 
             tracing::info!("Stopped warm bookmark cache updater");
-        };
+        }
+        .instrument(span);
 
         // Fire and forget. This will terminate using the `terminate` receiver.
         std::mem::drop(mononoke::spawn_task(fut));

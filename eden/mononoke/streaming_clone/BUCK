@@ -14,6 +14,7 @@ rust_binary(
         "fbsource//third-party/rust:clap",
         "fbsource//third-party/rust:futures",
         "fbsource//third-party/rust:tokio",
+        "fbsource//third-party/rust:tracing",
         "//common/rust/shed/borrowed:borrowed",
         "//common/rust/shed/facet:facet",
         "//common/rust/shed/fbinit:fbinit",

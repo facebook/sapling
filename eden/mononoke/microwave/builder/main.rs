@@ -52,6 +52,7 @@ use repo_derived_data::RepoDerivedDataArc;
 use repo_identity::RepoIdentity;
 use slog::info;
 use slog::o;
+use tracing::Instrument;
 use warm_bookmarks_cache::LatestDerivedBookmarkEntry;
 use warm_bookmarks_cache::create_derived_data_warmer;
 use warm_bookmarks_cache::find_latest_derived_and_underived;
@@ -160,6 +161,7 @@ async fn async_main(app: MononokeApp) -> Result<(), Error> {
         .into_iter()
         .map(|(name, config)| {
             cloned!(repo_factory, mut scuba, common_config);
+            let span = tracing::info_span!("microwave builder", repo = %name);
             async move {
                 let logger = logger.new(o!("repo" => name.clone()));
                 let ctx = {
@@ -222,6 +224,7 @@ async fn async_main(app: MononokeApp) -> Result<(), Error> {
 
                 Result::<_, Error>::Ok(())
             }
+            .instrument(span)
         })
         .collect::<Vec<_>>();
 

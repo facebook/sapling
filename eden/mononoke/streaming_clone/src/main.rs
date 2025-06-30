@@ -47,6 +47,7 @@ use streaming_clone::StreamingClone;
 use streaming_clone::StreamingCloneRef;
 use tokio::io::AsyncReadExt;
 use tokio::io::AsyncSeekExt;
+use tracing::Instrument;
 
 /// Tool to manage streaming clone chunks
 #[derive(Parser)]
@@ -120,23 +121,31 @@ async fn streaming_clone(fb: FacebookInit, app: &MononokeApp) -> Result<(), Erro
     let res = match args.subcmd {
         StreamingCloneSubCommand::Create { create_args } => {
             let tag: Option<&str> = create_args.tag.as_deref();
-            scuba.add_opt("tag", tag);
-            let ctx = build_context(fb, logger, &repo, &tag);
-            // This command works only if there are no streaming chunks at all for a give repo.
-            // So exit quickly if database is not empty
-            let count = repo.streaming_clone().count_chunks(&ctx, tag).await?;
-            if count > 0 {
-                return Err(anyhow!(
-                    "cannot create new streaming clone chunks because they already exists"
-                ));
+            async {
+                scuba.add_opt("tag", tag);
+                let ctx = build_context(fb, logger, &repo, &tag);
+                // This command works only if there are no streaming chunks at all for a give repo.
+                // So exit quickly if database is not empty
+                let count = repo.streaming_clone().count_chunks(&ctx, tag).await?;
+                if count > 0 {
+                    return Err(anyhow!(
+                        "cannot create new streaming clone chunks because they already exists"
+                    ));
+                }
+                update_streaming_changelog(&ctx, &repo, &create_args, tag).await
             }
-            update_streaming_changelog(&ctx, &repo, &create_args, tag).await
+            .instrument(tracing::info_span!("streaming clone create", repo = %repo.repo_identity().name(), tag))
+            .await
         }
         StreamingCloneSubCommand::Update { update_args } => {
             let tag: Option<&str> = update_args.tag.as_deref();
-            scuba.add_opt("tag", tag);
-            let ctx = build_context(fb, logger, &repo, &tag);
-            update_streaming_changelog(&ctx, &repo, &update_args, tag).await
+            async {
+                scuba.add_opt("tag", tag);
+                let ctx = build_context(fb, logger, &repo, &tag);
+                update_streaming_changelog(&ctx, &repo, &update_args, tag).await
+            }
+            .instrument(tracing::info_span!("streaming clone update", repo = %repo.repo_identity().name(), tag))
+            .await
         }
     };
 

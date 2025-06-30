@@ -35,6 +35,7 @@ use regex::Regex;
 use repo_identity::RepoIdentityRef;
 use samplingblob::SamplingHandler;
 use tokio::fs::{self as tkfs};
+use tracing::Instrument;
 
 use crate::commands::CORPUS;
 use crate::commands::JobParams;
@@ -392,6 +393,8 @@ pub async fn corpus(
         cloned!(mut command, walk_params);
 
         command.apply_repo(&repo_params);
+        let span =
+            tracing::info_span!("walker corpus", repo = %repo_params.repo.repo_identity().name());
 
         let walk = run_one(
             fb,
@@ -401,7 +404,7 @@ pub async fn corpus(
             command,
             Arc::clone(&cancellation_requested),
         );
-        all_walks.push(walk);
+        all_walks.push(walk.instrument(span));
     }
     try_join_all(all_walks).await.map(|_| ())
 }
