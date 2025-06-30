@@ -15,6 +15,7 @@ use phases::ArcPhases;
 use repo_derived_data::ArcRepoDerivedData;
 use slog::info;
 use slog::o;
+use tracing::Instrument;
 
 use super::IsWarmFn;
 use super::Warmer;
@@ -36,6 +37,7 @@ where
                 repo_derived_data.derive::<Derivable>(ctx, cs_id).await?;
                 Ok(())
             }
+            .instrument(tracing::info_span!("warmer", ddt = %Derivable::NAME))
             .boxed()
         }
     });
@@ -51,6 +53,7 @@ where
                 Ok(maybe_derived.is_some())
             }
             .watched(logger)
+            .instrument(tracing::info_span!("is warm", ddt = %Derivable::NAME))
             .boxed()
         }
     });
