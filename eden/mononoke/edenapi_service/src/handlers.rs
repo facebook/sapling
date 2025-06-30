@@ -55,6 +55,7 @@ use mononoke_macros::mononoke;
 use serde::Deserialize;
 use serde::Serialize;
 use time_ext::DurationExt;
+use tracing::Instrument;
 
 use crate::context::ServerContext;
 use crate::middleware::request_dumper::RequestDumper;
@@ -249,7 +250,10 @@ impl ErrorFormatter for JsonErrorFomatter {
 macro_rules! define_handler {
     ($name:ident, $func:path, [$($flavour:ident),*]) => {
         fn $name(mut state: State) -> Pin<Box<HandlerFuture>> {
+            let request_id = state.short_request_id();
+            let span = tracing::info_span!("slapi handler", method = %stringify!($name), %request_id);
             async move {
+
                 let slapi_flavour = SlapiCommitIdentityScheme::borrow_from(&state).clone();
                 let supported_flavours = [$(SlapiCommitIdentityScheme::$flavour),*];
                 let res = if !supported_flavours
@@ -267,6 +271,7 @@ macro_rules! define_handler {
                 build_response(res, state, &JsonErrorFomatter)
 
             }
+            .instrument(span)
             .boxed()
         }
     };
@@ -323,6 +328,9 @@ async fn handler_wrapper<Handler: SaplingRemoteApiHandler>(
 where
     <Handler as SaplingRemoteApiHandler>::Request: std::fmt::Debug,
 {
+    let request_id = state.short_request_id();
+    let span = tracing::info_span!("slapi handler", method = %Handler::API_METHOD, %request_id);
+
     let (future_stats, res) = async {
         let path = Handler::PathExtractor::take_from(&mut state);
         let query = Handler::QueryStringExtractor::take_from(&mut state);
@@ -365,10 +373,11 @@ where
         }
     }
     .timed()
+    .instrument(span.clone())
     .await;
     ScubaMiddlewareState::try_set_future_stats(&mut state, &future_stats);
 
-    build_response(res, state, &JsonErrorFomatter)
+    span.in_scope(move || build_response(res, state, &JsonErrorFomatter))
 }
 
 pub fn monitor_request<S, T>(

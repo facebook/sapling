@@ -25,6 +25,7 @@ rust_library(
         "fbsource//third-party/rust:futures",
         "fbsource//third-party/rust:gotham",
         "fbsource//third-party/rust:async-compression",
+        "fbsource//third-party/rust:tracing",
         "//common/rust/shed/sorted_vector_map:sorted_vector_map",
         "fbsource//third-party/rust:rayon",
         "fbsource//third-party/rust:gotham_derive",

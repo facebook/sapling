@@ -76,6 +76,7 @@ time_ext = { version = "0.1.0", git = "https://github.com/facebookexperimental/r
 time_window_counter = { version = "0.1.0", path = "../time_window_counter" }
 tokio = { version = "1.45.0", features = ["full", "test-util", "tracing"] }
 tokio-util = { version = "0.7.15", features = ["full"] }
+tracing = { version = "0.1.41", features = ["attributes", "valuable"] }
 vec1 = { version = "1", features = ["serde"] }
 
 [dev-dependencies]
