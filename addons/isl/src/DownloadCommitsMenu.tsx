@@ -16,8 +16,10 @@ import {Tooltip} from 'isl-components/Tooltip';
 import {useAtom} from 'jotai';
 import {useEffect, useRef, useState} from 'react';
 import {nullthrows} from 'shared/utils';
+import {Collapsable} from './Collapsable';
 import {CommitCloudInfo} from './CommitCloud';
 import {DropdownFields} from './DropdownFields';
+import {GotoTimeContent} from './GotoTimeMenu';
 import {useCommandEvent} from './ISLShortcuts';
 import {Internal} from './Internal';
 import {findPublicBaseAncestor} from './getCommitTree';
@@ -225,6 +227,18 @@ function DownloadCommitsTooltip({dismiss}: {dismiss: () => unknown}) {
           </Tooltip>
         </div>
       </div>
+
+      <Collapsable
+        title={
+          <>
+            <Icon icon="clock" />
+            <T>Go to time</T>
+          </>
+        }
+        className="download-commits-expander">
+        <GotoTimeContent dismiss={dismiss} />
+      </Collapsable>
+
       {Internal.supportsCommitCloud && (
         <>
           <Divider />

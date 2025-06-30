@@ -21,3 +21,8 @@
   flex-direction: column;
   gap: var(--pad);
 }
+
+/* Add padding to the top of the expander contents for better spacing */
+.download-commits-expander .collapsable-contents {
+  padding-top: var(--pad);
+}

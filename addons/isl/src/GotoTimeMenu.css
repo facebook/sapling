@@ -1,0 +1,37 @@
+/**
+ * Copyright (c) Meta Platforms, Inc. and affiliates.
+ *
+ * This source code is licensed under the MIT license found in the
+ * LICENSE file in the root directory of this source tree.
+ */
+
+.goto-time-input-row {
+  display: flex;
+  gap: var(--pad);
+  align-items: center;
+}
+
+.goto-time-content {
+  display: flex;
+  flex-direction: column;
+  min-width: 210px; /* Ensure dialog is wide enough for datetime picker */
+}
+
+.goto-time-or-divider {
+  text-align: center;
+  margin: 8px 0;
+  color: var(--text-secondary);
+}
+
+.goto-time-datetime-inputs {
+  display: flex;
+  align-items: center;
+}
+
+.goto-time-actions {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-top: 16px;
+  gap: var(--pad);
+}
