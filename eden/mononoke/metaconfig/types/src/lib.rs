@@ -511,7 +511,7 @@ pub enum RemoteDerivationConfig {
 
 impl RepoConfig {
     /// Returns the address of the primary metadata database, or None if there is none.
-    pub fn primary_metadata_db_address(&self) -> Option<String> {
+    pub fn primary_metadata_db_address(&self) -> Option<&str> {
         self.storage_config.metadata.primary_address()
     }
 }
@@ -1257,9 +1257,9 @@ impl MetadataDatabaseConfig {
     }
 
     /// The address of the primary metadata database, if this is a remote metadata database.
-    pub fn primary_address(&self) -> Option<String> {
+    pub fn primary_address(&self) -> Option<&str> {
         match self {
-            MetadataDatabaseConfig::Remote(remote) => Some(remote.primary.db_address.clone()),
+            MetadataDatabaseConfig::Remote(remote) => Some(&remote.primary.db_address),
             MetadataDatabaseConfig::OssRemote(_) => None,
             MetadataDatabaseConfig::Local(_) => None,
         }
