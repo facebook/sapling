@@ -32,11 +32,16 @@ use crate::sender::manager::SendManager;
 pub struct CommandArgs {
     #[clap(long, help = "Changeset to sync")]
     cs_id: ChangesetId,
+
+    #[clap(flatten, next_help_heading = "SYNC OPTIONS")]
+    sync_args: crate::sync::SyncArgs,
 }
 
 pub async fn run(app: MononokeApp, args: CommandArgs) -> Result<()> {
     let app_args = &app.args::<ModernSyncArgs>()?;
-    let repo: Repo = app.open_repo(&app_args.repo).await?;
+    let args = Arc::new(args);
+    let sync_args = &args.clone().sync_args;
+    let repo: Repo = app.open_repo(&sync_args.repo).await?;
     let _repo_id = repo.repo_identity().id();
     let repo_name = repo.repo_identity().name().to_string();
 
@@ -64,7 +69,10 @@ pub async fn run(app: MononokeApp, args: CommandArgs) -> Result<()> {
             .clone()
             .ok_or_else(|| format_err!("TLS params not found for repo {}", repo_name))?;
 
-        let dest_repo = app_args.dest_repo_name.clone().unwrap_or(repo_name.clone());
+        let dest_repo = sync_args
+            .dest_repo_name
+            .clone()
+            .unwrap_or(repo_name.clone());
 
         Arc::new(
             DefaultEdenapiSenderBuilder::new(

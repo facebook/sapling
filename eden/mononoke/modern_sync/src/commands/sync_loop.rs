@@ -30,6 +30,9 @@ const SM_CLEANUP_TIMEOUT_SECS: u64 = 120;
 /// Replays bookmark's moves
 #[derive(Parser)]
 pub struct CommandArgs {
+    #[clap(flatten, next_help_heading = "SYNC OPTIONS")]
+    sync_args: crate::sync::SyncArgs,
+
     #[clap(long = "start-id", help = "Start id for the sync [default: 0]")]
     start_id: Option<u64>,
     #[clap(long, help = "Print sent items without actually syncing")]
@@ -134,9 +137,10 @@ impl RepoShardedProcessExecutor for ModernSyncProcessExecutor {
 }
 
 pub async fn run(app: MononokeApp, args: CommandArgs) -> Result<()> {
+    let args = Arc::new(args);
     let app_args = &app.args::<ModernSyncArgs>()?;
 
-    let process = Arc::new(ModernSyncProcess::new(Arc::new(app), Arc::new(args)));
+    let process = Arc::new(ModernSyncProcess::new(Arc::new(app), args.clone()));
     let logger = process.app.logger().clone();
 
     let exit_file = app_args.exit_file.clone();
@@ -154,15 +158,17 @@ pub async fn run(app: MononokeApp, args: CommandArgs) -> Result<()> {
             .block_and_execute(&logger, Arc::new(AtomicBool::new(false)))
             .await?;
     } else {
-        // we can trust the repo arguments
-
         tracing::info!("Running unsharded sync loop");
-        let source_repo: Repo = process.app.clone().open_repo(&app_args.repo).await?;
+
+        // we can trust the repo arguments
+        let sync_args = &args.clone().sync_args;
+        let source_repo: Repo = process.app.clone().open_repo(&sync_args.repo).await?;
         let source_repo_name = source_repo.repo_identity.name().to_string();
-        let target_repo_name = app_args
+        let target_repo_name = &sync_args
             .dest_repo_name
             .clone()
             .unwrap_or(source_repo_name.clone());
+        let target_repo_name = target_repo_name.to_string();
 
         let source_repo_args = SourceRepoArgs::with_name(source_repo_name.clone());
 

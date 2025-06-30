@@ -23,6 +23,7 @@ use bookmarks::BookmarkUpdateLogId;
 use bookmarks::BookmarksRef;
 use borrowed::borrowed;
 use changeset_info::ChangesetInfo;
+use clap::Parser;
 use clientinfo::ClientEntryPoint;
 use clientinfo::ClientInfo;
 use cloned::cloned;
@@ -48,6 +49,7 @@ use mercurial_types::blobs::HgBlobManifest;
 use metaconfig_types::ModernSyncConfig;
 use metadata::Metadata;
 use mononoke_app::MononokeApp;
+use mononoke_app::args::RepoArgs;
 use mononoke_app::args::SourceRepoArgs;
 use mononoke_macros::mononoke;
 use mononoke_types::ChangesetId;
@@ -93,6 +95,16 @@ define_stats! {
     prefix = "mononoke.modern_sync.sync";
     changeset_processed_time_ms:  dynamic_timeseries("{}.changeset.processed.time_ms", (repo: String); Average),
     changeset_processed_count:  dynamic_timeseries("{}.changeset.processed.count", (repo: String); Sum),
+}
+
+#[derive(Parser)]
+pub struct SyncArgs {
+    #[clap(flatten)]
+    pub repo: RepoArgs,
+
+    #[clap(long)]
+    /// "Dest repo name (in case it's different from source repo name)"
+    pub dest_repo_name: Option<String>,
 }
 
 #[derive(Clone)]
@@ -911,11 +923,11 @@ fn classify_entries(
 
 pub(crate) async fn get_unsharded_repo_args(
     app: Arc<MononokeApp>,
-    app_args: &ModernSyncArgs,
+    sync_args: &SyncArgs,
 ) -> Result<(SourceRepoArgs, String, String)> {
-    let source_repo: Repo = app.open_repo(&app_args.repo).await?;
+    let source_repo: Repo = app.open_repo(&sync_args.repo).await?;
     let source_repo_name = source_repo.repo_identity.name().to_string();
-    let target_repo_name = app_args
+    let target_repo_name = sync_args
         .dest_repo_name
         .clone()
         .unwrap_or(source_repo_name.clone());

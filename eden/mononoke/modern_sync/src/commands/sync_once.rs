@@ -13,13 +13,15 @@ use anyhow::Result;
 use clap::Parser;
 use mononoke_app::MononokeApp;
 
-use crate::ModernSyncArgs;
 use crate::sync::ExecutionType;
 use crate::sync::get_unsharded_repo_args;
 
 /// Replays bookmark's moves
 #[derive(Parser)]
 pub struct CommandArgs {
+    #[clap(flatten, next_help_heading = "SYNC OPTIONS")]
+    sync_args: crate::sync::SyncArgs,
+
     #[clap(long = "start-id", help = "Start id for the sync [default: 0]")]
     start_id: Option<u64>,
     #[clap(long, help = "Print sent items without actually syncing")]
@@ -28,9 +30,8 @@ pub struct CommandArgs {
 
 pub async fn run(app: MononokeApp, args: CommandArgs) -> Result<()> {
     let app = Arc::new(app);
-    let app_args = &app.args::<ModernSyncArgs>()?;
     let (source_repo_args, _, dest_repo_name) =
-        get_unsharded_repo_args(app.clone(), app_args).await?;
+        get_unsharded_repo_args(app.clone(), &args.sync_args).await?;
 
     tracing::info!("Running sync-once loop");
     let cancellation_requested = Arc::new(AtomicBool::new(false));

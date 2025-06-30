@@ -227,8 +227,6 @@ function mononoke_modern_sync {
   GLOG_minloglevel=5 "$MONONOKE_MODERN_SYNC" \
     "${CACHE_ARGS[@]}" \
     "${COMMON_ARGS[@]}" \
-    --repo-name "$ORIG_REPO" \
-    --dest-repo-name "$DEST_REPO" \
     --bookmark "master_bookmark" \
     --exit-file "exit_file" \
     --mononoke-config-path "$TESTTMP/mononoke-config" \
@@ -240,7 +238,10 @@ function mononoke_modern_sync {
     --tracing \
     --tracing-test-format \
     ${FLAGS_ARG:+$FLAGS_ARG} \
-    "$COMMAND" "$@"
+    "$COMMAND" \
+    --repo-name "$ORIG_REPO" \
+    --dest-repo-name "$DEST_REPO" \
+    "$@"
 }
 
 function mononoke_admin {
