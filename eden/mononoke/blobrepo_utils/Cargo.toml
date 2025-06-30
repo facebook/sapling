@@ -35,6 +35,7 @@ slog = { package = "tracing_slog_compat", version = "0.1.0", git = "https://gith
 thiserror = "2.0.12"
 tokio = { version = "1.45.0", features = ["full", "test-util", "tracing"] }
 tokio-stream = { version = "0.1.17", features = ["fs", "io-util", "net", "signal", "sync", "time"] }
+tracing = { version = "0.1.41", features = ["attributes", "valuable"] }
 
 [dev-dependencies]
 bookmarks = { version = "0.1.0", path = "../bookmarks" }

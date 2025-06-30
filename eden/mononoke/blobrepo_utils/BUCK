@@ -15,6 +15,7 @@ rust_library(
         "fbsource//third-party/rust:thiserror",
         "fbsource//third-party/rust:tokio",
         "fbsource//third-party/rust:tokio-stream",
+        "fbsource//third-party/rust:tracing",
         "//common/rust/shed/cloned:cloned",
         "//eden/mononoke/blobrepo:blobrepo_hg",
         "//eden/mononoke/blobrepo:blobrepo_override",

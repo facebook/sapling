@@ -23,6 +23,7 @@ use slog::o;
 use tokio::sync::mpsc;
 use tokio::sync::mpsc::Sender;
 use tokio_stream::wrappers::ReceiverStream;
+use tracing::Instrument;
 
 use crate::BonsaiMFVerifyResult;
 use crate::Repo;
@@ -198,6 +199,7 @@ impl<R: Repo> VisitOne<R> {
                     .visitor
                     .clone()
                     .visit(ctx, logger, repo, changeset)
+                    .instrument(tracing::info_span!("visit", %changeset_id))
                     .await?;
 
                 sender
