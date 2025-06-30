@@ -114,10 +114,8 @@ rust_library(
         "//eden/mononoke/land_service/if:land_service_if-rust",
         "//eden/mononoke/land_service/if:land_service_if-rust-clients",
         "//eden/mononoke/repo_attributes/repo_identity:repo_identity",
-        "//common/rust/shed/justknobs_stub:justknobs",
         "//common/rust/smc-thrift:smc-thrift",
         "//common/smc/if:Smc2-rust-clients",
         "//dba/rust/common/smc_models:smc_models",
-        "fbsource//third-party/rust:regex",
     ])),
 )
