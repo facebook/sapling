@@ -106,6 +106,7 @@ rust_library(
         "fbsource//third-party/rust:slog-term",
         "fbsource//third-party/rust:tracing",
         "fbsource//third-party/rust:tracing-glog",
+        "fbsource//third-party/rust:tracing-log",
         "fbsource//third-party/rust:tracing-subscriber",
         "//common/rust/folly/logging:logging",
         "//common/rust/gflags:gflags",

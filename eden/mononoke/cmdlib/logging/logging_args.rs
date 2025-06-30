@@ -236,6 +236,13 @@ impl LoggingArgs {
             tracing::subscriber::set_global_default(subscriber)?;
         }
 
+        // Configure legacy logging (at ERROR or above) to go to tracing.
+        let stdlog_level_filter = log::LevelFilter::Error;
+        tracing_log::LogTracer::builder()
+            .with_max_level(stdlog_level_filter)
+            .init()?;
+        log::set_max_level(stdlog_level_filter);
+
         Ok(())
     }
 
