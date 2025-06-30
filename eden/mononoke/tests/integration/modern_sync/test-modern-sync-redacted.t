@@ -85,6 +85,8 @@ Sync all bookmarks moves
   $ RUST_LOG="INFO,http_client::handler::streaming=OFF,mononoke_modern_sync_job::sender::edenapi::retry=OFF,mononoke_modern_sync_job::sender::manager=OFF,mononoke_modern_sync_job::sender::manager::content=WARN" \
   > mononoke_modern_sync "" sync-once orig dest --start-id 0
   [INFO] Running sync-once loop
+  [INFO] Opened SourceRepoArgs(Name("orig")) unredacted
+  [INFO] Starting sync from 0
   [INFO] Connecting to https://localhost:$LOCAL_PORT/edenapi/, timeout 300s
   [INFO] Established EdenAPI connection
   [INFO] Initialized channels
@@ -143,6 +145,8 @@ Restart mononoke server to pick up the redaction config without relying on timin
 Sync all bookmarks moves
   $ mononoke_modern_sync "" sync-once orig dest --start-id 0 2>&1 | grep -v "Uploaded"
   [INFO] Running sync-once loop
+  [INFO] Opened SourceRepoArgs(Name("orig")) unredacted
+  [INFO] Starting sync from 0
   [INFO] Connecting to https://localhost:$LOCAL_PORT/edenapi/, timeout 300s
   [INFO] Established EdenAPI connection
   [INFO] Initialized channels

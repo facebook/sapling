@@ -174,6 +174,8 @@ Sync all bookmarks moves
 // Also there's only one bookmark moves instead of two due to the batching we use.
   $ mononoke_modern_sync "" sync-once orig dest --start-id 0
   [INFO] Running sync-once loop
+  [INFO] Opened SourceRepoArgs(Name("orig")) unredacted
+  [INFO] Starting sync from 0
   [INFO] Connecting to https://localhost:$LOCAL_PORT/edenapi/, timeout 300s
   [INFO] Established EdenAPI connection
   [INFO] Initialized channels
