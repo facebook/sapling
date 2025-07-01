@@ -29,7 +29,7 @@ use scuba_ext::MononokeScubaSampleBuilder;
 
 /// RedactedBlobstore should be part of every blobstore since it is a layer
 /// which adds security by preventing users to access sensitive content.
-
+///
 /// Making PrefixBlobstore part of every blobstore does two things:
 /// 1. It ensures that the prefix applies first, which is important for shared caches like
 ///    memcache.

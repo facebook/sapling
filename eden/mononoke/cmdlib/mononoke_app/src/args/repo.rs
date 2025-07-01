@@ -17,7 +17,6 @@ use clap::value_parser;
 use mononoke_types::RepositoryId;
 
 /// Command line arguments for specifying a single repo.
-
 // For convenience first we define macro for generating appropriate RepoArgs
 // structure that can be used with clap derive structs. Each struct adds args
 // for providing repo using id or name.

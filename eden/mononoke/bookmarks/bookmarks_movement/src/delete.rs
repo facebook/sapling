@@ -109,7 +109,7 @@ impl<'op> DeleteBookmarkOp<'op> {
         let fast_forward_only = repo
             .repo_bookmark_attrs()
             .is_fast_forward_only(&self.bookmark);
-        let bypass = self.pushvars.map_or(false, |pushvar| {
+        let bypass = self.pushvars.is_some_and(|pushvar| {
             pushvar.contains_key(ALLOW_NON_FFWD_PUSHVAR)
                 || self.bookmark.is_tag() && pushvar.contains_key(ALLOW_TAG_DELETION)
                 || !self.bookmark.is_tag() && pushvar.contains_key(ALLOW_BRANCH_DELETION)

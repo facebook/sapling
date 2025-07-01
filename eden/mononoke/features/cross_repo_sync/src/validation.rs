@@ -1013,7 +1013,7 @@ async fn verify_dir<'a>(
                 Box::pin(async move {
                     let target_path = wrap_mover_result(mover, &Some(source_path.clone()))?;
 
-                    if start_source_path.map_or(false, |p| p != source_path)
+                    if start_source_path.is_some_and(|p| p != source_path)
                         && (prefixes_to_visit.contains(&source_path))
                     {
                         return Ok((vec![], vec![]));
@@ -1447,9 +1447,9 @@ pub async fn verify_bookmarks<R: Repo>(
     let diff: Vec<_> = diff
         .into_iter()
         .filter(|d| {
-            mb_bookmark_regex.as_ref().map_or(true, |bookmark_regex| {
-                bookmark_regex.is_match(d.target_bookmark().as_str())
-            })
+            mb_bookmark_regex
+                .as_ref()
+                .is_none_or(|bookmark_regex| bookmark_regex.is_match(d.target_bookmark().as_str()))
         })
         .collect();
 

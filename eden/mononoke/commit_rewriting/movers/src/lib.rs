@@ -246,8 +246,7 @@ impl Mover for CrossRepoMover {
                 })
                 .with_context(|| {
                     ErrorKind::PrefixActionFailure(orig_prefix_action.clone(), source_path.clone())
-                })
-                .map_err(Error::from)?,
+                })?,
         };
         if let (Some(mapped_path), Some(reverse_mover)) = (&mapped_path, &self.reverse_mover) {
             if reverse_mover.move_path(mapped_path)?.as_ref() != Some(source_path) {

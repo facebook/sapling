@@ -159,7 +159,7 @@ impl<T: Blobstore + Clone> Blobstore for MemWritesBlobstore<T> {
                     return Ok(None);
                 }
 
-                Ok(self.inner.get(ctx, key).await?.map(Into::into))
+                Ok(self.inner.get(ctx, key).await?)
             }
         }
     }

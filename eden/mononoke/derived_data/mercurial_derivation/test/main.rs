@@ -1109,7 +1109,7 @@ async fn save_reproducibility_under_load(fb: FacebookInit) -> Result<(), Error> 
         &repo,
         &mut rng,
         None,
-        std::iter::repeat(16).take(50),
+        std::iter::repeat_n(16, 50),
     )
     .await?;
     let hgcsid = repo.derive_hg_changeset(&ctx, csid).await?;

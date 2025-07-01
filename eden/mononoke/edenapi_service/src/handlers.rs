@@ -337,10 +337,7 @@ where
         let content_encoding = ContentEncoding::from_state(&state);
 
         let slapi_flavour = SlapiCommitIdentityScheme::borrow_from(&state).clone();
-        if !Handler::SUPPORTED_FLAVOURS
-            .iter()
-            .any(|x| *x == slapi_flavour)
-        {
+        if !Handler::SUPPORTED_FLAVOURS.contains(&slapi_flavour) {
             return Err(gotham_ext::error::HttpError::e400(anyhow!(
                 "Unsupported SaplingRemoteApi flavour"
             )));

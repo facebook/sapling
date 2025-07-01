@@ -94,7 +94,7 @@ impl MetadataMiddleware {
 
     fn require_client_info(&self, state: &State) -> bool {
         let is_health_check =
-            Uri::try_borrow_from(state).map_or(false, |uri| uri.path().ends_with("/health_check"));
+            Uri::try_borrow_from(state).is_some_and(|uri| uri.path().ends_with("/health_check"));
         let is_git_server = self.entry_point == ClientEntryPoint::MononokeGitServer;
         !is_health_check && !is_git_server
     }

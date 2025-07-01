@@ -44,9 +44,5 @@ pub async fn mononoke_source_of_truth(ctx: &CoreContext, repo: Arc<Repo>) -> any
     repo.git_source_of_truth_config()
         .get_by_repo_name(ctx, &repo_name, Staleness::MostRecent)
         .await
-        .map(|entry| {
-            entry.map_or(false, |entry| {
-                entry.source_of_truth == GitSourceOfTruth::Mononoke
-            })
-        })
+        .map(|entry| entry.is_some_and(|entry| entry.source_of_truth == GitSourceOfTruth::Mononoke))
 }

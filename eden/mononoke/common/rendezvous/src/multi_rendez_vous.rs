@@ -59,7 +59,7 @@ where
     pub fn get(&self, group: G) -> RendezVous<K, V, <C as MultiRendezVousController>::Controller> {
         use dashmap::mapref::entry::Entry;
 
-        let ret = match self.inner.entry(group) {
+        match self.inner.entry(group) {
             Entry::Occupied(e) => e.get().clone(),
             Entry::Vacant(e) => e
                 .insert(RendezVous::new(
@@ -67,8 +67,6 @@ where
                     self.stats.clone(),
                 ))
                 .clone(),
-        };
-
-        ret
+        }
     }
 }

@@ -111,8 +111,7 @@ fn extract_repo_name_from_filename(filename: &str) -> &str {
         .captures(filename)
         .with_context(|| format!("Failed to capture lambda for filename {}", filename))
         .unwrap();
-    let repo_name = caps.get(1).map_or("", |m| m.as_str());
-    repo_name
+    caps.get(1).map_or("", |m| m.as_str())
 }
 
 fn extract_inner_store_id_from_filename(filename: &str) -> Option<u64> {

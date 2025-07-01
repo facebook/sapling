@@ -37,13 +37,13 @@ impl Pushvars {
     pub fn wait_for_wbc_update(&self) -> bool {
         self.0
             .get(WAIT_FOR_WBC_UPDATE)
-            .map_or(false, |v| **v == *b"1")
+            .is_some_and(|v| **v == *b"1")
     }
 
     pub fn use_only_offset_delta(&self) -> bool {
         self.0
             .get(USE_ONLY_OFFSET_DELTA)
-            .map_or(false, |v| **v == *b"1")
+            .is_some_and(|v| **v == *b"1")
     }
 
     pub fn concurrency(&self) -> usize {

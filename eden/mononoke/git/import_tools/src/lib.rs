@@ -338,7 +338,7 @@ pub fn upload_git_tag<'a, Uploader: GitUploader, Reader: GitReader>(
 }
 
 fn repo_name(prefs: &GitimportPreferences, path: &Path) -> String {
-    let repo_name = if let Some(name) = &prefs.gitrepo_name {
+    if let Some(name) = &prefs.gitrepo_name {
         String::from(name)
     } else {
         let name_path = if path.ends_with(".git") {
@@ -347,8 +347,7 @@ fn repo_name(prefs: &GitimportPreferences, path: &Path) -> String {
             path
         };
         String::from(name_path.to_string_lossy())
-    };
-    repo_name
+    }
 }
 
 pub async fn gitimport<Uploader: GitUploader>(

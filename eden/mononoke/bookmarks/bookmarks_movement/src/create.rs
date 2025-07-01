@@ -172,7 +172,7 @@ impl<'op> CreateBookmarkOp<'op> {
         let is_mirror_upload = self
             .pushvars
             .and_then(|p| p.get("MIRROR_UPLOAD"))
-            .map_or(false, |v| **v == *b"true");
+            .is_some_and(|v| **v == *b"true");
 
         if is_mirror_upload {
             authz.require_mirror_upload_operations(ctx, repo).await?;

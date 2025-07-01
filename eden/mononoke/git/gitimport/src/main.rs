@@ -337,7 +337,7 @@ async fn async_main(app: MononokeApp) -> Result<(), Error> {
     let uploader = Arc::new(import_direct::DirectUploader::new(repo.clone(), reupload));
     let reader = Arc::new(GitRepoReader::new(&prefs.git_command_path, path).await?);
     let target = match args.subcommand {
-        GitimportSubcommand::FullRepo {} => GitimportTarget::full(),
+        GitimportSubcommand::FullRepo => GitimportTarget::full(),
         GitimportSubcommand::GitRange { git_from, git_to } => {
             let from = git_from.parse()?;
             let to = git_to.parse()?;

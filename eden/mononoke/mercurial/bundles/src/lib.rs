@@ -133,8 +133,7 @@ pub fn create_bundle_stream_new(
     // Empty Bytes are used just to make chaining of streams below easier.
     let (result_sender, result_receiver) = oneshot::channel::<Result<Bytes>>();
     let mut bundle = Bundle2EncodeBuilder::new(SinkWriter::new(
-        CopyToBytes::new(sender)
-            .sink_map_err(|e| std::io::Error::new(std::io::ErrorKind::Other, format!("{e:?}"))),
+        CopyToBytes::new(sender).sink_map_err(|e| std::io::Error::other(format!("{e:?}"))),
     ));
     for part in parts {
         bundle.add_part(part);
