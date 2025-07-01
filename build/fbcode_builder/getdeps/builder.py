@@ -85,6 +85,14 @@ class BuilderBase(object):
                 return [wrapper, "&&"]
         return []
 
+    def _check_cmd(self, cmd, **kwargs) -> None:
+        """Run the command and abort on failure"""
+        rc = self._run_cmd(cmd, **kwargs)
+        if rc != 0:
+            raise RuntimeError(
+                f"Failure exit code {rc} for command {cmd}"
+            )
+
     def _run_cmd(
         self,
         cmd,
@@ -324,10 +332,10 @@ class MakeBuilder(BuilderBase):
             + self.build_args
             + self._get_prefix()
         )
-        self._run_cmd(cmd, env=env)
+        self._check_cmd(cmd, env=env)
 
         install_cmd = [self._make_binary] + self.install_args + self._get_prefix()
-        self._run_cmd(install_cmd, env=env)
+        self._check_cmd(install_cmd, env=env)
 
         # bz2's Makefile doesn't install its .so properly
         if self.manifest and self.manifest.name == "bz2":
@@ -357,12 +365,12 @@ class MakeBuilder(BuilderBase):
             + self.test_args
             + self._get_prefix()
         )
-        self._run_cmd(cmd, allow_fail=False, env=env)
+        self._check_cmd(cmd, allow_fail=False, env=env)
 
 
 class CMakeBootStrapBuilder(MakeBuilder):
     def _build(self, reconfigure) -> None:
-        self._run_cmd(
+        self._check_cmd(
             [
                 "./bootstrap",
                 "--prefix=" + self.inst_dir,
@@ -426,21 +434,21 @@ class AutoconfBuilder(BuilderBase):
             # seem to realize that it should invoke libtoolize and then
             # error out when the configure script references a libtool
             # related symbol.
-            self._run_cmd(["libtoolize"], cwd=self.src_dir, env=env)
+            self._check_cmd(["libtoolize"], cwd=self.src_dir, env=env)
 
             # We generally prefer to call the `autogen.sh` script provided
             # by the project on the basis that it may know more than plain
             # autoreconf does.
             if os.path.exists(autogen_path):
-                self._run_cmd(["bash", autogen_path], cwd=self.src_dir, env=env)
+                self._check_cmd(["bash", autogen_path], cwd=self.src_dir, env=env)
             else:
-                self._run_cmd(["autoreconf", "-ivf"], cwd=self.src_dir, env=env)
+                self._check_cmd(["autoreconf", "-ivf"], cwd=self.src_dir, env=env)
         configure_cmd = [configure_path, "--prefix=" + self.inst_dir] + self.args
-        self._run_cmd(configure_cmd, env=env)
+        self._check_cmd(configure_cmd, env=env)
         only_install = self.manifest.get("build", "only_install", "false", ctx=self.ctx)
         if not only_install:
-            self._run_cmd([self._make_binary, "-j%s" % self.num_jobs], env=env)
-        self._run_cmd([self._make_binary, "install"], env=env)
+            self._check_cmd([self._make_binary, "-j%s" % self.num_jobs], env=env)
+        self._check_cmd([self._make_binary, "install"], env=env)
 
 
 class Iproute2Builder(BuilderBase):
@@ -473,10 +481,10 @@ class Iproute2Builder(BuilderBase):
     def _build(self, reconfigure) -> None:
         configure_path = os.path.join(self.src_dir, "configure")
         env = self.env.copy()
-        self._run_cmd([configure_path], env=env)
+        self._check_cmd([configure_path], env=env)
         shutil.rmtree(self.build_dir)
         shutil.copytree(self.src_dir, self.build_dir)
-        self._run_cmd(["make", "-j%s" % self.num_jobs], env=env)
+        self._check_cmd(["make", "-j%s" % self.num_jobs], env=env)
         install_cmd = ["make", "install", "DESTDIR=" + self.inst_dir]
 
         for d in ["include", "lib"]:
@@ -485,7 +493,7 @@ class Iproute2Builder(BuilderBase):
                     os.path.join(self.build_dir, d), os.path.join(self.inst_dir, d)
                 )
 
-        self._run_cmd(install_cmd, env=env)
+        self._check_cmd(install_cmd, env=env)
 
 
 class SystemdBuilder(BuilderBase):
@@ -522,7 +530,7 @@ class SystemdBuilder(BuilderBase):
         # Meson builds typically require setup, compile, and install steps.
         # During this setup step we ensure that the static library is built and
         # the prefix is empty.
-        self._run_cmd(
+        self._check_cmd(
             [
                 meson,
                 "setup",
@@ -535,10 +543,10 @@ class SystemdBuilder(BuilderBase):
 
         # Compile step needs to satisfy the build directory that was previously
         # prepared during setup.
-        self._run_cmd([meson, "compile", "-C", self.build_dir])
+        self._check_cmd([meson, "compile", "-C", self.build_dir])
 
         # Install step
-        self._run_cmd(
+        self._check_cmd(
             [meson, "install", "-C", self.build_dir, "--destdir", self.inst_dir]
         )
 
@@ -862,9 +870,9 @@ if __name__ == "__main__":
             )
 
             self._invalidate_cache()
-            self._run_cmd([cmake, self.src_dir] + define_args, env=env)
+            self._check_cmd([cmake, self.src_dir] + define_args, env=env)
 
-        self._run_cmd(
+        self._check_cmd(
             [
                 cmake,
                 "--build",
@@ -1065,6 +1073,7 @@ if __name__ == "__main__":
                     runs.append([])
 
                 for run in runs:
+                    # FIXME: What is this trying to accomplish? Should it fail on first or >=1 errors?
                     self._run_cmd(
                         testpilot_args + run,
                         cwd=self.build_opts.fbcode_builder_dir,
@@ -1083,7 +1092,8 @@ if __name__ == "__main__":
 
             count = 0
             while count <= retry:
-                retcode = self._run_cmd(
+                # FIXME: What is this trying to accomplish? Should it fail on first or >=1 errors?
+                retcode = self._check_cmd(
                     args, env=env, use_cmd_prefix=use_cmd_prefix, allow_fail=True
                 )
 
@@ -1125,7 +1135,7 @@ class NinjaBootstrap(BuilderBase):
         )
 
     def _build(self, reconfigure) -> None:
-        self._run_cmd([sys.executable, "configure.py", "--bootstrap"], cwd=self.src_dir)
+        self._check_cmd([sys.executable, "configure.py", "--bootstrap"], cwd=self.src_dir)
         src_ninja = os.path.join(self.src_dir, "ninja")
         dest_ninja = os.path.join(self.inst_dir, "bin/ninja")
         bin_dir = os.path.dirname(dest_ninja)
@@ -1197,7 +1207,7 @@ class OpenSSLBuilder(BuilderBase):
         else:
             raise Exception("don't know how to build openssl for %r" % self.ctx)
 
-        self._run_cmd(
+        self._check_cmd(
             [
                 perl,
                 configure,
@@ -1215,11 +1225,11 @@ class OpenSSLBuilder(BuilderBase):
             + extra_args
         )
         # show the config produced
-        self._run_cmd([perl, "configdata.pm", "--dump"], env=env)
+        self._check_cmd([perl, "configdata.pm", "--dump"], env=env)
         make_build = [make] + make_j_args
-        self._run_cmd(make_build, env=env)
+        self._check_cmd(make_build, env=env)
         make_install = [make, "install_sw", "install_ssldirs"]
-        self._run_cmd(make_install, env=env)
+        self._check_cmd(make_install, env=env)
 
 
 class Boost(BuilderBase):
@@ -1272,18 +1282,18 @@ class Boost(BuilderBase):
             )
             if self.build_opts.is_windows():
                 bootstrap = os.path.join(self.src_dir, "bootstrap.bat")
-                self._run_cmd([bootstrap] + bootstrap_args, cwd=self.src_dir, env=env)
+                self._check_cmd([bootstrap] + bootstrap_args, cwd=self.src_dir, env=env)
                 args += ["address-model=64"]
             else:
                 bootstrap = os.path.join(self.src_dir, "bootstrap.sh")
-                self._run_cmd(
+                self._check_cmd(
                     [bootstrap, "--prefix=%s" % self.inst_dir] + bootstrap_args,
                     cwd=self.src_dir,
                     env=env,
                 )
 
             b2 = os.path.join(self.src_dir, "b2")
-            self._run_cmd(
+            self._check_cmd(
                 [
                     b2,
                     "-j%s" % self.num_jobs,
@@ -1418,8 +1428,8 @@ install(FILES sqlite3.h sqlite3ext.h DESTINATION include)
         # Resolve the cmake that we installed
         cmake = path_search(env, "cmake")
 
-        self._run_cmd([cmake, self.build_dir] + define_args, env=env)
-        self._run_cmd(
+        self._check_cmd([cmake, self.build_dir] + define_args, env=env)
+        self._check_cmd(
             [
                 cmake,
                 "--build",
