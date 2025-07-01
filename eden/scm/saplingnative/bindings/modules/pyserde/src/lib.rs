@@ -10,13 +10,13 @@ use cpython_ext::ResultPyErrExt;
 use cpython_ext::convert::Serde;
 
 pub fn init_module(py: Python, package: &str) -> PyResult<PyModule> {
-    let name = [package, "toml"].join(".");
+    let name = [package, "serde"].join(".");
     let m = PyModule::new(py, &name)?;
-    m.add(py, "loads", py_fn!(py, parse(text: &str)))?;
+    m.add(py, "toml_loads", py_fn!(py, toml_loads(text: &str)))?;
     Ok(m)
 }
 
-fn parse(py: Python, text: &str) -> PyResult<Serde<toml::Value>> {
+fn toml_loads(py: Python, text: &str) -> PyResult<Serde<toml::Value>> {
     let value: toml::Value = toml::from_str(text).map_pyerr(py)?;
     Ok(Serde(value))
 }
