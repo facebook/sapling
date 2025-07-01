@@ -42,6 +42,7 @@ use lock_ext::LockExt;
 use mononoke_types::ChangesetId;
 use mononoke_types::DerivableType;
 use scuba_ext::FutureStatsScubaExt;
+use tracing::Instrument;
 
 use super::DerivationAssignment;
 use super::DerivedDataManager;
@@ -690,72 +691,74 @@ impl DerivedDataManager {
     where
         Derivable: BonsaiDerivable,
     {
-        let (csids, secondary_derivation) = if let Some(secondary_data) = &self.inner.secondary {
-            let DerivationAssignment { primary, secondary } =
-                secondary_data.assigner.assign(ctx, csids).await?;
-            (primary, {
-                cloned!(rederivation);
-                async move {
-                    secondary_data
-                        .manager
-                        .derive_exactly_batch::<Derivable>(ctx, secondary, rederivation)
-                        .await
-                }
-                .left_future()
-            })
-        } else {
-            (csids, future::ready(Ok(Duration::ZERO)).right_future())
-        };
-        self.check_enabled::<Derivable>()?;
-        let mut derivation_ctx = self.derivation_context(rederivation.clone());
+        async {
+            let (csids, secondary_derivation) = if let Some(secondary_data) = &self.inner.secondary
+            {
+                let DerivationAssignment { primary, secondary } =
+                    secondary_data.assigner.assign(ctx, csids).await?;
+                (primary, {
+                    cloned!(rederivation);
+                    async move {
+                        secondary_data
+                            .manager
+                            .derive_exactly_batch::<Derivable>(ctx, secondary, rederivation)
+                            .await
+                    }
+                    .left_future()
+                })
+            } else {
+                (csids, future::ready(Ok(Duration::ZERO)).right_future())
+            };
+            self.check_enabled::<Derivable>()?;
+            let mut derivation_ctx = self.derivation_context(rederivation.clone());
 
-        // Enable write batching, so that writes are stored in memory
-        // before being flushed.
-        derivation_ctx.enable_write_batching();
-        let derivation_ctx_ref = &derivation_ctx;
+            // Enable write batching, so that writes are stored in memory
+            // before being flushed.
+            derivation_ctx.enable_write_batching();
+            let derivation_ctx_ref = &derivation_ctx;
 
-        let mut scuba = ctx.scuba().clone();
-        scuba
-            .add("stack_size", csids.len())
-            .add("derived_data", Derivable::NAME);
-        if let (Some(first), Some(last)) = (csids.first(), csids.last()) {
+            let mut scuba = ctx.scuba().clone();
             scuba
-                .add("first_csid", first.to_string())
-                .add("last_csid", last.to_string());
-        }
-
-        // Load all of the bonsais for this batch.
-        let bonsais = stream::iter(csids.iter().cloned().map(|csid| async move {
-            let bonsai = csid.load(ctx, derivation_ctx_ref.blobstore()).await?;
-            Ok::<_, Error>(bonsai)
-        }))
-        .buffered(100)
-        .try_collect::<Vec<_>>()
-        .await?;
-
-        // Dependency checks: check topological order and determine heads
-        // and highest ancestors of the batch.
-        let mut seen = HashSet::new();
-        let mut heads = HashSet::new();
-        let mut ancestors = HashMap::new();
-        for bonsai in bonsais.iter() {
-            let csid = bonsai.get_changeset_id();
-            if ancestors.contains_key(&csid) {
-                return Err(anyhow!("batch not in topological order at {}", csid).into());
+                .add("stack_size", csids.len())
+                .add("derived_data", Derivable::NAME);
+            if let (Some(first), Some(last)) = (csids.first(), csids.last()) {
+                scuba
+                    .add("first_csid", first.to_string())
+                    .add("last_csid", last.to_string());
             }
-            for parent in bonsai.parents() {
-                if !seen.contains(&parent) {
-                    ancestors.insert(csid.clone(), parent);
+
+            // Load all of the bonsais for this batch.
+            let bonsais = stream::iter(csids.iter().cloned().map(|csid| async move {
+                let bonsai = csid.load(ctx, derivation_ctx_ref.blobstore()).await?;
+                Ok::<_, Error>(bonsai)
+            }))
+            .buffered(100)
+            .try_collect::<Vec<_>>()
+            .await?;
+
+            // Dependency checks: check topological order and determine heads
+            // and highest ancestors of the batch.
+            let mut seen = HashSet::new();
+            let mut heads = HashSet::new();
+            let mut ancestors = HashMap::new();
+            for bonsai in bonsais.iter() {
+                let csid = bonsai.get_changeset_id();
+                if ancestors.contains_key(&csid) {
+                    return Err(anyhow!("batch not in topological order at {}", csid).into());
                 }
-                heads.remove(&parent);
+                for parent in bonsai.parents() {
+                    if !seen.contains(&parent) {
+                        ancestors.insert(csid.clone(), parent);
+                    }
+                    heads.remove(&parent);
+                }
+                seen.insert(csid);
+                heads.insert(csid);
             }
-            seen.insert(csid);
-            heads.insert(csid);
-        }
 
-        // Dependency checks: all ancestors should have this derived
-        // data type derived
-        stream::iter(ancestors)
+            // Dependency checks: all ancestors should have this derived
+            // data type derived
+            stream::iter(ancestors)
             .map(|(child, csid)| {
                 derivation_ctx_ref
                     .fetch_dependency::<Derivable>(ctx, csid)
@@ -782,118 +785,120 @@ impl DerivedDataManager {
                 "all ancestors' and dependencies' data must already have been derived",
             ))?;
 
-        // All heads should have their dependent data types derived.
-        // Let's check if that's the case
-        stream::iter(heads)
-            .map(|csid| async move {
-                Derivable::Dependencies::check_dependencies(ctx, derivation_ctx_ref, csid).await
-            })
-            .buffered(100)
-            .try_for_each(|_| async { Ok(()) })
-            .await
-            .context("a batch dependency has not been derived")?;
+            // All heads should have their dependent data types derived.
+            // Let's check if that's the case
+            stream::iter(heads)
+                .map(|csid| async move {
+                    Derivable::Dependencies::check_dependencies(ctx, derivation_ctx_ref, csid).await
+                })
+                .buffered(100)
+                .try_for_each(|_| async { Ok(()) })
+                .await
+                .context("a batch dependency has not been derived")?;
 
-        let ctx = ctx.clone_and_reset();
-        let ctx = self.set_derivation_session_class(ctx.clone());
-        borrowed!(ctx);
+            let ctx = ctx.clone_and_reset();
+            let ctx = self.set_derivation_session_class(ctx.clone());
+            borrowed!(ctx);
 
-        let csid_range = if let (Some(first), Some(last)) = (bonsais.first(), bonsais.last()) {
-            let first_csid = first.get_changeset_id();
-            let last_csid = last.get_changeset_id();
-            tracing::debug!(
-                repo = self.repo_name(),
-                "derive exactly {} batch from {} to {}",
-                Derivable::NAME,
-                first_csid,
-                last_csid,
-            );
-            Some((first_csid, last_csid))
-        } else {
-            None
-        };
-
-        let mut derived_data_scuba = self.derived_data_scuba::<Derivable>();
-        derived_data_scuba.add_changesets(&bonsais);
-        derived_data_scuba.log_batch_derivation_start(ctx);
-        derived_data_scuba.add_metadata(ctx.metadata());
-        let (overall_stats, result) = async {
-            let derivation_ctx_ref = &derivation_ctx;
-            let (batch_duration, derived) = {
-                let (stats, derived) = Derivable::derive_batch(ctx, derivation_ctx_ref, bonsais)
-                    .try_timed()
-                    .await
-                    .with_context(|| {
-                        if let Some((first, last)) = csid_range {
-                            format!(
-                                "failed to derive {} batch (start:{}, end:{})",
-                                Derivable::NAME,
-                                first,
-                                last
-                            )
-                        } else {
-                            format!("failed to derive empty {} batch", Derivable::NAME)
-                        }
-                    })?;
-                (stats.completion_time, derived)
+            let csid_range = if let (Some(first), Some(last)) = (bonsais.first(), bonsais.last()) {
+                let first_csid = first.get_changeset_id();
+                let last_csid = last.get_changeset_id();
+                tracing::debug!(
+                    "derive exactly batch from {} to {}",
+                    first_csid,
+                    last_csid,
+                );
+                Some((first_csid, last_csid))
+            } else {
+                None
             };
 
-            // Flush the blobstore.  If it has been set up to cache writes, these
-            // must be flushed before we write the mapping.
-            derivation_ctx
-                .flush(ctx)
-                .try_timed()
-                .await?
-                .log_future_stats(scuba.clone(), "Flushed derived blobs", None);
-
-            let mut derivation_ctx = self.derivation_context(rederivation.clone());
-            derivation_ctx.enable_write_batching();
-            // Write all mapping values, and flush the blobstore to ensure they
-            // are persisted.
-            let (persist_stats, persisted) = async {
+            let mut derived_data_scuba = self.derived_data_scuba::<Derivable>();
+            derived_data_scuba.add_changesets(&bonsais);
+            derived_data_scuba.log_batch_derivation_start(ctx);
+            derived_data_scuba.add_metadata(ctx.metadata());
+            let (overall_stats, result) = async {
                 let derivation_ctx_ref = &derivation_ctx;
-                let csids = stream::iter(derived.into_iter())
-                    .map(|(csid, derived)| async move {
-                        derived.store_mapping(ctx, derivation_ctx_ref, csid).await?;
-                        Ok::<_, Error>(csid)
-                    })
-                    .buffer_unordered(100)
-                    .try_collect::<Vec<_>>()
-                    .await?;
+                let (batch_duration, derived) = {
+                    let (stats, derived) =
+                        Derivable::derive_batch(ctx, derivation_ctx_ref, bonsais)
+                            .try_timed()
+                            .await
+                            .with_context(|| {
+                                if let Some((first, last)) = csid_range {
+                                    format!(
+                                        "failed to derive {} batch (start:{}, end:{})",
+                                        Derivable::NAME,
+                                        first,
+                                        last
+                                    )
+                                } else {
+                                    format!("failed to derive empty {} batch", Derivable::NAME)
+                                }
+                            })?;
+                    (stats.completion_time, derived)
+                };
 
-                derivation_ctx.flush(ctx).await?;
-                if let Some(rederivation) = rederivation {
-                    for csid in csids {
-                        rederivation.mark_derived(Derivable::VARIANT, csid);
+                // Flush the blobstore.  If it has been set up to cache writes, these
+                // must be flushed before we write the mapping.
+                derivation_ctx
+                    .flush(ctx)
+                    .try_timed()
+                    .await?
+                    .log_future_stats(scuba.clone(), "Flushed derived blobs", None);
+
+                let mut derivation_ctx = self.derivation_context(rederivation.clone());
+                derivation_ctx.enable_write_batching();
+                // Write all mapping values, and flush the blobstore to ensure they
+                // are persisted.
+                let (persist_stats, persisted) = async {
+                    let derivation_ctx_ref = &derivation_ctx;
+                    let csids = stream::iter(derived.into_iter())
+                        .map(|(csid, derived)| async move {
+                            derived.store_mapping(ctx, derivation_ctx_ref, csid).await?;
+                            Ok::<_, Error>(csid)
+                        })
+                        .buffer_unordered(100)
+                        .try_collect::<Vec<_>>()
+                        .await?;
+
+                    derivation_ctx.flush(ctx).await?;
+                    if let Some(rederivation) = rederivation {
+                        for csid in csids {
+                            rederivation.mark_derived(Derivable::VARIANT, csid);
+                        }
                     }
+                    Ok::<_, Error>(())
                 }
-                Ok::<_, Error>(())
+                .timed()
+                .await;
+
+                derived_data_scuba.log_mapping_insertion(
+                    ctx,
+                    None,
+                    &persist_stats,
+                    persisted.as_ref().err(),
+                );
+
+                persisted?;
+
+                scuba
+                    .add_future_stats(&persist_stats)
+                    .log_with_msg("Flushed mapping", None);
+
+                Ok(batch_duration)
             }
             .timed()
             .await;
 
-            derived_data_scuba.log_mapping_insertion(
-                ctx,
-                None,
-                &persist_stats,
-                persisted.as_ref().err(),
-            );
+            derived_data_scuba.log_batch_derivation_end(ctx, &overall_stats, result.as_ref().err());
 
-            persisted?;
+            let batch_duration = result?;
 
-            scuba
-                .add_future_stats(&persist_stats)
-                .log_with_msg("Flushed mapping", None);
-
-            Ok(batch_duration)
+            Ok(batch_duration + secondary_derivation.await?)
         }
-        .timed()
-        .await;
-
-        derived_data_scuba.log_batch_derivation_end(ctx, &overall_stats, result.as_ref().err());
-
-        let batch_duration = result?;
-
-        Ok(batch_duration + secondary_derivation.await?)
+        .instrument(tracing::info_span!("derive", repo = %self.repo_name(), ddt = %Derivable::NAME))
+        .await
     }
 
     /// Fetch derived data for a changeset if it has previously been derived.
