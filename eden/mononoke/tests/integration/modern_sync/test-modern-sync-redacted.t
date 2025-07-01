@@ -85,20 +85,20 @@ Sync all bookmarks moves
   $ RUST_LOG="INFO,http_client::handler::streaming=OFF,mononoke_modern_sync_job::sender::edenapi::retry=OFF,mononoke_modern_sync_job::sender::manager=OFF,mononoke_modern_sync_job::sender::manager::content=WARN" \
   > mononoke_modern_sync "" sync-once orig dest --start-id 0
   [INFO] Running sync-once loop
-  [INFO] Opened SourceRepoArgs(Name("orig")) unredacted
-  [INFO] Starting sync from 0
-  [INFO] Connecting to https://localhost:$LOCAL_PORT/edenapi/, timeout 300s
-  [INFO] Established EdenAPI connection
-  [INFO] Initialized channels
-  [INFO] Read 1 entries
-  [INFO] 1 entries left after filtering
-  [INFO] mononoke_host="*" dogfooding=false (glob)
-  [INFO] Calculating segments for entry 1, from changeset None to changeset ChangesetId(Blake2(e32a1e342cdb1e38e88466b4c1a01ae9f410024017aa21dc0a1c5da6b3963bf2)), to generation 3
-  [INFO] Done calculating segments for entry 1, from changeset None to changeset ChangesetId(Blake2(e32a1e342cdb1e38e88466b4c1a01ae9f410024017aa21dc0a1c5da6b3963bf2)), to generation 3 in *ms (glob)
-  [INFO] Resuming from latest entry checkpoint 0
-  [INFO] Skipping 0 batches from entry 1
-  [INFO] Starting sync of 3 missing commits, 0 were already synced
-  [ERROR] Error processing content: collecting contents entries
+  [INFO] [sync{repo=orig}] Opened SourceRepoArgs(Name("orig")) unredacted
+  [INFO] [sync{repo=orig}] Starting sync from 0
+  [INFO] [sync{repo=orig}] Connecting to https://localhost:$LOCAL_PORT/edenapi/, timeout 300s
+  [INFO] [sync{repo=orig}] Established EdenAPI connection
+  [INFO] [sync{repo=orig}] Initialized channels
+  [INFO] [sync{repo=orig}] Read 1 entries
+  [INFO] [sync{repo=orig}] 1 entries left after filtering
+  [INFO] [sync{repo=orig}] mononoke_host="*" dogfooding=false (glob)
+  [INFO] [sync{repo=orig}] Calculating segments for entry 1, from changeset None to changeset ChangesetId(Blake2(e32a1e342cdb1e38e88466b4c1a01ae9f410024017aa21dc0a1c5da6b3963bf2)), to generation 3
+  [INFO] [sync{repo=orig}] Done calculating segments for entry 1, from changeset None to changeset ChangesetId(Blake2(e32a1e342cdb1e38e88466b4c1a01ae9f410024017aa21dc0a1c5da6b3963bf2)), to generation 3 in *ms (glob)
+  [INFO] [sync{repo=orig}] Resuming from latest entry checkpoint 0
+  [INFO] [sync{repo=orig}] Skipping 0 batches from entry 1
+  [INFO] [sync{repo=orig}] Starting sync of 3 missing commits, 0 were already synced
+  [ERROR] [sync{repo=orig}] Error processing content: collecting contents entries
   
   Caused by:
       server responded 500 Internal Server Error for https://localhost:$LOCAL_PORT/edenapi/dest/upload/file/content_id/896ad5879a5df0403bfc93fc96507ad9c93b31b11f3d0fa05445da7918241e5d?content_size=1: {"message":"internal error: The blob content.blake2.896ad5879a5df0403bfc93fc96507ad9c93b31b11f3d0fa05445da7918241e5d is censored.\n Task/Sev: T0: The blob content.blake2.896ad5879a5df0403bfc93fc96507ad9c93b31b11f3d0fa05445da7918241e5d is censored.\n Task/Sev: T0: The blob content.blake2.896ad5879a5df0403bfc93fc96507ad9c93b31b11f3d0fa05445da7918241e5d is censored.\n Task/Sev: T0","request_id":"*"}. Headers: { (glob)
@@ -110,7 +110,7 @@ Sync all bookmarks moves
           "content-length": "406",
           "date": "*", (glob)
       }
-  [ERROR] Error processing content: collecting contents entries
+  [ERROR] [sync{repo=orig}] Error processing content: collecting contents entries
   
   Caused by:
       server responded 500 Internal Server Error for https://localhost:$LOCAL_PORT/edenapi/dest/upload/file/content_id/896ad5879a5df0403bfc93fc96507ad9c93b31b11f3d0fa05445da7918241e5d?content_size=1: {"message":"internal error: The blob content.blake2.896ad5879a5df0403bfc93fc96507ad9c93b31b11f3d0fa05445da7918241e5d is censored.\n Task/Sev: T0: The blob content.blake2.896ad5879a5df0403bfc93fc96507ad9c93b31b11f3d0fa05445da7918241e5d is censored.\n Task/Sev: T0: The blob content.blake2.896ad5879a5df0403bfc93fc96507ad9c93b31b11f3d0fa05445da7918241e5d is censored.\n Task/Sev: T0","request_id":"*"}. Headers: { (glob)
@@ -122,7 +122,6 @@ Sync all bookmarks moves
           "content-length": "406",
           "date": "*", (glob)
       }
-
 
 
 Removing the redaction config should allow the sync to succeed. That is the scenario we use in the initial AWS sync
@@ -145,20 +144,20 @@ Restart mononoke server to pick up the redaction config without relying on timin
 Sync all bookmarks moves
   $ mononoke_modern_sync "" sync-once orig dest --start-id 0 2>&1 | grep -v "Uploaded"
   [INFO] Running sync-once loop
-  [INFO] Opened SourceRepoArgs(Name("orig")) unredacted
-  [INFO] Starting sync from 0
-  [INFO] Connecting to https://localhost:$LOCAL_PORT/edenapi/, timeout 300s
-  [INFO] Established EdenAPI connection
-  [INFO] Initialized channels
-  [INFO] Read 1 entries
-  [INFO] 1 entries left after filtering
-  [INFO] mononoke_host="*" dogfooding=false (glob)
-  [INFO] Calculating segments for entry 1, from changeset None to changeset ChangesetId(Blake2(e32a1e342cdb1e38e88466b4c1a01ae9f410024017aa21dc0a1c5da6b3963bf2)), to generation 3
-  [INFO] Done calculating segments for entry 1, from changeset None to changeset ChangesetId(Blake2(e32a1e342cdb1e38e88466b4c1a01ae9f410024017aa21dc0a1c5da6b3963bf2)), to generation 3 in *ms (glob)
-  [INFO] Resuming from latest entry checkpoint 0
-  [INFO] Skipping 0 batches from entry 1
-  [INFO] Starting sync of 3 missing commits, 0 were already synced
-  [INFO] Setting checkpoint from entry 1 to 0
-  [INFO] Setting bookmark master_bookmark from None to Some(HgChangesetId(HgNodeHash(Sha1(d3b399ca8757acdb81c3681b052eb978db6768d8))))
-  [INFO] Moved bookmark with result SetBookmarkResponse { data: Ok(()) }
-  [INFO] Marking entry 1 as done
+  [INFO] [sync{repo=orig}] Opened SourceRepoArgs(Name("orig")) unredacted
+  [INFO] [sync{repo=orig}] Starting sync from 0
+  [INFO] [sync{repo=orig}] Connecting to https://localhost:$LOCAL_PORT/edenapi/, timeout 300s
+  [INFO] [sync{repo=orig}] Established EdenAPI connection
+  [INFO] [sync{repo=orig}] Initialized channels
+  [INFO] [sync{repo=orig}] Read 1 entries
+  [INFO] [sync{repo=orig}] 1 entries left after filtering
+  [INFO] [sync{repo=orig}] mononoke_host="*" dogfooding=false (glob)
+  [INFO] [sync{repo=orig}] Calculating segments for entry 1, from changeset None to changeset ChangesetId(Blake2(e32a1e342cdb1e38e88466b4c1a01ae9f410024017aa21dc0a1c5da6b3963bf2)), to generation 3
+  [INFO] [sync{repo=orig}] Done calculating segments for entry 1, from changeset None to changeset ChangesetId(Blake2(e32a1e342cdb1e38e88466b4c1a01ae9f410024017aa21dc0a1c5da6b3963bf2)), to generation 3 in *ms (glob)
+  [INFO] [sync{repo=orig}] Resuming from latest entry checkpoint 0
+  [INFO] [sync{repo=orig}] Skipping 0 batches from entry 1
+  [INFO] [sync{repo=orig}] Starting sync of 3 missing commits, 0 were already synced
+  [INFO] [sync{repo=orig}] Setting checkpoint from entry 1 to 0
+  [INFO] [sync{repo=orig}] Setting bookmark master_bookmark from None to Some(HgChangesetId(HgNodeHash(Sha1(d3b399ca8757acdb81c3681b052eb978db6768d8))))
+  [INFO] [sync{repo=orig}] Moved bookmark with result SetBookmarkResponse { data: Ok(()) }
+  [INFO] [sync{repo=orig}] Marking entry 1 as done

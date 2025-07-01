@@ -174,24 +174,24 @@ Sync all bookmarks moves
 // Also there's only one bookmark moves instead of two due to the batching we use.
   $ mononoke_modern_sync "" sync-once orig dest --start-id 0
   [INFO] Running sync-once loop
-  [INFO] Opened SourceRepoArgs(Name("orig")) unredacted
-  [INFO] Starting sync from 0
-  [INFO] Connecting to https://localhost:$LOCAL_PORT/edenapi/, timeout 300s
-  [INFO] Established EdenAPI connection
-  [INFO] Initialized channels
-  [INFO] Read 2 entries
-  [INFO] 2 entries left after filtering
-  [INFO] mononoke_host="*" dogfooding=false (glob)
-  [INFO] Calculating segments for entry 1, from changeset Some(ChangesetId(Blake2(5b1c7130dde8e54b4285b9153d8e56d69fbf4ae685eaf9e9766cc409861995f8))) to changeset ChangesetId(Blake2(53b034a90fe3002a707a7da9cdf6eac3dea460ad72f7c6969dfb88fd0e69f856)), moved back by approx 4 commit(s)
-  [INFO] Done calculating segments for entry 1, from changeset Some(ChangesetId(Blake2(5b1c7130dde8e54b4285b9153d8e56d69fbf4ae685eaf9e9766cc409861995f8))) to changeset ChangesetId(Blake2(53b034a90fe3002a707a7da9cdf6eac3dea460ad72f7c6969dfb88fd0e69f856)), moved back by approx 4 commit(s) in *ms (glob)
-  [INFO] Resuming from latest entry checkpoint 0
-  [INFO] Skipping 0 batches from entry 1
-  [INFO] Calculating segments for entry 2, from changeset Some(ChangesetId(Blake2(53b034a90fe3002a707a7da9cdf6eac3dea460ad72f7c6969dfb88fd0e69f856))) to changeset ChangesetId(Blake2(5b1c7130dde8e54b4285b9153d8e56d69fbf4ae685eaf9e9766cc409861995f8)), approx 4 commit(s)
-  [INFO] Done calculating segments for entry 2, from changeset Some(ChangesetId(Blake2(53b034a90fe3002a707a7da9cdf6eac3dea460ad72f7c6969dfb88fd0e69f856))) to changeset ChangesetId(Blake2(5b1c7130dde8e54b4285b9153d8e56d69fbf4ae685eaf9e9766cc409861995f8)), approx 4 commit(s) in *ms (glob)
-  [INFO] Resuming from latest entry checkpoint 0
-  [INFO] Skipping 0 batches from entry 2
-  [INFO] Starting sync of 0 missing commits, 4 were already synced
-  [INFO] Setting checkpoint from entry 2 to 0
-  [INFO] Setting bookmark master_bookmark from None to Some(HgChangesetId(HgNodeHash(Sha1(8c3947e5d8bd4fe70259eca001b8885651c75850))))
-  [INFO] Moved bookmark with result SetBookmarkResponse { data: Ok(()) }
-  [INFO] Marking entry 2 as done
+  [INFO] [sync{repo=orig}] Opened SourceRepoArgs(Name("orig")) unredacted
+  [INFO] [sync{repo=orig}] Starting sync from 0
+  [INFO] [sync{repo=orig}] Connecting to https://localhost:$LOCAL_PORT/edenapi/, timeout 300s
+  [INFO] [sync{repo=orig}] Established EdenAPI connection
+  [INFO] [sync{repo=orig}] Initialized channels
+  [INFO] [sync{repo=orig}] Read 2 entries
+  [INFO] [sync{repo=orig}] 2 entries left after filtering
+  [INFO] [sync{repo=orig}] mononoke_host="*" dogfooding=false (glob)
+  [INFO] [sync{repo=orig}] Calculating segments for entry 1, from changeset Some(ChangesetId(Blake2(5b1c7130dde8e54b4285b9153d8e56d69fbf4ae685eaf9e9766cc409861995f8))) to changeset ChangesetId(Blake2(53b034a90fe3002a707a7da9cdf6eac3dea460ad72f7c6969dfb88fd0e69f856)), moved back by approx 4 commit(s)
+  [INFO] [sync{repo=orig}] Done calculating segments for entry 1, from changeset Some(ChangesetId(Blake2(5b1c7130dde8e54b4285b9153d8e56d69fbf4ae685eaf9e9766cc409861995f8))) to changeset ChangesetId(Blake2(53b034a90fe3002a707a7da9cdf6eac3dea460ad72f7c6969dfb88fd0e69f856)), moved back by approx 4 commit(s) in *ms (glob)
+  [INFO] [sync{repo=orig}] Resuming from latest entry checkpoint 0
+  [INFO] [sync{repo=orig}] Skipping 0 batches from entry 1
+  [INFO] [sync{repo=orig}] Calculating segments for entry 2, from changeset Some(ChangesetId(Blake2(53b034a90fe3002a707a7da9cdf6eac3dea460ad72f7c6969dfb88fd0e69f856))) to changeset ChangesetId(Blake2(5b1c7130dde8e54b4285b9153d8e56d69fbf4ae685eaf9e9766cc409861995f8)), approx 4 commit(s)
+  [INFO] [sync{repo=orig}] Done calculating segments for entry 2, from changeset Some(ChangesetId(Blake2(53b034a90fe3002a707a7da9cdf6eac3dea460ad72f7c6969dfb88fd0e69f856))) to changeset ChangesetId(Blake2(5b1c7130dde8e54b4285b9153d8e56d69fbf4ae685eaf9e9766cc409861995f8)), approx 4 commit(s) in *ms (glob)
+  [INFO] [sync{repo=orig}] Resuming from latest entry checkpoint 0
+  [INFO] [sync{repo=orig}] Skipping 0 batches from entry 2
+  [INFO] [sync{repo=orig}] Starting sync of 0 missing commits, 4 were already synced
+  [INFO] [sync{repo=orig}] Setting checkpoint from entry 2 to 0
+  [INFO] [sync{repo=orig}] Setting bookmark master_bookmark from None to Some(HgChangesetId(HgNodeHash(Sha1(8c3947e5d8bd4fe70259eca001b8885651c75850))))
+  [INFO] [sync{repo=orig}] Moved bookmark with result SetBookmarkResponse { data: Ok(()) }
+  [INFO] [sync{repo=orig}] Marking entry 2 as done
