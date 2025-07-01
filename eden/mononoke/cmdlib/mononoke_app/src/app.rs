@@ -721,7 +721,7 @@ impl MononokeApp {
                 .into_iter()
                 .filter_map(|(name, config)| {
                     let is_matching_filter =
-                        repo_filter.as_ref().map_or(true, |filter| filter(&name));
+                        repo_filter.as_ref().is_none_or(|filter| filter(&name));
                     let is_deep_sharded = service
                         .as_ref()
                         .and_then(|service| {

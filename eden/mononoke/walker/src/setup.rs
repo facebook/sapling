@@ -189,7 +189,7 @@ pub async fn setup_common(
             // Allow Remaining Deferred = True if either the CLI or the walker
             // config say so.
             chunking.allow_remaining_deferred |=
-                walker_config_params.map_or(false, |p| p.allow_remaining_deferred);
+                walker_config_params.is_some_and(|p| p.allow_remaining_deferred);
             // If the type of walker is specified, the checkpoint name should be
             // a combination of checkpoint_prefix + walker_type + repo_name.
             if let Some(walker_type) = walker_type {
@@ -506,7 +506,7 @@ fn reachable_graph_elements(
         // Only retain edge types that are traversable
         include_edge_types.retain(|e| {
             e.incoming_type()
-                .map_or(true, |t|
+                .is_none_or(|t|
                     // its an incoming_type we want
                     (include_node_types.contains(&t) || root_node_types.contains(&t)) &&
                     // Another existing edge can get us to this node type
@@ -518,7 +518,7 @@ fn reachable_graph_elements(
         include_node_types.retain(|t| {
             include_edge_types
                 .iter()
-                .any(|e| &e.outgoing_type() == t || e.incoming_type().map_or(false, |ot| &ot == t))
+                .any(|e| &e.outgoing_type() == t || e.incoming_type().is_some_and(|ot| &ot == t))
         });
         last_param_count = param_count;
         param_count = include_edge_types.len() + include_node_types.len();

@@ -38,8 +38,7 @@ pub fn benchmark(
                 BenchmarkId::from_parameter(format!("{} x{}", size, concurrency)),
                 &size,
                 |b, &size| {
-                    let blocks: Vec<_> = std::iter::repeat(())
-                        .take(concurrency)
+                    let blocks: Vec<_> = std::iter::repeat_n((), concurrency)
                         .map(|()| {
                             let mut block = vec![0; size];
                             thread_rng().fill(&mut block as &mut [u8]);

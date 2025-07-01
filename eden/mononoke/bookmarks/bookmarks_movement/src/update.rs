@@ -68,9 +68,7 @@ impl BookmarkUpdatePolicy {
             Self::FastForwardOnly => true,
             Self::AnyPermittedByConfig => repo.repo_bookmark_attrs().is_fast_forward_only(bookmark),
         };
-        let bypass = pushvars.map_or(false, |pushvar| {
-            pushvar.contains_key(ALLOW_NON_FFWD_PUSHVAR)
-        });
+        let bypass = pushvars.is_some_and(|pushvar| pushvar.contains_key(ALLOW_NON_FFWD_PUSHVAR));
         if fast_forward_only && !bypass && targets.old != targets.new {
             // Check that this move is a fast-forward move.
             if !repo

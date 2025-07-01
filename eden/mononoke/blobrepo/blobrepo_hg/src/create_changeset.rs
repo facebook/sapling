@@ -174,7 +174,7 @@ impl CreateChangeset {
                     expected_files
                 } else if subtree_changes
                     .as_ref()
-                    .map_or(false, |(changes, _)| !changes.copies.is_empty())
+                    .is_some_and(|(changes, _)| !changes.copies.is_empty())
                 {
                     // Presence of subtree copies means the file list is expected to be empty.
                     Vec::new()

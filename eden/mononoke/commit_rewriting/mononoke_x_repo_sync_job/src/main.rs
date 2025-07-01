@@ -435,7 +435,7 @@ async fn tail(
 
         let skip = maybe_bookmark_regex
             .as_ref()
-            .map_or(false, |regex| !regex.is_match(entry.bookmark_name.as_str()));
+            .is_some_and(|regex| !regex.is_match(entry.bookmark_name.as_str()));
 
         if !skip {
             let (stats, res) = sync_single_bookmark_update_log(

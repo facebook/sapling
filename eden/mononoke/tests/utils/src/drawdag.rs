@@ -352,7 +352,7 @@ impl ActionArg {
                         arg.push(ch);
                     }
                     '&' => {
-                        while iter.peek().map_or(false, |ch| !ch.is_whitespace()) {
+                        while iter.peek().is_some_and(|ch| !ch.is_whitespace()) {
                             arg.push_hex(&mut iter)?;
                         }
                     }

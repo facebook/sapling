@@ -307,7 +307,7 @@ impl CommitGraph {
             if let Some(common_generation) = common_skew_ancestors_set.highest_generation() {
                 if frontier
                     .last_key_value()
-                    .map_or(true, |(frontier_generation, _)| {
+                    .is_none_or(|(frontier_generation, _)| {
                         common_generation >= *frontier_generation
                     })
                 {

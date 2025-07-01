@@ -85,11 +85,10 @@ impl GetAsMap<LocalBookmarksMap> for SqlCommitCloud {
         .await?;
         let mut map = LocalBookmarksMap::new();
         for (name, node) in rows {
-            let hgid = node.into();
-            if let Some(val) = map.get_mut(&hgid) {
+            if let Some(val) = map.get_mut(&node) {
                 val.push(name.clone());
             } else {
-                map.insert(hgid, vec![name]);
+                map.insert(node, vec![name]);
             }
         }
         Ok(map)

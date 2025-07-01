@@ -5,7 +5,7 @@
  * GNU General Public License version 2.
  */
 
-use std::iter::repeat;
+use std::iter::repeat_n;
 use std::sync::Arc;
 
 use blobstore::Blobstore;
@@ -50,7 +50,7 @@ pub fn benchmark(
                             .await
                             .expect("Put failed")
                     });
-                    let keys = repeat(key).take(concurrency);
+                    let keys = repeat_n(key, concurrency);
                     let test = |ctx: CoreContext, blobstore: Arc<dyn Blobstore>| {
                         let keys = keys.clone();
                         async move {

@@ -86,11 +86,10 @@ impl GetAsMap<RemoteBookmarksMap> for SqlCommitCloud {
         let mut map = RemoteBookmarksMap::new();
         for (remote, name, commit) in rows {
             let rb = WorkspaceRemoteBookmark::new(remote, name, commit.clone())?;
-            let hgid = commit.into();
-            if let Some(val) = map.get_mut(&hgid) {
+            if let Some(val) = map.get_mut(&commit) {
                 val.push(rb);
             } else {
-                map.insert(hgid, vec![rb]);
+                map.insert(commit, vec![rb]);
             }
         }
         Ok(map)

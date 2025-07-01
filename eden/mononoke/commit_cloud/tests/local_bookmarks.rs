@@ -139,11 +139,11 @@ async fn test_local_bookmarks(_fb: FacebookInit) -> anyhow::Result<()> {
 
     let res_map: LocalBookmarksMap = sql.get_as_map(reponame.clone(), workspace.clone()).await?;
     assert_eq!(
-        res_map.get(&hgid1.into()).unwrap().to_owned(),
+        res_map.get(&hgid1).unwrap().to_owned(),
         vec!["my_bookmark1"]
     );
     assert_eq!(
-        res_map.get(&hgid2.into()).unwrap().to_owned(),
+        res_map.get(&hgid2).unwrap().to_owned(),
         vec!["my_bookmark2"]
     );
 

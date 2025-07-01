@@ -984,7 +984,7 @@ impl CommitGraph {
             .into_iter()
             .filter(|cs_id| {
                 // If a changeset has a parent that is not in the input collection, then its part of the boundary
-                changesets_with_parents.get(cs_id).map_or(false, |parents| {
+                changesets_with_parents.get(cs_id).is_some_and(|parents| {
                     parents
                         .iter()
                         .any(|parent| !changesets_with_parents.contains_key(&parent.cs_id))

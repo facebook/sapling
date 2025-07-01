@@ -507,7 +507,7 @@ where
         unsafe_always_rewrite_sync_commit(
             ctx,
             cs_id,
-            &commit_sync_data,
+            commit_sync_data,
             None,
             version,
             CommitSyncContext::XRepoSyncJob,
@@ -537,7 +537,7 @@ where
         unsafe_sync_commit(
             ctx,
             cs_id,
-            &commit_sync_data,
+            commit_sync_data,
             parent_mapping_selection_hint,
             CommitSyncContext::XRepoSyncJob,
             Some(version.clone()),
@@ -667,7 +667,7 @@ where
         let (stats, mb_synced) = unsafe_sync_commit(
             ctx,
             ancestor_cs_id,
-            &commit_sync_data,
+            commit_sync_data,
             CandidateSelectionHint::Only,
             CommitSyncContext::ForwardSyncerInitialImport,
             Some(config_version.clone()),
@@ -730,7 +730,7 @@ where
     let (stats, result) = unsafe_sync_commit(
         ctx,
         cs_id,
-        &commit_sync_data,
+        commit_sync_data,
         CandidateSelectionHint::Only,
         CommitSyncContext::ForwardSyncerInitialImport,
         Some(config_version),
@@ -869,7 +869,7 @@ where
     unsafe_sync_commit_pushrebase(
         ctx,
         bcs,
-        &commit_sync_data,
+        commit_sync_data,
         target_bookmark.clone(),
         CommitSyncContext::XRepoSyncJob,
         pushrebase_rewrite_dates,

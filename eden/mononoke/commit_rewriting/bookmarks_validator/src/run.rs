@@ -79,7 +79,7 @@ pub(crate) async fn loop_forever<R: CrossRepo>(
         let enabled = push_redirection_config
             .get(ctx, small_repo_id)
             .await?
-            .map_or(false, |enables| enables.public_push);
+            .is_some_and(|enables| enables.public_push);
 
         if enabled {
             let res = validate(ctx, &syncers, large_repo_name, small_repo_name).await;

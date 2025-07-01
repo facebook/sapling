@@ -5,7 +5,7 @@
  * GNU General Public License version 2.
  */
 
-use std::iter::repeat;
+use std::iter::repeat_n;
 use std::sync::Arc;
 
 use blobstore::Blobstore;
@@ -39,8 +39,7 @@ pub fn benchmark(
                 BenchmarkId::from_parameter(format!("{} x{}", size, concurrency)),
                 &size,
                 |b, &size| {
-                    let keys: Vec<_> = repeat(())
-                        .take(concurrency)
+                    let keys: Vec<_> = repeat_n((), concurrency)
                         .map(|()| {
                             let mut block = vec![0; size];
                             thread_rng().fill(&mut block as &mut [u8]);

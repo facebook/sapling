@@ -1469,7 +1469,7 @@ pub async fn validate_entry(
                     validation_duration,
                 );
 
-                validation_result.map_err(Error::from)
+                validation_result
             }
         },
     );

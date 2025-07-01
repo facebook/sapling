@@ -2291,7 +2291,7 @@ where
                         c.label,
                         c.target.get_type()
                     ));
-                } else if c.label.incoming_type().map_or(false, |t| t != node_type) {
+                } else if c.label.incoming_type().is_some_and(|t| t != node_type) {
                     return Err(format_err!("Bad step {:?} from {:?}", c.label, node_type,));
                 }
             }

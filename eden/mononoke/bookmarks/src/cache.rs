@@ -250,10 +250,10 @@ impl CachedBookmarks {
                             let category = key.category();
                             if filter_categories
                                 .as_ref()
-                                .map_or(true, |categories| categories.iter().any(|c| c == category))
+                                .is_none_or(|categories| categories.iter().any(|c| c == category))
                                 && filter_kinds
                                     .as_ref()
-                                    .map_or(true, |kinds| kinds.iter().any(|k| k == kind))
+                                    .is_none_or(|kinds| kinds.iter().any(|k| k == kind))
                             {
                                 let bookmark = Bookmark {
                                     key: key.clone(),

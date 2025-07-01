@@ -156,12 +156,9 @@ async fn test_remote_bookmarks(_fb: FacebookInit) -> anyhow::Result<()> {
     assert_eq!(res.len(), 2);
 
     let res_map: RemoteBookmarksMap = sql.get_as_map(reponame.clone(), workspace.clone()).await?;
+    assert_eq!(res_map.get(&hgid1).unwrap().to_vec(), vec![bookmark1]);
     assert_eq!(
-        res_map.get(&hgid1.into()).unwrap().to_vec(),
-        vec![bookmark1]
-    );
-    assert_eq!(
-        res_map.get(&hgid2.into()).unwrap().to_vec(),
+        res_map.get(&hgid2).unwrap().to_vec(),
         vec![bookmark2.clone()]
     );
 
