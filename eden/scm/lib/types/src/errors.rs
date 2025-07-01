@@ -24,7 +24,7 @@ impl KeyError {
 #[error("{0}: {1:#}")]
 pub struct KeyedError(pub Key, #[source] pub Error);
 
-/// NeworkError is a wrapper/tagging error meant for libraries to use
+/// NetworkError is a wrapper/tagging error meant for libraries to use
 /// to mark errors that may imply a network problem.
 pub struct NetworkError(pub Error);
 

@@ -530,7 +530,7 @@ impl Inner {
         let ancestor_dir = parent_dir.strip_suffix(suffix, true)?;
 
         let head = if suffix.is_empty() {
-            // If we have no suffix, then `ancestor_dir == parent_dir`. Tha name of the advanced
+            // If we have no suffix, then `ancestor_dir == parent_dir`. The name of the advanced
             // child is the last part of `dir`.
             dir.split_last_component()?.1
         } else {
@@ -587,7 +587,7 @@ impl Inner {
                     threshold,
                     config.walk_ratio,
                 ),
-                // Otherwise use default threhsold.
+                // Otherwise use default threshold.
                 None => child_seen_count >= threshold,
             };
 

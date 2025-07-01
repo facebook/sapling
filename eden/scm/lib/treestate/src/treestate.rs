@@ -50,7 +50,7 @@ pub struct TreeState {
     root: TreeStateRoot,
     original_root_id: BlockId,
     // overlay_dirstate_path is only used in the case the case that the treestate is
-    // wrapping a legacy eden dirstate which is necessary for EdenFS compatility.
+    // wrapping a legacy eden dirstate which is necessary for EdenFS compatibility.
     overlay_dirstate_path: Option<PathBuf>,
     case_sensitive: bool,
     pending_change_count: u64,

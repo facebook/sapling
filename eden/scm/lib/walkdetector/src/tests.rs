@@ -405,7 +405,7 @@ fn test_merge_cousins() {
 }
 
 #[test]
-fn test_dont_merge_into_containg_walk() {
+fn test_dont_merge_into_containing_walk() {
     let mut detector = Detector::new();
     detector.set_walk_threshold(TEST_WALK_THRESHOLD);
 

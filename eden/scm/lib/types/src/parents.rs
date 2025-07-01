@@ -91,7 +91,7 @@ impl Parents {
         ]
     }
 
-    /// Reports `Vec<HgId>` excluding `NULL_ID`s. Might reutrn an empty vec.
+    /// Reports `Vec<HgId>` excluding `NULL_ID`s. Might return an empty vec.
     pub fn to_vec(&self) -> Vec<HgId> {
         let mut result = Vec::new();
         match self {

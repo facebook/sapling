@@ -98,7 +98,7 @@ pub fn init_working_copy(
 #[derive(Debug, thiserror::Error)]
 pub enum EdenCloneError {
     #[error("Failed cloning eden checkout\n Stdout: '{0}'\n Stderr: '{1}'")]
-    ExeuctionFailure(String, String),
+    ExecutionFailure(String, String),
     #[error("edenfs.command config is not set")]
     MissingCommandConfig(),
 }
@@ -127,7 +127,7 @@ fn run_eden_clone_command(clone_command: &mut Command) -> Result<()> {
     })?;
 
     if !output.status.success() {
-        return Err(EdenCloneError::ExeuctionFailure(
+        return Err(EdenCloneError::ExecutionFailure(
             String::from_utf8_lossy(&output.stdout).to_string(),
             String::from_utf8_lossy(&output.stderr).to_string(),
         )

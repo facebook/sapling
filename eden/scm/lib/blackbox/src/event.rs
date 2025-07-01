@@ -659,7 +659,7 @@ impl fmt::Display for Event {
             } => {
                 write!(
                     f,
-                    "[commmand_finish] exited {} in {} ms, max RSS: {} bytes",
+                    "[command_finish] exited {} in {} ms, max RSS: {} bytes",
                     exit_code, duration_ms, max_rss
                 )?;
             }

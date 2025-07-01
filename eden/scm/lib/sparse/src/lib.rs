@@ -116,7 +116,7 @@ pub enum Error {
     #[error(transparent)]
     Fetch(#[from] anyhow::Error),
 
-    #[error("unsuppported pattern type {0}")]
+    #[error("unsupported pattern type {0}")]
     UnsupportedPattern(String),
 
     #[error(transparent)]
@@ -928,7 +928,7 @@ path:b
         let prof = Root::from_bytes(base, "test".to_string())?;
         let matcher = prof.matcher(|_| async { Ok(Some(child.to_vec())) }).await?;
 
-        // Exclude rule "wins" for v1 despite order in confing.
+        // Exclude rule "wins" for v1 despite order in config.
         assert!(!matcher.matches("a/exc".try_into()?)?);
         assert!(!matcher.matches("b/exc".try_into()?)?);
         assert!(matcher.matches("a/inc".try_into()?)?);

@@ -22,7 +22,7 @@ unsafe impl RawRwLockTrait for WrappedRwLock {
     // > const a fresh instance of the Cell or Mutex or AtomicXxxx will be created, which defeats
     // > the whole purpose of using these types in the first place.
     //
-    // We acturally want this behavior. Every time `INIT` should give us a fresh new lock that
+    // We actually want this behavior. Every time `INIT` should give us a fresh new lock that
     // has an empty `on_unlock_exclusive`.
     #[allow(clippy::declare_interior_mutable_const)]
     const INIT: Self = Self {

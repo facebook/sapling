@@ -15,7 +15,7 @@ Via `hg debugruntest`:
 
     hg debugruntest test-foo.t test-bar.t ...
 
-Via `run-tests.py`. Only tests with `#debugruntest-compatibile` will run
+Via `run-tests.py`. Only tests with `#debugruntest-compatible` will run
 through this `testing` module:
 
     run-tests.py test-foo.t test-bar.t ...
@@ -67,7 +67,7 @@ Tests passing with `run-tests.py` and a real `bash` can fail with
   effects and fix it by gating with config options. If the fix is non-obvious,
   `#inprocess-hg-incompatible` can make a test run `hg` as external process -
   trade performance for compatibility. `#inprocess-hg-incompatible` can be used
-  together with `#chg-compatibile` to restore some performance using chg.
+  together with `#chg-compatible` to restore some performance using chg.
   `#inprocess-hg-incompatible` disables in-process shell emulation.
   Commands run by `ui.system` will use the real system shell.
 

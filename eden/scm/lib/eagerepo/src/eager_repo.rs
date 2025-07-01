@@ -158,7 +158,7 @@ impl EagerRepoStore {
     /// This is usually used for hg's LFS data.
     pub fn add_arbitrary_blob(&self, id: Id20, data: &[u8]) -> Result<()> {
         let mut inner = self.inner.write();
-        inner.insert_arbitary(id, data, &[])?;
+        inner.insert_arbitrary(id, data, &[])?;
         Ok(())
     }
 

@@ -232,7 +232,7 @@ impl OpenOptions {
             log.open_options.index_defs = self.index_defs.clone();
             message += &log
                 .rebuild_indexes_with_lock(false, &lock)
-                .context("while trying to update indexes with reapired log")?;
+                .context("while trying to update indexes with repaired log")?;
 
             Ok(message.into_string())
         })();

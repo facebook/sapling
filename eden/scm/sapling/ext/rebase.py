@@ -660,7 +660,7 @@ class rebaseruntime:
                         )
                         raise error.AbortMergeToolError(msg % (kindstr, pathstr))
                     elif cmdutil.uncommittedchanges(repo):
-                        raise error.UncommitedChangesAbort(
+                        raise error.UncommittedChangesAbort(
                             _(
                                 "must use on-disk merge for this rebase (%s in %s), but you have working copy changes"
                             )

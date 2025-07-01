@@ -154,7 +154,7 @@ class DeprecatedError(Abort):
     __bytes__ = _tobytes
 
 
-class UncommitedChangesAbort(Abort):
+class UncommittedChangesAbort(Abort):
     """Raised if there are uncommitted changs and the command requires a clean
     working copy
     """

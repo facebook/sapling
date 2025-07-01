@@ -599,7 +599,7 @@ mod tests {
     }
 
     quickcheck! {
-        fn test_rountrip_serialization(
+        fn test_roundtrip_serialization(
             component: PathComponentBuf,
             hgid: HgId,
             flag_proxy: Option<FileType>

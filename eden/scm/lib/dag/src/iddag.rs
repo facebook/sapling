@@ -594,7 +594,7 @@ pub trait IdDagAlgorithm: IdDagStore {
     }
 
     /// Return a [`IdSet`] that covers persistable ids stored in this [`IdDag`],
-    /// i.e. everything exluding the VIRTUAL group.
+    /// i.e. everything excluding the VIRTUAL group.
     fn all(&self) -> Result<IdSet> {
         // Intentionally skip the VIRTUAL group.
         self.all_ids_in_groups(&[Group::MASTER, Group::NON_MASTER])
@@ -1527,8 +1527,8 @@ pub trait IdDagAlgorithm: IdDagStore {
                     //    (low) |-- overlap-span --| (high)
                     //               |-------------|
                     //               push this part to result
-                    let roots_intesection = roots.intersection(&overlap_span.into());
-                    if let Some(id) = roots_intesection.min() {
+                    let roots_intersection = roots.intersection(&overlap_span.into());
+                    if let Some(id) = roots_intersection.min() {
                         overlap_span.low = id;
                         trace(&|| format!("  push {:?} (root in span)", &overlap_span));
                         result.push_span_asc(overlap_span);
@@ -2232,7 +2232,7 @@ mod tests {
     }
 
     #[test]
-    fn test_discontinous_flat_segment_only_head() {
+    fn test_discontinuous_flat_segment_only_head() {
         let prepared = PreparedFlatSegments {
             segments: vec![
                 FlatSegment {

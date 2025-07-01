@@ -389,7 +389,7 @@ impl TracingData {
         result
     }
 
-    /// Rewrite `moudle_path` and `line` information so they stay stable
+    /// Rewrite `module_path` and `line` information so they stay stable
     /// across tests.
     #[cfg(test)]
     pub(crate) fn fixup_module_lines_for_tests(&mut self) {

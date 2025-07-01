@@ -1064,7 +1064,7 @@ impl TreeEntry for ScmStoreTreeEntry {
 }
 
 /// ScmStoreTreeEntry is a wrapper around a LazyTree that implements `TreeEntry` with aux data support.
-/// Basic tree entry is used to avoid multiple coversions of the same tree into the mercurial format.
+/// Basic tree entry is used to avoid multiple conversions of the same tree into the mercurial format.
 impl Into<ScmStoreTreeEntry> for LazyTree {
     fn into(self) -> ScmStoreTreeEntry {
         ScmStoreTreeEntry {

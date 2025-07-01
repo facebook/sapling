@@ -47,7 +47,7 @@ journalremotebookmarktype = "remotebookmark"
 def _getbkfile(repo):
     """Hook so that extensions that mess with the store can hook bm storage.
 
-    For core, this just handles wether we should see pending
+    For core, this just handles whether we should see pending
     bookmarks or the committed ones. Other extensions (like share)
     may need to tweak this behavior further.
     """

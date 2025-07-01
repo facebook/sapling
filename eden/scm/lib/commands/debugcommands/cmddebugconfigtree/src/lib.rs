@@ -45,7 +45,7 @@ pub fn run(ctx: ReqCtx<DebugConfigTreeOpts>, repo: Option<&Repo>) -> Result<u8> 
 
 struct State<'a> {
     ctx: &'a ReqCtx<DebugConfigTreeOpts>,
-    /// Print every tiem in those sections.
+    /// Print every item in those sections.
     full_sections: HashSet<&'a str>,
     /// Print some items in those sections.
     /// If empty, print everything.

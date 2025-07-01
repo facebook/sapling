@@ -63,12 +63,12 @@ pyrenderdag = { version = "0.1.0", path = "modules/pyrenderdag" }
 pyrepo = { version = "0.1.0", path = "modules/pyrepo" }
 pyrevisionstore = { version = "0.1.0", path = "modules/pyrevisionstore" }
 pyrevlogindex = { version = "0.1.0", path = "modules/pyrevlogindex" }
+pyserde = { version = "0.1.0", path = "modules/pyserde" }
 pysptui = { version = "0.1.0", path = "modules/pysptui" }
 pystatus = { version = "0.1.0", path = "modules/pystatus" }
 pystoremodel = { version = "0.1.0", path = "modules/pystoremodel" }
 pysubmodule = { version = "0.1.0", path = "modules/pysubmodule" }
 pythreading = { version = "0.1.0", path = "modules/pythreading" }
-pytoml = { version = "0.1.0", path = "modules/pytoml" }
 pytracing = { version = "0.1.0", path = "modules/pytracing" }
 pytreestate = { version = "0.1.0", path = "modules/pytreestate" }
 pyversion = { version = "0.1.0", path = "modules/pyversion" }

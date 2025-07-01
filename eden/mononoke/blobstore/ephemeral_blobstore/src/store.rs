@@ -450,16 +450,13 @@ impl RepoEphemeralStoreInner {
         // Step 1: Mark the bubble as expired in the backing SQL Store.
         ctx.perf_counters()
             .increment_counter(PerfCounterType::SqlWrites);
-        let res = UpdateExpired::query(
+        UpdateExpired::query(
             &self.connections.write_connection,
             ctx.client_request_info(),
             &ExpiryStatus::Expired,
             &bubble_id,
         )
         .await?;
-        if res.affected_rows() != 1 {
-            return Err(EphemeralBlobstoreError::DeleteBubbleFailed(bubble_id).into());
-        }
         // If only marking is required, exit now.
         if let BubbleDeletionMode::MarkOnly = self.bubble_deletion_mode {
             return Ok(0); // Since 0 blob items were unlinked/removed.

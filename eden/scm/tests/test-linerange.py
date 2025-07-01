@@ -151,7 +151,7 @@ class blocksinrangetests(unittest.TestCase):
             self.assertEqual(linerange1, (7, 12))
             self.assertEqual(skipped, [True, True, False, True])
 
-    def testAccrossTwoBlocks(self):
+    def testAcrossTwoBlocks(self):
         """linerange across two blocks"""
         # IDX 0         1
         #     012345678901

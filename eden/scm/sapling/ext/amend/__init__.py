@@ -94,7 +94,7 @@ amendopts = [
 # Never restack commits on amend.
 RESTACK_NEVER = "never"
 
-# Restack commits on amend only if they chage manifest, and don't change the
+# Restack commits on amend only if they change manifest, and don't change the
 # commit manifest.
 RESTACK_ONLY_TRIVIAL = "only-trivial"
 

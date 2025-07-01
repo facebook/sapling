@@ -1446,7 +1446,7 @@ def debugexportrevlog(ui, repo, path, **opts) -> None:
             ui.write_err(_("exported %s at %r as %s\n") % (blobtype, path, hex(node)))
 
     if nodes:
-        # Vanilla hg uses 00manfiest.i for root trees, while this codebase uses
+        # Vanilla hg uses 00manifest.i for root trees, while this codebase uses
         # 00manifesttree.i for root trees (so flat trees stay in 00manifest).
         # Make a symlink for compatibility. But skip it if the repo is empty.
         os.symlink(
@@ -3142,7 +3142,7 @@ def debugsuccessorssets(ui, repo, *revs, **opts) -> None:
     """show set of successors for revision
 
     A successors set of changeset A is a consistent group of revisions that
-    succeed A. It contains non-obsolete changesets only unless closests
+    succeed A. It contains non-obsolete changesets only unless closest
     successors set is set.
 
     In most cases a changeset A has a single successors set containing a single

@@ -568,7 +568,7 @@ mod lfs_mocks {
     pub fn make_lfs_config(
         server: &mockito::Server,
         dir: impl AsRef<Path>,
-        agent_sufix: &str,
+        agent_suffix: &str,
     ) -> BTreeMap<String, String> {
         let mut config = make_config(dir);
         let mut set = |key: &str, value: &str| {
@@ -578,7 +578,7 @@ mod lfs_mocks {
         set("lfs.use-client-certs", "false");
         set(
             "experimental.lfs.user-agent",
-            &format!("mercurial/revisionstore/unittests/{}", agent_sufix),
+            &format!("mercurial/revisionstore/unittests/{}", agent_suffix),
         );
         set("lfs.threshold", "4");
         set("remotefilelog.lfs", "true");

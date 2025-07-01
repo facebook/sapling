@@ -183,7 +183,7 @@ pub(crate) fn prefetch_manager(
 
             batch_dir_prefetches.retain(|handle| !handle.is_canceled());
 
-            // Re-use a cached TreeManifest if available. It is thread safe and cheaply cloneable
+            // Reuse a cached TreeManifest if available. It is thread safe and cheaply cloneable
             // when used read-only.
             let mf: TreeManifest = match current_manifest {
                 Some(ref mf) => mf.clone(),
@@ -317,7 +317,7 @@ fn prefetch(
     walk_detector: walkdetector::Detector,
     work: PrefetchWork,
 ) -> PrefetchHandle {
-    // The cancelation works by making our thread below return early when the handle has been
+    // The cancellation works by making our thread below return early when the handle has been
     // dropped. When it returns, it drops its manifest/file iterators, which will cause those
     // operations to cancel themselves the next time they fail sending on their result channels.
     let handle = PrefetchHandle::default();

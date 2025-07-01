@@ -904,6 +904,7 @@ impl Convert for RawGitConcurrencyParams {
             trees_and_blobs: self.trees_and_blobs.try_into()?,
             commits: self.commits.try_into()?,
             tags: self.tags.try_into()?,
+            shallow: self.shallow.try_into()?,
         })
     }
 }

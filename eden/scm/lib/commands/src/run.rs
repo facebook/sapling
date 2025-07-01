@@ -721,7 +721,7 @@ fn log_start(args: Vec<String>, now: StartTime) -> tracing::Span {
 
         #[cfg(not(unix))]
         unsafe {
-            // uid and nice are not aviailable on Windows.
+            // uid and nice are not available on Windows.
             (0, libc::getpid() as u32, 0)
         }
     };

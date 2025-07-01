@@ -1077,7 +1077,7 @@ impl IdConvert for RevlogIndex {
         vertex: &Vertex,
         _max_group: Group,
     ) -> dag::Result<Option<Id>> {
-        // RevlogIndex stores everything in the master group. So max_gorup is ignored.
+        // RevlogIndex stores everything in the master group. So max_group is ignored.
         if let Some(pending_id) = self.pending_nodes_index.get(vertex) {
             Ok(Some(Id((pending_id + self.data_len()) as _)))
         } else if let Some(id) = self.nodemap.node_to_rev(vertex.as_ref())? {

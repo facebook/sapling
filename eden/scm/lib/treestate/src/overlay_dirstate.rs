@@ -15,7 +15,7 @@
 //! Right now this is just a simple serialization format that is rewritten in full every time. It
 //! has checksum and does not need "repack" like the full treestate, and can convert to an
 //! in-memory-only treestate in O(N) time just fine, assuming the overlay is always small so the
-//! O(N) is affordable and maybe even desirable for the lack of repack complexitiy. If it becomes
+//! O(N) is affordable and maybe even desirable for the lack of repack complexity. If it becomes
 //! a scalability issue we can revisit.
 //!
 //! Note carefully that a legacy Eden dirstate has a different binary format to a legacy dirstate

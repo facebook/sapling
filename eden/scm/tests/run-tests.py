@@ -936,7 +936,7 @@ def setup_sigtrace():
 CDATA_EVIL = re.compile(rb"[\000-\010\013\014\016-\037]")
 
 # Match feature conditionalized output lines in the form, capturing the feature
-# list in group 2, and the preceeding line output in group 1:
+# list in group 2, and the preceding line output in group 1:
 #
 #   output..output (feature !)\n
 optline = re.compile(b"(.*) \\((.+?) !\\)\n$")

@@ -51,7 +51,7 @@ pub fn init_module(py: Python, package: &str) -> PyResult<PyModule> {
     // maximum Id
     m.add(py, "MAX_ID", dag::Id::MAX.0)?;
 
-    // Explain bytes in indexedlog IdDag. For troubleshotting purpose.
+    // Explain bytes in indexedlog IdDag. For troubleshooting purpose.
     m.add(
         py,
         "describebytes",

@@ -351,7 +351,7 @@ impl IdMap {
             // Re-create the VerLink to mark it as incompatible.
             self.map_version = VerLink::new();
         }
-        // Step 3: Remove entries in the virutal_map.
+        // Step 3: Remove entries in the virtual_map.
         if high.is_virtual() {
             names.extend(self.virtual_map.remove_range(low, high)?);
         }

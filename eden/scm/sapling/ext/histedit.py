@@ -9,6 +9,9 @@
 #
 # This software may be used and distributed according to the terms of the
 # GNU General Public License version 2 or any later version.
+
+# @lint-ignore-every SPELL
+
 """interactive history editing
 
 With this extension installed, Mercurial gains one new command: histedit. Usage

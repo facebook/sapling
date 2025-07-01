@@ -34,7 +34,7 @@ pub struct MissingCerts {
     msg: String,
 }
 
-/// A group of client authentiation settings from the user's config.
+/// A group of client authentication settings from the user's config.
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct AuthGroup {
     pub name: String,
