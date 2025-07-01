@@ -189,7 +189,7 @@ struct MemChecksum {
     /// ```
     ///
     /// For the root checksum (`Index::chunksum`), the `xxhash_list` should
-    /// conver the entire buffer, as if `start` is 0 (but `start` is not 0).
+    /// convert the entire buffer, as if `start` is 0 (but `start` is not 0).
     xxhash_list: Vec<u64>,
 
     /// Whether chunks are checked against `xxhash_list`.

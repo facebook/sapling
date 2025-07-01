@@ -343,7 +343,7 @@ impl ConfigSet {
     /// to avoid infinite loop. A separate `load_path` call would not ignore files loaded by
     /// other `load_path` calls.
     ///
-    /// Return a list of errors. An error pasing a file will stop that file from loading, without
+    /// Return a list of errors. An error parsing a file will stop that file from loading, without
     /// affecting other files.
     pub fn load_path<P: AsRef<Path>>(&mut self, path: P, opts: &Options) -> Vec<Error> {
         let mut visited = HashSet::new();

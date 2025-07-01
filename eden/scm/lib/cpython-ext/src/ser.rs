@@ -19,6 +19,7 @@ use serde::Serialize;
 use serde::ser;
 
 use crate::PyErr as Error;
+use crate::ResultPyErrExt as _;
 
 /// Serialize into Python object.
 pub fn to_object<T>(py: Python, value: &T) -> PyResult<PyObject>
@@ -156,6 +157,13 @@ impl<'a, 'b> ser::Serializer for &'a Serializer<'b> {
     }
 
     fn serialize_i64(self, v: i64) -> Result<PyObject> {
+        self.serialize(v)
+    }
+
+    fn serialize_i128(self, v: i128) -> Result<PyObject> {
+        // serde_cbor uses i128 even for smaller integers
+        // i128 did not implement `ToPyObject` - use i64 as a workaround
+        let v: i64 = v.try_into().map_pyerr(self.py)?;
         self.serialize(v)
     }
 

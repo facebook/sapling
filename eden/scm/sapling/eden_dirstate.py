@@ -158,7 +158,7 @@ class eden_dirstate(dirstate.dirstate):
         # Call matches() on the current working directory parent commit
         results = set(self._parent_commit_matches(match))
 
-        # Augument the results with anything modified in the dirstate,
+        # Augment the results with anything modified in the dirstate,
         # to take care of added/removed files.
         for path in self._map._keys():
             if match(path):
@@ -173,7 +173,7 @@ class eden_dirstate(dirstate.dirstate):
         """
         results = set(self._parent_commit_matches(match))
 
-        # Augument the results with anything modified in the dirstate,
+        # Augment the results with anything modified in the dirstate,
         # to take care of added/removed files.
         for path, state in self._map._items():
             if match(path):

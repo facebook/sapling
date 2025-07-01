@@ -10,7 +10,7 @@ from sapling.node import hex, nullid
 from . import constants, shallowutil
 
 
-class ChainIndicies:
+class ChainIndices:
     """A static class for easy reference to the delta chain indices."""
 
     # The filename of this revision delta
@@ -48,17 +48,17 @@ class unioncontentstore:
         assert isinstance(node, bytes)
         chain = self.getdeltachain(name, node)
 
-        if chain[-1][ChainIndicies.BASENODE] != nullid:
+        if chain[-1][ChainIndices.BASENODE] != nullid:
             # If we didn't receive a full chain, throw
             raise KeyError((name, hex(node)))
 
         # The last entry in the chain is a full text, so we start our delta
         # applies with that.
-        fulltext = chain.pop()[ChainIndicies.DATA]
+        fulltext = chain.pop()[ChainIndices.DATA]
 
         text = fulltext
         while chain:
-            delta = chain.pop()[ChainIndicies.DATA]
+            delta = chain.pop()[ChainIndices.DATA]
             text = mdiff.patches(text, [delta])
 
         return text
@@ -88,7 +88,7 @@ class unioncontentstore:
         assert isinstance(name, str)
         assert isinstance(node, bytes)
         chain = self._getpartialchain(name, node)
-        while chain[-1][ChainIndicies.BASENODE] != nullid:
+        while chain[-1][ChainIndices.BASENODE] != nullid:
             x, x, deltabasename, deltabasenode, x = chain[-1]
             try:
                 morechain = self._getpartialchain(deltabasename, deltabasenode)

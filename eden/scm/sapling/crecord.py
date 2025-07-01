@@ -1234,7 +1234,7 @@ class curseschunkselector:
             # skip remainder of output
             return outstr
 
-        # print out lines of the chunk preceeding changed-lines
+        # print out lines of the chunk preceding changed-lines
         for line in hunk.before:
             linestr = b" " * (self.hunklineindentnumchars + len(checkbox)) + line
             outstr += self.printstring(self.chunkpad, linestr, towin=towin)

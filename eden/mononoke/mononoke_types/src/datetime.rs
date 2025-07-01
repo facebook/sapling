@@ -81,10 +81,19 @@ impl DateTime {
     }
 
     pub fn from_gix(time: gix_date::Time) -> Result<Self> {
+        // The time we get from Git is not validated. Mononoke is more precise.
+        // Clamp the offset to valid values. (see https://www.internalfb.com/intern/rustdoc/third-party/rust:chrono-0.4.41/src/chrono/offset/fixed.rs.html#98)
+        // This means we won't round-trip between Mononoke (bonsai) and Git for invalid offsets,
+        // but that's OK: a valid Mononoke time can always be represented as a git time, so
+        // deriving git commits will always work.
+        // For imported commits, we keep the Git bytes which are used for round-tripping
+        let valid_offset = (-time.offset).clamp(-86_399, 86_399);
+
         // As you can see in from_timestamp, we store the timezone offset with
         // `FixedOffset::west_opt` (offset would be 5 for UTC-5)
         // gix uses the eastern convension (offset would be -5 for UTC-5)
-        Self::from_timestamp(time.seconds, -time.offset)
+
+        Self::from_timestamp(time.seconds, valid_offset)
     }
 
     pub fn into_gix(&self) -> gix_date::Time {

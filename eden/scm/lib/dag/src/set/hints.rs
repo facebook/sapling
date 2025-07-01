@@ -53,7 +53,7 @@ bitflags! {
     }
 }
 
-/// Optimation hints.
+/// Optimization hints.
 #[derive(Default)]
 pub struct Hints {
     // Atomic is used for interior mutability.

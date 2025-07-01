@@ -109,6 +109,7 @@ fn concurrency(context: &RepositoryRequestContext) -> PackfileConcurrency {
             concurrency.trees_and_blobs,
             concurrency.commits,
             concurrency.tags,
+            concurrency.shallow,
             context.repo_configs.common.git_memory_upper_bound,
         ),
         None => PackfileConcurrency::standard(),

@@ -243,7 +243,7 @@ def hg(stdin: BinaryIO, stdout: BinaryIO, stderr: BinaryIO, env: Env) -> int:
     origstdio = (util.stdin, util.stdout, util.stderr)
 
     # bindings.commands.run might keep the stdio strems to prevent
-    # file delection (for example, if stdout redirects to a file).
+    # file deletion (for example, if stdout redirects to a file).
     # Workaround that by using a temporary in-memory stream.
     if os.name == "nt":
         real_stdout, real_stderr = stdout, stderr

@@ -134,7 +134,7 @@ impl Group {
     /// - Ideally free from fragmentation. In other words,
     ///   `ancestors(master)` can be represented in a single Span.
     /// - Ideally has limited heads. Does not scale with too many heads.
-    /// - Vertexs (commit hashes) might be lazy.
+    /// - Vertexes (commit hashes) might be lazy.
     pub const MASTER: Self = Self(0);
 
     /// The "non-master" group.
@@ -143,7 +143,7 @@ impl Group {
     /// - Expected to have multiple heads. In other words, is fragmented.
     /// - Expected to be sparse referred. For example, the "visible heads"
     ///   will refer to a bounded subset in this group.
-    /// - Expected to be non-lazy. Code paths assume Vertexs
+    /// - Expected to be non-lazy. Code paths assume Vertexes
     ///   (commit hashes) are known in this group.
     pub const NON_MASTER: Self = Self(1);
 

@@ -2002,6 +2002,8 @@ pub struct GitConcurrencyParams {
     pub commits: usize,
     /// The concurrency value for tag fetches
     pub tags: usize,
+    /// The concurrency value for boundary objects in shallow fetches
+    pub shallow: usize,
 }
 
 /// All Git related configs (e.g. Git Server and Git-only repos)

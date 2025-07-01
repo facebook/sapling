@@ -150,7 +150,7 @@ static void sendall(int sockfd, const void* data, size_t datasize) {
   }
 }
 
-/* Write lengh-data block to cmdserver */
+/* Write length-data block to cmdserver */
 static void writeblock(const hgclient_t* hgc) {
   assert(hgc);
 

@@ -530,6 +530,6 @@ Verify regular expressions are no longer supported
   > EOF
   $ hg ci -Aqm 'initial'
   $ LOG=sparse=warn hg sparse include re:sh.w
-  ERROR sparse: ignoring unsupported sparse pattern err=unsuppported pattern type re pat=Include("re:sh.w") src=$TESTTMP/rerepo/.hg/sparse
+  ERROR sparse: ignoring unsupported sparse pattern err=unsupported pattern type re pat=Include("re:sh.w") src=$TESTTMP/rerepo/.hg/sparse
   $ LOG=sparse=warn hg sparse enable sparse.profile 2>&1 | head -1
-  ERROR sparse: ignoring unsupported sparse pattern err=unsuppported pattern type re pat=Include("re:sh.w") src=$TESTTMP/rerepo/.hg/sparse
+  ERROR sparse: ignoring unsupported sparse pattern err=unsupported pattern type re pat=Include("re:sh.w") src=$TESTTMP/rerepo/.hg/sparse

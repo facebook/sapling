@@ -942,6 +942,7 @@ mod test {
             trees_and_blobs = 500
             commits = 1000
             tags = 1000
+            shallow = 100
 
             [cross_repo_commit_validation_config]
             skip_bookmarks = ["weirdy"]
@@ -1390,6 +1391,7 @@ mod test {
                         trees_and_blobs: 500,
                         commits: 1000,
                         tags: 1000,
+                        shallow: 100,
                     }),
                     git_lfs_interpret_pointers: false,
                     fetch_message: None,

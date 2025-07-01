@@ -200,7 +200,7 @@ struct ExternalKeyBuffer {
     // 3. If Log is alive, then Log.mem_buf is alive.
     // 4. Log.mem_buf is pinned, so this pointer is valid.
     //
-    // Here is why `Arc<Mutex<Vec<u8>>>` is not fesiable:
+    // Here is why `Arc<Mutex<Vec<u8>>>` is not feasible:
     //
     // - Bad performance: The Mutex overhead is visible.
     //   "log insertion (no checksum)" takes 2x time.
@@ -211,7 +211,7 @@ struct ExternalKeyBuffer {
     //   `&Log -> &MutexGuard -> &[u8]`, which means unsafe Rust is
     //   needed, or it has to take the mutex lock. Neither desirable.
     //
-    // Here is why normal lifetime is not fesiable:
+    // Here is why normal lifetime is not feasible:
     // - A normal lifetime will enforce the `mem_buf` to be read-only.
     //   But Log needs to write to it.
     //

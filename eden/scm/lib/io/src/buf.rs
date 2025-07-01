@@ -196,6 +196,7 @@ mod test {
 
         let mut got = Vec::new();
         buf.read_until(&mut got, |so_far, _is_eof| so_far.last() == Some(&b'l'))?;
+        // @lint-ignore SPELL
         assert_eq!(got, b"hel");
 
         buf.seek(std::io::SeekFrom::Start(0))?;

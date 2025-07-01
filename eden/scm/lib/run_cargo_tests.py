@@ -115,7 +115,7 @@ def runtest(
 
 
 def shorten_error_message(message: str) -> str:
-    r"""Shortern error message. Pick up 2 "error" blocks.
+    r"""Shorten error message. Pick up 2 "error" blocks.
 
     This can be useful when the error is super long (ex. 2k lines) because of a
     mismatched dependency somehow.

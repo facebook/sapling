@@ -48,7 +48,7 @@ pub enum SaplingRemoteApiError {
     NotSupported,
     #[error(transparent)]
     MissingCerts(#[from] auth::MissingCerts),
-    #[error("IncompeteResponse: {0}")]
+    #[error("IncompleteResponse: {0}")]
     IncompleteResponse(String),
 }
 

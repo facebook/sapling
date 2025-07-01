@@ -41,7 +41,7 @@ An example server configuration:
 * `includepattern` - a list of regex patterns matching files that should be kept remotely. Defaults to all files.
 * `excludepattern` - a list of regex patterns matching files that should not be kept remotely and should always be downloaded.
 * `pullprefetch` - a revset of commits whose file content should be prefetched after every pull. The most common value for this will be '(bookmark() + head()) & public()'. This is useful in environments where offline work is common, since it will enable offline updating to, rebasing to, and committing on every head and bookmark.
-* `stickypushpath` (default=True) - wether to fetch file revisions from the server that was just pushed from, this overrides fallbackpath in the case of a push and is used in cases where the read server might be lagging behind from the write master.
+* `stickypushpath` (default=True) - whether to fetch file revisions from the server that was just pushed from, this overrides fallbackpath in the case of a push and is used in cases where the read server might be lagging behind from the write master.
 
 An example client configuration:
 

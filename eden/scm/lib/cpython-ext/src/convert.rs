@@ -62,7 +62,7 @@ impl<T> Deref for BytesLike<T> {
     }
 }
 
-/// Wrapper type. Converts between pure Rust serde types and PyObjct.
+/// Wrapper type. Converts between pure Rust serde types and PyObject.
 ///
 /// In bindings code:
 /// - For input, use `v: Serde<MyType>` in definition, and `v.0` to extract

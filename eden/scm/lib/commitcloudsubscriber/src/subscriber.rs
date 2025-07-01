@@ -67,7 +67,7 @@ pub struct Subscription {
 ///             and restart if requested
 ///
 /// main use case:
-///   * if a cient (hg) add itself as a new subscriber (hg cloud join),
+///   * if a client (hg) add itself as a new subscriber (hg cloud join),
 ///     it is also client's responsibility to send "restart_subscriptions" command
 ///     same for unsubscribing (hg cloud leave)
 ///

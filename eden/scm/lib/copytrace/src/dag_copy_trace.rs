@@ -170,7 +170,7 @@ impl CopyTrace for DagCopyTrace {
         dst: Vertex,
         src_path: RepoPathBuf,
     ) -> Result<TraceResult> {
-        tracing::debug!(?src, ?dst, ?src_path, "trace_reanme");
+        tracing::debug!(?src, ?dst, ?src_path, "trace_rename");
 
         let msrc = self.vertex_to_tree_manifest(&src).await?;
         if msrc.get(&src_path)?.is_none() {

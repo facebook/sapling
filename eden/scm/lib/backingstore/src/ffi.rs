@@ -32,7 +32,7 @@ pub(crate) mod ffi {
     #[namespace = "facebook::eden"]
     #[repr(u8)]
     pub enum FetchCause {
-        // Lowest Prioity - Unknown orginination
+        // Lowest Priority - Unknown orginination
         Unknown,
         // The request originated from a Thrift prefetch endpoint
         Prefetch,

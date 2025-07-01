@@ -485,8 +485,7 @@ impl WorkingCopy {
                 .get_or_default("unsafe", "filtersuspectsymlink")
                 .unwrap_or_default()
         {
-            status_builder =
-                self.filter_accidential_symlink_changes(status_builder, p1_manifest)?;
+            status_builder = self.filter_accidental_symlink_changes(status_builder, p1_manifest)?;
         }
 
         // Calculate submodule status.
@@ -548,7 +547,7 @@ impl WorkingCopy {
     // Windows because we don't materialize symlinks in the working
     // copy. The comment in Python's _filtersuspectsymlink suggests it
     // can also happen on network mounts.
-    fn filter_accidential_symlink_changes(
+    fn filter_accidental_symlink_changes(
         &self,
         mut status_builder: StatusBuilder,
         manifest: &impl Manifest,
