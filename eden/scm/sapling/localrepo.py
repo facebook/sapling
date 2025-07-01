@@ -3224,7 +3224,7 @@ def aftertrans(reporef, files):
                 pass
 
         # Sync metalog references back to git references.
-        # This should happen after writng metalog.
+        # This should happen after writing metalog.
         repo = reporef()
         if repo is not None and git.isgitstore(repo):
             repo.changelog.inner.updatereferences(repo.metalog())

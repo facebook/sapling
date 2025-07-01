@@ -711,7 +711,7 @@ def _guesspushtobookmark(repo, pushnode, remotename):
     """try to guess the "push --to" bookmark name
 
     Find the remote name that starts with "{remotename}/" that does not have
-    another remotename descandant, and can fast-forward to pushnode (aka. is
+    another remotename descendant, and can fast-forward to pushnode (aka. is
     an ancestor of node) with the least distance.
 
     Return the name that can be used as "push --to", or None if there are no

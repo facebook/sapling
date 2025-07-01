@@ -266,6 +266,7 @@ pub fn run(ctx: ReqCtx<StatusOpts>, repo: &Repo, wc: &WorkingCopy) -> Result<u8>
 }
 
 pub fn aliases() -> &'static str {
+    // @lint-ignore SPELL
     "status|st|sta|stat|statu"
 }
 

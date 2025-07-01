@@ -89,7 +89,7 @@ def _handlecommandexception(orig, ui):
         ret = p.returncode
 
         # Python returns negative exit code for signal-terminated process. The
-        # shell converts singal-terminated process to a positive exit code by
+        # shell converts signal-terminated process to a positive exit code by
         # +128. Ctrl+C generates SIGTERM. Re-report the error unless the
         # process exits cleanly or is terminated by SIGTERM (Ctrl+C).
         ctrlc = (ret == signal.SIGTERM + 128) or (ret == -signal.SIGTERM)

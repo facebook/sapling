@@ -6,7 +6,7 @@
  */
 
 /// Manage a `Vec` of references. so elements with different lifetimes can be
-/// pushed manually, and poped automatically. Elements pushed later must have
+/// pushed manually, and popped automatically. Elements pushed later must have
 /// a more narrow lifetime than elements pushed earlier.
 ///
 /// Practically, instead of `vec![&'a T, &'a T, &'a, T, &'a T, ...]`,
@@ -143,7 +143,7 @@ impl<'a, T: ?Sized> AsRef<Vec<&'a T>> for VecStack<'a, T> {
     /// ```
     ///
     /// Panic if `as_ref` is called when a previously pushed element is
-    /// not poped (ex. the result of a previous `push` is not dropped).
+    /// not popped (ex. the result of a previous `push` is not dropped).
     ///
     /// ```
     /// # use treestate::vecstack::VecStack;

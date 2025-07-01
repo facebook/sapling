@@ -1744,7 +1744,7 @@ class ui:
 
 
 def _normalizepath(rawloc: str) -> str:
-    """normalize url for comparsion
+    """normalize url for comparison
 
     >>> def is_same(a, b):
     ...     return _normalizepath(a) == _normalizepath(b)

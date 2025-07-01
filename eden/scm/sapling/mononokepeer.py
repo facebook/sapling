@@ -14,7 +14,7 @@
 # through load balancing proxies.
 #
 # The wrapping protocol first prefixes a buffer with a single byte indicating
-# wether this is intended for stdin, stderr or stdout and then wrapping the
+# whether this is intended for stdin, stderr or stdout and then wrapping the
 # buffer inside a netstring encoding so that sender/receiver knows the bounds.
 #
 # More information on Netstring can be found at:
@@ -71,9 +71,9 @@ class mononokepipe:
 
         if decompress:
             self._ui.debug("zstd compression on the wire is enabled\n")
-            self._decompresser = zstd.zstream()
+            self._decompressor = zstd.zstream()
         else:
-            self._decompresser = None
+            self._decompressor = None
 
     def write(self, data):
         assert isinstance(data, bytes)
@@ -117,8 +117,8 @@ class mononokepipe:
                     % (r[segmentlength], NETSTRING_ENDING)
                 )
 
-            if self._decompresser:
-                segment = self._decompresser.decompress_buffer(segment)
+            if self._decompressor:
+                segment = self._decompressor.decompress_buffer(segment)
 
             if stdtype == IoStream.STDOUT.value:
                 return segment
@@ -405,7 +405,7 @@ class mononokepeer(stdiopeer.stdiopeer):
                     # protocol afterwards
                     self.handle = self.sock.makefile(mode="rwb")
 
-                # First line is wether request was successful
+                # First line is whether request was successful
                 line = self.handle.readline(1024).strip()
 
                 if self._verbose:

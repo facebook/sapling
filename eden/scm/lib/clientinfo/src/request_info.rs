@@ -299,7 +299,7 @@ mod tests {
     }
 
     #[test]
-    fn test_static_client_requst_info_with_env_vars() {
+    fn test_static_client_request_info_with_env_vars() {
         let correlator = "test1234";
         // TODO: Audit that the environment access only happens in single-threaded code.
         unsafe { set_var(ENV_SAPLING_CLIENT_CORRELATOR, correlator) };

@@ -107,7 +107,7 @@ pub struct RichCasClient {
     /// fetch_limit * fetch_concurrency is the maximum number of bytes to fetch in parallel, so memory usage is bounded.
     fetch_concurrency: usize,
     /// Whether to use streaming downloads or not for very large files (hundreds of MBs).
-    use_streaming_dowloads: bool,
+    use_streaming_downloads: bool,
     /// The path to the private cache (local cache).
     /// This mode is used for testing/benchmarking, and it is not used in production.
     /// This mode would define Rich client mode with its own local cache, the shared cache (CASd daemon) is not used.
@@ -215,7 +215,7 @@ impl RichCasClient {
             fetch_limit: config
                 .get_or::<ByteCount>("cas", "max-batch-bytes", || default_fetch_limit)?,
             fetch_concurrency: config.get_or("cas", "fetch-concurrency", || 4)?,
-            use_streaming_dowloads: config.get_or("cas", "use-streaming-downloads", || true)?,
+            use_streaming_downloads: config.get_or("cas", "use-streaming-downloads", || true)?,
             private_cache_path,
             private_cache_size,
             cas_success_tracker: CasSuccessTracker::new(CasSuccessTrackerConfig {
@@ -393,9 +393,9 @@ impl CasClient for RichCasClient {
             .map(move |digests| async move {
                 if !self.cas_success_tracker.allow_request()? {
                     tracing::debug!(target: "cas_client", "RichCasClient skip fetching {} {}(s)", digests.len(), log_name);
-                    return Err(anyhow!("skip cas fetching due to cas success tracker error rate limiting vioaltion"));
+                    return Err(anyhow!("skip cas fetching due to cas success tracker error rate limiting violation"));
                 }
-                if self.use_streaming_dowloads && digests.len() == 1 && digests.first().unwrap().size >= self.fetch_limit.value() {
+                if self.use_streaming_downloads && digests.len() == 1 && digests.first().unwrap().size >= self.fetch_limit.value() {
                     // Single large file, fetch it via the streaming API to avoid memory issues on CAS side.
                     let digest = digests.first().unwrap();
                     tracing::debug!(target: "cas_client", "RichCasClient streaming {} {}(s)", digests.len(), log_name);
@@ -546,7 +546,7 @@ impl CasClient for RichCasClient {
         .map(move |digests| async move {
             if !self.cas_success_tracker.allow_request()? {
                 tracing::debug!(target: "cas_client", "RichCasClient skip prefetching {} {}(s)", digests.len(), log_name);
-                return Err(anyhow!("skip cas prefetching due to cas success tracker error rate limiting vioaltion"));
+                return Err(anyhow!("skip cas prefetching due to cas success tracker error rate limiting violation"));
             }
 
             tracing::debug!(target: "cas_client", "RichCasClient prefetching {} {}(s)", digests.len(), log_name);

@@ -256,7 +256,7 @@ impl GitSegmentedCommits {
                             }
 
                             // If `id` is changed because of tag, re-calculate `should_import_to_dag`.
-                            // We caluclate `should_import_to_dag` first before reading tags, to
+                            // We calculate `should_import_to_dag` first before reading tags, to
                             // reduce overhead reading (known) non-tag objects.
                             if is_tag {
                                 should_import_to_dag = match existing_remotenames.get(*name) {

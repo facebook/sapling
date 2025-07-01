@@ -133,12 +133,12 @@ impl Zstore {
             return Ok(id);
         }
 
-        self.insert_arbitary(id, data, candidate_base_ids)?;
+        self.insert_arbitrary(id, data, candidate_base_ids)?;
         Ok(id)
     }
 
     /// Insert arbitrary data that might not match its SHA1 content.
-    pub fn insert_arbitary(
+    pub fn insert_arbitrary(
         &mut self,
         id: Id20,
         data: &[u8],
@@ -924,14 +924,14 @@ Chain Len| Depth |Subchain Len| Chain ID
     }
 
     #[test]
-    fn test_insert_arbitary() {
+    fn test_insert_arbitrary() {
         let dir = TempDir::new().unwrap();
         let mut zstore = Zstore::open(&dir).unwrap();
 
         let data1 = b"123456";
         let data2 = b"abcdef";
         let id1 = zstore.insert(&data1[..], &[]).unwrap();
-        zstore.insert_arbitary(id1, &data2[..], &[]).unwrap();
+        zstore.insert_arbitrary(id1, &data2[..], &[]).unwrap();
 
         assert_eq!(zstore.get(id1).unwrap().unwrap(), data2,);
     }

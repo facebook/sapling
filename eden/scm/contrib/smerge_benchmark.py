@@ -6,7 +6,7 @@
 """
 This script is for evaluating the performance of automerge (smart merge) algorithms.
 
-The script supports both git repsotiories and interal sapling repositories. Below
+The script supports both git repositories and internal sapling repositories. Below
 are the steps to use this script for the `git/git` repository, since it has many merge
 commits and it's faster to run the script on a local git repository.
 
@@ -158,7 +158,7 @@ def debugsmerge(ui, repo, *args, **opts):
 )
 def sresolve(ui, repo, *args, **opts):
     """
-    sresolve resolves file conficts based on the specified dest, src and base revisions.
+    sresolve resolves file conflicts based on the specified dest, src and base revisions.
 
     This is for manually verifying the correctness of merge conflict resolution. The input
     arguments order `<FILEPATH> <DEST> <SRC> <BASE>` matches the output of `smerge_bench`

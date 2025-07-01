@@ -9,7 +9,7 @@ import silenttestrunner
 from sapling import manifest as manifestmod, match as matchmod
 
 
-EMTPY_MANIFEST = b""
+EMPTY_MANIFEST = b""
 
 HASH_1 = b"1" * 40
 BIN_HASH_1 = binascii.unhexlify(HASH_1)
@@ -89,7 +89,7 @@ class basemanifesttests:
         raise NotImplementedError("parsemanifest not implemented by test case")
 
     def testEmptyManifest(self):
-        m = self.parsemanifest(EMTPY_MANIFEST)
+        m = self.parsemanifest(EMPTY_MANIFEST)
         self.assertEqual(0, len(m))
         self.assertEqual([], list(m))
 
@@ -106,7 +106,7 @@ class basemanifesttests:
     def testSetItem(self):
         want = BIN_HASH_1
 
-        m = self.parsemanifest(EMTPY_MANIFEST)
+        m = self.parsemanifest(EMPTY_MANIFEST)
         m["a"] = want
         self.assertIn("a", m)
         self.assertEqual(want, m["a"])
@@ -121,7 +121,7 @@ class basemanifesttests:
         want = "x"
         wantb = b"x"
 
-        m = self.parsemanifest(EMTPY_MANIFEST)
+        m = self.parsemanifest(EMPTY_MANIFEST)
         # first add a file; a file-less flag makes no sense
         m["a"] = BIN_HASH_1
         m.setflag("a", want)
@@ -240,14 +240,14 @@ class basemanifesttests:
             "foo": (MISSING, (BIN_HASH_3, "x")),
             "z-only-in-left": (MISSING, (BIN_HASH_1, "")),
         }
-        self.assertEqual(want, self.parsemanifest(EMTPY_MANIFEST).diff(left))
+        self.assertEqual(want, self.parsemanifest(EMPTY_MANIFEST).diff(left))
 
         want = {
             "bar/baz/qux.py": ((BIN_HASH_2, "l"), MISSING),
             "foo": ((BIN_HASH_3, "x"), MISSING),
             "z-only-in-left": ((BIN_HASH_1, ""), MISSING),
         }
-        self.assertEqual(want, left.diff(self.parsemanifest(EMTPY_MANIFEST)))
+        self.assertEqual(want, left.diff(self.parsemanifest(EMPTY_MANIFEST)))
         copy = right.copy()
         del copy["z-only-in-right"]
         del right["foo"]

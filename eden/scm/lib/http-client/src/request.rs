@@ -173,7 +173,7 @@ pub struct RequestContext {
 pub struct RequestId(usize);
 
 /// A builder struct for HTTP requests, designed to be
-/// a more egonomic API for setting up a curl handle.
+/// a more ergonomic API for setting up a curl handle.
 #[derive(Clone, Debug)]
 pub struct Request {
     ctx: RequestContext,
@@ -424,7 +424,7 @@ impl Request {
         self.headers.get_mut(&name.to_string().to_lowercase())
     }
 
-    /// Specify a client certificate for TLS mutual authentiation.
+    /// Specify a client certificate for TLS mutual authentication.
     ///
     /// This should be a path to a base64-encoded PEM file containing the
     /// client's X.509 certificate. When using a client certificate, the client
@@ -436,7 +436,7 @@ impl Request {
         self
     }
 
-    /// Specify a client certificate for TLS mutual authentiation.
+    /// Specify a client certificate for TLS mutual authentication.
     ///
     /// This should be a path to a base64-encoded PEM file containing the
     /// client's X.509 certificate. When using a client certificate, the client
@@ -448,7 +448,7 @@ impl Request {
         self
     }
 
-    /// Specify a client private key for TLS mutual authentiation.
+    /// Specify a client private key for TLS mutual authentication.
     ///
     /// This method can be used to specify the path to the client's private
     /// key if this key was not included in the certificate file specified via
@@ -458,7 +458,7 @@ impl Request {
         self
     }
 
-    /// Specify a client private key for TLS mutual authentiation.
+    /// Specify a client private key for TLS mutual authentication.
     ///
     /// This method can be used to specify the path to the client's private
     /// key if this key was not included in the certificate file specified via
@@ -1272,12 +1272,12 @@ mod tests {
     }
 
     const DUMMY_URL_STR: &str = "https://a.example.com/b";
-    const DUMMY_METOD: Method = Method::Get;
+    const DUMMY_METHOD: Method = Method::Get;
 
     impl RequestContext {
         /// Dummy RequestContext for testing.
         pub(crate) fn dummy() -> Self {
-            Self::new(Url::parse(DUMMY_URL_STR).unwrap(), DUMMY_METOD)
+            Self::new(Url::parse(DUMMY_URL_STR).unwrap(), DUMMY_METHOD)
         }
     }
 
@@ -1285,7 +1285,7 @@ mod tests {
     fn test_request_context() {
         let req = RequestContext::dummy();
         assert_eq!(req.url().as_str(), DUMMY_URL_STR);
-        assert_eq!(req.method(), &DUMMY_METOD);
+        assert_eq!(req.method(), &DUMMY_METHOD);
 
         let req2 = RequestContext::dummy();
         assert_ne!(req.id(), req2.id());

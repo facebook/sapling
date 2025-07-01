@@ -513,7 +513,7 @@ def _cleanuplanded(repo, dryrun=False):
         elif status == "Abandoned":
             # filter out unhidable nodes
             draftnodes = {node for node in draftnodes if node in visible_heads}
-            markedcount_abandoned += _process_abandonded(
+            markedcount_abandoned += _process_abandoned(
                 repo,
                 diffid,
                 draftnodes,
@@ -584,7 +584,7 @@ def _query_phabricator(repo, diffids, diff_status_list):
         )
 
 
-def _process_abandonded(
+def _process_abandoned(
     repo,
     diffid,
     draftnodes,

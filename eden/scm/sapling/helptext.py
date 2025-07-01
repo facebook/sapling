@@ -1716,7 +1716,7 @@ Setting used to control when to paginate and with what external tool. See
     Only affects streampager. Default: false.
 
 ``encoding``
-    Encoding to use to output to ther pager.
+    Encoding to use to output to the pager.
 
     If set, overrides the output encoding when sending output to the pager.
 
@@ -2505,7 +2505,7 @@ User interface controls.
     to release, but over time the recommended config settings
     shift. Enable this config to opt in to get automatic tweaks to
     @Product@'s behavior over time. This config setting will have no
-    effet if ``HGPLAIN` is set or ``HGPLAINEXCEPT`` is set and does
+    effect if ``HGPLAIN` is set or ``HGPLAINEXCEPT`` is set and does
     not include ``tweakdefaults``. (default: False)
 
 ``username``

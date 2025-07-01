@@ -431,6 +431,7 @@ def _iprompt(repo, mynode, orig, fcd, fco, fca, toolconf, labels=None):
         else:
             index = ui.promptchoice(
                 _(
+                    # @lint-ignore SPELL
                     "keep (l)ocal%(l)s, take (o)ther%(o)s, or leave (u)nresolved"
                     " for %(fd)s?"
                     "$$ &Local $$ &Other $$ &Unresolved"

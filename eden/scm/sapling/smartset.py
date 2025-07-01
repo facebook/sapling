@@ -557,7 +557,7 @@ class nameset(abstractsmartset):
       and GIL + async Rust might deadlock. In some cases, during Py_Finalize
       thread stack unwinding, we saw rust-cpython panic when the RGenerator
       is used, this hasn't been fully understood. It might be a good idea
-      to reduce or elimate generatorset usage.
+      to reduce or eliminate generatorset usage.
     """
 
     @property

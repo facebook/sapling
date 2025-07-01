@@ -182,7 +182,7 @@ impl Eq for PoolEntry {}
 ///
 /// In this case, when a `PoolEntry` is taken from the pool, it will only
 /// be used by a single thread, and returned only when it is dropped. As
-/// such, there is no risk of it being used by multiple theads at the same
+/// such, there is no risk of it being used by multiple threads at the same
 /// time, so it is safe to mark it as `Send`.
 ///
 /// [1]: https://curl.haxx.se/libcurl/c/threadsafe.html

@@ -145,7 +145,7 @@ impl IntersectionSet {
         Self { lhs, rhs, hints }
     }
 
-    fn is_rhs_id_map_comapatible(&self) -> bool {
+    fn is_rhs_id_map_compatible(&self) -> bool {
         let lhs_version = self.lhs.hints().id_map_version();
         let rhs_version = self.rhs.hints().id_map_version();
         lhs_version == rhs_version || (lhs_version > rhs_version && rhs_version > None)
@@ -155,7 +155,7 @@ impl IntersectionSet {
 #[async_trait::async_trait]
 impl AsyncSetQuery for IntersectionSet {
     async fn iter(&self) -> Result<BoxVertexStream> {
-        let stop_condition = if !self.is_rhs_id_map_comapatible() {
+        let stop_condition = if !self.is_rhs_id_map_compatible() {
             None
         } else if self.lhs.hints().contains(Flags::ID_ASC) {
             self.rhs.hints().max_id().map(|id| StopCondition {
@@ -181,7 +181,7 @@ impl AsyncSetQuery for IntersectionSet {
     }
 
     async fn iter_rev(&self) -> Result<BoxVertexStream> {
-        let stop_condition = if !self.is_rhs_id_map_comapatible() {
+        let stop_condition = if !self.is_rhs_id_map_compatible() {
             None
         } else if self.lhs.hints().contains(Flags::ID_DESC) {
             self.rhs.hints().max_id().map(|id| StopCondition {

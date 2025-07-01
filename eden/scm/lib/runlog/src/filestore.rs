@@ -78,7 +78,7 @@ impl FileStore {
     }
 
     pub(crate) fn close(&self, e: &Entry) -> Result<()> {
-        // Remove inconsequential, clean-exitting runlog entries immediately.
+        // Remove inconsequential, clean-exiting runlog entries immediately.
         if self.boring && e.exit_code == Some(0) {
             let path = self.dir.join(&e.id);
             remove_file_ignore_missing(path.with_extension(LOCK_EXT))?;

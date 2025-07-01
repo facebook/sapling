@@ -55,7 +55,7 @@ impl BfsIterPool {
             let work_send = work_send.downgrade();
             pool.execute(move || {
                 let res = BfsIterPool::run(work_recv, work_send);
-                tracing::debug!(?res, "bfs worker exitted");
+                tracing::debug!(?res, "bfs worker exited");
             });
         }
 

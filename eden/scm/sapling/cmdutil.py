@@ -977,7 +977,7 @@ def bailifchanged(repo, merge=True, hint=None):
         raise error.Abort(_("outstanding uncommitted merge"), hint=hint)
 
     if uncommittedchanges(repo):
-        raise error.UncommitedChangesAbort(_("uncommitted changes"), hint=hint)
+        raise error.UncommittedChangesAbort(_("uncommitted changes"), hint=hint)
 
 
 def logmessage(repo, opts):

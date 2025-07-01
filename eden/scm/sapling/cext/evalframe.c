@@ -7,13 +7,13 @@
 
 /*
 Use PEP 523 to insert a "pass through" function in the native stack to match
-Python stacks. The "pass thorugh" function keeps the frame state in its stack
+Python stacks. The "pass through" function keeps the frame state in its stack
 frame, so a native debugger may use it to read the Python stack, without
 waiting for the GIL, or python-debuginfo to parse inline information.
 
 The code is written in C instead of Rust because:
 - Related APIs are officially defined in `Python.h` and rapidly changing.
-- `NO_OPT` does not seem to have a Rust equvilent.
+- `NO_OPT` does not seem to have a Rust equivalent.
 
 To check if this compiles with multiple versions of Python, try:
 

@@ -2154,7 +2154,7 @@ def _prefetchlazychildren(repo, node):
             node = repo[node].node()
         dag = repo.changelog.dag
         if node in dag.mastergroup():
-            # See D30004908. Pre-calcualte children(node) so
+            # See D30004908. Pre-calculate children(node) so
             # commit on node is more offline friendly.
             try:
                 childrennodes = list(dag.children([node]))

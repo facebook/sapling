@@ -517,7 +517,7 @@ async fn test_log_merge_same_with_parent() {
 }
 
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
-async fn test_log_muti_heads_in_testing_range() {
+async fn test_log_multi_heads_in_testing_range() {
     // This test targets the plain "bisect" algorithm that was
     // tried before using segments. It is generally useful
     // for testing correctness.

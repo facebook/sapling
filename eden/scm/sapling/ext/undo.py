@@ -146,8 +146,8 @@ def _runcommandwrapper(orig, lui, repo, cmd, fullargs, *args):
             triggered.append(True)
             encoding.environ["_undologactive"] = "active"
 
-            # Check wether undolog is consistent
-            # ie check wether the undo ext was
+            # Check whether undolog is consistent
+            # ie check whether the undo ext was
             # off before this command
             changes = safelog(repo, [""])
             if changes:

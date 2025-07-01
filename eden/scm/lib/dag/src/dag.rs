@@ -1117,9 +1117,9 @@ where
 
                 // The client parent ids in the MASTER group.
                 let mut parent_client_ids = Vec::new();
-                let mut missng_parent_server_ids = Vec::new();
+                let mut missing_parent_server_ids = Vec::new();
 
-                // Calculate `parent_client_ids`, and `missng_parent_server_ids`.
+                // Calculate `parent_client_ids`, and `missing_parent_server_ids`.
                 // Intentionally using `new.map` not `new` to bypass remote lookups.
                 {
                     let client_id_res = new.map.vertex_id_batch(&parent_names).await?;
@@ -1136,19 +1136,19 @@ where
                                 parent_client_ids.push(id);
                             }
                             Err(crate::Error::VertexNotFound(_)) => {
-                                missng_parent_server_ids.push(server_id);
+                                missing_parent_server_ids.push(server_id);
                             }
                             Err(e) => return Err(e),
                         }
                     }
                 }
 
-                if !missng_parent_server_ids.is_empty() {
+                if !missing_parent_server_ids.is_empty() {
                     // Parents are not ready. Needs revisit this segment after inserting parents.
                     stack.push(server_high);
                     // Insert missing parents.
                     // First parent, first insertion.
-                    for &server_id in missng_parent_server_ids.iter().rev() {
+                    for &server_id in missing_parent_server_ids.iter().rev() {
                         stack.push(server_id);
                     }
                     continue;

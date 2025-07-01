@@ -178,7 +178,7 @@ def _listify(value):
         return [value]
 
 
-def preapre_script_env_and_output():
+def prepare_script_env_and_output():
     """Prepare the environments to run Python logic in drawdag.
     Return (globals, output).
     globals define functions usable by drawdag Python code (user input).
@@ -579,7 +579,7 @@ def _drawdagintransaction(repo, text: str, tr, **opts) -> None:
                 tohide -= {n}
 
     # run user script for more flexible overrides
-    global_env, output = preapre_script_env_and_output()
+    global_env, output = prepare_script_env_and_output()
     if script:
         exec(script, global_env)
 
