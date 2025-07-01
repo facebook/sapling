@@ -248,7 +248,7 @@ impl File {
             .and_then(|s| {
                 let prefix_len = SHA256_PREFIX.len();
 
-                let check = prefix_len <= s.len() && s[..prefix_len].as_bytes() == SHA256_PREFIX;
+                let check = prefix_len <= s.len() && &s.as_bytes()[..prefix_len] == SHA256_PREFIX;
                 if check {
                     Some(s[prefix_len..].to_string())
                 } else {

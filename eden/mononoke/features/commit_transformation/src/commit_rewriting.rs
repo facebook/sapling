@@ -61,9 +61,9 @@ This commit created by squashing the following git commits:
 /// The return value can be:
 /// - `Err` if the rewrite failed
 /// - `Ok(None)` if the rewrite decided that this commit should
-///              not be present in the rewrite target
+///   not be present in the rewrite target
 /// - `Ok(Some(rewritten))` for a successful rewrite, which should be
-///                         present in the rewrite target
+///   present in the rewrite target
 ///
 /// The notion that the commit "should not be present in the rewrite
 /// target" means that the commit is not a merge and all of its changes

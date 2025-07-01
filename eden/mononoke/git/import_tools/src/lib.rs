@@ -996,7 +996,7 @@ pub async fn import_tree_as_single_bonsai_changeset<Uploader: GitUploader>(
                 .map_ok(|batch| {
                     batch
                         .into_iter()
-                        .last()
+                        .next_back()
                         .expect("Finalize batch should produce a changeset for each sha1")
                         .1
                 })

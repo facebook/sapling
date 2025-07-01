@@ -251,9 +251,9 @@ pub struct CommitRewriteResult {
     /// small repo sync config (e.g. expanded, stripped).
     ///
     /// - `None` if the rewrite decided that this commit should
-    ///              not be present in the rewrite target
+    ///   not be present in the rewrite target
     /// - `Some(rewritten)` for a successful rewrite, which should be
-    ///                         present in the rewrite target
+    ///   present in the rewrite target
     pub rewritten: Option<BonsaiChangesetMut>,
     /// Map from submodule dependency repo to all the file changes that have
     /// to be copied from its blobstore to the large repo's blobstore for the

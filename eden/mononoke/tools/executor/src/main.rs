@@ -31,7 +31,7 @@ use tokio::time;
 /// The application can be used to validate:
 /// -> Proper repo distribution according to assigned weights.
 /// -> Sanity check of core functionality for target BP before onboarding.
-
+///
 /// Struct representing the Background Process that needs to be executed
 /// by the Mononoke Sharded Process Manager. This struct can contain state
 /// that applies to all repos and need to be one-time initialized. Examples

@@ -6,7 +6,6 @@
  */
 
 use std::fmt::Debug;
-use std::mem;
 
 use anyhow::Result;
 use bytes::Bytes;

@@ -244,9 +244,7 @@ pub trait MegarepoOp<R> {
             Result::<_, Error>::Ok(hg_cs.manifestid())
         }));
 
-        let (hg_cs_merge, parent_hg_css) = try_join(hg_cs_merge, parent_hg_css)
-            .await
-            .map_err(Error::from)?;
+        let (hg_cs_merge, parent_hg_css) = try_join(hg_cs_merge, parent_hg_css).await?;
 
         let file_changes = bonsai_diff(
             ctx.clone(),

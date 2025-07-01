@@ -43,7 +43,6 @@ use repo_blobstore::RepoBlobstoreRef;
         .required(true)
         .args(&["git", "svnrev"]),
 ))]
-
 struct BackFillArgs {
     #[clap(flatten)]
     repo: RepoArgs,

@@ -615,7 +615,6 @@ impl HgAugmentedManifestEnvelope {
     }
 
     /// The next 3 functions are used to generate the content addressed manifest blob to store in content addressed store.
-
     pub fn augmented_manifest_id(&self) -> Blake3 {
         self.augmented_manifest_id
     }

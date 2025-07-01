@@ -369,7 +369,6 @@ impl RevlogEntry {
                     nodeid
                 ))
             })
-            .map_err(Error::from)
             .into_future()
             .boxify()
     }
@@ -380,7 +379,6 @@ impl RevlogEntry {
 
         revlog
             .and_then(|revlog| revlog.is_ext_by_nodeid(nodeid))
-            .map_err(Error::from)
             .into_future()
             .boxify()
     }
@@ -427,7 +425,6 @@ impl RevlogEntry {
                     nodeid
                 ))
             })
-            .map_err(Error::from)
             .into_future()
             .boxify()
     }

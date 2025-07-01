@@ -118,12 +118,12 @@ impl AuthorizationContext {
         repo_name: &str,
         denied_action: DeniedAction,
     ) -> AuthorizationError {
-        AuthorizationError::from(PermissionDenied {
+        AuthorizationError::from(Box::new(PermissionDenied {
             denied_action,
             denied_repo_name: repo_name.to_string(),
             context: self.clone(),
             identities: ctx.metadata().identities().clone(),
-        })
+        }))
     }
 
     /// Create a permission denied error for a particular action.

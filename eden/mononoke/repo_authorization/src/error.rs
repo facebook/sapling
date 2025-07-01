@@ -102,7 +102,7 @@ impl std::error::Error for PermissionDenied {}
 #[derive(Debug, Error)]
 pub enum AuthorizationError {
     #[error(transparent)]
-    PermissionDenied(#[from] PermissionDenied),
+    PermissionDenied(#[from] Box<PermissionDenied>),
 
     #[error(transparent)]
     Error(#[from] Error),

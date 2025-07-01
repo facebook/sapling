@@ -1212,7 +1212,7 @@ mod test_parse {
     /// Common code for testing parsing:
     /// - check all truncated inputs return "Ok(None)"
     /// - complete inputs return the expected result, and leave any remainder in
-    ///    the input buffer.
+    ///   the input buffer.
     fn test_parse<I: AsRef<[u8]> + Debug>(inp: I, exp: Request) {
         test_parse_with_extra(inp, exp, b"extra")
     }

@@ -114,7 +114,7 @@ struct Deriver<TreeId, LeafChange, T, L, Store> {
     create_leaf: L,
 }
 
-impl<'caller, LeafChange, TreeId, Leaf, T, TFut, L, LFut, Ctx, Store>
+impl<LeafChange, TreeId, Leaf, T, TFut, L, LFut, Ctx, Store>
     Deriver<TreeId, LeafChange, T, L, Store>
 where
     Store: Sync + Send + Clone + 'static,
@@ -130,9 +130,9 @@ where
         + Send
         + Sync
         + 'static,
-    TFut: Future<Output = Result<(Ctx, TreeId)>> + Send + 'caller,
+    TFut: Future<Output = Result<(Ctx, TreeId)>> + Send,
     L: Fn(LeafInfo<Leaf, LeafChange>, ChangesetId) -> LFut + Send + Sync + 'static,
-    LFut: Future<Output = Result<(Ctx, Leaf)>> + Send + 'caller,
+    LFut: Future<Output = Result<(Ctx, Leaf)>> + Send,
     <TreeId::Value as Manifest<Store>>::TrieMapType: Clone,
     Ctx: Clone + Send + Sync + 'static,
 {
