@@ -616,7 +616,7 @@ async fn process_tags<Uploader: GitUploader, Reader: GitReader>(
     uploader: Arc<Uploader>,
     reader: Arc<Reader>,
 ) -> anyhow::Result<()> {
-    let new_or_updated_tag = existing_tags.get(name).map_or(true, |tag_hash| {
+    let new_or_updated_tag = existing_tags.get(name).is_none_or(|tag_hash| {
         if let Ok(new_hash) = GitSha1::from_object_id(&tag_id) {
             *tag_hash != new_hash
         } else {

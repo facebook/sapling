@@ -307,7 +307,7 @@ async fn back_sync_commits_to_small_repo(
             let maybe_synced_cs_id = unsafe_sync_commit(
                 ctx,
                 ancestor,
-                &large_to_small_syncer,
+                large_to_small_syncer,
                 CandidateSelectionHint::Only,
                 CommitSyncContext::RepoImport,
                 Some(version.clone()),

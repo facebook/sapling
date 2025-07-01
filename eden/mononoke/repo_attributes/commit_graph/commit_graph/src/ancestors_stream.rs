@@ -207,7 +207,7 @@ impl AncestorsStreamBuilder {
                                 // because the skip tree parent is the common ancestor of all parents, and since
                                 // the current changeset is a descendant of descendants_of, all of its parents
                                 // will also be descendants of it.
-                                if !edges.skip_tree_parent.map_or(false, |skip_tree_parent| {
+                                if !edges.skip_tree_parent.is_some_and(|skip_tree_parent| {
                                     skip_tree_parent.generation >= *descendants_of_gen
                                 }) && !commit_graph
                                     .is_ancestor(ctx, *descendants_of, parent.cs_id)

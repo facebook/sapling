@@ -61,7 +61,7 @@ where
     F: Fn(&'a [u8]) -> Result<T>,
 {
     match lines.next() {
-        Some(s) => parse(s).map_err(Into::into),
+        Some(s) => parse(s),
         None => bail!("premature end"),
     }
 }

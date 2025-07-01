@@ -282,7 +282,7 @@ impl MutableRenames {
 
                 let res = caching_ext::get_or_fill(&cache, keys).await?;
 
-                Ok(res.get(&dst_cs_id).map_or(false, |r| r.0))
+                Ok(res.get(&dst_cs_id).is_some_and(|r| r.0))
             }
         }
     }

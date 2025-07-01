@@ -118,12 +118,13 @@ impl MononokeScubaSampleBuilder {
     pub fn should_log_with_level(&self, level: ScubaVerbosityLevel) -> bool {
         match level {
             ScubaVerbosityLevel::Normal => true,
-            ScubaVerbosityLevel::Verbose => self
-                .maybe_observability_context
-                .as_ref()
-                .map_or(false, |octx| {
-                    octx.should_log_scuba_sample(level, self.get_logging_decision_fields())
-                }),
+            ScubaVerbosityLevel::Verbose => {
+                self.maybe_observability_context
+                    .as_ref()
+                    .is_some_and(|octx| {
+                        octx.should_log_scuba_sample(level, self.get_logging_decision_fields())
+                    })
+            }
         }
     }
 

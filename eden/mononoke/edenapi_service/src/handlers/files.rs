@@ -311,8 +311,7 @@ pub async fn upload_file(state: &mut State) -> Result<impl TryIntoResponse + use
 
     let (body, content_size) = match compression.as_deref() {
         Some("zstd") => {
-            let body =
-                body.map_err(|e| std::io::Error::new(std::io::ErrorKind::Other, format!("{e:?}")));
+            let body = body.map_err(|e| std::io::Error::other(format!("{e:?}")));
             let decoder = ZstdDecoder::new(tokio_util::io::StreamReader::new(body));
             let body = tokio_util::io::ReaderStream::new(decoder).map_err(|e| e.into());
             Ok((body.left_stream(), content_size))

@@ -188,7 +188,7 @@ pub(crate) async fn derive_unode_manifest_with_subtree_changes(
                     // covered by either of those two cases.
                     let changed_paths = Arc::new(changed_paths);
                     let filter_changed_paths =
-                        move |path: &MPath| changed_paths.get(path).map_or(true, |x| !x);
+                        move |path: &MPath| changed_paths.get(path).is_none_or(|x| !x);
                     from_unode
                         .find_entries_filtered(
                             ctx.clone(),

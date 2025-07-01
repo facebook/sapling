@@ -119,7 +119,7 @@ impl SkewAncestorsSet {
     pub fn contains_ancestor(&self, cs_id: ChangesetId) -> bool {
         self.skew_ancestors_counts
             .get(&cs_id)
-            .map_or(false, |count| *count > 0)
+            .is_some_and(|count| *count > 0)
     }
 
     /// Removes and returns the highest generation number from the set and all changesets
@@ -265,14 +265,10 @@ impl CommitGraph {
             if let Some(heads_generation) = heads_skew_ancestors_set.highest_generation() {
                 if frontier
                     .last_key_value()
-                    .map_or(true, |(frontier_generation, _)| {
-                        heads_generation >= *frontier_generation
-                    })
+                    .is_none_or(|(frontier_generation, _)| heads_generation >= *frontier_generation)
                     && common_skew_ancestors_set
                         .highest_generation()
-                        .map_or(true, |common_generation| {
-                            heads_generation >= common_generation
-                        })
+                        .is_none_or(|common_generation| heads_generation >= common_generation)
                 {
                     if let Some((generation, heads)) = heads_skew_ancestors_set.pop_last() {
                         for cs_id in heads {

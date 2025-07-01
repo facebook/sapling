@@ -660,7 +660,7 @@ impl Convert for RawWalkerJobParams {
             scheduled_max_concurrency: self.scheduled_max_concurrency,
             qps_limit: self.qps_limit,
             exclude_node_type: self.exclude_node_type,
-            allow_remaining_deferred: self.allow_remaining_deferred.map_or(false, |v| v),
+            allow_remaining_deferred: self.allow_remaining_deferred.is_some_and(|v| v),
             error_as_node_data_type: self.error_as_node_data_type,
         })
     }

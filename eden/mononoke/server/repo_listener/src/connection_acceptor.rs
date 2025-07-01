@@ -465,7 +465,7 @@ impl ChannelConn {
                 futures::pin_mut!(wr);
 
                 let res = stream::select(orx, stream::select(erx, krx))
-                    .map_err(|()| io::Error::new(io::ErrorKind::Other, "huh?"))
+                    .map_err(|()| io::Error::other("huh?"))
                     .forward(wr.as_mut())
                     .await;
 

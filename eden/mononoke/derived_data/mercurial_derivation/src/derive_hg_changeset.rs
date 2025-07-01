@@ -478,10 +478,7 @@ async fn generate_hg_changeset(
     // Keep a record of any parents for now (i.e. > 2 parents). We'll store those in extras.
     let step_parents = parents;
 
-    let files = if subtree_changes
-        .as_ref()
-        .map_or(true, |s| s.copies.is_empty())
-    {
+    let files = if subtree_changes.as_ref().is_none_or(|s| s.copies.is_empty()) {
         compute_changed_files(
             ctx.clone(),
             blobstore.clone(),

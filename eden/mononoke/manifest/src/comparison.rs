@@ -131,7 +131,7 @@ where
                     if base_mf_trie_maps.is_empty()
                         || base_mf_trie_maps
                             .iter()
-                            .all(|parent| parent.as_ref().map_or(true, TrieMapOps::is_empty))
+                            .all(|parent| parent.as_ref().is_none_or(TrieMapOps::is_empty))
                     {
                         return Ok((
                             stream::iter(vec![Ok(ManifestComparison::ManyNew(
@@ -218,7 +218,7 @@ where
                         } else if !child_base_mfs.is_empty()
                             && !child_base_mfs
                                 .iter()
-                                .all(|parent| parent.as_ref().map_or(true, TrieMapOps::is_empty))
+                                .all(|parent| parent.as_ref().is_none_or(TrieMapOps::is_empty))
                         {
                             out.push(Ok(ManifestComparison::ManyRemoved(prefix, child_base_mfs)));
                         }

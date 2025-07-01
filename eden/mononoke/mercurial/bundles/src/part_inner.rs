@@ -162,7 +162,7 @@ pub(crate) fn inner_stream<R: AsyncBufRead + Send + 'static>(
 ) {
     let wrapped_stream = stream
         .try_take_while(|frame| {
-            futures::future::ok(frame.as_ref().map_or(false, |frame| frame.is_payload()))
+            futures::future::ok(frame.as_ref().is_ok_and(|frame| frame.is_payload()))
         })
         .map_ok(|frame| frame.unwrap().get_payload());
     let (wrapped_stream, remainder) = wrapped_stream.return_remainder();
