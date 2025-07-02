@@ -37,7 +37,14 @@ impl PathLock {
     pub fn exclusive<P: AsRef<Path>>(path: P) -> io::Result<Self> {
         let file = open_lockfile(path.as_ref())?;
         fs2::FileExt::lock_exclusive(file.file())
-            .path_context("error locking file", path.as_ref())?;
+            .path_context("error exclusive locking file", path.as_ref())?;
+        Ok(PathLock { file })
+    }
+
+    pub fn shared<P: AsRef<Path>>(path: P) -> io::Result<Self> {
+        let file = open_lockfile(path.as_ref())?;
+        fs2::FileExt::lock_shared(file.file())
+            .path_context("error shared locking file", path.as_ref())?;
         Ok(PathLock { file })
     }
 
@@ -85,6 +92,12 @@ pub fn open_lockfile<P: AsRef<Path>>(path: P) -> io::Result<File> {
 pub fn try_lock_exclusive<P: AsRef<Path>>(path: P) -> io::Result<File> {
     let file = open_lockfile(path.as_ref())?;
     fs2::FileExt::try_lock_exclusive(file.file())?;
+    Ok(file)
+}
+
+pub fn try_lock_shared<P: AsRef<Path>>(path: P) -> io::Result<File> {
+    let file = open_lockfile(path.as_ref())?;
+    fs2::FileExt::try_lock_shared(file.file())?;
     Ok(file)
 }
 pub struct ContentLock {
@@ -161,8 +174,8 @@ impl ContentLock {
         if !self.dir_lock_path.try_exists()? || !self.lock_path.try_exists()? {
             return Ok(());
         }
-        let _dir_lock = PathLock::exclusive(&self.dir_lock_path)?;
-        match try_lock_exclusive(&self.lock_path) {
+        let _dir_lock = PathLock::shared(&self.dir_lock_path)?;
+        match try_lock_shared(&self.lock_path) {
             Ok(_) => Ok(()),
             Err(err) if err.kind() == fs2::lock_contended_error().kind() => {
                 let contents = fs_err::read(&self.content_path)?;
@@ -270,6 +283,41 @@ mod tests {
         assert!(unlock_res.is_err());
         #[cfg(unix)]
         assert!(unlock_res.is_ok());
+        Ok(())
+    }
+
+    #[test]
+    fn test_shared_lock() -> anyhow::Result<()> {
+        let dir = tempfile::tempdir()?;
+        let path = dir.path().join("a");
+        let _shared_lock = PathLock::shared(&path)?;
+        let _shared_lock2 = PathLock::shared(&path)?;
+        let _shared_lock3 = PathLock::shared(&path)?;
+
+        let content_lock = ContentLock::new(&path);
+        let _ = content_lock.check_lock()?;
+        let _ = content_lock.check_lock()?;
+        let _ = content_lock.check_lock()?;
+
+        Ok(())
+    }
+
+    #[test]
+    fn test_content_lock() -> anyhow::Result<()> {
+        let dir = tempfile::tempdir()?;
+        let path = dir.path().join("a");
+        let content_lock = ContentLock::new(&path);
+        let _locked = content_lock.try_lock(b"foo")?;
+        let contents = content_lock.check_lock().unwrap_err();
+        assert!(contents.is_contended());
+        match contents {
+            ContentLockError::Contended(err) => {
+                assert_eq!(err.path, path);
+                assert_eq!(err.contents, b"foo");
+            }
+            _ => panic!("Expected a Contended error"),
+        }
+
         Ok(())
     }
 }
