@@ -957,7 +957,7 @@ def debuginternusername(ui, **opts):
     ui.write("%s\n" % name)
 
 
-def graphqlgetdiff(repo, diffid):
+def graphqlgetdiff(repo, diffid, version=None):
     """Resolves a phabricator Diff number to a commit hash of it's latest version"""
     if util.istest():
         hexnode = repo.ui.config("phrevset", "mock-D%s" % diffid)
@@ -982,7 +982,7 @@ def graphqlgetdiff(repo, diffid):
     timeout = repo.ui.configint("ssl", "timeout", 10)
     try:
         client = graphql.Client(repodir=os.getcwd(), repo=repo)
-        return client.getdifflatestversion(timeout, diffid)
+        return client.getdiffversion(timeout, diffid, version=version)
     except Exception as e:
         raise error.Abort(
             "Could not call phabricator graphql API: %s" % e,
@@ -1037,15 +1037,15 @@ def localgetdiff(repo, diffid):
     return None
 
 
-def search(repo, diffid):
+def search(repo, diffid, version=None):
     """Perform a GraphQL query first. If it fails, fallback to local search.
 
     Returns (node, None) or (None, graphql_response) tuple.
     """
 
     repo.ui.debug("[diffrev] Starting graphql call\n")
-    if repo.ui.configbool("phrevset", "graphqlonly"):
-        return (None, graphqlgetdiff(repo, diffid))
+    if repo.ui.configbool("phrevset", "graphqlonly") or version:
+        return (None, graphqlgetdiff(repo, diffid, version=version))
 
     try:
         return (None, graphqlgetdiff(repo, diffid))
@@ -1090,7 +1090,7 @@ def parsedesc(repo, resp, ignoreparsefailure):
 
 
 @util.lrucachefunc
-def diffidtonode(repo, diffid, localreponame=None):
+def diffidtonode(repo, diffid, localreponame=None, version=None):
     """Return node that matches a given Differential ID or None.
 
     The node might exist or not exist in the repo.
@@ -1108,7 +1108,7 @@ def diffidtonode(repo, diffid, localreponame=None):
             repo.ui.warn(_("Could not find diff D%s in changelog\n") % diffid)
         return node
 
-    node, resp = search(repo, diffid)
+    node, resp = search(repo, diffid, version=version)
 
     if node is not None:
         # The log walk found the diff, nothing more to do
@@ -1264,9 +1264,9 @@ def _try_parse_diffid_version(name):
 
 
 def _lookupname(repo, name):
-    if name.startswith("D") and name[1:].isdigit():
-        diffid = name[1:]
-        node = diffidtonode(repo, diffid)
+    if diffid_version := _try_parse_diffid_version(name):
+        diffid, version = diffid_version
+        node = diffidtonode(repo, diffid, version=version)
         if node is not None and node in repo:
             return [node]
     return []
@@ -1292,17 +1292,18 @@ def _autopullphabdiff(
     if not repo.ui.configbool("phrevset", "autopull"):
         return
 
-    if (
-        name.startswith("D")
-        and name[1:].isdigit()
-        and (rewritepullrev or name not in repo)
+    if (diffid_version := _try_parse_diffid_version(name)) and (
+        rewritepullrev or name not in repo
     ):
-        diffid = name[1:]
-        node = diffidtonode(repo, diffid)
+        diffid, version = diffid_version
+        node = diffidtonode(repo, diffid, version=version)
         if node and (rewritepullrev or node not in repo):
             # Attempt to pull it. This also rewrites "pull -r Dxxx" to "pull -r
             # HASH".
-            friendlyname = "D%s (%s)" % (diffid, hex(node))
+            if version:
+                friendlyname = "D%s%s (%s)" % (diffid, version, hex(node))
+            else:
+                friendlyname = "D%s (%s)" % (diffid, hex(node))
             return autopull.pullattempt(headnodes=[node], friendlyname=friendlyname)
 
 

@@ -144,7 +144,7 @@ class Client:
                 rev_numbers.append(int(r))
         return [int(x) for x in rev_numbers]
 
-    def getdifflatestversion(self, timeout, diffid, version=None):
+    def getdiffversion(self, timeout, diffid, version=None):
         query = """
             query DiffLastVersionDescriptionQuery($diffid: String!){
               phabricator_diff_query(query_params: {
