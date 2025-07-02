@@ -29,6 +29,17 @@ pub fn init_module(py: Python, package: &str) -> PyResult<PyModule> {
         py_fn!(py, cbor_dumps(value: Serde<serde_cbor::Value>)),
     )?;
 
+    m.add(
+        py,
+        "mincode_loads",
+        py_fn!(py, mincode_loads(data: PyBytes)),
+    )?;
+    m.add(
+        py,
+        "mincode_dumps",
+        py_fn!(py, mincode_dumps(value: Vec<i64>)),
+    )?;
+
     Ok(m)
 }
 
@@ -59,5 +70,16 @@ fn cbor_loads(py: Python, data: PyBytes) -> PyResult<Serde<serde_cbor::Value>> {
 fn cbor_dumps(py: Python, value: Serde<serde_cbor::Value>) -> PyResult<PyBytes> {
     let cbor = serde_cbor::to_vec(&value.0).map_pyerr(py)?;
     let bytes = PyBytes::new(py, &cbor);
+    Ok(bytes)
+}
+
+fn mincode_loads(py: Python, data: PyBytes) -> PyResult<Vec<i64>> {
+    let value = mincode::deserialize(data.data(py)).map_pyerr(py)?;
+    Ok(value)
+}
+
+fn mincode_dumps(py: Python, value: Vec<i64>) -> PyResult<PyBytes> {
+    let mincode = mincode::serialize(&value).map_pyerr(py)?;
+    let bytes = PyBytes::new(py, &mincode);
     Ok(bytes)
 }

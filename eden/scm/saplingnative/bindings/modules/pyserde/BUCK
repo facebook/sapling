@@ -11,5 +11,6 @@ rust_python_library(
         "fbsource//third-party/rust:serde_json",
         "fbsource//third-party/rust:toml",
         "//eden/scm/lib/cpython-ext:cpython-ext",
+        "//eden/scm/lib/mincode:mincode",
     ],
 )
