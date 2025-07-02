@@ -18,6 +18,7 @@ import {
   expectMessageNOTSentToServer,
   expectMessageSentToServer,
   fireMouseEvent,
+  getLastMessageOfTypeSentToServer,
   resetTestMessages,
   simulateCommits,
   simulateMessageFromServer,
@@ -126,15 +127,28 @@ describe('Image upload inside TextArea ', () => {
   });
 
   describe('Image upload UI', () => {
-    async function startFileUpload(id: string) {
-      const randomIdSpy = jest.spyOn(utils, 'randomId');
-      randomIdSpy.mockImplementationOnce(() => id);
+    async function startFileUpload() {
+      // Get the previous upload message (if any) to avoid race conditions
+      const previousMessage = getLastMessageOfTypeSentToServer('uploadFile');
+      const previousId = previousMessage?.id;
+
       const uploadButton = screen.getAllByTestId('attach-file-input')[0];
       act(() => void userEvent.upload(uploadButton, [mockFile]));
-      await waitFor(() =>
-        expectMessageSentToServer(expect.objectContaining({type: 'uploadFile', id})),
-      );
-      randomIdSpy.mockRestore();
+
+      // Wait for a NEW upload message that's different from the previous one
+      const message = await waitFor(() => {
+        const latestMessage = utils.nullthrows(getLastMessageOfTypeSentToServer('uploadFile'));
+        // If this is the first upload or the ID is different from the previous one, we're good
+        if (!previousId || latestMessage.id !== previousId) {
+          return latestMessage;
+        }
+        // Otherwise, throw to keep waiting
+        throw new Error('Still waiting for new upload message');
+      });
+
+      const id = message.id;
+      expectMessageSentToServer(expect.objectContaining({type: 'uploadFile', id}));
+      return id;
     }
 
     async function simulateUploadSucceeded(id: string) {
@@ -163,44 +177,43 @@ describe('Image upload inside TextArea ', () => {
 
     it('shows placeholder when uploading an image', async () => {
       expect(descriptionTextContent()).not.toContain('Uploading');
-      await startFileUpload('1111');
+      await startFileUpload();
       expect(descriptionTextContent()).toContain('Uploading #1');
     });
 
     it('sends a message to the server to upload the file', async () => {
-      jest.spyOn(utils, 'randomId').mockImplementation(() => '1111');
-      await startFileUpload('1111');
+      const id = await startFileUpload();
       expectMessageSentToServer({
         type: 'uploadFile',
         filename: 'file.png',
-        id: '1111',
+        id,
         b64Content: mockFileContentInBase64,
       });
     });
 
     it('removes placeholder when upload succeeds', async () => {
-      await startFileUpload('1111');
+      const id = await startFileUpload();
       expect(descriptionTextContent()).toContain('Uploading #1');
-      await simulateUploadSucceeded('1111');
+      await simulateUploadSucceeded(id);
       expect(descriptionTextContent()).not.toContain('Uploading #1');
-      expect(descriptionTextContent()).toContain('https://image.example.com/1111');
+      expect(descriptionTextContent()).toContain(`https://image.example.com/${id}`);
     });
 
     it('removes placeholder when upload fails', async () => {
-      await startFileUpload('1111');
+      const id = await startFileUpload();
       expect(descriptionTextContent()).toContain('Uploading #1');
-      await simulateUploadFailed('1111');
+      await simulateUploadFailed(id);
       expect(descriptionTextContent()).not.toContain('Uploading #1');
       expect(descriptionTextContent()).not.toContain('https://image.example.com');
     });
 
     it('shows progress of ongoing uploads', async () => {
-      await startFileUpload('1111');
+      await startFileUpload();
       expect(screen.getByText('Uploading 1 file')).toBeInTheDocument();
     });
 
     it('click to cancel upload', async () => {
-      await startFileUpload('1111');
+      await startFileUpload();
       expect(screen.getByText('Uploading 1 file')).toBeInTheDocument();
       act(() => {
         fireEvent.mouseOver(screen.getByText('Uploading 1 file'));
@@ -215,39 +228,40 @@ describe('Image upload inside TextArea ', () => {
     });
 
     it('clears hover state when cancelling', async () => {
-      await startFileUpload('1111');
+      await startFileUpload();
       act(() => void fireEvent.mouseOver(screen.getByText('Uploading 1 file')));
       act(() => void fireEvent.click(screen.getByText('Click to cancel')));
-      await startFileUpload('2222');
+      await startFileUpload();
       expect(screen.queryByText('Uploading 1 file')).toBeInTheDocument();
     });
 
     it('shows upload errors', async () => {
-      await startFileUpload('1111');
-      await simulateUploadFailed('1111');
+      const id = await startFileUpload();
+      await simulateUploadFailed(id);
       expect(screen.getByText('1 file upload failed')).toBeInTheDocument();
       fireEvent.click(screen.getByTestId('dismiss-upload-errors'));
       expect(screen.queryByText('1 file upload failed')).not.toBeInTheDocument();
     });
 
     it('handles multiple placeholders', async () => {
-      await startFileUpload('1111');
+      const id1 = await startFileUpload();
       expect(screen.getByText('Uploading 1 file')).toBeInTheDocument();
-      await startFileUpload('2222');
+      const id2 = await startFileUpload();
       expect(screen.getByText('Uploading 2 files')).toBeInTheDocument();
+      expect(id1).not.toEqual(id2);
 
       expect(descriptionTextContent()).toContain('Uploading #1');
       expect(descriptionTextContent()).toContain('Uploading #2');
-      await simulateUploadSucceeded('1111');
+      await simulateUploadSucceeded(id1);
       expect(descriptionTextContent()).not.toContain('Uploading #1');
       expect(descriptionTextContent()).toContain('Uploading #2');
 
-      expect(descriptionTextContent()).toContain('https://image.example.com/1111');
-      expect(descriptionTextContent()).not.toContain('https://image.example.com/2222');
+      expect(descriptionTextContent()).toContain(`https://image.example.com/${id1}`);
+      expect(descriptionTextContent()).not.toContain(`https://image.example.com/${id2}`);
 
-      await simulateUploadSucceeded('2222');
+      await simulateUploadSucceeded(id2);
       expect(descriptionTextContent()).not.toContain('Uploading #2');
-      expect(descriptionTextContent()).toContain('https://image.example.com/2222');
+      expect(descriptionTextContent()).toContain(`https://image.example.com/${id2}`);
     });
 
     it('inserts whitespace before inserted placeholder when necessary', async () => {
@@ -257,7 +271,7 @@ describe('Image upload inside TextArea ', () => {
         getDescriptionEditor().selectionStart = 6;
         getDescriptionEditor().selectionEnd = 6;
       });
-      await startFileUpload('1111');
+      await startFileUpload();
       expect(descriptionTextContent()).toEqual('Hello! 【 Uploading #1 】\n');
       //                                       ^ inserted space  ^ no extra space
     });
@@ -269,7 +283,7 @@ describe('Image upload inside TextArea ', () => {
         getDescriptionEditor().selectionStart = 0;
         getDescriptionEditor().selectionEnd = 0;
       });
-      await startFileUpload('1111');
+      await startFileUpload();
       expect(descriptionTextContent()).toEqual('【 Uploading #1 】 Hello!\n');
       //                                        ^ no space       ^ inserted space
     });
@@ -281,7 +295,7 @@ describe('Image upload inside TextArea ', () => {
         getDescriptionEditor().selectionStart = 2;
         getDescriptionEditor().selectionEnd = 8;
       });
-      await startFileUpload('1111');
+      await startFileUpload();
       expect(descriptionTextContent()).toEqual('He 【 Uploading #1 】 orld!\n');
       //                                          ^ inserted spaces ^
 
@@ -297,7 +311,7 @@ describe('Image upload inside TextArea ', () => {
         getDescriptionEditor().selectionStart = 4;
         getDescriptionEditor().selectionEnd = 4;
       });
-      await startFileUpload('1111');
+      const id = await startFileUpload();
       expect(descriptionTextContent()).toEqual('fob\n【 Uploading #1 】 bar\nbaz');
       //                     start new selection: ^--------------------------^
       getDescriptionEditor().selectionStart = 2;
@@ -306,13 +320,13 @@ describe('Image upload inside TextArea ', () => {
       expect(descriptionTextContent()[getDescriptionEditor().selectionStart]).toEqual('b');
       expect(descriptionTextContent()[getDescriptionEditor().selectionEnd]).toEqual('a');
 
-      await simulateUploadSucceeded('1111');
-      expect(descriptionTextContent()).toEqual('fob\nhttps://image.example.com/1111 bar\nbaz');
+      await simulateUploadSucceeded(id);
+      expect(descriptionTextContent()).toEqual(`fob\nhttps://image.example.com/${id} bar\nbaz`);
       //                 selection is preserved:  ^---------------------------------------^
 
       // now cursor is after Uploading
       expect(getDescriptionEditor().selectionStart).toEqual(2);
-      expect(getDescriptionEditor().selectionEnd).toEqual(40);
+      expect(getDescriptionEditor().selectionEnd).toEqual(36 + id.length);
       expect(descriptionTextContent()[getDescriptionEditor().selectionStart]).toEqual('b');
       expect(descriptionTextContent()[getDescriptionEditor().selectionEnd]).toEqual('a');
     });
@@ -332,11 +346,11 @@ describe('Image upload inside TextArea ', () => {
         expect(
           CommitInfoTestUtils.withinCommitActionBar().getByText('Amend Message'),
         ).not.toBeDisabled();
-        await startFileUpload('1111');
+        const id = await startFileUpload();
         expect(
           CommitInfoTestUtils.withinCommitActionBar().getByText('Amend Message'),
         ).toBeDisabled();
-        await simulateUploadSucceeded('1111');
+        await simulateUploadSucceeded(id);
         expect(
           CommitInfoTestUtils.withinCommitActionBar().getByText('Amend Message'),
         ).not.toBeDisabled();
@@ -344,18 +358,18 @@ describe('Image upload inside TextArea ', () => {
 
       it('disables amend button', async () => {
         expect(CommitInfoTestUtils.withinCommitActionBar().getByText('Amend')).not.toBeDisabled();
-        await startFileUpload('1111');
+        const id = await startFileUpload();
         expect(CommitInfoTestUtils.withinCommitActionBar().getByText('Amend')).toBeDisabled();
-        await simulateUploadSucceeded('1111');
+        await simulateUploadSucceeded(id);
         expect(CommitInfoTestUtils.withinCommitActionBar().getByText('Amend')).not.toBeDisabled();
       });
 
       it('disables commit button', async () => {
         CommitInfoTestUtils.clickCommitMode();
         expect(CommitInfoTestUtils.withinCommitActionBar().getByText('Commit')).not.toBeDisabled();
-        await startFileUpload('1111');
+        const id = await startFileUpload();
         expect(CommitInfoTestUtils.withinCommitActionBar().getByText('Commit')).toBeDisabled();
-        await simulateUploadSucceeded('1111');
+        await simulateUploadSucceeded(id);
         expect(CommitInfoTestUtils.withinCommitActionBar().getByText('Commit')).not.toBeDisabled();
       });
 
@@ -382,11 +396,11 @@ describe('Image upload inside TextArea ', () => {
         expect(
           CommitInfoTestUtils.withinCommitActionBar().getByText('Commit and Submit'),
         ).not.toBeDisabled();
-        await startFileUpload('1111');
+        const id = await startFileUpload();
         expect(
           CommitInfoTestUtils.withinCommitActionBar().getByText('Commit and Submit'),
         ).toBeDisabled();
-        await simulateUploadSucceeded('1111');
+        await simulateUploadSucceeded(id);
         expect(
           CommitInfoTestUtils.withinCommitActionBar().getByText('Commit and Submit'),
         ).not.toBeDisabled();
@@ -402,9 +416,9 @@ describe('Image upload inside TextArea ', () => {
         userEvent.type(CommitInfoTestUtils.getTitleEditor(), 'hi');
         userEvent.type(CommitInfoTestUtils.getDescriptionEditor(), 'hey\n');
       });
-      await startFileUpload('1111');
-      await simulateUploadSucceeded('1111');
-      expect(descriptionTextContent()).toContain('https://image.example.com/1111');
+      const id = await startFileUpload();
+      await simulateUploadSucceeded(id);
+      expect(descriptionTextContent()).toContain(`https://image.example.com/${id}`);
 
       act(() => {
         fireEvent.click(CommitInfoTestUtils.withinCommitActionBar().getByText('Commit'));
@@ -415,7 +429,7 @@ describe('Image upload inside TextArea ', () => {
           operation: expect.objectContaining({
             args: expect.arrayContaining([
               'commit',
-              expect.stringMatching('hi\n+(Summary:\n)?hey\nhttps://image.example.com/1111'),
+              expect.stringMatching(`hi\n+(Summary:\n)?hey\nhttps://image.example.com/${id}`),
             ]),
           }),
         }),
