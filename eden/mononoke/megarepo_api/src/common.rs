@@ -1297,6 +1297,11 @@ pub(crate) async fn derive_all_types(
     .map(|jk| jk.max(1) as usize)
     .unwrap_or(DEFAULT_NUM_HEADS_TO_DERIVE_AT_ONCE);
 
+    let override_batch_size =
+        justknobs::get("scm/mononoke:megarepo_override_derivation_batch_size", None)
+            .map(|jk| jk.max(1) as u64)
+            .ok();
+
     for chunk in csids.chunks(num_heads_to_derive_at_once) {
         retry(
             Some(ctx.logger()),
@@ -1310,7 +1315,7 @@ pub(crate) async fn derive_all_types(
                 }
                 repo.repo_derived_data()
                     .manager()
-                    .derive_bulk(ctx, chunk, None, &derived_data_types, None)
+                    .derive_bulk(ctx, chunk, None, &derived_data_types, override_batch_size)
                     .await
             },
             |e| {
