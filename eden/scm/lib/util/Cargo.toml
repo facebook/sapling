@@ -27,6 +27,7 @@ sapling-metrics = { version = "0.1.0", path = "../metrics" }
 sapling-rewrite-macros = { version = "0.1.0", path = "rewrite-macros" }
 shellexpand = "2.1.2"
 thiserror = "2.0.12"
+tracing = { version = "0.1.41", features = ["attributes", "valuable"] }
 
 [dev-dependencies]
 memmap2 = "0.9.5"
@@ -42,7 +43,7 @@ tempfile = "3.15"
 
 [target.'cfg(target_os = "windows")'.dependencies]
 widestring = "1.0.2"
-winapi = { version = "0.3", features = ["fileapi", "handleapi", "winbase", "winnt"] }
+winapi = { version = "0.3", features = ["fileapi", "handleapi", "winbase", "winerror", "winnt"] }
 
 [target.'cfg(target_os = "windows")'.dev-dependencies]
 tempfile = "3.15"

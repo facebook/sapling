@@ -6,7 +6,6 @@
  */
 
 use std::collections::HashMap;
-use std::error;
 use std::fmt;
 use std::fs::File;
 #[cfg(unix)]
@@ -29,7 +28,9 @@ use parking_lot::Mutex;
 use progress_model::ProgressBar;
 use sysutil::hostname;
 use util::errors::IOContext;
+pub use util::lock::LockContendedError;
 use util::lock::PathLock;
+use util::lock::sanitize_lock_name;
 
 const WORKING_COPY_NAME: &str = "wlock";
 const STORE_NAME: &str = "lock";
@@ -506,15 +507,6 @@ impl Drop for LockHandle {
     }
 }
 
-fn sanitize_lock_name(name: &str) -> String {
-    // Avoid letting a caller specify "foo.lock" and accidentally
-    // interfering with the underlying locking details. This is
-    // mainly for compatibility during python lock transition to
-    // avoid a python lock "foo.lock" accidentally colliding with
-    // the rust lock file.
-    name.replace('.', "_")
-}
-
 #[derive(thiserror::Error, Debug)]
 pub enum LockError {
     #[error(transparent)]
@@ -525,20 +517,6 @@ pub enum LockError {
     Io(#[from] io::Error),
     #[error("{0}")]
     OutOfOrder(String),
-}
-
-#[derive(Debug)]
-pub struct LockContendedError {
-    pub path: PathBuf,
-    pub contents: Vec<u8>,
-}
-
-impl error::Error for LockContendedError {}
-
-impl fmt::Display for LockContendedError {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "lock {:?} contended", self.path)
-    }
 }
 
 impl LockError {
