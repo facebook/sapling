@@ -12,6 +12,7 @@ import {
   COMMIT,
   closeCommitInfoSidebar,
   expectMessageSentToServer,
+  getLastMessageOfTypeSentToServer,
   simulateCommits,
   simulateMessageFromServer,
   simulateRepoConnected,
@@ -23,9 +24,6 @@ const allCommits = [
   COMMIT('a', 'My Commit', '1'),
   COMMIT('b', 'Another Commit', 'a', {isDot: true}),
 ];
-
-const mockNextOperationId = (id: string) =>
-  jest.spyOn(utils, 'randomId').mockImplementationOnce(() => id);
 
 describe('CommitTreeList', () => {
   beforeEach(() => {
@@ -80,13 +78,18 @@ describe('CommitTreeList', () => {
     );
 
     await waitFor(() => expect(screen.getByText('Fetch all cloud commits')));
-    mockNextOperationId('1');
     fireEvent.click(screen.getByText('Fetch all cloud commits'));
+
+    const message = await waitFor(() =>
+      utils.nullthrows(getLastMessageOfTypeSentToServer('runOperation')),
+    );
+    const id = message.operation.id;
+
     expectMessageSentToServer({
       type: 'runOperation',
       operation: {
         args: ['cloud', 'sync', '--full'],
-        id: '1',
+        id,
         runner: CommandRunner.Sapling,
         trackEventName: 'CommitCloudSyncOperation',
       },
@@ -95,7 +98,7 @@ describe('CommitTreeList', () => {
     act(() =>
       simulateMessageFromServer({
         type: 'operationProgress',
-        id: '1',
+        id,
         kind: 'spawn',
         queue: [],
       }),
@@ -103,7 +106,7 @@ describe('CommitTreeList', () => {
     act(() =>
       simulateMessageFromServer({
         type: 'operationProgress',
-        id: '1',
+        id,
         kind: 'exit',
         exitCode: 0,
         timestamp: 1234,
