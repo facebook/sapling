@@ -10,6 +10,7 @@ use std::fmt;
 #[cfg(unix)]
 use std::fs::Permissions;
 use std::io;
+use std::io::Write;
 #[cfg(unix)]
 use std::os::unix::fs::PermissionsExt;
 use std::path::Path;
@@ -38,6 +39,10 @@ impl PathLock {
         fs2::FileExt::lock_exclusive(file.file())
             .path_context("error locking file", path.as_ref())?;
         Ok(PathLock { file })
+    }
+
+    fn new(file: File) -> Self {
+        PathLock { file }
     }
 
     pub fn unlock(&self) -> io::Result<()> {
@@ -75,6 +80,121 @@ pub fn open_lockfile<P: AsRef<Path>>(path: P) -> io::Result<File> {
         let _ = file.set_permissions(Permissions::from_mode(0o666));
     }
     Ok(file)
+}
+
+pub fn try_lock_exclusive<P: AsRef<Path>>(path: P) -> io::Result<File> {
+    let file = open_lockfile(path.as_ref())?;
+    fs2::FileExt::try_lock_exclusive(file.file())?;
+    Ok(file)
+}
+pub struct ContentLock {
+    // Contains paths needed for an advisory lock and some contents that
+    // get returned when trying to access the lock while it is held.
+    pub content_path: PathBuf,
+    pub lock_path: PathBuf,
+    pub dir_lock_path: PathBuf,
+}
+
+impl ContentLock {
+    pub fn new<P: AsRef<Path>>(content_path: P) -> Self {
+        let lock_path = content_path.as_ref().with_extension("lock");
+        let dir_lock_path = content_path.as_ref().with_file_name(".dir_lock");
+        Self {
+            content_path: content_path.as_ref().to_path_buf(),
+            lock_path,
+            dir_lock_path,
+        }
+    }
+
+    pub fn new_with_name<P: AsRef<Path>>(dir: P, name: &str) -> Self {
+        let content_path = dir.as_ref().join(sanitize_lock_name(name));
+        Self::new(&content_path)
+    }
+
+    // Take an exclusive lock on `path`. The lock file will be created on
+    // demand. If the lock is successfully acquired, write `contents` to `content_path`.
+    // If the lock file is already locked, return a ContentLockError(ContentLockError)
+    // with the contents of the lock file.
+    //
+    //   Our locking strategy uses three files:
+    //   1. An empty advisory lock file at the directory level.
+    //   2. An empty advisory lock file named <name>.lock. This file is returned.
+    //   3. An file named <name>. This file contains the specified contents
+    //
+    //  Readers and writers acquire the directory lock first. This
+    //  ensures atomicity across lock acquisition and notification
+    //
+    pub fn try_lock(&self, contents: &[u8]) -> Result<PathLock, ContentLockError> {
+        // Hold the PathLock during this function, then drop it at the end
+        let _dir_lock = PathLock::exclusive(&self.dir_lock_path)?;
+        let file = match try_lock_exclusive(&self.lock_path) {
+            Ok(lock_file) => lock_file,
+            Err(err) if err.kind() == fs2::lock_contended_error().kind() => {
+                let contents = fs_err::read(&self.content_path)?;
+                return Err(LockContendedError {
+                    path: self.content_path.clone(),
+                    contents,
+                }
+                .into());
+            }
+            Err(err) => {
+                return Err(crate::errors::from_err_msg_path(
+                    err,
+                    "error locking lock file",
+                    &self.lock_path,
+                )
+                .into());
+            }
+        };
+        let mut contents_file = crate::file::open(&self.content_path, "wct")?;
+        #[cfg(unix)]
+        let _ = contents_file.set_permissions(Permissions::from_mode(0o666));
+        contents_file
+            .write_all(contents.as_ref())
+            .path_context("error write lock contents", &self.content_path)?;
+        Ok(PathLock::new(file))
+    }
+
+    // Checks if there is a lock on path. Returns () if there isn't one.
+    // If there is already a lock on path, returns the value contained in content_path
+    pub fn check_lock(&self) -> Result<(), ContentLockError> {
+        if !self.dir_lock_path.try_exists()? || !self.lock_path.try_exists()? {
+            return Ok(());
+        }
+        let _dir_lock = PathLock::exclusive(&self.dir_lock_path)?;
+        match try_lock_exclusive(&self.lock_path) {
+            Ok(_) => Ok(()),
+            Err(err) if err.kind() == fs2::lock_contended_error().kind() => {
+                let contents = fs_err::read(&self.content_path)?;
+                Err(LockContendedError {
+                    path: self.content_path.clone(),
+                    contents,
+                }
+                .into())
+            }
+            Err(err) => Err(crate::errors::from_err_msg_path(
+                err,
+                "error locking lock file",
+                &self.lock_path,
+            )
+            .into()),
+        }
+    }
+}
+
+#[derive(thiserror::Error, Debug)]
+pub enum ContentLockError {
+    #[error(transparent)]
+    Contended(#[from] LockContendedError),
+    #[error(transparent)]
+    Io(#[from] io::Error),
+}
+
+impl ContentLockError {
+    /// Test if the error is contended, aka. held by others.
+    pub fn is_contended(&self) -> bool {
+        matches!(self, ContentLockError::Contended(_))
+    }
 }
 
 #[derive(Debug)]
