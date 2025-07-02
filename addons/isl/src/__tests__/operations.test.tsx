@@ -20,6 +20,7 @@ import {
   dragAndDropCommits,
   expectMessageSentToServer,
   expectYouAreHerePointAt,
+  getLastMessageOfTypeSentToServer,
   resetTestMessages,
   simulateCommits,
   simulateMessageFromServer,
@@ -48,26 +49,13 @@ describe('operations', () => {
         value: TEST_COMMIT_HISTORY,
       });
     });
-
-    // ensure operations have predictable ID
-    jest
-      .spyOn(utils, 'randomId')
-      .mockImplementationOnce(() => '1')
-      .mockImplementationOnce(() => '2')
-      .mockImplementationOnce(() => '3')
-      .mockImplementationOnce(() => '4');
   });
-
-  const mockNextOperationId = (id: string) =>
-    jest.spyOn(utils, 'randomId').mockImplementationOnce(() => id);
 
   afterEach(() => {
     jest.useRealTimers();
-    jest.spyOn(utils, 'randomId').mockRestore();
   });
 
   it('shows running operation', async () => {
-    mockNextOperationId('1');
     await clickGoto('c');
 
     expect(
@@ -76,20 +64,23 @@ describe('operations', () => {
   });
 
   it('shows stdout from running command', async () => {
-    mockNextOperationId('1');
     await clickGoto('c');
+    const message = await waitFor(() =>
+      utils.nullthrows(getLastMessageOfTypeSentToServer('runOperation')),
+    );
+    const id = message.operation.id;
 
     act(() => {
       simulateMessageFromServer({
         type: 'operationProgress',
-        id: '1',
+        id,
         kind: 'spawn',
         queue: [],
       });
 
       simulateMessageFromServer({
         type: 'operationProgress',
-        id: '1',
+        id,
         kind: 'stdout',
         message: 'some progress...',
       });
@@ -100,7 +91,7 @@ describe('operations', () => {
     act(() => {
       simulateMessageFromServer({
         type: 'operationProgress',
-        id: '1',
+        id,
         kind: 'stdout',
         message: 'another message',
       });
@@ -110,20 +101,23 @@ describe('operations', () => {
   });
 
   it('shows stderr from running command', async () => {
-    mockNextOperationId('1');
     await clickGoto('c');
+    const message = await waitFor(() =>
+      utils.nullthrows(getLastMessageOfTypeSentToServer('runOperation')),
+    );
+    const id = message.operation.id;
 
     act(() => {
       simulateMessageFromServer({
         type: 'operationProgress',
-        id: '1',
+        id,
         kind: 'spawn',
         queue: [],
       });
 
       simulateMessageFromServer({
         type: 'operationProgress',
-        id: '1',
+        id,
         kind: 'stderr',
         message: 'some progress...',
       });
@@ -134,7 +128,7 @@ describe('operations', () => {
     act(() => {
       simulateMessageFromServer({
         type: 'operationProgress',
-        id: '1',
+        id,
         kind: 'stderr',
         message: 'another message',
       });
@@ -144,7 +138,6 @@ describe('operations', () => {
   });
 
   it('shows abort on long-running commands', async () => {
-    mockNextOperationId('1');
     await clickGoto('c');
     expect(abortButton()).toBeNull();
 
@@ -155,20 +148,23 @@ describe('operations', () => {
   });
 
   it('shows successful exit status', async () => {
-    mockNextOperationId('1');
     await clickGoto('c');
+    const message = await waitFor(() =>
+      utils.nullthrows(getLastMessageOfTypeSentToServer('runOperation')),
+    );
+    const id = message.operation.id;
 
     act(() => {
       simulateMessageFromServer({
         type: 'operationProgress',
-        id: '1',
+        id,
         kind: 'spawn',
         queue: [],
       });
 
       simulateMessageFromServer({
         type: 'operationProgress',
-        id: '1',
+        id,
         kind: 'exit',
         exitCode: 0,
         timestamp: 1234,
@@ -182,20 +178,23 @@ describe('operations', () => {
   });
 
   it('shows unsuccessful exit status', async () => {
-    mockNextOperationId('1');
     await clickGoto('c');
+    const message = await waitFor(() =>
+      utils.nullthrows(getLastMessageOfTypeSentToServer('runOperation')),
+    );
+    const id = message.operation.id;
 
     act(() => {
       simulateMessageFromServer({
         type: 'operationProgress',
-        id: '1',
+        id,
         kind: 'spawn',
         queue: [],
       });
 
       simulateMessageFromServer({
         type: 'operationProgress',
-        id: '1',
+        id,
         kind: 'exit',
         exitCode: -1,
         timestamp: 1234,
@@ -209,25 +208,31 @@ describe('operations', () => {
   });
 
   it('handles out of order exit messages', async () => {
-    mockNextOperationId('1');
     await clickGoto('c');
+    const message1 = await waitFor(() =>
+      utils.nullthrows(getLastMessageOfTypeSentToServer('runOperation')),
+    );
+    const id1 = message1.operation.id;
 
     act(() => {
       simulateMessageFromServer({
         type: 'operationProgress',
-        id: '1',
+        id: id1,
         kind: 'spawn',
         queue: [],
       });
     });
 
-    mockNextOperationId('2');
     await clickGoto('d');
+    const message2 = await waitFor(() =>
+      utils.nullthrows(getLastMessageOfTypeSentToServer('runOperation')),
+    );
+    const id2 = message2.operation.id;
 
     act(() => {
       simulateMessageFromServer({
         type: 'operationProgress',
-        id: '2',
+        id: id2,
         kind: 'spawn',
         queue: [],
       });
@@ -237,7 +242,7 @@ describe('operations', () => {
     act(() => {
       simulateMessageFromServer({
         type: 'operationProgress',
-        id: '2',
+        id: id2,
         kind: 'exit',
         exitCode: 0,
         timestamp: 1234,
@@ -248,7 +253,7 @@ describe('operations', () => {
     act(() => {
       simulateMessageFromServer({
         type: 'operationProgress',
-        id: '1',
+        id: id1,
         kind: 'exit',
         exitCode: 0,
         timestamp: 1234,
@@ -261,13 +266,13 @@ describe('operations', () => {
 
     expect(opList.currentOperation).toEqual(
       expect.objectContaining({
-        operation: expect.objectContaining({id: '2'}),
+        operation: expect.objectContaining({id: id2}),
         exitCode: 0,
       }),
     );
     expect(opList.operationHistory).toEqual([
       expect.objectContaining({
-        operation: expect.objectContaining({id: '1'}),
+        operation: expect.objectContaining({id: id1}),
         exitCode: 0, // we marked it as exited even though they came out of order
       }),
     ]);
@@ -283,8 +288,12 @@ describe('operations', () => {
   });
 
   it('reacts to abort', async () => {
-    mockNextOperationId('1');
     await clickGoto('c');
+    const message = await waitFor(() =>
+      utils.nullthrows(getLastMessageOfTypeSentToServer('runOperation')),
+    );
+    const id = message.operation.id;
+
     act(() => {
       jest.advanceTimersByTime(600000);
     });
@@ -299,7 +308,7 @@ describe('operations', () => {
     act(() => {
       simulateMessageFromServer({
         type: 'operationProgress',
-        id: '1',
+        id,
         kind: 'exit',
         exitCode: 130,
         timestamp: 1234,
@@ -311,21 +320,22 @@ describe('operations', () => {
 
   describe('queued commands', () => {
     it('optimistically shows queued commands', async () => {
-      mockNextOperationId('1');
       await clickGoto('c');
+      const message1 = await waitFor(() =>
+        utils.nullthrows(getLastMessageOfTypeSentToServer('runOperation')),
+      );
+      const id1 = message1.operation.id;
 
       act(() => {
         simulateMessageFromServer({
           type: 'operationProgress',
-          id: '1',
+          id: id1,
           kind: 'spawn',
           queue: [],
         });
       });
 
-      mockNextOperationId('2');
       await clickGoto('a');
-      mockNextOperationId('3');
       await clickGoto('b');
 
       expect(
@@ -337,20 +347,27 @@ describe('operations', () => {
     });
 
     it('dequeues when the server starts the next command', async () => {
-      mockNextOperationId('1');
       await clickGoto('c');
+      const message1 = await waitFor(() =>
+        utils.nullthrows(getLastMessageOfTypeSentToServer('runOperation')),
+      );
+      const id1 = message1.operation.id;
 
       act(() => {
         simulateMessageFromServer({
           type: 'operationProgress',
-          id: '1',
+          id: id1,
           kind: 'spawn',
           queue: [],
         });
       });
 
-      mockNextOperationId('2');
       await clickGoto('a');
+      const message2 = await waitFor(() =>
+        utils.nullthrows(getLastMessageOfTypeSentToServer('runOperation')),
+      );
+      const id2 = message2.operation.id;
+
       expect(
         within(screen.getByTestId('queued-commands')).getByText('sl goto --rev a'),
       ).toBeInTheDocument();
@@ -358,7 +375,7 @@ describe('operations', () => {
       act(() => {
         simulateMessageFromServer({
           type: 'operationProgress',
-          id: '2',
+          id: id2,
           kind: 'spawn',
           queue: [],
         });
@@ -368,36 +385,46 @@ describe('operations', () => {
     });
 
     it('takes queued command info from server', async () => {
-      mockNextOperationId('1');
       await clickGoto('c');
+      const message1 = await waitFor(() =>
+        utils.nullthrows(getLastMessageOfTypeSentToServer('runOperation')),
+      );
+      const id1 = message1.operation.id;
 
       act(() => {
         simulateMessageFromServer({
           type: 'operationProgress',
-          id: '1',
+          id: id1,
           kind: 'spawn',
           queue: [],
         });
       });
 
-      mockNextOperationId('2');
       await clickGoto('a');
-      mockNextOperationId('3');
+      const message2 = await waitFor(() =>
+        utils.nullthrows(getLastMessageOfTypeSentToServer('runOperation')),
+      );
+      const id2 = message2.operation.id;
+
       await clickGoto('b');
+      const message3 = await waitFor(() =>
+        utils.nullthrows(getLastMessageOfTypeSentToServer('runOperation')),
+      );
+      const id3 = message3.operation.id;
 
       act(() => {
         simulateMessageFromServer({
           type: 'operationProgress',
-          id: '1',
+          id: id1,
           kind: 'exit',
           exitCode: 0,
           timestamp: 1234,
         });
         simulateMessageFromServer({
           type: 'operationProgress',
-          id: '2',
+          id: id2,
           kind: 'spawn',
-          queue: ['3'],
+          queue: [id3],
         });
       });
 
@@ -410,21 +437,22 @@ describe('operations', () => {
     });
 
     it('error running command cancels queued commands', async () => {
-      mockNextOperationId('1');
       await clickGoto('c');
+      const message1 = await waitFor(() =>
+        utils.nullthrows(getLastMessageOfTypeSentToServer('runOperation')),
+      );
+      const id1 = message1.operation.id;
 
       act(() => {
         simulateMessageFromServer({
           type: 'operationProgress',
-          id: '1',
+          id: id1,
           kind: 'spawn',
           queue: [],
         });
       });
 
-      mockNextOperationId('2');
       await clickGoto('a');
-      mockNextOperationId('3');
       await clickGoto('b');
 
       expect(screen.queryByTestId('queued-commands')).toBeInTheDocument();
@@ -433,7 +461,7 @@ describe('operations', () => {
         // original goto fails
         simulateMessageFromServer({
           type: 'operationProgress',
-          id: '1',
+          id: id1,
           kind: 'exit',
           exitCode: -1,
           timestamp: 1234,
@@ -504,12 +532,25 @@ describe('operations', () => {
       await waitFor(() => {
         expect(screen.getByText('rebasing...')).toBeInTheDocument();
       });
+
+      // Get the rebase operation ID
+      const rebaseMessage = await waitFor(() =>
+        utils.nullthrows(getLastMessageOfTypeSentToServer('runOperation')),
+      );
+      const rebaseId = rebaseMessage.operation.id;
+
       await clickGoto('d'); // checkout d, which is now optimistic from the rebase, since it'll actually become d2.
+
+      // Get the goto operation ID
+      const gotoMessage = await waitFor(() =>
+        utils.nullthrows(getLastMessageOfTypeSentToServer('runOperation')),
+      );
+      const gotoId = gotoMessage.operation.id;
 
       act(() =>
         simulateMessageFromServer({
           type: 'operationProgress',
-          id: '1',
+          id: rebaseId,
           kind: 'spawn',
           queue: [],
         }),
@@ -517,15 +558,15 @@ describe('operations', () => {
       act(() =>
         simulateMessageFromServer({
           type: 'operationProgress',
-          id: '2',
+          id: gotoId,
           kind: 'queue',
-          queue: ['2'],
+          queue: [gotoId],
         }),
       );
       act(() =>
         simulateMessageFromServer({
           type: 'operationProgress',
-          id: '1',
+          id: rebaseId,
           kind: 'exit',
           exitCode: 0,
           timestamp: 300,
@@ -534,7 +575,7 @@ describe('operations', () => {
       act(() =>
         simulateMessageFromServer({
           type: 'operationProgress',
-          id: '2',
+          id: gotoId,
           kind: 'spawn',
           queue: [],
         }),
@@ -542,7 +583,7 @@ describe('operations', () => {
       act(() =>
         simulateMessageFromServer({
           type: 'operationProgress',
-          id: '2',
+          id: gotoId,
           kind: 'exit',
           exitCode: 0,
           timestamp: 500,
@@ -551,7 +592,7 @@ describe('operations', () => {
       act(() =>
         simulateMessageFromServer({
           type: 'operationProgress',
-          id: '2',
+          id: gotoId,
           kind: 'exit',
           exitCode: 0,
           timestamp: 500,
@@ -617,20 +658,23 @@ describe('operations', () => {
 
   describe('progress messages', () => {
     it('shows progress messages', async () => {
-      mockNextOperationId('1');
       await clickGoto('c');
+      const message = await waitFor(() =>
+        utils.nullthrows(getLastMessageOfTypeSentToServer('runOperation')),
+      );
+      const id = message.operation.id;
 
       act(() => {
         simulateMessageFromServer({
           type: 'operationProgress',
-          id: '1',
+          id,
           kind: 'spawn',
           queue: [],
         });
 
         simulateMessageFromServer({
           type: 'operationProgress',
-          id: '1',
+          id,
           kind: 'progress',
           progress: {message: 'doing the thing', progress: 3, progressTotal: 7},
         });
@@ -642,20 +686,23 @@ describe('operations', () => {
     });
 
     it('hide progress on new stdout', async () => {
-      mockNextOperationId('1');
       await clickGoto('c');
+      const message = await waitFor(() =>
+        utils.nullthrows(getLastMessageOfTypeSentToServer('runOperation')),
+      );
+      const id = message.operation.id;
 
       act(() => {
         simulateMessageFromServer({
           type: 'operationProgress',
-          id: '1',
+          id,
           kind: 'spawn',
           queue: [],
         });
 
         simulateMessageFromServer({
           type: 'operationProgress',
-          id: '1',
+          id,
           kind: 'progress',
           progress: {message: 'doing the thing'},
         });
@@ -668,7 +715,7 @@ describe('operations', () => {
       act(() => {
         simulateMessageFromServer({
           type: 'operationProgress',
-          id: '1',
+          id,
           kind: 'stdout',
           message: 'hello',
         });
@@ -685,20 +732,23 @@ describe('operations', () => {
 
   describe('inline progress', () => {
     it('shows progress messages next to commits', async () => {
-      mockNextOperationId('1');
       await clickGoto('c');
+      const message = await waitFor(() =>
+        utils.nullthrows(getLastMessageOfTypeSentToServer('runOperation')),
+      );
+      const id = message.operation.id;
 
       act(() => {
         simulateMessageFromServer({
           type: 'operationProgress',
-          id: '1',
+          id,
           kind: 'spawn',
           queue: [],
         });
 
         simulateMessageFromServer({
           type: 'operationProgress',
-          id: '1',
+          id,
           kind: 'inlineProgress',
           hash: 'c',
           message: 'going...', // not a real thing for goto operation, but we support arbitrary progress

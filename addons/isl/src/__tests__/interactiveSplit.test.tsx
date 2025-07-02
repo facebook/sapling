@@ -15,6 +15,7 @@ import {
   closeCommitInfoSidebar,
   expectMessageNOTSentToServer,
   expectMessageSentToServer,
+  getLastMessageOfTypeSentToServer,
   resetTestMessages,
   simulateCommits,
   simulateMessageFromServer,
@@ -90,9 +91,6 @@ describe('Interactive Split', () => {
     window.IntersectionObserver = jest.fn().mockImplementation(mockObserveFn);
   });
 
-  const mockNextOperationId = (id: string) =>
-    jest.spyOn(utils, 'randomId').mockImplementationOnce(() => id);
-
   it('shows split button on dot commit', () => {
     expect(screen.getByText('Split')).toBeInTheDocument();
   });
@@ -124,8 +122,12 @@ describe('Interactive Split', () => {
   });
 
   it('waits for existing commands to finish running before loading stack', async () => {
-    mockNextOperationId('1');
     fireEvent.click(screen.getByText('Pull', {selector: 'button'}));
+    const message = await waitFor(() =>
+      utils.nullthrows(getLastMessageOfTypeSentToServer('runOperation')),
+    );
+    const id = message.operation.id;
+
     fireEvent.click(screen.getByText('Split'));
 
     expectMessageNOTSentToServer({type: 'exportStack', revs: 'e'});
@@ -133,7 +135,7 @@ describe('Interactive Split', () => {
     act(() =>
       simulateMessageFromServer({
         type: 'operationProgress',
-        id: '1',
+        id,
         kind: 'exit',
         exitCode: 0,
         timestamp: 0,
@@ -180,47 +182,49 @@ describe('Interactive Split', () => {
 
       const arrows = screen.getAllByTitle('Move this line change right');
       fireEvent.click(arrows[1]);
-      mockNextOperationId('2');
       fireEvent.click(screen.getByTestId('confirm-edit-stack-button'));
 
-      await waitFor(() =>
-        expectMessageSentToServer({
-          type: 'runOperation',
-          operation: {
-            id: '2',
-            trackEventName: 'ImportStackOperation',
-            args: ['debugimportstack'],
-            stdin: JSON.stringify([
-              [
-                'commit',
-                {
-                  mark: ':r1',
-                  author: 'username',
-                  date: [1577836800, 25200],
-                  text: 'Commit E',
-                  parents: ['d'],
-                  predecessors: ['e'],
-                  files: {'myFile.js': {data: 'world!\n', flags: ''}},
-                },
-              ],
-              [
-                'commit',
-                {
-                  mark: ':r2',
-                  author: 'username',
-                  date: [1577836800, 25200],
-                  text: 'Split of "Commit E"',
-                  parents: [':r1'],
-                  predecessors: ['e'],
-                  files: {'myFile.js': {data: 'hello (changed)\nworld!\n', flags: ''}},
-                },
-              ],
-              ['goto', {mark: ':r2'}],
-            ]),
-            runner: CommandRunner.Sapling,
-          },
-        }),
+      const message = await waitFor(() =>
+        utils.nullthrows(getLastMessageOfTypeSentToServer('runOperation')),
       );
+      const id = message.operation.id;
+
+      expectMessageSentToServer({
+        type: 'runOperation',
+        operation: {
+          id,
+          trackEventName: 'ImportStackOperation',
+          args: ['debugimportstack'],
+          stdin: JSON.stringify([
+            [
+              'commit',
+              {
+                mark: ':r1',
+                author: 'username',
+                date: [1577836800, 25200],
+                text: 'Commit E',
+                parents: ['d'],
+                predecessors: ['e'],
+                files: {'myFile.js': {data: 'world!\n', flags: ''}},
+              },
+            ],
+            [
+              'commit',
+              {
+                mark: ':r2',
+                author: 'username',
+                date: [1577836800, 25200],
+                text: 'Split of "Commit E"',
+                parents: [':r1'],
+                predecessors: ['e'],
+                files: {'myFile.js': {data: 'hello (changed)\nworld!\n', flags: ''}},
+              },
+            ],
+            ['goto', {mark: ':r2'}],
+          ]),
+          runner: CommandRunner.Sapling,
+        },
+      });
     });
   });
 });
