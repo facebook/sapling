@@ -86,6 +86,9 @@ DESCRIPTION_REGEX: Pattern[str] = re.compile(
 # e.g.: Grafted e8470334d2058106534ac7d72485e6bfaa76ca01
 GRAFT_INFO_REGEX: Pattern[str] = re.compile("(?m)^(Grafted [a-f0-9]+)$")
 
+# Pattern for parsing diff ID and version (e.g., D1234567, D1234567V1, D1234567V1.2)
+DIFFID_VERSION_REGEX: Pattern[str] = re.compile(r"^D(\d+)(?:(V\d+(?:\.\d+)?))?$")
+
 DEFAULT_TIMEOUT = 60
 MAX_CONNECT_RETRIES = 3
 COMMITTEDSTATUS = "Committed"
@@ -1233,6 +1236,31 @@ def diffidtonode(repo, diffid, localreponame=None):
             )
 
             return None
+
+
+def _try_parse_diffid_version(name):
+    """Parse names like D1234567V1 or D1234567 to a tuple of (diffid, version).
+
+    Returns None if the name is not valid.
+
+    >>> _try_parse_diffid_version("D1234567V1")
+    ('1234567', 'V1')
+    >>> _try_parse_diffid_version("D1234567V1.1")
+    ('1234567', 'V1.1')
+    >>> _try_parse_diffid_version("D1234567")
+    ('1234567', None)
+    >>> _try_parse_diffid_version("D1234567V")
+    >>> _try_parse_diffid_version("D1234567V1.1.1")
+    """
+    match = DIFFID_VERSION_REGEX.match(name)
+
+    if not match:
+        return None
+
+    diffid = match.group(1)
+    version = match.group(2)
+
+    return (diffid, version)
 
 
 def _lookupname(repo, name):
