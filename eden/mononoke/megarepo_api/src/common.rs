@@ -84,6 +84,7 @@ pub struct SourceAndMovedChangesets {
 }
 
 const MAX_BOOKMARK_MOVE_ATTEMPTS: usize = 5;
+const DEFAULT_NUM_HEADS_TO_DERIVE_AT_ONCE: usize = 10;
 
 #[async_trait]
 pub trait MegarepoOp<R> {
@@ -600,6 +601,7 @@ pub trait MegarepoOp<R> {
             .iter()
             .map(|(_, css)| css.moved.get_changeset_id())
             .collect::<Vec<_>>();
+
         let (stats, _) = derive_all_types(ctx, repo, &cs_ids).try_timed().await?;
         scuba.add_future_stats(&stats);
         scuba.log_with_msg("Derived move commits", None);
@@ -1288,33 +1290,42 @@ pub(crate) async fn derive_all_types(
             *t != DerivableType::FileNodes
         })
         .collect::<Vec<_>>();
-    retry(
-        Some(ctx.logger()),
-        async |num_retry| {
-            if num_retry >= 1 {
-                let mut scuba = ctx.scuba().clone();
-                scuba.log_with_msg(
-                    "Derived data failed, retrying. Num retries",
-                    Some(format!("{num_retry}")),
-                );
-            }
-            repo.repo_derived_data()
-                .manager()
-                .derive_bulk(ctx, csids, None, &derived_data_types, None)
-                .await
-        },
-        |e| {
-            let description = format!("{e:?}").to_ascii_lowercase();
-            description.contains("blobstore") || description.contains("timeout")
-        },
-        RetryLogic::ExponentialWithJitter {
-            base: Duration::from_secs(1),
-            factor: 1.2,
-            jitter: Duration::from_secs(2),
-        },
-        5,
+    let num_heads_to_derive_at_once = justknobs::get(
+        "scm/mononoke:megarepo_override_num_heads_to_derive_at_once",
+        None,
     )
-    .await?;
+    .map(|jk| jk.max(1) as usize)
+    .unwrap_or(DEFAULT_NUM_HEADS_TO_DERIVE_AT_ONCE);
+
+    for chunk in csids.chunks(num_heads_to_derive_at_once) {
+        retry(
+            Some(ctx.logger()),
+            async |num_retry| {
+                if num_retry >= 1 {
+                    let mut scuba = ctx.scuba().clone();
+                    scuba.log_with_msg(
+                        "Derived data failed, retrying. Num retries",
+                        Some(format!("{num_retry}")),
+                    );
+                }
+                repo.repo_derived_data()
+                    .manager()
+                    .derive_bulk(ctx, chunk, None, &derived_data_types, None)
+                    .await
+            },
+            |e| {
+                let description = format!("{e:?}").to_ascii_lowercase();
+                description.contains("blobstore") || description.contains("timeout")
+            },
+            RetryLogic::ExponentialWithJitter {
+                base: Duration::from_secs(1),
+                factor: 1.2,
+                jitter: Duration::from_secs(2),
+            },
+            5,
+        )
+        .await?;
+    }
     Ok(())
 }
 
