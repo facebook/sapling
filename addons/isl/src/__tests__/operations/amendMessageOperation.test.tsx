@@ -13,6 +13,7 @@ import {CommitInfoTestUtils, CommitTreeListTestUtils} from '../../testQueries';
 import {
   COMMIT,
   expectMessageSentToServer,
+  getLastMessageOfTypeSentToServer,
   openCommitInfoSidebar,
   resetTestMessages,
   simulateCommits,
@@ -60,7 +61,7 @@ describe('AmendMessageOperation', () => {
     });
   });
 
-  it('on error, restores edited commit message to try again', () => {
+  it('on error, restores edited commit message to try again', async () => {
     act(() => CommitInfoTestUtils.clickToSelectCommit('aaaaaaaaaaaa'));
     act(() => openCommitInfoSidebar());
     act(() => {
@@ -74,10 +75,13 @@ describe('AmendMessageOperation', () => {
       userEvent.type(desc, 'My description');
     });
 
-    jest.spyOn(utils, 'randomId').mockImplementationOnce(() => '1111');
     act(() => {
       CommitInfoTestUtils.clickAmendMessageButton();
     });
+    const message = await waitFor(() =>
+      utils.nullthrows(getLastMessageOfTypeSentToServer('runOperation')),
+    );
+    const id = message.operation.id;
 
     CommitInfoTestUtils.expectIsNOTEditingTitle();
 
@@ -89,7 +93,7 @@ describe('AmendMessageOperation', () => {
         type: 'operationProgress',
         kind: 'exit',
         exitCode: 1,
-        id: '1111',
+        id,
         timestamp: 0,
       });
     });
@@ -108,8 +112,6 @@ describe('AmendMessageOperation', () => {
   });
 
   it('if a previous command errors and metaedit is queued, the message is recovered', async () => {
-    // run a goto
-    jest.spyOn(utils, 'randomId').mockImplementationOnce(() => '3333');
     await CommitTreeListTestUtils.clickGoto('cccccccccccc');
     expectMessageSentToServer({
       type: 'runOperation',
@@ -117,12 +119,14 @@ describe('AmendMessageOperation', () => {
         args: expect.arrayContaining(['goto']),
       }),
     });
+    const gotoMessage = utils.nullthrows(getLastMessageOfTypeSentToServer('runOperation'));
+    const gotoId = gotoMessage.operation.id;
 
     act(() => {
       simulateMessageFromServer({
         type: 'operationProgress',
         kind: 'spawn',
-        id: '3333',
+        id: gotoId,
         queue: [],
       });
     });
@@ -141,7 +145,6 @@ describe('AmendMessageOperation', () => {
       userEvent.type(desc, 'My description');
     });
 
-    jest.spyOn(utils, 'randomId').mockImplementationOnce(() => '4444');
     act(() => {
       CommitInfoTestUtils.clickAmendMessageButton();
     });
@@ -153,13 +156,15 @@ describe('AmendMessageOperation', () => {
         }),
       });
     });
+    const amendMessage = utils.nullthrows(getLastMessageOfTypeSentToServer('runOperation'));
+    const amendMessageId = amendMessage.operation.id;
 
     act(() => {
       simulateMessageFromServer({
         type: 'operationProgress',
         kind: 'queue',
-        id: '4444',
-        queue: ['4444'],
+        id: amendMessageId,
+        queue: [amendMessageId],
       });
     });
 
@@ -173,7 +178,7 @@ describe('AmendMessageOperation', () => {
         type: 'operationProgress',
         kind: 'exit',
         exitCode: 1,
-        id: '3333',
+        id: gotoId,
         timestamp: 0,
       });
     });
