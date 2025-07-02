@@ -13,6 +13,7 @@ import {
   closeCommitInfoSidebar,
   COMMIT,
   expectMessageSentToServer,
+  getLastMessageOfTypeSentToServer,
   resetTestMessages,
   simulateCommits,
   simulateMessageFromServer,
@@ -63,20 +64,24 @@ describe('Download Commits', () => {
 
     fireEvent.click(screen.getByTestId('download-commit-button'));
 
-    jest.spyOn(utils, 'randomId').mockImplementationOnce(() => '111');
+    const pullMessage = await waitFor(() =>
+      utils.nullthrows(getLastMessageOfTypeSentToServer('runOperation')),
+    );
+    const pullId = pullMessage.operation.id;
+
     expectMessageSentToServer({
       type: 'runOperation',
       operation: {
         args: ['pull', '--rev', {type: 'exact-revset', revset: 'aaaaaa'}],
         runner: CommandRunner.Sapling,
         trackEventName: 'PullRevOperation',
-        id: expect.anything(),
+        id: pullId,
       },
     });
     act(() =>
       simulateMessageFromServer({
         type: 'operationProgress',
-        id: '111',
+        id: pullId,
         kind: 'exit',
         exitCode: 0,
         timestamp: 0,
