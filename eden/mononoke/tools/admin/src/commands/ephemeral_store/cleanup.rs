@@ -9,9 +9,11 @@ use std::time::Duration;
 
 use anyhow::Result;
 use clap::Args;
+use cloned::cloned;
 use context::CoreContext;
-use futures::TryFutureExt;
-use futures::future::try_join_all;
+use futures::StreamExt;
+use futures::TryStreamExt;
+use futures::stream;
 
 use super::Repo;
 
@@ -37,6 +39,10 @@ pub struct EphemeralStoreCleanUpArgs {
     /// a non-dryrun of this command.
     #[clap(long, short = 'n')]
     dryrun: bool,
+
+    /// The concurrency with which the bubbles will be cleaned up. Defaults to 100.
+    #[clap(long, short = 'j', default_value_t = 100)]
+    concurrency: usize,
 }
 
 pub async fn clean_bubbles(
@@ -59,18 +65,22 @@ pub async fn clean_bubbles(
         );
     }
     if !args.dryrun {
-        let delete_futures = expired_bubbles.iter().map(|id| {
-            repo.repo_ephemeral_store
-                .delete_bubble(ctx, *id)
-                .map_ok(|count| (id.clone(), count))
-        });
-        let bubbleid_and_count = try_join_all(delete_futures).await?;
-        for (id, count) in bubbleid_and_count.iter() {
-            println!(
-                "Cleaned up bubble {} and deleted {} blob keys contained in it",
-                id, count
-            );
-        }
+        stream::iter(expired_bubbles.into_iter())
+            .map(Ok)
+            .map_ok(|id| {
+                cloned!(ctx, repo);
+                async move {
+                    let count = repo.repo_ephemeral_store.delete_bubble(&ctx, id).await?;
+                    println!(
+                        "Cleaned up bubble {} and deleted {} blob keys contained in it",
+                        id, count
+                    );
+                    anyhow::Ok(())
+                }
+            })
+            .try_buffer_unordered(args.concurrency)
+            .try_collect::<Vec<_>>()
+            .await?;
     } else {
         println!(
             "Executing cleanup in dry-run mode. The following bubbles were fetched for deletion:"
