@@ -41,6 +41,15 @@ fn main() {
         // "watchman") from the working copy.
         // TODO: Audit that the environment access only happens in single-threaded code.
         unsafe { std::env::set_var("NoDefaultCurrentDirectoryInExePath", "1") }
+
+        // Setting NoDefaultCurrentDirectoryInExePath seems to have a side effect of not cleaning
+        // leading leading path separators from $PATH. Work around by manually stripping leading
+        // separators.
+        if let Ok(path) = std::env::var("PATH") {
+            if path.starts_with(';') {
+                unsafe { std::env::set_var("PATH", path.trim_start_matches(';')) }
+            }
+        }
     }
 
     // This code path is used by `open Sapling.app` on macOS.
