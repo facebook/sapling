@@ -144,14 +144,14 @@ class Client:
                 rev_numbers.append(int(r))
         return [int(x) for x in rev_numbers]
 
-    def getdifflatestversion(self, timeout, diffid):
+    def getdifflatestversion(self, timeout, diffid, version=None):
         query = """
             query DiffLastVersionDescriptionQuery($diffid: String!){
               phabricator_diff_query(query_params: {
                 numbers: [$diffid]
               }) {
                 results {
-                    nodes {
+                  nodes {
                     latest_associated_phabricator_version_regardless_of_viewer {
                       description
                       repository {
@@ -168,11 +168,45 @@ class Client:
                         commit_identifier
                       }
                     }
+                    %s
                   }
                 }
               }
             }
         """
+        if version:
+            if "." in version:
+                extra_query = """
+                  unpublished_phabricator_versions {
+                    phabricator_version_migration {
+                      repository {
+                        scm_name
+                      }
+                      ordinal_label {
+                        abbreviated
+                      }
+                      commit_hash_best_effort
+                    }
+                  }
+                """
+            else:
+                extra_query = """
+                  phabricator_versions {
+                    nodes {
+                      repository {
+                        scm_name
+                      }
+                      ordinal_label {
+                        abbreviated
+                      }
+                      commit_hash_best_effort
+                    }
+                  }
+                """
+        else:
+            extra_query = ""
+        query = query % extra_query
+
         params = {"diffid": diffid}
         ret = self._client.query(timeout, query, params)
 
@@ -194,14 +228,31 @@ class Client:
                 % (diffid, json.dumps(ret)),
             )
 
-        # Massage commits into {repo_name => commit_hash}
-        commits = ret["data"]["phabricator_diff_query"][0]["results"]["nodes"][0][
-            "phabricator_diff_commit"
-        ]["nodes"]
-        latest["commits"] = {
-            commit["repository"]["scm_name"]: commit["commit_identifier"]
-            for commit in commits
-        }
+        if version:
+            if "." in version:
+                commits = ret["data"]["phabricator_diff_query"][0]["results"]["nodes"][
+                    0
+                ]["unpublished_phabricator_versions"]
+                commits = [c["phabricator_version_migration"] for c in commits]
+            else:
+                commits = ret["data"]["phabricator_diff_query"][0]["results"]["nodes"][
+                    0
+                ]["phabricator_versions"]["nodes"]
+            latest["commit_hash_best_effort"] = None
+            latest["commits"] = {
+                commit["repository"]["scm_name"]: commit["commit_hash_best_effort"]
+                for commit in commits
+                if commit["ordinal_label"]["abbreviated"] == version
+            }
+        else:
+            # Massage commits into {repo_name => commit_hash}
+            commits = ret["data"]["phabricator_diff_query"][0]["results"]["nodes"][0][
+                "phabricator_diff_commit"
+            ]["nodes"]
+            latest["commits"] = {
+                commit["repository"]["scm_name"]: commit["commit_identifier"]
+                for commit in commits
+            }
 
         return latest
 
