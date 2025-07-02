@@ -4,4 +4,4 @@ shared/coverage/
 components/coverage/
 vscode-build/
 /*.tar.xz
-*/vite.config.ts.timestamp-*.mjs
+*/vite.config*.timestamp-*.mjs
