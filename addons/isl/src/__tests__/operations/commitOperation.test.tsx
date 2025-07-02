@@ -13,6 +13,7 @@ import {CommitInfoTestUtils} from '../../testQueries';
 import {
   COMMIT,
   expectMessageSentToServer,
+  getLastMessageOfTypeSentToServer,
   openCommitInfoSidebar,
   resetTestMessages,
   simulateCommits,
@@ -199,8 +200,11 @@ describe('CommitOperation', () => {
       userEvent.type(desc, 'My description');
     });
 
-    jest.spyOn(utils, 'randomId').mockImplementationOnce(() => '1111');
     await CommitInfoTestUtils.clickCommitButton();
+    const message = await waitFor(() =>
+      utils.nullthrows(getLastMessageOfTypeSentToServer('runOperation')),
+    );
+    const id = message.operation.id;
 
     CommitInfoTestUtils.expectIsNOTEditingTitle();
 
@@ -209,7 +213,7 @@ describe('CommitOperation', () => {
         type: 'operationProgress',
         kind: 'exit',
         exitCode: 1,
-        id: '1111',
+        id,
         timestamp: 0,
       });
     });
@@ -235,8 +239,12 @@ describe('CommitOperation', () => {
       userEvent.type(desc, 'My description');
     });
 
-    jest.spyOn(utils, 'randomId').mockImplementationOnce(() => '2222');
     await CommitInfoTestUtils.clickCommitButton();
+    const message = await waitFor(() =>
+      utils.nullthrows(getLastMessageOfTypeSentToServer('runOperation')),
+    );
+    const id = message.operation.id;
+
     CommitInfoTestUtils.expectIsNOTEditingTitle();
 
     act(() => {
@@ -255,7 +263,7 @@ describe('CommitOperation', () => {
         type: 'operationProgress',
         kind: 'exit',
         exitCode: 1,
-        id: '2222',
+        id,
         timestamp: 0,
       });
     });
