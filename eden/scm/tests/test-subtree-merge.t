@@ -864,3 +864,44 @@ test subtree merge from subtree copy commit
    4
   -5
   +5foo
+
+test subtree merge with subtree copy overwriting a path
+
+  $ newclientrepo
+  $ drawdag <<'EOS'
+  > B   # B/foo/x = 1foo\n2\n3\n4\n5foo\n
+  > |
+  > A   # A/foo/x = 1\n2\n3\n4\n5\n
+  >     # drawdag.defaultfiles=false
+  > EOS
+  $ hg go -q $B
+  $ hg subtree copy -r $A --from-path foo --to-path foo2 -m "subtree copy foo -> foo2"
+  copying foo to foo2
+  $ hg subtree merge --from-path foo --to-path foo2
+  searching for merge base ...
+  found the last subtree copy commit 9b7364fcbb0b
+  merge base: 0a99ffb8a8f3
+  1 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  (subtree merge, don't forget to commit)
+  $ hg ci -m "subtree merge foo to foo2"
+  $ hg subtree copy -r 9b7364fcbb0b --from-path foo2 --to-path foo2 -m "overwrite foo2 -> foo2" --force
+  removing foo2/x
+  copying foo2 to foo2
+  $ hg log -G -T '{node|short} {desc|firstline}\n'
+  @  e27d8148b043 overwrite foo2 -> foo2
+  │
+  o  a5697510be4b subtree merge foo to foo2
+  │
+  o  9b7364fcbb0b subtree copy foo -> foo2
+  │
+  o  e4d1c0766aec B
+  │
+  o  0a99ffb8a8f3 A
+tofix: merge base search should follow the overwrite link and skip a5697510be4b
+  $ hg subtree merge --from-path foo --to-path foo2
+  searching for merge base ...
+  found the last subtree merge commit a5697510be4b
+  merge base: 9b7364fcbb0b
+  0 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  (subtree merge, don't forget to commit)
+  $ hg diff
