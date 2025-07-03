@@ -14,6 +14,7 @@ use anyhow::Context;
 use anyhow::Result;
 use anyhow::anyhow;
 use anyhow::bail;
+use anyhow::format_err;
 use async_trait::async_trait;
 use edenapi_types::BlameData;
 use edenapi_types::BlameRequest;
@@ -76,6 +77,14 @@ impl SaplingRemoteApiHandler for BlameHandler {
         Ok(stream::iter(blames)
             .buffer_unordered(MAX_CONCURRENT_BLAMES_PER_REQUEST)
             .boxed())
+    }
+
+    fn extract_in_band_error(response: &Self::Response) -> Option<anyhow::Error> {
+        response
+            .data
+            .as_ref()
+            .err()
+            .map(|err| format_err!("{:?}", err))
     }
 }
 

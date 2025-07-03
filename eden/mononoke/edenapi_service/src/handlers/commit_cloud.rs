@@ -6,6 +6,7 @@
  */
 
 use anyhow::Error;
+use anyhow::format_err;
 use async_trait::async_trait;
 use edenapi_types::CloudShareWorkspaceRequest;
 use edenapi_types::CloudShareWorkspaceResponse;
@@ -87,6 +88,14 @@ impl SaplingRemoteApiHandler for CommitCloudWorkspace {
         let res = get_workspace(request, repo).boxed();
         Ok(stream::once(res).boxed())
     }
+
+    fn extract_in_band_error(response: &Self::Response) -> Option<anyhow::Error> {
+        response
+            .data
+            .as_ref()
+            .err()
+            .map(|err| format_err!("{:?}", err))
+    }
 }
 
 async fn get_workspace<R: MononokeRepo>(
@@ -127,6 +136,14 @@ impl SaplingRemoteApiHandler for CommitCloudWorkspaces {
         let repo = ectx.repo();
         let res = get_workspaces(request, repo).boxed();
         Ok(stream::once(res).boxed())
+    }
+
+    fn extract_in_band_error(response: &Self::Response) -> Option<anyhow::Error> {
+        response
+            .data
+            .as_ref()
+            .err()
+            .map(|err| format_err!("{:?}", err))
     }
 }
 
@@ -175,6 +192,14 @@ impl SaplingRemoteApiHandler for CommitCloudReferences {
         };
         let res = get_references(request, repo).boxed();
         Ok(stream::once(res).boxed())
+    }
+
+    fn extract_in_band_error(response: &Self::Response) -> Option<anyhow::Error> {
+        response
+            .data
+            .as_ref()
+            .err()
+            .map(|err| format_err!("{:?}", err))
     }
 }
 
@@ -234,6 +259,14 @@ impl SaplingRemoteApiHandler for CommitCloudUpdateReferences {
         let res = update_references(request, repo).boxed();
         Ok(stream::once(res).boxed())
     }
+
+    fn extract_in_band_error(response: &Self::Response) -> Option<anyhow::Error> {
+        response
+            .data
+            .as_ref()
+            .err()
+            .map(|err| format_err!("{:?}", err))
+    }
 }
 
 async fn update_references<R: MononokeRepo>(
@@ -280,6 +313,14 @@ impl SaplingRemoteApiHandler for CommitCloudSmartlog {
         let repo = ectx.repo();
         let res = get_smartlog(request, repo).boxed();
         Ok(stream::once(res).boxed())
+    }
+
+    fn extract_in_band_error(response: &Self::Response) -> Option<anyhow::Error> {
+        response
+            .data
+            .as_ref()
+            .err()
+            .map(|err| format_err!("{:?}", err))
     }
 }
 
@@ -330,6 +371,14 @@ impl SaplingRemoteApiHandler for CommitCloudShareWorkspace {
         let res = share_workspace(request, repo).boxed();
         Ok(stream::once(res).boxed())
     }
+
+    fn extract_in_band_error(response: &Self::Response) -> Option<anyhow::Error> {
+        response
+            .data
+            .as_ref()
+            .err()
+            .map(|err| format_err!("{:?}", err))
+    }
 }
 
 async fn share_workspace<R: MononokeRepo>(
@@ -369,6 +418,14 @@ impl SaplingRemoteApiHandler for CommitCloudUpdateArchive {
         let repo = ectx.repo();
         let res = update_archive(request, repo).boxed();
         Ok(stream::once(res).boxed())
+    }
+
+    fn extract_in_band_error(response: &Self::Response) -> Option<anyhow::Error> {
+        response
+            .data
+            .as_ref()
+            .err()
+            .map(|err| format_err!("{:?}", err))
     }
 }
 
@@ -410,6 +467,14 @@ impl SaplingRemoteApiHandler for CommitCloudRenameWorkspace {
         let res = rename_workspace(request, repo).boxed();
         Ok(stream::once(res).boxed())
     }
+
+    fn extract_in_band_error(response: &Self::Response) -> Option<anyhow::Error> {
+        response
+            .data
+            .as_ref()
+            .err()
+            .map(|err| format_err!("{:?}", err))
+    }
 }
 
 async fn rename_workspace<R: MononokeRepo>(
@@ -449,6 +514,14 @@ impl SaplingRemoteApiHandler for CommitCloudSmartlogByVersion {
         let repo = ectx.repo();
         let res = get_smartlog_by_version(request, repo).boxed();
         Ok(stream::once(res).boxed())
+    }
+
+    fn extract_in_band_error(response: &Self::Response) -> Option<anyhow::Error> {
+        response
+            .data
+            .as_ref()
+            .err()
+            .map(|err| format_err!("{:?}", err))
     }
 }
 
@@ -501,6 +574,14 @@ impl SaplingRemoteApiHandler for CommitCloudHistoricalVersions {
         let res = historical_versions(request, repo).boxed();
         Ok(stream::once(res).boxed())
     }
+
+    fn extract_in_band_error(response: &Self::Response) -> Option<anyhow::Error> {
+        response
+            .data
+            .as_ref()
+            .err()
+            .map(|err| format_err!("{:?}", err))
+    }
 }
 
 async fn historical_versions<R: MononokeRepo>(
@@ -546,6 +627,14 @@ impl SaplingRemoteApiHandler for CommitCloudRollbackWorkspace {
         let repo = ectx.repo();
         let res = rollback_workspace(request, repo).boxed();
         Ok(stream::once(res).boxed())
+    }
+
+    fn extract_in_band_error(response: &Self::Response) -> Option<anyhow::Error> {
+        response
+            .data
+            .as_ref()
+            .err()
+            .map(|err| format_err!("{:?}", err))
     }
 }
 

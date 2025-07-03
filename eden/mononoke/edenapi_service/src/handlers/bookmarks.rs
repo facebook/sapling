@@ -9,6 +9,7 @@ use std::collections::HashMap;
 
 use anyhow::Context;
 use anyhow::Error;
+use anyhow::format_err;
 use async_trait::async_trait;
 use bookmarks::BookmarkKey;
 use bookmarks::Freshness;
@@ -126,6 +127,14 @@ impl SaplingRemoteApiHandler for SetBookmarkHandler {
         );
 
         Ok(stream::once(res).boxed())
+    }
+
+    fn extract_in_band_error(response: &Self::Response) -> Option<anyhow::Error> {
+        response
+            .data
+            .as_ref()
+            .err()
+            .map(|err| format_err!("{:?}", err))
     }
 }
 
@@ -261,5 +270,13 @@ impl SaplingRemoteApiHandler for Bookmarks2Handler {
         Ok(stream::iter(fetches)
             .buffer_unordered(MAX_CONCURRENT_FETCHES_PER_REQUEST)
             .boxed())
+    }
+
+    fn extract_in_band_error(response: &Self::Response) -> Option<Error> {
+        response
+            .data
+            .as_ref()
+            .err()
+            .map(|err| format_err!("{:?}", err))
     }
 }

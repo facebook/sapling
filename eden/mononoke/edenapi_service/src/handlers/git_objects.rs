@@ -8,6 +8,7 @@
 use std::sync::Arc;
 
 use anyhow::Error;
+use anyhow::format_err;
 use async_stream::try_stream;
 use async_trait::async_trait;
 use edenapi_types::GitObjectBytes;
@@ -59,6 +60,14 @@ impl SaplingRemoteApiHandler for GitObjectsHandler {
             }
         }
         .boxed())
+    }
+
+    fn extract_in_band_error(response: &Self::Response) -> Option<anyhow::Error> {
+        response
+            .result
+            .as_ref()
+            .err()
+            .map(|err| format_err!("{:?}", err))
     }
 }
 
