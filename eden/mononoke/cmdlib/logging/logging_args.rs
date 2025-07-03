@@ -5,6 +5,7 @@
  * GNU General Public License version 2.
  */
 
+use std::io::IsTerminal;
 use std::str::FromStr;
 use std::sync::Arc;
 
@@ -231,6 +232,7 @@ impl LoggingArgs {
                 .event_format(event_format)
                 .fmt_fields(GlogFields::default())
                 .with_writer(std::io::stderr)
+                .with_ansi(std::io::stderr().is_terminal())
                 .with_filter(filter);
 
             let subscriber = tracing_subscriber::registry().with(log_layer);
