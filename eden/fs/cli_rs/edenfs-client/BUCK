@@ -5,9 +5,6 @@ oncall("scm_client_infra")
 rust_library(
     name = "edenfs-client",
     srcs = glob(["src/**/*.rs"]),
-    named_deps = {
-        "hg_util": "//eden/scm/lib/util:util",
-    },
     os_deps = [
         (
             "windows",

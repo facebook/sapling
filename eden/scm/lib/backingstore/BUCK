@@ -52,6 +52,14 @@ rust_library(
             }},
             "features": {"fb": ["sapling-configloader/fb"]},
             "lib": {"name": "backingstore"},
+            "lints": {
+                "rust": {
+                    "unexpected_cfgs": {
+                        "check-cfg": ["cfg(fbcode_build)"],
+                        "level": "warn",
+                    },
+                },
+            },
             "package": {
                 "authors": ["Meta Source Control Team <sourcecontrol-dev@meta.com>"],
                 "homepage": "https://sapling-scm.com/",

@@ -44,12 +44,14 @@ endif()
 
 add_fb_python_unittest(
   integration_tests
+  TYPE "pex"
   SOURCES ${INTEGRATION_SRCS}
   WORKING_DIRECTORY "${CMAKE_BINARY_DIR}"
   DEPENDS
     edenfsctl.real.main_lib
     eden_integration_lib
     eden_hg_integration_lib
+    python-psutil::python-psutil
   ENV
     "CMAKE_SOURCE_DIR=${CMAKE_SOURCE_DIR}"
 )
