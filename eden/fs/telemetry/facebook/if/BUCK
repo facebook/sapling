@@ -7,7 +7,9 @@ thrift_library(
     languages = [
         "cpp2",
         "py-deprecated",
+        "python",
     ],
+    py3_namespace = "eden",
     py_base_module = "eden",
     thrift_cpp2_options = "json",
     thrift_srcs = {
