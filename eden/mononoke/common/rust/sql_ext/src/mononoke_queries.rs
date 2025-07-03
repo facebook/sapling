@@ -131,7 +131,8 @@ macro_rules! mononoke_queries {
                     C: Into<Option<&'a ClientRequestInfo>>
                 {
                     let cri_str = cri.into().map(|cri| serde_json::to_string(cri)).transpose()?;
-                    [<$name Impl>]::commented_query_with_transaction(transaction, cri_str.as_deref(), $( $pname, )* $( $lname, )*).await
+                    let (txn, (res, _)) = [<$name Impl>]::commented_query_with_transaction(transaction, cri_str.as_deref(), $( $pname, )* $( $lname, )*).await?;
+                    Ok((txn, res))
                 }
 
             }
@@ -233,7 +234,8 @@ macro_rules! mononoke_queries {
                     C: Into<Option<&'a ClientRequestInfo>>
                 {
                     let cri_str = cri.into().map(|cri| serde_json::to_string(cri)).transpose()?;
-                    [<$name Impl>]::commented_query_with_transaction(transaction, cri_str.as_deref(), $( $pname, )* $( $lname, )*).await
+                    let (txn, (res, _)) = [<$name Impl>]::commented_query_with_transaction(transaction, cri_str.as_deref(), $( $pname, )* $( $lname, )*).await?;
+                    Ok((txn, res))
                 }
 
             }
