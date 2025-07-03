@@ -20,7 +20,7 @@ futures_ext = { version = "0.1.0", git = "https://github.com/facebookexperimenta
 futures_stats = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 itertools = "0.14.0"
 justknobs = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
-lazy_static = { version = "1.5", features = ["spin_no_std"], default-features = false }
+lazy_static = "1.5"
 maplit = "1.0"
 mercurial_mutation = { version = "0.1.0", path = "../mutation" }
 mercurial_types = { version = "0.1.0", path = "../types" }

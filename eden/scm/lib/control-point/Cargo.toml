@@ -14,7 +14,7 @@ name = "control_point"
 
 [dependencies]
 anyhow = "1.0.98"
-lazy_static = { version = "1.5", features = ["spin_no_std"], default-features = false }
+lazy_static = "1.5"
 parking_lot = { version = "0.12.1", features = ["send_guard"] }
 sapling-util = { version = "0.1.0", path = "../util" }
 serde_json = { version = "1.0.140", features = ["alloc", "float_roundtrip", "unbounded_depth"] }
