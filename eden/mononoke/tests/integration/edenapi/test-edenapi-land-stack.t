@@ -37,7 +37,8 @@ Populate test repo
 
 Start up SaplingRemoteAPI server.
   $ setup_mononoke_config
-  $ start_and_wait_for_mononoke_server
+  $ SCUBA="$TESTTMP/scuba.json"
+  $ start_and_wait_for_mononoke_server --scuba-log-file "$SCUBA"
 Clone the repo
   $ cd $TESTTMP
   $ hg clone -q mono:repo repo --noupdate
@@ -82,3 +83,13 @@ Test land stack failure - expose server error to client
   $ hg debugapi -e landstack -i "'master_bookmark'" -i "'$C'" -i "'$B'"
   {"data": {"Err": {"code": 0,
                     "message": "Conflicts while pushrebasing: [PushrebaseConflict { left: MPath(\"C\"), right: MPath(\"C\") }]"}}}
+
+  $ cat "$SCUBA" | jq '. | select(.normal.log_tag == "EdenAPI Request Processed" and .normal.edenapi_method == "land_stack") | {edenapi_error: .normal.edenapi_error, edenapi_error_count: .int.edenapi_error_count}'
+  {
+    "edenapi_error": null,
+    "edenapi_error_count": 0
+  }
+  {
+    "edenapi_error": "ServerError { message: \"Conflicts while pushrebasing: [PushrebaseConflict { left: MPath(\\\"C\\\"), right: MPath(\\\"C\\\") }]\", code: 0 }",
+    "edenapi_error_count": 1
+  }

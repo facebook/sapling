@@ -9,6 +9,7 @@ use std::collections::HashMap;
 
 use anyhow::Context;
 use anyhow::Error;
+use anyhow::format_err;
 use async_trait::async_trait;
 use bookmarks_movement::BookmarkKindRestrictions;
 use bytes::Bytes;
@@ -61,6 +62,14 @@ impl SaplingRemoteApiHandler for LandStackHandler {
                 .collect(),
         ))
         .boxed())
+    }
+
+    fn extract_in_band_error(response: &Self::Response) -> Option<anyhow::Error> {
+        response
+            .data
+            .as_ref()
+            .err()
+            .map(|err| format_err!("{:?}", err))
     }
 }
 
