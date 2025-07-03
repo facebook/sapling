@@ -512,6 +512,13 @@ def _subtree_merge_base(repo, to_ctx, to_path, from_ctx, from_path, opts):
                     )
                     merge_base_ctx = repo[branch.from_commit]
                     return registerdiffgrafts(merge_base_ctx, i)
+                elif branch.to_path == paths[i] and branch.from_path == paths[i]:
+                    # subtree copy overwrite, follow the source commit
+                    source_node = node.bin(branch.from_commit)
+                    hist = pathlog.pathlog(
+                        repo, source_node, paths[i], is_prefetch_commit_text=True
+                    )
+                    iters[i] = hist
 
             try:
                 # add next node to the list

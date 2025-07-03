@@ -900,8 +900,20 @@ test subtree merge with subtree copy overwriting a path
 tofix: merge base search should follow the overwrite link and skip a5697510be4b
   $ hg subtree merge --from-path foo --to-path foo2
   searching for merge base ...
-  found the last subtree merge commit a5697510be4b
-  merge base: 9b7364fcbb0b
-  0 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  found the last subtree copy commit 9b7364fcbb0b
+  merge base: 0a99ffb8a8f3
+  merging foo2/x and foo/x to foo2/x
+  0 files updated, 1 files merged, 0 files removed, 0 files unresolved
   (subtree merge, don't forget to commit)
   $ hg diff
+  diff --git a/foo2/x b/foo2/x
+  --- a/foo2/x
+  +++ b/foo2/x
+  @@ -1,5 +1,5 @@
+  -1
+  +1foo
+   2
+   3
+   4
+  -5
+  +5foo
