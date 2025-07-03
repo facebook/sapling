@@ -11,6 +11,12 @@ import type {Logger} from 'isl-server/src/logger';
 import type {ChangedFile} from 'isl/src/types';
 import type {Comparison} from 'shared/Comparison';
 import type {Writable} from 'shared/typeUtils';
+import type {
+  SaplingChangedFile,
+  SaplingCommandOutput,
+  SaplingCommitInfo,
+  SaplingRepository,
+} from './api/types';
 import type {EnabledSCMApiFeature} from './types';
 
 import {Repository} from 'isl-server/src/Repository';
@@ -142,6 +148,10 @@ export class VSCodeReposList {
     };
   }
 
+  public getCurrentActiveRepos(): Array<VSCodeRepo> {
+    return Array.from(this.vscodeRepos.values());
+  }
+
   public dispose() {
     for (const disposable of this.disposables) {
       disposable.dispose();
@@ -159,7 +169,7 @@ export type SaplingResourceGroup = vscode.SourceControlResourceGroup & {
  * vscode-API-compatible repository.
  * This handles vscode-api integrations, but defers to Repository for any actual work.
  */
-export class VSCodeRepo implements vscode.QuickDiffProvider {
+export class VSCodeRepo implements vscode.QuickDiffProvider, SaplingRepository {
   private disposables: Array<vscode.Disposable> = [];
   private sourceControl?: vscode.SourceControl;
   private resourceGroups?: Record<
@@ -376,6 +386,33 @@ export class VSCodeRepo implements vscode.QuickDiffProvider {
     const comparison = {type: ComparisonType.UncommittedChanges} as Comparison;
 
     return encodeSaplingDiffUri(uri, comparison);
+  }
+
+  ////////////////////////////////////////////////////////////////////////////////////
+
+  get info() {
+    return this.repo.info;
+  }
+
+  getDotCommit(): SaplingCommitInfo | undefined {
+    return this.repo.getHeadCommit();
+  }
+  onChangeDotCommit(callback: (commit: SaplingCommitInfo | undefined) => void): vscode.Disposable {
+    return this.repo.subscribeToHeadCommit(callback);
+  }
+  getUncommittedChanges(): ReadonlyArray<SaplingChangedFile> {
+    return this.repo.getUncommittedChanges()?.files?.value ?? [];
+  }
+  onChangeUncommittedChanges(
+    callback: (changes: ReadonlyArray<SaplingChangedFile>) => void,
+  ): vscode.Disposable {
+    return this.repo.subscribeToUncommittedChanges(result => {
+      callback(result.files?.value ?? []);
+    });
+  }
+
+  runSlCommand(args: Array<string>): Promise<SaplingCommandOutput> {
+    return this.repo.runCommand(args, undefined, this.repo.initialConnectionContext);
   }
 }
 

@@ -8,6 +8,7 @@
 import type {Level} from 'isl-server/src/logger';
 import type {ServerPlatform} from 'isl-server/src/serverPlatform';
 import type {RepositoryContext} from 'isl-server/src/serverTypes';
+import type {SaplingExtensionApi} from './api/types';
 import type {EnabledSCMApiFeature} from './types';
 
 import {makeServerSideTracker} from 'isl-server/src/analytics/serverSideTracker';
@@ -18,6 +19,7 @@ import {DeletedFileContentProvider} from './DeletedFileContentProvider';
 import {registerSaplingDiffContentProvider} from './DiffContentProvider';
 import {Internal} from './Internal';
 import {VSCodeReposList} from './VSCodeRepo';
+import {makeExtensionApi} from './api/api';
 import {InlineBlameProvider} from './blame/blame';
 import {registerCommands} from './commands';
 import {getCLICommand} from './config';
@@ -26,7 +28,9 @@ import {registerISLCommands} from './islWebviewPanel';
 import {extensionVersion} from './utils';
 import {getVSCodePlatform} from './vscodePlatform';
 
-export async function activate(context: vscode.ExtensionContext) {
+export async function activate(
+  context: vscode.ExtensionContext,
+): Promise<SaplingExtensionApi | undefined> {
   const start = Date.now();
   const [outputChannel, logger] = createOutputChannelLogger();
   const platform = getVSCodePlatform(context);
@@ -83,10 +87,13 @@ export async function activate(context: vscode.ExtensionContext) {
       context.subscriptions.push(Internal.registerInternalBugLogsProvider(logger));
 
     extensionTracker.track('VSCodeExtensionActivated', {duration: Date.now() - start});
+    const api = makeExtensionApi(platform, ctx, reposList);
+    return api;
   } catch (error) {
     extensionTracker.error('VSCodeExtensionActivated', 'VSCodeActivationError', error as Error, {
       duration: Date.now() - start,
     });
+    return undefined;
   }
 }
 
