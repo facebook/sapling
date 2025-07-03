@@ -162,6 +162,12 @@ pub trait SaplingRemoteApiHandler: 'static {
         nonzero!(1u64)
     }
 
+    /// Returns an in-band error if the response contains one. In-band errors are errors that
+    /// are sent to the client as part of the response.
+    fn extract_in_band_error(_response: &Self::Response) -> Option<anyhow::Error> {
+        None
+    }
+
     async fn handler(
         ctx: SaplingRemoteApiContext<Self::PathExtractor, Self::QueryStringExtractor, Repo>,
         request: Self::Request,

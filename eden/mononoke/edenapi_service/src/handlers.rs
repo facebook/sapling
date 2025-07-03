@@ -41,6 +41,7 @@ use gotham_ext::middleware::load::RequestLoad;
 use gotham_ext::middleware::request_context::RequestContext;
 use gotham_ext::middleware::scuba::HttpScubaKey;
 use gotham_ext::middleware::scuba::ScubaMiddlewareState;
+use gotham_ext::response::PendingInBandErrors;
 use gotham_ext::response::ResponseTryStreamExt;
 use gotham_ext::response::StreamBody;
 use gotham_ext::response::TryIntoResponse;
@@ -361,11 +362,25 @@ where
 
         let ectx = SaplingRemoteApiContext::new(rctx, sctx, repo, path, query, slapi_flavour);
 
+        let (in_band_error_sender, in_band_error_receiver) =
+            tokio::sync::mpsc::unbounded_channel::<Error>();
+
+        state.put(PendingInBandErrors {
+            receiver: in_band_error_receiver,
+        });
+
         match Handler::handler(ectx, request).await {
-            Ok(responses) => Ok(encode_response_stream(
-                monitor_request(&state, responses),
-                content_encoding,
-            )),
+            Ok(responses) => {
+                let stream = monitor_request(&state, responses);
+                let stream = stream.inspect_ok(move |response| {
+                    if let Some(in_band_error) = Handler::extract_in_band_error(response) {
+                        if let Err(err) = in_band_error_sender.send(in_band_error) {
+                            tracing::warn!("Failed to send in-band error: {}", err);
+                        }
+                    }
+                });
+                Ok(encode_response_stream(stream, content_encoding))
+            }
             Err(err) => Err(err.into()),
         }
     }

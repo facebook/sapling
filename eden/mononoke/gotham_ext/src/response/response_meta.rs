@@ -112,3 +112,22 @@ impl PendingResponseMeta {
         ResponseMeta { headers, body }
     }
 }
+
+pub struct InBandErrors {
+    pub errors: Vec<Error>,
+}
+
+#[derive(StateData)]
+pub struct PendingInBandErrors {
+    pub receiver: tokio::sync::mpsc::UnboundedReceiver<Error>,
+}
+
+impl PendingInBandErrors {
+    pub async fn finish(&mut self) -> InBandErrors {
+        let mut errors = vec![];
+        while let Some(error) = self.receiver.recv().await {
+            errors.push(error);
+        }
+        InBandErrors { errors }
+    }
+}

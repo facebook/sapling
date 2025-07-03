@@ -25,6 +25,8 @@ pub use response::build_error_response;
 pub use response::build_response;
 pub use response_meta::BodyMeta;
 pub use response_meta::HeadersMeta;
+pub use response_meta::InBandErrors;
+pub use response_meta::PendingInBandErrors;
 pub use response_meta::PendingResponseMeta;
 pub use response_meta::ResponseMeta;
 pub use stream::CompressedResponseStream;

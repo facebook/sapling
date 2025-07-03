@@ -28,6 +28,8 @@ use trust_dns_resolver::TokioAsyncResolver;
 use super::MetadataState;
 use super::Middleware;
 use super::RequestStartTime;
+use crate::response::InBandErrors;
+use crate::response::PendingInBandErrors;
 use crate::response::PendingResponseMeta;
 use crate::response::PendingStreamStats;
 use crate::response::ResponseMeta;
@@ -40,17 +42,30 @@ pub struct PostResponseInfo {
     pub client_hostname: Option<String>,
     pub meta: Option<ResponseMeta>,
     pub stream_stats: Option<StreamStats>,
+    pub in_band_errors: Option<InBandErrors>,
 }
 
 impl PostResponseInfo {
     pub fn first_error(&self) -> Option<&Error> {
-        self.meta.as_ref()?.body().error_meta.errors.first()
+        if let Some(err) = self.meta.as_ref()?.body().error_meta.errors.first() {
+            Some(err)
+        } else if let Some(err) = self.in_band_errors.as_ref()?.errors.first() {
+            Some(err)
+        } else {
+            None
+        }
     }
 
     pub fn error_count(&self) -> u64 {
-        self.meta
+        let errors_count = self
+            .meta
             .as_ref()
-            .map_or(0, |m| m.body().error_meta.error_count())
+            .map_or(0, |m| m.body().error_meta.error_count());
+        let in_band_errors_count = self
+            .in_band_errors
+            .as_ref()
+            .map_or(0, |e| e.errors.len() as u64);
+        errors_count + in_band_errors_count
     }
 }
 
@@ -105,6 +120,7 @@ impl<C: PostResponseConfig> Middleware for PostResponseMiddleware<C> {
         let hostname_future = MetadataState::try_borrow_from(state).map(resolve_hostname);
         let meta = PendingResponseMeta::try_take_from(state);
         let stream_stats = PendingStreamStats::try_take_from(state);
+        let pending_in_band_errors = PendingInBandErrors::try_take_from(state);
 
         if let Some(callbacks) = state.try_take::<PostResponseCallbacks>() {
             mononoke::spawn_task(callbacks.run(
@@ -113,6 +129,7 @@ impl<C: PostResponseConfig> Middleware for PostResponseMiddleware<C> {
                 meta,
                 stream_stats,
                 hostname_future,
+                pending_in_band_errors,
             ));
         }
     }
@@ -151,6 +168,7 @@ impl PostResponseCallbacks {
         meta: Option<PendingResponseMeta>,
         stream_stats: Option<PendingStreamStats>,
         hostname_future: Option<H>,
+        pending_in_band_errors: Option<PendingInBandErrors>,
     ) where
         C: PostResponseConfig,
         H: Future<Output = Option<String>> + Send + 'static,
@@ -176,11 +194,17 @@ impl PostResponseCallbacks {
             _ => None,
         };
 
+        let in_band_errors = match pending_in_band_errors {
+            Some(mut pending_in_band_errors) => Some(pending_in_band_errors.finish().await),
+            None => None,
+        };
+
         let info = PostResponseInfo {
             duration,
             client_hostname,
             meta,
             stream_stats,
+            in_band_errors,
         };
 
         for callback in callbacks {
