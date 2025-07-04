@@ -1,0 +1,14 @@
+load("@fbcode_macros//build_defs:thrift_library.bzl", "thrift_library")
+
+oncall("source_control")
+
+thrift_library(
+    name = "fbsource_commit_tailer",
+    languages = [
+        "python",
+    ],
+    py_base_module = "configerator.mononoke",
+    thrift_py_options = "json",
+    thrift_srcs = {"relevant_paths.thrift": None},
+    deps = [],
+)

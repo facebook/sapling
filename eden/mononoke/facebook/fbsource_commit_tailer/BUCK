@@ -9,6 +9,8 @@ python_binary(
     main_function = "eden.mononoke.facebook.fbsource_commit_tailer.tailer.main",
     deps = [
         "fbsource//third-party/pypi/aiohttp:aiohttp",
+        "//configerator/distribution/api/py:configerator_client",
+        "//configerator/structs/scm/mononoke/fbsource_commit_tailer:fbsource_commit_tailer-python-types",
         "//eden/mononoke/facebook/mononoke_config:mononoke_config",
         "//eden/mononoke/facebook/post_commit_tailer:post_commit_tailer",
         "//eden/mononoke/scs/if:source_control-py3-clients",
