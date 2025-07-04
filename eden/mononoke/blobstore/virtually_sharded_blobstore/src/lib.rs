@@ -28,6 +28,7 @@ use anyhow::Result;
 use anyhow::anyhow;
 use async_trait::async_trait;
 use blobstore::Blobstore;
+use blobstore::BlobstoreCacheEncoding;
 use blobstore::BlobstoreGetData;
 use blobstore::BlobstoreIsPresent;
 use blobstore::BlobstoreMetadata;
@@ -97,7 +98,7 @@ enum CacheData {
 }
 
 impl CacheData {
-    fn deserialize(mut val: Bytes) -> Result<Self> {
+    fn deserialize(mut val: Bytes, encoding: BlobstoreCacheEncoding) -> Result<Self> {
         let prefix = val.split_to(1);
 
         if prefix.as_ref() == NOT_STORABLE {
@@ -105,7 +106,7 @@ impl CacheData {
         }
 
         if prefix.as_ref() == STORED {
-            let val = BlobstoreBytes::decode(val)
+            let val = BlobstoreBytes::decode(val, encoding)
                 .ok_or_else(|| anyhow!("Invalid data in blob cache"))?
                 .into();
             return Ok(Self::Stored(val));
@@ -201,12 +202,14 @@ impl<T> VirtuallyShardedBlobstore<T> {
         presence_pool: VolatileLruCachePool,
         shards: NonZeroUsize,
         cachelib_options: CachelibBlobstoreOptions,
+        encoding: BlobstoreCacheEncoding,
     ) -> Self {
         let cache = Cache {
             blob_pool,
             presence_pool,
             cache_filter: allow_all_filter,
             cachelib_options,
+            encoding,
         };
 
         let inner = Inner::new(blobstore, shards, cache);
@@ -232,6 +235,7 @@ struct Cache {
     blob_pool: VolatileLruCachePool,
     cache_filter: fn(&Bytes) -> Result<()>,
     cachelib_options: CachelibBlobstoreOptions,
+    encoding: BlobstoreCacheEncoding,
 }
 
 impl Cache {
@@ -241,7 +245,7 @@ impl Cache {
             None => return Ok(None),
         };
 
-        Ok(Some(CacheData::deserialize(val)?))
+        Ok(Some(CacheData::deserialize(val, self.encoding)?))
     }
 
     /// Set presence for this cache key.
@@ -275,7 +279,7 @@ impl Cache {
         };
         let stored = value
             .into_bytes()
-            .encode(encode_limit)
+            .encode(encode_limit, self.encoding)
             .ok_or_else(|| anyhow!("Could not encode"))
             .and_then(|encoded| {
                 (self.cache_filter)(&encoded)?;
@@ -647,6 +651,7 @@ mod test {
             blob_pool,
             cache_filter,
             cachelib_options: CachelibBlobstoreOptions::default(),
+            encoding: Default::default(),
         })
     }
 

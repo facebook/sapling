@@ -279,6 +279,7 @@ async fn open_blobstore(
                     Arc::new(blob_pool),
                     Arc::new(presence_pool),
                     blobstore_options.cachelib_options,
+                    Default::default(),
                 ))
             }
             #[cfg(not(fbcode_build))]

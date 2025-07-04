@@ -64,6 +64,15 @@ pub mod private {
     pub use crate::Storable;
 }
 
+#[derive(Copy, Clone, Default, PartialEq, Eq)]
+pub enum BlobstoreCacheEncoding {
+    /// Local cache uses abomonation for encoding
+    #[default]
+    Abomonation,
+    /// Local cache uses bincode for encoding
+    Bincode,
+}
+
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct BlobstoreGetData {
     meta: BlobstoreMetadata,
@@ -74,6 +83,11 @@ const UNCOMPRESSED: u8 = b'0';
 const COMPRESSED: u8 = b'1';
 
 pub const BLOBSTORE_MAX_POLL_TIME_MS: u64 = 100;
+
+const BINCODE_CONFIG: bincode::config::Configuration<
+    bincode::config::LittleEndian,
+    bincode::config::Fixint,
+> = bincode::config::standard().with_fixed_int_encoding();
 
 impl BlobstoreGetData {
     #[inline]
@@ -236,10 +250,22 @@ impl BlobstoreBytes {
         &self.0
     }
 
-    pub fn encode(self, encode_limit: Option<u64>) -> Option<Bytes> {
+    pub fn encode(
+        self,
+        encode_limit: Option<u64>,
+        encoding: BlobstoreCacheEncoding,
+    ) -> Option<Bytes> {
         let mut bytes = vec![UNCOMPRESSED];
         let prepared = BlobstoreBytesSerialisable::from(self);
-        unsafe { abomonation::encode(&prepared, &mut bytes).ok()? };
+
+        match encoding {
+            BlobstoreCacheEncoding::Abomonation => {
+                unsafe { abomonation::encode(&prepared, &mut bytes).ok()? };
+            }
+            BlobstoreCacheEncoding::Bincode => {
+                bincode::encode_into_std_write(&prepared, &mut bytes, BINCODE_CONFIG).ok()?;
+            }
+        }
 
         match encode_limit {
             Some(encode_limit) if bytes.len() as u64 >= encode_limit => {
@@ -255,7 +281,7 @@ impl BlobstoreBytes {
         }
     }
 
-    pub fn decode(mut bytes: Bytes) -> Option<Self> {
+    pub fn decode(mut bytes: Bytes, encoding: BlobstoreCacheEncoding) -> Option<Self> {
         let prefix_size = 1;
         if bytes.len() < prefix_size {
             return None;
@@ -269,16 +295,27 @@ impl BlobstoreBytes {
             bytes.as_ref().into()
         };
 
-        let get_data_serialisable =
-            unsafe { abomonation::decode::<BlobstoreBytesSerialisable>(&mut bytes) };
-
-        get_data_serialisable.and_then(|(get_data_serialisable, tail)| {
-            if tail.is_empty() {
-                Some(get_data_serialisable.clone().into())
-            } else {
-                None
+        match encoding {
+            BlobstoreCacheEncoding::Abomonation => {
+                let get_data_serialisable =
+                    unsafe { abomonation::decode::<BlobstoreBytesSerialisable>(&mut bytes) };
+                get_data_serialisable.and_then(|(get_data_serialisable, tail)| {
+                    if tail.is_empty() {
+                        Some(get_data_serialisable.clone().into())
+                    } else {
+                        None
+                    }
+                })
             }
-        })
+            BlobstoreCacheEncoding::Bincode => {
+                let (get_data_serialisable, _bytes_read) = bincode::decode_from_slice::<
+                    BlobstoreBytesSerialisable,
+                    _,
+                >(&bytes, BINCODE_CONFIG)
+                .ok()?;
+                Some(get_data_serialisable.into())
+            }
+        }
     }
 }
 
