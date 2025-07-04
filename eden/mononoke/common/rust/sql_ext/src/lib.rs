@@ -14,6 +14,7 @@ mod sqlite;
 pub use sql::SqlConnections;
 pub use sql::SqlShardedConnections;
 pub use sql::Transaction;
+pub use sql_telemetry_logger::SqlTelemetryLogger;
 pub use sqlite::open_existing_sqlite_path;
 pub use sqlite::open_sqlite_in_memory;
 pub use sqlite::open_sqlite_path;
@@ -30,6 +31,7 @@ pub mod _macro_internal {
     pub use std::collections::hash_map::DefaultHasher;
     pub use std::hash::Hash;
     pub use std::hash::Hasher;
+    pub use std::sync::Arc;
 
     pub use anyhow::Result;
     pub use clientinfo::ClientEntryPoint;
@@ -41,6 +43,7 @@ pub mod _macro_internal {
     pub use sql::WriteResult;
     pub use sql::queries;
     pub use sql_query_config::SqlQueryConfig;
+    pub use sql_telemetry_logger::SqlTelemetryLogger;
     pub use twox_hash::xxh3::Hash128;
     pub use twox_hash::xxh3::HasherExt;
 

@@ -107,7 +107,7 @@ impl Insert<WorkspaceLocalBookmark> for SqlCommitCloud {
     ) -> anyhow::Result<Transaction> {
         let (txn, _) = InsertLocalBookmark::query_with_transaction(
             txn,
-            cri,
+            cri.map(|cri| cri.into()),
             &reponame,
             &workspace,
             data.name(),
@@ -130,7 +130,7 @@ impl Update<WorkspaceLocalBookmark> for SqlCommitCloud {
     ) -> anyhow::Result<(Transaction, u64)> {
         let (txn, result) = UpdateWorkspaceName::query_with_transaction(
             txn,
-            cri,
+            cri.map(|cri| cri.into()),
             &cc_ctx.reponame,
             &cc_ctx.workspace,
             &args.new_workspace,
@@ -153,7 +153,7 @@ impl Delete<WorkspaceLocalBookmark> for SqlCommitCloud {
     ) -> anyhow::Result<Transaction> {
         let (txn, _) = DeleteLocalBookmark::query_with_transaction(
             txn,
-            cri,
+            cri.map(|cri| cri.into()),
             &reponame,
             &workspace,
             &args.removed_bookmarks,

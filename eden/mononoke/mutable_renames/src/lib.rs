@@ -215,12 +215,7 @@ impl MutableRenames {
             ));
         }
 
-        AddPaths::query(
-            &self.store.write_connection,
-            ctx.client_request_info(),
-            &rows[..],
-        )
-        .await?;
+        AddPaths::query(&self.store.write_connection, ctx.into(), &rows[..]).await?;
 
         // Now insert the renames
         ctx.perf_counters()
@@ -239,12 +234,7 @@ impl MutableRenames {
             ));
         }
 
-        AddRenames::query(
-            &self.store.write_connection,
-            ctx.client_request_info(),
-            &rows[..],
-        )
-        .await?;
+        AddRenames::query(&self.store.write_connection, ctx.into(), &rows[..]).await?;
 
         Ok(())
     }
@@ -259,7 +249,7 @@ impl MutableRenames {
 
         let rename_targets = HasRenameCheck::query(
             &self.store.read_connection,
-            ctx.client_request_info(),
+            ctx.into(),
             &self.repo_id,
             &dst_cs_id,
         )
@@ -304,7 +294,7 @@ impl MutableRenames {
         let dst_path_hash = PathHashBytes::new(&dst_path_bytes);
         let mut rows = GetRename::query(
             &self.store.read_connection,
-            ctx.client_request_info(),
+            ctx.into(),
             &self.repo_id,
             &dst_cs_id,
             &dst_path_hash.0,
@@ -364,7 +354,7 @@ impl MutableRenames {
         let dst_path_hash = PathHashBytes::new(&dst_path_bytes);
         let rows = FindRenames::query(
             &self.store.read_connection,
-            ctx.client_request_info(),
+            ctx.into(),
             &self.repo_id,
             &dst_path_hash.0,
         )
@@ -402,7 +392,7 @@ impl MutableRenames {
             .increment_counter(PerfCounterType::SqlReadsReplica);
         let rows = ListRenamesByDstChangeset::query(
             &self.store.read_connection,
-            ctx.client_request_info(),
+            ctx.into(),
             &self.repo_id,
             &dst_cs_id,
         )
@@ -448,13 +438,12 @@ impl MutableRenames {
 
         // Delete renames
         let (txn, delete_renames_result) =
-            DeleteRenames::query_with_transaction(txn, ctx.client_request_info(), &rows[..])
-                .await?;
+            DeleteRenames::query_with_transaction(txn, ctx.into(), &rows[..]).await?;
 
         // Compute orphan paths
         let (txn, used_path_hashes) = FindUsedPathHashes::query_with_transaction(
             txn,
-            ctx.client_request_info(),
+            ctx.into(),
             &path_hashes.clone().into_iter().collect::<Vec<_>>()[..],
         )
         .await?;
@@ -466,7 +455,7 @@ impl MutableRenames {
         // Delete orphan paths
         let (txn, delete_paths_result) = DeletePaths::query_with_transaction(
             txn,
-            ctx.client_request_info(),
+            ctx.into(),
             &path_hashes.into_iter().collect::<Vec<_>>()[..],
         )
         .await?;

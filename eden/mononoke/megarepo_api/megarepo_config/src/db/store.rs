@@ -95,7 +95,7 @@ impl MegarepoSyncConfig for SqlMegarepoSyncConfig {
                 .context("failed to serialize SyncTargetConfig")?;
         let res = AddRepoConfig::query(
             &self.connections.write_connection,
-            ctx.client_request_info(),
+            ctx.into(),
             repo_id,
             bookmark.name(),
             version,
@@ -137,7 +137,7 @@ impl MegarepoSyncConfig for SqlMegarepoSyncConfig {
     ) -> Result<Option<MegarepoSyncConfigEntry>> {
         let rows = GetRepoConfigByVersion::query(
             &self.connections.read_connection,
-            ctx.client_request_info(),
+            ctx.into(),
             repo_id,
             bookmark.name(),
             version,

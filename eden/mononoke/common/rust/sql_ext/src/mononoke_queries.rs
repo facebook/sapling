@@ -100,16 +100,17 @@ macro_rules! mononoke_queries {
                 use $crate::_macro_internal::*;
 
                 #[allow(dead_code)]
-                pub async fn query<'a, C>(
+                pub async fn query<'a>(
                     connection: &'a Connection,
-                    cri: C,
+                    tel_logger: Option<SqlTelemetryLogger>,
                     $( $pname: &'a $ptype, )*
                     $( $lname: &'a [ $ltype ], )*
                 ) -> Result<Vec<($( $rtype, )*)>>
-                where
-                    C: Into<Option<&'a ClientRequestInfo>>
                 {
-                    let cri_str = cri.into().map(|cri| serde_json::to_string(cri)).transpose()?;
+                    let cri = tel_logger.as_ref().and_then(|p| p.client_request_info());
+                    // Convert ClientRequestInfo to string if present
+                    let cri_str = cri.map(|cri| serde_json::to_string(&cri)).transpose()?;
+
                     query_with_retry_no_cache(
                         || async {
                             let (res, _opt_stats) = [<$name Impl>]::commented_query(connection, cri_str.as_deref(), $( $pname, )* $( $lname, )*).await?;
@@ -121,16 +122,16 @@ macro_rules! mononoke_queries {
                 }
 
                 #[allow(dead_code)]
-                pub async fn query_with_transaction<'a, C>(
+                pub async fn query_with_transaction<'a>(
                     transaction: Transaction,
-                    cri: C,
+                    tel_logger: Option<SqlTelemetryLogger>,
                     $( $pname: &'a $ptype, )*
                     $( $lname: &'a [ $ltype ], )*
                 ) -> Result<(Transaction, Vec<($( $rtype, )*)>)>
-                where
-                    C: Into<Option<&'a ClientRequestInfo>>
                 {
-                    let cri_str = cri.into().map(|cri| serde_json::to_string(cri)).transpose()?;
+                    let cri = tel_logger.as_ref().and_then(|p| p.client_request_info());
+                    // Convert ClientRequestInfo to string if present
+                    let cri_str = cri.map(|cri| serde_json::to_string(&cri)).transpose()?;
                     let (txn, (res, _)) = [<$name Impl>]::commented_query_with_transaction(transaction, cri_str.as_deref(), $( $pname, )* $( $lname, )*).await?;
                     Ok((txn, res))
                 }
@@ -166,16 +167,14 @@ macro_rules! mononoke_queries {
                 use $crate::_macro_internal::*;
 
                 #[allow(dead_code)]
-                pub async fn query<'a, C>(
+                pub async fn query<'a>(
                     config: &SqlQueryConfig,
                     cache_ttl: Option<std::time::Duration>,
                     connection: &'a Connection,
-                    cri: C,
+                    tel_logger: Option<SqlTelemetryLogger>,
                     $( $pname: &'a $ptype, )*
                     $( $lname: &'a [ $ltype ], )*
                 ) -> Result<Vec<($( $rtype, )*)>>
-                where
-                    C: Into<Option<&'a ClientRequestInfo>>
                 {
                     // Prepare cache data
                     let mut hasher = Hash128::with_seed(0);
@@ -191,8 +190,9 @@ macro_rules! mononoke_queries {
                     let key = hasher.finish_ext();
                     let data = CacheData {key, config: config.caching.as_ref(), cache_ttl };
 
+                    let cri = tel_logger.as_ref().and_then(|p| p.client_request_info());
                     // Convert ClientRequestInfo to string if present
-                    let cri_str = cri.into().map(|cri| serde_json::to_string(cri)).transpose()?;
+                    let cri_str = cri.map(|cri| serde_json::to_string(&cri)).transpose()?;
 
                     // Execute query with caching
                     let res = query_with_retry(
@@ -212,16 +212,17 @@ macro_rules! mononoke_queries {
                 }
 
                 #[allow(dead_code)]
-                pub async fn query_with_transaction<'a, C>(
+                pub async fn query_with_transaction(
                     transaction: Transaction,
-                    cri: C,
-                    $( $pname: &'a $ptype, )*
-                    $( $lname: &'a [ $ltype ], )*
+                    tel_logger: Option<SqlTelemetryLogger>,
+                    $( $pname: &$ptype, )*
+                    $( $lname: &[ $ltype ], )*
                 ) -> Result<(Transaction, Vec<($( $rtype, )*)>)>
-                where
-                    C: Into<Option<&'a ClientRequestInfo>>
                 {
-                    let cri_str = cri.into().map(|cri| serde_json::to_string(cri)).transpose()?;
+                    let cri = tel_logger.as_ref().and_then(|p| p.client_request_info());
+                    // Convert ClientRequestInfo to string if present
+                    let cri_str = cri.map(|cri| serde_json::to_string(&cri)).transpose()?;
+
                     let (txn, (res, _)) = [<$name Impl>]::commented_query_with_transaction(transaction, cri_str.as_deref(), $( $pname, )* $( $lname, )*).await?;
                     Ok((txn, res))
                 }
@@ -274,32 +275,31 @@ macro_rules! mononoke_queries {
                 use $crate::_macro_internal::*;
 
                 #[allow(dead_code)]
-                pub async fn query<'a, C>(
+                pub async fn query<'a>(
                     connection: &'a Connection,
-                    cri: C,
+                    tel_logger: Option<SqlTelemetryLogger>,
                     values: &'a[($( & $vtype, )*)],
                     $( $pname: &'a $ptype ),*
-                ) -> Result<WriteResult>
-                where
-                    C: Into<Option<&'a ClientRequestInfo>>
-                {
-                    let cri_str = cri.into().map(|cri| serde_json::to_string(cri)).transpose()?;
+                ) -> Result<WriteResult> {
+                    let cri = tel_logger.as_ref().and_then(|p| p.client_request_info());
+                    // Convert ClientRequestInfo to string if present
+                    let cri_str = cri.map(|cri| serde_json::to_string(&cri)).transpose()?;
                     query_with_retry_no_cache(
                         || [<$name Impl>]::commented_query(connection, cri_str.as_deref(), values $( , $pname )* ),
                     ).await
                 }
 
                 #[allow(dead_code)]
-                pub async fn query_with_transaction<'a, C>(
+                pub async fn query_with_transaction<'a>(
                     transaction: Transaction,
-                    cri: C,
+                    tel_logger: Option<SqlTelemetryLogger>,
                     values: &'a[($( & $vtype, )*)],
                     $( $pname: &'a $ptype ),*
-                ) -> Result<(Transaction, WriteResult)>
-                where
-                    C: Into<Option<&'a ClientRequestInfo>>
-                {
-                    let cri_str = cri.into().map(|cri| serde_json::to_string(cri)).transpose()?;
+                ) -> Result<(Transaction, WriteResult)> {
+                    let cri = tel_logger.as_ref().and_then(|p| p.client_request_info());
+                    // Convert ClientRequestInfo to string if present
+                    let cri_str = cri.map(|cri| serde_json::to_string(&cri)).transpose()?;
+
                     [<$name Impl>]::commented_query_with_transaction(transaction, cri_str.as_deref(), values $( , $pname )*).await
                 }
             }
@@ -350,32 +350,32 @@ macro_rules! mononoke_queries {
                 use $crate::_macro_internal::*;
 
                 #[allow(dead_code)]
-                pub async fn query<'a, C>(
+                pub async fn query<'a>(
                     connection: &'a Connection,
-                    cri: C,
+                    tel_logger: Option<SqlTelemetryLogger>,
                     $( $pname: &'a $ptype, )*
                     $( $lname: &'a [ $ltype ], )*
-                ) -> Result<WriteResult>
-                where
-                    C: Into<Option<&'a ClientRequestInfo>>
-                {
-                    let cri_str = cri.into().map(|cri| serde_json::to_string(cri)).transpose()?;
+                ) -> Result<WriteResult> {
+                    let cri = tel_logger.as_ref().and_then(|p| p.client_request_info());
+                    // Convert ClientRequestInfo to string if present
+                    let cri_str = cri.map(|cri| serde_json::to_string(&cri)).transpose()?;
+
                     query_with_retry_no_cache(
                         || [<$name Impl>]::commented_query(connection, cri_str.as_deref(), $( $pname, )* $( $lname, )*),
                     ).await
                 }
 
                 #[allow(dead_code)]
-                pub async fn query_with_transaction<'a, C>(
+                pub async fn query_with_transaction<'a>(
                     transaction: Transaction,
-                    cri: C,
+                    tel_logger: Option<SqlTelemetryLogger>,
                     $( $pname: &'a $ptype, )*
                     $( $lname: &'a [ $ltype ], )*
-                ) -> Result<(Transaction, WriteResult)>
-                where
-                    C: Into<Option<&'a ClientRequestInfo>>
-                {
-                    let cri_str = cri.into().map(|cri| serde_json::to_string(cri)).transpose()?;
+                ) -> Result<(Transaction, WriteResult)> {
+                    let cri = tel_logger.as_ref().and_then(|p| p.client_request_info());
+                    // Convert ClientRequestInfo to string if present
+                    let cri_str = cri.map(|cri| serde_json::to_string(&cri)).transpose()?;
+
                     [<$name Impl>]::commented_query_with_transaction(transaction, cri_str.as_deref() $( , $pname )* $( , $lname )*).await
                 }
             }
@@ -567,6 +567,7 @@ where
 
 #[cfg(test)]
 mod tests {
+
     mononoke_queries! {
         read TestQuery(param_str: String, param_uint: u64) -> (u64, Option<i32>, String, i64) {
             "SELECT 44, NULL, {param_str}, {param_uint}"
@@ -595,16 +596,15 @@ mod tests {
         clippy::todo
     )]
     async fn should_compile() -> anyhow::Result<()> {
-        use clientinfo::ClientEntryPoint;
-        use clientinfo::ClientRequestInfo;
         use sql_query_config::SqlQueryConfig;
+        use sql_telemetry_logger::SqlTelemetryLogger;
 
         let config: &SqlQueryConfig = todo!();
         let connection: &sql::Connection = todo!();
-        let cri = ClientRequestInfo::new(ClientEntryPoint::Sapling);
+        let tel_logger = SqlTelemetryLogger::empty();
         TestQuery::query(connection, None, todo!(), todo!()).await?;
         TestQuery::query_with_transaction(todo!(), None, todo!(), todo!()).await?;
-        TestQuery2::query(config, None, connection, None).await?;
+        TestQuery2::query(config, None, connection, None::<SqlTelemetryLogger>).await?;
         TestQuery2::query(
             config,
             Some(std::time::Duration::from_secs(60)),
@@ -616,10 +616,10 @@ mod tests {
         TestQuery3::query(connection, None, &[(&12,)]).await?;
         TestQuery3::query_with_transaction(todo!(), None, &[(&12,)]).await?;
         TestQuery4::query(connection, None, &"hello").await?;
-        TestQuery::query(connection, Some(&cri), todo!(), todo!()).await?;
-        TestQuery2::query(config, None, connection, Some(&cri)).await?;
-        TestQuery3::query(connection, Some(&cri), &[(&12,)]).await?;
-        TestQuery4::query(connection, Some(&cri), &"hello").await?;
+        TestQuery::query(connection, Some(tel_logger), todo!(), todo!()).await?;
+        TestQuery2::query(config, None, connection, Some(tel_logger)).await?;
+        TestQuery3::query(connection, Some(tel_logger), &[(&12,)]).await?;
+        TestQuery4::query(connection, Some(tel_logger), &"hello").await?;
         TestQuery::query(connection, None, todo!(), todo!()).await?;
         TestQuery2::query(config, None, connection, None).await?;
         TestQuery3::query(connection, None, &[(&12,)]).await?;

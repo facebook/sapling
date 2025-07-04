@@ -106,7 +106,7 @@ impl Insert<WorkspaceVersion> for SqlCommitCloud {
     ) -> anyhow::Result<Transaction> {
         let (txn, _) = InsertVersion::query_with_transaction(
             txn,
-            cri,
+            cri.map(|cri| cri.into()),
             &reponame,
             &workspace,
             &data.version,
@@ -137,7 +137,7 @@ impl Update<WorkspaceVersion> for SqlCommitCloud {
             UpdateVersionArgs::Archive(archived) => {
                 let (txn, result) = UpdateArchive::query_with_transaction(
                     txn,
-                    cri,
+                    cri.map(|cri| cri.into()),
                     &cc_ctx.reponame,
                     &cc_ctx.workspace,
                     &archived,
@@ -148,7 +148,7 @@ impl Update<WorkspaceVersion> for SqlCommitCloud {
             UpdateVersionArgs::WorkspaceName(new_workspace) => {
                 let (txn, result) = UpdateWorkspaceName::query_with_transaction(
                     txn,
-                    cri,
+                    cri.map(|cri| cri.into()),
                     &cc_ctx.reponame,
                     &cc_ctx.workspace,
                     &new_workspace,

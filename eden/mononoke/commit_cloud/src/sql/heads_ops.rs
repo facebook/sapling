@@ -74,9 +74,14 @@ impl Insert<WorkspaceHead> for SqlCommitCloud {
         workspace: String,
         data: WorkspaceHead,
     ) -> anyhow::Result<Transaction> {
-        let (txn, _) =
-            InsertHead::query_with_transaction(txn, cri, &reponame, &workspace, &data.commit)
-                .await?;
+        let (txn, _) = InsertHead::query_with_transaction(
+            txn,
+            cri.map(|cri| cri.into()),
+            &reponame,
+            &workspace,
+            &data.commit,
+        )
+        .await?;
         Ok(txn)
     }
 }
@@ -93,7 +98,7 @@ impl Update<WorkspaceHead> for SqlCommitCloud {
     ) -> anyhow::Result<(Transaction, u64)> {
         let (txn, result) = UpdateWorkspaceName::query_with_transaction(
             txn,
-            cri,
+            cri.map(|cri| cri.into()),
             &cc_ctx.reponame,
             &cc_ctx.workspace,
             &args.new_workspace,
@@ -116,7 +121,7 @@ impl Delete<WorkspaceHead> for SqlCommitCloud {
     ) -> anyhow::Result<Transaction> {
         let (txn, _) = DeleteHead::query_with_transaction(
             txn,
-            cri,
+            cri.map(|cri| cri.into()),
             &reponame,
             &workspace,
             args.removed_commits.as_slice(),

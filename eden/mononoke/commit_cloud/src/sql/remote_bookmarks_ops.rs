@@ -108,7 +108,7 @@ impl Insert<WorkspaceRemoteBookmark> for SqlCommitCloud {
     ) -> anyhow::Result<Transaction> {
         let (txn, _) = InsertRemoteBookmark::query_with_transaction(
             txn,
-            cri,
+            cri.map(|cri| cri.into()),
             &reponame,
             &workspace,
             data.remote(),
@@ -132,7 +132,7 @@ impl Update<WorkspaceRemoteBookmark> for SqlCommitCloud {
     ) -> anyhow::Result<(Transaction, u64)> {
         let (txn, result) = UpdateWorkspaceName::query_with_transaction(
             txn,
-            cri,
+            cri.map(|cri| cri.into()),
             &cc_ctx.reponame,
             &cc_ctx.workspace,
             &args.new_workspace,
@@ -155,7 +155,7 @@ impl Delete<WorkspaceRemoteBookmark> for SqlCommitCloud {
     ) -> anyhow::Result<Transaction> {
         let (txn, _) = DeleteRemoteBookmark::query_with_transaction(
             txn,
-            cri,
+            cri.map(|cri| cri.into()),
             &reponame,
             &workspace,
             args.removed_bookmarks.as_slice(),

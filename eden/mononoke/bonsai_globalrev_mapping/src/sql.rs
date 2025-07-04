@@ -28,6 +28,7 @@ use slog::warn;
 use sql_construct::SqlConstruct;
 use sql_construct::SqlConstructFromMetadataDatabaseConfig;
 use sql_ext::SqlConnections;
+use sql_ext::SqlTelemetryLogger;
 use thiserror::Error;
 
 use super::BonsaiGlobalrevMapping;
@@ -330,12 +331,7 @@ impl BonsaiGlobalrevMapping for SqlBonsaiGlobalrevMapping {
             .map(|entry| (&repo_id, &entry.bcs_id, &entry.globalrev))
             .collect();
 
-        DangerouslyAddGlobalrevs::query(
-            &self.write_connection,
-            ctx.client_request_info(),
-            &entries[..],
-        )
-        .await?;
+        DangerouslyAddGlobalrevs::query(&self.write_connection, ctx.into(), &entries[..]).await?;
 
         Ok(())
     }
@@ -381,7 +377,7 @@ impl BonsaiGlobalrevMapping for SqlBonsaiGlobalrevMapping {
 
         let row = SelectClosestGlobalrev::query(
             &self.read_connection.conn,
-            ctx.client_request_info(),
+            ctx.into(),
             &self.repo_id,
             &globalrev,
         )
@@ -404,14 +400,10 @@ impl BonsaiGlobalrevMapping for SqlBonsaiGlobalrevMapping {
         ctx.perf_counters()
             .increment_counter(PerfCounterType::SqlReadsMaster);
 
-        let row = SelectMaxEntry::query(
-            &self.read_master_connection.conn,
-            ctx.client_request_info(),
-            repo_id,
-        )
-        .await?
-        .into_iter()
-        .next();
+        let row = SelectMaxEntry::query(&self.read_master_connection.conn, ctx.into(), repo_id)
+            .await?
+            .into_iter()
+            .next();
 
         Ok(row.map(|r| r.0))
     }
@@ -433,14 +425,14 @@ async fn select_mapping(
                 .fetch_globalrev
                 .dispatch(ctx.fb, bcs_ids.iter().copied().collect(), || {
                     let conn = connection.conn.clone();
-                    let cri = ctx.client_request_info().cloned();
+                    let tel_logger: SqlTelemetryLogger = ctx.into();
 
                     move |bcs_ids| async move {
                         let bcs_ids = bcs_ids.into_iter().collect::<Vec<_>>();
 
                         Ok(SelectMappingByBonsai::query(
                             &conn,
-                            cri.as_ref(),
+                            Some(tel_logger.clone()),
                             &repo_id,
                             &bcs_ids[..],
                         )
@@ -469,7 +461,7 @@ async fn select_mapping(
                 .expect("We already returned earlier if objects.is_empty()");
             let rows = SelectMappingByGlobalrevCacheFriendly::query(
                 &connection.conn,
-                ctx.client_request_info(),
+                ctx.into(),
                 &repo_id,
                 max_globalrev,
                 &globalrevs[..],
@@ -539,12 +531,9 @@ pub async fn add_globalrevs(
     // crate doesn't allow us to reach into this yet, so for now we check the number of affected
     // rows.
 
-    let (transaction, res) = DangerouslyAddGlobalrevs::query_with_transaction(
-        transaction,
-        ctx.client_request_info(),
-        &rows[..],
-    )
-    .await?;
+    let (transaction, res) =
+        DangerouslyAddGlobalrevs::query_with_transaction(transaction, ctx.into(), &rows[..])
+            .await?;
 
     if res.affected_rows() != rows.len() as u64 {
         return Err(AddGlobalrevsErrorKind::Conflict);

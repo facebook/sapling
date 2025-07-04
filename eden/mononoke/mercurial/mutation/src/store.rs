@@ -170,13 +170,14 @@ impl SqlHgMutationStore {
 
         ctx.perf_counters()
             .add_to_counter(PerfCounterType::SqlWrites, 4);
-        let cri = ctx.client_request_info();
-        let (txn, _) = AddChangesets::query_with_transaction(txn, cri, db_csets.as_slice()).await?;
         let (txn, _) =
-            AddEntries::query_with_transaction(txn, cri, ref_db_entries.as_slice()).await?;
-        let (txn, _) = AddPreds::query_with_transaction(txn, cri, ref_db_preds.as_slice()).await?;
+            AddChangesets::query_with_transaction(txn, ctx.into(), db_csets.as_slice()).await?;
         let (txn, _) =
-            AddSplits::query_with_transaction(txn, cri, ref_db_splits.as_slice()).await?;
+            AddEntries::query_with_transaction(txn, ctx.into(), ref_db_entries.as_slice()).await?;
+        let (txn, _) =
+            AddPreds::query_with_transaction(txn, ctx.into(), ref_db_preds.as_slice()).await?;
+        let (txn, _) =
+            AddSplits::query_with_transaction(txn, ctx.into(), ref_db_splits.as_slice()).await?;
         txn.commit().await?;
 
         debug!(
@@ -225,7 +226,7 @@ impl SqlHgMutationStore {
             .increment_counter(PerfCounterType::SqlReadsReplica);
         let count = CountChangesets::query(
             &self.connections.read_connection,
-            ctx.client_request_info(),
+            ctx.into(),
             &self.repo_id,
             changeset_ids.as_slice(),
         )
@@ -303,7 +304,7 @@ impl SqlHgMutationStore {
             ctx.perf_counters().increment_counter(sql_perf_counter);
             let rows = SelectSplitsBySuccessor::query(
                 connection,
-                ctx.client_request_info(),
+                ctx.into(),
                 &self.repo_id,
                 to_fetch_split.as_slice(),
             )
@@ -337,12 +338,11 @@ impl SqlHgMutationStore {
             .map(|chunk| chunk.copied().collect::<Vec<_>>())
             .collect::<Vec<_>>();
 
-        let cri = ctx.client_request_info();
         let rows = stream::iter(chunks.into_iter().map(|changesets| async move {
             ctx.perf_counters().increment_counter(sql_perf_counter);
             SelectBySuccessorChain::query(
                 connection,
-                cri,
+                ctx.into(),
                 &self.repo_id,
                 &self.mutation_chain_limit,
                 &changesets,

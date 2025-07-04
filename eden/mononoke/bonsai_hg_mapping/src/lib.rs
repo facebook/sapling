@@ -13,10 +13,8 @@ use anyhow::Error;
 use anyhow::Result;
 use anyhow::ensure;
 use async_trait::async_trait;
-use clientinfo::ClientRequestInfo;
 use context::CoreContext;
 use context::PerfCounterType;
-use fbinit::FacebookInit;
 use futures::future;
 use mercurial_types::HgChangesetId;
 use mercurial_types::HgChangesetIdPrefix;
@@ -31,6 +29,7 @@ use sql::Connection;
 use sql_construct::SqlConstruct;
 use sql_construct::SqlConstructFromMetadataDatabaseConfig;
 use sql_ext::SqlConnections;
+use sql_ext::SqlTelemetryLogger;
 use sql_ext::mononoke_queries;
 use stats::prelude::*;
 
@@ -390,11 +389,10 @@ impl SqlBonsaiHgMapping {
     ) -> Result<(), Error> {
         let BonsaiHgMappingEntry { hg_cs_id, bcs_id } = entry.clone();
 
-        let cri = ctx.client_request_info();
         let hg_ids = &[hg_cs_id];
         let by_hg = SelectMappingByHg::query(
             &self.read_master_connection.conn,
-            cri,
+            ctx.into(),
             &self.repo_id,
             hg_ids,
         );
@@ -402,7 +400,7 @@ impl SqlBonsaiHgMapping {
 
         let by_bcs = SelectMappingByBonsai::query(
             &self.read_master_connection.conn,
-            cri,
+            ctx.into(),
             &self.repo_id,
             bcs_ids,
         )
@@ -434,11 +432,10 @@ impl BonsaiHgMapping for SqlBonsaiHgMapping {
             .increment_counter(PerfCounterType::SqlWrites);
 
         let BonsaiHgMappingEntry { hg_cs_id, bcs_id } = entry.clone();
-        let cri = ctx.client_request_info();
         if self.overwrite {
             let result = ReplaceMapping::query(
                 &self.write_connection,
-                cri,
+                ctx.into(),
                 &[(&self.repo_id, &hg_cs_id, &bcs_id)],
             )
             .await?;
@@ -446,7 +443,7 @@ impl BonsaiHgMapping for SqlBonsaiHgMapping {
         } else {
             let result = InsertMapping::query(
                 &self.write_connection,
-                cri,
+                ctx.into(),
                 &[(&self.repo_id, &hg_cs_id, &bcs_id)],
             )
             .await?;
@@ -467,14 +464,8 @@ impl BonsaiHgMapping for SqlBonsaiHgMapping {
         STATS::gets.add_value(1);
         ctx.perf_counters()
             .increment_counter(PerfCounterType::SqlReadsReplica);
-        let (mut mappings, left_to_fetch) = select_mapping(
-            ctx.fb,
-            ctx.client_request_info().cloned(),
-            &self.read_connection,
-            self.repo_id,
-            ids,
-        )
-        .await?;
+        let (mut mappings, left_to_fetch) =
+            select_mapping(ctx, &self.read_connection, self.repo_id, ids).await?;
 
         if left_to_fetch.is_empty() {
             return Ok(mappings);
@@ -484,8 +475,7 @@ impl BonsaiHgMapping for SqlBonsaiHgMapping {
         ctx.perf_counters()
             .increment_counter(PerfCounterType::SqlReadsMaster);
         let (mut master_mappings, _) = select_mapping(
-            ctx.fb,
-            ctx.client_request_info().cloned(),
+            ctx,
             &self.read_master_connection,
             self.repo_id,
             left_to_fetch,
@@ -508,12 +498,11 @@ impl BonsaiHgMapping for SqlBonsaiHgMapping {
         if low > high {
             return Ok(Vec::new());
         }
-        let cri = ctx.client_request_info();
         ctx.perf_counters()
             .increment_counter(PerfCounterType::SqlReadsReplica);
         let rows = SelectHgChangesetsByRange::query(
             &self.read_connection.conn,
-            cri,
+            ctx.into(),
             &self.repo_id,
             &low.as_bytes(),
             &high.as_bytes(),
@@ -526,7 +515,7 @@ impl BonsaiHgMapping for SqlBonsaiHgMapping {
                 .increment_counter(PerfCounterType::SqlReadsMaster);
             let rows = SelectHgChangesetsByRange::query(
                 &self.read_master_connection.conn,
-                cri,
+                ctx.into(),
                 &self.repo_id,
                 &low.as_bytes(),
                 &high.as_bytes(),
@@ -540,8 +529,7 @@ impl BonsaiHgMapping for SqlBonsaiHgMapping {
 }
 
 async fn select_mapping(
-    fb: FacebookInit,
-    cri: Option<ClientRequestInfo>,
+    ctx: &CoreContext,
     connection: &RendezVousConnection,
     repo_id: RepositoryId,
     cs_ids: BonsaiOrHgChangesetIds,
@@ -549,19 +537,20 @@ async fn select_mapping(
     if cs_ids.is_empty() {
         return Ok((vec![], cs_ids));
     }
+    let tel_logger: SqlTelemetryLogger = ctx.into();
 
     let (found, missing): (Vec<_>, _) = match cs_ids {
         BonsaiOrHgChangesetIds::Bonsai(bcs_ids) => {
             let ret = connection
                 .bonsai
-                .dispatch(fb, bcs_ids.into_iter().collect(), || {
+                .dispatch(ctx.fb, bcs_ids.into_iter().collect(), || {
                     let conn = connection.conn.clone();
                     move |bcs_ids| async move {
                         let bcs_ids = bcs_ids.into_iter().collect::<Vec<_>>();
 
                         let res = SelectMappingByBonsai::query(
                             &conn,
-                            cri.as_ref(),
+                            Some(tel_logger.clone()),
                             &repo_id,
                             &bcs_ids[..],
                         )
@@ -592,16 +581,19 @@ async fn select_mapping(
         BonsaiOrHgChangesetIds::Hg(hg_cs_ids) => {
             let ret = connection
                 .hg
-                .dispatch(fb, hg_cs_ids.into_iter().collect(), || {
+                .dispatch(ctx.fb, hg_cs_ids.into_iter().collect(), || {
                     let conn = connection.conn.clone();
                     move |hg_cs_ids| async move {
                         let hg_cs_ids = hg_cs_ids.into_iter().collect::<Vec<_>>();
-                        Ok(
-                            SelectMappingByHg::query(&conn, cri.as_ref(), &repo_id, &hg_cs_ids[..])
-                                .await?
-                                .into_iter()
-                                .collect(),
+                        Ok(SelectMappingByHg::query(
+                            &conn,
+                            Some(tel_logger.clone()),
+                            &repo_id,
+                            &hg_cs_ids[..],
                         )
+                        .await?
+                        .into_iter()
+                        .collect())
                     }
                 })
                 .await?;

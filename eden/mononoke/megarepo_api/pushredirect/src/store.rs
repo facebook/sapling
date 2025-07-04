@@ -111,7 +111,7 @@ impl PushRedirectionConfig for SqlPushRedirectionConfig {
     ) -> Result<()> {
         Set::query(
             &self.connections.write_connection,
-            ctx.client_request_info(),
+            ctx.into(),
             &repo_id,
             &draft_push,
             &public_push,
@@ -136,7 +136,7 @@ impl PushRedirectionConfig for SqlPushRedirectionConfig {
                 Some(std::time::Duration::from_secs(ttl))
             },
             &self.connections.read_connection,
-            ctx.client_request_info(),
+            ctx.into(),
             &repo_id,
         )
         .await?;

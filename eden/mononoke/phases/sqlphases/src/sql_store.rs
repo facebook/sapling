@@ -143,7 +143,7 @@ impl SqlPhasesStore {
         ctx.perf_counters()
             .increment_counter(PerfCounterType::SqlWrites);
 
-        InsertPhase::query(&self.write_connection, ctx.client_request_info(), &phases).await?;
+        InsertPhase::query(&self.write_connection, ctx.into(), &phases).await?;
         {
             let ctx = (ctx, repoid, self);
             let phases = csids
@@ -164,9 +164,7 @@ impl SqlPhasesStore {
         STATS::list_all.add_value(1);
         ctx.perf_counters()
             .increment_counter(PerfCounterType::SqlReadsReplica);
-        let ans =
-            SelectAllPublic::query(&self.read_connection, ctx.client_request_info(), &repo_id)
-                .await?;
+        let ans = SelectAllPublic::query(&self.read_connection, ctx.into(), &repo_id).await?;
         Ok(ans.into_iter().map(|x| x.0).collect())
     }
 
@@ -175,8 +173,7 @@ impl SqlPhasesStore {
         ctx: &CoreContext,
         repo_id: RepositoryId,
     ) -> Result<u64, Error> {
-        let ans = CountAllPublic::query(&self.read_connection, ctx.client_request_info(), &repo_id)
-            .await?;
+        let ans = CountAllPublic::query(&self.read_connection, ctx.into(), &repo_id).await?;
         Ok(ans.first().map_or(0, |(count,)| *count))
     }
 }
@@ -243,13 +240,8 @@ impl KeyedEntityStore<ChangesetId, SqlPhase> for CacheRequest<'_> {
             .increment_counter(PerfCounterType::SqlReadsReplica);
 
         // NOTE: We only track public phases in the DB.
-        let public = SelectPhases::query(
-            &mapping.read_connection,
-            ctx.client_request_info(),
-            repo_id,
-            &cs_ids,
-        )
-        .await?;
+        let public =
+            SelectPhases::query(&mapping.read_connection, (*ctx).into(), repo_id, &cs_ids).await?;
 
         Result::<_, Error>::Ok(public.into_iter().collect())
     }

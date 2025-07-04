@@ -202,7 +202,7 @@ impl Delete<WorkspaceHistory> for SqlCommitCloud {
     ) -> anyhow::Result<Transaction> {
         let (txn, _) = DeleteHistory::query_with_transaction(
             txn,
-            cri,
+            cri.map(|cri| cri.into()),
             &reponame,
             &workspace,
             &args.keep_days,
@@ -240,7 +240,7 @@ impl Insert<WorkspaceHistory> for SqlCommitCloud {
 
         (res_txn, _) = InsertHistory::query_with_transaction(
             txn,
-            cri,
+            cri.map(|cri| cri.into()),
             &reponame,
             &workspace,
             &data.version,
@@ -267,7 +267,7 @@ impl Update<WorkspaceHistory> for SqlCommitCloud {
     ) -> anyhow::Result<(Transaction, u64)> {
         let (txn, result) = UpdateWorkspaceName::query_with_transaction(
             txn,
-            cri,
+            cri.map(|cri| cri.into()),
             &cc_ctx.reponame,
             &cc_ctx.workspace,
             &args.new_workspace,

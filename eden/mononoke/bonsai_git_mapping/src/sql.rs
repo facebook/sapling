@@ -117,7 +117,6 @@ impl BonsaiGitMapping for SqlBonsaiGitMapping {
         STATS::adds.add_value(entries.len().try_into().map_err(Error::from)?);
         ctx.perf_counters()
             .increment_counter(PerfCounterType::SqlWrites);
-        let cri = ctx.client_request_info();
 
         let rows: Vec<_> = entries
             .iter()
@@ -125,7 +124,7 @@ impl BonsaiGitMapping for SqlBonsaiGitMapping {
             .collect();
 
         let (transaction, res) =
-            InsertMapping::query_with_transaction(transaction, cri, &rows[..]).await?;
+            InsertMapping::query_with_transaction(transaction, ctx.into(), &rows[..]).await?;
 
         let transaction = if res.affected_rows() != rows.len() as u64 {
             // Let's see if there are any conflicting entries in DB.
@@ -133,7 +132,7 @@ impl BonsaiGitMapping for SqlBonsaiGitMapping {
             let (transaction, git2bonsai_mapping_from_db) =
                 SelectMappingByGitSha1::query_with_transaction(
                     transaction,
-                    cri,
+                    ctx.into(),
                     &self.repo_id,
                     &git_shas[..],
                 )
@@ -145,7 +144,7 @@ impl BonsaiGitMapping for SqlBonsaiGitMapping {
             let (transaction, bonsai2git_mapping_from_db) =
                 SelectMappingByBonsai::query_with_transaction(
                     transaction,
-                    cri,
+                    ctx.into(),
                     &self.repo_id,
                     &bcs_ids[..],
                 )
@@ -243,10 +242,9 @@ impl BonsaiGitMapping for SqlBonsaiGitMapping {
         }
         ctx.perf_counters()
             .increment_counter(PerfCounterType::SqlReadsReplica);
-        let cri = ctx.client_request_info();
         let rows = SelectGitSha1sByRange::query(
             &self.connections.read_connection,
-            cri,
+            ctx.into(),
             &self.repo_id,
             &low,
             &high,
@@ -259,7 +257,7 @@ impl BonsaiGitMapping for SqlBonsaiGitMapping {
                 .increment_counter(PerfCounterType::SqlReadsMaster);
             let rows = SelectGitSha1sByRange::query(
                 &self.connections.read_master_connection,
-                cri,
+                ctx.into(),
                 &self.repo_id,
                 &low,
                 &high,
@@ -348,13 +346,12 @@ async fn select_mapping(
         return Ok(vec![]);
     }
 
-    let cri = ctx.client_request_info();
     let rows = match objects {
         BonsaisOrGitShas::Bonsai(bcs_ids) => {
-            SelectMappingByBonsai::query(connection, cri, repo_id, &bcs_ids[..]).await?
+            SelectMappingByBonsai::query(connection, ctx.into(), repo_id, &bcs_ids[..]).await?
         }
         BonsaisOrGitShas::GitSha1(git_sha1s) => {
-            SelectMappingByGitSha1::query(connection, cri, repo_id, &git_sha1s[..]).await?
+            SelectMappingByGitSha1::query(connection, ctx.into(), repo_id, &git_sha1s[..]).await?
         }
     };
 

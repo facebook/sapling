@@ -369,7 +369,6 @@ impl SqlBookmarks {
         let categories: Vec<_> = categories.to_vec();
 
         async move {
-            let cri = ctx.client_request_info();
             let rows = if prefix.is_empty() {
                 match pagination {
                     BookmarkPagination::FromStart => {
@@ -379,7 +378,7 @@ impl SqlBookmarks {
                             let tok: i32 = rand::thread_rng().r#gen();
                             SelectAllUnordered::query(
                                 &conn,
-                                cri,
+                                ctx.into(),
                                 &repo_id,
                                 &limit,
                                 &tok,
@@ -398,23 +397,30 @@ impl SqlBookmarks {
                             })
                             .collect()
                         } else {
-                            SelectAll::query(&conn, cri, &repo_id, &limit, &kinds, &categories)
-                                .await?
-                                .into_iter()
-                                .map(|(name, category, kind, cs_id, log_id)| {
-                                    (
-                                        BookmarkKey::with_name_and_category(name, category),
-                                        kind,
-                                        cs_id,
-                                        log_id,
-                                    )
-                                })
-                                .collect()
+                            SelectAll::query(
+                                &conn,
+                                ctx.into(),
+                                &repo_id,
+                                &limit,
+                                &kinds,
+                                &categories,
+                            )
+                            .await?
+                            .into_iter()
+                            .map(|(name, category, kind, cs_id, log_id)| {
+                                (
+                                    BookmarkKey::with_name_and_category(name, category),
+                                    kind,
+                                    cs_id,
+                                    log_id,
+                                )
+                            })
+                            .collect()
                         }
                     }
                     BookmarkPagination::After(after) => SelectAllAfter::query(
                         &conn,
-                        cri,
+                        ctx.into(),
                         &repo_id,
                         &after,
                         &limit,
@@ -440,7 +446,7 @@ impl SqlBookmarks {
                         if limit == u64::MAX {
                             SelectByPrefixUnordered::query(
                                 &conn,
-                                cri,
+                                ctx.into(),
                                 &repo_id,
                                 &prefix_like_pattern,
                                 &"\\",
@@ -462,7 +468,7 @@ impl SqlBookmarks {
                         } else {
                             SelectByPrefix::query(
                                 &conn,
-                                cri,
+                                ctx.into(),
                                 &repo_id,
                                 &prefix_like_pattern,
                                 &"\\",
@@ -485,7 +491,7 @@ impl SqlBookmarks {
                     }
                     BookmarkPagination::After(after) => SelectByPrefixAfter::query(
                         &conn,
-                        cri,
+                        ctx.into(),
                         &repo_id,
                         &prefix_like_pattern,
                         &"\\",
@@ -523,14 +529,9 @@ impl SqlBookmarks {
         let conn = self.connections.read_master_connection.clone();
         cloned!(self.repo_id, key);
         async move {
-            let rows = SelectBookmark::query(
-                &conn,
-                ctx.client_request_info(),
-                &repo_id,
-                key.name(),
-                key.category(),
-            )
-            .await?;
+            let rows =
+                SelectBookmark::query(&conn, ctx.into(), &repo_id, key.name(), key.category())
+                    .await?;
             Ok(rows.into_iter().next())
         }
     }
@@ -618,13 +619,12 @@ impl BookmarkUpdateLog for SqlBookmarks {
 
         async move {
             let tok: i32 = rand::thread_rng().r#gen();
-            let cri = ctx.client_request_info();
 
             let rows = match offset {
                 Some(offset) => {
                     SelectBookmarkLogsWithOffset::query(
                         &conn,
-                        cri,
+                        ctx.into(),
                         &repo_id,
                         key.name(),
                         key.category(),
@@ -637,7 +637,7 @@ impl BookmarkUpdateLog for SqlBookmarks {
                 None => {
                     SelectBookmarkLogs::query(
                         &conn,
-                        cri,
+                        ctx.into(),
                         &repo_id,
                         key.name(),
                         key.category(),
@@ -673,10 +673,9 @@ impl BookmarkUpdateLog for SqlBookmarks {
         let repo_id = self.repo_id;
 
         async move {
-            let cri = ctx.client_request_info();
             let rows = SelectBookmarkLogsWithTsInRange::query(
                 &conn,
-                cri,
+                ctx.into(),
                 &repo_id,
                 key.name(),
                 key.category(),
@@ -703,13 +702,20 @@ impl BookmarkUpdateLog for SqlBookmarks {
         let repo_id = self.repo_id;
 
         async move {
-            let cri = ctx.client_request_info();
             let entries = match maybe_exclude_reason {
                 Some(ref r) => {
-                    CountFurtherBookmarkLogEntriesWithoutReason::query(&conn, cri, &id, &repo_id, r)
-                        .await?
+                    CountFurtherBookmarkLogEntriesWithoutReason::query(
+                        &conn,
+                        ctx.into(),
+                        &id,
+                        &repo_id,
+                        r,
+                    )
+                    .await?
                 }
-                None => CountFurtherBookmarkLogEntries::query(&conn, cri, &id, &repo_id).await?,
+                None => {
+                    CountFurtherBookmarkLogEntries::query(&conn, ctx.into(), &id, &repo_id).await?
+                }
             };
             match entries.into_iter().next() {
                 Some(count) => Ok(count.0),
@@ -738,9 +744,9 @@ impl BookmarkUpdateLog for SqlBookmarks {
         let conn = self.connections.read_connection.clone();
         let repo_id = self.repo_id;
         async move {
-            let cri = ctx.client_request_info();
             let entries =
-                CountFurtherBookmarkLogEntriesByReason::query(&conn, cri, &id, &repo_id).await?;
+                CountFurtherBookmarkLogEntriesByReason::query(&conn, ctx.into(), &id, &repo_id)
+                    .await?;
             Ok(entries.into_iter().collect())
         }
         .boxed()
@@ -757,10 +763,14 @@ impl BookmarkUpdateLog for SqlBookmarks {
         let conn = self.connections.read_connection.clone();
         cloned!(self.repo_id, reason);
         async move {
-            let cri = ctx.client_request_info();
-            let entries =
-                SkipOverBookmarkLogEntriesWithReason::query(&conn, cri, &id, &repo_id, &reason)
-                    .await?;
+            let entries = SkipOverBookmarkLogEntriesWithReason::query(
+                &conn,
+                ctx.into(),
+                &id,
+                &repo_id,
+                &reason,
+            )
+            .await?;
             Ok(entries.first().map(|entry| entry.0))
         }
         .boxed()
@@ -778,10 +788,10 @@ impl BookmarkUpdateLog for SqlBookmarks {
         let repo_id = self.repo_id;
 
         async move {
-            let cri = ctx.client_request_info();
-            let entries = ReadNextBookmarkLogEntries::query(&conn, cri, &id, &repo_id, &limit)
-                .watched(ctx.logger())
-                .await?;
+            let entries =
+                ReadNextBookmarkLogEntries::query(&conn, (&ctx).into(), &id, &repo_id, &limit)
+                    .watched(ctx.logger())
+                    .await?;
 
             let homogenous_entries: Vec<_> = match entries.first().cloned() {
                 Some(first_entry) => {
@@ -847,9 +857,9 @@ impl BookmarkUpdateLog for SqlBookmarks {
         let repo_id = self.repo_id;
 
         async move {
-            let cri = ctx.client_request_info();
             let entries =
-                ReadNextBookmarkLogEntries::query(&connection, cri, &id, &repo_id, &limit).await?;
+                ReadNextBookmarkLogEntries::query(&connection, ctx.into(), &id, &repo_id, &limit)
+                    .await?;
 
             Ok(
                 stream::iter(entries.into_iter().map(Ok)).and_then(|entry| async move {
@@ -888,8 +898,7 @@ impl BookmarkUpdateLog for SqlBookmarks {
         let repo_id = self.repo_id;
 
         async move {
-            let cri = ctx.client_request_info();
-            let entries = GetLargestLogId::query(&connection, cri, &repo_id).await?;
+            let entries = GetLargestLogId::query(&connection, ctx.into(), &repo_id).await?;
             let entry = entries.into_iter().next();
             match entry {
                 Some(count) => Ok(count.0),

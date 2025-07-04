@@ -15,6 +15,7 @@ use scribe_ext::Scribe;
 use scuba_ext::MononokeScubaSampleBuilder;
 use slog::Logger;
 use slog_glog_fmt::logger_that_can_work_in_tests;
+use sql_telemetry_logger::SqlTelemetryLogger;
 
 use crate::logging::LoggingContainer;
 use crate::logging::SamplingKey;
@@ -165,5 +166,31 @@ impl CoreContext {
 
     pub fn fork_perf_counters(&mut self) -> Arc<PerfCounters> {
         self.logging.fork_perf_counters()
+    }
+}
+
+impl From<CoreContext> for Option<SqlTelemetryLogger> {
+    fn from(ctx: CoreContext) -> Option<SqlTelemetryLogger> {
+        ctx.metadata()
+            .client_request_info()
+            .map(SqlTelemetryLogger::from)
+    }
+}
+
+impl From<&CoreContext> for SqlTelemetryLogger {
+    fn from(ctx: &CoreContext) -> SqlTelemetryLogger {
+        ctx.metadata()
+            .client_request_info()
+            .cloned()
+            .map_or(SqlTelemetryLogger::empty(), SqlTelemetryLogger::from)
+    }
+}
+
+impl From<&CoreContext> for Option<SqlTelemetryLogger> {
+    fn from(ctx: &CoreContext) -> Option<SqlTelemetryLogger> {
+        ctx.metadata()
+            .client_request_info()
+            .cloned()
+            .map(SqlTelemetryLogger::from)
     }
 }
