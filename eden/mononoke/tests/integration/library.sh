@@ -599,6 +599,8 @@ function scs {
     --mononoke-config-path "$TESTTMP/mononoke-config" \
     --bound-address-file "$TESTTMP/scs_server_addr.txt" \
     --scribe-logging-directory "$TESTTMP/scribe_logs" \
+    --tracing \
+    --tracing-test-format \
     $BOOKMARK_CACHE_FLAG \
     "${CACHE_ARGS[@]}" \
     "${COMMON_ARGS[@]}" >> "$TESTTMP/scs_server.out" 2>&1 &
