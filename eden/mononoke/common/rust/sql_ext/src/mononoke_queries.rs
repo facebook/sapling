@@ -113,7 +113,12 @@ macro_rules! mononoke_queries {
 
                     query_with_retry_no_cache(
                         || async {
-                            let (res, _opt_stats) = [<$name Impl>]::commented_query(connection, cri_str.as_deref(), $( $pname, )* $( $lname, )*).await?;
+                            let (res, _opt_stats) = [<$name Impl>]::commented_query(
+                                connection,
+                                cri_str.as_deref(),
+                                $( $pname, )*
+                                $( $lname, )*
+                            ).await?;
 
                             // TODO(T223577767): log stats
                             Ok(res)
@@ -132,7 +137,12 @@ macro_rules! mononoke_queries {
                     let cri = tel_logger.as_ref().and_then(|p| p.client_request_info());
                     // Convert ClientRequestInfo to string if present
                     let cri_str = cri.map(|cri| serde_json::to_string(&cri)).transpose()?;
-                    let (txn, (res, _)) = [<$name Impl>]::commented_query_with_transaction(transaction, cri_str.as_deref(), $( $pname, )* $( $lname, )*).await?;
+                    let (txn, (res, _)) = [<$name Impl>]::commented_query_with_transaction(
+                        transaction,
+                        cri_str.as_deref(),
+                        $( $pname, )*
+                        $( $lname, )*
+                    ).await?;
                     Ok((txn, res))
                 }
 
@@ -200,7 +210,12 @@ macro_rules! mononoke_queries {
                         || {
                             let cri_str = cri_str.clone();
                             async move {
-                                let (res, _opt_tel) = [<$name Impl>]::commented_query(connection, cri_str.as_deref(), $( $pname, )* $( $lname, )*).await?;
+                                let (res, _opt_tel) = [<$name Impl>]::commented_query(
+                                    connection,
+                                    cri_str.as_deref(),
+                                    $( $pname, )*
+                                    $( $lname, )*
+                                ).await?;
 
                                 // TODO(T223577767): log stats
                                 Ok(CachedQueryResult(res))
@@ -223,7 +238,12 @@ macro_rules! mononoke_queries {
                     // Convert ClientRequestInfo to string if present
                     let cri_str = cri.map(|cri| serde_json::to_string(&cri)).transpose()?;
 
-                    let (txn, (res, _)) = [<$name Impl>]::commented_query_with_transaction(transaction, cri_str.as_deref(), $( $pname, )* $( $lname, )*).await?;
+                    let (txn, (res, _)) = [<$name Impl>]::commented_query_with_transaction(
+                        transaction,
+                        cri_str.as_deref(),
+                        $( $pname, )*
+                        $( $lname, )*
+                    ).await?;
                     Ok((txn, res))
                 }
 
@@ -285,7 +305,12 @@ macro_rules! mononoke_queries {
                     // Convert ClientRequestInfo to string if present
                     let cri_str = cri.map(|cri| serde_json::to_string(&cri)).transpose()?;
                     query_with_retry_no_cache(
-                        || [<$name Impl>]::commented_query(connection, cri_str.as_deref(), values $( , $pname )* ),
+                        || [<$name Impl>]::commented_query(
+                            connection,
+                            cri_str.as_deref(),
+                            values
+                            $( , $pname )*
+                        ),
                     ).await
                 }
 
@@ -300,7 +325,12 @@ macro_rules! mononoke_queries {
                     // Convert ClientRequestInfo to string if present
                     let cri_str = cri.map(|cri| serde_json::to_string(&cri)).transpose()?;
 
-                    [<$name Impl>]::commented_query_with_transaction(transaction, cri_str.as_deref(), values $( , $pname )*).await
+                    [<$name Impl>]::commented_query_with_transaction(
+                        transaction,
+                        cri_str.as_deref(),
+                        values
+                        $( , $pname )*
+                    ).await
                 }
             }
 
@@ -361,7 +391,12 @@ macro_rules! mononoke_queries {
                     let cri_str = cri.map(|cri| serde_json::to_string(&cri)).transpose()?;
 
                     query_with_retry_no_cache(
-                        || [<$name Impl>]::commented_query(connection, cri_str.as_deref(), $( $pname, )* $( $lname, )*),
+                        || [<$name Impl>]::commented_query(
+                            connection,
+                            cri_str.as_deref(),
+                            $( $pname, )*
+                            $( $lname, )*
+                        ),
                     ).await
                 }
 
@@ -376,7 +411,12 @@ macro_rules! mononoke_queries {
                     // Convert ClientRequestInfo to string if present
                     let cri_str = cri.map(|cri| serde_json::to_string(&cri)).transpose()?;
 
-                    [<$name Impl>]::commented_query_with_transaction(transaction, cri_str.as_deref() $( , $pname )* $( , $lname )*).await
+                    [<$name Impl>]::commented_query_with_transaction(
+                        transaction,
+                        cri_str.as_deref()
+                        $( , $pname )*
+                        $( , $lname )*
+                    ).await
                 }
             }
 
