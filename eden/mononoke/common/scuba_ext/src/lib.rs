@@ -463,6 +463,14 @@ impl MononokeScubaSampleBuilder {
     pub fn get<K: Into<String>>(&self, key: K) -> Option<&ScubaValue> {
         self.inner.get(key)
     }
+
+    /// Set the [subset] of this sample.
+    ///
+    /// [subset]: https://fburl.com/qa/xqm9hsxx
+    pub fn set_subset<S: Into<String>>(&mut self, subset: S) -> &mut Self {
+        self.inner.set_subset(subset);
+        self
+    }
 }
 
 pub trait FutureStatsScubaExt {

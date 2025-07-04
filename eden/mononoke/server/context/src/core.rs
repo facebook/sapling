@@ -171,26 +171,27 @@ impl CoreContext {
 
 impl From<CoreContext> for Option<SqlTelemetryLogger> {
     fn from(ctx: CoreContext) -> Option<SqlTelemetryLogger> {
-        ctx.metadata()
-            .client_request_info()
-            .map(SqlTelemetryLogger::from)
+        let cri = ctx.metadata().client_request_info();
+        let fb = ctx.fb.clone();
+
+        Some(SqlTelemetryLogger::new(cri.cloned(), Some(fb)))
     }
 }
 
 impl From<&CoreContext> for SqlTelemetryLogger {
     fn from(ctx: &CoreContext) -> SqlTelemetryLogger {
-        ctx.metadata()
-            .client_request_info()
-            .cloned()
-            .map_or(SqlTelemetryLogger::empty(), SqlTelemetryLogger::from)
+        let cri = ctx.metadata().client_request_info();
+        let fb = ctx.fb.clone();
+
+        SqlTelemetryLogger::new(cri.cloned(), Some(fb))
     }
 }
 
 impl From<&CoreContext> for Option<SqlTelemetryLogger> {
     fn from(ctx: &CoreContext) -> Option<SqlTelemetryLogger> {
-        ctx.metadata()
-            .client_request_info()
-            .cloned()
-            .map(SqlTelemetryLogger::from)
+        let cri = ctx.metadata().client_request_info();
+        let fb = ctx.fb.clone();
+
+        Some(SqlTelemetryLogger::new(cri.cloned(), Some(fb)))
     }
 }

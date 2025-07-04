@@ -8,6 +8,7 @@ rust_library(
         "sql_telemetry_logger.rs",
     ],
     deps = [
+        "//common/rust/shed/fbinit:fbinit",
         "//eden/scm/lib/clientinfo:clientinfo",
     ],
 )

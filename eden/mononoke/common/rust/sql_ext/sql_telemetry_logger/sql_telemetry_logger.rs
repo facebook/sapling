@@ -6,6 +6,7 @@
  */
 
 use clientinfo::ClientRequestInfo;
+use fbinit::FacebookInit;
 
 /// Provides data and objects needed to log SQL query telemetry, e.g.
 /// client request info, scuba logger.
@@ -14,30 +15,42 @@ pub struct SqlTelemetryLogger {
     /// Provides client request info so that client correlator can be attached
     /// to the query.
     client_request_info: Option<ClientRequestInfo>,
+
+    /// fbinit to create a scuba logger
+    fb: Option<FacebookInit>,
 }
 
 impl SqlTelemetryLogger {
     pub fn empty() -> Self {
         Self {
             client_request_info: None,
+            fb: None,
         }
     }
 
-    pub fn new(client_request_info: Option<ClientRequestInfo>) -> Self {
+    pub fn new(client_request_info: Option<ClientRequestInfo>, fb: Option<FacebookInit>) -> Self {
         Self {
             client_request_info,
+            fb,
         }
     }
 
     pub fn client_request_info(&self) -> Option<&ClientRequestInfo> {
         self.client_request_info.as_ref()
     }
+
+    pub fn fb(&self) -> &Option<FacebookInit> {
+        &self.fb
+    }
 }
 
+// TODO(T223577767): delete this impl to make sure we don't accidentally use it
+// instead of passing a CoreContext
 impl From<ClientRequestInfo> for SqlTelemetryLogger {
     fn from(client_request_info: ClientRequestInfo) -> Self {
         Self {
             client_request_info: Some(client_request_info),
+            fb: None,
         }
     }
 }

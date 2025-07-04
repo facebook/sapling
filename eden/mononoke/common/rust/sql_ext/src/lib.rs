@@ -10,6 +10,7 @@ mod mononoke_queries;
 mod oss;
 pub mod replication;
 mod sqlite;
+mod telemetry;
 
 pub use sql::SqlConnections;
 pub use sql::SqlShardedConnections;
@@ -51,6 +52,8 @@ pub mod _macro_internal {
     pub use crate::mononoke_queries::CachedQueryResult;
     pub use crate::mononoke_queries::query_with_retry;
     pub use crate::mononoke_queries::query_with_retry_no_cache;
+    pub use crate::telemetry::TelemetryGranularity;
+    pub use crate::telemetry::log_query_telemetry;
 }
 
 pub mod facebook {

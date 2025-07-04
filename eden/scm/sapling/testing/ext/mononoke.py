@@ -1342,6 +1342,8 @@ def setup_environment_variables(stderr: BinaryIO, fs: ShellFS, env: Env) -> int:
     test_tmp = env.getenv("TESTTMP")
     scribe_logs_dir = f"{test_tmp}/scribe_logs"
     env.setenv("SCRIBE_LOGS_DIR", scribe_logs_dir)
+    sql_telemetry_logs_dir = f"{test_tmp}/sql_telemetry_logs.json"
+    env.setenv("SQL_TELEMETRY_SCUBA_FILE_PATH", sql_telemetry_logs_dir)
 
     # Setting up various timeouts based on the presence of DB_SHARD_NAME
     db_shard_name = env.getenv("DB_SHARD_NAME")

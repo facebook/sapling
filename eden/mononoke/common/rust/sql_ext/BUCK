@@ -27,6 +27,7 @@ rust_library(
         "fbsource//third-party/rust:paste",
         "fbsource//third-party/rust:serde",
         "fbsource//third-party/rust:serde_cbor",
+        "//eden/mononoke/common/scuba_ext:scuba_ext",
         "fbsource//third-party/rust:serde_json",
         "fbsource//third-party/rust:tokio",
         "fbsource//third-party/rust:twox-hash",
