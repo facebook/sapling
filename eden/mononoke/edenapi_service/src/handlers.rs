@@ -283,11 +283,6 @@ define_handler!(
     capabilities::capabilities_handler,
     [Hg]
 );
-define_handler!(
-    commit_hash_to_location_handler,
-    commit::hash_to_location,
-    [Hg]
-);
 define_handler!(commit_revlog_data_handler, commit::revlog_data, [Hg]);
 define_handler!(repos_handler, repos::repos, [Hg]);
 define_handler!(trees_handler, trees::trees, [Hg]);
@@ -525,6 +520,7 @@ pub fn build_router<R: Send + Sync + Clone + 'static>(ctx: ServerContext<R>) -> 
         Handlers::setup::<commit::GraphHandlerV2>(route);
         Handlers::setup::<commit::GraphSegmentsHandler>(route);
         Handlers::setup::<commit::HashLookupHandler>(route);
+        Handlers::setup::<commit::HashToLocationHandler>(route);
         Handlers::setup::<commit::LocationToHashHandler>(route);
         Handlers::setup::<commit::UploadBonsaiChangesetHandler>(route);
         Handlers::setup::<commit::UploadHgChangesetsHandler>(route);
@@ -548,10 +544,6 @@ pub fn build_router<R: Send + Sync + Clone + 'static>(ctx: ServerContext<R>) -> 
             .post("/:repo/trees")
             .with_path_extractor::<trees::TreeParams>()
             .to(trees_handler);
-        route
-            .post("/:repo/commit/hash_to_location")
-            .with_path_extractor::<commit::HashToLocationParams>()
-            .to(commit_hash_to_location_handler);
         route
             .post("/:repo/commit/revlog_data")
             .with_path_extractor::<commit::RevlogDataParams>()
