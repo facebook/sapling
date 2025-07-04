@@ -1345,6 +1345,10 @@ pub(crate) async fn derive_all_types_remotely(
     .map(|jk| jk.max(1) as usize)
     .ok();
 
+    let manager = repo
+        .repo_derived_data()
+        .manager_for_config("megarepo_api_rollout_remote_derivation")
+        .unwrap_or(repo.repo_derived_data().manager());
     for chunk in csids.chunks(num_heads_to_derive_at_once) {
         retry(
             Some(ctx.logger()),
@@ -1356,8 +1360,7 @@ pub(crate) async fn derive_all_types_remotely(
                         Some(format!("{num_retry}")),
                     );
                 }
-                repo.repo_derived_data()
-                    .manager()
+                manager
                     .derive_bulk(ctx, chunk, None, derived_data_types, override_concurrency)
                     .await
             },
