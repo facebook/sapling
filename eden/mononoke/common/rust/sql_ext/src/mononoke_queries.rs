@@ -195,32 +195,20 @@ macro_rules! mononoke_queries {
                     let cri_str = cri.into().map(|cri| serde_json::to_string(cri)).transpose()?;
 
                     // Execute query with caching
-                    match cri_str {
-                        Some(cri) => {
-                            Ok(query_with_retry(
-                                data,
-                                || {
-                                    let cri = cri.clone();
-                                    async move {
-                                        let (res, _opt_stats) = [<$name Impl>]::commented_query(connection, cri.as_str(), $( $pname, )* $( $lname, )*).await?;
+                    let res = query_with_retry(
+                        data,
+                        || {
+                            let cri_str = cri_str.clone();
+                            async move {
+                                let (res, _opt_tel) = [<$name Impl>]::commented_query(connection, cri_str.as_deref(), $( $pname, )* $( $lname, )*).await?;
 
-                                        // TODO(T223577767): log stats
-                                        Ok(CachedQueryResult(res))
-                                    }
-                                },
-                            ).await?.0)
+                                // TODO(T223577767): log stats
+                                Ok(CachedQueryResult(res))
+                            }
                         },
-                        None => {
-                            Ok(query_with_retry(
-                                data,
-                                || async move {
-                                    let (res, _opt_stats) = [<$name Impl>]::commented_query(connection, None, $( $pname, )* $( $lname, )*).await?;
-                                    // TODO(T223577767): log stats
-                                    Ok(CachedQueryResult(res))
-                                },
-                            ).await?.0)
-                        }
-                    }
+                    ).await?.0;
+
+                    Ok(res)
                 }
 
                 #[allow(dead_code)]
