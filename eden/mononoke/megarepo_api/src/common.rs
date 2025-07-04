@@ -75,6 +75,7 @@ use repo_authorization::AuthorizationContext;
 use retry::RetryLogic;
 use retry::retry;
 use sorted_vector_map::SortedVectorMap;
+use tracing_slog_compat::tracing::Instrument;
 
 use crate::Repo;
 
@@ -1274,22 +1275,12 @@ pub async fn save_sync_target_config_in_changeset(
     Ok(())
 }
 
-pub(crate) async fn derive_all_types(
+pub(crate) async fn derive_all_types_locally(
     ctx: &CoreContext,
     repo: &impl Repo,
     csids: &[ChangesetId],
+    derived_data_types: &[DerivableType],
 ) -> Result<(), Error> {
-    let derived_data_types = repo
-        .repo_derived_data()
-        .active_config()
-        .types
-        .iter()
-        .copied()
-        .filter(|t| {
-            // Filenodes cannot be derived for draft commits
-            *t != DerivableType::FileNodes
-        })
-        .collect::<Vec<_>>();
     let num_heads_to_derive_at_once = justknobs::get(
         "scm/mononoke:megarepo_override_num_heads_to_derive_at_once",
         None,
@@ -1315,7 +1306,7 @@ pub(crate) async fn derive_all_types(
                 }
                 repo.repo_derived_data()
                     .manager()
-                    .derive_bulk_locally(ctx, chunk, None, &derived_data_types, override_batch_size)
+                    .derive_bulk_locally(ctx, chunk, None, derived_data_types, override_batch_size)
                     .await
             },
             |e| {
@@ -1330,6 +1321,89 @@ pub(crate) async fn derive_all_types(
             5,
         )
         .await?;
+    }
+    Ok(())
+}
+
+pub(crate) async fn derive_all_types_remotely(
+    ctx: &CoreContext,
+    repo: &impl Repo,
+    csids: &[ChangesetId],
+    derived_data_types: &[DerivableType],
+) -> Result<(), Error> {
+    let num_heads_to_derive_at_once = justknobs::get(
+        "scm/mononoke:megarepo_override_num_heads_to_derive_at_once",
+        None,
+    )
+    .map(|jk| jk.max(1) as usize)
+    .unwrap_or(DEFAULT_NUM_HEADS_TO_DERIVE_AT_ONCE);
+
+    let override_concurrency = justknobs::get(
+        "scm/mononoke:megarepo_override_remote_derivation_concurrency",
+        None,
+    )
+    .map(|jk| jk.max(1) as usize)
+    .ok();
+
+    for chunk in csids.chunks(num_heads_to_derive_at_once) {
+        retry(
+            Some(ctx.logger()),
+            async |num_retry| {
+                if num_retry >= 1 {
+                    let mut scuba = ctx.scuba().clone();
+                    scuba.log_with_msg(
+                        "Derived data failed, retrying. Num retries",
+                        Some(format!("{num_retry}")),
+                    );
+                }
+                repo.repo_derived_data()
+                    .manager()
+                    .derive_bulk(ctx, chunk, None, derived_data_types, override_concurrency)
+                    .await
+            },
+            |e| {
+                let description = format!("{e:?}").to_ascii_lowercase();
+                description.contains("blobstore") || description.contains("timeout")
+            },
+            RetryLogic::ExponentialWithJitter {
+                base: Duration::from_secs(1),
+                factor: 1.2,
+                jitter: Duration::from_secs(2),
+            },
+            5,
+        )
+        .await?;
+    }
+    Ok(())
+}
+
+pub(crate) async fn derive_all_types(
+    ctx: &CoreContext,
+    repo: &impl Repo,
+    csids: &[ChangesetId],
+) -> Result<(), Error> {
+    let derive_remotely =
+        justknobs::eval("scm/mononoke:megarepo_derive_remotely", None, None).unwrap_or(false);
+
+    let derived_data_types = repo
+        .repo_derived_data()
+        .active_config()
+        .types
+        .iter()
+        .copied()
+        .filter(|t| {
+            // Filenodes cannot be derived for draft commits
+            *t != DerivableType::FileNodes
+        })
+        .collect::<Vec<_>>();
+    if derive_remotely {
+        derive_all_types_remotely(ctx, repo, csids, &derived_data_types)
+            .instrument(tracing::info_span!("derive all types remotely"))
+            .await?;
+    } else {
+        derive_all_types_locally(ctx, repo, csids, &derived_data_types)
+            .instrument(tracing::info_span!("derive all types locally"))
+            .await?;
     }
     Ok(())
 }
