@@ -1909,7 +1909,7 @@ impl<R: MononokeRepo> RepoContext<R> {
         Ok(response)
     }
 
-    pub async fn derive_bulk(
+    pub async fn derive_bulk_locally(
         &self,
         ctx: &CoreContext,
         csids: Vec<ChangesetId>,
@@ -1924,7 +1924,7 @@ impl<R: MononokeRepo> RepoContext<R> {
             .repo
             .repo_derived_data()
             .manager()
-            .derive_bulk(
+            .derive_bulk_locally(
                 ctx,
                 &csids,
                 rederivation,

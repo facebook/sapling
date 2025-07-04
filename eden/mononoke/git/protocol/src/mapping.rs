@@ -165,7 +165,7 @@ pub async fn bonsai_git_mappings_by_bonsai(
         .collect::<Vec<_>>();
     repo.repo_derived_data()
         .manager()
-        .derive_bulk(
+        .derive_bulk_locally(
             ctx,
             unmapped_bonsais.as_slice(),
             None,

@@ -267,7 +267,7 @@ impl<'a, R: BlobimportRepoLike + Clone + 'static> Blobimport<'a, R> {
                 for cs_id in &cs_ids {
                     repo.repo_derived_data()
                         .manager()
-                        .derive_bulk(ctx, &[*cs_id], None, derived_data_types, None)
+                        .derive_bulk_locally(ctx, &[*cs_id], None, derived_data_types, None)
                         .await?;
                 }
                 Ok(())

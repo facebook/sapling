@@ -48,7 +48,7 @@ use unodes::RootUnodeManifestId;
 #[async_trait]
 pub trait BulkDerivation {
     /// Derive all the given derived data types for all the given changeset ids.
-    async fn derive_bulk(
+    async fn derive_bulk_locally(
         &self,
         ctx: &CoreContext,
         csids: &[ChangesetId],
@@ -350,7 +350,7 @@ impl BulkDerivation for DerivedDataManager {
     /// Derive all the desired derived data types for all the desired csids
     ///
     /// If the dependent types or changesets are not derived yet, they will be derived now
-    async fn derive_bulk(
+    async fn derive_bulk_locally(
         &self,
         ctx: &CoreContext,
         csids: &[ChangesetId],

@@ -749,7 +749,7 @@ pub(crate) async fn derive_all_enabled_types_for_repo(
     let _ = repo
         .repo_derived_data()
         .manager()
-        .derive_bulk(
+        .derive_bulk_locally(
             ctx,
             &all_changesets
                 .iter()

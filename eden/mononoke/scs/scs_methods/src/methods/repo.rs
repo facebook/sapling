@@ -577,7 +577,7 @@ impl SourceControlServiceImpl {
                 .iter()
                 .map(DerivableType::from_request)
                 .collect::<Result<Vec<_>, _>>()?;
-            repo.derive_bulk(&ctx, csids, &derived_data_types, Some(batch_size))
+            repo.derive_bulk_locally(&ctx, csids, &derived_data_types, Some(batch_size))
                 .await?;
         }
 
@@ -843,7 +843,7 @@ impl SourceControlServiceImpl {
         let derived_data_type = DerivableType::from_request(&params.derived_data_type)?;
 
         const CONCURRENCY: u64 = 1000;
-        repo.derive_bulk(&ctx, csids, &[derived_data_type], Some(CONCURRENCY))
+        repo.derive_bulk_locally(&ctx, csids, &[derived_data_type], Some(CONCURRENCY))
             .await?;
 
         Ok(thrift::RepoPrepareCommitsResponse {

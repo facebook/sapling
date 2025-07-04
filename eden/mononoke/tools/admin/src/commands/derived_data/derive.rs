@@ -88,7 +88,7 @@ pub(super) async fn derive(
         }
     } else {
         let (stats, ()) = manager
-            .derive_bulk(
+            .derive_bulk_locally(
                 ctx,
                 csids,
                 Some(rederivation),

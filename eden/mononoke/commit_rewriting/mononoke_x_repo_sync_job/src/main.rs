@@ -457,7 +457,7 @@ async fn tail(
                     .get_target_repo()
                     .repo_derived_data()
                     .manager()
-                    .derive_bulk(ctx, &synced_css, None, derived_data_types, None)
+                    .derive_bulk_locally(ctx, &synced_css, None, derived_data_types, None)
                     .await?;
 
                 maybe_apply_backpressure(

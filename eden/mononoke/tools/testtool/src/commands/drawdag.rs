@@ -157,7 +157,7 @@ async fn derive_all(ctx: &CoreContext, repo: &Repo, csids: &[ChangesetId]) -> Re
         .collect::<Vec<_>>();
     repo.repo_derived_data()
         .manager()
-        .derive_bulk(ctx, csids, None, derived_data_types.as_slice(), None)
+        .derive_bulk_locally(ctx, csids, None, derived_data_types.as_slice(), None)
         .await?;
     Ok(())
 }

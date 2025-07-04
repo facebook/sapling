@@ -392,7 +392,7 @@ async fn derive_bonsais_single_repo(
         .collect::<Vec<_>>();
     repo.repo_derived_data()
         .manager()
-        .derive_bulk(ctx, bcs_ids, None, derived_data_types, None)
+        .derive_bulk_locally(ctx, bcs_ids, None, derived_data_types, None)
         .map_err(|e| e.into())
         .await
 }

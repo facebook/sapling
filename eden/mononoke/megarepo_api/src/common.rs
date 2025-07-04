@@ -1315,7 +1315,7 @@ pub(crate) async fn derive_all_types(
                 }
                 repo.repo_derived_data()
                     .manager()
-                    .derive_bulk(ctx, chunk, None, &derived_data_types, override_batch_size)
+                    .derive_bulk_locally(ctx, chunk, None, &derived_data_types, override_batch_size)
                     .await
             },
             |e| {

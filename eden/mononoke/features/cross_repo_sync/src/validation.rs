@@ -1629,7 +1629,7 @@ pub async fn update_large_repo_bookmarks<'a, R: Repo>(
                     large_repo
                         .repo_derived_data()
                         .manager()
-                        .derive_bulk(ctx, &[large_cs_id], None, &derived_data_types, None)
+                        .derive_bulk_locally(ctx, &[large_cs_id], None, &derived_data_types, None)
                         .await?;
                     let reason = BookmarkUpdateReason::XRepoSync;
                     let large_bookmark =
