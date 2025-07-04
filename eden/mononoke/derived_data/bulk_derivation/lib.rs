@@ -35,6 +35,7 @@ use futures::stream;
 use git_types::MappedGitCommitId;
 use git_types::RootGitDeltaManifestV2Id;
 use inferred_copy_from::RootInferredCopyFromId;
+use itertools::Itertools;
 use mercurial_derivation::MappedHgChangesetId;
 use mercurial_derivation::RootHgAugmentedManifestId;
 use mononoke_macros::mononoke;
@@ -55,6 +56,16 @@ pub trait BulkDerivation {
         rederivation: Option<Arc<dyn Rederivation>>,
         derived_data_types: &[DerivableType],
         override_batch_size: Option<u64>,
+    ) -> Result<(), SharedDerivationError>;
+
+    /// Derive all the given derived data types for all the given changeset ids remotely.
+    async fn derive_bulk(
+        &self,
+        ctx: &CoreContext,
+        csids: &[ChangesetId],
+        rederivation: Option<Arc<dyn Rederivation>>,
+        derived_data_types: &[DerivableType],
+        override_concurrency: Option<usize>,
     ) -> Result<(), SharedDerivationError>;
 
     /// Derive data for exactly a batch of changesets.
@@ -195,6 +206,13 @@ trait SingleTypeDerivation: Send + Sync {
         csid: ChangesetId,
         rederivation: Option<Arc<dyn Rederivation>>,
     ) -> Result<(), DerivationError>;
+
+    async fn derive(
+        &self,
+        ctx: &CoreContext,
+        csid: ChangesetId,
+        rederivation: Option<Arc<dyn Rederivation>>,
+    ) -> Result<(), SharedDerivationError>;
 }
 
 #[async_trait]
@@ -289,6 +307,16 @@ impl<T: BonsaiDerivable> SingleTypeDerivation for SingleTypeManager<T> {
         self.manager
             .derive_from_predecessor::<T>(ctx, csid, rederivation)
             .await?;
+        Ok(())
+    }
+
+    async fn derive(
+        &self,
+        ctx: &CoreContext,
+        csid: ChangesetId,
+        rederivation: Option<Arc<dyn Rederivation>>,
+    ) -> Result<(), SharedDerivationError> {
+        self.manager.derive::<T>(ctx, csid, rederivation).await?;
         Ok(())
     }
 }
@@ -386,6 +414,35 @@ impl BulkDerivation for DerivedDataManager {
             .buffer_unordered(10)
             .try_collect::<Vec<_>>()
             .await?;
+
+        Ok(())
+    }
+
+    /// Derive all the desired derived data types for all the desired csids
+    ///
+    /// If the dependent types or changesets are not derived yet, they will be derived now
+    ///
+    /// Perform the derivation remotely using the Derived Data Service, or fall back to local
+    /// derivation if necessary
+    async fn derive_bulk(
+        &self,
+        ctx: &CoreContext,
+        csids: &[ChangesetId],
+        rederivation: Option<Arc<dyn Rederivation>>,
+        derived_data_types: &[DerivableType],
+        override_concurrency: Option<usize>,
+    ) -> Result<(), SharedDerivationError> {
+        stream::iter(
+            derived_data_types
+                .iter()
+                .map(|ddt| manager_for_type(self, *ddt))
+                .cartesian_product(csids),
+        )
+        .map(async |(manager, csid)| manager.derive(ctx, *csid, rederivation.clone()).await)
+        .boxed()
+        .buffer_unordered(override_concurrency.unwrap_or(10).max(1))
+        .try_collect::<Vec<_>>()
+        .await?;
 
         Ok(())
     }
