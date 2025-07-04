@@ -22,6 +22,7 @@ use commit_cloud::sql::ops::Update;
 use commit_cloud_types::LocalBookmarksMap;
 use commit_cloud_types::WorkspaceLocalBookmark;
 use commit_cloud_types::changeset::CloudChangesetId;
+use context::CoreContext;
 use fbinit::FacebookInit;
 use mercurial_types::HgChangesetId;
 use mononoke_macros::mononoke;
@@ -97,7 +98,8 @@ fn test_lbs_to_map() {
 }
 
 #[mononoke::fbinit_test]
-async fn test_local_bookmarks(_fb: FacebookInit) -> anyhow::Result<()> {
+async fn test_local_bookmarks(fb: FacebookInit) -> anyhow::Result<()> {
+    let ctx = CoreContext::test_mock(fb);
     let sql = SqlCommitCloudBuilder::with_sqlite_in_memory()?.new();
     let reponame = "test_repo".to_owned();
     let workspace = "user_testuser_default".to_owned();
@@ -116,7 +118,7 @@ async fn test_local_bookmarks(_fb: FacebookInit) -> anyhow::Result<()> {
     txn = sql
         .insert(
             txn,
-            None,
+            &ctx,
             reponame.clone(),
             workspace.clone(),
             bookmark1.clone(),
@@ -126,7 +128,7 @@ async fn test_local_bookmarks(_fb: FacebookInit) -> anyhow::Result<()> {
     txn = sql
         .insert(
             txn,
-            None,
+            &ctx,
             reponame.clone(),
             workspace.clone(),
             bookmark2.clone(),
@@ -152,7 +154,7 @@ async fn test_local_bookmarks(_fb: FacebookInit) -> anyhow::Result<()> {
     txn = Delete::<WorkspaceLocalBookmark>::delete(
         &sql,
         txn,
-        None,
+        &ctx,
         reponame.clone(),
         workspace.clone(),
         DeleteArgs { removed_bookmarks },
@@ -167,7 +169,7 @@ async fn test_local_bookmarks(_fb: FacebookInit) -> anyhow::Result<()> {
     };
     let txn = sql.connections.write_connection.start_transaction().await?;
     let (txn, affected_rows) =
-        Update::<WorkspaceLocalBookmark>::update(&sql, txn, None, cc_ctx, new_name_args).await?;
+        Update::<WorkspaceLocalBookmark>::update(&sql, txn, &ctx, cc_ctx, new_name_args).await?;
     txn.commit().await?;
     assert_eq!(affected_rows, 1);
 

@@ -7,7 +7,7 @@
 
 use ::sql_ext::mononoke_queries;
 use async_trait::async_trait;
-use clientinfo::ClientRequestInfo;
+use context::CoreContext;
 use mononoke_types::Timestamp;
 use sql::Connection;
 use sql::Transaction;
@@ -99,14 +99,14 @@ impl Insert<WorkspaceVersion> for SqlCommitCloud {
     async fn insert(
         &self,
         txn: Transaction,
-        cri: Option<&ClientRequestInfo>,
+        ctx: &CoreContext,
         reponame: String,
         workspace: String,
         data: WorkspaceVersion,
     ) -> anyhow::Result<Transaction> {
         let (txn, _) = InsertVersion::query_with_transaction(
             txn,
-            cri.map(|cri| cri.into()),
+            ctx.into(),
             &reponame,
             &workspace,
             &data.version,
@@ -129,7 +129,7 @@ impl Update<WorkspaceVersion> for SqlCommitCloud {
     async fn update(
         &self,
         txn: Transaction,
-        cri: Option<&ClientRequestInfo>,
+        ctx: &CoreContext,
         cc_ctx: CommitCloudContext,
         args: Self::UpdateArgs,
     ) -> anyhow::Result<(Transaction, u64)> {
@@ -137,7 +137,7 @@ impl Update<WorkspaceVersion> for SqlCommitCloud {
             UpdateVersionArgs::Archive(archived) => {
                 let (txn, result) = UpdateArchive::query_with_transaction(
                     txn,
-                    cri.map(|cri| cri.into()),
+                    ctx.into(),
                     &cc_ctx.reponame,
                     &cc_ctx.workspace,
                     &archived,
@@ -148,7 +148,7 @@ impl Update<WorkspaceVersion> for SqlCommitCloud {
             UpdateVersionArgs::WorkspaceName(new_workspace) => {
                 let (txn, result) = UpdateWorkspaceName::query_with_transaction(
                     txn,
-                    cri.map(|cri| cri.into()),
+                    ctx.into(),
                     &cc_ctx.reponame,
                     &cc_ctx.workspace,
                     &new_workspace,

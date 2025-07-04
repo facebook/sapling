@@ -7,9 +7,9 @@
 
 use ::sql_ext::mononoke_queries;
 use async_trait::async_trait;
-use clientinfo::ClientRequestInfo;
 use commit_cloud_types::WorkspaceHead;
 use commit_cloud_types::changeset::CloudChangesetId;
+use context::CoreContext;
 use sql::Transaction;
 
 use crate::ctx::CommitCloudContext;
@@ -69,14 +69,14 @@ impl Insert<WorkspaceHead> for SqlCommitCloud {
     async fn insert(
         &self,
         txn: Transaction,
-        cri: Option<&ClientRequestInfo>,
+        ctx: &CoreContext,
         reponame: String,
         workspace: String,
         data: WorkspaceHead,
     ) -> anyhow::Result<Transaction> {
         let (txn, _) = InsertHead::query_with_transaction(
             txn,
-            cri.map(|cri| cri.into()),
+            ctx.into(),
             &reponame,
             &workspace,
             &data.commit,
@@ -92,13 +92,13 @@ impl Update<WorkspaceHead> for SqlCommitCloud {
     async fn update(
         &self,
         txn: Transaction,
-        cri: Option<&ClientRequestInfo>,
+        ctx: &CoreContext,
         cc_ctx: CommitCloudContext,
         args: Self::UpdateArgs,
     ) -> anyhow::Result<(Transaction, u64)> {
         let (txn, result) = UpdateWorkspaceName::query_with_transaction(
             txn,
-            cri.map(|cri| cri.into()),
+            ctx.into(),
             &cc_ctx.reponame,
             &cc_ctx.workspace,
             &args.new_workspace,
@@ -114,14 +114,14 @@ impl Delete<WorkspaceHead> for SqlCommitCloud {
     async fn delete(
         &self,
         txn: Transaction,
-        cri: Option<&ClientRequestInfo>,
+        ctx: &CoreContext,
         reponame: String,
         workspace: String,
         args: Self::DeleteArgs,
     ) -> anyhow::Result<Transaction> {
         let (txn, _) = DeleteHead::query_with_transaction(
             txn,
-            cri.map(|cri| cri.into()),
+            ctx.into(),
             &reponame,
             &workspace,
             args.removed_commits.as_slice(),

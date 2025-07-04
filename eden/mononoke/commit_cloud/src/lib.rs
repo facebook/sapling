@@ -269,7 +269,6 @@ impl CommitCloud {
             .start_transaction()
             .await
             .map_err(CommitCloudInternalError::Error)?;
-        let cri = self.ctx.client_request_info();
 
         let initiate_workspace = params.version == 0
             && params.new_heads.is_empty()
@@ -280,7 +279,7 @@ impl CommitCloud {
                 .is_none_or(|x| x.is_empty());
 
         if !initiate_workspace {
-            txn = update_references_data(&self.storage, txn, cri, params.clone(), cc_ctx)
+            txn = update_references_data(&self.storage, txn, &self.ctx, params.clone(), cc_ctx)
                 .await
                 .context(format!(
                     "Failed to update references for request {:?}",
@@ -303,7 +302,7 @@ impl CommitCloud {
             .storage
             .insert(
                 txn,
-                cri,
+                &self.ctx,
                 cc_ctx.reponame.clone(),
                 cc_ctx.workspace.clone(),
                 args.clone(),
@@ -326,7 +325,7 @@ impl CommitCloud {
             .storage
             .insert(
                 txn,
-                cri,
+                &self.ctx,
                 cc_ctx.reponame.clone(),
                 cc_ctx.workspace.clone(),
                 history_entry,
@@ -475,8 +474,8 @@ impl CommitCloud {
             ),
         );
 
-        let cri = self.ctx.client_request_info();
-        let (txn, affected_rows) = rename_all(&self.storage, cri, cc_ctx, new_workspace).await?;
+        let (txn, affected_rows) =
+            rename_all(&self.storage, &self.ctx, cc_ctx, new_workspace).await?;
 
         ensure!(
             affected_rows > 0,
@@ -504,11 +503,11 @@ impl CommitCloud {
             .write_connection
             .start_transaction()
             .await?;
-        let cri = self.ctx.client_request_info();
+
         let (txn, affected_rows) = Update::<WorkspaceVersion>::update(
             &self.storage,
             txn,
-            cri,
+            &self.ctx,
             cc_ctx.clone(),
             UpdateVersionArgs::Archive(archived),
         )

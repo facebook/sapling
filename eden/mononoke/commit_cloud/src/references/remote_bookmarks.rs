@@ -8,9 +8,9 @@
 use std::str::FromStr;
 
 use anyhow::ensure;
-use clientinfo::ClientRequestInfo;
 use commit_cloud_types::WorkspaceRemoteBookmark;
 use commit_cloud_types::changeset::CloudChangesetId;
+use context::CoreContext;
 use mononoke_types::sha1_hash::Sha1;
 use sql::Transaction;
 
@@ -58,8 +58,8 @@ pub fn rbs_to_list(lbs: Vec<WorkspaceRemoteBookmark>) -> Vec<Vec<String>> {
 pub async fn update_remote_bookmarks(
     sql_commit_cloud: &SqlCommitCloud,
     mut txn: Transaction,
-    cri: Option<&ClientRequestInfo>,
-    ctx: &CommitCloudContext,
+    ctx: &CoreContext,
+    cc_ctx: &CommitCloudContext,
     updated_remote_bookmarks: Option<Vec<WorkspaceRemoteBookmark>>,
     removed_remote_bookmarks: Option<Vec<WorkspaceRemoteBookmark>>,
 ) -> anyhow::Result<Transaction> {
@@ -79,9 +79,9 @@ pub async fn update_remote_bookmarks(
         txn = Delete::<WorkspaceRemoteBookmark>::delete(
             sql_commit_cloud,
             txn,
-            cri,
-            ctx.reponame.clone(),
-            ctx.workspace.clone(),
+            ctx,
+            cc_ctx.reponame.clone(),
+            cc_ctx.workspace.clone(),
             delete_args,
         )
         .await?;
@@ -91,9 +91,9 @@ pub async fn update_remote_bookmarks(
         txn = Insert::<WorkspaceRemoteBookmark>::insert(
             sql_commit_cloud,
             txn,
-            cri,
-            ctx.reponame.clone(),
-            ctx.workspace.clone(),
+            ctx,
+            cc_ctx.reponame.clone(),
+            cc_ctx.workspace.clone(),
             book,
         )
         .await?;

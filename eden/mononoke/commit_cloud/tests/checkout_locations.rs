@@ -14,6 +14,7 @@ use commit_cloud::sql::common::UpdateWorkspaceNameArgs;
 use commit_cloud::sql::ops::Insert;
 use commit_cloud::sql::ops::Update;
 use commit_cloud_types::WorkspaceCheckoutLocation;
+use context::CoreContext;
 use fbinit::FacebookInit;
 use mononoke_macros::mononoke;
 use mononoke_types::Timestamp;
@@ -21,9 +22,11 @@ use mononoke_types::sha1_hash::Sha1;
 use sql_construct::SqlConstruct;
 
 #[mononoke::fbinit_test]
-async fn test_checkout_locations(_fb: FacebookInit) -> anyhow::Result<()> {
+async fn test_checkout_locations(fb: FacebookInit) -> anyhow::Result<()> {
     use commit_cloud::sql::ops::Get;
     use commit_cloud_types::changeset::CloudChangesetId;
+    let ctx = CoreContext::test_mock(fb);
+
     let sql = SqlCommitCloudBuilder::with_sqlite_in_memory()?.new();
     let reponame = "test_repo".to_owned();
     let workspace = "user_testuser_default".to_owned();
@@ -44,7 +47,7 @@ async fn test_checkout_locations(_fb: FacebookInit) -> anyhow::Result<()> {
     let mut txn = sql.connections.write_connection.start_transaction().await?;
 
     txn = sql
-        .insert(txn, None, reponame.clone(), workspace.clone(), args)
+        .insert(txn, &ctx, reponame.clone(), workspace.clone(), args)
         .await?;
     txn.commit().await?;
 
@@ -56,7 +59,7 @@ async fn test_checkout_locations(_fb: FacebookInit) -> anyhow::Result<()> {
     };
     let txn = sql.connections.write_connection.start_transaction().await?;
     let (txn, affected_rows) =
-        Update::<WorkspaceCheckoutLocation>::update(&sql, txn, None, cc_ctx, new_name_args).await?;
+        Update::<WorkspaceCheckoutLocation>::update(&sql, txn, &ctx, cc_ctx, new_name_args).await?;
     txn.commit().await?;
     assert_eq!(affected_rows, 1);
 

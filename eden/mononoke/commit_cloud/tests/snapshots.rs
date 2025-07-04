@@ -15,16 +15,18 @@ use commit_cloud::sql::ops::Insert;
 use commit_cloud::sql::ops::Update;
 use commit_cloud_types::WorkspaceSnapshot;
 use commit_cloud_types::changeset::CloudChangesetId;
+use context::CoreContext;
 use fbinit::FacebookInit;
 use mononoke_macros::mononoke;
 use mononoke_types::sha1_hash::Sha1;
 use sql_construct::SqlConstruct;
 
 #[mononoke::fbinit_test]
-async fn test_snapshots(_fb: FacebookInit) -> anyhow::Result<()> {
+async fn test_snapshots(fb: FacebookInit) -> anyhow::Result<()> {
     use commit_cloud::sql::ops::Get;
     use commit_cloud::sql::snapshots_ops::DeleteArgs;
 
+    let ctx = CoreContext::test_mock(fb);
     let sql = SqlCommitCloudBuilder::with_sqlite_in_memory()?.new();
 
     let reponame = "test_repo".to_owned();
@@ -47,7 +49,7 @@ async fn test_snapshots(_fb: FacebookInit) -> anyhow::Result<()> {
     txn = sql
         .insert(
             txn,
-            None,
+            &ctx,
             reponame.clone(),
             workspace.clone(),
             snapshot1.clone(),
@@ -57,7 +59,7 @@ async fn test_snapshots(_fb: FacebookInit) -> anyhow::Result<()> {
     txn = sql
         .insert(
             txn,
-            None,
+            &ctx,
             reponame.clone(),
             workspace.clone(),
             snapshot2.clone(),
@@ -73,7 +75,7 @@ async fn test_snapshots(_fb: FacebookInit) -> anyhow::Result<()> {
     txn = Delete::<WorkspaceSnapshot>::delete(
         &sql,
         txn,
-        None,
+        &ctx,
         reponame.clone(),
         workspace.clone(),
         DeleteArgs { removed_snapshots },
@@ -89,7 +91,7 @@ async fn test_snapshots(_fb: FacebookInit) -> anyhow::Result<()> {
     };
     let txn = sql.connections.write_connection.start_transaction().await?;
     let (txn, affected_rows) =
-        Update::<WorkspaceSnapshot>::update(&sql, txn, None, cc_ctx, new_name_args).await?;
+        Update::<WorkspaceSnapshot>::update(&sql, txn, &ctx, cc_ctx, new_name_args).await?;
     txn.commit().await?;
     assert_eq!(affected_rows, 1);
 

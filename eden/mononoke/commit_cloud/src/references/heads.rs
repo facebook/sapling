@@ -7,9 +7,9 @@
 
 use std::str::FromStr;
 
-use clientinfo::ClientRequestInfo;
 use commit_cloud_types::WorkspaceHead;
 use commit_cloud_types::changeset::CloudChangesetId;
+use context::CoreContext;
 use mononoke_types::sha1_hash::Sha1;
 use sql::Transaction;
 
@@ -38,8 +38,8 @@ pub fn heads_to_list(heads: &Vec<WorkspaceHead>) -> Vec<String> {
 pub async fn update_heads(
     sql_commit_cloud: &SqlCommitCloud,
     mut txn: Transaction,
-    cri: Option<&ClientRequestInfo>,
-    ctx: &CommitCloudContext,
+    ctx: &CoreContext,
+    cc_ctx: &CommitCloudContext,
     removed_heads: Vec<CloudChangesetId>,
     new_heads: Vec<CloudChangesetId>,
 ) -> anyhow::Result<Transaction> {
@@ -51,9 +51,9 @@ pub async fn update_heads(
         txn = Delete::<WorkspaceHead>::delete(
             sql_commit_cloud,
             txn,
-            cri,
-            ctx.reponame.clone(),
-            ctx.workspace.clone(),
+            ctx,
+            cc_ctx.reponame.clone(),
+            cc_ctx.workspace.clone(),
             delete_args,
         )
         .await?;
@@ -62,9 +62,9 @@ pub async fn update_heads(
         txn = Insert::<WorkspaceHead>::insert(
             sql_commit_cloud,
             txn,
-            cri,
-            ctx.reponame.clone(),
-            ctx.workspace.clone(),
+            ctx,
+            cc_ctx.reponame.clone(),
+            cc_ctx.workspace.clone(),
             WorkspaceHead { commit: head },
         )
         .await?;

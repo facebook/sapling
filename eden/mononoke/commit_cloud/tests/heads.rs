@@ -17,6 +17,7 @@ use commit_cloud::sql::ops::Insert;
 use commit_cloud::sql::ops::Update;
 use commit_cloud_types::WorkspaceHead;
 use commit_cloud_types::changeset::CloudChangesetId;
+use context::CoreContext;
 use fbinit::FacebookInit;
 use mononoke_macros::mononoke;
 use mononoke_types::sha1_hash::Sha1;
@@ -54,9 +55,10 @@ fn test_heads_to_list() {
 }
 
 #[mononoke::fbinit_test]
-async fn test_heads(_fb: FacebookInit) -> anyhow::Result<()> {
+async fn test_heads(fb: FacebookInit) -> anyhow::Result<()> {
     use commit_cloud::sql::heads_ops::DeleteArgs;
     use commit_cloud::sql::ops::Get;
+    let ctx = CoreContext::test_mock(fb);
     let sql = SqlCommitCloudBuilder::with_sqlite_in_memory()?.new();
     let reponame = "test_repo".to_owned();
     let workspace = "user_testuser_default".to_owned();
@@ -77,7 +79,7 @@ async fn test_heads(_fb: FacebookInit) -> anyhow::Result<()> {
     txn = sql
         .insert(
             txn,
-            None,
+            &ctx,
             reponame.clone(),
             workspace.clone(),
             head1.clone(),
@@ -87,7 +89,7 @@ async fn test_heads(_fb: FacebookInit) -> anyhow::Result<()> {
     txn = sql
         .insert(
             txn,
-            None,
+            &ctx,
             reponame.clone(),
             workspace.clone(),
             head2.clone(),
@@ -102,7 +104,7 @@ async fn test_heads(_fb: FacebookInit) -> anyhow::Result<()> {
     txn = Delete::<WorkspaceHead>::delete(
         &sql,
         txn,
-        None,
+        &ctx,
         reponame.clone(),
         workspace.clone(),
         DeleteArgs { removed_commits },
@@ -118,7 +120,7 @@ async fn test_heads(_fb: FacebookInit) -> anyhow::Result<()> {
     };
     let txn = sql.connections.write_connection.start_transaction().await?;
     let (txn, affected_rows) =
-        Update::<WorkspaceHead>::update(&sql, txn, None, cc_ctx, new_name_args).await?;
+        Update::<WorkspaceHead>::update(&sql, txn, &ctx, cc_ctx, new_name_args).await?;
     txn.commit().await?;
     assert_eq!(affected_rows, 1);
 

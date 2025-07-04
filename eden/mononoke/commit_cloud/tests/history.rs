@@ -17,6 +17,7 @@ use commit_cloud_types::WorkspaceHead;
 use commit_cloud_types::WorkspaceLocalBookmark;
 use commit_cloud_types::changeset::CloudChangesetId;
 use commit_cloud_types::references::WorkspaceRemoteBookmark;
+use context::CoreContext;
 use fbinit::FacebookInit;
 use mononoke_macros::mononoke;
 use mononoke_types::Timestamp;
@@ -24,13 +25,14 @@ use mononoke_types::sha1_hash::Sha1;
 use sql_construct::SqlConstruct;
 
 #[mononoke::fbinit_test]
-async fn test_history(_fb: FacebookInit) -> anyhow::Result<()> {
+async fn test_history(fb: FacebookInit) -> anyhow::Result<()> {
     use commit_cloud::references::history::WorkspaceHistory;
     use commit_cloud::sql::history_ops::DeleteArgs;
     use commit_cloud::sql::history_ops::GetOutput;
     use commit_cloud::sql::history_ops::GetType;
     use commit_cloud::sql::ops::GenericGet;
 
+    let ctx = CoreContext::test_mock(fb);
     // Create a workspace with heads and bookmarks
     let sql = SqlCommitCloudBuilder::with_sqlite_in_memory()?.new();
     let reponame = "test_repo".to_owned();
@@ -69,7 +71,7 @@ async fn test_history(_fb: FacebookInit) -> anyhow::Result<()> {
     txn = sql
         .insert(
             txn,
-            None,
+            &ctx,
             reponame.clone(),
             workspace.clone(),
             args1.clone(),
@@ -107,7 +109,7 @@ async fn test_history(_fb: FacebookInit) -> anyhow::Result<()> {
     txn = sql
         .insert(
             txn,
-            None,
+            &ctx,
             reponame.clone(),
             workspace.clone(),
             args2.clone(),
@@ -120,7 +122,7 @@ async fn test_history(_fb: FacebookInit) -> anyhow::Result<()> {
     txn = Delete::<WorkspaceHistory>::delete(
         &sql,
         txn,
-        None,
+        &ctx,
         reponame.clone(),
         workspace.clone(),
         DeleteArgs {
@@ -158,7 +160,7 @@ async fn test_history(_fb: FacebookInit) -> anyhow::Result<()> {
     };
     let txn = sql.connections.write_connection.start_transaction().await?;
     let (txn, affected_rows) =
-        Update::<WorkspaceHistory>::update(&sql, txn, None, cc_ctx, new_name_args).await?;
+        Update::<WorkspaceHistory>::update(&sql, txn, &ctx, cc_ctx, new_name_args).await?;
     txn.commit().await?;
     assert_eq!(affected_rows, 1);
 

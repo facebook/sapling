@@ -6,7 +6,7 @@
  */
 
 use async_trait::async_trait;
-use clientinfo::ClientRequestInfo;
+use context::CoreContext;
 use sql::Transaction;
 use sql_ext::SqlConnections;
 
@@ -48,7 +48,7 @@ pub trait Insert<T = Self> {
     async fn insert(
         &self,
         txn: Transaction,
-        cri: Option<&ClientRequestInfo>,
+        ctx: &CoreContext,
         reponame: String,
         workspace: String,
         data: T,
@@ -61,7 +61,7 @@ pub trait Update<T = Self> {
     async fn update(
         &self,
         txn: Transaction,
-        cri: Option<&ClientRequestInfo>,
+        ctx: &CoreContext,
         cc_ctx: CommitCloudContext,
         args: Self::UpdateArgs,
     ) -> anyhow::Result<(Transaction, u64)>;
@@ -73,7 +73,7 @@ pub trait Delete<T = Self> {
     async fn delete(
         &self,
         txn: Transaction,
-        cri: Option<&ClientRequestInfo>,
+        ctx: &CoreContext,
         reponame: String,
         workspace: String,
         args: Self::DeleteArgs,

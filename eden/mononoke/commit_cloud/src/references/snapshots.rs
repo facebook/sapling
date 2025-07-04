@@ -5,9 +5,9 @@
  * GNU General Public License version 2.
  */
 
-use clientinfo::ClientRequestInfo;
 use commit_cloud_types::WorkspaceSnapshot;
 use commit_cloud_types::changeset::CloudChangesetId;
+use context::CoreContext;
 use sql::Transaction;
 
 use crate::CommitCloudContext;
@@ -19,8 +19,8 @@ use crate::sql::snapshots_ops::DeleteArgs;
 pub async fn update_snapshots(
     sql_commit_cloud: &SqlCommitCloud,
     mut txn: Transaction,
-    cri: Option<&ClientRequestInfo>,
-    ctx: &CommitCloudContext,
+    ctx: &CoreContext,
+    cc_ctx: &CommitCloudContext,
     new_snapshots: Vec<CloudChangesetId>,
     removed_snapshots: Vec<CloudChangesetId>,
 ) -> anyhow::Result<Transaction> {
@@ -30,9 +30,9 @@ pub async fn update_snapshots(
         txn = Delete::<WorkspaceSnapshot>::delete(
             sql_commit_cloud,
             txn,
-            cri,
-            ctx.reponame.clone(),
-            ctx.workspace.clone(),
+            ctx,
+            cc_ctx.reponame.clone(),
+            cc_ctx.workspace.clone(),
             delete_args,
         )
         .await?;
@@ -41,9 +41,9 @@ pub async fn update_snapshots(
         txn = Insert::<WorkspaceSnapshot>::insert(
             sql_commit_cloud,
             txn,
-            cri,
-            ctx.reponame.clone(),
-            ctx.workspace.clone(),
+            ctx,
+            cc_ctx.reponame.clone(),
+            cc_ctx.workspace.clone(),
             WorkspaceSnapshot { commit: snapshot },
         )
         .await?;

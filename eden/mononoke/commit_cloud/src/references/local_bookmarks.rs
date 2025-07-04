@@ -8,9 +8,9 @@
 use std::collections::HashMap;
 use std::str::FromStr;
 
-use clientinfo::ClientRequestInfo;
 use commit_cloud_types::WorkspaceLocalBookmark;
 use commit_cloud_types::changeset::CloudChangesetId;
+use context::CoreContext;
 use mononoke_types::sha1_hash::Sha1;
 use sql::Transaction;
 
@@ -41,8 +41,8 @@ pub fn lbs_to_map(list: Vec<WorkspaceLocalBookmark>) -> HashMap<String, String> 
 pub async fn update_bookmarks(
     sql_commit_cloud: &SqlCommitCloud,
     mut txn: Transaction,
-    cri: Option<&ClientRequestInfo>,
-    ctx: &CommitCloudContext,
+    ctx: &CoreContext,
+    cc_ctx: &CommitCloudContext,
     updated_bookmarks: HashMap<String, CloudChangesetId>,
     removed_bookmarks: Vec<String>,
 ) -> anyhow::Result<Transaction> {
@@ -52,9 +52,9 @@ pub async fn update_bookmarks(
         txn = Delete::<WorkspaceLocalBookmark>::delete(
             sql_commit_cloud,
             txn,
-            cri,
-            ctx.reponame.clone(),
-            ctx.workspace.clone(),
+            ctx,
+            cc_ctx.reponame.clone(),
+            cc_ctx.workspace.clone(),
             delete_args,
         )
         .await?;
@@ -63,9 +63,9 @@ pub async fn update_bookmarks(
         txn = Insert::<WorkspaceLocalBookmark>::insert(
             sql_commit_cloud,
             txn,
-            cri,
-            ctx.reponame.clone(),
-            ctx.workspace.clone(),
+            ctx,
+            cc_ctx.reponame.clone(),
+            cc_ctx.workspace.clone(),
             WorkspaceLocalBookmark::new(name, book)?,
         )
         .await?;

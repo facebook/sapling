@@ -43,20 +43,3 @@ impl SqlTelemetryLogger {
         &self.fb
     }
 }
-
-// TODO(T223577767): delete this impl to make sure we don't accidentally use it
-// instead of passing a CoreContext
-impl From<ClientRequestInfo> for SqlTelemetryLogger {
-    fn from(client_request_info: ClientRequestInfo) -> Self {
-        Self {
-            client_request_info: Some(client_request_info),
-            fb: None,
-        }
-    }
-}
-
-impl From<&ClientRequestInfo> for SqlTelemetryLogger {
-    fn from(client_request_info: &ClientRequestInfo) -> Self {
-        SqlTelemetryLogger::from(client_request_info.clone())
-    }
-}

@@ -19,6 +19,7 @@ use commit_cloud::sql::ops::Update;
 use commit_cloud_types::RemoteBookmarksMap;
 use commit_cloud_types::WorkspaceRemoteBookmark;
 use commit_cloud_types::changeset::CloudChangesetId;
+use context::CoreContext;
 use fbinit::FacebookInit;
 use mononoke_macros::mononoke;
 use mononoke_types::sha1_hash::Sha1;
@@ -109,10 +110,11 @@ fn test_rbs_to_list() {
 }
 
 #[mononoke::fbinit_test]
-async fn test_remote_bookmarks(_fb: FacebookInit) -> anyhow::Result<()> {
+async fn test_remote_bookmarks(fb: FacebookInit) -> anyhow::Result<()> {
     use commit_cloud::sql::ops::Get;
     use commit_cloud::sql::remote_bookmarks_ops::DeleteArgs;
 
+    let ctx = CoreContext::test_mock(fb);
     let sql = SqlCommitCloudBuilder::with_sqlite_in_memory()?.new();
     let reponame = "test_repo".to_owned();
     let workspace = "user_testuser_default".to_owned();
@@ -134,7 +136,7 @@ async fn test_remote_bookmarks(_fb: FacebookInit) -> anyhow::Result<()> {
     txn = sql
         .insert(
             txn,
-            None,
+            &ctx,
             reponame.clone(),
             workspace.clone(),
             bookmark1.clone(),
@@ -144,7 +146,7 @@ async fn test_remote_bookmarks(_fb: FacebookInit) -> anyhow::Result<()> {
     txn = sql
         .insert(
             txn,
-            None,
+            &ctx,
             reponame.clone(),
             workspace.clone(),
             bookmark2.clone(),
@@ -167,7 +169,7 @@ async fn test_remote_bookmarks(_fb: FacebookInit) -> anyhow::Result<()> {
     txn = Delete::<WorkspaceRemoteBookmark>::delete(
         &sql,
         txn,
-        None,
+        &ctx,
         reponame.clone(),
         workspace.clone(),
         DeleteArgs { removed_bookmarks },
@@ -183,7 +185,7 @@ async fn test_remote_bookmarks(_fb: FacebookInit) -> anyhow::Result<()> {
     };
     let txn = sql.connections.write_connection.start_transaction().await?;
     let (txn, affected_rows) =
-        Update::<WorkspaceRemoteBookmark>::update(&sql, txn, None, cc_ctx, new_name_args).await?;
+        Update::<WorkspaceRemoteBookmark>::update(&sql, txn, &ctx, cc_ctx, new_name_args).await?;
     txn.commit().await?;
     assert_eq!(affected_rows, 1);
 

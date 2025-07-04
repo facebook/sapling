@@ -13,13 +13,16 @@ use commit_cloud::sql::ops::Insert;
 use commit_cloud::sql::ops::Update;
 use commit_cloud::sql::versions_ops::UpdateVersionArgs;
 use commit_cloud::sql::versions_ops::get_version_by_prefix;
+use context::CoreContext;
 use fbinit::FacebookInit;
 use mononoke_macros::mononoke;
 use mononoke_types::Timestamp;
 use sql_construct::SqlConstruct;
 
 #[mononoke::fbinit_test]
-async fn test_versions(_fb: FacebookInit) -> anyhow::Result<()> {
+async fn test_versions(fb: FacebookInit) -> anyhow::Result<()> {
+    let ctx = CoreContext::test_mock(fb);
+
     let sql = SqlCommitCloudBuilder::with_sqlite_in_memory()?.new();
     let reponame = "test_repo".to_owned();
     let workspace = "user/testuser/default".to_owned();
@@ -34,7 +37,7 @@ async fn test_versions(_fb: FacebookInit) -> anyhow::Result<()> {
 
     let mut txn = sql.connections.write_connection.start_transaction().await?;
     txn = sql
-        .insert(txn, None, reponame.clone(), workspace.clone(), args.clone())
+        .insert(txn, &ctx, reponame.clone(), workspace.clone(), args.clone())
         .await?;
     txn.commit().await?;
 
@@ -61,7 +64,7 @@ async fn test_versions(_fb: FacebookInit) -> anyhow::Result<()> {
     txn = sql
         .insert(
             txn,
-            None,
+            &ctx,
             reponame.clone(),
             workspace.clone(),
             args2.clone(),
@@ -75,7 +78,7 @@ async fn test_versions(_fb: FacebookInit) -> anyhow::Result<()> {
     let archive_args = UpdateVersionArgs::Archive(true);
     txn = sql.connections.write_connection.start_transaction().await?;
     let (txn, affected_rows) =
-        Update::<WorkspaceVersion>::update(&sql, txn, None, cc_ctx.clone(), archive_args).await?;
+        Update::<WorkspaceVersion>::update(&sql, txn, &ctx, cc_ctx.clone(), archive_args).await?;
     txn.commit().await?;
     assert_eq!(affected_rows, 1);
     let res3: Vec<WorkspaceVersion> = sql.get(reponame.clone(), workspace.clone()).await?;
@@ -84,7 +87,7 @@ async fn test_versions(_fb: FacebookInit) -> anyhow::Result<()> {
     let new_name_args = UpdateVersionArgs::WorkspaceName(renamed_workspace.clone());
     let txn = sql.connections.write_connection.start_transaction().await?;
     let (txn, affected_rows) =
-        Update::<WorkspaceVersion>::update(&sql, txn, None, cc_ctx, new_name_args).await?;
+        Update::<WorkspaceVersion>::update(&sql, txn, &ctx, cc_ctx, new_name_args).await?;
     txn.commit().await?;
     assert_eq!(affected_rows, 1);
 

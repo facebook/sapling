@@ -11,7 +11,6 @@ use std::sync::Arc;
 use bonsai_git_mapping::BonsaiGitMapping;
 use bonsai_hg_mapping::BonsaiHgMapping;
 use changeset_info::ChangesetInfo;
-use clientinfo::ClientRequestInfo;
 use cloned::cloned;
 use commit_cloud_types::ReferencesData;
 use commit_cloud_types::UpdateReferencesParams;
@@ -169,17 +168,25 @@ pub(crate) async fn cast_references_data(
 pub(crate) async fn update_references_data(
     sql: &SqlCommitCloud,
     txn: Transaction,
-    cri: Option<&ClientRequestInfo>,
+    ctx: &CoreContext,
     params: UpdateReferencesParams,
-    ctx: &CommitCloudContext,
+    cc_ctx: &CommitCloudContext,
 ) -> anyhow::Result<Transaction> {
     let mut txn = txn;
-    txn = update_heads(sql, txn, cri, ctx, params.removed_heads, params.new_heads).await?;
+    txn = update_heads(
+        sql,
+        txn,
+        ctx,
+        cc_ctx,
+        params.removed_heads,
+        params.new_heads,
+    )
+    .await?;
     txn = update_bookmarks(
         sql,
         txn,
-        cri,
         ctx,
+        cc_ctx,
         params.updated_bookmarks,
         params.removed_bookmarks,
     )
@@ -187,8 +194,8 @@ pub(crate) async fn update_references_data(
     txn = update_remote_bookmarks(
         sql,
         txn,
-        cri,
         ctx,
+        cc_ctx,
         params.updated_remote_bookmarks,
         params.removed_remote_bookmarks,
     )
@@ -196,8 +203,8 @@ pub(crate) async fn update_references_data(
     txn = update_snapshots(
         sql,
         txn,
-        cri,
         ctx,
+        cc_ctx,
         params.new_snapshots,
         params.removed_snapshots,
     )
@@ -207,7 +214,7 @@ pub(crate) async fn update_references_data(
 
 pub async fn rename_all(
     sql: &SqlCommitCloud,
-    cri: Option<&ClientRequestInfo>,
+    ctx: &CoreContext,
     cc_ctx: &CommitCloudContext,
     new_workspace: &str,
 ) -> anyhow::Result<(Transaction, u64)> {
@@ -216,24 +223,24 @@ pub async fn rename_all(
     };
     let mut txn = sql.connections.write_connection.start_transaction().await?;
 
-    (txn, _) = Update::<WorkspaceHead>::update(sql, txn, cri, cc_ctx.clone(), args.clone()).await?;
+    (txn, _) = Update::<WorkspaceHead>::update(sql, txn, ctx, cc_ctx.clone(), args.clone()).await?;
     (txn, _) =
-        Update::<WorkspaceLocalBookmark>::update(sql, txn, cri, cc_ctx.clone(), args.clone())
+        Update::<WorkspaceLocalBookmark>::update(sql, txn, ctx, cc_ctx.clone(), args.clone())
             .await?;
     (txn, _) =
-        Update::<WorkspaceRemoteBookmark>::update(sql, txn, cri, cc_ctx.clone(), args.clone())
+        Update::<WorkspaceRemoteBookmark>::update(sql, txn, ctx, cc_ctx.clone(), args.clone())
             .await?;
     (txn, _) =
-        Update::<WorkspaceSnapshot>::update(sql, txn, cri, cc_ctx.clone(), args.clone()).await?;
+        Update::<WorkspaceSnapshot>::update(sql, txn, ctx, cc_ctx.clone(), args.clone()).await?;
     (txn, _) =
-        Update::<WorkspaceCheckoutLocation>::update(sql, txn, cri, cc_ctx.clone(), args.clone())
+        Update::<WorkspaceCheckoutLocation>::update(sql, txn, ctx, cc_ctx.clone(), args.clone())
             .await?;
     (txn, _) =
-        Update::<WorkspaceHistory>::update(sql, txn, cri, cc_ctx.clone(), args.clone()).await?;
+        Update::<WorkspaceHistory>::update(sql, txn, ctx, cc_ctx.clone(), args.clone()).await?;
     let (txn, affected_rows) = Update::<WorkspaceVersion>::update(
         sql,
         txn,
-        cri,
+        ctx,
         cc_ctx.clone(),
         UpdateVersionArgs::WorkspaceName(new_workspace.to_string()),
     )
