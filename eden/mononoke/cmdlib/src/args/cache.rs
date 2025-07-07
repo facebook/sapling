@@ -184,7 +184,7 @@ pub(crate) fn parse_cachelib_shards(matches: &ArgMatches<'_>) -> LocalCacheConfi
     };
     LocalCacheConfig {
         blobstore_cache_shards,
-        encoding: LocalCacheEncoding::Abomonation,
+        encoding: LocalCacheEncoding::Bincode,
     }
 }
 

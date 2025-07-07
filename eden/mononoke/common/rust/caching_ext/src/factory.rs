@@ -13,9 +13,6 @@ use crate::CachelibHandler;
 use crate::MemcacheHandler;
 
 pub enum CacheHandlerEncoding {
-    /// Entries are encoded using Abomonation
-    Abomonation,
-
     /// Entries are encoded using Bincode
     Bincode,
 }
@@ -68,9 +65,6 @@ impl CacheHandlerFactory {
                 encoding,
                 ..
             } => match encoding {
-                CacheHandlerEncoding::Abomonation => {
-                    CachelibHandler::Abomonation(cachelib_pool.clone())
-                }
                 CacheHandlerEncoding::Bincode => CachelibHandler::Bincode(cachelib_pool.clone()),
             },
             Self::Mocked => CachelibHandler::create_mock(),

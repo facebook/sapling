@@ -46,7 +46,6 @@ pub fn init_cachelib(
             .expect("cachelib initialize should always succeed");
 
         let encoding = match args.cache_encoding {
-            CacheEncoding::Abomonation => LocalCacheEncoding::Abomonation,
             CacheEncoding::Bincode => LocalCacheEncoding::Bincode,
         };
 

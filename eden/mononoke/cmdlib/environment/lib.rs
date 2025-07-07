@@ -30,9 +30,6 @@ use tokio::runtime::Handle;
 
 #[derive(Copy, Clone, PartialEq, Eq)]
 pub enum LocalCacheEncoding {
-    /// Local cache uses abomonation for encoding
-    Abomonation,
-
     /// Local cache uses bincode for encoding
     Bincode,
 }

@@ -35,9 +35,6 @@ impl ArgDefaults for CacheMode {
 
 #[derive(ValueEnum, Clone, Copy, Debug, PartialEq, Eq)]
 pub enum CacheEncoding {
-    /// Local cache uses abomonation for encoding
-    Abomonation,
-
     /// Local cache uses bincode for encoding
     Bincode,
 }
@@ -60,7 +57,7 @@ pub struct CachelibArgs {
     #[clap(long, value_enum, default_value_t = CacheMode::Enabled)]
     pub cache_mode: CacheMode,
 
-    #[clap(long, value_enum, default_value_t = CacheEncoding::Abomonation)]
+    #[clap(long, value_enum, default_value_t = CacheEncoding::Bincode)]
     pub cache_encoding: CacheEncoding,
 
     #[clap(long)]

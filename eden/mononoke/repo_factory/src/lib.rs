@@ -724,7 +724,6 @@ impl RepoFactory {
     fn cache_handler_factory(&self, name: &str) -> Result<Option<CacheHandlerFactory>> {
         fn map_encoding(encoding: LocalCacheEncoding) -> CacheHandlerEncoding {
             match encoding {
-                LocalCacheEncoding::Abomonation => CacheHandlerEncoding::Abomonation,
                 LocalCacheEncoding::Bincode => CacheHandlerEncoding::Bincode,
             }
         }
