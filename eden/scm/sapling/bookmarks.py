@@ -1079,9 +1079,6 @@ def saveremotenames(repo, remotebookmarks, override: bool = True) -> None:
     from . import extensions
 
     with repo.lock():
-        if extensions.isenabled(repo.ui, "remotenames"):
-            transition(repo, repo.ui)
-
         # read in all data first before opening file to write
         olddata = set(readremotenames(repo))
         oldbooks = {}
@@ -1258,33 +1255,6 @@ class lazyremotenamedict(collections.abc.Mapping):
 
     def __len__(self):
         return len(list(self.keys()))
-
-
-def transition(repo, ui) -> None:
-    """
-    Help with transitioning to using a remotenames workflow.
-
-    Allows deleting matching local bookmarks defined in a config file:
-
-    [remotenames]
-    transitionbookmarks = master
-        stable
-
-    TODO: Remove this once remotenames is default on everywhere.
-    """
-    transmarks = ui.configlist("remotenames", "transitionbookmarks")
-    localmarks = repo._bookmarks
-    changes = []
-    for mark in transmarks:
-        if mark in localmarks:
-            changes.append((mark, None))  # delete this bookmark
-    if changes:
-        with repo.lock(), repo.transaction("remotenames") as tr:
-            localmarks.applychanges(repo, tr, changes)
-
-        message = ui.config("remotenames", "transitionmessage")
-        if message:
-            ui.warn(message + "\n")
 
 
 def readremotenames(repo=None, svfs=None):
