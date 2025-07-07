@@ -67,21 +67,21 @@
 
 -- use verify-bookmarks command. One inconsistency.
   $ with_stripped_logs crossrepo_verify_bookmarks 2 0
-  inconsistent value of *, but 'meg-mon' bookmark points to None (glob)
-  inconsistent value of *, but 'meg-mon' bookmark points to None (glob)
+  [WARN] inconsistent value of *, but 'meg-mon' bookmark points to None (glob)
+  [WARN] inconsistent value of *, but 'meg-mon' bookmark points to None (glob)
   Error: found 2 inconsistencies
   [1]
 
 -- use verify-bookmarks, but passing a regex.
   $ with_stripped_logs crossrepo_verify_bookmarks 2 0 --update-large-repo-bookmarks \
   > --no-bookmark-updates --bookmark-regex "master_bookmark"
-  all is well!
+  [INFO] all is well!
 
 
 -- updating large repo bookmark will not work, bc there are unsynced commits.
   $ with_stripped_logs crossrepo_verify_bookmarks 2 0 --update-large-repo-bookmarks \
   > --no-bookmark-updates
-  found 2 inconsistencies, trying to update them...
+  [WARN] found 2 inconsistencies, trying to update them...
   Error: Missing outcome for * from small repo (glob)
   [1]
 
@@ -108,9 +108,9 @@
 
 -- now update the inconsistent bookmarks
   $ with_stripped_logs crossrepo_verify_bookmarks 2 0 --update-large-repo-bookmarks
-  found 2 inconsistencies, trying to update them...
-  setting ovrsource/* (glob)
-  setting ovrsource/* (glob)
+  [WARN] found 2 inconsistencies, trying to update them...
+  [INFO] setting ovrsource/* (glob)
+  [INFO] setting ovrsource/* (glob)
 
 -- mutable counter was not updated, because the once command was used
   $ sqlite3 "$TESTTMP/monsql/sqlite_dbs" "select * from mutable_counters where name = 'xreposync_from_2'";

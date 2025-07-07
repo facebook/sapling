@@ -141,7 +141,7 @@ Before config change
   > --target-bookmark $MASTER_BOOKMARK \
   > --limit 1 \
   > --commit-date-rfc3339 "$COMMIT_DATE"
-  merging 1 commits
+  [INFO] merging 1 commits
 
 -- check that merge has made into large repo
   $ cd "$TESTTMP"/large-hg-client
@@ -326,7 +326,7 @@ Before config change
   > --target-bookmark $MASTER_BOOKMARK \
   > --limit 1 \
   > --commit-date-rfc3339 "$COMMIT_DATE"
-  merging 1 commits
+  [INFO] merging 1 commits
 
 -- check that merge has made into large repo
   $ cd "$TESTTMP"/large-hg-client

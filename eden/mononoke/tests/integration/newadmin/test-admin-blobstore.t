@@ -109,9 +109,9 @@ Test --blobstore-scrub-action works
   $ ls $TESTTMP/blobstore/1/blobs | wc -l
   33
   $ with_stripped_logs mononoke_admin --blobstore-scrub-action=ReportOnly blobstore -R repo fetch -q changeset.blake2.f9d662054cf779809fd1a55314f760dc7577eac63f1057162c1b8e56aa0f02a1 | rg scrub
-  scrub: blobstore_id BlobstoreId(1) not repaired for repo0000.changeset.blake2.f9d662054cf779809fd1a55314f760dc7577eac63f1057162c1b8e56aa0f02a1
+  [WARN] scrub: blobstore_id BlobstoreId(1) not repaired for repo0000.changeset.blake2.f9d662054cf779809fd1a55314f760dc7577eac63f1057162c1b8e56aa0f02a1
   $ with_stripped_logs mononoke_admin --blobstore-scrub-action=Repair blobstore -R repo fetch -q changeset.blake2.f9d662054cf779809fd1a55314f760dc7577eac63f1057162c1b8e56aa0f02a1 | rg scrub
-  scrub: blobstore_id BlobstoreId(1) repaired for repo0000.changeset.blake2.f9d662054cf779809fd1a55314f760dc7577eac63f1057162c1b8e56aa0f02a1
+  [INFO] scrub: blobstore_id BlobstoreId(1) repaired for repo0000.changeset.blake2.f9d662054cf779809fd1a55314f760dc7577eac63f1057162c1b8e56aa0f02a1
 
   $ ls $TESTTMP/blobstore/1/blobs | wc -l
   34

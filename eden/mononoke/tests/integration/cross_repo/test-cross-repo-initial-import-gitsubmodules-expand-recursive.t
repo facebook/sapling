@@ -170,10 +170,10 @@ TODO(T174902563): Fix deletion of submodules in EXPAND submodule action.
 -- The check-push-redirection-prereqs should behave the same both ways but let's verify it (we had bugs where it didn't)
 -- (those outputs are still not correct but that's expected)
   $ quiet_grep "all is well" -- with_stripped_logs mononoke_admin megarepo check-prereqs --source-repo-id $SUBMODULE_REPO_ID --target-repo-id $LARGE_REPO_ID --source-changeset bm=heads/master_bookmark --target-changeset bm=master_bookmark --version "$LATEST_CONFIG_VERSION_NAME" | strip_glog | tee $TESTTMP/push_redir_prereqs_small_large
-  all is well!
+  [INFO] all is well!
 
   $ quiet_grep "all is well" -- with_stripped_logs mononoke_admin megarepo check-prereqs --source-repo-id $LARGE_REPO_ID --target-repo-id $SUBMODULE_REPO_ID --source-changeset bm=master_bookmark --target-changeset bm=heads/master_bookmark --version "$LATEST_CONFIG_VERSION_NAME" | strip_glog | tee $TESTTMP/push_redir_prereqs_large_small
-  all is well!
+  [INFO] all is well!
   $ diff -wbBdu $TESTTMP/push_redir_prereqs_small_large $TESTTMP/push_redir_prereqs_large_small
 
 -- Let's corrupt the expansion and check if validation complains

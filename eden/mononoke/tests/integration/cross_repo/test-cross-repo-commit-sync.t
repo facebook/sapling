@@ -159,8 +159,8 @@ fbsource should be fully in sync
 ovrsource has two problems
 (master not matching is not a real problem though)
   $ quiet_grep bookmark -- crossrepo_verify_bookmarks 0 2 | strip_glog | sort
-  'ovr-mon' has a bookmark master_bookmark but it points to a commit that has no equivalent in 'meg-mon'. If it's a shared bookmark (e.g. master) that might mean that it points to a commit from another repository
-  inconsistent value of forgotten_bookmark: 'ovr-mon' has 15ea1fb0b1b27b9d23175d1e7169e43d515c9aa06acf287cd992cbaf4908718e, but 'meg-mon' bookmark points to None
+  [WARN] 'ovr-mon' has a bookmark master_bookmark but it points to a commit that has no equivalent in 'meg-mon'. If it's a shared bookmark (e.g. master) that might mean that it points to a commit from another repository
+  [WARN] inconsistent value of forgotten_bookmark: 'ovr-mon' has 15ea1fb0b1b27b9d23175d1e7169e43d515c9aa06acf287cd992cbaf4908718e, but 'meg-mon' bookmark points to None
 
 update-large-repo-bookmarks won't create commits by itself 
 only the syncer can create the commit or they have to be imported some other way
@@ -170,11 +170,11 @@ only the syncer can create the commit or they have to be imported some other way
 
 but let's  say we synced that commit manually
   $ with_stripped_logs mononoke_admin megarepo manual-commit-sync --source-repo-id 2 --target-repo-id 0 --commit $FORGOTTEN --parents $FORGOTTEN_PARENT --mapping-version-name TEST_VERSION_NAME
-  using repo "ovr-mon" repoid RepositoryId(2) (glob)
-  using repo "meg-mon" repoid RepositoryId(0) (glob)
-  changeset resolved as: ChangesetId(Blake2(5e88c1738667e8b2f4ef54dd53d2ebfb42a6fc0997fd9c5d05cb3ae7e96d5330))
-  changeset resolved as: ChangesetId(Blake2(15ea1fb0b1b27b9d23175d1e7169e43d515c9aa06acf287cd992cbaf4908718e))
-  target cs id is Some(ChangesetId(Blake2(6f62563c84369fb14c82e97dc91a9f4bfe5ffa43db8f3cb7ea06b692c9f0d2e3)))
+  [INFO] using repo "ovr-mon" repoid RepositoryId(2)
+  [INFO] using repo "meg-mon" repoid RepositoryId(0)
+  [INFO] changeset resolved as: ChangesetId(Blake2(5e88c1738667e8b2f4ef54dd53d2ebfb42a6fc0997fd9c5d05cb3ae7e96d5330))
+  [INFO] changeset resolved as: ChangesetId(Blake2(15ea1fb0b1b27b9d23175d1e7169e43d515c9aa06acf287cd992cbaf4908718e))
+  [INFO] target cs id is Some(ChangesetId(Blake2(6f62563c84369fb14c82e97dc91a9f4bfe5ffa43db8f3cb7ea06b692c9f0d2e3)))
 
 it still doesn't have any data derived
   $ mononoke_admin derived-data -R meg-mon exists -T changeset_info -i 6f62563c84369fb14c82e97dc91a9f4bfe5ffa43db8f3cb7ea06b692c9f0d2e3
@@ -189,8 +189,8 @@ it still doesn't have any data derived
 
 and tried again, this time in dry run mode with no limit
   $ quiet_grep bookmark -- crossrepo_verify_bookmarks 0 2 --update-large-repo-bookmarks --no-bookmark-updates --limit 2| strip_glog | sort
-  setting ovrsource/forgotten_bookmark 6f62563c84369fb14c82e97dc91a9f4bfe5ffa43db8f3cb7ea06b692c9f0d2e3
-  skipping master_bookmark because it's a common bookmark
+  [INFO] setting ovrsource/forgotten_bookmark 6f62563c84369fb14c82e97dc91a9f4bfe5ffa43db8f3cb7ea06b692c9f0d2e3
+  [INFO] skipping master_bookmark because it's a common bookmark
 
 and the data is derived
   $ mononoke_admin derived-data -R meg-mon exists -T changeset_info -i 6f62563c84369fb14c82e97dc91a9f4bfe5ffa43db8f3cb7ea06b692c9f0d2e3
@@ -198,8 +198,8 @@ and the data is derived
 
 and tried again
   $ quiet_grep bookmark -- crossrepo_verify_bookmarks 0 2 --update-large-repo-bookmarks | strip_glog | sort
-  setting ovrsource/forgotten_bookmark 6f62563c84369fb14c82e97dc91a9f4bfe5ffa43db8f3cb7ea06b692c9f0d2e3
-  skipping master_bookmark because it's a common bookmark
+  [INFO] setting ovrsource/forgotten_bookmark 6f62563c84369fb14c82e97dc91a9f4bfe5ffa43db8f3cb7ea06b692c9f0d2e3
+  [INFO] skipping master_bookmark because it's a common bookmark
 
 now the verification shouldn't return that error
   $ crossrepo_verify_bookmarks 0 2
