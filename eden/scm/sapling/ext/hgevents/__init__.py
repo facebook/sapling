@@ -20,7 +20,7 @@ to support SCM-aware subscriptions:
 https://facebook.github.io/watchman/docs/scm-query.html.
 """
 
-from sapling import extensions, filemerge, merge, perftrace
+from sapling import extensions, filemerge, merge, perftrace, util
 from sapling.i18n import _
 
 from ..extlib import watchmanclient
@@ -60,6 +60,8 @@ def reposetup(ui, repo):
 
         def wlock(self, *args, **kwargs):
             l = super(hgeventsrepo, self).wlock(*args, **kwargs)
+            if isinstance(l, util.nullcontextmanager):
+                return l
             if not self._eventreporting:
                 return l
             if not self.ui.configbool("experimental", "fsmonitor.transaction_notify"):
