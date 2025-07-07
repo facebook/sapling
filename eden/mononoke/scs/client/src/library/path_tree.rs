@@ -12,37 +12,66 @@ use std::iter::Extend;
 pub(crate) struct PathFilter {
     // None means include everything.
     include: Option<PathTree>,
+
+    // None means don't exclude anything.
+    exclude: Option<PathTree>,
 }
 
 impl PathFilter {
-    pub(crate) fn new(include: Option<PathTree>) -> Self {
-        Self { include }
+    pub(crate) fn new(include: Option<PathTree>, exclude: Option<PathTree>) -> Self {
+        Self { include, exclude }
     }
 
     /// Return whether to include file `name`.
     pub(crate) fn matches_file(&mut self, name: &str) -> bool {
-        match &mut self.include {
+        let include = match &mut self.include {
             None => true,
             Some(tree) => match tree.remove(name) {
                 None => false,
                 Some(PathItem::TargetDir | PathItem::Dir(_)) => false,
                 Some(PathItem::Target) => true,
             },
+        };
+        if !include {
+            return false;
         }
+
+        let exclude = match &mut self.exclude {
+            None => false,
+            Some(tree) => match tree.remove(name) {
+                None => false,
+                Some(PathItem::TargetDir | PathItem::Dir(_)) => false,
+                Some(PathItem::Target) => true,
+            },
+        };
+
+        !exclude
     }
 
     /// Return sub-filter relative to `name` if `name` should be included, else None.
     pub(crate) fn matches_dir(&mut self, name: &str) -> Option<Self> {
-        match &mut self.include {
-            None => Some(Self::default()),
+        let sub_include = match &mut self.include {
+            None => None,
+            Some(tree) => match tree.remove(name) {
+                None => return None,
+                Some(PathItem::Target | PathItem::TargetDir) => None,
+                Some(PathItem::Dir(sub_tree)) => Some(sub_tree),
+            },
+        };
+
+        let sub_exclude = match &mut self.exclude {
+            None => None,
             Some(tree) => match tree.remove(name) {
                 None => None,
-                Some(PathItem::Target | PathItem::TargetDir) => Some(Self::default()),
-                Some(PathItem::Dir(sub_tree)) => Some(Self {
-                    include: Some(sub_tree),
-                }),
+                Some(PathItem::Target | PathItem::TargetDir) => return None,
+                Some(PathItem::Dir(sub_tree)) => Some(sub_tree),
             },
-        }
+        };
+
+        Some(Self {
+            include: sub_include,
+            exclude: sub_exclude,
+        })
     }
 }
 
@@ -156,13 +185,13 @@ mod test {
     use super::*;
 
     #[mononoke::test]
-    fn test_filter() {
+    fn test_include_filter() {
         let mut tree = PathTree::new();
         tree.insert("file");
         tree.insert("dir1");
         tree.insert("dir2/dir3");
 
-        let mut filter = PathFilter::new(Some(tree));
+        let mut filter = PathFilter::new(Some(tree), None);
 
         assert!(filter.matches_file("file"));
         assert!(!filter.matches_file("other_file"));
@@ -190,5 +219,64 @@ mod test {
                 .unwrap()
                 .matches_file("anything")
         );
+    }
+
+    #[mononoke::test]
+    fn test_exclude_filter() {
+        let mut tree = PathTree::new();
+        tree.insert("file");
+        tree.insert("dir1");
+        tree.insert("dir2/dir3");
+
+        let mut filter = PathFilter::new(None, Some(tree));
+
+        assert!(filter.matches_file("other_file"));
+        assert!(!filter.matches_file("file"));
+
+        assert!(
+            filter
+                .matches_dir("other_dir")
+                .unwrap()
+                .matches_file("file")
+        );
+
+        assert!(filter.matches_dir("dir1").is_none());
+
+        let mut sub_filter = filter.matches_dir("dir2").unwrap();
+        assert!(
+            sub_filter
+                .matches_dir("anything")
+                .unwrap()
+                .matches_file("anything")
+        );
+        assert!(sub_filter.matches_dir("dir3").is_none());
+    }
+
+    #[mononoke::test]
+    fn test_include_and_exclude_filter() {
+        let mut include = PathTree::new();
+        include.insert("include_file");
+        include.insert("include_dir");
+
+        let mut exclude = PathTree::new();
+        exclude.insert("exclude_file");
+        exclude.insert("include_dir/exclude_file");
+        exclude.insert("include_dir/exclude_dir");
+
+        let mut filter = PathFilter::new(Some(include), Some(exclude));
+
+        assert!(filter.matches_file("include_file"));
+        assert!(!filter.matches_file("exclude_file"));
+
+        let mut sub_filter = filter.matches_dir("include_dir").unwrap();
+        assert!(sub_filter.matches_file("anything"));
+        assert!(
+            sub_filter
+                .matches_dir("anything")
+                .unwrap()
+                .matches_file("anything")
+        );
+        assert!(!sub_filter.matches_file("exclude_file"));
+        assert!(sub_filter.matches_dir("exclude_dir").is_none());
     }
 }

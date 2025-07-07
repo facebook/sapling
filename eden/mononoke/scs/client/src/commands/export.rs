@@ -765,7 +765,7 @@ pub(super) async fn run(app: ScscApp, args: CommandArgs) -> Result<()> {
 
     let has_include_filter = path_tree.is_some();
 
-    let path_filter = PathFilter::new(path_tree);
+    let path_filter = PathFilter::new(path_tree, None);
 
     let repo = args.repo_args.clone().into_repo_specifier();
     let commit_id = args.commit_id_args.clone().into_commit_id();
