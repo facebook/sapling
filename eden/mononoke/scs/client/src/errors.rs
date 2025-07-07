@@ -8,7 +8,6 @@
 use std::convert::Into;
 
 use anyhow::Error;
-use anyhow::anyhow;
 use scs_client_raw::thrift;
 use source_control_clients::errors::CommitCommonBaseWithError;
 use source_control_clients::errors::CommitCompareError;
@@ -52,21 +51,26 @@ pub(crate) trait SelectionErrorExt {
 macro_rules! impl_handle_selection_error {
     ($type: ident) => {
         impl SelectionErrorExt for $type {
+            #[cfg(not(any(target_os = "macos", target_os = "windows")))]
             fn handle_selection_error(self, repo: &thrift::RepoSpecifier) -> Error {
                 if let $type::ThriftError(ref err) = self {
-                    #[cfg(not(any(target_os = "macos", target_os = "windows")))]
                     if let Some(err) = err.downcast_ref::<srclient::TServiceRouterException>() {
                         if err.is_selection_error()
                             && err.error_reason() == srclient::ErrorReason::SELECTION_NONEXISTENT_DOMAIN
                         {
                             if let Some(possible_repo_name) = repo.name.strip_suffix(".git") {
-                                return anyhow!("repo does not exist: {}. Try removing the .git suffix (i.e. -R {})", repo.name, possible_repo_name);
+                                return anyhow::anyhow!("repo does not exist: {}. Try removing the .git suffix (i.e. -R {})", repo.name, possible_repo_name);
                             } else {
-                                return anyhow!("repo does not exist: {}", repo.name);
+                                return anyhow::anyhow!("repo does not exist: {}", repo.name);
                             };
                         }
                     }
                 }
+                self.into()
+            }
+
+            #[cfg(any(target_os = "macos", target_os = "windows"))]
+            fn handle_selection_error(self, _repo: &thrift::RepoSpecifier) -> Error {
                 self.into()
             }
         }
