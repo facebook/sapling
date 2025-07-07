@@ -49,7 +49,7 @@ use crate::args::progress::ProgressArgs;
 use crate::args::progress::ProgressOutput;
 use crate::args::repo::RepoArgs;
 use crate::errors::SelectionErrorExt;
-use crate::library::path_tree::PathItem;
+use crate::library::path_tree::PathFilter;
 use crate::library::path_tree::PathTree;
 use crate::render::Render;
 
@@ -291,63 +291,37 @@ fn export_tree_entry(
     tx: FileSender,
     destination: &Path,
     entry: thrift::TreeEntry,
-) -> Result<ExportItem> {
-    match entry.info {
-        thrift::EntryInfo::tree(info) => Ok(ExportItem::Tree {
-            path: join_path(path, &entry.name),
-            id: info.id,
-            tx,
-            destination: destination.join(&entry.name),
-            filter: None,
-        }),
-        thrift::EntryInfo::file(info) => Ok(ExportItem::File {
-            path: join_path(path, &entry.name),
-            id: info.id,
-            tx,
-            destination: destination.join(&entry.name),
-            size: info.file_size as u64,
-            type_: entry.r#type,
-        }),
-        _ => {
-            bail!("malformed response format for '{}'", entry.name);
-        }
-    }
-}
-
-fn export_filtered_tree_entry(
-    path: &str,
-    tx: FileSender,
-    destination: &Path,
-    entry: thrift::TreeEntry,
-    filter: &mut PathTree,
+    filter: &mut PathFilter,
     casefold: Casefold,
 ) -> Result<Option<ExportItem>> {
-    match (filter.remove(&casefold.of(&entry.name)), entry.info) {
-        (None, _) => Ok(None),
-        (Some(item), thrift::EntryInfo::tree(info)) => {
-            let subfilter = match item {
-                PathItem::Target | PathItem::TargetDir => None,
-                PathItem::Dir(tree) => Some(tree),
-            };
-            Ok(Some(ExportItem::Tree {
-                path: join_path(path, &entry.name),
-                id: info.id,
-                tx,
-                destination: destination.join(&entry.name),
-                filter: subfilter,
-            }))
+    Ok(match (entry.name, entry.info) {
+        (name, thrift::EntryInfo::tree(info)) => {
+            filter
+                .matches_dir(&casefold.of(&name))
+                .map(|subfilter| ExportItem::Tree {
+                    path: join_path(path, &name),
+                    id: info.id,
+                    tx,
+                    destination: destination.join(&name),
+                    filter: subfilter,
+                })
         }
-        (Some(PathItem::Dir(_) | PathItem::TargetDir), thrift::EntryInfo::file(_)) => Ok(None),
-        (Some(PathItem::Target), thrift::EntryInfo::file(info)) => Ok(Some(ExportItem::File {
-            path: join_path(path, &entry.name),
-            id: info.id,
-            tx,
-            destination: destination.join(&entry.name),
-            size: info.file_size as u64,
-            type_: entry.r#type,
-        })),
-        _ => bail!("malformed response format for '{}'", entry.name),
-    }
+        (name, thrift::EntryInfo::file(info)) => {
+            if filter.matches_file(&casefold.of(&name)) {
+                Some(ExportItem::File {
+                    path: join_path(path, &name),
+                    id: info.id,
+                    tx,
+                    destination: destination.join(&name),
+                    size: info.file_size as u64,
+                    type_: entry.r#type,
+                })
+            } else {
+                None
+            }
+        }
+        (name, _) => bail!("malformed response format for '{name}'"),
+    })
 }
 
 async fn export_tree(
@@ -357,7 +331,7 @@ async fn export_tree(
     id: Vec<u8>,
     tx: FileSender,
     destination: PathBuf,
-    filter: Option<PathTree>,
+    mut filter: PathFilter,
     casefold: Casefold,
     create_dirs: CreateDirs,
 ) -> Result<Vec<ExportItem>> {
@@ -407,32 +381,22 @@ async fn export_tree(
             .try_collect::<Vec<_>>()
             .await?;
 
-    let output = if let Some(mut filter) = filter {
-        Some(response.entries)
-            .into_iter()
-            .chain(other_tree_chunks)
-            .flatten()
-            .filter_map(|entry| {
-                export_filtered_tree_entry(
-                    &path,
-                    tx.clone(),
-                    &destination,
-                    entry,
-                    &mut filter,
-                    casefold,
-                )
-                .transpose()
-            })
-            .collect::<Result<_, _>>()?
-    } else {
-        Some(response.entries)
-            .into_iter()
-            .chain(other_tree_chunks)
-            .flatten()
-            .map(|entry| export_tree_entry(&path, tx.clone(), &destination, entry))
-            .collect::<Result<_, _>>()?
-    };
-    Ok(output)
+    Some(response.entries)
+        .into_iter()
+        .chain(other_tree_chunks)
+        .flatten()
+        .filter_map(|entry| {
+            export_tree_entry(
+                &path,
+                tx.clone(),
+                &destination,
+                entry,
+                &mut filter,
+                casefold,
+            )
+            .transpose()
+        })
+        .collect::<Result<_, _>>()
 }
 
 async fn export_file(
@@ -549,7 +513,7 @@ enum ExportItem {
         id: Vec<u8>,
         tx: FileSender,
         destination: PathBuf,
-        filter: Option<PathTree>,
+        filter: PathFilter,
     },
     File {
         path: String,
@@ -799,6 +763,10 @@ pub(super) async fn run(app: ScscApp, args: CommandArgs) -> Result<()> {
         None => None,
     };
 
+    let has_include_filter = path_tree.is_some();
+
+    let path_filter = PathFilter::new(path_tree);
+
     let repo = args.repo_args.clone().into_repo_specifier();
     let commit_id = args.commit_id_args.clone().into_commit_id();
     let conn = app.get_connection(Some(&repo.name))?;
@@ -888,15 +856,16 @@ pub(super) async fn run(app: ScscApp, args: CommandArgs) -> Result<()> {
                 id: info.id,
                 tx,
                 destination: root,
-                filter: path_tree,
+                filter: path_filter,
             }
         }
         (Some(type_), Some(thrift::EntryInfo::file(info))) => {
             file_count = 1;
             total_size = info.file_size as u64;
-            if path_tree.is_some() {
-                // A list of paths to filter has been provided, but the target
-                // is a file, so none of the paths can possible match.
+            if has_include_filter {
+                // A list of paths to filter has been provided, but the target is a file, so none of
+                // the paths can possible match (because the filter is relative to the provided root
+                // path).
                 return Ok(());
             }
             ExportItem::File {
