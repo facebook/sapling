@@ -268,21 +268,30 @@ function mononoke_import {
   GLOG_minloglevel=5 "$MONONOKE_IMPORT" \
     "${CACHE_ARGS[@]}" \
     "${COMMON_ARGS[@]}" \
-    --mononoke-config-path "$TESTTMP"/mononoke-config "$@"
+    --mononoke-config-path "$TESTTMP"/mononoke-config \
+    --tracing \
+    --tracing-test-format \
+    "$@"
 }
 
 function mononoke_testtool {
   GLOG_minloglevel=5 "$MONONOKE_TESTTOOL" \
     "${CACHE_ARGS[@]}" \
     "${COMMON_ARGS[@]}" \
-    --mononoke-config-path "$TESTTMP"/mononoke-config "$@"
+    --mononoke-config-path "$TESTTMP"/mononoke-config \
+    --tracing \
+    --tracing-test-format \
+    "$@"
 }
 
 function mononoke_backfill_bonsai_blob_mapping {
   GLOG_minloglevel=5 "$MONONOKE_BACKFILL_BONSAI_BLOB_MAPPING" \
     "${CACHE_ARGS[@]}" \
     "${COMMON_ARGS[@]}" \
-    --mononoke-config-path "$TESTTMP"/mononoke-config "$@"
+    --mononoke-config-path "$TESTTMP"/mononoke-config \
+    --tracing \
+    --tracing-test-format \
+    "$@"
 }
 
 function repo_metadata_logger {
@@ -290,7 +299,10 @@ function repo_metadata_logger {
     "${CACHE_ARGS[@]}" \
     "${COMMON_ARGS[@]}" \
     --scuba-log-file "$TESTTMP/metadata_logger_scuba_logs" \
-    --mononoke-config-path "$TESTTMP"/mononoke-config "$@"
+    --mononoke-config-path "$TESTTMP"/mononoke-config \
+    --tracing \
+    --tracing-test-format \
+    "$@"
 }
 
 # Remove the glog prefix
