@@ -6,7 +6,7 @@ Mononoke has a utility module called caching_ext which is designed to handle th
 ### TL;DR (checklist)
 
 1. Create a type to represent your cacheable data. If you only want positive caching (not negative), this only represents the data you cache. If you want negative caching (“this key had no value”), then it needs to contain an `Option` or other suitable way to indicate a successful negative fetch.
-2. Derive [Abomonation](https://docs.rs/abomonation_derive/0.5.0/abomonation_derive/) and implement `caching_ext::MemcacheEntity` for this cacheable data item. Use Thrift Compact Protocol to implement MemcacheEntity if it’s non-trivial.
+2. Derive `bincode::Encode` and `bincode::Decode` and implement `caching_ext::MemcacheEntity` for this cacheable data item. Use Thrift Compact Protocol to implement MemcacheEntity if it’s non-trivial.
 3. Create a struct to hold all the items needed for your cache (cachelib handlers, memcache clients, keygens etc)
 4. Implement `caching_ext::EntityStore<MyDataType>` for your cache struct. You can use one cache struct for multiple caches if you wish - you just need multiple implementations of traits. Note while implementing cache_determinator that the final TTL can be twice what you return, as there are two underlying caches, and we can fill process-local cachelib from Memcache.
 5. Implement `caching_ext::KeyedEntityStore<MyCacheKeyType, MyDataType>` for your cache struct. Again, you can implement this multiple times for different key-value pairs on the same cache, and you can implement this to cache the same value type under different keys.
@@ -28,7 +28,7 @@ You cannot cache arbitrary Rust types. Instead, follow the process below to crea
 * Implement `MemcacheEntity` for that type. This converts to and from Bytes and is used to put the item into Memcache - you must ensure that there is no detectable difference between the item you get back from `MemcacheEntity::deserialize` and one you fetch from the backing store.
    * If the item is non-trivial, Thrift Compact Protocol is a good choice for serializing and deserializing
    * You must ensure that you fail safe when deserializing something from the cache that isn’t in expected format. Your serialization format should be able to detect corruption from the cache and reject bad bytes.
-* `#[derive(Abomonation)]` for that type; this enables it to go into Cachelib local caching. If this fails to derive, then you need to simplify your cacheable data type until it can derive sensibly, or make other things derive Abomonation so that everything works as intended.
+* `#[derive(bincode::Encode, bincode::Decode)]` for that type; this enables it to go into Cachelib local caching. If this fails to derive, then you need to simplify your cacheable data type until it can derive sensibly, or make other things derive bincode::Encode/Decode so that everything works as intended.
 
 
 ### EntityStore

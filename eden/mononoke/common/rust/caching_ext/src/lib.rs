@@ -18,7 +18,6 @@ use std::collections::HashSet;
 use std::hash::Hash;
 use std::time::Duration;
 
-use abomonation::Abomonation;
 use anyhow::Context as _;
 use anyhow::Error;
 use async_trait::async_trait;
@@ -106,7 +105,7 @@ pub enum CacheDisposition {
 }
 
 /// Implement this for a data item that can be cached. You will also need
-/// #[derive(Abomonation, bincode::Encode, bincode::Decode)] on the data item.
+/// #[derive(bincode::Encode, bincode::Decode)] on the data item.
 pub trait MemcacheEntity: Sized {
     /// Convert the item to bytes that can live in Memcache and be deserialized
     /// in another process
@@ -164,7 +163,7 @@ pub async fn get_or_fill<K, V>(
 ) -> Result<HashMap<K, V>, Error>
 where
     K: Hash + Eq + Clone,
-    V: Abomonation + bincode::Encode + bincode::Decode<()> + MemcacheEntity + Clone,
+    V: bincode::Encode + bincode::Decode<()> + MemcacheEntity + Clone,
 {
     get_or_fill_chunked(store, keys, usize::MAX, 1).await
 }
@@ -189,7 +188,7 @@ pub async fn get_or_fill_chunked<K, V>(
 ) -> Result<HashMap<K, V>, Error>
 where
     K: Hash + Eq + Clone,
-    V: Abomonation + bincode::Encode + bincode::Decode<()> + MemcacheEntity + Clone,
+    V: bincode::Encode + bincode::Decode<()> + MemcacheEntity + Clone,
 {
     let mut ret = HashMap::<K, V>::with_capacity(keys.len());
 
@@ -287,7 +286,7 @@ async fn fill_one_chunk<K, V>(
 ) -> Result<HashMap<K, V>, Error>
 where
     K: Hash + Eq + Clone,
-    V: Abomonation + bincode::Encode + bincode::Decode<()> + MemcacheEntity + Clone,
+    V: bincode::Encode + bincode::Decode<()> + MemcacheEntity + Clone,
 {
     let n_keys = keys.len();
 
@@ -319,7 +318,7 @@ pub fn fill_cachelib<'a, K, V>(
     data: impl IntoIterator<Item = (&'a K, &'a V)>,
 ) where
     K: Hash + Eq + Clone + 'a,
-    V: Abomonation + bincode::Encode + bincode::Decode<()> + Clone + 'a,
+    V: bincode::Encode + bincode::Decode<()> + Clone + 'a,
 {
     let mut cachelib_keys = Vec::new();
     for (k, v) in data {
@@ -340,7 +339,7 @@ pub async fn fill_cache<'a, K, V>(
     data: impl IntoIterator<Item = (&'a K, &'a V)>,
 ) where
     K: Hash + Eq + Clone + 'a,
-    V: Abomonation + bincode::Encode + bincode::Decode<()> + MemcacheEntity + Clone + 'a,
+    V: bincode::Encode + bincode::Decode<()> + MemcacheEntity + Clone + 'a,
 {
     fill_caches_by_key(
         store,
@@ -357,7 +356,7 @@ async fn fill_caches_by_key<'a, V>(
     store: &impl EntityStore<V>,
     data: impl IntoIterator<Item = (CachelibKey, MemcacheKey, &'a V)>,
 ) where
-    V: Abomonation + bincode::Encode + bincode::Decode<()> + MemcacheEntity + Clone + 'a,
+    V: bincode::Encode + bincode::Decode<()> + MemcacheEntity + Clone + 'a,
 {
     let mut cachelib_keys = Vec::new();
     let mut memcache_keys = Vec::new();
@@ -434,7 +433,7 @@ fn fill_multiple_cachelib<'a, V>(
     cachelib: &'a CachelibHandler<V>,
     data: impl IntoIterator<Item = (impl Borrow<CachelibKey> + 'a, CacheTtl, &'a V)>,
 ) where
-    V: Abomonation + bincode::Encode + bincode::Decode<()> + Clone,
+    V: bincode::Encode + bincode::Decode<()> + Clone,
 {
     for (cachelib_key, ttl, v) in data {
         let cachelib_key = cachelib_key.borrow();
@@ -497,13 +496,12 @@ mod test {
     use std::sync::atomic::AtomicUsize;
     use std::sync::atomic::Ordering;
 
-    use abomonation_derive::Abomonation;
     use maplit::hashmap;
     use maplit::hashset;
 
     use super::*;
 
-    #[derive(Abomonation, Clone, Debug, PartialEq, Eq)]
+    #[derive(Clone, Debug, PartialEq, Eq)]
     #[derive(bincode::Encode, bincode::Decode)]
     struct TestEntity(Vec<u8>);
 

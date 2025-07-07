@@ -9,14 +9,12 @@ rust_library(
     ]),
     named_deps = {"bincode": "fbsource//third-party/rust:bincode-2"},
     test_deps = [
-        "fbsource//third-party/rust:abomonation_derive",
         "fbsource//third-party/rust:maplit",
         "fbsource//third-party/rust:quickcheck",
         "fbsource//third-party/rust:tokio",
         "//eden/mononoke/mononoke_macros:mononoke_macros",
     ],
     deps = [
-        "fbsource//third-party/rust:abomonation",
         "fbsource//third-party/rust:anyhow",
         "fbsource//third-party/rust:async-trait",
         "fbsource//third-party/rust:bytes",

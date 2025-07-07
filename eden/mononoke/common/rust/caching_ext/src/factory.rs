@@ -5,7 +5,6 @@
  * GNU General Public License version 2.
  */
 
-use abomonation::Abomonation;
 use cachelib::VolatileLruCachePool;
 use memcache::MemcacheClient;
 
@@ -52,7 +51,7 @@ impl CacheHandlerFactory {
     /// Build cachelib cache handler.
     pub fn cachelib<T>(&self) -> CachelibHandler<T>
     where
-        T: Abomonation + bincode::Encode + bincode::Decode<()> + Clone,
+        T: bincode::Encode + bincode::Decode<()> + Clone,
     {
         match self {
             Self::Shared {
