@@ -102,7 +102,7 @@
   * 20572a577cfeaf2580444148d6abd34121a0899b total:1 bad:0 * (glob)
 
   $ bonsai_verify round-trip "$hghash"
-  * 100.00% valid, summary: , total: *, valid: *, errors: 0, ignored: 0 (glob)
+  [INFO] 100.00% valid ignored=0 errors=0 valid=5 total=5
 
   $ sqlite3 "$TESTTMP/monsql/sqlite_dbs" "SELECT HEX(filenode), HEX(linknode) FROM filenodes ORDER BY filenode DESC;"
   DDAE7A95B6B0FB27DFACC4051C41AA9CFF30C1E2|3E11F5E9E3E90C064F0AF238475FC6BEDD9527B9

@@ -545,6 +545,8 @@ function backfill_mapping {
     "${COMMON_ARGS[@]}" \
     --repo-id "$REPOID" \
     --mononoke-config-path "$TESTTMP/mononoke-config" \
+    --tracing \
+    --tracing-test-format \
     "$@"
 }
 
@@ -568,6 +570,8 @@ function blobimport {
     "${COMMON_ARGS[@]}" \
      --repo-id $REPOID \
      --mononoke-config-path "$TESTTMP/mononoke-config" \
+     --tracing \
+     --tracing-test-format \
      "$revlog/.hg" \
      "$@" > "$TESTTMP/blobimport.out" 2>&1
   BLOBIMPORT_RC="$?"
@@ -586,6 +590,8 @@ function bonsai_verify {
     "${COMMON_ARGS[@]}" \
     --repo-id "$REPOID" \
     --mononoke-config-path "$TESTTMP/mononoke-config" \
+    --tracing \
+    --tracing-test-format \
     "$@"
 }
 
@@ -650,6 +656,8 @@ function land_service {
     --mononoke-config-path "$TESTTMP/mononoke-config" \
     --scribe-logging-directory "$TESTTMP/scribe_logs" \
     --bound-address-file "$TESTTMP/land_service_addr.txt" \
+    --tracing \
+    --tracing-test-format \
     "${CACHE_ARGS[@]}" \
     "${COMMON_ARGS[@]}" >> "$TESTTMP/land_service.out" 2>&1 &
   export LAND_SERVICE_PID=$!
@@ -1022,6 +1030,8 @@ function mononoke_git_service {
     --log-level DEBUG \
     --mononoke-config-path "$TESTTMP/mononoke-config" \
     --bound-address-file "$TESTTMP/mononoke_git_service_addr.txt" \
+    --tracing \
+    --tracing-test-format \
     "${CACHE_ARGS[@]}" \
     "${COMMON_ARGS[@]}" >> "$log" 2>&1 &
   export MONONOKE_GIT_SERVICE_PID=$!
