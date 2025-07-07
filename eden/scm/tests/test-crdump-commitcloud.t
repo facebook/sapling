@@ -26,6 +26,11 @@ commit_cloud should be false when commitcloud is broken
   $ hg debugcrdump -r . --config experimental.upload-mutations=invalid | grep commit_cloud
               "commit_cloud": false,
 
+don't report commit_cloud=true when the upload didn't work
+FIXME: should be false
+  $ FAILPOINTS="eagerepo::api::uploadchangesets=return(empty)" hg debugcrdump -r . 2>/dev/null | grep commit_cloud
+              "commit_cloud": true,
+
 debugcrdump should upload the commit and commit_cloud should be true when
 commitcloud is working
   $ hg debugcrdump -r . 2>/dev/null | grep commit_cloud

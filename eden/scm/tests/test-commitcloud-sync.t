@@ -774,7 +774,7 @@ Simulate failure to backup a commit by setting a FAILPOINT.
   │
   o  d20a80d4def3 'base'
   
-  $ FAILPOINTS=eagerepo::api::uploadchangesets=return hg cloud sync
+  $ FAILPOINTS="eagerepo::api::uploadchangesets=return(error)" hg cloud sync
   commitcloud: synchronizing 'server' with 'user/test/default'
   commitcloud: head 'a6b97eebbf74' hasn't been uploaded yet
   commitcloud: head '9bd68ef10d6b' hasn't been uploaded yet

@@ -926,13 +926,17 @@ impl SaplingRemoteApi for EagerRepo {
         debug!(?changesets, ?mutations, "upload_changesets");
         self.refresh_for_api();
 
-        ::fail::fail_point!("eagerepo::api::uploadchangesets", |_| {
-            Err(SaplingRemoteApiError::HttpError {
-                status: StatusCode::INTERNAL_SERVER_ERROR,
-                message: "failpoint".to_string(),
-                headers: Default::default(),
-                url: self.url("upload_changesets"),
-            })
+        ::fail::fail_point!("eagerepo::api::uploadchangesets", |mode| {
+            match mode.as_deref() {
+                Some("error") => Err(SaplingRemoteApiError::HttpError {
+                    status: StatusCode::INTERNAL_SERVER_ERROR,
+                    message: "failpoint".to_string(),
+                    headers: Default::default(),
+                    url: self.url("upload_changesets"),
+                }),
+                Some("empty") => Ok(convert_to_response(Vec::new())),
+                _ => panic!("invalid failpoint return mode - specify 'error' or 'empty'"),
+            }
         });
 
         let mut res = Vec::with_capacity(changesets.len());

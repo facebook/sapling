@@ -317,7 +317,7 @@ Check if ssh batch mode enables only for background backup and not for foregroun
 
 Fail to push a backup by setting fail point:
   $ mkcommit toobig
-  $ FAILPOINTS=eagerepo::api::uploadchangesets=return hg cloud backup
+  $ FAILPOINTS="eagerepo::api::uploadchangesets=return(error)" hg cloud backup
   commitcloud: head '73e861ba66d5' hasn't been uploaded yet
   edenapi: queue 1 commit for upload
   edenapi: queue 1 file for upload
