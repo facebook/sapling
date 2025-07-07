@@ -1797,13 +1797,16 @@ class localrepository:
             return tr
         return None
 
-    def transaction(self, desc, report=None):
-        if self.ui.configbool("devel", "all-warnings") or self.ui.configbool(
-            "devel", "check-locks"
+    def transaction(self, desc, report=None, lockfree=False):
+        tr = self.currenttransaction()
+        if tr is not None and tr.lockfree:
+            lockfree = True
+        if not lockfree and (
+            self.ui.configbool("devel", "all-warnings")
+            or self.ui.configbool("devel", "check-locks")
         ):
             if self._currentlock(self._lockref) is None:
                 raise errormod.ProgrammingError("transaction requires locking")
-        tr = self.currenttransaction()
         if tr is not None:
             return tr.nest()
 
@@ -1820,7 +1823,8 @@ class localrepository:
         txnid = "TXN:" + ha
         self.hook("pretxnopen", throw=True, txnname=desc, txnid=txnid)
 
-        self._writejournal(desc)
+        if not lockfree:
+            self._writejournal(desc)
         renames = [(vfs, x, undoname(x)) for vfs, x in self._journalfiles()]
         if report:
             rp = report
@@ -1948,7 +1952,8 @@ class localrepository:
             else:
                 # discard all changes (including ones already written
                 # out) in this transaction
-                repo.dirstate.restorebackup(None, "journal.dirstate")
+                if tr is None or not tr.lockfree:
+                    repo.dirstate.restorebackup(None, "journal.dirstate")
 
                 repo.invalidate(clearfilecache=True)
 
@@ -1965,6 +1970,7 @@ class localrepository:
             checkambigfiles=_cachedfiles,
             uiconfig=self.ui.uiconfig(),
             desc=desc,
+            lockfree=lockfree,
         )
         tr.changes["nodes"] = []
         tr.changes["obsmarkers"] = set()
