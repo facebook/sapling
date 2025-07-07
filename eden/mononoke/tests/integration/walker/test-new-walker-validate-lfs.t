@@ -18,10 +18,12 @@ setup configuration
   blobimporting
 
 validate with LFS enabled, shallow
-  $ mononoke_walker --scuba-log-file scuba-validate-shallow.json -L graph validate --include-check-type=FileContentIsLfs -I shallow -I BookmarkToBonsaiHgMapping -i hg -x HgFileNode -i FileContent -i FileContentMetadataV2 -q -b master_bookmark 2>&1 | strip_glog
-  Performing check types [FileContentIsLfs], repo: repo
-  Seen,Loaded: 15,15, repo: repo
-  Nodes,Pass,Fail:15,3,0; EdgesChecked:3; CheckType:Pass,Fail Total:3,0 FileContentIsLfs:3,0, repo: repo
+  $ mononoke_walker --scuba-log-file scuba-validate-shallow.json -L graph validate --include-check-type=FileContentIsLfs -I shallow -I BookmarkToBonsaiHgMapping -i hg -x HgFileNode -i FileContent -i FileContentMetadataV2 -q -b master_bookmark 2>&1 | strip_glog | grep -vE "(Bytes|Walked)/s"
+  [INFO] Walking edge types [BonsaiHgMappingToHgChangesetViaBonsai, BookmarkToBonsaiHgMapping, FileContentToFileContentMetadataV2, HgChangesetToHgManifest, HgChangesetToHgManifestFileNode, HgChangesetViaBonsaiToHgChangeset, HgFileEnvelopeToFileContent, HgManifestToChildHgManifest, HgManifestToHgFileEnvelope, HgManifestToHgManifestFileNode]
+  [INFO] Walking node types [BonsaiHgMapping, FileContent, FileContentMetadataV2, HgChangeset, HgChangesetViaBonsai, HgFileEnvelope, HgManifest, HgManifestFileNode]
+  [INFO] [walker validate{repo=repo}] Performing check types [FileContentIsLfs]
+  [INFO] [walker validate{repo=repo}] Seen,Loaded: 15,15
+  [INFO] [walker validate{repo=repo}] Nodes,Pass,Fail:15,3,0; EdgesChecked:3; CheckType:Pass,Fail Total:3,0 FileContentIsLfs:3,0
 
 Check scuba data is logged for lfs and that it contains useful hg changeset and path in via_node_key and node_path.  As its shallow walk expect all via_node_key to be the same
   $ wc -l < scuba-validate-shallow.json
@@ -40,17 +42,16 @@ Make a commit for a file in a subdir path
   $ blobimport repo/.hg repo
 
 validate with LFS enabled, deep.  Params are setup so that ValidateRoute contains the HgChangeset that originated a Bonsai and then the Bonsai points to the files it touched.
-  $ mononoke_walker --scuba-log-file scuba-validate-deep.json validate --include-check-type=FileContentIsLfs -I deep -X HgFileNodeToLinkedHgChangeset -X HgFileNodeToHgParentFileNode -X HgFileNodeToHgCopyfromFileNode -X ChangesetToBonsaiParent -X ChangesetToBonsaiHgMapping -X HgChangesetToHgParent -i default -x HgFileEnvelope -x AliasContentMapping -q -p BonsaiHgMapping 2>&1 | strip_glog
-  Walking edge types [BonsaiHgMappingToHgChangesetViaBonsai, ChangesetToFileContent, FileContentToFileContentMetadataV2, HgBonsaiMappingToChangeset, HgChangesetToHgManifest, HgChangesetViaBonsaiToHgChangeset, HgFileNodeToLinkedHgBonsaiMapping, HgManifestToChildHgManifest, HgManifestToHgFileNode], repo: repo
-  Walking node types [BonsaiHgMapping, Changeset, FileContent, FileContentMetadataV2, HgBonsaiMapping, HgChangeset, HgChangesetViaBonsai, HgFileNode, HgManifest], repo: repo
-  Performing check types [FileContentIsLfs], repo: repo
-  Repo bounds: (1, 5), repo: repo
-  Starting chunk 1 with bounds (1, 5), repo: repo
-  Seen,Loaded: * (glob)
-  Walked* (glob)
-  Nodes,Pass,Fail:37,4,0; EdgesChecked:4; CheckType:Pass,Fail Total:4,0 FileContentIsLfs:4,0, repo: repo
-  Deferred: 0, repo: repo
-  Completed in 1 chunks of size 100000, repo: repo
+  $ mononoke_walker --scuba-log-file scuba-validate-deep.json validate --include-check-type=FileContentIsLfs -I deep -X HgFileNodeToLinkedHgChangeset -X HgFileNodeToHgParentFileNode -X HgFileNodeToHgCopyfromFileNode -X ChangesetToBonsaiParent -X ChangesetToBonsaiHgMapping -X HgChangesetToHgParent -i default -x HgFileEnvelope -x AliasContentMapping -q -p BonsaiHgMapping 2>&1 | strip_glog | grep -vE "(Bytes|Walked)/s"
+  [INFO] Walking edge types [BonsaiHgMappingToHgChangesetViaBonsai, ChangesetToFileContent, FileContentToFileContentMetadataV2, HgBonsaiMappingToChangeset, HgChangesetToHgManifest, HgChangesetViaBonsaiToHgChangeset, HgFileNodeToLinkedHgBonsaiMapping, HgManifestToChildHgManifest, HgManifestToHgFileNode]
+  [INFO] Walking node types [BonsaiHgMapping, Changeset, FileContent, FileContentMetadataV2, HgBonsaiMapping, HgChangeset, HgChangesetViaBonsai, HgFileNode, HgManifest]
+  [INFO] [walker validate{repo=repo}] Performing check types [FileContentIsLfs]
+  [INFO] [walker validate{repo=repo}] Repo bounds: (1, 5)
+  [INFO] [walker validate{repo=repo}] Starting chunk 1 with bounds (1, 5)
+  [INFO] [walker validate{repo=repo}] Seen,Loaded: 37,37
+  [INFO] [walker validate{repo=repo}] Nodes,Pass,Fail:37,4,0; EdgesChecked:4; CheckType:Pass,Fail Total:4,0 FileContentIsLfs:4,0
+  [INFO] [walker validate{repo=repo}] Deferred: 0
+  [INFO] [walker validate{repo=repo}] Completed in 1 chunks of size 100000
 
 Check scuba data is logged for lfs and that it contains useful hg changeset and path in via_node_key and node_path
   $ wc -l < scuba-validate-deep.json
@@ -63,17 +64,16 @@ Check scuba data is logged for lfs and that it contains useful hg changeset and 
 
 
 validate with LFS enabled, deep with simpler query.  Should have same output but touch less nodes to get there.
-  $ mononoke_walker --scuba-log-file scuba-validate-deep2.json validate --include-check-type=FileContentIsLfs -I deep -I BonsaiHgMappingToHgBonsaiMapping -X BonsaiHgMappingToHgChangesetViaBonsai -X ChangesetToBonsaiParent -X ChangesetToBonsaiHgMapping -i bonsai -i FileContent -i FileContentMetadataV2 -i HgBonsaiMapping -i BonsaiHgMapping -q -p BonsaiHgMapping 2>&1 | strip_glog
-  Walking edge types [BonsaiHgMappingToHgBonsaiMapping, ChangesetToFileContent, FileContentToFileContentMetadataV2, HgBonsaiMappingToChangeset], repo: repo
-  Walking node types [BonsaiHgMapping, Changeset, FileContent, FileContentMetadataV2, HgBonsaiMapping], repo: repo
-  Performing check types [FileContentIsLfs], repo: repo
-  Repo bounds: (1, 5), repo: repo
-  Starting chunk 1 with bounds (1, 5), repo: repo
-  Seen,Loaded: * (glob)
-  Walked* (glob)
-  Nodes,Pass,Fail:20,4,0; EdgesChecked:4; CheckType:Pass,Fail Total:4,0 FileContentIsLfs:4,0, repo: repo
-  Deferred: 0, repo: repo
-  Completed in 1 chunks of size 100000, repo: repo
+  $ mononoke_walker --scuba-log-file scuba-validate-deep2.json validate --include-check-type=FileContentIsLfs -I deep -I BonsaiHgMappingToHgBonsaiMapping -X BonsaiHgMappingToHgChangesetViaBonsai -X ChangesetToBonsaiParent -X ChangesetToBonsaiHgMapping -i bonsai -i FileContent -i FileContentMetadataV2 -i HgBonsaiMapping -i BonsaiHgMapping -q -p BonsaiHgMapping 2>&1 | strip_glog | grep -vE "(Bytes|Walked)/s"
+  [INFO] Walking edge types [BonsaiHgMappingToHgBonsaiMapping, ChangesetToFileContent, FileContentToFileContentMetadataV2, HgBonsaiMappingToChangeset]
+  [INFO] Walking node types [BonsaiHgMapping, Changeset, FileContent, FileContentMetadataV2, HgBonsaiMapping]
+  [INFO] [walker validate{repo=repo}] Performing check types [FileContentIsLfs]
+  [INFO] [walker validate{repo=repo}] Repo bounds: (1, 5)
+  [INFO] [walker validate{repo=repo}] Starting chunk 1 with bounds (1, 5)
+  [INFO] [walker validate{repo=repo}] Seen,Loaded: 20,20
+  [INFO] [walker validate{repo=repo}] Nodes,Pass,Fail:20,4,0; EdgesChecked:4; CheckType:Pass,Fail Total:4,0 FileContentIsLfs:4,0
+  [INFO] [walker validate{repo=repo}] Deferred: 0
+  [INFO] [walker validate{repo=repo}] Completed in 1 chunks of size 100000
 
 Check scuba data is logged for lfs and that it contains useful hg changeset and path in via_node_key and node_path
   $ wc -l < scuba-validate-deep2.json

@@ -34,8 +34,10 @@ Pack the blobs in the two packed stores differently
   $ packer --zstd-level=19 --keys-dir $TESTTMP/pack_key_files_1/ --tuning-info-scuba-log-file "${TESTTMP}/tuning_scuba.json"
 
 Run a scrub, need a scrub action to put ScrubBlobstore in the stack, which is necessary to make sure all the inner stores of the multiplex are read
-  $ mononoke_walker -l loaded --blobstore-scrub-action=ReportOnly scrub -q -I deep -i bonsai -i FileContent -b master_bookmark -a all --pack-log-scuba-file pack-info-packed.json 2>&1 | strip_glog
-  Seen,Loaded: 7,7, repo: repo
+  $ mononoke_walker -l loaded --blobstore-scrub-action=ReportOnly scrub -q -I deep -i bonsai -i FileContent -b master_bookmark -a all --pack-log-scuba-file pack-info-packed.json 2>&1 | strip_glog | grep -vE "(Bytes|Walked)/s"
+  [INFO] Walking edge types [BookmarkToChangeset, ChangesetToBonsaiParent, ChangesetToFileContent]
+  [INFO] Walking node types [Bookmark, Changeset, FileContent]
+  [INFO] [walker scrub{repo=repo}] Seen,Loaded: 7,7
 
 Check logged pack info now the store is packed. Expecting to see two packed stores and one unpacked
   $ jq -r '.int * .normal | [ .blobstore_id, .chunk_num, .blobstore_key, .node_type, .node_fingerprint, .similarity_key, .mtime, .uncompressed_size, .unique_compressed_size, .pack_key, .relevant_uncompressed_size, .relevant_compressed_size ] | @csv' < pack-info-packed.json | sort | uniq

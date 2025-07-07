@@ -18,9 +18,13 @@ setup configuration
   $ blobimport repo/.hg repo --derived-data-type=fsnodes
 
 compression-benefit, file content only, not expecting any compression from the tiny test files
-  $ mononoke_walker -l sizing compression-benefit -q --bookmark master_bookmark --sample-rate 1 --include-sample-node-type FileContent 2>&1 | strip_glog
-  Raw/s,Compressed/s,Raw,Compressed,%Saving; Delta */s,*/s,12,12,0%* (glob)
+  $ mononoke_walker -l sizing compression-benefit -q --bookmark master_bookmark --sample-rate 1 --include-sample-node-type FileContent 2>&1 | strip_glog | grep -vE "(Bytes|Raw|Walked)/s"
+  [INFO] Walking edge types [AliasContentMappingToFileContent, BonsaiHgMappingToHgChangesetViaBonsai, BookmarkToChangeset, ChangesetToBonsaiHgMapping, ChangesetToBonsaiParent, ChangesetToFileContent, FileContentMetadataV2ToGitSha1Alias, FileContentMetadataV2ToSeededBlake3Alias, FileContentMetadataV2ToSha1Alias, FileContentMetadataV2ToSha256Alias, FileContentToFileContentMetadataV2, HgBonsaiMappingToChangeset, HgChangesetToHgManifest, HgChangesetToHgParent, HgChangesetViaBonsaiToHgChangeset, HgFileEnvelopeToFileContent, HgFileNodeToHgCopyfromFileNode, HgFileNodeToHgParentFileNode, HgFileNodeToLinkedHgBonsaiMapping, HgFileNodeToLinkedHgChangeset, HgManifestToChildHgManifest, HgManifestToHgFileEnvelope, HgManifestToHgFileNode]
+  [INFO] Walking node types [AliasContentMapping, BonsaiHgMapping, Bookmark, Changeset, FileContent, FileContentMetadataV2, HgBonsaiMapping, HgChangeset, HgChangesetViaBonsai, HgFileEnvelope, HgFileNode, HgManifest]
+  [INFO] [walker sizing{repo=repo}] Seen,Loaded: 43,43
 
 compression-benefit, all compressible types
-  $ mononoke_walker -l sizing compression-benefit -q --bookmark master_bookmark --sample-rate 1 2>&1 | strip_glog
-  * Run */s,*/s,2*,2*,1%,*s; Type:Raw,Compressed,%Saving AliasContentMapping:444,444,0% BonsaiHgMapping:281,281,0% Bookmark:0,0,0% Changeset:277,277,0% FileContent:12,12,0% FileContentMetadataV2:4*,4*,0% HgBonsaiMapping:0,0,0% HgChangeset:281,281,0% HgChangesetViaBonsai:0,0,0% HgFileEnvelope:189,189,0% HgFileNode:0,0,0% HgManifest:444,415,6%* (glob)
+  $ mononoke_walker -l sizing compression-benefit -q --bookmark master_bookmark --sample-rate 1 2>&1 | strip_glog | grep -vE "(Bytes|Raw|Walked)/s"
+  [INFO] Walking edge types [AliasContentMappingToFileContent, BonsaiHgMappingToHgChangesetViaBonsai, BookmarkToChangeset, ChangesetToBonsaiHgMapping, ChangesetToBonsaiParent, ChangesetToFileContent, FileContentMetadataV2ToGitSha1Alias, FileContentMetadataV2ToSeededBlake3Alias, FileContentMetadataV2ToSha1Alias, FileContentMetadataV2ToSha256Alias, FileContentToFileContentMetadataV2, HgBonsaiMappingToChangeset, HgChangesetToHgManifest, HgChangesetToHgParent, HgChangesetViaBonsaiToHgChangeset, HgFileEnvelopeToFileContent, HgFileNodeToHgCopyfromFileNode, HgFileNodeToHgParentFileNode, HgFileNodeToLinkedHgBonsaiMapping, HgFileNodeToLinkedHgChangeset, HgManifestToChildHgManifest, HgManifestToHgFileEnvelope, HgManifestToHgFileNode]
+  [INFO] Walking node types [AliasContentMapping, BonsaiHgMapping, Bookmark, Changeset, FileContent, FileContentMetadataV2, HgBonsaiMapping, HgChangeset, HgChangesetViaBonsai, HgFileEnvelope, HgFileNode, HgManifest]
+  [INFO] [walker sizing{repo=repo}] Seen,Loaded: 43,43

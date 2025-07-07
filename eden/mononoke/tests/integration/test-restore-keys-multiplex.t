@@ -30,22 +30,20 @@ Write one blob with corrupt content
 
 
 Check that walker fails on the corrupted blobstore
-  $ mononoke_walker -L graph scrub -q --inner-blobstore-id=0 -I deep -b master_bookmark 2>&1 | strip_glog
-  Execution error: Could not step to OutgoingEdge { label: HgManifestToHgFileEnvelope, target: HgFileEnvelope(HgFileNodeId(HgNodeHash(Sha1(005d992c5dcf32993668f7cede29d296c494a5d9)))), path: None } via Some(EmptyRoute) in repo repo
+  $ mononoke_walker -L graph scrub -q --inner-blobstore-id=0 -I deep -b master_bookmark 2>&1 | grep -v 'Walking .* types'
+  [ERROR] Execution error: Could not step to OutgoingEdge { label: HgManifestToHgFileEnvelope, target: HgFileEnvelope(HgFileNodeId(HgNodeHash(Sha1(005d992c5dcf32993668f7cede29d296c494a5d9)))), path: None } via Some(EmptyRoute) in repo repo
   
   Caused by:
       0: error while deserializing blob for 'HgFileEnvelope'
       1: end of file reached
   Error: Execution failed
-
 Check that walker detects keys, which need to be repaired
-  $ mononoke_walker --scuba-log-file scuba-reportonly.json -l loaded --blobstore-scrub-action=ReportOnly scrub -q -I deep -b master_bookmark 2>&1 | strip_glog | sed -re 's/^(scrub: blobstore_id BlobstoreId.0. not repaired for repo0000.).*/\1/' | uniq -c | sed 's/^ *//'
-  1 Execution error: Could not step to OutgoingEdge { label: HgManifestToHgFileEnvelope, target: HgFileEnvelope(HgFileNodeId(HgNodeHash(Sha1(005d992c5dcf32993668f7cede29d296c494a5d9)))), path: None } via Some(EmptyRoute) in repo repo
-  1 
-  1 Caused by:
-  1     Different blobstores have different values for this item: * (glob)
-  1 Error: Execution failed
-
+  $ mononoke_walker --scuba-log-file scuba-reportonly.json -l loaded --blobstore-scrub-action=ReportOnly scrub -q -I deep -b master_bookmark 2>&1 | grep -v 'Walking .* types'
+  [ERROR] Execution error: Could not step to OutgoingEdge { label: HgManifestToHgFileEnvelope, target: HgFileEnvelope(HgFileNodeId(HgNodeHash(Sha1(005d992c5dcf32993668f7cede29d296c494a5d9)))), path: None } via Some(EmptyRoute) in repo repo
+  
+  Caused by:
+      Different blobstores have different values for this item: * (glob)
+  Error: Execution failed
   $ cat > "$TESTTMP"/keys <<EOF
   > repo0000.hgfilenode.sha1.005d992c5dcf32993668f7cede29d296c494a5d9
   > EOF
@@ -66,6 +64,6 @@ Copy missing key from the healthy inner blobstore
 
 Walker now should process previously corrupted blobstore correctly
 # TODO(mbthomas): concurrent fetches may not hit in the cache
-  $ mononoke_walker -L graph scrub -q --inner-blobstore-id=0 -I deep -b master_bookmark 2>&1 | strip_glog
-  Seen,Loaded: 43,43, repo: repo
-  Bytes/s,Keys/s,Bytes,Keys; Delta 000000/s,000000/s,2*,*,0s; Run 000000/s,000000/s,2*,*,0s; Type:Raw,Compressed AliasContentMapping:* BonsaiHgMapping:* Bookmark:0,0 Changeset:277,3 FileContent:12,3 FileContentMetadataV2:* HgBonsaiMapping:0,0 HgChangeset:* HgChangesetViaBonsai:0,0 HgFileEnvelope:189,3 HgFileNode:0,0 HgManifest:444,3, repo: repo (glob)
+  $ mononoke_walker -L graph scrub -q --inner-blobstore-id=0 -I deep -b master_bookmark 2>&1 | grep -v 'Walking .* types' | grep -v 'Walked/s'
+  [INFO] [walker scrub{repo=repo}] Seen,Loaded: 43,43
+  [INFO] [walker scrub{repo=repo}] Bytes/s,Keys/s,Bytes,Keys; Delta 000000/s,000000/s,2*,*,0s; Run 000000/s,000000/s,2*,*,0s; Type:Raw,Compressed AliasContentMapping:* BonsaiHgMapping:* Bookmark:0,0 Changeset:277,3 FileContent:12,3 FileContentMetadataV2:* HgBonsaiMapping:0,0 HgChangeset:* HgChangesetViaBonsai:0,0 HgFileEnvelope:189,3 HgFileNode:0,0 HgManifest:444,3 (glob)

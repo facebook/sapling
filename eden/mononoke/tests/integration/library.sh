@@ -160,6 +160,8 @@ function mononoke_walker {
     "${COMMON_ARGS[@]}" \
     --repo-id $REPOID \
     --mononoke-config-path "$TESTTMP"/mononoke-config \
+    --tracing \
+    --tracing-test-format \
     "$@"
 }
 

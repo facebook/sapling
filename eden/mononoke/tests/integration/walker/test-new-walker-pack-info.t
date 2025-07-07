@@ -24,8 +24,10 @@ setup configuration with some compressable files
   $ blobimport repo/.hg repo
 
 Run a scrub with the pack logging enabled
-  $ mononoke_walker -l loaded scrub -q -I deep -i bonsai -i FileContent -b master_bookmark -a all --pack-log-scuba-file pack-info.json 2>&1 | strip_glog
-  Seen,Loaded: 7,7, repo: repo
+  $ mononoke_walker -l loaded scrub -q -I deep -i bonsai -i FileContent -b master_bookmark -a all --pack-log-scuba-file pack-info.json 2>&1 | strip_glog | grep -vE "(Bytes|Walked)/s"
+  [INFO] Walking edge types [BookmarkToChangeset, ChangesetToBonsaiParent, ChangesetToFileContent]
+  [INFO] Walking node types [Bookmark, Changeset, FileContent]
+  [INFO] [walker scrub{repo=repo}] Seen,Loaded: 7,7
 
 Check logged pack info. Commit time is forced to zero in tests, hence mtime is 0. Expect compressed sizes and no pack_key yet
   $ jq -r '.int * .normal | [ .repo, .chunk_num, .blobstore_key, .node_type, .node_fingerprint, .similarity_key, .mtime, .uncompressed_size, .unique_compressed_size, .pack_key, .ctime] | @csv' < pack-info.json | sort | uniq
@@ -44,9 +46,15 @@ Now pack the blobs
   $ packer --zstd-level=3 --keys-dir $TESTTMP/pack_key_files/ --tuning-info-scuba-log-file "${TESTTMP}/tuning_scuba.json"
 
 Run a scrub again now the storage is packed
-  $ mononoke_walker -l loaded scrub -q -I deep -i bonsai -i FileContent -p Changeset --checkpoint-name=bonsai_packed --checkpoint-path=test_sqlite -a all --pack-log-scuba-file pack-info-packed.json 2>&1 | strip_glog
-  Seen,Loaded: 6,6, repo: repo
-  Deferred: 0, repo: repo
+  $ mononoke_walker -l loaded scrub -q -I deep -i bonsai -i FileContent -p Changeset --checkpoint-name=bonsai_packed --checkpoint-path=test_sqlite -a all --pack-log-scuba-file pack-info-packed.json 2>&1 | strip_glog | grep -vE "(Bytes|Walked)/s"
+  [INFO] Walking edge types [ChangesetToBonsaiParent, ChangesetToFileContent]
+  [INFO] Walking node types [Changeset, FileContent]
+  [INFO] [walker scrub{repo=repo}] Repo bounds: (1, 4)
+  [INFO] [walker scrub{repo=repo}] Starting chunk 1 with bounds (1, 4)
+  [INFO] [walker scrub{repo=repo}] Seen,Loaded: 6,6
+  [INFO] [walker scrub{repo=repo}] Deferred: 0
+  [INFO] [walker scrub{repo=repo}] Chunk 1 inserting checkpoint (1, 4)
+  [INFO] [walker scrub{repo=repo}] Completed in 1 chunks of size 100000
 
 Check logged pack info now the store is packed. Expecting multiple in same pack key
   $ jq -r '.int * .normal | [ .chunk_num, .blobstore_key, .node_type, .node_fingerprint, .similarity_key, .mtime, .uncompressed_size, .unique_compressed_size, .pack_key, .relevant_uncompressed_size, .relevant_compressed_size, .ctime, .checkpoint_name] | @csv' < pack-info-packed.json | sort | uniq
