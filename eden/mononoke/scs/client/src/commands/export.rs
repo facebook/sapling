@@ -105,6 +105,9 @@ pub(super) struct CommandArgs {
     /// Filename of a file containing a list of paths (relative to PATH) to exclude
     exclude_path_list_file: Option<String>,
     #[clap(long)]
+    /// Exclude files >= specified byte size.
+    file_size_threshold: Option<ByteSize>,
+    #[clap(long)]
     /// Perform additional requests to try for case insensitive matches
     case_insensitive: bool,
     #[clap(long)]
@@ -410,18 +413,40 @@ async fn export_file(
     destination: PathBuf,
     size: u64,
     _type_: thrift::EntryType,
+    file_size_threshold: Option<u64>,
 ) -> Result<()> {
-    let file = thrift::FileSpecifier::by_id(thrift::FileIdSpecifier {
-        repo: repo.clone(),
-        id,
-        ..Default::default()
-    });
-    let file_metadata = FileMetadata {
+    let mut file_metadata = FileMetadata {
         size,
         path: destination.clone(),
         entry_type: _type_,
     };
-    let responses = if size > 0 {
+
+    let responses = if file_size_threshold.is_some_and(|t| size >= t) {
+        // File is above size threshold - export placeholder content.
+        let placeholder = format!(
+            "This is a placeholder for a large file\n\nOriginal file id: {}\nOriginal file size: {size}\n",
+            faster_hex::hex_string(&id),
+        );
+        file_metadata.size = placeholder.len() as u64;
+        stream::once(future::ready(
+            future::ready(anyhow::Ok((
+                file_metadata,
+                FileChunk {
+                    offset: 0,
+                    file_size: placeholder.len() as i64,
+                    data: placeholder.into_bytes(),
+                    ..Default::default()
+                },
+            )))
+            .boxed(),
+        ))
+        .right_stream()
+    } else if size > 0 {
+        let file = thrift::FileSpecifier::by_id(thrift::FileIdSpecifier {
+            repo: repo.clone(),
+            id,
+            ..Default::default()
+        });
         stream::iter((0..size).step_by(FILE_CHUNK_SIZE as usize))
             .map({
                 move |offset| {
@@ -471,6 +496,7 @@ async fn export_item(
     item: ExportItem,
     casefold: Casefold,
     create_dirs: CreateDirs,
+    file_size_threshold: Option<u64>,
     files_written: Arc<AtomicU64>,
 ) -> Result<(Option<String>, Vec<ExportItem>)> {
     match item {
@@ -503,7 +529,17 @@ async fn export_item(
             size,
             type_,
         } => {
-            export_file(connection, repo, id, tx, destination, size, type_).await?;
+            export_file(
+                connection,
+                repo,
+                id,
+                tx,
+                destination,
+                size,
+                type_,
+                file_size_threshold,
+            )
+            .await?;
             files_written.fetch_add(1, Ordering::Relaxed);
             Ok((Some(path), Vec::new()))
         }
@@ -791,6 +827,8 @@ pub(super) async fn run(app: ScscApp, args: CommandArgs) -> Result<()> {
         ..Default::default()
     };
 
+    let file_size_threshold = args.file_size_threshold.map(|bs| bs.0);
+
     let params = thrift::CommitPathInfoParams {
         ..Default::default()
     };
@@ -899,6 +937,7 @@ pub(super) async fn run(app: ScscApp, args: CommandArgs) -> Result<()> {
                 item,
                 casefold,
                 create_dirs,
+                file_size_threshold,
                 files_written.clone(),
             )
             .boxed()
