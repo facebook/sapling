@@ -950,7 +950,7 @@ pub(super) async fn run(app: ScscApp, args: CommandArgs) -> Result<()> {
         );
         ProgressOutput::new(message, bytes_written, total_size)
     });
-    app.target.render(&(), render).await?;
+    app.target.render_stderr(&(), render).await?;
     file_writer.await??;
     downloader.await?
 }

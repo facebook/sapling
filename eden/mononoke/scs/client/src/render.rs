@@ -44,25 +44,52 @@ pub(crate) enum OutputFormat {
     Json,
 }
 
+trait WriteAndIsTerminal: Write + IsTerminal {}
+impl WriteAndIsTerminal for std::io::Stdout {}
+impl WriteAndIsTerminal for std::io::Stderr {}
+
 impl OutputFormat {
-    /// Render the output for a command invocation.
+    /// Render the output for a command invocation to stdout.
     pub(crate) async fn render<R: Render>(
         self,
         matches: &R::Args,
         objs: impl Stream<Item = Result<R>>,
     ) -> Result<()> {
+        self.render_to(matches, objs, false).await
+    }
+
+    /// Render the output to stderr.
+    pub(crate) async fn render_stderr<R: Render>(
+        self,
+        matches: &R::Args,
+        objs: impl Stream<Item = Result<R>>,
+    ) -> Result<()> {
+        self.render_to(matches, objs, true).await
+    }
+
+    /// Render the output for a command invocation.
+    pub(crate) async fn render_to<R: Render>(
+        self,
+        matches: &R::Args,
+        objs: impl Stream<Item = Result<R>>,
+        stderr: bool,
+    ) -> Result<()> {
         objs.try_for_each(move |output| async move {
-            let mut stdout = std::io::stdout();
+            let out: &mut dyn WriteAndIsTerminal = if stderr {
+                &mut std::io::stderr()
+            } else {
+                &mut std::io::stdout()
+            };
             match self {
                 OutputFormat::Json => {
-                    output.render_json(matches, &mut stdout)?;
-                    writeln!(&mut stdout)?;
+                    output.render_json(matches, out)?;
+                    writeln!(out)?;
                 }
                 OutputFormat::Text => {
-                    if stdout.is_terminal() {
-                        output.render_tty(matches, &mut stdout)?;
+                    if out.is_terminal() {
+                        output.render_tty(matches, out)?;
                     } else {
-                        output.render(matches, &mut stdout)?;
+                        output.render(matches, out)?;
                     }
                 }
             }
