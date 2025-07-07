@@ -111,11 +111,12 @@ pub struct Sqlblob {
     put_behaviour: PutBehaviour,
     allow_inline_put: bool,
     ctime_inline_grace: i64,
+    mysql_tier: String,
 }
 
 impl std::fmt::Display for Sqlblob {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "Sqlblob")
+        f.write_str(format!("Sqlblob=\"{}\"", self.mysql_tier).as_str())
     }
 }
 
@@ -195,6 +196,7 @@ impl Sqlblob {
                 put_behaviour,
                 allow_inline_put: DEFAULT_ALLOW_INLINE_PUT,
                 ctime_inline_grace: DEFAULT_CTIME_INLINE_GRACE,
+                mysql_tier: shardmap.clone(),
             },
             shardmap,
         ))
@@ -291,6 +293,7 @@ impl Sqlblob {
                 put_behaviour,
                 allow_inline_put,
                 ctime_inline_grace,
+                mysql_tier: label.clone(),
             },
             label,
         ))
@@ -381,6 +384,7 @@ impl Sqlblob {
                 put_behaviour,
                 allow_inline_put,
                 ctime_inline_grace,
+                mysql_tier: "sqlite".into(),
             },
             "sqlite".into(),
         ))
