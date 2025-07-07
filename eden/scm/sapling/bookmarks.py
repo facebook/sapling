@@ -1078,7 +1078,7 @@ def saveremotenames(repo, remotebookmarks, override: bool = True) -> None:
 
     from . import extensions
 
-    with repo.wlock(), repo.lock():
+    with repo.lock():
         if extensions.isenabled(repo.ui, "remotenames"):
             transition(repo, repo.ui)
 
