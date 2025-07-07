@@ -38,14 +38,14 @@ Run sqlblob_gc generation size report
 Run sqlblob_gc generation size report again, just to check mark has not broken it
 Run sqlblob_gc mark
   $ mononoke_sqlblob_gc --storage-config-name=blobstore --shard-count=2 mark 2>&1 | strip_glog
-  Starting initial generation set
-  Completed initial generation handling on shard * (glob)
-  Completed initial generation handling on shard * (glob)
-  Completed initial generation set
-  Starting marking generation 1
-  Starting mark on data keys from shard 0
-  Starting mark on data keys from shard 1
-  Completed marking generation 1
+  [INFO] Starting initial generation set
+  [INFO] Completed initial generation handling on shard * (glob)
+  [INFO] Completed initial generation handling on shard * (glob)
+  [INFO] Completed initial generation set
+  [INFO] Starting marking generation 1
+  [INFO] Starting mark on data keys from shard * (glob)
+  [INFO] Starting mark on data keys from shard * (glob)
+  [INFO] Completed marking generation 1
 
 Run sqlblob_gc generation size report again, just to check mark has not broken it
   $ mononoke_sqlblob_gc --storage-config-name=blobstore --shard-count=2 --scuba-log-file scuba.json generation-size 2>&1 | strip_glog

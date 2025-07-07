@@ -170,6 +170,8 @@ function mononoke_blobstore_healer {
     "${CACHE_ARGS[@]}" \
     "${COMMON_ARGS[@]}" \
     --mononoke-config-path "$TESTTMP"/mononoke-config \
+    --tracing \
+    --tracing-test-format \
     "$@" 2>&1 | grep -v "Could not connect to a replica"
 }
 
@@ -178,6 +180,8 @@ function mononoke_sqlblob_gc {
     "${CACHE_ARGS[@]}" \
     "${COMMON_ARGS[@]}" \
     --mononoke-config-path "$TESTTMP"/mononoke-config \
+    --tracing \
+    --tracing-test-format \
     "$@" 2>&1 | grep -v "Could not connect to a replica"
 }
 
