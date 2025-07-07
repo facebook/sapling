@@ -150,6 +150,7 @@ class transaction(util.transactional):
         checkambigfiles=None,
         uiconfig=None,
         desc=None,
+        lockfree=False,
     ):
         """Begin a new transaction
 
@@ -163,11 +164,18 @@ class transaction(util.transactional):
         `checkambigfiles` is a set of (path, vfs-location) tuples,
         which determine whether file stat ambiguity should be avoided
         for corresponded files.
+
+        If `lockfree` is True, the transaction does not require a repo lock,
+        and during the lifetime of this transaction, subsequent repo locks
+        (but not wlocks) become no-ops, and nested transactions are lockfree too.
+        Certain traditional features like addfilegenerator, addbackup, etc. are
+        unsupported in a lockfree transaction.
         """
         self.count = 1
         self.usages = 1
         self.report = report
         self.desc = desc
+        self.lockfree = lockfree
         # a vfs to the store content
         self.opener = opener
         # a map to access file in various {location -> vfs}
