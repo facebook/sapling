@@ -11,7 +11,7 @@ use fbinit::FacebookInit;
 /// Provides data and objects needed to log SQL query telemetry, e.g.
 /// client request info, scuba logger.
 #[derive(Clone, Debug)]
-pub struct SqlTelemetryLogger {
+pub struct SqlQueryTelemetry {
     /// Provides client request info so that client correlator can be attached
     /// to the query.
     client_request_info: Option<ClientRequestInfo>,
@@ -20,7 +20,7 @@ pub struct SqlTelemetryLogger {
     fb: FacebookInit,
 }
 
-impl SqlTelemetryLogger {
+impl SqlQueryTelemetry {
     pub fn new(client_request_info: Option<ClientRequestInfo>, fb: FacebookInit) -> Self {
         Self {
             client_request_info,

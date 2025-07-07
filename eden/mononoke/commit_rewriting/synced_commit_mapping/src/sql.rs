@@ -27,7 +27,7 @@ use sql::Transaction;
 use sql_construct::SqlConstruct;
 use sql_construct::SqlConstructFromMetadataDatabaseConfig;
 use sql_ext::SqlConnections;
-use sql_ext::SqlTelemetryLogger;
+use sql_ext::SqlQueryTelemetry;
 use sql_ext::mononoke_queries;
 use stats::prelude::*;
 
@@ -269,7 +269,7 @@ impl SqlSyncedCommitMapping {
             .per_repo_pair_rendezvous(source_repo_id, target_repo_id)
             .dispatch(ctx.fb, bcs_ids.iter().copied().collect(), || {
                 let conn = rendezvous.conn.clone();
-                let tel_logger: SqlTelemetryLogger = ctx.into();
+                let tel_logger: SqlQueryTelemetry = ctx.into();
 
                 move |bcs_ids| async move {
                     let bcs_ids = bcs_ids.into_iter().collect::<Vec<_>>();

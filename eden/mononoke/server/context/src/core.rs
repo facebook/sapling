@@ -15,7 +15,7 @@ use scribe_ext::Scribe;
 use scuba_ext::MononokeScubaSampleBuilder;
 use slog::Logger;
 use slog_glog_fmt::logger_that_can_work_in_tests;
-use sql_telemetry_logger::SqlTelemetryLogger;
+use sql_query_telemetry::SqlQueryTelemetry;
 
 use crate::logging::LoggingContainer;
 use crate::logging::SamplingKey;
@@ -169,29 +169,29 @@ impl CoreContext {
     }
 }
 
-impl From<CoreContext> for Option<SqlTelemetryLogger> {
-    fn from(ctx: CoreContext) -> Option<SqlTelemetryLogger> {
+impl From<CoreContext> for Option<SqlQueryTelemetry> {
+    fn from(ctx: CoreContext) -> Option<SqlQueryTelemetry> {
         let cri = ctx.metadata().client_request_info();
         let fb = ctx.fb.clone();
 
-        Some(SqlTelemetryLogger::new(cri.cloned(), fb))
+        Some(SqlQueryTelemetry::new(cri.cloned(), fb))
     }
 }
 
-impl From<&CoreContext> for SqlTelemetryLogger {
-    fn from(ctx: &CoreContext) -> SqlTelemetryLogger {
+impl From<&CoreContext> for SqlQueryTelemetry {
+    fn from(ctx: &CoreContext) -> SqlQueryTelemetry {
         let cri = ctx.metadata().client_request_info();
         let fb = ctx.fb.clone();
 
-        SqlTelemetryLogger::new(cri.cloned(), fb)
+        SqlQueryTelemetry::new(cri.cloned(), fb)
     }
 }
 
-impl From<&CoreContext> for Option<SqlTelemetryLogger> {
-    fn from(ctx: &CoreContext) -> Option<SqlTelemetryLogger> {
+impl From<&CoreContext> for Option<SqlQueryTelemetry> {
+    fn from(ctx: &CoreContext) -> Option<SqlQueryTelemetry> {
         let cri = ctx.metadata().client_request_info();
         let fb = ctx.fb.clone();
 
-        Some(SqlTelemetryLogger::new(cri.cloned(), fb))
+        Some(SqlQueryTelemetry::new(cri.cloned(), fb))
     }
 }

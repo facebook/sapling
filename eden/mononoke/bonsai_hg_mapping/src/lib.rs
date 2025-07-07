@@ -29,7 +29,7 @@ use sql::Connection;
 use sql_construct::SqlConstruct;
 use sql_construct::SqlConstructFromMetadataDatabaseConfig;
 use sql_ext::SqlConnections;
-use sql_ext::SqlTelemetryLogger;
+use sql_ext::SqlQueryTelemetry;
 use sql_ext::mononoke_queries;
 use stats::prelude::*;
 
@@ -537,7 +537,7 @@ async fn select_mapping(
     if cs_ids.is_empty() {
         return Ok((vec![], cs_ids));
     }
-    let tel_logger: SqlTelemetryLogger = ctx.into();
+    let tel_logger: SqlQueryTelemetry = ctx.into();
 
     let (found, missing): (Vec<_>, _) = match cs_ids {
         BonsaiOrHgChangesetIds::Bonsai(bcs_ids) => {

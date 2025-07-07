@@ -49,7 +49,7 @@ use sql::SqlConnections;
 use sql::mysql::IsolationLevel;
 use sql_construct::SqlConstruct;
 use sql_construct::SqlConstructFromMetadataDatabaseConfig;
-use sql_ext::SqlTelemetryLogger;
+use sql_ext::SqlQueryTelemetry;
 use sql_ext::mononoke_queries;
 use sql_ext::should_retry_query;
 use vec1::Vec1;
@@ -1343,7 +1343,7 @@ impl SqlCommitGraphStorage {
             return Ok(HashMap::new());
         }
 
-        let tel_logger: SqlTelemetryLogger = ctx.into();
+        let tel_logger: SqlQueryTelemetry = ctx.into();
 
         if let Some(target) = prefetch.target() {
             let steps_limit =
@@ -1357,7 +1357,7 @@ impl SqlCommitGraphStorage {
                         .dispatch(ctx.fb.clone(), cs_ids.iter().copied().collect(), || {
                             let conn = rendezvous.conn.clone();
                             let repo_id = self.repo_id.clone();
-                            let tel_logger: SqlTelemetryLogger = ctx.into();
+                            let tel_logger: SqlQueryTelemetry = ctx.into();
 
                             move |cs_ids| async move {
                                 let cs_ids = cs_ids.into_iter().collect::<Vec<_>>();

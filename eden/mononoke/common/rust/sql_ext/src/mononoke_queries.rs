@@ -102,7 +102,7 @@ macro_rules! mononoke_queries {
                 #[allow(dead_code)]
                 pub async fn query<'a>(
                     connection: &'a Connection,
-                    tel_logger: Option<SqlTelemetryLogger>,
+                    tel_logger: Option<SqlQueryTelemetry>,
                     $( $pname: &'a $ptype, )*
                     $( $lname: &'a [ $ltype ], )*
                 ) -> Result<Vec<($( $rtype, )*)>>
@@ -136,7 +136,7 @@ macro_rules! mononoke_queries {
                 #[allow(dead_code)]
                 pub async fn query_with_transaction<'a>(
                     transaction: Transaction,
-                    tel_logger: Option<SqlTelemetryLogger>,
+                    tel_logger: Option<SqlQueryTelemetry>,
                     $( $pname: &'a $ptype, )*
                     $( $lname: &'a [ $ltype ], )*
                 ) -> Result<(Transaction, Vec<($( $rtype, )*)>)>
@@ -192,7 +192,7 @@ macro_rules! mononoke_queries {
                     config: &SqlQueryConfig,
                     cache_ttl: Option<std::time::Duration>,
                     connection: &'a Connection,
-                    tel_logger: Option<SqlTelemetryLogger>,
+                    tel_logger: Option<SqlQueryTelemetry>,
                     $( $pname: &'a $ptype, )*
                     $( $lname: &'a [ $ltype ], )*
                 ) -> Result<Vec<($( $rtype, )*)>>
@@ -241,7 +241,7 @@ macro_rules! mononoke_queries {
                 #[allow(dead_code)]
                 pub async fn query_with_transaction(
                     transaction: Transaction,
-                    tel_logger: Option<SqlTelemetryLogger>,
+                    tel_logger: Option<SqlQueryTelemetry>,
                     $( $pname: &$ptype, )*
                     $( $lname: &[ $ltype ], )*
                 ) -> Result<(Transaction, Vec<($( $rtype, )*)>)>
@@ -312,7 +312,7 @@ macro_rules! mononoke_queries {
                 #[allow(dead_code)]
                 pub async fn query<'a>(
                     connection: &'a Connection,
-                    tel_logger: Option<SqlTelemetryLogger>,
+                    tel_logger: Option<SqlQueryTelemetry>,
                     values: &'a[($( & $vtype, )*)],
                     $( $pname: &'a $ptype ),*
                 ) -> Result<WriteResult> {
@@ -338,7 +338,7 @@ macro_rules! mononoke_queries {
                 #[allow(dead_code)]
                 pub async fn query_with_transaction<'a>(
                     transaction: Transaction,
-                    tel_logger: Option<SqlTelemetryLogger>,
+                    tel_logger: Option<SqlQueryTelemetry>,
                     values: &'a[($( & $vtype, )*)],
                     $( $pname: &'a $ptype ),*
                 ) -> Result<(Transaction, WriteResult)> {
@@ -408,7 +408,7 @@ macro_rules! mononoke_queries {
                 #[allow(dead_code)]
                 pub async fn query<'a>(
                     connection: &'a Connection,
-                    tel_logger: Option<SqlTelemetryLogger>,
+                    tel_logger: Option<SqlQueryTelemetry>,
                     $( $pname: &'a $ptype, )*
                     $( $lname: &'a [ $ltype ], )*
                 ) -> Result<WriteResult> {
@@ -436,7 +436,7 @@ macro_rules! mononoke_queries {
                 #[allow(dead_code)]
                 pub async fn query_with_transaction<'a>(
                     transaction: Transaction,
-                    tel_logger: Option<SqlTelemetryLogger>,
+                    tel_logger: Option<SqlQueryTelemetry>,
                     $( $pname: &'a $ptype, )*
                     $( $lname: &'a [ $ltype ], )*
                 ) -> Result<(Transaction, WriteResult)> {
@@ -682,16 +682,16 @@ mod tests {
         use clientinfo::ClientEntryPoint;
         use clientinfo::ClientRequestInfo;
         use sql_query_config::SqlQueryConfig;
-        use sql_telemetry_logger::SqlTelemetryLogger;
+        use sql_query_telemetry::SqlQueryTelemetry;
 
         let config: &SqlQueryConfig = todo!();
         let connection: &sql::Connection = todo!();
         let cri = ClientRequestInfo::new(ClientEntryPoint::Sapling);
 
-        let tel_logger = SqlTelemetryLogger::new(Some(cri), fb);
+        let tel_logger = SqlQueryTelemetry::new(Some(cri), fb);
         TestQuery::query(connection, None, todo!(), todo!()).await?;
         TestQuery::query_with_transaction(todo!(), None, todo!(), todo!()).await?;
-        TestQuery2::query(config, None, connection, None::<SqlTelemetryLogger>).await?;
+        TestQuery2::query(config, None, connection, None::<SqlQueryTelemetry>).await?;
         TestQuery2::query(
             config,
             Some(std::time::Duration::from_secs(60)),

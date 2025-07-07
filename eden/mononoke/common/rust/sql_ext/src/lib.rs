@@ -15,7 +15,7 @@ mod telemetry;
 pub use sql::SqlConnections;
 pub use sql::SqlShardedConnections;
 pub use sql::Transaction;
-pub use sql_telemetry_logger::SqlTelemetryLogger;
+pub use sql_query_telemetry::SqlQueryTelemetry;
 pub use sqlite::open_existing_sqlite_path;
 pub use sqlite::open_sqlite_in_memory;
 pub use sqlite::open_sqlite_path;
@@ -44,7 +44,7 @@ pub mod _macro_internal {
     pub use sql::WriteResult;
     pub use sql::queries;
     pub use sql_query_config::SqlQueryConfig;
-    pub use sql_telemetry_logger::SqlTelemetryLogger;
+    pub use sql_query_telemetry::SqlQueryTelemetry;
     pub use twox_hash::xxh3::Hash128;
     pub use twox_hash::xxh3::HasherExt;
 

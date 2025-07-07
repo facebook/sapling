@@ -40,7 +40,7 @@ rust_library(
         "//common/rust/shed/sql:sql",
         "//dba/myadmin/if:if-myadmin-rust",
         "//dba/myadmin/if:if-myadmin-rust-srclients",
-        "//eden/mononoke/common/rust/sql_ext/sql_telemetry_logger:sql_telemetry_logger",
+        "//eden/mononoke/common/rust/sql_ext/sql_query_telemetry:sql_query_telemetry",
         "//eden/mononoke/common/retry:retry",
         "//eden/mononoke/common/rust/caching_ext:caching_ext",
         "//eden/mononoke/repo_attributes/sql_query_config:sql_query_config",

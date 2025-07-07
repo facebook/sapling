@@ -11,7 +11,7 @@ use scuba_ext::MononokeScubaSampleBuilder;
 use sql::QueryTelemetry;
 #[cfg(fbcode_build)]
 use sql::mysql::MysqlQueryTelemetry;
-use sql_telemetry_logger::SqlTelemetryLogger;
+use sql_query_telemetry::SqlQueryTelemetry;
 
 const SQL_TELEMETRY_SCUBA_TABLE: &str = "mononoke_sql_telemetry";
 
@@ -29,12 +29,12 @@ pub enum TelemetryGranularity {
 // `log_query_telemetry_impl`
 pub fn log_query_telemetry(
     opt_tel: Option<QueryTelemetry>,
-    opt_tel_logger: Option<SqlTelemetryLogger>,
+    opt_sql_tel: Option<SqlQueryTelemetry>,
     granularity: TelemetryGranularity,
 ) -> Result<()> {
-    match (opt_tel, opt_tel_logger) {
-        (Some(query_tel), Some(tel_logger)) => {
-            log_query_telemetry_impl(query_tel, tel_logger, granularity)
+    match (opt_tel, opt_sql_tel) {
+        (Some(query_tel), Some(sql_tel)) => {
+            log_query_telemetry_impl(query_tel, sql_tel, granularity)
         }
         // TODO(T223577767): handle case when there's no telemetry
         _ => Ok(()),
@@ -43,14 +43,14 @@ pub fn log_query_telemetry(
 
 fn log_query_telemetry_impl(
     query_tel: QueryTelemetry,
-    tel_logger: SqlTelemetryLogger,
+    sql_tel: SqlQueryTelemetry,
     granularity: TelemetryGranularity,
 ) -> Result<()> {
     match query_tel {
         #[cfg(fbcode_build)]
         QueryTelemetry::MySQL(telemetry) => {
             // Log to scuba
-            log_mysql_query_telemetry(telemetry, tel_logger, granularity)
+            log_mysql_query_telemetry(telemetry, sql_tel, granularity)
         }
         _ => Err(anyhow!("Unsupported query telemetry type")),
     }
@@ -59,10 +59,10 @@ fn log_query_telemetry_impl(
 #[cfg(fbcode_build)]
 fn log_mysql_query_telemetry(
     query_tel: MysqlQueryTelemetry,
-    tel_logger: SqlTelemetryLogger,
+    sql_tel: SqlQueryTelemetry,
     granularity: TelemetryGranularity,
 ) -> Result<()> {
-    let fb = tel_logger.fb().clone();
+    let fb = sql_tel.fb().clone();
 
     // Log to file if SQL_TELEMETRY_SCUBA_FILE_PATH is set (for testing)
     let mut scuba = if let Ok(scuba_file_path) = std::env::var("SQL_TELEMETRY_SCUBA_FILE_PATH") {
@@ -71,7 +71,7 @@ fn log_mysql_query_telemetry(
         MononokeScubaSampleBuilder::new(fb, SQL_TELEMETRY_SCUBA_TABLE)?
     };
 
-    if let Some(cri) = tel_logger.client_request_info() {
+    if let Some(cri) = sql_tel.client_request_info() {
         scuba.add_client_request_info(cri);
     };
 

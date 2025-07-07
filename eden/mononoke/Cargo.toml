@@ -259,7 +259,7 @@ members = [
   "common/rust/caching_ext",
   "common/rust/slog_ext",
   "common/rust/sql_ext",
-  "common/rust/sql_ext/sql_telemetry_logger",
+  "common/rust/sql_ext/sql_query_telemetry",
   "common/scribe_ext",
   "common/scuba_ext",
   "common/sql_construct",

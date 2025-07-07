@@ -28,7 +28,7 @@ use slog::warn;
 use sql_construct::SqlConstruct;
 use sql_construct::SqlConstructFromMetadataDatabaseConfig;
 use sql_ext::SqlConnections;
-use sql_ext::SqlTelemetryLogger;
+use sql_ext::SqlQueryTelemetry;
 use thiserror::Error;
 
 use super::BonsaiGlobalrevMapping;
@@ -425,7 +425,7 @@ async fn select_mapping(
                 .fetch_globalrev
                 .dispatch(ctx.fb, bcs_ids.iter().copied().collect(), || {
                     let conn = connection.conn.clone();
-                    let tel_logger: SqlTelemetryLogger = ctx.into();
+                    let tel_logger: SqlQueryTelemetry = ctx.into();
 
                     move |bcs_ids| async move {
                         let bcs_ids = bcs_ids.into_iter().collect::<Vec<_>>();
