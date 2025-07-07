@@ -67,6 +67,8 @@ evalframe-passthrough=true
 
 run-python-hooks-via-pyhook=true
 
+lock-free-pull=true
+
 [zsh]
 completion-age=7
 completion-description=false
