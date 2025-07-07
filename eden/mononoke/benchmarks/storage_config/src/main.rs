@@ -106,7 +106,6 @@ fn main(fb: fbinit::FacebookInit) -> Result<(), Error> {
                 blobstore,
                 local_cache_config.blobstore_cache_shards,
                 &CachelibBlobstoreOptions::default(),
-                local_cache_config.encoding,
             )
             .context("repo_factory::cachelib_blobstore failed")?,
             Caching::Enabled(local_cache_config) => {
@@ -114,7 +113,6 @@ fn main(fb: fbinit::FacebookInit) -> Result<(), Error> {
                     blobstore,
                     local_cache_config.blobstore_cache_shards,
                     &CachelibBlobstoreOptions::default(),
-                    local_cache_config.encoding,
                 )
                 .context("repo_factory::cachelib_blobstore failed")?;
                 Arc::new(

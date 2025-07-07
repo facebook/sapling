@@ -11,7 +11,6 @@ use std::sync::Arc;
 use async_trait::async_trait;
 use blobstore::Blobstore;
 use blobstore::BlobstoreBytes;
-use blobstore::BlobstoreCacheEncoding;
 use blobstore::BlobstoreGetData;
 use blobstore::CountedBlobstore;
 use bytes::Bytes;
@@ -60,7 +59,6 @@ pub struct CachelibOps {
     blob_pool: Arc<LruCachePool>,
     presence_pool: Arc<LruCachePool>,
     options: CachelibBlobstoreOptions,
-    encoding: BlobstoreCacheEncoding,
 }
 
 impl std::fmt::Display for CachelibOps {
@@ -74,13 +72,11 @@ impl CachelibOps {
         blob_pool: Arc<LruCachePool>,
         presence_pool: Arc<LruCachePool>,
         options: CachelibBlobstoreOptions,
-        encoding: BlobstoreCacheEncoding,
     ) -> Self {
         Self {
             blob_pool,
             presence_pool,
             options,
-            encoding,
         }
     }
 }
@@ -90,12 +86,11 @@ pub fn new_cachelib_blobstore_no_lease<T>(
     blob_pool: Arc<LruCachePool>,
     presence_pool: Arc<LruCachePool>,
     options: CachelibBlobstoreOptions,
-    encoding: BlobstoreCacheEncoding,
 ) -> CountedBlobstore<CacheBlobstore<CachelibOps, DummyLease, T>>
 where
     T: Blobstore,
 {
-    let cache_ops = CachelibOps::new(blob_pool, presence_pool, options, encoding);
+    let cache_ops = CachelibOps::new(blob_pool, presence_pool, options);
     CountedBlobstore::new(
         "cachelib".to_string(),
         CacheBlobstore::new(cache_ops, DummyLease {}, blobstore, options.lazy_cache_put),
@@ -107,12 +102,11 @@ pub fn new_cachelib_blobstore<T>(
     blob_pool: Arc<LruCachePool>,
     presence_pool: Arc<LruCachePool>,
     options: CachelibBlobstoreOptions,
-    encoding: BlobstoreCacheEncoding,
 ) -> CountedBlobstore<CacheBlobstore<CachelibOps, InProcessLease, T>>
 where
     T: Blobstore + Clone,
 {
-    let cache_ops = CachelibOps::new(blob_pool, presence_pool, options, encoding);
+    let cache_ops = CachelibOps::new(blob_pool, presence_pool, options);
     CountedBlobstore::new(
         "cachelib".to_string(),
         CacheBlobstore::new(
@@ -133,7 +127,7 @@ impl CacheOps for CachelibOps {
     async fn get(&self, key: &str) -> Option<BlobstoreGetData> {
         let blob = self.blob_pool.get(key);
         let blob = blob.ok()??;
-        let blob = BlobstoreBytes::decode(blob, self.encoding)?;
+        let blob = BlobstoreBytes::decode(blob)?;
         Some(blob.into())
     }
 
@@ -146,7 +140,7 @@ impl CacheOps for CachelibOps {
         } else {
             None
         };
-        if let Some(bytes) = value.into_bytes().encode(encode_limit, self.encoding) {
+        if let Some(bytes) = value.into_bytes().encode(encode_limit) {
             let _ = self.blob_pool.set(key, bytes);
         }
     }

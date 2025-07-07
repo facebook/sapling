@@ -26,7 +26,6 @@ use anyhow::Result;
 use anyhow::anyhow;
 use async_once_cell::AsyncOnceCell;
 use blobstore::Blobstore;
-use blobstore::BlobstoreCacheEncoding;
 use blobstore::BlobstoreEnumerableWithUnlink;
 use blobstore::BlobstoreUnlinkOps;
 pub use blobstore_factory::BlobstoreOptions;
@@ -570,7 +569,6 @@ impl RepoFactory {
                             memcache_blobstore,
                             local_cache_config.blobstore_cache_shards,
                             &self.env.blobstore_options.cachelib_options,
-                            local_cache_config.encoding,
                         )?
                     }
                     Caching::LocalOnly(local_cache_config) => {
@@ -578,7 +576,6 @@ impl RepoFactory {
                             blobstore,
                             local_cache_config.blobstore_cache_shards,
                             &self.env.blobstore_options.cachelib_options,
-                            local_cache_config.encoding,
                         )?;
                     }
                     Caching::Disabled => {}
@@ -782,13 +779,7 @@ pub fn cachelib_blobstore<B: Blobstore + 'static>(
     blobstore: B,
     cache_shards: usize,
     options: &CachelibBlobstoreOptions,
-    encoding: LocalCacheEncoding,
 ) -> Result<Arc<dyn Blobstore>> {
-    let encoding = match encoding {
-        LocalCacheEncoding::Abomonation => BlobstoreCacheEncoding::Abomonation,
-        LocalCacheEncoding::Bincode => BlobstoreCacheEncoding::Bincode,
-    };
-
     const BLOBSTORE_BLOBS_CACHE_POOL: &str = "blobstore-blobs";
     const BLOBSTORE_PRESENCE_CACHE_POOL: &str = "blobstore-presence";
 
@@ -803,7 +794,6 @@ pub fn cachelib_blobstore<B: Blobstore + 'static>(
                 presence_pool,
                 cache_shards,
                 options.clone(),
-                encoding,
             ))
         }
         None => {
@@ -815,7 +805,6 @@ pub fn cachelib_blobstore<B: Blobstore + 'static>(
                 Arc::new(blob_pool),
                 Arc::new(presence_pool),
                 options.clone(),
-                encoding,
             ))
         }
     };

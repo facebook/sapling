@@ -14,7 +14,6 @@ use std::sync::Arc;
 
 use anyhow::Error;
 use blobstore::Blobstore;
-use blobstore::BlobstoreCacheEncoding;
 use blobstore::BlobstorePutOps;
 use blobstore::BlobstoreUnlinkOps;
 use blobstore::OverwriteStatus;
@@ -303,13 +302,8 @@ async fn cache_blob_tests(fb: FacebookInit, expect_zstd: bool) -> Result<(), Err
     )?);
 
     let inner = Arc::new(Memblob::new(PutBehaviour::Overwrite));
-    let cache_blob = cacheblob::new_cachelib_blobstore(
-        inner.clone(),
-        blob_pool.clone(),
-        presence_pool,
-        options,
-        Default::default(),
-    );
+    let cache_blob =
+        cacheblob::new_cachelib_blobstore(inner.clone(), blob_pool.clone(), presence_pool, options);
 
     let small_key = "small_key";
     let value = BlobstoreBytes::from_bytes(Bytes::copy_from_slice(b"smalldata"));
