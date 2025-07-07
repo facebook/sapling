@@ -174,7 +174,7 @@ impl From<CoreContext> for Option<SqlTelemetryLogger> {
         let cri = ctx.metadata().client_request_info();
         let fb = ctx.fb.clone();
 
-        Some(SqlTelemetryLogger::new(cri.cloned(), Some(fb)))
+        Some(SqlTelemetryLogger::new(cri.cloned(), fb))
     }
 }
 
@@ -183,7 +183,7 @@ impl From<&CoreContext> for SqlTelemetryLogger {
         let cri = ctx.metadata().client_request_info();
         let fb = ctx.fb.clone();
 
-        SqlTelemetryLogger::new(cri.cloned(), Some(fb))
+        SqlTelemetryLogger::new(cri.cloned(), fb)
     }
 }
 
@@ -192,6 +192,6 @@ impl From<&CoreContext> for Option<SqlTelemetryLogger> {
         let cri = ctx.metadata().client_request_info();
         let fb = ctx.fb.clone();
 
-        Some(SqlTelemetryLogger::new(cri.cloned(), Some(fb)))
+        Some(SqlTelemetryLogger::new(cri.cloned(), fb))
     }
 }

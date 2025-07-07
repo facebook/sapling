@@ -17,18 +17,11 @@ pub struct SqlTelemetryLogger {
     client_request_info: Option<ClientRequestInfo>,
 
     /// fbinit to create a scuba logger
-    fb: Option<FacebookInit>,
+    fb: FacebookInit,
 }
 
 impl SqlTelemetryLogger {
-    pub fn empty() -> Self {
-        Self {
-            client_request_info: None,
-            fb: None,
-        }
-    }
-
-    pub fn new(client_request_info: Option<ClientRequestInfo>, fb: Option<FacebookInit>) -> Self {
+    pub fn new(client_request_info: Option<ClientRequestInfo>, fb: FacebookInit) -> Self {
         Self {
             client_request_info,
             fb,
@@ -39,7 +32,7 @@ impl SqlTelemetryLogger {
         self.client_request_info.as_ref()
     }
 
-    pub fn fb(&self) -> &Option<FacebookInit> {
+    pub fn fb(&self) -> &FacebookInit {
         &self.fb
     }
 }

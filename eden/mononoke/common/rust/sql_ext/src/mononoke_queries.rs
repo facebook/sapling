@@ -646,6 +646,8 @@ where
 
 #[cfg(test)]
 mod tests {
+    use fbinit::FacebookInit;
+    use mononoke_macros::mononoke;
 
     mononoke_queries! {
         read TestQuery(param_str: String, param_uint: u64) -> (u64, Option<i32>, String, i64) {
@@ -674,13 +676,19 @@ mod tests {
         clippy::diverging_sub_expression,
         clippy::todo
     )]
-    async fn should_compile() -> anyhow::Result<()> {
+    #[ignore]
+    #[mononoke::fbinit_test]
+    async fn should_compile(fb: FacebookInit) -> anyhow::Result<()> {
+        use clientinfo::ClientEntryPoint;
+        use clientinfo::ClientRequestInfo;
         use sql_query_config::SqlQueryConfig;
         use sql_telemetry_logger::SqlTelemetryLogger;
 
         let config: &SqlQueryConfig = todo!();
         let connection: &sql::Connection = todo!();
-        let tel_logger = SqlTelemetryLogger::empty();
+        let cri = ClientRequestInfo::new(ClientEntryPoint::Sapling);
+
+        let tel_logger = SqlTelemetryLogger::new(Some(cri), fb);
         TestQuery::query(connection, None, todo!(), todo!()).await?;
         TestQuery::query_with_transaction(todo!(), None, todo!(), todo!()).await?;
         TestQuery2::query(config, None, connection, None::<SqlTelemetryLogger>).await?;

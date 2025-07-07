@@ -62,10 +62,7 @@ fn log_mysql_query_telemetry(
     tel_logger: SqlTelemetryLogger,
     granularity: TelemetryGranularity,
 ) -> Result<()> {
-    let fb = match tel_logger.fb().clone() {
-        Some(fb) => fb,
-        None => return Ok(()),
-    };
+    let fb = tel_logger.fb().clone();
 
     // Log to file if SQL_TELEMETRY_SCUBA_FILE_PATH is set (for testing)
     let mut scuba = if let Ok(scuba_file_path) = std::env::var("SQL_TELEMETRY_SCUBA_FILE_PATH") {
