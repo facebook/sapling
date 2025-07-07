@@ -21,10 +21,10 @@ Try creating with a tag
   $ TAG=another_mainline
   $ streaming_clone create --dot-hg-path "$TESTTMP/repo/.hg" --tag another_mainline
   * using repo "repo" repoid RepositoryId(0) (glob)
-  * current sizes in database: index: 0, data: 0, tag: another_mainline, repo: repo (glob)
-  * about to upload 1 entries, tag: another_mainline, repo: repo (glob)
-  * inserting into streaming clone database, tag: another_mainline, repo: repo (glob)
-  * current max chunk num is None, tag: another_mainline, repo: repo (glob)
+  [INFO] [streaming clone create{repo=repo tag="another_mainline"}] current sizes in database: index: 0, data: 0
+  [INFO] [streaming clone create{repo=repo tag="another_mainline"}] about to upload 1 entries
+  [INFO] [streaming clone create{repo=repo tag="another_mainline"}] inserting into streaming clone database
+  [INFO] [streaming clone create{repo=repo tag="another_mainline"}] current max chunk num is None
 
 
   $ start_and_wait_for_mononoke_server

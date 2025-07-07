@@ -20,10 +20,10 @@ setup configuration
   $ LOG_FILE="$TESTTMP/log_file"
   $ streaming_clone --scuba-log-file "$LOG_FILE" create --dot-hg-path "$TESTTMP/repo/.hg"
   * using repo "repo" repoid RepositoryId(0) (glob)
-  * current sizes in database: index: 0, data: 0, repo: repo (glob)
-  * about to upload 1 entries, repo: repo (glob)
-  * inserting into streaming clone database, repo: repo (glob)
-  * current max chunk num is None, repo: repo (glob)
+  [INFO] [streaming clone create{repo=repo}] current sizes in database: index: 0, data: 0
+  [INFO] [streaming clone create{repo=repo}] about to upload 1 entries
+  [INFO] [streaming clone create{repo=repo}] inserting into streaming clone database
+  [INFO] [streaming clone create{repo=repo}] current max chunk num is None
   $ jq .normal.reponame < "$LOG_FILE"
   "repo"
   $ jq .normal.chunks_inserted < "$LOG_FILE"
@@ -54,10 +54,10 @@ Try creating again, this should fail
   $ sqlite3 "$TESTTMP/monsql/sqlite_dbs" "delete from streaming_changelog_chunks where repo_id = 0;"
   $ streaming_clone create --dot-hg-path "$TESTTMP/repo/.hg" --max-data-chunk-size 1
   * using repo "repo" repoid RepositoryId(0) (glob)
-  * current sizes in database: index: 0, data: 0, repo: repo (glob)
-  * about to upload 3 entries, repo: repo (glob)
-  * inserting into streaming clone database, repo: repo (glob)
-  * current max chunk num is None, repo: repo (glob)
+  [INFO] [streaming clone create{repo=repo}] current sizes in database: index: 0, data: 0
+  [INFO] [streaming clone create{repo=repo}] about to upload 3 entries
+  [INFO] [streaming clone create{repo=repo}] inserting into streaming clone database
+  [INFO] [streaming clone create{repo=repo}] current max chunk num is None
   $ rm -rf "$TESTTMP/repo-streamclone"
   $ cd "$TESTTMP"
   $ hg clone mono:repo repo-streamclone
@@ -123,17 +123,17 @@ Push a few new commits and update streaming clone
 Check that with last chunk skipping no new batches are uploaded
   $ streaming_clone update --dot-hg-path "$TESTTMP/repo-streamclone-2/.hg" --skip-last-chunk
   * using repo "repo" repoid RepositoryId(0) (glob)
-  * current sizes in database: index: 192, data: 171, repo: repo (glob)
-  * about to upload 0 entries, repo: repo (glob)
-  * inserting into streaming clone database, repo: repo (glob)
-  * current max chunk num is Some(2), repo: repo (glob)
+  [INFO] [streaming clone update{repo=repo}] current sizes in database: index: 192, data: 171
+  [INFO] [streaming clone update{repo=repo}] about to upload 0 entries
+  [INFO] [streaming clone update{repo=repo}] inserting into streaming clone database
+  [INFO] [streaming clone update{repo=repo}] current max chunk num is Some(2)
 
   $ streaming_clone update --dot-hg-path "$TESTTMP/repo-streamclone-2/.hg"
   * using repo "repo" repoid RepositoryId(0) (glob)
-  * current sizes in database: index: 192, data: 171, repo: repo (glob)
-  * about to upload 1 entries, repo: repo (glob)
-  * inserting into streaming clone database, repo: repo (glob)
-  * current max chunk num is Some(2), repo: repo (glob)
+  [INFO] [streaming clone update{repo=repo}] current sizes in database: index: 192, data: 171
+  [INFO] [streaming clone update{repo=repo}] about to upload 1 entries
+  [INFO] [streaming clone update{repo=repo}] inserting into streaming clone database
+  [INFO] [streaming clone update{repo=repo}] current max chunk num is Some(2)
 
 Clone it again to make sure saved streaming chunks are valid
   $ cd "$TESTTMP"
@@ -164,11 +164,11 @@ Check no-upload-if-less-than-chunks option
   $ sqlite3 "$TESTTMP/monsql/sqlite_dbs" "delete from streaming_changelog_chunks where repo_id = 0;"
   $ streaming_clone create --dot-hg-path "$TESTTMP/repo/.hg" --no-upload-if-less-than-chunks 2
   * using repo "repo" repoid RepositoryId(0) (glob)
-  * current sizes in database: index: 0, data: 0, repo: repo (glob)
-  * has too few chunks to upload - 1. Exiting, repo: repo (glob)
+  [INFO] [streaming clone create{repo=repo}] current sizes in database: index: 0, data: 0
+  [INFO] [streaming clone create{repo=repo}] has too few chunks to upload - 1. Exiting
   $ streaming_clone create --dot-hg-path "$TESTTMP/repo/.hg" --no-upload-if-less-than-chunks 2 --max-data-chunk-size 1
   * using repo "repo" repoid RepositoryId(0) (glob)
-  * current sizes in database: index: 0, data: 0, repo: repo (glob)
-  * about to upload 3 entries, repo: repo (glob)
-  * inserting into streaming clone database, repo: repo (glob)
-  * current max chunk num is None, repo: repo (glob)
+  [INFO] [streaming clone create{repo=repo}] current sizes in database: index: 0, data: 0
+  [INFO] [streaming clone create{repo=repo}] about to upload 3 entries
+  [INFO] [streaming clone create{repo=repo}] inserting into streaming clone database
+  [INFO] [streaming clone create{repo=repo}] current max chunk num is None

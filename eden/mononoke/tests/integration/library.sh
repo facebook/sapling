@@ -1213,7 +1213,10 @@ function aliasverify() {
      "${COMMON_ARGS[@]}" \
      --mononoke-config-path "$TESTTMP/mononoke-config" \
      --alias-type "$alias_type" \
-     --mode "$mode" "$@"
+     --mode "$mode" \
+     --tracing \
+     --tracing-test-format \
+     "$@"
 }
 
 # Without rev
@@ -1530,7 +1533,10 @@ function derived_data_tailer {
   GLOG_minloglevel=5 "$DERIVED_DATA_TAILER" \
     "${CACHE_ARGS[@]}" \
     "${COMMON_ARGS[@]}" \
-    --mononoke-config-path "$TESTTMP"/mononoke-config "$@"
+    --mononoke-config-path "$TESTTMP"/mononoke-config \
+    --tracing \
+    --tracing-test-format \
+    "$@"
 }
 
 function hook_tailer() {
@@ -1539,6 +1545,8 @@ function hook_tailer() {
     "${COMMON_ARGS[@]}" \
     --repo-id "$REPOID" \
     --mononoke-config-path "${TESTTMP}/mononoke-config" \
+    --tracing \
+    --tracing-test-format \
     "$@"
 }
 
@@ -1615,6 +1623,8 @@ function copy_blobstore_keys() {
     --source-repo-id "$SOURCE_REPO_ID" \
     --target-repo-id "$TARGET_REPO_ID" \
     --mononoke-config-path "${TESTTMP}/mononoke-config" \
+    --tracing \
+    --tracing-test-format \
     "$@"
 }
 
@@ -1624,6 +1634,8 @@ function streaming_clone() {
     "${COMMON_ARGS[@]}" \
     --repo-id "$REPOID" \
     --mononoke-config-path "${TESTTMP}/mononoke-config" \
+    --tracing \
+    --tracing-test-format \
     "$@"
 }
 
@@ -1664,6 +1676,8 @@ function packer() {
     "${CACHE_ARGS[@]}" \
     "${COMMON_ARGS[@]}" \
     --mononoke-config-path "${TESTTMP}/mononoke-config" \
+    --tracing \
+    --tracing-test-format \
     "$@"
 }
 
@@ -1673,6 +1687,8 @@ function check_git_wc() {
     "${COMMON_ARGS[@]}" \
     --repo-id "$REPOID" \
     --mononoke-config-path "${TESTTMP}/mononoke-config" \
+    --tracing \
+    --tracing-test-format \
     "$@"
 }
 
@@ -1689,6 +1705,8 @@ function derived_data_service() {
     -p 0 \
     --mononoke-config-path "${TESTTMP}/mononoke-config" \
     --bound-address-file "$DDS_SERVER_ADDR_FILE" \
+    --tracing \
+    --tracing-test-format \
     "${CACHE_ARGS[@]}" \
     "${COMMON_ARGS[@]}" >> "$TESTTMP/derived_data_service.out" 2>&1 &
 
@@ -1722,7 +1740,10 @@ function derivation_worker() {
   GLOG_minloglevel=5 "$DERIVED_DATA_WORKER" \
     "${CACHE_ARGS[@]}" \
     "${COMMON_ARGS[@]}" \
-    --mononoke-config-path "$TESTTMP"/mononoke-config "$@"
+    --mononoke-config-path "$TESTTMP"/mononoke-config \
+    --tracing \
+    --tracing-test-format \
+    "$@"
 }
 
 function verify_integrity_service_health() {
