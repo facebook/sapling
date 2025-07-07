@@ -84,7 +84,7 @@ pub(crate) fn try_resolve_metalog_conflict(
                 .collect::<Vec<_>>();
             Some(refencode::encode_visibleheads(&resolved).into())
         }
-        "bookmarks" => {
+        "bookmarks" | "gitrefs" => {
             let (this, other, ancestor) = map3(&this, other, ancestor, |s| {
                 refencode::decode_bookmarks(s).ok()
             })?;
