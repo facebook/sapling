@@ -37,6 +37,8 @@ pub struct FilesystemTelemetryCounters {
     pub syscall_stat: u64,
     // The number of successful setattr operations.
     pub syscall_setattr: u64,
+    // The number of successful lookup operations.
+    pub syscall_lookup: u64,
     // The number of successful access operations.
     pub syscall_access: u64,
 }
@@ -53,6 +55,7 @@ impl Sub for FilesystemTelemetryCounters {
             syscall_write: self.syscall_write - rhs.syscall_write,
             syscall_stat: self.syscall_stat - rhs.syscall_stat,
             syscall_setattr: self.syscall_setattr - rhs.syscall_setattr,
+            syscall_lookup: self.syscall_lookup - rhs.syscall_lookup,
             syscall_access: self.syscall_access - rhs.syscall_access,
         }
     }
@@ -676,6 +679,7 @@ impl EdenFsClient {
             COUNTER_FS_WRITE,
             COUNTER_FS_GETATTR,
             COUNTER_FS_SETATTR,
+            COUNTER_FS_LOOKUP,
             COUNTER_FS_ACCESS,
         ];
 
@@ -781,6 +785,7 @@ impl EdenFsClient {
                 syscall_write: *counters.get(COUNTER_FS_WRITE).unwrap_or(&0) as u64,
                 syscall_stat: *counters.get(COUNTER_FS_GETATTR).unwrap_or(&0) as u64,
                 syscall_setattr: *counters.get(COUNTER_FS_SETATTR).unwrap_or(&0) as u64,
+                syscall_lookup: *counters.get(COUNTER_FS_LOOKUP).unwrap_or(&0) as u64,
                 syscall_access: *counters.get(COUNTER_FS_ACCESS).unwrap_or(&0) as u64,
             },
             thrift_stats: ThriftTelemetryCounters {},
