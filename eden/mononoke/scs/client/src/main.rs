@@ -12,7 +12,6 @@
 use std::env;
 use std::io::IsTerminal;
 use std::io::stderr;
-use std::io::stdout;
 use std::process::ExitCode;
 
 use ansi_term::Colour;
@@ -25,7 +24,7 @@ use fbinit::FacebookInit;
 use scs_client_raw::ScsClient;
 
 use crate::connection::ConnectionArgs;
-use crate::render::OutputTarget;
+use crate::render::OutputFormat;
 
 mod args;
 mod commands;
@@ -67,7 +66,7 @@ lazy_static::lazy_static! {
 pub(crate) struct ScscApp {
     matches: ArgMatches,
     connection_args: ConnectionArgs,
-    target: OutputTarget,
+    target: OutputFormat,
     fb: FacebookInit,
 }
 
@@ -115,11 +114,9 @@ async fn main_impl(fb: FacebookInit) -> anyhow::Result<()> {
     let common_args = ScscArgs::from_arg_matches(&matches)?;
     let connection_args = common_args.connection_args;
     let target = if common_args.json {
-        OutputTarget::Json
-    } else if stdout().is_terminal() {
-        OutputTarget::Tty
+        OutputFormat::Json
     } else {
-        OutputTarget::Pipe
+        OutputFormat::Text
     };
     let app = ScscApp {
         matches,

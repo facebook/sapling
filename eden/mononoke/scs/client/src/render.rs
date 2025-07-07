@@ -6,6 +6,7 @@
  */
 
 //! Rendering of responses.
+use std::io::IsTerminal;
 use std::io::Write;
 
 use anyhow::Result;
@@ -38,13 +39,12 @@ pub(crate) trait Render: Send {
 }
 
 #[derive(Copy, Clone, Debug)]
-pub(crate) enum OutputTarget {
-    Tty,
-    Pipe,
+pub(crate) enum OutputFormat {
+    Text,
     Json,
 }
 
-impl OutputTarget {
+impl OutputFormat {
     /// Render the output for a command invocation.
     pub(crate) async fn render<R: Render>(
         self,
@@ -54,15 +54,16 @@ impl OutputTarget {
         objs.try_for_each(move |output| async move {
             let mut stdout = std::io::stdout();
             match self {
-                OutputTarget::Tty => {
-                    output.render_tty(matches, &mut stdout)?;
-                }
-                OutputTarget::Pipe => {
-                    output.render(matches, &mut stdout)?;
-                }
-                OutputTarget::Json => {
+                OutputFormat::Json => {
                     output.render_json(matches, &mut stdout)?;
                     writeln!(&mut stdout)?;
+                }
+                OutputFormat::Text => {
+                    if stdout.is_terminal() {
+                        output.render_tty(matches, &mut stdout)?;
+                    } else {
+                        output.render(matches, &mut stdout)?;
+                    }
                 }
             }
             Ok(())
