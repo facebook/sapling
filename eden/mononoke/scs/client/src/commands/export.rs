@@ -102,6 +102,9 @@ pub(super) struct CommandArgs {
     /// Filename of a file containing a list of paths (relative to PATH) to export
     path_list_file: Option<String>,
     #[clap(long)]
+    /// Filename of a file containing a list of paths (relative to PATH) to exclude
+    exclude_path_list_file: Option<String>,
+    #[clap(long)]
     /// Perform additional requests to try for case insensitive matches
     case_insensitive: bool,
     #[clap(long)]
@@ -745,27 +748,32 @@ pub(super) async fn run(app: ScscApp, args: CommandArgs) -> Result<()> {
         Casefold::Sensitive
     };
 
-    let path_tree = match args.path_list_file {
-        Some(path_list_file) => {
-            let file = tokio::fs::File::open(path_list_file)
-                .await
-                .context("failed to open path list file")?;
-            let lines = tokio::io::BufReader::new(file).lines();
-            let stream = tokio_stream::wrappers::LinesStream::new(lines);
+    let load_path_list_file = async |file: Option<String>| -> Result<Option<PathTree>> {
+        Ok(match file {
+            Some(path_list_file) => {
+                let file = tokio::fs::File::open(path_list_file)
+                    .await
+                    .context("failed to open path list file")?;
+                let lines = tokio::io::BufReader::new(file).lines();
+                let stream = tokio_stream::wrappers::LinesStream::new(lines);
 
-            let path_tree = stream
-                .map_ok(|path| casefold.of(path).into_owned())
-                .try_collect::<PathTree>()
-                .await
-                .context("failed to load path list file")?;
-            Some(path_tree)
-        }
-        None => None,
+                let path_tree = stream
+                    .map_ok(|path| casefold.of(path).into_owned())
+                    .try_collect::<PathTree>()
+                    .await
+                    .context("failed to load path list file")?;
+                Some(path_tree)
+            }
+            None => None,
+        })
     };
 
-    let has_include_filter = path_tree.is_some();
+    let include_paths = load_path_list_file(args.path_list_file).await?;
+    let exclude_paths = load_path_list_file(args.exclude_path_list_file).await?;
 
-    let path_filter = PathFilter::new(path_tree, None);
+    let has_include_filter = include_paths.is_some();
+
+    let path_filter = PathFilter::new(include_paths, exclude_paths);
 
     let repo = args.repo_args.clone().into_repo_specifier();
     let commit_id = args.commit_id_args.clone().into_commit_id();
