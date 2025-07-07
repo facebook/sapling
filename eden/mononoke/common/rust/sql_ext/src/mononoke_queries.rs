@@ -10,8 +10,6 @@ use std::collections::HashSet;
 use std::future::Future;
 use std::time::Duration;
 
-use abomonation::Abomonation;
-use abomonation_derive::Abomonation;
 use anyhow::Result;
 use anyhow::anyhow;
 use async_trait::async_trait;
@@ -34,8 +32,8 @@ const RETRY_ATTEMPTS: usize = 2;
 /// Caching can be enabled on a read query by:
 /// - Adding "cacheable" keyword to your query.
 /// - Make sure all parameters (input) to the query implement the Hash trait.
-/// - Making sure the return values (output) implement Serialize, Deserialize, Abomonation,
-///   and bincode::{Encode, Decode}.
+/// - Making sure the return values (output) implement Serialize, Deserialize, and
+/// bincode::{Encode, Decode}.
 ///
 /// Queries that return no rows are not cached to allow later retries to succeed.
 #[macro_export]
@@ -562,7 +560,7 @@ where
     }
 }
 
-#[derive(Abomonation, Clone)]
+#[derive(Clone)]
 #[derive(bincode::Encode, bincode::Decode)]
 pub struct CachedQueryResult<T>(pub T);
 
@@ -615,7 +613,7 @@ pub async fn query_with_retry<T, Fut>(
     do_query: impl Fn() -> Fut + Send + Sync,
 ) -> Result<CachedQueryResult<Vec<T>>>
 where
-    T: Send + Abomonation + bincode::Encode + bincode::Decode<()> + Clone + 'static,
+    T: Send + bincode::Encode + bincode::Decode<()> + Clone + 'static,
     CachedQueryResult<Vec<T>>: MemcacheEntity,
     Fut: Future<Output = Result<CachedQueryResult<Vec<T>>>> + Send,
 {

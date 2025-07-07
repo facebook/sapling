@@ -7,7 +7,6 @@ rust_library(
     srcs = glob(["src/**/*.rs"]),
     autocargo = {"cargo_toml_config": {
         "dependencies_override": {"dependencies": {
-            "abomonation": {"features": []},
             "sapling-minibytes": {
                 "default-features": False,
                 "features": [],
@@ -15,7 +14,6 @@ rust_library(
         }},
         "features": {
             "for-tests": ["quickcheck"],
-            "serialize-abomonation": ["abomonation"],
         },
         "lib": {"name": "dag-types"},
         "package": {
@@ -30,14 +28,11 @@ rust_library(
     crate_root = "src/lib.rs",
     features = [
         "for-tests",
-        "serialize-abomonation",
     ],
     test_deps = [
         "fbsource//third-party/rust:quickcheck",
     ],
     deps = [
-        "fbsource//third-party/rust:abomonation",
-        "fbsource//third-party/rust:abomonation_derive",
         "fbsource//third-party/rust:quickcheck",
         "fbsource//third-party/rust:serde",
         "//eden/scm/lib/minibytes:minibytes",

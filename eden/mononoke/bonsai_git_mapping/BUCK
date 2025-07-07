@@ -14,8 +14,6 @@ rust_library(
         "slog": "//common/rust/shed/tracing_slog_compat:tracing_slog_compat",
     },
     deps = [
-        "fbsource//third-party/rust:abomonation",
-        "fbsource//third-party/rust:abomonation_derive",
         "fbsource//third-party/rust:anyhow",
         "fbsource//third-party/rust:ascii",
         "fbsource//third-party/rust:async-trait",

@@ -9,7 +9,6 @@ use std::collections::HashMap;
 use std::collections::HashSet;
 use std::sync::Arc;
 
-use abomonation_derive::Abomonation;
 use anyhow::Context;
 use anyhow::Error;
 use anyhow::Result;
@@ -39,7 +38,7 @@ use super::BonsaiSvnrevMapping;
 use super::BonsaiSvnrevMappingEntry;
 use super::BonsaisOrSvnrevs;
 
-#[derive(Abomonation, Clone, Debug, Eq, Hash, PartialEq)]
+#[derive(Clone, Debug, Eq, Hash, PartialEq)]
 #[derive(bincode::Encode, bincode::Decode)]
 pub struct BonsaiSvnrevMappingCacheEntry {
     pub repo_id: RepositoryId,

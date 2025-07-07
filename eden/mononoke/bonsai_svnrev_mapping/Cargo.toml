@@ -12,8 +12,6 @@ name = "bonsai_svnrev_mapping_test"
 path = "test/main.rs"
 
 [dependencies]
-abomonation = { version = "0.7", features = ["smallvec"] }
-abomonation_derive = "0.5"
 anyhow = "1.0.98"
 async-trait = "0.1.86"
 bincode = { version = "2", features = ["serde"] }

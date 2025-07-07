@@ -12,7 +12,6 @@ use std::num::NonZeroU64;
 use std::str::FromStr;
 use std::sync::Arc;
 
-use abomonation_derive::Abomonation;
 use anyhow::Result;
 use anyhow::anyhow;
 use async_stream::try_stream;
@@ -189,7 +188,7 @@ impl BubbleId {
 type RawBubbleBlobstore = PrefixBlobstore<Arc<dyn BlobstoreEnumerableWithUnlink>>;
 
 /// Enum representing the expiry status of a bubble in the backing store.
-#[derive(Copy, Debug, Clone, PartialEq, Serialize, Deserialize, Abomonation)]
+#[derive(Copy, Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[derive(bincode::Encode, bincode::Decode)]
 pub enum ExpiryStatus {
     Active = 0,

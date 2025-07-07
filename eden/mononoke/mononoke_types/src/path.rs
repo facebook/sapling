@@ -16,7 +16,6 @@ use std::iter::once;
 use std::os::unix::ffi::OsStrExt;
 use std::slice::Iter;
 
-use abomonation_derive::Abomonation;
 use anyhow::Context as _;
 use anyhow::Error;
 use anyhow::Result;
@@ -43,7 +42,7 @@ pub mod mpath_element;
 /// A path or filename within Mononoke, with information about whether
 /// it's the root of the repo, a directory or a file.
 #[derive(Arbitrary, Clone, Debug, PartialEq, Eq, Hash)]
-#[derive(Abomonation, Serialize, Deserialize)]
+#[derive(Serialize, Deserialize)]
 #[derive(bincode::Encode, bincode::Decode)]
 pub enum RepoPath {
     // It is now *completely OK* to create a RepoPath directly. All MPaths are valid once
@@ -200,7 +199,7 @@ impl From<MPathElement> for NonRootMPath {
 ///
 /// This is called `MPath` so that it can be differentiated from `std::path::Path`.
 #[derive(Clone, Ord, PartialOrd, Eq, PartialEq, Hash)]
-#[derive(Abomonation, Serialize, Deserialize)]
+#[derive(Serialize, Deserialize)]
 #[derive(bincode::Encode, bincode::Decode)]
 pub struct MPath {
     elements: Vec<MPathElement>,
@@ -616,7 +615,7 @@ impl Arbitrary for MPath {
 /// A path or filename within Mononoke (typically within manifests or changegroups).
 /// The path can ONLY be non-root path (i.e. just / is not allowed)
 #[derive(Clone, Ord, PartialOrd, Eq, PartialEq, Hash)]
-#[derive(Abomonation, Serialize, Deserialize)]
+#[derive(Serialize, Deserialize)]
 #[derive(bincode::Encode, bincode::Decode)]
 pub struct NonRootMPath(MPath);
 

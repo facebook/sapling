@@ -10,7 +10,6 @@ use std::collections::HashSet;
 use std::sync::Arc;
 
 use ::sql::Transaction;
-use abomonation_derive::Abomonation;
 use anyhow::Error;
 use anyhow::Result;
 use anyhow::anyhow;
@@ -49,7 +48,7 @@ define_stats! {
     memcache_deserialize_err: timeseries("memcache.deserialize_err"; Rate, Sum),
 }
 
-#[derive(Abomonation, Clone, Debug, Eq, Hash, PartialEq)]
+#[derive(Clone, Debug, Eq, Hash, PartialEq)]
 #[derive(bincode::Encode, bincode::Decode)]
 pub struct BonsaiGitMappingCacheEntry {
     pub repo_id: RepositoryId,

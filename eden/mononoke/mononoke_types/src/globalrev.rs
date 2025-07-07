@@ -10,7 +10,6 @@ use std::fmt::Display;
 use std::str;
 use std::str::FromStr;
 
-use abomonation_derive::Abomonation;
 use anyhow::Error;
 use anyhow::Result;
 use anyhow::bail;
@@ -31,7 +30,7 @@ pub const START_COMMIT_GLOBALREV: u64 = 1000147970;
 
 // Changeset globalrev.
 #[derive(Debug, Clone, Copy, Eq, PartialEq, Ord, PartialOrd, Hash)]
-#[derive(Abomonation, Serialize)]
+#[derive(Serialize)]
 #[derive(mysql::OptTryFromRowField)]
 #[derive(bincode::Encode, bincode::Decode)]
 pub struct Globalrev(u64);

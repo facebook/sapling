@@ -8,7 +8,6 @@
 use std::fmt;
 use std::str::FromStr;
 
-use abomonation_derive::Abomonation;
 use anyhow::Error;
 use lazy_static::lazy_static;
 use quickcheck_arbitrary_derive::Arbitrary;
@@ -47,7 +46,7 @@ lazy_static! {
 
 /// Represents a repository. This ID is used throughout storage.
 #[derive(Clone, Copy, Eq, PartialEq, Ord, PartialOrd, Debug, Hash)]
-#[derive(Abomonation, Arbitrary)]
+#[derive(Arbitrary)]
 #[derive(Serialize, Deserialize, mysql::OptTryFromRowField)]
 #[derive(bincode::Encode, bincode::Decode)]
 pub struct RepositoryId(i32);

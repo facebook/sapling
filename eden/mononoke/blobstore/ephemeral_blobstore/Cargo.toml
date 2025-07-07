@@ -8,8 +8,6 @@ edition = "2024"
 license = "GPLv2+"
 
 [dependencies]
-abomonation = { version = "0.7", features = ["smallvec"] }
-abomonation_derive = "0.5"
 anyhow = "1.0.98"
 async-stream = "0.3"
 async-trait = "0.1.86"

@@ -57,8 +57,6 @@ rust_library(
         "//eden/mononoke/mononoke_macros:mononoke_macros",
     ],
     deps = [
-        "fbsource//third-party/rust:abomonation",
-        "fbsource//third-party/rust:abomonation_derive",
         "fbsource//third-party/rust:anyhow",
         "fbsource//third-party/rust:async-trait",
         "fbsource//third-party/rust:auto_impl",
@@ -590,8 +588,6 @@ rust_library(
         "//eden/mononoke/mononoke_types:mononoke_types-mocks",
     ],
     deps = [
-        "fbsource//third-party/rust:abomonation",
-        "fbsource//third-party/rust:abomonation_derive",
         "fbsource//third-party/rust:anyhow",
         "fbsource//third-party/rust:async-stream",
         "fbsource//third-party/rust:async-trait",

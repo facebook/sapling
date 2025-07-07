@@ -69,8 +69,6 @@ rust_library(
         "types/src/blobs/*/*.bin",
     ]),
     deps = [
-        "fbsource//third-party/rust:abomonation",
-        "fbsource//third-party/rust:abomonation_derive",
         "fbsource//third-party/rust:anyhow",
         "fbsource//third-party/rust:ascii",
         "fbsource//third-party/rust:async-stream",
@@ -203,8 +201,6 @@ rust_library(
         "//common/rust/shed/quickcheck_arbitrary_derive:quickcheck_arbitrary_derive",
     ],
     deps = [
-        "fbsource//third-party/rust:abomonation",
-        "fbsource//third-party/rust:abomonation_derive",
         "fbsource//third-party/rust:anyhow",
         "fbsource//third-party/rust:async-trait",
         "fbsource//third-party/rust:bytes",

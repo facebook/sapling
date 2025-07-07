@@ -5,7 +5,6 @@
  * GNU General Public License version 2.
  */
 
-use abomonation_derive::Abomonation;
 use serde_derive::Deserialize;
 use serde_derive::Serialize;
 
@@ -14,7 +13,7 @@ use serde_derive::Serialize;
 /// The generation number for a changeset is defined as the max of the changeset's parents'
 /// generation number plus 1; if there are no parents then it's 1.
 #[derive(Debug, Copy, Clone, Eq, PartialEq, Ord, PartialOrd, Hash)]
-#[derive(Abomonation, Serialize, Deserialize)]
+#[derive(Serialize, Deserialize)]
 #[derive(bincode::Encode, bincode::Decode)]
 pub struct Generation(u64);
 

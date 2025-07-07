@@ -8,7 +8,6 @@
 use std::io::Read;
 
 use abomonable_string::AbomonableString;
-use abomonation_derive::Abomonation;
 use anyhow::Error;
 use anyhow::Result;
 use anyhow::anyhow;
@@ -25,7 +24,7 @@ use types::mutation::MutationEntry;
 use crate::aligned_hg_changeset_id::AlignedHgChangesetId;
 
 /// Record of a Mercurial mutation operation (e.g. amend or rebase).
-#[derive(Abomonation, Clone, Debug, Hash, Eq, PartialEq)]
+#[derive(Clone, Debug, Hash, Eq, PartialEq)]
 #[derive(bincode::Encode, bincode::Decode)]
 #[cfg_attr(test, derive(Arbitrary))]
 #[repr(align(8))]

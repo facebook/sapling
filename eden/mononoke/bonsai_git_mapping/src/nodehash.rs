@@ -12,7 +12,6 @@ use std::fmt::Display;
 use std::result;
 use std::str::FromStr;
 
-use abomonation_derive::Abomonation;
 use anyhow::Result;
 use mononoke_types::hash::GitSha1;
 use mononoke_types::sha1_hash::Sha1;
@@ -20,7 +19,6 @@ use mononoke_types::sha1_hash::Sha1Prefix;
 
 /// An identifier for a changeset hash prefix in Git.
 #[derive(Clone, Copy, Eq, PartialEq, Ord, PartialOrd, Debug, Hash)]
-#[derive(Abomonation)]
 #[derive(bincode::Encode, bincode::Decode)]
 pub struct GitSha1Prefix(Sha1Prefix);
 

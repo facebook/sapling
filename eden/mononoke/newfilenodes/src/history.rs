@@ -5,12 +5,11 @@
  * GNU General Public License version 2.
  */
 
-use abomonation_derive::Abomonation;
 use anyhow::Error;
 use filenodes::FilenodeInfo;
 use filenodes::FilenodeInfoCached;
 
-#[derive(Abomonation, Clone)]
+#[derive(Clone)]
 #[derive(bincode::Encode, bincode::Decode)]
 pub struct FilenodeHistoryCached {
     // TODO: We could store this more efficiently by deduplicating filenode IDs.

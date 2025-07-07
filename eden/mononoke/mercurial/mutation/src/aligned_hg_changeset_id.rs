@@ -5,13 +5,12 @@
  * GNU General Public License version 2.
  */
 
-use abomonation_derive::Abomonation;
 use mercurial_types::HgChangesetId;
 #[cfg(test)]
 use quickcheck_arbitrary_derive::Arbitrary;
 
 /// Wrapper around `HgChangesetId` to force alignment to 8 bytes.
-#[derive(Abomonation, Copy, Clone, Debug, Eq, PartialEq, Hash)]
+#[derive(Copy, Clone, Debug, Eq, PartialEq, Hash)]
 #[derive(bincode::Encode, bincode::Decode)]
 #[cfg_attr(test, derive(Arbitrary))]
 #[repr(align(8))]

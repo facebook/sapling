@@ -10,7 +10,6 @@ use std::fmt::Display;
 use std::str;
 use std::str::FromStr;
 
-use abomonation_derive::Abomonation;
 use anyhow::Error;
 use anyhow::Result;
 use anyhow::bail;
@@ -19,7 +18,7 @@ use sql::mysql;
 use crate::BonsaiChangeset;
 
 // Changeset svnrev. Present only in some repos which were imported from SVN.
-#[derive(Abomonation, Debug, Clone, Copy, Eq, PartialEq, Ord, PartialOrd, Hash)]
+#[derive(Debug, Clone, Copy, Eq, PartialEq, Ord, PartialOrd, Hash)]
 #[derive(mysql::OptTryFromRowField)]
 #[derive(bincode::Encode, bincode::Decode)]
 pub struct Svnrev(u64);

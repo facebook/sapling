@@ -9,7 +9,6 @@ use std::collections::HashMap;
 use std::collections::HashSet;
 use std::sync::Arc;
 
-use abomonation_derive::Abomonation;
 use anyhow::Error;
 use async_trait::async_trait;
 use bytes::Bytes;
@@ -72,7 +71,7 @@ impl CachingSyncedCommitMapping {
     }
 }
 
-#[derive(Abomonation, Clone, Debug, Default, Eq, Hash, PartialEq)]
+#[derive(Clone, Debug, Default, Eq, Hash, PartialEq)]
 #[derive(bincode::Encode, bincode::Decode)]
 struct CacheEntry {
     mapping_entries: Vec<FetchedMappingEntry>,

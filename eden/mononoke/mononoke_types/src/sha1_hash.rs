@@ -10,7 +10,6 @@ use std::fmt::Debug;
 use std::fmt::Display;
 use std::str::FromStr;
 
-use abomonation_derive::Abomonation;
 use anyhow::Error;
 use anyhow::Result;
 use anyhow::bail;
@@ -38,7 +37,7 @@ pub const NULL: Sha1 = Sha1([0; SHA1_HASH_LENGTH_BYTES]);
 /// Mercurial bases all its hashing on SHA-1, but this type is only used to build
 /// more specific typed hashes.
 #[derive(Clone, Copy, Eq, PartialEq, Ord, PartialOrd, Hash)]
-#[derive(Serialize, Deserialize, Abomonation)]
+#[derive(Serialize, Deserialize)]
 #[derive(bincode::Encode, bincode::Decode)]
 pub struct Sha1([u8; SHA1_HASH_LENGTH_BYTES]);
 
@@ -184,7 +183,7 @@ impl Arbitrary for Sha1 {
 }
 
 #[derive(Clone, Copy, Eq, PartialEq, Ord, PartialOrd, Hash)]
-#[derive(Serialize, Deserialize, Abomonation)]
+#[derive(Serialize, Deserialize)]
 #[derive(bincode::Encode, bincode::Decode)]
 /// Raw SHA-1 hash prefix.
 /// Internal implementation is the inclusive range of Sha1 objects.

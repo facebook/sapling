@@ -9,7 +9,6 @@ use std::borrow::Borrow;
 use std::borrow::Cow;
 use std::hash::Hash;
 
-use abomonation_derive::Abomonation;
 use mononoke_types::RepoPath;
 use mononoke_types::hash;
 use mononoke_types::path::MPath;
@@ -20,7 +19,7 @@ use sql::mysql_async::Value;
 use sql::mysql_async::prelude::ConvIr;
 use sql::mysql_async::prelude::FromValue;
 
-#[derive(Abomonation, Debug, Clone, PartialEq, Eq, Hash, PartialOrd, Ord)]
+#[derive(Debug, Clone, PartialEq, Eq, Hash, PartialOrd, Ord)]
 #[derive(mysql::OptTryFromRowField)]
 #[derive(bincode::Encode, bincode::Decode)]
 pub struct PathHashBytes(pub Vec<u8>);
@@ -70,7 +69,7 @@ impl std::fmt::Display for PathHashBytes {
     }
 }
 
-#[derive(Abomonation, Debug, Clone, PartialEq, Eq, Hash, PartialOrd, Ord)]
+#[derive(Debug, Clone, PartialEq, Eq, Hash, PartialOrd, Ord)]
 #[derive(mysql::OptTryFromRowField)]
 #[derive(bincode::Encode, bincode::Decode)]
 pub struct PathBytes(pub Vec<u8>);
@@ -149,7 +148,7 @@ fn convert_from_repo_path(path: &RepoPath) -> (Vec<u8>, bool) {
     (bytes, is_tree)
 }
 
-#[derive(Abomonation, Clone, Debug, Eq, PartialEq)]
+#[derive(Clone, Debug, Eq, PartialEq)]
 #[derive(bincode::Encode, bincode::Decode)]
 pub struct PathHash {
     pub path_bytes: PathBytes,

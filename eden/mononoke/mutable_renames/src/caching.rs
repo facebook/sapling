@@ -9,7 +9,6 @@ use std::collections::HashMap;
 use std::collections::HashSet;
 use std::time::Duration;
 
-use abomonation_derive::Abomonation;
 use anyhow::Error;
 use async_trait::async_trait;
 use bytes::Bytes;
@@ -134,7 +133,7 @@ impl CacheHandlers {
     }
 }
 
-#[derive(Abomonation, Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug)]
 #[derive(bincode::Encode, bincode::Decode)]
 pub struct HasMutableRename(pub bool);
 const TRUE: &[u8] = b"y";
@@ -216,11 +215,11 @@ impl<'a> KeyedEntityStore<ChangesetId, HasMutableRename> for CachedHasMutableRen
     }
 }
 
-#[derive(Abomonation, Clone)]
+#[derive(Clone)]
 #[derive(bincode::Encode, bincode::Decode)]
 pub struct CachedMutableRenameEntry(pub Option<CacheableMutableRenameEntry>);
 
-#[derive(Abomonation, Clone)]
+#[derive(Clone)]
 #[derive(bincode::Encode, bincode::Decode)]
 pub struct CacheableMutableRenameEntry {
     dst_cs_id: ChangesetId,
@@ -465,7 +464,7 @@ impl<'a> KeyedEntityStore<RenameKey, CachedMutableRenameEntry> for CachedGetMuta
     }
 }
 
-#[derive(Abomonation, Clone)]
+#[derive(Clone)]
 #[derive(bincode::Encode, bincode::Decode)]
 pub struct ChangesetIdSet {
     // You can't easily Abomonate HashSet, but you can Vec. Store as Vec, construct from HashSet only

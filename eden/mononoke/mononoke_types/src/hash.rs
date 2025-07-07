@@ -10,7 +10,6 @@ use std::fmt::Debug;
 use std::fmt::Display;
 use std::str::FromStr;
 
-use abomonation_derive::Abomonation;
 use anyhow::Error;
 use anyhow::Result;
 use anyhow::bail;
@@ -59,7 +58,7 @@ pub const BLAKE2_HASH_LENGTH_HEX: usize = BLAKE2_HASH_LENGTH_BYTES * 2;
 ///
 /// For more on BLAKE2b, see <https://blake2.net/>
 #[derive(Clone, Copy, Eq, PartialEq, Ord, PartialOrd, Hash)]
-#[derive(Abomonation, mysql::OptTryFromRowField)]
+#[derive(mysql::OptTryFromRowField)]
 #[derive(bincode::Encode, bincode::Decode)]
 pub struct Blake2([u8; BLAKE2_HASH_LENGTH_BYTES]);
 
@@ -221,7 +220,7 @@ impl Debug for Blake2 {
     }
 }
 
-#[derive(Abomonation, Clone, Copy, Eq, PartialEq, Ord, PartialOrd, Hash)]
+#[derive(Clone, Copy, Eq, PartialEq, Ord, PartialOrd, Hash)]
 #[derive(bincode::Encode, bincode::Decode)]
 pub struct Blake2Prefix(Blake2, Blake2);
 
@@ -326,7 +325,7 @@ impl Debug for Blake2Prefix {
 
 macro_rules! impl_hash {
     ($type:ident, $size:literal, $error:ident) => {
-        #[derive(Abomonation, Clone, Copy, Eq, PartialEq, Ord, PartialOrd, Hash)]
+        #[derive(Clone, Copy, Eq, PartialEq, Ord, PartialOrd, Hash)]
         #[derive(bincode::Encode, bincode::Decode)]
         pub struct $type([u8; $size]);
 

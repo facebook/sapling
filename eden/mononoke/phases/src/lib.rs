@@ -10,7 +10,6 @@ mod errors;
 use std::collections::HashSet;
 use std::fmt;
 
-use abomonation_derive::Abomonation;
 use anyhow::Result;
 use async_trait::async_trait;
 use context::CoreContext;
@@ -18,7 +17,7 @@ pub use errors::PhasesError;
 use mononoke_types::ChangesetId;
 use mononoke_types::RepositoryId;
 
-#[derive(Abomonation, Clone, Copy, PartialEq, Eq, Debug)]
+#[derive(Clone, Copy, PartialEq, Eq, Debug)]
 #[derive(bincode::Encode, bincode::Decode)]
 pub enum Phase {
     Draft,

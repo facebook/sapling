@@ -8,7 +8,6 @@ rust_library(
     autocargo = {"cargo_toml_config": {
         "dependencies_override": {"dependencies": {"sapling-dag-types": {"features": [
             "for-tests",
-            "serialize-abomonation",
         ]}}},
         "extra_buck_dependencies": {"dependencies": [
             "//eden/scm/lib/dag:dag",

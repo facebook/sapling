@@ -10,7 +10,6 @@ use std::collections::HashSet;
 use std::fmt;
 use std::sync::Arc;
 
-use abomonation_derive::Abomonation;
 use anyhow::Error;
 use anyhow::Result;
 use ascii::AsciiString;
@@ -42,7 +41,7 @@ define_stats! {
 }
 
 /// Newtype wrapper for Phase that allows us to derive SQL conversions.
-#[derive(Abomonation, Clone, Copy, PartialEq, Eq, Debug)]
+#[derive(Clone, Copy, PartialEq, Eq, Debug)]
 #[derive(mysql::OptTryFromRowField)]
 #[derive(bincode::Encode, bincode::Decode)]
 #[repr(transparent)]

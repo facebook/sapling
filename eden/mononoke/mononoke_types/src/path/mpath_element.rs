@@ -5,7 +5,6 @@
  * GNU General Public License version 2.
  */
 
-use abomonation_derive::Abomonation;
 use anyhow::Context as _;
 use anyhow::Result;
 use anyhow::bail;
@@ -42,7 +41,7 @@ const MPATH_ELEMENT_INVALID_BYTES: &[(u8, &str)] = &[(0, "\\0"), (b'/', "/")];
 /// as with the union feature the smallvec is 32 bytes on stack which is same as previous
 /// Bytes member stack sise (Bytes will usually have heap as well of course)
 #[derive(Clone, Ord, PartialOrd, Eq, PartialEq, Hash)]
-#[derive(Abomonation, Serialize, Deserialize)]
+#[derive(Serialize, Deserialize)]
 #[derive(bincode::Encode, bincode::Decode)]
 pub struct MPathElement(pub(super) SmallVec<[u8; 24]>);
 

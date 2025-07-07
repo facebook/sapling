@@ -22,7 +22,6 @@ use std::str;
 use std::str::FromStr;
 use std::time::Duration;
 
-use abomonation_derive::Abomonation;
 use anyhow::Context;
 use anyhow::Error;
 use anyhow::Result;
@@ -1456,7 +1455,7 @@ impl CommitSyncDirection {
 }
 
 /// CommitSyncConfig version name
-#[derive(Abomonation, Debug, Clone, PartialEq, Eq, Hash, PartialOrd, Ord)]
+#[derive(Debug, Clone, PartialEq, Eq, Hash, PartialOrd, Ord)]
 #[derive(mysql::OptTryFromRowField)]
 #[derive(bincode::Encode, bincode::Decode)]
 pub struct CommitSyncConfigVersion(pub String);

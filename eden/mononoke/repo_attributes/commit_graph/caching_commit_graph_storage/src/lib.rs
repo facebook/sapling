@@ -7,13 +7,9 @@
 
 use std::collections::HashMap;
 use std::collections::HashSet;
-use std::io::Result as IoResult;
-use std::io::Write;
 use std::ops::Deref;
 use std::sync::Arc;
 
-use abomonation::Abomonation;
-use abomonation_derive::Abomonation;
 use anyhow::Result;
 use anyhow::anyhow;
 use async_trait::async_trait;
@@ -88,7 +84,7 @@ struct CacheRequest<'a> {
 }
 
 /// Origin of a value in the cachelib cache.
-#[derive(Copy, Clone, Debug, Abomonation)]
+#[derive(Copy, Clone, Debug)]
 #[derive(bincode::Encode, bincode::Decode)]
 pub enum CacheOrigin {
     /// This cached value originated from a direct fetch.
@@ -107,7 +103,7 @@ pub enum CacheOrigin {
 /// A cached copy of changeset edges
 ///
 /// This structure contains what is stored in the in-memory cache (cachelib).
-#[derive(Clone, Debug, Abomonation)]
+#[derive(Clone, Debug)]
 #[derive(bincode::Encode, bincode::Decode)]
 pub struct CachedChangesetEdges {
     /// The cached edges.
@@ -133,34 +129,6 @@ pub struct CachedPrefetchedChangesetEdges {
     /// later on, but this should not matter.  If it is too small, when we encounter something
     /// that is missing, we will fetch from that point, which is still better than nothing.
     prefetched_edges: HashMap<ChangesetId, ChangesetEdges>,
-}
-
-impl Abomonation for CachedPrefetchedChangesetEdges {
-    #[inline(always)]
-    unsafe fn entomb<W: Write>(&self, write: &mut W) -> IoResult<()> {
-        unsafe {
-            // SAFETY: This implementation matches the proc-macro-generated version but with `prefetched_edges` excluded, and matches the exhume method below.
-            self.inner.entomb(write)?;
-            // We deliberately do not entomb the contents of `prefetched_edges`.  It will be re-initialized when exhumed.
-            Ok(())
-        }
-    }
-
-    #[inline(always)]
-    unsafe fn exhume<'a, 'b>(&'a mut self, bytes: &'b mut [u8]) -> Option<&'b mut [u8]> {
-        unsafe {
-            // SAFETY: This implementation matches the proc-macro-generated version but with `prefetched_edges` re-initialized, and matches the entomb method above.
-            let bytes = self.inner.exhume(bytes)?;
-            // Re-initialize `prefetched_edges` as its contents were not entombed.
-            std::ptr::write(&mut self.prefetched_edges, HashMap::new());
-            Some(bytes)
-        }
-    }
-
-    #[inline(always)]
-    fn extent(&self) -> usize {
-        self.inner.extent()
-    }
 }
 
 impl bincode::Encode for CachedPrefetchedChangesetEdges {

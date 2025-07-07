@@ -7,8 +7,6 @@ rust_library(
     srcs = glob(["src/**/*.rs"]),
     named_deps = {"bincode": "fbsource//third-party/rust:bincode-2"},
     deps = [
-        "fbsource//third-party/rust:abomonation",
-        "fbsource//third-party/rust:abomonation_derive",
         "fbsource//third-party/rust:anyhow",
         "fbsource//third-party/rust:async-trait",
         "fbsource//third-party/rust:quickcheck",

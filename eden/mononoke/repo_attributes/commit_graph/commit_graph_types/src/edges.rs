@@ -9,7 +9,6 @@
 
 use std::num::NonZeroU32;
 
-use abomonation_derive::Abomonation;
 use anyhow::Result;
 use anyhow::anyhow;
 use commit_graph_thrift as thrift;
@@ -18,7 +17,7 @@ use mononoke_types::ChangesetId;
 use mononoke_types::Generation;
 use smallvec::SmallVec;
 
-#[derive(Abomonation, Copy, Clone, Debug, Eq, PartialEq)]
+#[derive(Copy, Clone, Debug, Eq, PartialEq)]
 #[derive(bincode::Encode, bincode::Decode)]
 pub struct ChangesetNode {
     /// The id of the changeset.
@@ -95,7 +94,7 @@ pub type ChangesetNodeParents = SmallVec<[ChangesetNode; 1]>;
 pub type ChangesetNodeSubtreeSources = Vec<ChangesetNode>;
 
 /// Outgoing edges from a changeset node.
-#[derive(Abomonation, Clone, Debug, Eq, PartialEq)]
+#[derive(Clone, Debug, Eq, PartialEq)]
 #[derive(bincode::Encode, bincode::Decode)]
 pub struct ChangesetEdges {
     /// The starting changeset for this set of edges.

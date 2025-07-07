@@ -13,8 +13,6 @@ use std::fmt;
 use std::io;
 use std::ops;
 
-#[cfg(feature = "serialize-abomonation")]
-use abomonation_derive::Abomonation;
 pub use minibytes::Bytes;
 use serde::Deserialize;
 use serde::Serialize;
@@ -23,7 +21,6 @@ use serde::Serialize;
 /// [`Id`]s are topologically sorted.
 #[derive(Copy, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
 #[derive(Serialize, Deserialize)]
-#[cfg_attr(feature = "serialize-abomonation", derive(Abomonation))]
 pub struct Id(pub u64);
 
 /// Name of a vertex in the graph.

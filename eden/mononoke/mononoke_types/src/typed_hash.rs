@@ -12,7 +12,6 @@ use std::hash::Hash;
 use std::result;
 use std::str::FromStr;
 
-use abomonation_derive::Abomonation;
 use anyhow::Result;
 use async_trait::async_trait;
 use blobstore::Blobstore;
@@ -92,13 +91,13 @@ where
 }
 
 /// An identifier for a changeset in Mononoke.
-#[derive(Clone, Copy, Eq, PartialEq, Ord, PartialOrd, Debug, Hash, Abomonation)]
+#[derive(Clone, Copy, Eq, PartialEq, Ord, PartialOrd, Debug, Hash)]
 #[derive(mysql::OptTryFromRowField)]
 #[derive(bincode::Encode, bincode::Decode)]
 pub struct ChangesetId(Blake2);
 
 /// An identifier for a changeset hash prefix in Mononoke.
-#[derive(Clone, Copy, Eq, PartialEq, Ord, PartialOrd, Debug, Hash, Abomonation)]
+#[derive(Clone, Copy, Eq, PartialEq, Ord, PartialOrd, Debug, Hash)]
 #[derive(bincode::Encode, bincode::Decode)]
 pub struct ChangesetIdPrefix(Blake2Prefix);
 

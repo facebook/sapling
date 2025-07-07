@@ -20,7 +20,6 @@ use std::ops::RangeFull;
 use std::ops::RangeInclusive;
 use std::ops::RangeToInclusive;
 
-use abomonation_derive::Abomonation;
 use anyhow::Context;
 use anyhow::Error;
 use anyhow::Result;
@@ -151,7 +150,7 @@ impl From<BlobstoreGetData> for BlobstoreBytes {
     }
 }
 
-#[derive(Abomonation, Clone, Debug, PartialEq, Eq, Hash)]
+#[derive(Clone, Debug, PartialEq, Eq, Hash)]
 #[derive(bincode::Encode, bincode::Decode)]
 pub struct PackMetadata {
     /// Gives an idea what its packed with, if anything
@@ -163,7 +162,7 @@ pub struct PackMetadata {
 }
 
 /// Optional information about the size of a value
-#[derive(Abomonation, Clone, Debug, PartialEq, Eq, Hash)]
+#[derive(Clone, Debug, PartialEq, Eq, Hash)]
 #[derive(bincode::Encode, bincode::Decode)]
 pub struct SizeMetadata {
     /// How much size this value has added to storage on its own.
@@ -173,7 +172,7 @@ pub struct SizeMetadata {
     pub pack_meta: Option<PackMetadata>,
 }
 
-#[derive(Abomonation, Clone, Debug, Default, PartialEq, Eq, Hash)]
+#[derive(Clone, Debug, Default, PartialEq, Eq, Hash)]
 #[derive(bincode::Encode, bincode::Decode)]
 pub struct BlobstoreMetadata {
     ctime: Option<i64>,

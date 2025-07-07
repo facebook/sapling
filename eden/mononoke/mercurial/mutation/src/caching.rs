@@ -10,7 +10,6 @@ use std::collections::HashSet;
 use std::sync::Arc;
 use std::time::Duration;
 
-use abomonation_derive::Abomonation;
 use anyhow::Error;
 use anyhow::Result;
 use anyhow::anyhow;
@@ -42,7 +41,7 @@ use crate::HgMutationStore;
 
 /// Struct representing the cache entry for
 /// (repo_id, cs_id) -> Vec<HgMutationEntry> mapping
-#[derive(Abomonation, Clone, Debug, Eq, Hash, PartialEq)]
+#[derive(Clone, Debug, Eq, Hash, PartialEq)]
 #[derive(bincode::Encode, bincode::Decode)]
 #[cfg_attr(test, derive(Arbitrary))]
 #[repr(align(8))]
@@ -264,21 +263,5 @@ impl KeyedEntityStore<HgChangesetId, HgMutationCacheEntry> for CacheRequest<'_> 
                 })
                 .collect(),
         )
-    }
-}
-
-#[cfg(test)]
-mod tests {
-    use quickcheck::quickcheck;
-
-    use super::HgMutationCacheEntry;
-
-    quickcheck! {
-        fn abomonable(entry: HgMutationCacheEntry) -> bool {
-            let mut v = Vec::new();
-            unsafe { abomonation::encode(&entry, &mut v).expect("should encode"); }
-            let (decoded, remainder) = unsafe { abomonation::decode::<HgMutationCacheEntry>(&mut v).expect("should decode") };
-            decoded == &entry && remainder.is_empty()
-        }
     }
 }

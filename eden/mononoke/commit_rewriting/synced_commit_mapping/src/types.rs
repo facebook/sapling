@@ -12,7 +12,6 @@ use ::sql::mysql_async::FromValueError;
 use ::sql::mysql_async::Value;
 use ::sql::mysql_async::prelude::ConvIr;
 use ::sql::mysql_async::prelude::FromValue;
-use abomonation_derive::Abomonation;
 use anyhow::Error;
 use anyhow::anyhow;
 use async_trait::async_trait;
@@ -49,7 +48,7 @@ pub enum ErrorKind {
 
 // Repo that originally contained the synced commit
 #[derive(Copy, Clone, Debug, Eq, Hash, PartialEq)]
-#[derive(Abomonation, mysql::OptTryFromRowField)]
+#[derive(mysql::OptTryFromRowField)]
 #[derive(bincode::Encode, bincode::Decode)]
 pub enum SyncedCommitSourceRepo {
     Large,
@@ -331,7 +330,7 @@ pub trait SyncedCommitMapping: Send + Sync {
     ) -> Result<Option<CommitSyncConfigVersion>, Error>;
 }
 
-#[derive(Abomonation, Clone, Debug, Hash, PartialEq, Eq)]
+#[derive(Clone, Debug, Hash, PartialEq, Eq)]
 #[derive(bincode::Encode, bincode::Decode)]
 pub struct FetchedMappingEntry {
     pub target_bcs_id: ChangesetId,
