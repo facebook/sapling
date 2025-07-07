@@ -118,6 +118,8 @@ def crdump(ui, repo, *revs, **opts):
                 # Silence any output from commitcloud
                 repo.ui.quiet = True
                 _backedup, notbackedup = commitcloud.upload.upload(repo, revs)
+                # Convert nodes back to revs for the below check.
+                notbackedup = repo.revs("%ln", notbackedup)
             except Exception as ex:
                 if ui.configbool("crdump", "commitcloudrequired"):
                     raise
