@@ -8,6 +8,44 @@
 use std::collections::BTreeMap;
 use std::iter::Extend;
 
+#[derive(Default)]
+pub(crate) struct PathFilter {
+    // None means include everything.
+    include: Option<PathTree>,
+}
+
+impl PathFilter {
+    pub(crate) fn new(include: Option<PathTree>) -> Self {
+        Self { include }
+    }
+
+    /// Return whether to include file `name`.
+    pub(crate) fn matches_file(&mut self, name: &str) -> bool {
+        match &mut self.include {
+            None => true,
+            Some(tree) => match tree.remove(name) {
+                None => false,
+                Some(PathItem::TargetDir | PathItem::Dir(_)) => false,
+                Some(PathItem::Target) => true,
+            },
+        }
+    }
+
+    /// Return sub-filter relative to `name` if `name` should be included, else None.
+    pub(crate) fn matches_dir(&mut self, name: &str) -> Option<Self> {
+        match &mut self.include {
+            None => Some(Self::default()),
+            Some(tree) => match tree.remove(name) {
+                None => None,
+                Some(PathItem::Target | PathItem::TargetDir) => Some(Self::default()),
+                Some(PathItem::Dir(sub_tree)) => Some(Self {
+                    include: Some(sub_tree),
+                }),
+            },
+        }
+    }
+}
+
 #[derive(Debug)]
 pub(crate) enum PathItem {
     // Requested item.  Either a file, or a whole directory tree.
@@ -108,5 +146,49 @@ impl Extend<String> for PathTree {
         for item in items {
             self.insert(&item);
         }
+    }
+}
+
+#[cfg(test)]
+mod test {
+    use mononoke_macros::mononoke;
+
+    use super::*;
+
+    #[mononoke::test]
+    fn test_filter() {
+        let mut tree = PathTree::new();
+        tree.insert("file");
+        tree.insert("dir1");
+        tree.insert("dir2/dir3");
+
+        let mut filter = PathFilter::new(Some(tree));
+
+        assert!(filter.matches_file("file"));
+        assert!(!filter.matches_file("other_file"));
+
+        assert!(filter.matches_dir("other_dir").is_none());
+
+        // Everything under dir/ matches.
+        let mut sub_filter = filter.matches_dir("dir1").unwrap();
+        assert!(sub_filter.matches_file("anything"));
+        assert!(
+            sub_filter
+                .matches_dir("anything")
+                .unwrap()
+                .matches_file("anything")
+        );
+
+        // Not everything under dir2/ matches.
+        let mut sub_filter = filter.matches_dir("dir2").unwrap();
+        assert!(!sub_filter.matches_file("anything"));
+        assert!(sub_filter.matches_dir("anything").is_none());
+        // But we do match anything under dir2/dir3/
+        assert!(
+            sub_filter
+                .matches_dir("dir3")
+                .unwrap()
+                .matches_file("anything")
+        );
     }
 }

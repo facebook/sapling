@@ -22,6 +22,9 @@ rust_binary(
             ],
         ),
     ],
+    test_deps = [
+        "//eden/mononoke/mononoke_macros:mononoke_macros",
+    ],
     deps = [
         "fbsource//third-party/rust:ansi_term",
         "fbsource//third-party/rust:anyhow",
