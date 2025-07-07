@@ -55,7 +55,7 @@ setup hg server repos
   > # bookmark: A master_bookmark
   > EOF
   A=abe2e94615b738949a81cbb940fbca24717cf22c
- 
+
   $ start_and_wait_for_mononoke_server
 
 
@@ -89,7 +89,6 @@ setup hg server repos
   date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     megarepo commit 1
   
-
 get some bonsai hashes to avoid magic strings later
   $ FBSOURCE_C1_BONSAI=$(mononoke_admin bookmarks --repo-id 1 get fbsource_c1)
   $ FBSOURCE_MASTER_BONSAI=$(mononoke_admin bookmarks --repo-id 1 get fbsource_master)
@@ -104,17 +103,17 @@ insert sync mapping entry
 
 run the sync again
   $ with_stripped_logs mononoke_x_repo_sync 1 0 once --target-bookmark master_bookmark -B fbsource_master |& grep -v "using repo"
-  Starting session with id * (glob)
-  Starting up X Repo Sync from small repo fbs-mon to large repo meg-mon
-  Syncing 1 commits and all of their unsynced ancestors (glob)
-  Checking if * is already synced 1->0 (glob)
-  2 unsynced ancestors of 185ab836cc4952b370393e74f342c5ab3dd6f56cadcb42a58ef48e01823076fd
-  syncing 9d41183ab69f7a8ccb85011c35ecbd7329d76bdc96e765459176bf4cc3fe1683
-  changeset 9d41183ab69f7a8ccb85011c35ecbd7329d76bdc96e765459176bf4cc3fe1683 synced as fc7956caaa6324fff247c4990221e10cb234309e3bc571cff00739f7c08adcbd in * (glob)
-  syncing 185ab836cc4952b370393e74f342c5ab3dd6f56cadcb42a58ef48e01823076fd via pushrebase for master_bookmark
-  changeset 185ab836cc4952b370393e74f342c5ab3dd6f56cadcb42a58ef48e01823076fd synced as 5d1ca261178e0ebb020ed452430815db8c00eaee93fe7cc7ccf8a8cadb3c7abe in * (glob)
-  successful sync (glob)
-  X Repo Sync execution finished from small repo fbs-mon to large repo meg-mon
+  [INFO] Starting session with id * (glob)
+  [INFO] Starting up X Repo Sync from small repo fbs-mon to large repo meg-mon
+  [INFO] Syncing 1 commits and all of their unsynced ancestors
+  [INFO] Checking if 185ab836cc4952b370393e74f342c5ab3dd6f56cadcb42a58ef48e01823076fd is already synced 1->0
+  [INFO] 2 unsynced ancestors of 185ab836cc4952b370393e74f342c5ab3dd6f56cadcb42a58ef48e01823076fd
+  [INFO] syncing 9d41183ab69f7a8ccb85011c35ecbd7329d76bdc96e765459176bf4cc3fe1683
+  [INFO] changeset 9d41183ab69f7a8ccb85011c35ecbd7329d76bdc96e765459176bf4cc3fe1683 synced as fc7956caaa6324fff247c4990221e10cb234309e3bc571cff00739f7c08adcbd in * (glob)
+  [INFO] syncing 185ab836cc4952b370393e74f342c5ab3dd6f56cadcb42a58ef48e01823076fd via pushrebase for master_bookmark
+  [INFO] changeset 185ab836cc4952b370393e74f342c5ab3dd6f56cadcb42a58ef48e01823076fd synced as 5d1ca261178e0ebb020ed452430815db8c00eaee93fe7cc7ccf8a8cadb3c7abe in * (glob)
+  [INFO] successful sync
+  [INFO] X Repo Sync execution finished from small repo fbs-mon to large repo meg-mon
   $ flush_mononoke_bookmarks
 
 check that the changes are synced

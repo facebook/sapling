@@ -32,15 +32,15 @@ Create small repo commits
   $ with_stripped_logs mononoke_x_repo_sync "$SUBMODULE_REPO_ID"  "$LARGE_REPO_ID" \
   > initial-import --no-progress-bar -i "$C" --add-mapping-to-hg-extra \
   > --version-name "$LATEST_CONFIG_VERSION_NAME" | tee $TESTTMP/initial_import.out
-  Starting session with id * (glob)
-  Starting up X Repo Sync from small repo small_repo to large repo large_repo
-  Checking if 738630e43445144e9f5ddbe1869730cfbaf8ff6bf95b25b8410cb35ca92f25c7 is already synced 11->10
-  Syncing 738630e43445144e9f5ddbe1869730cfbaf8ff6bf95b25b8410cb35ca92f25c7 for initial import
-  Source repo: small_repo / Target repo: large_repo
-  Found 3 unsynced ancestors
-  changeset 738630e43445144e9f5ddbe1869730cfbaf8ff6bf95b25b8410cb35ca92f25c7 synced as 5018d85a3db49803d93474fec07b26a65f527ba14a320de37e8f48fb98086e7a in * (glob)
-  successful sync of head 738630e43445144e9f5ddbe1869730cfbaf8ff6bf95b25b8410cb35ca92f25c7
-  X Repo Sync execution finished from small repo small_repo to large repo large_repo
+  [INFO] Starting session with id * (glob)
+  [INFO] Starting up X Repo Sync from small repo small_repo to large repo large_repo
+  [INFO] Checking if 738630e43445144e9f5ddbe1869730cfbaf8ff6bf95b25b8410cb35ca92f25c7 is already synced 11->10
+  [INFO] Syncing 738630e43445144e9f5ddbe1869730cfbaf8ff6bf95b25b8410cb35ca92f25c7 for initial import
+  [INFO] Source repo: small_repo / Target repo: large_repo
+  [INFO] Found 3 unsynced ancestors
+  [INFO] changeset 738630e43445144e9f5ddbe1869730cfbaf8ff6bf95b25b8410cb35ca92f25c7 synced as 5018d85a3db49803d93474fec07b26a65f527ba14a320de37e8f48fb98086e7a * (glob)
+  [INFO] successful sync of head 738630e43445144e9f5ddbe1869730cfbaf8ff6bf95b25b8410cb35ca92f25c7
+  [INFO] X Repo Sync execution finished from small repo small_repo to large repo large_repo
 
   $ SYNCED_HEAD=$(rg ".+synced as (\w+) .+" -or '$1' "$TESTTMP/initial_import.out")
   $ clone_and_log_large_repo "$SYNCED_HEAD"
@@ -69,6 +69,11 @@ Create small repo commits
   RewrittenAs([(ChangesetId(Blake2(738630e43445144e9f5ddbe1869730cfbaf8ff6bf95b25b8410cb35ca92f25c7)), CommitSyncConfigVersion("INITIAL_IMPORT_SYNC_CONFIG"))])
   
   Deriving all the enabled derived data types
+
+
+
+
+
 
 # Check that commit sync mapping is in hg extra
 # $ MASTER_HASH=$(mononoke_admin bookmarks -R $LARGE_REPO_NAME get master_bookmark)
@@ -126,3 +131,4 @@ Create small repo commits
           Blake2(5018d85a3db49803d93474fec07b26a65f527ba14a320de37e8f48fb98086e7a),
       ),
   }
+

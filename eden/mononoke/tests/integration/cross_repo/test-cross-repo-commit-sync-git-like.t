@@ -175,23 +175,23 @@
 
 -- sync again
   $ with_stripped_logs mononoke_x_repo_sync 1 0 tail --catch-up-once
-  Starting session with id * (glob)
-  Starting up X Repo Sync from small repo small to large repo large
-  queue size is 3
-  processing log entry #5
-  0 unsynced ancestors of dd912eedd1899b2403fc507d74bec70bda5f4a035cd9851478847bc2b35dfa3f
-  successful sync bookmark update log #5
-  processing log entry #6
-  1 unsynced ancestors of 2e8a00bae279cc78af17418196b1d6e78730b82752d758c7306f3b281038e8a3
-  syncing 2e8a00bae279cc78af17418196b1d6e78730b82752d758c7306f3b281038e8a3
-  changeset 2e8a00bae279cc78af17418196b1d6e78730b82752d758c7306f3b281038e8a3 synced as b149e7a688c2bac6a2f25dc4b846060f774967ae82eeac54cc1a7c148b215b27 in * (glob)
-  successful sync bookmark update log #6
-  processing log entry #7
-  1 unsynced ancestors of 21fa4d2997f1f2e050b3911639e9643efcb90896b3551b0a9c6affc33c7ea708
-  syncing 21fa4d2997f1f2e050b3911639e9643efcb90896b3551b0a9c6affc33c7ea708
-  changeset 21fa4d2997f1f2e050b3911639e9643efcb90896b3551b0a9c6affc33c7ea708 synced as f2f336ed26e996561dc4156ce6a5b647a30abe6b0584615c5739caaf8f6d153e in * (glob)
-  successful sync bookmark update log #7
-  X Repo Sync execution finished from small repo small to large repo large
+  [INFO] Starting session with id * (glob)
+  [INFO] Starting up X Repo Sync from small repo small to large repo large
+  [INFO] queue size is 3
+  [INFO] processing log entry #5
+  [INFO] 0 unsynced ancestors of dd912eedd1899b2403fc507d74bec70bda5f4a035cd9851478847bc2b35dfa3f
+  [INFO] successful sync bookmark update log #5
+  [INFO] processing log entry #6
+  [INFO] 1 unsynced ancestors of 2e8a00bae279cc78af17418196b1d6e78730b82752d758c7306f3b281038e8a3
+  [INFO] syncing 2e8a00bae279cc78af17418196b1d6e78730b82752d758c7306f3b281038e8a3
+  [INFO] changeset 2e8a00bae279cc78af17418196b1d6e78730b82752d758c7306f3b281038e8a3 synced as b149e7a688c2bac6a2f25dc4b846060f774967ae82eeac54cc1a7c148b215b27 in * (glob)
+  [INFO] successful sync bookmark update log #6
+  [INFO] processing log entry #7
+  [INFO] 1 unsynced ancestors of 21fa4d2997f1f2e050b3911639e9643efcb90896b3551b0a9c6affc33c7ea708
+  [INFO] syncing 21fa4d2997f1f2e050b3911639e9643efcb90896b3551b0a9c6affc33c7ea708
+  [INFO] changeset 21fa4d2997f1f2e050b3911639e9643efcb90896b3551b0a9c6affc33c7ea708 synced as f2f336ed26e996561dc4156ce6a5b647a30abe6b0584615c5739caaf8f6d153e in * (glob)
+  [INFO] successful sync bookmark update log #7
+  [INFO] X Repo Sync execution finished from small repo small to large repo large
 
 -- check the state of bookmarks in the large repo
   $ mononoke_admin bookmarks --repo-name large list

@@ -39,17 +39,16 @@ Create commit that modifies git submodule in small repo
   $ with_stripped_logs mononoke_x_repo_sync "$SUBMODULE_REPO_ID"  "$LARGE_REPO_ID" \
   > initial-import --no-progress-bar -i "$C" \
   > --version-name "$LATEST_CONFIG_VERSION_NAME" --no-automatic-derivation | tee $TESTTMP/initial_import.out
-  Starting session with id * (glob)
-  Starting up X Repo Sync from small repo small_repo to large repo large_repo
-  Checking if ab5bf42dd164f61fa2bcb2de20224d8ffb60f12619bb3692f69d7c171dc1c3be is already synced 11->10
-  Syncing ab5bf42dd164f61fa2bcb2de20224d8ffb60f12619bb3692f69d7c171dc1c3be for initial import
-  Source repo: small_repo / Target repo: large_repo
-  Found 3 unsynced ancestors
-  changeset ab5bf42dd164f61fa2bcb2de20224d8ffb60f12619bb3692f69d7c171dc1c3be synced as f299e57c379932297b130d60f6d86e54c87c8e02507bf0867783e23d7d8f8a50 in * (glob)
-  successful sync of head ab5bf42dd164f61fa2bcb2de20224d8ffb60f12619bb3692f69d7c171dc1c3be
-  X Repo Sync execution finished from small repo small_repo to large repo large_repo
-
-# NOTE: this command is expected to fail because some types can't be derived 
+  [INFO] Starting session with id * (glob)
+  [INFO] Starting up X Repo Sync from small repo small_repo to large repo large_repo
+  [INFO] Checking if ab5bf42dd164f61fa2bcb2de20224d8ffb60f12619bb3692f69d7c171dc1c3be is already synced 11->10
+  [INFO] Syncing ab5bf42dd164f61fa2bcb2de20224d8ffb60f12619bb3692f69d7c171dc1c3be for initial import
+  [INFO] Source repo: small_repo / Target repo: large_repo
+  [INFO] Found 3 unsynced ancestors
+  [INFO] changeset ab5bf42dd164f61fa2bcb2de20224d8ffb60f12619bb3692f69d7c171dc1c3be synced as f299e57c379932297b130d60f6d86e54c87c8e02507bf0867783e23d7d8f8a50 in * (glob)
+  [INFO] successful sync of head ab5bf42dd164f61fa2bcb2de20224d8ffb60f12619bb3692f69d7c171dc1c3be
+  [INFO] X Repo Sync execution finished from small repo small_repo to large repo large_repo
+# NOTE: this command is expected to fail because some types can't be derived
 # for bonsais with git submodules.
   $ SYNCED_HEAD=$(rg ".+synced as (\w+) .+" -or '$1' "$TESTTMP/initial_import.out")
   $ clone_and_log_large_repo "$SYNCED_HEAD"
@@ -71,5 +70,10 @@ Create commit that modifies git submodule in small repo
   
   Deriving all the enabled derived data types
   Error: * (glob)
+
+
+
+
+
 
   $ REPOIDLARGE=$LARGE_REPO_ID REPOIDSMALL=$SUBMODULE_REPO_ID verify_wc "f299e57c379932297b130d60f6d86e54c87c8e02507bf0867783e23d7d8f8a50"

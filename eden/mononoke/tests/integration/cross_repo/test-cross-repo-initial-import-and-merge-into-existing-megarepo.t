@@ -116,15 +116,15 @@ Before config change
   IC=65f0b76c034d87adf7dac6f0b5a5442ab3f62edda21adb8e8ec57d1a99fb5905
 
   $ with_stripped_logs mononoke_x_repo_sync "$IMPORTED_REPO_ID"  "$LARGE_REPO_ID" initial-import -i "$IC" --version-name "imported_noop"
-  Starting session with id * (glob)
-  Starting up X Repo Sync from small repo imported_repo to large repo large-mon
-  Checking if 65f0b76c034d87adf7dac6f0b5a5442ab3f62edda21adb8e8ec57d1a99fb5905 is already synced 2->0
-  Syncing 65f0b76c034d87adf7dac6f0b5a5442ab3f62edda21adb8e8ec57d1a99fb5905 for initial import
-  Source repo: imported_repo / Target repo: large-mon
-  Found 3 unsynced ancestors
-  changeset 65f0b76c034d87adf7dac6f0b5a5442ab3f62edda21adb8e8ec57d1a99fb5905 synced as ecc8ec74d00988653ae64ebf206a9ed42898449125b91f59ecd1d8a0a93f4a97 in *ms (glob)
-  successful sync of head 65f0b76c034d87adf7dac6f0b5a5442ab3f62edda21adb8e8ec57d1a99fb5905
-  X Repo Sync execution finished from small repo imported_repo to large repo large-mon
+  [INFO] Starting session with id * (glob)
+  [INFO] Starting up X Repo Sync from small repo imported_repo to large repo large-mon
+  [INFO] Checking if 65f0b76c034d87adf7dac6f0b5a5442ab3f62edda21adb8e8ec57d1a99fb5905 is already synced 2->0
+  [INFO] Syncing 65f0b76c034d87adf7dac6f0b5a5442ab3f62edda21adb8e8ec57d1a99fb5905 for initial import
+  [INFO] Source repo: imported_repo / Target repo: large-mon
+  [INFO] Found 3 unsynced ancestors
+  [INFO] changeset 65f0b76c034d87adf7dac6f0b5a5442ab3f62edda21adb8e8ec57d1a99fb5905 synced as ecc8ec74d00988653ae64ebf206a9ed42898449125b91f59ecd1d8a0a93f4a97 in * (glob)
+  [INFO] successful sync of head 65f0b76c034d87adf7dac6f0b5a5442ab3f62edda21adb8e8ec57d1a99fb5905
+  [INFO] X Repo Sync execution finished from small repo imported_repo to large repo large-mon
 
   $ mononoke_admin fetch -R $LARGE_REPO_NAME  -i ecc8ec74d00988653ae64ebf206a9ed42898449125b91f59ecd1d8a0a93f4a97 --json | jq .parents
   [
@@ -206,18 +206,18 @@ Before config change
   $ PREV_BOOK_VALUE=$(get_bookmark_value_edenapi $SMALL_REPO_NAME $MASTER_BOOKMARK)
   $ with_stripped_logs mononoke_x_repo_sync "$IMPORTED_REPO_ID"  "$LARGE_REPO_ID" \
   > once --commit-id "$ID" --unsafe-change-version-to "new_version" --target-bookmark $MASTER_BOOKMARK
-  Starting session with id * (glob)
-  Starting up X Repo Sync from small repo imported_repo to large repo large-mon
-  Syncing 1 commits and all of their unsynced ancestors
-  Checking if a14dee507f7605083e9a99901971ac7c5558d8b28d7d01090bd2cff2432fa707 is already synced 2->0
-  Changing mapping version during pushrebase to new_version
-  1 unsynced ancestors of a14dee507f7605083e9a99901971ac7c5558d8b28d7d01090bd2cff2432fa707
-  target bookmark is not wc-equivalent to synced commit, falling back to parent_version
-  UNSAFE: changing mapping version during pushrebase to new_version
-  syncing a14dee507f7605083e9a99901971ac7c5558d8b28d7d01090bd2cff2432fa707 via pushrebase for master_bookmark
-  changeset a14dee507f7605083e9a99901971ac7c5558d8b28d7d01090bd2cff2432fa707 synced as 402c52f0f2156a83bf5354aae35c3cae55e92b23da3ed61bc10ee7960e172c8e in *ms (glob)
-  successful sync
-  X Repo Sync execution finished from small repo imported_repo to large repo large-mon
+  [INFO] Starting session with id * (glob)
+  [INFO] Starting up X Repo Sync from small repo imported_repo to large repo large-mon
+  [INFO] Syncing 1 commits and all of their unsynced ancestors
+  [INFO] Checking if a14dee507f7605083e9a99901971ac7c5558d8b28d7d01090bd2cff2432fa707 is already synced 2->0
+  [WARN] Changing mapping version during pushrebase to new_version
+  [INFO] 1 unsynced ancestors of a14dee507f7605083e9a99901971ac7c5558d8b28d7d01090bd2cff2432fa707
+  [WARN] target bookmark is not wc-equivalent to synced commit, falling back to parent_version
+  [WARN] UNSAFE: changing mapping version during pushrebase to new_version
+  [INFO] syncing a14dee507f7605083e9a99901971ac7c5558d8b28d7d01090bd2cff2432fa707 via pushrebase for master_bookmark
+  [INFO] changeset a14dee507f7605083e9a99901971ac7c5558d8b28d7d01090bd2cff2432fa707 synced as 402c52f0f2156a83bf5354aae35c3cae55e92b23da3ed61bc10ee7960e172c8e * (glob)
+  [INFO] successful sync
+  [INFO] X Repo Sync execution finished from small repo imported_repo to large repo large-mon
 
   $ wait_for_bookmark_move_away_edenapi $SMALL_REPO_NAME $MASTER_BOOKMARK $PREV_BOOK_VALUE
   $ cd "$TESTTMP/small-hg-client"
@@ -300,15 +300,15 @@ Before config change
   AC=156943c35cda314d72b0177b06d5edf3c92dc9c9505d7b3171b9230f7c1768bb
 
   $ with_stripped_logs mononoke_x_repo_sync "$ANOTHER_REPO_ID"  "$LARGE_REPO_ID" initial-import -i "$AC" --version-name "another_noop"
-  Starting session with id * (glob)
-  Starting up X Repo Sync from small repo another_repo to large repo large-mon
-  Checking if 156943c35cda314d72b0177b06d5edf3c92dc9c9505d7b3171b9230f7c1768bb is already synced 3->0
-  Syncing 156943c35cda314d72b0177b06d5edf3c92dc9c9505d7b3171b9230f7c1768bb for initial import
-  Source repo: another_repo / Target repo: large-mon
-  Found 3 unsynced ancestors
-  changeset 156943c35cda314d72b0177b06d5edf3c92dc9c9505d7b3171b9230f7c1768bb synced as 0a9797a0fa6b3284b9d73ec43357f06a9b00d6fa402122d1bbfbeac16e3a2c39 in *ms (glob)
-  successful sync of head 156943c35cda314d72b0177b06d5edf3c92dc9c9505d7b3171b9230f7c1768bb
-  X Repo Sync execution finished from small repo another_repo to large repo large-mon
+  [INFO] Starting session with id * (glob)
+  [INFO] Starting up X Repo Sync from small repo another_repo to large repo large-mon
+  [INFO] Checking if 156943c35cda314d72b0177b06d5edf3c92dc9c9505d7b3171b9230f7c1768bb is already synced 3->0
+  [INFO] Syncing 156943c35cda314d72b0177b06d5edf3c92dc9c9505d7b3171b9230f7c1768bb for initial import
+  [INFO] Source repo: another_repo / Target repo: large-mon
+  [INFO] Found 3 unsynced ancestors
+  [INFO] changeset 156943c35cda314d72b0177b06d5edf3c92dc9c9505d7b3171b9230f7c1768bb synced as 0a9797a0fa6b3284b9d73ec43357f06a9b00d6fa402122d1bbfbeac16e3a2c39 * (glob)
+  [INFO] successful sync of head 156943c35cda314d72b0177b06d5edf3c92dc9c9505d7b3171b9230f7c1768bb
+  [INFO] X Repo Sync execution finished from small repo another_repo to large repo large-mon
 
   $ mononoke_admin fetch -R $LARGE_REPO_NAME  -i 0a9797a0fa6b3284b9d73ec43357f06a9b00d6fa402122d1bbfbeac16e3a2c39 --json | jq .parents
   [
@@ -349,18 +349,18 @@ Before config change
   $ PREV_BOOK_VALUE=$(get_bookmark_value_edenapi $SMALL_REPO_NAME $MASTER_BOOKMARK)
   $ with_stripped_logs mononoke_x_repo_sync "$ANOTHER_REPO_ID"  "$LARGE_REPO_ID" \
   > once --commit-id "$AD" --unsafe-change-version-to "another_version" --target-bookmark $MASTER_BOOKMARK
-  Starting session with id * (glob)
-  Starting up X Repo Sync from small repo another_repo to large repo large-mon
-  Syncing 1 commits and all of their unsynced ancestors
-  Checking if 1d0bbdb162c2887a5b93893d7a48fd852a304ab58be2245899bb795e80aa10e9 is already synced 3->0
-  Changing mapping version during pushrebase to another_version
-  1 unsynced ancestors of 1d0bbdb162c2887a5b93893d7a48fd852a304ab58be2245899bb795e80aa10e9
-  target bookmark is not wc-equivalent to synced commit, falling back to parent_version
-  UNSAFE: changing mapping version during pushrebase to another_version
-  syncing 1d0bbdb162c2887a5b93893d7a48fd852a304ab58be2245899bb795e80aa10e9 via pushrebase for master_bookmark
-  changeset 1d0bbdb162c2887a5b93893d7a48fd852a304ab58be2245899bb795e80aa10e9 synced as 76b08a5702ff09571621ca88b107d886963d2c8265f508edc6e4d8f95777fd3e in *ms (glob)
-  successful sync
-  X Repo Sync execution finished from small repo another_repo to large repo large-mon
+  [INFO] Starting session with id * (glob)
+  [INFO] Starting up X Repo Sync from small repo another_repo to large repo large-mon
+  [INFO] Syncing 1 commits and all of their unsynced ancestors
+  [INFO] Checking if 1d0bbdb162c2887a5b93893d7a48fd852a304ab58be2245899bb795e80aa10e9 is already synced 3->0
+  [WARN] Changing mapping version during pushrebase to another_version
+  [INFO] 1 unsynced ancestors of 1d0bbdb162c2887a5b93893d7a48fd852a304ab58be2245899bb795e80aa10e9
+  [WARN] target bookmark is not wc-equivalent to synced commit, falling back to parent_version
+  [WARN] UNSAFE: changing mapping version during pushrebase to another_version
+  [INFO] syncing 1d0bbdb162c2887a5b93893d7a48fd852a304ab58be2245899bb795e80aa10e9 via pushrebase for master_bookmark
+  [INFO] changeset 1d0bbdb162c2887a5b93893d7a48fd852a304ab58be2245899bb795e80aa10e9 synced as 76b08a5702ff09571621ca88b107d886963d2c8265f508edc6e4d8f95777fd3e * (glob)
+  [INFO] successful sync
+  [INFO] X Repo Sync execution finished from small repo another_repo to large repo large-mon
 
   $ PREV_BOOK_VALUE=$(get_bookmark_value_edenapi "$IMPORTED_REPO_NAME" heads/$MASTER_BOOKMARK)
   $ testtool_drawdag  --print-hg-hashes -R "$IMPORTED_REPO_NAME" <<EOF

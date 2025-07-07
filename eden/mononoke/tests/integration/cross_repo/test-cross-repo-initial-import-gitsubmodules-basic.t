@@ -42,21 +42,21 @@ Create commit that modifies git submodule in small repo
   $ with_stripped_logs mononoke_x_repo_sync "$SUBMODULE_REPO_ID" "$LARGE_REPO_ID" \
   > initial-import --no-progress-bar --version-name "$LATEST_CONFIG_VERSION_NAME" \
   > --all-bookmarks | tee $TESTTMP/initial_import.out
-  Starting session with id * (glob)
-  Starting up X Repo Sync from small repo small_repo to large repo large_repo
-  Checking if 1d0633cca456dfccb06ca24646024da1a8f42204f91e54d765fc4e5f2ad87bbe is already synced 11->10
-  Syncing 1d0633cca456dfccb06ca24646024da1a8f42204f91e54d765fc4e5f2ad87bbe for initial import
-  Source repo: small_repo / Target repo: large_repo
-  Found 2 unsynced ancestors
-  changeset 1d0633cca456dfccb06ca24646024da1a8f42204f91e54d765fc4e5f2ad87bbe synced as 1d0633cca456dfccb06ca24646024da1a8f42204f91e54d765fc4e5f2ad87bbe * (glob)
-  successful sync of head 1d0633cca456dfccb06ca24646024da1a8f42204f91e54d765fc4e5f2ad87bbe
-  Checking if 00b0b4d6130a22ccf3fada118572a85a6bb2d7c253d4285557802b7b8f250821 is already synced 11->10
-  Syncing 00b0b4d6130a22ccf3fada118572a85a6bb2d7c253d4285557802b7b8f250821 for initial import
-  Source repo: small_repo / Target repo: large_repo
-  Found 3 unsynced ancestors
-  changeset 00b0b4d6130a22ccf3fada118572a85a6bb2d7c253d4285557802b7b8f250821 synced as 768a9c6d2b6943900f9d4374028a891c7d3dc62d7ecc25a1fd2a9c3fc9aba14b in * (glob)
-  successful sync of head 00b0b4d6130a22ccf3fada118572a85a6bb2d7c253d4285557802b7b8f250821
-  X Repo Sync execution finished from small repo small_repo to large repo large_repo
+  [INFO] Starting session with id * (glob)
+  [INFO] Starting up X Repo Sync from small repo small_repo to large repo large_repo
+  [INFO] Checking if 1d0633cca456dfccb06ca24646024da1a8f42204f91e54d765fc4e5f2ad87bbe is already synced 11->10
+  [INFO] Syncing 1d0633cca456dfccb06ca24646024da1a8f42204f91e54d765fc4e5f2ad87bbe for initial import
+  [INFO] Source repo: small_repo / Target repo: large_repo
+  [INFO] Found 2 unsynced ancestors
+  [INFO] changeset 1d0633cca456dfccb06ca24646024da1a8f42204f91e54d765fc4e5f2ad87bbe synced as 1d0633cca456dfccb06ca24646024da1a8f42204f91e54d765fc4e5f2ad87bbe in * (glob)
+  [INFO] successful sync of head 1d0633cca456dfccb06ca24646024da1a8f42204f91e54d765fc4e5f2ad87bbe
+  [INFO] Checking if 00b0b4d6130a22ccf3fada118572a85a6bb2d7c253d4285557802b7b8f250821 is already synced 11->10
+  [INFO] Syncing 00b0b4d6130a22ccf3fada118572a85a6bb2d7c253d4285557802b7b8f250821 for initial import
+  [INFO] Source repo: small_repo / Target repo: large_repo
+  [INFO] Found 3 unsynced ancestors
+  [INFO] changeset 00b0b4d6130a22ccf3fada118572a85a6bb2d7c253d4285557802b7b8f250821 synced as 768a9c6d2b6943900f9d4374028a891c7d3dc62d7ecc25a1fd2a9c3fc9aba14b in * (glob)
+  [INFO] successful sync of head 00b0b4d6130a22ccf3fada118572a85a6bb2d7c253d4285557802b7b8f250821
+  [INFO] X Repo Sync execution finished from small repo small_repo to large repo large_repo
 
 
   $ SYNCED_HEAD=$(rg ".+synced as (\w+) .+" -or '$1' "$TESTTMP/initial_import.out" | tail -n1)
@@ -90,13 +90,6 @@ Create commit that modifies git submodule in small repo
   RewrittenAs([(ChangesetId(Blake2(1d0633cca456dfccb06ca24646024da1a8f42204f91e54d765fc4e5f2ad87bbe)), CommitSyncConfigVersion("INITIAL_IMPORT_SYNC_CONFIG"))])
   
   Deriving all the enabled derived data types
-
-
-
-
-
-
-
 
 
 

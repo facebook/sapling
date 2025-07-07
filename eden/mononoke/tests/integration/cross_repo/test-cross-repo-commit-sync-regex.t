@@ -57,10 +57,10 @@
 
   $ with_stripped_logs mononoke_x_repo_sync 2 0 tail --bookmark-regex "master_bookmark" \
   > --catch-up-once |& grep -E '(processing|skipping)'
-  skipping log entry #2 for anotherbookmark
-  skipping log entry #3 for somebookmark
-  processing log entry #4
-  skipping log entry #5 for somebookmark
+  [INFO] skipping log entry #2 for anotherbookmark
+  [INFO] skipping log entry #3 for somebookmark
+  [INFO] processing log entry #4
+  [INFO] skipping log entry #5 for somebookmark
   $ sqlite3 "$TESTTMP/monsql/sqlite_dbs" "select * from mutable_counters where name = 'xreposync_from_2'";
   0|xreposync_from_2|5
 
@@ -87,24 +87,24 @@
 
 -- sync the missing commits
   $ with_stripped_logs mononoke_x_repo_sync 2 0 once --bookmark-regex ".+bookmark"
-  Starting session with id * (glob)
-  Starting up X Repo Sync from small repo ovr-mon to large repo meg-mon
-  Syncing 3 commits and all of their unsynced ancestors
-  Checking if 9f68d735e272dce827b1c41311f8e99a8ae9f10ed971f541f0ba1a76e606f832 is already synced 2->0
-  9f68d735e272dce827b1c41311f8e99a8ae9f10ed971f541f0ba1a76e606f832 is already synced
-  Checking if 1bb2a7206ca6be0c58d221310122be17839ac6969017d940aa6ef6ca8eec495f is already synced 2->0
-  1 unsynced ancestors of 1bb2a7206ca6be0c58d221310122be17839ac6969017d940aa6ef6ca8eec495f
-  syncing 1bb2a7206ca6be0c58d221310122be17839ac6969017d940aa6ef6ca8eec495f
-  changeset 1bb2a7206ca6be0c58d221310122be17839ac6969017d940aa6ef6ca8eec495f synced as 8213e7f8c5768f72236f6d18cf84dfe5f6af4266c13da41d7eae97873d46e593 in * (glob)
-  successful sync
-  Checking if 545278b8c8976a9d986b1ef0270e80cbf79ae8a7991af12fa437d19341d884a8 is already synced 2->0
-  2 unsynced ancestors of 545278b8c8976a9d986b1ef0270e80cbf79ae8a7991af12fa437d19341d884a8
-  syncing 814d6ccdf14dbc46142c13c098b59d316c98ee4dfd921f85a5d2186048142b24
-  changeset 814d6ccdf14dbc46142c13c098b59d316c98ee4dfd921f85a5d2186048142b24 synced as aa1d76f7d25dc8a93190a32de9c5784c3d2b57e0d0a3d92a52d98aca800f48b8 in * (glob)
-  syncing 545278b8c8976a9d986b1ef0270e80cbf79ae8a7991af12fa437d19341d884a8
-  changeset 545278b8c8976a9d986b1ef0270e80cbf79ae8a7991af12fa437d19341d884a8 synced as bf8d1698e43e07e19660eca448c1c155aae5673a3c8f81cc53880ffda469fe6d in * (glob)
-  successful sync
-  X Repo Sync execution finished from small repo ovr-mon to large repo meg-mon
+  [INFO] Starting session with id * (glob)
+  [INFO] Starting up X Repo Sync from small repo ovr-mon to large repo meg-mon
+  [INFO] Syncing 3 commits and all of their unsynced ancestors
+  [INFO] Checking if 9f68d735e272dce827b1c41311f8e99a8ae9f10ed971f541f0ba1a76e606f832 is already synced 2->0
+  [INFO] 9f68d735e272dce827b1c41311f8e99a8ae9f10ed971f541f0ba1a76e606f832 is already synced
+  [INFO] Checking if 1bb2a7206ca6be0c58d221310122be17839ac6969017d940aa6ef6ca8eec495f is already synced 2->0
+  [INFO] 1 unsynced ancestors of 1bb2a7206ca6be0c58d221310122be17839ac6969017d940aa6ef6ca8eec495f
+  [INFO] syncing 1bb2a7206ca6be0c58d221310122be17839ac6969017d940aa6ef6ca8eec495f
+  [INFO] changeset 1bb2a7206ca6be0c58d221310122be17839ac6969017d940aa6ef6ca8eec495f synced as 8213e7f8c5768f72236f6d18cf84dfe5f6af4266c13da41d7eae97873d46e593 in * (glob)
+  [INFO] successful sync
+  [INFO] Checking if 545278b8c8976a9d986b1ef0270e80cbf79ae8a7991af12fa437d19341d884a8 is already synced 2->0
+  [INFO] 2 unsynced ancestors of 545278b8c8976a9d986b1ef0270e80cbf79ae8a7991af12fa437d19341d884a8
+  [INFO] syncing 814d6ccdf14dbc46142c13c098b59d316c98ee4dfd921f85a5d2186048142b24
+  [INFO] changeset 814d6ccdf14dbc46142c13c098b59d316c98ee4dfd921f85a5d2186048142b24 synced as aa1d76f7d25dc8a93190a32de9c5784c3d2b57e0d0a3d92a52d98aca800f48b8 in * (glob)
+  [INFO] syncing 545278b8c8976a9d986b1ef0270e80cbf79ae8a7991af12fa437d19341d884a8
+  [INFO] changeset 545278b8c8976a9d986b1ef0270e80cbf79ae8a7991af12fa437d19341d884a8 synced as bf8d1698e43e07e19660eca448c1c155aae5673a3c8f81cc53880ffda469fe6d in * (glob)
+  [INFO] successful sync
+  [INFO] X Repo Sync execution finished from small repo ovr-mon to large repo meg-mon
 
 -- now update the inconsistent bookmarks
   $ with_stripped_logs crossrepo_verify_bookmarks 2 0 --update-large-repo-bookmarks

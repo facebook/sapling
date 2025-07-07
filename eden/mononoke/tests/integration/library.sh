@@ -191,6 +191,8 @@ function mononoke_x_repo_sync() {
     --target-repo-id="$target_repo_id" \
     --mononoke-config-path "$TESTTMP/mononoke-config" \
     --scuba-log-file "$TESTTMP/x_repo_sync_scuba_logs" \
+    --tracing \
+    --tracing-test-format \
     "$@"
 }
 

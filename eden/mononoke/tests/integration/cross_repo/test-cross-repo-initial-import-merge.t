@@ -38,15 +38,15 @@ Create small repo commits
   $ with_stripped_logs mononoke_x_repo_sync "$SUBMODULE_REPO_ID"  "$LARGE_REPO_ID" \
   > initial-import --no-progress-bar -i "$M" --version-name "$LATEST_CONFIG_VERSION_NAME" \
   > | tee $TESTTMP/initial_import.out
-  Starting session with id * (glob)
-  Starting up X Repo Sync from small repo small_repo to large repo large_repo
-  Checking if 3eb23b278c44bf5d812c96f2a3211408d2a779b566984670127eebcd01fe459d is already synced 11->10
-  Syncing 3eb23b278c44bf5d812c96f2a3211408d2a779b566984670127eebcd01fe459d for initial import
-  Source repo: small_repo / Target repo: large_repo
-  Found 6 unsynced ancestors
-  changeset 3eb23b278c44bf5d812c96f2a3211408d2a779b566984670127eebcd01fe459d synced as 154e057495ead9af16d2ad3401b1fca7a7d23e39a295e277d84ba37f244e48ff in *ms (glob)
-  successful sync of head 3eb23b278c44bf5d812c96f2a3211408d2a779b566984670127eebcd01fe459d
-  X Repo Sync execution finished from small repo small_repo to large repo large_repo
+  [INFO] Starting session with id * (glob)
+  [INFO] Starting up X Repo Sync from small repo small_repo to large repo large_repo
+  [INFO] Checking if 3eb23b278c44bf5d812c96f2a3211408d2a779b566984670127eebcd01fe459d is already synced 11->10
+  [INFO] Syncing 3eb23b278c44bf5d812c96f2a3211408d2a779b566984670127eebcd01fe459d for initial import
+  [INFO] Source repo: small_repo / Target repo: large_repo
+  [INFO] Found 6 unsynced ancestors
+  [INFO] changeset 3eb23b278c44bf5d812c96f2a3211408d2a779b566984670127eebcd01fe459d synced as 154e057495ead9af16d2ad3401b1fca7a7d23e39a295e277d84ba37f244e48ff in * (glob)
+  [INFO] successful sync of head 3eb23b278c44bf5d812c96f2a3211408d2a779b566984670127eebcd01fe459d
+  [INFO] X Repo Sync execution finished from small repo small_repo to large repo large_repo
 
 
   $ SYNCED_HEAD=$(rg ".+synced as (\w+) .+" -or '$1' "$TESTTMP/initial_import.out")
