@@ -1797,6 +1797,10 @@ class localrepository:
             return tr
         return None
 
+    def _is_within_lockfree_transaction(self):
+        tr = self.currenttransaction()
+        return tr is not None and tr.lockfree
+
     def transaction(self, desc, report=None, lockfree=False):
         tr = self.currenttransaction()
         if tr is not None and tr.lockfree:
@@ -2399,7 +2403,14 @@ class localrepository:
         stripping). If you are opening a transaction, get a lock as well.)
 
         If both 'lock' and 'wlock' must be acquired, ensure you always acquires
-        'wlock' first to avoid a dead-lock hazard."""
+        'wlock' first to avoid a dead-lock hazard.
+
+        Returns 'nullcontextmanager' without reading or writing on-disk locks,
+        if the current active transaction is marked as lockfree.
+        """
+        if self._is_within_lockfree_transaction():
+            return util.nullcontextmanager()
+
         l = self._currentlock(self._lockref)
         if l is not None:
             l.lock()
@@ -2449,7 +2460,13 @@ class localrepository:
         Use this before modifying files in .hg.
 
         If both 'lock' and 'wlock' must be acquired, ensure you always acquires
-        'wlock' first to avoid a dead-lock hazard."""
+        'wlock' first to avoid a dead-lock hazard.
+        """
+        if self._is_within_lockfree_transaction():
+            raise errormod.ProgrammingError(
+                "wlock inside lockfree transaction is not currently allowed",
+                stacklevel=1,
+            )
         l = self._wlockref and self._wlockref()
         if l is not None and l.held:
             l.lock()

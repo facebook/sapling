@@ -398,5 +398,5 @@ def islocked(vfs, name) -> bool:
 
 def release(*locks) -> None:
     for lock in locks:
-        if lock is not None:
+        if lock is not None and not isinstance(lock, util.nullcontextmanager):
             lock.release()
