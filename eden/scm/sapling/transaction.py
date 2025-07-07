@@ -41,6 +41,8 @@ gengrouppostfinalize = "postfinalize"
 # Format: JSON-serialized {path: hex(root)}
 ENV_PENDING_METALOG = "HG_PENDING_METALOG"
 
+METALOG_TRACKED = set(bindings.metalog.tracked())
+
 
 def decodependingmetalog(content):
     result = {}
@@ -69,6 +71,15 @@ def active(func):
         return func(self, *args, **kwds)
 
     return _active
+
+
+def lockfree_incompatible(func):
+    def _check_lockfree(self, *args, **kwargs):
+        if self.lockfree:
+            raise error.ProgrammingError("unsupported in lockfree transaction")
+        return func(self, *args, **kwargs)
+
+    return _check_lockfree
 
 
 def _playback(
@@ -211,7 +222,10 @@ class transaction(util.transactional):
 
         # a dict of arguments to be passed to hooks
         self.hookargs = {}
-        self.file = opener.open(self.journal, "wb")
+        if lockfree:
+            self.file = None
+        else:
+            self.file = opener.open(self.journal, "wb")
 
         # a list of ('location', 'path', 'backuppath', cache) entries.
         # - if 'backuppath' is empty, no file existed at backup time
@@ -222,10 +236,13 @@ class transaction(util.transactional):
         self._backupentries = []
         self._backupmap = {}
         self._backupjournal = "%s.backupfiles" % self.journal
-        self._backupsfile = opener.open(self._backupjournal, "wb")
-        self._backupsfile.write(b"%d\n" % version)
+        if lockfree:
+            self._backupsfile = None
+        else:
+            self._backupsfile = opener.open(self._backupjournal, "wb")
+            self._backupsfile.write(b"%d\n" % version)
 
-        if createmode is not None:
+        if createmode is not None and not lockfree:
             opener.chmod(self.journal, createmode & 0o666)
             opener.chmod(self._backupjournal, createmode & 0o666)
 
@@ -290,8 +307,11 @@ class transaction(util.transactional):
 
         self._addentry(file, offset, data)
 
+    @lockfree_incompatible
     def _addentry(self, file, offset, data):
-        """add a append-only entry to memory and on-disk state"""
+        """add a append-only entry to memory and on-disk state
+        Raises in a lockfree transaction.
+        """
         if file in self.map or file in self._backupmap:
             return
         self.entries.append((file, offset, data))
@@ -301,6 +321,7 @@ class transaction(util.transactional):
         self.file.flush()
 
     @active
+    @lockfree_incompatible
     def addbackup(self, file, hardlink=True, location=""):
         """Adds a backup of the file to the transaction
 
@@ -310,6 +331,8 @@ class transaction(util.transactional):
 
         * `file`: the file path, relative to .hg/store
         * `hardlink`: use a hardlink to quickly create the backup
+
+        Raises in a lockfree transaction.
         """
         if self._queue:
             msg = 'cannot use transaction.addbackup inside "group"'
@@ -334,8 +357,11 @@ class transaction(util.transactional):
 
         self._addbackupentry((location, file, backupfile, False))
 
+    @lockfree_incompatible
     def _addbackupentry(self, entry):
-        """register a new backup entry and write it to disk"""
+        """register a new backup entry and write it to disk
+        Raises in a lockfree transaction.
+        """
         self._backupentries.append(entry)
         self._backupmap[entry[1]] = len(self._backupentries) - 1
         self._backupsfile.write(("%s\0%s\0%s\0%d\n" % entry).encode())
@@ -373,7 +399,15 @@ class transaction(util.transactional):
         The `location` arguments may be used to indicate the files are located
         outside of the the standard directory for transaction. It should match
         one of the key of the `transaction.vfsmap` dictionary.
+
+        In a lockfree transaction, filenames must be tracked by metalog.
         """
+        if self.lockfree:
+            incompatible_filenames = [f for f in filenames if f not in METALOG_TRACKED]
+            if incompatible_filenames:
+                raise error.ProgrammingError(
+                    f"addfilegenerator requires metalog tracked filenames {METALOG_TRACKED} in a lockfree transaction, incompatible filenames: {incompatible_filenames}"
+                )
         # For now, we are unable to do proper backup and restore of custom vfs
         # but for bookmarks that are handled outside this mechanism.
         self._filegenerators[genid] = (order, filenames, genfunc, location)
@@ -405,7 +439,8 @@ class transaction(util.transactional):
                         self.registertmp(name, location=location)
                         checkambig = False
                     else:
-                        self.addbackup(name, location=location)
+                        if not self.lockfree:
+                            self.addbackup(name, location=location)
                         checkambig = (name, location) in self.checkambigfiles
                     files.append(vfs(name, "w", atomictemp=True, checkambig=checkambig))
                 genfunc(*files)
@@ -423,12 +458,13 @@ class transaction(util.transactional):
         return None
 
     @active
+    @lockfree_incompatible
     def replace(self, file, offset, data=None):
         """
         replace can only replace already committed entries
         that are not pending in the queue
+        Raises in a lockfree transaction.
         """
-
         if file not in self.map:
             raise KeyError(file)
         index = self.map[file]
@@ -561,8 +597,9 @@ class transaction(util.transactional):
         self.count -= 1
         if self.count != 0:
             return
-        self.file.close()
-        self._backupsfile.close()
+        if not self.lockfree:
+            self.file.close()
+            self._backupsfile.close()
         # cleanup temporary files
         for l, f, b, c in self._backupentries:
             if l not in self._vfsmap and c:
@@ -584,10 +621,11 @@ class transaction(util.transactional):
         if self.after:
             self.after()
             self.after = None  # Help prevent cycles.
-        if self.opener.isfile(self._backupjournal):
-            self.opener.unlink(self._backupjournal)
-        if self.opener.isfile(self.journal):
-            self.opener.unlink(self.journal)
+        if not self.lockfree:
+            if self.opener.isfile(self._backupjournal):
+                self.opener.unlink(self._backupjournal)
+            if self.opener.isfile(self.journal):
+                self.opener.unlink(self.journal)
         for l, _f, b, c in self._backupentries:
             if l not in self._vfsmap and c:
                 self.report("couldn't remove %s: unknown cache location%s\n" % (b, l))
@@ -623,7 +661,11 @@ class transaction(util.transactional):
         self._abort()
 
     def _writeundo(self):
-        """write transaction data for possible future undo call"""
+        """write transaction data for possible future undo call
+        Does nothing in a lockfree transaction.
+        """
+        if self.lockfree:
+            return
         if self.undoname is None:
             return
         undobackupfile = self.opener.open("%s.backupfiles" % self.undoname, "wb")
@@ -680,8 +722,9 @@ class transaction(util.transactional):
     def _abort(self):
         self.count = 0
         self.usages = 0
-        self.file.close()
-        self._backupsfile.close()
+        if not self.lockfree:
+            self.file.close()
+            self._backupsfile.close()
 
         # Discard metalog state when exiting transaction.
         svfs = self._vfsmap[""]
@@ -690,10 +733,11 @@ class transaction(util.transactional):
 
         try:
             if not self.entries and not self._backupentries:
-                if self._backupjournal:
-                    self.opener.unlink(self._backupjournal)
-                if self.journal:
-                    self.opener.unlink(self.journal)
+                if not self.lockfree:
+                    if self._backupjournal:
+                        self.opener.unlink(self._backupjournal)
+                    if self.journal:
+                        self.opener.unlink(self.journal)
                 return
 
             self.report(_("transaction abort!\n"))
@@ -703,17 +747,18 @@ class transaction(util.transactional):
                     self._abortcallback[cat](self)
                 # Prevent double usage and help clear cycles.
                 self._abortcallback = None
-                _playback(
-                    self.journal,
-                    self.report,
-                    self.opener,
-                    self._vfsmap,
-                    self.entries,
-                    self._backupentries,
-                    False,
-                    checkambigfiles=self.checkambigfiles,
-                )
-                self.report(_("rollback completed\n"))
+                if not self.lockfree:
+                    _playback(
+                        self.journal,
+                        self.report,
+                        self.opener,
+                        self._vfsmap,
+                        self.entries,
+                        self._backupentries,
+                        False,
+                        checkambigfiles=self.checkambigfiles,
+                    )
+                    self.report(_("rollback completed\n"))
             except BaseException:
                 self.report(_("rollback failed - please run @prog@ recover\n"))
         finally:
