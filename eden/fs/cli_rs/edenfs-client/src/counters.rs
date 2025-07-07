@@ -41,6 +41,8 @@ pub struct FilesystemTelemetryCounters {
     pub syscall_lookup: u64,
     // The number of successful access operations.
     pub syscall_access: u64,
+    // The number of successful mkdir operations.
+    pub syscall_mkdir: u64,
 }
 
 impl Sub for FilesystemTelemetryCounters {
@@ -57,6 +59,7 @@ impl Sub for FilesystemTelemetryCounters {
             syscall_setattr: self.syscall_setattr - rhs.syscall_setattr,
             syscall_lookup: self.syscall_lookup - rhs.syscall_lookup,
             syscall_access: self.syscall_access - rhs.syscall_access,
+            syscall_mkdir: self.syscall_mkdir - rhs.syscall_mkdir,
         }
     }
 }
@@ -681,6 +684,7 @@ impl EdenFsClient {
             COUNTER_FS_SETATTR,
             COUNTER_FS_LOOKUP,
             COUNTER_FS_ACCESS,
+            COUNTER_FS_MKDIR,
         ];
 
         let cas_local_cache_counters = [
@@ -787,6 +791,7 @@ impl EdenFsClient {
                 syscall_setattr: *counters.get(COUNTER_FS_SETATTR).unwrap_or(&0) as u64,
                 syscall_lookup: *counters.get(COUNTER_FS_LOOKUP).unwrap_or(&0) as u64,
                 syscall_access: *counters.get(COUNTER_FS_ACCESS).unwrap_or(&0) as u64,
+                syscall_mkdir: *counters.get(COUNTER_FS_MKDIR).unwrap_or(&0) as u64,
             },
             thrift_stats: ThriftTelemetryCounters {},
             backend_stats: RemoteBackendTelemetryCounters {

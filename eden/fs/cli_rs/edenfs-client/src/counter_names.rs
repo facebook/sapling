@@ -19,6 +19,7 @@ pub mod fs_counters {
     pub const COUNTER_FS_SETATTR: &str = "nfs.setattr_successful.sum";
     pub const COUNTER_FS_LOOKUP: &str = "nfs.lookup_successful.sum";
     pub const COUNTER_FS_ACCESS: &str = "nfs.access_successful.sum";
+    pub const COUNTER_FS_MKDIR: &str = "nfs.mkdir_successful.sum";
 }
 
 #[cfg(target_os = "windows")]
@@ -32,6 +33,7 @@ pub mod fs_counters {
     pub const COUNTER_FS_SETATTR: &str = "prjfs.setattr_successful.sum"; // placeholder, does not exist
     pub const COUNTER_FS_LOOKUP: &str = "prjfs.lookup_successful.sum";
     pub const COUNTER_FS_ACCESS: &str = "prjfs.access_successful.sum";
+    pub const COUNTER_FS_MKDIR: &str = "prjfs.mkdir_successful.sum"; // placeholder, does not exist
 }
 
 // Filesystem counters for FUSE
@@ -46,6 +48,7 @@ pub mod fs_counters {
     pub const COUNTER_FS_SETATTR: &str = "fuse.setattr_successful.sum";
     pub const COUNTER_FS_LOOKUP: &str = "fuse.lookup_successful.sum";
     pub const COUNTER_FS_ACCESS: &str = "fuse.access_successful.sum";
+    pub const COUNTER_FS_MKDIR: &str = "fuse.mkdir_successful.sum";
 }
 
 // Re-export the filesystem counters
