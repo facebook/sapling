@@ -45,6 +45,7 @@ use scuba_ext::MononokeScubaSampleBuilder;
 use sharding_ext::RepoShard;
 use slog::error;
 use slog::info;
+use tracing::Instrument;
 use zk_leader_election::LeaderElection;
 use zk_leader_election::ZkMode;
 
@@ -168,67 +169,70 @@ impl MononokeCasSyncProcessExecutor {
     }
 
     async fn do_execute(&self) -> anyhow::Result<()> {
-        info!(
-            self.ctx.logger(),
-            "Initiating mononoke RE CAS sync command execution for repo {}", &self.repo_name,
-        );
+        async {
+            info!(
+                self.ctx.logger(),
+                "Initiating mononoke RE CAS sync command execution",
+            );
 
-        let args = self.app.args::<CasSyncArgs>()?;
+            let args = self.app.args::<CasSyncArgs>()?;
 
-        let base_retry_delay = args
-            .base_retry_delay_ms
-            .map_or(DEFAULT_RETRY_DELAY, Duration::from_millis);
+            let base_retry_delay = args
+                .base_retry_delay_ms
+                .map_or(DEFAULT_RETRY_DELAY, Duration::from_millis);
 
-        let retry_num = args.retry_num.unwrap_or(DEFAULT_EXECUTION_RETRY_NUM);
+            let retry_num = args.retry_num.unwrap_or(DEFAULT_EXECUTION_RETRY_NUM);
 
-        let mode: ZkMode = args.leader_only.into();
+            let mode: ZkMode = args.leader_only.into();
 
-        retry_always(
-            self.ctx.logger(),
-            |attempt| async move {
-                // Once cancellation is requested, do not retry even if its
-                // a retryable error.
-                if self.cancellation_requested.load(Ordering::Relaxed) {
-                    info!(
-                        self.ctx.logger(),
-                        "sync stopping due to cancellation request at attempt {}", attempt
-                    );
-                } else {
-                    match self.maybe_become_leader(mode, self.ctx.logger().clone()).await {
-                        Ok(_leader_token) => {
-                            run_sync(
-                                attempt,
-                                self.fb,
-                                &self.ctx,
-                                self.app.clone(),
-                                self.args.clone(),
-                                self.repo_name.clone(),
-                                Arc::clone(&self.cancellation_requested),
-                            )
-                            .await
-                            .with_context(|| {
-                                format!(
-                                    "Error during mononoke RE CAS sync command execution for repo {}. Attempt number {}",
-                                    &self.repo_name, attempt
+            retry_always(
+                self.ctx.logger(),
+                |attempt| async move {
+                    // Once cancellation is requested, do not retry even if its
+                    // a retryable error.
+                    if self.cancellation_requested.load(Ordering::Relaxed) {
+                        info!(
+                            self.ctx.logger(),
+                            "sync stopping due to cancellation request at attempt {}", attempt
+                        );
+                    } else {
+                        match self.maybe_become_leader(mode, self.ctx.logger().clone()).await {
+                            Ok(_leader_token) => {
+                                run_sync(
+                                    attempt,
+                                    self.fb,
+                                    &self.ctx,
+                                    self.app.clone(),
+                                    self.args.clone(),
+                                    self.repo_name.clone(),
+                                    Arc::clone(&self.cancellation_requested),
                                 )
-                            })?;
-                        },
-                        Err(e) => {
-                            error!(self.ctx.logger(), "Failed to become leader {:#}", e);
+                                .await
+                                .with_context(|| {
+                                    format!(
+                                        "Error during mononoke RE CAS sync command execution for repo {}. Attempt number {}",
+                                        &self.repo_name, attempt
+                                    )
+                                })?;
+                            },
+                            Err(e) => {
+                                error!(self.ctx.logger(), "Failed to become leader {:#}", e);
+                            }
                         }
                     }
-                }
-                anyhow::Ok(())
-            },
-            base_retry_delay,
-            retry_num,
-        )
-        .await?;
-        info!(
-            self.ctx.logger(),
-            "Finished mononoke RE CAS sync command execution for repo {}", &self.repo_name,
-        );
-        Ok(())
+                    anyhow::Ok(())
+                },
+                base_retry_delay,
+                retry_num,
+            )
+            .await?;
+            info!(
+                self.ctx.logger(),
+                "Finished mononoke RE CAS sync command execution for repo {}", &self.repo_name,
+            );
+            Ok(())
+    }.instrument(tracing::info_span!("execute", repo = %self.repo_name))
+    .await
     }
 }
 

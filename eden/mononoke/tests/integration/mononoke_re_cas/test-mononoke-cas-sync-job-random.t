@@ -46,15 +46,15 @@ Check that new entry was added to the sync database. 4 pushes
 
 Sync all bookmarks moves and test the "stats" output. This should be stable due to the use of "random", that's why we never expect already present blobs, and uploaded sum should be the same for all runs. Upload should include both bookmarks master_bookmark and other.
   $ with_stripped_logs mononoke_cas_sync repo 0
-  Initiating mononoke RE CAS sync command execution for repo repo, repo: repo
-  using repo "repo" repoid RepositoryId(0), repo: repo
-  syncing log entries [1, 2, 3, 4, 5] ..., repo: repo
-  log entry BookmarkUpdateLogEntry * is a creation of bookmark, repo: repo (glob)
-  log entry BookmarkUpdateLogEntry * is a creation of bookmark, repo: repo (glob)
-  log entries [1, 2, 3, 4, 5] synced (5 commits uploaded, upload stats: uploaded digests: 10, already present digests: 0, uploaded bytes: 2.8 KiB, the largest uploaded blob: 875 B), took overall * sec, repo: repo (glob)
-  queue size after processing: 0, repo: repo
-  successful sync of entries [1, 2, 3, 4, 5], repo: repo
-  Finished mononoke RE CAS sync command execution for repo repo, repo: repo
+  [INFO] [execute{repo=repo}] Initiating mononoke RE CAS sync command execution
+  [INFO] [execute{repo=repo}] using repo "repo" repoid RepositoryId(0)
+  [INFO] [execute{repo=repo}] syncing log entries [1, 2, 3, 4, 5] ...
+  [INFO] [execute{repo=repo}] log entry BookmarkUpdateLogEntry * is a creation of bookmark (glob)
+  [INFO] [execute{repo=repo}] log entry BookmarkUpdateLogEntry * is a creation of bookmark (glob)
+  [INFO] [execute{repo=repo}] log entries [1, 2, 3, 4, 5] synced (5 commits uploaded, upload stats: uploaded digests: 10, already present digests: 0, uploaded bytes: 2.8 KiB, the largest uploaded blob: 875 B), took overall * sec (glob)
+  [INFO] [execute{repo=repo}] queue size after processing: 0
+  [INFO] [execute{repo=repo}] successful sync of entries [1, 2, 3, 4, 5]
+  [INFO] [execute{repo=repo}] Finished mononoke RE CAS sync command execution for repo repo
 
 Validate that all the blobs are now present in CAS for the commit D
   $ with_stripped_logs mononoke_admin cas-store --repo-name repo upload --full --hg-id $D
