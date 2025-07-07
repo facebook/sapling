@@ -1097,11 +1097,13 @@ class localrepository:
                 git.pull(self, source, names=bookmarknames, nodes=headnodes)
             return
 
+        lockfree = self.config.get.as_bool("experimental", "lock-free-pull")
+
         with (
             self.conn(source) as conn,
-            self.wlock(),
-            self.lock(),
-            self.transaction("pull"),
+            lockfree and util.nullcontextmanager() or self.wlock(),
+            lockfree and util.nullcontextmanager() or self.lock(),
+            self.transaction("pull", lockfree=lockfree),
             self.ui.configoverride(configoverride),
         ):
             remote = conn.peer
