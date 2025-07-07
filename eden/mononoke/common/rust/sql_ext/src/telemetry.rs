@@ -75,6 +75,8 @@ fn log_mysql_query_telemetry(
         scuba.add_client_request_info(cri);
     };
 
+    scuba.add_common_server_data();
+
     scuba.add("granularity", format!("{:?}", granularity));
     scuba.add("instance_type", query_tel.instance_type());
     scuba.add(
