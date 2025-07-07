@@ -23,7 +23,7 @@
 # Capture the first blob hash
   $ first_blob_hash=$(git ls-tree $(git rev-list --max-parents=0 HEAD) | awk '{print $3}' | head -n 1)
 # Create an annotated tag pointing to the root tree of the repo
-  $ git tag -a tag_to_tree $root_tree_hash -m "Tag pointing to root tree"  
+  $ git tag -a tag_to_tree $root_tree_hash -m "Tag pointing to root tree"
 # Create a branch pointing to the root tree of the repo
   $ echo $root_tree_hash > .git/refs/heads/branch_to_root_tree
 # Create a simple tag pointing to the root tree of the repo
@@ -42,38 +42,40 @@
 # Try importing tree refs into Mononoke without enabling --allow-content-refs. This should fail.
   $ cd "$TESTTMP"
   $ with_stripped_logs gitimport "$GIT_REPO" --concurrency 100 --generate-bookmarks --include-refs refs/heads/branch_to_root_tree full-repo | head -6
-  using repo "repo" repoid RepositoryId(0)
-  GitRepo:$TESTTMP/repo-git commit 1 of 1 - Oid:8ce3eae4 => Bid:032cd4dc, repo: $TESTTMP/repo-git
-  Execution error: read_git_refs failed
+  [INFO] using repo "repo" repoid RepositoryId(0)
+  [INFO] GitRepo:$TESTTMP/repo-git commit 1 of 1 - Oid:8ce3eae4 => Bid:032cd4dc
+  [ERROR] Execution error: read_git_refs failed
   
   Caused by:
       Ref: refs/heads/branch_to_blob points to a blob
+
 
 # Try importing blob refs into Mononoke without enabling --allow-content-refs. This should fail.
   $ with_stripped_logs gitimport "$GIT_REPO" --concurrency 100 --generate-bookmarks --include-refs refs/heads/branch_to_blob full-repo | head -6
-  using repo "repo" repoid RepositoryId(0)
-  GitRepo:$TESTTMP/repo-git 1 of 1 commit(s) already exist, repo: $TESTTMP/repo-git
-  Execution error: read_git_refs failed
+  [INFO] using repo "repo" repoid RepositoryId(0)
+  [INFO] GitRepo:$TESTTMP/repo-git 1 of 1 commit(s) already exist
+  [ERROR] Execution error: read_git_refs failed
   
   Caused by:
       Ref: refs/heads/branch_to_blob points to a blob
 
+
 # Import it into Mononoke
   $ with_stripped_logs gitimport "$GIT_REPO" --concurrency 100 --generate-bookmarks --allow-content-refs full-repo
-  using repo "repo" repoid RepositoryId(0)
-  GitRepo:$TESTTMP/repo-git 1 of 1 commit(s) already exist, repo: $TESTTMP/repo-git
-  Ref: "refs/heads/branch_to_blob": None
-  Ref: "refs/heads/branch_to_root_tree": None
-  Ref: "refs/heads/master_bookmark": Some(ChangesetId(Blake2(032cd4dce0406f1c1dd1362b6c3c9f9bdfa82f2fc5615e237a890be4fe08b044)))
-  Ref: "refs/tags/first_tag": Some(ChangesetId(Blake2(032cd4dce0406f1c1dd1362b6c3c9f9bdfa82f2fc5615e237a890be4fe08b044)))
-  Ref: "refs/tags/recursive_tag": None
-  Ref: "refs/tags/simple_tag_to_tree": None
-  Ref: "refs/tags/tag_to_tree": None
-  Initializing repo: repo
-  Initialized repo: repo
-  All repos initialized. It took: * seconds (glob)
-  Bookmark: "heads/master_bookmark": ChangesetId(Blake2(032cd4dce0406f1c1dd1362b6c3c9f9bdfa82f2fc5615e237a890be4fe08b044)) (created)
-  Bookmark: "tags/first_tag": ChangesetId(Blake2(032cd4dce0406f1c1dd1362b6c3c9f9bdfa82f2fc5615e237a890be4fe08b044)) (created)
+  [INFO] using repo "repo" repoid RepositoryId(0)
+  [INFO] GitRepo:$TESTTMP/repo-git 1 of 1 commit(s) already exist
+  [INFO] Ref: "refs/heads/branch_to_blob": None
+  [INFO] Ref: "refs/heads/branch_to_root_tree": None
+  [INFO] Ref: "refs/heads/master_bookmark": Some(ChangesetId(Blake2(032cd4dce0406f1c1dd1362b6c3c9f9bdfa82f2fc5615e237a890be4fe08b044)))
+  [INFO] Ref: "refs/tags/first_tag": Some(ChangesetId(Blake2(032cd4dce0406f1c1dd1362b6c3c9f9bdfa82f2fc5615e237a890be4fe08b044)))
+  [INFO] Ref: "refs/tags/recursive_tag": None
+  [INFO] Ref: "refs/tags/simple_tag_to_tree": None
+  [INFO] Ref: "refs/tags/tag_to_tree": None
+  [INFO] Initializing repo: repo
+  [INFO] Initialized repo: repo
+  [INFO] All repos initialized. It took: * seconds (glob)
+  [INFO] Bookmark: "heads/master_bookmark": ChangesetId(Blake2(032cd4dce0406f1c1dd1362b6c3c9f9bdfa82f2fc5615e237a890be4fe08b044)) (created)
+  [INFO] Bookmark: "tags/first_tag": ChangesetId(Blake2(032cd4dce0406f1c1dd1362b6c3c9f9bdfa82f2fc5615e237a890be4fe08b044)) (created)
 
 # Ensure that the refs pointing to trees and blobs are recorded as expected. Note that currently we record the refs with the "refs/" prefix which is incorrect
   $ sqlite3 "$TESTTMP/monsql/sqlite_dbs" "SELECT ref_name, hex(git_hash) as git_hash, is_tree FROM git_ref_content_mapping ORDER BY ref_name"

@@ -59,17 +59,17 @@ Disable Mercurial types as they do not support git submodules
 # Import it into Mononoke
   $ cd "$TESTTMP"
   $ with_stripped_logs gitimport "$GIT_REPO" --generate-bookmarks full-repo
-  using repo "repo" repoid RepositoryId(0)
-  GitRepo:$TESTTMP/repo-git commit 3 of 3 - Oid:* => Bid:* (glob)
-  Ref: "refs/heads/master_bookmark": Some(ChangesetId(Blake2(*))) (glob)
-  Ref: "refs/tags/empty_tag": Some(ChangesetId(Blake2(da93dc81badd8d407db0f3219ec0ec78f1ef750ebfa95735bb483310371af80c)))
-  Ref: "refs/tags/first_tag": Some(ChangesetId(Blake2(032cd4dce0406f1c1dd1362b6c3c9f9bdfa82f2fc5615e237a890be4fe08b044)))
-  Initializing repo: repo
-  Initialized repo: repo
-  All repos initialized. It took: * seconds (glob)
-  Bookmark: "heads/master_bookmark": ChangesetId(Blake2(*)) (created) (glob)
-  Bookmark: "tags/empty_tag": ChangesetId(Blake2(da93dc81badd8d407db0f3219ec0ec78f1ef750ebfa95735bb483310371af80c)) (created)
-  Bookmark: "tags/first_tag": ChangesetId(Blake2(032cd4dce0406f1c1dd1362b6c3c9f9bdfa82f2fc5615e237a890be4fe08b044)) (created)
+  [INFO] using repo "repo" repoid RepositoryId(0)
+  [INFO] GitRepo:$TESTTMP/repo-git commit 3 of 3 - Oid:* => Bid:* (glob)
+  [INFO] Ref: "refs/heads/master_bookmark": Some(ChangesetId(Blake2(*))) (glob)
+  [INFO] Ref: "refs/tags/empty_tag": Some(ChangesetId(Blake2(da93dc81badd8d407db0f3219ec0ec78f1ef750ebfa95735bb483310371af80c)))
+  [INFO] Ref: "refs/tags/first_tag": Some(ChangesetId(Blake2(032cd4dce0406f1c1dd1362b6c3c9f9bdfa82f2fc5615e237a890be4fe08b044)))
+  [INFO] Initializing repo: repo
+  [INFO] Initialized repo: repo
+  [INFO] All repos initialized. It took: * seconds (glob)
+  [INFO] Bookmark: "heads/master_bookmark": ChangesetId(Blake2(*)) (created) (glob)
+  [INFO] Bookmark: "tags/empty_tag": ChangesetId(Blake2(da93dc81badd8d407db0f3219ec0ec78f1ef750ebfa95735bb483310371af80c)) (created)
+  [INFO] Bookmark: "tags/first_tag": ChangesetId(Blake2(032cd4dce0406f1c1dd1362b6c3c9f9bdfa82f2fc5615e237a890be4fe08b044)) (created)
 
 # Regenerate the Git repo out of the Mononoke repo
   $ mononoke_admin git-bundle create from-repo -R repo --output-location "$BUNDLE_PATH"
@@ -79,7 +79,7 @@ Disable Mercurial types as they do not support git submodules
   $TESTTMP/repo_bundle.bundle is okay
 
 # Create a new empty folder for containing the repo
-  $ mkdir $TESTTMP/git_client_repo  
+  $ mkdir $TESTTMP/git_client_repo
   $ cd "$TESTTMP"
   $ git clone --mirror "$BUNDLE_PATH" git_client_repo
   Cloning into bare repository 'git_client_repo'...
@@ -93,4 +93,4 @@ Disable Mercurial types as they do not support git submodules
   $ git rev-list --objects --all | git cat-file --batch-check='%(objectname) %(objecttype) %(rest)' | sort > $TESTTMP/new_object_list
 
 # Ensure that there are no differences between the set of objects by diffing both object list files
-  $ diff -w $TESTTMP/new_object_list $TESTTMP/object_list  
+  $ diff -w $TESTTMP/new_object_list $TESTTMP/object_list

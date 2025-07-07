@@ -30,14 +30,14 @@ But it's available on the separate lfs server
 
 Git Import without extra option will fail
   $ with_stripped_logs gitimport "$GIT_REPO_SERVER" --lfs-import-max-attempts 1 --generate-bookmarks --concurrency 100 --lfs-server "$LEGACY_LFS_URL/download_sha256" full-repo | grep -e error -e Execution
-  Execution error: gitimport failed
+  [ERROR] Execution error: gitimport failed
   Error: Execution failed
 
 Git Import will skip dangling pointer
   $ quiet_grep Uploading -- with_stripped_logs gitimport "$GIT_REPO_SERVER"  --lfs-import-max-attempts 1 --allow-dangling-lfs-pointers --generate-bookmarks --concurrency 100 --lfs-server "$LEGACY_LFS_URL/download_sha256" full-repo | sort
-  Uploading LFS large_file sha256:6c54a4de size:20* (glob)
-  Uploading LFS large_file_dangling_pointer sha256:baaaaaad size:1234* (glob)
-  Uploading LFS large_file_non_canonical_pointer sha256:6c54a4de size:20* (glob)
+  [INFO] Uploading LFS large_file sha256:6c54a4de size:20
+  [INFO] Uploading LFS large_file_dangling_pointer sha256:baaaaaad size:1234
+  [INFO] Uploading LFS large_file_non_canonical_pointer sha256:6c54a4de size:20
 We store full file contents for non-LFS file
   $ mononoke_admin fetch -R repo -B heads/master_bookmark --path small_file
   File-Type: regular

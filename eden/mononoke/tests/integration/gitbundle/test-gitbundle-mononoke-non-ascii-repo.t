@@ -38,17 +38,17 @@
 # Import it into Mononoke
   $ cd "$TESTTMP"
   $ with_stripped_logs gitimport "$GIT_REPO" --derive-hg --generate-bookmarks full-repo
-  using repo "repo" repoid RepositoryId(0)
-  GitRepo:*repo-git commit 2 of 2 - Oid:* => Bid:* (glob)
-  Hg: Sha1(*): HgManifestId(HgNodeHash(Sha1(*))) (glob)
-  Hg: Sha1(*): HgManifestId(HgNodeHash(Sha1(*))) (glob)
-  Ref: "refs/heads/master_bookmark": Some(ChangesetId(Blake2(*))) (glob)
-  Ref: "refs/tags/empty_tag": Some(ChangesetId(Blake2(*))) (glob)
-  Initializing repo: repo
-  Initialized repo: repo
-  All repos initialized. It took: * seconds (glob)
-  Bookmark: "heads/master_bookmark": ChangesetId(Blake2(*)) (created) (glob)
-  Bookmark: "tags/empty_tag": ChangesetId(Blake2(*)) (created) (glob)
+  [INFO] using repo "repo" repoid RepositoryId(0)
+  [INFO] GitRepo:$TESTTMP/repo-git commit 2 of 2 - Oid:d46416c1 => Bid:fa44539f
+  [INFO] Hg: Sha1(65d52395d5907d3d7db131ac3a8d9e9e2a564009): HgManifestId(HgNodeHash(Sha1(6f475e77c1b34e29046bb4d7bbf8d181bb1db1a8)))
+  [INFO] Hg: Sha1(d46416c10751191818e93a023d9d44db9ffd2513): HgManifestId(HgNodeHash(Sha1(f84a41aa4398ec5494ba1cdfbe1bdc65f29cd8ca)))
+  [INFO] Ref: "refs/heads/master_bookmark": Some(ChangesetId(Blake2(fa44539fc506e5752424e2a05f43bccff5994cb860ac7a94351fb25baf2079ae)))
+  [INFO] Ref: "refs/tags/empty_tag": Some(ChangesetId(Blake2(fa44539fc506e5752424e2a05f43bccff5994cb860ac7a94351fb25baf2079ae)))
+  [INFO] Initializing repo: repo
+  [INFO] Initialized repo: repo
+  [INFO] All repos initialized. It took: * seconds (glob)
+  [INFO] Bookmark: "heads/master_bookmark": ChangesetId(Blake2(fa44539fc506e5752424e2a05f43bccff5994cb860ac7a94351fb25baf2079ae)) (created)
+  [INFO] Bookmark: "tags/empty_tag": ChangesetId(Blake2(fa44539fc506e5752424e2a05f43bccff5994cb860ac7a94351fb25baf2079ae)) (created)
 
 # Regenerate the Git repo out of the Mononoke repo
   $ mononoke_admin git-bundle create from-repo -R repo --output-location "$BUNDLE_PATH"
@@ -59,7 +59,7 @@
   $TESTTMP/repo_bundle.bundle is okay
 
 # Create a new empty folder for containing the repo
-  $ mkdir $TESTTMP/git_client_repo  
+  $ mkdir $TESTTMP/git_client_repo
   $ cd "$TESTTMP"
   $ git clone --mirror "$BUNDLE_PATH" git_client_repo
   Cloning into bare repository 'git_client_repo'...
@@ -81,4 +81,4 @@
   $ git rev-list --objects --all | git cat-file --batch-check='%(objectname) %(objecttype) %(rest)' | sort > $TESTTMP/new_object_list
 
 # Ensure that there are no differences between the set of objects by diffing both object list files
-  $ diff -w $TESTTMP/new_object_list $TESTTMP/object_list  
+  $ diff -w $TESTTMP/new_object_list $TESTTMP/object_list

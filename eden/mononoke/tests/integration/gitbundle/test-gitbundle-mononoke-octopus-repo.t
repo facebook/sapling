@@ -62,19 +62,19 @@
 # Import it into Mononoke
   $ cd "$TESTTMP"
   $ with_stripped_logs gitimport "$GIT_REPO" --generate-bookmarks full-repo
-  using repo "repo" repoid RepositoryId(0)
-  GitRepo:*repo-git commit 5 of 5 - Oid:* => Bid:* (glob)
-  Ref: "refs/heads/branch1": Some(ChangesetId(Blake2(*))) (glob)
-  Ref: "refs/heads/branch2": Some(ChangesetId(Blake2(*))) (glob)
-  Ref: "refs/heads/master_bookmark": Some(ChangesetId(Blake2(cd646b3089570264b64aad059cf0420b0564f9a57e3b243921da560d9e94339c)))
-  Ref: "refs/heads/root": Some(ChangesetId(Blake2(*))) (glob)
-  Initializing repo: repo
-  Initialized repo: repo
-  All repos initialized. It took: * seconds (glob)
-  Bookmark: "heads/branch1": ChangesetId(Blake2(*)) (created) (glob)
-  Bookmark: "heads/branch2": ChangesetId(Blake2(*)) (created) (glob)
-  Bookmark: "heads/master_bookmark": ChangesetId(Blake2(*)) (created) (glob)
-  Bookmark: "heads/root": ChangesetId(Blake2(*)) (created) (glob)
+  [INFO] using repo "repo" repoid RepositoryId(0)
+  [INFO] GitRepo:$TESTTMP/repo-git commit 5 of 5 - Oid:b83b948f => Bid:cd646b30
+  [INFO] Ref: "refs/heads/branch1": Some(ChangesetId(Blake2(7db05defca4d86fbafe97460d971c74fcb571da08f921252990831d86816ab5f)))
+  [INFO] Ref: "refs/heads/branch2": Some(ChangesetId(Blake2(3f6085be18c9325ed283c4b4f766737470a243e00f7236db58e48ab918410d45)))
+  [INFO] Ref: "refs/heads/master_bookmark": Some(ChangesetId(Blake2(cd646b3089570264b64aad059cf0420b0564f9a57e3b243921da560d9e94339c)))
+  [INFO] Ref: "refs/heads/root": Some(ChangesetId(Blake2(3127796ac597cbfe000475927080d809512a797d800cb0af0153d37533544ef3)))
+  [INFO] Initializing repo: repo
+  [INFO] Initialized repo: repo
+  [INFO] All repos initialized. It took: * seconds (glob)
+  [INFO] Bookmark: "heads/branch1": ChangesetId(Blake2(7db05defca4d86fbafe97460d971c74fcb571da08f921252990831d86816ab5f)) (created)
+  [INFO] Bookmark: "heads/branch2": ChangesetId(Blake2(3f6085be18c9325ed283c4b4f766737470a243e00f7236db58e48ab918410d45)) (created)
+  [INFO] Bookmark: "heads/master_bookmark": ChangesetId(Blake2(cd646b3089570264b64aad059cf0420b0564f9a57e3b243921da560d9e94339c)) (created)
+  [INFO] Bookmark: "heads/root": ChangesetId(Blake2(3127796ac597cbfe000475927080d809512a797d800cb0af0153d37533544ef3)) (created)
 
 
 # Regenerate the Git repo out of the Mononoke repo
@@ -85,7 +85,7 @@
   $TESTTMP/repo_bundle.bundle is okay
 
 # Create a new empty folder for containing the repo
-  $ mkdir $TESTTMP/git_client_repo  
+  $ mkdir $TESTTMP/git_client_repo
   $ cd "$TESTTMP"
   $ git clone --mirror "$BUNDLE_PATH" git_client_repo
   Cloning into bare repository 'git_client_repo'...
@@ -102,4 +102,4 @@
   $ git rev-list --objects --all | git cat-file --batch-check='%(objectname) %(objecttype) %(rest)' | sort > $TESTTMP/new_object_list
 
 # Ensure that there are no differences between the set of objects by diffing both object list files
-  $ diff -w $TESTTMP/new_object_list $TESTTMP/object_list  
+  $ diff -w $TESTTMP/new_object_list $TESTTMP/object_list

@@ -29,6 +29,8 @@
   +++ b/file1
   @@ -0,0 +1 @@
   +this is file1
+
+
 # Create a correct tag
   $ git tag -a correct_tag -m ""
 # Now create an incorrect tag from this correct tag
@@ -40,6 +42,7 @@
   tag correct_tag
   tagger mononoke <mononoke@mononoke> 946684800 +0000
   
+
 # We will make an incorrect tag by stripping the timezone from the tagger, as was seen in prod during T199503972
 # First, show why the tag is invalid, and why git tries to prevent us from creating it
   $ git cat-file -p 596f709c975acae56ccd9fd3e6714beeece4005f | head -c 111 | { printf "%s\n" "$(cat)"; } | git mktag
@@ -62,14 +65,14 @@
 
 # Import it into Mononoke
   $ with_stripped_logs gitimport "$GIT_REPO" --generate-bookmarks full-repo
-  using repo "repo" repoid RepositoryId(0)
-  GitRepo:$TESTTMP/repo-git commit 1 of 1 - Oid:15cc4e95 => Bid:ce423062* (glob)
-  Ref: "refs/heads/master_bookmark": Some(ChangesetId(Blake2(ce423062b4eee7935dc1bf77937f8393e1aa97478077e1cce2745c8cf1b9e8c6)))
-  Ref: "refs/tags/correct_tag": Some(ChangesetId(Blake2(ce423062b4eee7935dc1bf77937f8393e1aa97478077e1cce2745c8cf1b9e8c6)))
-  Ref: "refs/tags/incorrect_tag": Some(ChangesetId(Blake2(ce423062b4eee7935dc1bf77937f8393e1aa97478077e1cce2745c8cf1b9e8c6)))
-  Initializing repo: repo
-  Initialized repo: repo
-  All repos initialized. It took: 0 seconds
-  Bookmark: "heads/master_bookmark": ChangesetId(Blake2(ce423062b4eee7935dc1bf77937f8393e1aa97478077e1cce2745c8cf1b9e8c6)) (created)
-  Bookmark: "tags/correct_tag": ChangesetId(Blake2(ce423062b4eee7935dc1bf77937f8393e1aa97478077e1cce2745c8cf1b9e8c6)) (created)
-  Bookmark: "tags/incorrect_tag": ChangesetId(Blake2(ce423062b4eee7935dc1bf77937f8393e1aa97478077e1cce2745c8cf1b9e8c6)) (created)
+  [INFO] using repo "repo" repoid RepositoryId(0)
+  [INFO] GitRepo:$TESTTMP/repo-git commit 1 of 1 - Oid:15cc4e95 => Bid:ce423062
+  [INFO] Ref: "refs/heads/master_bookmark": Some(ChangesetId(Blake2(ce423062b4eee7935dc1bf77937f8393e1aa97478077e1cce2745c8cf1b9e8c6)))
+  [INFO] Ref: "refs/tags/correct_tag": Some(ChangesetId(Blake2(ce423062b4eee7935dc1bf77937f8393e1aa97478077e1cce2745c8cf1b9e8c6)))
+  [INFO] Ref: "refs/tags/incorrect_tag": Some(ChangesetId(Blake2(ce423062b4eee7935dc1bf77937f8393e1aa97478077e1cce2745c8cf1b9e8c6)))
+  [INFO] Initializing repo: repo
+  [INFO] Initialized repo: repo
+  [INFO] All repos initialized. It took: * seconds (glob)
+  [INFO] Bookmark: "heads/master_bookmark": ChangesetId(Blake2(ce423062b4eee7935dc1bf77937f8393e1aa97478077e1cce2745c8cf1b9e8c6)) (created)
+  [INFO] Bookmark: "tags/correct_tag": ChangesetId(Blake2(ce423062b4eee7935dc1bf77937f8393e1aa97478077e1cce2745c8cf1b9e8c6)) (created)
+  [INFO] Bookmark: "tags/incorrect_tag": ChangesetId(Blake2(ce423062b4eee7935dc1bf77937f8393e1aa97478077e1cce2745c8cf1b9e8c6)) (created)

@@ -34,8 +34,8 @@
 # Import it into Mononoke
   $ cd "$TESTTMP"
   $ with_stripped_logs gitimport "$GIT_REPO" import-tree-as-single-bonsai-changeset 69d481cfc9a21ef59b516c3de04cd742d059d345
-  using repo "repo" repoid RepositoryId(0)
-  imported as 996a9fdfbf6ef7fe0e61e6f5da99f2189896379558cc24e9501b06b45350d489
+  [INFO] using repo "repo" repoid RepositoryId(0)
+  [INFO] imported as 996a9fdfbf6ef7fe0e61e6f5da99f2189896379558cc24e9501b06b45350d489
 
 # Validate if creating the commit also uploaded the raw commit blob
 # The id of the blob should be the same as the commit object id

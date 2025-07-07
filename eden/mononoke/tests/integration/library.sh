@@ -1461,6 +1461,8 @@ function gitimport() {
     --tls-ca "$TEST_CERTDIR/root-ca.crt" \
     --tls-private-key "$TEST_CERTDIR/client0.key" \
     --tls-certificate "$TEST_CERTDIR/client0.crt" \
+    --tracing \
+    --tracing-test-format \
     "$@"
 }
 

@@ -14,16 +14,16 @@ Use common repo setup
 
 Git Import
   $ with_stripped_logs gitimport "$GIT_REPO_SERVER" --generate-bookmarks --concurrency 100 --derive-hg full-repo
-  using repo "repo" repoid RepositoryId(0)
-  GitRepo:$TESTTMP/repo-git-server commit 3 of 3 - Oid:c13a0ad2 => Bid:63ca8c6f* (glob)
-  Hg: Sha1(cd1f06e78e52e64d693fe02d19cf3a427ab1c7f4): HgManifestId(HgNodeHash(Sha1(0ed5ff2a892144296f5abaca61b5759c7f69b551)))
-  Hg: Sha1(ec907399950a922e347f484167d9597485acf6a3): HgManifestId(HgNodeHash(Sha1(a754e6297b9438be3c3463bd07f635a7bb26eb39)))
-  Hg: Sha1(c13a0ad234813977286c5827533de22af7f04fc5): HgManifestId(HgNodeHash(Sha1(8c3afe88bfee82fe7eaa26c061875ce6395f9a98)))
-  Ref: "refs/heads/master_bookmark": Some(ChangesetId(Blake2(63ca8c6ff5810be0626a3d9d84f08e39ff4236b6e9907cc2aeaaba73d520a0c7)))
-  Initializing repo: repo
-  Initialized repo: repo
-  All repos initialized. It took: * seconds (glob)
-  Bookmark: "heads/master_bookmark": ChangesetId(Blake2(63ca8c6ff5810be0626a3d9d84f08e39ff4236b6e9907cc2aeaaba73d520a0c7)) (created)
+  [INFO] using repo "repo" repoid RepositoryId(0)
+  [INFO] GitRepo:$TESTTMP/repo-git-server commit 3 of 3 - Oid:c13a0ad2 => Bid:63ca8c6f
+  [INFO] Hg: Sha1(cd1f06e78e52e64d693fe02d19cf3a427ab1c7f4): HgManifestId(HgNodeHash(Sha1(0ed5ff2a892144296f5abaca61b5759c7f69b551)))
+  [INFO] Hg: Sha1(ec907399950a922e347f484167d9597485acf6a3): HgManifestId(HgNodeHash(Sha1(a754e6297b9438be3c3463bd07f635a7bb26eb39)))
+  [INFO] Hg: Sha1(c13a0ad234813977286c5827533de22af7f04fc5): HgManifestId(HgNodeHash(Sha1(8c3afe88bfee82fe7eaa26c061875ce6395f9a98)))
+  [INFO] Ref: "refs/heads/master_bookmark": Some(ChangesetId(Blake2(63ca8c6ff5810be0626a3d9d84f08e39ff4236b6e9907cc2aeaaba73d520a0c7)))
+  [INFO] Initializing repo: repo
+  [INFO] Initialized repo: repo
+  [INFO] All repos initialized. It took: * seconds (glob)
+  [INFO] Bookmark: "heads/master_bookmark": ChangesetId(Blake2(63ca8c6ff5810be0626a3d9d84f08e39ff4236b6e9907cc2aeaaba73d520a0c7)) (created)
 
 We store full file contents for non-LFS file
   $ mononoke_admin fetch -R repo -B heads/master_bookmark --path small_file
@@ -36,6 +36,8 @@ We store full file contents for non-LFS file
   
   sml fle
   
+
+
 We store just LFS pointer for LFS file
   $ mononoke_admin fetch -R repo -B heads/master_bookmark --path large_file
   File-Type: regular
@@ -50,6 +52,8 @@ We store just LFS pointer for LFS file
   size 20
   
 
+
+
   $ mononoke_admin fetch -R repo -B heads/master_bookmark --path large_file_non_canonical_pointer
   File-Type: regular
   Size: 126
@@ -62,6 +66,8 @@ We store just LFS pointer for LFS file
   oid sha256:6c54a4de10537e482e9f91281fb85ab614e0e0f62307047f9b9f3ccea2de8204
   size 20
   
+
+
 This repo has just 3 file content blobs stored (small + two LFS pointers)
   $ ls "$TESTTMP"/blobstore/blobs/blob-repo0000.content.*
   $TESTTMP/blobstore/blobs/blob-repo0000.content.blake2.0356a836e448b746fa1f83ebdfd27d039bdf6038168d4fdba6074633d1af82a4

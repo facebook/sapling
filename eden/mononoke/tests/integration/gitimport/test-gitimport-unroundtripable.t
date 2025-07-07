@@ -20,9 +20,9 @@
 
 # Import it into Mononoke
   $ with_stripped_logs gitimport "$GIT_REPO" --concurrency 1 full-repo
-  using repo "repo" repoid RepositoryId(0)
-  GitRepo:$TESTTMP/repo-git commit 1 of 1 - Oid:a57065d8 => Bid:f1c2afeb* (glob)
-  Ref: "refs/heads/master_bookmark": Some(ChangesetId(Blake2(f1c2afeb1a400c6b7d45af203fd2de012f5c55a08616cdd2a8499278ab1ddf3d)))
+  [INFO] using repo "repo" repoid RepositoryId(0)
+  [INFO] GitRepo:$TESTTMP/repo-git commit 1 of 1 - Oid:a57065d8 => Bid:f1c2afeb
+  [INFO] Ref: "refs/heads/master_bookmark": Some(ChangesetId(Blake2(f1c2afeb1a400c6b7d45af203fd2de012f5c55a08616cdd2a8499278ab1ddf3d)))
 
   $ mononoke_admin git-objects -R repo fetch --id a57065d80c86fdef0f01cc4c822278257107ccad
   The object is a Git Commit

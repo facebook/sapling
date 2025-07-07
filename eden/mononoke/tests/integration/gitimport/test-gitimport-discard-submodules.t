@@ -101,20 +101,22 @@
   @@ -0,0 +1 @@
   +Subproject commit de0c53cc213a98b1382aec1dcbcb01bf088273e4
 
+
+
 # Import it into Mononoke
   $ cd "$TESTTMP"
   $ with_stripped_logs gitimport "$GIT_REPO" --generate-bookmarks --discard-submodules full-repo
-  using repo "repo" repoid RepositoryId(0)
-  GitRepo:$TESTTMP/repo-git commit 3 of 3 - Oid:fbae2e73 => Bid:4cd77220* (glob)
-  Ref: "refs/heads/master_bookmark": Some(ChangesetId(Blake2(4cd77220f6dcf9154b8cd4dc0f33b72b19a765d73a770cce612ee094191e7d9e)))
-  Ref: "refs/tags/empty_tag": Some(ChangesetId(Blake2(4cd77220f6dcf9154b8cd4dc0f33b72b19a765d73a770cce612ee094191e7d9e)))
-  Ref: "refs/tags/first_tag": Some(ChangesetId(Blake2(032cd4dce0406f1c1dd1362b6c3c9f9bdfa82f2fc5615e237a890be4fe08b044)))
-  Initializing repo: repo
-  Initialized repo: repo
-  All repos initialized. It took: * seconds (glob)
-  Bookmark: "heads/master_bookmark": ChangesetId(Blake2(4cd77220f6dcf9154b8cd4dc0f33b72b19a765d73a770cce612ee094191e7d9e)) (created)
-  Bookmark: "tags/empty_tag": ChangesetId(Blake2(4cd77220f6dcf9154b8cd4dc0f33b72b19a765d73a770cce612ee094191e7d9e)) (created)
-  Bookmark: "tags/first_tag": ChangesetId(Blake2(032cd4dce0406f1c1dd1362b6c3c9f9bdfa82f2fc5615e237a890be4fe08b044)) (created)
+  [INFO] using repo "repo" repoid RepositoryId(0)
+  [INFO] GitRepo:$TESTTMP/repo-git commit 3 of 3 - Oid:fbae2e73 => Bid:4cd77220
+  [INFO] Ref: "refs/heads/master_bookmark": Some(ChangesetId(Blake2(4cd77220f6dcf9154b8cd4dc0f33b72b19a765d73a770cce612ee094191e7d9e)))
+  [INFO] Ref: "refs/tags/empty_tag": Some(ChangesetId(Blake2(4cd77220f6dcf9154b8cd4dc0f33b72b19a765d73a770cce612ee094191e7d9e)))
+  [INFO] Ref: "refs/tags/first_tag": Some(ChangesetId(Blake2(032cd4dce0406f1c1dd1362b6c3c9f9bdfa82f2fc5615e237a890be4fe08b044)))
+  [INFO] Initializing repo: repo
+  [INFO] Initialized repo: repo
+  [INFO] All repos initialized. It took: * seconds (glob)
+  [INFO] Bookmark: "heads/master_bookmark": ChangesetId(Blake2(4cd77220f6dcf9154b8cd4dc0f33b72b19a765d73a770cce612ee094191e7d9e)) (created)
+  [INFO] Bookmark: "tags/empty_tag": ChangesetId(Blake2(4cd77220f6dcf9154b8cd4dc0f33b72b19a765d73a770cce612ee094191e7d9e)) (created)
+  [INFO] Bookmark: "tags/first_tag": ChangesetId(Blake2(032cd4dce0406f1c1dd1362b6c3c9f9bdfa82f2fc5615e237a890be4fe08b044)) (created)
 
 # We can see that the bonsai changesets graph we created looks correct
   $ mononoke_admin changelog -R repo graph -i 4cd77220f6dcf9154b8cd4dc0f33b72b19a765d73a770cce612ee094191e7d9e -M -I
@@ -126,7 +128,7 @@
   │
   o  message: Add file1
      , id: 032cd4dce0406f1c1dd1362b6c3c9f9bdfa82f2fc5615e237a890be4fe08b044
- 
+
 # Look at the commit that introduced the submodule:
 # While the edit to the normal file: `.gitmodules` is preserved, the addition of the submodule itself was removed
 # from the commit at import time.
@@ -138,6 +140,8 @@
   FileChanges:
   	 ADDED/MODIFIED: .gitmodules 2b6c6b2889a7b56e04e646b89d236f31552baf7271957b807b84cb0b77fa9e1d
   
+
+
 # Generate Git Bundle for the submodule discarded repo
   $ mononoke_admin git-bundle create from-repo -R repo --output-location "$BUNDLE_PATH"
 

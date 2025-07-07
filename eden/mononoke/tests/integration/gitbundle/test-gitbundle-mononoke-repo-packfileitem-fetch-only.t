@@ -78,27 +78,27 @@
 # Import it into Mononoke
   $ cd "$TESTTMP"
   $ with_stripped_logs gitimport "$GIT_REPO" --generate-bookmarks full-repo
-  using repo "repo" repoid RepositoryId(0)
-  GitRepo:$TESTTMP/repo-git commit 7 of 7 - Oid:e460783b => Bid:73a90516, repo: $TESTTMP/repo-git
-  Ref: "refs/heads/dev_branch": Some(ChangesetId(Blake2(a2cfb9ade953e1c8f39e4f6d6eca07eb7bf628f25862e13a0c62c6620944e8fd)))
-  Ref: "refs/heads/master_bookmark": Some(ChangesetId(Blake2(*))) (glob)
-  Ref: "refs/heads/test_branch": Some(ChangesetId(Blake2(73a90516c7d6cc1076e5ef7f51cf7f614a217922d90b45a5e72f196f894c32f8)))
-  Ref: "refs/tags/dev_version": Some(ChangesetId(Blake2(*))) (glob)
-  Ref: "refs/tags/first_tag": Some(ChangesetId(Blake2(*))) (glob)
-  Ref: "refs/tags/release_v1.0": Some(ChangesetId(Blake2(*))) (glob)
-  Ref: "refs/tags/simple_tag": Some(ChangesetId(Blake2(*))) (glob)
-  Ref: "refs/tags/tag_version": Some(ChangesetId(Blake2(*))) (glob)
-  Initializing repo: repo
-  Initialized repo: repo
-  All repos initialized. It took: * seconds (glob)
-  Bookmark: "heads/dev_branch": ChangesetId(Blake2(*)) (created) (glob)
-  Bookmark: "heads/master_bookmark": ChangesetId(Blake2(*)) (created) (glob)
-  Bookmark: "heads/test_branch": ChangesetId(Blake2(*)) (created) (glob)
-  Bookmark: "tags/dev_version": ChangesetId(Blake2(*)) (created) (glob)
-  Bookmark: "tags/first_tag": ChangesetId(Blake2(*)) (created) (glob)
-  Bookmark: "tags/release_v1.0": ChangesetId(Blake2(*)) (created) (glob)
-  Bookmark: "tags/simple_tag": ChangesetId(Blake2(*)) (created) (glob)
-  Bookmark: "tags/tag_version": ChangesetId(Blake2(*)) (created) (glob)
+  [INFO] using repo "repo" repoid RepositoryId(0)
+  [INFO] GitRepo:$TESTTMP/repo-git commit 7 of 7 - Oid:e460783b => Bid:73a90516
+  [INFO] Ref: "refs/heads/dev_branch": Some(ChangesetId(Blake2(a2cfb9ade953e1c8f39e4f6d6eca07eb7bf628f25862e13a0c62c6620944e8fd)))
+  [INFO] Ref: "refs/heads/master_bookmark": Some(ChangesetId(Blake2(73a90516c7d6cc1076e5ef7f51cf7f614a217922d90b45a5e72f196f894c32f8)))
+  [INFO] Ref: "refs/heads/test_branch": Some(ChangesetId(Blake2(73a90516c7d6cc1076e5ef7f51cf7f614a217922d90b45a5e72f196f894c32f8)))
+  [INFO] Ref: "refs/tags/dev_version": Some(ChangesetId(Blake2(a2cfb9ade953e1c8f39e4f6d6eca07eb7bf628f25862e13a0c62c6620944e8fd)))
+  [INFO] Ref: "refs/tags/first_tag": Some(ChangesetId(Blake2(032cd4dce0406f1c1dd1362b6c3c9f9bdfa82f2fc5615e237a890be4fe08b044)))
+  [INFO] Ref: "refs/tags/release_v1.0": Some(ChangesetId(Blake2(148f9770bac5e4b44df2bf2f551e2e711fb0cecaa6869fce968c6f57dce0987a)))
+  [INFO] Ref: "refs/tags/simple_tag": Some(ChangesetId(Blake2(70d4bcfdbd65ba98d371ca4f117ee64146e342c993e0c753b6e2aab2c1b4c6c2)))
+  [INFO] Ref: "refs/tags/tag_version": Some(ChangesetId(Blake2(73a90516c7d6cc1076e5ef7f51cf7f614a217922d90b45a5e72f196f894c32f8)))
+  [INFO] Initializing repo: repo
+  [INFO] Initialized repo: repo
+  [INFO] All repos initialized. It took: * seconds (glob)
+  [INFO] Bookmark: "heads/dev_branch": ChangesetId(Blake2(a2cfb9ade953e1c8f39e4f6d6eca07eb7bf628f25862e13a0c62c6620944e8fd)) (created)
+  [INFO] Bookmark: "heads/master_bookmark": ChangesetId(Blake2(73a90516c7d6cc1076e5ef7f51cf7f614a217922d90b45a5e72f196f894c32f8)) (created)
+  [INFO] Bookmark: "heads/test_branch": ChangesetId(Blake2(73a90516c7d6cc1076e5ef7f51cf7f614a217922d90b45a5e72f196f894c32f8)) (created)
+  [INFO] Bookmark: "tags/dev_version": ChangesetId(Blake2(a2cfb9ade953e1c8f39e4f6d6eca07eb7bf628f25862e13a0c62c6620944e8fd)) (created)
+  [INFO] Bookmark: "tags/first_tag": ChangesetId(Blake2(032cd4dce0406f1c1dd1362b6c3c9f9bdfa82f2fc5615e237a890be4fe08b044)) (created)
+  [INFO] Bookmark: "tags/release_v1.0": ChangesetId(Blake2(148f9770bac5e4b44df2bf2f551e2e711fb0cecaa6869fce968c6f57dce0987a)) (created)
+  [INFO] Bookmark: "tags/simple_tag": ChangesetId(Blake2(70d4bcfdbd65ba98d371ca4f117ee64146e342c993e0c753b6e2aab2c1b4c6c2)) (created)
+  [INFO] Bookmark: "tags/tag_version": ChangesetId(Blake2(73a90516c7d6cc1076e5ef7f51cf7f614a217922d90b45a5e72f196f894c32f8)) (created)
 
 # Regenerate the Git repo out of the Mononoke repo using stored packfile items and verify that it works
   $ mononoke_admin git-bundle create from-repo -R repo --output-location "$BUNDLE_PATH" --packfile-item-inclusion fetch-only
@@ -108,7 +108,7 @@
   $TESTTMP/repo_bundle.bundle is okay
 
 # Create a new empty folder for containing the repo
-  $ mkdir $TESTTMP/git_packfile_item_repo  
+  $ mkdir $TESTTMP/git_packfile_item_repo
   $ cd "$TESTTMP"
   $ git clone --mirror "$BUNDLE_PATH" git_packfile_item_repo
   Cloning into bare repository 'git_packfile_item_repo'...
@@ -122,4 +122,4 @@
   $ git rev-list --objects --all | git cat-file --batch-check='%(objectname) %(objecttype) %(rest)' | sort > $TESTTMP/new_object_list
 
 # Ensure that there are no differences between the set of objects by diffing both object list files
-  $ diff -w $TESTTMP/new_object_list $TESTTMP/object_list 
+  $ diff -w $TESTTMP/new_object_list $TESTTMP/object_list
