@@ -16,6 +16,7 @@ pub mod fs_counters {
     pub const COUNTER_FS_READDIRPLUS: &str = "nfs.readdirplus_successful.sum";
     pub const COUNTER_FS_WRITE: &str = "nfs.write_successful.sum";
     pub const COUNTER_FS_GETATTR: &str = "nfs.getattr_successful.sum";
+    pub const COUNTER_FS_SETATTR: &str = "nfs.setattr_successful.sum";
     pub const COUNTER_FS_ACCESS: &str = "nfs.access_successful.sum";
 }
 
@@ -27,6 +28,7 @@ pub mod fs_counters {
     pub const COUNTER_FS_READDIRPLUS: &str = "prjfs.readdirplus_successful.sum"; // placeholder, does not exist
     pub const COUNTER_FS_WRITE: &str = "prjfs.write_successful.sum"; // placeholder, does not exist
     pub const COUNTER_FS_GETATTR: &str = "prjfs.getattr_successful.sum"; // placeholder, does not exist
+    pub const COUNTER_FS_SETATTR: &str = "prjfs.setattr_successful.sum"; // placeholder, does not exist
     pub const COUNTER_FS_ACCESS: &str = "prjfs.access_successful.sum";
 }
 
@@ -39,6 +41,7 @@ pub mod fs_counters {
     pub const COUNTER_FS_READDIRPLUS: &str = "fuse.readdirplus_successful.sum"; // not used
     pub const COUNTER_FS_WRITE: &str = "fuse.write_successful.sum";
     pub const COUNTER_FS_GETATTR: &str = "fuse.getattr_successful.sum";
+    pub const COUNTER_FS_SETATTR: &str = "fuse.setattr_successful.sum";
     pub const COUNTER_FS_ACCESS: &str = "fuse.access_successful.sum";
 }
 
