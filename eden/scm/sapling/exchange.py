@@ -1364,9 +1364,8 @@ def pull(
             )
             raise error.Abort(msg)
 
-    wlock = lock = None
+    lock = None
     try:
-        wlock = pullop.repo.wlock()
         lock = pullop.repo.lock()
         pullop.trmanager = transactionmanager(repo, "pull", remote.url())
         # This should ideally be in _pullbundle2(). However, it needs to run
@@ -1390,7 +1389,7 @@ def pull(
                 _pullbookmarks(pullop)
         pullop.trmanager.close()
     finally:
-        lockmod.release(pullop.trmanager, lock, wlock)
+        lockmod.release(pullop.trmanager, lock)
 
     return pullop
 
