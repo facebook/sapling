@@ -35,7 +35,7 @@
   qux
 
 Sync all bookmarks moves (the second move is a merge commit)
-  $ with_stripped_logs mononoke_cas_sync repo 0
+  $ mononoke_cas_sync repo 0
   [INFO] [execute{repo=repo}] Initiating mononoke RE CAS sync command execution
   [INFO] [execute{repo=repo}] using repo "repo" repoid RepositoryId(0)
   [INFO] [execute{repo=repo}] syncing log entries [1, 2] ...
@@ -46,5 +46,5 @@ Sync all bookmarks moves (the second move is a merge commit)
   [INFO] [execute{repo=repo}] Finished mononoke RE CAS sync command execution for repo repo
 
 Verify that all the blobs are in CAS for the merge commit F
-  $ with_stripped_logs mononoke_admin cas-store --repo-name repo upload --full --hg-id $F
+  $ mononoke_admin cas-store --repo-name repo upload --full --hg-id $F
   [INFO] Upload completed. Upload stats: uploaded digests: 0, already present digests: 6, uploaded bytes: 0 B, the largest uploaded blob: 0 B

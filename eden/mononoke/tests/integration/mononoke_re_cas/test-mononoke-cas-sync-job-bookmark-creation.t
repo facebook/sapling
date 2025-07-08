@@ -27,7 +27,7 @@
 
 
 Validate that blobs and trees were uploaded for _all_ 4 commits (this should include 4 files and 4 trees)
-  $ with_stripped_logs mononoke_cas_sync repo 0
+  $ mononoke_cas_sync repo 0
   [INFO] [execute{repo=repo}] Initiating mononoke RE CAS sync command execution
   [INFO] [execute{repo=repo}] using repo "repo" repoid RepositoryId(0)
   [INFO] [execute{repo=repo}] syncing log entries [1] ...

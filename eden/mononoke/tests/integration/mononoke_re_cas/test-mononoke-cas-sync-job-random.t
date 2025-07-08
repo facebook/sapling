@@ -45,7 +45,7 @@ Check that new entry was added to the sync database. 4 pushes
   5
 
 Sync all bookmarks moves and test the "stats" output. This should be stable due to the use of "random", that's why we never expect already present blobs, and uploaded sum should be the same for all runs. Upload should include both bookmarks master_bookmark and other.
-  $ with_stripped_logs mononoke_cas_sync repo 0
+  $ mononoke_cas_sync repo 0
   [INFO] [execute{repo=repo}] Initiating mononoke RE CAS sync command execution
   [INFO] [execute{repo=repo}] using repo "repo" repoid RepositoryId(0)
   [INFO] [execute{repo=repo}] syncing log entries [1, 2, 3, 4, 5] ...
@@ -57,25 +57,25 @@ Sync all bookmarks moves and test the "stats" output. This should be stable due 
   [INFO] [execute{repo=repo}] Finished mononoke RE CAS sync command execution for repo repo
 
 Validate that all the blobs are now present in CAS for the commit D
-  $ with_stripped_logs mononoke_admin cas-store --repo-name repo upload --full --hg-id $D
+  $ mononoke_admin cas-store --repo-name repo upload --full --hg-id $D
   [INFO] Upload completed. Upload stats: uploaded digests: 0, already present digests: 5, uploaded bytes: 0 B, the largest uploaded blob: 0 B
 
 Validate that all the blobs are now present in CAS for the commit D (by bookmark name)
-  $ with_stripped_logs mononoke_admin cas-store --repo-name repo upload --full -B master_bookmark
+  $ mononoke_admin cas-store --repo-name repo upload --full -B master_bookmark
   [INFO] Upload completed. Upload stats: uploaded digests: 0, already present digests: 5, uploaded bytes: 0 B, the largest uploaded blob: 0 B
 
 Validate that all the blobs are now present in CAS for the middle commit B
-  $ with_stripped_logs mononoke_admin cas-store --repo-name repo upload --full --hg-id $B
+  $ mononoke_admin cas-store --repo-name repo upload --full --hg-id $B
   [INFO] Upload completed. Upload stats: uploaded digests: 0, already present digests: 3, uploaded bytes: 0 B, the largest uploaded blob: 0 B
 
 Validate that all the blobs are now present in CAS for the first commit A
-  $ with_stripped_logs mononoke_admin cas-store --repo-name repo upload --full --hg-id $A
+  $ mononoke_admin cas-store --repo-name repo upload --full --hg-id $A
   [INFO] Upload completed. Upload stats: uploaded digests: 0, already present digests: 2, uploaded bytes: 0 B, the largest uploaded blob: 0 B
 
 Commit F belongs to a different bookmark, validate that the commit is fully uploaded
-  $ with_stripped_logs mononoke_admin cas-store --repo-name repo upload --full --hg-id $F
+  $ mononoke_admin cas-store --repo-name repo upload --full --hg-id $F
   [INFO] Upload completed. Upload stats: uploaded digests: 0, already present digests: 6, uploaded bytes: 0 B, the largest uploaded blob: 0 B
 
 Commit F belongs to a different bookmark, validate that the commit is fully uploaded (by bookmark name)
-  $ with_stripped_logs mononoke_admin cas-store --repo-name repo upload --full -B other_bookmark
+  $ mononoke_admin cas-store --repo-name repo upload --full -B other_bookmark
   [INFO] Upload completed. Upload stats: uploaded digests: 0, already present digests: 6, uploaded bytes: 0 B, the largest uploaded blob: 0 B

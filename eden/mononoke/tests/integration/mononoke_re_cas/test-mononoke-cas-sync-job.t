@@ -38,7 +38,7 @@ Check that new entry was added to the sync database. 4 pushes
   4
 
 Sync all bookmarks moves
-  $ with_stripped_logs mononoke_cas_sync repo 0
+  $ mononoke_cas_sync repo 0
   [INFO] [execute{repo=repo}] Initiating mononoke RE CAS sync command execution
   [INFO] [execute{repo=repo}] using repo "repo" repoid RepositoryId(0)
   [INFO] [execute{repo=repo}] syncing log entries [1, 2, 3, 4] ...
@@ -50,9 +50,9 @@ Sync all bookmarks moves
 
 Validate that the whole working copy for the top commit D is already present in CAS, nothing should be uploaded if incremental sync is correct.
 All trees and blobs should be present!
-  $ with_stripped_logs mononoke_admin cas-store --repo-name repo upload --full --hg-id $D
+  $ mononoke_admin cas-store --repo-name repo upload --full --hg-id $D
   [INFO] Upload completed. Upload stats: uploaded digests: 0, already present digests: 6, uploaded bytes: 0 B, the largest uploaded blob: 0 B
 
 Validate the same for a middle commit B
-  $ with_stripped_logs mononoke_admin cas-store --repo-name repo upload --full --hg-id $B
+  $ mononoke_admin cas-store --repo-name repo upload --full --hg-id $B
   [INFO] Upload completed. Upload stats: uploaded digests: 0, already present digests: 4, uploaded bytes: 0 B, the largest uploaded blob: 0 B
