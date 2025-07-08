@@ -4,6 +4,7 @@ include(FBCMakeParseArgs)
 include(FBThriftCppLibrary)
 include(FBThriftPyLibrary)
 include(FBThriftPy3Library)
+include(FBThriftRustLibrary)
 
 #
 # add_fbthrift_library()
@@ -25,8 +26,8 @@ include(FBThriftPy3Library)
 #
 function(add_fbthrift_library LIB_NAME THRIFT_FILE)
   # Parse the arguments
-  set(multi_value_args SERVICES DEPENDS LANGUAGES CPP_OPTIONS PY_OPTIONS)
   set(one_value_args PY_NAMESPACE PY3_NAMESPACE INCLUDE_DIR THRIFT_INCLUDE_DIR)
+  set(multi_value_args SERVICES DEPENDS LANGUAGES CPP_OPTIONS PY_OPTIONS RUST_OPTIONS)
   fb_cmake_parse_args(
     ARG "" "${one_value_args}" "${multi_value_args}" "${ARGN}"
   )
@@ -42,9 +43,11 @@ function(add_fbthrift_library LIB_NAME THRIFT_FILE)
   # now we still want to support older versions of CMake.
   set(CPP_DEPENDS)
   set(PY_DEPENDS)
+  set(RUST_DEPENDS)
   foreach(dep IN LISTS ARG_DEPENDS)
     list(APPEND CPP_DEPENDS "${dep}_cpp")
     list(APPEND PY_DEPENDS "${dep}_py")
+    list(APPEND RUST_DEPENDS "${dep}_rs")
   endforeach()
 
   foreach(lang IN LISTS ARG_LANGUAGES)
@@ -79,6 +82,14 @@ function(add_fbthrift_library LIB_NAME THRIFT_FILE)
         ${namespace_args}
         DEPENDS ${PY_DEPENDS}
         OPTIONS ${ARG_PY_OPTIONS}
+        THRIFT_INCLUDE_DIR "${ARG_THRIFT_INCLUDE_DIR}"
+      )
+    elseif ("${lang}" STREQUAL "rust")
+      add_fbthrift_rust_library(
+        "${LIB_NAME}_rs" "${THRIFT_FILE}"
+        SERVICES ${ARG_SERVICES}
+        DEPENDS ${RUST_DEPENDS}
+        OPTIONS ${ARG_RUST_OPTIONS}
         THRIFT_INCLUDE_DIR "${ARG_THRIFT_INCLUDE_DIR}"
       )
     else()
