@@ -8,6 +8,7 @@
 #![feature(type_alias_impl_trait)]
 
 use std::collections::HashSet;
+use std::fmt;
 use std::path::Path;
 use std::path::PathBuf;
 use std::time::Duration;
@@ -20,6 +21,7 @@ use fs_err as fs;
 use futures::StreamExt;
 use futures::stream;
 use futures::stream::BoxStream;
+use serde::Serialize;
 use util::file::get_umask;
 use util::lock::ContentLock;
 use util::lock::ContentLockError;
@@ -282,6 +284,55 @@ struct StreamChangesSinceWithStatesData<'a> {
     inner_stream: BoxStream<'a, Result<ChangesSinceV2Result>>,
     last_event: Option<ChangesSinceV2Result>,
     state: IsStateCurrentlyAsserted,
+}
+
+#[derive(Debug, PartialEq, Serialize)]
+pub enum StateChange {
+    Entered,
+    Left,
+}
+
+impl fmt::Display for StateChange {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        if self == &StateChange::Entered {
+            write!(f, "Entered")
+        } else {
+            write!(f, "Left")
+        }
+    }
+}
+
+#[derive(Debug, Serialize)]
+pub struct ChangeEvent {
+    event_type: StateChange,
+    state: String,
+    position: JournalPosition,
+}
+
+impl fmt::Display for ChangeEvent {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(f, "{} {} at {}", self.event_type, self.state, self.position)
+    }
+}
+
+#[derive(Debug, Serialize)]
+pub struct ChangeEvents {
+    events: Vec<ChangeEvent>,
+}
+
+impl fmt::Display for ChangeEvents {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        for event in self.events.iter() {
+            writeln!(f, "{event}")?;
+        }
+        Ok(())
+    }
+}
+
+impl ChangeEvents {
+    pub fn new() -> Self {
+        ChangeEvents { events: Vec::new() }
+    }
 }
 
 #[cfg(test)]

@@ -13,6 +13,7 @@ rust_library(
         "fbsource//third-party/rust:anyhow",
         "fbsource//third-party/rust:fs-err",
         "fbsource//third-party/rust:futures",
+        "fbsource//third-party/rust:serde",
         "fbsource//third-party/rust:thiserror",
         "fbsource//third-party/rust:tokio",
         "fbsource//third-party/rust:tracing",

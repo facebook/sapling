@@ -12,6 +12,7 @@ use std::path::PathBuf;
 use anyhow::Result;
 use async_trait::async_trait;
 use clap::Parser;
+use edenfs_asserted_states::ChangeEvents;
 use edenfs_asserted_states::StreamingChangesClient;
 use edenfs_client::changes_since::ChangesSinceV2Result;
 use edenfs_client::types::JournalPosition;
@@ -89,6 +90,18 @@ pub struct ChangesSinceCmd {
 
 impl ChangesSinceCmd {
     fn print_result(&self, result: &ChangesSinceV2Result) {
+        println!(
+            "{}",
+            if self.json {
+                serde_json::to_string(&result).expect("Failed to serialize result to JSON.") + "\n"
+            } else {
+                result.to_string()
+            }
+        );
+    }
+
+    #[allow(dead_code)]
+    fn print_change_events(&self, result: &ChangeEvents) {
         println!(
             "{}",
             if self.json {
