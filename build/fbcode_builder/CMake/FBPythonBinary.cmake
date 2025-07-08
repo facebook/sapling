@@ -105,7 +105,7 @@ function(add_fb_python_executable TARGET)
 
   # Parse the arguments
   set(one_value_args BASE_DIR NAMESPACE MAIN_MODULE TYPE)
-  set(multi_value_args SOURCES DEPENDS)
+  set(multi_value_args SOURCES DEPENDS NORMAL_DEPENDS)
   fb_cmake_parse_args(
     ARG "" "${one_value_args}" "${multi_value_args}" "${ARGN}"
   )
@@ -118,6 +118,7 @@ function(add_fb_python_executable TARGET)
     NAMESPACE "${ARG_NAMESPACE}"
     SOURCES ${ARG_SOURCES}
     DEPENDS ${ARG_DEPENDS}
+    NORMAL_DEPENDS ${ARG_NORMAL_DEPENDS}
   )
 
   set(
@@ -232,7 +233,7 @@ endfunction()
 # passing additional configuration to the test.
 function(add_fb_python_unittest TARGET)
   # Parse the arguments
-  set(multi_value_args SOURCES DEPENDS ENV PROPERTIES)
+  set(multi_value_args SOURCES DEPENDS ENV NORMAL_DEPENDS PROPERTIES)
   set(
     one_value_args
     WORKING_DIRECTORY BASE_DIR NAMESPACE TEST_LIST DISCOVERY_TIMEOUT
@@ -298,7 +299,32 @@ function(add_fb_python_unittest TARGET)
     BASE_DIR "${ARG_BASE_DIR}"
     SOURCES ${ARG_SOURCES}
     DEPENDS ${ARG_DEPENDS}
+    NORMAL_DEPENDS ${ARG_NORMAL_DEPENDS}
   )
+
+  set(_python_dirs "")
+  set(_runtime_dirs "")
+
+  foreach( _dep IN LISTS ARG_DEPENDS)
+    list(APPEND _python_dirs "$<TARGET_PROPERTY:${_dep}.py_lib,INTERFACE_INCLUDE_DIRECTORIES>")
+    list(APPEND _runtime_dirs "$<INSTALL_INTERFACE:${_dep}.py_lib>")
+  endforeach()
+
+  foreach( _dep IN LISTS ARG_NORMAL_DEPENDS)
+    list(APPEND _runtime_dirs "$<TARGET_FILE_DIR:${_dep}>")
+  endforeach()
+  
+  foreach(_dep IN LISTS "$ENV{PYTHONPATH}")
+    list(APPEND _python_dirs "${_dep}")
+  endforeach()
+
+  set(_runtime_env_var "$<IF:$<PLATFORM_ID:Darwin>,DYLD_LIBRARY_PATH,LD_LIBRARY_PATH>")
+  foreach(_dep IN LISTS "$ENV{_runtime_env_var}")
+    list(APPEND _runtime_dirs "${_dep}")
+  endforeach()
+
+  cmake_path(CONVERT "${_python_dirs}" TO_NATIVE_PATH_LIST _python_path)
+  cmake_path(CONVERT "${_runtime_dirs}" TO_NATIVE_PATH_LIST _runtime_path)
 
   # Run test discovery after the test executable is built.
   # This logic is based on the code for gtest_discover_tests()
@@ -309,6 +335,9 @@ function(add_fb_python_unittest TARGET)
     TARGET "${TARGET}.GEN_PY_EXE" POST_BUILD
     BYPRODUCTS "${ctest_tests_file}"
     COMMAND
+      "${CMAKE_COMMAND}" -E env
+      "${_runtime_env_var}=${_runtime_path}"
+      "PYTHONPATH=${_python_path}"
       "${CMAKE_COMMAND}"
       -D "TEST_TARGET=${TARGET}"
       -D "TEST_INTERPRETER=${Python3_EXECUTABLE}"
@@ -401,7 +430,7 @@ function(add_fb_python_library LIB_NAME)
   # cmake_parse_arguments() does not handle empty arguments, and it is common
   # for callers to want to specify an empty NAMESPACE parameter.
   set(one_value_args BASE_DIR NAMESPACE INSTALL_DIR)
-  set(multi_value_args SOURCES DEPENDS)
+  set(multi_value_args SOURCES DEPENDS NORMAL_DEPENDS)
   fb_cmake_parse_args(
     ARG "" "${one_value_args}" "${multi_value_args}" "${ARGN}"
   )
@@ -498,6 +527,11 @@ function(add_fb_python_library LIB_NAME)
     #   rather than "${dep}.py_sources_built" for this purpose because the
     #   ".py_sources_built" target won't be available for imported targets.
     add_dependencies("${LIB_NAME}.py_sources_built" "${dep}.py_lib")
+  endforeach()
+
+  foreach(dep IN LISTS ARG_NORMAL_DEPENDS)
+    target_link_libraries("${LIB_NAME}.py_lib" INTERFACE "${dep}")
+    add_dependencies("${LIB_NAME}.py_sources_built" "${dep}")
   endforeach()
 
   # Add a custom command to help with library installation, in case
