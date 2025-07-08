@@ -1072,11 +1072,11 @@ folly::SemiFuture<folly::Unit> EdenMount::unmount(UnmountOptions options) {
         return channel_->unmount(options);
       })
       .thenTry([this](Try<Unit>&& result) noexcept -> folly::Future<Unit> {
-        auto mountingUnmountingState = mountingUnmountingState_.wlock();
-        XDCHECK(mountingUnmountingState->fsChannelUnmountPromise.has_value());
+        auto unmountState = mountingUnmountingState_.wlock();
+        XDCHECK(unmountState->fsChannelUnmountPromise.has_value());
         folly::SharedPromise<folly::Unit>* unsafeUnmountPromise =
-            &*mountingUnmountingState->fsChannelUnmountPromise;
-        mountingUnmountingState.unlock();
+            &*unmountState->fsChannelUnmountPromise;
+        unmountState.unlock();
 
         unsafeUnmountPromise->setTry(Try<Unit>{result});
         return folly::makeFuture<folly::Unit>(std::move(result));
