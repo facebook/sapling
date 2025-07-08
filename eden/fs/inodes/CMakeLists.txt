@@ -80,6 +80,7 @@ else()
     PUBLIC
       eden_fuse
       eden_fscatalog
+      eden_fscatalog_dev
       eden_lmdb_catalog
       eden_overlay_checker
   )
@@ -117,6 +118,7 @@ target_link_libraries(
 
 add_subdirectory(overlay)
 add_subdirectory(fscatalog)
+add_subdirectory(fscatalog_dev)
 add_subdirectory(memcatalog)
 add_subdirectory(sqlitecatalog)
 add_subdirectory(lmdbcatalog)
