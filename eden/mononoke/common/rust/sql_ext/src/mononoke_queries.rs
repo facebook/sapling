@@ -115,14 +115,18 @@ macro_rules! mononoke_queries {
                                 // Convert ClientRequestInfo to string if present
                                 let cri_str = cri.map(|cri| serde_json::to_string(cri)).transpose()?;
 
+                                let granularity = TelemetryGranularity::Query;
+
                                 let (res, opt_tel) = [<$name Impl>]::commented_query(
                                     connection,
                                     cri_str.as_deref(),
                                     $( $pname, )*
                                     $( $lname, )*
-                                ).await?;
+                                ).await.inspect_err(|e| {
+                                    log_query_error(&tel_logger, &e, granularity)
+                                })?;
 
-                                log_query_telemetry(opt_tel, tel_logger, TelemetryGranularity::Query)?;
+                                log_query_telemetry(opt_tel, tel_logger, granularity)?;
 
 
                                 Ok(res)
@@ -142,14 +146,18 @@ macro_rules! mononoke_queries {
                     let cri = tel_logger.as_ref().and_then(|p| p.client_request_info());
                     // Convert ClientRequestInfo to string if present
                     let cri_str = cri.map(|cri| serde_json::to_string(&cri)).transpose()?;
+                    let granularity = TelemetryGranularity::TransactionQuery;
+
                     let (txn, (res, opt_tel)) = [<$name Impl>]::commented_query_with_transaction(
                         transaction,
                         cri_str.as_deref(),
                         $( $pname, )*
                         $( $lname, )*
-                    ).await?;
+                    ).await.inspect_err(|e| {
+                        log_query_error(&tel_logger, &e, granularity)
+                    })?;
 
-                    log_query_telemetry(opt_tel, tel_logger, TelemetryGranularity::TransactionQuery)?;
+                    log_query_telemetry(opt_tel, tel_logger, granularity)?;
 
 
                     Ok((txn, res))
@@ -220,14 +228,18 @@ macro_rules! mononoke_queries {
                                 // Convert ClientRequestInfo to string if present
                                 let cri_str = cri.map(|cri| serde_json::to_string(&cri)).transpose()?;
 
+                                let granularity = TelemetryGranularity::Query;
+
                                 let (res, opt_tel) = [<$name Impl>]::commented_query(
                                     connection,
                                     cri_str.as_deref(),
                                     $( $pname, )*
                                     $( $lname, )*
-                                ).await?;
+                                ).await.inspect_err(|e| {
+                                    log_query_error(&tel_logger, &e, granularity)
+                                })?;
 
-                                log_query_telemetry(opt_tel, tel_logger, TelemetryGranularity::Query)?;
+                                log_query_telemetry(opt_tel, tel_logger, granularity)?;
                                 Ok(CachedQueryResult(res))
                             }
                         },
@@ -248,14 +260,18 @@ macro_rules! mononoke_queries {
                     // Convert ClientRequestInfo to string if present
                     let cri_str = cri.map(|cri| serde_json::to_string(&cri)).transpose()?;
 
+                    let granularity = TelemetryGranularity::TransactionQuery;
+
                     let (txn, (res, opt_tel)) = [<$name Impl>]::commented_query_with_transaction(
                         transaction,
                         cri_str.as_deref(),
                         $( $pname, )*
                         $( $lname, )*
-                    ).await?;
+                    ).await.inspect_err(|e| {
+                        log_query_error(&tel_logger, &e, granularity)
+                    })?;
 
-                    log_query_telemetry(opt_tel, tel_logger, TelemetryGranularity::TransactionQuery)?;
+                    log_query_telemetry(opt_tel, tel_logger, granularity)?;
 
                     Ok((txn, res))
                 }
@@ -317,6 +333,9 @@ macro_rules! mononoke_queries {
                     let cri = tel_logger.as_ref().and_then(|p| p.client_request_info());
                     // Convert ClientRequestInfo to string if present
                     let cri_str = cri.map(|cri| serde_json::to_string(&cri)).transpose()?;
+
+                    let granularity = TelemetryGranularity::Query;
+
                     let write_res = query_with_retry_no_cache(
                         || [<$name Impl>]::commented_query(
                             connection,
@@ -324,10 +343,12 @@ macro_rules! mononoke_queries {
                             values
                             $( , $pname )*
                         ),
-                    ).await?;
+                    ).await.inspect_err(|e| {
+                        log_query_error(&tel_logger, &e, granularity)
+                    })?;
 
                     let opt_tel = write_res.query_telemetry().clone();
-                    log_query_telemetry(opt_tel, tel_logger, TelemetryGranularity::TransactionQuery)?;
+                    log_query_telemetry(opt_tel, tel_logger, granularity)?;
 
                     Ok(write_res)
 
@@ -344,14 +365,19 @@ macro_rules! mononoke_queries {
                     // Convert ClientRequestInfo to string if present
                     let cri_str = cri.map(|cri| serde_json::to_string(&cri)).transpose()?;
 
+                    let granularity = TelemetryGranularity::TransactionQuery;
+
                     let (txn, write_res) = [<$name Impl>]::commented_query_with_transaction(
                         transaction,
                         cri_str.as_deref(),
                         values
                         $( , $pname )*
-                    ).await?;
+                    ).await.inspect_err(|e| {
+                        log_query_error(&tel_logger, &e, granularity)
+                    })?;
+
                     let opt_tel = write_res.query_telemetry().clone();
-                    log_query_telemetry(opt_tel, tel_logger, TelemetryGranularity::TransactionQuery)?;
+                    log_query_telemetry(opt_tel, tel_logger, granularity)?;
 
                     Ok((txn, write_res))
 
@@ -414,7 +440,7 @@ macro_rules! mononoke_queries {
                     // Convert ClientRequestInfo to string if present
                     let cri_str = cri.map(|cri| serde_json::to_string(&cri)).transpose()?;
 
-
+                    let granularity = TelemetryGranularity::Query;
 
                     let write_res = query_with_retry_no_cache(
                         || [<$name Impl>]::commented_query(
@@ -423,10 +449,12 @@ macro_rules! mononoke_queries {
                             $( $pname, )*
                             $( $lname, )*
                         ),
-                    ).await?;
+                    ).await.inspect_err(|e| {
+                        log_query_error(&tel_logger, &e, granularity)
+                    })?;
 
                     let opt_tel = write_res.query_telemetry().clone();
-                    log_query_telemetry(opt_tel, tel_logger, TelemetryGranularity::TransactionQuery)?;
+                    log_query_telemetry(opt_tel, tel_logger, granularity)?;
 
                     Ok(write_res)
                 }
@@ -442,16 +470,19 @@ macro_rules! mononoke_queries {
                     // Convert ClientRequestInfo to string if present
                     let cri_str = cri.map(|cri| serde_json::to_string(&cri)).transpose()?;
 
+                    let granularity = TelemetryGranularity::TransactionQuery;
 
                     let (txn, write_res) = [<$name Impl>]::commented_query_with_transaction(
                         transaction,
                         cri_str.as_deref()
                         $( , $pname )*
                         $( , $lname )*
-                    ).await?;
+                    ).await.inspect_err(|e| {
+                        log_query_error(&tel_logger, &e, granularity)
+                    })?;
 
                     let opt_tel = write_res.query_telemetry().clone();
-                    log_query_telemetry(opt_tel, tel_logger, TelemetryGranularity::TransactionQuery)?;
+                    log_query_telemetry(opt_tel, tel_logger, granularity)?;
 
                     Ok((txn, write_res))
                 }

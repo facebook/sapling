@@ -5,6 +5,7 @@
  * GNU General Public License version 2.
  */
 
+use anyhow::Error;
 use anyhow::Result;
 use anyhow::anyhow;
 use scuba_ext::MononokeScubaSampleBuilder;
@@ -15,7 +16,7 @@ use sql_query_telemetry::SqlQueryTelemetry;
 
 const SQL_TELEMETRY_SCUBA_TABLE: &str = "mononoke_sql_telemetry";
 
-#[derive(Clone, Debug, Eq, PartialEq)]
+#[derive(Clone, Debug, Eq, PartialEq, Copy)]
 pub enum TelemetryGranularity {
     /// From a single query
     Query,
@@ -41,6 +42,39 @@ pub fn log_query_telemetry(
     }
 }
 
+/// Log query errors to Scuba on a best-effort basis.
+pub fn log_query_error(
+    opt_tel: &Option<SqlQueryTelemetry>,
+    err: &Error,
+    granularity: TelemetryGranularity,
+) {
+    let sql_tel = match opt_tel.as_ref() {
+        Some(sql_tel) => sql_tel,
+        None => return,
+    };
+
+    let mut scuba = match setup_scuba_sample(sql_tel, granularity) {
+        Ok(scuba) => scuba,
+        // This is the only call that can return an Err, but errors will be
+        // ignored and logged to stderr instead.
+        Err(e) => {
+            tracing::error!("Failed to setup scuba sample: {e}");
+            return;
+        }
+    };
+
+    scuba.add("error", format!("{:?}", err));
+    scuba.add("success", 0);
+
+    // Log the Scuba sample for debugging when log-level is set to trace.
+    tracing::trace!(
+        "Logging query telemetry to scuba: {0:#?}",
+        scuba.get_sample()
+    );
+
+    scuba.log();
+}
+
 fn log_query_telemetry_impl(
     query_tel: QueryTelemetry,
     sql_tel: SqlQueryTelemetry,
@@ -62,20 +96,10 @@ fn log_mysql_query_telemetry(
     sql_tel: SqlQueryTelemetry,
     granularity: TelemetryGranularity,
 ) -> Result<()> {
-    let fb = sql_tel.fb().clone();
+    let mut scuba = setup_scuba_sample(&sql_tel, granularity)?;
 
-    // Log to file if SQL_TELEMETRY_SCUBA_FILE_PATH is set (for testing)
-    let mut scuba = if let Ok(scuba_file_path) = std::env::var("SQL_TELEMETRY_SCUBA_FILE_PATH") {
-        MononokeScubaSampleBuilder::with_discard().with_log_file(scuba_file_path)?
-    } else {
-        MononokeScubaSampleBuilder::new(fb, SQL_TELEMETRY_SCUBA_TABLE)?
-    };
+    scuba.add("success", 1);
 
-    scuba.add_metadata(sql_tel.metadata());
-
-    scuba.add_common_server_data();
-
-    scuba.add("granularity", format!("{:?}", granularity));
     scuba.add("instance_type", query_tel.instance_type());
     scuba.add(
         "read_tables",
@@ -123,4 +147,27 @@ fn log_mysql_query_telemetry(
     scuba.log();
 
     Ok(())
+}
+
+/// Sets fields that are present in both successful and failed queries.
+fn setup_scuba_sample(
+    sql_tel: &SqlQueryTelemetry,
+    granularity: TelemetryGranularity,
+) -> Result<MononokeScubaSampleBuilder> {
+    let fb = sql_tel.fb().clone();
+
+    // Log to file if SQL_TELEMETRY_SCUBA_FILE_PATH is set (for testing)
+    let mut scuba = if let Ok(scuba_file_path) = std::env::var("SQL_TELEMETRY_SCUBA_FILE_PATH") {
+        MononokeScubaSampleBuilder::with_discard().with_log_file(scuba_file_path)?
+    } else {
+        MononokeScubaSampleBuilder::new(fb, SQL_TELEMETRY_SCUBA_TABLE)?
+    };
+
+    scuba.add_metadata(sql_tel.metadata());
+
+    scuba.add_common_server_data();
+
+    scuba.add("granularity", format!("{:?}", granularity));
+
+    Ok(scuba)
 }

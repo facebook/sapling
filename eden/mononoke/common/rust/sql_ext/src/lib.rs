@@ -53,6 +53,7 @@ pub mod _macro_internal {
     pub use crate::mononoke_queries::query_with_retry;
     pub use crate::mononoke_queries::query_with_retry_no_cache;
     pub use crate::telemetry::TelemetryGranularity;
+    pub use crate::telemetry::log_query_error;
     pub use crate::telemetry::log_query_telemetry;
 }
 
