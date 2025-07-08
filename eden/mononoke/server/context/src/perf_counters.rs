@@ -104,8 +104,6 @@ define_perf_counters! {
         NumKnown,
         NumKnownRequested,
         NumUnknown,
-        SegmentedChangelogServerSideOpsHits,
-        SegmentedChangelogServerSideOpsFallbacks,
         SqlReadsMaster,
         SqlReadsReplica,
         SqlWrites,
@@ -210,8 +208,6 @@ impl PerfCounterType {
             | NumKnown
             | NumKnownRequested
             | NumUnknown
-            | SegmentedChangelogServerSideOpsHits
-            | SegmentedChangelogServerSideOpsFallbacks
             | SqlReadsMaster
             | SqlReadsReplica
             | SqlWrites
