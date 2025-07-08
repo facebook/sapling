@@ -18,9 +18,13 @@ use edenfs_error::ConnectAndRequestError;
 use edenfs_error::ErrorHandlingStrategy;
 use edenfs_error::HasErrorHandlingStrategy;
 use edenfs_error::Result;
+#[cfg(fbcode_build)]
 use edenfs_telemetry::EdenSample;
+#[cfg(fbcode_build)]
 use edenfs_telemetry::QueueingScubaLogger;
+#[cfg(fbcode_build)]
 use edenfs_telemetry::SampleLogger;
+#[cfg(fbcode_build)]
 use edenfs_telemetry::create_logger;
 use fbinit::FacebookInit;
 use futures_stats::TimedTryFutureExt;
@@ -41,6 +45,7 @@ use crate::client::connector::StreamingEdenFsThriftClientFuture;
 use crate::methods::EdenThriftMethod;
 use crate::use_case::UseCase;
 
+#[cfg(fbcode_build)]
 lazy_static! {
     static ref SCUBA_CLIENT: QueueingScubaLogger =
         QueueingScubaLogger::new(create_logger("edenfs_client".to_string()), 1000);
@@ -126,6 +131,7 @@ impl Client for ThriftClient {
         let mut connection = (*self.connection.lock()).clone();
         let mut attempts = 0;
         let mut retries = 0;
+        #[cfg(fbcode_build)]
         let mut sample = EdenSample::new();
         loop {
             attempts += 1;
@@ -144,23 +150,30 @@ impl Client for ThriftClient {
             }
             .try_timed()
             .await;
-            sample.add_int("wall_clock_duration_us", start.elapsed().as_micros() as i64);
-            sample.add_int("attempts", attempts as i64);
-            sample.add_int("retries", retries as i64);
-            sample.add_string("use_case", self.use_case.name());
-            sample.add_string("session_id", &self.session_id);
-            sample.add_string("request_id", generate_id().as_str());
+            #[cfg(fbcode_build)]
+            {
+                sample.add_int("wall_clock_duration_us", start.elapsed().as_micros() as i64);
+                sample.add_int("attempts", attempts as i64);
+                sample.add_int("retries", retries as i64);
+                sample.add_string("use_case", self.use_case.name());
+                sample.add_string("session_id", &self.session_id);
+                sample.add_string("request_id", generate_id().as_str());
+            }
             let (error, method) = match result {
                 Ok((stats, (result, method))) => {
                     self.stats_handler.on_success(attempts, retries);
-                    sample.add_int("success", true as i64);
-                    sample.add_int("duration_us", stats.completion_time.as_micros() as i64);
-                    sample.add_string("method", method.name());
-                    let _ = SCUBA_CLIENT.log(sample); // Ideally log should be infalliable, but since its not we don't want to fail the request
+                    #[cfg(fbcode_build)]
+                    {
+                        sample.add_int("success", true as i64);
+                        sample.add_int("duration_us", stats.completion_time.as_micros() as i64);
+                        sample.add_string("method", method.name());
+                        let _ = SCUBA_CLIENT.log(sample); // Ideally log should be infalliable, but since its not we don't want to fail the request
+                    }
                     break Ok(result);
                 }
                 Err(e) => e,
             };
+            #[cfg(fbcode_build)]
             sample.add_string("method", method.name());
             match error.get_error_handling_strategy() {
                 ErrorHandlingStrategy::Reconnect => {
@@ -190,16 +203,22 @@ impl Client for ThriftClient {
                     );
                 }
                 ErrorHandlingStrategy::Abort => {
-                    sample.fail(format!("{:?}", error).as_str());
-                    let _ = SCUBA_CLIENT.log(sample);
+                    #[cfg(fbcode_build)]
+                    {
+                        sample.fail(format!("{:?}", error).as_str());
+                        let _ = SCUBA_CLIENT.log(sample);
+                    }
                     break Err(error);
                 }
             };
 
             if attempts > MAX_RETRY_ATTEMPTS {
-                sample.fail(format!("{:?}", error).as_str());
-                sample.add_bool("max_retry_reached", true);
-                let _ = SCUBA_CLIENT.log(sample);
+                #[cfg(fbcode_build)]
+                {
+                    sample.fail(format!("{:?}", error).as_str());
+                    sample.add_bool("max_retry_reached", true);
+                    let _ = SCUBA_CLIENT.log(sample);
+                }
                 break Err(error);
             }
         }
