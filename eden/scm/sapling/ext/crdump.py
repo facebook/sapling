@@ -134,6 +134,12 @@ def crdump(ui, repo, *revs, **opts):
             finally:
                 repo.ui.quiet = oldquiet
 
+            if notbackedup and ui.configbool("crdump", "commitcloudrequired"):
+                raise error.Abort(
+                    "failed to upload commits to commit cloud: %s"
+                    % ", ".join(str(repo[rev]) for rev in notbackedup)
+                )
+
         for rev in revs:
             ctx = repo[rev]
             rdata = {

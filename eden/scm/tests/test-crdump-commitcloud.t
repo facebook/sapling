@@ -30,6 +30,11 @@ don't report commit_cloud=true when the upload didn't work
   $ FAILPOINTS="eagerepo::api::uploadchangesets=return(empty)" hg debugcrdump -r . 2>/dev/null | grep commit_cloud
               "commit_cloud": false,
 
+fail early if commitcloudrequired is set and some commits fail to upload to commit cloud
+  $ FAILPOINTS="eagerepo::api::uploadchangesets=return(empty)" hg debugcrdump -r . --config crdump.commitcloudrequired=True
+  abort: failed to upload commits to commit cloud: 9092f1db7931
+  [255]
+
 debugcrdump should upload the commit and commit_cloud should be true when
 commitcloud is working
   $ hg debugcrdump -r . 2>/dev/null | grep commit_cloud
