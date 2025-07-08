@@ -28,7 +28,9 @@
 #include "eden/fs/store/hg/SaplingImportRequestQueue.h"
 #include "eden/fs/telemetry/ActivityBuffer.h"
 #include "eden/scm/lib/backingstore/include/SaplingNativeBackingStore.h"
+#ifdef EDEN_HAVE_MONITORING
 #include "monitoring/obc/OBCPxx.h"
+#endif // EDEN_HAVE_MONITORING
 
 namespace facebook::eden {
 
@@ -646,6 +648,7 @@ class SaplingBackingStore final : public BackingStore {
   std::shared_ptr<LocalStore> localStore_;
   EdenStatsPtr stats_;
 
+#ifdef EDEN_HAVE_MONITORING
   // This is used to avoid reading config in hot path of get request
   bool isOBCEnabled_ = false;
   // TODO: this is a prototype to test OBC API on eden
@@ -653,6 +656,7 @@ class SaplingBackingStore final : public BackingStore {
   monitoring::OBCP99P95P50 getBlobPerRepoLatencies_; // calculates p50, p95, p99
   monitoring::OBCP99P95P50 getTreePerRepoLatencies_; // calculates p50, p95, p99
   void initializeOBCCounters();
+#endif // EDEN_HAVE_MONITORING
 
   /**
    * Reference to the eden config, may be a null pointer in unit tests.

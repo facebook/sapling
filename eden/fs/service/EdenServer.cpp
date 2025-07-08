@@ -1006,10 +1006,12 @@ void EdenServer::startPeriodicTasks() {
     } else {
       entities = {hostname, fmt::format("{}:{}", hostname, reWorkerID)};
     }
+#ifdef EDEN_HAVE_MONITORING
     memory_vm_rss_bytes_ = monitoring::OBCAvg(
         monitoring::OdsCategoryId::ODS_EDEN,
         fmt::format("eden.{}", kMemoryVmRssBytes),
         entities);
+#endif // EDEN_HAVE_MONITORING
     // Report memory usage stats once every 60 seconds
     memoryStatsTask_.updateInterval(60s);
   }
@@ -2850,11 +2852,13 @@ void EdenServer::flushStatsNow() {
 }
 
 void EdenServer::reportMemoryStats() {
+#ifdef EDEN_HAVE_MONITORING
   auto memoryStats = facebook::eden::proc_util::readMemoryStats();
   if (memoryStats) {
     // Bump the OBC counters for the current memory usage
     memory_vm_rss_bytes_ += memoryStats->resident;
   }
+#endif // EDEN_HAVE_MONITORING
 }
 
 void EdenServer::manageLocalStore() {
