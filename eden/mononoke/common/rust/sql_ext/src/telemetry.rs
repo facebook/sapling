@@ -114,6 +114,12 @@ fn log_mysql_query_telemetry(
         scuba.add("task_some_delay_rru", client_stats.task_some_delay_rru);
     }
 
+    // Log the Scuba sample for debugging when log-level is set to trace.
+    tracing::trace!(
+        "Logging query telemetry to scuba: {0:#?}",
+        scuba.get_sample()
+    );
+
     scuba.log();
 
     Ok(())
