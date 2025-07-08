@@ -121,9 +121,10 @@ function(add_fb_python_executable TARGET)
     NORMAL_DEPENDS ${ARG_NORMAL_DEPENDS}
   )
 
+  # Tightly coupled to target_include_directories() below in add_fb_python_library()
   set(
     manifest_files
-    "$<TARGET_PROPERTY:${TARGET}.main_lib.py_lib,INTERFACE_INCLUDE_DIRECTORIES>"
+    "$<FILTER:$<TARGET_PROPERTY:${TARGET}.main_lib.py_lib,INTERFACE_INCLUDE_DIRECTORIES>,EXCLUDE,/.*/include>"
   )
   set(
     source_files
@@ -497,6 +498,7 @@ function(add_fb_python_library LIB_NAME)
   endforeach()
   configure_file("${tmp_manifest}" "${manifest_path}" COPYONLY)
 
+  # Tightly coupled to manifest_files in add_fbpython_executable()
   target_include_directories(
     "${LIB_NAME}.py_lib" INTERFACE
     "$<BUILD_INTERFACE:${manifest_path}>"

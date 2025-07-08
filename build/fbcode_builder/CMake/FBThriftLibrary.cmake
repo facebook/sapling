@@ -1,8 +1,9 @@
 # Copyright (c) Facebook, Inc. and its affiliates.
 
 include(FBCMakeParseArgs)
-include(FBThriftPyLibrary)
 include(FBThriftCppLibrary)
+include(FBThriftPyLibrary)
+include(FBThriftPy3Library)
 
 #
 # add_fbthrift_library()
@@ -24,8 +25,8 @@ include(FBThriftCppLibrary)
 #
 function(add_fbthrift_library LIB_NAME THRIFT_FILE)
   # Parse the arguments
-  set(one_value_args PY_NAMESPACE INCLUDE_DIR THRIFT_INCLUDE_DIR)
   set(multi_value_args SERVICES DEPENDS LANGUAGES CPP_OPTIONS PY_OPTIONS)
+  set(one_value_args PY_NAMESPACE PY3_NAMESPACE INCLUDE_DIR THRIFT_INCLUDE_DIR)
   fb_cmake_parse_args(
     ARG "" "${one_value_args}" "${multi_value_args}" "${ARGN}"
   )
@@ -62,6 +63,18 @@ function(add_fbthrift_library LIB_NAME THRIFT_FILE)
       endif()
       add_fbthrift_py_library(
         "${LIB_NAME}_py" "${THRIFT_FILE}"
+        SERVICES ${ARG_SERVICES}
+        ${namespace_args}
+        DEPENDS ${PY_DEPENDS}
+        OPTIONS ${ARG_PY_OPTIONS}
+        THRIFT_INCLUDE_DIR "${ARG_THRIFT_INCLUDE_DIR}"
+      )
+    elseif ("${lang}" STREQUAL "py3")
+      if (DEFINED ARG_PY3_NAMESPACE)
+        set(namespace_args NAMESPACE "${ARG_PY3_NAMESPACE}")
+      endif()
+      add_fbthrift_py3_library(
+        "${LIB_NAME}_py3" "${THRIFT_FILE}"
         SERVICES ${ARG_SERVICES}
         ${namespace_args}
         DEPENDS ${PY_DEPENDS}
