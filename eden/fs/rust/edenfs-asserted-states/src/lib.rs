@@ -10,6 +10,7 @@
 use std::collections::HashSet;
 use std::path::Path;
 use std::path::PathBuf;
+use std::time::Duration;
 
 use edenfs_client::changes_since::ChangesSinceV2Result;
 use edenfs_error::EdenFsError;
@@ -113,6 +114,38 @@ impl StreamingChangesClient {
             Err(err) => Err(err),
         }
     }
+
+    pub async fn stream_changes_since_with_states<'a>(
+        &'a self,
+        inner_stream: BoxStream<'a, Result<ChangesSinceV2Result>>,
+        states: &'a [String],
+    ) -> Result<BoxStream<'a, Result<ChangesSinceV2Result>>> {
+        let stream = stream::unfold(inner_stream, move |mut inner_stream| async move {
+            loop {
+                match self.is_any_state_asserted(states) {
+                    Ok(true) => {
+                        tracing::debug!("States asserted");
+                        tokio::time::sleep(Duration::from_secs(1)).await;
+                    }
+                    Ok(false) => return Some((inner_stream.as_mut().next().await?, inner_stream)),
+                    Err(e) => {
+                        tracing::error!("error while checking states {:?}", e);
+                        return Some((Err(e), inner_stream));
+                    }
+                }
+            }
+        });
+        Ok(stream.boxed())
+    }
+
+    fn is_any_state_asserted(&self, states: &[String]) -> Result<bool> {
+        for state in states {
+            if self.is_state_asserted(state)? {
+                return Ok(true);
+            }
+        }
+        Ok(false)
+    }
 }
 
 // As PathLock, but creates an additional file with the .notify extension
@@ -167,16 +200,6 @@ fn is_state_locked(dir: &Path, name: &str) -> Result<bool> {
         Err(ContentLockError::Contended(_)) => Ok(true),
         Err(ContentLockError::Io(err)) => Err(err.into()),
     }
-}
-
-pub async fn stream_changes_since_with_states<'a>(
-    inner_stream: BoxStream<'a, Result<ChangesSinceV2Result>>,
-    _states: &[String],
-) -> Result<BoxStream<'a, Result<ChangesSinceV2Result>>> {
-    let stream = stream::unfold(inner_stream, move |mut inner_stream| async move {
-        Some((inner_stream.as_mut().next().await?, inner_stream))
-    });
-    Ok(stream.boxed())
 }
 
 #[cfg(test)]
@@ -335,6 +358,23 @@ mod tests {
         drop(lock);
         assert!(!is_state_locked(&state_path, state)?);
 
+        Ok(())
+    }
+
+    #[fbinit::test]
+    fn test_states_asserted(_fb: FacebookInit) -> anyhow::Result<()> {
+        let mount_point = std::env::temp_dir().join("test_mount7");
+        let client = StreamingChangesClient::new(mount_point)?;
+        let state = "test_state";
+        let state2 = "test_state2";
+        let guard_result = client.enter_state(state)?;
+        let states_asserted = client.is_any_state_asserted(&[state.to_string()])?;
+        assert!(states_asserted);
+        let states_asserted = client.is_any_state_asserted(&[state2.to_string()])?;
+        assert!(!states_asserted);
+        drop(guard_result);
+        let states_asserted = client.is_any_state_asserted(&[state.to_string()])?;
+        assert!(!states_asserted);
         Ok(())
     }
 }

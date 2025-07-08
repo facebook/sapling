@@ -19,6 +19,8 @@ from .lib import testcase
 
 @testcase.eden_repo_test
 class NotifyTest(testcase.EdenRepoTest):
+    git_test_supported = False
+
     def populate_repo(self) -> None:
         self.repo.write_file("hello", "hola\n")
         self.repo.commit("Initial commit.")
@@ -37,6 +39,7 @@ class NotifyTest(testcase.EdenRepoTest):
         super().tearDown()
 
     async def subscribe(self) -> asyncio.subprocess.Process:
+        self.mkdir(".edenfs-notifications-state")
         cmd, env = self.eden.get_edenfsctl_cmd_env(
             "notify",
             "changes-since",

@@ -12,9 +12,10 @@ use std::path::PathBuf;
 use anyhow::Result;
 use async_trait::async_trait;
 use clap::Parser;
-use edenfs_asserted_states::stream_changes_since_with_states;
+use edenfs_asserted_states::StreamingChangesClient;
 use edenfs_client::changes_since::ChangesSinceV2Result;
 use edenfs_client::types::JournalPosition;
+use edenfs_client::utils::get_mount_point;
 use futures::StreamExt;
 use hg_util::path::expand_path;
 
@@ -130,6 +131,7 @@ impl crate::Subcommand for ChangesSinceCmd {
 
         self.print_result(&result);
         if self.subscribe {
+            let stream_client = StreamingChangesClient::new(get_mount_point(&self.mount_point)?)?;
             let mut stream = client
                 .stream_changes_since(
                     &self.mount_point,
@@ -144,7 +146,9 @@ impl crate::Subcommand for ChangesSinceCmd {
                 )
                 .await?;
             if !self.states.is_empty() {
-                stream = stream_changes_since_with_states(stream, &self.states).await?;
+                stream = stream_client
+                    .stream_changes_since_with_states(stream, &self.states)
+                    .await?;
             }
             stream
                 .for_each(|result| async {

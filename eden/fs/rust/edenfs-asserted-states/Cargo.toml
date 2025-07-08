@@ -15,6 +15,7 @@ fs-err = { version = "3", features = ["tokio"] }
 futures = { version = "0.3.30", features = ["async-await", "compat"] }
 sapling-util = { version = "0.1.0", path = "../../../scm/lib/util" }
 thiserror = "2.0.12"
+tokio = { version = "1.45.0", features = ["full", "test-util", "tracing"] }
 tracing = { version = "0.1.41", features = ["attributes", "valuable"] }
 
 [dev-dependencies]
