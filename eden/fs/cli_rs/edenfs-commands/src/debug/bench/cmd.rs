@@ -141,7 +141,9 @@ impl crate::Subcommand for BenchCmd {
                         "{}",
                         dbio::bench_rocksdb_read_mfmd(&test_dir, &random_data)?
                     );
+                    #[cfg(fbcode_build)]
                     println!("{}", dbio::bench_lmdb_write_mfmd(&test_dir, &random_data)?);
+                    #[cfg(fbcode_build)]
                     println!("{}", dbio::bench_lmdb_read_mfmd(&test_dir, &random_data)?);
                     println!(
                         "{}",
