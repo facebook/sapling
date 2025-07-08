@@ -220,7 +220,6 @@ members = [
   "cmdlib/sharding",
   "cmdlib/sharding_ext",
   "cmdlib/zk_leader_election",
-  "cmds/copy_blobstore_keys",
   "commit_cloud",
   "commit_cloud/helpers",
   "commit_cloud/types",

@@ -6,7 +6,6 @@
 MONONOKE_BINS = {
     "BACKSYNCER": "backsyncer_cmd",
     "COMMIT_VALIDATOR": "commit_validator",
-    "COPY_BLOBSTORE_KEYS": "copy_blobstore_keys",
     "DERIVED_DATA_SERVICE": "derived_data_service",
     "DERIVED_DATA_CLIENT": "2ds_client",
     "DERIVED_DATA_WORKER": "derivation_worker",

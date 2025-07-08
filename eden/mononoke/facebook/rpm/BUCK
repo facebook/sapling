@@ -33,10 +33,6 @@ rpm.builder(
             src = "//eden/mononoke/walker:walker",
             dst = "/bin/mononoke_walker",
         ),
-        rpm.install(
-            src = "//eden/mononoke/cmds/copy_blobstore_keys:copy_blobstore_keys",
-            dst = "/bin/copy_blobstore_keys",
-        ),
     ],
     strip_debuginfo_without_saving_symbols = True,
     summary = "Administration tools for Mononoke",

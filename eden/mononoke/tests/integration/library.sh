@@ -1613,23 +1613,6 @@ function quiet_grep() {
   return "$ret"
 }
 
-function copy_blobstore_keys() {
-  SOURCE_REPO_ID="$1"
-  shift
-  TARGET_REPO_ID="$1"
-  shift
-
-  GLOG_minloglevel=5 "$COPY_BLOBSTORE_KEYS" \
-    "${CACHE_ARGS[@]}" \
-    "${COMMON_ARGS[@]}" \
-    --source-repo-id "$SOURCE_REPO_ID" \
-    --target-repo-id "$TARGET_REPO_ID" \
-    --mononoke-config-path "${TESTTMP}/mononoke-config" \
-    --tracing \
-    --tracing-test-format \
-    "$@"
-}
-
 function streaming_clone() {
   GLOG_minloglevel=5 "$MONONOKE_STREAMING_CLONE" \
     "${CACHE_ARGS[@]}" \
