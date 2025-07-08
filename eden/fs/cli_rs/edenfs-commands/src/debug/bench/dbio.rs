@@ -21,6 +21,7 @@ use super::types::Benchmark;
 use super::types::BenchmarkType;
 
 /// Runs the RocksDB write benchmark and returns the benchmark results
+#[cfg(fbcode_build)]
 pub fn bench_rocksdb_write_mfmd(test_dir: &TestDir, random_data: &RandomData) -> Result<Benchmark> {
     let mut agg_write_dur = std::time::Duration::new(0, 0);
     let db_opts = rocksdb::Options::new().create_if_missing(true);
@@ -74,6 +75,7 @@ pub fn bench_rocksdb_write_mfmd(test_dir: &TestDir, random_data: &RandomData) ->
 }
 
 /// Runs the RocksDB read benchmark and returns the benchmark results
+#[cfg(fbcode_build)]
 pub fn bench_rocksdb_read_mfmd(test_dir: &TestDir, random_data: &RandomData) -> Result<Benchmark> {
     let mut agg_read_dur = std::time::Duration::new(0, 0);
     let mut read_data = vec![0u8; random_data.chunk_size];
