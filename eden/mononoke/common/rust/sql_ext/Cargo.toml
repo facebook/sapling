@@ -45,4 +45,5 @@ vec1 = { version = "1", features = ["serde"] }
 [dev-dependencies]
 assert_matches = "1.5"
 fbinit-tokio = { version = "0.1.2", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
+metadata = { version = "0.1.0", path = "../../../server/metadata" }
 mononoke_macros = { version = "0.1.0", path = "../../../mononoke_macros" }

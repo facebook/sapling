@@ -171,27 +171,27 @@ impl CoreContext {
 
 impl From<CoreContext> for Option<SqlQueryTelemetry> {
     fn from(ctx: CoreContext) -> Option<SqlQueryTelemetry> {
-        let cri = ctx.metadata().client_request_info();
         let fb = ctx.fb.clone();
+        let metadata = ctx.metadata();
 
-        Some(SqlQueryTelemetry::new(cri.cloned(), fb))
+        Some(SqlQueryTelemetry::new(fb, metadata.clone()))
     }
 }
 
 impl From<&CoreContext> for SqlQueryTelemetry {
     fn from(ctx: &CoreContext) -> SqlQueryTelemetry {
-        let cri = ctx.metadata().client_request_info();
         let fb = ctx.fb.clone();
+        let metadata = ctx.metadata();
 
-        SqlQueryTelemetry::new(cri.cloned(), fb)
+        SqlQueryTelemetry::new(fb, metadata.clone())
     }
 }
 
 impl From<&CoreContext> for Option<SqlQueryTelemetry> {
     fn from(ctx: &CoreContext) -> Option<SqlQueryTelemetry> {
-        let cri = ctx.metadata().client_request_info();
         let fb = ctx.fb.clone();
+        let metadata = ctx.metadata();
 
-        Some(SqlQueryTelemetry::new(cri.cloned(), fb))
+        Some(SqlQueryTelemetry::new(fb, metadata.clone()))
     }
 }

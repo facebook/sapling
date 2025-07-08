@@ -678,15 +678,21 @@ mod tests {
     #[mononoke::fbinit_test]
     async fn should_compile(fb: FacebookInit) -> anyhow::Result<()> {
         use clientinfo::ClientEntryPoint;
+        use clientinfo::ClientInfo;
         use clientinfo::ClientRequestInfo;
+        use metadata::Metadata;
         use sql_query_config::SqlQueryConfig;
         use sql_query_telemetry::SqlQueryTelemetry;
 
         let config: &SqlQueryConfig = todo!();
         let connection: &sql::Connection = todo!();
-        let cri = ClientRequestInfo::new(ClientEntryPoint::Sapling);
 
-        let tel_logger = SqlQueryTelemetry::new(Some(cri), fb);
+        let cri = ClientRequestInfo::new(ClientEntryPoint::Sapling);
+        let client_info = ClientInfo::new()?;
+        let mut metadata = Metadata::default();
+        metadata.add_client_info(client_info);
+
+        let tel_logger = SqlQueryTelemetry::new(fb, metadata);
         TestQuery::query(connection, None, todo!(), todo!()).await?;
         TestQuery::query_with_transaction(todo!(), None, todo!(), todo!()).await?;
         TestQuery2::query(config, None, connection, None::<SqlQueryTelemetry>).await?;

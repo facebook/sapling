@@ -16,6 +16,7 @@ rust_library(
         "fbsource//third-party/rust:assert_matches",
         "//common/rust/shed/fbinit:fbinit-tokio",
         "//eden/mononoke/mononoke_macros:mononoke_macros",
+        "//eden/mononoke/server/metadata:metadata",
     ],
     deps = ([
         "fbsource//third-party/rust:anyhow",
