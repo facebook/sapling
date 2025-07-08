@@ -8,6 +8,7 @@
 use std::path::Path;
 use std::path::PathBuf;
 
+#[cfg(feature = "fb")]
 use remote_loader::get_remote_configs;
 use strum::IntoStaticStr;
 
@@ -87,6 +88,12 @@ impl UseCase {
             })
     }
 
+    #[cfg(not(feature = "fb"))]
+    fn get_use_case(&self) -> Option<ScmUseCase> {
+        None
+    }
+
+    #[cfg(feature = "fb")]
     fn get_use_case(&self) -> Option<ScmUseCase> {
         let is_pub = cpe::x2p::supports_vpnless();
         let config_url = helpers::config_url(is_pub);
@@ -98,7 +105,8 @@ impl UseCase {
         };
         let http_config = helpers::get_http_config(is_pub, proxy_sock_path).ok()?;
         let cache_path = self.config_dir.join("scm_use_cases");
-        let config: ScmUseCases = get_remote_configs(
+
+        let config = get_remote_configs(
             is_pub,
             Some(config_url),
             300, // 5 minutes
