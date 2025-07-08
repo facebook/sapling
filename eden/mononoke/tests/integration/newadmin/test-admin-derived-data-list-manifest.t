@@ -30,11 +30,11 @@ setup configuration
 derived-data list-manifest:
 
 Skeleton manifest of main's a directory
-  $ with_stripped_logs mononoke_admin derived-data -R repo list-manifest -p "a" -B main -t skeleton-manifests --derive
+  $ mononoke_admin derived-data -R repo list-manifest -p "a" -B main -t skeleton-manifests --derive
   a/b/	32d74c40e3ed0a76b1fe09ee7251df9805370e271b4a815ce08a96b640228b61
   a/foo.txt	exists
 Skeleton manifest of B's root directory
-  $ with_stripped_logs mononoke_admin derived-data -R repo list-manifest -i "$B" -t skeleton-manifests
+  $ mononoke_admin derived-data -R repo list-manifest -i "$B" -t skeleton-manifests
   A	exists
   B	exists
   a/	02d87d7d93a5072f4fe981d3801b13d6ca4157ad1387ffbeb20363463b19ff9a
@@ -42,11 +42,11 @@ Skeleton manifest of B's root directory
   script	exists
   script.sh	exists
 Skeleton manifest of B's a directory (recursive)
-  $ with_stripped_logs mononoke_admin derived-data -R repo list-manifest -p "a" -i "$B" -t skeleton-manifests --recursive | sort
+  $ mononoke_admin derived-data -R repo list-manifest -p "a" -i "$B" -t skeleton-manifests --recursive | sort
   a/b/bar.txt	exists
   a/foo.txt	exists
 Skeleton manifest of main's root directory (recursive)
-  $ with_stripped_logs mononoke_admin derived-data -R repo list-manifest -B main -t skeleton-manifests --recursive | sort
+  $ mononoke_admin derived-data -R repo list-manifest -B main -t skeleton-manifests --recursive | sort
   A	exists
   B	exists
   C	exists
@@ -56,23 +56,23 @@ Skeleton manifest of main's root directory (recursive)
   a/foo.txt	exists
   script	exists
   script.sh	exists
-  $ with_stripped_logs mononoke_admin derived-data -R repo list-manifest -B main -t skeleton-manifests2 --derive | sort
+  $ mononoke_admin derived-data -R repo list-manifest -B main -t skeleton-manifests2 --derive | sort
   A	file
   B	file
   C	file
   a/	tree	count=7
   script	file
   script.sh	file
-  $ with_stripped_logs mononoke_admin derived-data -R repo list-manifest -B main -p "a" -t skeleton-manifests2 --derive | sort
+  $ mononoke_admin derived-data -R repo list-manifest -B main -p "a" -t skeleton-manifests2 --derive | sort
   a/b/	tree	count=5
   a/foo.txt	file
 
 Fsnodes of main's a directory
-  $ with_stripped_logs mononoke_admin derived-data -R repo list-manifest -p "a" -B main -t fsnodes --derive | sort
+  $ mononoke_admin derived-data -R repo list-manifest -p "a" -B main -t fsnodes --derive | sort
   a/b/	f43b8e1f3b620c61eb8e47329df9cee895b77613f2afeb1d53238c63ebba58c4
   a/foo.txt	67f9f510b6a13f94986928ba0f270ec005b194edd77b22a13dec797471a4fe85	type=regular	size=5
 Fsnodes from B's root path (recursive)
-  $ with_stripped_logs mononoke_admin derived-data -R repo list-manifest -i "$B" -t fsnodes --recursive | sort
+  $ mononoke_admin derived-data -R repo list-manifest -i "$B" -t fsnodes --recursive | sort
   A	eb56488e97bb4cf5eb17f05357b80108a4a71f6c3bab52dfcaec07161d105ec9	type=regular	size=1
   B	55662471e2a28db8257939b2f9a2d24e65b46a758bac12914a58f17dcde6905f	type=regular	size=1
   a/b/bar.txt	638aceddb6283739ca98ac2cb18bf6d8d5358439ea187fd4ab0257d24d6d6e47	type=regular	size=5
@@ -82,11 +82,11 @@ Fsnodes from B's root path (recursive)
   script.sh	7944a589808e894931ed482c1cb0543524483a49aaf9568e60959a34fe9700d9	type=executable	size=4
 
 Content manifests
-  $ with_stripped_logs mononoke_admin derived-data -R repo list-manifest -p "a" -B main -t content-manifests --derive | sort
+  $ mononoke_admin derived-data -R repo list-manifest -p "a" -B main -t content-manifests --derive | sort
   a/b/	6c6855704970b38c87329e762932ff95eebcfb2b60ec2e93150f6b5270b42e1f
   a/foo.txt	67f9f510b6a13f94986928ba0f270ec005b194edd77b22a13dec797471a4fe85	type=regular	size=5
 Content manifests from root path, recursive
-  $ with_stripped_logs mononoke_admin derived-data -R repo list-manifest -p "" -B main -t content-manifests --recursive | sort
+  $ mononoke_admin derived-data -R repo list-manifest -p "" -B main -t content-manifests --recursive | sort
   A	eb56488e97bb4cf5eb17f05357b80108a4a71f6c3bab52dfcaec07161d105ec9	type=regular	size=1
   B	55662471e2a28db8257939b2f9a2d24e65b46a758bac12914a58f17dcde6905f	type=regular	size=1
   C	896ad5879a5df0403bfc93fc96507ad9c93b31b11f3d0fa05445da7918241e5d	type=regular	size=1
@@ -98,12 +98,12 @@ Content manifests from root path, recursive
   script.sh	7944a589808e894931ed482c1cb0543524483a49aaf9568e60959a34fe9700d9	type=executable	size=4
 
 Unodes of main's a directory
-  $ with_stripped_logs mononoke_admin derived-data -R repo list-manifest -p "a" -B main -t unodes --derive
+  $ mononoke_admin derived-data -R repo list-manifest -p "a" -B main -t unodes --derive
   a/b/	102bf16d65a69acdfc009c57dcb04a5320793d4127f3380a563f4321dec5e188
   a/foo.txt	6ff43b2e8ed1fe11cb9d4960b3b98b2b6b74f8d33b07212b21e703a26bff7bab
 
 Unodes of B's root (recursive)
-  $ with_stripped_logs mononoke_admin derived-data -R repo list-manifest -i "$B" -t unodes --recursive | sort
+  $ mononoke_admin derived-data -R repo list-manifest -i "$B" -t unodes --recursive | sort
   A	cd771475fbda7931a732013c817545b570f2fda7aedd5ee15677168c54e713b6
   B	670de42024de2d059cc795e4af983511e283f7a20edac3f2c07954dde321133c
   a/b/bar.txt	d865bc1be52ba5b788200e52fc52e091cee771ada2db4b8dd2e5360e181775df
@@ -113,19 +113,19 @@ Unodes of B's root (recursive)
   script.sh	8bdc9692cef408f0067f89ae55b0f3dab8e74ce8f63e34137ea5ef944e309dfe
 
 Deleted manifests of B's a directory
-  $ with_stripped_logs mononoke_admin derived-data -R repo list-manifest -p "a" -i "$B" -t deleted-manifests --derive | sort
+  $ mononoke_admin derived-data -R repo list-manifest -p "a" -i "$B" -t deleted-manifests --derive | sort
   a/bar.txt	2d424b26533fbe5aafdfb7a7f9834282630b465b2b1b56194c9e0689df8ec2f2	linknode=581ea2acc78e89f96ece88fc87956018ffd01941d62119e055bbc9348d98caad
 
 Deleted manifests of main from root (recursive)
 Note that `b/` appears because the directory was fully deleted.
-  $ with_stripped_logs mononoke_admin derived-data -R repo list-manifest -B "main" -t deleted-manifests --derive --recursive | sort
+  $ mononoke_admin derived-data -R repo list-manifest -B "main" -t deleted-manifests --derive --recursive | sort
   a/bar.txt	2d424b26533fbe5aafdfb7a7f9834282630b465b2b1b56194c9e0689df8ec2f2	linknode=581ea2acc78e89f96ece88fc87956018ffd01941d62119e055bbc9348d98caad
   b/	0646f87ccb30da2fdfdc22c453d9bdb5a75e25d3104a8a1b25cc48037fd21cf6	linknode=3371afd62725ca00669b19e45fed925030a601c26c409742583da2cf3c5e6eae
   b/hoo.txt	c14cdb955b6ec1ce0f3b76e80d9aaca4e86766e08025e5b286dfeadc150d9b20	linknode=3371afd62725ca00669b19e45fed925030a601c26c409742583da2cf3c5e6eae
 
 #  $ mononoke_admin derived-data -R repo derive -B "main" -T git_commits
 
-  $ with_stripped_logs mononoke_admin derived-data -R repo list-manifest -B "main" -t git-trees --derive --recursive | sort
+  $ mononoke_admin derived-data -R repo list-manifest -B "main" -t git-trees --derive --recursive | sort
   A	8c7e5a667f1b771847fe88c01c3de34413a1b220	mode=100644
   B	7371f47a6f8bd23a8fa1a8b2a9479cdd76380e54	mode=100644
   C	96d80cd6c4e7158dbebd0849f4fb7ce513e5828c	mode=100644
@@ -137,6 +137,6 @@ Note that `b/` appears because the directory was fully deleted.
   script.sh	30d74d258442c7c65512eafab474568dd706c430	mode=100755
 
 Validate all these manifests are equivalent
-  $ with_stripped_logs mononoke_admin derived-data -R repo verify-manifests -i "$A" -T fsnodes -T hgchangesets -T unodes -T skeleton_manifests -T git_commits -T content_manifests
-  $ with_stripped_logs mononoke_admin derived-data -R repo verify-manifests -i "$B" -T fsnodes -T hgchangesets -T unodes -T skeleton_manifests -T git_commits -T content_manifests
-  $ with_stripped_logs mononoke_admin derived-data -R repo verify-manifests -i "$C" -T fsnodes -T hgchangesets -T unodes -T skeleton_manifests -T git_commits -T content_manifests
+  $ mononoke_admin derived-data -R repo verify-manifests -i "$A" -T fsnodes -T hgchangesets -T unodes -T skeleton_manifests -T git_commits -T content_manifests
+  $ mononoke_admin derived-data -R repo verify-manifests -i "$B" -T fsnodes -T hgchangesets -T unodes -T skeleton_manifests -T git_commits -T content_manifests
+  $ mononoke_admin derived-data -R repo verify-manifests -i "$C" -T fsnodes -T hgchangesets -T unodes -T skeleton_manifests -T git_commits -T content_manifests
