@@ -13,6 +13,7 @@ use std::path::PathBuf;
 use std::time::Duration;
 
 use edenfs_client::changes_since::ChangesSinceV2Result;
+use edenfs_client::types::JournalPosition;
 use edenfs_error::EdenFsError;
 use edenfs_error::Result;
 use fs_err as fs;
@@ -120,17 +121,87 @@ impl StreamingChangesClient {
         inner_stream: BoxStream<'a, Result<ChangesSinceV2Result>>,
         states: &'a [String],
     ) -> Result<BoxStream<'a, Result<ChangesSinceV2Result>>> {
-        let stream = stream::unfold(inner_stream, move |mut inner_stream| async move {
-            loop {
-                match self.is_any_state_asserted(states) {
-                    Ok(true) => {
-                        tracing::debug!("States asserted");
-                        tokio::time::sleep(Duration::from_secs(1)).await;
+        let state_data = StreamChangesSinceWithStatesData {
+            inner_stream: inner_stream.boxed(),
+            last_event: None,
+            state: IsStateCurrentlyAsserted::NotAsserted,
+        };
+
+        let stream = stream::unfold(state_data, move |mut state_data| async move {
+            match state_data.state {
+                IsStateCurrentlyAsserted::NotAsserted => {
+                    let next_result = state_data.inner_stream.as_mut().next().await?;
+                    match next_result {
+                        Ok(inner_result) => match self.is_any_state_asserted(states) {
+                            Ok(true) => {
+                                tracing::debug!("States asserted");
+                                // Return an empty change here. In a followup, attach a list of ChangeEvents
+                                let output = Ok(ChangesSinceV2Result {
+                                    to_position: inner_result.to_position.clone(),
+                                    changes: Vec::new(),
+                                });
+                                state_data.last_event = Some(inner_result);
+                                state_data.state = IsStateCurrentlyAsserted::StateAsserted;
+                                Some((output, state_data))
+                            }
+                            Ok(false) => Some((Ok(inner_result), state_data)),
+                            Err(e) => {
+                                tracing::error!("error while checking states {:?}", e);
+                                Some((Err(e), state_data))
+                            }
+                        },
+                        Err(e) => {
+                            // Pass through the error
+                            Some((Err(e), state_data))
+                        }
                     }
-                    Ok(false) => return Some((inner_stream.as_mut().next().await?, inner_stream)),
-                    Err(e) => {
-                        tracing::error!("error while checking states {:?}", e);
-                        return Some((Err(e), inner_stream));
+                }
+                IsStateCurrentlyAsserted::StateAsserted => {
+                    loop {
+                        match self.is_any_state_asserted(states) {
+                            Ok(true) => {
+                                tokio::time::sleep(Duration::from_secs(1)).await;
+                            }
+                            Ok(false) => {
+                                tracing::debug!("All states deasserted, exiting asserted states");
+                                let next_result = state_data.inner_stream.as_mut().next().await?;
+
+                                let mut right_changes = match next_result {
+                                    Ok(inner_result) => inner_result,
+                                    Err(e) => {
+                                        // Pass through the error
+                                        return Some((Err(e), state_data));
+                                    }
+                                };
+                                state_data.state = IsStateCurrentlyAsserted::NotAsserted;
+                                // At this point, last_event should already contain a value
+                                let left_changes =
+                                    state_data
+                                        .last_event
+                                        .take()
+                                        .unwrap_or(ChangesSinceV2Result {
+                                            to_position: JournalPosition::default(),
+                                            changes: Vec::new(),
+                                        });
+
+                                let mut output = ChangesSinceV2Result {
+                                    to_position: right_changes.to_position,
+                                    changes: left_changes.changes,
+                                };
+                                output.changes.append(&mut right_changes.changes);
+
+                                return Some((
+                                    // In a followup, attach a list of ChangeEvents
+                                    Ok(output),
+                                    state_data,
+                                ));
+                            }
+                            Err(e) => {
+                                tracing::error!("error while checking states {:?}", e);
+                                // Pass through the error
+                                return Some((Err(e), state_data));
+                            }
+                        }
                     }
                 }
             }
@@ -200,6 +271,17 @@ fn is_state_locked(dir: &Path, name: &str) -> Result<bool> {
         Err(ContentLockError::Contended(_)) => Ok(true),
         Err(ContentLockError::Io(err)) => Err(err.into()),
     }
+}
+
+enum IsStateCurrentlyAsserted {
+    NotAsserted,
+    StateAsserted,
+}
+
+struct StreamChangesSinceWithStatesData<'a> {
+    inner_stream: BoxStream<'a, Result<ChangesSinceV2Result>>,
+    last_event: Option<ChangesSinceV2Result>,
+    state: IsStateCurrentlyAsserted,
 }
 
 #[cfg(test)]
