@@ -6,8 +6,9 @@
 add_fbthrift_library(
   eden_config_thrift
   eden_config.thrift
-  LANGUAGES cpp py
+  LANGUAGES cpp py py3
   PY_NAMESPACE facebook.eden.eden_config
+  PY3_NAMESPACE eden.fs.config.eden_config
 )
 
 file(GLOB CONFIG_SRCS "*.cpp")

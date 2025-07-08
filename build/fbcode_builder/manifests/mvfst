@@ -11,6 +11,9 @@ repo_url = https://github.com/facebook/mvfst.git
 builder = cmake
 subdir = .
 
+[cmake.defines]
+BUILD_SHARED_LIBS = ON
+
 [cmake.defines.test=on]
 BUILD_TESTS = ON
 

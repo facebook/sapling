@@ -11,5 +11,5 @@ add_fb_python_library(
     ${EDEN_PY_SRCS}
     # Also include the generated eden/config.py file
     "${CMAKE_CURRENT_BINARY_DIR}/eden/config.py=eden/config.py"
-  DEPENDS eden_service_thrift_py
+  DEPENDS eden_service_thrift_py3
 )
