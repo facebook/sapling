@@ -199,6 +199,7 @@ dott_test(
     deps = [
         "//eden/mononoke:blobimport",
         "//eden/mononoke/cmds/copy_blobstore_keys:copy_blobstore_keys",
+        "//eden/mononoke/tools/admin:admin",
         "//eden/mononoke/walker:walker",
     ],
 )

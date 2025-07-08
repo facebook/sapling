@@ -14,7 +14,6 @@ use clap::ValueEnum;
 #[derive(Args, Debug)]
 #[clap(group(
     ArgGroup::new("repo_blobstore")
-        .required(true)
         .args(&["repo_id", "repo_name", "storage_name"]),
 ))]
 pub struct RepoBlobstoreArgs {

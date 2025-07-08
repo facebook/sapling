@@ -42,6 +42,7 @@ rust_binary(
         "fbsource//third-party/rust:prettytable-rs",
         "fbsource//third-party/rust:regex",
         "fbsource//third-party/rust:serde_json",
+        "fbsource//third-party/rust:thiserror",
         "fbsource//third-party/rust:tokio",
         "fbsource//third-party/rust:tokio-stream",
         "fbsource//third-party/rust:tokio-util",

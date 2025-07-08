@@ -82,7 +82,7 @@ Check that only a single key exist before the copy command
   1
 
 First run should fail, because we do not strip repo0000 prefix
-  $ copy_blobstore_keys "$REPOID_SRC" "$REPOID_DEST" --input-file "$TESTTMP"/keys \
+  $ mononoke_admin blobstore copy-keys --source-repo-id "$REPOID_SRC" --target-repo-id "$REPOID_DEST" --input-file "$TESTTMP"/keys \
   > --error-keys-output "$TESTTMP"/errors \
   > --missing-keys-output "$TESTTMP"/missing \
   > --success-keys-output "$TESTTMP"/success
@@ -96,8 +96,9 @@ First run should fail, because we do not strip repo0000 prefix
   [1]
 
 
+
 Now run with ignore errors - it should not fail, but should not copy anything either
-  $ copy_blobstore_keys "$REPOID_SRC" "$REPOID_DEST" --input-file "$TESTTMP"/keys --ignore-errors \
+  $ mononoke_admin --blobstore-put-behaviour Overwrite blobstore copy-keys --source-repo-id "$REPOID_SRC" --target-repo-id "$REPOID_DEST" --input-file "$TESTTMP"/keys --ignore-errors \
   > --error-keys-output "$TESTTMP"/errors \
   > --missing-keys-output "$TESTTMP"/missing \
   > --success-keys-output "$TESTTMP"/success 2>&1 | grep -v 'failed to copy'
@@ -122,7 +123,7 @@ Now run with ignore errors - it should not fail, but should not copy anything ei
   $ wc -l "$TESTTMP"/missing
   29 $TESTTMP/missing
 
-  $ copy_blobstore_keys "$REPOID_SRC" "$REPOID_DEST" --input-file "$TESTTMP"/keys --strip-source-repo-prefix \
+  $ mononoke_admin --blobstore-put-behaviour Overwrite blobstore copy-keys --source-repo-id "$REPOID_SRC" --target-repo-id "$REPOID_DEST" --input-file "$TESTTMP"/keys --strip-source-repo-prefix \
   > --error-keys-output "$TESTTMP"/errors \
   > --missing-keys-output "$TESTTMP"/missing \
   > --success-keys-output "$TESTTMP"/success

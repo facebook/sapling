@@ -37,6 +37,9 @@ Check that walker fails on the corrupted blobstore
       0: error while deserializing blob for 'HgFileEnvelope'
       1: end of file reached
   Error: Execution failed
+
+
+
 Check that walker detects keys, which need to be repaired
   $ mononoke_walker --scuba-log-file scuba-reportonly.json -l loaded --blobstore-scrub-action=ReportOnly scrub -q -I deep -b master_bookmark 2>&1 | grep -v 'Walking .* types'
   [ERROR] Execution error: Could not step to OutgoingEdge { label: HgManifestToHgFileEnvelope, target: HgFileEnvelope(HgFileNodeId(HgNodeHash(Sha1(005d992c5dcf32993668f7cede29d296c494a5d9)))), path: None } via Some(EmptyRoute) in repo repo
@@ -44,12 +47,13 @@ Check that walker detects keys, which need to be repaired
   Caused by:
       Different blobstores have different values for this item: * (glob)
   Error: Execution failed
+
   $ cat > "$TESTTMP"/keys <<EOF
   > repo0000.hgfilenode.sha1.005d992c5dcf32993668f7cede29d296c494a5d9
   > EOF
 
 Copy missing key from the healthy inner blobstore
-  $ copy_blobstore_keys "$REPOID" "$REPOID" --input-file "$TESTTMP"/keys \
+  $ mononoke_admin --blobstore-put-behaviour Overwrite blobstore copy-keys --source-repo-id "$REPOID" --target-repo-id "$REPOID" --input-file "$TESTTMP"/keys \
   > --strip-source-repo-prefix \
   > --error-keys-output "$TESTTMP"/errors \
   > --missing-keys-output "$TESTTMP"/missing \
