@@ -22,10 +22,10 @@ fn main() {
     fs::write(cratemap_path, CRATEMAP).expect("Failed to write cratemap");
     Config::from_env(GenContext::Mocks)
         .expect("Failed to instantiate thrift_compiler::Config")
-        .base_path("../../../..")
+        .base_path("../../../../..")
         .types_crate("thrift__types")
         .clients_crate("thrift__clients")
         .options("deprecated_default_enum_min_i32")
-        .run(["../eden.thrift"])
+        .run(["../../eden.thrift"])
         .expect("Failed while running thrift compilation");
 }
