@@ -20,15 +20,16 @@ list(
   REMOVE_ITEM
   INODES_SRCS
   ${CMAKE_CURRENT_SOURCE_DIR}/RequestContext.cpp
-  ${CMAKE_CURRENT_SOURCE_DIR}/InodeNumber.cpp
   ${CMAKE_CURRENT_SOURCE_DIR}/InodeMetadata.cpp
   ${CMAKE_CURRENT_SOURCE_DIR}/InodeTimestamps.cpp
 )
 
 add_library(
   eden_inodes_inodenumber STATIC
-    ${CMAKE_CURRENT_SOURCE_DIR}/InodeNumber.cpp
+  InodeNumber.h
 )
+
+set_target_properties(eden_inodes_inodenumber PROPERTIES LINKER_LANGUAGE CXX)
 
 target_link_libraries(
   eden_inodes_inodenumber
