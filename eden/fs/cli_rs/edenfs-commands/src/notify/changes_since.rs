@@ -12,6 +12,7 @@ use std::path::PathBuf;
 use anyhow::Result;
 use async_trait::async_trait;
 use clap::Parser;
+use edenfs_asserted_states::stream_changes_since_with_states;
 use edenfs_client::changes_since::ChangesSinceV2Result;
 use edenfs_client::types::JournalPosition;
 use futures::StreamExt;
@@ -71,6 +72,12 @@ pub struct ChangesSinceCmd {
     )]
     subscribe: bool,
 
+    #[clap(
+        long,
+        help = "If any of the listed states are asserted, wait for them to be deasserted before getting changes"
+    )]
+    states: Vec<String>,
+
     #[clap(long, help = "Print the output in JSON format")]
     json: bool,
 
@@ -123,7 +130,7 @@ impl crate::Subcommand for ChangesSinceCmd {
 
         self.print_result(&result);
         if self.subscribe {
-            let stream = client
+            let mut stream = client
                 .stream_changes_since(
                     &self.mount_point,
                     self.throttle,
@@ -136,6 +143,9 @@ impl crate::Subcommand for ChangesSinceCmd {
                     self.include_vcs_roots,
                 )
                 .await?;
+            if !self.states.is_empty() {
+                stream = stream_changes_since_with_states(stream, &self.states).await?;
+            }
             stream
                 .for_each(|result| async {
                     match result {

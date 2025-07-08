@@ -9,8 +9,10 @@ license = "GPLv2+"
 
 [dependencies]
 anyhow = "1.0.98"
+edenfs-client = { version = "0.1.0", path = "../../cli_rs/edenfs-client" }
 edenfs-error = { version = "0.1.0", path = "../../cli_rs/edenfs-error" }
 fs-err = { version = "3", features = ["tokio"] }
+futures = { version = "0.3.30", features = ["async-await", "compat"] }
 sapling-util = { version = "0.1.0", path = "../../../scm/lib/util" }
 thiserror = "2.0.12"
 tracing = { version = "0.1.41", features = ["attributes", "valuable"] }

@@ -11,9 +11,13 @@ use std::collections::HashSet;
 use std::path::Path;
 use std::path::PathBuf;
 
+use edenfs_client::changes_since::ChangesSinceV2Result;
 use edenfs_error::EdenFsError;
 use edenfs_error::Result;
 use fs_err as fs;
+use futures::StreamExt;
+use futures::stream;
+use futures::stream::BoxStream;
 use util::file::get_umask;
 use util::lock::ContentLock;
 use util::lock::ContentLockError;
@@ -163,6 +167,16 @@ fn is_state_locked(dir: &Path, name: &str) -> Result<bool> {
         Err(ContentLockError::Contended(_)) => Ok(true),
         Err(ContentLockError::Io(err)) => Err(err.into()),
     }
+}
+
+pub async fn stream_changes_since_with_states<'a>(
+    inner_stream: BoxStream<'a, Result<ChangesSinceV2Result>>,
+    _states: &[String],
+) -> Result<BoxStream<'a, Result<ChangesSinceV2Result>>> {
+    let stream = stream::unfold(inner_stream, move |mut inner_stream| async move {
+        Some((inner_stream.as_mut().next().await?, inner_stream))
+    });
+    Ok(stream.boxed())
 }
 
 #[cfg(test)]

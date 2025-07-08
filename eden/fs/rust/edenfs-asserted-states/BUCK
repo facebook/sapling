@@ -12,8 +12,10 @@ rust_library(
     deps = [
         "fbsource//third-party/rust:anyhow",
         "fbsource//third-party/rust:fs-err",
+        "fbsource//third-party/rust:futures",
         "fbsource//third-party/rust:thiserror",
         "fbsource//third-party/rust:tracing",
+        "//eden/fs/cli_rs/edenfs-client:edenfs-client",
         "//eden/fs/cli_rs/edenfs-error:edenfs-error",
         "//eden/scm/lib/util:util",
     ],
