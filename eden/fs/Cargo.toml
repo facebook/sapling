@@ -5,6 +5,7 @@ cbindgen = { git = "https://github.com/mozilla/cbindgen.git", rev = "cf94b56ef35
 cxx = { package = "cxx", git = "https://github.com/facebookexperimental/cxx.git", rev = "43f8f85eb1b9d99f10f7228ab679997c484ade69" }
 cxx-build = { package = "cxx-build", git = "https://github.com/facebookexperimental/cxx.git", rev = "43f8f85eb1b9d99f10f7228ab679997c484ade69" }
 displaydoc = { git = "https://github.com/yaahc/displaydoc", rev = "7dc6e324b1788a6b7fb9f3a1953c512923a3e9f0" }
+enumset = { git = "https://github.com/Lymia/enumset", rev = "51e84d9f80b8ef76565a218530914f9e837a018d" }
 google-cloud-gax = { git = "https://github.com/googleapis/google-cloud-rust.git", rev = "e8e19354a374b673afa00c34ceb0a589cb2e25ff" }
 google-cloud-gax-internal = { git = "https://github.com/googleapis/google-cloud-rust.git", rev = "e8e19354a374b673afa00c34ceb0a589cb2e25ff" }
 google-cloud-rpc = { git = "https://github.com/googleapis/google-cloud-rust.git", rev = "e8e19354a374b673afa00c34ceb0a589cb2e25ff" }
