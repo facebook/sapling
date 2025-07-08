@@ -1238,8 +1238,10 @@ jobs:
                     or builder_name == "cargo"
                     or mbuilder_name == "cargo"
                 ):
-                    out.write("    - name: Install Rust Stable\n")
-                    out.write("      uses: dtolnay/rust-toolchain@stable\n")
+                    out.write("    - name: Install Rust Nightly\n")
+                    out.write("      uses: dtolnay/rust-toolchain@nightly\n")
+                    out.write("    - name: Install rustfmt\n")
+                    out.write("      run: rustup component add rustfmt\n")
                     break
 
             # Normal deps that have manifests
