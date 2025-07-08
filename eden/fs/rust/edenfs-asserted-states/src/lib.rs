@@ -37,6 +37,7 @@ pub struct StreamingChangesClient {
     mount_point: PathBuf,
 }
 
+#[allow(dead_code)]
 impl StreamingChangesClient {
     pub fn new(mount_point: PathBuf) -> Self {
         StreamingChangesClient { mount_point }
@@ -93,6 +94,26 @@ pub fn try_guarded_lock(
     Ok(ContentLockGuard(inner_lock))
 }
 
+#[allow(dead_code)]
+fn try_lock_state(dir: &Path, name: &str) -> Result<ContentLockGuard, ContentLockError> {
+    let content_lock = ContentLock::new_with_name(dir, name);
+    let state_lock = try_guarded_lock(&content_lock, &[])?;
+
+    Ok(state_lock)
+}
+
+#[allow(dead_code)]
+fn is_state_locked(dir: &Path, name: &str) -> Result<bool, ContentLockError> {
+    // Check the lock state, without creating the lock file
+    // If the lock doesn't exist, return false
+    let content_lock = ContentLock::new_with_name(dir, name);
+    match content_lock.check_lock() {
+        Ok(()) => Ok(false),
+        Err(err) if err.is_contended() => Ok(true),
+        Err(err) => Err(err),
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use fbinit::FacebookInit;
@@ -125,6 +146,23 @@ mod tests {
         assert!(&state_path.join(state).exists());
         assert!(&state_path.join(state).with_extension("lock").exists());
         assert!(!&state_path.join(state).with_extension("notify").exists());
+        Ok(())
+    }
+
+    #[fbinit::test]
+    fn test_try_lock_state(_fb: FacebookInit) -> anyhow::Result<()> {
+        let mount = "test_mount8";
+        let state = "test.state";
+
+        let mount_point = std::env::temp_dir().join(mount);
+        let state_path = mount_point.join(state);
+
+        ensure_directory(&state_path)?;
+        let lock = try_lock_state(&state_path, state)?;
+        assert!(is_state_locked(&state_path, state)?);
+        drop(lock);
+        assert!(!is_state_locked(&state_path, state)?);
+
         Ok(())
     }
 }
