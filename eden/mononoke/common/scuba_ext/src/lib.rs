@@ -190,12 +190,7 @@ impl MononokeScubaSampleBuilder {
         }
 
         if let Some(client_info) = metadata.client_request_info() {
-            self.inner
-                .add_opt("client_main_id", client_info.main_id.as_deref());
-            self.inner
-                .add("client_entry_point", client_info.entry_point.to_string());
-            self.inner
-                .add("client_correlator", client_info.correlator.as_str());
+            self.add_client_request_info(client_info);
         }
 
         self.inner
