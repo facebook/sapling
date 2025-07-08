@@ -65,6 +65,7 @@ members = [
   "rust/edenfs-asserted-states",
   "rust/edenfs-asserted-states-client",
   "rust/redirect_ffi",
+  "service/oss-thriftclients",
   "service/thrift",
   "service/thrift/clients",
   "service/thrift/mocks",
