@@ -72,6 +72,7 @@ target_link_libraries(
     eden_store
     eden_takeover
     eden_telemetry
+    redirect_ffi
     ${EDEN_STORE_IMPLEMENTATIONS}
     ${YARPL_LIBRARIES}
     Folly::folly
