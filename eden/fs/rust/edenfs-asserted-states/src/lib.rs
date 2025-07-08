@@ -5,10 +5,13 @@
  * GNU General Public License version 2.
  */
 
+#![feature(type_alias_impl_trait)]
+
 use std::collections::HashSet;
 use std::path::Path;
 use std::path::PathBuf;
 
+use edenfs_error::EdenFsError;
 use edenfs_error::Result;
 use fs_err as fs;
 use util::file::get_umask;
@@ -21,7 +24,6 @@ use util::path::remove_file;
 
 const ASSERTED_STATE_DIR: &str = ".edenfs-notifications-state";
 
-#[allow(dead_code)]
 fn ensure_directory(path: &Path) -> Result<()> {
     // Create the directory, if it doesn't exist.
     match path.try_exists() {
@@ -38,7 +40,16 @@ pub struct StreamingChangesClient {
     states_root: PathBuf,
 }
 
-#[allow(dead_code)]
+#[derive(thiserror::Error, Debug)]
+pub enum StateError {
+    #[error(transparent)]
+    EdenFsError(#[from] EdenFsError),
+    #[error("State is already asserted {0}")]
+    StateAlreadyAsserted(String),
+    #[error("{0}")]
+    OtherError(#[from] anyhow::Error),
+}
+
 impl StreamingChangesClient {
     pub fn new(mount_point: PathBuf) -> Result<Self> {
         let states_root = mount_point.join(ASSERTED_STATE_DIR);
@@ -54,12 +65,23 @@ impl StreamingChangesClient {
         Ok(state_path)
     }
 
-    pub fn state_enter(&self, _state: &str) -> Result<()> {
-        Ok(())
-    }
-
-    pub fn state_leave(&self, _state: &str) -> Result<()> {
-        Ok(())
+    pub fn enter_state(&self, state: &str) -> Result<ContentLockGuard, StateError> {
+        // Asserts the named state, in the current mount.
+        // Returns () if the state was successfully asserted, or an StateAlreadyAsserted StateError if the state was already asserted.
+        // Returns other errors if an error occurred while asserting the state.
+        // To exit the state, drop the ContentLockGuard returned by this function either explicitly
+        // or implicitly by letting it go out of scope.
+        // TODO: Add logging
+        let state_path: PathBuf = self
+            .get_state_path(state)
+            .map_err(StateError::EdenFsError)?;
+        match try_lock_state(&state_path, state) {
+            Ok(lock) => Ok(lock),
+            Err(ContentLockError::Contended(_)) => {
+                Err(StateError::StateAlreadyAsserted(state.to_string()))
+            }
+            Err(ContentLockError::Io(err)) => Err(StateError::EdenFsError(EdenFsError::from(err))),
+        }
     }
 
     pub fn get_asserted_states(&self) -> Result<HashSet<String>> {
@@ -150,9 +172,73 @@ mod tests {
     use crate::*;
 
     #[fbinit::test]
-    fn test_get_asserted_states_empty(_fb: FacebookInit) -> anyhow::Result<()> {
+    fn test_enter_state(_fb: FacebookInit) -> anyhow::Result<()> {
         let mount_point = std::env::temp_dir().join("test_mount");
         let client = StreamingChangesClient::new(mount_point)?;
+        let state = "test_state1";
+        let _result = client.enter_state(state)?;
+        let check_state = client.is_state_asserted(state)?;
+        assert!(check_state);
+        Ok(())
+    }
+
+    #[fbinit::test]
+    fn test_state_leave(_fb: FacebookInit) -> anyhow::Result<()> {
+        let mount_point = std::env::temp_dir().join("test_mount1");
+        let client = StreamingChangesClient::new(mount_point)?;
+        let state = "test_state2";
+        let guard = client.enter_state(state)?;
+        let check_state = client.is_state_asserted(state)?;
+        assert!(check_state);
+        drop(guard);
+        let exited_state = client.is_state_asserted(state)?;
+        assert!(!exited_state);
+        Ok(())
+    }
+
+    #[fbinit::test]
+    fn test_state_leave_implicit(_fb: FacebookInit) -> anyhow::Result<()> {
+        let mount_point = std::env::temp_dir().join("test_mount");
+        let client = StreamingChangesClient::new(mount_point)?;
+        let state = "test_state2";
+        {
+            let _guard = client.enter_state(state)?;
+            let check_state = client.is_state_asserted(state)?;
+            assert!(check_state);
+        }
+        let exited_state = client.is_state_asserted(state)?;
+        assert!(!exited_state);
+        Ok(())
+    }
+
+    #[fbinit::test]
+    fn test_get_asserted_states_empty(_fb: FacebookInit) -> anyhow::Result<()> {
+        let mount_point = std::env::temp_dir().join("test_mount2");
+        let client = StreamingChangesClient::new(mount_point)?;
+        let asserted_states = client.get_asserted_states()?;
+        assert!(asserted_states.is_empty());
+        Ok(())
+    }
+
+    #[fbinit::test]
+    fn test_get_asserted_states(_fb: FacebookInit) -> anyhow::Result<()> {
+        let mount_point = std::env::temp_dir().join("test_mount3");
+        let client = StreamingChangesClient::new(mount_point)?;
+        let state1 = "test_state1";
+        let state2 = "test_state2";
+
+        let guard_result = client.enter_state(state1)?;
+        let guard_result2 = client.enter_state(state2)?;
+        let asserted_states = client.get_asserted_states()?;
+        assert_eq!(
+            asserted_states,
+            HashSet::from([state1.to_string(), state2.to_string()])
+        );
+
+        drop(guard_result);
+        let asserted_states = client.get_asserted_states()?;
+        assert_eq!(asserted_states, HashSet::from([state2.to_string()]));
+        drop(guard_result2);
         let asserted_states = client.get_asserted_states()?;
         assert!(asserted_states.is_empty());
         Ok(())
@@ -175,6 +261,49 @@ mod tests {
         assert!(&state_path.join(state).exists());
         assert!(&state_path.join(state).with_extension("lock").exists());
         assert!(!&state_path.join(state).with_extension("notify").exists());
+        Ok(())
+    }
+
+    #[fbinit::test]
+    fn test_multiple_mount(_fb: FacebookInit) -> anyhow::Result<()> {
+        let mount_point1 = std::env::temp_dir().join("test_mount4");
+        let mount_point2 = std::env::temp_dir().join("test_mount4a");
+        let client1 = StreamingChangesClient::new(mount_point1)?;
+        let client2 = StreamingChangesClient::new(mount_point2)?;
+        let state1 = "test_state1";
+        let state2 = "test_state2";
+        let guard_result = client1.enter_state(state1)?;
+        let _guard_result2 = client2.enter_state(state2)?;
+        let asserted_states = client1.get_asserted_states()?;
+        assert_eq!(asserted_states, HashSet::from([state1.to_string()]));
+        let asserted_states = client2.get_asserted_states()?;
+        assert_eq!(asserted_states, HashSet::from([state2.to_string()]));
+
+        drop(guard_result);
+        let asserted_states = client1.get_asserted_states()?;
+        assert!(asserted_states.is_empty());
+        let asserted_states = client2.get_asserted_states()?;
+        assert_eq!(asserted_states, HashSet::from([state2.to_string()]));
+        Ok(())
+    }
+
+    #[fbinit::test]
+    fn test_repeat_enter(_fb: FacebookInit) -> anyhow::Result<()> {
+        let mount_point = std::env::temp_dir().join("test_mount6");
+        let client = StreamingChangesClient::new(mount_point)?;
+        let state = "test_state";
+        let result = client.enter_state(state);
+        let result2 = client.enter_state(state);
+        assert!(result.is_ok());
+        match result2 {
+            Ok(_) => return Err(anyhow::anyhow!("State should not be asserted twice")),
+            Err(StateError::StateAlreadyAsserted(_)) => {}
+            _ => {
+                return Err(anyhow::anyhow!(
+                    "State should return StateAlreadyAsserted error"
+                ));
+            }
+        }
         Ok(())
     }
 

@@ -7,11 +7,12 @@ rust_library(
     srcs = glob(["src/**/*.rs"]),
     crate_root = "src/lib.rs",
     test_deps = [
-        "fbsource//third-party/rust:anyhow",
         "//common/rust/shed/fbinit:fbinit",
     ],
     deps = [
+        "fbsource//third-party/rust:anyhow",
         "fbsource//third-party/rust:fs-err",
+        "fbsource//third-party/rust:thiserror",
         "fbsource//third-party/rust:tracing",
         "//eden/fs/cli_rs/edenfs-error:edenfs-error",
         "//eden/scm/lib/util:util",
