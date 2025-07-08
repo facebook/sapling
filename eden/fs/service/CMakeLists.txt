@@ -58,6 +58,11 @@ add_library(
   eden_service STATIC
   ${SERVICE_SRCS}
 )
+target_link_options(
+  eden_service
+  PUBLIC
+    -Wl,--allow-multiple-definition
+)
 target_link_libraries(
   eden_service
   PUBLIC
