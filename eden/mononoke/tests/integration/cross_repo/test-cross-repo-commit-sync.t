@@ -169,7 +169,7 @@ only the syncer can create the commit or they have to be imported some other way
   [1]
 
 but let's  say we synced that commit manually
-  $ with_stripped_logs mononoke_admin megarepo manual-commit-sync --source-repo-id 2 --target-repo-id 0 --commit $FORGOTTEN --parents $FORGOTTEN_PARENT --mapping-version-name TEST_VERSION_NAME
+  $ mononoke_admin megarepo manual-commit-sync --source-repo-id 2 --target-repo-id 0 --commit $FORGOTTEN --parents $FORGOTTEN_PARENT --mapping-version-name TEST_VERSION_NAME
   [INFO] using repo "ovr-mon" repoid RepositoryId(2)
   [INFO] using repo "meg-mon" repoid RepositoryId(0)
   [INFO] changeset resolved as: ChangesetId(Blake2(5e88c1738667e8b2f4ef54dd53d2ebfb42a6fc0997fd9c5d05cb3ae7e96d5330))

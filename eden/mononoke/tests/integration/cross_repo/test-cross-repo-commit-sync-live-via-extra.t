@@ -88,7 +88,7 @@ Find the hash of mapping change commit in the large repo
 After the change
 -- an empty, mapping changing commit from large repo shouldn't be backsynced when forward sync is on
   $ X=$(x_repo_lookup large-mon small-mon "$(hg whereami)")
-  $ with_stripped_logs mononoke_admin cross-repo --source-repo-id 0 --target-repo-id 1 map -i $(hg whereami)
+  $ mononoke_admin cross-repo --source-repo-id 0 --target-repo-id 1 map -i $(hg whereami)
   EquivalentWorkingCopyAncestor(ChangesetId(Blake2(cdd50b2d186ce87fe6d2428b01caf9994a98ac51e65f7d6bb43c6a0f6e8d7a56)), CommitSyncConfigVersion("new_version"))
 
   $ cd "$TESTTMP/small-hg-client"
@@ -118,7 +118,7 @@ After the change
   ~
 
 -- trigger xrepo sync and show that can sync commit over the config change
-  $ with_stripped_logs wait_for_xrepo_sync 3
+  $ wait_for_xrepo_sync 3
 
 -- push to a large repo
   $ cd "$TESTTMP/large-hg-client"
@@ -139,7 +139,7 @@ Rest of this test won't pass as we failed the previous command so is commented o
   $ hg log -r master_bookmark -T "{files % '{file}\n'}"
   after_change
 -- Verify the working copy state after the operation
-  $ with_stripped_logs verify_wc $(hg whereami)
+  $ verify_wc $(hg whereami)
 
 -- Show the list of files in the repo after the operation
   $ hg files
@@ -155,5 +155,5 @@ Rest of this test won't pass as we failed the previous command so is commented o
   smallrepofolder_after/foo
 
 -- Show the actual mapping version used for rewriting of small repo change
-  $ with_stripped_logs mononoke_admin cross-repo --source-repo-id 0 --target-repo-id 1 map -i $(hg log -T "{node}" -r .^)
+  $ mononoke_admin cross-repo --source-repo-id 0 --target-repo-id 1 map -i $(hg log -T "{node}" -r .^)
   RewrittenAs([(ChangesetId(Blake2(e7a0827177ac9caf3578f2c5e4307f3d11a8954ccaa576c3813f166d174f4e64)), CommitSyncConfigVersion("new_version"))])

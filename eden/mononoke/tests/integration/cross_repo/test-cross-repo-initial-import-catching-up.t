@@ -34,8 +34,8 @@ Create small repo commits
   B=2999dcf517994fe94506b62e5a9c54f851abd4c4964f98fdd701c013abd9c0c3
 
 # Ignoring lines with `initializing` or `initialized
-  $ with_stripped_logs mononoke_x_repo_sync "$SUBMODULE_REPO_ID" "$LARGE_REPO_ID" --log-level=TRACE \
-  > initial-import --no-progress-bar --derivation-batch-size 2 -i "$B" --version-name "$LATEST_CONFIG_VERSION_NAME" | \
+  $ mononoke_x_repo_sync "$SUBMODULE_REPO_ID" "$LARGE_REPO_ID" --log-level=TRACE \
+  > initial-import --no-progress-bar --derivation-batch-size 2 -i "$B" --version-name "$LATEST_CONFIG_VERSION_NAME" 2>&1 | \
   > rg -v "nitializ" | rg -v "derive" | rg -v "Upload" | tee $TESTTMP/initial_import.out
   [INFO] Starting session with id * (glob)
   [INFO] Starting up X Repo Sync from small repo small_repo to large repo large_repo
@@ -111,8 +111,8 @@ Add more commits to small repo
 
 
 # Ignoring lines with `initializing` or `initialized
-  $ with_stripped_logs mononoke_x_repo_sync "$SUBMODULE_REPO_ID" "$LARGE_REPO_ID" --log-level=TRACE \
-  > initial-import --no-progress-bar --derivation-batch-size 2 -i "$D" --version-name "$LATEST_CONFIG_VERSION_NAME" | \
+  $ mononoke_x_repo_sync "$SUBMODULE_REPO_ID" "$LARGE_REPO_ID" --log-level=TRACE \
+  > initial-import --no-progress-bar --derivation-batch-size 2 -i "$D" --version-name "$LATEST_CONFIG_VERSION_NAME" 2>&1 | \
   > rg -v "nitializ" | rg -v "derive" | rg -v "Upload"
   [INFO] Starting session with id * (glob)
   [INFO] Starting up X Repo Sync from small repo small_repo to large repo large_repo

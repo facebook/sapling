@@ -61,7 +61,7 @@
 -- and the date wasn't rewritten there's no divergence between S_C and S_D.
   $ mononoke_admin mutable-counters -R large-mon set xreposync_from_1 0
   Value of xreposync_from_1 in repo large-mon(Id: 0) set to 0
-  $ with_stripped_logs mononoke_x_repo_sync 1 0 tail --catch-up-once
+  $ mononoke_x_repo_sync 1 0 tail --catch-up-once
   [INFO] Starting session with id * (glob)
   [INFO] Starting up X Repo Sync from small repo small-mon to large repo large-mon
   [INFO] queue size is 3

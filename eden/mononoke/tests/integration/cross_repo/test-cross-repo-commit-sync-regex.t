@@ -55,7 +55,7 @@
   $ hg -q ci -m "ovrsource commit 4"
   $ hg push -r . --to somebookmark -q --create
 
-  $ with_stripped_logs mononoke_x_repo_sync 2 0 tail --bookmark-regex "master_bookmark" \
+  $ mononoke_x_repo_sync 2 0 tail --bookmark-regex "master_bookmark" \
   > --catch-up-once |& grep -E '(processing|skipping)'
   [INFO] skipping log entry #2 for anotherbookmark
   [INFO] skipping log entry #3 for somebookmark
@@ -66,27 +66,27 @@
 
 
 -- use verify-bookmarks command. One inconsistency.
-  $ with_stripped_logs crossrepo_verify_bookmarks 2 0
+  $ crossrepo_verify_bookmarks 2 0
   [WARN] inconsistent value of *, but 'meg-mon' bookmark points to None (glob)
   [WARN] inconsistent value of *, but 'meg-mon' bookmark points to None (glob)
   Error: found 2 inconsistencies
   [1]
 
 -- use verify-bookmarks, but passing a regex.
-  $ with_stripped_logs crossrepo_verify_bookmarks 2 0 --update-large-repo-bookmarks \
+  $ crossrepo_verify_bookmarks 2 0 --update-large-repo-bookmarks \
   > --no-bookmark-updates --bookmark-regex "master_bookmark"
   [INFO] all is well!
 
 
 -- updating large repo bookmark will not work, bc there are unsynced commits.
-  $ with_stripped_logs crossrepo_verify_bookmarks 2 0 --update-large-repo-bookmarks \
+  $ crossrepo_verify_bookmarks 2 0 --update-large-repo-bookmarks \
   > --no-bookmark-updates
   [WARN] found 2 inconsistencies, trying to update them...
   Error: Missing outcome for * from small repo (glob)
   [1]
 
 -- sync the missing commits
-  $ with_stripped_logs mononoke_x_repo_sync 2 0 once --bookmark-regex ".+bookmark"
+  $ mononoke_x_repo_sync 2 0 once --bookmark-regex ".+bookmark"
   [INFO] Starting session with id * (glob)
   [INFO] Starting up X Repo Sync from small repo ovr-mon to large repo meg-mon
   [INFO] Syncing 3 commits and all of their unsynced ancestors
@@ -107,7 +107,7 @@
   [INFO] X Repo Sync execution finished from small repo ovr-mon to large repo meg-mon
 
 -- now update the inconsistent bookmarks
-  $ with_stripped_logs crossrepo_verify_bookmarks 2 0 --update-large-repo-bookmarks
+  $ crossrepo_verify_bookmarks 2 0 --update-large-repo-bookmarks
   [WARN] found 2 inconsistencies, trying to update them...
   [INFO] setting ovrsource/* (glob)
   [INFO] setting ovrsource/* (glob)

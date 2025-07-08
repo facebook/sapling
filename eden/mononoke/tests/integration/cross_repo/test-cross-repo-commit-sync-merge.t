@@ -102,7 +102,7 @@ insert sync mapping entry
   $ add_synced_commit_mapping_entry 1 $FBSOURCE_C1_BONSAI 0 $MEGAREPO_MERGE_BONSAI TEST_VERSION_NAME
 
 run the sync again
-  $ with_stripped_logs mononoke_x_repo_sync 1 0 once --target-bookmark master_bookmark -B fbsource_master |& grep -v "using repo"
+  $ mononoke_x_repo_sync 1 0 once --target-bookmark master_bookmark -B fbsource_master |& grep -v "using repo"
   [INFO] Starting session with id * (glob)
   [INFO] Starting up X Repo Sync from small repo fbs-mon to large repo meg-mon
   [INFO] Syncing 1 commits and all of their unsynced ancestors

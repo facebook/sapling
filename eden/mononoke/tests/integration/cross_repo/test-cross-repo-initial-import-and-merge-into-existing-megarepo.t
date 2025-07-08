@@ -115,7 +115,7 @@ Before config change
   IB=e1238541007d381b788b0aaab2425ed3aad02e38afd80b4e85bb922deb452972
   IC=65f0b76c034d87adf7dac6f0b5a5442ab3f62edda21adb8e8ec57d1a99fb5905
 
-  $ with_stripped_logs mononoke_x_repo_sync "$IMPORTED_REPO_ID"  "$LARGE_REPO_ID" initial-import -i "$IC" --version-name "imported_noop"
+  $ mononoke_x_repo_sync "$IMPORTED_REPO_ID"  "$LARGE_REPO_ID" initial-import -i "$IC" --version-name "imported_noop"
   [INFO] Starting session with id * (glob)
   [INFO] Starting up X Repo Sync from small repo imported_repo to large repo large-mon
   [INFO] Checking if 65f0b76c034d87adf7dac6f0b5a5442ab3f62edda21adb8e8ec57d1a99fb5905 is already synced 2->0
@@ -134,7 +134,7 @@ Before config change
 -- use gradual merge to merge in just one commit (usually this one does sequence of merges)
   $ PREV_BOOK_VALUE=$(get_bookmark_value_edenapi $SMALL_REPO_NAME $MASTER_BOOKMARK)
   $ COMMIT_DATE="1985-09-04T00:00:00.00Z"
-  $ with_stripped_logs quiet_grep merging -- mononoke_admin megarepo gradual-merge \
+  $ quiet_grep merging -- mononoke_admin megarepo gradual-merge \
   > --repo-id $LARGE_REPO_ID -a test_user -m "gradual merge" \
   > --pre-deletion-commit -i fa5173cebb32a908f52fd6f01b442a76f013bda5b3d4bbcf3e29af0227bbb74f \
   > --last-deletion-commit -i ecc8ec74d00988653ae64ebf206a9ed42898449125b91f59ecd1d8a0a93f4a97 \
@@ -204,7 +204,7 @@ Before config change
   ID=a14dee507f7605083e9a99901971ac7c5558d8b28d7d01090bd2cff2432fa707
 
   $ PREV_BOOK_VALUE=$(get_bookmark_value_edenapi $SMALL_REPO_NAME $MASTER_BOOKMARK)
-  $ with_stripped_logs mononoke_x_repo_sync "$IMPORTED_REPO_ID"  "$LARGE_REPO_ID" \
+  $ mononoke_x_repo_sync "$IMPORTED_REPO_ID"  "$LARGE_REPO_ID" \
   > once --commit-id "$ID" --unsafe-change-version-to "new_version" --target-bookmark $MASTER_BOOKMARK
   [INFO] Starting session with id * (glob)
   [INFO] Starting up X Repo Sync from small repo imported_repo to large repo large-mon
@@ -299,7 +299,7 @@ Before config change
   AB=1bb09eba8700dd4438bf66006b0f70cce454b32adb9a168f1e8a2d04c19c0cd3
   AC=156943c35cda314d72b0177b06d5edf3c92dc9c9505d7b3171b9230f7c1768bb
 
-  $ with_stripped_logs mononoke_x_repo_sync "$ANOTHER_REPO_ID"  "$LARGE_REPO_ID" initial-import -i "$AC" --version-name "another_noop"
+  $ mononoke_x_repo_sync "$ANOTHER_REPO_ID"  "$LARGE_REPO_ID" initial-import -i "$AC" --version-name "another_noop"
   [INFO] Starting session with id * (glob)
   [INFO] Starting up X Repo Sync from small repo another_repo to large repo large-mon
   [INFO] Checking if 156943c35cda314d72b0177b06d5edf3c92dc9c9505d7b3171b9230f7c1768bb is already synced 3->0
@@ -318,7 +318,7 @@ Before config change
 -- use gradual merge to merge in just one commit (usually this one does sequence of merges)
   $ PREV_BOOK_VALUE=$(get_bookmark_value_edenapi $SMALL_REPO_NAME $MASTER_BOOKMARK)
   $ COMMIT_DATE="2006-05-03T22:38:01.00Z"
-  $ with_stripped_logs quiet_grep merging -- mononoke_admin megarepo gradual-merge \
+  $ quiet_grep merging -- mononoke_admin megarepo gradual-merge \
   > --repo-id $LARGE_REPO_ID -a test_user \
   > -m "another merge" \
   > --pre-deletion-commit -i 7b877236dc63b9df21954f78b6c8ce8b69a844e786fe58a2932de04ac685075d \
@@ -347,7 +347,7 @@ Before config change
   AD=1d0bbdb162c2887a5b93893d7a48fd852a304ab58be2245899bb795e80aa10e9
 
   $ PREV_BOOK_VALUE=$(get_bookmark_value_edenapi $SMALL_REPO_NAME $MASTER_BOOKMARK)
-  $ with_stripped_logs mononoke_x_repo_sync "$ANOTHER_REPO_ID"  "$LARGE_REPO_ID" \
+  $ mononoke_x_repo_sync "$ANOTHER_REPO_ID"  "$LARGE_REPO_ID" \
   > once --commit-id "$AD" --unsafe-change-version-to "another_version" --target-bookmark $MASTER_BOOKMARK
   [INFO] Starting session with id * (glob)
   [INFO] Starting up X Repo Sync from small repo another_repo to large repo large-mon
@@ -371,7 +371,7 @@ Before config change
   IG=8ab5c12e737d5da736082a535ed0fc66b234e957
   IH=390213545a07b8f0b3452f97e862443d56b58375
   II=6738aefcbd6e1d868fa73a489b55aab543fd0c53
-  $ quiet with_stripped_logs mononoke_x_repo_sync "$IMPORTED_REPO_ID"  "$LARGE_REPO_ID" tail --bookmark-regex "heads/$MASTER_BOOKMARK" --catch-up-once
+  $ quiet mononoke_x_repo_sync "$IMPORTED_REPO_ID"  "$LARGE_REPO_ID" tail --bookmark-regex "heads/$MASTER_BOOKMARK" --catch-up-once
 
   $ FINAL_BOOK_VALUE=$(x_repo_lookup $IMPORTED_REPO_NAME $LARGE_REPO_NAME $II)
 
@@ -442,7 +442,7 @@ so they'll be dumped to files to keep this (already long) integration test short
 -- Set up live forward syncer, which should sync all commits in submodule repo's
 -- heads/master bookmark to large repo's master bookmark via pushrebase
   $ touch $TESTTMP/xreposync.out
-  $ with_stripped_logs mononoke_x_repo_sync_forever "$SUBMODULE_REPO_ID" "$LARGE_REPO_ID"
+  $ mononoke_x_repo_sync_forever "$SUBMODULE_REPO_ID" "$LARGE_REPO_ID"
 
 
 -- push to large repo on top of merge

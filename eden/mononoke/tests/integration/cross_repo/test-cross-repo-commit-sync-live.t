@@ -126,7 +126,7 @@ After the change
     }
   } (no-eol)
 -- Verify the working copy state after the operation
-  $ with_stripped_logs verify_wc $(hg whereami)
+  $ verify_wc $(hg whereami)
 
 -- Show the list of files in the repo after the operation
   $ hg files
@@ -142,5 +142,5 @@ After the change
   smallrepofolder_after/mapping.json
 
 -- Show the actual mapping version used for the operation
-  $ with_stripped_logs mononoke_admin cross-repo --source-repo-id 0 --target-repo-id 1 map -i $(hg whereami)
+  $ mononoke_admin cross-repo --source-repo-id 0 --target-repo-id 1 map -i $(hg whereami)
   RewrittenAs([(ChangesetId(Blake2(*)), CommitSyncConfigVersion("new_version"))]) (glob)
