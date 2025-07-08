@@ -42,8 +42,10 @@ if(NOT pexpect_FOUND)
   )
 endif()
 
+find_package(FBThrift CONFIG REQUIRED)
+
 add_fb_python_unittest(
-  integration_tests
+  integration_tests.egg
   TYPE "pex"
   SOURCES ${INTEGRATION_SRCS}
   WORKING_DIRECTORY "${CMAKE_BINARY_DIR}"
@@ -52,6 +54,13 @@ add_fb_python_unittest(
     eden_integration_lib
     eden_hg_integration_lib
     python-psutil::python-psutil
+    FBThrift::thrift_python_cpp
+    Folly::folly_python_cpp
+  NORMAL_DEPENDS
+    FBThrift::thriftcpp2
+    Folly::folly
+    fmt::fmt
+    glog::glog
   ENV
     "CMAKE_SOURCE_DIR=${CMAKE_SOURCE_DIR}"
 )
