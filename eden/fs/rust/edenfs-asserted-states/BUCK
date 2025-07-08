@@ -10,5 +10,10 @@ rust_library(
         "fbsource//third-party/rust:anyhow",
         "//common/rust/shed/fbinit:fbinit",
     ],
-    deps = ["//eden/fs/cli_rs/edenfs-error:edenfs-error"],
+    deps = [
+        "fbsource//third-party/rust:fs-err",
+        "fbsource//third-party/rust:tracing",
+        "//eden/fs/cli_rs/edenfs-error:edenfs-error",
+        "//eden/scm/lib/util:util",
+    ],
 )

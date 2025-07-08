@@ -9,6 +9,9 @@ license = "GPLv2+"
 
 [dependencies]
 edenfs-error = { version = "0.1.0", path = "../../cli_rs/edenfs-error" }
+fs-err = { version = "3", features = ["tokio"] }
+sapling-util = { version = "0.1.0", path = "../../../scm/lib/util" }
+tracing = { version = "0.1.41", features = ["attributes", "valuable"] }
 
 [dev-dependencies]
 anyhow = "1.0.98"

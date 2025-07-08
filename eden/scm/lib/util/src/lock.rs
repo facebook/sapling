@@ -100,6 +100,7 @@ pub fn try_lock_shared<P: AsRef<Path>>(path: P) -> io::Result<File> {
     fs2::FileExt::try_lock_shared(file.file())?;
     Ok(file)
 }
+
 pub struct ContentLock {
     // Contains paths needed for an advisory lock and some contents that
     // get returned when trying to access the lock while it is held.

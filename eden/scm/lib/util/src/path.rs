@@ -509,7 +509,7 @@ fn create_dir_with_mode(path: &Path, _mode: u32) -> anyhow::Result<()> {
     }
 }
 
-fn dir_mode(umask: u32) -> u32 {
+pub fn dir_mode(umask: u32) -> u32 {
     // umask affects the "group" and "other" permission.
     0o777 ^ (0o077 & umask)
 }

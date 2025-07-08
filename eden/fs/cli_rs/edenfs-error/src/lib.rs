@@ -151,8 +151,11 @@ pub enum EdenFsError {
     #[error("The running version of the EdenFS daemon doesn't know that method.")]
     UnknownMethod(String),
 
-    #[error("The Eden Thrift server responded with an EdenError.")]
+    #[error("The Eden Thrift server responded with an EdenError. {0:?}")]
     ThriftRequestError(ThriftRequestError),
+
+    #[error("Encountered an I/O error: {0}")]
+    IOError(#[from] std::io::Error),
 
     #[error("{0}")]
     Other(#[from] anyhow::Error),
