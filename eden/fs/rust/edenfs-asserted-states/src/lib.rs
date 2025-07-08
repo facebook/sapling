@@ -19,6 +19,8 @@ use util::path::create_dir_all_with_mode;
 use util::path::dir_mode;
 use util::path::remove_file;
 
+const ASSERTED_STATE_DIR: &str = ".edenfs-notifications-state";
+
 #[allow(dead_code)]
 fn ensure_directory(path: &Path) -> Result<()> {
     // Create the directory, if it doesn't exist.
@@ -32,15 +34,24 @@ fn ensure_directory(path: &Path) -> Result<()> {
     Ok(())
 }
 
-#[allow(dead_code)]
 pub struct StreamingChangesClient {
-    mount_point: PathBuf,
+    states_root: PathBuf,
 }
 
 #[allow(dead_code)]
 impl StreamingChangesClient {
-    pub fn new(mount_point: PathBuf) -> Self {
-        StreamingChangesClient { mount_point }
+    pub fn new(mount_point: PathBuf) -> Result<Self> {
+        let states_root = mount_point.join(ASSERTED_STATE_DIR);
+        ensure_directory(&states_root)?;
+
+        Ok(StreamingChangesClient { states_root })
+    }
+
+    #[allow(dead_code)]
+    pub fn get_state_path(&self, state: &str) -> Result<PathBuf> {
+        let state_path = self.states_root.join(state);
+        ensure_directory(&state_path)?;
+        Ok(state_path)
     }
 
     pub fn state_enter(&self, _state: &str) -> Result<()> {
@@ -52,11 +63,29 @@ impl StreamingChangesClient {
     }
 
     pub fn get_asserted_states(&self) -> Result<HashSet<String>> {
-        Ok(HashSet::new())
+        // Gets a set of all asserted states.
+        // For use in debug CLI. Not intended for end user consumption,
+        // use is_state_asserted() with your list of states instead.
+        let mut asserted_states = HashSet::new();
+        for dir_entry in std::fs::read_dir(&self.states_root)? {
+            let entry = dir_entry?;
+            if entry.path().is_dir() {
+                let state = entry.file_name().to_string_lossy().to_string();
+                if self.is_state_asserted(&state)? {
+                    asserted_states.insert(state);
+                }
+            }
+        }
+        Ok(asserted_states)
     }
 
-    pub fn is_state_asserted(&self, _state: &str) -> Result<bool> {
-        Ok(false)
+    pub fn is_state_asserted(&self, state: &str) -> Result<bool> {
+        let state_path = self.get_state_path(state)?;
+        match is_state_locked(&state_path, state) {
+            Ok(true) => Ok(true),
+            Ok(false) => Ok(false),
+            Err(err) => Err(err),
+        }
     }
 }
 
@@ -103,14 +132,14 @@ fn try_lock_state(dir: &Path, name: &str) -> Result<ContentLockGuard, ContentLoc
 }
 
 #[allow(dead_code)]
-fn is_state_locked(dir: &Path, name: &str) -> Result<bool, ContentLockError> {
+fn is_state_locked(dir: &Path, name: &str) -> Result<bool> {
     // Check the lock state, without creating the lock file
     // If the lock doesn't exist, return false
     let content_lock = ContentLock::new_with_name(dir, name);
     match content_lock.check_lock() {
         Ok(()) => Ok(false),
-        Err(err) if err.is_contended() => Ok(true),
-        Err(err) => Err(err),
+        Err(ContentLockError::Contended(_)) => Ok(true),
+        Err(ContentLockError::Io(err)) => Err(err.into()),
     }
 }
 
@@ -123,7 +152,7 @@ mod tests {
     #[fbinit::test]
     fn test_get_asserted_states_empty(_fb: FacebookInit) -> anyhow::Result<()> {
         let mount_point = std::env::temp_dir().join("test_mount");
-        let client = StreamingChangesClient::new(mount_point);
+        let client = StreamingChangesClient::new(mount_point)?;
         let asserted_states = client.get_asserted_states()?;
         assert!(asserted_states.is_empty());
         Ok(())
