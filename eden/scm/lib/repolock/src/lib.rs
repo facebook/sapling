@@ -28,6 +28,8 @@ use parking_lot::Mutex;
 use progress_model::ProgressBar;
 use sysutil::hostname;
 use util::errors::IOContext;
+use util::lock::ContentLock;
+use util::lock::ContentLockError;
 pub use util::lock::LockContendedError;
 use util::lock::PathLock;
 use util::lock::sanitize_lock_name;
@@ -426,41 +428,25 @@ pub fn try_lock(dir: &Path, name: &str, contents: &[u8]) -> Result<LockHandle, L
     //  Readers and writers acquire the directory lock first. This
     //  ensures atomicity across lock acquisition and content
     //  writing.
-    let _dir_lock = PathLock::exclusive(lock_paths.dir)?;
-
-    #[cfg(unix)]
-    let _ = _dir_lock
-        .as_file()
-        .set_permissions(Permissions::from_mode(0o666));
-
-    let lock_file = File::from(util::file::open(&lock_paths.lock, "wc")?);
-
-    #[cfg(unix)]
-    let _ = lock_file.set_permissions(Permissions::from_mode(0o666));
-
-    match fs2::FileExt::try_lock_exclusive(&lock_file) {
-        Ok(()) => {}
-        Err(err) if err.kind() == fs2::lock_contended_error().kind() => {
-            let contents = fs_err::read(&lock_paths.data)?;
-            return Err(LockContendedError {
-                path: lock_paths.data,
-                contents,
-            }
-            .into());
+    let mut content_lock = ContentLock::new(&lock_paths.data);
+    content_lock.lock_path = lock_paths.lock;
+    content_lock.dir_lock_path = lock_paths.dir;
+    let lock_file = match content_lock.try_lock(contents) {
+        Ok(lock_file) => lock_file,
+        // Submatch so into() knows which LockError to use
+        Err(ContentLockError::Contended(err)) => {
+            return Err(err.into());
         }
-        Err(err) => {
-            return Err(util::errors::from_err_msg_path(
-                err,
-                "error locking lock file",
-                &lock_paths.lock,
-            )
-            .into());
+        Err(ContentLockError::Io(err)) => {
+            return Err(err.into());
         }
     };
 
     // Create the legacy lock file to maintain compatibility for
     // external code that checks directly for .hg/wlock as an
     // indication of "is an hg operation in progress".
+    // Not guarded by the directory lock, but things reading it aren't checking
+    // it anyway.
     if let Ok(mut legacy_file) = File::create(&lock_paths.legacy) {
         // Also write lock contents for compatibility with Python readers.
         let _ = legacy_file.write_all(contents.as_ref());
@@ -469,15 +455,8 @@ pub fn try_lock(dir: &Path, name: &str, contents: &[u8]) -> Result<LockHandle, L
         let _ = legacy_file.set_permissions(Permissions::from_mode(0o644));
     }
 
-    let mut contents_file = util::file::open(&lock_paths.data, "wct")?;
-    #[cfg(unix)]
-    let _ = contents_file.set_permissions(Permissions::from_mode(0o666));
-    contents_file
-        .write_all(contents.as_ref())
-        .path_context("error write lock contents", &lock_paths.data)?;
-
     Ok(LockHandle {
-        path: lock_paths.lock,
+        path: content_lock.lock_path,
         lock: lock_file,
         legacy_path: lock_paths.legacy,
     })
@@ -486,14 +465,16 @@ pub fn try_lock(dir: &Path, name: &str, contents: &[u8]) -> Result<LockHandle, L
 #[derive(Debug)]
 pub struct LockHandle {
     path: PathBuf,
-    lock: File,
+    lock: PathLock,
     legacy_path: PathBuf,
 }
 
 impl LockHandle {
     pub fn unlock(&mut self) -> io::Result<()> {
         self.unlink_legacy();
-        fs2::FileExt::unlock(&self.lock).path_context("error unlocking lock file", &self.path)
+        self.lock
+            .unlock()
+            .path_context("error unlocking lock file", &self.path)
     }
 
     fn unlink_legacy(&mut self) {
