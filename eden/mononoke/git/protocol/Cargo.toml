@@ -22,6 +22,7 @@ cloned = { version = "0.1.0", git = "https://github.com/facebookexperimental/rus
 commit_graph = { version = "0.1.0", path = "../../repo_attributes/commit_graph/commit_graph" }
 commit_graph_types = { version = "0.1.0", path = "../../repo_attributes/commit_graph/commit_graph_types" }
 context = { version = "0.1.0", path = "../../server/context" }
+faster-hex = "0.6.1"
 filestore = { version = "0.1.0", path = "../../filestore" }
 futures = { version = "0.3.30", features = ["async-await", "compat"] }
 futures_stats = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }

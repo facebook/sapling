@@ -67,6 +67,10 @@
     "packfile_tag_count": 2,
     "packfile_tree_and_blob_count": 4,
 
+# Verify the signature hashing haves and wants from the client are recorded in scuba
+  $ jq -S .normal "$SCUBA" | grep "signature"
+    "request_signature": "647444788fee66b8e43d7d5972a241adfc57b1cf",
+
 # Verify the method variants in scuba as a normvector
   $ jq .normvector.method_variants "$SCUBA" | grep -v null 
   [

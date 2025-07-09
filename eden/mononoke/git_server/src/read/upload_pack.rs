@@ -126,7 +126,7 @@ async fn acknowledgements(
         // packfile based on the data sent by the client
         return Ok((None, Some(pack_header().await?)));
     }
-    let git_shas = BonsaisOrGitShas::from_object_ids(args.haves.iter())?;
+    let git_shas = BonsaisOrGitShas::from_object_ids(args.haves().iter())?;
     let entries = context
         .repo
         .bonsai_git_mapping()
@@ -140,7 +140,7 @@ async fn acknowledgements(
         })?;
     let mut output_buffer = vec![];
     write_text_packetline(ACKNOWLEDGEMENTS_HEADER, &mut output_buffer).await?;
-    if entries.is_empty() && !args.haves.is_empty() {
+    if entries.is_empty() && !args.haves().is_empty() {
         // None of the Git Shas provided by the client are recognized by the server
         write_text_packetline(NAK, &mut output_buffer).await?;
     } else {
@@ -573,15 +573,18 @@ pub async fn fetch(
                         .send("Packfile will be created using only offset deltas\n".to_string())
                         .await?;
                 }
+                let fetch_request =
+                    args.into_request(concurrency(&request_context), shallow_response);
+                let request_signature = fetch_request.hash_heads_and_bases();
                 let response_stream = fetch_response(
                     request_context.ctx.clone(),
                     &request_context.repo,
-                    args.into_request(concurrency(&request_context), shallow_response),
+                    fetch_request,
                     progress_writer,
                     perf_scuba.clone(),
                 )
                 .await?;
-                packfile_count_to_scuba(&response_stream, &mut perf_scuba);
+                packfile_count_to_scuba(&response_stream, &mut perf_scuba, request_signature);
                 let mut pack_writer = PackfileWriter::new(
                     sink_writer,
                     response_stream.num_objects() as u32,
@@ -640,7 +643,11 @@ async fn git_error_message(
     Ok(BytesBody::new(Bytes::from(buf), mime::TEXT_PLAIN))
 }
 
-fn packfile_count_to_scuba(response: &FetchResponse<'_>, scuba: &mut MononokeScubaSampleBuilder) {
+fn packfile_count_to_scuba(
+    response: &FetchResponse<'_>,
+    scuba: &mut MononokeScubaSampleBuilder,
+    request_signature: String,
+) {
     scuba.add(
         MononokeGitScubaKey::PackfileCommitCount,
         response.num_commits,
@@ -650,6 +657,7 @@ fn packfile_count_to_scuba(response: &FetchResponse<'_>, scuba: &mut MononokeScu
         response.num_trees_and_blobs,
     );
     scuba.add(MononokeGitScubaKey::PackfileTagCount, response.num_tags);
+    scuba.add(MononokeGitScubaKey::RequestSignature, request_signature);
     scuba.unsampled();
     scuba.log();
 }

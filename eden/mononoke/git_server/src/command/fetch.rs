@@ -47,10 +47,10 @@ const PACKFILE_URIS_SEPARATOR: &str = ",";
 pub struct FetchArgs {
     /// Indicates to the server the objects which the client wants to
     /// retrieve
-    pub wants: Vec<ObjectId>,
+    wants: Vec<ObjectId>,
     /// Indicates to the server the objects which the client already has
     /// locally
-    pub haves: Vec<ObjectId>,
+    haves: Vec<ObjectId>,
     /// Indicates to the server that negotiation should terminate (or
     /// not even begin if performing a clone) and that the server should
     /// use the information supplied in the request to construct the packfile
@@ -262,6 +262,10 @@ impl FetchArgs {
         }
     }
 
+    pub fn haves(&self) -> &Vec<ObjectId> {
+        &self.haves
+    }
+
     pub fn parse_from_packetline(args: &[u8]) -> Result<Self> {
         let mut tokens = StreamingPeekableIter::new(args, &[PacketLineRef::Flush], true);
         let mut fetch_args = Self::default();
@@ -331,6 +335,8 @@ impl FetchArgs {
                 );
             };
         }
+        fetch_args.wants.sort();
+        fetch_args.haves.sort();
         fetch_args.validate()?;
         Ok(fetch_args)
     }

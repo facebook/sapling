@@ -18,6 +18,7 @@ use anyhow::Result;
 use anyhow::anyhow;
 use bookmarks::BookmarkKey;
 use context::CoreContext;
+use faster_hex::hex_string;
 use futures::stream::BoxStream;
 use git_types::DeltaObjectKind;
 use git_types::GDMV2Entry;
@@ -34,6 +35,8 @@ use repo_blobstore::RepoBlobstore;
 use repo_derived_data::RepoDerivedData;
 use rustc_hash::FxHashMap;
 use rustc_hash::FxHashSet;
+use sha1::Digest;
+use sha1::Sha1;
 use tokio::io::AsyncWrite;
 
 use crate::Repo;
@@ -403,6 +406,16 @@ pub struct FetchRequest {
     pub concurrency: PackfileConcurrency,
     /// The mode to be used to break chains of delta packfile items
     pub chain_breaking_mode: ChainBreakingMode,
+}
+
+impl FetchRequest {
+    pub fn hash_heads_and_bases(&self) -> String {
+        let mut hasher = Sha1::new();
+        for o in self.heads.iter().chain(self.bases.iter()) {
+            hasher.update(o.as_slice());
+        }
+        hex_string(&hasher.finalize())
+    }
 }
 
 /// Struct representing the filtering options that can be used during fetch / clone

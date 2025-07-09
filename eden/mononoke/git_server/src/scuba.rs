@@ -35,6 +35,7 @@ pub enum MononokeGitScubaKey {
     PackfileCommitCount,
     PackfileTreeAndBlobCount,
     PackfileTagCount,
+    RequestSignature,
 }
 
 impl AsRef<str> for MononokeGitScubaKey {
@@ -54,6 +55,7 @@ impl AsRef<str> for MononokeGitScubaKey {
             Self::PackfileCommitCount => "packfile_commit_count",
             Self::PackfileTreeAndBlobCount => "packfile_tree_and_blob_count",
             Self::PackfileTagCount => "packfile_tag_count",
+            Self::RequestSignature => "request_signature",
         }
     }
 }

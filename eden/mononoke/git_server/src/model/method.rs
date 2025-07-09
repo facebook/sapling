@@ -124,7 +124,7 @@ impl GitMethodInfo {
             Command::LsRefs(_) => (GitMethod::LsRefs, vec![GitMethodVariant::Standard]),
             Command::BundleUri => (GitMethod::BundleURI, vec![GitMethodVariant::Standard]),
             Command::Fetch(fetch_args) => {
-                let method = if fetch_args.haves.is_empty() && fetch_args.done {
+                let method = if fetch_args.haves().is_empty() && fetch_args.done {
                     GitMethod::Clone
                 } else {
                     GitMethod::Pull
