@@ -122,11 +122,13 @@ impl StreamingChangesClient {
         &'a self,
         inner_stream: BoxStream<'a, Result<ChangesSinceV2Result>>,
         states: &'a [String],
-    ) -> Result<BoxStream<'a, Result<ChangesSinceV2Result>>> {
+    ) -> Result<BoxStream<'a, Result<(ChangesSinceV2Result, ChangeEvents)>>> {
         let state_data = StreamChangesSinceWithStatesData {
             inner_stream: inner_stream.boxed(),
             last_event: None,
             state: IsStateCurrentlyAsserted::NotAsserted,
+            asserted_states: HashSet::new(),
+            position: JournalPosition::default(),
         };
 
         let stream = stream::unfold(state_data, move |mut state_data| async move {
@@ -134,19 +136,29 @@ impl StreamingChangesClient {
                 IsStateCurrentlyAsserted::NotAsserted => {
                     let next_result = state_data.inner_stream.as_mut().next().await?;
                     match next_result {
-                        Ok(inner_result) => match self.is_any_state_asserted(states) {
-                            Ok(true) => {
-                                tracing::debug!("States asserted");
-                                // Return an empty change here. In a followup, attach a list of ChangeEvents
-                                let output = Ok(ChangesSinceV2Result {
+                        Ok(inner_result) => match self.which_states_asserted(states) {
+                            Ok(asserted_states) if !asserted_states.is_empty() => {
+                                tracing::debug!("States asserted: {:?}", asserted_states);
+                                let mut changes = ChangeEvents::new();
+                                state_data.asserted_states = asserted_states.clone();
+                                for asserted_state in asserted_states {
+                                    changes.events.push(ChangeEvent {
+                                        event_type: StateChange::Entered,
+                                        state: asserted_state,
+                                        position: inner_result.to_position.clone(),
+                                    })
+                                }
+                                let empty_result = ChangesSinceV2Result {
                                     to_position: inner_result.to_position.clone(),
                                     changes: Vec::new(),
-                                });
+                                };
+                                state_data.position = inner_result.to_position.clone();
                                 state_data.last_event = Some(inner_result);
                                 state_data.state = IsStateCurrentlyAsserted::StateAsserted;
+                                let output = Ok((empty_result, changes));
                                 Some((output, state_data))
                             }
-                            Ok(false) => Some((Ok(inner_result), state_data)),
+                            Ok(_) => Some((Ok((inner_result, ChangeEvents::new())), state_data)),
                             Err(e) => {
                                 tracing::error!("error while checking states {:?}", e);
                                 Some((Err(e), state_data))
@@ -160,11 +172,47 @@ impl StreamingChangesClient {
                 }
                 IsStateCurrentlyAsserted::StateAsserted => {
                     loop {
-                        match self.is_any_state_asserted(states) {
-                            Ok(true) => {
-                                tokio::time::sleep(Duration::from_secs(1)).await;
+                        match self.which_states_asserted(states) {
+                            Ok(asserted_states) if !asserted_states.is_empty() => {
+                                let entered_states: Vec<_> = asserted_states
+                                    .difference(&state_data.asserted_states)
+                                    .cloned()
+                                    .collect();
+                                let left_states: Vec<_> = state_data
+                                    .asserted_states
+                                    .difference(&asserted_states)
+                                    .cloned()
+                                    .collect();
+                                if !entered_states.is_empty() || !left_states.is_empty() {
+                                    let mut change_events = ChangeEvents::new();
+                                    for difference in entered_states {
+                                        tracing::debug!("New state asserted: {:?}", difference);
+                                        change_events.events.push(ChangeEvent {
+                                            event_type: StateChange::Entered,
+                                            state: difference.to_string(),
+                                            position: state_data.position.clone(),
+                                        });
+                                        state_data.asserted_states.insert(difference);
+                                    }
+                                    for difference in left_states {
+                                        tracing::debug!("State deasserted: {:?}", difference);
+                                        change_events.events.push(ChangeEvent {
+                                            event_type: StateChange::Left,
+                                            state: difference.to_string(),
+                                            position: state_data.position.clone(),
+                                        });
+                                        state_data.asserted_states.remove(&difference);
+                                    }
+                                    let empty_result = ChangesSinceV2Result {
+                                        to_position: state_data.position.clone(),
+                                        changes: Vec::new(),
+                                    };
+                                    return Some((Ok((empty_result, change_events)), state_data));
+                                } else {
+                                    tokio::time::sleep(Duration::from_secs(1)).await;
+                                }
                             }
-                            Ok(false) => {
+                            Ok(_) => {
                                 tracing::debug!("All states deasserted, exiting asserted states");
                                 let next_result = state_data.inner_stream.as_mut().next().await?;
 
@@ -186,17 +234,23 @@ impl StreamingChangesClient {
                                             changes: Vec::new(),
                                         });
 
-                                let mut output = ChangesSinceV2Result {
+                                let mut change_events = ChangeEvents::new();
+                                for asserted_state in &state_data.asserted_states {
+                                    change_events.events.push(ChangeEvent {
+                                        event_type: StateChange::Left,
+                                        state: asserted_state.to_string(),
+                                        position: right_changes.to_position.clone(),
+                                    })
+                                }
+                                state_data.asserted_states.clear();
+                                let mut merged_changes = ChangesSinceV2Result {
                                     to_position: right_changes.to_position,
                                     changes: left_changes.changes,
                                 };
-                                output.changes.append(&mut right_changes.changes);
+                                merged_changes.changes.append(&mut right_changes.changes);
 
-                                return Some((
-                                    // In a followup, attach a list of ChangeEvents
-                                    Ok(output),
-                                    state_data,
-                                ));
+                                let output = Ok((merged_changes, change_events));
+                                return Some((output, state_data));
                             }
                             Err(e) => {
                                 tracing::error!("error while checking states {:?}", e);
@@ -211,13 +265,14 @@ impl StreamingChangesClient {
         Ok(stream.boxed())
     }
 
-    fn is_any_state_asserted(&self, states: &[String]) -> Result<bool> {
+    fn which_states_asserted(&self, states: &[String]) -> Result<HashSet<String>> {
+        let mut output = HashSet::new();
         for state in states {
             if self.is_state_asserted(state)? {
-                return Ok(true);
+                output.insert(state.clone());
             }
         }
-        Ok(false)
+        Ok(output)
     }
 }
 
@@ -284,6 +339,8 @@ struct StreamChangesSinceWithStatesData<'a> {
     inner_stream: BoxStream<'a, Result<ChangesSinceV2Result>>,
     last_event: Option<ChangesSinceV2Result>,
     state: IsStateCurrentlyAsserted,
+    asserted_states: HashSet<String>,
+    position: JournalPosition,
 }
 
 #[derive(Debug, PartialEq, Serialize)]
@@ -501,13 +558,13 @@ mod tests {
         let state = "test_state";
         let state2 = "test_state2";
         let guard_result = client.enter_state(state)?;
-        let states_asserted = client.is_any_state_asserted(&[state.to_string()])?;
-        assert!(states_asserted);
-        let states_asserted = client.is_any_state_asserted(&[state2.to_string()])?;
-        assert!(!states_asserted);
+        let states_asserted = client.which_states_asserted(&[state.to_string()])?;
+        assert!(!states_asserted.is_empty());
+        let states_asserted = client.which_states_asserted(&[state2.to_string()])?;
+        assert!(states_asserted.is_empty());
         drop(guard_result);
-        let states_asserted = client.is_any_state_asserted(&[state.to_string()])?;
-        assert!(!states_asserted);
+        let states_asserted = client.which_states_asserted(&[state.to_string()])?;
+        assert!(states_asserted.is_empty());
         Ok(())
     }
 }

@@ -143,9 +143,10 @@ impl crate::Subcommand for ChangesSinceCmd {
             .await?;
 
         self.print_result(&result);
+        let mut rc = 0;
         if self.subscribe {
             let stream_client = StreamingChangesClient::new(get_mount_point(&self.mount_point)?)?;
-            let mut stream = client
+            let stream = client
                 .stream_changes_since(
                     &self.mount_point,
                     self.throttle,
@@ -159,19 +160,38 @@ impl crate::Subcommand for ChangesSinceCmd {
                 )
                 .await?;
             if !self.states.is_empty() {
-                stream = stream_client
+                self.print_change_events(&ChangeEvents::new());
+                let wrapped_stream = stream_client
                     .stream_changes_since_with_states(stream, &self.states)
                     .await?;
+                wrapped_stream
+                    .for_each(|result| async {
+                        match result {
+                            Ok(result) => {
+                                self.print_result(&result.0);
+                                self.print_change_events(&result.1);
+                            }
+                            Err(e) => {
+                                eprintln!("Error: {}", e);
+                            }
+                        }
+                    })
+                    .await;
+            } else {
+                stream
+                    .for_each(|result| async {
+                        match result {
+                            Ok(result) => self.print_result(&result),
+                            Err(e) => {
+                                eprintln!("Error: {}", e);
+                            }
+                        }
+                    })
+                    .await;
             }
-            stream
-                .for_each(|result| async {
-                    match result {
-                        Ok(result) => self.print_result(&result),
-                        Err(e) => eprintln!("Error: {}", e),
-                    }
-                })
-                .await;
+            // Stream only ends on error or cancellation
+            rc = 1;
         }
-        Ok(0)
+        Ok(rc)
     }
 }
