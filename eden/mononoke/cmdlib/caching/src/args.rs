@@ -102,10 +102,6 @@ pub struct CachelibArgs {
     #[clap(long, value_name = "SIZE", hide = true)]
     pub presence_cache_size: Option<usize>,
 
-    /// Override size of the changesets cache
-    #[clap(long, value_name = "SIZE", hide = true)]
-    pub changesets_cache_size: Option<usize>,
-
     /// Override size of the commit graph cache
     #[clap(long, value_name = "SIZE", hide = true)]
     pub commit_graph_cache_size: Option<usize>,
@@ -141,10 +137,6 @@ pub struct CachelibArgs {
     /// Override size of the phases cache
     #[clap(long, value_name = "SIZE", hide = true)]
     pub phases_cache_size: Option<usize>,
-
-    /// Override size of the segmented changelog cache
-    #[clap(long, value_name = "SIZE", hide = true)]
-    pub segmented_changelog_cache_size: Option<usize>,
 
     /// Override size of the mutable renames cache
     #[clap(long, value_name = "SIZE", hide = true)]

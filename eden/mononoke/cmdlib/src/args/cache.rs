@@ -30,7 +30,6 @@ const CACHELIB_REBALANCING_USE_LRU: &str = "cachelib-rebalancing-use-lru";
 const CACHELIB_REBALANCING_INTERVAL: &str = "cachelib-rebalancing-interval-secs";
 
 const PHASES_CACHE_SIZE: &str = "phases-cache-size";
-const SEGMENTED_CHANGELOG_CACHE_SIZE: &str = "segmented-changelog-cache-size";
 const GLOBALREVS_CACHE_SIZE: &str = "globalrevs-cache-size";
 const SVNREVS_CACHE_SIZE: &str = "svnrevs-cache-size";
 const BUCKETS_POWER: &str = "buckets-power";
@@ -42,10 +41,6 @@ const CACHE_ARGS: &[(&str, &str)] = &[
     (
         "presence-cache-size",
         "override size of the blob presence cache",
-    ),
-    (
-        "changesets-cache-size",
-        "override size of the changesets cache",
     ),
     (
         "commit-graph-cache-size",
@@ -75,10 +70,6 @@ const CACHE_ARGS: &[(&str, &str)] = &[
     (
         BUCKETS_POWER,
         "override the bucket power for cachelib's hashtable",
-    ),
-    (
-        SEGMENTED_CHANGELOG_CACHE_SIZE,
-        "override the size of the segmented changelog cache",
     ),
 ];
 
@@ -223,9 +214,6 @@ pub fn parse_and_init_cachelib(
             if let Some(presence_cache_size) = matches.value_of("presence-cache-size") {
                 settings.presence_cache_size = Some(presence_cache_size.parse().unwrap());
             }
-            if let Some(changesets_cache_size) = matches.value_of("changesets-cache-size") {
-                settings.changesets_cache_size = Some(changesets_cache_size.parse().unwrap());
-            }
             if let Some(commit_graph_cache_size) = matches.value_of("commit-graph-cache-size") {
                 settings.commit_graph_cache_size = Some(commit_graph_cache_size.parse().unwrap());
             }
@@ -252,12 +240,6 @@ pub fn parse_and_init_cachelib(
             }
             if let Some(phases_cache_size) = matches.value_of(PHASES_CACHE_SIZE) {
                 settings.phases_cache_size = Some(phases_cache_size.parse().unwrap());
-            }
-            if let Some(segmented_changelog_cache_size) =
-                matches.value_of(SEGMENTED_CHANGELOG_CACHE_SIZE)
-            {
-                settings.segmented_changelog_cache_size =
-                    Some(segmented_changelog_cache_size.parse().unwrap());
             }
             if let Some(buckets_power) = matches.value_of(BUCKETS_POWER) {
                 settings.buckets_power = Some(buckets_power.parse().unwrap());

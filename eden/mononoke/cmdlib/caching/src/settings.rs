@@ -19,7 +19,6 @@ pub struct CachelibSettings {
     pub buckets_power: Option<u32>,
     pub use_tupperware_shrinker: bool,
     pub presence_cache_size: Option<usize>,
-    pub changesets_cache_size: Option<usize>,
     pub commit_graph_cache_size: Option<usize>,
     pub filenodes_cache_size: Option<usize>,
     pub filenodes_history_cache_size: Option<usize>,
@@ -30,7 +29,6 @@ pub struct CachelibSettings {
     pub svnrev_cache_size: Option<usize>,
     pub blob_cache_size: Option<usize>,
     pub phases_cache_size: Option<usize>,
-    pub segmented_changelog_cache_size: Option<usize>,
     pub mutable_renames_cache_size: Option<usize>,
     pub sql_cache_size: Option<usize>,
     pub synced_commit_mapping_cache_size: Option<usize>,
@@ -77,11 +75,6 @@ impl CachelibSettings {
         );
         set_default(
             &mut defaults,
-            "changesets-cache-size",
-            &self.changesets_cache_size,
-        );
-        set_default(
-            &mut defaults,
             "commit-graph-cache-size",
             &self.commit_graph_cache_size,
         );
@@ -120,11 +113,6 @@ impl CachelibSettings {
         set_default(&mut defaults, "phases-cache-size", &self.phases_cache_size);
         set_default(
             &mut defaults,
-            "segmented-changelog-cache-size",
-            &self.segmented_changelog_cache_size,
-        );
-        set_default(
-            &mut defaults,
             "mutable-renames-cache-size",
             &self.mutable_renames_cache_size,
         );
@@ -154,7 +142,6 @@ impl CachelibSettings {
         replace(&mut self.min_process_size_gib, &args.min_process_size);
         replace(&mut self.buckets_power, &args.buckets_power);
         replace(&mut self.presence_cache_size, &args.presence_cache_size);
-        replace(&mut self.changesets_cache_size, &args.changesets_cache_size);
         replace(
             &mut self.commit_graph_cache_size,
             &args.commit_graph_cache_size,
@@ -178,10 +165,6 @@ impl CachelibSettings {
         replace(&mut self.blob_cache_size, &args.blob_cache_size);
         replace(&mut self.phases_cache_size, &args.phases_cache_size);
         replace(
-            &mut self.segmented_changelog_cache_size,
-            &args.segmented_changelog_cache_size,
-        );
-        replace(
             &mut self.mutable_renames_cache_size,
             &args.mutable_renames_cache_size,
         );
@@ -202,7 +185,6 @@ impl Default for CachelibSettings {
             buckets_power: None,
             use_tupperware_shrinker: false,
             presence_cache_size: None,
-            changesets_cache_size: None,
             commit_graph_cache_size: None,
             filenodes_cache_size: None,
             filenodes_history_cache_size: None,
@@ -213,7 +195,6 @@ impl Default for CachelibSettings {
             svnrev_cache_size: None,
             blob_cache_size: None,
             phases_cache_size: None,
-            segmented_changelog_cache_size: None,
             mutable_renames_cache_size: None,
             sql_cache_size: None,
             synced_commit_mapping_cache_size: None,
