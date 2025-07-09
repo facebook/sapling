@@ -80,6 +80,11 @@ fn log_query_telemetry_impl(
     sql_tel: SqlQueryTelemetry,
     granularity: TelemetryGranularity,
 ) -> Result<()> {
+    #[cfg(not(fbcode_build))]
+    {
+        // To remove typechecker unused variable warning in OSS
+        let _ = (sql_tel, granularity);
+    }
     match query_tel {
         #[cfg(fbcode_build)]
         QueryTelemetry::MySQL(telemetry) => {
