@@ -675,8 +675,14 @@ where
 
 #[cfg(test)]
 mod tests {
+    use clientinfo::ClientEntryPoint;
+    use clientinfo::ClientInfo;
+    use clientinfo::ClientRequestInfo;
     use fbinit::FacebookInit;
+    use metadata::Metadata;
     use mononoke_macros::mononoke;
+    use sql_query_config::SqlQueryConfig;
+    use sql_query_telemetry::SqlQueryTelemetry;
 
     mononoke_queries! {
         read TestQuery(param_str: String, param_uint: u64) -> (u64, Option<i32>, String, i64) {
@@ -708,13 +714,6 @@ mod tests {
     #[ignore]
     #[mononoke::fbinit_test]
     async fn should_compile(fb: FacebookInit) -> anyhow::Result<()> {
-        use clientinfo::ClientEntryPoint;
-        use clientinfo::ClientInfo;
-        use clientinfo::ClientRequestInfo;
-        use metadata::Metadata;
-        use sql_query_config::SqlQueryConfig;
-        use sql_query_telemetry::SqlQueryTelemetry;
-
         let config: &SqlQueryConfig = todo!();
         let connection: &sql::Connection = todo!();
 
