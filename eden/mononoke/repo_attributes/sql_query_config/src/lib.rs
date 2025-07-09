@@ -22,3 +22,16 @@ pub struct CachingConfig {
 pub struct SqlQueryConfig {
     pub caching: Option<CachingConfig>,
 }
+
+impl SqlQueryConfig {
+    pub fn mocked() -> Self {
+        let caching_config = CachingConfig {
+            keygen: KeyGen::new("test.prefix", 1, 2),
+            cache_handler_factory: CacheHandlerFactory::Mocked,
+        };
+
+        SqlQueryConfig {
+            caching: Some(caching_config),
+        }
+    }
+}
