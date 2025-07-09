@@ -19,7 +19,7 @@ Check that Mononoke booted despite the lack of microwave snapshot
 
   $ wait_for_mononoke_cache_warmup
   $ grep microwave "$TESTTMP/mononoke.out"
-  * microwave: cache warmup failed: "Snapshot is missing", repo: repo (glob)
+  [WARN] [cache warmup{repo=repo}] microwave: cache warmup failed: "Snapshot is missing"
 
 Kill Mononoke
 
@@ -48,8 +48,8 @@ Start Mononoke again, check that the microwave snapshot was used
   $ start_and_wait_for_mononoke_server --scuba-log-file "$SCUBA"
   $ wait_for_mononoke_cache_warmup
   $ grep primed "$TESTTMP/mononoke.out"
-  * primed filenodes cache with 1 entries, repo: repo (glob)
-  * microwave: successfully primed cache, repo: repo (glob)
+  [INFO] [cache warmup{repo=repo}] primed filenodes cache with 1 entries
+  [WARN] [cache warmup{repo=repo}] microwave: successfully primed cache
 
 Finally, check that we can also generate a snapshot to files
 
