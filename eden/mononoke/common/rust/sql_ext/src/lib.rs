@@ -11,6 +11,8 @@ mod oss;
 pub mod replication;
 mod sqlite;
 mod telemetry;
+#[cfg(test)]
+mod tests;
 
 pub use sql::SqlConnections;
 pub use sql::SqlShardedConnections;
