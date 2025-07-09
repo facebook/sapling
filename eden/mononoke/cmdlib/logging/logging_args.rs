@@ -57,7 +57,7 @@ const DEFAULT_TRACING_LEVEL: filter::LevelFilter = filter::LevelFilter::INFO;
 #[derive(Args, Debug)]
 pub struct LoggingArgs {
     /// Use tracing instead of slog
-    #[clap(long)]
+    #[clap(long, default_value_t = true)]
     pub tracing: bool,
 
     /// Configure tracing to output in test format
