@@ -1,3 +1,4 @@
+load("@fbcode_macros//build_defs:native_rules.bzl", "buck_command_alias")
 load("@fbcode_macros//build_defs:rust_binary.bzl", "rust_binary")
 
 oncall("scm_server_infra")
@@ -14,4 +15,39 @@ rust_binary(
         "//common/rust/shed/fbinit:fbinit-tokio",
         "//eden/mononoke/common/rust/sql_ext:sql_ext",
     ],
+)
+
+rust_binary(
+    name = "sql_telemetry_tester",
+    srcs = [
+        "sql_telemetry_tester.rs",
+    ],
+    crate_root = "sql_telemetry_tester.rs",
+    deps = [
+        "fbsource//third-party/rust:anyhow",
+        "fbsource//third-party/rust:clap",
+        "fbsource//third-party/rust:futures",
+        "//common/rust/shed/facet:facet",
+        "//common/rust/shed/fbinit:fbinit",
+        "//eden/mononoke/bookmarks:bookmarks",
+        "//eden/mononoke/cmdlib/mononoke_app:mononoke_app",
+        "//eden/mononoke/repo_attributes/repo_identity:repo_identity",
+        "//eden/mononoke/server/context:context",
+        "//eden/mononoke/server/metadata:metadata",
+        "//eden/scm/lib/clientinfo:clientinfo",
+    ],
+)
+
+buck_command_alias(
+    name = "quick_telemetry_test",
+    args = [
+        "--git-config",
+        "--tracing",
+        "-R",
+        "gustavo-test",
+    ],
+    env = {
+        "RUST_LOG": "sql_ext::telemetry=trace",
+    },
+    exe = ":sql_telemetry_tester",
 )
