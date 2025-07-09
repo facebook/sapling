@@ -57,7 +57,7 @@ Sync all bookmarks moves and test the "stats" output. This should be stable due 
   [INFO] [execute{repo=repo}] Finished mononoke RE CAS sync command execution for repo repo
 
 Validate that all the blobs are now present in CAS for the commit D
-  $ mononoke_admin cas-store --repo-name repo upload --full --hg-id $D
+  $ mononoke_admin cas-store --repo-name repo upload --full -i $D
   [INFO] Upload completed. Upload stats: uploaded digests: 0, already present digests: 5, uploaded bytes: 0 B, the largest uploaded blob: 0 B
 
 Validate that all the blobs are now present in CAS for the commit D (by bookmark name)
@@ -65,15 +65,15 @@ Validate that all the blobs are now present in CAS for the commit D (by bookmark
   [INFO] Upload completed. Upload stats: uploaded digests: 0, already present digests: 5, uploaded bytes: 0 B, the largest uploaded blob: 0 B
 
 Validate that all the blobs are now present in CAS for the middle commit B
-  $ mononoke_admin cas-store --repo-name repo upload --full --hg-id $B
+  $ mononoke_admin cas-store --repo-name repo upload --full -i $B
   [INFO] Upload completed. Upload stats: uploaded digests: 0, already present digests: 3, uploaded bytes: 0 B, the largest uploaded blob: 0 B
 
 Validate that all the blobs are now present in CAS for the first commit A
-  $ mononoke_admin cas-store --repo-name repo upload --full --hg-id $A
+  $ mononoke_admin cas-store --repo-name repo upload --full -i $A
   [INFO] Upload completed. Upload stats: uploaded digests: 0, already present digests: 2, uploaded bytes: 0 B, the largest uploaded blob: 0 B
 
 Commit F belongs to a different bookmark, validate that the commit is fully uploaded
-  $ mononoke_admin cas-store --repo-name repo upload --full --hg-id $F
+  $ mononoke_admin cas-store --repo-name repo upload --full -i $F
   [INFO] Upload completed. Upload stats: uploaded digests: 0, already present digests: 6, uploaded bytes: 0 B, the largest uploaded blob: 0 B
 
 Commit F belongs to a different bookmark, validate that the commit is fully uploaded (by bookmark name)
