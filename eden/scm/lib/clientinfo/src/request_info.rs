@@ -134,6 +134,7 @@ pub enum ClientEntryPoint {
     ModernSync,
     ScmRepoManager,
     MononokeCasNewCommitTailer,
+    Tests,
 }
 
 impl ClientRequestInfo {
@@ -223,6 +224,7 @@ impl Display for ClientEntryPoint {
             ClientEntryPoint::Git => "git",
             ClientEntryPoint::ScmRepoManager => "scm_repo_manager",
             ClientEntryPoint::MononokeCasNewCommitTailer => "mononoke_cas_new_commit_tailer",
+            ClientEntryPoint::Tests => "tests",
         };
         write!(f, "{}", out)
     }
