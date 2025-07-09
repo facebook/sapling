@@ -51,10 +51,10 @@ Create small repo commits
   C=738630e43445144e9f5ddbe1869730cfbaf8ff6bf95b25b8410cb35ca92f25c7
 
 
-  $ quiet with_stripped_logs mononoke_x_repo_sync "$SUBMODULE_REPO_ID"  "$LARGE_REPO_ID" \
+  $ quiet mononoke_x_repo_sync "$SUBMODULE_REPO_ID"  "$LARGE_REPO_ID" \
   >   initial-import --no-progress-bar -i "$C" --version-name "$LATEST_CONFIG_VERSION_NAME"
 
-  $ quiet with_stripped_logs mononoke_admin megarepo gradual-merge \
+  $ quiet mononoke_admin megarepo gradual-merge \
   >   --repo-id "$LARGE_REPO_ID" -a test_user -m "gradual merge" \
   >   --last-deletion-commit -i ca175120dfe7fb7fcb0d872e26ce331cb24c7d9ec457d599a40684527c65d63a \
   >   --pre-deletion-commit -i ca175120dfe7fb7fcb0d872e26ce331cb24c7d9ec457d599a40684527c65d63a  \

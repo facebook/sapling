@@ -174,7 +174,7 @@
   SE=21fa4d2997f1f2e050b3911639e9643efcb90896b3551b0a9c6affc33c7ea708
 
 -- sync again
-  $ with_stripped_logs mononoke_x_repo_sync 1 0 tail --catch-up-once
+  $ mononoke_x_repo_sync 1 0 tail --catch-up-once
   [INFO] Starting session with id * (glob)
   [INFO] Starting up X Repo Sync from small repo small to large repo large
   [INFO] queue size is 3

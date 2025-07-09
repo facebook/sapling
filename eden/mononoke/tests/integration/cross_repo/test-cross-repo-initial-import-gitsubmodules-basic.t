@@ -39,9 +39,9 @@ Create commit that modifies git submodule in small repo
   D=a3d81f95df47e4c8a25e2ea1a171bc186af856a8072b2c0490b7c03ffb5a5680
   E=1d0633cca456dfccb06ca24646024da1a8f42204f91e54d765fc4e5f2ad87bbe
 
-  $ with_stripped_logs mononoke_x_repo_sync "$SUBMODULE_REPO_ID" "$LARGE_REPO_ID" \
+  $ mononoke_x_repo_sync "$SUBMODULE_REPO_ID" "$LARGE_REPO_ID" \
   > initial-import --no-progress-bar --version-name "$LATEST_CONFIG_VERSION_NAME" \
-  > --all-bookmarks | tee $TESTTMP/initial_import.out
+  > --all-bookmarks |& tee $TESTTMP/initial_import.out
   [INFO] Starting session with id * (glob)
   [INFO] Starting up X Repo Sync from small repo small_repo to large repo large_repo
   [INFO] Checking if 1d0633cca456dfccb06ca24646024da1a8f42204f91e54d765fc4e5f2ad87bbe is already synced 11->10
