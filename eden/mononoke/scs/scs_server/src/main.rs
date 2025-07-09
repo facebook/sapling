@@ -21,6 +21,7 @@ use clap::Parser;
 use clap::ValueEnum;
 use clientinfo::ClientEntryPoint;
 use cloned::cloned;
+use cmdlib_logging::LoggingArgs;
 use cmdlib_logging::ScribeLoggingArgs;
 use connection_security_checker::ConnectionSecurityChecker;
 use environment::BookmarkCacheDerivedData;
@@ -36,7 +37,6 @@ use megarepo_api::MegarepoApi;
 use metaconfig_types::ShardedService;
 use mononoke_api::CoreContext;
 use mononoke_api::repo::Repo;
-use mononoke_app::MononokeApp;
 use mononoke_app::MononokeAppBuilder;
 use mononoke_app::MononokeReposManager;
 use mononoke_app::args::HooksAppExtension;
@@ -46,7 +46,6 @@ use mononoke_app::args::WarmBookmarksCacheExtension;
 use panichandler::Fate;
 use scs_methods::source_control_impl::SourceControlServiceImpl;
 use sharding_ext::RepoShard;
-use slog::Logger;
 use slog::info;
 use source_control_services::make_SourceControlService_server;
 use srserver::ThriftExecutor;
@@ -61,12 +60,6 @@ use srserver::service_framework::ServiceFramework;
 use srserver::service_framework::ThriftStatsModule;
 use thrift_factory::ThriftFactoryBuilder;
 use tokio::task;
-use tracing::Level;
-use tracing_glog::Glog;
-use tracing_glog::GlogFields;
-use tracing_subscriber::Layer;
-use tracing_subscriber::filter;
-use tracing_subscriber::layer::SubscriberExt;
 
 mod facebook;
 mod metadata;
@@ -129,6 +122,9 @@ struct ScsServerArgs {
     /// considerably slowing down the startup. This flag primarily exists for the purpose of local testing with --filter-repos argument
     #[clap(long, requires = "filter_repos")]
     load_all_repos_in_tier: bool,
+
+    #[clap(flatten, next_help_heading = "LOGGING OPTIONS")]
+    logging_args: LoggingArgs,
 }
 
 #[derive(ValueEnum, Clone, Copy, Debug, PartialEq, Eq)]
@@ -246,8 +242,7 @@ fn main(fb: FacebookInit) -> Result<(), Error> {
         .build::<ScsServerArgs>()?;
 
     let args: ScsServerArgs = app.args()?;
-
-    let logger = setup_logging(&app, &args)?;
+    let logger = app.logger().clone();
     let runtime = app.runtime();
     let env = app.environment();
 
@@ -409,37 +404,6 @@ fn main(fb: FacebookInit) -> Result<(), Error> {
 
     info!(logger, "Exiting...");
     Ok(())
-}
-
-fn setup_logging(app: &MononokeApp, args: &ScsServerArgs) -> anyhow::Result<Logger> {
-    if args.trace {
-        let default_filter = filter::Targets::new()
-            .with_default(Level::TRACE)
-            // Make sure noisy dependencies don't pollute the logs
-            .with_target("fb303_core::server", Level::WARN)
-            .with_target("overload_protection::capacity", Level::WARN)
-            .with_target("runtime", Level::WARN)
-            .with_target("tokio", Level::WARN);
-
-        let event_format = Glog::default()
-            .with_timer(tracing_glog::LocalTime::default())
-            .with_target(true);
-
-        // Create and register Glog (stderr) and Scuba logging layers
-        let log_layer = tracing_subscriber::fmt::layer()
-            .event_format(event_format)
-            .fmt_fields(GlogFields::default())
-            .with_writer(std::io::stderr)
-            .with_ansi(false)
-            .with_filter(default_filter.clone());
-
-        let subscriber = tracing_subscriber::registry().with(log_layer);
-
-        // Register tracing subscriber and default
-        tracing::subscriber::set_global_default(subscriber)?;
-    }
-
-    Ok(app.logger().clone())
 }
 
 fn setup_thrift_server(
