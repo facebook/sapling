@@ -26,7 +26,6 @@ rust_binary(
         "//eden/mononoke/cmdlib/mononoke_app:mononoke_app",
         "//eden/mononoke/cmdlib/sharding:executor_lib",
         "//eden/mononoke/cmdlib/sharding_ext:sharding_ext",
-        "//eden/mononoke/cmdlib/zk_leader_election:zk_leader_election",
         "//eden/mononoke/common/facebook/db_primary_region:db_primary_region",
         "//eden/mononoke/derived_data:bulk_derivation",
         "//eden/mononoke/derived_data:derived_data_manager",
