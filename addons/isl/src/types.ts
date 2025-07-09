@@ -998,7 +998,12 @@ export type ServerToClientMessage =
   | {type: 'gotSuggestedReviewers'; reviewers: Array<string>; key: string}
   | {type: 'gotConfiguredMergeTool'; tool: string | undefined}
   | {type: 'updatedRemoteDiffMessage'; diffId: DiffId; error?: string}
-  | {type: 'updateDraftCommitMessage'; title: string; description: string}
+  | {
+      type: 'updateDraftCommitMessage';
+      title: string;
+      description: string;
+      mode?: 'commit' | 'amend';
+    }
   | {type: 'uploadFileResult'; id: string; result: Result<string>}
   | {type: 'gotRepoUrlAtHash'; url: Result<string>}
   | {type: 'comparison'; comparison: Comparison; data: ComparisonData}

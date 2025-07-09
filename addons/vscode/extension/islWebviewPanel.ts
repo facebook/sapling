@@ -189,7 +189,7 @@ export function registerISLCommands(
     }),
     vscode.commands.registerCommand(
       'sapling.open-isl-with-commit-message',
-      async (title: string, description: string) => {
+      async (title: string, description: string, mode?: 'commit' | 'amend') => {
         try {
           let readySignal: Deferred<void>;
 
@@ -210,6 +210,7 @@ export function registerISLCommands(
               type: 'updateDraftCommitMessage',
               title,
               description,
+              mode,
             };
 
             currentPanelOrViewResult.panel.webview.postMessage(serializeToString(message));
