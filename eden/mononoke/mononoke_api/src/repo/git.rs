@@ -11,6 +11,11 @@ use bonsai_git_mapping::BonsaiGitMappingEntry;
 use bonsai_git_mapping::BonsaiGitMappingRef;
 use bonsai_tag_mapping::BonsaiTagMappingEntry;
 use bonsai_tag_mapping::BonsaiTagMappingRef;
+use bookmarks::BookmarkCategory;
+use bookmarks::BookmarkKey;
+use bookmarks::BookmarkKind;
+use bookmarks::BookmarkPagination;
+use bookmarks::BookmarkPrefix;
 use bookmarks::BookmarksRef;
 use bookmarks_cache::BookmarksCacheRef;
 use bundle_uri::GitBundleUriRef;
@@ -21,11 +26,13 @@ use commit_graph::CommitGraphRef;
 use commit_graph::CommitGraphWriterRef;
 use context::CoreContext;
 use filestore::FilestoreConfigRef;
+use futures::TryStreamExt;
 use git_ref_content_mapping::GitRefContentMappingEntry;
 use git_ref_content_mapping::GitRefContentMappingRef;
 use git_symbolic_refs::GitSymbolicRefsRef;
 use git_types::GitError;
 use gix_hash::ObjectId;
+use hook_manager::BookmarkState;
 use metaconfig_types::RepoConfigRef;
 use mononoke_types::BonsaiChangesetMut;
 use mononoke_types::ChangesetId;
@@ -384,6 +391,47 @@ async fn get_git_commit(
             e
         ))
     })
+}
+
+pub async fn bookmark_exists_with_prefix<'a, 'b>(
+    ctx: &CoreContext,
+    repo: &'a impl Repo,
+    prefix: &'b BookmarkPrefix,
+) -> anyhow::Result<bool> {
+    let bookmark_with_prefix_count = repo
+        .bookmarks()
+        .list(
+            ctx.clone(),
+            bookmarks::Freshness::MaybeStale,
+            prefix,
+            BookmarkCategory::ALL,
+            BookmarkKind::ALL_PUBLISHING,
+            &BookmarkPagination::FromStart,
+            1,
+        )
+        .try_collect::<Vec<_>>()
+        .await
+        .with_context(|| format!("Error fetching bookmarks with prefix {prefix}"))?
+        .len();
+
+    Ok(bookmark_with_prefix_count > 0)
+}
+
+pub async fn get_bookmark_state<'a, 'b>(
+    ctx: &'a CoreContext,
+    repo: &'a impl Repo,
+    bookmark: &'b BookmarkKey,
+) -> anyhow::Result<BookmarkState> {
+    let maybe_bookmark_val = repo
+        .bookmarks()
+        .get(ctx.clone(), bookmark)
+        .await
+        .with_context(|| format!("Error fetching bookmark: {}", bookmark))?;
+    if let Some(cs_id) = maybe_bookmark_val {
+        Ok(BookmarkState::Existing(cs_id))
+    } else {
+        Ok(BookmarkState::New)
+    }
 }
 
 /// Free function for creating a Git bundle for the stack of commits

@@ -37,20 +37,6 @@
 # Set Mononoke as the Source of Truth
   $ set_mononoke_as_source_of_truth_for_git
 
-  $ cd "$TESTTMP"/mononoke-config
-  $ cat >> repos/repo/server.toml <<EOF
-  > [[bookmarks]]
-  > regex=".*"
-  > [[bookmarks.hooks]]
-  > hook_name="block_new_bookmark_creations_by_prefix"
-  > [[hooks]]
-  > name="block_new_bookmark_creations_by_prefix"
-  > config_json='''{
-  > }'''
-  > bypass_pushvar="x-git-allow-invalid-bookmarks=1"
-  > EOF
-  $ cd "${TESTTMP}"
-
 # Start up the Mononoke Git Service
   $ mononoke_git_service
 # Clone the Git repo from Mononoke
@@ -74,10 +60,7 @@
 # This push is blocked
   $ git_client push origin HEAD:master_bookmark/another_master
   To https://localhost:$LOCAL_PORT/repos/git/ro/repo.git
-   ! [remote rejected] HEAD -> master_bookmark/another_master (hooks failed:
-    block_new_bookmark_creations_by_prefix for f53155321de7df9aa68c3b4b418019e612f0fa4b: Creation of bookmark "heads/master_bookmark/another_master" was blocked because its path prefix "heads/master_bookmark" already exists as a bookmark
-  
-  For more information about hooks and bypassing, refer https://fburl.com/wiki/mb4wtk1j)
+   ! [remote rejected] HEAD -> master_bookmark/another_master (Creation of bookmark "heads/master_bookmark/another_master" was blocked because its path prefix "heads/master_bookmark" already exists as a bookmark)
   error: failed to push some refs to 'https://localhost:$LOCAL_PORT/repos/git/ro/repo.git'
   [1]
 
@@ -97,18 +80,12 @@
   $ git commit -qam "More new content"
   $ git_client push origin HEAD:just/some/created
   To https://localhost:$LOCAL_PORT/repos/git/ro/repo.git
-   ! [remote rejected] HEAD -> just/some/created (hooks failed:
-    block_new_bookmark_creations_by_prefix for 134d5c589615ac5e391391b82f46f3722f89c924: Creation of bookmark "heads/just/some/created" was blocked because it exists as a path prefix of an existing bookmark
-  
-  For more information about hooks and bypassing, refer https://fburl.com/wiki/mb4wtk1j)
+   ! [remote rejected] HEAD -> just/some/created (Creation of bookmark "heads/just/some/created" was blocked because it exists as a path prefix of an existing bookmark)
   error: failed to push some refs to 'https://localhost:$LOCAL_PORT/repos/git/ro/repo.git'
   [1]
   $ git_client push origin HEAD:just
   To https://localhost:$LOCAL_PORT/repos/git/ro/repo.git
-   ! [remote rejected] HEAD -> just (hooks failed:
-    block_new_bookmark_creations_by_prefix for 134d5c589615ac5e391391b82f46f3722f89c924: Creation of bookmark "heads/just" was blocked because it exists as a path prefix of an existing bookmark
-  
-  For more information about hooks and bypassing, refer https://fburl.com/wiki/mb4wtk1j)
+   ! [remote rejected] HEAD -> just (Creation of bookmark "heads/just" was blocked because it exists as a path prefix of an existing bookmark)
   error: failed to push some refs to 'https://localhost:$LOCAL_PORT/repos/git/ro/repo.git'
   [1]
 

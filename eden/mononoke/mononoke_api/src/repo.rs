@@ -27,6 +27,7 @@ use MononokeApiStats_ods3_types::MononokeApiEvent;
 #[cfg(fbcode_build)]
 use MononokeApiStats_ods3_types::MononokeApiStats;
 use acl_regions::AclRegions;
+use anyhow::Context;
 use anyhow::Error;
 use anyhow::Result;
 use anyhow::anyhow;

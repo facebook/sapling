@@ -5,11 +5,13 @@
  * GNU General Public License version 2.
  */
 
+use std::str::FromStr;
 use std::sync::Arc;
 
 use anyhow::Context;
 use anyhow::Result;
 use bonsai_tag_mapping::BonsaiTagMappingRef;
+use bookmarks::BookmarkPrefix;
 use cloned::cloned;
 use futures::StreamExt;
 use futures::TryStreamExt;
@@ -24,8 +26,11 @@ use import_tools::set_bookmark;
 use mononoke_api::BookmarkKey;
 use mononoke_api::MononokeError;
 use mononoke_api::repo::RepoContextBuilder;
+use mononoke_api::repo::git::bookmark_exists_with_prefix;
+use mononoke_api::repo::git::get_bookmark_state;
 use mononoke_api::repo::push_redirector_enabled;
 use mononoke_types::ChangesetId;
+use mononoke_types::MPath;
 use protocol::bookmarks_provider::wait_for_bookmark_move;
 use repo_authorization::AuthorizationContext;
 use repo_identity::RepoIdentityRef;
@@ -207,6 +212,34 @@ async fn set_ref_inner(
             "Mononoke is not the source of truth for this repo"
         ));
     }
+    if bookmark_operation.is_create() {
+        let bookmark_prefix_str = if !bookmark_key.as_str().ends_with("/") {
+            format!("{bookmark_key}/")
+        } else {
+            bookmark_key.to_string()
+        };
+        let bookmark_prefix = BookmarkPrefix::from_str(bookmark_prefix_str.as_str())?;
+        if bookmark_exists_with_prefix(&ctx, &request_context.repo, &bookmark_prefix).await? {
+            // reject push
+            return Err(anyhow::anyhow!(
+                "Creation of bookmark \"{bookmark_key}\" was blocked because it exists as a path prefix of an existing bookmark",
+            ));
+        }
+        for bookmark_prefix_path in MPath::new(bookmark_prefix_str.as_str())?.into_ancestors() {
+            let bookmark_prefix_path =
+                BookmarkKey::from_str(std::str::from_utf8(&bookmark_prefix_path.to_vec())?)?;
+            // Check if the path ancestors of this bookmark already exist as bookmark in the repo
+            if get_bookmark_state(&ctx, &request_context.repo, &bookmark_prefix_path)
+                .await?
+                .is_existing()
+            {
+                return Err(anyhow::anyhow!(
+                    "Creation of bookmark \"{bookmark_key}\" was blocked because its path prefix \"{bookmark_prefix_path}\" already exists as a bookmark",
+                ));
+            }
+        }
+    }
+
     // Flag for client side expectation of allow non fast forward updates. Git clients by default
     // prevent users from pushing non-ffwd updates. If the request reaches the server, then that
     // means the client has explicitly requested for a non-ffwd update and the final result will be

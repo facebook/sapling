@@ -44,6 +44,7 @@ rust_binary(
         "//common/rust/shed/secure_utils:secure_utils",
         "//eden/mononoke/blobrepo:repo_blobstore",
         "//eden/mononoke/bonsai_git_mapping:bonsai_git_mapping",
+        "//eden/mononoke/bookmarks:bookmarks",
         "//eden/mononoke/cmdlib:environment",
         "//eden/mononoke/cmdlib/caching:cmdlib_caching",
         "//eden/mononoke/cmdlib/mononoke_app:mononoke_app",
