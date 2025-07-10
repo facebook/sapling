@@ -18,7 +18,6 @@ rust_library(
     deps = ([
         "fbsource//third-party/rust:anyhow",
         "fbsource//third-party/rust:async-trait",
-        "//common/rust/manifold/manifold-thrift:manifold-thrift",
         "//common/rust/shed/facet:facet",
         "//common/rust/shed/fbinit:fbinit",
         "//common/rust/shed/sql:sql",
@@ -37,5 +36,5 @@ rust_library(
         "//ti/urlgen/service:if-rust-srclients",
     ] + ([] if rust_oss.is_oss_build() else [
         "fbsource//third-party/rust:serde_json",
-    ])) + ["//configerator/structs/fi/common:context-rust"],
+    ])),
 )

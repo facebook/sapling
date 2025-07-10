@@ -17,7 +17,6 @@ rust_library(
         "//common/rust/scuba:scuba",
         "//common/rust/shed/fbinit:fbinit",
         "//common/rust/shed/stats:stats",
-        "//configerator/structs/fi/common:context-rust",
         "//eden/mononoke/common/sql_construct:sql_construct",
         "//eden/mononoke/facebook/git_server/push_poller/lib/ephemeral_shard:ephemeral_shard",
         "//eden/mononoke/facebook/git_server/push_poller/lib/repository:repository",

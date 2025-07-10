@@ -31,7 +31,6 @@ rust_library(
         "fbsource//third-party/rust:futures",
         "fbsource//third-party/rust:regex",
         "fbsource//third-party/rust:thiserror",
-        "//albacore/if:manifest-rust",
         "//common/rust/shed/cloned:cloned",
         "//common/rust/shed/facet:facet",
         "//common/rust/shed/fbinit:fbinit",
