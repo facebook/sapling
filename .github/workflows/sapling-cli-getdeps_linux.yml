@@ -3,7 +3,7 @@
 name: Sapling CLI Getdeps Linux
 
 on:
-  public
+  workflow_dispatch
 
 permissions:
   contents: read  #  to fetch code (actions/checkout)
@@ -755,15 +755,15 @@ jobs:
        path: ${{ steps.paths.outputs.rust-shed_INSTALL }}
        key: ${{ steps.paths.outputs.rust-shed_CACHE_KEY }}-install
     - name: Build sapling
-      run: python3 build/fbcode_builder/getdeps.py --allow-system-packages build --src-dir=. sapling  --project-install-prefix sapling:/
+      run: python3 build/fbcode_builder/getdeps.py --allow-system-packages build --src-dir=. sapling --project-install-prefix sapling:/
     - name: Copy artifacts
-      run: python3 build/fbcode_builder/getdeps.py --allow-system-packages fixup-dyn-deps --strip --src-dir=. sapling _artifacts/linux  --project-install-prefix sapling:/ --final-install-prefix /usr/local
+      run: python3 build/fbcode_builder/getdeps.py --allow-system-packages fixup-dyn-deps --strip --src-dir=. sapling _artifacts/linux --project-install-prefix sapling:/ --final-install-prefix /usr/local
     - uses: actions/upload-artifact@v4
       with:
         name: sapling
         path: _artifacts
     - name: Test sapling
-      run: python3 build/fbcode_builder/getdeps.py --allow-system-packages test --num-jobs 16 --src-dir=. sapling  --project-install-prefix sapling:/
+      run: python3 build/fbcode_builder/getdeps.py --allow-system-packages test --num-jobs 16 --src-dir=. sapling --project-install-prefix sapling:/
     - name: Show disk space at end
       if: always()
       run: df -h

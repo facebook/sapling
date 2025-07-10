@@ -863,12 +863,12 @@ jobs:
     - name: Build sapling
       run: python3 build/fbcode_builder/getdeps.py --allow-system-packages build --src-dir=. --no-tests sapling
     - name: Build mononoke_integration
-      run: python3 build/fbcode_builder/getdeps.py --allow-system-packages build --no-deps --src-dir=. mononoke_integration  --project-install-prefix mononoke_integration:/usr/local
+      run: python3 build/fbcode_builder/getdeps.py --allow-system-packages build --no-deps --src-dir=. mononoke_integration --project-install-prefix mononoke_integration:/usr/local
     - name: Copy artifacts
-      run: python3 build/fbcode_builder/getdeps.py --allow-system-packages fixup-dyn-deps --strip --src-dir=. mononoke_integration _artifacts/linux  --project-install-prefix mononoke_integration:/usr/local --final-install-prefix /usr/local
+      run: python3 build/fbcode_builder/getdeps.py --allow-system-packages fixup-dyn-deps --strip --src-dir=. mononoke_integration _artifacts/linux --project-install-prefix mononoke_integration:/usr/local --final-install-prefix /usr/local
     - uses: actions/upload-artifact@v4
       with:
         name: mononoke_integration
         path: _artifacts
     - name: Test mononoke_integration
-      run: python3 build/fbcode_builder/getdeps.py --allow-system-packages test --num-jobs 4 --src-dir=. mononoke_integration  --project-install-prefix mononoke_integration:/usr/local
+      run: python3 build/fbcode_builder/getdeps.py --allow-system-packages test --num-jobs 4 --src-dir=. mononoke_integration --project-install-prefix mononoke_integration:/usr/local
