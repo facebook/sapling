@@ -39,6 +39,7 @@ pub mod _macro_internal {
     pub use anyhow::Result;
     pub use clientinfo::ClientEntryPoint;
     pub use clientinfo::ClientRequestInfo;
+    pub use mononoke_types::RepositoryId;
     pub use paste;
     pub use serde_json;
     pub use sql::Connection;

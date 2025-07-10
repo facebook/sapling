@@ -8,6 +8,7 @@
 use anyhow::Error;
 use anyhow::Result;
 use anyhow::anyhow;
+use mononoke_types::RepositoryId;
 use scuba_ext::MononokeScubaSampleBuilder;
 use sql::QueryTelemetry;
 #[cfg(fbcode_build)]
@@ -32,10 +33,12 @@ pub fn log_query_telemetry(
     opt_tel: Option<QueryTelemetry>,
     opt_sql_tel: Option<SqlQueryTelemetry>,
     granularity: TelemetryGranularity,
+
+    opt_repo_id: Option<RepositoryId>,
 ) -> Result<()> {
     match (opt_tel, opt_sql_tel) {
         (Some(query_tel), Some(sql_tel)) => {
-            log_query_telemetry_impl(query_tel, sql_tel, granularity)
+            log_query_telemetry_impl(query_tel, sql_tel, granularity, opt_repo_id)
         }
         // TODO(T223577767): handle case when there's no telemetry
         _ => Ok(()),
@@ -79,6 +82,7 @@ fn log_query_telemetry_impl(
     query_tel: QueryTelemetry,
     sql_tel: SqlQueryTelemetry,
     granularity: TelemetryGranularity,
+    opt_repo_id: Option<RepositoryId>,
 ) -> Result<()> {
     #[cfg(not(fbcode_build))]
     {
@@ -89,7 +93,7 @@ fn log_query_telemetry_impl(
         #[cfg(fbcode_build)]
         QueryTelemetry::MySQL(telemetry) => {
             // Log to scuba
-            log_mysql_query_telemetry(telemetry, sql_tel, granularity)
+            log_mysql_query_telemetry(telemetry, sql_tel, granularity, opt_repo_id)
         }
         _ => Err(anyhow!("Unsupported query telemetry type")),
     }
@@ -100,6 +104,7 @@ fn log_mysql_query_telemetry(
     query_tel: MysqlQueryTelemetry,
     sql_tel: SqlQueryTelemetry,
     granularity: TelemetryGranularity,
+    opt_repo_id: Option<RepositoryId>,
 ) -> Result<()> {
     let mut scuba = setup_scuba_sample(&sql_tel, granularity)?;
 
@@ -114,6 +119,10 @@ fn log_mysql_query_telemetry(
         "write_tables",
         query_tel.write_tables().iter().collect::<Vec<_>>(),
     );
+
+    if let Some(repo_id) = opt_repo_id {
+        scuba.add("repo_id", repo_id.id());
+    }
 
     for wait_stats in query_tel.wait_stats() {
         scuba.add(

@@ -11,6 +11,7 @@ use clientinfo::ClientRequestInfo;
 use fbinit::FacebookInit;
 use metadata::Metadata;
 use mononoke_macros::mononoke;
+use mononoke_types::RepositoryId;
 use sql_query_config::SqlQueryConfig;
 use sql_query_telemetry::SqlQueryTelemetry;
 
@@ -35,7 +36,8 @@ mononoke_queries! {
         sqlite("DELETE FROM mytable2 where id = {id}")
     }
 
-    read ReadQuery1(id: u64) -> (i64) {
+    // Test to cover fetching the id from the type, not arg name
+    read ReadQuery1(id: RepositoryId) -> (i64) {
         "SELECT x FROM mononoke_queries_test WHERE ID > {id} LIMIT 10"
     }
 
@@ -93,13 +95,23 @@ mod facebook {
         let _res = WriteQuery1::query(&connection, Some(tel_logger.clone()), &[(&1i64,), (&2i64,)])
             .await?;
 
-        let _res = ReadQuery1::query(&connection, Some(tel_logger), &1).await?;
+        let expected_repo_id = 1;
+        let _res = ReadQuery1::query(
+            &connection,
+            Some(tel_logger),
+            &RepositoryId::new(expected_repo_id),
+        )
+        .await?;
 
-        // Values that we expect to always be the same in all the samples.
-        let consistent_values: HashMap<String, String> = hashmap! {
-            "client_correlator".to_string() => cri.correlator.to_string(),
-            "client_entry_point".to_string() => ClientEntryPoint::Tests.to_string(),
-        };
+        // Values that we expect to always be the same.
+        let expected_values: HashMap<String, serde_json::Value> = hashmap! {
+              "client_correlator" => serde_json::Value::String(cri.correlator.to_string()),
+              "client_entry_point" => serde_json::Value::String(ClientEntryPoint::Tests.to_string()),
+              "repo_id" => serde_json::Value::Number(expected_repo_id.into()),
+        }
+        .into_iter()
+        .map(|(k, v)| (String::from(k), v))
+        .collect();
 
         // Columns expected to be logged in all samples.
         let expected_in_all: HashSet<String> = hashset! {
@@ -141,6 +153,7 @@ mod facebook {
             "wait_count_ENQUEUE",
             "wait_time_ENQUEUE",
             "write_tables",
+            "repo_id",
         }
         .into_iter()
         .map(String::from)
@@ -153,7 +166,7 @@ mod facebook {
         // println!("Scuba log content: {:#?}", content);
 
         // Extract and print all columns from the scuba logs
-        let columns = extract_all_scuba_columns(&content, expected_in_all, consistent_values);
+        let columns = extract_all_scuba_columns(&content, expected_in_all, expected_values);
 
         // For debugging purposes. By default will only print if test fails.
         println!("All columns logged in scuba samples: {:#?}", columns);
@@ -173,14 +186,14 @@ mod facebook {
     fn extract_all_scuba_columns(
         log_content: &str,
         expected_in_all: HashSet<String>,
-        consistent_values: HashMap<String, String>,
+        expected_values: HashMap<String, serde_json::Value>,
     ) -> HashSet<String> {
         log_content
         .lines()
         .filter_map(|line| serde_json::from_str::<serde_json::Value>(line).ok())
         .fold(HashSet::new(), |mut all_columns, json| {
             // println!("json: {:#?}", json);
-            let sample_columns = extract_columns_from_sample(&json, &consistent_values);
+            let sample_columns = extract_columns_from_sample(&json, &expected_values);
 
             println!("sample_columns: {:#?}", sample_columns);
             assert!(
@@ -200,7 +213,7 @@ mod facebook {
     /// Extracts column names from a single scuba sample
     fn extract_columns_from_sample(
         sample: &serde_json::Value,
-        consistent_values: &HashMap<String, String>,
+        expected_values: &HashMap<String, serde_json::Value>,
     ) -> HashSet<String> {
         // Check each category (normal, int, double, normvector)
         if let Some(obj) = sample.as_object() {
@@ -209,7 +222,7 @@ mod facebook {
                 .fold(HashSet::new(), |mut acc, (_category, value)| {
                     if let Some(category_obj) = value.as_object() {
                         println!("category_obj: {:#?}", category_obj);
-                        consistent_values.iter().for_each(|(exp_key, exp_v)| {
+                        expected_values.iter().for_each(|(exp_key, exp_v)| {
                             // Check if the key is inside the value object
                             // and if it is, assert the value is the same as expected
                             if let Some(value) = category_obj.get(exp_key) {

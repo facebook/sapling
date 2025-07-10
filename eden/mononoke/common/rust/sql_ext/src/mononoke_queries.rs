@@ -107,7 +107,7 @@ macro_rules! mononoke_queries {
                 {
 
 
-                    query_with_retry_no_cache(
+                query_with_retry_no_cache(
                         || {
                             let tel_logger = tel_logger.clone();
                             async {
@@ -126,7 +126,10 @@ macro_rules! mononoke_queries {
                                     log_query_error(&tel_logger, &e, granularity)
                                 })?;
 
-                                log_query_telemetry(opt_tel, tel_logger, granularity)?;
+                                // Check if any parameter is a RepositoryId and pass it to telemetry
+                                let repo_id = $crate::mononoke_queries_extract_repo_id!($($pname: $ptype),*);
+
+                                log_query_telemetry(opt_tel, tel_logger, granularity, repo_id)?;
 
 
                                 Ok(res)
@@ -157,7 +160,11 @@ macro_rules! mononoke_queries {
                         log_query_error(&tel_logger, &e, granularity)
                     })?;
 
-                    log_query_telemetry(opt_tel, tel_logger, granularity)?;
+
+                    // Check if any parameter is a RepositoryId and pass it to telemetry
+                    let repo_id = $crate::mononoke_queries_extract_repo_id!($($pname: $ptype),*);
+
+                    log_query_telemetry(opt_tel, tel_logger, granularity, repo_id)?;
 
 
                     Ok((txn, res))
@@ -235,11 +242,15 @@ macro_rules! mononoke_queries {
                                     cri_str.as_deref(),
                                     $( $pname, )*
                                     $( $lname, )*
+
                                 ).await.inspect_err(|e| {
                                     log_query_error(&tel_logger, &e, granularity)
                                 })?;
 
-                                log_query_telemetry(opt_tel, tel_logger, granularity)?;
+                                // Check if any parameter is a RepositoryId and pass it to telemetry
+                                let repo_id = $crate::mononoke_queries_extract_repo_id!($($pname: $ptype),*);
+
+                                log_query_telemetry(opt_tel, tel_logger, granularity, repo_id)?;
                                 Ok(CachedQueryResult(res))
                             }
                         },
@@ -271,7 +282,11 @@ macro_rules! mononoke_queries {
                         log_query_error(&tel_logger, &e, granularity)
                     })?;
 
-                    log_query_telemetry(opt_tel, tel_logger, granularity)?;
+                    // Check if any parameter is a RepositoryId and pass it to telemetry
+                    let repo_id = $crate::mononoke_queries_extract_repo_id!($($pname: $ptype),*);
+
+                    log_query_telemetry(opt_tel, tel_logger, granularity, repo_id)?;
+
 
                     Ok((txn, res))
                 }
@@ -348,7 +363,11 @@ macro_rules! mononoke_queries {
                     })?;
 
                     let opt_tel = write_res.query_telemetry().clone();
-                    log_query_telemetry(opt_tel, tel_logger, granularity)?;
+
+                    // Check if any parameter is a RepositoryId and pass it to telemetry
+                    let repo_id = $crate::mononoke_queries_extract_repo_id!($($pname: $ptype),*);
+
+                    log_query_telemetry(opt_tel, tel_logger, granularity, repo_id)?;
 
                     Ok(write_res)
 
@@ -377,7 +396,11 @@ macro_rules! mononoke_queries {
                     })?;
 
                     let opt_tel = write_res.query_telemetry().clone();
-                    log_query_telemetry(opt_tel, tel_logger, granularity)?;
+
+                    // Check if any parameter is a RepositoryId and pass it to telemetry
+                    let repo_id = $crate::mononoke_queries_extract_repo_id!($($pname: $ptype),*);
+
+                    log_query_telemetry(opt_tel, tel_logger, granularity, repo_id)?;
 
                     Ok((txn, write_res))
 
@@ -454,7 +477,11 @@ macro_rules! mononoke_queries {
                     })?;
 
                     let opt_tel = write_res.query_telemetry().clone();
-                    log_query_telemetry(opt_tel, tel_logger, granularity)?;
+
+                    // Check if any parameter is a RepositoryId and pass it to telemetry
+                    let repo_id = $crate::mononoke_queries_extract_repo_id!($($pname: $ptype),*);
+
+                    log_query_telemetry(opt_tel, tel_logger, granularity, repo_id)?;
 
                     Ok(write_res)
                 }
@@ -482,7 +509,11 @@ macro_rules! mononoke_queries {
                     })?;
 
                     let opt_tel = write_res.query_telemetry().clone();
-                    log_query_telemetry(opt_tel, tel_logger, granularity)?;
+
+                    // Check if any parameter is a RepositoryId and pass it to telemetry
+                    let repo_id = $crate::mononoke_queries_extract_repo_id!($($pname: $ptype),*);
+
+                    log_query_telemetry(opt_tel, tel_logger, granularity, repo_id)?;
 
                     Ok((txn, write_res))
                 }
@@ -492,6 +523,28 @@ macro_rules! mononoke_queries {
         }
     };
 
+}
+// Helper macro to extract RepositoryId from query parameters
+#[macro_export]
+macro_rules! mononoke_queries_extract_repo_id {
+    // Base case: no parameters
+    () => { None };
+
+    // Match RepositoryId directly
+    ($pname:ident: RepositoryId) => { Some(*$pname) };
+
+    // Match RepositoryId with additional parameters
+    ($pname:ident: RepositoryId, $($rest_pname:ident: $rest_ptype:ty),*) => {
+        Some(*$pname)
+    };
+
+    // Single non-RepositoryId parameter
+    ($pname:ident: $ptype:ty) => { None };
+
+    // Multiple parameters, first is not RepositoryId
+    ($pname:ident: $ptype:ty, $($rest_pname:ident: $rest_ptype:ty),*) => {
+        $crate::mononoke_queries_extract_repo_id!($($rest_pname: $rest_ptype),*)
+    };
 }
 
 #[cfg(fbcode_build)]
