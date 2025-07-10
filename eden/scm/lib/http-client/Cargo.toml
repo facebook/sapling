@@ -44,7 +44,7 @@ thiserror = "2.0.12"
 tokio = { version = "1.45.0", features = ["full", "test-util", "tracing"] }
 tokio-util = { version = "0.7.15", features = ["full"] }
 tracing = { version = "0.1.41", features = ["attributes", "valuable"] }
-url = "2.5.2"
+url = "2.5.4"
 
 [dev-dependencies]
 assert_matches = "1.5"

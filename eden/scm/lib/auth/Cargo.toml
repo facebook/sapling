@@ -22,7 +22,7 @@ sapling-util = { version = "0.1.0", path = "../util" }
 simple_asn1 = "0.5.4"
 thiserror = "2.0.12"
 tracing = { version = "0.1.41", features = ["attributes", "valuable"] }
-url = "2.5.2"
+url = "2.5.4"
 
 [dev-dependencies]
 once_cell = "1.12"

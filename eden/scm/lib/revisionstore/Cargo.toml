@@ -65,7 +65,7 @@ thiserror = "2.0.12"
 tokio = { version = "1.45.0", features = ["full", "test-util", "tracing"] }
 tokio-stream = { version = "0.1.17", features = ["fs", "io-util", "net", "signal", "sync", "time"] }
 tracing = { version = "0.1.41", features = ["attributes", "valuable"] }
-url = "2.5.2"
+url = "2.5.4"
 
 [dev-dependencies]
 maplit = "1.0"

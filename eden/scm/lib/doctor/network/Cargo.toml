@@ -20,7 +20,7 @@ sapling-hg-http = { version = "0.1.0", path = "../../hg-http" }
 sapling-http-client = { version = "0.1.0", path = "../../http-client" }
 thiserror = "2.0.12"
 tracing = { version = "0.1.41", features = ["attributes", "valuable"] }
-url = "2.5.2"
+url = "2.5.4"
 
 [dev-dependencies]
 tempfile = "3.15"
