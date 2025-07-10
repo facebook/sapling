@@ -13,6 +13,7 @@ use anyhow::Result;
 use bonsai_tag_mapping::BonsaiTagMappingRef;
 use bookmarks::BookmarkPrefix;
 use cloned::cloned;
+use context::CoreContext;
 use futures::StreamExt;
 use futures::TryStreamExt;
 use futures::stream;
@@ -25,6 +26,7 @@ use import_tools::git_reader::GitReader;
 use import_tools::set_bookmark;
 use mononoke_api::BookmarkKey;
 use mononoke_api::MononokeError;
+use mononoke_api::Repo;
 use mononoke_api::repo::RepoContextBuilder;
 use mononoke_api::repo::git::bookmark_exists_with_prefix;
 use mononoke_api::repo::git::get_bookmark_state;
@@ -165,14 +167,6 @@ async fn set_ref_inner(
     if ref_update.ref_name.starts_with(COMMIT_CLOUD_REF_PREFIX) {
         return Ok(());
     }
-
-    // Check if push redirector is enabled, if it is then reject the push
-    if push_redirector_enabled(&ctx, repo.clone()).await? {
-        return Err(anyhow::anyhow!(
-            "Pushes to repo {0} are disallowed because its source of truth has been moved. Use `git pushrebase` or make changes directly in the repo where the source of truth was moved.",
-            repo.repo_identity().name()
-        ));
-    }
     // If the ref is a content ref, then we have already processed it in the uploader. There is no
     // bookmark to move in this case
     if ref_update.is_content() {
@@ -186,6 +180,15 @@ async fn set_ref_inner(
         }
         return Ok(());
     }
+    // Create the bookmark operation representing the ref update if its allowed
+    let bookmark_operation = bookmark_operation(
+        &ctx,
+        repo.clone(),
+        mappings_store.clone(),
+        object_store.clone(),
+        &ref_update,
+    )
+    .await?;
     // Create the repo context which is the pre-requisite for moving bookmarks
     let repo_context = RepoContextBuilder::new(ctx.clone(), repo.clone(), repos)
         .await
@@ -194,50 +197,12 @@ async fn set_ref_inner(
         .build()
         .await
         .context("Failure in creating RepoContext for git push")?;
-    // Get the bonsai changeset id of the old and the new git commits
-    let old_changeset = get_bonsai(&mappings_store, &object_store, &ref_update.from).await?;
-    let new_changeset = get_bonsai(&mappings_store, &object_store, &ref_update.to).await?;
-    // Create the bookmark key by stripping the refs/ prefix from the ref name
-    let bookmark_key = BookmarkKey::new(
-        ref_update
-            .ref_name
-            .strip_prefix("refs/")
-            .unwrap_or(ref_update.ref_name.as_str()),
-    )?;
-    let bookmark_operation =
-        BookmarkOperation::new(bookmark_key.clone(), old_changeset, new_changeset)?;
+
     // Do one final check of SoT to ensure that we don't update the bookmark if the repo is locked or sourced in Metagit
     if !mononoke_source_of_truth(&ctx, repo.clone()).await? {
         return Err(anyhow::anyhow!(
             "Mononoke is not the source of truth for this repo"
         ));
-    }
-    if bookmark_operation.is_create() {
-        let bookmark_prefix_str = if !bookmark_key.as_str().ends_with("/") {
-            format!("{bookmark_key}/")
-        } else {
-            bookmark_key.to_string()
-        };
-        let bookmark_prefix = BookmarkPrefix::from_str(bookmark_prefix_str.as_str())?;
-        if bookmark_exists_with_prefix(&ctx, &request_context.repo, &bookmark_prefix).await? {
-            // reject push
-            return Err(anyhow::anyhow!(
-                "Creation of bookmark \"{bookmark_key}\" was blocked because it exists as a path prefix of an existing bookmark",
-            ));
-        }
-        for bookmark_prefix_path in MPath::new(bookmark_prefix_str.as_str())?.into_ancestors() {
-            let bookmark_prefix_path =
-                BookmarkKey::from_str(std::str::from_utf8(&bookmark_prefix_path.to_vec())?)?;
-            // Check if the path ancestors of this bookmark already exist as bookmark in the repo
-            if get_bookmark_state(&ctx, &request_context.repo, &bookmark_prefix_path)
-                .await?
-                .is_existing()
-            {
-                return Err(anyhow::anyhow!(
-                    "Creation of bookmark \"{bookmark_key}\" was blocked because its path prefix \"{bookmark_prefix_path}\" already exists as a bookmark",
-                ));
-            }
-        }
     }
 
     // Flag for client side expectation of allow non fast forward updates. Git clients by default
@@ -260,6 +225,7 @@ async fn set_ref_inner(
     }
     // If the bookmark is a tag and the operation is a delete, then we need to remove the tag entry
     // from bonsai_tag_mapping table in addition to removing the bookmark entry from bookmarks table
+    let bookmark_key = &bookmark_operation.bookmark_key;
     if bookmark_key.is_tag() && bookmark_operation.is_delete() {
         repo.bonsai_tag_mapping()
             .delete_mappings_by_name(vec![bookmark_key.name().to_string()])
@@ -267,9 +233,71 @@ async fn set_ref_inner(
     }
     // If requested, let's wait for the bookmark move to get reflected in WBC
     if request_context.pushvars.wait_for_wbc_update() {
-        wait_for_bookmark_move(&ctx, &repo, &bookmark_key, old_changeset).await?;
+        wait_for_bookmark_move(
+            &ctx,
+            &repo,
+            bookmark_key,
+            bookmark_operation.operation_type.old_changeset(),
+        )
+        .await?;
     }
     Ok(())
+}
+
+async fn bookmark_operation(
+    ctx: &CoreContext,
+    repo: Arc<Repo>,
+    mappings_store: Arc<GitMappingsStore>,
+    object_store: Arc<GitObjectStore>,
+    ref_update: &RefUpdate,
+) -> Result<BookmarkOperation> {
+    // Check if push redirector is enabled, if it is then reject the push
+    if push_redirector_enabled(ctx, repo.clone()).await? {
+        return Err(anyhow::anyhow!(
+            "Pushes to repo {0} are disallowed because its source of truth has been moved. Use `git pushrebase` or make changes directly in the repo where the source of truth was moved.",
+            repo.repo_identity().name()
+        ));
+    }
+    // Get the bonsai changeset id of the old and the new git commits
+    let old_changeset = get_bonsai(&mappings_store, &object_store, &ref_update.from).await?;
+    let new_changeset = get_bonsai(&mappings_store, &object_store, &ref_update.to).await?;
+    // Create the bookmark key by stripping the refs/ prefix from the ref name
+    let bookmark_key = BookmarkKey::new(
+        ref_update
+            .ref_name
+            .strip_prefix("refs/")
+            .unwrap_or(ref_update.ref_name.as_str()),
+    )?;
+    let bookmark_operation =
+        BookmarkOperation::new(bookmark_key.clone(), old_changeset, new_changeset)?;
+    if bookmark_operation.is_create() {
+        let bookmark_prefix_str = if !bookmark_key.as_str().ends_with("/") {
+            format!("{bookmark_key}/")
+        } else {
+            bookmark_key.to_string()
+        };
+        let bookmark_prefix = BookmarkPrefix::from_str(bookmark_prefix_str.as_str())?;
+        if bookmark_exists_with_prefix(ctx, &repo, &bookmark_prefix).await? {
+            // reject push
+            return Err(anyhow::anyhow!(
+                "Creation of bookmark \"{bookmark_key}\" was blocked because it exists as a path prefix of an existing bookmark",
+            ));
+        }
+        for bookmark_prefix_path in MPath::new(bookmark_prefix_str.as_str())?.into_ancestors() {
+            let bookmark_prefix_path =
+                BookmarkKey::from_str(std::str::from_utf8(&bookmark_prefix_path.to_vec())?)?;
+            // Check if the path ancestors of this bookmark already exist as bookmark in the repo
+            if get_bookmark_state(ctx, &repo, &bookmark_prefix_path)
+                .await?
+                .is_existing()
+            {
+                return Err(anyhow::anyhow!(
+                    "Creation of bookmark \"{bookmark_key}\" was blocked because its path prefix \"{bookmark_prefix_path}\" already exists as a bookmark",
+                ));
+            }
+        }
+    }
+    Ok(bookmark_operation)
 }
 
 async fn get_bonsai(

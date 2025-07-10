@@ -104,6 +104,14 @@ impl BookmarkOperationType {
             _ => false,
         }
     }
+
+    pub fn old_changeset(&self) -> Option<ChangesetId> {
+        match self {
+            Self::Move(old, _) => Some(*old),
+            Self::Delete(old) => Some(*old),
+            _ => None,
+        }
+    }
 }
 
 /// Method responsible for either creating, moving or deleting a bookmark in gitimport and gitserver.
