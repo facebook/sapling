@@ -17,7 +17,10 @@ rust_library(
         "//common/rust/shed/fbinit:fbinit-tokio",
         "//eden/mononoke/mononoke_macros:mononoke_macros",
         "//eden/mononoke/server/metadata:metadata",
-    ],
+    ] + ([] if rust_oss.is_oss_build() else [
+        "fbsource//third-party/rust:tempfile",
+        "//common/rust/shed/sql:sql_tests_lib",
+    ]),
     deps = ([
         "fbsource//third-party/rust:anyhow",
         "fbsource//third-party/rust:async-trait",
