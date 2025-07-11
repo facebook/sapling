@@ -107,8 +107,8 @@ function gitimport_repos_a_b_c {
     --bypass-readonly --generate-bookmarks full-repo
 
   # shellcheck disable=SC2153
-  REPOID="$SUBMODULE_REPO_ID" with_stripped_logs gitimport "$GIT_REPO_A" --bypass-derived-data-backfilling \
-    --bypass-readonly --generate-bookmarks full-repo > "$TESTTMP/gitimport_output"
+  REPOID="$SUBMODULE_REPO_ID" gitimport "$GIT_REPO_A" --bypass-derived-data-backfilling \
+    --bypass-readonly --generate-bookmarks full-repo > "$TESTTMP/gitimport_output" 2>&1
 
   GIT_REPO_A_HEAD=$(rg ".*Ref: \"refs/heads/master_bookmark\": Some\(ChangesetId\(Blake2\((\w+).+" -or '$1' "$TESTTMP/gitimport_output")
 
@@ -138,7 +138,7 @@ function merge_repo_a_to_large_repo {
   print_section "Running initial import"
 
   # shellcheck disable=SC2153
-  with_stripped_logs mononoke_x_repo_sync "$SUBMODULE_REPO_ID" "$LARGE_REPO_ID" initial-import \
+  mononoke_x_repo_sync "$SUBMODULE_REPO_ID" "$LARGE_REPO_ID" initial-import \
     --no-progress-bar --derivation-batch-size 2 -i "$GIT_REPO_A_HEAD_PARENT" \
     --version-name "$IMPORT_CONFIG_VERSION_NAME" 2>&1 | tee "$TESTTMP/initial_import_output"
 
@@ -151,7 +151,7 @@ function merge_repo_a_to_large_repo {
   COMMIT_DATE="1985-09-04T00:00:00.00Z"
 
   print_section "Creating deletion commits"
-  with_stripped_logs mononoke_admin megarepo gradual-delete \
+  mononoke_admin megarepo gradual-delete \
     --repo-id "$LARGE_REPO_ID" -a test_user -m "deletion commits for merge into large repo" \
     -i "$IMPORTED_HEAD" --even-chunk-size 2 --commit-date-rfc3339 "$COMMIT_DATE" \
     "$SMALL_REPO_FOLDER" 2>&1 | tee "$TESTTMP/gradual_delete.out"
@@ -160,14 +160,14 @@ function merge_repo_a_to_large_repo {
   printf "\nLAST_DELETION_COMMIT: %s\n\n" "$LAST_DELETION_COMMIT"
 
   print_section "Creating gradual merge commit"
-  with_stripped_logs mononoke_admin megarepo gradual-merge \
+  mononoke_admin megarepo gradual-merge \
     --repo-id "$LARGE_REPO_ID" -a test_user -m "gradual merge" \
     --last-deletion-commit -i "$LAST_DELETION_COMMIT" \
     --pre-deletion-commit -i "$IMPORTED_HEAD"  --target-bookmark "$MASTER_BOOKMARK_NAME" --limit 10 \
     --commit-date-rfc3339 "$COMMIT_DATE" 2>&1 | tee "$TESTTMP/gradual_merge.out"
 
   print_section "Changing commit sync mapping version"
-  with_stripped_logs mononoke_x_repo_sync "$SUBMODULE_REPO_ID" "$LARGE_REPO_ID" \
+  mononoke_x_repo_sync "$SUBMODULE_REPO_ID" "$LARGE_REPO_ID" \
     once --unsafe-force-rewrite-parent-to-target-bookmark --commit-id "$GIT_REPO_A_HEAD" \
     --unsafe-change-version-to "$FINAL_CONFIG_VERSION_NAME" \
     --target-bookmark "$MASTER_BOOKMARK_NAME" 2>&1 | tee "$TESTTMP/xrepo_mapping_change.out"
@@ -274,8 +274,8 @@ function create_repo_b_commits_for_submodule_pointer_update {
   cd "$TESTTMP" || exit
 
   # Import this commit to repo_b mononoke mirror
-  REPOID="$REPO_B_ID" with_stripped_logs gitimport "$GIT_REPO_B" --bypass-derived-data-backfilling  \
-    --bypass-readonly --generate-bookmarks full-repo > "$TESTTMP/gitimport_output"
+  REPOID="$REPO_B_ID" gitimport "$GIT_REPO_B" --bypass-derived-data-backfilling  \
+    --bypass-readonly --generate-bookmarks full-repo > "$TESTTMP/gitimport_output" 2>&1
 
   REPO_B_BONSAI=$(rg ".*Ref: \"refs/heads/master_bookmark\": Some\(ChangesetId\(Blake2\((\w+).+" -or '$1' "$TESTTMP/gitimport_output")
   echo "REPO_B_BONSAI: $REPO_B_BONSAI"
@@ -308,8 +308,8 @@ function create_repo_a_commit {
   cd "$TESTTMP" || exit
 
   # Import this commit to repo_a mononoke mirror
-  REPOID="$SUBMODULE_REPO_ID" with_stripped_logs gitimport "$GIT_REPO_A" --bypass-derived-data-backfilling  \
-    --bypass-readonly --generate-bookmarks full-repo > "$TESTTMP/gitimport_repo_a_output"
+  REPOID="$SUBMODULE_REPO_ID" gitimport "$GIT_REPO_A" --bypass-derived-data-backfilling  \
+    --bypass-readonly --generate-bookmarks full-repo > "$TESTTMP/gitimport_repo_a_output" 2>&1
 
   GIT_REPO_A_HEAD=$(rg ".*Ref: \"refs/heads/master_bookmark\": Some\(ChangesetId\(Blake2\((\w+).+" -or '$1' "$TESTTMP/gitimport_repo_a_output")
   echo "GIT_REPO_A_HEAD: $GIT_REPO_A_HEAD"
@@ -334,8 +334,8 @@ function create_repo_c_commit {
   cd "$TESTTMP" || exit
 
   # Import this commit to repo_c mononoke mirror
-  REPOID="$REPO_C_ID" with_stripped_logs gitimport "$GIT_REPO_C" --bypass-derived-data-backfilling  \
-    --bypass-readonly --generate-bookmarks full-repo > "$TESTTMP/gitimport_repo_c_output"
+  REPOID="$REPO_C_ID" gitimport "$GIT_REPO_C" --bypass-derived-data-backfilling  \
+    --bypass-readonly --generate-bookmarks full-repo > "$TESTTMP/gitimport_repo_c_output" 2>&1
 
   GIT_REPO_C_HEAD=$(rg ".*Ref: \"refs/heads/master_bookmark\": Some\(ChangesetId\(Blake2\((\w+).+" -or '$1' "$TESTTMP/gitimport_repo_c_output")
   echo "GIT_REPO_C_HEAD: $GIT_REPO_C_HEAD"
@@ -362,8 +362,8 @@ function create_repo_c_and_repo_b_commits_for_submodule_pointer_update {
   git commit -q -am "Update submodule C in repo B"
 
   # Import this commit to repo_b mononoke mirror
-  REPOID="$REPO_B_ID" with_stripped_logs gitimport "$GIT_REPO_B" --bypass-derived-data-backfilling  \
-    --bypass-readonly --generate-bookmarks full-repo > "$TESTTMP/gitimport_output"
+  REPOID="$REPO_B_ID" gitimport "$GIT_REPO_B" --bypass-derived-data-backfilling  \
+    --bypass-readonly --generate-bookmarks full-repo > "$TESTTMP/gitimport_output" 2>&1
 
   GIT_REPO_B_HEAD=$(rg ".*Ref: \"refs/heads/master_bookmark\": Some\(ChangesetId\(Blake2\((\w+).+" -or '$1' "$TESTTMP/gitimport_output")
   echo "GIT_REPO_B_HEAD: $GIT_REPO_B_HEAD"
@@ -422,7 +422,7 @@ function switch_source_of_truth_to_large_repo {
 
   # Start backsyncer in the background
   REPOIDSMALL=$SUBMODULE_REPO_ID REPOIDLARGE=$LARGE_REPO_ID \
-    with_stripped_logs backsync_large_to_small_forever
+    backsync_large_to_small_forever
 
   # Enable pushredirection for small repo, i.e. switch the source of truth to large repo
   print_section "Enable push redirection for small repo"
@@ -513,14 +513,14 @@ function setup_all_repos_for_test {
   # Set up live forward syncer, which should sync all commits in small repo's (repo A)
   # heads/master_bookmark bookmark to large repo's master_bookmark bookmark via pushrebase
   touch "$TESTTMP/xreposync.out"
-  with_stripped_logs mononoke_x_repo_sync_forever "$SUBMODULE_REPO_ID" "$LARGE_REPO_ID"
+  mononoke_x_repo_sync_forever "$SUBMODULE_REPO_ID" "$LARGE_REPO_ID"
 
   # Import the changes from git repo A into its Mononoke repo. They should be automatically
   # forward synced to the large repo
   # TODO: generate or not bookmarks for SCS tests UPDATE_REPO_A
   if [ "$UPDATE_REPO_A" != 0 ]; then
-    REPOID="$SUBMODULE_REPO_ID" with_stripped_logs gitimport "$GIT_REPO_A" --bypass-derived-data-backfilling \
-      --bypass-readonly --generate-bookmarks missing-for-commit "$GIT_REPO_A_HEAD" > "$TESTTMP/gitimport_output"
+    REPOID="$SUBMODULE_REPO_ID" gitimport "$GIT_REPO_A" --bypass-derived-data-backfilling \
+      --bypass-readonly --generate-bookmarks missing-for-commit "$GIT_REPO_A_HEAD" > "$TESTTMP/gitimport_output" 2>&1
   fi
 
 }
