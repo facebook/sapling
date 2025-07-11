@@ -48,7 +48,9 @@ use unodes::RootUnodeManifestId;
 
 #[async_trait]
 pub trait BulkDerivation {
-    /// Derive all the given derived data types for all the given changeset ids.
+    /// Derive all the desired derived data types for all the desired csids
+    ///
+    /// If the dependent types or changesets are not derived yet, they will be derived now
     async fn derive_bulk_locally(
         &self,
         ctx: &CoreContext,
@@ -58,7 +60,12 @@ pub trait BulkDerivation {
         override_batch_size: Option<u64>,
     ) -> Result<(), SharedDerivationError>;
 
-    /// Derive all the given derived data types for all the given changeset ids remotely.
+    /// Derive all the desired derived data types for all the desired csids
+    ///
+    /// If the dependent types or changesets are not derived yet, they will be derived now
+    ///
+    /// Perform the derivation remotely using the Derived Data Service, or fall back to local
+    /// derivation if necessary
     async fn derive_bulk(
         &self,
         ctx: &CoreContext,
@@ -375,9 +382,6 @@ fn manager_for_type(
 
 #[async_trait]
 impl BulkDerivation for DerivedDataManager {
-    /// Derive all the desired derived data types for all the desired csids
-    ///
-    /// If the dependent types or changesets are not derived yet, they will be derived now
     async fn derive_bulk_locally(
         &self,
         ctx: &CoreContext,
@@ -418,12 +422,6 @@ impl BulkDerivation for DerivedDataManager {
         Ok(())
     }
 
-    /// Derive all the desired derived data types for all the desired csids
-    ///
-    /// If the dependent types or changesets are not derived yet, they will be derived now
-    ///
-    /// Perform the derivation remotely using the Derived Data Service, or fall back to local
-    /// derivation if necessary
     async fn derive_bulk(
         &self,
         ctx: &CoreContext,
