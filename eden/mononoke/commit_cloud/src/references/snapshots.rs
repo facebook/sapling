@@ -8,7 +8,7 @@
 use commit_cloud_types::WorkspaceSnapshot;
 use commit_cloud_types::changeset::CloudChangesetId;
 use context::CoreContext;
-use sql::Transaction;
+use sql_ext::Transaction;
 
 use crate::CommitCloudContext;
 use crate::SqlCommitCloud;

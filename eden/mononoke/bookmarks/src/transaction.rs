@@ -13,7 +13,7 @@ use bookmarks_types::BookmarkKey;
 use context::CoreContext;
 use futures::future::BoxFuture;
 use mononoke_types::ChangesetId;
-use sql::Transaction;
+use sql_ext::Transaction;
 use thiserror::Error;
 
 use crate::log::BookmarkUpdateReason;

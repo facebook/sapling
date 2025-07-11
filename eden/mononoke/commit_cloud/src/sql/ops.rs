@@ -7,8 +7,8 @@
 
 use async_trait::async_trait;
 use context::CoreContext;
-use sql::Transaction;
 use sql_ext::SqlConnections;
+use sql_ext::Transaction;
 
 use crate::ctx::CommitCloudContext;
 pub struct SqlCommitCloud {

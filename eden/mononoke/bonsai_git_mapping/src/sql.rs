@@ -9,7 +9,7 @@ use std::collections::BTreeMap;
 use std::collections::HashSet;
 
 use ::sql::Connection;
-use ::sql::Transaction;
+use ::sql_ext::Transaction;
 use ::sql_ext::mononoke_queries;
 use anyhow::Error;
 use anyhow::Result;
@@ -100,7 +100,8 @@ impl BonsaiGitMapping for SqlBonsaiGitMapping {
             .connections
             .write_connection
             .start_transaction()
-            .await?;
+            .await?
+            .into();
         let txn = self
             .bulk_add_git_mapping_in_transaction(ctx, entries, txn)
             .await?;

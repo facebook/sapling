@@ -19,7 +19,7 @@ use pushrebase_hook::PushrebaseCommitHook;
 use pushrebase_hook::PushrebaseHook;
 use pushrebase_hook::PushrebaseTransactionHook;
 use pushrebase_hook::RebasedChangesets;
-use sql::Transaction;
+use sql_ext::Transaction;
 
 use crate::PushrebaseMutationMappingEntry;
 use crate::sql_queries::add_pushrebase_mapping;

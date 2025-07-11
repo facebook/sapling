@@ -9,10 +9,10 @@ use anyhow::Result;
 use metaconfig_types::RemoteDatabaseConfig;
 use metaconfig_types::RemoteMetadataDatabaseConfig;
 use mononoke_types::RepositoryId;
-use sql::Transaction;
 use sql_construct::SqlConstruct;
 use sql_construct::SqlConstructFromMetadataDatabaseConfig;
 use sql_ext::SqlConnections;
+use sql_ext::Transaction;
 use sql_ext::mononoke_queries;
 
 use crate::Bundle;
@@ -126,7 +126,7 @@ impl SqlGitBundleMetadataStorage {
     /// Bundle.in_bundle_list_order.
     pub async fn add_new_bundles(&self, bundles: &[Bundle]) -> Result<u64> {
         let conn = &self.connections.write_connection;
-        let txn = conn.start_transaction().await?;
+        let txn = conn.start_transaction().await?.into();
 
         let (txn, rows) =
             GetLatestBundleListNumForRepo::query_with_transaction(txn, None, &self.repo_id).await?;

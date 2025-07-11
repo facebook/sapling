@@ -223,7 +223,8 @@ impl RepoEphemeralStoreInner {
             .connections
             .write_connection
             .start_transaction()
-            .await?;
+            .await?
+            .into();
         let (txn, res) = CreateBubble::query_with_transaction(
             txn,
             ctx.into(),

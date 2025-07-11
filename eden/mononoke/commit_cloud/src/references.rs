@@ -27,7 +27,7 @@ use futures::stream;
 use futures::stream::TryStreamExt;
 use history::WorkspaceHistory;
 use repo_derived_data::ArcRepoDerivedData;
-use sql::Transaction;
+use sql_ext::Transaction;
 use versions::WorkspaceVersion;
 
 use crate::CommitCloudContext;
@@ -221,7 +221,12 @@ pub async fn rename_all(
     let args = UpdateWorkspaceNameArgs {
         new_workspace: new_workspace.to_string(),
     };
-    let mut txn = sql.connections.write_connection.start_transaction().await?;
+    let mut txn = sql
+        .connections
+        .write_connection
+        .start_transaction()
+        .await?
+        .into();
 
     (txn, _) = Update::<WorkspaceHead>::update(sql, txn, ctx, cc_ctx.clone(), args.clone()).await?;
     (txn, _) =

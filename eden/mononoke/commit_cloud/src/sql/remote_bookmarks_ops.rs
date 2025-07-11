@@ -10,7 +10,7 @@ use commit_cloud_types::RemoteBookmarksMap;
 use commit_cloud_types::WorkspaceRemoteBookmark;
 use commit_cloud_types::changeset::CloudChangesetId;
 use context::CoreContext;
-use sql::Transaction;
+use sql_ext::Transaction;
 use sql_ext::mononoke_queries;
 
 use crate::ctx::CommitCloudContext;

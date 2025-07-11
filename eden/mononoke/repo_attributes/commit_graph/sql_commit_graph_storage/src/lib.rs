@@ -1605,7 +1605,7 @@ impl SqlCommitGraphStorage {
 
         // We need to be careful because there might be dependencies among the edges
         // Part 1 - Add all nodes without any edges, so we generate ids for them
-        let transaction = self.write_connection.start_transaction().await?;
+        let transaction = self.write_connection.start_transaction().await?.into();
         let cs_no_edges = many_edges
             .iter()
             .map(|e| {
@@ -1856,7 +1856,7 @@ impl CommitGraphStorage for SqlCommitGraphStorage {
                 .collect()
             };
 
-        let transaction = self.write_connection.start_transaction().await?;
+        let transaction = self.write_connection.start_transaction().await?.into();
 
         let (transaction, result) = InsertChangeset::query_with_transaction(
             transaction,

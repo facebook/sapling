@@ -9,7 +9,7 @@ use std::collections::HashMap;
 use std::collections::HashSet;
 use std::sync::Arc;
 
-use ::sql::Transaction;
+use ::sql_ext::Transaction;
 use anyhow::Error;
 use anyhow::Result;
 use anyhow::anyhow;

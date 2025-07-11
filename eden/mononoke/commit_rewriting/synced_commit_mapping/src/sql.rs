@@ -23,11 +23,11 @@ use rendezvous::RendezVous;
 use rendezvous::RendezVousOptions;
 use rendezvous::RendezVousStats;
 use sql::Connection;
-use sql::Transaction;
 use sql_construct::SqlConstruct;
 use sql_construct::SqlConstructFromMetadataDatabaseConfig;
 use sql_ext::SqlConnections;
 use sql_ext::SqlQueryTelemetry;
+use sql_ext::Transaction;
 use sql_ext::mononoke_queries;
 use stats::prelude::*;
 
@@ -246,7 +246,7 @@ impl SqlSyncedCommitMapping {
     ) -> Result<u64, Error> {
         ctx.perf_counters()
             .increment_counter(PerfCounterType::SqlWrites);
-        let txn = self.write_connection.start_transaction().await?;
+        let txn = self.write_connection.start_transaction().await?.into();
         let (txn, affected_rows) = add_many_in_txn(ctx, txn, entries).await?;
         txn.commit().await?;
         Ok(affected_rows)

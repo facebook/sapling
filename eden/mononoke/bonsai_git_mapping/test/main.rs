@@ -9,7 +9,7 @@ use std::sync::Arc;
 use std::sync::atomic::AtomicUsize;
 use std::sync::atomic::Ordering;
 
-use ::sql::Transaction;
+use ::sql_ext::Transaction;
 use anyhow::Error;
 use assert_matches::assert_matches;
 use async_trait::async_trait;
@@ -274,7 +274,7 @@ async fn test_add_with_transaction(fb: FacebookInit) -> Result<(), Error> {
         git_sha1: TWOS_GIT_SHA1,
     };
 
-    let txn = conn.start_transaction().await?;
+    let txn = conn.start_transaction().await?.into();
     mapping
         .bulk_add_git_mapping_in_transaction(&ctx, &[entry1.clone()], txn)
         .await?
@@ -288,7 +288,7 @@ async fn test_add_with_transaction(fb: FacebookInit) -> Result<(), Error> {
             .await?
     );
 
-    let txn = conn.start_transaction().await?;
+    let txn = conn.start_transaction().await?.into();
     mapping
         .bulk_add_git_mapping_in_transaction(&ctx, &[entry2.clone()], txn)
         .await?
@@ -303,7 +303,7 @@ async fn test_add_with_transaction(fb: FacebookInit) -> Result<(), Error> {
     );
 
     // Inserting duplicates fails
-    let txn = conn.start_transaction().await?;
+    let txn = conn.start_transaction().await?.into();
     let res = async {
         let entry_conflict = BonsaiGitMappingEntry {
             bcs_id: bonsai::TWOS_CSID,

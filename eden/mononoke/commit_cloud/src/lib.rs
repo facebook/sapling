@@ -268,7 +268,8 @@ impl CommitCloud {
             .write_connection
             .start_transaction()
             .await
-            .map_err(CommitCloudInternalError::Error)?;
+            .map_err(CommitCloudInternalError::Error)?
+            .into();
 
         let initiate_workspace = params.version == 0
             && params.new_heads.is_empty()
@@ -502,7 +503,8 @@ impl CommitCloud {
             .connections
             .write_connection
             .start_transaction()
-            .await?;
+            .await?
+            .into();
 
         let (txn, affected_rows) = Update::<WorkspaceVersion>::update(
             &self.storage,

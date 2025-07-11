@@ -22,7 +22,7 @@ use metaconfig_types::CommitSyncConfigVersion;
 use mononoke_types::BonsaiChangesetMut;
 use mononoke_types::ChangesetId;
 use mononoke_types::RepositoryId;
-use sql::Transaction;
+use sql_ext::Transaction;
 use synced_commit_mapping::SyncedCommitMapping;
 use synced_commit_mapping::SyncedCommitMappingEntry;
 use synced_commit_mapping::SyncedCommitSourceRepo;

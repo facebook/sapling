@@ -5,7 +5,7 @@
  * GNU General Public License version 2.
  */
 
-use ::sql::Transaction;
+use ::sql_ext::Transaction;
 use anyhow::Error;
 use anyhow::Result;
 use async_trait::async_trait;

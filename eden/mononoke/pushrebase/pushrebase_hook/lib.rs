@@ -14,7 +14,7 @@ use context::CoreContext;
 use mononoke_types::BonsaiChangesetMut;
 use mononoke_types::ChangesetId;
 use mononoke_types::Timestamp;
-use sql::Transaction;
+use sql_ext::Transaction;
 
 pub type RebasedChangesets = HashMap<ChangesetId, (ChangesetId, Timestamp)>;
 

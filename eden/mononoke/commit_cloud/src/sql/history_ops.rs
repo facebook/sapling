@@ -12,7 +12,7 @@ use commit_cloud_types::WorkspaceLocalBookmark;
 use commit_cloud_types::references::WorkspaceRemoteBookmark;
 use context::CoreContext;
 use mononoke_types::Timestamp;
-use sql::Transaction;
+use sql_ext::Transaction;
 
 use crate::ctx::CommitCloudContext;
 use crate::references::heads::heads_from_list;

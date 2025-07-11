@@ -17,10 +17,10 @@ use async_trait::async_trait;
 use context::CoreContext;
 use context::PerfCounterType;
 use mononoke_types::RepositoryId;
-use sql::Transaction as SqlTransaction;
 use sql_construct::SqlConstruct;
 use sql_construct::SqlConstructFromMetadataDatabaseConfig;
 use sql_ext::SqlConnections;
+use sql_ext::Transaction as SqlTransaction;
 use sql_ext::TransactionResult;
 use sql_ext::mononoke_queries;
 use stats::prelude::*;
@@ -149,7 +149,7 @@ impl MutableCounters for SqlMutableCounters {
         prev_value: Option<i64>,
     ) -> Result<bool> {
         let conn = &self.connections.write_connection;
-        let txn = conn.start_transaction().await?;
+        let txn = conn.start_transaction().await?.into();
         let txn_result =
             Self::set_counter_on_txn(ctx, self.repo_id, name, value, prev_value, txn).await?;
         match txn_result {

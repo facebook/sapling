@@ -1327,7 +1327,7 @@ mod tests {
     use repo_blobstore::RepoBlobstoreRef;
     use repo_derived_data::RepoDerivedData;
     use repo_identity::RepoIdentity;
-    use sql::Transaction;
+    use sql_ext::Transaction;
     use sql_ext::TransactionResult;
     use test_repo_factory::TestRepoFactory;
     use tests_utils::CreateCommitContext;

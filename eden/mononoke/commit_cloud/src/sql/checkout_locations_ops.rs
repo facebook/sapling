@@ -14,7 +14,7 @@ use commit_cloud_types::changeset::CloudChangesetId;
 use context::CoreContext;
 use mononoke_types::Timestamp;
 use sql::Connection;
-use sql::Transaction;
+use sql_ext::Transaction;
 
 use crate::ctx::CommitCloudContext;
 use crate::sql::common::UpdateWorkspaceNameArgs;

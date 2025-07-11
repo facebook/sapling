@@ -792,7 +792,8 @@ impl LongRunningRequestsQueue for SqlLongRunningRequestsQueue {
             .connections
             .write_connection
             .start_transaction()
-            .await?;
+            .await?
+            .into();
         let (mut txn, rows) =
             GetRequest::query_with_transaction(txn, None, &req_id.0, &req_id.1).await?;
         let entry = match rows.into_iter().next() {
@@ -897,7 +898,8 @@ impl LongRunningRequestsQueue for SqlLongRunningRequestsQueue {
             .connections
             .write_connection
             .start_transaction()
-            .await?;
+            .await?
+            .into();
 
         let (mut txn, rows) =
             GetRequest::query_with_transaction(txn, None, &req_id.0, &req_id.1).await?;

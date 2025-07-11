@@ -114,7 +114,12 @@ async fn test_local_bookmarks(fb: FacebookInit) -> anyhow::Result<()> {
     let bookmark1 = WorkspaceLocalBookmark::new("my_bookmark1".to_owned(), hgid1.clone())?;
     let bookmark2 = WorkspaceLocalBookmark::new("my_bookmark2".to_owned(), hgid2.clone())?;
 
-    let mut txn = sql.connections.write_connection.start_transaction().await?;
+    let mut txn = sql
+        .connections
+        .write_connection
+        .start_transaction()
+        .await?
+        .into();
     txn = sql
         .insert(
             txn,
@@ -150,7 +155,12 @@ async fn test_local_bookmarks(fb: FacebookInit) -> anyhow::Result<()> {
     );
 
     let removed_bookmarks = vec![bookmark1.name().clone()];
-    txn = sql.connections.write_connection.start_transaction().await?;
+    txn = sql
+        .connections
+        .write_connection
+        .start_transaction()
+        .await?
+        .into();
     txn = Delete::<WorkspaceLocalBookmark>::delete(
         &sql,
         txn,
@@ -167,7 +177,12 @@ async fn test_local_bookmarks(fb: FacebookInit) -> anyhow::Result<()> {
     let new_name_args = UpdateWorkspaceNameArgs {
         new_workspace: renamed_workspace.clone(),
     };
-    let txn = sql.connections.write_connection.start_transaction().await?;
+    let txn = sql
+        .connections
+        .write_connection
+        .start_transaction()
+        .await?
+        .into();
     let (txn, affected_rows) =
         Update::<WorkspaceLocalBookmark>::update(&sql, txn, &ctx, cc_ctx, new_name_args).await?;
     txn.commit().await?;

@@ -8,7 +8,7 @@
 use std::collections::HashMap;
 use std::collections::HashSet;
 
-use ::sql::Transaction;
+use ::sql_ext::Transaction;
 use anyhow::Result;
 use anyhow::ensure;
 use ascii::AsciiStr;

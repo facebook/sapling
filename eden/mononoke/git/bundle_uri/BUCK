@@ -20,7 +20,6 @@ rust_library(
         "fbsource//third-party/rust:async-trait",
         "//common/rust/shed/facet:facet",
         "//common/rust/shed/fbinit:fbinit",
-        "//common/rust/shed/sql:sql",
         "//configerator/structs/infrasec/if:acl-rust",
         "//eden/mononoke/server/context:context",
         "//crypto/cat/rust:cryptocat",

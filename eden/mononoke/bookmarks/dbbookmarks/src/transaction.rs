@@ -27,7 +27,7 @@ use mononoke_types::ChangesetId;
 use mononoke_types::RepositoryId;
 use mononoke_types::Timestamp;
 use sql::Connection;
-use sql::Transaction as SqlTransaction;
+use sql_ext::Transaction as SqlTransaction;
 use sql_ext::mononoke_queries;
 use stats::prelude::*;
 
@@ -700,10 +700,10 @@ impl BookmarkTransaction for SqlBookmarksTransaction {
 
         async move {
             let mut attempt = 0;
-            let result: Result<(sql::Transaction, u64), _> = loop {
+            let result: Result<(sql_ext::Transaction, u64), _> = loop {
                 attempt += 1;
 
-                let mut txn = write_connection.start_transaction().await?;
+                let mut txn = write_connection.start_transaction().await?.into();
 
                 txn = match run_transaction_hooks(&ctx, txn, &txn_hooks).await {
                     Ok(txn) => txn,
@@ -774,9 +774,9 @@ impl BookmarkTransaction for SqlBookmarksTransaction {
 
 async fn run_transaction_hooks(
     ctx: &CoreContext,
-    mut txn: sql::Transaction,
+    mut txn: sql_ext::Transaction,
     txn_hooks: &Vec<BookmarkTransactionHook>,
-) -> Result<sql::Transaction, BookmarkTransactionError> {
+) -> Result<sql_ext::Transaction, BookmarkTransactionError> {
     for txn_hook in txn_hooks {
         txn = txn_hook(ctx.clone(), txn).await?;
     }

@@ -82,7 +82,8 @@ impl SqlHgMutationStore {
             .connections
             .write_connection
             .start_transaction()
-            .await?;
+            .await?
+            .into();
 
         let mut db_csets = Vec::new();
         let mut db_entries = Vec::new();

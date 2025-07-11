@@ -10,7 +10,7 @@ use async_trait::async_trait;
 use commit_cloud_types::WorkspaceHead;
 use commit_cloud_types::changeset::CloudChangesetId;
 use context::CoreContext;
-use sql::Transaction;
+use sql_ext::Transaction;
 
 use crate::ctx::CommitCloudContext;
 use crate::sql::common::UpdateWorkspaceNameArgs;

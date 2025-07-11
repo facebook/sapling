@@ -12,7 +12,7 @@ use commit_cloud_types::WorkspaceRemoteBookmark;
 use commit_cloud_types::changeset::CloudChangesetId;
 use context::CoreContext;
 use mononoke_types::sha1_hash::Sha1;
-use sql::Transaction;
+use sql_ext::Transaction;
 
 use crate::CommitCloudContext;
 use crate::sql::ops::Delete;

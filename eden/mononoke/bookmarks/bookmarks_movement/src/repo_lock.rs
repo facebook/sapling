@@ -29,7 +29,7 @@ use repo_lock::RepoLockState;
 use repo_lock::TransactionRepoLock;
 use repo_permission_checker::RepoPermissionChecker;
 use repo_permission_checker::RepoPermissionCheckerRef;
-use sql::Transaction;
+use sql_ext::Transaction;
 
 use crate::BookmarkMovementError;
 

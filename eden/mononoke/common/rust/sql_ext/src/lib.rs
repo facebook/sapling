@@ -14,9 +14,12 @@ mod telemetry;
 #[cfg(test)]
 mod tests;
 
+use anyhow::Result;
+use sql::Connection;
+use sql::QueryTelemetry;
 pub use sql::SqlConnections;
 pub use sql::SqlShardedConnections;
-pub use sql::Transaction;
+use sql::Transaction as SqlTransaction;
 pub use sql_query_telemetry::SqlQueryTelemetry;
 pub use sqlite::open_existing_sqlite_path;
 pub use sqlite::open_sqlite_in_memory;
@@ -43,7 +46,6 @@ pub mod _macro_internal {
     pub use paste;
     pub use serde_json;
     pub use sql::Connection;
-    pub use sql::Transaction;
     pub use sql::WriteResult;
     pub use sql::queries;
     pub use sql_query_config::SqlQueryConfig;
@@ -51,6 +53,7 @@ pub mod _macro_internal {
     pub use twox_hash::xxh3::Hash128;
     pub use twox_hash::xxh3::HasherExt;
 
+    pub use crate::Transaction;
     pub use crate::mononoke_queries::CacheData;
     pub use crate::mononoke_queries::CachedQueryResult;
     pub use crate::mononoke_queries::query_with_retry;
@@ -58,6 +61,41 @@ pub mod _macro_internal {
     pub use crate::telemetry::TelemetryGranularity;
     pub use crate::telemetry::log_query_error;
     pub use crate::telemetry::log_query_telemetry;
+}
+
+/// Wrapper over the SQL transaction that will keep track of telemetry from the
+/// entire transaction.
+pub struct Transaction {
+    pub inner: SqlTransaction,
+}
+
+impl Transaction {
+    /// Create a new transaction for the provided connection.
+    pub async fn new(connection: &Connection) -> Result<Self> {
+        let inner = SqlTransaction::new(connection).await?;
+        Ok(Self { inner })
+    }
+
+    /// Create a new transaction for the provided connection.
+    pub fn from_sql_transaction(sql_txn: SqlTransaction) -> Self {
+        Self { inner: sql_txn }
+    }
+
+    /// Perform a commit on this transaction
+    pub async fn commit(self) -> Result<()> {
+        self.inner.commit().await
+    }
+
+    /// Perform a rollback on this transaction
+    pub async fn rollback(self) -> Result<()> {
+        self.inner.rollback().await
+    }
+}
+
+impl From<SqlTransaction> for Transaction {
+    fn from(sql_txn: SqlTransaction) -> Self {
+        Self { inner: sql_txn }
+    }
 }
 
 pub mod facebook {

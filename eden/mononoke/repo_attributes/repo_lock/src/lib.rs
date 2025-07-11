@@ -14,10 +14,10 @@ use async_trait::async_trait;
 use maplit::hashmap;
 use mononoke_types::RepositoryId;
 use sql::Connection;
-use sql::Transaction;
 use sql_construct::SqlConstruct;
 use sql_construct::SqlConstructFromMetadataDatabaseConfig;
 use sql_ext::SqlConnections;
+use sql_ext::Transaction;
 use sql_ext::mononoke_queries;
 
 const DEFAULT_DB_MSG: &str = "Repo is locked in DB";

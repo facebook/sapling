@@ -10,7 +10,7 @@ use std::collections::HashSet;
 use std::sync::Arc;
 
 use ::sql::Connection;
-use ::sql::Transaction;
+use ::sql_ext::Transaction;
 use ::sql_ext::mononoke_queries;
 use anyhow::Error;
 use async_trait::async_trait;

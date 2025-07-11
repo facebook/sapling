@@ -151,8 +151,11 @@ macro_rules! mononoke_queries {
                     let cri_str = cri.map(|cri| serde_json::to_string(&cri)).transpose()?;
                     let granularity = TelemetryGranularity::TransactionQuery;
 
-                    let (txn, (res, opt_tel)) = [<$name Impl>]::commented_query_with_transaction(
-                        transaction,
+                    let Transaction{inner: sql_txn} = transaction;
+
+
+                    let (sql_txn, (res, opt_tel)) = [<$name Impl>]::commented_query_with_transaction(
+                        sql_txn,
                         cri_str.as_deref(),
                         $( $pname, )*
                         $( $lname, )*
@@ -167,7 +170,7 @@ macro_rules! mononoke_queries {
                     log_query_telemetry(opt_tel, tel_logger, granularity, repo_id)?;
 
 
-                    Ok((txn, res))
+                    Ok((Transaction::from_sql_transaction(sql_txn), res))
                 }
 
             }
@@ -273,8 +276,10 @@ macro_rules! mononoke_queries {
 
                     let granularity = TelemetryGranularity::TransactionQuery;
 
-                    let (txn, (res, opt_tel)) = [<$name Impl>]::commented_query_with_transaction(
-                        transaction,
+                    let Transaction{inner: sql_txn} = transaction;
+
+                    let (sql_txn, (res, opt_tel)) = [<$name Impl>]::commented_query_with_transaction(
+                        sql_txn,
                         cri_str.as_deref(),
                         $( $pname, )*
                         $( $lname, )*
@@ -288,7 +293,7 @@ macro_rules! mononoke_queries {
                     log_query_telemetry(opt_tel, tel_logger, granularity, repo_id)?;
 
 
-                    Ok((txn, res))
+                    Ok((Transaction::from_sql_transaction(sql_txn), res))
                 }
 
             }
@@ -386,8 +391,10 @@ macro_rules! mononoke_queries {
 
                     let granularity = TelemetryGranularity::TransactionQuery;
 
-                    let (txn, write_res) = [<$name Impl>]::commented_query_with_transaction(
-                        transaction,
+                    let Transaction{inner: sql_txn} = transaction;
+
+                    let (sql_txn, write_res) = [<$name Impl>]::commented_query_with_transaction(
+                        sql_txn,
                         cri_str.as_deref(),
                         values
                         $( , $pname )*
@@ -402,7 +409,7 @@ macro_rules! mononoke_queries {
 
                     log_query_telemetry(opt_tel, tel_logger, granularity, repo_id)?;
 
-                    Ok((txn, write_res))
+                    Ok((Transaction::from_sql_transaction(sql_txn), write_res))
 
                 }
             }
@@ -499,8 +506,9 @@ macro_rules! mononoke_queries {
 
                     let granularity = TelemetryGranularity::TransactionQuery;
 
-                    let (txn, write_res) = [<$name Impl>]::commented_query_with_transaction(
-                        transaction,
+                    let Transaction{inner: sql_txn} = transaction;
+                    let (sql_txn, write_res) = [<$name Impl>]::commented_query_with_transaction(
+                        sql_txn,
                         cri_str.as_deref()
                         $( , $pname )*
                         $( , $lname )*
@@ -515,7 +523,7 @@ macro_rules! mononoke_queries {
 
                     log_query_telemetry(opt_tel, tel_logger, granularity, repo_id)?;
 
-                    Ok((txn, write_res))
+                    Ok((Transaction::from_sql_transaction(sql_txn), write_res))
                 }
             }
 

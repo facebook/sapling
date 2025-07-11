@@ -62,7 +62,8 @@ impl SqlBookmarksSubscription {
         let txn = conn
             .start_transaction()
             .await
-            .context("Failed to start bookmarks read transaction")?;
+            .context("Failed to start bookmarks read transaction")?
+            .into();
 
         let (txn, log_id_rows) =
             GetLargestLogId::query_with_transaction(txn, ctx.into(), &sql_bookmarks.repo_id)

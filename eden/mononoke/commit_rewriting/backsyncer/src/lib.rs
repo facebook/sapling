@@ -101,7 +101,7 @@ use slog::debug;
 use slog::error;
 use slog::info;
 use slog::warn;
-use sql::Transaction;
+use sql_ext::Transaction;
 use sql_ext::TransactionResult;
 use sql_query_config::SqlQueryConfig;
 use thiserror::Error;

@@ -48,7 +48,7 @@ async fn test_add_and_get(_fb: FacebookInit) -> Result<()> {
         ),
     ];
 
-    let txn = conn.start_transaction().await?;
+    let txn = conn.start_transaction().await?.into();
     let txn = add_pushrebase_mapping(txn, &entries).await?;
     txn.commit().await?;
 

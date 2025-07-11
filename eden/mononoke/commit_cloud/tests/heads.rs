@@ -75,7 +75,12 @@ async fn test_heads(fb: FacebookInit) -> anyhow::Result<()> {
             Sha1::from_str("3e0e761030db6e479a7fb58b12881883f9f8c63f").unwrap(),
         ),
     };
-    let mut txn = sql.connections.write_connection.start_transaction().await?;
+    let mut txn = sql
+        .connections
+        .write_connection
+        .start_transaction()
+        .await?
+        .into();
     txn = sql
         .insert(
             txn,
@@ -100,7 +105,12 @@ async fn test_heads(fb: FacebookInit) -> anyhow::Result<()> {
     let res: Vec<WorkspaceHead> = sql.get(reponame.clone(), workspace.clone()).await?;
     assert_eq!(res.len(), 2);
     let removed_commits = vec![head1.commit];
-    txn = sql.connections.write_connection.start_transaction().await?;
+    txn = sql
+        .connections
+        .write_connection
+        .start_transaction()
+        .await?
+        .into();
     txn = Delete::<WorkspaceHead>::delete(
         &sql,
         txn,
@@ -118,7 +128,12 @@ async fn test_heads(fb: FacebookInit) -> anyhow::Result<()> {
     let new_name_args = UpdateWorkspaceNameArgs {
         new_workspace: renamed_workspace.clone(),
     };
-    let txn = sql.connections.write_connection.start_transaction().await?;
+    let txn = sql
+        .connections
+        .write_connection
+        .start_transaction()
+        .await?
+        .into();
     let (txn, affected_rows) =
         Update::<WorkspaceHead>::update(&sql, txn, &ctx, cc_ctx, new_name_args).await?;
     txn.commit().await?;
