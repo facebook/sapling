@@ -21,7 +21,6 @@ use clap::Parser;
 use clap::ValueEnum;
 use clientinfo::ClientEntryPoint;
 use cloned::cloned;
-use cmdlib_logging::LoggingArgs;
 use cmdlib_logging::ScribeLoggingArgs;
 use connection_security_checker::ConnectionSecurityChecker;
 use environment::BookmarkCacheDerivedData;
@@ -122,9 +121,6 @@ struct ScsServerArgs {
     /// considerably slowing down the startup. This flag primarily exists for the purpose of local testing with --filter-repos argument
     #[clap(long, requires = "filter_repos")]
     load_all_repos_in_tier: bool,
-
-    #[clap(flatten, next_help_heading = "LOGGING OPTIONS")]
-    logging_args: LoggingArgs,
 }
 
 #[derive(ValueEnum, Clone, Copy, Debug, PartialEq, Eq)]
