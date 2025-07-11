@@ -471,6 +471,10 @@ impl HgAugmentedManifestId {
         HgNodeHash::from_thrift(thrift_hash).map(HgAugmentedManifestId)
     }
 
+    pub fn from_sha1(sha1: Sha1) -> Self {
+        HgAugmentedManifestId(HgNodeHash(sha1))
+    }
+
     pub fn as_bytes(&self) -> &[u8] {
         self.0.as_bytes()
     }

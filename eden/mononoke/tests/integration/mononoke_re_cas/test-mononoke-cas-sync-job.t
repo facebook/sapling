@@ -56,3 +56,12 @@ All trees and blobs should be present!
 Validate the same for a middle commit B
   $ mononoke_admin cas-store --repo-name repo upload --full -i $B
   [INFO] Upload completed. Upload stats: uploaded digests: 0, already present digests: 4, uploaded bytes: 0 B, the largest uploaded blob: 0 B
+
+  $ mononoke_admin derived-data --repo-name repo fetch -i $B -T hg_augmented_manifests
+  Derived: c5ae951c61da1af20ce42287cca9f1e2a10e8e16e5fe6fff96221529de1391c7 -> RootHgAugmentedManifestId(HgAugmentedManifestId(HgNodeHash(Sha1(3071e3203526cb812525ec7838669975e6113567))))
+
+  $ mononoke_admin cas-store --repo-name repo tree-info -i 3071e3203526cb812525ec7838669975e6113567 -c
+  CAS digest: 8f8e91f9bca60b3b3bf51c6b8cff9042b7f28fc495e3f97d6abc2fca2244c386:553
+  A -> File CAS digest: 5ad3ba58a716e5fc04296ac9af7a1420f726b401fdf16d270beb5b6b30bc0cda:1 HgId: 005d992c5dcf32993668f7cede29d296c494a5d9
+  B -> File CAS digest: 5667f2421ac250c4bb9af657b5ead3cdbd940bfbc350b2bfee47454643832b48:1 HgId: 35e7525ce3a48913275d7061dd9a867ffef1e34d
+  foo -> File CAS digest: c0dc9fb94012c02a11f30c7f2533d6e8ab55a3b42726c00c02cd4fa1c1eb920c:8 HgId: e69018796d5c4e6314c9ee3c7131abc3349b5dba

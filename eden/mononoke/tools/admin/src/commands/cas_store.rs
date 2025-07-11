@@ -5,7 +5,7 @@
  * GNU General Public License version 2.
  */
 
-mod info;
+mod tree_info;
 mod upload;
 
 use anyhow::Result;
@@ -16,13 +16,13 @@ use bonsai_svnrev_mapping::BonsaiSvnrevMapping;
 use bookmarks::Bookmarks;
 use clap::Parser;
 use clap::Subcommand;
-use info::CasStoreInfoArgs;
 use metaconfig_types::RepoConfig;
 use mononoke_app::MononokeApp;
 use mononoke_app::args::RepoArgs;
 use repo_blobstore::RepoBlobstore;
 use repo_derived_data::RepoDerivedData;
 use repo_identity::RepoIdentity;
+use tree_info::CasStoreTreeInfoArgs;
 use upload::CasStoreUploadArgs;
 
 /// Examine and maintain the contents of the cas store.
@@ -70,8 +70,8 @@ pub struct Repo {
 
 #[derive(Subcommand)]
 pub enum CasStoreSubcommand {
-    /// Describe data associated with a digest within the cas store.
-    Info(CasStoreInfoArgs),
+    /// Show information related to CAS about a tree using its hgid.
+    TreeInfo(CasStoreTreeInfoArgs),
     /// Upload a specific (augmented) tree, file or data for a given commit recursively into the cas store.
     Upload(CasStoreUploadArgs),
 }
@@ -84,6 +84,8 @@ pub async fn run(app: MononokeApp, args: CommandArgs) -> Result<()> {
         CasStoreSubcommand::Upload(upload_args) => {
             upload::cas_store_upload(&ctx, &repo, upload_args).await
         }
-        CasStoreSubcommand::Info(info_args) => info::cas_store_info(&ctx, &repo, info_args).await,
+        CasStoreSubcommand::TreeInfo(tree_info_args) => {
+            tree_info::tree_info(&ctx, &repo, tree_info_args).await
+        }
     }
 }
