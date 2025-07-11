@@ -29,7 +29,7 @@
 
 # Import it into Mononoke
   $ cd "$TESTTMP"
-  $ with_stripped_logs gitimport "$GIT_REPO" --derive-hg full-repo
+  $ gitimport "$GIT_REPO" --derive-hg full-repo
   [INFO] using repo "repo" repoid RepositoryId(0)
   [INFO] GitRepo:$TESTTMP/repo-git commit 1 of 1 - Oid:200c0e83 => Bid:d37ab145
   [INFO] Hg: Sha1(200c0e8395a7222c38cf9c3efdf734d2507fda90): HgManifestId(HgNodeHash(Sha1(009adbc8d457927d2e1883c08b0692bc45089839)))

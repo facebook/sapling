@@ -62,7 +62,7 @@
 
 # Import it into Mononoke
   $ cd "$TESTTMP"
-  $ with_stripped_logs gitimport "$GIT_REPO" --concurrency 100 --generate-bookmarks --allow-content-refs full-repo
+  $ gitimport "$GIT_REPO" --concurrency 100 --generate-bookmarks --allow-content-refs full-repo
   [INFO] using repo "repo" repoid RepositoryId(0)
   [INFO] GitRepo:$TESTTMP/repo-git commit 1 of 1 - Oid:8ce3eae4 => Bid:032cd4dc
   [INFO] Ref: "refs/heads/branch_to_blob": None

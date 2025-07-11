@@ -1442,8 +1442,6 @@ function gitexport() {
 }
 
 function gitimport() {
-  log="$TESTTMP/gitimport.out"
-
   local git_cmd
   # git.real not present in OSS but mononoke defaults to it, so detect right command
   if type --path git.real > /dev/null; then

@@ -41,7 +41,7 @@
 
 # Import it into Mononoke
   $ cd "$TESTTMP"
-  $ with_stripped_logs gitimport "$GIT_REPO" --concurrency 100 --derive-hg full-repo
+  $ gitimport "$GIT_REPO" --concurrency 100 --derive-hg full-repo
   [INFO] using repo "repo" repoid RepositoryId(0)
   [INFO] GitRepo:$TESTTMP/repo-git commit 1 of 1 - Oid:8ce3eae4 => Bid:032cd4dc
   [INFO] Hg: Sha1(8ce3eae44760b500bf3f2c3922a95dcd3c908e9e): HgManifestId(HgNodeHash(Sha1(009adbc8d457927d2e1883c08b0692bc45089839)))
@@ -104,7 +104,7 @@
 
 # Test missing-for-commit flag (against partially imported repo history)
   $ cd "$TESTTMP"
-  $ with_stripped_logs gitimport "$GIT_REPO" missing-for-commit e8615d6f149b876be0a2f30a1c5bf0c42bf8e136
+  $ gitimport "$GIT_REPO" missing-for-commit e8615d6f149b876be0a2f30a1c5bf0c42bf8e136
   [INFO] using repo "repo" repoid RepositoryId(0)
   [INFO] GitRepo:$TESTTMP/repo-git 1 of 2 commit(s) already exist
   [INFO] GitRepo:$TESTTMP/repo-git commit 2 of 2 - Oid:e8615d6f => Bid:da93dc81
@@ -131,12 +131,12 @@
   e8615d6f149b876be0a2f30a1c5bf0c42bf8e136
 
 # Test missing-for-commit flag (agains fully imported repo history)
-  $ with_stripped_logs gitimport "$GIT_REPO" --suppress-ref-mapping missing-for-commit e8615d6f149b876be0a2f30a1c5bf0c42bf8e136
+  $ gitimport "$GIT_REPO" --suppress-ref-mapping missing-for-commit e8615d6f149b876be0a2f30a1c5bf0c42bf8e136
   [INFO] using repo "repo" repoid RepositoryId(0)
   [INFO] Nothing to import for repo $TESTTMP/repo-git.
 
 # Also check that a readonly import works
-  $ with_stripped_logs gitimport "$GIT_REPO" --with-readonly-storage=true --derive-hg --skip-head-symref full-repo
+  $ gitimport "$GIT_REPO" --with-readonly-storage=true --derive-hg --skip-head-symref full-repo
   [INFO] using repo "repo" repoid RepositoryId(0)
   [INFO] GitRepo:$TESTTMP/repo-git 2 of 2 commit(s) already exist
   [INFO] Hg: Sha1(8ce3eae44760b500bf3f2c3922a95dcd3c908e9e): HgManifestId(HgNodeHash(Sha1(009adbc8d457927d2e1883c08b0692bc45089839)))
@@ -154,7 +154,7 @@
 
 # Check its ref can be parsed
   $ cd "$TESTTMP"
-  $ with_stripped_logs gitimport "$GIT_REPO" --generate-bookmarks full-repo
+  $ gitimport "$GIT_REPO" --generate-bookmarks full-repo
   [INFO] using repo "repo" repoid RepositoryId(0)
   [INFO] GitRepo:$TESTTMP/repo-git 2 of 2 commit(s) already exist
   [INFO] Ref: "refs/heads/master_bookmark": Some(ChangesetId(Blake2(da93dc81badd8d407db0f3219ec0ec78f1ef750ebfa95735bb483310371af80c)))
@@ -252,7 +252,7 @@
   $ git tag -a -m "changing it again" changing_tag $tagged_commit
 
 # Importing a second time should still work
-  $ with_stripped_logs gitimport "$GIT_REPO" --generate-bookmarks full-repo
+  $ gitimport "$GIT_REPO" --generate-bookmarks full-repo
   [INFO] using repo "repo" repoid RepositoryId(0)
   [INFO] GitRepo:$TESTTMP/repo-git 2 of 2 commit(s) already exist
   [INFO] Ref: "refs/heads/master_bookmark": Some(ChangesetId(Blake2(da93dc81badd8d407db0f3219ec0ec78f1ef750ebfa95735bb483310371af80c)))

@@ -16,7 +16,7 @@ But it's available on the separate lfs server
   laaaaaaaaaarge file
 
 Git Import
-  $ quiet_grep Uploading -- with_stripped_logs gitimport "$GIT_REPO_SERVER" --generate-bookmarks --concurrency 100 --lfs-server "$LEGACY_LFS_URL/download_sha256" full-repo | sort
+  $ quiet_grep Uploading -- gitimport "$GIT_REPO_SERVER" --generate-bookmarks --concurrency 100 --lfs-server "$LEGACY_LFS_URL/download_sha256" full-repo | sort
   [INFO] Uploading LFS large_file sha256:6c54a4de size:20
   [INFO] Uploading LFS large_file_non_canonical_pointer sha256:6c54a4de size:20
 We store full file contents for non-LFS file

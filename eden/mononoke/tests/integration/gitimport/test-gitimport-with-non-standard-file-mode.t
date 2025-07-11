@@ -52,7 +52,7 @@
   $ git rev-list --objects --all | git cat-file --batch-check='%(objectname) %(objecttype) %(rest)' | sort > $TESTTMP/object_list
 
 # Import it into Mononoke
-  $ with_stripped_logs gitimport "$GIT_REPO_ORIGIN" --derive-hg --generate-bookmarks full-repo | head -6
+  $ gitimport "$GIT_REPO_ORIGIN" --derive-hg --generate-bookmarks full-repo |& head -6
   [INFO] using repo "repo" repoid RepositoryId(0)
   [INFO] GitRepo:$TESTTMP/origin/repo-git commit 4 of 4 - Oid:6887491e => Bid:788ba976
   [INFO] Hg: Sha1(8ce3eae44760b500bf3f2c3922a95dcd3c908e9e): HgManifestId(HgNodeHash(Sha1(009adbc8d457927d2e1883c08b0692bc45089839)))

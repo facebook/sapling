@@ -13,7 +13,7 @@ Use common repo setup
   $ test_repos_for_git_lfs_import
 
 Git Import
-  $ with_stripped_logs gitimport "$GIT_REPO_SERVER" --generate-bookmarks --concurrency 100 --derive-hg full-repo
+  $ gitimport "$GIT_REPO_SERVER" --generate-bookmarks --concurrency 100 --derive-hg full-repo
   [INFO] using repo "repo" repoid RepositoryId(0)
   [INFO] GitRepo:$TESTTMP/repo-git-server commit 3 of 3 - Oid:c13a0ad2 => Bid:63ca8c6f
   [INFO] Hg: Sha1(cd1f06e78e52e64d693fe02d19cf3a427ab1c7f4): HgManifestId(HgNodeHash(Sha1(0ed5ff2a892144296f5abaca61b5759c7f69b551)))

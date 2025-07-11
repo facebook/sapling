@@ -49,7 +49,7 @@
 
 # Import it into Mononoke. Note: cleanup-mononoke-bookmarks does nothing here, but we want to show that it doesn't.
   $ cd "$TESTTMP"
-  $ with_stripped_logs gitimport "$GIT_REPO" --concurrency 100 --generate-bookmarks --cleanup-mononoke-bookmarks full-repo
+  $ gitimport "$GIT_REPO" --concurrency 100 --generate-bookmarks --cleanup-mononoke-bookmarks full-repo
   [INFO] using repo "repo" repoid RepositoryId(0)
   [INFO] GitRepo:$TESTTMP/repo-git commit 1 of 1 - Oid:8ce3eae4 => Bid:032cd4dc
   [INFO] Ref: "refs/heads/another_branch": Some(ChangesetId(Blake2(032cd4dce0406f1c1dd1362b6c3c9f9bdfa82f2fc5615e237a890be4fe08b044)))
@@ -93,7 +93,7 @@
 
 # Re-import
   $ cd "$TESTTMP"
-  $ with_stripped_logs gitimport "$GIT_REPO" --generate-bookmarks --cleanup-mononoke-bookmarks full-repo
+  $ gitimport "$GIT_REPO" --generate-bookmarks --cleanup-mononoke-bookmarks full-repo
   [INFO] using repo "repo" repoid RepositoryId(0)
   [INFO] GitRepo:$TESTTMP/repo-git 1 of 1 commit(s) already exist
   [INFO] Ref: "refs/heads/master_bookmark": Some(ChangesetId(Blake2(032cd4dce0406f1c1dd1362b6c3c9f9bdfa82f2fc5615e237a890be4fe08b044)))

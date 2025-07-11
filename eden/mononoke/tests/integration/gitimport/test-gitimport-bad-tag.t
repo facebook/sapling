@@ -64,7 +64,7 @@
   $ echo 1b2df0f47c7d7360831f174fd9a6c31580ee9b53 > .git/refs/tags/incorrect_tag
 
 # Import it into Mononoke
-  $ with_stripped_logs gitimport "$GIT_REPO" --generate-bookmarks full-repo
+  $ gitimport "$GIT_REPO" --generate-bookmarks full-repo
   [INFO] using repo "repo" repoid RepositoryId(0)
   [INFO] GitRepo:$TESTTMP/repo-git commit 1 of 1 - Oid:15cc4e95 => Bid:ce423062
   [INFO] Ref: "refs/heads/master_bookmark": Some(ChangesetId(Blake2(ce423062b4eee7935dc1bf77937f8393e1aa97478077e1cce2745c8cf1b9e8c6)))
