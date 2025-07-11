@@ -19,7 +19,7 @@ rust_library(
         (
             "macos",
             [
-                "//common/rust/shed/fbinit:fbinit",
+                "//remote_execution/cas/client_lib/ligen:rich_cas_client_wrapper-rs_bindings",
             ],
         ),
         (
