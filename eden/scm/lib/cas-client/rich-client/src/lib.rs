@@ -18,22 +18,8 @@ use cas_client::CasFetchedStats;
 use cas_client::CasSuccessTracker;
 use cas_client::CasSuccessTrackerConfig;
 use cas_client::FetchContext;
-#[cfg(target_os = "windows")]
-use cas_client_lib::CASClientBuilder;
-#[cfg(target_os = "windows")]
-use cas_client_lib::CASClientBundle;
 use cas_client_lib::CASDaemonClientCfg;
-#[cfg(target_os = "windows")]
-use cas_client_lib::ClientBuilderCommonMethods;
-#[cfg(target_os = "windows")]
-use cas_client_lib::DownloadDigestsIntoCacheRequest;
-#[cfg(target_os = "windows")]
-use cas_client_lib::DownloadRequest;
-#[cfg(target_os = "windows")]
-use cas_client_lib::DownloadStreamRequest;
 use cas_client_lib::EmbeddedCASDaemonClientCfg;
-#[cfg(target_os = "windows")]
-use cas_client_lib::REClientError;
 use cas_client_lib::RESessionID;
 use cas_client_lib::RemoteCASdAddress;
 use cas_client_lib::RemoteCacheConfig;
@@ -42,8 +28,6 @@ use cas_client_lib::RemoteExecutionMetadata;
 use cas_client_lib::RemoteFetchPolicy;
 use cas_client_lib::TCode;
 use cas_client_lib::THashAlgo;
-#[cfg(target_os = "windows")]
-use cas_client_lib::UploadRequest;
 use cas_client_lib::create_default_config;
 use configmodel::Config;
 use configmodel::ConfigExt;
@@ -59,9 +43,7 @@ use re_cas_common::from_re_digest;
 use re_cas_common::parse_stats;
 use re_cas_common::split_up_to_max_bytes;
 use re_cas_common::to_re_digest;
-#[cfg(any(target_os = "linux", target_os = "macos"))]
 use rich_cas_client_wrapper::CASClientWrapper as CASClientBundle;
-#[cfg(any(target_os = "linux", target_os = "macos"))]
 use rich_cas_client_wrapper::CASSharedCacheWrapper;
 use types::cas::CasPrefetchOutcome;
 
@@ -80,7 +62,6 @@ pub enum CasCacheModeLocalFetch {
 
 pub struct RichCasClient {
     client: OnceCell<CASClientBundle>,
-    #[cfg(any(target_os = "linux", target_os = "macos"))]
     shared_cache: OnceCell<CASSharedCacheWrapper>,
     cas_success_tracker: CasSuccessTracker,
     /// Verbose logging will disable quiet mode in REClient.
@@ -196,7 +177,6 @@ impl RichCasClient {
 
         Ok(Some(Self {
             client: Default::default(),
-            #[cfg(any(target_os = "linux", target_os = "macos"))]
             shared_cache: Default::default(),
             verbose: config.get_or_default("cas", "verbose")?,
             metadata: RemoteExecutionMetadata {
@@ -291,14 +271,7 @@ impl RichCasClient {
 
         re_config.cas_client_config = CASDaemonClientCfg::embedded_config(embedded_config);
 
-        #[cfg(any(target_os = "linux", target_os = "macos"))]
         let client = CASClientBundle::new(self.session_id.clone(), CAS_SESSION_TTL, re_config)?;
-        #[cfg(target_os = "windows")]
-        let client = CASClientBuilder::new(fbinit::expect_init())
-            .with_config(re_config)
-            .with_session_ttl(CAS_SESSION_TTL)
-            .build()?;
-
         Ok(client)
     }
 
@@ -306,7 +279,6 @@ impl RichCasClient {
         self.client.get_or_try_init(|| self.build())
     }
 
-    #[cfg(any(target_os = "linux", target_os = "macos"))]
     fn shared_cache_wrapper(&self) -> Result<&CASSharedCacheWrapper> {
         self.shared_cache
             .get_or_try_init(|| Ok(self.client()?.get_shared_cache_wrapper()?))
@@ -322,64 +294,34 @@ impl CasClient for RichCasClient {
     ) -> Result<(CasFetchedStats, Option<Blob>)> {
         tracing::trace!(target: "cas_client", "RichCasClient fetching {:?} digest from local cache", digest);
 
-        #[cfg(any(target_os = "linux", target_os = "macos"))]
-        {
-            let (stats, data) = self
-                .shared_cache_wrapper()?
-                .lookup_cache(to_re_digest(digest), THashAlgo::KEYED_BLAKE3)?
-                .unpack();
+        let (stats, data) = self
+            .shared_cache_wrapper()?
+            .lookup_cache(to_re_digest(digest), THashAlgo::KEYED_BLAKE3)?
+            .unpack();
 
-            let parsed_stats = parse_stats(std::iter::empty(), stats);
+        let parsed_stats = parse_stats(std::iter::empty(), stats);
 
-            if data.is_null() {
-                Ok((parsed_stats, None))
-            } else {
-                Ok((parsed_stats, Some(Blob::IOBuf(data.into()))))
-            }
+        if data.is_null() {
+            Ok((parsed_stats, None))
+        } else {
+            Ok((parsed_stats, Some(Blob::IOBuf(data.into()))))
         }
-
-        #[cfg(target_os = "windows")]
-        Ok((CasFetchedStats::default(), None))
     }
 
     /// Upload blobs to CAS.
     async fn upload(&self, blobs: Vec<Blob>) -> Result<Vec<CasDigest>> {
         tracing::debug!(target: "cas_client", "RichCasClient uploading {} blobs", blobs.len());
 
-        #[cfg(any(target_os = "linux", target_os = "macos"))]
-        {
-            self.client()?
-                .co_upload_inlined_blobs(
-                    self.metadata.clone(),
-                    blobs.into_iter().map(|blob| blob.into_vec()).collect(),
-                )
-                .await??
-                .digests
-                .into_iter()
-                .map(|digest_with_status| from_re_digest(&digest_with_status.digest))
-                .collect::<Result<Vec<_>>>()
-        }
-
-        #[cfg(target_os = "windows")]
-        {
-            self.client()?
-                .upload(
-                    self.metadata.clone(),
-                    UploadRequest {
-                        inlined_blobs: Some(
-                            blobs.into_iter().map(|blob| blob.into_vec()).collect(),
-                        ),
-                        upload_only_missing: true,
-                        ..Default::default()
-                    },
-                )
-                .await?
-                .inlined_blobs_status
-                .unwrap_or_default()
-                .into_iter()
-                .map(|digest_with_status| from_re_digest(&digest_with_status.digest))
-                .collect::<Result<Vec<_>>>()
-        }
+        self.client()?
+            .co_upload_inlined_blobs(
+                self.metadata.clone(),
+                blobs.into_iter().map(|blob| blob.into_vec()).collect(),
+            )
+            .await??
+            .digests
+            .into_iter()
+            .map(|digest_with_status| from_re_digest(&digest_with_status.digest))
+            .collect::<Result<Vec<_>>>()
     }
 
     /// Fetch blobs from CAS.
@@ -404,34 +346,9 @@ impl CasClient for RichCasClient {
                     // Unfortunately, the streaming API does not return the storage stats, so it won't be added to the stats.
                     let stats = CasFetchedStats::default();
 
-                    #[cfg(any(target_os = "linux", target_os = "macos"))]
                     let mut response_stream = self.client()?
                         .download_stream(self.metadata.clone(), to_re_digest(digest))
                         .await;
-
-                    #[cfg(target_os = "windows")]
-                    let mut response_stream = {
-                        let request =  DownloadStreamRequest {
-                            digest: to_re_digest(digest),
-                            ..Default::default()
-                        };
-                        let response = self.client()?
-                            .download_stream(self.metadata.clone(), request)
-                            .await;
-
-                        if let Err(ref err) = response {
-                            if let Some(inner) = err.downcast_ref::<REClientError>() {
-                                if inner.code == TCode::NOT_FOUND {
-                                    // Streaming download failed because the digest was not found, record a success.
-                                    self.cas_success_tracker.record_success();
-                                    return Ok((stats, vec![(digest.to_owned(), Ok(None))]));
-                                }
-                                // Unfortunately, the streaming download failed, record a failure.
-                                self.cas_success_tracker.record_failure()?;
-                            }
-                        }
-                        response
-                    }?;
 
                     let mut bytes: Vec<u8> = Vec::with_capacity(digest.size as usize);
                     while let Some(chunk) = response_stream.next().await {
@@ -449,7 +366,6 @@ impl CasClient for RichCasClient {
 
                 tracing::debug!(target: "cas_client", "RichCasClient fetching {} {}(s)", digests.len(), log_name);
 
-                #[cfg(any(target_os = "linux", target_os = "macos"))]
                 let (data, stats) = {
                     let response = self.client()?
                         .co_low_level_download_inline(self.metadata.clone(), digests.iter().map(to_re_digest).collect()).await;
@@ -470,37 +386,14 @@ impl CasClient for RichCasClient {
                     (response.unpack_downloads(),  parse_stats(storage_stats.per_backend_stats.into_iter(), local_cache_stats))
                 };
 
-                #[cfg(target_os = "windows")]
-                let (data, stats) = {
-                    let request = DownloadRequest {
-                        inlined_digests: Some(digests.iter().map(to_re_digest).collect()),
-                        throw_on_error: false,
-                        ..Default::default()
-                    };
-                    let response = self.client()?
-                    .download(self.metadata.clone(), request)
-                    .await
-                    .map_err(|err| {
-                        // Unfortunately, the download failed entirely, record a failure.
-                        let _failure_error = self.cas_success_tracker.record_failure();
-                        err
-                    })?;
-                    let local_cache_stats = response.local_cache_stats;
-
-                    (response.inlined_blobs.unwrap_or_default(), parse_stats(response.storage_stats.per_backend_stats.into_iter(), local_cache_stats))
-                };
-
 
                 let data = data
                     .into_iter()
                     .map(|blob| {
-                        #[cfg(any(target_os = "linux", target_os = "macos"))]
                         let (digest, status, data) = {
                             let (digest, status, data) = blob.unpack();
                             (digest, status, Blob::IOBuf(data.into()))
                         };
-                        #[cfg(target_os = "windows")]
-                        let (digest, status, data) = (blob.digest, blob.status, Blob::Bytes(blob.blob.into()));
 
                         let digest = from_re_digest(&digest)?;
                         match status.code {
@@ -551,7 +444,6 @@ impl CasClient for RichCasClient {
 
             tracing::debug!(target: "cas_client", "RichCasClient prefetching {} {}(s)", digests.len(), log_name);
 
-            #[cfg(any(target_os = "linux", target_os = "macos"))]
             let response = self.client()?
                 .co_download_digests_into_cache(self.metadata.clone(), digests.iter().map(to_re_digest).collect())
                 .await
@@ -559,23 +451,6 @@ impl CasClient for RichCasClient {
                     // Unfortunately, the "download_digests_into_cache" failed entirely, record a failure.
                     let _failure_error = self.cas_success_tracker.record_failure();
                 })?;
-
-            #[cfg(target_os = "windows")]
-            let response = {
-                let request = DownloadDigestsIntoCacheRequest {
-                    digests: digests.iter().map(to_re_digest).collect(),
-                    throw_on_error: false,
-                    ..Default::default()
-                };
-                self.client()?
-                .download_digests_into_cache(self.metadata.clone(), request)
-                .await
-                .map_err(|err| {
-                    // Unfortunately, the "download_digests_into_cache" failed entirely, record a failure.
-                    let _failure_error = self.cas_success_tracker.record_failure();
-                    err
-                })
-            }?;
 
             let local_cache_stats = response.local_cache_stats;
 

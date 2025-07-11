@@ -26,6 +26,3 @@ sapling-factory = { version = "0.1.0", path = "../../util/factory" }
 sapling-re-cas-common = { version = "0.1.0", path = "../re-cas-common" }
 sapling-types = { version = "0.1.0", path = "../../types" }
 tracing = { version = "0.1.41", features = ["attributes", "valuable"] }
-
-[target.'cfg(target_os = "windows")'.dependencies]
-fbinit = { version = "0.2.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
