@@ -35,10 +35,15 @@ Multiple changesets
   $ mononoke_admin derived-data -R repo exists -T unodes -i aa53d24251ff3f54b1b2c29ae02826701b2abeb0079f1bb13b8434b54cd87675 -i 5a25c0a76794bbcc5180da0949a652750101597f0fbade488e611d5c0917e7be
   Derived: aa53d24251ff3f54b1b2c29ae02826701b2abeb0079f1bb13b8434b54cd87675
   Not Derived: 5a25c0a76794bbcc5180da0949a652750101597f0fbade488e611d5c0917e7be
+  $ mononoke_admin derived-data -R repo fetch -T unodes -i aa53d24251ff3f54b1b2c29ae02826701b2abeb0079f1bb13b8434b54cd87675 -i 5a25c0a76794bbcc5180da0949a652750101597f0fbade488e611d5c0917e7be
+  Derived: aa53d24251ff3f54b1b2c29ae02826701b2abeb0079f1bb13b8434b54cd87675 -> RootUnodeManifestId(ManifestUnodeId(Blake2(53a2097eea133df6d1d44507695b148b785325a505129d2fbce1ccecdda9b0c2)))
+  Not Derived: 5a25c0a76794bbcc5180da0949a652750101597f0fbade488e611d5c0917e7be
 Bookmark
   $ mononoke_admin derived-data -R repo exists -T unodes -B main
   Derived: e32a1e342cdb1e38e88466b4c1a01ae9f410024017aa21dc0a1c5da6b3963bf2
-
+  $ mononoke_admin derived-data -R repo fetch -T unodes -B main
+  Derived: e32a1e342cdb1e38e88466b4c1a01ae9f410024017aa21dc0a1c5da6b3963bf2 -> RootUnodeManifestId(ManifestUnodeId(Blake2(a6ad350bbe00558e673cd0b1bc6121e78f65f8d86921ec8215a93aaf57c9d2b4)))
+ 
 derived-data count-underived:
 
 Simple usage

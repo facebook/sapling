@@ -9,6 +9,7 @@ mod count_underived;
 mod derive;
 mod derive_slice;
 mod exists;
+mod fetch;
 mod list_manifest;
 mod slice;
 mod verify_manifests;
@@ -44,6 +45,8 @@ use self::derive_slice::DeriveSliceArgs;
 use self::derive_slice::derive_slice;
 use self::exists::ExistsArgs;
 use self::exists::exists;
+use self::fetch::FetchArgs;
+use self::fetch::fetch;
 use self::list_manifest::ListManifestArgs;
 use self::list_manifest::list_manifest;
 use self::slice::SliceArgs;
@@ -105,6 +108,8 @@ enum DerivedDataSubcommand {
     DeriveSlice(DeriveSliceArgs),
     /// Check if derived data has been generated
     Exists(ExistsArgs),
+    /// Fetch previously derived data for the given commits
+    Fetch(FetchArgs),
     /// List the contents of a manifest at a given path
     ListManifest(ListManifestArgs),
     /// Slice underived ancestors of given commits
@@ -118,6 +123,7 @@ pub async fn run(app: MononokeApp, args: CommandArgs) -> Result<()> {
 
     let repo: Repo = match &args.subcommand {
         DerivedDataSubcommand::Exists(_)
+        | DerivedDataSubcommand::Fetch(_)
         | DerivedDataSubcommand::CountUnderived(_)
         | DerivedDataSubcommand::VerifyManifests(_)
         | DerivedDataSubcommand::ListManifest(_)
@@ -142,6 +148,7 @@ pub async fn run(app: MononokeApp, args: CommandArgs) -> Result<()> {
 
     match args.subcommand {
         DerivedDataSubcommand::Exists(args) => exists(&ctx, &repo, manager, args).await?,
+        DerivedDataSubcommand::Fetch(args) => fetch(&ctx, &repo, manager, args).await?,
         DerivedDataSubcommand::CountUnderived(args) => {
             count_underived(&ctx, &repo, manager, args).await?
         }
