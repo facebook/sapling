@@ -61,7 +61,7 @@
 
 # Import it into Mononoke
   $ cd "$TESTTMP"
-  $ with_stripped_logs gitimport "$GIT_REPO" --generate-bookmarks full-repo
+  $ gitimport "$GIT_REPO" --generate-bookmarks full-repo
   [INFO] using repo "repo" repoid RepositoryId(0)
   [INFO] GitRepo:$TESTTMP/repo-git commit 5 of 5 - Oid:b83b948f => Bid:cd646b30
   [INFO] Ref: "refs/heads/branch1": Some(ChangesetId(Blake2(7db05defca4d86fbafe97460d971c74fcb571da08f921252990831d86816ab5f)))

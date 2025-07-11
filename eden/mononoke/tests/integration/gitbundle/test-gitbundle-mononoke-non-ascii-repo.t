@@ -37,7 +37,7 @@
 
 # Import it into Mononoke
   $ cd "$TESTTMP"
-  $ with_stripped_logs gitimport "$GIT_REPO" --derive-hg --generate-bookmarks full-repo
+  $ gitimport "$GIT_REPO" --derive-hg --generate-bookmarks full-repo
   [INFO] using repo "repo" repoid RepositoryId(0)
   [INFO] GitRepo:$TESTTMP/repo-git commit 2 of 2 - Oid:d46416c1 => Bid:fa44539f
   [INFO] Hg: Sha1(65d52395d5907d3d7db131ac3a8d9e9e2a564009): HgManifestId(HgNodeHash(Sha1(6f475e77c1b34e29046bb4d7bbf8d181bb1db1a8)))

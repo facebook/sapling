@@ -58,7 +58,7 @@ Disable Mercurial types as they do not support git submodules
 
 # Import it into Mononoke
   $ cd "$TESTTMP"
-  $ with_stripped_logs gitimport "$GIT_REPO" --generate-bookmarks full-repo
+  $ gitimport "$GIT_REPO" --generate-bookmarks full-repo
   [INFO] using repo "repo" repoid RepositoryId(0)
   [INFO] GitRepo:$TESTTMP/repo-git commit 3 of 3 - Oid:* => Bid:* (glob)
   [INFO] Ref: "refs/heads/master_bookmark": Some(ChangesetId(Blake2(*))) (glob)

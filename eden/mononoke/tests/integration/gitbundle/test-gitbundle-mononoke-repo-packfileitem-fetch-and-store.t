@@ -77,7 +77,7 @@
 
 # Import it into Mononoke
   $ cd "$TESTTMP"
-  $ with_stripped_logs gitimport "$GIT_REPO" --generate-bookmarks full-repo
+  $ gitimport "$GIT_REPO" --generate-bookmarks full-repo
   [INFO] using repo "repo" repoid RepositoryId(0)
   [INFO] GitRepo:$TESTTMP/repo-git commit 7 of 7 - Oid:e460783b => Bid:73a90516
   [INFO] Ref: "refs/heads/dev_branch": Some(ChangesetId(Blake2(a2cfb9ade953e1c8f39e4f6d6eca07eb7bf628f25862e13a0c62c6620944e8fd)))
