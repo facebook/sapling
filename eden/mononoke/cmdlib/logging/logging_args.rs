@@ -36,6 +36,7 @@ use slog_glog_fmt::kv_defaults::FacebookKV;
 use slog_term::TermDecorator;
 use tracing::Event;
 use tracing::Subscriber;
+use tracing_glog::FormatLevelChars;
 use tracing_glog::Glog;
 use tracing_glog::GlogFields;
 use tracing_subscriber::EnvFilter;
@@ -122,6 +123,14 @@ pub enum PanicFate {
     Exit,
     Abort,
 }
+
+// Override trace and debug levels use to use `V` as this is what
+// is expected by the log parser.  See: https://fburl.com/code/qeburjh0
+const GLOG_FORMAT_LEVEL_CHARS: FormatLevelChars = FormatLevelChars {
+    trace: "V",
+    debug: "V",
+    ..FormatLevelChars::const_default()
+};
 
 impl LoggingArgs {
     fn setup_panic_handler(&self) {
@@ -226,6 +235,7 @@ impl LoggingArgs {
         } else {
             let event_format = Glog::default()
                 .with_timer(tracing_glog::LocalTime::default())
+                .with_format_level_chars(&GLOG_FORMAT_LEVEL_CHARS)
                 .with_span_names(false)
                 .with_target(true);
             let log_layer = tracing_subscriber::fmt::layer()
