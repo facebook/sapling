@@ -39,7 +39,7 @@ Run the x-repo with submodules setup
   heads/master_bookmark
 
 
-  $ QUIET_LOGGING_LOG_FILE="$TESTTMP/xrepo_sync_last_logs.out" with_stripped_logs wait_for_xrepo_sync 2
+  $ QUIET_LOGGING_LOG_FILE="$TESTTMP/xrepo_sync_last_logs.out" wait_for_xrepo_sync 2
 
   $ cd "$TESTTMP/$LARGE_REPO_NAME"
   $ wait_for_bookmark_move_away_edenapi large_repo master_bookmark $(hg whereami)
@@ -169,10 +169,10 @@ TODO(T174902563): Fix deletion of submodules in EXPAND submodule action.
 
 -- The check-push-redirection-prereqs should behave the same both ways but let's verify it (we had bugs where it didn't)
 -- (those outputs are still not correct but that's expected)
-  $ quiet_grep "all is well" -- with_stripped_logs mononoke_admin megarepo check-prereqs --source-repo-id $SUBMODULE_REPO_ID --target-repo-id $LARGE_REPO_ID --source-changeset bm=heads/master_bookmark --target-changeset bm=master_bookmark --version "$LATEST_CONFIG_VERSION_NAME" | strip_glog | tee $TESTTMP/push_redir_prereqs_small_large
+  $ quiet_grep "all is well" -- mononoke_admin megarepo check-prereqs --source-repo-id $SUBMODULE_REPO_ID --target-repo-id $LARGE_REPO_ID --source-changeset bm=heads/master_bookmark --target-changeset bm=master_bookmark --version "$LATEST_CONFIG_VERSION_NAME" | strip_glog | tee $TESTTMP/push_redir_prereqs_small_large
   [INFO] all is well!
 
-  $ quiet_grep "all is well" -- with_stripped_logs mononoke_admin megarepo check-prereqs --source-repo-id $LARGE_REPO_ID --target-repo-id $SUBMODULE_REPO_ID --source-changeset bm=master_bookmark --target-changeset bm=heads/master_bookmark --version "$LATEST_CONFIG_VERSION_NAME" | strip_glog | tee $TESTTMP/push_redir_prereqs_large_small
+  $ quiet_grep "all is well" -- mononoke_admin megarepo check-prereqs --source-repo-id $LARGE_REPO_ID --target-repo-id $SUBMODULE_REPO_ID --source-changeset bm=master_bookmark --target-changeset bm=heads/master_bookmark --version "$LATEST_CONFIG_VERSION_NAME" | strip_glog | tee $TESTTMP/push_redir_prereqs_large_small
   [INFO] all is well!
   $ diff -wbBdu $TESTTMP/push_redir_prereqs_small_large $TESTTMP/push_redir_prereqs_large_small
 
@@ -199,7 +199,7 @@ TODO(T174902563): Fix deletion of submodules in EXPAND submodule action.
   >   local hg_hash=$1; shift;
   >   
   >   printf "Check mapping in database with Mononoke admin\n"
-  >   with_stripped_logs mononoke_admin \
+  >   mononoke_admin \
   >     cross-repo --source-repo-id $LARGE_REPO_ID --target-repo-id $SUBMODULE_REPO_ID map -i $hg_hash | rg -v "using repo"
   >   
   >   printf "\n\nCall hg committranslateids\n" 
