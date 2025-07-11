@@ -5,6 +5,8 @@
  * GNU General Public License version 2.
  */
 
+use std::num::NonZeroU64;
+
 use anyhow::Error;
 use anyhow::Result;
 use anyhow::anyhow;
@@ -182,6 +184,18 @@ fn setup_scuba_sample(
     scuba.add_common_server_data();
 
     scuba.add("granularity", format!("{:?}", granularity));
+
+    let jk_sample_rate =
+        justknobs::get_as::<u64>("scm/mononoke:sql_telemetry_sample_rate", None).unwrap_or(10);
+
+    match NonZeroU64::new(jk_sample_rate).ok_or(anyhow!("Sample rate must be a positive number")) {
+        Ok(sample_rate) => {
+            scuba.sampled(sample_rate);
+        }
+        Err(e) => {
+            tracing::error!("Failed to set Scuba sample rate from JustKnobs: {e:?}");
+        }
+    };
 
     Ok(scuba)
 }

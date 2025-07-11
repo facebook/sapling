@@ -86,6 +86,7 @@
     "scm/mononoke:pushredirection_config_cache_ttl_secs": 0,
     "scm/mononoke:build_underived_batched_graph_max_failed_attempts": 3,
     "scm/mononoke:git_bundle_generator_packfile_concurrency": 18000,
-    "scm/mononoke:git_server_max_packfile_size": 7516192768
+    "scm/mononoke:git_server_max_packfile_size": 7516192768,
+    "scm/mononoke:sql_telemetry_sample_rate": 1
   }
 }
