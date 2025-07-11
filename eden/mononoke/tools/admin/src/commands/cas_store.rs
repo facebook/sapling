@@ -5,6 +5,7 @@
  * GNU General Public License version 2.
  */
 
+mod file_info;
 mod tree_info;
 mod upload;
 
@@ -16,6 +17,7 @@ use bonsai_svnrev_mapping::BonsaiSvnrevMapping;
 use bookmarks::Bookmarks;
 use clap::Parser;
 use clap::Subcommand;
+use file_info::CasStoreFileInfoArgs;
 use metaconfig_types::RepoConfig;
 use mononoke_app::MononokeApp;
 use mononoke_app::args::RepoArgs;
@@ -72,6 +74,8 @@ pub struct Repo {
 pub enum CasStoreSubcommand {
     /// Show information related to CAS about a tree using its hgid.
     TreeInfo(CasStoreTreeInfoArgs),
+    /// Show information related to CAS about a tree using its hgid.
+    FileInfo(CasStoreFileInfoArgs),
     /// Upload a specific (augmented) tree, file or data for a given commit recursively into the cas store.
     Upload(CasStoreUploadArgs),
 }
@@ -86,6 +90,9 @@ pub async fn run(app: MononokeApp, args: CommandArgs) -> Result<()> {
         }
         CasStoreSubcommand::TreeInfo(tree_info_args) => {
             tree_info::tree_info(&ctx, &repo, tree_info_args).await
+        }
+        CasStoreSubcommand::FileInfo(file_info_args) => {
+            file_info::file_info(&ctx, &repo, file_info_args).await
         }
     }
 }

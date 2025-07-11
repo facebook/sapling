@@ -534,6 +534,10 @@ impl HgFileNodeId {
         HgNodeHash::from_bytes(bytes).map(HgFileNodeId)
     }
 
+    pub fn from_sha1(sha1: Sha1) -> Self {
+        HgFileNodeId(HgNodeHash(sha1))
+    }
+
     pub fn from_thrift(thrift_hash: thrift::HgNodeHash) -> Result<Self> {
         HgNodeHash::from_thrift(thrift_hash).map(HgFileNodeId)
     }

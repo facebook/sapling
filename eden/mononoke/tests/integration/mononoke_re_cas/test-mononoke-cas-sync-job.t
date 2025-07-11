@@ -65,3 +65,6 @@ Validate the same for a middle commit B
   A -> File CAS digest: 5ad3ba58a716e5fc04296ac9af7a1420f726b401fdf16d270beb5b6b30bc0cda:1 HgId: 005d992c5dcf32993668f7cede29d296c494a5d9
   B -> File CAS digest: 5667f2421ac250c4bb9af657b5ead3cdbd940bfbc350b2bfee47454643832b48:1 HgId: 35e7525ce3a48913275d7061dd9a867ffef1e34d
   foo -> File CAS digest: c0dc9fb94012c02a11f30c7f2533d6e8ab55a3b42726c00c02cd4fa1c1eb920c:8 HgId: e69018796d5c4e6314c9ee3c7131abc3349b5dba
+
+  $ mononoke_admin cas-store --repo-name repo file-info -i 005d992c5dcf32993668f7cede29d296c494a5d9
+  CAS digest: 5ad3ba58a716e5fc04296ac9af7a1420f726b401fdf16d270beb5b6b30bc0cda:1
