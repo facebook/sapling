@@ -5,6 +5,7 @@
  * GNU General Public License version 2.
  */
 
+use std::collections::HashMap;
 use std::marker::PhantomData;
 use std::sync::Arc;
 
@@ -124,6 +125,19 @@ pub trait BulkDerivation {
         derived_data_type: DerivableType,
     ) -> Result<Vec<ChangesetId>, DerivationError>;
 
+    /// Fetch derived data for a batch of changesets if they have previously
+    /// been derived.
+    ///
+    /// Returns a hashmap from changeset id to the debug format of the derived data.
+    /// Changesets for which the data has not previously been derived are omitted.
+    async fn fetch_derived_batch(
+        &self,
+        ctx: &CoreContext,
+        csids: &[ChangesetId],
+        rederivation: Option<Arc<dyn Rederivation>>,
+        derived_data_type: DerivableType,
+    ) -> Result<HashMap<ChangesetId, String>, DerivationError>;
+
     /// Returns the number of ancestor of the given changeset that don't have
     /// the given derived data type derived.
     async fn count_underived(
@@ -198,6 +212,13 @@ trait SingleTypeDerivation: Send + Sync {
         csids: &[ChangesetId],
         rederivation: Option<Arc<dyn Rederivation>>,
     ) -> Result<Vec<ChangesetId>, DerivationError>;
+
+    async fn fetch_derived_batch(
+        &self,
+        ctx: &CoreContext,
+        csids: &[ChangesetId],
+        rederivation: Option<Arc<dyn Rederivation>>,
+    ) -> Result<HashMap<ChangesetId, String>, DerivationError>;
 
     async fn count_underived(
         &self,
@@ -290,6 +311,22 @@ impl<T: BonsaiDerivable> SingleTypeDerivation for SingleTypeManager<T> {
             .iter()
             .filter(|csid| !derived.contains_key(csid))
             .copied()
+            .collect())
+    }
+
+    async fn fetch_derived_batch(
+        &self,
+        ctx: &CoreContext,
+        csids: &[ChangesetId],
+        rederivation: Option<Arc<dyn Rederivation>>,
+    ) -> Result<HashMap<ChangesetId, String>, DerivationError> {
+        let derived = self
+            .manager
+            .fetch_derived_batch::<T>(ctx, csids.to_vec(), rederivation)
+            .await?;
+        Ok(derived
+            .into_iter()
+            .map(|(csid, derived)| (csid, format!("{:?}", derived)))
             .collect())
     }
 
@@ -489,6 +526,17 @@ impl BulkDerivation for DerivedDataManager {
     ) -> Result<Vec<ChangesetId>, DerivationError> {
         let manager = manager_for_type(self, derived_data_type);
         manager.pending(ctx, csids, rederivation).await
+    }
+
+    async fn fetch_derived_batch(
+        &self,
+        ctx: &CoreContext,
+        csids: &[ChangesetId],
+        rederivation: Option<Arc<dyn Rederivation>>,
+        derived_data_type: DerivableType,
+    ) -> Result<HashMap<ChangesetId, String>, DerivationError> {
+        let manager = manager_for_type(self, derived_data_type);
+        manager.fetch_derived_batch(ctx, csids, rederivation).await
     }
 
     async fn count_underived(
