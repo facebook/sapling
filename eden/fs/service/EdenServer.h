@@ -357,6 +357,8 @@ class EdenServer : private TakeoverHandler {
       std::chrono::system_clock::time_point cutoff,
       const ObjectFetchContextPtr& context);
 
+  bool isWorkingCopyGCRunningForAnyMount() const;
+
   std::shared_ptr<LocalStore> getLocalStore() const {
     return localStore_;
   }

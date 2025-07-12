@@ -2871,6 +2871,16 @@ void EdenServer::garbageCollectAllMounts() {
   }
 }
 
+bool EdenServer::isWorkingCopyGCRunningForAnyMount() const {
+  auto mountPoints = getMountPoints();
+  for (auto& mountHandle : mountPoints) {
+    if (mountHandle.getEdenMount().isWorkingCopyGCRunning()) {
+      return true;
+    }
+  }
+  return false;
+}
+
 void EdenServer::accidentalUnmountRecovery() {
   XLOGF(DBG5, "Performing accidental unmount recovery.");
   folly::dynamic dirs = folly::dynamic::object();

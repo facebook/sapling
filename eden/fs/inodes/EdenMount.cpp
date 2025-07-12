@@ -2757,6 +2757,10 @@ std::optional<EdenMount::WorkingCopyGCLease> EdenMount::tryStartWorkingCopyGC(
       &workingCopyGCInProgress_, std::move(inode)};
 }
 
+bool EdenMount::isWorkingCopyGCRunning() const {
+  return workingCopyGCInProgress_.load(std::memory_order_acquire);
+}
+
 void EdenMount::treePrefetchFinished() noexcept {
   auto oldValue =
       numPrefetchesInProgress_.fetch_sub(1, std::memory_order_acq_rel);

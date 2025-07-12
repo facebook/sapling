@@ -1090,6 +1090,12 @@ class EdenMount : public std::enable_shared_from_this<EdenMount> {
   std::optional<WorkingCopyGCLease> tryStartWorkingCopyGC(TreeInodePtr inode);
 
   /**
+   * Returns true if a GC is currently running. This is used to determine if
+   * we should wait for a GC to complete before graceful restart.
+   */
+  bool isWorkingCopyGCRunning() const;
+
+  /**
    * Get a weak_ptr to this EdenMount object. EdenMounts are stored as shared
    * pointers inside of EdenServer's MountList.
    */
