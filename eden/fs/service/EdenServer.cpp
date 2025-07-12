@@ -2605,6 +2605,29 @@ folly::Future<TakeoverData> EdenServer::startTakeoverShutdown() {
       }
     }
 
+    // We should confirm that no garbage collection is running during graceful
+    // restart.
+    // First stop the periodic GC
+    gcTask_.updateInterval(std::chrono::seconds(0));
+    // Also, wait for any running GC to finish.
+    bool isGCRunning = isWorkingCopyGCRunningForAnyMount();
+    uint8_t checkingGCAttempts = 0;
+    while (isGCRunning && checkingGCAttempts < 3) {
+      std::this_thread::sleep_for(std::chrono::seconds(20));
+      isGCRunning = isWorkingCopyGCRunningForAnyMount();
+      checkingGCAttempts++;
+    }
+    if (isGCRunning) {
+      // We are still waiting for the GC to finish. This is unexpected and
+      // should not happen. We should not proceed with the graceful restart.
+      return makeFuture<TakeoverData>(std::runtime_error(
+          "cannot run graceful restart while garbage collection is running"));
+    }
+    // Note: If anything fails after this point, and we fallback to the old
+    // eden, we don't need to worry about updating the gcTask_ interval.
+    // Updating gcTask_ interval is part of the reloadConfig() periodic task
+    // which is running every few minutes.
+
     // Make a copy of the thrift server socket so we can transfer it to the
     // new edenfs process.  Our local thrift will close its own socket when
     // we stop the server.  The easiest way to avoid completely closing the
