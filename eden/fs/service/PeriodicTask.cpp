@@ -88,6 +88,7 @@ void PeriodicTask::updateInterval(
 
 void PeriodicTask::reschedule() {
   if (interval_ <= Duration(0)) {
+    cancelTimeout(); // no need to reschedule
     return;
   }
   evb_->timer().scheduleTimeout(this, interval_);
