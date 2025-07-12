@@ -2860,10 +2860,28 @@ void EdenServer::garbageCollectAllMounts() {
   auto cutoffConfig =
       std::chrono::duration_cast<std::chrono::system_clock::duration>(
           config->gcCutoff.getValue());
-  auto cutoff = std::chrono::system_clock::now() - cutoffConfig;
+  auto shorterCutoffConfig =
+      std::chrono::duration_cast<std::chrono::system_clock::duration>(
+          config->aggressiveGcCutoff.getValue());
+  std::chrono::system_clock::time_point cutoff;
 
   auto mountPoints = getMountPoints();
   for (auto& mountHandle : mountPoints) {
+    auto inodeCountsBeforeGc =
+        mountHandle.getEdenMount().getInodeMap()->getInodeCounts();
+    auto totalNumberOfInodesBeforeGc = inodeCountsBeforeGc.fileCount +
+        inodeCountsBeforeGc.treeCount + inodeCountsBeforeGc.unloadedInodeCount;
+    auto aggressiveGcThreshold = config->aggressiveGcThreshold.getValue();
+    // If aggressiveGcThreshold is set to 0, we will not run GC with shorter
+    // cutoff.
+    if (aggressiveGcThreshold > 0 &&
+        totalNumberOfInodesBeforeGc > aggressiveGcThreshold) {
+      // If the number of inodes is above the threshold, we want to run
+      // GC with shorter cutoff.
+      cutoff = std::chrono::system_clock::now() - shorterCutoffConfig;
+    } else {
+      cutoff = std::chrono::system_clock::now() - cutoffConfig;
+    }
     folly::via(
         getServerState()->getThreadPool().get(),
         [this, mountHandle, cutoff]() mutable {
