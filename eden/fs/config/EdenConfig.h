@@ -481,7 +481,35 @@ class EdenConfig : private ConfigSettingManager {
       this};
 
   /**
-   * Files with an atime older than this will be invalidated during GC.
+   * If the number of inodes is greater than this threshold, the garbage
+   * collection cutoff will be more aggressive.
+   *
+   * Set to zero to disable aggressive GC.
+   *
+   * See aggressiveGcCutoff for more details.
+   */
+  ConfigSetting<uint64_t> aggressiveGcThreshold{
+      "mount:agrrssive-gc-threshold",
+      0,
+      this};
+
+  /**
+   * Inodes with a last used time (atime on Windows) older than cutoff will be
+   * invalidated during GC.
+   *
+   * When total number of inodes is greater than a threshold, cutoff will be
+   * more aggressive.
+   *
+   * See aggressiveGcThreshold for more details.
+   */
+  ConfigSetting<OneHourMinDuration> aggressiveGcCutoff{
+      "mount:aggressive-gc-cutoff",
+      OneHourMinDuration(std::chrono::hours(1)),
+      this};
+
+  /**
+   * Inodes with a last used time (atime on Windows) older than cutoff will be
+   * invalidated during GC.
    *
    * Default to a day. On Windows, the atime is  updated only once an hour, so
    * values below 1h are disallowed.
