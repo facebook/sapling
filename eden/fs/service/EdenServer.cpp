@@ -2864,19 +2864,6 @@ void EdenServer::garbageCollectAllMounts() {
 
   auto mountPoints = getMountPoints();
   for (auto& mountHandle : mountPoints) {
-#ifdef __APPLE__
-    // On macOS, we don't want to run periodic GC if the number of inodes for
-    // the mount is below the threshold.
-    auto inodeCountsBeforeGC =
-        mountHandle.getEdenMount().getInodeMap()->getInodeCounts();
-    auto totalNumberOfInodesBeforeGC = inodeCountsBeforeGC.fileCount +
-        inodeCountsBeforeGC.treeCount + inodeCountsBeforeGC.unloadedInodeCount;
-    auto nfsPeriodicGcLoadedInodesThreshold =
-        config->nfsPeriodicGcLoadedInodesThreshold.getValue();
-    if (totalNumberOfInodesBeforeGC < nfsPeriodicGcLoadedInodesThreshold) {
-      continue;
-    }
-#endif
     folly::via(
         getServerState()->getThreadPool().get(),
         [this, mountHandle, cutoff]() mutable {

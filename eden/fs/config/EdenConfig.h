@@ -481,17 +481,6 @@ class EdenConfig : private ConfigSettingManager {
       this};
 
   /**
-   * Minimum number of inodes that need to be loaded  before triggering the
-   * periodic NFS Garbage Collector (GC). If the loaded inode count is below
-   * this number, a GC will be skipped. A value of 0 will effectively skip this
-   * check.
-   */
-  ConfigSetting<uint64_t> nfsPeriodicGcLoadedInodesThreshold{
-      "mount:nfs-periodic-gc-loaded-inodes-threshold",
-      1000000,
-      this};
-
-  /**
    * Files with an atime older than this will be invalidated during GC.
    *
    * Default to a day. On Windows, the atime is  updated only once an hour, so
