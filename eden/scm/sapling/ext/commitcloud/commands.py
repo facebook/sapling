@@ -1272,9 +1272,9 @@ def cloudreclaimworkspaces(ui, repo, **opts):
         ),
     ],
 )
-def cloudsync(ui, repo, cloudrefs=None, **opts):
+def cloudsync(ui, repo, **opts):
     """backup and synchronize commits with the commit cloud service"""
-    return _cloudsync(ui, repo, cloudrefs=cloudrefs, **opts)
+    return _cloudsync(ui, repo, **opts)
 
 
 def _cloudsync(ui, repo, cloudrefs=None, **opts):

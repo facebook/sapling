@@ -171,9 +171,10 @@ Make a commit in the first client, and sync it
   finished in * (glob)
 
 Sync does not allow positional arguments
-Tofix: should not crash with AttributeError
-  $ hg cloud sync all 2>&1 | grep "AttributeError"
-  AttributeError: 'str' object has no attribute 'version'
+  $ hg cloud sync all
+  hg cloud sync: invalid arguments
+  (use 'hg cloud sync -h' to get help)
+  [255]
 
 Sync requires visibility
   $ hg cloud sync --config visibility.enabled=false
