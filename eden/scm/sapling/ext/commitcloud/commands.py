@@ -189,7 +189,7 @@ def cloudjoin(ui, repo, **opts):
             % (workspacename, ccutil.getreponame(repo)),
             component="commitcloud",
         )
-        return cloudsync(ui, repo, **opts)
+        return _cloudsync(ui, repo, **opts)
 
     # Check the current workspace and perform necessary clean up.
     # If the local repository is already connected to some workspace,
@@ -225,7 +225,7 @@ def cloudjoin(ui, repo, **opts):
             # sync all the current commits and bookmarks before switching workspace
             if not opts.get("force"):
                 try:
-                    cloudsync(ui, repo, **opts)
+                    _cloudsync(ui, repo, **opts)
                 except ccerror.BadRequestError:
                     # the sync error can happen if the current workspace is missing on the server
                     # if it has been renamed or removed
@@ -346,7 +346,7 @@ def cloudjoin(ui, repo, **opts):
         % (workspacename, ccutil.getreponame(repo)),
         component="commitcloud",
     )
-    cloudsync(ui, repo, **opts)
+    _cloudsync(ui, repo, **opts)
 
 
 @subcmd(
@@ -814,7 +814,7 @@ def cloudmove(ui, repo, *revs, **opts):
             sourceworkspace == currentworkspace
             or destinationworkspace == currentworkspace
         ):
-            return cloudsync(ui, repo, **opts)
+            return _cloudsync(ui, repo, **opts)
 
 
 @subcmd(
@@ -841,7 +841,7 @@ def cloudhide(ui, repo, *revs, **opts):
         dry_run=opts.get("dry_run"),
     ):
         if workspacename == workspace.currentworkspace(repo):
-            return cloudsync(ui, repo, **opts)
+            return _cloudsync(ui, repo, **opts)
 
 
 def checkauthenticated(ui, repo):
@@ -882,9 +882,9 @@ def cloudrollback(ui, repo, *revs, **opts):
 
     # cloud sync before and after rollback for the current workspace
     if workspacename == workspace.currentworkspace(repo):
-        cloudsync(ui, repo, **opts)
+        _cloudsync(ui, repo, **opts)
         serv.rollbackworkspace(reponame, workspacename, version)
-        cloudsync(ui, repo, **opts)
+        _cloudsync(ui, repo, **opts)
     else:
         serv.rollbackworkspace(reponame, workspacename, version)
 
@@ -1119,7 +1119,7 @@ def cloudrenameworkspace(ui, repo, skipconfirmation=False, **opts):
 
     if source == currentworkspace:
         # sync all the current commits and bookmarks before rename
-        cloudsync(ui, repo, **opts)
+        _cloudsync(ui, repo, **opts)
 
     ui.status(
         _("rename the '%s' workspace to '%s' for the repo '%s'\n")
@@ -1274,6 +1274,10 @@ def cloudreclaimworkspaces(ui, repo, **opts):
 )
 def cloudsync(ui, repo, cloudrefs=None, **opts):
     """backup and synchronize commits with the commit cloud service"""
+    return _cloudsync(ui, repo, cloudrefs=cloudrefs, **opts)
+
+
+def _cloudsync(ui, repo, cloudrefs=None, **opts):
     repo.ignoreautobackup = True
     full = opts.get("full")
     besteffort = opts.get("best_effort")
@@ -1318,7 +1322,7 @@ def cloudrecover(ui, repo, **opts):
     if workspacename is None:
         raise ccerror.WorkspaceError(ui, _("undefined workspace"))
     syncstate.SyncState.erasestate(repo, workspacename)
-    cloudsync(ui, repo, **opts)
+    _cloudsync(ui, repo, **opts)
 
 
 @subcmd(
@@ -1759,7 +1763,7 @@ def cloudimport(ui, repo, **opts):
     state = syncstate.SyncState(repo, destinationworkspace)
 
     if state.version != destcloudrefs.version:
-        cloudsync(ui, repo, workspace=currentworkspace)
+        _cloudsync(ui, repo, workspace=currentworkspace)
 
     # Dedupe changes to avoid unnecessary updates
     uniquenewheads, uniquenewbookmarks, bookmarkstodelete = (
@@ -1778,7 +1782,7 @@ def cloudimport(ui, repo, **opts):
     )
 
     if currentrepo == destinationrepo and currentworkspace == destinationworkspace:
-        cloudsync(ui, repo, workspace=currentworkspace)
+        _cloudsync(ui, repo, workspace=currentworkspace)
 
     if opts.get("wipe_source"):
         heads = cloudrefs.heads if cloudrefs.heads else []
