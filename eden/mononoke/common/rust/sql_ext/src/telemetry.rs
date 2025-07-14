@@ -19,7 +19,7 @@ use sql_query_telemetry::SqlQueryTelemetry;
 
 const SQL_TELEMETRY_SCUBA_TABLE: &str = "mononoke_sql_telemetry";
 
-#[derive(Clone, Debug, Eq, PartialEq, Copy)]
+#[derive(Clone, Debug, Eq, PartialEq, Copy, serde::Deserialize)]
 pub enum TelemetryGranularity {
     /// From a single query
     Query,
