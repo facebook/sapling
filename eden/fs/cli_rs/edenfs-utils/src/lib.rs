@@ -90,6 +90,11 @@ pub fn bytes_from_path(path: PathBuf) -> Result<Vec<u8>> {
         .to_vec())
 }
 
+// As path_from_bytes, but returns a &Path
+pub fn path_ref_from_bytes(bytes: &[u8]) -> Result<&Path> {
+    Ok(Path::new(std::str::from_utf8(bytes).from_err()?))
+}
+
 const ENV_KEYS_TO_REMOVE: &[&str] = &[
     "DYLD_LIBRARY_PATH",
     "DYLD_INSERT_LIBRARIES",

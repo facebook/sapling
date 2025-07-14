@@ -13,10 +13,12 @@ use std::path::Path;
 use std::path::PathBuf;
 use std::time::Duration;
 
+use edenfs_client::changes_since::ChangeNotification;
 use edenfs_client::changes_since::ChangesSinceV2Result;
 use edenfs_client::types::JournalPosition;
 use edenfs_error::EdenFsError;
 use edenfs_error::Result;
+use edenfs_utils::path_ref_from_bytes;
 use fs_err as fs;
 use futures::StreamExt;
 use futures::stream;
@@ -97,7 +99,7 @@ impl StreamingChangesClient {
         // For use in debug CLI. Not intended for end user consumption,
         // use is_state_asserted() with your list of states instead.
         let mut asserted_states = HashSet::new();
-        for dir_entry in std::fs::read_dir(&self.states_root)? {
+        for dir_entry in fs::read_dir(&self.states_root)? {
             let entry = dir_entry?;
             if entry.path().is_dir() {
                 let state = entry.file_name().to_string_lossy().to_string();
@@ -148,14 +150,22 @@ impl StreamingChangesClient {
                                         position: inner_result.to_position.clone(),
                                     })
                                 }
-                                let empty_result = ChangesSinceV2Result {
-                                    to_position: inner_result.to_position.clone(),
-                                    changes: Vec::new(),
+                                let to_position = inner_result.to_position.clone();
+                                let (left_changes, right_changes) = self
+                                    .split_changes_on_state_enter(&inner_result, states)
+                                    .unwrap_or_else(|_| (&[], &inner_result.changes[..]));
+                                let pre_enter_result = ChangesSinceV2Result {
+                                    to_position: to_position.clone(),
+                                    changes: left_changes.to_vec(),
                                 };
-                                state_data.position = inner_result.to_position.clone();
-                                state_data.last_event = Some(inner_result);
+                                let post_enter_result = ChangesSinceV2Result {
+                                    to_position: to_position.clone(),
+                                    changes: right_changes.to_vec(),
+                                };
+                                state_data.position = to_position.clone();
+                                state_data.last_event = Some(post_enter_result);
                                 state_data.state = IsStateCurrentlyAsserted::StateAsserted;
-                                let output = Ok((empty_result, changes));
+                                let output = Ok((pre_enter_result, changes));
                                 Some((output, state_data))
                             }
                             Ok(_) => Some((Ok((inner_result, ChangeEvents::new())), state_data)),
@@ -273,6 +283,59 @@ impl StreamingChangesClient {
             }
         }
         Ok(output)
+    }
+
+    fn split_changes_on_state_enter<'a>(
+        &'a self,
+        changes: &'a ChangesSinceV2Result,
+        states: &[String],
+    ) -> Result<(&'a [ChangeNotification], &'a [ChangeNotification])> {
+        let mut i = 0;
+        for change in &changes.changes {
+            if let ChangeNotification::SmallChange(small_change) = change {
+                let path = path_ref_from_bytes(small_change.first_path())?;
+                // We don't expect the file to be Renamed or Replaced, but treat it
+                // like state change if there is.
+                if self.is_notify_file_state(path, states) {
+                    tracing::debug!("Found state lockfile {:?} at {i}", path);
+                    break;
+                }
+            }
+            i += 1;
+        }
+        Ok(changes.changes.split_at(i))
+    }
+
+    fn is_path_notify_file(&self, path: &Path) -> bool {
+        // Check if the item at path is a valid lockfile
+        // A valid lockfile is a non-directory that exists and ends with .notify inside states_root
+        if !path.starts_with(ASSERTED_STATE_DIR) {
+            return false;
+        }
+        match path.extension() {
+            Some(ext) => ext == "notify",
+            None => false,
+        }
+    }
+
+    fn is_notify_file_state(&self, path: &Path, states: &[String]) -> bool {
+        // Check if the lockfile at path is one of the states we care about
+        if !self.is_path_notify_file(path) {
+            return false;
+        }
+        match path.parent() {
+            Some(parent) => match parent.file_name() {
+                Some(state_name) => {
+                    let state_str = state_name.to_str();
+                    match state_str {
+                        Some(state_str) => states.iter().any(|x| x == state_str),
+                        None => false,
+                    }
+                }
+                None => false,
+            },
+            None => false,
+        }
     }
 }
 
@@ -565,6 +628,22 @@ mod tests {
         drop(guard_result);
         let states_asserted = client.which_states_asserted(&[state.to_string()])?;
         assert!(states_asserted.is_empty());
+        Ok(())
+    }
+
+    #[fbinit::test]
+    fn test_is_path_notify_file(_fb: FacebookInit) -> anyhow::Result<()> {
+        let mount_point = std::env::temp_dir().join("test_mount9");
+        let client = StreamingChangesClient::new(mount_point)?;
+        let state = "test_state";
+        let state_dir = PathBuf::from(ASSERTED_STATE_DIR);
+        let _guard_result = client.enter_state(state)?;
+        assert!(!client.is_path_notify_file(&state_dir));
+        assert!(!client.is_path_notify_file(&state_dir.join(state)));
+        assert!(!client.is_path_notify_file(&state_dir.join(state).join(state)));
+        assert!(
+            client.is_path_notify_file(&state_dir.join(state).join(state).with_extension("notify"))
+        );
         Ok(())
     }
 }

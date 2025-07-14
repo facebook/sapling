@@ -240,6 +240,19 @@ pub enum SmallChangeNotification {
     Removed(Removed),
 }
 
+impl SmallChangeNotification {
+    pub fn first_path(&self) -> &Vec<u8> {
+        // Returns the path value, or the "from" path.
+        match self {
+            SmallChangeNotification::Added(added) => &added.path,
+            SmallChangeNotification::Modified(modified) => &modified.path,
+            SmallChangeNotification::Removed(removed) => &removed.path,
+            SmallChangeNotification::Renamed(renamed) => &renamed.from,
+            SmallChangeNotification::Replaced(replaced) => &replaced.from,
+        }
+    }
+}
+
 impl fmt::Display for SmallChangeNotification {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         match self {
