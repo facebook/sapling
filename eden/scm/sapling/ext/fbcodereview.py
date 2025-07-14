@@ -1157,6 +1157,11 @@ def diffidtonode(repo, diffid, localreponame=None, version=None):
 
     if vcs == "git" or vcs == "hg":
         if not rev:
+            if version:
+                # If we are looking for a specific version, we can't use the
+                # "description" property to find the commit hash, as it only
+                # contains the latest version.
+                return None
             rev = parsedesc(repo, resp, ignoreparsefailure=True)
 
         if rev:
