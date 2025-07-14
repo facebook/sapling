@@ -56,15 +56,25 @@ mod facebook {
 
     use maplit::hashmap;
     use maplit::hashset;
+    use sql::mysql::MysqlQueryTelemetry;
     use sql_tests_lib::mysql_test_lib::setup_mysql_test_connection;
 
     use super::*;
+    use crate::telemetry::TelemetryGranularity;
 
     struct TelemetryTestData {
         connection: sql::Connection,
         tel_logger: SqlQueryTelemetry,
         cri: ClientRequestInfo,
         temp_path: String,
+    }
+
+    #[derive(Debug, Clone, serde::Deserialize, PartialEq)]
+    struct ScubaTelemetryLogSample {
+        mysql_telemetry: MysqlQueryTelemetry,
+        success: bool,
+        repo_id: Option<RepositoryId>,
+        granularity: TelemetryGranularity,
     }
 
     #[mononoke::fbinit_test]
@@ -163,6 +173,80 @@ mod facebook {
         Ok(())
     }
 
+    #[mononoke::fbinit_test]
+    async fn test_transaction_scuba_logging(fb: FacebookInit) -> Result<()> {
+        let TelemetryTestData {
+            connection,
+            tel_logger,
+            temp_path,
+            ..
+        } = setup_scuba_logging_test(fb).await?;
+
+        let _res = WriteQuery1::query(&connection, Some(tel_logger.clone()), &[(&1i64,), (&2i64,)])
+            .await?;
+
+        let txn = connection.start_transaction().await?.into();
+
+        // Query with Repo ID 1
+        let (txn, _res) = ReadQuery1::query_with_transaction(
+            txn,
+            Some(tel_logger.clone()),
+            &RepositoryId::new(1),
+        )
+        .await?;
+        // Query with Repo ID 2
+        let (txn, _res) =
+            ReadQuery1::query_with_transaction(txn, Some(tel_logger), &RepositoryId::new(2))
+                .await?;
+
+        txn.commit().await?;
+
+        let scuba_logs = deserialize_scuba_log_file(&temp_path)?;
+
+        println!("scuba_logs: {:#?}", scuba_logs);
+
+        // In the test function:
+        let expected_logs = vec![
+            ScubaTelemetryLogSample {
+                success: true,
+                repo_id: None,
+                granularity: TelemetryGranularity::Query,
+                mysql_telemetry: MysqlQueryTelemetry {
+                    read_tables: hashset! {},
+                    write_tables: hashset! {"mononoke_queries_test".to_string()},
+                    ..Default::default()
+                },
+            },
+            ScubaTelemetryLogSample {
+                success: true,
+                repo_id: Some(1.into()),
+                granularity: TelemetryGranularity::TransactionQuery,
+                mysql_telemetry: MysqlQueryTelemetry {
+                    read_tables: hashset! {"mononoke_queries_test".to_string()},
+                    write_tables: hashset! {},
+                    ..Default::default()
+                },
+            },
+            ScubaTelemetryLogSample {
+                success: true,
+                repo_id: Some(2.into()),
+                granularity: TelemetryGranularity::TransactionQuery,
+                mysql_telemetry: MysqlQueryTelemetry {
+                    read_tables: hashset! {"mononoke_queries_test".to_string()},
+                    write_tables: hashset! {},
+                    ..Default::default()
+                },
+            },
+            // TODO(T223577767): test transaction-level metadata, e.g. run multiple queries
+            // for different repos and ensure they are all logged together.
+            // Expect a new sample for transaction level
+        ];
+
+        assert_eq!(scuba_logs, expected_logs);
+
+        Ok(())
+    }
+
     async fn setup_scuba_logging_test(fb: FacebookInit) -> Result<TelemetryTestData> {
         // Set log file in SQL_TELEMETRY_SCUBA_FILE_PATH environment variable
         let temp_file = tempfile::NamedTempFile::new()?;
@@ -202,8 +286,6 @@ mod facebook {
             temp_path,
         })
     }
-    // TODO(T223577767): test transaction-level metadata, e.g. run multiple queries
-    // for different repos and ensure they are all logged together.
 
     /// Extracts all column names from scuba samples in the log content
     fn extract_all_scuba_columns(
@@ -267,6 +349,74 @@ mod facebook {
         }
 
         HashSet::new()
+    }
+
+    /// Reads the scuba log file and parses all samples as ScubaTelemetryLogSample
+    fn deserialize_scuba_log_file(scuba_log_file: &str) -> Result<Vec<ScubaTelemetryLogSample>> {
+        use std::fs::File;
+        use std::io::BufRead;
+        use std::io::BufReader;
+
+        let file = File::open(scuba_log_file)?;
+        let reader = BufReader::new(file);
+
+        // Collect all lines first (not efficient for very large files, but works for test logs)
+        let lines: Vec<String> = reader.lines().collect::<std::io::Result<_>>()?;
+
+        // Parse each line as a ScubaTelemetryLogSample object
+        let mysql_tels: Vec<ScubaTelemetryLogSample> = lines
+            .into_iter()
+            .map(|line| {
+                serde_json::from_str::<serde_json::Value>(&line)
+                    .map_err(anyhow::Error::from)
+                    .and_then(|json| {
+                        // Scuba groups the logs by type (e.g. int, normal), so
+                        // let's remove those and flatten the sample into a single
+                        // json object.
+                        let flattended_log = json
+                            .as_object()
+                            .iter()
+                            .flat_map(|obj| {
+                                obj.iter().flat_map(|(_, category_values)| {
+                                    category_values.as_object().into_iter().flat_map(
+                                        |category_obj| {
+                                            category_obj.iter().map(|(k, v)| (k.clone(), v.clone()))
+                                        },
+                                    )
+                                })
+                            })
+                            .collect::<serde_json::Value>();
+
+                        println!("flattend_log: {flattended_log:#?}");
+
+                        let success: bool = flattended_log["success"]
+                            .as_i64()
+                            .map(|i| i == 1)
+                            .expect("success should always be logged");
+
+                        let granularity = serde_json::from_value::<TelemetryGranularity>(
+                            flattended_log["granularity"].clone(),
+                        )?;
+
+                        let repo_id: Option<i32> = flattended_log["repo_id"]
+                            .as_i64()
+                            .map(|i| i.try_into())
+                            .transpose()?;
+                        // Now deserialize that into a MysqlQueryTelemetry object
+                        let mysql_tel =
+                            serde_json::from_value::<MysqlQueryTelemetry>(flattended_log)?;
+
+                        Ok(ScubaTelemetryLogSample {
+                            mysql_telemetry: mysql_tel,
+                            success,
+                            repo_id: repo_id.map(RepositoryId::new),
+                            granularity,
+                        })
+                    })
+            })
+            .collect::<Result<Vec<_>>>()?;
+
+        Ok(mysql_tels)
     }
 }
 
