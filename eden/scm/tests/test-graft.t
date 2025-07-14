@@ -1120,3 +1120,59 @@ Can use --message-field to update parts of commit message.
   
   Test Plan:
   test plan
+
+# Test graft -m and -l options
+
+  $ newclientrepo
+  $ drawdag <<'EOS'
+  > C   # C/foo/x = 1a\n2\n3a\n
+  > |
+  > B   # B/foo/x = 1a\n2\n3\n
+  > |
+  > A   # A/foo/x = 1\n2\n3\n
+  >     # drawdag.defaultfiles=false
+  > EOS
+  $ hg go $A -q
+  $ hg graft -r $C -m "new C"
+  grafting 78072751cf70 "C"
+  merging foo/x
+  $ hg show
+  commit:      a466a52d5162
+  user:        test
+  date:        Thu Jan 01 00:00:00 1970 +0000
+  files:       foo/x
+  description:
+  new C
+  
+  
+  diff -r 2f10237b4399 -r a466a52d5162 foo/x
+  --- a/foo/x	Thu Jan 01 00:00:00 1970 +0000
+  +++ b/foo/x	Thu Jan 01 00:00:00 1970 +0000
+  @@ -1,3 +1,3 @@
+   1
+   2
+  -3
+  +3a
+
+  $ hg go $A -q
+  $ echo "my commit message" > my_logfile.txt
+  $ hg graft -r $C -l my_logfile.txt
+  grafting 78072751cf70 "C"
+  merging foo/x
+  $ hg show
+  commit:      daf80b302751
+  user:        test
+  date:        Thu Jan 01 00:00:00 1970 +0000
+  files:       foo/x
+  description:
+  my commit message
+  
+  
+  diff -r 2f10237b4399 -r daf80b302751 foo/x
+  --- a/foo/x	Thu Jan 01 00:00:00 1970 +0000
+  +++ b/foo/x	Thu Jan 01 00:00:00 1970 +0000
+  @@ -1,3 +1,3 @@
+   1
+   2
+  -3
+  +3a

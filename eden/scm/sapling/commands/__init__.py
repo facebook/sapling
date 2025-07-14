@@ -2501,6 +2501,7 @@ def forget(ui, repo, *pats, **opts):
             _("record the current user as committer"),
         ),
     ]
+    + commitopts
     + commitopts2
     + cmdutil.messagefieldopts
     + mergetoolopts
