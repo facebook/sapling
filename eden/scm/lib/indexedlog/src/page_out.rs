@@ -87,7 +87,11 @@ pub(crate) fn find_region(addr: usize) -> Option<(usize, usize, bool)> {
     if let Some((start, end)) = locked.find_region(addr) {
         return Some((start, end, false));
     }
-    None
+    // Also check the change_detect mmap buffers.
+    let locked = crate::change_detect::BUFFERS.try_lock().ok()?;
+    locked
+        .find_region(addr)
+        .map(|(start, end)| (start, end, true))
 }
 
 impl<W: WeakSlice> WeakBuffers<W> {

@@ -175,4 +175,27 @@ mod tests {
             }
         }
     }
+
+    #[test]
+    fn test_sigbus_truncate_rlock_change_detector() {
+        super::register_sigbus_handler();
+
+        let dir = tempdir().unwrap();
+        let log_path = dir.path().join("log");
+        let mut log1 = Log::open(&log_path, Vec::new()).unwrap();
+        let log2 = Log::open(&log_path, Vec::new()).unwrap();
+
+        let file = OpenOptions::new()
+            .write(true)
+            .read(true)
+            .open(log_path.join("rlock"))
+            .unwrap();
+        file.set_len(0).unwrap();
+
+        log1.append([b'a'; 10]).unwrap();
+        log1.sync().unwrap();
+
+        assert!(!log1.is_changed_on_disk());
+        assert!(log2.is_changed_on_disk());
+    }
 }
