@@ -15,6 +15,7 @@ use std::time::Duration;
 
 use edenfs_client::changes_since::ChangeNotification;
 use edenfs_client::changes_since::ChangesSinceV2Result;
+use edenfs_client::changes_since::SmallChangeNotification;
 use edenfs_client::types::JournalPosition;
 use edenfs_error::EdenFsError;
 use edenfs_error::Result;
@@ -138,22 +139,33 @@ impl StreamingChangesClient {
                 IsStateCurrentlyAsserted::NotAsserted => {
                     let next_result = state_data.inner_stream.as_mut().next().await?;
                     match next_result {
-                        Ok(inner_result) => match self.which_states_asserted(states) {
-                            Ok(asserted_states) if !asserted_states.is_empty() => {
-                                tracing::debug!("States asserted: {:?}", asserted_states);
-                                let mut changes = ChangeEvents::new();
-                                state_data.asserted_states = asserted_states.clone();
-                                for asserted_state in asserted_states {
-                                    changes.events.push(ChangeEvent {
-                                        event_type: StateChange::Entered,
-                                        state: asserted_state,
-                                        position: inner_result.to_position.clone(),
-                                    })
+                        Ok(inner_result) => {
+                            let (change_events, state_entered_index) = self
+                                .get_state_changes_and_first_entered_index(&inner_result, states);
+                            if let Some(state_entered_index) = state_entered_index {
+                                for change_event in &change_events.events {
+                                    match change_event.event_type {
+                                        StateChange::Entered => {
+                                            state_data
+                                                .asserted_states
+                                                .insert(change_event.state.clone());
+                                        }
+                                        StateChange::Left => {
+                                            // May happen if the state was entered and exited in the same
+                                            // result, or if a preexisting state was used
+                                            state_data
+                                                .asserted_states
+                                                .remove(&change_event.state.clone());
+                                        }
+                                    }
                                 }
+                                if state_data.asserted_states.is_empty() {
+                                    let output = Ok((inner_result, change_events));
+                                    return Some((output, state_data));
+                                }
+                                let (left_changes, right_changes) =
+                                    inner_result.changes.split_at(state_entered_index);
                                 let to_position = inner_result.to_position.clone();
-                                let (left_changes, right_changes) = self
-                                    .split_changes_on_state_enter(&inner_result, states)
-                                    .unwrap_or_else(|_| (&[], &inner_result.changes[..]));
                                 let pre_enter_result = ChangesSinceV2Result {
                                     to_position: to_position.clone(),
                                     changes: left_changes.to_vec(),
@@ -165,15 +177,14 @@ impl StreamingChangesClient {
                                 state_data.position = to_position.clone();
                                 state_data.last_event = Some(post_enter_result);
                                 state_data.state = IsStateCurrentlyAsserted::StateAsserted;
-                                let output = Ok((pre_enter_result, changes));
+                                let output = Ok((pre_enter_result, change_events));
+                                Some((output, state_data))
+                            } else {
+                                // No state entered, return the result directly
+                                let output = Ok((inner_result, change_events));
                                 Some((output, state_data))
                             }
-                            Ok(_) => Some((Ok((inner_result, ChangeEvents::new())), state_data)),
-                            Err(e) => {
-                                tracing::error!("error while checking states {:?}", e);
-                                Some((Err(e), state_data))
-                            }
-                        },
+                        }
                         Err(e) => {
                             // Pass through the error
                             Some((Err(e), state_data))
@@ -181,91 +192,110 @@ impl StreamingChangesClient {
                     }
                 }
                 IsStateCurrentlyAsserted::StateAsserted => {
+                    let timer = tokio::time::interval(Duration::from_secs(1));
+                    tokio::pin!(timer);
                     loop {
-                        match self.which_states_asserted(states) {
-                            Ok(asserted_states) if !asserted_states.is_empty() => {
-                                let entered_states: Vec<_> = asserted_states
-                                    .difference(&state_data.asserted_states)
-                                    .cloned()
-                                    .collect();
-                                let left_states: Vec<_> = state_data
-                                    .asserted_states
-                                    .difference(&asserted_states)
-                                    .cloned()
-                                    .collect();
-                                if !entered_states.is_empty() || !left_states.is_empty() {
-                                    let mut change_events = ChangeEvents::new();
-                                    for difference in entered_states {
-                                        tracing::debug!("New state asserted: {:?}", difference);
-                                        change_events.events.push(ChangeEvent {
-                                            event_type: StateChange::Entered,
-                                            state: difference.to_string(),
-                                            position: state_data.position.clone(),
-                                        });
-                                        state_data.asserted_states.insert(difference);
-                                    }
-                                    for difference in left_states {
-                                        tracing::debug!("State deasserted: {:?}", difference);
-                                        change_events.events.push(ChangeEvent {
-                                            event_type: StateChange::Left,
-                                            state: difference.to_string(),
-                                            position: state_data.position.clone(),
-                                        });
-                                        state_data.asserted_states.remove(&difference);
-                                    }
-                                    let empty_result = ChangesSinceV2Result {
-                                        to_position: state_data.position.clone(),
-                                        changes: Vec::new(),
-                                    };
-                                    return Some((Ok((empty_result, change_events)), state_data));
-                                } else {
-                                    tokio::time::sleep(Duration::from_secs(1)).await;
-                                }
-                            }
-                            Ok(_) => {
-                                tracing::debug!("All states deasserted, exiting asserted states");
-                                let next_result = state_data.inner_stream.as_mut().next().await?;
-
-                                let mut right_changes = match next_result {
-                                    Ok(inner_result) => inner_result,
-                                    Err(e) => {
-                                        // Pass through the error
-                                        return Some((Err(e), state_data));
-                                    }
-                                };
-                                state_data.state = IsStateCurrentlyAsserted::NotAsserted;
-                                // At this point, last_event should already contain a value
-                                let left_changes =
-                                    state_data
-                                        .last_event
-                                        .take()
-                                        .unwrap_or(ChangesSinceV2Result {
-                                            to_position: JournalPosition::default(),
+                        let mut change_events = ChangeEvents::new();
+                        tokio::select! {
+                            _ = timer.tick() => {
+                                // Check states, to see if any have been deasserted without a notification due to crash.
+                                // May occasionally send a double exit if the timer hits immediately before an entry containing
+                                // an exit from the stream, but clients should ignore the second one.
+                                // Does not check for newly entered states, those should be reliably handled via
+                                // the journal.
+                                if let Ok(asserted_states) = self.which_states_asserted(states) {
+                                    let left_states: Vec<_> = state_data
+                                        .asserted_states
+                                        .difference(&asserted_states)
+                                        .cloned()
+                                        .collect();
+                                    if !left_states.is_empty() {
+                                        for difference in left_states {
+                                            tracing::debug!("Found deasserted state during timer check: {:?}", difference);
+                                            change_events.events.push(ChangeEvent {
+                                                event_type: StateChange::Left,
+                                                state: difference.to_string(),
+                                                position: state_data.position.clone(),
+                                            });
+                                            state_data.asserted_states.remove(&difference);
+                                        }
+                                        let mut results = ChangesSinceV2Result {
+                                            to_position: state_data.position.clone(),
                                             changes: Vec::new(),
-                                        });
-
-                                let mut change_events = ChangeEvents::new();
-                                for asserted_state in &state_data.asserted_states {
-                                    change_events.events.push(ChangeEvent {
-                                        event_type: StateChange::Left,
-                                        state: asserted_state.to_string(),
-                                        position: right_changes.to_position.clone(),
-                                    })
+                                        };
+                                        if asserted_states.is_empty() {
+                                            state_data.state = IsStateCurrentlyAsserted::NotAsserted;
+                                            results = state_data.last_event.take().unwrap_or(results);
+                                        }
+                                        let output = Ok((results, change_events));
+                                        return Some((output, state_data));
+                                    }
                                 }
-                                state_data.asserted_states.clear();
-                                let mut merged_changes = ChangesSinceV2Result {
-                                    to_position: right_changes.to_position,
-                                    changes: left_changes.changes,
-                                };
-                                merged_changes.changes.append(&mut right_changes.changes);
+                            },
+                            next_result_opt = state_data.inner_stream.next() => {
+                                match next_result_opt {
+                                    None => {
+                                        // Stream terminated
+                                        return None;
+                                    }
+                                    Some(next_result) => {
+                                        match next_result {
+                                            Ok(mut inner_result) => {
+                                                (change_events, _) = self.get_state_changes_and_first_entered_index(&inner_result, states);
+                                                for change_event in &change_events.events {
+                                                    match change_event.event_type {
+                                                        StateChange::Entered => {
+                                                            state_data
+                                                                .asserted_states
+                                                                .insert(change_event.state.clone());
+                                                        }
+                                                        StateChange::Left => {
+                                                            state_data
+                                                                .asserted_states
+                                                                .remove(&change_event.state);
+                                                        }
+                                                    }
+                                                }
 
-                                let output = Ok((merged_changes, change_events));
-                                return Some((output, state_data));
-                            }
-                            Err(e) => {
-                                tracing::error!("error while checking states {:?}", e);
-                                // Pass through the error
-                                return Some((Err(e), state_data));
+                                                // At this point, last_event should already contain a value
+                                                let left_changes =
+                                                    state_data
+                                                        .last_event
+                                                        .take()
+                                                        .unwrap_or(ChangesSinceV2Result {
+                                                            to_position: JournalPosition::default(),
+                                                            changes: Vec::new(),
+                                                        });
+                                                let mut merged_changes = ChangesSinceV2Result {
+                                                    to_position: inner_result.to_position,
+                                                    changes: left_changes.changes,
+                                                };
+                                                merged_changes.changes.append(&mut inner_result.changes);
+                                                state_data.position = merged_changes.to_position.clone();
+
+                                                if state_data.asserted_states.is_empty() {
+                                                    state_data.state = IsStateCurrentlyAsserted::NotAsserted;
+                                                    let results = Ok((merged_changes, change_events));
+                                                    return Some((results, state_data));
+                                                } else {
+                                                    state_data.last_event = Some(merged_changes);
+                                                    let results = Ok((
+                                                        ChangesSinceV2Result {
+                                                            to_position: state_data.position.clone(),
+                                                            changes: Vec::new(),
+                                                        }, change_events));
+                                                    return Some((results, state_data));
+                                                }
+                                            }
+                                            Err(e) => {
+                                                // Pass through the error. The stream will be terminated
+                                                // inside the subscription after surfacing an error.
+                                                tracing::error!("error while checking states {:?}", e);
+                                                return Some((Err(e), state_data));
+                                            }
+                                        }
+                                    }
+                                }
                             }
                         }
                     }
@@ -285,25 +315,67 @@ impl StreamingChangesClient {
         Ok(output)
     }
 
-    fn split_changes_on_state_enter<'a>(
+    fn get_state_changes_and_first_entered_index<'a>(
         &'a self,
         changes: &'a ChangesSinceV2Result,
         states: &[String],
-    ) -> Result<(&'a [ChangeNotification], &'a [ChangeNotification])> {
-        let mut i = 0;
-        for change in &changes.changes {
+    ) -> (ChangeEvents, Option<usize>) {
+        let mut change_events = ChangeEvents::new();
+        let mut first_entered_index = None;
+        for (i, change) in changes.changes.iter().enumerate() {
             if let ChangeNotification::SmallChange(small_change) = change {
-                let path = path_ref_from_bytes(small_change.first_path())?;
-                // We don't expect the file to be Renamed or Replaced, but treat it
-                // like state change if there is.
-                if self.is_notify_file_state(path, states) {
-                    tracing::debug!("Found state lockfile {:?} at {i}", path);
-                    break;
+                // Ignore the Err that happens due to invalid UTF-8, values from eden should
+                // only be UTF-8
+                if let Ok(path) = path_ref_from_bytes(small_change.first_path()) {
+                    if let Some(state_name) = self.get_notify_file_state(path, states) {
+                        match small_change {
+                            SmallChangeNotification::Added(_) => {
+                                tracing::debug!(
+                                    "Entered state {:?} at {}",
+                                    path,
+                                    changes.to_position.clone()
+                                );
+                                change_events.events.push(ChangeEvent {
+                                    event_type: StateChange::Entered,
+                                    state: state_name.to_string(),
+                                    position: changes.to_position.clone(),
+                                });
+                                if first_entered_index.is_none() {
+                                    first_entered_index = Some(i);
+                                }
+                            }
+                            SmallChangeNotification::Removed(_)
+                            | SmallChangeNotification::Renamed(_) => {
+                                tracing::debug!(
+                                    "Left state {:?} at {}",
+                                    path,
+                                    changes.to_position.clone()
+                                );
+                                change_events.events.push(ChangeEvent {
+                                    event_type: StateChange::Left,
+                                    state: state_name.to_string(),
+                                    position: changes.to_position.clone(),
+                                });
+                            }
+                            SmallChangeNotification::Modified(_) => {
+                                // Modified state file happens on linux platforms immediately after creation.
+                                // Ignore it, since it doesn't change the state
+                            }
+                            SmallChangeNotification::Replaced(_) => {
+                                // We currently do not expect to see Replaced happening on the
+                                // state notifier file
+                                tracing::debug!(
+                                    "Unexpected state change Replaced in {:?} at {}",
+                                    path,
+                                    changes.to_position.clone()
+                                );
+                            }
+                        }
+                    }
                 }
             }
-            i += 1;
         }
-        Ok(changes.changes.split_at(i))
+        (change_events, first_entered_index)
     }
 
     fn is_path_notify_file(&self, path: &Path) -> bool {
@@ -318,23 +390,28 @@ impl StreamingChangesClient {
         }
     }
 
-    fn is_notify_file_state(&self, path: &Path, states: &[String]) -> bool {
+    fn get_notify_file_state<'a>(&self, path: &'a Path, states: &[String]) -> Option<&'a str> {
         // Check if the lockfile at path is one of the states we care about
         if !self.is_path_notify_file(path) {
-            return false;
+            return None;
         }
+        if let Some(state) = self.get_state_name(path) {
+            if states.iter().any(|s| s == state) {
+                return Some(state);
+            }
+        }
+        None
+    }
+
+    fn get_state_name<'a>(&self, path: &'a Path) -> Option<&'a str> {
+        // Get the name of the state from the path
+        // The state name is the parent directory of the notify file
         match path.parent() {
             Some(parent) => match parent.file_name() {
-                Some(state_name) => {
-                    let state_str = state_name.to_str();
-                    match state_str {
-                        Some(state_str) => states.iter().any(|x| x == state_str),
-                        None => false,
-                    }
-                }
-                None => false,
+                Some(state_name) => state_name.to_str(),
+                None => None,
             },
-            None => false,
+            None => None,
         }
     }
 }
