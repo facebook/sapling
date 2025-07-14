@@ -2515,41 +2515,42 @@ def graft(ui, repo, *revs, **opts):
     Use @Product@'s merge logic to copy individual commits from other
     locations without making merge commits. This is sometimes known as
     'backporting' or 'cherry-picking'. By default, graft will also
-    copy user and description from the source commits. If you want to
-    keep the date of the source commits, you can add below config to your
-    configuration file::
-
-      [tweakdefaults]
-      graftkeepdate = True
-
-    Source commits will be skipped if they are ancestors of the
-    current commit, have already been grafted, or are merges.
-
-    If ``--log`` is specified, commit messages will have a comment appended
-    of the form::
-
-      (grafted from COMMITHASH)
-
-    If ``--force`` is specified, commits will be grafted even if they
-    are already ancestors of, or have been grafted to, the destination.
-    This is useful when the commits have since been backed out.
-
-    If a graft results in conflicts, the graft process is interrupted
-    so that the current merge can be manually resolved. Once all
-    conflicts are resolved, the graft process can be continued with
-    the ``-c/--continue`` option.
-
-    ``--from-path`` and ``--to-path`` allow copying commits between
-    directories. Files in the grafted commit(s) outside of
-    ``--from-path`` are ignored. See :prog:`help directorybranching` for
-    more information.
-
-    .. note::
-
-       The ``-c/--continue`` operation does not remember options from
-       the original invocation, except for ``--force``.
+    copy user and description from the source commits.
 
     .. container:: verbose
+
+      If you want to keep the date of the source commits, you can add below config to your
+      configuration file::
+
+        [tweakdefaults]
+        graftkeepdate = True
+
+      Source commits will be skipped if they are ancestors of the
+      current commit, have already been grafted, or are merges.
+
+      If ``--log`` is specified, commit messages will have a comment appended
+      of the form::
+
+        (grafted from COMMITHASH)
+
+      If ``--force`` is specified, commits will be grafted even if they
+      are already ancestors of, or have been grafted to, the destination.
+      This is useful when the commits have since been backed out.
+
+      If a graft results in conflicts, the graft process is interrupted
+      so that the current merge can be manually resolved. Once all
+      conflicts are resolved, the graft process can be continued with
+      the ``-c/--continue`` option.
+
+      ``--from-path`` and ``--to-path`` allow copying commits between
+      directories. Files in the grafted commit(s) outside of
+      ``--from-path`` are ignored. See :prog:`help directorybranching` for
+      more information.
+
+      .. note::
+
+         The ``-c/--continue`` operation does not remember options from
+         the original invocation, except for ``--force``.
 
       Examples:
 
@@ -2574,7 +2575,7 @@ def graft(ui, repo, *revs, **opts):
 
           @prog@ log --debug -r .
 
-    See :prog:`help revisions` for more about specifying revisions.
+      See :prog:`help revisions` for more about specifying revisions.
 
     Returns 0 on success.
     """
