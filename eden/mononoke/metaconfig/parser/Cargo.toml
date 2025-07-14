@@ -25,7 +25,7 @@ serde = { version = "1.0.185", features = ["derive", "rc"] }
 serde_ignored = "0.1.10"
 serde_json = { version = "1.0.140", features = ["alloc", "float_roundtrip", "unbounded_depth"] }
 thiserror = "2.0.12"
-toml = "0.8.22"
+toml = { version = "0.8.22", features = ["preserve_order"] }
 tracing = { version = "0.1.41", features = ["attributes", "valuable"] }
 
 [dev-dependencies]

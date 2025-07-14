@@ -71,7 +71,7 @@ serde_derive = "1.0.185"
 slog = { package = "tracing_slog_compat", version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 sqlblob = { version = "0.1.0", path = "blobstore/sqlblob" }
 tokio = { version = "1.45.0", features = ["full", "test-util", "tracing"] }
-toml = "0.8.22"
+toml = { version = "0.8.22", features = ["preserve_order"] }
 
 [patch.crates-io]
 abomonation = { git = "https://github.com/markbt/abomonation", rev = "0f43346d2afa2aedc64d61f3f4273e8d1e454642" }
