@@ -31,6 +31,8 @@ pub struct FbClientInfo {
     sandcastle_type: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
     sandcastle_vcs: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    devcompute: Option<bool>,
 }
 
 impl FbClientInfo {
@@ -77,5 +79,6 @@ pub fn get_fb_client_info() -> FbClientInfo {
         sandcastle_alias: var("SANDCASTLE_ALIAS").ok(),
         sandcastle_type: var("SANDCASTLE_TYPE").ok(),
         sandcastle_vcs: var("SANDCASTLE_VCS").ok(),
+        devcompute: var("DEVCOMPUTE").ok().and_then(|s| s.parse().ok()),
     }
 }
