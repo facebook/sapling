@@ -145,7 +145,7 @@ impl crate::Subcommand for ChangesSinceCmd {
         self.print_result(&result);
         let mut rc = 0;
         if self.subscribe {
-            let stream_client = StreamingChangesClient::new(get_mount_point(&self.mount_point)?)?;
+            let stream_client = StreamingChangesClient::new(&get_mount_point(&self.mount_point)?)?;
             let stream = client
                 .stream_changes_since(
                     &self.mount_point,
