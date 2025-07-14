@@ -64,6 +64,7 @@ define_stats! {
     path_history_duration_ms: histogram(100, 0, 5000, Average, Sum, Count; P 50; P 75; P 95; P 99),
     request_load: histogram(100, 0, 5000, Average; P 50; P 75; P 95; P 99),
     requests: dynamic_timeseries("{}.requests", (method: String); Rate, Sum),
+    total_requests: timeseries(Rate, Sum),
     response_bytes_sent: dynamic_histogram("{}.response_bytes_sent", (method: String); 1_500_000, 0, 150_000_000, Average, Sum, Count; P 50; P 75; P 95; P 99),
     set_bookmark_duration_ms: histogram(10, 0, 500, Average, Sum, Count; P 50; P 75; P 95; P 99),
     streaming_clone_duration_ms:  histogram(100, 0, 5000, Average, Sum, Count; P 50; P 75; P 95; P 99),
@@ -163,6 +164,7 @@ fn log_stats(state: &mut State, status: StatusCode) -> Option<()> {
 
         let method = method.to_string();
         STATS::requests.add_value(1, (method.clone(),));
+        STATS::total_requests.add_value(1);
 
         if status.is_success() {
             STATS::success.add_value(1, (method.clone(),));
