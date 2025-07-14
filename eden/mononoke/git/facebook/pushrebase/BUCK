@@ -14,11 +14,9 @@ rust_binary(
         "fbsource//third-party/rust:clap",
         "fbsource//third-party/rust:serde_json",
         "fbsource//third-party/rust:tracing",
-        "fbsource//third-party/rust:tracing-core",
-        "fbsource//third-party/rust:tracing-glog",
-        "fbsource//third-party/rust:tracing-subscriber",
         "//common/rust/shed/fbinit:fbinit",
         "//common/rust/shed/fbinit:fbinit-tokio",
+        "//eden/mononoke/cmdlib:cmdlib_logging",
     ],
 )
 
