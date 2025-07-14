@@ -158,7 +158,7 @@ fbsource should be fully in sync
 
 ovrsource has two problems
 (master not matching is not a real problem though)
-  $ quiet_grep bookmark -- crossrepo_verify_bookmarks 0 2 | strip_glog | sort
+  $ quiet_grep bookmark -- crossrepo_verify_bookmarks 0 2 | sort
   [WARN] 'ovr-mon' has a bookmark master_bookmark but it points to a commit that has no equivalent in 'meg-mon'. If it's a shared bookmark (e.g. master) that might mean that it points to a commit from another repository
   [WARN] inconsistent value of forgotten_bookmark: 'ovr-mon' has 15ea1fb0b1b27b9d23175d1e7169e43d515c9aa06acf287cd992cbaf4908718e, but 'meg-mon' bookmark points to None
 
@@ -181,14 +181,14 @@ it still doesn't have any data derived
   Not Derived: 6f62563c84369fb14c82e97dc91a9f4bfe5ffa43db8f3cb7ea06b692c9f0d2e3
 
 and tried again, this time in dry run mode with limit 0 to ensure such command wouldn't do anything
-  $ crossrepo_verify_bookmarks 0 2 --update-large-repo-bookmarks --no-bookmark-updates --limit 0|& grep bookmark | strip_glog | sort
+  $ crossrepo_verify_bookmarks 0 2 --update-large-repo-bookmarks --no-bookmark-updates --limit 0|& grep bookmark | sort
 
 it still doesn't have any data derived
   $ mononoke_admin derived-data -R meg-mon exists -T changeset_info -i 6f62563c84369fb14c82e97dc91a9f4bfe5ffa43db8f3cb7ea06b692c9f0d2e3
   Not Derived: 6f62563c84369fb14c82e97dc91a9f4bfe5ffa43db8f3cb7ea06b692c9f0d2e3
 
 and tried again, this time in dry run mode with no limit
-  $ quiet_grep bookmark -- crossrepo_verify_bookmarks 0 2 --update-large-repo-bookmarks --no-bookmark-updates --limit 2| strip_glog | sort
+  $ quiet_grep bookmark -- crossrepo_verify_bookmarks 0 2 --update-large-repo-bookmarks --no-bookmark-updates --limit 2| sort
   [INFO] setting ovrsource/forgotten_bookmark 6f62563c84369fb14c82e97dc91a9f4bfe5ffa43db8f3cb7ea06b692c9f0d2e3
   [INFO] skipping master_bookmark because it's a common bookmark
 
@@ -197,7 +197,7 @@ and the data is derived
   Derived: 6f62563c84369fb14c82e97dc91a9f4bfe5ffa43db8f3cb7ea06b692c9f0d2e3
 
 and tried again
-  $ quiet_grep bookmark -- crossrepo_verify_bookmarks 0 2 --update-large-repo-bookmarks | strip_glog | sort
+  $ quiet_grep bookmark -- crossrepo_verify_bookmarks 0 2 --update-large-repo-bookmarks | sort
   [INFO] setting ovrsource/forgotten_bookmark 6f62563c84369fb14c82e97dc91a9f4bfe5ffa43db8f3cb7ea06b692c9f0d2e3
   [INFO] skipping master_bookmark because it's a common bookmark
 

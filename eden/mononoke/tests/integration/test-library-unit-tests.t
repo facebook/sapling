@@ -38,28 +38,3 @@
   [2]
 
 
-
-
-# strip_glog removes what we expect
-  $ cat << EOF | strip_glog
-  > some
-  > I0131 01:16:33.803668 4035520 Logger.h:335] [WARNING] WhenceScribeLogged is overwritten to SANDBOX. https://fburl.com/cpp-logger-whence-logged
-  > plain
-  > E0130 16:56:31.642324 98667 Ods3Publisher.cpp:173] [ODS3 SDK] ODS3 SDK has dropped some samples. This is NOT the cause of errors in your application. 0 samples were dropped during observations. 16 samples were dropped due to publishing. One publishing error is: apache::thrift::transport::TTransportException: Channel is !good()
-  > output
-  > EOF
-  some
-  [WARNING] WhenceScribeLogged is overwritten to SANDBOX. https://fburl.com/cpp-logger-whence-logged
-  plain
-  [ODS3 SDK] ODS3 SDK has dropped some samples. This is NOT the cause of errors in your application. 0 samples were dropped during observations. 16 samples were dropped due to publishing. One publishing error is: apache::thrift::transport::TTransportException: Channel is !good()
-  output
-
-# strip_glog will strip the exit code
-  $ mononoke_admin invalid 2>&1 | strip_glog
-  error: unrecognized subcommand 'invalid'
-  
-  Usage: admin [OPTIONS] <--config-path <CONFIG_PATH>|--config-tier <CONFIG_TIER>|--prod|--git-config> <COMMAND>
-  
-  For more information, try '--help'.
-
-

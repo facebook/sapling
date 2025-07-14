@@ -106,7 +106,7 @@
 -- there's no other way to do the sync than to diverge now.
   $ mononoke_admin bookmarks -R small-mon set other_bookmark $S_E
   Updating publishing bookmark other_bookmark from 6899eb0af1d64df45683e6bf22c8b82593b22539dec09394f516f944f6fa8c12 to a9d1b36d3a6d37d43ff6cd7279e0e02a9f6e1930dc41e1ee129bdfd315572074
-  $ mononoke_x_repo_sync 1 0 tail --catch-up-once  2>&1 | strip_glog
+  $ mononoke_x_repo_sync 1 0 tail --catch-up-once
   [INFO] Starting session with id * (glob)
   [INFO] Starting up X Repo Sync from small repo small-mon to large repo large-mon
   [INFO] queue size is 1
@@ -128,7 +128,7 @@
 
   $ mononoke_admin bookmarks -R small-mon set master_bookmark $S_E
   Updating publishing bookmark master_bookmark from 542a68bb4fd5a7ba5a047a0bb29a48d660c0ea5114688d00b11658313e8f1e6b to a9d1b36d3a6d37d43ff6cd7279e0e02a9f6e1930dc41e1ee129bdfd315572074
-  $ mononoke_x_repo_sync 1 0 tail --catch-up-once  2>&1 | strip_glog
+  $ mononoke_x_repo_sync 1 0 tail --catch-up-once
   [INFO] Starting session with id * (glob)
   [INFO] Starting up X Repo Sync from small repo small-mon to large repo large-mon
   [INFO] queue size is 1
@@ -167,7 +167,7 @@
 -- the S_F commit is based on S_E so there are two possible choices here.
   $ mononoke_admin bookmarks -R small-mon set other_bookmark $S_F
   Updating publishing bookmark other_bookmark from a9d1b36d3a6d37d43ff6cd7279e0e02a9f6e1930dc41e1ee129bdfd315572074 to c8f423b81b6dc422d07144a05bde9fe8ff03a0c7aaf77840418b104125fff9c0
-  $ mononoke_x_repo_sync 1 0 tail --catch-up-once  2>&1 | strip_glog
+  $ mononoke_x_repo_sync 1 0 tail --catch-up-once
   * (glob)
   [INFO] Starting up X Repo Sync from small repo small-mon to large repo large-mon
   [INFO] queue size is 1

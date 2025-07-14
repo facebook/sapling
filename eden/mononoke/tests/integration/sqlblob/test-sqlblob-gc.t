@@ -29,7 +29,7 @@ Check that chunk_generations populated from put and they have length
   1 f50e7c0f6932bdffdf0265beb40720a074b6168cc3ae28c372637d78114f86ae|2|194
 
 Run sqlblob_gc generation size report
-  $ mononoke_sqlblob_gc --storage-config-name=blobstore --shard-count=2 generation-size 2>&1 | strip_glog
+  $ mononoke_sqlblob_gc --storage-config-name=blobstore --shard-count=2 generation-size
   Generation | Size
   -----------------
            2 | 2.1 KiB
@@ -37,7 +37,7 @@ Run sqlblob_gc generation size report
 
 Run sqlblob_gc generation size report again, just to check mark has not broken it
 Run sqlblob_gc mark
-  $ mononoke_sqlblob_gc --storage-config-name=blobstore --shard-count=2 mark 2>&1 | strip_glog
+  $ mononoke_sqlblob_gc --storage-config-name=blobstore --shard-count=2 mark
   [INFO] Starting initial generation set
   [INFO] Completed initial generation handling on shard * (glob)
   [INFO] Completed initial generation handling on shard * (glob)
@@ -48,7 +48,7 @@ Run sqlblob_gc mark
   [INFO] Completed marking generation 1
 
 Run sqlblob_gc generation size report again, just to check mark has not broken it
-  $ mononoke_sqlblob_gc --storage-config-name=blobstore --shard-count=2 --scuba-log-file scuba.json generation-size 2>&1 | strip_glog
+  $ mononoke_sqlblob_gc --storage-config-name=blobstore --shard-count=2 --scuba-log-file scuba.json generation-size
   Generation | Size
   -----------------
            2 | 2.1 KiB

@@ -18,13 +18,13 @@ setup configuration
   $ blobimport repo/.hg repo
 
 bonsai core data, deep, unchunked. This is the base case
-  $ mononoke_walker -L sizing scrub --checkpoint-version=v2 -q -b master_bookmark -I bonsai 2>&1 | strip_glog | grep -vE "(Bytes|Walked)/s"
+  $ mononoke_walker -L sizing scrub --checkpoint-version=v2 -q -b master_bookmark -I bonsai 2>&1 | grep -vE "(Bytes|Walked)/s"
   [INFO] Walking edge types [BookmarkToChangeset, ChangesetToBonsaiParent, ChangesetToFileContent]
   [INFO] Walking node types [Bookmark, Changeset, FileContent]
   [INFO] [walker scrub{repo=repo}] Seen,Loaded: 7,7
 
 bonsai core data, chunked, deep, with checkpointing enabled
-  $ mononoke_walker -L sizing -L graph scrub --checkpoint-version=v2 -q -p Changeset --chunk-size=2 --checkpoint-name=bonsai_deep --checkpoint-path=test_sqlite -I deep -i bonsai -i FileContent 2>&1 | strip_glog | grep -vE "(Bytes|Walked)/s"
+  $ mononoke_walker -L sizing -L graph scrub --checkpoint-version=v2 -q -p Changeset --chunk-size=2 --checkpoint-name=bonsai_deep --checkpoint-path=test_sqlite -I deep -i bonsai -i FileContent 2>&1 | grep -vE "(Bytes|Walked)/s"
   [INFO] Walking edge types [ChangesetToBonsaiParent, ChangesetToFileContent]
   [INFO] Walking node types [Changeset, FileContent]
   [INFO] [walker scrub{repo=repo}] Repo bounds: (1, 4)
@@ -43,7 +43,7 @@ inspect the checkpoint table
   0|bonsai_deep|1|4
 
 same run, but against metadata db
-  $ mononoke_walker -L sizing -L graph scrub --checkpoint-version=v2 -q -p Changeset --chunk-size=2 --checkpoint-name=bonsai_deep_meta -I deep -i bonsai -i FileContent 2>&1 | strip_glog | grep -vE "(Bytes|Walked)/s"
+  $ mononoke_walker -L sizing -L graph scrub --checkpoint-version=v2 -q -p Changeset --chunk-size=2 --checkpoint-name=bonsai_deep_meta -I deep -i bonsai -i FileContent 2>&1 | grep -vE "(Bytes|Walked)/s"
   [INFO] Walking edge types [ChangesetToBonsaiParent, ChangesetToFileContent]
   [INFO] Walking node types [Changeset, FileContent]
   [INFO] [walker scrub{repo=repo}] Repo bounds: (1, 4)
@@ -58,7 +58,7 @@ same run, but against metadata db
   [INFO] [walker scrub{repo=repo}] Completed in 2 chunks of size 2
 
 test restoring from checkpoint, scrub should have no chunks to do as checkpoint loaded covers the repo bounds
-  $ mononoke_walker -L sizing -L graph scrub --checkpoint-version=v2 -q -p Changeset --chunk-size=2 --checkpoint-name=bonsai_deep --checkpoint-path=test_sqlite -I deep -i bonsai -i FileContent 2>&1 | strip_glog | grep -vE "(Bytes|Walked)/s"
+  $ mononoke_walker -L sizing -L graph scrub --checkpoint-version=v2 -q -p Changeset --chunk-size=2 --checkpoint-name=bonsai_deep --checkpoint-path=test_sqlite -I deep -i bonsai -i FileContent 2>&1 | grep -vE "(Bytes|Walked)/s"
   [INFO] Walking edge types [ChangesetToBonsaiParent, ChangesetToFileContent]
   [INFO] Walking node types [Changeset, FileContent]
   [INFO] [walker scrub{repo=repo}] Found checkpoint with bounds: (1, 4)
@@ -67,7 +67,7 @@ test restoring from checkpoint, scrub should have no chunks to do as checkpoint 
   [INFO] [walker scrub{repo=repo}] Completed in 2 chunks of size 2
 
 run to a new checkpoint name, with checkpoint sampling set so that last chunk not included in checkpoint
-  $ mononoke_walker -L sizing -L graph scrub --checkpoint-version=v2 -q -p Changeset --chunk-size=1 --checkpoint-sample-rate=2 --checkpoint-name=bonsai_deep2 --checkpoint-path=bonsai_deep2 -I deep -i bonsai -i FileContent 2>&1 | strip_glog | grep -vE "(Bytes|Walked)/s"
+  $ mononoke_walker -L sizing -L graph scrub --checkpoint-version=v2 -q -p Changeset --chunk-size=1 --checkpoint-sample-rate=2 --checkpoint-name=bonsai_deep2 --checkpoint-path=bonsai_deep2 -I deep -i bonsai -i FileContent 2>&1 | grep -vE "(Bytes|Walked)/s"
   [INFO] Walking edge types [ChangesetToBonsaiParent, ChangesetToFileContent]
   [INFO] Walking node types [Changeset, FileContent]
   [INFO] [walker scrub{repo=repo}] Repo bounds: (1, 4)
@@ -85,7 +85,7 @@ run to a new checkpoint name, with checkpoint sampling set so that last chunk no
 
 run again, should have no catchup, but main bounds will continue from checkpoint
   $ sleep 1
-  $ mononoke_walker -L sizing -L graph scrub --checkpoint-version=v2 -q -p Changeset --chunk-size=1 --checkpoint-name=bonsai_deep2 --checkpoint-path=bonsai_deep2 -I deep -i bonsai -i FileContent 2>&1 | strip_glog | grep -vE "(Bytes|Walked)/s"
+  $ mononoke_walker -L sizing -L graph scrub --checkpoint-version=v2 -q -p Changeset --chunk-size=1 --checkpoint-name=bonsai_deep2 --checkpoint-path=bonsai_deep2 -I deep -i bonsai -i FileContent 2>&1 | grep -vE "(Bytes|Walked)/s"
   [INFO] Walking edge types [ChangesetToBonsaiParent, ChangesetToFileContent]
   [INFO] Walking node types [Changeset, FileContent]
   [INFO] [walker scrub{repo=repo}] Found checkpoint with bounds: (2, 4)
@@ -108,7 +108,7 @@ additional commit
   $ blobimport repo/.hg repo
 
 run again, should catchup with new data since checkpoint and nothing to do in main bounds
-  $ mononoke_walker -L sizing -L graph scrub --checkpoint-version=v2 -q -p Changeset --chunk-size=2 --checkpoint-name=bonsai_deep --checkpoint-path=test_sqlite -I deep -i bonsai -i FileContent 2>&1 | strip_glog | grep -vE "(Bytes|Walked)/s"
+  $ mononoke_walker -L sizing -L graph scrub --checkpoint-version=v2 -q -p Changeset --chunk-size=2 --checkpoint-name=bonsai_deep --checkpoint-path=test_sqlite -I deep -i bonsai -i FileContent 2>&1 | grep -vE "(Bytes|Walked)/s"
   [INFO] Walking edge types [ChangesetToBonsaiParent, ChangesetToFileContent]
   [INFO] Walking node types [Changeset, FileContent]
   [INFO] [walker scrub{repo=repo}] Found checkpoint with bounds: (1, 4)
@@ -120,7 +120,7 @@ run again, should catchup with new data since checkpoint and nothing to do in ma
   [INFO] [walker scrub{repo=repo}] Completed in 3 chunks of size 2
 
 setup for both a catchup due to a new commit, plus continuation from a checkpoint.  First create the partial checkpoint by setting sample rate
-  $ mononoke_walker -L sizing -L graph scrub --checkpoint-version=v2 -q -p Changeset --chunk-size=1 --checkpoint-sample-rate=3 --checkpoint-name=bonsai_deep3 --checkpoint-path=test_sqlite -I deep -i bonsai -i FileContent 2>&1 | strip_glog | grep -vE "(Bytes|Walked)/s"
+  $ mononoke_walker -L sizing -L graph scrub --checkpoint-version=v2 -q -p Changeset --chunk-size=1 --checkpoint-sample-rate=3 --checkpoint-name=bonsai_deep3 --checkpoint-path=test_sqlite -I deep -i bonsai -i FileContent 2>&1 | grep -vE "(Bytes|Walked)/s"
   [INFO] Walking edge types [ChangesetToBonsaiParent, ChangesetToFileContent]
   [INFO] Walking node types [Changeset, FileContent]
   [INFO] [walker scrub{repo=repo}] Repo bounds: (1, 5)
@@ -140,7 +140,7 @@ setup for both a catchup due to a new commit, plus continuation from a checkpoin
   [INFO] [walker scrub{repo=repo}] Completed in 4 chunks of size 1
 
  hg setup.  First create the partial checkpoint by setting sample rate
-  $ mononoke_walker -L sizing -L graph scrub --checkpoint-version=v2 -q -p BonsaiHgMapping --chunk-size=1 --checkpoint-sample-rate=3 --checkpoint-name=hg_deep --checkpoint-path=test_sqlite -I deep -i hg -i FileContent 2>&1 | strip_glog | grep -vE "(Bytes|Walked)/s"
+  $ mononoke_walker -L sizing -L graph scrub --checkpoint-version=v2 -q -p BonsaiHgMapping --chunk-size=1 --checkpoint-sample-rate=3 --checkpoint-name=hg_deep --checkpoint-path=test_sqlite -I deep -i hg -i FileContent 2>&1 | grep -vE "(Bytes|Walked)/s"
   [INFO] Walking edge types [BonsaiHgMappingToHgChangesetViaBonsai, HgChangesetToHgManifest, HgChangesetToHgManifestFileNode, HgChangesetToHgParent, HgChangesetViaBonsaiToHgChangeset, HgFileEnvelopeToFileContent, HgFileNodeToHgCopyfromFileNode, HgFileNodeToHgParentFileNode, HgFileNodeToLinkedHgBonsaiMapping, HgFileNodeToLinkedHgChangeset, HgManifestFileNodeToHgCopyfromFileNode, HgManifestFileNodeToHgParentFileNode, HgManifestFileNodeToLinkedHgBonsaiMapping, HgManifestFileNodeToLinkedHgChangeset, HgManifestToChildHgManifest, HgManifestToHgFileEnvelope, HgManifestToHgFileNode]
   [INFO] Walking node types [BonsaiHgMapping, FileContent, HgBonsaiMapping, HgChangeset, HgChangesetViaBonsai, HgFileEnvelope, HgFileNode, HgManifest, HgManifestFileNode]
   [INFO] [walker scrub{repo=repo}] Repo bounds: (1, 5)
@@ -160,7 +160,7 @@ setup for both a catchup due to a new commit, plus continuation from a checkpoin
   [INFO] [walker scrub{repo=repo}] Completed in 4 chunks of size 1
 
 OldestFirst setup for both a catchup due to a new commit, plus continuation from a checkpoint.  First create the partial checkpoint by setting sample rate
-  $ mononoke_walker -L sizing -L graph scrub --checkpoint-version=v2 -q -p Changeset -d OldestFirst --chunk-size=1 --checkpoint-sample-rate=3 --checkpoint-name=bonsai_deep3_oldest --checkpoint-path=test_sqlite -I deep -i bonsai -i FileContent 2>&1 | strip_glog | grep -vE "(Bytes|Walked)/s"
+  $ mononoke_walker -L sizing -L graph scrub --checkpoint-version=v2 -q -p Changeset -d OldestFirst --chunk-size=1 --checkpoint-sample-rate=3 --checkpoint-name=bonsai_deep3_oldest --checkpoint-path=test_sqlite -I deep -i bonsai -i FileContent 2>&1 | grep -vE "(Bytes|Walked)/s"
   [INFO] Walking edge types [ChangesetToBonsaiParent, ChangesetToFileContent]
   [INFO] Walking node types [Changeset, FileContent]
   [INFO] [walker scrub{repo=repo}] Repo bounds: (1, 5)
@@ -180,7 +180,7 @@ OldestFirst setup for both a catchup due to a new commit, plus continuation from
   [INFO] [walker scrub{repo=repo}] Completed in 4 chunks of size 1
 
 OldestFirst hg setup
-  $ mononoke_walker -L sizing -L graph scrub --checkpoint-version=v2 -q -p BonsaiHgMapping -d OldestFirst --chunk-size=1 --checkpoint-name=hg_deep_oldest --checkpoint-path=test_sqlite -I deep -i bonsai -i FileContent 2>&1 | strip_glog | grep -vE "(Bytes|Walked)/s"
+  $ mononoke_walker -L sizing -L graph scrub --checkpoint-version=v2 -q -p BonsaiHgMapping -d OldestFirst --chunk-size=1 --checkpoint-name=hg_deep_oldest --checkpoint-path=test_sqlite -I deep -i bonsai -i FileContent 2>&1 | grep -vE "(Bytes|Walked)/s"
   [INFO] Walking edge types [ChangesetToBonsaiParent, ChangesetToFileContent]
   [INFO] Walking node types [Changeset, FileContent]
   [INFO] [walker scrub{repo=repo}] Repo bounds: (1, 5)
@@ -209,7 +209,7 @@ now the additional commit
   $ blobimport repo/.hg repo
 
 finally, bonsai should have a run with both catchup and main bounds
-  $ mononoke_walker -L sizing -L graph scrub --checkpoint-version=v2 -q -p Changeset --chunk-size=1 --checkpoint-sample-rate=3 --checkpoint-name=bonsai_deep3 --checkpoint-path=test_sqlite -I deep -i bonsai -i FileContent 2>&1 | strip_glog | grep -vE "(Bytes|Walked)/s"
+  $ mononoke_walker -L sizing -L graph scrub --checkpoint-version=v2 -q -p Changeset --chunk-size=1 --checkpoint-sample-rate=3 --checkpoint-name=bonsai_deep3 --checkpoint-path=test_sqlite -I deep -i bonsai -i FileContent 2>&1 | grep -vE "(Bytes|Walked)/s"
   [INFO] Walking edge types [ChangesetToBonsaiParent, ChangesetToFileContent]
   [INFO] Walking node types [Changeset, FileContent]
   [INFO] [walker scrub{repo=repo}] Found checkpoint with bounds: (2, 5)
@@ -225,7 +225,7 @@ finally, bonsai should have a run with both catchup and main bounds
   [INFO] [walker scrub{repo=repo}] Completed in 5 chunks of size 1
 
 hg should have a run with both catchup and main bounds, and some deferred expected at end
-  $ mononoke_walker -L sizing -L graph scrub --checkpoint-version=v2 -q -p BonsaiHgMapping --chunk-size=1 --checkpoint-sample-rate=3 --checkpoint-name=hg_deep --checkpoint-path=test_sqlite -I deep -i hg 2>&1 | strip_glog | grep -vE "(Bytes|Walked)/s"
+  $ mononoke_walker -L sizing -L graph scrub --checkpoint-version=v2 -q -p BonsaiHgMapping --chunk-size=1 --checkpoint-sample-rate=3 --checkpoint-name=hg_deep --checkpoint-path=test_sqlite -I deep -i hg 2>&1 | grep -vE "(Bytes|Walked)/s"
   [INFO] Walking edge types [BonsaiHgMappingToHgChangesetViaBonsai, HgChangesetToHgManifest, HgChangesetToHgManifestFileNode, HgChangesetToHgParent, HgChangesetViaBonsaiToHgChangeset, HgFileNodeToHgCopyfromFileNode, HgFileNodeToHgParentFileNode, HgFileNodeToLinkedHgBonsaiMapping, HgFileNodeToLinkedHgChangeset, HgManifestFileNodeToHgCopyfromFileNode, HgManifestFileNodeToHgParentFileNode, HgManifestFileNodeToLinkedHgBonsaiMapping, HgManifestFileNodeToLinkedHgChangeset, HgManifestToChildHgManifest, HgManifestToHgFileEnvelope, HgManifestToHgFileNode]
   [INFO] Walking node types [BonsaiHgMapping, HgBonsaiMapping, HgChangeset, HgChangesetViaBonsai, HgFileEnvelope, HgFileNode, HgManifest, HgManifestFileNode]
   [INFO] [walker scrub{repo=repo}] Found checkpoint with bounds: (2, 5)
@@ -241,7 +241,7 @@ hg should have a run with both catchup and main bounds, and some deferred expect
   [INFO] [walker scrub{repo=repo}] Completed in 5 chunks of size 1
 
 OldestFirst, has only main bounds as the start point of the repo has not changed
-  $ mononoke_walker -L sizing -L graph scrub --checkpoint-version=v2 -q -p Changeset -d OldestFirst --chunk-size=1 --checkpoint-sample-rate=3 --checkpoint-name=bonsai_deep3_oldest --checkpoint-path=test_sqlite -I deep -i bonsai -i FileContent 2>&1 | strip_glog | grep -vE "(Bytes|Walked)/s"
+  $ mononoke_walker -L sizing -L graph scrub --checkpoint-version=v2 -q -p Changeset -d OldestFirst --chunk-size=1 --checkpoint-sample-rate=3 --checkpoint-name=bonsai_deep3_oldest --checkpoint-path=test_sqlite -I deep -i bonsai -i FileContent 2>&1 | grep -vE "(Bytes|Walked)/s"
   [INFO] Walking edge types [ChangesetToBonsaiParent, ChangesetToFileContent]
   [INFO] Walking node types [Changeset, FileContent]
   [INFO] [walker scrub{repo=repo}] Found checkpoint with bounds: (1, 4)
@@ -256,7 +256,7 @@ OldestFirst, has only main bounds as the start point of the repo has not changed
   [INFO] [walker scrub{repo=repo}] Completed in 5 chunks of size 1
 
 OldestFirst, hg should have a run with only main bounds
-  $ mononoke_walker -L sizing -L graph scrub --checkpoint-version=v2 -q -p BonsaiHgMapping -d OldestFirst --chunk-size=1 --checkpoint-name=hg_deep_oldest --checkpoint-path=test_sqlite -I deep -i hg 2>&1 | strip_glog | grep -vE "(Bytes|Walked)/s"
+  $ mononoke_walker -L sizing -L graph scrub --checkpoint-version=v2 -q -p BonsaiHgMapping -d OldestFirst --chunk-size=1 --checkpoint-name=hg_deep_oldest --checkpoint-path=test_sqlite -I deep -i hg 2>&1 | grep -vE "(Bytes|Walked)/s"
   [INFO] Walking edge types [BonsaiHgMappingToHgChangesetViaBonsai, HgChangesetToHgManifest, HgChangesetToHgManifestFileNode, HgChangesetToHgParent, HgChangesetViaBonsaiToHgChangeset, HgFileNodeToHgCopyfromFileNode, HgFileNodeToHgParentFileNode, HgFileNodeToLinkedHgBonsaiMapping, HgFileNodeToLinkedHgChangeset, HgManifestFileNodeToHgCopyfromFileNode, HgManifestFileNodeToHgParentFileNode, HgManifestFileNodeToLinkedHgBonsaiMapping, HgManifestFileNodeToLinkedHgChangeset, HgManifestToChildHgManifest, HgManifestToHgFileEnvelope, HgManifestToHgFileNode]
   [INFO] Walking node types [BonsaiHgMapping, HgBonsaiMapping, HgChangeset, HgChangesetViaBonsai, HgFileEnvelope, HgFileNode, HgManifest, HgManifestFileNode]
   [INFO] [walker scrub{repo=repo}] Found checkpoint with bounds: (1, 5)
@@ -270,7 +270,7 @@ OldestFirst, hg should have a run with only main bounds
 
 Check that the checkpoint low bound is not used if its too old
   $ sleep 2
-  $ mononoke_walker -L sizing -L graph scrub --checkpoint-version=v2 -q -p Changeset --chunk-size=5 --state-max-age=1 --checkpoint-sample-rate=3 --checkpoint-name=bonsai_deep3 --checkpoint-path=test_sqlite -I deep -i bonsai -i FileContent 2>&1 | strip_glog | grep -vE "(Bytes|Walked)/s"
+  $ mononoke_walker -L sizing -L graph scrub --checkpoint-version=v2 -q -p Changeset --chunk-size=5 --state-max-age=1 --checkpoint-sample-rate=3 --checkpoint-name=bonsai_deep3 --checkpoint-path=test_sqlite -I deep -i bonsai -i FileContent 2>&1 | grep -vE "(Bytes|Walked)/s"
   [INFO] Walking edge types [ChangesetToBonsaiParent, ChangesetToFileContent]
   [INFO] Walking node types [Changeset, FileContent]
   [INFO] [walker scrub{repo=repo}] Found checkpoint with bounds: (2, 5)
@@ -282,7 +282,7 @@ Check that the checkpoint low bound is not used if its too old
   [INFO] [walker scrub{repo=repo}] Completed in 1 chunks of size 5
 
 OldestFirst, Check that the checkpoint high bound is not used if its too old
-  $ mononoke_walker -L sizing -L graph scrub --checkpoint-version=v2 -q -p Changeset --chunk-size=5 --state-max-age=1 --checkpoint-sample-rate=3 --checkpoint-name=bonsai_deep3_oldest --checkpoint-path=test_sqlite -I deep -i bonsai -i FileContent 2>&1 | strip_glog | grep -vE "(Bytes|Walked)/s"
+  $ mononoke_walker -L sizing -L graph scrub --checkpoint-version=v2 -q -p Changeset --chunk-size=5 --state-max-age=1 --checkpoint-sample-rate=3 --checkpoint-name=bonsai_deep3_oldest --checkpoint-path=test_sqlite -I deep -i bonsai -i FileContent 2>&1 | grep -vE "(Bytes|Walked)/s"
   [INFO] Walking edge types [ChangesetToBonsaiParent, ChangesetToFileContent]
   [INFO] Walking node types [Changeset, FileContent]
   [INFO] [walker scrub{repo=repo}] Found checkpoint with bounds: (1, 4)

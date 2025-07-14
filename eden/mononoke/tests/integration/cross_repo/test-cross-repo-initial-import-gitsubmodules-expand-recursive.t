@@ -8,7 +8,7 @@
 # A will depend on B as a submodule and B will depend on C.
 #
 
-# The test will run an initial-import and set up a live sync from A to a large 
+# The test will run an initial-import and set up a live sync from A to a large
 # repo, expanding the git submodule changes.
 # All files from all submodules need to be copied in A, in the appropriate
 # subdirectory.
@@ -24,7 +24,7 @@
 
 
 
-Run the x-repo with submodules setup  
+Run the x-repo with submodules setup
 
   $ quiet run_common_xrepo_sync_with_gitsubmodules_setup
   $ set_git_submodules_action_in_config_version "$LATEST_CONFIG_VERSION_NAME" "$SUBMODULE_REPO_ID" 3 # 3=expand
@@ -43,7 +43,7 @@ Run the x-repo with submodules setup
 
   $ cd "$TESTTMP/$LARGE_REPO_NAME"
   $ wait_for_bookmark_move_away_edenapi large_repo master_bookmark $(hg whereami)
-  $ hg pull -q 
+  $ hg pull -q
   $ hg co -q master_bookmark
 
   $ hg log --graph -T '{node} {desc}\n' -r "all()"
@@ -165,24 +165,24 @@ TODO(T174902563): Fix deletion of submodules in EXPAND submodule action.
   0597690a839ce11a250139dae33ee85d9772a47a (no-eol)
 
 -- Also check that our two binaries that can verify working copy are able to deal with expansions
-  $ REPOIDLARGE=$LARGE_REPO_ID REPOIDSMALL=$SUBMODULE_REPO_ID verify_wc $(hg log -r master_bookmark -T '{node}') |& strip_glog
+  $ REPOIDLARGE=$LARGE_REPO_ID REPOIDSMALL=$SUBMODULE_REPO_ID verify_wc $(hg log -r master_bookmark -T '{node}')
 
 -- The check-push-redirection-prereqs should behave the same both ways but let's verify it (we had bugs where it didn't)
 -- (those outputs are still not correct but that's expected)
-  $ quiet_grep "all is well" -- mononoke_admin megarepo check-prereqs --source-repo-id $SUBMODULE_REPO_ID --target-repo-id $LARGE_REPO_ID --source-changeset bm=heads/master_bookmark --target-changeset bm=master_bookmark --version "$LATEST_CONFIG_VERSION_NAME" | strip_glog | tee $TESTTMP/push_redir_prereqs_small_large
+  $ quiet_grep "all is well" -- mononoke_admin megarepo check-prereqs --source-repo-id $SUBMODULE_REPO_ID --target-repo-id $LARGE_REPO_ID --source-changeset bm=heads/master_bookmark --target-changeset bm=master_bookmark --version "$LATEST_CONFIG_VERSION_NAME" | tee $TESTTMP/push_redir_prereqs_small_large
   [INFO] all is well!
 
-  $ quiet_grep "all is well" -- mononoke_admin megarepo check-prereqs --source-repo-id $LARGE_REPO_ID --target-repo-id $SUBMODULE_REPO_ID --source-changeset bm=master_bookmark --target-changeset bm=heads/master_bookmark --version "$LATEST_CONFIG_VERSION_NAME" | strip_glog | tee $TESTTMP/push_redir_prereqs_large_small
+  $ quiet_grep "all is well" -- mononoke_admin megarepo check-prereqs --source-repo-id $LARGE_REPO_ID --target-repo-id $SUBMODULE_REPO_ID --source-changeset bm=master_bookmark --target-changeset bm=heads/master_bookmark --version "$LATEST_CONFIG_VERSION_NAME" | tee $TESTTMP/push_redir_prereqs_large_small
   [INFO] all is well!
   $ diff -wbBdu $TESTTMP/push_redir_prereqs_small_large $TESTTMP/push_redir_prereqs_large_small
 
 -- Let's corrupt the expansion and check if validation complains
 -- (those outputs are still not correct but that's expected)
-  $ echo corrupt > smallrepofolder1/git-repo-b/git-repo-c/choo3 
+  $ echo corrupt > smallrepofolder1/git-repo-b/git-repo-c/choo3
   $ echo corrupt > smallrepofolder1/.x-repo-submodule-git-repo-b
   $ hg commit -m "submodule corruption"
   $ hg push -q --to master_bookmark
-  $ quiet_grep "mismatch" -- mononoke_admin megarepo check-prereqs --source-repo-id $SUBMODULE_REPO_ID --target-repo-id $LARGE_REPO_ID --source-changeset bm=heads/master_bookmark --target-changeset bm=master_bookmark  --version "$LATEST_CONFIG_VERSION_NAME" | strip_glog | tee $TESTTMP/push_redir_prereqs_small_large
+  $ quiet_grep "mismatch" -- mononoke_admin megarepo check-prereqs --source-repo-id $SUBMODULE_REPO_ID --target-repo-id $LARGE_REPO_ID --source-changeset bm=heads/master_bookmark --target-changeset bm=master_bookmark  --version "$LATEST_CONFIG_VERSION_NAME" | tee $TESTTMP/push_redir_prereqs_small_large
   submodule expansion mismatch: Failed to fetch content from content id 06a434694d9172d617062abd92f015f73978fb17dd6bcc54e708cd2c6f247970 file containing the submodule's git commit hash
 
   $ quiet_grep "mismatch" -- mononoke_admin megarepo check-prereqs --source-repo-id $LARGE_REPO_ID --target-repo-id $SUBMODULE_REPO_ID --source-changeset bm=master_bookmark --target-changeset bm=heads/master_bookmark  --version "$LATEST_CONFIG_VERSION_NAME" | sort | tee $TESTTMP/push_redir_prereqs_large_small
@@ -201,9 +201,7 @@ TODO(T174902563): Fix deletion of submodules in EXPAND submodule action.
   >   printf "Check mapping in database with Mononoke admin\n"
   >   mononoke_admin \
   >     cross-repo --source-repo-id $LARGE_REPO_ID --target-repo-id $SUBMODULE_REPO_ID map -i $hg_hash | rg -v "using repo"
-  >   
-  >   printf "\n\nCall hg committranslateids\n" 
-  >   
+  >   printf "\n\nCall hg committranslateids\n"
   >   hg debugapi -e committranslateids \
   >     -i "[{'Hg': '$hg_hash'}]" -i "'Bonsai'" -i None -i "'$SUBMODULE_REPO_NAME'"
   >   
@@ -249,13 +247,13 @@ TODO(T174902563): Fix deletion of submodules in EXPAND submodule action.
 -- Test backsyncing (i.e. large to small)
 
   $ cd "$TESTTMP/$LARGE_REPO_NAME" || exit
-  $ hg pull -q && hg co -q master_bookmark  
+  $ hg pull -q && hg co -q master_bookmark
   $ hg status
   $ hg co -q .^ # go before the commit that corrupts submodules
   $ hg status
   $ enable commitcloud infinitepush # to push commits to server
-  $ function hg_log() { 
-  >   hg log --graph -T '{node|short} {desc}\n' "$@" 
+  $ function hg_log() {
+  >   hg log --graph -T '{node|short} {desc}\n' "$@"
   > }
 
   $ hg_log
@@ -359,7 +357,7 @@ TODO(T174902563): Fix deletion of submodules in EXPAND submodule action.
 -- Change a large repo file and try to backsync it to small repo
 -- EXPECT: commit isn't synced and returns working copy equivalent instead
   $ echo "changing large repo file" > file_in_large_repo.txt
-  $ hg commit -A -m "Changing large repo file" 
+  $ hg commit -A -m "Changing large repo file"
   $ hg push -q -r . --to master_bookmark --non-forward-move --pushvar NON_FAST_FORWARD=true
   $ backsync_get_info_and_derive_data
   Processing commit: Changing large repo file
@@ -383,7 +381,7 @@ TODO(T174902563): Fix deletion of submodules in EXPAND submodule action.
 -- Change a small repo file outside of a submodule expansion
 -- EXPECT: commit is backsynced normally because it doesn't touch submodule expansions
   $ echo "changing small repo file" > smallrepofolder1/regular_dir/aardvar
-  $ hg commit -A -m "Changing small repo in large repo (not submodule)" 
+  $ hg commit -A -m "Changing small repo in large repo (not submodule)"
   $ hg push -q -r . --to master_bookmark --non-forward-move --pushvar NON_FAST_FORWARD=true
   $ backsync_get_info_and_derive_data
   Processing commit: Changing small repo in large repo (not submodule)
@@ -477,7 +475,7 @@ TODO(T174902563): Fix deletion of submodules in EXPAND submodule action.
 -- First change the file without updating the submodule metadata file
   $ hg co -q .^ # go to previous commit because the current one doesn't sync
   $ echo "changing submodule expansion" > smallrepofolder1/git-repo-b/foo
-  $ hg commit -Aq -m "Changing submodule expansion in large repo" 
+  $ hg commit -Aq -m "Changing submodule expansion in large repo"
   $ backsync_get_info_and_derive_data
   Processing commit: Changing submodule expansion in large repo
   Commit hash: 17b64cd26d50139b93037e4aa7040cfaea104b15
@@ -487,7 +485,7 @@ TODO(T174902563): Fix deletion of submodules in EXPAND submodule action.
 -- Change a small repo file inside a recursive submodule expansion
   $ hg co -q .^ # go to previous commit because the current one doesn't sync
   $ echo "changing submodule expansion" > smallrepofolder1/git-repo-b/git-repo-c/choo
-  $ hg commit -A -m "Changing recursive submodule expansion in large repo" 
+  $ hg commit -A -m "Changing recursive submodule expansion in large repo"
   $ backsync_get_info_and_derive_data
   Processing commit: Changing recursive submodule expansion in large repo
   Commit hash: 392ccb8b74534dfd35eb99e3f3f4ead1f0277e96
@@ -497,7 +495,7 @@ TODO(T174902563): Fix deletion of submodules in EXPAND submodule action.
 -- Delete submodule metadata file
   $ hg co -q .^ # go to previous commit because the current one doesn't sync
   $ rm smallrepofolder1/.x-repo-submodule-git-repo-b
-  $ hg commit -q -A -m "Deleting repo_b submodule metadata file" 
+  $ hg commit -q -A -m "Deleting repo_b submodule metadata file"
   $ backsync_get_info_and_derive_data
   Processing commit: Deleting repo_b submodule metadata file
   Commit hash: fc9ac6bc48350781bc9affc6125b3d3c234688d9
@@ -508,7 +506,7 @@ TODO(T174902563): Fix deletion of submodules in EXPAND submodule action.
 -- Delete recursive submodule metadata file
   $ hg co -q .^ # go to previous commit because the current one doesn't sync
   $ rm smallrepofolder1/git-repo-b/.x-repo-submodule-git-repo-c
-  $ hg commit -q -A -m "Deleting repo_c recursive submodule metadata file" 
+  $ hg commit -q -A -m "Deleting repo_c recursive submodule metadata file"
   $ backsync_get_info_and_derive_data
   Processing commit: Deleting repo_c recursive submodule metadata file
   Commit hash: c5ba322776e498b34aee61308c3fb3590d09b0ce
@@ -519,7 +517,7 @@ TODO(T174902563): Fix deletion of submodules in EXPAND submodule action.
 -- Modify submodule metadata file
   $ hg co -q .^ # go to previous commit because the current one doesn't sync
   $ echo "change metadata file" > smallrepofolder1/.x-repo-submodule-git-repo-b
-  $ hg commit -q -A -m "Change repo_b submodule metadata file" 
+  $ hg commit -q -A -m "Change repo_b submodule metadata file"
   $ backsync_get_info_and_derive_data
   Processing commit: Change repo_b submodule metadata file
   Commit hash: cbf713928ec94ec9bf2d4eee8f9247d3001fc291
@@ -530,7 +528,7 @@ TODO(T174902563): Fix deletion of submodules in EXPAND submodule action.
 -- Modify recursive submodule metadata file
   $ hg co -q .^ # go to previous commit because the current one doesn't sync
   $ echo "change metadata file" > smallrepofolder1/git-repo-b/.x-repo-submodule-git-repo-c
-  $ hg commit -q -A -m "Change repo_c recursive submodule metadata file" 
+  $ hg commit -q -A -m "Change repo_c recursive submodule metadata file"
   $ backsync_get_info_and_derive_data
   Processing commit: Change repo_c recursive submodule metadata file
   Commit hash: 02285a4ca81aa356b80d8dc2daf095822e0187d5
@@ -542,7 +540,7 @@ TODO(T174902563): Fix deletion of submodules in EXPAND submodule action.
 -- Delete submodule expansion
   $ hg co -q .^ # go to previous commit because the current one doesn't sync
   $ rm -rf smallrepofolder1/git-repo-b
-  $ hg commit -q -A -m "Delete repo_b submodule expansion" 
+  $ hg commit -q -A -m "Delete repo_b submodule expansion"
   $ backsync_get_info_and_derive_data
   Processing commit: Delete repo_b submodule expansion
   Commit hash: 6bb6f4620ca201142b5fd0d42486879a04158229
@@ -552,7 +550,7 @@ TODO(T174902563): Fix deletion of submodules in EXPAND submodule action.
 -- Delete recursive submodule expansion
   $ hg co -q .^ # go to previous commit because the current one doesn't sync
   $ rm -rf smallrepofolder1/git-repo-b/git-repo-c
-  $ hg commit -q -A -m "Delete repo_c recursive submodule expansion" 
+  $ hg commit -q -A -m "Delete repo_c recursive submodule expansion"
   $ backsync_get_info_and_derive_data
   Processing commit: Delete repo_c recursive submodule expansion
   Commit hash: f229a7929d48e8d5e1e461443c41071b2c0be99e

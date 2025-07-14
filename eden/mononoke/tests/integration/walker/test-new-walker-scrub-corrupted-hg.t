@@ -39,7 +39,7 @@ Try scrubbing hg file contents (as we regularly do in production)
   > -i=bonsai  -i=hg -i=FileContent -x=HgFileNode -I=marker \
   > --exclude-node BonsaiHgMapping:c567ecc582f8822cf1529a127dec105db78a440fbeaa21221ce2abc4affff6ec \
   > --exclude-node BonsaiHgMapping:17090c5bf061aa21f7aa2393796b7bb9a20c81a3940b2aaab7683f1e10c67978 \
-  > -q 2>&1 | strip_glog | grep -vE "(Bytes|Walked)/s"
+  > -q 2>&1 | grep -vE "(Bytes|Walked)/s"
   [INFO] Walking edge types [BonsaiHgMappingToHgChangesetViaBonsai, ChangesetToBonsaiHgMapping, ChangesetToBonsaiParent, ChangesetToFileContent, HgBonsaiMappingToChangeset, HgChangesetToHgManifest, HgChangesetToHgManifestFileNode, HgChangesetToHgParent, HgChangesetViaBonsaiToHgChangeset, HgFileEnvelopeToFileContent, HgManifestFileNodeToHgCopyfromFileNode, HgManifestFileNodeToHgParentFileNode, HgManifestFileNodeToLinkedHgBonsaiMapping, HgManifestFileNodeToLinkedHgChangeset, HgManifestToChildHgManifest, HgManifestToHgFileEnvelope]
   [INFO] Walking node types [BonsaiHgMapping, Changeset, FileContent, HgBonsaiMapping, HgChangeset, HgChangesetViaBonsai, HgFileEnvelope, HgManifest, HgManifestFileNode]
   [INFO] [walker scrub{repo=repo}] Repo bounds: (1, 12)
@@ -55,7 +55,7 @@ Try scrubbing hg filenodes (as we regularly do in production)
   > -i=bonsai  -i=hg -i=FileContent -x=HgFileEnvelope -i=HgFileNode \
   > --exclude-node BonsaiHgMapping:c567ecc582f8822cf1529a127dec105db78a440fbeaa21221ce2abc4affff6ec \
   > --exclude-node BonsaiHgMapping:17090c5bf061aa21f7aa2393796b7bb9a20c81a3940b2aaab7683f1e10c67978 \
-  > -q 2>&1 | strip_glog | grep -vE "(Bytes|Walked)/s"
+  > -q 2>&1 | grep -vE "(Bytes|Walked)/s"
   [INFO] Walking edge types [BonsaiHgMappingToHgChangesetViaBonsai, ChangesetToBonsaiHgMapping, ChangesetToBonsaiParent, ChangesetToFileContent, HgBonsaiMappingToChangeset, HgChangesetToHgManifest, HgChangesetToHgManifestFileNode, HgChangesetToHgParent, HgChangesetViaBonsaiToHgChangeset, HgFileNodeToHgCopyfromFileNode, HgFileNodeToHgParentFileNode, HgFileNodeToLinkedHgBonsaiMapping, HgFileNodeToLinkedHgChangeset, HgManifestFileNodeToHgCopyfromFileNode, HgManifestFileNodeToHgParentFileNode, HgManifestFileNodeToLinkedHgBonsaiMapping, HgManifestFileNodeToLinkedHgChangeset, HgManifestToChildHgManifest, HgManifestToHgFileNode]
   [INFO] Walking node types [BonsaiHgMapping, Changeset, FileContent, HgBonsaiMapping, HgChangeset, HgChangesetViaBonsai, HgFileNode, HgManifest, HgManifestFileNode]
   [INFO] [walker scrub{repo=repo}] Repo bounds: (1, 12)
@@ -67,7 +67,7 @@ Try scrubbing hg filenodes (as we regularly do in production)
   [INFO] [walker scrub{repo=repo}] Completed in 1 chunks of size 100000
 
 Basic case, deep scrub of the good branch still works
-  $ mononoke_walker scrub -I deep -q -b good 2>&1 | strip_glog | grep -vE "(Bytes|Walked)/s"
+  $ mononoke_walker scrub -I deep -q -b good 2>&1 | grep -vE "(Bytes|Walked)/s"
   [INFO] Walking edge types [AliasContentMappingToFileContent, BonsaiHgMappingToHgChangesetViaBonsai, BookmarkToChangeset, ChangesetToBonsaiHgMapping, ChangesetToBonsaiParent, ChangesetToFileContent, FileContentMetadataV2ToGitSha1Alias, FileContentMetadataV2ToSeededBlake3Alias, FileContentMetadataV2ToSha1Alias, FileContentMetadataV2ToSha256Alias, FileContentToFileContentMetadataV2, HgBonsaiMappingToChangeset, HgChangesetToHgManifest, HgChangesetToHgParent, HgChangesetViaBonsaiToHgChangeset, HgFileEnvelopeToFileContent, HgFileNodeToHgCopyfromFileNode, HgFileNodeToHgParentFileNode, HgFileNodeToLinkedHgBonsaiMapping, HgFileNodeToLinkedHgChangeset, HgManifestToChildHgManifest, HgManifestToHgFileEnvelope, HgManifestToHgFileNode]
   [INFO] Walking node types [AliasContentMapping, BonsaiHgMapping, Bookmark, Changeset, FileContent, FileContentMetadataV2, HgBonsaiMapping, HgChangeset, HgChangesetViaBonsai, HgFileEnvelope, HgFileNode, HgManifest]
   [INFO] [walker scrub{repo=repo}] Seen,Loaded: 25,25
@@ -76,7 +76,7 @@ Basic case, deep scrub of the bad branch does work only because of current mitig
 and only because the bad commit is a head of the branch.
   $ mononoke_walker scrub -I deep -q -b bad \
   > --exclude-node Changeset:c567ecc582f8822cf1529a127dec105db78a440fbeaa21221ce2abc4affff6ec \
-  > 2>&1 | strip_glog | grep -vE "(Bytes|Walked)/s"
+  > 2>&1 | grep -vE "(Bytes|Walked)/s"
   [INFO] Walking edge types [AliasContentMappingToFileContent, BonsaiHgMappingToHgChangesetViaBonsai, BookmarkToChangeset, ChangesetToBonsaiHgMapping, ChangesetToBonsaiParent, ChangesetToFileContent, FileContentMetadataV2ToGitSha1Alias, FileContentMetadataV2ToSeededBlake3Alias, FileContentMetadataV2ToSha1Alias, FileContentMetadataV2ToSha256Alias, FileContentToFileContentMetadataV2, HgBonsaiMappingToChangeset, HgChangesetToHgManifest, HgChangesetToHgParent, HgChangesetViaBonsaiToHgChangeset, HgFileEnvelopeToFileContent, HgFileNodeToHgCopyfromFileNode, HgFileNodeToHgParentFileNode, HgFileNodeToLinkedHgBonsaiMapping, HgFileNodeToLinkedHgChangeset, HgManifestToChildHgManifest, HgManifestToHgFileEnvelope, HgManifestToHgFileNode]
   [INFO] Walking node types [AliasContentMapping, BonsaiHgMapping, Bookmark, Changeset, FileContent, FileContentMetadataV2, HgBonsaiMapping, HgChangeset, HgChangesetViaBonsai, HgFileEnvelope, HgFileNode, HgManifest]
   [INFO] [walker scrub{repo=repo}] Seen,Loaded: 1,1
@@ -87,7 +87,7 @@ Basic case, deep scrub of the bad branch that doesn't have bad commit at head.
   > --exclude-node Changeset:17090c5bf061aa21f7aa2393796b7bb9a20c81a3940b2aaab7683f1e10c67978 \
   > --exclude-node HgChangeset:6d7e2d6f0ed4ce975af19d70754704b279e4fd35 \
   > --exclude-node HgChangesetViaBonsai:6d7e2d6f0ed4ce975af19d70754704b279e4fd35 \
-  > 2>&1 | strip_glog | grep -vE "(Bytes|Walked)/s"
+  > 2>&1 | grep -vE "(Bytes|Walked)/s"
   [INFO] Walking edge types [AliasContentMappingToFileContent, BonsaiHgMappingToHgChangesetViaBonsai, ChangesetToBonsaiHgMapping, ChangesetToBonsaiParent, ChangesetToFileContent, FileContentMetadataV2ToGitSha1Alias, FileContentMetadataV2ToSeededBlake3Alias, FileContentMetadataV2ToSha1Alias, FileContentMetadataV2ToSha256Alias, FileContentToFileContentMetadataV2, HgBonsaiMappingToChangeset, HgChangesetToHgManifest, HgChangesetToHgParent, HgChangesetViaBonsaiToHgChangeset, HgFileEnvelopeToFileContent, HgFileNodeToHgCopyfromFileNode, HgFileNodeToHgParentFileNode, HgFileNodeToLinkedHgBonsaiMapping, HgFileNodeToLinkedHgChangeset, HgManifestToChildHgManifest, HgManifestToHgFileEnvelope, HgManifestToHgFileNode]
   [INFO] Walking node types [AliasContentMapping, BonsaiHgMapping, Changeset, FileContent, FileContentMetadataV2, HgBonsaiMapping, HgChangeset, HgChangesetViaBonsai, HgFileEnvelope, HgFileNode, HgManifest]
   [INFO] [walker scrub{repo=repo}] Seen,Loaded: 34,34

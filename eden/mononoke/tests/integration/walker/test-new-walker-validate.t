@@ -18,7 +18,7 @@ setup configuration
   blobimporting
 
 validate, expecting all valid
-  $ mononoke_walker validate -I deep -q -b master_bookmark 2>&1 | strip_glog | grep -vE "(Bytes|Walked)/s"
+  $ mononoke_walker validate -I deep -q -b master_bookmark 2>&1 | grep -vE "(Bytes|Walked)/s"
   [INFO] Walking edge types [AliasContentMappingToFileContent, BonsaiHgMappingToHgChangesetViaBonsai, BookmarkToChangeset, ChangesetToBonsaiHgMapping, ChangesetToBonsaiParent, ChangesetToFileContent, FileContentMetadataV2ToGitSha1Alias, FileContentMetadataV2ToSeededBlake3Alias, FileContentMetadataV2ToSha1Alias, FileContentMetadataV2ToSha256Alias, FileContentToFileContentMetadataV2, HgBonsaiMappingToChangeset, HgChangesetToHgManifest, HgChangesetToHgParent, HgChangesetViaBonsaiToHgChangeset, HgFileEnvelopeToFileContent, HgFileNodeToHgCopyfromFileNode, HgFileNodeToHgParentFileNode, HgFileNodeToLinkedHgBonsaiMapping, HgFileNodeToLinkedHgChangeset, HgManifestToChildHgManifest, HgManifestToHgFileEnvelope, HgManifestToHgFileNode]
   [INFO] Walking node types [AliasContentMapping, BonsaiHgMapping, Bookmark, Changeset, FileContent, FileContentMetadataV2, HgBonsaiMapping, HgChangeset, HgChangesetViaBonsai, HgFileEnvelope, HgFileNode, HgManifest]
   [INFO] [walker validate{repo=repo}] Performing check types [HgLinkNodePopulated]
@@ -27,7 +27,7 @@ validate, expecting all valid
 
 
 validate, check route is logged on unexpected error (forced with chaos blob)
-  $ mononoke_walker --scuba-log-file scuba-error.json --blobstore-read-chaos-rate=1 -l validate validate -q -I deep -b master_bookmark 2>&1 | strip_glog | grep -vE "(Bytes|Walked)/s"
+  $ mononoke_walker --scuba-log-file scuba-error.json --blobstore-read-chaos-rate=1 -l validate validate -q -I deep -b master_bookmark 2>&1 | grep -vE "(Bytes|Walked)/s"
   [INFO] Walking edge types [AliasContentMappingToFileContent, BonsaiHgMappingToHgChangesetViaBonsai, BookmarkToChangeset, ChangesetToBonsaiHgMapping, ChangesetToBonsaiParent, ChangesetToFileContent, FileContentMetadataV2ToGitSha1Alias, FileContentMetadataV2ToSeededBlake3Alias, FileContentMetadataV2ToSha1Alias, FileContentMetadataV2ToSha256Alias, FileContentToFileContentMetadataV2, HgBonsaiMappingToChangeset, HgChangesetToHgManifest, HgChangesetToHgParent, HgChangesetViaBonsaiToHgChangeset, HgFileEnvelopeToFileContent, HgFileNodeToHgCopyfromFileNode, HgFileNodeToHgParentFileNode, HgFileNodeToLinkedHgBonsaiMapping, HgFileNodeToLinkedHgChangeset, HgManifestToChildHgManifest, HgManifestToHgFileEnvelope, HgManifestToHgFileNode]
   [INFO] Walking node types [AliasContentMapping, BonsaiHgMapping, Bookmark, Changeset, FileContent, FileContentMetadataV2, HgBonsaiMapping, HgChangeset, HgChangesetViaBonsai, HgFileEnvelope, HgFileNode, HgManifest]
   [INFO] [walker validate{repo=repo}] Performing check types [HgLinkNodePopulated]
@@ -46,7 +46,7 @@ Remove all filenodes
   $ sqlite3 "$TESTTMP/monsql/sqlite_dbs" "DELETE FROM filenodes where linknode=x'112478962961147124EDD43549AEDD1A335E44BF'";
 
 validate, expecting validation fails
-  $ mononoke_walker --scuba-log-file scuba.json -l validate validate -q -I deep -b master_bookmark 2>&1 | strip_glog | grep -vE "(Bytes|Walked)/s"
+  $ mononoke_walker --scuba-log-file scuba.json -l validate validate -q -I deep -b master_bookmark 2>&1 | grep -vE "(Bytes|Walked)/s"
   [INFO] Walking edge types [AliasContentMappingToFileContent, BonsaiHgMappingToHgChangesetViaBonsai, BookmarkToChangeset, ChangesetToBonsaiHgMapping, ChangesetToBonsaiParent, ChangesetToFileContent, FileContentMetadataV2ToGitSha1Alias, FileContentMetadataV2ToSeededBlake3Alias, FileContentMetadataV2ToSha1Alias, FileContentMetadataV2ToSha256Alias, FileContentToFileContentMetadataV2, HgBonsaiMappingToChangeset, HgChangesetToHgManifest, HgChangesetToHgParent, HgChangesetViaBonsaiToHgChangeset, HgFileEnvelopeToFileContent, HgFileNodeToHgCopyfromFileNode, HgFileNodeToHgParentFileNode, HgFileNodeToLinkedHgBonsaiMapping, HgFileNodeToLinkedHgChangeset, HgManifestToChildHgManifest, HgManifestToHgFileEnvelope, HgManifestToHgFileNode]
   [INFO] Walking node types [AliasContentMapping, BonsaiHgMapping, Bookmark, Changeset, FileContent, FileContentMetadataV2, HgBonsaiMapping, HgChangeset, HgChangesetViaBonsai, HgFileEnvelope, HgFileNode, HgManifest]
   [INFO] [walker validate{repo=repo}] Performing check types [HgLinkNodePopulated]
@@ -64,7 +64,7 @@ repair by blobimport.
   $ blobimport repo/.hg repo
 
 validate, expecting all valid, this time checking marker types as well
-  $ mononoke_walker -l validate validate -q -I deep -I marker -b master_bookmark 2>&1 | strip_glog | grep -vE "(Bytes|Walked)/s"
+  $ mononoke_walker -l validate validate -q -I deep -I marker -b master_bookmark 2>&1 | grep -vE "(Bytes|Walked)/s"
   [INFO] Walking edge types [AliasContentMappingToFileContent, BonsaiHgMappingToHgChangesetViaBonsai, BookmarkToChangeset, ChangesetToBonsaiHgMapping, ChangesetToBonsaiParent, ChangesetToFileContent, ChangesetToPhaseMapping, FileContentMetadataV2ToGitSha1Alias, FileContentMetadataV2ToSeededBlake3Alias, FileContentMetadataV2ToSha1Alias, FileContentMetadataV2ToSha256Alias, FileContentToFileContentMetadataV2, HgBonsaiMappingToChangeset, HgChangesetToHgManifest, HgChangesetToHgParent, HgChangesetViaBonsaiToHgChangeset, HgFileEnvelopeToFileContent, HgFileNodeToHgCopyfromFileNode, HgFileNodeToHgParentFileNode, HgFileNodeToLinkedHgBonsaiMapping, HgFileNodeToLinkedHgChangeset, HgManifestToChildHgManifest, HgManifestToHgFileEnvelope, HgManifestToHgFileNode]
   [INFO] Walking node types [AliasContentMapping, BonsaiHgMapping, Bookmark, Changeset, FileContent, FileContentMetadataV2, HgBonsaiMapping, HgChangeset, HgChangesetViaBonsai, HgFileEnvelope, HgFileNode, HgManifest, PhaseMapping]
   [INFO] [walker validate{repo=repo}] Performing check types [ChangesetPhaseIsPublic, HgLinkNodePopulated]
@@ -75,7 +75,7 @@ Remove the phase information, linknodes already point to them
   $ sqlite3 "$TESTTMP/monsql/sqlite_dbs" "DELETE FROM phases where repo_id >= 0";
 
 validate, expect no failures on phase info, as the commits are still public, just not marked as so in the phases table
-  $ mononoke_walker -l validate validate -q -I deep -I marker -b master_bookmark 2>&1 | strip_glog | grep -vE "(Bytes|Walked)/s"
+  $ mononoke_walker -l validate validate -q -I deep -I marker -b master_bookmark 2>&1 | grep -vE "(Bytes|Walked)/s"
   [INFO] Walking edge types [AliasContentMappingToFileContent, BonsaiHgMappingToHgChangesetViaBonsai, BookmarkToChangeset, ChangesetToBonsaiHgMapping, ChangesetToBonsaiParent, ChangesetToFileContent, ChangesetToPhaseMapping, FileContentMetadataV2ToGitSha1Alias, FileContentMetadataV2ToSeededBlake3Alias, FileContentMetadataV2ToSha1Alias, FileContentMetadataV2ToSha256Alias, FileContentToFileContentMetadataV2, HgBonsaiMappingToChangeset, HgChangesetToHgManifest, HgChangesetToHgParent, HgChangesetViaBonsaiToHgChangeset, HgFileEnvelopeToFileContent, HgFileNodeToHgCopyfromFileNode, HgFileNodeToHgParentFileNode, HgFileNodeToLinkedHgBonsaiMapping, HgFileNodeToLinkedHgChangeset, HgManifestToChildHgManifest, HgManifestToHgFileEnvelope, HgManifestToHgFileNode]
   [INFO] Walking node types [AliasContentMapping, BonsaiHgMapping, Bookmark, Changeset, FileContent, FileContentMetadataV2, HgBonsaiMapping, HgChangeset, HgChangesetViaBonsai, HgFileEnvelope, HgFileNode, HgManifest, PhaseMapping]
   [INFO] [walker validate{repo=repo}] Performing check types [ChangesetPhaseIsPublic, HgLinkNodePopulated]
@@ -85,7 +85,7 @@ validate, expect no failures on phase info, as the commits are still public, jus
 Remove all filenodes for the last commit, validation should succeed (i.e. filenodes were not derived yet)
   $ cd "$TESTTMP"
   $ sqlite3 "$TESTTMP/monsql/sqlite_dbs" "DELETE FROM filenodes where HEX(linknode) like '26805aba1e600a82e93661149f2313866a221a7b'";
-  $ mononoke_walker -l validate validate -q -I deep -b master_bookmark 2>&1 | strip_glog | grep -vE "(Bytes|Walked)/s"
+  $ mononoke_walker -l validate validate -q -I deep -b master_bookmark 2>&1 | grep -vE "(Bytes|Walked)/s"
   [INFO] Walking edge types [AliasContentMappingToFileContent, BonsaiHgMappingToHgChangesetViaBonsai, BookmarkToChangeset, ChangesetToBonsaiHgMapping, ChangesetToBonsaiParent, ChangesetToFileContent, FileContentMetadataV2ToGitSha1Alias, FileContentMetadataV2ToSeededBlake3Alias, FileContentMetadataV2ToSha1Alias, FileContentMetadataV2ToSha256Alias, FileContentToFileContentMetadataV2, HgBonsaiMappingToChangeset, HgChangesetToHgManifest, HgChangesetToHgParent, HgChangesetViaBonsaiToHgChangeset, HgFileEnvelopeToFileContent, HgFileNodeToHgCopyfromFileNode, HgFileNodeToHgParentFileNode, HgFileNodeToLinkedHgBonsaiMapping, HgFileNodeToLinkedHgChangeset, HgManifestToChildHgManifest, HgManifestToHgFileEnvelope, HgManifestToHgFileNode]
   [INFO] Walking node types [AliasContentMapping, BonsaiHgMapping, Bookmark, Changeset, FileContent, FileContentMetadataV2, HgBonsaiMapping, HgChangeset, HgChangesetViaBonsai, HgFileEnvelope, HgFileNode, HgManifest]
   [INFO] [walker validate{repo=repo}] Performing check types [HgLinkNodePopulated]

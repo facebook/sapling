@@ -28,13 +28,13 @@ setup repo2 so we can try multi-repo
   $ REPOID=2 blobimport repo2/.hg repo2 --exclude-derived-data-type=filenodes
 
 Base case, check can walk fine, one repo
-  $ mononoke_walker scrub -I deep -q -b master_bookmark 2>&1 | strip_glog | grep -vE "(Bytes|Walked)/s"
+  $ mononoke_walker scrub -I deep -q -b master_bookmark 2>&1 | grep -vE "(Bytes|Walked)/s"
   [INFO] Walking edge types [AliasContentMappingToFileContent, BonsaiHgMappingToHgChangesetViaBonsai, BookmarkToChangeset, ChangesetToBonsaiHgMapping, ChangesetToBonsaiParent, ChangesetToFileContent, FileContentMetadataV2ToGitSha1Alias, FileContentMetadataV2ToSeededBlake3Alias, FileContentMetadataV2ToSha1Alias, FileContentMetadataV2ToSha256Alias, FileContentToFileContentMetadataV2, HgBonsaiMappingToChangeset, HgChangesetToHgManifest, HgChangesetToHgParent, HgChangesetViaBonsaiToHgChangeset, HgFileEnvelopeToFileContent, HgFileNodeToHgCopyfromFileNode, HgFileNodeToHgParentFileNode, HgFileNodeToLinkedHgBonsaiMapping, HgFileNodeToLinkedHgChangeset, HgManifestToChildHgManifest, HgManifestToHgFileEnvelope, HgManifestToHgFileNode]
   [INFO] Walking node types [AliasContentMapping, BonsaiHgMapping, Bookmark, Changeset, FileContent, FileContentMetadataV2, HgBonsaiMapping, HgChangeset, HgChangesetViaBonsai, HgFileEnvelope, HgFileNode, HgManifest]
   [INFO] [walker scrub{repo=repo0}] Seen,Loaded: 43,43
 
 Check that multi repo runs for all repos specified
-  $ mononoke_walker --repo-name repo2 scrub -I deep -q -b master_bookmark 2>&1 | strip_glog | grep -vE "(Bytes|Walked)/s" > multi_repo.log
+  $ mononoke_walker --repo-name repo2 scrub -I deep -q -b master_bookmark 2>&1 | grep -vE "(Bytes|Walked)/s" > multi_repo.log
   $ grep 'repo0' multi_repo.log
   [INFO] Walking repos ["repo0", "repo2"]
   [INFO] [walker scrub{repo=repo0}] Seen,Loaded: 43,43
@@ -48,7 +48,7 @@ Delete all data from one side of the multiplex
   $ rm blobstore/0/blobs/*
 
 Check fails on only the deleted side
-  $ mononoke_walker -L graph scrub -q --inner-blobstore-id=0 -I deep -b master_bookmark 2>&1 | strip_glog | grep -vE "(Bytes|Walked)/s"
+  $ mononoke_walker -L graph scrub -q --inner-blobstore-id=0 -I deep -b master_bookmark 2>&1 | grep -vE "(Bytes|Walked)/s"
   [INFO] Walking edge types [AliasContentMappingToFileContent, BonsaiHgMappingToHgChangesetViaBonsai, BookmarkToChangeset, ChangesetToBonsaiHgMapping, ChangesetToBonsaiParent, ChangesetToFileContent, FileContentMetadataV2ToGitSha1Alias, FileContentMetadataV2ToSeededBlake3Alias, FileContentMetadataV2ToSha1Alias, FileContentMetadataV2ToSha256Alias, FileContentToFileContentMetadataV2, HgBonsaiMappingToChangeset, HgChangesetToHgManifest, HgChangesetToHgParent, HgChangesetViaBonsaiToHgChangeset, HgFileEnvelopeToFileContent, HgFileNodeToHgCopyfromFileNode, HgFileNodeToHgParentFileNode, HgFileNodeToLinkedHgBonsaiMapping, HgFileNodeToLinkedHgChangeset, HgManifestToChildHgManifest, HgManifestToHgFileEnvelope, HgManifestToHgFileNode]
   [INFO] Walking node types [AliasContentMapping, BonsaiHgMapping, Bookmark, Changeset, FileContent, FileContentMetadataV2, HgBonsaiMapping, HgChangeset, HgChangesetViaBonsai, HgFileEnvelope, HgFileNode, HgManifest]
   [ERROR] Execution error: Could not step to OutgoingEdge { label: BookmarkToChangeset, target: Changeset(ChangesetKey { inner: ChangesetId(Blake2(c3384961b16276f2db77df9d7c874bbe981cf0525bd6f84a502f919044f2dabd)), filenode_known_derived: false }), path: None } via Some(EmptyRoute) in repo repo0
@@ -58,19 +58,19 @@ Check fails on only the deleted side
   Error: Execution failed
 
 Check can walk fine on the only remaining side
-  $ mononoke_walker -L graph scrub -q --inner-blobstore-id=1 -I deep -b master_bookmark 2>&1 | strip_glog | grep -vE "(Bytes|Walked)/s"
+  $ mononoke_walker -L graph scrub -q --inner-blobstore-id=1 -I deep -b master_bookmark 2>&1 | grep -vE "(Bytes|Walked)/s"
   [INFO] Walking edge types [AliasContentMappingToFileContent, BonsaiHgMappingToHgChangesetViaBonsai, BookmarkToChangeset, ChangesetToBonsaiHgMapping, ChangesetToBonsaiParent, ChangesetToFileContent, FileContentMetadataV2ToGitSha1Alias, FileContentMetadataV2ToSeededBlake3Alias, FileContentMetadataV2ToSha1Alias, FileContentMetadataV2ToSha256Alias, FileContentToFileContentMetadataV2, HgBonsaiMappingToChangeset, HgChangesetToHgManifest, HgChangesetToHgParent, HgChangesetViaBonsaiToHgChangeset, HgFileEnvelopeToFileContent, HgFileNodeToHgCopyfromFileNode, HgFileNodeToHgParentFileNode, HgFileNodeToLinkedHgBonsaiMapping, HgFileNodeToLinkedHgChangeset, HgManifestToChildHgManifest, HgManifestToHgFileEnvelope, HgManifestToHgFileNode]
   [INFO] Walking node types [AliasContentMapping, BonsaiHgMapping, Bookmark, Changeset, FileContent, FileContentMetadataV2, HgBonsaiMapping, HgChangeset, HgChangesetViaBonsai, HgFileEnvelope, HgFileNode, HgManifest]
   [INFO] [walker scrub{repo=repo0}] Seen,Loaded: 43,43
 
 Check can walk fine on the multiplex remaining side
-  $ mononoke_walker -l loaded scrub -q -I deep -b master_bookmark 2>&1 | strip_glog | grep -vE "(Bytes|Walked)/s"
+  $ mononoke_walker -l loaded scrub -q -I deep -b master_bookmark 2>&1 | grep -vE "(Bytes|Walked)/s"
   [INFO] Walking edge types [AliasContentMappingToFileContent, BonsaiHgMappingToHgChangesetViaBonsai, BookmarkToChangeset, ChangesetToBonsaiHgMapping, ChangesetToBonsaiParent, ChangesetToFileContent, FileContentMetadataV2ToGitSha1Alias, FileContentMetadataV2ToSeededBlake3Alias, FileContentMetadataV2ToSha1Alias, FileContentMetadataV2ToSha256Alias, FileContentToFileContentMetadataV2, HgBonsaiMappingToChangeset, HgChangesetToHgManifest, HgChangesetToHgParent, HgChangesetViaBonsaiToHgChangeset, HgFileEnvelopeToFileContent, HgFileNodeToHgCopyfromFileNode, HgFileNodeToHgParentFileNode, HgFileNodeToLinkedHgBonsaiMapping, HgFileNodeToLinkedHgChangeset, HgManifestToChildHgManifest, HgManifestToHgFileEnvelope, HgManifestToHgFileNode]
   [INFO] Walking node types [AliasContentMapping, BonsaiHgMapping, Bookmark, Changeset, FileContent, FileContentMetadataV2, HgBonsaiMapping, HgChangeset, HgChangesetViaBonsai, HgFileEnvelope, HgFileNode, HgManifest]
   [INFO] [walker scrub{repo=repo0}] Seen,Loaded: 43,43
 
 Check can walk fine on the multiplex with scrub-blobstore enabled in ReportOnly mode, should log the scrub repairs needed
-  $ mononoke_walker -l loaded --blobstore-scrub-action=ReportOnly --scuba-log-file scuba-reportonly.json scrub -q -I deep -b master_bookmark 2>&1 | strip_glog | grep -vE "(Bytes|Raw|Walked)/s" | sed -re 's/(scrub: blobstore_id BlobstoreId.0. not repaired for repo0000.).*/\1/' | uniq -c | sed 's/^ *//'
+  $ mononoke_walker -l loaded --blobstore-scrub-action=ReportOnly --scuba-log-file scuba-reportonly.json scrub -q -I deep -b master_bookmark 2>&1 | grep -vE "(Bytes|Raw|Walked)/s" | sed -re 's/(scrub: blobstore_id BlobstoreId.0. not repaired for repo0000.).*/\1/' | uniq -c | sed 's/^ *//'
   1 [INFO] Walking edge types [AliasContentMappingToFileContent, BonsaiHgMappingToHgChangesetViaBonsai, BookmarkToChangeset, ChangesetToBonsaiHgMapping, ChangesetToBonsaiParent, ChangesetToFileContent, FileContentMetadataV2ToGitSha1Alias, FileContentMetadataV2ToSeededBlake3Alias, FileContentMetadataV2ToSha1Alias, FileContentMetadataV2ToSha256Alias, FileContentToFileContentMetadataV2, HgBonsaiMappingToChangeset, HgChangesetToHgManifest, HgChangesetToHgParent, HgChangesetViaBonsaiToHgChangeset, HgFileEnvelopeToFileContent, HgFileNodeToHgCopyfromFileNode, HgFileNodeToHgParentFileNode, HgFileNodeToLinkedHgBonsaiMapping, HgFileNodeToLinkedHgChangeset, HgManifestToChildHgManifest, HgManifestToHgFileEnvelope, HgManifestToHgFileNode]
   1 [INFO] Walking node types [AliasContentMapping, BonsaiHgMapping, Bookmark, Changeset, FileContent, FileContentMetadataV2, HgBonsaiMapping, HgChangeset, HgChangesetViaBonsai, HgFileEnvelope, HgFileNode, HgManifest]
   * [WARN] [walker scrub{repo=repo0}] scrub: blobstore_id BlobstoreId(0) not repaired for repo0000. (glob)
@@ -113,7 +113,7 @@ Note - we might get duplicate reports, we just expect that there should not be a
   1,"scrub_repair","repo0000.hgmanifest.sha1.eb79886383871977bccdb3000c275a279f0d4c99","repo0","scrub",1* (glob)
 
 Check that walking with a grace period does not report the errors as the keys are too new
-  $ mononoke_walker -l loaded --blobstore-scrub-grace=3600 --blobstore-scrub-action=ReportOnly --scuba-log-file scuba-reportonly-grace.json scrub -q -I deep -b master_bookmark 2>&1 | strip_glog | grep -vE "(Bytes|Raw|Walked)/s" | sed -re 's/^(scrub: blobstore_id BlobstoreId.0. not repaired for repo0000.).*/\1/' | uniq -c | sed 's/^ *//'
+  $ mononoke_walker -l loaded --blobstore-scrub-grace=3600 --blobstore-scrub-action=ReportOnly --scuba-log-file scuba-reportonly-grace.json scrub -q -I deep -b master_bookmark 2>&1 | grep -vE "(Bytes|Raw|Walked)/s" | sed -re 's/^(scrub: blobstore_id BlobstoreId.0. not repaired for repo0000.).*/\1/' | uniq -c | sed 's/^ *//'
   1 [INFO] Walking edge types [AliasContentMappingToFileContent, BonsaiHgMappingToHgChangesetViaBonsai, BookmarkToChangeset, ChangesetToBonsaiHgMapping, ChangesetToBonsaiParent, ChangesetToFileContent, FileContentMetadataV2ToGitSha1Alias, FileContentMetadataV2ToSeededBlake3Alias, FileContentMetadataV2ToSha1Alias, FileContentMetadataV2ToSha256Alias, FileContentToFileContentMetadataV2, HgBonsaiMappingToChangeset, HgChangesetToHgManifest, HgChangesetToHgParent, HgChangesetViaBonsaiToHgChangeset, HgFileEnvelopeToFileContent, HgFileNodeToHgCopyfromFileNode, HgFileNodeToHgParentFileNode, HgFileNodeToLinkedHgBonsaiMapping, HgFileNodeToLinkedHgChangeset, HgManifestToChildHgManifest, HgManifestToHgFileEnvelope, HgManifestToHgFileNode]
   1 [INFO] Walking node types [AliasContentMapping, BonsaiHgMapping, Bookmark, Changeset, FileContent, FileContentMetadataV2, HgBonsaiMapping, HgChangeset, HgChangesetViaBonsai, HgFileEnvelope, HgFileNode, HgManifest]
   1 [INFO] [walker scrub{repo=repo0}] Seen,Loaded: 43,43
@@ -121,7 +121,7 @@ Check that walking with a grace period does not report the errors as the keys ar
   $ [[ $LINES -lt 1 ]]
 
 Check can walk fine on the multiplex with scrub-blobstore enabled in Repair mode, should also log the scrub repairs done
-  $ mononoke_walker -l loaded --blobstore-scrub-action=Repair --scuba-log-file scuba-repair.json scrub -q -I deep -b master_bookmark 2>&1 | strip_glog | grep -vE "(Bytes|Raw|Walked)/s" | sed -re 's/(scrub: blobstore_id BlobstoreId.0. repaired for repo0000.).*/\1/' | uniq -c | sed 's/^ *//'
+  $ mononoke_walker -l loaded --blobstore-scrub-action=Repair --scuba-log-file scuba-repair.json scrub -q -I deep -b master_bookmark 2>&1 | grep -vE "(Bytes|Raw|Walked)/s" | sed -re 's/(scrub: blobstore_id BlobstoreId.0. repaired for repo0000.).*/\1/' | uniq -c | sed 's/^ *//'
   1 [INFO] Walking edge types [AliasContentMappingToFileContent, BonsaiHgMappingToHgChangesetViaBonsai, BookmarkToChangeset, ChangesetToBonsaiHgMapping, ChangesetToBonsaiParent, ChangesetToFileContent, FileContentMetadataV2ToGitSha1Alias, FileContentMetadataV2ToSeededBlake3Alias, FileContentMetadataV2ToSha1Alias, FileContentMetadataV2ToSha256Alias, FileContentToFileContentMetadataV2, HgBonsaiMappingToChangeset, HgChangesetToHgManifest, HgChangesetToHgParent, HgChangesetViaBonsaiToHgChangeset, HgFileEnvelopeToFileContent, HgFileNodeToHgCopyfromFileNode, HgFileNodeToHgParentFileNode, HgFileNodeToLinkedHgBonsaiMapping, HgFileNodeToLinkedHgChangeset, HgManifestToChildHgManifest, HgManifestToHgFileEnvelope, HgManifestToHgFileNode]
   1 [INFO] Walking node types [AliasContentMapping, BonsaiHgMapping, Bookmark, Changeset, FileContent, FileContentMetadataV2, HgBonsaiMapping, HgChangeset, HgChangesetViaBonsai, HgFileEnvelope, HgFileNode, HgManifest]
   * [INFO] [walker scrub{repo=repo0}] scrub: blobstore_id BlobstoreId(0) repaired for repo0000. (glob)
@@ -164,7 +164,7 @@ Note - we might get duplicate repairs, we just expect that there should not be a
   0,"scrub_repair","repo0000.hgmanifest.sha1.eb79886383871977bccdb3000c275a279f0d4c99","repo0","scrub",1* (glob)
 
 Check that all is repaired by running on only the deleted side
-  $ mononoke_walker -l loaded scrub -q --inner-blobstore-id=0 -I deep -b master_bookmark 2>&1 | strip_glog | grep -vE "(Bytes|Walked)/s"
+  $ mononoke_walker -l loaded scrub -q --inner-blobstore-id=0 -I deep -b master_bookmark 2>&1 | grep -vE "(Bytes|Walked)/s"
   [INFO] Walking edge types [AliasContentMappingToFileContent, BonsaiHgMappingToHgChangesetViaBonsai, BookmarkToChangeset, ChangesetToBonsaiHgMapping, ChangesetToBonsaiParent, ChangesetToFileContent, FileContentMetadataV2ToGitSha1Alias, FileContentMetadataV2ToSeededBlake3Alias, FileContentMetadataV2ToSha1Alias, FileContentMetadataV2ToSha256Alias, FileContentToFileContentMetadataV2, HgBonsaiMappingToChangeset, HgChangesetToHgManifest, HgChangesetToHgParent, HgChangesetViaBonsaiToHgChangeset, HgFileEnvelopeToFileContent, HgFileNodeToHgCopyfromFileNode, HgFileNodeToHgParentFileNode, HgFileNodeToLinkedHgBonsaiMapping, HgFileNodeToLinkedHgChangeset, HgManifestToChildHgManifest, HgManifestToHgFileEnvelope, HgManifestToHgFileNode]
   [INFO] Walking node types [AliasContentMapping, BonsaiHgMapping, Bookmark, Changeset, FileContent, FileContentMetadataV2, HgBonsaiMapping, HgChangeset, HgChangesetViaBonsai, HgFileEnvelope, HgFileNode, HgManifest]
   [INFO] [walker scrub{repo=repo0}] Seen,Loaded: 43,43

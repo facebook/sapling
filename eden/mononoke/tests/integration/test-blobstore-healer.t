@@ -45,7 +45,7 @@ Run the heal, with write errors injected, simulating store still bad
   >  sed -re 's/^(Adding source blobstores \[BlobstoreId\(1\), BlobstoreId\(2\)\] to the queue so that failed destination blob stores \[BlobstoreId\(0\)\] will be retried later).*/\1/' |
   >  uniq -c | sed 's/^ *//'
   > }
-  $ mononoke_blobstore_healer --blobstore-write-chaos-rate 1 -q --iteration-limit=1 --heal-min-age-secs=0 --storage-id=blobstore --sync-queue-limit=100 2>&1 | strip_glog | count_log | grep -v "speed" | grep -E -v "^1 (Monitoring|Discovered) regions:.*"
+  $ mononoke_blobstore_healer --blobstore-write-chaos-rate 1 -q --iteration-limit=1 --heal-min-age-secs=0 --storage-id=blobstore --sync-queue-limit=100 2>&1 | count_log | grep -v "speed" | grep -E -v "^1 (Monitoring|Discovered) regions:.*"
   1 [INFO] Fetched 33 distinct put operations
   1 [INFO] Found 33 blobs to be healed... Doing it with weight limit 10000000000, max concurrency: 100
   1 [INFO] Couldn't heal blob repo0000.alias.gitsha1.7371f47a6f8bd23a8fa1a8b2a9479cdd76380e54 in these blobstores: {BlobstoreId(0)}
@@ -92,7 +92,7 @@ Check that healer queue still has the items, should not have drained
   33
 
 Healer run again now store recovered
-  $ mononoke_blobstore_healer -q --iteration-limit=1 --heal-min-age-secs=0 --storage-id=blobstore --sync-queue-limit=100 2>&1 | strip_glog | count_log | grep -E -v "^1 (Monitoring|Discovered) regions:.*"
+  $ mononoke_blobstore_healer -q --iteration-limit=1 --heal-min-age-secs=0 --storage-id=blobstore --sync-queue-limit=100 2>&1 | count_log | grep -E -v "^1 (Monitoring|Discovered) regions:.*"
   1 [INFO] Fetched 33 distinct put operations
   1 [INFO] Found 33 blobs to be healed... Doing it with weight limit 10000000000, max concurrency: 100
   1 [INFO] For 33 processed entries and 33 blobstore keys: healthy blobs 0, healed blobs 33, failed to heal 0, missing blobs 0

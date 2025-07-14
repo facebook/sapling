@@ -24,7 +24,7 @@ setup configuration with some compressable files
   $ blobimport repo/.hg repo
 
 Run a scrub with the pack logging enabled
-  $ mononoke_walker -l loaded scrub -q -I deep -i bonsai -i FileContent -b master_bookmark -a all --pack-log-scuba-file pack-info.json 2>&1 | strip_glog | grep -vE "(Bytes|Walked)/s"
+  $ mononoke_walker -l loaded scrub -q -I deep -i bonsai -i FileContent -b master_bookmark -a all --pack-log-scuba-file pack-info.json 2>&1 | grep -vE "(Bytes|Walked)/s"
   [INFO] Walking edge types [BookmarkToChangeset, ChangesetToBonsaiParent, ChangesetToFileContent]
   [INFO] Walking node types [Bookmark, Changeset, FileContent]
   [INFO] [walker scrub{repo=repo}] Seen,Loaded: 7,7
@@ -46,7 +46,7 @@ Now pack the blobs
   $ packer --zstd-level=3 --keys-dir $TESTTMP/pack_key_files/ --tuning-info-scuba-log-file "${TESTTMP}/tuning_scuba.json"
 
 Run a scrub again now the storage is packed
-  $ mononoke_walker -l loaded scrub -q -I deep -i bonsai -i FileContent -p Changeset --checkpoint-name=bonsai_packed --checkpoint-path=test_sqlite -a all --pack-log-scuba-file pack-info-packed.json 2>&1 | strip_glog | grep -vE "(Bytes|Walked)/s"
+  $ mononoke_walker -l loaded scrub -q -I deep -i bonsai -i FileContent -p Changeset --checkpoint-name=bonsai_packed --checkpoint-path=test_sqlite -a all --pack-log-scuba-file pack-info-packed.json 2>&1 | grep -vE "(Bytes|Walked)/s"
   [INFO] Walking edge types [ChangesetToBonsaiParent, ChangesetToFileContent]
   [INFO] Walking node types [Changeset, FileContent]
   [INFO] [walker scrub{repo=repo}] Repo bounds: (1, 4)
