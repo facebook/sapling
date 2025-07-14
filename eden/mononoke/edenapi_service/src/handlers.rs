@@ -281,7 +281,7 @@ macro_rules! define_handler {
 define_handler!(
     capabilities_handler,
     capabilities::capabilities_handler,
-    [Hg]
+    [Hg, Git]
 );
 define_handler!(commit_revlog_data_handler, commit::revlog_data, [Hg]);
 define_handler!(repos_handler, repos::repos, [Hg]);

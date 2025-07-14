@@ -11,6 +11,7 @@ use gotham::state::State;
 use gotham_derive::StateData;
 use gotham_derive::StaticResponseExtender;
 use gotham_ext::error::HttpError;
+use gotham_ext::handler::SlapiCommitIdentityScheme;
 use gotham_ext::middleware::request_context::RequestContext;
 use gotham_ext::response::BytesBody;
 use mononoke_api::MononokeError;
@@ -65,9 +66,18 @@ pub async fn capabilities_handler(state: &mut State) -> Result<BytesBody<Bytes>,
     let sctx = ServerContext::borrow_from(state);
     let rctx = RequestContext::borrow_from(state).clone();
     let hg_repo_ctx: HgRepoContext<Repo> = get_repo(sctx, &rctx, &params.repo, None).await?;
-    let caps = get_capabilities_vec(&hg_repo_ctx)
-        .await
-        .map_err(|e| e.into_http_error("error getting capabilities"))?;
+
+    let slapi_flavour = SlapiCommitIdentityScheme::borrow_from(state).clone();
+
+    let caps = match slapi_flavour {
+        SlapiCommitIdentityScheme::Hg => get_capabilities_vec(&hg_repo_ctx)
+            .await
+            .map_err(|e| e.into_http_error("error getting capabilities"))?,
+        SlapiCommitIdentityScheme::Git => {
+            vec![]
+        }
+    };
+
     let caps_json = serde_json::to_vec(&caps).map_err(|e| {
         HttpError::e500(anyhow::Error::from(e).context("converting capabilities to JSON"))
     })?;
