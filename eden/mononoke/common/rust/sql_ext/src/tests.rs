@@ -5,6 +5,7 @@
  * GNU General Public License version 2.
  */
 
+use anyhow::Result;
 use clientinfo::ClientEntryPoint;
 use clientinfo::ClientInfo;
 use clientinfo::ClientRequestInfo;
@@ -59,38 +60,21 @@ mod facebook {
 
     use super::*;
 
+    struct TelemetryTestData {
+        connection: sql::Connection,
+        tel_logger: SqlQueryTelemetry,
+        cri: ClientRequestInfo,
+        temp_path: String,
+    }
+
     #[mononoke::fbinit_test]
-    async fn test_basic_scuba_logging(fb: FacebookInit) -> anyhow::Result<()> {
-        // Set log file in SQL_TELEMETRY_SCUBA_FILE_PATH environment variable
-        let temp_file = tempfile::NamedTempFile::new()?;
-        let temp_path = temp_file.path().to_str().unwrap().to_string();
-        unsafe {
-            std::env::set_var("SQL_TELEMETRY_SCUBA_FILE_PATH", &temp_path);
-        }
-
-        let connection: sql::Connection = setup_mysql_test_connection(
-            fb,
-            "CREATE TABLE IF NOT EXISTS mononoke_queries_test(
-             x INT,
-             y DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
-             test CHAR(64),
-             id INT AUTO_INCREMENT,
-             PRIMARY KEY(id)
-         )",
-        )
-        .await?;
-        let client_info = ClientInfo::new_with_entry_point(ClientEntryPoint::Tests)?;
-        let cri = client_info
-            .request_info
-            .clone()
-            .expect("client request info missing");
-
-        println!("cri: {:#?}", cri);
-
-        let mut metadata = Metadata::default();
-        metadata.add_client_info(client_info);
-
-        let tel_logger = SqlQueryTelemetry::new(fb, metadata);
+    async fn test_basic_scuba_logging(fb: FacebookInit) -> Result<()> {
+        let TelemetryTestData {
+            connection,
+            tel_logger,
+            cri,
+            temp_path,
+        } = setup_scuba_logging_test(fb).await?;
 
         let _res = WriteQuery1::query(&connection, Some(tel_logger.clone()), &[(&1i64,), (&2i64,)])
             .await?;
@@ -179,6 +163,45 @@ mod facebook {
         Ok(())
     }
 
+    async fn setup_scuba_logging_test(fb: FacebookInit) -> Result<TelemetryTestData> {
+        // Set log file in SQL_TELEMETRY_SCUBA_FILE_PATH environment variable
+        let temp_file = tempfile::NamedTempFile::new()?;
+        let temp_path = temp_file.path().to_str().unwrap().to_string();
+        unsafe {
+            std::env::set_var("SQL_TELEMETRY_SCUBA_FILE_PATH", &temp_path);
+        }
+
+        let connection: sql::Connection = setup_mysql_test_connection(
+            fb,
+            "CREATE TABLE IF NOT EXISTS mononoke_queries_test(
+                     x INT,
+                     y DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                     test CHAR(64),
+                     id INT AUTO_INCREMENT,
+                     PRIMARY KEY(id)
+                 )",
+        )
+        .await?;
+        let client_info = ClientInfo::new_with_entry_point(ClientEntryPoint::Tests)?;
+        let cri = client_info
+            .request_info
+            .clone()
+            .expect("client request info missing");
+
+        println!("cri: {:#?}", cri);
+
+        let mut metadata = Metadata::default();
+        metadata.add_client_info(client_info);
+
+        let tel_logger = SqlQueryTelemetry::new(fb, metadata);
+
+        Ok(TelemetryTestData {
+            connection,
+            tel_logger,
+            cri,
+            temp_path,
+        })
+    }
     // TODO(T223577767): test transaction-level metadata, e.g. run multiple queries
     // for different repos and ensure they are all logged together.
 
@@ -256,7 +279,7 @@ mod facebook {
 )]
 #[ignore]
 #[mononoke::fbinit_test]
-async fn should_compile(fb: FacebookInit) -> anyhow::Result<()> {
+async fn should_compile(fb: FacebookInit) -> Result<()> {
     let config: &SqlQueryConfig = todo!();
     let connection: &sql::Connection = todo!();
 
