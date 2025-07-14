@@ -33,6 +33,7 @@ const DEFAULT_THRESHOLD: i64 = 1i64 << 31;
 /// Collection of weak buffers.
 pub(crate) struct WeakBuffers<W> {
     buffers: Vec<W>,
+    gc_tick: usize,
 }
 
 pub(crate) trait WeakSlice {
@@ -89,11 +90,17 @@ impl<W: WeakSlice> WeakBuffers<W> {
     pub(crate) const fn new() -> Self {
         Self {
             buffers: Vec::new(),
+            gc_tick: 0,
         }
     }
 
     pub(crate) fn track(&mut self, value: W) {
         self.buffers.push(value);
+        self.gc_tick = self.gc_tick + 1;
+        if self.gc_tick > crate::config::WEAK_BUFFER_GC_THRESHOLD.load(Ordering::Acquire) {
+            self.for_each_alive_buffer(None); // side effect: gc
+            self.gc_tick = 0;
+        }
     }
 
     fn find_region(&self, addr: usize) -> Option<(usize, usize)> {
