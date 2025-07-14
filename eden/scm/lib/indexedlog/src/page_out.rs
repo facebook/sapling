@@ -25,10 +25,31 @@ pub(crate) static NEED_FIND_REGION: AtomicBool = AtomicBool::new(false);
 static AVAILABLE: AtomicI64 = AtomicI64::new(DEFAULT_THRESHOLD);
 
 /// Tracked buffers. Also serve as a lock for `page_out()`.
-static BUFFERS: Mutex<Vec<WeakBytes>> = Mutex::new(Vec::new());
+static BUFFERS: Mutex<WeakBuffers<WeakBytes>> = Mutex::new(WeakBuffers::<WeakBytes>::new());
 
 /// By default, trigger `page_out()` after reading 2GB `Log` entries.
 const DEFAULT_THRESHOLD: i64 = 1i64 << 31;
+
+/// Collection of weak buffers.
+pub(crate) struct WeakBuffers<W> {
+    buffers: Vec<W>,
+}
+
+pub(crate) trait WeakSlice {
+    type Upgraded;
+    fn upgrade(&self) -> Option<Self::Upgraded>;
+    fn as_slice(v: &Self::Upgraded) -> &[u8];
+}
+
+impl WeakSlice for WeakBytes {
+    type Upgraded = Bytes;
+    fn upgrade(&self) -> Option<Self::Upgraded> {
+        Bytes::upgrade(self)
+    }
+    fn as_slice(v: &Bytes) -> &[u8] {
+        Bytes::as_ref(v)
+    }
+}
 
 /// Adjust the `AVAILABLE`.
 /// If it becomes negative when `THRESHOLD` is positive, trigger `page_out`.
@@ -40,7 +61,7 @@ pub(crate) fn adjust_available(delta: i64) {
             let mut buffers = BUFFERS.lock().unwrap();
             AVAILABLE.store(threshold, Ordering::Release);
             tracing::info!("running page_out()");
-            page_out(&mut buffers);
+            buffers.page_out();
         }
     }
 }
@@ -51,36 +72,9 @@ pub(crate) fn track_mmap_buffer(bytes: &Bytes) {
     if threshold > 0 || NEED_FIND_REGION.load(Ordering::Acquire) {
         let mut buffers = BUFFERS.lock().unwrap();
         if let Some(weak) = bytes.downgrade() {
-            buffers.push(weak);
+            buffers.track(weak);
         }
     }
-}
-
-#[cfg(unix)]
-fn page_out(buffers: &mut Vec<WeakBytes>) {
-    let mut new_buffers = Vec::new();
-    for weak in buffers.drain(..) {
-        let bytes = match Bytes::upgrade(&weak) {
-            None => continue,
-            Some(bytes) => bytes,
-        };
-        let slice: &[u8] = bytes.as_ref();
-        #[cfg(unix)]
-        let ret = unsafe {
-            libc::madvise(
-                slice.as_ptr() as *const libc::c_void as *mut libc::c_void,
-                slice.len() as _,
-                libc::MADV_DONTNEED,
-            )
-        };
-        tracing::debug!(
-            "madvise({} bytes, MADV_DONTNEED) returned {}",
-            slice.len(),
-            ret
-        );
-        new_buffers.push(weak);
-    }
-    *buffers = new_buffers;
 }
 
 /// Find the mmap region that contains the given pointer. Best effort.
@@ -88,30 +82,74 @@ fn page_out(buffers: &mut Vec<WeakBytes>) {
 #[cfg(unix)]
 pub(crate) fn find_region(addr: usize) -> Option<(usize, usize)> {
     let locked = BUFFERS.try_lock().ok()?;
-    for weak in locked.iter() {
-        let bytes = match Bytes::upgrade(weak) {
-            None => continue,
-            Some(bytes) => bytes,
-        };
-        let start = bytes.as_ptr() as usize;
-        let len = bytes.len();
-        if start <= addr && start.wrapping_add(len) > addr {
-            return Some((start, len));
-        }
-    }
-    None
+    locked.find_region(addr)
 }
 
-#[cfg(windows)]
-fn page_out(buffers: &mut Vec<WeakBytes>) {
-    use winapi::um::processthreadsapi::GetCurrentProcess;
-    use winapi::um::psapi::EmptyWorkingSet;
-
-    unsafe {
-        let handle = GetCurrentProcess();
-        let ret = EmptyWorkingSet(handle);
-        tracing::debug!("EmptyWorkingSet returned {}", ret);
+impl<W: WeakSlice> WeakBuffers<W> {
+    pub(crate) const fn new() -> Self {
+        Self {
+            buffers: Vec::new(),
+        }
     }
 
-    buffers.clear();
+    pub(crate) fn track(&mut self, value: W) {
+        self.buffers.push(value);
+    }
+
+    fn find_region(&self, addr: usize) -> Option<(usize, usize)> {
+        for weak in self.buffers.iter() {
+            let bytes = match WeakSlice::upgrade(weak) {
+                None => continue,
+                Some(bytes) => bytes,
+            };
+            let buf = W::as_slice(&bytes);
+            let start = buf.as_ptr() as usize;
+            let len = buf.len();
+            if start <= addr && start.wrapping_add(len) > addr {
+                return Some((start, len));
+            }
+        }
+        None
+    }
+
+    #[cfg(unix)]
+    fn page_out(&mut self) {
+        let mut new_buffers = Vec::new();
+        for weak in self.buffers.drain(..) {
+            let bytes = match WeakSlice::upgrade(&weak) {
+                None => continue,
+                Some(bytes) => bytes,
+            };
+            let slice: &[u8] = W::as_slice(&bytes);
+            #[cfg(unix)]
+            let ret = unsafe {
+                libc::madvise(
+                    slice.as_ptr() as *const libc::c_void as *mut libc::c_void,
+                    slice.len() as _,
+                    libc::MADV_DONTNEED,
+                )
+            };
+            tracing::debug!(
+                "madvise({} bytes, MADV_DONTNEED) returned {}",
+                slice.len(),
+                ret
+            );
+            new_buffers.push(weak);
+        }
+        self.buffers = new_buffers;
+    }
+
+    #[cfg(windows)]
+    fn page_out(&mut self) {
+        use winapi::um::processthreadsapi::GetCurrentProcess;
+        use winapi::um::psapi::EmptyWorkingSet;
+
+        unsafe {
+            let handle = GetCurrentProcess();
+            let ret = EmptyWorkingSet(handle);
+            tracing::debug!("EmptyWorkingSet returned {}", ret);
+        }
+
+        self.buffers.clear();
+    }
 }
