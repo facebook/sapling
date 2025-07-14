@@ -79,11 +79,15 @@ pub(crate) fn track_mmap_buffer(bytes: &Bytes) {
 }
 
 /// Find the mmap region that contains the given pointer. Best effort.
+/// Returns `(start, end, should_be_writable)`.
 /// Does not block. Returns `None` when unable to take the lock.
 #[cfg(unix)]
-pub(crate) fn find_region(addr: usize) -> Option<(usize, usize)> {
+pub(crate) fn find_region(addr: usize) -> Option<(usize, usize, bool)> {
     let locked = BUFFERS.try_lock().ok()?;
-    locked.find_region(addr)
+    if let Some((start, end)) = locked.find_region(addr) {
+        return Some((start, end, false));
+    }
+    None
 }
 
 impl<W: WeakSlice> WeakBuffers<W> {

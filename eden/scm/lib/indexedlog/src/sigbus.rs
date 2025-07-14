@@ -54,9 +54,11 @@ unsafe extern "C" fn signal_handler(
             // it async signal safe it typically means extra pipes, threads, more complexity with
             // `fork`, etc. We're crashing (and in relatively rare cases) anyway, so don't bother
             // async signal safety for now.
-            if crate::page_out::find_region(addr).is_some() && zero_fill_page(addr).is_ok() {
-                // Retry, since zero_fill_page probably made it readable.
-                return;
+            if let Some((_start, _end, writable)) = crate::page_out::find_region(addr) {
+                if zero_fill_page(addr, writable).is_ok() {
+                    // Retry, since zero_fill_page probably made it accessible.
+                    return;
+                }
             }
         }
 
@@ -73,7 +75,7 @@ unsafe extern "C" fn signal_handler(
 }
 
 /// Zero-fill a page that contains the given address, to make it readable.
-fn zero_fill_page(addr: usize) -> Result<(), ()> {
+fn zero_fill_page(addr: usize, writable: bool) -> Result<(), ()> {
     static PAGE_SIZE: OnceLock<i64> = OnceLock::new();
     let page_size = *PAGE_SIZE.get_or_init(|| unsafe { libc::sysconf(libc::_SC_PAGESIZE) });
     if page_size <= 0 {
@@ -91,7 +93,10 @@ fn zero_fill_page(addr: usize) -> Result<(), ()> {
     }
 
     // Use mmap MAP_FIXED | MAP_ANONYMOUS to zero-fill the page.
-    let prot = libc::PROT_READ;
+    let mut prot = libc::PROT_READ;
+    if writable {
+        prot |= libc::PROT_WRITE
+    }
     let flags = libc::MAP_PRIVATE | libc::MAP_ANONYMOUS | libc::MAP_FIXED;
     let fd = -1; // With MAP_ANONYMOUS, fd is not used.
     let offset = 0;
