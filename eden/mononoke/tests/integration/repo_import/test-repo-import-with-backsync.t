@@ -86,7 +86,7 @@ Setup configuration
   > --mark-not-synced-mapping "large_only" \
   > --recovery-file-path "$GIT_REPO/recovery_file.json"
   *] using repo "large-mon" repoid RepositoryId(0) (glob)
-  *] Execution error: Small repo 1 default prefix smallrepofolder overlaps with import destination smallrepofolder/imported2 (glob)
+  [ERROR] Execution error: Small repo 1 default prefix smallrepofolder overlaps with import destination smallrepofolder/imported2
   Error: Execution failed
   [1]
 

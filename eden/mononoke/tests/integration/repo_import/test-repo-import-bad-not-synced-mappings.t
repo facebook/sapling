@@ -35,7 +35,7 @@ Setup configuration
 -- SHOULD FAIL
   $ cd "$TESTTMP"
   $ REPOID="$REPOIDLARGE"
-  $ with_stripped_logs repo_import \
+  $ repo_import \
   > import \
   > "$GIT_REPO" \
   > --dest-path "imported" \
@@ -49,15 +49,15 @@ Setup configuration
   > --commit-date-rfc3339 "1970-01-01T00:00:00Z" \
   > --mark-not-synced-mapping "non_existent_version" \
   > --recovery-file-path "$GIT_REPO/recovery_file.json"
-  using repo "large-mon" repoid RepositoryId(0)
-  Execution error: Couldn't find commit sync config version non_existent_version
+  [INFO] using repo "large-mon" repoid RepositoryId(0)
+  [ERROR] Execution error: Couldn't find commit sync config version non_existent_version
   Error: Execution failed
   [1]
 
 
 -- Try to import passing a mapping that is not large-repo only
 -- SHOULD FAIL
-  $ with_stripped_logs repo_import \
+  $ repo_import \
   > import \
   > "$GIT_REPO" \
   > --dest-path "imported2" \
@@ -71,7 +71,7 @@ Setup configuration
   > --commit-date-rfc3339 "1970-01-01T00:00:00Z" \
   > --mark-not-synced-mapping "test_version" \
   > --recovery-file-path "$GIT_REPO/recovery_file.json"
-  using repo "large-mon" repoid RepositoryId(0)
-  Execution error: The provided mapping test_version is not a large-only mapping
+  [INFO] using repo "large-mon" repoid RepositoryId(0)
+  [ERROR] Execution error: The provided mapping test_version is not a large-only mapping
   Error: Execution failed
   [1]

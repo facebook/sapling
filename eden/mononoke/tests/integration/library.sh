@@ -1639,6 +1639,8 @@ function repo_import() {
     --git-command-path "$git_cmd"\
     --repo-id "$REPOID" \
     --mononoke-config-path "${TESTTMP}/mononoke-config" \
+    --tracing \
+    --tracing-test-format \
     "$@"
 }
 

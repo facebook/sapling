@@ -84,34 +84,34 @@
   >  recover-process \
   > "$TESTTMP/recovery_file.json"
   * using repo "repo" repoid RepositoryId(0) (glob)
-  * Fetching the recovery stage for importing (glob)
-  * Fetched the recovery stage for importing. (glob)
+  [INFO] Fetching the recovery stage for importing
+  [INFO] Fetched the recovery stage for importing.
   Starting from stage: GitImport
-  * Started importing git commits to Mononoke (glob)
-  * GitRepo:$TESTTMP/repo-git commit 5 of 5 - Oid:6783febd => Bid:8d76deb1* (glob)
-  * Added commits to Mononoke (glob)
-  * Commit 1/5: Remapped ChangesetId(Blake2(071d73e6b97823ffbde324c6147a785013f479157ade3f83c9b016c8f40c09de)) => ChangesetId(Blake2(4f830791a5ae7a2981d6c252d2be0bd7ebd3b1090080074b4b4bae6deb250b4a)) (glob)
-  * Commit 2/5: Remapped ChangesetId(Blake2(4dbc950685a833a9329f7f31116b92232f6d759769c699ded44fba4e239c66a4)) => ChangesetId(Blake2(fea472cdf364ad6499f20e5f32c0ba01cb73fda8cab229c24f456df085b17622)) (glob)
-  * Commit 3/5: Remapped ChangesetId(Blake2(d805ae48f71b290203959f8b9eb859bea762989fe5c32439dbd39f48c9050960)) => ChangesetId(Blake2(6b49fda25c209960aad992721e872237737671564a6ce0f0347f04f4c0fee177)) (glob)
-  * Commit 4/5: Remapped ChangesetId(Blake2(260f78ba75e428610060f950dc7b4aa06a81e8b34179a38e6f46492f90c76084)) => ChangesetId(Blake2(5d2a4db5b6b759b8767ed501d1a53a4bec89ea3778bfa9516b62c6986c78f132)) (glob)
-  * Commit 5/5: Remapped ChangesetId(Blake2(8d76deb176f7a48e0ab67b66cb791c6461406b6e35aedc440f6e4f9e3b27127c)) => ChangesetId(Blake2(11b1e6976133cca327762371e8c523d3a0cd3ff2abe34385c8253df72cc989a9)) (glob)
-  * Saving shifted bonsai changesets (glob)
-  * Saved shifted bonsai changesets (glob)
-  * Start deriving data types (glob)
-  * Finished deriving data types (glob)
-  * Start moving the bookmark (glob)
-  * Created bookmark * "repo_import_new_repo" * pointing to 4f830791a5ae7a2981d6c252d2be0bd7ebd3b1090080074b4b4bae6deb250b4a (glob)
-  * Set bookmark * "repo_import_new_repo" * to point to ChangesetId(Blake2(6b49fda25c209960aad992721e872237737671564a6ce0f0347f04f4c0fee177)) (glob)
-  * Set bookmark * "repo_import_new_repo" * to point to ChangesetId(Blake2(11b1e6976133cca327762371e8c523d3a0cd3ff2abe34385c8253df72cc989a9)) (glob)
-  * Finished moving the bookmark (glob)
-  * Merging the imported commits into given bookmark, master_bookmark (glob)
-  * Done checking path conflicts (glob)
-  * Creating a merge bonsai changeset with parents: e32a1e342cdb1e38e88466b4c1a01ae9f410024017aa21dc0a1c5da6b3963bf2, fea472cdf364ad6499f20e5f32c0ba01cb73fda8cab229c24f456df085b17622 (glob)
-  * Created merge bonsai: b3739fb6296e8a65162abc891a120516adc3cbe8ce94acafa65e5f4d93d88293 and changeset: BonsaiChangeset { inner: BonsaiChangesetMut { parents: [ChangesetId(Blake2(e32a1e342cdb1e38e88466b4c1a01ae9f410024017aa21dc0a1c5da6b3963bf2)), ChangesetId(Blake2(fea472cdf364ad6499f20e5f32c0ba01cb73fda8cab229c24f456df085b17622))], author: "user", author_date: DateTime(2005-04-02T21:37:00+01:00), committer: Some("user"), committer_date: Some(DateTime(2005-04-02T21:37:00+01:00)), message: "merging", hg_extra: {}, git_extra_headers: None, file_changes: {}, is_snapshot: false, git_tree_hash: None, git_annotated_tag: None, subtree_changes: {} }, id: ChangesetId(Blake2(b3739fb6296e8a65162abc891a120516adc3cbe8ce94acafa65e5f4d93d88293)) } (glob)
-  * Finished merging (glob)
-  * Running pushrebase (glob)
-  * Finished pushrebasing to b3739fb6296e8a65162abc891a120516adc3cbe8ce94acafa65e5f4d93d88293 (glob)
-  * Set bookmark BookmarkKey { name: BookmarkName { bookmark: "repo_import_new_repo" }, category: Branch } to the merge commit: ChangesetId(Blake2(b3739fb6296e8a65162abc891a120516adc3cbe8ce94acafa65e5f4d93d88293)) (glob)
+  [INFO] Started importing git commits to Mononoke
+  [INFO] GitRepo:$TESTTMP/repo-git commit 5 of 5 - Oid:6783febd => Bid:8d76deb1
+  [INFO] Added commits to Mononoke
+  [INFO] Commit 1/5: Remapped ChangesetId(Blake2(071d73e6b97823ffbde324c6147a785013f479157ade3f83c9b016c8f40c09de)) => ChangesetId(Blake2(4f830791a5ae7a2981d6c252d2be0bd7ebd3b1090080074b4b4bae6deb250b4a))
+  [INFO] Commit 2/5: Remapped ChangesetId(Blake2(4dbc950685a833a9329f7f31116b92232f6d759769c699ded44fba4e239c66a4)) => ChangesetId(Blake2(fea472cdf364ad6499f20e5f32c0ba01cb73fda8cab229c24f456df085b17622))
+  [INFO] Commit 3/5: Remapped ChangesetId(Blake2(d805ae48f71b290203959f8b9eb859bea762989fe5c32439dbd39f48c9050960)) => ChangesetId(Blake2(6b49fda25c209960aad992721e872237737671564a6ce0f0347f04f4c0fee177))
+  [INFO] Commit 4/5: Remapped ChangesetId(Blake2(260f78ba75e428610060f950dc7b4aa06a81e8b34179a38e6f46492f90c76084)) => ChangesetId(Blake2(5d2a4db5b6b759b8767ed501d1a53a4bec89ea3778bfa9516b62c6986c78f132))
+  [INFO] Commit 5/5: Remapped ChangesetId(Blake2(8d76deb176f7a48e0ab67b66cb791c6461406b6e35aedc440f6e4f9e3b27127c)) => ChangesetId(Blake2(11b1e6976133cca327762371e8c523d3a0cd3ff2abe34385c8253df72cc989a9))
+  [INFO] Saving shifted bonsai changesets
+  [INFO] Saved shifted bonsai changesets
+  [INFO] Start deriving data types
+  [INFO] Finished deriving data types
+  [INFO] Start moving the bookmark
+  [INFO] Created bookmark BookmarkKey { name: BookmarkName { bookmark: "repo_import_new_repo" }, category: Branch } pointing to 4f830791a5ae7a2981d6c252d2be0bd7ebd3b1090080074b4b4bae6deb250b4a
+  [INFO] Set bookmark BookmarkKey { name: BookmarkName { bookmark: "repo_import_new_repo" }, category: Branch } to point to ChangesetId(Blake2(6b49fda25c209960aad992721e872237737671564a6ce0f0347f04f4c0fee177))
+  [INFO] Set bookmark BookmarkKey { name: BookmarkName { bookmark: "repo_import_new_repo" }, category: Branch } to point to ChangesetId(Blake2(11b1e6976133cca327762371e8c523d3a0cd3ff2abe34385c8253df72cc989a9))
+  [INFO] Finished moving the bookmark
+  [INFO] Merging the imported commits into given bookmark, master_bookmark
+  [INFO] Done checking path conflicts
+  [INFO] Creating a merge bonsai changeset with parents: e32a1e342cdb1e38e88466b4c1a01ae9f410024017aa21dc0a1c5da6b3963bf2, fea472cdf364ad6499f20e5f32c0ba01cb73fda8cab229c24f456df085b17622
+  [INFO] Created merge bonsai: b3739fb6296e8a65162abc891a120516adc3cbe8ce94acafa65e5f4d93d88293 and changeset: BonsaiChangeset { inner: BonsaiChangesetMut { parents: [ChangesetId(Blake2(e32a1e342cdb1e38e88466b4c1a01ae9f410024017aa21dc0a1c5da6b3963bf2)), ChangesetId(Blake2(fea472cdf364ad6499f20e5f32c0ba01cb73fda8cab229c24f456df085b17622))], author: "user", author_date: DateTime(2005-04-02T21:37:00+01:00), committer: Some("user"), committer_date: Some(DateTime(2005-04-02T21:37:00+01:00)), message: "merging", hg_extra: {}, git_extra_headers: None, file_changes: {}, is_snapshot: false, git_tree_hash: None, git_annotated_tag: None, subtree_changes: {} }, id: ChangesetId(Blake2(b3739fb6296e8a65162abc891a120516adc3cbe8ce94acafa65e5f4d93d88293)) }
+  [INFO] Finished merging
+  [INFO] Running pushrebase
+  [INFO] Finished pushrebasing to b3739fb6296e8a65162abc891a120516adc3cbe8ce94acafa65e5f4d93d88293
+  [INFO] Set bookmark BookmarkKey { name: BookmarkName { bookmark: "repo_import_new_repo" }, category: Branch } to the merge commit: ChangesetId(Blake2(b3739fb6296e8a65162abc891a120516adc3cbe8ce94acafa65e5f4d93d88293))
 
 # Check if we derived all the types for imported commits. Checking last one after bookmark move, before setting it to the merge commit.
   $ MERGE_PARENT_GIT="11b1e6976133cca327762371e8c523d3a0cd3ff2abe34385c8253df72cc989a9"
