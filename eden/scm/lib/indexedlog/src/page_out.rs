@@ -112,16 +112,27 @@ impl<W: WeakSlice> WeakBuffers<W> {
         None
     }
 
-    #[cfg(unix)]
-    fn page_out(&mut self) {
+    /// Run logic on each buffer that is still alive.
+    /// Drops buffers that are dead.
+    fn for_each_alive_buffer(&mut self, callback: Option<fn(&[u8])>) {
         let mut new_buffers = Vec::new();
         for weak in self.buffers.drain(..) {
             let bytes = match WeakSlice::upgrade(&weak) {
                 None => continue,
                 Some(bytes) => bytes,
             };
-            let slice: &[u8] = W::as_slice(&bytes);
-            #[cfg(unix)]
+            if let Some(callback) = callback {
+                let slice: &[u8] = W::as_slice(&bytes);
+                callback(slice);
+            }
+            new_buffers.push(weak);
+        }
+        self.buffers = new_buffers;
+    }
+
+    #[cfg(unix)]
+    fn page_out(&mut self) {
+        self.for_each_alive_buffer(Some(|slice| {
             let ret = unsafe {
                 libc::madvise(
                     slice.as_ptr() as *const libc::c_void as *mut libc::c_void,
@@ -134,9 +145,7 @@ impl<W: WeakSlice> WeakBuffers<W> {
                 slice.len(),
                 ret
             );
-            new_buffers.push(weak);
-        }
-        self.buffers = new_buffers;
+        }));
     }
 
     #[cfg(windows)]
