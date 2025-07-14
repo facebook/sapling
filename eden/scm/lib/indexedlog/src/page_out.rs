@@ -165,7 +165,5 @@ impl<W: WeakSlice> WeakBuffers<W> {
             let ret = EmptyWorkingSet(handle);
             tracing::debug!("EmptyWorkingSet returned {}", ret);
         }
-
-        self.buffers.clear();
     }
 }
