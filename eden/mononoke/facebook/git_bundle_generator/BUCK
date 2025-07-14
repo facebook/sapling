@@ -40,9 +40,7 @@ rust_binary(
         "//eden/mononoke/mononoke_api:mononoke_api",
         "//eden/mononoke/mononoke_macros:mononoke_macros",
         "//manifold/clients/rust:manifold_client",
-    ] + ([] if rust_oss.is_oss_build() else [
-        "//configerator/structs/privacy/data_schema/if:protocol-rust",
-    ]),
+    ],
 )
 
 tw.container(
