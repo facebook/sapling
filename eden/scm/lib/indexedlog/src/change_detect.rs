@@ -6,16 +6,25 @@
  */
 
 use std::sync::Arc;
+use std::sync::Mutex;
+use std::sync::Weak;
 use std::sync::atomic::AtomicU64;
 use std::sync::atomic::Ordering;
 
 use memmap2::MmapMut;
+
+use crate::page_out::WeakBuffers;
+use crate::page_out::WeakSlice;
 
 /// Detect changes by using a u64 counter backed by mmap.
 pub(crate) struct SharedChangeDetector {
     mmap: Arc<MmapMut>,
     last_read: AtomicU64,
 }
+
+/// Useful for the SIGBUS handler to prevent the process from crashing if
+/// something truncates the file backing the mmap buffer.
+pub(crate) static BUFFERS: Mutex<WeakBuffers<Weak<MmapMut>>> = Mutex::new(WeakBuffers::new());
 
 impl Clone for SharedChangeDetector {
     fn clone(&self) -> Self {
@@ -32,10 +41,9 @@ impl SharedChangeDetector {
     pub fn new(mmap: MmapMut) -> Self {
         assert!(mmap.len() >= std::mem::size_of::<AtomicU64>());
         let last_read = AtomicU64::new(mmap_as_atomic_u64(&mmap).load(Ordering::Acquire));
-        Self {
-            mmap: Arc::new(mmap),
-            last_read,
-        }
+        let mmap = Arc::new(mmap);
+        BUFFERS.lock().unwrap().track(Arc::downgrade(&mmap));
+        Self { mmap, last_read }
     }
 
     /// Set the shared value and clear this detector.
@@ -65,5 +73,15 @@ impl Drop for SharedChangeDetector {
         if let Some(mmap) = Arc::get_mut(&mut self.mmap) {
             let _ = mmap.flush_async();
         }
+    }
+}
+
+impl WeakSlice for Weak<MmapMut> {
+    type Upgraded = Arc<MmapMut>;
+    fn upgrade(&self) -> Option<Self::Upgraded> {
+        Weak::upgrade(&self)
+    }
+    fn as_slice(v: &Self::Upgraded) -> &[u8] {
+        AsRef::as_ref(v)
     }
 }
