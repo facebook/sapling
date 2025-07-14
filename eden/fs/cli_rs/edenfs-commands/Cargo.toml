@@ -39,7 +39,7 @@ sysinfo = "0.35.1"
 tabular = "0.2.0"
 termwiz = { version = "0.23", features = ["widgets"] }
 tokio = { version = "1.45.0", features = ["full", "test-util", "tracing"] }
-toml = { version = "0.8.22", features = ["preserve_order"] }
+toml = { version = "0.9.2", features = ["preserve_order"] }
 tracing = { version = "0.1.41", features = ["attributes", "valuable"] }
 
 [dev-dependencies]
