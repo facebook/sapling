@@ -28,12 +28,15 @@ EdenStateDir::EdenStateDir(AbsolutePathPiece path)
 
 EdenStateDir::~EdenStateDir() = default;
 
-bool EdenStateDir::acquireLock() {
+std::pair<
+    bool /* is_lock_aquired */,
+    std::optional<std::string> /* old_daemon_pid */>
+EdenStateDir::acquireLock() {
   auto lockFile =
       folly::File(lockPath_.value(), O_WRONLY | O_CREAT | O_CLOEXEC);
   try {
     if (!lockFile.try_lock()) {
-      return false;
+      return std::make_pair(false, std::nullopt);
     }
   } catch (const std::system_error& ex) {
     throw std::runtime_error(fmt::format(
@@ -43,11 +46,10 @@ bool EdenStateDir::acquireLock() {
         ex.what()));
   }
 
-  takeoverLock(std::move(lockFile));
-  return true;
+  return std::make_pair(true, takeoverLock(std::move(lockFile)));
 }
 
-void EdenStateDir::takeoverLock(folly::File lockFile) {
+std::optional<std::string> EdenStateDir::takeoverLock(folly::File lockFile) {
   writePidToLockFile(lockFile);
   int rc = fstat(lockFile.fd(), &lockFileStat_);
   folly::checkUnixError(rc, "error getting lock file attributes");
@@ -57,8 +59,24 @@ void EdenStateDir::takeoverLock(folly::File lockFile) {
   // Other processes cannot read the lock file while we are holding the lock,
   // so we store it in a separate file too.
   auto pidFilePath = path_ + PathComponentPiece(kPidFileName);
+
+  std::string oldDaemonPid;
+  std::optional<std::string> oldDaemonPidContents = std::nullopt;
+  const auto pidContents = folly::to<std::string>(getpid(), "\n");
+  // If the pid file already exists, we have an eden already running. We need to
+  // keep its pid as old eden pid. However, the takeoverLock() function get
+  // called multiple times during the startup process. We only want to keep the
+  // old pid if the contents of the pid file are different from the current
+  // running eden pid. Otherwise, it is the new eden pid that get into the pid
+  // file before.
+  if (folly::readFile(pidFilePath.c_str(), oldDaemonPid) &&
+      pidContents != oldDaemonPid) {
+    oldDaemonPidContents = oldDaemonPid;
+  }
+
   folly::File pidFile(pidFilePath.c_str(), O_WRONLY | O_CREAT, 0644);
   writePidToLockFile(pidFile);
+  return oldDaemonPidContents;
 }
 
 folly::File EdenStateDir::extractLock() {

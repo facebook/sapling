@@ -697,6 +697,11 @@ class EdenServer : private TakeoverHandler {
 
   const std::vector<std::string> originalCommandLine_;
   EdenStateDir edenDir_;
+
+  // During graceful restart, this will be the pid of the old edenfs daemon.
+  // This is used because at some point we have both edenfs daemon processes
+  // running and we need to be able to tell which one is the old one.
+  std::optional<std::string> oldDaemonPid_ = std::nullopt;
   std::shared_ptr<EdenServiceHandler> handler_;
   std::shared_ptr<apache::thrift::ThriftServer> server_;
   std::shared_ptr<ThriftServerEventHandler> serverEventHandler_;

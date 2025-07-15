@@ -68,7 +68,7 @@ class Command {
               config_->getEdenConfig()->edenDir.getValue());
           return EdenStateDir(config_->getEdenConfig()->edenDir.getValue());
         }()) {
-    if (!edenDir_.acquireLock()) {
+    if (!edenDir_.acquireLock().first) {
       throw ArgumentError(
           "error: failed to acquire the Eden lock\n"
           "This utility cannot be used while edenfs is running.");

@@ -1149,7 +1149,10 @@ ImmediateFuture<Unit> EdenServer::recoverImpl(TakeoverData&& takeoverData) {
   const auto takeoverPath = edenDir_.getTakeoverSocketPath();
 
   // Recover the eden lock file and the thrift server socket.
-  edenDir_.takeoverLock(std::move(takeoverData.lockFile));
+  auto oldDaemonPid = edenDir_.takeoverLock(std::move(takeoverData.lockFile));
+  if (oldDaemonPid.has_value()) {
+    oldDaemonPid_ = oldDaemonPid.value();
+  }
   server_->useExistingSocket(takeoverData.thriftSocket.release());
 
   // Remount our mounts from our prepared takeoverData
@@ -1191,7 +1194,13 @@ std::chrono::seconds getTakeoverTimeoutSeconds(const EdenConfig& config) {
 
 Future<Unit> EdenServer::prepareImpl(std::shared_ptr<StartupLogger> logger) {
   bool doingTakeover = false;
-  if (!edenDir_.acquireLock()) {
+  auto edenDirLockResult = edenDir_.acquireLock();
+  if (edenDirLockResult.second.has_value()) {
+    // If it is during graceful restart and the old edenfs daemon process is
+    // still running, we need to keep the old daemon pid.
+    oldDaemonPid_ = edenDirLockResult.second;
+  }
+  if (!edenDirLockResult.first) {
     // Another edenfs process is already running.
     //
     // If --takeover was specified, fall through and attempt to gracefully
@@ -1234,7 +1243,10 @@ Future<Unit> EdenServer::prepareImpl(std::shared_ptr<StartupLogger> logger) {
         " mount points");
 
     // Take over the eden lock file and the thrift server socket.
-    edenDir_.takeoverLock(std::move(takeoverData.lockFile));
+    auto oldDaemonPid = edenDir_.takeoverLock(std::move(takeoverData.lockFile));
+    if (oldDaemonPid.has_value()) {
+      oldDaemonPid_ = oldDaemonPid.value();
+    }
     server_->useExistingSocket(takeoverData.thriftSocket.release());
 #else
     NOT_IMPLEMENTED();

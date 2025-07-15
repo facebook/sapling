@@ -38,17 +38,29 @@ class EdenStateDir {
    * operations on the EdenStateDir, to ensure that only one process can use the
    * state directory at a time.
    *
-   * Returns true if the lock was acquired successfully, or false if we failed
-   * to acquire the lock (likely due to another process holding it).
+   * Returns a pair of is_lock_acquired bool and old_daemon_pid
+   * std::optional<std::string>
+   *    is_lock_acquired: True if the lock was acquired
+   *    successfully, or false if we failed to acquire the lock (likely due to
+   *    another process holding it).
+   *    old_daemon_pid: The pid of the process that currently holds the lock.
+   *    During graceful restart, this corresponds to the old EdenFS daemon's
+   *    pid.
+   *
    * May throw an exception on other errors (e.g., insufficient permissions to
    * create the lock file, out of disk space, etc).
    */
-  FOLLY_NODISCARD bool acquireLock();
+  FOLLY_NODISCARD
+  std::pair<
+      bool /* is_lock_aquired */,
+      std::optional<std::string> /* old_daemon_pid */>
+  acquireLock();
 
   /**
-   * Take over the lock file from another process.
+   * Take over the lock file from another process, and return the old EdenFS
+   * daemon pid if it exists.
    */
-  void takeoverLock(folly::File lockFile);
+  std::optional<std::string> takeoverLock(folly::File lockFile);
 
   /**
    * Extract the lock file without releasing it.
