@@ -391,6 +391,12 @@ class EdenServer : private TakeoverHandler {
     return edenDir_.getPath();
   }
 
+  std::string getEdenHeartbeatFileNameStr() const;
+  std::optional<std::string> getOldEdenHeartbeatFileNameStr() const;
+  folly::StringPiece getHeartbeatFileNamePrefix() const {
+    return edenDir_.getHeartbeatFileNamePrefix();
+  }
+
   const std::shared_ptr<ServerState>& getServerState() const {
     return serverState_;
   }

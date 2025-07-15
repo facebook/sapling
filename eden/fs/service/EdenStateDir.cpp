@@ -21,6 +21,7 @@ constexpr StringPiece kPidFileName{"pid"};
 constexpr StringPiece kTakeoverSocketName{"takeover"};
 constexpr StringPiece kThriftSocketName{"socket"};
 constexpr PathComponentPiece kMountdSocketName{"mountd.socket"_pc};
+constexpr StringPiece kHeartbeatFileNamePrefix{"heartbeat_"};
 } // namespace
 
 EdenStateDir::EdenStateDir(AbsolutePathPiece path)
@@ -145,6 +146,10 @@ AbsolutePath EdenStateDir::getMountdSocketPath() const {
 
 AbsolutePath EdenStateDir::getCheckoutStateDir(StringPiece checkoutID) const {
   return path_ + PathComponent("clients") + PathComponent(checkoutID);
+}
+
+StringPiece EdenStateDir::getHeartbeatFileNamePrefix() const {
+  return kHeartbeatFileNamePrefix;
 }
 
 } // namespace facebook::eden

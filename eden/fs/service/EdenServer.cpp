@@ -1171,6 +1171,20 @@ void EdenServer::serve() const {
   getServer()->serve();
 }
 
+std::string EdenServer::getEdenHeartbeatFileNameStr() const {
+  const auto pidContents = folly::to<std::string>(getpid());
+  return edenDir_.getHeartbeatFileNamePrefix().toString() + pidContents;
+}
+
+std::optional<std::string> EdenServer::getOldEdenHeartbeatFileNameStr() const {
+  if (oldDaemonPid_.has_value()) {
+    return edenDir_.getHeartbeatFileNamePrefix().toString() +
+        oldDaemonPid_.value();
+  } else {
+    return std::nullopt;
+  }
+}
+
 Future<Unit> EdenServer::prepare(std::shared_ptr<StartupLogger> logger) {
   return prepareImpl(std::move(logger))
       .ensure(
