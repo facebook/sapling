@@ -172,36 +172,6 @@ impl WalkNode {
         }
     }
 
-    /// Find or create node for `dir`.
-    pub(crate) fn get_or_create_node<'a>(
-        &'a mut self,
-        config: &Config,
-        dir: &'a RepoPath,
-    ) -> &'a mut Self {
-        match dir.split_first_component() {
-            Some((head, tail)) => {
-                if self.children.contains_key(head) {
-                    self.children
-                        .get_mut(head)
-                        .unwrap()
-                        .get_or_create_node(config, tail)
-                } else {
-                    self.children
-                        .entry(head.to_owned())
-                        .or_insert_with(|| Self::new(config.gc_timeout))
-                        .get_or_create_node(config, tail)
-                }
-            }
-            None => {
-                // Perform a JIT "light" GC.
-                if self.expired() {
-                    self.clear_except_children(config);
-                }
-                self
-            }
-        }
-    }
-
     /// Insert a new walk. Any redundant/contained walks will be removed. `walk` will not
     /// be inserted if it is contained by an ancestor walk.
     pub(crate) fn insert_walk(
