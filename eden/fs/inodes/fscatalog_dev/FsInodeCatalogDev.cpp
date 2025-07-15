@@ -64,12 +64,6 @@ constexpr uint32_t kOverlayVersion = 1;
 constexpr size_t kInfoHeaderSize =
     kInfoHeaderMagic.size() + sizeof(kOverlayVersion);
 
-constexpr folly::StringPiece FsFileContentStoreDev::kHeaderIdentifierDir;
-constexpr folly::StringPiece FsFileContentStoreDev::kHeaderIdentifierFile;
-constexpr uint32_t FsFileContentStoreDev::kHeaderVersion;
-constexpr size_t FsFileContentStoreDev::kHeaderLength;
-constexpr uint32_t FsFileContentStoreDev::kNumShards;
-
 static void doFormatSubdirPath(
     uint64_t inodeNum,
     MutableStringPiece subdirPath) {
