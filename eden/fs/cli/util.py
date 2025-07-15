@@ -58,6 +58,7 @@ class RepoError(Exception):
 # These paths are relative to the user's client directory.
 LOCK_FILE = "lock"
 PID_FILE = "pid"
+HEARTBEAT_FILE_PREFIX = "heartbeat_"
 
 NFS_MOUNT_PROTOCOL_STRING = "nfs"
 FUSE_MOUNT_PROTOCOL_STRING = "fuse"

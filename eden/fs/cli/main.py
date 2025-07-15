@@ -2827,7 +2827,7 @@ re-open these files after EdenFS is restarted.
         # precedence over the default timeout passed in by our caller.
         if self.args.shutdown_timeout is not None:
             timeout = typing.cast(float, self.args.shutdown_timeout)
-        daemon.wait_for_shutdown(pid, timeout=timeout)
+        daemon.wait_for_shutdown(pid, config_dir=instance.state_dir, timeout=timeout)
 
     def _do_stop(self, instance: EdenInstance, pid: int, timeout: int) -> None:
         with instance.get_thrift_client_legacy(timeout=timeout) as client:
@@ -3008,7 +3008,9 @@ class StopCmd(Subcmd):
             return SHUTDOWN_EXIT_CODE_REQUESTED_SHUTDOWN
 
         try:
-            if daemon.wait_for_shutdown(pid, timeout=args.timeout):
+            if daemon.wait_for_shutdown(
+                pid, config_dir=instance.state_dir, timeout=args.timeout
+            ):
                 print_stderr("edenfs exited cleanly.")
                 return SHUTDOWN_EXIT_CODE_NORMAL
             else:
@@ -3030,7 +3032,9 @@ class StopCmd(Subcmd):
             return SHUTDOWN_EXIT_CODE_NOT_RUNNING_ERROR
 
         try:
-            daemon.sigkill_process(pid, timeout=args.timeout)
+            daemon.sigkill_process(
+                pid, config_dir=instance.state_dir, timeout=args.timeout
+            )
             print_stderr("Terminated edenfs with SIGKILL.")
             return SHUTDOWN_EXIT_CODE_NORMAL
         except ShutdownError as ex:

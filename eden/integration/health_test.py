@@ -48,7 +48,7 @@ class HealthOfFakeEdenFSTest(ServiceTestCaseBase, PexpectAssertionMixin):
     def test_killed_daemon_is_not_running(self) -> None:
         with self.spawn_fake_edenfs(self.temp_dir) as daemon_pid:
             os.kill(daemon_pid, signal.SIGKILL)
-            wait_for_shutdown(pid=daemon_pid, timeout=5)
+            wait_for_shutdown(pid=daemon_pid, config_dir=self.temp_dir, timeout=5)
 
             status_process = self.spawn_status([])
             status_process.expect_exact("EdenFS is not running")

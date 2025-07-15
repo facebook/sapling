@@ -14,6 +14,7 @@ import threading
 import time
 import typing
 import unittest
+from pathlib import Path
 
 from eden.fs.cli.daemon import wait_for_shutdown
 
@@ -24,15 +25,17 @@ class WaitForShutdownTest(unittest.TestCase):
         process.wait()
 
         stop_watch = StopWatch()
+        config_dir = Path("/tmp/eden_test")
         with stop_watch.measure():
-            wait_for_shutdown(process.pid, timeout=5)
+            wait_for_shutdown(process.pid, config_dir, timeout=5)
         self.assertLessEqual(stop_watch.elapsed, 3)
 
     def test_waiting_for_exiting_process_finishes_without_sigkill(self) -> None:
         process = AutoReapingChildProcess(
             ["python3", "-c", "import time; time.sleep(1)"]
         )
-        wait_for_shutdown(process.pid, timeout=5)
+        config_dir = Path("/tmp/eden_test")
+        wait_for_shutdown(process.pid, config_dir, timeout=5)
         returncode = process.wait()
         self.assertEqual(returncode, 0, "Process should have exited cleanly")
 
@@ -40,7 +43,8 @@ class WaitForShutdownTest(unittest.TestCase):
         process = AutoReapingChildProcess(
             ["python3", "-c", "import time; time.sleep(30)"]
         )
-        wait_for_shutdown(process.pid, timeout=1)
+        config_dir = Path("/tmp/eden_test")
+        wait_for_shutdown(process.pid, config_dir, timeout=1)
         returncode = process.wait()
         self.assertEqual(
             returncode,

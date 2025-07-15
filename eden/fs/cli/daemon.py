@@ -10,7 +10,10 @@ import os
 import stat
 import subprocess
 import sys
+from pathlib import Path
 from typing import Dict, List, Optional, Tuple
+
+from eden.fs.cli.util import HEARTBEAT_FILE_PREFIX
 
 from . import daemon_util, proc_utils as proc_utils_mod
 from .config import EdenInstance
@@ -50,7 +53,10 @@ def wait_for_process_exit(pid: int, timeout: float) -> bool:
 
 
 def wait_for_shutdown(
-    pid: int, timeout: float, kill_timeout: float = DEFAULT_SIGKILL_TIMEOUT
+    pid: int,
+    config_dir: Path,
+    timeout: float,
+    kill_timeout: float = DEFAULT_SIGKILL_TIMEOUT,
 ) -> bool:
     """Wait for a process to exit.
 
@@ -73,11 +79,13 @@ def wait_for_shutdown(
         "within {} seconds. Attempting SIGKILL.",
         timeout,
     )
-    sigkill_process(pid, timeout=kill_timeout)
+    sigkill_process(pid, config_dir, timeout=kill_timeout)
     return False
 
 
-def sigkill_process(pid: int, timeout: float = DEFAULT_SIGKILL_TIMEOUT) -> None:
+def sigkill_process(
+    pid: int, config_dir: Path, timeout: float = DEFAULT_SIGKILL_TIMEOUT
+) -> None:
     """Send SIGKILL to a process, and wait for it to exit.
 
     If timeout is greater than 0, this waits for the process to exit after sending the
@@ -88,6 +96,22 @@ def sigkill_process(pid: int, timeout: float = DEFAULT_SIGKILL_TIMEOUT) -> None:
     This is done to handle situations where the process exited on its own just before we
     could send SIGKILL.
     """
+
+    # On Windows, EdenFS daemon doesn't have any hearbeat flag.
+    if sys.platform != "win32":
+        # This SIGKILL is not triggered by the OS due to memory issues, so we should clean up
+        # the heartbeat file. This ensures that the SIGKILL won't be mislogged as a silent
+        # exit when the next EdenFS daemon starts.
+        # The thrift server may be unresponsive at this point, so clean up the file directly
+        # instead of sending a thrift request.
+        heartbeat_file = config_dir / f"{HEARTBEAT_FILE_PREFIX}{pid}"
+        try:
+            heartbeat_file.unlink()
+        except FileNotFoundError:
+            pass
+        except Exception as e:
+            print_stderr(f"Failed to delete heartbeat file {heartbeat_file}: {e}")
+
     proc_utils: proc_utils_mod.ProcUtils = proc_utils_mod.new()
     try:
         proc_utils.kill_process(pid)
