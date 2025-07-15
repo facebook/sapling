@@ -1033,6 +1033,12 @@ void EdenServer::updatePeriodicTaskIntervals(const EdenConfig& config) {
   accidentalUnmountRecoveryTask_.updateInterval(
       std::chrono::duration_cast<std::chrono::milliseconds>(
           config.accidentalUnmountRecoveryInterval.getValue()));
+
+#ifndef _WIN32
+  updateEdenHeartbeatFileTask_.updateInterval(
+      std::chrono::duration_cast<std::chrono::milliseconds>(
+          config.updateEdenHeartbeatFileInterval.getValue()));
+#endif
 }
 
 void EdenServer::scheduleCallbackOnMainEventBase(
@@ -1190,7 +1196,7 @@ std::optional<std::string> EdenServer::getOldEdenHeartbeatFileNameStr() const {
 }
 
 #ifndef _WIN32
-void EdenServer::createEdenHeartbeatFile() const {
+void EdenServer::createOrUpdateEdenHeartbeatFile() {
   // Create the heartbeat file and write the current timestamp to it
   auto now = std::chrono::system_clock::now();
   auto now_c = std::chrono::system_clock::to_time_t(now);
@@ -1198,7 +1204,10 @@ void EdenServer::createEdenHeartbeatFile() const {
       std::to_string(now_c)); // Convert time_t to StringPiece
   auto result = writeFileAtomic(heartbeatFilePath_, now_str);
   if (result.hasException()) {
-    XLOGF(ERR, "Failed to create heartbeat flag file: {}", result.exception());
+    XLOGF(
+        ERR,
+        "Failed to create or update heartbeat flag file: {}",
+        result.exception());
   }
 }
 

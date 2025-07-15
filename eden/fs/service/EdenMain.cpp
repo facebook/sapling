@@ -523,7 +523,7 @@ int runEdenMain(EdenMain&& main, int argc, char** argv) {
             }
 
             // Create a new heartbeat file
-            server->createEdenHeartbeatFile();
+            server->createOrUpdateEdenHeartbeatFile();
 #endif
           });
 

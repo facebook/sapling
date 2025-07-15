@@ -398,7 +398,7 @@ class EdenServer : private TakeoverHandler {
   }
 
 #ifndef _WIN32
-  void createEdenHeartbeatFile() const;
+  void createOrUpdateEdenHeartbeatFile();
   void removeEdenHeartbeatFile() const;
 #endif
 
@@ -938,5 +938,9 @@ class EdenServer : private TakeoverHandler {
       "detect_nfs_crawl"};
   PeriodicFnTask<&EdenServer::accidentalUnmountRecovery>
       accidentalUnmountRecoveryTask_{this, "accidental_unmount_recovery"};
+#ifndef _WIN32
+  PeriodicFnTask<&EdenServer::createOrUpdateEdenHeartbeatFile>
+      updateEdenHeartbeatFileTask_{this, "update-eden-heartbeat"};
+#endif
 };
 } // namespace facebook::eden
