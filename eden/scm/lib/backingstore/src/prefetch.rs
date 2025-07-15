@@ -10,7 +10,7 @@ use std::collections::HashSet;
 use std::collections::VecDeque;
 use std::mem;
 use std::sync::Arc;
-use std::sync::atomic::AtomicBool;
+use std::sync::atomic::AtomicU8;
 use std::sync::atomic::Ordering;
 use std::time::Duration;
 use std::time::Instant;
@@ -170,8 +170,19 @@ pub(crate) fn prefetch_manager(
                     return false;
                 }
 
+                let any_paused = handles.iter().any(|(_, handle)| handle.is_paused());
+
                 // Clear out prefetches at depths that have completed.
-                handles.retain(|(_, handle)| !handle.is_canceled());
+                handles.retain(|(depth, handle)| {
+                    if any_paused {
+                        // Prefetch paused - don't retain handle, and clear from `handled_prefetches`
+                        // so it will be resumed as a new prefetch when possible.
+                        handled_prefetches.remove(&(walk.clone(), *depth));
+                        false
+                    } else {
+                        !handle.is_done()
+                    }
+                });
 
                 if handles.is_empty() {
                     tracing::debug!(?walk, "removing complete prefetch");
@@ -181,7 +192,7 @@ pub(crate) fn prefetch_manager(
                 }
             });
 
-            batch_dir_prefetches.retain(|handle| !handle.is_canceled());
+            batch_dir_prefetches.retain(|handle| !handle.is_done());
 
             // Reuse a cached TreeManifest if available. It is thread safe and cheaply cloneable
             // when used read-only.
@@ -435,7 +446,7 @@ fn prefetch(
         };
 
         for file in files {
-            if my_handle.is_canceled() {
+            if !my_handle.is_in_progress() {
                 info_if!(interesting_walk, event, elapsed=?start_time.elapsed(), file_count, "prefetch canceled");
                 return;
             }
@@ -464,7 +475,7 @@ fn prefetch(
 
         // Wait for any remaining file fetches to finish.
         for fetch in file_fetches {
-            if my_handle.is_canceled() {
+            if !my_handle.is_in_progress() {
                 info_if!(interesting_walk, event, elapsed=?start_time.elapsed(), file_count, "prefetch canceled");
                 return;
             }
@@ -524,18 +535,48 @@ impl Matcher for WalkMatcher {
 
 #[derive(Clone, Default, Debug)]
 pub(crate) struct PrefetchHandle {
-    canceled: Arc<AtomicBool>,
+    state: Arc<AtomicU8>,
 }
 
 impl PrefetchHandle {
-    pub(crate) fn is_canceled(&self) -> bool {
-        self.canceled.load(Ordering::Relaxed)
+    const IN_PROGRESS: u8 = 0;
+    const DONE: u8 = 1;
+    const PAUSED: u8 = 2;
+
+    pub(crate) fn cancel(&self) {
+        let _ = self.state.compare_exchange(
+            Self::IN_PROGRESS,
+            Self::DONE,
+            Ordering::AcqRel,
+            Ordering::Relaxed,
+        );
+    }
+
+    pub(crate) fn pause(&self) {
+        let _ = self.state.compare_exchange(
+            Self::IN_PROGRESS,
+            Self::PAUSED,
+            Ordering::AcqRel,
+            Ordering::Relaxed,
+        );
+    }
+
+    pub(crate) fn is_done(&self) -> bool {
+        self.state.load(Ordering::Acquire) == Self::DONE
+    }
+
+    pub(crate) fn is_paused(&self) -> bool {
+        self.state.load(Ordering::Acquire) == Self::PAUSED
+    }
+
+    pub(crate) fn is_in_progress(&self) -> bool {
+        self.state.load(Ordering::Acquire) == Self::IN_PROGRESS
     }
 }
 
 impl Drop for PrefetchHandle {
     fn drop(&mut self) {
-        self.canceled.store(true, Ordering::Relaxed);
+        self.cancel();
     }
 }
 
@@ -590,7 +631,7 @@ mod test {
         );
 
         // Wait for prefetch to complete.
-        while !handle.is_canceled() {
+        while !handle.is_done() {
             std::thread::sleep(Duration::from_millis(1));
         }
 
@@ -609,7 +650,7 @@ mod test {
         );
 
         // Wait for prefetch to complete.
-        while !handle.is_canceled() {
+        while !handle.is_done() {
             std::thread::sleep(Duration::from_millis(1));
         }
 
@@ -666,7 +707,7 @@ mod test {
         );
 
         // Wait for prefetch to complete.
-        while !handle.is_canceled() {
+        while !handle.is_done() {
             std::thread::sleep(Duration::from_millis(1));
         }
 
@@ -847,9 +888,25 @@ mod test {
     #[test]
     fn test_prefetch_handle() {
         let handle = PrefetchHandle::default();
-        assert!(!handle.is_canceled());
+        assert!(handle.is_in_progress());
+        assert!(!handle.is_done());
+        assert!(!handle.is_paused());
 
         drop(handle.clone());
-        assert!(handle.is_canceled());
+        assert!(handle.is_done());
+        assert!(!handle.is_in_progress());
+        assert!(!handle.is_paused());
+
+        // Has no effect.
+        handle.pause();
+        assert!(handle.is_done());
+        assert!(!handle.is_in_progress());
+        assert!(!handle.is_paused());
+
+        let handle = PrefetchHandle::default();
+        handle.pause();
+        assert!(!handle.is_done());
+        assert!(!handle.is_in_progress());
+        assert!(handle.is_paused());
     }
 }
