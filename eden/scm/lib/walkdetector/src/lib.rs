@@ -167,7 +167,7 @@ impl Detector {
         my_dir.seen_files.insert(base_name.to_owned());
 
         let seen_count = my_dir.seen_files.len();
-        if my_dir.is_walked(WalkType::File, seen_count, walk_threshold, walk_ratio) {
+        if my_dir.is_walked(WalkType::File, seen_count, 0, walk_threshold, walk_ratio) {
             my_dir.seen_files.clear();
             inner.insert_walk(
                 &self.config,
@@ -259,7 +259,13 @@ impl Detector {
         my_dir.seen_dirs.insert(base_name.to_owned());
 
         let seen_count = my_dir.seen_dirs.len();
-        if my_dir.is_walked(WalkType::Directory, seen_count, walk_threshold, walk_ratio) {
+        if my_dir.is_walked(
+            WalkType::Directory,
+            seen_count,
+            0,
+            walk_threshold,
+            walk_ratio,
+        ) {
             my_dir.seen_dirs.clear();
             inner.insert_walk(
                 &self.config,
@@ -532,21 +538,43 @@ impl Inner {
         // expanding a huge walk deeper, so we wait until we've seen depth
         // advancements that bubble up to at least N different children of the walk
         // root.
-        let (num_advanced_children, child_seen_count) =
+        let (num_advanced_children, num_advanced_descendants, child_seen_count) =
             ancestor.insert_advanced_child(walk_type, head.to_owned());
 
-        tracing::trace!(%ancestor_dir, num_advanced_children, child_seen_count, threshold, total_dirs=ancestor.total_dirs(), "should_advance_ancestor_walk");
+        tracing::trace!(
+            %ancestor_dir,
+            num_advanced_children,
+            num_advanced_descendants,
+            child_seen_count,
+            threshold,
+            total_dirs=ancestor.total_dirs(),
+            "should_advance_ancestor_walk",
+        );
 
         let ancestor_walk_depth = ancestor
             .get_dominating_walk(walk_type)
             .map_or(0, |w| w.depth);
 
-        if ancestor.is_walked(
+        // Check that both:
+        //    - We are walked at depth=0 based on num_advanced_children. This ensures the walk is
+        //    "wide" enough (i.e. enough of our direct children directories have advanced walks).
+        //    - We are walked at depth=N+1 based on num_advanced_descendants. This ensures we don't
+        //    prematurely advance across a huge directory at depth N+1.
+        let is_walked = ancestor.is_walked(
             WalkType::Directory,
             num_advanced_children,
+            0,
             threshold,
             config.walk_ratio,
-        ) {
+        ) && ancestor.is_walked(
+            WalkType::Directory,
+            num_advanced_descendants,
+            ancestor_walk_depth,
+            threshold,
+            config.walk_ratio,
+        );
+
+        if is_walked {
             let depth = ancestor_walk_depth + 1;
             tracing::debug!(dir=%ancestor_dir, depth, "expanding walk boundary");
             return Some((ancestor_dir, depth));
@@ -562,12 +590,25 @@ impl Inner {
             let threshold = walk_threshold(config, ancestor_depth + 1);
             let split_off_child = match ancestor.get_node(head.as_ref()) {
                 // If we have directory size hints, use them.
-                Some(child) => child.is_walked(
-                    WalkType::Directory,
-                    child_seen_count,
-                    threshold,
-                    config.walk_ratio,
-                ),
+                Some(child) => {
+                    child.get_walk_for_type(walk_type).is_none()
+                        // Similar to above, check for evidence of advanced walk activity for
+                        // direct children and at depth N+1.
+                        && child.is_walked(
+                            WalkType::Directory,
+                            child_seen_count,
+                            0,
+                            threshold,
+                            config.walk_ratio,
+                        )
+                        && child.is_walked(
+                            WalkType::Directory,
+                            child_seen_count,
+                            ancestor_walk_depth.saturating_sub(1),
+                            threshold,
+                            config.walk_ratio,
+                        )
+                }
                 // Otherwise use default threshold.
                 None => child_seen_count >= threshold,
             };
@@ -654,15 +695,32 @@ fn should_merge_into_ancestor(
         depth < ancestor_distance
     });
 
-    tracing::trace!(%dir, kin_count, ancestor_distance, walk_threshold, walk_ratio, total_dirs=ancestor.total_dirs(), "should_merge_into_ancestor");
+    tracing::trace!(
+        %dir,
+        kin_count,
+        ancestor_distance,
+        walk_threshold,
+        walk_ratio,
+        total_dirs=ancestor.total_dirs(),
+        "should_merge_into_ancestor",
+    );
 
     if ancestor.is_walked(
         WalkType::Directory, // We are combining directories here, so always use directory count.
         kin_count,
+        ancestor_distance - 1,
         walk_threshold,
         walk_ratio,
     ) {
-        tracing::debug!(%dir, kin_count, ancestor_distance, walk_threshold, walk_ratio, total_dirs=ancestor.total_dirs(), "combining with collateral kin");
+        tracing::debug!(
+            %dir,
+            kin_count,
+            ancestor_distance,
+            walk_threshold,
+            walk_ratio,
+            total_dirs=ancestor.total_dirs(),
+            "combining with collateral kin",
+        );
         Some(ancestor_distance)
     } else {
         None

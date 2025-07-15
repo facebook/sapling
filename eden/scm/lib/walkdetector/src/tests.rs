@@ -763,6 +763,8 @@ fn test_split_off_child_walk() {
     detector.file_loaded(p("small/dir1/b"), 0);
     detector.file_loaded(p("big/dir1/a"), 0);
     detector.file_loaded(p("big/dir1/b"), 0);
+    detector.file_loaded(p("big/dir2/a"), 0);
+    detector.file_loaded(p("big/dir2/b"), 0);
     assert_eq!(detector.file_walks(), vec![(p(""), 2)]);
 
     detector.file_loaded(p("small/dir1/dir1_1/a"), 0);
@@ -931,4 +933,38 @@ fn test_recursive_metadata() {
     // depth=1 (foo/bar/baz/*)
     assert_eq!(node.total_dirs_at_depth(1), Some(201));
     assert_eq!(node.total_files_at_depth(1), Some(101));
+}
+
+#[test]
+fn test_advance_depth_across_wide_dir() {
+    let mut detector = Detector::new();
+    detector.set_walk_threshold(TEST_WALK_THRESHOLD);
+    detector.set_walk_ratio(0.1);
+
+    // Big dir with 100 sub-directories.
+    detector.dir_loaded(p("really/big/dir"), 0, 100, 0);
+
+    // Existing walk covers up to really/big/dir/* (but not into the 100 sub-directories).
+    insert_walk(&detector, p(""), WalkType::File, 3);
+
+    // Two children of root ("some" and "other") have a depth advancing walk.
+    insert_walk(&detector, p("some/small/dir/child"), WalkType::File, 0);
+    insert_walk(&detector, p("other/small/dir/child"), WalkType::File, 0);
+    // Root walk wasn't advanced yet - need to surpass 10% threshold for really/big/dir.
+    assert_eq!(
+        detector.file_walks(),
+        vec![
+            (p(""), 3),
+            (p("other/small/dir/child"), 0),
+            (p("some/small/dir/child"), 0)
+        ]
+    );
+
+    // Trigger walks of 10 of the dirs under really/big/dir.
+    for i in 0..10 {
+        detector.file_loaded(p(format!("really/big/dir/child_{i}/a")), 0);
+        detector.file_loaded(p(format!("really/big/dir/child_{i}/b")), 0);
+    }
+    // Now we surpassed the 10% (of 100) threshold for depth 4.
+    assert_eq!(detector.file_walks(), vec![(p(""), 4)]);
 }

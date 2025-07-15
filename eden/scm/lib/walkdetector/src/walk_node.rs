@@ -223,8 +223,18 @@ impl WalkNode {
                 self.remove_contained(walk_type, &walk, threshold, walk_ratio);
 
                 let seen_count = self.advanced_children_len(walk_type);
-                if self.is_walked(WalkType::Directory, seen_count, threshold, walk_ratio) {
+                if self.is_walked(
+                    WalkType::Directory,
+                    seen_count,
+                    walk.depth + 1,
+                    threshold,
+                    walk_ratio,
+                ) {
                     walk.depth += 1;
+                    tracing::debug!(
+                        new_depth = walk.depth,
+                        "advancing walk after removing descendants"
+                    );
                     self.insert_walk(config, walk_type, walk_root, walk, root_depth)
                 } else {
                     self.set_walk_for_type(walk_type, Some(walk));
@@ -311,12 +321,12 @@ impl WalkNode {
     }
 
     /// Mark name as an advanced child of self (i.e. a descendant under name has a walk that has advanced one level deeper than our walk).
-    /// Returns (total advanced children, name advanced count).
+    /// Returns (total advanced children, total advanced count, name advanced count).
     pub(crate) fn insert_advanced_child(
         &mut self,
         walk_type: WalkType,
         name: PathComponentBuf,
-    ) -> (usize, usize) {
+    ) -> (usize, usize, usize) {
         let map = match walk_type {
             WalkType::File => &mut self.advanced_file_children,
             WalkType::Directory => &mut self.advanced_dir_children,
@@ -328,7 +338,7 @@ impl WalkNode {
             *counter
         };
 
-        (map.len(), counter)
+        (map.len(), map.values().sum(), counter)
     }
 
     fn advanced_children_len(&self, walk_type: WalkType) -> usize {
@@ -531,6 +541,7 @@ impl WalkNode {
         &self,
         walk_type: WalkType,
         seen_count: usize,
+        depth: usize,
         mut walk_threshold: usize,
         walk_ratio: f64,
     ) -> bool {
@@ -539,8 +550,8 @@ impl WalkNode {
         }
 
         let total_count = match walk_type {
-            WalkType::File => self.total_files(),
-            WalkType::Directory => self.total_dirs(),
+            WalkType::File => self.total_files_at_depth(depth),
+            WalkType::Directory => self.total_dirs_at_depth(depth),
         };
 
         // If we have the total size hint, adjust the threshold for extreme cases.
