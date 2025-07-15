@@ -44,6 +44,12 @@ rust_library(
             ],
         ),
     ],
+    test_deps = select({
+        "DEFAULT": [],
+        "ovr_config//os:macos": [
+            "fbsource//third-party/rust:tempfile",
+        ],
+    }),
     deps = [
         "fbsource//third-party/rust:libc",
     ],
@@ -68,6 +74,19 @@ rust_binary(
     name = "rss",
     srcs = ["examples/rss.rs"],
     autocargo = {"ignore_rule": True},
+    unittests = False,
+    deps = [
+        ":procinfo",
+    ],
+)
+
+rust_binary(
+    name = "lsof",
+    srcs = ["examples/lsof.rs"],
+    autocargo = {"ignore_rule": True},
+    compatible_with = [
+        "ovr_config//os:macos",
+    ],
     unittests = False,
     deps = [
         ":procinfo",
