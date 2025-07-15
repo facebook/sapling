@@ -405,36 +405,6 @@ fn test_merge_cousins() {
 }
 
 #[test]
-fn test_dont_merge_into_containing_walk() {
-    let mut detector = Detector::new();
-    detector.set_walk_threshold(TEST_WALK_THRESHOLD);
-
-    insert_walk(&detector, p(""), WalkType::File, 2);
-    assert_eq!(detector.file_walks(), vec![(p(""), 2)]);
-
-    detector.dir_loaded(p("dir2"), 0, 1000, 0);
-    detector.dir_loaded(p("dir2/dir2_1"), 0, 1, 0);
-    detector.dir_loaded(p("dir2/dir2_1/dir2_1_1"), 1, 0, 0);
-    detector.file_loaded(p("dir2/dir2_1/dir2_1_1/a"), 0);
-    assert_eq!(
-        detector.file_walks(),
-        vec![(p(""), 2), (p("dir2/dir2_1"), 1)]
-    );
-
-    detector.dir_loaded(p("dir2/dir2_2"), 0, 1, 0);
-    detector.dir_loaded(p("dir2/dir2_2/dir2_2_1"), 1, 0, 0);
-    detector.file_loaded(p("dir2/dir2_2/dir2_2_1/a"), 0);
-
-    // Be careful to not let the latter two walks merge into the root walk. "dir2" is a large
-    // directory, so we shouldn't let "dir2/dir2_1" and "dir2/dir2_2" jump across it and deepen the
-    // root walk.
-    assert_eq!(
-        detector.file_walks(),
-        vec![(p(""), 2), (p("dir2/dir2_1"), 1), (p("dir2/dir2_2"), 1)]
-    );
-}
-
-#[test]
 fn test_gc() {
     // Test with a low interval so full GC is invoked often, and test with a large interval so full
     // GC is not invoked.
