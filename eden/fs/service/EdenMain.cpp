@@ -24,6 +24,7 @@
 #include <gflags/gflags.h>
 #include <thrift/lib/cpp2/Flags.h>
 #include <thrift/lib/cpp2/server/ThriftServer.h>
+#include <filesystem>
 
 #include "eden/common/telemetry/SessionInfo.h"
 #include "eden/common/telemetry/StructuredLogger.h"
@@ -456,7 +457,21 @@ int runEdenMain(EdenMain&& main, int argc, char** argv) {
       .ensure(
           [daemonStart,
            structuredLogger = server->getServerState()->getStructuredLogger(),
-           takeover = FLAGS_takeover] {
+           takeover = FLAGS_takeover
+#ifndef _WIN32
+           ,
+           &server
+#endif
+  ] {
+#ifndef _WIN32
+            auto edenDir = server->getEdenDir();
+            folly::StringPiece heartbeatFileNamePrefix =
+                server->getHeartbeatFileNamePrefix();
+            std::optional<std::string> oldEdenHeartbeatFileNameStr =
+                server->getOldEdenHeartbeatFileNameStr();
+            std::string edenHeartbeatPathFileNameStr =
+                server->getEdenHeartbeatFileNameStr();
+#endif
             // This value is slightly different from `startTimeInSeconds`
             // we pass into `startupLogger->success()`, but should be
             // identical.
@@ -468,6 +483,48 @@ int runEdenMain(EdenMain&& main, int argc, char** argv) {
             // unsuccessful remounts
             structuredLogger->logEvent(
                 DaemonStart{startTimeInSeconds, takeover, true /*success*/});
+
+#ifndef _WIN32
+            // Create a heartbeat file to indicate that the daemon has
+            // started successfully. This heartbeat get updated by a periodic
+            // task in eden server. This file should be deleted on eden exit.
+            // If the previous heartbeat file was not deleted, it indicates that
+            // the previous EdenFS daemon exited due to SIGKILL.
+            //
+            // First check if the previous eden has crashed
+            for (const auto& entry :
+                 std::filesystem::directory_iterator(edenDir.asString())) {
+              if (entry.is_regular_file() &&
+                  entry.path().filename().string().starts_with(
+                      heartbeatFileNamePrefix.toString())) {
+                if (oldEdenHeartbeatFileNameStr.has_value() && takeover &&
+                    entry.path().filename().string() ==
+                        oldEdenHeartbeatFileNameStr.value()) {
+                  // We have a heartbeat file from the previous eden. But it is
+                  // not a crash because eden is taking over the previous eden
+                  // during graceful restart. This heartbeat file will be
+                  // deleted when the previous eden cleanups.
+                  continue;
+                } else if (
+                    entry.path().filename().string() ==
+                    edenHeartbeatPathFileNameStr) {
+                  // We have a heartbeat file but it is from the current eden.
+                  // It could happen during graceful restart when takeover fail
+                  // and it fallback to the previous eden. We should not delete
+                  // the heartbeat file in this case.
+                  continue;
+                } else {
+                  XLOGF(ERR, "Previous EdenFS daemon exited due to SIGKILL");
+                  // TODO: get all the available information in the structured
+                  // logger
+                  std::remove(entry.path().string().c_str());
+                }
+              }
+            }
+
+            // Create a new heartbeat file
+            server->createEdenHeartbeatFile();
+#endif
           });
 
   while (true) {
@@ -480,6 +537,11 @@ int runEdenMain(EdenMain&& main, int argc, char** argv) {
   }
 
   main.cleanup();
+
+#ifndef _WIN32
+  // Remove the heartbeat file for a clean shutdown
+  server->removeEdenHeartbeatFile();
+#endif
 
   XLOG(INFO) << "EdenFS exiting successfully";
   return kExitCodeSuccess;
