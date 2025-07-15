@@ -34,7 +34,9 @@ pub struct FilesystemTelemetryCounters {
     // The number of successful write operations.
     pub syscall_write: u64,
     // The number of successful stat operations.
-    pub syscall_stat: u64,
+    pub syscall_statfs: u64,
+    // The number of successful getattr operations.
+    pub syscall_getattr: u64,
     // The number of successful setattr operations.
     pub syscall_setattr: u64,
     // The number of successful lookup operations.
@@ -55,7 +57,8 @@ impl Sub for FilesystemTelemetryCounters {
             syscall_readdir: self.syscall_readdir - rhs.syscall_readdir,
             syscall_readdirplus: self.syscall_readdirplus - rhs.syscall_readdirplus,
             syscall_write: self.syscall_write - rhs.syscall_write,
-            syscall_stat: self.syscall_stat - rhs.syscall_stat,
+            syscall_statfs: self.syscall_statfs - rhs.syscall_statfs,
+            syscall_getattr: self.syscall_getattr - rhs.syscall_getattr,
             syscall_setattr: self.syscall_setattr - rhs.syscall_setattr,
             syscall_lookup: self.syscall_lookup - rhs.syscall_lookup,
             syscall_access: self.syscall_access - rhs.syscall_access,
@@ -787,8 +790,9 @@ impl EdenFsClient {
                 syscall_readdir: *counters.get(COUNTER_FS_READDIR).unwrap_or(&0) as u64,
                 syscall_readdirplus: *counters.get(COUNTER_FS_READDIRPLUS).unwrap_or(&0) as u64,
                 syscall_write: *counters.get(COUNTER_FS_WRITE).unwrap_or(&0) as u64,
-                syscall_stat: *counters.get(COUNTER_FS_GETATTR).unwrap_or(&0) as u64,
+                syscall_getattr: *counters.get(COUNTER_FS_GETATTR).unwrap_or(&0) as u64,
                 syscall_setattr: *counters.get(COUNTER_FS_SETATTR).unwrap_or(&0) as u64,
+                syscall_statfs: *counters.get(COUNTER_FS_STATFS).unwrap_or(&0) as u64,
                 syscall_lookup: *counters.get(COUNTER_FS_LOOKUP).unwrap_or(&0) as u64,
                 syscall_access: *counters.get(COUNTER_FS_ACCESS).unwrap_or(&0) as u64,
                 syscall_mkdir: *counters.get(COUNTER_FS_MKDIR).unwrap_or(&0) as u64,
