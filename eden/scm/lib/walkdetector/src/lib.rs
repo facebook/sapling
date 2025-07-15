@@ -9,6 +9,7 @@
 mod tests;
 mod walk_node;
 
+use std::path::Path;
 use std::path::PathBuf;
 use std::sync::Arc;
 use std::sync::LazyLock;
@@ -165,7 +166,11 @@ impl Detector {
 
         if let Some(walk) = owner.get_dominating_walk(WalkType::File) {
             tracing::trace!(walk_root=%path.strip_suffix(suffix, true).unwrap_or_default(), file=%path, "file already in walk");
-            walk.inc_file_load(dir_path.strip_suffix(suffix, true).unwrap_or_default(), 1);
+            walk.inc_file_load(
+                dir_path.strip_suffix(suffix, true).unwrap_or_default(),
+                self.root.as_deref(),
+                path,
+            );
             return walk_changed;
         }
 
@@ -257,7 +262,11 @@ impl Detector {
 
         if let Some(walk) = owner.get_dominating_walk(WalkType::Directory) {
             tracing::trace!(walk_root=%dir_path.strip_suffix(suffix, true).unwrap_or_default(), dir=%path, "dir already in walk");
-            walk.inc_dir_load(dir_path.strip_suffix(suffix, true).unwrap_or_default(), 1);
+            walk.inc_dir_load(
+                dir_path.strip_suffix(suffix, true).unwrap_or_default(),
+                self.root.as_deref(),
+                path,
+            );
             return walk_changed;
         }
 
@@ -355,10 +364,18 @@ impl Detector {
             if let Some(walk) = walk_node.get_dominating_walk(wt) {
                 let walk_root = dir.strip_suffix(suffix, true).unwrap_or_default();
                 match (wt, heavy_read) {
-                    (WalkType::File, false) => walk.inc_file_read(walk_root, 1),
-                    (WalkType::File, true) => walk.inc_file_load(walk_root, 1),
-                    (WalkType::Directory, false) => walk.inc_dir_read(walk_root, 1),
-                    (WalkType::Directory, true) => walk.inc_dir_load(walk_root, 1),
+                    (WalkType::File, false) => {
+                        walk.inc_file_read(walk_root, self.root.as_deref(), path)
+                    }
+                    (WalkType::File, true) => {
+                        walk.inc_file_load(walk_root, self.root.as_deref(), path)
+                    }
+                    (WalkType::Directory, false) => {
+                        walk.inc_dir_read(walk_root, self.root.as_deref(), path)
+                    }
+                    (WalkType::Directory, true) => {
+                        walk.inc_dir_load(walk_root, self.root.as_deref(), path)
+                    }
                 };
 
                 walk.maybe_swap_pid(pid, 1);
@@ -879,27 +896,27 @@ impl Walk {
         }
     }
 
-    fn inc_file_load(&self, root: &RepoPath, val: u64) {
-        if self.file_loads.fetch_add(val, Ordering::AcqRel) >= Self::BIG_WALK_THRESHOLD - 1 {
-            self.maybe_log_big_walk(root);
+    fn inc_file_load(&self, walk_root: &RepoPath, repo_root: Option<&Path>, path: &RepoPath) {
+        if self.file_loads.fetch_add(1, Ordering::AcqRel) >= Self::BIG_WALK_THRESHOLD - 1 {
+            self.maybe_log_big_walk(walk_root, repo_root, path);
         }
     }
 
-    fn inc_file_read(&self, root: &RepoPath, val: u64) {
-        if self.file_reads.fetch_add(val, Ordering::Relaxed) >= Self::BIG_WALK_THRESHOLD - 1 {
-            self.maybe_log_big_walk(root);
+    fn inc_file_read(&self, walk_root: &RepoPath, repo_root: Option<&Path>, path: &RepoPath) {
+        if self.file_reads.fetch_add(1, Ordering::Relaxed) >= Self::BIG_WALK_THRESHOLD - 1 {
+            self.maybe_log_big_walk(walk_root, repo_root, path);
         }
     }
 
-    fn inc_dir_load(&self, root: &RepoPath, val: u64) {
-        if self.dir_loads.fetch_add(val, Ordering::AcqRel) >= Self::BIG_WALK_THRESHOLD - 1 {
-            self.maybe_log_big_walk(root);
+    fn inc_dir_load(&self, walk_root: &RepoPath, repo_root: Option<&Path>, path: &RepoPath) {
+        if self.dir_loads.fetch_add(1, Ordering::AcqRel) >= Self::BIG_WALK_THRESHOLD - 1 {
+            self.maybe_log_big_walk(walk_root, repo_root, path);
         }
     }
 
-    fn inc_dir_read(&self, root: &RepoPath, val: u64) {
-        if self.dir_reads.fetch_add(val, Ordering::Relaxed) >= Self::BIG_WALK_THRESHOLD - 1 {
-            self.maybe_log_big_walk(root);
+    fn inc_dir_read(&self, walk_root: &RepoPath, repo_root: Option<&Path>, path: &RepoPath) {
+        if self.dir_reads.fetch_add(1, Ordering::Relaxed) >= Self::BIG_WALK_THRESHOLD - 1 {
+            self.maybe_log_big_walk(walk_root, repo_root, path);
         }
     }
 
@@ -918,8 +935,15 @@ impl Walk {
             return false;
         }
 
-        let denominator = self.total_accesses();
-        if pid != self.pid() && rand::thread_rng().gen_range(0..denominator.max(1)) < numerator {
+        let current_pid = self.pid();
+
+        // Don't swap to a 0 pid to favor having some pid info available.
+        if pid > 0
+            && pid != current_pid
+            && (current_pid == 0 || // Always take the new pid if current pid not set.
+                // Give the new pid a probabilistic chance to "take over" based on its weight.
+                rand::thread_rng().gen_range(0..self.total_accesses().max(1)) < numerator)
+        {
             self.pid.store(pid as u64, Ordering::Relaxed);
             true
         } else {
@@ -927,17 +951,44 @@ impl Walk {
         }
     }
 
-    fn maybe_log_big_walk(&self, root: &RepoPath) {
+    fn maybe_log_big_walk(&self, walk_root: &RepoPath, repo_root: Option<&Path>, path: &RepoPath) {
         // Init the pid detail at the start of the walk. If we wait until the walk ends, the walking
         // process may have exited. We init pid_detail before checking logged_start because it is
         // possible that logged_start is true before pid_detail is set due to absorbing a logged
         // walk.
         self.pid_detail.get_or_init(|| {
+            let mut pid = self.pid();
+
+            // In practice we don't get pid on mac since EdenFS uses NFS. If this file path crossed
+            // us into "big walk" territory, do an expensive lsof lookup to try to get the pid.
+            if pid == 0 {
+                if let Some(root) = repo_root {
+                    if let Some(full_path) = root.join(path.as_str()).to_str() {
+                        #[cfg(target_os = "macos")]
+                        {
+                            pid =
+                                procinfo::macos::file_path_to_pid(std::path::Path::new(full_path));
+                        }
+
+                        #[cfg(not(target_os = "macos"))]
+                        {
+                            // It would make sense to fall back to the "lsof" logic for other
+                            // platforms as well, but we currently only have it implemented for mac.
+                            let _ = full_path;
+                            pid = 0;
+                        }
+
+                        if pid > 0 {
+                            self.pid.store(pid as u64, Ordering::Relaxed);
+                        }
+                    }
+                }
+            }
+
             // Short circuit procinfo call if we aren't going to log it.
             let tracing_enabled = tracing::enabled!(Level::INFO)
                 || tracing::enabled!(target: "big_walk", Level::DEBUG);
 
-            let pid = self.pid();
             if tracing_enabled && pid > 0 {
                 procinfo::ancestors(pid)
             } else {
@@ -950,7 +1001,7 @@ impl Walk {
         }
 
         tracing::info!(
-            %root,
+            root=%walk_root,
             file_loads = self.file_loads.load(Ordering::Relaxed),
             file_reads = self.file_reads.load(Ordering::Relaxed),
             file_preloads = self.file_preloads.load(Ordering::Relaxed),
