@@ -305,7 +305,7 @@ fn test_advance_while_advancing() {
     insert_walk(&detector, p("root/dir1/a/b"), WalkType::File, 0);
     insert_walk(&detector, p("root/dir2/a/b"), WalkType::File, 0);
 
-    // Now isnsert two "advancing" walks.
+    // Now insert two "advancing" walks.
     insert_walk(&detector, p("root/dir1/a"), WalkType::File, 0);
     insert_walk(&detector, p("root/dir2/a"), WalkType::File, 0);
 
@@ -885,4 +885,44 @@ fn test_pid_propagation() {
             break;
         }
     }
+}
+
+#[test]
+fn test_dont_gc_ancestor_walk() {
+    let mut detector = Detector::new();
+    detector.set_walk_threshold(TEST_WALK_THRESHOLD);
+    detector.set_gc_timeout(Duration::from_secs(2));
+
+    insert_walk(&detector, p("root"), WalkType::File, 1);
+
+    MockClock::advance(Duration::from_secs(1));
+
+    // Now we see deeper activity "behind" an intermediate walk.
+
+    insert_walk(&detector, p("root/a/b/bigdir"), WalkType::File, 0);
+
+    MockClock::advance(Duration::from_secs(1));
+
+    insert_walk(&detector, p("root/a/b/bigdir/dir1"), WalkType::File, 0);
+
+    MockClock::advance(Duration::from_secs(1));
+
+    insert_walk(&detector, p("root/a/b/bigdir/dir2"), WalkType::File, 0);
+
+    MockClock::advance(Duration::from_secs(1));
+
+    insert_walk(&detector, p("root/a/b/bigdir/dir3"), WalkType::File, 0);
+
+    MockClock::advance(Duration::from_secs(1));
+
+    // Now things have bubbled up closer to root/.
+
+    insert_walk(&detector, p("root/a/foo"), WalkType::File, 0);
+
+    MockClock::advance(Duration::from_secs(1));
+
+    insert_walk(&detector, p("root/b/foo"), WalkType::File, 0);
+
+    // We kept around the root/ walk (and advanced it to depth 2).
+    assert_eq!(detector.file_walks(), vec![(p("root"), 2)]);
 }

@@ -450,10 +450,6 @@ impl Inner {
         let parent_dir = dir.parent()?;
         let parent_node = self.node.get_node(parent_dir)?;
 
-        // Touch the ancestor's last access time. We don't want the ancestor's walk to GC while we
-        // are still "making progress" towards advancing its walk.
-        parent_node.last_access.bump();
-
         let walk_depth = should_merge_into_ancestor(
             walk_threshold(config, parent_dir.depth()),
             config.walk_ratio,
@@ -489,10 +485,6 @@ impl Inner {
         if suffix.is_empty() {
             return None;
         }
-
-        // Touch the ancestor's last access time. We don't want the ancestor's walk to GC while we
-        // are still "making progress" towards advancing its walk.
-        ancestor.last_access.bump();
 
         let grandparent_node = ancestor.get_node(suffix.parent()?)?;
 
@@ -543,10 +535,6 @@ impl Inner {
             // advanced child is the first part of the suffix.
             suffix.split_first_component()?.0
         };
-
-        // Touch the ancestor's last access time. We don't want the ancestor's walk to GC while we
-        // are still "making progress" towards advancing its walk.
-        ancestor.last_access.bump();
 
         let ancestor_depth = ancestor_dir.depth();
         let threshold = walk_threshold(config, ancestor_depth);

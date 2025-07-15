@@ -208,8 +208,16 @@ impl WalkNode {
         mut walk: Walk,
         root_depth: usize,
     ) -> &mut Self {
+        if self.get_walk_for_type(walk_type).is_some() {
+            // Refresh our last_access_time as we see a descendant walk getting inserted. In general
+            // a descendant walk is "making progress" towards advancing ancestors walks, and the
+            // progress can be very slow (and we don't want the ancestor walk to get GC'd in the
+            // mean time).
+            self.last_access.bump();
+        }
+
         // If we completely overlap with the walk to be inserted, skip it. This shouldn't
-        // happen, but I want to guarantee there are no overlapping walks.
+        // happen, but we want to guarantee there are no completely overlapping walks.
         if self.contains(walk_type, walk_root, walk.depth) {
             if let Some(existing) = self.get_walk_for_type(walk_type) {
                 existing.absorb_counters(&walk);
