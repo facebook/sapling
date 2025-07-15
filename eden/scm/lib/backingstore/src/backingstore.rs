@@ -59,6 +59,7 @@ struct Inner {
     filestore: Arc<dyn FileStore>,
     treestore: Arc<dyn TreeStore>,
     repo: Arc<Repo>,
+    mount_path: PathBuf,
 
     // We store these so we can maintain them when reloading ourself.
     extra_configs: Vec<PinnedConfig>,
@@ -110,8 +111,8 @@ impl FromStr for WalkMode {
 
 impl BackingStore {
     /// Initialize `BackingStore`.
-    pub fn new<P: AsRef<Path>>(root: P) -> Result<Self> {
-        Self::new_with_config(root.as_ref(), &[])
+    pub fn new<P: AsRef<Path>>(root: P, mount: P) -> Result<Self> {
+        Self::new_with_config(root.as_ref(), mount.as_ref(), &[])
     }
 
     pub fn name(&self) -> Result<String> {
@@ -123,7 +124,11 @@ impl BackingStore {
 
     /// Initialize `BackingStore` with extra configs.
     /// This is used by benches/ to set cache path to control warm/code test cases.
-    pub fn new_with_config(root: impl AsRef<Path>, extra_configs: &[String]) -> Result<Self> {
+    pub fn new_with_config(
+        root: impl AsRef<Path>,
+        mount: impl AsRef<Path>,
+        extra_configs: &[String],
+    ) -> Result<Self> {
         let extra_configs = extra_configs
             .iter()
             .map(|c| PinnedConfig::Raw(c.to_string().into(), "backingstore".into()))
@@ -134,6 +139,7 @@ impl BackingStore {
         Ok(Self {
             inner: ArcSwap::new(Arc::new(Self::new_inner(
                 root.as_ref(),
+                mount.as_ref(),
                 &extra_configs,
                 touch_file_mtime(),
                 parent_hint.clone(),
@@ -145,6 +151,7 @@ impl BackingStore {
 
     fn new_inner(
         root: &Path,
+        mount: &Path,
         extra_configs: &[PinnedConfig],
         touch_file_mtime: Option<SystemTime>,
         parent_hint: Arc<RwLock<Option<String>>>,
@@ -244,6 +251,7 @@ impl BackingStore {
             treestore,
             filestore,
             repo,
+            mount_path: mount.to_path_buf(),
             extra_configs: extra_configs.to_vec(),
             create_time: Instant::now(),
             touch_file_mtime,
@@ -520,6 +528,7 @@ impl BackingStore {
 
             match Self::new_inner(
                 inner.repo.path(),
+                &inner.mount_path,
                 &inner.extra_configs,
                 new_mtime,
                 self.parent_hint.clone(),
@@ -589,6 +598,7 @@ impl Inner {
             filestore: self.filestore.clone(),
             treestore: self.treestore.clone(),
             repo: self.repo.clone(),
+            mount_path: self.mount_path.clone(),
             extra_configs: self.extra_configs.clone(),
 
             touch_file_mtime,

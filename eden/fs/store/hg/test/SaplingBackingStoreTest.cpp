@@ -82,6 +82,7 @@ struct SaplingBackingStoreNoFaultInjectorTest : SaplingBackingStoreTestBase {
   std::unique_ptr<SaplingBackingStore> queuedBackingStore =
       std::make_unique<SaplingBackingStore>(
           repo.path(),
+          repo.path(),
           localStore,
           stats.copy(),
           &executor,
@@ -100,6 +101,7 @@ struct SaplingBackingStoreWithFaultInjectorTest : SaplingBackingStoreTestBase {
 
   std::unique_ptr<SaplingBackingStore> queuedBackingStore =
       std::make_unique<SaplingBackingStore>(
+          repo.path(),
           repo.path(),
           localStore,
           stats.copy(),
@@ -120,6 +122,7 @@ struct SaplingBackingStoreWithFaultInjectorIgnoreConfigTest
 
   std::unique_ptr<SaplingBackingStore> queuedBackingStore =
       std::make_unique<SaplingBackingStore>(
+          repo.path(),
           repo.path(),
           localStore,
           stats.copy(),

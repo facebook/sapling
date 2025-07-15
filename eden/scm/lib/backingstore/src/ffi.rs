@@ -158,7 +158,10 @@ pub(crate) mod ffi {
     extern "Rust" {
         type BackingStore;
 
-        pub unsafe fn sapling_backingstore_new(repository: &[c_char]) -> Result<Box<BackingStore>>;
+        pub unsafe fn sapling_backingstore_new(
+            repository: &[c_char],
+            mount: &[c_char],
+        ) -> Result<Box<BackingStore>>;
 
         pub unsafe fn sapling_backingstore_get_name(store: &BackingStore) -> Result<String>;
 
@@ -307,12 +310,16 @@ fn select_cause(fetch_causes_iter: impl Iterator<Item = ffi::FetchCause>) -> Fet
     }
 }
 
-pub unsafe fn sapling_backingstore_new(repository: &[c_char]) -> Result<Box<BackingStore>> {
+pub unsafe fn sapling_backingstore_new(
+    repository: &[c_char],
+    mount: &[c_char],
+) -> Result<Box<BackingStore>> {
     unsafe {
         super::init::backingstore_global_init();
 
         let repo = CStr::from_ptr(repository.as_ptr()).to_str()?;
-        let store = BackingStore::new(repo).map_err(|err| anyhow!("{:?}", err))?;
+        let mount = CStr::from_ptr(mount.as_ptr()).to_str()?;
+        let store = BackingStore::new(repo, mount).map_err(|err| anyhow!("{:?}", err))?;
         Ok(Box::new(store))
     }
 }

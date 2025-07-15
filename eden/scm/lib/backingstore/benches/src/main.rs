@@ -221,7 +221,7 @@ impl TempDirExt for tempfile::TempDir {
                 }
             }
         }
-        BackingStore::new_with_config(root, &configs).unwrap()
+        BackingStore::new_with_config(&root, &root, &configs).unwrap()
     }
 
     fn warm_up(&self, test_title: &str) {

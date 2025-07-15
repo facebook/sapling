@@ -196,6 +196,7 @@ HgImportTraceEvent::HgImportTraceEvent(
 
 SaplingBackingStore::SaplingBackingStore(
     AbsolutePathPiece repository,
+    AbsolutePathPiece mount,
     std::shared_ptr<LocalStore> localStore,
     EdenStatsPtr stats,
     UnboundedQueueExecutor* serverThreadPool,
@@ -219,7 +220,7 @@ SaplingBackingStore::SaplingBackingStore(
       traceBus_{TraceBus<HgImportTraceEvent>::create(
           "hg",
           config_->getEdenConfig()->HgTraceBusCapacity.getValue())},
-      store_{repository.view()} {
+      store_{repository.view(), mount.view()} {
   uint8_t numberThreads =
       config_->getEdenConfig()->numBackingstoreThreads.getValue();
   if (!numberThreads) {
@@ -249,6 +250,7 @@ SaplingBackingStore::SaplingBackingStore(
  */
 SaplingBackingStore::SaplingBackingStore(
     AbsolutePathPiece repository,
+    AbsolutePathPiece mount,
     std::shared_ptr<LocalStore> localStore,
     EdenStatsPtr stats,
     folly::InlineExecutor* inlineExecutor,
@@ -272,7 +274,7 @@ SaplingBackingStore::SaplingBackingStore(
       traceBus_{TraceBus<HgImportTraceEvent>::create(
           "hg",
           config_->getEdenConfig()->HgTraceBusCapacity.getValue())},
-      store_{repository.view()} {
+      store_{repository.view(), mount.view()} {
   uint8_t numberThreads =
       config_->getEdenConfig()->numBackingstoreThreads.getValue();
   if (!numberThreads) {

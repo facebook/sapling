@@ -30,6 +30,7 @@
 #include "eden/common/telemetry/StructuredLogger.h"
 #include "eden/common/utils/Bug.h"
 #include "eden/common/utils/UserInfo.h"
+#include "eden/fs/config/CheckoutConfig.h"
 #include "eden/fs/config/EdenConfig.h"
 #include "eden/fs/eden-config.h"
 #include "eden/fs/inodes/ServerState.h"
@@ -127,10 +128,12 @@ namespace {
 std::shared_ptr<SaplingBackingStore> createSaplingBackingStore(
     const BackingStoreFactory::CreateParams& params,
     const AbsolutePath& repoPath,
+    const AbsolutePath& mountPath,
     std::shared_ptr<ReloadableConfig> reloadableConfig,
     std::unique_ptr<SaplingBackingStoreOptions> runtimeOptions) {
   return std::make_shared<SaplingBackingStore>(
       repoPath,
+      mountPath,
       params.localStore,
       params.sharedStats.copy(),
       params.serverState->getThreadPool().get(),
@@ -157,7 +160,11 @@ void EdenMain::registerStandardBackingStores() {
 
     auto runtimeOptions = std::make_unique<SaplingBackingStoreOptions>();
     return createSaplingBackingStore(
-        params, repoPath, reloadableConfig, std::move(runtimeOptions));
+        params,
+        repoPath,
+        params.config.getMountPath(),
+        reloadableConfig,
+        std::move(runtimeOptions));
   });
 
   registerBackingStore(
@@ -169,7 +176,11 @@ void EdenMain::registerStandardBackingStores() {
 
         auto options = std::make_unique<SaplingBackingStoreOptions>();
         auto saplingBackingStore = createSaplingBackingStore(
-            params, repoPath, reloadableConfig, std::move(options));
+            params,
+            repoPath,
+            params.config.getMountPath(),
+            reloadableConfig,
+            std::move(options));
         return std::make_shared<FilteredBackingStore>(
             std::move(saplingBackingStore), std::move(hgSparseFilter));
       });

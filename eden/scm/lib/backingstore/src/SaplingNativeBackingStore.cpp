@@ -24,10 +24,12 @@
 namespace sapling {
 
 SaplingNativeBackingStore::SaplingNativeBackingStore(
-    std::string_view repository)
+    std::string_view repository,
+    std::string_view mount)
     : store_{
           sapling_backingstore_new(
-              rust::Slice<const char>{repository.data(), repository.size()})
+              rust::Slice<const char>{repository.data(), repository.size()},
+              rust::Slice<const char>{mount.data(), mount.size()})
               .into_raw(),
           [](BackingStore* backingStore) {
             auto box = rust::Box<BackingStore>::from_raw(backingStore);
