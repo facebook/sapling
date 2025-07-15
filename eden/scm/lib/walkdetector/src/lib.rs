@@ -132,8 +132,7 @@ impl Detector {
         tracing::trace!(%path, "file_loaded");
 
         // Try lightweight read-only path.
-        if let Some(walk_root) = self.mark_read(path, WalkType::File, true, pid) {
-            tracing::trace!(%walk_root, file=%path, "file already in walk (fastpath)");
+        if self.mark_read(path, WalkType::File, true, pid).is_some() {
             return false;
         }
 
@@ -213,8 +212,10 @@ impl Detector {
         );
 
         // Try lightweight read-only path.
-        if let Some(walk_root) = self.mark_read(path, WalkType::Directory, true, pid) {
-            tracing::trace!(%walk_root, dir=%path, "dir already in walk (fastpath)");
+        if self
+            .mark_read(path, WalkType::Directory, true, pid)
+            .is_some()
+        {
             if is_interesting_metadata {
                 // Fill in interesting metadata that informs detection of file content walks.
                 let mut inner = self.inner.write();
@@ -350,7 +351,11 @@ impl Detector {
                 walk.maybe_swap_pid(pid, 1);
             }
 
-            return Some(dir.strip_suffix(suffix, true).unwrap_or_default());
+            let walk_root = dir.strip_suffix(suffix, true).unwrap_or_default();
+
+            tracing::trace!(%walk_root, ?wt, %path, "already in walk (fastpath)");
+
+            return Some(walk_root);
         }
 
         None
