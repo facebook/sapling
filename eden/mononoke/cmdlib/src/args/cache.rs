@@ -28,6 +28,8 @@ const CACHELIB_DISABLE_CACHEADMIN: &str = "cachelib-disable-cacheadmin";
 const CACHELIB_SHARDS: &str = "cachelib-shards";
 const CACHELIB_REBALANCING_USE_LRU: &str = "cachelib-rebalancing-use-lru";
 const CACHELIB_REBALANCING_INTERVAL: &str = "cachelib-rebalancing-interval-secs";
+const CACHE_FILE_PATH: &str = "cache-file-path";
+const CACHE_FILE_SIZE: &str = "cache-file-size";
 
 const PHASES_CACHE_SIZE: &str = "phases-cache-size";
 const GLOBALREVS_CACHE_SIZE: &str = "globalrevs-cache-size";
@@ -110,6 +112,20 @@ pub(crate) fn add_cachelib_args<'a, 'b>(
                 CACHE_SIZE_GB_DEFAULT.get_or_init(|| (defaults.cache_size / ONE_GIB).to_string()),
             )
             .help("size of the cachelib cache, in GiB"),
+    )
+    .arg(
+        Arg::with_name(CACHE_FILE_PATH)
+            .long(CACHE_FILE_PATH)
+            .takes_value(true)
+            .value_name("PATH")
+            .help("path to the cachelib cache file (for hybrid mode)"),
+    )
+    .arg(
+        Arg::with_name(CACHE_FILE_SIZE)
+            .long(CACHE_FILE_SIZE)
+            .takes_value(true)
+            .value_name("SIZE")
+            .help("size of the cachelib cache file (for hybrid mode), in GiB"),
     )
     .arg(
         Arg::with_name(USE_TUPPERWARE_SHRINKER)
@@ -203,6 +219,13 @@ pub fn parse_and_init_cachelib(
             if let Some(cache_size) = matches.value_of(CACHE_SIZE_GB) {
                 settings.cache_size =
                     (cache_size.parse::<f64>().unwrap() * ONE_GIB as f64) as usize;
+            }
+            if let Some(cache_file_path) = matches.value_of(CACHE_FILE_PATH) {
+                settings.cache_file_path = Some(cache_file_path.into());
+            }
+            if let Some(cache_file_size) = matches.value_of(CACHE_FILE_SIZE) {
+                settings.cache_file_size =
+                    (cache_file_size.parse::<f64>().unwrap() * ONE_GIB as f64) as u64;
             }
             if let Some(max_process_size) = matches.value_of(MAX_PROCESS_SIZE) {
                 settings.max_process_size_gib = Some(max_process_size.parse().unwrap());

@@ -5,6 +5,8 @@
  * GNU General Public License version 2.
  */
 
+use std::path::PathBuf;
+
 use arg_extensions::ArgDefaults;
 use clap::Args;
 use clap::ValueEnum;
@@ -153,4 +155,12 @@ pub struct CachelibArgs {
     /// Override the power for cachelib's hashtable buckets
     #[clap(long, value_name = "SIZE", hide = true)]
     pub buckets_power: Option<u32>,
+
+    /// File path to use for the on-disk cachelib cache file
+    #[clap(long)]
+    pub cache_file_path: Option<PathBuf>,
+
+    /// Size of the on-disk cachelib cache file, in GiB
+    #[clap(long, value_name = "SIZE")]
+    pub cache_file_size_gb: f64,
 }

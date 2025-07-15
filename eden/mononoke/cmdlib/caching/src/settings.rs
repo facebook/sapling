@@ -5,6 +5,7 @@
  * GNU General Public License version 2.
  */
 
+use std::path::PathBuf;
 use std::time::Duration;
 
 use super::args::CachelibArgs;
@@ -35,12 +36,18 @@ pub struct CachelibSettings {
     pub expected_item_size_bytes: Option<usize>,
     pub rebalancing_use_lru: bool,
     pub rebalancing_interval: Duration,
+    pub cache_file_path: Option<PathBuf>,
+    pub cache_file_size: u64,
 }
 
 impl CachelibSettings {
     pub fn arg_defaults(&self) -> Vec<(&'static str, String)> {
         let mut defaults = vec![
             ("cache_size_gb", (self.cache_size / ONE_GIB).to_string()),
+            (
+                "cache_file_size_gb",
+                (self.cache_file_size as f64 / ONE_GIB as f64).to_string(),
+            ),
             (
                 "cachelib_rebalancing_interval_secs",
                 self.rebalancing_interval.as_secs().to_string(),
@@ -122,12 +129,21 @@ impl CachelibSettings {
             "synced-commit-mapping-cache-size",
             &self.synced_commit_mapping_cache_size,
         );
+        set_default(
+            &mut defaults,
+            "cache-file-path",
+            &self
+                .cache_file_path
+                .as_ref()
+                .map(|path| path.clone().into_os_string().into_string().unwrap()),
+        );
 
         defaults
     }
 
     pub fn update_from_args(&mut self, args: &CachelibArgs) {
         self.cache_size = (args.cache_size_gb * ONE_GIB as f64) as usize;
+        self.cache_file_size = (args.cache_file_size_gb * ONE_GIB as f64) as u64;
         self.use_tupperware_shrinker = args.use_tupperware_shrinker;
         self.rebalancing_use_lru = args.cachelib_rebalancing_use_lru;
         self.rebalancing_interval = Duration::from_secs(args.cachelib_rebalancing_interval_secs);
@@ -173,6 +189,7 @@ impl CachelibSettings {
             &mut self.synced_commit_mapping_cache_size,
             &args.synced_commit_mapping_cache_size,
         );
+        replace(&mut self.cache_file_path, &args.cache_file_path);
     }
 }
 
@@ -201,6 +218,8 @@ impl Default for CachelibSettings {
             expected_item_size_bytes: None,
             rebalancing_use_lru: false,
             rebalancing_interval: Duration::from_secs(300),
+            cache_file_path: None,
+            cache_file_size: 32 * ONE_GIB as u64,
         }
     }
 }
