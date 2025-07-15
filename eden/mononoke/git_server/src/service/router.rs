@@ -7,6 +7,10 @@
 
 use std::pin::Pin;
 
+use bytes::Bytes;
+use edenapi_service::handlers::JsonErrorFomatter;
+use edenapi_service::handlers::handler::BasicPathExtractor;
+use edenapi_service::handlers::handler::PathExtractorWithRepo;
 use futures::FutureExt;
 use futures_stats::futures03::TimedFutureExt;
 use gotham::handler::HandlerFuture;
@@ -19,8 +23,11 @@ use gotham::router::builder::DrawRoutes;
 use gotham::router::builder::build_router as gotham_build_router;
 use gotham::state::FromState;
 use gotham::state::State;
+use gotham_ext::error::HttpError;
 use gotham_ext::middleware::ScubaMiddlewareState;
+use gotham_ext::response::BytesBody;
 use gotham_ext::response::build_error_response;
+use gotham_ext::response::build_response;
 use hyper::HeaderMap;
 
 use super::error_formatter::GitErrorFormatter;
@@ -113,6 +120,25 @@ fn health_handler(state: State) -> Pin<Box<HandlerFuture>> {
     .boxed()
 }
 
+pub async fn get_capabilities() -> Result<BytesBody<Bytes>, HttpError> {
+    let caps: Vec<&str> = vec!["commit-cloud"];
+    let caps_json = serde_json::to_vec(&caps).map_err(|e| {
+        HttpError::e500(anyhow::Error::from(e).context("converting capabilities to JSON"))
+    })?;
+    Ok(BytesBody::new(caps_json.into(), mime::APPLICATION_JSON))
+}
+
+fn slapi_capabilities_handler(mut state: State) -> Pin<Box<HandlerFuture>> {
+    async move {
+        ScubaMiddlewareState::try_borrow_add(&mut state, "method", "capabilities");
+        let repo_name = BasicPathExtractor::borrow_from(&state).repo();
+        ScubaMiddlewareState::try_borrow_add(&mut state, "repo", repo_name);
+        let res = get_capabilities().await;
+        build_response(res, state, &JsonErrorFomatter)
+    }
+    .boxed()
+}
+
 pub fn build_router(context: GitServerContext) -> Router {
     let pipeline = new_pipeline().add(StateMiddleware::new(context)).build();
 
@@ -141,6 +167,12 @@ pub fn build_router(context: GitServerContext) -> Router {
             .to(clone_bundle_handler);
 
         route.get("/health_check").to(health_handler);
+
+        // SLAPI endpoints
+        route
+            .get("/edenapi/*repo/capabilities")
+            .with_path_extractor::<BasicPathExtractor>()
+            .to(slapi_capabilities_handler);
         GitHandlers::setup::<edenapi_service::handlers::commit_cloud::CommitCloudWorkspace>(route);
         GitHandlers::setup::<edenapi_service::handlers::commit_cloud::CommitCloudReferences>(route);
         GitHandlers::setup::<edenapi_service::handlers::commit_cloud::CommitCloudUpdateReferences>(

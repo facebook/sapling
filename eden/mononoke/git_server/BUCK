@@ -32,6 +32,7 @@ rust_binary(
         "fbsource//third-party/rust:mime",
         "fbsource//third-party/rust:rustc-hash",
         "fbsource//third-party/rust:serde",
+        "fbsource//third-party/rust:serde_json",
         "fbsource//third-party/rust:strum",
         "fbsource//third-party/rust:thiserror",
         "fbsource//third-party/rust:tokio",
