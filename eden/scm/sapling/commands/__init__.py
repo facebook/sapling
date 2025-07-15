@@ -2542,11 +2542,6 @@ def graft(ui, repo, *revs, **opts):
       conflicts are resolved, the graft process can be continued with
       the ``-c/--continue`` option.
 
-      ``--from-path`` and ``--to-path`` allow copying commits between
-      directories. Files in the grafted commit(s) outside of
-      ``--from-path`` are ignored. See :prog:`help directorybranching` for
-      more information.
-
       .. note::
 
          The ``-c/--continue`` operation does not remember options from
