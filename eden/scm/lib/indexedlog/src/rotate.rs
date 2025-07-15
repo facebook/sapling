@@ -463,21 +463,25 @@ impl RotateLog {
 
             if self.writable_log().iter_dirty().next().is_none() {
                 // Read-only path, no need to take directory lock.
-                if let Ok(latest) = read_latest(self.dir.as_ref().unwrap()) {
-                    if latest != self.latest {
-                        // Latest changed. Re-load and write to the real latest Log.
-                        // PERF(minor): This can be smarter by avoiding reloading some logs.
-                        self.set_logs(read_logs(
-                            self.dir.as_ref().unwrap(),
-                            &self.open_options,
-                            latest,
-                        )?);
-                        self.latest = latest;
+                match read_latest(self.dir.as_ref().unwrap()) {
+                    Ok(latest) => {
+                        if latest != self.latest {
+                            // Latest changed. Re-load and write to the real latest Log.
+                            // PERF(minor): This can be smarter by avoiding reloading some logs.
+                            self.set_logs(read_logs(
+                                self.dir.as_ref().unwrap(),
+                                &self.open_options,
+                                latest,
+                            )?);
+                            self.latest = latest;
+                        }
+                        self.writable_log().sync()?;
                     }
-                    self.writable_log().sync()?;
-                } else {
-                    // If latest can not be read, do not error out.
-                    // This RotateLog can still be used to answer queries.
+                    Err(err) => {
+                        // If latest can not be read, do not error out.
+                        // This RotateLog can still be used to answer queries.
+                        tracing::error!(?err, "ignoring error reading latest log");
+                    }
                 }
             } else {
                 // Read-write path. Take the directory lock.

@@ -492,32 +492,36 @@ impl Log {
 
             // Read-only fast path - no need to take directory lock.
             if self.mem_buf.is_empty() {
-                if let Ok(meta) = Self::load_or_create_meta(&self.dir, false) {
-                    let changed = self.meta != meta;
-                    let truncated = self.meta.epoch != meta.epoch;
-                    if !truncated {
-                        check_append_only(self, &meta)?;
+                match Self::load_or_create_meta(&self.dir, false) {
+                    Ok(meta) => {
+                        let changed = self.meta != meta;
+                        let truncated = self.meta.epoch != meta.epoch;
+                        if !truncated {
+                            check_append_only(self, &meta)?;
+                        }
+                        // No need to reload anything if metadata hasn't changed.
+                        if changed {
+                            // Indexes cannot be reused, if epoch has changed. Otherwise,
+                            // Indexes can be reused, since they do not have new in-memory
+                            // entries, and the on-disk primary log is append-only (so data
+                            // already present in the indexes is valid).
+                            *self = self.open_options.clone().open_internal(
+                                &self.dir,
+                                if truncated { None } else { Some(&self.indexes) },
+                                None,
+                            )?;
+                        }
                     }
-                    // No need to reload anything if metadata hasn't changed.
-                    if changed {
-                        // Indexes cannot be reused, if epoch has changed. Otherwise,
-                        // Indexes can be reused, since they do not have new in-memory
-                        // entries, and the on-disk primary log is append-only (so data
-                        // already present in the indexes is valid).
-                        *self = self.open_options.clone().open_internal(
-                            &self.dir,
-                            if truncated { None } else { Some(&self.indexes) },
-                            None,
-                        )?;
+                    Err(err) => {
+                        // If meta can not be read, do not error out.
+                        // This Log can still be used to answer queries.
+                        //
+                        // This behavior makes Log more friendly for cases where an
+                        // external process does a `rm -rf` and the current process
+                        // does a `sync()` just for loading new data. Not erroring
+                        // out and pretend that nothing happened.
+                        tracing::error!(?err, "ignoring error loading meta");
                     }
-                } else {
-                    // If meta can not be read, do not error out.
-                    // This Log can still be used to answer queries.
-                    //
-                    // This behavior makes Log more friendly for cases where an
-                    // external process does a `rm -rf` and the current process
-                    // does a `sync()` just for loading new data. Not erroring
-                    // out and pretend that nothing happened.
                 }
                 self.update_change_detector_to_match_meta();
                 return Ok(self.meta.primary_len);
@@ -708,7 +712,7 @@ impl Log {
         for &index_id in index_ids.iter() {
             let metaname = self.open_options.index_defs[index_id].metaname();
             let new_length = self.indexes[index_id].flush();
-            let new_length = self.maybe_set_index_error(new_length.map_err(Into::into))?;
+            let new_length = self.maybe_set_index_error(new_length)?;
             self.meta.indexes.insert(metaname, new_length);
             trace!(
                 name = "Log::flush_lagging_index",
@@ -820,7 +824,7 @@ impl Log {
                 // Flush all indexes.
                 for i in 0..self.indexes.len() {
                     let new_length = self.indexes[i].flush();
-                    let new_length = self.maybe_set_index_error(new_length.map_err(Into::into))?;
+                    let new_length = self.maybe_set_index_error(new_length)?;
                     let name = self.open_options.index_defs[i].metaname();
                     self.meta.indexes.insert(name, new_length);
                 }
