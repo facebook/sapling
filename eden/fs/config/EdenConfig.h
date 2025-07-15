@@ -1524,6 +1524,18 @@ class EdenConfig : private ConfigSettingManager {
       this};
 
   /**
+   * Specify the interval of updating eden heartbeat file. The heartbeat file
+   * should have the latest timestamp. If eden crash with a SIGKILL, the
+   * timestamp of the heartbeat file can be used to determine approximate time
+   * of the crash.
+   * Zero means disable the updating feature.
+   */
+  ConfigSetting<std::chrono::nanoseconds> updateEdenHeartbeatFileInterval{
+      "experimental:update-eden-heartbeat-file-interval",
+      std::chrono::minutes(15),
+      this};
+
+  /**
    * Controls whether EdenFS will periodically garbage collect the working
    * directory.
    *
