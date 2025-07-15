@@ -148,7 +148,6 @@ function mononoke_cas_sync {
     --retry-num 1 \
     --repo-name $HG_REPO_NAME \
     --mononoke-config-path "$TESTTMP/mononoke-config" \
-    --tracing \
     --tracing-test-format \
      sync-loop --start-id "$START_ID" --batch-size 20
 }
@@ -160,7 +159,6 @@ function mononoke_walker {
     "${COMMON_ARGS[@]}" \
     --repo-id $REPOID \
     --mononoke-config-path "$TESTTMP"/mononoke-config \
-    --tracing \
     --tracing-test-format \
     "$@"
 }
@@ -170,7 +168,6 @@ function mononoke_blobstore_healer {
     "${CACHE_ARGS[@]}" \
     "${COMMON_ARGS[@]}" \
     --mononoke-config-path "$TESTTMP"/mononoke-config \
-    --tracing \
     --tracing-test-format \
     "$@" 2>&1 | grep -v "Could not connect to a replica"
 }
@@ -180,7 +177,6 @@ function mononoke_sqlblob_gc {
     "${CACHE_ARGS[@]}" \
     "${COMMON_ARGS[@]}" \
     --mononoke-config-path "$TESTTMP"/mononoke-config \
-    --tracing \
     --tracing-test-format \
     "$@" 2>&1 | grep -v "Could not connect to a replica"
 }
@@ -197,7 +193,6 @@ function mononoke_x_repo_sync() {
     --target-repo-id="$target_repo_id" \
     --mononoke-config-path "$TESTTMP/mononoke-config" \
     --scuba-log-file "$TESTTMP/x_repo_sync_scuba_logs" \
-    --tracing \
     --tracing-test-format \
     "$@"
 }
@@ -245,7 +240,6 @@ function mononoke_modern_sync {
     --tls-private-key "$TEST_CERTDIR/localhost.key" \
     --tls-certificate "$TEST_CERTDIR/localhost.crt" \
     --scuba-log-file "$TESTTMP/modern_sync_scuba_logs" \
-    --tracing \
     --tracing-test-format \
     ${FLAGS_ARG:+$FLAGS_ARG} \
     "$COMMAND" \
@@ -259,7 +253,6 @@ function mononoke_admin {
     "${CACHE_ARGS[@]}" \
     "${COMMON_ARGS[@]}" \
     --mononoke-config-path "$TESTTMP"/mononoke-config \
-    --tracing \
     --tracing-test-format \
     "$@"
 }
@@ -269,7 +262,6 @@ function mononoke_import {
     "${CACHE_ARGS[@]}" \
     "${COMMON_ARGS[@]}" \
     --mononoke-config-path "$TESTTMP"/mononoke-config \
-    --tracing \
     --tracing-test-format \
     "$@"
 }
@@ -279,7 +271,6 @@ function mononoke_testtool {
     "${CACHE_ARGS[@]}" \
     "${COMMON_ARGS[@]}" \
     --mononoke-config-path "$TESTTMP"/mononoke-config \
-    --tracing \
     --tracing-test-format \
     "$@"
 }
@@ -289,7 +280,6 @@ function mononoke_backfill_bonsai_blob_mapping {
     "${CACHE_ARGS[@]}" \
     "${COMMON_ARGS[@]}" \
     --mononoke-config-path "$TESTTMP"/mononoke-config \
-    --tracing \
     --tracing-test-format \
     "$@"
 }
@@ -300,7 +290,6 @@ function repo_metadata_logger {
     "${COMMON_ARGS[@]}" \
     --scuba-log-file "$TESTTMP/metadata_logger_scuba_logs" \
     --mononoke-config-path "$TESTTMP"/mononoke-config \
-    --tracing \
     --tracing-test-format \
     "$@"
 }
@@ -533,7 +522,6 @@ function backfill_mapping {
     "${COMMON_ARGS[@]}" \
     --repo-id "$REPOID" \
     --mononoke-config-path "$TESTTMP/mononoke-config" \
-    --tracing \
     --tracing-test-format \
     "$@"
 }
@@ -558,7 +546,6 @@ function blobimport {
     "${COMMON_ARGS[@]}" \
      --repo-id $REPOID \
      --mononoke-config-path "$TESTTMP/mononoke-config" \
-     --tracing \
      --tracing-test-format \
      "$revlog/.hg" \
      "$@" > "$TESTTMP/blobimport.out" 2>&1
@@ -578,7 +565,6 @@ function bonsai_verify {
     "${COMMON_ARGS[@]}" \
     --repo-id "$REPOID" \
     --mononoke-config-path "$TESTTMP/mononoke-config" \
-    --tracing \
     --tracing-test-format \
     "$@"
 }
@@ -617,7 +603,6 @@ function scs {
     --mononoke-config-path "$TESTTMP/mononoke-config" \
     --bound-address-file "$TESTTMP/scs_server_addr.txt" \
     --scribe-logging-directory "$TESTTMP/scribe_logs" \
-    --tracing \
     --tracing-test-format \
     $BOOKMARK_CACHE_FLAG \
     "${CACHE_ARGS[@]}" \
@@ -642,7 +627,6 @@ function land_service {
     --mononoke-config-path "$TESTTMP/mononoke-config" \
     --scribe-logging-directory "$TESTTMP/scribe_logs" \
     --bound-address-file "$TESTTMP/land_service_addr.txt" \
-    --tracing \
     --tracing-test-format \
     "${CACHE_ARGS[@]}" \
     "${COMMON_ARGS[@]}" >> "$TESTTMP/land_service.out" 2>&1 &
@@ -844,7 +828,6 @@ function _megarepo_async_worker_cmd {
     --log-level INFO \
     --mononoke-config-path "$TESTTMP/mononoke-config" \
     --scuba-log-file "$TESTTMP/async-worker.json" \
-    --tracing \
     --tracing-test-format \
     "${CACHE_ARGS[@]}" \
     "${COMMON_ARGS[@]}"
@@ -1014,7 +997,6 @@ function mononoke_git_service {
     --log-level DEBUG \
     --mononoke-config-path "$TESTTMP/mononoke-config" \
     --bound-address-file "$TESTTMP/mononoke_git_service_addr.txt" \
-    --tracing \
     --tracing-test-format \
     "${CACHE_ARGS[@]}" \
     "${COMMON_ARGS[@]}" >> "$log" 2>&1 &
@@ -1198,7 +1180,6 @@ function aliasverify() {
      --mononoke-config-path "$TESTTMP/mononoke-config" \
      --alias-type "$alias_type" \
      --mode "$mode" \
-     --tracing \
      --tracing-test-format \
      "$@"
 }
@@ -1443,7 +1424,6 @@ function gitimport() {
     --tls-ca "$TEST_CERTDIR/root-ca.crt" \
     --tls-private-key "$TEST_CERTDIR/client0.key" \
     --tls-certificate "$TEST_CERTDIR/client0.crt" \
-    --tracing \
     --tracing-test-format \
     "$@"
 }
@@ -1518,7 +1498,6 @@ function derived_data_tailer {
     "${CACHE_ARGS[@]}" \
     "${COMMON_ARGS[@]}" \
     --mononoke-config-path "$TESTTMP"/mononoke-config \
-    --tracing \
     --tracing-test-format \
     "$@"
 }
@@ -1529,7 +1508,6 @@ function hook_tailer() {
     "${COMMON_ARGS[@]}" \
     --repo-id "$REPOID" \
     --mononoke-config-path "${TESTTMP}/mononoke-config" \
-    --tracing \
     --tracing-test-format \
     "$@"
 }
@@ -1601,7 +1579,6 @@ function streaming_clone() {
     "${COMMON_ARGS[@]}" \
     --repo-id "$REPOID" \
     --mononoke-config-path "${TESTTMP}/mononoke-config" \
-    --tracing \
     --tracing-test-format \
     "$@"
 }
@@ -1623,7 +1600,6 @@ function repo_import() {
     --git-command-path "$git_cmd"\
     --repo-id "$REPOID" \
     --mononoke-config-path "${TESTTMP}/mononoke-config" \
-    --tracing \
     --tracing-test-format \
     "$@"
 }
@@ -1645,7 +1621,6 @@ function packer() {
     "${CACHE_ARGS[@]}" \
     "${COMMON_ARGS[@]}" \
     --mononoke-config-path "${TESTTMP}/mononoke-config" \
-    --tracing \
     --tracing-test-format \
     "$@"
 }
@@ -1656,7 +1631,6 @@ function check_git_wc() {
     "${COMMON_ARGS[@]}" \
     --repo-id "$REPOID" \
     --mononoke-config-path "${TESTTMP}/mononoke-config" \
-    --tracing \
     --tracing-test-format \
     "$@"
 }
@@ -1674,7 +1648,6 @@ function derived_data_service() {
     -p 0 \
     --mononoke-config-path "${TESTTMP}/mononoke-config" \
     --bound-address-file "$DDS_SERVER_ADDR_FILE" \
-    --tracing \
     --tracing-test-format \
     "${CACHE_ARGS[@]}" \
     "${COMMON_ARGS[@]}" >> "$TESTTMP/derived_data_service.out" 2>&1 &
@@ -1709,7 +1682,6 @@ function derivation_worker() {
     "${CACHE_ARGS[@]}" \
     "${COMMON_ARGS[@]}" \
     --mononoke-config-path "$TESTTMP"/mononoke-config \
-    --tracing \
     --tracing-test-format \
     "$@"
 }

@@ -23,7 +23,7 @@ SCUBA_LOG_FILE="$TESTTMP/scuba_gitexport_logs"
 
 # Call gitexport with the proper arguments for all integration tests
 function test_gitexport {
-  gitexport --repo-name "repo" -B "master_bookmark" --scuba-log-file "$SCUBA_LOG_FILE" --git-output "$GIT_BUNDLE_OUTPUT" --tracing --tracing-test-format "$@"
+  gitexport --repo-name "repo" -B "master_bookmark" --scuba-log-file "$SCUBA_LOG_FILE" --git-output "$GIT_BUNDLE_OUTPUT" --tracing-test-format "$@"
 }
 
 

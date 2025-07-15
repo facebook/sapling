@@ -150,7 +150,6 @@ def mononoke(args: List[str], stderr: BinaryIO, fs: ShellFS, env: Env) -> int:
         "--mononoke-config-path",
         f"{test_tmp}/mononoke-config",
         "--no-default-scuba-dataset",
-        "--tracing",
         "--tracing-test-format",
         *cache_args,
         *common_args,

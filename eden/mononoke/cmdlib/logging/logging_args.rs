@@ -7,13 +7,8 @@
 
 use std::io::IsTerminal;
 use std::str::FromStr;
-use std::sync::Arc;
 
-use anyhow::Context;
 use anyhow::Result;
-#[cfg(fbcode_build)]
-use anyhow::anyhow;
-use anyhow::bail;
 use cached_config::ConfigStore;
 use clap::ArgAction;
 use clap::Args;
@@ -22,18 +17,7 @@ use clap::builder::PossibleValuesParser;
 use fbinit::FacebookInit;
 use observability::ObservabilityContext;
 use panichandler::Fate;
-use slog::Drain;
-use slog::Level;
 use slog::Logger;
-use slog::Never;
-use slog::SendSyncRefUnwindSafeDrain;
-use slog::debug;
-use slog::o;
-use slog_ext::make_tag_filter_drain;
-use slog_glog_fmt::GlogFormat;
-use slog_glog_fmt::kv_categorizer::FacebookCategorizer;
-use slog_glog_fmt::kv_defaults::FacebookKV;
-use slog_term::TermDecorator;
 use tracing::Event;
 use tracing::Subscriber;
 use tracing_glog::FormatLevelChars;
@@ -57,10 +41,6 @@ const DEFAULT_TRACING_LEVEL: filter::LevelFilter = filter::LevelFilter::INFO;
 /// Command line arguments for spawning slog Logger
 #[derive(Args, Debug)]
 pub struct LoggingArgs {
-    /// Use tracing instead of slog
-    #[clap(long, default_value_t = true)]
-    pub tracing: bool,
-
     /// Configure tracing to output in test format
     #[clap(long)]
     pub tracing_test_format: bool,
@@ -259,105 +239,6 @@ impl LoggingArgs {
         Ok(())
     }
 
-    // Logic copied from: https://fburl.com/code/ygj4muxz
-    fn create_root_log_drain(
-        &self,
-        fb: FacebookInit,
-    ) -> Result<impl Drain<Ok = (), Err = Never> + Clone + use<>> {
-        self.setup_panic_handler();
-
-        let stdlog_env = "RUST_LOG";
-
-        let log_level = if self.debug {
-            Level::Debug
-        } else if let Some(log_level_str) = &self.log_level {
-            match log_level_str.as_str() {
-                "OFF" => Level::Critical,
-                "ERROR" => Level::Error,
-                "WARN" => Level::Warning,
-                "INFO" => Level::Info,
-                "DEBUG" => Level::Debug,
-                "TRACE" => Level::Trace,
-                _ => {
-                    bail!("Unknown log level: {}", log_level_str);
-                }
-            }
-        } else {
-            Level::Info
-        };
-
-        #[cfg(fbcode_build)]
-        crate::glog::set_glog_log_level(fb, log_level.into())?;
-
-        let glog_drain = make_tag_filter_drain(
-            glog_drain(),
-            self.log_include_tag.iter().cloned().collect(),
-            self.log_exclude_tag.iter().cloned().collect(),
-            true, // Log messages which have no tags
-        )?;
-
-        let root_log_drain: Arc<dyn SendSyncRefUnwindSafeDrain<Ok = (), Err = Never>> =
-            match &self.logview_category {
-                Some(category) => {
-                    #[cfg(fbcode_build)]
-                    {
-                        // Sometimes scribe writes can fail due to backpressure - it's OK to drop these
-                        // since logview is sampled anyway.
-                        let logview_drain =
-                            ::slog_logview::LogViewDrain::new(fb, category).ignore_res();
-                        match &self.logview_additional_level_filter {
-                            Some(log_level_str) => {
-                                let logview_level = Level::from_str(log_level_str)
-                                    .map_err(|_| anyhow!("Unknown log level: {}", log_level_str))?;
-
-                                let drain = slog::Duplicate::new(
-                                    glog_drain,
-                                    logview_drain.filter_level(logview_level).ignore_res(),
-                                );
-                                Arc::new(drain.ignore_res())
-                            }
-                            None => {
-                                let drain = slog::Duplicate::new(glog_drain, logview_drain);
-                                Arc::new(drain.ignore_res())
-                            }
-                        }
-                    }
-                    #[cfg(not(fbcode_build))]
-                    {
-                        let _ = (fb, category);
-                        unimplemented!(
-                            "Passed --logview-category, but it is supported only for fbcode builds",
-                        )
-                    }
-                }
-                None => Arc::new(glog_drain),
-            };
-
-        // NOTE: We pass an unfiltered Logger to init_stdlog_once. That's because we do the filtering
-        // at the stdlog level there.
-        let stdlog_logger = Logger::root(root_log_drain.clone(), o![]);
-        let stdlog_level = crate::log::init_stdlog_once(stdlog_logger, stdlog_env)?;
-
-        let root_log_drain = root_log_drain.filter_level(log_level).ignore_res();
-
-        // Note what level we enabled stdlog at, so that if someone is trying to debug they get
-        // informed of potentially needing to set RUST_LOG.
-        debug!(
-            Logger::root(root_log_drain.clone(), o![]),
-            "enabled stdlog with level: {:?} (set {} to configure)", stdlog_level, stdlog_env
-        );
-
-        Ok(root_log_drain)
-    }
-
-    fn create_logger(
-        &self,
-        root_log_drain: Arc<dyn SendSyncRefUnwindSafeDrain<Ok = (), Err = Never>>,
-    ) -> Result<Logger> {
-        let kv = FacebookKV::new().context("Failed to initialize FacebookKV")?;
-        Ok(Logger::root(root_log_drain, o![kv]))
-    }
-
     pub fn create_observability_context(
         &self,
         config_store: &ConfigStore,
@@ -370,24 +251,9 @@ impl LoggingArgs {
     }
 
     pub fn setup_logging(&self, fb: FacebookInit) -> Result<Logger> {
-        if self.tracing {
-            self.setup_tracing(fb)?;
-            Ok(Logger::Tracing)
-        } else {
-            let root_log_drain = Arc::new(self.create_root_log_drain(fb)?);
-            self.create_logger(root_log_drain)
-        }
+        self.setup_tracing(fb)?;
+        Ok(Logger::Tracing)
     }
-}
-
-/// Create a default root logger for Facebook services
-fn glog_drain() -> impl Drain<Ok = (), Err = Never> {
-    let decorator = TermDecorator::new().build();
-    // FacebookCategorizer is used for slog KV arguments.
-    // At the time of writing this code FacebookCategorizer and FacebookKV
-    // that was added below was mainly useful for logview logging and had no effect on GlogFormat
-    let drain = GlogFormat::new(decorator, FacebookCategorizer).ignore_res();
-    ::std::sync::Mutex::new(drain).ignore_res()
 }
 
 pub struct TestFormatter;
