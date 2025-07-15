@@ -235,6 +235,8 @@ impl BackingStore {
             walk_detector.set_gc_timeout(timeout);
         }
 
+        walk_detector.set_root(Some(mount.to_path_buf()));
+
         let prefetch_send = if walk_mode == WalkMode::Prefetch {
             prefetch_manager(
                 repo.tree_resolver()?,

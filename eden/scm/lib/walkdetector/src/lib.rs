@@ -9,6 +9,7 @@
 mod tests;
 mod walk_node;
 
+use std::path::PathBuf;
 use std::sync::Arc;
 use std::sync::LazyLock;
 use std::sync::OnceLock;
@@ -39,6 +40,7 @@ use walk_node::WalkNode;
 #[derive(Clone, Default)]
 pub struct Detector {
     config: Config,
+    root: Option<PathBuf>,
     inner: Arc<RwLock<Inner>>,
 }
 
@@ -95,6 +97,11 @@ impl Detector {
         // Update root node's timeout as a special case. The root node is never deleted, so has no
         // chance to get current gc_timeout on creation.
         self.inner.write().node.gc_timeout = timeout;
+    }
+
+    /// Set root path. Used in some metric collection.
+    pub fn set_root(&mut self, root: Option<PathBuf>) {
+        self.root = root;
     }
 
     /// Return list of (walk root dir, walk depth) representing active file content walks.
