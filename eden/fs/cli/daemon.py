@@ -97,7 +97,7 @@ def sigkill_process(
     could send SIGKILL.
     """
 
-    # On Windows, EdenFS daemon doesn't have any hearbeat flag.
+    # On Windows, EdenFS daemon doesn't have any heartbeat flag.
     if sys.platform != "win32":
         # This SIGKILL is not triggered by the OS due to memory issues, so we should clean up
         # the heartbeat file. This ensures that the SIGKILL won't be mislogged as a silent

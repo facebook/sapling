@@ -457,21 +457,8 @@ int runEdenMain(EdenMain&& main, int argc, char** argv) {
       .ensure(
           [daemonStart,
            structuredLogger = server->getServerState()->getStructuredLogger(),
-           takeover = FLAGS_takeover
-#ifndef _WIN32
-           ,
-           &server
-#endif
-  ] {
-#ifndef _WIN32
-            auto edenDir = server->getEdenDir();
-            folly::StringPiece heartbeatFileNamePrefix =
-                server->getHeartbeatFileNamePrefix();
-            std::optional<std::string> oldEdenHeartbeatFileNameStr =
-                server->getOldEdenHeartbeatFileNameStr();
-            std::string edenHeartbeatPathFileNameStr =
-                server->getEdenHeartbeatFileNameStr();
-#endif
+           takeover = FLAGS_takeover,
+           &server] {
             // This value is slightly different from `startTimeInSeconds`
             // we pass into `startupLogger->success()`, but should be
             // identical.
@@ -485,6 +472,13 @@ int runEdenMain(EdenMain&& main, int argc, char** argv) {
                 DaemonStart{startTimeInSeconds, takeover, true /*success*/});
 
 #ifndef _WIN32
+            auto edenDir = server->getEdenDir();
+            folly::StringPiece heartbeatFileNamePrefix =
+                server->getHeartbeatFileNamePrefix();
+            std::optional<std::string> oldEdenHeartbeatFileNameStr =
+                server->getOldEdenHeartbeatFileNameStr();
+            std::string edenHeartbeatPathFileNameStr =
+                server->getEdenHeartbeatFileNameStr();
             // Create a heartbeat file to indicate that the daemon has
             // started successfully. This heartbeat get updated by a periodic
             // task in eden server. This file should be deleted on eden exit.
@@ -514,7 +508,7 @@ int runEdenMain(EdenMain&& main, int argc, char** argv) {
                   // the heartbeat file in this case.
                   continue;
                 } else {
-                  XLOGF(ERR, "Previous EdenFS daemon exited due to SIGKILL");
+                  XLOGF(ERR, "ERROR: Previous EdenFS daemon silently exited.");
                   // Read the latest timestamp from the heartbeat file
                   std::string latestDaemonHeartbeatStr;
                   uint64_t latestDaemonHeartbeat = 0;
@@ -536,6 +530,9 @@ int runEdenMain(EdenMain&& main, int argc, char** argv) {
 
             // Create a new heartbeat file
             server->createOrUpdateEdenHeartbeatFile();
+#else
+            // On Windows, EdenFS does not create a heartbeat file.
+            (void)server;
 #endif
           });
 
