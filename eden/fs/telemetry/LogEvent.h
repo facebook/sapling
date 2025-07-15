@@ -610,6 +610,21 @@ struct WorkingCopyGc : public EdenFSEvent {
   }
 };
 
+struct SilentDaemonExit : public EdenFSEvent {
+  uint64_t last_daemon_heartbeat = 0;
+
+  explicit SilentDaemonExit(uint64_t last_daemon_heartbeat)
+      : last_daemon_heartbeat(last_daemon_heartbeat) {}
+
+  void populate(DynamicEvent& event) const override {
+    event.addInt("last_daemon_heartbeat", last_daemon_heartbeat);
+  }
+
+  const char* getType() const override {
+    return "silent_daemon_exit";
+  }
+};
+
 struct AccidentalUnmountRecovery : public EdenFSEvent {
   std::string error;
   bool success = false;

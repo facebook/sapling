@@ -515,8 +515,20 @@ int runEdenMain(EdenMain&& main, int argc, char** argv) {
                   continue;
                 } else {
                   XLOGF(ERR, "Previous EdenFS daemon exited due to SIGKILL");
-                  // TODO: get all the available information in the structured
-                  // logger
+                  // Read the latest timestamp from the heartbeat file
+                  std::string latestDaemonHeartbeatStr;
+                  uint64_t latestDaemonHeartbeat = 0;
+                  if (folly::readFile(
+                          entry.path().string().c_str(),
+                          latestDaemonHeartbeatStr)) {
+                    // Convert latestDaemonHeartbeatStr to uint64_t
+                    latestDaemonHeartbeat =
+                        folly::to<uint64_t>(latestDaemonHeartbeatStr);
+                  }
+                  // Log a crash event
+                  structuredLogger->logEvent(
+                      SilentDaemonExit{latestDaemonHeartbeat});
+
                   std::remove(entry.path().string().c_str());
                 }
               }
