@@ -624,13 +624,19 @@ fn test_counters() {
     // Propagate counts when we convert to file walk.
     detector.file_loaded(p("dir1/a"), 0);
     detector.file_loaded(p("dir1/b"), 0);
+    detector.file_read(p("dir1/c"), 0);
+
     detector.files_preloaded(p("dir1"), 1);
-    assert_eq!(get_counters(p("dir1"), WalkType::File), (2, 0, 1, 3, 1));
+    let (preloaded, read) = detector.files_preloaded(p("dir1"), 1);
+    assert_eq!(read, 1);
+    assert_eq!(preloaded, 2);
+
+    assert_eq!(get_counters(p("dir1"), WalkType::File), (2, 1, 2, 3, 1));
 
     // Propagate when combining walks.
     detector.file_loaded(p("dir2/a"), 0);
     detector.file_loaded(p("dir2/b"), 0);
-    assert_eq!(get_counters(p(""), WalkType::File), (4, 0, 1, 3, 1));
+    assert_eq!(get_counters(p(""), WalkType::File), (4, 1, 2, 3, 1));
 }
 
 #[test]

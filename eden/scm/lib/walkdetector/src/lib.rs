@@ -329,8 +329,12 @@ impl Detector {
 
     /// Record that a certain number of files have been preloaded. This has no functional purpose -
     /// it is purely to measure the efficiency of this library when paired with a prefetch
-    /// mechanism.
-    pub fn files_preloaded(&self, walk_root: impl AsRef<RepoPath>, preload_count: u64) {
+    /// mechanism. Returns total number of files preloaded and read (i.e. cache hits) so far.
+    pub fn files_preloaded(
+        &self,
+        walk_root: impl AsRef<RepoPath>,
+        preload_count: u64,
+    ) -> (u64, u64) {
         let walk_root = walk_root.as_ref();
         tracing::trace!(%walk_root, preload_count, "files_preloaded");
 
@@ -338,10 +342,17 @@ impl Detector {
 
         if let Some(node) = inner.node.get_node(walk_root) {
             if let Some(walk) = node.get_walk_for_type(WalkType::File) {
-                walk.file_preloads
+                let prev_preload = walk
+                    .file_preloads
                     .fetch_add(preload_count, Ordering::Relaxed);
+                return (
+                    prev_preload + preload_count,
+                    walk.file_reads.load(Ordering::Relaxed),
+                );
             }
         }
+
+        (0, 0)
     }
 
     /// "touch" any walk of type wt that covers `path` to update metrics and keep the walk alive.
