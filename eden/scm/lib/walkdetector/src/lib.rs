@@ -547,7 +547,7 @@ impl Inner {
         let (num_advanced_children, child_seen_count) =
             ancestor.insert_advanced_child(walk_type, head.to_owned());
 
-        tracing::trace!(%ancestor_dir, num_advanced_children, child_seen_count, threshold, ?ancestor.total_dirs, "should_advance_ancestor_walk");
+        tracing::trace!(%ancestor_dir, num_advanced_children, child_seen_count, threshold, total_dirs=ancestor.total_dirs(), "should_advance_ancestor_walk");
 
         let ancestor_walk_depth = ancestor
             .get_dominating_walk(walk_type)
@@ -631,10 +631,7 @@ impl Inner {
 
     fn set_metadata(&mut self, config: &Config, dir: &RepoPath, num_files: usize, num_dirs: usize) {
         tracing::trace!(%dir, num_files, num_dirs, "setting directory metadata");
-        let node = self.node.get_or_create_node(config, dir);
-        node.last_access.bump();
-        node.total_dirs = Some(num_dirs);
-        node.total_files = Some(num_files);
+        self.node.set_metadata(config, dir, num_files, num_dirs);
     }
 }
 
@@ -669,7 +666,7 @@ fn should_merge_into_ancestor(
         depth < ancestor_distance
     });
 
-    tracing::trace!(%dir, kin_count, ancestor_distance, walk_threshold, walk_ratio, ?ancestor.total_dirs, "should_merge_into_ancestor");
+    tracing::trace!(%dir, kin_count, ancestor_distance, walk_threshold, walk_ratio, total_dirs=ancestor.total_dirs(), "should_merge_into_ancestor");
 
     if ancestor.is_walked(
         WalkType::Directory, // We are combining directories here, so always use directory count.
@@ -677,7 +674,7 @@ fn should_merge_into_ancestor(
         walk_threshold,
         walk_ratio,
     ) {
-        tracing::debug!(%dir, kin_count, ancestor_distance, walk_threshold, walk_ratio, ?ancestor.total_dirs, "combining with collateral kin");
+        tracing::debug!(%dir, kin_count, ancestor_distance, walk_threshold, walk_ratio, total_dirs=ancestor.total_dirs(), "combining with collateral kin");
         Some(ancestor_distance)
     } else {
         None

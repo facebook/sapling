@@ -849,7 +849,7 @@ fn test_important_metadata() {
                 .node
                 .get_node(&p(dir))
                 .unwrap()
-                .total_dirs
+                .total_dirs()
                 .unwrap(),
             1000
         );
@@ -925,4 +925,40 @@ fn test_dont_gc_ancestor_walk() {
 
     // We kept around the root/ walk (and advanced it to depth 2).
     assert_eq!(detector.file_walks(), vec![(p("root"), 2)]);
+}
+
+#[test]
+fn test_recursive_metadata() {
+    let mut detector = Detector::new();
+    detector.set_walk_threshold(TEST_WALK_THRESHOLD);
+    detector.set_walk_ratio(0.1);
+
+    // Small directory metadata should not get included in rollups to ancestors.
+    detector.dir_loaded(p("foo/small"), 1, 1, 0);
+
+    detector.dir_loaded(p("foo/bar"), 10, 20, 0);
+    detector.dir_loaded(p("foo/bar/baz"), 100, 200, 0);
+    detector.dir_loaded(p("foo/bar/baz"), 101, 201, 0);
+
+    let inner = detector.inner.read();
+    let node = &inner.node;
+    assert_eq!(node.total_dirs_at_depth(0), None);
+    assert_eq!(node.total_files_at_depth(0), None);
+
+    // depth=2 (foo/bar/*)
+    assert_eq!(node.total_dirs_at_depth(2), Some(20));
+    assert_eq!(node.total_files_at_depth(2), Some(10));
+
+    // depth=3 (foo/bar/baz/*) - make sure we didn't overcount foo/bar/baz metadata
+    assert_eq!(node.total_dirs_at_depth(3), Some(201));
+    assert_eq!(node.total_files_at_depth(3), Some(101));
+
+    // Check counts starting from foo/bar
+    let node = node.get_node(&p("foo/bar")).unwrap();
+    // depth=0 (foo/bar/*)
+    assert_eq!(node.total_dirs_at_depth(0), Some(20));
+    assert_eq!(node.total_files_at_depth(0), Some(10));
+    // depth=1 (foo/bar/baz/*)
+    assert_eq!(node.total_dirs_at_depth(1), Some(201));
+    assert_eq!(node.total_files_at_depth(1), Some(101));
 }

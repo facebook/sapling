@@ -41,14 +41,18 @@ pub(crate) struct WalkNode {
     pub(crate) advanced_file_children: HashMap<PathComponentBuf, usize>,
     pub(crate) advanced_dir_children: HashMap<PathComponentBuf, usize>,
 
-    // Total file count in this directory (if hint available).
-    pub(crate) total_files: Option<usize>,
-    // Total directory count in this directory (if hint available).
-    pub(crate) total_dirs: Option<usize>,
     // File names seen so far (only used before transitioning to walk).
     pub(crate) seen_files: HashSet<PathComponentBuf>,
     // Dir names seen so far (only used before transitioning to walk).
     pub(crate) seen_dirs: HashSet<PathComponentBuf>,
+
+    // Total dir count under us, by depth (depth=0 direct children).
+    // This is only a rough estimate based on what we have observed.
+    total_dirs_at_depth: Vec<Option<usize>>,
+
+    // Total file count seen under us, by depth (depth=0 direct children).
+    // This is only a rough estimate based on what we have observed.
+    total_files_at_depth: Vec<Option<usize>>,
 }
 
 impl WalkNode {
@@ -61,10 +65,10 @@ impl WalkNode {
             children: Default::default(),
             advanced_file_children: Default::default(),
             advanced_dir_children: Default::default(),
-            total_files: Default::default(),
-            total_dirs: Default::default(),
             seen_files: Default::default(),
             seen_dirs: Default::default(),
+            total_dirs_at_depth: Default::default(),
+            total_files_at_depth: Default::default(),
         };
         node.last_access.bump();
         node
@@ -432,7 +436,7 @@ impl WalkNode {
                 let retain = child.has_walk() && !child.expired()
                     || !child.children.is_empty()
                     // Keep node around if it has total file/dir hints that are likely to be useful.
-                    || interesting_metadata(threshold, ratio, child.total_files, child.total_dirs);
+                    || interesting_metadata(threshold, ratio, child.total_files(), child.total_dirs());
 
                 if !retain {
                     tracing::trace!(%path, "dropping node during insert");
@@ -463,6 +467,88 @@ impl WalkNode {
         );
     }
 
+    pub(crate) fn total_dirs(&self) -> Option<usize> {
+        self.total_dirs_at_depth(0)
+    }
+
+    pub(crate) fn total_dirs_at_depth(&self, depth: usize) -> Option<usize> {
+        self.total_dirs_at_depth
+            .get(depth)
+            .cloned()
+            .unwrap_or_default()
+    }
+
+    pub(crate) fn total_files(&self) -> Option<usize> {
+        self.total_files_at_depth(0)
+    }
+
+    pub(crate) fn total_files_at_depth(&self, depth: usize) -> Option<usize> {
+        self.total_files_at_depth
+            .get(depth)
+            .cloned()
+            .unwrap_or_default()
+    }
+
+    /// Set directory metadata for dir, updating metadata for ancestors of dir as we go.
+    pub(crate) fn set_metadata(
+        &mut self,
+        config: &Config,
+        dir: &RepoPath,
+        num_files: usize,
+        num_dirs: usize,
+    ) -> (isize, isize) {
+        let (file_delta, dir_delta) = match dir.split_first_component() {
+            Some((head, tail)) => {
+                if self.children.contains_key(head) {
+                    self.children
+                        .get_mut(head)
+                        .unwrap()
+                        .set_metadata(config, tail, num_files, num_dirs)
+                } else {
+                    self.children
+                        .entry(head.to_owned())
+                        .or_insert_with(|| Self::new(config.gc_timeout))
+                        .set_metadata(config, tail, num_files, num_dirs)
+                }
+            }
+            None => {
+                self.last_access.bump();
+
+                // If we already have total_files and/or total_dirs set, we don't want to add the
+                // full value to ancestors' metadata again, so compute the delta relative to current
+                // value.
+                (
+                    num_files as isize - self.total_files().unwrap_or_default() as isize,
+                    num_dirs as isize - self.total_dirs().unwrap_or_default() as isize,
+                )
+            }
+        };
+
+        let depth = dir.depth();
+
+        for (num, delta, totals) in [
+            (num_files, file_delta, &mut self.total_files_at_depth),
+            (num_dirs, dir_delta, &mut self.total_dirs_at_depth),
+        ] {
+            if depth > 0 && num < config.walk_threshold {
+                // Skip small directory metadata when storing the rollups for ancestors.
+                // Ancestors only care about large directories.
+                continue;
+            }
+
+            if totals.len() < depth + 1 {
+                totals.resize(depth + 1, None);
+            }
+            totals[depth] = Some(
+                totals[depth]
+                    .unwrap_or_default()
+                    .saturating_add_signed(delta),
+            );
+        }
+
+        (file_delta, dir_delta)
+    }
+
     /// Reports whether self has a walk and the walk fully contains a descendant walk
     /// rooted at `path` of depth `depth`.
     fn contains(&self, walk_type: WalkType, path: &RepoPath, depth: usize) -> bool {
@@ -483,8 +569,8 @@ impl WalkNode {
         }
 
         let total_count = match walk_type {
-            WalkType::File => self.total_files,
-            WalkType::Directory => self.total_dirs,
+            WalkType::File => self.total_files(),
+            WalkType::Directory => self.total_dirs(),
         };
 
         // If we have the total size hint, adjust the threshold for extreme cases.
@@ -557,8 +643,8 @@ impl WalkNode {
             let important_metadata = important_metadata(
                 config.walk_threshold,
                 config.walk_ratio,
-                node.total_files,
-                node.total_dirs,
+                node.total_files(),
+                node.total_dirs(),
             );
             let keep_me = !expired || !node.children.is_empty() || important_metadata;
             let has_walk = node.has_walk();
@@ -625,15 +711,25 @@ impl WalkNode {
         self.advanced_dir_children.clear();
         self.seen_files.clear();
 
-        // Retain important metadata indefinintely.
-        if !important_metadata(
-            config.walk_threshold,
-            config.walk_ratio,
-            self.total_files,
-            self.total_dirs,
-        ) {
-            self.total_files.take();
-            self.total_dirs.take();
+        // Retain any important metadata, per-depth.
+        for i in 0..self
+            .total_files_at_depth
+            .len()
+            .max(self.total_dirs_at_depth.len())
+        {
+            // Retain important metadata indefinintely.
+            if !important_metadata(
+                config.walk_threshold,
+                config.walk_ratio,
+                self.total_files_at_depth
+                    .get(i)
+                    .cloned()
+                    .unwrap_or_default(),
+                self.total_dirs_at_depth.get(i).cloned().unwrap_or_default(),
+            ) {
+                self.total_dirs_at_depth.get_mut(i).map(|d| d.take());
+                self.total_files_at_depth.get_mut(i).map(|f| f.take());
+            }
         }
     }
 
