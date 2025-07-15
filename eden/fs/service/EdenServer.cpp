@@ -443,6 +443,10 @@ EdenServer::EdenServer(
     std::string version)
     : originalCommandLine_{std::move(originalCommandLine)},
       edenDir_{edenConfig->edenDir.getValue()},
+      heartbeatFilePath_{
+          edenDir_.getPath() +
+          PathComponentPiece{getEdenHeartbeatFileNameStr()}},
+      heartbeatFilePathString_{heartbeatFilePath_.c_str()},
       activityRecorderFactory_{std::move(activityRecorderFactory)},
       backingStoreFactory_{backingStoreFactory},
       config_{std::make_shared<ReloadableConfig>(edenConfig)},
@@ -1184,6 +1188,27 @@ std::optional<std::string> EdenServer::getOldEdenHeartbeatFileNameStr() const {
     return std::nullopt;
   }
 }
+
+#ifndef _WIN32
+void EdenServer::createEdenHeartbeatFile() const {
+  // Create the heartbeat file and write the current timestamp to it
+  auto now = std::chrono::system_clock::now();
+  auto now_c = std::chrono::system_clock::to_time_t(now);
+  folly::StringPiece now_str(
+      std::to_string(now_c)); // Convert time_t to StringPiece
+  auto result = writeFileAtomic(heartbeatFilePath_, now_str);
+  if (result.hasException()) {
+    XLOGF(ERR, "Failed to create heartbeat flag file: {}", result.exception());
+  }
+}
+
+void EdenServer::removeEdenHeartbeatFile() const {
+  const int rc = unlink(heartbeatFilePathString_);
+  if (rc != 0 && errno != ENOENT) {
+    // TODO: add an async-signal-safe log here
+  }
+}
+#endif
 
 Future<Unit> EdenServer::prepare(std::shared_ptr<StartupLogger> logger) {
   return prepareImpl(std::move(logger))

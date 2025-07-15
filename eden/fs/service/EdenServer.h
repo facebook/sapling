@@ -397,6 +397,11 @@ class EdenServer : private TakeoverHandler {
     return edenDir_.getHeartbeatFileNamePrefix();
   }
 
+#ifndef _WIN32
+  void createEdenHeartbeatFile() const;
+  void removeEdenHeartbeatFile() const;
+#endif
+
   const std::shared_ptr<ServerState>& getServerState() const {
     return serverState_;
   }
@@ -703,6 +708,8 @@ class EdenServer : private TakeoverHandler {
 
   const std::vector<std::string> originalCommandLine_;
   EdenStateDir edenDir_;
+  AbsolutePath heartbeatFilePath_;
+  const char* heartbeatFilePathString_;
 
   // During graceful restart, this will be the pid of the old edenfs daemon.
   // This is used because at some point we have both edenfs daemon processes
