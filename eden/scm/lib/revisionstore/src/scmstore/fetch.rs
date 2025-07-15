@@ -128,8 +128,8 @@ impl<T: StoreValue + std::fmt::Debug> CommonFetchState<T> {
                 if !self.fctx.mode().ignore_result() {
                     let new = new.mask(self.request_attrs);
                     let _ = self.found_tx.send(Ok((key, new)));
-                    self.bar.increase_position(1);
                 }
+                self.bar.increase_position(1);
 
                 return true;
             } else {
