@@ -396,6 +396,10 @@ class EdenServer::ThriftServerEventHandler
         // takes longer than expected for some reason.  (For instance, if we
         // unmounting the mount points hangs for some reason.)
         XLOGF(INFO, "stopping due to signal {}", sig);
+#ifndef _WIN32
+        // Remove eden heartbeat file for a clean exit
+        edenServer_->removeEdenHeartbeatFile();
+#endif
         unregisterSignalHandler(sig);
         edenServer_->stop();
     }
@@ -1212,6 +1216,9 @@ void EdenServer::createOrUpdateEdenHeartbeatFile() {
 }
 
 void EdenServer::removeEdenHeartbeatFile() const {
+  // removeEdenHeartbeatFile() should be an async-signal-safe function. It could
+  // get called from signal handlers. Full rulles:
+  // https://man7.org/linux/man-pages/man7/signal-safety.7.html
   const int rc = unlink(heartbeatFilePathString_);
   if (rc != 0 && errno != ENOENT) {
     // TODO: add an async-signal-safe log here
