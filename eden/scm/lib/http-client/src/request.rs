@@ -582,7 +582,7 @@ impl Request {
     }
 
     /// Set the fetch cause for this request. This is used for traffic attribution.
-    pub fn set_fetch_cause(&mut self, fetch_cause: Option<&str>) -> &mut Self {
+    pub fn set_fetch_cause(&mut self, fetch_cause: Option<impl ToString>) -> &mut Self {
         if let Some(c) = fetch_cause {
             self.set_header(FETCH_CAUSE_HEADER, c);
         }

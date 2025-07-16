@@ -49,12 +49,12 @@ impl FetchContext {
         }
     }
 
-    pub fn mode(&self) -> &FetchMode {
-        &self.mode
+    pub fn mode(&self) -> FetchMode {
+        self.mode
     }
 
-    pub fn cause(&self) -> &FetchCause {
-        &self.cause
+    pub fn cause(&self) -> FetchCause {
+        self.cause
     }
 
     pub fn inc_local(&self, count: u64) {

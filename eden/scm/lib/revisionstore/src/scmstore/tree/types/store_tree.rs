@@ -5,17 +5,14 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-use std::collections::HashMap;
 use std::ops::BitOr;
 
 use anyhow::Result;
 use anyhow::anyhow;
 use manifest_tree::TreeEntry as ManifestTreeEntry;
 use storemodel::TreeAuxData;
-use types::HgId;
 use types::Parents;
 
-use crate::scmstore::tree::types::AuxData;
 use crate::scmstore::tree::types::LazyTree;
 use crate::scmstore::tree::types::TreeAttributes;
 use crate::scmstore::value::StoreValue;

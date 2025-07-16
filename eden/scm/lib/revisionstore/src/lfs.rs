@@ -1192,7 +1192,7 @@ impl LfsRemote {
                     req.set_min_transfer_speed(mts);
                 }
 
-                req.set_fetch_cause(fctx.as_ref().map(|fctx| fctx.cause().to_str()));
+                req.set_fetch_cause(fctx.as_ref().map(|fctx| fctx.cause().to_str().to_string()));
 
                 let res = async {
                     let request_timeout = http_options.request_timeout;

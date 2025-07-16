@@ -388,7 +388,9 @@ impl Client {
                     .cbor(&req)
                     .map_err(SaplingRemoteApiError::RequestSerializationFailed)
                     .map(|mut req| {
-                        req.set_fetch_cause(fctx.as_ref().map(|fctx| fctx.cause().to_str()));
+                        req.set_fetch_cause(
+                            fctx.as_ref().map(|fctx| fctx.cause().to_str().to_string()),
+                        );
                         req
                     })
             })
