@@ -6,7 +6,6 @@
  */
 
 #include <folly/Range.h>
-#include <folly/logging/xlog.h>
 #include <gtest/gtest.h>
 #include <stdexcept>
 

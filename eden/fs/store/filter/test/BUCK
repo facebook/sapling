@@ -19,6 +19,5 @@ cpp_unittest(
         "//eden/fs/testharness:fake_backing_store_and_tree_builder",
         "//folly:range",
         "//folly/executors:manual_executor",
-        "//folly/logging:logging",
     ],
 )
