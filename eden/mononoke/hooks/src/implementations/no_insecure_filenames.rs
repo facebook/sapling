@@ -69,19 +69,19 @@ impl FileHook for NoInsecureFilenames {
             return Ok(HookExecution::Accepted);
         }
 
-        let path = format!("{}", path);
+        let path = path.to_string();
         let lower_path = path.to_lowercase();
         if self.illegal_regex.is_match(&lower_path) {
             return Ok(HookExecution::Rejected(HookRejectionInfo::new_long(
                 "Illegal filename",
-                format!("ABORT: Illegal filename: {}", path),
+                format!("ABORT: Illegal filename: {path:?}"),
             )));
         }
 
         if self.insecure_lower_regex.is_match(&lower_path) {
             return Ok(HookExecution::Rejected(HookRejectionInfo::new_long(
                 "Illegal insecure name",
-                format!("ABORT: Illegal insecure name: {}", path),
+                format!("ABORT: Illegal insecure name: {path:?}"),
             )));
         }
 
@@ -89,7 +89,7 @@ impl FileHook for NoInsecureFilenames {
             if insecure_regex.is_match(&path) {
                 return Ok(HookExecution::Rejected(HookRejectionInfo::new_long(
                     "Illegal insecure name",
-                    format!("ABORT: Illegal insecure name: {}", path),
+                    format!("ABORT: Illegal insecure name: {path:?}"),
                 )));
             }
         }

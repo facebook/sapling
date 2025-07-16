@@ -101,8 +101,7 @@ impl FileHook for NoQuestionableFilenames {
                     return Ok(HookExecution::Rejected(HookRejectionInfo::new_long(
                         "Illegal filename",
                         format!(
-                            "ABORT: Illegal filename: {}. The file name cannot include brace(s).",
-                            path
+                            "ABORT: Illegal filename: {path:?}. The file name cannot include brace(s).",
                         ),
                     )));
                 }

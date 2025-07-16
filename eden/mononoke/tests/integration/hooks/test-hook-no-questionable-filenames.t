@@ -36,7 +36,7 @@ Attempt to add a filename with braces in it
   remote: Command failed
   remote:   Error:
   remote:     hooks failed:
-  remote:     no_questionable_filenames for 089829221aab7ce82a51c996ce41806affbfb765: ABORT: Illegal filename: test/{foobar}. The file name cannot include brace(s).
+  remote:     no_questionable_filenames for 089829221aab7ce82a51c996ce41806affbfb765: ABORT: Illegal filename: "test/{foobar}". The file name cannot include brace(s).
   abort: unexpected EOL, expected netstring digit
   [255]
 
