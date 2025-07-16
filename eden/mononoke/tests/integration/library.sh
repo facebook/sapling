@@ -142,7 +142,7 @@ function mononoke_cas_sync {
   START_ID="$1"
   shift
 
-  "$MONONOKE_CAS_SYNC" \
+  GLOG_minloglevel=5 "$MONONOKE_CAS_SYNC" \
     "${CACHE_ARGS[@]}" \
     "${COMMON_ARGS[@]}" \
     --retry-num 1 \
@@ -154,7 +154,7 @@ function mononoke_cas_sync {
 
 
 function mononoke_walker {
-  "$MONONOKE_WALKER" \
+  GLOG_minloglevel=5 "$MONONOKE_WALKER" \
     "${CACHE_ARGS[@]}" \
     "${COMMON_ARGS[@]}" \
     --repo-id $REPOID \
@@ -164,7 +164,7 @@ function mononoke_walker {
 }
 
 function mononoke_blobstore_healer {
-  "$MONONOKE_BLOBSTORE_HEALER" \
+  GLOG_minloglevel=5 "$MONONOKE_BLOBSTORE_HEALER" \
     "${CACHE_ARGS[@]}" \
     "${COMMON_ARGS[@]}" \
     --mononoke-config-path "$TESTTMP"/mononoke-config \
@@ -173,7 +173,7 @@ function mononoke_blobstore_healer {
 }
 
 function mononoke_sqlblob_gc {
-  "$MONONOKE_SQLBLOB_GC" \
+  GLOG_minloglevel=5 "$MONONOKE_SQLBLOB_GC" \
     "${CACHE_ARGS[@]}" \
     "${COMMON_ARGS[@]}" \
     --mononoke-config-path "$TESTTMP"/mononoke-config \
@@ -186,7 +186,7 @@ function mononoke_x_repo_sync() {
   target_repo_id=$2
   shift
   shift
-  "$MONONOKE_X_REPO_SYNC" \
+  GLOG_minloglevel=5 "$MONONOKE_X_REPO_SYNC" \
     "${CACHE_ARGS[@]}" \
     "${COMMON_ARGS[@]}" \
     --source-repo-id="$source_repo_id" \
@@ -229,7 +229,7 @@ function mononoke_modern_sync {
   else
     FLAGS_ARG=""
   fi
-  "$MONONOKE_MODERN_SYNC" \
+  GLOG_minloglevel=5 "$MONONOKE_MODERN_SYNC" \
     "${CACHE_ARGS[@]}" \
     "${COMMON_ARGS[@]}" \
     --bookmark "master_bookmark" \
@@ -249,7 +249,7 @@ function mononoke_modern_sync {
 }
 
 function mononoke_admin {
-  "$MONONOKE_ADMIN" \
+  GLOG_minloglevel=5 "$MONONOKE_ADMIN" \
     "${CACHE_ARGS[@]}" \
     "${COMMON_ARGS[@]}" \
     --mononoke-config-path "$TESTTMP"/mononoke-config \
@@ -258,7 +258,7 @@ function mononoke_admin {
 }
 
 function mononoke_import {
-  "$MONONOKE_IMPORT" \
+  GLOG_minloglevel=5 "$MONONOKE_IMPORT" \
     "${CACHE_ARGS[@]}" \
     "${COMMON_ARGS[@]}" \
     --mononoke-config-path "$TESTTMP"/mononoke-config \
@@ -267,7 +267,7 @@ function mononoke_import {
 }
 
 function mononoke_testtool {
-  "$MONONOKE_TESTTOOL" \
+  GLOG_minloglevel=5 "$MONONOKE_TESTTOOL" \
     "${CACHE_ARGS[@]}" \
     "${COMMON_ARGS[@]}" \
     --mononoke-config-path "$TESTTMP"/mononoke-config \
@@ -276,7 +276,7 @@ function mononoke_testtool {
 }
 
 function mononoke_backfill_bonsai_blob_mapping {
-  "$MONONOKE_BACKFILL_BONSAI_BLOB_MAPPING" \
+  GLOG_minloglevel=5 "$MONONOKE_BACKFILL_BONSAI_BLOB_MAPPING" \
     "${CACHE_ARGS[@]}" \
     "${COMMON_ARGS[@]}" \
     --mononoke-config-path "$TESTTMP"/mononoke-config \
@@ -285,7 +285,7 @@ function mononoke_backfill_bonsai_blob_mapping {
 }
 
 function repo_metadata_logger {
-  "$REPO_METADATA_LOGGER" \
+  GLOG_minloglevel=5 "$REPO_METADATA_LOGGER" \
     "${CACHE_ARGS[@]}" \
     "${COMMON_ARGS[@]}" \
     --scuba-log-file "$TESTTMP/metadata_logger_scuba_logs" \
@@ -517,7 +517,7 @@ CONF
 }
 
 function backfill_mapping {
-  "$MONONOKE_BACKFILL_MAPPING" \
+  GLOG_minloglevel=5 "$MONONOKE_BACKFILL_MAPPING" \
     "${CACHE_ARGS[@]}" \
     "${COMMON_ARGS[@]}" \
     --repo-id "$REPOID" \
@@ -541,7 +541,7 @@ function blobimport {
   local revlog="$input/revlog-export"
   rm -rf "$revlog"
   hg --cwd "$input" debugexportrevlog revlog-export
-  $MONONOKE_BLOBIMPORT \
+  GLOG_minloglevel=5 $MONONOKE_BLOBIMPORT \
     "${CACHE_ARGS[@]}" \
     "${COMMON_ARGS[@]}" \
      --repo-id $REPOID \
@@ -560,7 +560,7 @@ function blobimport {
 }
 
 function bonsai_verify {
-  "$MONONOKE_BONSAI_VERIFY" \
+  GLOG_minloglevel=5 "$MONONOKE_BONSAI_VERIFY" \
     "${CACHE_ARGS[@]}" \
     "${COMMON_ARGS[@]}" \
     --repo-id "$REPOID" \
@@ -590,7 +590,8 @@ function scs {
   fi
 
   rm -f "$TESTTMP/scs_server_addr.txt"
-  THRIFT_TLS_SRV_CERT="$TEST_CERTDIR/localhost.crt" \
+  GLOG_minloglevel=5 \
+    THRIFT_TLS_SRV_CERT="$TEST_CERTDIR/localhost.crt" \
     THRIFT_TLS_SRV_KEY="$TEST_CERTDIR/localhost.key" \
     THRIFT_TLS_CL_CA_PATH="$TEST_CERTDIR/root-ca.crt" \
     THRIFT_TLS_CL_CERT_PATH="$TEST_CERTDIR/proxy.crt" \
@@ -616,7 +617,8 @@ function land_service {
     mkdir "$SCRIBE_LOGS_DIR"
   fi
   rm -f "$TESTTMP/land_service_addr.txt"
-  THRIFT_TLS_SRV_CERT="$TEST_CERTDIR/localhost.crt" \
+  GLOG_minloglevel=5 \
+    THRIFT_TLS_SRV_CERT="$TEST_CERTDIR/localhost.crt" \
     THRIFT_TLS_SRV_KEY="$TEST_CERTDIR/localhost.key" \
     THRIFT_TLS_CL_CA_PATH="$TEST_CERTDIR/root-ca.crt" \
     THRIFT_TLS_TICKETS="$TEST_CERTDIR/server.pem.seeds" \
@@ -823,7 +825,8 @@ function start_and_wait_for_land_service {
 }
 
 function _megarepo_async_worker_cmd {
-  RUST_LOG="warm_bookmarks_cache=WARN" \
+  GLOG_minloglevel=5 \
+    RUST_LOG="warm_bookmarks_cache=WARN" \
     "$ASYNC_REQUESTS_WORKER" "$@" \
     --log-level INFO \
     --mononoke-config-path "$TESTTMP/mononoke-config" \
@@ -846,7 +849,8 @@ function megarepo_async_worker_foreground {
 function scsc_as {
   local name="$1"
   shift
-  THRIFT_TLS_CL_CERT_PATH="$TEST_CERTDIR/$name.crt" \
+  GLOG_minloglevel=5 \
+    THRIFT_TLS_CL_CERT_PATH="$TEST_CERTDIR/$name.crt" \
     THRIFT_TLS_CL_KEY_PATH="$TEST_CERTDIR/$name.key" \
     THRIFT_TLS_CL_CA_PATH="$TEST_CERTDIR/root-ca.crt" \
     "$SCS_CLIENT" --host "$LOCALIP:$SCS_PORT" "$@"
@@ -950,7 +954,7 @@ function lfs_server {
   fi
   opts=("${opts[@]}" "--listen-host" "$listen_host")
 
-  "$LFS_SERVER" \
+  GLOG_minloglevel=5 "$LFS_SERVER" \
     "${opts[@]}" "${args[@]}" >> "$log" 2>&1 &
 
   lfs_server_pid="$!"
@@ -987,7 +991,7 @@ function mononoke_git_service {
   bound_addr_file="$TESTTMP/mononoke_git_service_addr.txt"
   log="${TESTTMP}/mononoke_git_service.out"
   rm -f "$bound_addr_file"
-  "$MONONOKE_GIT_SERVER" "$@" \
+  GLOG_minloglevel=5 "$MONONOKE_GIT_SERVER" "$@" \
     --tls-ca "$TEST_CERTDIR/root-ca.crt" \
     --tls-private-key "$TEST_CERTDIR/localhost.key" \
     --tls-certificate "$TEST_CERTDIR/localhost.crt" \
@@ -1174,7 +1178,7 @@ function aliasverify() {
   mode="$1"
   alias_type="$2"
   shift 2
-  "$MONONOKE_ALIAS_VERIFY" --repo-id $REPOID \
+  GLOG_minloglevel=5 "$MONONOKE_ALIAS_VERIFY" --repo-id $REPOID \
      "${CACHE_ARGS[@]}" \
      "${COMMON_ARGS[@]}" \
      --mononoke-config-path "$TESTTMP/mononoke-config" \
@@ -1415,7 +1419,7 @@ function gitimport() {
     git_cmd="git"
   fi
 
-  "$MONONOKE_GITIMPORT" \
+  GLOG_minloglevel=5 "$MONONOKE_GITIMPORT" \
     "${CACHE_ARGS[@]}" \
     "${COMMON_ARGS[@]}" \
     --git-command-path $git_cmd\
@@ -1494,7 +1498,7 @@ function microwave_builder() {
 }
 
 function derived_data_tailer {
-  "$DERIVED_DATA_TAILER" \
+  GLOG_minloglevel=5 "$DERIVED_DATA_TAILER" \
     "${CACHE_ARGS[@]}" \
     "${COMMON_ARGS[@]}" \
     --mononoke-config-path "$TESTTMP"/mononoke-config \
@@ -1574,7 +1578,7 @@ function quiet_grep() {
 }
 
 function streaming_clone() {
-  "$MONONOKE_STREAMING_CLONE" \
+  GLOG_minloglevel=5 "$MONONOKE_STREAMING_CLONE" \
     "${CACHE_ARGS[@]}" \
     "${COMMON_ARGS[@]}" \
     --repo-id "$REPOID" \
@@ -1617,7 +1621,7 @@ function merge_just_knobs() {
 }
 
 function packer() {
-  "$MONONOKE_PACKER" \
+  GLOG_minloglevel=5 "$MONONOKE_PACKER" \
     "${CACHE_ARGS[@]}" \
     "${COMMON_ARGS[@]}" \
     --mononoke-config-path "${TESTTMP}/mononoke-config" \
@@ -1626,7 +1630,7 @@ function packer() {
 }
 
 function check_git_wc() {
-  "$MONONOKE_CHECK_GIT_WC" \
+  GLOG_minloglevel=5 "$MONONOKE_CHECK_GIT_WC" \
     "${CACHE_ARGS[@]}" \
     "${COMMON_ARGS[@]}" \
     --repo-id "$REPOID" \
@@ -1644,7 +1648,7 @@ function derived_data_service() {
   THRIFT_TLS_SRV_KEY="$TEST_CERTDIR/localhost.key" \
   THRIFT_TLS_CL_CA_PATH="$TEST_CERTDIR/root-ca.crt" \
   THRIFT_TLS_TICKETS="$TEST_CERTDIR/server.pem.seeds" \
-    "$DERIVED_DATA_SERVICE" "$@" \
+  GLOG_minloglevel=5 "$DERIVED_DATA_SERVICE" "$@" \
     -p 0 \
     --mononoke-config-path "${TESTTMP}/mononoke-config" \
     --bound-address-file "$DDS_SERVER_ADDR_FILE" \
@@ -1669,16 +1673,17 @@ function wait_for_dds() {
 }
 
 function derived_data_client() {
+  GLOG_minloglevel=5 \
   THRIFT_TLS_CL_CERT_PATH="$TEST_CERTDIR/client0.crt" \
   THRIFT_TLS_CL_KEY_PATH="$TEST_CERTDIR/client0.key" \
   THRIFT_TLS_CL_CA_PATH="$TEST_CERTDIR/root-ca.crt" \
-  "$DERIVED_DATA_CLIENT" \
+  GLOG_minloglevel=5 "$DERIVED_DATA_CLIENT" \
   --host "localhost:$DDS_PORT" \
   "$@"
 }
 
 function derivation_worker() {
-  "$DERIVED_DATA_WORKER" \
+  GLOG_minloglevel=5 "$DERIVED_DATA_WORKER" \
     "${CACHE_ARGS[@]}" \
     "${COMMON_ARGS[@]}" \
     --mononoke-config-path "$TESTTMP"/mononoke-config \
@@ -1710,7 +1715,7 @@ function verify_integrity_service() {
 # Wrapper for drawdag that loads all the commit aliases to env variables
 # so they can be used to refer to commits instead of hashes.
 function testtool_drawdag() {
-  out="$(GLOG_minloglevel=5 mononoke_testtool drawdag "$@" | tee /dev/fd/2)"
+  out="$(mononoke_testtool drawdag "$@" | tee /dev/fd/2)"
   rc="${PIPESTATUS[0]}"
   # shellcheck disable=SC2046,SC2163,SC2086
   export $out
@@ -1794,7 +1799,3 @@ function wait_for_bookmark_move_to_commit {
 function fb303-status() {
   $FB303_STATUS "$@"
 }
-
-if [ ! -z $DISABLE_ALL_NETWORK_ACCESS ]; then
-  export GLOG_minloglevel=5
-fi
