@@ -176,6 +176,7 @@ pub(crate) async fn commits(
 ) -> Result<Vec<ChangesetId>> {
     match shallow_info {
         Some(shallow_info) => Ok(shallow_info
+            .packfile_commits
             .commits
             .iter()
             .map(|entry| entry.csid())

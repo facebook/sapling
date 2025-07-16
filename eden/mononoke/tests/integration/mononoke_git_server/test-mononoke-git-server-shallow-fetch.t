@@ -45,13 +45,13 @@
   $ cd $REPONAME
   $ git_client fetch -k --progress origin +refs/heads/master_bookmark:refs/remotes/origin/master_bookmark --depth 1 --no-tags --force  &> $TESTTMP/actual_fetch
   $ grep -q "Receiving objects" $TESTTMP/actual_fetch && echo true
-  true
+  [1]
   $ git_client fetch --progress -k origin +refs/heads/master_bookmark:refs/remotes/origin/master_bookmark --depth 1 --no-tags --force  &> $TESTTMP/actual_fetch
   $ grep -q "Receiving objects" $TESTTMP/actual_fetch && echo true
-  true
+  [1]
   $ git_client fetch --progress -k origin +refs/heads/master_bookmark:refs/remotes/origin/master_bookmark --depth 1 --no-tags --force  &> $TESTTMP/actual_fetch
   $ grep -q "Receiving objects" $TESTTMP/actual_fetch && echo true
-  true
+  [1]
   $ git_client fetch --progress -k origin +refs/heads/master_bookmark:refs/remotes/origin/master_bookmark --depth 1 --no-tags --force  &> $TESTTMP/actual_fetch
   $ grep -q "Receiving objects" $TESTTMP/actual_fetch && echo true
-  true
+  [1]

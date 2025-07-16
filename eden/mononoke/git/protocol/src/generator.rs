@@ -63,6 +63,7 @@ use crate::types::PackItemStreamRequest;
 use crate::types::PackItemStreamResponse;
 use crate::types::PackfileItemInclusion;
 use crate::types::RefsSource;
+use crate::types::ShallowCommits;
 use crate::types::ShallowInfoRequest;
 use crate::types::ShallowInfoResponse;
 use crate::types::ShallowVariant;
@@ -90,7 +91,7 @@ async fn boundary_trees_and_blobs(
         ..
     } = fetch_container;
     let boundary_commits = match shallow_info.as_ref() {
-        Some(shallow_info) => shallow_info.boundary_commits.clone(),
+        Some(shallow_info) => shallow_info.packfile_commits.boundary_commits.clone(),
         None => Vec::new(),
     };
     stream::iter(boundary_commits.into_iter().map(|entry| Ok((entry.csid(), entry.oid()))))
@@ -463,6 +464,7 @@ async fn commit_packfile_stream<'a>(
     } = fetch_container;
     let shallow_commits = match shallow_info.as_ref() {
         Some(shallow_info) => shallow_info
+            .packfile_commits
             .boundary_commits
             .iter()
             .map(|entry| entry.csid())
@@ -950,6 +952,10 @@ pub async fn shallow_info(
     let translated_shallow_commits = git_shas_to_bonsais(&ctx, repo, request.shallow.iter())
         .await
         .context("Error converting shallow Git commits to Bonsai during shallow-info")?;
+    // Convert the provided have object ids to bonsais so that we can use Mononoke commit graph
+    let translated_sha_bases = git_shas_to_bonsais(&ctx, repo, request.bases.iter())
+        .await
+        .context("Error converting base Git commits to Bonsai during shallow-info")?;
     let shallow_commits = ordered_bonsai_git_mappings_by_bonsai(
         &ctx,
         repo,
@@ -965,7 +971,7 @@ pub async fn shallow_info(
             .context("Error in getting ancestors within distance from heads commits during shallow-info")?,
         ShallowVariant::FromClientWithDepth(depth) => repo
             .commit_graph()
-            .ancestors_within_distance(&ctx, translated_shallow_commits.bonsais, *depth as u64)
+            .ancestors_within_distance(&ctx, translated_shallow_commits.bonsais.clone(), *depth as u64)
             .await
             .context("Error in getting ancestors within distance from shallow commits during shallow-info")?,
         ShallowVariant::FromServerWithTime(time) => ancestors_after_time(&ctx, repo, translated_sha_heads.bonsais, *time)
@@ -976,17 +982,61 @@ pub async fn shallow_info(
             .context("Error in getting ancestors excluding refs during shallow-info")?,
         ShallowVariant::None => AncestorsWithinDistance::default(),
     };
-    let boundary_commits =
-        ordered_bonsai_git_mappings_by_bonsai(&ctx, repo, ancestors_within_distance.boundaries)
-            .await
-            .context("Error fetching Git mappings for boundary bonsais")?;
-    let target_commits =
-        ordered_bonsai_git_mappings_by_bonsai(&ctx, repo, ancestors_within_distance.ancestors)
-            .await
-            .context("Error fetching Git mappings for target bonsais")?;
-    Ok(ShallowInfoResponse::new(
-        target_commits,
+    // We might decide not to send some objects based on the client's HAVES and SHALLOW but for reporting purposes in shallow section
+    // of Git protocol, we need to provide visibility into all elligible commits. That's the purpose of info_commits
+    let info_commits = ShallowCommits {
+        commits: ordered_bonsai_git_mappings_by_bonsai(
+            &ctx,
+            repo,
+            ancestors_within_distance.ancestors.clone(),
+        )
+        .await
+        .context("Error fetching Git mappings for boundary bonsais")?,
+        boundary_commits: ordered_bonsai_git_mappings_by_bonsai(
+            &ctx,
+            repo,
+            ancestors_within_distance.boundaries.clone(),
+        )
+        .await
+        .context("Error fetching Git mappings for boundary bonsais")?,
+    };
+    // Get the set of commits that are already present at the client so we don't resend them as part of this fetch
+    let mut client_commits = repo
+        .commit_graph()
+        .ancestors_difference(
+            &ctx,
+            translated_sha_bases.bonsais,
+            translated_shallow_commits.bonsais.clone(),
+        )
+        .await
+        .context("Error in fetching difference of ancestors between client haves and shallow")?
+        .into_iter()
+        .collect::<FxHashSet<_>>();
+    client_commits.extend(translated_shallow_commits.bonsais);
+    let boundaries = ancestors_within_distance
+        .boundaries
+        .into_iter()
+        .filter(|commit| !client_commits.contains(commit))
+        .collect();
+    let ancestors = ancestors_within_distance
+        .ancestors
+        .into_iter()
+        .filter(|commit| !client_commits.contains(commit))
+        .collect();
+
+    let boundary_commits = ordered_bonsai_git_mappings_by_bonsai(&ctx, repo, boundaries)
+        .await
+        .context("Error fetching Git mappings for boundary bonsais")?;
+    let target_commits = ordered_bonsai_git_mappings_by_bonsai(&ctx, repo, ancestors)
+        .await
+        .context("Error fetching Git mappings for target bonsais")?;
+    let packfile_commits = ShallowCommits {
+        commits: target_commits,
         boundary_commits,
+    };
+    Ok(ShallowInfoResponse::new(
+        packfile_commits,
+        info_commits,
         shallow_commits,
     ))
 }

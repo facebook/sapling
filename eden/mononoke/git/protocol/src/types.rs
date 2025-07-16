@@ -575,6 +575,8 @@ impl ShallowVariant {
 pub struct ShallowInfoRequest {
     /// List of commit object Ids that are requested by the client
     pub heads: Vec<ObjectId>,
+    /// List of commit object Ids that are present with the client
+    pub bases: Vec<ObjectId>,
     /// List of object Ids representing the edge of the shallow history present
     /// at the client, i.e. the set of commits that the client knows about but
     /// does not have any of their parents and their ancestors
@@ -616,27 +618,36 @@ impl From<(ChangesetId, ObjectId)> for BonsaiAndGitCommit {
     }
 }
 
+/// Struct representing shallow commits that need to be used for reporting and
+/// sending data to the client
+#[derive(Debug, Clone)]
+pub struct ShallowCommits {
+    /// The set of shallow commits that are not part of the shallow boundary
+    pub commits: Vec<BonsaiAndGitCommit>,
+    /// The boundary or the edge of the shallow history that will be part of the response
+    pub boundary_commits: Vec<BonsaiAndGitCommit>,
+}
+
 /// Struct representing the response for shallow info section in Git fetch response
 #[derive(Debug, Clone)]
 pub struct ShallowInfoResponse {
-    /// The set of commits that need to be returned as part of the shallow clone/fetch
-    pub commits: Vec<BonsaiAndGitCommit>,
-    /// The set of commits that are returned as part of the shallow clone/fetch but also
-    /// form the boundary of the shallow history sent by the server
-    pub boundary_commits: Vec<BonsaiAndGitCommit>,
+    /// Shallow commits that will be sent as part of the packfile
+    pub packfile_commits: ShallowCommits,
+    /// The set of shallow commits that will help generate the shallow section of the response headers
+    pub info_commits: ShallowCommits,
     /// The set of commits that are considered as shallow at the client
     pub client_shallow: Vec<BonsaiAndGitCommit>,
 }
 
 impl ShallowInfoResponse {
     pub fn new(
-        commits: Vec<BonsaiAndGitCommit>,
-        boundary_commits: Vec<BonsaiAndGitCommit>,
+        packfile_commits: ShallowCommits,
+        info_commits: ShallowCommits,
         client_shallow: Vec<BonsaiAndGitCommit>,
     ) -> Self {
         Self {
-            commits,
-            boundary_commits,
+            packfile_commits,
+            info_commits,
             client_shallow,
         }
     }
@@ -647,7 +658,7 @@ impl ShallowInfoResponse {
         self.client_shallow
             .iter()
             .filter_map(|entry| {
-                if self.commits.contains(entry) {
+                if self.info_commits.commits.contains(entry) {
                     Some(entry.csid())
                 } else {
                     None

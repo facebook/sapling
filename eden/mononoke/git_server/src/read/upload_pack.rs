@@ -172,7 +172,7 @@ async fn shallow_info(
         args.into_shallow_request(),
     )
     .await?;
-    for boundary_commit in response.boundary_commits.iter() {
+    for boundary_commit in response.info_commits.boundary_commits.iter() {
         write_text_packetline(
             format!("shallow {}", boundary_commit.oid().to_hex()).as_bytes(),
             &mut output_buffer,
@@ -180,6 +180,7 @@ async fn shallow_info(
         .await?;
     }
     let git_commits = response
+        .info_commits
         .commits
         .iter()
         .map(|entry| entry.oid())

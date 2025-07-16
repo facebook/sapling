@@ -377,6 +377,7 @@ impl FetchArgs {
         };
         ShallowInfoRequest {
             heads: self.wants.clone(),
+            bases: self.haves.clone(),
             shallow: self.shallow.clone(),
             variant,
         }
