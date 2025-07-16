@@ -7,6 +7,11 @@
   $ eagerepo
   $ enable undo rebase
 
+# enable morestatus outputs
+  $ enable morestatus
+  $ setconfig morestatus.show=true
+
+# initialize test repo
   $ hg init a
   $ cd a
   $ echo c1 >common
@@ -62,20 +67,22 @@ Conflicting rebase:
   unresolved conflicts (see hg resolve, then hg rebase --continue)
   [1]
 
-  $ hg status --config commands.status.verbose=1
+  $ hg status
   M common
   ? common.orig
-  # The repository is in an unfinished *rebase* state.
   
-  # Unresolved merge conflicts:
+  # The repository is in an unfinished *rebase* state.
+  # Unresolved merge conflicts (1):
   # 
   #     common
   # 
   # To mark files as resolved:  hg resolve --mark FILE
-  
   # To continue:                hg rebase --continue
   # To abort:                   hg rebase --abort
   # To quit:                    hg rebase --quit
+  # 
+  # Rebasing 46f0b057b5c0 (L2)
+  #       to 3e046f2ecedb (L1)
 
 Try to continue without solving the conflict:
 

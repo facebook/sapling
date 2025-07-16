@@ -5909,8 +5909,6 @@ def status(ui, repo, *pats, **opts):
                         label="status.copied",
                     )
 
-    if (ui.verbose or ui.configbool("commands", "status.verbose")) and not ui.plain():
-        cmdutil.morestatus(repo, fm)
     fm.end()
 
 

@@ -4,6 +4,11 @@
 
   $ eagerepo
 
+# enable morestatus outputs
+  $ enable morestatus
+  $ setconfig morestatus.show=true
+
+# initialize test repo
   $ hg init repo
   $ cd repo
   $ cat << EOF > a
@@ -50,22 +55,18 @@
   $ hg id
   618808747361+c0c68e4fe667+
 
-  $ echo "[commands]" >> $HGRCPATH
-  $ echo "status.verbose=true" >> $HGRCPATH
   $ hg status
   M a
   ? a.orig
-  # The repository is in an unfinished *merge* state.
   
-  # Unresolved merge conflicts:
+  # The repository is in an unfinished *merge* state.
+  # Unresolved merge conflicts (1):
   # 
   #     a
   # 
   # To mark files as resolved:  hg resolve --mark FILE
-  
   # To continue:                hg commit
   # To abort:                   hg goto --clean .    (warning: this will discard uncommitted changes)
-  
 
   $ cat a
   Small Mathematical Series.
@@ -81,7 +82,7 @@
   >>>>>>> merge rev:    c0c68e4fe667 - test: branch1
   Hop we are done.
 
-  $ hg status --config commands.status.verbose=0
+  $ hg status --config 'morestatus.skipstates=merge'
   M a
   ? a.orig
 

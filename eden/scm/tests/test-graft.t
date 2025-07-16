@@ -17,6 +17,10 @@
   > pdiff = sh "$RUNTESTDIR/pdiff"
   > EOF
 
+# enable morestatus outputs
+  $ enable morestatus
+  $ setconfig morestatus.show=true
+
 # Create a repo with some stuff in it:
 
   $ newclientrepo
@@ -225,19 +229,18 @@
 
 # Using status to get more context
 
-  $ hg status --verbose
+  $ hg status
   M d
   M e
   ? a.orig
   ? e.orig
-  # The repository is in an unfinished *graft* state.
   
-  # Unresolved merge conflicts:
+  # The repository is in an unfinished *graft* state.
+  # Unresolved merge conflicts (1):
   # 
   #     e
   # 
   # To mark files as resolved:  hg resolve --mark FILE
-  
   # To continue:                hg graft --continue
   # To abort:                   hg graft --abort
 

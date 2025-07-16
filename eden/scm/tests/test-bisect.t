@@ -11,6 +11,10 @@
   $ hg init repo
   $ cd repo
 
+# enable morestatus outputs
+  $ enable morestatus
+  $ setconfig morestatus.show=true
+
 # committing changes
 
   $ echo >> a
@@ -187,13 +191,15 @@
 
   $ hg bisect -r
   $ hg bisect -b
-  $ hg status -v
-  # The repository is in an unfinished *bisect* state.
+  $ hg status
   
+  # The repository is in an unfinished *bisect* state.
+  # Current bisect state: 0 good commit(s), 1 bad commit(s), 0 skip commit(s)
   # To mark the commit good:     hg bisect --good
   # To mark the commit bad:      hg bisect --bad
   # To abort:                    hg bisect --reset
-  $ hg status -v --config 'commands.status.skipstates=bisect'
+  
+  $ hg status --config 'morestatus.skipstates=bisect'
   $ hg summary
   parent: 58c80a7c8a40 
    msg 31
