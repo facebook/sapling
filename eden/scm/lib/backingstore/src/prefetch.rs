@@ -43,11 +43,18 @@ macro_rules! info_if {
     };
 }
 
+#[derive(Debug, Clone, Copy, Default)]
+pub(crate) struct Config {
+    pub(crate) max_initial_lag: u64,
+    pub(crate) min_ratio: f64,
+}
+
 /// Launch an asynchronous prefetch manager to kick of file/dir prefetches when kicked via the
 /// returned channel. The prefetches are based on active fs walks, according to the walk detector
 /// (prefetching content makes the serial walks go faster). The manager and any active prefetches
 /// are canceled when all copies of the returned channel are dropped.
 pub(crate) fn prefetch_manager(
+    config: Config,
     tree_resolver: Arc<dyn ReadTreeManifest>,
     file_store: Arc<dyn FileStore>,
     current_commit_id: Arc<RwLock<Option<String>>>,
@@ -228,6 +235,7 @@ pub(crate) fn prefetch_manager(
                             handled.insert(((root.clone(), false), *depth));
                         }
                         batch_dir_prefetches.push(prefetch(
+                            config,
                             mf.clone(),
                             file_store.clone(),
                             detector.clone(),
@@ -280,6 +288,11 @@ pub(crate) fn prefetch_manager(
                     continue;
                 }
 
+                if should_pause_prefetch(&detector, &config, &new_walk.0.0) {
+                    tracing::debug!(?new_walk, "not kicking off new walk - prefetching paused");
+                    continue;
+                }
+
                 handled_prefetches.insert(new_walk.clone());
 
                 let prefetches_for_this_root = prefetches.entry(new_walk.0.clone()).or_default();
@@ -296,7 +309,13 @@ pub(crate) fn prefetch_manager(
                 // when we drop its handle.
                 prefetches_for_this_root.push((
                     new_walk.1,
-                    prefetch(mf.clone(), file_store.clone(), detector.clone(), work),
+                    prefetch(
+                        config,
+                        mf.clone(),
+                        file_store.clone(),
+                        detector.clone(),
+                        work,
+                    ),
                 ));
 
                 // Make sure the prefetches stay ordered by depth.
@@ -323,6 +342,7 @@ enum PrefetchWork {
 /// fetching file content of resultant files via `file_store`. Returns a handle
 /// that will cancel the prefetch on drop.
 fn prefetch(
+    config: Config,
     manifest: impl Manifest + Send + Sync + 'static,
     file_store: Arc<dyn FileStore>,
     walk_detector: walkdetector::Detector,
@@ -405,6 +425,11 @@ fn prefetch(
             iter.for_each(drop);
             if let Some(walk_root) = &file_content_root {
                 walk_detector.files_preloaded(walk_root, fctx.remote_fetch_count());
+
+                if should_pause_prefetch(&walk_detector, &config, walk_root) {
+                    info_if!(interesting_walk, event, "pausing prefetch");
+                    my_handle.pause();
+                }
             }
         };
 
@@ -421,6 +446,12 @@ fn prefetch(
             // If file fetches are full, wait for first one to finish.
             if file_fetches.len() >= MAX_CONCURRENT_FILE_FETCHES {
                 consume_file_fetch(file_fetches.pop_front().unwrap());
+            }
+
+            // Check for cancellation since the consume_file_fetch() call can cancel the prefetch.
+            if !my_handle.is_in_progress() {
+                info_if!(interesting_walk, event, elapsed=?start_time.elapsed(), file_count, "prefetch canceled");
+                return;
             }
 
             // Use IGNORE_RESULT optimization since we don't care about the data.
@@ -490,6 +521,32 @@ fn prefetch(
     });
 
     handle
+}
+
+/// Determine whether prefetching for `walk_root` should be paused by considering how much we have
+/// prefetched so far, and how much of our prefetched data has actually been read by the walker.
+fn should_pause_prefetch(
+    detector: &walkdetector::Detector,
+    config: &Config,
+    walk_root: &RepoPath,
+) -> bool {
+    let (prefetch_count, read_count) = detector.files_preloaded(walk_root, 0);
+    tracing::debug!(%walk_root, prefetch_count, read_count, "should_pause_prefetch");
+
+    if prefetch_count == 0 {
+        return false;
+    }
+
+    let prefetch_ratio = read_count as f64 / prefetch_count as f64;
+    if prefetch_ratio > config.min_ratio {
+        // If we haven't gone below our allowed ratio, keep prefetching.
+        return false;
+    }
+
+    // Ratio isn't good - check if the absolute value of lag is too big. There is no guarantee that
+    // files are read in the order we prefetch them, so we need to allow for sizeable lag. At the
+    // same time, we want to prevent crazy over prefetching.
+    config.max_initial_lag > 0 && prefetch_count - read_count > config.max_initial_lag
 }
 
 // A pathmatcher::Matcher impl that matches a simple directory prefix along with a depth filter.
@@ -624,6 +681,7 @@ mod test {
 
         // Prefetch for "dir/" at depth=0 (i.e. "dir/*").
         let handle = prefetch(
+            Config::default(),
             mf.clone(),
             file_store.clone(),
             detector.clone(),
@@ -643,6 +701,7 @@ mod test {
 
         // Prefetch for "dir/" at min_depth=1, max_depth=1 (i.e. "dir/dir2/*").
         let handle = prefetch(
+            Config::default(),
             mf,
             file_store,
             detector,
@@ -700,6 +759,7 @@ mod test {
 
         // Prefetch directories for "" at depth=0 (i.e. "*"). This should fetch directory "dir".
         let handle = prefetch(
+            Config::default(),
             mf.clone(),
             file_store.clone(),
             detector.clone(),
@@ -775,6 +835,7 @@ mod test {
         let tree_resolver = StubTreeResolver([(stub_commit_id, mf)].into());
 
         let kick_manager = prefetch_manager(
+            Config::default(),
             Arc::new(tree_resolver),
             file_store,
             Arc::new(RwLock::new(Some(stub_commit_id.to_hex()))),
@@ -845,6 +906,7 @@ mod test {
         let tree_resolver = StubTreeResolver([(stub_commit_id, mf)].into());
 
         let kick_manager = prefetch_manager(
+            Config::default(),
             Arc::new(tree_resolver),
             file_store,
             Arc::new(RwLock::new(Some(stub_commit_id.to_hex()))),
@@ -908,5 +970,48 @@ mod test {
         assert!(!handle.is_done());
         assert!(!handle.is_in_progress());
         assert!(handle.is_paused());
+    }
+
+    #[test]
+    fn test_should_pause_prefetch() -> anyhow::Result<()> {
+        let config = Config {
+            min_ratio: 0.1,
+            max_initial_lag: 20,
+        };
+
+        let mut detector = walkdetector::Detector::new();
+        detector.set_walk_threshold(2);
+
+        let walk_root: RepoPathBuf = "root".to_string().try_into()?;
+
+        assert!(!should_pause_prefetch(&detector, &config, &walk_root));
+
+        detector.file_loaded(RepoPath::from_str("root/a")?, 0);
+        detector.file_loaded(RepoPath::from_str("root/b")?, 0);
+        detector.file_read(RepoPath::from_str("root/c")?, 0);
+
+        assert!(!should_pause_prefetch(&detector, &config, &walk_root));
+
+        detector.files_preloaded(&walk_root, 15);
+
+        // Still not paused - lag is below 20.
+        assert!(!should_pause_prefetch(&detector, &config, &walk_root));
+
+        // Now we are paused
+        detector.files_preloaded(&walk_root, 10);
+        assert!(should_pause_prefetch(&detector, &config, &walk_root));
+
+        for i in 0..100 {
+            detector.file_read(RepoPath::from_str(&format!("root/{i})"))?, 0);
+        }
+        detector.files_preloaded(&walk_root, 500);
+        // Ratio is ~100/500 - above min_ratio of 0.1.
+        assert!(!should_pause_prefetch(&detector, &config, &walk_root));
+
+        // Now we are below the min ratio.
+        detector.files_preloaded(&walk_root, 700);
+        assert!(should_pause_prefetch(&detector, &config, &walk_root));
+
+        Ok(())
     }
 }

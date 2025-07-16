@@ -194,7 +194,6 @@ impl TempDirExt for tempfile::TempDir {
         let cache_path = self.path();
         let mut configs = vec![
             format!("remotefilelog.cachepath={}", cache_path.display()),
-            "experimental.tree-resolver-cache-size=0".to_string(),
             // This moves the tree aux cache into the shared cache so updating the
             // cachepath above will drop this cache as well.
             "scmstore.store-tree-aux-in-shared-cache=true".to_string(),

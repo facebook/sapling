@@ -46,6 +46,7 @@ use types::HgId;
 use types::Key;
 use types::RepoPath;
 
+use crate::prefetch;
 use crate::prefetch::prefetch_manager;
 
 pub struct BackingStore {
@@ -238,7 +239,19 @@ impl BackingStore {
         walk_detector.set_root(Some(mount.to_path_buf()));
 
         let prefetch_send = if walk_mode == WalkMode::Prefetch {
+            let prefetch_config = prefetch::Config {
+                // Pause prefetch if ratio of cache hits to prefetches is below min_ratio AND
+                // prefetches - cache hits is greater than max_initial_lag.
+                min_ratio: config.get_or("backingstore", "walk-prefetch-min-ratio", || 0.1)?,
+                max_initial_lag: config.get_or(
+                    "backingstore",
+                    "walk-prefetch-max-initial-lag",
+                    || 50_000,
+                )?,
+            };
+
             prefetch_manager(
+                prefetch_config,
                 repo.tree_resolver()?,
                 filestore.clone(),
                 parent_hint,
