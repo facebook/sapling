@@ -83,8 +83,6 @@ pub struct FileStore {
 
     // Top level flag allow disabling all local computation of aux data.
     pub(crate) compute_aux_data: bool,
-    // Make prefetch() calls request aux data.
-    pub(crate) prefetch_aux_data: bool,
 
     // Local-only stores
     pub(crate) indexedlog_local: Option<Arc<IndexedLogHgIdDataStore>>,
@@ -607,7 +605,6 @@ impl FileStore {
             edenapi_retries: 0,
             allow_write_lfs_ptrs: false,
 
-            prefetch_aux_data: false,
             compute_aux_data: false,
 
             indexedlog_local: None,
@@ -658,7 +655,6 @@ impl FileStore {
             edenapi_retries: self.edenapi_retries.clone(),
             allow_write_lfs_ptrs: self.allow_write_lfs_ptrs,
 
-            prefetch_aux_data: self.prefetch_aux_data,
             compute_aux_data: self.compute_aux_data,
 
             indexedlog_local: self.indexedlog_cache.clone(),
@@ -705,18 +701,13 @@ impl FileStore {
     pub fn prefetch(&self, keys: Vec<Key>) -> Result<Vec<Key>> {
         self.metrics.write().api.hg_prefetch.call(keys.len());
 
-        let mut attrs = FileAttributes::CONTENT;
-        if self.prefetch_aux_data {
-            attrs |= FileAttributes::AUX;
-        }
-
         self.fetch(
             FetchContext::new_with_cause(
                 FetchMode::AllowRemote | FetchMode::IGNORE_RESULT,
                 FetchCause::SaplingPrefetch,
             ),
             keys,
-            attrs,
+            FileAttributes::CONTENT,
         )
         .missing()
     }

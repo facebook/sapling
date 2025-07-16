@@ -1,6 +1,7 @@
 #require no-eden
 
   $ eagerepo
+  $ setconfig scmstore.tree-metadata-mode=always
 
   $ newrepo server
   $ drawdag <<EOS
@@ -23,10 +24,6 @@ Prefetch (and also check we get counters):
   scmstore.file.api.hg_prefetch.singles: 1
   scmstore.file.api.hg_refresh.calls: 2
   scmstore.file.flush: * (glob)
-  scmstore.file.prefetch.aux.cache.keys: 1
-  scmstore.file.prefetch.aux.cache.misses: 1
-  scmstore.file.prefetch.aux.cache.requests: 1
-  scmstore.file.prefetch.aux.cache.singles: 1
   scmstore.file.prefetch.aux.cache.time: * (glob) (?)
   scmstore.file.prefetch.edenapi.hits: 1
   scmstore.file.prefetch.edenapi.keys: 1
@@ -103,7 +100,7 @@ Now we do have aux data locally:
 
 
 Fetch only content first:
-  $ hg cat -q -r $B B
+  $ hg cat -q -r $B B --config scmstore.tree-metadata-mode=never
   B (no-eol)
 
 Make sure we don't have aux data yet:
