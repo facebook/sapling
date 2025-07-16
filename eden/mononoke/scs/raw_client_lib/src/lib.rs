@@ -131,7 +131,10 @@ fn build_from_tier_name_via_sr(
             c.with_shard_manager_domain(encode_repo_name(&shardmanager_domain))
         })
         .maybe_with(single_host, |c, single_host| {
+            // Additionally disable enforcement of service identities as
+            // we are connecting to a specific known host.
             c.with_single_host(single_host, None)
+                .with_enforce_tls_service_identities_ADVANCED("")
         })
         .maybe_with(processing_timeout, |c, processing_timeout| {
             c.with_processing_timeout(processing_timeout)
