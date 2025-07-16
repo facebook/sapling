@@ -39,7 +39,6 @@ use mononoke_types::fsnode::FsnodeDirectory;
 use mononoke_types::fsnode::FsnodeEntry;
 use mononoke_types::fsnode::FsnodeFile;
 use movers::Mover;
-use reporting::log_debug;
 use reporting::log_error;
 use reporting::log_trace;
 use scuba_ext::FutureStatsScubaExt;
@@ -150,7 +149,7 @@ async fn validate_submodule_expansion<'a, R: Repo>(
     submodule_repo: &'a R,
     mover: Arc<dyn Mover>,
 ) -> Result<BonsaiChangeset> {
-    log_debug(
+    log_trace(
         ctx,
         format!(
             "Validating expansion of submodule {0} while syncing commit {1:?}",
@@ -523,7 +522,7 @@ pub async fn validate_working_copy_of_expansion_with_recursive_submodules<'a, R>
 where
     R: Repo,
 {
-    log_debug(
+    log_trace(
         ctx,
         format!(
             "Validating expansion working copy of submodule repo {0}",
