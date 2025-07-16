@@ -168,11 +168,11 @@ And sanity check the counter we are looking for exists:
   scmstore.file.fetch.indexedlog.cache.keys: 1
 
 Count duplicate key fetches properly:
-  $ hg dbsh -c "n = repo['$A']['dir/file'].filenode(); repo.fileslog.filestore.prefetch([('foo', n), ('bar', n)])" --config devel.print-metrics=scmstore.file.fetch.cas >/dev/null
-  scmstore.file.fetch.cas.hits: 2
-  scmstore.file.fetch.cas.keys: 2
-  scmstore.file.fetch.cas.requests: 1
-  scmstore.file.fetch.cas.time: * (glob)
+  $ hg dbsh -c "n = repo['$A']['dir/file'].filenode(); repo.fileslog.filestore.prefetch([('foo', n), ('bar', n)])" --config devel.print-metrics=scmstore.file.prefetch.cas >/dev/null
+  scmstore.file.prefetch.cas.hits: 2
+  scmstore.file.prefetch.cas.keys: 2
+  scmstore.file.prefetch.cas.requests: 1
+  scmstore.file.prefetch.cas.time: * (glob)
 
 
 Make sure fall back to non-CAS fetching works:

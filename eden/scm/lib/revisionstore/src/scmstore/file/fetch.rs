@@ -102,7 +102,11 @@ impl FetchState {
         FetchState {
             common: CommonFetchState::new(keys, attrs, found_tx, fctx.clone(), bar),
             errors: FetchErrors::new(),
-            metrics: &metrics::FILE_STORE_FETCH_METRICS,
+            metrics: if fctx.cause().is_prefetch() {
+                &metrics::FILE_STORE_PREFETCH_METRICS
+            } else {
+                &metrics::FILE_STORE_FETCH_METRICS
+            },
 
             lfs_pointers: HashMap::new(),
 

@@ -32,7 +32,7 @@ pub struct FetchMetrics {
     // Total time spent completing the fetch
     pub(crate) time: &'static Counter,
 
-    // Number of times data was computed/derved (i.e. aux data based on content).
+    // Number of times data was computed/derived (i.e. aux data based on content).
     pub(crate) computed: &'static Counter,
 }
 

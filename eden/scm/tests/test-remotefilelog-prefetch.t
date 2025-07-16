@@ -22,45 +22,53 @@ Prefetch (and also check we get counters):
   scmstore.file.api.hg_prefetch.keys: 1
   scmstore.file.api.hg_prefetch.singles: 1
   scmstore.file.api.hg_refresh.calls: 2
-  scmstore.file.fetch.aux.cache.keys: 1
-  scmstore.file.fetch.aux.cache.misses: 1
-  scmstore.file.fetch.aux.cache.requests: 1
-  scmstore.file.fetch.aux.cache.singles: 1
-  scmstore.file.fetch.aux.cache.time: * (glob) (?)
-  scmstore.file.fetch.edenapi.hits: 1
-  scmstore.file.fetch.edenapi.keys: 1
-  scmstore.file.fetch.edenapi.requests: 1
-  scmstore.file.fetch.edenapi.singles: 1
-  scmstore.file.fetch.edenapi.time: * (glob) (?)
-  scmstore.file.fetch.indexedlog.cache.keys: 1
-  scmstore.file.fetch.indexedlog.cache.misses: 1
-  scmstore.file.fetch.indexedlog.cache.requests: 1
-  scmstore.file.fetch.indexedlog.cache.singles: 1
-  scmstore.file.fetch.indexedlog.cache.time: * (glob) (?)
-  scmstore.file.fetch.indexedlog.local.keys: 1
-  scmstore.file.fetch.indexedlog.local.misses: 1
-  scmstore.file.fetch.indexedlog.local.requests: 1
-  scmstore.file.fetch.indexedlog.local.singles: 1
-  scmstore.file.fetch.indexedlog.local.time: * (glob) (?)
   scmstore.file.flush: * (glob)
+  scmstore.file.prefetch.aux.cache.keys: 1
+  scmstore.file.prefetch.aux.cache.misses: 1
+  scmstore.file.prefetch.aux.cache.requests: 1
+  scmstore.file.prefetch.aux.cache.singles: 1
+  scmstore.file.prefetch.aux.cache.time: * (glob) (?)
+  scmstore.file.prefetch.edenapi.hits: 1
+  scmstore.file.prefetch.edenapi.keys: 1
+  scmstore.file.prefetch.edenapi.requests: 1
+  scmstore.file.prefetch.edenapi.singles: 1
+  scmstore.file.prefetch.edenapi.time: * (glob) (?)
+  scmstore.file.prefetch.indexedlog.cache.keys: 1
+  scmstore.file.prefetch.indexedlog.cache.misses: 1
+  scmstore.file.prefetch.indexedlog.cache.requests: 1
+  scmstore.file.prefetch.indexedlog.cache.singles: 1
+  scmstore.file.prefetch.indexedlog.cache.time: * (glob) (?)
+  scmstore.file.prefetch.indexedlog.local.keys: 1
+  scmstore.file.prefetch.indexedlog.local.misses: 1
+  scmstore.file.prefetch.indexedlog.local.requests: 1
+  scmstore.file.prefetch.indexedlog.local.singles: 1
+  scmstore.file.prefetch.indexedlog.local.time: * (glob) (?)
   scmstore.indexedlog.rotate: * (glob) (?)
   scmstore.indexedlog.sync: * (glob) (?)
   scmstore.tree.fetch.edenapi.keys: 1
   scmstore.tree.fetch.edenapi.requests: 1
   scmstore.tree.fetch.edenapi.singles: 1
   scmstore.tree.fetch.edenapi.time: * (glob) (?)
-  scmstore.tree.fetch.indexedlog.cache.hits: 2
-  scmstore.tree.fetch.indexedlog.cache.keys: 3
+  scmstore.tree.prefetch.edenapi.time: * (glob) (?)
+  scmstore.tree.fetch.indexedlog.cache.hits: 1
+  scmstore.tree.fetch.indexedlog.cache.keys: 2
   scmstore.tree.fetch.indexedlog.cache.misses: 1
-  scmstore.tree.fetch.indexedlog.cache.requests: 3
-  scmstore.tree.fetch.indexedlog.cache.singles: 3
-  scmstore.tree.fetch.indexedlog.cache.time: * (glob) (?)
+  scmstore.tree.fetch.indexedlog.cache.requests: 2
+  scmstore.tree.fetch.indexedlog.cache.singles: 2
+  scmstore.tree.prefetch.indexedlog.cache.time: * (glob) (?)
   scmstore.tree.fetch.indexedlog.local.keys: 1
   scmstore.tree.fetch.indexedlog.local.misses: 1
-  scmstore.tree.fetch.indexedlog.local.requests: 2
+  scmstore.tree.fetch.indexedlog.local.requests: 1
   scmstore.tree.fetch.indexedlog.local.singles: 1
-  scmstore.tree.fetch.indexedlog.local.time: * (glob) (?)
-  scmstore.tree.flush: * (glob)
+  scmstore.tree.prefetch.indexedlog.local.time: * (glob) (?)
+  scmstore.tree.flush: * (glob) (?)
+  scmstore.tree.prefetch.indexedlog.cache.hits: 1
+  scmstore.tree.prefetch.indexedlog.cache.keys: 1
+  scmstore.tree.prefetch.indexedlog.cache.requests: 1
+  scmstore.tree.prefetch.indexedlog.cache.singles: 1
+  scmstore.tree.prefetch.indexedlog.cache.time: * (glob) (?)
+  scmstore.tree.prefetch.indexedlog.local.requests: 1
+  scmstore.tree.prefetch.indexedlog.local.time: * (glob) (?)
 
 Now we do have aux data locally:
   $ hg debugscmstore -r $A A --fetch-mode=LOCAL --mode=file

@@ -33,6 +33,28 @@ pub(crate) static TREE_STORE_FETCH_METRICS: TreeStoreFetchMetrics = TreeStoreFet
     cas_direct_local_cache: &CAS_DIRECT_LOCAL_CACHE,
 };
 
+static_local_cache_fetch_metrics!(INDEXEDLOG_PREFETCH, "scmstore.tree.prefetch.indexedlog");
+static_local_cache_fetch_metrics!(AUX_PREFETCH, "scmstore.tree.prefetch.aux");
+static_fetch_metrics!(EDENAPI_PREFETCH, "scmstore.tree.prefetch.edenapi");
+static_fetch_metrics!(CAS_PREFETCH, "scmstore.tree.prefetch.cas");
+
+static_cas_backend_metrics!(CAS_BACKEND_PREFETCH, "scmstore.tree.prefetch.cas");
+static_cas_local_cache_metrics!(CAS_LOCAL_CACHE_PREFETCH, "scmstore.tree.prefetch.cas");
+static_cas_local_cache_metrics!(
+    CAS_DIRECT_LOCAL_CACHE_PREFETCH,
+    "scmstore.tree.prefetch.cas_direct"
+);
+
+pub(crate) static TREE_STORE_PREFETCH_METRICS: TreeStoreFetchMetrics = TreeStoreFetchMetrics {
+    indexedlog: &INDEXEDLOG_PREFETCH,
+    edenapi: &EDENAPI_PREFETCH,
+    aux: &AUX_PREFETCH,
+    cas: &CAS_PREFETCH,
+    cas_backend: &CAS_BACKEND_PREFETCH,
+    cas_local_cache: &CAS_LOCAL_CACHE_PREFETCH,
+    cas_direct_local_cache: &CAS_DIRECT_LOCAL_CACHE_PREFETCH,
+};
+
 pub struct TreeStoreFetchMetrics {
     pub(crate) indexedlog: &'static LocalAndCacheFetchMetrics,
     pub(crate) edenapi: &'static FetchMetrics,

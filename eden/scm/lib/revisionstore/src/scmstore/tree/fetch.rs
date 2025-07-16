@@ -29,6 +29,7 @@ use types::NodeInfo;
 use types::hgid::NULL_ID;
 
 use super::metrics::TREE_STORE_FETCH_METRICS;
+use super::metrics::TREE_STORE_PREFETCH_METRICS;
 use super::metrics::TreeStoreFetchMetrics;
 use super::types::StoreTree;
 use super::types::TreeAttributes;
@@ -62,10 +63,15 @@ impl FetchState {
         fctx: FetchContext,
         bar: Arc<ProgressBar>,
     ) -> Self {
+        let cause = fctx.cause();
         FetchState {
             common: CommonFetchState::new(keys, attrs, found_tx, fctx, bar),
             errors: FetchErrors::new(),
-            metrics: &TREE_STORE_FETCH_METRICS,
+            metrics: if cause.is_prefetch() {
+                &TREE_STORE_PREFETCH_METRICS
+            } else {
+                &TREE_STORE_FETCH_METRICS
+            },
         }
     }
 

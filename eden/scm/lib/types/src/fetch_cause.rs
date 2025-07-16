@@ -41,6 +41,21 @@ impl FetchCause {
             FetchCause::Unspecified => "unspecified",
         }
     }
+
+    pub fn is_prefetch(&self) -> bool {
+        match self {
+            FetchCause::EdenPrefetch => true,
+            FetchCause::SaplingPrefetch => true,
+            FetchCause::EdenWalkPrefetch => true,
+
+            FetchCause::EdenUnknown => false,
+            FetchCause::EdenThrift => false,
+            FetchCause::EdenFs => false,
+            FetchCause::EdenMixed => false,
+            FetchCause::SaplingUnknown => false,
+            FetchCause::Unspecified => false,
+        }
+    }
 }
 
 impl std::str::FromStr for FetchCause {

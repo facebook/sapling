@@ -44,6 +44,30 @@ pub(crate) static FILE_STORE_FETCH_METRICS: FileStoreFetchMetrics = FileStoreFet
     cas_direct_local_cache: &CAS_DIRECT_LOCAL_CACHE,
 };
 
+static_local_cache_fetch_metrics!(INDEXEDLOG_PREFETCH, "scmstore.file.prefetch.indexedlog");
+static_local_cache_fetch_metrics!(LFS_PREFETCH, "scmstore.file.prefetch.lfs");
+static_local_cache_fetch_metrics!(AUX_PREFETCH, "scmstore.file.prefetch.aux");
+static_fetch_metrics!(EDENAPI_PREFETCH, "scmstore.file.prefetch.edenapi");
+static_fetch_metrics!(CAS_PREFETCH, "scmstore.file.prefetch.cas");
+
+static_cas_backend_metrics!(CAS_BACKEND_PREFETCH, "scmstore.file.prefetch.cas");
+static_cas_local_cache_metrics!(CAS_LOCAL_CACHE_PREFETCH, "scmstore.file.prefetch.cas");
+static_cas_local_cache_metrics!(
+    CAS_DIRECT_LOCAL_CACHE_PREFETCH,
+    "scmstore.file.prefetch.cas_direct"
+);
+
+pub(crate) static FILE_STORE_PREFETCH_METRICS: FileStoreFetchMetrics = FileStoreFetchMetrics {
+    indexedlog: &INDEXEDLOG_PREFETCH,
+    lfs: &LFS_PREFETCH,
+    aux: &AUX_PREFETCH,
+    edenapi: &EDENAPI_PREFETCH,
+    cas: &CAS_PREFETCH,
+    cas_backend: &CAS_BACKEND_PREFETCH,
+    cas_local_cache: &CAS_LOCAL_CACHE_PREFETCH,
+    cas_direct_local_cache: &CAS_DIRECT_LOCAL_CACHE_PREFETCH,
+};
+
 pub struct FileStoreFetchMetrics {
     pub(crate) indexedlog: &'static LocalAndCacheFetchMetrics,
     pub(crate) lfs: &'static LocalAndCacheFetchMetrics,
