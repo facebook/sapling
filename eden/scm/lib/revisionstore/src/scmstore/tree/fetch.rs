@@ -130,14 +130,7 @@ impl FetchState {
             let entry = LazyTree::SaplingRemoteApi(entry);
 
             if aux_cache.is_some() || tree_aux_store.is_some() {
-                cache_child_aux_data(
-                    &entry,
-                    aux_cache,
-                    tree_aux_store,
-                    // read_before_write=false - okay to write tree aux data without first checking presence
-                    // since SLAPI fetches should only happen if we don't already have data in cache
-                    false,
-                )?;
+                cache_child_aux_data(&entry, aux_cache, tree_aux_store)?;
 
                 if let Some(aux_data) = entry.aux_data() {
                     if let Some(tree_aux_store) = tree_aux_store.as_ref() {
@@ -308,8 +301,6 @@ impl FetchState {
                                                     &lazy_tree,
                                                     aux_cache,
                                                     tree_aux_store,
-                                                    // read_before_write=true - check presence in indexedlog before appending (to avoid duplicate entries on every CAS fetch)
-                                                    true,
                                                 )
                                             {
                                                 self.errors.multiple_keyed_error(keys, "cache child aux data failed", err);
@@ -378,8 +369,6 @@ fn cache_child_aux_data(
     tree: &LazyTree,
     aux_cache: Option<&AuxStore>,
     tree_aux_store: Option<&TreeAuxStore>,
-    // Perform an indexedlog "contains" check to gate writing new entry.
-    read_before_write: bool,
 ) -> Result<()> {
     if aux_cache.is_none() && tree_aux_store.is_none() {
         return Ok(());
@@ -390,7 +379,9 @@ fn cache_child_aux_data(
         match aux {
             AuxData::File(file_aux) => {
                 if let Some(aux_cache) = aux_cache.as_ref() {
-                    if !read_before_write || !aux_cache.contains(hgid)? {
+                    // Perform a read-before-write to avoid duplicate writes to the aux cache, which
+                    // will cause the cache to prematurely roll over (and drop live data).
+                    if !aux_cache.contains(hgid)? {
                         tracing::trace!(?hgid, "writing to aux cache");
                         aux_cache.put(hgid, &file_aux)?;
                     }
@@ -398,7 +389,7 @@ fn cache_child_aux_data(
             }
             AuxData::Tree(tree_aux) => {
                 if let Some(tree_aux_store) = tree_aux_store.as_ref() {
-                    if !read_before_write || !tree_aux_store.contains(hgid)? {
+                    if !tree_aux_store.contains(hgid)? {
                         tracing::trace!(?hgid, "writing to tree aux store");
                         tree_aux_store.put(hgid, &tree_aux)?;
                     }
