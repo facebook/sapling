@@ -16,6 +16,7 @@ use sql::QueryTelemetry;
 #[cfg(fbcode_build)]
 use sql::mysql::MysqlQueryTelemetry;
 use sql_query_telemetry::SqlQueryTelemetry;
+use stats::prelude::*;
 
 const SQL_TELEMETRY_SCUBA_TABLE: &str = "mononoke_sql_telemetry";
 
@@ -70,6 +71,7 @@ pub fn log_query_error(
 
     scuba.add("error", format!("{:?}", err));
     scuba.add("success", 0);
+    STATS::error.add_value(1);
 
     // Log the Scuba sample for debugging when log-level is set to trace.
     tracing::trace!(
@@ -111,18 +113,72 @@ fn log_mysql_query_telemetry(
     let mut scuba = setup_scuba_sample(&sql_tel, granularity, repo_ids)?;
 
     scuba.add("success", 1);
+    STATS::success.add_value(1);
 
-    scuba.add("instance_type", query_tel.instance_type());
-    scuba.add(
-        "read_tables",
-        query_tel.read_tables().iter().collect::<Vec<_>>(),
-    );
-    scuba.add(
-        "write_tables",
-        query_tel.write_tables().iter().collect::<Vec<_>>(),
-    );
+    let opt_instance_type = query_tel.instance_type().cloned();
+
+    let read_tables = query_tel.read_tables().iter().collect::<Vec<_>>();
+    let write_tables = query_tel.write_tables().iter().collect::<Vec<_>>();
+
+    scuba.add("instance_type", opt_instance_type.clone());
+    if let Some(instance_type) = opt_instance_type {
+        // Success
+        STATS::success_instance.add_value(1, (instance_type.clone(),));
+
+        // CPU and Delay RRU by instance type
+        if let Some(client_stats) = query_tel.client_stats() {
+            STATS::cpu_rru_instance.add_value(
+                (1000.0 * client_stats.cpu_rru) as i64,
+                (instance_type.clone(),),
+            );
+            STATS::delay_rru_instance.add_value(
+                (1000.0 * client_stats.delay_rru) as i64,
+                (instance_type.clone(),),
+            );
+            STATS::task_full_delay_rru_instance.add_value(
+                (1000.0 * client_stats.task_full_delay_rru) as i64,
+                (instance_type.clone(),),
+            );
+            STATS::task_some_delay_rru.add_value(
+                (1000.0 * client_stats.task_some_delay_rru) as i64,
+                (instance_type.clone(),),
+            );
+        };
+
+        // Table stats
+        read_tables.iter().for_each(|&table| {
+            STATS::read_tables.add_value(1, (table.clone(), instance_type.clone()))
+        });
+
+        write_tables.iter().for_each(|&table| {
+            STATS::write_tables.add_value(1, (table.clone(), instance_type.clone()))
+        });
+    }
+
+    // CPU and Delay RRU by instance type
+    if let Some(client_stats) = query_tel.client_stats() {
+        STATS::cpu_rru.add_value((1000.0 * client_stats.cpu_rru) as i64);
+        STATS::delay_rru.add_value((1000.0 * client_stats.delay_rru) as i64);
+        STATS::full_delay_rru.add_value((1000.0 * client_stats.full_delay_rru) as i64);
+        STATS::max_cpu_rru.add_value((1000.0 * client_stats.max_rru) as i64);
+    };
+
+    scuba.add("read_tables", read_tables);
+    scuba.add("write_tables", write_tables);
 
     for wait_stats in query_tel.wait_stats() {
+        STATS::wait_count.add_value(
+            wait_stats.wait_count as i64,
+            (wait_stats.wait_type.clone(),),
+        );
+        wait_stats.wait_time.inspect(|wt| {
+            STATS::wait_time.add_value(*wt as i64, (wait_stats.wait_type.clone(),));
+        });
+
+        wait_stats.signal_time.inspect(|st| {
+            STATS::signal_time.add_value(*st as i64, (wait_stats.wait_type.clone(),));
+        });
+
         scuba.add(
             format!("wait_count_{}", wait_stats.wait_type),
             wait_stats.wait_count,
@@ -204,4 +260,64 @@ fn setup_scuba_sample(
     );
 
     Ok(scuba)
+}
+
+// Documentation of MySQL Client Logs: https://fburl.com/wiki/e21tf16l
+define_stats! {
+    prefix = "mononoke.sql_telemetry";
+    success: timeseries("success"; Sum, Average),
+    success_instance: dynamic_timeseries(
+        "success.instance.{}", (instance_type: String);
+        Sum, Average
+    ),
+    error: timeseries("error"; Sum, Average),
+
+    // Wait stats
+    wait_count: dynamic_timeseries(
+        "wait_count.{}", (wait_event_type: String);
+        Sum, Average
+    ),
+    wait_time: dynamic_timeseries(
+        "wait_time.{}", (wait_event_type: String);
+        Sum, Average
+    ),
+    signal_time: dynamic_timeseries(
+        "signal_time.{}", (wait_event_type: String);
+         Sum, Average
+    ),
+
+    // CPU and Delay RRU for all tasks
+    cpu_rru: timeseries("cpu_milli_rru"; Sum, Average),
+    max_cpu_rru: timeseries("max_cpu_milli_rru"; Sum),
+    delay_rru: timeseries("delay_milli_rru"; Sum, Average),
+    full_delay_rru: timeseries("full_delay_milli_rru";  Sum, Average),
+
+    // CPU and Delay RRU split by instance type (e.g. Primary or Secondary)
+    cpu_rru_instance: dynamic_timeseries(
+        "cpu_milli_rru.instance.{}", (instance_type: String);
+         Sum, Average
+    ),
+    delay_rru_instance: dynamic_timeseries(
+        "delay_milli_rru.instance.{}", (instance_type: String);
+         Sum, Average
+    ),
+    task_full_delay_rru_instance: dynamic_timeseries(
+        "task_full_delay_milli_rru.instance.{}", (instance_type: String);
+         Sum, Average
+    ),
+    task_some_delay_rru: dynamic_timeseries(
+        "task_some_delay_milli_rru.instance.{}", (instance_type: String);
+         Sum, Average
+    ),
+
+    // Table stats
+    read_tables: dynamic_timeseries(
+        "reads.{}.instance.{}", (table: String, instance_type: String);
+        Count, Sum
+    ),
+    write_tables: dynamic_timeseries(
+        "writes.{}.instance.{}", (table: String, instance_type: String);
+        Count, Sum
+    ),
+
 }
