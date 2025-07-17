@@ -785,15 +785,16 @@ impl LongRunningRequestsQueue for SqlLongRunningRequestsQueue {
 
     async fn poll(
         &self,
-        _ctx: &CoreContext,
+        ctx: &CoreContext,
         req_id: &RequestId,
     ) -> Result<Option<(bool, LongRunningRequestEntry)>> {
-        let txn = self
+        let sql_txn = self
             .connections
             .write_connection
             .start_transaction()
-            .await?
-            .into();
+            .await?;
+        let txn = sql_ext::Transaction::new(sql_txn, Default::default(), ctx.clone().into());
+
         let (mut txn, rows) =
             GetRequest::query_with_transaction(txn, None, &req_id.0, &req_id.1).await?;
         let entry = match rows.into_iter().next() {
@@ -890,16 +891,16 @@ impl LongRunningRequestsQueue for SqlLongRunningRequestsQueue {
 
     async fn update_for_retry_or_fail(
         &self,
-        _ctx: &CoreContext,
+        ctx: &CoreContext,
         req_id: &RequestId,
         max_retry_allowed: u8,
     ) -> Result<bool> {
-        let txn = self
+        let sql_txn = self
             .connections
             .write_connection
             .start_transaction()
-            .await?
-            .into();
+            .await?;
+        let txn = sql_ext::Transaction::new(sql_txn, Default::default(), ctx.clone().into());
 
         let (mut txn, rows) =
             GetRequest::query_with_transaction(txn, None, &req_id.0, &req_id.1).await?;

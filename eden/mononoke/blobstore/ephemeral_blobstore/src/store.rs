@@ -219,12 +219,12 @@ impl RepoEphemeralStoreInner {
             Some(duration) => to_chrono(duration),
         };
         let expires_at = created_at + duration;
-        let txn = self
+        let sql_txn = self
             .connections
             .write_connection
             .start_transaction()
-            .await?
-            .into();
+            .await?;
+        let txn = sql_ext::Transaction::new(sql_txn, Default::default(), ctx.clone().into());
         let (txn, res) = CreateBubble::query_with_transaction(
             txn,
             ctx.into(),

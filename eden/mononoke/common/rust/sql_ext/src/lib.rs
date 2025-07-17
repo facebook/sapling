@@ -166,16 +166,6 @@ impl Transaction {
     }
 }
 
-impl From<SqlTransaction> for Transaction {
-    fn from(sql_txn: SqlTransaction) -> Self {
-        Self {
-            inner: sql_txn,
-            txn_telemetry: Default::default(),
-            sql_query_tel: None,
-        }
-    }
-}
-
 pub mod facebook {
     #[cfg(fbcode_build)]
     mod r#impl;

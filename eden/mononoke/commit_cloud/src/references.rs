@@ -221,12 +221,8 @@ pub async fn rename_all(
     let args = UpdateWorkspaceNameArgs {
         new_workspace: new_workspace.to_string(),
     };
-    let mut txn = sql
-        .connections
-        .write_connection
-        .start_transaction()
-        .await?
-        .into();
+    let sql_txn = sql.connections.write_connection.start_transaction().await?;
+    let mut txn = sql_ext::Transaction::new(sql_txn, Default::default(), ctx.clone().into());
 
     (txn, _) = Update::<WorkspaceHead>::update(sql, txn, ctx, cc_ctx.clone(), args.clone()).await?;
     (txn, _) =

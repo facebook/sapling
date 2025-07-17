@@ -78,12 +78,12 @@ impl SqlHgMutationStore {
         new_changeset_ids: HashSet<HgChangesetId>,
         entries: Vec<HgMutationEntry>,
     ) -> Result<()> {
-        let txn = self
+        let sql_txn = self
             .connections
             .write_connection
             .start_transaction()
-            .await?
-            .into();
+            .await?;
+        let txn = sql_ext::Transaction::new(sql_txn, Default::default(), ctx.clone().into());
 
         let mut db_csets = Vec::new();
         let mut db_entries = Vec::new();

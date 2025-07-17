@@ -262,14 +262,15 @@ impl CommitCloud {
             .map_err(CommitCloudError::internal_error);
         }
 
-        let mut txn = self
+        let sql_txn = self
             .storage
             .connections
             .write_connection
             .start_transaction()
             .await
-            .map_err(CommitCloudInternalError::Error)?
-            .into();
+            .map_err(CommitCloudInternalError::Error)?;
+        let mut txn =
+            sql_ext::Transaction::new(sql_txn, Default::default(), self.ctx.clone().into());
 
         let initiate_workspace = params.version == 0
             && params.new_heads.is_empty()
@@ -498,13 +499,13 @@ impl CommitCloud {
         // Check if workspace exists
         let _ = self.get_workspace(cc_ctx).await?;
 
-        let txn = self
+        let sql_txn = self
             .storage
             .connections
             .write_connection
             .start_transaction()
-            .await?
-            .into();
+            .await?;
+        let txn = sql_ext::Transaction::new(sql_txn, Default::default(), self.ctx.clone().into());
 
         let (txn, affected_rows) = Update::<WorkspaceVersion>::update(
             &self.storage,

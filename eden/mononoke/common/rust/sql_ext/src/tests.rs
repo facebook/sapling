@@ -191,7 +191,11 @@ mod facebook {
         let _res = WriteQuery1::query(&connection, Some(tel_logger.clone()), &[(&1i64,), (&2i64,)])
             .await?;
 
-        let txn: Transaction = connection.start_transaction().await?.into();
+        let txn = Transaction::new(
+            connection.start_transaction().await?,
+            Default::default(),
+            Some(tel_logger.clone()),
+        );
         let txn = txn.add_sql_query_tel(tel_logger.clone());
 
         // Query with Repo ID 1

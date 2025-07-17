@@ -434,12 +434,8 @@ impl MutableRenames {
             path_hashes.insert(&rename.src_path_hash().hash.0);
         }
 
-        let txn = self
-            .store
-            .write_connection
-            .start_transaction()
-            .await?
-            .into();
+        let sql_txn = self.store.write_connection.start_transaction().await?;
+        let txn = sql_ext::Transaction::new(sql_txn, Default::default(), ctx.clone().into());
 
         // Delete renames
         let (txn, delete_renames_result) =

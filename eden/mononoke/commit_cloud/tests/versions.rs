@@ -35,12 +35,8 @@ async fn test_versions(fb: FacebookInit) -> anyhow::Result<()> {
         archived: false,
     };
 
-    let mut txn = sql
-        .connections
-        .write_connection
-        .start_transaction()
-        .await?
-        .into();
+    let sql_txn = sql.connections.write_connection.start_transaction().await?;
+    let mut txn = sql_ext::Transaction::new(sql_txn, Default::default(), ctx.clone().into());
     txn = sql
         .insert(txn, &ctx, reponame.clone(), workspace.clone(), args.clone())
         .await?;
@@ -65,12 +61,8 @@ async fn test_versions(fb: FacebookInit) -> anyhow::Result<()> {
         archived: false,
     };
 
-    txn = sql
-        .connections
-        .write_connection
-        .start_transaction()
-        .await?
-        .into();
+    let sql_txn = sql.connections.write_connection.start_transaction().await?;
+    txn = sql_ext::Transaction::new(sql_txn, Default::default(), ctx.clone().into());
     txn = sql
         .insert(
             txn,
@@ -86,12 +78,8 @@ async fn test_versions(fb: FacebookInit) -> anyhow::Result<()> {
 
     let cc_ctx = CommitCloudContext::new(&workspace.clone(), &reponame.clone())?;
     let archive_args = UpdateVersionArgs::Archive(true);
-    txn = sql
-        .connections
-        .write_connection
-        .start_transaction()
-        .await?
-        .into();
+    let sql_txn = sql.connections.write_connection.start_transaction().await?;
+    txn = sql_ext::Transaction::new(sql_txn, Default::default(), ctx.clone().into());
     let (txn, affected_rows) =
         Update::<WorkspaceVersion>::update(&sql, txn, &ctx, cc_ctx.clone(), archive_args).await?;
     txn.commit().await?;
@@ -100,12 +88,8 @@ async fn test_versions(fb: FacebookInit) -> anyhow::Result<()> {
     assert!(res3[0].archived);
 
     let new_name_args = UpdateVersionArgs::WorkspaceName(renamed_workspace.clone());
-    let txn = sql
-        .connections
-        .write_connection
-        .start_transaction()
-        .await?
-        .into();
+    let sql_txn = sql.connections.write_connection.start_transaction().await?;
+    let txn = sql_ext::Transaction::new(sql_txn, Default::default(), ctx.clone().into());
     let (txn, affected_rows) =
         Update::<WorkspaceVersion>::update(&sql, txn, &ctx, cc_ctx, new_name_args).await?;
     txn.commit().await?;

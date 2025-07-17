@@ -45,12 +45,8 @@ async fn test_snapshots(fb: FacebookInit) -> anyhow::Result<()> {
             Sha1::from_str("3e0e761030db6e479a7fb58b12881883f9f8c63f").unwrap(),
         ),
     };
-    let mut txn = sql
-        .connections
-        .write_connection
-        .start_transaction()
-        .await?
-        .into();
+    let sql_txn = sql.connections.write_connection.start_transaction().await?;
+    let mut txn = sql_ext::Transaction::new(sql_txn, Default::default(), ctx.clone().into());
     txn = sql
         .insert(
             txn,
@@ -76,12 +72,8 @@ async fn test_snapshots(fb: FacebookInit) -> anyhow::Result<()> {
     assert_eq!(res.len(), 2);
 
     let removed_snapshots = vec![snapshot1.commit];
-    txn = sql
-        .connections
-        .write_connection
-        .start_transaction()
-        .await?
-        .into();
+    let sql_txn = sql.connections.write_connection.start_transaction().await?;
+    txn = sql_ext::Transaction::new(sql_txn, Default::default(), ctx.clone().into());
     txn = Delete::<WorkspaceSnapshot>::delete(
         &sql,
         txn,
@@ -99,12 +91,8 @@ async fn test_snapshots(fb: FacebookInit) -> anyhow::Result<()> {
     let new_name_args = UpdateWorkspaceNameArgs {
         new_workspace: renamed_workspace.clone(),
     };
-    let txn = sql
-        .connections
-        .write_connection
-        .start_transaction()
-        .await?
-        .into();
+    let sql_txn = sql.connections.write_connection.start_transaction().await?;
+    let txn = sql_ext::Transaction::new(sql_txn, Default::default(), ctx.clone().into());
     let (txn, affected_rows) =
         Update::<WorkspaceSnapshot>::update(&sql, txn, &ctx, cc_ctx, new_name_args).await?;
     txn.commit().await?;

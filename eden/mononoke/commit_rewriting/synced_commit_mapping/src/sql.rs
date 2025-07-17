@@ -246,7 +246,8 @@ impl SqlSyncedCommitMapping {
     ) -> Result<u64, Error> {
         ctx.perf_counters()
             .increment_counter(PerfCounterType::SqlWrites);
-        let txn = self.write_connection.start_transaction().await?.into();
+        let sql_txn = self.write_connection.start_transaction().await?;
+        let txn = sql_ext::Transaction::new(sql_txn, Default::default(), ctx.clone().into());
         let (txn, affected_rows) = add_many_in_txn(ctx, txn, entries).await?;
         txn.commit().await?;
         Ok(affected_rows)

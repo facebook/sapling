@@ -703,7 +703,8 @@ impl BookmarkTransaction for SqlBookmarksTransaction {
             let result: Result<(sql_ext::Transaction, u64), _> = loop {
                 attempt += 1;
 
-                let mut txn = write_connection.start_transaction().await?.into();
+                let sql_txn = write_connection.start_transaction().await?;
+                let mut txn = sql_ext::Transaction::new(sql_txn, Default::default(), (&ctx).into());
 
                 txn = match run_transaction_hooks(&ctx, txn, &txn_hooks).await {
                     Ok(txn) => txn,

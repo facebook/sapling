@@ -132,12 +132,8 @@ async fn test_remote_bookmarks(fb: FacebookInit) -> anyhow::Result<()> {
     let bookmark2 =
         WorkspaceRemoteBookmark::new("remote".to_owned(), "my_bookmark2".to_owned(), hgid2)?;
 
-    let mut txn = sql
-        .connections
-        .write_connection
-        .start_transaction()
-        .await?
-        .into();
+    let sql_txn = sql.connections.write_connection.start_transaction().await?;
+    let mut txn = sql_ext::Transaction::new(sql_txn, Default::default(), ctx.clone().into());
     txn = sql
         .insert(
             txn,
@@ -170,12 +166,8 @@ async fn test_remote_bookmarks(fb: FacebookInit) -> anyhow::Result<()> {
     );
 
     let removed_bookmarks = vec!["remote/my_bookmark1".to_owned()];
-    txn = sql
-        .connections
-        .write_connection
-        .start_transaction()
-        .await?
-        .into();
+    let sql_txn = sql.connections.write_connection.start_transaction().await?;
+    txn = sql_ext::Transaction::new(sql_txn, Default::default(), ctx.clone().into());
     txn = Delete::<WorkspaceRemoteBookmark>::delete(
         &sql,
         txn,
@@ -193,12 +185,8 @@ async fn test_remote_bookmarks(fb: FacebookInit) -> anyhow::Result<()> {
     let new_name_args = UpdateWorkspaceNameArgs {
         new_workspace: renamed_workspace.clone(),
     };
-    let txn = sql
-        .connections
-        .write_connection
-        .start_transaction()
-        .await?
-        .into();
+    let sql_txn = sql.connections.write_connection.start_transaction().await?;
+    let txn = sql_ext::Transaction::new(sql_txn, Default::default(), ctx.clone().into());
     let (txn, affected_rows) =
         Update::<WorkspaceRemoteBookmark>::update(&sql, txn, &ctx, cc_ctx, new_name_args).await?;
     txn.commit().await?;

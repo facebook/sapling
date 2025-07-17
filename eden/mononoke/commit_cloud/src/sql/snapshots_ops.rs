@@ -79,7 +79,7 @@ impl Insert<WorkspaceSnapshot> for SqlCommitCloud {
     ) -> anyhow::Result<Transaction> {
         let (txn, _) = InsertSnapshot::query_with_transaction(
             txn,
-            ctx.into(),
+            ctx.clone().into(),
             &reponame,
             &workspace,
             &data.commit,
@@ -101,7 +101,7 @@ impl Update<WorkspaceSnapshot> for SqlCommitCloud {
     ) -> anyhow::Result<(Transaction, u64)> {
         let (txn, result) = UpdateWorkspaceName::query_with_transaction(
             txn,
-            ctx.into(),
+            ctx.clone().into(),
             &cc_ctx.reponame,
             &cc_ctx.workspace,
             &args.new_workspace,
@@ -124,7 +124,7 @@ impl Delete<WorkspaceSnapshot> for SqlCommitCloud {
     ) -> anyhow::Result<Transaction> {
         let (txn, _) = DeleteSnapshot::query_with_transaction(
             txn,
-            ctx.into(),
+            ctx.clone().into(),
             &reponame,
             &workspace,
             &args.removed_snapshots,
