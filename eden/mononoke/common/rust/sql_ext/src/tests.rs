@@ -395,7 +395,7 @@ mod facebook {
                         // Scuba groups the logs by type (e.g. int, normal), so
                         // let's remove those and flatten the sample into a single
                         // json object.
-                        let flattended_log = json
+                        let flattened_log = json
                             .as_object()
                             .iter()
                             .flat_map(|obj| {
@@ -409,20 +409,20 @@ mod facebook {
                             })
                             .collect::<serde_json::Value>();
 
-                        println!("flattend_log: {flattended_log:#?}");
+                        println!("flattened_log: {flattened_log:#?}");
 
-                        let success: bool = flattended_log["success"]
+                        let success: bool = flattened_log["success"]
                             .as_i64()
                             .map(|i| i == 1)
                             .expect("success should always be logged");
                         let granularity = serde_json::from_value::<TelemetryGranularity>(
-                            flattended_log["granularity"].clone(),
+                            flattened_log["granularity"].clone(),
                         )?;
 
                         let query_name: Option<String> =
-                            flattended_log["query_name"].as_str().map(String::from);
+                            flattened_log["query_name"].as_str().map(String::from);
 
-                        let repo_ids: Vec<RepositoryId> = flattended_log["repo_ids"]
+                        let repo_ids: Vec<RepositoryId> = flattened_log["repo_ids"]
                             .as_array()
                             .map(|ids| {
                                 ids.iter()
@@ -437,7 +437,7 @@ mod facebook {
                             .unwrap_or_default();
                         // Now deserialize that into a MysqlQueryTelemetry object
                         let mysql_tel =
-                            serde_json::from_value::<MysqlQueryTelemetry>(flattended_log)?;
+                            serde_json::from_value::<MysqlQueryTelemetry>(flattened_log)?;
 
                         Ok(ScubaTelemetryLogSample {
                             mysql_telemetry: mysql_tel,

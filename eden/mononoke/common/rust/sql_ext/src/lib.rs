@@ -15,7 +15,9 @@ mod telemetry;
 mod tests;
 
 use anyhow::Result;
+use mononoke_types::RepositoryId;
 use sql::Connection;
+use sql::QueryTelemetry;
 pub use sql::SqlConnections;
 pub use sql::SqlShardedConnections;
 use sql::Transaction as SqlTransaction;
@@ -25,7 +27,9 @@ pub use sqlite::open_sqlite_in_memory;
 pub use sqlite::open_sqlite_path;
 
 pub use crate::mononoke_queries::should_retry_mysql_query as should_retry_query;
+use crate::telemetry::TelemetryGranularity;
 use crate::telemetry::TransactionTelemetry;
+use crate::telemetry::log_query_telemetry;
 use crate::telemetry::log_transaction_telemetry;
 
 #[must_use]
@@ -133,6 +137,32 @@ impl Transaction {
     /// Perform a rollback on this transaction
     pub async fn rollback(self) -> Result<()> {
         self.inner.rollback().await
+    }
+
+    pub fn from_transaction_query_result(
+        sql_txn: SqlTransaction,
+        opt_tel: Option<QueryTelemetry>,
+        mut txn_telemetry: TransactionTelemetry,
+        tel_logger: Option<SqlQueryTelemetry>,
+        query_repo_ids: Vec<RepositoryId>,
+        granularity: TelemetryGranularity,
+        query_name: &str,
+    ) -> Result<Self> {
+        if let Some(tel) = opt_tel.as_ref() {
+            txn_telemetry.add_query_telemetry(tel.clone())
+        };
+
+        txn_telemetry.add_repo_ids(query_repo_ids.clone());
+
+        log_query_telemetry(
+            opt_tel,
+            tel_logger.as_ref(),
+            granularity,
+            query_repo_ids,
+            query_name,
+        )?;
+
+        Ok(Transaction::new(sql_txn, txn_telemetry, tel_logger))
     }
 }
 

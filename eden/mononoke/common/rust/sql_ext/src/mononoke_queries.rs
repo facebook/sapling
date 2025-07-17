@@ -427,7 +427,7 @@ macro_rules! mononoke_queries {
 
                     let opt_tel = write_res.query_telemetry().clone();
 
-                   let txn = build_transaction_wrapper(
+                   let txn = Transaction::from_transaction_query_result(
                         sql_txn,
                         opt_tel,
                         txn_telemetry,
@@ -538,7 +538,6 @@ macro_rules! mononoke_queries {
 
                     let granularity = TelemetryGranularity::TransactionQuery;
 
-
                     // Check if any parameter is a RepositoryId and pass it to telemetry
                     let query_repo_ids = $crate::extract_repo_ids_from_queries!($($pname: $ptype; )*);
 
@@ -559,7 +558,7 @@ macro_rules! mononoke_queries {
 
                     let opt_tel = write_res.query_telemetry().clone();
 
-                    let txn = build_transaction_wrapper(
+                    let txn = Transaction::from_transaction_query_result(
                         sql_txn,
                         opt_tel,
                         txn_telemetry,
@@ -619,7 +618,7 @@ macro_rules! read_query_with_transaction {
             )
         })?;
 
-        let txn = build_transaction_wrapper(
+        let txn = Transaction::from_transaction_query_result(
             sql_txn,
             opt_tel,
             txn_telemetry,
@@ -667,9 +666,10 @@ pub fn build_transaction_wrapper(
     granularity: TelemetryGranularity,
     query_name: &str,
 ) -> Result<Transaction> {
-    opt_tel
-        .as_ref()
-        .map(|tel| txn_telemetry.add_query_telemetry(tel.clone()));
+    if let Some(tel) = opt_tel.as_ref() {
+        txn_telemetry.add_query_telemetry(tel.clone())
+    };
+
     txn_telemetry.add_repo_ids(query_repo_ids.clone());
 
     log_query_telemetry(
