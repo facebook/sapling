@@ -5,6 +5,7 @@
  * GNU General Public License version 2.
  */
 
+use std::collections::HashSet;
 use std::num::NonZeroU64;
 
 use anyhow::Error;
@@ -30,6 +31,18 @@ pub enum TelemetryGranularity {
     Transaction,
 }
 
+/// Telemetry we would like to keep track of for a transaction
+#[derive(Clone, Debug, Default)]
+pub struct TransactionTelemetry {
+    /// Tables that were read from
+    pub read_tables: HashSet<String>,
+    /// Tables that were written to
+    pub write_tables: HashSet<String>,
+    /// Repo ids that were involved in at least one query in this transaction
+    pub repo_ids: HashSet<RepositoryId>,
+    // TODO(T223577767): track name of the queries from the transaction
+}
+
 // TODO(T223577767): make these args required and remove the need for
 // `log_query_telemetry_impl`
 pub fn log_query_telemetry(
@@ -44,6 +57,20 @@ pub fn log_query_telemetry(
         }
         // TODO(T223577767): handle case when there's no telemetry
         _ => Ok(()),
+    }
+}
+
+// TODO(T223577767): make these args required and remove the need for
+// `log_query_telemetry_impl`
+pub fn log_transaction_telemetry(
+    txn_tel: TransactionTelemetry,
+    opt_sql_tel: Option<SqlQueryTelemetry>,
+) -> Result<()> {
+    if let Some(sql_tel) = opt_sql_tel {
+        log_transaction_telemetry_impl(txn_tel, sql_tel)
+    } else {
+        // TODO(T223577767): handle case when there's no telemetry
+        Ok(())
     }
 }
 
@@ -217,6 +244,38 @@ fn log_mysql_query_telemetry(
     Ok(())
 }
 
+fn log_transaction_telemetry_impl(
+    txn_tel: TransactionTelemetry,
+    sql_tel: SqlQueryTelemetry,
+) -> Result<()> {
+    let mut scuba = setup_scuba_sample(
+        &sql_tel,
+        TelemetryGranularity::Transaction,
+        txn_tel.repo_ids.into_iter().collect::<Vec<_>>(),
+    )?;
+
+    scuba.add("success", 1);
+
+    scuba.add(
+        "read_tables",
+        txn_tel.read_tables.into_iter().collect::<Vec<_>>(),
+    );
+    scuba.add(
+        "write_tables",
+        txn_tel.write_tables.into_iter().collect::<Vec<_>>(),
+    );
+
+    // Log the Scuba sample for debugging when log-level is set to trace.
+    tracing::trace!(
+        "Logging transaction telemetry to scuba: {0:#?}",
+        scuba.get_sample()
+    );
+
+    scuba.log();
+
+    Ok(())
+}
+
 /// Sets fields that are present in both successful and failed queries.
 fn setup_scuba_sample(
     sql_tel: &SqlQueryTelemetry,
@@ -260,6 +319,31 @@ fn setup_scuba_sample(
     );
 
     Ok(scuba)
+}
+
+impl TransactionTelemetry {
+    pub fn add_query_telemetry(&mut self, query_tel: QueryTelemetry) {
+        match query_tel {
+            #[cfg(fbcode_build)]
+            QueryTelemetry::MySQL(mysql_tel) => {
+                self.add_mysql_query_telemetry(mysql_tel);
+            }
+            _ => (),
+        }
+    }
+
+    pub fn add_repo_ids<I>(&mut self, repo_ids: I)
+    where
+        I: IntoIterator<Item = RepositoryId>,
+    {
+        self.repo_ids.extend(repo_ids);
+    }
+
+    #[cfg(fbcode_build)]
+    fn add_mysql_query_telemetry(&mut self, query_tel: MysqlQueryTelemetry) {
+        self.read_tables.extend(query_tel.read_tables);
+        self.write_tables.extend(query_tel.write_tables);
+    }
 }
 
 // Documentation of MySQL Client Logs: https://fburl.com/wiki/e21tf16l

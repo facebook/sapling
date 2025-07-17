@@ -20,9 +20,17 @@ use itertools::Itertools;
 use maplit::hashmap;
 use maplit::hashset;
 use memcache::KeyGen;
+use mononoke_types::RepositoryId;
 use retry::RetryLogic;
 use retry::retry;
+use sql::QueryTelemetry;
 use sql_query_config::CachingConfig;
+
+use crate::SqlQueryTelemetry;
+use crate::Transaction;
+use crate::TransactionTelemetry;
+use crate::telemetry::TelemetryGranularity;
+use crate::telemetry::log_query_telemetry;
 
 const RETRY_ATTEMPTS: usize = 2;
 
@@ -374,7 +382,11 @@ macro_rules! mononoke_queries {
                     let query_repo_ids = $crate::extract_repo_ids_from_queries!($($pname: $ptype; )*);
 
 
-                    let Transaction{inner: sql_txn} = transaction;
+                    let Transaction {
+                        inner: sql_txn,
+                        txn_telemetry
+                    } = transaction;
+
 
                     let (sql_txn, write_res) = [<$name Impl>]::commented_query_with_transaction(
                         sql_txn,
@@ -392,9 +404,16 @@ macro_rules! mononoke_queries {
 
                     let opt_tel = write_res.query_telemetry().clone();
 
-                    log_query_telemetry(opt_tel, tel_logger, granularity, query_repo_ids)?;
+                   let txn = build_transaction_wrapper(
+                        sql_txn,
+                        opt_tel,
+                        txn_telemetry,
+                        tel_logger,
+                        query_repo_ids,
+                        granularity
+                    )?;
 
-                    Ok((Transaction::from_sql_transaction(sql_txn), write_res))
+                    Ok((txn, write_res))
 
                 }
             }
@@ -498,7 +517,11 @@ macro_rules! mononoke_queries {
                     let query_repo_ids = $crate::extract_repo_ids_from_queries!($($pname: $ptype; )*);
 
 
-                    let Transaction{inner: sql_txn} = transaction;
+                    let Transaction {
+                        inner: sql_txn,
+                        txn_telemetry
+                    } = transaction;
+
                     let (sql_txn, write_res) = [<$name Impl>]::commented_query_with_transaction(
                         sql_txn,
                         cri_str.as_deref()
@@ -510,9 +533,16 @@ macro_rules! mononoke_queries {
 
                     let opt_tel = write_res.query_telemetry().clone();
 
-                    log_query_telemetry(opt_tel, tel_logger, granularity, query_repo_ids)?;
+                    let txn = build_transaction_wrapper(
+                        sql_txn,
+                        opt_tel,
+                        txn_telemetry,
+                        tel_logger,
+                        query_repo_ids,
+                        granularity
+                    )?;
 
-                    Ok((Transaction::from_sql_transaction(sql_txn), write_res))
+                    Ok((txn, write_res))
                 }
             }
 
@@ -538,7 +568,11 @@ macro_rules! read_query_with_transaction {
         let cri = $tel_logger.as_ref().and_then(|p| p.client_request_info());
         let cri_str = cri.map(|cri| serde_json::to_string(&cri)).transpose()?;
 
-        let Transaction{inner: sql_txn} = $transaction;
+        let Transaction {
+            inner: sql_txn,
+            txn_telemetry
+        } = $transaction;
+
 
         let (sql_txn, (res, opt_tel)) = paste::expr! {
             [<$name Impl>]::commented_query_with_transaction(
@@ -551,10 +585,16 @@ macro_rules! read_query_with_transaction {
             log_query_error(&$tel_logger, &e, granularity, $query_repo_ids.clone())
         })?;
 
-        log_query_telemetry(opt_tel, $tel_logger, granularity, $query_repo_ids)?;
+        let txn = build_transaction_wrapper(
+            sql_txn,
+            opt_tel,
+            txn_telemetry,
+            $tel_logger,
+            $query_repo_ids,
+            granularity
+        )?;
 
-
-        Ok((Transaction::from_sql_transaction(sql_txn), res))
+        Ok((txn, res))
     }};
 }
 
@@ -580,6 +620,24 @@ macro_rules! extract_repo_ids_from_queries {
     ($pname:ident: $ptype:ty; $($rest:tt)*) => {
         $crate::extract_repo_ids_from_queries!($($rest)*)
     };
+}
+
+/// Update the transaction telemetry and build the Mononoke Transaction wrapper
+pub fn build_transaction_wrapper(
+    sql_txn: sql::Transaction,
+    opt_tel: Option<QueryTelemetry>,
+    mut txn_telemetry: TransactionTelemetry,
+    tel_logger: Option<SqlQueryTelemetry>,
+    query_repo_ids: Vec<RepositoryId>,
+    granularity: TelemetryGranularity,
+) -> Result<Transaction> {
+    opt_tel
+        .as_ref()
+        .map(|tel| txn_telemetry.add_query_telemetry(tel.clone()));
+    txn_telemetry.add_repo_ids(query_repo_ids.clone());
+    log_query_telemetry(opt_tel, tel_logger, granularity, query_repo_ids)?;
+
+    Ok(Transaction::new(sql_txn, txn_telemetry))
 }
 
 #[cfg(fbcode_build)]

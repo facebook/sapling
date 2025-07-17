@@ -25,6 +25,8 @@ pub use sqlite::open_sqlite_in_memory;
 pub use sqlite::open_sqlite_path;
 
 pub use crate::mononoke_queries::should_retry_mysql_query as should_retry_query;
+use crate::telemetry::TransactionTelemetry;
+use crate::telemetry::log_transaction_telemetry;
 
 #[must_use]
 pub enum TransactionResult {
@@ -55,34 +57,61 @@ pub mod _macro_internal {
     pub use crate::Transaction;
     pub use crate::mononoke_queries::CacheData;
     pub use crate::mononoke_queries::CachedQueryResult;
+    pub use crate::mononoke_queries::build_transaction_wrapper;
     pub use crate::mononoke_queries::query_with_retry;
     pub use crate::mononoke_queries::query_with_retry_no_cache;
     pub use crate::telemetry::TelemetryGranularity;
     pub use crate::telemetry::log_query_error;
     pub use crate::telemetry::log_query_telemetry;
+    pub use crate::telemetry::log_transaction_telemetry;
 }
 
 /// Wrapper over the SQL transaction that will keep track of telemetry from the
 /// entire transaction.
 pub struct Transaction {
     pub inner: SqlTransaction,
+
+    pub txn_telemetry: TransactionTelemetry,
 }
 
 impl Transaction {
+    pub fn new(sql_txn: SqlTransaction, txn_telemetry: TransactionTelemetry) -> Self {
+        Self {
+            inner: sql_txn,
+            txn_telemetry,
+        }
+    }
+
     /// Create a new transaction for the provided connection.
-    pub async fn new(connection: &Connection) -> Result<Self> {
+    pub async fn from_connection(connection: &Connection) -> Result<Self> {
         let inner = SqlTransaction::new(connection).await?;
-        Ok(Self { inner })
+
+        Ok(Self {
+            inner,
+            txn_telemetry: Default::default(),
+        })
     }
 
     /// Create a new transaction for the provided connection.
     pub fn from_sql_transaction(sql_txn: SqlTransaction) -> Self {
-        Self { inner: sql_txn }
+        Self {
+            inner: sql_txn,
+            txn_telemetry: Default::default(),
+        }
     }
 
     /// Perform a commit on this transaction
     pub async fn commit(self) -> Result<()> {
-        self.inner.commit().await
+        let Transaction {
+            inner: sql_txn,
+            txn_telemetry,
+            ..
+        } = self;
+
+        let opt_sql_tel = None; // TODO: add SqlQueryTelemetry for the transaction itself
+        log_transaction_telemetry(txn_telemetry, opt_sql_tel)?;
+
+        sql_txn.commit().await
     }
 
     /// Perform a rollback on this transaction
@@ -93,7 +122,10 @@ impl Transaction {
 
 impl From<SqlTransaction> for Transaction {
     fn from(sql_txn: SqlTransaction) -> Self {
-        Self { inner: sql_txn }
+        Self {
+            inner: sql_txn,
+            txn_telemetry: Default::default(),
+        }
     }
 }
 
