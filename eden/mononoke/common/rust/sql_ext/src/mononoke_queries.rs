@@ -119,6 +119,7 @@ macro_rules! mononoke_queries {
                         || {
                             let tel_logger = tel_logger.clone();
                             async move {
+                                let query_name = stringify!($name);
                                 let cri = tel_logger.as_ref().and_then(|p| p.client_request_info());
                                 // Convert ClientRequestInfo to string if present
                                 let cri_str = cri.map(|cri| serde_json::to_string(cri)).transpose()?;
@@ -134,7 +135,13 @@ macro_rules! mononoke_queries {
                                     $( $pname, )*
                                     $( $lname, )*
                                 ).await.inspect_err(|e| {
-                                    log_query_error(&tel_logger, &e, granularity, repo_ids.clone())
+                                    log_query_error(
+                                        &tel_logger,
+                                        &e,
+                                        granularity,
+                                        repo_ids.clone(),
+                                        query_name
+                                    )
                                 })?;
 
                                 log_query_telemetry(
@@ -142,6 +149,7 @@ macro_rules! mononoke_queries {
                                     tel_logger.as_ref(),
                                     granularity,
                                     repo_ids,
+                                    query_name,
                                 )?;
 
 
@@ -159,12 +167,14 @@ macro_rules! mononoke_queries {
                     $( $lname: &[ $ltype ], )*
                 ) -> Result<(Transaction, Vec<($( $rtype, )*)>)>
                 {
+                    let query_name = stringify!($name);
                     let query_repo_ids = $crate::extract_repo_ids_from_queries!($($pname: $ptype; )*);
                     $crate::read_query_with_transaction!(
                         $name,
                         transaction,
                         tel_logger,
                         query_repo_ids,
+                        query_name,
                         ($( $pname: $ptype ),*),
                         ($( $lname: $ltype )*)
                     )
@@ -230,7 +240,7 @@ macro_rules! mononoke_queries {
                         || {
                             let tel_logger = tel_logger.clone();
                             async move {
-
+                                let query_name = stringify!($name);
                                 let cri = tel_logger.as_ref().and_then(|p| p.client_request_info());
                                 // Convert ClientRequestInfo to string if present
                                 let cri_str = cri.map(|cri| serde_json::to_string(&cri)).transpose()?;
@@ -247,7 +257,13 @@ macro_rules! mononoke_queries {
                                     $( $lname, )*
 
                                 ).await.inspect_err(|e| {
-                                    log_query_error(&tel_logger, &e, granularity, repo_ids.clone())
+                                    log_query_error(
+                                        &tel_logger,
+                                        &e,
+                                        granularity,
+                                        repo_ids.clone(),
+                                        &query_name
+                                    )
                                 })?;
 
                                 log_query_telemetry(
@@ -255,6 +271,7 @@ macro_rules! mononoke_queries {
                                     tel_logger.as_ref(),
                                     granularity,
                                     repo_ids,
+                                    query_name,
                                 )?;
                                 Ok(CachedQueryResult(res))
                             }
@@ -272,12 +289,14 @@ macro_rules! mononoke_queries {
                     $( $lname: &[ $ltype ], )*
                 ) -> Result<(Transaction, Vec<($( $rtype, )*)>)>
                 {
+                    let query_name = stringify!($name);
                     let query_repo_ids = $crate::extract_repo_ids_from_queries!($($pname: $ptype; )*);
                     $crate::read_query_with_transaction!(
                         $name,
                         transaction,
                         tel_logger,
                         query_repo_ids,
+                        query_name,
                         ($( $pname: $ptype ),*),
                         ($( $lname: $ltype )*)
                     )
@@ -337,6 +356,7 @@ macro_rules! mononoke_queries {
                     values: &'a[($( & $vtype, )*)],
                     $( $pname: &'a $ptype ),*
                 ) -> Result<WriteResult> {
+                    let query_name = stringify!($name);
                     let cri = tel_logger.as_ref().and_then(|p| p.client_request_info());
                     // Convert ClientRequestInfo to string if present
                     let cri_str = cri.map(|cri| serde_json::to_string(&cri)).transpose()?;
@@ -354,12 +374,12 @@ macro_rules! mononoke_queries {
                             $( , $pname )*
                         ),
                     ).await.inspect_err(|e| {
-                        log_query_error(&tel_logger, &e, granularity, repo_ids.clone())
+                        log_query_error(&tel_logger, &e, granularity, repo_ids.clone(), &query_name)
                     })?;
 
                     let opt_tel = write_res.query_telemetry().clone();
 
-                    log_query_telemetry(opt_tel, tel_logger.as_ref(), granularity, repo_ids)?;
+                    log_query_telemetry(opt_tel, tel_logger.as_ref(), granularity, repo_ids, &query_name)?;
 
                     Ok(write_res)
 
@@ -372,6 +392,7 @@ macro_rules! mononoke_queries {
                     values: &[($( & $vtype, )*)],
                     $( $pname: & $ptype ),*
                 ) -> Result<(Transaction, WriteResult)> {
+                    let query_name = stringify!($name);
                     let cri = tel_logger.as_ref().and_then(|p| p.client_request_info());
                     // Convert ClientRequestInfo to string if present
                     let cri_str = cri.map(|cri| serde_json::to_string(&cri)).transpose()?;
@@ -399,7 +420,8 @@ macro_rules! mononoke_queries {
                             &tel_logger,
                             &e,
                             granularity,
-                            query_repo_ids.clone()
+                            query_repo_ids.clone(),
+                            &query_name
                         )
                     })?;
 
@@ -411,7 +433,8 @@ macro_rules! mononoke_queries {
                         txn_telemetry,
                         tel_logger,
                         query_repo_ids,
-                        granularity
+                        granularity,
+                        query_name,
                     )?;
 
                     Ok((txn, write_res))
@@ -471,6 +494,7 @@ macro_rules! mononoke_queries {
                     $( $pname: &'a $ptype, )*
                     $( $lname: &'a [ $ltype ], )*
                 ) -> Result<WriteResult> {
+                    let query_name = stringify!($name);
                     let cri = tel_logger.as_ref().and_then(|p| p.client_request_info());
                     // Convert ClientRequestInfo to string if present
                     let cri_str = cri.map(|cri| serde_json::to_string(&cri)).transpose()?;
@@ -488,12 +512,12 @@ macro_rules! mononoke_queries {
                             $( $lname, )*
                         ),
                     ).await.inspect_err(|e| {
-                        log_query_error(&tel_logger, &e, granularity, repo_ids.clone())
+                        log_query_error(&tel_logger, &e, granularity, repo_ids.clone(), &query_name)
                     })?;
 
                     let opt_tel = write_res.query_telemetry().clone();
 
-                    log_query_telemetry(opt_tel, tel_logger.as_ref(), granularity, repo_ids)?;
+                    log_query_telemetry(opt_tel, tel_logger.as_ref(), granularity, repo_ids, &query_name)?;
 
                     Ok(write_res)
                 }
@@ -507,6 +531,7 @@ macro_rules! mononoke_queries {
                     $( $pname: &$ptype, )*
                     $( $lname: &[ $ltype ], )*
                 ) -> Result<(Transaction, WriteResult)> {
+                    let query_name = stringify!($name);
                     let cri = tel_logger.as_ref().and_then(|p| p.client_request_info());
                     // Convert ClientRequestInfo to string if present
                     let cri_str = cri.map(|cri| serde_json::to_string(&cri)).transpose()?;
@@ -516,7 +541,6 @@ macro_rules! mononoke_queries {
 
                     // Check if any parameter is a RepositoryId and pass it to telemetry
                     let query_repo_ids = $crate::extract_repo_ids_from_queries!($($pname: $ptype; )*);
-
 
                     let Transaction {
                         inner: sql_txn,
@@ -530,7 +554,7 @@ macro_rules! mononoke_queries {
                         $( , $pname )*
                         $( , $lname )*
                     ).await.inspect_err(|e| {
-                        log_query_error(&tel_logger, &e, granularity, query_repo_ids.clone())
+                        log_query_error(&tel_logger, &e, granularity, query_repo_ids.clone(), &query_name)
                     })?;
 
                     let opt_tel = write_res.query_telemetry().clone();
@@ -541,7 +565,8 @@ macro_rules! mononoke_queries {
                         txn_telemetry,
                         tel_logger,
                         query_repo_ids,
-                        granularity
+                        granularity,
+                        &query_name
                     )?;
 
                     Ok((txn, write_res))
@@ -562,6 +587,7 @@ macro_rules! read_query_with_transaction {
         $transaction:ident,
         $tel_logger:ident,
         $query_repo_ids:ident,
+        $query_name:ident,
         ($( $pname:ident: $ptype:ty ),*),
         ($( $lname:ident: $ltype:ty )*)
     ) => {{
@@ -584,7 +610,13 @@ macro_rules! read_query_with_transaction {
                 $( $lname, )*
             )
         }.await.inspect_err(|e| {
-            log_query_error(&$tel_logger, &e, granularity, $query_repo_ids.clone())
+            log_query_error(
+                &$tel_logger,
+                &e,
+                granularity,
+                $query_repo_ids.clone(),
+                &$query_name
+            )
         })?;
 
         let txn = build_transaction_wrapper(
@@ -593,7 +625,8 @@ macro_rules! read_query_with_transaction {
             txn_telemetry,
             $tel_logger,
             $query_repo_ids,
-            granularity
+            granularity,
+            $query_name,
         )?;
 
         Ok((txn, res))
@@ -632,13 +665,20 @@ pub fn build_transaction_wrapper(
     tel_logger: Option<SqlQueryTelemetry>,
     query_repo_ids: Vec<RepositoryId>,
     granularity: TelemetryGranularity,
+    query_name: &str,
 ) -> Result<Transaction> {
     opt_tel
         .as_ref()
         .map(|tel| txn_telemetry.add_query_telemetry(tel.clone()));
     txn_telemetry.add_repo_ids(query_repo_ids.clone());
 
-    log_query_telemetry(opt_tel, tel_logger.as_ref(), granularity, query_repo_ids)?;
+    log_query_telemetry(
+        opt_tel,
+        tel_logger.as_ref(),
+        granularity,
+        query_repo_ids,
+        query_name,
+    )?;
 
     Ok(Transaction::new(sql_txn, txn_telemetry, tel_logger))
 }

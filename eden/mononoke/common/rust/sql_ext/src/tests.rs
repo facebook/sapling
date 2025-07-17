@@ -82,6 +82,7 @@ mod facebook {
         success: bool,
         repo_ids: Vec<RepositoryId>,
         granularity: TelemetryGranularity,
+        query_name: Option<String>,
     }
 
     #[mononoke::fbinit_test]
@@ -149,6 +150,7 @@ mod facebook {
 
         // Columns expected in some samples, but not necessarily all.
         let expected_in_some: HashSet<String> = hashset! {
+            "query_name",
             "read_tables",
             "signal_time_ENQUEUE",
             "wait_count_ENQUEUE",
@@ -220,6 +222,7 @@ mod facebook {
                 success: true,
                 repo_ids: vec![],
                 granularity: TelemetryGranularity::Query,
+                query_name: Some("WriteQuery1".to_string()),
                 mysql_telemetry: MysqlQueryTelemetry {
                     read_tables: hashset! {},
                     write_tables: hashset! {"mononoke_queries_test".to_string()},
@@ -230,6 +233,7 @@ mod facebook {
                 success: true,
                 repo_ids: vec![1.into()],
                 granularity: TelemetryGranularity::TransactionQuery,
+                query_name: Some("ReadQuery1".to_string()),
                 mysql_telemetry: MysqlQueryTelemetry {
                     read_tables: hashset! {"mononoke_queries_test".to_string()},
                     write_tables: hashset! {},
@@ -240,6 +244,7 @@ mod facebook {
                 success: true,
                 repo_ids: vec![2.into(), 3.into()],
                 granularity: TelemetryGranularity::TransactionQuery,
+                query_name: Some("ReadQuery2".to_string()),
                 mysql_telemetry: MysqlQueryTelemetry {
                     read_tables: hashset! {"mononoke_queries_test".to_string()},
                     write_tables: hashset! {},
@@ -253,6 +258,7 @@ mod facebook {
                 success: true,
                 repo_ids: vec![1.into(), 2.into(), 3.into()],
                 granularity: TelemetryGranularity::Transaction,
+                query_name: None,
                 mysql_telemetry: MysqlQueryTelemetry {
                     read_tables: hashset! {"mononoke_queries_test".to_string()},
                     write_tables: hashset! {},
@@ -413,6 +419,9 @@ mod facebook {
                             flattended_log["granularity"].clone(),
                         )?;
 
+                        let query_name: Option<String> =
+                            flattended_log["query_name"].as_str().map(String::from);
+
                         let repo_ids: Vec<RepositoryId> = flattended_log["repo_ids"]
                             .as_array()
                             .map(|ids| {
@@ -435,6 +444,7 @@ mod facebook {
                             success,
                             repo_ids,
                             granularity,
+                            query_name,
                         })
                     })
             })

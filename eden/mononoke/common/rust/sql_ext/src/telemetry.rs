@@ -50,10 +50,11 @@ pub fn log_query_telemetry(
     opt_sql_tel: Option<&SqlQueryTelemetry>,
     granularity: TelemetryGranularity,
     repo_ids: Vec<RepositoryId>,
+    query_name: &str,
 ) -> Result<()> {
     match (opt_tel, opt_sql_tel) {
         (Some(query_tel), Some(sql_tel)) => {
-            log_query_telemetry_impl(query_tel, sql_tel, granularity, repo_ids)
+            log_query_telemetry_impl(query_tel, sql_tel, granularity, repo_ids, query_name)
         }
         // TODO(T223577767): handle case when there's no telemetry
         _ => Ok(()),
@@ -80,13 +81,14 @@ pub fn log_query_error(
     err: &Error,
     granularity: TelemetryGranularity,
     repo_ids: Vec<RepositoryId>,
+    query_name: &str,
 ) {
     let sql_tel = match opt_tel.as_ref() {
         Some(sql_tel) => sql_tel,
         None => return,
     };
 
-    let mut scuba = match setup_scuba_sample(sql_tel, granularity, repo_ids) {
+    let mut scuba = match setup_scuba_sample(sql_tel, granularity, repo_ids, Some(query_name)) {
         Ok(scuba) => scuba,
         // This is the only call that can return an Err, but errors will be
         // ignored and logged to stderr instead.
@@ -114,6 +116,7 @@ fn log_query_telemetry_impl(
     sql_tel: &SqlQueryTelemetry,
     granularity: TelemetryGranularity,
     repo_ids: Vec<RepositoryId>,
+    query_name: &str,
 ) -> Result<()> {
     #[cfg(not(fbcode_build))]
     {
@@ -124,7 +127,7 @@ fn log_query_telemetry_impl(
         #[cfg(fbcode_build)]
         QueryTelemetry::MySQL(telemetry) => {
             // Log to scuba
-            log_mysql_query_telemetry(telemetry, sql_tel, granularity, repo_ids)
+            log_mysql_query_telemetry(telemetry, sql_tel, granularity, repo_ids, query_name)
         }
         _ => Err(anyhow!("Unsupported query telemetry type")),
     }
@@ -136,8 +139,9 @@ fn log_mysql_query_telemetry(
     sql_tel: &SqlQueryTelemetry,
     granularity: TelemetryGranularity,
     repo_ids: Vec<RepositoryId>,
+    query_name: &str,
 ) -> Result<()> {
-    let mut scuba = setup_scuba_sample(&sql_tel, granularity, repo_ids)?;
+    let mut scuba = setup_scuba_sample(&sql_tel, granularity, repo_ids, Some(query_name))?;
 
     scuba.add("success", 1);
     STATS::success.add_value(1);
@@ -252,6 +256,7 @@ fn log_transaction_telemetry_impl(
         &sql_tel,
         TelemetryGranularity::Transaction,
         txn_tel.repo_ids.into_iter().collect::<Vec<_>>(),
+        None,
     )?;
 
     scuba.add("success", 1);
@@ -281,6 +286,7 @@ fn setup_scuba_sample(
     sql_tel: &SqlQueryTelemetry,
     granularity: TelemetryGranularity,
     repo_ids: Vec<RepositoryId>,
+    query_name: Option<&str>,
 ) -> Result<MononokeScubaSampleBuilder> {
     let fb = sql_tel.fb().clone();
 
@@ -296,6 +302,7 @@ fn setup_scuba_sample(
     scuba.add_common_server_data();
 
     scuba.add("granularity", format!("{:?}", granularity));
+    scuba.add("query_name", query_name);
 
     let jk_sample_rate =
         justknobs::get_as::<u64>("scm/mononoke:sql_telemetry_sample_rate", None).unwrap_or(10);
