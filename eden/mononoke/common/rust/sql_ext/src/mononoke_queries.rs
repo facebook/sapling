@@ -118,8 +118,7 @@ macro_rules! mononoke_queries {
                                 let granularity = TelemetryGranularity::Query;
 
                                 // Check if any parameter is a RepositoryId and pass it to telemetry
-                                let repo_id = $crate::mononoke_queries_extract_repo_id!($($pname: $ptype),*);
-                                let repo_ids = repo_id.into_iter().collect::<Vec<_>>();
+                                let repo_ids = $crate::extract_repo_ids_from_queries!($($pname: $ptype; )*);
 
                                 let (res, opt_tel) = [<$name Impl>]::commented_query(
                                     connection,
@@ -158,8 +157,8 @@ macro_rules! mononoke_queries {
                     let granularity = TelemetryGranularity::TransactionQuery;
 
                     // Check if any parameter is a RepositoryId and pass it to telemetry
-                    let repo_id = $crate::mononoke_queries_extract_repo_id!($($pname: $ptype),*);
-                    let query_repo_ids = repo_id.into_iter().collect::<Vec<_>>();
+                    let query_repo_ids = $crate::extract_repo_ids_from_queries!($($pname: $ptype; )*);
+
                     let Transaction{inner: sql_txn} = transaction;
 
 
@@ -246,8 +245,7 @@ macro_rules! mononoke_queries {
                                 let granularity = TelemetryGranularity::Query;
 
                                 // Check if any parameter is a RepositoryId and pass it to telemetry
-                                let repo_id = $crate::mononoke_queries_extract_repo_id!($($pname: $ptype),*);
-                                let repo_ids = repo_id.into_iter().collect::<Vec<_>>();
+                                let repo_ids = $crate::extract_repo_ids_from_queries!($($pname: $ptype; )*);
 
                                 let (res, opt_tel) = [<$name Impl>]::commented_query(
                                     connection,
@@ -288,8 +286,8 @@ macro_rules! mononoke_queries {
                     let granularity = TelemetryGranularity::TransactionQuery;
 
                     // Check if any parameter is a RepositoryId and pass it to telemetry
-                    let repo_id = $crate::mononoke_queries_extract_repo_id!($($pname: $ptype),*);
-                    let query_repo_ids = repo_id.into_iter().collect::<Vec<_>>();
+                    let query_repo_ids = $crate::extract_repo_ids_from_queries!($($pname: $ptype; )*);
+
 
                     let Transaction{inner: sql_txn} = transaction;
 
@@ -369,8 +367,7 @@ macro_rules! mononoke_queries {
                     let granularity = TelemetryGranularity::Query;
 
                     // Check if any parameter is a RepositoryId and pass it to telemetry
-                    let repo_id = $crate::mononoke_queries_extract_repo_id!($($pname: $ptype),*);
-                    let repo_ids = repo_id.into_iter().collect::<Vec<_>>();
+                    let repo_ids = $crate::extract_repo_ids_from_queries!($($pname: $ptype; )*);
 
                     let write_res = query_with_retry_no_cache(
                         || [<$name Impl>]::commented_query(
@@ -405,8 +402,8 @@ macro_rules! mononoke_queries {
                     let granularity = TelemetryGranularity::TransactionQuery;
 
                     // Check if any parameter is a RepositoryId and pass it to telemetry
-                    let repo_id = $crate::mononoke_queries_extract_repo_id!($($pname: $ptype),*);
-                    let query_repo_ids = repo_id.into_iter().collect::<Vec<_>>();
+                    let query_repo_ids = $crate::extract_repo_ids_from_queries!($($pname: $ptype; )*);
+
 
                     let Transaction{inner: sql_txn} = transaction;
 
@@ -492,8 +489,7 @@ macro_rules! mononoke_queries {
                     let granularity = TelemetryGranularity::Query;
 
                     // Check if any parameter is a RepositoryId and pass it to telemetry
-                    let repo_id = $crate::mononoke_queries_extract_repo_id!($($pname: $ptype),*);
-                    let repo_ids = repo_id.into_iter().collect::<Vec<_>>();
+                    let repo_ids = $crate::extract_repo_ids_from_queries!($($pname: $ptype; )*);
 
                     let write_res = query_with_retry_no_cache(
                         || [<$name Impl>]::commented_query(
@@ -528,8 +524,8 @@ macro_rules! mononoke_queries {
 
 
                     // Check if any parameter is a RepositoryId and pass it to telemetry
-                    let repo_id = $crate::mononoke_queries_extract_repo_id!($($pname: $ptype),*);
-                    let query_repo_ids = repo_id.into_iter().collect::<Vec<_>>();
+                    let query_repo_ids = $crate::extract_repo_ids_from_queries!($($pname: $ptype; )*);
+
 
                     let Transaction{inner: sql_txn} = transaction;
                     let (sql_txn, write_res) = [<$name Impl>]::commented_query_with_transaction(
@@ -554,26 +550,28 @@ macro_rules! mononoke_queries {
     };
 
 }
+
 // Helper macro to extract RepositoryId from query parameters
 #[macro_export]
-macro_rules! mononoke_queries_extract_repo_id {
+macro_rules! extract_repo_ids_from_queries {
     // Base case: no parameters
-    () => { None };
-
-    // Match RepositoryId directly
-    ($pname:ident: RepositoryId) => { Some(*$pname) };
+    () => {{
+        Vec::<RepositoryId>::new()
+    }};
 
     // Match RepositoryId with additional parameters
-    ($pname:ident: RepositoryId, $($rest_pname:ident: $rest_ptype:ty),*) => {
-        Some(*$pname)
-    };
+    ($pname:ident: RepositoryId; $($rest:tt)*) => {{
+        vec![*$pname]
+            .into_iter()
+            .chain(
+                $crate::extract_repo_ids_from_queries!($($rest)*)
+            )
+            .collect::<Vec<_>>()
+    }};
 
-    // Single non-RepositoryId parameter
-    ($pname:ident: $ptype:ty) => { None };
-
-    // Multiple parameters, first is not RepositoryId
-    ($pname:ident: $ptype:ty, $($rest_pname:ident: $rest_ptype:ty),*) => {
-        $crate::mononoke_queries_extract_repo_id!($($rest_pname: $rest_ptype),*)
+    // Skip non-RepositoryId parameter and continue with the rest
+    ($pname:ident: $ptype:ty; $($rest:tt)*) => {
+        $crate::extract_repo_ids_from_queries!($($rest)*)
     };
 }
 

@@ -46,6 +46,11 @@ mononoke_queries! {
         none,
         "INSERT INTO mononoke_queries_test (x) VALUES {values}"
     }
+
+    // Test to cover fetching two repo ids
+    read ReadQuery2(small_repo_id: RepositoryId, large_repo_id: RepositoryId) -> (i64) {
+        "SELECT x FROM mononoke_queries_test WHERE ID > {small_repo_id} AND ID > {large_repo_id} LIMIT 10"
+    }
 }
 
 #[cfg(fbcode_build)]
@@ -156,9 +161,6 @@ mod facebook {
         // Read the temp file and print its content
         let content = std::fs::read_to_string(&temp_path)?;
 
-        // Uncomment to debug the entire log file
-        // println!("Scuba log content: {:#?}", content);
-
         // Extract and print all columns from the scuba logs
         let columns = extract_all_scuba_columns(&content, expected_in_all, expected_values);
 
@@ -195,9 +197,13 @@ mod facebook {
         )
         .await?;
         // Query with Repo ID 2
-        let (txn, _res) =
-            ReadQuery1::query_with_transaction(txn, Some(tel_logger), &RepositoryId::new(2))
-                .await?;
+        let (txn, _res) = ReadQuery2::query_with_transaction(
+            txn,
+            Some(tel_logger),
+            &RepositoryId::new(2),
+            &RepositoryId::new(3),
+        )
+        .await?;
 
         txn.commit().await?;
 
@@ -229,7 +235,7 @@ mod facebook {
             },
             ScubaTelemetryLogSample {
                 success: true,
-                repo_ids: vec![2.into()],
+                repo_ids: vec![2.into(), 3.into()],
                 granularity: TelemetryGranularity::TransactionQuery,
                 mysql_telemetry: MysqlQueryTelemetry {
                     read_tables: hashset! {"mononoke_queries_test".to_string()},
@@ -297,10 +303,8 @@ mod facebook {
         .lines()
         .filter_map(|line| serde_json::from_str::<serde_json::Value>(line).ok())
         .fold(HashSet::new(), |mut all_columns, json| {
-            // println!("json: {:#?}", json);
             let sample_columns = extract_columns_from_sample(&json, &expected_values);
 
-            println!("sample_columns: {:#?}", sample_columns);
             assert!(
                 expected_in_all.is_subset(&sample_columns),
                 "Expected columns that should be in all samples are missing: {0:#?}. Sample: {1:#?}",
@@ -326,7 +330,6 @@ mod facebook {
                 .iter()
                 .fold(HashSet::new(), |mut acc, (_category, value)| {
                     if let Some(category_obj) = value.as_object() {
-                        println!("category_obj: {:#?}", category_obj);
                         expected_values.iter().for_each(|(exp_key, exp_v)| {
                             // Check if the key is inside the value object
                             // and if it is, assert the value is the same as expected
