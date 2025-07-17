@@ -23,6 +23,11 @@ namespace InteractiveSmartlogVSExtension
         }
         public override object EditValue(ITypeDescriptorContext context, IServiceProvider provider, object value)
         {
+            if (provider == null)
+            {
+                return value;
+            }
+
             IWindowsFormsEditorService editorService = provider.GetService(typeof(IWindowsFormsEditorService)) as IWindowsFormsEditorService;
             if (editorService != null)
             {
