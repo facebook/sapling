@@ -72,13 +72,28 @@ pub struct Transaction {
     pub inner: SqlTransaction,
 
     pub txn_telemetry: TransactionTelemetry,
+
+    // TODO(T223577767): make this required after updating all callsites
+    pub sql_query_tel: Option<SqlQueryTelemetry>,
 }
 
 impl Transaction {
-    pub fn new(sql_txn: SqlTransaction, txn_telemetry: TransactionTelemetry) -> Self {
+    pub fn new(
+        sql_txn: SqlTransaction,
+        txn_telemetry: TransactionTelemetry,
+        sql_query_tel: Option<SqlQueryTelemetry>,
+    ) -> Self {
         Self {
             inner: sql_txn,
             txn_telemetry,
+            sql_query_tel,
+        }
+    }
+
+    pub fn add_sql_query_tel(self, sql_query_tel: SqlQueryTelemetry) -> Self {
+        Self {
+            sql_query_tel: Some(sql_query_tel),
+            ..self
         }
     }
 
@@ -89,6 +104,7 @@ impl Transaction {
         Ok(Self {
             inner,
             txn_telemetry: Default::default(),
+            sql_query_tel: None,
         })
     }
 
@@ -97,6 +113,7 @@ impl Transaction {
         Self {
             inner: sql_txn,
             txn_telemetry: Default::default(),
+            sql_query_tel: None,
         }
     }
 
@@ -105,11 +122,10 @@ impl Transaction {
         let Transaction {
             inner: sql_txn,
             txn_telemetry,
-            ..
+            sql_query_tel,
         } = self;
 
-        let opt_sql_tel = None; // TODO: add SqlQueryTelemetry for the transaction itself
-        log_transaction_telemetry(txn_telemetry, opt_sql_tel)?;
+        log_transaction_telemetry(txn_telemetry, sql_query_tel)?;
 
         sql_txn.commit().await
     }
@@ -125,6 +141,7 @@ impl From<SqlTransaction> for Transaction {
         Self {
             inner: sql_txn,
             txn_telemetry: Default::default(),
+            sql_query_tel: None,
         }
     }
 }

@@ -16,6 +16,7 @@ use mononoke_types::RepositoryId;
 use sql_query_config::SqlQueryConfig;
 use sql_query_telemetry::SqlQueryTelemetry;
 
+use crate::Transaction;
 use crate::mononoke_queries;
 
 mononoke_queries! {
@@ -59,6 +60,7 @@ mod facebook {
     use std::collections::HashMap;
     use std::collections::HashSet;
 
+    use itertools::Itertools;
     use maplit::hashmap;
     use maplit::hashset;
     use sql::mysql::MysqlQueryTelemetry;
@@ -187,7 +189,8 @@ mod facebook {
         let _res = WriteQuery1::query(&connection, Some(tel_logger.clone()), &[(&1i64,), (&2i64,)])
             .await?;
 
-        let txn = connection.start_transaction().await?.into();
+        let txn: Transaction = connection.start_transaction().await?.into();
+        let txn = txn.add_sql_query_tel(tel_logger.clone());
 
         // Query with Repo ID 1
         let (txn, _res) = ReadQuery1::query_with_transaction(
@@ -246,6 +249,16 @@ mod facebook {
             // TODO(T223577767): test transaction-level metadata, e.g. run multiple queries
             // for different repos and ensure they are all logged together.
             // Expect a new sample for transaction level
+            ScubaTelemetryLogSample {
+                success: true,
+                repo_ids: vec![1.into(), 2.into(), 3.into()],
+                granularity: TelemetryGranularity::Transaction,
+                mysql_telemetry: MysqlQueryTelemetry {
+                    read_tables: hashset! {"mononoke_queries_test".to_string()},
+                    write_tables: hashset! {},
+                    ..Default::default()
+                },
+            },
         ];
 
         pretty_assertions::assert_eq!(scuba_logs, expected_logs);
@@ -409,6 +422,7 @@ mod facebook {
                                             .and_then(|s| s.parse::<i32>().ok())
                                             .map(RepositoryId::new)
                                     })
+                                    .sorted()
                                     .collect()
                             })
                             .unwrap_or_default();

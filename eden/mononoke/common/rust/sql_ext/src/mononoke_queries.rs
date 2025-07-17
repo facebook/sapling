@@ -118,7 +118,7 @@ macro_rules! mononoke_queries {
                 query_with_retry_no_cache(
                         || {
                             let tel_logger = tel_logger.clone();
-                            async {
+                            async move {
                                 let cri = tel_logger.as_ref().and_then(|p| p.client_request_info());
                                 // Convert ClientRequestInfo to string if present
                                 let cri_str = cri.map(|cri| serde_json::to_string(cri)).transpose()?;
@@ -139,7 +139,7 @@ macro_rules! mononoke_queries {
 
                                 log_query_telemetry(
                                     opt_tel,
-                                    tel_logger,
+                                    tel_logger.as_ref(),
                                     granularity,
                                     repo_ids,
                                 )?;
@@ -252,7 +252,7 @@ macro_rules! mononoke_queries {
 
                                 log_query_telemetry(
                                     opt_tel,
-                                    tel_logger,
+                                    tel_logger.as_ref(),
                                     granularity,
                                     repo_ids,
                                 )?;
@@ -359,7 +359,7 @@ macro_rules! mononoke_queries {
 
                     let opt_tel = write_res.query_telemetry().clone();
 
-                    log_query_telemetry(opt_tel, tel_logger, granularity, repo_ids)?;
+                    log_query_telemetry(opt_tel, tel_logger.as_ref(), granularity, repo_ids)?;
 
                     Ok(write_res)
 
@@ -384,7 +384,8 @@ macro_rules! mononoke_queries {
 
                     let Transaction {
                         inner: sql_txn,
-                        txn_telemetry
+                        txn_telemetry,
+                        ..
                     } = transaction;
 
 
@@ -492,7 +493,7 @@ macro_rules! mononoke_queries {
 
                     let opt_tel = write_res.query_telemetry().clone();
 
-                    log_query_telemetry(opt_tel, tel_logger, granularity, repo_ids)?;
+                    log_query_telemetry(opt_tel, tel_logger.as_ref(), granularity, repo_ids)?;
 
                     Ok(write_res)
                 }
@@ -519,7 +520,8 @@ macro_rules! mononoke_queries {
 
                     let Transaction {
                         inner: sql_txn,
-                        txn_telemetry
+                        txn_telemetry,
+                        ..
                     } = transaction;
 
                     let (sql_txn, write_res) = [<$name Impl>]::commented_query_with_transaction(
@@ -568,11 +570,11 @@ macro_rules! read_query_with_transaction {
         let cri = $tel_logger.as_ref().and_then(|p| p.client_request_info());
         let cri_str = cri.map(|cri| serde_json::to_string(&cri)).transpose()?;
 
-        let Transaction {
+       let Transaction {
             inner: sql_txn,
-            txn_telemetry
+            txn_telemetry,
+            sql_query_tel: _sql_query_tel,
         } = $transaction;
-
 
         let (sql_txn, (res, opt_tel)) = paste::expr! {
             [<$name Impl>]::commented_query_with_transaction(
@@ -635,9 +637,10 @@ pub fn build_transaction_wrapper(
         .as_ref()
         .map(|tel| txn_telemetry.add_query_telemetry(tel.clone()));
     txn_telemetry.add_repo_ids(query_repo_ids.clone());
-    log_query_telemetry(opt_tel, tel_logger, granularity, query_repo_ids)?;
 
-    Ok(Transaction::new(sql_txn, txn_telemetry))
+    log_query_telemetry(opt_tel, tel_logger.as_ref(), granularity, query_repo_ids)?;
+
+    Ok(Transaction::new(sql_txn, txn_telemetry, tel_logger))
 }
 
 #[cfg(fbcode_build)]

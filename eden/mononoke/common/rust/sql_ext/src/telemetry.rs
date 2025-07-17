@@ -47,7 +47,7 @@ pub struct TransactionTelemetry {
 // `log_query_telemetry_impl`
 pub fn log_query_telemetry(
     opt_tel: Option<QueryTelemetry>,
-    opt_sql_tel: Option<SqlQueryTelemetry>,
+    opt_sql_tel: Option<&SqlQueryTelemetry>,
     granularity: TelemetryGranularity,
     repo_ids: Vec<RepositoryId>,
 ) -> Result<()> {
@@ -67,7 +67,7 @@ pub fn log_transaction_telemetry(
     opt_sql_tel: Option<SqlQueryTelemetry>,
 ) -> Result<()> {
     if let Some(sql_tel) = opt_sql_tel {
-        log_transaction_telemetry_impl(txn_tel, sql_tel)
+        log_transaction_telemetry_impl(txn_tel, &sql_tel)
     } else {
         // TODO(T223577767): handle case when there's no telemetry
         Ok(())
@@ -111,7 +111,7 @@ pub fn log_query_error(
 
 fn log_query_telemetry_impl(
     query_tel: QueryTelemetry,
-    sql_tel: SqlQueryTelemetry,
+    sql_tel: &SqlQueryTelemetry,
     granularity: TelemetryGranularity,
     repo_ids: Vec<RepositoryId>,
 ) -> Result<()> {
@@ -133,7 +133,7 @@ fn log_query_telemetry_impl(
 #[cfg(fbcode_build)]
 fn log_mysql_query_telemetry(
     query_tel: MysqlQueryTelemetry,
-    sql_tel: SqlQueryTelemetry,
+    sql_tel: &SqlQueryTelemetry,
     granularity: TelemetryGranularity,
     repo_ids: Vec<RepositoryId>,
 ) -> Result<()> {
@@ -246,7 +246,7 @@ fn log_mysql_query_telemetry(
 
 fn log_transaction_telemetry_impl(
     txn_tel: TransactionTelemetry,
-    sql_tel: SqlQueryTelemetry,
+    sql_tel: &SqlQueryTelemetry,
 ) -> Result<()> {
     let mut scuba = setup_scuba_sample(
         &sql_tel,
