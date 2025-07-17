@@ -79,6 +79,7 @@ impl Default for BonsaiChangesetMut {
     }
 }
 
+/// Debug format Hg extras, showing the value as a byte string.
 fn debug_format_hg_extra(
     hg_extra: &SortedVectorMap<String, Vec<u8>>,
     f: &mut std::fmt::Formatter<'_>,
@@ -92,6 +93,7 @@ fn debug_format_hg_extra(
     Ok(())
 }
 
+/// Debug format Git extra headers, showing the key and value as byte strings.
 fn debug_format_git_extra_headers(
     git_extra_headers: &Option<SortedVectorMap<SmallVec<[u8; 24]>, Bytes>>,
     f: &mut std::fmt::Formatter<'_>,
@@ -102,6 +104,7 @@ fn debug_format_git_extra_headers(
                 let mut d = f.debug_map();
                 for (k, v) in git_extra_headers {
                     d.key_with(|f| crate::debug::format_byte_string(k, f));
+                    // The value is `Bytes` which is already formatted correctly.
                     d.value(v);
                 }
                 d.finish()?;

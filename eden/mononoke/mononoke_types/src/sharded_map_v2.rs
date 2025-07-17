@@ -81,13 +81,29 @@ type SmallBinary = SmallVec<[u8; 24]>;
 #[derivative(PartialEq, Debug, Hash, Default(bound = ""))]
 #[derive(Clone, Eq)]
 pub struct ShardedMapV2Node<Value: ShardedMapV2Value> {
+    #[derivative(Debug(format_with = "crate::debug::format_byte_string"))]
     prefix: SmallBinary,
     value: Option<Box<Value>>,
+    #[derivative(Debug(format_with = "debug_format_children"))]
     children: SortedVectorMap<u8, LoadableShardedMapV2Node<Value>>,
     #[derivative(PartialEq = "ignore", Debug = "ignore", Hash = "ignore")]
     weight: OnceLock<usize>,
     #[derivative(PartialEq = "ignore", Debug = "ignore", Hash = "ignore")]
     size: OnceLock<usize>,
+}
+
+/// Debug format node children, showing the key as a byte literal.
+fn debug_format_children<Value: ShardedMapV2Value>(
+    children: &SortedVectorMap<u8, LoadableShardedMapV2Node<Value>>,
+    f: &mut std::fmt::Formatter<'_>,
+) -> std::fmt::Result {
+    let mut d = f.debug_map();
+    for (k, v) in children {
+        d.key_with(|f| crate::debug::format_byte(k, f));
+        d.value(v);
+    }
+    d.finish()?;
+    Ok(())
 }
 
 #[derive(Derivative)]
