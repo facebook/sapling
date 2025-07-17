@@ -144,37 +144,22 @@ macro_rules! mononoke_queries {
                 }
 
                 #[allow(dead_code)]
-                pub async fn query_with_transaction<'a>(
+                pub async fn query_with_transaction(
                     transaction: Transaction,
                     tel_logger: Option<SqlQueryTelemetry>,
-                    $( $pname: &'a $ptype, )*
-                    $( $lname: &'a [ $ltype ], )*
+                    $( $pname: &$ptype, )*
+                    $( $lname: &[ $ltype ], )*
                 ) -> Result<(Transaction, Vec<($( $rtype, )*)>)>
                 {
-                    let cri = tel_logger.as_ref().and_then(|p| p.client_request_info());
-                    // Convert ClientRequestInfo to string if present
-                    let cri_str = cri.map(|cri| serde_json::to_string(&cri)).transpose()?;
-                    let granularity = TelemetryGranularity::TransactionQuery;
-
-                    // Check if any parameter is a RepositoryId and pass it to telemetry
                     let query_repo_ids = $crate::extract_repo_ids_from_queries!($($pname: $ptype; )*);
-
-                    let Transaction{inner: sql_txn} = transaction;
-
-
-                    let (sql_txn, (res, opt_tel)) = [<$name Impl>]::commented_query_with_transaction(
-                        sql_txn,
-                        cri_str.as_deref(),
-                        $( $pname, )*
-                        $( $lname, )*
-                    ).await.inspect_err(|e| {
-                        log_query_error(&tel_logger, &e, granularity, query_repo_ids.clone())
-                    })?;
-
-                    log_query_telemetry(opt_tel, tel_logger, granularity, query_repo_ids)?;
-
-
-                    Ok((Transaction::from_sql_transaction(sql_txn), res))
+                    $crate::read_query_with_transaction!(
+                        $name,
+                        transaction,
+                        tel_logger,
+                        query_repo_ids,
+                        ($( $pname: $ptype ),*),
+                        ($( $lname: $ltype )*)
+                    )
                 }
 
             }
@@ -279,31 +264,15 @@ macro_rules! mononoke_queries {
                     $( $lname: &[ $ltype ], )*
                 ) -> Result<(Transaction, Vec<($( $rtype, )*)>)>
                 {
-                    let cri = tel_logger.as_ref().and_then(|p| p.client_request_info());
-                    // Convert ClientRequestInfo to string if present
-                    let cri_str = cri.map(|cri| serde_json::to_string(&cri)).transpose()?;
-
-                    let granularity = TelemetryGranularity::TransactionQuery;
-
-                    // Check if any parameter is a RepositoryId and pass it to telemetry
                     let query_repo_ids = $crate::extract_repo_ids_from_queries!($($pname: $ptype; )*);
-
-
-                    let Transaction{inner: sql_txn} = transaction;
-
-                    let (sql_txn, (res, opt_tel)) = [<$name Impl>]::commented_query_with_transaction(
-                        sql_txn,
-                        cri_str.as_deref(),
-                        $( $pname, )*
-                        $( $lname, )*
-                    ).await.inspect_err(|e| {
-                        log_query_error(&tel_logger, &e, granularity, query_repo_ids.clone())
-                    })?;
-
-                    log_query_telemetry(opt_tel, tel_logger, granularity, query_repo_ids)?;
-
-
-                    Ok((Transaction::from_sql_transaction(sql_txn), res))
+                    $crate::read_query_with_transaction!(
+                        $name,
+                        transaction,
+                        tel_logger,
+                        query_repo_ids,
+                        ($( $pname: $ptype ),*),
+                        ($( $lname: $ltype )*)
+                    )
                 }
 
             }
@@ -389,11 +358,11 @@ macro_rules! mononoke_queries {
                 }
 
                 #[allow(dead_code)]
-                pub async fn query_with_transaction<'a>(
+                pub async fn query_with_transaction(
                     transaction: Transaction,
                     tel_logger: Option<SqlQueryTelemetry>,
-                    values: &'a[($( & $vtype, )*)],
-                    $( $pname: &'a $ptype ),*
+                    values: &[($( & $vtype, )*)],
+                    $( $pname: & $ptype ),*
                 ) -> Result<(Transaction, WriteResult)> {
                     let cri = tel_logger.as_ref().and_then(|p| p.client_request_info());
                     // Convert ClientRequestInfo to string if present
@@ -509,12 +478,14 @@ macro_rules! mononoke_queries {
                     Ok(write_res)
                 }
 
+                // TODO(T223577767): extract duplication from
+                // `query_with_transaction` from write queries with values
                 #[allow(dead_code)]
-                pub async fn query_with_transaction<'a>(
+                pub async fn query_with_transaction(
                     transaction: Transaction,
                     tel_logger: Option<SqlQueryTelemetry>,
-                    $( $pname: &'a $ptype, )*
-                    $( $lname: &'a [ $ltype ], )*
+                    $( $pname: &$ptype, )*
+                    $( $lname: &[ $ltype ], )*
                 ) -> Result<(Transaction, WriteResult)> {
                     let cri = tel_logger.as_ref().and_then(|p| p.client_request_info());
                     // Convert ClientRequestInfo to string if present
@@ -549,6 +520,42 @@ macro_rules! mononoke_queries {
         }
     };
 
+}
+
+// Helper macro to generate the body of query_with_transaction for read queries
+#[macro_export]
+macro_rules! read_query_with_transaction {
+    (
+        $name:ident,
+        $transaction:ident,
+        $tel_logger:ident,
+        $query_repo_ids:ident,
+        ($( $pname:ident: $ptype:ty ),*),
+        ($( $lname:ident: $ltype:ty )*)
+    ) => {{
+        let granularity = TelemetryGranularity::TransactionQuery;
+
+        let cri = $tel_logger.as_ref().and_then(|p| p.client_request_info());
+        let cri_str = cri.map(|cri| serde_json::to_string(&cri)).transpose()?;
+
+        let Transaction{inner: sql_txn} = $transaction;
+
+        let (sql_txn, (res, opt_tel)) = paste::expr! {
+            [<$name Impl>]::commented_query_with_transaction(
+                sql_txn,
+                cri_str.as_deref(),
+                $( $pname, )*
+                $( $lname, )*
+            )
+        }.await.inspect_err(|e| {
+            log_query_error(&$tel_logger, &e, granularity, $query_repo_ids.clone())
+        })?;
+
+        log_query_telemetry(opt_tel, $tel_logger, granularity, $query_repo_ids)?;
+
+
+        Ok((Transaction::from_sql_transaction(sql_txn), res))
+    }};
 }
 
 // Helper macro to extract RepositoryId from query parameters
