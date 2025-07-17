@@ -33,6 +33,7 @@ use mononoke_types::FileChange;
 use mononoke_types::FileType;
 use mononoke_types::GitLfs;
 use mononoke_types::NonRootMPath;
+use mononoke_types::RepositoryId;
 use mononoke_types::content_manifest::compat::ContentManifestFile;
 use mononoke_types::content_manifest::compat::ContentManifestId;
 use mononoke_types::path::MPath;
@@ -52,7 +53,7 @@ pub trait Repo =
 
 mononoke_queries! {
     read GetMappingEntry(
-        target_repo_id: i64,
+        target_repo_id: RepositoryId,
         target_bookmark: String,
         target_bcs_id: ChangesetId,
     ) -> (String, ChangesetId, SyncConfigVersion) {
@@ -66,7 +67,7 @@ mononoke_queries! {
 
     write InsertMapping(values: (
         source_name: str,
-        target_repo_id: i64,
+        target_repo_id: RepositoryId,
         target_bookmark: String,
         source_bcs_id: ChangesetId,
         target_bcs_id: ChangesetId,
@@ -79,7 +80,7 @@ mononoke_queries! {
     }
 
     read GetReverseMappingEntry(
-        target_repo_id: i64,
+        target_repo_id: RepositoryId,
         target_bookmark: String,
         source_bcs_id: ChangesetId,
     ) -> (String, ChangesetId, SyncConfigVersion) {
@@ -318,10 +319,11 @@ impl MegarepoMapping {
         connection: &Connection,
     ) -> Result<Option<MegarepoMappingEntry>, Error> {
         ctx.perf_counters().increment_counter(sql_perf_counter);
+        let target_repo_id: i32 = target.repo_id.try_into()?;
         let mut rows = GetMappingEntry::query(
             connection,
             ctx.into(),
-            &target.repo_id,
+            &RepositoryId::new(target_repo_id),
             &target.bookmark,
             &target_cs_id,
         )
@@ -384,10 +386,11 @@ impl MegarepoMapping {
         connection: &Connection,
     ) -> Result<Vec<MegarepoMappingEntry>, Error> {
         ctx.perf_counters().increment_counter(sql_perf_counter);
+        let target_repo_id: i32 = target.repo_id.try_into()?;
         let rows = GetReverseMappingEntry::query(
             connection,
             ctx.into(),
-            &target.repo_id,
+            &RepositoryId::new(target_repo_id),
             &target.bookmark,
             &source_cs_id,
         )
@@ -419,12 +422,13 @@ impl MegarepoMapping {
         ctx.perf_counters()
             .increment_counter(PerfCounterType::SqlWrites);
 
+        let target_repo_id: i32 = target.repo_id.try_into()?;
         let res = InsertMapping::query(
             &self.connections.write_connection,
             ctx.into(),
             &[(
                 source_name.as_str(),
-                &target.repo_id,
+                &RepositoryId::new(target_repo_id),
                 &target.bookmark,
                 &source_cs_id,
                 &target_cs_id,
