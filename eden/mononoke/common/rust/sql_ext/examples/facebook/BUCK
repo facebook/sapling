@@ -42,7 +42,6 @@ buck_command_alias(
     name = "quick_telemetry_test",
     args = [
         "--git-config",
-        "--tracing",
         "-R",
         "gustavo-test",
     ],
