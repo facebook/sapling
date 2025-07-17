@@ -48,7 +48,7 @@ AbsolutePath findHgBinary() {
   }
   folly::StringPiece pathEnv{pathPtr};
   std::vector<std::string> pathEnvParts;
-  folly::split(":", pathEnv, pathEnvParts);
+  folly::split(':', pathEnv, pathEnvParts);
 
   for (const auto& dir : pathEnvParts) {
     for (const auto& name : {"hg.real", "hg.real.exe", "hg", "hg.exe"}) {
