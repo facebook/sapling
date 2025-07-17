@@ -117,19 +117,25 @@ macro_rules! mononoke_queries {
 
                                 let granularity = TelemetryGranularity::Query;
 
+                                // Check if any parameter is a RepositoryId and pass it to telemetry
+                                let repo_id = $crate::mononoke_queries_extract_repo_id!($($pname: $ptype),*);
+                                let repo_ids = repo_id.into_iter().collect::<Vec<_>>();
+
                                 let (res, opt_tel) = [<$name Impl>]::commented_query(
                                     connection,
                                     cri_str.as_deref(),
                                     $( $pname, )*
                                     $( $lname, )*
                                 ).await.inspect_err(|e| {
-                                    log_query_error(&tel_logger, &e, granularity)
+                                    log_query_error(&tel_logger, &e, granularity, repo_ids.clone())
                                 })?;
 
-                                // Check if any parameter is a RepositoryId and pass it to telemetry
-                                let repo_id = $crate::mononoke_queries_extract_repo_id!($($pname: $ptype),*);
-
-                                log_query_telemetry(opt_tel, tel_logger, granularity, repo_id)?;
+                                log_query_telemetry(
+                                    opt_tel,
+                                    tel_logger,
+                                    granularity,
+                                    repo_ids,
+                                )?;
 
 
                                 Ok(res)
@@ -151,6 +157,9 @@ macro_rules! mononoke_queries {
                     let cri_str = cri.map(|cri| serde_json::to_string(&cri)).transpose()?;
                     let granularity = TelemetryGranularity::TransactionQuery;
 
+                    // Check if any parameter is a RepositoryId and pass it to telemetry
+                    let repo_id = $crate::mononoke_queries_extract_repo_id!($($pname: $ptype),*);
+                    let query_repo_ids = repo_id.into_iter().collect::<Vec<_>>();
                     let Transaction{inner: sql_txn} = transaction;
 
 
@@ -160,14 +169,10 @@ macro_rules! mononoke_queries {
                         $( $pname, )*
                         $( $lname, )*
                     ).await.inspect_err(|e| {
-                        log_query_error(&tel_logger, &e, granularity)
+                        log_query_error(&tel_logger, &e, granularity, query_repo_ids.clone())
                     })?;
 
-
-                    // Check if any parameter is a RepositoryId and pass it to telemetry
-                    let repo_id = $crate::mononoke_queries_extract_repo_id!($($pname: $ptype),*);
-
-                    log_query_telemetry(opt_tel, tel_logger, granularity, repo_id)?;
+                    log_query_telemetry(opt_tel, tel_logger, granularity, query_repo_ids)?;
 
 
                     Ok((Transaction::from_sql_transaction(sql_txn), res))
@@ -240,6 +245,10 @@ macro_rules! mononoke_queries {
 
                                 let granularity = TelemetryGranularity::Query;
 
+                                // Check if any parameter is a RepositoryId and pass it to telemetry
+                                let repo_id = $crate::mononoke_queries_extract_repo_id!($($pname: $ptype),*);
+                                let repo_ids = repo_id.into_iter().collect::<Vec<_>>();
+
                                 let (res, opt_tel) = [<$name Impl>]::commented_query(
                                     connection,
                                     cri_str.as_deref(),
@@ -247,13 +256,15 @@ macro_rules! mononoke_queries {
                                     $( $lname, )*
 
                                 ).await.inspect_err(|e| {
-                                    log_query_error(&tel_logger, &e, granularity)
+                                    log_query_error(&tel_logger, &e, granularity, repo_ids.clone())
                                 })?;
 
-                                // Check if any parameter is a RepositoryId and pass it to telemetry
-                                let repo_id = $crate::mononoke_queries_extract_repo_id!($($pname: $ptype),*);
-
-                                log_query_telemetry(opt_tel, tel_logger, granularity, repo_id)?;
+                                log_query_telemetry(
+                                    opt_tel,
+                                    tel_logger,
+                                    granularity,
+                                    repo_ids,
+                                )?;
                                 Ok(CachedQueryResult(res))
                             }
                         },
@@ -276,6 +287,10 @@ macro_rules! mononoke_queries {
 
                     let granularity = TelemetryGranularity::TransactionQuery;
 
+                    // Check if any parameter is a RepositoryId and pass it to telemetry
+                    let repo_id = $crate::mononoke_queries_extract_repo_id!($($pname: $ptype),*);
+                    let query_repo_ids = repo_id.into_iter().collect::<Vec<_>>();
+
                     let Transaction{inner: sql_txn} = transaction;
 
                     let (sql_txn, (res, opt_tel)) = [<$name Impl>]::commented_query_with_transaction(
@@ -284,13 +299,10 @@ macro_rules! mononoke_queries {
                         $( $pname, )*
                         $( $lname, )*
                     ).await.inspect_err(|e| {
-                        log_query_error(&tel_logger, &e, granularity)
+                        log_query_error(&tel_logger, &e, granularity, query_repo_ids.clone())
                     })?;
 
-                    // Check if any parameter is a RepositoryId and pass it to telemetry
-                    let repo_id = $crate::mononoke_queries_extract_repo_id!($($pname: $ptype),*);
-
-                    log_query_telemetry(opt_tel, tel_logger, granularity, repo_id)?;
+                    log_query_telemetry(opt_tel, tel_logger, granularity, query_repo_ids)?;
 
 
                     Ok((Transaction::from_sql_transaction(sql_txn), res))
@@ -356,6 +368,10 @@ macro_rules! mononoke_queries {
 
                     let granularity = TelemetryGranularity::Query;
 
+                    // Check if any parameter is a RepositoryId and pass it to telemetry
+                    let repo_id = $crate::mononoke_queries_extract_repo_id!($($pname: $ptype),*);
+                    let repo_ids = repo_id.into_iter().collect::<Vec<_>>();
+
                     let write_res = query_with_retry_no_cache(
                         || [<$name Impl>]::commented_query(
                             connection,
@@ -364,15 +380,12 @@ macro_rules! mononoke_queries {
                             $( , $pname )*
                         ),
                     ).await.inspect_err(|e| {
-                        log_query_error(&tel_logger, &e, granularity)
+                        log_query_error(&tel_logger, &e, granularity, repo_ids.clone())
                     })?;
 
                     let opt_tel = write_res.query_telemetry().clone();
 
-                    // Check if any parameter is a RepositoryId and pass it to telemetry
-                    let repo_id = $crate::mononoke_queries_extract_repo_id!($($pname: $ptype),*);
-
-                    log_query_telemetry(opt_tel, tel_logger, granularity, repo_id)?;
+                    log_query_telemetry(opt_tel, tel_logger, granularity, repo_ids)?;
 
                     Ok(write_res)
 
@@ -391,6 +404,10 @@ macro_rules! mononoke_queries {
 
                     let granularity = TelemetryGranularity::TransactionQuery;
 
+                    // Check if any parameter is a RepositoryId and pass it to telemetry
+                    let repo_id = $crate::mononoke_queries_extract_repo_id!($($pname: $ptype),*);
+                    let query_repo_ids = repo_id.into_iter().collect::<Vec<_>>();
+
                     let Transaction{inner: sql_txn} = transaction;
 
                     let (sql_txn, write_res) = [<$name Impl>]::commented_query_with_transaction(
@@ -399,15 +416,17 @@ macro_rules! mononoke_queries {
                         values
                         $( , $pname )*
                     ).await.inspect_err(|e| {
-                        log_query_error(&tel_logger, &e, granularity)
+                        log_query_error(
+                            &tel_logger,
+                            &e,
+                            granularity,
+                            query_repo_ids.clone()
+                        )
                     })?;
 
                     let opt_tel = write_res.query_telemetry().clone();
 
-                    // Check if any parameter is a RepositoryId and pass it to telemetry
-                    let repo_id = $crate::mononoke_queries_extract_repo_id!($($pname: $ptype),*);
-
-                    log_query_telemetry(opt_tel, tel_logger, granularity, repo_id)?;
+                    log_query_telemetry(opt_tel, tel_logger, granularity, query_repo_ids)?;
 
                     Ok((Transaction::from_sql_transaction(sql_txn), write_res))
 
@@ -472,6 +491,10 @@ macro_rules! mononoke_queries {
 
                     let granularity = TelemetryGranularity::Query;
 
+                    // Check if any parameter is a RepositoryId and pass it to telemetry
+                    let repo_id = $crate::mononoke_queries_extract_repo_id!($($pname: $ptype),*);
+                    let repo_ids = repo_id.into_iter().collect::<Vec<_>>();
+
                     let write_res = query_with_retry_no_cache(
                         || [<$name Impl>]::commented_query(
                             connection,
@@ -480,15 +503,12 @@ macro_rules! mononoke_queries {
                             $( $lname, )*
                         ),
                     ).await.inspect_err(|e| {
-                        log_query_error(&tel_logger, &e, granularity)
+                        log_query_error(&tel_logger, &e, granularity, repo_ids.clone())
                     })?;
 
                     let opt_tel = write_res.query_telemetry().clone();
 
-                    // Check if any parameter is a RepositoryId and pass it to telemetry
-                    let repo_id = $crate::mononoke_queries_extract_repo_id!($($pname: $ptype),*);
-
-                    log_query_telemetry(opt_tel, tel_logger, granularity, repo_id)?;
+                    log_query_telemetry(opt_tel, tel_logger, granularity, repo_ids)?;
 
                     Ok(write_res)
                 }
@@ -506,6 +526,11 @@ macro_rules! mononoke_queries {
 
                     let granularity = TelemetryGranularity::TransactionQuery;
 
+
+                    // Check if any parameter is a RepositoryId and pass it to telemetry
+                    let repo_id = $crate::mononoke_queries_extract_repo_id!($($pname: $ptype),*);
+                    let query_repo_ids = repo_id.into_iter().collect::<Vec<_>>();
+
                     let Transaction{inner: sql_txn} = transaction;
                     let (sql_txn, write_res) = [<$name Impl>]::commented_query_with_transaction(
                         sql_txn,
@@ -513,15 +538,12 @@ macro_rules! mononoke_queries {
                         $( , $pname )*
                         $( , $lname )*
                     ).await.inspect_err(|e| {
-                        log_query_error(&tel_logger, &e, granularity)
+                        log_query_error(&tel_logger, &e, granularity, query_repo_ids.clone())
                     })?;
 
                     let opt_tel = write_res.query_telemetry().clone();
 
-                    // Check if any parameter is a RepositoryId and pass it to telemetry
-                    let repo_id = $crate::mononoke_queries_extract_repo_id!($($pname: $ptype),*);
-
-                    log_query_telemetry(opt_tel, tel_logger, granularity, repo_id)?;
+                    log_query_telemetry(opt_tel, tel_logger, granularity, query_repo_ids)?;
 
                     Ok((Transaction::from_sql_transaction(sql_txn), write_res))
                 }

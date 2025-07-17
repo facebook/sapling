@@ -73,7 +73,7 @@ mod facebook {
     struct ScubaTelemetryLogSample {
         mysql_telemetry: MysqlQueryTelemetry,
         success: bool,
-        repo_id: Option<RepositoryId>,
+        repo_ids: Vec<RepositoryId>,
         granularity: TelemetryGranularity,
     }
 
@@ -147,7 +147,7 @@ mod facebook {
             "wait_count_ENQUEUE",
             "wait_time_ENQUEUE",
             "write_tables",
-            "repo_id",
+            "repo_ids",
         }
         .into_iter()
         .map(String::from)
@@ -209,7 +209,7 @@ mod facebook {
         let expected_logs = vec![
             ScubaTelemetryLogSample {
                 success: true,
-                repo_id: None,
+                repo_ids: vec![],
                 granularity: TelemetryGranularity::Query,
                 mysql_telemetry: MysqlQueryTelemetry {
                     read_tables: hashset! {},
@@ -219,7 +219,7 @@ mod facebook {
             },
             ScubaTelemetryLogSample {
                 success: true,
-                repo_id: Some(1.into()),
+                repo_ids: vec![1.into()],
                 granularity: TelemetryGranularity::TransactionQuery,
                 mysql_telemetry: MysqlQueryTelemetry {
                     read_tables: hashset! {"mononoke_queries_test".to_string()},
@@ -229,7 +229,7 @@ mod facebook {
             },
             ScubaTelemetryLogSample {
                 success: true,
-                repo_id: Some(2.into()),
+                repo_ids: vec![2.into()],
                 granularity: TelemetryGranularity::TransactionQuery,
                 mysql_telemetry: MysqlQueryTelemetry {
                     read_tables: hashset! {"mononoke_queries_test".to_string()},
@@ -242,7 +242,7 @@ mod facebook {
             // Expect a new sample for transaction level
         ];
 
-        assert_eq!(scuba_logs, expected_logs);
+        pretty_assertions::assert_eq!(scuba_logs, expected_logs);
 
         Ok(())
     }
@@ -393,15 +393,22 @@ mod facebook {
                             .as_i64()
                             .map(|i| i == 1)
                             .expect("success should always be logged");
-
                         let granularity = serde_json::from_value::<TelemetryGranularity>(
                             flattended_log["granularity"].clone(),
                         )?;
 
-                        let repo_id: Option<i32> = flattended_log["repo_id"]
-                            .as_i64()
-                            .map(|i| i.try_into())
-                            .transpose()?;
+                        let repo_ids: Vec<RepositoryId> = flattended_log["repo_ids"]
+                            .as_array()
+                            .map(|ids| {
+                                ids.iter()
+                                    .filter_map(|id| {
+                                        id.as_str()
+                                            .and_then(|s| s.parse::<i32>().ok())
+                                            .map(RepositoryId::new)
+                                    })
+                                    .collect()
+                            })
+                            .unwrap_or_default();
                         // Now deserialize that into a MysqlQueryTelemetry object
                         let mysql_tel =
                             serde_json::from_value::<MysqlQueryTelemetry>(flattended_log)?;
@@ -409,7 +416,7 @@ mod facebook {
                         Ok(ScubaTelemetryLogSample {
                             mysql_telemetry: mysql_tel,
                             success,
-                            repo_id: repo_id.map(RepositoryId::new),
+                            repo_ids,
                             granularity,
                         })
                     })

@@ -16,7 +16,6 @@ mod tests;
 
 use anyhow::Result;
 use sql::Connection;
-use sql::QueryTelemetry;
 pub use sql::SqlConnections;
 pub use sql::SqlShardedConnections;
 use sql::Transaction as SqlTransaction;

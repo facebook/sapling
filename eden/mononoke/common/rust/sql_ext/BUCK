@@ -18,6 +18,7 @@ rust_library(
         "//eden/mononoke/mononoke_macros:mononoke_macros",
         "//eden/mononoke/server/metadata:metadata",
     ] + ([] if rust_oss.is_oss_build() else [
+        "fbsource//third-party/rust:pretty_assertions",
         "fbsource//third-party/rust:tempfile",
         "//common/rust/shed/sql:sql_tests_lib",
     ]),
