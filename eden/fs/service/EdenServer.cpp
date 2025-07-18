@@ -144,6 +144,7 @@ DEFINE_bool(
 
 #define DEFAULT_STORAGE_ENGINE "rocksdb"
 #define SUPPORTED_STORAGE_ENGINES "rocksdb|sqlite|memory"
+#define DAEMON_EXIT_SIGNAL_FILE_NAME "daemon_exit_signal"
 
 DEFINE_string(
     local_storage_engine_unsafe,
@@ -451,6 +452,10 @@ EdenServer::EdenServer(
           edenDir_.getPath() +
           PathComponentPiece{getEdenHeartbeatFileNameStr()}},
       heartbeatFilePathString_{heartbeatFilePath_.c_str()},
+      daemonExitSignalFilePath_{
+          edenDir_.getPath() +
+          PathComponentPiece{DAEMON_EXIT_SIGNAL_FILE_NAME}},
+      daemonExitSignalFilePathString_{daemonExitSignalFilePath_.c_str()},
       activityRecorderFactory_{std::move(activityRecorderFactory)},
       backingStoreFactory_{backingStoreFactory},
       config_{std::make_shared<ReloadableConfig>(edenConfig)},
@@ -1215,13 +1220,73 @@ void EdenServer::createOrUpdateEdenHeartbeatFile() {
   }
 }
 
-void EdenServer::removeEdenHeartbeatFile() const {
-  // removeEdenHeartbeatFile() should be an async-signal-safe function. It could
-  // get called from signal handlers. Full rulles:
+// Convert integer to string in a signal-safe way (simple itoa)
+// return the length of the string
+int int_to_str(int val, char* buf, size_t buf_size) {
+  if (buf_size == 0) {
+    return 0;
+  }
+  size_t i = buf_size - 1;
+  buf[i] = '\0';
+  i--;
+  unsigned int v;
+  bool negative = false;
+  if (val < 0) {
+    negative = true;
+    v = -val;
+  } else {
+    v = val;
+  }
+  if (v == 0) {
+    buf[i--] = '0';
+  } else {
+    while (v > 0 && i > 0) {
+      buf[i--] = '0' + (v % 10);
+      v /= 10;
+    }
+  }
+  if (negative && i > 0) {
+    buf[i--] = '-';
+  }
+  // Shift string to start of buffer
+  int start = i + 1;
+  int j = 0;
+  while (buf[start] != '\0') {
+    buf[j++] = buf[start++];
+  }
+  buf[j] = '\0';
+  return j;
+}
+
+void EdenServer::createDaemonExitSignalFile(int signal) {
+  // Create the daemon exit signal file and write the signal to it
+  // createDaemonExitSignalFile() should be an async-signal-safe function.
+  // It get called from signal handlers. Full rulles:
   // https://man7.org/linux/man-pages/man7/signal-safety.7.html
+  int fileno =
+      open(daemonExitSignalFilePathString_, O_WRONLY | O_CREAT | O_TRUNC, 0644);
+  if (fileno == -1) {
+    return;
+  }
+  char buf[10];
+  int str_len = int_to_str(signal, buf, sizeof(buf));
+  write(fileno, buf, str_len);
+  close(fileno);
+}
+
+void EdenServer::removeEdenHeartbeatFile() const {
   const int rc = unlink(heartbeatFilePathString_);
   if (rc != 0 && errno != ENOENT) {
-    // TODO: add an async-signal-safe log here
+    XLOGF(ERR, "Failed to remove eden heartbeat file: {}", errno);
+  }
+  removeDaemonExitSignalFile();
+}
+
+void EdenServer::removeDaemonExitSignalFile() const {
+  // Remove the daemon exit signal file if it exists
+  const int rc = unlink(daemonExitSignalFilePathString_);
+  if (rc != 0 && errno != ENOENT) {
+    XLOGF(ERR, "Failed to remove daemon exit signal file: {}", errno);
   }
 }
 #endif

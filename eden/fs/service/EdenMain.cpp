@@ -536,6 +536,9 @@ int runEdenMain(EdenMain&& main, int argc, char** argv) {
                       latestDaemonHeartbeat, daemon_exit_signal});
 
                   std::remove(entry.path().string().c_str());
+                  // Remove any existing daemon exit signal file to clean up
+                  // signals for the new edenFS daemon
+                  server->removeDaemonExitSignalFile();
                 }
               }
             }
