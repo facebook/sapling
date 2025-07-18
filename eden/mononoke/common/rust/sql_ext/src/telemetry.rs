@@ -11,6 +11,7 @@ use std::num::NonZeroU64;
 use anyhow::Error;
 use anyhow::Result;
 use anyhow::anyhow;
+use itertools::Itertools;
 use mononoke_types::RepositoryId;
 use scuba_ext::MononokeScubaSampleBuilder;
 use sql::QueryTelemetry;
@@ -172,11 +173,11 @@ fn log_mysql_query_telemetry(
         };
 
         // Table stats
-        read_tables.iter().for_each(|&table| {
+        read_tables.iter().sorted().for_each(|&table| {
             STATS::read_tables.add_value(1, (table.clone(), instance_type.clone()))
         });
 
-        write_tables.iter().for_each(|&table| {
+        write_tables.iter().sorted().for_each(|&table| {
             STATS::write_tables.add_value(1, (table.clone(), instance_type.clone()))
         });
     }
@@ -258,11 +259,15 @@ fn log_transaction_telemetry_impl(
 
     scuba.add(
         "read_tables",
-        txn_tel.read_tables.into_iter().collect::<Vec<_>>(),
+        txn_tel.read_tables.into_iter().sorted().collect::<Vec<_>>(),
     );
     scuba.add(
         "write_tables",
-        txn_tel.write_tables.into_iter().collect::<Vec<_>>(),
+        txn_tel
+            .write_tables
+            .into_iter()
+            .sorted()
+            .collect::<Vec<_>>(),
     );
 
     // Log the Scuba sample for debugging when log-level is set to trace.
@@ -316,6 +321,7 @@ fn setup_scuba_sample(
         // Scuba only supports NormVector of Strings
         repo_ids
             .into_iter()
+            .sorted()
             .map(|id| id.to_string())
             .collect::<Vec<_>>(),
     );
