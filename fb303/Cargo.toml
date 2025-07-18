@@ -1,5 +1,14 @@
 [workspace]
-members = ["thrift/rust", "thrift/rust/clients", "thrift/rust/mocks", "thrift/rust/services"]
+members = [
+  "thrift/rust",
+  "thrift/rust/clients",
+  "thrift/rust/gen_safe_patch",
+  "thrift/rust/gen_safe_patch/clients",
+  "thrift/rust/gen_safe_patch/mocks",
+  "thrift/rust/gen_safe_patch/services",
+  "thrift/rust/mocks",
+  "thrift/rust/services",
+]
 resolver = "2"
 
 [workspace.package]
