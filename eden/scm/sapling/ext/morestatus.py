@@ -12,6 +12,8 @@ the state of the repo
 import math
 import os
 
+from bindings import workingcopy as wc
+
 from sapling import (
     commands,
     hbisect,
@@ -95,10 +97,6 @@ def rebasemsg(repo, ui):
         )
         # fmt: on
         ui.write_err(prefixlines(msg))
-
-
-def histeditmsg(repo, ui):
-    helpmessage(ui, _("@prog@ histedit --continue"), _("@prog@ histedit --abort"))
 
 
 def unshelvemsg(repo, ui):
@@ -196,8 +194,10 @@ def mergepredicate(repo):
 
 
 STATES = (
+    # (state, rust state object with 'is_active()' and 'hint()')
+    # OR
     # (state, predicate to detect states, helpful message function)
-    ("histedit", fileexistspredicate("histedit-state"), histeditmsg),
+    ("histedit", wc.commandstate.get_state("histedit", "histedit-state")),
     ("bisect", fileexistspredicate("bisect.state"), bisectmsg),
     ("graft", fileexistspredicate("graftstate"), graftmsg),
     ("unshelve", fileexistspredicate("unshelverebasestate"), unshelvemsg),
@@ -267,7 +267,7 @@ def statuscmd(orig, ui, repo, *pats, **opts):
 
     statetuple = getrepostate(repo)
     if statetuple:
-        state, statedetectionpredicate, helpfulmsg = statetuple
+        state, helpfulmsg = statetuple
         statemsg = _("The repository is in an unfinished *%s* state.") % state
         ui.warn("\n" + prefixlines(statemsg))
         conflictsmsg(repo, ui)
@@ -283,8 +283,27 @@ def statuscmd(orig, ui, repo, *pats, **opts):
 def getrepostate(repo):
     # experimental config: morestatus.skipstates
     skip = set(repo.ui.configlist("morestatus", "skipstates", []))
-    for state, statedetectionpredicate, msgfn in STATES:
-        if state in skip:
-            continue
-        if statedetectionpredicate(repo):
-            return (state, statedetectionpredicate, msgfn)
+
+    for compositestate in STATES:
+        if len(compositestate) == 2:
+            # rust case
+            statename, state = compositestate
+            if statename in skip:
+                continue
+            if state.is_active(repo.path):
+                msgfn = lambda _repo, ui: ui.warn(prefixlines(state.hint()))
+                return (statename, msgfn)
+        elif len(compositestate) == 3:
+            # python case
+            statename, statedetectionpredicate, msgfn = compositestate
+            if statename in skip:
+                continue
+            if statedetectionpredicate(repo):
+                return (statename, msgfn)
+        else:
+            raise Abort(
+                _(
+                    "invalid command state configuration: expected tuple of length 2 or 3, got length %s"
+                )
+                % len(compositestate)
+            )
