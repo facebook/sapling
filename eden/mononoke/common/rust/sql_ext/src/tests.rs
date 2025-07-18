@@ -194,7 +194,7 @@ mod facebook {
         let txn = Transaction::new(
             connection.start_transaction().await?,
             Default::default(),
-            Some(tel_logger.clone()),
+            tel_logger.clone(),
         );
         let txn = txn.add_sql_query_tel(tel_logger.clone());
 

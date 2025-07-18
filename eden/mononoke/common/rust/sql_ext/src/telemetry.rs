@@ -65,19 +65,14 @@ pub fn log_query_telemetry(
 // `log_query_telemetry_impl`
 pub fn log_transaction_telemetry(
     txn_tel: TransactionTelemetry,
-    opt_sql_tel: Option<SqlQueryTelemetry>,
+    sql_tel: SqlQueryTelemetry,
 ) -> Result<()> {
-    if let Some(sql_tel) = opt_sql_tel {
-        log_transaction_telemetry_impl(txn_tel, &sql_tel)
-    } else {
-        // TODO(T223577767): handle case when there's no telemetry
-        Ok(())
-    }
+    log_transaction_telemetry_impl(txn_tel, &sql_tel)
 }
 
 /// Log query errors to Scuba on a best-effort basis.
 pub fn log_query_error(
-    opt_tel: &Option<SqlQueryTelemetry>,
+    opt_tel: Option<&SqlQueryTelemetry>,
     err: &Error,
     granularity: TelemetryGranularity,
     repo_ids: Vec<RepositoryId>,

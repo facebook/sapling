@@ -136,7 +136,7 @@ macro_rules! mononoke_queries {
                                     $( $lname, )*
                                 ).await.inspect_err(|e| {
                                     log_query_error(
-                                        &tel_logger,
+                                        tel_logger.as_ref(),
                                         &e,
                                         granularity,
                                         repo_ids.clone(),
@@ -162,7 +162,7 @@ macro_rules! mononoke_queries {
                 #[allow(dead_code)]
                 pub async fn query_with_transaction(
                     transaction: Transaction,
-                    tel_logger: Option<SqlQueryTelemetry>,
+                    _tel_logger: Option<SqlQueryTelemetry>,
                     $( $pname: &$ptype, )*
                     $( $lname: &[ $ltype ], )*
                 ) -> Result<(Transaction, Vec<($( $rtype, )*)>)>
@@ -172,7 +172,6 @@ macro_rules! mononoke_queries {
                     $crate::read_query_with_transaction!(
                         $name,
                         transaction,
-                        tel_logger,
                         query_repo_ids,
                         query_name,
                         ($( $pname: $ptype ),*),
@@ -258,7 +257,7 @@ macro_rules! mononoke_queries {
 
                                 ).await.inspect_err(|e| {
                                     log_query_error(
-                                        &tel_logger,
+                                        tel_logger.as_ref(),
                                         &e,
                                         granularity,
                                         repo_ids.clone(),
@@ -284,7 +283,7 @@ macro_rules! mononoke_queries {
                 #[allow(dead_code)]
                 pub async fn query_with_transaction(
                     transaction: Transaction,
-                    tel_logger: Option<SqlQueryTelemetry>,
+                    _tel_logger: Option<SqlQueryTelemetry>,
                     $( $pname: &$ptype, )*
                     $( $lname: &[ $ltype ], )*
                 ) -> Result<(Transaction, Vec<($( $rtype, )*)>)>
@@ -294,7 +293,6 @@ macro_rules! mononoke_queries {
                     $crate::read_query_with_transaction!(
                         $name,
                         transaction,
-                        tel_logger,
                         query_repo_ids,
                         query_name,
                         ($( $pname: $ptype ),*),
@@ -374,7 +372,13 @@ macro_rules! mononoke_queries {
                             $( , $pname )*
                         ),
                     ).await.inspect_err(|e| {
-                        log_query_error(&tel_logger, &e, granularity, repo_ids.clone(), &query_name)
+                        log_query_error(
+                            tel_logger.as_ref(),
+                            &e,
+                            granularity,
+                            repo_ids.clone(),
+                            &query_name
+                        )
                     })?;
 
                     let opt_tel = write_res.query_telemetry().clone();
@@ -406,7 +410,7 @@ macro_rules! mononoke_queries {
                     let Transaction {
                         inner: sql_txn,
                         txn_telemetry,
-                        ..
+                        sql_query_tel,
                     } = transaction;
 
 
@@ -417,7 +421,7 @@ macro_rules! mononoke_queries {
                         $( , $pname )*
                     ).await.inspect_err(|e| {
                         log_query_error(
-                            &tel_logger,
+                            tel_logger.as_ref(),
                             &e,
                             granularity,
                             query_repo_ids.clone(),
@@ -431,7 +435,7 @@ macro_rules! mononoke_queries {
                         sql_txn,
                         opt_tel,
                         txn_telemetry,
-                        tel_logger,
+                        sql_query_tel,
                         query_repo_ids,
                         granularity,
                         query_name,
@@ -512,7 +516,13 @@ macro_rules! mononoke_queries {
                             $( $lname, )*
                         ),
                     ).await.inspect_err(|e| {
-                        log_query_error(&tel_logger, &e, granularity, repo_ids.clone(), &query_name)
+                        log_query_error(
+                            tel_logger.as_ref(),
+                            &e,
+                            granularity,
+                            repo_ids.clone(),
+                            &query_name
+                        )
                     })?;
 
                     let opt_tel = write_res.query_telemetry().clone();
@@ -544,7 +554,7 @@ macro_rules! mononoke_queries {
                     let Transaction {
                         inner: sql_txn,
                         txn_telemetry,
-                        ..
+                        sql_query_tel,
                     } = transaction;
 
                     let (sql_txn, write_res) = [<$name Impl>]::commented_query_with_transaction(
@@ -553,7 +563,13 @@ macro_rules! mononoke_queries {
                         $( , $pname )*
                         $( , $lname )*
                     ).await.inspect_err(|e| {
-                        log_query_error(&tel_logger, &e, granularity, query_repo_ids.clone(), &query_name)
+                        log_query_error(
+                            tel_logger.as_ref(),
+                            &e,
+                            granularity,
+                            query_repo_ids.clone(),
+                            &query_name
+                        )
                     })?;
 
                     let opt_tel = write_res.query_telemetry().clone();
@@ -562,7 +578,7 @@ macro_rules! mononoke_queries {
                         sql_txn,
                         opt_tel,
                         txn_telemetry,
-                        tel_logger,
+                        sql_query_tel,
                         query_repo_ids,
                         granularity,
                         &query_name
@@ -584,7 +600,6 @@ macro_rules! read_query_with_transaction {
     (
         $name:ident,
         $transaction:ident,
-        $tel_logger:ident,
         $query_repo_ids:ident,
         $query_name:ident,
         ($( $pname:ident: $ptype:ty ),*),
@@ -592,14 +607,14 @@ macro_rules! read_query_with_transaction {
     ) => {{
         let granularity = TelemetryGranularity::TransactionQuery;
 
-        let cri = $tel_logger.as_ref().and_then(|p| p.client_request_info());
-        let cri_str = cri.map(|cri| serde_json::to_string(&cri)).transpose()?;
-
        let Transaction {
             inner: sql_txn,
             txn_telemetry,
-            sql_query_tel: _sql_query_tel,
+            sql_query_tel,
         } = $transaction;
+
+        let cri = sql_query_tel.client_request_info();
+        let cri_str = cri.map(|cri| serde_json::to_string(&cri)).transpose()?;
 
         let (sql_txn, (res, opt_tel)) = paste::expr! {
             [<$name Impl>]::commented_query_with_transaction(
@@ -610,7 +625,7 @@ macro_rules! read_query_with_transaction {
             )
         }.await.inspect_err(|e| {
             log_query_error(
-                &$tel_logger,
+                Some(&sql_query_tel),
                 &e,
                 granularity,
                 $query_repo_ids.clone(),
@@ -622,7 +637,7 @@ macro_rules! read_query_with_transaction {
             sql_txn,
             opt_tel,
             txn_telemetry,
-            $tel_logger,
+            sql_query_tel,
             $query_repo_ids,
             granularity,
             $query_name,
@@ -661,7 +676,7 @@ pub fn build_transaction_wrapper(
     sql_txn: sql::Transaction,
     opt_tel: Option<QueryTelemetry>,
     mut txn_telemetry: TransactionTelemetry,
-    tel_logger: Option<SqlQueryTelemetry>,
+    sql_query_tel: SqlQueryTelemetry,
     query_repo_ids: Vec<RepositoryId>,
     granularity: TelemetryGranularity,
     query_name: &str,
@@ -674,13 +689,13 @@ pub fn build_transaction_wrapper(
 
     log_query_telemetry(
         opt_tel,
-        tel_logger.as_ref(),
+        Some(&sql_query_tel),
         granularity,
         query_repo_ids,
         query_name,
     )?;
 
-    Ok(Transaction::new(sql_txn, txn_telemetry, tel_logger))
+    Ok(Transaction::new(sql_txn, txn_telemetry, sql_query_tel))
 }
 
 #[cfg(fbcode_build)]

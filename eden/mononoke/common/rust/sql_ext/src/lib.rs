@@ -16,7 +16,6 @@ mod tests;
 
 use anyhow::Result;
 use mononoke_types::RepositoryId;
-use sql::Connection;
 use sql::QueryTelemetry;
 pub use sql::SqlConnections;
 pub use sql::SqlShardedConnections;
@@ -77,15 +76,14 @@ pub struct Transaction {
 
     pub txn_telemetry: TransactionTelemetry,
 
-    // TODO(T223577767): make this required after updating all callsites
-    pub sql_query_tel: Option<SqlQueryTelemetry>,
+    pub sql_query_tel: SqlQueryTelemetry,
 }
 
 impl Transaction {
     pub fn new(
         sql_txn: SqlTransaction,
         txn_telemetry: TransactionTelemetry,
-        sql_query_tel: Option<SqlQueryTelemetry>,
+        sql_query_tel: SqlQueryTelemetry,
     ) -> Self {
         Self {
             inner: sql_txn,
@@ -96,28 +94,8 @@ impl Transaction {
 
     pub fn add_sql_query_tel(self, sql_query_tel: SqlQueryTelemetry) -> Self {
         Self {
-            sql_query_tel: Some(sql_query_tel),
+            sql_query_tel,
             ..self
-        }
-    }
-
-    /// Create a new transaction for the provided connection.
-    pub async fn from_connection(connection: &Connection) -> Result<Self> {
-        let inner = SqlTransaction::new(connection).await?;
-
-        Ok(Self {
-            inner,
-            txn_telemetry: Default::default(),
-            sql_query_tel: None,
-        })
-    }
-
-    /// Create a new transaction for the provided connection.
-    pub fn from_sql_transaction(sql_txn: SqlTransaction) -> Self {
-        Self {
-            inner: sql_txn,
-            txn_telemetry: Default::default(),
-            sql_query_tel: None,
         }
     }
 
@@ -143,7 +121,7 @@ impl Transaction {
         sql_txn: SqlTransaction,
         opt_tel: Option<QueryTelemetry>,
         mut txn_telemetry: TransactionTelemetry,
-        tel_logger: Option<SqlQueryTelemetry>,
+        tel_logger: SqlQueryTelemetry,
         query_repo_ids: Vec<RepositoryId>,
         granularity: TelemetryGranularity,
         query_name: &str,
@@ -156,7 +134,7 @@ impl Transaction {
 
         log_query_telemetry(
             opt_tel,
-            tel_logger.as_ref(),
+            Some(&tel_logger),
             granularity,
             query_repo_ids,
             query_name,
