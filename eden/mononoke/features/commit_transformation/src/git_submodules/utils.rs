@@ -345,8 +345,8 @@ pub fn get_submodule_expansions_affected<'a, R: Repo>(
 ) -> Result<Vec<NonRootMPath>> {
     let submodules_affected = sm_exp_data
         .submodule_deps
-        .iter()
-        .map(|(submodule_path, _)| {
+        .keys()
+        .map(|submodule_path| {
             // Get the submodule's metadata file path
             let metadata_file_path = get_x_repo_submodule_metadata_file_path(
                 &SubmodulePath(submodule_path.clone()),

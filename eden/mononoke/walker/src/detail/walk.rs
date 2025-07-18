@@ -1951,10 +1951,7 @@ where
 
     async move {
         let published_bookmarks = Arc::new(published_bookmarks.await?);
-        let heads = published_bookmarks
-            .iter()
-            .map(|(_, csid)| *csid)
-            .collect::<Vec<_>>();
+        let heads = published_bookmarks.values().copied().collect::<Vec<_>>();
 
         cloned!(
             repo_params.repo,

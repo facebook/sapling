@@ -58,8 +58,8 @@ impl<R> MononokeRepos<R> {
         let result: Vec<_> = self
             .name_to_repo_map
             .load()
-            .iter()
-            .map(|(_, repo)| Arc::clone(repo))
+            .values()
+            .map(Arc::clone)
             .collect();
         result.into_iter()
     }
@@ -70,8 +70,8 @@ impl<R> MononokeRepos<R> {
         let result: Vec<_> = self
             .id_to_name_map
             .load()
-            .iter()
-            .map(|(_, name)| name.to_string())
+            .values()
+            .map(|name| name.to_string())
             .collect();
         result.into_iter()
     }
@@ -79,12 +79,7 @@ impl<R> MononokeRepos<R> {
     /// Returns an iterator over the set of repo-ids corresponding
     /// to the repos currently loaded for the service / command.
     pub fn iter_ids(&self) -> impl Iterator<Item = i32> + use<R> {
-        let result: Vec<_> = self
-            .id_to_name_map
-            .load()
-            .iter()
-            .map(|(id, _)| *id)
-            .collect();
+        let result: Vec<_> = self.id_to_name_map.load().keys().copied().collect();
         result.into_iter()
     }
 

@@ -41,7 +41,7 @@ const RETRY_ATTEMPTS: usize = 2;
 /// - Adding "cacheable" keyword to your query.
 /// - Make sure all parameters (input) to the query implement the Hash trait.
 /// - Making sure the return values (output) implement Serialize, Deserialize, and
-/// bincode::{Encode, Decode}.
+///   bincode::{Encode, Decode}.
 ///
 /// Queries that return no rows are not cached to allow later retries to succeed.
 #[macro_export]

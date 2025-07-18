@@ -590,7 +590,7 @@ async fn find_closest_root(
         return find_closest_ancestor_root(ctx, repo, config, bookmark, roots, id).await;
     }
 
-    let roots = roots.iter().map(|(root, _)| {
+    let roots = roots.keys().map(|root| {
         let repo = &repo;
 
         async move {

@@ -43,7 +43,7 @@ impl InMemoryCommitGraphStorage {
 
     pub fn drain(&self) -> Vec<ChangesetEdges> {
         let mut changesets = self.changesets.write();
-        let many_edges = changesets.iter().map(|(_, edges)| edges).cloned().collect();
+        let many_edges = changesets.values().cloned().collect();
         changesets.clear();
         many_edges
     }
