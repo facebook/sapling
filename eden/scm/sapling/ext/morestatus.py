@@ -99,10 +99,6 @@ def rebasemsg(repo, ui):
         ui.write_err(prefixlines(msg))
 
 
-def unshelvemsg(repo, ui):
-    helpmessage(ui, _("@prog@ unshelve --continue"), _("@prog@ unshelve --abort"))
-
-
 def updatecleanmsg(dest=None):
     warning = _("warning: this will discard uncommitted changes")
     return _("@prog@ goto --clean %s    (%s)") % (dest or ".", warning)
@@ -196,7 +192,7 @@ STATES = (
     ("histedit", wc.commandstate.get_state("histedit", "histedit-state")),
     ("bisect", fileexistspredicate("bisect.state"), bisectmsg),
     ("graft", wc.commandstate.get_state("graft", "graftstate")),
-    ("unshelve", fileexistspredicate("unshelverebasestate"), unshelvemsg),
+    ("unshelve", wc.commandstate.get_state("unshelve", "shelvedstate")),
     ("rebase", fileexistspredicate("rebasestate"), rebasemsg),
     # 'update --merge'. Unlike the 'update' state below, this can be
     # continued.
