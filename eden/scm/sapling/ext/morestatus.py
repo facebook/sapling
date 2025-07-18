@@ -108,10 +108,6 @@ def updatecleanmsg(dest=None):
     return _("@prog@ goto --clean %s    (%s)") % (dest or ".", warning)
 
 
-def graftmsg(repo, ui):
-    helpmessage(ui, _("@prog@ graft --continue"), _("@prog@ graft --abort"))
-
-
 def updatemsg(repo, ui):
     previousargs = repo.localvfs.tryreadutf8(UPDATEARGS)
     if previousargs:
@@ -199,7 +195,7 @@ STATES = (
     # (state, predicate to detect states, helpful message function)
     ("histedit", wc.commandstate.get_state("histedit", "histedit-state")),
     ("bisect", fileexistspredicate("bisect.state"), bisectmsg),
-    ("graft", fileexistspredicate("graftstate"), graftmsg),
+    ("graft", wc.commandstate.get_state("graft", "graftstate")),
     ("unshelve", fileexistspredicate("unshelverebasestate"), unshelvemsg),
     ("rebase", fileexistspredicate("rebasestate"), rebasemsg),
     # 'update --merge'. Unlike the 'update' state below, this can be
