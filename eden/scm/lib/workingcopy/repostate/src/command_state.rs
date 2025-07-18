@@ -94,6 +94,19 @@ impl std::error::Error for Conflict {}
 // So, put more specific/exclusive states first.
 static STATES: &[State] = &[
     State {
+        // Interrupted "histedit" due to conflicts.
+        command: "histedit",
+        description: "histedit in progress",
+        state_file: "histedit-state",
+        // By design, "histedit" allows committing mid-operation. Commit will
+        // still be rejected if there are unresolved conflicts.
+        allows: &[Operation::Commit],
+        proceed: "histedit --continue",
+        abort: "histedit --abort",
+        abort_lossy: false,
+    },
+    //TODO: Implement Bisect, add it here in the list (order matters)
+    State {
         // Interrupted "graft" due to conflicts.
         command: "graft",
         description: "graft in progress",
@@ -102,16 +115,6 @@ static STATES: &[State] = &[
         proceed: "graft --continue",
         abort: "graft --abort",
         abort_lossy: false,
-    },
-    State {
-        // Interrupted "go --merge" due to conflicts.
-        command: "goto",
-        description: "goto --merge in progress",
-        state_file: "updatemergestate",
-        allows: &[Operation::Commit],
-        proceed: "goto --continue",
-        abort: "goto --clean",
-        abort_lossy: true,
     },
     State {
         // Interrupted "unshelve" due to conflicts.
@@ -134,16 +137,14 @@ static STATES: &[State] = &[
         abort_lossy: false,
     },
     State {
-        // Interrupted "histedit" due to conflicts.
-        command: "histedit",
-        description: "histedit in progress",
-        state_file: "histedit-state",
-        // By design, "histedit" allows committing mid-operation. Commit will
-        // still be rejected if there are unresolved conflicts.
+        // Interrupted "go --merge" due to conflicts.
+        command: "goto",
+        description: "goto --merge in progress",
+        state_file: "updatemergestate",
         allows: &[Operation::Commit],
-        proceed: "histedit --continue",
-        abort: "histedit --abort",
-        abort_lossy: false,
+        proceed: "goto --continue",
+        abort: "goto --clean",
+        abort_lossy: true,
     },
     State {
         // Interrupted "goto" due to unexpected failure.
