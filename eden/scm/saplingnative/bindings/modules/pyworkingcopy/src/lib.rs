@@ -31,6 +31,9 @@ use pytreestate::treestate;
 use pyworkingcopyclient::WorkingCopyClient as PyWorkingCopyClient;
 use repostate::SubtreeMerge;
 use repostate::command_state::Operation;
+use repostate::command_state::STATES;
+use repostate::command_state::State;
+use repostate::command_state::UNRESOLVED_CONFLICTS;
 use rsworkingcopy::client::WorkingCopyClient;
 use rsworkingcopy::walker::WalkError;
 use rsworkingcopy::walker::Walker;
@@ -45,6 +48,7 @@ pub fn init_module(py: Python, package: &str) -> PyResult<PyModule> {
     m.add_class::<mergestate>(py)?;
     m.add_class::<walker>(py)?;
     m.add_class::<workingcopy>(py)?;
+    m.add_class::<commandstate>(py)?;
 
     impl_into::register(py);
 
@@ -333,6 +337,38 @@ py_class!(pub class mergestate |py| {
 
     def isempty(&self) -> PyResult<bool> {
         Ok(self.ms(py).borrow().files().is_empty())
+    }
+});
+
+py_class!(pub class commandstate |py| {
+    data state: State;
+
+    @classmethod def get_state(_cls, state: String, state_file: String) -> PyResult<Self> {
+        for current_state in STATES.iter() {
+            if current_state.command() == state && current_state.state_file() == state_file {
+                return Self::create_instance(py, current_state.clone());
+            }
+        }
+
+        let current_state = &UNRESOLVED_CONFLICTS;
+        if current_state.command() == state && current_state.state_file() == state_file {
+            return Self::create_instance(py, current_state.clone());
+        }
+
+        Err(PyErr::new::<cpython::exc::Exception, _>(py, "Invalid state"))
+    }
+
+    def get_command(&self) -> PyResult<String> {
+        Ok(self.state(py).command().to_string())
+    }
+
+
+    def is_active(&self, path: PyPathBuf) -> PyResult<bool> {
+        self.state(py).is_active(path.as_path()).map_pyerr(py)
+    }
+
+    def hint(&self) -> PyResult<Option<String>> {
+        Ok(Some(self.state(py).status_msg()))
     }
 });
 

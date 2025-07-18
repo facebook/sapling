@@ -36,12 +36,64 @@ pub struct State {
 }
 
 impl State {
-    fn is_active(&self, dot_path: &Path) -> Result<bool> {
+    pub fn is_active(&self, dot_path: &Path) -> Result<bool> {
         Ok(util::file::exists(dot_path.join(self.state_file))?.is_some())
     }
 
     fn allow(&self, op: Operation) -> bool {
         self.allows.contains(&op)
+    }
+
+    pub fn command(&self) -> &'static str {
+        self.command
+    }
+
+    pub fn state_file(&self) -> &'static str {
+        self.state_file
+    }
+
+    pub fn hint(&self) -> String {
+        use std::fmt::Write;
+
+        let mut s = String::new();
+        let _ = write!(
+            s,
+            "use '{} {}' to continue or\n",
+            identity::cli_name(),
+            self.proceed
+        );
+
+        // This is indented assuming a "(" will precede the hint when output.
+        let _ = write!(s, "     '{} {}' to abort", identity::cli_name(), self.abort);
+        if self.abort_lossy {
+            let _ = write!(s, " - WARNING: will destroy uncommitted changes");
+        }
+
+        s
+    }
+
+    pub fn status_msg(&self) -> String {
+        use std::fmt::Write;
+
+        let mut s = String::new();
+        let _ = write!(
+            s,
+            "To continue:                {} {}\n",
+            identity::cli_name(),
+            self.proceed
+        );
+
+        let _ = write!(
+            s,
+            "To abort:                   {} {}",
+            identity::cli_name(),
+            self.abort
+        );
+        if self.abort_lossy {
+            let _ = write!(s, " - WARNING: will destroy uncommitted changes");
+        }
+
+        s
     }
 }
 
@@ -54,28 +106,7 @@ impl Conflict {
     }
 
     pub fn hint(&self) -> String {
-        use std::fmt::Write;
-
-        let mut s = String::new();
-        let _ = write!(
-            s,
-            "use '{} {}' to continue or\n",
-            identity::cli_name(),
-            self.0.proceed
-        );
-
-        // This is indented assuming a "(" will precede the hint when output.
-        let _ = write!(
-            s,
-            "     '{} {}' to abort",
-            identity::cli_name(),
-            self.0.abort
-        );
-        if self.0.abort_lossy {
-            let _ = write!(s, " - WARNING: will destroy uncommitted changes");
-        }
-
-        s
+        self.0.hint()
     }
 }
 
@@ -92,7 +123,7 @@ impl std::error::Error for Conflict {}
 
 // Order matters since we report the first matching/problematic state to the user.
 // So, put more specific/exclusive states first.
-static STATES: &[State] = &[
+pub static STATES: &[State] = &[
     State {
         // Interrupted "histedit" due to conflicts.
         command: "histedit",
@@ -158,7 +189,7 @@ static STATES: &[State] = &[
     },
 ];
 
-static UNRESOLVED_CONFLICTS: State = State {
+pub static UNRESOLVED_CONFLICTS: State = State {
     // Interrupted "merge" due to conflicts.
     //
     // This can happen either from an actual "merge", or if an above state file
