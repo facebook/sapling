@@ -1343,7 +1343,7 @@ impl SqlCommitGraphStorage {
             return Ok(HashMap::new());
         }
 
-        let tel_logger = ctx.sql_query_telemetry();
+        let sql_query_tel = ctx.sql_query_telemetry();
 
         if let Some(target) = prefetch.target() {
             let steps_limit =
@@ -1357,14 +1357,14 @@ impl SqlCommitGraphStorage {
                         .dispatch(ctx.fb.clone(), cs_ids.iter().copied().collect(), || {
                             let conn = rendezvous.conn.clone();
                             let repo_id = self.repo_id.clone();
-                            let tel_logger: SqlQueryTelemetry = ctx.sql_query_telemetry();
+                            let sql_query_tel: SqlQueryTelemetry = ctx.sql_query_telemetry();
 
                             move |cs_ids| async move {
                                 let cs_ids = cs_ids.into_iter().collect::<Vec<_>>();
                                 let fetched_rows =
                                     SelectManyChangesetsWithFirstParentPrefetch::query(
                                         &conn,
-                                        Some(tel_logger.clone()),
+                                        Some(sql_query_tel.clone()),
                                         &repo_id,
                                         &std::cmp::min(steps, steps_limit),
                                         &generation.value(),
@@ -1388,7 +1388,7 @@ impl SqlCommitGraphStorage {
                                 let fetched_rows =
                                     SelectManyChangesetsWithExactSkipTreeAncestorPrefetch::query(
                                         &conn,
-                                        Some(tel_logger.clone()),
+                                        Some(sql_query_tel.clone()),
                                         &repo_id,
                                         &generation.value(),
                                         &cs_ids,
@@ -1417,7 +1417,7 @@ impl SqlCommitGraphStorage {
                         let cs_ids = cs_ids.into_iter().collect::<Vec<_>>();
                         let fetched_edges = SelectManyChangesets::query(
                             &conn,
-                            Some(tel_logger.clone()),
+                            Some(sql_query_tel.clone()),
                             &repo_id,
                             cs_ids.as_slice(),
                         )

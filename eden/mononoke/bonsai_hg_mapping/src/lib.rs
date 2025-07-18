@@ -537,7 +537,7 @@ async fn select_mapping(
     if cs_ids.is_empty() {
         return Ok((vec![], cs_ids));
     }
-    let tel_logger: SqlQueryTelemetry = ctx.sql_query_telemetry();
+    let sql_query_tel: SqlQueryTelemetry = ctx.sql_query_telemetry();
 
     let (found, missing): (Vec<_>, _) = match cs_ids {
         BonsaiOrHgChangesetIds::Bonsai(bcs_ids) => {
@@ -550,7 +550,7 @@ async fn select_mapping(
 
                         let res = SelectMappingByBonsai::query(
                             &conn,
-                            Some(tel_logger.clone()),
+                            Some(sql_query_tel.clone()),
                             &repo_id,
                             &bcs_ids[..],
                         )
@@ -587,7 +587,7 @@ async fn select_mapping(
                         let hg_cs_ids = hg_cs_ids.into_iter().collect::<Vec<_>>();
                         Ok(SelectMappingByHg::query(
                             &conn,
-                            Some(tel_logger.clone()),
+                            Some(sql_query_tel.clone()),
                             &repo_id,
                             &hg_cs_ids[..],
                         )

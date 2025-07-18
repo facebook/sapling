@@ -71,7 +71,7 @@ mod facebook {
 
     struct TelemetryTestData {
         connection: sql::Connection,
-        tel_logger: SqlQueryTelemetry,
+        sql_query_tel: SqlQueryTelemetry,
         cri: ClientRequestInfo,
         temp_path: String,
     }
@@ -89,18 +89,18 @@ mod facebook {
     async fn test_basic_scuba_logging(fb: FacebookInit) -> Result<()> {
         let TelemetryTestData {
             connection,
-            tel_logger,
+            sql_query_tel,
             cri,
             temp_path,
         } = setup_scuba_logging_test(fb).await?;
 
-        let _res = WriteQuery1::query(&connection, Some(tel_logger.clone()), &[(&1i64,), (&2i64,)])
-            .await?;
+        let _res =
+            WriteQuery1::query(&connection, sql_query_tel.clone(), &[(&1i64,), (&2i64,)]).await?;
 
         let expected_repo_id = 1;
         let _res = ReadQuery1::query(
             &connection,
-            Some(tel_logger),
+            sql_query_tel,
             &RepositoryId::new(expected_repo_id),
         )
         .await?;
@@ -183,20 +183,20 @@ mod facebook {
     async fn test_transaction_scuba_logging(fb: FacebookInit) -> Result<()> {
         let TelemetryTestData {
             connection,
-            tel_logger,
+            sql_query_tel,
             temp_path,
             ..
         } = setup_scuba_logging_test(fb).await?;
 
-        let _res = WriteQuery1::query(&connection, Some(tel_logger.clone()), &[(&1i64,), (&2i64,)])
-            .await?;
+        let _res =
+            WriteQuery1::query(&connection, sql_query_tel.clone(), &[(&1i64,), (&2i64,)]).await?;
 
         let txn = Transaction::new(
             connection.start_transaction().await?,
             Default::default(),
-            tel_logger.clone(),
+            sql_query_tel.clone(),
         );
-        let txn = txn.add_sql_query_tel(tel_logger.clone());
+        let txn = txn.add_sql_query_tel(sql_query_tel.clone());
 
         // Query with Repo ID 1
         let (txn, _res) = ReadQuery1::query_with_transaction(txn, &RepositoryId::new(1)).await?;
@@ -297,11 +297,11 @@ mod facebook {
         let mut metadata = Metadata::default();
         metadata.add_client_info(client_info);
 
-        let tel_logger = SqlQueryTelemetry::new(fb, metadata);
+        let sql_query_tel = SqlQueryTelemetry::new(fb, metadata);
 
         Ok(TelemetryTestData {
             connection,
-            tel_logger,
+            sql_query_tel,
             cri,
             temp_path,
         })
@@ -467,28 +467,28 @@ async fn should_compile(fb: FacebookInit) -> Result<()> {
     let mut metadata = Metadata::default();
     metadata.add_client_info(client_info);
 
-    let tel_logger = SqlQueryTelemetry::new(fb, metadata);
-    TestQuery::query(connection, None, todo!(), todo!()).await?;
+    let sql_query_tel = SqlQueryTelemetry::new(fb, metadata);
+    TestQuery::query(connection, sql_query_tel, todo!(), todo!()).await?;
     TestQuery::query_with_transaction(todo!(), todo!(), todo!()).await?;
-    TestQuery2::query(config, None, connection, None::<SqlQueryTelemetry>).await?;
+    TestQuery2::query(config, None, connection, sql_query_tel).await?;
     TestQuery2::query(
         config,
         Some(std::time::Duration::from_secs(60)),
         connection,
-        None,
+        sql_query_tel,
     )
     .await?;
     TestQuery2::query_with_transaction(todo!()).await?;
-    TestQuery3::query(connection, None, &[(&12,)]).await?;
+    TestQuery3::query(connection, sql_query_tel, &[(&12,)]).await?;
     TestQuery3::query_with_transaction(todo!(), &[(&12,)]).await?;
-    TestQuery4::query(connection, None, &"hello").await?;
-    TestQuery::query(connection, Some(tel_logger), todo!(), todo!()).await?;
-    TestQuery2::query(config, None, connection, Some(tel_logger)).await?;
-    TestQuery3::query(connection, Some(tel_logger), &[(&12,)]).await?;
-    TestQuery4::query(connection, Some(tel_logger), &"hello").await?;
-    TestQuery::query(connection, None, todo!(), todo!()).await?;
-    TestQuery2::query(config, None, connection, None).await?;
-    TestQuery3::query(connection, None, &[(&12,)]).await?;
-    TestQuery4::query(connection, None, &"hello").await?;
+    TestQuery4::query(connection, sql_query_tel, &"hello").await?;
+    TestQuery::query(connection, sql_query_tel, todo!(), todo!()).await?;
+    TestQuery2::query(config, None, connection, sql_query_tel).await?;
+    TestQuery3::query(connection, sql_query_tel, &[(&12,)]).await?;
+    TestQuery4::query(connection, sql_query_tel, &"hello").await?;
+    TestQuery::query(connection, sql_query_tel, todo!(), todo!()).await?;
+    TestQuery2::query(config, None, connection, sql_query_tel).await?;
+    TestQuery3::query(connection, sql_query_tel, &[(&12,)]).await?;
+    TestQuery4::query(connection, sql_query_tel, &"hello").await?;
     Ok(())
 }

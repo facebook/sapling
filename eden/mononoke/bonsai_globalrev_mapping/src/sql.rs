@@ -434,14 +434,14 @@ async fn select_mapping(
                 .fetch_globalrev
                 .dispatch(ctx.fb, bcs_ids.iter().copied().collect(), || {
                     let conn = connection.conn.clone();
-                    let tel_logger: SqlQueryTelemetry = ctx.sql_query_telemetry();
+                    let sql_query_tel: SqlQueryTelemetry = ctx.sql_query_telemetry();
 
                     move |bcs_ids| async move {
                         let bcs_ids = bcs_ids.into_iter().collect::<Vec<_>>();
 
                         Ok(SelectMappingByBonsai::query(
                             &conn,
-                            Some(tel_logger.clone()),
+                            Some(sql_query_tel.clone()),
                             &repo_id,
                             &bcs_ids[..],
                         )

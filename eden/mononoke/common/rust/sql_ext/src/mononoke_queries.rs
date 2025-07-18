@@ -115,13 +115,13 @@ macro_rules! mononoke_queries {
                 where
                     S: Into<Option<SqlQueryTelemetry>> + Send + Sync
                 {
-                    let tel_logger = opt_sql_telemetry.into();
+                    let sql_query_tel = opt_sql_telemetry.into();
                     query_with_retry_no_cache(
                         || {
-                            let tel_logger = tel_logger.clone();
+                            let sql_query_tel = sql_query_tel.clone();
                             async move {
                                 let query_name = stringify!($name);
-                                let cri = tel_logger.as_ref().and_then(|p| p.client_request_info());
+                                let cri = sql_query_tel.as_ref().and_then(|p| p.client_request_info());
                                 // Convert ClientRequestInfo to string if present
                                 let cri_str = cri.map(|cri| serde_json::to_string(cri)).transpose()?;
 
@@ -137,7 +137,7 @@ macro_rules! mononoke_queries {
                                     $( $lname, )*
                                 ).await.inspect_err(|e| {
                                     log_query_error(
-                                        tel_logger.as_ref(),
+                                        sql_query_tel.as_ref(),
                                         &e,
                                         granularity,
                                         repo_ids.clone(),
@@ -147,7 +147,7 @@ macro_rules! mononoke_queries {
 
                                 log_query_telemetry(
                                     opt_tel,
-                                    tel_logger.as_ref(),
+                                    sql_query_tel.as_ref(),
                                     granularity,
                                     repo_ids,
                                     query_name,
@@ -234,15 +234,15 @@ macro_rules! mononoke_queries {
                     let key = hasher.finish_ext();
                     let data = CacheData {key, config: config.caching.as_ref(), cache_ttl };
 
-                    let tel_logger = opt_sql_telemetry.into();
+                    let sql_query_tel = opt_sql_telemetry.into();
                     // Execute query with caching
                     let res = query_with_retry(
                         data,
                         || {
-                            let tel_logger = tel_logger.clone();
+                            let sql_query_tel = sql_query_tel.clone();
                             async move {
                                 let query_name = stringify!($name);
-                                let cri = tel_logger.as_ref().and_then(|p| p.client_request_info());
+                                let cri = sql_query_tel.as_ref().and_then(|p| p.client_request_info());
                                 // Convert ClientRequestInfo to string if present
                                 let cri_str = cri.map(|cri| serde_json::to_string(&cri)).transpose()?;
 
@@ -259,7 +259,7 @@ macro_rules! mononoke_queries {
 
                                 ).await.inspect_err(|e| {
                                     log_query_error(
-                                        tel_logger.as_ref(),
+                                        sql_query_tel.as_ref(),
                                         &e,
                                         granularity,
                                         repo_ids.clone(),
@@ -269,7 +269,7 @@ macro_rules! mononoke_queries {
 
                                 log_query_telemetry(
                                     opt_tel,
-                                    tel_logger.as_ref(),
+                                    sql_query_tel.as_ref(),
                                     granularity,
                                     repo_ids,
                                     query_name,
@@ -358,8 +358,8 @@ macro_rules! mononoke_queries {
                     S: Into<Option<SqlQueryTelemetry>>
                 {
                     let query_name = stringify!($name);
-                    let tel_logger = opt_sql_telemetry.into();
-                    let cri = tel_logger.as_ref().and_then(|p| p.client_request_info());
+                    let sql_query_tel = opt_sql_telemetry.into();
+                    let cri = sql_query_tel.as_ref().and_then(|p| p.client_request_info());
                     // Convert ClientRequestInfo to string if present
                     let cri_str = cri.map(|cri| serde_json::to_string(&cri)).transpose()?;
 
@@ -377,7 +377,7 @@ macro_rules! mononoke_queries {
                         ),
                     ).await.inspect_err(|e| {
                         log_query_error(
-                            tel_logger.as_ref(),
+                            sql_query_tel.as_ref(),
                             &e,
                             granularity,
                             repo_ids.clone(),
@@ -387,7 +387,7 @@ macro_rules! mononoke_queries {
 
                     let opt_tel = write_res.query_telemetry().clone();
 
-                    log_query_telemetry(opt_tel, tel_logger.as_ref(), granularity, repo_ids, &query_name)?;
+                    log_query_telemetry(opt_tel, sql_query_tel.as_ref(), granularity, repo_ids, &query_name)?;
 
                     Ok(write_res)
 
@@ -504,8 +504,8 @@ macro_rules! mononoke_queries {
                     S: Into<Option<SqlQueryTelemetry>>
                 {
                     let query_name = stringify!($name);
-                    let tel_logger = opt_sql_telemetry.into();
-                    let cri = tel_logger.as_ref().and_then(|p| p.client_request_info());
+                    let sql_query_tel = opt_sql_telemetry.into();
+                    let cri = sql_query_tel.as_ref().and_then(|p| p.client_request_info());
                     // Convert ClientRequestInfo to string if present
                     let cri_str = cri.map(|cri| serde_json::to_string(&cri)).transpose()?;
 
@@ -523,7 +523,7 @@ macro_rules! mononoke_queries {
                         ),
                     ).await.inspect_err(|e| {
                         log_query_error(
-                            tel_logger.as_ref(),
+                            sql_query_tel.as_ref(),
                             &e,
                             granularity,
                             repo_ids.clone(),
@@ -533,7 +533,7 @@ macro_rules! mononoke_queries {
 
                     let opt_tel = write_res.query_telemetry().clone();
 
-                    log_query_telemetry(opt_tel, tel_logger.as_ref(), granularity, repo_ids, &query_name)?;
+                    log_query_telemetry(opt_tel, sql_query_tel.as_ref(), granularity, repo_ids, &query_name)?;
 
                     Ok(write_res)
                 }

@@ -121,7 +121,7 @@ impl Transaction {
         sql_txn: SqlTransaction,
         opt_tel: Option<QueryTelemetry>,
         mut txn_telemetry: TransactionTelemetry,
-        tel_logger: SqlQueryTelemetry,
+        sql_query_tel: SqlQueryTelemetry,
         query_repo_ids: Vec<RepositoryId>,
         granularity: TelemetryGranularity,
         query_name: &str,
@@ -134,13 +134,13 @@ impl Transaction {
 
         log_query_telemetry(
             opt_tel,
-            Some(&tel_logger),
+            Some(&sql_query_tel),
             granularity,
             query_repo_ids,
             query_name,
         )?;
 
-        Ok(Transaction::new(sql_txn, txn_telemetry, tel_logger))
+        Ok(Transaction::new(sql_txn, txn_telemetry, sql_query_tel))
     }
 }
 

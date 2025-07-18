@@ -270,13 +270,13 @@ impl SqlSyncedCommitMapping {
             .per_repo_pair_rendezvous(source_repo_id, target_repo_id)
             .dispatch(ctx.fb, bcs_ids.iter().copied().collect(), || {
                 let conn = rendezvous.conn.clone();
-                let tel_logger: SqlQueryTelemetry = ctx.sql_query_telemetry();
+                let sql_query_tel: SqlQueryTelemetry = ctx.sql_query_telemetry();
 
                 move |bcs_ids| async move {
                     let bcs_ids = bcs_ids.into_iter().collect::<Vec<_>>();
                     let rows = SelectManyMappings::query(
                         &conn,
-                        Some(tel_logger.clone()),
+                        Some(sql_query_tel.clone()),
                         &source_repo_id,
                         &target_repo_id,
                         &bcs_ids,
