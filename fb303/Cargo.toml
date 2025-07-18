@@ -1,5 +1,5 @@
 [workspace]
-members = ["thrift", "thrift/clients", "thrift/mocks", "thrift/services"]
+members = ["thrift/rust", "thrift/rust/clients", "thrift/rust/mocks", "thrift/rust/services"]
 resolver = "2"
 
 [workspace.package]

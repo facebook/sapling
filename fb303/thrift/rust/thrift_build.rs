@@ -19,10 +19,10 @@ fn main() {
     fs::write(cratemap_path, CRATEMAP).expect("Failed to write cratemap");
     Config::from_env(GenContext::Types)
         .expect("Failed to instantiate thrift_compiler::Config")
-        .base_path("../..")
+        .base_path("../../..")
         .types_crate("fb303_core__types")
         .clients_crate("fb303_core__clients")
         .options("deprecated_default_enum_min_i32,serde")
-        .run(["fb303_core.thrift"])
+        .run(["../fb303_core.thrift"])
         .expect("Failed while running thrift compilation");
 }
