@@ -7,8 +7,10 @@
 
 use std::cmp::max;
 use std::cmp::min;
+use std::fs::OpenOptions;
 use std::time::Duration;
 
+use anyhow::Context;
 use anyhow::Error;
 use anyhow::Result;
 use anyhow::bail;
@@ -64,6 +66,30 @@ pub fn init_cachelib_from_settings(
         })
         .set_access_config(buckets_power, lock_power)
         .set_cache_name("mononoke");
+
+    if let Some(cache_file_path) = settings.cache_file_path {
+        if let Some(directory) = cache_file_path.parent() {
+            std::fs::create_dir_all(directory)
+                .with_context(|| "Failed to create cachelib cache directory")?;
+        }
+        OpenOptions::new()
+            .write(true)
+            .truncate(true)
+            .create(true)
+            .open(&cache_file_path)
+            .with_context(|| "Failed to create cachelib cache file")?;
+
+        cache_config = cache_config.set_nvm_cache_config(cachelib::NvmCacheConfig {
+            // Default values from cachelib codebase
+            block_size: 4096,
+            region_size: 16 * 1024 * 1024,
+            device: cachelib::NvmDevice::SimpleFile {
+                file_name: cache_file_path,
+                file_size: settings.cache_file_size,
+                truncate: true,
+            },
+        });
+    }
 
     if settings.use_tupperware_shrinker {
         if settings.max_process_size_gib.is_some() || settings.min_process_size_gib.is_some() {
