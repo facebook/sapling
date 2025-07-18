@@ -402,6 +402,7 @@ class EdenServer : private TakeoverHandler {
   void createDaemonExitSignalFile(int signal);
   void removeEdenHeartbeatFile() const;
   void removeDaemonExitSignalFile() const;
+  int readDaemonExitSignal() const;
 #endif
 
   const std::shared_ptr<ServerState>& getServerState() const {

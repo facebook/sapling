@@ -398,8 +398,10 @@ class EdenServer::ThriftServerEventHandler
         // unmounting the mount points hangs for some reason.)
         XLOGF(INFO, "stopping due to signal {}", sig);
 #ifndef _WIN32
-        // Remove eden heartbeat file for a clean exit
-        edenServer_->removeEdenHeartbeatFile();
+        // Record the signal that caused daemon to stop.
+        // The next edenFS startup record this signal in the silent daemon exit
+        // logger
+        edenServer_->createDaemonExitSignalFile(sig);
 #endif
         unregisterSignalHandler(sig);
         edenServer_->stop();
@@ -1288,6 +1290,22 @@ void EdenServer::removeDaemonExitSignalFile() const {
   if (rc != 0 && errno != ENOENT) {
     XLOGF(ERR, "Failed to remove daemon exit signal file: {}", errno);
   }
+}
+
+int EdenServer::readDaemonExitSignal() const {
+  // Read the signal from the daemon exit signal file
+  std::string signalStr;
+  if (folly::readFile(daemonExistSignalFilePathString_, signalStr)) {
+    // Optionally trim whitespace/newlines
+    folly::trimWhitespace(signalStr);
+    try {
+      return folly::to<uint8_t>(signalStr);
+    } catch (const std::exception&) {
+      return 0;
+    }
+  }
+  // File does not exist or is empty, return 0
+  return 0;
 }
 #endif
 
