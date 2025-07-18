@@ -9,7 +9,6 @@ google-cloud-gax = { git = "https://github.com/googleapis/google-cloud-rust.git"
 google-cloud-gax-internal = { git = "https://github.com/googleapis/google-cloud-rust.git", rev = "e8e19354a374b673afa00c34ceb0a589cb2e25ff" }
 google-cloud-rpc = { git = "https://github.com/googleapis/google-cloud-rust.git", rev = "e8e19354a374b673afa00c34ceb0a589cb2e25ff" }
 google-cloud-wkt = { git = "https://github.com/googleapis/google-cloud-rust.git", rev = "e8e19354a374b673afa00c34ceb0a589cb2e25ff" }
-graphql-parser = { git = "https://github.com/graphql-rust/graphql-parser", rev = "8d76425d83c40670570cc325f57c730262f07456" }
 imgui = { git = "https://github.com/imgui-rs/imgui-rs.git", rev = "2abba18c08fb5e70c699ba7992342e7ff8573b09" }
 imgui-sys = { git = "https://github.com/imgui-rs/imgui-rs.git", rev = "2abba18c08fb5e70c699ba7992342e7ff8573b09" }
 k = { git = "https://github.com/prnthp-meta/k", rev = "f06b504c563a4763dbf2d47366b868f67d5c9dd2" }
