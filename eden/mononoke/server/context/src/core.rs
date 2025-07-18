@@ -169,6 +169,15 @@ impl CoreContext {
     }
 }
 
+impl From<CoreContext> for SqlQueryTelemetry {
+    fn from(ctx: CoreContext) -> SqlQueryTelemetry {
+        let fb = ctx.fb.clone();
+        let metadata = ctx.metadata();
+
+        SqlQueryTelemetry::new(fb, metadata.clone())
+    }
+}
+
 impl From<CoreContext> for Option<SqlQueryTelemetry> {
     fn from(ctx: CoreContext) -> Option<SqlQueryTelemetry> {
         let fb = ctx.fb.clone();

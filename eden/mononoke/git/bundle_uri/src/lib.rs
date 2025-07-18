@@ -105,7 +105,7 @@ pub trait GitBundleUri: Send + Sync {
     ) -> Result<String>;
 
     /// Adds bundles as a new bundle list to the metadata db. Return bundle list num.
-    async fn add_new_bundles(&self, bundles: &[Bundle]) -> Result<u64>;
+    async fn add_new_bundles(&self, ctx: &CoreContext, bundles: &[Bundle]) -> Result<u64>;
 
     /// The repository for which the bundles are being tracked
     fn repo_id(&self) -> RepositoryId;
@@ -222,8 +222,10 @@ impl<U: Clone + Send + GitBundleUrlGenerator + Sync> GitBundleUri for BundleUri<
             .await
     }
 
-    async fn add_new_bundles(&self, bundles: &[Bundle]) -> Result<u64> {
-        self.bundle_metadata_storage.add_new_bundles(bundles).await
+    async fn add_new_bundles(&self, ctx: &CoreContext, bundles: &[Bundle]) -> Result<u64> {
+        self.bundle_metadata_storage
+            .add_new_bundles(ctx, bundles)
+            .await
     }
 
     async fn get_url_for_bundle_handle(

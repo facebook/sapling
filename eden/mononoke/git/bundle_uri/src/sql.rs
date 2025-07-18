@@ -6,12 +6,14 @@
  */
 
 use anyhow::Result;
+use context::CoreContext;
 use metaconfig_types::RemoteDatabaseConfig;
 use metaconfig_types::RemoteMetadataDatabaseConfig;
 use mononoke_types::RepositoryId;
 use sql_construct::SqlConstruct;
 use sql_construct::SqlConstructFromMetadataDatabaseConfig;
 use sql_ext::SqlConnections;
+use sql_ext::SqlQueryTelemetry;
 use sql_ext::Transaction;
 use sql_ext::mononoke_queries;
 
@@ -124,10 +126,10 @@ impl SqlGitBundleMetadataStorage {
     /// Add new bundle-list to the DB as the latest bundle-list.
     /// The Bundles are expected to be in sorted order, increasingly, on
     /// Bundle.in_bundle_list_order.
-    pub async fn add_new_bundles(&self, bundles: &[Bundle]) -> Result<u64> {
+    pub async fn add_new_bundles(&self, ctx: &CoreContext, bundles: &[Bundle]) -> Result<u64> {
         let conn = &self.connections.write_connection;
         let sql_txn = conn.start_transaction().await?;
-        let txn = sql_ext::Transaction::new(sql_txn, Default::default(), None);
+        let txn = sql_ext::Transaction::new(sql_txn, Default::default(), Some(ctx.into()));
 
         let (txn, rows) =
             GetLatestBundleListNumForRepo::query_with_transaction(txn, None, &self.repo_id).await?;
@@ -284,6 +286,7 @@ impl SqlGitBundleMetadataStorage {
 #[cfg(test)]
 mod test {
     use anyhow::Result;
+    use context::CoreContext;
     use fbinit::FacebookInit;
     use itertools::Itertools;
     use lazy_static::lazy_static;
@@ -332,7 +335,7 @@ mod test {
     }
 
     #[mononoke::fbinit_test]
-    async fn test_no_bundles(_: FacebookInit) -> Result<()> {
+    async fn test_no_bundles(_fb: FacebookInit) -> Result<()> {
         let repo_id = RepositoryId::new(2137);
         let storage = SqlGitBundleMetadataStorageBuilder::with_sqlite_in_memory()?.build(repo_id);
 
@@ -343,21 +346,27 @@ mod test {
     }
 
     #[mononoke::fbinit_test]
-    async fn test_add_bundles(_: FacebookInit) -> Result<()> {
+    async fn test_add_bundles(fb: FacebookInit) -> Result<()> {
+        let ctx = CoreContext::test_mock(fb);
         let repo_id = RepositoryId::new(2137);
         let storage = SqlGitBundleMetadataStorageBuilder::with_sqlite_in_memory()?.build(repo_id);
 
-        storage.add_new_bundles(&TEST_BUNDLE_LIST_2[..]).await?;
+        storage
+            .add_new_bundles(&ctx, &TEST_BUNDLE_LIST_2[..])
+            .await?;
 
         Ok(())
     }
 
     #[mononoke::fbinit_test]
-    async fn test_get_latest_bundles(_: FacebookInit) -> Result<()> {
+    async fn test_get_latest_bundles(fb: FacebookInit) -> Result<()> {
+        let ctx = CoreContext::test_mock(fb);
         let repo_id = RepositoryId::new(2137);
         let storage = SqlGitBundleMetadataStorageBuilder::with_sqlite_in_memory()?.build(repo_id);
 
-        storage.add_new_bundles(&TEST_BUNDLE_LIST_2[..]).await?;
+        storage
+            .add_new_bundles(&ctx, &TEST_BUNDLE_LIST_2[..])
+            .await?;
 
         let bundle_list = storage
             .get_latest_bundle_list()
@@ -369,7 +378,9 @@ mod test {
             assert!(p.in_bundle_list_order < n.in_bundle_list_order)
         }
 
-        storage.add_new_bundles(&TEST_BUNDLE_LIST_3[..]).await?;
+        storage
+            .add_new_bundles(&ctx, &TEST_BUNDLE_LIST_3[..])
+            .await?;
 
         let bundle_list = storage
             .get_latest_bundle_list()
@@ -385,12 +396,17 @@ mod test {
     }
 
     #[mononoke::fbinit_test]
-    async fn test_get_bundle_lists(_: FacebookInit) -> Result<()> {
+    async fn test_get_bundle_lists(fb: FacebookInit) -> Result<()> {
+        let ctx = CoreContext::test_mock(fb);
         let repo_id = RepositoryId::new(2137);
         let storage = SqlGitBundleMetadataStorageBuilder::with_sqlite_in_memory()?.build(repo_id);
 
-        storage.add_new_bundles(&TEST_BUNDLE_LIST_2[..]).await?;
-        storage.add_new_bundles(&TEST_BUNDLE_LIST_3[..]).await?;
+        storage
+            .add_new_bundles(&ctx, &TEST_BUNDLE_LIST_2[..])
+            .await?;
+        storage
+            .add_new_bundles(&ctx, &TEST_BUNDLE_LIST_3[..])
+            .await?;
 
         let bundle_lists = storage.get_bundle_lists().await?;
         assert_eq!(bundle_lists.len(), 2);
@@ -407,12 +423,17 @@ mod test {
     }
 
     #[mononoke::fbinit_test]
-    async fn test_remove_bundle_list(_: FacebookInit) -> Result<()> {
+    async fn test_remove_bundle_list(fb: FacebookInit) -> Result<()> {
+        let ctx = CoreContext::test_mock(fb);
         let repo_id = RepositoryId::new(2137);
         let storage = SqlGitBundleMetadataStorageBuilder::with_sqlite_in_memory()?.build(repo_id);
 
-        let bundle_list_num_2 = storage.add_new_bundles(&TEST_BUNDLE_LIST_2[..]).await?;
-        let bundle_list_num_3 = storage.add_new_bundles(&TEST_BUNDLE_LIST_3[..]).await?;
+        let bundle_list_num_2 = storage
+            .add_new_bundles(&ctx, &TEST_BUNDLE_LIST_2[..])
+            .await?;
+        let bundle_list_num_3 = storage
+            .add_new_bundles(&ctx, &TEST_BUNDLE_LIST_3[..])
+            .await?;
 
         let bundle_lists = storage.get_bundle_lists().await?;
         assert_eq!(bundle_lists.len(), 2);
