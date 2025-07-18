@@ -115,7 +115,7 @@ impl TransactionRepoLock {
         &self,
         txn: Transaction,
     ) -> Result<(Transaction, RepoLockState), Error> {
-        let (txn, row) = GetRepoLockStatus::query_with_transaction(txn, None, &self.repo_id)
+        let (txn, row) = GetRepoLockStatus::query_with_transaction(txn, &self.repo_id)
             .await
             .context("Failed to query repo lock status")?;
 

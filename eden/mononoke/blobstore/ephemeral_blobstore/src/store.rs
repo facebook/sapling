@@ -227,7 +227,6 @@ impl RepoEphemeralStoreInner {
         let txn = sql_ext::Transaction::new(sql_txn, Default::default(), ctx.sql_query_telemetry());
         let (txn, res) = CreateBubble::query_with_transaction(
             txn,
-            ctx.sql_query_telemetry(),
             &Timestamp::from(created_at),
             &Timestamp::from(expires_at),
             &None,
@@ -245,12 +244,9 @@ impl RepoEphemeralStoreInner {
                         .iter()
                         .map(|label| (&bubble_id, label as &str))
                         .collect::<Vec<_>>();
-                    let (txn, _res) = AddBubbleLabels::query_with_transaction(
-                        txn,
-                        ctx.sql_query_telemetry(),
-                        bubble_labels.as_slice(),
-                    )
-                    .await?;
+                    let (txn, _res) =
+                        AddBubbleLabels::query_with_transaction(txn, bubble_labels.as_slice())
+                            .await?;
                     txn.commit().await?;
                 } else {
                     txn.commit().await?;

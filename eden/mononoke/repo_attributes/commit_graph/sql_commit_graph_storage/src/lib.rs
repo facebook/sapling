@@ -1631,7 +1631,6 @@ impl SqlCommitGraphStorage {
             .collect::<Vec<_>>();
         let (transaction, result) = InsertChangesetsNoEdges::query_with_transaction(
             transaction,
-            Some(ctx.sql_query_telemetry()),
             // This pattern is used to convert a ref to tuple into a tuple of refs.
             #[allow(clippy::map_identity)]
             cs_no_edges
@@ -1659,7 +1658,6 @@ impl SqlCommitGraphStorage {
             // Use the same transaction to make sure we see the new values
             let (transaction, result) = SelectManyIds::query_with_transaction(
                 transaction,
-                ctx.sql_query_telemetry(),
                 &self.repo_id,
                 need_ids.into_iter().collect::<Vec<_>>().as_slice(),
             )
@@ -1724,7 +1722,6 @@ impl SqlCommitGraphStorage {
 
         let (transaction, _) = FixEdges::query_with_transaction(
             transaction,
-            ctx.sql_query_telemetry(),
             // This pattern is used to convert a ref to tuple into a tuple of refs.
             #[allow(clippy::map_identity)]
             rows.iter()
@@ -1750,7 +1747,6 @@ impl SqlCommitGraphStorage {
 
         let (transaction, result) = InsertMergeParents::query_with_transaction(
             transaction,
-            ctx.sql_query_telemetry(),
             // This pattern is used to convert a ref to tuple into a tuple of refs.
             #[allow(clippy::map_identity)]
             merge_parent_rows
@@ -1776,7 +1772,6 @@ impl SqlCommitGraphStorage {
 
         let (transaction, result) = InsertSubtreeSources::query_with_transaction(
             transaction,
-            ctx.sql_query_telemetry(),
             // This pattern is used to convert a ref to tuple into a tuple of refs.
             #[allow(clippy::map_identity)]
             subtree_source_rows
@@ -1867,7 +1862,6 @@ impl CommitGraphStorage for SqlCommitGraphStorage {
 
         let (transaction, result) = InsertChangeset::query_with_transaction(
             transaction,
-            ctx.sql_query_telemetry(),
             &self.repo_id,
             &edges.node.cs_id,
             &edges.node.generation.value(),
@@ -1919,7 +1913,6 @@ impl CommitGraphStorage for SqlCommitGraphStorage {
 
                 let (transaction, result) = InsertMergeParents::query_with_transaction(
                     transaction,
-                    ctx.sql_query_telemetry(),
                     // This pattern is used to convert a ref to tuple into a tuple of refs.
                     #[allow(clippy::map_identity)]
                     merge_parent_rows
@@ -1947,7 +1940,6 @@ impl CommitGraphStorage for SqlCommitGraphStorage {
 
                 let (transaction, result) = InsertSubtreeSources::query_with_transaction(
                     transaction,
-                    ctx.sql_query_telemetry(),
                     // This pattern is used to convert a ref to tuple into a tuple of refs.
                     #[allow(clippy::map_identity)]
                     subtree_source_rows

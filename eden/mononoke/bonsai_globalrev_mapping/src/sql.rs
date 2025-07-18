@@ -526,7 +526,7 @@ pub enum AddGlobalrevsErrorKind {
 // BonsaiGlobalrevMapping trait, we should probably rethink the design of it, and not actually have
 // it contain any connections (instead, they should be passed on by callers).
 pub async fn add_globalrevs(
-    ctx: &CoreContext,
+    _ctx: &CoreContext,
     transaction: Transaction,
     repo_id: RepositoryId,
     entries: impl IntoIterator<Item = &BonsaiGlobalrevMappingEntry>,
@@ -540,12 +540,8 @@ pub async fn add_globalrevs(
     // crate doesn't allow us to reach into this yet, so for now we check the number of affected
     // rows.
 
-    let (transaction, res) = DangerouslyAddGlobalrevs::query_with_transaction(
-        transaction,
-        ctx.sql_query_telemetry(),
-        &rows[..],
-    )
-    .await?;
+    let (transaction, res) =
+        DangerouslyAddGlobalrevs::query_with_transaction(transaction, &rows[..]).await?;
 
     if res.affected_rows() != rows.len() as u64 {
         return Err(AddGlobalrevsErrorKind::Conflict);

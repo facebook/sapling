@@ -708,7 +708,7 @@ impl SyncedCommitMapping for SqlSyncedCommitMapping {
 }
 
 pub async fn add_many_in_txn(
-    ctx: &CoreContext,
+    _ctx: &CoreContext,
     txn: Transaction,
     entries: Vec<SyncedCommitMappingEntry>,
 ) -> Result<(Transaction, u64), Error> {
@@ -728,9 +728,7 @@ pub async fn add_many_in_txn(
         })
         .collect();
 
-    let (txn, _result) =
-        InsertMapping::query_with_transaction(txn, ctx.sql_query_telemetry(), &insert_entries)
-            .await?;
+    let (txn, _result) = InsertMapping::query_with_transaction(txn, &insert_entries).await?;
     let owned_entries: Vec<_> = entries
         .into_iter()
         .map(|entry| entry.into_equivalent_working_copy_entry())
@@ -746,12 +744,9 @@ pub async fn add_many_in_txn(
             ));
         }
     }
-    let (txn, _result) = InsertVersionForLargeRepoCommit::query_with_transaction(
-        txn,
-        ctx.sql_query_telemetry(),
-        &large_repo_commit_versions,
-    )
-    .await?;
+    let (txn, _result) =
+        InsertVersionForLargeRepoCommit::query_with_transaction(txn, &large_repo_commit_versions)
+            .await?;
 
     let ref_entries: Vec<_> = owned_entries
         .iter()
@@ -766,23 +761,18 @@ pub async fn add_many_in_txn(
         })
         .collect();
 
-    let (txn, result) = InsertWorkingCopyEquivalence::query_with_transaction(
-        txn,
-        ctx.sql_query_telemetry(),
-        &ref_entries,
-    )
-    .await?;
+    let (txn, result) =
+        InsertWorkingCopyEquivalence::query_with_transaction(txn, &ref_entries).await?;
     Ok((txn, result.affected_rows()))
 }
 
 pub async fn add_many_large_repo_commit_versions_in_txn(
-    ctx: &CoreContext,
+    _ctx: &CoreContext,
     txn: Transaction,
     large_repo_commit_versions: &[(RepositoryId, ChangesetId, CommitSyncConfigVersion)],
 ) -> Result<(Transaction, u64), Error> {
     let (txn, result) = InsertVersionForLargeRepoCommit::query_with_transaction(
         txn,
-        ctx.sql_query_telemetry(),
         &large_repo_commit_versions
             .iter()
             .map(|(repo_id, cs_id, version_name)| (repo_id, cs_id, version_name))

@@ -195,14 +195,13 @@ impl Delete<WorkspaceHistory> for SqlCommitCloud {
     async fn delete(
         &self,
         txn: Transaction,
-        ctx: &CoreContext,
+        _ctx: &CoreContext,
         reponame: String,
         workspace: String,
         args: Self::DeleteArgs,
     ) -> anyhow::Result<Transaction> {
         let (txn, _) = DeleteHistory::query_with_transaction(
             txn,
-            ctx.sql_query_telemetry(),
             &reponame,
             &workspace,
             &args.keep_days,
@@ -219,7 +218,7 @@ impl Insert<WorkspaceHistory> for SqlCommitCloud {
     async fn insert(
         &self,
         txn: Transaction,
-        ctx: &CoreContext,
+        _ctx: &CoreContext,
         reponame: String,
         workspace: String,
         data: WorkspaceHistory,
@@ -240,7 +239,6 @@ impl Insert<WorkspaceHistory> for SqlCommitCloud {
 
         (res_txn, _) = InsertHistory::query_with_transaction(
             txn,
-            ctx.sql_query_telemetry(),
             &reponame,
             &workspace,
             &data.version,
@@ -261,13 +259,12 @@ impl Update<WorkspaceHistory> for SqlCommitCloud {
     async fn update(
         &self,
         txn: Transaction,
-        ctx: &CoreContext,
+        _ctx: &CoreContext,
         cc_ctx: CommitCloudContext,
         args: Self::UpdateArgs,
     ) -> anyhow::Result<(Transaction, u64)> {
         let (txn, result) = UpdateWorkspaceName::query_with_transaction(
             txn,
-            ctx.sql_query_telemetry(),
             &cc_ctx.reponame,
             &cc_ctx.workspace,
             &args.new_workspace,

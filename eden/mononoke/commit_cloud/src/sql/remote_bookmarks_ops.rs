@@ -101,14 +101,13 @@ impl Insert<WorkspaceRemoteBookmark> for SqlCommitCloud {
     async fn insert(
         &self,
         txn: Transaction,
-        ctx: &CoreContext,
+        _ctx: &CoreContext,
         reponame: String,
         workspace: String,
         data: WorkspaceRemoteBookmark,
     ) -> anyhow::Result<Transaction> {
         let (txn, _) = InsertRemoteBookmark::query_with_transaction(
             txn,
-            ctx.sql_query_telemetry(),
             &reponame,
             &workspace,
             data.remote(),
@@ -126,13 +125,12 @@ impl Update<WorkspaceRemoteBookmark> for SqlCommitCloud {
     async fn update(
         &self,
         txn: Transaction,
-        ctx: &CoreContext,
+        _ctx: &CoreContext,
         cc_ctx: CommitCloudContext,
         args: Self::UpdateArgs,
     ) -> anyhow::Result<(Transaction, u64)> {
         let (txn, result) = UpdateWorkspaceName::query_with_transaction(
             txn,
-            ctx.sql_query_telemetry(),
             &cc_ctx.reponame,
             &cc_ctx.workspace,
             &args.new_workspace,
@@ -148,14 +146,13 @@ impl Delete<WorkspaceRemoteBookmark> for SqlCommitCloud {
     async fn delete(
         &self,
         txn: Transaction,
-        ctx: &CoreContext,
+        _ctx: &CoreContext,
         reponame: String,
         workspace: String,
         args: Self::DeleteArgs,
     ) -> anyhow::Result<Transaction> {
         let (txn, _) = DeleteRemoteBookmark::query_with_transaction(
             txn,
-            ctx.sql_query_telemetry(),
             &reponame,
             &workspace,
             args.removed_bookmarks.as_slice(),

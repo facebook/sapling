@@ -199,20 +199,11 @@ mod facebook {
         let txn = txn.add_sql_query_tel(tel_logger.clone());
 
         // Query with Repo ID 1
-        let (txn, _res) = ReadQuery1::query_with_transaction(
-            txn,
-            Some(tel_logger.clone()),
-            &RepositoryId::new(1),
-        )
-        .await?;
+        let (txn, _res) = ReadQuery1::query_with_transaction(txn, &RepositoryId::new(1)).await?;
         // Query with Repo ID 2
-        let (txn, _res) = ReadQuery2::query_with_transaction(
-            txn,
-            Some(tel_logger),
-            &RepositoryId::new(2),
-            &RepositoryId::new(3),
-        )
-        .await?;
+        let (txn, _res) =
+            ReadQuery2::query_with_transaction(txn, &RepositoryId::new(2), &RepositoryId::new(3))
+                .await?;
 
         txn.commit().await?;
 
@@ -478,7 +469,7 @@ async fn should_compile(fb: FacebookInit) -> Result<()> {
 
     let tel_logger = SqlQueryTelemetry::new(fb, metadata);
     TestQuery::query(connection, None, todo!(), todo!()).await?;
-    TestQuery::query_with_transaction(todo!(), None, todo!(), todo!()).await?;
+    TestQuery::query_with_transaction(todo!(), todo!(), todo!()).await?;
     TestQuery2::query(config, None, connection, None::<SqlQueryTelemetry>).await?;
     TestQuery2::query(
         config,
@@ -487,9 +478,9 @@ async fn should_compile(fb: FacebookInit) -> Result<()> {
         None,
     )
     .await?;
-    TestQuery2::query_with_transaction(todo!(), None).await?;
+    TestQuery2::query_with_transaction(todo!()).await?;
     TestQuery3::query(connection, None, &[(&12,)]).await?;
-    TestQuery3::query_with_transaction(todo!(), None, &[(&12,)]).await?;
+    TestQuery3::query_with_transaction(todo!(), &[(&12,)]).await?;
     TestQuery4::query(connection, None, &"hello").await?;
     TestQuery::query(connection, Some(tel_logger), todo!(), todo!()).await?;
     TestQuery2::query(config, None, connection, Some(tel_logger)).await?;

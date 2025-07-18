@@ -72,19 +72,14 @@ impl Insert<WorkspaceSnapshot> for SqlCommitCloud {
     async fn insert(
         &self,
         txn: Transaction,
-        ctx: &CoreContext,
+        _ctx: &CoreContext,
         reponame: String,
         workspace: String,
         data: WorkspaceSnapshot,
     ) -> anyhow::Result<Transaction> {
-        let (txn, _) = InsertSnapshot::query_with_transaction(
-            txn,
-            ctx.sql_query_telemetry(),
-            &reponame,
-            &workspace,
-            &data.commit,
-        )
-        .await?;
+        let (txn, _) =
+            InsertSnapshot::query_with_transaction(txn, &reponame, &workspace, &data.commit)
+                .await?;
         Ok(txn)
     }
 }
@@ -95,13 +90,12 @@ impl Update<WorkspaceSnapshot> for SqlCommitCloud {
     async fn update(
         &self,
         txn: Transaction,
-        ctx: &CoreContext,
+        _ctx: &CoreContext,
         cc_ctx: CommitCloudContext,
         args: Self::UpdateArgs,
     ) -> anyhow::Result<(Transaction, u64)> {
         let (txn, result) = UpdateWorkspaceName::query_with_transaction(
             txn,
-            ctx.sql_query_telemetry(),
             &cc_ctx.reponame,
             &cc_ctx.workspace,
             &args.new_workspace,
@@ -117,14 +111,13 @@ impl Delete<WorkspaceSnapshot> for SqlCommitCloud {
     async fn delete(
         &self,
         txn: Transaction,
-        ctx: &CoreContext,
+        _ctx: &CoreContext,
         reponame: String,
         workspace: String,
         args: Self::DeleteArgs,
     ) -> anyhow::Result<Transaction> {
         let (txn, _) = DeleteSnapshot::query_with_transaction(
             txn,
-            ctx.sql_query_telemetry(),
             &reponame,
             &workspace,
             &args.removed_snapshots,

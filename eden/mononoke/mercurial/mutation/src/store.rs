@@ -171,30 +171,10 @@ impl SqlHgMutationStore {
 
         ctx.perf_counters()
             .add_to_counter(PerfCounterType::SqlWrites, 4);
-        let (txn, _) = AddChangesets::query_with_transaction(
-            txn,
-            ctx.sql_query_telemetry(),
-            db_csets.as_slice(),
-        )
-        .await?;
-        let (txn, _) = AddEntries::query_with_transaction(
-            txn,
-            ctx.sql_query_telemetry(),
-            ref_db_entries.as_slice(),
-        )
-        .await?;
-        let (txn, _) = AddPreds::query_with_transaction(
-            txn,
-            ctx.sql_query_telemetry(),
-            ref_db_preds.as_slice(),
-        )
-        .await?;
-        let (txn, _) = AddSplits::query_with_transaction(
-            txn,
-            ctx.sql_query_telemetry(),
-            ref_db_splits.as_slice(),
-        )
-        .await?;
+        let (txn, _) = AddChangesets::query_with_transaction(txn, db_csets.as_slice()).await?;
+        let (txn, _) = AddEntries::query_with_transaction(txn, ref_db_entries.as_slice()).await?;
+        let (txn, _) = AddPreds::query_with_transaction(txn, ref_db_preds.as_slice()).await?;
+        let (txn, _) = AddSplits::query_with_transaction(txn, ref_db_splits.as_slice()).await?;
         txn.commit().await?;
 
         debug!(

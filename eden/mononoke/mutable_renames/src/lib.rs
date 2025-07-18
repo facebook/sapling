@@ -449,13 +449,11 @@ impl MutableRenames {
 
         // Delete renames
         let (txn, delete_renames_result) =
-            DeleteRenames::query_with_transaction(txn, ctx.sql_query_telemetry(), &rows[..])
-                .await?;
+            DeleteRenames::query_with_transaction(txn, &rows[..]).await?;
 
         // Compute orphan paths
         let (txn, used_path_hashes) = FindUsedPathHashes::query_with_transaction(
             txn,
-            ctx.sql_query_telemetry(),
             &path_hashes.clone().into_iter().collect::<Vec<_>>()[..],
         )
         .await?;
@@ -467,7 +465,6 @@ impl MutableRenames {
         // Delete orphan paths
         let (txn, delete_paths_result) = DeletePaths::query_with_transaction(
             txn,
-            ctx.sql_query_telemetry(),
             &path_hashes.into_iter().collect::<Vec<_>>()[..],
         )
         .await?;

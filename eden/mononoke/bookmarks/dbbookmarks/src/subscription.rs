@@ -65,13 +65,10 @@ impl SqlBookmarksSubscription {
             .context("Failed to start bookmarks read transaction")?;
         let txn = sql_ext::Transaction::new(sql_txn, Default::default(), ctx.sql_query_telemetry());
 
-        let (txn, log_id_rows) = GetLargestLogId::query_with_transaction(
-            txn,
-            ctx.sql_query_telemetry(),
-            &sql_bookmarks.repo_id,
-        )
-        .await
-        .context("Failed to read log id")?;
+        let (txn, log_id_rows) =
+            GetLargestLogId::query_with_transaction(txn, &sql_bookmarks.repo_id)
+                .await
+                .context("Failed to read log id")?;
 
         // Our ids start at 1 so we can default log_id to zero if it's missing.
         let log_id = log_id_rows
@@ -84,7 +81,6 @@ impl SqlBookmarksSubscription {
         let tok: i32 = rand::thread_rng().r#gen();
         let (txn, bookmarks) = SelectAllUnordered::query_with_transaction(
             txn,
-            ctx.sql_query_telemetry(),
             &sql_bookmarks.repo_id,
             &u64::MAX,
             &tok,

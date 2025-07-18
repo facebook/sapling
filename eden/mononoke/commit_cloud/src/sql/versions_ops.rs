@@ -99,14 +99,13 @@ impl Insert<WorkspaceVersion> for SqlCommitCloud {
     async fn insert(
         &self,
         txn: Transaction,
-        ctx: &CoreContext,
+        _ctx: &CoreContext,
         reponame: String,
         workspace: String,
         data: WorkspaceVersion,
     ) -> anyhow::Result<Transaction> {
         let (txn, _) = InsertVersion::query_with_transaction(
             txn,
-            ctx.sql_query_telemetry(),
             &reponame,
             &workspace,
             &data.version,
@@ -129,7 +128,7 @@ impl Update<WorkspaceVersion> for SqlCommitCloud {
     async fn update(
         &self,
         txn: Transaction,
-        ctx: &CoreContext,
+        _ctx: &CoreContext,
         cc_ctx: CommitCloudContext,
         args: Self::UpdateArgs,
     ) -> anyhow::Result<(Transaction, u64)> {
@@ -137,7 +136,6 @@ impl Update<WorkspaceVersion> for SqlCommitCloud {
             UpdateVersionArgs::Archive(archived) => {
                 let (txn, result) = UpdateArchive::query_with_transaction(
                     txn,
-                    ctx.sql_query_telemetry(),
                     &cc_ctx.reponame,
                     &cc_ctx.workspace,
                     &archived,
@@ -148,7 +146,6 @@ impl Update<WorkspaceVersion> for SqlCommitCloud {
             UpdateVersionArgs::WorkspaceName(new_workspace) => {
                 let (txn, result) = UpdateWorkspaceName::query_with_transaction(
                     txn,
-                    ctx.sql_query_telemetry(),
                     &cc_ctx.reponame,
                     &cc_ctx.workspace,
                     &new_workspace,

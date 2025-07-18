@@ -124,14 +124,13 @@ impl Insert<WorkspaceCheckoutLocation> for SqlCommitCloud {
     async fn insert(
         &self,
         txn: Transaction,
-        ctx: &CoreContext,
+        _ctx: &CoreContext,
         reponame: String,
         workspace: String,
         data: WorkspaceCheckoutLocation,
     ) -> anyhow::Result<Transaction> {
         let (txn, _) = InsertCheckoutLocations::query_with_transaction(
             txn,
-            ctx.sql_query_telemetry(),
             &reponame,
             &workspace,
             &data.hostname,
@@ -152,13 +151,12 @@ impl Update<WorkspaceCheckoutLocation> for SqlCommitCloud {
     async fn update(
         &self,
         txn: Transaction,
-        ctx: &CoreContext,
+        _ctx: &CoreContext,
         cc_ctx: CommitCloudContext,
         args: Self::UpdateArgs,
     ) -> anyhow::Result<(Transaction, u64)> {
         let (txn, result) = UpdateWorkspaceName::query_with_transaction(
             txn,
-            ctx.sql_query_telemetry(),
             &cc_ctx.reponame,
             &cc_ctx.workspace,
             &args.new_workspace,

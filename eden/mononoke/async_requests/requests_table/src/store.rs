@@ -795,8 +795,7 @@ impl LongRunningRequestsQueue for SqlLongRunningRequestsQueue {
             .await?;
         let txn = sql_ext::Transaction::new(sql_txn, Default::default(), ctx.sql_query_telemetry());
 
-        let (mut txn, rows) =
-            GetRequest::query_with_transaction(txn, None, &req_id.0, &req_id.1).await?;
+        let (mut txn, rows) = GetRequest::query_with_transaction(txn, &req_id.0, &req_id.1).await?;
         let entry = match rows.into_iter().next() {
             None => bail!("unknown request polled: {:?}", req_id),
             Some(row) => {
@@ -815,7 +814,6 @@ impl LongRunningRequestsQueue for SqlLongRunningRequestsQueue {
                     RequestStatus::Ready => {
                         txn = MarkRequestPolled::query_with_transaction(
                             txn,
-                            None,
                             &req_id.0,
                             &req_id.1,
                             &Timestamp::now(),
@@ -902,8 +900,7 @@ impl LongRunningRequestsQueue for SqlLongRunningRequestsQueue {
             .await?;
         let txn = sql_ext::Transaction::new(sql_txn, Default::default(), ctx.sql_query_telemetry());
 
-        let (mut txn, rows) =
-            GetRequest::query_with_transaction(txn, None, &req_id.0, &req_id.1).await?;
+        let (mut txn, rows) = GetRequest::query_with_transaction(txn, &req_id.0, &req_id.1).await?;
         let will_retry = match rows.into_iter().next() {
             None => bail!("Failed to get request: {:?}", req_id),
             Some(row) => {
@@ -914,7 +911,6 @@ impl LongRunningRequestsQueue for SqlLongRunningRequestsQueue {
                         if next_retry > max_retry_allowed {
                             txn = MarkRequestFailed::query_with_transaction(
                                 txn,
-                                None,
                                 &req_id.0,
                                 &req_id.1,
                                 &Timestamp::now(),
@@ -925,7 +921,6 @@ impl LongRunningRequestsQueue for SqlLongRunningRequestsQueue {
                         } else {
                             txn = MarkRequestAsNewForRetry::query_with_transaction(
                                 txn,
-                                None,
                                 &req_id.0,
                                 &req_id.1,
                                 &next_retry,

@@ -189,7 +189,6 @@ impl SqlMutableCounters {
         let (txn, result) = if let Some(prev_value) = prev_value {
             SetCounterConditionally::query_with_transaction(
                 txn,
-                Some(ctx.sql_query_telemetry()),
                 &repo_id,
                 &name,
                 &value,
@@ -197,14 +196,7 @@ impl SqlMutableCounters {
             )
             .await?
         } else {
-            SetCounter::query_with_transaction(
-                txn,
-                Some(ctx.sql_query_telemetry()),
-                &repo_id,
-                &name,
-                &value,
-            )
-            .await?
+            SetCounter::query_with_transaction(txn, &repo_id, &name, &value).await?
         };
 
         Ok(if result.affected_rows() >= 1 {

@@ -100,14 +100,13 @@ impl Insert<WorkspaceLocalBookmark> for SqlCommitCloud {
     async fn insert(
         &self,
         txn: Transaction,
-        ctx: &CoreContext,
+        _ctx: &CoreContext,
         reponame: String,
         workspace: String,
         data: WorkspaceLocalBookmark,
     ) -> anyhow::Result<Transaction> {
         let (txn, _) = InsertLocalBookmark::query_with_transaction(
             txn,
-            ctx.sql_query_telemetry(),
             &reponame,
             &workspace,
             data.name(),
@@ -124,13 +123,12 @@ impl Update<WorkspaceLocalBookmark> for SqlCommitCloud {
     async fn update(
         &self,
         txn: Transaction,
-        ctx: &CoreContext,
+        _ctx: &CoreContext,
         cc_ctx: CommitCloudContext,
         args: Self::UpdateArgs,
     ) -> anyhow::Result<(Transaction, u64)> {
         let (txn, result) = UpdateWorkspaceName::query_with_transaction(
             txn,
-            ctx.sql_query_telemetry(),
             &cc_ctx.reponame,
             &cc_ctx.workspace,
             &args.new_workspace,
@@ -146,14 +144,13 @@ impl Delete<WorkspaceLocalBookmark> for SqlCommitCloud {
     async fn delete(
         &self,
         txn: Transaction,
-        ctx: &CoreContext,
+        _ctx: &CoreContext,
         reponame: String,
         workspace: String,
         args: Self::DeleteArgs,
     ) -> anyhow::Result<Transaction> {
         let (txn, _) = DeleteLocalBookmark::query_with_transaction(
             txn,
-            ctx.sql_query_telemetry(),
             &reponame,
             &workspace,
             &args.removed_bookmarks,
