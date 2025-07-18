@@ -523,6 +523,7 @@ int runEdenMain(EdenMain&& main, int argc, char** argv) {
                   // Read the latest timestamp from the heartbeat file
                   std::string latestDaemonHeartbeatStr;
                   uint64_t latestDaemonHeartbeat = 0;
+                  uint8_t daemon_exit_signal = 0;
                   if (folly::readFile(
                           entry.path().string().c_str(),
                           latestDaemonHeartbeatStr)) {
@@ -531,8 +532,8 @@ int runEdenMain(EdenMain&& main, int argc, char** argv) {
                         folly::to<uint64_t>(latestDaemonHeartbeatStr);
                   }
                   // Log a crash event
-                  structuredLogger->logEvent(
-                      SilentDaemonExit{latestDaemonHeartbeat});
+                  structuredLogger->logEvent(SilentDaemonExit{
+                      latestDaemonHeartbeat, daemon_exit_signal});
 
                   std::remove(entry.path().string().c_str());
                 }
