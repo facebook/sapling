@@ -696,7 +696,7 @@ def match(
     ctx,
     pats=(),
     opts=None,
-    globbed=False,
+    globbed: bool = False,
     default="relpath",
     badfn=None,
 ):
@@ -950,8 +950,13 @@ def cleanupnodes(repo, replacements, operation, moves=None, metadata=None):
 
 
 def addremove(
-    repo, matcher, addremove=True, automv=True, similarity=None, dry_run=False
-):
+    repo,
+    matcher,
+    addremove: bool = True,
+    automv: bool = True,
+    similarity=None,
+    dry_run: bool = False,
+) -> int:
     m = matcher
 
     rename_detection_file_limit = None
@@ -1113,7 +1118,7 @@ def _markchanges(repo, unknown, deleted, renames):
             wctx.copy(old, new)
 
 
-def dirstatecopy(ui, repo, wctx, src, dst, dryrun=False, cwd=None):
+def dirstatecopy(ui, repo, wctx, src, dst, dryrun: bool = False, cwd=None):
     """Update the dirstate to reflect the intent of copying src to dst. For
     different reasons it might not end with dst being marked as copied from src.
     """
@@ -1200,7 +1205,7 @@ class filecachesubentry:
 
 
 class filecacheentry:
-    def __init__(self, paths, stat=True):
+    def __init__(self, paths, stat: bool = True):
         self._entries = []
         for path in paths:
             self._entries.append(filecachesubentry(path, stat))
@@ -1390,7 +1395,7 @@ class simplekeyvaluefile:
         self.vfs = vfs
         self.path = path
 
-    def read(self, firstlinenonkeyval=False):
+    def read(self, firstlinenonkeyval: bool = False):
         """Read the contents of a simple key-value file
 
         'firstlinenonkeyval' indicates whether the first line of file should
@@ -1591,7 +1596,7 @@ def rootrelpaths(ctx, paths):
     return [rootrelpath(ctx, path) for path in paths]
 
 
-def walkfiles(repo, walkctx, matcher, base=None, nodes_only=False):
+def walkfiles(repo, walkctx, matcher, base=None, nodes_only: bool = False):
     """Return a list (path, filenode) pairs that match the matcher in the given context."""
     mf = walkctx.manifest()
     if base is None and hasattr(mf, "walkfiles"):
