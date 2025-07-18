@@ -1295,7 +1295,7 @@ void EdenServer::removeDaemonExitSignalFile() const {
 int EdenServer::readDaemonExitSignal() const {
   // Read the signal from the daemon exit signal file
   std::string signalStr;
-  if (folly::readFile(daemonExistSignalFilePathString_, signalStr)) {
+  if (folly::readFile(daemonExitSignalFilePathString_, signalStr)) {
     // Optionally trim whitespace/newlines
     folly::trimWhitespace(signalStr);
     try {
