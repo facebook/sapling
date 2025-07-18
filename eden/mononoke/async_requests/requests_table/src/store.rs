@@ -793,7 +793,7 @@ impl LongRunningRequestsQueue for SqlLongRunningRequestsQueue {
             .write_connection
             .start_transaction()
             .await?;
-        let txn = sql_ext::Transaction::new(sql_txn, Default::default(), ctx.clone().into());
+        let txn = sql_ext::Transaction::new(sql_txn, Default::default(), ctx.sql_query_telemetry());
 
         let (mut txn, rows) =
             GetRequest::query_with_transaction(txn, None, &req_id.0, &req_id.1).await?;
@@ -900,7 +900,7 @@ impl LongRunningRequestsQueue for SqlLongRunningRequestsQueue {
             .write_connection
             .start_transaction()
             .await?;
-        let txn = sql_ext::Transaction::new(sql_txn, Default::default(), ctx.clone().into());
+        let txn = sql_ext::Transaction::new(sql_txn, Default::default(), ctx.sql_query_telemetry());
 
         let (mut txn, rows) =
             GetRequest::query_with_transaction(txn, None, &req_id.0, &req_id.1).await?;

@@ -51,7 +51,7 @@ async fn test_add_and_get(_fb: FacebookInit) -> Result<()> {
 
     let ctx = CoreContext::test_mock(_fb);
     let sql_txn = conn.start_transaction().await?;
-    let txn = sql_ext::Transaction::new(sql_txn, Default::default(), ctx.clone().into());
+    let txn = sql_ext::Transaction::new(sql_txn, Default::default(), ctx.sql_query_telemetry());
     let txn = add_pushrebase_mapping(txn, &entries).await?;
     txn.commit().await?;
 

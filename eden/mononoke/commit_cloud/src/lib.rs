@@ -270,7 +270,7 @@ impl CommitCloud {
             .await
             .map_err(CommitCloudInternalError::Error)?;
         let mut txn =
-            sql_ext::Transaction::new(sql_txn, Default::default(), self.ctx.clone().into());
+            sql_ext::Transaction::new(sql_txn, Default::default(), self.ctx.sql_query_telemetry());
 
         let initiate_workspace = params.version == 0
             && params.new_heads.is_empty()
@@ -505,7 +505,8 @@ impl CommitCloud {
             .write_connection
             .start_transaction()
             .await?;
-        let txn = sql_ext::Transaction::new(sql_txn, Default::default(), self.ctx.clone().into());
+        let txn =
+            sql_ext::Transaction::new(sql_txn, Default::default(), self.ctx.sql_query_telemetry());
 
         let (txn, affected_rows) = Update::<WorkspaceVersion>::update(
             &self.storage,

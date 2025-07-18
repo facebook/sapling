@@ -322,7 +322,7 @@ impl MegarepoMapping {
         let target_repo_id: i32 = target.repo_id.try_into()?;
         let mut rows = GetMappingEntry::query(
             connection,
-            ctx.into(),
+            ctx.sql_query_telemetry(),
             &RepositoryId::new(target_repo_id),
             &target.bookmark,
             &target_cs_id,
@@ -389,7 +389,7 @@ impl MegarepoMapping {
         let target_repo_id: i32 = target.repo_id.try_into()?;
         let rows = GetReverseMappingEntry::query(
             connection,
-            ctx.into(),
+            ctx.sql_query_telemetry(),
             &RepositoryId::new(target_repo_id),
             &target.bookmark,
             &source_cs_id,
@@ -425,7 +425,7 @@ impl MegarepoMapping {
         let target_repo_id: i32 = target.repo_id.try_into()?;
         let res = InsertMapping::query(
             &self.connections.write_connection,
-            ctx.into(),
+            ctx.sql_query_telemetry(),
             &[(
                 source_name.as_str(),
                 &RepositoryId::new(target_repo_id),

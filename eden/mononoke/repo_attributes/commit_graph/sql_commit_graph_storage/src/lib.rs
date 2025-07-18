@@ -1343,7 +1343,7 @@ impl SqlCommitGraphStorage {
             return Ok(HashMap::new());
         }
 
-        let tel_logger: SqlQueryTelemetry = ctx.into();
+        let tel_logger = ctx.sql_query_telemetry();
 
         if let Some(target) = prefetch.target() {
             let steps_limit =
@@ -1357,7 +1357,7 @@ impl SqlCommitGraphStorage {
                         .dispatch(ctx.fb.clone(), cs_ids.iter().copied().collect(), || {
                             let conn = rendezvous.conn.clone();
                             let repo_id = self.repo_id.clone();
-                            let tel_logger: SqlQueryTelemetry = ctx.into();
+                            let tel_logger: SqlQueryTelemetry = ctx.sql_query_telemetry();
 
                             move |cs_ids| async move {
                                 let cs_ids = cs_ids.into_iter().collect::<Vec<_>>();
@@ -1455,7 +1455,7 @@ impl SqlCommitGraphStorage {
         Ok(Self::collect_changeset_edges(
             &SelectManyChangesetsInIdRange::query(
                 self.read_conn(read_from_master),
-                ctx.into(),
+                ctx.sql_query_telemetry(),
                 &self.repo_id,
                 &start_id,
                 &end_id,
@@ -1480,7 +1480,7 @@ impl SqlCommitGraphStorage {
     ) -> Result<Vec<ChangesetId>> {
         Ok(SelectManyChangesetsIdsInIdRange::query(
             self.read_conn(read_from_master),
-            ctx.into(),
+            ctx.sql_query_telemetry(),
             &self.repo_id,
             &start_id,
             &end_id,
@@ -1495,12 +1495,14 @@ impl SqlCommitGraphStorage {
     /// Returns the maximum auto-increment id for any changeset in the repo,
     /// or `None` if there are no changesets.
     pub async fn max_id(&self, ctx: &CoreContext, read_from_master: bool) -> Result<Option<u64>> {
-        Ok(
-            SelectMaxId::query(self.read_conn(read_from_master), ctx.into(), &self.repo_id)
-                .await?
-                .first()
-                .map(|(id,)| *id),
+        Ok(SelectMaxId::query(
+            self.read_conn(read_from_master),
+            ctx.sql_query_telemetry(),
+            &self.repo_id,
         )
+        .await?
+        .first()
+        .map(|(id,)| *id))
     }
 
     /// Returns the maximum auto-increment id of changesets having auto-increment
@@ -1515,7 +1517,7 @@ impl SqlCommitGraphStorage {
     ) -> Result<Option<u64>> {
         Ok(SelectMaxIdInRange::query(
             self.read_conn(read_from_master),
-            ctx.into(),
+            Some(ctx.sql_query_telemetry()),
             &self.repo_id,
             &start_id,
             &end_id,
@@ -1536,7 +1538,8 @@ impl SqlCommitGraphStorage {
         read_from_master: bool,
     ) -> Result<Option<Range<u64>>> {
         let conn = self.read_conn(read_from_master);
-        let rows = SelectChangesetsIdsBounds::query(conn, ctx.into(), &self.repo_id).await?;
+        let rows = SelectChangesetsIdsBounds::query(conn, ctx.sql_query_telemetry(), &self.repo_id)
+            .await?;
         Ok(rows.first().map(|(lo, hi)| *lo..*hi + 1))
     }
 
@@ -1554,7 +1557,7 @@ impl SqlCommitGraphStorage {
         let conn = self.read_conn(read_from_master);
         SelectOldestChangesetsIdsInRange::query(
             conn,
-            ctx.into(),
+            ctx.sql_query_telemetry(),
             &self.repo_id,
             &range.start,
             &range.end,
@@ -1577,7 +1580,7 @@ impl SqlCommitGraphStorage {
         let conn = self.read_conn(read_from_master);
         SelectNewestChangesetsIdsInRange::query(
             conn,
-            ctx.into(),
+            ctx.sql_query_telemetry(),
             &self.repo_id,
             &range.start,
             &range.end,
@@ -1589,7 +1592,7 @@ impl SqlCommitGraphStorage {
     // Returns the amount of commits in a repo.  Only to be used for ad-hoc internal operations
     pub async fn fetch_commit_count(&self, ctx: &CoreContext, id: RepositoryId) -> Result<u64> {
         let conn = self.read_conn(true);
-        let result = GetCommitCount::query(conn, ctx.into(), &id).await?;
+        let result = GetCommitCount::query(conn, ctx.sql_query_telemetry(), &id).await?;
         Ok(result.first().map_or(0, |(count,)| *count))
     }
 
@@ -1607,7 +1610,7 @@ impl SqlCommitGraphStorage {
         // Part 1 - Add all nodes without any edges, so we generate ids for them
         let sql_txn = self.write_connection.start_transaction().await?;
         let transaction =
-            sql_ext::Transaction::new(sql_txn, Default::default(), ctx.clone().into());
+            sql_ext::Transaction::new(sql_txn, Default::default(), ctx.sql_query_telemetry());
         let cs_no_edges = many_edges
             .iter()
             .map(|e| {
@@ -1628,7 +1631,7 @@ impl SqlCommitGraphStorage {
             .collect::<Vec<_>>();
         let (transaction, result) = InsertChangesetsNoEdges::query_with_transaction(
             transaction,
-            ctx.into(),
+            Some(ctx.sql_query_telemetry()),
             // This pattern is used to convert a ref to tuple into a tuple of refs.
             #[allow(clippy::map_identity)]
             cs_no_edges
@@ -1656,7 +1659,7 @@ impl SqlCommitGraphStorage {
             // Use the same transaction to make sure we see the new values
             let (transaction, result) = SelectManyIds::query_with_transaction(
                 transaction,
-                ctx.into(),
+                ctx.sql_query_telemetry(),
                 &self.repo_id,
                 need_ids.into_iter().collect::<Vec<_>>().as_slice(),
             )
@@ -1721,7 +1724,7 @@ impl SqlCommitGraphStorage {
 
         let (transaction, _) = FixEdges::query_with_transaction(
             transaction,
-            ctx.into(),
+            ctx.sql_query_telemetry(),
             // This pattern is used to convert a ref to tuple into a tuple of refs.
             #[allow(clippy::map_identity)]
             rows.iter()
@@ -1747,7 +1750,7 @@ impl SqlCommitGraphStorage {
 
         let (transaction, result) = InsertMergeParents::query_with_transaction(
             transaction,
-            ctx.into(),
+            ctx.sql_query_telemetry(),
             // This pattern is used to convert a ref to tuple into a tuple of refs.
             #[allow(clippy::map_identity)]
             merge_parent_rows
@@ -1773,7 +1776,7 @@ impl SqlCommitGraphStorage {
 
         let (transaction, result) = InsertSubtreeSources::query_with_transaction(
             transaction,
-            ctx.into(),
+            ctx.sql_query_telemetry(),
             // This pattern is used to convert a ref to tuple into a tuple of refs.
             #[allow(clippy::map_identity)]
             subtree_source_rows
@@ -1822,7 +1825,7 @@ impl CommitGraphStorage for SqlCommitGraphStorage {
                 .increment_counter(PerfCounterType::SqlReadsReplica);
             SelectManyIds::query(
                 &self.read_connection.conn,
-                ctx.into(),
+                ctx.sql_query_telemetry(),
                 &self.repo_id,
                 &edges
                     .parents
@@ -1845,7 +1848,7 @@ impl CommitGraphStorage for SqlCommitGraphStorage {
                     .increment_counter(PerfCounterType::SqlReadsReplica);
                 SelectManyIds::query(
                     &self.read_connection.conn,
-                    ctx.into(),
+                    ctx.sql_query_telemetry(),
                     &self.repo_id,
                     &edges
                         .subtree_sources
@@ -1860,11 +1863,11 @@ impl CommitGraphStorage for SqlCommitGraphStorage {
 
         let sql_txn = self.write_connection.start_transaction().await?;
         let transaction =
-            sql_ext::Transaction::new(sql_txn, Default::default(), ctx.clone().into());
+            sql_ext::Transaction::new(sql_txn, Default::default(), ctx.sql_query_telemetry());
 
         let (transaction, result) = InsertChangeset::query_with_transaction(
             transaction,
-            ctx.into(),
+            ctx.sql_query_telemetry(),
             &self.repo_id,
             &edges.node.cs_id,
             &edges.node.generation.value(),
@@ -1916,7 +1919,7 @@ impl CommitGraphStorage for SqlCommitGraphStorage {
 
                 let (transaction, result) = InsertMergeParents::query_with_transaction(
                     transaction,
-                    ctx.into(),
+                    ctx.sql_query_telemetry(),
                     // This pattern is used to convert a ref to tuple into a tuple of refs.
                     #[allow(clippy::map_identity)]
                     merge_parent_rows
@@ -1944,7 +1947,7 @@ impl CommitGraphStorage for SqlCommitGraphStorage {
 
                 let (transaction, result) = InsertSubtreeSources::query_with_transaction(
                     transaction,
-                    ctx.into(),
+                    ctx.sql_query_telemetry(),
                     // This pattern is used to convert a ref to tuple into a tuple of refs.
                     #[allow(clippy::map_identity)]
                     subtree_source_rows
@@ -2052,7 +2055,7 @@ impl CommitGraphStorage for SqlCommitGraphStorage {
             .increment_counter(PerfCounterType::SqlReadsReplica);
         let fetched_ids = SelectChangesetsInRange::query(
             &self.read_connection.conn,
-            ctx.into(),
+            ctx.sql_query_telemetry(),
             &self.repo_id,
             &cs_prefix.min_bound(),
             &cs_prefix.max_bound(),
@@ -2076,7 +2079,7 @@ impl CommitGraphStorage for SqlCommitGraphStorage {
     ) -> Result<Vec<ChangesetId>> {
         Ok(SelectChildren::query(
             &self.read_master_connection.conn,
-            ctx.into(),
+            ctx.sql_query_telemetry(),
             &self.repo_id,
             &cs_id,
         )

@@ -392,7 +392,7 @@ impl SqlBonsaiHgMapping {
         let hg_ids = &[hg_cs_id];
         let by_hg = SelectMappingByHg::query(
             &self.read_master_connection.conn,
-            ctx.into(),
+            ctx.sql_query_telemetry(),
             &self.repo_id,
             hg_ids,
         );
@@ -400,7 +400,7 @@ impl SqlBonsaiHgMapping {
 
         let by_bcs = SelectMappingByBonsai::query(
             &self.read_master_connection.conn,
-            ctx.into(),
+            ctx.sql_query_telemetry(),
             &self.repo_id,
             bcs_ids,
         )
@@ -435,7 +435,7 @@ impl BonsaiHgMapping for SqlBonsaiHgMapping {
         if self.overwrite {
             let result = ReplaceMapping::query(
                 &self.write_connection,
-                ctx.into(),
+                ctx.sql_query_telemetry(),
                 &[(&self.repo_id, &hg_cs_id, &bcs_id)],
             )
             .await?;
@@ -443,7 +443,7 @@ impl BonsaiHgMapping for SqlBonsaiHgMapping {
         } else {
             let result = InsertMapping::query(
                 &self.write_connection,
-                ctx.into(),
+                ctx.sql_query_telemetry(),
                 &[(&self.repo_id, &hg_cs_id, &bcs_id)],
             )
             .await?;
@@ -502,7 +502,7 @@ impl BonsaiHgMapping for SqlBonsaiHgMapping {
             .increment_counter(PerfCounterType::SqlReadsReplica);
         let rows = SelectHgChangesetsByRange::query(
             &self.read_connection.conn,
-            ctx.into(),
+            ctx.sql_query_telemetry(),
             &self.repo_id,
             &low.as_bytes(),
             &high.as_bytes(),
@@ -515,7 +515,7 @@ impl BonsaiHgMapping for SqlBonsaiHgMapping {
                 .increment_counter(PerfCounterType::SqlReadsMaster);
             let rows = SelectHgChangesetsByRange::query(
                 &self.read_master_connection.conn,
-                ctx.into(),
+                ctx.sql_query_telemetry(),
                 &self.repo_id,
                 &low.as_bytes(),
                 &high.as_bytes(),
@@ -537,7 +537,7 @@ async fn select_mapping(
     if cs_ids.is_empty() {
         return Ok((vec![], cs_ids));
     }
-    let tel_logger: SqlQueryTelemetry = ctx.into();
+    let tel_logger: SqlQueryTelemetry = ctx.sql_query_telemetry();
 
     let (found, missing): (Vec<_>, _) = match cs_ids {
         BonsaiOrHgChangesetIds::Bonsai(bcs_ids) => {

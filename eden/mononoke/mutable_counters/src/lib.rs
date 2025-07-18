@@ -129,7 +129,8 @@ impl MutableCounters for SqlMutableCounters {
         ctx.perf_counters()
             .increment_counter(PerfCounterType::SqlReadsMaster);
         let conn = &self.connections.read_master_connection;
-        let counter = GetCounter::query(conn, ctx.into(), &self.repo_id, &name).await?;
+        let counter =
+            GetCounter::query(conn, ctx.sql_query_telemetry(), &self.repo_id, &name).await?;
         Ok(counter.first().map(|entry| entry.0))
     }
 
@@ -137,7 +138,8 @@ impl MutableCounters for SqlMutableCounters {
         ctx.perf_counters()
             .increment_counter(PerfCounterType::SqlReadsReplica);
         let conn = &self.connections.read_connection;
-        let counter = GetCounter::query(conn, ctx.into(), &self.repo_id, &name).await?;
+        let counter =
+            GetCounter::query(conn, ctx.sql_query_telemetry(), &self.repo_id, &name).await?;
         Ok(counter.first().map(|entry| entry.0))
     }
 
@@ -150,7 +152,7 @@ impl MutableCounters for SqlMutableCounters {
     ) -> Result<bool> {
         let conn = &self.connections.write_connection;
         let sql_txn = conn.start_transaction().await?;
-        let txn = sql_ext::Transaction::new(sql_txn, Default::default(), ctx.clone().into());
+        let txn = sql_ext::Transaction::new(sql_txn, Default::default(), ctx.sql_query_telemetry());
         let txn_result =
             Self::set_counter_on_txn(ctx, self.repo_id, name, value, prev_value, txn).await?;
         match txn_result {
@@ -167,7 +169,8 @@ impl MutableCounters for SqlMutableCounters {
         ctx.perf_counters()
             .increment_counter(PerfCounterType::SqlReadsMaster);
         let conn = &self.connections.read_master_connection;
-        let counters = GetCountersForRepo::query(conn, ctx.into(), &self.repo_id).await?;
+        let counters =
+            GetCountersForRepo::query(conn, ctx.sql_query_telemetry(), &self.repo_id).await?;
         Ok(counters.into_iter().collect())
     }
 }
@@ -186,7 +189,7 @@ impl SqlMutableCounters {
         let (txn, result) = if let Some(prev_value) = prev_value {
             SetCounterConditionally::query_with_transaction(
                 txn,
-                ctx.into(),
+                Some(ctx.sql_query_telemetry()),
                 &repo_id,
                 &name,
                 &value,
@@ -194,7 +197,14 @@ impl SqlMutableCounters {
             )
             .await?
         } else {
-            SetCounter::query_with_transaction(txn, ctx.into(), &repo_id, &name, &value).await?
+            SetCounter::query_with_transaction(
+                txn,
+                Some(ctx.sql_query_telemetry()),
+                &repo_id,
+                &name,
+                &value,
+            )
+            .await?
         };
 
         Ok(if result.affected_rows() >= 1 {

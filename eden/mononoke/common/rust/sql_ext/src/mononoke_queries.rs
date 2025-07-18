@@ -106,16 +106,17 @@ macro_rules! mononoke_queries {
                 use $crate::_macro_internal::*;
 
                 #[allow(dead_code)]
-                pub async fn query<'a>(
-                    connection: &'a Connection,
-                    tel_logger: Option<SqlQueryTelemetry>,
-                    $( $pname: &'a $ptype, )*
-                    $( $lname: &'a [ $ltype ], )*
+                pub async fn query<S>(
+                    connection: &Connection,
+                    opt_sql_telemetry: S,
+                    $( $pname: &$ptype, )*
+                    $( $lname: &[ $ltype ], )*
                 ) -> Result<Vec<($( $rtype, )*)>>
+                where
+                    S: Into<Option<SqlQueryTelemetry>> + Send + Sync
                 {
-
-
-                query_with_retry_no_cache(
+                    let tel_logger = opt_sql_telemetry.into();
+                    query_with_retry_no_cache(
                         || {
                             let tel_logger = tel_logger.clone();
                             async move {
@@ -160,12 +161,14 @@ macro_rules! mononoke_queries {
                 }
 
                 #[allow(dead_code)]
-                pub async fn query_with_transaction(
+                pub async fn query_with_transaction<S>(
                     transaction: Transaction,
-                    _tel_logger: Option<SqlQueryTelemetry>,
+                    _opt_sql_telemetry: S,
                     $( $pname: &$ptype, )*
                     $( $lname: &[ $ltype ], )*
                 ) -> Result<(Transaction, Vec<($( $rtype, )*)>)>
+                where
+                    S: Into<Option<SqlQueryTelemetry>>
                 {
                     let query_name = stringify!($name);
                     let query_repo_ids = $crate::extract_repo_ids_from_queries!($($pname: $ptype; )*);
@@ -210,14 +213,16 @@ macro_rules! mononoke_queries {
                 use $crate::_macro_internal::*;
 
                 #[allow(dead_code)]
-                pub async fn query<'a>(
+                pub async fn query<S>(
                     config: &SqlQueryConfig,
                     cache_ttl: Option<std::time::Duration>,
-                    connection: &'a Connection,
-                    tel_logger: Option<SqlQueryTelemetry>,
-                    $( $pname: &'a $ptype, )*
-                    $( $lname: &'a [ $ltype ], )*
+                    connection: &Connection,
+                    opt_sql_telemetry: S,
+                    $( $pname: &$ptype, )*
+                    $( $lname: &[ $ltype ], )*
                 ) -> Result<Vec<($( $rtype, )*)>>
+                where
+                    S: Into<Option<SqlQueryTelemetry>>
                 {
                     // Prepare cache data
                     let mut hasher = Hash128::with_seed(0);
@@ -233,6 +238,7 @@ macro_rules! mononoke_queries {
                     let key = hasher.finish_ext();
                     let data = CacheData {key, config: config.caching.as_ref(), cache_ttl };
 
+                    let tel_logger = opt_sql_telemetry.into();
                     // Execute query with caching
                     let res = query_with_retry(
                         data,
@@ -281,12 +287,14 @@ macro_rules! mononoke_queries {
                 }
 
                 #[allow(dead_code)]
-                pub async fn query_with_transaction(
+                pub async fn query_with_transaction<S>(
                     transaction: Transaction,
-                    _tel_logger: Option<SqlQueryTelemetry>,
+                    _opt_sql_telemetry: S,
                     $( $pname: &$ptype, )*
                     $( $lname: &[ $ltype ], )*
                 ) -> Result<(Transaction, Vec<($( $rtype, )*)>)>
+                where
+                    S: Into<Option<SqlQueryTelemetry>>
                 {
                     let query_name = stringify!($name);
                     let query_repo_ids = $crate::extract_repo_ids_from_queries!($($pname: $ptype; )*);
@@ -348,13 +356,17 @@ macro_rules! mononoke_queries {
                 use $crate::_macro_internal::*;
 
                 #[allow(dead_code)]
-                pub async fn query<'a>(
-                    connection: &'a Connection,
-                    tel_logger: Option<SqlQueryTelemetry>,
-                    values: &'a[($( & $vtype, )*)],
-                    $( $pname: &'a $ptype ),*
-                ) -> Result<WriteResult> {
+                pub async fn query<S>(
+                    connection: &Connection,
+                    opt_sql_telemetry: S,
+                    values: &[($( & $vtype, )*)],
+                    $( $pname: &$ptype ),*
+                ) -> Result<WriteResult>
+                where
+                    S: Into<Option<SqlQueryTelemetry>>
+                {
                     let query_name = stringify!($name);
+                    let tel_logger = opt_sql_telemetry.into();
                     let cri = tel_logger.as_ref().and_then(|p| p.client_request_info());
                     // Convert ClientRequestInfo to string if present
                     let cri_str = cri.map(|cri| serde_json::to_string(&cri)).transpose()?;
@@ -390,13 +402,17 @@ macro_rules! mononoke_queries {
                 }
 
                 #[allow(dead_code)]
-                pub async fn query_with_transaction(
+                pub async fn query_with_transaction<S>(
                     transaction: Transaction,
-                    tel_logger: Option<SqlQueryTelemetry>,
+                    opt_sql_telemetry: S,
                     values: &[($( & $vtype, )*)],
                     $( $pname: & $ptype ),*
-                ) -> Result<(Transaction, WriteResult)> {
+                ) -> Result<(Transaction, WriteResult)>
+                where
+                    S: Into<Option<SqlQueryTelemetry>>
+                {
                     let query_name = stringify!($name);
+                    let tel_logger = opt_sql_telemetry.into();
                     let cri = tel_logger.as_ref().and_then(|p| p.client_request_info());
                     // Convert ClientRequestInfo to string if present
                     let cri_str = cri.map(|cri| serde_json::to_string(&cri)).transpose()?;
@@ -492,13 +508,17 @@ macro_rules! mononoke_queries {
                 use $crate::_macro_internal::*;
 
                 #[allow(dead_code)]
-                pub async fn query<'a>(
-                    connection: &'a Connection,
-                    tel_logger: Option<SqlQueryTelemetry>,
-                    $( $pname: &'a $ptype, )*
-                    $( $lname: &'a [ $ltype ], )*
-                ) -> Result<WriteResult> {
+                pub async fn query<S>(
+                    connection: &Connection,
+                    opt_sql_telemetry: S,
+                    $( $pname: &$ptype, )*
+                    $( $lname: &[ $ltype ], )*
+                ) -> Result<WriteResult>
+                where
+                    S: Into<Option<SqlQueryTelemetry>>
+                {
                     let query_name = stringify!($name);
+                    let tel_logger = opt_sql_telemetry.into();
                     let cri = tel_logger.as_ref().and_then(|p| p.client_request_info());
                     // Convert ClientRequestInfo to string if present
                     let cri_str = cri.map(|cri| serde_json::to_string(&cri)).transpose()?;
@@ -535,13 +555,17 @@ macro_rules! mononoke_queries {
                 // TODO(T223577767): extract duplication from
                 // `query_with_transaction` from write queries with values
                 #[allow(dead_code)]
-                pub async fn query_with_transaction(
+                pub async fn query_with_transaction<S>(
                     transaction: Transaction,
-                    tel_logger: Option<SqlQueryTelemetry>,
+                    opt_sql_telemetry: S,
                     $( $pname: &$ptype, )*
                     $( $lname: &[ $ltype ], )*
-                ) -> Result<(Transaction, WriteResult)> {
+                ) -> Result<(Transaction, WriteResult)>
+                where
+                    S: Into<Option<SqlQueryTelemetry>>
+                {
                     let query_name = stringify!($name);
+                    let tel_logger = opt_sql_telemetry.into();
                     let cri = tel_logger.as_ref().and_then(|p| p.client_request_info());
                     // Convert ClientRequestInfo to string if present
                     let cri_str = cri.map(|cri| serde_json::to_string(&cri)).transpose()?;

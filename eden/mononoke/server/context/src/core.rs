@@ -167,40 +167,10 @@ impl CoreContext {
     pub fn fork_perf_counters(&mut self) -> Arc<PerfCounters> {
         self.logging.fork_perf_counters()
     }
-}
 
-impl From<CoreContext> for SqlQueryTelemetry {
-    fn from(ctx: CoreContext) -> SqlQueryTelemetry {
-        let fb = ctx.fb.clone();
-        let metadata = ctx.metadata();
-
+    pub fn sql_query_telemetry(&self) -> SqlQueryTelemetry {
+        let fb = self.fb.clone();
+        let metadata = self.metadata();
         SqlQueryTelemetry::new(fb, metadata.clone())
-    }
-}
-
-impl From<CoreContext> for Option<SqlQueryTelemetry> {
-    fn from(ctx: CoreContext) -> Option<SqlQueryTelemetry> {
-        let fb = ctx.fb.clone();
-        let metadata = ctx.metadata();
-
-        Some(SqlQueryTelemetry::new(fb, metadata.clone()))
-    }
-}
-
-impl From<&CoreContext> for SqlQueryTelemetry {
-    fn from(ctx: &CoreContext) -> SqlQueryTelemetry {
-        let fb = ctx.fb.clone();
-        let metadata = ctx.metadata();
-
-        SqlQueryTelemetry::new(fb, metadata.clone())
-    }
-}
-
-impl From<&CoreContext> for Option<SqlQueryTelemetry> {
-    fn from(ctx: &CoreContext) -> Option<SqlQueryTelemetry> {
-        let fb = ctx.fb.clone();
-        let metadata = ctx.metadata();
-
-        Some(SqlQueryTelemetry::new(fb, metadata.clone()))
     }
 }

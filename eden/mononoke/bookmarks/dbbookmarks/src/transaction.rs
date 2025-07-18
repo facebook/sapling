@@ -234,7 +234,8 @@ impl SqlBookmarksTransactionPayload {
         repo_id: RepositoryId,
     ) -> Result<(SqlTransaction, u64)> {
         let (txn, max_id_entries) =
-            FindMaxBookmarkLogId::query_with_transaction(txn, ctx.into(), &repo_id).await?;
+            FindMaxBookmarkLogId::query_with_transaction(txn, ctx.sql_query_telemetry(), &repo_id)
+                .await?;
 
         let next_id = match &max_id_entries[..] {
             [(None,)] => 1,
@@ -268,7 +269,7 @@ impl SqlBookmarksTransactionPayload {
                 &log_entry.reason,
                 &timestamp,
             )];
-            txn = AddBookmarkLog::query_with_transaction(txn, ctx.into(), &data[..])
+            txn = AddBookmarkLog::query_with_transaction(txn, ctx.sql_query_telemetry(), &data[..])
                 .await?
                 .0;
         }
@@ -298,8 +299,12 @@ impl SqlBookmarksTransactionPayload {
                 )
             })
             .collect::<Vec<_>>();
-        let (txn, _) =
-            ReplaceBookmarks::query_with_transaction(txn, ctx.into(), data.as_slice()).await?;
+        let (txn, _) = ReplaceBookmarks::query_with_transaction(
+            txn,
+            ctx.sql_query_telemetry(),
+            data.as_slice(),
+        )
+        .await?;
         Ok(txn)
     }
 
@@ -330,8 +335,12 @@ impl SqlBookmarksTransactionPayload {
             })
             .collect::<Vec<_>>();
         let rows_to_insert = data.len() as u64;
-        let (txn, result) =
-            InsertBookmarks::query_with_transaction(txn, ctx.into(), data.as_slice()).await?;
+        let (txn, result) = InsertBookmarks::query_with_transaction(
+            txn,
+            ctx.sql_query_telemetry(),
+            data.as_slice(),
+        )
+        .await?;
         if result.affected_rows() != rows_to_insert {
             return Err(BookmarkTransactionError::LogicError);
         }
@@ -365,9 +374,12 @@ impl SqlBookmarksTransactionPayload {
             })
             .collect::<Vec<_>>();
         let rows_to_insert = data.len() as u64;
-        let (txn, result) =
-            InsertOrUpdateBookmarks::query_with_transaction(txn, ctx.into(), data.as_slice())
-                .await?;
+        let (txn, result) = InsertOrUpdateBookmarks::query_with_transaction(
+            txn,
+            ctx.sql_query_telemetry(),
+            data.as_slice(),
+        )
+        .await?;
         if result.affected_rows() < rows_to_insert {
             return Err(BookmarkTransactionError::LogicError);
         }
@@ -391,7 +403,7 @@ impl SqlBookmarksTransactionPayload {
                 // query instead of an update, since affected_rows() would otherwise return 0.
                 let (txn_, result) = SelectBookmark::query_with_transaction(
                     txn,
-                    ctx.into(),
+                    ctx.sql_query_telemetry(),
                     &self.repo_id,
                     bookmark.name(),
                     bookmark.category(),
@@ -404,7 +416,7 @@ impl SqlBookmarksTransactionPayload {
             } else {
                 let (txn_, result) = UpdateBookmark::query_with_transaction(
                     txn,
-                    ctx.into(),
+                    ctx.sql_query_telemetry(),
                     &self.repo_id,
                     &log_id,
                     bookmark.name(),
@@ -433,7 +445,7 @@ impl SqlBookmarksTransactionPayload {
             log.push_log_entry(bookmark, log_entry);
             let (txn_, _) = DeleteBookmark::query_with_transaction(
                 txn,
-                ctx.into(),
+                ctx.sql_query_telemetry(),
                 &self.repo_id,
                 bookmark.name(),
                 bookmark.category(),
@@ -456,7 +468,7 @@ impl SqlBookmarksTransactionPayload {
                 .map(|log_entry| log.push_log_entry(bookmark, log_entry));
             let (txn_, result) = DeleteBookmarkIf::query_with_transaction(
                 txn,
-                ctx.into(),
+                ctx.sql_query_telemetry(),
                 &self.repo_id,
                 bookmark.name(),
                 bookmark.category(),
@@ -704,7 +716,11 @@ impl BookmarkTransaction for SqlBookmarksTransaction {
                 attempt += 1;
 
                 let sql_txn = write_connection.start_transaction().await?;
-                let mut txn = sql_ext::Transaction::new(sql_txn, Default::default(), (&ctx).into());
+                let mut txn = sql_ext::Transaction::new(
+                    sql_txn,
+                    Default::default(),
+                    (&ctx).sql_query_telemetry(),
+                );
 
                 txn = match run_transaction_hooks(&ctx, txn, &txn_hooks).await {
                     Ok(txn) => txn,

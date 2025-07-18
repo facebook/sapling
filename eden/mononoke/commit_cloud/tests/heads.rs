@@ -76,7 +76,7 @@ async fn test_heads(fb: FacebookInit) -> anyhow::Result<()> {
         ),
     };
     let sql_txn = sql.connections.write_connection.start_transaction().await?;
-    let mut txn = sql_ext::Transaction::new(sql_txn, Default::default(), ctx.clone().into());
+    let mut txn = sql_ext::Transaction::new(sql_txn, Default::default(), ctx.sql_query_telemetry());
     txn = sql
         .insert(
             txn,
@@ -102,7 +102,7 @@ async fn test_heads(fb: FacebookInit) -> anyhow::Result<()> {
     assert_eq!(res.len(), 2);
     let removed_commits = vec![head1.commit];
     let sql_txn = sql.connections.write_connection.start_transaction().await?;
-    txn = sql_ext::Transaction::new(sql_txn, Default::default(), ctx.clone().into());
+    txn = sql_ext::Transaction::new(sql_txn, Default::default(), ctx.sql_query_telemetry());
     txn = Delete::<WorkspaceHead>::delete(
         &sql,
         txn,
@@ -121,7 +121,7 @@ async fn test_heads(fb: FacebookInit) -> anyhow::Result<()> {
         new_workspace: renamed_workspace.clone(),
     };
     let sql_txn = sql.connections.write_connection.start_transaction().await?;
-    let txn = sql_ext::Transaction::new(sql_txn, Default::default(), ctx.clone().into());
+    let txn = sql_ext::Transaction::new(sql_txn, Default::default(), ctx.sql_query_telemetry());
     let (txn, affected_rows) =
         Update::<WorkspaceHead>::update(&sql, txn, &ctx, cc_ctx, new_name_args).await?;
     txn.commit().await?;

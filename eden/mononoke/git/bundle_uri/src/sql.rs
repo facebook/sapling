@@ -129,7 +129,7 @@ impl SqlGitBundleMetadataStorage {
     pub async fn add_new_bundles(&self, ctx: &CoreContext, bundles: &[Bundle]) -> Result<u64> {
         let conn = &self.connections.write_connection;
         let sql_txn = conn.start_transaction().await?;
-        let txn = sql_ext::Transaction::new(sql_txn, Default::default(), ctx.into());
+        let txn = sql_ext::Transaction::new(sql_txn, Default::default(), ctx.sql_query_telemetry());
 
         let (txn, rows) =
             GetLatestBundleListNumForRepo::query_with_transaction(txn, None, &self.repo_id).await?;

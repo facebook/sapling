@@ -101,7 +101,7 @@ impl BonsaiGitMapping for SqlBonsaiGitMapping {
             .write_connection
             .start_transaction()
             .await?;
-        let txn = sql_ext::Transaction::new(sql_txn, Default::default(), ctx.clone().into());
+        let txn = sql_ext::Transaction::new(sql_txn, Default::default(), ctx.sql_query_telemetry());
         let txn = self
             .bulk_add_git_mapping_in_transaction(ctx, entries, txn)
             .await?;
@@ -124,8 +124,12 @@ impl BonsaiGitMapping for SqlBonsaiGitMapping {
             .map(|BonsaiGitMappingEntry { git_sha1, bcs_id }| (&self.repo_id, git_sha1, bcs_id))
             .collect();
 
-        let (transaction, res) =
-            InsertMapping::query_with_transaction(transaction, ctx.into(), &rows[..]).await?;
+        let (transaction, res) = InsertMapping::query_with_transaction(
+            transaction,
+            ctx.sql_query_telemetry(),
+            &rows[..],
+        )
+        .await?;
 
         let transaction = if res.affected_rows() != rows.len() as u64 {
             // Let's see if there are any conflicting entries in DB.
@@ -133,7 +137,7 @@ impl BonsaiGitMapping for SqlBonsaiGitMapping {
             let (transaction, git2bonsai_mapping_from_db) =
                 SelectMappingByGitSha1::query_with_transaction(
                     transaction,
-                    ctx.into(),
+                    ctx.sql_query_telemetry(),
                     &self.repo_id,
                     &git_shas[..],
                 )
@@ -145,7 +149,7 @@ impl BonsaiGitMapping for SqlBonsaiGitMapping {
             let (transaction, bonsai2git_mapping_from_db) =
                 SelectMappingByBonsai::query_with_transaction(
                     transaction,
-                    ctx.into(),
+                    ctx.sql_query_telemetry(),
                     &self.repo_id,
                     &bcs_ids[..],
                 )
@@ -245,7 +249,7 @@ impl BonsaiGitMapping for SqlBonsaiGitMapping {
             .increment_counter(PerfCounterType::SqlReadsReplica);
         let rows = SelectGitSha1sByRange::query(
             &self.connections.read_connection,
-            ctx.into(),
+            ctx.sql_query_telemetry(),
             &self.repo_id,
             &low,
             &high,
@@ -258,7 +262,7 @@ impl BonsaiGitMapping for SqlBonsaiGitMapping {
                 .increment_counter(PerfCounterType::SqlReadsMaster);
             let rows = SelectGitSha1sByRange::query(
                 &self.connections.read_master_connection,
-                ctx.into(),
+                ctx.sql_query_telemetry(),
                 &self.repo_id,
                 &low,
                 &high,
@@ -349,10 +353,22 @@ async fn select_mapping(
 
     let rows = match objects {
         BonsaisOrGitShas::Bonsai(bcs_ids) => {
-            SelectMappingByBonsai::query(connection, ctx.into(), repo_id, &bcs_ids[..]).await?
+            SelectMappingByBonsai::query(
+                connection,
+                ctx.sql_query_telemetry(),
+                repo_id,
+                &bcs_ids[..],
+            )
+            .await?
         }
         BonsaisOrGitShas::GitSha1(git_sha1s) => {
-            SelectMappingByGitSha1::query(connection, ctx.into(), repo_id, &git_sha1s[..]).await?
+            SelectMappingByGitSha1::query(
+                connection,
+                ctx.sql_query_telemetry(),
+                repo_id,
+                &git_sha1s[..],
+            )
+            .await?
         }
     };
 

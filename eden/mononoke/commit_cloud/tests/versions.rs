@@ -36,7 +36,7 @@ async fn test_versions(fb: FacebookInit) -> anyhow::Result<()> {
     };
 
     let sql_txn = sql.connections.write_connection.start_transaction().await?;
-    let mut txn = sql_ext::Transaction::new(sql_txn, Default::default(), ctx.clone().into());
+    let mut txn = sql_ext::Transaction::new(sql_txn, Default::default(), ctx.sql_query_telemetry());
     txn = sql
         .insert(txn, &ctx, reponame.clone(), workspace.clone(), args.clone())
         .await?;
@@ -62,7 +62,7 @@ async fn test_versions(fb: FacebookInit) -> anyhow::Result<()> {
     };
 
     let sql_txn = sql.connections.write_connection.start_transaction().await?;
-    txn = sql_ext::Transaction::new(sql_txn, Default::default(), ctx.clone().into());
+    txn = sql_ext::Transaction::new(sql_txn, Default::default(), ctx.sql_query_telemetry());
     txn = sql
         .insert(
             txn,
@@ -79,7 +79,7 @@ async fn test_versions(fb: FacebookInit) -> anyhow::Result<()> {
     let cc_ctx = CommitCloudContext::new(&workspace.clone(), &reponame.clone())?;
     let archive_args = UpdateVersionArgs::Archive(true);
     let sql_txn = sql.connections.write_connection.start_transaction().await?;
-    txn = sql_ext::Transaction::new(sql_txn, Default::default(), ctx.clone().into());
+    txn = sql_ext::Transaction::new(sql_txn, Default::default(), ctx.sql_query_telemetry());
     let (txn, affected_rows) =
         Update::<WorkspaceVersion>::update(&sql, txn, &ctx, cc_ctx.clone(), archive_args).await?;
     txn.commit().await?;
@@ -89,7 +89,7 @@ async fn test_versions(fb: FacebookInit) -> anyhow::Result<()> {
 
     let new_name_args = UpdateVersionArgs::WorkspaceName(renamed_workspace.clone());
     let sql_txn = sql.connections.write_connection.start_transaction().await?;
-    let txn = sql_ext::Transaction::new(sql_txn, Default::default(), ctx.clone().into());
+    let txn = sql_ext::Transaction::new(sql_txn, Default::default(), ctx.sql_query_telemetry());
     let (txn, affected_rows) =
         Update::<WorkspaceVersion>::update(&sql, txn, &ctx, cc_ctx, new_name_args).await?;
     txn.commit().await?;

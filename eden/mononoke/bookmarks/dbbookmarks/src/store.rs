@@ -378,7 +378,7 @@ impl SqlBookmarks {
                             let tok: i32 = rand::thread_rng().r#gen();
                             SelectAllUnordered::query(
                                 &conn,
-                                ctx.into(),
+                                ctx.sql_query_telemetry(),
                                 &repo_id,
                                 &limit,
                                 &tok,
@@ -399,7 +399,7 @@ impl SqlBookmarks {
                         } else {
                             SelectAll::query(
                                 &conn,
-                                ctx.into(),
+                                ctx.sql_query_telemetry(),
                                 &repo_id,
                                 &limit,
                                 &kinds,
@@ -420,7 +420,7 @@ impl SqlBookmarks {
                     }
                     BookmarkPagination::After(after) => SelectAllAfter::query(
                         &conn,
-                        ctx.into(),
+                        ctx.sql_query_telemetry(),
                         &repo_id,
                         &after,
                         &limit,
@@ -446,7 +446,7 @@ impl SqlBookmarks {
                         if limit == u64::MAX {
                             SelectByPrefixUnordered::query(
                                 &conn,
-                                ctx.into(),
+                                ctx.sql_query_telemetry(),
                                 &repo_id,
                                 &prefix_like_pattern,
                                 &"\\",
@@ -468,7 +468,7 @@ impl SqlBookmarks {
                         } else {
                             SelectByPrefix::query(
                                 &conn,
-                                ctx.into(),
+                                ctx.sql_query_telemetry(),
                                 &repo_id,
                                 &prefix_like_pattern,
                                 &"\\",
@@ -491,7 +491,7 @@ impl SqlBookmarks {
                     }
                     BookmarkPagination::After(after) => SelectByPrefixAfter::query(
                         &conn,
-                        ctx.into(),
+                        ctx.sql_query_telemetry(),
                         &repo_id,
                         &prefix_like_pattern,
                         &"\\",
@@ -529,9 +529,14 @@ impl SqlBookmarks {
         let conn = self.connections.read_master_connection.clone();
         cloned!(self.repo_id, key);
         async move {
-            let rows =
-                SelectBookmark::query(&conn, ctx.into(), &repo_id, key.name(), key.category())
-                    .await?;
+            let rows = SelectBookmark::query(
+                &conn,
+                ctx.sql_query_telemetry(),
+                &repo_id,
+                key.name(),
+                key.category(),
+            )
+            .await?;
             Ok(rows.into_iter().next())
         }
     }
@@ -624,7 +629,7 @@ impl BookmarkUpdateLog for SqlBookmarks {
                 Some(offset) => {
                     SelectBookmarkLogsWithOffset::query(
                         &conn,
-                        ctx.into(),
+                        ctx.sql_query_telemetry(),
                         &repo_id,
                         key.name(),
                         key.category(),
@@ -637,7 +642,7 @@ impl BookmarkUpdateLog for SqlBookmarks {
                 None => {
                     SelectBookmarkLogs::query(
                         &conn,
-                        ctx.into(),
+                        ctx.sql_query_telemetry(),
                         &repo_id,
                         key.name(),
                         key.category(),
@@ -675,7 +680,7 @@ impl BookmarkUpdateLog for SqlBookmarks {
         async move {
             let rows = SelectBookmarkLogsWithTsInRange::query(
                 &conn,
-                ctx.into(),
+                ctx.sql_query_telemetry(),
                 &repo_id,
                 key.name(),
                 key.category(),
@@ -706,7 +711,7 @@ impl BookmarkUpdateLog for SqlBookmarks {
                 Some(ref r) => {
                     CountFurtherBookmarkLogEntriesWithoutReason::query(
                         &conn,
-                        ctx.into(),
+                        ctx.sql_query_telemetry(),
                         &id,
                         &repo_id,
                         r,
@@ -714,7 +719,13 @@ impl BookmarkUpdateLog for SqlBookmarks {
                     .await?
                 }
                 None => {
-                    CountFurtherBookmarkLogEntries::query(&conn, ctx.into(), &id, &repo_id).await?
+                    CountFurtherBookmarkLogEntries::query(
+                        &conn,
+                        ctx.sql_query_telemetry(),
+                        &id,
+                        &repo_id,
+                    )
+                    .await?
                 }
             };
             match entries.into_iter().next() {
@@ -744,9 +755,13 @@ impl BookmarkUpdateLog for SqlBookmarks {
         let conn = self.connections.read_connection.clone();
         let repo_id = self.repo_id;
         async move {
-            let entries =
-                CountFurtherBookmarkLogEntriesByReason::query(&conn, ctx.into(), &id, &repo_id)
-                    .await?;
+            let entries = CountFurtherBookmarkLogEntriesByReason::query(
+                &conn,
+                ctx.sql_query_telemetry(),
+                &id,
+                &repo_id,
+            )
+            .await?;
             Ok(entries.into_iter().collect())
         }
         .boxed()
@@ -765,7 +780,7 @@ impl BookmarkUpdateLog for SqlBookmarks {
         async move {
             let entries = SkipOverBookmarkLogEntriesWithReason::query(
                 &conn,
-                ctx.into(),
+                ctx.sql_query_telemetry(),
                 &id,
                 &repo_id,
                 &reason,
@@ -788,10 +803,15 @@ impl BookmarkUpdateLog for SqlBookmarks {
         let repo_id = self.repo_id;
 
         async move {
-            let entries =
-                ReadNextBookmarkLogEntries::query(&conn, (&ctx).into(), &id, &repo_id, &limit)
-                    .watched(ctx.logger())
-                    .await?;
+            let entries = ReadNextBookmarkLogEntries::query(
+                &conn,
+                ctx.sql_query_telemetry(),
+                &id,
+                &repo_id,
+                &limit,
+            )
+            .watched(ctx.logger())
+            .await?;
 
             let homogenous_entries: Vec<_> = match entries.first().cloned() {
                 Some(first_entry) => {
@@ -857,9 +877,14 @@ impl BookmarkUpdateLog for SqlBookmarks {
         let repo_id = self.repo_id;
 
         async move {
-            let entries =
-                ReadNextBookmarkLogEntries::query(&connection, ctx.into(), &id, &repo_id, &limit)
-                    .await?;
+            let entries = ReadNextBookmarkLogEntries::query(
+                &connection,
+                ctx.sql_query_telemetry(),
+                &id,
+                &repo_id,
+                &limit,
+            )
+            .await?;
 
             Ok(
                 stream::iter(entries.into_iter().map(Ok)).and_then(|entry| async move {
@@ -898,7 +923,8 @@ impl BookmarkUpdateLog for SqlBookmarks {
         let repo_id = self.repo_id;
 
         async move {
-            let entries = GetLargestLogId::query(&connection, ctx.into(), &repo_id).await?;
+            let entries =
+                GetLargestLogId::query(&connection, ctx.sql_query_telemetry(), &repo_id).await?;
             let entry = entries.into_iter().next();
             match entry {
                 Some(count) => Ok(count.0),
