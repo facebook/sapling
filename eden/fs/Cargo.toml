@@ -20,6 +20,7 @@ perf-event-open-sys = { version = "5.0", git = "https://github.com/Nero5023/perf
 plexi-core = { version = "0.1.2", git = "https://github.com/markbt/plexi", rev = "9d459b7fb26101e5c9c2489c220cbae03d1d7afe" }
 protobuf-build = { git = "https://github.com/fbsource/protobuf-build", rev = "ee1de946ce2fd7d06a7a4fab7141e02c49f0981f" }
 quickcheck = { git = "https://github.com/jakoschiko/quickcheck", rev = "6ecdf5bb4b0132ce66670b4d46453aa022ea892c" }
+ratatui = { git = "https://github.com/fbsource/ratatui", rev = "2c4576ee123b2ac4845bd4a823af721ac447b33f" }
 rinja = { git = "https://github.com/fbsource/askama", rev = "2fc6173c98034c148f46330fc39a006cf0b09efe" }
 sqlx = { git = "https://github.com/launchbadge/sqlx", rev = "24317d5eab40fbc33caf1142946e2f39caad73ea" }
 stabby = { git = "https://github.com/fbsource/stabby", rev = "22db1dda19938ff7725a93db64012a5730325c5d" }
