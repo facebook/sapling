@@ -21,7 +21,6 @@ plexi-core = { version = "0.1.2", git = "https://github.com/markbt/plexi", rev =
 protobuf-build = { git = "https://github.com/fbsource/protobuf-build", rev = "ee1de946ce2fd7d06a7a4fab7141e02c49f0981f" }
 quickcheck = { git = "https://github.com/jakoschiko/quickcheck", rev = "6ecdf5bb4b0132ce66670b4d46453aa022ea892c" }
 rinja = { git = "https://github.com/fbsource/askama", rev = "2fc6173c98034c148f46330fc39a006cf0b09efe" }
-rusqlite_migration = { git = "https://github.com/cljoly/rusqlite_migration", rev = "34e29bdcb02e3489d9ab625d84bc648ca6587dcb" }
 sqlx = { git = "https://github.com/launchbadge/sqlx", rev = "24317d5eab40fbc33caf1142946e2f39caad73ea" }
 stabby = { git = "https://github.com/fbsource/stabby", rev = "22db1dda19938ff7725a93db64012a5730325c5d" }
 tokenizers-21 = { package = "tokenizers", git = "https://github.com/huggingface/tokenizers", rev = "133db48d4f272070076fbc7a649c9e8aa8cd0646" }
