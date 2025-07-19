@@ -471,7 +471,7 @@ fn create_dir_with_mode(path: &Path, mode: u32) -> anyhow::Result<()> {
     fs::set_permissions(&temp, Permissions::from_mode(mode))
         .with_context(|| format!("setting permissions on temp dir {:?}", temp))?;
 
-    let temp = temp.into_path();
+    let temp = temp.keep();
     if let Err(e) = fs::rename(&temp, &path) {
         // In the unlikely event where the rename fails, we attempt to clean up the
         // previously leaked temporary file before returning.

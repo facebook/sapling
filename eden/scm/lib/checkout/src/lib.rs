@@ -1882,7 +1882,7 @@ mod test {
             eprintln!("===");
             eprintln!(
                 "Working directory: {} (not deleted)",
-                tempdir.into_path().display()
+                tempdir.keep().display()
             );
             return Err(e);
         }
