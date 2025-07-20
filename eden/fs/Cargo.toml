@@ -1,6 +1,7 @@
 [patch.crates-io]
 abomonation = { git = "https://github.com/markbt/abomonation", rev = "0f43346d2afa2aedc64d61f3f4273e8d1e454642" }
 base64urlsafedata = { git = "https://github.com/kanidm/webauthn-rs.git", rev = "d278c56adfa39a0723c79bdcd461644194bc5138" }
+cargo = { git = "https://github.com/rust-lang/cargo", rev = "f5b3a6ba899c2eb9285dd3769aa6d84179ee7f8b" }
 cbindgen = { git = "https://github.com/mozilla/cbindgen.git", rev = "cf94b56ef35d91f8420e8f89fee70074d39d068d" }
 cxx = { package = "cxx", git = "https://github.com/facebookexperimental/cxx.git", rev = "43f8f85eb1b9d99f10f7228ab679997c484ade69" }
 cxx-build = { package = "cxx-build", git = "https://github.com/facebookexperimental/cxx.git", rev = "43f8f85eb1b9d99f10f7228ab679997c484ade69" }
