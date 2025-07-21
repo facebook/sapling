@@ -103,14 +103,22 @@ async fn boundary_trees_and_blobs(
                     .context("Error in fetching boundary commit")?
                     .with_parsed_as_commit(|commit| GitTreeId(commit.tree()))
                     .ok_or_else(|| anyhow::anyhow!("Git object {:?} is not a commit", git_commit_id))?;
-                let objects = root_tree.list_all_entries((*ctx).clone(), blobstore.clone()).try_filter_map(|(path, entry)|{
-                    cloned!(ctx, blobstore, filter);
+                let objects = root_tree.list_all_entries((*ctx).clone(), blobstore.clone()).try_collect::<Vec<_>>().await?;
+                let objects = stream::iter(objects).map(|(path, entry)| {
+                    cloned!(ctx, blobstore);
                     async move {
                         // If the entry is a submodule, then the concept of size does not apply. Assume 0 since it will be ignored anyway
                         let size = match entry.is_submodule() {
                             true => 0,
                             false => entry.size(&ctx, &blobstore).await?
                         };
+                        Ok((path, entry, size))
+                    }
+                })
+                .buffer_unordered(concurrency.trees_and_blobs)
+                .try_filter_map(|(path, entry, size)|{
+                    cloned!(filter);
+                    async move {
                         let kind = entry.kind();
                         let oid = entry.oid();
                         // If the entry corresponds to a submodules (and shows up as a commit), then we ignore it
@@ -121,7 +129,8 @@ async fn boundary_trees_and_blobs(
                             Ok(Some(FullObjectEntry::new(changeset_id, path, oid, size, kind)))
                         }
                     }
-                }).try_collect::<FxHashSet<_>>()
+                })
+                .try_collect::<FxHashSet<_>>()
                 .await
                 .with_context(|| {
                     format!(
