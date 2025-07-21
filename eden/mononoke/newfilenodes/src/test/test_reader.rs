@@ -219,7 +219,7 @@ async fn test_fallback_on_missing_copy_info(fb: FacebookInit) -> Result<(), Erro
     .do_not_handle_disabled_filenodes()?;
 
     // Now, delete the copy info from the replica.
-    DeleteCopyInfo::query(&replica, None).await?;
+    DeleteCopyInfo::query(&replica, ctx.sql_query_telemetry()).await?;
 
     let reader = Arc::new(FilenodesReader::new(vec1![replica], vec1![master])?);
     let prepared = copied_filenode();
@@ -273,7 +273,7 @@ async fn test_fallback_on_missing_paths(fb: FacebookInit) -> Result<(), Error> {
     .do_not_handle_disabled_filenodes()?;
 
     // Now, delete the copy info from the replica.
-    DeletePaths::query(&replica, None).await?;
+    DeletePaths::query(&replica, ctx.sql_query_telemetry()).await?;
 
     let reader = Arc::new(FilenodesReader::new(vec1![replica], vec1![master])?);
     let prepared = copied_filenode();

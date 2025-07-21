@@ -117,11 +117,15 @@ impl MegarepoSyncConfig for SqlMegarepoSyncConfig {
     #[cfg(test)]
     async fn test_get_repo_config_by_id(
         &self,
-        _ctx: &CoreContext,
+        ctx: &CoreContext,
         id: &RowId,
     ) -> Result<Option<MegarepoSyncConfigEntry>> {
-        let rows =
-            TestGetRepoConfigById::query(&self.connections.read_connection, None, id).await?;
+        let rows = TestGetRepoConfigById::query(
+            &self.connections.read_connection,
+            ctx.sql_query_telemetry(),
+            id,
+        )
+        .await?;
         match rows.into_iter().next() {
             None => Ok(None),
             Some(row) => Ok(Some(row_to_entry(row)?)),
