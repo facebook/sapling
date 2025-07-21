@@ -300,40 +300,26 @@ class TestTelemetryLogger(BaseJsonTelemetryLogger):
 
 
 class NullTelemetrySample(TelemetrySample):
-    # pyre-fixme[7]: Expected `NullTelemetrySample` but got implicit return value of
-    #  `None`.
     def add_int(self, name: str, value: int) -> "NullTelemetrySample":
-        pass
+        return self
 
-    # pyre-fixme[7]: Expected `NullTelemetrySample` but got implicit return value of
-    #  `None`.
     def add_string(self, name: str, value: str) -> "NullTelemetrySample":
-        pass
+        return self
 
-    # pyre-fixme[7]: Expected `NullTelemetrySample` but got implicit return value of
-    #  `None`.
     def add_double(self, name: str, value: float) -> "NullTelemetrySample":
-        pass
+        return self
 
-    # pyre-fixme[7]: Expected `NullTelemetrySample` but got implicit return value of
-    #  `None`.
     def add_tags(self, name: str, value: Set[str]) -> "NullTelemetrySample":
-        pass
+        return self
 
-    # pyre-fixme[7]: Expected `NullTelemetrySample` but got implicit return value of
-    #  `None`.
     def add_normvector(self, name: str, value: List[str]) -> "NullTelemetrySample":
-        pass
+        return self
 
-    # pyre-fixme[7]: Expected `NullTelemetrySample` but got implicit return value of
-    #  `None`.
     def add_bool(self, name: str, value: bool) -> "NullTelemetrySample":
-        pass
+        return self
 
-    # pyre-fixme[7]: Expected `NullTelemetrySample` but got implicit return value of
-    #  `None`.
     def add_fields(self, **kwargs: TelemetryTypes) -> "NullTelemetrySample":
-        pass
+        return self
 
     def _log_impl(self) -> None:
         pass
