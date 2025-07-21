@@ -18,6 +18,7 @@ use slog::info;
 use sql_construct::SqlConstruct;
 use sql_construct::SqlConstructFromMetadataDatabaseConfig;
 use sql_ext::SqlConnections;
+use sql_ext::SqlQueryTelemetry;
 use sql_ext::mononoke_queries;
 
 use crate::detail::fetcher::Direction;
@@ -211,9 +212,13 @@ impl fmt::Debug for CheckpointsByName {
 
 pub struct SqlCheckpoints {
     connections: SqlConnections,
+    sql_query_tel: SqlQueryTelemetry,
+}
+pub struct SqlCheckpointsBuilder {
+    connections: SqlConnections,
 }
 
-impl SqlConstruct for SqlCheckpoints {
+impl SqlConstruct for SqlCheckpointsBuilder {
     const LABEL: &'static str = "walker_checkpoints";
 
     const CREATION_QUERY: &'static str =
@@ -221,6 +226,15 @@ impl SqlConstruct for SqlCheckpoints {
 
     fn from_sql_connections(connections: SqlConnections) -> Self {
         Self { connections }
+    }
+}
+
+impl SqlCheckpointsBuilder {
+    pub fn build(self, sql_query_tel: SqlQueryTelemetry) -> SqlCheckpoints {
+        SqlCheckpoints {
+            connections: self.connections,
+            sql_query_tel,
+        }
     }
 }
 
@@ -235,7 +249,7 @@ impl SqlCheckpoints {
             CheckpointsVersion::V1 => {
                 SelectCheckpoint::query(
                     &self.connections.read_master_connection,
-                    None,
+                    self.sql_query_tel.clone(),
                     &repo_id,
                     &checkpoint_name,
                 )
@@ -244,7 +258,7 @@ impl SqlCheckpoints {
             CheckpointsVersion::V2 => {
                 SelectCheckpointV2::query(
                     &self.connections.read_master_connection,
-                    None,
+                    self.sql_query_tel.clone(),
                     &repo_id,
                     &checkpoint_name,
                 )
@@ -275,7 +289,7 @@ impl SqlCheckpoints {
             CheckpointsVersion::V1 => {
                 InsertCheckpoint::query(
                     &self.connections.write_connection,
-                    None,
+                    self.sql_query_tel.clone(),
                     &[(
                         &repo_id,
                         checkpoint_name,
@@ -292,7 +306,7 @@ impl SqlCheckpoints {
             CheckpointsVersion::V2 => {
                 InsertCheckpointV2::query(
                     &self.connections.write_connection,
-                    None,
+                    self.sql_query_tel.clone(),
                     &[(
                         &repo_id,
                         checkpoint_name,
@@ -322,7 +336,7 @@ impl SqlCheckpoints {
             CheckpointsVersion::V1 => {
                 UpdateCheckpoint::query(
                     &self.connections.write_connection,
-                    None,
+                    self.sql_query_tel.clone(),
                     &repo_id,
                     checkpoint_name,
                     &checkpoint.lower_bound,
@@ -337,7 +351,7 @@ impl SqlCheckpoints {
             CheckpointsVersion::V2 => {
                 UpdateCheckpointV2::query(
                     &self.connections.write_connection,
-                    None,
+                    self.sql_query_tel.clone(),
                     &repo_id,
                     checkpoint_name,
                     &checkpoint.lower_bound,
@@ -365,7 +379,7 @@ impl SqlCheckpoints {
             CheckpointsVersion::V1 => {
                 FinishCheckpoint::query(
                     &self.connections.write_connection,
-                    None,
+                    self.sql_query_tel.clone(),
                     &repo_id,
                     checkpoint_name,
                     &checkpoint.lower_bound,
@@ -379,7 +393,7 @@ impl SqlCheckpoints {
             CheckpointsVersion::V2 => {
                 FinishCheckpointV2::query(
                     &self.connections.write_connection,
-                    None,
+                    self.sql_query_tel.clone(),
                     &repo_id,
                     checkpoint_name,
                     &checkpoint.lower_bound,
@@ -395,7 +409,7 @@ impl SqlCheckpoints {
     }
 }
 
-impl SqlConstructFromMetadataDatabaseConfig for SqlCheckpoints {}
+impl SqlConstructFromMetadataDatabaseConfig for SqlCheckpointsBuilder {}
 
 mononoke_queries! {
     read SelectCheckpoint(
@@ -515,15 +529,20 @@ mononoke_queries! {
 
 #[cfg(test)]
 mod tests {
+    use context::CoreContext;
     use fbinit::FacebookInit;
     use mononoke_macros::mononoke;
 
     use super::*;
 
-    async fn test_sql_roundtrip_impl(version: CheckpointsVersion) -> Result<(), Error> {
+    async fn test_sql_roundtrip_impl(
+        fb: FacebookInit,
+        version: CheckpointsVersion,
+    ) -> Result<(), Error> {
+        let ctx = CoreContext::test_mock(fb);
         let checkpoints = CheckpointsByName::new(
             "test_checkpoint".to_string(),
-            SqlCheckpoints::with_sqlite_in_memory()?,
+            SqlCheckpointsBuilder::with_sqlite_in_memory()?.build(ctx.sql_query_telemetry()),
             0,
             version,
         );
@@ -573,12 +592,12 @@ mod tests {
     }
 
     #[mononoke::fbinit_test]
-    async fn test_sql_roundtrip(_fb: FacebookInit) -> Result<(), Error> {
-        test_sql_roundtrip_impl(CheckpointsVersion::V1).await
+    async fn test_sql_roundtrip(fb: FacebookInit) -> Result<(), Error> {
+        test_sql_roundtrip_impl(fb, CheckpointsVersion::V1).await
     }
 
     #[mononoke::fbinit_test]
-    async fn test_sql_roundtrip_v2(_fb: FacebookInit) -> Result<(), Error> {
-        test_sql_roundtrip_impl(CheckpointsVersion::V2).await
+    async fn test_sql_roundtrip_v2(fb: FacebookInit) -> Result<(), Error> {
+        test_sql_roundtrip_impl(fb, CheckpointsVersion::V2).await
     }
 }

@@ -17,6 +17,7 @@ use anyhow::format_err;
 use blobstore::Blobstore;
 use blobstore_factory::ScrubHandler;
 use cloned::cloned;
+use context::CoreContext;
 use fbinit::FacebookInit;
 use metaconfig_types::CommonConfig;
 use metaconfig_types::MetadataDatabaseConfig;
@@ -74,6 +75,7 @@ pub async fn setup_common(
     blobstore_sampler: Option<Arc<dyn SamplingHandler>>,
     blobstore_component_sampler: Option<Arc<dyn ComponentSamplingHandler>>,
 ) -> Result<JobParams, Error> {
+    let ctx = app.new_basic_context();
     let logger = app.logger();
     let mut scuba_builder = app.environment().scuba_sample_builder.clone();
     let walker_type = app.args::<WalkerArgs>()?.walker_type;
@@ -138,7 +140,7 @@ pub async fn setup_common(
     let walk_roots = common_args.walk_roots.parse_args()?;
     let exclude_nodes = common_args.exclude_nodes.parse_args()?;
     let mut parsed_tail_params = parse_tail_params(
-        app.fb,
+        &ctx,
         &common_args.tailing,
         mysql_options,
         &repos,
@@ -357,7 +359,7 @@ fn setup_repo_factory<'a>(
 }
 
 async fn parse_tail_params(
-    fb: FacebookInit,
+    ctx: &CoreContext,
     tail_args: &TailArgs,
     mysql_options: &MysqlOptions,
     repos: &[(String, RepoConfig)],
@@ -370,7 +372,7 @@ async fn parse_tail_params(
             Some(tail_params) => tail_params.clone(),
             None => {
                 let tail_params = tail_args
-                    .parse_args(fb, metadatadb_config, mysql_options)
+                    .parse_args(ctx, metadatadb_config, mysql_options)
                     .await?;
                 parsed_tail_params.insert(metadatadb_config.clone(), tail_params.clone());
                 tail_params

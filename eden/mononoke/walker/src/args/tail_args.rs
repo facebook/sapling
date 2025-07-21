@@ -9,7 +9,7 @@ use std::time::Duration;
 
 use anyhow::Error;
 use clap::Args;
-use fbinit::FacebookInit;
+use context::CoreContext;
 use metaconfig_types::MetadataDatabaseConfig;
 use sql_construct::SqlConstruct;
 use sql_construct::SqlConstructFromMetadataDatabaseConfig;
@@ -21,7 +21,7 @@ use crate::args::arg_types::InternedTypeArg;
 use crate::args::graph_arg_types::NodeTypeArg;
 use crate::detail::checkpoint::CheckpointsByName;
 use crate::detail::checkpoint::CheckpointsVersion;
-use crate::detail::checkpoint::SqlCheckpoints;
+use crate::detail::checkpoint::SqlCheckpointsBuilder;
 use crate::detail::fetcher::Direction;
 use crate::detail::tail::ChunkingParams;
 use crate::detail::tail::ClearStateParams;
@@ -45,7 +45,7 @@ pub struct TailArgs {
 impl TailArgs {
     pub async fn parse_args(
         &self,
-        fb: FacebookInit,
+        ctx: &CoreContext,
         dbconfig: &MetadataDatabaseConfig,
         mysql_options: &MysqlOptions,
     ) -> Result<TailParams, Error> {
@@ -53,7 +53,7 @@ impl TailArgs {
             tail_secs: self.tail_interval.clone(),
             chunking: self
                 .chunking
-                .parse_args(fb, dbconfig, mysql_options)
+                .parse_args(ctx, dbconfig, mysql_options)
                 .await?,
             state_max_age: Duration::from_secs(self.state_max_age),
         })
@@ -110,7 +110,7 @@ pub struct ChunkingArgs {
 impl ChunkingArgs {
     pub async fn parse_args(
         &self,
-        fb: FacebookInit,
+        ctx: &CoreContext,
         dbconfig: &MetadataDatabaseConfig,
         mysql_options: &MysqlOptions,
     ) -> Result<Option<ChunkingParams>, Error> {
@@ -151,7 +151,7 @@ impl ChunkingArgs {
             clear_state,
             checkpoints: self
                 .checkpoint
-                .parse_args(fb, dbconfig, mysql_options)
+                .parse_args(ctx, dbconfig, mysql_options)
                 .await?,
             allow_remaining_deferred: self.allow_remaining_deferred,
             repo_lower_bound_override: self.repo_lower_bound,
@@ -179,16 +179,23 @@ pub struct CheckpointArgs {
 impl CheckpointArgs {
     pub async fn parse_args(
         &self,
-        fb: FacebookInit,
+        ctx: &CoreContext,
         dbconfig: &MetadataDatabaseConfig,
         mysql_options: &MysqlOptions,
     ) -> Result<Option<CheckpointsByName>, Error> {
         if let Some(checkpoint_name) = &self.checkpoint_name {
             let sql_checkpoints = if let Some(checkpoint_path) = &self.checkpoint_path {
-                SqlCheckpoints::with_sqlite_path(checkpoint_path, false)?
+                SqlCheckpointsBuilder::with_sqlite_path(checkpoint_path, false)?
+                    .build(ctx.sql_query_telemetry())
             } else {
-                SqlCheckpoints::with_metadata_database_config(fb, dbconfig, mysql_options, false)
-                    .await?
+                SqlCheckpointsBuilder::with_metadata_database_config(
+                    ctx.fb.clone(),
+                    dbconfig,
+                    mysql_options,
+                    false,
+                )
+                .await?
+                .build(ctx.sql_query_telemetry())
             };
 
             Ok(Some(CheckpointsByName::new(
