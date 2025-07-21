@@ -9,6 +9,7 @@ use std::hash::Hasher;
 use std::sync::Arc;
 
 use anyhow::Result;
+use context::CoreContext;
 use futures::stream;
 use futures::stream::StreamExt;
 use futures::stream::TryStreamExt;
@@ -50,31 +51,34 @@ pub struct BonsaiBlobMapping {
 impl BonsaiBlobMapping {
     pub async fn get_blob_keys_for_changesets(
         &self,
+        ctx: &CoreContext,
         repo_id: RepositoryId,
         cs_ids: Vec<ChangesetId>,
     ) -> Result<Vec<(ChangesetId, String)>> {
         self.sql_bonsai_blob_mapping
-            .get_blob_keys_for_changesets(repo_id, cs_ids)
+            .get_blob_keys_for_changesets(ctx, repo_id, cs_ids)
             .await
     }
 
     pub async fn get_changesets_for_blob_keys(
         &self,
+        ctx: &CoreContext,
         repo_id: RepositoryId,
         blob_keys: Vec<String>,
     ) -> Result<Vec<(ChangesetId, String)>> {
         self.sql_bonsai_blob_mapping
-            .get_changesets_for_blob_keys(repo_id, blob_keys)
+            .get_changesets_for_blob_keys(ctx, repo_id, blob_keys)
             .await
     }
 
     pub async fn insert_blob_keys_for_changesets(
         &self,
+        ctx: &CoreContext,
         repo_id: RepositoryId,
         mappings: Vec<(ChangesetId, String)>,
     ) -> Result<u64> {
         self.sql_bonsai_blob_mapping
-            .insert_blob_keys_for_changesets(repo_id, mappings)
+            .insert_blob_keys_for_changesets(ctx, repo_id, mappings)
             .await
     }
 }
@@ -100,6 +104,7 @@ impl SqlBonsaiBlobMapping {
 
     pub async fn get_blob_keys_for_changesets(
         &self,
+        ctx: &CoreContext,
         repo_id: RepositoryId,
         cs_ids: Vec<ChangesetId>,
     ) -> Result<Vec<(ChangesetId, String)>> {
@@ -107,7 +112,7 @@ impl SqlBonsaiBlobMapping {
         for shard_id in 0..self.shard_count {
             let rows = GetBlobKeysForChangesets::query(
                 &self.read_connections[shard_id],
-                None,
+                ctx.sql_query_telemetry(),
                 &repo_id,
                 &cs_ids[..],
             )
@@ -119,6 +124,7 @@ impl SqlBonsaiBlobMapping {
 
     pub async fn get_changesets_for_blob_keys(
         &self,
+        ctx: &CoreContext,
         repo_id: RepositoryId,
         blob_keys: Vec<String>,
     ) -> Result<Vec<(ChangesetId, String)>> {
@@ -132,7 +138,7 @@ impl SqlBonsaiBlobMapping {
             .map(|(shard_id, blob_keys)| async move {
                 GetChangesetsForBlobKeys::query(
                     &self.read_connections[shard_id],
-                    None,
+                    ctx.sql_query_telemetry(),
                     &repo_id,
                     &blob_keys[..],
                 )
@@ -148,6 +154,7 @@ impl SqlBonsaiBlobMapping {
 
     pub async fn insert_blob_keys_for_changesets(
         &self,
+        ctx: &CoreContext,
         repo_id: RepositoryId,
         mappings: Vec<(ChangesetId, String)>,
     ) -> Result<u64> {
@@ -168,7 +175,7 @@ impl SqlBonsaiBlobMapping {
                     let chunk: Vec<_> = chunk.iter().map(|(a, b, c)| (a, b, c)).collect();
                     let result = InsertBlobKeysForChangesets::query(
                         &self.write_connections[shard_id],
-                        None,
+                        ctx.sql_query_telemetry(),
                         &chunk[..],
                     )
                     .await?;
@@ -226,6 +233,7 @@ impl SqlShardableConstructFromMetadataDatabaseConfig for SqlBonsaiBlobMapping {
 
 #[cfg(test)]
 mod test {
+    use fbinit::FacebookInit;
     use mononoke_macros::mononoke;
     use mononoke_types_mocks::changesetid::ONES_CSID;
     use mononoke_types_mocks::changesetid::THREES_CSID;
@@ -235,7 +243,8 @@ mod test {
     use super::*;
 
     #[mononoke::fbinit_test]
-    async fn test_single_write_and_read() -> Result<()> {
+    async fn test_single_write_and_read(fb: FacebookInit) -> Result<()> {
+        let ctx = CoreContext::test_mock(fb);
         let sql = SqlBonsaiBlobMapping::with_sqlite_in_memory()?;
         let repo_id = RepositoryId::new(1);
         let values = vec!["blob1", "blob2", "blob3"]
@@ -243,18 +252,18 @@ mod test {
             .map(|blob| (ONES_CSID, blob.into()))
             .collect::<Vec<_>>();
         let res = sql
-            .insert_blob_keys_for_changesets(repo_id, values.clone())
+            .insert_blob_keys_for_changesets(&ctx, repo_id, values.clone())
             .await?;
 
         assert_eq!(res, 3); // we are inserting 3 blobs each mapped to ONES_CSID
 
         let rows = sql
-            .get_changesets_for_blob_keys(repo_id, vec!["blob1".into()])
+            .get_changesets_for_blob_keys(&ctx, repo_id, vec!["blob1".into()])
             .await?;
         assert_eq!(rows, vec![values[0].clone()]);
 
         let rows = sql
-            .get_blob_keys_for_changesets(repo_id, vec![ONES_CSID])
+            .get_blob_keys_for_changesets(&ctx, repo_id, vec![ONES_CSID])
             .await?;
 
         assert_eq!(rows, values);
@@ -262,7 +271,8 @@ mod test {
     }
 
     #[mononoke::fbinit_test]
-    async fn test_read_write_multiple_values() -> Result<()> {
+    async fn test_read_write_multiple_values(fb: FacebookInit) -> Result<()> {
+        let ctx = CoreContext::test_mock(fb);
         let sql = SqlBonsaiBlobMapping::with_sqlite_in_memory()?;
         let repo_id = RepositoryId::new(1);
         let blobs1 = vec!["blob1", "blob2", "blob3"]
@@ -282,12 +292,16 @@ mod test {
             .into_iter()
             .collect::<Vec<_>>();
 
-        let res = sql.insert_blob_keys_for_changesets(repo_id, values).await?;
+        let res = sql
+            .insert_blob_keys_for_changesets(&ctx, repo_id, values)
+            .await?;
 
         assert_eq!(res, 9); // for each of the 3 cs_ids we have 3 blobs to insert so total = 9
 
         let blob_keys = blobs2.into_iter().map(|(_, s)| s).collect::<Vec<_>>();
-        let rows = sql.get_changesets_for_blob_keys(repo_id, blob_keys).await?;
+        let rows = sql
+            .get_changesets_for_blob_keys(&ctx, repo_id, blob_keys)
+            .await?;
 
         assert_eq!(
             rows,
@@ -301,7 +315,7 @@ mod test {
         );
 
         let rows = sql
-            .get_blob_keys_for_changesets(repo_id, vec![TWOS_CSID, THREES_CSID])
+            .get_blob_keys_for_changesets(&ctx, repo_id, vec![TWOS_CSID, THREES_CSID])
             .await?;
 
         assert_eq!(

@@ -11,6 +11,7 @@ use std::string::ToString;
 
 use anyhow::Result;
 use anyhow::anyhow;
+use context::CoreContext;
 use futures::stream;
 use futures::stream::StreamExt;
 use futures::stream::TryStreamExt;
@@ -124,35 +125,38 @@ pub struct DeletionLog {
 impl DeletionLog {
     pub async fn insert_candidates(
         &self,
+        ctx: &CoreContext,
         repo_id: RepositoryId,
         reason: String,
         stage: DeletionStage,
         cs_to_blobs: Vec<(ChangesetId, String)>,
     ) -> Result<u64> {
         self.sql_deletion_log
-            .insert_candidates(repo_id, reason, stage.to_string(), cs_to_blobs)
+            .insert_candidates(ctx, repo_id, reason, stage.to_string(), cs_to_blobs)
             .await
     }
 
     pub async fn update_candidates<T: TransitionState>(
         &self,
+        ctx: &CoreContext,
         repo_id: RepositoryId,
         reason: String,
         cs_to_blobs: Vec<(ChangesetId, String)>,
     ) -> Result<u64> {
         self.sql_deletion_log
-            .update_candidates::<T>(repo_id, reason, cs_to_blobs)
+            .update_candidates::<T>(ctx, repo_id, reason, cs_to_blobs)
             .await
     }
 
     pub async fn get_blob_keys_for_request(
         &self,
+        ctx: &CoreContext,
         repo_id: RepositoryId,
         reason: String,
         stage: DeletionStage,
     ) -> Result<Vec<(ChangesetId, String)>> {
         self.sql_deletion_log
-            .get_blob_keys_for_request_and_stage(repo_id, reason, stage.to_string())
+            .get_blob_keys_for_request_and_stage(ctx, repo_id, reason, stage.to_string())
             .await
     }
 }
@@ -186,6 +190,7 @@ impl SqlConstructFromMetadataDatabaseConfig for SqlDeletionLog {
 impl SqlDeletionLog {
     async fn insert_candidates(
         &self,
+        ctx: &CoreContext,
         repo_id: RepositoryId,
         reason: String,
         stage: String,
@@ -206,7 +211,12 @@ impl SqlDeletionLog {
                             (&repo_id, cs_id, blob_key, &reason, &stage, &timestamp)
                         })
                         .collect::<Vec<_>>();
-                    InsertCandidate::query(&self.write_connection, None, v.as_slice()).await
+                    InsertCandidate::query(
+                        &self.write_connection,
+                        ctx.sql_query_telemetry(),
+                        v.as_slice(),
+                    )
+                    .await
                 }
             })
             .try_fold(0, |acc, res| async move { Ok(acc + res.affected_rows()) })
@@ -215,6 +225,7 @@ impl SqlDeletionLog {
 
     async fn update_candidates<T: TransitionState>(
         &self,
+        ctx: &CoreContext,
         repo_id: RepositoryId,
         reason: String,
         cs_to_blobs: Vec<(ChangesetId, String)>,
@@ -226,7 +237,7 @@ impl SqlDeletionLog {
         let from_stage = T::from();
         let to_stage = T::to();
         let rows = self
-            .get_blob_keys_for_request(repo_id, reason.clone())
+            .get_blob_keys_for_request(ctx, repo_id, reason.clone())
             .await?;
         let (in_target_state, not_in_target_state): (Vec<_>, Vec<_>) = rows
             .into_iter()
@@ -266,7 +277,12 @@ impl SqlDeletionLog {
                             (&repo_id, cs_id, blob_key, &reason, &stage, &timestamp)
                         })
                         .collect::<Vec<_>>();
-                    UpdateCandidate::query(&self.write_connection, None, v.as_slice()).await
+                    UpdateCandidate::query(
+                        &self.write_connection,
+                        ctx.sql_query_telemetry(),
+                        v.as_slice(),
+                    )
+                    .await
                 }
             })
             .try_fold(0, |acc, res| async move { Ok(acc + res.affected_rows()) })
@@ -275,11 +291,17 @@ impl SqlDeletionLog {
 
     async fn get_blob_keys_for_request(
         &self,
+        ctx: &CoreContext,
         repo_id: RepositoryId,
         reason: String,
     ) -> Result<Vec<(ChangesetId, String, DeletionStage)>> {
-        let blobs =
-            GetBlobKeysForRequest::query(&self.read_connection, None, &repo_id, &reason).await?;
+        let blobs = GetBlobKeysForRequest::query(
+            &self.read_connection,
+            ctx.sql_query_telemetry(),
+            &repo_id,
+            &reason,
+        )
+        .await?;
         blobs
             .into_iter()
             .map(|(cs_id, blob, stage)| Ok((cs_id, blob, DeletionStage::from_str(&stage)?)))
@@ -288,17 +310,25 @@ impl SqlDeletionLog {
 
     async fn get_blob_keys_for_request_and_stage(
         &self,
+        ctx: &CoreContext,
         repo_id: RepositoryId,
         reason: String,
         stage: String,
     ) -> Result<Vec<(ChangesetId, String)>> {
-        GetBlobKeysForRequestAndStage::query(&self.read_connection, None, &repo_id, &reason, &stage)
-            .await
+        GetBlobKeysForRequestAndStage::query(
+            &self.read_connection,
+            ctx.sql_query_telemetry(),
+            &repo_id,
+            &reason,
+            &stage,
+        )
+        .await
     }
 }
 
 #[cfg(test)]
 mod test {
+    use fbinit::FacebookInit;
     use mononoke_macros::mononoke;
     use mononoke_types_mocks::changesetid::ONES_CSID;
     use mononoke_types_mocks::changesetid::THREES_CSID;
@@ -308,7 +338,8 @@ mod test {
     use super::*;
 
     #[mononoke::fbinit_test]
-    async fn test_read_write() -> Result<()> {
+    async fn test_read_write(fb: FacebookInit) -> Result<()> {
+        let ctx = CoreContext::test_mock(fb);
         let sql = SqlDeletionLog::with_sqlite_in_memory()?;
         let repo_id = RepositoryId::new(1);
         let reason = "my_reason".to_string();
@@ -324,6 +355,7 @@ mod test {
         let three = vec![(THREES_CSID, "blob6".to_string())];
         let res = sql
             .insert_candidates(
+                &ctx,
                 repo_id,
                 reason.clone(),
                 DeletionStage::Deleted.to_string(),
@@ -333,6 +365,7 @@ mod test {
         assert_eq!(res, 3);
         let res = sql
             .insert_candidates(
+                &ctx,
                 repo_id,
                 reason.clone(),
                 DeletionStage::Staged.to_string(),
@@ -342,6 +375,7 @@ mod test {
         assert_eq!(res, 2);
         let res = sql
             .insert_candidates(
+                &ctx,
                 repo_id,
                 reason.clone(),
                 DeletionStage::Staged.to_string(),
@@ -352,6 +386,7 @@ mod test {
 
         let res = sql
             .get_blob_keys_for_request_and_stage(
+                &ctx,
                 repo_id,
                 reason,
                 DeletionStage::Deleted.to_string(),
@@ -362,7 +397,8 @@ mod test {
     }
 
     #[mononoke::fbinit_test]
-    async fn test_update() -> Result<()> {
+    async fn test_update(fb: FacebookInit) -> Result<()> {
+        let ctx = CoreContext::test_mock(fb);
         let sql = SqlDeletionLog::with_sqlite_in_memory()?;
         let deletion_log = DeletionLog {
             sql_deletion_log: sql,
@@ -376,22 +412,28 @@ mod test {
         ];
 
         let res = deletion_log
-            .insert_candidates(repo_id, reason.clone(), DeletionStage::Planned, one.clone())
+            .insert_candidates(
+                &ctx,
+                repo_id,
+                reason.clone(),
+                DeletionStage::Planned,
+                one.clone(),
+            )
             .await?;
         assert_eq!(res, 3);
 
         let update = vec![(ONES_CSID, "blob1".to_string())];
 
         let res = deletion_log
-            .update_candidates::<PlannedToStaged>(repo_id, reason.clone(), update.clone())
+            .update_candidates::<PlannedToStaged>(&ctx, repo_id, reason.clone(), update.clone())
             .await?;
         assert_eq!(res, 1);
         let res = deletion_log
-            .get_blob_keys_for_request(repo_id, reason.clone(), DeletionStage::Staged)
+            .get_blob_keys_for_request(&ctx, repo_id, reason.clone(), DeletionStage::Staged)
             .await?;
         assert_eq!(res, update);
         let res = deletion_log
-            .get_blob_keys_for_request(repo_id, reason, DeletionStage::Planned)
+            .get_blob_keys_for_request(&ctx, repo_id, reason, DeletionStage::Planned)
             .await?;
         assert_eq!(res, one.into_iter().skip(1).collect::<Vec<_>>());
         Ok(())
