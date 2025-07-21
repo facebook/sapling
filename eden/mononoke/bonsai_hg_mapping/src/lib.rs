@@ -550,7 +550,7 @@ async fn select_mapping(
 
                         let res = SelectMappingByBonsai::query(
                             &conn,
-                            Some(sql_query_tel.clone()),
+                            sql_query_tel.clone(),
                             &repo_id,
                             &bcs_ids[..],
                         )
@@ -587,7 +587,7 @@ async fn select_mapping(
                         let hg_cs_ids = hg_cs_ids.into_iter().collect::<Vec<_>>();
                         Ok(SelectMappingByHg::query(
                             &conn,
-                            Some(sql_query_tel.clone()),
+                            sql_query_tel.clone(),
                             &repo_id,
                             &hg_cs_ids[..],
                         )

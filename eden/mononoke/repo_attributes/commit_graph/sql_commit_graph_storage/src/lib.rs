@@ -1364,7 +1364,7 @@ impl SqlCommitGraphStorage {
                                 let fetched_rows =
                                     SelectManyChangesetsWithFirstParentPrefetch::query(
                                         &conn,
-                                        Some(sql_query_tel.clone()),
+                                        sql_query_tel.clone(),
                                         &repo_id,
                                         &std::cmp::min(steps, steps_limit),
                                         &generation.value(),
@@ -1388,7 +1388,7 @@ impl SqlCommitGraphStorage {
                                 let fetched_rows =
                                     SelectManyChangesetsWithExactSkipTreeAncestorPrefetch::query(
                                         &conn,
-                                        Some(sql_query_tel.clone()),
+                                        sql_query_tel.clone(),
                                         &repo_id,
                                         &generation.value(),
                                         &cs_ids,
@@ -1417,7 +1417,7 @@ impl SqlCommitGraphStorage {
                         let cs_ids = cs_ids.into_iter().collect::<Vec<_>>();
                         let fetched_edges = SelectManyChangesets::query(
                             &conn,
-                            Some(sql_query_tel.clone()),
+                            sql_query_tel.clone(),
                             &repo_id,
                             cs_ids.as_slice(),
                         )
@@ -1517,7 +1517,7 @@ impl SqlCommitGraphStorage {
     ) -> Result<Option<u64>> {
         Ok(SelectMaxIdInRange::query(
             self.read_conn(read_from_master),
-            Some(ctx.sql_query_telemetry()),
+            ctx.sql_query_telemetry(),
             &self.repo_id,
             &start_id,
             &end_id,

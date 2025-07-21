@@ -441,7 +441,7 @@ async fn select_mapping(
 
                         Ok(SelectMappingByBonsai::query(
                             &conn,
-                            Some(sql_query_tel.clone()),
+                            sql_query_tel.clone(),
                             &repo_id,
                             &bcs_ids[..],
                         )

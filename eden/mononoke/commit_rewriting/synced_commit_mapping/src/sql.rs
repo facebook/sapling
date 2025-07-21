@@ -276,7 +276,7 @@ impl SqlSyncedCommitMapping {
                     let bcs_ids = bcs_ids.into_iter().collect::<Vec<_>>();
                     let rows = SelectManyMappings::query(
                         &conn,
-                        Some(sql_query_tel.clone()),
+                        sql_query_tel.clone(),
                         &source_repo_id,
                         &target_repo_id,
                         &bcs_ids,
