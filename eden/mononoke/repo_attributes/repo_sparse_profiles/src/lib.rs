@@ -8,6 +8,7 @@
 use std::collections::HashMap;
 
 use anyhow::Result;
+use context::CoreContext;
 use metaconfig_types::RemoteDatabaseConfig;
 use metaconfig_types::RemoteMetadataDatabaseConfig;
 use mononoke_types::ChangesetId;
@@ -49,23 +50,25 @@ impl RepoSparseProfiles {
 
     pub async fn get_profiles_sizes(
         &self,
+        ctx: &CoreContext,
         cs_id: ChangesetId,
         profiles: Vec<String>,
     ) -> Result<Option<Vec<(String, u64)>>> {
         Ok(match &self.sql_profile_sizes {
             None => None,
-            Some(sql) => Some(sql.get_profiles_sizes(cs_id, profiles).await?),
+            Some(sql) => Some(sql.get_profiles_sizes(ctx, cs_id, profiles).await?),
         })
     }
 
     pub async fn insert_profiles_sizes(
         &self,
+        ctx: &CoreContext,
         cs_id: ChangesetId,
         size_map: HashMap<String, u64>,
     ) -> Result<Option<bool>> {
         Ok(match &self.sql_profile_sizes {
             None => None,
-            Some(sql) => Some(sql.insert_profiles_sizes(cs_id, size_map).await?),
+            Some(sql) => Some(sql.insert_profiles_sizes(ctx, cs_id, size_map).await?),
         })
     }
 }
@@ -100,14 +103,22 @@ impl SqlConstructFromMetadataDatabaseConfig for SqlSparseProfilesSizes {
 impl SqlSparseProfilesSizes {
     pub async fn get_profiles_sizes(
         &self,
+        ctx: &CoreContext,
         cs_id: ChangesetId,
         profiles: Vec<String>,
     ) -> Result<Vec<(String, u64)>> {
-        GetProfilesSize::query(&self.read_connection, None, &cs_id, &profiles[..]).await
+        GetProfilesSize::query(
+            &self.read_connection,
+            ctx.sql_query_telemetry(),
+            &cs_id,
+            &profiles[..],
+        )
+        .await
     }
 
     pub async fn insert_profiles_sizes(
         &self,
+        ctx: &CoreContext,
         cs_id: ChangesetId,
         size_map: HashMap<String, u64>,
     ) -> Result<bool> {
@@ -115,7 +126,7 @@ impl SqlSparseProfilesSizes {
             .iter()
             .map(|(profile, size)| (&cs_id, profile, size))
             .collect();
-        InsertProfilesSizes::query(&self.write_connection, None, &v[..])
+        InsertProfilesSizes::query(&self.write_connection, ctx.sql_query_telemetry(), &v[..])
             .await
             .map(|res| res.affected_rows() > 0)
     }
@@ -123,6 +134,7 @@ impl SqlSparseProfilesSizes {
 
 #[cfg(test)]
 mod test {
+    use fbinit::FacebookInit;
     use mononoke_macros::mononoke;
     use mononoke_types_mocks::changesetid::ONES_CSID;
     use mononoke_types_mocks::changesetid::THREES_CSID;
@@ -131,7 +143,8 @@ mod test {
     use super::*;
 
     #[mononoke::fbinit_test]
-    async fn test_simple() -> Result<()> {
+    async fn test_simple(fb: FacebookInit) -> Result<()> {
+        let ctx = CoreContext::test_mock(fb);
         let sql = SqlSparseProfilesSizes::with_sqlite_in_memory()?;
 
         let mut size = 10;
@@ -143,10 +156,14 @@ mod test {
                     (profile.to_string(), size)
                 })
                 .collect();
-            sql.insert_profiles_sizes(*cs, m).await?;
+            sql.insert_profiles_sizes(&ctx, *cs, m).await?;
         }
         let rows = sql
-            .get_profiles_sizes(TWOS_CSID, vec!["one".to_string(), "three".to_string()])
+            .get_profiles_sizes(
+                &ctx,
+                TWOS_CSID,
+                vec!["one".to_string(), "three".to_string()],
+            )
             .await?;
         assert_eq!(
             rows,

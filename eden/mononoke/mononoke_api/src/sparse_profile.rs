@@ -199,7 +199,11 @@ impl SparseProfileMonitoring {
         let cs_id = changeset.id();
         let maybe_sizes = self
             .sql_sparse_profiles
-            .get_profiles_sizes(cs_id, paths.iter().map(NonRootMPath::to_string).collect())
+            .get_profiles_sizes(
+                ctx,
+                cs_id,
+                paths.iter().map(NonRootMPath::to_string).collect(),
+            )
             .await?;
         let (paths_to_calculate, mut sizes) = match maybe_sizes {
             None => (paths, HashMap::new()),
@@ -222,7 +226,7 @@ impl SparseProfileMonitoring {
             let other_sizes = calculate_size(ctx, changeset, matchers).await?;
             let res = self
                 .sql_sparse_profiles
-                .insert_profiles_sizes(cs_id, other_sizes.clone())
+                .insert_profiles_sizes(ctx, cs_id, other_sizes.clone())
                 .await?;
             if let Some(false) = res {
                 debug!(
