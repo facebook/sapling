@@ -68,11 +68,18 @@ pub async fn add_pushrebase_mapping(
 }
 
 pub async fn get_prepushrebase_ids(
+    ctx: &CoreContext,
     connection: &Connection,
     repo_id: RepositoryId,
     successor_bcs_id: ChangesetId,
 ) -> Result<Vec<ChangesetId>> {
-    let rows = SelectPrepushrebaseIds::query(connection, None, &repo_id, &successor_bcs_id).await?;
+    let rows = SelectPrepushrebaseIds::query(
+        connection,
+        ctx.sql_query_telemetry(),
+        &repo_id,
+        &successor_bcs_id,
+    )
+    .await?;
 
     Ok(rows.into_iter().map(|r| r.0).collect())
 }
@@ -110,12 +117,13 @@ impl SqlPushrebaseMutationMappingConnection {
         ctx.perf_counters()
             .increment_counter(PerfCounterType::SqlReadsReplica);
         let mut ids =
-            get_prepushrebase_ids(&self.read_connection, repo_id, successor_bcs_id).await?;
+            get_prepushrebase_ids(ctx, &self.read_connection, repo_id, successor_bcs_id).await?;
         if ids.is_empty() {
             ctx.perf_counters()
                 .increment_counter(PerfCounterType::SqlReadsMaster);
-            ids = get_prepushrebase_ids(&self.read_master_connection, repo_id, successor_bcs_id)
-                .await?;
+            ids =
+                get_prepushrebase_ids(ctx, &self.read_master_connection, repo_id, successor_bcs_id)
+                    .await?;
         }
         Ok(ids)
     }

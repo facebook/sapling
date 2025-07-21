@@ -21,7 +21,8 @@ use crate::add_pushrebase_mapping;
 use crate::get_prepushrebase_ids;
 
 #[mononoke::fbinit_test]
-async fn test_add_and_get(_fb: FacebookInit) -> Result<()> {
+async fn test_add_and_get(fb: FacebookInit) -> Result<()> {
+    let ctx = CoreContext::test_mock(fb);
     let conn = open_sqlite_in_memory()?;
     conn.execute_batch(SqlPushrebaseMutationMappingConnection::CREATION_QUERY)?;
     let conn = Connection::with_sqlite(conn);
@@ -49,14 +50,13 @@ async fn test_add_and_get(_fb: FacebookInit) -> Result<()> {
         ),
     ];
 
-    let ctx = CoreContext::test_mock(_fb);
     let sql_txn = conn.start_transaction().await?;
     let txn = sql_ext::Transaction::new(sql_txn, Default::default(), ctx.sql_query_telemetry());
     let txn = add_pushrebase_mapping(txn, &entries).await?;
     txn.commit().await?;
 
     let mut prepushrebase_ids =
-        get_prepushrebase_ids(&conn, repo::REPO_ONE, changesetid::TWOS_CSID).await?;
+        get_prepushrebase_ids(&ctx, &conn, repo::REPO_ONE, changesetid::TWOS_CSID).await?;
     prepushrebase_ids.sort();
 
     assert_eq!(
