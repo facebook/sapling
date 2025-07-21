@@ -633,10 +633,11 @@ def bind(func, *args):
     >>>
     >>> add1 = bind(add, 1)
     >>> add1 # doctest: +ELLIPSIS
-    <function bind.<locals>.closure at ...>
+    <function add at ...>
     """
     assert callable(func)
 
+    @functools.wraps(func)
     def closure(*a, **kw):
         return func(*(args + a), **kw)
 
