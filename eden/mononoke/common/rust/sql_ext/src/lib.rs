@@ -44,6 +44,7 @@ pub mod _macro_internal {
     pub use std::sync::Arc;
 
     pub use anyhow::Result;
+    pub use borrowed::borrowed;
     pub use clientinfo::ClientEntryPoint;
     pub use clientinfo::ClientRequestInfo;
     pub use mononoke_types::RepositoryId;
@@ -134,7 +135,7 @@ impl Transaction {
 
         log_query_telemetry(
             opt_tel,
-            Some(&sql_query_tel),
+            &sql_query_tel,
             granularity,
             query_repo_ids,
             query_name,

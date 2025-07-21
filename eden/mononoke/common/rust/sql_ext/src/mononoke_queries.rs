@@ -106,22 +106,18 @@ macro_rules! mononoke_queries {
                 use $crate::_macro_internal::*;
 
                 #[allow(dead_code)]
-                pub async fn query<S>(
+                pub async fn query(
                     connection: &Connection,
-                    opt_sql_telemetry: S,
+                    sql_query_tel: SqlQueryTelemetry,
                     $( $pname: &$ptype, )*
                     $( $lname: &[ $ltype ], )*
-                ) -> Result<Vec<($( $rtype, )*)>>
-                where
-                    S: Into<Option<SqlQueryTelemetry>> + Send + Sync
-                {
-                    let sql_query_tel = opt_sql_telemetry.into();
+                ) -> Result<Vec<($( $rtype, )*)>> {
                     query_with_retry_no_cache(
                         || {
-                            let sql_query_tel = sql_query_tel.clone();
+                            borrowed!(sql_query_tel);
                             async move {
                                 let query_name = stringify!($name);
-                                let cri = sql_query_tel.as_ref().and_then(|p| p.client_request_info());
+                                let cri = sql_query_tel.client_request_info();
                                 // Convert ClientRequestInfo to string if present
                                 let cri_str = cri.map(|cri| serde_json::to_string(cri)).transpose()?;
 
@@ -137,7 +133,7 @@ macro_rules! mononoke_queries {
                                     $( $lname, )*
                                 ).await.inspect_err(|e| {
                                     log_query_error(
-                                        sql_query_tel.as_ref(),
+                                        &sql_query_tel,
                                         &e,
                                         granularity,
                                         repo_ids.clone(),
@@ -147,7 +143,7 @@ macro_rules! mononoke_queries {
 
                                 log_query_telemetry(
                                     opt_tel,
-                                    sql_query_tel.as_ref(),
+                                    &sql_query_tel,
                                     granularity,
                                     repo_ids,
                                     query_name,
@@ -209,17 +205,14 @@ macro_rules! mononoke_queries {
                 use $crate::_macro_internal::*;
 
                 #[allow(dead_code)]
-                pub async fn query<S>(
+                pub async fn query(
                     config: &SqlQueryConfig,
                     cache_ttl: Option<std::time::Duration>,
                     connection: &Connection,
-                    opt_sql_telemetry: S,
+                    sql_query_tel: SqlQueryTelemetry,
                     $( $pname: &$ptype, )*
                     $( $lname: &[ $ltype ], )*
-                ) -> Result<Vec<($( $rtype, )*)>>
-                where
-                    S: Into<Option<SqlQueryTelemetry>>
-                {
+                ) -> Result<Vec<($( $rtype, )*)>> {
                     // Prepare cache data
                     let mut hasher = Hash128::with_seed(0);
                     $(
@@ -234,15 +227,14 @@ macro_rules! mononoke_queries {
                     let key = hasher.finish_ext();
                     let data = CacheData {key, config: config.caching.as_ref(), cache_ttl };
 
-                    let sql_query_tel = opt_sql_telemetry.into();
                     // Execute query with caching
                     let res = query_with_retry(
                         data,
                         || {
-                            let sql_query_tel = sql_query_tel.clone();
+                            borrowed!(sql_query_tel);
                             async move {
                                 let query_name = stringify!($name);
-                                let cri = sql_query_tel.as_ref().and_then(|p| p.client_request_info());
+                                let cri = sql_query_tel.client_request_info();
                                 // Convert ClientRequestInfo to string if present
                                 let cri_str = cri.map(|cri| serde_json::to_string(&cri)).transpose()?;
 
@@ -259,7 +251,7 @@ macro_rules! mononoke_queries {
 
                                 ).await.inspect_err(|e| {
                                     log_query_error(
-                                        sql_query_tel.as_ref(),
+                                        &sql_query_tel,
                                         &e,
                                         granularity,
                                         repo_ids.clone(),
@@ -269,7 +261,7 @@ macro_rules! mononoke_queries {
 
                                 log_query_telemetry(
                                     opt_tel,
-                                    sql_query_tel.as_ref(),
+                                    &sql_query_tel,
                                     granularity,
                                     repo_ids,
                                     query_name,
@@ -348,18 +340,14 @@ macro_rules! mononoke_queries {
                 use $crate::_macro_internal::*;
 
                 #[allow(dead_code)]
-                pub async fn query<S>(
+                pub async fn query(
                     connection: &Connection,
-                    opt_sql_telemetry: S,
+                    sql_query_tel: SqlQueryTelemetry,
                     values: &[($( & $vtype, )*)],
                     $( $pname: &$ptype ),*
-                ) -> Result<WriteResult>
-                where
-                    S: Into<Option<SqlQueryTelemetry>>
-                {
+                ) -> Result<WriteResult> {
                     let query_name = stringify!($name);
-                    let sql_query_tel = opt_sql_telemetry.into();
-                    let cri = sql_query_tel.as_ref().and_then(|p| p.client_request_info());
+                    let cri = sql_query_tel.client_request_info();
                     // Convert ClientRequestInfo to string if present
                     let cri_str = cri.map(|cri| serde_json::to_string(&cri)).transpose()?;
 
@@ -377,7 +365,7 @@ macro_rules! mononoke_queries {
                         ),
                     ).await.inspect_err(|e| {
                         log_query_error(
-                            sql_query_tel.as_ref(),
+                            &sql_query_tel,
                             &e,
                             granularity,
                             repo_ids.clone(),
@@ -387,7 +375,7 @@ macro_rules! mononoke_queries {
 
                     let opt_tel = write_res.query_telemetry().clone();
 
-                    log_query_telemetry(opt_tel, sql_query_tel.as_ref(), granularity, repo_ids, &query_name)?;
+                    log_query_telemetry(opt_tel, &sql_query_tel, granularity, repo_ids, &query_name)?;
 
                     Ok(write_res)
 
@@ -423,7 +411,7 @@ macro_rules! mononoke_queries {
                         $( , $pname )*
                     ).await.inspect_err(|e| {
                         log_query_error(
-                            Some(&sql_query_tel),
+                            &sql_query_tel,
                             &e,
                             granularity,
                             query_repo_ids.clone(),
@@ -494,18 +482,14 @@ macro_rules! mononoke_queries {
                 use $crate::_macro_internal::*;
 
                 #[allow(dead_code)]
-                pub async fn query<S>(
+                pub async fn query(
                     connection: &Connection,
-                    opt_sql_telemetry: S,
+                    sql_query_tel: SqlQueryTelemetry,
                     $( $pname: &$ptype, )*
                     $( $lname: &[ $ltype ], )*
-                ) -> Result<WriteResult>
-                where
-                    S: Into<Option<SqlQueryTelemetry>>
-                {
+                ) -> Result<WriteResult> {
                     let query_name = stringify!($name);
-                    let sql_query_tel = opt_sql_telemetry.into();
-                    let cri = sql_query_tel.as_ref().and_then(|p| p.client_request_info());
+                    let cri = sql_query_tel.client_request_info();
                     // Convert ClientRequestInfo to string if present
                     let cri_str = cri.map(|cri| serde_json::to_string(&cri)).transpose()?;
 
@@ -523,7 +507,7 @@ macro_rules! mononoke_queries {
                         ),
                     ).await.inspect_err(|e| {
                         log_query_error(
-                            sql_query_tel.as_ref(),
+                            &sql_query_tel,
                             &e,
                             granularity,
                             repo_ids.clone(),
@@ -533,7 +517,7 @@ macro_rules! mononoke_queries {
 
                     let opt_tel = write_res.query_telemetry().clone();
 
-                    log_query_telemetry(opt_tel, sql_query_tel.as_ref(), granularity, repo_ids, &query_name)?;
+                    log_query_telemetry(opt_tel, &sql_query_tel, granularity, repo_ids, &query_name)?;
 
                     Ok(write_res)
                 }
@@ -571,7 +555,7 @@ macro_rules! mononoke_queries {
                         $( , $lname )*
                     ).await.inspect_err(|e| {
                         log_query_error(
-                            Some(&sql_query_tel),
+                            &sql_query_tel,
                             &e,
                             granularity,
                             query_repo_ids.clone(),
@@ -632,7 +616,7 @@ macro_rules! read_query_with_transaction {
             )
         }.await.inspect_err(|e| {
             log_query_error(
-                Some(&sql_query_tel),
+                &sql_query_tel,
                 &e,
                 granularity,
                 $query_repo_ids.clone(),
@@ -696,7 +680,7 @@ pub fn build_transaction_wrapper(
 
     log_query_telemetry(
         opt_tel,
-        Some(&sql_query_tel),
+        &sql_query_tel,
         granularity,
         query_repo_ids,
         query_name,
