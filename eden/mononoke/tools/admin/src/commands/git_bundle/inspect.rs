@@ -25,7 +25,7 @@ pub struct InspectArgs {
 }
 
 pub async fn inspect_bundle_uri(
-    _ctx: &CoreContext,
+    ctx: &CoreContext,
     app: &MononokeApp,
     args: InspectArgs,
 ) -> Result<()> {
@@ -35,7 +35,7 @@ pub async fn inspect_bundle_uri(
         .context("Failed to open repo")?;
 
     // Get all available bundle lists for the repo
-    let bundle_lists = repo.git_bundle_uri.get_bundle_lists().await?;
+    let bundle_lists = repo.git_bundle_uri.get_bundle_lists(ctx).await?;
 
     if bundle_lists.is_empty() {
         println!(

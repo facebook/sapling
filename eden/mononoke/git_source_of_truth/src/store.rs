@@ -118,14 +118,14 @@ impl SqlConstructFromMetadataDatabaseConfig for SqlGitSourceOfTruthConfigBuilder
 impl GitSourceOfTruthConfig for SqlGitSourceOfTruthConfig {
     async fn set(
         &self,
-        _ctx: &CoreContext,
+        ctx: &CoreContext,
         repo_id: RepositoryId,
         repo_name: RepositoryName,
         source_of_truth: GitSourceOfTruth,
     ) -> Result<()> {
         Set::query(
             &self.connections.write_connection,
-            None,
+            ctx.sql_query_telemetry(),
             &repo_id,
             &repo_name,
             &source_of_truth,
@@ -136,21 +136,26 @@ impl GitSourceOfTruthConfig for SqlGitSourceOfTruthConfig {
 
     async fn get_by_repo_name(
         &self,
-        _ctx: &CoreContext,
+        ctx: &CoreContext,
         repo_name: &RepositoryName,
         staleness: Staleness,
     ) -> Result<Option<GitSourceOfTruthConfigEntry>> {
-        let rows = GetByRepoName::query(self.get_connection(staleness), None, repo_name).await?;
+        let rows = GetByRepoName::query(
+            self.get_connection(staleness),
+            ctx.sql_query_telemetry(),
+            repo_name,
+        )
+        .await?;
         Ok(rows.into_iter().next().map(row_to_entry))
     }
 
     async fn get_redirected_to_mononoke(
         &self,
-        _ctx: &CoreContext,
+        ctx: &CoreContext,
     ) -> Result<Vec<GitSourceOfTruthConfigEntry>> {
         let rows = GetByGitSourceOfTruth::query(
             &self.connections.read_master_connection,
-            None,
+            ctx.sql_query_telemetry(),
             &GitSourceOfTruth::Mononoke,
         )
         .await?;
@@ -159,21 +164,21 @@ impl GitSourceOfTruthConfig for SqlGitSourceOfTruthConfig {
 
     async fn get_redirected_to_metagit(
         &self,
-        _ctx: &CoreContext,
+        ctx: &CoreContext,
     ) -> Result<Vec<GitSourceOfTruthConfigEntry>> {
         let rows = GetByGitSourceOfTruth::query(
             &self.connections.read_master_connection,
-            None,
+            ctx.sql_query_telemetry(),
             &GitSourceOfTruth::Metagit,
         )
         .await?;
         Ok(rows.into_iter().map(row_to_entry).collect())
     }
 
-    async fn get_locked(&self, _ctx: &CoreContext) -> Result<Vec<GitSourceOfTruthConfigEntry>> {
+    async fn get_locked(&self, ctx: &CoreContext) -> Result<Vec<GitSourceOfTruthConfigEntry>> {
         let rows = GetByGitSourceOfTruth::query(
             &self.connections.read_master_connection,
-            None,
+            ctx.sql_query_telemetry(),
             &GitSourceOfTruth::Locked,
         )
         .await?;

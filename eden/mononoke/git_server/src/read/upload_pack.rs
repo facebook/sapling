@@ -390,7 +390,10 @@ async fn get_bundle_url(
 ) -> Option<String> {
     if !request_context.ctx.metadata().client_untrusted() {
         let bundle_uri = &request_context.repo.git_bundle_uri;
-        let bundle_list = bundle_uri.get_latest_bundle_list().await.ok()?;
+        let bundle_list = bundle_uri
+            .get_latest_bundle_list(&request_context.ctx)
+            .await
+            .ok()?;
 
         if let Some(bundle_list) = bundle_list {
             // TODO(mzr) we only generate full repo bundles at the moment so all bundle lists are
@@ -424,7 +427,9 @@ bundle.heuristic=creationToken
 
     if !request_context.ctx.metadata().client_untrusted() {
         let bundle_uri = &request_context.repo.git_bundle_uri;
-        let bundle_list = bundle_uri.get_latest_bundle_list().await?;
+        let bundle_list = bundle_uri
+            .get_latest_bundle_list(&request_context.ctx)
+            .await?;
 
         if let Some(bundle_list) = bundle_list {
             let bundle_list_out: Result<Vec<u8>, anyhow::Error> = try {

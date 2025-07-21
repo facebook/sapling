@@ -84,17 +84,24 @@ pub struct LocalFSBUndleUriGenerator {}
 pub trait GitBundleUri: Send + Sync {
     /// Gets the latest list of git bundles which together comprise the whole repo.
     /// There might be None.
-    async fn get_latest_bundle_list(&self) -> Result<Option<BundleList>>;
+    async fn get_latest_bundle_list(&self, ctx: &CoreContext) -> Result<Option<BundleList>>;
 
     /// Gets the latest list of git bundles which together comprise the whole repo.
     /// There might be None. Provides read-after-write consistency.
-    async fn get_latest_bundle_list_from_primary(&self) -> Result<Option<BundleList>>;
+    async fn get_latest_bundle_list_from_primary(
+        &self,
+        ctx: &CoreContext,
+    ) -> Result<Option<BundleList>>;
 
     /// Get all available bundle lists for a repo.
-    async fn get_bundle_lists(&self) -> Result<Vec<BundleList>>;
+    async fn get_bundle_lists(&self, ctx: &CoreContext) -> Result<Vec<BundleList>>;
 
     /// Remove all bundles in a given bundle list from the metadata db.
-    async fn remove_bundle_list_from_metadata_db(&self, bundle_list_num: u64) -> Result<()>;
+    async fn remove_bundle_list_from_metadata_db(
+        &self,
+        ctx: &CoreContext,
+        bundle_list_num: u64,
+    ) -> Result<()>;
 
     async fn get_url_for_bundle_handle(
         &self,
@@ -202,23 +209,32 @@ impl<U: Clone + Send + GitBundleUrlGenerator + Sync> GitBundleUri for BundleUri<
         self.repo_id
     }
 
-    async fn get_latest_bundle_list(&self) -> Result<Option<BundleList>> {
-        self.bundle_metadata_storage.get_latest_bundle_list().await
-    }
-
-    async fn get_latest_bundle_list_from_primary(&self) -> Result<Option<BundleList>> {
+    async fn get_latest_bundle_list(&self, ctx: &CoreContext) -> Result<Option<BundleList>> {
         self.bundle_metadata_storage
-            .get_latest_bundle_list_from_primary()
+            .get_latest_bundle_list(ctx)
             .await
     }
 
-    async fn get_bundle_lists(&self) -> Result<Vec<BundleList>> {
-        self.bundle_metadata_storage.get_bundle_lists().await
+    async fn get_latest_bundle_list_from_primary(
+        &self,
+        ctx: &CoreContext,
+    ) -> Result<Option<BundleList>> {
+        self.bundle_metadata_storage
+            .get_latest_bundle_list_from_primary(ctx)
+            .await
     }
 
-    async fn remove_bundle_list_from_metadata_db(&self, bundle_list_num: u64) -> Result<()> {
+    async fn get_bundle_lists(&self, ctx: &CoreContext) -> Result<Vec<BundleList>> {
+        self.bundle_metadata_storage.get_bundle_lists(ctx).await
+    }
+
+    async fn remove_bundle_list_from_metadata_db(
+        &self,
+        ctx: &CoreContext,
+        bundle_list_num: u64,
+    ) -> Result<()> {
         self.bundle_metadata_storage
-            .remove_bundle_list(bundle_list_num)
+            .remove_bundle_list(ctx, bundle_list_num)
             .await
     }
 

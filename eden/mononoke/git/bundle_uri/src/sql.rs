@@ -156,15 +156,19 @@ impl SqlGitBundleMetadataStorage {
         Ok(new_bundle_list_num)
     }
 
-    pub async fn get_latest_bundle_list_from_primary(&self) -> Result<Option<BundleList>> {
-        self._get_latest_bundle_list(true).await
+    pub async fn get_latest_bundle_list_from_primary(
+        &self,
+        ctx: &CoreContext,
+    ) -> Result<Option<BundleList>> {
+        self._get_latest_bundle_list(ctx, true).await
     }
 
-    pub async fn get_latest_bundle_list(&self) -> Result<Option<BundleList>> {
-        self._get_latest_bundle_list(false).await
+    pub async fn get_latest_bundle_list(&self, ctx: &CoreContext) -> Result<Option<BundleList>> {
+        self._get_latest_bundle_list(ctx, false).await
     }
     pub async fn _get_latest_bundle_list(
         &self,
+        ctx: &CoreContext,
         read_from_primary: bool,
     ) -> Result<Option<BundleList>> {
         let conn = if read_from_primary {
@@ -172,7 +176,9 @@ impl SqlGitBundleMetadataStorage {
         } else {
             &self.connections.read_connection
         };
-        let rows = GetLatestBundleListForRepo::query(conn, None, &self.repo_id).await?;
+        let rows =
+            GetLatestBundleListForRepo::query(conn, ctx.sql_query_telemetry(), &self.repo_id)
+                .await?;
 
         let bundle_list_num = match rows.first() {
             Some(val) => val.2,
@@ -205,10 +211,10 @@ impl SqlGitBundleMetadataStorage {
         Ok(Some(bundle_list))
     }
 
-    pub async fn remove_bundle_list(&self, bundle_list_num: u64) -> Result<()> {
+    pub async fn remove_bundle_list(&self, ctx: &CoreContext, bundle_list_num: u64) -> Result<()> {
         RemoveBundleList::query(
             &self.connections.write_connection,
-            None,
+            ctx.sql_query_telemetry(),
             &self.repo_id,
             &bundle_list_num,
         )
@@ -216,10 +222,13 @@ impl SqlGitBundleMetadataStorage {
         Ok(())
     }
 
-    pub async fn get_bundle_lists(&self) -> Result<Vec<BundleList>> {
-        let rows =
-            GetBundleListsForRepo::query(&self.connections.read_connection, None, &self.repo_id)
-                .await?;
+    pub async fn get_bundle_lists(&self, ctx: &CoreContext) -> Result<Vec<BundleList>> {
+        let rows = GetBundleListsForRepo::query(
+            &self.connections.read_connection,
+            ctx.sql_query_telemetry(),
+            &self.repo_id,
+        )
+        .await?;
 
         // +----------------------+-------------+
         // | in_bundle_list_order | bundle_list |
@@ -335,11 +344,12 @@ mod test {
     }
 
     #[mononoke::fbinit_test]
-    async fn test_no_bundles(_fb: FacebookInit) -> Result<()> {
+    async fn test_no_bundles(fb: FacebookInit) -> Result<()> {
+        let ctx = CoreContext::test_mock(fb);
         let repo_id = RepositoryId::new(2137);
         let storage = SqlGitBundleMetadataStorageBuilder::with_sqlite_in_memory()?.build(repo_id);
 
-        let bundle_list = storage.get_latest_bundle_list().await?;
+        let bundle_list = storage.get_latest_bundle_list(&ctx).await?;
         assert!(bundle_list.is_none());
 
         Ok(())
@@ -369,7 +379,7 @@ mod test {
             .await?;
 
         let bundle_list = storage
-            .get_latest_bundle_list()
+            .get_latest_bundle_list(&ctx)
             .await?
             .expect("Should return bundle-list");
         assert_eq!(bundle_list.bundles.len(), 2);
@@ -383,7 +393,7 @@ mod test {
             .await?;
 
         let bundle_list = storage
-            .get_latest_bundle_list()
+            .get_latest_bundle_list(&ctx)
             .await?
             .expect("Should return bundle-list");
         assert_eq!(bundle_list.bundles.len(), 3);
@@ -408,7 +418,7 @@ mod test {
             .add_new_bundles(&ctx, &TEST_BUNDLE_LIST_3[..])
             .await?;
 
-        let bundle_lists = storage.get_bundle_lists().await?;
+        let bundle_lists = storage.get_bundle_lists(&ctx).await?;
         assert_eq!(bundle_lists.len(), 2);
         for bundle_list in bundle_lists.iter() {
             for (p, n) in bundle_list.bundles.iter().tuple_windows() {
@@ -435,16 +445,16 @@ mod test {
             .add_new_bundles(&ctx, &TEST_BUNDLE_LIST_3[..])
             .await?;
 
-        let bundle_lists = storage.get_bundle_lists().await?;
+        let bundle_lists = storage.get_bundle_lists(&ctx).await?;
         assert_eq!(bundle_lists.len(), 2);
         assert_eq!(bundle_lists[0].bundle_list_num, bundle_list_num_3);
         assert_eq!(bundle_lists[1].bundle_list_num, bundle_list_num_2);
-        storage.remove_bundle_list(bundle_list_num_2).await?;
-        let bundle_lists = storage.get_bundle_lists().await?;
+        storage.remove_bundle_list(&ctx, bundle_list_num_2).await?;
+        let bundle_lists = storage.get_bundle_lists(&ctx).await?;
         assert_eq!(bundle_lists.len(), 1);
         assert_eq!(bundle_lists[0].bundle_list_num, bundle_list_num_3);
-        storage.remove_bundle_list(bundle_list_num_3).await?;
-        let bundle_lists = storage.get_bundle_lists().await?;
+        storage.remove_bundle_list(&ctx, bundle_list_num_3).await?;
+        let bundle_lists = storage.get_bundle_lists(&ctx).await?;
         assert_eq!(bundle_lists.len(), 0);
 
         Ok(())

@@ -23,6 +23,7 @@ rust_binary(
         "//eden/mononoke/git/bundle_uri:bundle_uri",
         "//eden/mononoke/metaconfig:metaconfig_types",
         "//eden/mononoke/repo_attributes/repo_identity:repo_identity",
+        "//eden/mononoke/server/context:context",
         "//manifold/clients/rust:manifold_client",
     ],
 )
