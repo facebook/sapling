@@ -704,7 +704,7 @@ pub async fn generate_pack_item_stream<'a>(
         .context("Error while determining refs to include in the pack")?;
 
     // STEP 2.5: Add symrefs to the refs_to_include map based on the request parameters
-    include_symrefs(repo, request.requested_symrefs, &mut refs_to_include)
+    include_symrefs(&ctx, repo, request.requested_symrefs, &mut refs_to_include)
         .await
         .context("Error while adding symrefs to included set of refs")?;
 
@@ -778,7 +778,7 @@ pub async fn ls_refs_response(
         .context("Error while determining refs to include in the response")?;
 
     // Add symrefs to the refs_to_include map based on the request parameters
-    include_symrefs(repo, request.requested_symrefs, &mut refs_to_include)
+    include_symrefs(ctx, repo, request.requested_symrefs, &mut refs_to_include)
         .await
         .context("Error while adding symrefs to included set of refs")?;
 

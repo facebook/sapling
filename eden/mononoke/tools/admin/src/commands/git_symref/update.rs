@@ -8,6 +8,7 @@
 use anyhow::Context;
 use anyhow::Result;
 use clap::Args;
+use context::CoreContext;
 use git_symbolic_refs::GitSymbolicRefsEntry;
 
 use super::Repo;
@@ -25,7 +26,7 @@ pub struct UpdateSymrefArgs {
     ref_type: String,
 }
 
-pub async fn update(repo: &Repo, update_args: UpdateSymrefArgs) -> Result<()> {
+pub async fn update(ctx: &CoreContext, repo: &Repo, update_args: UpdateSymrefArgs) -> Result<()> {
     let success_msg = format!(
         "Symbolic ref {} pointing to {} {} has been updated",
         update_args.symref_name, update_args.ref_type, update_args.ref_name
@@ -38,7 +39,7 @@ pub async fn update(repo: &Repo, update_args: UpdateSymrefArgs) -> Result<()> {
     .context("Error in creating GitSymbolicRefsEntry from provided input")?;
 
     repo.git_symbolic_refs
-        .add_or_update_entries(vec![entry])
+        .add_or_update_entries(ctx, vec![entry])
         .await?;
     println!("{}", success_msg);
     Ok(())

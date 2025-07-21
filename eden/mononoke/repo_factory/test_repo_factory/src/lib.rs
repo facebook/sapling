@@ -566,7 +566,7 @@ impl TestRepoFactory {
                 SqlGitSymbolicRefsBuilder::from_sql_connections(self.metadata_db.clone())
                     .build(repo_identity.id());
             let cached_symbolic_refs =
-                CachedGitSymbolicRefs::new(Arc::new(git_symbolic_refs)).await?;
+                CachedGitSymbolicRefs::new(&self.ctx, Arc::new(git_symbolic_refs)).await?;
             Ok(Arc::new(cached_symbolic_refs))
         }
     }

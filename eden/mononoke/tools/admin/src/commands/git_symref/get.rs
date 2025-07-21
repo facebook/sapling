@@ -7,6 +7,7 @@
 
 use anyhow::Result;
 use clap::Args;
+use context::CoreContext;
 
 use super::Repo;
 
@@ -17,10 +18,10 @@ pub struct GetSymrefArgs {
     symref_name: String,
 }
 
-pub async fn get(repo: &Repo, get_args: GetSymrefArgs) -> Result<()> {
+pub async fn get(ctx: &CoreContext, repo: &Repo, get_args: GetSymrefArgs) -> Result<()> {
     match repo
         .git_symbolic_refs
-        .get_ref_by_symref(get_args.symref_name.clone())
+        .get_ref_by_symref(ctx, get_args.symref_name.clone())
         .await?
     {
         Some(symref_entry) => println!(

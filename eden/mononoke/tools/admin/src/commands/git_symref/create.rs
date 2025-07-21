@@ -8,6 +8,7 @@
 use anyhow::Context;
 use anyhow::Result;
 use clap::Args;
+use context::CoreContext;
 use git_symbolic_refs::GitSymbolicRefsEntry;
 
 use super::Repo;
@@ -25,11 +26,11 @@ pub struct CreateSymrefArgs {
     ref_type: String,
 }
 
-pub async fn create(repo: &Repo, create_args: CreateSymrefArgs) -> Result<()> {
+pub async fn create(ctx: &CoreContext, repo: &Repo, create_args: CreateSymrefArgs) -> Result<()> {
     // Check if the symref being added already exists
     let symrefs = repo.git_symbolic_refs.clone();
     if let Some(symref_entry) = symrefs
-        .get_ref_by_symref(create_args.symref_name.clone())
+        .get_ref_by_symref(ctx, create_args.symref_name.clone())
         .await?
     {
         anyhow::bail!(
@@ -51,7 +52,7 @@ pub async fn create(repo: &Repo, create_args: CreateSymrefArgs) -> Result<()> {
     )
     .context("Error in creating GitSymbolicRefsEntry from provided input")?;
 
-    symrefs.add_or_update_entries(vec![entry]).await?;
+    symrefs.add_or_update_entries(ctx, vec![entry]).await?;
     println!("{}", success_msg);
     Ok(())
 }

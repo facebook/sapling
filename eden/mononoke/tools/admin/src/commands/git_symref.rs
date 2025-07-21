@@ -55,15 +55,22 @@ pub enum GitSymrefSubcommand {
 }
 
 pub async fn run(app: MononokeApp, args: CommandArgs) -> Result<()> {
+    let ctx = app.new_basic_context();
     let repo: Repo = app
         .open_repo(&args.repo)
         .await
         .context("Failed to open repo")?;
     match args.subcommand {
-        GitSymrefSubcommand::Create(create_args) => create::create(&repo, create_args).await?,
-        GitSymrefSubcommand::Update(update_args) => update::update(&repo, update_args).await?,
-        GitSymrefSubcommand::Get(get_args) => get::get(&repo, get_args).await?,
-        GitSymrefSubcommand::Delete(delete_args) => delete::delete(&repo, delete_args).await?,
+        GitSymrefSubcommand::Create(create_args) => {
+            create::create(&ctx, &repo, create_args).await?
+        }
+        GitSymrefSubcommand::Update(update_args) => {
+            update::update(&ctx, &repo, update_args).await?
+        }
+        GitSymrefSubcommand::Get(get_args) => get::get(&ctx, &repo, get_args).await?,
+        GitSymrefSubcommand::Delete(delete_args) => {
+            delete::delete(&ctx, &repo, delete_args).await?
+        }
     }
     Ok(())
 }

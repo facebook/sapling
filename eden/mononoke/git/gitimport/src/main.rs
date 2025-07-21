@@ -403,7 +403,7 @@ async fn async_main(app: MononokeApp) -> Result<(), Error> {
             .await
             .context("read_symrefs failed")?;
         repo.git_symbolic_refs()
-            .add_or_update_entries(vec![symref_entry])
+            .add_or_update_entries(&ctx, vec![symref_entry])
             .await
             .context("failed to add symbolic ref entries")?;
     }

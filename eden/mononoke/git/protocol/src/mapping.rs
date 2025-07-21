@@ -322,6 +322,7 @@ pub(crate) async fn refs_to_include(
 /// The HEAD ref in Git doesn't have a direct counterpart in Mononoke bookmarks and is instead
 /// stored in the git_symbolic_refs. Fetch the mapping and add them to the list of refs to include
 pub(crate) async fn include_symrefs(
+    ctx: &CoreContext,
     repo: &impl Repo,
     requested_symrefs: RequestedSymrefs,
     refs_to_include: &mut FxHashMap<String, RefTarget>,
@@ -331,7 +332,7 @@ pub(crate) async fn include_symrefs(
             // Get the branch that the HEAD symref points to
             let head_ref = repo
                 .git_symbolic_refs()
-                .get_ref_by_symref(HEAD_REF.to_string())
+                .get_ref_by_symref(ctx, HEAD_REF.to_string())
                 .await
                 .with_context(|| {
                     format!(
@@ -367,7 +368,7 @@ pub(crate) async fn include_symrefs(
             // Get all the symrefs with the branches/tags that they point to
             let symref_entries = repo
                 .git_symbolic_refs()
-                .list_all_symrefs()
+                .list_all_symrefs(ctx)
                 .await
                 .with_context(|| {
                     format!(

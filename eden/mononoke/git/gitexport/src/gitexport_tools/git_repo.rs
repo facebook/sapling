@@ -44,7 +44,7 @@ pub async fn create_git_repo_on_disk(
         ref_type.to_string(),
     )?;
     repo.git_symbolic_refs()
-        .add_or_update_entries(vec![symref_entry])
+        .add_or_update_entries(ctx, vec![symref_entry])
         .await
         .context("failed to add symbolic ref entries")?;
 

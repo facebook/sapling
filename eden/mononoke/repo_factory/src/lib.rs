@@ -1204,8 +1204,11 @@ impl RepoFactory {
         {
             Ok(Arc::new(git_symbolic_refs))
         } else {
-            let cached_git_symbolic_refs =
-                CachedGitSymbolicRefs::new(Arc::new(git_symbolic_refs)).await?;
+            let cached_git_symbolic_refs = CachedGitSymbolicRefs::new(
+                &self.ctx(Some(repo_identity)),
+                Arc::new(git_symbolic_refs),
+            )
+            .await?;
             Ok(Arc::new(cached_git_symbolic_refs))
         }
     }

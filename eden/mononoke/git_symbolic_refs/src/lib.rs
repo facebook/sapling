@@ -12,6 +12,7 @@ use std::fmt::Display;
 
 use anyhow::Result;
 use async_trait::async_trait;
+use context::CoreContext;
 use mononoke_types::RepositoryId;
 
 pub use crate::caching::CachedGitSymbolicRefs;
@@ -82,21 +83,30 @@ pub trait GitSymbolicRefs: Send + Sync {
 
     /// Fetch the symbolic ref entry corresponding to the symref name in the
     /// given repo, if one exists
-    async fn get_ref_by_symref(&self, symref: String) -> Result<Option<GitSymbolicRefsEntry>>;
+    async fn get_ref_by_symref(
+        &self,
+        ctx: &CoreContext,
+        symref: String,
+    ) -> Result<Option<GitSymbolicRefsEntry>>;
 
     /// Fetch the symrefs corresponding to the given ref name and type, if they exist
     async fn get_symrefs_by_ref(
         &self,
+        ctx: &CoreContext,
         ref_name: String,
         ref_type: RefType,
     ) -> Result<Option<Vec<String>>>;
 
     /// Add new symrefs to ref mappings or update existing symrefs
-    async fn add_or_update_entries(&self, entries: Vec<GitSymbolicRefsEntry>) -> Result<()>;
+    async fn add_or_update_entries(
+        &self,
+        ctx: &CoreContext,
+        entries: Vec<GitSymbolicRefsEntry>,
+    ) -> Result<()>;
 
     /// Delete symrefs if they exists
-    async fn delete_symrefs(&self, symrefs: Vec<String>) -> Result<()>;
+    async fn delete_symrefs(&self, ctx: &CoreContext, symrefs: Vec<String>) -> Result<()>;
 
     /// List all symrefs for a given repo
-    async fn list_all_symrefs(&self) -> Result<Vec<GitSymbolicRefsEntry>>;
+    async fn list_all_symrefs(&self, ctx: &CoreContext) -> Result<Vec<GitSymbolicRefsEntry>>;
 }

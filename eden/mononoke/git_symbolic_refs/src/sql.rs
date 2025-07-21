@@ -9,6 +9,7 @@ use ::sql_ext::mononoke_queries;
 use anyhow::Context;
 use anyhow::Result;
 use async_trait::async_trait;
+use context::CoreContext;
 use mononoke_types::RepositoryId;
 use sql_construct::SqlConstruct;
 use sql_construct::SqlConstructFromMetadataDatabaseConfig;
@@ -106,10 +107,14 @@ impl GitSymbolicRefs for SqlGitSymbolicRefs {
 
     /// Fetch the symbolic ref entry corresponding to the symref name in the
     /// given repo, if one exists
-    async fn get_ref_by_symref(&self, symref: String) -> Result<Option<GitSymbolicRefsEntry>> {
+    async fn get_ref_by_symref(
+        &self,
+        ctx: &CoreContext,
+        symref: String,
+    ) -> Result<Option<GitSymbolicRefsEntry>> {
         let results = SelectRefBySymref::query(
             &self.connections.read_connection,
-            None,
+            ctx.sql_query_telemetry(),
             &self.repo_id,
             &symref,
         )
@@ -140,12 +145,13 @@ impl GitSymbolicRefs for SqlGitSymbolicRefs {
     /// Fetch the symrefs corresponding to the given ref name and type, if they exist
     async fn get_symrefs_by_ref(
         &self,
+        ctx: &CoreContext,
         ref_name: String,
         ref_type: RefType,
     ) -> Result<Option<Vec<String>>> {
         let results = SelectSymrefsByRef::query(
             &self.connections.read_connection,
-            None,
+            ctx.sql_query_telemetry(),
             &self.repo_id,
             &ref_name,
             &ref_type.to_string(),
@@ -167,7 +173,11 @@ impl GitSymbolicRefs for SqlGitSymbolicRefs {
     }
 
     /// Add new symrefs to ref mappings or update existing symrefs
-    async fn add_or_update_entries(&self, entries: Vec<GitSymbolicRefsEntry>) -> Result<()> {
+    async fn add_or_update_entries(
+        &self,
+        ctx: &CoreContext,
+        entries: Vec<GitSymbolicRefsEntry>,
+    ) -> Result<()> {
         let entries: Vec<_> = entries
             .into_iter()
             .map(|entry| {
@@ -189,7 +199,7 @@ impl GitSymbolicRefs for SqlGitSymbolicRefs {
             .collect();
         AddOrUpdateGitSymbolicRefs::query(
             &self.connections.write_connection,
-            None,
+            ctx.sql_query_telemetry(),
             entries.as_slice(),
         )
         .await
@@ -203,10 +213,10 @@ impl GitSymbolicRefs for SqlGitSymbolicRefs {
     }
 
     /// Delete the entry corresponding to the given symref if its exists
-    async fn delete_symrefs(&self, symref: Vec<String>) -> Result<()> {
+    async fn delete_symrefs(&self, ctx: &CoreContext, symref: Vec<String>) -> Result<()> {
         DeleteGitSymbolicRefs::query(
             &self.connections.write_connection,
-            None,
+            ctx.sql_query_telemetry(),
             &self.repo_id,
             symref.as_slice(),
         )
@@ -221,16 +231,19 @@ impl GitSymbolicRefs for SqlGitSymbolicRefs {
     }
 
     /// List all symrefs for a given repo
-    async fn list_all_symrefs(&self) -> Result<Vec<GitSymbolicRefsEntry>> {
-        let results =
-            SelectAllGitSymbolicRefs::query(&self.connections.read_connection, None, &self.repo_id)
-                .await
-                .with_context(|| {
-                    format!(
-                        "Failure in fetching git symbolic refs in repo {}",
-                        self.repo_id
-                    )
-                })?;
+    async fn list_all_symrefs(&self, ctx: &CoreContext) -> Result<Vec<GitSymbolicRefsEntry>> {
+        let results = SelectAllGitSymbolicRefs::query(
+            &self.connections.read_connection,
+            ctx.sql_query_telemetry(),
+            &self.repo_id,
+        )
+        .await
+        .with_context(|| {
+            format!(
+                "Failure in fetching git symbolic refs in repo {}",
+                self.repo_id
+            )
+        })?;
         results
             .into_iter()
             .map(|(symref_name, ref_name, ref_type)| {

@@ -9,6 +9,7 @@ use std::collections::HashSet;
 
 use anyhow::Error;
 use anyhow::Result;
+use context::CoreContext;
 use fbinit::FacebookInit;
 use git_symbolic_refs::GitSymbolicRefs;
 use git_symbolic_refs::GitSymbolicRefsEntry;
@@ -37,7 +38,8 @@ fn test_symref_entry_creation() -> Result<()> {
 }
 
 #[mononoke::fbinit_test]
-async fn test_add_and_get(_: FacebookInit) -> Result<(), Error> {
+async fn test_add_and_get(fb: FacebookInit) -> Result<(), Error> {
+    let ctx = CoreContext::test_mock(fb);
     let symrefs = SqlGitSymbolicRefsBuilder::with_sqlite_in_memory()?.build(REPO_ZERO);
     let symref_name = "HEAD";
     let ref_name = "master";
@@ -47,20 +49,25 @@ async fn test_add_and_get(_: FacebookInit) -> Result<(), Error> {
         ref_name.to_string(),
         ref_type.to_string(),
     )?;
-    symrefs.add_or_update_entries(vec![entry.clone()]).await?;
+    symrefs
+        .add_or_update_entries(&ctx, vec![entry.clone()])
+        .await?;
 
-    let result = symrefs.get_ref_by_symref(entry.symref_name.clone()).await?;
+    let result = symrefs
+        .get_ref_by_symref(&ctx, entry.symref_name.clone())
+        .await?;
     assert_eq!(result, Some(entry.clone()));
 
     let result = symrefs
-        .get_symrefs_by_ref(entry.ref_name.clone(), entry.ref_type.clone())
+        .get_symrefs_by_ref(&ctx, entry.ref_name.clone(), entry.ref_type.clone())
         .await?;
     assert_eq!(result, Some(vec![entry.symref_name]));
     Ok(())
 }
 
 #[mononoke::fbinit_test]
-async fn test_add_and_delete(_: FacebookInit) -> Result<(), Error> {
+async fn test_add_and_delete(fb: FacebookInit) -> Result<(), Error> {
+    let ctx = CoreContext::test_mock(fb);
     let symrefs = SqlGitSymbolicRefsBuilder::with_sqlite_in_memory()?.build(REPO_ZERO);
     let symref_name = "HEAD";
     let ref_name = "master";
@@ -70,21 +77,28 @@ async fn test_add_and_delete(_: FacebookInit) -> Result<(), Error> {
         ref_name.to_string(),
         ref_type.to_string(),
     )?;
-    symrefs.add_or_update_entries(vec![entry.clone()]).await?;
+    symrefs
+        .add_or_update_entries(&ctx, vec![entry.clone()])
+        .await?;
 
-    let result = symrefs.get_ref_by_symref(entry.symref_name.clone()).await?;
+    let result = symrefs
+        .get_ref_by_symref(&ctx, entry.symref_name.clone())
+        .await?;
     assert_eq!(result, Some(entry.clone()));
 
     symrefs
-        .delete_symrefs(vec![entry.symref_name.clone()])
+        .delete_symrefs(&ctx, vec![entry.symref_name.clone()])
         .await?;
-    let result = symrefs.get_ref_by_symref(entry.symref_name.clone()).await?;
+    let result = symrefs
+        .get_ref_by_symref(&ctx, entry.symref_name.clone())
+        .await?;
     assert_eq!(result, None);
     Ok(())
 }
 
 #[mononoke::fbinit_test]
-async fn test_update_and_get(_: FacebookInit) -> Result<(), Error> {
+async fn test_update_and_get(fb: FacebookInit) -> Result<(), Error> {
+    let ctx = CoreContext::test_mock(fb);
     let symrefs = SqlGitSymbolicRefsBuilder::with_sqlite_in_memory()?.build(REPO_ZERO);
     let symref_name = "HEAD";
     let ref_name = "master";
@@ -94,9 +108,13 @@ async fn test_update_and_get(_: FacebookInit) -> Result<(), Error> {
         ref_name.to_string(),
         ref_type.to_string(),
     )?;
-    symrefs.add_or_update_entries(vec![entry.clone()]).await?;
+    symrefs
+        .add_or_update_entries(&ctx, vec![entry.clone()])
+        .await?;
 
-    let result = symrefs.get_ref_by_symref(entry.symref_name.clone()).await?;
+    let result = symrefs
+        .get_ref_by_symref(&ctx, entry.symref_name.clone())
+        .await?;
     assert_eq!(result, Some(entry.clone()));
 
     let new_ref_name = "main";
@@ -105,28 +123,34 @@ async fn test_update_and_get(_: FacebookInit) -> Result<(), Error> {
         new_ref_name.to_string(),
         ref_type.to_string(),
     )?;
-    symrefs.add_or_update_entries(vec![entry.clone()]).await?;
+    symrefs
+        .add_or_update_entries(&ctx, vec![entry.clone()])
+        .await?;
 
-    let result = symrefs.get_ref_by_symref(entry.symref_name.clone()).await?;
+    let result = symrefs
+        .get_ref_by_symref(&ctx, entry.symref_name.clone())
+        .await?;
     assert_eq!(result, Some(entry.clone()));
     Ok(())
 }
 
 #[mononoke::fbinit_test]
-async fn test_get_without_add(_: FacebookInit) -> Result<(), Error> {
+async fn test_get_without_add(fb: FacebookInit) -> Result<(), Error> {
+    let ctx = CoreContext::test_mock(fb);
     let symrefs = SqlGitSymbolicRefsBuilder::with_sqlite_in_memory()?.build(REPO_ZERO);
-    let result = symrefs.get_ref_by_symref("HEAD".to_string()).await?;
+    let result = symrefs.get_ref_by_symref(&ctx, "HEAD".to_string()).await?;
     assert_eq!(result, None);
 
     let result = symrefs
-        .get_symrefs_by_ref("master".to_string(), "branch".try_into()?)
+        .get_symrefs_by_ref(&ctx, "master".to_string(), "branch".try_into()?)
         .await?;
     assert_eq!(result, None);
     Ok(())
 }
 
 #[mononoke::fbinit_test]
-async fn test_get_multiple(_: FacebookInit) -> Result<(), Error> {
+async fn test_get_multiple(fb: FacebookInit) -> Result<(), Error> {
+    let ctx = CoreContext::test_mock(fb);
     let symrefs = SqlGitSymbolicRefsBuilder::with_sqlite_in_memory()?.build(REPO_ZERO);
     let entry = GitSymbolicRefsEntry::new(
         "HEAD".to_string(),
@@ -141,11 +165,11 @@ async fn test_get_multiple(_: FacebookInit) -> Result<(), Error> {
     let adhoc_entry =
         GitSymbolicRefsEntry::new("ADHOC".to_string(), "master".to_string(), "tag".to_string())?;
     symrefs
-        .add_or_update_entries(vec![entry, tag_entry, adhoc_entry])
+        .add_or_update_entries(&ctx, vec![entry, tag_entry, adhoc_entry])
         .await?;
 
     let result = symrefs
-        .get_symrefs_by_ref("master".to_string(), "tag".try_into()?)
+        .get_symrefs_by_ref(&ctx, "master".to_string(), "tag".try_into()?)
         .await?
         .expect("None symrefs returned for the input ref name and type");
     assert_eq!(
@@ -154,7 +178,7 @@ async fn test_get_multiple(_: FacebookInit) -> Result<(), Error> {
     );
 
     let result = symrefs
-        .get_symrefs_by_ref("master".to_string(), "branch".try_into()?)
+        .get_symrefs_by_ref(&ctx, "master".to_string(), "branch".try_into()?)
         .await?
         .expect("None symrefs returned for the input ref name and type");
     assert_eq!(
@@ -165,7 +189,8 @@ async fn test_get_multiple(_: FacebookInit) -> Result<(), Error> {
 }
 
 #[mononoke::fbinit_test]
-async fn test_list_all(_: FacebookInit) -> Result<(), Error> {
+async fn test_list_all(fb: FacebookInit) -> Result<(), Error> {
+    let ctx = CoreContext::test_mock(fb);
     let symrefs = SqlGitSymbolicRefsBuilder::with_sqlite_in_memory()?.build(REPO_ZERO);
     let entry = GitSymbolicRefsEntry::new(
         "HEAD".to_string(),
@@ -180,11 +205,14 @@ async fn test_list_all(_: FacebookInit) -> Result<(), Error> {
     let adhoc_entry =
         GitSymbolicRefsEntry::new("ADHOC".to_string(), "master".to_string(), "tag".to_string())?;
     symrefs
-        .add_or_update_entries(vec![entry.clone(), tag_entry.clone(), adhoc_entry.clone()])
+        .add_or_update_entries(
+            &ctx,
+            vec![entry.clone(), tag_entry.clone(), adhoc_entry.clone()],
+        )
         .await?;
 
     let result: HashSet<GitSymbolicRefsEntry> =
-        symrefs.list_all_symrefs().await?.into_iter().collect();
+        symrefs.list_all_symrefs(&ctx).await?.into_iter().collect();
     assert_eq!(
         result,
         HashSet::from_iter(vec![entry.clone(), tag_entry.clone(), adhoc_entry.clone()].into_iter())

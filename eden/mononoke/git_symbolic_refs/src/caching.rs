@@ -10,6 +10,7 @@ use std::sync::Arc;
 
 use anyhow::Result;
 use async_trait::async_trait;
+use context::CoreContext;
 use mononoke_types::RepositoryId;
 
 use crate::GitSymbolicRefs;
@@ -27,9 +28,12 @@ pub struct CachedGitSymbolicRefs {
 }
 
 impl CachedGitSymbolicRefs {
-    pub async fn new(git_symbolic_refs: Arc<dyn GitSymbolicRefs>) -> Result<Self> {
+    pub async fn new(
+        ctx: &CoreContext,
+        git_symbolic_refs: Arc<dyn GitSymbolicRefs>,
+    ) -> Result<Self> {
         let cached_entries = git_symbolic_refs
-            .list_all_symrefs()
+            .list_all_symrefs(ctx)
             .await?
             .into_iter()
             .collect();
@@ -49,7 +53,11 @@ impl GitSymbolicRefs for CachedGitSymbolicRefs {
 
     /// Fetch the symbolic ref entry corresponding to the symref name in the
     /// given repo, if one exists
-    async fn get_ref_by_symref(&self, symref: String) -> Result<Option<GitSymbolicRefsEntry>> {
+    async fn get_ref_by_symref(
+        &self,
+        _ctx: &CoreContext,
+        symref: String,
+    ) -> Result<Option<GitSymbolicRefsEntry>> {
         Ok(self
             .cached_entries
             .iter()
@@ -60,6 +68,7 @@ impl GitSymbolicRefs for CachedGitSymbolicRefs {
     /// Fetch the symrefs corresponding to the given ref name and type, if they exist
     async fn get_symrefs_by_ref(
         &self,
+        _ctx: &CoreContext,
         ref_name: String,
         ref_type: RefType,
     ) -> Result<Option<Vec<String>>> {
@@ -73,17 +82,23 @@ impl GitSymbolicRefs for CachedGitSymbolicRefs {
     }
 
     /// Add new symrefs to ref mappings or update existing symrefs
-    async fn add_or_update_entries(&self, entries: Vec<GitSymbolicRefsEntry>) -> Result<()> {
-        self.git_symbolic_refs.add_or_update_entries(entries).await
+    async fn add_or_update_entries(
+        &self,
+        ctx: &CoreContext,
+        entries: Vec<GitSymbolicRefsEntry>,
+    ) -> Result<()> {
+        self.git_symbolic_refs
+            .add_or_update_entries(ctx, entries)
+            .await
     }
 
     /// Delete symrefs if they exists
-    async fn delete_symrefs(&self, symrefs: Vec<String>) -> Result<()> {
-        self.git_symbolic_refs.delete_symrefs(symrefs).await
+    async fn delete_symrefs(&self, ctx: &CoreContext, symrefs: Vec<String>) -> Result<()> {
+        self.git_symbolic_refs.delete_symrefs(ctx, symrefs).await
     }
 
     /// List all symrefs for a given repo
-    async fn list_all_symrefs(&self) -> Result<Vec<GitSymbolicRefsEntry>> {
+    async fn list_all_symrefs(&self, _ctx: &CoreContext) -> Result<Vec<GitSymbolicRefsEntry>> {
         Ok(self.cached_entries.iter().cloned().collect())
     }
 }
