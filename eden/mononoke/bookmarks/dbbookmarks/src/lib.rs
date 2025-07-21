@@ -77,7 +77,7 @@ mod test {
             ),
         ];
 
-        crate::transaction::insert_bookmarks(&conn, rows).await?;
+        crate::transaction::insert_bookmarks(&ctx, &conn, rows).await?;
 
         // Using 'create_scratch' to replace a non-scratch bookmark should fail.
         let mut txn = store.create_transaction(ctx.clone());
@@ -188,6 +188,7 @@ mod test {
             .map(|(bookmark, (kind, changeset_id))| (&repo_id, bookmark, changeset_id, kind));
 
         rt.block_on(crate::transaction::insert_bookmarks(
+            &ctx,
             &store.connections.write_connection,
             rows,
         ))

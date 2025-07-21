@@ -264,7 +264,7 @@ mod test {
             &ONES_CSID,
             &BookmarkKind::Publishing,
         )];
-        crate::transaction::insert_bookmarks(&conn, rows).await?;
+        crate::transaction::insert_bookmarks(&ctx, &conn, rows).await?;
 
         sub.refresh(&ctx).await?;
         assert_eq!(*sub.bookmarks(), hashmap! {});
@@ -296,7 +296,7 @@ mod test {
             &ONES_CSID,
             &BookmarkKind::Publishing,
         )];
-        crate::transaction::insert_bookmarks(&conn, rows).await?;
+        crate::transaction::insert_bookmarks(&ctx, &conn, rows).await?;
 
         let mut sub =
             SqlBookmarksSubscription::create(&ctx, bookmarks.clone(), Freshness::MostRecent)

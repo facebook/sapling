@@ -2023,7 +2023,7 @@ mod tests {
 
         ClearBookmarkUpdateLog::query(
             &factory.metadata_db().write_connection,
-            None,
+            ctx.sql_query_telemetry(),
             &repo.repo_identity().id(),
         )
         .await?;

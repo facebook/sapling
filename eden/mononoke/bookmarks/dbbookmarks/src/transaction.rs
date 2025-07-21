@@ -783,6 +783,7 @@ async fn run_transaction_hooks(
 
 #[cfg(test)]
 pub(crate) async fn insert_bookmarks(
+    ctx: &CoreContext,
     conn: &Connection,
     rows: impl IntoIterator<Item = (&RepositoryId, &BookmarkKey, &ChangesetId, &BookmarkKind)>,
 ) -> Result<()> {
@@ -791,6 +792,6 @@ pub(crate) async fn insert_bookmarks(
         .into_iter()
         .map(|(r, b, c, k)| (r, &none, b.name(), b.category(), c, k))
         .collect::<Vec<_>>();
-    InsertBookmarks::query(conn, None, rows.as_slice()).await?;
+    InsertBookmarks::query(conn, ctx.sql_query_telemetry(), rows.as_slice()).await?;
     Ok(())
 }
