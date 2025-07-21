@@ -90,7 +90,6 @@ rust_binary(
         "//common/rust/shed/fbinit:fbinit",
         "//eden/mononoke/blobimport_lib:blobimport_lib",
         "//eden/mononoke/bonsai_globalrev_mapping:bonsai_globalrev_mapping",
-        "//eden/mononoke/cmdlib:cmdlib",
         "//eden/mononoke/cmdlib/mononoke_app:mononoke_app",
         "//eden/mononoke/commit_rewriting/synced_commit_mapping:synced_commit_mapping",
         "//eden/mononoke/common/sql_construct:sql_construct",
