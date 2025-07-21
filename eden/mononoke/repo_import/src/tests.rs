@@ -622,7 +622,7 @@ mod tests {
 
     /*
         The test checks if we have imported the files into the right paths
-        in a pushredirected large repo and if we have back-sycned the files
+        in a pushredirected large repo and if we have back-synced the files
         in the right places in small repo.
 
         Given file A, B and destination prefix "dest_path_prefix".

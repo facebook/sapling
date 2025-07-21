@@ -254,7 +254,7 @@ mod test {
             SqlBookmarksSubscription::create(&ctx, bookmarks.clone(), Freshness::MostRecent)
                 .await?;
 
-        // Insert a bookmark, but without going throguh the log. This won't happen in prod.
+        // Insert a bookmark, but without going through the log. This won't happen in prod.
         // However, for the purposes of this test, it makes the update invisible to the
         // subscription, and only a full refresh will find it.
         let book = BookmarkKey::new("book")?;

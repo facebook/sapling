@@ -80,7 +80,7 @@ pub async fn run(app: MononokeApp, args: CommandArgs) -> Result<()> {
         args.inner_blobstore_id,
     )?;
     let blobstore = app
-        .open_blobstore_unlink_ops_with_overriden_blob_config(&blob_config)
+        .open_blobstore_unlink_ops_with_overridden_blob_config(&blob_config)
         .await?;
 
     match blobstore.unlink(&ctx, &args.key).await {

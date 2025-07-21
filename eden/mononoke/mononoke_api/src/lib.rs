@@ -107,8 +107,8 @@ pub struct Mononoke<R> {
 impl<R: MononokeRepo> Mononoke<R> {
     /// Create a MononokeAPI instance for MononokeRepos
     ///
-    /// Takes extra argument containing list of all aviailable repos
-    /// (used to power APIs listing repos; TODO: change that arg to MonononokeConfigs)
+    /// Takes extra argument containing list of all available repos
+    /// (used to power APIs listing repos; TODO: change that arg to MononokeConfigs)
     pub fn new(
         repos: Arc<MononokeRepos<R>>,
         repo_names_in_tier: Vec<String>,

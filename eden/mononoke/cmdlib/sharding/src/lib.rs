@@ -56,7 +56,7 @@ pub trait RepoShardedProcessExecutor: Send + Sync {
     /// Callback for when the executing repo process for the current job is required to
     /// relinquish an existing repo assigned to it earlier. The timeout specified during
     /// creation determines the time for which the executing repo process will wait before
-    /// performing a hard-cleaup of the repo associated task. Note that this
+    /// performing a hard-cleanup of the repo associated task. Note that this
     /// method is responsible ONLY for signalling the termination of the execution
     /// of the repo for the given process. Once the control returns from this method,
     /// the executor waits for timeout seconds (specified during executor construction)

@@ -817,7 +817,7 @@ pub async fn fetch_response<'a>(
     let translated_sha_bases = git_shas_to_bonsais(&ctx, repo, request.bases.iter())
         .try_timed()
         .await
-        .context("Error converting base Git commits to Bonsai duing fetch")?
+        .context("Error converting base Git commits to Bonsai during fetch")?
         .log_future_stats(
             perf_scuba.clone(),
             "Converted HAVE Git commits to Bonsais",
@@ -989,7 +989,7 @@ pub async fn shallow_info(
         ShallowVariant::None => AncestorsWithinDistance::default(),
     };
     // We might decide not to send some objects based on the client's HAVES and SHALLOW but for reporting purposes in shallow section
-    // of Git protocol, we need to provide visibility into all elligible commits. That's the purpose of info_commits
+    // of Git protocol, we need to provide visibility into all eligible commits. That's the purpose of info_commits
     let info_commits = ShallowCommits {
         commits: ordered_bonsai_git_mappings_by_bonsai(
             &ctx,

@@ -1811,7 +1811,7 @@ impl<V: VisitOne> Checker<V> {
             .await
     }
 
-    // Convience method around make_edge
+    // Convenience method around make_edge
     fn add_edge<N>(&self, edges: &mut Vec<OutgoingEdge>, edge_type: EdgeType, node_fn: N)
     where
         N: FnOnce() -> Node,
@@ -1821,7 +1821,7 @@ impl<V: VisitOne> Checker<V> {
         }
     }
 
-    // Convience method around make_edge_with_path
+    // Convenience method around make_edge_with_path
     fn add_edge_with_path<N, P>(
         &self,
         edges: &mut Vec<OutgoingEdge>,

@@ -283,7 +283,7 @@ pub async fn get_file_history(
 /// Get the history of the file at the specified path, using the given
 /// prefetched history map as a cache to speed up the operation.
 ///
-/// FIXME: max_legth parameter is not necessary. We can use .take() method on the stream
+/// FIXME: max_length parameter is not necessary. We can use .take() method on the stream
 /// i.e. get_file_history_using_prefetched().take(max_length)
 fn get_file_history_using_prefetched(
     ctx: CoreContext,

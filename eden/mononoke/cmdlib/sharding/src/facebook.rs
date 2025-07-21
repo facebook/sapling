@@ -695,7 +695,7 @@ impl ShardedProcessHandler {
             // The setup has not been initiated yet. Need to setup the execution
             // for this repo.
             else {
-                let details = format!("Initating setup. Adding shard {} is in progress", &key);
+                let details = format!("Initiating setup. Adding shard {} is in progress", &key);
                 let repo_setup_process = RepoSetupProcess::new(
                     shard,
                     key.clone(),

@@ -76,7 +76,7 @@ pub use crate::typed_hash::ShardedMapNodeDMv2Id;
 /// 5. Finalize the conversion by recording the mapping from changeset id to the root deleted
 ///    files manifest hash.
 ///
-/// Where does point a linknode for a file that was markes as deleted in a merge commit?
+/// Where does point a linknode for a file that was marked as deleted in a merge commit?
 ///
 /// Linknode will point to the merge commit itself, if the file deletion was made in some of the
 /// parents and was accepted in merge commit.

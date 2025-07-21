@@ -90,7 +90,7 @@ pub enum ChangesetMessage {
     Changeset((HgBlobChangeset, BonsaiChangeset)),
     // Checkpoint position (first argument) within the BUL entry (second argument)
     CheckpointInEntry(u64, i64),
-    // Perfrom bookmark movement and mark BUL entry as completed once the changeset is synced
+    // Perform bookmark movement and mark BUL entry as completed once the changeset is synced
     FinishEntry(BookmarkInfo, i64),
     // Notify changeset sending is done
     NotifyCompletion(oneshot::Sender<Result<()>>),

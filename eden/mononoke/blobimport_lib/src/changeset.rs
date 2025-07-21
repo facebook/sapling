@@ -316,7 +316,7 @@ impl<R: BlobimportRepoLike + Clone + 'static> UploadChangesets<R> {
     pub fn upload(
         self,
         changesets: impl Stream<Item = (RevIdx, HgNodeHash), Error = Error> + Send + 'static,
-        is_import_from_beggining: bool,
+        is_import_from_beginning: bool,
         origin_repo: Option<BackupSourceRepo>,
     ) -> BoxStream<(RevIdx, (BonsaiChangeset, HgBlobChangeset)), Error> {
         let Self {
@@ -458,7 +458,7 @@ impl<R: BlobimportRepoLike + Clone + 'static> UploadChangesets<R> {
                         let p = p.into_nodehash();
                         let maybe_handle = parent_changeset_handles.get(&p).cloned();
 
-                        if is_import_from_beggining {
+                        if is_import_from_beginning {
                             maybe_handle
                                 .unwrap_or_else(|| panic!("parent {} not found for {}", p, csid))
                         } else {

@@ -11,7 +11,7 @@ use std::sync::atomic::AtomicBool;
 use anyhow::anyhow;
 use edenapi_service::context::ServerContext;
 use edenapi_service::handlers::HandlerInfo;
-use edenapi_service::handlers::JsonErrorFomatter;
+use edenapi_service::handlers::JsonErrorFormatter;
 use edenapi_service::handlers::encode_response_stream;
 use edenapi_service::handlers::handler::HandlerError;
 use edenapi_service::handlers::handler::PathExtractorWithRepo;
@@ -122,5 +122,5 @@ where
 
     ScubaMiddlewareState::try_set_future_stats(&mut state, &future_stats);
 
-    build_response(res, state, &JsonErrorFomatter)
+    build_response(res, state, &JsonErrorFormatter)
 }

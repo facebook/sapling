@@ -104,8 +104,8 @@ fn test_multi_mover_prefixed_with_exceptions() -> Result<(), Error> {
         default_prefix: "prefix".to_string(),
         overrides: btreemap! {
             "override".to_string() => vec![
-                "overriden_1".to_string(),
-                "overriden_2".to_string(),
+                "overridden_1".to_string(),
+                "overridden_2".to_string(),
             ]
         },
         ..Default::default()
@@ -119,8 +119,8 @@ fn test_multi_mover_prefixed_with_exceptions() -> Result<(), Error> {
     assert_eq!(
         multi_mover.multi_move_path(&NonRootMPath::new("override/path")?)?,
         vec![
-            NonRootMPath::new("overriden_1/path")?,
-            NonRootMPath::new("overriden_2/path")?,
+            NonRootMPath::new("overridden_1/path")?,
+            NonRootMPath::new("overridden_2/path")?,
         ]
     );
     Ok(())

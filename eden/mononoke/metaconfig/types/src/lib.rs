@@ -138,7 +138,7 @@ pub struct CommonConfig {
     pub enable_http_control_api: bool,
     /// Configuration for redaction of blobs
     pub redaction_config: RedactionConfig,
-    /// Service identity for interal Mononoke services.
+    /// Service identity for internal Mononoke services.
     pub internal_identity: Identity,
     /// Upper bound in bytes for the RSS memory that can be utilized by Mononoke GRit
     /// server for serving packfile stream
@@ -560,7 +560,7 @@ pub struct CacheWarmupParams {
 /// Configuration for the hook manager
 #[derive(Debug, Clone, Eq, PartialEq, Deserialize, Default)]
 pub struct HookManagerParams {
-    /// Wether to disable the acl checker or not (intended for testing purposes)
+    /// Whether to disable the acl checker or not (intended for testing purposes)
     pub disable_acl_checker: bool,
     /// Whether to log admin bypasses.
     pub all_hooks_bypassed: bool,
@@ -878,7 +878,7 @@ pub struct LfsParams {
     pub use_upstream_lfs_server: bool,
 }
 
-/// Id used to discriminate diffirent underlying blobstore instances
+/// Id used to discriminate different underlying blobstore instances
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Ord, PartialOrd, Deserialize)]
 #[derive(From, Into, mysql::OptTryFromRowField)]
 pub struct BlobstoreId(u64);

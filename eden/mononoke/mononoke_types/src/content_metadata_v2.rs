@@ -1060,6 +1060,7 @@ mod test {
         assert!(!is_partially_generated(bytes_stream).await);
 
         let bytes_stream = stream::iter(
+            // @lint-ignore SPELL
             ["This chunk has @partially-genarate", "d marker in it"]
                 .into_iter()
                 .map(Bytes::from),

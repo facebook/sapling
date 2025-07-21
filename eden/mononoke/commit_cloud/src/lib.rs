@@ -132,7 +132,7 @@ impl CommitCloud {
         if let Some(res) = maybeworkspace {
             return Ok(res.into_workspace_data(&cc_ctx.reponame));
         }
-        Err(CommitCloudUserError::NonexistantWorkspace(
+        Err(CommitCloudUserError::NonexistentWorkspace(
             cc_ctx.workspace.clone(),
             cc_ctx.reponame.clone(),
         )

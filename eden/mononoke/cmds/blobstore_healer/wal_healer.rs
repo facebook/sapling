@@ -428,7 +428,7 @@ async fn enqueue_entries(
     }
     info!(
         ctx.logger(),
-        "Requeueing {} queue entries for another healing attempt",
+        "Requeuing {} queue entries for another healing attempt",
         entries.len()
     );
     let new_entries = entries

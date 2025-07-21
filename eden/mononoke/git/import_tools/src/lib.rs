@@ -822,7 +822,7 @@ pub async fn read_symref(
     Ok(symref_entry)
 }
 
-/// Resolve git rev using `git rev-parse --verfify`
+/// Resolve git rev using `git rev-parse --verify`
 pub async fn resolve_rev(
     rev: &str,
     path: &Path,

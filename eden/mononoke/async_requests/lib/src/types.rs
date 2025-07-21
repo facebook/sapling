@@ -74,7 +74,7 @@ pub trait Request: Sized + Send + Sync {
 pub trait ThriftParams: Sized + Send + Sync + Into<AsynchronousRequestParams> + Debug {
     type R: Request<ThriftParams = Self>;
 
-    /// Every *Params argument referes to some Target
+    /// Every *Params argument refers to some Target
     /// This method is needed to extract it from the
     /// implementer of this trait
     fn target(&self) -> String;

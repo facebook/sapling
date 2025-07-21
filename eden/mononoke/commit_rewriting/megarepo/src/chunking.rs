@@ -138,21 +138,21 @@ mod test {
             .collect();
         let chunked = chunker(mpaths);
 
-        let expeected_chunk_0: Vec<NonRootMPath> = vec!["/a/b/c", "/a/c"]
+        let expected_chunk_0: Vec<NonRootMPath> = vec!["/a/b/c", "/a/c"]
             .into_iter()
             .map(|p| NonRootMPath::new(p).unwrap())
             .collect();
-        let expeected_chunk_1: Vec<NonRootMPath> = vec!["/b/w/z", "/a/d"]
+        let expected_chunk_1: Vec<NonRootMPath> = vec!["/b/w/z", "/a/d"]
             .into_iter()
             .map(|p| NonRootMPath::new(p).unwrap())
             .collect();
-        let expeected_chunk_2: Vec<NonRootMPath> = vec!["/d/e/f", "/a"]
+        let expected_chunk_2: Vec<NonRootMPath> = vec!["/d/e/f", "/a"]
             .into_iter()
             .map(|p| NonRootMPath::new(p).unwrap())
             .collect();
         assert_eq!(
             chunked,
-            vec![expeected_chunk_0, expeected_chunk_1, expeected_chunk_2]
+            vec![expected_chunk_0, expected_chunk_1, expected_chunk_2]
         )
     }
 
@@ -176,21 +176,21 @@ mod test {
             .collect();
         let chunked = chunker(mpaths);
 
-        let expeected_chunk_0: Vec<NonRootMPath> = vec!["/a/b/c", "/a/c"]
+        let expected_chunk_0: Vec<NonRootMPath> = vec!["/a/b/c", "/a/c"]
             .into_iter()
             .map(|p| NonRootMPath::new(p).unwrap())
             .collect();
-        let expeected_chunk_1: Vec<NonRootMPath> = vec!["/b/w/z", "/a/d"]
+        let expected_chunk_1: Vec<NonRootMPath> = vec!["/b/w/z", "/a/d"]
             .into_iter()
             .map(|p| NonRootMPath::new(p).unwrap())
             .collect();
-        let expeected_chunk_2: Vec<NonRootMPath> = vec!["/d/e/f", "/a"]
+        let expected_chunk_2: Vec<NonRootMPath> = vec!["/d/e/f", "/a"]
             .into_iter()
             .map(|p| NonRootMPath::new(p).unwrap())
             .collect();
         assert_eq!(
             chunked,
-            vec![expeected_chunk_0, expeected_chunk_1, expeected_chunk_2]
+            vec![expected_chunk_0, expected_chunk_1, expected_chunk_2]
         )
     }
 }

@@ -196,7 +196,7 @@ async fn test_derive_manifest(fb: FacebookInit) -> Result<()> {
         );
     }
 
-    // file-derectory conflict
+    // file-directory conflict
     {
         let mf0 = derive(
             vec![],

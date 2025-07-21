@@ -10,7 +10,7 @@ use thiserror::Error;
 #[derive(Debug, Error, Clone, PartialEq, Eq, Hash)]
 pub enum CommitCloudUserError {
     #[error("Workspace {0} does not exist for repo {1}")]
-    NonexistantWorkspace(String, String),
+    NonexistentWorkspace(String, String),
     #[error("Workspace {0} in repo {1}  has been removed or renamed")]
     WorkspaceWasRemoved(String, String),
     #[error(

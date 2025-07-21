@@ -458,7 +458,7 @@ impl UploadHgFileEntry {
         Ok(ret)
     }
 
-    /// Upload and provide a path for this upload. This will be returned to the caller, but wil
+    /// Upload and provide a path for this upload. This will be returned to the caller, but will
     /// also be used for logging.
     pub async fn upload_with_path(
         self,

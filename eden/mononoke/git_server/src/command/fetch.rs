@@ -25,7 +25,7 @@ const DONE: &[u8] = b"done";
 const THIN_PACK: &[u8] = b"thin-pack";
 const NO_PROGRESS: &[u8] = b"no-progress";
 const INCLUDE_TAG: &[u8] = b"include-tag";
-const OFSET_DELTA: &[u8] = b"ofs-delta";
+const OFFSET_DELTA: &[u8] = b"ofs-delta";
 const WAIT_FOR_DONE: &[u8] = b"wait-for-done";
 const SIDEBAND_ALL: &[u8] = b"sideband-all";
 const DEEPEN_RELATIVE: &[u8] = b"deepen-relative";
@@ -318,7 +318,7 @@ impl FetchArgs {
                         THIN_PACK => fetch_args.thin_pack = true,
                         NO_PROGRESS => fetch_args.no_progress = true,
                         INCLUDE_TAG => fetch_args.include_tag = true,
-                        OFSET_DELTA => fetch_args.ofs_delta = true,
+                        OFFSET_DELTA => fetch_args.ofs_delta = true,
                         WAIT_FOR_DONE => fetch_args.wait_for_done = true,
                         SIDEBAND_ALL => fetch_args.sideband_all = true,
                         DEEPEN_RELATIVE => fetch_args.deepen_relative = true,

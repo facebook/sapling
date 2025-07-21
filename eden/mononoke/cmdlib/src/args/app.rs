@@ -188,7 +188,7 @@ pub struct MononokeAppBuilder {
     /// still be available, just not displayed in help.
     hide_advanced_args: bool,
 
-    /// Flag determinig if the command supports getting repos dynamically at runtime in
+    /// Flag determining if the command supports getting repos dynamically at runtime in
     /// addition to repos being provided through CLI before execution.
     dynamic_repos: bool,
 
@@ -797,7 +797,7 @@ impl MononokeAppBuilder {
                 .takes_value(true)
                 .required(false)
                 .requires(WRITE_ZSTD_ARG)
-                .help("Override the zstd compression leve used for writes via packblob."),
+                .help("Override the zstd compression level used for writes via packblob."),
         )
         .arg(
             Arg::with_name(CACHELIB_ATTEMPT_ZSTD_ARG)

@@ -196,7 +196,7 @@ where
 pub struct GitimportPreferences {
     pub dry_run: bool,
     /// Only for logging purposes,
-    /// useful when several repos are imported simultainously.
+    /// useful when several repos are imported simultaneously.
     pub gitrepo_name: Option<String>,
     pub concurrency: usize,
     /// Whether submodules should be imported instead of dropped.
@@ -439,7 +439,7 @@ pub fn decode_with_bom<'a>(
 
 /// Decode a git commit message
 ///
-/// Git choses to keep the raw user-provided bytes for the commit message.
+/// Git chooses to keep the raw user-provided bytes for the commit message.
 /// That is to avoid a possibly lossy conversion to UTF-8.
 /// Git provides an option to set the encoding by setting i18n.commitEncoding in .git/config.
 /// See [the git documentation](https://git-scm.com/docs/git-commit#_discussion) for a discussion

@@ -230,7 +230,7 @@ pub enum PostResolveAction {
 }
 
 /// The resolve function takes a bundle2, interprets it's content as Changesets, Filelogs and
-/// Manifests and uploades all of them to the provided repo in the correct order.
+/// Manifests and uploads all of them to the provided repo in the correct order.
 /// It returns a Future that contains the response that should be send back to the requester.
 pub async fn resolve<'a>(
     ctx: &'a CoreContext,

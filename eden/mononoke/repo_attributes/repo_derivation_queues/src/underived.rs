@@ -124,7 +124,7 @@ pub async fn build_underived_batched_graph<'a>(
                     ctx.metadata().client_info(),
                 )?;
 
-                let max_failed_attemps = justknobs::get_as::<u64>("scm/mononoke:build_underived_batched_graph_max_failed_attempts", None)?;
+                let max_failed_attempts = justknobs::get_as::<u64>("scm/mononoke:build_underived_batched_graph_max_failed_attempts", None)?;
 
                 // Upstream batch will depend on this cs
                 let mut upstream_dep = item.id().clone();
@@ -132,7 +132,7 @@ pub async fn build_underived_batched_graph<'a>(
                 let mut failed_attempt = 0;
                 let mut err_msg = None;
                 while let Some(item) = cur_item {
-                    if failed_attempt >= max_failed_attemps {
+                    if failed_attempt >= max_failed_attempts {
                         return Err(anyhow!(
                             "Couldn't enqueue item {:?} into zeus after {} attempts. Last err: {:?}",
                             item,

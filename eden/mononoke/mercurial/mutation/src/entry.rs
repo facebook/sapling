@@ -341,7 +341,7 @@ impl TryFrom<HgMutationEntryContent> for HgMutationEntry {
         let user = std::str::from_utf8(&mutation.user)?.to_string();
         let timestamp = mutation.time;
         let timezone = mutation.tz;
-        let exta = mutation
+        let extra = mutation
             .extras
             .into_iter()
             .map(|extra| {
@@ -360,7 +360,7 @@ impl TryFrom<HgMutationEntryContent> for HgMutationEntry {
             user,
             timestamp,
             timezone,
-            exta,
+            extra,
         ))
     }
 }

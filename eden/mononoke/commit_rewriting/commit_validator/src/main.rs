@@ -64,7 +64,7 @@ use crate::tail::QueueSize;
 use crate::tail::tail_entries;
 use crate::validation::EntryCommitId;
 use crate::validation::ValidationHelpers;
-use crate::validation::get_entry_with_small_repo_mapings;
+use crate::validation::get_entry_with_small_repo_mappings;
 use crate::validation::prepare_entry;
 use crate::validation::unfold_bookmarks_update_log_entry;
 use crate::validation::validate_entry;
@@ -87,7 +87,7 @@ fn validate_stream<'a>(
         })
         .try_flatten()
         .then(move |res_entry| async move {
-            get_entry_with_small_repo_mapings(ctx, res_entry?, validation_helpers).await
+            get_entry_with_small_repo_mappings(ctx, res_entry?, validation_helpers).await
         })
         .filter_map(|maybe_entry_res| future::ready(maybe_entry_res.transpose()))
         .then(move |res_entry| async move {

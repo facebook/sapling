@@ -153,7 +153,7 @@ impl Arbitrary for CgPartSequence {
             CgVersion::Cg3Version => gen_sequence_v3,
         };
 
-        // All the parts can be shrinked independently as long as the section
+        // All the parts can be shrunk independently as long as the section
         // remains the same (ensured in the impl of Arbitrary for
         // changegroup::Part).
         Box::new(

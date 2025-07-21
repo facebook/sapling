@@ -1927,7 +1927,7 @@ impl<R: Repo> HgCommands for RepoClient<R> {
     ) -> BoxStream<'static, Result<Bytes, Error>> {
         self.getpack(
             params,
-            |ctx, repo, node, _lfs_thresold, validate_hash| {
+            |ctx, repo, node, _lfs_threshold, validate_hash| {
                 async move {
                     let (size, fut) =
                         create_getpack_v1_blob(&ctx, &repo, node, validate_hash).await?;
@@ -1950,10 +1950,10 @@ impl<R: Repo> HgCommands for RepoClient<R> {
     ) -> BoxStream<'static, Result<Bytes, Error>> {
         self.getpack(
             params,
-            |ctx, repo, node, lfs_thresold, validate_hash| {
+            |ctx, repo, node, lfs_threshold, validate_hash| {
                 async move {
                     let (size, fut) =
-                        create_getpack_v2_blob(&ctx, &repo, node, lfs_thresold, validate_hash)
+                        create_getpack_v2_blob(&ctx, &repo, node, lfs_threshold, validate_hash)
                             .await?;
                     // GetpackV2 always has metadata.
                     let fut = async move {

@@ -852,7 +852,7 @@ impl<R: MononokeRepo> ChangesetContext<R> {
         ordering: ChangesetFileOrdering,
         limit: Option<usize>,
     ) -> Result<Vec<ChangesetPathDiffContext<R>>, MononokeError> {
-        // Helper to that checks if a path is within the givien path restrictions
+        // Helper to that checks if a path is within the given path restrictions
         fn within_restrictions(path: &MPath, path_restrictions: &Option<Vec<MPath>>) -> bool {
             path_restrictions.as_ref().is_none_or(|i| {
                 i.iter()
@@ -888,7 +888,7 @@ impl<R: MononokeRepo> ChangesetContext<R> {
 
             for (to_path, file_change) in file_changes.iter() {
                 let to_path: MPath = to_path.clone().into();
-                let path_is_overriden = self
+                let path_is_overridden = self
                     .mutable_history
                     .as_ref()
                     .and_then(|history_map| {
@@ -897,7 +897,7 @@ impl<R: MononokeRepo> ChangesetContext<R> {
                             .map(PathMutableHistory::is_override)
                     })
                     .unwrap_or(false);
-                if path_is_overriden {
+                if path_is_overridden {
                     // Mutable history overrides immutable if present
                     continue;
                 }

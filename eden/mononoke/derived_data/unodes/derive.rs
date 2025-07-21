@@ -740,7 +740,7 @@ mod tests {
         let repo: TestRepo = Linear::get_repo(fb).await;
         let ctx = CoreContext::test_mock(fb);
 
-        async fn check_unode_uniqeness(
+        async fn check_unode_uniqueness(
             ctx: CoreContext,
             repo: TestRepo,
             file_changes: BTreeMap<NonRootMPath, FileChange>,
@@ -771,14 +771,14 @@ mod tests {
             btreemap! {"file1" => Some(("content", FileType::Regular)), "file2" => Some(("content", FileType::Regular))},
             repo.clone(),
         ).await?;
-        check_unode_uniqeness(ctx.clone(), repo.clone(), file_changes).await?;
+        check_unode_uniqueness(ctx.clone(), repo.clone(), file_changes).await?;
 
         let file_changes = store_files(
             ctx.clone(),
             btreemap! {"dir1/file" => Some(("content", FileType::Regular)), "dir2/file" => Some(("content", FileType::Regular))},
             repo.clone(),
         ).await?;
-        check_unode_uniqeness(ctx.clone(), repo.clone(), file_changes).await?;
+        check_unode_uniqueness(ctx.clone(), repo.clone(), file_changes).await?;
         Ok(())
     }
 

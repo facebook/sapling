@@ -633,7 +633,7 @@ struct BlameCompact {
 
   /// Approximate number of commits in the history of this file (merged
   /// ancestors may not be included in this count if they did not contribute
-  /// content to the merge).  Only present if `INCLUDE_COMMIT_NUMERS` was
+  /// content to the merge).  Only present if `INCLUDE_COMMIT_NUMBERS` was
   /// requested.
   10: optional i32 approx_commit_count;
 
@@ -1363,7 +1363,7 @@ struct CommitFindFilesParams {
 ///
 /// * `descendants_of` will restrict traversal to only those commits which
 ///   are **between** the target commit and this commit.  This means any
-///   branches that are merged in after the `decendants_of` commit will
+///   branches that are merged in after the `descendants_of` commit will
 ///   be excluded.  Use this when you want to find all the commits that
 ///   are between two commits.
 ///
@@ -2910,6 +2910,7 @@ service SourceControlService extends fb303_core.BaseService {
     2: CommitRunHooksParams params,
   ) throws (
     1: RequestError request_error,
+    // @lint-ignore SPELL (this was not caught by the previous SPELL linter)
     2: InternalError interal_error,
     3: OverloadError overload_error,
   );

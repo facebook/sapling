@@ -586,7 +586,7 @@ impl WalMultiplexedBlobstore {
                     }
                     (bs_id, Ok(BlobstoreIsPresent::ProbablyNotPresent(err))) => {
                         // Treat this like an error from the underlying blobstore.
-                        // In reality, this won't happen as multiplexed operates over sinle
+                        // In reality, this won't happen as multiplexed operates over single
                         // standard blobstores, which always can answer if the blob is present.
                         errors.insert(bs_id, err);
                     }

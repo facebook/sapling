@@ -279,7 +279,7 @@ async fn check_large_bookmark_history<R: CrossRepo>(
         match log_entries.last() {
             Some((_, _, _, timestamp)) => Ok(timestamp.since_seconds() < max_delay_secs as i64),
             None => {
-                // Shouldn't happen in practive, so return false in that case
+                // Shouldn't happen in practice, so return false in that case
                 Ok(false)
             }
         }

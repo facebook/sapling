@@ -24,7 +24,7 @@ include "thrift/annotation/rust.thrift"
 //
 // BssmV3 is an optimized version of Bssm that differs from it in two ways:
 //
-// 1) It uses ShardedMapV2 instead of ShardedMap which avoids creating un-cachable blobs,
+// 1) It uses ShardedMapV2 instead of ShardedMap which avoids creating un-cacheable blobs,
 // instead dividing the manifest into closely sized blobs.
 //
 // 2) Stores the sharded map inlined without a layer of indirection, and relies only

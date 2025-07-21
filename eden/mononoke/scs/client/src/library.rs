@@ -5,7 +5,7 @@
  * GNU General Public License version 2.
  */
 
-//! Library contating code shared between commands.
+//! Library containing code shared between commands.
 
 pub(crate) mod bookmark;
 pub(crate) mod commit;

@@ -566,7 +566,7 @@ where
         }
         Some(Change::Add(leaf)) => {
             // Replace current merge node with a leaf, and stop traversal.
-            // This case is used ot either replace leaf entry or resolve file/tree conflict
+            // This case is used to either replace leaf entry or resolve file/tree conflict
             // in favour or file.
             return Ok((
                 MergeResult::CreateLeaf {

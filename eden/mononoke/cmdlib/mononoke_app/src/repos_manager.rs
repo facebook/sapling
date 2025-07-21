@@ -285,7 +285,7 @@ impl<Repo> MononokeConfigUpdateReceiver<Repo> {
         }
     }
 
-    /// Method for determing the set of repos to be reloaded with the new config
+    /// Method for determining the set of repos to be reloaded with the new config
     fn reloadable_repo(&self, repo_configs: Arc<RepoConfigs>) -> Vec<(String, RepoConfig)> {
         let mut repos_to_load = vec![];
         for (repo_name, repo_config) in repo_configs.repos.clone().into_iter() {

@@ -58,7 +58,7 @@ pub fn build<R: Send + Sync + Clone + 'static>(
     scuba: MononokeScubaSampleBuilder,
     mononoke: Arc<Mononoke<R>>,
     will_exit: Arc<AtomicBool>,
-    test_friendly_loging: bool,
+    test_friendly_logging: bool,
     tls_session_data_log_path: Option<&Path>,
     rate_limiter: Option<RateLimitEnvironment>,
     configs: Arc<MononokeConfigs>,
@@ -68,7 +68,7 @@ pub fn build<R: Send + Sync + Clone + 'static>(
 ) -> Result<SaplingRemoteApi, Error> {
     let ctx = ServerContext::new(mononoke, will_exit);
 
-    let log_middleware = if test_friendly_loging {
+    let log_middleware = if test_friendly_logging {
         LogMiddleware::test_friendly()
     } else {
         LogMiddleware::slog(logger.clone())

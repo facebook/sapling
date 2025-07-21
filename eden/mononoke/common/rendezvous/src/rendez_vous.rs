@@ -58,6 +58,7 @@ struct RendezVousInner<K, V, C> {
     stats: Arc<RendezVousStats>,
 }
 
+// @lint-ignore SPELL
 /// RendezVous is a difficultly named library which can be used to batch together and deduplicate queries to a backend.
 ///
 /// It batches together queries that look like `async fn get(keys: HashSet<K>) -> HashMap<K, V>`,

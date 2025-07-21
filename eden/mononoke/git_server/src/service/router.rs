@@ -8,7 +8,7 @@
 use std::pin::Pin;
 
 use bytes::Bytes;
-use edenapi_service::handlers::JsonErrorFomatter;
+use edenapi_service::handlers::JsonErrorFormatter;
 use edenapi_service::handlers::handler::BasicPathExtractor;
 use edenapi_service::handlers::handler::PathExtractorWithRepo;
 use futures::FutureExt;
@@ -134,7 +134,7 @@ fn slapi_capabilities_handler(mut state: State) -> Pin<Box<HandlerFuture>> {
         let repo_name = BasicPathExtractor::borrow_from(&state).repo();
         ScubaMiddlewareState::try_borrow_add(&mut state, "repo", repo_name);
         let res = get_capabilities().await;
-        build_response(res, state, &JsonErrorFomatter)
+        build_response(res, state, &JsonErrorFormatter)
     }
     .boxed()
 }

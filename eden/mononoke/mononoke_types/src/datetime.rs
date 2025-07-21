@@ -90,13 +90,13 @@ impl DateTime {
 
         // As you can see in from_timestamp, we store the timezone offset with
         // `FixedOffset::west_opt` (offset would be 5 for UTC-5)
-        // gix uses the eastern convension (offset would be -5 for UTC-5)
+        // gix uses the eastern convention (offset would be -5 for UTC-5)
 
         Self::from_timestamp(time.seconds, valid_offset)
     }
 
     pub fn into_gix(&self) -> gix_date::Time {
-        // As you can see in tz_offset_secs, that offset is representes as UTC - local (offset would be 5 for UTC-5)
+        // As you can see in tz_offset_secs, that offset is represented as UTC - local (offset would be 5 for UTC-5)
         // gix needs the opposite (offset would be -5 for UTC-5)
         gix_date::Time::new(self.timestamp_secs(), -self.tz_offset_secs())
     }

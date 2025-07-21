@@ -360,7 +360,7 @@ where
         // For the bookmarks that don't remap to small repos we can skip. But it's
         // still valuable to have commit mapping ready for them. That's why we spawn
         // a commit backsync future that we don't wait for here. Each of such futures
-        // waits for result of previous commmit-only backsync so we don't duplicate
+        // waits for result of previous commit-only backsync so we don't duplicate
         // work unnecessarily.
         debug!(ctx.logger(), "Renamed bookmark is None. No sync happening.");
         target_repo_dbs

@@ -82,7 +82,7 @@ pub enum SrubWriteOnly {
     /// take the normal scrub action for write only stores
     Scrub,
     /// Mode for populating empty stores.  Assumes its already missing. Don't attempt to read. Write with IfAbsent so won't overwrite if run incorrectluy.
-    /// More efficient than the above if thes store is totally empty.
+    /// More efficient than the above if the store is totally empty.
     PopulateIfAbsent,
     /// Mode for rescrubbing write-only stores before enabling them. Assumes that the data in them is correct,
     /// and won't read from the main stores unless the write-only stores have missing data or read failures

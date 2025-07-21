@@ -43,7 +43,7 @@ to complete.
 ## Running Tests Incrementally: a better way
 
 If your code changes trigger rebuild of multiple Mononoke binaries there is a way
-to avoid unnnecessary rebuilds: our incremental helper scripts.
+to avoid unnecessary rebuilds: our incremental helper scripts.
 Using them allows you to skip most build steps, and rebuild only what you need to
 re-run your test (e.g. if you're iterating on Mononoke server, then you won't
 need to rebuild blobimport more than once).

@@ -39,7 +39,7 @@ const MPATH_ELEMENT_INVALID_BYTES: &[(u8, &str)] = &[(0, "\\0"), (b'/', "/")];
 /// Internally using SmallVec as many path elements are directory names and thus
 /// quite short, avoiding need for heap alloc. Its stack storage size is set to 24
 /// as with the union feature the smallvec is 32 bytes on stack which is same as previous
-/// Bytes member stack sise (Bytes will usually have heap as well of course)
+/// Bytes member stack size (Bytes will usually have heap as well of course)
 #[derive(Clone, Ord, PartialOrd, Eq, PartialEq, Hash)]
 #[derive(Serialize, Deserialize)]
 #[derive(bincode::Encode, bincode::Decode)]

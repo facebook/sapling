@@ -108,7 +108,7 @@ fn log_success_to_logger(
         None => {
             info!(
                 logger,
-                "Syncing {} succeeded in {}ms but did not produce a changeset in the taret repo.",
+                "Syncing {} succeeded in {}ms but did not produce a changeset in the target repo.",
                 source_cs_id,
                 duration,
             );

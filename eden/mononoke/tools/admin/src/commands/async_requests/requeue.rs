@@ -39,7 +39,7 @@ pub async fn requeue_request(
         queue
             .requeue(&ctx, request_id)
             .await
-            .context("requeueing the request")?;
+            .context("requeuing the request")?;
         Ok(())
     } else {
         Err(anyhow!("Request not found."))

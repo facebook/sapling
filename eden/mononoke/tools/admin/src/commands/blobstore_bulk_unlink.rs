@@ -262,7 +262,7 @@ impl BlobstoreBulkUnlinker {
                 let blob_config = get_blobconfig(repo_config.storage_config.blobstore, None)?;
                 if let Ok(blobstore) = self
                     .app
-                    .open_blobstore_unlink_ops_with_overriden_blob_config(&blob_config)
+                    .open_blobstore_unlink_ops_with_overridden_blob_config(&blob_config)
                     .await
                 {
                     e.insert(blobstore);

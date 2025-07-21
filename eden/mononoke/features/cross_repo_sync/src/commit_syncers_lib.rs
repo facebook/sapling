@@ -384,7 +384,7 @@ where
         ),
     );
 
-    // Killswitch to disable this logic alltogether.
+    // Killswitch to disable this logic altogether.
     if let Ok(true) = justknobs::eval(
         "scm/mononoke:xrepo_disable_forward_sync_over_mapping_change",
         None,

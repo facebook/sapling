@@ -1256,7 +1256,7 @@ impl BlameRangeIndex {
 /// This uses indexes into tables stored in the main blame data.
 #[derive(Debug, Clone, Copy, Eq, PartialEq, Hash)]
 pub enum BlameParentIndex {
-    // The parent is a direct parent of ths changeset, and this is
+    // The parent is a direct parent of this changeset, and this is
     // its index in the list of parents for the current changeset.
     ChangesetParent(u32),
 

@@ -76,7 +76,7 @@ async fn add_and_get<M: BonsaiHgMapping>(fb: FacebookInit, mapping: M) {
     let result = mapping
         .add(&ctx, same_bc_entry.clone())
         .await
-        .expect_err("Conflicting entries should haved produced an error");
+        .expect_err("Conflicting entries should have produced an error");
     assert_matches!(
         result.downcast::<ErrorKind>(),
         Ok(ErrorKind::ConflictingEntries(ref e0, ref e1)) if e0 == &entry && e1 == &same_bc_entry
@@ -89,7 +89,7 @@ async fn add_and_get<M: BonsaiHgMapping>(fb: FacebookInit, mapping: M) {
     let result = mapping
         .add(&ctx, same_hg_entry.clone())
         .await
-        .expect_err("Conflicting entries should haved produced an error");
+        .expect_err("Conflicting entries should have produced an error");
     assert_matches!(
         result.downcast::<ErrorKind>(),
         Ok(ErrorKind::ConflictingEntries(ref e0, ref e1)) if e0 == &entry && e1 == &same_hg_entry

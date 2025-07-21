@@ -5,6 +5,8 @@
  * GNU General Public License version 2.
  */
 
+// @lint-ignore-every SPELL
+
 use std::fmt;
 use std::fmt::Debug;
 use std::fmt::Display;

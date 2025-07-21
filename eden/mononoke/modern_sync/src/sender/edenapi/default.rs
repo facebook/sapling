@@ -347,7 +347,7 @@ impl EdenapiSender for DefaultEdenapiSender {
                 anyhow::Ok(
                     entry
                         .data
-                        .with_context(|| "extracing bookmark response")?
+                        .with_context(|| "extracting bookmark response")?
                         .hgid,
                 )
             })

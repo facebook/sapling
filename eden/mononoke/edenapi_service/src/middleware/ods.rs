@@ -90,8 +90,8 @@ fn log_stats(state: &mut State, status: StatusCode) -> Option<()> {
         _ => {}
     }
 
-    let hander_info = state.try_borrow::<HandlerInfo>()?;
-    let method = hander_info.method?;
+    let handler_info = state.try_borrow::<HandlerInfo>()?;
+    let method = handler_info.method?;
     let request_load = RequestLoad::try_borrow_from(state).map(|r| r.0 as f64);
 
     let callbacks = state.try_borrow_mut::<PostResponseCallbacks>()?;

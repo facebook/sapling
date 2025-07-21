@@ -158,7 +158,7 @@ fn test_empty_bundle_roundtrip_uncompressed() {
 }
 
 #[mononoke::fbinit_test]
-fn test_phases_part_encording(fb: FacebookInit) {
+fn test_phases_part_encoding(fb: FacebookInit) {
     let phases_entries = stream::iter(vec![
         (
             HgChangesetId::from_bytes(b"bbbbbbbbbbbbbbbbbbbb").unwrap(),

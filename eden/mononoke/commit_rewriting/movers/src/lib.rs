@@ -557,7 +557,7 @@ mod test {
     images in the big repo.
     */
 
-    fn get_small_repo_sync_config_1_non_ovelapping() -> SmallRepoCommitSyncConfig {
+    fn get_small_repo_sync_config_1_non_overlapping() -> SmallRepoCommitSyncConfig {
         SmallRepoCommitSyncConfig {
             default_action: DefaultSmallToLargeCommitSyncPathAction::Preserve,
             map: hashmap! {
@@ -567,7 +567,7 @@ mod test {
         }
     }
 
-    fn get_small_repo_sync_config_2_non_ovelapping() -> SmallRepoCommitSyncConfig {
+    fn get_small_repo_sync_config_2_non_overlapping() -> SmallRepoCommitSyncConfig {
         SmallRepoCommitSyncConfig {
             default_action: DefaultSmallToLargeCommitSyncPathAction::PrependPrefix(mp("shifted2")),
             map: hashmap! {
@@ -584,8 +584,8 @@ mod test {
             large_repo_id: RepositoryId::new(3),
             common_pushrebase_bookmarks: vec![],
             small_repos: hashmap! {
-                RepositoryId::new(1) => get_small_repo_sync_config_1_non_ovelapping(),
-                RepositoryId::new(2) => get_small_repo_sync_config_2_non_ovelapping(),
+                RepositoryId::new(1) => get_small_repo_sync_config_1_non_overlapping(),
+                RepositoryId::new(2) => get_small_repo_sync_config_2_non_overlapping(),
             },
             version_name: CommitSyncConfigVersion("TEST_VERSION_NAME".to_string()),
         }
@@ -898,7 +898,7 @@ mod test {
         }
     }
 
-    fn get_large_repo_sync_config_with_exludes() -> CommitSyncConfig {
+    fn get_large_repo_sync_config_with_excludes() -> CommitSyncConfig {
         CommitSyncConfig {
             large_repo_id: RepositoryId::new(2),
             common_pushrebase_bookmarks: vec![],
@@ -912,7 +912,7 @@ mod test {
     #[mononoke::test]
     fn test_get_large_to_small_mover_with_excludes() -> Result<()> {
         let mover = get_large_to_small_mover(
-            &get_large_repo_sync_config_with_exludes(),
+            &get_large_repo_sync_config_with_excludes(),
             RepositoryId::new(1),
         )?;
 

@@ -76,6 +76,7 @@ type PathToFileNodeIdMapping = HashMap<NonRootMPath, (FileType, HgFileNodeId)>;
 
 define_stats! {
     prefix = "mononoke.commit_validation";
+    // @lint-ignore SPELL
     bizzare_boookmark_move: timeseries(Rate, Sum),
 }
 
@@ -758,6 +759,7 @@ pub async fn unfold_bookmarks_update_log_entry(
                 // we verify `to_cs_id` itself. If we decided to just use
                 // the revset from below, it would've excluded `to_cs_id`
                 // as it is likely to be an ancestor of master.
+                // @lint-ignore SPELL
                 STATS::bizzare_boookmark_move.add_value(1);
                 vec![Ok(to_cs_id)]
             } else {
@@ -873,7 +875,7 @@ pub struct CommitEntryWithSmallReposMapped {
     queue_size: QueueSize,
 }
 
-pub async fn get_entry_with_small_repo_mapings(
+pub async fn get_entry_with_small_repo_mappings(
     ctx: &CoreContext,
     entry: CommitEntry,
     validation_helpers: &ValidationHelpers,

@@ -877,7 +877,7 @@ async fn validate_expansion_directory_against_submodule_manifest_entry<'a, R: Re
     // so we load this submodule repo, get its manifest and
     // call the working copy validation for its expansion.
     let submodule_file = remaining_sm_files.remove(&exp_path).ok_or(anyhow!(
-        "Path should be a GitSubmodule file in tha submodule's manifest"
+        "Path should be a GitSubmodule file in the submodule's manifest"
     ))?;
 
     // The file has to be of type GitSubmodule

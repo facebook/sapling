@@ -36,7 +36,7 @@ When extending the walker to cover step to a new type of `Node`,  one needs to:
   - `Node` should hold the minimal key needed to lookup this node (e.g. hash or hash + repopath)
   - `NodeData` should hold the data loaded by the Node that is used to derive the children.  The key thing is that it should be Some() if the load succeeded.  NodeData is currently populated for all Node's.
   - If if there is a both a mapping (e.g. Bonsai to Hg) and data, those are represented as two separate `Node`'s
-- Add the new types to matche statements,  the compiler will find these for you.
+- Add the new types to match statements,  the compiler will find these for you.
 - Add new `_step()` functions in walk.rs that expand the `Node` to its children.
   - If reading your node may cause writes (e.g. data derivation),  make sure to honor the enable_derive flag, as in prod usage the walker runs with it set to false.  This may mean changes to the underlying code to support non-writing mode.
 - Update existing `_step()` that are sources of edges to your `Node` to produce `OutgoingEdge` with your `Node` listed.
@@ -52,7 +52,7 @@ There are often multiple valid routes from A to B, and because the graph is dyna
 
 Most Mononoke data represented on the graph is immutable, so visit tracking can prevent any re-visits at all.
 
-For bookmarks the solution is that published bookmark data is resolved once per walk and then refered to during the walk to ensure it is consistent within a given tailing run.
+For bookmarks the solution is that published bookmark data is resolved once per walk and then referred to during the walk to ensure it is consistent within a given tailing run.
 
 However for a subset of data, currently `BonsaiHgMapping` and `BonsaiPhaseMapping`,  the graph sees the data in more than one state.  In this case the data is too large to efficiently reload in a snapshot approach on each tail iteration,  so instead the `WalkStateCHashmap` state tracking will allow revisits until the `Node` has received its `NodeData` in the expected terminal state.
 

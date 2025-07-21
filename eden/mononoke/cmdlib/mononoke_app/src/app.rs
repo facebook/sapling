@@ -941,12 +941,12 @@ impl MononokeApp {
         Ok(blobstore)
     }
 
-    pub async fn open_blobstore_unlink_ops_with_overriden_blob_config(
+    pub async fn open_blobstore_unlink_ops_with_overridden_blob_config(
         &self,
         config: &BlobConfig,
     ) -> Result<Arc<dyn BlobstoreUnlinkOps>> {
         self.repo_factory
-            .blobstore_unlink_ops_with_overriden_blob_config(config)
+            .blobstore_unlink_ops_with_overridden_blob_config(config)
             .await
     }
 

@@ -217,9 +217,9 @@ struct JsonError {
     request_id: String,
 }
 
-pub struct JsonErrorFomatter;
+pub struct JsonErrorFormatter;
 
-impl ErrorFormatter for JsonErrorFomatter {
+impl ErrorFormatter for JsonErrorFormatter {
     type Body = Vec<u8>;
 
     fn format(&self, error: &Error, state: &State) -> Result<(Self::Body, Mime), Error> {
@@ -269,7 +269,7 @@ macro_rules! define_handler {
                     ScubaMiddlewareState::try_set_future_stats(&mut state, &future_stats);
                     res
                 };
-                build_response(res, state, &JsonErrorFomatter)
+                build_response(res, state, &JsonErrorFormatter)
 
             }
             .instrument(span)
@@ -384,7 +384,7 @@ where
     .await;
     ScubaMiddlewareState::try_set_future_stats(&mut state, &future_stats);
 
-    span.in_scope(move || build_response(res, state, &JsonErrorFomatter))
+    span.in_scope(move || build_response(res, state, &JsonErrorFormatter))
 }
 
 pub fn monitor_request<S, T>(

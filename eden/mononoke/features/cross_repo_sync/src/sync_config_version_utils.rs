@@ -152,7 +152,7 @@ pub fn get_mapping_change_version_from_hg_extra<'a>(
 }
 
 /// Get a mapping change version from changeset extras, if present
-/// Some changesets are used as "boundaries" to change CommmitSyncConfigVersion
+/// Some changesets are used as "boundaries" to change CommitSyncConfigVersion
 /// used in syncing. This is determined by the `CHANGE_XREPO_MAPPING_EXTRA`'s
 /// value.
 pub fn get_mapping_change_version(
@@ -162,7 +162,7 @@ pub fn get_mapping_change_version(
 }
 
 /// Set mapping change version into changeset extras
-/// Some changesets are used as "boundaries" to change CommmitSyncConfigVersion
+/// Some changesets are used as "boundaries" to change CommitSyncConfigVersion
 /// used in syncing. This is determined by the `CHANGE_XREPO_MAPPING_EXTRA`'s
 /// value.
 pub fn set_mapping_change_version(

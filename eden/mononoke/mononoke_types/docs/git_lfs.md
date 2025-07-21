@@ -68,7 +68,7 @@ size 12345
 (ending \n)
 ```
 
-If the Git LFS pointer interpretatin is disabled we just store the pointer and set the `git_lfs` field to `None`.
+If the Git LFS pointer interpretation is disabled we just store the pointer and set the `git_lfs` field to `None`.
 
 ## It doesn't have to be consistent within a Mononoke repo
 

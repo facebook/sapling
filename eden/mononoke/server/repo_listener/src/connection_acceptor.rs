@@ -523,7 +523,7 @@ impl ChannelConn {
             // like to avoid that but sometimes that happens), then that will delay `fwd`. This
             // means that notably keepalives will not be sent (you can repro by putting a
             // `std::thread::sleep` right after we spawn `fwd`). To mitigate this, we spawn another
-            // dummy taks here. This task will take `fwd`'s place in the LIFO slot, thus pushing
+            // dummy task here. This task will take `fwd`'s place in the LIFO slot, thus pushing
             // `fwd` onto a task queue where other runtime threads can claim it. This way, even if
             // this thread goes do some expensive CPU-bound work, we won't delay keepalives.
             mononoke::spawn_task(async {});

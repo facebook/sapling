@@ -31,7 +31,7 @@
 //! <byte>{numbytes}
 //! ```
 //!
-//! The expections are requests that pass streaming arguments (f.e. unbundle). After such a
+//! The exceptions are requests that pass streaming arguments (f.e. unbundle). After such a
 //! requests the responder should respond with
 //! ```text
 //! '0\n'

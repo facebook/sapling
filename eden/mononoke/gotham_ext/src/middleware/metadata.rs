@@ -84,7 +84,7 @@ impl MetadataMiddleware {
         match tls_certificate_identities {
             TlsCertificateIdentities::TrustedProxy(idents) => {
                 match request_identities_from_headers(headers) {
-                    Some(identies_from_headers) => Some(identies_from_headers),
+                    Some(identities_from_headers) => Some(identities_from_headers),
                     None => Some(idents),
                 }
             }

@@ -76,7 +76,7 @@ struct BlameRangeV2 {
   // the file.
   //
   // If a subtree copy caused the parent to be replaced, then the index of the
-  // parent in `replacement_parents` will be sotred in `replacement_parent_index`.
+  // parent in `replacement_parents` will be stored in `replacement_parent_index`.
   //
   // Thus, the algorithm for finding the destination for "skip past this change"
   // is:

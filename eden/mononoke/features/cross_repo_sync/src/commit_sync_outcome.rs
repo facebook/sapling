@@ -415,7 +415,7 @@ pub enum DesiredRelationship<R: Repo> {
     /// Changeset should be a descendant of this variant's payload
     /// Note: in this case any changeset is a descendant of itself
     DescendantOf(Target<ChangesetId>, Target<R>),
-    /// Changeset should the same as this variant's paylod
+    /// Changeset should the same as this variant's payload
     EqualTo(Target<ChangesetId>),
 }
 

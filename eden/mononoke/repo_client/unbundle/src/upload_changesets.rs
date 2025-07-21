@@ -305,8 +305,8 @@ pub async fn upload_changeset(
         message: String::from_utf8(revlog_cs.message().into())?,
     };
 
-    // DO NOT try to comute p1 and p2 concurrently!
-    // It may result in a combinatoral explosion in mergy repos (see D14100259)
+    // DO NOT try to compute p1 and p2 concurrently!
+    // It may result in a combinatorial explosion in mergy repos (see D14100259)
     let p1 = get_parent(ctx.clone(), &repo, &uploaded_changesets, revlog_cs.p1);
     let p2 = get_parent(ctx.clone(), &repo, &uploaded_changesets, revlog_cs.p2);
 

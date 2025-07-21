@@ -35,7 +35,7 @@ mod all_simple;
 mod current_simple;
 mod push_redirection;
 
-const EMTPY_COMMIT_SYNC_ALL: &str = r#"{
+const EMPTY_COMMIT_SYNC_ALL: &str = r#"{
      "repos": {}
  }"#;
 

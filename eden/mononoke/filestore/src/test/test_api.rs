@@ -1009,6 +1009,7 @@ async fn filestore_test_peek(fb: FacebookInit) -> Result<()> {
     let res = filestore::peek(blob, ctx, &FetchKey::Canonical(content_id), 3).await;
     println!("res = {:#?}", res);
 
+    // @lint-ignore SPELL
     let expected: &[u8] = b"hel";
     assert_eq!(res?, Some(Bytes::from(expected)));
 
@@ -1041,6 +1042,7 @@ async fn filestore_test_chunked_peek(fb: FacebookInit) -> Result<()> {
     let res = filestore::peek(blob, ctx, &FetchKey::Canonical(content_id), 3).await;
     println!("res = {:#?}", res);
 
+    // @lint-ignore SPELL
     let expected: &[u8] = b"hel";
     assert_eq!(res?, Some(Bytes::from(expected)));
 

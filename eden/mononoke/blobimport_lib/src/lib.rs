@@ -134,7 +134,7 @@ impl<'a, R: BlobimportRepoLike + Clone + 'static> Blobimport<'a, R> {
 
         let chunk_size = 100;
 
-        let is_import_from_beggining = changeset.is_none() && skip.is_none();
+        let is_import_from_beginning = changeset.is_none() && skip.is_none();
         let changesets = get_changeset_stream(&revlogrepo, changeset, skip, commits_limit)
             .boxed()
             .compat();
@@ -149,7 +149,7 @@ impl<'a, R: BlobimportRepoLike + Clone + 'static> Blobimport<'a, R> {
             concurrent_lfs_imports,
             fixed_parent_order,
         }
-        .upload(changesets, is_import_from_beggining, origin_repo)
+        .upload(changesets, is_import_from_beginning, origin_repo)
         .enumerate()
         .compat()
         .map_ok({

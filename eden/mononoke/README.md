@@ -23,7 +23,7 @@ omitted are:
 * CacheLib support. There is caching, but not yet using the [OSS CacheLib release](https://github.com/facebook/cachelib).
 * Documentation on how to configure.  You can probably work out some hints from the tests.
 
-Check GitHub Actions for the latest build/test status. Linux is Mononoke's primary target plaform with OSS CI also running on MacOS. Other Unix-like OSes may be supported in the future.
+Check GitHub Actions for the latest build/test status. Linux is Mononoke's primary target platform with OSS CI also running on MacOS. Other Unix-like OSes may be supported in the future.
 
 ## Subsystem Docs
 

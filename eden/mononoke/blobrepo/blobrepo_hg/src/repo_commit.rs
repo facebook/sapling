@@ -463,7 +463,7 @@ pub fn extract_parents_complete(
     subtree_changes: &Option<(HgSubtreeChanges, HashMap<HgChangesetId, ChangesetHandle>)>,
 ) -> BoxFuture<'static, Result<(), Error>> {
     // DO NOT replace and_then() with join() or futures_ordered()!
-    // It may result in a combinatoral explosion in mergy repos, like the following:
+    // It may result in a combinatorial explosion in mergy repos, like the following:
     //  o
     //  |\
     //  | o
@@ -512,7 +512,7 @@ pub async fn handle_parents(
     p2: Option<ChangesetHandle>,
 ) -> Result<(HgParents, Vec<HgManifestId>, Vec<ChangesetId>), Error> {
     // DO NOT replace and_then() with join() or futures_ordered()!
-    // It may result in a combinatoral explosion in mergy repos, like the following:
+    // It may result in a combinatorial explosion in mergy repos, like the following:
     //  o
     //  |\
     //  | o

@@ -82,7 +82,7 @@ Run the heal, with write errors injected, simulating store still bad
   1 [INFO] Couldn't heal blob repo0000.hgmanifest.sha1.7c9b4fd8b49377e2fead2e9610bb8db910a98c53 in these blobstores: {BlobstoreId(0)}
   1 [INFO] Couldn't heal blob repo0000.hgmanifest.sha1.eb79886383871977bccdb3000c275a279f0d4c99 in these blobstores: {BlobstoreId(0)}
   1 [INFO] For 33 processed entries and 33 blobstore keys: healthy blobs 0, healed blobs 0, failed to heal 33, missing blobs 0
-  1 [INFO] Requeueing 33 queue entries for another healing attempt
+  1 [INFO] Requeuing 33 queue entries for another healing attempt
   1 [INFO] Deleting 33 actioned queue entries
   1 [INFO] Iteration rows processed: * rows, *s; total: * rows, *s (glob)
   1 [INFO] The last batch was not full size, waiting...

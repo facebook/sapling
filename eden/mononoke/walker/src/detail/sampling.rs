@@ -538,7 +538,7 @@ where
     }
 
     // Needs to be called to stop tracking the node and thus free memory.
-    // Can be called from the vistor visit, or in the stream processing
+    // Can be called from the visitor visit, or in the stream processing
     // walk output.
     pub fn complete_step(&self, s: &S) -> Option<T> {
         let reverse_mapping = self.inflight_reverse.remove(s);

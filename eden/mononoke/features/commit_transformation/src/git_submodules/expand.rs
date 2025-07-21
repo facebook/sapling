@@ -630,7 +630,7 @@ async fn get_previous_submodule_commits<'a, R: Repo>(
     ctx: &'a CoreContext,
     // Parents of the changeset being synced from the source repo. We get the
     // contents of the submodule file in those revisions to get the previous
-    // submodule commit the source repo dependend on.
+    // submodule commit the source repo depended on.
     parents: &'a [ChangesetId],
     small_repo: &'a R,
     // Path of submodule `A` within repo `source`.
