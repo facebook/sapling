@@ -70,7 +70,7 @@ pub async fn run(app: MononokeApp, args: CommandArgs) -> Result<()> {
         GitContentRefSubcommand::Update(update_args) => {
             update::update(&repo, &ctx, update_args).await?
         }
-        GitContentRefSubcommand::Get(get_args) => get::get(&repo, get_args).await?,
+        GitContentRefSubcommand::Get(get_args) => get::get(&ctx, &repo, get_args).await?,
         GitContentRefSubcommand::Delete(delete_args) => {
             delete::delete(&repo, &ctx, delete_args).await?
         }

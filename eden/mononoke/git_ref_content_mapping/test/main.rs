@@ -9,6 +9,7 @@ use std::collections::HashSet;
 use std::str::FromStr;
 
 use anyhow::Error;
+use context::CoreContext;
 use fbinit::FacebookInit;
 use git_ref_content_mapping::GitRefContentMapping;
 use git_ref_content_mapping::GitRefContentMappingEntry;
@@ -22,7 +23,8 @@ const ZERO_GIT_HASH: &str = "0000000000000000000000000000000000000000";
 const ONE_GIT_HASH: &str = "1111111111111111111111111111111111111111";
 
 #[mononoke::fbinit_test]
-async fn test_add_and_get(_: FacebookInit) -> Result<(), Error> {
+async fn test_add_and_get(fb: FacebookInit) -> Result<(), Error> {
+    let ctx = CoreContext::test_mock(fb);
     let mapping = SqlGitRefContentMappingBuilder::with_sqlite_in_memory()?.build(REPO_ZERO);
     let ref_name = "refs/tags/tag_to_tree";
     let entry = GitRefContentMappingEntry {
@@ -31,10 +33,12 @@ async fn test_add_and_get(_: FacebookInit) -> Result<(), Error> {
         is_tree: true,
     };
 
-    mapping.add_or_update_mappings(vec![entry.clone()]).await?;
+    mapping
+        .add_or_update_mappings(&ctx, vec![entry.clone()])
+        .await?;
 
     let result = mapping
-        .get_entry_by_ref_name(entry.ref_name.clone())
+        .get_entry_by_ref_name(&ctx, entry.ref_name.clone())
         .await?;
     assert_eq!(
         result.as_ref().map(|entry| entry.git_hash),
@@ -45,7 +49,8 @@ async fn test_add_and_get(_: FacebookInit) -> Result<(), Error> {
 }
 
 #[mononoke::fbinit_test]
-async fn test_update_and_get(_: FacebookInit) -> Result<(), Error> {
+async fn test_update_and_get(fb: FacebookInit) -> Result<(), Error> {
+    let ctx = CoreContext::test_mock(fb);
     let mapping = SqlGitRefContentMappingBuilder::with_sqlite_in_memory()?.build(REPO_ZERO);
     let ref_name = "refs/tags/tag_to_tree";
     let entry = GitRefContentMappingEntry {
@@ -54,10 +59,12 @@ async fn test_update_and_get(_: FacebookInit) -> Result<(), Error> {
         is_tree: true,
     };
 
-    mapping.add_or_update_mappings(vec![entry.clone()]).await?;
+    mapping
+        .add_or_update_mappings(&ctx, vec![entry.clone()])
+        .await?;
 
     let result = mapping
-        .get_entry_by_ref_name(entry.ref_name.clone())
+        .get_entry_by_ref_name(&ctx, entry.ref_name.clone())
         .await?;
     assert_eq!(result, Some(entry.clone()));
 
@@ -68,10 +75,10 @@ async fn test_update_and_get(_: FacebookInit) -> Result<(), Error> {
         is_tree: true,
     };
     mapping
-        .add_or_update_mappings(vec![new_entry.clone()])
+        .add_or_update_mappings(&ctx, vec![new_entry.clone()])
         .await?;
     let result = mapping
-        .get_entry_by_ref_name(new_entry.ref_name.clone())
+        .get_entry_by_ref_name(&ctx, new_entry.ref_name.clone())
         .await?;
     assert_eq!(result, Some(new_entry.clone()));
 
@@ -79,10 +86,11 @@ async fn test_update_and_get(_: FacebookInit) -> Result<(), Error> {
 }
 
 #[mononoke::fbinit_test]
-async fn test_get_without_add(_: FacebookInit) -> Result<(), Error> {
+async fn test_get_without_add(fb: FacebookInit) -> Result<(), Error> {
+    let ctx = CoreContext::test_mock(fb);
     let mapping = SqlGitRefContentMappingBuilder::with_sqlite_in_memory()?.build(REPO_ZERO);
     let result = mapping
-        .get_entry_by_ref_name("refs/tags/tag_to_tree".to_string())
+        .get_entry_by_ref_name(&ctx, "refs/tags/tag_to_tree".to_string())
         .await?;
     assert_eq!(result, None);
 
@@ -90,7 +98,8 @@ async fn test_get_without_add(_: FacebookInit) -> Result<(), Error> {
 }
 
 #[mononoke::fbinit_test]
-async fn test_get_all_mappings(_: FacebookInit) -> Result<(), Error> {
+async fn test_get_all_mappings(fb: FacebookInit) -> Result<(), Error> {
+    let ctx = CoreContext::test_mock(fb);
     let mapping = SqlGitRefContentMappingBuilder::with_sqlite_in_memory()?.build(REPO_ZERO);
     let entry = GitRefContentMappingEntry {
         ref_name: "refs/tags/tag_to_tree".to_string(),
@@ -103,11 +112,11 @@ async fn test_get_all_mappings(_: FacebookInit) -> Result<(), Error> {
         is_tree: false,
     };
     mapping
-        .add_or_update_mappings(vec![entry, another_entry])
+        .add_or_update_mappings(&ctx, vec![entry, another_entry])
         .await?;
 
     let result = mapping
-        .get_all_entries()
+        .get_all_entries(&ctx)
         .await?
         .into_iter()
         .map(|entry| entry.ref_name);
@@ -122,7 +131,8 @@ async fn test_get_all_mappings(_: FacebookInit) -> Result<(), Error> {
 }
 
 #[mononoke::fbinit_test]
-async fn test_delete_mappings_by_name(_: FacebookInit) -> Result<(), Error> {
+async fn test_delete_mappings_by_name(fb: FacebookInit) -> Result<(), Error> {
+    let ctx = CoreContext::test_mock(fb);
     let mapping = SqlGitRefContentMappingBuilder::with_sqlite_in_memory()?.build(REPO_ZERO);
     let entry = GitRefContentMappingEntry {
         ref_name: "refs/tags/tag_to_tree".to_string(),
@@ -135,11 +145,11 @@ async fn test_delete_mappings_by_name(_: FacebookInit) -> Result<(), Error> {
         is_tree: false,
     };
     mapping
-        .add_or_update_mappings(vec![entry, another_entry])
+        .add_or_update_mappings(&ctx, vec![entry, another_entry])
         .await?;
 
     let result = mapping
-        .get_all_entries()
+        .get_all_entries(&ctx)
         .await?
         .into_iter()
         .map(|entry| entry.ref_name);
@@ -152,12 +162,15 @@ async fn test_delete_mappings_by_name(_: FacebookInit) -> Result<(), Error> {
     );
 
     mapping
-        .delete_mappings_by_name(vec![
-            "refs/tags/tag_to_tree".to_string(),
-            "refs/tags/tag_to_blob".to_string(),
-        ])
+        .delete_mappings_by_name(
+            &ctx,
+            vec![
+                "refs/tags/tag_to_tree".to_string(),
+                "refs/tags/tag_to_blob".to_string(),
+            ],
+        )
         .await?;
 
-    assert!(mapping.get_all_entries().await?.is_empty());
+    assert!(mapping.get_all_entries(&ctx).await?.is_empty());
     Ok(())
 }

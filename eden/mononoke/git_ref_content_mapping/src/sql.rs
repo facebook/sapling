@@ -9,6 +9,7 @@ use ::sql_ext::mononoke_queries;
 use anyhow::Context;
 use anyhow::Result;
 use async_trait::async_trait;
+use context::CoreContext;
 use mononoke_types::RepositoryId;
 use mononoke_types::hash::GitSha1;
 use sql_construct::SqlConstruct;
@@ -91,13 +92,14 @@ impl GitRefContentMapping for SqlGitRefContentMapping {
         self.repo_id
     }
 
-    async fn get_all_entries(&self) -> Result<Vec<GitRefContentMappingEntry>> {
-        let results =
-            SelectAllMappings::query(&self.connections.read_connection, None, &self.repo_id)
-                .await
-                .with_context(|| {
-                    format!("Failure in fetching all entries for repo {}", self.repo_id)
-                })?;
+    async fn get_all_entries(&self, ctx: &CoreContext) -> Result<Vec<GitRefContentMappingEntry>> {
+        let results = SelectAllMappings::query(
+            &self.connections.read_connection,
+            ctx.sql_query_telemetry(),
+            &self.repo_id,
+        )
+        .await
+        .with_context(|| format!("Failure in fetching all entries for repo {}", self.repo_id))?;
 
         let values = results
             .into_iter()
@@ -110,11 +112,12 @@ impl GitRefContentMapping for SqlGitRefContentMapping {
 
     async fn get_entry_by_ref_name(
         &self,
+        ctx: &CoreContext,
         ref_name: String,
     ) -> Result<Option<GitRefContentMappingEntry>> {
         let results = SelectMappingByRefName::query(
             &self.connections.read_connection,
-            None,
+            ctx.sql_query_telemetry(),
             &self.repo_id,
             &ref_name,
         )
@@ -141,7 +144,11 @@ impl GitRefContentMapping for SqlGitRefContentMapping {
             }))
     }
 
-    async fn add_or_update_mappings(&self, entries: Vec<GitRefContentMappingEntry>) -> Result<()> {
+    async fn add_or_update_mappings(
+        &self,
+        ctx: &CoreContext,
+        entries: Vec<GitRefContentMappingEntry>,
+    ) -> Result<()> {
         let converted_entries: Vec<_> = entries
             .iter()
             .map(|entry| {
@@ -155,7 +162,7 @@ impl GitRefContentMapping for SqlGitRefContentMapping {
             .collect();
         AddOrUpdateGitRefContentMapping::query(
             &self.connections.write_connection,
-            None,
+            ctx.sql_query_telemetry(),
             converted_entries.as_slice(),
         )
         .await
@@ -168,10 +175,14 @@ impl GitRefContentMapping for SqlGitRefContentMapping {
         Ok(())
     }
 
-    async fn delete_mappings_by_name(&self, ref_names: Vec<String>) -> Result<()> {
+    async fn delete_mappings_by_name(
+        &self,
+        ctx: &CoreContext,
+        ref_names: Vec<String>,
+    ) -> Result<()> {
         DeleteGitRefContentMappingsByName::query(
             &self.connections.write_connection,
-            None,
+            ctx.sql_query_telemetry(),
             &self.repo_id,
             ref_names.as_slice(),
         )

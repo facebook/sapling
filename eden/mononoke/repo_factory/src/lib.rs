@@ -1142,6 +1142,7 @@ impl RepoFactory {
             match repo_event_publisher.subscribe_for_content_refs_updates(&repo_name.to_string()) {
                 Ok(update_notification_receiver) => {
                     let cached_git_ref_content_mapping = CachedGitRefContentMapping::new(
+                        &self.ctx(Some(repo_identity)),
                         Arc::new(git_ref_content_mapping),
                         update_notification_receiver,
                         logger,

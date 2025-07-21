@@ -209,12 +209,12 @@ where
 
     async fn generate_ref_content_mapping(
         &self,
-        _ctx: &CoreContext,
+        ctx: &CoreContext,
         ref_name: String,
         git_hash: ObjectId,
         is_tree: bool,
     ) -> Result<(), Error> {
-        generate_ref_content_mapping(&*self.inner, ref_name, git_hash, is_tree)
+        generate_ref_content_mapping(ctx, &*self.inner, ref_name, git_hash, is_tree)
             .await
             .context("Failure in generating ref content mapping")
     }

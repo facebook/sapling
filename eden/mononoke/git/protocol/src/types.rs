@@ -846,8 +846,12 @@ pub(crate) struct GitBookmarks {
 }
 
 impl GitBookmarks {
-    pub(crate) async fn with_content_refs(&mut self, repo: &impl Repo) -> Result<&mut Self> {
-        let content_refs = git_ref_content_mapping(repo).await?;
+    pub(crate) async fn with_content_refs(
+        &mut self,
+        ctx: &CoreContext,
+        repo: &impl Repo,
+    ) -> Result<&mut Self> {
+        let content_refs = git_ref_content_mapping(ctx, repo).await?;
         self.entries
             .extend(content_refs.into_iter().collect::<FxHashMap<_, _>>());
         Ok(self)

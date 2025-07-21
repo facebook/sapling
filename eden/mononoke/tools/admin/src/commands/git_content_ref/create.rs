@@ -39,7 +39,7 @@ pub async fn create(
     // Check if the content ref being added already exists
     let git_ref_content_mapping = repo.git_ref_content_mapping.clone();
     if let Some(content_ref_entry) = git_ref_content_mapping
-        .get_entry_by_ref_name(create_args.ref_name.clone())
+        .get_entry_by_ref_name(ctx, create_args.ref_name.clone())
         .await?
     {
         anyhow::bail!(
@@ -62,7 +62,7 @@ pub async fn create(
         GitRefContentMappingEntry::new(create_args.ref_name.clone(), git_hash, create_args.is_tree);
 
     git_ref_content_mapping
-        .add_or_update_mappings(vec![entry])
+        .add_or_update_mappings(ctx, vec![entry])
         .await?;
     let info = GitContentRefInfo {
         repo_name: repo.repo_identity.name().to_string(),

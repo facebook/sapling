@@ -10,6 +10,7 @@ mod sql;
 
 use anyhow::Result;
 use async_trait::async_trait;
+use context::CoreContext;
 use mononoke_types::RepositoryId;
 use mononoke_types::hash::GitSha1;
 
@@ -42,18 +43,27 @@ pub trait GitRefContentMapping: Send + Sync {
     fn repo_id(&self) -> RepositoryId;
 
     /// Fetch all the ref content mapping entries for the given repo
-    async fn get_all_entries(&self) -> Result<Vec<GitRefContentMappingEntry>>;
+    async fn get_all_entries(&self, ctx: &CoreContext) -> Result<Vec<GitRefContentMappingEntry>>;
 
     /// Fetch the git ref content mapping entry corresponding to the ref name in the
     /// given repo, if one exists
     async fn get_entry_by_ref_name(
         &self,
+        ctx: &CoreContext,
         ref_name: String,
     ) -> Result<Option<GitRefContentMappingEntry>>;
 
     /// Add new git ref to content mapping entries or update existing ones
-    async fn add_or_update_mappings(&self, entries: Vec<GitRefContentMappingEntry>) -> Result<()>;
+    async fn add_or_update_mappings(
+        &self,
+        ctx: &CoreContext,
+        entries: Vec<GitRefContentMappingEntry>,
+    ) -> Result<()>;
 
     /// Delete existing git ref content mappings based on the input ref names
-    async fn delete_mappings_by_name(&self, ref_names: Vec<String>) -> Result<()>;
+    async fn delete_mappings_by_name(
+        &self,
+        ctx: &CoreContext,
+        ref_names: Vec<String>,
+    ) -> Result<()>;
 }

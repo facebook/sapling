@@ -683,7 +683,7 @@ pub async fn generate_pack_item_stream<'a>(
         .await
         .context("Error while converting bookmarks to Git format during upload-pack")?;
     let bookmarks = bookmarks
-        .with_content_refs(repo)
+        .with_content_refs(ctx.as_ref(), repo)
         .await
         .context("Error while getting content refs during upload-pack")?;
     // Reverse the list of commits so that we can prevent delta cycles from appearing in the packfile
@@ -769,7 +769,7 @@ pub async fn ls_refs_response(
         .await
         .context("Error while converting bookmarks to Git format during ls-refs")?;
     let bookmarks = bookmarks
-        .with_content_refs(repo)
+        .with_content_refs(ctx, repo)
         .await
         .context("Error while getting content refs during ls-refs")?;
     // Convert the above bookmarks into refs that can be sent in the response

@@ -32,7 +32,7 @@ pub async fn delete(
         delete_args.ref_names
     );
     repo.git_ref_content_mapping
-        .delete_mappings_by_name(delete_args.ref_names.clone())
+        .delete_mappings_by_name(ctx, delete_args.ref_names.clone())
         .await?;
     for ref_name in delete_args.ref_names {
         let info = GitContentRefInfo {

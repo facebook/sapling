@@ -181,9 +181,12 @@ pub async fn bonsai_git_mappings_by_bonsai(
         .collect())
 }
 
-pub async fn git_ref_content_mapping(repo: &impl Repo) -> Result<Vec<(BookmarkKey, ObjectId)>> {
+pub async fn git_ref_content_mapping(
+    ctx: &CoreContext,
+    repo: &impl Repo,
+) -> Result<Vec<(BookmarkKey, ObjectId)>> {
     repo.git_ref_content_mapping()
-        .get_all_entries()
+        .get_all_entries(ctx)
         .await
         .with_context(|| {
             format!(

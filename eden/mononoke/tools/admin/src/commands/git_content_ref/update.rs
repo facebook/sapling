@@ -47,7 +47,7 @@ pub async fn update(
         GitRefContentMappingEntry::new(update_args.ref_name.clone(), git_hash, update_args.is_tree);
 
     repo.git_ref_content_mapping
-        .add_or_update_mappings(vec![entry])
+        .add_or_update_mappings(ctx, vec![entry])
         .await?;
     let info = GitContentRefInfo {
         repo_name: repo.repo_identity.name().to_string(),

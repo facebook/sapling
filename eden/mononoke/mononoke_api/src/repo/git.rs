@@ -258,6 +258,7 @@ pub async fn create_git_tree(
 /// either a blob or tree object, where `git_hash` is the hash of the object that is pointed
 /// to by the ref.
 pub async fn generate_ref_content_mapping(
+    ctx: &CoreContext,
     repo: &impl GitRefContentMappingRef,
     ref_name: String,
     git_hash: ObjectId,
@@ -266,9 +267,10 @@ pub async fn generate_ref_content_mapping(
     let git_hash = GitSha1::from_bytes(git_hash.as_bytes())
         .map_err(|_| GitError::InvalidHash(git_hash.to_string()))?;
     repo.git_ref_content_mapping()
-        .add_or_update_mappings(vec![GitRefContentMappingEntry::new(
-            ref_name, git_hash, is_tree,
-        )])
+        .add_or_update_mappings(
+            ctx,
+            vec![GitRefContentMappingEntry::new(ref_name, git_hash, is_tree)],
+        )
         .await
         .map_err(|e| GitError::StorageFailure(git_hash.to_string(), e.into()))
 }

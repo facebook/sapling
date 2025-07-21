@@ -7,6 +7,7 @@
 
 use anyhow::Result;
 use clap::Args;
+use context::CoreContext;
 
 use super::Repo;
 
@@ -17,10 +18,10 @@ pub struct GetContentRefArgs {
     ref_name: String,
 }
 
-pub async fn get(repo: &Repo, get_args: GetContentRefArgs) -> Result<()> {
+pub async fn get(ctx: &CoreContext, repo: &Repo, get_args: GetContentRefArgs) -> Result<()> {
     match repo
         .git_ref_content_mapping
-        .get_entry_by_ref_name(get_args.ref_name.clone())
+        .get_entry_by_ref_name(ctx, get_args.ref_name.clone())
         .await?
     {
         Some(content_ref_entry) => println!(
