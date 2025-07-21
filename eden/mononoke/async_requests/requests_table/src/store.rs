@@ -576,7 +576,7 @@ pub struct SqlLongRunningRequestsQueue {
 impl LongRunningRequestsQueue for SqlLongRunningRequestsQueue {
     async fn add_request(
         &self,
-        _ctx: &CoreContext,
+        ctx: &CoreContext,
         request_type: &RequestType,
         repo_id: Option<&RepositoryId>,
         args_blobstore_key: &BlobstoreKey,
@@ -585,7 +585,7 @@ impl LongRunningRequestsQueue for SqlLongRunningRequestsQueue {
             Some(repo_id) => {
                 AddRequestWithRepo::query(
                     &self.connections.write_connection,
-                    None,
+                    ctx.sql_query_telemetry(),
                     request_type,
                     repo_id,
                     args_blobstore_key,
@@ -596,7 +596,7 @@ impl LongRunningRequestsQueue for SqlLongRunningRequestsQueue {
             None => {
                 AddRequest::query(
                     &self.connections.write_connection,
-                    None,
+                    ctx.sql_query_telemetry(),
                     request_type,
                     args_blobstore_key,
                     &Timestamp::now(),
@@ -622,8 +622,14 @@ impl LongRunningRequestsQueue for SqlLongRunningRequestsQueue {
         loop {
             let connection = &self.connections.read_master_connection; // reaching DB master improves our chances.
             let rows = match supported_repos {
-                Some(repos) => GetOneNewRequestForRepos::query(connection, None, repos).await,
-                None => GetOneNewRequestForGlobalQueue::query(connection, None).await,
+                Some(repos) => {
+                    GetOneNewRequestForRepos::query(connection, ctx.sql_query_telemetry(), repos)
+                        .await
+                }
+                None => {
+                    GetOneNewRequestForGlobalQueue::query(connection, ctx.sql_query_telemetry())
+                        .await
+                }
             }
             .context("claiming new request")?;
             let mut entry = match rows.into_iter().next() {
@@ -650,10 +656,15 @@ impl LongRunningRequestsQueue for SqlLongRunningRequestsQueue {
 
     async fn test_get_request_entry_by_id(
         &self,
-        _ctx: &CoreContext,
+        ctx: &CoreContext,
         id: &RowId,
     ) -> Result<Option<LongRunningRequestEntry>> {
-        let rows = TestGetRequest::query(&self.connections.read_connection, None, id).await?;
+        let rows = TestGetRequest::query(
+            &self.connections.read_connection,
+            ctx.sql_query_telemetry(),
+            id,
+        )
+        .await?;
         match rows.into_iter().next() {
             None => Ok(None),
             Some(row) => Ok(Some(row_to_entry(row))),
@@ -662,13 +673,13 @@ impl LongRunningRequestsQueue for SqlLongRunningRequestsQueue {
 
     async fn mark_in_progress(
         &self,
-        _ctx: &CoreContext,
+        ctx: &CoreContext,
         req_id: &RequestId,
         claimed_by: &ClaimedBy,
     ) -> Result<bool> {
         let res = MarkRequestInProgress::query(
             &self.connections.write_connection,
-            None,
+            ctx.sql_query_telemetry(),
             &req_id.0,
             &req_id.1,
             &Timestamp::now(),
@@ -680,12 +691,12 @@ impl LongRunningRequestsQueue for SqlLongRunningRequestsQueue {
 
     async fn update_in_progress_timestamp(
         &self,
-        _ctx: &CoreContext,
+        ctx: &CoreContext,
         req_id: &RequestId,
     ) -> Result<bool> {
         let res = UpdateInProgressTimestamp::query(
             &self.connections.write_connection,
-            None,
+            ctx.sql_query_telemetry(),
             &req_id.0,
             &req_id.1,
             &Timestamp::now(),
@@ -696,7 +707,7 @@ impl LongRunningRequestsQueue for SqlLongRunningRequestsQueue {
 
     async fn find_abandoned_requests(
         &self,
-        _ctx: &CoreContext,
+        ctx: &CoreContext,
         repo_ids: Option<&[RepositoryId]>,
         abandoned_timestamp: Timestamp,
     ) -> Result<Vec<RequestId>> {
@@ -704,7 +715,7 @@ impl LongRunningRequestsQueue for SqlLongRunningRequestsQueue {
             Some(repos) => {
                 FindAbandonedRequestsForRepos::query(
                     &self.connections.write_connection,
-                    None,
+                    ctx.sql_query_telemetry(),
                     &abandoned_timestamp,
                     repos,
                 )
@@ -713,7 +724,7 @@ impl LongRunningRequestsQueue for SqlLongRunningRequestsQueue {
             None => {
                 FindAbandonedRequestsForAnyRepo::query(
                     &self.connections.write_connection,
-                    None,
+                    ctx.sql_query_telemetry(),
                     &abandoned_timestamp,
                 )
                 .await
@@ -725,13 +736,13 @@ impl LongRunningRequestsQueue for SqlLongRunningRequestsQueue {
 
     async fn mark_abandoned_request_as_new(
         &self,
-        _ctx: &CoreContext,
+        ctx: &CoreContext,
         request_id: RequestId,
         abandoned_timestamp: Timestamp,
     ) -> Result<bool> {
         let res = MarkRequestAsNewAgainIfAbandoned::query(
             &self.connections.write_connection,
-            None,
+            ctx.sql_query_telemetry(),
             &request_id.0,
             &request_id.1,
             &abandoned_timestamp,
@@ -743,13 +754,13 @@ impl LongRunningRequestsQueue for SqlLongRunningRequestsQueue {
 
     async fn mark_ready(
         &self,
-        _ctx: &CoreContext,
+        ctx: &CoreContext,
         req_id: &RequestId,
         blobstore_result_key: BlobstoreKey,
     ) -> Result<bool> {
         let res = MarkRequestReady::query(
             &self.connections.write_connection,
-            None,
+            ctx.sql_query_telemetry(),
             &req_id.0,
             &req_id.1,
             &Timestamp::now(),
@@ -760,10 +771,10 @@ impl LongRunningRequestsQueue for SqlLongRunningRequestsQueue {
         Ok(res.affected_rows() > 0)
     }
 
-    async fn mark_new(&self, _ctx: &CoreContext, req_id: &RequestId) -> Result<bool> {
+    async fn mark_new(&self, ctx: &CoreContext, req_id: &RequestId) -> Result<bool> {
         let res = MarkRequestAsNew::query(
             &self.connections.write_connection,
-            None,
+            ctx.sql_query_telemetry(),
             &req_id.0,
             &req_id.1,
         )
@@ -774,12 +785,17 @@ impl LongRunningRequestsQueue for SqlLongRunningRequestsQueue {
 
     async fn test_mark(
         &self,
-        _ctx: &CoreContext,
+        ctx: &CoreContext,
         row_id: &RowId,
         status: RequestStatus,
     ) -> Result<bool> {
-        let res =
-            TestMark::query(&self.connections.write_connection, None, row_id, &status).await?;
+        let res = TestMark::query(
+            &self.connections.write_connection,
+            ctx.sql_query_telemetry(),
+            row_id,
+            &status,
+        )
+        .await?;
         Ok(res.affected_rows() > 0)
     }
 
@@ -835,7 +851,7 @@ impl LongRunningRequestsQueue for SqlLongRunningRequestsQueue {
 
     async fn list_requests(
         &self,
-        _ctx: &CoreContext,
+        ctx: &CoreContext,
         repo_ids: Option<&[RepositoryId]>,
         last_update_newer_than: Option<&Timestamp>,
     ) -> Result<Vec<LongRunningRequestEntry>> {
@@ -843,7 +859,7 @@ impl LongRunningRequestsQueue for SqlLongRunningRequestsQueue {
             Some(repos) => {
                 ListRequestsForRepos::query(
                     &self.connections.read_connection,
-                    None,
+                    ctx.sql_query_telemetry(),
                     last_update_newer_than.unwrap_or(&Timestamp::from_timestamp_nanos(0)),
                     repos,
                 )
@@ -852,7 +868,7 @@ impl LongRunningRequestsQueue for SqlLongRunningRequestsQueue {
             None => {
                 ListRequestsForAnyRepo::query(
                     &self.connections.read_connection,
-                    None,
+                    ctx.sql_query_telemetry(),
                     last_update_newer_than.unwrap_or(&Timestamp::from_timestamp_nanos(0)),
                 )
                 .await
@@ -867,19 +883,26 @@ impl LongRunningRequestsQueue for SqlLongRunningRequestsQueue {
 
     async fn get_queue_stats(
         &self,
-        _ctx: &CoreContext,
+        ctx: &CoreContext,
         repo_ids: Option<&[RepositoryId]>,
     ) -> Result<QueueStats> {
         Ok(QueueStats {
-            queue_length_by_status: get_queue_length(&self.connections.read_connection, repo_ids)
+            queue_length_by_status: get_queue_length(
+                ctx,
+                &self.connections.read_connection,
+                repo_ids,
+            )
+            .await?,
+            queue_age_by_status: get_queue_age(ctx, &self.connections.read_connection, repo_ids)
                 .await?,
-            queue_age_by_status: get_queue_age(&self.connections.read_connection, repo_ids).await?,
             queue_length_by_repo_and_status: get_queue_length_by_repo(
+                ctx,
                 &self.connections.read_connection,
                 repo_ids,
             )
             .await?,
             queue_age_by_repo_and_status: get_queue_age_by_repo(
+                ctx,
                 &self.connections.read_connection,
                 repo_ids,
             )
@@ -944,12 +967,13 @@ impl LongRunningRequestsQueue for SqlLongRunningRequestsQueue {
 }
 
 async fn get_queue_length(
+    ctx: &CoreContext,
     conn: &Connection,
     repo_ids: Option<&[RepositoryId]>,
 ) -> Result<Vec<(RequestStatus, u64)>> {
     Ok(match repo_ids {
-        Some(repos) => GetQueueLengthForRepos::query(conn, None, repos).await,
-        None => GetQueueLengthForAllRepos::query(conn, None).await,
+        Some(repos) => GetQueueLengthForRepos::query(conn, ctx.sql_query_telemetry(), repos).await,
+        None => GetQueueLengthForAllRepos::query(conn, ctx.sql_query_telemetry()).await,
     }
     .context("fetching queue length stats")?
     .into_iter()
@@ -957,12 +981,15 @@ async fn get_queue_length(
 }
 
 async fn get_queue_length_by_repo(
+    ctx: &CoreContext,
     conn: &Connection,
     repo_ids: Option<&[RepositoryId]>,
 ) -> Result<Vec<(QueueStatsEntry, u64)>> {
     Ok(match repo_ids {
-        Some(repos) => GetQueueLengthByRepoForRepos::query(conn, None, repos).await,
-        None => GetQueueLengthByRepoForAllRepos::query(conn, None).await,
+        Some(repos) => {
+            GetQueueLengthByRepoForRepos::query(conn, ctx.sql_query_telemetry(), repos).await
+        }
+        None => GetQueueLengthByRepoForAllRepos::query(conn, ctx.sql_query_telemetry()).await,
     }
     .context("fetching queue length stats")?
     .into_iter()
@@ -970,12 +997,13 @@ async fn get_queue_length_by_repo(
     .collect())
 }
 async fn get_queue_age(
+    ctx: &CoreContext,
     conn: &Connection,
     repo_ids: Option<&[RepositoryId]>,
 ) -> Result<Vec<(RequestStatus, Timestamp)>> {
     Ok(match repo_ids {
-        Some(repos) => GetQueueAgeForRepos::query(conn, None, repos).await,
-        None => GetQueueAgeForAllRepos::query(conn, None).await,
+        Some(repos) => GetQueueAgeForRepos::query(conn, ctx.sql_query_telemetry(), repos).await,
+        None => GetQueueAgeForAllRepos::query(conn, ctx.sql_query_telemetry()).await,
     }
     .context("fetching queue age stats")?
     .into_iter()
@@ -994,12 +1022,15 @@ async fn get_queue_age(
 }
 
 async fn get_queue_age_by_repo(
+    ctx: &CoreContext,
     conn: &Connection,
     repo_ids: Option<&[RepositoryId]>,
 ) -> Result<Vec<(QueueStatsEntry, Timestamp)>> {
     Ok(match repo_ids {
-        Some(repos) => GetQueueAgeByRepoForRepos::query(conn, None, repos).await,
-        None => GetQueueAgeByRepoForAllRepos::query(conn, None).await,
+        Some(repos) => {
+            GetQueueAgeByRepoForRepos::query(conn, ctx.sql_query_telemetry(), repos).await
+        }
+        None => GetQueueAgeByRepoForAllRepos::query(conn, ctx.sql_query_telemetry()).await,
     }
     .context("fetching queue age stats")?
     .into_iter()
