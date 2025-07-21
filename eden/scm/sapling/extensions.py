@@ -627,7 +627,14 @@ def bind(func, *args):
     Returns a new function that is the partial application of args and kwargs
     to func.  For example,
 
-        f(1, 2, bar=3) === bind(f, 1)(2, bar=3)"""
+        f(1, 2, bar=3) === bind(f, 1)(2, bar=3)
+
+    >>> def add(x, y): return x + y
+    >>>
+    >>> add1 = bind(add, 1)
+    >>> add1 # doctest: +ELLIPSIS
+    <function bind.<locals>.closure at ...>
+    """
     assert callable(func)
 
     def closure(*a, **kw):
