@@ -16,6 +16,7 @@ use uuid::Uuid;
 pub use write_ahead_log::BlobstoreWal;
 pub use write_ahead_log::BlobstoreWalEntry;
 pub use write_ahead_log::SqlBlobstoreWal;
+pub use write_ahead_log::SqlBlobstoreWalBuilder;
 
 // Identifier for given blobstore operation to facilitate correlating same operation
 // across multiple blobstores.

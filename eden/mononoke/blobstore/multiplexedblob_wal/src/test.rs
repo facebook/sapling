@@ -19,7 +19,7 @@ use blobstore::BlobstoreIsPresent;
 use blobstore::BlobstoreUnlinkOps;
 use blobstore_sync_queue::BlobstoreWal;
 use blobstore_sync_queue::BlobstoreWalEntry;
-use blobstore_sync_queue::SqlBlobstoreWal;
+use blobstore_sync_queue::SqlBlobstoreWalBuilder;
 use blobstore_test_utils::Tickable;
 use borrowed::borrowed;
 use bytes::Bytes;
@@ -48,13 +48,15 @@ use crate::WalMultiplexedBlobstore;
 use crate::scrub::WalScrubBlobstore;
 
 #[mononoke::fbinit_test]
-async fn test_quorum_is_valid(_fb: FacebookInit) -> Result<()> {
+async fn test_quorum_is_valid(fb: FacebookInit) -> Result<()> {
+    let ctx = CoreContext::test_mock(fb);
     let scuba = Scuba::new(
         MononokeScubaSampleBuilder::with_discard(),
         MononokeScubaSampleBuilder::with_discard(),
         nonzero!(1u64),
     )?;
-    let wal = Arc::new(SqlBlobstoreWal::with_sqlite_in_memory()?);
+    let wal =
+        Arc::new(SqlBlobstoreWalBuilder::with_sqlite_in_memory()?.build(ctx.sql_query_telemetry()));
 
     // Check the quorum cannot be zero
     {

@@ -14,7 +14,7 @@ use async_trait::async_trait;
 use blobstore::Blobstore;
 use blobstore::BlobstoreBytes;
 use blobstore::BlobstoreGetData;
-use blobstore_sync_queue::SqlBlobstoreWal;
+use blobstore_sync_queue::SqlBlobstoreWalBuilder;
 use bytes::Bytes;
 use context::CoreContext;
 use fbinit::FacebookInit;
@@ -117,7 +117,8 @@ async fn test_all_blobstores_failing(fb: FacebookInit) -> Result<()> {
     // all blobatores fail, so it doesn't matter whether we actually write the blob or not
 
     // the queue will have an entry for the previous write
-    let wal = Arc::new(SqlBlobstoreWal::with_sqlite_in_memory()?);
+    let wal =
+        Arc::new(SqlBlobstoreWalBuilder::with_sqlite_in_memory()?.build(ctx.sql_query_telemetry()));
     let entry = BlobstoreWalEntry::new(key.clone(), multiplex_id, ts, 12);
     wal.log_many(&ctx, vec![entry]).await?;
 
@@ -171,7 +172,8 @@ async fn test_healthy_blob(fb: FacebookInit) -> Result<()> {
 
     // the queue will have an entry for the previous write
     // it can even have multiple entries, if the blob was written twice
-    let wal = Arc::new(SqlBlobstoreWal::with_sqlite_in_memory()?);
+    let wal =
+        Arc::new(SqlBlobstoreWalBuilder::with_sqlite_in_memory()?.build(ctx.sql_query_telemetry()));
     let entry1 = BlobstoreWalEntry::new(key.clone(), multiplex_id, ts, 13);
     let entry2 = BlobstoreWalEntry::new(key.clone(), multiplex_id, ts, 14);
     wal.log_many(&ctx, vec![entry1, entry2]).await?;
@@ -222,7 +224,8 @@ async fn test_missing_blob_healed(fb: FacebookInit) -> Result<()> {
     bs1.put(&ctx, key.clone(), value.clone()).await?;
 
     // the queue will have an entry for the previous write
-    let wal = Arc::new(SqlBlobstoreWal::with_sqlite_in_memory()?);
+    let wal =
+        Arc::new(SqlBlobstoreWalBuilder::with_sqlite_in_memory()?.build(ctx.sql_query_telemetry()));
     let entry = BlobstoreWalEntry::new(key.clone(), multiplex_id, ts, 15);
     wal.log_many(&ctx, vec![entry]).await?;
 
@@ -272,7 +275,8 @@ async fn test_missing_blob_not_healed(fb: FacebookInit) -> Result<()> {
     bs1.put(&ctx, key.clone(), value.clone()).await?;
 
     // the queue will have an entry for the previous write
-    let wal = Arc::new(SqlBlobstoreWal::with_sqlite_in_memory()?);
+    let wal =
+        Arc::new(SqlBlobstoreWalBuilder::with_sqlite_in_memory()?.build(ctx.sql_query_telemetry()));
     let entry = BlobstoreWalEntry::new(key.clone(), multiplex_id, ts, 16);
     wal.log_many(&ctx, vec![entry]).await?;
 
@@ -322,7 +326,8 @@ async fn test_blob_cannot_be_fetched(fb: FacebookInit) -> Result<()> {
     // we assume the blob is only available in the failing blobstore
 
     // the queue will have an entry for the previous write
-    let wal = Arc::new(SqlBlobstoreWal::with_sqlite_in_memory()?);
+    let wal =
+        Arc::new(SqlBlobstoreWalBuilder::with_sqlite_in_memory()?.build(ctx.sql_query_telemetry()));
     let entry = BlobstoreWalEntry::new(key.clone(), multiplex_id, ts, 17);
     wal.log_many(&ctx, vec![entry]).await?;
 
@@ -383,7 +388,8 @@ async fn test_different_blobs_wal_entries(fb: FacebookInit) -> Result<()> {
 
     // the queue will have an entry for the previous writes and some other
     // entries from different multiplex configuration
-    let wal = Arc::new(SqlBlobstoreWal::with_sqlite_in_memory()?);
+    let wal =
+        Arc::new(SqlBlobstoreWalBuilder::with_sqlite_in_memory()?.build(ctx.sql_query_telemetry()));
 
     let entry1 = BlobstoreWalEntry::new(key1.clone(), mid1, ts, 18);
     let entry2 = BlobstoreWalEntry::new(key2.clone(), mid1, ts, 19);
@@ -442,7 +448,8 @@ async fn test_blob_missing_completely(fb: FacebookInit) -> Result<()> {
 
     // the queue will have an entry for the previous write
     // it can even have multiple entries, if the blob was written twice
-    let wal = Arc::new(SqlBlobstoreWal::with_sqlite_in_memory()?);
+    let wal =
+        Arc::new(SqlBlobstoreWalBuilder::with_sqlite_in_memory()?.build(ctx.sql_query_telemetry()));
     let entry = BlobstoreWalEntry::new(key.clone(), multiplex_id, ts, 21);
     wal.log_many(&ctx, vec![entry]).await?;
 
@@ -492,7 +499,8 @@ async fn test_entry_timestamp_updated(fb: FacebookInit) -> Result<()> {
     bs1.put(&ctx, key.clone(), value.clone()).await?;
 
     // the queue will have an entry for the previous write
-    let wal = Arc::new(SqlBlobstoreWal::with_sqlite_in_memory()?);
+    let wal =
+        Arc::new(SqlBlobstoreWalBuilder::with_sqlite_in_memory()?.build(ctx.sql_query_telemetry()));
     let entry = BlobstoreWalEntry::new(key.clone(), multiplex_id, original_ts, 22);
     wal.log_many(&ctx, vec![entry]).await?;
 

@@ -29,7 +29,7 @@ use blobstore_factory::BlobstoreOptions;
 use blobstore_factory::ReadOnlyStorage;
 use blobstore_factory::make_blobstore;
 use blobstore_sync_queue::BlobstoreWal;
-use blobstore_sync_queue::SqlBlobstoreWal;
+use blobstore_sync_queue::SqlBlobstoreWalBuilder;
 use borrowed::borrowed;
 use cached_config::ConfigStore;
 use chrono::Duration as ChronoDuration;
@@ -163,7 +163,7 @@ async fn maybe_schedule_healer_for_storage(
             ..
         } => {
             let wal = setup_wal(
-                fb,
+                ctx,
                 mysql_options,
                 queue_db,
                 readonly_storage,
@@ -210,20 +210,21 @@ async fn maybe_schedule_healer_for_storage(
 }
 
 fn setup_wal(
-    fb: FacebookInit,
+    ctx: &CoreContext,
     mysql_options: &MysqlOptions,
     queue_db: ShardedDatabaseConfig,
     readonly_storage: ReadOnlyStorage,
     dry_run: bool,
     shard_range: ShardRange,
 ) -> Result<Arc<dyn BlobstoreWal>> {
-    let wal = SqlBlobstoreWal::with_sharded_database_config(
-        fb,
+    let wal = SqlBlobstoreWalBuilder::with_sharded_database_config(
+        ctx.fb.clone(),
         &queue_db,
         mysql_options,
         readonly_storage.0,
     )
-    .context("While opening WAL")?;
+    .context("While opening WAL")?
+    .build(ctx.sql_query_telemetry());
 
     let wal: Arc<dyn BlobstoreWal> = if dry_run {
         Arc::new(DummyBlobstoreWal::new(wal))

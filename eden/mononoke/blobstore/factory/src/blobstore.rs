@@ -21,11 +21,12 @@ use blobstore::DEFAULT_PUT_BEHAVIOUR;
 use blobstore::DisabledBlob;
 use blobstore::ErrorKind;
 use blobstore::PutBehaviour;
-use blobstore_sync_queue::SqlBlobstoreWal;
+use blobstore_sync_queue::SqlBlobstoreWalBuilder;
 use cacheblob::CachelibBlobstoreOptions;
 use cached_config::ConfigStore;
 use chaosblob::ChaosBlobstore;
 use chaosblob::ChaosOptions;
+use context::CoreContext;
 use delayblob::DelayOptions;
 use delayblob::DelayedBlobstore;
 use fbinit::FacebookInit;
@@ -812,18 +813,23 @@ async fn make_multiplexed_wal<'a>(
     )
     .await?;
 
-    let wal_queue = Arc::new(SqlBlobstoreWal::with_sharded_database_config(
-        fb,
-        &queue_db,
-        mysql_options,
-        readonly_storage.0,
-    )?);
     let scuba = WalScuba::new_from_raw(
         fb,
         inner_blobstores_scuba_table,
         multiplex_scuba_table,
         scuba_sample_rate,
     )?;
+
+    let ctx = CoreContext::new_with_logger(fb, logger.clone());
+
+    let sql_blob_wal = SqlBlobstoreWalBuilder::with_sharded_database_config(
+        fb,
+        &queue_db,
+        mysql_options,
+        readonly_storage.0,
+    )?
+    .build(ctx.sql_query_telemetry());
+    let wal_queue = Arc::new(sql_blob_wal);
 
     let blobstore = match &blobstore_options.scrub_options {
         Some(scrub_options) => {

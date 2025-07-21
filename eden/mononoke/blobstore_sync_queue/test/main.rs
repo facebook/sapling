@@ -9,7 +9,7 @@ use anyhow::Error;
 use anyhow::format_err;
 use blobstore_sync_queue::BlobstoreWal;
 use blobstore_sync_queue::BlobstoreWalEntry;
-use blobstore_sync_queue::SqlBlobstoreWal;
+use blobstore_sync_queue::SqlBlobstoreWalBuilder;
 use context::CoreContext;
 use fbinit::FacebookInit;
 use metaconfig_types::MultiplexId;
@@ -20,7 +20,7 @@ use sql_construct::SqlConstruct;
 #[mononoke::fbinit_test]
 async fn test_write_ahead_log(fb: FacebookInit) -> Result<(), Error> {
     let ctx = CoreContext::test_mock(fb);
-    let wal = SqlBlobstoreWal::with_sqlite_in_memory()?;
+    let wal = SqlBlobstoreWalBuilder::with_sqlite_in_memory()?.build(ctx.sql_query_telemetry());
     let mp = MultiplexId::new(1);
 
     let key0 = String::from("key0");

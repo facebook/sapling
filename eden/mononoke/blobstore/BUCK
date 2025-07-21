@@ -44,6 +44,7 @@ rust_library(
         "//eden/mononoke/facebook/manifoldblob:manifoldblob",
         "//eden/mononoke/facebook/s3pool:s3pool",
         "//eden/mononoke/metaconfig:metaconfig_types",
+        "//eden/mononoke/server/context:context",
     ],
 )
 

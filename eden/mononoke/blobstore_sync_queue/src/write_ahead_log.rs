@@ -44,6 +44,7 @@ use sql::Connection;
 use sql::WriteResult;
 use sql_common::mysql::IsolationLevel;
 use sql_construct::SqlShardedConstruct;
+use sql_ext::SqlQueryTelemetry;
 use sql_ext::SqlShardedConnections;
 use sql_ext::mononoke_queries;
 use vec1::Vec1;
@@ -154,9 +155,36 @@ pub struct SqlBlobstoreWal {
     delete_rendezvous: RendezVous<BlobstoreWalEntry, (), ConfigurableRendezVousController>,
 }
 
+#[derive(Clone)]
+pub struct SqlBlobstoreWalBuilder {
+    read_master_connections: Vec1<Connection>,
+    write_connections: Arc<Vec1<Connection>>,
+    /// Used to cycle through shards when reading
+    conn_idx: Arc<AtomicUsize>,
+    /// Used to batch deletions together and not overwhelm db with too many queries
+    delete_rendezvous: RendezVous<BlobstoreWalEntry, (), ConfigurableRendezVousController>,
+}
+
+impl SqlBlobstoreWalBuilder {
+    pub fn build(self, sql_query_tel: SqlQueryTelemetry) -> SqlBlobstoreWal {
+        let (enqueue_entry_sender, ensure_worker_scheduled) =
+            SqlBlobstoreWal::setup_worker(self.write_connections.clone(), sql_query_tel);
+
+        SqlBlobstoreWal {
+            read_master_connections: self.read_master_connections,
+            write_connections: self.write_connections,
+            enqueue_entry_sender,
+            ensure_worker_scheduled,
+            conn_idx: self.conn_idx,
+            delete_rendezvous: self.delete_rendezvous,
+        }
+    }
+}
+
 impl SqlBlobstoreWal {
     fn setup_worker(
         write_connections: Arc<Vec1<Connection>>,
+        sql_query_tel: SqlQueryTelemetry,
     ) -> (EnqueueSender, Shared<BoxFuture<'static, ()>>) {
         // The mpsc channel needed as a way to enqueue new entries while there is an
         // in-flight write query to Mysql.
@@ -177,10 +205,13 @@ impl SqlBlobstoreWal {
                     conn_idx += 1;
                     let shard_id = conn_idx % write_connections.len();
                     let write_connection = write_connections[shard_id].clone();
+                    let sql_query_tel = sql_query_tel.clone();
                     async move {
                         let (senders, entries): (Vec<_>, Vec<_>) = batch.into_iter().unzip();
 
-                        let result = insert_entries(&write_connection, &entries).await;
+                        let result =
+                            insert_entries(&write_connection, &entries, sql_query_tel.clone())
+                                .await;
                         let result = result
                             .map_err(|err| err.context("Failed to insert to WAL").shared_error());
                         // We don't really need WriteResult data as we write in batches
@@ -218,6 +249,7 @@ impl SqlBlobstoreWal {
 
     // This doesn't do any automatic rendezvous/queueing
     async fn inner_delete_by_key(
+        ctx: &CoreContext,
         write_connections: &[Connection],
         entries: HashSet<BlobstoreWalEntry>,
     ) -> Result<()> {
@@ -244,7 +276,7 @@ impl SqlBlobstoreWal {
                     for chunk in del_entries.chunks(DEL_CHUNK) {
                         WalDeleteKeys::query(
                             &write_connections[shard_id],
-                            None,
+                            ctx.sql_query_telemetry(),
                             &multiplex_id,
                             chunk,
                         )
@@ -340,7 +372,7 @@ impl BlobstoreWal for SqlBlobstoreWal {
 
     async fn read<'a>(
         &'a self,
-        _ctx: &'a CoreContext,
+        ctx: &'a CoreContext,
         multiplex_id: &MultiplexId,
         older_than: &Timestamp,
         mut limit: usize,
@@ -353,7 +385,7 @@ impl BlobstoreWal for SqlBlobstoreWal {
             let cur_shard = self.conn_idx.fetch_add(1, Ordering::Relaxed) % shards;
             let rows = WalReadEntries::query(
                 &self.read_master_connections[cur_shard],
-                None,
+                ctx.sql_query_telemetry(),
                 multiplex_id,
                 older_than,
                 &limit,
@@ -373,7 +405,7 @@ impl BlobstoreWal for SqlBlobstoreWal {
 
     async fn delete<'a>(
         &'a self,
-        _ctx: &'a CoreContext,
+        ctx: &'a CoreContext,
         entries: &'a [BlobstoreWalEntry],
     ) -> Result<()> {
         let mut entry_info: Vec<(u64, usize)> =
@@ -393,8 +425,12 @@ impl BlobstoreWal for SqlBlobstoreWal {
                     let shard_id: usize = batch[0].1;
                     let ids: Vec<u64> = batch.iter().map(|(id, _)| *id).collect();
                     for chunk in ids.chunks(10_000) {
-                        WalDeleteEntries::query(&self.write_connections[shard_id], None, chunk)
-                            .await?;
+                        WalDeleteEntries::query(
+                            &self.write_connections[shard_id],
+                            ctx.sql_query_telemetry(),
+                            chunk,
+                        )
+                        .await?;
                     }
                     anyhow::Ok(())
                 })
@@ -409,8 +445,9 @@ impl BlobstoreWal for SqlBlobstoreWal {
         self.delete_rendezvous
             .dispatch(ctx.fb, entries.iter().cloned().collect(), || {
                 let connections = self.write_connections.clone();
+                let ctx = ctx.clone();
                 |keys| async move {
-                    Self::inner_delete_by_key(&connections, keys).await?;
+                    Self::inner_delete_by_key(&ctx, &connections, keys).await?;
                     // We don't care about results
                     Ok(HashMap::new())
                 }
@@ -420,7 +457,7 @@ impl BlobstoreWal for SqlBlobstoreWal {
     }
 }
 
-impl SqlShardedConstruct for SqlBlobstoreWal {
+impl SqlShardedConstruct for SqlBlobstoreWalBuilder {
     const LABEL: &'static str = "blobstore_wal";
 
     const CREATION_QUERY: &'static str = include_str!("../schemas/sqlite-blobstore-wal.sql");
@@ -444,15 +481,11 @@ impl SqlShardedConstruct for SqlBlobstoreWal {
         }
         let write_connections = Arc::new(write_connections);
 
-        let (sender, ensure_worker_scheduled) =
-            SqlBlobstoreWal::setup_worker(write_connections.clone());
         let conn_idx = rand::thread_rng().gen_range(0..read_master_connections.len());
 
         Self {
             write_connections,
             read_master_connections,
-            enqueue_entry_sender: sender,
-            ensure_worker_scheduled,
             conn_idx: Arc::new(AtomicUsize::new(conn_idx)),
             // For the delete rendezvous, we don't need to be super fast.
             // - 1 free connection just so we don't wait unnecessarily if traffic is very low
@@ -473,6 +506,7 @@ impl SqlShardedConstruct for SqlBlobstoreWal {
 async fn insert_entries(
     write_connection: &Connection,
     entries: &[BlobstoreWalEntry],
+    sql_query_tel: SqlQueryTelemetry,
 ) -> Result<WriteResult> {
     let entries: Vec<_> = entries
         .iter()
@@ -486,7 +520,7 @@ async fn insert_entries(
         .map(|(a, b, c, d, e)| (a, b, c, d, e)) // &(a, b, ...) into (&a, &b, ...)
         .collect();
 
-    WalInsertEntry::query(write_connection, None, &entries_ref).await
+    WalInsertEntry::query(write_connection, sql_query_tel, &entries_ref).await
 }
 
 mononoke_queries! {
