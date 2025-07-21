@@ -68,7 +68,7 @@ async fn test_snapshots(fb: FacebookInit) -> anyhow::Result<()> {
         .await?;
     txn.commit().await?;
 
-    let res: Vec<WorkspaceSnapshot> = sql.get(reponame.clone(), workspace.clone()).await?;
+    let res: Vec<WorkspaceSnapshot> = sql.get(&ctx, reponame.clone(), workspace.clone()).await?;
     assert_eq!(res.len(), 2);
 
     let removed_snapshots = vec![snapshot1.commit];
@@ -85,7 +85,7 @@ async fn test_snapshots(fb: FacebookInit) -> anyhow::Result<()> {
     .await?;
     txn.commit().await?;
 
-    let res: Vec<WorkspaceSnapshot> = sql.get(reponame.clone(), workspace.clone()).await?;
+    let res: Vec<WorkspaceSnapshot> = sql.get(&ctx, reponame.clone(), workspace.clone()).await?;
     assert_eq!(res, vec![snapshot2.clone()]);
 
     let new_name_args = UpdateWorkspaceNameArgs {
@@ -98,7 +98,7 @@ async fn test_snapshots(fb: FacebookInit) -> anyhow::Result<()> {
     txn.commit().await?;
     assert_eq!(affected_rows, 1);
 
-    let res: Vec<WorkspaceSnapshot> = sql.get(reponame.clone(), renamed_workspace).await?;
+    let res: Vec<WorkspaceSnapshot> = sql.get(&ctx, reponame.clone(), renamed_workspace).await?;
     assert_eq!(res.len(), 1);
 
     Ok(())

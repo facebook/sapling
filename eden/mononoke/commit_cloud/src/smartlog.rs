@@ -13,6 +13,7 @@ use commit_cloud_types::SmartlogNode;
 use commit_cloud_types::WorkspaceHead;
 use commit_cloud_types::WorkspaceRemoteBookmark;
 use commit_cloud_types::changeset::CloudChangesetId;
+use context::CoreContext;
 
 use crate::CommitCloud;
 use crate::Phase;
@@ -60,18 +61,20 @@ impl RawSmartlogData {
     }
 
     pub(crate) async fn fetch_smartlog_references(
-        ctx: &CommitCloudContext,
+        ctx: &CoreContext,
+        cc_ctx: &CommitCloudContext,
         sql: &SqlCommitCloud,
     ) -> Result<Self, anyhow::Error> {
-        let heads: Vec<WorkspaceHead> =
-            sql.get(ctx.reponame.clone(), ctx.workspace.clone()).await?;
+        let heads: Vec<WorkspaceHead> = sql
+            .get(ctx, cc_ctx.reponame.clone(), cc_ctx.workspace.clone())
+            .await?;
 
         let local_bookmarks = sql
-            .get_as_map(ctx.reponame.clone(), ctx.workspace.clone())
+            .get_as_map(ctx, cc_ctx.reponame.clone(), cc_ctx.workspace.clone())
             .await?;
 
         let remote_bookmarks = sql
-            .get_as_map(ctx.reponame.clone(), ctx.workspace.clone())
+            .get_as_map(ctx, cc_ctx.reponame.clone(), cc_ctx.workspace.clone())
             .await?;
 
         Ok(RawSmartlogData {
@@ -85,9 +88,11 @@ impl RawSmartlogData {
 impl CommitCloud {
     pub async fn get_smartlog_raw_info(
         &self,
+        ctx: &CoreContext,
         cc_ctx: &CommitCloudContext,
     ) -> anyhow::Result<RawSmartlogData> {
         RawSmartlogData::fetch_smartlog_references(
+            ctx,
             &CommitCloudContext::new(&cc_ctx.workspace, &cc_ctx.reponame)?,
             &self.storage,
         )

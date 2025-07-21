@@ -52,12 +52,13 @@ mononoke_queries! {
 impl Get<WorkspaceSnapshot> for SqlCommitCloud {
     async fn get(
         &self,
+        ctx: &CoreContext,
         reponame: String,
         workspace: String,
     ) -> anyhow::Result<Vec<WorkspaceSnapshot>> {
         let rows = GetSnapshots::query(
             &self.connections.read_connection,
-            None,
+            ctx.sql_query_telemetry(),
             &reponame,
             &workspace,
         )

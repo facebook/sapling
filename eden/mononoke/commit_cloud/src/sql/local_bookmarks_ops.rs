@@ -53,12 +53,13 @@ mononoke_queries! {
 impl Get<WorkspaceLocalBookmark> for SqlCommitCloud {
     async fn get(
         &self,
+        ctx: &CoreContext,
         reponame: String,
         workspace: String,
     ) -> anyhow::Result<Vec<WorkspaceLocalBookmark>> {
         let rows = GetLocalBookmarks::query(
             &self.connections.read_connection,
-            None,
+            ctx.sql_query_telemetry(),
             &reponame.clone(),
             &workspace,
         )
@@ -73,12 +74,13 @@ impl Get<WorkspaceLocalBookmark> for SqlCommitCloud {
 impl GetAsMap<LocalBookmarksMap> for SqlCommitCloud {
     async fn get_as_map(
         &self,
+        ctx: &CoreContext,
         reponame: String,
         workspace: String,
     ) -> anyhow::Result<LocalBookmarksMap> {
         let rows = GetLocalBookmarks::query(
             &self.connections.read_connection,
-            None,
+            ctx.sql_query_telemetry(),
             &reponame,
             &workspace,
         )

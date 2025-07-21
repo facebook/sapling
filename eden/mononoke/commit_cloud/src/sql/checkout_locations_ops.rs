@@ -91,12 +91,13 @@ mononoke_queries! {
 impl Get<WorkspaceCheckoutLocation> for SqlCommitCloud {
     async fn get(
         &self,
+        ctx: &CoreContext,
         reponame: String,
         workspace: String,
     ) -> anyhow::Result<Vec<WorkspaceCheckoutLocation>> {
         let rows = GetCheckoutLocations::query(
             &self.connections.read_connection,
-            None,
+            ctx.sql_query_telemetry(),
             &reponame,
             &workspace,
         )

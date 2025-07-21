@@ -98,7 +98,7 @@ async fn test_heads(fb: FacebookInit) -> anyhow::Result<()> {
         .await?;
     txn.commit().await?;
 
-    let res: Vec<WorkspaceHead> = sql.get(reponame.clone(), workspace.clone()).await?;
+    let res: Vec<WorkspaceHead> = sql.get(&ctx, reponame.clone(), workspace.clone()).await?;
     assert_eq!(res.len(), 2);
     let removed_commits = vec![head1.commit];
     let sql_txn = sql.connections.write_connection.start_transaction().await?;
@@ -114,7 +114,7 @@ async fn test_heads(fb: FacebookInit) -> anyhow::Result<()> {
     .await?;
     txn.commit().await?;
 
-    let res: Vec<WorkspaceHead> = sql.get(reponame.clone(), workspace.clone()).await?;
+    let res: Vec<WorkspaceHead> = sql.get(&ctx, reponame.clone(), workspace.clone()).await?;
     assert_eq!(res, vec![head2]);
 
     let new_name_args = UpdateWorkspaceNameArgs {
@@ -127,7 +127,7 @@ async fn test_heads(fb: FacebookInit) -> anyhow::Result<()> {
     txn.commit().await?;
     assert_eq!(affected_rows, 1);
 
-    let res: Vec<WorkspaceHead> = sql.get(reponame.clone(), renamed_workspace).await?;
+    let res: Vec<WorkspaceHead> = sql.get(&ctx, reponame.clone(), renamed_workspace).await?;
     assert_eq!(res.len(), 1);
 
     Ok(())

@@ -8,6 +8,7 @@
 use commit_cloud_types::WorkspaceData;
 use mononoke_types::Timestamp;
 
+use crate::CoreContext;
 use crate::Get;
 use crate::SqlCommitCloud;
 use crate::sql::versions_ops::get_version_by_prefix;
@@ -22,21 +23,29 @@ pub struct WorkspaceVersion {
 
 impl WorkspaceVersion {
     pub async fn fetch_from_db(
+        ctx: &CoreContext,
         sql: &SqlCommitCloud,
         workspace: &str,
         reponame: &str,
     ) -> anyhow::Result<Option<Self>> {
-        Get::<WorkspaceVersion>::get(sql, reponame.to_owned(), workspace.to_owned())
+        Get::<WorkspaceVersion>::get(sql, ctx, reponame.to_owned(), workspace.to_owned())
             .await
             .map(|versions| versions.into_iter().next())
     }
 
     pub async fn fetch_by_prefix(
+        ctx: &CoreContext,
         sql: &SqlCommitCloud,
         prefix: &str,
         reponame: &str,
     ) -> anyhow::Result<Vec<Self>> {
-        get_version_by_prefix(&sql.connections, reponame.to_string(), prefix.to_string()).await
+        get_version_by_prefix(
+            ctx,
+            &sql.connections,
+            reponame.to_string(),
+            prefix.to_string(),
+        )
+        .await
     }
 }
 

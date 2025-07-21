@@ -121,10 +121,14 @@ impl CommitCloud {
         &self,
         cc_ctx: &CommitCloudContext,
     ) -> Result<WorkspaceData, CommitCloudError> {
-        let maybeworkspace =
-            WorkspaceVersion::fetch_from_db(&self.storage, &cc_ctx.workspace, &cc_ctx.reponame)
-                .await
-                .map_err(CommitCloudInternalError::Error)?;
+        let maybeworkspace = WorkspaceVersion::fetch_from_db(
+            &self.ctx,
+            &self.storage,
+            &cc_ctx.workspace,
+            &cc_ctx.reponame,
+        )
+        .await
+        .map_err(CommitCloudInternalError::Error)?;
         if let Some(res) = maybeworkspace {
             return Ok(res.into_workspace_data(&cc_ctx.reponame));
         }
@@ -151,7 +155,7 @@ impl CommitCloud {
         );
 
         let maybeworkspace =
-            WorkspaceVersion::fetch_by_prefix(&self.storage, prefix, reponame).await?;
+            WorkspaceVersion::fetch_by_prefix(&self.ctx, &self.storage, prefix, reponame).await?;
 
         Ok(maybeworkspace
             .into_iter()
@@ -168,10 +172,14 @@ impl CommitCloud {
 
         let mut latest_version: u64 = 0;
         let mut version_timestamp: i64 = 0;
-        let maybeworkspace =
-            WorkspaceVersion::fetch_from_db(&self.storage, &cc_ctx.workspace, &cc_ctx.reponame)
-                .await
-                .map_err(CommitCloudInternalError::Error)?;
+        let maybeworkspace = WorkspaceVersion::fetch_from_db(
+            &self.ctx,
+            &self.storage,
+            &cc_ctx.workspace,
+            &cc_ctx.reponame,
+        )
+        .await
+        .map_err(CommitCloudInternalError::Error)?;
         if let Some(workspace_version) = maybeworkspace {
             latest_version = workspace_version.version;
             version_timestamp = workspace_version.timestamp.timestamp_seconds();
@@ -207,7 +215,7 @@ impl CommitCloud {
             });
         }
 
-        let raw_references_data = fetch_references(cc_ctx, &self.storage)
+        let raw_references_data = fetch_references(&self.ctx, cc_ctx, &self.storage)
             .await
             .map_err(CommitCloudInternalError::Error)?;
 
@@ -235,16 +243,20 @@ impl CommitCloud {
         let mut latest_version: u64 = 0;
         let mut version_timestamp: i64 = 0;
 
-        let maybeworkspace =
-            WorkspaceVersion::fetch_from_db(&self.storage, &cc_ctx.workspace, &cc_ctx.reponame)
-                .await
-                .map_err(CommitCloudInternalError::Error)?;
+        let maybeworkspace = WorkspaceVersion::fetch_from_db(
+            &self.ctx,
+            &self.storage,
+            &cc_ctx.workspace,
+            &cc_ctx.reponame,
+        )
+        .await
+        .map_err(CommitCloudInternalError::Error)?;
 
         if let Some(workspace_version) = maybeworkspace {
             latest_version = workspace_version.version;
             version_timestamp = workspace_version.timestamp.timestamp_seconds();
         }
-        let raw_references_data = fetch_references(cc_ctx, &self.storage)
+        let raw_references_data = fetch_references(&self.ctx, cc_ctx, &self.storage)
             .await
             .map_err(CommitCloudInternalError::Error)?;
         if params.version < latest_version {
@@ -394,8 +406,13 @@ impl CommitCloud {
         &self,
         ctx: &CommitCloudContext,
     ) -> anyhow::Result<WorkspaceSharingData> {
-        let maybeworkspace =
-            WorkspaceVersion::fetch_from_db(&self.storage, &ctx.workspace, &ctx.reponame).await?;
+        let maybeworkspace = WorkspaceVersion::fetch_from_db(
+            &self.ctx,
+            &self.storage,
+            &ctx.workspace,
+            &ctx.reponame,
+        )
+        .await?;
         if maybeworkspace.is_none() {
             bail!(
                 "'share_workspace' failed: workspace {} does not exist in repo {}",
@@ -467,9 +484,14 @@ impl CommitCloud {
         );
 
         ensure!(
-            WorkspaceVersion::fetch_from_db(&self.storage, new_workspace, &cc_ctx.reponame)
-                .await?
-                .is_none(),
+            WorkspaceVersion::fetch_from_db(
+                &self.ctx,
+                &self.storage,
+                new_workspace,
+                &cc_ctx.reponame
+            )
+            .await?
+            .is_none(),
             format!(
                 "'rename_workspace' failed: workspace {} already exists",
                 new_workspace
@@ -553,6 +575,7 @@ impl CommitCloud {
 
         let history = GenericGet::<WorkspaceHistory>::get(
             &self.storage,
+            &self.ctx,
             cc_ctx.reponame.clone(),
             cc_ctx.workspace.clone(),
             args.clone(),
@@ -580,9 +603,14 @@ impl CommitCloud {
         cc_ctx: &CommitCloudContext,
     ) -> anyhow::Result<Vec<HistoricalVersion>> {
         ensure!(
-            WorkspaceVersion::fetch_from_db(&self.storage, &cc_ctx.workspace, &cc_ctx.reponame)
-                .await?
-                .is_some(),
+            WorkspaceVersion::fetch_from_db(
+                &self.ctx,
+                &self.storage,
+                &cc_ctx.workspace,
+                &cc_ctx.reponame
+            )
+            .await?
+            .is_some(),
             format!(
                 "'get_historical_versions' failed: workspace {} does not exist",
                 &cc_ctx.workspace
@@ -592,6 +620,7 @@ impl CommitCloud {
         let args = GetType::GetHistoryVersionTimestamp;
         let results = GenericGet::<WorkspaceHistory>::get(
             &self.storage,
+            &self.ctx,
             cc_ctx.reponame.clone(),
             cc_ctx.workspace.clone(),
             args.clone(),
@@ -606,9 +635,13 @@ impl CommitCloud {
         cc_ctx: &CommitCloudContext,
         version: u64,
     ) -> anyhow::Result<String> {
-        let maybeworkspace =
-            WorkspaceVersion::fetch_from_db(&self.storage, &cc_ctx.workspace, &cc_ctx.reponame)
-                .await?;
+        let maybeworkspace = WorkspaceVersion::fetch_from_db(
+            &self.ctx,
+            &self.storage,
+            &cc_ctx.workspace,
+            &cc_ctx.reponame,
+        )
+        .await?;
         ensure!(
             maybeworkspace.is_some(),
             format!(
@@ -621,6 +654,7 @@ impl CommitCloud {
         let args = GetType::GetHistoryVersion { version };
         let result = GenericGet::<WorkspaceHistory>::get(
             &self.storage,
+            &self.ctx,
             cc_ctx.reponame.clone(),
             cc_ctx.workspace.clone(),
             args.clone(),
@@ -646,7 +680,7 @@ impl CommitCloud {
             .map(|h| h.commit.clone())
             .collect();
 
-        let current_workspace = fetch_references(cc_ctx, &self.storage).await?;
+        let current_workspace = fetch_references(&self.ctx, cc_ctx, &self.storage).await?;
         let current_heads: HashSet<CloudChangesetId> = current_workspace
             .heads
             .iter()

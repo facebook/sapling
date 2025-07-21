@@ -118,7 +118,7 @@ impl<R: MononokeRepo> RepoContext<R> {
         let raw_data = self
             .repo()
             .commit_cloud()
-            .get_smartlog_raw_info(&cc_ctx)
+            .get_smartlog_raw_info(self.ctx(), &cc_ctx)
             .await?;
         let hg_ids = raw_data.collapse_into_vec(flags);
 

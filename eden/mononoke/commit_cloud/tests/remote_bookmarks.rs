@@ -155,10 +155,13 @@ async fn test_remote_bookmarks(fb: FacebookInit) -> anyhow::Result<()> {
         .await?;
     txn.commit().await?;
 
-    let res: Vec<WorkspaceRemoteBookmark> = sql.get(reponame.clone(), workspace.clone()).await?;
+    let res: Vec<WorkspaceRemoteBookmark> =
+        sql.get(&ctx, reponame.clone(), workspace.clone()).await?;
     assert_eq!(res.len(), 2);
 
-    let res_map: RemoteBookmarksMap = sql.get_as_map(reponame.clone(), workspace.clone()).await?;
+    let res_map: RemoteBookmarksMap = sql
+        .get_as_map(&ctx, reponame.clone(), workspace.clone())
+        .await?;
     assert_eq!(res_map.get(&hgid1).unwrap().to_vec(), vec![bookmark1]);
     assert_eq!(
         res_map.get(&hgid2).unwrap().to_vec(),
@@ -179,7 +182,8 @@ async fn test_remote_bookmarks(fb: FacebookInit) -> anyhow::Result<()> {
     .await?;
     txn.commit().await?;
 
-    let res: Vec<WorkspaceRemoteBookmark> = sql.get(reponame.clone(), workspace.clone()).await?;
+    let res: Vec<WorkspaceRemoteBookmark> =
+        sql.get(&ctx, reponame.clone(), workspace.clone()).await?;
     assert_eq!(res, vec![bookmark2]);
 
     let new_name_args = UpdateWorkspaceNameArgs {
@@ -192,7 +196,8 @@ async fn test_remote_bookmarks(fb: FacebookInit) -> anyhow::Result<()> {
     txn.commit().await?;
     assert_eq!(affected_rows, 1);
 
-    let res: Vec<WorkspaceRemoteBookmark> = sql.get(reponame.clone(), renamed_workspace).await?;
+    let res: Vec<WorkspaceRemoteBookmark> =
+        sql.get(&ctx, reponame.clone(), renamed_workspace).await?;
     assert_eq!(res.len(), 1);
 
     Ok(())

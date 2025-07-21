@@ -60,19 +60,25 @@ pub struct RawReferencesData {
 
 // Perform all get queries into the database
 pub(crate) async fn fetch_references(
-    ctx: &CommitCloudContext,
+    ctx: &CoreContext,
+    cc_ctx: &CommitCloudContext,
     sql: &SqlCommitCloud,
 ) -> Result<RawReferencesData, anyhow::Error> {
-    let heads: Vec<WorkspaceHead> = sql.get(ctx.reponame.clone(), ctx.workspace.clone()).await?;
+    let heads: Vec<WorkspaceHead> = sql
+        .get(ctx, cc_ctx.reponame.clone(), cc_ctx.workspace.clone())
+        .await?;
 
-    let local_bookmarks: Vec<WorkspaceLocalBookmark> =
-        sql.get(ctx.reponame.clone(), ctx.workspace.clone()).await?;
+    let local_bookmarks: Vec<WorkspaceLocalBookmark> = sql
+        .get(ctx, cc_ctx.reponame.clone(), cc_ctx.workspace.clone())
+        .await?;
 
-    let remote_bookmarks: Vec<WorkspaceRemoteBookmark> =
-        sql.get(ctx.reponame.clone(), ctx.workspace.clone()).await?;
+    let remote_bookmarks: Vec<WorkspaceRemoteBookmark> = sql
+        .get(ctx, cc_ctx.reponame.clone(), cc_ctx.workspace.clone())
+        .await?;
 
-    let snapshots: Vec<WorkspaceSnapshot> =
-        sql.get(ctx.reponame.clone(), ctx.workspace.clone()).await?;
+    let snapshots: Vec<WorkspaceSnapshot> = sql
+        .get(ctx, cc_ctx.reponame.clone(), cc_ctx.workspace.clone())
+        .await?;
 
     Ok(RawReferencesData {
         heads,

@@ -82,6 +82,7 @@ async fn test_history(fb: FacebookInit) -> anyhow::Result<()> {
 
     let res: Vec<GetOutput> = sql
         .get(
+            &ctx,
             reponame.clone(),
             workspace.clone(),
             GetType::GetHistoryVersion { version: 1 },
@@ -139,6 +140,7 @@ async fn test_history(fb: FacebookInit) -> anyhow::Result<()> {
 
     let res: Vec<GetOutput> = sql
         .get(
+            &ctx,
             reponame.clone(),
             workspace.clone(),
             GetType::GetHistoryDate {
@@ -170,6 +172,7 @@ async fn test_history(fb: FacebookInit) -> anyhow::Result<()> {
 
     let res: Vec<GetOutput> = sql
         .get(
+            &ctx,
             reponame.clone(),
             renamed_workspace.clone(),
             GetType::GetHistoryDate {

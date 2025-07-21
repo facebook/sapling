@@ -71,12 +71,13 @@ mononoke_queries! {
 impl Get<WorkspaceVersion> for SqlCommitCloud {
     async fn get(
         &self,
+        ctx: &CoreContext,
         reponame: String,
         workspace: String,
     ) -> anyhow::Result<Vec<WorkspaceVersion>> {
         let rows = GetVersion::query(
             &self.connections.read_connection,
-            None,
+            ctx.sql_query_telemetry(),
             &reponame,
             &workspace,
         )
@@ -158,13 +159,14 @@ impl Update<WorkspaceVersion> for SqlCommitCloud {
 }
 
 pub async fn get_version_by_prefix(
+    ctx: &CoreContext,
     connections: &SqlConnections,
     reponame: String,
     prefix: String,
 ) -> anyhow::Result<Vec<WorkspaceVersion>> {
     let rows = GetVersionByPrefix::query(
         &connections.read_connection,
-        None,
+        ctx.sql_query_telemetry(),
         &reponame,
         &prepare_prefix(&prefix),
     )

@@ -104,6 +104,7 @@ impl GenericGet<WorkspaceHistory> for SqlCommitCloud {
 
     async fn get(
         &self,
+        ctx: &CoreContext,
         reponame: String,
         workspace: String,
         args: Self::GetArgs,
@@ -112,7 +113,7 @@ impl GenericGet<WorkspaceHistory> for SqlCommitCloud {
             GetType::GetHistoryVersionTimestamp => {
                 let rows = GetHistoryVersionTimestamp::query(
                     &self.connections.read_connection,
-                    None,
+                    ctx.sql_query_telemetry(),
                     &reponame,
                     &workspace,
                 )
@@ -130,7 +131,7 @@ impl GenericGet<WorkspaceHistory> for SqlCommitCloud {
             GetType::GetHistoryDate { timestamp, limit } => {
                 let rows = GetHistoryDate::query(
                     &self.connections.read_connection,
-                    None,
+                    ctx.sql_query_telemetry(),
                     &reponame,
                     &workspace,
                     &timestamp.timestamp_seconds(),
@@ -159,7 +160,7 @@ impl GenericGet<WorkspaceHistory> for SqlCommitCloud {
             GetType::GetHistoryVersion { version } => {
                 let rows = GetHistoryVersion::query(
                     &self.connections.read_connection,
-                    None,
+                    ctx.sql_query_telemetry(),
                     &reponame,
                     &workspace,
                     &version,

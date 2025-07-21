@@ -52,7 +52,7 @@ async fn test_checkout_locations(fb: FacebookInit) -> anyhow::Result<()> {
         .await?;
     txn.commit().await?;
 
-    let res: Vec<WorkspaceCheckoutLocation> = sql.get(reponame.clone(), workspace).await?;
+    let res: Vec<WorkspaceCheckoutLocation> = sql.get(&ctx, reponame.clone(), workspace).await?;
     assert_eq!(vec![expected], res);
 
     let new_name_args = UpdateWorkspaceNameArgs {
@@ -65,7 +65,8 @@ async fn test_checkout_locations(fb: FacebookInit) -> anyhow::Result<()> {
     txn.commit().await?;
     assert_eq!(affected_rows, 1);
 
-    let res: Vec<WorkspaceCheckoutLocation> = sql.get(reponame.clone(), renamed_workspace).await?;
+    let res: Vec<WorkspaceCheckoutLocation> =
+        sql.get(&ctx, reponame.clone(), renamed_workspace).await?;
     assert_eq!(res.len(), 1);
 
     Ok(())
