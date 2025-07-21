@@ -40,6 +40,7 @@ struct Repo {
 }
 
 pub async fn locking_status(app: &MononokeApp, args: LockingStatusArgs) -> Result<()> {
+    let ctx = app.new_basic_context();
     let repos = args.repo.ids_or_names()?;
     let repo_configs = app.repo_configs();
 
@@ -79,7 +80,7 @@ pub async fn locking_status(app: &MononokeApp, args: LockingStatusArgs) -> Resul
     let mut all_status = Vec::with_capacity(repos.len());
 
     for repo in repos {
-        let state = repo.repo_lock().check_repo_lock().await?;
+        let state = repo.repo_lock().check_repo_lock(&ctx).await?;
         if !args.only_locked || matches!(state, RepoLockState::Locked(_)) {
             all_status.push((repo.repo_identity().name().to_owned(), state));
         }

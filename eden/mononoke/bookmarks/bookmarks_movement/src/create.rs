@@ -161,6 +161,7 @@ impl<'op> CreateBookmarkOp<'op> {
             .await?;
 
         check_repo_lock(
+            ctx,
             repo,
             kind,
             self.pushvars,

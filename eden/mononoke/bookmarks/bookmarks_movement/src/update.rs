@@ -224,6 +224,7 @@ impl<'op> UpdateBookmarkOp<'op> {
             .await?;
 
         check_repo_lock(
+            ctx,
             repo,
             kind,
             self.pushvars,

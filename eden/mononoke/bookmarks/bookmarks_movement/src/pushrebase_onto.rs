@@ -175,6 +175,7 @@ impl<'op> PushrebaseOntoBookmarkOp<'op> {
         // bookmark update transaction, to check if the repo got locked while
         // we were performing the pushrebase.
         check_repo_lock(
+            ctx,
             repo,
             kind,
             self.pushvars,

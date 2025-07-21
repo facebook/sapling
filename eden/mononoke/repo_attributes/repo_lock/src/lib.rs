@@ -11,6 +11,7 @@ use anyhow::Context;
 use anyhow::Error;
 use anyhow::anyhow;
 use async_trait::async_trait;
+use context::CoreContext;
 use maplit::hashmap;
 use mononoke_types::RepositoryId;
 use sql::Connection;
@@ -42,11 +43,18 @@ impl RepoLockState {
 #[async_trait]
 pub trait RepoLock: Send + Sync {
     /// Check whether a repo is locked, which will prevent new commits being pushed.
-    async fn check_repo_lock(&self) -> Result<RepoLockState, Error>;
-    async fn all_repos_lock(&self) -> Result<HashMap<RepositoryId, RepoLockState>, Error>;
+    async fn check_repo_lock(&self, ctx: &CoreContext) -> Result<RepoLockState, Error>;
+    async fn all_repos_lock(
+        &self,
+        ctx: &CoreContext,
+    ) -> Result<HashMap<RepositoryId, RepoLockState>, Error>;
     /// Lock a repo to prevent pushes. This method returns Ok(true) if the repo wasn't previously
     /// locked, Ok(false) if it was and Err(_) if there is an error modifying the lock status.
-    async fn set_repo_lock(&self, lock_state: RepoLockState) -> Result<bool, Error>;
+    async fn set_repo_lock(
+        &self,
+        ctx: &CoreContext,
+        lock_state: RepoLockState,
+    ) -> Result<bool, Error>;
 }
 
 mononoke_queries! {
@@ -144,27 +152,40 @@ impl MutableRepoLock {
 
 #[async_trait]
 impl RepoLock for MutableRepoLock {
-    async fn check_repo_lock(&self) -> Result<RepoLockState, Error> {
-        let row =
-            GetRepoLockStatus::query(&self.sql_repo_lock.read_connection, None, &self.repo_id)
-                .await
-                .context("Failed to query repo lock status")?;
+    async fn check_repo_lock(&self, ctx: &CoreContext) -> Result<RepoLockState, Error> {
+        let row = GetRepoLockStatus::query(
+            &self.sql_repo_lock.read_connection,
+            ctx.sql_query_telemetry(),
+            &self.repo_id,
+        )
+        .await
+        .context("Failed to query repo lock status")?;
 
         row.first()
             .map_or(Ok(RepoLockState::Unlocked), convert_sql_state)
     }
 
-    async fn all_repos_lock(&self) -> Result<HashMap<RepositoryId, RepoLockState>, Error> {
-        let rows = AllReposLockStatus::query(&self.sql_repo_lock.read_connection, None)
-            .await
-            .context("Failed to query repo lock status")?;
+    async fn all_repos_lock(
+        &self,
+        ctx: &CoreContext,
+    ) -> Result<HashMap<RepositoryId, RepoLockState>, Error> {
+        let rows = AllReposLockStatus::query(
+            &self.sql_repo_lock.read_connection,
+            ctx.sql_query_telemetry(),
+        )
+        .await
+        .context("Failed to query repo lock status")?;
 
         rows.into_iter()
             .map(|(repo_id, state, reason)| Ok((repo_id, convert_sql_state(&(state, reason))?)))
             .collect()
     }
 
-    async fn set_repo_lock(&self, lock_state: RepoLockState) -> Result<bool, Error> {
+    async fn set_repo_lock(
+        &self,
+        ctx: &CoreContext,
+        lock_state: RepoLockState,
+    ) -> Result<bool, Error> {
         let (state, reason) = match lock_state {
             RepoLockState::Unlocked => (0, None),
             RepoLockState::Locked(reason) => (1, Some(reason)),
@@ -172,7 +193,7 @@ impl RepoLock for MutableRepoLock {
 
         SetRepoLockStatus::query(
             &self.sql_repo_lock.write_connection,
-            None,
+            ctx.sql_query_telemetry(),
             &self.repo_id,
             &state,
             &reason.as_deref(),
@@ -196,15 +217,18 @@ impl AlwaysLockedRepoLock {
 
 #[async_trait]
 impl RepoLock for AlwaysLockedRepoLock {
-    async fn check_repo_lock(&self) -> Result<RepoLockState, Error> {
+    async fn check_repo_lock(&self, _ctx: &CoreContext) -> Result<RepoLockState, Error> {
         Ok(RepoLockState::Locked(self.reason.clone()))
     }
 
-    async fn all_repos_lock(&self) -> Result<HashMap<RepositoryId, RepoLockState>, Error> {
+    async fn all_repos_lock(
+        &self,
+        _ctx: &CoreContext,
+    ) -> Result<HashMap<RepositoryId, RepoLockState>, Error> {
         Ok(hashmap! { self.repo_id => RepoLockState::Locked(self.reason.clone()) })
     }
 
-    async fn set_repo_lock(&self, _: RepoLockState) -> Result<bool, Error> {
+    async fn set_repo_lock(&self, _ctx: &CoreContext, _: RepoLockState) -> Result<bool, Error> {
         Err(anyhow!("Repo is locked in config and can't be updated"))
     }
 }
@@ -222,21 +246,25 @@ impl AlwaysUnlockedRepoLock {
 
 #[async_trait]
 impl RepoLock for AlwaysUnlockedRepoLock {
-    async fn check_repo_lock(&self) -> Result<RepoLockState, Error> {
+    async fn check_repo_lock(&self, _ctx: &CoreContext) -> Result<RepoLockState, Error> {
         Ok(RepoLockState::Unlocked)
     }
 
-    async fn all_repos_lock(&self) -> Result<HashMap<RepositoryId, RepoLockState>, Error> {
+    async fn all_repos_lock(
+        &self,
+        _ctx: &CoreContext,
+    ) -> Result<HashMap<RepositoryId, RepoLockState>, Error> {
         Ok(hashmap! { self.repo_id => RepoLockState::Unlocked })
     }
 
-    async fn set_repo_lock(&self, _: RepoLockState) -> Result<bool, Error> {
+    async fn set_repo_lock(&self, _ctx: &CoreContext, _: RepoLockState) -> Result<bool, Error> {
         Err(anyhow!("Repo is always unlocked and can't be updated"))
     }
 }
 
 #[cfg(test)]
 mod test {
+    use fbinit::FacebookInit;
     use mononoke_macros::mononoke;
 
     use super::*;
@@ -250,7 +278,8 @@ mod test {
     }
 
     #[mononoke::fbinit_test]
-    async fn test_locked() -> Result<(), Error> {
+    async fn test_locked(fb: FacebookInit) -> Result<(), Error> {
+        let ctx = CoreContext::test_mock(fb);
         let sql_repo_lock = SqlRepoLock::with_sqlite_in_memory()?;
         let repo_id = RepositoryId::new(0);
 
@@ -258,7 +287,7 @@ mod test {
 
         InsertState::query(
             &repo_lock.sql_repo_lock.clone().write_connection,
-            None,
+            ctx.sql_query_telemetry(),
             &repo_id,
             &1,
             &Some("reason"),
@@ -266,7 +295,7 @@ mod test {
         .await?;
 
         assert_eq!(
-            repo_lock.check_repo_lock().await?,
+            repo_lock.check_repo_lock(&ctx).await?,
             RepoLockState::Locked("reason".to_string())
         );
 
@@ -274,19 +303,24 @@ mod test {
     }
 
     #[mononoke::fbinit_test]
-    async fn test_default_to_unlocked() -> Result<(), Error> {
+    async fn test_default_to_unlocked(fb: FacebookInit) -> Result<(), Error> {
+        let ctx = CoreContext::test_mock(fb);
         let sql_repo_lock = SqlRepoLock::with_sqlite_in_memory()?;
         let repo_id = RepositoryId::new(0);
 
         let repo_lock = MutableRepoLock::new(sql_repo_lock, repo_id);
 
-        assert_eq!(repo_lock.check_repo_lock().await?, RepoLockState::Unlocked);
+        assert_eq!(
+            repo_lock.check_repo_lock(&ctx).await?,
+            RepoLockState::Unlocked
+        );
 
         Ok(())
     }
 
     #[mononoke::fbinit_test]
-    async fn test_lock_with_other_repo() -> Result<(), Error> {
+    async fn test_lock_with_other_repo(fb: FacebookInit) -> Result<(), Error> {
+        let ctx = CoreContext::test_mock(fb);
         let sql_repo_lock = SqlRepoLock::with_sqlite_in_memory()?;
         let repo_id = RepositoryId::new(0);
         let other_repo_id = RepositoryId::new(1);
@@ -296,15 +330,15 @@ mod test {
 
         assert!(
             repo_lock
-                .set_repo_lock(RepoLockState::Locked("test".into()))
+                .set_repo_lock(&ctx, RepoLockState::Locked("test".into()))
                 .await?,
         );
         assert_eq!(
-            repo_lock.check_repo_lock().await?,
+            repo_lock.check_repo_lock(&ctx).await?,
             RepoLockState::Locked("test".into())
         );
         assert_eq!(
-            other_repo_lock.check_repo_lock().await?,
+            other_repo_lock.check_repo_lock(&ctx).await?,
             RepoLockState::Unlocked
         );
 

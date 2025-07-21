@@ -122,6 +122,7 @@ impl<'op> DeleteBookmarkOp<'op> {
         }
 
         check_repo_lock(
+            ctx,
             repo,
             kind,
             self.pushvars,

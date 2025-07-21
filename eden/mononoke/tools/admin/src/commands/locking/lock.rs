@@ -35,9 +35,10 @@ pub struct Repo {
 }
 
 pub async fn locking_lock(app: &MononokeApp, args: LockingLockArgs) -> Result<()> {
+    let ctx = app.new_basic_context();
     let repo: Repo = app.open_repo(&args.repo).await?;
     repo.repo_lock()
-        .set_repo_lock(RepoLockState::Locked(args.reason.clone()))
+        .set_repo_lock(&ctx, RepoLockState::Locked(args.reason.clone()))
         .await?;
     println!("{} locked", repo.repo_identity().name());
     Ok(())
@@ -50,9 +51,10 @@ pub struct LockingUnlockArgs {
 }
 
 pub async fn locking_unlock(app: &MononokeApp, args: LockingUnlockArgs) -> Result<()> {
+    let ctx = app.new_basic_context();
     let repo: Repo = app.open_repo(&args.repo).await?;
     repo.repo_lock()
-        .set_repo_lock(RepoLockState::Unlocked)
+        .set_repo_lock(&ctx, RepoLockState::Unlocked)
         .await?;
     println!("{} unlocked", repo.repo_identity().name());
     Ok(())

@@ -67,6 +67,7 @@ async fn should_check_repo_lock(
 }
 
 pub(crate) async fn check_repo_lock(
+    ctx: &CoreContext,
     repo: &(impl RepoLockRef + RepoPermissionCheckerRef),
     kind: BookmarkKind,
     pushvars: Option<&HashMap<String, Bytes>>,
@@ -84,7 +85,7 @@ pub(crate) async fn check_repo_lock(
     {
         let state = repo
             .repo_lock()
-            .check_repo_lock()
+            .check_repo_lock(ctx)
             .await
             .context("Failed to fetch repo lock state")?;
 
