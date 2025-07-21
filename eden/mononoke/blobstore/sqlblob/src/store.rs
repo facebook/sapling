@@ -15,6 +15,7 @@ use anyhow::bail;
 use anyhow::format_err;
 use bytes::BytesMut;
 use cached_config::ConfigHandle;
+use context::CoreContext;
 use futures::future::TryFutureExt;
 use futures::stream;
 use futures::stream::Stream;
@@ -234,13 +235,23 @@ impl DataSqlStore {
         }
     }
 
-    pub(crate) async fn get(&self, key: &str) -> Result<Option<Chunked>, Error> {
+    pub(crate) async fn get(&self, ctx: &CoreContext, key: &str) -> Result<Option<Chunked>, Error> {
         let shard_id = self.shard(key);
 
         let rows = {
-            let rows = SelectData::query(&self.read_connection[shard_id], None, &key).await?;
+            let rows = SelectData::query(
+                &self.read_connection[shard_id],
+                ctx.sql_query_telemetry(),
+                &key,
+            )
+            .await?;
             if rows.is_empty() {
-                SelectData::query(&self.read_master_connection[shard_id], None, &key).await?
+                SelectData::query(
+                    &self.read_master_connection[shard_id],
+                    ctx.sql_query_telemetry(),
+                    &key,
+                )
+                .await?
             } else {
                 rows
             }
@@ -259,6 +270,7 @@ impl DataSqlStore {
 
     pub(crate) async fn put(
         &self,
+        ctx: &CoreContext,
         key: &str,
         ctime: i64,
         chunk_id: &str,
@@ -271,14 +283,14 @@ impl DataSqlStore {
 
         let res = InsertData::query(
             &self.write_connection[shard_id],
-            None,
+            ctx.sql_query_telemetry(),
             &[(&key, &ctime, &chunk_id, &chunk_count, &chunking_method)],
         )
         .await?;
         if res.affected_rows() == 0 {
             UpdateData::query(
                 &self.write_connection[shard_id],
-                None,
+                ctx.sql_query_telemetry(),
                 &key,
                 &ctime,
                 &chunk_id,
@@ -294,6 +306,7 @@ impl DataSqlStore {
     // Used from gc marking to inline small blobs where ctime hasn't changed
     pub(crate) async fn update_optimistic(
         &self,
+        ctx: &CoreContext,
         key: &str,
         ctime: i64,
         chunk_id: &str,
@@ -306,7 +319,7 @@ impl DataSqlStore {
 
         UpdateDataOptimistic::query(
             &self.write_connection[shard_id],
-            None,
+            ctx.sql_query_telemetry(),
             &key,
             &ctime,
             &chunk_id,
@@ -319,13 +332,18 @@ impl DataSqlStore {
         Ok(())
     }
 
-    pub(crate) async fn unlink(&self, key: &str) -> Result<(), Error> {
+    pub(crate) async fn unlink(&self, ctx: &CoreContext, key: &str) -> Result<(), Error> {
         let shard_id = self.shard(key);
 
         self.delay.delay(shard_id).await;
 
         // Deleting from data table does not remove the chunks as they are content addressed.  GC checks for orphaned chunks and removes them.
-        let res = DeleteData::query(&self.write_connection[shard_id], None, &key).await?;
+        let res = DeleteData::query(
+            &self.write_connection[shard_id],
+            ctx.sql_query_telemetry(),
+            &key,
+        )
+        .await?;
         if res.affected_rows() != 1 {
             bail!(
                 "Unexpected row_count {} from sqlblob unlink for {}",
@@ -336,15 +354,23 @@ impl DataSqlStore {
         Ok(())
     }
 
-    pub(crate) async fn is_present(&self, key: &str) -> Result<bool, Error> {
+    pub(crate) async fn is_present(&self, ctx: &CoreContext, key: &str) -> Result<bool, Error> {
         let shard_id = self.shard(key);
 
         let rows = {
-            let rows =
-                SelectIsDataPresent::query(&self.read_connection[shard_id], None, &key).await?;
+            let rows = SelectIsDataPresent::query(
+                &self.read_connection[shard_id],
+                ctx.sql_query_telemetry(),
+                &key,
+            )
+            .await?;
             if rows.is_empty() {
-                SelectIsDataPresent::query(&self.read_master_connection[shard_id], None, &key)
-                    .await?
+                SelectIsDataPresent::query(
+                    &self.read_master_connection[shard_id],
+                    ctx.sql_query_telemetry(),
+                    &key,
+                )
+                .await?
             } else {
                 rows
             }
@@ -354,11 +380,12 @@ impl DataSqlStore {
 
     pub(crate) fn get_keys_from_shard(
         &self,
+        ctx: CoreContext,
         shard_num: usize,
     ) -> impl Stream<Item = Result<String, Error>> + use<> {
         let conn = self.read_master_connection[shard_num].clone();
         async move {
-            let keys = GetAllKeys::query(&conn, None).await?;
+            let keys = GetAllKeys::query(&conn, ctx.sql_query_telemetry()).await?;
             Ok(stream::iter(
                 keys.into_iter()
                     .map(|(id,)| Ok(String::from_utf8_lossy(&id).to_string())),
@@ -409,19 +436,24 @@ impl ChunkSqlStore {
 
     pub(crate) async fn get(
         &self,
+        ctx: &CoreContext,
         id: &str,
         chunk_num: u32,
         chunking_method: ChunkingMethod,
     ) -> Result<BytesMut, Error> {
         if let Some(shard_id) = self.shard(id, chunk_num, chunking_method) {
             let rows = {
-                let rows =
-                    SelectChunk::query(&self.read_connection[shard_id], None, &id, &chunk_num)
-                        .await?;
+                let rows = SelectChunk::query(
+                    &self.read_connection[shard_id],
+                    ctx.sql_query_telemetry(),
+                    &id,
+                    &chunk_num,
+                )
+                .await?;
                 if rows.is_empty() {
                     SelectChunk::query(
                         &self.read_master_connection[shard_id],
-                        None,
+                        ctx.sql_query_telemetry(),
                         &id,
                         &chunk_num,
                     )
@@ -447,6 +479,7 @@ impl ChunkSqlStore {
     /// Returns the shard and number of chunk_generation rows updated
     pub(crate) async fn put(
         &self,
+        ctx: &CoreContext,
         key: &str,
         chunk_num: u32,
         chunking_method: ChunkingMethod,
@@ -458,9 +491,20 @@ impl ChunkSqlStore {
             let generation = self.gc_generations.get().put_generation as u64;
             let conn = &self.write_connection[shard_id];
             // Update generation in case it already exists
-            let updated =
-                UpdateGeneration::query(conn, None, &key, &generation, &full_value_len).await?;
-            InsertChunk::query(conn, None, &[(&key, &chunk_num, &value)]).await?;
+            let updated = UpdateGeneration::query(
+                conn,
+                ctx.sql_query_telemetry(),
+                &key,
+                &generation,
+                &full_value_len,
+            )
+            .await?;
+            InsertChunk::query(
+                conn,
+                ctx.sql_query_telemetry(),
+                &[(&key, &chunk_num, &value)],
+            )
+            .await?;
             if updated.affected_rows() > 0 {
                 Ok(Some(ChunkGenerationState::Updated))
             } else {
@@ -479,18 +523,25 @@ impl ChunkSqlStore {
     // Saves lazy computing it with associated MySQL read bandwidth from length(chunk.value) later.
     pub(crate) async fn put_chunk_generation(
         &self,
+        ctx: &CoreContext,
         key: &str,
         shard_id: usize,
         full_value_len: u64,
     ) -> Result<(), Error> {
         let generation = self.gc_generations.get().put_generation as u64;
         let conn = &self.write_connection[shard_id];
-        InsertGeneration::query(conn, None, &[(&key, &generation, &full_value_len)]).await?;
+        InsertGeneration::query(
+            conn,
+            ctx.sql_query_telemetry(),
+            &[(&key, &generation, &full_value_len)],
+        )
+        .await?;
         Ok(())
     }
 
     pub(crate) async fn update_generation(
         &self,
+        ctx: &CoreContext,
         key: &str,
         chunk_num: u32,
         chunking_method: ChunkingMethod,
@@ -500,7 +551,7 @@ impl ChunkSqlStore {
             self.delay.delay(shard_id).await;
             UpdateGeneration::query(
                 &self.write_connection[shard_id],
-                None,
+                ctx.sql_query_telemetry(),
                 &key,
                 &(self.gc_generations.get().put_generation as u64),
                 &value_len,
@@ -513,17 +564,26 @@ impl ChunkSqlStore {
     #[cfg(test)]
     pub(crate) async fn get_generation(
         &self,
+        ctx: &CoreContext,
         key: &str,
         chunk_num: u32,
         chunking_method: ChunkingMethod,
     ) -> Result<Option<u64>, Error> {
         if let Some(shard_id) = self.shard(key, chunk_num, chunking_method) {
             let rows = {
-                let rows =
-                    GetChunkGeneration::query(&self.read_connection[shard_id], None, &key).await?;
+                let rows = GetChunkGeneration::query(
+                    &self.read_connection[shard_id],
+                    ctx.sql_query_telemetry(),
+                    &key,
+                )
+                .await?;
                 if rows.is_empty() {
-                    GetChunkGeneration::query(&self.read_master_connection[shard_id], None, &key)
-                        .await?
+                    GetChunkGeneration::query(
+                        &self.read_master_connection[shard_id],
+                        ctx.sql_query_telemetry(),
+                        &key,
+                    )
+                    .await?
                 } else {
                     rows
                 }
@@ -534,11 +594,21 @@ impl ChunkSqlStore {
         }
     }
 
-    async fn get_len(&self, shard_id: usize, key: &str) -> Result<u64, Error> {
+    async fn get_len(&self, ctx: &CoreContext, shard_id: usize, key: &str) -> Result<u64, Error> {
         let rows = {
-            let rows = SelectChunkLen::query(&self.read_connection[shard_id], None, &key).await?;
+            let rows = SelectChunkLen::query(
+                &self.read_connection[shard_id],
+                ctx.sql_query_telemetry(),
+                &key,
+            )
+            .await?;
             if rows.is_empty() {
-                SelectChunkLen::query(&self.read_master_connection[shard_id], None, &key).await?
+                SelectChunkLen::query(
+                    &self.read_master_connection[shard_id],
+                    ctx.sql_query_telemetry(),
+                    &key,
+                )
+                .await?
             } else {
                 rows
             }
@@ -552,6 +622,7 @@ impl ChunkSqlStore {
     // Returns length of the chunk value if known
     pub(crate) async fn set_generation(
         &self,
+        ctx: &CoreContext,
         key: &str,
         chunk_num: u32,
         chunking_method: ChunkingMethod,
@@ -563,41 +634,46 @@ impl ChunkSqlStore {
             let put_generation = self.gc_generations.get().put_generation as u64;
 
             // Short-circuit if we have a generation and that generation is >= mark_generation
-            let found_generation =
-                GetChunkGeneration::query(&self.read_connection[shard_id], None, &key)
-                    .await?
-                    .into_iter()
-                    .next();
-            let (found_generation, value_len) = if let Some((found_generation, value_len)) =
-                found_generation
-            {
-                if found_generation >= mark_generation {
-                    return Ok(Some(value_len));
-                }
-                (Some(found_generation), Some(value_len))
-            } else {
-                let found_generation =
-                    GetChunkGeneration::query(&self.read_master_connection[shard_id], None, &key)
-                        .await?
-                        .into_iter()
-                        .next();
-
+            let found_generation = GetChunkGeneration::query(
+                &self.read_connection[shard_id],
+                ctx.sql_query_telemetry(),
+                &key,
+            )
+            .await?
+            .into_iter()
+            .next();
+            let (found_generation, value_len) =
                 if let Some((found_generation, value_len)) = found_generation {
                     if found_generation >= mark_generation {
                         return Ok(Some(value_len));
                     }
                     (Some(found_generation), Some(value_len))
                 } else {
-                    (None, None)
-                }
-            };
+                    let found_generation = GetChunkGeneration::query(
+                        &self.read_master_connection[shard_id],
+                        ctx.sql_query_telemetry(),
+                        &key,
+                    )
+                    .await?
+                    .into_iter()
+                    .next();
+
+                    if let Some((found_generation, value_len)) = found_generation {
+                        if found_generation >= mark_generation {
+                            return Ok(Some(value_len));
+                        }
+                        (Some(found_generation), Some(value_len))
+                    } else {
+                        (None, None)
+                    }
+                };
 
             // Make sure we know how large the value is
             let value_len: u64 = if let Some(value_len) = value_len {
                 value_len
             } else {
                 // This chunk has never had value_len populated so get it from chunk.value
-                self.get_len(shard_id, key).await?
+                self.get_len(ctx, shard_id, key).await?
             };
 
             // About to start writing so delay
@@ -607,7 +683,7 @@ impl ChunkSqlStore {
                 // First set the generation if unset, so that future writers will update it.
                 InsertGeneration::query(
                     &self.write_connection[shard_id],
-                    None,
+                    ctx.sql_query_telemetry(),
                     &[(&key, &put_generation, &value_len)],
                 )
                 .await?;
@@ -615,7 +691,7 @@ impl ChunkSqlStore {
             // Then update it in case it already existed
             UpdateGeneration::query(
                 &self.write_connection[shard_id],
-                None,
+                ctx.sql_query_telemetry(),
                 &key,
                 &mark_generation,
                 &value_len,
@@ -632,22 +708,31 @@ impl ChunkSqlStore {
     // but chunk_generation doesn't record that (it doesn't need to)
     pub(crate) async fn get_chunk_sizes_by_generation(
         &self,
+        ctx: &CoreContext,
         shard_num: usize,
     ) -> Result<HashMap<Option<u64>, (u64, u64)>, Error> {
-        GetGenerationSizes::query(&self.read_master_connection[shard_num], None)
-            .await
-            .map(|s| {
-                s.into_iter()
-                    .map(|(r#gen, size, count)| (r#gen, (size, count)))
-                    .collect::<HashMap<_, (_, _)>>()
-            })
+        GetGenerationSizes::query(
+            &self.read_master_connection[shard_num],
+            ctx.sql_query_telemetry(),
+        )
+        .await
+        .map(|s| {
+            s.into_iter()
+                .map(|(r#gen, size, count)| (r#gen, (size, count)))
+                .collect::<HashMap<_, (_, _)>>()
+        })
     }
 
-    pub(crate) async fn set_initial_generation(&self, shard_num: usize) -> Result<(), Error> {
+    pub(crate) async fn set_initial_generation(
+        &self,
+        ctx: &CoreContext,
+        shard_num: usize,
+    ) -> Result<(), Error> {
         loop {
             self.delay.delay(shard_num).await;
             let conn = &self.write_connection[shard_num];
-            let chunks_needing_gen = GetNeedsInitialGeneration::query(conn, None, &10000).await?;
+            let chunks_needing_gen =
+                GetNeedsInitialGeneration::query(conn, ctx.sql_query_telemetry(), &10000).await?;
             if chunks_needing_gen.is_empty() {
                 return Ok(());
             }
@@ -659,11 +744,15 @@ impl ChunkSqlStore {
                 let value_len = if let Some(value_len) = value_len {
                     value_len
                 } else {
-                    self.get_len(shard_num, &id).await?
+                    self.get_len(ctx, shard_num, &id).await?
                 };
 
-                InsertGeneration::query(conn, None, &[(&id.as_ref(), &generation, &value_len)])
-                    .await?;
+                InsertGeneration::query(
+                    conn,
+                    ctx.sql_query_telemetry(),
+                    &[(&id.as_ref(), &generation, &value_len)],
+                )
+                .await?;
             }
         }
     }

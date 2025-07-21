@@ -209,8 +209,8 @@ async fn dedup(fb: FacebookInit) -> Result<(), Error> {
 
         // Reach inside the store and confirm it only stored the data once
         let data_store = bs.get_data_store();
-        let row1 = data_store.get(&key1).await?.expect("Blob 1 not found");
-        let row2 = data_store.get(&key2).await?.expect("Blob 2 not found");
+        let row1 = data_store.get(ctx, &key1).await?.expect("Blob 1 not found");
+        let row2 = data_store.get(ctx, &key2).await?.expect("Blob 2 not found");
         assert_eq!(row1.id, row2.id, "Chunk stored under different ids");
         assert_eq!(row1.count, row2.count, "Chunk count differs");
         assert_eq!(
@@ -274,8 +274,8 @@ async fn link(fb: FacebookInit) -> Result<(), Error> {
 
         // Reach inside the store and confirm it only stored the data once
         let data_store = bs.get_data_store();
-        let row1 = data_store.get(&key1).await?.expect("Blob 1 not found");
-        let row2 = data_store.get(&key2).await?.expect("Blob 2 not found");
+        let row1 = data_store.get(ctx, &key1).await?.expect("Blob 1 not found");
+        let row2 = data_store.get(ctx, &key2).await?.expect("Blob 2 not found");
         assert_eq!(row1.id, row2.id, "Chunk stored under different ids");
         assert_eq!(row1.count, row2.count, "Chunk count differs");
         assert_eq!(
@@ -331,7 +331,7 @@ async fn generations(fb: FacebookInit) -> Result<(), Error> {
             bs.put_with_status(ctx, key1.clone(), blobstore_bytes.clone())
                 .await?;
 
-            let generations = bs.get_chunk_generations(&key1).await?;
+            let generations = bs.get_chunk_generations(ctx, &key1).await?;
 
             let value_len: u64 = blobstore_bytes.len().try_into()?;
             if !auto_inline_puts || value_len > MAX_INLINE_LEN {
@@ -356,8 +356,8 @@ async fn generations(fb: FacebookInit) -> Result<(), Error> {
             config_store.force_update_configs();
 
             // Set the generation and confirm
-            bs.set_generation(&key1, true, mark_gen).await?;
-            let generations = bs.get_chunk_generations(&key1).await?;
+            bs.set_generation(ctx, &key1, true, mark_gen).await?;
+            let generations = bs.get_chunk_generations(ctx, &key1).await?;
             if value_len > MAX_INLINE_LEN {
                 assert_eq!(generations, vec![Some(3)], "Generation set to 3");
             } else {
@@ -375,9 +375,9 @@ async fn generations(fb: FacebookInit) -> Result<(), Error> {
                 set_test_generations(test_source.as_ref(), 5, 4, 2, INITIAL_VERSION + 2);
                 config_store.force_update_configs();
                 bs.put(ctx, key2.clone(), blobstore_bytes.clone()).await?;
-                let generations = bs.get_chunk_generations(&key1).await?;
+                let generations = bs.get_chunk_generations(ctx, &key1).await?;
                 assert_eq!(generations, vec![Some(5)], "key1 generation not updated");
-                let generations = bs.get_chunk_generations(&key2).await?;
+                let generations = bs.get_chunk_generations(ctx, &key2).await?;
                 assert_eq!(generations, vec![Some(5)], "key2 generation not updated");
 
                 // Now update via the route GC uses, confirm it updates nicely and doesn't leap to
@@ -385,10 +385,10 @@ async fn generations(fb: FacebookInit) -> Result<(), Error> {
                 let mark_gen =
                     set_test_generations(test_source.as_ref(), 999, 10, 3, INITIAL_VERSION + 3);
                 config_store.force_update_configs();
-                bs.set_generation(&key1, true, mark_gen).await?;
-                let generations = bs.get_chunk_generations(&key1).await?;
+                bs.set_generation(ctx, &key1, true, mark_gen).await?;
+                let generations = bs.get_chunk_generations(ctx, &key1).await?;
                 assert_eq!(generations, vec![Some(10)], "key1 generation not updated");
-                let generations = bs.get_chunk_generations(&key2).await?;
+                let generations = bs.get_chunk_generations(ctx, &key2).await?;
                 assert_eq!(generations, vec![Some(10)], "key2 generation not updated");
             }
         }

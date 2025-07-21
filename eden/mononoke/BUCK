@@ -266,6 +266,7 @@ rust_binary(
         "//eden/mononoke/common/retry:retry",
         "//eden/mononoke/metaconfig:metaconfig_types",
         "//eden/mononoke/mononoke_macros:mononoke_macros",
+        "//eden/mononoke/server/context:context",
     ],
 )
 

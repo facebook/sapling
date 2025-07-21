@@ -48,6 +48,7 @@ fn print_sizes(sizes: &HashMap<Option<u64>, u64>) {
 
 pub async fn run(app: MononokeApp, _args: CommandArgs) -> Result<()> {
     let common_args: MononokeSQLBlobGCArgs = app.args()?;
+    let ctx = app.new_basic_context();
 
     let max_parallelism: usize = common_args.scheduled_max;
 
@@ -58,7 +59,7 @@ pub async fn run(app: MononokeApp, _args: CommandArgs) -> Result<()> {
     let shard_sizes: Vec<(usize, HashMap<Option<u64>, (u64, u64)>)> = stream::iter(shard_range)
         .map(|shard| {
             sqlblob
-                .get_chunk_sizes_by_generation(shard)
+                .get_chunk_sizes_by_generation(&ctx, shard)
                 .map_ok(move |gen_to_size| (shard, gen_to_size))
         })
         .buffer_unordered(max_parallelism)

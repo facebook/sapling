@@ -403,33 +403,45 @@ impl Sqlblob {
 
     pub fn get_keys_from_shard(
         &self,
+        ctx: &CoreContext,
         shard_num: usize,
     ) -> impl Stream<Item = Result<String>> + use<> {
-        self.data_store.get_keys_from_shard(shard_num)
+        self.data_store.get_keys_from_shard(ctx.clone(), shard_num)
     }
 
     /// Returns a HashMap from generation->(size, chunk_count)
     pub async fn get_chunk_sizes_by_generation(
         &self,
+        ctx: &CoreContext,
         shard_num: usize,
     ) -> Result<HashMap<Option<u64>, (u64, u64)>> {
         self.chunk_store
-            .get_chunk_sizes_by_generation(shard_num)
+            .get_chunk_sizes_by_generation(ctx, shard_num)
             .await
     }
 
-    pub async fn set_initial_generation(&self, shard_num: usize) -> Result<()> {
-        self.chunk_store.set_initial_generation(shard_num).await
+    pub async fn set_initial_generation(&self, ctx: &CoreContext, shard_num: usize) -> Result<()> {
+        self.chunk_store
+            .set_initial_generation(ctx, shard_num)
+            .await
     }
 
     #[cfg(test)]
-    pub async fn get_chunk_generations(&self, key: &str) -> Result<Vec<Option<u64>>> {
-        let chunked = self.data_store.get(key).await?;
+    pub async fn get_chunk_generations(
+        &self,
+        ctx: &CoreContext,
+        key: &str,
+    ) -> Result<Vec<Option<u64>>> {
+        let chunked = self.data_store.get(ctx, key).await?;
         if let Some(chunked) = chunked {
             let fetch_chunk_generations: FuturesOrdered<_> = (0..chunked.count)
                 .map(|chunk_num| {
-                    self.chunk_store
-                        .get_generation(&chunked.id, chunk_num, chunked.chunking_method)
+                    self.chunk_store.get_generation(
+                        ctx,
+                        &chunked.id,
+                        chunk_num,
+                        chunked.chunking_method,
+                    )
                 })
                 .collect();
             fetch_chunk_generations.try_collect().await
@@ -446,17 +458,19 @@ impl Sqlblob {
     /// If its value was small enough to inline, then also inline it if requested
     pub async fn set_generation(
         &self,
+        ctx: &CoreContext,
         key: &str,
         inline_small_values: bool,
         // Take the mark generation as param, so that marking for an entire run is consistent
         mark_generation: u64,
     ) -> Result<()> {
-        let chunked = self.data_store.get(key).await?;
+        let chunked = self.data_store.get(ctx, key).await?;
         if let Some(chunked) = chunked {
             let set_chunk_generations: FuturesUnordered<_> = (0..chunked.count)
                 .map(|chunk_num| {
                     self.chunk_store
                         .set_generation(
+                            ctx,
                             &chunked.id,
                             chunk_num,
                             chunked.chunking_method,
@@ -477,7 +491,7 @@ impl Sqlblob {
             let can_inline: Vec<bool> = set_chunk_generations.try_collect().await?;
             if inline_small_values && can_inline.len() == 1 && can_inline[0] {
                 // Value was small, so lets inline it
-                let small_value = self.get_impl(key).await?;
+                let small_value = self.get_impl(ctx, key).await?;
                 if let Some(small_value) = small_value {
                     // Double check length in case it changed since setting generation
                     let value_len: u64 = small_value.as_bytes().len().try_into()?;
@@ -497,6 +511,7 @@ impl Sqlblob {
                                 let small_value = encode_small_value(&small_value.into_raw_bytes());
                                 self.data_store
                                     .update_optimistic(
+                                        ctx,
                                         key,
                                         ctime,
                                         &small_value,
@@ -517,8 +532,12 @@ impl Sqlblob {
         }
     }
 
-    async fn get_impl<'a>(&'a self, key: &'a str) -> Result<Option<BlobstoreGetData>> {
-        let chunked = self.data_store.get(key).await?;
+    async fn get_impl<'a>(
+        &'a self,
+        ctx: &CoreContext,
+        key: &'a str,
+    ) -> Result<Option<BlobstoreGetData>> {
+        let chunked = self.data_store.get(ctx, key).await?;
         if let Some(chunked) = chunked {
             let blob = match chunked.chunking_method {
                 ChunkingMethod::InlineBase64 => {
@@ -528,8 +547,12 @@ impl Sqlblob {
                 ChunkingMethod::ByContentHashBlake2 => {
                     let chunks = (0..chunked.count)
                         .map(|chunk_num| {
-                            self.chunk_store
-                                .get(&chunked.id, chunk_num, chunked.chunking_method)
+                            self.chunk_store.get(
+                                ctx,
+                                &chunked.id,
+                                chunk_num,
+                                chunked.chunking_method,
+                            )
                         })
                         .collect::<FuturesOrdered<_>>()
                         .try_collect::<Vec<_>>()
@@ -565,18 +588,18 @@ impl fmt::Debug for Sqlblob {
 impl Blobstore for Sqlblob {
     async fn get<'a>(
         &'a self,
-        _ctx: &'a CoreContext,
+        ctx: &'a CoreContext,
         key: &'a str,
     ) -> Result<Option<BlobstoreGetData>> {
-        self.get_impl(key).await
+        self.get_impl(ctx, key).await
     }
 
     async fn is_present<'a>(
         &'a self,
-        _ctx: &'a CoreContext,
+        ctx: &'a CoreContext,
         key: &'a str,
     ) -> Result<BlobstoreIsPresent> {
-        let present = self.data_store.is_present(key).await?;
+        let present = self.data_store.is_present(ctx, key).await?;
         Ok(if present {
             BlobstoreIsPresent::Present
         } else {
@@ -596,17 +619,18 @@ impl Blobstore for Sqlblob {
 
     async fn copy<'a>(
         &'a self,
-        _ctx: &'a CoreContext,
+        ctx: &'a CoreContext,
         old_key: &'a str,
         new_key: String,
     ) -> Result<()> {
         let existing_data = self
             .data_store
-            .get(old_key)
+            .get(ctx, old_key)
             .await?
             .ok_or_else(|| format_err!("Key {} does not exist in the blobstore", old_key))?;
         self.data_store
             .put(
+                ctx,
                 &new_key,
                 existing_data.ctime,
                 &existing_data.id,
@@ -621,7 +645,7 @@ impl Blobstore for Sqlblob {
 impl BlobstorePutOps for Sqlblob {
     async fn put_explicit<'a>(
         &'a self,
-        _ctx: &'a CoreContext,
+        ctx: &'a CoreContext,
         key: String,
         value: BlobstoreBytes,
         put_behaviour: PutBehaviour,
@@ -634,7 +658,7 @@ impl BlobstorePutOps for Sqlblob {
             ));
         }
 
-        if put_behaviour == PutBehaviour::IfAbsent && self.data_store.is_present(&key).await? {
+        if put_behaviour == PutBehaviour::IfAbsent && self.data_store.is_present(ctx, &key).await? {
             // Can short circuit here as key already exists, and is keeping its chunks live
             return Ok(OverwriteStatus::Prevented);
         }
@@ -669,6 +693,7 @@ impl BlobstorePutOps for Sqlblob {
                         let chunk_gen_state = self
                             .chunk_store
                             .put(
+                                ctx,
                                 chunk_key.as_str(),
                                 chunk_num.try_into()?,
                                 chunking_method,
@@ -699,6 +724,7 @@ impl BlobstorePutOps for Sqlblob {
 
             self.data_store
                 .put(
+                    ctx,
                     &key,
                     ctime,
                     chunk_key.as_str(),
@@ -711,7 +737,7 @@ impl BlobstorePutOps for Sqlblob {
             // successfully before a generation is inserted (aka no dangling generations)
             if let Some(shard_id) = chunk_gen_insert_shard_id {
                 self.chunk_store
-                    .put_chunk_generation(&chunk_key, shard_id, value_len)
+                    .put_chunk_generation(ctx, &chunk_key, shard_id, value_len)
                     .await?
             }
 
@@ -721,7 +747,7 @@ impl BlobstorePutOps for Sqlblob {
         match put_behaviour {
             PutBehaviour::Overwrite => put_fut.await,
             PutBehaviour::IfAbsent | PutBehaviour::OverwriteAndLog => {
-                match self.data_store.get(&key).await? {
+                match self.data_store.get(ctx, &key).await? {
                     None => {
                         put_fut.await?;
                         Ok(OverwriteStatus::New)
@@ -735,6 +761,7 @@ impl BlobstorePutOps for Sqlblob {
                             for chunk_num in 0..chunk_count {
                                 self.chunk_store
                                     .update_generation(
+                                        ctx,
                                         &chunked.id,
                                         chunk_num,
                                         chunked.chunking_method,
@@ -762,14 +789,14 @@ impl BlobstorePutOps for Sqlblob {
 
 #[async_trait]
 impl BlobstoreUnlinkOps for Sqlblob {
-    async fn unlink<'a>(&'a self, _ctx: &'a CoreContext, key: &'a str) -> Result<()> {
-        if !self.data_store.is_present(key).await? {
+    async fn unlink<'a>(&'a self, ctx: &'a CoreContext, key: &'a str) -> Result<()> {
+        if !self.data_store.is_present(ctx, key).await? {
             bail!(
                 "Sqlblob::unlink: key {} does not exist in the blobstore",
                 key
             )
         };
-        self.data_store.unlink(key).await
+        self.data_store.unlink(ctx, key).await
     }
 }
 
