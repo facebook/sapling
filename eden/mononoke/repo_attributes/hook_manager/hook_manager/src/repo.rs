@@ -348,7 +348,7 @@ impl HookRepo {
 
     pub async fn get_tag_type<'a, 'b>(
         &'a self,
-        _ctx: &'a CoreContext,
+        ctx: &'a CoreContext,
         bookmark: &'b BookmarkKey,
     ) -> Result<TagType> {
         if !bookmark.is_tag() {
@@ -356,7 +356,7 @@ impl HookRepo {
         }
         match self
             .bonsai_tag_mapping
-            .get_entry_by_tag_name(bookmark.to_string(), Freshness::Latest)
+            .get_entry_by_tag_name(ctx, bookmark.to_string(), Freshness::Latest)
             .await?
         {
             Some(entry) => Ok(TagType::AnnotatedTag(entry.tag_hash)),

@@ -530,6 +530,7 @@ fn tag_entries_to_stream<'a>(
 /// Create a stream of packfile items containing tag objects that need to be included in the packfile/bundle while also
 /// returning the total number of tags included in the stream
 async fn tag_packfile_stream<'a>(
+    ctx: &CoreContext,
     fetch_container: FetchContainer,
     repo: &'a impl Repo,
     bookmarks: &GitBookmarks,
@@ -546,7 +547,11 @@ async fn tag_packfile_stream<'a>(
             // is an annotated tag
             let tag_name = bookmark.name().to_string();
             repo.bonsai_tag_mapping()
-                .get_entry_by_tag_name(tag_name.clone(), bonsai_tag_mapping::Freshness::MaybeStale)
+                .get_entry_by_tag_name(
+                    ctx,
+                    tag_name.clone(),
+                    bonsai_tag_mapping::Freshness::MaybeStale,
+                )
                 .await
                 .with_context(|| {
                     format!(
@@ -616,7 +621,7 @@ async fn tags_packfile_stream<'a>(
     // that match the requested tag names
     let tag_entries = repo
         .bonsai_tag_mapping()
-        .get_all_entries()
+        .get_all_entries(&ctx)
         .await
         .context("Error in getting tags during fetch")?
         .into_iter()
@@ -694,7 +699,7 @@ pub async fn generate_pack_item_stream<'a>(
 
     // STEP 2: Create a mapping of all known bookmarks (i.e. branches, tags) and the commit that they point to. The commit should be represented
     // as a Git hash instead of a Bonsai hash since it will be part of the packfile/bundle
-    let mut refs_to_include = refs_to_include(repo, bookmarks, request.tag_inclusion)
+    let mut refs_to_include = refs_to_include(ctx.as_ref(), repo, bookmarks, request.tag_inclusion)
         .await
         .context("Error while determining refs to include in the pack")?;
 
@@ -723,9 +728,10 @@ pub async fn generate_pack_item_stream<'a>(
 
     // STEP 5: Get the stream of tag packfile items to include in the pack/bundle. Note that we have not yet included the tag count in the
     // total object count so we will need the stream + count of elements in the stream
-    let (tag_stream, tags_count) = tag_packfile_stream(fetch_container.clone(), repo, bookmarks)
-        .await
-        .context("Error while generating tag packfile item stream")?;
+    let (tag_stream, tags_count) =
+        tag_packfile_stream(ctx.as_ref(), fetch_container.clone(), repo, bookmarks)
+            .await
+            .context("Error while generating tag packfile item stream")?;
     // Compute the overall object count by summing the trees, blobs, tags and commits count
     let object_count = commits_count + trees_and_blobs_count + tags_count;
 
@@ -767,7 +773,7 @@ pub async fn ls_refs_response(
         .await
         .context("Error while getting content refs during ls-refs")?;
     // Convert the above bookmarks into refs that can be sent in the response
-    let mut refs_to_include = refs_to_include(repo, bookmarks, request.tag_inclusion)
+    let mut refs_to_include = refs_to_include(ctx, repo, bookmarks, request.tag_inclusion)
         .await
         .context("Error while determining refs to include in the response")?;
 

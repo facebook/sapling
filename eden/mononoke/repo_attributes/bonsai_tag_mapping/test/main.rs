@@ -36,7 +36,8 @@ const ZERO_GIT_HASH: &str = "0000000000000000000000000000000000000000";
 const ONE_GIT_HASH: &str = "1111111111111111111111111111111111111111";
 
 #[mononoke::fbinit_test]
-async fn test_add_and_get(_: FacebookInit) -> Result<(), Error> {
+async fn test_add_and_get(fb: FacebookInit) -> Result<(), Error> {
+    let ctx = CoreContext::test_mock(fb);
     let mapping = SqlBonsaiTagMappingBuilder::with_sqlite_in_memory()?.build(REPO_ZERO);
     let tag_name = "JustATag";
     let entry = BonsaiTagMappingEntry {
@@ -46,10 +47,12 @@ async fn test_add_and_get(_: FacebookInit) -> Result<(), Error> {
         target_is_tag: false,
     };
 
-    mapping.add_or_update_mappings(vec![entry.clone()]).await?;
+    mapping
+        .add_or_update_mappings(&ctx, vec![entry.clone()])
+        .await?;
 
     let result = mapping
-        .get_entry_by_tag_name(entry.tag_name.clone(), Freshness::MaybeStale)
+        .get_entry_by_tag_name(&ctx, entry.tag_name.clone(), Freshness::MaybeStale)
         .await?;
     assert_eq!(
         result.as_ref().map(|entry| entry.changeset_id),
@@ -61,7 +64,7 @@ async fn test_add_and_get(_: FacebookInit) -> Result<(), Error> {
     );
 
     let result = mapping
-        .get_entries_by_changeset(bonsai::ONES_CSID)
+        .get_entries_by_changeset(&ctx, bonsai::ONES_CSID)
         .await?
         .map(|entries| {
             entries
@@ -74,7 +77,8 @@ async fn test_add_and_get(_: FacebookInit) -> Result<(), Error> {
 }
 
 #[mononoke::fbinit_test]
-async fn test_update_and_get(_: FacebookInit) -> Result<(), Error> {
+async fn test_update_and_get(fb: FacebookInit) -> Result<(), Error> {
+    let ctx = CoreContext::test_mock(fb);
     let mapping = SqlBonsaiTagMappingBuilder::with_sqlite_in_memory()?.build(REPO_ZERO);
     let tag_name = "JustATag";
     let entry = BonsaiTagMappingEntry {
@@ -84,14 +88,18 @@ async fn test_update_and_get(_: FacebookInit) -> Result<(), Error> {
         target_is_tag: false,
     };
 
-    mapping.add_or_update_mappings(vec![entry.clone()]).await?;
+    mapping
+        .add_or_update_mappings(&ctx, vec![entry.clone()])
+        .await?;
 
     let result = mapping
-        .get_entry_by_tag_name(entry.tag_name.clone(), Freshness::Latest)
+        .get_entry_by_tag_name(&ctx, entry.tag_name.clone(), Freshness::Latest)
         .await?;
     assert_eq!(result, Some(entry.clone()));
 
-    let result = mapping.get_entries_by_changeset(bonsai::ONES_CSID).await?;
+    let result = mapping
+        .get_entries_by_changeset(&ctx, bonsai::ONES_CSID)
+        .await?;
     assert_eq!(result, Some(vec![entry]));
 
     // Update the tag hash and try storing the same entry
@@ -102,33 +110,39 @@ async fn test_update_and_get(_: FacebookInit) -> Result<(), Error> {
         target_is_tag: true,
     };
     mapping
-        .add_or_update_mappings(vec![new_entry.clone()])
+        .add_or_update_mappings(&ctx, vec![new_entry.clone()])
         .await?;
     let result = mapping
-        .get_entry_by_tag_name(new_entry.tag_name.clone(), Freshness::Latest)
+        .get_entry_by_tag_name(&ctx, new_entry.tag_name.clone(), Freshness::Latest)
         .await?;
     assert_eq!(result, Some(new_entry.clone()));
 
-    let result = mapping.get_entries_by_changeset(bonsai::ONES_CSID).await?;
+    let result = mapping
+        .get_entries_by_changeset(&ctx, bonsai::ONES_CSID)
+        .await?;
     assert_eq!(result, Some(vec![new_entry]));
     Ok(())
 }
 
 #[mononoke::fbinit_test]
-async fn test_get_without_add(_: FacebookInit) -> Result<(), Error> {
+async fn test_get_without_add(fb: FacebookInit) -> Result<(), Error> {
+    let ctx = CoreContext::test_mock(fb);
     let mapping = SqlBonsaiTagMappingBuilder::with_sqlite_in_memory()?.build(REPO_ZERO);
     let result = mapping
-        .get_entry_by_tag_name("JustATag".to_string(), Freshness::MaybeStale)
+        .get_entry_by_tag_name(&ctx, "JustATag".to_string(), Freshness::MaybeStale)
         .await?;
     assert_eq!(result, None);
 
-    let result = mapping.get_entries_by_changeset(bonsai::ONES_CSID).await?;
+    let result = mapping
+        .get_entries_by_changeset(&ctx, bonsai::ONES_CSID)
+        .await?;
     assert_eq!(result, None);
     Ok(())
 }
 
 #[mononoke::fbinit_test]
-async fn test_get_multiple_tags(_: FacebookInit) -> Result<(), Error> {
+async fn test_get_multiple_tags(fb: FacebookInit) -> Result<(), Error> {
+    let ctx = CoreContext::test_mock(fb);
     let mapping = SqlBonsaiTagMappingBuilder::with_sqlite_in_memory()?.build(REPO_ZERO);
     let entry = BonsaiTagMappingEntry {
         changeset_id: bonsai::ONES_CSID,
@@ -143,11 +157,11 @@ async fn test_get_multiple_tags(_: FacebookInit) -> Result<(), Error> {
         target_is_tag: true,
     };
     mapping
-        .add_or_update_mappings(vec![entry, another_entry])
+        .add_or_update_mappings(&ctx, vec![entry, another_entry])
         .await?;
 
     let result = mapping
-        .get_entries_by_changeset(bonsai::ONES_CSID)
+        .get_entries_by_changeset(&ctx, bonsai::ONES_CSID)
         .await?
         .expect("None tags returned for the input changeset")
         .into_iter()
@@ -160,7 +174,8 @@ async fn test_get_multiple_tags(_: FacebookInit) -> Result<(), Error> {
 }
 
 #[mononoke::fbinit_test]
-async fn test_get_tags_by_multiple_changesets(_: FacebookInit) -> Result<(), Error> {
+async fn test_get_tags_by_multiple_changesets(fb: FacebookInit) -> Result<(), Error> {
+    let ctx = CoreContext::test_mock(fb);
     let mapping = SqlBonsaiTagMappingBuilder::with_sqlite_in_memory()?.build(REPO_ZERO);
     let entry = BonsaiTagMappingEntry {
         changeset_id: bonsai::ONES_CSID,
@@ -175,11 +190,11 @@ async fn test_get_tags_by_multiple_changesets(_: FacebookInit) -> Result<(), Err
         target_is_tag: true,
     };
     mapping
-        .add_or_update_mappings(vec![entry, another_entry])
+        .add_or_update_mappings(&ctx, vec![entry, another_entry])
         .await?;
 
     let result = mapping
-        .get_entries_by_changesets(vec![bonsai::ONES_CSID, bonsai::TWOS_CSID])
+        .get_entries_by_changesets(&ctx, vec![bonsai::ONES_CSID, bonsai::TWOS_CSID])
         .await?
         .into_iter()
         .map(|entry| entry.tag_name);
@@ -191,7 +206,8 @@ async fn test_get_tags_by_multiple_changesets(_: FacebookInit) -> Result<(), Err
 }
 
 #[mononoke::fbinit_test]
-async fn test_get_all_tags(_: FacebookInit) -> Result<(), Error> {
+async fn test_get_all_tags(fb: FacebookInit) -> Result<(), Error> {
+    let ctx = CoreContext::test_mock(fb);
     let mapping = SqlBonsaiTagMappingBuilder::with_sqlite_in_memory()?.build(REPO_ZERO);
     let entry = BonsaiTagMappingEntry {
         changeset_id: bonsai::ONES_CSID,
@@ -206,11 +222,11 @@ async fn test_get_all_tags(_: FacebookInit) -> Result<(), Error> {
         target_is_tag: true,
     };
     mapping
-        .add_or_update_mappings(vec![entry, another_entry])
+        .add_or_update_mappings(&ctx, vec![entry, another_entry])
         .await?;
 
     let result = mapping
-        .get_all_entries()
+        .get_all_entries(&ctx)
         .await?
         .into_iter()
         .map(|entry| entry.tag_name);
@@ -222,7 +238,8 @@ async fn test_get_all_tags(_: FacebookInit) -> Result<(), Error> {
 }
 
 #[mononoke::fbinit_test]
-async fn test_get_tag_by_tag_hashes(_: FacebookInit) -> Result<(), Error> {
+async fn test_get_tag_by_tag_hashes(fb: FacebookInit) -> Result<(), Error> {
+    let ctx = CoreContext::test_mock(fb);
     let mapping = SqlBonsaiTagMappingBuilder::with_sqlite_in_memory()?.build(REPO_ZERO);
     let entry = BonsaiTagMappingEntry {
         changeset_id: bonsai::ONES_CSID,
@@ -237,14 +254,17 @@ async fn test_get_tag_by_tag_hashes(_: FacebookInit) -> Result<(), Error> {
         target_is_tag: true,
     };
     mapping
-        .add_or_update_mappings(vec![entry, another_entry])
+        .add_or_update_mappings(&ctx, vec![entry, another_entry])
         .await?;
 
     let result = mapping
-        .get_entries_by_tag_hashes(vec![
-            GitSha1::from_str(ZERO_GIT_HASH)?,
-            GitSha1::from_str(ONE_GIT_HASH)?,
-        ])
+        .get_entries_by_tag_hashes(
+            &ctx,
+            vec![
+                GitSha1::from_str(ZERO_GIT_HASH)?,
+                GitSha1::from_str(ONE_GIT_HASH)?,
+            ],
+        )
         .await?
         .into_iter()
         .map(|entry| entry.tag_name);
@@ -256,7 +276,8 @@ async fn test_get_tag_by_tag_hashes(_: FacebookInit) -> Result<(), Error> {
 }
 
 #[mononoke::fbinit_test]
-async fn test_delete_mappings_by_name(_: FacebookInit) -> Result<(), Error> {
+async fn test_delete_mappings_by_name(fb: FacebookInit) -> Result<(), Error> {
+    let ctx = CoreContext::test_mock(fb);
     let mapping = SqlBonsaiTagMappingBuilder::with_sqlite_in_memory()?.build(REPO_ZERO);
     let entry = BonsaiTagMappingEntry {
         changeset_id: bonsai::ONES_CSID,
@@ -271,11 +292,11 @@ async fn test_delete_mappings_by_name(_: FacebookInit) -> Result<(), Error> {
         target_is_tag: true,
     };
     mapping
-        .add_or_update_mappings(vec![entry, another_entry])
+        .add_or_update_mappings(&ctx, vec![entry, another_entry])
         .await?;
 
     let result = mapping
-        .get_all_entries()
+        .get_all_entries(&ctx)
         .await?
         .into_iter()
         .map(|entry| entry.tag_name);
@@ -285,10 +306,10 @@ async fn test_delete_mappings_by_name(_: FacebookInit) -> Result<(), Error> {
     );
 
     mapping
-        .delete_mappings_by_name(vec!["JustATag".to_string(), "AnotherTag".to_string()])
+        .delete_mappings_by_name(&ctx, vec!["JustATag".to_string(), "AnotherTag".to_string()])
         .await?;
 
-    assert!(mapping.get_all_entries().await?.is_empty());
+    assert!(mapping.get_all_entries(&ctx,).await?.is_empty());
     Ok(())
 }
 
@@ -304,7 +325,7 @@ async fn test_cached_bonsai_tag_mappings(fb: FacebookInit) -> Result<(), Error> 
             let ctx = CoreContext::test_mock(fb);
             let (sender, receiver) = broadcast::channel(10);
             let mapping =
-                CachedBonsaiTagMapping::new(mapping, receiver, ctx.logger().clone()).await?;
+                CachedBonsaiTagMapping::new(&ctx, mapping, receiver, ctx.logger().clone()).await?;
             // Add a few mappings
             let entry = BonsaiTagMappingEntry {
                 changeset_id: bonsai::ONES_CSID,
@@ -319,7 +340,7 @@ async fn test_cached_bonsai_tag_mappings(fb: FacebookInit) -> Result<(), Error> 
                 target_is_tag: true,
             };
             mapping
-                .add_or_update_mappings(vec![entry, another_entry])
+                .add_or_update_mappings(&ctx, vec![entry, another_entry])
                 .await?;
             let received_by = sender.send(PlainBookmarkInfo::default())?;
             assert_eq!(
@@ -329,7 +350,7 @@ async fn test_cached_bonsai_tag_mappings(fb: FacebookInit) -> Result<(), Error> 
             sleep(Duration::from_secs(3)).await;
             // Ensure that the cache got updated with the latest value
             let result = mapping
-                .get_all_entries()
+                .get_all_entries(&ctx)
                 .await?
                 .into_iter()
                 .map(|entry| entry.tag_name);
@@ -345,21 +366,24 @@ async fn test_cached_bonsai_tag_mappings(fb: FacebookInit) -> Result<(), Error> 
                 target_is_tag: true,
             };
             mapping
-                .add_or_update_mappings(vec![new_entry.clone()])
+                .add_or_update_mappings(&ctx, vec![new_entry.clone()])
                 .await?;
             sender.send(PlainBookmarkInfo::default())?;
             sleep(Duration::from_secs(3)).await;
             let result = mapping
-                .get_entry_by_tag_name(new_entry.tag_name.clone(), Freshness::MaybeStale) // MaybeStale so that the cache is used
+                .get_entry_by_tag_name(&ctx, new_entry.tag_name.clone(), Freshness::MaybeStale) // MaybeStale so that the cache is used
                 .await?;
             assert_eq!(result, Some(new_entry.clone()));
             // Remove all entries and validate that the cache catches up with that change
             mapping
-                .delete_mappings_by_name(vec!["JustATag".to_string(), "AnotherTag".to_string()])
+                .delete_mappings_by_name(
+                    &ctx,
+                    vec!["JustATag".to_string(), "AnotherTag".to_string()],
+                )
                 .await?;
             sender.send(PlainBookmarkInfo::default())?;
             sleep(Duration::from_secs(3)).await;
-            assert!(mapping.get_all_entries().await?.is_empty());
+            assert!(mapping.get_all_entries(&ctx,).await?.is_empty());
             Ok(())
         }
         .boxed(),

@@ -146,7 +146,7 @@ pub async fn set_refs(
     }
     if !tags_to_delete.is_empty() {
         repo.bonsai_tag_mapping()
-            .delete_mappings_by_name(tags_to_delete)
+            .delete_mappings_by_name(&ctx, tags_to_delete)
             .await?;
     }
     Ok(())
@@ -228,7 +228,7 @@ async fn set_ref_inner(
     let bookmark_key = &bookmark_operation.bookmark_key;
     if bookmark_key.is_tag() && bookmark_operation.is_delete() {
         repo.bonsai_tag_mapping()
-            .delete_mappings_by_name(vec![bookmark_key.name().to_string()])
+            .delete_mappings_by_name(&ctx, vec![bookmark_key.name().to_string()])
             .await?;
     }
     // If requested, let's wait for the bookmark move to get reflected in WBC

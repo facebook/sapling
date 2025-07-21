@@ -13,6 +13,7 @@ use anyhow::Result;
 use arc_swap::ArcSwap;
 use async_trait::async_trait;
 use cloned::cloned;
+use context::CoreContext;
 use mononoke_macros::mononoke;
 use mononoke_types::ChangesetId;
 use mononoke_types::RepositoryId;
@@ -45,18 +46,20 @@ pub struct CachedBonsaiTagMapping {
 #[allow(dead_code)]
 impl CachedBonsaiTagMapping {
     pub async fn new(
+        ctx: &CoreContext,
         inner: Arc<dyn BonsaiTagMapping>,
         update_notification_receiver: Receiver<PlainBookmarkInfo>,
         logger: slog::Logger,
     ) -> Result<Self> {
         let initial_entries = inner
-            .get_all_entries()
+            .get_all_entries(ctx)
             .await
             .context("Error while getting initial set of bonsai tag mapping entries")?;
         let entries = Arc::new(ArcSwap::from_pointee(initial_entries));
         let updater_task = mononoke::spawn_task({
             cloned!(entries, inner);
-            update_cache(entries, inner, update_notification_receiver, logger)
+            let ctx = ctx.clone();
+            update_cache(ctx, entries, inner, update_notification_receiver, logger)
         });
         Ok(Self {
             inner,
@@ -67,6 +70,7 @@ impl CachedBonsaiTagMapping {
 }
 
 async fn update_cache(
+    ctx: CoreContext,
     entries: Swappable<Vec<BonsaiTagMappingEntry>>,
     bonsai_tag_mapping: Arc<dyn BonsaiTagMapping>,
     mut update_notification_receiver: Receiver<PlainBookmarkInfo>,
@@ -83,7 +87,7 @@ async fn update_cache(
                     logger,
                     "Received update notification from scribe for updating tags cache"
                 );
-                match bonsai_tag_mapping.get_all_entries().await {
+                match bonsai_tag_mapping.get_all_entries(&ctx).await {
                     Ok(new_entries) => {
                         let new_entries = Arc::new(new_entries);
                         entries.store(new_entries);
@@ -130,13 +134,13 @@ impl BonsaiTagMapping for CachedBonsaiTagMapping {
     }
 
     /// Fetch all the tag mapping entries for the given repo
-    async fn get_all_entries(&self) -> Result<Vec<BonsaiTagMappingEntry>> {
+    async fn get_all_entries(&self, ctx: &CoreContext) -> Result<Vec<BonsaiTagMappingEntry>> {
         if justknobs::eval("scm/mononoke:enable_bonsai_tag_mapping_caching", None, None)
             .unwrap_or(false)
         {
             Ok(self.entries.load_full().to_vec())
         } else {
-            self.inner.get_all_entries().await
+            self.inner.get_all_entries(ctx).await
         }
     }
 
@@ -144,6 +148,7 @@ impl BonsaiTagMapping for CachedBonsaiTagMapping {
     /// for the given repo
     async fn get_entries_by_changesets(
         &self,
+        ctx: &CoreContext,
         changeset_ids: Vec<ChangesetId>,
     ) -> Result<Vec<BonsaiTagMappingEntry>> {
         if justknobs::eval("scm/mononoke:enable_bonsai_tag_mapping_caching", None, None)
@@ -158,7 +163,9 @@ impl BonsaiTagMapping for CachedBonsaiTagMapping {
                 .cloned()
                 .collect())
         } else {
-            self.inner.get_entries_by_changesets(changeset_ids).await
+            self.inner
+                .get_entries_by_changesets(ctx, changeset_ids)
+                .await
         }
     }
 
@@ -166,13 +173,18 @@ impl BonsaiTagMapping for CachedBonsaiTagMapping {
     /// given repo, if one exists
     async fn get_entry_by_tag_name(
         &self,
+        ctx: &CoreContext,
         tag_name: String,
         freshness: Freshness,
     ) -> Result<Option<BonsaiTagMappingEntry>> {
         match freshness {
             // If the caller wants the latest view of data, we delegate to the inner bonsai tag mapping
             // instead of relying on the cache
-            Freshness::Latest => self.inner.get_entry_by_tag_name(tag_name, freshness).await,
+            Freshness::Latest => {
+                self.inner
+                    .get_entry_by_tag_name(ctx, tag_name, freshness)
+                    .await
+            }
             Freshness::MaybeStale => {
                 if justknobs::eval("scm/mononoke:enable_bonsai_tag_mapping_caching", None, None)
                     .unwrap_or(false)
@@ -185,7 +197,9 @@ impl BonsaiTagMapping for CachedBonsaiTagMapping {
                         .cloned();
                     Ok(entry)
                 } else {
-                    self.inner.get_entry_by_tag_name(tag_name, freshness).await
+                    self.inner
+                        .get_entry_by_tag_name(ctx, tag_name, freshness)
+                        .await
                 }
             }
         }
@@ -194,6 +208,7 @@ impl BonsaiTagMapping for CachedBonsaiTagMapping {
     /// Fetch the tag mapping entries corresponding to the input tag hashes
     async fn get_entries_by_tag_hashes(
         &self,
+        ctx: &CoreContext,
         tag_hashes: Vec<GitSha1>,
     ) -> Result<Vec<BonsaiTagMappingEntry>> {
         if justknobs::eval("scm/mononoke:enable_bonsai_tag_mapping_caching", None, None)
@@ -208,19 +223,27 @@ impl BonsaiTagMapping for CachedBonsaiTagMapping {
                 .cloned()
                 .collect())
         } else {
-            self.inner.get_entries_by_tag_hashes(tag_hashes).await
+            self.inner.get_entries_by_tag_hashes(ctx, tag_hashes).await
         }
     }
 
     /// Add new tag name to bonsai changeset mappings
-    async fn add_or_update_mappings(&self, entries: Vec<BonsaiTagMappingEntry>) -> Result<()> {
+    async fn add_or_update_mappings(
+        &self,
+        ctx: &CoreContext,
+        entries: Vec<BonsaiTagMappingEntry>,
+    ) -> Result<()> {
         // Writes are directly delegated to inner bonsai tag mapping
-        self.inner.add_or_update_mappings(entries).await
+        self.inner.add_or_update_mappings(ctx, entries).await
     }
 
     /// Delete existing bonsai tag mappings based on the input tag names
-    async fn delete_mappings_by_name(&self, tag_names: Vec<String>) -> Result<()> {
+    async fn delete_mappings_by_name(
+        &self,
+        ctx: &CoreContext,
+        tag_names: Vec<String>,
+    ) -> Result<()> {
         // Writes are directly delegated to inner bonsai tag mapping
-        self.inner.delete_mappings_by_name(tag_names).await
+        self.inner.delete_mappings_by_name(ctx, tag_names).await
     }
 }

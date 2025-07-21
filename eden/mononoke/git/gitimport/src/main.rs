@@ -449,7 +449,7 @@ async fn async_main(app: MononokeApp) -> Result<(), Error> {
                 .context("failed to build RepoContext")?;
             let existing_tags = repo
                 .bonsai_tag_mapping()
-                .get_all_entries()
+                .get_all_entries(&ctx)
                 .await
                 .context("Failed to fetch bonsai tag mapping")?
                 .into_iter()

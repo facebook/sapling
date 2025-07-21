@@ -335,7 +335,7 @@ pub async fn create_annotated_tag(
         target_is_tag,
     };
     repo.bonsai_tag_mapping()
-        .add_or_update_mappings(vec![mapping_entry])
+        .add_or_update_mappings(ctx, vec![mapping_entry])
         .await
         .map_err(|e| {
             anyhow::anyhow!(

@@ -9,6 +9,7 @@ use ::sql_ext::mononoke_queries;
 use anyhow::Context;
 use anyhow::Result;
 use async_trait::async_trait;
+use context::CoreContext;
 use mononoke_types::ChangesetId;
 use mononoke_types::RepositoryId;
 use mononoke_types::hash::GitSha1;
@@ -111,13 +112,14 @@ impl BonsaiTagMapping for SqlBonsaiTagMapping {
         self.repo_id
     }
 
-    async fn get_all_entries(&self) -> Result<Vec<BonsaiTagMappingEntry>> {
-        let results =
-            SelectAllMappings::query(&self.connections.read_connection, None, &self.repo_id)
-                .await
-                .with_context(|| {
-                    format!("Failure in fetching all entries for repo {}", self.repo_id)
-                })?;
+    async fn get_all_entries(&self, ctx: &CoreContext) -> Result<Vec<BonsaiTagMappingEntry>> {
+        let results = SelectAllMappings::query(
+            &self.connections.read_connection,
+            ctx.sql_query_telemetry(),
+            &self.repo_id,
+        )
+        .await
+        .with_context(|| format!("Failure in fetching all entries for repo {}", self.repo_id))?;
 
         let values = results
             .into_iter()
@@ -130,6 +132,7 @@ impl BonsaiTagMapping for SqlBonsaiTagMapping {
 
     async fn get_entry_by_tag_name(
         &self,
+        ctx: &CoreContext,
         tag_name: String,
         freshness: Freshness,
     ) -> Result<Option<BonsaiTagMappingEntry>> {
@@ -138,14 +141,19 @@ impl BonsaiTagMapping for SqlBonsaiTagMapping {
         } else {
             &self.connections.read_connection
         };
-        let results = SelectMappingByTagName::query(connection, None, &self.repo_id, &tag_name)
-            .await
-            .with_context(|| {
-                format!(
-                    "Failure in fetching entry for tag {} in repo {}",
-                    tag_name, self.repo_id
-                )
-            })?;
+        let results = SelectMappingByTagName::query(
+            connection,
+            ctx.sql_query_telemetry(),
+            &self.repo_id,
+            &tag_name,
+        )
+        .await
+        .with_context(|| {
+            format!(
+                "Failure in fetching entry for tag {} in repo {}",
+                tag_name, self.repo_id
+            )
+        })?;
         // This should not happen but since this is new code, extra checks dont hurt.
         if results.len() > 1 {
             anyhow::bail!(
@@ -164,11 +172,12 @@ impl BonsaiTagMapping for SqlBonsaiTagMapping {
 
     async fn get_entries_by_changesets(
         &self,
+        ctx: &CoreContext,
         changeset_ids: Vec<ChangesetId>,
     ) -> Result<Vec<BonsaiTagMappingEntry>> {
         let results = SelectMappingByChangeset::query(
             &self.connections.read_connection,
-            None,
+            ctx.sql_query_telemetry(),
             &self.repo_id,
             changeset_ids.as_slice(),
         )
@@ -191,11 +200,12 @@ impl BonsaiTagMapping for SqlBonsaiTagMapping {
 
     async fn get_entries_by_tag_hashes(
         &self,
+        ctx: &CoreContext,
         tag_hashes: Vec<GitSha1>,
     ) -> Result<Vec<BonsaiTagMappingEntry>> {
         let results = SelectMappingByTagHash::query(
             &self.connections.read_connection,
-            None,
+            ctx.sql_query_telemetry(),
             &self.repo_id,
             tag_hashes.as_slice(),
         )
@@ -216,7 +226,11 @@ impl BonsaiTagMapping for SqlBonsaiTagMapping {
         return Ok(values);
     }
 
-    async fn add_or_update_mappings(&self, entries: Vec<BonsaiTagMappingEntry>) -> Result<()> {
+    async fn add_or_update_mappings(
+        &self,
+        ctx: &CoreContext,
+        entries: Vec<BonsaiTagMappingEntry>,
+    ) -> Result<()> {
         let converted_entries: Vec<_> = entries
             .iter()
             .map(|entry| {
@@ -231,7 +245,7 @@ impl BonsaiTagMapping for SqlBonsaiTagMapping {
             .collect();
         AddOrUpdateBonsaiTagMapping::query(
             &self.connections.write_connection,
-            None,
+            ctx.sql_query_telemetry(),
             converted_entries.as_slice(),
         )
         .await
@@ -244,10 +258,14 @@ impl BonsaiTagMapping for SqlBonsaiTagMapping {
         Ok(())
     }
 
-    async fn delete_mappings_by_name(&self, tag_names: Vec<String>) -> Result<()> {
+    async fn delete_mappings_by_name(
+        &self,
+        ctx: &CoreContext,
+        tag_names: Vec<String>,
+    ) -> Result<()> {
         DeleteBonsaiTagMappingsByName::query(
             &self.connections.write_connection,
-            None,
+            ctx.sql_query_telemetry(),
             &self.repo_id,
             tag_names.as_slice(),
         )

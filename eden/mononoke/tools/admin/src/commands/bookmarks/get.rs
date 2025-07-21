@@ -48,7 +48,11 @@ pub async fn get(ctx: &CoreContext, repo: &Repo, get_args: BookmarksGetArgs) -> 
             if key.is_tag() {
                 let metadata_changeset = repo
                     .bonsai_tag_mapping
-                    .get_entry_by_tag_name(key.name().clone().into_string(), Freshness::MaybeStale)
+                    .get_entry_by_tag_name(
+                        ctx,
+                        key.name().clone().into_string(),
+                        Freshness::MaybeStale,
+                    )
                     .await?
                     .map(|entry| entry.changeset_id);
                 match metadata_changeset {

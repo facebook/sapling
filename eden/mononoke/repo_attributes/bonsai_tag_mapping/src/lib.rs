@@ -10,6 +10,7 @@ mod sql;
 
 use anyhow::Result;
 use async_trait::async_trait;
+use context::CoreContext;
 use mononoke_types::ChangesetId;
 use mononoke_types::RepositoryId;
 use mononoke_types::hash::GitSha1;
@@ -58,12 +59,13 @@ pub trait BonsaiTagMapping: Send + Sync {
     fn repo_id(&self) -> RepositoryId;
 
     /// Fetch all the tag mapping entries for the given repo
-    async fn get_all_entries(&self) -> Result<Vec<BonsaiTagMappingEntry>>;
+    async fn get_all_entries(&self, ctx: &CoreContext) -> Result<Vec<BonsaiTagMappingEntry>>;
 
     /// Fetch the tag mapping entries corresponding to the input changeset ids
     /// for the given repo
     async fn get_entries_by_changesets(
         &self,
+        ctx: &CoreContext,
         changeset_id: Vec<ChangesetId>,
     ) -> Result<Vec<BonsaiTagMappingEntry>>;
 
@@ -71,6 +73,7 @@ pub trait BonsaiTagMapping: Send + Sync {
     /// given repo, if one exists
     async fn get_entry_by_tag_name(
         &self,
+        ctx: &CoreContext,
         tag_name: String,
         freshness: Freshness,
     ) -> Result<Option<BonsaiTagMappingEntry>>;
@@ -80,21 +83,33 @@ pub trait BonsaiTagMapping: Send + Sync {
     /// tags that map to the same changeset
     async fn get_entries_by_changeset(
         &self,
+        ctx: &CoreContext,
         changeset_id: ChangesetId,
     ) -> Result<Option<Vec<BonsaiTagMappingEntry>>> {
-        let entries = self.get_entries_by_changesets(vec![changeset_id]).await?;
+        let entries = self
+            .get_entries_by_changesets(ctx, vec![changeset_id])
+            .await?;
         Ok((!entries.is_empty()).then_some(entries))
     }
 
     /// Fetch the tag mapping entries corresponding to the input tag hashes
     async fn get_entries_by_tag_hashes(
         &self,
+        ctx: &CoreContext,
         tag_hashes: Vec<GitSha1>,
     ) -> Result<Vec<BonsaiTagMappingEntry>>;
 
     /// Add new tag name to bonsai changeset mappings
-    async fn add_or_update_mappings(&self, entries: Vec<BonsaiTagMappingEntry>) -> Result<()>;
+    async fn add_or_update_mappings(
+        &self,
+        ctx: &CoreContext,
+        entries: Vec<BonsaiTagMappingEntry>,
+    ) -> Result<()>;
 
     /// Delete existing bonsai tag mappings based on the input tag names
-    async fn delete_mappings_by_name(&self, tag_names: Vec<String>) -> Result<()>;
+    async fn delete_mappings_by_name(
+        &self,
+        ctx: &CoreContext,
+        tag_names: Vec<String>,
+    ) -> Result<()>;
 }

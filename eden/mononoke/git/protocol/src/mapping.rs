@@ -217,7 +217,7 @@ pub(crate) async fn tagged_commits(
     // Fetch the names of the tags corresponding to the tag object represented by the input object ids
     let tag_names = repo
         .bonsai_tag_mapping()
-        .get_entries_by_tag_hashes(git_shas)
+        .get_entries_by_tag_hashes(ctx, git_shas)
         .await
         .context("Error while fetching tag entries from tag hashes")?
         .into_iter()
@@ -259,13 +259,14 @@ pub(crate) async fn tagged_commits(
 /// will be bookmarks created from branches and tags. Branches and simple tags will be mapped to the
 /// Git commit that they point to. Annotated tags will be handled based on the `tag_inclusion` parameter
 pub(crate) async fn refs_to_include(
+    ctx: &CoreContext,
     repo: &impl Repo,
     bookmarks: &GitBookmarks,
     tag_inclusion: TagInclusion,
 ) -> Result<FxHashMap<String, RefTarget>> {
     let bonsai_tag_map = repo
         .bonsai_tag_mapping()
-        .get_all_entries()
+        .get_all_entries(ctx)
         .await
         .with_context(|| {
             format!(
