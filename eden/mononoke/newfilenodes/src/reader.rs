@@ -220,6 +220,7 @@ impl FilenodesReader {
                     };
 
                     match select_filenode_from_sql(
+                        &ctx,
                         cache_filler,
                         &self.read_connections,
                         repo_id,
@@ -263,6 +264,7 @@ impl FilenodesReader {
                     STATS::gets_master.add_value(1);
 
                     let res = select_filenode_from_sql(
+                        &ctx,
                         cache_filler,
                         &self.read_master_connections,
                         repo_id,
@@ -326,6 +328,7 @@ impl FilenodesReader {
                     };
 
                     select_history_from_sql(
+                        &ctx,
                         &cache_filler,
                         &self.read_connections,
                         repo_id,
@@ -379,6 +382,7 @@ struct PartialFilenode {
 }
 
 async fn select_filenode_from_sql(
+    ctx: &CoreContext,
     filler: FilenodeCacheFiller<'_>,
     connections: &Connections,
     repo_id: RepositoryId,
@@ -386,7 +390,8 @@ async fn select_filenode_from_sql(
     filenode: HgFileNodeId,
     recorder: &PerfCounterRecorder<'_>,
 ) -> Result<FilenodeResult<Option<FilenodeInfo>>, ErrorKind> {
-    let partial = select_partial_filenode(connections, repo_id, pwh, filenode, recorder).await?;
+    let partial =
+        select_partial_filenode(ctx, connections, repo_id, pwh, filenode, recorder).await?;
 
     let partial = match partial {
         Some(partial) => partial,
@@ -395,7 +400,7 @@ async fn select_filenode_from_sql(
         }
     };
 
-    let ret = match fill_paths(connections, pwh, repo_id, vec![partial], recorder)
+    let ret = match fill_paths(ctx, connections, pwh, repo_id, vec![partial], recorder)
         .await?
         .into_iter()
         .next()
@@ -412,6 +417,7 @@ async fn select_filenode_from_sql(
 }
 
 async fn select_partial_filenode(
+    ctx: &CoreContext,
     connections: &Connections,
     repo_id: RepositoryId,
     pwh: &PathWithHash<'_>,
@@ -424,7 +430,7 @@ async fn select_partial_filenode(
 
     let rows = enforce_sql_timeout(SelectFilenode::query(
         connection,
-        None,
+        ctx.sql_query_telemetry(),
         &repo_id,
         &pwh.hash,
         pwh.sql_is_tree(),
@@ -456,6 +462,7 @@ impl<'a> HistoryCacheFiller<'a> {
 }
 
 async fn select_history_from_sql(
+    ctx: &CoreContext,
     filler: &HistoryCacheFiller<'_>,
     connections: &Connections,
     repo_id: RepositoryId,
@@ -463,10 +470,11 @@ async fn select_history_from_sql(
     recorder: &PerfCounterRecorder<'_>,
     limit: Option<u64>,
 ) -> Result<FilenodeResult<FilenodeRange>> {
-    let maybe_partial = select_partial_history(connections, repo_id, pwh, recorder, limit).await?;
+    let maybe_partial =
+        select_partial_history(ctx, connections, repo_id, pwh, recorder, limit).await?;
     if let Some(partial) = maybe_partial {
         let history = FilenodeRange::Filenodes(
-            fill_paths(connections, pwh, repo_id, partial, recorder).await?,
+            fill_paths(ctx, connections, pwh, repo_id, partial, recorder).await?,
         );
         filler.fill(history.clone());
         Ok(FilenodeResult::Present(history))
@@ -477,6 +485,7 @@ async fn select_history_from_sql(
 }
 
 async fn select_partial_history(
+    ctx: &CoreContext,
     connections: &Connections,
     repo_id: RepositoryId,
     pwh: &PathWithHash<'_>,
@@ -494,7 +503,7 @@ async fn select_partial_history(
         Some(limit) => {
             let rows = enforce_sql_timeout(SelectLimitedFilenodes::query(
                 connection,
-                None,
+                ctx.sql_query_telemetry(),
                 &repo_id,
                 &pwh.hash,
                 pwh.sql_is_tree(),
@@ -510,7 +519,7 @@ async fn select_partial_history(
         None => {
             enforce_sql_timeout(SelectAllFilenodes::query(
                 connection,
-                None,
+                ctx.sql_query_telemetry(),
                 &repo_id,
                 &pwh.hash,
                 pwh.sql_is_tree(),
@@ -555,6 +564,7 @@ fn convert_row_to_partial_filenode(row: FilenodeRow) -> Result<PartialFilenode, 
 }
 
 async fn fill_paths(
+    ctx: &CoreContext,
     connections: &Connections,
     pwh: &PathWithHash<'_>,
     repo_id: RepositoryId,
@@ -566,7 +576,7 @@ async fn fill_paths(
         .filter_map(|r| r.copyfrom.as_ref().map(|c| c.0.clone()));
 
     let path_hashes_to_paths =
-        select_paths(connections, repo_id, path_hashes_to_fetch, recorder).await?;
+        select_paths(ctx, connections, repo_id, path_hashes_to_fetch, recorder).await?;
 
     let ret = rows
         .into_iter()
@@ -612,6 +622,7 @@ async fn fill_paths(
 }
 
 async fn select_paths<I: Iterator<Item = PathHashBytes>>(
+    ctx: &CoreContext,
     connections: &Connections,
     repo_id: RepositoryId,
     iter: I,
@@ -624,17 +635,21 @@ async fn select_paths<I: Iterator<Item = PathHashBytes>>(
             let group = group.collect::<Vec<_>>();
 
             STATS::path_gets.add_value(group.len() as i64);
-
+            let ctx = ctx.clone();
             async move {
                 recorder.increment();
 
                 let connection = connections.checkout_by_shard_id(shard_id, AcquireReason::Paths);
 
-                let output =
-                    enforce_sql_timeout(SelectPaths::query(connection, None, &repo_id, &group[..]))
-                        .await?
-                        .into_iter()
-                        .collect::<HashMap<_, _>>();
+                let output = enforce_sql_timeout(SelectPaths::query(
+                    connection,
+                    ctx.sql_query_telemetry(),
+                    &repo_id,
+                    &group[..],
+                ))
+                .await?
+                .into_iter()
+                .collect::<HashMap<_, _>>();
 
                 Result::<_, ErrorKind>::Ok(output)
             }
