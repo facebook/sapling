@@ -60,6 +60,7 @@ class HgRepository(repobase.Repository):
         self.hg_environment["NOSCMLOG"] = "1"
         self.hg_environment["LOCALE"] = "en_US.UTF-8"
         self.hg_environment["LC_ALL"] = "en_US.UTF-8"
+
         # Set HGRCPATH to make sure we aren't affected by the local system's
         # mercurial settings from /etc/mercurial/
         if system_hgrc:
@@ -319,6 +320,7 @@ class HgRepository(repobase.Repository):
         if not hgrc.has_section("extensions"):
             hgrc.add_section("extensions")
         hgrc["extensions"]["commitcloud"] = "!"
+        hgrc["extensions"]["hgevents"] = "!"
 
         self.write_hgrc(hgrc)
 
