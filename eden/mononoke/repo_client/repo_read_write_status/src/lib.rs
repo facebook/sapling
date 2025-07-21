@@ -104,9 +104,13 @@ impl SqlRepoReadWriteStatus {
         &self,
         hgsql_name: &HgsqlName,
     ) -> Result<Option<(HgMononokeReadWrite, Option<String>)>, Error> {
-        GetReadWriteStatus::query(&self.read_connection, None, hgsql_name.as_ref())
-            .await
-            .map(|rows| rows.into_iter().next())
+        GetReadWriteStatus::query(
+            &self.read_connection,
+            ctx.sql_query_telemetry(),
+            hgsql_name.as_ref(),
+        )
+        .await
+        .map(|rows| rows.into_iter().next())
     }
 
     async fn set_state(

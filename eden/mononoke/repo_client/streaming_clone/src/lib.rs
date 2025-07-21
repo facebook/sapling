@@ -164,8 +164,13 @@ impl StreamingClone {
             .increment_counter(PerfCounterType::SqlReadsReplica);
 
         let tag = tag.unwrap_or("");
-        let res = CountChunks::query(&self.connections.read_connection, None, &self.repo_id, &tag)
-            .await?;
+        let res = CountChunks::query(
+            &self.connections.read_connection,
+            ctx.sql_query_telemetry(),
+            &self.repo_id,
+            &tag,
+        )
+        .await?;
         Ok(res.first().map_or(0, |x| x.0))
     }
 
@@ -178,9 +183,13 @@ impl StreamingClone {
             .increment_counter(PerfCounterType::SqlReadsReplica);
 
         let tag = tag.unwrap_or("");
-        let rows =
-            SelectChunks::query(&self.connections.read_connection, None, &self.repo_id, &tag)
-                .await?;
+        let rows = SelectChunks::query(
+            &self.connections.read_connection,
+            ctx.sql_query_telemetry(),
+            &self.repo_id,
+            &tag,
+        )
+        .await?;
 
         let res = rows.into_iter().fold(
             RevlogStreamingChunks::new(),
@@ -224,7 +233,12 @@ impl StreamingClone {
             .map(|row| (&self.repo_id, &tag, &row.0, &row.1, &row.2, &row.3, &row.4))
             .collect();
 
-        InsertChunks::query(&self.connections.write_connection, None, &ref_chunks[..]).await?;
+        InsertChunks::query(
+            &self.connections.write_connection,
+            ctx.sql_query_telemetry(),
+            &ref_chunks[..],
+        )
+        .await?;
 
         Ok(())
     }
@@ -239,8 +253,13 @@ impl StreamingClone {
 
         let tag = tag.unwrap_or("");
 
-        let res = SelectSizes::query(&self.connections.read_connection, None, &self.repo_id, &tag)
-            .await?;
+        let res = SelectSizes::query(
+            &self.connections.read_connection,
+            ctx.sql_query_telemetry(),
+            &self.repo_id,
+            &tag,
+        )
+        .await?;
         let (idx, data) = match res.first() {
             Some((Some(idx), Some(data))) => (idx, data),
             _ => {
@@ -255,8 +274,12 @@ impl StreamingClone {
         ctx.perf_counters()
             .increment_counter(PerfCounterType::SqlReadsReplica);
 
-        let res = SelectMaxChunkNum::query(&self.connections.read_connection, None, &self.repo_id)
-            .await?;
+        let res = SelectMaxChunkNum::query(
+            &self.connections.read_connection,
+            ctx.sql_query_telemetry(),
+            &self.repo_id,
+        )
+        .await?;
         Ok(res.first().and_then(|x| x.0))
     }
 }
