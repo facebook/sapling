@@ -17,6 +17,7 @@ use sql_construct::SqlConstruct;
 use sql_construct::SqlConstructFromMetadataDatabaseConfig;
 use sql_ext::SqlConnections;
 use sql_ext::mononoke_queries;
+use sql_query_telemetry::SqlQueryTelemetry;
 
 use super::RepoMetadataCheckpoint;
 use super::RepoMetadataCheckpointEntry;
@@ -53,6 +54,7 @@ mononoke_queries! {
 pub struct SqlRepoMetadataCheckpoint {
     connections: SqlConnections,
     repo_id: RepositoryId,
+    sql_query_tel: SqlQueryTelemetry,
 }
 
 #[derive(Clone)]
@@ -79,10 +81,15 @@ impl SqlConstructFromMetadataDatabaseConfig for SqlRepoMetadataCheckpointBuilder
 }
 
 impl SqlRepoMetadataCheckpointBuilder {
-    pub fn build(self, repo_id: RepositoryId) -> SqlRepoMetadataCheckpoint {
+    pub fn build(
+        self,
+        repo_id: RepositoryId,
+        sql_query_tel: SqlQueryTelemetry,
+    ) -> SqlRepoMetadataCheckpoint {
         SqlRepoMetadataCheckpoint {
             connections: self.connections,
             repo_id,
+            sql_query_tel,
         }
     }
 }
@@ -96,12 +103,13 @@ impl RepoMetadataCheckpoint for SqlRepoMetadataCheckpoint {
 
     /// Fetch all the metadata info entries for the given repo
     async fn get_all_entries(&self) -> Result<Vec<RepoMetadataCheckpointEntry>> {
-        let results =
-            SelectAllEntries::query(&self.connections.read_connection, None, &self.repo_id)
-                .await
-                .with_context(|| {
-                    format!("Failure in fetching all entries for repo {}", self.repo_id)
-                })?;
+        let results = SelectAllEntries::query(
+            &self.connections.read_connection,
+            self.sql_query_tel.clone(),
+            &self.repo_id,
+        )
+        .await
+        .with_context(|| format!("Failure in fetching all entries for repo {}", self.repo_id))?;
 
         let values = results
             .into_iter()
@@ -124,7 +132,7 @@ impl RepoMetadataCheckpoint for SqlRepoMetadataCheckpoint {
     ) -> Result<Option<RepoMetadataCheckpointEntry>> {
         let results = SelectEntryByBookmark::query(
             &self.connections.read_connection,
-            None,
+            self.sql_query_tel.clone(),
             &self.repo_id,
             &bookmark_name,
         )
@@ -169,7 +177,7 @@ impl RepoMetadataCheckpoint for SqlRepoMetadataCheckpoint {
             .collect();
         AddOrUpdateRepoMetadataCheckpoint::query(
             &self.connections.write_connection,
-            None,
+            self.sql_query_tel.clone(),
             converted_entries.as_slice(),
         )
         .await

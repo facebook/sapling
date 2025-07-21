@@ -549,7 +549,7 @@ impl TestRepoFactory {
     ) -> Result<ArcRepoMetadataCheckpoint> {
         Ok(Arc::new(
             SqlRepoMetadataCheckpointBuilder::from_sql_connections(self.metadata_db.clone())
-                .build(repo_identity.id()),
+                .build(repo_identity.id(), self.ctx.sql_query_telemetry()),
         ))
     }
 

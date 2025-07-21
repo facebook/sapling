@@ -8,6 +8,7 @@
 use std::collections::HashSet;
 
 use anyhow::Error;
+use context::CoreContext;
 use fbinit::FacebookInit;
 use mononoke_macros::mononoke;
 use mononoke_types::Timestamp;
@@ -19,8 +20,10 @@ use repo_metadata_checkpoint::SqlRepoMetadataCheckpointBuilder;
 use sql_construct::SqlConstruct;
 
 #[mononoke::fbinit_test]
-async fn test_add_and_get(_: FacebookInit) -> Result<(), Error> {
-    let metadata_info = SqlRepoMetadataCheckpointBuilder::with_sqlite_in_memory()?.build(REPO_ZERO);
+async fn test_add_and_get(fb: FacebookInit) -> Result<(), Error> {
+    let ctx = CoreContext::test_mock(fb);
+    let metadata_info = SqlRepoMetadataCheckpointBuilder::with_sqlite_in_memory()?
+        .build(REPO_ZERO, ctx.sql_query_telemetry());
     let bookmark_name = "JustABookmark";
     let timestamp = Timestamp::now();
     let entry = RepoMetadataCheckpointEntry {
@@ -46,8 +49,10 @@ async fn test_add_and_get(_: FacebookInit) -> Result<(), Error> {
 }
 
 #[mononoke::fbinit_test]
-async fn test_update_and_get(_: FacebookInit) -> Result<(), Error> {
-    let metadata_info = SqlRepoMetadataCheckpointBuilder::with_sqlite_in_memory()?.build(REPO_ZERO);
+async fn test_update_and_get(fb: FacebookInit) -> Result<(), Error> {
+    let ctx = CoreContext::test_mock(fb);
+    let metadata_info = SqlRepoMetadataCheckpointBuilder::with_sqlite_in_memory()?
+        .build(REPO_ZERO, ctx.sql_query_telemetry());
     let bookmark_name = "JustABookmark";
     let timestamp = Timestamp::now();
     let entry = RepoMetadataCheckpointEntry {
@@ -83,8 +88,10 @@ async fn test_update_and_get(_: FacebookInit) -> Result<(), Error> {
 }
 
 #[mononoke::fbinit_test]
-async fn test_get_without_add(_: FacebookInit) -> Result<(), Error> {
-    let metadata_info = SqlRepoMetadataCheckpointBuilder::with_sqlite_in_memory()?.build(REPO_ZERO);
+async fn test_get_without_add(fb: FacebookInit) -> Result<(), Error> {
+    let ctx = CoreContext::test_mock(fb);
+    let metadata_info = SqlRepoMetadataCheckpointBuilder::with_sqlite_in_memory()?
+        .build(REPO_ZERO, ctx.sql_query_telemetry());
     let result = metadata_info.get_entry("master".to_string()).await?;
     assert_eq!(result, None);
 
@@ -95,8 +102,10 @@ async fn test_get_without_add(_: FacebookInit) -> Result<(), Error> {
 }
 
 #[mononoke::fbinit_test]
-async fn test_get_multiple(_: FacebookInit) -> Result<(), Error> {
-    let metadata_info = SqlRepoMetadataCheckpointBuilder::with_sqlite_in_memory()?.build(REPO_ZERO);
+async fn test_get_multiple(fb: FacebookInit) -> Result<(), Error> {
+    let ctx = CoreContext::test_mock(fb);
+    let metadata_info = SqlRepoMetadataCheckpointBuilder::with_sqlite_in_memory()?
+        .build(REPO_ZERO, ctx.sql_query_telemetry());
     let entry = RepoMetadataCheckpointEntry {
         changeset_id: bonsai::ONES_CSID,
         bookmark_name: "master".to_string(),

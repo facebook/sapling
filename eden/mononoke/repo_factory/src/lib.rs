@@ -1222,7 +1222,10 @@ impl RepoFactory {
             .open_sql::<SqlRepoMetadataCheckpointBuilder>(repo_config)
             .await
             .context(RepoFactoryError::RepoMetadataCheckpoint)?
-            .build(repo_identity.id());
+            .build(
+                repo_identity.id(),
+                self.ctx(Some(repo_identity)).sql_query_telemetry(),
+            );
         Ok(Arc::new(repo_metadata_info))
     }
 
