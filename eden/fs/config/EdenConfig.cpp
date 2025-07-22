@@ -97,7 +97,7 @@ EdenConfigData EdenConfig::toThriftConfigData() const {
   for (const auto& [sectionName, section] : configMap_) {
     for (const auto& [key, setting] : section) {
       auto keyName = fmt::format("{}:{}", sectionName, key);
-      auto& configValue = result.values_ref()[keyName];
+      auto& configValue = result.values()[keyName];
       configValue.parsedValue() = setting->getStringValue();
       configValue.sourceType() = setting->getSourceType();
       configValue.sourcePath() = toSourcePath(setting->getSourceType());
