@@ -531,25 +531,25 @@ std::vector<DebugJournalDelta> Journal::getDebugRawJournalInfo(
       [&](const FileChangeJournalDelta& current) -> bool {
         DebugJournalDelta delta;
         JournalPosition fromPosition;
-        fromPosition.mountGeneration_ref() = mountGeneration;
-        fromPosition.sequenceNumber_ref() = current.sequenceID;
-        fromPosition.snapshotHash_ref() = rootIdCodec.renderRootId(currentHash);
-        delta.fromPosition_ref() = fromPosition;
+        fromPosition.mountGeneration() = mountGeneration;
+        fromPosition.sequenceNumber() = current.sequenceID;
+        fromPosition.snapshotHash() = rootIdCodec.renderRootId(currentHash);
+        delta.fromPosition() = fromPosition;
 
         JournalPosition toPosition;
-        toPosition.mountGeneration_ref() = mountGeneration;
-        toPosition.sequenceNumber_ref() = current.sequenceID;
-        toPosition.snapshotHash_ref() = rootIdCodec.renderRootId(currentHash);
-        delta.toPosition_ref() = toPosition;
+        toPosition.mountGeneration() = mountGeneration;
+        toPosition.sequenceNumber() = current.sequenceID;
+        toPosition.snapshotHash() = rootIdCodec.renderRootId(currentHash);
+        delta.toPosition() = toPosition;
 
         for (const auto& entry : current.getChangedFilesInOverlay()) {
           auto& path = entry.first;
           auto& changeInfo = entry.second;
 
           DebugPathChangeInfo debugChangeInfo;
-          debugChangeInfo.existedBefore_ref() = changeInfo.existedBefore;
-          debugChangeInfo.existedAfter_ref() = changeInfo.existedAfter;
-          delta.changedPaths_ref()->emplace(path.asString(), debugChangeInfo);
+          debugChangeInfo.existedBefore() = changeInfo.existedBefore;
+          debugChangeInfo.existedAfter() = changeInfo.existedAfter;
+          delta.changedPaths()->emplace(path.asString(), debugChangeInfo);
         }
 
         result.push_back(delta);
@@ -559,21 +559,21 @@ std::vector<DebugJournalDelta> Journal::getDebugRawJournalInfo(
       [&](const RootUpdateJournalDelta& current) -> bool {
         DebugJournalDelta delta;
         JournalPosition fromPosition;
-        fromPosition.mountGeneration_ref() = mountGeneration;
-        fromPosition.sequenceNumber_ref() = current.sequenceID;
-        fromPosition.snapshotHash_ref() =
+        fromPosition.mountGeneration() = mountGeneration;
+        fromPosition.sequenceNumber() = current.sequenceID;
+        fromPosition.snapshotHash() =
             rootIdCodec.renderRootId(current.fromHash);
-        delta.fromPosition_ref() = fromPosition;
+        delta.fromPosition() = fromPosition;
 
         JournalPosition toPosition;
-        toPosition.mountGeneration_ref() = mountGeneration;
-        toPosition.sequenceNumber_ref() = current.sequenceID;
-        toPosition.snapshotHash_ref() = rootIdCodec.renderRootId(currentHash);
-        delta.toPosition_ref() = toPosition;
+        toPosition.mountGeneration() = mountGeneration;
+        toPosition.sequenceNumber() = current.sequenceID;
+        toPosition.snapshotHash() = rootIdCodec.renderRootId(currentHash);
+        delta.toPosition() = toPosition;
         currentHash = current.fromHash;
 
         for (auto& path : current.uncleanPaths) {
-          delta.uncleanPaths_ref()->emplace(path.asString());
+          delta.uncleanPaths()->emplace(path.asString());
         }
 
         result.push_back(delta);

@@ -358,37 +358,25 @@ TEST_F(JournalTest, debugRawJournalInfoRemoveCreateUpdate) {
   ASSERT_EQ(3, debugDeltas.size());
 
   // Debug Raw Journal Info returns info from newest->latest
-  EXPECT_TRUE(
-      *debugDeltas[0].changedPaths_ref()["test.txt"].existedBefore_ref());
-  EXPECT_TRUE(
-      *debugDeltas[0].changedPaths_ref()["test.txt"].existedAfter_ref());
-  EXPECT_EQ(
-      *debugDeltas[0].fromPosition_ref()->mountGeneration_ref(), mountGen);
-  EXPECT_EQ(*debugDeltas[0].fromPosition_ref()->sequenceNumber_ref(), 3);
-  EXPECT_FALSE(
-      *debugDeltas[1].changedPaths_ref()["test.txt"].existedBefore_ref());
-  EXPECT_TRUE(
-      *debugDeltas[1].changedPaths_ref()["test.txt"].existedAfter_ref());
-  EXPECT_EQ(
-      *debugDeltas[1].fromPosition_ref()->mountGeneration_ref(), mountGen);
-  EXPECT_EQ(*debugDeltas[1].fromPosition_ref()->sequenceNumber_ref(), 2);
-  EXPECT_TRUE(
-      *debugDeltas[2].changedPaths_ref()["test.txt"].existedBefore_ref());
-  EXPECT_FALSE(
-      *debugDeltas[2].changedPaths_ref()["test.txt"].existedAfter_ref());
-  EXPECT_EQ(
-      *debugDeltas[2].fromPosition_ref()->mountGeneration_ref(), mountGen);
-  EXPECT_EQ(*debugDeltas[2].fromPosition_ref()->sequenceNumber_ref(), 1);
+  EXPECT_TRUE(*debugDeltas[0].changedPaths()["test.txt"].existedBefore());
+  EXPECT_TRUE(*debugDeltas[0].changedPaths()["test.txt"].existedAfter());
+  EXPECT_EQ(*debugDeltas[0].fromPosition()->mountGeneration(), mountGen);
+  EXPECT_EQ(*debugDeltas[0].fromPosition()->sequenceNumber(), 3);
+  EXPECT_FALSE(*debugDeltas[1].changedPaths()["test.txt"].existedBefore());
+  EXPECT_TRUE(*debugDeltas[1].changedPaths()["test.txt"].existedAfter());
+  EXPECT_EQ(*debugDeltas[1].fromPosition()->mountGeneration(), mountGen);
+  EXPECT_EQ(*debugDeltas[1].fromPosition()->sequenceNumber(), 2);
+  EXPECT_TRUE(*debugDeltas[2].changedPaths()["test.txt"].existedBefore());
+  EXPECT_FALSE(*debugDeltas[2].changedPaths()["test.txt"].existedAfter());
+  EXPECT_EQ(*debugDeltas[2].fromPosition()->mountGeneration(), mountGen);
+  EXPECT_EQ(*debugDeltas[2].fromPosition()->sequenceNumber(), 1);
 
   debugDeltas = journal.getDebugRawJournalInfo(0, 1, mountGen, codec);
   ASSERT_EQ(1, debugDeltas.size());
-  EXPECT_TRUE(
-      *debugDeltas[0].changedPaths_ref()["test.txt"].existedBefore_ref());
-  EXPECT_TRUE(
-      *debugDeltas[0].changedPaths_ref()["test.txt"].existedAfter_ref());
-  EXPECT_EQ(
-      *debugDeltas[0].fromPosition_ref()->mountGeneration_ref(), mountGen);
-  EXPECT_EQ(*debugDeltas[0].fromPosition_ref()->sequenceNumber_ref(), 3);
+  EXPECT_TRUE(*debugDeltas[0].changedPaths()["test.txt"].existedBefore());
+  EXPECT_TRUE(*debugDeltas[0].changedPaths()["test.txt"].existedAfter());
+  EXPECT_EQ(*debugDeltas[0].fromPosition()->mountGeneration(), mountGen);
+  EXPECT_EQ(*debugDeltas[0].fromPosition()->sequenceNumber(), 3);
 
   debugDeltas = journal.getDebugRawJournalInfo(0, 0, mountGen, codec);
   ASSERT_EQ(0, debugDeltas.size());
@@ -412,33 +400,22 @@ TEST_F(JournalTest, debugRawJournalInfoHashUpdates) {
   ASSERT_EQ(3, debugDeltas.size());
 
   // Debug Raw Journal Info returns info from newest->latest
-  EXPECT_TRUE(debugDeltas[0].changedPaths_ref()->empty());
-  EXPECT_EQ(
-      *debugDeltas[0].fromPosition_ref()->mountGeneration_ref(), mountGen);
-  EXPECT_EQ(*debugDeltas[0].fromPosition_ref()->sequenceNumber_ref(), 3);
-  EXPECT_EQ(
-      *debugDeltas[0].fromPosition_ref()->snapshotHash_ref(), hash1.value());
-  EXPECT_EQ(
-      *debugDeltas[0].toPosition_ref()->snapshotHash_ref(), hash2.value());
-  EXPECT_FALSE(
-      *debugDeltas[1].changedPaths_ref()["test.txt"].existedBefore_ref());
-  EXPECT_TRUE(
-      *debugDeltas[1].changedPaths_ref()["test.txt"].existedAfter_ref());
-  EXPECT_EQ(
-      *debugDeltas[1].fromPosition_ref()->mountGeneration_ref(), mountGen);
-  EXPECT_EQ(*debugDeltas[1].fromPosition_ref()->sequenceNumber_ref(), 2);
-  EXPECT_EQ(
-      *debugDeltas[1].fromPosition_ref()->snapshotHash_ref(), hash1.value());
-  EXPECT_EQ(
-      *debugDeltas[1].toPosition_ref()->snapshotHash_ref(), hash1.value());
-  EXPECT_TRUE(debugDeltas[2].changedPaths_ref()->empty());
-  EXPECT_EQ(
-      *debugDeltas[2].fromPosition_ref()->mountGeneration_ref(), mountGen);
-  EXPECT_EQ(*debugDeltas[2].fromPosition_ref()->sequenceNumber_ref(), 1);
-  EXPECT_EQ(
-      *debugDeltas[2].fromPosition_ref()->snapshotHash_ref(), hash0.value());
-  EXPECT_EQ(
-      *debugDeltas[2].toPosition_ref()->snapshotHash_ref(), hash1.value());
+  EXPECT_TRUE(debugDeltas[0].changedPaths()->empty());
+  EXPECT_EQ(*debugDeltas[0].fromPosition()->mountGeneration(), mountGen);
+  EXPECT_EQ(*debugDeltas[0].fromPosition()->sequenceNumber(), 3);
+  EXPECT_EQ(*debugDeltas[0].fromPosition()->snapshotHash(), hash1.value());
+  EXPECT_EQ(*debugDeltas[0].toPosition()->snapshotHash(), hash2.value());
+  EXPECT_FALSE(*debugDeltas[1].changedPaths()["test.txt"].existedBefore());
+  EXPECT_TRUE(*debugDeltas[1].changedPaths()["test.txt"].existedAfter());
+  EXPECT_EQ(*debugDeltas[1].fromPosition()->mountGeneration(), mountGen);
+  EXPECT_EQ(*debugDeltas[1].fromPosition()->sequenceNumber(), 2);
+  EXPECT_EQ(*debugDeltas[1].fromPosition()->snapshotHash(), hash1.value());
+  EXPECT_EQ(*debugDeltas[1].toPosition()->snapshotHash(), hash1.value());
+  EXPECT_TRUE(debugDeltas[2].changedPaths()->empty());
+  EXPECT_EQ(*debugDeltas[2].fromPosition()->mountGeneration(), mountGen);
+  EXPECT_EQ(*debugDeltas[2].fromPosition()->sequenceNumber(), 1);
+  EXPECT_EQ(*debugDeltas[2].fromPosition()->snapshotHash(), hash0.value());
+  EXPECT_EQ(*debugDeltas[2].toPosition()->snapshotHash(), hash1.value());
 }
 
 TEST_F(JournalTest, destruction_does_not_overflow_stack_on_long_chain) {
