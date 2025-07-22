@@ -61,7 +61,6 @@ pub mod _macro_internal {
     pub use crate::Transaction;
     pub use crate::mononoke_queries::CacheData;
     pub use crate::mononoke_queries::CachedQueryResult;
-    pub use crate::mononoke_queries::build_transaction_wrapper;
     pub use crate::mononoke_queries::query_with_retry;
     pub use crate::mononoke_queries::query_with_retry_no_cache;
     pub use crate::telemetry::TelemetryGranularity;

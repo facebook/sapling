@@ -20,17 +20,9 @@ use itertools::Itertools;
 use maplit::hashmap;
 use maplit::hashset;
 use memcache::KeyGen;
-use mononoke_types::RepositoryId;
 use retry::RetryLogic;
 use retry::retry;
-use sql::QueryTelemetry;
 use sql_query_config::CachingConfig;
-
-use crate::SqlQueryTelemetry;
-use crate::Transaction;
-use crate::TransactionTelemetry;
-use crate::telemetry::TelemetryGranularity;
-use crate::telemetry::log_query_telemetry;
 
 const RETRY_ATTEMPTS: usize = 2;
 
@@ -660,33 +652,6 @@ macro_rules! extract_repo_ids_from_queries {
     ($pname:ident: $ptype:ty; $($rest:tt)*) => {
         $crate::extract_repo_ids_from_queries!($($rest)*)
     };
-}
-
-/// Update the transaction telemetry and build the Mononoke Transaction wrapper
-pub fn build_transaction_wrapper(
-    sql_txn: sql::Transaction,
-    opt_tel: Option<QueryTelemetry>,
-    mut txn_telemetry: TransactionTelemetry,
-    sql_query_tel: SqlQueryTelemetry,
-    query_repo_ids: Vec<RepositoryId>,
-    granularity: TelemetryGranularity,
-    query_name: &str,
-) -> Result<Transaction> {
-    if let Some(tel) = opt_tel.as_ref() {
-        txn_telemetry.add_query_telemetry(tel.clone())
-    };
-
-    txn_telemetry.add_repo_ids(query_repo_ids.clone());
-
-    log_query_telemetry(
-        opt_tel,
-        &sql_query_tel,
-        granularity,
-        query_repo_ids,
-        query_name,
-    )?;
-
-    Ok(Transaction::new(sql_txn, txn_telemetry, sql_query_tel))
 }
 
 #[cfg(fbcode_build)]
