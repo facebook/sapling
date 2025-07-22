@@ -78,6 +78,24 @@ struct ObjectStoreTest : public ::testing::TestWithParam<CaseSensitivity> {
         true,
         GetParam());
 
+    auto configWithTreeAuxPrefetching = EdenConfig::createTestEdenConfig();
+    ;
+    configWithTreeAuxPrefetching->warmTreeAuxCacheIfTreeFromLocalStore.setValue(
+        true, ConfigSourceType::UserConfig);
+    fakeBackingStoreWithTreeAuxPrefetching = std::make_shared<FakeBackingStore>(
+        BackingStore::LocalStoreCachingPolicy::Anything);
+    objectStoreWithTreeAuxPrefetching = ObjectStore::create(
+        fakeBackingStoreWithTreeAuxPrefetching,
+        localStore,
+        treeCache,
+        stats.copy(),
+        std::make_shared<ProcessInfoCache>(),
+        std::make_shared<NullStructuredLogger>(),
+        std::make_shared<ReloadableConfig>(
+            configWithTreeAuxPrefetching, ConfigReloadBehavior::NoReload),
+        true,
+        GetParam());
+
     readyBlobId = putReadyBlob("readyblob");
     readyTreeId = putReadyTree();
   }
@@ -88,7 +106,13 @@ struct ObjectStoreTest : public ::testing::TestWithParam<CaseSensitivity> {
       storedBlob->setReady();
     }
 
-    auto [storedBlob, id] = fakeBackingStore->putBlob(data);
+    {
+      auto [storedBlob, id] = fakeBackingStore->putBlob(data);
+      storedBlob->setReady();
+    }
+
+    auto [storedBlob, id] =
+        fakeBackingStoreWithTreeAuxPrefetching->putBlob(data);
     storedBlob->setReady();
     return id;
   }
@@ -99,8 +123,15 @@ struct ObjectStoreTest : public ::testing::TestWithParam<CaseSensitivity> {
       storedBlob->setReady();
     }
 
-    StoredTree* storedTree = fakeBackingStore->putTree({});
+    {
+      StoredTree* storedTree = fakeBackingStore->putTree({});
+      storedTree->setReady();
+    }
+
+    StoredTree* storedTree =
+        fakeBackingStoreWithTreeAuxPrefetching->putTree({});
     storedTree->setReady();
+
     return storedTree->get().getHash();
   }
 
@@ -110,7 +141,13 @@ struct ObjectStoreTest : public ::testing::TestWithParam<CaseSensitivity> {
       storedBlob->setReady();
     }
 
-    StoredTree* storedTree = fakeBackingStore->putTree(entries);
+    {
+      StoredTree* storedTree = fakeBackingStore->putTree(entries);
+      storedTree->setReady();
+    }
+
+    StoredTree* storedTree =
+        fakeBackingStoreWithTreeAuxPrefetching->putTree(entries);
     storedTree->setReady();
     return storedTree->get().getHash();
   }
@@ -136,11 +173,13 @@ struct ObjectStoreTest : public ::testing::TestWithParam<CaseSensitivity> {
   std::shared_ptr<LocalStore> localStore;
   std::shared_ptr<FakeBackingStore> fakeBackingStore;
   std::shared_ptr<FakeBackingStore> fakeBackingStoreWithKeyedBlake3;
+  std::shared_ptr<FakeBackingStore> fakeBackingStoreWithTreeAuxPrefetching;
   std::shared_ptr<BackingStore> backingStoreWithKeyedBlake3;
   std::shared_ptr<TreeCache> treeCache;
   EdenStatsPtr stats;
   std::shared_ptr<ObjectStore> objectStore;
   std::shared_ptr<ObjectStore> objectStoreWithBlake3Key;
+  std::shared_ptr<ObjectStore> objectStoreWithTreeAuxPrefetching;
 
   ObjectId readyBlobId;
   ObjectId readyTreeId;
@@ -297,6 +336,26 @@ TEST_P(ObjectStoreTest, getTree_tracks_second_read_from_local_store) {
   EXPECT_EQ(ObjectFetchContext::Tree, request.type);
   EXPECT_EQ(readyTreeId, request.hash);
   EXPECT_EQ(ObjectFetchContext::FromDiskCache, request.origin);
+}
+
+TEST_P(ObjectStoreTest, getTree_prefetch_missing_aux_data) {
+  // FakeBackingStore provides a tree with no aux data; this simulates storing a
+  // tree that lacks aux data in LocalStore
+  auto tree1 =
+      objectStoreWithTreeAuxPrefetching->getTree(readyTreeId, context).get(0ms);
+  EXPECT_EQ(tree1->getAuxData(), nullptr);
+
+  // Clear in-memory cache so that we are guaranteed to hit LocalStore caches
+  treeCache->clear();
+
+  // Issue a getTree that triggers tree aux prefetching. Since tree aux is
+  // missing from the LocalStore tree, we will attempt to fall back to
+  // BackingStore->getTreeAux() which will also fail. This shouldn't be fatal,
+  // but it currently is due to a missing thenTry
+  EXPECT_THROW_RE(
+      objectStoreWithTreeAuxPrefetching->getTree(readyTreeId, context).get(0ms),
+      std::domain_error,
+      "^GetTreeAuxData not implemented for FakeBackingStore");
 }
 
 TEST_P(ObjectStoreTest, getBlobSize_tracks_backing_store_read) {
