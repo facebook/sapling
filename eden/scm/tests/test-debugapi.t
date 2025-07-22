@@ -35,7 +35,8 @@ Test APIs:
   $ hg debugapi -e capabilities
   ["segmented-changelog",
    "commit-graph-segments",
-   "sha1-only"]
+   "sha1-only",
+   "sapling-common"]
 
   $ hg debugapi -e bookmarks -i '["master", "foo"]'
   {"foo": None,
@@ -120,5 +121,5 @@ Works outside repo
   $ hg --cwd .. debugapi test:e1 -e capabilities
   ["segmented-changelog",
    "commit-graph-segments",
-   "sha1-only"]
-
+   "sha1-only",
+   "sapling-common"]
