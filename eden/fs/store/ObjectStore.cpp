@@ -384,7 +384,18 @@ folly::SemiFuture<BackingStore::GetTreeResult> ObjectStore::getTreeImpl(
                     &ObjectStoreStats::
                         prewarmTreeAuxCacheForTreeFetchedFromLocalStore);
                 return self->getTreeAuxData(id, context)
-                    .thenValue([tree = tree](TreeAuxData&&) {
+                    .thenTry([self, tree = tree, id = id](
+                                 folly::Try<TreeAuxData>&& auxResult) {
+                      if (auxResult.hasException()) {
+                        self->stats_->increment(
+                            &ObjectStoreStats::
+                                prewarmTreeAuxCacheForTreeFetchedFromLocalStoreFailed);
+                        XLOGF(
+                            DBG5,
+                            "Failed to fetch Tree Aux Data for Tree {}: {}",
+                            id,
+                            auxResult.exception().what());
+                      }
                       return BackingStore::GetTreeResult{
                           tree, ObjectFetchContext::FromDiskCache};
                     });

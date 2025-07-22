@@ -350,12 +350,11 @@ TEST_P(ObjectStoreTest, getTree_prefetch_missing_aux_data) {
 
   // Issue a getTree that triggers tree aux prefetching. Since tree aux is
   // missing from the LocalStore tree, we will attempt to fall back to
-  // BackingStore->getTreeAux() which will also fail. This shouldn't be fatal,
-  // but it currently is due to a missing thenTry
-  EXPECT_THROW_RE(
-      objectStoreWithTreeAuxPrefetching->getTree(readyTreeId, context).get(0ms),
-      std::domain_error,
-      "^GetTreeAuxData not implemented for FakeBackingStore");
+  // BackingStore->getTreeAux() which will also fail.
+  auto tree2 =
+      objectStoreWithTreeAuxPrefetching->getTree(readyTreeId, context).get(0ms);
+
+  EXPECT_EQ(tree2->getAuxData(), nullptr);
 }
 
 TEST_P(ObjectStoreTest, getBlobSize_tracks_backing_store_read) {

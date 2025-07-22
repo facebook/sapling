@@ -490,6 +490,8 @@ struct ObjectStoreStats : StatsGroup<ObjectStoreStats> {
 
   Counter prewarmTreeAuxCacheForTreeFetchedFromLocalStore{
       "object_store.prewarm_tree_aux.local_store_tree"};
+  Counter prewarmTreeAuxCacheForTreeFetchedFromLocalStoreFailed{
+      "object_store.prewarm_tree_aux.local_store_tree_failed"};
   Counter prewarmTreeAuxMemCacheForTreeFromBackingStore{
       "object_store.prewarm_tree_aux.mem.backing_store_tree"};
   Counter prewarmTreeAuxLocalCacheForTreeFromBackingStore{
