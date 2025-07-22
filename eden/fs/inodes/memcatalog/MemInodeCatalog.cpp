@@ -79,7 +79,7 @@ void MemInodeCatalog::saveOverlayDir(
 void MemInodeCatalog::removeOverlayDir(InodeNumber inodeNumber) {
   auto store = store_.wlock();
   auto itr = store->find(inodeNumber);
-  if (itr == store->end() || !itr->second.entries_ref()->empty()) {
+  if (itr == store->end() || !itr->second.entries()->empty()) {
     throw NonEmptyError("cannot delete non-empty directory");
   }
 
@@ -113,7 +113,7 @@ bool MemInodeCatalog::removeChild(
   auto store = store_.wlock();
   auto itr = store->find(parent);
   if (itr != store->end()) {
-    auto entries = itr->second.entries_ref();
+    auto entries = itr->second.entries();
     entries->erase(childName.asString());
     return true;
   }
@@ -126,11 +126,11 @@ bool MemInodeCatalog::hasChild(
     PathComponentPiece childName) {
   auto store = store_.rlock();
   auto itr = store->find(parent);
-  if (itr == store->end() || itr->second.entries_ref()->empty()) {
+  if (itr == store->end() || itr->second.entries()->empty()) {
     return false;
   }
 
-  auto entries = itr->second.entries_ref();
+  auto entries = itr->second.entries();
   return entries->count(childName.asString()) != 0;
 }
 
@@ -145,7 +145,7 @@ void MemInodeCatalog::renameChild(
   auto dstOdir = store->find(dst);
   if (dstOdir != store->end()) {
     // Check if dst named child exists
-    auto dstEntries = dstOdir->second.entries_ref();
+    auto dstEntries = dstOdir->second.entries();
     auto dstChild = dstEntries->find(dstName.asString());
     if (dstChild != dstEntries->end()) {
       // Check if dst child has children
@@ -162,17 +162,17 @@ void MemInodeCatalog::renameChild(
   auto srcOdir = store->find(src);
   if (srcOdir != store->end()) {
     // Check if src named child exists
-    auto srcEntries = srcOdir->second.entries_ref();
+    auto srcEntries = srcOdir->second.entries();
     auto srcChild = srcEntries->find(srcName.asString());
     if (srcChild != srcEntries->end()) {
       if (dstOdir == store->end()) {
         // Create dst and include src child in entries
         overlay::OverlayDir odir;
-        odir.entries_ref()->emplace(dstName.asString(), srcChild->second);
+        odir.entries()->emplace(dstName.asString(), srcChild->second);
         store->emplace(dst, std::move(odir));
       } else {
         // Use existing dst
-        auto dstEntries = dstOdir->second.entries_ref();
+        auto dstEntries = dstOdir->second.entries();
         dstEntries[dstName.asString()] = srcChild->second;
       }
       srcEntries->erase(srcChild);

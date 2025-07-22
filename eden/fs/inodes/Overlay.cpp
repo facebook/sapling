@@ -459,7 +459,7 @@ DirContents Overlay::loadOverlayDir(InodeNumber inodeNumber) {
 
   bool shouldRewriteOverlay = false;
 
-  for (auto& iter : *dir.entries_ref()) {
+  for (auto& iter : *dir.entries()) {
     const auto& name = iter.first;
     const auto& value = iter.second;
 
@@ -472,20 +472,19 @@ DirContents Overlay::loadOverlayDir(InodeNumber inodeNumber) {
     }
 
     InodeNumber ino;
-    if (*value.inodeNumber_ref()) {
-      ino = InodeNumber::fromThrift(*value.inodeNumber_ref());
+    if (*value.inodeNumber()) {
+      ino = InodeNumber::fromThrift(*value.inodeNumber());
     } else {
       ino = allocateInodeNumber();
       shouldRewriteOverlay = true;
     }
 
-    if (value.hash_ref() && !value.hash_ref()->empty()) {
-      auto hash =
-          ObjectId{folly::ByteRange{folly::StringPiece{*value.hash_ref()}}};
-      result.emplace(PathComponentPiece{name}, *value.mode_ref(), ino, hash);
+    if (value.hash() && !value.hash()->empty()) {
+      auto hash = ObjectId{folly::ByteRange{folly::StringPiece{*value.hash()}}};
+      result.emplace(PathComponentPiece{name}, *value.mode(), ino, hash);
     } else {
       // The inode is materialized
-      result.emplace(PathComponentPiece{name}, *value.mode_ref(), ino);
+      result.emplace(PathComponentPiece{name}, *value.mode(), ino);
     }
   }
 
@@ -504,10 +503,10 @@ overlay::OverlayEntry Overlay::serializeOverlayEntry(const DirEntry& ent) {
   // tree, serialize that tree into the overlay, then restart Eden. Since
   // writing mode bits into the InodeMetadataTable only occurs when the inode
   // is loaded, the initial mode bits must persist until the first load.
-  entry.mode_ref() = ent.getInitialMode();
-  entry.inodeNumber_ref() = ent.getInodeNumber().get();
+  entry.mode() = ent.getInitialMode();
+  entry.inodeNumber() = ent.getInodeNumber().get();
   if (!ent.isMaterialized()) {
-    entry.hash_ref() = ent.getHash().asString();
+    entry.hash() = ent.getHash().asString();
   }
 
   return entry;
@@ -536,7 +535,7 @@ overlay::OverlayDir Overlay::serializeOverlayDir(
     XCHECK_LT(ent.getInodeNumber().get(), nextInodeNumber)
         << "serializeOverlayDir called with entry using unallocated inode number";
 
-    odir.entries_ref()->emplace(
+    odir.entries()->emplace(
         std::make_pair(entName.asString(), serializeOverlayEntry(ent)));
   }
 
@@ -865,16 +864,16 @@ void Overlay::handleGCRequest(GCRequest& request) {
   };
 
   auto processDir = [&](const overlay::OverlayDir& dir) {
-    for (const auto& entry : *dir.entries_ref()) {
+    for (const auto& entry : *dir.entries()) {
       const auto& value = entry.second;
-      if (!(*value.inodeNumber_ref())) {
+      if (!(*value.inodeNumber())) {
         // Legacy-only.  All new Overlay trees have inode numbers for all
         // children.
         continue;
       }
-      auto ino = InodeNumber::fromThrift(*value.inodeNumber_ref());
+      auto ino = InodeNumber::fromThrift(*value.inodeNumber());
 
-      if (S_ISDIR(*value.mode_ref())) {
+      if (S_ISDIR(*value.mode())) {
         queue.push(ino);
       } else {
         // No need to recurse, but delete any file at this inode.  Note that,

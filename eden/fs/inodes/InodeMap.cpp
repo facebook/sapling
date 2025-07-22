@@ -182,19 +182,19 @@ void InodeMap::initializeFromTakeover(
   auto data = data_.wlock();
   initializeRoot(data, std::move(root));
 
-  for (const auto& entry : *takeover.unloadedInodes_ref()) {
-    if (*entry.numFsReferences_ref() < 0) {
+  for (const auto& entry : *takeover.unloadedInodes()) {
+    if (*entry.numFsReferences() < 0) {
       auto message = folly::to<std::string>(
           "inode number ",
-          *entry.inodeNumber_ref(),
+          *entry.inodeNumber(),
           " has a negative numFsReferences number");
       XLOG(ERR) << message;
       throw std::runtime_error(message);
     }
 
     std::optional<ObjectId> hash;
-    if (entry.hash_ref().has_value()) {
-      const std::string& value = entry.hash_ref().value();
+    if (entry.hash().has_value()) {
+      const std::string& value = entry.hash().value();
       if (value.empty()) {
         // LEGACY: Old versions of EdenFS sent the empty string to mean
         // materialized. When a BackingStore wants to support the empty ObjectId
@@ -206,13 +206,13 @@ void InodeMap::initializeFromTakeover(
     }
     initializeUnloadedInode(
         data,
-        InodeNumber::fromThrift(*entry.parentInode_ref()),
-        InodeNumber::fromThrift(*entry.inodeNumber_ref()),
-        PathComponentPiece{*entry.name_ref()},
-        *entry.isUnlinked_ref(),
-        *entry.mode_ref(),
+        InodeNumber::fromThrift(*entry.parentInode()),
+        InodeNumber::fromThrift(*entry.inodeNumber()),
+        PathComponentPiece{*entry.name()},
+        *entry.isUnlinked(),
+        *entry.mode(),
         std::move(hash),
-        folly::to<uint32_t>(*entry.numFsReferences_ref()));
+        folly::to<uint32_t>(*entry.numFsReferences()));
   }
 
   XLOG(DBG2) << "InodeMap initialized mount " << mount_->getPath()
@@ -942,25 +942,25 @@ Future<SerializedInodeMap> InodeMap::shutdown(
     }
 
     SerializedInodeMap result;
-    result.unloadedInodes_ref()->reserve(data->unloadedInodes_.size());
+    result.unloadedInodes()->reserve(data->unloadedInodes_.size());
     for (const auto& [inodeNumber, entry] : data->unloadedInodes_) {
       SerializedInodeMapEntry serializedEntry;
 
       XLOG(DBG5) << "  serializing unloaded inode " << inodeNumber
                  << " parent=" << entry.parent.get() << " name=" << entry.name;
 
-      serializedEntry.inodeNumber_ref() = inodeNumber.get();
-      serializedEntry.parentInode_ref() = entry.parent.get();
+      serializedEntry.inodeNumber() = inodeNumber.get();
+      serializedEntry.parentInode() = entry.parent.get();
       serializedEntry.name() = entry.name.asString();
-      serializedEntry.isUnlinked_ref() = entry.isUnlinked;
-      serializedEntry.numFsReferences_ref() = entry.numFsReferences;
+      serializedEntry.isUnlinked() = entry.isUnlinked;
+      serializedEntry.numFsReferences() = entry.numFsReferences;
       if (entry.hash.has_value()) {
-        serializedEntry.hash_ref() = entry.hash.value().asString();
+        serializedEntry.hash() = entry.hash.value().asString();
       }
       // If entry.hash is empty, the inode is materialized.
-      serializedEntry.mode_ref() = entry.mode;
+      serializedEntry.mode() = entry.mode;
 
-      result.unloadedInodes_ref()->emplace_back(std::move(serializedEntry));
+      result.unloadedInodes()->emplace_back(std::move(serializedEntry));
     }
 
     return result;

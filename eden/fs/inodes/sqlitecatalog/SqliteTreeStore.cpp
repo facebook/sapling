@@ -420,10 +420,10 @@ overlay::OverlayDir SqliteTreeStore::loadTree(InodeNumber inode) {
     while (query->step()) {
       auto name = query->columnBlob(0);
       overlay::OverlayEntry entry;
-      entry.mode_ref() =
+      entry.mode() =
           dtype_to_mode(static_cast<dtype_t>(query->columnUint64(1)));
-      entry.inodeNumber_ref() = query->columnUint64(2);
-      entry.hash_ref() = query->columnBlob(3).toString();
+      entry.inodeNumber() = query->columnUint64(2);
+      entry.hash() = query->columnBlob(3).toString();
       dir.entries_ref()->emplace(std::make_pair(name, entry));
     }
   });
@@ -442,10 +442,10 @@ overlay::OverlayDir SqliteTreeStore::loadAndRemoveTree(InodeNumber inode) {
     while (query->step()) {
       auto name = query->columnBlob(0);
       overlay::OverlayEntry entry;
-      entry.mode_ref() =
+      entry.mode() =
           dtype_to_mode(static_cast<dtype_t>(query->columnUint64(1)));
-      entry.inodeNumber_ref() = query->columnUint64(2);
-      entry.hash_ref() = query->columnBlob(3).toString();
+      entry.inodeNumber() = query->columnUint64(2);
+      entry.hash() = query->columnBlob(3).toString();
       dir.entries_ref()->emplace(std::make_pair(name, entry));
     }
 
@@ -558,12 +558,12 @@ void SqliteTreeStore::insertInodeEntry(
     InodeNumber parent,
     PathComponentPiece name,
     const overlay::OverlayEntry& entry) {
-  auto mode = static_cast<uint32_t>(entry.mode_ref().value());
+  auto mode = static_cast<uint32_t>(entry.mode().value());
   auto dtype = static_cast<uint32_t>(mode_to_dtype(mode));
-  auto inode = entry.inodeNumber_ref().value();
+  auto inode = entry.inodeNumber().value();
   folly::ByteRange hash;
 
-  if (auto entryHash = entry.hash_ref()) {
+  if (auto entryHash = entry.hash()) {
     hash = folly::ByteRange{
         reinterpret_cast<const unsigned char*>(entryHash->data()),
         entryHash->size()};

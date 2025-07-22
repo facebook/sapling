@@ -97,13 +97,12 @@ InodeNumber LMDBStoreInterface::loadCounters() {
         auto odir =
             CompactSerializer::deserialize<overlay::OverlayDir>(std::string{
                 static_cast<char*>(mdb_value.mv_data), mdb_value.mv_size});
-        for (auto entries_iter = odir.entries_ref()->cbegin();
-             entries_iter != odir.entries_ref()->cend();
+        for (auto entries_iter = odir.entries()->cbegin();
+             entries_iter != odir.entries()->cend();
              entries_iter++) {
           const auto& entry = entries_iter->second;
 
-          auto entryIno =
-              InodeNumber::fromThrift(*entry.inodeNumber_ref()).get();
+          auto entryIno = InodeNumber::fromThrift(*entry.inodeNumber()).get();
 
           if (entryIno > inode) {
             inode = entryIno;

@@ -136,9 +136,9 @@ void CheckoutContext::addConflict(
       << "attempted to add error using addConflict(): " << path;
 
   CheckoutConflict conflict;
-  conflict.path_ref() = std::string{path.value()};
-  conflict.type_ref() = type;
-  conflict.dtype_ref() = static_cast<Dtype>(dtype);
+  conflict.path() = std::string{path.value()};
+  conflict.type() = type;
+  conflict.dtype() = static_cast<Dtype>(dtype);
   conflicts_.wlock()->push_back(std::move(conflict));
 }
 
@@ -174,9 +174,9 @@ void CheckoutContext::addError(
 
   auto path = parentPath + name;
   CheckoutConflict conflict;
-  conflict.path_ref() = path.value();
-  conflict.type_ref() = ConflictType::ERROR;
-  conflict.message_ref() = folly::exceptionStr(ew).toStdString();
+  conflict.path() = path.value();
+  conflict.type() = ConflictType::ERROR;
+  conflict.message() = folly::exceptionStr(ew).toStdString();
   conflicts_.wlock()->push_back(std::move(conflict));
 }
 

@@ -38,16 +38,16 @@ class LMDBStoreInterfaceTest : public ::testing::Test {
       dtype_t mode = dtype_t::Regular,
       std::optional<InodeNumber> inode = std::nullopt) {
     overlay::OverlayEntry entry;
-    entry.mode_ref() = dtype_to_mode(mode);
+    entry.mode() = dtype_to_mode(mode);
 
     if (inode) {
-      entry.inodeNumber_ref() = inode->get();
+      entry.inodeNumber() = inode->get();
     } else {
-      entry.inodeNumber_ref() = store_->nextInodeNumber().get();
+      entry.inodeNumber() = store_->nextInodeNumber().get();
     }
 
     if (hash) {
-      entry.hash_ref() = hash->toByteString();
+      entry.hash() = hash->toByteString();
     }
 
     return entry;
@@ -68,11 +68,11 @@ class LMDBStoreInterfaceTest : public ::testing::Test {
 void expect_entry(
     const overlay::OverlayEntry& lhs,
     const overlay::OverlayEntry& rhs) {
-  EXPECT_EQ(*lhs.inodeNumber_ref(), *rhs.inodeNumber_ref());
-  EXPECT_EQ(*lhs.mode_ref(), *rhs.mode_ref());
+  EXPECT_EQ(*lhs.inodeNumber(), *rhs.inodeNumber());
+  EXPECT_EQ(*lhs.mode(), *rhs.mode());
   // We use `value_unchecked()` here since it will not throw an exception if
   // the value doesn't exist.
-  EXPECT_EQ(lhs.hash_ref().value_unchecked(), rhs.hash_ref().value_unchecked());
+  EXPECT_EQ(lhs.hash().value_unchecked(), rhs.hash().value_unchecked());
 }
 
 void expect_entries(
@@ -89,28 +89,28 @@ void expect_entries(
 TEST_F(LMDBStoreInterfaceTest, testSaveLoadTree) {
   overlay::OverlayDir dir;
 
-  dir.entries_ref()->emplace(std::make_pair(
+  dir.entries()->emplace(std::make_pair(
       "hello",
       makeEntry(
           Hash20{"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"}, dtype_t::Dir)));
-  dir.entries_ref()->emplace(std::make_pair("world", makeEntry()));
-  dir.entries_ref()->emplace(std::make_pair("foo", makeEntry()));
-  dir.entries_ref()->emplace(std::make_pair("bar", makeEntry()));
+  dir.entries()->emplace(std::make_pair("world", makeEntry()));
+  dir.entries()->emplace(std::make_pair("foo", makeEntry()));
+  dir.entries()->emplace(std::make_pair("bar", makeEntry()));
 
   auto serializedOverlayDir =
       apache::thrift::CompactSerializer::serialize<std::string>(dir);
   store_->saveTree(kRootNodeId, std::move(serializedOverlayDir));
   auto restored = store_->loadTree(kRootNodeId);
-  ASSERT_EQ(dir.entries_ref()->size(), restored.entries_ref()->size());
-  expect_entries(*dir.entries_ref(), *restored.entries_ref());
+  ASSERT_EQ(dir.entries()->size(), restored.entries()->size());
+  expect_entries(*dir.entries(), *restored.entries());
 }
 
 TEST_F(LMDBStoreInterfaceTest, testRecoverInodeEntryNumber) {
   overlay::OverlayDir dir;
-  dir.entries_ref()->emplace(std::make_pair("hello", makeEntry()));
-  dir.entries_ref()->emplace(std::make_pair("world", makeEntry()));
-  dir.entries_ref()->emplace(std::make_pair("foo", makeEntry()));
-  dir.entries_ref()->emplace(std::make_pair("bar", makeEntry()));
+  dir.entries()->emplace(std::make_pair("hello", makeEntry()));
+  dir.entries()->emplace(std::make_pair("world", makeEntry()));
+  dir.entries()->emplace(std::make_pair("foo", makeEntry()));
+  dir.entries()->emplace(std::make_pair("bar", makeEntry()));
 
   auto serializedOverlayDir =
       apache::thrift::CompactSerializer::serialize<std::string>(std::move(dir));
@@ -136,7 +136,7 @@ TEST_F(LMDBStoreInterfaceTest, testSavingEmptyTree) {
   store_->saveTree(inode, std::move(serializedOverlayDir));
 
   auto loaded = store_->loadTree(inode);
-  EXPECT_EQ(loaded.entries_ref()->size(), 0);
+  EXPECT_EQ(loaded.entries()->size(), 0);
 }
 
 TEST_F(LMDBStoreInterfaceTest, testSavingEmptyBlob) {
@@ -159,19 +159,19 @@ TEST_F(LMDBStoreInterfaceTest, testSavingEmptyBlob) {
 TEST_F(LMDBStoreInterfaceTest, testSavingTreeOverwrite) {
   auto inode = InodeNumber{store_->nextInodeNumber()};
   overlay::OverlayDir dir;
-  dir.entries_ref()->emplace(std::make_pair("hello", makeEntry()));
+  dir.entries()->emplace(std::make_pair("hello", makeEntry()));
   auto serializedOverlayDir =
       apache::thrift::CompactSerializer::serialize<std::string>(std::move(dir));
   store_->saveTree(inode, std::move(serializedOverlayDir));
 
   overlay::OverlayDir newDir;
-  newDir.entries_ref()->emplace(std::make_pair("world", makeEntry()));
+  newDir.entries()->emplace(std::make_pair("world", makeEntry()));
   auto newSerializedOverlayDir =
       apache::thrift::CompactSerializer::serialize<std::string>(newDir);
   store_->saveTree(inode, std::move(newSerializedOverlayDir));
 
   auto loaded = store_->loadTree(inode);
-  expect_entries(*newDir.entries_ref(), *loaded.entries_ref());
+  expect_entries(*newDir.entries(), *loaded.entries());
 }
 
 TEST_F(LMDBStoreInterfaceTest, testSavingBlobOverwrite) {
@@ -200,7 +200,7 @@ TEST_F(LMDBStoreInterfaceTest, testHasTree) {
   EXPECT_FALSE(store_->hasTree(inode));
 
   overlay::OverlayDir dir;
-  dir.entries_ref()->emplace(std::make_pair("hello", makeEntry()));
+  dir.entries()->emplace(std::make_pair("hello", makeEntry()));
   auto serializedOverlayDir =
       apache::thrift::CompactSerializer::serialize<std::string>(std::move(dir));
   store_->saveTree(inode, std::move(serializedOverlayDir));
@@ -226,15 +226,15 @@ TEST_F(LMDBStoreInterfaceTest, testHasBlob) {
 TEST_F(LMDBStoreInterfaceTest, testRemoveTree) {
   auto inode = InodeNumber{store_->nextInodeNumber()};
   overlay::OverlayDir dir;
-  dir.entries_ref()->emplace(std::make_pair("hello", makeEntry()));
+  dir.entries()->emplace(std::make_pair("hello", makeEntry()));
 
   auto serializedOverlayDir =
       apache::thrift::CompactSerializer::serialize<std::string>(std::move(dir));
   store_->saveTree(inode, std::move(serializedOverlayDir));
-  EXPECT_EQ(store_->loadTree(inode).entries_ref()->size(), 1);
+  EXPECT_EQ(store_->loadTree(inode).entries()->size(), 1);
 
   EXPECT_NO_THROW(store_->removeTree(inode));
-  EXPECT_EQ(store_->loadTree(inode).entries_ref()->size(), 0);
+  EXPECT_EQ(store_->loadTree(inode).entries()->size(), 0);
 }
 
 TEST_F(LMDBStoreInterfaceTest, testRemoveBlob) {
@@ -252,15 +252,15 @@ TEST_F(LMDBStoreInterfaceTest, testRemoveBlob) {
 TEST_F(LMDBStoreInterfaceTest, testLoadAndRemoveTree) {
   auto inode = InodeNumber{store_->nextInodeNumber()};
   overlay::OverlayDir dir;
-  dir.entries_ref()->emplace(std::make_pair("hello", makeEntry()));
+  dir.entries()->emplace(std::make_pair("hello", makeEntry()));
 
   auto serializedOverlayDir =
       apache::thrift::CompactSerializer::serialize<std::string>(std::move(dir));
   store_->saveTree(inode, std::move(serializedOverlayDir));
-  EXPECT_EQ(store_->loadAndRemoveTree(inode).entries_ref()->size(), 1);
+  EXPECT_EQ(store_->loadAndRemoveTree(inode).entries()->size(), 1);
   EXPECT_FALSE(store_->hasTree(inode));
 
-  EXPECT_EQ(store_->loadAndRemoveTree(inode).entries_ref()->size(), 0);
+  EXPECT_EQ(store_->loadAndRemoveTree(inode).entries()->size(), 0);
 }
 
 } // namespace facebook::eden

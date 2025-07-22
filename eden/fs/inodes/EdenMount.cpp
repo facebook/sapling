@@ -902,7 +902,7 @@ ImmediateFuture<SetPathObjectIdResultAndTimes> EdenMount::setPathsToObjectIds(
               SetPathObjectIdResultAndTimes resultAndTimes;
               resultAndTimes.times = *setPathObjectIdTime;
               SetPathObjectIdResult result;
-              result.conflicts_ref() = std::move(conflicts);
+              result.conflicts() = std::move(conflicts);
               resultAndTimes.result = std::move(result);
               return resultAndTimes;
             })
@@ -931,7 +931,7 @@ ImmediateFuture<SetPathObjectIdResultAndTimes> EdenMount::setPathsToObjectIds(
             SetPathObjectIdTimes times;
             std::vector<CheckoutConflict> conflicts;
             for (auto& resultAndTime : resultAndTimesList) {
-              for (auto conflict : *resultAndTime.result.conflicts_ref()) {
+              for (auto conflict : *resultAndTime.result.conflicts()) {
                 conflicts.emplace_back(std::move(conflict));
               }
               times.didLookupTreesOrGetInodeByPath +=
@@ -940,7 +940,7 @@ ImmediateFuture<SetPathObjectIdResultAndTimes> EdenMount::setPathsToObjectIds(
               times.didFinish += resultAndTime.times.didFinish;
             }
             SetPathObjectIdResult result;
-            result.conflicts_ref() = std::move(conflicts);
+            result.conflicts() = std::move(conflicts);
             SetPathObjectIdResultAndTimes resultAndTimes;
             resultAndTimes.times = std::move(times);
             resultAndTimes.result = std::move(result);
@@ -2039,13 +2039,13 @@ ImmediateFuture<Unit> EdenMount::diff(
               ScmStatus newStatus = callback->peekStatus();
 
               // no need to insert a status result which contains exceptions
-              if (newStatus.errors_ref()->size() > 0) {
+              if (newStatus.errors()->size() > 0) {
                 shouldInsert = false;
               }
 
               // don't cache a status if it's too large so the cache size does
               // not explode easily
-              if (newStatus.entries_ref().value().size() >
+              if (newStatus.entries().value().size() >
                   getEdenConfig()->scmStatusCacheMaxEntriesPerItem.getValue()) {
                 getStats()->increment(&JournalStats::journalStatusCacheSkip);
                 shouldInsert = false;

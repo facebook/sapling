@@ -182,8 +182,8 @@ class OverlayChecker::RepairState {
           auto result = entries->find(childName.asString());
           if (result != entries->end()) {
             overlay::OverlayEntry& entry = result->second;
-            entry.hash_ref() = hash.asString();
-            entry.inodeNumber_ref() = 0;
+            entry.hash() = hash.asString();
+            entry.inodeNumber() = 0;
 
             inodeCatalog()->saveOverlayDir(parent, std::move(parentDir));
             return true;
@@ -409,15 +409,15 @@ class OverlayChecker::MissingMaterializedInode : public OverlayChecker::Error {
       : parent_(parentDirInode), childName_(childName), childInfo_(childInfo) {}
 
   string getMessage(OverlayChecker* checker) const override {
-    auto fileTypeStr = S_ISDIR(*childInfo_.mode_ref())
+    auto fileTypeStr = S_ISDIR(*childInfo_.mode())
         ? "directory"
-        : (S_ISLNK(*childInfo_.mode_ref()) ? "symlink" : "file");
+        : (S_ISLNK(*childInfo_.mode()) ? "symlink" : "file");
     auto path = checker->computePath(parent_, childName_);
     return folly::to<string>(
         "missing overlay file for materialized ",
         fileTypeStr,
         " inode ",
-        *childInfo_.inodeNumber_ref(),
+        *childInfo_.inodeNumber(),
         " (",
         path.toString(),
         ")");
@@ -425,24 +425,24 @@ class OverlayChecker::MissingMaterializedInode : public OverlayChecker::Error {
 
   bool repair(RepairState& repair) const override {
     // Create replacement data for this inode in the overlay
-    XDCHECK_NE(*childInfo_.inodeNumber_ref(), 0);
-    InodeNumber childInodeNumber(*childInfo_.inodeNumber_ref());
+    XDCHECK_NE(*childInfo_.inodeNumber(), 0);
+    InodeNumber childInodeNumber(*childInfo_.inodeNumber());
 
     // If we were unable to fetch the scm state of the file, let's replace it
     // with an empty tree/file. This could happen if we're offline during fsck
     // and can't fetch the scm state.
     if (!repair.dematerializeDirEntry(parent_, childName_)) {
-      repair.createInodeReplacement(childInodeNumber, *childInfo_.mode_ref());
+      repair.createInodeReplacement(childInodeNumber, *childInfo_.mode());
 
       // Add an entry in the OverlayChecker's inodes_ set.
       // In case the parent directory was part of an orphaned subtree the
       // OrphanInode code will look for this child in the inodes_ map.
       auto type =
-          S_ISDIR(*childInfo_.mode_ref()) ? InodeType::Dir : InodeType::File;
+          S_ISDIR(*childInfo_.mode()) ? InodeType::Dir : InodeType::File;
       auto [iter, inserted] = repair.checker()->impl_->inodes.try_emplace(
           childInodeNumber, childInodeNumber, type);
       XDCHECK(inserted);
-      iter->second.addParent(parent_, *childInfo_.mode_ref());
+      iter->second.addParent(parent_, *childInfo_.mode());
     }
 
     return true;
@@ -515,8 +515,8 @@ class OverlayChecker::OrphanInode : public OverlayChecker::Error {
     }
 
     auto* const checker = repair.checker();
-    for (const auto& childEntry : *children.entries_ref()) {
-      auto childRawInode = *childEntry.second.inodeNumber_ref();
+    for (const auto& childEntry : *children.entries()) {
+      auto childRawInode = *childEntry.second.inodeNumber();
       if (childRawInode == 0) {
         // If this child does not have an inode number allocated it cannot
         // be materialized.
@@ -555,8 +555,7 @@ class OverlayChecker::OrphanInode : public OverlayChecker::Error {
 
     switch (info->type) {
       case InodeType::File:
-        archiveOrphanFile(
-            repair, info->number, archivePath, *dirEntry.mode_ref());
+        archiveOrphanFile(repair, info->number, archivePath, *dirEntry.mode());
         return;
       case InodeType::Dir:
         archiveOrphanDir(repair, info->number, archivePath, info->children);
@@ -947,8 +946,8 @@ PathComponent OverlayChecker::findChildName(
   // error, which is hopefully rare.  Therefore we avoid doing as much work as
   // possible during linkInodeChildren(), at the cost of doing extra work here
   // if we do actually need to compute paths.
-  for (const auto& entry : *parentInfo.children.entries_ref()) {
-    if (static_cast<uint64_t>(*entry.second.inodeNumber_ref()) == child.get()) {
+  for (const auto& entry : *parentInfo.children.entries()) {
+    if (static_cast<uint64_t>(*entry.second.inodeNumber()) == child.get()) {
       return PathComponent(entry.first);
     }
   }
@@ -1127,8 +1126,8 @@ std::optional<InodeInfo> OverlayChecker::loadInodeInfoFromFileContentStore(
 
 void OverlayChecker::linkInodeChildren() {
   for (const auto& [parentInodeNumber, parent] : impl_->inodes) {
-    for (const auto& [childName, child] : *parent.children.entries_ref()) {
-      auto childRawInode = *child.inodeNumber_ref();
+    for (const auto& [childName, child] : *parent.children.entries()) {
+      auto childRawInode = *child.inodeNumber();
       if (childRawInode == 0) {
         // Older versions of edenfs would leave the inode number set to 0
         // if the child inode has never been loaded.  The child can't be
@@ -1144,7 +1143,7 @@ void OverlayChecker::linkInodeChildren() {
       updateMaxInodeNumber(childInodeNumber);
       auto childInfo = getInodeInfo(childInodeNumber);
       if (!childInfo) {
-        const auto& hash = child.hash_ref();
+        const auto& hash = child.hash();
         if (!hash.has_value() || hash->empty()) {
           // This child is materialized (since it doesn't have a hash
           // linking it to a source control object).  It's a problem if the
@@ -1153,7 +1152,7 @@ void OverlayChecker::linkInodeChildren() {
               parentInodeNumber, childName, child);
         }
       } else {
-        childInfo->addParent(parentInodeNumber, *child.mode_ref());
+        childInfo->addParent(parentInodeNumber, *child.mode());
 
         // TODO: It would be nice to also check for mismatch between
         // childInfo->type and child.mode

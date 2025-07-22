@@ -232,10 +232,10 @@ CheckoutConflict makeConflict(
     StringPiece message = "",
     Dtype dtype = Dtype::UNKNOWN) {
   CheckoutConflict conflict;
-  conflict.type_ref() = type;
-  conflict.path_ref() = path.str();
-  conflict.message_ref() = message.str();
-  conflict.dtype_ref() = dtype;
+  conflict.type() = type;
+  conflict.path() = path.str();
+  conflict.message() = message.str();
+  conflict.dtype() = dtype;
   return conflict;
 }
 
@@ -634,8 +634,8 @@ void testModifyConflict(
   auto result = std::move(checkoutResult).get();
   ASSERT_EQ(1, result.conflicts.size());
 
-  EXPECT_EQ(path, *result.conflicts[0].path_ref());
-  EXPECT_EQ(ConflictType::MODIFIED_MODIFIED, *result.conflicts[0].type_ref());
+  EXPECT_EQ(path, *result.conflicts[0].path());
+  EXPECT_EQ(ConflictType::MODIFIED_MODIFIED, *result.conflicts[0].type());
 
   const auto currentParent = testMount.getEdenMount()->getWorkingCopyParent();
   const auto configParent =
@@ -1395,7 +1395,7 @@ void runTestSetPathObjectId(
 
   testMount.drainServerExecutor();
   auto result = std::move(setPathObjectIdResultAndTimesAndTimes).get();
-  EXPECT_EQ(0, result.result.conflicts_ref()->size());
+  EXPECT_EQ(0, result.result.conflicts()->size());
 
   // Confirm that the tree has been updated correctly.
   EXPECT_FILE_INODE(
@@ -1457,7 +1457,7 @@ TEST(Checkout, testSetPathObjectIdConflict) {
   // Insert file2 to pathToSet
   RelativePathPiece path{"dir/dir2/dir3"};
   SetPathObjectIdParams params;
-  params.type_ref() = facebook::eden::ObjectType::TREE;
+  params.type() = facebook::eden::ObjectType::TREE;
   auto setPathObjectIdResultAndTimes =
       testMount.getEdenMount()
           ->setPathsToObjectIds(
@@ -1473,10 +1473,10 @@ TEST(Checkout, testSetPathObjectIdConflict) {
   testMount.drainServerExecutor();
 
   auto result = std::move(setPathObjectIdResultAndTimes).get();
-  ASSERT_TRUE(result.result.conflicts_ref().has_value());
-  EXPECT_EQ(1, result.result.conflicts_ref()->size());
+  ASSERT_TRUE(result.result.conflicts().has_value());
+  EXPECT_EQ(1, result.result.conflicts()->size());
   EXPECT_THAT(
-      std::move(result).result.conflicts_ref().value(),
+      std::move(result).result.conflicts().value(),
       UnorderedElementsAre(makeConflict(
           ConflictType::UNTRACKED_ADDED,
           "dir/dir2/dir3/file.txt",
@@ -1539,7 +1539,7 @@ TEST(Checkout, testSetPathObjectIdLastCheckoutTime) {
   // Insert file2 to dir2
   RelativePathPiece path{"dir2"};
   SetPathObjectIdParams params;
-  params.type_ref() = facebook::eden::ObjectType::TREE;
+  params.type() = facebook::eden::ObjectType::TREE;
   auto setPathObjectIdResultAndTimes =
       testMount.getEdenMount()
           ->setPathsToObjectIds(
@@ -1555,7 +1555,7 @@ TEST(Checkout, testSetPathObjectIdLastCheckoutTime) {
   testMount.drainServerExecutor();
 
   auto result = std::move(setPathObjectIdResultAndTimes).get();
-  EXPECT_EQ(0, result.result.conflicts_ref()->size());
+  EXPECT_EQ(0, result.result.conflicts()->size());
 
   struct timespec updatedLastCheckoutTime =
       edenMount->getLastCheckoutTime().toTimespec();
@@ -1597,7 +1597,7 @@ TEST(Checkout, testSetPathObjectIdCheckoutSingleFile) {
   testMount.drainServerExecutor();
 
   auto result = std::move(setPathObjectIdResultAndTimes).get();
-  EXPECT_EQ(0, result.result.conflicts_ref()->size());
+  EXPECT_EQ(0, result.result.conflicts()->size());
 
   // Confirm that the blob has been updated correctly.
   EXPECT_FILE_INODE(testMount.getFileInode(path), contents, 0644);
@@ -1628,7 +1628,7 @@ TEST(Checkout, testSetPathObjectIdCheckoutMultipleFiles) {
   testMount.drainServerExecutor();
 
   auto result = std::move(setPathObjectIdResultAndTimes).get();
-  EXPECT_EQ(0, result.result.conflicts_ref()->size());
+  EXPECT_EQ(0, result.result.conflicts()->size());
 
   // Confirm that the blob has been updated correctly.
   EXPECT_FILE_INODE(testMount.getFileInode(path), contents, 0644);
@@ -1645,7 +1645,7 @@ TEST(Checkout, testSetPathObjectIdCheckoutMultipleFiles) {
   testMount.drainServerExecutor();
 
   auto result2 = std::move(setPathObjectIdResultAndTimes2).get();
-  EXPECT_EQ(0, result2.result.conflicts_ref()->size());
+  EXPECT_EQ(0, result2.result.conflicts()->size());
 
   EXPECT_FILE_INODE(testMount.getFileInode(path), contents, 0644);
   EXPECT_FILE_INODE(testMount.getFileInode(path2), contents2, 0644);
@@ -1847,9 +1847,9 @@ TEST(Checkout, conflict_when_directory_containing_modified_file_is_removed) {
 
   {
     auto& conflict = result.conflicts[0];
-    EXPECT_EQ("d1/sub/one.txt", *conflict.path_ref());
-    EXPECT_EQ(ConflictType::MODIFIED_REMOVED, *conflict.type_ref());
-    EXPECT_EQ("", *conflict.message_ref());
+    EXPECT_EQ("d1/sub/one.txt", *conflict.path());
+    EXPECT_EQ(ConflictType::MODIFIED_REMOVED, *conflict.type());
+    EXPECT_EQ("", *conflict.message());
   }
 }
 

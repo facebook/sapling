@@ -181,7 +181,7 @@ class TestDir {
       mode_t mode,
       uint64_t number = 0) {
     auto insertResult =
-        contents_.entries_ref()->emplace(name, overlay::OverlayEntry{});
+        contents_.entries()->emplace(name, overlay::OverlayEntry{});
     if (!insertResult.second) {
       throw std::runtime_error(
           folly::to<string>("an entry named \"", name, "\" already exists"));
@@ -191,11 +191,11 @@ class TestDir {
       number = overlay_->allocateInodeNumber().get();
     }
     auto& entry = insertResult.first->second;
-    entry.mode_ref() = mode;
-    entry.inodeNumber_ref() = static_cast<int64_t>(number);
+    entry.mode() = mode;
+    entry.inodeNumber() = static_cast<int64_t>(number);
     if (hash) {
       auto hashBytes = hash->getBytes();
-      entry.hash_ref() = std::string{
+      entry.hash() = std::string{
 
           reinterpret_cast<const char*>(hashBytes.data()), hashBytes.size()};
     }
@@ -612,7 +612,7 @@ TEST_P(FsckTest, testTruncatedDirData) {
   auto newDirContents =
       testOverlay->inodeCatalog()->loadOverlayDir(layout.src.number());
   ASSERT_TRUE(newDirContents.has_value());
-  EXPECT_EQ(0, newDirContents->entries_ref()->size());
+  EXPECT_EQ(0, newDirContents->entries()->size());
 
   // No inodes from the orphaned subtree should be present in the
   // overlay any more.
@@ -722,7 +722,7 @@ TEST_P(FsckTest, testMissingDirData) {
   auto newDirContents =
       testOverlay->inodeCatalog()->loadOverlayDir(layout.src.number());
   ASSERT_TRUE(newDirContents.has_value());
-  EXPECT_EQ(0, newDirContents->entries_ref()->size());
+  EXPECT_EQ(0, newDirContents->entries()->size());
 
   // No inodes from the orphaned subtree should be present in the
   // overlay any more.
