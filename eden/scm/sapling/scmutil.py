@@ -23,6 +23,7 @@ import time
 import bindings
 
 from . import (
+    copies,
     encoding,
     error,
     hintutil,
@@ -1005,14 +1006,15 @@ def addremove(
         added += unknown
         removed += deleted
 
-    if (
-        rename_detection_file_limit
-        and len(added) + len(removed) > rename_detection_file_limit
-    ):
-        repo.ui.status_err(_("too many files - skipping rename detection\n"))
-        renames = {}
-    else:
-        renames = _findrenames(repo, m, added, removed, similarity)
+    renames = {}
+    if added:
+        if (
+            rename_detection_file_limit
+            and len(added) + len(removed) > rename_detection_file_limit
+        ):
+            repo.ui.status_err(_("too many files - skipping rename detection\n"))
+        else:
+            renames = _findrenames(repo, m, added, removed, similarity)
 
     if not dry_run:
         if addremove:
@@ -1090,7 +1092,12 @@ def _interestingfiles(repo, matcher):
         if ignored(file) and repo.wvfs.isfileorlink(file) and audit_path.check(file)
     )
 
-    return status.added, unknown, status.deleted, removed, forgotten
+    # remove the added files for which we already have copy info
+    added = status.added
+    copy = copies.pathcopies(repo["."], repo[None], matcher)
+    added = [f for f in added if f not in copy]
+
+    return added, unknown, status.deleted, removed, forgotten
 
 
 def _findrenames(repo, matcher, added, removed, similarity):

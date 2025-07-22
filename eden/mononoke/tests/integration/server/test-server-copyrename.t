@@ -45,7 +45,6 @@ push some files with copy/move files
   $ hg cp a a_copy
   $ hg mv b b_move
   $ hg addremove && hg ci -q -mb
-  recording removal of b as rename to b_move (100% similar)
   $ hg push --to master_bookmark
   pushing rev 4b747ca852a4 to destination mono:repo bookmark master_bookmark
   searching for changes

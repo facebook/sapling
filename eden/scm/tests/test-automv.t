@@ -371,6 +371,4 @@
   $ hg mv foo bar
   moving foo/a.txt to bar/a.txt
   moving foo/b.txt to bar/b.txt
-Tofix: should not try rename detection for moved files
   $ hg ci -m mv --config automv.max-files=1
-  too many files - skipping rename detection
