@@ -35,10 +35,10 @@ TEST(ProcessAccessLog, accessIncrementsAccessCount) {
       pid, ProcessAccessLog::AccessType::FsChannelBackingStoreImport);
 
   auto ac = AccessCounts{};
-  ac.fsChannelTotal_ref() = 3;
-  ac.fsChannelReads_ref() = 1;
-  ac.fsChannelWrites_ref() = 1;
-  ac.fsChannelBackingStoreImports_ref() = 1;
+  ac.fsChannelTotal() = 3;
+  ac.fsChannelReads() = 1;
+  ac.fsChannelWrites() = 1;
+  ac.fsChannelBackingStoreImports() = 1;
 
   EXPECT_THAT(log.getAccessCounts(10s), Contains(std::pair{pid, ac}));
 }

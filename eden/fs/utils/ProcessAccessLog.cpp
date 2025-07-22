@@ -219,21 +219,21 @@ std::unordered_map<pid_t, AccessCounts> ProcessAccessLog::getAccessCounts(
   // Transfer to a Thrift map
   std::unordered_map<pid_t, AccessCounts> accessCountsByPid;
   for (auto& [pid, accessCounts] : bucket.accessCountsByPid) {
-    accessCountsByPid[pid].fsChannelReads_ref() =
+    accessCountsByPid[pid].fsChannelReads() =
         accessCounts[AccessType::FsChannelRead];
-    accessCountsByPid[pid].fsChannelWrites_ref() =
+    accessCountsByPid[pid].fsChannelWrites() =
         accessCounts[AccessType::FsChannelWrite];
-    accessCountsByPid[pid].fsChannelTotal_ref() =
+    accessCountsByPid[pid].fsChannelTotal() =
         accessCounts[AccessType::FsChannelRead] +
         accessCounts[AccessType::FsChannelWrite] +
         accessCounts[AccessType::FsChannelOther];
-    accessCountsByPid[pid].fsChannelMemoryCacheImports_ref() =
+    accessCountsByPid[pid].fsChannelMemoryCacheImports() =
         accessCounts[AccessType::FsChannelMemoryCacheImport];
-    accessCountsByPid[pid].fsChannelDiskCacheImports_ref() =
+    accessCountsByPid[pid].fsChannelDiskCacheImports() =
         accessCounts[AccessType::FsChannelDiskCacheImport];
-    accessCountsByPid[pid].fsChannelBackingStoreImports_ref() =
+    accessCountsByPid[pid].fsChannelBackingStoreImports() =
         accessCounts[AccessType::FsChannelBackingStoreImport];
-    accessCountsByPid[pid].fsChannelDurationNs_ref() =
+    accessCountsByPid[pid].fsChannelDurationNs() =
         accessCounts.duration.count();
   }
   return accessCountsByPid;
