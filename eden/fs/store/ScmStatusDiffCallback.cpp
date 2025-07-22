@@ -17,29 +17,25 @@ namespace facebook::eden {
 
 void ScmStatusDiffCallback::ignoredPath(RelativePathPiece path, dtype_t type) {
   if (type != dtype_t::Dir) {
-    data_.wlock()->entries_ref()->emplace(
-        path.asString(), ScmFileStatus::IGNORED);
+    data_.wlock()->entries()->emplace(path.asString(), ScmFileStatus::IGNORED);
   }
 }
 
 void ScmStatusDiffCallback::addedPath(RelativePathPiece path, dtype_t type) {
   if (type != dtype_t::Dir) {
-    data_.wlock()->entries_ref()->emplace(
-        path.asString(), ScmFileStatus::ADDED);
+    data_.wlock()->entries()->emplace(path.asString(), ScmFileStatus::ADDED);
   }
 }
 
 void ScmStatusDiffCallback::removedPath(RelativePathPiece path, dtype_t type) {
   if (type != dtype_t::Dir) {
-    data_.wlock()->entries_ref()->emplace(
-        path.asString(), ScmFileStatus::REMOVED);
+    data_.wlock()->entries()->emplace(path.asString(), ScmFileStatus::REMOVED);
   }
 }
 
 void ScmStatusDiffCallback::modifiedPath(RelativePathPiece path, dtype_t type) {
   if (type != dtype_t::Dir) {
-    data_.wlock()->entries_ref()->emplace(
-        path.asString(), ScmFileStatus::MODIFIED);
+    data_.wlock()->entries()->emplace(path.asString(), ScmFileStatus::MODIFIED);
   }
 }
 
@@ -48,7 +44,7 @@ void ScmStatusDiffCallback::diffError(
     const folly::exception_wrapper& ew) {
   XLOG(WARNING) << "error computing status data for " << path << ": "
                 << folly::exceptionStr(ew);
-  data_.wlock()->errors_ref()->emplace(
+  data_.wlock()->errors()->emplace(
       path.asString(), folly::exceptionStr(ew).toStdString());
 }
 

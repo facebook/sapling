@@ -44,10 +44,10 @@ TEST_F(ScmStatusCacheTest, insert_sequence_status_pair) {
   JournalDelta::SequenceNumber seqLarge = 6;
 
   ScmStatus initialStatus;
-  initialStatus.entries_ref()->emplace("foo", ScmFileStatus::ADDED);
+  initialStatus.entries()->emplace("foo", ScmFileStatus::ADDED);
   ScmStatus secondStatus;
   ScmStatus thirdStatus;
-  initialStatus.entries_ref()->emplace("bar", ScmFileStatus::ADDED);
+  initialStatus.entries()->emplace("bar", ScmFileStatus::ADDED);
 
   cache->insert(key, sequenceId, initialStatus);
   EXPECT_TRUE(cache->contains(key));
@@ -77,7 +77,7 @@ TEST_F(ScmStatusCacheTest, evict_when_cache_size_too_large) {
   auto sizeOfStatus =
       sizeof(status); // this is different for different platforms: Linux: 104,
                       // Mac: 56, Windows: 40
-  status.entries_ref().value().emplace(
+  status.entries().value().emplace(
       "f1234", ScmFileStatus::ADDED); // entry size = 6 + 4 = 10 bytes
   // Total size of a cache item = sizeof(sequence) + sizeof(ScmStatus) + 10
   auto totalItemSize = 8 + sizeOfStatus + 10;
@@ -115,7 +115,7 @@ TEST_F(ScmStatusCacheTest, evict_on_update) {
   auto sizeOfStatus =
       sizeof(status); // this is different for different platforms: Linux: 104,
                       // Mac: 56, Windows: 40
-  status.entries_ref().value().emplace(
+  status.entries().value().emplace(
       "f1234", ScmFileStatus::ADDED); // entry size = 6 + 4 = 10 bytes
   // Total size of a cache item = sizeof(sequence) + sizeof(ScmStatus) + 10
   auto totalItemSize = 8 + sizeOfStatus + 10;
@@ -142,7 +142,7 @@ TEST_F(ScmStatusCacheTest, evict_on_update) {
 
   ScmStatus statusWithManyEntries;
   for (auto i = 0; i < 100; i++) {
-    statusWithManyEntries.entries_ref().value().emplace(
+    statusWithManyEntries.entries().value().emplace(
         fmt::format("file{}", i), ScmFileStatus::ADDED);
   }
 
@@ -158,7 +158,7 @@ TEST_F(ScmStatusCacheTest, drop_cached_promise) {
       rawEdenConfig.get(), makeRefPtr<EdenStats>(), journal);
 
   ScmStatus status;
-  status.entries_ref()->emplace("foo", ScmFileStatus::ADDED);
+  status.entries()->emplace("foo", ScmFileStatus::ADDED);
 
   auto key = ObjectId::sha1("foo");
   auto getResult_0 = cache->get(key, 1);
@@ -192,7 +192,7 @@ TEST_F(ScmStatusCacheTest, get_results_as_promise_or_future) {
       rawEdenConfig.get(), makeRefPtr<EdenStats>(), journal);
 
   ScmStatus status;
-  status.entries_ref()->emplace("foo", ScmFileStatus::ADDED);
+  status.entries()->emplace("foo", ScmFileStatus::ADDED);
 
   auto key = ObjectId::sha1("foo");
   EXPECT_FALSE(cache->contains(key));

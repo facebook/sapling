@@ -180,8 +180,8 @@ TEST_F(DiffTest, sameCommit) {
   backingStore_->putCommit("1", builder)->setReady();
 
   auto result = diffCommits("1", "1").get(100ms);
-  EXPECT_THAT(*result.errors_ref(), UnorderedElementsAre());
-  EXPECT_THAT(*result.entries_ref(), UnorderedElementsAre());
+  EXPECT_THAT(*result.errors(), UnorderedElementsAre());
+  EXPECT_THAT(*result.entries(), UnorderedElementsAre());
 }
 
 TEST_F(DiffTest, basicDiff) {
@@ -206,9 +206,9 @@ TEST_F(DiffTest, basicDiff) {
   backingStore_->putCommit("2", builder2)->setReady();
 
   auto result = diffCommits("1", "2").get(100ms);
-  EXPECT_THAT(*result.errors_ref(), UnorderedElementsAre());
+  EXPECT_THAT(*result.errors(), UnorderedElementsAre());
   EXPECT_THAT(
-      *result.entries_ref(),
+      *result.entries(),
       UnorderedElementsAre(
           Pair("src/main.c", ScmFileStatus::MODIFIED),
           Pair("src/test/test2.c", ScmFileStatus::ADDED),
@@ -234,17 +234,17 @@ TEST_F(DiffTest, directoryOrdering) {
   backingStore_->putCommit("2", builder2)->setReady();
 
   auto result = diffCommits("1", "2").get(100ms);
-  EXPECT_THAT(*result.errors_ref(), UnorderedElementsAre());
+  EXPECT_THAT(*result.errors(), UnorderedElementsAre());
   EXPECT_THAT(
-      *result.entries_ref(),
+      *result.entries(),
       UnorderedElementsAre(
           Pair("src/foo/aaa.txt", ScmFileStatus::ADDED),
           Pair("src/foo/zzz.txt", ScmFileStatus::ADDED)));
 
   auto result2 = diffCommits("2", "1").get(100ms);
-  EXPECT_THAT(*result2.errors_ref(), UnorderedElementsAre());
+  EXPECT_THAT(*result2.errors(), UnorderedElementsAre());
   EXPECT_THAT(
-      *result2.entries_ref(),
+      *result2.entries(),
       UnorderedElementsAre(
           Pair("src/foo/aaa.txt", ScmFileStatus::REMOVED),
           Pair("src/foo/zzz.txt", ScmFileStatus::REMOVED)));
@@ -266,15 +266,15 @@ TEST_F(DiffTest, modeChange) {
   backingStore_->putCommit("2", builder2)->setReady();
 
   auto result = diffCommits("1", "2").get(100ms);
-  EXPECT_THAT(*result.errors_ref(), UnorderedElementsAre());
+  EXPECT_THAT(*result.errors(), UnorderedElementsAre());
   EXPECT_THAT(
-      *result.entries_ref(),
+      *result.entries(),
       UnorderedElementsAre(Pair("some_file", ScmFileStatus::MODIFIED)));
 
   auto result2 = diffCommits("2", "1").get(100ms);
-  EXPECT_THAT(*result2.errors_ref(), UnorderedElementsAre());
+  EXPECT_THAT(*result2.errors(), UnorderedElementsAre());
   EXPECT_THAT(
-      *result2.entries_ref(),
+      *result2.entries(),
       UnorderedElementsAre(Pair("some_file", ScmFileStatus::MODIFIED)));
 }
 #endif // !_WIN32
@@ -298,9 +298,9 @@ TEST_F(DiffTest, newDirectory) {
   backingStore_->putCommit("2", builder2)->setReady();
 
   auto result = diffCommits("1", "2").get(100ms);
-  EXPECT_THAT(*result.errors_ref(), UnorderedElementsAre());
+  EXPECT_THAT(*result.errors(), UnorderedElementsAre());
   EXPECT_THAT(
-      *result.entries_ref(),
+      *result.entries(),
       UnorderedElementsAre(
           Pair("src/foo/a/b/c.txt", ScmFileStatus::ADDED),
           Pair("src/foo/a/b/d.txt", ScmFileStatus::ADDED),
@@ -310,9 +310,9 @@ TEST_F(DiffTest, newDirectory) {
           Pair("src/foo/z/y/w.txt", ScmFileStatus::ADDED)));
 
   auto result2 = diffCommits("2", "1").get(100ms);
-  EXPECT_THAT(*result2.errors_ref(), UnorderedElementsAre());
+  EXPECT_THAT(*result2.errors(), UnorderedElementsAre());
   EXPECT_THAT(
-      *result2.entries_ref(),
+      *result2.entries(),
       UnorderedElementsAre(
           Pair("src/foo/a/b/c.txt", ScmFileStatus::REMOVED),
           Pair("src/foo/a/b/d.txt", ScmFileStatus::REMOVED),
@@ -343,9 +343,9 @@ TEST_F(DiffTest, fileToDirectory) {
   backingStore_->putCommit("2", builder2)->setReady();
 
   auto result = diffCommits("1", "2").get(100ms);
-  EXPECT_THAT(*result.errors_ref(), UnorderedElementsAre());
+  EXPECT_THAT(*result.errors(), UnorderedElementsAre());
   EXPECT_THAT(
-      *result.entries_ref(),
+      *result.entries(),
       UnorderedElementsAre(
           Pair("src/foo/a", ScmFileStatus::REMOVED),
           Pair("src/foo/a/b/c.txt", ScmFileStatus::ADDED),
@@ -356,9 +356,9 @@ TEST_F(DiffTest, fileToDirectory) {
           Pair("src/foo/z/y/w.txt", ScmFileStatus::ADDED)));
 
   auto result2 = diffCommits("2", "1").get(100ms);
-  EXPECT_THAT(*result2.errors_ref(), UnorderedElementsAre());
+  EXPECT_THAT(*result2.errors(), UnorderedElementsAre());
   EXPECT_THAT(
-      *result2.entries_ref(),
+      *result2.entries(),
       UnorderedElementsAre(
           Pair("src/foo/a", ScmFileStatus::ADDED),
           Pair("src/foo/a/b/c.txt", ScmFileStatus::REMOVED),
@@ -450,12 +450,12 @@ TEST_F(DiffTest, blockedFutures) {
   EXPECT_TRUE(resultFuture.isReady());
 
   auto result = std::move(resultFuture).get(0ms);
-  EXPECT_THAT(*result.errors_ref(), UnorderedElementsAre());
+  EXPECT_THAT(*result.errors(), UnorderedElementsAre());
 
   // TODO: T66590035
 #ifndef _WIN32
   EXPECT_THAT(
-      *result.entries_ref(),
+      *result.entries(),
       UnorderedElementsAre(
           Pair("src/main.c", ScmFileStatus::MODIFIED),
           Pair("src/test/test2.c", ScmFileStatus::ADDED),
@@ -521,12 +521,12 @@ TEST_F(DiffTest, loadTreeError) {
 
   auto result = std::move(resultFuture).get(0ms);
   EXPECT_THAT(
-      *result.errors_ref(),
+      *result.errors(),
       UnorderedElementsAre(Pair(
           "x/y/z",
           folly::exceptionStr(std::runtime_error("oh noes")).c_str())));
   EXPECT_THAT(
-      *result.entries_ref(),
+      *result.entries(),
       UnorderedElementsAre(Pair("a/b/3.txt", ScmFileStatus::MODIFIED)));
 }
 
@@ -551,9 +551,9 @@ TEST_F(DiffTest, nonignored_added_modified_and_removed_files) {
 
   auto result = diffCommitsWithGitIgnore(
       builder.getRoot()->get().getHash(), builder2.getRoot()->get().getHash());
-  EXPECT_THAT(*result.errors_ref(), UnorderedElementsAre());
+  EXPECT_THAT(*result.errors(), UnorderedElementsAre());
   EXPECT_THAT(
-      *result.entries_ref(),
+      *result.entries(),
       UnorderedElementsAre(
           Pair("src/bar/e.txt", ScmFileStatus::ADDED),
           Pair("src/bar/d.txt", ScmFileStatus::REMOVED),
@@ -581,9 +581,9 @@ TEST_F(DiffTest, nonignored_added_files) {
 
   auto result = diffCommitsWithGitIgnore(
       builder.getRoot()->get().getHash(), builder2.getRoot()->get().getHash());
-  EXPECT_THAT(*result.errors_ref(), UnorderedElementsAre());
+  EXPECT_THAT(*result.errors(), UnorderedElementsAre());
   EXPECT_THAT(
-      *result.entries_ref(),
+      *result.entries(),
       UnorderedElementsAre(
           Pair("src/bar/foo/e.txt", ScmFileStatus::ADDED),
           Pair("src/bar/foo/f.txt", ScmFileStatus::ADDED)));
@@ -604,9 +604,9 @@ TEST_F(DiffTest, nonignored_added_files) {
                        return callback->extractStatus();
                      })
                      .get(100ms);
-  EXPECT_THAT(*result2.errors_ref(), UnorderedElementsAre());
+  EXPECT_THAT(*result2.errors(), UnorderedElementsAre());
   EXPECT_THAT(
-      *result2.entries_ref(),
+      *result2.entries(),
       UnorderedElementsAre(
           Pair("src/bar/foo/e.txt", ScmFileStatus::ADDED),
           Pair("src/bar/foo/f.txt", ScmFileStatus::ADDED)));
@@ -634,9 +634,9 @@ TEST_F(DiffTest, nonignored_removed_files) {
 
   auto result = diffCommitsWithGitIgnore(
       builder.getRoot()->get().getHash(), builder2.getRoot()->get().getHash());
-  EXPECT_THAT(*result.errors_ref(), UnorderedElementsAre());
+  EXPECT_THAT(*result.errors(), UnorderedElementsAre());
   EXPECT_THAT(
-      *result.entries_ref(),
+      *result.entries(),
       UnorderedElementsAre(
           Pair("src/bar/foo/e.txt", ScmFileStatus::REMOVED),
           Pair("src/bar/foo/f.txt", ScmFileStatus::REMOVED)));
@@ -657,9 +657,9 @@ TEST_F(DiffTest, nonignored_removed_files) {
                        return callback->extractStatus();
                      })
                      .get(100ms);
-  EXPECT_THAT(*result2.errors_ref(), UnorderedElementsAre());
+  EXPECT_THAT(*result2.errors(), UnorderedElementsAre());
   EXPECT_THAT(
-      *result2.entries_ref(),
+      *result2.entries(),
       UnorderedElementsAre(
           Pair("src/bar/foo/e.txt", ScmFileStatus::REMOVED),
           Pair("src/bar/foo/f.txt", ScmFileStatus::REMOVED)));
@@ -692,9 +692,9 @@ TEST_F(DiffTest, diff_trees_with_tracked_ignored_file_modified) {
 
   auto result = diffCommitsWithGitIgnore(
       builder.getRoot()->get().getHash(), builder2.getRoot()->get().getHash());
-  EXPECT_THAT(*result.errors_ref(), UnorderedElementsAre());
+  EXPECT_THAT(*result.errors(), UnorderedElementsAre());
   EXPECT_THAT(
-      *result.entries_ref(),
+      *result.entries(),
       UnorderedElementsAre(
           Pair("src/bar/e.txt", ScmFileStatus::ADDED),
           Pair("src/bar/d.txt", ScmFileStatus::REMOVED),
@@ -726,9 +726,9 @@ TEST_F(DiffTest, ignored_added_modified_and_removed_files) {
 
   auto result = diffCommitsWithGitIgnore(
       builder.getRoot()->get().getHash(), builder2.getRoot()->get().getHash());
-  EXPECT_THAT(*result.errors_ref(), UnorderedElementsAre());
+  EXPECT_THAT(*result.errors(), UnorderedElementsAre());
   EXPECT_THAT(
-      *result.entries_ref(),
+      *result.entries(),
       UnorderedElementsAre(
           Pair("src/foo/.gitignore", ScmFileStatus::ADDED),
           Pair("src/bar/e.txt", ScmFileStatus::ADDED),
@@ -758,9 +758,9 @@ TEST_F(DiffTest, ignored_added_files) {
 
   auto result = diffCommitsWithGitIgnore(
       builder.getRoot()->get().getHash(), builder2.getRoot()->get().getHash());
-  EXPECT_THAT(*result.errors_ref(), UnorderedElementsAre());
+  EXPECT_THAT(*result.errors(), UnorderedElementsAre());
   EXPECT_THAT(
-      *result.entries_ref(),
+      *result.entries(),
       UnorderedElementsAre(
           Pair("src/bar/foo/e.txt", ScmFileStatus::ADDED),
           Pair("src/bar/foo/f.txt", ScmFileStatus::ADDED)));
@@ -793,9 +793,9 @@ TEST_F(DiffTest, ignored_removed_files) {
 
   auto result = diffCommitsWithGitIgnore(
       builder.getRoot()->get().getHash(), builder2.getRoot()->get().getHash());
-  EXPECT_THAT(*result.errors_ref(), UnorderedElementsAre());
+  EXPECT_THAT(*result.errors(), UnorderedElementsAre());
   EXPECT_THAT(
-      *result.entries_ref(),
+      *result.entries(),
       UnorderedElementsAre(
           Pair("src/bar/foo/e.txt", ScmFileStatus::REMOVED),
           Pair("src/bar/foo/f.txt", ScmFileStatus::REMOVED)));
@@ -828,9 +828,9 @@ TEST_F(DiffTest, ignoreToplevelOnly) {
   auto result = diffCommitsWithGitIgnore(
       builder.getRoot()->get().getHash(), builder2.getRoot()->get().getHash());
 
-  EXPECT_THAT(*result.errors_ref(), UnorderedElementsAre());
+  EXPECT_THAT(*result.errors(), UnorderedElementsAre());
   EXPECT_THAT(
-      *result.entries_ref(),
+      *result.entries(),
       UnorderedElementsAre(
           std::make_pair("src/1.txt", ScmFileStatus::ADDED),
           std::make_pair("1.txt", ScmFileStatus::ADDED),
@@ -873,7 +873,7 @@ TEST_F(DiffTest, ignored_file_local_and_in_tree) {
   auto result = diffCommitsWithGitIgnore(
       builder.getRoot()->get().getHash(), builder2.getRoot()->get().getHash());
   EXPECT_THAT(
-      *result.entries_ref(),
+      *result.entries(),
       UnorderedElementsAre(
           std::make_pair("src/1.txt", ScmFileStatus::ADDED),
           std::make_pair("src/foo/abc/xyz/ignore.txt", ScmFileStatus::MODIFIED),
@@ -918,7 +918,7 @@ TEST_F(DiffTest, ignored_file_not_local_but_is_in_tree) {
   auto result = diffCommitsWithGitIgnore(
       builder.getRoot()->get().getHash(), builder2.getRoot()->get().getHash());
   EXPECT_THAT(
-      *result.entries_ref(),
+      *result.entries(),
       UnorderedElementsAre(
           std::make_pair("src/1.txt", ScmFileStatus::ADDED),
           std::make_pair("src/foo/abc/xyz/ignore.txt", ScmFileStatus::REMOVED),
@@ -954,7 +954,7 @@ TEST_F(DiffTest, ignoreSystemLevelAndUser) {
       "skip_global.txt\n",
       "skip_user.txt\n");
   EXPECT_THAT(
-      *result.entries_ref(),
+      *result.entries(),
       UnorderedElementsAre(
           std::make_pair("skip_global.txt", ScmFileStatus::ADDED),
           std::make_pair("skip_user.txt", ScmFileStatus::ADDED)));
@@ -985,7 +985,7 @@ TEST_F(DiffTest, ignoreUserLevel) {
       "",
       "skip_user.txt\n");
   EXPECT_THAT(
-      *result.entries_ref(),
+      *result.entries(),
       UnorderedElementsAre(
           std::make_pair("skip_global.txt", ScmFileStatus::ADDED),
           std::make_pair("skip_user.txt", ScmFileStatus::ADDED)));
@@ -1016,7 +1016,7 @@ TEST_F(DiffTest, ignoreSystemLevel) {
       "skip_global.txt\n",
       "");
   EXPECT_THAT(
-      *result.entries_ref(),
+      *result.entries(),
       UnorderedElementsAre(
           std::make_pair("skip_global.txt", ScmFileStatus::ADDED),
           std::make_pair("skip_user.txt", ScmFileStatus::ADDED)));
@@ -1049,7 +1049,7 @@ TEST_F(DiffTest, directory_to_file_with_directory_ignored) {
   auto result = diffCommitsWithGitIgnore(
       builder.getRoot()->get().getHash(), builder2.getRoot()->get().getHash());
   EXPECT_THAT(
-      *result.entries_ref(),
+      *result.entries(),
       UnorderedElementsAre(
           std::make_pair("a/b/c.txt", ScmFileStatus::REMOVED),
           std::make_pair("a/b/d.txt", ScmFileStatus::REMOVED),
@@ -1084,7 +1084,7 @@ TEST_F(DiffTest, directory_to_file_with_file_ignored) {
   auto result = diffCommitsWithGitIgnore(
       builder.getRoot()->get().getHash(), builder2.getRoot()->get().getHash());
   EXPECT_THAT(
-      *result.entries_ref(),
+      *result.entries(),
       UnorderedElementsAre(
           std::make_pair("a/b/c.txt", ScmFileStatus::REMOVED),
           std::make_pair("a/b/d.txt", ScmFileStatus::REMOVED),
@@ -1119,7 +1119,7 @@ TEST_F(DiffTest, file_to_directory_with_gitignore) {
   auto result = diffCommitsWithGitIgnore(
       builder.getRoot()->get().getHash(), builder2.getRoot()->get().getHash());
   EXPECT_THAT(
-      *result.entries_ref(),
+      *result.entries(),
       UnorderedElementsAre(
           std::make_pair("a/b/d", ScmFileStatus::REMOVED),
           std::make_pair("a/b/d/e.txt", ScmFileStatus::ADDED),
@@ -1162,7 +1162,7 @@ TEST_F(DiffTest, addIgnoredDirectory) {
       systemIgnore);
 
   EXPECT_THAT(
-      *result.entries_ref(),
+      *result.entries(),
       UnorderedElementsAre(
           std::make_pair("a/b/r", ScmFileStatus::REMOVED),
           std::make_pair("a/b/r/e.txt", ScmFileStatus::ADDED),
@@ -1200,7 +1200,7 @@ TEST_F(DiffTest, nestedGitIgnoreFiles) {
       builder2.getRoot()->get().getHash(),
       systemIgnore);
   EXPECT_THAT(
-      *result.entries_ref(),
+      *result.entries(),
       UnorderedElementsAre(
           std::make_pair("a/b/r", ScmFileStatus::REMOVED),
           std::make_pair("a/b/r/e.txt", ScmFileStatus::ADDED),
@@ -1230,7 +1230,7 @@ TEST_F(DiffTest, hiddenFolder) {
   auto result = diffCommitsWithGitIgnore(
       builder.getRoot()->get().getHash(), builder2.getRoot()->get().getHash());
   EXPECT_THAT(
-      *result.entries_ref(),
+      *result.entries(),
       UnorderedElementsAre(std::make_pair("a/c.txt", ScmFileStatus::ADDED)));
 }
 
@@ -1252,7 +1252,7 @@ TEST_F(DiffTest, caseSensitivity) {
       "",
       true,
       CaseSensitivity::Insensitive);
-  EXPECT_THAT(*resultInsensitive.entries_ref(), UnorderedElementsAre());
+  EXPECT_THAT(*resultInsensitive.entries(), UnorderedElementsAre());
 
   auto resultSensitive = diffCommitsWithGitIgnore(
       builder1.getRoot()->get().getHash(),
@@ -1262,7 +1262,7 @@ TEST_F(DiffTest, caseSensitivity) {
       true,
       CaseSensitivity::Sensitive);
   EXPECT_THAT(
-      *resultSensitive.entries_ref(),
+      *resultSensitive.entries(),
       UnorderedElementsAre(
           Pair("a/b.txt", ScmFileStatus::REMOVED),
           Pair("a/B.txt", ScmFileStatus::ADDED)));
