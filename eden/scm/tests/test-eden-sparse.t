@@ -43,8 +43,8 @@ Test diff command against a commit that updated files excluded by the sparse pro
   $ cd
   $ hg clone -q --eden test:server-diff client-diff --config clone.eden-sparse-filter=eden-sparse
   $ cd client-diff
-Tofix: diff should not panic
   $ hg diff -r 'desc(b)' --stat
-  abort: $TESTTMP\client-diff\b.txt: $ENOENT$ (windows !)
-  abort: $ENOENT$: $TESTTMP/client-diff/b.txt (no-windows !)
-  [255]
+   a.txt       |  2 +-
+   b.txt       |  2 +-
+   eden-sparse |  4 ++++
+   3 files changed, 6 insertions(+), 2 deletions(-)

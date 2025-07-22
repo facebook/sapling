@@ -75,6 +75,7 @@ from .sparse import (
     _common_config_opts,
     _config,
     _setupcommit,
+    _setupdiff,
     _setupupdates,
     _showsubcmdlogic,
     getcommonopts,
@@ -98,6 +99,12 @@ def reposetup(ui, repo) -> None:
         return
 
     _wraprepo(ui, repo)
+
+
+def extsetup(ui) -> None:
+    if extensions.isenabled(ui, "sparse"):
+        return
+    _setupdiff(ui)
 
 
 def _wraprepo(ui, repo) -> None:
