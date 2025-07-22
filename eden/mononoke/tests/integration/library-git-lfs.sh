@@ -17,9 +17,8 @@
 #
 #  The git repo has two files pushed to it, one LFS, one non-LFS.
 function test_repos_for_lfs_with_upstream {
-    setup_common_config
     REPOTYPE="blob_files"
-    setup_common_config $REPOTYPE
+    COMMIT_IDENTITY_SCHEME=3 setup_common_config $REPOTYPE
     cat >> repos/repo/server.toml <<EOF
     [source_control_service.service_write_restrictions.gitremoteimport]
     permitted_methods = ["create_bookmark", "move_bookmark", "create_changeset", "set_git_mapping_from_changeset", "git_import_operations"]

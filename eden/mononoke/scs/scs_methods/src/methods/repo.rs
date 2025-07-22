@@ -399,6 +399,32 @@ impl SourceControlServiceImpl {
     ) -> Result<CreateChange, scs_errors::ServiceError> {
         let change = match change {
             thrift::RepoCreateCommitParamsChange::changed(c) => {
+                if justknobs::eval(
+                    "scm/mononoke:scs_repo_create_commit_git_restrictions",
+                    None,
+                    None,
+                )
+                .unwrap_or(false)
+                {
+                    if c.r#type == thrift::RepoCreateCommitParamsFileType::GIT_SUBMODULE
+                        && repo.config().default_commit_identity_scheme == CommitIdentityScheme::HG
+                    {
+                        return Err(scs_errors::invalid_request(
+                            "cannot create git submodule in hg repo",
+                        )
+                        .into());
+                    }
+
+                    if c.git_lfs.is_some()
+                        && repo.config().default_commit_identity_scheme == CommitIdentityScheme::HG
+                    {
+                        return Err(scs_errors::invalid_request(
+                            "cannot create git lfs file in hg repo",
+                        )
+                        .into());
+                    }
+                }
+
                 let file_type = FileType::from_request(&c.r#type)?;
                 let git_lfs = match c.git_lfs {
                     // Right now the default is to use full content when client didn't explicitly
