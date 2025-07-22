@@ -141,19 +141,19 @@ ImmediateFuture<std::unique_ptr<LocalFiles>> computeLocalFiles(
 } // namespace
 
 ThriftGlobImpl::ThriftGlobImpl(const GlobParams& params)
-    : includeDotfiles_{*params.includeDotfiles_ref()},
-      prefetchFiles_{*params.prefetchFiles_ref()},
-      suppressFileList_{*params.suppressFileList_ref()},
-      wantDtype_{*params.wantDtype_ref()},
-      listOnlyFiles_{*params.listOnlyFiles_ref()},
-      rootHashes_{*params.revisions_ref()},
-      searchRootUser_{*params.searchRoot_ref()} {}
+    : includeDotfiles_{*params.includeDotfiles()},
+      prefetchFiles_{*params.prefetchFiles()},
+      suppressFileList_{*params.suppressFileList()},
+      wantDtype_{*params.wantDtype()},
+      listOnlyFiles_{*params.listOnlyFiles()},
+      rootHashes_{*params.revisions()},
+      searchRootUser_{*params.searchRoot()} {}
 
 ThriftGlobImpl::ThriftGlobImpl(const PrefetchParams& params)
     : includeDotfiles_{true},
-      prefetchFiles_{!*params.directoriesOnly_ref()},
-      rootHashes_{*params.revisions_ref()},
-      searchRootUser_{*params.searchRoot_ref()} {}
+      prefetchFiles_{!*params.directoriesOnly()},
+      rootHashes_{*params.revisions()},
+      searchRootUser_{*params.searchRoot()} {}
 
 ImmediateFuture<std::unique_ptr<Glob>> ThriftGlobImpl::glob(
     std::shared_ptr<EdenMount> edenMount,
@@ -309,8 +309,7 @@ ImmediateFuture<std::unique_ptr<Glob>> ThriftGlobImpl::glob(
                   // already deduplicated at this point, no need to de-dup
                   for (auto& entry : results) {
                     if (!listOnlyFiles || entry.dtype != dtype_t::Dir) {
-                      out->matchingFiles_ref()->emplace_back(
-                          entry.name.asString());
+                      out->matchingFiles()->emplace_back(entry.name.asString());
 
                       if (wantDtype) {
                         auto dtype = entry.dtype;
@@ -318,11 +317,11 @@ ImmediateFuture<std::unique_ptr<Glob>> ThriftGlobImpl::glob(
                             !windowsSymlinksEnabled) {
                           dtype = dtype_t::Regular;
                         }
-                        out->dtypes_ref()->emplace_back(
+                        out->dtypes()->emplace_back(
                             static_cast<OsDtype>(dtype));
                       }
 
-                      out->originHashes_ref()->emplace_back(
+                      out->originHashes()->emplace_back(
                           edenMount->getObjectStore()->renderRootId(
                               *entry.originHash));
                     }

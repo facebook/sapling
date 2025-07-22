@@ -63,16 +63,16 @@ ScmBlobWithOrigin transformToBlobFromOrigin(
   ScmBlobOrError blobOrError;
   if (blob.hasValue()) {
     if (!blob.value()) {
-      blobOrError.error_ref() = newEdenError(
+      blobOrError.error() = newEdenError(
           ENOENT,
           EdenErrorType::POSIX_ERROR,
           "no blob found for id ",
           edenMount->getObjectStore()->renderObjectId(id));
     } else {
-      blobOrError.blob_ref() = blob.value()->asString();
+      blobOrError.blob() = blob.value()->asString();
     }
   } else {
-    blobOrError.error_ref() = newEdenError(blob.exception());
+    blobOrError.error() = newEdenError(blob.exception());
   }
   ScmBlobWithOrigin result;
   result.blob() = std::move(blobOrError);

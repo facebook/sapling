@@ -35,9 +35,9 @@ BlobMetadataWithOrigin transformToBlobMetadataFromOrigin(
     ScmBlobMetadata thriftMetadata;
     thriftMetadata.size() = auxData.value().size;
     thriftMetadata.contentsSha1() = thriftHash20(auxData.value().sha1);
-    auxDataOrError.metadata_ref() = std::move(thriftMetadata);
+    auxDataOrError.metadata() = std::move(thriftMetadata);
   } else {
-    auxDataOrError.error_ref() = newEdenError(auxData.exception());
+    auxDataOrError.error() = newEdenError(auxData.exception());
   }
   BlobMetadataWithOrigin result;
   result.metadata() = std::move(auxDataOrError);
@@ -53,7 +53,7 @@ ScmTreeWithOrigin transformToTreeFromOrigin(
   ScmTreeOrError treeOrError;
   if (tree.hasValue()) {
     if (!tree.value()) {
-      treeOrError.error_ref() = newEdenError(
+      treeOrError.error() = newEdenError(
           ENOENT,
           EdenErrorType::POSIX_ERROR,
           "no tree found for id ",
@@ -61,11 +61,11 @@ ScmTreeWithOrigin transformToTreeFromOrigin(
     } else {
       for (const auto& entry : *(tree.value())) {
         const auto& [name, treeEntry] = entry;
-        treeOrError.treeEntries_ref().ensure().emplace_back();
-        auto& out = treeOrError.treeEntries_ref()->back();
-        out.name_ref() = name.asString();
-        out.mode_ref() = modeFromTreeEntryType(treeEntry.getType());
-        out.id_ref() =
+        treeOrError.treeEntries().ensure().emplace_back();
+        auto& out = treeOrError.treeEntries()->back();
+        out.name() = name.asString();
+        out.mode() = modeFromTreeEntryType(treeEntry.getType());
+        out.id() =
             edenMount->getObjectStore()->renderObjectId(treeEntry.getHash());
       }
 
@@ -76,7 +76,7 @@ ScmTreeWithOrigin transformToTreeFromOrigin(
       }
     }
   } else {
-    treeOrError.error_ref() = newEdenError(tree.exception());
+    treeOrError.error() = newEdenError(tree.exception());
   }
   ScmTreeWithOrigin result;
   result.scmTreeData() = std::move(treeOrError);
@@ -85,11 +85,11 @@ ScmTreeWithOrigin transformToTreeFromOrigin(
     TreeAux treeAux;
 
     DigestSizeOrError digestSize;
-    digestSize.digestSize_ref() = tree.value()->getAuxData()->digestSize;
+    digestSize.digestSize() = tree.value()->getAuxData()->digestSize;
     treeAux.digestSize() = std::move(digestSize);
 
     DigestHashOrError digestHash;
-    digestHash.digestHash_ref() =
+    digestHash.digestHash() =
         thriftHash32(tree.value()->getAuxData()->digestHash.value());
     treeAux.digestHash() = std::move(digestHash);
 

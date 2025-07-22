@@ -2339,7 +2339,7 @@ ImmediateFuture<CheckoutResult> EdenServer::checkOutRevision(
                     } catch (EdenError& err) {
                       // This is an expected error if the mount has been
                       // unmounted before this callback ran.
-                      if (err.errorCode_ref() == ENOENT) {
+                      if (err.errorCode() == ENOENT) {
                         XLOGF(
                             DBG3,
                             "Callback to clear inodes: Mount cannot be found. {}",
