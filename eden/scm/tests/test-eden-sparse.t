@@ -48,3 +48,7 @@ Test diff command against a commit that updated files excluded by the sparse pro
    b.txt       |  2 +-
    eden-sparse |  4 ++++
    3 files changed, 6 insertions(+), 2 deletions(-)
+  $ hg diff -r 'desc(b)' --stat --sparse
+   a.txt       |  2 +-
+   eden-sparse |  4 ++++
+   2 files changed, 5 insertions(+), 1 deletions(-)
