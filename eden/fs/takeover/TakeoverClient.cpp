@@ -73,8 +73,8 @@ TakeoverData takeoverMounts(
             // whether we're capable of handshaking successfully
 
             TakeoverVersionQuery query;
-            query.versions_ref() = supportedVersions;
-            query.capabilities_ref() = supportedTakeoverCapabilities;
+            query.versions() = supportedVersions;
+            query.capabilities() = supportedTakeoverCapabilities;
 
             return socket.send(
                 CompactSerializer::serialize<folly::IOBufQueue>(query).move());

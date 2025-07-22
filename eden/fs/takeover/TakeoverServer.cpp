@@ -160,10 +160,10 @@ Future<Unit> TakeoverServer::ConnHandler::start() noexcept {
             CompactSerializer::deserialize<TakeoverVersionQuery>(&msg->data);
 
         auto supported = TakeoverData::computeCompatibleVersion(
-            *query.versions_ref(), this->supportedVersions_);
+            *query.versions(), this->supportedVersions_);
 
         if (!supported.has_value()) {
-          auto clientVersionList = folly::join(", ", *query.versions_ref());
+          auto clientVersionList = folly::join(", ", *query.versions());
           auto serverVersionList = folly::join(", ", this->supportedVersions_);
 
           throwf<std::runtime_error>(
@@ -184,7 +184,7 @@ Future<Unit> TakeoverServer::ConnHandler::start() noexcept {
         if (protocolCapabilities & TakeoverCapabilities::CAPABILITY_MATCHING) {
           state.protocolCapabilities =
               TakeoverData::computeCompatibleCapabilities(
-                  *query.capabilities_ref(), supportedCapabilities_);
+                  *query.capabilities(), supportedCapabilities_);
         } else {
           state.protocolCapabilities = protocolCapabilities;
         }

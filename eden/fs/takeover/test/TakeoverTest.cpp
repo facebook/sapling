@@ -603,21 +603,21 @@ TEST(Takeover, manyInodes) {
       tmpDirPath + RelativePathPiece{folly::to<string>("client")};
   auto fusePath = tmpDirPath + PathComponentPiece{folly::to<string>("fuse")};
   SerializedInodeMap inodeMap;
-  inodeMap.unloadedInodes_ref()->reserve(numInodes);
+  inodeMap.unloadedInodes()->reserve(numInodes);
   for (int64_t i = 0; i < numInodes; ++i) {
     SerializedInodeMapEntry entry;
-    entry.inodeNumber_ref() = i;
-    entry.parentInode_ref() = 0;
+    entry.inodeNumber() = i;
+    entry.parentInode() = 0;
     // The name and hash are chosen to be long enough to make the message
     // larger than 1 GB.
-    entry.name_ref() = folly::to<string>(
+    entry.name() = folly::to<string>(
         "example_inode_name______________choose_a_big_name______________", i);
-    entry.isUnlinked_ref() = false;
-    entry.numFsReferences_ref() = 1;
-    entry.hash_ref() = folly::to<string>(
+    entry.isUnlinked() = false;
+    entry.numFsReferences() = 1;
+    entry.hash() = folly::to<string>(
         "example_inode_hash______________choose_a_big_hash______________", i);
-    entry.mode_ref() = 0644;
-    inodeMap.unloadedInodes_ref()->emplace_back(std::move(entry));
+    entry.mode() = 0644;
+    inodeMap.unloadedInodes()->emplace_back(std::move(entry));
   }
   serverData.mountPoints.emplace_back(
       mountPath,
@@ -655,7 +655,7 @@ TEST(Takeover, manyInodes) {
       tmpDirPath + PathComponentPiece{folly::to<string>("fuse")};
   auto& fuseChannelData = std::get<FuseChannelData>(mountInfo.channelInfo);
   checkExpectedFile(fuseChannelData.fd.fd(), expectedFusePath);
-  EXPECT_EQ(numInodes, mountInfo.inodeMap.unloadedInodes_ref()->size());
+  EXPECT_EQ(numInodes, mountInfo.inodeMap.unloadedInodes()->size());
 }
 
 TEST(Takeover, error) {
