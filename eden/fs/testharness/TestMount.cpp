@@ -459,7 +459,7 @@ void TestMount::remountGracefully() {
          "remountGracefully()";
 
   XLOG(DBG1) << "number of unloaded inodes transferred on graceful remount: "
-             << takeoverData.unloadedInodes_ref()->size();
+             << takeoverData.unloadedInodes()->size();
 
   // Create a new EdenMount object.
   edenMount_ = EdenMount::create(
