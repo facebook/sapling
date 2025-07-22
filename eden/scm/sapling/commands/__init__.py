@@ -2758,6 +2758,7 @@ def _dograft(ui, to_repo, *revs, from_repo=None, **opts):
     # remove state when we complete successfully
     if not opts.get("dry_run"):
         to_repo.localvfs.unlinkpath("graftstate", ignoremissing=True)
+        mergemod.mergestate.clean(to_repo)
 
     return 0
 
