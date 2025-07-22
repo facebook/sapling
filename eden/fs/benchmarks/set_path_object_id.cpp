@@ -52,14 +52,14 @@ void call_set_path_object_id(benchmark::State& state) {
   auto client = std::make_unique<EdenServiceAsyncClient>(std::move(channel));
 
   SetPathObjectIdParams param;
-  param.mountPoint_ref() = mount.view();
-  param.objectId_ref() = FLAGS_object_id;
+  param.mountPoint() = mount.view();
+  param.objectId() = FLAGS_object_id;
   if ("tree" == FLAGS_object_type) {
-    param.type_ref() = facebook::eden::ObjectType::TREE;
+    param.type() = facebook::eden::ObjectType::TREE;
   } else if ("regular_file" == FLAGS_object_type) {
-    param.type_ref() = facebook::eden::ObjectType::REGULAR_FILE;
+    param.type() = facebook::eden::ObjectType::REGULAR_FILE;
   } else if ("executable_file" == FLAGS_object_type) {
-    param.type_ref() = facebook::eden::ObjectType::EXECUTABLE_FILE;
+    param.type() = facebook::eden::ObjectType::EXECUTABLE_FILE;
   } else {
     throw std::invalid_argument("Unsupported object type");
   }
@@ -70,7 +70,7 @@ void call_set_path_object_id(benchmark::State& state) {
   for (long i = 0; i < FLAGS_path_levels; i++) {
     path = path + "/" + boost::uuids::to_string(uuidGenerator());
   }
-  param.path_ref() = path;
+  param.path() = path;
 
   for (auto _ : state) {
     auto start = std::chrono::high_resolution_clock::now();

@@ -50,14 +50,14 @@ void eden_glob(benchmark::State& state) {
   auto client = std::make_unique<EdenServiceAsyncClient>(std::move(channel));
 
   GlobParams param;
-  param.mountPoint_ref() = path.view();
-  param.globs_ref() = std::vector<std::string>{FLAGS_query};
-  param.includeDotfiles_ref() = false;
-  param.prefetchFiles_ref() = false;
-  param.suppressFileList_ref() = false;
-  param.wantDtype_ref() = false;
-  param.prefetchMetadata_ref() = false;
-  param.searchRoot_ref() = FLAGS_root;
+  param.mountPoint() = path.view();
+  param.globs() = std::vector<std::string>{FLAGS_query};
+  param.includeDotfiles() = false;
+  param.prefetchFiles() = false;
+  param.suppressFileList() = false;
+  param.wantDtype() = false;
+  param.prefetchMetadata() = false;
+  param.searchRoot() = FLAGS_root;
 
   for (auto _ : state) {
     auto start = std::chrono::high_resolution_clock::now();
