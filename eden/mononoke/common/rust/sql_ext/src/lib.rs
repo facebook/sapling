@@ -131,6 +131,7 @@ impl Transaction {
         };
 
         txn_telemetry.add_repo_ids(query_repo_ids.clone());
+        txn_telemetry.add_query_name(query_name);
 
         log_query_telemetry(
             opt_tel,

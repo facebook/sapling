@@ -41,7 +41,8 @@ pub struct TransactionTelemetry {
     pub write_tables: HashSet<String>,
     /// Repo ids that were involved in at least one query in this transaction
     pub repo_ids: HashSet<RepositoryId>,
-    // TODO(T223577767): track name of the queries from the transaction
+    /// All queries that ran as part of this transaction
+    pub query_names: HashSet<String>,
 }
 
 // TODO(T223577767): make these args required and remove the need for
@@ -266,6 +267,11 @@ fn log_transaction_telemetry_impl(
             .collect::<Vec<_>>(),
     );
 
+    scuba.add(
+        "transaction_query_names",
+        txn_tel.query_names.into_iter().sorted().collect::<Vec<_>>(),
+    );
+
     // Log the Scuba sample for debugging when log-level is set to trace.
     tracing::trace!(
         "Logging transaction telemetry to scuba: {0:#?}",
@@ -341,6 +347,10 @@ impl TransactionTelemetry {
         I: IntoIterator<Item = RepositoryId>,
     {
         self.repo_ids.extend(repo_ids);
+    }
+
+    pub fn add_query_name(&mut self, query_name: &str) {
+        self.query_names.insert(query_name.to_string());
     }
 
     #[cfg(fbcode_build)]

@@ -83,6 +83,7 @@ mod facebook {
         repo_ids: Vec<RepositoryId>,
         granularity: TelemetryGranularity,
         query_name: Option<String>,
+        transaction_query_names: Vec<String>,
     }
 
     #[mononoke::fbinit_test]
@@ -223,6 +224,7 @@ mod facebook {
                     write_tables: hashset! {"mononoke_queries_test".to_string()},
                     ..Default::default()
                 },
+                transaction_query_names: vec![],
             },
             ScubaTelemetryLogSample {
                 success: true,
@@ -234,6 +236,7 @@ mod facebook {
                     write_tables: hashset! {},
                     ..Default::default()
                 },
+                transaction_query_names: vec![],
             },
             ScubaTelemetryLogSample {
                 success: true,
@@ -245,6 +248,7 @@ mod facebook {
                     write_tables: hashset! {},
                     ..Default::default()
                 },
+                transaction_query_names: vec![],
             },
             // TODO(T223577767): test transaction-level metadata, e.g. run multiple queries
             // for different repos and ensure they are all logged together.
@@ -259,6 +263,11 @@ mod facebook {
                     write_tables: hashset! {},
                     ..Default::default()
                 },
+                transaction_query_names: vec!["ReadQuery1", "ReadQuery2"]
+                    .into_iter()
+                    .map(String::from)
+                    .sorted()
+                    .collect::<Vec<String>>(),
             },
         ];
 
@@ -430,6 +439,18 @@ mod facebook {
                                     .collect()
                             })
                             .unwrap_or_default();
+
+                        let transaction_query_names: Vec<String> =
+                            flattened_log["transaction_query_names"]
+                                .as_array()
+                                .map(|ids| {
+                                    ids.iter()
+                                        .filter_map(|id| id.as_str())
+                                        .map(String::from)
+                                        .sorted()
+                                        .collect()
+                                })
+                                .unwrap_or_default();
                         // Now deserialize that into a MysqlQueryTelemetry object
                         let mysql_tel =
                             serde_json::from_value::<MysqlQueryTelemetry>(flattened_log)?;
@@ -440,6 +461,7 @@ mod facebook {
                             repo_ids,
                             granularity,
                             query_name,
+                            transaction_query_names,
                         })
                     })
             })
