@@ -795,3 +795,23 @@ Can use --message-field to update parts of commit message.
   
   diff --git a/bar b/bar
   new file mode 100644
+
+Graft a commit should not result into a merge state when complete successfully
+  $ newclientrepo
+  $ drawdag <<EOS
+  > C B  # B/bar/file = a\nb\ncc\n (copied from foo/file)
+  > |/   # C/foo/rename = aa\nb\nc\n (renamed from foo/file)
+  > A    # A/foo/file = a\nb\nc\n
+  > EOS
+  $ hg go -q $B
+  $ hg subtree graft -r $C --from-path non-exist --to-path non-exist
+  grafting 53d1a0c140f9 "C"
+  path 'non-exist' does not exist in commit 53d1a0c140f9
+  note: graft of 53d1a0c140f9 created no changes to commit
+Tofix: the status should not be in merge state
+  $ hg st
+  
+  # The repository is in an unfinished *merge* state.
+  # No unresolved merge conflicts.
+  # To continue:                hg continue, then hg commit
+  # To abort:                   hg goto --clean .    (warning: this will discard uncommitted changes)
