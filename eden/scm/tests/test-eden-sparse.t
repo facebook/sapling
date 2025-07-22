@@ -2,6 +2,7 @@
 #require eden
 
   $ eagerepo
+  $ enable edensparse
   $ setconfig clone.use-rust=true
 
   $ newrepo server
@@ -18,3 +19,32 @@
 
 Allow adhoc use of sparse commands to debug sparse profiles:
   $ hg debugsparsematch -q --sparse-profile=sparse excluded --config extensions.sparse=
+
+Test diff command against a commit that updated files excluded by the sparse profile
+
+  $ cd
+  $ newrepo server-diff
+  $ echo aaa > a.txt
+  $ hg commit -Aqm a
+  $ echo bbb > b.txt
+  $ hg commit -Aqm b
+  $ echo ccc > a.txt
+  $ echo ccc > b.txt
+  $ hg commit -Aqm c
+  $ cat >> eden-sparse << EOF
+  > [include]
+  > *
+  > [exclude]
+  > b.txt
+  > EOF
+  $ hg commit -Aqm d
+  $ hg book master
+
+  $ cd
+  $ hg clone -q --eden test:server-diff client-diff --config clone.eden-sparse-filter=eden-sparse
+  $ cd client-diff
+Tofix: diff should not panic
+  $ hg diff -r 'desc(b)' --stat
+  abort: $TESTTMP\client-diff\b.txt: $ENOENT$ (windows !)
+  abort: $ENOENT$: $TESTTMP/client-diff/b.txt (no-windows !)
+  [255]
