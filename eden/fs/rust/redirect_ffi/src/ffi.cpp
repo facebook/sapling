@@ -10,13 +10,13 @@
 namespace facebook::eden {
 Redirection redirectionFromFFI(RedirectionFFI&& redirFFI) {
   Redirection redir;
-  redir.repoPath_ref() = std::string(std::move(redirFFI.repo_path));
-  redir.redirType_ref() = redirFFI.redir_type;
-  redir.source_ref() = std::string(std::move(redirFFI.source));
-  redir.state_ref() = redirFFI.state;
+  redir.repoPath() = std::string(std::move(redirFFI.repo_path));
+  redir.redirType() = redirFFI.redir_type;
+  redir.source() = std::string(std::move(redirFFI.source));
+  redir.state() = redirFFI.state;
   auto optTarget = redirectionTargetFromFFI(std::move(redirFFI.target));
   if (optTarget.has_value()) {
-    redir.target_ref() = std::move(optTarget.value());
+    redir.target() = std::move(optTarget.value());
   }
   return redir;
 }
