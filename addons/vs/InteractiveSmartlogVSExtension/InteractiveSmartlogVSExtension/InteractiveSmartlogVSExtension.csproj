@@ -67,7 +67,7 @@
     <Compile Include="Models\SmartlogUrlCache.cs" />
     <Compile Include="ToolWindows\InteractiveSmartlogToolWindow.cs" />
     <Compile Include="Telemetry\TelemetryLogger.cs" />
-    <Compile Include="Telemetry\ScribeToolManager.cs" />
+    <Compile Include="Telemetry\LogEntries.cs" />
     <Compile Include="ToolWindows\InteractiveSmartlogToolWindowControl.xaml.cs">
       <DependentUpon>InteractiveSmartlogToolWindowControl.xaml</DependentUpon>
     </Compile>
@@ -96,6 +96,12 @@
     <Reference Include="System.Xml" />
     <Reference Include="System.Xml.Linq" />
     <Reference Include="WindowsBase" />
+    <Reference Include="Meta.VisualStudio.ScubaLogger">
+      <HintPath>..\..\..\..\..\..\arvr\csharp\IDE\VisualStudio\Shared\ScubaLogger\bin\Debug\net472\ScubaLogger.exe</HintPath>
+    </Reference>
+    <Reference Include="Meta.Windows.ScubaUtility">
+      <HintPath>..\..\..\..\..\..\arvr\csharp\IDE\VisualStudio\Shared\ScubaLogger\bin\Debug\net472\ScubaUtility.dll</HintPath>
+    </Reference>
   </ItemGroup>
   <ItemGroup>
     <!-- Prefer older versions of SDK as it allows to run on older versions of VS. -->
@@ -115,6 +121,9 @@
     </PackageReference>
     <PackageReference Include="Microsoft.Web.WebView2">
       <Version>1.0.2903.40</Version>
+    </PackageReference>
+    <PackageReference Include="System.Security.Permissions">
+      <Version>7.0.0</Version>
     </PackageReference>
   </ItemGroup>
   <ItemGroup>

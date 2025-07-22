@@ -98,34 +98,5 @@ namespace InteractiveSmartlogVSExtension.Tests.Telemetry
                 }
             }
         }
-
-        [TestMethod]
-        public void GetBaseString_ReturnsExpectedKeys()
-        {
-            // Arrange
-            var logger = new TelemetryLogger();
-
-            // Act
-            // We need to use reflection to access the private method
-            var method = typeof(TelemetryLogger).GetMethod("getBaseString",
-                BindingFlags.NonPublic | BindingFlags.Instance);
-            var result = method.Invoke(logger, null) as System.Collections.Generic.Dictionary<string, string>;
-
-            // Assert
-            Assert.IsNotNull(result);
-            Assert.IsTrue(result.ContainsKey("session_id"));
-            Assert.IsTrue(result.ContainsKey("username"));
-            Assert.IsTrue(result.ContainsKey("hostname"));
-            Assert.IsTrue(result.ContainsKey("ide_name"));
-            Assert.IsTrue(result.ContainsKey("ide_version"));
-            Assert.IsTrue(result.ContainsKey("extension_name"));
-            Assert.IsTrue(result.ContainsKey("extension_version"));
-        }
-
-        // Note: Testing the writeToScuba method directly would require modifying the production code
-        // to make it more testable. In a real-world scenario, you might:
-        // 1. Extract an interface for ScribeToolManager
-        // 2. Use dependency injection to provide a mock implementation for testing
-        // 3. Verify the mock was called with the expected parameters
     }
 }
