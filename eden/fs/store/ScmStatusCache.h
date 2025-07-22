@@ -39,7 +39,7 @@ struct SeqStatusPair {
   size_t getSizeBytes() const {
     size_t internalSize = sizeof(*this);
     size_t statusSize = 0;
-    for (const auto& entry : status.entries_ref().value()) {
+    for (const auto& entry : status.entries().value()) {
       statusSize += entry.first.size() * sizeof(char) + sizeof(entry.second);
     }
     return internalSize + statusSize;

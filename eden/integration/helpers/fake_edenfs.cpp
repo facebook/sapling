@@ -213,9 +213,9 @@ class FakeEdenServiceHandler : virtual public StreamingEdenServiceSvIf {
   }
 
   void getDaemonInfo(DaemonInfo& result) override {
-    *result.pid_ref() = server_->getPid();
-    *result.commandLine_ref() = server_->getCommandLine();
-    result.status_ref() = getStatus();
+    *result.pid() = server_->getPid();
+    *result.commandLine() = server_->getCommandLine();
+    result.status() = getStatus();
   }
 
   void listMounts(std::vector<MountInfo>& /* results */) override {}
