@@ -173,6 +173,7 @@ pub fn build_router(context: GitServerContext) -> Router {
             .get("/edenapi/*repo/capabilities")
             .with_path_extractor::<BasicPathExtractor>()
             .to(slapi_capabilities_handler);
+        GitHandlers::setup::<edenapi_service::handlers::commit_cloud::CommitCloudWorkspaces>(route);
         GitHandlers::setup::<edenapi_service::handlers::commit_cloud::CommitCloudWorkspace>(route);
         GitHandlers::setup::<edenapi_service::handlers::commit_cloud::CommitCloudReferences>(route);
         GitHandlers::setup::<edenapi_service::handlers::commit_cloud::CommitCloudUpdateReferences>(
