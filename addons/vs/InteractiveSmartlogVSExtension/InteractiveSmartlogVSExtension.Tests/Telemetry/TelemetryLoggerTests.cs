@@ -6,18 +6,24 @@
  */
 
 using System;
-using System.Reflection;
+using System.Collections.Generic;
+using InteractiveSmartlogVSExtension;
 using InteractiveSmartlogVSExtension.Enums;
-using InteractiveSmartlogVSExtension.Helpers;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
-using Moq;
-using Newtonsoft.Json;
 
 namespace InteractiveSmartlogVSExtension.Tests.Telemetry
 {
     [TestClass]
     public class TelemetryLoggerTests
     {
+        private TelemetryLogger _telemetryLogger;
+
+        [TestInitialize]
+        public void Initialize()
+        {
+            _telemetryLogger = new TelemetryLogger();
+        }
+
         [TestMethod]
         public void Constructor_InitializesProperties()
         {
@@ -31,16 +37,8 @@ namespace InteractiveSmartlogVSExtension.Tests.Telemetry
         }
 
         [TestMethod]
-        public void LogInfo_CallsWriteToScuba()
+        public void LogInfo_WithoutMock_DoesNotThrowException()
         {
-            // This test is challenging to implement without modifying the production code
-            // to make it more testable. In a real-world scenario, you might:
-            // 1. Extract an interface for ScribeToolManager
-            // 2. Use dependency injection to provide a mock implementation for testing
-            // 3. Verify the mock was called with the expected parameters
-
-            // For now, we'll just verify the method doesn't throw exceptions
-
             // Arrange
             var logger = new TelemetryLogger();
 
@@ -69,10 +67,8 @@ namespace InteractiveSmartlogVSExtension.Tests.Telemetry
         }
 
         [TestMethod]
-        public void LogError_CallsWriteToScuba()
+        public void LogError_WithoutMock_DoesNotThrowException()
         {
-            // Similar to LogInfo_CallsWriteToScuba, this test is challenging without modifying the production code
-
             // Arrange
             var logger = new TelemetryLogger();
 

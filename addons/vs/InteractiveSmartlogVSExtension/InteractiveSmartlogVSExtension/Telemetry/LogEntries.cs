@@ -5,6 +5,8 @@
  * LICENSE file in the root directory of this source tree.
  */
 
+using InteractiveSmartlogVSExtension;
+using InteractiveSmartlogVSExtension.Helpers;
 using Meta.VisualStudio.ScubaLogger;
 using Meta.Windows.ScubaUtility;
 

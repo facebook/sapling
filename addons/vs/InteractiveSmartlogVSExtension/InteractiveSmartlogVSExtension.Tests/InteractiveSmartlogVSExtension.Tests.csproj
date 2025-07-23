@@ -18,4 +18,8 @@
 		<ProjectReference Include="..\InteractiveSmartlogVSExtension\InteractiveSmartlogVSExtension.csproj" />
 	</ItemGroup>
 
+	<ItemGroup>
+		<None Include="app.config" />
+	</ItemGroup>
+
 </Project>
