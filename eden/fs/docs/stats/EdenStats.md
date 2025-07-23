@@ -29,7 +29,6 @@ The list of all the EdenStats Counter/Duration are as follows:
 - [LocalStoreStats](./LocalStoreStats.md)
 - [OverlayStats](./OverlayStats.md)
 - JournalStats
-
   1. `Counter truncatedReads{"journal.truncated_reads"}` : Number of times a
      truncated read happens in Journal.
 
@@ -53,7 +52,6 @@ The list of all the EdenStats Counter/Duration are as follows:
      larger than the limit configured [here](https://fburl.com/code/flwry2g4).
 
 - ThriftStats
-
   1. `Duration streamChangesSince{ "thrift.StreamingEdenService.streamChangesSince.streaming_time_us"}`
      : Duration of thrift stream change calls.
 
@@ -85,7 +83,6 @@ The list of all the EdenStats Counter/Duration are as follows:
      offloadable request locally
 
 - InodeMapStats
-
   1. `Counter lookupTreeInodeHit{"inode_map.lookup_tree_inode_hit"}` : Count the
      number of Tree Inodes found in the InodeMap
 
@@ -102,7 +99,6 @@ The list of all the EdenStats Counter/Duration are as follows:
      number of Inodes lookup errors
 
 - InodeMetadataTableStats
-
   1. `Counter getHit{"inode_metadata_table.get_hit"}` : Count the number of hits
      in InodeMetadata Table
 
@@ -110,7 +106,6 @@ The list of all the EdenStats Counter/Duration are as follows:
      misses in InodeMetadata Table
 
 - BlobCacheStats
-
   1. `Counter getHit{"blob_cache.get_hit"}` : Number of times BlobCache request
      got hit
 
@@ -126,7 +121,6 @@ The list of all the EdenStats Counter/Duration are as follows:
      the cache)
 
 - TreeCacheStats
-
   1. `Counter getHit{"tree_cache.get_hit"}` : Number of times TreeCache request
      got hit
 
@@ -146,7 +140,6 @@ The list of all the EdenStats Counter/Duration are as follows:
     objects can be added here to mirror variables used in real stats objects as
     needed.
 - FuseStats
-
   - In Fuse FS the following ODS Durations record the duration of each Fuse
     command in microseconds. Also, we have counters for all these durations for
     Successful/Failure events.
@@ -187,7 +180,6 @@ The list of all the EdenStats Counter/Duration are as follows:
   ```
 
 - NfsStats
-
   - In NFS the following ODS Durations record the duration of each NFS command
     in microseconds. Also, we have counters for all of these duration for
     Successful/Failure events.
