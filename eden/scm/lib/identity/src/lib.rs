@@ -902,16 +902,16 @@ mod test {
         // a/.sl
         // a/b/.test
         // a/b/c/.sl
-        let sniff_result = sniff_roots(&abc)?;
-        assert_eq!(sniff_result.len(), 4);
-        assert_eq!(sniff_result[0].0, abc);
-        assert_eq!(sniff_result[0].1.repo, TEST.repo);
-        assert_eq!(sniff_result[1].0, ab);
-        assert_eq!(sniff_result[1].1.repo, TEST.repo);
-        assert_eq!(sniff_result[2].0, a);
-        assert_eq!(sniff_result[2].1.repo, TEST.repo);
-        assert_eq!(sniff_result[3].0, dir.path());
-        assert_eq!(sniff_result[3].1.repo, TEST.repo);
+        let sniff_roots_result = sniff_roots(&abc)?;
+        assert_eq!(sniff_roots_result.len(), 4);
+        assert_eq!(sniff_roots_result[0].0, abc);
+        assert_eq!(sniff_roots_result[0].1.repo, TEST.repo);
+        assert_eq!(sniff_roots_result[1].0, ab);
+        assert_eq!(sniff_roots_result[1].1.repo, TEST.repo);
+        assert_eq!(sniff_roots_result[2].0, a);
+        assert_eq!(sniff_roots_result[2].1.repo, TEST.repo);
+        assert_eq!(sniff_roots_result[3].0, dir.path());
+        assert_eq!(sniff_roots_result[3].1.repo, TEST.repo);
 
         Ok(())
     }
@@ -936,12 +936,18 @@ mod test {
 
         let (sniffed_root, _) = sniff_root(&link)?.unwrap();
         assert_eq!(sniffed_root, root);
+        let sniff_roots_result = sniff_roots(&link)?;
+        assert_eq!(sniff_roots_result.len(), 1);
+        assert_eq!(sniff_roots_result[0].0, root);
 
         let relative_link = dir.path().join("relative-link");
         symlink(Path::new("root/subdir"), &relative_link)?;
 
         let (sniffed_root, _) = sniff_root(&relative_link)?.unwrap();
         assert_eq!(sniffed_root, root);
+        let sniff_roots_result = sniff_roots(&relative_link)?;
+        assert_eq!(sniff_roots_result.len(), 1);
+        assert_eq!(sniff_roots_result[0].0, root);
 
         Ok(())
     }
@@ -966,6 +972,9 @@ mod test {
 
         let (sniffed_root, _) = sniff_root(&link_within_repo)?.unwrap();
         assert_eq!(sniffed_root, root);
+        let sniff_roots_result = sniff_roots(&link_within_repo)?;
+        assert_eq!(sniff_roots_result.len(), 1);
+        assert_eq!(sniff_roots_result[0].0, root);
 
         Ok(())
     }
@@ -993,6 +1002,9 @@ mod test {
         // the "lexical" containing repo indicated by the path.
         let (sniffed_root, _) = sniff_root(&link_within_repo)?.unwrap();
         assert_eq!(sniffed_root, repo1);
+        let sniff_roots_result = sniff_roots(&link_within_repo)?;
+        assert_eq!(sniff_roots_result.len(), 1);
+        assert_eq!(sniff_roots_result[0].0, repo1);
 
         Ok(())
     }
@@ -1011,6 +1023,7 @@ mod test {
         symlink(a.join("subdir"), &b)?;
 
         assert!(sniff_root(&a)?.is_none());
+        assert_eq!(sniff_roots(&a)?.len(), 0);
 
         Ok(())
     }
