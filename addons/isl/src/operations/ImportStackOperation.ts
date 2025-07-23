@@ -124,7 +124,7 @@ export class ImportStackOperation extends Operation {
         author: commit.author ?? '',
         date: commit.date == null ? new Date() : new Date(commit.date[0] * 1000),
         description: commit.text,
-        isDot: this.gotoMark ? commit.mark === this.gotoMark : existingInfo?.isDot ?? false,
+        isDot: this.gotoMark ? commit.mark === this.gotoMark : (existingInfo?.isDot ?? false),
         totalFileCount: Object.keys(commit.files).length,
         closestPredecessors: commit.predecessors,
         previewType: CommitPreview.STACK_EDIT_DESCENDANT,

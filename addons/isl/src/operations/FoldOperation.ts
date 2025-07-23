@@ -21,7 +21,10 @@ function ends<T>(range: Array<T>): [T, T] {
 }
 
 export class FoldOperation extends Operation {
-  constructor(private foldRange: Array<CommitInfo>, newMessage: string) {
+  constructor(
+    private foldRange: Array<CommitInfo>,
+    newMessage: string,
+  ) {
     super('FoldOperation');
     this.newTitle = firstLine(newMessage);
     this.newDescription = newMessage.substring(firstLine(newMessage).length + 1);

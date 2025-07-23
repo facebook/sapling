@@ -638,7 +638,7 @@ function StackRangeSelector() {
   splitRange = splitRange.set('endKey', endKey);
   const mutableRevs = commitStack.mutableRevs().reverse();
 
-  const startCommitKey = startRev == null ? '' : commitStack.get(startRev)?.key ?? '';
+  const startCommitKey = startRev == null ? '' : (commitStack.get(startRev)?.key ?? '');
   const [dragSelection, setDragSelection] = useState<DragSelection>({
     start: startRev ?? 0,
     startKey: startCommitKey,

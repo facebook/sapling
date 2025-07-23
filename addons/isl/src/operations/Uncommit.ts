@@ -19,7 +19,10 @@ export class UncommitOperation extends Operation {
    * @param originalDotCommit the current dot commit, needed to track when optimistic state is resolved
    * @param changedFiles the files that are in the commit to be uncommitted. Must be fetched before running, as the CommitInfo object itself does not have file statuses.
    */
-  constructor(private originalDotCommit: CommitInfo, private changedFiles: Array<ChangedFile>) {
+  constructor(
+    private originalDotCommit: CommitInfo,
+    private changedFiles: Array<ChangedFile>,
+  ) {
     super('UncommitOperation');
   }
 

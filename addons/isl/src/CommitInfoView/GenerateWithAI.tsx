@@ -58,8 +58,8 @@ export function GenerateAIButton({
     currentCommit == null
       ? undefined
       : mode === 'commit'
-      ? `commit/${currentCommit.hash}`
-      : currentCommit.hash;
+        ? `commit/${currentCommit.hash}`
+        : currentCommit.hash;
 
   const fieldNameAndHashKey: FieldNameAndHashKey = `${fieldName}+${hashKey}`;
 
@@ -216,8 +216,8 @@ function GenerateAIModal({
     content.state === 'hasError'
       ? (content.error as Error)
       : content.state === 'hasData'
-      ? (content.data.error as Error)
-      : undefined;
+        ? (content.data.error as Error)
+        : undefined;
 
   const suggestionId = FunnelTracker.getSuggestionId(fieldNameAndHashKey);
 
@@ -261,7 +261,7 @@ function GenerateAIModal({
         <div className="generated-message-textarea-container">
           <TextArea
             readOnly
-            value={content.state === 'hasData' ? content.data.value ?? '' : ''}
+            value={content.state === 'hasData' ? (content.data.value ?? '') : ''}
             rows={14}
           />
           {content.state === 'loading' && <Icon icon="loading" />}

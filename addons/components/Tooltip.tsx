@@ -73,7 +73,10 @@ type VisibleState =
   | 'title' /* 'title', not 'component' is visible */;
 
 class TooltipChangeEvent<T> extends Event {
-  constructor(type: string, public data: T | Error) {
+  constructor(
+    type: string,
+    public data: T | Error,
+  ) {
     super(type);
   }
 }

@@ -67,7 +67,7 @@ export default function BranchingPrModalContent({
   // once the optimistic commit is no longer in the dag.
   const top =
     topOfStack.isDot && topOfStack.optimisticRevset != null
-      ? dag.resolve('.') ?? topOfStack
+      ? (dag.resolve('.') ?? topOfStack)
       : topOfStack;
   const stack = dag.getBatch(dag.ancestors(top.hash, {within: dag.draft()}).toArray());
 

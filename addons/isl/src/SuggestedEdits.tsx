@@ -69,8 +69,8 @@ export async function confirmSuggestedEditsForFiles(
     files == null
       ? suggestedEdits
       : Array.isArray(files)
-      ? suggestedEdits.filter(filepath => files.includes(filepath))
-      : suggestedEdits.filter(filepath => files.isFullyOrPartiallySelected(filepath));
+        ? suggestedEdits.filter(filepath => files.includes(filepath))
+        : suggestedEdits.filter(filepath => files.isFullyOrPartiallySelected(filepath));
   if (toWarnAbout.length === 0) {
     return true; // nothing to warn about
   }

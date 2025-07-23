@@ -173,7 +173,10 @@ export class Repository {
   public initialConnectionContext: RepositoryContext;
 
   /**  Prefer using `RepositoryCache.getOrCreate()` to access and dispose `Repository`s. */
-  constructor(public info: ValidatedRepoInfo, ctx: RepositoryContext) {
+  constructor(
+    public info: ValidatedRepoInfo,
+    ctx: RepositoryContext,
+  ) {
     this.initialConnectionContext = ctx;
 
     const remote = info.codeReviewSystem;
@@ -1169,8 +1172,8 @@ export class Repository {
         obj.backingup === 'True'
           ? CommitCloudBackupStatus.InProgress
           : now.valueOf() - new Date(obj.date).valueOf() < TEN_MIN
-          ? CommitCloudBackupStatus.Pending
-          : CommitCloudBackupStatus.Failed,
+            ? CommitCloudBackupStatus.Pending
+            : CommitCloudBackupStatus.Failed,
       ]),
     );
     return statuses;

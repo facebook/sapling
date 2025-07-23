@@ -146,10 +146,10 @@ export function relativeDate(
   const formats = options.useRelativeForm
     ? longFormatsRelative
     : options.useShortVariant
-    ? shortFormats
-    : options.useNumbersOnly
-    ? longFormatsNumbers
-    : longFormats;
+      ? shortFormats
+      : options.useNumbersOnly
+        ? longFormatsNumbers
+        : longFormats;
   for (const [limit, relativeFormat, remainder] of formats) {
     if (absDelta < limit) {
       if (typeof remainder === 'number') {

@@ -67,7 +67,10 @@ export class DiscardOperation extends Operation {
 export class PartialDiscardOperation extends Operation {
   static opName = 'Discard';
 
-  constructor(private selection: PartialSelection, private allFiles: Array<RepoRelativePath>) {
+  constructor(
+    private selection: PartialSelection,
+    private allFiles: Array<RepoRelativePath>,
+  ) {
     super('PartialDiscardOperation');
   }
 

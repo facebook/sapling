@@ -179,8 +179,8 @@ registerDisposable(
       const headOrHash = isCommit
         ? 'head'
         : isMetaedit
-        ? operation.getCommitHash()
-        : readAtom(latestHeadCommit)?.hash;
+          ? operation.getCommitHash()
+          : readAtom(latestHeadCommit)?.hash;
 
       if (!headOrHash) {
         continue;

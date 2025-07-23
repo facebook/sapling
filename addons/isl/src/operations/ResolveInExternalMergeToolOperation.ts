@@ -10,7 +10,10 @@ import type {CommandArg, RepoRelativePath} from '../types';
 import {Operation} from './Operation';
 
 export class ResolveInExternalMergeToolOperation extends Operation {
-  constructor(private tool: string, private filePath?: RepoRelativePath) {
+  constructor(
+    private tool: string,
+    private filePath?: RepoRelativePath,
+  ) {
     super('ResolveInExternalMergeToolOperation');
   }
 

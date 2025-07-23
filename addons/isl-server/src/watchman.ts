@@ -125,9 +125,8 @@ export class Watchman {
 
       return existingSubscription;
     } else {
-      const {watch: watchRoot, relative_path: relativePath} = await this.watchProject(
-        localDirectoryPath,
-      );
+      const {watch: watchRoot, relative_path: relativePath} =
+        await this.watchProject(localDirectoryPath);
       const clock = await this.clock(watchRoot);
       const options: WatchmanSubscriptionOptions = {
         ...subscriptionOptions,

@@ -24,7 +24,10 @@ export enum ResolveTool {
 }
 
 export class ResolveOperation extends Operation {
-  constructor(private filePath: RepoRelativePath, private tool: ResolveTool) {
+  constructor(
+    private filePath: RepoRelativePath,
+    private tool: ResolveTool,
+  ) {
     super('ResolveOperation');
   }
 

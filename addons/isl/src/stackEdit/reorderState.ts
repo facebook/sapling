@@ -48,8 +48,8 @@ export function reorderWithDeps(
     origRev + desiredOffset < 0
       ? -origRev
       : origRev + desiredOffset >= n
-      ? n - 1 - origRev
-      : desiredOffset;
+        ? n - 1 - origRev
+        : desiredOffset;
 
   let order: CommitRev[] = [];
   const deps: CommitRev[] = [origRev];

@@ -137,7 +137,7 @@ export function SuggestedReviewers({
   const currentCommitInfoViewCommit = useAtomValue(commitInfoViewCurrentCommits);
   const currentCommit = currentCommitInfoViewCommit?.[0]; // assume we only have one commit
 
-  const key = currentCommit?.isDot && mode === 'commit' ? 'head' : currentCommit?.hash ?? '';
+  const key = currentCommit?.isDot && mode === 'commit' ? 'head' : (currentCommit?.hash ?? '');
   const suggestedReviewers = useAtomValue(suggestedReviewersForCommit(key));
 
   const filteredSuggestions = (

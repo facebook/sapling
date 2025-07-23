@@ -167,14 +167,14 @@ export function File({
                 displayType === 'tree'
                   ? file.path.slice(file.path.lastIndexOf('/') + 1)
                   : // Holding alt takes precedence over fish/short styles, but not tree.
-                  displayType === 'fullPaths' || isHoldingAlt
-                  ? file.path
-                  : displayType === 'fish'
-                  ? file.path
-                      .split('/')
-                      .map((a, i, arr) => (i === arr.length - 1 ? a : a[0]))
-                      .join('/')
-                  : file.label,
+                    displayType === 'fullPaths' || isHoldingAlt
+                    ? file.path
+                    : displayType === 'fish'
+                      ? file.path
+                          .split('/')
+                          .map((a, i, arr) => (i === arr.length - 1 ? a : a[0]))
+                          .join('/')
+                      : file.label,
               )}
             </span>
           </Tooltip>

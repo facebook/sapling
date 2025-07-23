@@ -245,8 +245,8 @@ function commandWithUriOrResourceState(
       uriOrResource == null
         ? vscode.window.activeTextEditor?.document.uri
         : uriOrResource instanceof vscode.Uri
-        ? uriOrResource
-        : uriOrResource.resourceUri;
+          ? uriOrResource
+          : uriOrResource.resourceUri;
     if (uri == null) {
       vscode.window.showErrorMessage(t(`No active file found`));
       return;

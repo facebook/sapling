@@ -11,8 +11,8 @@ import {isMac, isWindows} from 'isl-components/OperatingSystem';
 const fontFamily = isWindows
   ? '"Segoe WPC", "Segoe UI", sans-serif'
   : isMac
-  ? '-apple-system, BlinkMacSystemFont, sans-serif'
-  : 'system-ui, "Ubuntu", "Droid Sans", sans-serif';
+    ? '-apple-system, BlinkMacSystemFont, sans-serif'
+    : 'system-ui, "Ubuntu", "Droid Sans", sans-serif';
 
 // https://github.com/microsoft/vscode/blob/c90951b147164bb427d08f2c251666d5610076d3/src/vs/workbench/contrib/webview/browser/themeing.ts#L68-L76
 const fontSize = '13px';

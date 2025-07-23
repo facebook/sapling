@@ -66,7 +66,10 @@ const DEFAULT_GH_FETCH_TIMEOUT = 60_000; // 1 minute
 
 type GitHubCodeReviewSystem = CodeReviewSystem & {type: 'github'};
 export class GitHubCodeReviewProvider implements CodeReviewProvider {
-  constructor(private codeReviewSystem: GitHubCodeReviewSystem, private logger: Logger) {}
+  constructor(
+    private codeReviewSystem: GitHubCodeReviewSystem,
+    private logger: Logger,
+  ) {}
   private diffSummaries = new TypedEventEmitter<'data', Map<DiffId, GitHubDiffSummary>>();
   private hasMergeQueueSupport: Promise<boolean> | null = null;
 
@@ -158,8 +161,8 @@ export class GitHubCodeReviewProvider implements CodeReviewProvider {
                 summary.isDraft && summary.state === PullRequestState.Open
                   ? 'DRAFT'
                   : summary.mergeQueueEntry != null
-                  ? 'MERGE_QUEUED'
-                  : summary.state,
+                    ? 'MERGE_QUEUED'
+                    : summary.state,
               number: id,
               url: summary.url,
               commentCount: summary.comments.totalCount,

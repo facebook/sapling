@@ -749,12 +749,12 @@ function ActionsBar({
               areImageUploadsOngoing
                 ? t('Image uploads are still pending')
                 : isCommitMode
-                ? selection.isEverythingSelected()
-                  ? t('No changes to commit')
-                  : t('No selected changes to commit')
-                : selection.isEverythingSelected()
-                ? t('No changes to amend')
-                : t('No selected changes to amend')
+                  ? selection.isEverythingSelected()
+                    ? t('No changes to commit')
+                    : t('No selected changes to commit')
+                  : selection.isEverythingSelected()
+                    ? t('No changes to amend')
+                    : t('No selected changes to amend')
             }
             trigger={areImageUploadsOngoing || !anythingToCommit ? 'hover' : 'disabled'}>
             <OperationDisabledButton
@@ -809,13 +809,13 @@ function ActionsBar({
               areImageUploadsOngoing
                 ? t('Image uploads are still pending')
                 : !isAnythingBeingEdited
-                ? t('No message edits to amend')
-                : messageSyncEnabled && commit.diffId != null
-                ? t(
-                    'Amend the commit message with the newly entered message, then sync that message up to $provider.',
-                    {replace: {$provider: codeReviewProviderName ?? 'remote'}},
-                  )
-                : t('Amend the commit message with the newly entered message.')
+                  ? t('No message edits to amend')
+                  : messageSyncEnabled && commit.diffId != null
+                    ? t(
+                        'Amend the commit message with the newly entered message, then sync that message up to $provider.',
+                        {replace: {$provider: codeReviewProviderName ?? 'remote'}},
+                      )
+                    : t('Amend the commit message with the newly entered message.')
             }>
             <OperationDisabledButton
               contextKey={`amend-message-${commit.hash}`}
@@ -903,10 +903,10 @@ function SubmitButton({
   const disabledReason = areImageUploadsOngoing
     ? t('Image uploads are still pending')
     : submitDisabledReason
-    ? submitDisabledReason
-    : !canSubmitWithCodeReviewProvider
-    ? t('No code review system found for this repository')
-    : null;
+      ? submitDisabledReason
+      : !canSubmitWithCodeReviewProvider
+        ? t('No code review system found for this repository')
+        : null;
 
   const getApplicableOperations = async (): Promise<Array<Operation> | undefined> => {
     const shouldContinue = await confirmUnsavedFiles();
@@ -985,10 +985,10 @@ function SubmitButton({
               draft: shouldSubmitAsDraft,
             })
           : answer === 'pr'
-          ? new PrSubmitOperation({
-              draft: shouldSubmitAsDraft,
-            })
-          : null;
+            ? new PrSubmitOperation({
+                draft: shouldSubmitAsDraft,
+              })
+            : null;
 
       // TODO: account for branching PR
 

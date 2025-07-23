@@ -306,7 +306,7 @@ function getStreamPromise(origStream: Stream | null): Promise<string> {
 
 function commonToSpawnOptions(options?: EjecaOptions): SpawnOptions {
   const env = options?.env
-    ? options.extendEnv ?? true
+    ? (options.extendEnv ?? true)
       ? {...process.env, ...options.env}
       : options.env
     : process.env;

@@ -87,8 +87,8 @@ describe('GeneratedFiles', () => {
               filePath === '/myGeneratedFile.js'
                 ? `/* this file is ${'@'}generated */`
                 : filePath === '/myPartiallyGeneratedFile.js'
-                ? `/* this file is ${'@'}partially-generated */`
-                : '// Normal file content',
+                  ? `/* this file is ${'@'}partially-generated */`
+                  : '// Normal file content',
           })),
           close: jest.fn(),
         } as unknown as FileHandle;

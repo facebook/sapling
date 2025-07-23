@@ -10,7 +10,10 @@ import type {MergeConflicts} from '../types';
 import {Operation} from './Operation';
 
 export class AbortMergeOperation extends Operation {
-  constructor(private conflicts: MergeConflicts, private isPartialAbort: boolean) {
+  constructor(
+    private conflicts: MergeConflicts,
+    private isPartialAbort: boolean,
+  ) {
     super('AbortMergeOperation');
   }
 

@@ -332,10 +332,10 @@ function FetchDurationInfo(
     deltaMs == null
       ? undefined
       : deltaMs < 1000
-      ? styles.fast
-      : deltaMs < 3000
-      ? styles.ok
-      : styles.slow;
+        ? styles.fast
+        : deltaMs < 3000
+          ? styles.ok
+          : styles.slow;
   return (
     <div className={`fetch-duration-info`}>
       {name} <Badge xstyle={xstyle}>{deltaMs == null ? 'N/A' : `${deltaMs}ms`}</Badge>

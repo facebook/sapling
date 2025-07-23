@@ -55,7 +55,10 @@ jest.mock('isl-server/src/Repository', () => {
         pullRequestDomain: undefined,
       });
     });
-    constructor(public info: ValidatedRepoInfo, public logger?: Logger) {}
+    constructor(
+      public info: ValidatedRepoInfo,
+      public logger?: Logger,
+    ) {}
 
     public disposables: Array<() => void> = [];
     public dispose() {

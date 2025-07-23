@@ -32,7 +32,10 @@ export class LRU<K extends LRUKey, V> {
   // the first key, then the actual key in the nested map.
   private cache = new Map<LRUHashKey, Map<K, V>>();
 
-  constructor(private maxItems: number, private maxHashCollision = 3) {}
+  constructor(
+    private maxItems: number,
+    private maxHashCollision = 3,
+  ) {}
 
   get(key: K): V | undefined {
     let result = undefined;

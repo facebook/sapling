@@ -16,7 +16,11 @@ export class Timer implements Disposable {
    * The `callback` can return `false` to auto-stop the timer.
    * The timer auto stops if being GC-ed.
    */
-  constructor(callback: () => void | boolean, public intervalMs = 1000, enabled = false) {
+  constructor(
+    callback: () => void | boolean,
+    public intervalMs = 1000,
+    enabled = false,
+  ) {
     const thisRef = new WeakRef(this);
     this.callback = () => {
       const timer = thisRef.deref();

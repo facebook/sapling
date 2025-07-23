@@ -25,7 +25,7 @@ export function getDiffBlameHoverMarkup(repo: Repository, commit: CommitInfo): s
   const diffLinkMarkup =
     diffId != null
       ? `${repo.codeReviewProvider?.getDiffUrlMarkdown(diffId)}`
-      : repo.codeReviewProvider?.getCommitHashUrlMarkdown(commit.hash) ?? hash.slice(0, 12);
+      : (repo.codeReviewProvider?.getCommitHashUrlMarkdown(commit.hash) ?? hash.slice(0, 12));
 
   // Though the ISL UI knows the schema for commit messages and can parse things out,
   // here in the vscode extension we don't really know the schema. Let's just dump the whole commit message.

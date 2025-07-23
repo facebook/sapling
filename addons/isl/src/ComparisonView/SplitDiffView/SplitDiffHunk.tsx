@@ -493,8 +493,8 @@ function HunkSeparator({
         // just omit the amount to be expanded
         t('Expand lines')
       : numLines === 1
-      ? t('Expand 1 line')
-      : t(`Expand ${numLines} lines`);
+        ? t('Expand 1 line')
+        : t(`Expand ${numLines} lines`);
   return (
     <SeparatorRow>
       <InlineRowButton label={label} onClick={onExpand} />

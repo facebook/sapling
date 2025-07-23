@@ -75,8 +75,8 @@ export function useShowConfirmSubmitStack() {
       mode === 'submit'
         ? t('Submitting $numCommits commits for review with $cmd', {replace})
         : mode === 'resubmit'
-        ? t('Submitting new versions of $numCommits commits for review with $cmd', {replace})
-        : t('Submitting all $numCommits commits in this stack for review with $cmd', {replace});
+          ? t('Submitting new versions of $numCommits commits for review with $cmd', {replace})
+          : t('Submitting all $numCommits commits in this stack for review with $cmd', {replace});
     const response = await showModal<SubmitConfirmationReponse>({
       type: 'custom',
       title,

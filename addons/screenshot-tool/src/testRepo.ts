@@ -123,7 +123,10 @@ export class TestRepo {
     return url;
   }
 
-  constructor(private repoPath: string, private command: string) {}
+  constructor(
+    private repoPath: string,
+    private command: string,
+  ) {}
 }
 
 async function copyRecursive(src: string, dst: string): Promise<void> {

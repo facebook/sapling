@@ -10,7 +10,10 @@ import type {CommandArg, RepoRelativePath} from '../types';
 import {Operation} from './Operation';
 
 export class CommitBaseOperation extends Operation {
-  constructor(public message: string, protected filesPathsToCommit?: Array<RepoRelativePath>) {
+  constructor(
+    public message: string,
+    protected filesPathsToCommit?: Array<RepoRelativePath>,
+  ) {
     super(filesPathsToCommit ? 'CommitFileSubsetOperation' : 'CommitOperation');
   }
 

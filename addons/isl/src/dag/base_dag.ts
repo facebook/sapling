@@ -54,8 +54,8 @@ export class BaseDag<C extends HashWithParents> extends SelfUpdate<BaseDagRecord
           children == null
             ? List([child])
             : children.contains(child)
-            ? children
-            : children.push(child);
+              ? children
+              : children.push(child);
         childMap = childMap.set(p, newChildren);
       });
       infoMap = infoMap.set(commit.hash, commit);

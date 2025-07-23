@@ -51,8 +51,8 @@ async function simulateGeneratedFiles(num: number) {
           i % 3 === 0
             ? GeneratedStatus.Generated
             : i % 3 === 1
-            ? GeneratedStatus.PartiallyGenerated
-            : GeneratedStatus.Manual,
+              ? GeneratedStatus.PartiallyGenerated
+              : GeneratedStatus.Manual,
         ]),
       ),
     });

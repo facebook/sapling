@@ -36,7 +36,7 @@ export function OpenComparisonViewButton({
         showComparison(comparison);
       }}>
       <Icon icon="files" slot="start" />
-      {isFake ? <T>View Changes</T> : buttonText ?? buttonLabelForComparison(comparison)}
+      {isFake ? <T>View Changes</T> : (buttonText ?? buttonLabelForComparison(comparison))}
     </Button>
   );
 }

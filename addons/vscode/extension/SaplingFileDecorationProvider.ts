@@ -25,7 +25,10 @@ export default class SaplingFileDecorationProvider implements FileDecorationProv
   private disposables: Disposable[] = [];
   private decorations = new Map<string, FileDecoration>();
 
-  constructor(private repository: VSCodeRepo, private logger: Logger) {
+  constructor(
+    private repository: VSCodeRepo,
+    private logger: Logger,
+  ) {
     this.disposables.push(
       window?.registerFileDecorationProvider?.(this),
       repository.repo.subscribeToUncommittedChanges(this.onDidRunStatus.bind(this)),

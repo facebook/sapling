@@ -79,8 +79,8 @@ export function configBackedAtom<T extends Json>(
       event.value === undefined
         ? defaultValue
         : useRawValue === true
-        ? event.value
-        : JSON.parse(event.value),
+          ? event.value
+          : JSON.parse(event.value),
     );
   });
   serverAPI.onConnectOrReconnect(() => {

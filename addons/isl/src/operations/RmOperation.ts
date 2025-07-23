@@ -10,7 +10,10 @@ import type {CommandArg, RepoRelativePath} from '../types';
 import {Operation} from './Operation';
 
 export class RmOperation extends Operation {
-  constructor(private filePath: RepoRelativePath, private force: boolean) {
+  constructor(
+    private filePath: RepoRelativePath,
+    private force: boolean,
+  ) {
     super('RmOperation');
   }
 

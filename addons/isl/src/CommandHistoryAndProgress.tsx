@@ -52,12 +52,12 @@ function OperationDescription(props: {
 
   const commandName =
     operation.runner === CommandRunner.Sapling
-      ? /[^\\/]+$/.exec(info.command)?.[0] ?? 'sl'
+      ? (/[^\\/]+$/.exec(info.command)?.[0] ?? 'sl')
       : operation.runner === CommandRunner.CodeReviewProvider
-      ? reviewProvider?.cliName
-      : operation.runner === CommandRunner.InternalArcanist
-      ? CommandRunner.InternalArcanist
-      : null;
+        ? reviewProvider?.cliName
+        : operation.runner === CommandRunner.InternalArcanist
+          ? CommandRunner.InternalArcanist
+          : null;
   return (
     <code className={className}>
       {(commandName ?? '') +
@@ -80,10 +80,10 @@ function OperationDescription(props: {
                   return props.long
                     ? arg.revset
                     : // truncate full commit hashes to short representation visually
-                    // revset could also be a remote bookmark, so only do this if it looks like a hash
-                    /^[a-z0-9]{40}$/.test(arg.revset)
-                    ? short(arg.revset)
-                    : truncate(arg.revset, 80);
+                      // revset could also be a remote bookmark, so only do this if it looks like a hash
+                      /^[a-z0-9]{40}$/.test(arg.revset)
+                      ? short(arg.revset)
+                      : truncate(arg.revset, 80);
               }
             }
             if (/\s/.test(arg)) {

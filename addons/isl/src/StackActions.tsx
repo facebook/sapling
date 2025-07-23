@@ -277,20 +277,20 @@ function StackEditButton({info}: {info: DagCommitInfo}): React.ReactElement | nu
   const title = isError
     ? t(`Failed to load stack: ${loadingState.error}`)
     : isLoading
-    ? loadingState.exportedStack === undefined
-      ? t('Reading stack content')
-      : t('Analyzing stack content')
-    : isDirty
-    ? t(
-        'Cannot edit stack when there are uncommitted changes.\nCommit or amend your changes first.',
-      )
-    : isPreview
-    ? t('Cannot edit pending changes')
-    : hasPublic
-    ? t('Cannot edit public commits')
-    : isLinear
-    ? t('Reorder, fold, or drop commits')
-    : t('Cannot edit non-linear stack');
+      ? loadingState.exportedStack === undefined
+        ? t('Reading stack content')
+        : t('Analyzing stack content')
+      : isDirty
+        ? t(
+            'Cannot edit stack when there are uncommitted changes.\nCommit or amend your changes first.',
+          )
+        : isPreview
+          ? t('Cannot edit pending changes')
+          : hasPublic
+            ? t('Cannot edit public commits')
+            : isLinear
+              ? t('Reorder, fold, or drop commits')
+              : t('Cannot edit non-linear stack');
   const highlight = disabled ? [] : stackCommits;
   const tooltipDelay = disabled && !isLoading ? undefined : DOCUMENTATION_DELAY;
   const icon = isLoading ? <Icon icon="loading" slot="start" /> : <StackEditIcon slot="start" />;

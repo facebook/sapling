@@ -192,8 +192,8 @@ export function getSuggestedRebaseOperation(
           succeedableRevset(destination),
         )
       : Array.isArray(source)
-      ? new BulkRebaseOperation(source, succeedableRevset(destination))
-      : new RebaseOperation(source, succeedableRevset(destination));
+        ? new BulkRebaseOperation(source, succeedableRevset(destination))
+        : new RebaseOperation(source, succeedableRevset(destination));
 
   return operation;
 }

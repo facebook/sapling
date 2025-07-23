@@ -225,7 +225,10 @@ export class TestBrowser {
     await page.evaluate('startReplay()');
   }
 
-  constructor(public browser: Browser, public page: Page) {}
+  constructor(
+    public browser: Browser,
+    public page: Page,
+  ) {}
 }
 
 function sleep(ms: number): Promise<void> {

@@ -51,7 +51,10 @@ class SimpleMockRepositoryImpl {
       ...data,
     });
   }
-  constructor(public info: RepoInfo, public logger: Logger) {}
+  constructor(
+    public info: RepoInfo,
+    public logger: Logger,
+  ) {}
 
   dispose = jest.fn();
 }
@@ -240,7 +243,10 @@ describe('RepositoryCache', () => {
         }
         throw new Error('unknown repo');
       }
-      constructor(public info: RepoInfo, public logger: Logger) {}
+      constructor(
+        public info: RepoInfo,
+        public logger: Logger,
+      ) {}
 
       dispose = jest.fn();
     }

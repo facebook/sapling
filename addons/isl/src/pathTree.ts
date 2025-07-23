@@ -147,18 +147,18 @@ export function calculateTreeSelectionStates<T extends {path: string}>(
       const checked = anyPartiallyChecked
         ? 'indeterminate'
         : allChecked
-        ? true
-        : anyChecked
-        ? 'indeterminate'
-        : false;
+          ? true
+          : anyChecked
+            ? 'indeterminate'
+            : false;
       checkedStates.set(key, checked);
       return checked;
     } else {
       const checked = selection.isFullySelected(node.path)
         ? true
         : selection.isFullyOrPartiallySelected(node.path)
-        ? 'indeterminate'
-        : false;
+          ? 'indeterminate'
+          : false;
       return checked;
     }
   }

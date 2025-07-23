@@ -27,7 +27,10 @@ export class RateLimiter {
   private running: Array<Id> = [];
   private runs = new TypedEventEmitter<'run', Id>();
 
-  constructor(private maxSimultaneousRunning: number, private log?: (s: string) => unknown) {}
+  constructor(
+    private maxSimultaneousRunning: number,
+    private log?: (s: string) => unknown,
+  ) {}
 
   private nextId = 1;
   private generateId(): Id {

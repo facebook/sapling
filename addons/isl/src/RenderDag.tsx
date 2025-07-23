@@ -327,7 +327,7 @@ function DagRowInner(props: {row: ExtendedGraphRow; info: DagCommitInfo} & Rende
     <>
       <div className="render-dag-row-left-side-line term-line-pad">
         {termLine.map((isTerm, i) => {
-          const line = isTerm ? PadLine.Ancestor : ancestryLine.at(i) ?? PadLine.Blank;
+          const line = isTerm ? PadLine.Ancestor : (ancestryLine.at(i) ?? PadLine.Blank);
           return <PadTile key={i} scaleY={0.25} line={line} />;
         })}
       </div>

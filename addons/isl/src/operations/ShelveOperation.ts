@@ -19,7 +19,10 @@ export class ShelveOperation extends Operation {
    * @param name the name of the shelved changes. This makes it easier to find the change later.
    * @param filesPathsToCommit if provided, only these file paths will be included in the shelve operation. If undefined, ALL uncommitted changes are included. Paths should be relative to repo root.
    */
-  constructor(private name?: string, private filesPathsToCommit?: Array<RepoRelativePath>) {
+  constructor(
+    private name?: string,
+    private filesPathsToCommit?: Array<RepoRelativePath>,
+  ) {
     super('ShelveOperation');
   }
 

@@ -89,7 +89,7 @@ function createComparisonWebview(
     isPanel(islPanelOrViewResult.panel) &&
     islPanelOrViewResult.panel.active
       ? vscode.ViewColumn.Beside
-      : vscode.window.activeTextEditor?.viewColumn ?? vscode.ViewColumn.One;
+      : (vscode.window.activeTextEditor?.viewColumn ?? vscode.ViewColumn.One);
 
   const webview = populateAndSetISLWebview(
     context,

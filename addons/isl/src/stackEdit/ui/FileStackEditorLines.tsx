@@ -211,8 +211,8 @@ export function computeLinesForFileStackEditor(
       aIdx != null
         ? selectedLineIds.has(`a${aIdx}`)
         : bIdx != null
-        ? selectedLineIds.has(`b${bIdx}`)
-        : false;
+          ? selectedLineIds.has(`b${bIdx}`)
+          : false;
 
     if (!leftMost && sign === '!') {
       const title = selected

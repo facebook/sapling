@@ -224,10 +224,10 @@ class MultiRunner {
         handle == null
           ? chalk.gray('Waiting...')
           : handle.exitCode == null
-          ? status ?? chalk.gray('Running...')
-          : handle.exitCode === 0
-          ? chalk.green(`Succeeded${durationStr}`)
-          : chalk.red(`Exited ${handle.exitCode}`);
+            ? (status ?? chalk.gray('Running...'))
+            : handle.exitCode === 0
+              ? chalk.green(`Succeeded${durationStr}`)
+              : chalk.red(`Exited ${handle.exitCode}`);
 
       const output = [];
 
@@ -250,8 +250,8 @@ class MultiRunner {
         const truncated = printAllOutput
           ? line
           : line.length > maxLen
-          ? line.slice(0, maxLen) + ELLIPSIS
-          : line;
+            ? line.slice(0, maxLen) + ELLIPSIS
+            : line;
         output.push(`${chalk.cyan('┃ ')}${truncated}`);
       }
       output.push(`${chalk.cyan('┗━ ')} ${chalk.gray(statusStr)}`);
@@ -306,8 +306,8 @@ async function main() {
           ? ['build-webview']
           : ['watch-webview']
         : isProduction
-        ? ['build']
-        : ['start'],
+          ? ['build']
+          : ['start'],
     customStatus: isProduction
       ? undefined
       : (chunk: string, status?: string) => {
@@ -332,8 +332,8 @@ async function main() {
           ? ['build-extension']
           : ['watch-extension']
         : isProduction
-        ? ['build']
-        : ['watch'],
+          ? ['build']
+          : ['watch'],
     customStatus: isProduction
       ? undefined
       : (chunk: string, status?: string) => {

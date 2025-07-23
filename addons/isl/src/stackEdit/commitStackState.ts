@@ -176,8 +176,8 @@ export class CommitStackState extends SelfUpdate<CommitStackRecord> {
             stack: getCommitStatesFromExportStack(originalStack),
           })
         : record !== undefined
-        ? record
-        : CommitStackRecord(),
+          ? record
+          : CommitStackRecord(),
     );
   }
 
@@ -306,7 +306,7 @@ export class CommitStackState extends SelfUpdate<CommitStackRecord> {
     let file = newFile;
     // Remove 'absent' for non-empty files.
     if (isAbsent(file) && this.getUtf8Data(file) !== '') {
-      const newFlags: FileFlag = file.flags === ABSENT_FLAG ? '' : file.flags ?? '';
+      const newFlags: FileFlag = file.flags === ABSENT_FLAG ? '' : (file.flags ?? '');
       file = file.set('flags', newFlags);
     }
     // Remove other flags for absent files.
@@ -1936,8 +1936,8 @@ function convertExportFileToFileState(file: ExportFile | null): FileState {
       file.data != null
         ? file.data
         : file.dataBase85
-        ? Base85({dataBase85: file.dataBase85})
-        : DataRef(nullthrows(file.dataRef)),
+          ? Base85({dataBase85: file.dataBase85})
+          : DataRef(nullthrows(file.dataRef)),
     copyFrom: file.copyFrom,
     flags: file.flags,
   });

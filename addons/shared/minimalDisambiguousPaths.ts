@@ -111,9 +111,9 @@ export function minimalDisambiguousPaths(paths: string[], options: Options = {})
           ? hadLeadingSeparator
             ? [rootPrefix, ...resultPathParts]
             : resultPathParts
-          : options.alwaysShowLeadingSeparator ?? hadLeadingSeparator
-          ? ['', ...resultPathParts]
-          : resultPathParts;
+          : (options.alwaysShowLeadingSeparator ?? hadLeadingSeparator)
+            ? ['', ...resultPathParts]
+            : resultPathParts;
     }
 
     return resultPathParts.join(separator);

@@ -86,7 +86,8 @@ export class PartialSelection extends SelfUpdate<PartialSelectionRecord> {
   /** Toggle expansion of a file. */
   toggleExpand(path: RepoRelativePath, select?: boolean): PartialSelection {
     const expanded = this.inner.expanded;
-    const newExpanded = select ?? !expanded.has(path) ? expanded.add(path) : expanded.remove(path);
+    const newExpanded =
+      (select ?? !expanded.has(path)) ? expanded.add(path) : expanded.remove(path);
     return this.set('expanded', newExpanded);
   }
 

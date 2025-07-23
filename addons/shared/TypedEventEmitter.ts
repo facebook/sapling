@@ -6,7 +6,10 @@
  */
 
 class EventWithPayload<T> extends Event {
-  constructor(type: string, public data: T | Error) {
+  constructor(
+    type: string,
+    public data: T | Error,
+  ) {
     super(type);
   }
 }

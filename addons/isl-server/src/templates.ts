@@ -56,8 +56,8 @@ export const mainFetchTemplateFields = (codeReviewSystem: CodeReviewSystem) => (
     codeReviewSystem.type === 'phabricator'
       ? '{phabdiff}'
       : codeReviewSystem.type === 'github'
-      ? '{github_pull_request_number}'
-      : '',
+        ? '{github_pull_request_number}'
+        : '',
   isFollower: '{sapling_pr_follower|json}',
   stableCommitMetadata: Internal.stableCommitConfig?.template ?? '',
   // Description must be last

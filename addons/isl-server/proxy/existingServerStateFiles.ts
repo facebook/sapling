@@ -30,8 +30,8 @@ const cacheDir =
   process.platform == 'win32'
     ? path.join(nullthrows(process.env.LOCALAPPDATA), 'cache')
     : process.platform == 'darwin'
-    ? path.join(os.homedir(), 'Library/Caches')
-    : process.env.XDG_CACHE_HOME || path.join(os.homedir(), '.cache');
+      ? path.join(os.homedir(), 'Library/Caches')
+      : process.env.XDG_CACHE_HOME || path.join(os.homedir(), '.cache');
 
 /**
  * Per-user cache dir with restrictive permissions.

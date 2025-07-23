@@ -81,7 +81,7 @@ export function OperationDisabledButton({
         }
         setTriggeredOperationId(ops.map(op => op.id));
       }}>
-      {isRunningThisOperation ? <Icon icon="loading" slot="start" /> : icon ?? null}
+      {isRunningThisOperation ? <Icon icon="loading" slot="start" /> : (icon ?? null)}
       {children}
     </Button>
   );

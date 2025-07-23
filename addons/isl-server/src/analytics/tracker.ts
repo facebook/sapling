@@ -19,7 +19,10 @@ type SendData<T> = (data: TrackDataWithEventName, context: T) => void;
  *  - The server sends the data to finally get processed
  */
 export class Tracker<T> {
-  constructor(private sendData: SendData<T>, public context: T) {}
+  constructor(
+    private sendData: SendData<T>,
+    public context: T,
+  ) {}
 
   /**
    * Record an analytics error event `eventName`.

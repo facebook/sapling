@@ -17,7 +17,10 @@ import {Tracker} from './tracker';
 export type ServerSideTracker = Tracker<ServerSideContext>;
 
 class ServerSideContext {
-  constructor(public logger: Logger, public data: ApplicationInfo) {}
+  constructor(
+    public logger: Logger,
+    public data: ApplicationInfo,
+  ) {}
 
   public setRepo(repo: Repository | undefined): void {
     this.data.repo = repo?.codeReviewProvider?.getSummaryName();
@@ -44,15 +47,18 @@ export function makeServerSideTracker(
 ): ServerSideTracker {
   const analyticsInfo = generateAnalyticsInfo(platform.platformName, version, platform.sessionId);
   logger.info('Setup analytics, session: ', analyticsInfo.sessionId);
-  return new Tracker((data: TrackDataWithEventName, context: ServerSideContext) => {
-    const {logger} = context;
-    // log track event, since tracking events can be used as datapoints when reviewing logs
-    logger.log(
-      '[track]',
-      data.eventName,
-      data.errorName ?? '',
-      data.extras != null ? JSON.stringify(data.extras) : '',
-    );
-    writeToServer({...data, ...context.data}, logger);
-  }, new ServerSideContext(logger, analyticsInfo));
+  return new Tracker(
+    (data: TrackDataWithEventName, context: ServerSideContext) => {
+      const {logger} = context;
+      // log track event, since tracking events can be used as datapoints when reviewing logs
+      logger.log(
+        '[track]',
+        data.eventName,
+        data.errorName ?? '',
+        data.extras != null ? JSON.stringify(data.extras) : '',
+      );
+      writeToServer({...data, ...context.data}, logger);
+    },
+    new ServerSideContext(logger, analyticsInfo),
+  );
 }

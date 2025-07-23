@@ -80,7 +80,10 @@ export class InlineBlameProvider implements Disposable {
   observedRepos = new Map<string, RepoCaches>();
   decorationType = window.createTextEditorDecorationType({});
 
-  constructor(private reposList: VSCodeReposList, private ctx: RepositoryContext) {
+  constructor(
+    private reposList: VSCodeReposList,
+    private ctx: RepositoryContext,
+  ) {
     this.initBasedOnConfig();
   }
 

@@ -14,7 +14,10 @@ import type {ShelvedChange, UncommittedChanges} from '../types';
 import {Operation} from './Operation';
 
 export class UnshelveOperation extends Operation {
-  constructor(private shelvedChange: ShelvedChange, private keep: boolean) {
+  constructor(
+    private shelvedChange: ShelvedChange,
+    private keep: boolean,
+  ) {
     super('UnshelveOperation');
   }
 

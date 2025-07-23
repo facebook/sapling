@@ -373,7 +373,7 @@ export const openFileCmdAtom = configBackedAtom<string | null>(
 
 function OpenFilesCmdSetting() {
   const cmdRaw = useAtomValue(openFileCmdAtom);
-  const cmd = cmdRaw == null ? null : (tryJsonParse(cmdRaw) as string | Array<string>) ?? cmdRaw;
+  const cmd = cmdRaw == null ? null : ((tryJsonParse(cmdRaw) as string | Array<string>) ?? cmdRaw);
   const cmdEl =
     cmd == null ? (
       <T>OS Default Program</T>

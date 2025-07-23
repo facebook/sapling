@@ -20,7 +20,10 @@ const LocalWebSocketEventBus =
 
 let globalMockWs: MockWebSocketImpl;
 class MockWebSocketImpl extends EventTarget implements WebSocket {
-  constructor(public url: string, _protocols?: string | string[] | undefined) {
+  constructor(
+    public url: string,
+    _protocols?: string | string[] | undefined,
+  ) {
     super();
     globalMockWs = this as unknown as MockWebSocketImpl; // keep track of each new instance as a global to use in tests
   }
