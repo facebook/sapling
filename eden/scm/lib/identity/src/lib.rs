@@ -710,6 +710,43 @@ pub fn sniff_root(path: &Path) -> Result<Option<(PathBuf, Identity)>> {
     Ok(None)
 }
 
+/// Recursively call `sniff_root` to get all the repo directories
+/// and corresponding identities up to system root `/`.
+/// Returns an empty vector if no valid repository is found.
+/// Note that it still respects sniff_root_priority, so it's possible that
+/// some roots of low priority get skipped when those of high priority exist.
+pub fn sniff_roots(path: &Path) -> Result<Vec<(PathBuf, Identity)>> {
+    let mut roots: Vec<(PathBuf, Identity)> = Vec::new();
+    let mut seen = HashSet::new();
+    let mut first_ident = None;
+
+    let mut curr_path = Some(path.to_path_buf());
+    while let Some(p) = curr_path.take() {
+        if !seen.insert(p.to_path_buf()) {
+            break;
+        }
+        if let Some((root, ident)) = sniff_root(&p)? {
+            // Various repo identities usually indicate errors,
+            // since in general we don't support nested repos.
+            if first_ident.is_none() {
+                first_ident = Some(ident);
+            } else if ident != first_ident.unwrap() {
+                return Err(anyhow::anyhow!(
+                    "Various repo identities ({} and {}) found, which indicates an error.\n\
+                    Sapling does not support nested repos of different kinds.",
+                    first_ident.unwrap().repo.sniff_dot_dir(),
+                    ident.repo.sniff_dot_dir()
+                ));
+            }
+
+            roots.push((root.to_path_buf(), ident));
+            curr_path = root.parent().map(|p| p.to_path_buf());
+        }
+    }
+
+    Ok(roots)
+}
+
 pub fn env_var(var_suffix: &str) -> Option<Result<String, VarError>> {
     let current_id = DEFAULT.read();
 
@@ -835,6 +872,46 @@ mod test {
         assert_eq!(sniffed_root, root);
         assert_eq!(sniffed_ident.repo, TEST.repo);
         assert_eq!(sniffed_ident.user, default().user);
+
+        Ok(())
+    }
+
+    #[test]
+    fn test_sniff_roots_in_nested_repos() -> Result<()> {
+        let dir = tempfile::tempdir()?;
+        assert_eq!(sniff_roots(dir.path())?.len(), 0);
+
+        let dot_dir = dir.path().join(TEST.dot_dir());
+        fs::create_dir_all(dot_dir)?;
+
+        let a = dir.path().join("a");
+        let ab = a.join("b");
+        let abc = ab.join("c");
+        fs::create_dir_all(&a)?;
+        fs::create_dir_all(&ab)?;
+        fs::create_dir_all(&abc)?;
+
+        let a_dot_dir = a.join(TEST.dot_dir());
+        let ab_dot_dir = ab.join(TEST.dot_dir());
+        let abc_dot_dir = abc.join(TEST.dot_dir());
+        fs::create_dir_all(&a_dot_dir)?;
+        fs::create_dir_all(&ab_dot_dir)?;
+        fs::create_dir_all(&abc_dot_dir)?;
+
+        // .test
+        // a/.sl
+        // a/b/.test
+        // a/b/c/.sl
+        let sniff_result = sniff_roots(&abc)?;
+        assert_eq!(sniff_result.len(), 4);
+        assert_eq!(sniff_result[0].0, abc);
+        assert_eq!(sniff_result[0].1.repo, TEST.repo);
+        assert_eq!(sniff_result[1].0, ab);
+        assert_eq!(sniff_result[1].1.repo, TEST.repo);
+        assert_eq!(sniff_result[2].0, a);
+        assert_eq!(sniff_result[2].1.repo, TEST.repo);
+        assert_eq!(sniff_result[3].0, dir.path());
+        assert_eq!(sniff_result[3].1.repo, TEST.repo);
 
         Ok(())
     }
