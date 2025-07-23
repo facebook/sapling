@@ -32,6 +32,7 @@ cmddebugpython = { version = "0.1.0", path = "debugcommands/cmddebugpython" }
 cmddebugracyoutput = { version = "0.1.0", path = "debugcommands/cmddebugracyoutput" }
 cmddebugrefreshconfig = { version = "0.1.0", path = "debugcommands/cmddebugrefreshconfig" }
 cmddebugrevsets = { version = "0.1.0", path = "debugcommands/cmddebugrevsets" }
+cmddebugroots = { version = "0.1.0", path = "debugcommands/cmddebugroots" }
 cmddebugrunlog = { version = "0.1.0", path = "debugcommands/cmddebugrunlog" }
 cmddebugscmstore = { version = "0.1.0", path = "debugcommands/cmddebugscmstore" }
 cmddebugscmstorereplay = { version = "0.1.0", path = "debugcommands/cmddebugscmstorereplay" }

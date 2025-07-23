@@ -55,6 +55,7 @@ members = [
   "lib/commands/debugcommands/cmddebugracyoutput",
   "lib/commands/debugcommands/cmddebugrefreshconfig",
   "lib/commands/debugcommands/cmddebugrevsets",
+  "lib/commands/debugcommands/cmddebugroots",
   "lib/commands/debugcommands/cmddebugrunlog",
   "lib/commands/debugcommands/cmddebugscmstore",
   "lib/commands/debugcommands/cmddebugscmstorereplay",

@@ -56,6 +56,7 @@ external_commands![
     cmddebugracyoutput,
     cmddebugrefreshconfig,
     cmddebugrevsets,
+    cmddebugroots,
     cmddebugrunlog,
     cmddebugscmstore,
     cmddebugscmstorereplay,
