@@ -134,7 +134,7 @@ fn log_mysql_query_telemetry(
     repo_ids: Vec<RepositoryId>,
     query_name: &str,
 ) -> Result<()> {
-    let mut scuba = setup_scuba_sample(&sql_query_tel, granularity, repo_ids, Some(query_name))?;
+    let mut scuba = setup_scuba_sample(sql_query_tel, granularity, repo_ids, Some(query_name))?;
 
     scuba.add("success", 1);
     STATS::success.add_value(1);

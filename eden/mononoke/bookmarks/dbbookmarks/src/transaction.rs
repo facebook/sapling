@@ -700,7 +700,7 @@ impl BookmarkTransaction for SqlBookmarksTransaction {
                 let mut txn = sql_ext::Transaction::new(
                     sql_txn,
                     Default::default(),
-                    (&ctx).sql_query_telemetry(),
+                    ctx.sql_query_telemetry(),
                 );
 
                 txn = match run_transaction_hooks(&ctx, txn, &txn_hooks).await {
