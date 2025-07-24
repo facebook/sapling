@@ -30,7 +30,7 @@
   c4f2046634d7639ba94a58507cb75270d667b0b0
 
 Query history with slapigit using git sha1 input
-  $ hg --config remotefilelog.reponame=repo --config edenapi.url=https://localhost:$MONONOKE_SOCKET/slapigit/ debugapi -e path_history -i "'$C_GIT'" -i "['x']" -i None -i "[]"
+  $ hg --config remotefilelog.reponame=repo --config edenapi.url=https://localhost:$MONONOKE_SOCKET/slapigit/ --config edenapi.ignore-capabilities=true debugapi -e path_history -i "'$C_GIT'" -i "['x']" -i None -i "[]"
   [{"path": "x",
     "entries": {"Ok": {"entries": [{"commit": bin("c7dd666200707e650996f8007fbfd57c7371d348")},
                                    {"commit": bin("75e999f64908e2d05bea9a46067d24bdedeeb41d")}],

@@ -397,16 +397,17 @@ impl BackingStore {
         // the Response, probably by implementing map similar to how then is currently implemented.
         // Another option is to hand down the async object through to C++ when the FFI layer supports
         // it more robustly.
-        let result =
-            BlockingResponse::from_async(self.maybe_reload().repo.eden_api()?.suffix_query(
-                CommitId::Hg(HgId::from_hex(commit_id)?),
-                suffixes,
-                prefixes,
-            ))?
-            .entries
-            .iter()
-            .map(|res| res.file_path.to_string())
-            .collect();
+        let result = BlockingResponse::from_async(
+            self.maybe_reload()
+                .repo
+                .eden_api()
+                .map_err(|err| err.tag_network())?
+                .suffix_query(CommitId::Hg(HgId::from_hex(commit_id)?), suffixes, prefixes),
+        )?
+        .entries
+        .iter()
+        .map(|res| res.file_path.to_string())
+        .collect();
         Ok(Some(result))
     }
 

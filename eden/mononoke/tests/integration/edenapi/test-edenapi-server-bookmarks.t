@@ -67,7 +67,7 @@ Check response for error propagating endpoint
   ]
 
 Check response for slapigit.
-  $ hg --config edenapi.url=https://localhost:$MONONOKE_SOCKET/slapigit/ debugapi -e bookmarks -i '["alpha", "beta", "unknown"]'
+  $ hg --config edenapi.url=https://localhost:$MONONOKE_SOCKET/slapigit/  --config edenapi.ignore-capabilities=true debugapi -e bookmarks -i '["alpha", "beta", "unknown"]'
   {"beta": "be393840a21645c52bbde7e62bdb7269fc3ebb87",
    "alpha": "8131b4f1da6df2caebe93c581ddd303153b338e5",
    "unknown": None}

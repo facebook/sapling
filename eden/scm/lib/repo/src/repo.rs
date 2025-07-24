@@ -4,8 +4,8 @@
  * This source code is licensed under the MIT license found in the
  * LICENSE file in the root directory of this source tree.
  */
-
 use std::collections::BTreeMap;
+use std::collections::HashSet;
 use std::ops::Deref;
 use std::path::Path;
 use std::path::PathBuf;
@@ -14,6 +14,7 @@ use std::sync::Arc;
 use anyhow::Context;
 use anyhow::Result;
 use anyhow::anyhow;
+use async_runtime::block_on;
 use cas_client::CasClient;
 use commits_trait::DagCommits;
 use configloader::Config;
@@ -62,13 +63,16 @@ use crate::errors;
 use crate::init;
 use crate::trees::TreeManifestResolver;
 
+const DEFAULT_CAPABILITIES: [&str; 1] = ["sapling-common"];
+type Capabilities = HashSet<String>;
+
 #[derive(Clone)]
 pub struct Repo {
     info: RepoMinimalInfo,
     config: Arc<dyn Config>,
     repo_name: Option<String>,
     metalog: OnceCell<Arc<RwLock<MetaLog>>>,
-    eden_api: OnceCell<Arc<dyn SaplingRemoteApi>>,
+    eden_api: OnceCell<(Capabilities, Arc<dyn SaplingRemoteApi>)>,
     dag_commits: OnceCell<Arc<RwLock<Box<dyn DagCommits + Send + 'static>>>>,
     file_store: OnceCell<Arc<dyn FileStore>>,
     file_scm_store: OnceCell<Arc<scmstore::FileStore>>,
@@ -270,8 +274,8 @@ impl Repo {
     ///
     /// Use `optional_eden_api` if `SaplingRemoteAPI` is optional.
     pub fn eden_api(&self) -> Result<Arc<dyn SaplingRemoteApi>, SaplingRemoteApiError> {
-        match self.optional_eden_api()? {
-            Some(v) => Ok(v),
+        match self.optional_eden_api_with_capabilities()? {
+            Some((_, edenapi)) => Ok(edenapi),
             None => Err(SaplingRemoteApiError::Other(anyhow!(
                 "SaplingRemoteAPI is requested but not available for this repo"
             ))),
@@ -283,9 +287,9 @@ impl Repo {
     fn force_construct_eden_api(
         &self,
         maybe_repo_url: Option<RepoUrl>,
-    ) -> Result<Arc<dyn SaplingRemoteApi>, SaplingRemoteApiError> {
-        let eden_api = self.eden_api.get_or_try_init(
-            || -> Result<Arc<dyn SaplingRemoteApi>, SaplingRemoteApiError> {
+    ) -> Result<(Capabilities, Arc<dyn SaplingRemoteApi>), SaplingRemoteApiError> {
+        let (caps, eden_api) = self.eden_api.get_or_try_init(
+            || -> Result<(Capabilities, Arc<dyn SaplingRemoteApi>), SaplingRemoteApiError> {
                 tracing::trace!(target: "repo::eden_api", "creating edenapi");
                 let mut builder = Builder::from_config(&self.config)?;
                 if let Some(path) = maybe_repo_url {
@@ -297,18 +301,55 @@ impl Repo {
                 }
                 let eden_api = builder.build()?;
                 tracing::info!(url=eden_api.url(), path=?self.path, "SaplingRemoteApi built");
-                Ok(eden_api)
+                let caps_set = if !self
+                    .config
+                    .must_get::<bool>("edenapi", "ignore-capabilities")
+                    .unwrap_or_default()
+                {
+                    let caps = block_on(eden_api.capabilities())?;
+                    caps.into_iter().collect::<HashSet<String>>()
+                } else {
+                    // If we turned on ignore-capabilities, means something is failing fetching the capabilities.
+                    // We put this as a placeholder to avoid breaking the code, it won't affect behaviour because the check for it is also disabled by the same config.
+                    HashSet::new()
+                };
+
+                Ok((caps_set, eden_api))
             },
         )?;
-        Ok(eden_api.clone())
+        Ok((caps.clone(), eden_api.clone()))
     }
 
-    /// Constructs SaplingRemoteAPI client if it should be constructed.
+    /// Constructs SaplingRemoteAPI client if it should be constructed and it supports the default sapling capabilities.
     ///
-    /// Returns `None` if SaplingRemoteAPI should not be used.
+    /// Returns `None` if SaplingRemoteAPI should not be used or does not support the default capabilities.
     pub fn optional_eden_api(
         &self,
     ) -> Result<Option<Arc<dyn SaplingRemoteApi>>, SaplingRemoteApiError> {
+        if let Some((caps, edenapi)) = self.optional_eden_api_with_capabilities()? {
+            let supports_caps = DEFAULT_CAPABILITIES.iter().all(|&r| caps.contains(r));
+            if !supports_caps
+                && !self
+                    .config
+                    .must_get::<bool>("edenapi", "ignore-capabilities")
+                    .unwrap_or_default()
+            {
+                tracing::trace!(target: "repo::eden_api", "disabled because required capabilities {:?} are not supported within {:?}", DEFAULT_CAPABILITIES, caps);
+                return Ok(None);
+            }
+
+            Ok(Some(edenapi))
+        } else {
+            Ok(None)
+        }
+    }
+
+    /// Constructs SaplingRemoteAPI client if it should be constructed and fetches it's capabilities.
+    ///
+    /// Returns `None` if SaplingRemoteAPI should not be used.
+    fn optional_eden_api_with_capabilities(
+        &self,
+    ) -> Result<Option<(Capabilities, Arc<dyn SaplingRemoteApi>)>, SaplingRemoteApiError> {
         if matches!(
             self.config.get_opt::<bool>("edenapi", "enable"),
             Ok(Some(false))
@@ -329,7 +370,8 @@ impl Repo {
                 // EagerRepo URLs (test:, eager: file path, dummyssh).
                 if EagerRepo::url_to_dir(&path).is_some() {
                     tracing::trace!(target: "repo::eden_api", "using EagerRepo at {}", &path);
-                    return Ok(Some(self.force_construct_eden_api(Some(path))?));
+                    let (caps, edenapi) = self.force_construct_eden_api(Some(path))?;
+                    return Ok(Some((caps, edenapi)));
                 }
                 // Legacy tests are incompatible with SaplingRemoteAPI.
                 // They use None or file or ssh scheme with dummyssh.
@@ -358,7 +400,10 @@ impl Repo {
                 }
 
                 tracing::trace!(target: "repo::eden_api", "proceeding with path {}, reponame {:?}", path, self.config.get("remotefilelog", "reponame"));
-                Ok(Some(self.force_construct_eden_api(Some(path))?))
+                let (supported_capabilities, edenapi) =
+                    self.force_construct_eden_api(Some(path))?;
+
+                Ok(Some((supported_capabilities, edenapi)))
             }
         }
     }
@@ -428,7 +473,7 @@ impl Repo {
         }
 
         tracing::trace!(target: "repo::file_store", "creating edenapi");
-        let eden_api = self.optional_eden_api()?;
+        let eden_api = self.optional_eden_api().map_err(|err| err.tag_network())?;
 
         tracing::trace!(target: "repo::file_store", "building filestore");
         let mut file_builder = FileStoreBuilder::new(self.config()).local_path(self.store_path());
@@ -484,7 +529,7 @@ impl Repo {
             return Ok(store);
         }
 
-        let eden_api = self.optional_eden_api()?;
+        let eden_api = self.optional_eden_api().map_err(|err| err.tag_network())?;
         let mut tree_builder = TreeStoreBuilder::new(self.config())
             .local_path(self.store_path())
             .suffix("manifests");
@@ -558,7 +603,7 @@ impl Repo {
         let dag = dag.read();
         let metalog = self.metalog()?;
         let metalog = metalog.read();
-        let edenapi = self.optional_eden_api()?;
+        let edenapi = self.optional_eden_api().map_err(|err| err.tag_network())?;
         revset_utils::resolve_single(
             &self.config,
             change_id,

@@ -32,7 +32,7 @@ impl StoreInfo for Repo {
     }
 
     fn remote_peer(&self) -> anyhow::Result<Option<Arc<dyn SaplingRemoteApi>>> {
-        Ok(self.optional_eden_api()?)
+        self.optional_eden_api().map_err(|err| err.tag_network())
     }
 
     fn metalog(&self) -> anyhow::Result<Arc<RwLock<MetaLog>>> {

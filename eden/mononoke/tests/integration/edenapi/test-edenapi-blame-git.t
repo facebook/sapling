@@ -32,7 +32,7 @@
              "path": "A"}}]
 
 # Test with slapigit with git sha1 input
-  $ hg --config remotefilelog.reponame=repo --config edenapi.url=https://localhost:$MONONOKE_SOCKET/slapigit/ debugapi -e blame -i "[{'path': 'A', 'node': 'ca5c1860d51d7cfbc1102f5d6aa1cfe6e44aeeff'}]"
+  $ hg --config remotefilelog.reponame=repo --config edenapi.url=https://localhost:$MONONOKE_SOCKET/slapigit/ --config edenapi.ignore-capabilities=true debugapi -e blame -i "[{'path': 'A', 'node': 'ca5c1860d51d7cfbc1102f5d6aa1cfe6e44aeeff'}]"
   [{"data": {"Ok": {"paths": ["A"],
                     "commits": [bin("ca5c1860d51d7cfbc1102f5d6aa1cfe6e44aeeff")],
                     "line_ranges": [{"line_count": 1,

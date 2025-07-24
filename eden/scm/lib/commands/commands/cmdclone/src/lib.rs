@@ -579,7 +579,7 @@ fn clone_metadata(
     )?;
 
     let res = (|| {
-        let edenapi = repo.eden_api()?;
+        let edenapi = repo.eden_api().map_err(|err| err.tag_network())?;
 
         let mut capabilities: Vec<String> =
             block_on(edenapi.capabilities())?.map_err(|e| e.tag_network())?;
