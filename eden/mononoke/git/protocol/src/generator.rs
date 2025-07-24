@@ -105,12 +105,14 @@ async fn boundary_trees_and_blobs(
                     .ok_or_else(|| anyhow::anyhow!("Git object {:?} is not a commit", git_commit_id))?;
                 let objects = root_tree.list_all_entries((*ctx).clone(), blobstore.clone()).try_collect::<Vec<_>>().await?;
                 let objects = stream::iter(objects).map(|(path, entry)| {
-                    cloned!(ctx, blobstore);
+                    cloned!(ctx, blobstore, filter);
                     async move {
-                        // If the entry is a submodule, then the concept of size does not apply. Assume 0 since it will be ignored anyway
-                        let size = match entry.is_submodule() {
-                            true => 0,
-                            false => entry.size(&ctx, &blobstore).await?
+                        let filter = Arc::unwrap_or_clone(filter);
+                        // If the entry is a submodule OR if the request has no filter or doesn't care about size, then let's assume size as 0
+                        let size = if entry.is_submodule() || filter.is_none_or(|filter| filter.no_size_constraint()) {
+                            0
+                        } else {
+                            entry.size(&ctx, &blobstore).await?
                         };
                         Ok((path, entry, size))
                     }

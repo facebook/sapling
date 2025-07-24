@@ -438,6 +438,10 @@ impl FetchFilter {
     pub fn include_tags(&self) -> bool {
         self.allowed_object_types.contains(&gix_object::Kind::Tag)
     }
+
+    pub fn no_size_constraint(&self) -> bool {
+        self.max_blob_size == u64::MAX
+    }
 }
 
 /// Struct representing the packfile item response generated for the
