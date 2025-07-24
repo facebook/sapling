@@ -38,6 +38,18 @@ CHEF_LOG_TIMESTAMP_KEY = "chef.run_success_timestamp"
 # time period is shorter than 4 days. So, we report a problem after two weeks.
 CHEF_RUN_AGE_PROBLEM = timedelta(days=14)
 
+
+class ForegroundColor(Enum):
+    RED = "\033[91m"
+    GREEN = "\033[92m"
+    YELLOW = "\033[93m"
+    BLUE = "\033[94m"
+    MAGENTA = "\033[95m"
+    CYAN = "\033[96m"
+    WHITE = "\033[97m"
+    RESET = "\033[0m"
+
+
 import thrift.transport
 from eden.fs.cli.version import VersionInfo
 
@@ -1125,10 +1137,14 @@ is case-sensitive. This is not recommended and is intended only for testing."""
             # to want to access soon.
             return 0
         except EdenService.EdenError as ex:
-            print_stderr(f"Failed to clone. Error from EdenFS: {ex}")
+            print_stderr(
+                f"{ForegroundColor.RED.value}Failed to clone.{ForegroundColor.RESET.value} Error from EdenFS: {ex}"
+            )
             return int(ex.errorCode) if ex.errorCode else 1
         except Exception as ex:
-            print_stderr(f"Failed to clone. Error: {ex}")
+            print_stderr(
+                f"{ForegroundColor.RED.value}Failed to clone.{ForegroundColor.RESET.value} Error: {ex}"
+            )
             return 1
 
 
