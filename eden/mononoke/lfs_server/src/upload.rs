@@ -434,16 +434,14 @@ pub async fn upload(state: &mut State) -> Result<impl TryIntoResponse + use<>, H
 
 #[cfg(test)]
 mod test {
-    use std::num::NonZeroU32;
     use std::sync::Arc;
 
-    use chaosblob::ChaosBlobstore;
-    use chaosblob::ChaosOptions;
     use fbinit::FacebookInit;
     use futures::future;
     use futures::stream;
     use memblob::Memblob;
     use mononoke_macros::mononoke;
+    use readonlyblob::ReadOnlyBlobstore;
     use test_repo_factory::TestRepoFactory;
 
     use super::*;
@@ -467,12 +465,9 @@ mod test {
 
     #[mononoke::fbinit_test]
     async fn test_upload_from_client_failing_internal(fb: FacebookInit) -> Result<(), Error> {
-        // Create a test repo with a blobstore that fails all reads and writes.
+        // Create a test repo with a readonly blobstore that will fail all writes.
         let repo = TestRepoFactory::new(fb)?
-            .with_blobstore(Arc::new(ChaosBlobstore::new(
-                Memblob::default(),
-                ChaosOptions::new(NonZeroU32::new(1), NonZeroU32::new(1)),
-            )))
+            .with_blobstore(Arc::new(ReadOnlyBlobstore::new(Memblob::default())))
             .build()
             .await?;
 
