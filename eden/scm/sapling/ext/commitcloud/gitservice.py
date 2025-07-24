@@ -14,8 +14,7 @@ class GitService(
     """Remote commit-cloud service for git repos"""
 
     def __init__(self, ui, repo):
-        self.ui = ui
-        self.repo = repo
+        super().__init__(ui, repo)
 
     def check(self):
         return True

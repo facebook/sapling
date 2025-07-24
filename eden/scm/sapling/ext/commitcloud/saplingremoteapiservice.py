@@ -23,8 +23,8 @@ class SaplingRemoteAPIService(baseservice.BaseService):
             raise error.Abort(
                 "Tried to start Sapling Remote API service with no repo object"
             )
-        self.repo = repo
-        self.repo.edenapi.capabilities()  # Check Sapling Remote API is reachable
+
+        self.edenapi = repo.edenapiwithcapabilities(["commit-cloud"])
 
     def check(self):
         return True
@@ -40,7 +40,7 @@ class SaplingRemoteAPIService(baseservice.BaseService):
             "sending 'get_references' request on Sapling Remote API\n",
             component="commitcloud",
         )
-        response = self.repo.edenapi.cloudreferences(
+        response = self.edenapi.cloudreferences(
             {
                 "workspace": workspace,
                 "reponame": reponame,
@@ -129,7 +129,7 @@ class SaplingRemoteAPIService(baseservice.BaseService):
 
         # send request
 
-        response = self.repo.edenapi.cloudupdatereferences(
+        response = self.edenapi.cloudupdatereferences(
             {
                 "version": version,
                 "reponame": reponame,
@@ -173,7 +173,7 @@ class SaplingRemoteAPIService(baseservice.BaseService):
             "workspace": workspace,
             "flags": self._map_legacy_flags(flags),
         }
-        response = self.repo.edenapi.cloudsmartlog(data)
+        response = self.edenapi.cloudsmartlog(data)
 
         smartlog = self._getdatafromresponse(response)
         if limit != 0:
@@ -214,7 +214,7 @@ class SaplingRemoteAPIService(baseservice.BaseService):
                 "flags": self._map_legacy_flags(flags),
             }
 
-        response = self.repo.edenapi.cloudsmartlogbyversion(data)
+        response = self.edenapi.cloudsmartlogbyversion(data)
 
         smartlog = self._getdatafromresponse(response)
         if limit != 0:
@@ -241,7 +241,7 @@ class SaplingRemoteAPIService(baseservice.BaseService):
             component="commitcloud",
         )
 
-        response = self.repo.edenapi.cloudworkspaces(prefix, reponame)
+        response = self.edenapi.cloudworkspaces(prefix, reponame)
         # Put everything into "workspaces" key, so it's easier to parse in the client
         workspaces = {"workspaces": self._getdatafromresponse(response)}
         return self._makeworkspacesinfo(workspaces)
@@ -251,7 +251,7 @@ class SaplingRemoteAPIService(baseservice.BaseService):
             "sending 'get_workspace' request on Sapling Remote API\n",
             component="commitcloud",
         )
-        response = self.repo.edenapi.cloudworkspace(workspacename, reponame)
+        response = self.edenapi.cloudworkspace(workspacename, reponame)
 
         if "data" in response:
             if "Ok" in response["data"]:
@@ -273,7 +273,7 @@ class SaplingRemoteAPIService(baseservice.BaseService):
         )
 
         data = {"reponame": reponame, "workspace": workspace, "archived": archived}
-        self.repo.edenapi.cloudupdatearchive(data)
+        self.edenapi.cloudupdatearchive(data)
 
     def renameworkspace(self, reponame, workspace, new_workspace):
         """Rename the given workspace"""
@@ -287,7 +287,7 @@ class SaplingRemoteAPIService(baseservice.BaseService):
             "workspace": workspace,
             "new_workspace": new_workspace,
         }
-        self._getdatafromresponse(self.repo.edenapi.cloudrenameworkspace(data))
+        self._getdatafromresponse(self.edenapi.cloudrenameworkspace(data))
 
     def shareworkspace(self, reponame, workspace):
         """Enable sharing for the given workspace"""
@@ -299,7 +299,7 @@ class SaplingRemoteAPIService(baseservice.BaseService):
             "reponame": reponame,
             "workspace": workspace,
         }
-        response = self.repo.edenapi.cloudshareworkspace(data)
+        response = self.edenapi.cloudshareworkspace(data)
         return self._getdatafromresponse(response)
 
     def rollbackworkspace(self, reponame, workspace, version):
@@ -311,7 +311,7 @@ class SaplingRemoteAPIService(baseservice.BaseService):
             "workspace": workspace,
             "version": version,
         }
-        self.repo.edenapi.cloudrollbackworkspace(data)
+        self.edenapi.cloudrollbackworkspace(data)
 
     def gethistoricalversions(self, reponame, workspace):
         self.ui.debug(
@@ -321,7 +321,7 @@ class SaplingRemoteAPIService(baseservice.BaseService):
 
         data = {"reponame": reponame, "workspace": workspace}
 
-        response = self.repo.edenapi.cloudhistoricalversions(data)
+        response = self.edenapi.cloudhistoricalversions(data)
         versions = self._getdatafromresponse(response)["versions"]
 
         self.ui.debug(

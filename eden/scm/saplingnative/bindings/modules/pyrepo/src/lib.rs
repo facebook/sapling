@@ -147,6 +147,13 @@ py_class!(pub class repo |py| {
         PySaplingRemoteApi::create_instance(py, edenapi_ref)
     }
 
+    def edenapiwithcapabilities(&self, capabilities : Vec<String>) -> PyResult<PySaplingRemoteApi> {
+        let cap = capabilities.into_iter().collect::<HashSet<String>>();
+        let repo_ref = self.inner(py).read();
+        let edenapi_ref = repo_ref.eden_api_with_capabilities(cap).map_pyerr(py)?;
+        PySaplingRemoteApi::create_instance(py, edenapi_ref)
+    }
+
     def nullableedenapi(&self) -> PyResult<Option<PySaplingRemoteApi>> {
         let repo_ref = self.inner(py).read();
         match repo_ref.optional_eden_api().map_pyerr(py)? {

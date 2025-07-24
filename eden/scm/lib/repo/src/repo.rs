@@ -282,6 +282,36 @@ impl Repo {
         }
     }
 
+    /// Constructs the SaplingRemoteAPI client. Errors out if the SaplingRemoteAPI should not be
+    /// constructed or doesn't meet the required capabilities.
+    ///
+    /// Use `optional_eden_api_with_capabilities` if `SaplingRemoteAPI` is optional.
+    pub fn eden_api_with_capabilities(
+        &self,
+        capabilities: HashSet<String>,
+    ) -> Result<Arc<dyn SaplingRemoteApi>, SaplingRemoteApiError> {
+        match self.optional_eden_api_with_capabilities()? {
+            Some((caps, edenapi)) => {
+                if !self
+                    .config
+                    .must_get::<bool>("edenapi", "ignore-capabilities")
+                    .unwrap_or_default()
+                    && !capabilities.is_subset(&caps)
+                {
+                    return Err(SaplingRemoteApiError::Other(anyhow!(
+                        "SaplingRemoteAPI is requested but capabilities {:?} are not supported within {:?}",
+                        capabilities,
+                        caps
+                    )));
+                }
+                Ok(edenapi)
+            }
+            None => Err(SaplingRemoteApiError::Other(anyhow!(
+                "SaplingRemoteAPI is not available"
+            ))),
+        }
+    }
+
     /// Private API used by `optional_eden_api` that bypasses checks about whether
     /// SaplingRemoteAPI should be used or not.
     fn force_construct_eden_api(
@@ -320,7 +350,7 @@ impl Repo {
         Ok((caps.clone(), eden_api.clone()))
     }
 
-    /// Constructs SaplingRemoteAPI client if it should be constructed and it supports the default sapling capabilities.
+    /// Constructs SaplingRemoteAPI client if it should be constructed and has the basic sapling capabilities.
     ///
     /// Returns `None` if SaplingRemoteAPI should not be used or does not support the default capabilities.
     pub fn optional_eden_api(

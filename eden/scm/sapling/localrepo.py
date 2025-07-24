@@ -1376,6 +1376,9 @@ class localrepository:
     def nullableedenapi(self):
         return self._getedenapi(nullable=True)
 
+    def edenapiwithcapabilities(self, capabilities):
+        return self._rsrepo.edenapiwithcapabilities(capabilities)
+
     @dagcache()
     def _dagcopytrace(self):
         return bindings.copytrace.dagcopytrace(
