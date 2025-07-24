@@ -534,14 +534,11 @@ ImmediateFuture<Unit> ensureDotEdenSymlink(
       })
       .thenTry([symlinkName](folly::Try<folly::Unit>&& try_) {
         if (try_.hasException()) {
-          // Log the error but don't propagate it up to our caller.
-          // We'll continue mounting the checkout even if we encountered an
-          // error setting up some of these symlinks.  There's not much else
-          // we can try here, and it is better to let the user continue
-          // mounting the checkout so that it isn't completely unusable.
           XLOG(ERR) << "error setting up .eden/" << symlinkName
                     << " symlink: " << try_.exception().what();
+          return ImmediateFuture<Unit>(std::move(try_).exception());
         }
+        return ImmediateFuture<Unit>(folly::unit);
       });
 }
 } // namespace
@@ -600,14 +597,23 @@ ImmediateFuture<folly::Unit> EdenMount::setupDotEden(TreeInodePtr root) {
         // Wait until we finish setting up all of the symlinks.
         // Use collectAll() since we want to wait for everything to complete,
         // even if one of them fails early.
-        return collectAll(std::move(futures)).thenValue([=](auto&&) {
-          // Set the dotEdenInodeNumber_ as our final step.
-          // We do this after all of the ensureDotEdenSymlink() calls have
-          // finished, since the TreeInode code will refuse to allow any
-          // modifications to the .eden directory once we have set
-          // dotEdenInodeNumber_.
-          dotEdenInodeNumber_ = dotEdenInode->getNodeId();
-        });
+        return collectAll(std::move(futures))
+            .thenValue([self = shared_from_this(),
+                        dotEdenInode](auto&& results) {
+              for (auto& t : results) {
+                if (t.hasException()) {
+                  XLOG(ERR) << "Symlink setup failed: " << t.exception().what();
+                  return ImmediateFuture<Unit>(std::move(t).exception());
+                }
+              }
+              // Set the dotEdenInodeNumber_ as our final step.
+              // We do this after all of the ensureDotEdenSymlink() calls have
+              // finished, since the TreeInode code will refuse to allow any
+              // modifications to the .eden directory once we have set
+              // dotEdenInodeNumber_.
+              self->dotEdenInodeNumber_ = dotEdenInode->getNodeId();
+              return ImmediateFuture<Unit>(folly::unit);
+            });
       });
 }
 

@@ -8,6 +8,7 @@
 
 import json
 import os
+import re
 import subprocess
 import sys
 from pathlib import Path
@@ -15,6 +16,8 @@ from textwrap import dedent
 from typing import Optional, Sequence, Set
 
 from eden.integration.lib.hgrepo import HgRepository
+
+from facebook.eden.ttypes import FaultDefinition
 
 from .lib import edenclient, testcase
 from .lib.fake_edenfs import get_fake_edenfs_argv
@@ -24,6 +27,8 @@ from .lib.service_test_case import service_test, ServiceTestCaseBase
 
 @testcase.eden_repo_test
 class CloneTest(testcase.EdenRepoTest):
+    enable_fault_injection: bool = True
+
     def populate_repo(self) -> None:
         self.repo.write_file("hello", "hola\n")
         self.repo.commit("Initial commit.")
@@ -147,6 +152,33 @@ class CloneTest(testcase.EdenRepoTest):
         # Clone the Eden clone! Note it should inherit its config.
         eden_clone2 = self.make_temporary_directory()
         self.clone_rev(self.repo.get_head_hash(), eden_clone1, eden_clone2)
+
+    def test_clone_with_symlink_exception_fails(self) -> None:
+        def strip_ansi_codes(s):
+            ansi_escape = re.compile(r"\x1b\[[0-9;]*m")
+            return ansi_escape.sub("", s)
+
+        with self.get_thrift_client_legacy() as client:
+            client.injectFault(
+                FaultDefinition(
+                    keyClass="TreeInode::symlink",
+                    keyValueRegex=".*",
+                    errorType="runtime_error",
+                    errorMessage="intentional exception",
+                )
+            )
+
+            try:
+                self.eden.clone(self.repo.path, self.make_temporary_directory())
+                self.fail(
+                    "eden clone should fail if there are problems with .eden symlinks!"
+                )
+            except edenclient.EdenCommandError as e:
+                clean_error_msg = strip_ansi_codes(e.stderr.strip())
+                self.assertEqual(
+                    "Failed to clone. Error from EdenFS: std::runtime_error: intentional exception",
+                    clean_error_msg,
+                )
 
     def test_clone_with_valid_revision_cmd_line_arg_works(self) -> None:
         tmp = self.make_temporary_directory()

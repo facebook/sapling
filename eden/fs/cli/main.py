@@ -1124,8 +1124,11 @@ is case-sensitive. This is not recommended and is intended only for testing."""
             # process here to prefetch files that we think the user is likely
             # to want to access soon.
             return 0
+        except EdenService.EdenError as ex:
+            print_stderr(f"Failed to clone. Error from EdenFS: {ex}")
+            return int(ex.errorCode) if ex.errorCode else 1
         except Exception as ex:
-            print_stderr("error: {}", ex)
+            print_stderr(f"Failed to clone. Error: {ex}")
             return 1
 
 

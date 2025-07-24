@@ -1281,6 +1281,9 @@ FileInodePtr TreeInode::symlink(
   validatePathComponentLength(name);
   materialize();
 
+  getMount()->getServerState()->getFaultInjector().check(
+      "TreeInode::symlink", name);
+
   {
     // Acquire our contents lock
     auto contents = contents_.wlock();
