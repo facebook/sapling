@@ -10,11 +10,9 @@ thrift_rust_library(
         ],
     ),
     allow_oss_build = False,
-    test_deps = [
-        "fbsource//third-party/rust:anyhow",
-        "fbsource//third-party/rust:maplit",
-        "//thrift/test/testset:testset-rust",
-    ],
+    # Temporarily disabled while we optimize testset build time.
+    # https://fb.workplace.com/groups/rust.language/posts/29013945748227331
+    unittests = False,
     deps = [
         "fbsource//third-party/rust:anyhow",
         "fbsource//third-party/rust:hex",
