@@ -1586,16 +1586,6 @@ class EdenConfig : private ConfigSettingManager {
       this};
 
   /**
-   * Controls if EdenFS runs a prefetch operation serially or not.
-   *
-   * This is a temporary option to help us mitigate and understand S399431.
-   */
-  ConfigSetting<bool> runSerialPrefetch{
-      "experimental:run-serial-prefetch",
-      false,
-      this};
-
-  /**
    * Controls whether EdenFS propagates errors during the core checkout
    * operation. The old behavior was to "propagate" as conflict errors (which
    * Sapling might ignore). The new behavior is to propagate errors as top-level
