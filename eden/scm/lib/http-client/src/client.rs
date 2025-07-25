@@ -72,6 +72,10 @@ pub struct Config {
     // files across 1000 requests).
     pub max_concurrent_requests_per_batch: Option<usize>,
 
+    // Max number of multiplexed HTTP/2 requests per-connection.
+    // Currently defaults to 100 (in curl).
+    pub max_concurrent_streams: Option<usize>,
+
     // Escape hatch to turn off our request limiting.
     pub limit_requests: bool,
     // Escape hatch to turn off our response body limiting.
@@ -107,6 +111,7 @@ impl Default for Config {
             disable_tls_verification: false,
             max_concurrent_requests: None, // No limit by default
             max_concurrent_requests_per_batch: None,
+            max_concurrent_streams: None,
             limit_requests: true,
             limit_response_buffering: true,
             unix_socket_domains: HashSet::new(),
@@ -168,6 +173,11 @@ impl HttpClient {
         multi
             .get_mut()
             .set_max_total_connections(self.config.max_concurrent_requests.unwrap_or(0))?;
+
+        if let Some(max_streams) = self.config.max_concurrent_streams {
+            multi.get_mut().set_max_concurrent_streams(max_streams)?;
+        }
+
         let driver = MultiDriver::new(multi.get(), self.config.verbose_stats);
 
         for mut request in requests {
@@ -302,6 +312,10 @@ impl HttpClient {
                 .get_mut()
                 // TODO: don't conflate connections with requests
                 .set_max_total_connections(self.config.max_concurrent_requests.unwrap_or(0))?;
+
+            if let Some(max_streams) = self.config.max_concurrent_streams {
+                multi.get_mut().set_max_concurrent_streams(max_streams)?;
+            }
 
             let driver = MultiDriver::new(multi.get(), self.config.verbose_stats);
 

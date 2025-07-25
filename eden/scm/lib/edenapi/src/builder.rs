@@ -305,10 +305,14 @@ impl HttpClientBuilder {
         let max_retry_per_request =
             get_config::<usize>(config, "edenapi", "max-retry-per-request")?.unwrap_or(3);
 
+        let max_concurrent_streams =
+            get_config::<usize>(config, "edenapi", "max-concurrent-streams")?;
+
         let mut http_config = hg_http::http_config(config, &server_url)?;
         http_config.verbose_stats |= debug;
         http_config.max_concurrent_requests = max_requests;
         http_config.max_concurrent_requests_per_batch = max_requests_per_batch;
+        http_config.max_concurrent_streams = max_concurrent_streams;
 
         let builder = HttpClientBuilder {
             repo_name,
