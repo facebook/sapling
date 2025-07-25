@@ -991,13 +991,13 @@ void InodeMap::shutdownComplete(
 }
 
 bool InodeMap::isInodeRemembered(InodeNumber ino) const {
-  return data_.rlock()->unloadedInodes_.count(ino) > 0;
+  return data_.rlock()->unloadedInodes_.contains(ino);
 }
 
 bool InodeMap::isInodeLoadedOrRemembered(InodeNumber ino) const {
   auto members = data_.rlock();
-  return members->unloadedInodes_.count(ino) > 0 ||
-      members->loadedInodes_.count(ino) > 0;
+  return members->unloadedInodes_.contains(ino) ||
+      members->loadedInodes_.contains(ino);
 }
 
 void InodeMap::onInodeUnreferenced(
@@ -1182,7 +1182,7 @@ optional<InodeMap::UnloadedInode> InodeMap::updateOverlayForUnload(
     for (const auto& pair : treeContents.entries) {
       const auto& childName = pair.first;
       const auto& entry = pair.second;
-      if (data->unloadedInodes_.count(entry.getInodeNumber())) {
+      if (data->unloadedInodes_.contains(entry.getInodeNumber())) {
         XLOG(DBG5) << "remembering inode " << asTree->getNodeId() << " ("
                    << asTree->getLogPath() << ") because its child "
                    << childName << " was remembered";
