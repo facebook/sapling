@@ -14,4 +14,4 @@ license = "MIT"
 name = "nonblocking"
 
 [dev-dependencies]
-futures = { version = "0.3.30", features = ["async-await", "compat"] }
+futures = { version = "0.3.31", features = ["async-await", "compat"] }

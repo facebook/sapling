@@ -19,7 +19,7 @@ cross_repo_sync = { version = "0.1.0", path = "../../features/cross_repo_sync" }
 environment = { version = "0.1.0", path = "../../cmdlib/environment" }
 executor_lib = { version = "0.1.0", path = "../../cmdlib/sharding" }
 fbinit = { version = "0.2.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
-futures = { version = "0.3.30", features = ["async-await", "compat"] }
+futures = { version = "0.3.31", features = ["async-await", "compat"] }
 justknobs = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 metadata = { version = "0.1.0", path = "../../server/metadata" }
 mononoke_app = { version = "0.1.0", path = "../../cmdlib/mononoke_app" }

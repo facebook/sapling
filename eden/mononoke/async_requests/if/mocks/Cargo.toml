@@ -21,7 +21,7 @@ async_requests_types_thrift__clients = { package = "async_requests_types_thrift_
 async_requests_types_thrift__types = { package = "async_requests_types_thrift", version = "0.1.0", path = ".." }
 codegen_includer_proc_macro = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 fbthrift = { version = "0.0.1+unstable", git = "https://github.com/facebook/fbthrift.git", branch = "main" }
-futures = { version = "0.3.30", features = ["async-await", "compat"] }
+futures = { version = "0.3.31", features = ["async-await", "compat"] }
 mononoke_types_serialization = { version = "0.1.0", path = "../../../mononoke_types/serialization" }
 mononoke_types_serialization_clients = { version = "0.1.0", path = "../../../mononoke_types/serialization/clients" }
 mononoke_types_serialization_mocks = { version = "0.1.0", path = "../../../mononoke_types/serialization/mocks" }

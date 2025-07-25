@@ -19,7 +19,7 @@ bonsai_hg_mapping = { version = "0.1.0", path = "../../../bonsai_hg_mapping" }
 cmdlib_displaying = { version = "0.1.0", path = ".." }
 commit_graph = { version = "0.1.0", path = "../../../repo_attributes/commit_graph/commit_graph" }
 context = { version = "0.1.0", path = "../../../server/context" }
-futures = { version = "0.3.30", features = ["async-await", "compat"] }
+futures = { version = "0.3.31", features = ["async-await", "compat"] }
 mononoke_types = { version = "0.1.0", path = "../../../mononoke_types" }
 repo_blobstore = { version = "0.1.0", path = "../../../blobrepo/repo_blobstore" }
 sapling-dag = { version = "0.1.0", path = "../../../../scm/lib/dag" }

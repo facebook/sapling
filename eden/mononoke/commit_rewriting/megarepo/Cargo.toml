@@ -16,7 +16,7 @@ changesets_creation = { version = "0.1.0", path = "../../changesets/changesets_c
 commit_graph = { version = "0.1.0", path = "../../repo_attributes/commit_graph/commit_graph" }
 context = { version = "0.1.0", path = "../../server/context" }
 fsnodes = { version = "0.1.0", path = "../../derived_data/fsnodes" }
-futures = { version = "0.3.30", features = ["async-await", "compat"] }
+futures = { version = "0.3.31", features = ["async-await", "compat"] }
 itertools = "0.14.0"
 manifest = { version = "0.1.0", path = "../../manifest" }
 mercurial_derivation = { version = "0.1.0", path = "../../derived_data/mercurial_derivation" }

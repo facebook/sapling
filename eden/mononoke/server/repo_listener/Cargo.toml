@@ -19,7 +19,7 @@ connection_security_checker = { version = "0.1.0", path = "../../common/connecti
 context = { version = "0.1.0", path = "../context" }
 edenapi_service = { version = "0.1.0", path = "../../edenapi_service" }
 fbinit = { version = "0.2.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
-futures = { version = "0.3.30", features = ["async-await", "compat"] }
+futures = { version = "0.3.31", features = ["async-await", "compat"] }
 futures-util = { version = "0.3.30", features = ["compat"] }
 futures_ext = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 futures_stats = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }

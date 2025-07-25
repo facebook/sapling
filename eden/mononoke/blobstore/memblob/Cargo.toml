@@ -12,4 +12,4 @@ anyhow = "1.0.98"
 async-trait = "0.1.86"
 blobstore = { version = "0.1.0", path = ".." }
 context = { version = "0.1.0", path = "../../server/context" }
-futures = { version = "0.3.30", features = ["async-await", "compat"] }
+futures = { version = "0.3.31", features = ["async-await", "compat"] }

@@ -20,7 +20,7 @@ bookmarks = { version = "0.1.0", path = "../../bookmarks" }
 clap = { version = "4.5.41", features = ["derive", "env", "string", "unicode", "wrap_help"] }
 commit_id_types = { version = "0.1.0", path = "../commit_id_types" }
 context = { version = "0.1.0", path = "../../server/context" }
-futures = { version = "0.3.30", features = ["async-await", "compat"] }
+futures = { version = "0.3.31", features = ["async-await", "compat"] }
 mercurial_types = { version = "0.1.0", path = "../../mercurial/types" }
 mononoke_types = { version = "0.1.0", path = "../../mononoke_types" }
 strum = { version = "0.27.1", features = ["derive"] }

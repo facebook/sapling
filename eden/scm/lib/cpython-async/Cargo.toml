@@ -11,7 +11,7 @@ name = "cpython_async"
 [dependencies]
 anyhow = "1.0.98"
 cpython = { version = "0.7.2", features = ["python3-sys"], default-features = false }
-futures = { version = "0.3.30", features = ["async-await", "compat"] }
+futures = { version = "0.3.31", features = ["async-await", "compat"] }
 sapling-async-runtime = { version = "0.1.0", path = "../async-runtime" }
 sapling-cpython-ext = { version = "0.1.0", path = "../cpython-ext" }
 

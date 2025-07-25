@@ -15,7 +15,7 @@ clap = { version = "4.5.41", features = ["derive", "env", "string", "unicode", "
 commit_graph_thrift = { version = "0.1.0", path = "if" }
 context = { version = "0.1.0", path = "../../../server/context" }
 either = "1.5"
-futures = { version = "0.3.30", features = ["async-await", "compat"] }
+futures = { version = "0.3.31", features = ["async-await", "compat"] }
 maplit = "1.0"
 mononoke_types = { version = "0.1.0", path = "../../../mononoke_types" }
 serde = { version = "1.0.185", features = ["derive", "rc"] }

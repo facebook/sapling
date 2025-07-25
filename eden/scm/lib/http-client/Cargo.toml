@@ -24,7 +24,7 @@ curl = { version = "0.4.41", features = ["http2", "static-ssl"] }
 curl-sys = "0.4.80"
 env_logger = { version = "0.11.8", features = ["color"] }
 flume = "0.11.1"
-futures = { version = "0.3.30", features = ["async-await", "compat"] }
+futures = { version = "0.3.31", features = ["async-await", "compat"] }
 http = "0.2"
 lru-cache = "0.1.2"
 maplit = "1.0"

@@ -15,7 +15,7 @@ name = "edenapi_trait"
 [dependencies]
 anyhow = "1.0.98"
 async-trait = "0.1.86"
-futures = { version = "0.3.30", features = ["async-await", "compat"] }
+futures = { version = "0.3.31", features = ["async-await", "compat"] }
 http = "0.2"
 sapling-auth = { version = "0.1.0", path = "../../auth" }
 sapling-configmodel = { version = "0.1.0", path = "../../config/model" }

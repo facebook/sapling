@@ -25,7 +25,7 @@ derived_data_manager = { version = "0.1.0", path = "../manager" }
 fastlog = { version = "0.1.0", path = "../fastlog" }
 filenodes_derivation = { version = "0.1.0", path = "../filenodes_derivation" }
 fsnodes = { version = "0.1.0", path = "../fsnodes" }
-futures = { version = "0.3.30", features = ["async-await", "compat"] }
+futures = { version = "0.3.31", features = ["async-await", "compat"] }
 git_types = { version = "0.1.0", path = "../../git/git_types" }
 inferred_copy_from = { version = "0.1.0", path = "../inferred_copy_from" }
 itertools = "0.14.0"

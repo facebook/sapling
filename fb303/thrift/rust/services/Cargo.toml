@@ -23,7 +23,7 @@ cpp = { version = "0.0.1+unstable", git = "https://github.com/facebook/fbthrift.
 cpp_services = { version = "0.0.1+unstable", git = "https://github.com/facebook/fbthrift.git", branch = "main" }
 fb303_core__types = { package = "fb303_core", version = "0.0.0", path = ".." }
 fbthrift = { version = "0.0.1+unstable", git = "https://github.com/facebook/fbthrift.git", branch = "main" }
-futures = { version = "0.3.30", features = ["async-await", "compat"] }
+futures = { version = "0.3.31", features = ["async-await", "compat"] }
 thrift = { version = "0.0.1+unstable", git = "https://github.com/facebook/fbthrift.git", branch = "main" }
 thrift_services = { version = "0.0.1+unstable", git = "https://github.com/facebook/fbthrift.git", branch = "main" }
 tracing = { version = "0.1.41", features = ["attributes", "valuable"] }
