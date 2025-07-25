@@ -47,7 +47,6 @@ use mutable_counters::MutableCountersArc;
 use repo_blobstore::RepoBlobstore;
 use repo_derived_data::RepoDerivedData;
 use repo_identity::RepoIdentity;
-use retry::RetryAttemptsCount;
 use scuba_ext::MononokeScubaSampleBuilder;
 use slog::error;
 use slog::info;
@@ -137,9 +136,9 @@ pub struct PipelineState<T> {
 }
 
 pub type OutcomeWithStats =
-    Result<(FutureStats, PipelineState<RetryAttemptsCount>), (Option<FutureStats>, PipelineError)>;
+    Result<(FutureStats, PipelineState<usize>), (Option<FutureStats>, PipelineError)>;
 
-pub type Outcome = Result<PipelineState<RetryAttemptsCount>, PipelineError>;
+pub type Outcome = Result<PipelineState<usize>, PipelineError>;
 
 pub fn get_id_to_search_after(entries: &[BookmarkUpdateLogEntry]) -> BookmarkUpdateLogId {
     entries
@@ -180,8 +179,7 @@ pub fn build_reporting_handler<'a>(
     scuba_sample: &'a MononokeScubaSampleBuilder,
     attempt_num: usize,
     bookmarks: Arc<dyn BookmarkUpdateLog>,
-) -> impl Fn(OutcomeWithStats) -> BoxFuture<'a, Result<PipelineState<RetryAttemptsCount>, PipelineError>>
-{
+) -> impl Fn(OutcomeWithStats) -> BoxFuture<'a, Result<PipelineState<usize>, PipelineError>> {
     move |res| {
         cloned!(bookmarks);
         async move {
@@ -198,7 +196,7 @@ pub fn build_reporting_handler<'a>(
 
             let attempts = match &res {
                 Ok((_, PipelineState { data: attempts, .. })) => attempts.clone(),
-                Err(..) => RetryAttemptsCount(attempt_num),
+                Err(..) => attempt_num,
             };
 
             let maybe_error = match &res {
@@ -280,7 +278,7 @@ pub async fn try_sync_single_combined_entry<'a>(
     ctx: &'a CoreContext,
     combined_entry: &'a CombinedBookmarkUpdateLogEntry,
     main_bookmark: &'a str,
-) -> Result<RetryAttemptsCount, Error> {
+) -> Result<usize, Error> {
     re_cas_sync::try_sync_single_combined_entry(
         re_cas_client,
         repo,
@@ -296,7 +294,7 @@ fn log_processed_entry_to_scuba(
     log_entry: &BookmarkUpdateLogEntry,
     mut scuba_sample: MononokeScubaSampleBuilder,
     error: Option<String>,
-    attempts: RetryAttemptsCount,
+    attempts: usize,
     duration: Duration,
     queue_size: QueueSize,
 ) {
@@ -309,7 +307,7 @@ fn log_processed_entry_to_scuba(
         .add("entry", u64::from(entry))
         .add("bookmark", book)
         .add("reason", reason)
-        .add("attempts", attempts.0)
+        .add("attempts", attempts)
         .add("duration", duration.as_millis() as i64);
 
     match error {
@@ -329,7 +327,7 @@ fn log_processed_entries_to_scuba(
     entries: &[BookmarkUpdateLogEntry],
     scuba_sample: MononokeScubaSampleBuilder,
     error: Option<String>,
-    attempts: RetryAttemptsCount,
+    attempts: usize,
     duration: Duration,
     queue_size: QueueSize,
 ) {

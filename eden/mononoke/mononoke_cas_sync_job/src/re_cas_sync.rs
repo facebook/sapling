@@ -30,7 +30,6 @@ use slog::info;
 
 use crate::CombinedBookmarkUpdateLogEntry;
 use crate::Repo;
-use crate::RetryAttemptsCount;
 
 const DEFAULT_UPLOAD_RETRY_NUM: usize = 1;
 const DEFAULT_UPLOAD_CONCURRENT_COMMITS: usize = 100;
@@ -229,7 +228,7 @@ pub async fn try_sync_single_combined_entry<'a>(
     ctx: &'a CoreContext,
     combined_entry: &'a CombinedBookmarkUpdateLogEntry,
     main_bookmark: &'a str,
-) -> Result<RetryAttemptsCount, Error> {
+) -> Result<usize, Error> {
     let ids: Vec<_> = combined_entry
         .components
         .iter()
@@ -287,5 +286,5 @@ pub async fn try_sync_single_combined_entry<'a>(
         derivation_stats.completion_time.as_secs_f64(),
     );
     // TODO: add configurable retries.
-    Ok(RetryAttemptsCount(DEFAULT_UPLOAD_RETRY_NUM))
+    Ok(DEFAULT_UPLOAD_RETRY_NUM)
 }

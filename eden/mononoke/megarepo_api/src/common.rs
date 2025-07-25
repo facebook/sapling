@@ -35,6 +35,7 @@ use futures::TryStreamExt;
 use futures::future::try_join;
 use futures::future::try_join_all;
 use futures::stream;
+use futures_retry::retry;
 use futures_stats::TimedTryFutureExt;
 use itertools::EitherOrBoth;
 use itertools::Itertools;
@@ -72,8 +73,7 @@ use mononoke_types::content_manifest::compat::ContentManifestFile;
 use mononoke_types::content_manifest::compat::ContentManifestId;
 use mononoke_types::path::MPath;
 use repo_authorization::AuthorizationContext;
-use retry::RetryLogic;
-use retry::retry;
+use slog::info;
 use sorted_vector_map::SortedVectorMap;
 use tracing_slog_compat::tracing::Instrument;
 
@@ -1295,13 +1295,12 @@ pub(crate) async fn derive_all_types_locally(
 
     for chunk in csids.chunks(num_heads_to_derive_at_once) {
         retry(
-            Some(ctx.logger()),
-            async |num_retry| {
-                if num_retry >= 1 {
+            async |attempt| {
+                if attempt > 1 {
                     let mut scuba = ctx.scuba().clone();
                     scuba.log_with_msg(
                         "Derived data failed, retrying. Num retries",
-                        Some(format!("{num_retry}")),
+                        Some(format!("{attempt}")),
                     );
                 }
                 repo.repo_derived_data()
@@ -1309,17 +1308,16 @@ pub(crate) async fn derive_all_types_locally(
                     .derive_bulk_locally(ctx, chunk, None, derived_data_types, override_batch_size)
                     .await
             },
-            |e| {
-                let description = format!("{e:?}").to_ascii_lowercase();
-                description.contains("blobstore") || description.contains("timeout")
-            },
-            RetryLogic::ExponentialWithJitter {
-                base: Duration::from_secs(1),
-                factor: 1.2,
-                jitter: Duration::from_secs(2),
-            },
-            5,
+            Duration::from_secs(1),
         )
+        .exponential_backoff(1.2)
+        .jitter(Duration::from_secs(2))
+        .retry_if(|_attempt, e| {
+            let description = format!("{e:?}").to_ascii_lowercase();
+            description.contains("blobstore") || description.contains("timeout")
+        })
+        .max_attempts(5)
+        .inspect_err(|attempt, _err| info!(ctx.logger(), "attempt {attempt} failed"))
         .await?;
     }
     Ok(())
@@ -1351,30 +1349,28 @@ pub(crate) async fn derive_all_types_remotely(
         .unwrap_or(repo.repo_derived_data().manager());
     for chunk in csids.chunks(num_heads_to_derive_at_once) {
         retry(
-            Some(ctx.logger()),
-            async |num_retry| {
-                if num_retry >= 1 {
+            async |attempt| {
+                if attempt > 1 {
                     let mut scuba = ctx.scuba().clone();
                     scuba.log_with_msg(
                         "Derived data failed, retrying. Num retries",
-                        Some(format!("{num_retry}")),
+                        Some(format!("{attempt}")),
                     );
                 }
                 manager
                     .derive_bulk(ctx, chunk, None, derived_data_types, override_concurrency)
                     .await
             },
-            |e| {
-                let description = format!("{e:?}").to_ascii_lowercase();
-                description.contains("blobstore") || description.contains("timeout")
-            },
-            RetryLogic::ExponentialWithJitter {
-                base: Duration::from_secs(1),
-                factor: 1.2,
-                jitter: Duration::from_secs(2),
-            },
-            5,
+            Duration::from_secs(1),
         )
+        .exponential_backoff(1.2)
+        .jitter(Duration::from_secs(2))
+        .retry_if(|_attempt, e| {
+            let description = format!("{e:?}").to_ascii_lowercase();
+            description.contains("blobstore") || description.contains("timeout")
+        })
+        .max_attempts(5)
+        .inspect_err(|attempt, _err| info!(ctx.logger(), "attempt {attempt} failed"))
         .await?;
     }
     Ok(())

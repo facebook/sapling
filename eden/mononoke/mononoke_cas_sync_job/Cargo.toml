@@ -24,6 +24,7 @@ executor_lib = { version = "0.1.0", path = "../cmdlib/sharding" }
 facet = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 fbinit = { version = "0.2.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 futures = { version = "0.3.31", features = ["async-await", "compat"] }
+futures_retry = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 futures_stats = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 futures_watchdog = { version = "0.1.0", path = "../common/futures_watchdog" }
 itertools = "0.14.0"
@@ -35,7 +36,6 @@ mutable_counters = { version = "0.1.0", path = "../mutable_counters" }
 repo_blobstore = { version = "0.1.0", path = "../blobrepo/repo_blobstore" }
 repo_derived_data = { version = "0.1.0", path = "../repo_attributes/repo_derived_data" }
 repo_identity = { version = "0.1.0", path = "../repo_attributes/repo_identity" }
-retry = { version = "0.1.0", path = "../common/retry" }
 sapling-clientinfo = { version = "0.1.0", path = "../../scm/lib/clientinfo" }
 sapling-repourl = { version = "0.1.0", path = "../../scm/lib/repo/url" }
 scuba_ext = { version = "0.1.0", path = "../common/scuba_ext" }

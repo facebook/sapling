@@ -50,6 +50,7 @@ facet = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust
 fbinit = { version = "0.2.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 futures = { version = "0.3.31", features = ["async-await", "compat"] }
 futures-util = { version = "0.3.30", features = ["compat"] }
+futures_retry = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 git2 = "0.20.2"
 lock_ext = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 mercurial_derivation = { version = "0.1.0", path = "derived_data/mercurial_derivation" }
@@ -64,7 +65,6 @@ regex = "1.11.1"
 repo_blobstore = { version = "0.1.0", path = "blobrepo/repo_blobstore" }
 repo_derived_data = { version = "0.1.0", path = "repo_attributes/repo_derived_data" }
 repo_identity = { version = "0.1.0", path = "repo_attributes/repo_identity" }
-retry = { version = "0.1.0", path = "common/retry" }
 scuba_ext = { version = "0.1.0", path = "common/scuba_ext" }
 serde = { version = "1.0.185", features = ["derive", "rc"] }
 serde_derive = "1.0.185"

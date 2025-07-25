@@ -33,6 +33,7 @@ use futures::future;
 use futures::future::TryFutureExt;
 use futures::stream::StreamExt;
 use futures::stream::TryStreamExt;
+use futures_retry::retry;
 use futures_stats::futures03::TimedFutureExt;
 use futures_watchdog::WatchdogExt;
 use metaconfig_types::RepoConfigRef;
@@ -40,7 +41,6 @@ use mononoke_app::MononokeApp;
 use mononoke_app::args::RepoArg;
 use repo_identity::RepoIdentityRef;
 use repourl::encode_repo_name;
-use retry::retry_always;
 use scuba_ext::MononokeScubaSampleBuilder;
 use sharding_ext::RepoShard;
 use slog::error;
@@ -185,9 +185,8 @@ impl MononokeCasSyncProcessExecutor {
 
             let mode: ZkMode = args.leader_only.into();
 
-            retry_always(
-                self.ctx.logger(),
-                |attempt| async move {
+            retry(
+                async |attempt| {
                     // Once cancellation is requested, do not retry even if its
                     // a retryable error.
                     if self.cancellation_requested.load(Ordering::Relaxed) {
@@ -223,8 +222,10 @@ impl MononokeCasSyncProcessExecutor {
                     anyhow::Ok(())
                 },
                 base_retry_delay,
-                retry_num,
-            )
+            ).binary_exponential_backoff()
+            .max_attempts(
+            retry_num)
+    .inspect_err(|attempt, _err| info!(self.ctx.logger(), "attempt {attempt} of {retry_num} failed"))
             .await?;
             info!(
                 self.ctx.logger(),

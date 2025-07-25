@@ -16,12 +16,11 @@ use async_trait::async_trait;
 use base64::Engine;
 use bytes::Bytes;
 use caching_ext::*;
+use futures_retry::retry;
 use itertools::Itertools;
 use maplit::hashmap;
 use maplit::hashset;
 use memcache::KeyGen;
-use retry::RetryLogic;
-use retry::retry;
 use sql_query_config::CachingConfig;
 
 const RETRY_ATTEMPTS: usize = 2;
@@ -783,20 +782,12 @@ where
     if let Ok(true) = justknobs::eval("scm/mononoke:sql_disable_auto_retries", None, None) {
         return do_query().await;
     }
-    Ok(retry(
-        None,
-        |_| do_query(),
-        should_retry_mysql_query,
-        // See https://fburl.com/7dmedu1u for backoff reasoning
-        RetryLogic::ExponentialWithJitter {
-            base: Duration::from_secs(10),
-            factor: 1.2,
-            jitter: Duration::from_secs(5),
-        },
-        RETRY_ATTEMPTS,
-    )
-    .await?
-    .0)
+    Ok(retry(|_| do_query(), Duration::from_secs(10))
+        .exponential_backoff(1.2)
+        .jitter(Duration::from_secs(5))
+        .max_attempts(RETRY_ATTEMPTS)
+        .await?
+        .0)
 }
 
 pub async fn query_with_retry<T, Fut>(

@@ -32,6 +32,7 @@ use commit_graph_types::storage::Prefetch;
 use commit_graph_types::storage::PrefetchTarget;
 use context::CoreContext;
 use context::PerfCounterType;
+use futures_retry::retry;
 use itertools::Itertools;
 use mononoke_types::ChangesetId;
 use mononoke_types::ChangesetIdPrefix;
@@ -42,8 +43,6 @@ use rendezvous::ConfigurableRendezVousController;
 use rendezvous::RendezVous;
 use rendezvous::RendezVousOptions;
 use rendezvous::RendezVousStats;
-use retry::RetryLogic;
-use retry::retry;
 use sql::Connection;
 use sql::SqlConnections;
 use sql::mysql::IsolationLevel;
@@ -1798,20 +1797,21 @@ impl CommitGraphStorage for SqlCommitGraphStorage {
     }
 
     async fn add_many(&self, ctx: &CoreContext, many_edges: Vec1<ChangesetEdges>) -> Result<usize> {
-        Ok(retry(
-            None,
-            |_| self._add_many(ctx, &many_edges),
-            should_retry_query,
-            RetryLogic::ExponentialWithJitter {
-                base: Duration::from_secs(1),
-                factor: 1.2,
-                jitter: Duration::from_secs(2),
-            },
-            justknobs::get_as::<usize>("scm/mononoke:commit_graph_storage_sql_retries_num", None)
-                .unwrap_or(1),
+        Ok(
+            retry(|_| self._add_many(ctx, &many_edges), Duration::from_secs(1))
+                .exponential_backoff(1.2)
+                .jitter(Duration::from_secs(2))
+                .retry_if(|_attempt, err| should_retry_query(err))
+                .max_attempts(
+                    justknobs::get_as::<usize>(
+                        "scm/mononoke:commit_graph_storage_sql_retries_num",
+                        None,
+                    )
+                    .unwrap_or(1),
+                )
+                .await?
+                .0,
         )
-        .await?
-        .0)
     }
 
     async fn add(&self, ctx: &CoreContext, edges: ChangesetEdges) -> Result<bool> {

@@ -19,14 +19,15 @@ use context::CoreContext;
 use futures::future::FutureExt;
 use futures::stream::FuturesUnordered;
 use futures::stream::TryStreamExt;
+use futures_retry::retry;
 use packblob::EmptyPack;
 use packblob::Pack;
 use packblob::PackBlob;
 use packblob::SingleCompressed;
 use packblob::get_entry_compressed_size;
-use retry::retry_always;
 use scuba_ext::MononokeScubaSampleBuilder;
 use slog::Logger;
+use slog::info;
 use tokio::task::spawn_blocking;
 
 type BlobsWithKeys = Vec<(String, BlobstoreBytes)>;
@@ -136,8 +137,7 @@ pub async fn repack_keys_with_retry<T: BlobstoreUnlinkOps>(
     tuning_info_scuba: &MononokeScubaSampleBuilder,
     logger: &Logger,
 ) -> Result<()> {
-    let _ = retry_always(
-        logger,
+    retry(
         |_| {
             repack_keys(
                 ctx,
@@ -152,8 +152,10 @@ pub async fn repack_keys_with_retry<T: BlobstoreUnlinkOps>(
             )
         },
         BASE_RETRY_DELAY,
-        RETRIES,
     )
+    .binary_exponential_backoff()
+    .max_attempts(RETRIES)
+    .inspect_err(|attempt, _err| info!(logger, "attempt {attempt} of {RETRIES} failed"))
     .await?;
     Ok(())
 }

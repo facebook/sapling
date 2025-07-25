@@ -18,9 +18,9 @@ use futures::sink::SinkExt;
 use futures::stream;
 use futures::stream::StreamExt;
 use futures::stream::TryStreamExt;
+use futures_retry::retry;
 use mononoke_app::MononokeApp;
 use mononoke_macros::mononoke;
-use retry::retry_always;
 use slog::Logger;
 use slog::info;
 use sqlblob::Sqlblob;
@@ -53,14 +53,15 @@ async fn handle_one_key(
     logger: Arc<Logger>,
     mark_generation: u64,
 ) -> Result<()> {
-    retry_always(
-        &logger,
+    retry(
         |_| store.set_generation(&ctx, &key, inline_small_values, mark_generation),
         BASE_RETRY_DELAY,
-        RETRIES,
     )
+    .binary_exponential_backoff()
+    .max_attempts(RETRIES)
+    .inspect_err(|attempt, _err| info!(logger, "attempt {attempt} of {RETRIES} failed"))
     .await
-    .with_context(|| anyhow!("Failed to handle {} after {} retries", &key, RETRIES))?;
+    .with_context(|| anyhow!("Failed to handle {key} after {RETRIES} attempts"))?;
     Ok(())
 }
 
@@ -70,19 +71,16 @@ async fn handle_initial_generation(
     shard: usize,
     logger: &Logger,
 ) -> Result<()> {
-    retry_always(
-        logger,
+    retry(
         |_| store.set_initial_generation(ctx, shard),
         BASE_RETRY_DELAY,
-        RETRIES,
     )
+    .binary_exponential_backoff()
+    .max_attempts(RETRIES)
+    .inspect_err(|attempt, _err| info!(logger, "attempt {attempt} of {RETRIES} failed"))
     .await
     .with_context(|| {
-        anyhow!(
-            "Failed to handle initial generation on shard {} after {} retries",
-            &shard,
-            RETRIES
-        )
+        anyhow!("Failed to handle initial generation on shard {shard} after {RETRIES} retries",)
     })?;
     info!(
         logger,
