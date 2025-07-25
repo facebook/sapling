@@ -65,8 +65,7 @@ impl InnerStore {
         })
     }
 
-    pub fn prefetch(&self, keys: impl IntoIterator<Item = Key>) -> Result<()> {
-        let keys: Vec<Key> = keys.into_iter().collect();
+    pub fn prefetch(&self, keys: Vec<Key>) -> Result<()> {
         tracing::debug_span!(
             "tree::store::prefetch",
             ids = keys
