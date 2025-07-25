@@ -15,7 +15,7 @@ aws-sdk-secretsmanager = "1.45.0"
 base64 = { version = "0.22.1", features = ["alloc"] }
 bincode = { version = "2", features = ["serde"] }
 borrowed = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
-bytes = { version = "1.9.0", features = ["serde"] }
+bytes = { version = "1.10", features = ["serde"] }
 caching_ext = { version = "0.1.0", path = "../caching_ext" }
 fbinit = { version = "0.2.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 futures = { version = "0.3.30", features = ["async-await", "compat"] }

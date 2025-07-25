@@ -11,7 +11,7 @@ license = "GPLv2+"
 anyhow = "1.0.98"
 async-trait = "0.1.86"
 bincode = { version = "2", features = ["serde"] }
-bytes = { version = "1.9.0", features = ["serde"] }
+bytes = { version = "1.10", features = ["serde"] }
 caching_ext = { version = "0.1.0", path = "../../../common/rust/caching_ext" }
 commit_graph_thrift = { version = "0.1.0", path = "../commit_graph_types/if" }
 commit_graph_types = { version = "0.1.0", path = "../commit_graph_types" }
