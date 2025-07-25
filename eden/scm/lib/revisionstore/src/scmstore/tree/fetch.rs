@@ -41,6 +41,7 @@ use crate::HgIdMutableHistoryStore;
 use crate::IndexedLogHgIdDataStore;
 use crate::IndexedLogHgIdHistoryStore;
 use crate::SaplingRemoteApiTreeStore;
+use crate::indexedlogdatastore::Entry;
 use crate::indexedlogtreeauxstore::TreeAuxStore;
 use crate::scmstore::KeyFetchError;
 use crate::scmstore::fetch::CommonFetchState;
@@ -63,6 +64,9 @@ pub struct FetchState {
     // Enqueue aux data so we can process it more efficiently all at once.
     pub(crate) file_aux_to_cache: Vec<(HgId, FileAuxData)>,
     pub(crate) tree_aux_to_cache: Vec<(HgId, TreeAuxData)>,
+
+    pub(crate) tree_cache: Option<Arc<IndexedLogHgIdDataStore>>,
+    pub(crate) trees_to_cache: Vec<(HgId, Entry)>,
 }
 
 impl Drop for FetchState {
@@ -80,8 +84,12 @@ impl Drop for FetchState {
             }
         }
 
-        // Don't report missing entries by default. If we got an overall error that left 1M pending
-        // entries, we don't want to report 1M errors.
+        if let Some(tree_cache) = &self.tree_cache {
+            if let Err(err) = tree_cache.put_batch(std::mem::take(&mut self.trees_to_cache)) {
+                self.errors.other_error(err);
+            }
+        }
+
         self.common.results(std::mem::take(&mut self.errors), false);
     }
 }
@@ -93,6 +101,7 @@ impl FetchState {
         found_tx: Sender<Result<(Key, StoreTree), KeyFetchError>>,
         fctx: FetchContext,
         bar: Arc<ProgressBar>,
+        tree_cache: Option<Arc<IndexedLogHgIdDataStore>>,
         file_aux_cache: Option<Arc<AuxStore>>,
         tree_aux_cache: Option<Arc<TreeAuxStore>>,
     ) -> Self {
@@ -109,6 +118,8 @@ impl FetchState {
             file_aux_to_cache: Vec::new(),
             tree_aux_cache,
             tree_aux_to_cache: Vec::new(),
+            tree_cache,
+            trees_to_cache: Vec::new(),
         }
     }
 
@@ -176,9 +187,9 @@ impl FetchState {
                 }
             }
 
-            if let Some(indexedlog_cache) = &indexedlog_cache {
+            if indexedlog_cache.is_some() {
                 if let Some(entry) = entry.indexedlog_cache_entry(key.hgid)? {
-                    indexedlog_cache.put_entry(entry)?;
+                    self.trees_to_cache.push((key.hgid, entry));
                 }
             }
 

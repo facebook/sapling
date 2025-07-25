@@ -376,6 +376,7 @@ impl TreeStore {
             bounded(RESULT_QUEUE_SIZE)
         };
 
+        let indexedlog_cache = self.indexedlog_cache.clone();
         let aux_cache = self.filestore.as_ref().and_then(|fs| fs.aux_cache.clone());
         let tree_aux_store = self.tree_aux_store.clone();
 
@@ -386,6 +387,7 @@ impl TreeStore {
             found_tx,
             fctx.clone(),
             bar.clone(),
+            indexedlog_cache.clone(),
             aux_cache,
             tree_aux_store.clone(),
         );
@@ -414,7 +416,6 @@ impl TreeStore {
 
         bar.increase_total(keys_len as u64);
 
-        let indexedlog_cache = self.indexedlog_cache.clone();
         let indexedlog_local = self.indexedlog_local.clone();
         let edenapi = self.edenapi.clone();
 
