@@ -14,7 +14,6 @@
 //! recording performance information about Futures.
 
 #![deny(warnings, missing_docs, clippy::all, rustdoc::broken_intra_doc_links)]
-#![feature(never_type)]
 
 use std::time::Duration;
 
