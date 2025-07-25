@@ -613,7 +613,7 @@ bool checkAllowedQuery(
     const std::vector<std::string>& suffixes,
     const std::unordered_set<std::string>& allowedSuffixes) {
   for (auto& suffix : suffixes) {
-    if (allowedSuffixes.count(suffix) == 0) {
+    if (!allowedSuffixes.contains(suffix)) {
       XLOGF(DBG4, "Suffix {} is not in allowed suffixes", suffix);
       return false;
     }
