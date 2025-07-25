@@ -81,8 +81,9 @@ static void handle_events(int fd) {
 
     /* Check if end of available data reached */
 
-    if (len <= 0)
+    if (len <= 0) {
       break;
+    }
 
     /* Point to the first event in the buffer */
 
@@ -236,8 +237,9 @@ int main(int argc, char* argv[]) {
   while (1) {
     poll_num = poll(fds, nfds, -1);
     if (poll_num == -1) {
-      if (errno == EINTR) /* Interrupted by a signal */
+      if (errno == EINTR) { /* Interrupted by a signal */
         continue; /* Restart poll() */
+      }
 
       perror("poll"); /* Unexpected error */
       exit(EXIT_FAILURE);
@@ -247,8 +249,9 @@ int main(int argc, char* argv[]) {
       if (fds[0].revents & POLLIN) {
         /* Console input is available: empty stdin and quit */
 
-        while (read(STDIN_FILENO, &buf, 1) > 0 && buf != '\n')
+        while (read(STDIN_FILENO, &buf, 1) > 0 && buf != '\n') {
           continue;
+        }
         break;
       }
 

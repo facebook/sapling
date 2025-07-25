@@ -23,8 +23,9 @@
 static int colorenabled = 0;
 
 static inline void fsetcolor(FILE* fp, const char* code) {
-  if (!colorenabled)
+  if (!colorenabled) {
     return;
+  }
   fprintf(fp, "\033[%sm", code);
 }
 
@@ -32,8 +33,9 @@ static void vabortmsgerrno(int no, const char* fmt, va_list args) {
   fsetcolor(stderr, "1;31");
   fputs("chg: abort: ", stderr);
   vfprintf(stderr, fmt, args);
-  if (no != 0)
+  if (no != 0) {
     fprintf(stderr, " (errno = %d, %s)", no, strerror(no));
+  }
   fsetcolor(stderr, "");
   fputc('\n', stderr);
   exit(255);
@@ -77,8 +79,9 @@ void enabledebugmsg(void) {
 }
 
 void debugmsg(const char* fmt, ...) {
-  if (!debugmsgenabled)
+  if (!debugmsgenabled) {
     return;
+  }
 
   va_list args;
   va_start(args, fmt);
@@ -92,36 +95,42 @@ void debugmsg(const char* fmt, ...) {
 
 void fchdirx(int dirfd) {
   int r = fchdir(dirfd);
-  if (r == -1)
+  if (r == -1) {
     abortmsgerrno("failed to fchdir");
+  }
 }
 
 void fsetcloexec(int fd) {
   int flags = fcntl(fd, F_GETFD);
-  if (flags < 0)
+  if (flags < 0) {
     abortmsgerrno("cannot get flags of fd %d", fd);
-  if (fcntl(fd, F_SETFD, flags | FD_CLOEXEC) < 0)
+  }
+  if (fcntl(fd, F_SETFD, flags | FD_CLOEXEC) < 0) {
     abortmsgerrno("cannot set flags of fd %d", fd);
+  }
 }
 
 void* chg_mallocx(size_t size) {
   void* result = malloc(size);
-  if (!result)
+  if (!result) {
     abortmsg("failed to malloc");
+  }
   return result;
 }
 
 void* chg_reallocx(void* ptr, size_t size) {
   void* result = realloc(ptr, size);
-  if (!result)
+  if (!result) {
     abortmsg("failed to realloc");
+  }
   return result;
 }
 
 void* chg_callocx(size_t count, size_t size) {
   void* result = calloc(count, size);
-  if (!result)
+  if (!result) {
     abortmsg("failed to calloc");
+  }
   return result;
 }
 
@@ -145,30 +154,37 @@ int runshellcmd(const char* cmd, const char* envp[], const char* cwd) {
   memset(&newsa, 0, sizeof(newsa));
   newsa.sa_handler = SIG_IGN;
   newsa.sa_flags = 0;
-  if (sigemptyset(&newsa.sa_mask) < 0)
+  if (sigemptyset(&newsa.sa_mask) < 0) {
     goto done;
-  if (sigaction(SIGINT, &newsa, &oldsaint) < 0)
+  }
+  if (sigaction(SIGINT, &newsa, &oldsaint) < 0) {
     goto done;
+  }
   doneflags |= F_SIGINT;
-  if (sigaction(SIGQUIT, &newsa, &oldsaquit) < 0)
+  if (sigaction(SIGQUIT, &newsa, &oldsaquit) < 0) {
     goto done;
+  }
   doneflags |= F_SIGQUIT;
 
-  if (sigaddset(&newsa.sa_mask, SIGCHLD) < 0)
+  if (sigaddset(&newsa.sa_mask, SIGCHLD) < 0) {
     goto done;
-  if (sigprocmask(SIG_BLOCK, &newsa.sa_mask, &oldmask) < 0)
+  }
+  if (sigprocmask(SIG_BLOCK, &newsa.sa_mask, &oldmask) < 0) {
     goto done;
+  }
   doneflags |= F_SIGMASK;
 
   pid_t pid = fork();
-  if (pid < 0)
+  if (pid < 0) {
     goto done;
+  }
   if (pid == 0) {
     sigaction(SIGINT, &oldsaint, NULL);
     sigaction(SIGQUIT, &oldsaquit, NULL);
     sigprocmask(SIG_SETMASK, &oldmask, NULL);
-    if (cwd && chdir(cwd) < 0)
+    if (cwd && chdir(cwd) < 0) {
       _exit(127);
+    }
     const char* argv[] = {"sh", "-c", cmd, NULL};
     if (envp) {
       execve("/bin/sh", (char**)argv, (char**)envp);
@@ -177,26 +193,33 @@ int runshellcmd(const char* cmd, const char* envp[], const char* cwd) {
     }
     _exit(127);
   } else {
-    if (waitpid(pid, &status, 0) < 0)
+    if (waitpid(pid, &status, 0) < 0) {
       goto done;
+    }
     doneflags |= F_WAITPID;
   }
 
 done:
-  if (doneflags & F_SIGINT)
+  if (doneflags & F_SIGINT) {
     sigaction(SIGINT, &oldsaint, NULL);
-  if (doneflags & F_SIGQUIT)
+  }
+  if (doneflags & F_SIGQUIT) {
     sigaction(SIGQUIT, &oldsaquit, NULL);
-  if (doneflags & F_SIGMASK)
+  }
+  if (doneflags & F_SIGMASK) {
     sigprocmask(SIG_SETMASK, &oldmask, NULL);
+  }
 
   /* no way to report other errors, use 127 (= shell termination) */
-  if (!(doneflags & F_WAITPID))
+  if (!(doneflags & F_WAITPID)) {
     return 127;
-  if (WIFEXITED(status))
+  }
+  if (WIFEXITED(status)) {
     return WEXITSTATUS(status);
-  if (WIFSIGNALED(status))
+  }
+  if (WIFSIGNALED(status)) {
     return -WTERMSIG(status);
+  }
   return 127;
 }
 

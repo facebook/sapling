@@ -85,8 +85,9 @@ static PyObject* hashflags(line* l) {
   PyObject* flags;
   PyObject* tup;
 
-  if (!hash)
+  if (!hash) {
     return NULL;
+  }
 #ifdef IS_PY3K
   flags = PyUnicode_FromStringAndSize(s + hplen - 1, flen);
 #else
@@ -156,17 +157,19 @@ static int lazymanifest_init(lazymanifest* self, PyObject* args) {
   err = PyBytes_AsStringAndSize(pydata, &data, &len);
 
   self->dirty = false;
-  if (err == -1)
+  if (err == -1) {
     return -1;
+  }
   self->pydata = pydata;
   Py_INCREF(self->pydata);
   Py_BEGIN_ALLOW_THREADS self->lines = malloc(DEFAULT_LINES * sizeof(line));
   self->maxlines = DEFAULT_LINES;
   self->numlines = 0;
-  if (!self->lines)
+  if (!self->lines) {
     ret = MANIFEST_OOM;
-  else
+  } else {
     ret = find_lines(self, data, len);
+  }
   Py_END_ALLOW_THREADS switch (ret) {
     case 0:
       break;
@@ -457,15 +460,17 @@ static int internalsetitem(lazymanifest* self, line* new) {
   while (start < end) {
     int pos = start + (end - start) / 2;
     int c = linecmp(new, self->lines + pos);
-    if (c < 0)
+    if (c < 0) {
       end = pos;
-    else if (c > 0)
+    } else if (c > 0) {
       start = pos + 1;
-    else {
-      if (self->lines[pos].deleted)
+    } else {
+      if (self->lines[pos].deleted) {
         self->livelines++;
-      if (self->lines[pos].from_malloc)
+      }
+      if (self->lines[pos].from_malloc) {
         free((void*)self->lines[pos].start);
+      }
       start = pos;
       goto finish;
     }
@@ -652,16 +657,18 @@ static int compact(lazymanifest* self) {
   char* data;
   line *src, *dst;
   PyObject* pydata;
-  if (!self->dirty)
+  if (!self->dirty) {
     return 0;
+  }
   for (i = 0; i < self->numlines; i++) {
     if (!self->lines[i].deleted) {
       need += self->lines[i].len;
     }
   }
   pydata = PyBytes_FromStringAndSize(NULL, need);
-  if (!pydata)
+  if (!pydata) {
     return -1;
+  }
   data = PyBytes_AsString(pydata);
   if (!data) {
     return -1;
@@ -844,8 +851,9 @@ static PyObject* lazymanifest_diff(lazymanifest* self, PyObject* args) {
     key = result <= 0 ? PyBytes_FromString(left->start)
                       : PyBytes_FromString(right->start);
 #endif
-    if (!key)
+    if (!key) {
       goto nomem;
+    }
     if (result < 0) {
       PyObject* l = hashflags(left);
       if (!l) {
@@ -992,8 +1000,9 @@ static PyTypeObject lazymanifestType = {
 
 void manifest_module_init(PyObject* mod) {
   lazymanifestType.tp_new = PyType_GenericNew;
-  if (PyType_Ready(&lazymanifestType) < 0)
+  if (PyType_Ready(&lazymanifestType) < 0) {
     return;
+  }
   Py_INCREF(&lazymanifestType);
 
   PyModule_AddObject(mod, "lazymanifest", (PyObject*)&lazymanifestType);

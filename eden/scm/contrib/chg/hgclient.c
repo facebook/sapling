@@ -85,8 +85,9 @@ static void initcontext(context_t* ctx) {
 }
 
 static void enlargecontext(context_t* ctx, size_t newsize) {
-  if (newsize <= ctx->maxdatasize)
+  if (newsize <= ctx->maxdatasize) {
     return;
+  }
 
   newsize =
       defaultdatasize * ((newsize + defaultdatasize - 1) / defaultdatasize);
@@ -126,15 +127,17 @@ static void readchannel(hgclient_t* hgc) {
   hgc->ctx.datasize = ntohl(datasize_n);
   enlargecontext(&hgc->ctx, hgc->ctx.datasize);
 
-  if (isupper(hgc->ctx.ch))
+  if (isupper(hgc->ctx.ch)) {
     return; /* assumes input request */
+  }
 
   size_t cursize = 0;
   while (cursize < hgc->ctx.datasize) {
     rsize = recv(
         hgc->sockfd, hgc->ctx.data + cursize, hgc->ctx.datasize - cursize, 0);
-    if (rsize < 1)
+    if (rsize < 1) {
       abortmsg("failed to read data block");
+    }
     cursize += rsize;
   }
 }
@@ -144,8 +147,9 @@ static void sendall(int sockfd, const void* data, size_t datasize) {
   const char* const endp = p + datasize;
   while (p < endp) {
     ssize_t r = send(sockfd, p, endp - p, 0);
-    if (r < 0)
+    if (r < 0) {
       abortmsgerrno("cannot communicate");
+    }
     p += r;
   }
 }
@@ -184,8 +188,9 @@ packcmdargs(context_t* ctx, const char* const args[], ssize_t argsize) {
     ctx->datasize += n;
   }
 
-  if (ctx->datasize > 0)
+  if (ctx->datasize > 0) {
     --ctx->datasize; /* strip last '\0' */
+  }
 }
 
 /* Parse a series of '\0'-terminated strings from ctx-data
@@ -201,8 +206,9 @@ static const char** unpackcmdargsnul(const context_t* ctx) {
       args = chg_reallocx(args, maxnargs * sizeof(args[0]));
     }
     const char* nulbyte = memchr(s, '\0', e - s);
-    if (!nulbyte)
+    if (!nulbyte) {
       break;
+    }
     args[nargs] = s;
     nargs++;
     s = nulbyte + 1;
@@ -221,8 +227,9 @@ static void handlereadrequest(hgclient_t* hgc) {
 /* Read single-line */
 static void handlereadlinerequest(hgclient_t* hgc) {
   context_t* ctx = &hgc->ctx;
-  if (!fgets(ctx->data, ctx->datasize, stdin))
+  if (!fgets(ctx->data, ctx->datasize, stdin)) {
     ctx->data[0] = '\0';
+  }
   ctx->datasize = strlen(ctx->data);
   writeblock(hgc);
 }
@@ -231,8 +238,9 @@ static void handlereadlinerequest(hgclient_t* hgc) {
 static void handlesystemrequest(hgclient_t* hgc) {
   context_t* ctx = &hgc->ctx;
   const char** args = unpackcmdargsnul(ctx);
-  if (!args[0] || !args[1])
+  if (!args[0] || !args[1]) {
     abortmsg("missing command or cwd in system request");
+  }
 
   const char* cmd = args[0];
   const char* cwd = args[1];
@@ -251,8 +259,9 @@ static void handlesystemrequest(hgclient_t* hgc) {
 static void handlepagerrequest(hgclient_t* hgc) {
   context_t* ctx = &hgc->ctx;
   const char** args = unpackcmdargsnul(ctx);
-  if (!args[0] || !args[1])
+  if (!args[0] || !args[1]) {
     abortmsg("missing command or redirect settings in pager request");
+  }
 
   const char* cmd = args[0];
   const char* redirect = args[1];
@@ -262,8 +271,9 @@ static void handlepagerrequest(hgclient_t* hgc) {
       "starting pager: cmd='%s', redirect_stderr='%d'", cmd, redirect_stderr);
 
   setuppager(cmd, envp, redirect_stderr);
-  if (hgc->capflags & CAP_ATTACHIO)
+  if (hgc->capflags & CAP_ATTACHIO) {
     attachio(hgc);
+  }
   /* unblock the server */
   static const char emptycmd[] = "\n";
   sendall(hgc->sockfd, emptycmd, sizeof(emptycmd) - 1);
@@ -302,8 +312,9 @@ static void handleresponse(hgclient_t* hgc) {
         handlepagerrequest(hgc);
         break;
       default:
-        if (isupper(ctx->ch))
+        if (isupper(ctx->ch)) {
           abortmsg("cannot handle response (ch = %c)", ctx->ch);
+        }
     }
   }
 }
@@ -312,8 +323,9 @@ static unsigned int parsecapabilities(const char* s, const char* e) {
   unsigned int flags = 0;
   while (s < e) {
     const char* t = strchr(s, ' ');
-    if (!t || t > e)
+    if (!t || t > e) {
       t = e;
+    }
     const cappair_t* cap;
     for (cap = capable; cap->flag; ++cap) {
       size_t n = t - s;
@@ -389,11 +401,13 @@ static void readhello(hgclient_t* hgc) {
   const char* const dataend = ctx->data + ctx->datasize;
   while (s < dataend) {
     const char* t = strchr(s, ':');
-    if (!t || t[1] != ' ')
+    if (!t || t[1] != ' ') {
       break;
+    }
     const char* u = strchr(t + 2, '\n');
-    if (!u)
+    if (!u) {
       u = dataend;
+    }
     if (strncmp(s, "capabilities:", t - s + 1) == 0) {
       hgc->capflags = parsecapabilities(t + 2, u);
     } else if (strncmp(s, "pgid:", t - s + 1) == 0) {
@@ -415,8 +429,9 @@ static void readhello(hgclient_t* hgc) {
 static void updateprocname(hgclient_t* hgc) {
   int r = snprintf(
       hgc->ctx.data, hgc->ctx.maxdatasize, "pfc[worker/%d]", (int)getpid());
-  if (r < 0 || (size_t)r >= hgc->ctx.maxdatasize)
+  if (r < 0 || (size_t)r >= hgc->ctx.maxdatasize) {
     abortmsg("insufficient buffer to write procname (r = %d)", r);
+  }
   hgc->ctx.datasize = (size_t)r;
   writeblockrequest(hgc, "setprocname");
 }
@@ -427,8 +442,9 @@ static void attachio(hgclient_t* hgc) {
   sendall(hgc->sockfd, chcmd, sizeof(chcmd) - 1);
   readchannel(hgc);
   context_t* ctx = &hgc->ctx;
-  if (ctx->ch != 'I')
+  if (ctx->ch != 'I') {
     abortmsg("unexpected response for attachio (ch = %c)", ctx->ch);
+  }
 
   size_t fds_len = 3;
   int fds[4] = {STDIN_FILENO, STDOUT_FILENO, STDERR_FILENO, -1};
@@ -461,23 +477,27 @@ static void attachio(hgclient_t* hgc) {
   memcpy(CMSG_DATA(cmsg), fds, fds_size);
   msgh.msg_controllen = cmsg->cmsg_len;
   ssize_t r = sendmsg(hgc->sockfd, &msgh, 0);
-  if (r < 0)
+  if (r < 0) {
     abortmsgerrno("sendmsg failed");
+  }
 
   handleresponse(hgc);
   int32_t n;
-  if (ctx->datasize != sizeof(n))
+  if (ctx->datasize != sizeof(n)) {
     abortmsg("unexpected size of attachio result");
+  }
   memcpy(&n, ctx->data, sizeof(n));
   n = ntohl(n);
   // safety: fds_len <= 4
-  if (n != (int32_t)fds_len)
+  if (n != (int32_t)fds_len) {
     abortmsg("failed to send fds (n = %d)", n);
+  }
 }
 
 static void chdirtocwd(hgclient_t* hgc) {
-  if (!getcwd(hgc->ctx.data, hgc->ctx.maxdatasize))
+  if (!getcwd(hgc->ctx.data, hgc->ctx.maxdatasize)) {
     abortmsgerrno("failed to getcwd");
+  }
   hgc->ctx.datasize = strlen(hgc->ctx.data);
   writeblockrequest(hgc, "chdir");
 }
@@ -499,8 +519,9 @@ static void forwardumask(hgclient_t* hgc) {
  */
 hgclient_t* hgc_open(const char* sockname) {
   int fd = socket(AF_UNIX, SOCK_STREAM, 0);
-  if (fd < 0)
+  if (fd < 0) {
     abortmsgerrno("cannot create socket");
+  }
 
   /* don't keep fd on fork(), so that it can be closed when the parent
    * process get terminated. */
@@ -515,34 +536,39 @@ hgclient_t* hgc_open(const char* sockname) {
   {
     const char* split = strrchr(sockname, '/');
     if (split && split != sockname) {
-      if (split[1] == '\0')
+      if (split[1] == '\0') {
         abortmsg("sockname cannot end with a slash");
+      }
       size_t len = split - sockname;
       char sockdir[len + 1];
       memcpy(sockdir, sockname, len);
       sockdir[len] = '\0';
 
       bakfd = open(".", O_DIRECTORY);
-      if (bakfd == -1)
+      if (bakfd == -1) {
         abortmsgerrno("cannot open cwd");
+      }
 
       int r = chdir(sockdir);
-      if (r != 0)
+      if (r != 0) {
         abortmsgerrno("cannot chdir %s", sockdir);
+      }
 
       basename = split + 1;
     }
   }
-  if (strlen(basename) >= sizeof(addr.sun_path))
+  if (strlen(basename) >= sizeof(addr.sun_path)) {
     abortmsg("sockname is too long: %s", basename);
+  }
   strncpy(addr.sun_path, basename, sizeof(addr.sun_path));
   addr.sun_path[sizeof(addr.sun_path) - 1] = '\0';
 
   /* real connect */
   int r = connect(fd, (struct sockaddr*)&addr, sizeof(addr));
   if (r < 0) {
-    if (errno != ENOENT && errno != ECONNREFUSED)
+    if (errno != ENOENT && errno != ECONNREFUSED) {
       abortmsgerrno("cannot connect to %s", sockname);
+    }
   }
   if (bakfd != -1) {
     fchdirx(bakfd);
@@ -561,16 +587,21 @@ hgclient_t* hgc_open(const char* sockname) {
   initcontext(&hgc->ctx);
 
   readhello(hgc);
-  if (!(hgc->capflags & CAP_RUNCOMMAND))
+  if (!(hgc->capflags & CAP_RUNCOMMAND)) {
     abortmsg("insufficient capability: runcommand");
-  if (hgc->capflags & CAP_SETPROCNAME)
+  }
+  if (hgc->capflags & CAP_SETPROCNAME) {
     updateprocname(hgc);
-  if (hgc->capflags & CAP_ATTACHIO)
+  }
+  if (hgc->capflags & CAP_ATTACHIO) {
     attachio(hgc);
-  if (hgc->capflags & CAP_CHDIR)
+  }
+  if (hgc->capflags & CAP_CHDIR) {
     chdirtocwd(hgc);
-  if (hgc->capflags & CAP_SETUMASK)
+  }
+  if (hgc->capflags & CAP_SETUMASK) {
     forwardumask(hgc);
+  }
 
   return hgc;
 }
@@ -674,8 +705,9 @@ int hgc_runcommand(hgclient_t* hgc, const char* const args[], size_t argsize) {
  */
 void hgc_attachio(hgclient_t* hgc) {
   assert(hgc);
-  if (!(hgc->capflags & CAP_ATTACHIO))
+  if (!(hgc->capflags & CAP_ATTACHIO)) {
     return;
+  }
   attachio(hgc);
 }
 
@@ -687,8 +719,9 @@ void hgc_attachio(hgclient_t* hgc) {
  */
 void hgc_setenv(hgclient_t* hgc, const char* const envp[]) {
   assert(hgc && envp);
-  if (!(hgc->capflags & CAP_SETENV))
+  if (!(hgc->capflags & CAP_SETENV)) {
     return;
+  }
   packcmdargs(&hgc->ctx, envp, /*argsize*/ -1);
   writeblockrequest(hgc, "setenv");
 }

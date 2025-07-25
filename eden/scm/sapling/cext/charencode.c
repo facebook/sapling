@@ -133,8 +133,9 @@ PyObject* unhexlify(const char* str, Py_ssize_t len) {
 
   ret = PyBytes_FromStringAndSize(NULL, len / 2);
 
-  if (!ret)
+  if (!ret) {
     return NULL;
+  }
 
   d = PyBytes_AsString(ret);
 
@@ -150,21 +151,24 @@ PyObject* unhexlify(const char* str, Py_ssize_t len) {
 PyObject* isasciistr(PyObject* self, PyObject* args) {
   const char* buf;
   Py_ssize_t i, len;
-  if (!PyArg_ParseTuple(args, "s#:isasciistr", &buf, &len))
+  if (!PyArg_ParseTuple(args, "s#:isasciistr", &buf, &len)) {
     return NULL;
+  }
   i = 0;
   /* char array in PyStringObject should be at least 4-byte aligned */
   if (((uintptr_t)buf & 3) == 0) {
     const uint32_t* p = (const uint32_t*)buf;
     for (; i < len / 4; i++) {
-      if (p[i] & 0x80808080U)
+      if (p[i] & 0x80808080U) {
         Py_RETURN_FALSE;
+      }
     }
     i *= 4;
   }
   for (; i < len; i++) {
-    if (buf[i] & 0x80)
+    if (buf[i] & 0x80) {
       Py_RETURN_FALSE;
+    }
   }
   Py_RETURN_TRUE;
 }
@@ -196,8 +200,9 @@ static inline PyObject* _asciitransform(
   }
 
   newobj = PyBytes_FromStringAndSize(NULL, len);
-  if (!newobj)
+  if (!newobj) {
     goto quit;
+  }
 
   newstr = PyBytes_AS_STRING(newobj);
 
@@ -226,15 +231,17 @@ quit:
 
 PyObject* asciilower(PyObject* self, PyObject* args) {
   PyObject* str_obj;
-  if (!PyArg_ParseTuple(args, "O!:asciilower", &PyBytes_Type, &str_obj))
+  if (!PyArg_ParseTuple(args, "O!:asciilower", &PyBytes_Type, &str_obj)) {
     return NULL;
+  }
   return _asciitransform(str_obj, lowertable, NULL);
 }
 
 PyObject* asciiupper(PyObject* self, PyObject* args) {
   PyObject* str_obj;
-  if (!PyArg_ParseTuple(args, "O!:asciiupper", &PyBytes_Type, &str_obj))
+  if (!PyArg_ParseTuple(args, "O!:asciiupper", &PyBytes_Type, &str_obj)) {
     return NULL;
+  }
   return _asciitransform(str_obj, uppertable, NULL);
 }
 
@@ -255,8 +262,9 @@ PyObject* make_file_foldmap(PyObject* self, PyObject* args) {
           &PyInt_Type,
           &spec_obj,
           &PyFunction_Type,
-          &normcase_fallback))
+          &normcase_fallback)) {
     goto quit;
+  }
 
   spec = (int)PyInt_AS_LONG(spec_obj);
   switch (spec) {
@@ -277,8 +285,9 @@ PyObject* make_file_foldmap(PyObject* self, PyObject* args) {
   /* Add some more entries to deal with additions outside this
      function. */
   file_foldmap = _dict_new_presized((PyDict_Size(dmap) / 10) * 11);
-  if (file_foldmap == NULL)
+  if (file_foldmap == NULL) {
     goto quit;
+  }
 
   while (PyDict_Next(dmap, &pos, &k, &v)) {
     if (!dirstate_tuple_check(v)) {
@@ -295,8 +304,9 @@ PyObject* make_file_foldmap(PyObject* self, PyObject* args) {
         normed = PyObject_CallFunctionObjArgs(normcase_fallback, k, NULL);
       }
 
-      if (normed == NULL)
+      if (normed == NULL) {
         goto quit;
+      }
       if (PyDict_SetItem(file_foldmap, normed, k) == -1) {
         Py_DECREF(normed);
         goto quit;
@@ -403,22 +413,25 @@ PyObject* jsonescapeu8fast(PyObject* self, PyObject* args) {
   Py_ssize_t origlen, esclen;
   int paranoid;
   if (!PyArg_ParseTuple(
-          args, "O!i:jsonescapeu8fast", &PyBytes_Type, &origstr, &paranoid))
+          args, "O!i:jsonescapeu8fast", &PyBytes_Type, &origstr, &paranoid)) {
     return NULL;
+  }
 
   origbuf = PyBytes_AS_STRING(origstr);
   origlen = PyBytes_GET_SIZE(origstr);
   esclen = jsonescapelen(origbuf, origlen, paranoid);
-  if (esclen < 0)
+  if (esclen < 0) {
     return NULL; /* unsupported char found or overflow */
+  }
   if (origlen == esclen) {
     Py_INCREF(origstr);
     return origstr;
   }
 
   escstr = PyBytes_FromStringAndSize(NULL, esclen);
-  if (!escstr)
+  if (!escstr) {
     return NULL;
+  }
   encodejsonescape(
       PyBytes_AS_STRING(escstr), esclen, origbuf, origlen, paranoid);
 

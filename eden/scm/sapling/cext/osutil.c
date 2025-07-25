@@ -431,8 +431,9 @@ static PyObject* makestat(const struct stat* st) {
   PyObject* stat;
 
   stat = PyObject_CallObject((PyObject*)&listdir_stat_type, NULL);
-  if (stat)
+  if (stat) {
     memcpy(&((struct listdir_stat*)stat)->st, st, sizeof(*st));
+  }
   return stat;
 }
 
@@ -472,12 +473,14 @@ _listdir_stat(const char* path, int pathlen, int keepstat, const char* skip) {
   }
 
   list = PyList_New(0);
-  if (!list)
+  if (!list) {
     goto error_list;
+  }
 
   while ((ent = readdir(dir))) {
-    if (!strcmp(ent->d_name, ".") || !strcmp(ent->d_name, ".."))
+    if (!strcmp(ent->d_name, ".") || !strcmp(ent->d_name, "..")) {
       continue;
+    }
 
     kind = entkind(ent);
     if (kind == -1 || keepstat) {
@@ -490,8 +493,9 @@ _listdir_stat(const char* path, int pathlen, int keepstat, const char* skip) {
 #endif
       if (err == -1) {
         /* race with file deletion? */
-        if (errno == ENOENT)
+        if (errno == ENOENT) {
           continue;
+        }
         strncpy(fullpath + pathlen + 1, ent->d_name, PATH_MAX - pathlen);
         fullpath[PATH_MAX] = 0;
         PyErr_SetFromErrnoWithFilename(PyExc_OSError, fullpath);
@@ -508,13 +512,16 @@ _listdir_stat(const char* path, int pathlen, int keepstat, const char* skip) {
 
     if (keepstat) {
       stat = makestat(&st);
-      if (!stat)
+      if (!stat) {
         goto error;
+      }
       elem = Py_BuildValue("siN", ent->d_name, kind, stat);
-    } else
+    } else {
       elem = Py_BuildValue("si", ent->d_name, kind);
-    if (!elem)
+    }
+    if (!elem) {
       goto error;
+    }
     stat = NULL;
 
     PyList_Append(list, elem);
@@ -753,8 +760,9 @@ static PyObject* statfiles(PyObject* self, PyObject* args) {
   PyObject *names, *stats;
   Py_ssize_t i, count;
 
-  if (!PyArg_ParseTuple(args, "O:statfiles", &names))
+  if (!PyArg_ParseTuple(args, "O:statfiles", &names)) {
     return NULL;
+  }
 
   count = PySequence_Length(names);
   if (count == -1) {
@@ -763,8 +771,9 @@ static PyObject* statfiles(PyObject* self, PyObject* args) {
   }
 
   stats = PyList_New(count);
-  if (stats == NULL)
+  if (stats == NULL) {
     return NULL;
+  }
 
   for (i = 0; i < count; i++) {
     PyObject *stat, *pypath;
@@ -774,12 +783,14 @@ static PyObject* statfiles(PyObject* self, PyObject* args) {
 
     /* With a large file count or on a slow filesystem,
        don't block signals for long (issue4878). */
-    if ((i % 1000) == 999 && PyErr_CheckSignals() == -1)
+    if ((i % 1000) == 999 && PyErr_CheckSignals() == -1) {
       goto bail;
+    }
 
     pypath = PySequence_GetItem(names, i);
-    if (!pypath)
+    if (!pypath) {
       goto bail;
+    }
 #ifdef IS_PY3K
     path = PyUnicode_AsUTF8(pypath);
 #else
@@ -795,8 +806,9 @@ static PyObject* statfiles(PyObject* self, PyObject* args) {
     kind = st.st_mode & S_IFMT;
     if (ret != -1 && (kind == S_IFREG || kind == S_IFLNK)) {
       stat = makestat(&st);
-      if (stat == NULL)
+      if (stat == NULL) {
         goto bail;
+      }
       PyList_SET_ITEM(stats, i, stat);
     } else {
       Py_INCREF(Py_None);
@@ -831,12 +843,14 @@ recvfdstobuf(int sockfd, int** rfds, void* cbuf, size_t cbufsize) {
   msgh.msg_iovlen = 1;
   msgh.msg_control = cbuf;
   msgh.msg_controllen = (socklen_t)cbufsize;
-  if (recvmsg(sockfd, &msgh, 0) < 0)
+  if (recvmsg(sockfd, &msgh, 0) < 0) {
     return -1;
+  }
 
   for (cmsg = CMSG_FIRSTHDR(&msgh); cmsg; cmsg = CMSG_NXTHDR(&msgh, cmsg)) {
-    if (cmsg->cmsg_level != SOL_SOCKET || cmsg->cmsg_type != SCM_RIGHTS)
+    if (cmsg->cmsg_level != SOL_SOCKET || cmsg->cmsg_type != SCM_RIGHTS) {
       continue;
+    }
     *rfds = (int*)CMSG_DATA(cmsg);
     return (cmsg->cmsg_len - CMSG_LEN(0)) / sizeof(int);
   }
@@ -852,20 +866,24 @@ static PyObject* recvfds(PyObject* self, PyObject* args) {
   char cbuf[256];
   PyObject* rfdslist = NULL;
 
-  if (!PyArg_ParseTuple(args, "i", &sockfd))
+  if (!PyArg_ParseTuple(args, "i", &sockfd)) {
     return NULL;
+  }
 
   rfdscount = recvfdstobuf(sockfd, &rfds, cbuf, sizeof(cbuf));
-  if (rfdscount < 0)
+  if (rfdscount < 0) {
     return PyErr_SetFromErrno(PyExc_OSError);
+  }
 
   rfdslist = PyList_New(rfdscount);
-  if (!rfdslist)
+  if (!rfdslist) {
     goto bail;
+  }
   for (i = 0; i < rfdscount; i++) {
     PyObject* obj = PyLong_FromLong(rfds[i]);
-    if (!obj)
+    if (!obj) {
       goto bail;
+    }
     PyList_SET_ITEM(rfdslist, i, obj);
   }
   return rfdslist;
@@ -938,8 +956,9 @@ static void getarg0size(char** argstart, size_t* argsize) {
 #ifndef SETPROCNAME_USE_NONE
 static PyObject* setprocname(PyObject* self, PyObject* args) {
   const char* name = NULL;
-  if (!PyArg_ParseTuple(args, "s", &name))
+  if (!PyArg_ParseTuple(args, "s", &name)) {
     return NULL;
+  }
 
 #if defined(SETPROCNAME_USE_SETPROCTITLE)
   setproctitle("%s", name);
@@ -954,8 +973,9 @@ static PyObject* setprocname(PyObject* self, PyObject* args) {
 
     if (argvstart && argvsize > 1) {
       int n = snprintf(argvstart, argvsize, "%s", name);
-      if (n >= 0 && (size_t)n < argvsize)
+      if (n >= 0 && (size_t)n < argvsize) {
         memset(argvstart + n, 0, argvsize - n);
+      }
     }
   }
 #endif
@@ -967,18 +987,22 @@ static PyObject* setprocname(PyObject* self, PyObject* args) {
 static PyObject* unblocksignal(PyObject* self, PyObject* args) {
   int sig = 0;
   int r;
-  if (!PyArg_ParseTuple(args, "i", &sig))
+  if (!PyArg_ParseTuple(args, "i", &sig)) {
     return NULL;
+  }
   sigset_t set;
   r = sigemptyset(&set);
-  if (r != 0)
+  if (r != 0) {
     return PyErr_SetFromErrno(PyExc_OSError);
+  }
   r = sigaddset(&set, sig);
-  if (r != 0)
+  if (r != 0) {
     return PyErr_SetFromErrno(PyExc_OSError);
+  }
   r = sigprocmask(SIG_UNBLOCK, &set, NULL);
-  if (r != 0)
+  if (r != 0) {
     return PyErr_SetFromErrno(PyExc_OSError);
+  }
   Py_RETURN_NONE;
 }
 
@@ -999,8 +1023,9 @@ static PyObject* listdir(PyObject* self, PyObject* args, PyObject* kwargs) {
   static char* kwlist[] = {"path", "stat", "skip", NULL};
 
   if (!PyArg_ParseTupleAndKeywords(
-          args, kwargs, "O|OO:listdir", kwlist, &pathobj, &statobj, &skipobj))
+          args, kwargs, "O|OO:listdir", kwlist, &pathobj, &statobj, &skipobj)) {
     return NULL;
+  }
 
   wantstat = statobj && PyObject_IsTrue(statobj);
 
@@ -1013,8 +1038,9 @@ static PyObject* listdir(PyObject* self, PyObject* args, PyObject* kwargs) {
 #else
   PyBytes_AsStringAndSize(pathobj, &path, &plen);
 #endif
-  if (!path)
+  if (!path) {
     return NULL;
+  }
 
   if (skipobj && skipobj != Py_None) {
 #ifdef IS_PY3K
@@ -1026,8 +1052,9 @@ static PyObject* listdir(PyObject* self, PyObject* args, PyObject* kwargs) {
 #else
     skip = PyBytes_AsString(skipobj);
 #endif
-    if (!skip)
+    if (!skip) {
       return NULL;
+    }
   }
 
   PyObject* result = _listdir(path, plen, wantstat, skip);
@@ -1231,8 +1258,9 @@ static struct PyModuleDef osutil_module =
 
 PyMODINIT_FUNC PyInit_osutil(void) {
   PyObject* m;
-  if (PyType_Ready(&listdir_stat_type) < 0)
+  if (PyType_Ready(&listdir_stat_type) < 0) {
     return NULL;
+  }
 
   m = PyModule_Create(&osutil_module);
   PyModule_AddIntConstant(m, "version", version);

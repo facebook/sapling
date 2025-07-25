@@ -56,19 +56,22 @@ struct FrameInfo {
   }
 
   lineno_t line() {
-    if (!code)
+    if (!code) {
       return 0;
+    }
     return code->co_firstlineno;
   }
 
   const char* file() {
-    if (!code)
+    if (!code) {
       return NULL;
+    }
 #ifdef IS_PY3K
     PyObject* obj =
         PyUnicode_AsEncodedString(code->co_filename, "utf-8", "strict");
-    if (!obj)
+    if (!obj) {
       return NULL;
+    }
     return PyBytes_AsString(obj);
 #else
     return PyString_AsString(code->co_filename);
@@ -76,12 +79,14 @@ struct FrameInfo {
   }
 
   const char* name() {
-    if (!code)
+    if (!code) {
       return NULL;
+    }
 #ifdef IS_PY3K
     PyObject* obj = PyUnicode_AsEncodedString(code->co_name, "utf-8", "strict");
-    if (!obj)
+    if (!obj) {
       return NULL;
+    }
     return PyBytes_AsString(obj);
 #else
     return PyString_AsString(code->co_name);
@@ -159,8 +164,9 @@ inline static uint64_t hashframe(PyFrameObject* frame) {
 
 /* hash, and store a Python frame, return its ID */
 static frameid_t hashandstoreframe(PyFrameObject* frame) {
-  if (!frame)
+  if (!frame) {
     return 0;
+  }
   frameid_t frameid = (frameid_t)hashframe(frame);
   if (frames.count(frameid) == 0) {
     static frameid_t fid;
@@ -266,15 +272,17 @@ static void buildsummaries() {
       calls[fid].push_back(&s);
     } else if (s.op == PyTrace_RETURN) {
       auto& entries = calls[fid];
-      if (entries.empty())
+      if (entries.empty()) {
         continue;
+      }
       /* frame was entered before */
       Sample* prev = entries.back();
       entries.pop_back();
       auto& sum = summaries[fid];
       sum.count += 1;
-      if (entries.empty())
+      if (entries.empty()) {
         sum.time += s.time - prev->time;
+      }
     } /* s.op */
   }
 }
@@ -308,13 +316,15 @@ static void buildframetree() {
 
 static std::string shortname(std::string path) {
   size_t p = path.rfind('/');
-  if (p == std::string::npos)
+  if (p == std::string::npos) {
     return path;
+  }
   /* special handling __init__.py, include its dirname */
   if (p > 0 && path.substr(p + 1, p + 1 + 11) == "__init__.py") {
     p = path.rfind('/', p - 1);
-    if (p == std::string::npos)
+    if (p == std::string::npos) {
       return path;
+    }
   }
   return path.substr(p + 1);
 }
@@ -322,13 +332,15 @@ static std::string shortname(std::string path) {
 /* width needed to output time (in ms) */
 static int timelen() {
   static int n = 0;
-  if (n)
+  if (n) {
     return n;
+  }
   n = 1;
   rdtsc_t maxframetime = 0;
   for (auto& s : summaries) {
-    if (s.second.time > maxframetime)
+    if (s.second.time > maxframetime) {
       maxframetime = s.second.time;
+    }
   }
   for (double t = static_cast<double>(maxframetime) * rdtscratio; t >= 10;
        t /= 10) {
@@ -348,8 +360,9 @@ static const char* timefmt() {
 }
 
 static inline int fprintindent(FILE* fp, int indent) {
-  for (int i = 0; i < indent; ++i)
+  for (int i = 0; i < indent; ++i) {
     fputc(' ', fp);
+  }
   return (indent > 0 ? indent : 0);
 }
 
@@ -372,8 +385,9 @@ static void fprintframetree(
   for (auto& cfid : framechildren[fid]) {
     auto& cs = summaries[cfid];
     if (static_cast<double>(cs.time) * rdtscratio >= timethreshold ||
-        cs.count == 0)
+        cs.count == 0) {
       cfids.push_back(cfid);
+    }
     ctotaltime += cs.time;
   }
 
@@ -444,8 +458,9 @@ static void clear() {
 }
 
 static void traceprof_report(FILE* fp = stderr) {
-  if (dedup)
+  if (dedup) {
     buildframededup();
+  }
   buildsummaries();
   buildframetree();
   fprintframetree(fp, dedupfid(0));

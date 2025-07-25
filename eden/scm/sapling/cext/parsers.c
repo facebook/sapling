@@ -38,8 +38,9 @@ static const char* const versionerrortext = "Python minor version mismatch";
 static PyObject* dict_new_presized(PyObject* self, PyObject* args) {
   Py_ssize_t expected_size;
 
-  if (!PyArg_ParseTuple(args, "n:make_presized_dict", &expected_size))
+  if (!PyArg_ParseTuple(args, "n:make_presized_dict", &expected_size)) {
     return NULL;
+  }
 
   return _dict_new_presized(expected_size);
 }
@@ -61,8 +62,9 @@ static PyObject* parse_manifest(PyObject* self, PyObject* args) {
           &PyDict_Type,
           &fdict,
           &str,
-          &len))
+          &len)) {
     goto quit;
+  }
 
   start = str;
   end = str + len;
@@ -86,26 +88,31 @@ static PyObject* parse_manifest(PyObject* self, PyObject* args) {
 
     file = PyBytes_FromStringAndSize(start, zero - start);
 
-    if (!file)
+    if (!file) {
       goto bail;
+    }
 
     nlen = newline - zero - 1;
 
     node = unhexlify(zero + 1, nlen > 40 ? 40 : (Py_ssize_t)nlen);
-    if (!node)
+    if (!node) {
       goto bail;
+    }
 
     if (nlen > 40) {
       flags = PyBytes_FromStringAndSize(zero + 41, nlen - 40);
-      if (!flags)
+      if (!flags) {
         goto bail;
+      }
 
-      if (PyDict_SetItem(fdict, file, flags) == -1)
+      if (PyDict_SetItem(fdict, file, flags) == -1) {
         goto bail;
+      }
     }
 
-    if (PyDict_SetItem(mfdict, file, node) == -1)
+    if (PyDict_SetItem(mfdict, file, node) == -1) {
       goto bail;
+    }
 
     start = newline + 1;
 
@@ -130,8 +137,9 @@ static inline dirstateTupleObject*
 make_dirstate_tuple(char state, int mode, int size, int mtime) {
   dirstateTupleObject* t =
       PyObject_New(dirstateTupleObject, &dirstateTupleType);
-  if (!t)
+  if (!t) {
     return NULL;
+  }
   t->state = state;
   t->mode = mode;
   t->size = size;
@@ -148,8 +156,9 @@ dirstate_tuple_new(PyTypeObject* subtype, PyObject* args, PyObject* kwds) {
   int size, mode, mtime;
 #ifdef IS_PY3K
   const char* utf8_state;
-  if (!PyArg_ParseTuple(args, "siii", &utf8_state, &mode, &size, &mtime))
+  if (!PyArg_ParseTuple(args, "siii", &utf8_state, &mode, &size, &mtime)) {
     return NULL;
+  }
   // We only need the first character of the string
   state = *utf8_state;
 #else
@@ -158,8 +167,9 @@ dirstate_tuple_new(PyTypeObject* subtype, PyObject* args, PyObject* kwds) {
 #endif
 
   t = (dirstateTupleObject*)subtype->tp_alloc(subtype, 1);
-  if (!t)
+  if (!t) {
     return NULL;
+  }
   t->state = state;
   t->mode = mode;
   t->size = size;
@@ -265,8 +275,9 @@ static PyObject* parse_dirstate(PyObject* self, PyObject* args) {
           &PyDict_Type,
           &cmap,
           &str,
-          &readlen))
+          &readlen)) {
     goto quit;
+  }
 
   len = readlen;
 
@@ -284,8 +295,9 @@ static PyObject* parse_dirstate(PyObject* self, PyObject* args) {
       Py_BuildValue("s#s#", str, (Py_ssize_t)20, str + 20, (Py_ssize_t)20);
 #endif
 
-  if (!parents)
+  if (!parents) {
     goto quit;
+  }
 
   /* read filenames */
   while (pos >= 40 && pos < len) {
@@ -318,8 +330,9 @@ static PyObject* parse_dirstate(PyObject* self, PyObject* args) {
       cname = PyBytes_FromStringAndSize(cpos + 1, flen - (cpos - cur) - 1);
 #endif
       if (!fname || !cname || PyDict_SetItem(cmap, fname, cname) == -1 ||
-          PyDict_SetItem(dmap, fname, entry) == -1)
+          PyDict_SetItem(dmap, fname, entry) == -1) {
         goto quit;
+      }
       Py_DECREF(cname);
     } else {
 #ifdef IS_PY3K
@@ -327,8 +340,9 @@ static PyObject* parse_dirstate(PyObject* self, PyObject* args) {
 #else
       fname = PyBytes_FromStringAndSize(cur, flen);
 #endif
-      if (!fname || PyDict_SetItem(dmap, fname, entry) == -1)
+      if (!fname || PyDict_SetItem(dmap, fname, entry) == -1) {
         goto quit;
+      }
     }
     Py_DECREF(fname);
     Py_DECREF(entry);
@@ -354,16 +368,19 @@ static PyObject* nonnormalotherparententries(PyObject* self, PyObject* args) {
   PyObject *nonnset = NULL, *otherpset = NULL, *result = NULL;
   Py_ssize_t pos;
 
-  if (!PyArg_ParseTuple(args, "O!:nonnormalentries", &PyDict_Type, &dmap))
+  if (!PyArg_ParseTuple(args, "O!:nonnormalentries", &PyDict_Type, &dmap)) {
     goto bail;
+  }
 
   nonnset = PySet_New(NULL);
-  if (nonnset == NULL)
+  if (nonnset == NULL) {
     goto bail;
+  }
 
   otherpset = PySet_New(NULL);
-  if (otherpset == NULL)
+  if (otherpset == NULL) {
     goto bail;
+  }
 
   pos = 0;
   while (PyDict_Next(dmap, &pos, &fname, &v)) {
@@ -380,15 +397,18 @@ static PyObject* nonnormalotherparententries(PyObject* self, PyObject* args) {
       }
     }
 
-    if (t->state == 'n' && t->mtime != -1)
+    if (t->state == 'n' && t->mtime != -1) {
       continue;
-    if (PySet_Add(nonnset, fname) == -1)
+    }
+    if (PySet_Add(nonnset, fname) == -1) {
       goto bail;
+    }
   }
 
   result = Py_BuildValue("(OO)", nonnset, otherpset);
-  if (result == NULL)
+  if (result == NULL) {
     goto bail;
+  }
   Py_DECREF(nonnset);
   Py_DECREF(otherpset);
   return result;
@@ -422,8 +442,9 @@ static PyObject* pack_dirstate(PyObject* self, PyObject* args) {
           &PyDict_Type,
           &copymap,
           &pl,
-          &now))
+          &now)) {
     return NULL;
+  }
 
   if (!PySequence_Check(pl) || PySequence_Size(pl) != 2) {
     PyErr_SetString(PyExc_TypeError, "expected 2-element sequence");
@@ -477,8 +498,9 @@ static PyObject* pack_dirstate(PyObject* self, PyObject* args) {
   }
 
   packobj = PyBytes_FromStringAndSize(NULL, nbytes);
-  if (packobj == NULL)
+  if (packobj == NULL) {
     goto bail;
+  }
 
   p = PyBytes_AS_STRING(packobj);
 
@@ -520,10 +542,12 @@ static PyObject* pack_dirstate(PyObject* self, PyObject* args) {
        * this. */
       mtime = -1;
       mtime_unset = (PyObject*)make_dirstate_tuple(state, mode, size, mtime);
-      if (!mtime_unset)
+      if (!mtime_unset) {
         goto bail;
-      if (PyDict_SetItem(map, k, mtime_unset) == -1)
+      }
+      if (PyDict_SetItem(map, k, mtime_unset) == -1) {
         goto bail;
+      }
       Py_DECREF(mtime_unset);
       mtime_unset = NULL;
     }
@@ -828,8 +852,9 @@ static void module_init(PyObject* mod) {
   manifest_module_init(mod);
   revlog_module_init(mod);
 
-  if (PyType_Ready(&dirstateTupleType) < 0)
+  if (PyType_Ready(&dirstateTupleType) < 0) {
     return;
+  }
   Py_INCREF(&dirstateTupleType);
   PyModule_AddObject(mod, "dirstatetuple", (PyObject*)&dirstateTupleType);
 }
@@ -837,12 +862,14 @@ static void module_init(PyObject* mod) {
 static int check_python_version(void) {
   PyObject *sys = PyImport_ImportModule("sys"), *ver;
   long hexversion;
-  if (!sys)
+  if (!sys) {
     return -1;
+  }
   ver = PyObject_GetAttrString(sys, "hexversion");
   Py_DECREF(sys);
-  if (!ver)
+  if (!ver) {
     return -1;
+  }
   hexversion = PyInt_AsLong(ver);
   Py_DECREF(ver);
   /* sys.hexversion is a 32-bit number by default, so the -1 case
@@ -873,8 +900,9 @@ static struct PyModuleDef parsers_module =
 PyMODINIT_FUNC PyInit_parsers(void) {
   PyObject* mod;
 
-  if (check_python_version() == -1)
+  if (check_python_version() == -1) {
     return NULL;
+  }
   mod = PyModule_Create(&parsers_module);
   module_init(mod);
   return mod;

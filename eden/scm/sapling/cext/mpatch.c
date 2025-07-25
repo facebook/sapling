@@ -61,13 +61,16 @@ struct mpatch_flist* cpygetitem(void* bins, ssize_t pos) {
   int r;
 
   PyObject* tmp = PyList_GetItem((PyObject*)bins, pos);
-  if (!tmp)
+  if (!tmp) {
     return NULL;
-  if (PyObject_AsCharBuffer(tmp, &buffer, (Py_ssize_t*)&blen))
+  }
+  if (PyObject_AsCharBuffer(tmp, &buffer, (Py_ssize_t*)&blen)) {
     return NULL;
+  }
   if ((r = mpatch_decode(buffer, blen, &res)) < 0) {
-    if (!PyErr_Occurred())
+    if (!PyErr_Occurred()) {
       setpyerr(r);
+    }
     return NULL;
   }
   return res;
@@ -81,8 +84,9 @@ static PyObject* patches(PyObject* self, PyObject* args) {
   char* out;
   Py_ssize_t len, outlen, inlen;
 
-  if (!PyArg_ParseTuple(args, "OO:mpatch", &text, &bins))
+  if (!PyArg_ParseTuple(args, "OO:mpatch", &text, &bins)) {
     return NULL;
+  }
 
   len = PyList_Size(bins);
   if (!len) {
@@ -91,13 +95,15 @@ static PyObject* patches(PyObject* self, PyObject* args) {
     return text;
   }
 
-  if (PyObject_AsCharBuffer(text, &in, &inlen))
+  if (PyObject_AsCharBuffer(text, &in, &inlen)) {
     return NULL;
+  }
 
   patch = mpatch_fold(bins, cpygetitem, 0, len);
   if (!patch) { /* error already set or memory error */
-    if (!PyErr_Occurred())
+    if (!PyErr_Occurred()) {
       PyErr_NoMemory();
+    }
     return NULL;
   }
 
@@ -119,8 +125,9 @@ static PyObject* patches(PyObject* self, PyObject* args) {
   }
 cleanup:
   mpatch_lfree(patch);
-  if (!result && !PyErr_Occurred())
+  if (!result && !PyErr_Occurred()) {
     setpyerr(r);
+  }
   return result;
 }
 
@@ -130,15 +137,17 @@ static PyObject* patchedsize(PyObject* self, PyObject* args) {
   Py_ssize_t patchlen;
   char* bin;
 
-  if (!PyArg_ParseTuple(args, "ls#", &orig, &bin, &patchlen))
+  if (!PyArg_ParseTuple(args, "ls#", &orig, &bin, &patchlen)) {
     return NULL;
+  }
 
   while (pos >= 0 && pos < patchlen) {
     start = getbe32(bin + pos);
     end = getbe32(bin + pos + 4);
     len = getbe32(bin + pos + 8);
-    if (start > end)
+    if (start > end) {
       break; /* sanity check */
+    }
     pos += 12 + len;
     outlen += start - last;
     last = end;
@@ -146,8 +155,9 @@ static PyObject* patchedsize(PyObject* self, PyObject* args) {
   }
 
   if (pos != patchlen) {
-    if (!PyErr_Occurred())
+    if (!PyErr_Occurred()) {
       PyErr_SetString(mpatch_Error, "patch cannot be decoded");
+    }
     return NULL;
   }
 
@@ -170,8 +180,9 @@ PyMODINIT_FUNC PyInit_mpatch(void) {
   PyObject* m;
 
   m = PyModule_Create(&mpatch_module);
-  if (m == NULL)
+  if (m == NULL) {
     return NULL;
+  }
 
   mpatch_Error = PyErr_NewException("cext.mpatch.mpatchError", NULL, NULL);
   Py_INCREF(mpatch_Error);
