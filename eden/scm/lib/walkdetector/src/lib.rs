@@ -414,6 +414,7 @@ impl Detector {
     }
 }
 
+// Whether directory metadata is interesting and we should retain it until normal expiration.
 fn interesting_metadata(
     threshold: usize,
     walk_ratio: f64,
@@ -427,13 +428,19 @@ fn interesting_metadata(
         return true;
     }
 
+    // Work backwards from walk threshold and walk ratio to calculate what size of directory would
+    // start to increase our walk threshold (due to the walk ratio).
+    let big_dir_threshold: usize = ((threshold + 1) as f64 / walk_ratio) as usize;
+
     // We don't care about empty directories because we will never see "activity" for an empty
     // directory, so probably won't ever make use of the size hint. Marking empty directories as
     // "not interesting" significantly reduces the number of nodes we create during big walks.
-    num_dirs.is_some_and(|dirs| dirs > 0 && dirs < threshold)
-        || num_files.is_some_and(|files| files > 0 && files < threshold)
+    num_dirs.is_some_and(|dirs| dirs > 0 && dirs < threshold || dirs >= big_dir_threshold)
+        || num_files
+            .is_some_and(|files| files > 0 && files < threshold || files >= big_dir_threshold)
 }
 
+// Whether directory metadata is important and we should retain indefinitely.
 fn important_metadata(
     threshold: usize,
     walk_ratio: f64,
@@ -445,10 +452,17 @@ fn important_metadata(
 
     // Work backwards from walk threshold and walk ratio to calculate what size of directory would
     // start to increase our walk threshold (due to the walk ratio).
-    let big_dir_threshold: usize = (threshold as f64 / walk_ratio) as usize;
+    let big_dir_threshold: usize = ((threshold + 1) as f64 / walk_ratio) as usize;
 
+    // We mainly care about directories with lots of children directories since they can very
+    // quickly cause exponential growth. We also care about directories with a lot of files, but
+    // less so since it is a one-time cost vs. an indication of potential extreme growth in the
+    // future. For example, a directory with 100 sub-directories is something we should slow down
+    // for, but a directory with 100 files is not that big of a deal. So, increase threshold by 10x
+    // for the file check. This greatly reduces the number of WalkNodes we keep indefinitely after
+    // large walks.
     num_dirs.is_some_and(|dirs| dirs >= big_dir_threshold)
-        || num_files.is_some_and(|files| files > big_dir_threshold)
+        || num_files.is_some_and(|files| files >= 10 * big_dir_threshold)
 }
 
 impl Inner {

@@ -937,7 +937,7 @@ fn test_recursive_metadata() {
     // Small directory metadata should not get included in rollups to ancestors.
     detector.dir_loaded(p("foo/small"), 1, 1, 0);
 
-    detector.dir_loaded(p("foo/bar"), 10, 20, 0);
+    detector.dir_loaded(p("foo/bar"), 10, 30, 0);
     detector.dir_loaded(p("foo/bar/baz"), 100, 200, 0);
     detector.dir_loaded(p("foo/bar/baz"), 101, 201, 0);
 
@@ -947,7 +947,7 @@ fn test_recursive_metadata() {
     assert_eq!(node.total_files_at_depth(0), None);
 
     // depth=2 (foo/bar/*)
-    assert_eq!(node.total_dirs_at_depth(2), Some(20));
+    assert_eq!(node.total_dirs_at_depth(2), Some(30));
     assert_eq!(node.total_files_at_depth(2), Some(10));
 
     // depth=3 (foo/bar/baz/*) - make sure we didn't overcount foo/bar/baz metadata
@@ -957,7 +957,7 @@ fn test_recursive_metadata() {
     // Check counts starting from foo/bar
     let node = node.get_node(&p("foo/bar")).unwrap();
     // depth=0 (foo/bar/*)
-    assert_eq!(node.total_dirs_at_depth(0), Some(20));
+    assert_eq!(node.total_dirs_at_depth(0), Some(30));
     assert_eq!(node.total_files_at_depth(0), Some(10));
     // depth=1 (foo/bar/baz/*)
     assert_eq!(node.total_dirs_at_depth(1), Some(201));
