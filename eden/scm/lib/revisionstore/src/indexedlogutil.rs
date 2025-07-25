@@ -76,6 +76,60 @@ impl Store {
         self.read().slice_to_bytes(slice)
     }
 
+    /// Append a batch of items to the store. This is optimized to reduce lock churn, which helps a
+    /// lot when there is multi-threaded contention.
+    pub fn append_batch<K: AsRef<[u8]>, V>(
+        &self,
+        mut items: Vec<(K, V)>,
+        serialize: impl Fn(K, V, &mut Vec<u8>) -> Result<()>,
+        // Filter out items already present in the store before inserting.
+        read_before_write: bool,
+    ) -> Result<()> {
+        if items.is_empty() {
+            return Ok(());
+        }
+
+        // If requested, filter out items that are already in the store.
+        if read_before_write {
+            let mut insert_idx = 0;
+            let log = self.read();
+            for read_idx in 0..items.len() {
+                if log.lookup(0, items[read_idx].0.as_ref())?.is_empty()? {
+                    items.swap(insert_idx, read_idx);
+                    insert_idx += 1;
+                }
+            }
+            if insert_idx == 0 {
+                return Ok(());
+            }
+            items.truncate(insert_idx);
+        }
+
+        // Pre-serialize all the items into a single buffer. This reduces allocations and minimizes
+        // the work we do inside the critical write lock section below (at the cost of using more
+        // memory).
+
+        // Buffer to hold all the items' serialized data.
+        let mut buf = Vec::new();
+        // Indexes of the ends of each item within buf.
+        let mut ends = Vec::with_capacity(items.len());
+
+        for (k, v) in items {
+            serialize(k, v, &mut buf)?;
+            ends.push(buf.len());
+        }
+
+        let mut log = self.write();
+
+        let mut start = 0;
+        for end in ends {
+            log.append(&buf[start..end])?;
+            start = end;
+        }
+
+        Ok(())
+    }
+
     pub fn flush(&self) -> Result<()> {
         self.write().flush()
     }
