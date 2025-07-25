@@ -861,6 +861,10 @@ pub struct Walk {
 
     // Whether we have already logged the start of this walk.
     logged_start: AtomicBool,
+
+    // Whether we have logged the end of this walk.
+    #[cfg(test)]
+    logged_end: Arc<AtomicBool>,
 }
 
 impl std::fmt::Debug for Walk {
@@ -1049,6 +1053,9 @@ impl Walk {
     }
 
     fn log_end(&self, root: &RepoPath) {
+        #[cfg(test)]
+        self.logged_end.store(true, Ordering::Relaxed);
+
         if self.file_loads.load(Ordering::Relaxed) >= Self::BIG_WALK_THRESHOLD
             || self.file_reads.load(Ordering::Relaxed) >= Self::BIG_WALK_THRESHOLD
             || self.file_preloads.load(Ordering::Relaxed) >= Self::BIG_WALK_THRESHOLD

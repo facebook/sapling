@@ -5,6 +5,7 @@
  * LICENSE file in the root directory of this source tree.
  */
 
+use std::sync::atomic::Ordering;
 use std::time::Duration;
 
 use mock_instant::MockClock;
@@ -471,9 +472,27 @@ fn test_gc() {
         MockClock::advance(Duration::from_secs(1));
         assert_eq!(detector.file_walks(), vec![(p(""), 1)]);
 
+        let logged_end = detector
+            .inner
+            .read()
+            .node
+            .get_node(&p(""))
+            .and_then(|n| n.get_walk_for_type(WalkType::File))
+            .unwrap()
+            .logged_end
+            .clone();
+
+        assert!(!logged_end.load(Ordering::Relaxed));
+
         // Everything is GC'd.
         MockClock::advance(Duration::from_secs(1));
         assert_eq!(detector.file_walks(), vec![]);
+
+        // This will trigger a "JIT" clean up of the root walk in the case we haven't run a full GC.
+        detector.file_loaded(p("a"), 0);
+
+        // Make sure the end of the walk was logged.
+        assert!(logged_end.load(Ordering::Relaxed));
     }
 }
 

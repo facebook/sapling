@@ -152,30 +152,48 @@ impl WalkNode {
         walk_type: WalkType,
         dir: &'a RepoPath,
     ) -> (&'a mut Self, &'a RepoPath) {
-        match dir.split_first_component() {
-            Some((head, tail)) => {
-                if self.contains(walk_type, dir, 0) {
-                    (self, dir)
-                } else if self.children.contains_key(head) {
-                    self.children
-                        .get_mut(head)
-                        .unwrap()
-                        .get_or_create_owning_node(config, walk_type, tail)
-                } else {
-                    self.children
-                        .entry(head.to_owned())
-                        .or_insert_with(|| Self::new(config.gc_timeout))
-                        .get_or_create_owning_node(config, walk_type, tail)
+        fn inner<'a>(
+            node: &'a mut WalkNode,
+            config: &Config,
+            walk_type: WalkType,
+            full_dir: &'a RepoPath,
+            relative_dir: &'a RepoPath,
+        ) -> (&'a mut WalkNode, &'a RepoPath) {
+            match relative_dir.split_first_component() {
+                Some((head, tail)) => {
+                    if node.contains(walk_type, relative_dir, 0) {
+                        (node, relative_dir)
+                    } else if node.children.contains_key(head) {
+                        inner(
+                            node.children.get_mut(head).unwrap(),
+                            config,
+                            walk_type,
+                            full_dir,
+                            tail,
+                        )
+                    } else {
+                        inner(
+                            node.children
+                                .entry(head.to_owned())
+                                .or_insert_with(|| WalkNode::new(config.gc_timeout)),
+                            config,
+                            walk_type,
+                            full_dir,
+                            tail,
+                        )
+                    }
                 }
-            }
-            None => {
-                // Perform a JIT "light" GC.
-                if self.expired() {
-                    self.clear_except_children(config);
+                None => {
+                    // Perform a JIT "light" GC.
+                    if node.expired() {
+                        node.clear_except_children(config, full_dir);
+                    }
+                    (node, relative_dir)
                 }
-                (self, dir)
             }
         }
+
+        inner(self, config, walk_type, dir, dir)
     }
 
     /// Insert a new walk. Any redundant/contained walks will be removed. `walk` will not
@@ -666,7 +684,6 @@ impl WalkNode {
             if has_walk {
                 if expired {
                     walks_removed += 1;
-                    node.log_walk_end(path);
                 } else {
                     walks_remaining += 1;
                 }
@@ -674,7 +691,7 @@ impl WalkNode {
 
             if expired && keep_me {
                 tracing::trace!(%path, has_walk, important_metadata, has_children=!node.children.is_empty(), "GC clearing node");
-                node.clear_except_children(config);
+                node.clear_except_children(config, path);
             }
 
             if keep_me {
@@ -703,30 +720,23 @@ impl WalkNode {
 
             if self.has_walk() {
                 walks_deleted += 1;
-                self.log_walk_end(RepoPath::empty());
             }
 
             // At top level we have no parent to remove us, so just unset our fields.
-            self.clear_except_children(config);
+            self.clear_except_children(config, RepoPath::empty());
         }
 
         (deleted, remaining, walks_deleted)
     }
 
-    fn log_walk_end(&self, root: &RepoPath) {
-        if let Some(walk) = &self.file_walk {
-            walk.log_end(root);
-        }
-
-        if let Some(walk) = &self.dir_walk {
-            walk.log_end(root);
-        }
-    }
-
     // Clear all fields except children.
-    fn clear_except_children(&mut self, config: &Config) {
-        self.file_walk.take();
-        self.dir_walk.take();
+    fn clear_except_children(&mut self, config: &Config, path: &RepoPath) {
+        if let Some(walk) = self.file_walk.take() {
+            walk.log_end(path);
+        }
+        if let Some(walk) = self.dir_walk.take() {
+            walk.log_end(path);
+        }
         self.last_access.reset();
         self.advanced_file_children.clear();
         self.advanced_dir_children.clear();
