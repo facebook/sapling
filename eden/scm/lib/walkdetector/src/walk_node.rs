@@ -9,6 +9,12 @@ use std::collections::HashMap;
 use std::collections::HashSet;
 use std::time::Duration;
 
+#[cfg(test)]
+use coarsetime as _; // silence "unused dependency" warning
+#[cfg(not(test))]
+use coarsetime::Instant;
+#[cfg(test)]
+use mock_instant::Instant;
 use types::PathComponentBuf;
 use types::RepoPath;
 use types::RepoPathBuf;
@@ -731,11 +737,13 @@ impl WalkNode {
 
     // Clear all fields except children.
     fn clear_except_children(&mut self, config: &Config, path: &RepoPath) {
+        let end_time = self.last_access.load().unwrap_or_else(Instant::now);
+
         if let Some(walk) = self.file_walk.take() {
-            walk.log_end(path);
+            walk.log_end(path, end_time);
         }
         if let Some(walk) = self.dir_walk.take() {
-            walk.log_end(path);
+            walk.log_end(path, end_time);
         }
         self.last_access.reset();
         self.advanced_file_children.clear();

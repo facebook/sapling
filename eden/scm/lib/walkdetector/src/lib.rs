@@ -859,6 +859,9 @@ pub struct Walk {
     pid: AtomicU64,
     pid_detail: OnceLock<String>,
 
+    // When walk first started - used to estimate walk duration.
+    start_time: AtomicInstant,
+
     // Whether we have already logged the start of this walk.
     logged_start: AtomicBool,
 
@@ -885,8 +888,11 @@ impl Walk {
     const BIG_WALK_THRESHOLD: u64 = 10_000;
 
     fn new(depth: usize) -> Self {
+        let start_time = AtomicInstant::new();
+        start_time.bump();
         Self {
             depth,
+            start_time,
             ..Default::default()
         }
     }
@@ -932,6 +938,17 @@ impl Walk {
             // If we took the other walk's pid, then also take its pid detail, if present.
             if let Some(detail) = other.pid_detail.get() {
                 let _ = self.pid_detail.set(detail.to_string());
+            }
+        }
+
+        // Take the earliest start time.
+        if let Some(other_start) = other.start_time.load() {
+            if self
+                .start_time
+                .load()
+                .is_none_or(|my_start| other_start < my_start)
+            {
+                self.start_time.store(other_start);
             }
         }
     }
@@ -1052,7 +1069,7 @@ impl Walk {
         );
     }
 
-    fn log_end(&self, root: &RepoPath) {
+    fn log_end(&self, root: &RepoPath, end_time: Instant) {
         #[cfg(test)]
         self.logged_end.store(true, Ordering::Relaxed);
 
@@ -1062,6 +1079,12 @@ impl Walk {
             || self.dir_loads.load(Ordering::Relaxed) >= Self::BIG_WALK_THRESHOLD
             || self.dir_reads.load(Ordering::Relaxed) >= Self::BIG_WALK_THRESHOLD
         {
+            let duration = self
+                .start_time
+                .load()
+                .map(|t| end_time.duration_since(t).as_secs())
+                .unwrap_or_default();
+
             tracing::info!(
                 %root,
                 file_loads = self.file_loads.load(Ordering::Relaxed),
@@ -1071,6 +1094,7 @@ impl Walk {
                 dir_reads = self.dir_reads.load(Ordering::Relaxed),
                 walk_depth = self.depth,
                 walker_detail = self.pid_detail.get(),
+                walk_duration = duration,
                 "big walk ended",
             );
 
@@ -1084,6 +1108,7 @@ impl Walk {
                 dir_reads = self.dir_reads.load(Ordering::Relaxed),
                 walk_depth = self.depth,
                 walker_detail = self.pid_detail.get(),
+                walk_duration = duration,
             );
         }
     }
