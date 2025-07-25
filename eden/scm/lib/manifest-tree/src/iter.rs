@@ -76,7 +76,7 @@ pub fn bfs_iter<M: 'static + Matcher + Sync + Send>(
 
     // This channel carries iteration results to the calling code.
     let (result_send, result_recv) =
-        flume::bounded::<Result<(RepoPathBuf, FsNodeMetadata)>>(RESULT_QUEUE_SIZE);
+        flume::bounded::<Vec<Result<(RepoPathBuf, FsNodeMetadata)>>>(RESULT_QUEUE_SIZE);
 
     let ctx = BfsContext {
         result_send,
@@ -96,7 +96,7 @@ pub fn bfs_iter<M: 'static + Matcher + Sync + Send>(
         })
         .unwrap();
 
-    Box::new(result_recv.into_iter())
+    Box::new(result_recv.into_iter().flatten())
 }
 
 struct BfsWork {
@@ -106,7 +106,7 @@ struct BfsWork {
 
 #[derive(Clone)]
 struct BfsContext {
-    result_send: Sender<Result<(RepoPathBuf, FsNodeMetadata)>>,
+    result_send: Sender<Vec<Result<(RepoPathBuf, FsNodeMetadata)>>>,
     matcher: Arc<dyn Matcher + Sync + Send>,
     store: InnerStore,
 }
@@ -139,7 +139,8 @@ impl BfsIterPool {
 
             let _ = ctx.store.prefetch(keys);
 
-            let mut to_send = Vec::<(RepoPathBuf, Link)>::new();
+            let mut work_to_send = Vec::<(RepoPathBuf, Link)>::new();
+            let mut results_to_send = Vec::<Result<(RepoPathBuf, FsNodeMetadata)>>::new();
             for (path, link) in work {
                 let (children, hgid) = match link.as_ref() {
                     Leaf(_) => {
@@ -150,13 +151,7 @@ impl BfsIterPool {
                     Durable(entry) => match entry.materialize_links(&ctx.store, &path) {
                         Ok(children) => (children, Some(entry.hgid)),
                         Err(e) => {
-                            if ctx
-                                .result_send
-                                .send(Err(e).context("materialize_links in bfs_iter"))
-                                .is_err()
-                            {
-                                continue 'outer;
-                            }
+                            results_to_send.push(Err(e).context("materialize_links in bfs_iter"));
                             continue;
                         }
                     },
@@ -168,22 +163,17 @@ impl BfsIterPool {
                     match link.matches(&ctx.matcher, &child_path) {
                         Ok(true) => {
                             if let Leaf(file_metadata) = link.as_ref() {
-                                if ctx
-                                    .result_send
-                                    .send(Ok((child_path, FsNodeMetadata::File(*file_metadata))))
-                                    .is_err()
-                                {
-                                    continue 'outer;
-                                }
+                                results_to_send
+                                    .push(Ok((child_path, FsNodeMetadata::File(*file_metadata))));
                                 continue;
                             }
 
-                            to_send.push((child_path, link.thread_copy()));
-                            if to_send.len() >= Self::BATCH_SIZE {
+                            work_to_send.push((child_path, link.thread_copy()));
+                            if work_to_send.len() >= Self::BATCH_SIZE {
                                 if !Self::try_send(
                                     &work_send,
                                     BfsWork {
-                                        work: mem::take(&mut to_send),
+                                        work: mem::take(&mut work_to_send),
                                         ctx: ctx.clone(),
                                     },
                                 )? {
@@ -193,27 +183,27 @@ impl BfsIterPool {
                         }
                         Ok(false) => {}
                         Err(e) => {
-                            if ctx
-                                .result_send
-                                .send(Err(e).context("matching in bfs_iter"))
-                                .is_err()
-                            {
-                                continue 'outer;
-                            }
+                            results_to_send.push(Err(e).context("matching in bfs_iter"));
                         }
                     };
                 }
 
-                if ctx
-                    .result_send
-                    .send(Ok((path, FsNodeMetadata::Directory(hgid))))
-                    .is_err()
-                {
+                results_to_send.push(Ok((path, FsNodeMetadata::Directory(hgid))));
+            }
+
+            if !results_to_send.is_empty() {
+                if ctx.result_send.send(results_to_send).is_err() {
                     continue 'outer;
                 }
             }
 
-            if !Self::try_send(&work_send, BfsWork { work: to_send, ctx })? {
+            if !Self::try_send(
+                &work_send,
+                BfsWork {
+                    work: work_to_send,
+                    ctx,
+                },
+            )? {
                 continue 'outer;
             }
         }
