@@ -32,6 +32,7 @@ use types::RepoPath;
 use types::RepoPathBuf;
 use types::fetch_cause::FetchCause;
 use types::fetch_mode::FetchMode;
+use walkdetector::WalkType;
 
 macro_rules! info_if {
     ($cond:expr, $kind:ident, $($rest:tt)*) => {
@@ -142,15 +143,9 @@ pub(crate) fn prefetch_manager(
             // become [(root="foo", depth=2)], _not_ including the depth=1 walk anymore).
             // Each walk is represented as `((root_path, wants_file_content), depth)`.
             let active_walks: HashMap<(RepoPathBuf, bool), usize> = detector
-                .file_walks()
+                .all_walks()
                 .into_iter()
-                .map(|(path, depth)| ((path, true), depth))
-                .chain(
-                    detector
-                        .dir_walks()
-                        .into_iter()
-                        .map(|(path, depth)| ((path, false), depth)),
-                )
+                .map(|(path, depth, wt)| ((path, wt == WalkType::File), depth))
                 .collect();
 
             if active_walks.is_empty() {

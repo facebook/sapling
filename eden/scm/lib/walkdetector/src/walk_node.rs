@@ -244,16 +244,26 @@ impl WalkNode {
         }
     }
 
-    /// List all active walks.
-    pub(crate) fn list_walks(&self, walk_type: WalkType) -> Vec<(RepoPathBuf, usize)> {
+    /// List all active walks. Filter by walk_type, if specified.
+    pub(crate) fn list_walks(
+        &self,
+        walk_type: Option<WalkType>,
+    ) -> Vec<(RepoPathBuf, usize, WalkType)> {
         fn inner(
             node: &WalkNode,
-            walk_type: WalkType,
+            walk_type: Option<WalkType>,
             path: &mut RepoPathBuf,
-            list: &mut Vec<(RepoPathBuf, usize)>,
+            list: &mut Vec<(RepoPathBuf, usize, WalkType)>,
         ) {
-            if let Some(walk) = node.get_walk_for_type(walk_type) {
-                list.push((path.clone(), walk.depth));
+            if walk_type.is_none_or(|wt| wt == WalkType::File) {
+                if let Some(walk) = node.get_walk_for_type(WalkType::File) {
+                    list.push((path.clone(), walk.depth, WalkType::File));
+                }
+            }
+            if walk_type.is_none_or(|wt| wt == WalkType::Directory) {
+                if let Some(walk) = node.get_walk_for_type(WalkType::Directory) {
+                    list.push((path.clone(), walk.depth, WalkType::Directory));
+                }
             }
 
             for (name, child) in node.children.iter() {

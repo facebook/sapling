@@ -168,46 +168,69 @@ fn test_walk_node_insert() {
     node.insert_walk(&config, WalkType::File, &p("foo"), Walk::new(1), 0);
     // Can re-insert.
     node.insert_walk(&config, WalkType::File, &p("foo"), Walk::new(1), 0);
-    assert_eq!(node.list_walks(WalkType::File), vec![(p("foo"), 1)]);
+    assert_eq!(
+        node.list_walks(Some(WalkType::File)),
+        vec![(p("foo"), 1, WalkType::File)]
+    );
 
     // Don't insert since it is fully contained by "foo" walk.
     node.insert_walk(&config, WalkType::File, &p("foo/bar"), Walk::new(0), 0);
-    assert_eq!(node.list_walks(WalkType::File), vec![(p("foo"), 1)]);
+    assert_eq!(
+        node.list_walks(Some(WalkType::File)),
+        vec![(p("foo"), 1, WalkType::File)]
+    );
 
     let baz_walk = Walk::new(2);
     node.insert_walk(&config, WalkType::File, &p("foo/bar/baz"), baz_walk, 0);
     assert_eq!(
-        node.list_walks(WalkType::File),
-        vec![(p("foo"), 1), (p("foo/bar/baz"), 2)]
+        node.list_walks(Some(WalkType::File)),
+        vec![
+            (p("foo"), 1, WalkType::File),
+            (p("foo/bar/baz"), 2, WalkType::File)
+        ]
     );
 
     let root_walk = Walk::new(0);
     node.insert_walk(&config, WalkType::File, &p(""), root_walk, 0);
     assert_eq!(
-        node.list_walks(WalkType::File),
-        vec![(p(""), 0), (p("foo"), 1), (p("foo/bar/baz"), 2)]
+        node.list_walks(Some(WalkType::File)),
+        vec![
+            (p(""), 0, WalkType::File),
+            (p("foo"), 1, WalkType::File),
+            (p("foo/bar/baz"), 2, WalkType::File)
+        ]
     );
 
     // depth=1 doesn't contain any descendant walks - don't clear anything out.
     let root_walk = Walk::new(1);
     node.insert_walk(&config, WalkType::File, &p(""), root_walk, 0);
     assert_eq!(
-        node.list_walks(WalkType::File),
-        vec![(p(""), 1), (p("foo"), 1), (p("foo/bar/baz"), 2)]
+        node.list_walks(Some(WalkType::File)),
+        vec![
+            (p(""), 1, WalkType::File),
+            (p("foo"), 1, WalkType::File),
+            (p("foo/bar/baz"), 2, WalkType::File)
+        ]
     );
 
     // depth=2 contains the "foo" walk - clear "foo" out.
     let root_walk = Walk::new(2);
     node.insert_walk(&config, WalkType::File, &p(""), root_walk, 0);
     assert_eq!(
-        node.list_walks(WalkType::File),
-        vec![(p(""), 2), (p("foo/bar/baz"), 2)]
+        node.list_walks(Some(WalkType::File)),
+        vec![
+            (p(""), 2, WalkType::File),
+            (p("foo/bar/baz"), 2, WalkType::File)
+        ]
     );
 
     // Contains the "foo/bar/baz" walk.
     let root_walk = Walk::new(5);
     node.insert_walk(&config, WalkType::File, &p(""), root_walk, 0);
-    assert_eq!(node.list_walks(WalkType::File), vec![(p(""), 5)]);
+    assert_eq!(
+        node.list_walks(Some(WalkType::File)),
+        vec![(p(""), 5, WalkType::File)]
+    );
 }
 
 #[test]

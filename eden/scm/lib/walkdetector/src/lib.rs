@@ -107,15 +107,26 @@ impl Detector {
 
     /// Return list of (walk root dir, walk depth) representing active file content walks.
     pub fn file_walks(&self) -> Vec<(RepoPathBuf, usize)> {
-        self.walks(WalkType::File)
+        self.walks(Some(WalkType::File))
+            .into_iter()
+            .map(|(root, depth, _)| (root, depth))
+            .collect()
     }
 
     /// Return list of (walk root dir, walk depth) representing active directory walks.
     pub fn dir_walks(&self) -> Vec<(RepoPathBuf, usize)> {
-        self.walks(WalkType::Directory)
+        self.walks(Some(WalkType::Directory))
+            .into_iter()
+            .map(|(root, depth, _)| (root, depth))
+            .collect()
     }
 
-    fn walks(&self, walk_type: WalkType) -> Vec<(RepoPathBuf, usize)> {
+    /// Return list of (walk root dir, walk depth, walk type) representing all active walks.
+    pub fn all_walks(&self) -> Vec<(RepoPathBuf, usize, WalkType)> {
+        self.walks(None)
+    }
+
+    fn walks(&self, walk_type: Option<WalkType>) -> Vec<(RepoPathBuf, usize, WalkType)> {
         let inner = self.inner.read();
 
         let mut walks = if inner.needs_gc(&self.config) {
