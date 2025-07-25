@@ -483,6 +483,7 @@ thrift_library(
         "py-deprecated",
     ],
     py_base_module = "facebook",
+    rust_autocargo = {"cargo_toml_dir": "thrift"},
     rust_deps = [
         "//common/rust/shed/sorted_vector_map:sorted_vector_map",
     ],

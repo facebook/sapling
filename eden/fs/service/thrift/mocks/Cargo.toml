@@ -18,9 +18,9 @@ doc = false
 anyhow = "1.0.98"
 async-trait = "0.1.86"
 codegen_includer_proc_macro = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
-config_thrift = { version = "0.1.0", path = "../../config" }
-config_thrift_clients = { version = "0.1.0", path = "../../config/clients" }
-config_thrift_mocks = { version = "0.1.0", path = "../../config/mocks" }
+config_thrift = { version = "0.1.0", path = "../../../config" }
+config_thrift_clients = { version = "0.1.0", path = "../../../config/clients" }
+config_thrift_mocks = { version = "0.1.0", path = "../../../config/mocks" }
 cpp = { version = "0.0.1+unstable", git = "https://github.com/facebook/fbthrift.git", branch = "main" }
 cpp_clients = { version = "0.0.1+unstable", git = "https://github.com/facebook/fbthrift.git", branch = "main" }
 cpp_mocks = { version = "0.0.1+unstable", git = "https://github.com/facebook/fbthrift.git", branch = "main" }
