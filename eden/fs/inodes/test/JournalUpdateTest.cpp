@@ -46,8 +46,8 @@ TEST_F(JournalUpdateTest, moveFileRename) {
   auto oldPath = RelativePath{"new_file.txt"};
   auto newPath = RelativePath{"new_file2.txt"};
 
-  ASSERT_EQ(1, summedDelta->changedFilesInOverlay.count(oldPath));
-  ASSERT_EQ(1, summedDelta->changedFilesInOverlay.count(newPath));
+  ASSERT_EQ(1, summedDelta->changedFilesInOverlay.contains(oldPath));
+  ASSERT_EQ(1, summedDelta->changedFilesInOverlay.contains(newPath));
 
   EXPECT_FALSE(summedDelta->changedFilesInOverlay[oldPath].existedBefore);
   EXPECT_FALSE(summedDelta->changedFilesInOverlay[oldPath].existedAfter);
@@ -71,8 +71,8 @@ TEST_F(JournalUpdateTest, moveFileReplace) {
   auto oldPath = RelativePath{"existing_file.txt"};
   auto newPath = RelativePath{"new_file.txt"};
 
-  ASSERT_EQ(1, summedDelta->changedFilesInOverlay.count(oldPath));
-  ASSERT_EQ(1, summedDelta->changedFilesInOverlay.count(newPath));
+  ASSERT_EQ(1, summedDelta->changedFilesInOverlay.contains(oldPath));
+  ASSERT_EQ(1, summedDelta->changedFilesInOverlay.contains(newPath));
 
   EXPECT_TRUE(summedDelta->changedFilesInOverlay[oldPath].existedBefore);
   EXPECT_FALSE(summedDelta->changedFilesInOverlay[oldPath].existedAfter);
