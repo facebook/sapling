@@ -512,6 +512,8 @@ pub async fn fetch(
     args: FetchArgs,
     scuba_handler: MononokeGitScubaHandler,
 ) -> Result<impl TryIntoResponse + use<>, Error> {
+    let n_haves = args.haves().len();
+    let n_wants = args.wants().len();
     let (writer, reader) = mpsc::channel::<Bytes>(100_000_000);
     let (progress_writer, mut progress_reader) = mpsc::channel::<String>(50);
     let (error_writer, mut err_reader) = mpsc::channel::<String>(50);
@@ -590,7 +592,9 @@ pub async fn fetch(
                     perf_scuba.clone(),
                 )
                 .await?;
-                packfile_count_to_scuba(&response_stream, &mut perf_scuba, request_signature);
+                perf_scuba.add(MononokeGitScubaKey::NWants, n_wants);
+                perf_scuba.add(MononokeGitScubaKey::NHaves, n_haves);
+                packfile_stats_to_scuba(&response_stream, &mut perf_scuba, request_signature);
                 let mut pack_writer = PackfileWriter::new(
                     sink_writer,
                     response_stream.num_objects() as u32,
@@ -650,7 +654,7 @@ async fn git_error_message(
     Ok(BytesBody::new(Bytes::from(buf), mime::TEXT_PLAIN))
 }
 
-fn packfile_count_to_scuba(
+fn packfile_stats_to_scuba(
     response: &FetchResponse<'_>,
     scuba: &mut MononokeScubaSampleBuilder,
     request_signature: String,

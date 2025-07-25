@@ -266,6 +266,10 @@ impl FetchArgs {
         &self.haves
     }
 
+    pub fn wants(&self) -> &Vec<ObjectId> {
+        &self.wants
+    }
+
     pub fn parse_from_packetline(args: &[u8]) -> Result<Self> {
         let mut tokens = StreamingPeekableIter::new(args, &[PacketLineRef::Flush], true);
         let mut fetch_args = Self::default();

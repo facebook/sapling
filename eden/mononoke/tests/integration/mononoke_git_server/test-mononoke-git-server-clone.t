@@ -9,6 +9,7 @@
   $ setup_common_config $REPOTYPE
   $ GIT_REPO_ORIGIN="${TESTTMP}/origin/repo-git"
   $ GIT_REPO="${TESTTMP}/repo-git"
+  $ SCUBA="$TESTTMP/scuba.json"
 
 # Setup git repository
   $ mkdir -p "$GIT_REPO_ORIGIN"
@@ -52,3 +53,7 @@
   $ cd $REPONAME  
   $ git rev-list --objects --all | git cat-file --batch-check='%(objectname) %(objecttype) %(rest)' | sort > $TESTTMP/new_object_list
   $ diff -w $TESTTMP/new_object_list $TESTTMP/object_list  
+# Verify we logged stats
+  $ jq .int "$SCUBA" | grep -E "(n_wants|n_haves)" | sort
+    "n_haves": 0,
+    "n_wants": 4,
