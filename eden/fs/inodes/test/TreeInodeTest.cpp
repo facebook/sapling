@@ -247,8 +247,8 @@ TEST(TreeInode, nfsReaddirEofIsCorrect) {
   // entire directory listing (buffer too small), and at least one with an
   // entire listing (buffer big enough) while iterating over buffer sizes above,
   // then we know we've covered that case.
-  ASSERT_NE(listingSizesReturned.count(5), 0);
-  ASSERT_NE(listingSizesReturned.count(6), 0);
+  ASSERT_NE(listingSizesReturned.contains(5), 0);
+  ASSERT_NE(listingSizesReturned.contains(6), 0);
 }
 
 namespace {
@@ -277,7 +277,7 @@ void runConcurrentModificationAndReaddirIteration(
   // Collision if it's already been used.
   auto pickName = [&]() -> PathComponentPiece {
     const auto& name = names[folly::Random::rand32(names.size())];
-    if (modified.count(name)) {
+    if (modified.contains(name)) {
       throw Collision{};
     }
     modified.insert(name);
@@ -352,7 +352,7 @@ void runConcurrentModificationAndReaddirIteration(
   // Verify all unmodified files were read.
   for (auto& name : names) {
     // If modified, it is not guaranteed to be returned by fuseReaddir.
-    if (modified.count(name)) {
+    if (modified.contains(name)) {
       continue;
     }
 
