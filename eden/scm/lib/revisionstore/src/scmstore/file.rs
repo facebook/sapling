@@ -240,6 +240,9 @@ impl FileStore {
             // when the consumer is consuming slower than we are fetching.
             bounded(RESULT_QUEUE_SIZE)
         };
+
+        let indexedlog_cache = self.indexedlog_cache.clone();
+
         let mut state = FetchState::new(
             keys,
             attrs,
@@ -249,6 +252,7 @@ impl FileStore {
             fctx.clone(),
             self.cas_cache_threshold_bytes,
             bar.clone(),
+            indexedlog_cache.clone(),
         );
 
         // When ignoring results, we won't advance the progress bar, so update the "total".
@@ -283,7 +287,6 @@ impl FileStore {
         let keys_len = state.pending_len();
 
         let aux_cache = self.aux_cache.clone();
-        let indexedlog_cache = self.indexedlog_cache.clone();
         let indexedlog_local = self.indexedlog_local.clone();
         let lfs_cache = self.lfs_cache.clone();
         let lfs_local = self.lfs_local.clone();

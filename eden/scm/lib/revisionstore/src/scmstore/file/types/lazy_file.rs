@@ -14,7 +14,6 @@ use format_util::split_file_metadata;
 use minibytes::Bytes;
 use storemodel::SerializationFormat;
 use types::HgId;
-use types::Id20;
 
 use crate::Metadata;
 use crate::indexedlogdatastore::Entry;
@@ -147,20 +146,6 @@ impl LazyFile {
                 size: Some(data.len() as u64),
                 flags: None,
             },
-        })
-    }
-
-    /// Convert the LazyFile to an indexedlog Entry, if it should ever be written to IndexedLog cache
-    pub(crate) fn indexedlog_cache_entry(&self, node: Id20) -> Result<Option<Entry>> {
-        use LazyFile::*;
-        Ok(match self {
-            IndexedLog(entry, _) => Some(entry.clone()),
-            SaplingRemoteApi(entry, _) => {
-                Some(Entry::new(node, entry.data()?, entry.metadata()?.clone()))
-            }
-            // LFS Files should be written to LfsCache instead
-            Lfs(_, _, _) => None,
-            Cas(_) => None,
         })
     }
 }

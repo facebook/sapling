@@ -32,7 +32,7 @@ use types::CasDigest;
 use types::CasDigestType;
 use types::CasFetchedStats;
 use types::FetchContext;
-use types::Id20;
+use types::HgId;
 use types::Key;
 use types::Sha256;
 use types::errors::NetworkError;
@@ -86,6 +86,9 @@ pub struct FetchState {
     format: SerializationFormat,
 
     cas_cache_threshold_bytes: Option<u64>,
+
+    file_cache: Option<Arc<IndexedLogHgIdDataStore>>,
+    files_to_cache: Vec<(HgId, Entry)>,
 }
 
 impl FetchState {
@@ -98,6 +101,7 @@ impl FetchState {
         fctx: FetchContext,
         cas_cache_threshold_bytes: Option<u64>,
         bar: Arc<ProgressBar>,
+        file_cache: Option<Arc<IndexedLogHgIdDataStore>>,
     ) -> Self {
         FetchState {
             common: CommonFetchState::new(keys, attrs, found_tx, fctx.clone(), bar),
@@ -115,6 +119,8 @@ impl FetchState {
             format: file_store.format(),
             fctx,
             cas_cache_threshold_bytes,
+            file_cache,
+            files_to_cache: Vec::new(),
         }
     }
 
@@ -172,22 +178,11 @@ impl FetchState {
         self.common.found(key.clone(), sf);
     }
 
-    fn evict_to_cache(
-        node: Id20,
-        file: LazyFile,
-        indexedlog_cache: &IndexedLogHgIdDataStore,
-        format: SerializationFormat,
-    ) -> Result<LazyFile> {
-        let cache_entry = file.indexedlog_cache_entry(node)?.ok_or_else(|| {
-            anyhow!(
-                "expected LazyFile::SaplingRemoteApi, other LazyFile variants should not be written to cache"
-            )
-        })?;
-        indexedlog_cache.put_entry(cache_entry)?;
-        let mmap_entry = indexedlog_cache
-            .get_entry(&node)?
-            .ok_or_else(|| anyhow!("failed to read entry back from indexedlog after writing"))?;
-        Ok(LazyFile::IndexedLog(mmap_entry, format))
+    fn cache_entry(&mut self, entry: Entry) {
+        self.files_to_cache.push((entry.node(), entry));
+        if self.files_to_cache.len() >= 1_000 {
+            self.flush_to_cache();
+        }
     }
 
     pub(crate) fn fetch_indexedlog(&mut self, store: &IndexedLogHgIdDataStore, loc: StoreLocation) {
@@ -493,12 +488,13 @@ impl FetchState {
         lfs_cache: Option<Arc<LfsStore>>,
         aux_cache: Option<Arc<AuxStore>>,
         format: SerializationFormat,
-    ) -> Result<(StoreFile, Option<LfsPointersEntry>)> {
+    ) -> Result<(StoreFile, Option<LfsPointersEntry>, Option<Entry>)> {
         let entry = entry.result?;
 
         let hgid = entry.key.hgid;
         let mut file = StoreFile::default();
         let mut lfsptr = None;
+        let mut cache_entry = None;
 
         if let Some(aux_data) = entry.aux_data() {
             let aux_data = aux_data.clone();
@@ -515,19 +511,20 @@ impl FetchState {
                     lfs_cache.add_pointer(ptr.clone())?;
                 }
                 lfsptr = Some(ptr);
-            } else if let Some(indexedlog_cache) = indexedlog_cache.as_ref() {
-                file.content = Some(Self::evict_to_cache(
-                    hgid,
-                    LazyFile::SaplingRemoteApi(entry, format),
-                    indexedlog_cache,
-                    format,
-                )?);
             } else {
+                if indexedlog_cache.is_some() {
+                    let mut e = Entry::new(hgid, entry.data()?, entry.metadata()?.clone());
+                    // Pre-compress content here since we are being called in parallel (and
+                    // compression is CPU intensive).
+                    e.compress_content()?;
+                    cache_entry = Some(e);
+                }
+
                 file.content = Some(LazyFile::SaplingRemoteApi(entry, format));
             }
         }
 
-        Ok((file, lfsptr))
+        Ok((file, lfsptr, cache_entry))
     }
 
     pub(crate) fn fetch_edenapi(
@@ -640,7 +637,7 @@ impl FetchState {
 
             fetching_keys.remove(&key);
             match res {
-                Ok((file, maybe_lfsptr)) => {
+                Ok((file, maybe_lfsptr, cache_entry)) => {
                     if let Some(lfsptr) = maybe_lfsptr {
                         found_pointers += 1;
                         self.found_pointer(key.clone(), lfsptr, false);
@@ -648,6 +645,9 @@ impl FetchState {
                         found += 1;
                     }
                     self.found_attributes(key, file);
+                    if let Some(cache_entry) = cache_entry {
+                        self.cache_entry(cache_entry);
+                    }
                 }
                 Err(err) => {
                     errors += 1;
@@ -1085,8 +1085,29 @@ impl FetchState {
             true
         });
     }
+}
 
-    pub(crate) fn finish(mut self) {
+impl FetchState {
+    // Flush pending files to file cache.
+    fn flush_to_cache(&mut self) {
+        if let Some(file_cache) = &self.file_cache {
+            if let Err(err) = file_cache.put_batch(std::mem::take(&mut self.files_to_cache)) {
+                self.errors.other_error(err);
+            }
+        }
+    }
+
+    pub(crate) fn finish(&mut self) {
+        // We made it to the end with no overall errors - report_mising=true so we report errors
+        // for any items we unexpectedly didn't get results for.
         self.common.results(std::mem::take(&mut self.errors), true);
+    }
+}
+
+impl Drop for FetchState {
+    fn drop(&mut self) {
+        self.flush_to_cache();
+
+        self.common.results(std::mem::take(&mut self.errors), false);
     }
 }

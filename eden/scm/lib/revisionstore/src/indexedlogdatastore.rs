@@ -182,6 +182,19 @@ impl Entry {
         Ok(content.clone())
     }
 
+    // Pre-compress content in preparation for insertion into cache.
+    pub fn compress_content(&mut self) -> Result<()> {
+        if self.compressed_content.is_some() {
+            return Ok(());
+        }
+
+        if let Some(content) = self.content.get() {
+            self.compressed_content = Some(compress(content)?.into());
+        }
+
+        Ok(())
+    }
+
     pub fn content(&self) -> Result<Bytes> {
         self.calculate_content()
     }
