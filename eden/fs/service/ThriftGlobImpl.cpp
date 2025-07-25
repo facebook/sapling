@@ -395,9 +395,9 @@ getLocalGlobResults(
               BackingStore::GetGlobFilesResult filteredRemoteGlobFiles;
               filteredRemoteGlobFiles.rootId = remoteGlobFiles.rootId;
               for (auto& entry : remoteGlobFiles.globFiles) {
-                if (localFiles->removedFiles.count(entry) == 1 ||
-                    localFiles->addedFiles.count(entry) == 1 ||
-                    localFiles->modifiedFiles.count(entry) == 1) {
+                if (localFiles->removedFiles.contains(entry) ||
+                    localFiles->addedFiles.contains(entry) ||
+                    localFiles->modifiedFiles.contains(entry)) {
                   continue;
                 }
                 filteredRemoteGlobFiles.globFiles.emplace_back(entry);
