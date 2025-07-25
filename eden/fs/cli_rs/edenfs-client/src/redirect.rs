@@ -28,6 +28,7 @@ use edenfs_telemetry::EDEN_EVENTS_SCUBA;
 use edenfs_telemetry::send;
 use edenfs_utils::metadata::MetadataExt;
 use edenfs_utils::remove_symlink;
+use hg_util::path::absolute;
 #[cfg(target_os = "windows")]
 use mkscratch::zzencode;
 use pathdiff::diff_paths;
@@ -37,7 +38,6 @@ use serde::Deserialize;
 use serde::Deserializer;
 use serde::Serialize;
 use toml::value::Value;
-use util::path::absolute;
 
 use crate::checkout::CheckoutConfig;
 use crate::checkout::EdenFsCheckout;

@@ -106,9 +106,9 @@ use edenfs_utils::get_executable;
 #[cfg(windows)]
 use edenfs_utils::strip_unc_prefix;
 use fbinit::expect_init;
+use hg_util::lock::PathLock;
 use tracing::Level;
 use tracing::event;
-use util::lock::PathLock;
 
 use crate::client::EdenFsClient;
 use crate::use_case::UseCase;

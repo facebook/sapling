@@ -70,6 +70,5 @@ rust_library(
         "//eden/scm/lib/config/remote-loader:remote-loader",
         "//eden/scm/lib/http-client:http-client",
         "//eden/scm/lib/thrift-types:thrift-types",
-        "//eden/scm/lib/util:util",
     ],
 )
