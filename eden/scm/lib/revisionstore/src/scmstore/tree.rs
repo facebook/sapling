@@ -376,8 +376,19 @@ impl TreeStore {
             bounded(RESULT_QUEUE_SIZE)
         };
 
+        let aux_cache = self.filestore.as_ref().and_then(|fs| fs.aux_cache.clone());
+        let tree_aux_store = self.tree_aux_store.clone();
+
         let found_tx2 = found_tx.clone();
-        let mut state = FetchState::new(reqs, attrs, found_tx, fctx.clone(), bar.clone());
+        let mut state = FetchState::new(
+            reqs,
+            attrs,
+            found_tx,
+            fctx.clone(),
+            bar.clone(),
+            aux_cache,
+            tree_aux_store.clone(),
+        );
 
         if tracing::enabled!(target: "tree_fetches", tracing::Level::TRACE) {
             let attrs = [
@@ -411,8 +422,6 @@ impl TreeStore {
         let historystore_local = self.historystore_local.clone();
 
         let cache_to_local_cache = self.cache_to_local_cache;
-        let aux_cache = self.filestore.as_ref().and_then(|fs| fs.aux_cache.clone());
-        let tree_aux_store = self.tree_aux_store.clone();
         let cas_client = self.cas_client.clone();
 
         let fetch_children_metadata = match self.tree_metadata_mode {
@@ -555,7 +564,7 @@ impl TreeStore {
 
                 // Then fetch from CAS since we essentially always expect a hit.
                 if let Some(cas_client) = &cas_client {
-                    state.fetch_cas(cas_client, aux_cache.as_deref(), tree_aux_store.as_deref());
+                    state.fetch_cas(cas_client);
                 }
 
                 // Finally fetch from local cache (shouldn't normally get here).
@@ -620,8 +629,6 @@ impl TreeStore {
                         } else {
                             None
                         },
-                        aux_cache.as_deref(),
-                        tree_aux_store.as_deref(),
                         if fetch_parents {
                             historystore_cache.as_deref()
                         } else {
@@ -633,8 +640,11 @@ impl TreeStore {
                 }
             }
 
-            // TODO(meyer): Report incomplete / not found, handle errors better instead of just always failing the batch, etc
-            state.common.results(state.errors);
+            // We made it to the end with no overall errors - report_mising=true so we report errors
+            // for any items we unexpectedly didn't get results for.
+            state
+                .common
+                .results(std::mem::take(&mut state.errors), true);
 
             Ok(())
         };

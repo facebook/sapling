@@ -1086,7 +1086,7 @@ impl FetchState {
         });
     }
 
-    pub(crate) fn finish(self) {
-        self.common.results(self.errors);
+    pub(crate) fn finish(mut self) {
+        self.common.results(std::mem::take(&mut self.errors), true);
     }
 }

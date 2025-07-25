@@ -142,16 +142,24 @@ impl<T: StoreValue + std::fmt::Debug> CommonFetchState<T> {
         false
     }
 
-    pub(crate) fn results(self, errors: FetchErrors) {
+    // Propagate errors to the result channel. report_missing controls whether we report errors for
+    // remaining pending items that we did not see a specific error for. This is set to `false` when
+    // we get "overall" errors that abort the operation early, potentially leaving all the items
+    // pending.
+    pub(crate) fn results(&mut self, errors: FetchErrors, report_missing: bool) {
         // Only emit keyed errors for items that are stuck in pending.
         // We may have, for example, gotten an error fetching a key from CAS, but then succeeded in
         // fetching it from SLAPI. In that case, `fetch_errors` contains the CAS error, but the
         // requested item won't be in `pending` since it was satisfied via SLAPI.
         let mut incomplete = errors.fetch_errors;
-        for (key, _value) in self.pending.into_iter() {
+        for (key, _value) in self.pending.drain() {
             let err = match incomplete.remove(&key) {
                 Some(err) => KeyFetchError::KeyedError(KeyedError(key, err)),
                 None => {
+                    if !report_missing {
+                        continue;
+                    }
+
                     if self.fctx.mode().is_local() {
                         KeyFetchError::NotFoundLocally(key)
                     } else {
@@ -241,7 +249,7 @@ impl fmt::Display for KeyFetchError {
     }
 }
 
-#[derive(Debug)]
+#[derive(Default, Debug)]
 pub(crate) struct FetchErrors {
     /// Errors encountered for specific keys
     pub(crate) fetch_errors: HashMap<Key, Error>,

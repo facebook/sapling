@@ -19,11 +19,14 @@ use futures::StreamExt;
 use manifest_augmented_tree::AugmentedTree;
 use manifest_augmented_tree::AugmentedTreeWithDigest;
 use progress_model::ProgressBar;
+use storemodel::FileAuxData;
+use storemodel::TreeAuxData;
 use tracing::field;
 use types::CasDigest;
 use types::CasDigestType;
 use types::CasFetchedStats;
 use types::FetchContext;
+use types::HgId;
 use types::Key;
 use types::NodeInfo;
 use types::hgid::NULL_ID;
@@ -53,6 +56,34 @@ pub struct FetchState {
 
     /// Track fetch metrics,
     pub(crate) metrics: &'static TreeStoreFetchMetrics,
+
+    pub(crate) file_aux_cache: Option<Arc<AuxStore>>,
+    pub(crate) tree_aux_cache: Option<Arc<TreeAuxStore>>,
+
+    // Enqueue aux data so we can process it more efficiently all at once.
+    pub(crate) file_aux_to_cache: Vec<(HgId, FileAuxData)>,
+    pub(crate) tree_aux_to_cache: Vec<(HgId, TreeAuxData)>,
+}
+
+impl Drop for FetchState {
+    fn drop(&mut self) {
+        if let Some(aux_cache) = &self.file_aux_cache {
+            if let Err(err) = aux_cache.put_batch(std::mem::take(&mut self.file_aux_to_cache)) {
+                self.errors.other_error(err);
+            }
+        }
+
+        if let Some(tree_aux_cache) = &self.tree_aux_cache {
+            if let Err(err) = tree_aux_cache.put_batch(std::mem::take(&mut self.tree_aux_to_cache))
+            {
+                self.errors.other_error(err);
+            }
+        }
+
+        // Don't report missing entries by default. If we got an overall error that left 1M pending
+        // entries, we don't want to report 1M errors.
+        self.common.results(std::mem::take(&mut self.errors), false);
+    }
 }
 
 impl FetchState {
@@ -62,6 +93,8 @@ impl FetchState {
         found_tx: Sender<Result<(Key, StoreTree), KeyFetchError>>,
         fctx: FetchContext,
         bar: Arc<ProgressBar>,
+        file_aux_cache: Option<Arc<AuxStore>>,
+        tree_aux_cache: Option<Arc<TreeAuxStore>>,
     ) -> Self {
         let cause = fctx.cause();
         FetchState {
@@ -72,6 +105,10 @@ impl FetchState {
             } else {
                 &TREE_STORE_FETCH_METRICS
             },
+            file_aux_cache,
+            file_aux_to_cache: Vec::new(),
+            tree_aux_cache,
+            tree_aux_to_cache: Vec::new(),
         }
     }
 
@@ -80,8 +117,6 @@ impl FetchState {
         edenapi: &SaplingRemoteApiTreeStore,
         attributes: edenapi_types::TreeAttributes,
         indexedlog_cache: Option<&IndexedLogHgIdDataStore>,
-        aux_cache: Option<&AuxStore>,
-        tree_aux_store: Option<&TreeAuxStore>,
         historystore_cache: Option<&IndexedLogHgIdHistoryStore>,
     ) -> Result<()> {
         let pending: Vec<_> = self
@@ -129,17 +164,15 @@ impl FetchState {
             let key = entry.key.clone();
             let entry = LazyTree::SaplingRemoteApi(entry);
 
-            if aux_cache.is_some() || tree_aux_store.is_some() {
-                cache_child_aux_data(&entry, aux_cache, tree_aux_store)?;
+            self.cache_child_aux_data(&entry);
 
+            if self.tree_aux_cache.is_some() {
                 if let Some(aux_data) = entry.aux_data() {
-                    if let Some(tree_aux_store) = tree_aux_store.as_ref() {
-                        tracing::trace!(
-                            hgid = %key.hgid,
-                            "writing self to tree aux store"
-                        );
-                        tree_aux_store.put(key.hgid, &aux_data)?;
-                    }
+                    tracing::trace!(
+                        hgid = %key.hgid,
+                        "writing self to tree aux store"
+                    );
+                    self.tree_aux_to_cache.push((key.hgid, aux_data));
                 }
             }
 
@@ -174,12 +207,7 @@ impl FetchState {
         Ok(())
     }
 
-    pub(crate) fn fetch_cas(
-        &mut self,
-        cas_client: &dyn CasClient,
-        aux_cache: Option<&AuxStore>,
-        tree_aux_store: Option<&TreeAuxStore>,
-    ) {
+    pub(crate) fn fetch_cas(&mut self, cas_client: &dyn CasClient) {
         if self.common.request_attrs == TreeAttributes::AUX_DATA {
             // If we are only requesting aux data, don't bother querying CAS. Aux data is
             // required to query CAS, so CAS cannot possibly help.
@@ -296,15 +324,10 @@ impl FetchState {
                                                 augmented_tree: tree,
                                             });
 
-                                            if let Err(err) =
-                                                cache_child_aux_data(
-                                                    &lazy_tree,
-                                                    aux_cache,
-                                                    tree_aux_store,
-                                                )
-                                            {
-                                                self.errors.multiple_keyed_error(keys, "cache child aux data failed", err);
-                                            } else if !keys.is_empty() {
+                                            self.cache_child_aux_data(
+                                                &lazy_tree,
+                                            );
+                                            if !keys.is_empty() {
                                                 let last = keys.pop().unwrap();
                                                 for key in keys {
                                                     self.common.found(
@@ -363,39 +386,20 @@ impl FetchState {
         self.metrics.cas_backend.update(&total_stats);
         self.metrics.cas_local_cache.update(&total_stats);
     }
-}
 
-fn cache_child_aux_data(
-    tree: &LazyTree,
-    aux_cache: Option<&AuxStore>,
-    tree_aux_store: Option<&TreeAuxStore>,
-) -> Result<()> {
-    if aux_cache.is_none() && tree_aux_store.is_none() {
-        return Ok(());
-    }
+    fn cache_child_aux_data(&mut self, tree: &LazyTree) {
+        let aux_cache = &self.file_aux_cache;
+        let tree_aux_store = &self.tree_aux_cache;
 
-    let aux_data = tree.children_aux_data();
-    for (hgid, aux) in aux_data.into_iter() {
-        match aux {
-            AuxData::File(file_aux) => {
-                if let Some(aux_cache) = aux_cache.as_ref() {
-                    // Perform a read-before-write to avoid duplicate writes to the aux cache, which
-                    // will cause the cache to prematurely roll over (and drop live data).
-                    if !aux_cache.contains(hgid)? {
-                        tracing::trace!(?hgid, "writing to aux cache");
-                        aux_cache.put(hgid, &file_aux)?;
-                    }
-                }
-            }
-            AuxData::Tree(tree_aux) => {
-                if let Some(tree_aux_store) = tree_aux_store.as_ref() {
-                    if !tree_aux_store.contains(hgid)? {
-                        tracing::trace!(?hgid, "writing to tree aux store");
-                        tree_aux_store.put(hgid, &tree_aux)?;
-                    }
-                }
+        if aux_cache.is_none() && tree_aux_store.is_none() {
+            return;
+        }
+
+        for (hgid, aux) in tree.children_aux_data() {
+            match aux {
+                AuxData::File(file_aux) => self.file_aux_to_cache.push((hgid, file_aux)),
+                AuxData::Tree(tree_aux) => self.tree_aux_to_cache.push((hgid, tree_aux)),
             }
         }
     }
-    Ok(())
 }
