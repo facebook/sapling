@@ -15,7 +15,7 @@ name = "revlogindex"
 [dependencies]
 async-trait = "0.1.86"
 bit-vec = "0.6"
-byteorder = "1.3"
+byteorder = "1.5"
 parking_lot = { version = "0.12.1", features = ["send_guard"] }
 sapling-dag = { version = "0.1.0", path = "../dag" }
 sapling-indexedlog = { version = "0.1.0", path = "../indexedlog" }

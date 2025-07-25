@@ -15,7 +15,7 @@ name = "mercurial_types_test"
 path = "../tests/src/lib.rs"
 
 [dependencies]
-byteorder = "1.3"
+byteorder = "1.5"
 mercurial_types = { version = "0.1.0", path = ".." }
 mononoke_types = { version = "0.1.0", path = "../../../mononoke_types" }
 mononoke_types-mocks = { version = "0.1.0", path = "../../../mononoke_types/mocks" }

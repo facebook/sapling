@@ -16,7 +16,7 @@ name = "revisionstore"
 anyhow = "1.0.98"
 async-trait = "0.1.86"
 blob = { version = "0.1.0", path = "../blob" }
-byteorder = "1.3"
+byteorder = "1.5"
 flume = "0.11.1"
 fn-error-context = "0.2"
 fs-err = { version = "3", features = ["tokio"] }
