@@ -44,10 +44,21 @@ macro_rules! info_if {
     };
 }
 
-#[derive(Debug, Clone, Copy, Default)]
+#[derive(Debug, Clone, Copy)]
 pub(crate) struct Config {
     pub(crate) max_initial_lag: u64,
     pub(crate) min_ratio: f64,
+    pub(crate) min_interval: Duration,
+}
+
+impl Default for Config {
+    fn default() -> Self {
+        Self {
+            max_initial_lag: 1000,
+            min_ratio: 0.1,
+            min_interval: Duration::from_millis(10),
+        }
+    }
 }
 
 /// Launch an asynchronous prefetch manager to kick of file/dir prefetches when kicked via the
@@ -100,9 +111,9 @@ pub(crate) fn prefetch_manager(
             let now = Instant::now();
             if last_iteration_time
                 .replace(now)
-                .is_some_and(|t| now.duration_since(t) < Duration::from_millis(1))
+                .is_some_and(|t| now.duration_since(t) < config.min_interval)
             {
-                std::thread::sleep(Duration::from_millis(1));
+                std::thread::sleep(config.min_interval);
             }
 
             let current_commit_id = match current_commit_id.read().as_ref() {
@@ -972,6 +983,7 @@ mod test {
         let config = Config {
             min_ratio: 0.1,
             max_initial_lag: 20,
+            min_interval: Duration::from_millis(1),
         };
 
         let mut detector = walkdetector::Detector::new();

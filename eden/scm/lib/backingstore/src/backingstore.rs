@@ -248,6 +248,11 @@ impl BackingStore {
                     "walk-prefetch-max-initial-lag",
                     || 50_000,
                 )?,
+                min_interval: config.get_or(
+                    "backingstore",
+                    "walk-prefetch-min-interval",
+                    || Duration::from_millis(10),
+                )?,
             };
 
             prefetch_manager(
