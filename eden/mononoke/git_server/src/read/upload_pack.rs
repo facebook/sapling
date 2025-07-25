@@ -605,6 +605,7 @@ pub async fn fetch(
                 Ok(_) => anyhow::Ok(()),
                 Err(e) => {
                     scuba.add(MononokeGitScubaKey::PackfileReadError, format!("{:?}", e));
+                    scuba.add("log_tag", "Packfile Read Error");
                     scuba.unsampled();
                     scuba.log();
                     error_writer.send(format!("{:?}", e)).await?;
@@ -664,6 +665,7 @@ fn packfile_count_to_scuba(
     );
     scuba.add(MononokeGitScubaKey::PackfileTagCount, response.num_tags);
     scuba.add(MononokeGitScubaKey::RequestSignature, request_signature);
+    scuba.add("log_tag", "Packfile stats");
     scuba.unsampled();
     scuba.log();
 }

@@ -117,6 +117,7 @@
     "log_tag": "Decoded objects from Packfile",
     "log_tag": "Fetched Prerequisite Objects",
     "log_tag": "GitImport, Derivation and Bonsai creation completed",
+    "log_tag": "Packfile stats",
     "log_tag": "Parsed complete Packfile",
     "log_tag": "Prefetched existing BonsaiGit Mappings",
     "log_tag": "Sent Packfile OK",
