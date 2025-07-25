@@ -644,8 +644,8 @@ class SaplingBackingStore final : public BackingStore {
   bool isOBCEnabled_ = false;
   // TODO: this is a prototype to test OBC API on eden
   // we should move these to a separate class
-  monitoring::OBCPxx getBlobPerRepoLatencies_; // calculates p10, p50, p95, p99
-  monitoring::OBCPxx getTreePerRepoLatencies_; // calculates p10, p50, p95, p99
+  monitoring::OBCP99P95P50 getBlobPerRepoLatencies_; // calculates p50, p95, p99
+  monitoring::OBCP99P95P50 getTreePerRepoLatencies_; // calculates p50, p95, p99
   void initializeOBCCounters();
 
   /**

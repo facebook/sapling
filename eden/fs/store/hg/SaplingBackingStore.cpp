@@ -308,11 +308,11 @@ void SaplingBackingStore::initializeOBCCounters() {
   std::string repoName = store_.getRepoName().data();
   // Get the hostname without the ".facebook.com" suffix
   auto hostname = facebook::network::getLocalHost(/*stripFbDomain=*/true);
-  getBlobPerRepoLatencies_ = monitoring::OBCPxx(
+  getBlobPerRepoLatencies_ = monitoring::OBCP99P95P50(
       monitoring::OdsCategoryId::ODS_EDEN,
       fmt::format("eden.store.sapling.fetch_blob_{}_us", repoName),
       {hostname});
-  getTreePerRepoLatencies_ = monitoring::OBCPxx(
+  getTreePerRepoLatencies_ = monitoring::OBCP99P95P50(
       monitoring::OdsCategoryId::ODS_EDEN,
       fmt::format("eden.store.sapling.fetch_tree_{}_us", repoName),
       {hostname});
