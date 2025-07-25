@@ -144,15 +144,20 @@ impl Entry {
     /// Write an entry to the IndexedLog. See [`from_log`] for the detail about the on-disk format.
     pub fn write_to_log(self, log: &Store) -> Result<()> {
         let mut buf = Vec::new();
+        self.serialize(&mut buf)?;
+        log.write().append(buf)
+    }
+
+    fn serialize(&self, buf: &mut Vec<u8>) -> Result<()> {
         buf.write_all(self.node.as_ref())?;
 
         // write empty name (i.e. zero length)
         buf.write_u16::<BigEndian>(0)?;
 
-        self.metadata.write(&mut buf)?;
+        self.metadata.write(buf)?;
 
-        let compressed = if let Some(compressed) = self.compressed_content {
-            compressed
+        let compressed = if let Some(compressed) = &self.compressed_content {
+            compressed.clone()
         } else if let Some(raw) = self.content.get() {
             compress(raw)?.into()
         } else {
@@ -162,7 +167,7 @@ impl Entry {
         buf.write_u64::<BigEndian>(compressed.len() as u64)?;
         buf.write_all(&compressed)?;
 
-        log.write().append(buf)
+        Ok(())
     }
 
     pub(crate) fn calculate_content(&self) -> Result<Bytes> {
@@ -306,6 +311,17 @@ impl IndexedLogHgIdDataStore {
 
     pub(crate) fn format(&self) -> SerializationFormat {
         self.format
+    }
+
+    pub fn put_batch(&self, entries: Vec<(HgId, Entry)>) -> Result<()> {
+        self.store.append_batch(
+            entries,
+            |_, entry, buf| entry.serialize(buf),
+            // Files and trees are, in general, not remotely fetched when they are already in local
+            // caches, so we don't need to do an extra read-before-write before inserting into
+            // cache.
+            false,
+        )
     }
 }
 
