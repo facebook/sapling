@@ -5,8 +5,6 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-use std::collections::HashMap;
-
 use anyhow::Result;
 use edenapi_types::TreeChildEntry;
 use edenapi_types::TreeEntry;
@@ -121,42 +119,34 @@ impl LazyTree {
         }
     }
 
-    pub fn children_aux_data(&self) -> HashMap<HgId, AuxData> {
+    pub fn children_aux_data(&self) -> Vec<(HgId, AuxData)> {
         use LazyTree::*;
         match self {
-            SaplingRemoteApi(entry) => {
-                entry
-                    .children
-                    .as_ref()
-                    .map_or_else(HashMap::new, |childrens| {
-                        childrens
-                            .iter()
-                            .filter_map(|entry| {
-                                let child_entry = entry
-                                    .as_ref()
-                                    .inspect_err(|err| {
-                                        tracing::warn!("Error fetching child entry: {:?}", err);
-                                    })
-                                    .ok()?;
-                                match child_entry {
-                                    TreeChildEntry::File(file_entry) => {
-                                        file_entry.file_metadata.clone().map(|file_metadata| {
-                                            (
-                                                file_entry.key.hgid,
-                                                AuxData::File(file_metadata.into()),
-                                            )
-                                        })
-                                    }
-                                    TreeChildEntry::Directory(dir_entry) => {
-                                        dir_entry.tree_aux_data.map(|dir_metadata| {
-                                            (dir_entry.key.hgid, AuxData::Tree(dir_metadata))
-                                        })
-                                    }
-                                }
+            SaplingRemoteApi(entry) => entry.children.as_ref().map_or_else(Vec::new, |childrens| {
+                childrens
+                    .iter()
+                    .filter_map(|entry| {
+                        let child_entry = entry
+                            .as_ref()
+                            .inspect_err(|err| {
+                                tracing::warn!("Error fetching child entry: {:?}", err);
                             })
-                            .collect::<HashMap<_, _>>()
+                            .ok()?;
+                        match child_entry {
+                            TreeChildEntry::File(file_entry) => {
+                                file_entry.file_metadata.clone().map(|file_metadata| {
+                                    (file_entry.key.hgid, AuxData::File(file_metadata.into()))
+                                })
+                            }
+                            TreeChildEntry::Directory(dir_entry) => {
+                                dir_entry.tree_aux_data.map(|dir_metadata| {
+                                    (dir_entry.key.hgid, AuxData::Tree(dir_metadata))
+                                })
+                            }
+                        }
                     })
-            }
+                    .collect::<Vec<_>>()
+            }),
             Cas(entry) => entry
                 .augmented_tree
                 .entries
@@ -182,7 +172,7 @@ impl LazyTree {
                     ),
                 })
                 .collect(),
-            _ => HashMap::new(),
+            _ => Vec::new(),
         }
     }
 }
