@@ -53,6 +53,11 @@ pub(crate) struct WalkNode {
     // Total file count seen under us, by depth (depth=0 direct children).
     // This is only a rough estimate based on what we have observed.
     total_files_at_depth: Vec<Option<usize>>,
+
+    // Whether a descendant (not include ourself) might have a walk.
+    // If false, we can be certain no descendant has a walk.
+    // This is used to optimize listing all the walks.
+    pub(crate) descendant_might_have_walk: bool,
 }
 
 impl WalkNode {
@@ -69,6 +74,7 @@ impl WalkNode {
             seen_dirs: Default::default(),
             total_dirs_at_depth: Default::default(),
             total_files_at_depth: Default::default(),
+            descendant_might_have_walk: false,
         };
         node.last_access.bump();
         node
@@ -201,6 +207,8 @@ impl WalkNode {
 
         match walk_root.split_first_component() {
             Some((head, tail)) => {
+                self.descendant_might_have_walk = true;
+
                 if self.children.contains_key(head) {
                     self.children
                         .get_mut(head)
@@ -266,10 +274,12 @@ impl WalkNode {
                 }
             }
 
-            for (name, child) in node.children.iter() {
-                path.push(name.as_path_component());
-                inner(child, walk_type, path, list);
-                path.pop();
+            if node.descendant_might_have_walk {
+                for (name, child) in node.children.iter() {
+                    path.push(name.as_path_component());
+                    inner(child, walk_type, path, list);
+                    path.pop();
+                }
             }
         }
 
@@ -386,6 +396,7 @@ impl WalkNode {
         ) -> bool {
             let mut any_child_advanced = false;
             let mut new_advanced_children = Vec::new();
+            let mut descendant_might_have_walk = false;
             node.children.retain(|name, child| {
                 let mut child_advanced = false;
 
@@ -423,7 +434,9 @@ impl WalkNode {
 
                 any_child_advanced = any_child_advanced || child_advanced;
 
-                let retain = child.has_walk() && !child.expired()
+                let child_has_walk = child.has_walk() && !child.expired();
+
+                let retain = child_has_walk
                     || !child.children.is_empty()
                     // Keep node around if it has total file/dir hints that are likely to be useful.
                     || interesting_metadata(threshold, ratio, child.total_files(), child.total_dirs());
@@ -434,6 +447,10 @@ impl WalkNode {
 
                 path.pop();
 
+                if child_has_walk || child.descendant_might_have_walk {
+                    descendant_might_have_walk = true;
+                }
+
                 retain
             });
 
@@ -441,6 +458,8 @@ impl WalkNode {
                 tracing::trace!(dir=%path, child=%advanced, "inserting advanced child during removal");
                 node.insert_advanced_child(walk_type, advanced);
             }
+
+            node.descendant_might_have_walk = descendant_might_have_walk;
 
             any_child_advanced
         }
@@ -601,33 +620,37 @@ impl WalkNode {
     /// Delete nodes not accessed within timeout.
     /// Returns (nodes_deleted, nodes_remaining, walks_deleted).
     pub(crate) fn gc(&mut self, config: &Config) -> (usize, usize, usize) {
-        // Return (nodes_deleted, nodes_remaining, walks_deleted, keep_me)
+        // Return (nodes_deleted, nodes_remaining, walks_deleted, walks_remaining, keep_me)
         fn inner(
             config: &Config,
             path: &mut RepoPathBuf,
             node: &mut WalkNode,
-        ) -> (usize, usize, usize, bool) {
+        ) -> (usize, usize, usize, usize, bool) {
             let mut walks_removed = 0;
             let mut deleted = 0;
             let mut retained = 0;
+            let mut walks_remaining = 0;
 
             node.children.retain(|name, child| {
                 path.push(name);
 
-                let (d, r, w, keep) = inner(config, path, child);
+                let (d, r, w, wr, keep) = inner(config, path, child);
 
                 deleted += d;
                 retained += r;
                 walks_removed += w;
+                walks_remaining += wr;
 
                 if !keep {
-                    tracing::trace!(%path, has_walk=child.has_walk(), "GCing node");
+                    tracing::trace!(%path, has_walk=child.has_walk(), "GC deleting node");
                 }
 
                 path.pop();
 
                 keep
             });
+
+            node.descendant_might_have_walk = walks_remaining > 0;
 
             let expired = node.expired();
 
@@ -640,13 +663,17 @@ impl WalkNode {
             let keep_me = !expired || !node.children.is_empty() || important_metadata;
             let has_walk = node.has_walk();
 
-            if expired && has_walk {
-                walks_removed += 1;
-                node.log_walk_end(path);
+            if has_walk {
+                if expired {
+                    walks_removed += 1;
+                    node.log_walk_end(path);
+                } else {
+                    walks_remaining += 1;
+                }
             }
 
             if expired && keep_me {
-                tracing::trace!(%path, has_walk, "GCing node with children");
+                tracing::trace!(%path, has_walk, important_metadata, has_children=!node.children.is_empty(), "GC clearing node");
                 node.clear_except_children(config);
             }
 
@@ -656,11 +683,14 @@ impl WalkNode {
                 deleted += 1;
             }
 
-            (deleted, retained, walks_removed, keep_me)
+            (deleted, retained, walks_removed, walks_remaining, keep_me)
         }
 
-        let (mut deleted, remaining, mut walks_deleted, keep_me) =
+        let (mut deleted, remaining, mut walks_deleted, walks_remaining, keep_me) =
             inner(config, &mut RepoPathBuf::new(), self);
+
+        self.descendant_might_have_walk = walks_remaining > 0;
+
         if !keep_me {
             // We don't actually delete the root node, so take one off.
             deleted -= 1;

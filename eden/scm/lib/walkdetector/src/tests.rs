@@ -997,3 +997,52 @@ fn test_advance_depth_across_wide_dir() {
     // Now we surpassed the 10% (of 100) threshold for depth 4.
     assert_eq!(detector.file_walks(), vec![(p(""), 4)]);
 }
+
+#[test]
+fn test_might_have_walk() {
+    let mut detector = Detector::new();
+    detector.set_gc_timeout(Duration::from_secs(1));
+    detector.set_gc_interval(Duration::from_secs(100));
+
+    let might_have_walk = |dir: &str| -> bool {
+        detector
+            .inner
+            .read()
+            .node
+            .get_node(&p(dir))
+            .is_some_and(|n| n.descendant_might_have_walk)
+    };
+
+    assert!(!might_have_walk(""));
+
+    insert_walk(&detector, p("foo/bar"), WalkType::File, 1);
+    assert!(might_have_walk(""));
+    assert!(might_have_walk("foo"));
+    assert!(!might_have_walk("foo/bar"));
+
+    insert_walk(&detector, p("foo/baz/qux/dir"), WalkType::Directory, 1);
+    assert!(might_have_walk("foo/baz"));
+    assert!(might_have_walk("foo/baz/qux"));
+
+    // foo/baz/qux walk does not conmpletely contain foo/baz/qux/dir
+    insert_walk(&detector, p("foo/baz/qux"), WalkType::Directory, 1);
+    assert!(might_have_walk("foo/baz"));
+    assert!(might_have_walk("foo/baz/qux"));
+
+    // now we completely contain - foo/baz/qux no longer has descendant walk
+    insert_walk(&detector, p("foo/baz/qux"), WalkType::Directory, 2);
+    assert!(might_have_walk("foo/baz"));
+    assert!(!might_have_walk("foo/baz/qux"));
+
+    MockClock::advance(Duration::from_secs(2));
+
+    // Refresh last_accessed
+    insert_walk(&detector, p("foo/bar"), WalkType::Directory, 2);
+
+    // GC foo/baz/qux walk - foo/baz should no longer have walk
+    detector.inner.write().node.gc(&detector.config);
+    assert!(might_have_walk(""));
+    assert!(might_have_walk("foo"));
+    assert!(!might_have_walk("foo/bar"));
+    assert!(!might_have_walk("foo/baz"));
+}
