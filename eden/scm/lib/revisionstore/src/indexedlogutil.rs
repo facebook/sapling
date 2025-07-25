@@ -81,7 +81,7 @@ impl Store {
     pub fn append_batch<K: AsRef<[u8]>, V>(
         &self,
         mut items: Vec<(K, V)>,
-        serialize: impl Fn(K, V, &mut Vec<u8>) -> Result<()>,
+        serialize: impl Fn(K, &V, &mut Vec<u8>) -> Result<()>,
         // Filter out items already present in the store before inserting.
         read_before_write: bool,
     ) -> Result<()> {
@@ -115,7 +115,7 @@ impl Store {
         let mut ends = Vec::with_capacity(items.len());
 
         for (k, v) in items {
-            serialize(k, v, &mut buf)?;
+            serialize(k, &v, &mut buf)?;
             ends.push(buf.len());
         }
 

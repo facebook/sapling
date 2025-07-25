@@ -44,19 +44,24 @@ pub(crate) type Entry = FileAuxData;
 /// Note: (v1) was the same but containing also sha256 hash
 ///       (v0) also contained content_id hash and blake3 hash was optional,
 ///       also, size field was close to the end, just before the blake3
-pub(crate) fn serialize(this: &FileAuxData, hgid: HgId) -> Result<Bytes> {
+pub(crate) fn serialize(hgid: HgId, aux: &FileAuxData) -> Result<Bytes> {
     let mut buf = Vec::new();
+    serialize_to(hgid, aux, &mut buf)?;
+    Ok(buf.into())
+}
+
+fn serialize_to(hgid: HgId, aux: &FileAuxData, buf: &mut Vec<u8>) -> Result<()> {
     buf.write_all(hgid.as_ref())?;
     buf.write_u8(2)?; // write version
-    buf.write_vlq(this.total_size)?;
-    buf.write_all(this.sha1.as_ref())?;
-    buf.write_all(this.blake3.as_ref())?;
-    if let Some(ref file_header_metadata) = this.file_header_metadata {
+    buf.write_vlq(aux.total_size)?;
+    buf.write_all(aux.sha1.as_ref())?;
+    buf.write_all(aux.blake3.as_ref())?;
+    if let Some(ref file_header_metadata) = aux.file_header_metadata {
         buf.write_u8(1)?; // write flag that it is present
         buf.write_vlq(file_header_metadata.len())?; // write size of file_header_metadata blob
         buf.write_all(file_header_metadata.as_ref())?;
     }
-    Ok(buf.into())
+    Ok(())
 }
 
 fn deserialize(bytes: Bytes) -> Result<Option<(HgId, FileAuxData)>> {
@@ -208,8 +213,18 @@ impl AuxStore {
     }
 
     pub fn put(&self, hgid: HgId, entry: &Entry) -> Result<()> {
-        let serialized = serialize(entry, hgid)?;
+        let serialized = serialize(hgid, entry)?;
         self.0.append(&serialized)
+    }
+
+    pub fn put_batch(&self, items: Vec<(HgId, Entry)>) -> Result<()> {
+        self.0.append_batch(
+            items,
+            serialize_to,
+            // aux data (particularly when fetching trees) can be inserted over and over - set
+            // read_before_write=true to avoid the insert if the data is already present.
+            true,
+        )
     }
 
     pub fn flush(&self) -> Result<()> {
@@ -580,7 +595,7 @@ mod tests {
             )?,
             file_header_metadata: Some("\x01\ncopy: aaa/bbb/ccc/ddd/test_file.php\ncopyrev: 79c2d9e37f2f90e2ee3cb05762224eea0b864e12\n\x01\n".into()),
         };
-        let bytes = serialize(&test_entry, hg_id)?;
+        let bytes = serialize(hg_id, &test_entry)?;
         let (hg_id1, test_entry1) = deserialize(bytes)?.expect("Failed to deserialize entry");
         assert_eq!(hg_id, hg_id1);
         assert_eq!(test_entry, test_entry1);
@@ -599,7 +614,7 @@ mod tests {
             )?,
             file_header_metadata: None,
         };
-        let bytes = serialize(&test_entry, hg_id)?;
+        let bytes = serialize(hg_id, &test_entry)?;
         let (hg_id1, test_entry1) = deserialize(bytes)?.expect("Failed to deserialize entry");
         assert_eq!(hg_id, hg_id1);
         assert_eq!(test_entry, test_entry1);

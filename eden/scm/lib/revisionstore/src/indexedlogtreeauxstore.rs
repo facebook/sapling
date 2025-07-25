@@ -68,11 +68,16 @@ fn deserialize(bytes: Bytes) -> Result<(HgId, TreeAuxData)> {
 /// Write an entry to a buffer
 fn serialize(hgid: HgId, tree_aux_data: &TreeAuxData) -> Result<Vec<u8>> {
     let mut buf = Vec::with_capacity(HgId::len() + 1 + Blake3::len() + 8);
+    serialize_to(hgid, tree_aux_data, &mut buf)?;
+    Ok(buf.into())
+}
+
+fn serialize_to(hgid: HgId, tree_aux_data: &TreeAuxData, buf: &mut Vec<u8>) -> Result<()> {
     buf.write_all(hgid.as_ref())?;
     buf.write_u8(0)?; // version
     buf.write_all(tree_aux_data.augmented_manifest_id.as_ref())?;
     buf.write_u64::<BigEndian>(tree_aux_data.augmented_manifest_size)?;
-    Ok(buf)
+    Ok(())
 }
 
 impl TreeAuxStore {
@@ -119,6 +124,16 @@ impl TreeAuxStore {
     pub fn put(&self, hgid: HgId, tree_aux_data: &TreeAuxData) -> Result<()> {
         let bytes = serialize(hgid, tree_aux_data)?;
         self.store.write().append(bytes)
+    }
+
+    pub fn put_batch(&self, items: Vec<(HgId, TreeAuxData)>) -> Result<()> {
+        self.store.append_batch(
+            items,
+            serialize_to,
+            // aux data (particularly when fetching trees) can be inserted over and over - set
+            // read_before_write=true to avoid the insert if the data is already present.
+            true,
+        )
     }
 
     pub fn flush(&self) -> Result<()> {
