@@ -15,7 +15,7 @@ name = "streams"
 [dependencies]
 async-trait = "0.1.86"
 futures = { version = "0.3.31", features = ["async-await", "compat"] }
-pin-project = "0.4.30"
+pin-project = "1.1.10"
 
 [dev-dependencies]
 anyhow = "1.0.98"

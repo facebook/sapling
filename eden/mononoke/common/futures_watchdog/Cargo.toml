@@ -10,5 +10,5 @@ license = "GPLv2+"
 [dependencies]
 futures = { version = "0.3.31", features = ["async-await", "compat"] }
 maybe-owned = "0.3.4"
-pin-project = "0.4.30"
+pin-project = "1.1.10"
 slog = { package = "tracing_slog_compat", version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }

@@ -17,7 +17,7 @@ futures = { version = "0.3.31", features = ["async-await", "compat"] }
 git_types = { version = "0.1.0", path = "../git_types" }
 gix-hash = "0.18.0"
 gix-pack = "0.59.1"
-pin-project = "0.4.30"
+pin-project = "1.1.10"
 rustc-hash = "2.1.1"
 sha1 = "0.10.5"
 sha1-checked = "0.10.0"

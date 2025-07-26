@@ -28,7 +28,7 @@ mononoke_macros = { version = "0.1.0", path = "../../mononoke_macros" }
 mononoke_types = { version = "0.1.0", path = "../../mononoke_types" }
 percent-encoding = "2.1"
 phases = { version = "0.1.0", path = "../../phases" }
-pin-project = "0.4.30"
+pin-project = "1.1.10"
 quickcheck = "1.0"
 sapling-revisionstore_types = { version = "0.1.0", path = "../../../scm/lib/revisionstore/types" }
 sapling-types = { version = "0.1.0", path = "../../../scm/lib/types" }

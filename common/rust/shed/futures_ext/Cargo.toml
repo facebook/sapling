@@ -13,7 +13,7 @@ license = "MIT OR Apache-2.0"
 [dependencies]
 anyhow = "1.0.98"
 futures = { version = "0.3.31", features = ["async-await", "compat"] }
-pin-project = "0.4.30"
+pin-project = "1.1.10"
 shared_error = { version = "0.1.0", path = "../shared_error" }
 thiserror = "2.0.12"
 tokio = { version = "1.46.1", features = ["full", "test-util", "tracing"] }

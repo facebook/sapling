@@ -22,7 +22,7 @@ futures_watchdog = { version = "0.1.0", path = "../common/futures_watchdog" }
 itertools = "0.14.0"
 mononoke_macros = { version = "0.1.0", path = "../mononoke_macros" }
 mononoke_types = { version = "0.1.0", path = "../mononoke_types" }
-pin-project = "0.4.30"
+pin-project = "1.1.10"
 sapling-edenapi_types = { version = "0.1.0", path = "../../scm/lib/edenapi/types" }
 sha1 = "0.10.5"
 sha2 = "0.10.6"
