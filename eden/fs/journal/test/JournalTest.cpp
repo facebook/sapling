@@ -233,7 +233,7 @@ TEST_F(JournalTest, accumulateRangeRemoveCreateUpdate) {
   EXPECT_EQ(1, summed->fromSequence);
   EXPECT_EQ(3, summed->toSequence);
   EXPECT_EQ(1, summed->changedFilesInOverlay.size());
-  ASSERT_EQ(1, summed->changedFilesInOverlay.count(RelativePath{"test.txt"}));
+  ASSERT_TRUE(summed->changedFilesInOverlay.contains(RelativePath{"test.txt"}));
   EXPECT_EQ(
       true,
       summed->changedFilesInOverlay[RelativePath{"test.txt"}].existedBefore);
@@ -247,7 +247,7 @@ TEST_F(JournalTest, accumulateRangeRemoveCreateUpdate) {
   EXPECT_EQ(3, summed->fromSequence);
   EXPECT_EQ(3, summed->toSequence);
   EXPECT_EQ(1, summed->changedFilesInOverlay.size());
-  ASSERT_EQ(1, summed->changedFilesInOverlay.count(RelativePath{"test.txt"}));
+  ASSERT_TRUE(summed->changedFilesInOverlay.contains(RelativePath{"test.txt"}));
   EXPECT_EQ(
       true,
       summed->changedFilesInOverlay[RelativePath{"test.txt"}].existedBefore);
@@ -260,7 +260,7 @@ TEST_F(JournalTest, accumulateRangeRemoveCreateUpdate) {
   EXPECT_EQ(2, summed->fromSequence);
   EXPECT_EQ(3, summed->toSequence);
   EXPECT_EQ(1, summed->changedFilesInOverlay.size());
-  ASSERT_EQ(1, summed->changedFilesInOverlay.count(RelativePath{"test.txt"}));
+  ASSERT_TRUE(summed->changedFilesInOverlay.contains(RelativePath{"test.txt"}));
   EXPECT_EQ(
       false,
       summed->changedFilesInOverlay[RelativePath{"test.txt"}].existedBefore);
@@ -273,7 +273,7 @@ TEST_F(JournalTest, accumulateRangeRemoveCreateUpdate) {
   EXPECT_EQ(1, summed->fromSequence);
   EXPECT_EQ(3, summed->toSequence);
   EXPECT_EQ(1, summed->changedFilesInOverlay.size());
-  ASSERT_EQ(1, summed->changedFilesInOverlay.count(RelativePath{"test.txt"}));
+  ASSERT_TRUE(summed->changedFilesInOverlay.contains(RelativePath{"test.txt"}));
   EXPECT_EQ(
       true,
       summed->changedFilesInOverlay[RelativePath{"test.txt"}].existedBefore);
