@@ -482,6 +482,7 @@ thrift_library(
         "rust",
         "py-deprecated",
     ],
+    py3_namespace = "eden.fs.service",
     py_base_module = "facebook",
     rust_deps = [
         "//common/rust/shed/sorted_vector_map:sorted_vector_map",

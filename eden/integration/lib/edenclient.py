@@ -23,10 +23,12 @@ from types import TracebackType
 from typing import Any, cast, Dict, List, Optional, TextIO, Tuple, Union
 
 from eden.fs.cli import util
+from eden.fs.service.eden.thrift_clients import EdenService
 from eden.thrift import legacy
 from eden.thrift.legacy import EdenClient
 from facebook.eden.ttypes import MountState
 from fb303_core.ttypes import fb303_status
+from thrift.python.client import ClientType, get_client
 
 from .find_executables import FindExe
 
@@ -202,6 +204,15 @@ class EdenFS:
         self, timeout: Optional[float] = None
     ) -> legacy.EdenClient:
         return legacy.create_thrift_client(str(self._eden_dir), timeout=timeout)
+
+    def get_thrift_client(self, timeout: float = 0) -> EdenService.Async:
+        socket_path = os.path.join(self._eden_dir, "socket")
+        return get_client(
+            EdenService,
+            path=socket_path,
+            timeout=timeout,
+            client_type=ClientType.THRIFT_ROCKET_CLIENT_TYPE,
+        )
 
     def run_cmd(
         self,

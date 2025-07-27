@@ -22,9 +22,13 @@ python_library(
         "//eden/fs/py/eden/thrift:legacy",
         "//eden/fs/py/eden/thrift:windows_thrift",
         "//eden/fs/service:thrift-py-deprecated",
+        "//eden/fs/service:thrift-python-clients",
+        "//eden/fs/service:thrift-python-services",
+        "//eden/fs/service:thrift-python-types",
         "//eden/integration/facebook/lib:lib",
         "//eden/test_support:py",
         "//fb303/thrift:fb303_core-py-deprecated",
+        "//thrift/lib/python/client:base",
     ],
 )
 
