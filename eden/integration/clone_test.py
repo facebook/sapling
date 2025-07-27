@@ -15,9 +15,9 @@ from pathlib import Path
 from textwrap import dedent
 from typing import Optional, Sequence, Set
 
-from eden.integration.lib.hgrepo import HgRepository
+from eden.fs.service.eden.thrift_types import FaultDefinition
 
-from facebook.eden.ttypes import FaultDefinition
+from eden.integration.lib.hgrepo import HgRepository
 
 from .lib import edenclient, testcase
 from .lib.fake_edenfs import get_fake_edenfs_argv
@@ -43,7 +43,7 @@ class CloneTest(testcase.EdenRepoTest):
             msg="clone should succeed in non-existent directory",
         )
 
-    def test_clone_to_dir_under_symlink(self) -> None:
+    async def test_clone_to_dir_under_symlink(self) -> None:
         tmp = self.make_temporary_directory()
         empty_dir = os.path.join(tmp, "foo/bar")
         os.makedirs(empty_dir)
@@ -59,9 +59,9 @@ class CloneTest(testcase.EdenRepoTest):
             msg="clone should succeed in empty directory",
         )
 
-        with self.get_thrift_client_legacy() as client:
+        async with self.get_thrift_client() as client:
             active_mount_points: Set[Optional[str]] = {
-                os.fsdecode(mount.mountPoint) for mount in client.listMounts()
+                os.fsdecode(mount.mountPoint) for mount in await client.listMounts()
             }
             self.assertIn(
                 empty_dir, active_mount_points, msg="mounted using the realpath"
@@ -153,13 +153,13 @@ class CloneTest(testcase.EdenRepoTest):
         eden_clone2 = self.make_temporary_directory()
         self.clone_rev(self.repo.get_head_hash(), eden_clone1, eden_clone2)
 
-    def test_clone_with_symlink_exception_fails(self) -> None:
+    async def test_clone_with_symlink_exception_fails(self) -> None:
         def strip_ansi_codes(s):
             ansi_escape = re.compile(r"\x1b\[[0-9;]*m")
             return ansi_escape.sub("", s)
 
-        with self.get_thrift_client_legacy() as client:
-            client.injectFault(
+        async with self.get_thrift_client() as client:
+            await client.injectFault(
                 FaultDefinition(
                     keyClass="TreeInode::symlink",
                     keyValueRegex=".*",
