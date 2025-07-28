@@ -8,6 +8,16 @@ python_library(
 )
 
 python_library(
+    name = "installer_utils",
+    srcs = ["installer_utils.py"],
+    deps = [
+        ":file_operation_utils",
+        ":process_utils",
+        ":system_utils",
+    ],
+)
+
+python_library(
     name = "process_utils",
     srcs = ["process_utils.py"],
 )
@@ -15,4 +25,13 @@ python_library(
 python_library(
     name = "system_utils",
     srcs = ["system_utils.py"],
+)
+
+python_library(
+    name = "uninstaller_utils",
+    srcs = ["uninstaller_utils.py"],
+    deps = [
+        ":file_operation_utils",
+        ":process_utils",
+    ],
 )
