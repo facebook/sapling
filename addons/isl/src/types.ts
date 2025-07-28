@@ -1081,7 +1081,7 @@ export type ServerToClientMessage =
   | {
       type: 'fetchedABPropDetails';
       id: string;
-      result: Result<InternalTypes['InternalABProp']>;
+      result: Result<InternalTypes['InternalMetaConfig']>;
     }
   | {
       type: 'fetchedTaskDetails';

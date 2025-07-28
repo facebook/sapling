@@ -1083,7 +1083,7 @@ export default class ServerToClientAPI {
       }
       case 'fetchABPropDetails': {
         Internal.fetchABPropMetadata?.(ctx, data.name)
-          .then((abprop: InternalTypes['InternalABProp']) => {
+          .then((abprop: InternalTypes['InternalMetaConfig']) => {
             this.postMessage({
               type: 'fetchedABPropDetails',
               id: data.id,
