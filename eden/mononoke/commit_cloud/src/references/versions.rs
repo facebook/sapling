@@ -16,6 +16,7 @@ use crate::sql::versions_ops::get_version_by_prefix;
 #[derive(Clone, Debug, PartialEq)]
 pub struct WorkspaceVersion {
     pub workspace: String,
+    pub reponame: String,
     pub version: u64,
     pub timestamp: Timestamp,
     pub archived: bool,

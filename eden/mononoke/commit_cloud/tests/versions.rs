@@ -30,6 +30,7 @@ async fn test_versions(fb: FacebookInit) -> anyhow::Result<()> {
     let initial_timestamp = Timestamp::now_as_secs();
     let args = WorkspaceVersion {
         workspace: workspace.clone(),
+        reponame: reponame.clone(),
         version: 1,
         timestamp: initial_timestamp,
         archived: false,
@@ -57,6 +58,7 @@ async fn test_versions(fb: FacebookInit) -> anyhow::Result<()> {
     // Test version conflict
     let args2 = WorkspaceVersion {
         workspace: workspace.clone(),
+        reponame: reponame.clone(),
         version: 2,
         timestamp: Timestamp::now_as_secs(),
         archived: false,

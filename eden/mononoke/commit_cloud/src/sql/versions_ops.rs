@@ -46,7 +46,7 @@ mononoke_queries! {
           )")
         sqlite("INSERT INTO versions (`reponame`, `workspace`, `version`, `timestamp`)
         VALUES ({reponame}, {workspace}, {version}, {timestamp})
-        ON CONFLICT(`reponame`, `workspace`)  DO UPDATE SET`timestamp` = {now} , 
+        ON CONFLICT(`reponame`, `workspace`)  DO UPDATE SET`timestamp` = {now} ,
         `version` = CASE
             WHEN `version` + 1 = {version} THEN {version}
             ELSE
@@ -78,7 +78,7 @@ impl Get<WorkspaceVersion> for SqlCommitCloud {
         let rows = GetVersion::query(
             &self.connections.read_connection,
             ctx.sql_query_telemetry(),
-            &reponame,
+            &reponame.clone(),
             &workspace,
         )
         .await?;
@@ -86,6 +86,7 @@ impl Get<WorkspaceVersion> for SqlCommitCloud {
             .map(|(workspace, version, archived, timestamp)| {
                 Ok(WorkspaceVersion {
                     workspace,
+                    reponame: reponame.clone(),
                     version,
                     archived,
                     timestamp: Timestamp::from_timestamp_secs(timestamp.unwrap_or(0)),
@@ -167,7 +168,7 @@ pub async fn get_version_by_prefix(
     let rows = GetVersionByPrefix::query(
         &connections.read_connection,
         ctx.sql_query_telemetry(),
-        &reponame,
+        &reponame.clone(),
         &prepare_prefix(&prefix),
     )
     .await?;
@@ -175,6 +176,7 @@ pub async fn get_version_by_prefix(
         .map(|(workspace, version, archived, timestamp)| {
             Ok(WorkspaceVersion {
                 workspace,
+                reponame: reponame.clone(),
                 version,
                 archived,
                 timestamp: Timestamp::from_timestamp_secs(timestamp.unwrap_or(0)),

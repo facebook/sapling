@@ -307,6 +307,7 @@ impl CommitCloud {
 
         let args = WorkspaceVersion {
             workspace: cc_ctx.workspace.clone(),
+            reponame: cc_ctx.reponame.clone(),
             version: new_version,
             timestamp: new_version_timestamp,
             archived: false,
