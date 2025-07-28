@@ -32,6 +32,11 @@ mononoke_queries! {
         sqlite("SELECT `workspace`,  `version`, `archived`, `timestamp` FROM `versions` WHERE `reponame`={reponame} AND `workspace` LIKE {prefix}")
     }
 
+    read GetHomonymousWorkspaces(workspace:String) -> (String, String,  u64, bool, Option<i64>){
+        mysql("SELECT `workspace`,`reponame`, `version`, `archived`, UNIX_TIMESTAMP(`timestamp`) FROM `versions` WHERE `workspace`={workspace}")
+        sqlite("SELECT `workspace`,`reponame`,  `version`, `archived`, `timestamp` FROM `versions` WHERE `workspace`={workspace}")
+    }
+
     // We have to check the version again inside the transaction because in rare case
     // it could be modified by another transaction fail the transaction in such cases
     write InsertVersion(reponame: String, workspace: String, version: u64, timestamp: i64, now: i64) {
@@ -177,6 +182,30 @@ pub async fn get_version_by_prefix(
             Ok(WorkspaceVersion {
                 workspace,
                 reponame: reponame.clone(),
+                version,
+                archived,
+                timestamp: Timestamp::from_timestamp_secs(timestamp.unwrap_or(0)),
+            })
+        })
+        .collect::<anyhow::Result<Vec<WorkspaceVersion>>>()
+}
+
+pub async fn get_homonymous_workspaces(
+    ctx: &CoreContext,
+    connections: &SqlConnections,
+    workspace: String,
+) -> anyhow::Result<Vec<WorkspaceVersion>> {
+    let rows = GetHomonymousWorkspaces::query(
+        &connections.read_connection,
+        ctx.sql_query_telemetry(),
+        &workspace,
+    )
+    .await?;
+    rows.into_iter()
+        .map(|(workspace, reponame, version, archived, timestamp)| {
+            Ok(WorkspaceVersion {
+                workspace,
+                reponame,
                 version,
                 archived,
                 timestamp: Timestamp::from_timestamp_secs(timestamp.unwrap_or(0)),

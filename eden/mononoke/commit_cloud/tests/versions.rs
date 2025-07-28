@@ -12,6 +12,7 @@ use commit_cloud::sql::ops::Get;
 use commit_cloud::sql::ops::Insert;
 use commit_cloud::sql::ops::Update;
 use commit_cloud::sql::versions_ops::UpdateVersionArgs;
+use commit_cloud::sql::versions_ops::get_homonymous_workspaces;
 use commit_cloud::sql::versions_ops::get_version_by_prefix;
 use context::CoreContext;
 use fbinit::FacebookInit;
@@ -25,6 +26,7 @@ async fn test_versions(fb: FacebookInit) -> anyhow::Result<()> {
 
     let sql = SqlCommitCloudBuilder::with_sqlite_in_memory()?.new();
     let reponame = "test_repo".to_owned();
+    let reponame2 = "test_repo2".to_owned();
     let workspace = "user/testuser/default".to_owned();
     let renamed_workspace = "user/testuser/renamed_workspace".to_owned();
     let initial_timestamp = Timestamp::now_as_secs();
@@ -36,10 +38,27 @@ async fn test_versions(fb: FacebookInit) -> anyhow::Result<()> {
         archived: false,
     };
 
+    let args2 = WorkspaceVersion {
+        workspace: workspace.clone(),
+        reponame: reponame2.clone(),
+        version: 1,
+        timestamp: initial_timestamp,
+        archived: false,
+    };
+
     let sql_txn = sql.connections.write_connection.start_transaction().await?;
     let mut txn = sql_ext::Transaction::new(sql_txn, Default::default(), ctx.sql_query_telemetry());
     txn = sql
         .insert(txn, &ctx, reponame.clone(), workspace.clone(), args.clone())
+        .await?;
+    txn = sql
+        .insert(
+            txn,
+            &ctx,
+            reponame2.clone(),
+            workspace.clone(),
+            args.clone(),
+        )
         .await?;
     txn.commit().await?;
 
@@ -53,7 +72,11 @@ async fn test_versions(fb: FacebookInit) -> anyhow::Result<()> {
         "user/testuser/".to_string(),
     )
     .await?;
-    assert_eq!(vec![args], res_prefix);
+    assert_eq!(vec![args.clone()], res_prefix);
+
+    let res_homonymus =
+        get_homonymous_workspaces(&ctx, &sql.connections, workspace.clone()).await?;
+    assert_eq!(vec![args, args2], res_homonymus);
 
     // Test version conflict
     let args2 = WorkspaceVersion {
