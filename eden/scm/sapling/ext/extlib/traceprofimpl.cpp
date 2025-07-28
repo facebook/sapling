@@ -27,9 +27,9 @@
 #ifndef _WIN32
 #endif
 
-typedef int lineno_t;
-typedef uint64_t frameid_t;
-typedef uint64_t rdtsc_t;
+using lineno_t = int;
+using frameid_t = uint64_t;
+using rdtsc_t = uint64_t;
 
 /* tracing ------------------------------------------------------------------ */
 
