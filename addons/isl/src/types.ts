@@ -942,6 +942,11 @@ export type ClientToServerMessage =
       type: 'fetchTaskDetails';
       id: string;
       taskNumber: number;
+    }
+  | {
+      type: 'fetchABPropDetails';
+      id: string;
+      name: string;
     };
 
 export type SubscriptionResultsData = {
@@ -1072,6 +1077,11 @@ export type ServerToClientMessage =
       type: 'fetchedQeDetails';
       id: string;
       result: Result<InternalTypes['InternalQuickExperiment']>;
+    }
+  | {
+      type: 'fetchedABPropDetails';
+      id: string;
+      result: Result<InternalTypes['InternalABProp']>;
     }
   | {
       type: 'fetchedTaskDetails';

@@ -1081,6 +1081,25 @@ export default class ServerToClientAPI {
           });
         break;
       }
+      case 'fetchABPropDetails': {
+        Internal.fetchABPropMetadata?.(ctx, data.name)
+          .then((abprop: InternalTypes['InternalABProp']) => {
+            this.postMessage({
+              type: 'fetchedABPropDetails',
+              id: data.id,
+              result: {value: abprop},
+            });
+          })
+          .catch((err: unknown) => {
+            logger?.error('Could not fetch ABProp details', err);
+            this.postMessage({
+              type: 'fetchedABPropDetails',
+              id: data.id,
+              result: {error: err as Error},
+            });
+          });
+        break;
+      }
       case 'getRepoUrlAtHash': {
         const args = ['url', '--rev', data.revset];
         // validate that the path is a valid file in repo
