@@ -96,7 +96,7 @@ void LMDBDatabase::openDb() {
     mdb_env_close(conn->mdb_env_);
     checkLMDBResult(result);
   } else {
-    XLOG(INFO) << "Opened lmdb db at" << dbPath_;
+    XLOG(DBG3) << "Opened lmdb db at" << dbPath_;
     conn->status = LMDBDbStatus::OPEN;
   }
 }
@@ -108,7 +108,7 @@ void LMDBDatabase::close() {
     mdb_env_close(conn->mdb_env_);
     conn->mdb_env_ = nullptr;
   }
-  XLOG(INFO) << "Closed lmdb db at" << dbPath_;
+  XLOG(DBG3) << "Closed lmdb db at" << dbPath_;
 }
 
 LMDBDatabase::~LMDBDatabase() {
