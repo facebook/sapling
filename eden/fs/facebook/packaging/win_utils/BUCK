@@ -1,1 +1,8 @@
-oncall("source_control")
+load("@fbcode_macros//build_defs:python_library.bzl", "python_library")
+
+oncall("scm_client_infra")
+
+python_library(
+    name = "process_utils",
+    srcs = ["process_utils.py"],
+)
