@@ -239,7 +239,7 @@ class LocalStore : public std::enable_shared_from_this<LocalStore> {
     virtual void put(
         KeySpace keySpace,
         folly::ByteRange key,
-        std::vector<folly::ByteRange> valueSlices) = 0;
+        const std::vector<folly::ByteRange>& valueSlices) = 0;
 
     /**
      * Flush any pending data to the store.

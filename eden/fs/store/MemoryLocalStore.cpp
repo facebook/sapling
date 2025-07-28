@@ -28,7 +28,7 @@ class MemoryWriteBatch : public LocalStore::WriteBatch {
   void put(
       KeySpace keySpace,
       folly::ByteRange key,
-      std::vector<folly::ByteRange> valueSlices) override {
+      const std::vector<folly::ByteRange>& valueSlices) override {
     std::string value;
     for (const auto& slice : valueSlices) {
       value.append(reinterpret_cast<const char*>(slice.data()), slice.size());

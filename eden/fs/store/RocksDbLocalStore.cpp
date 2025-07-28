@@ -143,7 +143,7 @@ class RocksDbWriteBatch : public LocalStore::WriteBatch {
   void put(
       KeySpace keySpace,
       folly::ByteRange key,
-      std::vector<folly::ByteRange> valueSlices) override;
+      const std::vector<folly::ByteRange>& valueSlices) override;
   void flush() override;
   ~RocksDbWriteBatch() override;
   // Use LocalStore::beginWrite() to create a write batch
@@ -222,10 +222,11 @@ void RocksDbWriteBatch::put(
 void RocksDbWriteBatch::put(
     KeySpace keySpace,
     folly::ByteRange key,
-    std::vector<folly::ByteRange> valueSlices) {
+    const std::vector<folly::ByteRange>& valueSlices) {
   std::vector<Slice> slices;
+  slices.reserve(valueSlices.size());
 
-  for (auto& valueSlice : valueSlices) {
+  for (const auto& valueSlice : valueSlices) {
     slices.emplace_back(_createSlice(valueSlice));
   }
 
@@ -520,6 +521,7 @@ RocksDbLocalStore::getBatch(
         reinterpret_cast<const char*>(key.data()), key.size());
   }
 
+  futures.reserve(batches.size());
   for (auto& batch : batches) {
     futures.emplace_back(
         faultInjector_.checkAsync("local store get batch", "")

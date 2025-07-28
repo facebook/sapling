@@ -51,7 +51,7 @@ class NullLocalStore final : public LocalStore {
   class NullWriteBatch final : public LocalStore::WriteBatch {
    public:
     void put(KeySpace, folly::ByteRange, folly::ByteRange) override {}
-    void put(KeySpace, folly::ByteRange, std::vector<folly::ByteRange>)
+    void put(KeySpace, folly::ByteRange, const std::vector<folly::ByteRange>&)
         override {}
     void flush() override {}
   };

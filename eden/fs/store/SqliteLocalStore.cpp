@@ -43,10 +43,12 @@ class SqliteWriteBatch : public LocalStore::WriteBatch {
         StringPiece(key).str(), StringPiece(value).str());
   }
 
-  void put(KeySpace keySpace, ByteRange key, std::vector<ByteRange> valueSlices)
-      override {
+  void put(
+      KeySpace keySpace,
+      ByteRange key,
+      const std::vector<ByteRange>& valueSlices) override {
     string value;
-    for (auto& slice : valueSlices) {
+    for (const auto& slice : valueSlices) {
       value.append(reinterpret_cast<const char*>(slice.data()), slice.size());
     }
     put(keySpace, key, StringPiece(value));
