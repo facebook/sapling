@@ -3,6 +3,16 @@ load("@fbcode_macros//build_defs:python_library.bzl", "python_library")
 oncall("scm_client_infra")
 
 python_library(
+    name = "file_operation_utils",
+    srcs = ["file_operation_utils.py"],
+)
+
+python_library(
     name = "process_utils",
     srcs = ["process_utils.py"],
+)
+
+python_library(
+    name = "system_utils",
+    srcs = ["system_utils.py"],
 )
