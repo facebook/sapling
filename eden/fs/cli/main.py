@@ -2049,207 +2049,202 @@ Do you still want to delete {path}?"""
 
     def run(self, args: argparse.Namespace) -> int:
         instance = get_eden_instance(args)
-        configured_mounts = list(instance.get_mount_paths())
 
-        telemetry_sample = instance.get_telemetry_logger().new_sample("rm")
+        with instance.get_telemetry_logger().new_sample("rm") as telemetry_sample:
+            configured_mounts = list(instance.get_mount_paths())
 
-        # First translate the list of paths into canonical checkout paths
-        # We also track a bool indicating if this checkout is currently mounted
-        mounts: List[Tuple[str, RemoveType]] = []
-        for path in args.paths:
-            if os.path.isfile(path):
-                if args.prompt and sys.stdin.isatty():
-                    return self.delete_file_with_confirmation(path)
-                else:
-                    print(
-                        f"error: {path} exists but it's a file; remove it manually.",
-                        file=sys.stderr,
-                    )
-                    return 1
-
-            if not os.path.exists(path):
-                msg = f"error: {path} is neither an EdenFS mount nor an existing directory"
-                telemetry_sample.fail(msg)
-                print(msg, file=sys.stderr)
-                return 1
-            try:
-                mount_path = util.get_eden_mount_name(path)
-                remove_type = RemoveType.ACTIVE_MOUNT
-            except util.NotAnEdenMountError as ex:
-                remove_type = RemoveType.NON_EDEN
-                # This is not an active mount point.
-                # Check for it by name in the config file anyway, in case it is
-                # listed in the config file but not currently mounted.
-                mount_path = os.path.realpath(path)
-                if mount_path in configured_mounts:
-                    remove_type = RemoveType.INACTIVE_MOUNT
-                elif self.is_prjfs_path(path):
-                    remove_type = RemoveType.CLEANUP_ONLY
-                else:
-                    # This is not located in the config file either, but it
-                    # may be leftover from a failed `eden rm` attempt. The
-                    # user may want us to delete it anyway, so let's ask.
+            # First translate the list of paths into canonical checkout paths
+            # We also track a bool indicating if this checkout is currently mounted
+            mounts: List[Tuple[str, RemoveType]] = []
+            for path in args.paths:
+                if os.path.isfile(path):
                     if args.prompt and sys.stdin.isatty():
-                        prompt = f"""\
+                        return self.delete_file_with_confirmation(path)
+                    else:
+                        print(
+                            f"error: {path} exists but it's a file; remove it manually.",
+                            file=sys.stderr,
+                        )
+                        return 1
+
+                if not os.path.exists(path):
+                    msg = f"error: {path} is neither an EdenFS mount nor an existing directory"
+                    telemetry_sample.fail(msg)
+                    print(msg, file=sys.stderr)
+                    return 1
+                try:
+                    mount_path = util.get_eden_mount_name(path)
+                    remove_type = RemoveType.ACTIVE_MOUNT
+                except util.NotAnEdenMountError as ex:
+                    remove_type = RemoveType.NON_EDEN
+                    # This is not an active mount point.
+                    # Check for it by name in the config file anyway, in case it is
+                    # listed in the config file but not currently mounted.
+                    mount_path = os.path.realpath(path)
+                    if mount_path in configured_mounts:
+                        remove_type = RemoveType.INACTIVE_MOUNT
+                    elif self.is_prjfs_path(path):
+                        remove_type = RemoveType.CLEANUP_ONLY
+                    else:
+                        # This is not located in the config file either, but it
+                        # may be leftover from a failed `eden rm` attempt. The
+                        # user may want us to delete it anyway, so let's ask.
+                        if args.prompt and sys.stdin.isatty():
+                            prompt = f"""\
 Warning: the following is not an EdenFS mount: {path}
 Any files in this directory will be lost forever.
 Do you still want to delete {path}?"""
-                        if not prompt_confirmation(prompt):
-                            return 2
-                        else:
-                            try:
-                                fs_mod.new().rmdir(path, args.preserve_mount_point)
-                                return 0
-                            except Exception as ex:
-                                if sys.platform != "win32":
-                                    msg = (
-                                        f"Error: cannot remove contents of {path}: {ex}"
-                                    )
-                                    telemetry_sample.fail(msg)
-                                    print(msg)
-                                    return 1
-                                else:
-                                    winhr = WinFileHandlerReleaser(instance)
-                                    maybe_succeeded = winhr.try_release(path)
-                                    try:
-                                        # Try again after try_release
-                                        if maybe_succeeded:
-                                            fs_mod.new().rmdir(
-                                                path, args.preserve_mount_point
-                                            )
-                                        else:
-                                            return 1
-                                    except Exception as ex:
-                                        msg = f"Error: cannot remove contents of {path} even after trying to kill processes holding resources: {ex}"
+                            if not prompt_confirmation(prompt):
+                                return 2
+                            else:
+                                try:
+                                    fs_mod.new().rmdir(path, args.preserve_mount_point)
+                                    return 0
+                                except Exception as ex:
+                                    if sys.platform != "win32":
+                                        msg = f"Error: cannot remove contents of {path}: {ex}"
                                         telemetry_sample.fail(msg)
                                         print(msg)
                                         return 1
-                    else:
-                        # We can't ask the user what their true intentions are,
-                        # so let's fail by default.
-                        print(f"error: {ex}")
-                        return 1
+                                    else:
+                                        winhr = WinFileHandlerReleaser(instance)
+                                        maybe_succeeded = winhr.try_release(path)
+                                        try:
+                                            # Try again after try_release
+                                            if maybe_succeeded:
+                                                fs_mod.new().rmdir(
+                                                    path, args.preserve_mount_point
+                                                )
+                                            else:
+                                                return 1
+                                        except Exception as ex:
+                                            msg = f"Error: cannot remove contents of {path} even after trying to kill processes holding resources: {ex}"
+                                            telemetry_sample.fail(msg)
+                                            print(msg)
+                                            return 1
+                        else:
+                            # We can't ask the user what their true intentions are,
+                            # so let's fail by default.
+                            print(f"error: {ex}")
+                            return 1
 
-            except Exception as ex:
-                msg = f"error: cannot determine mount point for {path}: {ex}"
-                telemetry_sample.fail(msg)
-                print(msg)
-                return 1
-
-            if os.path.realpath(mount_path) != os.path.realpath(path):
-                msg = f"error: {path} is not the root of checkout {mount_path}, not deleting"
-                telemetry_sample.fail(msg)
-                print(msg)
-                return 1
-            if remove_type != RemoveType.NON_EDEN:
-                mounts.append((mount_path, remove_type))
-
-        # Warn the user since this operation permanently destroys data
-        if args.prompt and sys.stdin.isatty() and len(mounts) > 0:
-            mounts_list = "\n  ".join(path for path, _ in mounts)
-            print(
-                f"""\
-Warning: this operation will permanently delete the following checkouts:
-  {mounts_list}
-
-Any uncommitted changes and shelves in this checkout will be lost forever."""
-            )
-            if not prompt_confirmation("Proceed?"):
-                print("Not confirmed")
-                return 2
-
-        # Unmount and destroy everything
-        exit_code = 0
-        for mount, remove_type in mounts:
-            print(f"Removing {mount}...")
-            # Removing reidrection targets from checkout config to allow deletion of redirected paths
-            instance, checkout, _rel_path = require_checkout(args, mount)
-            config = checkout.get_config()
-            config._replace(
-                redirection_targets={},
-            )
-            checkout.save_config(config)
-
-            if remove_type == RemoveType.ACTIVE_MOUNT:
-                try:
-                    # We don't bother complaining about removing redirections on Windows
-                    # since redirections are symlinks on Windows anyway, so the removal
-                    # of the repo will remove them. This would usually happen because
-                    # the daemon is not running, so this is oftenjust extra spam for users.
-                    print(f"Stopping aux processes for {mount}...")
-                    stop_aux_processes_for_path(
-                        mount,
-                        complain_about_failing_to_unmount_redirs=(
-                            sys.platform != "win32"
-                        ),
-                    )
                 except Exception as ex:
-                    msg = f"error stopping auxiliary processes {mount}: {ex}"
-                    telemetry_sample.add_string("problem_fixable", msg)
-                    print_stderr(msg)
-                    exit_code = 1
-                    # We intentionally fall through here and remove the mount point
-                    # so that the eden daemon will attempt to unmount it.
-                    # unmounting could still timeout, though we unmount with -f,
-                    # so theoretically this should not happen.
-                try:
-                    print(
-                        f"Unmounting `{mount}`. Please be patient: this can take up to 1 minute!"
-                    )
-                    instance.unmount(mount, use_force=not args.no_force)
-                except EdenNotRunningError:
-                    # Its fine if we could not tell the daemon to unmount
-                    # because the daemon is not running. There is just no
-                    # daemon we need to tell. Let's just perform the rest of
-                    # the clean up and this will remove the mount as expected.
-                    pass
-                except Exception as ex:
-                    # We used to intentionally fall through here and remove the
-                    # mount point from the config file. The most likely cause
-                    # of failure is if edenfs times out performing the unmount.
-                    # In this case, we don't want to start modifying state and
-                    # configs underneath a running EdenFS mount, so let's return
-                    # early and give possible mitigations for unmount timeouts.
-                    msg = f"error unmounting {mount}: {ex}"
+                    msg = f"error: cannot determine mount point for {path}: {ex}"
                     telemetry_sample.fail(msg)
-                    print_stderr(f"\n{msg}\n\n")
-                    print_stderr(
-                        f"For unmount timeouts, you can try:\n{_get_unmount_timeout_suggestions(mount)}"
-                    )
+                    print(msg)
                     return 1
 
-            try:
-                if remove_type != RemoveType.CLEANUP_ONLY:
-                    print(f"Deleting mount {mount}")
-                    instance.destroy_mount(mount, args.preserve_mount_point)
-            except Exception as ex:
-                msg = f"error deleting configuration for {mount}: {ex}"
-                telemetry_sample.fail(msg)
-                print_stderr(msg)
-                exit_code = 1
-                self.optional_traceback(ex, args.debug)
-            else:
+                if os.path.realpath(mount_path) != os.path.realpath(path):
+                    msg = f"error: {path} is not the root of checkout {mount_path}, not deleting"
+                    telemetry_sample.fail(msg)
+                    print(msg)
+                    return 1
+                if remove_type != RemoveType.NON_EDEN:
+                    mounts.append((mount_path, remove_type))
+
+            # Warn the user since this operation permanently destroys data
+            if args.prompt and sys.stdin.isatty() and len(mounts) > 0:
+                mounts_list = "\n  ".join(path for path, _ in mounts)
+                print(
+                    f"""\
+    Warning: this operation will permanently delete the following checkouts:
+    {mounts_list}
+
+    Any uncommitted changes and shelves in this checkout will be lost forever."""
+                )
+                if not prompt_confirmation("Proceed?"):
+                    print("Not confirmed")
+                    return 2
+
+            # Unmount and destroy everything
+            exit_code = 0
+            for mount, remove_type in mounts:
+                print(f"Removing {mount}...")
+                # Removing reidrection targets from checkout config to allow deletion of redirected paths
+                instance, checkout, _rel_path = require_checkout(args, mount)
+                config = checkout.get_config()
+                config._replace(
+                    redirection_targets={},
+                )
+                checkout.save_config(config)
+
+                if remove_type == RemoveType.ACTIVE_MOUNT:
+                    try:
+                        # We don't bother complaining about removing redirections on Windows
+                        # since redirections are symlinks on Windows anyway, so the removal
+                        # of the repo will remove them. This would usually happen because
+                        # the daemon is not running, so this is oftenjust extra spam for users.
+                        print(f"Stopping aux processes for {mount}...")
+                        stop_aux_processes_for_path(
+                            mount,
+                            complain_about_failing_to_unmount_redirs=(
+                                sys.platform != "win32"
+                            ),
+                        )
+                    except Exception as ex:
+                        msg = f"error stopping auxiliary processes {mount}: {ex}"
+                        telemetry_sample.add_string("problem_fixable", msg)
+                        print_stderr(msg)
+                        exit_code = 1
+                        # We intentionally fall through here and remove the mount point
+                        # so that the eden daemon will attempt to unmount it.
+                        # unmounting could still timeout, though we unmount with -f,
+                        # so theoretically this should not happen.
+                    try:
+                        print(
+                            f"Unmounting `{mount}`. Please be patient: this can take up to 1 minute!"
+                        )
+                        instance.unmount(mount, use_force=not args.no_force)
+                    except EdenNotRunningError:
+                        # Its fine if we could not tell the daemon to unmount
+                        # because the daemon is not running. There is just no
+                        # daemon we need to tell. Let's just perform the rest of
+                        # the clean up and this will remove the mount as expected.
+                        pass
+                    except Exception as ex:
+                        # We used to intentionally fall through here and remove the
+                        # mount point from the config file. The most likely cause
+                        # of failure is if edenfs times out performing the unmount.
+                        # In this case, we don't want to start modifying state and
+                        # configs underneath a running EdenFS mount, so let's return
+                        # early and give possible mitigations for unmount timeouts.
+                        msg = f"error unmounting {mount}: {ex}"
+                        telemetry_sample.fail(msg)
+                        print_stderr(f"\n{msg}\n\n")
+                        print_stderr(
+                            f"For unmount timeouts, you can try:\n{_get_unmount_timeout_suggestions(mount)}"
+                        )
+                        return 1
+
                 try:
-                    print(f"Cleaning up mount {mount}")
-                    instance.cleanup_mount(
-                        Path(mount), args.preserve_mount_point, args.debug
-                    )
+                    if remove_type != RemoveType.CLEANUP_ONLY:
+                        print(f"Deleting mount {mount}")
+                        instance.destroy_mount(mount, args.preserve_mount_point)
                 except Exception as ex:
-                    msg = f"error cleaning up mount {mount}: {ex}"
+                    msg = f"error deleting configuration for {mount}: {ex}"
                     telemetry_sample.fail(msg)
                     print_stderr(msg)
                     exit_code = 1
                     self.optional_traceback(ex, args.debug)
+                else:
+                    try:
+                        print(f"Cleaning up mount {mount}")
+                        instance.cleanup_mount(
+                            Path(mount), args.preserve_mount_point, args.debug
+                        )
+                    except Exception as ex:
+                        msg = f"error cleaning up mount {mount}: {ex}"
+                        telemetry_sample.fail(msg)
+                        print_stderr(msg)
+                        exit_code = 1
+                        self.optional_traceback(ex, args.debug)
 
-                # Continue around the loop removing any other mount points
+                    # Continue around the loop removing any other mount points
 
-        if exit_code == 0:
-            print("Success")
-            telemetry_sample.add_bool("success", True)
-
-        telemetry_sample.log()
-
-        return exit_code
+            if exit_code == 0:
+                print("Success")
+                telemetry_sample.add_bool("success", True)
+            return exit_code
 
 
 #
