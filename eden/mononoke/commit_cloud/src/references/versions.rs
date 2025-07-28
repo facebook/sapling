@@ -60,13 +60,13 @@ impl WorkspaceVersion {
 }
 
 impl WorkspaceVersion {
-    pub fn into_workspace_data(self, reponame: &str) -> WorkspaceData {
+    pub fn into_workspace_data(self) -> WorkspaceData {
         WorkspaceData {
             name: self.workspace,
             version: self.version,
             timestamp: self.timestamp.timestamp_seconds(),
             archived: self.archived,
-            reponame: reponame.to_owned(),
+            reponame: self.reponame,
         }
     }
 }

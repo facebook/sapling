@@ -130,7 +130,7 @@ impl CommitCloud {
         .await
         .map_err(CommitCloudInternalError::Error)?;
         if let Some(res) = maybeworkspace {
-            return Ok(res.into_workspace_data(&cc_ctx.reponame));
+            return Ok(res.into_workspace_data());
         }
         Err(CommitCloudUserError::NonexistentWorkspace(
             cc_ctx.workspace.clone(),
@@ -159,7 +159,7 @@ impl CommitCloud {
 
         Ok(maybeworkspace
             .into_iter()
-            .map(|wp| wp.into_workspace_data(reponame))
+            .map(|wp| wp.into_workspace_data())
             .collect())
     }
 
