@@ -9,7 +9,7 @@
 import re
 from typing import Dict, Optional
 
-from eden.fs.cli.util import poll_until
+from eden.fs.cli.util import poll_until_async
 
 from .lib import testcase
 
@@ -25,7 +25,7 @@ class RocksDBStoreTest(testcase.HgRepoTestMixin, testcase.EdenRepoTest):
     def select_storage_engine(self) -> str:
         return "rocksdb"
 
-    def test_local_store_stats(self) -> None:
+    async def test_local_store_stats(self) -> None:
         # Update the config to tell the local store to updates its stats frequently
         # and also check if it needs to reload the config file frequently.
         initial_config = """\
@@ -38,59 +38,52 @@ stats-interval = "100ms"
         self.eden.user_rc_path.write_text(initial_config)
 
         counter_regex = r"local_store\..*"
-        with self.get_thrift_client_legacy() as client:
+        async with self.get_thrift_client() as client:
             # Makes sure that EdenFS picks up our updated config,
             # since we wrote it out after EdenFS started.
-            client.reloadConfig()
+            await client.reloadConfig()
 
             # Get the local store counters
             # Assert that the exist and are greater than 0.
             # (Since we include memtable sizes in the values these are currently always
             # reported as taking up at least a small amount of space.)
-            initial_counters = client.getRegexCounters(counter_regex)
-            # pyre-fixme[6]: For 2nd param expected `SupportsDunderLT[Variable[_T]]`
-            #  but got `int`.
-            self.assertGreater(initial_counters.get("local_store.blob.size"), 0)
-            # pyre-fixme[6]: For 2nd param expected `SupportsDunderLT[Variable[_T]]`
-            #  but got `int`.
-            self.assertGreater(initial_counters.get("local_store.blobmeta.size"), 0)
-            # pyre-fixme[6]: For 2nd param expected `SupportsDunderLT[Variable[_T]]`
-            #  but got `int`.
-            self.assertGreater(initial_counters.get("local_store.tree.size"), 0)
-            self.assertGreater(
-                initial_counters.get("local_store.hgcommit2tree.size"),
-                # pyre-fixme[6]: For 2nd param expected
-                #  `SupportsDunderLT[Variable[_T]]` but got `int`.
-                0,
+            initial_counters = await client.getRegexCounters(counter_regex)
+
+            initial_blob_size = initial_counters.get("local_store.blob.size")
+            initial_blobmeta_size = initial_counters.get("local_store.blobmeta.size")
+            initial_tree_size = initial_counters.get("local_store.tree.size")
+            initial_hgcommit2tree_size = initial_counters.get(
+                "local_store.hgcommit2tree.size"
             )
-            # pyre-fixme[6]: For 2nd param expected `SupportsDunderLT[Variable[_T]]`
-            #  but got `int`.
-            self.assertGreater(initial_counters.get("local_store.hgproxyhash.size"), 0)
-            self.assertGreater(
-                initial_counters.get("local_store.ephemeral.total_size"),
-                # pyre-fixme[6]: For 2nd param expected
-                #  `SupportsDunderLT[Variable[_T]]` but got `int`.
-                0,
+            initial_hgproxyhash_size = initial_counters.get(
+                "local_store.hgproxyhash.size"
             )
-            self.assertGreater(
-                initial_counters.get("local_store.persistent.total_size"),
-                # pyre-fixme[6]: For 2nd param expected
-                #  `SupportsDunderLT[Variable[_T]]` but got `int`.
-                0,
+            initial_ephemeral_size = initial_counters.get(
+                "local_store.ephemeral.total_size"
             )
+            initial_persistent_size = initial_counters.get(
+                "local_store.persistent.total_size"
+            )
+
+            self.assertIsNotNone(initial_blob_size)
+            self.assertIsNotNone(initial_blobmeta_size)
+            self.assertIsNotNone(initial_tree_size)
+            self.assertIsNotNone(initial_hgcommit2tree_size)
+            self.assertIsNotNone(initial_hgproxyhash_size)
+            self.assertIsNotNone(initial_ephemeral_size)
+            self.assertIsNotNone(initial_persistent_size)
+
+            self.assertGreater(initial_blob_size, 0)
+            self.assertGreater(initial_blobmeta_size, 0)
+            self.assertGreater(initial_tree_size, 0)
+            self.assertGreater(initial_hgcommit2tree_size, 0)
+            self.assertGreater(initial_hgproxyhash_size, 0)
+            self.assertGreater(initial_ephemeral_size, 0)
+            self.assertGreater(initial_persistent_size, 0)
+
             # Make sure the counters are less than 500MB, just as a sanity check
-            self.assertLess(
-                initial_counters.get("local_store.ephemeral.total_size"),
-                # pyre-fixme[6]: For 2nd param expected
-                #  `SupportsDunderGT[Variable[_T]]` but got `int`.
-                500_000_000,
-            )
-            self.assertLess(
-                initial_counters.get("local_store.persistent.total_size"),
-                # pyre-fixme[6]: For 2nd param expected
-                #  `SupportsDunderGT[Variable[_T]]` but got `int`.
-                500_000_000,
-            )
+            self.assertLess(initial_ephemeral_size, 500_000_000)
+            self.assertLess(initial_persistent_size, 500_000_000)
 
             # Read back several files
             self.assertEqual((self.mount_path / "a/dir/foo.txt").read_text(), "foo\n")
@@ -102,22 +95,22 @@ stats-interval = "100ms"
             # The tree store size should be larger now after reading these files.
             # The counters won't be updated until the store.stats-interval expires.
             # Wait for this to happen.
-            def tree_size_incremented() -> Optional[bool]:
-                tree_size = client.getCounter("local_store.tree.size")
+            async def tree_size_incremented() -> Optional[bool]:
+                tree_size = await client.getCounter("local_store.tree.size")
 
-                initial_tree_size = initial_counters.get("local_store.tree.size")
-                assert initial_tree_size is not None
                 if tree_size > initial_tree_size:
                     return True
 
                 return None
 
-            poll_until(tree_size_incremented, timeout=10, interval=0.1)
+            await poll_until_async(tree_size_incremented, timeout=10, interval=0.1)
+
+            blob_size = await client.getCounter("local_store.blob.size")
 
             # EdenFS should not import blobs to local store
             self.assertEqual(
-                initial_counters.get("local_store.blob.size"),
-                client.getCounter("local_store.blob.size"),
+                initial_blob_size,
+                blob_size,
             )
 
             # Update the config file with a very small GC limit that will force GC to be
@@ -133,33 +126,42 @@ hgcommit2tree-size-limit = "1"
             )
 
             # Wait until a GC run has completed.
-            def gc_run_succeeded() -> Optional[Dict[str, int]]:
-                counters = client.getRegexCounters(counter_regex)
+            async def gc_run_succeeded() -> Optional[Dict[str, int]]:
+                counters = await client.getRegexCounters(counter_regex)
                 if counters.get("local_store.auto_gc.last_run_succeeded") is not None:
                     return counters
                 return None
 
-            counters = poll_until(gc_run_succeeded, timeout=30, interval=0.05)
+            counters = await poll_until_async(
+                gc_run_succeeded, timeout=30, interval=0.05
+            )
 
             # Check the local_store.auto_gc counters
-            self.assertEqual(counters.get("local_store.auto_gc.last_run_succeeded"), 1)
-            # pyre-fixme[6]: For 2nd param expected `SupportsDunderLT[Variable[_T]]`
-            #  but got `int`.
-            self.assertGreater(counters.get("local_store.auto_gc.success"), 0)
-            self.assertEqual(counters.get("local_store.auto_gc.failure", 0), 0)
-            self.assertGreaterEqual(
-                counters.get("local_store.auto_gc.last_duration_ms"),
-                # pyre-fixme[6]: For 2nd param expected
-                #  `SupportsDunderLE[Variable[_T]]` but got `int`.
-                0,
+
+            auto_gc_last_run_succeeded = counters.get(
+                "local_store.auto_gc.last_run_succeeded"
             )
+            auto_gc_success = counters.get("local_store.auto_gc.success")
+            auto_gc_failure = counters.get("local_store.auto_gc.failure")
+            auto_gc_last_duration_ms = counters.get(
+                "local_store.auto_gc.last_duration_ms"
+            )
+
+            self.assertIsNone(auto_gc_failure)
+
+            self.assertIsNotNone(auto_gc_last_run_succeeded)
+            self.assertIsNotNone(auto_gc_success)
+            self.assertIsNotNone(auto_gc_last_duration_ms)
+
+            self.assertEqual(auto_gc_last_run_succeeded, 1)
+            self.assertGreater(auto_gc_success, 0)
+            self.assertGreaterEqual(auto_gc_last_duration_ms, 0)
 
         # Run "eden stats local-store" and check the output
         stats_output = self.eden.run_cmd("stats", "local-store")
-        print(stats_output)
+
         m = re.search(r"Successful Auto-GC Runs:\s+(\d+)", stats_output)
         self.assertIsNotNone(m)
-        assert m is not None  # make the type checker happy
         self.assertGreater(int(m.group(1)), 0)
 
         self.assertRegex(stats_output, r"Last Auto-GC Result:\s+Success")
