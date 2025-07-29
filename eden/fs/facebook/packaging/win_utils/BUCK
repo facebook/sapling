@@ -12,7 +12,6 @@ python_library(
     srcs = ["installer_utils.py"],
     deps = [
         ":file_operation_utils",
-        ":process_utils",
         ":system_utils",
     ],
 )
