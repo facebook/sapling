@@ -13,7 +13,7 @@ license = "MIT"
 name = "constructors"
 
 [dependencies]
-once_cell = "1.12"
+once_cell = "1.21"
 sapling-commits = { version = "0.1.0", path = "../commits" }
 sapling-commits-git = { version = "0.1.0", path = "../commits/git", optional = true }
 sapling-eagerepo = { version = "0.1.0", path = "../eagerepo" }

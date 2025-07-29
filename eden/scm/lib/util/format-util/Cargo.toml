@@ -15,7 +15,7 @@ name = "format_util"
 [dependencies]
 anyhow = "1.0.98"
 memchr = "2.7.5"
-once_cell = "1.12"
+once_cell = "1.21"
 sapling-hgtime = { version = "0.1.0", path = "../../hgtime" }
 sapling-minibytes = { version = "0.1.0", path = "../../minibytes" }
 sapling-types = { version = "0.1.0", path = "../../types" }

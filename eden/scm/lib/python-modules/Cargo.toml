@@ -10,7 +10,7 @@ repository = "https://github.com/facebook/sapling"
 license = "GPL-2.0-only"
 
 [dependencies]
-once_cell = "1.12"
+once_cell = "1.21"
 phf = { version = "0.11", features = ["macros"] }
 sapling-zstdelta = { version = "0.1.0", path = "../zstdelta" }
 

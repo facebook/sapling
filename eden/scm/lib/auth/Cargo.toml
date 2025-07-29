@@ -25,5 +25,5 @@ tracing = { version = "0.1.41", features = ["attributes", "valuable"] }
 url = "2.5.4"
 
 [dev-dependencies]
-once_cell = "1.12"
+once_cell = "1.21"
 sapling-staticconfig = { version = "0.1.0", path = "../config/static" }

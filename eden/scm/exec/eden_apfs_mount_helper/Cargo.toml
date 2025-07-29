@@ -13,7 +13,7 @@ path = "src/eden_apfs/eden_apfs.rs"
 [dependencies]
 anyhow = "1.0.98"
 libc = "0.2.139"
-once_cell = "1.12"
+once_cell = "1.21"
 plist = "1.7.1"
 serde = { version = "1.0.185", features = ["derive", "rc"] }
 serde_json = { version = "1.0.140", features = ["alloc", "float_roundtrip", "unbounded_depth"] }

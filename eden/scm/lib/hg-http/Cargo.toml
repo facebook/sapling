@@ -13,7 +13,7 @@ license = "MIT"
 name = "hg_http"
 
 [dependencies]
-once_cell = "1.12"
+once_cell = "1.21"
 sapling-async-runtime = { version = "0.1.0", path = "../async-runtime" }
 sapling-auth = { version = "0.1.0", path = "../auth" }
 sapling-clientinfo = { version = "0.1.0", path = "../clientinfo" }

@@ -28,7 +28,7 @@ futures = { version = "0.3.31", features = ["async-await", "compat"] }
 http = "0.2"
 lru-cache = "0.1.2"
 maplit = "1.0"
-once_cell = "1.12"
+once_cell = "1.21"
 openssl = "0.10.72"
 parking_lot = { version = "0.12.1", features = ["send_guard"] }
 paste = "1.0.14"
