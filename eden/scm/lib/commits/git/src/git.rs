@@ -191,6 +191,7 @@ impl GitSegmentedCommits {
         let matcher = GitRefPreliminaryMatcher::new();
 
         let refs: BTreeMap<String, ReferenceValue> = self.git.list_references(Some(&matcher))?;
+        let head_id = self.git.resolve_head()?;
 
         // Bookmarks and remotenames are built from scratch.
         let mut bookmarks = BTreeMap::new();
@@ -217,6 +218,7 @@ impl GitSegmentedCommits {
                 hoist.as_deref(),
                 selective_pull_default,
                 import_remote_refs.as_deref(),
+                head_id,
             )?,
             RelevantConfig::DotSl => GitRefMetaLogFilter::new_for_dotsl(&refs)?,
         };
@@ -233,7 +235,7 @@ impl GitSegmentedCommits {
             let names: Vec<&str> = ref_name.splitn(3, '/').collect();
             match &names[..] {
                 ["refs", "remotes", name] => {
-                    if remote_name_filter.should_import_remote_name(name)? {
+                    if remote_name_filter.should_import_remote_name(name, &id)? {
                         let mut should_import_to_dag = match existing_remotenames.get(*name) {
                             Some(&existing_id) => existing_id != id,
                             None => true,

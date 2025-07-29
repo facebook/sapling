@@ -51,6 +51,8 @@ pub(crate) struct GitRefMetaLogFilter<'a> {
     import_remote_refs: Option<&'a (dyn Matcher + Send + Sync)>,
     // e.g. "origin"
     hoist: &'a str,
+    // commit hash referred by HEAD
+    head_id: HgId,
     is_dotgit: bool,
 }
 
@@ -62,6 +64,7 @@ impl<'a> GitRefMetaLogFilter<'a> {
         hoist: Option<&'a str>,
         selective_pull_default: &'a HashSet<String>,
         import_remote_refs: Option<&'a (dyn Matcher + Send + Sync)>,
+        head_id: HgId,
     ) -> Result<Self> {
         Self::new(
             refs,
@@ -69,6 +72,7 @@ impl<'a> GitRefMetaLogFilter<'a> {
             hoist.unwrap_or("origin"),
             selective_pull_default,
             import_remote_refs,
+            head_id,
             true,
         )
     }
@@ -78,7 +82,15 @@ impl<'a> GitRefMetaLogFilter<'a> {
         // No need to use "existing_remotenames" for non-dotgit.
         static EMPTY_MAP: BTreeMap<RefName, HgId> = BTreeMap::new();
         static EMPTY_SET: LazyLock<HashSet<String>> = LazyLock::new(Default::default);
-        Self::new(refs, &EMPTY_MAP, "remote", &EMPTY_SET, None, false)
+        Self::new(
+            refs,
+            &EMPTY_MAP,
+            "remote",
+            &EMPTY_SET,
+            None,
+            *HgId::null_id(),
+            false,
+        )
     }
 
     fn new(
@@ -87,6 +99,7 @@ impl<'a> GitRefMetaLogFilter<'a> {
         hoist: &'a str,
         selective_pull_default: &'a HashSet<String>,
         import_remote_refs: Option<&'a (dyn Matcher + Send + Sync)>,
+        head_id: HgId,
         is_dotgit: bool,
     ) -> Result<Self> {
         // e.g. "origin/main"
@@ -118,12 +131,13 @@ impl<'a> GitRefMetaLogFilter<'a> {
             selective_pull_default,
             import_remote_refs,
             hoist,
+            head_id,
             is_dotgit,
         })
     }
 
     /// Decides whether "refs/remotes/<name>" should be imported or not.
-    pub(crate) fn should_import_remote_name(&self, name: &str) -> Result<bool> {
+    pub(crate) fn should_import_remote_name(&self, name: &str, id: &HgId) -> Result<bool> {
         if !name.contains('/') || name.ends_with("/HEAD") || name.starts_with("tags/") {
             return Ok(false);
         }
@@ -134,12 +148,19 @@ impl<'a> GitRefMetaLogFilter<'a> {
             // the default, and we cannot rely on users knowing and using the flag.
             // `sl clone` ("dotsl", not "dotgit") only fetches limited remote refs.
             // It does not have this problem.
+            if &self.head_id == id {
+                tracing::trace!(name, "should be imported (hash matches HEAD)");
+                return Ok(true);
+            }
             if self.existing_remotenames.contains_key(name) {
                 tracing::trace!(name, "should be imported (existing)");
                 return Ok(true);
             }
             if self.head_remotenames.contains(name) {
-                tracing::trace!(name, "should be imported (pointed by HEAD)");
+                tracing::trace!(
+                    name,
+                    "should be imported (pointed by remotes/<remote>/HEAD)"
+                );
                 return Ok(true);
             }
             if let Some(matcher) = self.import_remote_refs {
@@ -209,24 +230,29 @@ mod tests {
         selected.insert("b3".to_string());
 
         let import_remote_refs = TreeMatcher::from_rules(std::iter::once("m/*"), false)?;
+        let head_id = HgId::from_hex(b"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa").unwrap();
         let filter = GitRefMetaLogFilter::new_for_dotgit(
             &refs,
             &existing_remotenames,
             None,
             &selected,
             Some(&import_remote_refs),
+            head_id,
         )
         .unwrap();
+        let null_id = HgId::null_id();
         // referred by HEAD (default)
-        assert!(filter.should_import_remote_name("origin/b1")?);
+        assert!(filter.should_import_remote_name("origin/b1", null_id)?,);
         // matches existing
-        assert!(filter.should_import_remote_name("origin/b2")?);
+        assert!(filter.should_import_remote_name("origin/b2", null_id)?);
         // matches config
-        assert!(filter.should_import_remote_name("origin/b3")?);
+        assert!(filter.should_import_remote_name("origin/b3", null_id)?);
         // matches nothing
-        assert!(!filter.should_import_remote_name("origin/b4")?);
+        assert!(!filter.should_import_remote_name("origin/b4", null_id)?);
+        // name matches nothing, but id matches HEAD
+        assert!(filter.should_import_remote_name("origin/b4", &head_id)?);
         // matches the import_remote_refs matcher
-        assert!(filter.should_import_remote_name("m/foo")?);
+        assert!(filter.should_import_remote_name("m/foo", null_id)?);
 
         assert!(filter.should_treat_local_ref_as_visible_head("main"));
         assert!(filter.should_treat_local_ref_as_visible_head("b1"));
@@ -241,14 +267,15 @@ mod tests {
     fn test_ref_filter_non_dotgit() -> Result<()> {
         let refs = get_test_refs("remote");
         let filter = GitRefMetaLogFilter::new_for_dotsl(&refs).unwrap();
+        let null_id = HgId::null_id();
         // all local refs should be treated as bookmarks since Git does not write
         assert!(!filter.should_treat_local_ref_as_visible_head("main"));
         assert!(!filter.should_treat_local_ref_as_visible_head("foo"));
         // all remote names should be imported. Except */HEAD
-        assert!(filter.should_import_remote_name("remote/main")?);
-        assert!(filter.should_import_remote_name("remote/foo")?);
-        assert!(filter.should_import_remote_name("upstream/bar")?);
-        assert!(!filter.should_import_remote_name("upstream/HEAD")?);
+        assert!(filter.should_import_remote_name("remote/main", null_id)?);
+        assert!(filter.should_import_remote_name("remote/foo", null_id)?);
+        assert!(filter.should_import_remote_name("upstream/bar", null_id)?);
+        assert!(!filter.should_import_remote_name("upstream/HEAD", null_id)?);
         // detects main branch
         assert!(filter.is_main_remote_name("remote/b1"));
         assert!(!filter.is_main_remote_name("remote/b2"));

@@ -17,9 +17,8 @@ Prepare a server repo with some branch names:
   > S1..S4
   > EOF
   $ git update-ref refs/heads/main $S1
-  $ for i in b1 b2; do
-  >   git update-ref refs/heads/$i $S1
-  > done
+  $ git update-ref refs/heads/b1 $S1
+  $ git update-ref refs/heads/b2 $S2
 
 Clone the repo:
 
@@ -27,19 +26,20 @@ Clone the repo:
   $ git clone -q server-repo client-repo
   $ cd client-repo
 
-By default, `sl` only syncs the "main" remote branch:
+By default, `sl` only syncs the "main" remote branch, and remote branches matching HEAD (b1):
 
   $ sl log -r . -T '{remotenames}\n'
-  origin/main
+  origin/b1 origin/main
 
   $ sl bookmarks --list-subscriptions
+     origin/b1                 5d045cb6dd86
      origin/main               5d045cb6dd86
 
 Git tracks more references:
 
   $ git for-each-ref | grep origin/b
   5d045cb6dd867debc8828c96e248804f892cf171 commit	refs/remotes/origin/b1
-  5d045cb6dd867debc8828c96e248804f892cf171 commit	refs/remotes/origin/b2
+  b1eae93731683dc9cf99f3714f5b4a23c6b0b13b commit	refs/remotes/origin/b2
 
 Push creates remote bookmarks:
 
@@ -55,6 +55,7 @@ b3 should be listed:
   origin/b3
 
   $ sl bookmarks --list-subscriptions
+     origin/b1                 5d045cb6dd86
      origin/b3                 3b0ae0a27e72
      origin/main               5d045cb6dd86
 
@@ -71,9 +72,9 @@ b3 should be updated to S2:
 
 Auto pull a remote name that exists in the local Git repo works:
 
-  $ sl log -r origin/b1 -T '{desc}\n'
-  pulling 'b1' from '$TESTTMP/server-repo'
-  S1
+  $ sl log -r origin/b2 -T '{desc}\n'
+  pulling 'b2' from '$TESTTMP/server-repo'
+  S2
 
 Test remote tags. Prepare it:
 
