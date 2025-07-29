@@ -8,6 +8,7 @@
 
 
 import abc
+import asyncio
 import binascii
 import errno
 import functools
@@ -25,6 +26,7 @@ from io import BytesIO
 from pathlib import Path
 from typing import (
     Any,
+    Awaitable,
     Callable,
     Dict,
     Iterator,
@@ -115,6 +117,38 @@ class HealthStatus:
 
 
 T = TypeVar("T")
+
+
+async def poll_until_async(
+    function: Callable[[], Awaitable[Optional[T]]],
+    timeout: float,
+    interval: float = 0.2,
+    timeout_ex: Optional[Exception] = None,
+) -> T:
+    """
+    Call the specified awaitable function repeatedly until it returns non-None.
+    Returns the function result.
+
+    Sleep 'interval' seconds between calls.  If 'timeout' seconds passes
+    before the function returns a non-None result, raise an exception.
+    If a 'timeout_ex' argument is supplied, that exception object is
+    raised, otherwise a TimeoutError is raised.
+    """
+    end_time = time.time() + timeout
+    while True:
+        result = await function()
+
+        if result is not None:
+            return result
+
+        if time.time() >= end_time:
+            if timeout_ex is not None:
+                raise timeout_ex
+            raise TimeoutError(
+                "timed out waiting on function {}".format(function.__name__)
+            )
+
+        await asyncio.sleep(interval)
 
 
 def poll_until(
