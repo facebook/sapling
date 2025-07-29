@@ -43,6 +43,9 @@ thrift_library(
     thrift_srcs = {
         "test_deprecated_optional_with_default_is_some.thrift": [],
     },
+    deps = [
+        "//thrift/annotation:thrift",
+    ],
 )
 
 thrift_library(
