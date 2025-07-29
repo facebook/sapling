@@ -894,7 +894,7 @@ class EdenConfig : private ConfigSettingManager {
    */
   ConfigSetting<int32_t> nfsDeadTimeoutSeconds{
       "nfs:dead-timeout-seconds",
-      60,
+      0,
       this};
 
   /**
