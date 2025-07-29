@@ -34,15 +34,30 @@ export interface SaplingExtensionApi {
   getRepositoryForPath(path: string): SaplingRepository | undefined;
 }
 
-export type SaplingRepositoryInfo =
-  | {
-      type: 'success';
-      repoRoot: string;
-      codeReviewSystem:
-        | {type: 'phabricator'; repo: string}
-        | {type: 'github'; owner: string; repo: string; hostname: string};
-    }
-  | {type: string};
+export type SaplingRepositoryInfo = {
+  type: 'success';
+  repoRoot: string;
+  codeReviewSystem:
+    | {
+        type: 'github';
+        owner: string;
+        repo: string;
+        /** github enterprise may use a different hostname than 'github.com' */
+        hostname: string;
+      }
+    | {
+        type: 'phabricator';
+        repo: string;
+        callsign?: string;
+      }
+    | {
+        type: 'none';
+      }
+    | {
+        type: 'unknown';
+        path?: string;
+      };
+};
 
 export interface SaplingRepository {
   info: SaplingRepositoryInfo;
@@ -71,6 +86,8 @@ export interface SaplingRepository {
   onChangeUncommittedChanges(
     callback: (changes: ReadonlyArray<SaplingChangedFile>) => void,
   ): vscode.Disposable;
+
+  getCurrentStack(): Promise<ReadonlyArray<SaplingCommitInfo>>;
 
   // TODO: refresh
   // TODO: moveFile / copyFile
