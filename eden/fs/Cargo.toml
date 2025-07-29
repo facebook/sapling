@@ -19,6 +19,9 @@ protobuf-build = { git = "https://github.com/fbsource/protobuf-build", rev = "ee
 quickcheck = { git = "https://github.com/jakoschiko/quickcheck", rev = "6ecdf5bb4b0132ce66670b4d46453aa022ea892c" }
 ratatui = { git = "https://github.com/fbsource/ratatui", rev = "2c4576ee123b2ac4845bd4a823af721ac447b33f" }
 rinja = { git = "https://github.com/fbsource/askama", rev = "2fc6173c98034c148f46330fc39a006cf0b09efe" }
+riscv = { git = "https://github.com/jsgf/riscv.git", rev = "90cfc5f2404e39e085e12845944d5bbbc869c290" }
+riscv-pac = { git = "https://github.com/jsgf/riscv.git", rev = "90cfc5f2404e39e085e12845944d5bbbc869c290" }
+riscv-rt = { git = "https://github.com/jsgf/riscv.git", rev = "90cfc5f2404e39e085e12845944d5bbbc869c290" }
 sqlx = { git = "https://github.com/launchbadge/sqlx", rev = "24317d5eab40fbc33caf1142946e2f39caad73ea" }
 stabby = { git = "https://github.com/fbsource/stabby", rev = "22db1dda19938ff7725a93db64012a5730325c5d" }
 tokenizers-21 = { package = "tokenizers", git = "https://github.com/huggingface/tokenizers", rev = "133db48d4f272070076fbc7a649c9e8aa8cd0646" }
