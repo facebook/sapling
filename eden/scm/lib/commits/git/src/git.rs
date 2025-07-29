@@ -333,7 +333,8 @@ impl GitSegmentedCommits {
             "git import"
         );
 
-        self.dag.import_from_git(&self.git_store, heads)?;
+        self.dag
+            .import_from_git(&self.git_store, heads, self.git.git_dir())?;
 
         let encoded_bookmarks = refencode::encode_bookmarks(&bookmarks);
         let encoded_remotenames = refencode::encode_remotenames(&remotenames);
@@ -459,7 +460,8 @@ impl GitSegmentedCommits {
         );
 
         if !heads.is_empty() {
-            self.dag.import_from_git(&self.git_store, heads.into())?;
+            self.dag
+                .import_from_git(&self.git_store, heads.into(), self.git.git_dir())?;
         }
 
         if let Some(v) = bookmarks {

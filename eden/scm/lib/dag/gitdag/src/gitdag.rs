@@ -5,6 +5,8 @@
  * LICENSE file in the root directory of this source tree.
  */
 
+use std::collections::HashSet;
+use std::io;
 use std::ops::Deref;
 use std::ops::DerefMut;
 use std::path::Path;
@@ -13,6 +15,7 @@ use dag::Dag;
 use dag::Vertex;
 use dag::VertexListWithOptions;
 use dag::ops::DagPersistent;
+use fs_err as fs;
 use gitstore::GitStore;
 use gitstore::ObjectType;
 use minibytes::Bytes;
@@ -49,16 +52,21 @@ impl GitDag {
 
     /// Import heads (and ancestors) from Git objects to the `dag`.
     /// The commit hashes are imported, but not the commit messages.
+    ///
+    /// Settings like git's shadow history will be read from `git_dir`
+    /// (like "repo/.git").
     pub fn import_from_git(
         &mut self,
         git_store: &GitStore,
         heads: VertexListWithOptions,
+        git_dir: &Path,
     ) -> anyhow::Result<()> {
         if heads.is_empty() {
             return Ok(());
         }
+        let shallow = read_git_shallow(git_dir)?;
         // git_repo is used to read local objects, not for reading references.
-        sync_from_git(&mut self.dag, git_store, heads)?;
+        sync_from_git(&mut self.dag, git_store, heads, shallow)?;
         Ok(())
     }
 }
@@ -77,11 +85,36 @@ impl DerefMut for GitDag {
     }
 }
 
+/// Read the .git/shallow files. It contains hex hashes that are the "stop"
+fn read_git_shallow(git_dir: &Path) -> anyhow::Result<HashSet<HgId>> {
+    // https://git-scm.com/docs/shallow
+    // > $GIT_DIR/shallow lists commit object names and tells Git to pretend as if they are root
+    // > commits (e.g. "git log" traversal stops after showing them; "git fsck" does not complain
+    // > saying the commits listed on their "parent" lines do not exist).
+    // > Each line contains exactly one object name. When read, a commit_graft will be constructed,
+    // > which has nr_parent < 0 to make it easier to discern from user provided grafts.
+    let path = git_dir.join("shallow");
+    match fs::read_to_string(&path) {
+        Err(e) if e.kind() == io::ErrorKind::NotFound => Ok(Default::default()),
+        Err(e) => return Err(e.into()),
+        Ok(text) => {
+            let shallow = text
+                .trim_ascii_end()
+                .lines()
+                .map(|line| HgId::from_hex(line.trim_ascii_end().as_ref()))
+                .collect::<Result<HashSet<_>, _>>()
+                .map_err(anyhow::Error::from);
+            anyhow::Context::with_context(shallow, || format!("parsing {}", path.display()))
+        }
+    }
+}
+
 /// Read from Git commit objects. Build segments for provided heads.
 fn sync_from_git(
     dag: &mut Dag,
     git_store: &GitStore,
     heads: VertexListWithOptions,
+    shallow: HashSet<HgId>,
 ) -> anyhow::Result<()> {
     // Filter out non-commit (ex. tree) references.
     let heads = heads.try_filter(&|vertex, _opts| {
@@ -99,6 +132,11 @@ fn sync_from_git(
         let id = HgId::from_slice(v.as_ref())
             .map_err(anyhow::Error::from)
             .context("converting to SHA1")?;
+        if shallow.contains(&id) {
+            // For shallow commits, their parents are forced to be empty.
+            tracing::trace!(" git commit {:?} is shallow", &v);
+            return Ok(Vec::new());
+        }
         let bytes = git_store
             .read_obj(id, ObjectType::Commit, FetchMode::LocalOnly)
             .context("reading git commit")?;
