@@ -24,6 +24,8 @@ use types::fetch_mode::FetchMode;
 use crate::errors::MapDagError;
 
 /// `GitDag` maintains segmented changelog as an index on the Git commit graph.
+/// It contains the commit hashes and their parent relationship. It does not
+/// contain the commit messages or the git references.
 ///
 /// This struct provides a "read-only" view for the commit graph. To read other
 /// parts of the git repo, or make changes to the Git commit graph, use a
