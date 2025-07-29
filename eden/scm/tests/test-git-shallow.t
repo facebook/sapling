@@ -1,6 +1,7 @@
 #require git no-windows
 
 Test client git repo with lazy blob/tree objects.
+"shallow" in terms of a sapling / remotefilelog terminology.
 
   $ . $TESTDIR/git.sh
   $ git -c init.defaultBranch=main init -q server-repo
