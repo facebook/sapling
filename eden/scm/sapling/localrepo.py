@@ -1819,13 +1819,14 @@ class localrepository:
         if tr is not None:
             return tr.nest()
 
-        try:
-            stat = self.svfs.stat("journal")
-        except FileNotFoundError:
-            # No existing transaction - this is the normal case.
-            pass
-        else:
-            self.recover()
+        if not lockfree:
+            try:
+                self.svfs.stat("journal")
+            except FileNotFoundError:
+                # No existing transaction - this is the normal case.
+                pass
+            else:
+                self.recover()
 
         idbase = b"%.40f#%f" % (random.random(), time.time())
         ha = hex(hashlib.sha1(idbase).digest())
