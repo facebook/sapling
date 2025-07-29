@@ -370,4 +370,15 @@ impl<R: MononokeRepo> RepoContext<R> {
             .rollback_workspace(&cc_ctx, version)
             .await?)
     }
+
+    pub async fn cloud_other_repo_workspaces(
+        &self,
+        workspace: &str,
+    ) -> Result<Vec<WorkspaceData>, MononokeError> {
+        Ok(self
+            .repo()
+            .commit_cloud()
+            .get_other_repo_workspaces(workspace)
+            .await?)
+    }
 }

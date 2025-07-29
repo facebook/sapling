@@ -91,6 +91,7 @@ pub use crate::cloud::HistoricalVersion;
 pub use crate::cloud::HistoricalVersionsData;
 pub use crate::cloud::HistoricalVersionsParams;
 pub use crate::cloud::HistoricalVersionsResponse;
+pub use crate::cloud::OtherRepoWorkspacesRequest;
 pub use crate::cloud::ReferencesData;
 pub use crate::cloud::ReferencesDataResponse;
 pub use crate::cloud::RenameWorkspaceRequest;

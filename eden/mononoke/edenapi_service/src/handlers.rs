@@ -101,6 +101,7 @@ pub enum SaplingRemoteApiMethod {
     Bookmarks2,
     Capabilities,
     CloudHistoricalVersions,
+    CloudOtherRepoWorkspaces,
     CloudReferences,
     CloudRenameWorkspace,
     CloudRollbackWorkspace,
@@ -149,6 +150,7 @@ impl fmt::Display for SaplingRemoteApiMethod {
             Self::Bookmarks2 => "bookmarks2",
             Self::Capabilities => "capabilities",
             Self::CloudHistoricalVersions => "cloud_historical_versions",
+            Self::CloudOtherRepoWorkspaces => "cloud_other_repo_workspaces",
             Self::CloudReferences => "cloud_references",
             Self::CloudRenameWorkspace => "cloud_rename_workspace",
             Self::CloudRollbackWorkspace => "cloud_rollback_workspace",
@@ -502,6 +504,7 @@ pub fn build_router<R: Send + Sync + Clone + 'static>(ctx: ServerContext<R>) -> 
         Handlers::setup::<bookmarks::SetBookmarkHandler>(route);
         Handlers::setup::<bookmarks::Bookmarks2Handler>(route);
         Handlers::setup::<commit_cloud::CommitCloudHistoricalVersions>(route);
+        Handlers::setup::<commit_cloud::CommitCloudOtherRepoWorkspaces>(route);
         Handlers::setup::<commit_cloud::CommitCloudReferences>(route);
         Handlers::setup::<commit_cloud::CommitCloudRenameWorkspace>(route);
         Handlers::setup::<commit_cloud::CommitCloudRollbackWorkspace>(route);

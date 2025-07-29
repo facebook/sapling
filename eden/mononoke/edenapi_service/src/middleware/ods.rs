@@ -32,6 +32,7 @@ define_stats! {
     bookmarks2_duration_ms: histogram(10, 0, 500, Average, Sum, Count; P 50; P 75; P 95; P 99),
     capabilities_duration_ms: histogram(100, 0, 5000, Average, Sum, Count; P 50; P 75; P 95; P 99),
     cloud_historical_versions_duration_ms: histogram(100, 0, 5000, Average, Sum, Count; P 50; P 75; P 95; P 99),
+    cloud_other_repo_workspaces_duration_ms: histogram(100, 0, 5000, Average, Sum, Count; P 50; P 75; P 95; P 99),
     cloud_references_duration_ms: histogram(100, 0, 5000, Average, Sum, Count; P 50; P 75; P 95; P 99),
     cloud_rename_workspace_duration_ms: histogram(100, 0, 5000, Average, Sum, Count; P 50; P 75; P 95; P 99),
     cloud_rollback_workspace_duration_ms: histogram(100, 0, 5000, Average, Sum, Count; P 50; P 75; P 95; P 99),
@@ -109,6 +110,9 @@ fn log_stats(state: &mut State, status: StatusCode) -> Option<()> {
                 Capabilities => STATS::capabilities_duration_ms.add_value(dur_ms),
                 CloudHistoricalVersions => {
                     STATS::cloud_historical_versions_duration_ms.add_value(dur_ms)
+                }
+                CloudOtherRepoWorkspaces => {
+                    STATS::cloud_other_repo_workspaces_duration_ms.add_value(dur_ms)
                 }
                 CloudReferences => STATS::cloud_references_duration_ms.add_value(dur_ms),
                 CloudRenameWorkspace => STATS::cloud_rename_workspace_duration_ms.add_value(dur_ms),

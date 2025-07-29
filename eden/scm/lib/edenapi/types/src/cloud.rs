@@ -401,3 +401,11 @@ pub struct RollbackWorkspaceResponse {
     #[no_default]
     pub data: Result<String, ServerError>,
 }
+
+#[auto_wire]
+#[derive(Clone, Default, Debug, Deserialize, Serialize, Eq, PartialEq)]
+#[cfg_attr(any(test, feature = "for-tests"), derive(Arbitrary))]
+pub struct OtherRepoWorkspacesRequest {
+    #[id(0)]
+    pub workspace: String,
+}

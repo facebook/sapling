@@ -20,6 +20,7 @@ use edenapi_types::HistoricalVersion;
 use edenapi_types::HistoricalVersionsData;
 use edenapi_types::HistoricalVersionsParams;
 use edenapi_types::HistoricalVersionsResponse;
+use edenapi_types::OtherRepoWorkspacesRequest;
 use edenapi_types::ReferencesData;
 use edenapi_types::ReferencesDataResponse;
 use edenapi_types::RenameWorkspaceRequest;
@@ -54,18 +55,19 @@ use crate::handlers::handler::PathExtractorWithRepo;
 use crate::utils::commit_cloud_types::FromCommitCloudType;
 use crate::utils::commit_cloud_types::IntoCommitCloudType;
 use crate::utils::commit_cloud_types::strip_git_suffix;
-pub struct CommitCloudWorkspace;
-pub struct CommitCloudWorkspaces;
+
+pub struct CommitCloudHistoricalVersions;
+pub struct CommitCloudOtherRepoWorkspaces;
 pub struct CommitCloudReferences;
-pub struct CommitCloudUpdateReferences;
+pub struct CommitCloudRenameWorkspace;
+pub struct CommitCloudRollbackWorkspace;
+pub struct CommitCloudShareWorkspace;
 pub struct CommitCloudSmartlog;
 pub struct CommitCloudSmartlogByVersion;
-pub struct CommitCloudShareWorkspace;
-pub struct CommitCloudRenameWorkspace;
 pub struct CommitCloudUpdateArchive;
-pub struct CommitCloudHistoricalVersions;
-
-pub struct CommitCloudRollbackWorkspace;
+pub struct CommitCloudUpdateReferences;
+pub struct CommitCloudWorkspace;
+pub struct CommitCloudWorkspaces;
 
 #[async_trait]
 impl SaplingRemoteApiHandler for CommitCloudWorkspace {
@@ -652,5 +654,58 @@ async fn rollback_workspace<R: MononokeRepo>(
             )
             .await
             .map_err(ServerError::from),
+    })
+}
+
+#[async_trait]
+impl SaplingRemoteApiHandler for CommitCloudOtherRepoWorkspaces {
+    type Request = OtherRepoWorkspacesRequest;
+    type Response = WorkspacesDataResponse;
+
+    const HTTP_METHOD: hyper::Method = hyper::Method::POST;
+    const API_METHOD: SaplingRemoteApiMethod = SaplingRemoteApiMethod::CloudOtherRepoWorkspaces;
+    const ENDPOINT: &'static str = "/cloud/other_repo_workspaces";
+    const SUPPORTED_FLAVOURS: &'static [SlapiCommitIdentityScheme] = &[
+        SlapiCommitIdentityScheme::Hg,
+        SlapiCommitIdentityScheme::Git,
+    ];
+
+    async fn handler(
+        ectx: SaplingRemoteApiContext<Self::PathExtractor, Self::QueryStringExtractor, Repo>,
+        request: Self::Request,
+    ) -> HandlerResult<'async_trait, Self::Response> {
+        let repo = ectx.repo();
+        let res = other_repo_workspaces(request, repo).boxed();
+        Ok(stream::once(res).boxed())
+    }
+
+    fn extract_in_band_error(response: &Self::Response) -> Option<anyhow::Error> {
+        response
+            .data
+            .as_ref()
+            .err()
+            .map(|err| format_err!("{:?}", err))
+    }
+}
+
+async fn other_repo_workspaces<R: MononokeRepo>(
+    request: OtherRepoWorkspacesRequest,
+    repo: HgRepoContext<R>,
+) -> anyhow::Result<WorkspacesDataResponse, Error> {
+    let cc_res = repo
+        .repo_ctx()
+        .cloud_other_repo_workspaces(&request.workspace)
+        .await;
+
+    let res = match cc_res {
+        Ok(res) => Ok(res
+            .into_iter()
+            .map(WorkspaceData::from_cc_type)
+            .collect::<anyhow::Result<Vec<_>>>()?),
+        Err(e) => Err(e),
+    };
+
+    Ok(WorkspacesDataResponse {
+        data: res.map_err(ServerError::from),
     })
 }

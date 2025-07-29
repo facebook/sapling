@@ -725,4 +725,22 @@ impl CommitCloud {
             .map(|_| "rollback succeeded".to_string())
             .map_err(|e| anyhow::anyhow!(e.to_string()))
     }
+
+    pub async fn get_other_repo_workspaces(
+        &self,
+        workspace: &str,
+    ) -> anyhow::Result<Vec<WorkspaceData>> {
+        ensure!(
+            !workspace.is_empty(),
+            "'get other repo workspaces' failed: empty workspace name"
+        );
+
+        let maybeworkspace =
+            WorkspaceVersion::fetch_by_name(&self.ctx, &self.storage, workspace).await?;
+
+        Ok(maybeworkspace
+            .into_iter()
+            .map(|wp| wp.into_workspace_data())
+            .collect())
+    }
 }
