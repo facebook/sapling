@@ -667,6 +667,12 @@ py_class!(pub class client |py| {
     def cloudrollbackworkspace(&self, data: Serde<RollbackWorkspaceRequest>) -> PyResult<Serde<RollbackWorkspaceResponse>> {
         self.inner(py).as_ref().cloud_rollback_workspace_py(data, py)
     }
+
+    def cloudotherrepoworkspaces(&self, workspace: String)
+        -> PyResult<Serde<WorkspacesDataResponse>>
+    {
+        self.inner(py).as_ref().cloud_other_repo_workspaces_py(workspace, py)
+    }
 });
 
 impl ExtractInnerRef for client {

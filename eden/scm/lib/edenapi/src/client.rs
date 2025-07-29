@@ -77,6 +77,7 @@ use edenapi_types::LandStackResponse;
 use edenapi_types::LookupRequest;
 use edenapi_types::LookupResponse;
 use edenapi_types::LookupResult;
+use edenapi_types::OtherRepoWorkspacesRequest;
 use edenapi_types::PathHistoryRequest;
 use edenapi_types::PathHistoryRequestPaginationCursor;
 use edenapi_types::PathHistoryResponse;
@@ -172,6 +173,7 @@ pub mod paths {
     pub const BOOKMARKS2: &str = "bookmarks2";
     pub const CAPABILITIES: &str = "capabilities";
     pub const CLOUD_HISTORICAL_VERSIONS: &str = "cloud/historical_versions";
+    pub const CLOUD_OTHER_REPO_WORKSPACES: &str = "cloud/other_repo_workspaces";
     pub const CLOUD_REFERENCES: &str = "cloud/references";
     pub const CLOUD_RENAME_WORKSPACE: &str = "cloud/rename_workspace";
     pub const CLOUD_ROLLBACK_WORKSPACE: &str = "cloud/rollback_workspace";
@@ -1358,6 +1360,20 @@ impl Client {
         self.request_single(paths::CLOUD_ROLLBACK_WORKSPACE, data)
             .await
     }
+
+    async fn cloud_other_repo_workspaces_attempt(
+        &self,
+        workspace: String,
+    ) -> Result<WorkspacesDataResponse, SaplingRemoteApiError> {
+        tracing::info!("Requesting other repo workspaces with name {}  ", workspace,);
+        self.request_single(
+            paths::CLOUD_OTHER_REPO_WORKSPACES,
+            OtherRepoWorkspacesRequest {
+                workspace: workspace.to_string(),
+            },
+        )
+        .await
+    }
 }
 
 #[async_trait]
@@ -2071,6 +2087,17 @@ impl SaplingRemoteApi for Client {
     ) -> Result<RollbackWorkspaceResponse, SaplingRemoteApiError> {
         self.with_retry(|this| this.cloud_rollback_workspace_attempt(data.clone()).boxed())
             .await
+    }
+
+    async fn cloud_other_repo_workspaces(
+        &self,
+        workspace: String,
+    ) -> Result<WorkspacesDataResponse, SaplingRemoteApiError> {
+        self.with_retry(|this| {
+            this.cloud_other_repo_workspaces_attempt(workspace.clone())
+                .boxed()
+        })
+        .await
     }
 
     async fn suffix_query(

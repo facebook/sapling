@@ -853,6 +853,18 @@ pub trait SaplingRemoteApiPyExt: SaplingRemoteApi {
             .map_pyerr(py)?;
         Ok(Serde(responses))
     }
+
+    fn cloud_other_repo_workspaces_py(
+        &self,
+        workspace: String,
+        py: Python,
+    ) -> PyResult<Serde<WorkspacesDataResponse>> {
+        let responses = py
+            .allow_threads(|| block_unless_interrupted(self.cloud_other_repo_workspaces(workspace)))
+            .map_pyerr(py)?
+            .map_pyerr(py)?;
+        Ok(Serde(responses))
+    }
 }
 
 impl<T: SaplingRemoteApi + ?Sized> SaplingRemoteApiPyExt for T {}

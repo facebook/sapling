@@ -48,6 +48,7 @@ use edenapi_types::HistoryEntry;
 use edenapi_types::IdenticalChangesetContent;
 use edenapi_types::LandStackResponse;
 use edenapi_types::LookupResponse;
+use edenapi_types::OtherRepoWorkspacesRequest;
 use edenapi_types::PathHistoryRequestPaginationCursor;
 use edenapi_types::PathHistoryResponse;
 use edenapi_types::ReferencesDataResponse;
@@ -503,6 +504,14 @@ pub trait SaplingRemoteApi: Send + Sync + 'static {
         data: RollbackWorkspaceRequest,
     ) -> Result<RollbackWorkspaceResponse, SaplingRemoteApiError> {
         let _ = data;
+        Err(SaplingRemoteApiError::NotSupported)
+    }
+
+    async fn cloud_other_repo_workspaces(
+        &self,
+        workspace: String,
+    ) -> Result<WorkspacesDataResponse, SaplingRemoteApiError> {
+        let _ = workspace;
         Err(SaplingRemoteApiError::NotSupported)
     }
 
