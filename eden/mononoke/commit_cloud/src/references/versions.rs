@@ -11,7 +11,7 @@ use mononoke_types::Timestamp;
 use crate::CoreContext;
 use crate::Get;
 use crate::SqlCommitCloud;
-use crate::sql::versions_ops::get_homonymous_workspaces;
+use crate::sql::versions_ops::get_other_repo_workspaces;
 use crate::sql::versions_ops::get_version_by_prefix;
 
 #[derive(Clone, Debug, PartialEq)]
@@ -55,7 +55,7 @@ impl WorkspaceVersion {
         sql: &SqlCommitCloud,
         name: &str,
     ) -> anyhow::Result<Vec<Self>> {
-        get_homonymous_workspaces(ctx, &sql.connections, name.to_string()).await
+        get_other_repo_workspaces(ctx, &sql.connections, name.to_string()).await
     }
 }
 

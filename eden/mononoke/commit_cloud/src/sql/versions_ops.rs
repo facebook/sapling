@@ -32,7 +32,7 @@ mononoke_queries! {
         sqlite("SELECT `workspace`,  `version`, `archived`, `timestamp` FROM `versions` WHERE `reponame`={reponame} AND `workspace` LIKE {prefix}")
     }
 
-    read GetHomonymousWorkspaces(workspace:String) -> (String, String,  u64, bool, Option<i64>){
+    read GetOtherRepoWorkspaces(workspace:String) -> (String, String,  u64, bool, Option<i64>){
         mysql("SELECT `workspace`,`reponame`, `version`, `archived`, UNIX_TIMESTAMP(`timestamp`) FROM `versions` WHERE `workspace`={workspace}")
         sqlite("SELECT `workspace`,`reponame`,  `version`, `archived`, `timestamp` FROM `versions` WHERE `workspace`={workspace}")
     }
@@ -190,12 +190,12 @@ pub async fn get_version_by_prefix(
         .collect::<anyhow::Result<Vec<WorkspaceVersion>>>()
 }
 
-pub async fn get_homonymous_workspaces(
+pub async fn get_other_repo_workspaces(
     ctx: &CoreContext,
     connections: &SqlConnections,
     workspace: String,
 ) -> anyhow::Result<Vec<WorkspaceVersion>> {
-    let rows = GetHomonymousWorkspaces::query(
+    let rows = GetOtherRepoWorkspaces::query(
         &connections.read_connection,
         ctx.sql_query_telemetry(),
         &workspace,

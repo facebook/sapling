@@ -12,7 +12,7 @@ use commit_cloud::sql::ops::Get;
 use commit_cloud::sql::ops::Insert;
 use commit_cloud::sql::ops::Update;
 use commit_cloud::sql::versions_ops::UpdateVersionArgs;
-use commit_cloud::sql::versions_ops::get_homonymous_workspaces;
+use commit_cloud::sql::versions_ops::get_other_repo_workspaces;
 use commit_cloud::sql::versions_ops::get_version_by_prefix;
 use context::CoreContext;
 use fbinit::FacebookInit;
@@ -74,9 +74,9 @@ async fn test_versions(fb: FacebookInit) -> anyhow::Result<()> {
     .await?;
     assert_eq!(vec![args.clone()], res_prefix);
 
-    let res_homonymus =
-        get_homonymous_workspaces(&ctx, &sql.connections, workspace.clone()).await?;
-    assert_eq!(vec![args, args2], res_homonymus);
+    let res_other_repo =
+        get_other_repo_workspaces(&ctx, &sql.connections, workspace.clone()).await?;
+    assert_eq!(vec![args, args2], res_other_repo);
 
     // Test version conflict
     let args2 = WorkspaceVersion {
