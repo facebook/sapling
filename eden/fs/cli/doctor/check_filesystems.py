@@ -36,6 +36,7 @@ from facebook.eden.ttypes import (
     DebugInvalidateRequest,
     DebugInvalidateResponse,
     EdenError,
+    EdenErrorType,
     GetCurrentSnapshotInfoRequest,
     GetScmStatusParams,
     MatchFileSystemRequest,
@@ -1065,6 +1066,10 @@ def check_hg_status_match_hg_diff(
 ) -> None:
     try:
         modified_files = get_modified_files(instance, checkout)
+    except EdenError as ex:
+        if ex.errorCode == EdenErrorType.CHECKOUT_IN_PROGRESS:
+            return
+        raise
     except InProgressCheckoutError:
         return
 
@@ -1082,6 +1087,10 @@ def check_hg_status_match_hg_diff(
         # checker would raise a Problem
         if modified_files != get_modified_files(instance, checkout):
             return
+    except EdenError as ex:
+        if ex.errorCode == EdenErrorType.CHECKOUT_IN_PROGRESS:
+            return
+        raise
     except InProgressCheckoutError:
         return
 
