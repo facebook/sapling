@@ -6,25 +6,25 @@
 
 # pyre-unsafe
 
+import asyncio
 import logging
 import os
 import re
 import sys
 import threading
-from contextlib import contextmanager
+from contextlib import asynccontextmanager
 from enum import Enum
 from multiprocessing import Process
 from textwrap import dedent
 from threading import Thread
-from typing import Dict, Generator, List, Optional, Set
+from typing import AsyncGenerator, Dict, List, Optional, Set
 
 from eden.fs.cli import util
-from eden.integration.hg.lib.hg_extension_test_base import EdenHgTestCase, hg_test
-from eden.integration.lib import hgrepo
-from facebook.eden.constants import DIS_ENABLE_FLAGS
-from facebook.eden.ttypes import (
+
+from eden.fs.service.eden.thrift_types import (
     CheckoutMode,
     CheckOutRevisionParams,
+    DIS_ENABLE_FLAGS,
     EdenError,
     EdenErrorType,
     FaultDefinition,
@@ -32,6 +32,9 @@ from facebook.eden.ttypes import (
     SyncBehavior,
     UnblockFaultArg,
 )
+
+from eden.integration.hg.lib.hg_extension_test_base import EdenHgTestCase, hg_test
+from eden.integration.lib import hgrepo
 
 if sys.platform == "win32":
     from eden.fs.cli import prjfs
@@ -496,13 +499,13 @@ class UpdateTest(EdenHgTestCase):
         self.assertFalse(os.path.exists(self.get_path("foo/bar/a.txt")))
         self.assertTrue(os.path.exists(self.get_path("foo/bar/b.txt")))
 
-    def wait_for_checkout_in_progress(self) -> None:
+    async def wait_for_checkout_in_progress(self) -> None:
         hg_parent = self.hg("log", "-r.", "-T{node}")
 
-        def checkout_in_progress() -> Optional[bool]:
+        async def checkout_in_progress() -> Optional[bool]:
             try:
-                with self.eden.get_thrift_client_legacy() as client:
-                    client.getScmStatusV2(
+                async with self.eden.get_thrift_client() as client:
+                    await client.getScmStatusV2(
                         GetScmStatusParams(
                             mountPoint=bytes(self.mount, encoding="utf-8"),
                             commit=bytes(hg_parent, encoding="utf-8"),
@@ -520,12 +523,12 @@ class UpdateTest(EdenHgTestCase):
                     raise ex
             return None
 
-        util.poll_until(checkout_in_progress, timeout=30)
+        await util.poll_until_async(checkout_in_progress, timeout=30)
 
-    @contextmanager
-    def block_checkout(self) -> Generator[None, None, None]:
-        with self.eden.get_thrift_client_legacy() as client:
-            client.injectFault(
+    @asynccontextmanager
+    async def block_checkout(self) -> AsyncGenerator[None, None]:
+        async with self.eden.get_thrift_client() as client:
+            await client.injectFault(
                 FaultDefinition(
                     keyClass="inodeCheckout", keyValueRegex=".*", block=True
                 )
@@ -534,25 +537,25 @@ class UpdateTest(EdenHgTestCase):
         try:
             yield
         finally:
-            with self.eden.get_thrift_client_legacy() as client:
-                client.unblockFault(
+            async with self.eden.get_thrift_client() as client:
+                await client.unblockFault(
                     UnblockFaultArg(keyClass="inodeCheckout", keyValueRegex=".*")
                 )
 
-    def test_mount_state_during_unmount_with_in_progress_checkout(self) -> None:
+    async def test_mount_state_during_unmount_with_in_progress_checkout(self) -> None:
         mounts = self.eden.run_cmd("list")
         self.assertEqual(f"{self.mount}\n", mounts)
 
         self.backing_repo.write_file("foo/bar.txt", "new contents")
         new_commit = self.backing_repo.commit("Update foo/bar.txt")
 
-        with self.block_checkout():
+        async with self.block_checkout():
             # Run a checkout
             p1 = Process(target=self.repo.update, args=(new_commit,))
             p1.start()
 
             # Ensure the checkout has started
-            self.wait_for_checkout_in_progress()
+            await self.wait_for_checkout_in_progress()
 
             p2 = Process(target=self.eden.unmount, args=(self.mount,))
             p2.start()
@@ -814,9 +817,11 @@ class UpdateTest(EdenHgTestCase):
         self.read_dir("foo/subdir")
         self.repo.update(commit4)
 
-    def kill_eden_during_checkout_and_restart(self, commit: str, keyValue: str) -> None:
-        with self.eden.get_thrift_client_legacy() as client:
-            client.injectFault(
+    async def kill_eden_during_checkout_and_restart(
+        self, commit: str, keyValue: str
+    ) -> None:
+        async with self.eden.get_thrift_client() as client:
+            await client.injectFault(
                 FaultDefinition(
                     keyClass="TreeInode::checkout",
                     keyValueRegex=keyValue,
@@ -837,7 +842,7 @@ class UpdateTest(EdenHgTestCase):
         self.eden = self.init_eden_client()
         self.eden.start()
 
-    def test_resume_interrupted_update(self) -> None:
+    async def test_resume_interrupted_update(self) -> None:
         """
         Test resuming a hg checkout after Eden was killed mid-checkout
         previously.
@@ -864,7 +869,7 @@ class UpdateTest(EdenHgTestCase):
         # dir3 were not materialized during the resumed checkout.
         self.repo.write_file("dir2/bar.txt", "Content 3")
 
-        self.kill_eden_during_checkout_and_restart(bottom, "dir2, false")
+        await self.kill_eden_during_checkout_and_restart(bottom, "dir2, false")
 
         with self.assertRaisesRegex(
             hgrepo.HgError, f"a previous checkout was interrupted.*{bottom}"
@@ -879,8 +884,8 @@ class UpdateTest(EdenHgTestCase):
         output = self.repo.update(bottom, clean=True)
         self.assertEqual("update complete\n", output)
 
-        with self.eden.get_thrift_client_legacy() as client:
-            inode_status = client.debugInodeStatus(
+        async with self.eden.get_thrift_client() as client:
+            inode_status = await client.debugInodeStatus(
                 self.repo.path.encode("utf8"),
                 b"",
                 flags=DIS_ENABLE_FLAGS,
@@ -893,32 +898,36 @@ class UpdateTest(EdenHgTestCase):
             self.assertFalse(dir2.loaded and inodes["dir2"].materialized)
             self.assertNotIn("dir3", inodes)
 
-    def test_resume_interrupted_with_concurrent_update(self) -> None:
+    async def test_resume_interrupted_with_concurrent_update(self) -> None:
         self.repo.write_file("foo/baz.txt", "Content 3")
-        self.kill_eden_during_checkout_and_restart(self.commit1, "foo, false")
+        await self.kill_eden_during_checkout_and_restart(self.commit1, "foo, false")
 
-        def start_force_checkout(commit: str) -> None:
-            with self.eden.get_thrift_client_legacy() as client:
-                client.checkOutRevision(
+        async def start_force_checkout(commit: str) -> None:
+            async with self.eden.get_thrift_client() as client:
+                await client.checkOutRevision(
                     mountPoint=self.mount_path_bytes,
                     snapshotHash=commit.encode(),
                     checkoutMode=CheckoutMode.FORCE,
                     params=CheckOutRevisionParams(),
                 )
 
-        with self.block_checkout():
+        def run_async_func_in_thread(async_func, *args):
+            asyncio.run(async_func(*args))
+
+        async with self.block_checkout():
             first_update = threading.Thread(
-                target=start_force_checkout, args=(self.commit1,)
+                target=run_async_func_in_thread,
+                args=(start_force_checkout, self.commit1),
             )
             first_update.start()
 
-            self.wait_for_checkout_in_progress()
+            await self.wait_for_checkout_in_progress()
 
             # Now let's run update a second time.
             with self.assertRaisesRegex(
                 EdenError, "another checkout operation is still in progress"
             ):
-                start_force_checkout(self.commit1)
+                await start_force_checkout(self.commit1)
 
         first_update.join()
 
@@ -1093,7 +1102,7 @@ class UpdateCacheInvalidationTest(EdenHgTestCase):
 
     if sys.platform == "win32":  # noqa: C901
 
-        def _retry_update_after_failed_entry_cache_invalidation(
+        async def _retry_update_after_failed_entry_cache_invalidation(
             self,
             initial_state: PrjFsState,
         ) -> None:
@@ -1116,8 +1125,8 @@ class UpdateCacheInvalidationTest(EdenHgTestCase):
                 raise ValueError("Unsupported initial state: {}".format(initial_state))
 
             # Simulate failed invalidation of file2.
-            with self.eden.get_thrift_client_legacy() as client:
-                client.injectFault(
+            async with self.eden.get_thrift_client() as client:
+                await client.injectFault(
                     FaultDefinition(
                         keyClass="invalidateChannelEntryCache",
                         keyValueRegex="file2",
@@ -1131,8 +1140,8 @@ class UpdateCacheInvalidationTest(EdenHgTestCase):
             self.assert_unfinished_operation("update")
 
             # Try to update again, this time without failure.
-            with self.eden.get_thrift_client_legacy() as client:
-                client.unblockFault(
+            async with self.eden.get_thrift_client() as client:
+                await client.unblockFault(
                     UnblockFaultArg(
                         keyClass="invalidateChannelEntryCache", keyValueRegex="file2"
                     )
@@ -1146,22 +1155,24 @@ class UpdateCacheInvalidationTest(EdenHgTestCase):
             # self.assert_status({}, op=None)
             # self.assertEqual(self.read_file("dir/file2"), "two")
 
-        def test_retry_update_after_failed_entry_cache_invalidation_placeholder(
+        async def test_retry_update_after_failed_entry_cache_invalidation_placeholder(
             self,
         ) -> None:
-            self._retry_update_after_failed_entry_cache_invalidation(
+            await self._retry_update_after_failed_entry_cache_invalidation(
                 initial_state=PrjFsState.PLACEHOLDER,
             )
 
-        def test_retry_update_after_failed_entry_cache_invalidation_hydrated_placeholder(
+        async def test_retry_update_after_failed_entry_cache_invalidation_hydrated_placeholder(
             self,
         ) -> None:
-            self._retry_update_after_failed_entry_cache_invalidation(
+            await self._retry_update_after_failed_entry_cache_invalidation(
                 initial_state=PrjFsState.HYDRATED_PLACEHOLDER,
             )
 
-        def test_retry_update_after_failed_entry_cache_invalidation_full(self) -> None:
-            self._retry_update_after_failed_entry_cache_invalidation(
+        async def test_retry_update_after_failed_entry_cache_invalidation_full(
+            self,
+        ) -> None:
+            await self._retry_update_after_failed_entry_cache_invalidation(
                 initial_state=PrjFsState.FULL,
             )
 
@@ -1407,7 +1418,7 @@ class PrjFSStressTornReads(EdenHgTestCase):
 
         self.assertEqual(contents, b"54321\n")
 
-    def test_torn_read_invalidation_shutdown(self) -> None:
+    async def test_torn_read_invalidation_shutdown(self) -> None:
         self.repo.update(self.long_file_commit)
         rel_path = "file"
         path = self.mount_path / rel_path
@@ -1436,8 +1447,8 @@ class PrjFSStressTornReads(EdenHgTestCase):
         except Exception:
             pass
 
-        with self.eden.get_thrift_client_legacy() as client:
-            client.injectFault(
+        async with self.eden.get_thrift_client() as client:
+            await client.injectFault(
                 FaultDefinition(
                     keyClass="PrjFSChannelInner::getFileData-invalidation",
                     keyValueRegex="file",
