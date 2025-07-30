@@ -47,6 +47,7 @@ define_stats! {
     prefix = "mononoke.shardmanager";
     restored_connection_to_shardmanager: timeseries(Rate, Sum),
     lost_connection_to_shardmanager: timeseries(Rate, Sum),
+    shard_setup_failures: timeseries(Rate, Sum),
 }
 
 /// Enum representing the states in which the repo-add
@@ -555,6 +556,7 @@ impl ShardedProcessHandler {
                             self.logger,
                             "Failure in setting up shard/repo so skipping it. Error: {:?}", e
                         );
+                        STATS::shard_setup_failures.add_value(1);
                         continue;
                     }
                     Err(e) => anyhow::bail!("Error while setting up shard: {:?}", e),
