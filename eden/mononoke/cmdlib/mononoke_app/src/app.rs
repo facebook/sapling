@@ -607,6 +607,38 @@ impl MononokeApp {
     }
 
     /// Create a new repo object -- for local instances, expect its contents to be empty.
+    pub async fn create_repo<Repo>(
+        &self,
+        repo_arg: &impl AsRepoArg,
+        maybe_inner_blobstore_id: Option<u64>,
+    ) -> Result<Repo>
+    where
+        Repo: for<'builder> AsyncBuildable<'builder, RepoFactoryBuilder<'builder>>,
+    {
+        let (repo_name, mut repo_config) = self.repo_config(repo_arg.as_repo_arg())?;
+        let common_config = self.repo_configs().common.clone();
+        if let Some(id) = maybe_inner_blobstore_id {
+            self.override_blobconfig(&mut repo_config.storage_config.blobstore, id)?;
+        }
+        info!(
+            self.logger().clone(),
+            "using repo \"{}\" repoid {:?}", repo_name, repo_config.repoid
+        );
+
+        match &repo_config.storage_config.blobstore {
+            BlobConfig::Files { path } | BlobConfig::Sqlite { path } => {
+                setup_repo_dir(path, CreateStorage::ExistingOrCreate)?;
+            }
+            _ => {}
+        }
+        let repo = self
+            .repo_factory
+            .build(repo_name, repo_config, common_config)
+            .await?;
+        Ok(repo)
+    }
+
+    /// Create a new repo object -- for local instances, expect its contents to be empty.
     /// Makes sure that the opened repo has redaction DISABLED
     pub async fn create_repo_unredacted<Repo>(
         &self,
