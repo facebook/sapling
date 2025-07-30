@@ -14,7 +14,7 @@ blake3 = { version = "=1.8.2", features = ["mmap", "rayon", "traits-preview"] }
 clap = { version = "3.2.25", features = ["derive", "env", "regex", "unicode", "wrap_help"] }
 colored = "2.1.0"
 comfy-table = "7.1.4"
-crossterm = { version = "0.28", features = ["event-stream"] }
+crossterm = { version = "0.28", features = ["event-stream", "serde"] }
 dialoguer = { version = "0.10.4", features = ["fuzzy-select"] }
 dunce = "1.0.5"
 edenfs-asserted-states = { version = "0.1.0", path = "../../rust/edenfs-asserted-states" }
