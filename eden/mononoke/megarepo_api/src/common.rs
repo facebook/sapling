@@ -75,7 +75,7 @@ use mononoke_types::path::MPath;
 use repo_authorization::AuthorizationContext;
 use slog::info;
 use sorted_vector_map::SortedVectorMap;
-use tracing_slog_compat::tracing::Instrument;
+use tracing::Instrument;
 
 use crate::Repo;
 
