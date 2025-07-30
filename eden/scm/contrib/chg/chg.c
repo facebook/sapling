@@ -101,6 +101,76 @@ static void getdefaultsockdir(char sockdir[], size_t size) {
   }
 }
 
+unsigned long long mycgroupid() {
+#ifndef __linux__
+  return 0;
+#endif
+
+  unsigned long long cgroup_id = 0;
+
+  char cgroup_entry[PATH_MAX];
+  FILE* cgroup_file = fopen("/proc/self/cgroup", "r");
+  if (cgroup_file == NULL) {
+    goto done;
+  }
+
+  size_t read = fread(cgroup_entry, 1, sizeof(cgroup_entry), cgroup_file);
+  if (read <= 2 || read >= sizeof(cgroup_entry) ||
+      cgroup_entry[read - 1] != '\n') {
+    debugmsg("unexpected /proc/self/cgroup");
+    goto done;
+  }
+  // Terminate string and trim newline.
+  cgroup_entry[read - 1] = 0;
+
+  // ex: cgroup_entry = 0::/muir.slice
+  debugmsg("cgroup_entry = %s", cgroup_entry);
+
+  // Check for and strip leading "0::".
+  // https://docs.kernel.org/admin-guide/cgroup-v2.html
+  // “/proc/$PID/cgroup” lists a process’s cgroup membership. [...]
+  // The entry for cgroup v2 is always in the format “0::$PATH”
+  if (strncmp(cgroup_entry, "0::", 3) != 0) {
+    goto done;
+  }
+  const char* cgroup_name = cgroup_entry + 3;
+  if (!*cgroup_name) {
+    goto done;
+  }
+
+  // ex: cgroup_name = /muir.slice
+  debugmsg("cgroup_name = %s", cgroup_name);
+
+  // assume typical cgroup2 mount at /sys/fs/cgroup
+  char cgroup_path[PATH_MAX];
+  int r = snprintf(
+      cgroup_path, sizeof(cgroup_path), "/sys/fs/cgroup%s", cgroup_name);
+  if (r < 0 || r >= sizeof(cgroup_path)) {
+    goto done;
+  }
+
+  // ex: /sys/fs/cgroup/muir.slice
+  debugmsg("cgroup_path = %s", cgroup_path);
+
+  struct stat st;
+  r = lstat(cgroup_path, &st);
+  if (r < 0) {
+    debugmsg("cgroup stat(%s) error: %s", cgroup_path, strerror(errno));
+    goto done;
+  }
+
+  cgroup_id = st.st_ino;
+
+  debugmsg("cgroup_id = %llu", cgroup_id);
+
+done:
+  if (cgroup_file != NULL) {
+    fclose(cgroup_file);
+  }
+
+  return cgroup_id;
+}
+
 static void setcmdserveropts(struct cmdserveropts* opts, const char* cli_name) {
   int r;
   char sockdir[PATH_MAX];
@@ -113,9 +183,26 @@ static void setcmdserveropts(struct cmdserveropts* opts, const char* cli_name) {
   opts->cli_name = cli_name;
 
   const char* basename = (envsockname) ? envsockname : sockdir;
-  const char* sockfmt = (envsockname) ? "%s-%s" : "%s/server-%s";
-  r = snprintf(
-      opts->sockname, sizeof(opts->sockname), sockfmt, basename, cli_name);
+
+  unsigned long long cgroup_id = mycgroupid();
+
+  if (cgroup_id > 0) {
+    // Namespace socket with cgroup id. This prevents sl commands from jumping
+    // into the "random" cgroup of the process that started the pfc server.
+    const char* sockfmt = (envsockname) ? "%s-%s-%llu" : "%s/server-%s-%llu";
+    r = snprintf(
+        opts->sockname,
+        sizeof(opts->sockname),
+        sockfmt,
+        basename,
+        cli_name,
+        cgroup_id);
+  } else {
+    const char* sockfmt = (envsockname) ? "%s-%s" : "%s/server-%s";
+    r = snprintf(
+        opts->sockname, sizeof(opts->sockname), sockfmt, basename, cli_name);
+  }
+
   if (r < 0 || (size_t)r >= sizeof(opts->sockname)) {
     abortmsg("too long TMPDIR or CHGSOCKNAME (r = %d)", r);
   }
