@@ -36,7 +36,9 @@ NodeInfo = collections.namedtuple(
 SmartlogInfo = collections.namedtuple(
     "SmartlogInfo", "dag public draft version timestamp nodeinfos"
 )
-WorkspaceInfo = collections.namedtuple("WorkspaceInfo", "name archived version")
+WorkspaceInfo = collections.namedtuple(
+    "WorkspaceInfo", "name reponame archived version"
+)
 
 PUBLICPHASE = "public"
 
@@ -306,10 +308,11 @@ class BaseService(abc.ABC):
         )
 
     @staticmethod
-    def _makeworkspacesinfo(workspacesinfos):
+    def _makeworkspacesinfo(workspacesinfos, reponame=None):
         return [
             WorkspaceInfo(
                 name=workspacesinfo["name"],
+                reponame=reponame if reponame else workspacesinfo["reponame"],
                 archived=bool(workspacesinfo["archived"]),
                 version=int(workspacesinfo["version"]),
             )

@@ -983,6 +983,60 @@ def cloudlistworkspaces(ui, repo, **opts):
         )
 
 
+@subcmd(
+    "listotherrepo",
+    [
+        (
+            "",
+            "raw-workspace",
+            "",
+            _("raw workspace name (e.g. '<prefix>/<username>/<workspace>')"),
+        ),
+        ("a", "all", None, _("list all workspaces, including archived")),
+    ],
+)
+def cloudlistotherrepoworkspaces(ui, repo, **opts):
+    """list Commit Cloud workspaces that have the same name across repos"""
+
+    activeonly = not opts.get("all")
+    workspacename = opts.get("raw_workspace")
+    ui.status(
+        _("searching workspaces with name '%s'\n") % workspacename,
+        component="commitcloud",
+    )
+
+    serv = service.get(ui, repo)
+
+    winfos = serv.getotherrepoworkspaces(workspacename)
+
+    if not winfos:
+        ui.write(_("no workspaces found with the name %s\n") % workspacename)
+        return
+
+    active, archived = [], []
+    for winfo in winfos:
+        (active if not winfo.archived else archived).append(winfo)
+
+    if not active and activeonly:
+        ui.write(_("no active workspaces found with the name %s\n") % workspacename)
+        return
+
+    ui.write(
+        ui.label(
+            _("the commitcloud workspace %s is available on the following repos:\n")
+            % workspacename,
+            "bold",
+        )
+    )
+
+    for winfo in active if activeonly else active + archived:
+        reponame = winfo.reponame
+        if not winfo.archived:
+            ui.write(_("        %s\n") % (reponame))
+        else:
+            ui.write(_("        %s (archived)\n") % (reponame))
+
+
 @subcmd("deleteworkspace|delete", [] + workspace.workspaceopts)
 def clouddeleteworkspace(ui, repo, **opts):
     """delete (archive) workspace from commit cloud"""

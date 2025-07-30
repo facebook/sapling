@@ -167,7 +167,7 @@ class LocalService(baseservice.BaseService):
         ]
         allworkspaces.append(
             baseservice.WorkspaceInfo(
-                name=workspace, archived=False, version=newversion
+                name=workspace, archived=False, version=newversion, reponame=reponame
             )
         )
         self._saveworkspaces(allworkspaces)
@@ -236,7 +236,9 @@ class LocalService(baseservice.BaseService):
                 data = json.load(f)
                 return [
                     winfo
-                    for winfo in self._makeworkspacesinfo(data["workspaces_data"])
+                    for winfo in self._makeworkspacesinfo(
+                        data["workspaces_data"], reponame
+                    )
                     if winfo.name.startswith(prefix)
                 ]
         except Exception as e:
@@ -281,7 +283,10 @@ class LocalService(baseservice.BaseService):
             ]
             allworkspaces.append(
                 baseservice.WorkspaceInfo(
-                    name=found.name, archived=archived, version=found.version
+                    name=found.name,
+                    archived=archived,
+                    version=found.version,
+                    reponame=reponame,
                 )
             )
             self._saveworkspaces(allworkspaces)
@@ -306,7 +311,10 @@ class LocalService(baseservice.BaseService):
             ]
             allworkspaces.append(
                 baseservice.WorkspaceInfo(
-                    name=new_workspace, archived=found.archived, version=found.version
+                    name=new_workspace,
+                    archived=found.archived,
+                    version=found.version,
+                    reponame=reponame,
                 )
             )
             # rename bunch of files:
