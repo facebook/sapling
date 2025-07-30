@@ -2309,6 +2309,21 @@ class UnmountCmd(Subcmd):
         return 0
 
 
+DBG_LOG_LEVELS: set[str] = {"DBG" + str(i) for i in range(10)}
+INFO_LOG_LEVELS: set[str] = {"INFO" + str(i) for i in range(10)}
+# https://www.internalfb.com/code/fbsource/[ea4f37a73366]/fbcode/folly/logging/LogLevel.h?lines=39-102
+VALID_LOG_LEVELS: set[str] = {
+    "DBG",
+    "INFO",
+    "WARN",
+    "WARNING",
+    "ERR",
+    "CRITICAL",
+    "DFATAL",
+    "FATAL",
+}.union(DBG_LOG_LEVELS).union(INFO_LOG_LEVELS)
+
+
 @subcmd("start", "Start the EdenFS service", aliases=["daemon"])
 class StartCmd(Subcmd):
     def setup_parser(self, parser: argparse.ArgumentParser) -> None:
@@ -2341,6 +2356,13 @@ class StartCmd(Subcmd):
                 "environment variables that should be preserved (or passed) "
                 "when starting a new daemon. NOTE: this should only contain "
                 "the names of the env vars, not their desired values."
+            ),
+        )
+        parser.add_argument(
+            "--daemon-log-level",
+            help=(
+                "Force the daemon to set a custom minimum log level at "
+                "startup. The daemon defaults to DBG2 if this arg is not set."
             ),
         )
         if sys.platform != "win32":
@@ -2382,6 +2404,13 @@ class StartCmd(Subcmd):
         except ValueError:
             pass
 
+        if args.daemon_log_level is not None:
+            stripped_log_level = args.daemon_log_level.replace('"', "")
+            if False and stripped_log_level not in VALID_LOG_LEVELS:
+                msg = f"invalid log level specified: {stripped_log_level}. Please choose one of {sorted(VALID_LOG_LEVELS)}"
+                raise subcmd_mod.CmdError(msg)
+            args.edenfs_args += ["--edenLogLevel", f"{stripped_log_level}"]
+
         if sys.platform != "win32":
             is_takeover = bool(args.takeover)
             if args.takeover and args.if_not_running:
@@ -2390,7 +2419,7 @@ class StartCmd(Subcmd):
                 )
             if args.gdb or args.strace:
                 if args.gdb and args.strace is not None:
-                    msg = "error: cannot run eden under gdb and strace together"
+                    msg = "cannot run eden under gdb and strace together"
                     raise subcmd_mod.CmdError(msg)
                 # --gdb or --strace imply foreground mode
                 args.foreground = True

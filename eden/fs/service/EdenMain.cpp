@@ -60,6 +60,7 @@
 
 DEFINE_bool(edenfs, false, "This legacy argument is ignored.");
 DEFINE_bool(allowRoot, false, "Allow running eden directly as root");
+DEFINE_string(edenLogLevel, "DBG2", "Logging level to use at startup");
 
 THRIFT_FLAG_DECLARE_bool(server_header_reject_framed);
 
@@ -324,7 +325,15 @@ int runEdenMain(EdenMain&& main, int argc, char** argv) {
     return kExitCodeUsage;
   }
 
-  auto loggingConfig = folly::parseLogConfig("eden=DBG2; default:async=true");
+  // Set the log level for the daemon.
+  try {
+    (void)folly::stringToLogLevel(FLAGS_edenLogLevel);
+  } catch (const std::range_error& e) {
+    fprintf(stderr, "error: selected log level is invalid: %s\n", e.what());
+    return kExitCodeUsage;
+  }
+  auto loggingConfig = folly::parseLogConfig(
+      fmt::format("eden={}; default:async=true", FLAGS_edenLogLevel));
   folly::LoggerDB::get().updateConfig(loggingConfig);
 
   // Temporary hack until client is migrated to supported channel

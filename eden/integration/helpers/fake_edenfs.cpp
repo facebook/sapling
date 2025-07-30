@@ -45,6 +45,7 @@ DEFINE_bool(
     "This argument must be supplied to confirm you intend to run "
     "edenfs instead of eden");
 DEFINE_bool(allowRoot, false, "Allow running eden directly as root");
+DEFINE_string(edenLogLevel, "DBG2", "Logging level to use at startup");
 DEFINE_string(
     cleanShutdownFile,
     "",
@@ -313,7 +314,8 @@ int main(int argc, char** argv) {
 
   auto init = folly::Init(&argc, &argv);
 
-  auto loggingConfig = folly::parseLogConfig(".=INFO,eden=DBG2");
+  auto loggingConfig =
+      folly::parseLogConfig(fmt::format(".=INFO,eden={}", FLAGS_edenLogLevel));
   folly::LoggerDB::get().updateConfig(loggingConfig);
 
   // Reference FLAGS_edenfsctlPath so that it is linked into fake_edenfs
