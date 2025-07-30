@@ -8,6 +8,9 @@ rust_library(
     srcs = glob([
         "src/**/*.rs",
     ]),
+    autocargo = {
+        "cargo_toml_config": {"package": {"autoexamples": False}},
+    },
     doc_deps = [
         "fbsource//third-party/rust:quickcheck",
     ],
