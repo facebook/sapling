@@ -10,7 +10,37 @@
 
 from typing import Callable, List, Tuple, TypeVar
 
-from . import mdiff
+from . import error, mdiff
+
+
+class annotateline:
+    def __init__(self, fctx=None, ctx=None, lineno=None, path=None):
+        if (not fctx) == (not ctx):
+            raise error.ProgrammingError("must specify exactly one of ctx or fctx")
+        if not fctx and not path:
+            raise error.ProgrammingError("must specify fctx or path")
+
+        self._ctx = ctx or fctx.changectx()
+        self._fctx = fctx
+        self._path = path or fctx.path()
+        self.lineno = lineno
+
+    def date(self):
+        # Prefer fctx.date() since that can differ for wdir files.
+        return (self._fctx or self._ctx).date()
+
+    def rev(self):
+        return self._ctx.rev()
+
+    def node(self):
+        return self._ctx.node()
+
+    def path(self):
+        return self._path
+
+    def user(self):
+        return self._ctx.user()
+
 
 F = TypeVar("F")
 L = TypeVar("L")
@@ -107,3 +137,28 @@ def annotatepair(parents, child, diffopts):
                 child[0][b1:b2] = parent[0][a1:a2]
 
     return child
+
+
+def create_line_decorator(linenumber: bool) -> Callable[[F], Tuple[List[L], bytes]]:
+    """Create a decorator for annotate() function."""
+
+    def lines(text):
+        if text.endswith(b"\n"):
+            return text.count(b"\n")
+        return text.count(b"\n") + int(bool(text))
+
+    if linenumber:
+
+        def decorate(fctx):
+            text = fctx.data()
+            return (
+                [annotateline(fctx=fctx, lineno=i) for i in range(1, lines(text) + 1)],
+                text,
+            )
+    else:
+
+        def decorate(fctx):
+            text = fctx.data()
+            return ([annotateline(fctx=fctx)] * lines(text), text)
+
+    return decorate

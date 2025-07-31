@@ -1105,29 +1105,7 @@ class basefilectx:
         number has a fixed value of False.
         """
 
-        def lines(text):
-            if text.endswith(b"\n"):
-                return text.count(b"\n")
-            return text.count(b"\n") + int(bool(text))
-
-        if linenumber:
-
-            def decorate(fctx):
-                text = fctx.data()
-                return (
-                    [
-                        annotateline(fctx=fctx, lineno=i)
-                        for i in range(1, lines(text) + 1)
-                    ],
-                    text,
-                )
-
-        else:
-
-            def decorate(fctx):
-                text = fctx.data()
-                return ([annotateline(fctx=fctx)] * lines(text), text)
-
+        decorate = annotate.create_line_decorator(linenumber)
         repo = self.repo()
 
         if (
@@ -1185,7 +1163,9 @@ class basefilectx:
                 path = blame["paths"][rng["path_index"]]
                 for i in range(rng["line_count"]):
                     lineno = bool(linenumber) and rng["origin_line_offset"] + i + 1
-                    lines.append(annotateline(ctx=ctx, lineno=lineno, path=path))
+                    lines.append(
+                        annotate.annotateline(ctx=ctx, lineno=lineno, path=path)
+                    )
 
             curr = (lines, filectx.data())
 
@@ -1382,35 +1362,6 @@ class pathhistoryparents:
             if node in nameset:
                 return parents(node)
         raise error.ProgrammingError("%s is not yet follow()-ed" % hex(node))
-
-
-class annotateline:
-    def __init__(self, fctx=None, ctx=None, lineno=None, path=None):
-        if (not fctx) == (not ctx):
-            raise error.ProgrammingError("must specify exactly one of ctx or fctx")
-        if not fctx and not path:
-            raise error.ProgrammingError("must specify fctx or path")
-
-        self._ctx = ctx or fctx.changectx()
-        self._fctx = fctx
-        self._path = path or fctx.path()
-        self.lineno = lineno
-
-    def date(self):
-        # Prefer fctx.date() since that can differ for wdir files.
-        return (self._fctx or self._ctx).date()
-
-    def rev(self):
-        return self._ctx.rev()
-
-    def node(self):
-        return self._ctx.node()
-
-    def path(self):
-        return self._path
-
-    def user(self):
-        return self._ctx.user()
 
 
 class filectx(basefilectx):
