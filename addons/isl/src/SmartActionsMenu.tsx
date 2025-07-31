@@ -9,15 +9,11 @@ import {Button} from 'isl-components/Button';
 import {Icon} from 'isl-components/Icon';
 import {Tooltip} from 'isl-components/Tooltip';
 import {DropdownFields} from './DropdownFields';
-import {t, T} from './i18n';
+import {T} from './i18n';
 import type {CommitInfo} from './types';
 
-import {useAtomValue, useSetAtom} from 'jotai';
-import {tracker} from './analytics';
-import {uncommittedChangesWithPreviews} from './previews';
 import './SmartActionsMenu.css';
-import {useConfirmUnsavedEditsBeforeSplit} from './stackEdit/ui/ConfirmUnsavedEditsBeforeSplit';
-import {editingStackIntentionHashes, shouldAutoSplitState} from './stackEdit/ui/stackEditState';
+import {BaseSplitButton} from './stackEdit/ui/BaseSplitButton';
 
 export function SmartActionsMenu({commit}: {commit: CommitInfo}) {
   return (
@@ -45,36 +41,14 @@ function SmartActions({commit, dismiss}: {commit: CommitInfo; dismiss: () => voi
 }
 
 /** Like SplitButton, but triggers AI split automatically. */
-export function AutoSplitButton({
-  commit,
-  dismiss,
-}: {commit: CommitInfo; dismiss: () => void} & React.ComponentProps<typeof Button>) {
-  const confirmUnsavedEditsBeforeSplit = useConfirmUnsavedEditsBeforeSplit();
-  const setEditStackIntentionHashes = useSetAtom(editingStackIntentionHashes);
-  const setShouldAutoSplit = useSetAtom(shouldAutoSplitState);
-
-  const uncommittedChanges = useAtomValue(uncommittedChangesWithPreviews);
-  const hasUncommittedChanges = uncommittedChanges.length > 0;
-
+function AutoSplitButton({commit, dismiss}: {commit: CommitInfo; dismiss: () => void}) {
   return (
-    <Tooltip
-      title={hasUncommittedChanges ? t('Cannot currently split with uncommitted changes') : ''}
-      trigger={hasUncommittedChanges ? 'hover' : 'disabled'}>
-      <Button
-        icon
-        onClick={async e => {
-          if (!(await confirmUnsavedEditsBeforeSplit([commit], 'split'))) {
-            return;
-          }
-          setEditStackIntentionHashes(['split', new Set([commit.hash])]);
-          setShouldAutoSplit(true);
-          tracker.track('SplitOpenFromSmartActions');
-          dismiss();
-          e.stopPropagation();
-        }}
-        disabled={hasUncommittedChanges}>
-        <T>Auto-split with AI</T>
-      </Button>
-    </Tooltip>
+    <BaseSplitButton
+      commit={commit}
+      trackerEventName="SplitOpenFromSmartActions"
+      autoSplit={true}
+      onSplitInitiated={dismiss}>
+      <T>Auto-split with AI</T>
+    </BaseSplitButton>
   );
 }

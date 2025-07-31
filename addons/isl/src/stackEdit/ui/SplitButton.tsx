@@ -8,46 +8,29 @@
 import type {TrackEventName} from 'isl-server/src/analytics/eventNames';
 import type {CommitInfo} from '../../types';
 
-import {Button} from 'isl-components/Button';
-import {Tooltip} from 'isl-components/Tooltip';
-import {useAtomValue, useSetAtom} from 'jotai';
-import {tracker} from '../../analytics';
-import {T, t} from '../../i18n';
+import type {Button} from 'isl-components/Button';
+import {T} from '../../i18n';
 import {SplitCommitIcon} from '../../icons/SplitCommitIcon';
-import {uncommittedChangesWithPreviews} from '../../previews';
-import {useConfirmUnsavedEditsBeforeSplit} from './ConfirmUnsavedEditsBeforeSplit';
-import {bumpStackEditMetric, editingStackIntentionHashes} from './stackEditState';
+import {BaseSplitButton} from './BaseSplitButton';
 
 /** Button to open split UI for the current commit. Expected to be shown on the head commit.
  * Loads that one commit in the split UI. */
 export function SplitButton({
   commit,
   trackerEventName,
-}: {commit: CommitInfo; trackerEventName: TrackEventName} & React.ComponentProps<typeof Button>) {
-  const confirmUnsavedEditsBeforeSplit = useConfirmUnsavedEditsBeforeSplit();
-  const setEditStackIntentionHashes = useSetAtom(editingStackIntentionHashes);
-
-  const uncommittedChanges = useAtomValue(uncommittedChangesWithPreviews);
-  const hasUncommittedChanges = uncommittedChanges.length > 0;
-
-  const onClick = async () => {
-    if (!(await confirmUnsavedEditsBeforeSplit([commit], 'split'))) {
-      return;
-    }
-    setEditStackIntentionHashes(['split', new Set([commit.hash])]);
-    if (trackerEventName === 'SplitOpenFromSplitSuggestion') {
-      bumpStackEditMetric('splitFromSuggestion');
-    }
-    tracker.track(trackerEventName);
-  };
+  ...buttonProps
+}: {
+  commit: CommitInfo;
+  trackerEventName: TrackEventName;
+} & React.ComponentProps<typeof Button>) {
   return (
-    <Tooltip
-      title={hasUncommittedChanges ? t('Cannot currently split with uncommitted changes') : ''}
-      trigger={hasUncommittedChanges ? 'hover' : 'disabled'}>
-      <Button icon onClick={onClick} disabled={hasUncommittedChanges}>
-        <SplitCommitIcon />
-        <T>Split</T>
-      </Button>
-    </Tooltip>
+    <BaseSplitButton
+      commit={commit}
+      trackerEventName={trackerEventName}
+      bumpSplitFromSuggestion={trackerEventName === 'SplitOpenFromSplitSuggestion'}
+      {...buttonProps}>
+      <SplitCommitIcon />
+      <T>Split</T>
+    </BaseSplitButton>
   );
 }
