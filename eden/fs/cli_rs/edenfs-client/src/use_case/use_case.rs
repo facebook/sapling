@@ -42,7 +42,7 @@ pub enum UseCaseId {
     #[strum(serialize = "testifyd")]
     TestifyDaemon,
     WatchActiveCommit,
-    Toozl,
+    StarlarkMcp,
 }
 
 pub struct UseCase {
