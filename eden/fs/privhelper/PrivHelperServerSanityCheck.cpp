@@ -171,6 +171,7 @@ void PrivHelperServer::unmountStaleMount(const std::string& mountPoint) {
   // valid mounts only.
   unmount(mountPoint.c_str(), {});
   mountPoints_.erase(mountPoint);
+  XLOGF(INFO, "Successfully unmounted stale mount {}", mountPoint);
 }
 
 void PrivHelperServer::detectAndUnmountStaleMount(
@@ -198,7 +199,11 @@ void PrivHelperServer::detectAndUnmountStaleMount(
     // Avoids running on hard NFS mounts since IO into hard mounts can hang
     // forever instead of returning an error.
     if (!isHardMount && isErrorSafeToIgnore(err, isNFS, mountPoint)) {
-      XLOGF(INFO, "Found a stale mount {}, attempting to unmount", mountPoint);
+      XLOGF(
+          INFO,
+          "Found a stale mount {}: {}. Attempting to unmount it",
+          mountPoint,
+          folly::errnoStr(err));
       unmountStaleMount(mountPoint);
       is_hanging = true;
     } else {
@@ -228,13 +233,34 @@ void PrivHelperServer::detectAndUnmountStaleMount(
       if (isErrnoFromHangingMount(err, isNFS)) {
         XLOGF(
             INFO,
-            "Found a stale mount {}, attempting to unmount it",
-            mountPoint);
+            "Found a stale mount {}: {}. Attempting to unmount it",
+            mountPoint,
+            folly::errnoStr(err));
         unmountStaleMount(mountPoint);
       }
     }
     XLOGF(DBG4, "Mount {} is not stale.", mountPoint);
   }
+
+  // On Linux/FUSE, it's possible that statfs will return an error if the mount
+  // is stale, but stat won't. Try statfs as well to catch this case.
+#ifdef __linux__
+  struct statfs fsBuf;
+  if (!isNFS && statfs(mountPoint.c_str(), &fsBuf) < 0) {
+    auto err = errno;
+    if (isErrorSafeToIgnore(err, isNFS, mountPoint)) {
+      XLOGF(
+          INFO,
+          "Found a stale mount {}: {}. Attempting to unmount it",
+          mountPoint,
+          folly::errnoStr(err));
+      unmountStaleMount(mountPoint);
+    } else {
+      throwf<std::domain_error>(
+          "statfs failed for: {}: {}", mountPoint, folly::errnoStr(err));
+    }
+  }
+#endif
 }
 
 void PrivHelperServer::sanityCheckMountPoint(
