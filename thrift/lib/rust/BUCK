@@ -3,34 +3,46 @@
 #   - fbcode/thrift/lib/rust/TARGETS
 #   - xplat/thrift/lib/rust/BUCK
 
+load("@fbcode_macros//build_defs:native_rules.bzl", "alias", "buck_genrule")
 load("@fbsource//tools/build_defs:default_platform_defs.bzl", "ANDROID", "APPLE", "CXX", "FBCODE", "WINDOWS")
-load("@fbsource//tools/build_defs:fb_native_wrapper.bzl", "fb_native")
-load("@fbsource//tools/build_defs:fbsource_utils.bzl", "is_arvr_mode", "is_xplat")
-load(":fbthrift_library.bzl", "fbthrift_library")
+load("@fbsource//tools/build_defs:fb_xplat_rust_library.bzl", "fb_xplat_rust_library")
+load("@fbsource//tools/build_defs:fbsource_utils.bzl", "is_xplat")
+load("@fbsource//tools/target_determinator/macros:ci.bzl", "ci")
 
 oncall("thrift")
 
 # In order to avoid potentially bringing both fbcode//thrift/lib/rust:fbthrift
 # and fbsource//xplat/thrift/lib/rust:fbthrift into the same build, the
-# unsuffixed target redirects back to Fbcode. `fb_xplat_cxx_library` and
+# unsuffixed target redirects back to fbsource. `fb_xplat_cxx_library` and
 # `cpp_library` have a more complex dependency remapping built-in, that does
 # not exist in rust yet.
 #
 # buildifier: disable=no-effect
-fb_native.alias(
+alias(
     name = "fbthrift",
-    actual = "fbcode//thrift/lib/rust:fbthrift",
+    actual = "fbsource//xplat/thrift/lib/rust:fbthrift",
     visibility = ["PUBLIC"],
-) if is_xplat() else None
+) if not is_xplat() else None
+
+# Mirror the autocargo manifest to fbcode to keep arc autocargo happy
+buck_genrule(
+    name = "fbthrift-rust-manifest",
+    out = "manifest.json",
+    cmd = "$(exe fbsource//tools/build_defs/genrule_utils:copyfile) $(location fbsource//xplat/thrift/lib/rust:fbthrift-rust-manifest) $OUT",
+    labels = [
+        "rust_manifest",
+        ci.skip_target(),
+    ],
+) if not is_xplat() else None
 
 # buildifier: disable=duplicated-name
-fbthrift_library(
+fb_xplat_rust_library(
     name = "fbthrift",
     srcs = glob([
         "src/*.rs",
         "src/tests/*.rs",
     ]),
-    autocargo = {
+    cxx_autocargo = {
         "cargo_toml_config": {
             "package": {
                 "publish": False,
@@ -38,10 +50,9 @@ fbthrift_library(
             },
         },
     },
-    platforms = (APPLE, ANDROID, WINDOWS, FBCODE),
+    platforms = (APPLE, ANDROID, CXX, WINDOWS, FBCODE),
     test_deps = ["fbsource//third-party/rust:quickcheck"],
     visibility = ["PUBLIC"],
-    xplat_preexisting_target_flavors = [CXX],
     deps = [
         "fbsource//third-party/rust:anyhow",
         "fbsource//third-party/rust:async-trait",
@@ -57,4 +68,4 @@ fbthrift_library(
         "fbsource//third-party/rust:serde_json",
         "fbsource//third-party/rust:thiserror",
     ],
-) if not is_xplat() or not is_arvr_mode() else None
+) if is_xplat() else None
