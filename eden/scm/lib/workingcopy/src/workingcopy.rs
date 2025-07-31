@@ -507,6 +507,14 @@ impl WorkingCopy {
                         continue;
                     }
                     let subm_path = self.vfs.root().join(&subm.path);
+                    // cgit behavior: if a submodule is "active" (enabled in config), but not
+                    // "initialized" (subm_path/.git is not a git directory), then it's considered
+                    // as "not modified".
+                    // https://github.com/git/git/blob/e813a0200a7121b97fec535f0d0b460b0a33356c/submodule.c#L1888
+                    if self.ident.dot_dir().starts_with(".git") && !subm_path.join(".git").is_dir()
+                    {
+                        continue;
+                    }
                     // PERF: This does not do batch fetching properly.
                     let tree_node = tree.get(path)?.and_then(|m| match m {
                         FsNodeMetadata::File(f) => match f.file_type {

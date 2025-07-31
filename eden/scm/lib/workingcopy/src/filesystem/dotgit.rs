@@ -130,7 +130,7 @@ impl FileSystem for DotGitFileSystem {
         let out = self.git.call("status", &args)?;
 
         // TODO: What to do with treestate?
-        // TODO: Check submodule status.
+        // Submodule status is handled by the callsite (WorkingCopy::status_internal)
 
         // Example output:
         //

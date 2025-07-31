@@ -18,6 +18,12 @@ Prepare git repo with submodules
   $ git submodule --quiet add -b main ../sub
   $ git commit -qm 'add .gitmodules'
 
+Status does not contain uninitialized submodule (cgit behavior):
+
+  $ mv sub/.git "$TESTTMP/subgit"  # make it "uninitialized"
+  $ sl status
+  $ mv "$TESTTMP/subgit" sub/.git
+
 Status does not contain submodule if submodule is not changed:
 
   $ touch b
