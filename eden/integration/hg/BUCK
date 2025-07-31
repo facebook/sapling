@@ -376,10 +376,11 @@ python_unittest(
     ],
     supports_static_listing = False,
     deps = [
-        "//eden/fs/service:thrift-py-deprecated",
+        "//eden/fs/cli:lib",
         "//eden/integration/hg/lib:testutil",
         "//eden/integration/lib:lib",
         "//thrift/lib/py:server_base",
+        "//thrift/lib/python:types",
     ],
 )
 

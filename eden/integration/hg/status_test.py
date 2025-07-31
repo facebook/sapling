@@ -16,10 +16,8 @@ import time
 from threading import Thread
 from typing import Dict, List
 
-import thrift.transport
-
-from eden.integration.lib.hgrepo import HgRepository
-from facebook.eden.ttypes import (
+from eden.fs.cli import util
+from eden.fs.service.eden.thrift_types import (
     EdenError,
     EdenErrorType,
     FaultDefinition,
@@ -30,6 +28,10 @@ from facebook.eden.ttypes import (
     SynchronizeWorkingCopyParams,
     UnblockFaultArg,
 )
+
+from eden.integration.lib.hgrepo import HgRepository
+
+from thrift.python.exceptions import ApplicationError
 
 from .lib.hg_extension_test_base import EdenHgTestCase, hg_cached_status_test
 
@@ -90,22 +92,23 @@ class StatusTest(EdenHgTestCase):
         self.touch("ignore_me")
         self.assert_status({"ignore_me": "I"})
 
-    def thoroughly_get_scm_status(
+    async def thoroughly_get_scm_status(
         self, client, mountPoint, commit, listIgnored, expected_status
     ) -> None:
-        status_from_get_scm_status = client.getScmStatus(
+        status_from_get_scm_status = await client.getScmStatus(
             mountPoint=bytes(mountPoint, encoding="utf-8"),
             commit=commit,
             listIgnored=False,
         )
-        status_from_get_scm_status_v2 = client.getScmStatusV2(
+        status_from_get_scm_status_v2_result = await client.getScmStatusV2(
             GetScmStatusParams(
                 mountPoint=bytes(mountPoint, encoding="utf-8"),
                 commit=commit,
                 listIgnored=False,
                 rootIdOptions=None,
             )
-        ).status
+        )
+        status_from_get_scm_status_v2 = status_from_get_scm_status_v2_result.status
 
         self.assertEqual(
             status_from_get_scm_status,
@@ -113,7 +116,7 @@ class StatusTest(EdenHgTestCase):
             "getScmStatus and getScmStatusV2 should agree",
         )
 
-    def test_status_thrift_apis(self) -> None:
+    async def test_status_thrift_apis(self) -> None:
         """Test both the getScmStatusV2() and getScmStatus() thrift APIs."""
         # This confirms that both thrift APIs continue to work,
         # independently of the one currently used by hg.
@@ -122,35 +125,35 @@ class StatusTest(EdenHgTestCase):
 
         enable_status_cache = self.enable_status_cache
 
-        with self.get_thrift_client_legacy() as client:
+        async with self.get_thrift_client() as client:
             # Test with a clean status.
             expected_status = ScmStatus(entries={}, errors={})
-            self.thoroughly_get_scm_status(
+            await self.thoroughly_get_scm_status(
                 client, self.mount, initial_commit, False, expected_status
             )
 
             if enable_status_cache:
-                self.counter_check(client, miss_cnt=1, hit_cnt=1)
+                await self.counter_check(client, miss_cnt=1, hit_cnt=1)
             else:
-                self.counter_check(client, miss_cnt=0, hit_cnt=0)
+                await self.counter_check(client, miss_cnt=0, hit_cnt=0)
 
             # Modify the working directory and then test again
             self.repo.write_file("hello.txt", "saluton")
             self.touch("new_tracked.txt")
 
             self.hg("add", "new_tracked.txt")
-            client.synchronizeWorkingCopy(
+            await client.synchronizeWorkingCopy(
                 self.mount.encode("utf-8"), SynchronizeWorkingCopyParams()
             )
 
             # `hg add` would trigger a call to getScmStatusV2
             if enable_status_cache:
-                self.counter_check(client, miss_cnt=2, hit_cnt=1)
+                await self.counter_check(client, miss_cnt=2, hit_cnt=1)
             else:
-                self.counter_check(client, miss_cnt=0, hit_cnt=0)
+                await self.counter_check(client, miss_cnt=0, hit_cnt=0)
 
             self.touch("untracked.txt")
-            client.synchronizeWorkingCopy(
+            await client.synchronizeWorkingCopy(
                 self.mount.encode("utf-8"), SynchronizeWorkingCopyParams()
             )
             expected_entries = {
@@ -160,25 +163,25 @@ class StatusTest(EdenHgTestCase):
             }
 
             expected_status = ScmStatus(entries=expected_entries, errors={})
-            self.thoroughly_get_scm_status(
+            await self.thoroughly_get_scm_status(
                 client, self.mount, initial_commit, False, expected_status
             )
 
             if enable_status_cache:
-                self.counter_check(client, miss_cnt=3, hit_cnt=2)
+                await self.counter_check(client, miss_cnt=3, hit_cnt=2)
             else:
-                self.counter_check(client, miss_cnt=0, hit_cnt=0)
+                await self.counter_check(client, miss_cnt=0, hit_cnt=0)
 
             # Commit the modifications
             self.repo.commit("committing changes")
 
-    def test_status_with_non_parent(self) -> None:
+    async def test_status_with_non_parent(self) -> None:
         # This confirms that an error is thrown if getScmStatusV2 is called
         # with a commit that is not the parent commit
         initial_commit_hex = self.repo.get_head_hash()
         initial_commit = binascii.unhexlify(initial_commit_hex)
 
-        with self.get_thrift_client_legacy() as client:
+        async with self.get_thrift_client() as client:
             # Add file to commit
             self.touch("new_tracked.txt")
             self.hg("add", "new_tracked.txt")
@@ -188,7 +191,7 @@ class StatusTest(EdenHgTestCase):
 
             # Test calling getScmStatusV2() with a commit that is not the parent commit
             with self.assertRaises(EdenError) as context:
-                client.getScmStatusV2(
+                await client.getScmStatusV2(
                     GetScmStatusParams(
                         mountPoint=bytes(self.mount, encoding="utf-8"),
                         commit=initial_commit,
@@ -199,13 +202,13 @@ class StatusTest(EdenHgTestCase):
                 EdenErrorType.OUT_OF_DATE_PARENT, context.exception.errorType
             )
 
-            self.use_customized_config(
+            await self.use_customized_config(
                 client,
                 {"hg": ["enforce-parents = false"]},
             )
 
             try:
-                client.getScmStatusV2(
+                await client.getScmStatusV2(
                     GetScmStatusParams(
                         mountPoint=bytes(self.mount, encoding="utf-8"),
                         commit=initial_commit,
@@ -285,7 +288,7 @@ class StatusTest(EdenHgTestCase):
         uds.close()
         self.assert_status({"socket": "?"})
 
-    def test_no_ignore_tracked(self) -> None:
+    async def test_no_ignore_tracked(self) -> None:
         self.repo.write_file(".gitignore", "subdir/foo/file.txt")
         self.repo.write_file("subdir/foo/file.txt", "ignored but tracked file")
         commit_with_ignored = self.repo.commit("Commit with ignored file")
@@ -294,8 +297,8 @@ class StatusTest(EdenHgTestCase):
         commit_with_ignored_removed = self.repo.commit("Commit with removed file")
         self.repo.update(commit_with_ignored)
 
-        with self.get_thrift_client_legacy() as client:
-            status_from_get_scm_status = client.getScmStatus(
+        async with self.get_thrift_client() as client:
+            status_from_get_scm_status = await client.getScmStatus(
                 mountPoint=self.mount_path_bytes,
                 commit=commit_with_ignored_removed.encode(),
                 listIgnored=False,
@@ -315,15 +318,15 @@ class StatusTest(EdenHgTestCase):
             ScmFileStatus.ADDED,
         )
 
-    def use_customized_config(self, client, config: Dict[str, List[str]]) -> None:
+    async def use_customized_config(self, client, config: Dict[str, List[str]]) -> None:
         edenrc = os.path.join(self.home_dir, ".edenrc")
         self.write_configs(config, edenrc)
 
         # Makes sure that EdenFS picks up our updated config,
         # since we wrote it out after EdenFS started.
-        client.reloadConfig()
+        await client.reloadConfig()
 
-    def counter_check(self, client, miss_cnt, hit_cnt) -> None:
+    async def counter_check(self, client, miss_cnt, hit_cnt) -> None:
         timeout_seconds = 2.0
         poll_interval_seconds = 0.1
         deadline = time.monotonic() + timeout_seconds
@@ -331,7 +334,8 @@ class StatusTest(EdenHgTestCase):
             any_failure = False
             for name, expect_count in zip(["miss", "hit"], [miss_cnt, hit_cnt]):
                 counter_name = f"journal.status_cache_{name}.count"
-                actual_count = client.getCounters().get(counter_name)
+                actual_count_result = await client.getCounters()
+                actual_count = actual_count_result.get(counter_name)
                 try:
                     self.assertEqual(
                         expect_count,
@@ -347,7 +351,7 @@ class StatusTest(EdenHgTestCase):
             if not any_failure:
                 break
 
-    def test_scm_status_cache(self) -> None:
+    async def test_scm_status_cache(self) -> None:
         """Test the SCM status cache"""
         initial_commit_hex = self.repo.get_head_hash()
         initial_commit = binascii.unhexlify(initial_commit_hex)
@@ -356,33 +360,33 @@ class StatusTest(EdenHgTestCase):
             # no need to test the cache if it is not enabled
             return
 
-        with self.get_thrift_client_legacy() as client:
+        async with self.get_thrift_client() as client:
             # disable enforce parent check
-            self.use_customized_config(
+            await self.use_customized_config(
                 client,
                 {"hg": ["enforce-parents = false"]},
             )
 
             # at the beginning, all counters should be 0
             miss_cnt, hit_cnt = 0, 0
-            self.counter_check(client, miss_cnt=miss_cnt, hit_cnt=hit_cnt)
+            await self.counter_check(client, miss_cnt=miss_cnt, hit_cnt=hit_cnt)
 
             # the first call should miss the cache
             miss_cnt += 1
             self.assert_status_empty()
-            self.counter_check(client, miss_cnt=miss_cnt, hit_cnt=hit_cnt)
+            await self.counter_check(client, miss_cnt=miss_cnt, hit_cnt=hit_cnt)
 
             # a second call should hit the cache
             hit_cnt += 1
             self.assert_status_empty()
-            self.counter_check(client, miss_cnt=miss_cnt, hit_cnt=hit_cnt)
+            await self.counter_check(client, miss_cnt=miss_cnt, hit_cnt=hit_cnt)
 
             self.touch("world.txt")
             num_of_tries = self.assert_status({"world.txt": "?"})
             expected_num_of_miss = 1
             hit_cnt += num_of_tries - expected_num_of_miss
             miss_cnt += expected_num_of_miss
-            self.counter_check(client, miss_cnt=miss_cnt, hit_cnt=hit_cnt)
+            await self.counter_check(client, miss_cnt=miss_cnt, hit_cnt=hit_cnt)
 
             self.hg("add", "world.txt")
             # `hg add` would internally call getStatus with listIgnored=False.
@@ -390,16 +394,16 @@ class StatusTest(EdenHgTestCase):
             # and the call misses the cache
             miss_cnt += 1
 
-            second_commit = self.repo.commit("adding world")
+            second_commit = binascii.unhexlify(self.repo.commit("adding world"))
             # `commit` method would internally call getStatus twice
             # against the old commit with listIgnoired=False.
             # but these two calls won't return new entries since there are
             # only changes under .hg folder
             hit_cnt += 2
-            self.counter_check(client, miss_cnt=miss_cnt, hit_cnt=hit_cnt)
+            await self.counter_check(client, miss_cnt=miss_cnt, hit_cnt=hit_cnt)
 
-            def verify_status(commit, listIgnored, expect_status) -> None:
-                res = client.getScmStatusV2(
+            async def verify_status(commit, listIgnored, expect_status) -> None:
+                res = await client.getScmStatusV2(
                     GetScmStatusParams(
                         mountPoint=bytes(self.mount, encoding="utf-8"),
                         commit=commit,
@@ -408,35 +412,37 @@ class StatusTest(EdenHgTestCase):
                 )
                 self.assertEqual(expect_status, dict(res.status.entries))
 
-            verify_status(second_commit, True, {})  # miss
+            await verify_status(second_commit, True, {})  # miss
             miss_cnt += 1
-            self.counter_check(client, miss_cnt=miss_cnt, hit_cnt=hit_cnt)
+            await self.counter_check(client, miss_cnt=miss_cnt, hit_cnt=hit_cnt)
 
-            verify_status(second_commit, True, {})  # hit
+            await verify_status(second_commit, True, {})  # hit
             hit_cnt += 1
-            self.counter_check(client, miss_cnt=miss_cnt, hit_cnt=hit_cnt)
+            await self.counter_check(client, miss_cnt=miss_cnt, hit_cnt=hit_cnt)
 
-            verify_status(second_commit, False, {})  # miss
+            await verify_status(second_commit, False, {})  # miss
             miss_cnt += 1
-            self.counter_check(client, miss_cnt=miss_cnt, hit_cnt=hit_cnt)
+            await self.counter_check(client, miss_cnt=miss_cnt, hit_cnt=hit_cnt)
 
             # cache miss because a commit will update the working directory
             # so the cached result from the previous assert_status call is lost
             # at this point
-            verify_status(initial_commit, True, {b"world.txt": 0})  # '0' means ADDED
+            await verify_status(
+                initial_commit, True, {b"world.txt": 0}
+            )  # '0' means ADDED
             miss_cnt += 1
-            self.counter_check(client, miss_cnt=miss_cnt, hit_cnt=hit_cnt)
+            await self.counter_check(client, miss_cnt=miss_cnt, hit_cnt=hit_cnt)
 
             # cache miss due to the same reason as above
-            verify_status(initial_commit, False, {b"world.txt": 0})
+            await verify_status(initial_commit, False, {b"world.txt": 0})
             miss_cnt += 1
-            self.counter_check(client, miss_cnt=miss_cnt, hit_cnt=hit_cnt)
+            await self.counter_check(client, miss_cnt=miss_cnt, hit_cnt=hit_cnt)
 
-            verify_status(initial_commit, False, {b"world.txt": 0})
+            await verify_status(initial_commit, False, {b"world.txt": 0})
             hit_cnt += 1
-            self.counter_check(client, miss_cnt=miss_cnt, hit_cnt=hit_cnt)
+            await self.counter_check(client, miss_cnt=miss_cnt, hit_cnt=hit_cnt)
 
-    def test_scm_status_cache_concurrent_calls(self) -> None:
+    async def test_scm_status_cache_concurrent_calls(self) -> None:
         """Test the SCM status cache when there are concurrent calls to getScmStatusV2"""
         initial_commit_hex = self.repo.get_head_hash()
         initial_commit = binascii.unhexlify(initial_commit_hex)
@@ -445,19 +451,27 @@ class StatusTest(EdenHgTestCase):
             # no need to test the cache if it is not enabled
             return
 
-        with self.get_thrift_client_legacy() as client:
+        async with self.get_thrift_client() as client:
             # disable enforce parent check
-            self.use_customized_config(
+            await self.use_customized_config(
                 client,
                 {"hg": ["enforce-parents = false"]},
             )
 
             # at the beginning, all counters should be 0
-            self.counter_check(client, miss_cnt=0, hit_cnt=0)
+            await self.counter_check(client, miss_cnt=0, hit_cnt=0)
 
-            def two_threads_call_in_parallel(func, args_1=(), args_2=()):
+            def two_threads_call_in_parallel(func, args_1=(), args_2=()) -> None:
                 t1 = Thread(target=func, args=args_1)
                 t2 = Thread(target=func, args=args_2)
+                t1.start()
+                t2.start()
+                t1.join(THREAD_JOIN_TIMEOUT_SECONDS)
+                t2.join(THREAD_JOIN_TIMEOUT_SECONDS)
+
+            def two_threads_async_call_in_parallel(func, args_1=(), args_2=()) -> None:
+                t1 = Thread(target=util.run_async_func_in_thread, args=(func, *args_1))
+                t2 = Thread(target=util.run_async_func_in_thread, args=(func, *args_2))
                 t1.start()
                 t2.start()
                 t1.join(THREAD_JOIN_TIMEOUT_SECONDS)
@@ -480,9 +494,9 @@ class StatusTest(EdenHgTestCase):
             self.hg("add", "world.txt")
             second_commit = self.repo.commit("adding world")
 
-            def verify_status(cls, commit, listIgnored, expect_status) -> None:
-                with cls.get_thrift_client_legacy() as thread_client:
-                    res = thread_client.getScmStatusV2(
+            async def verify_status(cls, commit, listIgnored, expect_status) -> None:
+                async with cls.get_thrift_client() as thread_client:
+                    res = await thread_client.getScmStatusV2(
                         GetScmStatusParams(
                             mountPoint=bytes(self.mount, encoding="utf-8"),
                             commit=commit,
@@ -506,7 +520,8 @@ class StatusTest(EdenHgTestCase):
                     flag,
                     {b"world.txt": 0} if commit == initial_commit else {},
                 )
-                two_threads_call_in_parallel(
+
+                two_threads_async_call_in_parallel(
                     verify_status, args_1=arg_tuple, args_2=arg_tuple
                 )
 
@@ -526,15 +541,16 @@ class StatusTest(EdenHgTestCase):
                     *arg_pairs_2[i],
                     {b"world.txt": 0} if arg_pairs_2[i][0] == initial_commit else {},
                 )
-                two_threads_call_in_parallel(
+
+                two_threads_async_call_in_parallel(
                     verify_status, args_1=arg_tuple_1, args_2=arg_tuple_2
                 )
 
-    def wait_for_status_cache_block_hit(self, client):
+    async def wait_for_status_cache_block_hit(self, client):
         poll_interval_seconds = 0.1
         deadline = time.monotonic() + 2
         while True:
-            response = client.getBlockedFaults(
+            response = await client.getBlockedFaults(
                 GetBlockedFaultsRequest(keyclass="scmStatusCache")
             )
             if len(response.keyValues) == 1:
@@ -543,7 +559,7 @@ class StatusTest(EdenHgTestCase):
                 raise Exception("timeout waiting for the block hit")
             time.sleep(poll_interval_seconds)
 
-    def test_status_shared_among_requests(self) -> None:
+    async def test_status_shared_among_requests(self) -> None:
         """Test that status requests with the same parameters will
         wait for the first request to finish setting the value."""
 
@@ -551,12 +567,12 @@ class StatusTest(EdenHgTestCase):
             # no need to test the cache if it is not enabled
             return
 
-        with self.get_thrift_client_legacy() as client:
+        async with self.get_thrift_client() as client:
             self.touch("world.txt")
-            client.synchronizeWorkingCopy(
+            await client.synchronizeWorkingCopy(
                 self.mount.encode("utf-8"), SynchronizeWorkingCopyParams()
             )
-            client.injectFault(
+            await client.injectFault(
                 FaultDefinition(
                     keyClass="scmStatusCache",
                     keyValueRegex="blocking setValue",
@@ -582,7 +598,7 @@ class StatusTest(EdenHgTestCase):
 
             try:
                 # wait for the block hit
-                self.wait_for_status_cache_block_hit(client)
+                await self.wait_for_status_cache_block_hit(client)
 
                 for _ in range(num_requests - 1):
                     t = Thread(target=thread_worker, args=(self, exceptions))
@@ -595,7 +611,7 @@ class StatusTest(EdenHgTestCase):
                         t.is_alive()
                     ), f"thread should be blocking. dumping exceptions: {exceptions}"
             finally:
-                client.unblockFault(
+                await client.unblockFault(
                     UnblockFaultArg(
                         keyClass="scmStatusCache", keyValueRegex="blocking setValue"
                     )
@@ -604,19 +620,19 @@ class StatusTest(EdenHgTestCase):
             for t in threads:
                 t.join(THREAD_JOIN_TIMEOUT_SECONDS)
             assert len(exceptions) == 0, f"no exception should be raised: {exceptions}"
-            self.counter_check(client, miss_cnt=1, hit_cnt=num_requests - 1)
+            await self.counter_check(client, miss_cnt=1, hit_cnt=num_requests - 1)
 
-    def test_status_cache_expire_blocking_setValue(self) -> None:
-        self.status_cache_expire_blocing_common("setValue")
+    async def test_status_cache_expire_blocking_setValue(self) -> None:
+        await self.status_cache_expire_blocing_common("setValue")
 
-    def test_status_cache_expire_blocking_insert(self) -> None:
-        self.status_cache_expire_blocing_common("insert")
+    async def test_status_cache_expire_blocking_insert(self) -> None:
+        await self.status_cache_expire_blocing_common("insert")
 
-    def test_status_cache_expire_blocking_dropPromise(self) -> None:
-        self.status_cache_expire_blocing_common("dropPromise")
+    async def test_status_cache_expire_blocking_dropPromise(self) -> None:
+        await self.status_cache_expire_blocing_common("dropPromise")
 
     # not suing subTest because it's hard to get threading working correctly with a clean env
-    def status_cache_expire_blocing_common(self, check_point) -> None:
+    async def status_cache_expire_blocing_common(self, check_point) -> None:
         """Test that status requests with latest journal sequence number will
         invalidate the existing cache with old sequence number."""
 
@@ -634,9 +650,9 @@ class StatusTest(EdenHgTestCase):
 
         block_key_value = "blocking " + check_point
 
-        with self.get_thrift_client_legacy() as client:
+        async with self.get_thrift_client() as client:
             self.touch("world.txt")
-            client.injectFault(
+            await client.injectFault(
                 FaultDefinition(
                     keyClass="scmStatusCache",
                     keyValueRegex=block_key_value,
@@ -653,7 +669,7 @@ class StatusTest(EdenHgTestCase):
 
             try:
                 # wait for the block hit
-                self.wait_for_status_cache_block_hit(client)
+                await self.wait_for_status_cache_block_hit(client)
 
                 # touching a new file should advance the journal sequence number
                 self.touch("peace.txt")
@@ -667,7 +683,7 @@ class StatusTest(EdenHgTestCase):
 
                 assert thread_expect_one_entry.is_alive(), f"the first thread should be blocked. dumping exceptions: {exceptions}"
             finally:
-                client.unblockFault(
+                await client.unblockFault(
                     UnblockFaultArg(
                         keyClass="scmStatusCache", keyValueRegex=block_key_value
                     )
@@ -678,9 +694,9 @@ class StatusTest(EdenHgTestCase):
             assert len(exceptions) == 0, f"unexpected exception raised: {exceptions}"
 
             # no cache should be hit since the sequence number is advanced
-            self.counter_check(client, miss_cnt=2, hit_cnt=0)
+            await self.counter_check(client, miss_cnt=2, hit_cnt=0)
 
-    def test_status_cache_error_handlilng(self) -> None:
+    async def test_status_cache_error_handlilng(self) -> None:
         """Test that when there is error computing the diff, we don't cache the error
         and the next call should succeed"""
         if not self.enable_status_cache:
@@ -697,8 +713,8 @@ class StatusTest(EdenHgTestCase):
         self.repo.write_file("parent/child/file_1.txt", "what")
         self.repo.write_file("parent/child/file_2.txt", "what")
 
-        with self.get_thrift_client_legacy() as client:
-            client.injectFault(
+        async with self.get_thrift_client() as client:
+            await client.injectFault(
                 FaultDefinition(
                     keyClass="TreeInode::computeDiff",
                     keyValueRegex="parent/child",
@@ -706,37 +722,39 @@ class StatusTest(EdenHgTestCase):
                     errorType="runtime_error",
                 )
             )
-            initial_status_with_error = client.getScmStatusV2(
+            initial_status_with_error_result = await client.getScmStatusV2(
                 GetScmStatusParams(
                     mountPoint=bytes(self.mount, encoding="utf-8"),
                     commit=initial_commit,
                     listIgnored=False,
                     rootIdOptions=None,
                 )
-            ).status
+            )
+            initial_status_with_error = initial_status_with_error_result.status
             self.assertDictEqual(
                 {
                     b"parent/child": f"{WINDOWS_RUNTIME_ERR_PREFIX}std::runtime_error: injected error"
                 },
-                initial_status_with_error.errors,
+                dict(initial_status_with_error.errors),
             )
-            self.counter_check(client, miss_cnt=1, hit_cnt=0)
+            await self.counter_check(client, miss_cnt=1, hit_cnt=0)
 
             # after the error is cleared, the next call should succeed without errors
-            status_without_error = client.getScmStatusV2(
+            status_without_error_result = await client.getScmStatusV2(
                 GetScmStatusParams(
                     mountPoint=bytes(self.mount, encoding="utf-8"),
                     commit=initial_commit,
                     listIgnored=False,
                     rootIdOptions=None,
                 )
-            ).status
+            )
+            status_without_error = status_without_error_result.status
             self.assertDictEqual(
                 {},
-                status_without_error.errors,
+                dict(status_without_error.errors),
             )
             # the previous call should not be cached so we are expecting two misses
-            self.counter_check(client, miss_cnt=2, hit_cnt=0)
+            await self.counter_check(client, miss_cnt=2, hit_cnt=0)
 
             # writing more files to advance the journal sequence number
             self.repo.write_file("parent/file_3.txt", "what")
@@ -744,11 +762,11 @@ class StatusTest(EdenHgTestCase):
 
             # On windows platform, there is a chance that the changes are not
             # synced so this call might hit the cache instead of returning an error.
-            client.synchronizeWorkingCopy(
+            await client.synchronizeWorkingCopy(
                 self.mount.encode("utf-8"), SynchronizeWorkingCopyParams()
             )
 
-            client.injectFault(
+            await client.injectFault(
                 FaultDefinition(
                     keyClass="EdenMount::diff",
                     keyValueRegex=f".*{initial_commit_hex}.*",
@@ -759,7 +777,7 @@ class StatusTest(EdenHgTestCase):
             )
 
             try:
-                client.getScmStatusV2(
+                await client.getScmStatusV2(
                     GetScmStatusParams(
                         mountPoint=bytes(self.mount, encoding="utf-8"),
                         commit=initial_commit,
@@ -767,20 +785,21 @@ class StatusTest(EdenHgTestCase):
                     )
                 )
                 self.fail("status cache should throw exception and fail this request!")
-            except thrift.Thrift.TApplicationException as e:
+            except ApplicationError as e:
                 self.assertEqual(
                     f"{WINDOWS_RUNTIME_ERR_PREFIX}std::runtime_error: intentional exception",
                     e.message,
                 )
-            self.counter_check(client, miss_cnt=3, hit_cnt=0)
+            await self.counter_check(client, miss_cnt=3, hit_cnt=0)
 
-            status_without_error = client.getScmStatusV2(
+            status_without_error_result = await client.getScmStatusV2(
                 GetScmStatusParams(
                     mountPoint=bytes(self.mount, encoding="utf-8"),
                     commit=initial_commit,
                     listIgnored=False,
                 )
-            ).status
+            )
+            status_without_error = status_without_error_result.status
 
             self.assertDictEqual(
                 {
@@ -791,9 +810,9 @@ class StatusTest(EdenHgTestCase):
                     b"parent/file_2.txt": 0,
                     b"parent/file_3.txt": 0,
                 },
-                status_without_error.entries,
+                dict(status_without_error.entries),
             )
-            self.counter_check(client, miss_cnt=4, hit_cnt=0)
+            await self.counter_check(client, miss_cnt=4, hit_cnt=0)
 
 
 @hg_cached_status_test
