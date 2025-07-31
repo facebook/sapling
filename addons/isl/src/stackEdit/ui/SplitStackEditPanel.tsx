@@ -19,7 +19,7 @@ import {Icon} from 'isl-components/Icon';
 import {Subtle} from 'isl-components/Subtle';
 import {TextField} from 'isl-components/TextField';
 import {Tooltip} from 'isl-components/Tooltip';
-import {useAtomValue} from 'jotai';
+import {useAtom, useAtomValue} from 'jotai';
 import {useEffect, useMemo, useRef, useState} from 'react';
 import {useContextMenu} from 'shared/ContextMenu';
 import {readableDiffBlocks as diffBlocks, type LineIdx, splitLines} from 'shared/diff';
@@ -48,6 +48,7 @@ import {computeLinesForFileStackEditor} from './FileStackEditorLines';
 import {
   bumpStackEditMetric,
   findStartEndRevs,
+  shouldAutoSplitState,
   SplitRangeRecord,
   useStackEditState,
 } from './stackEditState';
@@ -328,6 +329,22 @@ function SplitColumn(props: SplitColumnProps) {
     return options;
   });
 
+  const [shouldAutoSplit, setShouldAutoSplit] = useAtom(shouldAutoSplitState);
+  const aiSplitButtonRef = useRef<HTMLButtonElement | null>(null);
+
+  useEffect(() => {
+    const autoTriggerAISplit = () => {
+      if (aiSplitButtonRef.current != null) {
+        aiSplitButtonRef.current.click();
+      }
+    };
+
+    if (shouldAutoSplit) {
+      setShouldAutoSplit(false);
+      autoTriggerAISplit();
+    }
+  }, [setShouldAutoSplit, shouldAutoSplit]);
+
   return (
     <>
       {editors.isEmpty() ? null : (
@@ -347,6 +364,7 @@ function SplitColumn(props: SplitColumnProps) {
             commitStack={commitStack}
             subStack={subStack}
             rev={rev}
+            ref={aiSplitButtonRef}
           />
           <Button icon onClick={e => showExtraCommitActionsContextMenu(e)}>
             <Icon icon="ellipsis" />

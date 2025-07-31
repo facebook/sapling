@@ -137,6 +137,7 @@ export type TrackEventName =
   | 'StackEditInlineSplitButton'
   | 'SplitOpenFromCommitContextMenu'
   | 'SplitOpenFromHeadCommit'
+  | 'SplitOpenFromSmartActions'
   | 'SplitOpenRangeSelector'
   | 'AISplitButtonClick'
   | 'SuccessionsDetected'

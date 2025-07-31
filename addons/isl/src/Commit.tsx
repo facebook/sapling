@@ -374,7 +374,7 @@ export const Commit = memo(
 
     if (!isPublic && !actionsPrevented) {
       commitActions.push(
-        <SmartActionsMenu key="smartActions" />,
+        <SmartActionsMenu key="smartActions" commit={commit} />,
         <OpenCommitInfoButton
           key="open-sidebar"
           revealCommit={onDoubleClickToShowDrawer}
