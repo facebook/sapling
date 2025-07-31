@@ -212,6 +212,7 @@ class EdenDoctorChecker:
         self,
         instance: EdenInstance,
         tracker: ProblemTracker,
+        dry_run: bool,
         debug: bool,
         fast: bool,
         mount_table: Optional[mtab.MountTable] = None,
@@ -223,6 +224,7 @@ class EdenDoctorChecker:
     ) -> None:
         self.instance = instance
         self.tracker = tracker
+        self.dry_run = dry_run
         self.debug = debug
         self.fast = fast
         self.mount_table = mount_table if mount_table is not None else mtab.new()
@@ -339,7 +341,7 @@ class EdenDoctorChecker:
             self.tracker.add_problem(RunningElevatedProblem(health_status.pid))
 
     def run_normal_checks(self) -> None:
-        check_edenfs_version(self.tracker, self.instance)
+        check_edenfs_version(self.tracker, self.instance, self.dry_run or self.fast)
         try:
             checkouts = self._get_checkouts_info()
         except RuntimeError as ex:
@@ -396,7 +398,6 @@ class EdenDoctorChecker:
 
 class EdenDoctor(EdenDoctorChecker):
     fixer: ProblemFixer
-    dry_run: bool
     min_severity_to_report: ProblemSeverity
     lock_file_path: Path
     timeout: int
@@ -417,7 +418,6 @@ class EdenDoctor(EdenDoctorChecker):
         network_checker: Optional[check_network.NetworkChecker] = None,
         out: Optional[ui.Output] = None,
     ) -> None:
-        self.dry_run = dry_run
         self.min_severity_to_report = min_severity_to_report
         self.lock_file_path = instance.state_dir / ".doctor.lock"
         if wait:
@@ -443,6 +443,7 @@ class EdenDoctor(EdenDoctorChecker):
         super().__init__(
             instance,
             tracker=self.fixer,
+            dry_run=dry_run,
             debug=debug,
             fast=fast,
             mount_table=mount_table,
@@ -1341,7 +1342,9 @@ which may have important bug fixes or performance improvements.
         )
 
 
-def check_edenfs_version(tracker: ProblemTracker, instance: EdenInstance) -> None:
+def check_edenfs_version(
+    tracker: ProblemTracker, instance: EdenInstance, likely_automation: bool
+) -> None:
     # get released version parts
     rver, release = instance.get_running_version_parts()
     if not rver or not release:
@@ -1361,6 +1364,21 @@ def check_edenfs_version(tracker: ProblemTracker, instance: EdenInstance) -> Non
         reasons = bad_version_reasons_map[running_version]
         tracker.add_problem(BadEdenFsVersion(running_version_str, reasons))
         # if bad version, don't check for out of date version
+        return
+
+    # (T232917962): The out of date version advice as its implemented now is really only helpful for
+    # users who manually are running doctor. This is because of an edge case in the logic below:
+    # If we haven't had a release in >2 weeks, then we will immediately report the out of date
+    # version problem if `eden doctor` is ran anytime between the release and the next restart.
+    # The automatic restarter script will eventually fix this, but in the worst case, this could
+    # take more than a week. At the time of writing, the automatic restarter will only attempt to
+    # restart daemons with an uptime of more than 7 days, so if the daemon was restarted right
+    # before the release, it will trigger this code path for at least 7 days. This advice was
+    # originally added under the assumption that users would be running doctor manually, but now
+    #  many tools run it continuously, so this check as it exists today causes confusion. Until the
+    # task is addressed, we will disable this check for automation, which tends to run doctor with
+    # `--dry-run` and/or `--fast`.
+    if likely_automation:
         return
 
     # get installed version parts

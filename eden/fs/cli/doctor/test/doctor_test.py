@@ -1026,25 +1026,25 @@ Repairing hg directory contents for {checkout.path}...<green>fixed<reset>
         return checkout, fixer, out.getvalue()
 
     @patch("eden.fs.cli.version.get_current_version_parts")
-    # pyre-fixme[2]: Parameter must be annotated.
-    def test_edenfs_when_installed_and_running_match(self, mock_getver) -> None:
-        # pyre-fixme[6]: For 2nd param expected `str` but got `Tuple[str, str]`.
+    def test_edenfs_when_installed_and_running_match(
+        self, mock_getver: MagicMock
+    ) -> None:
         fixer, out = self._test_edenfs_version(mock_getver, ("20171213", "165642"))
         self.assertEqual("", out)
         self.assert_results(fixer, num_problems=0)
 
     @patch("eden.fs.cli.version.get_current_version_parts")
-    # pyre-fixme[2]: Parameter must be annotated.
-    def test_edenfs_when_installed_and_running_recent(self, mock_getver) -> None:
-        # pyre-fixme[6]: For 2nd param expected `str` but got `Tuple[str, str]`.
+    def test_edenfs_when_installed_and_running_recent(
+        self, mock_getver: MagicMock
+    ) -> None:
         fixer, out = self._test_edenfs_version(mock_getver, ("20171220", "165643"))
         self.assertEqual("", out)
         self.assert_results(fixer, num_problems=0)
 
     @patch("eden.fs.cli.version.get_current_version_parts")
-    # pyre-fixme[2]: Parameter must be annotated.
-    def test_edenfs_when_installed_and_running_old(self, mock_getver) -> None:
-        # pyre-fixme[6]: For 2nd param expected `str` but got `Tuple[str, str]`.
+    def test_edenfs_when_installed_and_running_old(
+        self, mock_getver: MagicMock
+    ) -> None:
         fixer, out = self._test_edenfs_version(mock_getver, ("20171227", "246561"))
         self.assertRegex(
             out,
@@ -1061,13 +1061,23 @@ which may have important bug fixes or performance improvements\.
         )
         self.assert_results(fixer, num_problems=1, num_advisory_fixes=1)
 
+    @patch("eden.fs.cli.version.get_current_version_parts")
+    def test_edenfs_when_installed_and_running_old_likely_automation(
+        self, mock_getver: MagicMock
+    ) -> None:
+        fixer, out = self._test_edenfs_version(
+            mock_getver, ("20171227", "246561"), likely_automation=True
+        )
+        self.assertEqual("", out)
+        self.assert_results(fixer, num_problems=0)
+
     def _test_edenfs_version(
         self,
-        # pyre-fixme[2]: Parameter must be annotated.
-        mock_rpm_q,
-        rpm_value: str,
+        mock_rpm_q: MagicMock,
+        rpm_value: Tuple[str, str],
+        likely_automation: bool = False,
     ) -> Tuple[doctor.ProblemFixer, str]:
-        side_effects: List[str] = []
+        side_effects: List[Tuple[str, str]] = []
         calls = []
         calls.append(call())
         side_effects.append(rpm_value)
@@ -1081,8 +1091,13 @@ which may have important bug fixes or performance improvements\.
             },
         )
         fixer, out = self.create_fixer(dry_run=False)
-        doctor.check_edenfs_version(fixer, typing.cast(EdenInstance, instance))
-        mock_rpm_q.assert_has_calls(calls)
+        doctor.check_edenfs_version(
+            fixer, typing.cast(EdenInstance, instance), likely_automation
+        )
+        if likely_automation:
+            mock_rpm_q.assert_not_called()
+        else:
+            mock_rpm_q.assert_has_calls(calls)
         return fixer, out.getvalue()
 
     def test_remount_checkouts(self) -> None:
