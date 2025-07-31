@@ -1104,7 +1104,22 @@ class basefilectx:
         the line number at the first appearance in the managed file, otherwise,
         number has a fixed value of False.
         """
-        annotatedlines, text = self._annotated_lines(follow, linenumber, diffopts)
+        repo = self.repo()
+        curr = self._annotated_lines(follow, linenumber, diffopts)
+        # filter out working copy nodes
+        nodes = [aline.node() for aline in curr[0] if aline.node() is not None]
+        # XXX: handle merge case: multiple roots
+        lastnode = repo.changelog.dag.roots(nodes).first()
+
+        if subtree_copy := subtreeutil.find_subtree_copy(repo, lastnode, self.path()):
+            from_commit, from_path = subtree_copy
+            srcfilectx = repo[from_commit][from_path]
+            copysource = srcfilectx._annotated_lines(follow, linenumber, diffopts)
+        else:
+            copysource = None
+        copies = [copysource] if copysource else []
+
+        (annotatedlines, text) = annotate.annotatepair(copies, curr, diffopts=diffopts)
         return zip(annotatedlines, text.splitlines(True))
 
     def _annotated_lines(self, follow=False, linenumber=False, diffopts=None):
@@ -1149,8 +1164,6 @@ class basefilectx:
             blame = blame["Ok"]
 
             tofetch = bindings.dag.nameset(blame["commits"])
-            # XXX: handle merge case: multiple roots
-            lastnode = repo.changelog.dag.roots(tofetch).first()
 
             # Prefetch commit and parent nodes.
             tofetch += repo.changelog.dag.parents(tofetch)
@@ -1170,17 +1183,6 @@ class basefilectx:
                     )
 
             curr = (lines, filectx.data())
-
-            if subtree_copy := subtreeutil.find_subtree_copy(
-                repo, lastnode, filectx.path()
-            ):
-                from_commit, from_path = subtree_copy
-                copysource = inner(repo[from_commit][from_path], linenumber)
-            else:
-                copysource = None
-            copies = [copysource] if copysource else []
-            curr = annotate.annotatepair(copies, curr, diffopts=None)
-
             return curr
 
         if diffopts and any(

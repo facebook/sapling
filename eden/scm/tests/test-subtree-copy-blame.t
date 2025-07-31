@@ -20,17 +20,28 @@ test subtree copy
   │
   o  d908813f0f7c A
 
-tofix: test blame on bar/x
+test blame on bar/x
   $ hg blame bar/x
-  80d62d83076f: aaa
-  80d62d83076f: bbb
+  d908813f0f7c: aaa
+  e8c35cfd53d9: bbb
 
-tofix: update foo/x and then run blame
+update foo/x and then run blame
   $ echo "ccc" >> bar/x
   $ hg ci -m "update bar/x"
   $ hg log -r . -T '{node|short}\n' 
   999d230b9730
   $ hg blame bar/x
-  80d62d83076f: aaa
-  80d62d83076f: bbb
+  d908813f0f7c: aaa
+  e8c35cfd53d9: bbb
   999d230b9730: ccc
+
+all lines are modified in the working copy
+  $ cat > bar/x << EOF
+  > 111
+  > 222
+  > 333
+  > EOF
+  $ hg blame -r "wdir()" bar/x
+  999d230b9730+: 111
+  999d230b9730+: 222
+  999d230b9730+: 333
