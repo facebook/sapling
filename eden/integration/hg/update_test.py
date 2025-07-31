@@ -911,12 +911,9 @@ class UpdateTest(EdenHgTestCase):
                     params=CheckOutRevisionParams(),
                 )
 
-        def run_async_func_in_thread(async_func, *args):
-            asyncio.run(async_func(*args))
-
         async with self.block_checkout():
             first_update = threading.Thread(
-                target=run_async_func_in_thread,
+                target=util.run_async_func_in_thread,
                 args=(start_force_checkout, self.commit1),
             )
             first_update.start()

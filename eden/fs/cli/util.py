@@ -28,6 +28,7 @@ from typing import (
     Any,
     Awaitable,
     Callable,
+    Coroutine,
     Dict,
     Iterator,
     List,
@@ -117,6 +118,13 @@ class HealthStatus:
 
 
 T = TypeVar("T")
+
+
+def run_async_func_in_thread(
+    async_func: Callable[..., Coroutine[typing.Any, typing.Any, T]],
+    *args: Any,
+) -> None:
+    asyncio.run(async_func(*args))
 
 
 async def poll_until_async(
