@@ -1104,7 +1104,10 @@ class basefilectx:
         the line number at the first appearance in the managed file, otherwise,
         number has a fixed value of False.
         """
+        annotatedlines, text = self._annotated_lines(follow, linenumber, diffopts)
+        return zip(annotatedlines, text.splitlines(True))
 
+    def _annotated_lines(self, follow=False, linenumber=False, diffopts=None):
         decorate = annotate.create_line_decorator(linenumber)
         repo = self.repo()
 
@@ -1113,7 +1116,7 @@ class basefilectx:
             and follow  # would be extra work to _not_ follow renames
             and repo.nullableedenapi
         ):
-            data = self._edenapi_annotate(linenumber, diffopts)
+            data = self._edenapi_annotated_lines(linenumber, diffopts)
             if data is not None:
                 repo.ui.log("blame_info", blame_mode="edenapi")
                 return data
@@ -1126,10 +1129,9 @@ class basefilectx:
             base, parents = _filelogbaseparents(self, follow)
             repo.ui.log("blame_info", blame_mode="filelog")
 
-        annotatedlines, text = annotate.annotate(base, parents, decorate, diffopts)
-        return zip(annotatedlines, text.splitlines(True))
+        return annotate.annotate(base, parents, decorate, diffopts)
 
-    def _edenapi_annotate(self, linenumber=False, diffopts=None):
+    def _edenapi_annotated_lines(self, linenumber=False, diffopts=None):
         def inner(filectx, linenumber):
             repo = filectx.repo()
             blame_response = repo.edenapi.blame(
@@ -1199,14 +1201,13 @@ class basefilectx:
             # probably knows about.
             parents = self.changectx().parents()
             if len(parents) == 1 and not self.cmp(fctx := parents[0][self.path()]):
-                return fctx._edenapi_annotate(linenumber, diffopts)
+                return fctx._edenapi_annotated_lines(linenumber, diffopts)
 
             # Working copy blame not supported.
             return None
 
         if res := inner(self, linenumber):
-            lines, text = res
-            return zip(lines, text.splitlines(True))
+            return res
         else:
             return None
 
