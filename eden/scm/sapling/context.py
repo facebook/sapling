@@ -1111,15 +1111,26 @@ class basefilectx:
         # XXX: handle merge case: multiple roots
         lastnode = repo.changelog.dag.roots(nodes).first()
 
+        prev = None
         if subtree_copy := subtreeutil.find_subtree_copy(repo, lastnode, self.path()):
             from_commit, from_path = subtree_copy
             srcfilectx = repo[from_commit][from_path]
-            copysource = srcfilectx._annotated_lines(follow, linenumber, diffopts)
-        else:
-            copysource = None
-        copies = [copysource] if copysource else []
-
-        (annotatedlines, text) = annotate.annotatepair(copies, curr, diffopts=diffopts)
+            prev = srcfilectx._annotated_lines(follow, linenumber, diffopts)
+        elif subtree_import := subtreeutil.find_subtree_import(
+            repo, lastnode, self.path()
+        ):
+            from_url, from_commit, source_path = subtree_import
+            # we currently only support import from git repo, so `git_url` must be set
+            git_url = git.maybegiturl(from_url)
+            if git_url:
+                with repo.ui.configoverride({("ui", "quiet"): True}):
+                    from_repo = subtreeutil.get_or_clone_git_repo(
+                        repo.ui, git_url, from_commit
+                    )
+                srcfilectx = from_repo[from_commit][source_path]
+                prev = srcfilectx._annotated_lines(follow, linenumber, diffopts)
+        parents = [prev] if prev else []
+        (annotatedlines, text) = annotate.annotatepair(parents, curr, diffopts=diffopts)
         return zip(annotatedlines, text.splitlines(True))
 
     def _annotated_lines(self, follow=False, linenumber=False, diffopts=None):
