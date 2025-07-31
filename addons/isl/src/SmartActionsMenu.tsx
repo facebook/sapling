@@ -9,11 +9,13 @@ import {Button} from 'isl-components/Button';
 import {Icon} from 'isl-components/Icon';
 import {Tooltip} from 'isl-components/Tooltip';
 import {DropdownFields} from './DropdownFields';
+import {useFeatureFlagSync} from './featureFlags';
 import {T} from './i18n';
+import {Internal} from './Internal';
+import {BaseSplitButton} from './stackEdit/ui/BaseSplitButton';
 import type {CommitInfo} from './types';
 
 import './SmartActionsMenu.css';
-import {BaseSplitButton} from './stackEdit/ui/BaseSplitButton';
 
 export function SmartActionsMenu({commit}: {commit: CommitInfo}) {
   return (
@@ -29,13 +31,20 @@ export function SmartActionsMenu({commit}: {commit: CommitInfo}) {
 }
 
 function SmartActions({commit, dismiss}: {commit: CommitInfo; dismiss: () => void}) {
+  const actions = [];
+
+  const aiCommitSplitEnabled = useFeatureFlagSync(Internal.featureFlags?.AICommitSplit);
+  if (aiCommitSplitEnabled) {
+    actions.push(<AutoSplitButton key="auto-split" commit={commit} dismiss={dismiss} />);
+  }
+
   return (
     <DropdownFields
       title={<T>Smart Actions</T>}
       icon="lightbulb"
       className="smart-actions-dropdown"
       data-testid="smart-actions-dropdown">
-      <AutoSplitButton commit={commit} dismiss={dismiss} />
+      {actions.length > 0 ? actions : <T>No smart actions available</T>}
     </DropdownFields>
   );
 }
