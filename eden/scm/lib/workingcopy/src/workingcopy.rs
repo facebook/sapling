@@ -68,7 +68,7 @@ use crate::filesystem::PhysicalFileSystem;
 use crate::filesystem::WatchmanFileSystem;
 use crate::status::compute_status;
 use crate::util::added_files;
-use crate::util::sniff_wdir_parents;
+use crate::util::fast_path_wdir_parents;
 use crate::util::walk_treestate;
 use crate::watchman_client::DeferredWatchmanClient;
 
@@ -516,7 +516,7 @@ impl WorkingCopy {
                         FsNodeMetadata::Directory(_) => None,
                     });
                     // The submodule working copy should use the same dotdir.
-                    let file_node = sniff_wdir_parents(&subm_path, Some(self.ident))?
+                    let file_node = fast_path_wdir_parents(&subm_path, self.ident)?
                         .p1()
                         .copied();
                     if file_node == tree_node {

@@ -14,7 +14,7 @@ use repo::repo::Repo;
 use types::hgid::NULL_ID;
 
 pub fn run(ctx: ReqCtx<NoOpts>, repo: &Repo) -> Result<u8> {
-    let parents = workingcopy::sniff_wdir_parents(repo.path(), Some(repo.ident()))?;
+    let parents = workingcopy::fast_path_wdir_parents(repo.path(), repo.ident())?;
     let p1 = parents.p1().copied().unwrap_or(NULL_ID);
 
     let mut stdout = ctx.io().output();

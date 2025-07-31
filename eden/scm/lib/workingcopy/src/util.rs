@@ -182,17 +182,10 @@ pub(crate) fn added_files(ts: &mut TreeState) -> Result<Vec<RepoPathBuf>> {
 
 /// Returns the first parent of a working copy, without constructing the working copy.
 /// `path` is the working copy root without the dot dir.
-/// `ident` is a hint of the working copy identity. If set, skip sniffing the identity.
+/// `ident` is the desired working copy identity to skip sniffing.
 ///
 /// This function does not consider locking, pending changes and other special cases.
-pub fn sniff_wdir_parents(path: &Path, ident: Option<Identity>) -> Result<Parents> {
-    let ident = match ident {
-        None => match identity::sniff_dir(path)? {
-            None => return Ok(Parents::None),
-            Some(id) => id,
-        },
-        Some(id) => id,
-    };
+pub fn fast_path_wdir_parents(path: &Path, ident: Identity) -> Result<Parents> {
     if ident.dot_dir().starts_with(".git") {
         // dotgit mode. Use gitcompat to resolve HEAD.
         let repo = BareGit::from_git_dir(path.join(".git"));
