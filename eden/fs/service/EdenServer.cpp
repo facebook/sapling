@@ -12,7 +12,6 @@
 #include <chrono>
 
 #include <sys/stat.h>
-#include <atomic>
 #include <fstream>
 #include <functional>
 #include <iterator>
@@ -346,7 +345,9 @@ class EdenServer::ThriftServerEventHandler
       public folly::AsyncSignalHandler {
  public:
   explicit ThriftServerEventHandler(EdenServer* edenServer)
-      : AsyncSignalHandler{nullptr}, edenServer_{edenServer} {}
+      : AsyncSignalHandler{nullptr},
+        edenServer_{edenServer},
+        stoppingFromSignal_{false} {}
 
   void preServe(const folly::SocketAddress* address) override {
     if (edenServer_->getServerState()
@@ -390,21 +391,58 @@ class EdenServer::ThriftServerEventHandler
 #endif
       case SIGINT:
       case SIGTERM:
-        // Stop the server.
-        // Unregister for this signal first, so that we will be terminated
-        // immediately if the signal is sent again before we finish stopping.
-        // This makes it easier to kill the daemon if graceful shutdown hangs or
-        // takes longer than expected for some reason.  (For instance, if we
-        // unmounting the mount points hangs for some reason.)
-        XLOGF(INFO, "stopping due to signal {}", sig);
+        if (stoppingFromSignal_) {
+          XLOGF(INFO, "already stopping due to signal {}", sig);
+        } else {
+          stoppingFromSignal_ = true;
+
+          XLOGF(INFO, "stopping due to signal {}", sig);
+
+          auto shutdownTimeout = edenServer_->getServerState()
+                                     ->getEdenConfig()
+                                     ->sigtermShutdownTimeout.getValue();
+
+          if (sig == SIGINT || shutdownTimeout.count() == 0) {
+            // Unregister signal handler if either:
+            //   - sig is SIGINT (this way, the process exits immediately when
+            //   you mash ctrl-c).
+            //   - shutdownTimeout is disabled.
+            //
+            // Unregistering the signal handler causes us to exit immediately
+            // via default signal handling the next time we get the signal.
+            XLOGF(INFO, "unregistering signal handler for signal {}", sig);
+            unregisterSignalHandler(sig);
+          } else {
+            // Otherwise we are using shutdownTimeout. Schedule a call to
+            // _exit() after the timeout.
+            XLOGF(
+                INFO,
+                "scheduling _exit() if not done shutting down in {}",
+                durationToString(shutdownTimeout));
+            edenServer_->getMainEventBase()->runAfterDelay(
+                [sig, shutdownTimeout] {
+                  XLOGF(
+                      INFO,
+                      "_exit()ing after {} timeout on signal {}",
+                      durationToString(shutdownTimeout),
+                      sig);
+                  folly::LoggerDB::get().flushAllHandlers();
+                  _exit(1);
+                },
+                std::chrono::duration_cast<std::chrono::milliseconds>(
+                    shutdownTimeout)
+                    .count());
+          }
+
 #ifndef _WIN32
-        // Record the signal that caused daemon to stop.
-        // The next edenFS startup record this signal in the silent daemon exit
-        // logger
-        edenServer_->createDaemonExitSignalFile(sig);
+          // Record the signal that caused daemon to
+          // stop. The next edenFS startup record this
+          // signal in the silent daemon exit logger
+          edenServer_->createDaemonExitSignalFile(sig);
 #endif
-        unregisterSignalHandler(sig);
-        edenServer_->stop();
+          // Stop the server.
+          edenServer_->stop();
+        }
     }
   }
 
@@ -419,6 +457,7 @@ class EdenServer::ThriftServerEventHandler
  private:
   EdenServer* edenServer_{nullptr};
   folly::Promise<Unit> runningPromise_;
+  bool stoppingFromSignal_;
 };
 
 static constexpr folly::StringPiece kNfsReadCount60{"nfs.read_us.count.60"};

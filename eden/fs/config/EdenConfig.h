@@ -297,6 +297,17 @@ class EdenConfig : private ConfigSettingManager {
       std::nullopt,
       this};
 
+  /**
+   * Timeout value for a clean shutdown on SIGTERM. If the timeout elapses, we
+   * exit immediately. Set to zero to revert to the old behavior where we
+   * unregister the signal handler unconditionally, causing the next signal to
+   * instantly kill us.
+   */
+  ConfigSetting<std::chrono::nanoseconds> sigtermShutdownTimeout{
+      "core:sigterm-shutdown-timeout",
+      std::chrono::seconds(15),
+      this};
+
   // [config]
 
   /**
