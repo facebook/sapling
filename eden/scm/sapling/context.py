@@ -1168,10 +1168,11 @@ class basefilectx:
 
             blame = blame["Ok"]
 
-            # Prefetch commit and parent nodes.
             tofetch = bindings.dag.nameset(blame["commits"])
-            lastnode = tofetch.last()
+            # XXX: handle merge case: multiple roots
+            lastnode = repo.changelog.dag.roots(tofetch).first()
 
+            # Prefetch commit and parent nodes.
             tofetch += repo.changelog.dag.parents(tofetch)
             repo.changelog.filternodes(tofetch)
 

@@ -102,11 +102,10 @@ use test subtree key so server does not follow subtree copy for blame
   7ac2e4266f1b: xxx
   35ee8b2028dd: yyy
 
-Tofix: "xxx" should be blamed to the original commit 7ac2e4266f1b
   $ echo zzz >> baz/file3
   $ hg ci -m "add zzz"
   $ hg push -r . --to master_bookmark -q
   $ hg blame baz/file3
-  35ee8b2028dd: xxx
+  7ac2e4266f1b: xxx
   35ee8b2028dd: yyy
   984613ca7101: zzz
