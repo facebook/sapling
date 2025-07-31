@@ -372,7 +372,7 @@ def get_subtree_merges(repo, node) -> List[SubtreeMerge]:
     return result
 
 
-def get_subtree_imports(repo, node):
+def get_subtree_imports(repo, node) -> List[SubtreeImport]:
     extra = repo[node].extra()
     result = []
     if metadata_list := _get_subtree_metadata_by_subtree_keys(extra):
@@ -718,6 +718,17 @@ def find_subtree_copy(repo, node, path):
         if path_starts_with(path, branch.to_path):
             source_path = branch.from_path + path[len(branch.to_path) :]
             return (branch.from_commit, source_path)
+    return None
+
+
+def find_subtree_import(repo, node, path):
+    """find the source url, commit and path of a subtree imported file/directory"""
+    imports = get_subtree_imports(repo, node)
+    for im in imports:
+        if path_starts_with(path, im.to_path):
+            source_path = im.from_path + path[len(im.to_path) :]
+            source_path = source_path.lstrip("/")
+            return (im.url, im.from_commit, source_path)
     return None
 
 
