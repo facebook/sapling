@@ -33,6 +33,7 @@ import {DragToRebase} from './DragToRebase';
 import {EducationInfoTip} from './Education';
 import {HighlightCommitsWhileHovering} from './HighlightedCommits';
 import {Internal} from './Internal';
+import {SmartActionsMenu} from './SmartActionsMenu';
 import {SubmitSelectionButton} from './SubmitSelectionButton';
 import {getSuggestedRebaseOperation, suggestedRebaseDestinations} from './SuggestedRebase';
 import {UncommitButton} from './UncommitButton';
@@ -373,6 +374,7 @@ export const Commit = memo(
 
     if (!isPublic && !actionsPrevented) {
       commitActions.push(
+        <SmartActionsMenu key="smartActions" />,
         <OpenCommitInfoButton
           key="open-sidebar"
           revealCommit={onDoubleClickToShowDrawer}

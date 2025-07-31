@@ -1,0 +1,21 @@
+/**
+ * Copyright (c) Meta Platforms, Inc. and affiliates.
+ *
+ * This source code is licensed under the MIT license found in the
+ * LICENSE file in the root directory of this source tree.
+ */
+
+ .commit .smart-actions-button {
+    opacity: 0;
+    transition: opacity 0.1s;
+ }
+
+ .commit:hover .smart-actions-button {
+    opacity: 1;
+ }
+
+.smart-actions-dropdown vscode-button,
+.smart-actions-dropdown button {
+  min-width: 250px;
+  justify-content: center;
+}
