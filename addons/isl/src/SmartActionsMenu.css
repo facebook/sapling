@@ -14,6 +14,10 @@
     opacity: 1;
  }
 
+ .smart-actions-button.dropdown-visible {
+   opacity: 1;
+ }
+
 .smart-actions-dropdown vscode-button,
 .smart-actions-dropdown button {
   min-width: 250px;

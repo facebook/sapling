@@ -14,10 +14,13 @@ import {T} from './i18n';
 import {Internal} from './Internal';
 import {BaseSplitButton} from './stackEdit/ui/BaseSplitButton';
 import type {CommitInfo} from './types';
+import {useState} from 'react';
 
 import './SmartActionsMenu.css';
 
 export function SmartActionsMenu({commit}: {commit: CommitInfo}) {
+  const [dropdownVisible, setDropdownVisible] = useState(false);
+
   const smartActionsMenuEnabled = useFeatureFlagSync(Internal.featureFlags?.SmartActionsMenu);
   if (!smartActionsMenuEnabled) {
     return null;
@@ -25,10 +28,17 @@ export function SmartActionsMenu({commit}: {commit: CommitInfo}) {
 
   return (
     <Tooltip
-      component={dismiss => <SmartActions commit={commit} dismiss={dismiss} />}
+      component={dismiss => {
+        return <SmartActions commit={commit} dismiss={dismiss} />;
+      }}
       trigger="click"
-      title={<T>Smart Actions...</T>}>
-      <Button icon data-testid="smart-actions-button" className="smart-actions-button">
+      title={<T>Smart Actions...</T>}
+      onVisible={() => setDropdownVisible(true)}
+      onDismiss={() => setDropdownVisible(false)}>
+      <Button
+        icon
+        data-testid="smart-actions-button"
+        className={'smart-actions-button' + (dropdownVisible ? ' dropdown-visible' : '')}>
         <Icon icon="lightbulb" />
       </Button>
     </Tooltip>

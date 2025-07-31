@@ -44,6 +44,11 @@ type TooltipProps = {
    */
   delayMs?: number;
   /**
+   * Callback to run when the tooltip becomes visible.
+   * For 'click' tooltips that also have a 'title', this only fires when the 'click' tooltip is shown.
+   */
+  onVisible?: () => unknown;
+  /**
    * Callback to run when the tooltip is dismissed for any reason.
    * For 'click' tooltips that also have a 'title', this only fires when the 'click' tooltip is dismissed.
    * Note: `onDismiss` will not run if the entire <Tooltip> is unmounted while the tooltip is visible.
@@ -112,6 +117,7 @@ export function Tooltip({
   trigger: triggerProp,
   delayMs,
   shouldShow,
+  onVisible,
   onDismiss,
   additionalToggles,
   group,
@@ -130,6 +136,13 @@ export function Tooltip({
     }
     lastVisible.current = visible === true;
   }, [visible, onDismiss, lastVisible]);
+
+  // trigger onVisible when visibility newly becomes true
+  useEffect(() => {
+    if (visible === true) {
+      onVisible?.();
+    }
+  }, [visible, onVisible]);
 
   const ref = useRef<HTMLDivElement>(null);
   const getContent = () => {
