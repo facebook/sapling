@@ -14,9 +14,14 @@ import {T} from './i18n';
 import {Internal} from './Internal';
 import {BaseSplitButton} from './stackEdit/ui/BaseSplitButton';
 import type {CommitInfo} from './types';
-import {useState} from 'react';
+import {Suspense, useState} from 'react';
+import {diffCommentData} from './codeReview/codeReviewAtoms';
+import {useAtomValue} from 'jotai';
+import serverAPI from './ClientToServerAPI';
 
 import './SmartActionsMenu.css';
+import platform from './platform';
+import {repositoryInfo} from './serverAPIState';
 
 export function SmartActionsMenu({commit}: {commit: CommitInfo}) {
   const [dropdownVisible, setDropdownVisible] = useState(false);
@@ -53,6 +58,18 @@ function SmartActions({commit, dismiss}: {commit: CommitInfo; dismiss: () => voi
     actions.push(<AutoSplitButton key="auto-split" commit={commit} dismiss={dismiss} />);
   }
 
+  const devmateResolveCommentsEnabled = useFeatureFlagSync(
+    Internal.featureFlags?.InlineCommentDevmateResolve,
+  );
+  // For now, only support this in VS Code
+  if (devmateResolveCommentsEnabled && commit.diffId && platform.platformName === 'vscode') {
+    actions.push(
+      <Suspense>
+        <ResolveCommentsButton key="resolve-comments" diffId={commit.diffId} dismiss={dismiss} />
+      </Suspense>,
+    );
+  }
+
   return (
     <DropdownFields
       title={<T>Smart Actions</T>}
@@ -74,5 +91,31 @@ function AutoSplitButton({commit, dismiss}: {commit: CommitInfo; dismiss: () => 
       onSplitInitiated={dismiss}>
       <T>Auto-split with AI</T>
     </BaseSplitButton>
+  );
+}
+
+/** Prompt Devmate to resolve all comments on a diff. */
+function ResolveCommentsButton({diffId, dismiss}: {diffId: string; dismiss: () => void}) {
+  const repo = useAtomValue(repositoryInfo);
+  const repoPath = repo?.repoRoot;
+  const diffComments = useAtomValue(diffCommentData(diffId));
+  if (diffComments.state !== 'hasData' || diffComments.data.length === 0) {
+    return;
+  }
+  return (
+    <Button
+      data-testid="review-comments-button"
+      onClick={e => {
+        serverAPI.postMessage({
+          type: 'platform/resolveAllCommentsWithAI',
+          diffId,
+          comments: diffComments.data,
+          repoPath,
+        });
+        dismiss();
+        e.stopPropagation();
+      }}>
+      <Icon icon="comment" /> <T>Resolve comments</T>
+    </Button>
   );
 }

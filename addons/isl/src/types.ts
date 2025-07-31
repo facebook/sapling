@@ -692,7 +692,13 @@ export type PlatformSpecificClientToServerMessages =
     }
   | {type: 'platform/checkForDiagnostics'; paths: Array<RepoRelativePath>}
   | {type: 'platform/executeVSCodeCommand'; command: string; args: Array<Json>}
-  | {type: 'platform/subscribeToVSCodeConfig'; config: string};
+  | {type: 'platform/subscribeToVSCodeConfig'; config: string}
+  | {
+      type: 'platform/resolveAllCommentsWithAI';
+      diffId: string;
+      comments: Array<DiffComment>;
+      repoPath?: string;
+    };
 
 /**
  * messages returned by platform-specific (browser, vscode, electron) server implementation,

@@ -19,34 +19,15 @@ import {ComparisonType} from 'shared/Comparison';
 import {group} from 'shared/utils';
 import {colors, font, radius, spacing} from '../../../components/theme/tokens.stylex';
 import {AvatarImg} from '../Avatar';
-import serverAPI from '../ClientToServerAPI';
 import {SplitDiffTable} from '../ComparisonView/SplitDiffView/SplitDiffHunk';
 import {Column, Row} from '../ComponentUtils';
 import {Link} from '../Link';
 import {T, t} from '../i18n';
-import {atomFamilyWeak, atomLoadableWithRefresh} from '../jotaiUtils';
 import platform from '../platform';
 import {RelativeDate} from '../relativeDate';
 import {layout} from '../stylexUtils';
 import {themeState} from '../theme';
-
-const diffCommentData = atomFamilyWeak((diffId: DiffId) =>
-  atomLoadableWithRefresh(async () => {
-    serverAPI.postMessage({
-      type: 'fetchDiffComments',
-      diffId,
-    });
-
-    const result = await serverAPI.nextMessageMatching(
-      'fetchedDiffComments',
-      msg => msg.diffId === diffId,
-    );
-    if (result.comments.error != null) {
-      throw new Error(result.comments.error.toString());
-    }
-    return result.comments.value;
-  }),
-);
+import {diffCommentData} from './codeReviewAtoms';
 
 const styles = stylex.create({
   list: {

@@ -26,6 +26,8 @@ import {PERSISTED_STORAGE_KEY_PREFIX} from './config';
 import {t} from './i18n';
 import {Internal} from './Internal';
 import openFile from './openFile';
+import {promptDevmate} from './facebook/metamate/command';
+import {ActionTriggerType} from './facebook/metamate/types';
 
 export type VSCodeServerPlatform = ServerPlatform & {
   panelOrView: undefined | vscode.WebviewPanel | vscode.WebviewView;
@@ -245,6 +247,14 @@ export const getVSCodePlatform = (context: vscode.ExtensionContext): VSCodeServe
         }
         case 'platform/executeVSCodeCommand': {
           vscode.commands.executeCommand(message.command, ...message.args);
+          break;
+        }
+        case 'platform/resolveAllCommentsWithAI': {
+          const {diffId, comments, repoPath} = message;
+          promptDevmate(
+            {type: 'resolveAllComments', diffId, comments, repoPath},
+            ActionTriggerType.ISL2SmartActions,
+          );
           break;
         }
       }
