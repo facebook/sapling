@@ -18,6 +18,11 @@ import type {CommitInfo} from './types';
 import './SmartActionsMenu.css';
 
 export function SmartActionsMenu({commit}: {commit: CommitInfo}) {
+  const smartActionsMenuEnabled = useFeatureFlagSync(Internal.featureFlags?.SmartActionsMenu);
+  if (!smartActionsMenuEnabled) {
+    return null;
+  }
+
   return (
     <Tooltip
       component={dismiss => <SmartActions commit={commit} dismiss={dismiss} />}
