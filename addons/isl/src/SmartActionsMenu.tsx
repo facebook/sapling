@@ -9,7 +9,7 @@ import {Button} from 'isl-components/Button';
 import {Icon} from 'isl-components/Icon';
 import {Tooltip} from 'isl-components/Tooltip';
 import {DropdownFields} from './DropdownFields';
-import {useFeatureFlagSync} from './featureFlags';
+import {featureFlagAsync, useFeatureFlagSync} from './featureFlags';
 import {T} from './i18n';
 import {Internal} from './Internal';
 import {BaseSplitButton} from './stackEdit/ui/BaseSplitButton';
@@ -179,7 +179,6 @@ function ResolveFailedSignalsButton({
       disabled={disabled}>
       <Icon icon="error" />
       <T>Fix failed signals</T>
-      <PoweredByDevmateIcon />
     </Button>
   );
 
