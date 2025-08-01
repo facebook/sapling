@@ -330,7 +330,12 @@ class EdenTestCase(EdenTestCaseBase):
         # up disk image redirections on Sandcastle is non-trivial. Let's
         # use symlink. redirections to avoid these issues.
         if sys.platform == "darwin":
-            configs["nfs"] = ["allow-apple-double = false"]
+            configs["nfs"] = [
+                "allow-apple-double = false",
+                # On macOS, hard-NFS mounts may hang indefinitely. Use a
+                # deadtimeout so that the kernel force unmounts them.
+                'dead-timeout-seconds = "30"',
+            ]
             if "SANDCASTLE" in os.environ:
                 configs["redirections"] = ['darwin-redirection-type = "symlink"']
         elif sys.platform == "win32":
