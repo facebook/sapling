@@ -698,6 +698,11 @@ export type PlatformSpecificClientToServerMessages =
       diffId: string;
       comments: Array<DiffComment>;
       repoPath?: string;
+    }
+  | {
+      type: 'platform/resolveFailedSignalsWithAI';
+      diffId: string;
+      repoPath?: string;
     };
 
 /**

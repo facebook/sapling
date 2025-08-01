@@ -16,6 +16,7 @@ import {BaseSplitButton} from './stackEdit/ui/BaseSplitButton';
 import type {CommitInfo} from './types';
 import {Suspense, useState} from 'react';
 import {diffCommentData} from './codeReview/codeReviewAtoms';
+import {diffSummary} from './codeReview/CodeReviewInfo';
 import {useAtomValue} from 'jotai';
 import serverAPI from './ClientToServerAPI';
 
@@ -70,6 +71,22 @@ function SmartActions({commit, dismiss}: {commit: CommitInfo; dismiss: () => voi
     );
   }
 
+  const devmateResolveFailedSignalsEnabled = useAtomValue(
+    featureFlagAsync(Internal.featureFlags?.DevmateResolveFailedSignals),
+  );
+  // For now, only support this in VS Code
+  if (devmateResolveFailedSignalsEnabled && commit.diffId && platform.platformName === 'vscode') {
+    actions.push(
+      <ResolveFailedSignalsButton
+        key="resolve-failed-signals"
+        diffId={commit.diffId}
+        dismiss={dismiss}
+        disabled={!commit.isDot}
+        disabledReason="This action is only available for the current commit."
+      />,
+    );
+  }
+
   return (
     <DropdownFields
       title={<T>Smart Actions</T>}
@@ -118,4 +135,53 @@ function ResolveCommentsButton({diffId, dismiss}: {diffId: string; dismiss: () =
       <Icon icon="comment" /> <T>Resolve comments</T>
     </Button>
   );
+}
+
+/** Prompt Devmate to resolve failed signals on a diff. */
+function ResolveFailedSignalsButton({
+  diffId,
+  dismiss,
+  disabled,
+  disabledReason,
+}: {
+  diffId: string;
+  dismiss: () => void;
+  disabled?: boolean;
+  disabledReason?: string;
+}) {
+  const repo = useAtomValue(repositoryInfo);
+  const repoPath = repo?.repoRoot;
+  const diffSummaryResult = useAtomValue(diffSummary(diffId));
+
+  // Only show the button if there are failed signals
+  if (diffSummaryResult.error) {
+    return null;
+  }
+  if (
+    !diffSummaryResult.value?.signalSummary ||
+    diffSummaryResult.value.signalSummary !== 'failed'
+  ) {
+    return null;
+  }
+
+  const button = (
+    <Button
+      data-testid="resolve-failed-signals-button"
+      onClick={e => {
+        serverAPI.postMessage({
+          type: 'platform/resolveFailedSignalsWithAI',
+          diffId,
+          repoPath,
+        });
+        dismiss();
+        e.stopPropagation();
+      }}
+      disabled={disabled}>
+      <Icon icon="error" />
+      <T>Fix failed signals</T>
+      <PoweredByDevmateIcon />
+    </Button>
+  );
+
+  return disabled ? <Tooltip title={disabledReason}>{button}</Tooltip> : button;
 }

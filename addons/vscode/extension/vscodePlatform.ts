@@ -257,6 +257,14 @@ export const getVSCodePlatform = (context: vscode.ExtensionContext): VSCodeServe
           );
           break;
         }
+        case 'platform/resolveFailedSignalsWithAI': {
+          const {diffId, repoPath} = message;
+          promptDevmate(
+            {type: 'resolveFailedSignals', diffId, repoPath},
+            ActionTriggerType.ISL2SmartActions,
+          );
+          break;
+        }
       }
     } catch (err) {
       vscode.window.showErrorMessage(`error handling message ${JSON.stringify(message)}\n${err}`);
