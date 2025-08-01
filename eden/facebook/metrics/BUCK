@@ -62,9 +62,3 @@ bento_test_kernel(
     notebooks = ["notebooks/usc_okr_reviews.py"],
     target_name = "usc_okr_reviews",
 )
-
-bento_test_kernel(
-    kernel_name = "eden",
-    notebooks = ["notebooks/gk_cpe_blackbird_sensor_exclusion_mobile.py"],
-    target_name = "gk_cpe_blackbird_sensor_exclusion_mobile",
-)
