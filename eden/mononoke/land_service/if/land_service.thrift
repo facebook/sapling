@@ -135,6 +135,12 @@ safe client exception InternalError {
   3: list<string> source_chain;
 }
 
+@rust.Exhaustive
+safe permanent client exception AuthorizationError {
+  @thrift.ExceptionMessage
+  1: string reason;
+}
+
 @rust.RequestContext
 service LandService extends fb303_core.BaseService {
   /// Land a stack of commits via land_changesets.
@@ -144,5 +150,6 @@ service LandService extends fb303_core.BaseService {
     2: PushrebaseConflictsException pushrebase_conflicts,
     3: HookRejectionsException hook_rejections,
     4: InternalError internal_error,
+    5: AuthorizationError authorization_error,
   );
 }
