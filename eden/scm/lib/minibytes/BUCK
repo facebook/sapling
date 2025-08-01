@@ -1,11 +1,12 @@
-load("@fbcode_macros//build_defs:rust_library.bzl", "rust_library")
+load("@fbsource//tools/build_defs:fb_xplat_rust_library.bzl", "fb_xplat_rust_library")
 
 oncall("sapling")
 
-rust_library(
+fb_xplat_rust_library(
     name = "minibytes",
     srcs = glob(["src/**/*.rs"]),
-    autocargo = {"cargo_toml_config": {
+    crate_root = "src/lib.rs",
+    cxx_autocargo = {"cargo_toml_config": {
         "features": {
             "default": [
                 "frombytes",
@@ -26,7 +27,11 @@ rust_library(
             "repository": "https://github.com/facebook/sapling",
         },
     }},
-    crate_root = "src/lib.rs",
+    # A test inside this target is using #[should_panic], setting the backtrace
+    # to false here, otherwise the test binary will try to extract the backtrace
+    # and the test will fail with leak sanitizer.
+    cxx_test_env = {"RUST_BACKTRACE": "0"},
+    cxx_test_labels = ["tpx-rust-no-backtrace-workaround"],
     features = [
         "frombytes",
         "frommmap",
@@ -36,11 +41,7 @@ rust_library(
         "fbsource//third-party/rust:quickcheck",
         "fbsource//third-party/rust:serde_cbor",
     ],
-    # A test inside this target is using #[should_panic], setting the backtrace
-    # to false here, otherwise the test binary will try to extract the backtrace
-    # and the test will fail with leak sanitizer.
-    test_env = {"RUST_BACKTRACE": "0"},
-    test_labels = ["tpx-rust-no-backtrace-workaround"],
+    visibility = ["PUBLIC"],
     deps = [
         "fbsource//third-party/rust:bytes",
         "fbsource//third-party/rust:memmap2",
