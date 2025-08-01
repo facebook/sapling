@@ -88,12 +88,18 @@ pub fn log_query_error(
     query_name: &str,
     shard_name: &str,
 ) {
+    let jk_sample_rate = justknobs::get_as::<u64>(
+        "scm/mononoke:sql_telemetry_error_sample_rate",
+        Some(shard_name),
+    )
+    .unwrap_or(10);
     let mut scuba = match setup_scuba_sample(
         sql_query_tel,
         granularity,
         repo_ids,
         Some(query_name),
         shard_name,
+        jk_sample_rate,
     ) {
         Ok(scuba) => scuba,
         // This is the only call that can return an Err, but errors will be
@@ -158,12 +164,17 @@ fn log_mysql_query_telemetry(
     query_name: &str,
     shard_name: &str,
 ) -> Result<()> {
+    let jk_sample_rate =
+        justknobs::get_as::<u64>("scm/mononoke:sql_telemetry_sample_rate", Some(shard_name))
+            .unwrap_or(10);
+
     let mut scuba = setup_scuba_sample(
         sql_query_tel,
         granularity,
         repo_ids,
         Some(query_name),
         shard_name,
+        jk_sample_rate,
     )?;
 
     scuba.add("success", 1);
@@ -276,12 +287,16 @@ fn log_transaction_telemetry_impl(
     sql_query_tel: &SqlQueryTelemetry,
     shard_name: &str,
 ) -> Result<()> {
+    let jk_sample_rate =
+        justknobs::get_as::<u64>("scm/mononoke:sql_telemetry_sample_rate", Some(shard_name))
+            .unwrap_or(10);
     let mut scuba = setup_scuba_sample(
         sql_query_tel,
         TelemetryGranularity::Transaction,
         txn_tel.repo_ids.into_iter().collect::<Vec<_>>(),
         None,
         shard_name,
+        jk_sample_rate,
     )?;
 
     scuba.add("success", 1);
@@ -322,6 +337,7 @@ fn setup_scuba_sample(
     repo_ids: Vec<RepositoryId>,
     query_name: Option<&str>,
     shard_name: &str,
+    sample_rate: u64,
 ) -> Result<MononokeScubaSampleBuilder> {
     let fb = sql_query_tel.fb().clone();
 
@@ -340,11 +356,7 @@ fn setup_scuba_sample(
     scuba.add("query_name", query_name);
     scuba.add("shard_name", shard_name);
 
-    let jk_sample_rate =
-        justknobs::get_as::<u64>("scm/mononoke:sql_telemetry_sample_rate", Some(shard_name))
-            .unwrap_or(10);
-
-    match NonZeroU64::new(jk_sample_rate).ok_or(anyhow!("Sample rate must be a positive number")) {
+    match NonZeroU64::new(sample_rate).ok_or(anyhow!("Sample rate must be a positive number")) {
         Ok(sample_rate) => {
             scuba.sampled(sample_rate);
         }
