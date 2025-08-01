@@ -17,12 +17,6 @@ python_library(
 
 bento_test_kernel(
     kernel_name = "eden",
-    notebooks = ["notebooks/usc_deep_dive.py"],
-    target_name = "usc_deep_dive",
-)
-
-bento_test_kernel(
-    kernel_name = "eden",
     notebooks = ["notebooks/usc_top_commands.py"],
     target_name = "usc_top_commands",
 )
