@@ -133,15 +133,27 @@ impl CacheOps for CachelibOps {
 
     async fn put(&self, key: &str, value: BlobstoreGetData) {
         // A failure to set presence is considered fine, here.
-        let _ = self.presence_pool.set(key, Bytes::from(b"P".as_ref()));
 
+        let _ = if justknobs::eval("scm/mononoke:cacheblob_use_set_or_replace", None, None).unwrap()
+        {
+            self.presence_pool
+                .set_or_replace(key, Bytes::from(b"P".as_ref()))
+        } else {
+            self.presence_pool.set(key, Bytes::from(b"P".as_ref()))
+        };
         let encode_limit = if self.options.attempt_zstd {
             Some(MAX_CACHELIB_VALUE_SIZE)
         } else {
             None
         };
         if let Some(bytes) = value.into_bytes().encode(encode_limit) {
-            let _ = self.blob_pool.set(key, bytes);
+            let _ = if justknobs::eval("scm/mononoke:cacheblob_use_set_or_replace", None, None)
+                .unwrap()
+            {
+                self.blob_pool.set_or_replace(key, bytes)
+            } else {
+                self.blob_pool.set(key, bytes)
+            };
         }
     }
 
