@@ -112,10 +112,10 @@ impl Transaction {
             inner: sql_txn,
             txn_telemetry,
             sql_query_tel,
-            shard_name: _shard_name,
+            shard_name,
         } = self;
 
-        log_transaction_telemetry(txn_telemetry, sql_query_tel)?;
+        log_transaction_telemetry(txn_telemetry, sql_query_tel, shard_name.as_deref())?;
 
         sql_txn.commit().await
     }
@@ -148,6 +148,7 @@ impl Transaction {
             granularity,
             query_repo_ids,
             query_name,
+            shard_name.as_deref(),
         )?;
 
         Ok(Transaction::new(

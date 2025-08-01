@@ -111,6 +111,7 @@ macro_rules! mononoke_queries {
                                 let cri = sql_query_tel.client_request_info();
                                 // Convert ClientRequestInfo to string if present
                                 let cri_str = cri.map(|cri| serde_json::to_string(cri)).transpose()?;
+                                let shard_name = connection.shard_name();
 
                                 let granularity = TelemetryGranularity::Query;
 
@@ -128,7 +129,8 @@ macro_rules! mononoke_queries {
                                         &e,
                                         granularity,
                                         repo_ids.clone(),
-                                        query_name
+                                        query_name,
+                                        shard_name.as_deref(),
                                     )
                                 })?;
 
@@ -138,6 +140,7 @@ macro_rules! mononoke_queries {
                                     granularity,
                                     repo_ids,
                                     query_name,
+                                    shard_name.as_deref(),
                                 )?;
 
 
@@ -228,6 +231,7 @@ macro_rules! mononoke_queries {
                                 let cri = sql_query_tel.client_request_info();
                                 // Convert ClientRequestInfo to string if present
                                 let cri_str = cri.map(|cri| serde_json::to_string(&cri)).transpose()?;
+                                let shard_name = connection.shard_name();
 
                                 let granularity = TelemetryGranularity::Query;
 
@@ -246,7 +250,9 @@ macro_rules! mononoke_queries {
                                         &e,
                                         granularity,
                                         repo_ids.clone(),
-                                        &query_name
+                                        &query_name,
+                                        shard_name.as_deref(),
+
                                     )
                                 })?;
 
@@ -256,6 +262,7 @@ macro_rules! mononoke_queries {
                                     granularity,
                                     repo_ids,
                                     query_name,
+                                    shard_name.as_deref(),
                                 )?;
                                 Ok(CachedQueryResult(res))
                             }
@@ -341,6 +348,7 @@ macro_rules! mononoke_queries {
                     let cri = sql_query_tel.client_request_info();
                     // Convert ClientRequestInfo to string if present
                     let cri_str = cri.map(|cri| serde_json::to_string(&cri)).transpose()?;
+                    let shard_name = connection.shard_name();
 
                     let granularity = TelemetryGranularity::Query;
 
@@ -360,13 +368,21 @@ macro_rules! mononoke_queries {
                             &e,
                             granularity,
                             repo_ids.clone(),
-                            &query_name
+                            &query_name,
+                            shard_name.as_deref(),
                         )
                     })?;
 
                     let opt_tel = write_res.query_telemetry().clone();
 
-                    log_query_telemetry(opt_tel, &sql_query_tel, granularity, repo_ids, &query_name)?;
+                    log_query_telemetry(
+                        opt_tel,
+                        &sql_query_tel,
+                        granularity,
+                        repo_ids,
+                        &query_name,
+                        shard_name.as_deref(),
+                    )?;
 
                     Ok(write_res)
 
@@ -407,7 +423,8 @@ macro_rules! mononoke_queries {
                             &e,
                             granularity,
                             query_repo_ids.clone(),
-                            &query_name
+                            &query_name,
+                            shard_name.as_deref(),
                         )
                     })?;
 
@@ -485,6 +502,7 @@ macro_rules! mononoke_queries {
                     let cri = sql_query_tel.client_request_info();
                     // Convert ClientRequestInfo to string if present
                     let cri_str = cri.map(|cri| serde_json::to_string(&cri)).transpose()?;
+                    let shard_name = connection.shard_name();
 
                     let granularity = TelemetryGranularity::Query;
 
@@ -504,13 +522,21 @@ macro_rules! mononoke_queries {
                             &e,
                             granularity,
                             repo_ids.clone(),
-                            &query_name
+                            &query_name,
+                            shard_name.as_deref(),
                         )
                     })?;
 
                     let opt_tel = write_res.query_telemetry().clone();
 
-                    log_query_telemetry(opt_tel, &sql_query_tel, granularity, repo_ids, &query_name)?;
+                    log_query_telemetry(
+                        opt_tel,
+                        &sql_query_tel,
+                        granularity,
+                        repo_ids,
+                        &query_name,
+                        shard_name.as_deref(),
+                    )?;
 
                     Ok(write_res)
                 }
@@ -553,7 +579,8 @@ macro_rules! mononoke_queries {
                             &e,
                             granularity,
                             query_repo_ids.clone(),
-                            &query_name
+                            &query_name,
+                            shard_name.as_deref(),
                         )
                     })?;
 
@@ -616,7 +643,8 @@ macro_rules! read_query_with_transaction {
                 &e,
                 granularity,
                 $query_repo_ids.clone(),
-                &$query_name
+                &$query_name,
+                shard_name.as_deref(),
             )
         })?;
 

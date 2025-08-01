@@ -60,6 +60,7 @@ mod facebook {
     use std::collections::HashMap;
     use std::collections::HashSet;
 
+    use anyhow::anyhow;
     use itertools::Itertools;
     use maplit::hashmap;
     use maplit::hashset;
@@ -86,6 +87,7 @@ mod facebook {
         granularity: TelemetryGranularity,
         query_name: Option<String>,
         transaction_query_names: Vec<String>,
+        shard_name: String,
     }
 
     #[mononoke::fbinit_test]
@@ -141,6 +143,7 @@ mod facebook {
           "region",
           "server_hostname",
           "session_uuid",
+          "shard_name",
           "some_delay_rru",
           "success",
           "task_full_delay_rru",
@@ -196,8 +199,6 @@ mod facebook {
 
         let txn = connection.start_transaction(sql_query_tel.clone()).await?;
 
-        let txn = txn.add_sql_query_tel(sql_query_tel.clone());
-
         // Query with Repo ID 1
         let (txn, _res) = ReadQuery1::query_with_transaction(txn, &RepositoryId::new(1)).await?;
         // Query with Repo ID 2
@@ -218,6 +219,7 @@ mod facebook {
                 repo_ids: vec![],
                 granularity: TelemetryGranularity::Query,
                 query_name: Some("WriteQuery1".to_string()),
+                shard_name: TEST_XDB_NAME.to_string(),
                 mysql_telemetry: MysqlQueryTelemetry {
                     read_tables: hashset! {},
                     write_tables: hashset! {"mononoke_queries_test".to_string()},
@@ -230,6 +232,7 @@ mod facebook {
                 repo_ids: vec![1.into()],
                 granularity: TelemetryGranularity::TransactionQuery,
                 query_name: Some("ReadQuery1".to_string()),
+                shard_name: TEST_XDB_NAME.to_string(),
                 mysql_telemetry: MysqlQueryTelemetry {
                     read_tables: hashset! {"mononoke_queries_test".to_string()},
                     write_tables: hashset! {},
@@ -242,6 +245,7 @@ mod facebook {
                 repo_ids: vec![2.into(), 3.into()],
                 granularity: TelemetryGranularity::TransactionQuery,
                 query_name: Some("ReadQuery2".to_string()),
+                shard_name: TEST_XDB_NAME.to_string(),
                 mysql_telemetry: MysqlQueryTelemetry {
                     read_tables: hashset! {"mononoke_queries_test".to_string()},
                     write_tables: hashset! {},
@@ -257,6 +261,7 @@ mod facebook {
                 repo_ids: vec![1.into(), 2.into(), 3.into()],
                 granularity: TelemetryGranularity::Transaction,
                 query_name: None,
+                shard_name: TEST_XDB_NAME.to_string(),
                 mysql_telemetry: MysqlQueryTelemetry {
                     read_tables: hashset! {"mononoke_queries_test".to_string()},
                     write_tables: hashset! {},
@@ -294,6 +299,7 @@ mod facebook {
                  )",
         )
         .await?;
+
         let connection = Connection {
             inner: sql_connection,
             shard_name: Some(TEST_XDB_NAME.to_string()),
@@ -429,6 +435,11 @@ mod facebook {
                         let query_name: Option<String> =
                             flattened_log["query_name"].as_str().map(String::from);
 
+                        let shard_name: String = flattened_log["shard_name"]
+                            .as_str()
+                            .map(String::from)
+                            .ok_or(anyhow!("Failed to parse shard_name from logs"))?;
+
                         let repo_ids: Vec<RepositoryId> = flattened_log["repo_ids"]
                             .as_array()
                             .map(|ids| {
@@ -454,6 +465,7 @@ mod facebook {
                                         .collect()
                                 })
                                 .unwrap_or_default();
+
                         // Now deserialize that into a MysqlQueryTelemetry object
                         let mysql_tel =
                             serde_json::from_value::<MysqlQueryTelemetry>(flattened_log)?;
@@ -465,6 +477,7 @@ mod facebook {
                             granularity,
                             query_name,
                             transaction_query_names,
+                            shard_name,
                         })
                     })
             })

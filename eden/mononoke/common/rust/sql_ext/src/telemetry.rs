@@ -53,11 +53,17 @@ pub fn log_query_telemetry(
     granularity: TelemetryGranularity,
     repo_ids: Vec<RepositoryId>,
     query_name: &str,
+    shard_name: Option<&str>,
 ) -> Result<()> {
     match opt_tel {
-        Some(query_tel) => {
-            log_query_telemetry_impl(query_tel, sql_query_tel, granularity, repo_ids, query_name)
-        }
+        Some(query_tel) => log_query_telemetry_impl(
+            query_tel,
+            sql_query_tel,
+            granularity,
+            repo_ids,
+            query_name,
+            shard_name,
+        ),
         // TODO(T223577767): handle case when there's no telemetry
         None => Ok(()),
     }
@@ -68,8 +74,9 @@ pub fn log_query_telemetry(
 pub fn log_transaction_telemetry(
     txn_tel: TransactionTelemetry,
     sql_query_tel: SqlQueryTelemetry,
+    shard_name: Option<&str>,
 ) -> Result<()> {
-    log_transaction_telemetry_impl(txn_tel, &sql_query_tel)
+    log_transaction_telemetry_impl(txn_tel, &sql_query_tel, shard_name)
 }
 
 /// Log query errors to Scuba on a best-effort basis.
@@ -79,9 +86,15 @@ pub fn log_query_error(
     granularity: TelemetryGranularity,
     repo_ids: Vec<RepositoryId>,
     query_name: &str,
+    shard_name: Option<&str>,
 ) {
-    let mut scuba = match setup_scuba_sample(sql_query_tel, granularity, repo_ids, Some(query_name))
-    {
+    let mut scuba = match setup_scuba_sample(
+        sql_query_tel,
+        granularity,
+        repo_ids,
+        Some(query_name),
+        shard_name,
+    ) {
         Ok(scuba) => scuba,
         // This is the only call that can return an Err, but errors will be
         // ignored and logged to stderr instead.
@@ -110,6 +123,7 @@ fn log_query_telemetry_impl(
     granularity: TelemetryGranularity,
     repo_ids: Vec<RepositoryId>,
     query_name: &str,
+    shard_name: Option<&str>,
 ) -> Result<()> {
     #[cfg(not(fbcode_build))]
     {
@@ -119,8 +133,17 @@ fn log_query_telemetry_impl(
     match query_tel {
         #[cfg(fbcode_build)]
         QueryTelemetry::MySQL(telemetry) => {
+            // TODO(T223577767): ensure MySQL always has shard_name
+
             // Log to scuba
-            log_mysql_query_telemetry(telemetry, sql_query_tel, granularity, repo_ids, query_name)
+            log_mysql_query_telemetry(
+                telemetry,
+                sql_query_tel,
+                granularity,
+                repo_ids,
+                query_name,
+                shard_name,
+            )
         }
         _ => Err(anyhow!("Unsupported query telemetry type")),
     }
@@ -133,8 +156,15 @@ fn log_mysql_query_telemetry(
     granularity: TelemetryGranularity,
     repo_ids: Vec<RepositoryId>,
     query_name: &str,
+    shard_name: Option<&str>,
 ) -> Result<()> {
-    let mut scuba = setup_scuba_sample(sql_query_tel, granularity, repo_ids, Some(query_name))?;
+    let mut scuba = setup_scuba_sample(
+        sql_query_tel,
+        granularity,
+        repo_ids,
+        Some(query_name),
+        shard_name,
+    )?;
 
     scuba.add("success", 1);
     STATS::success.add_value(1);
@@ -244,12 +274,14 @@ fn log_mysql_query_telemetry(
 fn log_transaction_telemetry_impl(
     txn_tel: TransactionTelemetry,
     sql_query_tel: &SqlQueryTelemetry,
+    shard_name: Option<&str>,
 ) -> Result<()> {
     let mut scuba = setup_scuba_sample(
         sql_query_tel,
         TelemetryGranularity::Transaction,
         txn_tel.repo_ids.into_iter().collect::<Vec<_>>(),
         None,
+        shard_name,
     )?;
 
     scuba.add("success", 1);
@@ -289,6 +321,7 @@ fn setup_scuba_sample(
     granularity: TelemetryGranularity,
     repo_ids: Vec<RepositoryId>,
     query_name: Option<&str>,
+    shard_name: Option<&str>,
 ) -> Result<MononokeScubaSampleBuilder> {
     let fb = sql_query_tel.fb().clone();
 
@@ -305,6 +338,7 @@ fn setup_scuba_sample(
 
     scuba.add("granularity", format!("{:?}", granularity));
     scuba.add("query_name", query_name);
+    scuba.add("shard_name", shard_name);
 
     let jk_sample_rate =
         justknobs::get_as::<u64>("scm/mononoke:sql_telemetry_sample_rate", None).unwrap_or(10);
