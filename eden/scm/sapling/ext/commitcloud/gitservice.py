@@ -32,11 +32,6 @@ class GitService(
     ):
         raise error.GitUnsupportedError(self.ui)
 
-    def getworkspace(self, reponame, workspacename):
-        self.ui.debug("Calling 'cloudworkspace' on edenapi\n", component="commitcloud")
-        stream = self.repo.edenapi.cloudworkspace(workspacename, reponame)
-        return list(stream)
-
     def updateworkspacearchive(self, reponame, workspace, archived):
         """Archive or Restore the given workspace"""
         raise error.GitUnsupportedError(self.ui)
