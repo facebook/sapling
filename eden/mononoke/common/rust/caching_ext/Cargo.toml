@@ -16,6 +16,7 @@ cachelib = { version = "0.1.0", git = "https://github.com/facebookexperimental/r
 cloned = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 futures = { version = "0.3.31", features = ["async-await", "compat"] }
 itertools = "0.14.0"
+justknobs = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 memcache = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 mononoke_macros = { version = "0.1.0", path = "../../../mononoke_macros" }
 once_cell = "1.21"

@@ -53,14 +53,20 @@ impl<T: bincode::Encode + bincode::Decode<()> + Clone> CachelibHandler<T> {
         }
     }
 
-    pub fn set_cached(&self, key: &str, value: &T, ttl: Option<Duration>) -> Result<bool> {
+    pub fn set_cached(&self, key: &str, value: &T, ttl: Option<Duration>) -> Result<()> {
         match self {
-            CachelibHandler::Bincode(cache) => bincode_cache::set_cached(cache, key, value, ttl),
+            CachelibHandler::Bincode(cache) => {
+                if justknobs::eval("scm/mononoke:caching_ext_use_set_or_replace", None, None)? {
+                    bincode_cache::set_or_replace_cached(cache, key, value, ttl)
+                } else {
+                    bincode_cache::set_cached(cache, key, value, ttl).map(|_| ())
+                }
+            }
             CachelibHandler::Mock(store) => {
                 store.set(key, value.clone());
-                Ok(true)
+                Ok(())
             }
-            CachelibHandler::Noop => Ok(false),
+            CachelibHandler::Noop => Ok(()),
         }
     }
 
