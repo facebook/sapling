@@ -25,7 +25,7 @@ async fn test_add_and_get(fb: FacebookInit) -> Result<()> {
     let ctx = CoreContext::test_mock(fb);
     let conn = open_sqlite_in_memory()?;
     conn.execute_batch(SqlPushrebaseMutationMappingConnection::CREATION_QUERY)?;
-    let conn = Connection::with_sqlite(conn);
+    let conn = Connection::with_sqlite(conn)?;
 
     let entries = vec![
         PushrebaseMutationMappingEntry::new(

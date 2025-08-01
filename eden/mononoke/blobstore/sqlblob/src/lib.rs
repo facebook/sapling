@@ -354,7 +354,7 @@ impl Sqlblob {
         let mut cons = Vec::with_capacity(SQLITE_SHARD_NUM.get());
 
         for i in 0..SQLITE_SHARD_NUM.get() {
-            cons.push(Connection::with_sqlite(constructor(i)?));
+            cons.push(Connection::with_sqlite(constructor(i)?)?);
         }
 
         let cons: Arc<Vec1<Connection>> = Arc::new(cons.try_into()?);

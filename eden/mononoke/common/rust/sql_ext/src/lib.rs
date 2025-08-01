@@ -20,7 +20,6 @@ use rusqlite::Connection as SqliteConnection;
 use sql::Connection as SqlConnection;
 use sql::QueryTelemetry;
 use sql::Transaction as SqlTransaction;
-use sql::mysql;
 use sql_common::sqlite::SqliteCallbacks;
 pub use sql_query_telemetry::SqlQueryTelemetry;
 pub use sqlite::open_existing_sqlite_path;
@@ -286,12 +285,10 @@ impl Connection {
         &self.shard_name
     }
 
-    pub fn with_sqlite(con: SqliteConnection) -> Self {
+    pub fn with_sqlite(con: SqliteConnection) -> Result<Self> {
+        let shard_name = Some(con.db_name(0)?);
         let inner = SqlConnection::with_sqlite(con);
-        Connection {
-            inner,
-            shard_name: None,
-        }
+        Ok(Connection { inner, shard_name })
     }
 
     /// Given a `rusqlite::Connection` create a connection to Sqlite database that might be used
@@ -299,30 +296,10 @@ impl Connection {
     pub fn with_sqlite_callbacks(
         con: SqliteConnection,
         callbacks: Box<dyn SqliteCallbacks>,
-    ) -> Self {
+    ) -> Result<Self> {
+        let shard_name = Some(con.db_name(0)?);
         let inner = SqlConnection::with_sqlite_callbacks(con, callbacks);
-        Connection {
-            inner,
-            shard_name: None,
-        }
-    }
-}
-
-impl From<sql::sqlite::SqliteMultithreaded> for Connection {
-    fn from(con: sql::sqlite::SqliteMultithreaded) -> Self {
-        Connection {
-            inner: SqlConnection::Sqlite(con),
-            shard_name: None,
-        }
-    }
-}
-
-impl From<sql::mysql::OssConnection> for Connection {
-    fn from(conn: mysql::OssConnection) -> Self {
-        Connection {
-            inner: SqlConnection::OssMysql(conn),
-            shard_name: None,
-        }
+        Ok(Connection { inner, shard_name })
     }
 }
 

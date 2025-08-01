@@ -130,7 +130,7 @@ async fn test_add_globalrevs(fb: FacebookInit) -> Result<(), Error> {
     let ctx = CoreContext::test_mock(fb);
     let conn = open_sqlite_in_memory()?;
     conn.execute_batch(SqlBonsaiGlobalrevMappingBuilder::CREATION_QUERY)?;
-    let conn = Connection::with_sqlite(conn);
+    let conn = Connection::with_sqlite(conn)?;
 
     let mapping = SqlBonsaiGlobalrevMappingBuilder::from_sql_connections(
         SqlConnections::new_single(conn.clone()),

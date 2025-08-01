@@ -259,7 +259,7 @@ async fn test_add_with_transaction(fb: FacebookInit) -> Result<(), Error> {
     let ctx = CoreContext::test_mock(fb);
     let conn = open_sqlite_in_memory()?;
     conn.execute_batch(SqlBonsaiGitMappingBuilder::CREATION_QUERY)?;
-    let conn = Connection::with_sqlite(conn);
+    let conn = Connection::with_sqlite(conn)?;
 
     let mapping =
         SqlBonsaiGitMappingBuilder::from_sql_connections(SqlConnections::new_single(conn.clone()))
@@ -343,7 +343,7 @@ async fn test_get_with_caching(fb: FacebookInit) -> Result<(), Error> {
     let ctx = CoreContext::test_mock(fb);
     let conn = open_sqlite_in_memory()?;
     conn.execute_batch(SqlBonsaiGitMappingBuilder::CREATION_QUERY)?;
-    let conn = Connection::with_sqlite(conn);
+    let conn = Connection::with_sqlite(conn)?;
     let mapping =
         SqlBonsaiGitMappingBuilder::from_sql_connections(SqlConnections::new_single(conn.clone()))
             .build(REPO_ZERO);

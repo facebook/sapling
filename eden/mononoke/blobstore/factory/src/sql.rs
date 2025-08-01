@@ -14,6 +14,7 @@ use metaconfig_types::MetadataDatabaseConfig;
 use metaconfig_types::OssRemoteMetadataDatabaseConfig;
 use metaconfig_types::RemoteMetadataDatabaseConfig;
 use metaconfig_types::ShardableRemoteDatabaseConfig;
+use sql::Connection as SqlConnection;
 use sql::sqlite::SqliteMultithreaded;
 use sql::sqlite::SqliteQueryType;
 use sql_construct::SqlConstruct;
@@ -72,12 +73,15 @@ impl MetadataSqlFactory {
                 let schema_connection =
                     SqliteMultithreaded::new(open_sqlite_path(path.clone(), false)?);
                 let read_connection =
-                    Connection::with_sqlite(open_existing_sqlite_path(path, true)?);
+                    Connection::with_sqlite(open_existing_sqlite_path(path.clone(), true)?)?;
                 let connections = SqlConnections {
                     write_connection: if readonly.0 {
                         read_connection.clone()
                     } else {
-                        schema_connection.clone().into()
+                        Connection {
+                            inner: SqlConnection::Sqlite(schema_connection.clone()),
+                            shard_name: Some(path.to_string_lossy().to_string()),
+                        }
                     },
                     read_master_connection: read_connection.clone(),
                     read_connection,

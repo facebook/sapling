@@ -286,12 +286,12 @@ impl TestRepoFactory {
         metadata_con.execute_batch(SqlCommitGraphStorageBuilder::CREATION_QUERY)?;
         metadata_con.execute_batch(SqlCommitCloudBuilder::CREATION_QUERY)?;
         let metadata_db = SqlConnections::new_single(match callbacks {
-            Some(callbacks) => Connection::with_sqlite_callbacks(metadata_con, callbacks),
-            None => Connection::with_sqlite(metadata_con),
+            Some(callbacks) => Connection::with_sqlite_callbacks(metadata_con, callbacks)?,
+            None => Connection::with_sqlite(metadata_con)?,
         });
 
         hg_mutation_con.execute_batch(SqlHgMutationStoreBuilder::CREATION_QUERY)?;
-        let hg_mutation_db = SqlConnections::new_single(Connection::with_sqlite(hg_mutation_con));
+        let hg_mutation_db = SqlConnections::new_single(Connection::with_sqlite(hg_mutation_con)?);
 
         Ok(TestRepoFactory {
             fb,

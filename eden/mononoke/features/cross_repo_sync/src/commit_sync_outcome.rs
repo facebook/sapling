@@ -696,7 +696,7 @@ mod tests {
     ) -> Result<SqlSyncedCommitMapping, Error> {
         let sqlite_con = SqliteConnection::open_in_memory()?;
         sqlite_con.execute_batch(SqlSyncedCommitMappingBuilder::CREATION_QUERY)?;
-        let con = Connection::with_sqlite(sqlite_con);
+        let con = Connection::with_sqlite(sqlite_con)?;
         let m =
             SqlSyncedCommitMappingBuilder::from_sql_connections(SqlConnections::new_single(con))
                 .build(RendezVousOptions::for_test());
