@@ -302,7 +302,7 @@ mod facebook {
 
         let connection = Connection {
             inner: sql_connection,
-            shard_name: Some(TEST_XDB_NAME.to_string()),
+            shard_name: TEST_XDB_NAME.to_string(),
         };
         let client_info = ClientInfo::new_with_entry_point(ClientEntryPoint::Tests)?;
         let cri = client_info

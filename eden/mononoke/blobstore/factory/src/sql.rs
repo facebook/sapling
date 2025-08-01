@@ -80,7 +80,7 @@ impl MetadataSqlFactory {
                     } else {
                         Connection {
                             inner: SqlConnection::Sqlite(schema_connection.clone()),
-                            shard_name: Some(path.to_string_lossy().to_string()),
+                            shard_name: path.to_string_lossy().to_string(),
                         }
                     },
                     read_master_connection: read_connection.clone(),

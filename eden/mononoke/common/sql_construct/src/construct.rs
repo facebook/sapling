@@ -40,7 +40,7 @@ pub trait SqlConstruct: Sized + Send + Sync + 'static {
         conn.execute_batch(Self::CREATION_QUERY)?;
         let connections = SqlConnections::new_single(sql_ext::Connection {
             inner: Connection::with_sqlite(conn),
-            shard_name: Some(database),
+            shard_name: database,
         });
         Ok(Self::from_sql_connections(connections))
     }
@@ -56,14 +56,14 @@ pub trait SqlConstruct: Sized + Send + Sync + 'static {
 
         let read_connection = sql_ext::Connection {
             inner: Connection::with_sqlite(open_existing_sqlite_path(path, true)?),
-            shard_name: Some(database.clone()),
+            shard_name: database.clone(),
         };
         let write_connection = if readonly {
             read_connection.clone()
         } else {
             sql_ext::Connection {
                 inner: write_connection,
-                shard_name: Some(database),
+                shard_name: database,
             }
         };
         let connections = SqlConnections {

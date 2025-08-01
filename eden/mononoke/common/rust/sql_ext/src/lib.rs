@@ -80,7 +80,7 @@ pub struct Transaction {
 
     pub sql_query_tel: SqlQueryTelemetry,
 
-    pub shard_name: Option<String>,
+    pub shard_name: String,
 }
 
 impl Transaction {
@@ -88,7 +88,7 @@ impl Transaction {
         sql_txn: SqlTransaction,
         txn_telemetry: TransactionTelemetry,
         sql_query_tel: SqlQueryTelemetry,
-        shard_name: Option<String>,
+        shard_name: String,
     ) -> Self {
         Self {
             inner: sql_txn,
@@ -114,7 +114,7 @@ impl Transaction {
             shard_name,
         } = self;
 
-        log_transaction_telemetry(txn_telemetry, sql_query_tel, shard_name.as_deref())?;
+        log_transaction_telemetry(txn_telemetry, sql_query_tel, shard_name.as_ref())?;
 
         sql_txn.commit().await
     }
@@ -132,7 +132,7 @@ impl Transaction {
         query_repo_ids: Vec<RepositoryId>,
         granularity: TelemetryGranularity,
         query_name: &str,
-        shard_name: Option<String>,
+        shard_name: String,
     ) -> Result<Self> {
         if let Some(tel) = opt_tel.as_ref() {
             txn_telemetry.add_query_telemetry(tel.clone())
@@ -147,7 +147,7 @@ impl Transaction {
             granularity,
             query_repo_ids,
             query_name,
-            shard_name.as_deref(),
+            shard_name.as_ref(),
         )?;
 
         Ok(Transaction::new(
@@ -256,7 +256,7 @@ pub mod facebook {
 pub struct Connection {
     pub inner: SqlConnection,
     /// Name of the shard (i.e. DB) the connection belongs to
-    pub shard_name: Option<String>,
+    pub shard_name: String,
 }
 
 impl From<Connection> for SqlConnection {
@@ -281,12 +281,12 @@ impl Connection {
         &self.inner
     }
 
-    pub fn shard_name(&self) -> &Option<String> {
+    pub fn shard_name(&self) -> &str {
         &self.shard_name
     }
 
     pub fn with_sqlite(con: SqliteConnection) -> Result<Self> {
-        let shard_name = Some(con.db_name(0)?);
+        let shard_name = con.db_name(0)?;
         let inner = SqlConnection::with_sqlite(con);
         Ok(Connection { inner, shard_name })
     }
@@ -297,7 +297,7 @@ impl Connection {
         con: SqliteConnection,
         callbacks: Box<dyn SqliteCallbacks>,
     ) -> Result<Self> {
-        let shard_name = Some(con.db_name(0)?);
+        let shard_name = con.db_name(0)?;
         let inner = SqlConnection::with_sqlite_callbacks(con, callbacks);
         Ok(Connection { inner, shard_name })
     }

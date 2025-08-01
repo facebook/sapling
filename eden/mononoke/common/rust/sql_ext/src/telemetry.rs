@@ -53,7 +53,7 @@ pub fn log_query_telemetry(
     granularity: TelemetryGranularity,
     repo_ids: Vec<RepositoryId>,
     query_name: &str,
-    shard_name: Option<&str>,
+    shard_name: &str,
 ) -> Result<()> {
     match opt_tel {
         Some(query_tel) => log_query_telemetry_impl(
@@ -74,7 +74,7 @@ pub fn log_query_telemetry(
 pub fn log_transaction_telemetry(
     txn_tel: TransactionTelemetry,
     sql_query_tel: SqlQueryTelemetry,
-    shard_name: Option<&str>,
+    shard_name: &str,
 ) -> Result<()> {
     log_transaction_telemetry_impl(txn_tel, &sql_query_tel, shard_name)
 }
@@ -86,7 +86,7 @@ pub fn log_query_error(
     granularity: TelemetryGranularity,
     repo_ids: Vec<RepositoryId>,
     query_name: &str,
-    shard_name: Option<&str>,
+    shard_name: &str,
 ) {
     let mut scuba = match setup_scuba_sample(
         sql_query_tel,
@@ -123,7 +123,7 @@ fn log_query_telemetry_impl(
     granularity: TelemetryGranularity,
     repo_ids: Vec<RepositoryId>,
     query_name: &str,
-    shard_name: Option<&str>,
+    shard_name: &str,
 ) -> Result<()> {
     #[cfg(not(fbcode_build))]
     {
@@ -156,7 +156,7 @@ fn log_mysql_query_telemetry(
     granularity: TelemetryGranularity,
     repo_ids: Vec<RepositoryId>,
     query_name: &str,
-    shard_name: Option<&str>,
+    shard_name: &str,
 ) -> Result<()> {
     let mut scuba = setup_scuba_sample(
         sql_query_tel,
@@ -274,7 +274,7 @@ fn log_mysql_query_telemetry(
 fn log_transaction_telemetry_impl(
     txn_tel: TransactionTelemetry,
     sql_query_tel: &SqlQueryTelemetry,
-    shard_name: Option<&str>,
+    shard_name: &str,
 ) -> Result<()> {
     let mut scuba = setup_scuba_sample(
         sql_query_tel,
@@ -321,7 +321,7 @@ fn setup_scuba_sample(
     granularity: TelemetryGranularity,
     repo_ids: Vec<RepositoryId>,
     query_name: Option<&str>,
-    shard_name: Option<&str>,
+    shard_name: &str,
 ) -> Result<MononokeScubaSampleBuilder> {
     let fb = sql_query_tel.fb().clone();
 

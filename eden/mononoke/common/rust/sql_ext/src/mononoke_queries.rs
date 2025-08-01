@@ -130,7 +130,7 @@ macro_rules! mononoke_queries {
                                         granularity,
                                         repo_ids.clone(),
                                         query_name,
-                                        shard_name.as_deref(),
+                                        shard_name.as_ref(),
                                     )
                                 })?;
 
@@ -140,7 +140,7 @@ macro_rules! mononoke_queries {
                                     granularity,
                                     repo_ids,
                                     query_name,
-                                    shard_name.as_deref(),
+                                    shard_name.as_ref(),
                                 )?;
 
 
@@ -251,7 +251,7 @@ macro_rules! mononoke_queries {
                                         granularity,
                                         repo_ids.clone(),
                                         &query_name,
-                                        shard_name.as_deref(),
+                                        shard_name.as_ref(),
 
                                     )
                                 })?;
@@ -262,7 +262,7 @@ macro_rules! mononoke_queries {
                                     granularity,
                                     repo_ids,
                                     query_name,
-                                    shard_name.as_deref(),
+                                    shard_name.as_ref(),
                                 )?;
                                 Ok(CachedQueryResult(res))
                             }
@@ -369,7 +369,7 @@ macro_rules! mononoke_queries {
                             granularity,
                             repo_ids.clone(),
                             &query_name,
-                            shard_name.as_deref(),
+                            shard_name.as_ref(),
                         )
                     })?;
 
@@ -381,7 +381,7 @@ macro_rules! mononoke_queries {
                         granularity,
                         repo_ids,
                         &query_name,
-                        shard_name.as_deref(),
+                        shard_name.as_ref(),
                     )?;
 
                     Ok(write_res)
@@ -424,7 +424,7 @@ macro_rules! mononoke_queries {
                             granularity,
                             query_repo_ids.clone(),
                             &query_name,
-                            shard_name.as_deref(),
+                            shard_name.as_ref(),
                         )
                     })?;
 
@@ -523,7 +523,7 @@ macro_rules! mononoke_queries {
                             granularity,
                             repo_ids.clone(),
                             &query_name,
-                            shard_name.as_deref(),
+                            shard_name.as_ref(),
                         )
                     })?;
 
@@ -535,7 +535,7 @@ macro_rules! mononoke_queries {
                         granularity,
                         repo_ids,
                         &query_name,
-                        shard_name.as_deref(),
+                        shard_name.as_ref(),
                     )?;
 
                     Ok(write_res)
@@ -580,7 +580,7 @@ macro_rules! mononoke_queries {
                             granularity,
                             query_repo_ids.clone(),
                             &query_name,
-                            shard_name.as_deref(),
+                            shard_name.as_ref(),
                         )
                     })?;
 
@@ -644,7 +644,7 @@ macro_rules! read_query_with_transaction {
                 granularity,
                 $query_repo_ids.clone(),
                 &$query_name,
-                shard_name.as_deref(),
+                shard_name.as_ref(),
             )
         })?;
 
