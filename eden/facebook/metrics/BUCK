@@ -5,7 +5,6 @@ oncall("source_control")
 python_library(
     name = "lib",
     srcs = [
-        "gk.py",
         "usc.py",
     ],
     deps = [
