@@ -475,6 +475,7 @@ impl SqlShardedConstruct for SqlBlobstoreWalBuilder {
         {
             if let Connection {
                 inner: SqlConnection::Mysql(conn),
+                ..
             } = conn
             {
                 // We don't care about strong locking of the queries, we just a simple "bag".

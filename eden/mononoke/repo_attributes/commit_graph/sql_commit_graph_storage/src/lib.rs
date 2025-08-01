@@ -87,6 +87,7 @@ impl SqlConstruct for SqlCommitGraphStorageBuilder {
 
         if let Connection {
             inner: SqlConnection::Mysql(conn),
+            ..
         } = &mut write_connection
         {
             conn.set_isolation_level(Some(IsolationLevel::ReadCommitted));

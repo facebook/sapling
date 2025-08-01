@@ -64,6 +64,7 @@ mod facebook {
     use maplit::hashmap;
     use maplit::hashset;
     use sql::mysql::MysqlQueryTelemetry;
+    use sql_tests_lib::mysql_test_lib::TEST_XDB_NAME;
     use sql_tests_lib::mysql_test_lib::setup_mysql_test_connection;
 
     use super::*;
@@ -282,7 +283,7 @@ mod facebook {
             std::env::set_var("SQL_TELEMETRY_SCUBA_FILE_PATH", &temp_path);
         }
 
-        let connection: sql::Connection = setup_mysql_test_connection(
+        let sql_connection: sql::Connection = setup_mysql_test_connection(
             fb,
             "CREATE TABLE IF NOT EXISTS mononoke_queries_test(
                      x INT,
@@ -293,6 +294,10 @@ mod facebook {
                  )",
         )
         .await?;
+        let connection = Connection {
+            inner: sql_connection,
+            shard_name: Some(TEST_XDB_NAME.to_string()),
+        };
         let client_info = ClientInfo::new_with_entry_point(ClientEntryPoint::Tests)?;
         let cri = client_info
             .request_info
@@ -307,7 +312,7 @@ mod facebook {
         let sql_query_tel = SqlQueryTelemetry::new(fb, metadata);
 
         Ok(TelemetryTestData {
-            connection: connection.into(),
+            connection,
             sql_query_tel,
             cri,
             temp_path,

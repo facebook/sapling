@@ -41,6 +41,7 @@ impl SqlConstruct for SqlHgMutationStoreBuilder {
         {
             if let Connection {
                 inner: SqlConnection::Mysql(conn),
+                ..
             } = &mut write_connection
             {
                 conn.set_isolation_level(Some(IsolationLevel::ReadCommitted));

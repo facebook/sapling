@@ -244,17 +244,13 @@ pub mod facebook {
 #[derive(Clone, Debug)]
 pub struct Connection {
     pub inner: SqlConnection,
+    /// Name of the shard (i.e. DB) the connection belongs to
+    pub shard_name: Option<String>,
 }
 
 impl From<Connection> for SqlConnection {
     fn from(conn: Connection) -> Self {
         conn.inner
-    }
-}
-
-impl From<SqlConnection> for Connection {
-    fn from(conn: SqlConnection) -> Self {
-        Connection { inner: conn }
     }
 }
 
@@ -271,7 +267,10 @@ impl Connection {
 
     pub fn with_sqlite(con: SqliteConnection) -> Self {
         let inner = SqlConnection::with_sqlite(con);
-        Connection { inner }
+        Connection {
+            inner,
+            shard_name: None,
+        }
     }
 
     /// Given a `rusqlite::Connection` create a connection to Sqlite database that might be used
@@ -281,7 +280,10 @@ impl Connection {
         callbacks: Box<dyn SqliteCallbacks>,
     ) -> Self {
         let inner = SqlConnection::with_sqlite_callbacks(con, callbacks);
-        Connection { inner }
+        Connection {
+            inner,
+            shard_name: None,
+        }
     }
 }
 
@@ -289,14 +291,7 @@ impl From<sql::sqlite::SqliteMultithreaded> for Connection {
     fn from(con: sql::sqlite::SqliteMultithreaded) -> Self {
         Connection {
             inner: SqlConnection::Sqlite(con),
-        }
-    }
-}
-
-impl From<sql::mysql::Connection> for Connection {
-    fn from(conn: mysql::Connection) -> Self {
-        Connection {
-            inner: SqlConnection::Mysql(conn),
+            shard_name: None,
         }
     }
 }
@@ -305,6 +300,7 @@ impl From<sql::mysql::OssConnection> for Connection {
     fn from(conn: mysql::OssConnection) -> Self {
         Connection {
             inner: SqlConnection::OssMysql(conn),
+            shard_name: None,
         }
     }
 }

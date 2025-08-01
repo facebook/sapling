@@ -35,9 +35,12 @@ pub trait SqlConstruct: Sized + Send + Sync + 'static {
     /// Construct an instance from an in-memory SQLite instance
     fn with_sqlite_in_memory() -> Result<Self> {
         let conn = open_sqlite_in_memory()?;
+        let database = conn.db_name(0)?;
+
         conn.execute_batch(Self::CREATION_QUERY)?;
         let connections = SqlConnections::new_single(sql_ext::Connection {
             inner: Connection::with_sqlite(conn),
+            shard_name: Some(database),
         });
         Ok(Self::from_sql_connections(connections))
     }
@@ -46,17 +49,21 @@ pub trait SqlConstruct: Sized + Send + Sync + 'static {
     fn with_sqlite_path<P: AsRef<Path>>(path: P, readonly: bool) -> Result<Self> {
         let path = path.as_ref();
         let conn = open_sqlite_path(path, false)?;
+        let database = conn.db_name(0)?;
+
         conn.execute_batch(Self::CREATION_QUERY)?;
         let write_connection = Connection::with_sqlite(conn);
 
         let read_connection = sql_ext::Connection {
             inner: Connection::with_sqlite(open_existing_sqlite_path(path, true)?),
+            shard_name: Some(database.clone()),
         };
         let write_connection = if readonly {
             read_connection.clone()
         } else {
             sql_ext::Connection {
                 inner: write_connection,
+                shard_name: Some(database),
             }
         };
         let connections = SqlConnections {
