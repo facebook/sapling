@@ -45,6 +45,6 @@ Test blame support subtree import
   $ echo 3 >> bar/alpha
   $ hg ci -m "update bar/alpha"
   $ hg blame bar/alpha
-  b6c31add3e60: 1
-  451ae41f487c: 2
+  b6c31add3e60~: 1
+  451ae41f487c~: 2
   *: 3 (glob)

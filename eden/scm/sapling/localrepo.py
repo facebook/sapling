@@ -1613,6 +1613,9 @@ class localrepository:
     def url(self):
         return "file:" + self.root
 
+    def origin_url(self):
+        return self.ui.config("paths", "default")
+
     def hook(self, name, throw=False, **args):
         """Call a hook, passing this repo instance.
 

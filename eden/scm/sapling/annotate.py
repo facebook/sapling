@@ -41,6 +41,9 @@ class annotateline:
     def user(self):
         return self._ctx.user()
 
+    def origin_url(self):
+        return self._ctx.repo().origin_url()
+
 
 F = TypeVar("F")
 L = TypeVar("L")

@@ -363,6 +363,9 @@ def annotate(ui, repo, *pats, **opts):
     Without the ``-a/--text`` option, annotate will skip binary files.
     With ``-a``, binary files will be annotated anyway.
 
+    Cross‑repo commits introduced through subtree import appear with a “~” suffix
+    in the output.
+
     Returns 0 on success.
     """
     if not pats:
@@ -380,6 +383,7 @@ def annotate(ui, repo, *pats, **opts):
         opts.pop("short-date", None)
 
     ctx = scmutil.revsingle(repo, opts.get("rev"))
+    curr_origin_url = repo.origin_url()
 
     rootfm = ui.formatter("annotate", opts)
     # short-date exists to allow us to enable brief date display via
@@ -412,15 +416,25 @@ def annotate(ui, repo, *pats, **opts):
                 else:
                     return "%d " % rev
 
-        def formathex(hex):
+        def formatchangeset(args):
+            hex, origin_url = args
             if hex is None:
                 return "%s+" % rootfm.hexfunc(ctx.p1().node())
+            elif origin_url != curr_origin_url:
+                return "%s~" % hex
             else:
                 return "%s " % hex
 
     else:
         hexfn = rootfm.hexfunc
-        formatrev = formathex = str
+        formatrev = str
+
+        def formatchangeset(args):
+            hex, origin_url = args
+            if origin_url != curr_origin_url:
+                return "%s~" % hex
+            else:
+                return "%s" % hex
 
     now = time.time()
 
@@ -444,9 +458,15 @@ def annotate(ui, repo, *pats, **opts):
         return "old"
 
     opmap = [
+        # op, sep, get, fmt
         ("user", " ", lambda x: x.user(), ui.shortuser),
         ("number", " ", lambda x: x.rev(), formatrev),
-        ("changeset", " ", lambda x: hexfn(x.node()), formathex),
+        (
+            "changeset",
+            " ",
+            lambda x: (hexfn(x.node()), x.origin_url()),
+            formatchangeset,
+        ),
         ("date", " ", lambda x: x.date(), util.cachefunc(datefunc)),
         ("file", " ", lambda x: x.path(), str),
         ("line_number", ":", lambda x: x.lineno, str),
@@ -471,16 +491,23 @@ def annotate(ui, repo, *pats, **opts):
 
     if rootfm.isplain():
 
-        def makefunc(get, fmt):
+        def makefunc(op, get, fmt):
             return lambda x: fmt(get(x))
 
     else:
 
-        def makefunc(get, fmt):
-            return get
+        def makefunc(op, get, fmt):
+            if op == "changeset":
+                # maintain backward compatibility for json output
+                return lambda x: get(x)[0]
+            else:
+                return get
 
-    funcmap = [(makefunc(get, fmt), sep) for op, sep, get, fmt in opmap if opts.get(op)]
-    funcmap[0] = (funcmap[0][0], "")  # no separator in front of first column
+    funcmap = [
+        [op, makefunc(op, get, fmt), sep] for op, sep, get, fmt in opmap if opts.get(op)
+    ]
+    # no separator in front of first column
+    funcmap[0][-1] = ""
     fields = " ".join(
         fieldnamemap.get(op, op) for op, sep, get, fmt in opmap if opts.get(op)
     )
@@ -516,12 +543,19 @@ def annotate(ui, repo, *pats, **opts):
         formats = []
         pieces = []
 
-        for f, sep in funcmap:
+        for op, f, sep in funcmap:
             l = [f(n) for n, dummy in lines]
             if fm.isplain():
                 sizes = [encoding.colwidth(x) for x in l]
                 ml = max(sizes)
-                formats.append([sep + " " * (ml - w) + "%s" for w in sizes])
+                if op == "changeset":
+                    # Left-align the changeset to allow suffixes:
+                    # b0466945ccdf~: line1
+                    # 46f2e833b4fb+: line2
+                    # 46f2e833b4fb : line3
+                    formats.append([sep + "%s" + " " * (ml - w) for w in sizes])
+                else:
+                    formats.append([sep + " " * (ml - w) + "%s" for w in sizes])
             else:
                 formats.append(["%s" for x in l])
             pieces.append(l)
