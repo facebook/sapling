@@ -384,6 +384,7 @@ macro_rules! mononoke_queries {
                         inner: sql_txn,
                         txn_telemetry,
                         sql_query_tel,
+                        shard_name,
                     } = transaction;
 
                     let cri = sql_query_tel.client_request_info();
@@ -420,6 +421,7 @@ macro_rules! mononoke_queries {
                         query_repo_ids,
                         granularity,
                         query_name,
+                        shard_name,
                     )?;
 
                     Ok((txn, write_res))
@@ -527,6 +529,7 @@ macro_rules! mononoke_queries {
                         inner: sql_txn,
                         txn_telemetry,
                         sql_query_tel,
+                        shard_name,
                     } = transaction;
 
                     let cri = sql_query_tel.client_request_info();
@@ -563,7 +566,8 @@ macro_rules! mononoke_queries {
                         sql_query_tel,
                         query_repo_ids,
                         granularity,
-                        &query_name
+                        &query_name,
+                        shard_name,
                     )?;
 
                     Ok((txn, write_res))
@@ -593,6 +597,7 @@ macro_rules! read_query_with_transaction {
             inner: sql_txn,
             txn_telemetry,
             sql_query_tel,
+            shard_name,
         } = $transaction;
 
         let cri = sql_query_tel.client_request_info();
@@ -623,6 +628,7 @@ macro_rules! read_query_with_transaction {
             $query_repo_ids,
             granularity,
             $query_name,
+            shard_name,
         )?;
 
         Ok((txn, res))

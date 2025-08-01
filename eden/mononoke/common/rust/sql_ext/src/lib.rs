@@ -80,6 +80,8 @@ pub struct Transaction {
     pub txn_telemetry: TransactionTelemetry,
 
     pub sql_query_tel: SqlQueryTelemetry,
+
+    pub shard_name: Option<String>,
 }
 
 impl Transaction {
@@ -87,11 +89,13 @@ impl Transaction {
         sql_txn: SqlTransaction,
         txn_telemetry: TransactionTelemetry,
         sql_query_tel: SqlQueryTelemetry,
+        shard_name: Option<String>,
     ) -> Self {
         Self {
             inner: sql_txn,
             txn_telemetry,
             sql_query_tel,
+            shard_name,
         }
     }
 
@@ -108,6 +112,7 @@ impl Transaction {
             inner: sql_txn,
             txn_telemetry,
             sql_query_tel,
+            shard_name: _shard_name,
         } = self;
 
         log_transaction_telemetry(txn_telemetry, sql_query_tel)?;
@@ -128,6 +133,7 @@ impl Transaction {
         query_repo_ids: Vec<RepositoryId>,
         granularity: TelemetryGranularity,
         query_name: &str,
+        shard_name: Option<String>,
     ) -> Result<Self> {
         if let Some(tel) = opt_tel.as_ref() {
             txn_telemetry.add_query_telemetry(tel.clone())
@@ -144,7 +150,12 @@ impl Transaction {
             query_name,
         )?;
 
-        Ok(Transaction::new(sql_txn, txn_telemetry, sql_query_tel))
+        Ok(Transaction::new(
+            sql_txn,
+            txn_telemetry,
+            sql_query_tel,
+            shard_name,
+        ))
     }
 }
 
@@ -258,11 +269,20 @@ impl Connection {
     pub async fn start_transaction(&self, sql_query_tel: SqlQueryTelemetry) -> Result<Transaction> {
         let sql_txn = self.inner.start_transaction().await?;
         let txn_telemetry = Default::default();
-        Ok(Transaction::new(sql_txn, txn_telemetry, sql_query_tel))
+        Ok(Transaction::new(
+            sql_txn,
+            txn_telemetry,
+            sql_query_tel,
+            self.shard_name.clone(),
+        ))
     }
 
     pub fn sql_connection(&self) -> &SqlConnection {
         &self.inner
+    }
+
+    pub fn shard_name(&self) -> &Option<String> {
+        &self.shard_name
     }
 
     pub fn with_sqlite(con: SqliteConnection) -> Self {
