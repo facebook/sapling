@@ -9,7 +9,6 @@ use ::sql_ext::mononoke_queries;
 use async_trait::async_trait;
 use context::CoreContext;
 use mononoke_types::Timestamp;
-use sql::Connection;
 use sql_ext::SqlConnections;
 use sql_ext::Transaction;
 

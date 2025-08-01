@@ -40,10 +40,11 @@ use rendezvous::RendezVousOptions;
 use rendezvous::RendezVousStats;
 use shared_error::anyhow::IntoSharedError;
 use shared_error::anyhow::SharedError;
-use sql::Connection;
+use sql::Connection as SqlConnection;
 use sql::WriteResult;
 use sql_common::mysql::IsolationLevel;
 use sql_construct::SqlShardedConstruct;
+use sql_ext::Connection;
 use sql_ext::SqlQueryTelemetry;
 use sql_ext::SqlShardedConnections;
 use sql_ext::mononoke_queries;
@@ -472,7 +473,10 @@ impl SqlShardedConstruct for SqlBlobstoreWalBuilder {
             .iter_mut()
             .chain(write_connections.iter_mut())
         {
-            if let Connection::Mysql(conn) = conn {
+            if let Connection {
+                inner: SqlConnection::Mysql(conn),
+            } = conn
+            {
                 // We don't care about strong locking of the queries, we just a simple "bag".
                 // Having stronger locking causes deadlocks. Let's use a weaker isolation level.
                 // See https://fb.workplace.com/groups/mysql.users/posts/24130604319894856

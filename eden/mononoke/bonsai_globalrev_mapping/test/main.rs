@@ -24,8 +24,8 @@ use mononoke_macros::mononoke;
 use mononoke_types_mocks::changesetid as bonsai;
 use mononoke_types_mocks::repo::REPO_ZERO;
 use rendezvous::RendezVousOptions;
-use sql::Connection;
 use sql_construct::SqlConstruct;
+use sql_ext::Connection;
 use sql_ext::SqlConnections;
 use sql_ext::open_sqlite_in_memory;
 

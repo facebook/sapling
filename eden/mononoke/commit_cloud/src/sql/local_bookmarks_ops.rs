@@ -11,7 +11,6 @@ use commit_cloud_types::LocalBookmarksMap;
 use commit_cloud_types::WorkspaceLocalBookmark;
 use commit_cloud_types::changeset::CloudChangesetId;
 use context::CoreContext;
-use sql::Connection;
 use sql_ext::Transaction;
 
 use crate::ctx::CommitCloudContext;

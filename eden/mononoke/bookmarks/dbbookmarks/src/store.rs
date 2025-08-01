@@ -41,7 +41,7 @@ use mononoke_types::ChangesetId;
 use mononoke_types::RepositoryId;
 use mononoke_types::Timestamp;
 use rand::Rng;
-use sql::Connection;
+use sql_ext::Connection;
 use sql_ext::SqlConnections;
 use sql_ext::mononoke_queries;
 use stats::prelude::*;

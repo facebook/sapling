@@ -12,9 +12,10 @@ use caching_ext::CacheHandlerFactory;
 use metaconfig_types::RemoteMetadataDatabaseConfig;
 use metaconfig_types::ShardableRemoteDatabaseConfig;
 use mononoke_types::RepositoryId;
-use sql::Connection;
+use sql::Connection as SqlConnection;
 use sql_construct::SqlShardableConstructFromMetadataDatabaseConfig;
 use sql_construct::SqlShardedConstruct;
+use sql_ext::Connection;
 use sql_ext::SqlShardedConnections;
 
 use crate::NewFilenodes;
@@ -61,7 +62,9 @@ impl NewFilenodesBuilder {
         } = self.shard_connections;
 
         let chunk_size = match read_connections.first() {
-            Connection::Mysql(_) => MYSQL_INSERT_CHUNK_SIZE,
+            Connection {
+                inner: SqlConnection::Mysql(_),
+            } => MYSQL_INSERT_CHUNK_SIZE,
             _ => SQLITE_INSERT_CHUNK_SIZE,
         };
 

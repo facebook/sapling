@@ -20,7 +20,6 @@ rust_library(
         "//common/rust/shed/justknobs_stub:justknobs",
         "//common/rust/shed/lock_ext:lock_ext",
         "//common/rust/shed/memcache_stub:memcache",
-        "//common/rust/shed/sql:sql",
         "//common/rust/shed/stats:stats",
         "//eden/mononoke/bonsai_hg_mapping/if:bonsai_hg_mapping_entry_thrift-rust",
         "//eden/mononoke/common/rendezvous:rendezvous",

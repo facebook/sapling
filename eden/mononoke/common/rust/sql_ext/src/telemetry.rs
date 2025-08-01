@@ -114,7 +114,7 @@ fn log_query_telemetry_impl(
     #[cfg(not(fbcode_build))]
     {
         // To remove typechecker unused variable warning in OSS
-        let _ = (sql_query_tel, granularity);
+        let _ = (sql_query_tel, granularity, repo_ids, query_name);
     }
     match query_tel {
         #[cfg(fbcode_build)]

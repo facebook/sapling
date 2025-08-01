@@ -43,11 +43,12 @@ use rendezvous::ConfigurableRendezVousController;
 use rendezvous::RendezVous;
 use rendezvous::RendezVousOptions;
 use rendezvous::RendezVousStats;
-use sql::Connection;
-use sql::SqlConnections;
+use sql::Connection as SqlConnection;
 use sql::mysql::IsolationLevel;
 use sql_construct::SqlConstruct;
 use sql_construct::SqlConstructFromMetadataDatabaseConfig;
+use sql_ext::Connection;
+use sql_ext::SqlConnections;
 use sql_ext::SqlQueryTelemetry;
 use sql_ext::mononoke_queries;
 use sql_ext::should_retry_query;
@@ -84,7 +85,10 @@ impl SqlConstruct for SqlCommitGraphStorageBuilder {
             mut write_connection,
         } = connections;
 
-        if let Connection::Mysql(conn) = &mut write_connection {
+        if let Connection {
+            inner: SqlConnection::Mysql(conn),
+        } = &mut write_connection
+        {
             conn.set_isolation_level(Some(IsolationLevel::ReadCommitted));
         }
 

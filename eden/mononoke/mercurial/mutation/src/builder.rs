@@ -8,10 +8,11 @@
 use metaconfig_types::RemoteDatabaseConfig;
 use metaconfig_types::RemoteMetadataDatabaseConfig;
 use mononoke_types::RepositoryId;
-use sql::Connection;
+use sql::Connection as SqlConnection;
 use sql::mysql::IsolationLevel;
 use sql_construct::SqlConstruct;
 use sql_construct::SqlConstructFromMetadataDatabaseConfig;
+use sql_ext::Connection;
 use sql_ext::SqlConnections;
 
 use crate::store::SqlHgMutationStore;
@@ -38,7 +39,10 @@ impl SqlConstruct for SqlHgMutationStoreBuilder {
 
         if justknobs::eval("scm/mononoke:mutations_use_read_committed", None, None).unwrap_or(false)
         {
-            if let Connection::Mysql(conn) = &mut write_connection {
+            if let Connection {
+                inner: SqlConnection::Mysql(conn),
+            } = &mut write_connection
+            {
                 conn.set_isolation_level(Some(IsolationLevel::ReadCommitted));
             }
         }

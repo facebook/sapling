@@ -9,8 +9,8 @@ use std::path::Path;
 
 use anyhow::Result;
 use sql::Connection;
-use sql::SqlConnections;
-use sql::SqlShardedConnections;
+use sql_ext::SqlConnections;
+use sql_ext::SqlShardedConnections;
 use sql_ext::open_existing_sqlite_path;
 use sql_ext::open_sqlite_in_memory;
 use sql_ext::open_sqlite_path;
@@ -36,7 +36,9 @@ pub trait SqlConstruct: Sized + Send + Sync + 'static {
     fn with_sqlite_in_memory() -> Result<Self> {
         let conn = open_sqlite_in_memory()?;
         conn.execute_batch(Self::CREATION_QUERY)?;
-        let connections = SqlConnections::new_single(Connection::with_sqlite(conn));
+        let connections = SqlConnections::new_single(sql_ext::Connection {
+            inner: Connection::with_sqlite(conn),
+        });
         Ok(Self::from_sql_connections(connections))
     }
 
@@ -46,13 +48,19 @@ pub trait SqlConstruct: Sized + Send + Sync + 'static {
         let conn = open_sqlite_path(path, false)?;
         conn.execute_batch(Self::CREATION_QUERY)?;
         let write_connection = Connection::with_sqlite(conn);
-        let read_connection = Connection::with_sqlite(open_existing_sqlite_path(path, true)?);
+
+        let read_connection = sql_ext::Connection {
+            inner: Connection::with_sqlite(open_existing_sqlite_path(path, true)?),
+        };
+        let write_connection = if readonly {
+            read_connection.clone()
+        } else {
+            sql_ext::Connection {
+                inner: write_connection,
+            }
+        };
         let connections = SqlConnections {
-            write_connection: if readonly {
-                read_connection.clone()
-            } else {
-                write_connection
-            },
+            write_connection,
             read_master_connection: read_connection.clone(),
             read_connection,
         };

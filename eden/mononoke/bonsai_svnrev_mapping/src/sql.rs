@@ -7,7 +7,7 @@
 
 use std::collections::HashSet;
 
-use ::sql::Connection;
+use ::sql_ext::Connection;
 use ::sql_ext::mononoke_queries;
 use anyhow::Error;
 use async_trait::async_trait;

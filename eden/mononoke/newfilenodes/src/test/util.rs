@@ -6,9 +6,9 @@
  */
 
 use anyhow::Error;
-use sql::Connection;
 use sql::rusqlite::Connection as SqliteConnection;
 use sql_construct::SqlConstruct;
+use sql_ext::Connection;
 use vec1::Vec1;
 
 use crate::builder::NewFilenodesBuilder;

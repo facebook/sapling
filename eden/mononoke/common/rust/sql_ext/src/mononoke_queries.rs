@@ -118,7 +118,7 @@ macro_rules! mononoke_queries {
                                 let repo_ids = $crate::extract_repo_ids_from_queries!($($pname: $ptype; )*);
 
                                 let (res, opt_tel) = [<$name Impl>]::commented_query(
-                                    connection,
+                                    connection.sql_connection(),
                                     cri_str.as_deref(),
                                     $( $pname, )*
                                     $( $lname, )*
@@ -235,7 +235,7 @@ macro_rules! mononoke_queries {
                                 let repo_ids = $crate::extract_repo_ids_from_queries!($($pname: $ptype; )*);
 
                                 let (res, opt_tel) = [<$name Impl>]::commented_query(
-                                    connection,
+                                    connection.sql_connection(),
                                     cri_str.as_deref(),
                                     $( $pname, )*
                                     $( $lname, )*
@@ -349,7 +349,7 @@ macro_rules! mononoke_queries {
 
                     let write_res = query_with_retry_no_cache(
                         || [<$name Impl>]::commented_query(
-                            connection,
+                            connection.sql_connection(),
                             cri_str.as_deref(),
                             values
                             $( , $pname )*
@@ -491,7 +491,7 @@ macro_rules! mononoke_queries {
 
                     let write_res = query_with_retry_no_cache(
                         || [<$name Impl>]::commented_query(
-                            connection,
+                            connection.sql_connection(),
                             cri_str.as_deref(),
                             $( $pname, )*
                             $( $lname, )*

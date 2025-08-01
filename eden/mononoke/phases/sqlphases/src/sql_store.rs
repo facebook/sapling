@@ -33,7 +33,7 @@ use memcache::KeyGen;
 use mononoke_types::ChangesetId;
 use mononoke_types::RepositoryId;
 use phases::Phase;
-use sql::Connection;
+use sql_ext::Connection;
 use sql_ext::mononoke_queries;
 use stats::prelude::*;
 

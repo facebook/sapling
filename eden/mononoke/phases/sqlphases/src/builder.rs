@@ -12,9 +12,9 @@ use commit_graph::ArcCommitGraph;
 use memcache::KeyGen;
 use mononoke_types::RepositoryId;
 use phases::ArcPhases;
-use sql::Connection;
 use sql_construct::SqlConstruct;
 use sql_construct::SqlConstructFromMetadataDatabaseConfig;
+use sql_ext::Connection;
 use sql_ext::SqlConnections;
 
 use crate::sql_phases::HeadsFetcher;

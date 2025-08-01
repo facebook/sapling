@@ -21,7 +21,7 @@ use mononoke_types::RepositoryId;
 use path_hash::PathBytes;
 use path_hash::PathHash;
 use path_hash::PathHashBytes;
-use sql::Connection;
+use sql_ext::Connection;
 use sql_ext::mononoke_queries;
 use stats::prelude::*;
 use thiserror::Error as DeriveError;

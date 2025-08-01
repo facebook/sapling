@@ -30,7 +30,6 @@ use mononoke_types::ChangesetIdsResolvedFromPrefix;
 use mononoke_types::RepositoryId;
 use repo_blobstore::RepoBlobstore;
 use smallvec::ToSmallVec;
-use sql::Connection;
 use sql_ext::SqlConnections;
 use sql_ext::mononoke_queries;
 use vec1::Vec1;

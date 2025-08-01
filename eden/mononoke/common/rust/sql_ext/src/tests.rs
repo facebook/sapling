@@ -67,10 +67,11 @@ mod facebook {
     use sql_tests_lib::mysql_test_lib::setup_mysql_test_connection;
 
     use super::*;
+    use crate::Connection;
     use crate::telemetry::TelemetryGranularity;
 
     struct TelemetryTestData {
-        connection: sql::Connection,
+        connection: Connection,
         sql_query_tel: SqlQueryTelemetry,
         cri: ClientRequestInfo,
         temp_path: String,
@@ -309,7 +310,7 @@ mod facebook {
         let sql_query_tel = SqlQueryTelemetry::new(fb, metadata);
 
         Ok(TelemetryTestData {
-            connection,
+            connection: connection.into(),
             sql_query_tel,
             cri,
             temp_path,
@@ -482,7 +483,7 @@ mod facebook {
 #[mononoke::fbinit_test]
 async fn should_compile(fb: FacebookInit) -> Result<()> {
     let config: &SqlQueryConfig = todo!();
-    let connection: &sql::Connection = todo!();
+    let connection: &crate::Connection = todo!();
 
     let cri = ClientRequestInfo::new(ClientEntryPoint::Sapling);
     let client_info = ClientInfo::new()?;

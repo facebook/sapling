@@ -7,7 +7,7 @@
 
 use path_hash::PathHashBytes;
 use path_hash::PathWithHash;
-use sql::Connection;
+use sql_ext::Connection;
 use stats::prelude::*;
 use vec1::Vec1;
 

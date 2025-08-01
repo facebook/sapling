@@ -11,8 +11,8 @@ use fbinit::FacebookInit;
 use mononoke_macros::mononoke;
 use mononoke_types_mocks::changesetid;
 use mononoke_types_mocks::repo;
-use sql::Connection;
 use sql_construct::SqlConstruct;
+use sql_ext::Connection;
 use sql_ext::open_sqlite_in_memory;
 
 use crate::PushrebaseMutationMappingEntry;

@@ -26,9 +26,9 @@ use mononoke_types::path::MPath;
 use mononoke_types::path_bytes_from_mpath;
 use path_hash::PathHash;
 use path_hash::PathHashBytes;
-use sql::Connection;
 use sql_construct::SqlConstruct;
 use sql_construct::SqlConstructFromMetadataDatabaseConfig;
+use sql_ext::Connection;
 use sql_ext::SqlConnections;
 use sql_ext::mononoke_queries;
 

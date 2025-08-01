@@ -21,7 +21,7 @@ use itertools::Itertools;
 use mercurial_types::HgChangesetId;
 use mononoke_types::RepositoryId;
 use slog::debug;
-use sql::Connection;
+use sql_ext::Connection;
 use sql_ext::SqlConnections;
 use sql_ext::mononoke_queries;
 

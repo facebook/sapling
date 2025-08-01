@@ -9,9 +9,9 @@ use anyhow::Result;
 use async_trait::async_trait;
 use context::CoreContext;
 use mononoke_types::RepositoryId;
-use sql::Connection;
 use sql_construct::SqlConstruct;
 use sql_construct::SqlConstructFromMetadataDatabaseConfig;
+use sql_ext::Connection;
 use sql_ext::SqlConnections;
 use sql_ext::mononoke_queries;
 

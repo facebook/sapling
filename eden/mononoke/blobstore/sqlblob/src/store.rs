@@ -19,7 +19,7 @@ use context::CoreContext;
 use futures::future::TryFutureExt;
 use futures::stream;
 use futures::stream::Stream;
-use sql::Connection;
+use sql_ext::Connection;
 use sql_ext::mononoke_queries;
 use twox_hash::XxHash32;
 use vec1::Vec1;

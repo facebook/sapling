@@ -13,7 +13,6 @@ use commit_cloud_types::WorkspaceCheckoutLocation;
 use commit_cloud_types::changeset::CloudChangesetId;
 use context::CoreContext;
 use mononoke_types::Timestamp;
-use sql::Connection;
 use sql_ext::Transaction;
 
 use crate::ctx::CommitCloudContext;

@@ -20,7 +20,6 @@ rust_library(
         "fbsource//third-party/rust:thiserror",
         "//common/rust/shed/facet:facet",
         "//common/rust/shed/memcache_stub:memcache",
-        "//common/rust/shed/sql:sql",
         "//eden/mononoke/bonsai_svnrev_mapping/if:bonsai_svnrev_mapping_thrift-rust",
         "//eden/mononoke/common/rust/caching_ext:caching_ext",
         "//eden/mononoke/common/rust/sql_ext:sql_ext",

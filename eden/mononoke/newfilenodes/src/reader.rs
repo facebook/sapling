@@ -30,7 +30,7 @@ use mononoke_types::RepositoryId;
 use path_hash::PathBytes;
 use path_hash::PathHashBytes;
 use path_hash::PathWithHash;
-use sql::Connection;
+use sql_ext::Connection;
 use sql_ext::mononoke_queries;
 use stats::prelude::*;
 use thiserror::Error;

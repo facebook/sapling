@@ -665,9 +665,9 @@ mod tests {
     use mononoke_types_mocks::changesetid::THREES_CSID;
     use mononoke_types_mocks::changesetid::TWOS_CSID;
     use rendezvous::RendezVousOptions;
-    use sql::Connection;
     use sql::rusqlite::Connection as SqliteConnection;
     use sql_construct::SqlConstruct;
+    use sql_ext::Connection;
     use sql_ext::SqlConnections;
     use synced_commit_mapping::SqlSyncedCommitMapping;
     use synced_commit_mapping::SqlSyncedCommitMappingBuilder;

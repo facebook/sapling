@@ -27,7 +27,7 @@ use mononoke_types::RepoPath;
 use mononoke_types::RepositoryId;
 use mononoke_types_mocks::repo::REPO_ONE;
 use mononoke_types_mocks::repo::REPO_ZERO;
-use sql::Connection;
+use sql_ext::Connection;
 use sql_ext::mononoke_queries;
 use vec1::Vec1;
 use vec1::vec1;

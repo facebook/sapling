@@ -16,14 +16,17 @@ mod tests;
 
 use anyhow::Result;
 use mononoke_types::RepositoryId;
+use rusqlite::Connection as SqliteConnection;
+use sql::Connection as SqlConnection;
 use sql::QueryTelemetry;
-pub use sql::SqlConnections;
-pub use sql::SqlShardedConnections;
 use sql::Transaction as SqlTransaction;
+use sql::mysql;
+use sql_common::sqlite::SqliteCallbacks;
 pub use sql_query_telemetry::SqlQueryTelemetry;
 pub use sqlite::open_existing_sqlite_path;
 pub use sqlite::open_sqlite_in_memory;
 pub use sqlite::open_sqlite_path;
+use vec1::Vec1;
 
 pub use crate::mononoke_queries::should_retry_mysql_query as should_retry_query;
 use crate::telemetry::TelemetryGranularity;
@@ -50,7 +53,6 @@ pub mod _macro_internal {
     pub use mononoke_types::RepositoryId;
     pub use paste;
     pub use serde_json;
-    pub use sql::Connection;
     pub use sql::WriteResult;
     pub use sql::queries;
     pub use sql_query_config::SqlQueryConfig;
@@ -58,6 +60,7 @@ pub mod _macro_internal {
     pub use twox_hash::xxh3::Hash128;
     pub use twox_hash::xxh3::HasherExt;
 
+    pub use crate::Connection;
     pub use crate::Transaction;
     pub use crate::mononoke_queries::CacheData;
     pub use crate::mononoke_queries::CachedQueryResult;
@@ -234,5 +237,139 @@ pub mod facebook {
         /// Choose replicas that satisfy a lower bound HLC value in order to
         /// perform consistent read-your-writes operations
         ReadAfterWriteConsistency,
+    }
+}
+
+/// Wrapper over the SQL connection, needed for telemetry
+#[derive(Clone, Debug)]
+pub struct Connection {
+    pub inner: SqlConnection,
+}
+
+impl From<Connection> for SqlConnection {
+    fn from(conn: Connection) -> Self {
+        conn.inner
+    }
+}
+
+impl From<SqlConnection> for Connection {
+    fn from(conn: SqlConnection) -> Self {
+        Connection { inner: conn }
+    }
+}
+
+impl Connection {
+    // TODO(T223577767): update this to return Mononoke Transaction
+    pub async fn start_transaction(&self) -> Result<SqlTransaction> {
+        self.inner.start_transaction().await
+    }
+
+    pub fn sql_connection(&self) -> &SqlConnection {
+        &self.inner
+    }
+
+    pub fn with_sqlite(con: SqliteConnection) -> Self {
+        let inner = SqlConnection::with_sqlite(con);
+        Connection { inner }
+    }
+
+    /// Given a `rusqlite::Connection` create a connection to Sqlite database that might be used
+    /// by this crate, and add callbacks for when operations happen.
+    pub fn with_sqlite_callbacks(
+        con: SqliteConnection,
+        callbacks: Box<dyn SqliteCallbacks>,
+    ) -> Self {
+        let inner = SqlConnection::with_sqlite_callbacks(con, callbacks);
+        Connection { inner }
+    }
+}
+
+impl From<sql::sqlite::SqliteMultithreaded> for Connection {
+    fn from(con: sql::sqlite::SqliteMultithreaded) -> Self {
+        Connection {
+            inner: SqlConnection::Sqlite(con),
+        }
+    }
+}
+
+impl From<sql::mysql::Connection> for Connection {
+    fn from(conn: mysql::Connection) -> Self {
+        Connection {
+            inner: SqlConnection::Mysql(conn),
+        }
+    }
+}
+
+impl From<sql::mysql::OssConnection> for Connection {
+    fn from(conn: mysql::OssConnection) -> Self {
+        Connection {
+            inner: SqlConnection::OssMysql(conn),
+        }
+    }
+}
+
+/// Struct to store a set of write, read and read-only connections for a shard.
+#[derive(Clone)]
+pub struct SqlConnections {
+    /// Write connection to the master
+    pub write_connection: Connection,
+    /// Read connection
+    pub read_connection: Connection,
+    /// Read master connection
+    pub read_master_connection: Connection,
+}
+
+impl SqlConnections {
+    /// Create SqlConnections from a single connection.
+    pub fn new_single(connection: Connection) -> Self {
+        Self {
+            write_connection: connection.clone(),
+            read_connection: connection.clone(),
+            read_master_connection: connection,
+        }
+    }
+}
+
+impl From<SqlConnections> for sql::SqlConnections {
+    fn from(conn: SqlConnections) -> Self {
+        Self {
+            write_connection: conn.write_connection.inner,
+            read_connection: conn.read_connection.inner,
+            read_master_connection: conn.read_master_connection.inner,
+        }
+    }
+}
+
+/// Struct to store a set of write, read and read-only connections for multiple shards.
+#[derive(Clone)]
+pub struct SqlShardedConnections {
+    /// Write connections to the master for each shard
+    pub write_connections: Vec1<Connection>,
+    /// Read connections for each shard
+    pub read_connections: Vec1<Connection>,
+    /// Read master connections for each shard
+    pub read_master_connections: Vec1<Connection>,
+}
+
+impl From<Vec1<SqlConnections>> for SqlShardedConnections {
+    fn from(shard_connections: Vec1<SqlConnections>) -> Self {
+        let (head, last) = shard_connections.split_off_last();
+        let (write_connections, read_connections, read_master_connections) =
+            itertools::multiunzip(head.into_iter().map(|conn| {
+                (
+                    conn.write_connection,
+                    conn.read_connection,
+                    conn.read_master_connection,
+                )
+            }));
+
+        Self {
+            read_connections: Vec1::from_vec_push(read_connections, last.read_connection),
+            read_master_connections: Vec1::from_vec_push(
+                read_master_connections,
+                last.read_master_connection,
+            ),
+            write_connections: Vec1::from_vec_push(write_connections, last.write_connection),
+        }
     }
 }

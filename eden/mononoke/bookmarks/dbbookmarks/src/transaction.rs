@@ -26,7 +26,7 @@ use futures::future::FutureExt;
 use mononoke_types::ChangesetId;
 use mononoke_types::RepositoryId;
 use mononoke_types::Timestamp;
-use sql::Connection;
+use sql_ext::Connection;
 use sql_ext::Transaction as SqlTransaction;
 use sql_ext::mononoke_queries;
 use stats::prelude::*;
