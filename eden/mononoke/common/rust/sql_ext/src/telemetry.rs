@@ -341,7 +341,8 @@ fn setup_scuba_sample(
     scuba.add("shard_name", shard_name);
 
     let jk_sample_rate =
-        justknobs::get_as::<u64>("scm/mononoke:sql_telemetry_sample_rate", None).unwrap_or(10);
+        justknobs::get_as::<u64>("scm/mononoke:sql_telemetry_sample_rate", Some(shard_name))
+            .unwrap_or(10);
 
     match NonZeroU64::new(jk_sample_rate).ok_or(anyhow!("Sample rate must be a positive number")) {
         Ok(sample_rate) => {
