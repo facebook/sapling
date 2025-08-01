@@ -16,7 +16,7 @@ commit_graph = { version = "0.1.0", path = "../../commit_graph/commit_graph" }
 facet = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 filestore = { version = "0.1.0", path = "../../../filestore" }
 metaconfig_types = { version = "0.1.0", path = "../../../metaconfig/types" }
-repo_blobstore = { version = "0.1.0", path = "../../../blobrepo/repo_blobstore" }
+repo_blobstore = { version = "0.1.0", path = "../../repo_blobstore" }
 repo_cross_repo = { version = "0.1.0", path = "../../repo_cross_repo" }
 repo_derived_data = { version = "0.1.0", path = "../../repo_derived_data" }
 repo_identity = { version = "0.1.0", path = "../../repo_identity" }

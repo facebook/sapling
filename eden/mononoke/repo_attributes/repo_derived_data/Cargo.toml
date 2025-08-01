@@ -22,5 +22,5 @@ filenodes = { version = "0.1.0", path = "../../filenodes" }
 filestore = { version = "0.1.0", path = "../../filestore" }
 metaconfig_types = { version = "0.1.0", path = "../../metaconfig/types" }
 mononoke_types = { version = "0.1.0", path = "../../mononoke_types" }
-repo_blobstore = { version = "0.1.0", path = "../../blobrepo/repo_blobstore" }
+repo_blobstore = { version = "0.1.0", path = "../repo_blobstore" }
 scuba_ext = { version = "0.1.0", path = "../../common/scuba_ext" }

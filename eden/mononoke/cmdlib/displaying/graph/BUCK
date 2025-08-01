@@ -17,7 +17,6 @@ rust_library(
     deps = [
         "fbsource//third-party/rust:anyhow",
         "fbsource//third-party/rust:futures",
-        "//eden/mononoke/blobrepo:repo_blobstore",
         "//eden/mononoke/blobstore:blobstore",
         "//eden/mononoke/bonsai_git_mapping:bonsai_git_mapping",
         "//eden/mononoke/bonsai_globalrev_mapping:bonsai_globalrev_mapping",
@@ -25,6 +24,7 @@ rust_library(
         "//eden/mononoke/cmdlib/displaying:cmdlib_displaying",
         "//eden/mononoke/mononoke_types:mononoke_types",
         "//eden/mononoke/repo_attributes/commit_graph/commit_graph:commit_graph",
+        "//eden/mononoke/repo_attributes/repo_blobstore:repo_blobstore",
         "//eden/mononoke/server/context:context",
         "//eden/scm/lib/dag:dag-lite",
     ],

@@ -64,7 +64,7 @@ fixtures = { version = "0.1.0", path = "../../tests/fixtures" }
 maplit = "1.0"
 memblob = { version = "0.1.0", path = "../../blobstore/memblob" }
 rand_distr = "0.4"
-repo_blobstore = { version = "0.1.0", path = "../../blobrepo/repo_blobstore" }
+repo_blobstore = { version = "0.1.0", path = "../../repo_attributes/repo_blobstore" }
 sql_ext = { version = "0.1.0", path = "../../common/rust/sql_ext" }
 test_repo_factory = { version = "0.1.0", path = "../../repo_factory/test_repo_factory" }
 tests_utils = { version = "0.1.0", path = "../../tests/utils" }

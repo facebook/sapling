@@ -57,7 +57,7 @@ packfile = { version = "0.1.0", path = "../git/packfile" }
 permission_checker = { version = "0.1.0", path = "../permission_checker" }
 protocol = { version = "0.1.0", path = "../git/protocol" }
 repo_authorization = { version = "0.1.0", path = "../repo_authorization" }
-repo_blobstore = { version = "0.1.0", path = "../blobrepo/repo_blobstore" }
+repo_blobstore = { version = "0.1.0", path = "../repo_attributes/repo_blobstore" }
 repo_identity = { version = "0.1.0", path = "../repo_attributes/repo_identity" }
 repo_permission_checker = { version = "0.1.0", path = "../repo_attributes/repo_permission_checker" }
 repo_update_logger = { version = "0.1.0", path = "../features/repo_update_logger" }
