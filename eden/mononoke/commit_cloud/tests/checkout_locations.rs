@@ -44,8 +44,11 @@ async fn test_checkout_locations(fb: FacebookInit) -> anyhow::Result<()> {
         unixname: "testuser".to_owned(),
     };
     let expected = args.clone();
-    let sql_txn = sql.connections.write_connection.start_transaction().await?;
-    let mut txn = sql_ext::Transaction::new(sql_txn, Default::default(), ctx.sql_query_telemetry());
+    let mut txn = sql
+        .connections
+        .write_connection
+        .start_transaction(ctx.sql_query_telemetry())
+        .await?;
 
     txn = sql
         .insert(txn, &ctx, reponame.clone(), workspace.clone(), args)
@@ -58,8 +61,11 @@ async fn test_checkout_locations(fb: FacebookInit) -> anyhow::Result<()> {
     let new_name_args = UpdateWorkspaceNameArgs {
         new_workspace: renamed_workspace.clone(),
     };
-    let sql_txn = sql.connections.write_connection.start_transaction().await?;
-    let txn = sql_ext::Transaction::new(sql_txn, Default::default(), ctx.sql_query_telemetry());
+    let txn = sql
+        .connections
+        .write_connection
+        .start_transaction(ctx.sql_query_telemetry())
+        .await?;
     let (txn, affected_rows) =
         Update::<WorkspaceCheckoutLocation>::update(&sql, txn, &ctx, cc_ctx, new_name_args).await?;
     txn.commit().await?;

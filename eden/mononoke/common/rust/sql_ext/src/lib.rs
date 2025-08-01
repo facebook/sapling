@@ -259,9 +259,10 @@ impl From<SqlConnection> for Connection {
 }
 
 impl Connection {
-    // TODO(T223577767): update this to return Mononoke Transaction
-    pub async fn start_transaction(&self) -> Result<SqlTransaction> {
-        self.inner.start_transaction().await
+    pub async fn start_transaction(&self, sql_query_tel: SqlQueryTelemetry) -> Result<Transaction> {
+        let sql_txn = self.inner.start_transaction().await?;
+        let txn_telemetry = Default::default();
+        Ok(Transaction::new(sql_txn, txn_telemetry, sql_query_tel))
     }
 
     pub fn sql_connection(&self) -> &SqlConnection {

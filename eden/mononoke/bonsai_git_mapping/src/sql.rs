@@ -96,12 +96,11 @@ impl BonsaiGitMapping for SqlBonsaiGitMapping {
         ctx: &CoreContext,
         entries: &[BonsaiGitMappingEntry],
     ) -> Result<(), AddGitMappingErrorKind> {
-        let sql_txn = self
+        let txn = self
             .connections
             .write_connection
-            .start_transaction()
+            .start_transaction(ctx.sql_query_telemetry())
             .await?;
-        let txn = sql_ext::Transaction::new(sql_txn, Default::default(), ctx.sql_query_telemetry());
         let txn = self
             .bulk_add_git_mapping_in_transaction(ctx, entries, txn)
             .await?;

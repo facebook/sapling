@@ -804,12 +804,11 @@ impl LongRunningRequestsQueue for SqlLongRunningRequestsQueue {
         ctx: &CoreContext,
         req_id: &RequestId,
     ) -> Result<Option<(bool, LongRunningRequestEntry)>> {
-        let sql_txn = self
+        let txn = self
             .connections
             .write_connection
-            .start_transaction()
+            .start_transaction(ctx.sql_query_telemetry())
             .await?;
-        let txn = sql_ext::Transaction::new(sql_txn, Default::default(), ctx.sql_query_telemetry());
 
         let (mut txn, rows) = GetRequest::query_with_transaction(txn, &req_id.0, &req_id.1).await?;
         let entry = match rows.into_iter().next() {
@@ -916,12 +915,11 @@ impl LongRunningRequestsQueue for SqlLongRunningRequestsQueue {
         req_id: &RequestId,
         max_retry_allowed: u8,
     ) -> Result<bool> {
-        let sql_txn = self
+        let txn = self
             .connections
             .write_connection
-            .start_transaction()
+            .start_transaction(ctx.sql_query_telemetry())
             .await?;
-        let txn = sql_ext::Transaction::new(sql_txn, Default::default(), ctx.sql_query_telemetry());
 
         let (mut txn, rows) = GetRequest::query_with_transaction(txn, &req_id.0, &req_id.1).await?;
         let will_retry = match rows.into_iter().next() {

@@ -151,8 +151,8 @@ impl MutableCounters for SqlMutableCounters {
         prev_value: Option<i64>,
     ) -> Result<bool> {
         let conn = &self.connections.write_connection;
-        let sql_txn = conn.start_transaction().await?;
-        let txn = sql_ext::Transaction::new(sql_txn, Default::default(), ctx.sql_query_telemetry());
+        let txn = conn.start_transaction(ctx.sql_query_telemetry()).await?;
+
         let txn_result =
             Self::set_counter_on_txn(ctx, self.repo_id, name, value, prev_value, txn).await?;
         match txn_result {

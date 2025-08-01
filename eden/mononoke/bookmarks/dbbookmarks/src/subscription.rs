@@ -59,11 +59,10 @@ impl SqlBookmarksSubscription {
         // bookmarks updated prior to this log id in the second query.
 
         let conn = sql_bookmarks.connection(ctx, freshness);
-        let sql_txn = conn
-            .start_transaction()
+        let txn = conn
+            .start_transaction(ctx.sql_query_telemetry())
             .await
             .context("Failed to start bookmarks read transaction")?;
-        let txn = sql_ext::Transaction::new(sql_txn, Default::default(), ctx.sql_query_telemetry());
 
         let (txn, log_id_rows) =
             GetLargestLogId::query_with_transaction(txn, &sql_bookmarks.repo_id)

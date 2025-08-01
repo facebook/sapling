@@ -274,8 +274,7 @@ async fn test_add_with_transaction(fb: FacebookInit) -> Result<(), Error> {
         git_sha1: TWOS_GIT_SHA1,
     };
 
-    let sql_txn = conn.start_transaction().await?;
-    let txn = sql_ext::Transaction::new(sql_txn, Default::default(), ctx.sql_query_telemetry());
+    let txn = conn.start_transaction(ctx.sql_query_telemetry()).await?;
     mapping
         .bulk_add_git_mapping_in_transaction(&ctx, &[entry1.clone()], txn)
         .await?
@@ -289,8 +288,7 @@ async fn test_add_with_transaction(fb: FacebookInit) -> Result<(), Error> {
             .await?
     );
 
-    let sql_txn = conn.start_transaction().await?;
-    let txn = sql_ext::Transaction::new(sql_txn, Default::default(), ctx.sql_query_telemetry());
+    let txn = conn.start_transaction(ctx.sql_query_telemetry()).await?;
     mapping
         .bulk_add_git_mapping_in_transaction(&ctx, &[entry2.clone()], txn)
         .await?
@@ -305,8 +303,7 @@ async fn test_add_with_transaction(fb: FacebookInit) -> Result<(), Error> {
     );
 
     // Inserting duplicates fails
-    let sql_txn = conn.start_transaction().await?;
-    let txn = sql_ext::Transaction::new(sql_txn, Default::default(), ctx.sql_query_telemetry());
+    let txn = conn.start_transaction(ctx.sql_query_telemetry()).await?;
     let res = async {
         let entry_conflict = BonsaiGitMappingEntry {
             bcs_id: bonsai::TWOS_CSID,

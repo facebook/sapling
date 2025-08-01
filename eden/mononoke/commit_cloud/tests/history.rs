@@ -66,8 +66,12 @@ async fn test_history(fb: FacebookInit) -> anyhow::Result<()> {
         remote_bookmarks: vec![remote_bookmark1.clone()],
     };
 
-    let sql_txn = sql.connections.write_connection.start_transaction().await?;
-    let mut txn = sql_ext::Transaction::new(sql_txn, Default::default(), ctx.sql_query_telemetry());
+    let mut txn = sql
+        .connections
+        .write_connection
+        .start_transaction(ctx.sql_query_telemetry())
+        .await?;
+
     // Insert a history entry, retrieve it and cast it to Rust struct
     txn = sql
         .insert(
@@ -107,8 +111,11 @@ async fn test_history(fb: FacebookInit) -> anyhow::Result<()> {
         local_bookmarks: vec![local_bookmark1],
         remote_bookmarks: vec![remote_bookmark1],
     };
-    let sql_txn = sql.connections.write_connection.start_transaction().await?;
-    txn = sql_ext::Transaction::new(sql_txn, Default::default(), ctx.sql_query_telemetry());
+    txn = sql
+        .connections
+        .write_connection
+        .start_transaction(ctx.sql_query_telemetry())
+        .await?;
     txn = sql
         .insert(
             txn,
@@ -121,8 +128,11 @@ async fn test_history(fb: FacebookInit) -> anyhow::Result<()> {
     txn.commit().await?;
 
     // Delete first history entry, validate only second entry is left
-    let sql_txn = sql.connections.write_connection.start_transaction().await?;
-    txn = sql_ext::Transaction::new(sql_txn, Default::default(), ctx.sql_query_telemetry());
+    txn = sql
+        .connections
+        .write_connection
+        .start_transaction(ctx.sql_query_telemetry())
+        .await?;
     txn = Delete::<WorkspaceHistory>::delete(
         &sql,
         txn,
@@ -163,8 +173,11 @@ async fn test_history(fb: FacebookInit) -> anyhow::Result<()> {
     let new_name_args = UpdateWorkspaceNameArgs {
         new_workspace: renamed_workspace.clone(),
     };
-    let sql_txn = sql.connections.write_connection.start_transaction().await?;
-    let txn = sql_ext::Transaction::new(sql_txn, Default::default(), ctx.sql_query_telemetry());
+    let txn = sql
+        .connections
+        .write_connection
+        .start_transaction(ctx.sql_query_telemetry())
+        .await?;
     let (txn, affected_rows) =
         Update::<WorkspaceHistory>::update(&sql, txn, &ctx, cc_ctx, new_name_args).await?;
     txn.commit().await?;

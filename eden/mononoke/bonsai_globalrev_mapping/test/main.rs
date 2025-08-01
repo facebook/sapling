@@ -147,8 +147,7 @@ async fn test_add_globalrevs(fb: FacebookInit) -> Result<(), Error> {
         globalrev: GLOBALREV_ONE,
     };
 
-    let sql_txn = conn.start_transaction().await?;
-    let txn = sql_ext::Transaction::new(sql_txn, Default::default(), ctx.sql_query_telemetry());
+    let txn = conn.start_transaction(ctx.sql_query_telemetry()).await?;
     let txn = add_globalrevs(&ctx, txn, REPO_ZERO, &[e0.clone()]).await?;
     txn.commit().await?;
 
@@ -159,8 +158,7 @@ async fn test_add_globalrevs(fb: FacebookInit) -> Result<(), Error> {
             .await?
     );
 
-    let sql_txn = conn.start_transaction().await?;
-    let txn = sql_ext::Transaction::new(sql_txn, Default::default(), ctx.sql_query_telemetry());
+    let txn = conn.start_transaction(ctx.sql_query_telemetry()).await?;
     let txn = add_globalrevs(&ctx, txn, REPO_ZERO, &[e1.clone()]).await?;
     txn.commit().await?;
 
@@ -174,8 +172,9 @@ async fn test_add_globalrevs(fb: FacebookInit) -> Result<(), Error> {
     // Inserting duplicates fails
 
     let ctx_new = ctx.clone();
-    let sql_txn = conn.start_transaction().await?;
-    let txn = sql_ext::Transaction::new(sql_txn, Default::default(), ctx_new.sql_query_telemetry());
+    let txn = conn
+        .start_transaction(ctx_new.sql_query_telemetry())
+        .await?;
     let res = async move {
         let txn = add_globalrevs(&ctx_new, txn, REPO_ZERO, &[e1.clone()]).await?;
         txn.commit().await?;
