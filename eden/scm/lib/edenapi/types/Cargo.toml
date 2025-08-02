@@ -30,7 +30,7 @@ sapling-minibytes = { version = "0.1.0", path = "../../minibytes" }
 sapling-revisionstore_types = { version = "0.1.0", path = "../../revisionstore/types" }
 sapling-type_macros = { version = "0.1.0", path = "proc_macros" }
 sapling-types = { version = "0.1.0", path = "../../types" }
-serde = { version = "1.0.185", features = ["derive", "rc"] }
+serde = { version = "1.0.219", features = ["derive", "rc"] }
 serde_bytes = "0.11"
 serde_derive = "1.0.185"
 thiserror = "2.0.12"

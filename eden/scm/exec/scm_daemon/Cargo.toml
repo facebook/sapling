@@ -11,7 +11,7 @@ clap = "2.34.0"
 env_logger = { version = "0.11.8", features = ["color"] }
 log = { version = "0.4.27", features = ["kv_unstable", "kv_unstable_std"] }
 sapling-commitcloudsubscriber = { version = "0.1.0", path = "../../lib/commitcloudsubscriber" }
-serde = { version = "1.0.185", features = ["derive", "rc"] }
+serde = { version = "1.0.219", features = ["derive", "rc"] }
 thiserror = "2.0.12"
 tokio = { version = "1.46.1", features = ["full", "test-util", "tracing"] }
 toml = { version = "0.9.2", features = ["preserve_order"] }

@@ -16,6 +16,6 @@ hex = { version = "0.4.3", features = ["alloc"] }
 manifest = { version = "0.1.0", path = "../../manifest" }
 mercurial_types = { version = "0.1.0", path = "../../mercurial/types" }
 mononoke_types = { version = "0.1.0", path = "../../mononoke_types" }
-serde = { version = "1.0.185", features = ["derive", "rc"] }
+serde = { version = "1.0.219", features = ["derive", "rc"] }
 unicode-truncate = "0.2"
 unicode-width = "=0.1.12"

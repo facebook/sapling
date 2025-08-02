@@ -23,7 +23,7 @@ sapling-hg-http = { version = "0.1.0", path = "../hg-http" }
 sapling-progress-model = { version = "0.1.0", path = "../progress/model" }
 sapling-repo = { version = "0.1.0", path = "../repo" }
 sapling-util = { version = "0.1.0", path = "../util" }
-serde = { version = "1.0.185", features = ["derive", "rc"] }
+serde = { version = "1.0.219", features = ["derive", "rc"] }
 serde_json = { version = "1.0.140", features = ["alloc", "float_roundtrip", "unbounded_depth"] }
 
 [dev-dependencies]

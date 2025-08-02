@@ -19,7 +19,7 @@ fs-err = { version = "3", features = ["tokio"] }
 sapling-identity = { version = "0.1.0", path = "../../identity" }
 sapling-types = { version = "0.1.0", path = "../../types" }
 sapling-util = { version = "0.1.0", path = "../../util" }
-serde = { version = "1.0.185", features = ["derive", "rc"] }
+serde = { version = "1.0.219", features = ["derive", "rc"] }
 
 [dev-dependencies]
 sapling-repolock = { version = "0.1.0", path = "../../repolock" }

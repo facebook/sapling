@@ -17,7 +17,7 @@ name = "mincode"
 [dependencies]
 byteorder = "1.5"
 sapling-vlqencoding = { version = "0.1.0", path = "../vlqencoding" }
-serde = { version = "1.0.185", features = ["derive", "rc"] }
+serde = { version = "1.0.219", features = ["derive", "rc"] }
 
 [dev-dependencies]
 quickcheck = "1.0"

@@ -63,7 +63,7 @@ sapling-edenapi_types = { version = "0.1.0", path = "../../scm/lib/edenapi/types
 sapling-revisionstore_types = { version = "0.1.0", path = "../../scm/lib/revisionstore/types" }
 sapling-types = { version = "0.1.0", path = "../../scm/lib/types" }
 scuba_ext = { version = "0.1.0", path = "../common/scuba_ext" }
-serde = { version = "1.0.185", features = ["derive", "rc"] }
+serde = { version = "1.0.219", features = ["derive", "rc"] }
 serde_cbor = "0.11"
 serde_json = { version = "1.0.140", features = ["alloc", "float_roundtrip", "unbounded_depth"] }
 sha2 = "0.10.6"

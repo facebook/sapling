@@ -32,7 +32,7 @@ rusqlite = { version = "0.36.0", features = ["backup", "blob", "bundled", "colum
 sapling-io = { version = "0.1.0", path = "../../../scm/lib/io" }
 sapling-termlogger = { version = "0.1.0", path = "../../../scm/lib/io/term/logger" }
 sapling-thrift-types = { version = "0.1.0", path = "../../../scm/lib/thrift-types" }
-serde = { version = "1.0.185", features = ["derive", "rc"] }
+serde = { version = "1.0.219", features = ["derive", "rc"] }
 serde_json = { version = "1.0.140", features = ["alloc", "float_roundtrip", "unbounded_depth"] }
 subprocess = "0.2.9"
 sysinfo = "0.35.1"

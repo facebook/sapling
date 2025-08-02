@@ -56,7 +56,7 @@ sapling-types = { version = "0.1.0", path = "../types" }
 sapling-util = { version = "0.1.0", path = "../util" }
 sapling-version = { version = "0.1.0", path = "../version" }
 sapling-vlqencoding = { version = "0.1.0", path = "../vlqencoding" }
-serde = { version = "1.0.185", features = ["derive", "rc"] }
+serde = { version = "1.0.219", features = ["derive", "rc"] }
 serde_derive = "1.0.185"
 serde_json = { version = "1.0.140", features = ["alloc", "float_roundtrip", "unbounded_depth"] }
 sha1 = "0.10.5"

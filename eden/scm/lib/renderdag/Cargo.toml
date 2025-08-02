@@ -15,7 +15,7 @@ name = "renderdag"
 
 [dependencies]
 bitflags = { version = "2.9", features = ["serde", "std"], default-features = false }
-serde = { version = "1.0.185", features = ["derive", "rc"], optional = true }
+serde = { version = "1.0.219", features = ["derive", "rc"], optional = true }
 
 [dev-dependencies]
 sapling-drawdag = { version = "0.1.0", path = "../drawdag" }

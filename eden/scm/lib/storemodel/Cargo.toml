@@ -26,4 +26,4 @@ sapling-factory = { version = "0.1.0", path = "../util/factory" }
 sapling-metalog = { version = "0.1.0", path = "../metalog" }
 sapling-minibytes = { version = "0.1.0", path = "../minibytes" }
 sapling-types = { version = "0.1.0", path = "../types" }
-serde = { version = "1.0.185", features = ["derive", "rc"] }
+serde = { version = "1.0.219", features = ["derive", "rc"] }

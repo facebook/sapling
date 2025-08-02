@@ -45,7 +45,7 @@ quickcheck_arbitrary_derive = { version = "0.1.0", git = "https://github.com/fac
 regex = "1.11.1"
 sapling-edenapi_types = { version = "0.1.0", path = "../../scm/lib/edenapi/types" }
 sapling-xdiff = { version = "0.1.0", path = "../../scm/lib/xdiff" }
-serde = { version = "1.0.185", features = ["derive", "rc"] }
+serde = { version = "1.0.219", features = ["derive", "rc"] }
 serde_derive = "1.0.185"
 sha1 = "0.10.5"
 slog = { package = "tracing_slog_compat", version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }

@@ -34,7 +34,7 @@ sapling-progress-model = { version = "0.1.0", path = "../progress/model" }
 sapling-repourl = { version = "0.1.0", path = "../repo/url" }
 sapling-types = { version = "0.1.0", path = "../types" }
 sapling-version = { version = "0.1.0", path = "../version" }
-serde = { version = "1.0.185", features = ["derive", "rc"] }
+serde = { version = "1.0.219", features = ["derive", "rc"] }
 serde_cbor = "0.11"
 serde_json = { version = "1.0.140", features = ["alloc", "float_roundtrip", "unbounded_depth"] }
 tokio = { version = "1.46.1", features = ["full", "test-util", "tracing"] }

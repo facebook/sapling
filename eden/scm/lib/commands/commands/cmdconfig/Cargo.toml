@@ -17,4 +17,4 @@ sapling-configloader = { version = "0.1.0", path = "../../../config/loader" }
 sapling-configmodel = { version = "0.1.0", path = "../../../config/model" }
 sapling-formatter = { version = "0.1.0", path = "../../../formatter" }
 sapling-minibytes = { version = "0.1.0", path = "../../../minibytes" }
-serde = { version = "1.0.185", features = ["derive", "rc"] }
+serde = { version = "1.0.219", features = ["derive", "rc"] }
