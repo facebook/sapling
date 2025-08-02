@@ -14,9 +14,8 @@ import subprocess
 from pathlib import Path
 from typing import Dict, List, Optional, Pattern, TypeVar, Union
 
-from facebook.eden.eden_config.ttypes import ConfigReloadBehavior
-
-from facebook.eden.ttypes import (
+from eden.fs.config.eden_config.thrift_types import ConfigReloadBehavior
+from eden.fs.service.eden.thrift_types import (
     Blake3Result,
     DigestHashResult,
     FileAttributeDataOrError,
@@ -32,7 +31,6 @@ from facebook.eden.ttypes import (
 )
 
 from .lib import testcase
-
 from .lib.find_executables import FindExe
 
 EdenThriftResult = TypeVar(
@@ -54,6 +52,7 @@ class ThriftTest(testcase.EdenRepoTest):
     expected_adir_digest_hash: bytes = b""
     expected_hello_blake3: bytes = b""
     expected_adir_file_blake3: bytes = b""
+    _blake3_computed: bool = False
 
     def setup_eden_test(self) -> None:
         self.enable_windows_symlinks = True
@@ -66,10 +65,10 @@ class ThriftTest(testcase.EdenRepoTest):
         )
         return result
 
-    def blake3_hash(self, blob: bytes) -> bytes:
+    async def blake3_hash(self, blob: bytes) -> bytes:
         key: Optional[str] = None
-        with self.get_thrift_client_legacy() as client:
-            config = client.getConfig(
+        async with self.get_thrift_client() as client:
+            config = await client.getConfig(
                 GetConfigParams(reload=ConfigReloadBehavior.ForceReload)
             )
             maybe_key = config.values.get("hash:blake3-key")
@@ -87,6 +86,13 @@ class ThriftTest(testcase.EdenRepoTest):
         p = subprocess.run(cmd, stdout=subprocess.PIPE, input=blob)
         assert p.returncode == 0, "0 exit code is expected for blake3_sum"
         return bytes.fromhex(p.stdout.decode("ascii"))
+
+    async def _ensure_blake3_computed(self) -> None:
+        """Compute blake3 hashes if not already computed."""
+        if not self._blake3_computed:
+            self.expected_hello_blake3 = await self.blake3_hash(b"hola\n")
+            self.expected_adir_file_blake3 = await self.blake3_hash(b"foo!\n")
+            self._blake3_computed = True
 
     def populate_repo(self) -> None:
         self.repo.write_file("hello", "hola\n")
@@ -129,12 +135,14 @@ class ThriftTest(testcase.EdenRepoTest):
         self.expected_adir_digest_hash = b"\x73\xf0\xc6\xe3\x6b\x3c\xb9\xfc\x64\xa8\xa3\x39\x24\x57\xd3\xc9\xd0\x2d\x11\xfd\x22\xe5\x36\x71\x94\x5d\x95\x3f\xfa\xc3\x8c\x92"
 
         # For files, digest hashes are just the blake3 hash of the file contents
-        self.expected_hello_blake3: bytes = self.blake3_hash(b"hola\n")
-        self.expected_adir_file_blake3: bytes = self.blake3_hash(b"foo!\n")
+        # We'll compute these as needed within tests, since populate_repo can't be async
+        self.expected_hello_blake3 = b""
+        self.expected_adir_file_blake3 = b""
+        self._blake3_computed = False
 
-    def get_loaded_inodes_count(self, path: str) -> int:
-        with self.get_thrift_client_legacy() as client:
-            result = client.debugInodeStatus(
+    async def get_loaded_inodes_count(self, path: str) -> int:
+        async with self.get_thrift_client() as client:
+            result = await client.debugInodeStatus(
                 self.mount_path_bytes, os.fsencode(path), flags=0, sync=SyncBehavior()
             )
         inode_count = 0
@@ -145,64 +153,68 @@ class ThriftTest(testcase.EdenRepoTest):
                     inode_count += 1
         return inode_count
 
-    def test_get_file_content(self) -> None:
+    async def test_get_file_content(self) -> None:
         thrift_mount = MountId(mountPoint=self.mount.encode("utf-8"))
 
         # Unmaterialized file
-        with self.eden.get_thrift_client_legacy() as client:
+        async with self.eden.get_thrift_client() as client:
             thrift_req = GetFileContentRequest(
                 mount=thrift_mount, filePath=b"hello", sync=SyncBehavior()
             )
-            response = client.getFileContent(thrift_req)
+            response = await client.getFileContent(thrift_req)
             self.assertEqual(
-                ScmBlobOrError.BLOB,
-                response.blob.getType(),
+                ScmBlobOrError.Type.blob,
+                response.blob.type,
                 "expect success",
             )
-            self.assertEqual(b"hola\n", response.blob.get_blob())
+            self.assertEqual(b"hola\n", response.blob.blob)
 
         # Materialized file
         self.write_file("tmpdir/file", "hola\n")
-        with self.eden.get_thrift_client_legacy() as client:
+        async with self.eden.get_thrift_client() as client:
             thrift_req = GetFileContentRequest(
                 mount=thrift_mount, filePath=b"tmpdir/file", sync=SyncBehavior()
             )
+            response = await client.getFileContent(thrift_req)
             self.assertEqual(
-                ScmBlobOrError.BLOB,
-                response.blob.getType(),
+                ScmBlobOrError.Type.blob,
+                response.blob.type,
                 "expect success",
             )
-            response = client.getFileContent(thrift_req)
-            self.assertEqual(b"hola\n", response.blob.get_blob())
+            self.assertEqual(b"hola\n", response.blob.blob)
 
         # Invalid paths
         self.rm("tmpdir/file")
-        with self.eden.get_thrift_client_legacy() as client:
+        async with self.eden.get_thrift_client() as client:
             thrift_req = GetFileContentRequest(
                 mount=thrift_mount, filePath=b"tmpdir/file", sync=SyncBehavior()
             )
-            response = client.getFileContent(thrift_req)
+            response = await client.getFileContent(thrift_req)
             self.assertEqual(
-                ScmBlobOrError.ERROR, response.blob.getType(), "expect error"
+                ScmBlobOrError.Type.error,
+                response.blob.type,
+                "expect error",
             )
             self.assertEqual(
-                response.blob.get_error().message,
+                response.blob.error.message,
                 "tmpdir/file: No such file or directory",
             )
             thrift_req = GetFileContentRequest(
                 mount=thrift_mount, filePath=b"tmpdir", sync=SyncBehavior()
             )
-            response = client.getFileContent(thrift_req)
+            response = await client.getFileContent(thrift_req)
             self.assertEqual(
-                ScmBlobOrError.ERROR, response.blob.getType(), "expect error"
+                ScmBlobOrError.Type.error,
+                response.blob.type,
+                "expect error",
             )
             self.assertEqual(
-                response.blob.get_error().message,
+                response.blob.error.message,
                 "tmpdir: Is a directory",
             )
         self.rmdir("tmpdir")
 
-    def test_pid_fetch_counts(self) -> None:
+    async def test_pid_fetch_counts(self) -> None:
         # We already test that our fetch counts get incremented correctly in
         # unit tests. This is an end to end test to make sure that our fetch
         # counts are reasonable values. We know touching a file means we must
@@ -214,14 +226,14 @@ class ThriftTest(testcase.EdenRepoTest):
         )
         touch_p.communicate()
 
-        with self.get_thrift_client_legacy() as client:
-            counts = client.getAccessCounts(1)
+        async with self.get_thrift_client() as client:
+            counts = await client.getAccessCounts(1)
             accesses = counts.accessesByMount[self.mount_path_bytes]
             self.assertLessEqual(2, accesses.fetchCountsByPid[touch_p.pid])
 
-    def test_list_mounts(self) -> None:
-        with self.get_thrift_client_legacy() as client:
-            mounts = client.listMounts()
+    async def test_list_mounts(self) -> None:
+        async with self.get_thrift_client() as client:
+            mounts = await client.listMounts()
         self.assertEqual(1, len(mounts))
 
         mount = mounts[0]
@@ -232,40 +244,42 @@ class ThriftTest(testcase.EdenRepoTest):
         # directory prefix of mount.edenClientPath
         Path(os.fsdecode(mount.edenClientPath)).relative_to(self.eden.eden_dir)
 
-    def test_get_sha1(self) -> None:
+    async def test_get_sha1(self) -> None:
         expected_sha1_for_hello = hashlib.sha1(b"hola\n").digest()
         result_for_hello = SHA1Result(sha1=expected_sha1_for_hello)
 
         expected_sha1_for_adir_file = hashlib.sha1(b"foo!\n").digest()
         result_for_adir_file = SHA1Result(sha1=expected_sha1_for_adir_file)
 
-        with self.get_thrift_client_legacy() as client:
+        async with self.get_thrift_client() as client:
             self.assertEqual(
                 [result_for_hello, result_for_adir_file],
-                client.getSHA1(
+                await client.getSHA1(
                     self.mount_path_bytes,
                     [b"hello", b"adir/file"],
                     sync=SyncBehavior(),
                 ),
             )
 
-    def test_get_blake3(self) -> None:
+    async def test_get_blake3(self) -> None:
+        await self._ensure_blake3_computed()
         result_for_hello = Blake3Result(blake3=self.expected_hello_blake3)
         result_for_adir_file = Blake3Result(blake3=self.expected_adir_file_blake3)
 
-        with self.get_thrift_client_legacy() as client:
+        async with self.get_thrift_client() as client:
             self.assertEqual(
                 [result_for_hello, result_for_adir_file],
-                client.getBlake3(
+                await client.getBlake3(
                     self.mount_path_bytes,
                     [b"hello", b"adir/file"],
                     sync=SyncBehavior(),
                 ),
             )
 
-    def test_get_digest_hash_for_file(self) -> None:
-        with self.get_thrift_client_legacy() as client:
-            results = client.getDigestHash(
+    async def test_get_digest_hash_for_file(self) -> None:
+        await self._ensure_blake3_computed()
+        async with self.get_thrift_client() as client:
+            results = await client.getDigestHash(
                 self.mount_path_bytes,
                 [b"hello", b"adir/file"],
                 sync=SyncBehavior(syncTimeoutSeconds=60),
@@ -280,9 +294,9 @@ class ThriftTest(testcase.EdenRepoTest):
             ],
         )
 
-    def test_get_digest_hash_for_directory(self) -> None:
-        with self.get_thrift_client_legacy() as client:
-            results = client.getDigestHash(
+    async def test_get_digest_hash_for_directory(self) -> None:
+        async with self.get_thrift_client() as client:
+            results = await client.getDigestHash(
                 self.mount_path_bytes,
                 [b"adir"],
                 sync=SyncBehavior(syncTimeoutSeconds=60),
@@ -299,9 +313,9 @@ class ThriftTest(testcase.EdenRepoTest):
                 "std::domain_error: getTreeAuxData is not implemented for GitBackingStores",
             )
 
-    def test_get_sha1_throws_for_path_with_dot_components(self) -> None:
-        with self.get_thrift_client_legacy() as client:
-            results = client.getSHA1(
+    async def test_get_sha1_throws_for_path_with_dot_components(self) -> None:
+        async with self.get_thrift_client() as client:
+            results = await client.getSHA1(
                 self.mount_path_bytes, [b"./hello"], sync=SyncBehavior()
             )
         self.assertEqual(1, len(results))
@@ -312,9 +326,9 @@ class ThriftTest(testcase.EdenRepoTest):
             ),
         )
 
-    def test_get_blake3_throws_for_path_with_dot_components(self) -> None:
-        with self.get_thrift_client_legacy() as client:
-            results = client.getBlake3(
+    async def test_get_blake3_throws_for_path_with_dot_components(self) -> None:
+        async with self.get_thrift_client() as client:
+            results = await client.getBlake3(
                 self.mount_path_bytes, [b"./hello"], sync=SyncBehavior()
             )
         self.assertEqual(1, len(results))
@@ -325,9 +339,9 @@ class ThriftTest(testcase.EdenRepoTest):
             ),
         )
 
-    def test_get_digest_hash_throws_for_path_with_dot_components(self) -> None:
-        with self.get_thrift_client_legacy() as client:
-            results = client.getDigestHash(
+    async def test_get_digest_hash_throws_for_path_with_dot_components(self) -> None:
+        async with self.get_thrift_client() as client:
+            results = await client.getDigestHash(
                 self.mount_path_bytes, [b"./hello"], sync=SyncBehavior()
             )
         self.assertEqual(1, len(results))
@@ -338,31 +352,33 @@ class ThriftTest(testcase.EdenRepoTest):
             ),
         )
 
-    def test_get_sha1_throws_for_empty_string(self) -> None:
-        with self.get_thrift_client_legacy() as client:
-            results = client.getSHA1(self.mount_path_bytes, [b""], sync=SyncBehavior())
+    async def test_get_sha1_throws_for_empty_string(self) -> None:
+        async with self.get_thrift_client() as client:
+            results = await client.getSHA1(
+                self.mount_path_bytes, [b""], sync=SyncBehavior()
+            )
         self.assertEqual(1, len(results))
         self.assert_sha1_error(results[0], ": Is a directory")
 
-    def test_get_blake3_throws_for_empty_string(self) -> None:
-        with self.get_thrift_client_legacy() as client:
-            results = client.getBlake3(
+    async def test_get_blake3_throws_for_empty_string(self) -> None:
+        async with self.get_thrift_client() as client:
+            results = await client.getBlake3(
                 self.mount_path_bytes, [b""], sync=SyncBehavior()
             )
         self.assertEqual(1, len(results))
         self.assert_blake3_error(results[0], ": Is a directory")
 
-    def test_get_digest_hash_throws_for_empty_string(self) -> None:
-        with self.get_thrift_client_legacy() as client:
-            results = client.getDigestHash(
+    async def test_get_digest_hash_throws_for_empty_string(self) -> None:
+        async with self.get_thrift_client() as client:
+            results = await client.getDigestHash(
                 self.mount_path_bytes, [b""], sync=SyncBehavior()
             )
         self.assertEqual(1, len(results))
         self.assert_digest_hash_error(results[0], "digest hash missing for tree: ")
 
-    def test_get_sha1_throws_for_directory(self) -> None:
-        with self.get_thrift_client_legacy() as client:
-            results = client.getSHA1(
+    async def test_get_sha1_throws_for_directory(self) -> None:
+        async with self.get_thrift_client() as client:
+            results = await client.getSHA1(
                 self.mount_path_bytes,
                 [b"adir"],
                 sync=SyncBehavior(syncTimeoutSeconds=60),
@@ -370,9 +386,9 @@ class ThriftTest(testcase.EdenRepoTest):
         self.assertEqual(1, len(results))
         self.assert_sha1_error(results[0], "adir: Is a directory")
 
-    def test_get_blake3_throws_for_directory(self) -> None:
-        with self.get_thrift_client_legacy() as client:
-            results = client.getBlake3(
+    async def test_get_blake3_throws_for_directory(self) -> None:
+        async with self.get_thrift_client() as client:
+            results = await client.getBlake3(
                 self.mount_path_bytes,
                 [b"adir"],
                 sync=SyncBehavior(syncTimeoutSeconds=60),
@@ -380,17 +396,17 @@ class ThriftTest(testcase.EdenRepoTest):
         self.assertEqual(1, len(results))
         self.assert_blake3_error(results[0], "adir: Is a directory")
 
-    def test_get_sha1_throws_for_non_existent_file(self) -> None:
-        with self.get_thrift_client_legacy() as client:
-            results = client.getSHA1(
+    async def test_get_sha1_throws_for_non_existent_file(self) -> None:
+        async with self.get_thrift_client() as client:
+            results = await client.getSHA1(
                 self.mount_path_bytes, [b"i_do_not_exist"], sync=SyncBehavior()
             )
         self.assertEqual(1, len(results))
         self.assert_sha1_error(results[0], "i_do_not_exist: No such file or directory")
 
-    def test_get_blake3_throws_for_non_existent_file(self) -> None:
-        with self.get_thrift_client_legacy() as client:
-            results = client.getBlake3(
+    async def test_get_blake3_throws_for_non_existent_file(self) -> None:
+        async with self.get_thrift_client() as client:
+            results = await client.getBlake3(
                 self.mount_path_bytes, [b"i_do_not_exist"], sync=SyncBehavior()
             )
         self.assertEqual(1, len(results))
@@ -398,9 +414,9 @@ class ThriftTest(testcase.EdenRepoTest):
             results[0], "i_do_not_exist: No such file or directory"
         )
 
-    def test_get_digest_hash_throws_for_non_existent_file(self) -> None:
-        with self.get_thrift_client_legacy() as client:
-            results = client.getDigestHash(
+    async def test_get_digest_hash_throws_for_non_existent_file(self) -> None:
+        async with self.get_thrift_client() as client:
+            results = await client.getDigestHash(
                 self.mount_path_bytes, [b"i_do_not_exist"], sync=SyncBehavior()
             )
         self.assertEqual(1, len(results))
@@ -408,19 +424,19 @@ class ThriftTest(testcase.EdenRepoTest):
             results[0], "i_do_not_exist: No such file or directory"
         )
 
-    def test_get_sha1_throws_for_symlink(self) -> None:
+    async def test_get_sha1_throws_for_symlink(self) -> None:
         """Fails because caller should resolve the symlink themselves."""
-        with self.get_thrift_client_legacy() as client:
-            results = client.getSHA1(
+        async with self.get_thrift_client() as client:
+            results = await client.getSHA1(
                 self.mount_path_bytes, [b"slink"], sync=SyncBehavior()
             )
         self.assertEqual(1, len(results))
         self.assert_sha1_error(results[0], "slink: file is a symlink: Invalid argument")
 
-    def test_get_blake3_throws_for_symlink(self) -> None:
+    async def test_get_blake3_throws_for_symlink(self) -> None:
         """Fails because caller should resolve the symlink themselves."""
-        with self.get_thrift_client_legacy() as client:
-            results = client.getBlake3(
+        async with self.get_thrift_client() as client:
+            results = await client.getBlake3(
                 self.mount_path_bytes, [b"slink"], sync=SyncBehavior()
             )
         self.assertEqual(1, len(results))
@@ -428,14 +444,15 @@ class ThriftTest(testcase.EdenRepoTest):
             results[0], "slink: file is a symlink: Invalid argument"
         )
 
-    def test_get_digest_hash_throws_for_materialized_directory(self) -> None:
+    async def test_get_digest_hash_throws_for_materialized_directory(self) -> None:
+        await self._ensure_blake3_computed()
         # Materialize a file in a nested directory
         self.mkdir("adir2")
         # Resuse contents of "hello" file so we don't need to calculate another blake3
         self.write_file("adir2/file", "hola\n")
 
-        with self.get_thrift_client_legacy() as client:
-            results = client.getDigestHash(
+        async with self.get_thrift_client() as client:
+            results = await client.getDigestHash(
                 self.mount_path_bytes, [b"adir2", b"adir2/file"], sync=SyncBehavior()
             )
         self.assertEqual(2, len(results))
@@ -448,7 +465,8 @@ class ThriftTest(testcase.EdenRepoTest):
             DigestHashResult(digestHash=self.expected_hello_blake3),
         )
 
-    def test_get_digest_hash_throws_for_local_directory(self) -> None:
+    async def test_get_digest_hash_throws_for_local_directory(self) -> None:
+        await self._ensure_blake3_computed()
         # By default, the checked out revision for eagerepos is the latest commit pushed to the
         # server. There's no way to do source control operations in generic Eden tests, so we
         # will clone a new repo w/ the specified local commit instead
@@ -457,8 +475,8 @@ class ThriftTest(testcase.EdenRepoTest):
             "clone", "--rev", self.local_commit, self.repo.path, str(new_clone)
         )
 
-        with self.get_thrift_client_legacy() as client:
-            results = client.getDigestHash(
+        async with self.get_thrift_client() as client:
+            results = await client.getDigestHash(
                 bytes(new_clone),
                 [b"local_dir", b"local_dir/file"],
                 sync=SyncBehavior(),
@@ -484,7 +502,7 @@ class ThriftTest(testcase.EdenRepoTest):
     def assert_eden_error(
         self, result: EdenThriftResult, error_message: Union[str, Pattern]
     ) -> None:
-        error = result.get_error()
+        error = result.error
         self.assertIsNotNone(error)
         if isinstance(error_message, str):
             self.assertEqual(error_message, error.message)
@@ -496,7 +514,7 @@ class ThriftTest(testcase.EdenRepoTest):
     ) -> None:
         self.assertIsNotNone(sha1result, msg="Must pass a SHA1Result")
         self.assertEqual(
-            SHA1Result.ERROR, sha1result.getType(), msg="SHA1Result must be an error"
+            SHA1Result.Type.error, sha1result.type, msg="SHA1Result must be an error"
         )
         self.assert_eden_error(sha1result, error_message)
 
@@ -505,8 +523,8 @@ class ThriftTest(testcase.EdenRepoTest):
     ) -> None:
         self.assertIsNotNone(digest_hash_result, msg="Must pass a DigestHashResult")
         self.assertEqual(
-            DigestHashResult.ERROR,
-            digest_hash_result.getType(),
+            DigestHashResult.Type.error,
+            digest_hash_result.type,
             msg="DigestHashResult must be an error",
         )
         self.assert_eden_error(digest_hash_result, error_message)
@@ -516,39 +534,39 @@ class ThriftTest(testcase.EdenRepoTest):
     ) -> None:
         self.assertIsNotNone(blake3_result, msg="Must pass a Blake3Result")
         self.assertEqual(
-            Blake3Result.ERROR,
-            blake3_result.getType(),
+            Blake3Result.Type.error,
+            blake3_result.type,
             msg="Blake3Result must be an error",
         )
         self.assert_eden_error(blake3_result, error_message)
 
-    def test_unload_free_inodes(self) -> None:
+    async def test_unload_free_inodes(self) -> None:
         for i in range(100):
             self.write_file("testfile%d.txt" % i, "unload test case")
 
-        inode_count_before_unload = self.get_loaded_inodes_count("")
+        inode_count_before_unload = await self.get_loaded_inodes_count("")
         self.assertGreater(
             inode_count_before_unload, 100, "Number of loaded inodes should increase"
         )
 
-        age = TimeSpec()
-        age.seconds = 0
-        age.nanoSeconds = 0
-        with self.get_thrift_client_legacy() as client:
-            unload_count = client.unloadInodeForPath(self.mount_path_bytes, b"", age)
+        age = TimeSpec(seconds=0, nanoSeconds=0)
+        async with self.get_thrift_client() as client:
+            unload_count = await client.unloadInodeForPath(
+                self.mount_path_bytes, b"", age
+            )
 
         self.assertGreaterEqual(
             unload_count, 100, "Number of loaded inodes should reduce after unload"
         )
 
-    def test_unload_thrift_api_accepts_single_dot_as_root(self) -> None:
+    async def test_unload_thrift_api_accepts_single_dot_as_root(self) -> None:
         self.write_file("testfile.txt", "unload test case")
 
-        age = TimeSpec()
-        age.seconds = 0
-        age.nanoSeconds = 0
-        with self.get_thrift_client_legacy() as client:
-            unload_count = client.unloadInodeForPath(self.mount_path_bytes, b".", age)
+        age = TimeSpec(seconds=0, nanoSeconds=0)
+        async with self.get_thrift_client() as client:
+            unload_count = await client.unloadInodeForPath(
+                self.mount_path_bytes, b".", age
+            )
 
         self.assertGreater(
             unload_count, 0, "Number of loaded inodes should reduce after unload"
@@ -557,18 +575,18 @@ class ThriftTest(testcase.EdenRepoTest):
     def get_counter(self, name: str) -> float:
         return self.get_counters()[name]
 
-    def test_diff_revisions(self) -> None:
+    async def test_diff_revisions(self) -> None:
         # Convert the commit hashes to binary for the thrift call
-        with self.get_thrift_client_legacy() as client:
-            diff = client.getScmStatusBetweenRevisions(
+        async with self.get_thrift_client() as client:
+            diff = await client.getScmStatusBetweenRevisions(
                 os.fsencode(self.mount),
                 binascii.unhexlify(self.commit1),
                 binascii.unhexlify(self.commit2),
             )
 
-        self.assertDictEqual(diff.errors, {})
+        self.assertDictEqual(dict(diff.errors), {})
         self.assertDictEqual(
-            diff.entries,
+            dict(diff.entries),
             {
                 b"cdir/subdir/new.txt": ScmFileStatus.ADDED,
                 b"bdir/file": ScmFileStatus.MODIFIED,
@@ -576,19 +594,19 @@ class ThriftTest(testcase.EdenRepoTest):
             },
         )
 
-    def test_diff_revisions_hex(self) -> None:
+    async def test_diff_revisions_hex(self) -> None:
         # Watchman currently calls getScmStatusBetweenRevisions()
         # with 40-byte hexadecimal commit IDs, so make sure that works.
-        with self.get_thrift_client_legacy() as client:
-            diff = client.getScmStatusBetweenRevisions(
+        async with self.get_thrift_client() as client:
+            diff = await client.getScmStatusBetweenRevisions(
                 os.fsencode(self.mount),
                 self.commit1.encode("utf-8"),
                 self.commit2.encode("utf-8"),
             )
 
-        self.assertDictEqual(diff.errors, {})
+        self.assertDictEqual(dict(diff.errors), {})
         self.assertDictEqual(
-            diff.entries,
+            dict(diff.entries),
             {
                 b"cdir/subdir/new.txt": ScmFileStatus.ADDED,
                 b"bdir/file": ScmFileStatus.MODIFIED,
@@ -596,20 +614,20 @@ class ThriftTest(testcase.EdenRepoTest):
             },
         )
 
-    def test_diff_revisions_with_reverted_file(self) -> None:
+    async def test_diff_revisions_with_reverted_file(self) -> None:
         # Convert the commit hashes to binary for the thrift call
-        with self.get_thrift_client_legacy() as client:
-            diff = client.getScmStatusBetweenRevisions(
+        async with self.get_thrift_client() as client:
+            diff = await client.getScmStatusBetweenRevisions(
                 os.fsencode(self.mount),
                 binascii.unhexlify(self.commit1),
                 binascii.unhexlify(self.commit3),
             )
 
-        self.assertDictEqual(diff.errors, {})
+        self.assertDictEqual(dict(diff.errors), {})
         # bdir/file was modified twice between commit1 and commit3 but had a
         # net change of 0 so it should not be reported in the diff results
         self.assertDictEqual(
-            diff.entries,
+            dict(diff.entries),
             {
                 b"cdir/subdir/new.txt": ScmFileStatus.ADDED,
                 b"README": ScmFileStatus.REMOVED,
