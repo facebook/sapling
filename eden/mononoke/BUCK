@@ -33,7 +33,7 @@ rust_binary(
         "//eden/scm/lib/clientinfo:clientinfo",
     ] + ([] if rust_oss.is_oss_build() else [
         "//eden/mononoke/pushrebase:pushrebase_client",
-    ])),
+    ])) + ["fbsource//third-party/rust:tokio"],
 )
 
 tokio_dependency_test(
@@ -155,6 +155,7 @@ rust_binary(
         "fbsource//third-party/rust:bytes",
         "fbsource//third-party/rust:clap",
         "fbsource//third-party/rust:futures",
+        "fbsource//third-party/rust:tokio",
         "//common/rust/shed/facet:facet",
         "//common/rust/shed/fbinit:fbinit",
         "//eden/mononoke/blobstore:blobstore",

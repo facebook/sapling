@@ -229,9 +229,8 @@ pub async fn run_sharded(
         Arc::new(scrub_process),
         true, // enable shard (repo) level healing
     )?;
-    executor
-        .block_and_execute(&logger, Arc::new(AtomicBool::new(false)))
-        .await
+    let (_, receiver) = tokio::sync::oneshot::channel::<bool>();
+    executor.block_and_execute(&logger, receiver).await
 }
 
 pub async fn run_unsharded(

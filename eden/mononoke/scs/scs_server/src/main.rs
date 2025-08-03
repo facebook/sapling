@@ -254,6 +254,7 @@ fn main(fb: FacebookInit) -> Result<(), Error> {
     let megarepo_api = Arc::new(MegarepoApi::new(&app, mononoke.clone())?);
 
     let will_exit = Arc::new(AtomicBool::new(false));
+    let (sm_shutdown_sender, sm_shutdown_receiver) = tokio::sync::oneshot::channel::<bool>();
 
     if let Some(max_memory) = args.max_memory {
         memory::set_max_memory(max_memory);
@@ -373,8 +374,11 @@ fn main(fb: FacebookInit) -> Result<(), Error> {
         runtime.spawn({
             let logger = logger.clone();
             {
-                cloned!(will_exit);
-                async move { executor.block_and_execute(&logger, will_exit).await }
+                async move {
+                    executor
+                        .block_and_execute(&logger, sm_shutdown_receiver)
+                        .await
+                }
             }
         });
     }
@@ -384,7 +388,10 @@ fn main(fb: FacebookInit) -> Result<(), Error> {
     app.start_stats_aggregation()?;
 
     app.wait_until_terminated(
-        move || will_exit.store(true, Ordering::Relaxed),
+        move || {
+            let _ = sm_shutdown_sender.send(true);
+            will_exit.store(true, Ordering::Relaxed)
+        },
         args.shutdown_timeout_args.shutdown_grace_period,
         async {
             // Note that async blocks are lazy, so this isn't called until first poll

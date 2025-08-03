@@ -12,6 +12,7 @@ use anyhow::Result;
 use fbinit::FacebookInit;
 use slog::Logger;
 use tokio::runtime::Handle;
+use tokio::sync::oneshot::Receiver;
 
 use crate::RepoShardedProcess;
 
@@ -34,7 +35,7 @@ impl ShardedProcessExecutor {
     pub async fn block_and_execute(
         &mut self,
         _logger: &Logger,
-        _terminate_process: Arc<AtomicBool>,
+        _terminate_signal_receiver: Receiver<bool>,
     ) -> Result<()> {
         unimplemented!("ShardedProcessExecutor is supported only for fbcode build")
     }

@@ -31,6 +31,7 @@ use slog::info;
 use stats::prelude::*;
 use tokio::runtime::Handle;
 use tokio::sync::RwLock;
+use tokio::sync::oneshot::Receiver;
 use tokio::task::JoinHandle;
 use tokio::time;
 
@@ -39,7 +40,6 @@ use crate::RepoShardedProcess;
 use crate::RepoShardedProcessExecutor;
 use crate::RepoState::*;
 
-const SLEEP_SECS: u64 = 10;
 const MAX_SM_CLIENT_INIT_RETRIES: i32 = 10;
 const SM_CLIENT_INIT_RETRY_SECS: i32 = 10;
 
@@ -1178,7 +1178,7 @@ impl ShardedProcessExecutor {
     pub async fn block_and_execute(
         &mut self,
         logger: &Logger,
-        terminate_process: Arc<AtomicBool>,
+        terminate_signal_receiver: Receiver<bool>,
     ) -> Result<()> {
         info!(logger, "Initiating sharded execution for service");
         let shards = self.client.get_my_shards()?;
@@ -1192,11 +1192,10 @@ impl ShardedProcessExecutor {
             justknobs::eval("scm/mononoke:best_effort_shard_setup", None, None).unwrap_or(false);
         self.handler.set_shards(shards, best_effort_setup).await?;
         self.client.start_callbacks_server();
-        // Periodically keep checking if termination is requested. If not, then
-        // sleep for a while (to provide a yield point) and try again.
-        while !terminate_process.load(Ordering::Relaxed) {
-            time::sleep(time::Duration::from_secs(SLEEP_SECS)).await
-        }
+        // Keep running until the terminate signal is received. Once the signal is received,
+        // exit.
+        terminate_signal_receiver.await?;
+        info!(logger, "ShardManager shutdown initiated...");
         // Termination was requested, exit.
         Ok(())
     }

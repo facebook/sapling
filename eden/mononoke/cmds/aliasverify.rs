@@ -673,9 +673,8 @@ async fn async_main(app: MononokeApp) -> Result<(), Error> {
                 Arc::new(process),
                 true, // enable shard (repo) level healing
             )?;
-            executor
-                .block_and_execute(&logger, Arc::new(AtomicBool::new(false)))
-                .await
+            let (_, receiver) = tokio::sync::oneshot::channel::<bool>();
+            executor.block_and_execute(&logger, receiver).await
         }
     }
 }

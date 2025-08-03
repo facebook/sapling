@@ -213,6 +213,7 @@ fn main(fb: FacebookInit) -> Result<(), Error> {
         LogMiddleware::slog(logger.clone())
     };
     let will_exit = Arc::new(AtomicBool::new(false));
+    let (sender, receiver) = tokio::sync::oneshot::channel::<bool>();
     let runtime = app.runtime().clone();
     // Service name is used for shallow or deep sharding. If sharding itself is disabled, provide
     // service name as None while opening repos.
@@ -227,7 +228,7 @@ fn main(fb: FacebookInit) -> Result<(), Error> {
     let requests_counter = Arc::new(AtomicI64::new(0));
     let (shutdown_tx, shutdown_rx) = oneshot::channel::<()>();
     let server = {
-        cloned!(logger, will_exit, requests_counter);
+        cloned!(logger, requests_counter);
         let tls_args = args.tls_params.clone();
         move |app: MononokeApp| async move {
             let repos_mgr = Arc::new(app.open_managed_repos(service_name).await?);
@@ -316,10 +317,7 @@ fn main(fb: FacebookInit) -> Result<(), Error> {
                 // on its own dedicated task spawned off the common tokio runtime.
                 runtime.spawn({
                     let logger = app.logger().clone();
-                    {
-                        cloned!(will_exit);
-                        async move { executor.block_and_execute(&logger, will_exit).await }
-                    }
+                    { async move { executor.block_and_execute(&logger, receiver).await } }
                 });
             }
 
@@ -351,10 +349,12 @@ fn main(fb: FacebookInit) -> Result<(), Error> {
             Ok(())
         }
     };
-
     app.run_until_terminated(
         server,
-        move || will_exit.store(true, Ordering::Relaxed),
+        move || {
+            will_exit.store(true, Ordering::SeqCst);
+            let _ = sender.send(true);
+        },
         args.shutdown_timeout_args.shutdown_grace_period,
         async move {
             let _ = shutdown_tx.send(());

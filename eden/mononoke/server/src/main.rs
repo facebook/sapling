@@ -306,6 +306,7 @@ fn main(fb: FacebookInit) -> Result<()> {
     let service = ReadyFlagService::new();
     let (terminate_sender, terminate_receiver) = oneshot::channel::<()>();
     let will_exit = Arc::new(AtomicBool::new(false));
+    let (sm_shutdown_sender, sm_shutdown_receiver) = tokio::sync::oneshot::channel::<bool>();
 
     let env = app.environment();
     let scuba = env.scuba_sample_builder.clone();
@@ -376,8 +377,11 @@ fn main(fb: FacebookInit) -> Result<()> {
                 runtime.spawn({
                     let logger = app.logger().clone();
                     {
-                        cloned!(will_exit);
-                        async move { executor.block_and_execute(&logger, will_exit).await }
+                        async move {
+                            executor
+                                .block_and_execute(&logger, sm_shutdown_receiver)
+                                .await
+                        }
                     }
                 });
             }
@@ -407,7 +411,10 @@ fn main(fb: FacebookInit) -> Result<()> {
 
     app.run_until_terminated(
         repo_listeners,
-        move || will_exit.store(true, Ordering::Relaxed),
+        move || {
+            let _ = sm_shutdown_sender.send(true);
+            will_exit.store(true, Ordering::Relaxed)
+        },
         args.shutdown_timeout_args.shutdown_grace_period,
         async {
             if let Err(err) = terminate_sender.send(()) {

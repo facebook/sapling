@@ -10,7 +10,6 @@ mod run;
 mod sharding;
 
 use std::sync::Arc;
-use std::sync::atomic::AtomicBool;
 
 use anyhow::Context;
 use anyhow::Error;
@@ -51,9 +50,8 @@ async fn async_main(ctx: CoreContext, app: MononokeApp) -> Result<(), Error> {
         true, // enable shard (repo) level healing
         SM_CLEANUP_TIMEOUT_SECS,
     )? {
-        executor
-            .block_and_execute(ctx.logger(), Arc::new(AtomicBool::new(false)))
-            .await
+        let (_, receiver) = tokio::sync::oneshot::channel::<bool>();
+        executor.block_and_execute(ctx.logger(), receiver).await
     } else {
         let repo_args = repo_args
             .into_source_and_target_args()

@@ -22,7 +22,6 @@ use async_requests_client::open_sql_connection;
 use async_trait::async_trait;
 use blobstore::Blobstore;
 use clap::Parser;
-use cloned::cloned;
 use cmdlib_logging::ScribeLoggingArgs;
 use context::CoreContext;
 use context::SessionContainer;
@@ -179,6 +178,7 @@ fn main(fb: FacebookInit) -> Result<()> {
     let sql_connection = Arc::new(runtime.block_on(open_sql_connection(fb, &app))?);
     let blobstore = runtime.block_on(open_blobstore(fb, &app))?;
     let will_exit = Arc::new(AtomicBool::new(false));
+    let (sm_shutdown_sender, sm_shutdown_receiver) = tokio::sync::oneshot::channel::<bool>();
 
     app.start_monitoring(app.runtime(), SERVICE_NAME, AliveService)?;
     app.start_stats_aggregation()?;
@@ -208,8 +208,11 @@ fn main(fb: FacebookInit) -> Result<()> {
         runtime.spawn({
             let logger = logger.clone();
             {
-                cloned!(will_exit);
-                async move { executor.block_and_execute(&logger, will_exit).await }
+                async move {
+                    executor
+                        .block_and_execute(&logger, sm_shutdown_receiver)
+                        .await
+                }
             }
         });
 
@@ -229,7 +232,10 @@ fn main(fb: FacebookInit) -> Result<()> {
         }
 
         app.wait_until_terminated(
-            move || will_exit.store(true, Ordering::Relaxed),
+            move || {
+                let _ = sm_shutdown_sender.send(true);
+                will_exit.store(true, Ordering::Relaxed)
+            },
             args.shutdown_timeout_args.shutdown_grace_period,
             async {
                 info!(logger, "Shutdown");
@@ -281,7 +287,10 @@ fn main(fb: FacebookInit) -> Result<()> {
         }
 
         app.wait_until_terminated(
-            move || will_exit.store(true, Ordering::Relaxed),
+            move || {
+                let _ = sm_shutdown_sender.send(true);
+                will_exit.store(true, Ordering::Relaxed)
+            },
             args.shutdown_timeout_args.shutdown_grace_period,
             async {
                 info!(logger, "Shutdown");

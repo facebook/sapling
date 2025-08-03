@@ -44,7 +44,6 @@
 
 use std::collections::HashSet;
 use std::sync::Arc;
-use std::sync::atomic::AtomicBool;
 use std::time::Duration;
 
 use anyhow::Context;
@@ -585,9 +584,8 @@ async fn async_main(app: MononokeApp, ctx: CoreContext) -> Result<(), Error> {
         true, // enable shard (repo) level healing
         SM_CLEANUP_TIMEOUT_SECS,
     )? {
-        executor
-            .block_and_execute(ctx.logger(), Arc::new(AtomicBool::new(false)))
-            .await
+        let (_, receiver) = tokio::sync::oneshot::channel::<bool>();
+        executor.block_and_execute(ctx.logger(), receiver).await
     } else {
         let repo_args = repo_args
             .into_source_and_target_args()

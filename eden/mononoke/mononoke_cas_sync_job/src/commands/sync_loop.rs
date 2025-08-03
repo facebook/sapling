@@ -267,13 +267,8 @@ pub async fn run(app: MononokeApp, args: CommandArgs) -> Result<()> {
         SM_CLEANUP_TIMEOUT_SECS,
     )? {
         slog::info!(logger, "Running sharded sync loop");
-        executor
-            .block_and_execute(&logger, Arc::new(AtomicBool::new(false)))
-            .await?;
-
-        executor
-            .block_and_execute(&logger, Arc::new(AtomicBool::new(false)))
-            .await
+        let (_, receiver) = tokio::sync::oneshot::channel::<bool>();
+        executor.block_and_execute(&logger, receiver).await
     } else {
         let repo_arg = app_args
             .repo
