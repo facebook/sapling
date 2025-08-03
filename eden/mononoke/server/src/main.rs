@@ -358,7 +358,7 @@ fn main(fb: FacebookInit) -> Result<()> {
                 .await?;
             info!(&root_log, "Cache warmup completed");
             let repos_mgr = Arc::new(repos_mgr);
-            if let Some(mut executor) = args.sharded_executor_args.build_executor(
+            if let Some(executor) = args.sharded_executor_args.build_executor(
                 app.fb,
                 runtime.clone(),
                 app.logger(),

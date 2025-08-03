@@ -1176,7 +1176,7 @@ impl ShardedProcessExecutor {
     /// Blocking call to begin execution of the underlying process based on the repos
     /// assigned by ShardManager
     pub async fn block_and_execute(
-        &mut self,
+        mut self,
         logger: &Logger,
         terminate_signal_receiver: Receiver<bool>,
     ) -> Result<()> {
@@ -1197,6 +1197,7 @@ impl ShardedProcessExecutor {
         terminate_signal_receiver.await?;
         info!(logger, "ShardManager shutdown initiated...");
         // Termination was requested, exit.
+        self.client.request_failover_and_remove_handler()?;
         Ok(())
     }
 }

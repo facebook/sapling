@@ -33,7 +33,7 @@ impl ShardedProcessExecutor {
     }
 
     pub async fn block_and_execute(
-        &mut self,
+        mut self,
         _logger: &Logger,
         _terminate_signal_receiver: Receiver<bool>,
     ) -> Result<()> {

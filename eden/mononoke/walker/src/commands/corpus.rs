@@ -217,7 +217,7 @@ pub async fn run_sharded(
     let logger = corpus_process.app.logger().clone();
     // The service name needs to be 'static to satisfy SM contract
     static SM_SERVICE_NAME: OnceLock<String> = OnceLock::new();
-    let mut executor = ShardedProcessExecutor::new(
+    let executor = ShardedProcessExecutor::new(
         corpus_process.app.fb,
         corpus_process.app.runtime().clone(),
         &logger,

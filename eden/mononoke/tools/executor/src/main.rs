@@ -236,7 +236,7 @@ async fn run_sharded(app: MononokeApp, sharded_service_name: String) -> Result<(
     // The service name needs to be 'static to satisfy SM contract
     static SM_SERVICE_NAME: OnceLock<String> = OnceLock::new();
     // For sharded execution, we need to first create the executor.
-    let mut executor = ShardedProcessExecutor::new(
+    let executor = ShardedProcessExecutor::new(
         process.app.fb,
         process.app.runtime().clone(),
         &logger,

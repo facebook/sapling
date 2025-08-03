@@ -171,7 +171,7 @@ pub async fn run(app: MononokeApp, args: CommandArgs) -> Result<()> {
     ));
     let logger = process.app.logger().clone();
 
-    if let Some(mut executor) = app_args.sharded_executor_args.clone().build_executor(
+    if let Some(executor) = app_args.sharded_executor_args.clone().build_executor(
         process.app.fb,
         process.app.runtime().clone(),
         &logger,

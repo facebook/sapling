@@ -183,7 +183,7 @@ fn main(fb: FacebookInit) -> Result<()> {
     app.start_monitoring(app.runtime(), SERVICE_NAME, AliveService)?;
     app.start_stats_aggregation()?;
 
-    if let Some(mut executor) = args.sharded_executor_args.clone().build_executor(
+    if let Some(executor) = args.sharded_executor_args.clone().build_executor(
         app.fb,
         runtime.clone(),
         &logger,

@@ -196,7 +196,7 @@ pub async fn run_sharded(
     let logger = validate_process.app.logger().clone();
     // The service name needs to be 'static to satisfy SM contract
     static SM_SERVICE_NAME: OnceLock<String> = OnceLock::new();
-    let mut executor = ShardedProcessExecutor::new(
+    let executor = ShardedProcessExecutor::new(
         validate_process.app.fb,
         validate_process.app.runtime().clone(),
         &logger,

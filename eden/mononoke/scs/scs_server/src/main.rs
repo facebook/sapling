@@ -361,7 +361,7 @@ fn main(fb: FacebookInit) -> Result<(), Error> {
         writer.write_all(b"\n")?;
     }
 
-    if let Some(mut executor) = args.sharded_executor_args.build_executor(
+    if let Some(executor) = args.sharded_executor_args.build_executor(
         fb,
         runtime.clone(),
         app.logger(),

@@ -663,7 +663,7 @@ async fn async_main(app: MononokeApp) -> Result<(), Error> {
             let logger = process.app.logger().clone();
             // The service name needs to be 'static to satisfy SM contract
             static SM_SERVICE_NAME: OnceLock<String> = OnceLock::new();
-            let mut executor = ShardedProcessExecutor::new(
+            let executor = ShardedProcessExecutor::new(
                 process.app.fb,
                 process.app.runtime().clone(),
                 &logger,

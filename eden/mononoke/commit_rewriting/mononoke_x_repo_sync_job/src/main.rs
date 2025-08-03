@@ -570,7 +570,7 @@ async fn async_main(app: MononokeApp, ctx: CoreContext) -> Result<(), Error> {
     let repo_args = args.repo_args.clone();
     let runtime = app.runtime().clone();
     let logger = app.logger().clone();
-    let res = if let Some(mut executor) = args.sharded_executor_args.clone().build_executor(
+    let res = if let Some(executor) = args.sharded_executor_args.clone().build_executor(
         app.fb,
         runtime.clone(),
         &logger,
