@@ -557,7 +557,9 @@ ImmediateFuture<EntryAttributes> VirtualInode::getEntryAttributes(
                 std::move(type),
                 std::move(objectId),
                 std::move(digestSize),
-                std::move(digestHash)};
+                std::move(digestHash),
+                std::nullopt,
+                std::nullopt};
           });
 }
 

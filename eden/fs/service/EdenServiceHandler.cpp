@@ -3281,6 +3281,22 @@ FileAttributeDataOrErrorV2 serializeEntryAttributes(
     fileData.digestHash() = std::move(digestHash);
   }
 
+  if (requestedAttributes.contains(ENTRY_ATTRIBUTE_MTIME)) {
+    MtimeOrError mtime;
+    if (!fillErrorRef(mtime, attributes->mtime, entryPath, "mtime")) {
+      mtime.mtime() = thriftTimeSpec(attributes->mtime.value().value());
+    }
+    fileData.mtime() = std::move(mtime);
+  }
+
+  if (requestedAttributes.contains(ENTRY_ATTRIBUTE_MODE)) {
+    ModeOrError mode;
+    if (!fillErrorRef(mode, attributes->mode, entryPath, "mode")) {
+      mode.mode() = attributes->mode.value().value();
+    }
+    fileData.mode() = std::move(mode);
+  }
+
   fileResult.fileAttributeData() = fileData;
   return fileResult;
 }

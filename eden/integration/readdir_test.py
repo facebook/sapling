@@ -33,6 +33,8 @@ from facebook.eden.ttypes import (
     GetAttributesFromFilesResult,
     GetAttributesFromFilesResultV2,
     GetConfigParams,
+    ModeOrError,
+    MtimeOrError,
     ObjectIdOrError,
     ReaddirParams,
     ReaddirResult,
@@ -41,10 +43,12 @@ from facebook.eden.ttypes import (
     SourceControlType,
     SourceControlTypeOrError,
     SyncBehavior,
+    TimeSpec,
 )
 
 from .lib import testcase
 from .lib.find_executables import FindExe
+from .lib.util import stat_mtime_to_timespec
 
 EdenThriftResult = Union[
     FileAttributeDataOrError,
@@ -60,6 +64,8 @@ ALL_ATTRIBUTES = (
     | FileAttributes.BLAKE3_HASH
     | FileAttributes.DIGEST_SIZE
     | FileAttributes.DIGEST_HASH
+    | FileAttributes.MTIME
+    | FileAttributes.MODE
 )
 
 
@@ -352,7 +358,10 @@ class ReaddirTest(testcase.EdenRepoTest):
             Optional[bytes],
             Optional[int],
             Optional[bytes],
+            Optional[TimeSpec],
+            Optional[int],
         ],
+        file_name: Optional[str] = None,
     ) -> Tuple[FileAttributeDataOrError, FileAttributeDataOrErrorV2]:
         (
             raw_sha1,
@@ -362,6 +371,8 @@ class ReaddirTest(testcase.EdenRepoTest):
             raw_blake3,
             digest_size,
             digest_hash,
+            raw_mtime,
+            raw_mode,
         ) = raw_attributes
         data = FileAttributeData()
         data_v2 = FileAttributeDataV2()
@@ -391,6 +402,28 @@ class ReaddirTest(testcase.EdenRepoTest):
 
         if digest_hash is not None:
             data_v2.digestHash = DigestHashOrError(digestHash=digest_hash)
+
+        if raw_mtime is not None:
+            # mtime is not implemented; always expect error
+            # data_v2.mtime = MtimeOrError(mtime=raw_mtime)
+            data_v2.mtime = MtimeOrError(
+                error=EdenError(
+                    message=f"{file_name}: mtime requested, but no mtime available",
+                    errorType=EdenErrorType.ATTRIBUTE_UNAVAILABLE,
+                    errorCode=ENOENT,
+                )
+            )
+
+        if raw_mode is not None:
+            # mode is not implemented; always expect error
+            # data_v2.mode = ModeOrError(mode=raw_mode)
+            data_v2.mode = ModeOrError(
+                error=EdenError(
+                    message=f"{file_name}: mode requested, but no mode available",
+                    errorType=EdenErrorType.ATTRIBUTE_UNAVAILABLE,
+                    errorCode=ENOENT,
+                )
+            )
 
         return (
             FileAttributeDataOrError(data=data),
@@ -436,7 +469,8 @@ class ReaddirTest(testcase.EdenRepoTest):
             self.get_expected_file_attributes(
                 "hello",
                 self.hello_id,
-            )
+            ),
+            file_name="hello",
         )
 
         # expected results for file "adir/file"
@@ -444,7 +478,8 @@ class ReaddirTest(testcase.EdenRepoTest):
             self.get_expected_file_attributes(
                 "adir/file",
                 self.adir_file_id,
-            )
+            ),
+            file_name="file",
         )
 
         # list of expected_results
@@ -472,7 +507,8 @@ class ReaddirTest(testcase.EdenRepoTest):
             expected_hello_result,
             expected_hello_result_v2,
         ) = self.wrap_expected_attributes(
-            (None, expected_hello_size, None, None, None, None, None)
+            (None, expected_hello_size, None, None, None, None, None, None, None),
+            file_name="hello",
         )
 
         # create result object for "hello"
@@ -498,7 +534,8 @@ class ReaddirTest(testcase.EdenRepoTest):
             expected_hello_result,
             expected_hello_result_v2,
         ) = self.wrap_expected_attributes(
-            (None, None, expected_hello_type, None, None, None, None)
+            (None, None, expected_hello_type, None, None, None, None, None, None),
+            file_name="hello",
         )
 
         # create result object for "hello"
@@ -548,7 +585,8 @@ class ReaddirTest(testcase.EdenRepoTest):
             expected_hello_result,
             expected_hello_result_v2,
         ) = self.wrap_expected_attributes(
-            (expected_hello_sha1, None, None, None, None, None, None)
+            (expected_hello_sha1, None, None, None, None, None, None, None, None),
+            file_name="hello",
         )
 
         # create result object for "hello"
@@ -577,7 +615,8 @@ class ReaddirTest(testcase.EdenRepoTest):
             expected_hello_result,
             expected_hello_result_v2,
         ) = self.wrap_expected_attributes(
-            (None, None, None, None, expected_hello_blake3, None, None)
+            (None, None, None, None, expected_hello_blake3, None, None, None, None),
+            file_name="hello",
         )
 
         # create result object for "hello"
@@ -597,6 +636,44 @@ class ReaddirTest(testcase.EdenRepoTest):
             expected_result_v2,
             [b"hello"],
             FileAttributes.BLAKE3_HASH,
+        )
+
+    def test_get_mtime_only(self) -> None:
+        # Not implemented yet; we expect an attribute unavailable error
+        mtime_res = (
+            self.get_attributes_v2([b"hello"], FileAttributes.MTIME)
+            .res[0]
+            .get_fileAttributeData()
+        )
+        self.assertIsNotNone(mtime_res)
+        mtime = mtime_res.mtime
+        self.assertIsNotNone(mtime)
+        self.assertEqual(
+            mtime.get_error(),
+            EdenError(
+                message="hello: mtime requested, but no mtime available",
+                errorType=EdenErrorType.ATTRIBUTE_UNAVAILABLE,
+                errorCode=ENOENT,
+            ),
+        )
+
+    def test_get_mode_only(self) -> None:
+        # Not implemented yet; we expect an attribute unavailable error
+        mode_res = (
+            self.get_attributes_v2([b"hello"], FileAttributes.MODE)
+            .res[0]
+            .get_fileAttributeData()
+        )
+        self.assertIsNotNone(mode_res)
+        mode = mode_res.mode
+        self.assertIsNotNone(mode)
+        self.assertEqual(
+            mode.get_error(),
+            EdenError(
+                message="hello: mode requested, but no mode available",
+                errorType=EdenErrorType.ATTRIBUTE_UNAVAILABLE,
+                errorCode=ENOENT,
+            ),
         )
 
     def test_get_attributes_throws_for_path_with_dot_components(self) -> None:
@@ -642,6 +719,7 @@ class ReaddirTest(testcase.EdenRepoTest):
         )
 
     def test_get_attributes_directory(self) -> None:
+        # stat = self.stat("adir")
         results = self.get_all_attributes([b"adir"])
         self.assertEqual(1, len(results.res))
         self.assert_attribute_error(
@@ -681,6 +759,22 @@ class ReaddirTest(testcase.EdenRepoTest):
                 ),
                 digestSize=self.adir_digest_size_result,
                 digestHash=self.adir_digest_hash_result,
+                mtime=MtimeOrError(
+                    error=EdenError(
+                        message="adir: mtime requested, but no mtime available",
+                        errorType=EdenErrorType.ATTRIBUTE_UNAVAILABLE,
+                        errorCode=ENOENT,
+                    )
+                ),
+                mode=ModeOrError(
+                    error=EdenError(
+                        message="adir: mode requested, but no mode available",
+                        errorType=EdenErrorType.ATTRIBUTE_UNAVAILABLE,
+                        errorCode=ENOENT,
+                    )
+                ),
+                # mtime=MtimeOrError(mtime=stat_mtime_to_timespec(stat)),
+                # mode=ModeOrError(mode=stat.st_mode),
             )
         )
 
@@ -702,6 +796,7 @@ class ReaddirTest(testcase.EdenRepoTest):
         with socket.socket(socket.AF_UNIX) as sock:
             sock.bind(sockpath)
 
+            # stat = self.stat("adir/asock")
             results = self.get_all_attributes([b"adir/asock"])
             self.assertEqual(1, len(results.res))
             self.assert_attribute_error(
@@ -753,6 +848,22 @@ class ReaddirTest(testcase.EdenRepoTest):
                             errorType=EdenErrorType.POSIX_ERROR,
                         )
                     ),
+                    mtime=MtimeOrError(
+                        error=EdenError(
+                            message="asock: mtime requested, but no mtime available",
+                            errorType=EdenErrorType.ATTRIBUTE_UNAVAILABLE,
+                            errorCode=ENOENT,
+                        )
+                    ),
+                    mode=ModeOrError(
+                        error=EdenError(
+                            message="asock: mode requested, but no mode available",
+                            errorType=EdenErrorType.ATTRIBUTE_UNAVAILABLE,
+                            errorCode=ENOENT,
+                        )
+                    ),
+                    # mtime=MtimeOrError(mtime=stat_mtime_to_timespec(stat)),
+                    # mode=ModeOrError(mode=stat.st_mode),
                 )
             )
 
@@ -768,6 +879,7 @@ class ReaddirTest(testcase.EdenRepoTest):
             self.assertEqual(expected_result_v2, results_v2)
 
     def test_get_attributes_symlink(self) -> None:
+        # stat = self.stat("slink")
         results = self.get_all_attributes([b"slink"])
         self.assertEqual(1, len(results.res))
         self.assert_attribute_error(
@@ -818,6 +930,22 @@ class ReaddirTest(testcase.EdenRepoTest):
                         errorType=EdenErrorType.POSIX_ERROR,
                     )
                 ),
+                mtime=MtimeOrError(
+                    error=EdenError(
+                        message="slink: mtime requested, but no mtime available",
+                        errorType=EdenErrorType.ATTRIBUTE_UNAVAILABLE,
+                        errorCode=ENOENT,
+                    )
+                ),
+                mode=ModeOrError(
+                    error=EdenError(
+                        message="slink: mode requested, but no mode available",
+                        errorType=EdenErrorType.ATTRIBUTE_UNAVAILABLE,
+                        errorCode=ENOENT,
+                    )
+                ),
+                # mtime=MtimeOrError(mtime=stat_mtime_to_timespec(stat)),
+                # mode=ModeOrError(mode=stat.st_mode),
             )
         )
 
@@ -955,21 +1083,18 @@ class ReaddirTest(testcase.EdenRepoTest):
         path: str,
         object_id: Optional[bytes],
     ) -> Tuple[
-        bytes,
-        int,
-        SourceControlType,
-        Optional[bytes],
-        bytes,
-        int,
-        bytes,
+        bytes, int, SourceControlType, Optional[bytes], bytes, int, bytes, TimeSpec, int
     ]:
         """Get attributes for the file with the specified path inside
         the eden repository. For now, just sha1 and file size.
         """
-        fullpath = self.get_path(path)
-        file_stat = os.stat(fullpath, follow_symlinks=False)
+
+        file_stat = self.stat(path)
+
+        mtime = stat_mtime_to_timespec(file_stat)
+        mode = file_stat.st_mode
         file_type = SourceControlType.REGULAR_FILE
-        if stat.S_ISDIR(file_stat.st_mode):
+        if stat.S_ISDIR(mode):
             return (
                 (0).to_bytes(20, byteorder="big"),
                 0,
@@ -978,8 +1103,10 @@ class ReaddirTest(testcase.EdenRepoTest):
                 (0).to_bytes(32, byteorder="big"),
                 0,
                 (0).to_bytes(32, byteorder="big"),
+                mtime,
+                mode,
             )
-        if stat.S_ISLNK(file_stat.st_mode):
+        if stat.S_ISLNK(mode):
             return (
                 (0).to_bytes(20, byteorder="big"),
                 0,
@@ -988,8 +1115,10 @@ class ReaddirTest(testcase.EdenRepoTest):
                 (0).to_bytes(32, byteorder="big"),
                 0,
                 (0).to_bytes(32, byteorder="big"),
+                mtime,
+                mode,
             )
-        if not stat.S_ISREG(file_stat.st_mode):
+        if not stat.S_ISREG(mode):
             return (
                 (0).to_bytes(20, byteorder="big"),
                 0,
@@ -998,10 +1127,13 @@ class ReaddirTest(testcase.EdenRepoTest):
                 (0).to_bytes(32, byteorder="big"),
                 0,
                 (0).to_bytes(32, byteorder="big"),
+                mtime,
+                mode,
             )
-        if stat.S_IXUSR & file_stat.st_mode:
+        if stat.S_IXUSR & mode:
             file_type = SourceControlType.EXECUTABLE_FILE
         file_size = file_stat.st_size
+        fullpath = self.get_path(path)
         ifile = open(fullpath, "rb")
         file_contents = ifile.read()
         sha1_hash = hashlib.sha1(file_contents).digest()
@@ -1016,6 +1148,8 @@ class ReaddirTest(testcase.EdenRepoTest):
             blake3,
             file_size,
             blake3,
+            mtime,
+            mode,
         )
 
     def get_counter(self, name: str) -> float:
@@ -1031,8 +1165,11 @@ class ReaddirTest(testcase.EdenRepoTest):
             Optional[bytes],
             int,
             Optional[bytes],
+            TimeSpec,
+            int,
         ],
         req_attr: int = ALL_ATTRIBUTES,
+        file_name: Optional[str] = None,
     ) -> FileAttributeDataOrErrorV2:
         sha1 = None
         if req_attr & FileAttributes.SHA1_HASH:
@@ -1068,6 +1205,30 @@ class ReaddirTest(testcase.EdenRepoTest):
         ] is not None:
             digestHash = DigestHashOrError(digestHash=expected_attributes[6])
 
+        mtime = None
+        if (req_attr & FileAttributes.MTIME) and expected_attributes[7] is not None:
+            # mtime not implemented, always expect error
+            # mtime = MtimeOrError(mtime=expected_attributes[7])
+            mtime = MtimeOrError(
+                error=EdenError(
+                    message=f"{file_name}: mtime requested, but no mtime available",
+                    errorType=EdenErrorType.ATTRIBUTE_UNAVAILABLE,
+                    errorCode=ENOENT,
+                )
+            )
+
+        mode = None
+        if (req_attr & FileAttributes.MODE) and expected_attributes[8] is not None:
+            # mode not implemented, always expect error
+            # mode = ModeOrError(mode=expected_attributes[8])
+            mode = ModeOrError(
+                error=EdenError(
+                    message=f"{file_name}: mode requested, but no mode available",
+                    errorType=EdenErrorType.ATTRIBUTE_UNAVAILABLE,
+                    errorCode=ENOENT,
+                )
+            )
+
         return FileAttributeDataOrErrorV2(
             fileAttributeData=FileAttributeDataV2(
                 sha1=sha1,
@@ -1077,6 +1238,8 @@ class ReaddirTest(testcase.EdenRepoTest):
                 blake3=blake3,
                 digestSize=digestSize,
                 digestHash=digestHash,
+                mtime=mtime,
+                mode=mode,
             )
         )
 
@@ -1092,7 +1255,8 @@ class ReaddirTest(testcase.EdenRepoTest):
                         self.get_expected_file_attributes(
                             "adir/file",
                             self.adir_file_id,
-                        )
+                        ),
+                        file_name="file",
                     )
                 }
             )
@@ -1102,8 +1266,9 @@ class ReaddirTest(testcase.EdenRepoTest):
                         self.get_expected_file_attributes(
                             "bdir/file",
                             self.bdir_file_id,
-                        )
-                    )
+                        ),
+                        file_name="file",
+                    ),
                 }
             )
 
@@ -1214,6 +1379,7 @@ class ReaddirTest(testcase.EdenRepoTest):
                             "adir/file", self.adir_file_id
                         ),
                         req_attr=req_attr,
+                        file_name="file",
                     )
                 }
             )
@@ -1224,6 +1390,7 @@ class ReaddirTest(testcase.EdenRepoTest):
                             "bdir/file", self.bdir_file_id
                         ),
                         req_attr=req_attr,
+                        file_name="file",
                     )
                 }
             )
@@ -1265,6 +1432,8 @@ class ReaddirTest(testcase.EdenRepoTest):
         object_id: Optional[bytes],
         digest_size_result: DigestSizeOrError,
         digest_hash_result: DigestHashOrError,
+        mtime_result=MtimeOrError,
+        mode_result=ModeOrError,
     ) -> None:
         with self.get_thrift_client_legacy() as client:
             expected = FileAttributeDataOrErrorV2(
@@ -1280,6 +1449,8 @@ class ReaddirTest(testcase.EdenRepoTest):
                     blake3=blake3_result,
                     digestSize=digest_size_result,
                     digestHash=digest_hash_result,
+                    mtime=mtime_result,
+                    mode=mode_result,
                 )
             )
 
@@ -1309,6 +1480,8 @@ class ReaddirTest(testcase.EdenRepoTest):
                     blake3=None,
                     digestSize=None,
                     digestHash=None,
+                    mtime=None,
+                    mode=None,
                 )
             )
 
@@ -1356,6 +1529,22 @@ class ReaddirTest(testcase.EdenRepoTest):
             object_id=self.cdir_subdir_id,
             digest_size_result=self.cdir_subdir_digest_size_result,
             digest_hash_result=self.cdir_subdir_digest_hash_result,
+            mtime_result=MtimeOrError(
+                error=EdenError(
+                    message="subdir: mtime requested, but no mtime available",
+                    errorType=EdenErrorType.ATTRIBUTE_UNAVAILABLE,
+                    errorCode=ENOENT,
+                )
+            ),
+            mode_result=ModeOrError(
+                error=EdenError(
+                    message="subdir: mode requested, but no mode available",
+                    errorType=EdenErrorType.ATTRIBUTE_UNAVAILABLE,
+                    errorCode=ENOENT,
+                )
+            ),
+            # mtime_result=MtimeOrError(mtime=stat_mtime_to_timespec(stat)),
+            # mode_result=ModeOrError(mode=stat.st_mode),
         )
 
         if sys.platform != "win32":
@@ -1388,6 +1577,22 @@ class ReaddirTest(testcase.EdenRepoTest):
                     digest_hash_result=DigestHashOrError(
                         error=sock_error,
                     ),
+                    mtime_result=MtimeOrError(
+                        error=EdenError(
+                            message="asock: mtime requested, but no mtime available",
+                            errorType=EdenErrorType.ATTRIBUTE_UNAVAILABLE,
+                            errorCode=ENOENT,
+                        )
+                    ),
+                    mode_result=ModeOrError(
+                        error=EdenError(
+                            message="asock: mode requested, but no mode available",
+                            errorType=EdenErrorType.ATTRIBUTE_UNAVAILABLE,
+                            errorCode=ENOENT,
+                        )
+                    ),
+                    # mtime_result=MtimeOrError(mtime=stat_mtime_to_timespec(stat)),
+                    # mode_result=ModeOrError(mode=stat.st_mode),
                 )
 
         slink_error = EdenError(
@@ -1413,6 +1618,20 @@ class ReaddirTest(testcase.EdenRepoTest):
             ),
             digest_hash_result=DigestHashOrError(
                 error=slink_error,
+            ),
+            mtime_result=MtimeOrError(
+                error=EdenError(
+                    message="slink: mtime requested, but no mtime available",
+                    errorType=EdenErrorType.ATTRIBUTE_UNAVAILABLE,
+                    errorCode=ENOENT,
+                )
+            ),
+            mode_result=ModeOrError(
+                error=EdenError(
+                    message="slink: mode requested, but no mode available",
+                    errorType=EdenErrorType.ATTRIBUTE_UNAVAILABLE,
+                    errorCode=ENOENT,
+                )
             ),
         )
 

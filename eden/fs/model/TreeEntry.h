@@ -48,6 +48,8 @@ struct EntryAttributes {
   std::optional<folly::Try<std::optional<ObjectId>>> objectId;
   std::optional<folly::Try<uint64_t>> digestSize;
   std::optional<folly::Try<Hash32>> digestHash;
+  std::optional<folly::Try<timespec>> mtime;
+  std::optional<folly::Try<mode_t>> mode;
 };
 
 /**

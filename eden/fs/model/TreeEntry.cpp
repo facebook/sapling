@@ -16,6 +16,7 @@
 
 #include "eden/common/utils/EnumValue.h"
 #include "eden/common/utils/PathFuncs.h"
+#include "eden/common/utils/TimeUtil.h"
 
 namespace facebook::eden {
 
@@ -41,7 +42,9 @@ bool operator==(const EntryAttributes& lhs, const EntryAttributes& rhs) {
       checkValueEqual(lhs.type, rhs.type) &&
       checkValueEqual(lhs.objectId, rhs.objectId) &&
       checkValueEqual(lhs.digestSize, rhs.digestSize) &&
-      checkValueEqual(lhs.digestHash, rhs.digestHash);
+      checkValueEqual(lhs.digestHash, rhs.digestHash) &&
+      checkValueEqual(lhs.mtime, rhs.mtime) &&
+      checkValueEqual(lhs.mode, rhs.mode);
 }
 
 bool operator!=(const EntryAttributes& lhs, const EntryAttributes& rhs) {
