@@ -13,7 +13,7 @@ import socket
 import stat
 import subprocess
 import sys
-from errno import ENOENT
+from errno import EINVAL, EISDIR, ENOENT
 from pathlib import Path
 from typing import Dict, List, Optional, Pattern, Tuple, Union
 
@@ -293,7 +293,11 @@ class ReaddirTest(testcase.EdenRepoTest):
         }[self.repo_type]
 
     def assert_eden_error(
-        self, result: EdenThriftResult, error_message: Union[str, Pattern]
+        self,
+        result: EdenThriftResult,
+        error_message: Union[str, Pattern],
+        error_type: Optional[EdenErrorType] = None,
+        error_code: Optional[int] = None,
     ) -> None:
         error = result.get_error()
         self.assertIsNotNone(error)
@@ -301,6 +305,12 @@ class ReaddirTest(testcase.EdenRepoTest):
             self.assertEqual(error_message, error.message)
         else:
             self.assertRegex(error.message, error_message)
+
+        if error_type is not None:
+            self.assertEqual(error_type, error.errorType)
+
+        if error_code is not None:
+            self.assertEqual(error_code, error.errorCode)
 
     def get_attributes(
         self, files: List[bytes], req_attr: int
@@ -514,13 +524,21 @@ class ReaddirTest(testcase.EdenRepoTest):
         results = self.get_all_attributes([b"i_do_not_exist"])
         self.assertEqual(1, len(results.res))
         self.assert_attribute_error(
-            results, "i_do_not_exist: No such file or directory", 0
+            results,
+            "i_do_not_exist: No such file or directory",
+            0,
+            error_type=EdenErrorType.POSIX_ERROR,
+            error_code=ENOENT,
         )
 
         results_v2 = self.get_all_attributes_v2([b"i_do_not_exist"])
         self.assertEqual(1, len(results_v2.res))
         self.assert_attribute_error(
-            results_v2, "i_do_not_exist: No such file or directory", 0
+            results_v2,
+            "i_do_not_exist: No such file or directory",
+            0,
+            error_type=EdenErrorType.POSIX_ERROR,
+            error_code=ENOENT,
         )
 
     def test_get_sha1_only(self) -> None:
@@ -588,6 +606,8 @@ class ReaddirTest(testcase.EdenRepoTest):
             results,
             re.compile(r"PathComponent must not be \."),
             0,
+            error_type=EdenErrorType.ARGUMENT_ERROR,
+            error_code=None,
         )
 
         results_v2 = self.get_all_attributes_v2([b"./hello"])
@@ -596,21 +616,41 @@ class ReaddirTest(testcase.EdenRepoTest):
             results_v2,
             re.compile(r"PathComponent must not be \."),
             0,
+            error_type=EdenErrorType.ARGUMENT_ERROR,
+            error_code=None,
         )
 
     def test_get_attributes_throws_for_empty_string(self) -> None:
         results = self.get_all_attributes([b""])
         self.assertEqual(1, len(results.res))
-        self.assert_attribute_error(results, "path cannot be the empty string", 0)
+        self.assert_attribute_error(
+            results,
+            "path cannot be the empty string",
+            0,
+            error_type=EdenErrorType.ARGUMENT_ERROR,
+            error_code=None,
+        )
 
         results_v2 = self.get_all_attributes_v2([b""])
         self.assertEqual(1, len(results_v2.res))
-        self.assert_attribute_error(results_v2, "path cannot be the empty string", 0)
+        self.assert_attribute_error(
+            results_v2,
+            "path cannot be the empty string",
+            0,
+            error_type=EdenErrorType.ARGUMENT_ERROR,
+            error_code=None,
+        )
 
     def test_get_attributes_directory(self) -> None:
         results = self.get_all_attributes([b"adir"])
         self.assertEqual(1, len(results.res))
-        self.assert_attribute_error(results, "adir: Is a directory", 0)
+        self.assert_attribute_error(
+            results,
+            "adir: Is a directory",
+            0,
+            error_type=EdenErrorType.POSIX_ERROR,
+            error_code=EISDIR,
+        )
 
         expected_adir_result_v2 = FileAttributeDataOrErrorV2(
             fileAttributeData=FileAttributeDataV2(
@@ -668,6 +708,8 @@ class ReaddirTest(testcase.EdenRepoTest):
                 results,
                 "adir/asock: file is a non-source-control type: 12: Invalid argument",
                 0,
+                error_type=EdenErrorType.POSIX_ERROR,
+                error_code=EINVAL,
             )
 
             expected_adir_result_v2 = FileAttributeDataOrErrorV2(
@@ -729,7 +771,11 @@ class ReaddirTest(testcase.EdenRepoTest):
         results = self.get_all_attributes([b"slink"])
         self.assertEqual(1, len(results.res))
         self.assert_attribute_error(
-            results, "slink: file is a symlink: Invalid argument", 0
+            results,
+            "slink: file is a symlink: Invalid argument",
+            0,
+            error_type=EdenErrorType.POSIX_ERROR,
+            error_code=EINVAL,
         )
         expected_slink_result_v2 = FileAttributeDataOrErrorV2(
             fileAttributeData=FileAttributeDataV2(
@@ -880,6 +926,8 @@ class ReaddirTest(testcase.EdenRepoTest):
         ],
         error_message: Union[str, Pattern],
         map_entry: int,
+        error_type: Optional[EdenErrorType] = None,
+        error_code: Optional[int] = None,
     ) -> None:
         self.assertIsNotNone(
             attribute_result, msg="Must pass a GetAttributesFromFilesResult"
@@ -895,7 +943,12 @@ class ReaddirTest(testcase.EdenRepoTest):
             attr_or_err.getType(),
             msg="GetAttributesFromFilesResult must be an error",
         )
-        self.assert_eden_error(attr_or_err, error_message)
+        self.assert_eden_error(
+            attr_or_err,
+            error_message,
+            error_type,
+            error_code,
+        )
 
     def get_expected_file_attributes(
         self,
