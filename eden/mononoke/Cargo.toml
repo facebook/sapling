@@ -430,6 +430,7 @@ members = [
   "repo_attributes/deletion_log",
   "repo_attributes/hook_manager/hook_manager",
   "repo_attributes/hook_manager/hook_manager_testlib",
+  "repo_attributes/mutable_blobstore",
   "repo_attributes/repo_blobstore",
   "repo_attributes/repo_bookmark_attrs",
   "repo_attributes/repo_cross_repo",
