@@ -144,6 +144,7 @@ class VirtualInode {
       EntryAttributeFlags requestedAttributes,
       RelativePathPiece path,
       const std::shared_ptr<ObjectStore>& objectStore,
+      timespec lastCheckoutTime,
       const ObjectFetchContextPtr& fetchContext) const;
 
   /**
@@ -194,6 +195,7 @@ class VirtualInode {
       EntryAttributeFlags requestedAttributes,
       RelativePath path,
       const std::shared_ptr<ObjectStore>& objectStore,
+      timespec lastCheckoutTime,
       const ObjectFetchContextPtr& fetchContext);
 
   ImmediateFuture<std::string> getBlob(
@@ -221,6 +223,7 @@ class VirtualInode {
       EntryAttributeFlags requestedAttributes,
       RelativePathPiece path,
       const std::shared_ptr<ObjectStore>& objectStore,
+      timespec lastCheckoutTime,
       const ObjectFetchContextPtr& fetchContext,
       std::optional<TreeEntryType> entryType,
       int errorCode,

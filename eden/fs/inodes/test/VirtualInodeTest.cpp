@@ -530,7 +530,6 @@ void verifyTreeState(
                                             << expected.getContents() << "\"";
       }
 
-      // TODO(cuev): This is no longer true. We should test directories as well.
       // Blake3 is only computed for files
       if ((verify_flags & VERIFY_BLAKE3) &&
           virtualInode.getDtype() == dtype_t::Regular) {
@@ -558,6 +557,7 @@ void verifyTreeState(
                         ENTRY_ATTRIBUTE_BLAKE3 | ENTRY_ATTRIBUTE_DIGEST_SIZE,
                     expected.path,
                     mount.getEdenMount()->getObjectStore(),
+                    mount.getEdenMount()->getLastCheckoutTime().toTimespec(),
                     ObjectFetchContext::getNullContext())
                 .semi()
                 .via(mount.getServerExecutor().get());
@@ -762,13 +762,15 @@ TEST(VirtualInodeTest, getChildrenAttributes) {
     EXPECT_INODE_OR(virtualInode, *info.get());
     if (virtualInode.isDirectory()) {
       for (auto& attribute_request : attribute_requests) {
-        auto result = virtualInode
-                          .getChildrenAttributes(
-                              attribute_request,
-                              info->path,
-                              mount.getEdenMount()->getObjectStore(),
-                              ObjectFetchContext::getNullContext())
-                          .get();
+        auto result =
+            virtualInode
+                .getChildrenAttributes(
+                    attribute_request,
+                    info->path,
+                    mount.getEdenMount()->getObjectStore(),
+                    mount.getEdenMount()->getLastCheckoutTime().toTimespec(),
+                    ObjectFetchContext::getNullContext())
+                .get();
 
         for (auto child : files.getChildren(RelativePathPiece{info->path})) {
           auto childVirtualInode = mount.getVirtualInode(child->path);
@@ -782,6 +784,9 @@ TEST(VirtualInodeTest, getChildrenAttributes) {
                           attribute_request,
                           child->path,
                           mount.getEdenMount()->getObjectStore(),
+                          mount.getEdenMount()
+                              ->getLastCheckoutTime()
+                              .toTimespec(),
                           ObjectFetchContext::getNullContext())
                       .getTry())));
         }
@@ -828,15 +833,17 @@ TEST(VirtualInodeTest, fileOpsOnCorrectObjectsOnly) {
           << " on path " << info.getLogPath();
     }
 
-    auto auxDataTry = virtualInode
-                          .getEntryAttributes(
-                              ENTRY_ATTRIBUTE_SIZE | ENTRY_ATTRIBUTE_SHA1 |
-                                  ENTRY_ATTRIBUTE_SOURCE_CONTROL_TYPE |
-                                  ENTRY_ATTRIBUTE_DIGEST_SIZE,
-                              info.path,
-                              mount.getEdenMount()->getObjectStore(),
-                              ObjectFetchContext::getNullContext())
-                          .getTry();
+    auto auxDataTry =
+        virtualInode
+            .getEntryAttributes(
+                ENTRY_ATTRIBUTE_SIZE | ENTRY_ATTRIBUTE_SHA1 |
+                    ENTRY_ATTRIBUTE_SOURCE_CONTROL_TYPE |
+                    ENTRY_ATTRIBUTE_DIGEST_SIZE,
+                info.path,
+                mount.getEdenMount()->getObjectStore(),
+                mount.getEdenMount()->getLastCheckoutTime().toTimespec(),
+                ObjectFetchContext::getNullContext())
+            .getTry();
     if (info.isRegularFile()) {
       EXPECT_EQ(true, auxDataTry.hasValue())
           << " on path " << info.getLogPath();
@@ -878,6 +885,7 @@ TEST(VirtualInodeTest, fileOpsOnCorrectObjectsOnly) {
                     ENTRY_ATTRIBUTE_DIGEST_SIZE,
                 info.path,
                 mount.getEdenMount()->getObjectStore(),
+                mount.getEdenMount()->getLastCheckoutTime().toTimespec(),
                 ObjectFetchContext::getNullContext())
             .getTry();
     if (info.isRegularFile()) {
@@ -945,6 +953,7 @@ TEST(VirtualInodeTest, getEntryAttributesAttributeError) {
           ENTRY_ATTRIBUTE_SOURCE_CONTROL_TYPE | ENTRY_ATTRIBUTE_DIGEST_SIZE,
       RelativePathPiece{"root_dirA"},
       mount.getEdenMount()->getObjectStore(),
+      mount.getEdenMount()->getLastCheckoutTime().toTimespec(),
       ObjectFetchContext::getNullContext());
 
   builder.triggerError(

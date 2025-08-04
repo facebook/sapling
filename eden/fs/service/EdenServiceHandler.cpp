@@ -3163,22 +3163,27 @@ getAllEntryAttributes(
   auto virtualInode =
       edenMount.getVirtualInode(RelativePathPiece{path}, fetchContext);
   return std::move(virtualInode)
-      .thenValue([path = std::move(path),
-                  requestedAttributes,
-                  objectStore = edenMount.getObjectStore(),
-                  fetchContext =
-                      fetchContext.copy()](VirtualInode tree) mutable {
-        if (!tree.isDirectory()) {
-          return ImmediateFuture<std::vector<
-              std::pair<PathComponent, folly::Try<EntryAttributes>>>>(
-              newEdenError(
-                  EINVAL,
-                  EdenErrorType::ARGUMENT_ERROR,
-                  fmt::format("{}: path must be a directory", path)));
-        }
-        return tree.getChildrenAttributes(
-            requestedAttributes, RelativePath{path}, objectStore, fetchContext);
-      });
+      .thenValue(
+          [path = std::move(path),
+           requestedAttributes,
+           objectStore = edenMount.getObjectStore(),
+           lastCheckoutTime = edenMount.getLastCheckoutTime().toTimespec(),
+           fetchContext = fetchContext.copy()](VirtualInode tree) mutable {
+            if (!tree.isDirectory()) {
+              return ImmediateFuture<std::vector<
+                  std::pair<PathComponent, folly::Try<EntryAttributes>>>>(
+                  newEdenError(
+                      EINVAL,
+                      EdenErrorType::ARGUMENT_ERROR,
+                      fmt::format("{}: path must be a directory", path)));
+            }
+            return tree.getChildrenAttributes(
+                requestedAttributes,
+                RelativePath{path},
+                objectStore,
+                lastCheckoutTime,
+                fetchContext);
+          });
 }
 
 template <typename SerializedT, typename T>
@@ -3462,6 +3467,7 @@ ImmediateFuture<EntryAttributes> EdenServiceHandler::getEntryAttributesForPath(
                 reqBitmask,
                 relativePath,
                 edenMount.getObjectStore(),
+                edenMount.getLastCheckoutTime().toTimespec(),
                 fetchContext);
           }
           return makeImmediateFuture<EntryAttributes>(PathError(
