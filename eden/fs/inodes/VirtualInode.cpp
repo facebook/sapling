@@ -277,6 +277,88 @@ ImmediateFuture<std::optional<TreeAuxData>> VirtualInode::getTreeAuxData(
       });
 }
 
+namespace {
+void populateInvalidNonFileAttributes(
+    EntryAttributes& attributes,
+    EntryAttributeFlags requestedAttributes,
+    int errorCode,
+    RelativePathPiece path,
+    std::optional<TreeEntryType> entryType,
+    std::string_view additionalErrorContext) {
+  // It's invalid to request sha1, size, and blake3 for non-file entries
+  if (requestedAttributes.contains(ENTRY_ATTRIBUTE_SHA1)) {
+    attributes.sha1 = folly::Try<Hash20>{
+        PathError{errorCode, path, std::string{additionalErrorContext}}};
+  }
+
+  if (requestedAttributes.contains(ENTRY_ATTRIBUTE_SIZE)) {
+    attributes.size = folly::Try<uint64_t>{
+        PathError{errorCode, path, std::string{additionalErrorContext}}};
+  }
+
+  if (requestedAttributes.contains(ENTRY_ATTRIBUTE_BLAKE3)) {
+    attributes.blake3 = folly::Try<Hash32>{
+        PathError{errorCode, path, std::string{additionalErrorContext}}};
+  }
+
+  // Aux data specific to tree entries was requested, but the entry we're
+  // processing is a symlink, socket, or other unsupported type.
+  //
+  // entryType is std::nullopt if the entry is a socket or other non-scm type
+  if (entryType.value_or(TreeEntryType::SYMLINK) != TreeEntryType::TREE) {
+    if (requestedAttributes.contains(ENTRY_ATTRIBUTE_DIGEST_SIZE)) {
+      attributes.digestSize = folly::Try<uint64_t>{
+          PathError{errorCode, path, std::string{additionalErrorContext}}};
+    }
+
+    if (requestedAttributes.contains(ENTRY_ATTRIBUTE_DIGEST_HASH)) {
+      attributes.digestHash = folly::Try<Hash32>{
+          PathError{errorCode, path, std::string{additionalErrorContext}}};
+    }
+  }
+}
+
+void populateTreeAuxNonFileAttributes(
+    EntryAttributes& attributes,
+    EntryAttributeFlags requestedAttributes,
+    const folly::Try<std::optional<TreeAuxData>>& treeAuxTry,
+    RelativePathPiece path) {
+  if (treeAuxTry.hasException()) {
+    // We failed to get tree aux data. This shouldn't cause the
+    // entire result to be an error. We can return whichever
+    // attributes we successfully fetched.
+    if (requestedAttributes.contains(ENTRY_ATTRIBUTE_DIGEST_HASH)) {
+      attributes.digestHash = folly::Try<Hash32>{treeAuxTry.exception()};
+    }
+
+    if (requestedAttributes.contains(ENTRY_ATTRIBUTE_DIGEST_SIZE)) {
+      attributes.digestSize = folly::Try<uint64_t>{treeAuxTry.exception()};
+    }
+  } else {
+    // The tree aux data request didn't error out, but we may have received
+    // "nullopt" as the result (indicating no tree aux data is currently
+    // computed for this entry).
+    auto treeAux = treeAuxTry.value();
+    if (requestedAttributes.contains(ENTRY_ATTRIBUTE_DIGEST_HASH)) {
+      attributes.digestHash = treeAux.has_value()
+          ? std::optional<folly::Try<Hash32>>{treeAux.value().digestHash}
+          : folly::Try<Hash32>(newEdenError(
+                ENOENT,
+                EdenErrorType::ATTRIBUTE_UNAVAILABLE,
+                fmt::format("tree aux data missing for tree: {}", path)));
+    }
+    if (requestedAttributes.contains(ENTRY_ATTRIBUTE_DIGEST_SIZE)) {
+      attributes.digestSize = treeAux.has_value()
+          ? std::optional<folly::Try<uint64_t>>{treeAux.value().digestSize}
+          : folly::Try<uint64_t>(newEdenError(
+                ENOENT,
+                EdenErrorType::ATTRIBUTE_UNAVAILABLE,
+                fmt::format("tree aux data missing for tree: {}", path)));
+    }
+  }
+}
+} // namespace
+
 ImmediateFuture<EntryAttributes> VirtualInode::getEntryAttributesForNonFile(
     EntryAttributeFlags requestedAttributes,
     RelativePathPiece path,
@@ -285,53 +367,29 @@ ImmediateFuture<EntryAttributes> VirtualInode::getEntryAttributesForNonFile(
     std::optional<TreeEntryType> entryType,
     int errorCode,
     std::string additionalErrorContext) const {
-  std::optional<folly::Try<Hash20>> sha1;
-  if (requestedAttributes.contains(ENTRY_ATTRIBUTE_SHA1)) {
-    sha1 =
-        folly::Try<Hash20>{PathError{errorCode, path, additionalErrorContext}};
-  }
+  EntryAttributes attributes = EntryAttributes{};
 
-  std::optional<folly::Try<std::optional<TreeEntryType>>> type;
+  // The entry's type and ObjectID are used to fetch other attributes.
+  // Compute/fill them immediately.
   if (requestedAttributes.contains(ENTRY_ATTRIBUTE_SOURCE_CONTROL_TYPE)) {
-    type = folly::Try<std::optional<TreeEntryType>>{entryType};
+    attributes.type = folly::Try<std::optional<TreeEntryType>>{entryType};
   }
 
-  std::optional<folly::Try<std::optional<ObjectId>>> objectId;
   auto oid = getObjectId();
   if (requestedAttributes.contains(ENTRY_ATTRIBUTE_OBJECT_ID)) {
-    objectId = folly::Try<std::optional<ObjectId>>{oid};
+    attributes.objectId = folly::Try<std::optional<ObjectId>>{oid};
   }
 
-  std::optional<folly::Try<uint64_t>> size;
-  if (requestedAttributes.contains(ENTRY_ATTRIBUTE_SIZE)) {
-    size = folly::Try<uint64_t>{
-        PathError{errorCode, path, additionalErrorContext}};
-  }
+  // Fill in any attributes that may be invalid for NonFile types
+  populateInvalidNonFileAttributes(
+      attributes,
+      requestedAttributes,
+      errorCode,
+      path,
+      entryType,
+      additionalErrorContext);
 
-  std::optional<folly::Try<Hash32>> blake3;
-  if (requestedAttributes.contains(ENTRY_ATTRIBUTE_BLAKE3)) {
-    blake3 =
-        folly::Try<Hash32>{PathError{errorCode, path, additionalErrorContext}};
-  }
-
-  std::optional<folly::Try<Hash32>> digestHash;
-  std::optional<folly::Try<uint64_t>> digestSize;
-
-  // The entry is a symlink, socket, or other unsupported type. We return
-  // error values for these entry types if they were requested.
-  //
-  // entryType is std::nullopt if the entry is a socket or other non-scm type
-  if (entryType.value_or(TreeEntryType::SYMLINK) != TreeEntryType::TREE) {
-    if (requestedAttributes.contains(ENTRY_ATTRIBUTE_DIGEST_SIZE)) {
-      digestSize = folly::Try<uint64_t>{
-          PathError{errorCode, path, additionalErrorContext}};
-    }
-
-    if (requestedAttributes.contains(ENTRY_ATTRIBUTE_DIGEST_HASH)) {
-      digestHash = folly::Try<Hash32>{
-          PathError{errorCode, path, std::move(additionalErrorContext)}};
-    }
-  } else {
+  if (entryType.value_or(TreeEntryType::SYMLINK) == TreeEntryType::TREE) {
     // The entry is a tree, and therefore we can attempt to compute tree
     // aux data for it. However, we can only compute the additional attributes
     // of trees that have ObjectIds. In other words, the tree must be
@@ -339,88 +397,25 @@ ImmediateFuture<EntryAttributes> VirtualInode::getEntryAttributesForNonFile(
     if ((requestedAttributes.contains(ENTRY_ATTRIBUTE_DIGEST_HASH) ||
          requestedAttributes.contains(ENTRY_ATTRIBUTE_DIGEST_SIZE)) &&
         oid.has_value()) {
-      auto treeAuxFut =
-          objectStore->getTreeAuxData(oid.value(), fetchContext)
-              .thenValue([requestedAttributes,
-                          sha1,
-                          type,
-                          objectId,
-                          blake3,
-                          size,
-                          digestSize,
-                          digestHash,
-                          path](std::optional<TreeAuxData> treeAux) mutable {
-                if (requestedAttributes.contains(ENTRY_ATTRIBUTE_DIGEST_HASH)) {
-                  digestHash = treeAux.has_value()
-                      ? std::optional<folly::Try<Hash32>>{treeAux.value()
-                                                              .digestHash}
-                      : folly::Try<Hash32>(newEdenError(
-                            ENOENT,
-                            EdenErrorType::ATTRIBUTE_UNAVAILABLE,
-                            fmt::format(
-                                "tree aux data missing for tree: {}", path)));
-                }
-                if (requestedAttributes.contains(ENTRY_ATTRIBUTE_DIGEST_SIZE)) {
-                  digestSize = treeAux.has_value()
-                      ? std::optional<folly::Try<uint64_t>>{std::move(
-                            treeAux.value().digestSize)}
-                      : folly::Try<uint64_t>(newEdenError(
-                            ENOENT,
-                            EdenErrorType::ATTRIBUTE_UNAVAILABLE,
-                            fmt::format(
-                                "tree aux data missing for tree: {}", path)));
-                }
-                return EntryAttributes{
-                    std::move(sha1),
-                    std::move(blake3),
-                    std::move(size),
-                    std::move(type),
-                    std::move(objectId),
-                    std::move(digestSize),
-                    std::move(digestHash)};
+      return objectStore->getTreeAuxData(oid.value(), fetchContext)
+          .thenTry(
+              [entryAttributes = std::move(attributes),
+               requestedAttributes,
+               oid,
+               path](
+                  folly::Try<std::optional<TreeAuxData>> treeAuxTry) mutable {
+                populateTreeAuxNonFileAttributes(
+                    entryAttributes,
+                    requestedAttributes,
+                    std::move(treeAuxTry),
+                    path);
+                return entryAttributes;
               });
-      return std::move(treeAuxFut)
-          .thenError([requestedAttributes,
-                      treeSha1 = std::move(sha1),
-                      treeType = std::move(type),
-                      treeObjectId = std::move(objectId),
-                      treeBlake3 = std::move(blake3),
-                      treeSize = std::move(size),
-                      treeDigestSize = std::move(digestSize),
-                      treeDigestHash = std::move(digestHash)](
-                         const folly::exception_wrapper& ex) mutable {
-            // We failed to get tree aux data. This shouldn't cause the
-            // entire result to be an error. We can return whichever
-            // attributes we successfully fetched.
-            if (requestedAttributes.contains(ENTRY_ATTRIBUTE_DIGEST_HASH)) {
-              treeDigestHash = folly::Try<Hash32>{ex};
-            }
-
-            if (requestedAttributes.contains(ENTRY_ATTRIBUTE_DIGEST_SIZE)) {
-              treeDigestSize = folly::Try<uint64_t>{ex};
-            }
-
-            return EntryAttributes{
-                std::move(treeSha1),
-                std::move(treeBlake3),
-                std::move(treeSize),
-                std::move(treeType),
-                std::move(treeObjectId),
-                std::move(treeDigestSize),
-                std::move(treeDigestHash)};
-          });
     }
     // We return empty tree aux data attributes for materialized directories
   }
 
-  return EntryAttributes{
-      std::move(sha1),
-      std::move(blake3),
-      std::move(size),
-      std::move(type),
-      std::move(objectId),
-      std::move(digestSize),
-      std::move(digestHash)};
+  return attributes;
 }
 
 ImmediateFuture<EntryAttributes> VirtualInode::getEntryAttributes(
