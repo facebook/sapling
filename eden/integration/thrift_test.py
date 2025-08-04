@@ -11,6 +11,7 @@ import hashlib
 import os
 import re
 import subprocess
+from errno import EINVAL, EISDIR, ENOENT
 from pathlib import Path
 from typing import Dict, List, Optional, Pattern, TypeVar, Union
 
@@ -18,6 +19,7 @@ from eden.fs.config.eden_config.thrift_types import ConfigReloadBehavior
 from eden.fs.service.eden.thrift_types import (
     Blake3Result,
     DigestHashResult,
+    EdenErrorType,
     FileAttributeDataOrError,
     FileAttributeDataOrErrorV2,
     GetConfigParams,
@@ -39,6 +41,7 @@ EdenThriftResult = TypeVar(
     SHA1Result,
     Blake3Result,
     DigestHashResult,
+    ScmBlobOrError,
 )
 
 
@@ -195,9 +198,11 @@ class ThriftTest(testcase.EdenRepoTest):
                 response.blob.type,
                 "expect error",
             )
-            self.assertEqual(
-                response.blob.error.message,
+            self.assert_eden_error(
+                response.blob,
                 "tmpdir/file: No such file or directory",
+                EdenErrorType.POSIX_ERROR,
+                ENOENT,
             )
             thrift_req = GetFileContentRequest(
                 mount=thrift_mount, filePath=b"tmpdir", sync=SyncBehavior()
@@ -208,9 +213,11 @@ class ThriftTest(testcase.EdenRepoTest):
                 response.blob.type,
                 "expect error",
             )
-            self.assertEqual(
-                response.blob.error.message,
+            self.assert_eden_error(
+                response.blob,
                 "tmpdir: Is a directory",
+                EdenErrorType.POSIX_ERROR,
+                EISDIR,
             )
         self.rmdir("tmpdir")
 
@@ -311,6 +318,7 @@ class ThriftTest(testcase.EdenRepoTest):
             self.assert_digest_hash_error(
                 results[0],
                 "std::domain_error: getTreeAuxData is not implemented for GitBackingStores",
+                EdenErrorType.GENERIC_ERROR,
             )
 
     async def test_get_sha1_throws_for_path_with_dot_components(self) -> None:
@@ -324,6 +332,7 @@ class ThriftTest(testcase.EdenRepoTest):
             re.compile(
                 r".*PathComponentValidationError.*: PathComponent must not be \."
             ),
+            EdenErrorType.GENERIC_ERROR,
         )
 
     async def test_get_blake3_throws_for_path_with_dot_components(self) -> None:
@@ -337,6 +346,7 @@ class ThriftTest(testcase.EdenRepoTest):
             re.compile(
                 r".*PathComponentValidationError.*: PathComponent must not be \."
             ),
+            EdenErrorType.GENERIC_ERROR,
         )
 
     async def test_get_digest_hash_throws_for_path_with_dot_components(self) -> None:
@@ -350,6 +360,7 @@ class ThriftTest(testcase.EdenRepoTest):
             re.compile(
                 r".*PathComponentValidationError.*: PathComponent must not be \."
             ),
+            EdenErrorType.GENERIC_ERROR,
         )
 
     async def test_get_sha1_throws_for_empty_string(self) -> None:
@@ -358,7 +369,9 @@ class ThriftTest(testcase.EdenRepoTest):
                 self.mount_path_bytes, [b""], sync=SyncBehavior()
             )
         self.assertEqual(1, len(results))
-        self.assert_sha1_error(results[0], ": Is a directory")
+        self.assert_sha1_error(
+            results[0], ": Is a directory", EdenErrorType.POSIX_ERROR, EISDIR
+        )
 
     async def test_get_blake3_throws_for_empty_string(self) -> None:
         async with self.get_thrift_client() as client:
@@ -366,7 +379,9 @@ class ThriftTest(testcase.EdenRepoTest):
                 self.mount_path_bytes, [b""], sync=SyncBehavior()
             )
         self.assertEqual(1, len(results))
-        self.assert_blake3_error(results[0], ": Is a directory")
+        self.assert_blake3_error(
+            results[0], ": Is a directory", EdenErrorType.POSIX_ERROR, EISDIR
+        )
 
     async def test_get_digest_hash_throws_for_empty_string(self) -> None:
         async with self.get_thrift_client() as client:
@@ -384,7 +399,9 @@ class ThriftTest(testcase.EdenRepoTest):
                 sync=SyncBehavior(syncTimeoutSeconds=60),
             )
         self.assertEqual(1, len(results))
-        self.assert_sha1_error(results[0], "adir: Is a directory")
+        self.assert_sha1_error(
+            results[0], "adir: Is a directory", EdenErrorType.POSIX_ERROR, EISDIR
+        )
 
     async def test_get_blake3_throws_for_directory(self) -> None:
         async with self.get_thrift_client() as client:
@@ -394,7 +411,9 @@ class ThriftTest(testcase.EdenRepoTest):
                 sync=SyncBehavior(syncTimeoutSeconds=60),
             )
         self.assertEqual(1, len(results))
-        self.assert_blake3_error(results[0], "adir: Is a directory")
+        self.assert_blake3_error(
+            results[0], "adir: Is a directory", EdenErrorType.POSIX_ERROR, EISDIR
+        )
 
     async def test_get_sha1_throws_for_non_existent_file(self) -> None:
         async with self.get_thrift_client() as client:
@@ -402,7 +421,12 @@ class ThriftTest(testcase.EdenRepoTest):
                 self.mount_path_bytes, [b"i_do_not_exist"], sync=SyncBehavior()
             )
         self.assertEqual(1, len(results))
-        self.assert_sha1_error(results[0], "i_do_not_exist: No such file or directory")
+        self.assert_sha1_error(
+            results[0],
+            "i_do_not_exist: No such file or directory",
+            EdenErrorType.POSIX_ERROR,
+            ENOENT,
+        )
 
     async def test_get_blake3_throws_for_non_existent_file(self) -> None:
         async with self.get_thrift_client() as client:
@@ -411,7 +435,10 @@ class ThriftTest(testcase.EdenRepoTest):
             )
         self.assertEqual(1, len(results))
         self.assert_blake3_error(
-            results[0], "i_do_not_exist: No such file or directory"
+            results[0],
+            "i_do_not_exist: No such file or directory",
+            EdenErrorType.POSIX_ERROR,
+            ENOENT,
         )
 
     async def test_get_digest_hash_throws_for_non_existent_file(self) -> None:
@@ -421,7 +448,10 @@ class ThriftTest(testcase.EdenRepoTest):
             )
         self.assertEqual(1, len(results))
         self.assert_digest_hash_error(
-            results[0], "i_do_not_exist: No such file or directory"
+            results[0],
+            "i_do_not_exist: No such file or directory",
+            EdenErrorType.POSIX_ERROR,
+            ENOENT,
         )
 
     async def test_get_sha1_throws_for_symlink(self) -> None:
@@ -431,7 +461,12 @@ class ThriftTest(testcase.EdenRepoTest):
                 self.mount_path_bytes, [b"slink"], sync=SyncBehavior()
             )
         self.assertEqual(1, len(results))
-        self.assert_sha1_error(results[0], "slink: file is a symlink: Invalid argument")
+        self.assert_sha1_error(
+            results[0],
+            "slink: file is a symlink: Invalid argument",
+            EdenErrorType.POSIX_ERROR,
+            EINVAL,
+        )
 
     async def test_get_blake3_throws_for_symlink(self) -> None:
         """Fails because caller should resolve the symlink themselves."""
@@ -441,7 +476,10 @@ class ThriftTest(testcase.EdenRepoTest):
             )
         self.assertEqual(1, len(results))
         self.assert_blake3_error(
-            results[0], "slink: file is a symlink: Invalid argument"
+            results[0],
+            "slink: file is a symlink: Invalid argument",
+            EdenErrorType.POSIX_ERROR,
+            EINVAL,
         )
 
     async def test_get_digest_hash_throws_for_materialized_directory(self) -> None:
@@ -490,6 +528,7 @@ class ThriftTest(testcase.EdenRepoTest):
             self.assert_digest_hash_error(
                 results[0],
                 "std::domain_error: getTreeAuxData is not implemented for GitBackingStores",
+                EdenErrorType.GENERIC_ERROR,
             )
 
         self.assertEqual(
@@ -498,7 +537,11 @@ class ThriftTest(testcase.EdenRepoTest):
         )
 
     def assert_eden_error(
-        self, result: EdenThriftResult, error_message: Union[str, Pattern]
+        self,
+        result: EdenThriftResult,
+        error_message: Union[str, Pattern],
+        error_type: Optional[EdenErrorType] = None,
+        error_code: Optional[int] = None,
     ) -> None:
         error = result.error
         self.assertIsNotNone(error)
@@ -507,17 +550,31 @@ class ThriftTest(testcase.EdenRepoTest):
         else:
             self.assertRegex(error.message, error_message)
 
+        if error_type is not None:
+            self.assertEqual(error.errorType, error_type)
+
+        if error_code is not None:
+            self.assertEqual(error.errorCode, error_code)
+
     def assert_sha1_error(
-        self, sha1result: SHA1Result, error_message: Union[str, Pattern]
+        self,
+        sha1result: SHA1Result,
+        error_message: Union[str, Pattern],
+        error_type: Optional[EdenErrorType] = None,
+        error_code: Optional[int] = None,
     ) -> None:
         self.assertIsNotNone(sha1result, msg="Must pass a SHA1Result")
         self.assertEqual(
             SHA1Result.Type.error, sha1result.type, msg="SHA1Result must be an error"
         )
-        self.assert_eden_error(sha1result, error_message)
+        self.assert_eden_error(sha1result, error_message, error_type, error_code)
 
     def assert_digest_hash_error(
-        self, digest_hash_result: DigestHashResult, error_message: Union[str, Pattern]
+        self,
+        digest_hash_result: DigestHashResult,
+        error_message: Union[str, Pattern],
+        error_type: Optional[EdenErrorType] = None,
+        error_code: Optional[int] = None,
     ) -> None:
         self.assertIsNotNone(digest_hash_result, msg="Must pass a DigestHashResult")
         self.assertEqual(
@@ -525,10 +582,16 @@ class ThriftTest(testcase.EdenRepoTest):
             digest_hash_result.type,
             msg="DigestHashResult must be an error",
         )
-        self.assert_eden_error(digest_hash_result, error_message)
+        self.assert_eden_error(
+            digest_hash_result, error_message, error_type, error_code
+        )
 
     def assert_blake3_error(
-        self, blake3_result: Blake3Result, error_message: Union[str, Pattern]
+        self,
+        blake3_result: Blake3Result,
+        error_message: Union[str, Pattern],
+        error_type: Optional[EdenErrorType] = None,
+        error_code: Optional[int] = None,
     ) -> None:
         self.assertIsNotNone(blake3_result, msg="Must pass a Blake3Result")
         self.assertEqual(
@@ -536,7 +599,7 @@ class ThriftTest(testcase.EdenRepoTest):
             blake3_result.type,
             msg="Blake3Result must be an error",
         )
-        self.assert_eden_error(blake3_result, error_message)
+        self.assert_eden_error(blake3_result, error_message, error_type, error_code)
 
     async def test_unload_free_inodes(self) -> None:
         for i in range(100):
