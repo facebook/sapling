@@ -49,6 +49,8 @@ const X_FB_NETWORK_TYPE: &str = "x-fb-validated-x2pauth-advice-subject-network-t
 pub enum HttpScubaKey {
     /// The cause of the fetch. E.g. eden prefetch, eden fuse, sapling prefetch, etc.
     FetchCause,
+    /// Whether or not the client attempted to fetch from CAS.
+    FetchFromCASAttempted,
     /// The status code for this response
     HttpStatus,
     /// The HTTP Path requested by the client.
@@ -112,6 +114,7 @@ impl AsRef<str> for HttpScubaKey {
 
         match self {
             FetchCause => "fetch_cause",
+            FetchFromCASAttempted => "fetch_from_cas_attempted",
             HttpStatus => "http_status",
             HttpPath => "http_path",
             HttpQuery => "http_query",
@@ -324,6 +327,12 @@ fn populate_scuba(scuba: &mut MononokeScubaSampleBuilder, state: &mut State) {
 
         let fetch_cause = metadata.fetch_cause();
         scuba.add(HttpScubaKey::FetchCause, fetch_cause);
+
+        let fetch_from_cas_attempted = metadata.fetch_from_cas_attempted();
+        scuba.add(
+            HttpScubaKey::FetchFromCASAttempted,
+            fetch_from_cas_attempted,
+        );
     }
 
     if let Some(config_version) = ConfigInfo::try_borrow_from(state) {

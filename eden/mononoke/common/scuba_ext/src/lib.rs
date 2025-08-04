@@ -207,12 +207,22 @@ impl MononokeScubaSampleBuilder {
             .add_opt("client_tw_task", metadata.clientinfo_tw_task());
 
         self.inner.add_opt("fetch_cause", metadata.fetch_cause());
+        self.inner.add(
+            "fetch_from_cas_attempted",
+            metadata.fetch_from_cas_attempted(),
+        );
 
         self
     }
 
     pub fn add_fetch_cause(&mut self, fetch_cause: &str) -> &mut Self {
         self.inner.add("fetch_cause", fetch_cause);
+        self
+    }
+
+    pub fn add_fetch_from_cas_attempted(&mut self, fetch_from_cas_attempted: bool) -> &mut Self {
+        self.inner
+            .add("fetch_from_cas_attempted", fetch_from_cas_attempted);
         self
     }
 

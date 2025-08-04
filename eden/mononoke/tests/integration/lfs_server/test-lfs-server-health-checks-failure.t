@@ -63,6 +63,7 @@
       "client_ip": "$LOCALIP",
       "client_main_id": *, (glob)
       "fetch_cause": null,
+      "fetch_from_cas_attempted": "false",
       "http_host": *, (glob)
       "http_method": "GET",
       "http_path": "/health_check",

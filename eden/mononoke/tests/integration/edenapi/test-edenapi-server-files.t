@@ -28,7 +28,9 @@ Blobimport test repo.
 
 Start up SaplingRemoteAPI server.
   $ setup_mononoke_config
-  $ start_and_wait_for_mononoke_server
+
+  $ SCUBA="$TESTTMP/scuba.json"
+  $ start_and_wait_for_mononoke_server --scuba-log-file "$SCUBA"
 Create and send file request.
   $ cat > req << EOF
   > [{
@@ -51,3 +53,9 @@ Check files in response.
                                    "blake3": bin("7e9a0ce0d68016f0502ac50ff401830c7e2e9c894b43b242439f90f99af8835a"),
                                    "total_size": 13,
                                    "file_header_metadata": b"\x01\ncopy: test.txt\ncopyrev: 186cafa3319c24956783383dc44c5cbc68c5a0ca\n\x01\n"}}}}]
+
+  $ cat "$SCUBA" | jq '. | select(.normal.log_tag == "EdenAPI Request Processed" and .normal.edenapi_method == "files2") | {edenapi_method: .normal.edenapi_method, fetch_from_cas_attempted: .normal.fetch_from_cas_attempted}'
+  {
+    "edenapi_method": "files2",
+    "fetch_from_cas_attempted": "false"
+  }

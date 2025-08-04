@@ -29,7 +29,8 @@ Blobimport test repo.
   $ blobimport repo/.hg repo
 
 Start up SaplingRemoteAPI server.
-  $ start_and_wait_for_mononoke_server
+  $ SCUBA="$TESTTMP/scuba.json"
+  $ start_and_wait_for_mononoke_server --scuba-log-file "$SCUBA"
 Create and send tree request.
   $ cat > keys << EOF
   > [
@@ -167,3 +168,9 @@ Expected for tree_aux_data to be returned.
                                                     "file_header_metadata": b""}}}}],
     "tree_aux_data": {"augmented_manifest_id": bin("f5d56263e1ffc9a4bf1e637a5d7c5245dfd89ec7b9109147cc7dcc5187e8a73f"),
                       "augmented_manifest_size": 504}}]
+
+  $ cat "$SCUBA" | jq '. | select(.normal.log_tag == "EdenAPI Request Processed" and .normal.edenapi_method == "trees") | {edenapi_method: .normal.edenapi_method, fetch_from_cas_attempted: .normal.fetch_from_cas_attempted}' | jq -s '.[0]'
+  {
+    "edenapi_method": "trees",
+    "fetch_from_cas_attempted": "false"
+  }

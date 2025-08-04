@@ -43,6 +43,7 @@ pub struct Metadata {
     raw_encoded_cats: Option<String>,
     client_info: Option<ClientInfo>,
     fetch_cause: Option<String>,
+    fetch_from_cas_attempted: bool,
 }
 
 impl Metadata {
@@ -88,6 +89,7 @@ impl Metadata {
             raw_encoded_cats: None,
             client_info: None,
             fetch_cause: None,
+            fetch_from_cas_attempted: false,
         }
     }
 
@@ -220,6 +222,11 @@ impl Metadata {
         self
     }
 
+    pub fn set_fetch_from_cas_attempted(mut self, fetch_from_cas_attempted: bool) -> Self {
+        self.fetch_from_cas_attempted = fetch_from_cas_attempted;
+        self
+    }
+
     pub fn unix_name(&self) -> Option<&str> {
         for identity in self.identities() {
             if identity.id_type() == "USER" {
@@ -268,5 +275,9 @@ impl Metadata {
 
     pub fn fetch_cause(&self) -> Option<&str> {
         self.fetch_cause.as_deref()
+    }
+
+    pub fn fetch_from_cas_attempted(&self) -> bool {
+        self.fetch_from_cas_attempted
     }
 }
