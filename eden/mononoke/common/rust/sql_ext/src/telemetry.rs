@@ -112,7 +112,7 @@ pub fn log_query_error(
 
     scuba.add("error", format!("{:?}", err));
     scuba.add("success", 0);
-    STATS::error.add_value(1);
+    STATS::error.add_value(1, (shard_name.to_string(),));
 
     // Log the Scuba sample for debugging when log-level is set to trace.
     tracing::trace!(
@@ -178,7 +178,7 @@ fn log_mysql_query_telemetry(
     )?;
 
     scuba.add("success", 1);
-    STATS::success.add_value(1);
+    STATS::success.add_value(1, (shard_name.to_string(),));
 
     let opt_instance_type = query_tel.instance_type().cloned();
 
@@ -188,44 +188,62 @@ fn log_mysql_query_telemetry(
     scuba.add("instance_type", opt_instance_type.clone());
     if let Some(instance_type) = opt_instance_type {
         // Success
-        STATS::success_instance.add_value(1, (instance_type.clone(),));
+        STATS::success_instance.add_value(1, (shard_name.to_string(), instance_type.clone()));
 
         // CPU and Delay RRU by instance type
         if let Some(client_stats) = query_tel.client_stats() {
             STATS::cpu_rru_instance.add_value(
                 (1000.0 * client_stats.cpu_rru) as i64,
-                (instance_type.clone(),),
+                (shard_name.to_string(), instance_type.clone()),
             );
             STATS::delay_rru_instance.add_value(
                 (1000.0 * client_stats.delay_rru) as i64,
-                (instance_type.clone(),),
+                (shard_name.to_string(), instance_type.clone()),
             );
             STATS::task_full_delay_rru_instance.add_value(
                 (1000.0 * client_stats.task_full_delay_rru) as i64,
-                (instance_type.clone(),),
+                (shard_name.to_string(), instance_type.clone()),
             );
             STATS::task_some_delay_rru.add_value(
                 (1000.0 * client_stats.task_some_delay_rru) as i64,
-                (instance_type.clone(),),
+                (shard_name.to_string(), instance_type.clone()),
             );
         };
 
         // Table stats
         read_tables.iter().sorted().for_each(|&table| {
-            STATS::read_tables.add_value(1, (table.clone(), instance_type.clone()))
+            STATS::read_tables.add_value(
+                1,
+                (shard_name.to_string(), table.clone(), instance_type.clone()),
+            )
         });
 
         write_tables.iter().sorted().for_each(|&table| {
-            STATS::write_tables.add_value(1, (table.clone(), instance_type.clone()))
+            STATS::write_tables.add_value(
+                1,
+                (shard_name.to_string(), table.clone(), instance_type.clone()),
+            )
         });
     }
 
     // CPU and Delay RRU by instance type
     if let Some(client_stats) = query_tel.client_stats() {
-        STATS::cpu_rru.add_value((1000.0 * client_stats.cpu_rru) as i64);
-        STATS::delay_rru.add_value((1000.0 * client_stats.delay_rru) as i64);
-        STATS::full_delay_rru.add_value((1000.0 * client_stats.full_delay_rru) as i64);
-        STATS::max_cpu_rru.add_value((1000.0 * client_stats.max_rru) as i64);
+        STATS::cpu_rru.add_value(
+            (1000.0 * client_stats.cpu_rru) as i64,
+            (shard_name.to_string(),),
+        );
+        STATS::delay_rru.add_value(
+            (1000.0 * client_stats.delay_rru) as i64,
+            (shard_name.to_string(),),
+        );
+        STATS::full_delay_rru.add_value(
+            (1000.0 * client_stats.full_delay_rru) as i64,
+            (shard_name.to_string(),),
+        );
+        STATS::max_cpu_rru.add_value(
+            (1000.0 * client_stats.max_rru) as i64,
+            (shard_name.to_string(),),
+        );
     };
 
     scuba.add("read_tables", read_tables);
@@ -234,14 +252,20 @@ fn log_mysql_query_telemetry(
     for wait_stats in query_tel.wait_stats() {
         STATS::wait_count.add_value(
             wait_stats.wait_count as i64,
-            (wait_stats.wait_type.clone(),),
+            (shard_name.to_string(), wait_stats.wait_type.clone()),
         );
         wait_stats.wait_time.inspect(|wt| {
-            STATS::wait_time.add_value(*wt as i64, (wait_stats.wait_type.clone(),));
+            STATS::wait_time.add_value(
+                *wt as i64,
+                (shard_name.to_string(), wait_stats.wait_type.clone()),
+            );
         });
 
         wait_stats.signal_time.inspect(|st| {
-            STATS::signal_time.add_value(*st as i64, (wait_stats.wait_type.clone(),));
+            STATS::signal_time.add_value(
+                *st as i64,
+                (shard_name.to_string(), wait_stats.wait_type.clone()),
+            );
         });
 
         scuba.add(
@@ -410,58 +434,61 @@ impl TransactionTelemetry {
 // Documentation of MySQL Client Logs: https://fburl.com/wiki/e21tf16l
 define_stats! {
     prefix = "mononoke.sql_telemetry";
-    success: timeseries("success"; Sum, Average),
+    success: dynamic_timeseries("{}.success", (shard_name: String); Sum, Average),
     success_instance: dynamic_timeseries(
-        "success.instance.{}", (instance_type: String);
+        "{}.success.instance.{}", (shard_name: String, instance_type: String);
         Sum, Average
     ),
-    error: timeseries("error"; Sum, Average),
+    error: dynamic_timeseries("{}.error", (shard_name: String); Sum, Average),
 
     // Wait stats
     wait_count: dynamic_timeseries(
-        "wait_count.{}", (wait_event_type: String);
+        "{}.wait_count.{}", (shard_name: String, wait_event_type: String);
         Sum, Average
     ),
     wait_time: dynamic_timeseries(
-        "wait_time.{}", (wait_event_type: String);
+        "{}.wait_time.{}", (shard_name: String, wait_event_type: String);
         Sum, Average
     ),
     signal_time: dynamic_timeseries(
-        "signal_time.{}", (wait_event_type: String);
+        "{}.signal_time.{}", (shard_name: String, wait_event_type: String);
          Sum, Average
     ),
 
     // CPU and Delay RRU for all tasks
-    cpu_rru: timeseries("cpu_milli_rru"; Sum, Average),
-    max_cpu_rru: timeseries("max_cpu_milli_rru"; Sum),
-    delay_rru: timeseries("delay_milli_rru"; Sum, Average),
-    full_delay_rru: timeseries("full_delay_milli_rru";  Sum, Average),
+    cpu_rru: dynamic_timeseries("{}.cpu_milli_rru", (shard_name: String); Sum, Average),
+    max_cpu_rru: dynamic_timeseries("{}.max_cpu_milli_rru", (shard_name: String); Sum),
+    delay_rru: dynamic_timeseries("{}.delay_milli_rru", (shard_name: String); Sum, Average),
+    full_delay_rru: dynamic_timeseries("{}.full_delay_milli_rru", (shard_name: String);  Sum, Average),
 
     // CPU and Delay RRU split by instance type (e.g. Primary or Secondary)
     cpu_rru_instance: dynamic_timeseries(
-        "cpu_milli_rru.instance.{}", (instance_type: String);
+        "{}.cpu_milli_rru.instance.{}",
+        (shard_name: String, instance_type: String);
          Sum, Average
     ),
     delay_rru_instance: dynamic_timeseries(
-        "delay_milli_rru.instance.{}", (instance_type: String);
+        "{}.delay_milli_rru.instance.{}", (shard_name: String, instance_type: String);
          Sum, Average
     ),
     task_full_delay_rru_instance: dynamic_timeseries(
-        "task_full_delay_milli_rru.instance.{}", (instance_type: String);
+        "{}.task_full_delay_milli_rru.instance.{}", (shard_name: String, instance_type: String);
          Sum, Average
     ),
     task_some_delay_rru: dynamic_timeseries(
-        "task_some_delay_milli_rru.instance.{}", (instance_type: String);
+        "{}.task_some_delay_milli_rru.instance.{}", (shard_name: String, instance_type: String);
          Sum, Average
     ),
 
     // Table stats
     read_tables: dynamic_timeseries(
-        "reads.{}.instance.{}", (table: String, instance_type: String);
+        "{}.reads.{}.instance.{}",
+        (shard_name: String, table: String, instance_type: String);
         Count, Sum
     ),
     write_tables: dynamic_timeseries(
-        "writes.{}.instance.{}", (table: String, instance_type: String);
+        "{}.writes.{}.instance.{}",
+        (shard_name: String, table: String, instance_type: String);
         Count, Sum
     ),
 
