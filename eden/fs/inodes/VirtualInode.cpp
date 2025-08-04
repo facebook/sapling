@@ -409,6 +409,51 @@ ImmediateFuture<EntryAttributes> VirtualInode::getEntryAttributesForNonFile(
   return attributes;
 }
 
+namespace {
+void populateBlobAuxAttributes(
+    EntryAttributes& attributes,
+    EntryAttributeFlags requestedAttributes,
+    const folly::Try<BlobAuxData>& blobAuxTry) {
+  if (requestedAttributes.contains(ENTRY_ATTRIBUTE_SHA1)) {
+    attributes.sha1 = blobAuxTry.hasException()
+        ? folly::Try<Hash20>(blobAuxTry.exception())
+        : folly::Try<Hash20>(blobAuxTry.value().sha1);
+  }
+
+  if (requestedAttributes.contains(ENTRY_ATTRIBUTE_BLAKE3)) {
+    if (blobAuxTry.hasException()) {
+      attributes.blake3 = folly::Try<Hash32>(blobAuxTry.exception());
+    } else {
+      attributes.blake3 = blobAuxTry.value().blake3.has_value()
+          ? std::optional<folly::Try<Hash32>>(blobAuxTry.value().blake3.value())
+          : std::nullopt;
+    }
+  }
+
+  if (requestedAttributes.contains(ENTRY_ATTRIBUTE_SIZE)) {
+    attributes.size = blobAuxTry.hasException()
+        ? folly::Try<uint64_t>(blobAuxTry.exception())
+        : folly::Try<uint64_t>(blobAuxTry.value().size);
+  }
+
+  if (requestedAttributes.contains(ENTRY_ATTRIBUTE_DIGEST_SIZE)) {
+    attributes.digestSize = blobAuxTry.hasException()
+        ? folly::Try<uint64_t>(blobAuxTry.exception())
+        : folly::Try<uint64_t>(blobAuxTry.value().size);
+  }
+
+  if (requestedAttributes.contains(ENTRY_ATTRIBUTE_DIGEST_HASH)) {
+    if (blobAuxTry.hasException()) {
+      attributes.digestHash = folly::Try<Hash32>(blobAuxTry.exception());
+    } else {
+      attributes.digestHash = blobAuxTry.value().blake3.has_value()
+          ? std::optional<folly::Try<Hash32>>(blobAuxTry.value().blake3.value())
+          : std::nullopt;
+    }
+  }
+}
+} // namespace
+
 ImmediateFuture<EntryAttributes> VirtualInode::getEntryAttributes(
     EntryAttributeFlags requestedAttributes,
     RelativePathPiece path,
@@ -451,6 +496,7 @@ ImmediateFuture<EntryAttributes> VirtualInode::getEntryAttributes(
               "file is a non-source-control type: {}",
               folly::to_underlying(dtype)));
   }
+
   // This is now guaranteed to be a dtype_t::Regular file. This
   // means there's no need for a Tree case, as Trees are always
   // directories. It's included to check that the visitor here is
@@ -461,6 +507,7 @@ ImmediateFuture<EntryAttributes> VirtualInode::getEntryAttributes(
     entryTypeFuture =
         getTreeEntryType(path, fetchContext, windowsSymlinksEnabled);
   }
+
   auto blobAuxdataFuture = ImmediateFuture<BlobAuxData>{PathError{
       EINVAL, path, std::string_view{"neither sha1 nor size requested"}}};
   if (requestedAttributes.containsAnyOf(ENTRY_ATTRIBUTES_FROM_BLOB_AUX)) {
@@ -486,75 +533,23 @@ ImmediateFuture<EntryAttributes> VirtualInode::getEntryAttributes(
                   folly::Try<std::optional<TreeEntryType>>,
                   folly::Try<BlobAuxData>> rawAttributeData) mutable
           -> EntryAttributes {
-            auto& [entryType, blobAuxdata] = rawAttributeData;
+            auto attributes = EntryAttributes{};
+            auto& [entryTypeTry, blobAuxTry] = rawAttributeData;
 
-            std::optional<folly::Try<Hash20>> sha1;
-            if (requestedAttributes.contains(ENTRY_ATTRIBUTE_SHA1)) {
-              sha1 = blobAuxdata.hasException()
-                  ? folly::Try<Hash20>(blobAuxdata.exception())
-                  : folly::Try<Hash20>(blobAuxdata.value().sha1);
-            }
-
-            std::optional<folly::Try<Hash32>> blake3;
-            if (requestedAttributes.contains(ENTRY_ATTRIBUTE_BLAKE3)) {
-              if (blobAuxdata.hasException()) {
-                blake3 = folly::Try<Hash32>(blobAuxdata.exception());
-              } else {
-                blake3 = blobAuxdata.value().blake3.has_value()
-                    ? std::optional<folly::Try<Hash32>>(
-                          blobAuxdata.value().blake3.value())
-                    : std::nullopt;
-              }
-            }
-
-            std::optional<folly::Try<uint64_t>> size;
-            if (requestedAttributes.contains(ENTRY_ATTRIBUTE_SIZE)) {
-              size = blobAuxdata.hasException()
-                  ? folly::Try<uint64_t>(blobAuxdata.exception())
-                  : folly::Try<uint64_t>(blobAuxdata.value().size);
-            }
-
-            std::optional<folly::Try<std::optional<TreeEntryType>>> type;
             if (requestedAttributes.contains(
                     ENTRY_ATTRIBUTE_SOURCE_CONTROL_TYPE)) {
-              type = std::move(entryType);
+              attributes.type = std::move(entryTypeTry);
             }
 
-            std::optional<folly::Try<std::optional<ObjectId>>> objectId;
             if (requestedAttributes.contains(ENTRY_ATTRIBUTE_OBJECT_ID)) {
-              objectId =
+              attributes.objectId =
                   folly::Try<std::optional<ObjectId>>{std::move(entryObjectId)};
             }
 
-            std::optional<folly::Try<uint64_t>> digestSize;
-            if (requestedAttributes.contains(ENTRY_ATTRIBUTE_DIGEST_SIZE)) {
-              digestSize = blobAuxdata.hasException()
-                  ? folly::Try<uint64_t>(blobAuxdata.exception())
-                  : folly::Try<uint64_t>(blobAuxdata.value().size);
-            }
+            populateBlobAuxAttributes(
+                attributes, requestedAttributes, std::move(blobAuxTry));
 
-            std::optional<folly::Try<Hash32>> digestHash;
-            if (requestedAttributes.contains(ENTRY_ATTRIBUTE_DIGEST_HASH)) {
-              if (blobAuxdata.hasException()) {
-                digestHash = folly::Try<Hash32>(blobAuxdata.exception());
-              } else {
-                digestHash = blobAuxdata.value().blake3.has_value()
-                    ? std::optional<folly::Try<Hash32>>(
-                          blobAuxdata.value().blake3.value())
-                    : std::nullopt;
-              }
-            }
-
-            return EntryAttributes{
-                std::move(sha1),
-                std::move(blake3),
-                std::move(size),
-                std::move(type),
-                std::move(objectId),
-                std::move(digestSize),
-                std::move(digestHash),
-                std::nullopt,
-                std::nullopt};
+            return attributes;
           });
 }
 
