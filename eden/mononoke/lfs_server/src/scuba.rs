@@ -66,6 +66,8 @@ pub enum LfsScubaKey {
     ClientTwTask,
     /// Fetch cause
     FetchCause,
+    /// Whether or not the client attempted to fetch from CAS.
+    FetchFromCASAttempted,
 }
 
 impl AsRef<str> for LfsScubaKey {
@@ -96,6 +98,7 @@ impl AsRef<str> for LfsScubaKey {
             ClientTwJob => "client_tw_job",
             ClientTwTask => "client_tw_task",
             FetchCause => "fetch_cause",
+            FetchFromCASAttempted => "fetch_from_cas_attempted",
         }
     }
 }
@@ -114,6 +117,7 @@ pub struct LfsScubaHandler {
     client_throttle_attempts_left: Option<u64>,
     client_info: Option<ClientInfo>,
     fetch_cause: Option<String>,
+    fetch_from_cas_attempted: bool,
 }
 
 impl ScubaHandler for LfsScubaHandler {
@@ -130,6 +134,9 @@ impl ScubaHandler for LfsScubaHandler {
                 .map(|ci: ClientInfoHeader| ci.0);
 
         let fetch_cause = read_header_value_ignore_err(state, "X-Fetch-Cause");
+        let fetch_from_cas_attempted =
+            read_header_value_ignore_err::<_, String>(state, "X-Fetch-From-CAS-Attempted")
+                .is_some();
 
         Self {
             ctx: state.try_borrow::<RequestContext>().cloned(),
@@ -138,6 +145,7 @@ impl ScubaHandler for LfsScubaHandler {
             client_throttle_attempts_left,
             client_info,
             fetch_cause,
+            fetch_from_cas_attempted,
         }
     }
 
@@ -191,6 +199,10 @@ impl ScubaHandler for LfsScubaHandler {
         }
 
         scuba.add_opt(LfsScubaKey::FetchCause, self.fetch_cause);
+        scuba.add(
+            LfsScubaKey::FetchFromCASAttempted,
+            self.fetch_from_cas_attempted,
+        );
 
         scuba.log();
     }
