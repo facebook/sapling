@@ -6,6 +6,7 @@
  */
 
 use std::sync::Arc;
+use std::sync::atomic::AtomicBool;
 use std::sync::atomic::AtomicU64;
 use std::sync::atomic::Ordering;
 
@@ -22,6 +23,8 @@ pub struct FetchContext {
 
     local_fetch_count: Arc<AtomicU64>,
     remote_fetch_count: Arc<AtomicU64>,
+
+    fetch_from_cas_attempted: Arc<AtomicBool>,
 }
 
 impl FetchContext {
@@ -46,6 +49,7 @@ impl FetchContext {
             cause,
             local_fetch_count: Default::default(),
             remote_fetch_count: Default::default(),
+            fetch_from_cas_attempted: Default::default(),
         }
     }
 
@@ -65,12 +69,21 @@ impl FetchContext {
         self.remote_fetch_count.fetch_add(count, Ordering::Relaxed);
     }
 
+    pub fn set_fetch_from_cas_attempted(&self, value: bool) {
+        self.fetch_from_cas_attempted
+            .store(value, Ordering::Relaxed);
+    }
+
     pub fn local_fetch_count(&self) -> u64 {
         self.local_fetch_count.load(Ordering::Relaxed)
     }
 
     pub fn remote_fetch_count(&self) -> u64 {
         self.remote_fetch_count.load(Ordering::Relaxed)
+    }
+
+    pub fn fetch_from_cas_attempted(&self) -> bool {
+        self.fetch_from_cas_attempted.load(Ordering::Relaxed)
     }
 }
 

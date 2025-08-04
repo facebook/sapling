@@ -219,6 +219,8 @@ impl FetchState {
     }
 
     pub(crate) fn fetch_cas(&mut self, cas_client: &dyn CasClient) {
+        self.common.fctx.set_fetch_from_cas_attempted(true);
+
         if self.common.request_attrs == TreeAttributes::AUX_DATA {
             // If we are only requesting aux data, don't bother querying CAS. Aux data is
             // required to query CAS, so CAS cannot possibly help.
