@@ -18,9 +18,6 @@ Configs::
     # hostname to use for the system
     hostname = myhost
 
-    # url of the endpoint serving commit cloud requests (for servicetype = remote)
-    url = https://example.commitcloud.com
-
     # help message to provide instruction on authentication process
     auth_help = please check authentication instructions at https://example.com/
 
