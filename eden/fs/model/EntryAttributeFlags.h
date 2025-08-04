@@ -46,4 +46,11 @@ inline constexpr auto ENTRY_ATTRIBUTE_MTIME =
 inline constexpr auto ENTRY_ATTRIBUTE_MODE =
     EntryAttributeFlags::raw(FileAttributes::MODE);
 
+inline constexpr auto ENTRY_ATTRIBUTES_FROM_BLOB_AUX = ENTRY_ATTRIBUTE_SIZE |
+    ENTRY_ATTRIBUTE_SHA1 | ENTRY_ATTRIBUTE_BLAKE3 |
+    ENTRY_ATTRIBUTE_DIGEST_SIZE | ENTRY_ATTRIBUTE_DIGEST_HASH;
+
+inline constexpr auto ENTRY_ATTRIBUTES_FROM_TREE_AUX =
+    ENTRY_ATTRIBUTE_DIGEST_SIZE | ENTRY_ATTRIBUTE_DIGEST_HASH;
+
 } // namespace facebook::eden

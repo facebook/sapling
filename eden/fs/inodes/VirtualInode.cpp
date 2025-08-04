@@ -389,8 +389,7 @@ ImmediateFuture<EntryAttributes> VirtualInode::getEntryAttributesForNonFile(
     // aux data for it. However, we can only compute the additional attributes
     // of trees that have ObjectIds. In other words, the tree must be
     // unmaterialized.
-    if ((requestedAttributes.contains(ENTRY_ATTRIBUTE_DIGEST_HASH) ||
-         requestedAttributes.contains(ENTRY_ATTRIBUTE_DIGEST_SIZE)) &&
+    if (requestedAttributes.containsAnyOf(ENTRY_ATTRIBUTES_FROM_TREE_AUX) &&
         oid.has_value()) {
       return objectStore->getTreeAuxData(oid.value(), fetchContext)
           .thenTry(
@@ -464,11 +463,7 @@ ImmediateFuture<EntryAttributes> VirtualInode::getEntryAttributes(
   }
   auto blobAuxdataFuture = ImmediateFuture<BlobAuxData>{PathError{
       EINVAL, path, std::string_view{"neither sha1 nor size requested"}}};
-  // sha1, blake3 and size come together so, there isn't much point of splitting
-  // them up
-  if (requestedAttributes.containsAnyOf(
-          ENTRY_ATTRIBUTE_SIZE | ENTRY_ATTRIBUTE_SHA1 | ENTRY_ATTRIBUTE_BLAKE3 |
-          ENTRY_ATTRIBUTE_DIGEST_SIZE | ENTRY_ATTRIBUTE_DIGEST_HASH)) {
+  if (requestedAttributes.containsAnyOf(ENTRY_ATTRIBUTES_FROM_BLOB_AUX)) {
     blobAuxdataFuture = getBlobAuxData(
         path,
         objectStore,
