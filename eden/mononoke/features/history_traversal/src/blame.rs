@@ -6,26 +6,36 @@
  */
 
 use std::collections::HashSet;
+use std::vec;
 
 use anyhow::Context;
+use anyhow::Error;
 use anyhow::anyhow;
 use async_recursion::async_recursion;
 use blame::BlameError;
 use blame::fetch_blame_v2;
 use blame::fetch_content_for_blame;
+use blobstore::Loadable;
 use bytes::Bytes;
 use context::CoreContext;
+use fastlog::fetch_fastlog_batch_by_unode_id;
+use futures::future::try_join_all;
 use futures::stream;
 use futures::stream::TryStreamExt;
 use futures::try_join;
 use futures_stats::TimedFutureExt;
+use inferred_copy_from::RootInferredCopyFromId;
+use manifest::Entry;
 use manifest::ManifestOps;
 use mononoke_types::ChangesetId;
+use mononoke_types::DerivableType;
 use mononoke_types::FileUnodeId;
+use mononoke_types::ManifestUnodeId;
 use mononoke_types::NonRootMPath;
 use mononoke_types::blame_v2::BlameParent;
 use mononoke_types::blame_v2::BlameParentId;
 use mononoke_types::blame_v2::BlameV2;
+use mononoke_types::inferred_copy_from::InferredCopyFromEntry;
 use mononoke_types::path::MPath;
 use scuba_ext::FutureStatsScubaExt;
 use unodes::RootUnodeManifestId;
@@ -177,13 +187,197 @@ async fn fetch_mutable_blame(
     Ok((blame, unode))
 }
 
+/// This is organic blame, blended with any inferred_copy_from data if the repo has it enabled
+#[async_recursion]
+async fn fetch_inferred_blame(
+    ctx: &CoreContext,
+    repo: &impl Repo,
+    csid: ChangesetId,
+    path: &NonRootMPath,
+    seen: &mut HashSet<ChangesetId>,
+) -> Result<(BlameV2, FileUnodeId), BlameError> {
+    if !seen.insert(csid) {
+        return Err(anyhow!("Infinite loop in inferred blame").into());
+    }
+
+    // Check whether the current changeset has inferred_copy_from with destination being path
+    let current_icf_entry = fetch_inferred_copy_from(ctx, repo, csid, path).await?;
+    if let Some(entry) = current_icf_entry {
+        // It does! Blend current blame and source blame together
+        let src_non_root_mpath = entry
+            .from_path
+            .clone()
+            .into_optional_non_root_path()
+            .ok_or_else(|| BlameError::IsDirectory(entry.from_path.clone()))?;
+
+        // Fetch the base blame from the inferred_copy_from source
+        let (src_blame, src_file_unode_id) =
+            fetch_inferred_blame(ctx, repo, entry.from_csid, &src_non_root_mpath, seen).await?;
+        let src_content = fetch_content_for_blame(ctx, repo, src_file_unode_id)
+            .await?
+            .into_bytes()?;
+
+        // Reblame against the source blame
+        let file_unode_id = get_unode_entry(ctx, repo, csid, path)
+            .await?
+            .into_leaf()
+            .ok_or_else(|| BlameError::IsDirectory(path.clone().into()))?;
+        let content = fetch_content_for_blame(ctx, repo, file_unode_id)
+            .await?
+            .into_bytes()?;
+        let blame_parent = BlameParent::new(
+            BlameParentId::ReplacementParent(entry.from_csid),
+            src_non_root_mpath,
+            src_content,
+            src_blame,
+        );
+        let blame = BlameV2::new(csid, path.clone(), content, vec![blame_parent])?;
+
+        return Ok((blame, file_unode_id));
+    }
+
+    // Otherwise, check its ancestors where path was first introduced
+    let ancestors = find_ancestors_with_inferred_copy_from(ctx, repo, csid, path).await?;
+    let ancestor_csid = match ancestors.first() {
+        None => {
+            // No inferred_copy_from on path, we are done
+            return fetch_blame_v2(ctx, repo, csid, path.clone()).await;
+        }
+        Some(ancestor_csid) => ancestor_csid.clone(),
+    };
+
+    // Path has inferred_copy_from at ancestors, blend current blame with ancestors' blame
+    let (mut blame, file_unode_id) = fetch_blame_v2(ctx, repo, csid, path.clone()).await?;
+    let ((ancestor_inferred_blame, _), (ancestor_original_blame, _)) = try_join!(
+        fetch_inferred_blame(ctx, repo, ancestor_csid, path, seen),
+        fetch_blame_v2(ctx, repo, ancestor_csid, path.clone())
+    )?;
+    blame.apply_mutable_change(&ancestor_original_blame, &ancestor_inferred_blame)?;
+
+    return Ok((blame, file_unode_id));
+}
+
+/// Given changeset and path, find all ancestors where the path was the
+/// inferred copy/rename destination.
+async fn find_ancestors_with_inferred_copy_from(
+    ctx: &CoreContext,
+    repo: &impl Repo,
+    csid: ChangesetId,
+    path: &NonRootMPath,
+) -> Result<Vec<ChangesetId>, BlameError> {
+    // Use fastlog to find the changesets that introduced this path,
+    // then remove csid since we only want ancestors
+    let root_csids = get_csids_that_added_path(ctx, repo, csid, path)
+        .await?
+        .into_iter()
+        .filter(|root_csid| *root_csid != csid)
+        .collect::<Vec<_>>();
+
+    let inferred = try_join_all(root_csids.into_iter().map(|root_csid| async move {
+        let entry = fetch_inferred_copy_from(ctx, repo, root_csid, path).await?;
+        anyhow::Ok((root_csid, entry))
+    }))
+    .await?;
+
+    Ok(inferred
+        .into_iter()
+        .filter_map(|(root_csid, entry)| entry.map(|_| root_csid))
+        .collect())
+}
+
+async fn get_unode_entry(
+    ctx: &CoreContext,
+    repo: &impl Repo,
+    csid: ChangesetId,
+    path: &NonRootMPath,
+) -> Result<Entry<ManifestUnodeId, FileUnodeId>, BlameError> {
+    let root_unode_mf_id = repo
+        .repo_derived_data()
+        .derive::<RootUnodeManifestId>(ctx, csid)
+        .await?;
+    let unode_entry = root_unode_mf_id
+        .manifest_unode_id()
+        .find_entry(ctx.clone(), repo.repo_blobstore_arc(), path.clone().into())
+        .await?
+        .ok_or_else(|| BlameError::NoSuchPath(path.clone()))?;
+
+    Ok(unode_entry)
+}
+
+async fn get_csids_that_added_path(
+    ctx: &CoreContext,
+    repo: &impl Repo,
+    csid: ChangesetId,
+    path: &NonRootMPath,
+) -> Result<Vec<ChangesetId>, BlameError> {
+    let unode_entry = get_unode_entry(ctx, repo, csid, path).await?;
+    let fastlog_batch =
+        fetch_fastlog_batch_by_unode_id(ctx, repo.repo_blobstore(), &unode_entry).await?;
+    if let Some(fastlog_batch) = fastlog_batch {
+        // Find changesets with empty parents
+        Ok(fastlog_batch
+            .latest()
+            .iter()
+            .filter_map(|(csid, parents)| {
+                if parents.is_empty() {
+                    Some(csid.clone())
+                } else {
+                    None
+                }
+            })
+            .collect())
+    } else {
+        Ok(vec![])
+    }
+}
+
+/// Fetch inferred_copy_from derived data for csid with destination path
+async fn fetch_inferred_copy_from(
+    ctx: &CoreContext,
+    repo: &impl Repo,
+    csid: ChangesetId,
+    path: &NonRootMPath,
+) -> Result<Option<InferredCopyFromEntry>, Error> {
+    let root_inferred_copy_from_id = repo
+        .repo_derived_data()
+        .derive::<RootInferredCopyFromId>(ctx, csid)
+        .await?;
+    let inferred_copy_from = root_inferred_copy_from_id
+        .into_inner_id()
+        .load(ctx, repo.repo_blobstore())
+        .await?;
+
+    inferred_copy_from
+        .lookup(ctx, repo.repo_blobstore(), &path.clone().into())
+        .await
+}
+
+fn can_use_inferred_copy_from(repo: &impl Repo) -> bool {
+    repo.repo_derived_data()
+        .config()
+        .is_enabled(DerivableType::InferredCopyFrom)
+        && justknobs::eval(
+            "scm/mononoke:blame_with_inferred_copy_from",
+            None,
+            Some(repo.repo_identity().name()),
+        )
+        .unwrap_or(false)
+}
+
 async fn fetch_immutable_blame(
     ctx: &CoreContext,
     repo: &impl Repo,
     csid: ChangesetId,
     path: &NonRootMPath,
 ) -> Result<(BlameV2, FileUnodeId), BlameError> {
-    fetch_blame_v2(ctx, repo, csid, path.clone()).await
+    if can_use_inferred_copy_from(repo) {
+        fetch_inferred_blame(ctx, repo, csid, path, &mut HashSet::new())
+            .timed()
+            .await
+            .log_future_stats(ctx.scuba().clone(), "Computed inferred blame", None)
+    } else {
+        fetch_blame_v2(ctx, repo, csid, path.clone()).await
+    }
 }
 
 pub async fn blame(
@@ -209,7 +403,7 @@ pub async fn blame(
 
 /// Blame metadata for this path, and the content that was blamed.  If the file
 /// content is too large or binary data is detected then
-//  the fetch may be rejected.
+/// the fetch may be rejected.
 pub async fn blame_with_content(
     ctx: &CoreContext,
     repo: &impl Repo,

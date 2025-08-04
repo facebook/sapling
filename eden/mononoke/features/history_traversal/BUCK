@@ -39,6 +39,7 @@ rust_library(
         "//eden/mononoke/derived_data:deleted_manifest",
         "//eden/mononoke/derived_data:derived_data",
         "//eden/mononoke/derived_data:fastlog",
+        "//eden/mononoke/derived_data:inferred_copy_from",
         "//eden/mononoke/derived_data:unodes",
         "//eden/mononoke/manifest:manifest",
         "//eden/mononoke/mononoke_types:mononoke_types",
