@@ -223,11 +223,6 @@ mock! {
             params: &GetAttributesFromFilesParams,
         ) -> BoxFuture<'static, Result<GetAttributesFromFilesResultV2, GetAttributesFromFilesV2Error>>;
 
-        fn getAttributesFromFiles(
-            &self,
-            params: &GetAttributesFromFilesParams,
-        ) -> BoxFuture<'static, Result<GetAttributesFromFilesResult, GetAttributesFromFilesError>>;
-
         fn readdir(
             &self,
             params: &ReaddirParams,

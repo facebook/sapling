@@ -20,7 +20,6 @@ from eden.fs.service.eden.thrift_types import (
     Blake3Result,
     DigestHashResult,
     EdenErrorType,
-    FileAttributeDataOrError,
     FileAttributeDataOrErrorV2,
     GetConfigParams,
     GetFileContentRequest,
@@ -37,7 +36,7 @@ from .lib.find_executables import FindExe
 
 EdenThriftResult = TypeVar(
     "EdenThriftResult",
-    Union[FileAttributeDataOrError, FileAttributeDataOrErrorV2],
+    FileAttributeDataOrErrorV2,
     SHA1Result,
     Blake3Result,
     DigestHashResult,

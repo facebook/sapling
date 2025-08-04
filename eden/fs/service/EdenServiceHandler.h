@@ -198,10 +198,6 @@ class EdenServiceHandler : virtual public StreamingEdenServiceSvIf,
       std::unique_ptr<std::vector<std::string>> paths,
       std::unique_ptr<SyncBehavior> sync) override;
 
-  folly::SemiFuture<std::unique_ptr<GetAttributesFromFilesResult>>
-  semifuture_getAttributesFromFiles(
-      std::unique_ptr<GetAttributesFromFilesParams> params) override;
-
   folly::SemiFuture<std::unique_ptr<GetAttributesFromFilesResultV2>>
   semifuture_getAttributesFromFilesV2(
       std::unique_ptr<GetAttributesFromFilesParams> params) override;
