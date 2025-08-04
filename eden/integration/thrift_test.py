@@ -389,7 +389,12 @@ class ThriftTest(testcase.EdenRepoTest):
                 self.mount_path_bytes, [b""], sync=SyncBehavior()
             )
         self.assertEqual(1, len(results))
-        self.assert_digest_hash_error(results[0], "tree aux data missing for tree")
+        self.assert_digest_hash_error(
+            results[0],
+            "tree aux data missing for tree",
+            EdenErrorType.ATTRIBUTE_UNAVAILABLE,
+            ENOENT,
+        )
 
     async def test_get_sha1_throws_for_directory(self) -> None:
         async with self.get_thrift_client() as client:
@@ -497,6 +502,8 @@ class ThriftTest(testcase.EdenRepoTest):
         self.assert_digest_hash_error(
             results[0],
             "tree aux data missing for tree",
+            EdenErrorType.ATTRIBUTE_UNAVAILABLE,
+            ENOENT,
         )
         self.assertEqual(
             results[1],
@@ -522,7 +529,12 @@ class ThriftTest(testcase.EdenRepoTest):
         print(results)
         self.assertEqual(2, len(results))
         if self.repo_type in ["hg", "filteredhg"]:
-            self.assert_digest_hash_error(results[0], "tree aux data missing for tree")
+            self.assert_digest_hash_error(
+                results[0],
+                "tree aux data missing for tree",
+                EdenErrorType.ATTRIBUTE_UNAVAILABLE,
+                ENOENT,
+            )
 
         else:
             self.assert_digest_hash_error(

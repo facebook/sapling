@@ -13,6 +13,7 @@ import socket
 import stat
 import subprocess
 import sys
+from errno import ENOENT
 from pathlib import Path
 from typing import Dict, List, Optional, Pattern, Tuple, Union
 
@@ -842,13 +843,15 @@ class ReaddirTest(testcase.EdenRepoTest):
                 digestHash=DigestHashOrError(
                     error=EdenError(
                         message="hello_dir: digesthash requested, but no digesthash available",
-                        errorType=EdenErrorType.GENERIC_ERROR,
+                        errorType=EdenErrorType.ATTRIBUTE_UNAVAILABLE,
+                        errorCode=ENOENT,
                     )
                 ),
                 digestSize=DigestSizeOrError(
                     error=EdenError(
                         message="hello_dir: digestsize requested, but no digestsize available",
-                        errorType=EdenErrorType.GENERIC_ERROR,
+                        errorType=EdenErrorType.ATTRIBUTE_UNAVAILABLE,
+                        errorCode=ENOENT,
                     )
                 ),
                 objectId=ObjectIdOrError(),

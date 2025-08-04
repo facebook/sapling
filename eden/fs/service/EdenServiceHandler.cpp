@@ -1097,8 +1097,8 @@ EdenServiceHandler::semifuture_getDigestHash(
                              thriftHash32(result.value().value());
                        } else {
                          digestHashResult.error() = newEdenError(
-                             EINVAL,
-                             EdenErrorType::GENERIC_ERROR,
+                             ENOENT,
+                             EdenErrorType::ATTRIBUTE_UNAVAILABLE,
                              "tree aux data missing for tree");
                        }
                      } else {
@@ -3189,7 +3189,8 @@ bool fillErrorRef(
     folly::StringPiece attributeName) {
   if (!rawResult.has_value()) {
     result.error_ref() = newEdenError(
-        EdenErrorType::GENERIC_ERROR,
+        ENOENT,
+        EdenErrorType::ATTRIBUTE_UNAVAILABLE,
         fmt::format(
             "{}: {} requested, but no {} available",
             path,
@@ -3525,7 +3526,8 @@ EdenServiceHandler::semifuture_getAttributesFromFiles(
                        // this API better.
                        if (!attributes.sha1.has_value()) {
                          file_res.error() = newEdenError(
-                             EdenErrorType::GENERIC_ERROR,
+                             ENOENT,
+                             EdenErrorType::ATTRIBUTE_UNAVAILABLE,
                              fmt::format(
                                  "{}: sha1 requested, but no type available",
                                  paths.at(index)));
@@ -3534,7 +3536,8 @@ EdenServiceHandler::semifuture_getAttributesFromFiles(
                              newEdenError(attributes.sha1.value().exception());
                        } else if (!attributes.size.has_value()) {
                          file_res.error() = newEdenError(
-                             EdenErrorType::GENERIC_ERROR,
+                             ENOENT,
+                             EdenErrorType::ATTRIBUTE_UNAVAILABLE,
                              fmt::format(
                                  "{}: size requested, but no type available",
                                  paths.at(index)));
@@ -3543,7 +3546,8 @@ EdenServiceHandler::semifuture_getAttributesFromFiles(
                              newEdenError(attributes.size.value().exception());
                        } else if (!attributes.type.has_value()) {
                          file_res.error() = newEdenError(
-                             EdenErrorType::GENERIC_ERROR,
+                             ENOENT,
+                             EdenErrorType::ATTRIBUTE_UNAVAILABLE,
                              fmt::format(
                                  "{}: type requested, but no type available",
                                  paths.at(index)));

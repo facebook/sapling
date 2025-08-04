@@ -355,8 +355,8 @@ ImmediateFuture<EntryAttributes> VirtualInode::getEntryAttributesForNonFile(
                       ? std::optional<folly::Try<Hash32>>{treeAux.value()
                                                               .digestHash}
                       : folly::Try<Hash32>(newEdenError(
-                            EINVAL,
-                            EdenErrorType::GENERIC_ERROR,
+                            ENOENT,
+                            EdenErrorType::ATTRIBUTE_UNAVAILABLE,
                             fmt::format(
                                 "tree aux data missing for tree: {}", path)));
                 }
@@ -365,8 +365,8 @@ ImmediateFuture<EntryAttributes> VirtualInode::getEntryAttributesForNonFile(
                       ? std::optional<folly::Try<uint64_t>>{std::move(
                             treeAux.value().digestSize)}
                       : folly::Try<uint64_t>(newEdenError(
-                            EINVAL,
-                            EdenErrorType::GENERIC_ERROR,
+                            ENOENT,
+                            EdenErrorType::ATTRIBUTE_UNAVAILABLE,
                             fmt::format(
                                 "tree aux data missing for tree: {}", path)));
                 }
@@ -520,9 +520,10 @@ ImmediateFuture<EntryAttributes> VirtualInode::getEntryAttributes(
               } else {
                 blake3 = blobAuxdata.value().blake3
                     ? folly::Try<Hash32>(blobAuxdata.value().blake3.value())
-                    : folly::Try<Hash32>(
-                          folly::make_exception_wrapper<std::runtime_error>(
-                              "no blake3 available"));
+                    : folly::Try<Hash32>(newEdenError(
+                          ENOENT,
+                          EdenErrorType::ATTRIBUTE_UNAVAILABLE,
+                          "no blake3 available"));
               }
             }
 
@@ -559,9 +560,10 @@ ImmediateFuture<EntryAttributes> VirtualInode::getEntryAttributes(
               } else {
                 digestHash = blobAuxdata.value().blake3
                     ? folly::Try<Hash32>(blobAuxdata.value().blake3.value())
-                    : folly::Try<Hash32>(
-                          folly::make_exception_wrapper<std::runtime_error>(
-                              "no blake3 available"));
+                    : folly::Try<Hash32>(newEdenError(
+                          ENOENT,
+                          EdenErrorType::ATTRIBUTE_UNAVAILABLE,
+                          "no blake3 available"));
               }
             }
 
