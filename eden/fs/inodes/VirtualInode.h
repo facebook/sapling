@@ -126,14 +126,19 @@ class VirtualInode {
       const ObjectFetchContextPtr& fetchContext) const;
 
   /**
-   * Get all the available attributes for a file entry in this tree. Available
+   * Get all the requested attributes for a file entry in this tree. Available
    * attributes are currently:
    * - sha1
-   * - size
+   * - file size
    * - source control type
-   *
-   * Note that we return error values for sha1s and sizes of directories and
-   * symlinks.
+   * - blake3 hash
+   * - object id
+   * - digest size
+   * - digest hash
+   * - mtime
+   * - mode
+   * Note: we return error values for attributes in some cases. See
+   * fs/service/eden.thrift for more details on error conditions for each type.
    */
   ImmediateFuture<EntryAttributes> getEntryAttributes(
       EntryAttributeFlags requestedAttributes,
@@ -169,13 +174,19 @@ class VirtualInode {
       const ObjectFetchContextPtr& fetchContext);
 
   /**
-   * Collect all available attributes for all of the children
+   * Collect all requested attributes for all of the children
    * of a directory. All available attributes are currently:
    * - sha1
-   * - size
+   * - file size
    * - source control type
-   * Note that we return error values for sha1s and sizes of directories and
-   * symlinks.
+   * - blake3 hash
+   * - object id
+   * - digest size
+   * - digest hash
+   * - mtime
+   * - mode
+   * Note: we return error values for attributes in some cases. See
+   * fs/service/eden.thrift for more details on error conditions for each type.
    */
   ImmediateFuture<
       std::vector<std::pair<PathComponent, folly::Try<EntryAttributes>>>>
