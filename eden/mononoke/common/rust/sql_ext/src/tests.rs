@@ -40,17 +40,35 @@ mononoke_queries! {
 
     // Test to cover fetching the id from the type, not arg name
     read ReadQuery1(id: RepositoryId) -> (i64) {
-        "SELECT x FROM mononoke_queries_test WHERE ID > {id} LIMIT 10"
+        "SELECT x FROM mononoke_queries_test_v3 WHERE ID > {id} LIMIT 10"
     }
 
     write WriteQuery1(values: (x: i64)) {
         none,
-        "INSERT INTO mononoke_queries_test (x) VALUES {values}"
+        "INSERT INTO mononoke_queries_test_v3 (x) VALUES {values}"
     }
 
     // Test to cover fetching two repo ids
     read ReadQuery2(small_repo_id: RepositoryId, large_repo_id: RepositoryId) -> (i64) {
-        "SELECT x FROM mononoke_queries_test WHERE ID > {small_repo_id} AND ID > {large_repo_id} LIMIT 10"
+        "SELECT x FROM mononoke_queries_test_v3 WHERE ID > {small_repo_id} AND ID > {large_repo_id} LIMIT 10"
+    }
+
+    write WriteQuery2(values: (x: i64, repo_id: RepositoryId)) {
+        none,
+        "INSERT INTO mononoke_queries_test_v3 (x, repo_id) VALUES {values}"
+    }
+
+    write WriteQuery3(values: (
+        x: i64,
+        a: i64,
+        b: i64,
+        c: i64,
+        d: i64,
+        e: i64,
+        repo_id: RepositoryId,
+    )) {
+        none,
+        "INSERT INTO mononoke_queries_test_v3 (x, a, b, c, d, e, repo_id) VALUES {values}"
     }
 }
 
@@ -222,7 +240,7 @@ mod facebook {
                 shard_name: TEST_XDB_NAME.to_string(),
                 mysql_telemetry: MysqlQueryTelemetry {
                     read_tables: hashset! {},
-                    write_tables: hashset! {"mononoke_queries_test".to_string()},
+                    write_tables: hashset! {"mononoke_queries_test_v3".to_string()},
                     ..Default::default()
                 },
                 transaction_query_names: vec![],
@@ -234,7 +252,7 @@ mod facebook {
                 query_name: Some("ReadQuery1".to_string()),
                 shard_name: TEST_XDB_NAME.to_string(),
                 mysql_telemetry: MysqlQueryTelemetry {
-                    read_tables: hashset! {"mononoke_queries_test".to_string()},
+                    read_tables: hashset! {"mononoke_queries_test_v3".to_string()},
                     write_tables: hashset! {},
                     ..Default::default()
                 },
@@ -247,7 +265,7 @@ mod facebook {
                 query_name: Some("ReadQuery2".to_string()),
                 shard_name: TEST_XDB_NAME.to_string(),
                 mysql_telemetry: MysqlQueryTelemetry {
-                    read_tables: hashset! {"mononoke_queries_test".to_string()},
+                    read_tables: hashset! {"mononoke_queries_test_v3".to_string()},
                     write_tables: hashset! {},
                     ..Default::default()
                 },
@@ -263,7 +281,7 @@ mod facebook {
                 query_name: None,
                 shard_name: TEST_XDB_NAME.to_string(),
                 mysql_telemetry: MysqlQueryTelemetry {
-                    read_tables: hashset! {"mononoke_queries_test".to_string()},
+                    read_tables: hashset! {"mononoke_queries_test_v3".to_string()},
                     write_tables: hashset! {},
                     ..Default::default()
                 },
@@ -272,6 +290,98 @@ mod facebook {
                     .map(String::from)
                     .sorted()
                     .collect::<Vec<String>>(),
+            },
+        ];
+
+        pretty_assertions::assert_eq!(scuba_logs, expected_logs);
+
+        Ok(())
+    }
+    #[mononoke::fbinit_test]
+    async fn test_multiple_repo_ids_in_write_query(fb: FacebookInit) -> Result<()> {
+        let TelemetryTestData {
+            connection,
+            sql_query_tel,
+            temp_path,
+            ..
+        } = setup_scuba_logging_test(fb).await?;
+
+        let _res = WriteQuery2::query(
+            &connection,
+            sql_query_tel.clone(),
+            &[
+                (&1i64, &RepositoryId::new(100)),
+                (&2i64, &RepositoryId::new(200)),
+            ],
+        )
+        .await?;
+
+        let _res = WriteQuery3::query(
+            &connection,
+            sql_query_tel.clone(),
+            &[
+                (
+                    &1i64,
+                    &1i64,
+                    &1i64,
+                    &1i64,
+                    &1i64,
+                    &1i64,
+                    &RepositoryId::new(100),
+                ),
+                (
+                    &1i64,
+                    &1i64,
+                    &1i64,
+                    &1i64,
+                    &1i64,
+                    &1i64,
+                    &RepositoryId::new(200),
+                ),
+                (
+                    &1i64,
+                    &1i64,
+                    &1i64,
+                    &1i64,
+                    &1i64,
+                    &1i64,
+                    &RepositoryId::new(300),
+                ),
+            ],
+        )
+        .await?;
+
+        let scuba_logs = deserialize_scuba_log_file(&temp_path)?;
+
+        println!("scuba_logs: {:#?}", scuba_logs);
+
+        // In the test function:
+        let expected_logs = vec![
+            ScubaTelemetryLogSample {
+                success: true,
+                repo_ids: vec![], // TODO(T223577767): get repo_ids from list args
+                granularity: TelemetryGranularity::Query,
+                query_name: Some("WriteQuery2".to_string()),
+                shard_name: TEST_XDB_NAME.to_string(),
+                mysql_telemetry: MysqlQueryTelemetry {
+                    read_tables: hashset! {},
+                    write_tables: hashset! {"mononoke_queries_test_v3".to_string()},
+                    ..Default::default()
+                },
+                transaction_query_names: vec![],
+            },
+            ScubaTelemetryLogSample {
+                success: true,
+                repo_ids: vec![], // TODO(T223577767): get repo_ids from list args
+                granularity: TelemetryGranularity::Query,
+                query_name: Some("WriteQuery3".to_string()),
+                shard_name: TEST_XDB_NAME.to_string(),
+                mysql_telemetry: MysqlQueryTelemetry {
+                    read_tables: hashset! {},
+                    write_tables: hashset! {"mononoke_queries_test_v3".to_string()},
+                    ..Default::default()
+                },
+                transaction_query_names: vec![],
             },
         ];
 
@@ -290,11 +400,18 @@ mod facebook {
 
         let sql_connection: sql::Connection = setup_mysql_test_connection(
             fb,
-            "CREATE TABLE IF NOT EXISTS mononoke_queries_test(
+            "CREATE TABLE IF NOT EXISTS mononoke_queries_test_v3(
                      x INT,
+                     repo_id INT UNSIGNED,
                      y DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
                      test CHAR(64),
                      id INT AUTO_INCREMENT,
+                     a INT,
+                     b INT,
+                     c INT,
+                     d INT,
+                     e INT,
+                     f INT,
                      PRIMARY KEY(id)
                  )",
         )
