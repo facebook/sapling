@@ -182,11 +182,12 @@ class ObjectStore : public IObjectStore,
   /**
    * Get aux data about a tree.
    *
-   * This returns an ImmediateFuture object that will produce the TreeAuxData
-   * when it is ready.  It may result in a std::domain_error if the specified
-   * tree does not exist, or possibly other exceptions on error.
+   * This returns an ImmediateFuture object that will produce optional
+   * TreeAuxData when it is ready.  Nullopt is returned when TreeAuxData is
+   * missing from all sources (including the BackingStore). This may return
+   * other exceptions when TreeAuxData is available but other errors occurred.
    */
-  ImmediateFuture<TreeAuxData> getTreeAuxData(
+  ImmediateFuture<std::optional<TreeAuxData>> getTreeAuxData(
       const ObjectId& id,
       const ObjectFetchContextPtr& context) const;
 
@@ -204,14 +205,14 @@ class ObjectStore : public IObjectStore,
   /**
    * Returns the DigestHash hash of the contents of the tree with the given ID.
    */
-  ImmediateFuture<Hash32> getTreeDigestHash(
+  ImmediateFuture<std::optional<Hash32>> getTreeDigestHash(
       const ObjectId& id,
       const ObjectFetchContextPtr& context) const;
 
   /**
    * Returns the digest size of the tree with the given ID.
    */
-  ImmediateFuture<uint64_t> getTreeDigestSize(
+  ImmediateFuture<std::optional<uint64_t>> getTreeDigestSize(
       const ObjectId& id,
       const ObjectFetchContextPtr& context) const;
 

@@ -1084,15 +1084,23 @@ EdenServiceHandler::semifuture_getDigestHash(
                            fetchContext);
                      })
                  .ensure([mountHandle] {})
-                 .thenValue([](std::vector<folly::Try<Hash32>> results) {
+                 .thenValue([](std::vector<folly::Try<std::optional<Hash32>>>
+                                   results) {
                    auto out = std::make_unique<std::vector<DigestHashResult>>();
                    out->reserve(results.size());
 
                    for (auto& result : results) {
                      auto& digestHashResult = out->emplace_back();
                      if (result.hasValue()) {
-                       digestHashResult.digestHash() =
-                           thriftHash32(result.value());
+                       if (result.value().has_value()) {
+                         digestHashResult.digestHash() =
+                             thriftHash32(result.value().value());
+                       } else {
+                         digestHashResult.error() = newEdenError(
+                             EINVAL,
+                             EdenErrorType::GENERIC_ERROR,
+                             "tree aux data missing for tree");
+                       }
                      } else {
                        digestHashResult.error() =
                            newEdenError(result.exception());

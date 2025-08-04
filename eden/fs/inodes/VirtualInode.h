@@ -120,7 +120,7 @@ class VirtualInode {
       const std::shared_ptr<ObjectStore>& objectStore,
       const ObjectFetchContextPtr& fetchContext) const;
 
-  ImmediateFuture<Hash32> getDigestHash(
+  ImmediateFuture<std::optional<Hash32>> getDigestHash(
       RelativePathPiece path,
       const std::shared_ptr<ObjectStore>& objectStore,
       const ObjectFetchContextPtr& fetchContext) const;
@@ -202,8 +202,7 @@ class VirtualInode {
   /**
    * Helper function for getChildrenAttributes
    */
-  ImmediateFuture<TreeAuxData> getTreeAuxData(
-      RelativePathPiece path,
+  ImmediateFuture<std::optional<TreeAuxData>> getTreeAuxData(
       const std::shared_ptr<ObjectStore>& objectStore,
       const ObjectFetchContextPtr& fetchContext) const;
 

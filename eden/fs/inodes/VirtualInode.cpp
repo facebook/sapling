@@ -111,7 +111,7 @@ ImmediateFuture<Hash32> VirtualInode::getBlake3(
       });
 }
 
-ImmediateFuture<Hash32> VirtualInode::getDigestHash(
+ImmediateFuture<std::optional<Hash32>> VirtualInode::getDigestHash(
     RelativePathPiece path,
     const std::shared_ptr<ObjectStore>& objectStore,
     const ObjectFetchContextPtr& fetchContext) const {
@@ -120,15 +120,18 @@ ImmediateFuture<Hash32> VirtualInode::getDigestHash(
   switch (filteredEntryDtype(
       getDtype(), objectStore->getWindowsSymlinksEnabled())) {
     case dtype_t::Symlink:
-      return makeImmediateFuture<Hash32>(
+      return makeImmediateFuture<std::optional<Hash32>>(
           PathError(EINVAL, path, "file is a symlink"));
     case dtype_t::Dir:
       break;
     case dtype_t::Regular:
       // The DigestHash of a file is the same as the Blake3 hash for that file
-      return getBlake3(path, objectStore, fetchContext);
+      return getBlake3(path, objectStore, fetchContext)
+          .thenValue([](auto&& blake3) {
+            return std::optional<Hash32>{std::move(blake3)};
+          });
     default:
-      return makeImmediateFuture<Hash32>(
+      return makeImmediateFuture<std::optional<Hash32>>(
           PathError(EINVAL, path, "variant is of unhandled type"));
   }
 
@@ -138,18 +141,7 @@ ImmediateFuture<Hash32> VirtualInode::getDigestHash(
   return match(
       variant_,
       [&](const InodePtr& inode) {
-        auto treeFut = inode.asTreePtr()->getDigestHash(fetchContext);
-        return std::move(treeFut).thenValue(
-            [treePath = path.copy()](std::optional<Hash32> hash) {
-              if (hash.has_value()) {
-                return ImmediateFuture<Hash32>{hash.value()};
-              } else {
-                return makeImmediateFuture<Hash32>(newEdenError(
-                    EINVAL,
-                    EdenErrorType::GENERIC_ERROR,
-                    fmt::format("digest hash missing for tree: {}", treePath)));
-              }
-            });
+        return inode.asTreePtr()->getDigestHash(fetchContext);
       },
       [&](const UnmaterializedUnloadedBlobDirEntry& entry) {
         return objectStore->getTreeDigestHash(
@@ -269,25 +261,13 @@ ImmediateFuture<BlobAuxData> VirtualInode::getBlobAuxData(
       });
 }
 
-ImmediateFuture<TreeAuxData> VirtualInode::getTreeAuxData(
-    RelativePathPiece path,
+ImmediateFuture<std::optional<TreeAuxData>> VirtualInode::getTreeAuxData(
     const std::shared_ptr<ObjectStore>& objectStore,
     const ObjectFetchContextPtr& fetchContext) const {
   return match(
       variant_,
       [&](const InodePtr& inode) {
-        return inode.asTreePtr()
-            ->getTreeAuxData(fetchContext)
-            .thenValue([path](std::optional<TreeAuxData> treeAux) {
-              if (treeAux.has_value()) {
-                return ImmediateFuture<TreeAuxData>(treeAux.value());
-              } else {
-                return makeImmediateFuture<TreeAuxData>(newEdenError(
-                    EINVAL,
-                    EdenErrorType::GENERIC_ERROR,
-                    fmt::format("tree aux data missing for tree: {}", path)));
-              }
-            });
+        return inode.asTreePtr()->getTreeAuxData(fetchContext);
       },
       [&](const TreePtr& tree) {
         return objectStore->getTreeAuxData(tree->getHash(), fetchContext);
@@ -368,14 +348,27 @@ ImmediateFuture<EntryAttributes> VirtualInode::getEntryAttributesForNonFile(
                           blake3,
                           size,
                           digestSize,
-                          digestHash](TreeAuxData treeAux) mutable {
+                          digestHash,
+                          path](std::optional<TreeAuxData> treeAux) mutable {
                 if (requestedAttributes.contains(ENTRY_ATTRIBUTE_DIGEST_HASH)) {
-                  digestHash =
-                      std::optional<folly::Try<Hash32>>{treeAux.digestHash};
+                  digestHash = treeAux.has_value()
+                      ? std::optional<folly::Try<Hash32>>{treeAux.value()
+                                                              .digestHash}
+                      : folly::Try<Hash32>(newEdenError(
+                            EINVAL,
+                            EdenErrorType::GENERIC_ERROR,
+                            fmt::format(
+                                "tree aux data missing for tree: {}", path)));
                 }
                 if (requestedAttributes.contains(ENTRY_ATTRIBUTE_DIGEST_SIZE)) {
-                  digestSize = std::optional<folly::Try<uint64_t>>{
-                      std::move(treeAux.digestSize)};
+                  digestSize = treeAux.has_value()
+                      ? std::optional<folly::Try<uint64_t>>{std::move(
+                            treeAux.value().digestSize)}
+                      : folly::Try<uint64_t>(newEdenError(
+                            EINVAL,
+                            EdenErrorType::GENERIC_ERROR,
+                            fmt::format(
+                                "tree aux data missing for tree: {}", path)));
                 }
                 return EntryAttributes{
                     std::move(sha1),

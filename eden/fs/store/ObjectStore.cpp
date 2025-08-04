@@ -385,8 +385,10 @@ folly::SemiFuture<BackingStore::GetTreeResult> ObjectStore::getTreeImpl(
                         prewarmTreeAuxCacheForTreeFetchedFromLocalStore);
                 return self->getTreeAuxData(id, context)
                     .thenTry([self, tree = tree, id = id](
-                                 folly::Try<TreeAuxData>&& auxResult) {
-                      if (auxResult.hasException()) {
+                                 folly::Try<std::optional<TreeAuxData>>&&
+                                     auxResult) {
+                      if (auxResult.hasException() ||
+                          !auxResult.value().has_value()) {
                         self->stats_->increment(
                             &ObjectStoreStats::
                                 prewarmTreeAuxCacheForTreeFetchedFromLocalStoreFailed);
@@ -394,7 +396,9 @@ folly::SemiFuture<BackingStore::GetTreeResult> ObjectStore::getTreeImpl(
                             DBG5,
                             "Failed to fetch Tree Aux Data for Tree {}: {}",
                             id,
-                            auxResult.exception().what());
+                            auxResult.hasException()
+                                ? auxResult.exception().what()
+                                : "no tree aux data");
                       }
                       return BackingStore::GetTreeResult{
                           tree, ObjectFetchContext::FromDiskCache};
@@ -438,7 +442,7 @@ folly::SemiFuture<BackingStore::GetTreeResult> ObjectStore::getTreeImpl(
       .semi();
 }
 
-ImmediateFuture<TreeAuxData> ObjectStore::getTreeAuxData(
+ImmediateFuture<std::optional<TreeAuxData>> ObjectStore::getTreeAuxData(
     const ObjectId& id,
     const ObjectFetchContextPtr& fetchContext) const {
   DurationScope<EdenStats> statScope{stats_, &ObjectStoreStats::getTreeAuxData};
@@ -464,11 +468,11 @@ ImmediateFuture<TreeAuxData> ObjectStore::getTreeAuxData(
            id,
            statScope =
                std::move(statScope)](BackingStore::GetTreeAuxResult result)
-              -> ImmediateFuture<TreeAuxData> {
+              -> ImmediateFuture<std::optional<TreeAuxData>> {
             if (!result.treeAux) {
               self->stats_->increment(&ObjectStoreStats::getTreeAuxDataFailed);
               XLOGF(DBG4, "unable to find aux data for {}", id);
-              throwf<std::domain_error>("aux data for {} not found", id);
+              return std::nullopt;
             }
             auto auxData = std::move(result.treeAux);
             self->treeAuxDataCache_.wlock()->set(id, *auxData);
@@ -546,29 +550,27 @@ ObjectStore::getTreeAuxDataImpl(
       .semi();
 }
 
-ImmediateFuture<Hash32> ObjectStore::getTreeDigestHash(
+ImmediateFuture<std::optional<Hash32>> ObjectStore::getTreeDigestHash(
     const ObjectId& id,
     const ObjectFetchContextPtr& context) const {
   return getTreeAuxData(id, context)
       .thenValue(
           [id, context = context.copy(), self = shared_from_this()](
-              const TreeAuxData& auxData) -> ImmediateFuture<Hash32> {
-            if (auxData.digestHash) {
-              return *auxData.digestHash;
-            }
-
-            // should never happen but better than crashing
-            EDEN_BUG() << fmt::format(
-                "DigestHash hash is not defined for id={}", id);
+              const std::optional<TreeAuxData>& auxData)
+              -> ImmediateFuture<std::optional<Hash32>> {
+            return auxData.has_value() ? auxData->digestHash : std::nullopt;
           });
 }
 
-ImmediateFuture<uint64_t> ObjectStore::getTreeDigestSize(
+ImmediateFuture<std::optional<uint64_t>> ObjectStore::getTreeDigestSize(
     const ObjectId& id,
     const ObjectFetchContextPtr& context) const {
-  return getTreeAuxData(id, context).thenValue([](const TreeAuxData& auxData) {
-    return auxData.digestSize;
-  });
+  return getTreeAuxData(id, context)
+      .thenValue([](const std::optional<TreeAuxData>& auxData) {
+        return auxData.has_value()
+            ? std::optional<uint64_t>(auxData->digestSize)
+            : std::nullopt;
+      });
 }
 
 ImmediateFuture<folly::Unit> ObjectStore::prefetchBlobs(

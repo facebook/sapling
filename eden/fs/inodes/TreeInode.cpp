@@ -1235,7 +1235,8 @@ ImmediateFuture<std::optional<Hash32>> TreeInode::getDigestHash(
     // If a tree is not materialized, it should have a hash value.
     return getObjectStore()
         .getTreeDigestHash(state->treeHash.value(), fetchContext)
-        .thenValue([](Hash32 hash) { return std::make_optional(hash); });
+        .thenValue(
+            [](std::optional<Hash32>&& hash) { return std::move(hash); });
   }
   return ImmediateFuture<std::optional<Hash32>>{std::nullopt};
 }
@@ -1249,7 +1250,8 @@ ImmediateFuture<std::optional<uint64_t>> TreeInode::getDigestSize(
     // If a tree is not materialized, it should have a hash size.
     return getObjectStore()
         .getTreeDigestSize(state->treeHash.value(), fetchContext)
-        .thenValue([](uint64_t size) { return std::make_optional(size); });
+        .thenValue(
+            [](std::optional<uint64_t>&& size) { return std::move(size); });
   }
   return ImmediateFuture<std::optional<uint64_t>>{std::nullopt};
 }
@@ -1263,8 +1265,9 @@ ImmediateFuture<std::optional<TreeAuxData>> TreeInode::getTreeAuxData(
     // If a tree is not materialized, it should have aux data.
     return getObjectStore()
         .getTreeAuxData(state->treeHash.value(), fetchContext)
-        .thenValue(
-            [](TreeAuxData treeAux) { return std::make_optional(treeAux); });
+        .thenValue([](std::optional<TreeAuxData>&& treeAux) {
+          return std::move(treeAux);
+        });
   }
   return ImmediateFuture<std::optional<TreeAuxData>>{std::nullopt};
 }
