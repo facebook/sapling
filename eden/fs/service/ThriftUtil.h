@@ -86,4 +86,11 @@ class HashRootIdCodec : public RootIdCodec {
   std::string renderRootId(const RootId& rootId) override;
 };
 
+inline TimeSpec thriftTimeSpec(const timespec& ts) {
+  auto thriftTs = TimeSpec();
+  thriftTs.seconds() = ts.tv_sec;
+  thriftTs.nanoSeconds() = ts.tv_nsec;
+  return thriftTs;
+}
+
 } // namespace facebook::eden
