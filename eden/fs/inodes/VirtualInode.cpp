@@ -321,8 +321,7 @@ void populateInvalidNonFileAttributes(
 void populateTreeAuxNonFileAttributes(
     EntryAttributes& attributes,
     EntryAttributeFlags requestedAttributes,
-    const folly::Try<std::optional<TreeAuxData>>& treeAuxTry,
-    RelativePathPiece path) {
+    const folly::Try<std::optional<TreeAuxData>>& treeAuxTry) {
   if (treeAuxTry.hasException()) {
     // We failed to get tree aux data. This shouldn't cause the
     // entire result to be an error. We can return whichever
@@ -337,23 +336,19 @@ void populateTreeAuxNonFileAttributes(
   } else {
     // The tree aux data request didn't error out, but we may have received
     // "nullopt" as the result (indicating no tree aux data is currently
-    // computed for this entry).
+    // computed for this entry). If that's the case, set the entire attribute as
+    // nullopt to trigger ATTRIBUTE_UNAVAILABLE errors when results are
+    // processed.
     auto treeAux = treeAuxTry.value();
     if (requestedAttributes.contains(ENTRY_ATTRIBUTE_DIGEST_HASH)) {
       attributes.digestHash = treeAux.has_value()
           ? std::optional<folly::Try<Hash32>>{treeAux.value().digestHash}
-          : folly::Try<Hash32>(newEdenError(
-                ENOENT,
-                EdenErrorType::ATTRIBUTE_UNAVAILABLE,
-                fmt::format("tree aux data missing for tree: {}", path)));
+          : std::nullopt;
     }
     if (requestedAttributes.contains(ENTRY_ATTRIBUTE_DIGEST_SIZE)) {
       attributes.digestSize = treeAux.has_value()
           ? std::optional<folly::Try<uint64_t>>{treeAux.value().digestSize}
-          : folly::Try<uint64_t>(newEdenError(
-                ENOENT,
-                EdenErrorType::ATTRIBUTE_UNAVAILABLE,
-                fmt::format("tree aux data missing for tree: {}", path)));
+          : std::nullopt;
     }
   }
 }
@@ -401,14 +396,11 @@ ImmediateFuture<EntryAttributes> VirtualInode::getEntryAttributesForNonFile(
           .thenTry(
               [entryAttributes = std::move(attributes),
                requestedAttributes,
-               oid,
-               path](
-                  folly::Try<std::optional<TreeAuxData>> treeAuxTry) mutable {
+               oid](folly::Try<std::optional<TreeAuxData>> treeAuxTry) mutable {
                 populateTreeAuxNonFileAttributes(
                     entryAttributes,
                     requestedAttributes,
-                    std::move(treeAuxTry),
-                    path);
+                    std::move(treeAuxTry));
                 return entryAttributes;
               });
     }
@@ -513,12 +505,10 @@ ImmediateFuture<EntryAttributes> VirtualInode::getEntryAttributes(
               if (blobAuxdata.hasException()) {
                 blake3 = folly::Try<Hash32>(blobAuxdata.exception());
               } else {
-                blake3 = blobAuxdata.value().blake3
-                    ? folly::Try<Hash32>(blobAuxdata.value().blake3.value())
-                    : folly::Try<Hash32>(newEdenError(
-                          ENOENT,
-                          EdenErrorType::ATTRIBUTE_UNAVAILABLE,
-                          "no blake3 available"));
+                blake3 = blobAuxdata.value().blake3.has_value()
+                    ? std::optional<folly::Try<Hash32>>(
+                          blobAuxdata.value().blake3.value())
+                    : std::nullopt;
               }
             }
 
@@ -553,12 +543,10 @@ ImmediateFuture<EntryAttributes> VirtualInode::getEntryAttributes(
               if (blobAuxdata.hasException()) {
                 digestHash = folly::Try<Hash32>(blobAuxdata.exception());
               } else {
-                digestHash = blobAuxdata.value().blake3
-                    ? folly::Try<Hash32>(blobAuxdata.value().blake3.value())
-                    : folly::Try<Hash32>(newEdenError(
-                          ENOENT,
-                          EdenErrorType::ATTRIBUTE_UNAVAILABLE,
-                          "no blake3 available"));
+                digestHash = blobAuxdata.value().blake3.has_value()
+                    ? std::optional<folly::Try<Hash32>>(
+                          blobAuxdata.value().blake3.value())
+                    : std::nullopt;
               }
             }
 
