@@ -817,6 +817,59 @@ class ReaddirTest(testcase.EdenRepoTest):
             0,
         )
 
+    def test_get_materialized_attributes(self) -> None:
+        # Materialize some files/dirs
+        self.write_file("hello_file", "something different")
+        self.mkdir("hello_dir")
+
+        # Materialized files should not have ObjectID values, but they should
+        # have valid digest hash/size values
+        expected_hello_result_file = FileAttributeDataOrErrorV2(
+            fileAttributeData=FileAttributeDataV2(
+                digestHash=DigestHashOrError(
+                    digestHash=self.blake3_hash(self.get_path("hello_file"))
+                ),
+                digestSize=DigestSizeOrError(digestSize=19),
+                objectId=ObjectIdOrError(),
+            )
+        )
+
+        # Materialized directories will not have digest hash/size values and
+        # return an error as a result. ObjectId is also not valid, but returns
+        # empty ObjectID because this legacy behavior is expected by Meerkat
+        expected_hello_result_dir = FileAttributeDataOrErrorV2(
+            fileAttributeData=FileAttributeDataV2(
+                digestHash=DigestHashOrError(
+                    error=EdenError(
+                        message="hello_dir: digesthash requested, but no digesthash available",
+                        errorType=EdenErrorType.GENERIC_ERROR,
+                    )
+                ),
+                digestSize=DigestSizeOrError(
+                    error=EdenError(
+                        message="hello_dir: digestsize requested, but no digestsize available",
+                        errorType=EdenErrorType.GENERIC_ERROR,
+                    )
+                ),
+                objectId=ObjectIdOrError(),
+            )
+        )
+
+        expected_results = GetAttributesFromFilesResultV2(
+            res=[expected_hello_result_file, expected_hello_result_dir]
+        )
+
+        self.assert_attribute_result(
+            self.get_attributes_v2,
+            expected_results,
+            [b"hello_file", b"hello_dir"],
+            attributes=(
+                FileAttributes.DIGEST_HASH
+                | FileAttributes.DIGEST_SIZE
+                | FileAttributes.OBJECT_ID
+            ),
+        )
+
     def assert_attribute_error(
         self,
         attribute_result: Union[
