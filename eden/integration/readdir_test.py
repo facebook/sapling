@@ -657,14 +657,14 @@ class ReaddirTest(testcase.EdenRepoTest):
                 sha1=Sha1OrError(
                     error=EdenError(
                         message="adir: Is a directory",
-                        errorCode=21,
+                        errorCode=EISDIR,
                         errorType=EdenErrorType.POSIX_ERROR,
                     )
                 ),
                 size=SizeOrError(
                     error=EdenError(
                         message="adir: Is a directory",
-                        errorCode=21,
+                        errorCode=EISDIR,
                         errorType=EdenErrorType.POSIX_ERROR,
                     )
                 ),
@@ -675,7 +675,7 @@ class ReaddirTest(testcase.EdenRepoTest):
                 blake3=Blake3OrError(
                     error=EdenError(
                         message="adir: Is a directory",
-                        errorCode=21,
+                        errorCode=EISDIR,
                         errorType=EdenErrorType.POSIX_ERROR,
                     )
                 ),
@@ -717,14 +717,14 @@ class ReaddirTest(testcase.EdenRepoTest):
                     sha1=Sha1OrError(
                         error=EdenError(
                             message="adir/asock: file is a non-source-control type: 12: Invalid argument",
-                            errorCode=22,
+                            errorCode=EINVAL,
                             errorType=EdenErrorType.POSIX_ERROR,
                         )
                     ),
                     size=SizeOrError(
                         error=EdenError(
                             message="adir/asock: file is a non-source-control type: 12: Invalid argument",
-                            errorCode=22,
+                            errorCode=EINVAL,
                             errorType=EdenErrorType.POSIX_ERROR,
                         )
                     ),
@@ -735,21 +735,21 @@ class ReaddirTest(testcase.EdenRepoTest):
                     blake3=Blake3OrError(
                         error=EdenError(
                             message="adir/asock: file is a non-source-control type: 12: Invalid argument",
-                            errorCode=22,
+                            errorCode=EINVAL,
                             errorType=EdenErrorType.POSIX_ERROR,
                         )
                     ),
                     digestSize=DigestSizeOrError(
                         error=EdenError(
                             message="adir/asock: file is a non-source-control type: 12: Invalid argument",
-                            errorCode=22,
+                            errorCode=EINVAL,
                             errorType=EdenErrorType.POSIX_ERROR,
                         )
                     ),
                     digestHash=DigestHashOrError(
                         error=EdenError(
                             message="adir/asock: file is a non-source-control type: 12: Invalid argument",
-                            errorCode=22,
+                            errorCode=EINVAL,
                             errorType=EdenErrorType.POSIX_ERROR,
                         )
                     ),
@@ -782,14 +782,14 @@ class ReaddirTest(testcase.EdenRepoTest):
                 sha1=Sha1OrError(
                     error=EdenError(
                         message="slink: file is a symlink: Invalid argument",
-                        errorCode=22,
+                        errorCode=EINVAL,
                         errorType=EdenErrorType.POSIX_ERROR,
                     )
                 ),
                 size=SizeOrError(
                     error=EdenError(
                         message="slink: file is a symlink: Invalid argument",
-                        errorCode=22,
+                        errorCode=EINVAL,
                         errorType=EdenErrorType.POSIX_ERROR,
                     )
                 ),
@@ -800,21 +800,21 @@ class ReaddirTest(testcase.EdenRepoTest):
                 blake3=Blake3OrError(
                     error=EdenError(
                         message="slink: file is a symlink: Invalid argument",
-                        errorCode=22,
+                        errorCode=EINVAL,
                         errorType=EdenErrorType.POSIX_ERROR,
                     )
                 ),
                 digestSize=DigestSizeOrError(
                     error=EdenError(
                         message="slink: file is a symlink: Invalid argument",
-                        errorCode=22,
+                        errorCode=EINVAL,
                         errorType=EdenErrorType.POSIX_ERROR,
                     )
                 ),
                 digestHash=DigestHashOrError(
                     error=EdenError(
                         message="slink: file is a symlink: Invalid argument",
-                        errorCode=22,
+                        errorCode=EINVAL,
                         errorType=EdenErrorType.POSIX_ERROR,
                     )
                 ),
@@ -1173,7 +1173,7 @@ class ReaddirTest(testcase.EdenRepoTest):
                     DirListAttributeDataOrError(
                         error=EdenError(
                             message="hello: path must be a directory",
-                            errorCode=22,
+                            errorCode=EINVAL,
                             errorType=EdenErrorType.ARGUMENT_ERROR,
                         )
                     )
@@ -1335,21 +1335,21 @@ class ReaddirTest(testcase.EdenRepoTest):
             sha1_result=Sha1OrError(
                 error=EdenError(
                     message="cdir/subdir: Is a directory",
-                    errorCode=21,
+                    errorCode=EISDIR,
                     errorType=EdenErrorType.POSIX_ERROR,
                 )
             ),
             blake3_result=Blake3OrError(
                 error=EdenError(
                     message="cdir/subdir: Is a directory",
-                    errorCode=21,
+                    errorCode=EISDIR,
                     errorType=EdenErrorType.POSIX_ERROR,
                 )
             ),
             size_result=SizeOrError(
                 error=EdenError(
                     message="cdir/subdir: Is a directory",
-                    errorCode=21,
+                    errorCode=EISDIR,
                     errorType=EdenErrorType.POSIX_ERROR,
                 )
             ),
@@ -1362,7 +1362,7 @@ class ReaddirTest(testcase.EdenRepoTest):
             sockpath = self.get_path("adir/asock")
             sock_error = EdenError(
                 message="adir/asock: file is a non-source-control type: 12: Invalid argument",
-                errorCode=22,
+                errorCode=EINVAL,
                 errorType=EdenErrorType.POSIX_ERROR,
             )
 
@@ -1392,7 +1392,7 @@ class ReaddirTest(testcase.EdenRepoTest):
 
         slink_error = EdenError(
             message="slink: file is a symlink: Invalid argument",
-            errorCode=22,
+            errorCode=EINVAL,
             errorType=EdenErrorType.POSIX_ERROR,
         )
 
