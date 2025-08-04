@@ -120,6 +120,7 @@ use mononoke_types::hash::Blake3;
 use mononoke_types::hash::GitSha1;
 use mononoke_types::hash::Sha1;
 use mononoke_types::hash::Sha256;
+use mutable_blobstore::MutableRepoBlobstore;
 use mutable_counters::MutableCounters;
 use mutable_renames::ArcMutableRenames;
 use mutable_renames::MutableRenames;
@@ -211,6 +212,9 @@ define_stats! {
 pub struct Repo {
     #[facet]
     pub repo_blobstore: RepoBlobstore,
+
+    #[facet]
+    pub mutable_repo_blobstore: MutableRepoBlobstore,
 
     #[facet]
     pub repo_bookmark_attrs: RepoBookmarkAttrs,

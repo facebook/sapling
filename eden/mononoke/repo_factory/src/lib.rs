@@ -146,6 +146,8 @@ use metaconfig_types::RepoConfig;
 use metaconfig_types::RepoReadOnly;
 #[cfg(fbcode_build)]
 use metaconfig_types::ZelosConfig;
+use mutable_blobstore::ArcMutableRepoBlobstore;
+use mutable_blobstore::MutableRepoBlobstore;
 use mutable_counters::ArcMutableCounters;
 use mutable_counters::SqlMutableCountersBuilder;
 use mutable_renames::ArcMutableRenames;
@@ -497,6 +499,21 @@ impl RepoFactory {
             repo_identity.id(),
             censored_scuba_builder,
         );
+
+        Ok(repo_blobstore)
+    }
+
+    async fn mutable_repo_blobstore_from_blobstore(
+        &self,
+        repo_identity: &ArcRepoIdentity,
+        blobstore: &Arc<dyn Blobstore>,
+    ) -> Result<MutableRepoBlobstore> {
+        let mut blobstore = blobstore.clone();
+        if self.env.readonly_storage.0 {
+            blobstore = Arc::new(ReadOnlyBlobstore::new(blobstore));
+        }
+
+        let repo_blobstore = MutableRepoBlobstore::new(blobstore, repo_identity.id());
 
         Ok(repo_blobstore)
     }
@@ -1393,6 +1410,20 @@ impl RepoFactory {
                 common_config,
             )
             .await?,
+        ))
+    }
+
+    pub async fn mutable_repo_blobstore(
+        &self,
+        repo_identity: &ArcRepoIdentity,
+        repo_config: &ArcRepoConfig,
+    ) -> Result<ArcMutableRepoBlobstore> {
+        let blobstore = self
+            .blobstore(&repo_config.storage_config.blobstore)
+            .await?;
+        Ok(Arc::new(
+            self.mutable_repo_blobstore_from_blobstore(repo_identity, &blobstore)
+                .await?,
         ))
     }
 

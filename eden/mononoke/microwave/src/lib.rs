@@ -25,7 +25,7 @@ use mercurial_types::HgNodeHash;
 use mononoke_types::BlobstoreBytes;
 use mononoke_types::RepoPath;
 use mononoke_types::RepositoryId;
-use repo_blobstore::RepoBlobstoreRef;
+use mutable_blobstore::MutableRepoBlobstoreRef;
 use repo_identity::RepoIdentityRef;
 use slog::info;
 use tokio::fs::File;
@@ -87,7 +87,7 @@ impl Snapshot {
     pub async fn commit(
         &self,
         ctx: &CoreContext,
-        repo: &(impl RepoIdentityRef + RepoBlobstoreRef),
+        repo: &(impl RepoIdentityRef + MutableRepoBlobstoreRef),
         location: SnapshotLocation<'_>,
     ) -> Result<(), Error> {
         let serialized = compact_protocol::serialize(&self.snapshot);
@@ -98,7 +98,7 @@ impl Snapshot {
                 file.write_all(&serialized).await?;
             }
             SnapshotLocation::Blobstore => {
-                repo.repo_blobstore()
+                repo.mutable_repo_blobstore()
                     .put(ctx, snapshot_name(), BlobstoreBytes::from_bytes(serialized))
                     .await?;
             }
@@ -119,7 +119,7 @@ fn snapshot_path(shared_local_path: &Path, repo_id: RepositoryId) -> PathBuf {
 
 async fn load_snapshot(
     ctx: &CoreContext,
-    repo: &(impl RepoIdentityRef + RepoBlobstoreRef),
+    repo: &(impl RepoIdentityRef + MutableRepoBlobstoreRef),
     location: SnapshotLocation<'_>,
 ) -> Result<thrift::RepoSnapshot, Error> {
     match location {
@@ -131,7 +131,7 @@ async fn load_snapshot(
         }
         SnapshotLocation::Blobstore => {
             let bytes = repo
-                .repo_blobstore()
+                .mutable_repo_blobstore()
                 .get(ctx, &snapshot_name())
                 .await?
                 .ok_or_else(|| Error::msg("Snapshot is missing"))?
@@ -143,7 +143,7 @@ async fn load_snapshot(
 
 pub async fn prime_cache(
     ctx: &CoreContext,
-    repo: &(impl RepoIdentityRef + RepoBlobstoreRef + FilenodesRef),
+    repo: &(impl RepoIdentityRef + MutableRepoBlobstoreRef + FilenodesRef),
     location: SnapshotLocation<'_>,
 ) -> Result<(), Error> {
     let snapshot = load_snapshot(ctx, repo, location).await?;

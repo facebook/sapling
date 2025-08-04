@@ -35,6 +35,7 @@ use metaconfig_types::CacheWarmupParams;
 use microwave::SnapshotLocation;
 use mononoke_macros::mononoke;
 use mononoke_types::ChangesetId;
+use mutable_blobstore::MutableRepoBlobstoreRef;
 use repo_blobstore::RepoBlobstoreRef;
 use repo_derived_data::RepoDerivedDataRef;
 use repo_identity::RepoIdentityRef;
@@ -43,6 +44,7 @@ use slog::info;
 use slog::warn;
 
 pub trait Repo = RepoBlobstoreRef
+    + MutableRepoBlobstoreRef
     + RepoDerivedDataRef
     + RepoIdentityRef
     + FilenodesRef

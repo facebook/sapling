@@ -46,6 +46,7 @@ use mononoke_app::MononokeAppBuilder;
 use mononoke_app::monitoring::AliveService;
 use mononoke_app::monitoring::MonitoringAppExtension;
 use mononoke_macros::mononoke;
+use mutable_blobstore::MutableRepoBlobstore;
 use repo_blobstore::RepoBlobstore;
 use repo_derived_data::RepoDerivedData;
 use repo_derived_data::RepoDerivedDataArc;
@@ -70,6 +71,9 @@ struct Repo {
 
     #[facet]
     repo_blobstore: RepoBlobstore,
+
+    #[facet]
+    mutable_repo_blobstore: MutableRepoBlobstore,
 
     #[facet]
     bookmarks: dyn Bookmarks,

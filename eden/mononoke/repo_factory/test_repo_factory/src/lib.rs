@@ -81,6 +81,8 @@ use metaconfig_types::SourceControlServiceParams;
 use metaconfig_types::UnodeVersion;
 use mononoke_types::DerivableType;
 use mononoke_types::RepositoryId;
+use mutable_blobstore::ArcMutableRepoBlobstore;
+use mutable_blobstore::MutableRepoBlobstore;
 use mutable_counters::ArcMutableCounters;
 use mutable_counters::SqlMutableCountersBuilder;
 use mutable_renames::ArcMutableRenames;
@@ -666,6 +668,16 @@ impl TestRepoFactory {
             MononokeScubaSampleBuilder::with_discard(),
         );
         Arc::new(repo_blobstore)
+    }
+
+    /// Construct the MutableRepoBlobstore using the blobstore in the factory.
+    pub fn mutable_repo_blobstore(
+        &self,
+        repo_identity: &ArcRepoIdentity,
+    ) -> ArcMutableRepoBlobstore {
+        let mutable_repo_blobstore =
+            MutableRepoBlobstore::new(self.blobstore.clone(), repo_identity.id());
+        Arc::new(mutable_repo_blobstore)
     }
 
     /// Construct filestore config based on the config in the factory.
