@@ -50,6 +50,7 @@ use crate::response::AsyncResponse;
 use crate::response::Response;
 
 pub const FETCH_CAUSE_HEADER: &str = "X-Fetch-Cause";
+pub const FETCH_FROM_CAS_ATTEMPTED_HEADER: &str = "X-Fetch-From-CAS-Attempted";
 
 #[derive(Copy, Clone, Debug, PartialEq)]
 pub enum Method {
@@ -585,6 +586,16 @@ impl Request {
     pub fn set_fetch_cause(&mut self, fetch_cause: Option<impl ToString>) -> &mut Self {
         if let Some(c) = fetch_cause {
             self.set_header(FETCH_CAUSE_HEADER, c);
+        }
+        self
+    }
+
+    pub fn set_fetch_from_cas_attempted(
+        &mut self,
+        fetch_from_cas_attempted: Option<bool>,
+    ) -> &mut Self {
+        if let Some(true) = fetch_from_cas_attempted {
+            self.set_header(FETCH_FROM_CAS_ATTEMPTED_HEADER, 1);
         }
         self
     }

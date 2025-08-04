@@ -393,6 +393,9 @@ impl Client {
                         req.set_fetch_cause(
                             fctx.as_ref().map(|fctx| fctx.cause().to_str().to_string()),
                         );
+                        req.set_fetch_from_cas_attempted(
+                            fctx.as_ref().map(|fctx| fctx.fetch_from_cas_attempted()),
+                        );
                         req
                     })
             })
