@@ -139,7 +139,9 @@ def _download_files_and_fix_status(ui, repo, snapshot) -> None:
                     )
                 )
     ui.status(
-        _("Downloading files for restoring snapshot\n"),
+        _("Downloading {count} files for restoring snapshot\n").format(
+            count=len(files2download)
+        ),
         component="snapshot",
     )
     start_download = time.perf_counter()
