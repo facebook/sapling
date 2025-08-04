@@ -1663,38 +1663,6 @@ pub struct SourceControlServiceMonitoring {
     pub bookmarks_to_report_age: Vec<BookmarkKey>,
 }
 
-/// Represents the repository name for this repository in Hgsql.
-#[derive(Debug, Default, Clone, Eq, PartialEq)]
-pub struct HgsqlName(pub String);
-
-impl AsRef<str> for HgsqlName {
-    fn as_ref(&self) -> &str {
-        &self.0
-    }
-}
-
-impl AsRef<String> for HgsqlName {
-    fn as_ref(&self) -> &String {
-        &self.0
-    }
-}
-
-/// Represents the repository name for Globalrevs for this repository in Hgsql.
-#[derive(Debug, Default, Clone, Eq, PartialEq)]
-pub struct HgsqlGlobalrevsName(pub String);
-
-impl AsRef<str> for HgsqlGlobalrevsName {
-    fn as_ref(&self) -> &str {
-        &self.0
-    }
-}
-
-impl AsRef<String> for HgsqlGlobalrevsName {
-    fn as_ref(&self) -> &String {
-        &self.0
-    }
-}
-
 /// Define a region of the repository, in terms of commits and path prefixes.
 ///
 /// The commit range is equivalent to the Mercurial revset
