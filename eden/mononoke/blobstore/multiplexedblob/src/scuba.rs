@@ -52,6 +52,7 @@ fn record_scuba_common(
     if let Some(fetch_cause) = ctx.metadata().fetch_cause() {
         scuba.add_fetch_cause(fetch_cause);
     }
+    scuba.add_fetch_from_cas_attempted(ctx.metadata().fetch_from_cas_attempted());
 }
 
 pub fn record_put<T>(
