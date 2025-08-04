@@ -1,5 +1,5 @@
+load("@fbcode//fbpkg:fbpkg.bzl", "fbpkg")
 load("@fbcode_macros//build_defs:rust_binary.bzl", "rust_binary")
-load("//fbpkg:fbpkg.bzl", "fbpkg")
 
 oncall("scm_client_infra")
 

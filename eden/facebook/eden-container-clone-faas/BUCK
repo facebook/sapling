@@ -1,14 +1,14 @@
-load("@fbcode_macros//build_defs:python_unittest.bzl", "python_unittest")
-load("@fbsource//tools/target_determinator/macros:ci.bzl", "ci")
-load("//fbpkg:fbpkg.bzl", "fbpkg")
+load("@fbcode//fbpkg:fbpkg.bzl", "fbpkg")
 load(
-    "//serverless/faas/container/py:buck.bzl",
+    "@fbcode//serverless/faas/container/py:buck.bzl",
     "faas_py_client",
 )
 load(
-    "//serverless/faas/container/rust:buck.bzl",
+    "@fbcode//serverless/faas/container/rust:buck.bzl",
     "faas_rust_binary",
 )
+load("@fbcode_macros//build_defs:python_unittest.bzl", "python_unittest")
+load("@fbsource//tools/target_determinator/macros:ci.bzl", "ci")
 
 oncall("source_control")
 

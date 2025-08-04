@@ -1,5 +1,5 @@
+load("@fbcode//eden:defs.bzl", "get_integration_test_env_and_deps")
 load("@fbcode_macros//build_defs:python_unittest.bzl", "python_unittest")
-load("//eden:defs.bzl", "get_integration_test_env_and_deps")
 
 oncall("scm_client_infra")
 

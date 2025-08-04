@@ -1,5 +1,5 @@
+load("@fbcode//cpe/nupkg_builder:nupkg.bzl", "nupkg")
 load("@fbcode_macros//build_defs:rust_binary.bzl", "rust_binary")
-load("//cpe/nupkg_builder:nupkg.bzl", "nupkg")
 
 oncall("source_control")
 

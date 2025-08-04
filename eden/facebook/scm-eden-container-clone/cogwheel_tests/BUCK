@@ -1,4 +1,4 @@
-load("//windtunnel/cogwheel:defs.bzl", "cogwheel_test", "create_cogwheel_config")
+load("@fbcode//windtunnel/cogwheel:defs.bzl", "cogwheel_test", "create_cogwheel_config")
 
 oncall("scm_client_infra")
 

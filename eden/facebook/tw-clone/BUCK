@@ -1,6 +1,6 @@
+load("@fbcode//eden:defs.bzl", "make_rule_compatible_with")
+load("@fbcode//fbpkg:fbpkg.bzl", "fbpkg")
 load("@fbcode_macros//build_defs:python_binary.bzl", "python_binary")
-load("//eden:defs.bzl", "make_rule_compatible_with")
-load("//fbpkg:fbpkg.bzl", "fbpkg")
 
 oncall("scm_client_infra")
 
