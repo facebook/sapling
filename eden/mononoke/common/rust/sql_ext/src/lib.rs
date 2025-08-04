@@ -54,6 +54,7 @@ pub mod _macro_internal {
     pub use serde_json;
     pub use sql::WriteResult;
     pub use sql::queries;
+    pub use sql_ext_proc_macros::extract_repo_ids_from_values;
     pub use sql_query_config::SqlQueryConfig;
     pub use sql_query_telemetry::SqlQueryTelemetry;
     pub use twox_hash::xxh3::Hash128;

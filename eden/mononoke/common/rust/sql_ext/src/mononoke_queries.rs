@@ -352,8 +352,16 @@ macro_rules! mononoke_queries {
 
                     let granularity = TelemetryGranularity::Query;
 
+                    // Extract repo IDs from values parameter
+                    let values_repo_ids: Vec<RepositoryId> =
+                        $crate::_macro_internal::extract_repo_ids_from_values!(($($vtype,)*));
                     // Check if any parameter is a RepositoryId and pass it to telemetry
-                    let repo_ids = $crate::extract_repo_ids_from_queries!($($pname: $ptype; )*);
+                    let repo_ids: Vec<RepositoryId> =
+                        $crate::extract_repo_ids_from_queries!($($pname: $ptype; )*)
+                        .into_iter()
+                        .chain(values_repo_ids)
+                        .collect();
+
 
                     let write_res = query_with_retry_no_cache(
                         || [<$name Impl>]::commented_query(
@@ -409,8 +417,16 @@ macro_rules! mononoke_queries {
 
                     let granularity = TelemetryGranularity::TransactionQuery;
 
+                    // Extract repo IDs from values parameter
+                    let values_repo_ids: Vec<RepositoryId> =
+                        $crate::_macro_internal::extract_repo_ids_from_values!(($($vtype,)*));
                     // Check if any parameter is a RepositoryId and pass it to telemetry
-                    let query_repo_ids = $crate::extract_repo_ids_from_queries!($($pname: $ptype; )*);
+                    let query_repo_ids: Vec<RepositoryId> =
+                        $crate::extract_repo_ids_from_queries!($($pname: $ptype; )*)
+                        .into_iter()
+                        .chain(values_repo_ids)
+                        .collect();
+
 
                     let (sql_txn, write_res) = [<$name Impl>]::commented_query_with_transaction(
                         sql_txn,

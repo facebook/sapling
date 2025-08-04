@@ -359,7 +359,7 @@ mod facebook {
         let expected_logs = vec![
             ScubaTelemetryLogSample {
                 success: true,
-                repo_ids: vec![], // TODO(T223577767): get repo_ids from list args
+                repo_ids: vec![100.into(), 200.into()],
                 granularity: TelemetryGranularity::Query,
                 query_name: Some("WriteQuery2".to_string()),
                 shard_name: TEST_XDB_NAME.to_string(),
@@ -372,7 +372,7 @@ mod facebook {
             },
             ScubaTelemetryLogSample {
                 success: true,
-                repo_ids: vec![], // TODO(T223577767): get repo_ids from list args
+                repo_ids: vec![100.into(), 200.into(), 300.into()],
                 granularity: TelemetryGranularity::Query,
                 query_name: Some("WriteQuery3".to_string()),
                 shard_name: TEST_XDB_NAME.to_string(),

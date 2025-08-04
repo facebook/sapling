@@ -34,6 +34,7 @@ rust_library(
         "fbsource//third-party/rust:paste",
         "fbsource//third-party/rust:vec1",
         "fbsource//third-party/rust:serde",
+        ":sql_ext_proc_macros",
         "fbsource//third-party/rust:serde_cbor",
         "//eden/mononoke/common/scuba_ext:scuba_ext",
         "fbsource//third-party/rust:serde_json",
@@ -67,5 +68,20 @@ rust_library(
         "//eden/mononoke/common/time_measuring:time_measuring",
     ])) + [
         "//dba/myadmin/if:if-myadmin-rust-clients",
+    ],
+)
+
+rust_library(
+    name = "sql_ext_proc_macros",
+    srcs = glob([
+        "proc_macros/**/*.rs",
+    ]),
+    autocargo = {
+        "cargo_toml_dir": "proc_macros",
+    },
+    proc_macro = True,
+    deps = [
+        "fbsource//third-party/rust:quote",
+        "fbsource//third-party/rust:syn1",
     ],
 )
