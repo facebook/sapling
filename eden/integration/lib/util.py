@@ -10,6 +10,8 @@ import os
 import sys
 from typing import Callable, List, Optional
 
+from facebook.eden.ttypes import TimeSpec
+
 if sys.platform == "win32":
     import ctypes
     from ctypes.wintypes import DWORD as _DWORD, HANDLE as _HANDLE, LPCWSTR as _LPCWSTR
@@ -79,3 +81,9 @@ if sys.platform == "win32":
         if fhandle == INVALID_HANDLE_VALUE:
             raise ctypes.WinError(ctypes.get_last_error())
         return Handle(fhandle)
+
+
+def stat_mtime_to_timespec(stat: os.stat_result) -> TimeSpec:
+    return TimeSpec(
+        seconds=int(stat.st_mtime), nanoSeconds=(stat.st_mtime_ns % 1_000_000_000)
+    )
