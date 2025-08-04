@@ -78,12 +78,12 @@ ImmediateFuture<Hash32> VirtualInode::getBlake3(
       return makeImmediateFuture<Hash32>(PathError(EISDIR, path));
     case dtype_t::Symlink:
       return makeImmediateFuture<Hash32>(
-          PathError(EINVAL, path, "file is a symlink"));
+          PathError(EINVAL, path, std::string_view{"file is a symlink"}));
     case dtype_t::Regular:
       break;
     default:
-      return makeImmediateFuture<Hash32>(
-          PathError(EINVAL, path, "variant is of unhandled type"));
+      return makeImmediateFuture<Hash32>(PathError(
+          EINVAL, path, std::string_view{"variant is of unhandled type"}));
   }
 
   // This is now guaranteed to be a dtype_t::Regular file. This means there's no
@@ -121,7 +121,7 @@ ImmediateFuture<std::optional<Hash32>> VirtualInode::getDigestHash(
       getDtype(), objectStore->getWindowsSymlinksEnabled())) {
     case dtype_t::Symlink:
       return makeImmediateFuture<std::optional<Hash32>>(
-          PathError(EINVAL, path, "file is a symlink"));
+          PathError(EINVAL, path, std::string_view{"file is a symlink"}));
     case dtype_t::Dir:
       break;
     case dtype_t::Regular:
@@ -131,8 +131,8 @@ ImmediateFuture<std::optional<Hash32>> VirtualInode::getDigestHash(
             return std::optional<Hash32>{std::move(blake3)};
           });
     default:
-      return makeImmediateFuture<std::optional<Hash32>>(
-          PathError(EINVAL, path, "variant is of unhandled type"));
+      return makeImmediateFuture<std::optional<Hash32>>(PathError(
+          EINVAL, path, std::string_view{"variant is of unhandled type"}));
   }
 
   // This is now guaranteed to be a dtype_t::Dir. This means there's no
@@ -167,12 +167,12 @@ ImmediateFuture<Hash20> VirtualInode::getSHA1(
       return makeImmediateFuture<Hash20>(PathError(EISDIR, path));
     case dtype_t::Symlink:
       return makeImmediateFuture<Hash20>(
-          PathError(EINVAL, path, "file is a symlink"));
+          PathError(EINVAL, path, std::string_view{"file is a symlink"}));
     case dtype_t::Regular:
       break;
     default:
-      return makeImmediateFuture<Hash20>(
-          PathError(EINVAL, path, "variant is of unhandled type"));
+      return makeImmediateFuture<Hash20>(PathError(
+          EINVAL, path, std::string_view{"variant is of unhandled type"}));
   }
 
   // This is now guaranteed to be a dtype_t::Regular file. This means there's no
@@ -287,18 +287,18 @@ void populateInvalidNonFileAttributes(
     std::string_view additionalErrorContext) {
   // It's invalid to request sha1, size, and blake3 for non-file entries
   if (requestedAttributes.contains(ENTRY_ATTRIBUTE_SHA1)) {
-    attributes.sha1 = folly::Try<Hash20>{
-        PathError{errorCode, path, std::string{additionalErrorContext}}};
+    attributes.sha1 =
+        folly::Try<Hash20>{PathError{errorCode, path, additionalErrorContext}};
   }
 
   if (requestedAttributes.contains(ENTRY_ATTRIBUTE_SIZE)) {
     attributes.size = folly::Try<uint64_t>{
-        PathError{errorCode, path, std::string{additionalErrorContext}}};
+        PathError{errorCode, path, additionalErrorContext}};
   }
 
   if (requestedAttributes.contains(ENTRY_ATTRIBUTE_BLAKE3)) {
-    attributes.blake3 = folly::Try<Hash32>{
-        PathError{errorCode, path, std::string{additionalErrorContext}}};
+    attributes.blake3 =
+        folly::Try<Hash32>{PathError{errorCode, path, additionalErrorContext}};
   }
 
   // Aux data specific to tree entries was requested, but the entry we're
@@ -308,12 +308,12 @@ void populateInvalidNonFileAttributes(
   if (entryType.value_or(TreeEntryType::SYMLINK) != TreeEntryType::TREE) {
     if (requestedAttributes.contains(ENTRY_ATTRIBUTE_DIGEST_SIZE)) {
       attributes.digestSize = folly::Try<uint64_t>{
-          PathError{errorCode, path, std::string{additionalErrorContext}}};
+          PathError{errorCode, path, additionalErrorContext}};
     }
 
     if (requestedAttributes.contains(ENTRY_ATTRIBUTE_DIGEST_HASH)) {
       attributes.digestHash = folly::Try<Hash32>{
-          PathError{errorCode, path, std::string{additionalErrorContext}}};
+          PathError{errorCode, path, additionalErrorContext}};
     }
   }
 }
@@ -361,7 +361,7 @@ ImmediateFuture<EntryAttributes> VirtualInode::getEntryAttributesForNonFile(
     const ObjectFetchContextPtr& fetchContext,
     std::optional<TreeEntryType> entryType,
     int errorCode,
-    std::string additionalErrorContext) const {
+    std::string_view additionalErrorContext) const {
   EntryAttributes attributes = EntryAttributes{};
 
   // The entry's type and ObjectID are used to fetch other attributes.
@@ -457,13 +457,13 @@ ImmediateFuture<EntryAttributes> VirtualInode::getEntryAttributes(
   // directories. It's included to check that the visitor here is
   // exhaustive.
   auto entryTypeFuture = ImmediateFuture<std::optional<TreeEntryType>>{
-      PathError{EINVAL, path, "type not requested"}};
+      PathError{EINVAL, path, std::string_view{"type not requested"}}};
   if (requestedAttributes.contains(ENTRY_ATTRIBUTE_SOURCE_CONTROL_TYPE)) {
     entryTypeFuture =
         getTreeEntryType(path, fetchContext, windowsSymlinksEnabled);
   }
-  auto blobAuxdataFuture = ImmediateFuture<BlobAuxData>{
-      PathError{EINVAL, path, "neither sha1 nor size requested"}};
+  auto blobAuxdataFuture = ImmediateFuture<BlobAuxData>{PathError{
+      EINVAL, path, std::string_view{"neither sha1 nor size requested"}}};
   // sha1, blake3 and size come together so, there isn't much point of splitting
   // them up
   if (requestedAttributes.containsAnyOf(
@@ -691,7 +691,8 @@ VirtualInode::getChildren(
     // These represent files in VirtualInode, and can't be descended
     return folly::Try<
         std::vector<std::pair<PathComponent, ImmediateFuture<VirtualInode>>>>{
-        PathError(ENOTDIR, path, "variant is of unhandled type")};
+        PathError(
+            ENOTDIR, path, std::string_view{"variant is of unhandled type"})};
   };
 
   return match(
@@ -807,8 +808,8 @@ ImmediateFuture<VirtualInode> VirtualInode::getOrFindChild(
   }
   auto notDirectory = [&] {
     // These represent files in VirtualInode, and can't be descended
-    return makeImmediateFuture<VirtualInode>(
-        PathError(ENOTDIR, path, "variant is of unhandled type"));
+    return makeImmediateFuture<VirtualInode>(PathError(
+        ENOTDIR, path, std::string_view{"variant is of unhandled type"}));
   };
   return match(
       variant_,

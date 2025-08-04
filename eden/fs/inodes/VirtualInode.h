@@ -213,7 +213,7 @@ class VirtualInode {
       const ObjectFetchContextPtr& fetchContext,
       std::optional<TreeEntryType> entryType,
       int errorCode,
-      std::string additionalErrorContext = {}) const;
+      std::string_view additionalErrorContext = {}) const;
 
   /**
    * The main object this encapsulates

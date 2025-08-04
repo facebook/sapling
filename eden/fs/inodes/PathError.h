@@ -32,6 +32,9 @@ class PathErrorBase : public std::system_error {
   PathErrorBase(int errnum, std::string message)
       : std::system_error(errnum, std::generic_category()),
         message_(std::move(message)) {}
+  PathErrorBase(int errnum, std::string_view message)
+      : std::system_error(errnum, std::generic_category()),
+        message_(std::string(message)) {}
   ~PathErrorBase() override = default;
 
   const char* what() const noexcept override;
@@ -62,6 +65,11 @@ class PathError : public PathErrorBase {
  public:
   explicit PathError(int errnum, RelativePathPiece path, std::string message)
       : PathErrorBase(errnum, std::move(message)), path_(path.copy()) {}
+  explicit PathError(
+      int errnum,
+      RelativePathPiece path,
+      std::string_view message)
+      : PathErrorBase(errnum, message), path_(path.copy()) {}
   explicit PathError(int errnum, RelativePathPiece path)
       : PathErrorBase(errnum), path_(path.copy()) {}
   ~PathError() override = default;
