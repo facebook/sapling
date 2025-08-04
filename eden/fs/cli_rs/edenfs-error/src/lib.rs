@@ -65,6 +65,7 @@ pub enum EdenThriftErrorType {
     JournalTruncatedError,
     CheckoutInProgressError,
     OutOfDateParentError,
+    AttributeUnavailable,
     UnknownError,
 }
 
@@ -84,6 +85,9 @@ impl From<thrift_types::edenfs::EdenErrorType> for EdenThriftErrorType {
                 Self::CheckoutInProgressError
             }
             thrift_types::edenfs::EdenErrorType::OUT_OF_DATE_PARENT => Self::OutOfDateParentError,
+            thrift_types::edenfs::EdenErrorType::ATTRIBUTE_UNAVAILABLE => {
+                Self::AttributeUnavailable
+            }
             _ => Self::UnknownError,
         }
     }
