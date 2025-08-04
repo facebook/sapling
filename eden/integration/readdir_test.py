@@ -386,15 +386,15 @@ class ReaddirTest(testcase.EdenRepoTest):
             FileAttributeDataOrErrorV2(fileAttributeData=data_v2),
         )
 
-    def assert_attributes_result(
+    def assert_attribute_result(
         self,
+        fn,
         expected_result,
-        expected_result_v2,
         paths,
         attributes: int = ALL_ATTRIBUTES,
     ) -> None:
         print("expected: \n{}", expected_result)
-        actual_result = self.get_attributes(paths, attributes)
+        actual_result = fn(paths, attributes)
         print("actual: \n{}", actual_result)
         self.assertEqual(len(paths), len(actual_result.res))
         self.assertEqual(
@@ -402,13 +402,18 @@ class ReaddirTest(testcase.EdenRepoTest):
             actual_result,
         )
 
-        print(f"expected v2: \n{expected_result_v2}")
-        actual_result_v2 = self.get_attributes_v2(paths, attributes)
-        print(f"actual v2: \n{actual_result_v2}")
-        self.assertEqual(len(paths), len(actual_result_v2.res))
-        self.assertEqual(
-            expected_result_v2,
-            actual_result_v2,
+    def assert_both_attributes_result(
+        self,
+        expected_result,
+        expected_result_v2,
+        paths,
+        attributes: int = ALL_ATTRIBUTES,
+    ) -> None:
+        self.assert_attribute_result(
+            self.get_attributes, expected_result, paths, attributes=attributes
+        )
+        self.assert_attribute_result(
+            self.get_attributes_v2, expected_result_v2, paths, attributes=attributes
         )
 
     def test_get_attributes(self) -> None:
@@ -445,7 +450,7 @@ class ReaddirTest(testcase.EdenRepoTest):
             ]
         )
 
-        self.assert_attributes_result(
+        self.assert_both_attributes_result(
             expected_result, expected_result_v2, [b"hello", b"adir/file"]
         )
 
@@ -471,7 +476,7 @@ class ReaddirTest(testcase.EdenRepoTest):
             ]
         )
 
-        self.assert_attributes_result(
+        self.assert_both_attributes_result(
             expected_result, expected_result_v2, [b"hello"], FileAttributes.FILE_SIZE
         )
 
@@ -497,7 +502,7 @@ class ReaddirTest(testcase.EdenRepoTest):
             ]
         )
 
-        self.assert_attributes_result(
+        self.assert_both_attributes_result(
             expected_result,
             expected_result_v2,
             [b"hello"],
@@ -539,7 +544,7 @@ class ReaddirTest(testcase.EdenRepoTest):
             ]
         )
 
-        self.assert_attributes_result(
+        self.assert_both_attributes_result(
             expected_result,
             expected_result_v2,
             [b"hello"],
@@ -568,7 +573,7 @@ class ReaddirTest(testcase.EdenRepoTest):
             ]
         )
 
-        self.assert_attributes_result(
+        self.assert_both_attributes_result(
             expected_result,
             expected_result_v2,
             [b"hello"],
@@ -805,7 +810,7 @@ class ReaddirTest(testcase.EdenRepoTest):
             ]
         )
 
-        self.assert_attributes_result(
+        self.assert_both_attributes_result(
             expected_result,
             expected_result_v2,
             [b"hello"],
