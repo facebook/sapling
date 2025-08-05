@@ -395,7 +395,9 @@ def annotate(ui, repo, *pats, **opts):
     else:
         datefunc = util.datestr
 
-    def format_changeset_helper(hex, annotated_line):
+    def format_changeset_helper(
+        hex: str, annotated_line: annotatemod.annotateline
+    ) -> str:
         if annotated_line.origin_url() != curr_origin_url:
             title = "%s~" % hex
         else:
@@ -403,7 +405,11 @@ def annotate(ui, repo, *pats, **opts):
 
         if ui.formatted and ui.configbool("blame", "hyperlink"):
             link = subtreeutil.xrepo_link(
-                repo, annotated_line.origin_url(), hex, annotated_line.path()
+                repo,
+                annotated_line.origin_url(),
+                hex,
+                annotated_line.path(),
+                annotated_line.lineno,
             )
             if link:
                 return color.hyperlink(link, title)
@@ -557,7 +563,7 @@ def annotate(ui, repo, *pats, **opts):
         lines = list(
             fctx.annotate(
                 follow=follow,
-                linenumber=linenumber,
+                linenumber=True,
                 diffopts=diffopts,
             )
         )

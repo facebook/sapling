@@ -749,15 +749,19 @@ def path_starts_with(path, prefix):
     return path.startswith(prefix + "/")
 
 
-def xrepo_link(repo, from_url: str, from_commit: str, from_path: str) -> Optional[str]:
+def xrepo_link(
+    repo, from_url: str, from_commit: str, from_path: str, lineno: int
+) -> Optional[str]:
     ui = repo.ui
-    github_link_format = "https://github.com/%s/blob/%s/%s"
+    github_link_format = "https://github.com/%s/blob/%s/%s#L%s"
     if from_url.startswith("git@github.com:"):
         repo_name = from_url[len("git@github.com:") : -4]
-        return github_link_format % (repo_name, from_commit, from_path)
+        return github_link_format % (repo_name, from_commit, from_path, lineno)
     elif from_url.startswith("https://github.com/"):
         repo_name = from_url[len("https://github.com/") : -4]
-        return github_link_format % (repo_name, from_commit, from_path)
+        return github_link_format % (repo_name, from_commit, from_path, lineno)
     elif link_format := ui.config("blame", from_url):
-        return link_format.format(from_commit=from_commit, from_path=from_path)
+        return link_format.format(
+            from_commit=from_commit, from_path=from_path, lineno=lineno
+        )
     return None
