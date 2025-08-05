@@ -50,7 +50,7 @@ export function SmartActionsMenu({commit}: {commit: CommitInfo}) {
         icon
         data-testid="smart-actions-button"
         className={'smart-actions-button' + (dropdownVisible ? ' dropdown-visible' : '')}>
-        <Icon icon="lightbulb" />
+        <Icon icon="lightbulb-sparkle" />
       </Button>
     </Tooltip>
   );
@@ -107,7 +107,7 @@ function SmartActions({commit, dismiss}: {commit: CommitInfo; dismiss: () => voi
   return (
     <DropdownFields
       title={<T>Smart Actions</T>}
-      icon="lightbulb"
+      icon="lightbulb-sparkle"
       className="smart-actions-dropdown"
       data-testid="smart-actions-dropdown">
       {actions.length > 0 ? actions : <T>No smart actions available</T>}
