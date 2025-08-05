@@ -420,7 +420,6 @@ async fn run_and_check_if_lfs(ctx: &CoreContext, lfs_params: LfsParams) -> Resul
         logging,
         None, // No PushRedirectorArgs
         Default::default(),
-        None, // No backup repo source
     );
 
     let bytes = repo_client

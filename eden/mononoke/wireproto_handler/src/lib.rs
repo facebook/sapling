@@ -7,17 +7,12 @@
 
 use std::sync::Arc;
 
-use bonsai_hg_mapping::BonsaiHgMapping;
-use bonsai_hg_mapping::BonsaiHgMappingArc;
 use bookmarks::ArcBookmarkUpdateLog;
 use bookmarks::ArcBookmarks;
 use facet::facet;
-use metaconfig_types::BackupRepoConfig;
 use metaconfig_types::CommonCommitSyncConfig;
 use metaconfig_types::RepoClientKnobs;
 use mutable_counters::ArcMutableCounters;
-use repo_blobstore::RepoBlobstore;
-use repo_blobstore::RepoBlobstoreArc;
 use scuba_ext::MononokeScubaSampleBuilder;
 use slog::Logger;
 use synced_commit_mapping::SyncedCommitMapping;
@@ -56,24 +51,4 @@ pub struct RepoHandlerBase {
     pub scuba: MononokeScubaSampleBuilder,
     pub maybe_push_redirector_base: Option<Arc<PushRedirectorBase>>,
     pub repo_client_knobs: RepoClientKnobs,
-    pub backup_repo_config: Option<BackupRepoConfig>,
-}
-
-#[facet::container]
-#[derive(Clone)]
-/// The source repo for a given backup repo
-pub struct BackupSourceRepo {
-    #[facet]
-    pub bonsai_hg_mapping: dyn BonsaiHgMapping,
-    #[facet]
-    pub repo_blobstore: RepoBlobstore,
-}
-
-impl BackupSourceRepo {
-    pub fn from_repo(repo: &(impl BonsaiHgMappingArc + RepoBlobstoreArc)) -> Self {
-        Self {
-            bonsai_hg_mapping: repo.bonsai_hg_mapping_arc(),
-            repo_blobstore: repo.repo_blobstore_arc(),
-        }
-    }
 }

@@ -40,7 +40,6 @@ use mercurial_types::subtree::HgSubtreeChanges;
 use mononoke_types::BonsaiChangeset;
 use scuba_ext::MononokeScubaSampleBuilder;
 use wirepack::TreemanifestEntry;
-use wireproto_handler::BackupSourceRepo;
 
 use crate::Repo;
 use crate::changegroup::Filelog;
@@ -290,7 +289,6 @@ pub async fn upload_changeset(
     mut uploaded_changesets: UploadedChangesets,
     filelogs: &Filelogs,
     manifests: &Manifests,
-    maybe_backup_repo_source: Option<BackupSourceRepo>,
     bonsai: Option<BonsaiChangeset>,
 ) -> Result<UploadedChangesets, Error> {
     let NewBlobs {
@@ -340,7 +338,6 @@ pub async fn upload_changeset(
         sub_entries,
         // XXX pass content blobs to CreateChangeset here
         cs_metadata,
-        verify_origin_repo: maybe_backup_repo_source,
         upload_to_blobstore_only: bonsai.is_some(),
     };
     let scheduled_uploading = create_changeset.create(ctx, &repo, bonsai, scuba_logger);

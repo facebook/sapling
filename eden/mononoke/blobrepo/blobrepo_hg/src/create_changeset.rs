@@ -16,10 +16,8 @@ use anyhow::Result;
 use anyhow::anyhow;
 use anyhow::format_err;
 use blobstore::Blobstore;
-use blobstore::Loadable;
 use bonsai_hg_mapping::BonsaiHgMappingArc;
 use bonsai_hg_mapping::BonsaiHgMappingEntry;
-use bonsai_hg_mapping::BonsaiHgMappingRef;
 use cloned::cloned;
 use commit_graph::CommitGraphWriterArc;
 use context::CoreContext;
@@ -38,7 +36,6 @@ use mercurial_types::HgManifestId;
 use mercurial_types::HgNodeHash;
 use mercurial_types::RepoPath;
 use mercurial_types::blobs::ChangesetMetadata;
-use mercurial_types::blobs::HgBlobChangeset;
 use mercurial_types::subtree::HgSubtreeChanges;
 use mononoke_macros::mononoke;
 use mononoke_types::BlobstoreValue;
@@ -48,12 +45,10 @@ use mononoke_types::MPath;
 use mononoke_types::NonRootMPath;
 use mononoke_types::subtree_change::SubtreeChange;
 use repo_blobstore::RepoBlobstoreArc;
-use repo_blobstore::RepoBlobstoreRef;
 use scuba_ext::MononokeScubaSampleBuilder;
 use sorted_vector_map::SortedVectorMap;
 use stats::prelude::*;
 use uuid::Uuid;
-use wireproto_handler::BackupSourceRepo;
 
 use crate::ErrorKind;
 use crate::bonsai_generation::create_bonsai_changeset_object;
@@ -68,29 +63,6 @@ define_stats! {
     create_changeset_cf_count: timeseries("create_changeset.changed_files_count"; Average, Sum),
 }
 
-async fn verify_bonsai_changeset_with_origin(
-    ctx: &CoreContext,
-    bcs: BonsaiChangeset,
-    cs: &HgBlobChangeset,
-    origin_repo: &BackupSourceRepo,
-) -> Result<BonsaiChangeset, Error> {
-    // There are some non-canonical bonsai changesets in the prod repos.
-    // To make the blobimported backup repos exactly the same, we will
-    // fetch bonsai from the prod in case of mismatch
-    let origin_bonsai_id = origin_repo
-        .bonsai_hg_mapping()
-        .get_bonsai_from_hg(ctx, cs.get_changeset_id())
-        .await?;
-    match origin_bonsai_id {
-        Some(id) if id != bcs.get_changeset_id() => {
-            id.load(ctx, origin_repo.repo_blobstore())
-                .map_err(|e| anyhow!(e))
-                .await
-        }
-        _ => Ok(bcs),
-    }
-}
-
 pub struct CreateChangeset {
     /// This should always be provided, keeping it an Option for tests
     pub expected_nodeid: Option<HgNodeHash>,
@@ -102,7 +74,6 @@ pub struct CreateChangeset {
     pub root_manifest: BoxFuture<'static, Result<Option<(HgManifestId, RepoPath)>>>,
     pub sub_entries: BoxStream<'static, Result<(Entry<HgManifestId, HgFileNodeId>, RepoPath)>>,
     pub cs_metadata: ChangesetMetadata,
-    pub verify_origin_repo: Option<BackupSourceRepo>,
     /// If set to true, don't update Changesets or BonsaiHgMapping, which should be done
     /// manually after this call. Effectively, the commit will be in the blobstore, but
     /// unreachable.
@@ -210,19 +181,6 @@ impl CreateChangeset {
                             &blobstore,
                         )
                         .await?;
-                        let bonsai_cs = if let Some(origin_repo) = self.verify_origin_repo.as_ref()
-                        {
-                            verify_bonsai_changeset_with_origin(
-                                &ctx,
-                                bonsai_cs,
-                                &hg_cs,
-                                origin_repo,
-                            )
-                            .await?
-                        } else {
-                            bonsai_cs
-                        };
-
                         (
                             bonsai_cs.clone(),
                             save_bonsai_changeset_object(&ctx, &blobstore, bonsai_cs).boxed(),
@@ -438,6 +396,7 @@ async fn resolve_subtree_changes(
 
 #[cfg(test)]
 mod tests {
+    use blobstore::Loadable;
     use context::CoreContext;
     use fbinit::FacebookInit;
     use manifest::ManifestOps;
@@ -449,6 +408,7 @@ mod tests {
     use mercurial_types::subtree::HgSubtreeImport;
     use mercurial_types::subtree::HgSubtreeMerge;
     use mononoke_macros::mononoke;
+    use repo_blobstore::RepoBlobstoreRef;
     use sorted_vector_map::sorted_vector_map;
     use tests_utils::BasicTestRepo;
     use tests_utils::drawdag::extend_from_dag_with_actions;
@@ -465,7 +425,7 @@ mod tests {
             r#"
                 A-B
                 # modify: A dir1/dir2/file1 "file1\n"
-                # modify: A dir1/dir2/file2 "file2\n"    
+                # modify: A dir1/dir2/file2 "file2\n"
                 # modify: B dir1/dir3/file3 "file3\n"
             "#,
         )

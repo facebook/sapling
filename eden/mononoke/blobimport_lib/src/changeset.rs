@@ -72,7 +72,6 @@ use repo_blobstore::RepoBlobstoreArc;
 use repo_identity::RepoIdentityRef;
 use slog::info;
 use tokio::runtime::Handle;
-use wireproto_handler::BackupSourceRepo;
 
 use crate::BlobimportRepoLike;
 use crate::concurrency::JobProcessor;
@@ -317,7 +316,6 @@ impl<R: BlobimportRepoLike + Clone + 'static> UploadChangesets<R> {
         self,
         changesets: impl Stream<Item = (RevIdx, HgNodeHash), Error = Error> + Send + 'static,
         is_import_from_beginning: bool,
-        origin_repo: Option<BackupSourceRepo>,
     ) -> BoxStream<(RevIdx, (BonsaiChangeset, HgBlobChangeset)), Error> {
         let Self {
             ctx,
@@ -491,7 +489,6 @@ impl<R: BlobimportRepoLike + Clone + 'static> UploadChangesets<R> {
                     root_manifest: rootmf.compat().boxed(),
                     sub_entries: entries.compat().boxed(),
                     cs_metadata,
-                    verify_origin_repo: origin_repo.clone(),
                     upload_to_blobstore_only: false,
                 };
                 let cshandle =

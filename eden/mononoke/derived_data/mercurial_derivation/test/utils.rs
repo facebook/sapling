@@ -180,7 +180,6 @@ pub fn create_changeset_no_parents(
             .collect::<FuturesUnordered<_>>()
             .boxed(),
         cs_metadata,
-        verify_origin_repo: None,
         upload_to_blobstore_only: false,
     };
     create_changeset.create(
@@ -218,7 +217,6 @@ pub fn create_changeset_one_parent(
             .collect::<FuturesUnordered<_>>()
             .boxed(),
         cs_metadata,
-        verify_origin_repo: None,
         upload_to_blobstore_only: false,
     };
     create_changeset.create(

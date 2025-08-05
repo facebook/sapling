@@ -1918,7 +1918,6 @@ impl RepoFactory {
         let scuba = ctx.scuba().clone();
         let logger = ctx.logger().clone();
         let repo_client_knobs = repo_config.repo_client_knobs.clone();
-        let backup_repo_config = repo_config.backup_repo_config.clone();
         let maybe_push_redirector_base = match **push_redirector_mode {
             Enabled(ref push_redirector_base) => Some(Arc::clone(push_redirector_base)),
             PushRedirectorMode::Disabled => None,
@@ -1928,7 +1927,6 @@ impl RepoFactory {
             scuba,
             maybe_push_redirector_base,
             repo_client_knobs,
-            backup_repo_config,
         }))
     }
 

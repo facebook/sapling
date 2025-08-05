@@ -54,7 +54,6 @@ use slog::info;
 use synced_commit_mapping::SyncedCommitMapping;
 use synced_commit_mapping::SyncedCommitMappingEntry;
 use synced_commit_mapping::SyncedCommitSourceRepo;
-use wireproto_handler::BackupSourceRepo;
 
 use crate::changeset::UploadChangesets;
 pub use crate::repo::BlobimportRepo;
@@ -87,7 +86,6 @@ pub struct Blobimport<'a, R: BlobimportRepoLike + Clone + 'static> {
     pub populate_git_mapping: bool,
     pub small_repo_id: Option<RepositoryId>,
     pub derived_data_types: Vec<DerivableType>,
-    pub origin_repo: Option<BackupSourceRepo>,
 }
 
 impl<'a, R: BlobimportRepoLike + Clone + 'static> Blobimport<'a, R> {
@@ -111,7 +109,6 @@ impl<'a, R: BlobimportRepoLike + Clone + 'static> Blobimport<'a, R> {
             populate_git_mapping,
             small_repo_id,
             derived_data_types,
-            origin_repo,
         } = self;
 
         // Take refs to avoid `async move` blocks capturing data data
@@ -149,7 +146,7 @@ impl<'a, R: BlobimportRepoLike + Clone + 'static> Blobimport<'a, R> {
             concurrent_lfs_imports,
             fixed_parent_order,
         }
-        .upload(changesets, is_import_from_beginning, origin_repo)
+        .upload(changesets, is_import_from_beginning)
         .enumerate()
         .compat()
         .map_ok({

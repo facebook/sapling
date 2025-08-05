@@ -18,7 +18,6 @@ use anyhow::anyhow;
 use cached_config::ConfigHandle;
 use cached_config::ConfigStore;
 use metaconfig_types::AsyncRequestsConfig;
-use metaconfig_types::BackupRepoConfig;
 use metaconfig_types::BlobConfig;
 use metaconfig_types::CensoredScubaParams;
 use metaconfig_types::CommonConfig;
@@ -153,7 +152,6 @@ fn parse_with_repo_definition(
 ) -> Result<RepoConfig> {
     let RawRepoDefinition {
         repo_id: repoid,
-        backup_source_repo_name,
         repo_name,
         repo_config,
         hipster_acl,
@@ -161,6 +159,7 @@ fn parse_with_repo_definition(
         readonly,
         needs_backup: _,
         external_repo_id: _,
+        backup_source_repo_name: _,
         acl_region_config,
         default_commit_identity_scheme,
     } = repo_definition;
@@ -181,22 +180,6 @@ fn parse_with_repo_definition(
             ))
         })?
         .clone();
-
-    let reponame = repo_name.ok_or_else(|| {
-        ConfigurationError::InvalidConfig("No repo_name in repo_definition".to_string())
-    })?;
-
-    let backup_repo_config = if let Some(backup_source_repo_name) = backup_source_repo_name {
-        if backup_source_repo_name != reponame {
-            Some(BackupRepoConfig {
-                source_repo_name: backup_source_repo_name,
-            })
-        } else {
-            None
-        }
-    } else {
-        None
-    };
 
     let RawRepoConfig {
         storage_config,
@@ -400,7 +383,6 @@ fn parse_with_repo_definition(
         repo_client_use_warm_bookmarks_cache,
         repo_client_knobs,
         phabricator_callsign,
-        backup_repo_config,
         acl_region_config,
         walker_config,
         cross_repo_commit_validation_config,
@@ -931,9 +913,6 @@ mod test {
             [repo_client_knobs]
             allow_short_getpack_history = true
 
-            [backup_config]
-            verification_enabled = false
-
             [walker_config]
             scrub_enabled = true
             validate_enabled = true
@@ -977,7 +956,6 @@ mod test {
             hipster_acl="foo/test"
             repo_config="fbsource"
             needs_backup=false
-            backup_source_repo_name="source"
             acl_region_config="fbsource"
         "#;
         let www_content = r#"
@@ -1317,9 +1295,6 @@ mod test {
                     allow_short_getpack_history: true,
                 },
                 phabricator_callsign: Some("FBS".to_string()),
-                backup_repo_config: Some(BackupRepoConfig {
-                    source_repo_name: "source".to_string(),
-                }),
                 acl_region_config: Some(AclRegionConfig {
                     allow_rules: vec![AclRegionRule {
                         name: "name_test".to_string(),
@@ -1459,7 +1434,6 @@ mod test {
                 repo_client_use_warm_bookmarks_cache: false,
                 repo_client_knobs: RepoClientKnobs::default(),
                 phabricator_callsign: Some("WWW".to_string()),
-                backup_repo_config: None,
                 acl_region_config: None,
                 walker_config: None,
                 cross_repo_commit_validation_config: None,

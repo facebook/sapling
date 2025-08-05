@@ -77,7 +77,6 @@ streaming_clone = { version = "0.1.0", path = "streaming_clone" }
 thiserror = "2.0.12"
 time_ext = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 unbundle = { version = "0.1.0", path = "unbundle" }
-wireproto_handler = { version = "0.1.0", path = "../wireproto_handler" }
 
 [dev-dependencies]
 fbinit = { version = "0.2.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }

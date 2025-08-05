@@ -50,7 +50,6 @@ use slog::info;
 use slog::warn;
 use sql_construct::SqlConstructFromMetadataDatabaseConfig;
 use synced_commit_mapping::SqlSyncedCommitMappingBuilder;
-use wireproto_handler::BackupSourceRepo;
 
 fn parse_fixed_parent_order<P: AsRef<Path>>(
     logger: &Logger,
@@ -256,18 +255,6 @@ async fn async_main(app: MononokeApp) -> Result<()> {
         _ => None,
     }
     .map(|source_repo_args| app.repo_id(source_repo_args.as_repo_arg()).unwrap());
-
-    let backup_from_repo_args = match (args.backup_from_repo_id, args.backup_from_repo_name) {
-        (Some(id), _) => Some(RepoArgs::from_repo_id(id.parse()?)),
-        (_, Some(name)) => Some(RepoArgs::from_repo_name(name)),
-        _ => None,
-    };
-    let origin_repo: Option<BlobimportRepo> = match backup_from_repo_args {
-        Some(backup_from_repo_args) => {
-            Some(app.open_repo(backup_from_repo_args.as_repo_arg()).await?)
-        }
-        _ => None,
-    };
     let globalrevs_store =
         Arc::new(globalrevs_store_builder.build(env.rendezvous_options, repo.repo_identity().id()));
     let synced_commit_mapping = Arc::new(synced_commit_mapping);
@@ -292,7 +279,6 @@ async fn async_main(app: MononokeApp) -> Result<()> {
             populate_git_mapping: repo_config.pushrebase.populate_git_mapping,
             small_repo_id,
             derived_data_types,
-            origin_repo: origin_repo.map(|repo| BackupSourceRepo::from_repo(&repo)),
         };
 
         let maybe_latest_imported_rev = if args.find_already_imported_rev_only {
@@ -458,12 +444,6 @@ struct MononokeBlobImportArgs {
     /// Exclude derived data types explicitly
     #[clap(long)]
     exclude_derived_data_type: Vec<String>,
-    /// Numeric ID of backup source of truth mononoke repository (used only for backup jobs to sync bonsai changesets)
-    #[clap(long, conflicts_with = "backup_from_repo_name")]
-    backup_from_repo_id: Option<String>,
-    /// Name of backup source of truth mononoke repository (used only for backup jobs to sync bonsai changesets)
-    #[clap(long)]
-    backup_from_repo_name: Option<String>,
     /// Numeric ID and Name of repository
     #[clap(flatten)]
     repo: RepoArgs,

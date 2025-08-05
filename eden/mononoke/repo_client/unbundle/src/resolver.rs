@@ -49,7 +49,6 @@ use mononoke_types::ChangesetId;
 use slog::trace;
 use topo_sort::sort_topological;
 use wirepack::parse_treemanifest_bundle2;
-use wireproto_handler::BackupSourceRepo;
 
 use crate::Repo;
 use crate::changegroup::convert_to_revlog_changesets;
@@ -239,7 +238,6 @@ pub async fn resolve<'a>(
     bundle2: BoxStream<'static, Result<Bundle2Item<'static>>>,
     push_params: &'a PushParams,
     pushrebase_flags: PushrebaseFlags,
-    maybe_backup_repo_source: Option<BackupSourceRepo>,
 ) -> Result<PostResolveAction, BundleResolverError> {
     let result = resolve_impl(
         ctx,
@@ -248,7 +246,6 @@ pub async fn resolve<'a>(
         bundle2,
         push_params,
         pushrebase_flags,
-        maybe_backup_repo_source,
     )
     .await;
     report_unbundle_type(ctx, repo, &result);
@@ -262,7 +259,6 @@ async fn resolve_impl<'a>(
     bundle2: BoxStream<'static, Result<Bundle2Item<'static>>>,
     push_params: &'a PushParams,
     pushrebase_flags: PushrebaseFlags,
-    maybe_backup_repo_source: Option<BackupSourceRepo>,
 ) -> Result<PostResolveAction, BundleResolverError> {
     let resolver = Bundle2Resolver::new(
         ctx,
@@ -316,7 +312,6 @@ async fn resolve_impl<'a>(
                 bundle2,
                 maybe_pushvars,
                 changegroup_always_unacceptable,
-                maybe_backup_repo_source,
             )
             .await
         }
@@ -329,7 +324,6 @@ async fn resolve_impl<'a>(
             maybe_pushvars,
             non_fast_forward_policy,
             move || pure_push_allowed,
-            maybe_backup_repo_source,
         )
         .await
         .context("bundle2_resolver error")
@@ -387,7 +381,6 @@ async fn resolve_push<'r, R: Repo>(
     maybe_pushvars: Option<HashMap<String, Bytes>>,
     non_fast_forward_policy: NonFastForwardPolicy,
     changegroup_acceptable: impl FnOnce() -> bool + Send + Sync + 'static,
-    maybe_backup_repo_source: Option<BackupSourceRepo>,
 ) -> Result<PostResolveAction, Error> {
     let (cg_push, bundle2) = resolver
         .maybe_resolve_changegroup(bundle2, changegroup_acceptable)
@@ -437,9 +430,8 @@ async fn resolve_push<'r, R: Repo>(
     let (changegroup_id, uploaded_bonsais, uploaded_hg_changeset_ids) =
         if let Some((cg_push, manifests)) = cg_and_manifests {
             let changegroup_id = Some(cg_push.part_id);
-            let (uploaded_bonsais, uploaded_hg_changeset_ids) = resolver
-                .upload_changesets(cg_push, manifests, maybe_backup_repo_source)
-                .await?;
+            let (uploaded_bonsais, uploaded_hg_changeset_ids) =
+                resolver.upload_changesets(cg_push, manifests).await?;
             // Note: we do not run hooks on pure pushes. This probably has to be changed later.
             (changegroup_id, uploaded_bonsais, uploaded_hg_changeset_ids)
         } else {
@@ -571,7 +563,6 @@ async fn resolve_pushrebase<'r, R: Repo>(
     bundle2: BoxStream<'static, Result<Bundle2Item<'static>>>,
     maybe_pushvars: Option<HashMap<String, Bytes>>,
     changegroup_acceptable: impl FnOnce() -> bool + Send + Sync + 'static,
-    maybe_backup_repo_source: Option<BackupSourceRepo>,
 ) -> Result<PostResolveAction, BundleResolverError> {
     let (manifests, bundle2) = resolver
         .resolve_b2xtreegroup2(bundle2)
@@ -607,9 +598,8 @@ async fn resolve_pushrebase<'r, R: Repo>(
         }
     }
 
-    let (uploaded_bonsais, _uploaded_hg_changeset_ids) = resolver
-        .upload_changesets(cg_push, manifests, maybe_backup_repo_source)
-        .await?;
+    let (uploaded_bonsais, _uploaded_hg_changeset_ids) =
+        resolver.upload_changesets(cg_push, manifests).await?;
 
     let (pushkeys, bundle2) = resolver
         .resolve_multiple_parts(bundle2, Bundle2Resolver::maybe_resolve_pushkey)
@@ -1132,7 +1122,6 @@ impl<'r, R: Repo> Bundle2Resolver<'r, R> {
         &self,
         cg_push: ChangegroupPush,
         manifests: Manifests,
-        maybe_backup_repo_source: Option<BackupSourceRepo>,
     ) -> Result<(UploadedBonsais, UploadedHgChangesetIds), Error> {
         let changesets = toposort_changesets(cg_push.changesets)?;
         // Get the list of Hg changeset for which Bonsai changeset mapping already exists based on the input.
@@ -1205,7 +1194,6 @@ impl<'r, R: Repo> Bundle2Resolver<'r, R> {
                         uploaded_changesets,
                         &filelogs,
                         &manifests,
-                        maybe_backup_repo_source.clone(),
                         None,
                     )
                     .await

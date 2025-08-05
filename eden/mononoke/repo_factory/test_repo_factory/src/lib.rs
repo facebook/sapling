@@ -755,7 +755,6 @@ impl TestRepoFactory {
             .clone()
             .get_common_config_if_exists(repo_identity.id())?;
         let synced_commit_mapping = repo_cross_repo.synced_commit_mapping();
-        let backup_repo_config = repo_config.backup_repo_config.clone();
         let target_repo_dbs = Arc::new(TargetRepoDbs {
             bookmarks: bookmarks.clone(),
             bookmark_update_log: bookmark_update_log.clone(),
@@ -775,7 +774,6 @@ impl TestRepoFactory {
             scuba,
             repo_client_knobs,
             maybe_push_redirector_base,
-            backup_repo_config,
         }))
     }
 

@@ -150,7 +150,6 @@ use unbundle::PushRedirector;
 use unbundle::PushRedirectorArgs;
 use unbundle::run_hooks;
 use unbundle::run_post_resolve_action;
-use wireproto_handler::BackupSourceRepo;
 
 use crate::Repo;
 use crate::errors::ErrorKind;
@@ -379,9 +378,6 @@ pub struct RepoClient<R: Repo> {
     force_lfs: Arc<AtomicBool>,
     knobs: RepoClientKnobs,
     request_perf_counters: Arc<PerfCounters>,
-    // In case `repo` is a backup of another repository `maybe_backup_repo_source` points to
-    // a source for this repository.
-    maybe_backup_repo_source: Option<BackupSourceRepo>,
 }
 
 impl<R: Repo> RepoClient<R> {
@@ -391,7 +387,6 @@ impl<R: Repo> RepoClient<R> {
         logging: LoggingContainer,
         maybe_push_redirector_args: Option<PushRedirectorArgs<R>>,
         knobs: RepoClientKnobs,
-        maybe_backup_repo_source: Option<BackupSourceRepo>,
     ) -> Self {
         let session_bookmarks_cache = Arc::new(SessionBookmarkCache::new(repo.clone()));
 
@@ -404,7 +399,6 @@ impl<R: Repo> RepoClient<R> {
             force_lfs: Arc::new(AtomicBool::new(false)),
             knobs,
             request_perf_counters: Arc::new(PerfCounters::default()),
-            maybe_backup_repo_source,
         }
     }
 
@@ -1589,7 +1583,6 @@ impl<R: Repo> HgCommands for RepoClient<R> {
 
                 let infinitepush_writes_allowed = repo.repo_config().infinitepush.allow_writes;
                 let pushrebase_params = repo.repo_config().pushrebase.clone();
-                let maybe_backup_repo_source = client.maybe_backup_repo_source.clone();
 
                 let pushrebase_flags = pushrebase_params.flags.clone();
                 let action = unbundle::resolve(
@@ -1599,7 +1592,6 @@ impl<R: Repo> HgCommands for RepoClient<R> {
                     stream,
                     &repo.repo_config().push,
                     pushrebase_flags,
-                    maybe_backup_repo_source,
                 )
                 .await?;
 

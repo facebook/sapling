@@ -91,7 +91,6 @@ pub async fn request_handler(
         repo,
         maybe_push_redirector_args,
         repo_client_knobs,
-        maybe_backup_repo_source,
     } = handler;
 
     // Upgrade log to include server drain
@@ -164,7 +163,6 @@ pub async fn request_handler(
         logging,
         maybe_push_redirector_args,
         repo_client_knobs,
-        maybe_backup_repo_source,
     );
     let request_perf_counters = repo_client.request_perf_counters();
 

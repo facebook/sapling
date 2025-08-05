@@ -403,7 +403,6 @@ impl<R: MononokeRepo> HgRepoContext<R> {
                 uploaded_changesets,
                 &filelogs,
                 &manifests,
-                None, /* maybe_backup_repo_source (unsupported here) */
                 bonsai,
             )
             .await

@@ -12,10 +12,8 @@ use metaconfig_types::RepoClientKnobs;
 use mononoke_api::Mononoke;
 use mononoke_api::Repo;
 use repo_client::PushRedirectorArgs;
-use repo_identity::RepoIdentityRef;
 use scuba_ext::MononokeScubaSampleBuilder;
 use slog::Logger;
-use wireproto_handler::BackupSourceRepo;
 
 use crate::errors::ErrorKind;
 
@@ -26,7 +24,6 @@ pub struct RepoHandler {
     pub repo: Arc<Repo>,
     pub maybe_push_redirector_args: Option<PushRedirectorArgs<Repo>>,
     pub repo_client_knobs: RepoClientKnobs,
-    pub maybe_backup_repo_source: Option<BackupSourceRepo>,
 }
 
 pub fn repo_handler(mononoke: Arc<Mononoke<Repo>>, repo_name: &str) -> anyhow::Result<RepoHandler> {
@@ -52,29 +49,6 @@ pub fn repo_handler(mononoke: Arc<Mononoke<Repo>>, repo_name: &str) -> anyhow::R
         }
         None => None,
     };
-    let maybe_backup_repo_source = match &base.backup_repo_config {
-        None => None,
-        Some(backup_repo_config) => {
-            let (orig_repo_name, source_repo_name) = (
-                source_repo.repo_identity().name(),
-                &backup_repo_config.source_repo_name,
-            );
-            // If the repo itself serves as its backup source, then it's not a backup repo.
-            // Hence, no need to setup backup_repo_source
-            if *orig_repo_name == *source_repo_name {
-                None
-            } else {
-                let backup_repo_source = mononoke.raw_repo(source_repo_name).ok_or_else(|| {
-                    anyhow!(
-                        "Backup source repo {} for core repo {} is not being served by this server",
-                        source_repo_name,
-                        orig_repo_name,
-                    )
-                })?;
-                Some(BackupSourceRepo::from_repo(&backup_repo_source))
-            }
-        }
-    };
 
     Ok(RepoHandler {
         logger: base.logger.clone(),
@@ -82,6 +56,5 @@ pub fn repo_handler(mononoke: Arc<Mononoke<Repo>>, repo_name: &str) -> anyhow::R
         repo_client_knobs: base.repo_client_knobs.clone(),
         repo: source_repo,
         maybe_push_redirector_args,
-        maybe_backup_repo_source,
     })
 }
