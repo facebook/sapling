@@ -38,13 +38,6 @@ struct ModernSyncArgs {
     #[clap(flatten)]
     sharded_executor_args: ShardedExecutorArgs,
 
-    #[clap(long, hide = true)] // To be used only in integration tests
-    pub dest_socket: Option<u64>,
-
-    /// TLS parameters for this service
-    #[clap(flatten)]
-    tls_params: Option<TLSArgs>,
-
     #[clap(long)]
     /// Update ODS counters
     log_to_ods: bool,
@@ -60,6 +53,28 @@ struct ModernSyncArgs {
     #[clap(long)]
     /// Bookmark to sync (default: master)
     bookmark: String,
+
+    #[clap(flatten, next_help_heading = "EDENAPI OPTIONS")]
+    edenapi_args: EdenAPIArgs,
+}
+
+#[derive(Parser)]
+struct EdenAPIArgs {
+    #[clap(long, hide = true)] // To be used only in integration tests
+    pub dest_socket: Option<u64>,
+
+    /// TLS parameters for this service
+    #[clap(flatten)]
+    tls_params: Option<TLSArgs>,
+
+    #[clap(long, default_value = "http://fwdproxy:8080")]
+    http_proxy_host: Option<String>,
+
+    #[clap(
+        long,
+        default_value = ".fbcdn.net,.facebook.com,.thefacebook.com,.tfbnw.net,.fb.com,.fburl.com,.facebook.net,.sb.fbsbx.com,localhost"
+    )]
+    http_no_proxy: Option<String>,
 }
 
 #[facet::container]

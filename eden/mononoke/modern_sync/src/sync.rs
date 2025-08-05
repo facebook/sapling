@@ -349,7 +349,7 @@ pub async fn build_edenfs_client(
     config: &ModernSyncConfig,
     repo_blobstore: &RepoBlobstore,
 ) -> Result<Arc<dyn EdenapiSender + Send + Sync>> {
-    let url = if let Some(socket) = app_args.dest_socket {
+    let url = if let Some(socket) = app_args.edenapi_args.dest_socket {
         // Only for integration tests
         format!("{}:{}/edenapi/", &config.url, socket)
     } else {
@@ -357,6 +357,7 @@ pub async fn build_edenfs_client(
     };
 
     let tls_args = app_args
+        .edenapi_args
         .tls_params
         .clone()
         .ok_or_else(|| format_err!("TLS params not found for repo {}", repo_name))?;
@@ -364,6 +365,8 @@ pub async fn build_edenfs_client(
     let config = edenapi::EdenapiConfig {
         url: Url::parse(&url)?,
         tls_args,
+        http_proxy_host: app_args.edenapi_args.http_proxy_host.clone(),
+        http_no_proxy: app_args.edenapi_args.http_no_proxy.clone(),
     };
 
     Ok(Arc::new(RetryEdenapiSender::new(Arc::new(

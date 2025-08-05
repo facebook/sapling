@@ -11,4 +11,6 @@ use url::Url;
 pub struct EdenapiConfig {
     pub url: Url,
     pub tls_args: TLSArgs,
+    pub http_proxy_host: Option<String>,
+    pub http_no_proxy: Option<String>,
 }

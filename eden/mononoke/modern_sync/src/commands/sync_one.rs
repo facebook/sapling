@@ -58,7 +58,7 @@ pub async fn run(app: MononokeApp, args: CommandArgs) -> Result<()> {
     let ctx = crate::sync::build_context(Arc::new(app), &repo_name, false);
 
     let sender: Arc<dyn EdenapiSender + Send + Sync> = {
-        let url = if let Some(socket) = app_args.dest_socket {
+        let url = if let Some(socket) = app_args.edenapi_args.dest_socket {
             // Only for integration tests
             format!("{}:{}/edenapi/", &config.url, socket)
         } else {
@@ -66,6 +66,7 @@ pub async fn run(app: MononokeApp, args: CommandArgs) -> Result<()> {
         };
 
         let tls_args = app_args
+            .edenapi_args
             .tls_params
             .clone()
             .ok_or_else(|| format_err!("TLS params not found for repo {}", repo_name))?;
@@ -78,6 +79,8 @@ pub async fn run(app: MononokeApp, args: CommandArgs) -> Result<()> {
         let edenapi_config = EdenapiConfig {
             url: Url::parse(&url)?,
             tls_args,
+            http_proxy_host: app_args.edenapi_args.http_proxy_host.clone(),
+            http_no_proxy: app_args.edenapi_args.http_no_proxy.clone(),
         };
 
         Arc::new(

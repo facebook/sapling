@@ -80,6 +80,8 @@ impl DefaultEdenapiSenderBuilder {
             key_path: Some(tls_args.tls_private_key.into()),
             ca_path: Some(tls_args.tls_ca.into()),
             client_info: Some(ci),
+            http_proxy_host: self.config.http_proxy_host.clone(),
+            http_no_proxy: self.config.http_no_proxy.clone(),
             ..Default::default()
         };
 
