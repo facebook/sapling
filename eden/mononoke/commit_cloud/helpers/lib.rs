@@ -103,6 +103,18 @@ mod test {
             "user/testuser@oculus.com/other name with spaces"
         ));
         assert!(sanity_check_workspace_name("user/user.with.dots/othername"));
+        assert!(sanity_check_workspace_name(
+            "aosp-user/unixname/mybranch/default"
+        ));
+        assert!(sanity_check_workspace_name(
+            "aosp-user/unixname/my.branch.with.dots/default"
+        ));
+        assert!(sanity_check_workspace_name(
+            "aosp-user/unixname/my-branch-with-dashes/default"
+        ));
+        assert!(sanity_check_workspace_name(
+            "aosp-user/user.with.dots/my-branch-with-dashes/default"
+        ));
     }
 
     #[mononoke::test]
@@ -137,6 +149,12 @@ mod test {
         assert_eq!(
             decorate_workspace_name_to_valid_acl_name("user/testuser/秘密项目"),
             "user/testuser/____"
+        );
+        assert_eq!(
+            decorate_workspace_name_to_valid_acl_name(
+                "aosp-user/user.with.dots/my-branch-with-dashes/default"
+            ),
+            "aosp-user/user.with.dots/my-branch-with-dashes/default"
         );
     }
 }
