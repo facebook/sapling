@@ -23,6 +23,7 @@ use url::Url;
 use crate::ModernSyncArgs;
 use crate::Repo;
 use crate::sender::edenapi::DefaultEdenapiSenderBuilder;
+use crate::sender::edenapi::EdenapiConfig;
 use crate::sender::edenapi::EdenapiSender;
 use crate::sender::manager::ChangesetMessage;
 use crate::sender::manager::SendManager;
@@ -74,12 +75,16 @@ pub async fn run(app: MononokeApp, args: CommandArgs) -> Result<()> {
             .clone()
             .unwrap_or(repo_name.clone());
 
+        let edenapi_config = EdenapiConfig {
+            url: Url::parse(&url)?,
+            tls_args,
+        };
+
         Arc::new(
             DefaultEdenapiSenderBuilder::new(
-                Url::parse(&url)?,
-                dest_repo,
-                tls_args,
                 ctx.clone(),
+                edenapi_config,
+                dest_repo,
                 repo.repo_blobstore().clone(),
             )
             .build()

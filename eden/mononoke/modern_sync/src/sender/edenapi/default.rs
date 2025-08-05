@@ -38,43 +38,39 @@ use mercurial_types::HgFileNodeId;
 use mercurial_types::HgManifestId;
 use mercurial_types::blobs::HgBlobChangeset;
 use minibytes::Bytes;
-use mononoke_app::args::TLSArgs;
 use mononoke_types::BonsaiChangeset;
 use mononoke_types::ChangesetId;
 use repo_blobstore::RepoBlobstore;
-use url::Url;
 
+use crate::sender::edenapi::EdenapiConfig;
 use crate::sender::edenapi::EdenapiSender;
 use crate::sender::edenapi::util;
 use crate::stat;
 
 pub struct DefaultEdenapiSenderBuilder {
-    url: Url,
-    reponame: String,
-    tls_args: TLSArgs,
     ctx: CoreContext,
+    config: EdenapiConfig,
+    reponame: String,
     repo_blobstore: RepoBlobstore,
 }
 
 impl DefaultEdenapiSenderBuilder {
     pub fn new(
-        url: Url,
-        reponame: String,
-        tls_args: TLSArgs,
         ctx: CoreContext,
+        config: EdenapiConfig,
+        reponame: String,
         repo_blobstore: RepoBlobstore,
     ) -> Self {
         Self {
-            url,
-            reponame,
-            tls_args,
             ctx,
+            config,
+            reponame,
             repo_blobstore,
         }
     }
 
     pub async fn build(self) -> Result<DefaultEdenapiSender> {
-        let tls_args = self.tls_args.clone();
+        let tls_args = self.config.tls_args.clone();
         let ci = ClientInfo::new_with_entry_point(ClientEntryPoint::ModernSync)
             .with_context(|| "building client info")?
             .to_json()
@@ -92,13 +88,13 @@ impl DefaultEdenapiSenderBuilder {
 
         tracing::info!(
             "Connecting to {}, timeout {}s",
-            self.url.to_string(),
+            self.config.url.to_string(),
             timeout
         );
 
         let client = HttpClientBuilder::new()
             .repo_name(&self.reponame)
-            .server_url(self.url.clone())
+            .server_url(self.config.url.clone())
             .http_config(http_config.clone())
             .http_version(HttpVersion::V11)
             .timeout(Duration::from_secs(timeout))

@@ -74,6 +74,7 @@ use url::Url;
 use crate::ModernSyncArgs;
 use crate::Repo;
 use crate::bul_util;
+use crate::sender::edenapi;
 use crate::sender::edenapi::DefaultEdenapiSenderBuilder;
 use crate::sender::edenapi::EdenapiSender;
 use crate::sender::edenapi::RetryEdenapiSender;
@@ -360,12 +361,16 @@ pub async fn build_edenfs_client(
         .clone()
         .ok_or_else(|| format_err!("TLS params not found for repo {}", repo_name))?;
 
+    let config = edenapi::EdenapiConfig {
+        url: Url::parse(&url)?,
+        tls_args,
+    };
+
     Ok(Arc::new(RetryEdenapiSender::new(Arc::new(
         DefaultEdenapiSenderBuilder::new(
-            Url::parse(&url)?,
-            repo_name.to_string(),
-            tls_args,
             ctx.clone(),
+            config,
+            repo_name.to_string(),
             repo_blobstore.clone(),
         )
         .build()

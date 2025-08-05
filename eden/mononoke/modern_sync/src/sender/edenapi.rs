@@ -16,12 +16,14 @@ use minibytes::Bytes;
 use mononoke_types::BonsaiChangeset;
 use mononoke_types::ChangesetId;
 
+mod config;
 mod default;
 mod filter;
 mod noop;
 mod retry;
 mod util;
 
+pub use config::EdenapiConfig;
 pub(crate) use default::DefaultEdenapiSenderBuilder;
 pub(crate) use filter::FilterEdenapiSender;
 pub(crate) use filter::MethodFilter;
