@@ -393,6 +393,13 @@ def annotate(ui, repo, *pats, **opts):
         datefunc = util.shortdate
     else:
         datefunc = util.datestr
+
+    def format_changeset_helper(hex, origin_url):
+        if origin_url != curr_origin_url:
+            return "%s~" % hex
+        else:
+            return "%s" % hex
+
     if ctx.rev() is None:
 
         def hexfn(node):
@@ -421,10 +428,7 @@ def annotate(ui, repo, *pats, **opts):
             hex, origin_url = args
             if hex is None:
                 return "%s+" % rootfm.hexfunc(ctx.p1().node())
-            elif origin_url != curr_origin_url:
-                return "%s~" % hex
-            else:
-                return "%s" % hex
+            return format_changeset_helper(hex, origin_url)
 
     else:
         hexfn = rootfm.hexfunc
@@ -432,10 +436,7 @@ def annotate(ui, repo, *pats, **opts):
 
         def formatchangeset(args):
             hex, origin_url = args
-            if origin_url != curr_origin_url:
-                return "%s~" % hex
-            else:
-                return "%s" % hex
+            return format_changeset_helper(hex, origin_url)
 
     now = time.time()
 
