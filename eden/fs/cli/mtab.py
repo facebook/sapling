@@ -30,7 +30,7 @@ MountInfo = NamedTuple(
 
 MTStat = NamedTuple("MTStat", [("st_uid", int), ("st_dev", int), ("st_mode", int)])
 
-kMountStaleSecondsTimeout = 10
+kMountStaleSecondsTimeout = 5
 
 
 # Note this function needs to be a global function, otherwise it will cause
