@@ -78,7 +78,13 @@ function SmartActions({commit, dismiss}: {commit: CommitInfo; dismiss: () => voi
   // For now, only support this in VS Code
   if (devmateResolveCommentsEnabled && commit.diffId && platform.platformName === 'vscode') {
     actions.push(
-      <ResolveCommentsButton key="resolve-comments" diffId={commit.diffId} dismiss={dismiss} />,
+      <ResolveCommentsButton
+        key="resolve-comments"
+        diffId={commit.diffId}
+        dismiss={dismiss}
+        disabled={!commit.isDot}
+        disabledReason="This action is only available for the current commit."
+      />,
     );
   }
 
@@ -125,7 +131,17 @@ function AutoSplitButton({commit, dismiss}: {commit: CommitInfo; dismiss: () => 
 }
 
 /** Prompt Devmate to resolve all comments on a diff. */
-function ResolveCommentsButton({diffId, dismiss}: {diffId: string; dismiss: () => void}) {
+function ResolveCommentsButton({
+  diffId,
+  dismiss,
+  disabled,
+  disabledReason,
+}: {
+  diffId: string;
+  dismiss: () => void;
+  disabled?: boolean;
+  disabledReason?: string;
+}) {
   const repo = useAtomValue(repositoryInfo);
   const repoPath = repo?.repoRoot;
   const diffComments = useAtomValue(diffCommentData(diffId));
@@ -135,7 +151,8 @@ function ResolveCommentsButton({diffId, dismiss}: {diffId: string; dismiss: () =
   if (diffComments.state === 'hasError' || diffComments.data.length === 0) {
     return;
   }
-  return (
+
+  const button = (
     <Button
       data-testid="review-comments-button"
       onClick={e => {
@@ -147,12 +164,15 @@ function ResolveCommentsButton({diffId, dismiss}: {diffId: string; dismiss: () =
         });
         dismiss();
         e.stopPropagation();
-      }}>
+      }}
+      disabled={disabled}>
       <Icon icon="comment" />
       <T>Resolve all comments</T>
       <PoweredByDevmateIcon />
     </Button>
   );
+
+  return disabled ? <Tooltip title={disabledReason}>{button}</Tooltip> : button;
 }
 
 /** Prompt Devmate to resolve failed signals on a diff. */
