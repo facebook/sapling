@@ -3158,10 +3158,10 @@
     "@types/babel__core" "^7.20.5"
     react-refresh "^0.14.0"
 
-"@vscode/codicons@^0.0.33":
-  version "0.0.33"
-  resolved "https://registry.yarnpkg.com/@vscode/codicons/-/codicons-0.0.33.tgz#a56243ab5492801fff04e53c0aab0d18a6521751"
-  integrity sha512-VdgpnD75swH9hpXjd34VBgQ2w2quK63WljodlUcOoJDPKiV+rPjHrcUc2sjLCNKxhl6oKqmsZgwOWcDAY2GKKQ==
+"@vscode/codicons@^0.0.39":
+  version "0.0.39"
+  resolved "https://registry.yarnpkg.com/@vscode/codicons/-/codicons-0.0.39.tgz#00985c0bb66f0baaf889ed6eaa2b82b9c0821bf2"
+  integrity sha512-gO09UZrOBONyzI8LWPRsCahnmUR16hkRQCJOSJzX8L4dC5aa6YGP4nS+gh5oSekMlM8LFJXMAgqBMGGiktdRJw==
 
 "@whatwg-node/events@^0.0.3":
   version "0.0.3"
