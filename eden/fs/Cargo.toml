@@ -1,5 +1,6 @@
 [patch.crates-io]
 abomonation = { git = "https://github.com/markbt/abomonation", rev = "0f43346d2afa2aedc64d61f3f4273e8d1e454642" }
+audio_streams = { git = "https://github.com/google/crosvm", rev = "7c87737b16bb7118f123962b3c8de2f28cbd887b" }
 base64urlsafedata = { git = "https://github.com/kanidm/webauthn-rs.git", rev = "d278c56adfa39a0723c79bdcd461644194bc5138" }
 cargo = { git = "https://github.com/rust-lang/cargo", rev = "f5b3a6ba899c2eb9285dd3769aa6d84179ee7f8b" }
 cbindgen = { git = "https://github.com/mozilla/cbindgen.git", rev = "cf94b56ef35d91f8420e8f89fee70074d39d068d" }
@@ -10,7 +11,9 @@ imgui = { git = "https://github.com/imgui-rs/imgui-rs.git", rev = "2abba18c08fb5
 imgui-sys = { git = "https://github.com/imgui-rs/imgui-rs.git", rev = "2abba18c08fb5e70c699ba7992342e7ff8573b09" }
 k = { git = "https://github.com/prnthp-meta/k", rev = "f06b504c563a4763dbf2d47366b868f67d5c9dd2" }
 libbpf-sys = { git = "https://github.com/calebho/libbpf-sys.git", rev = "ac56b9d69f477711b8f02bab12319999e8ba410b" }
+libcras = { git = "https://github.com/google/crosvm", rev = "7c87737b16bb7118f123962b3c8de2f28cbd887b" }
 lru-disk-cache = { git = "https://github.com/mozilla/sccache", rev = "fdbf843d174c6796d736b2b61dab0297670390f8" }
+minijail = { git = "https://chromium.googlesource.com/chromiumos/platform/minijail", rev = "fc020fd4672b3340ee706e192d043e12df8c8578" }
 murmur3 = { git = "https://github.com/stusmall/murmur3", rev = "f363bf6dd1d668988bf798c320823f8ceaedf5aa" }
 pcap = { git = "https://github.com/qrnch-jan/pcap", rev = "0c6ed076c84ef0c63198d384a24d66b737b24e4a" }
 perf-event = { version = "0.4", git = "https://github.com/Nero5023/perf-event.git", rev = "6dae86b6d4807acec081e6dc0a53167f57f8c0f4" }
