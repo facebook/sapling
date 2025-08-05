@@ -1095,6 +1095,8 @@ class localrepository:
                 headnodes = list(headnodes) + nodes
             with self.ui.configoverride(configoverride):
                 git.pull(self, source, names=bookmarknames, nodes=headnodes)
+                # recompute phases taking new pulled heads into account
+                self.invalidatevolatilesets()
             return
 
         lockfree = self.config.get.as_bool("experimental", "lock-free-pull")
