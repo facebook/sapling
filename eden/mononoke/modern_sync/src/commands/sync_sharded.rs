@@ -180,8 +180,9 @@ pub async fn run(app: MononokeApp, args: CommandArgs) -> Result<()> {
         SM_CLEANUP_TIMEOUT_SECS,
     )? {
         tracing::info!("Running sharded sync loop");
-        let (_, receiver) = tokio::sync::oneshot::channel::<bool>();
+        let (sender, receiver) = tokio::sync::oneshot::channel::<bool>();
         executor.block_and_execute(&logger, receiver).await?;
+        drop(sender);
     } else {
         bail!("can only run sharded")
     }

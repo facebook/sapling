@@ -246,8 +246,10 @@ async fn run_sharded(app: MononokeApp, sharded_service_name: String) -> Result<(
         Arc::new(process),
         true, // enable shard (repo) level healing
     )?;
-    let (_, receiver) = tokio::sync::oneshot::channel::<bool>();
-    executor.block_and_execute(&logger, receiver).await
+    let (sender, receiver) = tokio::sync::oneshot::channel::<bool>();
+    executor.block_and_execute(&logger, receiver).await?;
+    drop(sender);
+    Ok(())
 }
 
 async fn run_unsharded(app: MononokeApp) -> Result<()> {

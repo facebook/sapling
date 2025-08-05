@@ -584,8 +584,10 @@ async fn async_main(app: MononokeApp, ctx: CoreContext) -> Result<(), Error> {
         true, // enable shard (repo) level healing
         SM_CLEANUP_TIMEOUT_SECS,
     )? {
-        let (_, receiver) = tokio::sync::oneshot::channel::<bool>();
-        executor.block_and_execute(ctx.logger(), receiver).await
+        let (sender, receiver) = tokio::sync::oneshot::channel::<bool>();
+        executor.block_and_execute(&logger, receiver).await?;
+        drop(sender);
+        Ok(())
     } else {
         let repo_args = repo_args
             .into_source_and_target_args()
