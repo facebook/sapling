@@ -2,9 +2,9 @@
 # @lint-ignore-every BUCKLINT
 
 load("@fbcode_macros//build_defs:custom_unittest.bzl", "custom_unittest")
-load("@fbcode_macros//build_defs/lib:rust_common.bzl", "rust_common")
 load("@fbcode_macros//build_defs/lib:rust_oss.bzl", "rust_oss")
 load("@fbcode_macros//build_defs/lib:test_utils.bzl", "test_utils")
+load("@fbsource//tools/build_defs/lib/rust:rust_common.bzl", "rust_common")
 load(
     "//eden/mononoke/tests/integration/facebook:symlink.bzl",
     "symlink",
