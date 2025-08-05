@@ -10,6 +10,8 @@ import subprocess
 from pathlib import Path
 from typing import List, Optional
 
+from eden.fs.service.eden.thrift_types import GetCurrentSnapshotInfoRequest, MountId
+
 from eden.integration.hg.lib.hg_extension_test_base import (
     EdenHgTestCase,
     filteredhg_test,
@@ -18,7 +20,6 @@ from eden.integration.hg.lib.hg_extension_test_base import (
 )
 
 from eden.integration.lib import hgrepo
-from facebook.eden.ttypes import GetCurrentSnapshotInfoRequest, MountId
 
 
 @filteredhg_test
@@ -143,24 +144,24 @@ filtered
             msg="passing a filter without specifying filteredhg as the backing store should fail",
         )
 
-    def test_eden_get_filter_empty(self) -> None:
+    async def test_eden_get_filter_empty(self) -> None:
         path = self.eden_clone_filteredhg_repo(backing_store="filteredhg")
 
-        with self.get_thrift_client_legacy() as client:
-            result = client.getCurrentSnapshotInfo(
+        async with self.get_thrift_client() as client:
+            result = await client.getCurrentSnapshotInfo(
                 GetCurrentSnapshotInfoRequest(
                     mountId=MountId(mountPoint=os.fsencode(path))
                 )
             )
             self.assertEqual("null", result.filterId)
 
-    def test_eden_get_filter(self) -> None:
+    async def test_eden_get_filter(self) -> None:
         path = self.eden_clone_filteredhg_repo(
             backing_store="filteredhg", filter_path="tools/scm/filter/filter1"
         )
 
-        with self.get_thrift_client_legacy() as client:
-            result = client.getCurrentSnapshotInfo(
+        async with self.get_thrift_client() as client:
+            result = await client.getCurrentSnapshotInfo(
                 GetCurrentSnapshotInfoRequest(
                     mountId=MountId(mountPoint=os.fsencode(path))
                 )
@@ -191,11 +192,11 @@ class NonFilteredTestCase(EdenHgTestCase):
         )
         return Path(empty_dir)
 
-    def test_eden_get_filter_nonfiltered(self) -> None:
+    async def test_eden_get_filter_nonfiltered(self) -> None:
         path = self.eden_clone_filteredhg_repo(backing_store="hg")
 
-        with self.get_thrift_client_legacy() as client:
-            result = client.getCurrentSnapshotInfo(
+        async with self.get_thrift_client() as client:
+            result = await client.getCurrentSnapshotInfo(
                 GetCurrentSnapshotInfoRequest(
                     mountId=MountId(mountPoint=os.fsencode(path))
                 )
