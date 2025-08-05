@@ -48,3 +48,9 @@ Test blame support subtree import
   b6c31add3e60~: 1
   451ae41f487c~: 2
   *: 3 (glob)
+
+Test commit's color
+  $ hg blame bar/alpha --color=debug
+  [blame.age.old.xrepo|b6c31add3e60~: ]1
+  [blame.age.old.xrepo|451ae41f487c~: ]2
+  [blame.age.old|* : ]3 (glob)

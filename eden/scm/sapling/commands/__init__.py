@@ -26,6 +26,7 @@ import time
 import bindings
 
 from .. import (
+    annotate as annotatemod,
     archival,
     autopull,
     bookmarks,
@@ -438,24 +439,36 @@ def annotate(ui, repo, *pats, **opts):
 
     now = time.time()
 
-    def agebucket(d):
-        t, tz = d
-        if t > now - 3600:
-            return "1hour"
+    def agebucket(
+        annotated_line: annotatemod.annotateline, add_xrepo_suffix: bool = False
+    ) -> str:
+        if add_xrepo_suffix and annotated_line.origin_url() != curr_origin_url:
+            suffix = ".xrepo"
+        else:
+            suffix = ""
+
+        d = annotated_line.date()
+        t = d[0]
         day = 86400
-        if t > now - day:
-            return "1day"
-        if t > now - 7 * day:
-            return "7day"
-        if t > now - 30 * day:
-            return "30day"
-        if t > now - 60 * day:
-            return "60day"
-        if t > now - 180 * day:
-            return "180day"
-        if t > now - 360 * day:
-            return "360day"
-        return "old"
+
+        if t > now - 3600:
+            bucket = "1hour"
+        elif t > now - day:
+            bucket = "1day"
+        elif t > now - 7 * day:
+            bucket = "7day"
+        elif t > now - 30 * day:
+            bucket = "30day"
+        elif t > now - 60 * day:
+            bucket = "60day"
+        elif t > now - 180 * day:
+            bucket = "180day"
+        elif t > now - 360 * day:
+            bucket = "360day"
+        else:
+            bucket = "old"
+
+        return bucket + suffix
 
     opmap = [
         # op, sep, get, fmt
@@ -470,7 +483,7 @@ def annotate(ui, repo, *pats, **opts):
         ("date", " ", lambda x: x.date(), util.cachefunc(datefunc)),
         ("file", " ", lambda x: x.path(), str),
         ("line_number", ":", lambda x: x.lineno, str),
-        ("age_bucket", "", lambda x: agebucket(x.date()), lambda x: ""),
+        ("age_bucket", "", lambda x: agebucket(x), lambda x: ""),
     ]
     fieldnamemap = {"number": "rev", "changeset": "node"}
 
@@ -560,7 +573,7 @@ def annotate(ui, repo, *pats, **opts):
                 formats.append(["%s" for x in l])
             pieces.append(l)
 
-        agebuckets = [agebucket(x.date()) for x, dummy in lines]
+        agebuckets = [agebucket(x, add_xrepo_suffix=True) for x, dummy in lines]
 
         for f, p, l, a in zip(zip(*formats), zip(*pieces), lines, agebuckets):
             fm.startitem()
