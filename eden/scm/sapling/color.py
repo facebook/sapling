@@ -440,4 +440,5 @@ def supportedcolors(ui):
 
 def hyperlink(link: str, title: str) -> str:
     """Return hyperlink string for terminal"""
-    return "\x1b]8;;{link}\a{title}\x1b]8;;\a".format(link=link, title=title)
+    # https://gist.github.com/egmontkob/eb114294efbcd5adb1944c9f3cb5feda
+    return f"\x1b]8;;{link}\x1b\\{title}\x1b]8;;\x1b\\"
