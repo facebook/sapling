@@ -35,7 +35,11 @@ export function SmartActionsMenu({commit}: {commit: CommitInfo}) {
   return (
     <Tooltip
       component={dismiss => {
-        return <SmartActions commit={commit} dismiss={dismiss} />;
+        return (
+          <Suspense fallback={<Icon icon="loading" />}>
+            <SmartActions commit={commit} dismiss={dismiss} />
+          </Suspense>
+        );
       }}
       trigger="click"
       title={<T>Smart Actions...</T>}
@@ -54,20 +58,18 @@ export function SmartActionsMenu({commit}: {commit: CommitInfo}) {
 function SmartActions({commit, dismiss}: {commit: CommitInfo; dismiss: () => void}) {
   const actions = [];
 
-  const aiCommitSplitEnabled = useFeatureFlagSync(Internal.featureFlags?.AICommitSplit);
+  const aiCommitSplitEnabled = useAtomValue(featureFlagAsync(Internal.featureFlags?.AICommitSplit));
   if (aiCommitSplitEnabled) {
     actions.push(<AutoSplitButton key="auto-split" commit={commit} dismiss={dismiss} />);
   }
 
-  const devmateResolveCommentsEnabled = useFeatureFlagSync(
-    Internal.featureFlags?.InlineCommentDevmateResolve,
+  const devmateResolveCommentsEnabled = useAtomValue(
+    featureFlagAsync(Internal.featureFlags?.InlineCommentDevmateResolve),
   );
   // For now, only support this in VS Code
   if (devmateResolveCommentsEnabled && commit.diffId && platform.platformName === 'vscode') {
     actions.push(
-      <Suspense>
-        <ResolveCommentsButton key="resolve-comments" diffId={commit.diffId} dismiss={dismiss} />
-      </Suspense>,
+      <ResolveCommentsButton key="resolve-comments" diffId={commit.diffId} dismiss={dismiss} />,
     );
   }
 
@@ -116,7 +118,10 @@ function ResolveCommentsButton({diffId, dismiss}: {diffId: string; dismiss: () =
   const repo = useAtomValue(repositoryInfo);
   const repoPath = repo?.repoRoot;
   const diffComments = useAtomValue(diffCommentData(diffId));
-  if (diffComments.state !== 'hasData' || diffComments.data.length === 0) {
+  if (diffComments.state === 'loading') {
+    return <Icon icon="loading" />;
+  }
+  if (diffComments.state === 'hasError' || diffComments.data.length === 0) {
     return;
   }
   return (
