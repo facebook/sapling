@@ -44,7 +44,8 @@ export function SmartActionsMenu({commit}: {commit: CommitInfo}) {
       trigger="click"
       title={<T>Smart Actions...</T>}
       onVisible={() => setDropdownVisible(true)}
-      onDismiss={() => setDropdownVisible(false)}>
+      onDismiss={() => setDropdownVisible(false)}
+      group="smart-actions">
       <Button
         icon
         data-testid="smart-actions-button"
