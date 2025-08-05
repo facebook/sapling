@@ -876,7 +876,6 @@ def print_system_mount_table(out: IOWithRedaction) -> None:
 
 
 def print_disk_space_usage(out: IOWithRedaction) -> None:
-    section_title("Disk space usage:", out)
     cmds = [["eden", "du", "--fast"]]
     if sys.platform == "darwin":
         cmds.extend(
