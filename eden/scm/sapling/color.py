@@ -436,3 +436,8 @@ def supportedcolors(ui):
 
     # terminfo can override "realcolors" upwards.
     return max([realcolors, ticolors])
+
+
+def hyperlink(link: str, title: str) -> str:
+    """Return hyperlink string for terminal"""
+    return "\x1b]8;;{link}\a{title}\x1b]8;;\a".format(link=link, title=title)

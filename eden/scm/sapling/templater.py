@@ -1484,9 +1484,8 @@ def hyperlink(context, mapping, args):
     hyperlink = ui.formatted and ui.configbool("ui", "hyperlink", False)
 
     if hyperlink:
-        return "\x1b]8;;{link}\a{title}\x1b]8;;\a".format(
-            link=evalstring(context, mapping, args[0]), title=title
-        )
+        link = evalstring(context, mapping, args[0])
+        return color.hyperlink(link, title)
     return title
 
 
