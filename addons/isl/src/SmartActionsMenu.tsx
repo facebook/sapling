@@ -23,7 +23,6 @@ import serverAPI from './ClientToServerAPI';
 import './SmartActionsMenu.css';
 import platform from './platform';
 import {repositoryInfo} from './serverAPIState';
-import {SplitCommitIcon} from './icons/SplitCommitIcon';
 
 export function SmartActionsMenu({commit}: {commit: CommitInfo}) {
   const [dropdownVisible, setDropdownVisible] = useState(false);
@@ -52,14 +51,6 @@ export function SmartActionsMenu({commit}: {commit: CommitInfo}) {
         className={'smart-actions-button' + (dropdownVisible ? ' dropdown-visible' : '')}>
         <Icon icon="lightbulb-sparkle" />
       </Button>
-    </Tooltip>
-  );
-}
-
-function PoweredByDevmateIcon() {
-  return (
-    <Tooltip title={<T>Powered by Devmate</T>}>
-      <Icon icon="sparkle" size="XS" />
     </Tooltip>
   );
 }
@@ -123,9 +114,8 @@ function AutoSplitButton({commit, dismiss}: {commit: CommitInfo; dismiss: () => 
       trackerEventName="SplitOpenFromSmartActions"
       autoSplit={true}
       onSplitInitiated={dismiss}>
-      <SplitCommitIcon />
+      <Icon icon="sparkle" />
       <T>Auto-split</T>
-      <PoweredByDevmateIcon />
     </BaseSplitButton>
   );
 }
@@ -166,9 +156,8 @@ function ResolveCommentsButton({
         e.stopPropagation();
       }}
       disabled={disabled}>
-      <Icon icon="comment" />
+      <Icon icon="sparkle" />
       <T>Resolve all comments</T>
-      <PoweredByDevmateIcon />
     </Button>
   );
 
@@ -215,7 +204,7 @@ function ResolveFailedSignalsButton({
         e.stopPropagation();
       }}
       disabled={disabled}>
-      <Icon icon="error" />
+      <Icon icon="sparkle" />
       <T>Fix failed signals</T>
     </Button>
   );
