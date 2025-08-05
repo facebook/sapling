@@ -398,15 +398,16 @@ def annotate(ui, repo, *pats, **opts):
     def format_changeset_helper(hex, annotated_line):
         if annotated_line.origin_url() != curr_origin_url:
             title = "%s~" % hex
-            if ui.formatted and ui.configbool("blame", "hyperlink"):
-                link = subtreeutil.xrepo_link(
-                    annotated_line.origin_url(), hex, annotated_line.path()
-                )
-                if link:
-                    return color.hyperlink(link, title)
-            return title
         else:
-            return "%s" % hex
+            title = "%s" % hex
+
+        if ui.formatted and ui.configbool("blame", "hyperlink"):
+            link = subtreeutil.xrepo_link(
+                repo, annotated_line.origin_url(), hex, annotated_line.path()
+            )
+            if link:
+                return color.hyperlink(link, title)
+        return title
 
     if ctx.rev() is None:
 
