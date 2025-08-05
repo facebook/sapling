@@ -8,6 +8,7 @@
 
 import csv
 import getpass
+import gzip
 import io
 import os
 import platform
@@ -23,6 +24,7 @@ from functools import wraps
 from pathlib import Path
 from typing import (
     Any,
+    BinaryIO,
     Callable,
     cast,
     Dict,
@@ -247,6 +249,19 @@ def print_host_dashboard(out: IOWithRedaction, host: str) -> None:
         out.write(f"{host_dashboard_url}\n")
 
 
+def get_rotated_edenfs_log_path(instance: EdenInstance) -> Optional[Path]:
+    all_rotated_logs = [
+        (f)
+        for f in instance.get_log_dir().iterdir()
+        if f.name.endswith(".gz") and f.name.startswith("edenfs.log")
+    ]
+    all_rotated_logs.sort(key=lambda x: x.stat().st_ctime, reverse=True)
+    if len(all_rotated_logs) == 0:
+        return None
+    else:
+        return all_rotated_logs[0]
+
+
 @timer_decorator
 def get_eden_logs(
     out: IOWithRedaction, processor: str, instance: EdenInstance, dry_run: bool
@@ -254,13 +269,26 @@ def get_eden_logs(
     if not dry_run and processor:
         section_title("Verbose EdenFS logs:", out)
         paste_output(
-            lambda sink: print_log_file(
-                instance.get_log_path(), sink, whole_file=False
-            ),
+            lambda sink: print_log_file(instance.get_log_path(), sink),
             processor,
             out,
             dry_run,
         )
+
+        section_title("Rotated EdenFS log:", out)
+        rotated_log_file = get_rotated_edenfs_log_path(instance)
+        if rotated_log_file is not None:
+            out.write(f"Snippet of rotated log file {str(rotated_log_file)}: ")
+            paste_output(
+                lambda sink, log=rotated_log_file: print_log_file(
+                    log, sink, open_fn=gzip.open
+                ),
+                processor,
+                out,
+                dry_run,
+            )
+        else:
+            out.write("No rotated logs found")
 
 
 @timer_decorator
@@ -271,11 +299,7 @@ def print_watchman_log(out: IOWithRedaction, processor: str, dry_run: bool) -> N
         section_title("Watchman logs:", out)
         out.write(f"Logs from: {watchman_log_path}\n")
         paste_output(
-            lambda sink: print_log_file(
-                watchman_log_path,
-                sink,
-                whole_file=False,
-            ),
+            lambda sink: print_log_file(watchman_log_path, sink),
             processor,
             out,
             dry_run,
@@ -289,11 +313,7 @@ def print_upgrade_path(out: IOWithRedaction, processor: str, dry_run: bool) -> N
         section_title("EdenFS Upgrade logs:", out)
         out.write(f"Logs from: {upgrade_log_path}\n")
         paste_output(
-            lambda sink: print_log_file(
-                upgrade_log_path,
-                sink,
-                whole_file=False,
-            ),
+            lambda sink: print_log_file(upgrade_log_path, sink),
             processor,
             out,
             dry_run,
@@ -310,11 +330,7 @@ def print_config_path(out: IOWithRedaction, processor: str, dry_run: bool) -> No
         section_title("EdenFS Config logs:", out)
         out.write(f"Logs from: {config_log_path}\n")
         paste_output(
-            lambda sink: print_log_file(
-                config_log_path,
-                sink,
-                whole_file=False,
-            ),
+            lambda sink: print_log_file(config_log_path, sink),
             processor,
             out,
             dry_run,
@@ -618,7 +634,9 @@ def print_eden_doctor_report(out: IOWithRedaction, instance: EdenInstance) -> No
         out.write(f"{traceback.format_exc()}\n")
 
 
-def read_chunk(logfile: IO[bytes]) -> Generator[bytes, None, None]:
+def read_chunk(
+    logfile: BinaryIO,
+) -> Generator[bytes, None, None]:
     CHUNK_SIZE = 20 * 1024
     while True:
         data = logfile.read(CHUNK_SIZE)
@@ -628,12 +646,18 @@ def read_chunk(logfile: IO[bytes]) -> Generator[bytes, None, None]:
 
 
 def print_log_file(
-    path: Path, out: IOWithRedaction, whole_file: bool, size: int = 1000000
+    path: Path,
+    out: IOWithRedaction,
+    open_fn: Callable[
+        [Path, str],
+        BinaryIO,
+    ] = open,
+    tail_limit: Optional[int] = 1000000,
 ) -> None:
     try:
-        with path.open("rb") as logfile:
-            if not whole_file:
-                LOG_AMOUNT = size
+        with open_fn(path, "rb") as logfile:
+            if tail_limit is not None:
+                LOG_AMOUNT = tail_limit
                 size = logfile.seek(0, io.SEEK_END)
                 logfile.seek(max(0, size - LOG_AMOUNT), io.SEEK_SET)
             for data in read_chunk(logfile):
@@ -1039,7 +1063,9 @@ def print_crashed_edenfs_logs(
                         num_uploads += 1
                         paste_output(
                             lambda sink, crash=crash: print_log_file(
-                                crash, sink, whole_file=True
+                                crash,
+                                sink,
+                                tail_limit=None,
                             ),
                             processor,
                             out,

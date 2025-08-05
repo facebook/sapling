@@ -1193,8 +1193,11 @@ Do you want to run `eden mount %s` instead?"""
         with self.get_thrift_client_legacy() as client:
             return client.checkPrivHelper().connected
 
+    def get_log_dir(self) -> Path:
+        return self._config_dir / "logs"
+
     def get_log_path(self) -> Path:
-        return self._config_dir / "logs" / "edenfs.log"
+        return self.get_log_dir() / "edenfs.log"
 
     def get_checkout_config_for_path(self, path: str) -> Optional[CheckoutConfig]:
         client_link = os.path.join(path, ".eden", "client")
