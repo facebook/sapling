@@ -88,6 +88,9 @@ pub struct Config {
     pub read_buffer_size: Option<u64>,
     pub write_buffer_size: Option<u64>,
     pub follow_redirects: bool,
+
+    pub http_proxy_host: Option<String>,
+    pub http_no_proxy: Option<String>,
 }
 
 impl Default for Config {
@@ -122,6 +125,9 @@ impl Default for Config {
             read_buffer_size: None,
             write_buffer_size: None,
             follow_redirects: true,
+
+            http_proxy_host: None,
+            http_no_proxy: None,
         }
     }
 }

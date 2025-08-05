@@ -197,6 +197,8 @@ pub struct Request {
     read_buffer_size: Option<u64>,
     write_buffer_size: Option<u64>,
     follow_redirects: bool,
+    http_proxy_host: Option<String>,
+    http_no_proxy: Option<String>,
 }
 
 static REQUEST_CREATION_LISTENERS: Lazy<RwLock<RequestCreationEventListeners>> =
@@ -293,6 +295,8 @@ impl Request {
             read_buffer_size: None,
             write_buffer_size: None,
             follow_redirects: true,
+            http_proxy_host: None,
+            http_no_proxy: None,
         }
     }
 
@@ -635,6 +639,16 @@ impl Request {
         self
     }
 
+    pub fn set_http_proxy_host(&mut self, http_proxy_host: Option<String>) -> &mut Self {
+        self.http_proxy_host = http_proxy_host;
+        self
+    }
+
+    pub fn set_http_no_proxy(&mut self, http_no_proxy: Option<String>) -> &mut Self {
+        self.http_no_proxy = http_no_proxy;
+        self
+    }
+
     /// Execute the request, blocking until completion.
     ///
     /// This method is intended as a simple way to perform
@@ -734,9 +748,24 @@ impl Request {
             easy.post_redirections(PostRedirections::new().redirect_all(true))?;
         }
 
-        match std::env::var("HTTP_PROXY") {
-            Ok(proxy) => easy.proxy(&proxy)?,
-            Err(_) => (),
+        match self.http_proxy_host {
+            Some(host) => {
+                easy.proxy(&host)?;
+            }
+            None => match std::env::var("HTTP_PROXY") {
+                Ok(proxy) => easy.proxy(&proxy)?,
+                Err(_) => (),
+            },
+        }
+
+        match self.http_no_proxy {
+            Some(no_proxy) => {
+                easy.noproxy(&no_proxy)?;
+            }
+            None => match std::env::var("NO_PROXY") {
+                Ok(no_proxy) => easy.noproxy(&no_proxy)?,
+                Err(_) => (),
+            },
         }
 
         // Configure the handle for the desired HTTP method.

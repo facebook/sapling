@@ -357,6 +357,9 @@ impl Client {
             req.set_min_transfer_speed(*mts);
         }
 
+        req.set_http_proxy_host(config.http_config.http_proxy_host.clone());
+        req.set_http_no_proxy(config.http_config.http_no_proxy.clone());
+
         Ok(req)
     }
 
