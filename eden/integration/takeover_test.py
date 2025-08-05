@@ -11,15 +11,18 @@ import signal
 import subprocess
 import sys
 import threading
-from multiprocessing import Process
 from pathlib import Path
 from typing import Dict, List, Optional
 
 import pexpect
-from eden.fs.cli.util import EdenStartError, get_pid_using_lockfile, poll_until
-from eden.thrift.legacy import EdenClient
-from facebook.eden.ttypes import FaultDefinition, MountState, UnblockFaultArg
-from fb303_core.ttypes import fb303_status
+from eden.fs.cli.util import EdenStartError, get_pid_using_lockfile, poll_until_async
+from eden.fs.service.eden.thrift_clients import EdenService
+from eden.fs.service.eden.thrift_types import (
+    FaultDefinition,
+    MountState,
+    UnblockFaultArg,
+)
+from fb303_core.thrift_types import fb303_status
 
 from .lib import testcase
 from .lib.find_executables import FindExe
@@ -165,13 +168,13 @@ class TakeoverTest(TakeoverTestBase):
     def test_takeover(self) -> None:
         return self.do_takeover_test()
 
-    def test_takeover_after_diff_revisions(self) -> None:
+    async def test_takeover_after_diff_revisions(self) -> None:
         # Make a getScmStatusBetweenRevisions() call to Eden.
         # Previously this thrift call caused Eden to create temporary inode
         # objects outside of the normal root inode tree, and this would cause
         # Eden to crash when shutting down afterwards.
-        with self.get_thrift_client_legacy() as client:
-            client.getScmStatusBetweenRevisions(
+        async with self.get_thrift_client() as client:
+            await client.getScmStatusBetweenRevisions(
                 os.fsencode(self.mount),
                 self.commit1.encode("utf-8"),
                 self.commit2.encode("utf-8"),
@@ -355,8 +358,8 @@ class TakeoverTest(TakeoverTestBase):
             env=env,
         )
 
-    def assert_restart_fails_with_in_progress_graceful_restart(
-        self, client: EdenClient
+    async def assert_restart_fails_with_in_progress_graceful_restart(
+        self, client: EdenService.Async
     ) -> None:
         pid = self.eden.get_pid_via_thrift()
         p = self.run_restart()
@@ -367,23 +370,25 @@ class TakeoverTest(TakeoverTestBase):
         p.wait()
         self.assertEqual(p.exitstatus, 4)
 
-        self.assertEqual(client.getDaemonInfo().status, fb303_status.STOPPING)
+        daemon_info = await client.getDaemonInfo()
+        self.assertEqual(daemon_info.status, fb303_status.STOPPING)
 
-    def assert_shutdown_fails_with_in_progress_graceful_restart(
-        self, client: EdenClient
+    async def assert_shutdown_fails_with_in_progress_graceful_restart(
+        self, client: EdenService.Async
     ) -> None:
         # call initiateShutdown. This should not throw.
         try:
-            client.initiateShutdown("shutdown requested during graceful restart")
+            await client.initiateShutdown("shutdown requested during graceful restart")
         except Exception:
             self.fail(
                 "initiateShutdown should not throw when graceful restart is in progress"
             )
 
-        self.assertEqual(client.getDaemonInfo().status, fb303_status.STOPPING)
+        daemon_info = await client.getDaemonInfo()
+        self.assertEqual(daemon_info.status, fb303_status.STOPPING)
 
-    def assert_sigkill_fails_with_in_progress_graceful_restart(
-        self, client: EdenClient
+    async def assert_sigkill_fails_with_in_progress_graceful_restart(
+        self, client: EdenService.Async
     ) -> None:
         # send SIGTERM to process. This should not throw.
         pid = self.eden.get_pid_via_thrift()
@@ -394,12 +399,13 @@ class TakeoverTest(TakeoverTestBase):
                 "sending SIGTERM should not throw when graceful restart is in progress"
             )
 
-        self.assertEqual(client.getDaemonInfo().status, fb303_status.STOPPING)
+        daemon_info = await client.getDaemonInfo()
+        self.assertEqual(daemon_info.status, fb303_status.STOPPING)
 
-    def test_stop_during_takeover(self) -> None:
+    async def test_stop_during_takeover(self) -> None:
         # block graceful restart
-        with self.eden.get_thrift_client_legacy() as client:
-            client.injectFault(
+        async with self.get_thrift_client() as client:
+            await client.injectFault(
                 FaultDefinition(
                     keyClass="takeover", keyValueRegex="server_shutdown", block=True
                 )
@@ -414,27 +420,28 @@ class TakeoverTest(TakeoverTestBase):
             )
 
             # Wait for the state to be shutting down
-            def state_shutting_down() -> Optional[bool]:
-                if client.getDaemonInfo().status is fb303_status.STOPPING:
+            async def state_shutting_down() -> Optional[bool]:
+                daemon_info = await client.getDaemonInfo()
+                if daemon_info.status is fb303_status.STOPPING:
                     return True
                 return None
 
-            poll_until(state_shutting_down, timeout=60)
+            await poll_until_async(state_shutting_down, timeout=60)
 
             # Normal restart should be rejected while a graceful restart
             # is in progress
-            self.assert_restart_fails_with_in_progress_graceful_restart(client)
+            await self.assert_restart_fails_with_in_progress_graceful_restart(client)
 
             # Normal shutdown should be rejected while a graceful restart
             # is in progress
-            self.assert_shutdown_fails_with_in_progress_graceful_restart(client)
+            await self.assert_shutdown_fails_with_in_progress_graceful_restart(client)
 
             # Getting SIGTERM should not kill process while a graceful restart is in
             # progress
-            self.assert_sigkill_fails_with_in_progress_graceful_restart(client)
+            await self.assert_sigkill_fails_with_in_progress_graceful_restart(client)
 
             # Unblock the server shutdown and wait for the graceful restart to complete.
-            client.unblockFault(
+            await client.unblockFault(
                 UnblockFaultArg(keyClass="takeover", keyValueRegex="server_shutdown")
             )
 
@@ -446,11 +453,11 @@ class TakeoverTest(TakeoverTestBase):
                     "eden exited unsuccessfully with status {}".format(return_code)
                 )
 
-    def test_takeover_during_mount(self) -> None:
+    async def test_takeover_during_mount(self) -> None:
         self.eden.unmount(self.mount_path)
 
-        with self.eden.get_thrift_client_legacy() as client:
-            client.injectFault(
+        async with self.get_thrift_client() as client:
+            await client.injectFault(
                 FaultDefinition(keyClass="mount", keyValueRegex=".*", block=True)
             )
 
@@ -463,24 +470,25 @@ class TakeoverTest(TakeoverTestBase):
                 env=env,
             )
 
-            def mount_initializing() -> Optional[bool]:
-                with self.eden.get_thrift_client_legacy() as client:
-                    for mount_info in client.listMounts():
+            async def mount_initializing() -> Optional[bool]:
+                async with self.get_thrift_client() as client:
+                    mount_list = await client.listMounts()
+                    for mount_info in mount_list:
                         if mount_info.mountPoint == self.mount_path_bytes:
                             if mount_info.state == MountState.INITIALIZING:
                                 return True
                             return False
                 return None
 
-            poll_until(mount_initializing, timeout=60)
+            await poll_until_async(mount_initializing, timeout=60)
 
             with self.assertRaisesRegex(
                 EdenStartError, "edenfs exited before becoming healthy"
             ):
                 self.eden.graceful_restart()
         finally:
-            with self.eden.get_thrift_client_legacy() as client:
-                client.unblockFault(
+            async with self.get_thrift_client() as client:
+                await client.unblockFault(
                     UnblockFaultArg(keyClass="mount", keyValueRegex=".*")
                 )
             mountProcess.wait()
@@ -507,7 +515,7 @@ class TakeoverRocksDBStressTest(testcase.EdenRepoTest):
     def select_storage_engine(self) -> str:
         return "rocksdb"
 
-    def test_takeover_with_tree_inode_loading_from_local_store(self) -> None:
+    async def test_takeover_with_tree_inode_loading_from_local_store(self) -> None:
         """
         Restart edenfs while a tree inode is being loaded asynchronously. Ensure
         restarting does not deadlock.
@@ -537,9 +545,9 @@ class TakeoverRocksDBStressTest(testcase.EdenRepoTest):
 
         graceful_restart_startup_time = 5.0
 
-        with self.eden.get_thrift_client_legacy() as client:
+        async with self.get_thrift_client() as client:
             for key_class in ["local store get single", "local store get batch"]:
-                client.injectFault(
+                await client.injectFault(
                     FaultDefinition(
                         keyClass=key_class,
                         keyValueRegex=".*",

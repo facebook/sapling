@@ -524,10 +524,8 @@ python_unittest(
     deps = [
         "fbsource//third-party/pypi/pexpect:pexpect",
         "//eden/fs/cli:lib",
-        "//eden/fs/py/eden/thrift:legacy",
-        "//eden/fs/service:thrift-py-deprecated",
         "//eden/integration/lib:lib",
-        "//fb303/thrift:fb303_core-py-deprecated",
+        "//fb303/thrift:fb303_core-python-types",
     ],
 )
 
