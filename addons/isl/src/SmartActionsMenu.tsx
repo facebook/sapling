@@ -56,6 +56,14 @@ export function SmartActionsMenu({commit}: {commit: CommitInfo}) {
   );
 }
 
+function PoweredByDevmateIcon() {
+  return (
+    <Tooltip title={<T>Powered by Devmate</T>}>
+      <Icon icon="sparkle" size="XS" />
+    </Tooltip>
+  );
+}
+
 function SmartActions({commit, dismiss}: {commit: CommitInfo; dismiss: () => void}) {
   const actions = [];
 
@@ -110,7 +118,8 @@ function AutoSplitButton({commit, dismiss}: {commit: CommitInfo; dismiss: () => 
       autoSplit={true}
       onSplitInitiated={dismiss}>
       <SplitCommitIcon />
-      <T>Auto-split with AI</T>
+      <T>Auto-split</T>
+      <PoweredByDevmateIcon />
     </BaseSplitButton>
   );
 }
@@ -139,7 +148,9 @@ function ResolveCommentsButton({diffId, dismiss}: {diffId: string; dismiss: () =
         dismiss();
         e.stopPropagation();
       }}>
-      <Icon icon="comment" /> <T>Resolve comments</T>
+      <Icon icon="comment" />
+      <T>Resolve all comments</T>
+      <PoweredByDevmateIcon />
     </Button>
   );
 }
