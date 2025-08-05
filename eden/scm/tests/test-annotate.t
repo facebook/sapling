@@ -415,7 +415,7 @@ and its ancestor by overriding "repo._filecommit".
 annotate clean file
 
   $ hg annotate -ncr "wdir()" foo
-  11 472b18db256d : foo
+  11 472b18db256d: foo
 
 annotate modified file
 

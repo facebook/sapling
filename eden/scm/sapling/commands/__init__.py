@@ -424,7 +424,7 @@ def annotate(ui, repo, *pats, **opts):
             elif origin_url != curr_origin_url:
                 return "%s~" % hex
             else:
-                return "%s " % hex
+                return "%s" % hex
 
     else:
         hexfn = rootfm.hexfunc

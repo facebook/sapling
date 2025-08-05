@@ -55,9 +55,9 @@ Works with "wdir()" for unchanged files:
   $ EDENSCM_LOG=edenapi::client=info hg blame -cldqf bar -r 'wdir()'
    INFO edenapi::client: Requesting capabilities for repo repo
    INFO edenapi::client: Blaming 1 file(s)
-  1ac4b616a32d  1970-01-01 bar:1: zero
-  e9ace545f925  1970-01-01 bar:2: uno
-  4b86660b0697  1970-01-01 foo:2: two
+  1ac4b616a32d 1970-01-01 bar:1: zero
+  e9ace545f925 1970-01-01 bar:2: uno
+  4b86660b0697 1970-01-01 foo:2: two
 
 But doesn't work if file is dirty:
   $ echo dirty >> bar
