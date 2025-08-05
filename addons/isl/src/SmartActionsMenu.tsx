@@ -23,6 +23,7 @@ import serverAPI from './ClientToServerAPI';
 import './SmartActionsMenu.css';
 import platform from './platform';
 import {repositoryInfo} from './serverAPIState';
+import {SplitCommitIcon} from './icons/SplitCommitIcon';
 
 export function SmartActionsMenu({commit}: {commit: CommitInfo}) {
   const [dropdownVisible, setDropdownVisible] = useState(false);
@@ -108,6 +109,7 @@ function AutoSplitButton({commit, dismiss}: {commit: CommitInfo; dismiss: () => 
       trackerEventName="SplitOpenFromSmartActions"
       autoSplit={true}
       onSplitInitiated={dismiss}>
+      <SplitCommitIcon />
       <T>Auto-split with AI</T>
     </BaseSplitButton>
   );
