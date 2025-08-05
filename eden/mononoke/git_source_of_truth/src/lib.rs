@@ -43,6 +43,8 @@ pub trait GitSourceOfTruthConfig: Send + Sync {
         source_of_truth: GitSourceOfTruth,
     ) -> Result<()>;
 
+    async fn get_max_id(&self, ctx: &CoreContext) -> Result<Option<RepositoryId>>;
+
     async fn get_by_repo_name(
         &self,
         ctx: &CoreContext,
@@ -76,6 +78,10 @@ impl GitSourceOfTruthConfig for NoopGitSourceOfTruthConfig {
         _source_of_truth: GitSourceOfTruth,
     ) -> Result<()> {
         Ok(())
+    }
+
+    async fn get_max_id(&self, _ctx: &CoreContext) -> Result<Option<RepositoryId>> {
+        Ok(None)
     }
 
     async fn get_by_repo_name(
@@ -124,7 +130,7 @@ impl GitSourceOfTruthConfig for TestGitSourceOfTruthConfig {
     async fn set(
         &self,
         _ctx: &CoreContext,
-        _repo_id: RepositoryId,
+        repo_id: RepositoryId,
         repo_name: RepositoryName,
         source_of_truth: GitSourceOfTruth,
     ) -> Result<()> {
@@ -133,11 +139,22 @@ impl GitSourceOfTruthConfig for TestGitSourceOfTruthConfig {
             repo_name.to_owned(),
             GitSourceOfTruthConfigEntry {
                 id: RowId(0),
+                repo_id,
                 repo_name,
                 source_of_truth,
             },
         );
         Ok(())
+    }
+
+    async fn get_max_id(&self, _ctx: &CoreContext) -> Result<Option<RepositoryId>> {
+        Ok(self
+            .entries
+            .lock()
+            .expect("poisoned lock")
+            .values()
+            .map(|entry| entry.repo_id)
+            .max())
     }
 
     async fn get_by_repo_name(

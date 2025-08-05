@@ -25,10 +25,12 @@ use crate::Staleness;
 mononoke_queries! {
     read TestGet(id: RowId) -> (
         RowId,
+        RepositoryId,
         RepositoryName,
         GitSourceOfTruth,
     ) {
         "SELECT id,
+            repo_id,
             repo_name,
             source_of_truth
          FROM git_repositories_source_of_truth
@@ -37,22 +39,32 @@ mononoke_queries! {
 
     read GetByRepoName(repo_name: RepositoryName) -> (
         RowId,
+        RepositoryId,
         RepositoryName,
         GitSourceOfTruth,
     ) {
         "SELECT id,
+            repo_id,
             repo_name,
             source_of_truth
          FROM git_repositories_source_of_truth
          WHERE repo_name = {repo_name}"
     }
 
+    read GetMaxId() -> (
+        RepositoryId,
+    ) {
+        "SELECT COALESCE(MAX(repo_id), 0) FROM git_repositories_source_of_truth"
+    }
+
     read GetByGitSourceOfTruth(source_of_truth: GitSourceOfTruth) -> (
         RowId,
+        RepositoryId,
         RepositoryName,
         GitSourceOfTruth,
     ) {
         "SELECT id,
+            repo_id,
             repo_name,
             source_of_truth
          FROM git_repositories_source_of_truth
@@ -66,10 +78,13 @@ mononoke_queries! {
     }
 }
 
-fn row_to_entry(row: (RowId, RepositoryName, GitSourceOfTruth)) -> GitSourceOfTruthConfigEntry {
-    let (id, repo_name, source_of_truth) = row;
+fn row_to_entry(
+    row: (RowId, RepositoryId, RepositoryName, GitSourceOfTruth),
+) -> GitSourceOfTruthConfigEntry {
+    let (id, repo_id, repo_name, source_of_truth) = row;
     GitSourceOfTruthConfigEntry {
         id,
+        repo_id,
         repo_name,
         source_of_truth,
     }
@@ -183,6 +198,23 @@ impl GitSourceOfTruthConfig for SqlGitSourceOfTruthConfig {
         )
         .await?;
         Ok(rows.into_iter().map(row_to_entry).collect())
+    }
+
+    async fn get_max_id(&self, ctx: &CoreContext) -> Result<Option<RepositoryId>> {
+        let from_db = GetMaxId::query(
+            &self.connections.read_master_connection,
+            ctx.sql_query_telemetry(),
+        )
+        .await?
+        .first()
+        .map(|(id,)| *id);
+        if let Some(repo_id) = from_db
+            && repo_id == RepositoryId::new(0)
+        {
+            Ok(None)
+        } else {
+            Ok(from_db)
+        }
     }
 }
 
@@ -334,6 +366,41 @@ mod test {
         .await?;
 
         assert_eq!(push.get_locked(&ctx).await?.len(), 2);
+        Ok(())
+    }
+
+    #[mononoke::fbinit_test]
+    async fn test_get_max_id(fb: FacebookInit) -> Result<()> {
+        let ctx = CoreContext::test_mock(fb);
+        let builder = SqlGitSourceOfTruthConfigBuilder::with_sqlite_in_memory()?;
+        let push = builder.build();
+
+        assert_eq!(push.get_max_id(&ctx).await?, None);
+        let to_be_locked_repo_id = RepositoryId::new(1);
+        let to_be_locked_repo_name = RepositoryName("test1".to_string());
+        push.set(
+            &ctx,
+            to_be_locked_repo_id,
+            to_be_locked_repo_name.clone(),
+            GitSourceOfTruth::Metagit,
+        )
+        .await?;
+        push.set(
+            &ctx,
+            RepositoryId::new(2),
+            RepositoryName("test2".to_string()),
+            GitSourceOfTruth::Locked,
+        )
+        .await?;
+        assert_eq!(push.get_max_id(&ctx).await?, Some(RepositoryId::new(2)));
+        push.set(
+            &ctx,
+            RepositoryId::new(42),
+            RepositoryName("test3".to_string()),
+            GitSourceOfTruth::Mononoke,
+        )
+        .await?;
+        assert_eq!(push.get_max_id(&ctx).await?, Some(RepositoryId::new(42)));
         Ok(())
     }
 }
