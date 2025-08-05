@@ -10,7 +10,7 @@ import shutil
 from collections import defaultdict
 from dataclasses import asdict, dataclass
 from enum import Enum
-from typing import List, Set
+from typing import List, Optional, Set
 
 import bindings
 
@@ -747,3 +747,14 @@ def path_starts_with(path, prefix):
     if path == prefix:
         return True
     return path.startswith(prefix + "/")
+
+
+def xrepo_link(from_url: str, from_commit: str, from_path: str) -> Optional[str]:
+    github_link_format = "https://github.com/%s/blob/%s/%s"
+    if from_url.startswith("git@github.com:"):
+        repo_name = from_url[len("git@github.com:") : -4]
+        return github_link_format % (repo_name, from_commit, from_path)
+    elif from_url.startswith("https://github.com/"):
+        repo_name = from_url[len("https://github.com/") : -4]
+        return github_link_format % (repo_name, from_commit, from_path)
+    return None

@@ -34,6 +34,7 @@ from .. import (
     changegroup,
     cloneuri,
     cmdutil,
+    color,
     context,
     copies,
     destutil,
@@ -394,9 +395,16 @@ def annotate(ui, repo, *pats, **opts):
     else:
         datefunc = util.datestr
 
-    def format_changeset_helper(hex, origin_url):
-        if origin_url != curr_origin_url:
-            return "%s~" % hex
+    def format_changeset_helper(hex, annotated_line):
+        if annotated_line.origin_url() != curr_origin_url:
+            title = "%s~" % hex
+            if ui.formatted and ui.configbool("blame", "hyperlink"):
+                link = subtreeutil.xrepo_link(
+                    annotated_line.origin_url(), hex, annotated_line.path()
+                )
+                if link:
+                    return color.hyperlink(link, title)
+            return title
         else:
             return "%s" % hex
 
@@ -425,18 +433,19 @@ def annotate(ui, repo, *pats, **opts):
                     return "%d " % rev
 
         def formatchangeset(args):
-            hex, origin_url = args
+            hex, annotated_line = args
             if hex is None:
                 return "%s+" % rootfm.hexfunc(ctx.p1().node())
-            return format_changeset_helper(hex, origin_url)
+            else:
+                return format_changeset_helper(hex, annotated_line)
 
     else:
         hexfn = rootfm.hexfunc
         formatrev = str
 
         def formatchangeset(args):
-            hex, origin_url = args
-            return format_changeset_helper(hex, origin_url)
+            hex, annotated_line = args
+            return format_changeset_helper(hex, annotated_line)
 
     now = time.time()
 
@@ -478,7 +487,7 @@ def annotate(ui, repo, *pats, **opts):
         (
             "changeset",
             " ",
-            lambda x: (hexfn(x.node()), x.origin_url()),
+            lambda x: (hexfn(x.node()), x),
             formatchangeset,
         ),
         ("date", " ", lambda x: x.date(), util.cachefunc(datefunc)),
@@ -560,7 +569,7 @@ def annotate(ui, repo, *pats, **opts):
         for op, f, sep in funcmap:
             l = [f(n) for n, dummy in lines]
             if fm.isplain():
-                sizes = [encoding.colwidth(x) for x in l]
+                sizes = [encoding.colwidth(color.OSC8_RE.sub("", x)) for x in l]
                 ml = max(sizes)
                 if op == "changeset":
                     # Left-align the changeset to allow suffixes:

@@ -438,6 +438,17 @@ def supportedcolors(ui):
     return max([realcolors, ticolors])
 
 
+# hyperlinks
+
+OSC8_RE = re.compile(
+    r"""
+    \x1b]8;;.*?\x1b\\   |   # opening  OSC 8 seq: ESC ] 8 ; ; … ESC \
+    \x1b]8;;\x1b\\          # closing  OSC 8 seq: ESC ] 8 ; ; ESC \
+    """,
+    re.VERBOSE | re.DOTALL,
+)
+
+
 def hyperlink(link: str, title: str) -> str:
     """Return hyperlink string for terminal"""
     # https://gist.github.com/egmontkob/eb114294efbcd5adb1944c9f3cb5feda
