@@ -109,15 +109,4 @@ Hash32 Hash32::blake3(ByteRange data) {
 Hash32 Hash32::blake3(const std::string& str) {
   return blake3(folly::ByteRange{folly::StringPiece{str}});
 }
-
-std::ostream& operator<<(std::ostream& os, const Hash20& hash) {
-  os << hash.toString();
-  return os;
-}
-
-std::ostream& operator<<(std::ostream& os, const Hash32& hash) {
-  os << hash.toString();
-  return os;
-}
-
 } // namespace facebook::eden

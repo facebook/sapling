@@ -250,14 +250,6 @@ extern const Hash32 kZeroHash32;
 /** A hash object initialized to the Blake3 of zero bytes */
 extern const Hash32 kEmptyBlake3;
 
-/**
- * Output stream operator for Hash.
- *
- * This makes it possible to easily use Hash in glog statements.
- */
-std::ostream& operator<<(std::ostream& os, const Hash20& hash);
-std::ostream& operator<<(std::ostream& os, const Hash32& hash);
-
 } // namespace facebook::eden
 
 namespace std {
