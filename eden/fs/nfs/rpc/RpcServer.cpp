@@ -87,6 +87,7 @@ void RpcConnectionHandler::readEOF() noexcept {
     XLOGF(ERR, "readEOF called after the socket was already closed");
     return;
   }
+  XLOGF(ERR, "readEOF - the socket was closed on us. Deleting the reader");
   folly::futures::detachOn(
       sock_->getEventBase(), resetReader(RpcStopReason::UNMOUNT));
 }
@@ -134,7 +135,7 @@ RpcConnectionHandler::RpcConnectionHandler(
 }
 
 folly::SemiFuture<folly::Unit> RpcConnectionHandler::takeoverStop() {
-  XLOG(DBG7) << "Takeover requested: locking state to change the status";
+  XLOG(DBG4) << "Takeover requested: locking state to change the status";
   // note its essential that this runs inline with the pending requests
   // check in resetReader. This ensures that we don't double set the pending
   // requests promise.
@@ -150,7 +151,7 @@ folly::SemiFuture<folly::Unit> RpcConnectionHandler::takeoverStop() {
       });
     }
   }
-  XLOG(DBG7) << "Stop reading from the socket";
+  XLOG(DBG4) << "Stop reading from the socket";
   // as far as I can tell this will deliver all reads to the reader before this
   // completes. So we should not see any new requests after this point.
   // Note: it is important this is done inline with the caller. i.e. if we start
@@ -194,16 +195,16 @@ folly::SemiFuture<folly::Unit> RpcConnectionHandler::resetReader(
     // Note this must run on the main eventbase for the socket, and inline with
     // setting the stop reason This ensures that we don't accidentally set this
     // promise twice.
-    XLOG(DBG7) << "Pending requests: " << state.pendingRequests;
+    XLOG(DBG4) << "Pending requests: " << state.pendingRequests;
     if (state.pendingRequests == 0) {
       pendingRequestsComplete_.setValue();
     }
   }
 
-  XLOG(DBG7) << "waiting for pending requests to complete";
+  XLOG(DBG4) << "waiting for pending requests to complete";
   return pendingRequestsComplete_.getFuture().ensure(
       [this, proc = proc_, dg = std::move(dg), stopReason]() {
-        XLOG(DBG7) << "Pending requests complete; "
+        XLOG(DBG4) << "Pending requests complete; "
                    << "finishing destroying this RPC handler";
         this->sock_->getEventBase()->checkIsInEventBaseThread();
         if (auto owningServer = this->owningServer_.lock()) {

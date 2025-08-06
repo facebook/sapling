@@ -957,6 +957,7 @@ ImmediateFuture<SetPathObjectIdResultAndTimes> EdenMount::setPathsToObjectIds(
 
 void EdenMount::destroy() {
   auto oldState = state_.exchange(State::DESTROYING, std::memory_order_acq_rel);
+  XLOG(DBG4) << "attempting to destroy EdenMount " << getPath();
   switch (oldState) {
     case State::UNINITIALIZED:
     case State::INITIALIZING: {
@@ -1001,6 +1002,7 @@ void EdenMount::destroy() {
 folly::SemiFuture<SerializedInodeMap> EdenMount::shutdown(
     bool doTakeover,
     bool allowFuseNotStarted) {
+  XLOG(DBG4) << "attempting to shutdown EdenMount " << getPath();
   // shutdown() should only be called on mounts that have not yet reached
   // SHUTTING_DOWN or later states.  Confirm this is the case, and move to
   // SHUTTING_DOWN.
@@ -2475,10 +2477,15 @@ folly::Future<folly::Unit> EdenMount::startFsChannel(bool readOnly) {
                      e.code().value(), this->isNfsdChannel())) {
                XLOGF(
                    ERR,
-                   "Failed to create mount point: {}: {}",
+                   "Failed to create mount point (hanging mount): {}: {}",
                    e.code(),
                    e.what());
              } else {
+               XLOGF(
+                   ERR,
+                   "Failed to create mount point: {}: {}",
+                   e.code(),
+                   e.what());
                throw;
              }
            }
