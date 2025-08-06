@@ -163,3 +163,14 @@ cpp_binary(
         ("boost", None, "boost_uuid"),
     ],
 )
+
+cpp_binary(
+    name = "formatting",
+    srcs = ["formatting.cpp"],
+    deps = [
+        "fbsource//third-party/fmt:fmt",
+        "//eden/common/utils/benchharness:benchharness",
+        "//folly:conv",
+        "//folly:format",
+    ],
+)
