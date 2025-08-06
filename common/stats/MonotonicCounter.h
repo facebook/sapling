@@ -41,7 +41,7 @@ class MonotonicCounter {
       delta_ = value - prevValue_;
     }
     prevValue_ = value;
-    stat_.addValueLocked(guard, now.count(), delta_);
+    stat_.addValueLocked(guard, fb303::ExportedStat::TimePoint(now), delta_);
   }
   void swap(MonotonicCounter& counter) {}
   int64_t get() const {
