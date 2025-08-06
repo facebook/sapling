@@ -48,7 +48,14 @@ pub async fn summary(
 
     let mut table = Table::new();
 
-    let mut titles = row!["time in queue", "type", "bubble", "head", "root"];
+    let mut titles = row![
+        "time in queue",
+        "retry count",
+        "type",
+        "bubble",
+        "head",
+        "root"
+    ];
     if args.client_info {
         titles.add_cell(cell!["client info"]);
     }
@@ -73,6 +80,7 @@ pub async fn summary(
                     timestamp.since_seconds(),
                     timestamp.since_millis() % 1000
                 ),
+                item.retry_count(),
                 dd_type,
                 format!("{:?}", item.bubble_id()),
                 item.head_cs_id(),
