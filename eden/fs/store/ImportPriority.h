@@ -169,15 +169,6 @@ inline constexpr ImportPriority kThriftPrefetchPriority{
 
 } // namespace facebook::eden
 
-namespace std {
-inline std::ostream& operator<<(
-    std::ostream& os,
-    facebook::eden::ImportPriority priority) {
-  return os << "(" << priority.className() << ", " << priority.getAdjustment()
-            << ")";
-}
-} // namespace std
-
 namespace fmt {
 template <>
 struct formatter<facebook::eden::ImportPriority> : formatter<std::string> {
