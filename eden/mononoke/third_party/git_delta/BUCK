@@ -15,8 +15,8 @@ cpp_library(
         "-DNO_OPENSSL=1",
         "-std=c99",
     ],
-    exported_external_deps = [
-        ("zlib", None, "z"),
+    exported_deps = [
+        "fbsource//third-party/zlib:z",
     ],
 )
 
@@ -30,8 +30,8 @@ cpp_library(
     deps = [
         ":git_delta_c",
     ],
-    exported_external_deps = [
-        ("zlib", None, "z"),
+    exported_deps = [
+        "fbsource//third-party/zlib:z",
     ],
 )
 
