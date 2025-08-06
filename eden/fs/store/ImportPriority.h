@@ -171,9 +171,14 @@ inline constexpr ImportPriority kThriftPrefetchPriority{
 
 namespace fmt {
 template <>
-struct formatter<facebook::eden::ImportPriority> : formatter<std::string> {
+struct formatter<facebook::eden::ImportPriority> {
+  constexpr auto parse(format_parse_context& ctx) {
+    return ctx.begin();
+  }
+
   template <typename Context>
-  auto format(facebook::eden::ImportPriority priority, Context& ctx) const {
+  auto format(const facebook::eden::ImportPriority& priority, Context& ctx)
+      const {
     return fmt::format_to(
         ctx.out(),
         "({}, {:+d})",
