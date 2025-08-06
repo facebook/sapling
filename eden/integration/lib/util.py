@@ -10,7 +10,7 @@ import os
 import sys
 from typing import Callable, List, Optional
 
-from facebook.eden.ttypes import TimeSpec
+from eden.fs.service.eden.thrift_types import TimeSpec
 
 if sys.platform == "win32":
     import ctypes

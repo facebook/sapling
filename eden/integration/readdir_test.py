@@ -17,7 +17,7 @@ from errno import EINVAL, EISDIR, ENOENT
 from pathlib import Path
 from typing import Dict, List, Optional, Pattern, Tuple, Union
 
-from facebook.eden.ttypes import (
+from eden.fs.service.eden.thrift_types import (
     Blake3OrError,
     DigestHashOrError,
     DigestSizeOrError,
@@ -98,10 +98,10 @@ class ReaddirTest(testcase.EdenRepoTest):
         )
         return result
 
-    def blake3_hash(self, file_path: str) -> bytes:
+    async def blake3_hash(self, file_path: str) -> bytes:
         key: Optional[str] = None
-        with self.get_thrift_client_legacy() as client:
-            config = client.getConfig(GetConfigParams())
+        async with self.get_thrift_client() as client:
+            config = await client.getConfig(GetConfigParams())
             maybe_key = config.values.get("hash:blake3-key")
             key = (
                 maybe_key.parsedValue
@@ -297,7 +297,7 @@ class ReaddirTest(testcase.EdenRepoTest):
         error_type: Optional[EdenErrorType] = None,
         error_code: Optional[int] = None,
     ) -> None:
-        error = result.get_error()
+        error = result.error
         self.assertIsNotNone(error)
         if isinstance(error_message, str):
             self.assertEqual(error_message, error.message)
@@ -310,19 +310,21 @@ class ReaddirTest(testcase.EdenRepoTest):
         if error_code is not None:
             self.assertEqual(error_code, error.errorCode)
 
-    def get_attributes_v2(
+    async def get_attributes_v2(
         self, files: List[bytes], req_attr: int
     ) -> GetAttributesFromFilesResultV2:
-        with self.get_thrift_client_legacy() as client:
+        async with self.get_thrift_client() as client:
             thrift_params = GetAttributesFromFilesParams(
                 mountPoint=self.mount_path_bytes,
                 paths=files,
                 requestedAttributes=req_attr,
             )
-            return client.getAttributesFromFilesV2(thrift_params)
+            return await client.getAttributesFromFilesV2(thrift_params)
 
-    def get_all_attributes(self, files: List[bytes]) -> GetAttributesFromFilesResultV2:
-        return self.get_attributes_v2(files, ALL_ATTRIBUTES)
+    async def get_all_attributes(
+        self, files: List[bytes]
+    ) -> GetAttributesFromFilesResultV2:
+        return await self.get_attributes_v2(files, ALL_ATTRIBUTES)
 
     def wrap_expected_attributes(
         self,
@@ -349,40 +351,29 @@ class ReaddirTest(testcase.EdenRepoTest):
             raw_mtime,
             raw_mode,
         ) = raw_attributes
-        data = FileAttributeDataV2()
-
-        if raw_sha1 is not None:
-            data.sha1 = Sha1OrError(sha1=raw_sha1)
-
-        if raw_blake3 is not None:
-            data.blake3 = Blake3OrError(blake3=raw_blake3)
-
-        if raw_size is not None:
-            data.size = SizeOrError(size=raw_size)
-
-        if raw_type is not None:
-            data.sourceControlType = SourceControlTypeOrError(
-                sourceControlType=raw_type
-            )
-
-        if raw_object_id is not None:
-            data.objectId = ObjectIdOrError(objectId=raw_object_id)
-
-        if digest_size is not None:
-            data.digestSize = DigestSizeOrError(digestSize=digest_size)
-
-        if digest_hash is not None:
-            data.digestHash = DigestHashOrError(digestHash=digest_hash)
-
-        if raw_mtime is not None:
-            data.mtime = MtimeOrError(mtime=raw_mtime)
-
-        if raw_mode is not None:
-            data.mode = ModeOrError(mode=raw_mode)
+        data = FileAttributeDataV2(
+            sha1=Sha1OrError(sha1=raw_sha1) if raw_sha1 is not None else None,
+            blake3=Blake3OrError(blake3=raw_blake3) if raw_blake3 is not None else None,
+            size=SizeOrError(size=raw_size) if raw_size is not None else None,
+            sourceControlType=SourceControlTypeOrError(sourceControlType=raw_type)
+            if raw_type is not None
+            else None,
+            objectId=ObjectIdOrError(objectId=raw_object_id)
+            if raw_object_id is not None
+            else None,
+            digestSize=DigestSizeOrError(digestSize=digest_size)
+            if digest_size is not None
+            else None,
+            digestHash=DigestHashOrError(digestHash=digest_hash)
+            if digest_hash is not None
+            else None,
+            mtime=MtimeOrError(mtime=raw_mtime) if raw_mtime is not None else None,
+            mode=ModeOrError(mode=raw_mode) if raw_mode is not None else None,
+        )
 
         return FileAttributeDataOrErrorV2(fileAttributeData=data)
 
-    def assert_attribute_result(
+    async def assert_attribute_result(
         self,
         fn,
         expected_result,
@@ -390,7 +381,7 @@ class ReaddirTest(testcase.EdenRepoTest):
         attributes: int = ALL_ATTRIBUTES,
     ) -> None:
         print("expected: \n{}", expected_result)
-        actual_result = fn(paths, attributes)
+        actual_result = await fn(paths, attributes)
         print("actual: \n{}", actual_result)
         self.assertEqual(len(paths), len(actual_result.res))
         self.assertEqual(
@@ -398,21 +389,21 @@ class ReaddirTest(testcase.EdenRepoTest):
             actual_result,
         )
 
-    def assert_attributes_result(
+    async def assert_attributes_result(
         self,
         expected_result,
         paths,
         attributes: int = ALL_ATTRIBUTES,
     ) -> None:
-        self.assert_attribute_result(
+        await self.assert_attribute_result(
             self.get_attributes_v2, expected_result, paths, attributes=attributes
         )
 
-    def test_get_attributes(self) -> None:
+    async def test_get_attributes(self) -> None:
         # expected results for file named "hello"
 
         expected_hello_result = self.wrap_expected_attributes(
-            self.get_expected_file_attributes(
+            await self.get_expected_file_attributes(
                 "hello",
                 self.hello_id,
             )
@@ -420,7 +411,7 @@ class ReaddirTest(testcase.EdenRepoTest):
 
         # expected results for file "adir/file"
         expected_adir_result = self.wrap_expected_attributes(
-            self.get_expected_file_attributes(
+            await self.get_expected_file_attributes(
                 "adir/file",
                 self.adir_file_id,
             )
@@ -434,14 +425,14 @@ class ReaddirTest(testcase.EdenRepoTest):
             ]
         )
 
-        self.assert_attributes_result(expected_result, [b"hello", b"adir/file"])
+        await self.assert_attributes_result(expected_result, [b"hello", b"adir/file"])
 
-    def test_get_size_only(self) -> None:
+    async def test_get_size_only(self) -> None:
         # expected size result for file
-        expected_hello_size = self.get_expected_file_attributes("hello", None)[1]
+        expected_hello_size = await self.get_expected_file_attributes("hello", None)
 
         expected_hello_result = self.wrap_expected_attributes(
-            (None, expected_hello_size, None, None, None, None, None, None, None)
+            (None, expected_hello_size[1], None, None, None, None, None, None, None)
         )
 
         # create result object for "hello"
@@ -451,15 +442,15 @@ class ReaddirTest(testcase.EdenRepoTest):
             ]
         )
 
-        self.assert_attributes_result(
+        await self.assert_attributes_result(
             expected_result, [b"hello"], FileAttributes.FILE_SIZE
         )
 
-    def test_get_type_only(self) -> None:
+    async def test_get_type_only(self) -> None:
         # expected size result for file
-        expected_hello_type = self.get_expected_file_attributes("hello", None)[2]
+        expected_hello_type = await self.get_expected_file_attributes("hello", None)
         expected_hello_result = self.wrap_expected_attributes(
-            (None, None, expected_hello_type, None, None, None, None, None, None)
+            (None, None, expected_hello_type[2], None, None, None, None, None, None)
         )
 
         # create result object for "hello"
@@ -469,14 +460,14 @@ class ReaddirTest(testcase.EdenRepoTest):
             ]
         )
 
-        self.assert_attributes_result(
+        await self.assert_attributes_result(
             expected_result,
             [b"hello"],
             FileAttributes.SOURCE_CONTROL_TYPE,
         )
 
-    def test_get_attributes_throws_for_non_existent_file(self) -> None:
-        results = self.get_all_attributes([b"i_do_not_exist"])
+    async def test_get_attributes_throws_for_non_existent_file(self) -> None:
+        results = await self.get_all_attributes([b"i_do_not_exist"])
         self.assertEqual(1, len(results.res))
         self.assert_attribute_error(
             results,
@@ -486,12 +477,12 @@ class ReaddirTest(testcase.EdenRepoTest):
             error_code=ENOENT,
         )
 
-    def test_get_sha1_only(self) -> None:
+    async def test_get_sha1_only(self) -> None:
         # expected sha1 result for file
-        expected_hello_sha1 = self.get_expected_file_attributes("hello", None)[0]
+        expected_hello_sha1 = await self.get_expected_file_attributes("hello", None)
 
         expected_hello_result = self.wrap_expected_attributes(
-            (expected_hello_sha1, None, None, None, None, None, None, None, None)
+            (expected_hello_sha1[0], None, None, None, None, None, None, None, None)
         )
 
         # create result object for "hello"
@@ -501,18 +492,18 @@ class ReaddirTest(testcase.EdenRepoTest):
             ]
         )
 
-        self.assert_attributes_result(
+        await self.assert_attributes_result(
             expected_result,
             [b"hello"],
             FileAttributes.SHA1_HASH,
         )
 
-    def test_get_blake3_only(self) -> None:
+    async def test_get_blake3_only(self) -> None:
         # expected blake3 result for file
-        expected_hello_blake3 = self.get_expected_file_attributes("hello", None)[4]
+        expected_hello_blake3 = await self.get_expected_file_attributes("hello", None)
 
         expected_hello_result = self.wrap_expected_attributes(
-            (None, None, None, None, expected_hello_blake3, None, None, None, None)
+            (None, None, None, None, expected_hello_blake3[4], None, None, None, None)
         )
 
         # create result object for "hello"
@@ -522,17 +513,17 @@ class ReaddirTest(testcase.EdenRepoTest):
             ]
         )
 
-        self.assert_attributes_result(
+        await self.assert_attributes_result(
             expected_result,
             [b"hello"],
             FileAttributes.BLAKE3_HASH,
         )
 
-    def test_get_mtime_only(self) -> None:
+    async def test_get_mtime_only(self) -> None:
         # expected mtime result for file
-        expected_hello_mtime = self.get_expected_file_attributes("hello", None)[7]
+        expected_hello_mtime = await self.get_expected_file_attributes("hello", None)
         expected_hello_result = self.wrap_expected_attributes(
-            (None, None, None, None, None, None, None, expected_hello_mtime, None)
+            (None, None, None, None, None, None, None, expected_hello_mtime[7], None)
         )
 
         # create result object for "hello"
@@ -542,18 +533,18 @@ class ReaddirTest(testcase.EdenRepoTest):
             ]
         )
 
-        self.assert_attributes_result(
+        await self.assert_attributes_result(
             expected_result,
             [b"hello"],
             FileAttributes.MTIME,
         )
 
-    def test_get_mode_only(self) -> None:
+    async def test_get_mode_only(self) -> None:
         # expected mtime result for file
-        expected_hello_mode = self.get_expected_file_attributes("hello", None)[8]
+        expected_hello_mode = await self.get_expected_file_attributes("hello", None)
 
         expected_hello_result = self.wrap_expected_attributes(
-            (None, None, None, None, None, None, None, None, expected_hello_mode)
+            (None, None, None, None, None, None, None, None, expected_hello_mode[8])
         )
 
         # create result object for "hello"
@@ -563,14 +554,14 @@ class ReaddirTest(testcase.EdenRepoTest):
             ]
         )
 
-        self.assert_attributes_result(
+        await self.assert_attributes_result(
             expected_result,
             [b"hello"],
             FileAttributes.MODE,
         )
 
-    def test_get_attributes_throws_for_path_with_dot_components(self) -> None:
-        results = self.get_all_attributes([b"./hello"])
+    async def test_get_attributes_throws_for_path_with_dot_components(self) -> None:
+        results = await self.get_all_attributes([b"./hello"])
         self.assertEqual(1, len(results.res))
         self.assert_attribute_error(
             results,
@@ -580,8 +571,8 @@ class ReaddirTest(testcase.EdenRepoTest):
             error_code=None,
         )
 
-    def test_get_attributes_throws_for_empty_string(self) -> None:
-        results = self.get_all_attributes([b""])
+    async def test_get_attributes_throws_for_empty_string(self) -> None:
+        results = await self.get_all_attributes([b""])
         self.assertEqual(1, len(results.res))
         self.assert_attribute_error(
             results,
@@ -591,7 +582,7 @@ class ReaddirTest(testcase.EdenRepoTest):
             error_code=None,
         )
 
-    def test_get_attributes_directory(self) -> None:
+    async def test_get_attributes_directory(self) -> None:
         stat = self.stat("adir")
         (mode, mtime) = self.get_expected_mode_and_mtime(stat)
 
@@ -635,12 +626,12 @@ class ReaddirTest(testcase.EdenRepoTest):
             ]
         )
         print(f"expected: \n{expected_result}")
-        results = self.get_all_attributes([b"adir"])
+        results = await self.get_all_attributes([b"adir"])
         print(f"actual: \n{results}")
         self.assertEqual(1, len(results.res))
         self.assertEqual(expected_result, results)
 
-    def test_get_attributes_socket(self) -> None:
+    async def test_get_attributes_socket(self) -> None:
         sockpath = self.get_path("adir/asock")
         # UDS are not supported in python on Win until 3.9:
         # https://bugs.python.org/issue33408
@@ -701,12 +692,12 @@ class ReaddirTest(testcase.EdenRepoTest):
                 ]
             )
             print(f"expected: \n{expected_result}")
-            results = self.get_all_attributes([b"adir/asock"])
+            results = await self.get_all_attributes([b"adir/asock"])
             print(f"actual: \n{results}")
             self.assertEqual(1, len(results.res))
             self.assertEqual(expected_result, results)
 
-    def test_get_attributes_symlink(self) -> None:
+    async def test_get_attributes_symlink(self) -> None:
         stat = self.stat("slink")
         (mode, mtime) = self.get_expected_mode_and_mtime(stat)
         expected_slink_result = FileAttributeDataOrErrorV2(
@@ -761,16 +752,16 @@ class ReaddirTest(testcase.EdenRepoTest):
             ]
         )
         print(f"expected: \n{expected_result}")
-        results = self.get_all_attributes([b"slink"])
+        results = await self.get_all_attributes([b"slink"])
         print(f"actual: \n{results}")
         self.assertEqual(1, len(results.res))
         self.assertEqual(expected_result, results)
 
-    def test_get_attributes_no_files(self) -> None:
-        results = self.get_all_attributes([])
+    async def test_get_attributes_no_files(self) -> None:
+        results = await self.get_all_attributes([])
         self.assertEqual(0, len(results.res))
 
-    def test_get_no_attributes(self) -> None:
+    async def test_get_no_attributes(self) -> None:
         expected_hello_result = FileAttributeDataOrErrorV2(
             fileAttributeData=FileAttributeDataV2()
         )
@@ -782,24 +773,23 @@ class ReaddirTest(testcase.EdenRepoTest):
             ]
         )
 
-        self.assert_attributes_result(
+        await self.assert_attributes_result(
             expected_result,
             [b"hello"],
             0,
         )
 
-    def test_get_materialized_attributes(self) -> None:
+    async def test_get_materialized_attributes(self) -> None:
         # Materialize some files/dirs
         self.write_file("hello_file", "something different")
         self.mkdir("hello_dir")
 
         # Materialized files should not have ObjectID values, but they should
         # have valid digest hash/size values
+        blake3_hash_result = await self.blake3_hash(self.get_path("hello_file"))
         expected_hello_result_file = FileAttributeDataOrErrorV2(
             fileAttributeData=FileAttributeDataV2(
-                digestHash=DigestHashOrError(
-                    digestHash=self.blake3_hash(self.get_path("hello_file"))
-                ),
+                digestHash=DigestHashOrError(digestHash=blake3_hash_result),
                 digestSize=DigestSizeOrError(digestSize=19),
                 objectId=ObjectIdOrError(),
             )
@@ -832,7 +822,7 @@ class ReaddirTest(testcase.EdenRepoTest):
             res=[expected_hello_result_file, expected_hello_result_dir]
         )
 
-        self.assert_attribute_result(
+        await self.assert_attribute_result(
             self.get_attributes_v2,
             expected_results,
             [b"hello_file", b"hello_dir"],
@@ -855,9 +845,8 @@ class ReaddirTest(testcase.EdenRepoTest):
             attribute_result, msg="Must pass a GetAttributesFromFilesResult"
         )
         attr_or_err = attribute_result.res[map_entry]
-        self.assertEqual(
-            FileAttributeDataOrErrorV2.ERROR,
-            attr_or_err.getType(),
+        self.assertIsNotNone(
+            attr_or_err.error,
             msg="GetAttributesFromFilesResultV2 must be an error",
         )
         self.assert_eden_error(
@@ -880,7 +869,7 @@ class ReaddirTest(testcase.EdenRepoTest):
             mtime = stat_mtime_to_timespec(file_stat)
             return (mode, mtime)
 
-    def get_expected_file_attributes(
+    async def get_expected_file_attributes(
         self,
         path: str,
         object_id: Optional[bytes],
@@ -941,7 +930,7 @@ class ReaddirTest(testcase.EdenRepoTest):
         file_contents = ifile.read()
         sha1_hash = hashlib.sha1(file_contents).digest()
         ifile.close()
-        blake3 = self.blake3_hash(fullpath)
+        blake3 = await self.blake3_hash(fullpath)
 
         return (
             sha1_hash,
@@ -1029,16 +1018,16 @@ class ReaddirTest(testcase.EdenRepoTest):
             )
         )
 
-    def test_readdir(self) -> None:
+    async def test_readdir(self) -> None:
         # each of these tests should arguably be their own test case,
         # but integration tests are expensive, so we will do it all in one.
 
         # non empty directories
-        with self.get_thrift_client_legacy() as client:
+        async with self.get_thrift_client() as client:
             adir_result = DirListAttributeDataOrError(
                 dirListAttributeData={
                     b"file": self.constructReaddirResult(
-                        self.get_expected_file_attributes(
+                        await self.get_expected_file_attributes(
                             "adir/file",
                             self.adir_file_id,
                         )
@@ -1048,7 +1037,7 @@ class ReaddirTest(testcase.EdenRepoTest):
             bdir_result = DirListAttributeDataOrError(
                 dirListAttributeData={
                     b"file": self.constructReaddirResult(
-                        self.get_expected_file_attributes(
+                        await self.get_expected_file_attributes(
                             "bdir/file",
                             self.bdir_file_id,
                         )
@@ -1057,7 +1046,7 @@ class ReaddirTest(testcase.EdenRepoTest):
             )
 
             expected = ReaddirResult(dirLists=[adir_result, bdir_result])
-            actual_result = client.readdir(
+            actual_result = await client.readdir(
                 ReaddirParams(
                     mountPoint=self.mount_path_bytes,
                     directoryPaths=[b"adir", b"bdir"],
@@ -1082,7 +1071,7 @@ class ReaddirTest(testcase.EdenRepoTest):
             expected = ReaddirResult(
                 dirLists=[DirListAttributeDataOrError(dirListAttributeData={})]
             )
-            actual = client.readdir(
+            actual = await client.readdir(
                 ReaddirParams(
                     mountPoint=self.mount_path_bytes,
                     directoryPaths=[b"emptydir"],
@@ -1105,7 +1094,7 @@ class ReaddirTest(testcase.EdenRepoTest):
                     )
                 ]
             )
-            actual = client.readdir(
+            actual = await client.readdir(
                 ReaddirParams(
                     mountPoint=self.mount_path_bytes,
                     directoryPaths=[b"ddir"],
@@ -1128,7 +1117,7 @@ class ReaddirTest(testcase.EdenRepoTest):
                     )
                 ]
             )
-            actual = client.readdir(
+            actual = await client.readdir(
                 ReaddirParams(
                     mountPoint=self.mount_path_bytes,
                     directoryPaths=[b"hello"],
@@ -1140,7 +1129,7 @@ class ReaddirTest(testcase.EdenRepoTest):
             self.assertEqual(expected, actual)
 
             # empty string
-            actual = client.readdir(
+            actual = await client.readdir(
                 ReaddirParams(
                     mountPoint=self.mount_path_bytes,
                     directoryPaths=[b""],
@@ -1149,17 +1138,16 @@ class ReaddirTest(testcase.EdenRepoTest):
             )
             # access the data to ensure this does not throw and we have legit
             # data in the response
-            actual.dirLists[0].get_dirListAttributeData()
-            self.assertIn(b"test_fetch1", actual.dirLists[0].get_dirListAttributeData())
-            self.assertIn(b"hello", actual.dirLists[0].get_dirListAttributeData())
-            self.assertIn(b"cdir", actual.dirLists[0].get_dirListAttributeData())
+            self.assertIn(b"test_fetch1", actual.dirLists[0].dirListAttributeData)
+            self.assertIn(b"hello", actual.dirLists[0].dirListAttributeData)
+            self.assertIn(b"cdir", actual.dirLists[0].dirListAttributeData)
 
-    def readdir_single_attr_only(self, req_attr: int) -> None:
-        with self.get_thrift_client_legacy() as client:
+    async def readdir_single_attr_only(self, req_attr: int) -> None:
+        async with self.get_thrift_client() as client:
             adir_result = DirListAttributeDataOrError(
                 dirListAttributeData={
                     b"file": self.constructReaddirResult(
-                        self.get_expected_file_attributes(
+                        await self.get_expected_file_attributes(
                             "adir/file", self.adir_file_id
                         ),
                         req_attr=req_attr,
@@ -1169,7 +1157,7 @@ class ReaddirTest(testcase.EdenRepoTest):
             bdir_result = DirListAttributeDataOrError(
                 dirListAttributeData={
                     b"file": self.constructReaddirResult(
-                        self.get_expected_file_attributes(
+                        await self.get_expected_file_attributes(
                             "bdir/file", self.bdir_file_id
                         ),
                         req_attr=req_attr,
@@ -1178,7 +1166,7 @@ class ReaddirTest(testcase.EdenRepoTest):
             )
 
             expected = ReaddirResult(dirLists=[adir_result, bdir_result])
-            actual_result = client.readdir(
+            actual_result = await client.readdir(
                 ReaddirParams(
                     mountPoint=self.mount_path_bytes,
                     directoryPaths=[b"adir", b"bdir"],
@@ -1194,16 +1182,16 @@ class ReaddirTest(testcase.EdenRepoTest):
                 actual_result,
             )
 
-    def test_readdir_single_attr_only(self) -> None:
-        self.readdir_single_attr_only(FileAttributes.SHA1_HASH)
+    async def test_readdir_single_attr_only(self) -> None:
+        await self.readdir_single_attr_only(FileAttributes.SHA1_HASH)
 
-        self.readdir_single_attr_only(FileAttributes.BLAKE3_HASH)
+        await self.readdir_single_attr_only(FileAttributes.BLAKE3_HASH)
 
-        self.readdir_single_attr_only(FileAttributes.FILE_SIZE)
+        await self.readdir_single_attr_only(FileAttributes.FILE_SIZE)
 
-        self.readdir_single_attr_only(FileAttributes.SOURCE_CONTROL_TYPE)
+        await self.readdir_single_attr_only(FileAttributes.SOURCE_CONTROL_TYPE)
 
-    def readdir_no_size_or_sha1(
+    async def readdir_no_size_or_sha1(
         self,
         parent_name: bytes,
         entry_name: bytes,
@@ -1217,7 +1205,7 @@ class ReaddirTest(testcase.EdenRepoTest):
         mtime_result=MtimeOrError,
         mode_result=ModeOrError,
     ) -> None:
-        with self.get_thrift_client_legacy() as client:
+        async with self.get_thrift_client() as client:
             expected = FileAttributeDataOrErrorV2(
                 fileAttributeData=FileAttributeDataV2(
                     sha1=sha1_result,
@@ -1236,7 +1224,7 @@ class ReaddirTest(testcase.EdenRepoTest):
                 )
             )
 
-            actual = client.readdir(
+            actual = await client.readdir(
                 ReaddirParams(
                     mountPoint=self.mount_path_bytes,
                     directoryPaths=[parent_name],
@@ -1249,7 +1237,7 @@ class ReaddirTest(testcase.EdenRepoTest):
 
             self.assertEqual(
                 expected,
-                actual.dirLists[0].get_dirListAttributeData()[entry_name],
+                actual.dirLists[0].dirListAttributeData[entry_name],
             )
 
             expected = FileAttributeDataOrErrorV2(
@@ -1267,7 +1255,7 @@ class ReaddirTest(testcase.EdenRepoTest):
                 )
             )
 
-            actual = client.readdir(
+            actual = await client.readdir(
                 ReaddirParams(
                     mountPoint=self.mount_path_bytes,
                     directoryPaths=[parent_name],
@@ -1279,13 +1267,13 @@ class ReaddirTest(testcase.EdenRepoTest):
             print(f"actual: \n{actual}")
             self.assertEqual(
                 expected,
-                actual.dirLists[0].get_dirListAttributeData()[entry_name],
+                actual.dirLists[0].dirListAttributeData[entry_name],
             )
 
-    def test_readdir_directory_symlink_and_other(self) -> None:
+    async def test_readdir_directory_symlink_and_other(self) -> None:
         stat = self.stat("cdir")
         (mode, mtime) = self.get_expected_mode_and_mtime(stat)
-        self.readdir_no_size_or_sha1(
+        await self.readdir_no_size_or_sha1(
             parent_name=b"cdir",
             entry_name=b"subdir",
             source_control_type=SourceControlType.TREE,
@@ -1331,7 +1319,7 @@ class ReaddirTest(testcase.EdenRepoTest):
                 sock.bind(sockpath)
                 stat = self.stat("adir/asock")
                 (mode, mtime) = self.get_expected_mode_and_mtime(stat)
-                self.readdir_no_size_or_sha1(
+                await self.readdir_no_size_or_sha1(
                     parent_name=b"adir",
                     entry_name=b"asock",
                     source_control_type=SourceControlType.UNKNOWN,
@@ -1361,7 +1349,7 @@ class ReaddirTest(testcase.EdenRepoTest):
 
         stat = self.stat("slink")
         (mode, mtime) = self.get_expected_mode_and_mtime(stat)
-        self.readdir_no_size_or_sha1(
+        await self.readdir_no_size_or_sha1(
             parent_name=b"",
             entry_name=b"slink",
             source_control_type=SourceControlType.SYMLINK,
@@ -1383,10 +1371,10 @@ class ReaddirTest(testcase.EdenRepoTest):
             mode_result=ModeOrError(mode=mode),
         )
 
-    def test_materialized_files_return_no_object_id(self) -> None:
+    async def test_materialized_files_return_no_object_id(self) -> None:
         self.write_file("adir/file", "new contents\n")
 
-        actual = self.get_attributes_v2([b"adir/file"], FileAttributes.OBJECT_ID)
+        actual = await self.get_attributes_v2([b"adir/file"], FileAttributes.OBJECT_ID)
         self.assertEqual(1, len(actual.res))
         expected = FileAttributeDataOrErrorV2(
             fileAttributeData=FileAttributeDataV2(
