@@ -6,13 +6,32 @@
  */
 
 #include "eden/fs/utils/GlobNodeImpl.h"
-#include <iomanip>
 #include <iostream>
 
 using folly::StringPiece;
 using std::string;
 using std::unique_ptr;
 using std::vector;
+
+namespace facebook::eden::detail {
+struct Indentation {
+  int width;
+};
+} // namespace facebook::eden::detail
+
+template <>
+struct fmt::formatter<facebook::eden::detail::Indentation> {
+  constexpr auto parse(format_parse_context& ctx) {
+    return ctx.begin();
+  }
+
+  template <typename FormatContext>
+  auto format(
+      const facebook::eden::detail::Indentation& indentation,
+      FormatContext& ctx) {
+    return std::fill_n(ctx.out(), indentation.width, ' ');
+  }
+};
 
 namespace facebook::eden {
 
@@ -143,50 +162,46 @@ void GlobNodeImpl::debugDump() const {
   debugDump(/*currentDepth=*/0);
 }
 
-namespace {
-struct Indentation {
-  int width;
-
-  friend std::ostream& operator<<(
-      std::ostream& s,
-      const Indentation& indentation) {
-    return s << std::setw(indentation.width) << "";
-  }
-};
-} // namespace
-
 void GlobNodeImpl::debugDump(int currentDepth) const {
   auto& out = std::cerr;
-  auto indentation = Indentation{currentDepth * 2};
+  auto indentation = detail::Indentation{currentDepth * 2};
   auto boolString = [](bool b) -> const char* { return b ? "true" : "false"; };
 
-  out << indentation << "- GlobNodeImpl " << this << "\n"
-      << indentation << "  alwaysMatch=" << boolString(alwaysMatch_) << "\n"
-      << indentation << "  hasSpecials=" << boolString(hasSpecials_) << "\n"
-      << indentation << "  includeDotfiles=" << boolString(includeDotfiles_)
-      << "\n"
-      << indentation << "  isLeaf=" << boolString(isLeaf_) << "\n";
+  out << fmt::format(
+             "{}- GlobNodeImpl {:p}\n",
+             indentation,
+             static_cast<const void*>(this))
+      << fmt::format(
+             "{}  alwaysMatch={}\n", indentation, boolString(alwaysMatch_))
+      << fmt::format(
+             "{}  hasSpecials={}\n", indentation, boolString(hasSpecials_))
+      << fmt::format(
+             "{}  includeDotfiles={}\n",
+             indentation,
+             boolString(includeDotfiles_))
+      << fmt::format("{}  isLeaf={}\n", indentation, boolString(isLeaf_));
 
   if (pattern_.empty()) {
-    out << indentation << "  pattern is empty\n";
+    out << fmt::format("{}  pattern is empty\n", indentation);
   } else {
-    out << indentation << "  pattern: " << pattern_ << "\n";
+    out << fmt::format("{}  pattern: {}\n", indentation, pattern_);
   }
 
   if (!children_.empty()) {
-    out << indentation << "  children (" << children_.size() << "):\n";
+    out << fmt::format("{}  children ({}):\n", indentation, children_.size());
     for (const auto& child : children_) {
       child->debugDump(/*currentDepth=*/currentDepth + 1);
     }
   }
 
   if (!recursiveChildren_.empty()) {
-    out << indentation << "  recursiveChildren (" << recursiveChildren_.size()
-        << "):\n";
+    out << fmt::format(
+        "{}  recursiveChildren ({}):\n",
+        indentation,
+        recursiveChildren_.size());
     for (const auto& child : recursiveChildren_) {
       child->debugDump(/*currentDepth=*/currentDepth + 1);
     }
   }
 }
-
 } // namespace facebook::eden
