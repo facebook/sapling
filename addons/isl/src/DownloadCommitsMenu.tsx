@@ -16,6 +16,7 @@ import {Tooltip} from 'isl-components/Tooltip';
 import {useAtom} from 'jotai';
 import {useEffect, useRef, useState} from 'react';
 import {nullthrows} from 'shared/utils';
+import {tracker} from './analytics';
 import {Collapsable} from './Collapsable';
 import {CommitCloudInfo} from './CommitCloud';
 import {DropdownFields} from './DropdownFields';
@@ -92,6 +93,13 @@ function DownloadCommitsTooltip({dismiss}: {dismiss: () => unknown}) {
   const [shouldGoto, setShouldGoto] = useAtom(downloadCommitShouldGoto);
 
   const doCommitDownload = async () => {
+    tracker.track('ClickPullButton', {
+      extras: {
+        rebaseType,
+        shouldGoto,
+      },
+    });
+
     // We need to dismiss the tooltip now, since we don't want to leave it up until after the operations are run.
     dismiss();
 

@@ -40,6 +40,8 @@ export type TrackEventName =
   | 'CommitCloudCreateWorkspaceOperation'
   | 'CommitCloudSyncOperation'
   | 'CreateEmptyInitialCommit'
+  | 'ClickGotoTimeButton'
+  | 'ClickPullButton'
   | 'ClickSuggestedRebase'
   | 'ClickedConfigureExternalMergeTool'
   | 'DiscardOperation'

@@ -10,6 +10,7 @@ import {Checkbox} from 'isl-components/Checkbox';
 import {DatetimePicker} from 'isl-components/DatetimePicker';
 import {TextField} from 'isl-components/TextField';
 import {useEffect, useRef, useState} from 'react';
+import {tracker} from './analytics';
 import {t, T} from './i18n';
 import {GotoOperation} from './operations/GotoOperation';
 import {RebaseOperation} from './operations/RebaseOperation';
@@ -101,6 +102,13 @@ export function GotoTimeContent({dismiss}: {dismiss?: () => unknown}) {
   };
 
   const doGoToCommit = () => {
+    tracker.track('ClickGotoTimeButton', {
+      extras: {
+        isHours: hours.trim().length > 0,
+        shouldRebase,
+      },
+    });
+
     // Get the destination revset based on "hours ago" or datetime, whichever has a value
     let destinationRevset: ExactRevset;
 
