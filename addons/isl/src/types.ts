@@ -703,6 +703,10 @@ export type PlatformSpecificClientToServerMessages =
       type: 'platform/resolveFailedSignalsWithAI';
       diffId: string;
       repoPath?: string;
+    }
+  | {
+      type: 'platform/fillDevMateCommitMessage';
+      id: string;
     };
 
 /**
