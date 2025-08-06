@@ -121,6 +121,7 @@ pub enum SaplingRemoteApiMethod {
     CommitRevlogData,
     CommitTranslateId,
     DownloadFile,
+    EphemeralExtend,
     EphemeralPrepare,
     FetchSnapshot,
     Files2,
@@ -170,6 +171,7 @@ impl fmt::Display for SaplingRemoteApiMethod {
             Self::CommitRevlogData => "commit_revlog_data",
             Self::CommitTranslateId => "commit_translate_id",
             Self::DownloadFile => "download_file",
+            Self::EphemeralExtend => "ephemeral_extend",
             Self::EphemeralPrepare => "ephemeral_prepare",
             Self::FetchSnapshot => "fetch_snapshot",
             Self::Files2 => "files2",
@@ -518,6 +520,7 @@ pub fn build_router<R: Send + Sync + Clone + 'static>(ctx: ServerContext<R>) -> 
         Handlers::setup::<commit::AlterSnapshotHandler>(route);
         Handlers::setup::<commit::CommitMutationsHandler>(route);
         Handlers::setup::<commit::CommitTranslateId>(route);
+        Handlers::setup::<commit::EphemeralExtendHandler>(route);
         Handlers::setup::<commit::EphemeralPrepareHandler>(route);
         Handlers::setup::<commit::FetchSnapshotHandler>(route);
         Handlers::setup::<commit::GraphHandlerV2>(route);

@@ -453,6 +453,22 @@ pub struct EphemeralPrepareResponse {
     pub bubble_id: NonZeroU64,
 }
 
+#[auto_wire]
+#[derive(Clone, Debug, Deserialize, Serialize, Eq, PartialEq)]
+#[cfg_attr(any(test, feature = "for-tests"), derive(Arbitrary))]
+pub struct EphemeralExtendRequest {
+    #[id(1)]
+    pub bubble_id: NonZeroU64,
+    #[id(2)]
+    pub custom_duration_secs: Option<u64>,
+}
+
+#[derive(Clone, Debug, Deserialize, Serialize, Eq, PartialEq)]
+#[cfg_attr(any(test, feature = "for-tests"), derive(Arbitrary))]
+pub struct EphemeralExtendResponse {
+    pub bubble_id: NonZeroU64,
+}
+
 #[cfg(any(test, feature = "for-tests"))]
 impl Arbitrary for BonsaiFileChange {
     fn arbitrary(g: &mut Gen) -> Self {

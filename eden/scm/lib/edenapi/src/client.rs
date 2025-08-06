@@ -53,6 +53,8 @@ use edenapi_types::CommitRevlogData;
 use edenapi_types::CommitRevlogDataRequest;
 use edenapi_types::CommitTranslateIdRequest;
 use edenapi_types::CommitTranslateIdResponse;
+use edenapi_types::EphemeralExtendRequest;
+use edenapi_types::EphemeralExtendResponse;
 use edenapi_types::EphemeralPrepareRequest;
 use edenapi_types::EphemeralPrepareResponse;
 use edenapi_types::FetchSnapshotRequest;
@@ -193,6 +195,7 @@ pub mod paths {
     pub const COMMIT_REVLOG_DATA: &str = "commit/revlog_data";
     pub const COMMIT_TRANSLATE_ID: &str = "commit/translate_id";
     pub const DOWNLOAD_FILE: &str = "download/file";
+    pub const EPHEMERAL_EXTEND: &str = "ephemeral/extend";
     pub const EPHEMERAL_PREPARE: &str = "ephemeral/prepare";
     pub const FETCH_SNAPSHOT: &str = "snapshot";
     pub const FILES2: &str = "files2";
@@ -844,6 +847,38 @@ impl Client {
         let resp = self.fetch_single::<EphemeralPrepareResponse>(request).await;
         if let Ok(ref r) = resp {
             tracing::info!("Created bubble {}", r.bubble_id);
+        }
+        resp
+    }
+
+    async fn ephemeral_extend_attempt(
+        &self,
+        bubble_id: NonZeroU64,
+        custom_duration_secs: Option<u64>,
+    ) -> Result<EphemeralExtendResponse, SaplingRemoteApiError> {
+        if let Some(duration) = custom_duration_secs {
+            tracing::info!(
+                "Extending ephemeral bubble {} ttl to {} seconds",
+                bubble_id,
+                duration
+            );
+        } else {
+            tracing::info!("Extending ephemeral bubble {} ttl", bubble_id);
+        }
+        let url = self.build_url(paths::EPHEMERAL_EXTEND)?;
+        let req = EphemeralExtendRequest {
+            bubble_id,
+            custom_duration_secs,
+        }
+        .to_wire();
+        let request = self
+            .configure_request(paths::EPHEMERAL_EXTEND, self.inner.client.post(url))?
+            .cbor(&req)
+            .map_err(SaplingRemoteApiError::RequestSerializationFailed)?;
+
+        let resp = self.fetch_single::<EphemeralExtendResponse>(request).await;
+        if let Ok(ref r) = resp {
+            tracing::info!("Extended bubble {} ttl", r.bubble_id);
         }
         resp
     }
@@ -1923,6 +1958,21 @@ impl SaplingRemoteApi for Client {
     ) -> Result<EphemeralPrepareResponse, SaplingRemoteApiError> {
         self.with_retry(|this| {
             this.ephemeral_prepare_attempt(custom_duration, labels.clone())
+                .boxed()
+        })
+        .await
+    }
+
+    /// Prolongs the lifetime of the ephemeral bubble to a given duration.
+    /// The lifetime remains unchanged if the specified duration is shorter than the current remaining lifetime.
+    /// If no duration is provided, the lifetime resets to the greater of the default lifetime or the remaining lifetime.
+    async fn ephemeral_extend(
+        &self,
+        bubble_id: NonZeroU64,
+        custom_duration_secs: Option<u64>,
+    ) -> Result<EphemeralExtendResponse, SaplingRemoteApiError> {
+        self.with_retry(|this| {
+            this.ephemeral_extend_attempt(bubble_id, custom_duration_secs)
                 .boxed()
         })
         .await

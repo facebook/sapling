@@ -20,6 +20,7 @@ use crate::commit::CommitHashLookupRequest;
 use crate::commit::CommitHashLookupResponse;
 use crate::commit::CommitHashToLocationRequestBatch;
 use crate::commit::CommitHashToLocationResponse;
+use crate::commit::EphemeralExtendResponse;
 use crate::commit::EphemeralPrepareResponse;
 pub use crate::commit::WireBonsaiExtra;
 pub use crate::commit::WireCommitGraphEntry;
@@ -29,6 +30,7 @@ pub use crate::commit::WireCommitLocationToHashRequestBatch;
 pub use crate::commit::WireCommitLocationToHashResponse;
 pub use crate::commit::WireCommitMutationsRequest;
 pub use crate::commit::WireCommitMutationsResponse;
+pub use crate::commit::WireEphemeralExtendRequest;
 pub use crate::commit::WireEphemeralPrepareRequest;
 pub use crate::commit::WireExtra;
 pub use crate::commit::WireFetchSnapshotRequest;
@@ -473,6 +475,42 @@ impl Arbitrary for WireEphemeralPrepareResponse {
     }
 }
 
+#[derive(Clone, Debug, Serialize, Deserialize, Eq, PartialEq)]
+pub struct WireEphemeralExtendResponse {
+    #[serde(rename = "1")]
+    pub bubble_id: Option<NonZeroU64>,
+}
+
+impl ToWire for EphemeralExtendResponse {
+    type Wire = WireEphemeralExtendResponse;
+
+    fn to_wire(self) -> Self::Wire {
+        Self::Wire {
+            bubble_id: Some(self.bubble_id),
+        }
+    }
+}
+
+impl ToApi for WireEphemeralExtendResponse {
+    type Api = EphemeralExtendResponse;
+    type Error = WireToApiConversionError;
+
+    fn to_api(self) -> Result<Self::Api, Self::Error> {
+        Ok(Self::Api {
+            bubble_id: self.bubble_id.ok_or(
+                WireToApiConversionError::CannotPopulateRequiredField("bubble_id"),
+            )?,
+        })
+    }
+}
+
+#[cfg(any(test, feature = "for-tests"))]
+impl Arbitrary for WireEphemeralExtendResponse {
+    fn arbitrary(g: &mut quickcheck::Gen) -> Self {
+        EphemeralExtendResponse::arbitrary(g).to_wire()
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -487,6 +525,8 @@ mod tests {
         WireCommitHashToLocationResponse,
         WireCommitHashLookupRequest,
         WireCommitHashLookupResponse,
+        WireEphemeralExtendRequest,
+        WireEphemeralExtendResponse,
         WireEphemeralPrepareRequest,
         WireEphemeralPrepareResponse,
         WireCommitGraphRequest,

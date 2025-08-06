@@ -42,6 +42,7 @@ use edenapi_types::CommitKnownResponse;
 use edenapi_types::CommitLocationToHashResponse;
 use edenapi_types::CommitRevlogData;
 use edenapi_types::CommitTranslateIdResponse;
+use edenapi_types::EphemeralExtendResponse;
 use edenapi_types::EphemeralPrepareResponse;
 use edenapi_types::FetchSnapshotRequest;
 use edenapi_types::FetchSnapshotResponse;
@@ -514,6 +515,20 @@ py_class!(pub class client |py| {
         let api = self.inner(py).as_ref();
         py
             .allow_threads(|| block_unless_interrupted(api.ephemeral_prepare(custom_duration.map(Duration::from_secs), labels)))
+            .map_pyerr(py)?
+            .map_pyerr(py)
+            .map(Serde)
+    }
+
+    def ephemeralextend(&self, bubble_id: u64, custom_duration_secs: Option<u64>)
+        -> PyResult<Serde<EphemeralExtendResponse>>
+    {
+        let api = self.inner(py).as_ref();
+        let bubble_id = NonZeroU64::new(bubble_id).ok_or_else(|| {
+            PyErr::new::<cpython::exc::ValueError, _>(py, "bubble_id must be non-zero")
+        })?;
+        py
+            .allow_threads(|| block_unless_interrupted(api.ephemeral_extend(bubble_id, custom_duration_secs)))
             .map_pyerr(py)?
             .map_pyerr(py)
             .map(Serde)

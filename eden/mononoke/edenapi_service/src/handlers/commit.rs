@@ -48,6 +48,8 @@ use edenapi_types::CommitRevlogData;
 use edenapi_types::CommitRevlogDataRequest;
 use edenapi_types::CommitTranslateIdRequest;
 use edenapi_types::CommitTranslateIdResponse;
+use edenapi_types::EphemeralExtendRequest;
+use edenapi_types::EphemeralExtendResponse;
 use edenapi_types::EphemeralPrepareRequest;
 use edenapi_types::EphemeralPrepareResponse;
 use edenapi_types::FetchSnapshotRequest;
@@ -852,6 +854,42 @@ impl SaplingRemoteApiHandler for EphemeralPrepareHandler {
                     .await?
                     .bubble_id()
                     .into(),
+            })
+        })
+        .boxed())
+    }
+}
+
+/// Extends the TTL of an ephemeral bubble
+pub struct EphemeralExtendHandler;
+
+#[async_trait]
+impl SaplingRemoteApiHandler for EphemeralExtendHandler {
+    type Request = EphemeralExtendRequest;
+    type Response = EphemeralExtendResponse;
+
+    const HTTP_METHOD: hyper::Method = hyper::Method::POST;
+    const API_METHOD: SaplingRemoteApiMethod = SaplingRemoteApiMethod::EphemeralExtend;
+    const ENDPOINT: &'static str = "/ephemeral/extend";
+
+    async fn handler(
+        ectx: SaplingRemoteApiContext<Self::PathExtractor, Self::QueryStringExtractor, Repo>,
+        request: Self::Request,
+    ) -> HandlerResult<'async_trait, Self::Response> {
+        let repo = ectx.repo();
+        Ok(stream::once(async move {
+            // Placeholder implementation: verify bubble exists and return success
+            // TODO: Implement actual bubble TTL extension logic
+            let bubble_id = BubbleId::new(request.bubble_id);
+            let _bubble = repo
+                .ephemeral_store()
+                .open_bubble(repo.ctx(), bubble_id)
+                .await?;
+
+            // For now, just return success without actually extending the TTL
+            // The actual implementation would extend the bubble's expiration time
+            Ok(EphemeralExtendResponse {
+                bubble_id: request.bubble_id,
             })
         })
         .boxed())

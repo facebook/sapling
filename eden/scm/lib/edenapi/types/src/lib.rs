@@ -131,6 +131,8 @@ pub use crate::commit::CommitRevlogData;
 pub use crate::commit::CommitRevlogDataRequest;
 pub use crate::commit::CommitTranslateIdRequest;
 pub use crate::commit::CommitTranslateIdResponse;
+pub use crate::commit::EphemeralExtendRequest;
+pub use crate::commit::EphemeralExtendResponse;
 pub use crate::commit::EphemeralPrepareRequest;
 pub use crate::commit::EphemeralPrepareResponse;
 pub use crate::commit::Extra;

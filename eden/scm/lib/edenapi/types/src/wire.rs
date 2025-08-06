@@ -105,6 +105,8 @@ pub use crate::wire::commit::WireCommitLocation;
 pub use crate::wire::commit::WireCommitLocationToHashRequest;
 pub use crate::wire::commit::WireCommitLocationToHashRequestBatch;
 pub use crate::wire::commit::WireCommitLocationToHashResponse;
+pub use crate::wire::commit::WireEphemeralExtendRequest;
+pub use crate::wire::commit::WireEphemeralExtendResponse;
 pub use crate::wire::commit::WireEphemeralPrepareRequest;
 pub use crate::wire::commit::WireEphemeralPrepareResponse;
 pub use crate::wire::commit::WireExtra;
