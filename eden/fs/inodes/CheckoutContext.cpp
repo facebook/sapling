@@ -76,9 +76,14 @@ void CheckoutContext::start(
     } else {
       config->setCheckoutInProgress(oldParent.value(), newSnapshot);
     }
-    XLOG(DBG1) << "updated snapshot for " << config->getMountPath() << " from "
-               << (oldParent.has_value() ? oldParent->value() : "<none>")
-               << " to " << newSnapshot;
+    // P1373448241
+    static const std::string_view kEmptyOldParent = "<none>";
+    XLOGF(
+        DBG1,
+        "updated snapshot for {} from {} to {}",
+        config->getMountPath(),
+        oldParent.has_value() ? oldParent->value() : kEmptyOldParent,
+        newSnapshot);
   }
 }
 

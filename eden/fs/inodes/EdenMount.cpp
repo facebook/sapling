@@ -1470,8 +1470,12 @@ ImmediateFuture<CheckoutResult> EdenMount::checkout(
         fetchContext->getRequestInfo());
   }
 
-  XLOG(DBG1) << "starting checkout for " << this->getPath() << ": " << oldParent
-             << " to " << snapshotHash;
+  XLOGF(
+      DBG1,
+      "starting checkout for {}: {} to {}",
+      this->getPath(),
+      oldParent,
+      snapshotHash);
 
   // Update lastCheckoutTime_ before starting the checkout operation.
   // This ensures that any inode objects created once the checkout starts will
@@ -1723,15 +1727,19 @@ ImmediateFuture<CheckoutResult> EdenMount::checkout(
         auto fetchStats = ctx->getStatsContext().computeStatistics();
         auto inodeCounts = getInodeMap()->getInodeCounts();
 
-        XLOG(DBG1) << (result.hasValue() ? "" : "failed ") << "checkout for "
-                   << this->getPath() << " from " << oldParent << " to "
-                   << snapshotHash << " accessed "
-                   << fetchStats.tree.accessCount << " trees ("
-                   << fetchStats.tree.cacheHitRate << "% chr), "
-                   << fetchStats.blob.accessCount << " blobs ("
-                   << fetchStats.blob.cacheHitRate << "% chr), and "
-                   << fetchStats.blobAuxData.accessCount << " metadata ("
-                   << fetchStats.blobAuxData.cacheHitRate << "% chr).";
+        XLOGF(
+            DBG1,
+            "{}checkout for {} from {} to {} accessed {} trees ({}% chr), {} blobs ({}% chr), and {} metadata ({}% chr).",
+            result.hasValue() ? "" : "failed ",
+            this->getPath(),
+            oldParent,
+            snapshotHash,
+            fetchStats.tree.accessCount,
+            fetchStats.tree.cacheHitRate,
+            fetchStats.blob.accessCount,
+            fetchStats.blob.cacheHitRate,
+            fetchStats.blobAuxData.accessCount,
+            fetchStats.blobAuxData.cacheHitRate);
 
         auto checkoutTimeInSeconds =
             std::chrono::duration<double>{stopWatch.elapsed()};
@@ -2090,11 +2098,13 @@ ImmediateFuture<Unit> EdenMount::diff(
             })
             .ensure(std::move(stateHolder));
       }
-      XLOG(ERR) << "ScmStatusCache returned nullptr for promise: key=" << key
-                << ", commitHash=" << commitHash
-                << ", listIgnored=" << listIgnored
-                << ", curSequenceID=" << curSequenceID
-                << ". Falling back to no-cache path for this request";
+      XLOGF(
+          ERR,
+          "ScmStatusCache returned nullptr for promise: key={}, commitHash={}, listIgnored={}, curSequenceID={}. Falling back to no-cache path for this request",
+          key,
+          commitHash,
+          listIgnored,
+          curSequenceID);
     }
   }
 
@@ -2136,8 +2146,12 @@ void EdenMount::resetParent(const RootId& parent) {
   }
 
   auto oldParent = parentLock->workingCopyParentRootId;
-  XLOG(DBG1) << "resetting snapshot for " << this->getPath() << " from "
-             << oldParent << " to " << parent;
+  XLOGF(
+      DBG1,
+      "resetting snapshot for {} from {} to {}",
+      this->getPath(),
+      oldParent,
+      parent);
 
   // TODO: Maybe we should walk the inodes and see if we can dematerialize
   // some files using the new source control state.

@@ -191,7 +191,7 @@ std::shared_ptr<const Tree> changeCaseSensitivity(
 ImmediateFuture<ObjectStore::GetRootTreeResult> ObjectStore::getRootTree(
     const RootId& rootId,
     const ObjectFetchContextPtr& context) const {
-  XLOG(DBG3) << "getRootTree(" << rootId << ")";
+  XLOGF(DBG3, "getRootTree({})", rootId);
   DurationScope<EdenStats> statScope{stats_, &ObjectStoreStats::getRootTree};
 
   // TODO: this code caches the root tree, but doesn't have similar code to look

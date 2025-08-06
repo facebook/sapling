@@ -52,8 +52,6 @@ class RootId {
   std::string id_;
 };
 
-std::ostream& operator<<(std::ostream& os, const RootId& rootId);
-
 // Make folly::to<string>(RootId) work.
 void toAppend(const RootId&, std::string* result);
 
@@ -86,6 +84,7 @@ template <>
 struct fmt::formatter<facebook::eden::RootId> : formatter<std::string> {
   template <typename Context>
   auto format(const facebook::eden::RootId& id, Context& ctx) const {
+    // no extra allocation due to RootId::value returning a const std::string&
     return formatter<std::string>::format(id.value(), ctx);
   }
 };

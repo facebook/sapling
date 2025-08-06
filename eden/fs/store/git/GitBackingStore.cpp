@@ -110,7 +110,7 @@ ImmediateFuture<BackingStore::GetRootTreeResult> GitBackingStore::getRootTree(
     const RootId& rootId,
     const ObjectFetchContextPtr& /*context*/) {
   // TODO: Use a separate thread pool to do the git I/O
-  XLOG(DBG4) << "resolving tree for commit " << rootId;
+  XLOGF(DBG4, "resolving tree for commit {}", rootId);
 
   // Look up the commit info
   git_oid commitOID = root2Oid(rootId);
