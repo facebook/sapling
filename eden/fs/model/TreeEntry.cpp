@@ -136,21 +136,6 @@ std::string TreeEntry::toLogString(PathComponentPiece name) const {
   return fmt::format("({}, {}, {})", name, hash_, fileTypeChar);
 }
 
-std::ostream& operator<<(std::ostream& os, TreeEntryType type) {
-  switch (type) {
-    case TreeEntryType::TREE:
-      return os << "TREE";
-    case TreeEntryType::REGULAR_FILE:
-      return os << "REGULAR_FILE";
-    case TreeEntryType::EXECUTABLE_FILE:
-      return os << "EXECUTABLE_FILE";
-    case TreeEntryType::SYMLINK:
-      return os << "SYMLINK";
-  }
-
-  return os << "TreeEntryType::" << int(type);
-}
-
 size_t TreeEntry::serializedSize(PathComponentPiece name) const {
   return sizeof(uint8_t) + sizeof(uint16_t) + hash_.size() + sizeof(uint16_t) +
       name.view().size() + sizeof(uint64_t) + Hash20::RAW_SIZE +

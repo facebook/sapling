@@ -177,6 +177,4 @@ class TreeEntry {
   static constexpr uint64_t NO_SIZE = std::numeric_limits<uint64_t>::max();
 };
 
-std::ostream& operator<<(std::ostream& os, TreeEntryType type);
-
 } // namespace facebook::eden
