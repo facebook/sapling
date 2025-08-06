@@ -10,5 +10,6 @@ mod response;
 
 pub use self::request::encoding::RequestContentEncodingMiddleware;
 pub use self::request::pushvars::PushvarsParsingMiddleware;
+pub use self::request::ratelimiting::UploadPackRateLimitingMiddleware;
 pub use self::response::content_type::ResponseContentTypeMiddleware;
 pub use self::response::ods3::Ods3Middleware;

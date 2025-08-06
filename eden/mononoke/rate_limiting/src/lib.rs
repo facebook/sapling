@@ -125,6 +125,39 @@ impl RateLimitEnvironment {
         }
     }
 
+    pub fn new_with_runtime(
+        fb: FacebookInit,
+        category: String,
+        config: ConfigHandle<MononokeRateLimitConfig>,
+        counter_manager: Arc<RwLock<OdsCounterManager>>,
+        runtime: tokio::runtime::Handle,
+    ) -> Self {
+        for limit in &config.get().load_shed_limits {
+            match &limit.raw_config.load_shedding_metric {
+                LoadSheddingMetric::external_ods_counter(counter) => {
+                    counter_manager.write().expect("Poisoned lock").add_counter(
+                        counter.entity.clone(),
+                        counter.key.clone(),
+                        counter.reduce.clone(),
+                    )
+                }
+                _ => {}
+            };
+        }
+
+        runtime.spawn(periodic_fetch_counter(
+            counter_manager.clone(),
+            Duration::from_secs(60),
+        ));
+
+        Self {
+            fb,
+            category,
+            config,
+            counter_manager,
+        }
+    }
+
     pub fn get_rate_limiter(&self) -> BoxRateLimiter {
         let config = self.config.get();
 

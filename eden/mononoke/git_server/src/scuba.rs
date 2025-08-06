@@ -12,6 +12,7 @@ use gotham_ext::middleware::MetadataState;
 use gotham_ext::middleware::PostResponseInfo;
 use gotham_ext::middleware::ScubaHandler;
 use gotham_ext::middleware::request_context::RequestContext;
+use permission_checker::MononokeIdentitySet;
 use permission_checker::MononokeIdentitySetExt;
 use scuba_ext::MononokeScubaSampleBuilder;
 
@@ -38,6 +39,8 @@ pub enum MononokeGitScubaKey {
     RequestSignature,
     NHaves,
     NWants,
+    ClientMainId,
+    ClientIdentities,
 }
 
 impl AsRef<str> for MononokeGitScubaKey {
@@ -60,6 +63,8 @@ impl AsRef<str> for MononokeGitScubaKey {
             Self::RequestSignature => "request_signature",
             Self::NWants => "n_wants",
             Self::NHaves => "n_haves",
+            Self::ClientMainId => "client_main_id",
+            Self::ClientIdentities => "client_identities",
         }
     }
 }
@@ -176,6 +181,23 @@ impl MononokeGitScubaHandler {
 
     fn log_cancelled(mut scuba: MononokeScubaSampleBuilder) {
         scuba.add("log_tag", "MononokeGit Request Cancelled");
+        scuba.unsampled();
+        scuba.log();
+    }
+
+    pub(crate) fn log_rejected(
+        mut scuba: MononokeScubaSampleBuilder,
+        main_client_id: Option<String>,
+        identities: &MononokeIdentitySet,
+        error: String,
+    ) {
+        scuba.add(MononokeGitScubaKey::Error, error);
+        scuba.add_opt(MononokeGitScubaKey::ClientMainId, main_client_id);
+        scuba.add(
+            MononokeGitScubaKey::ClientIdentities,
+            identities.to_string(),
+        );
+        scuba.add("log_tag", "MononokeGit Request Rejected");
         scuba.unsampled();
         scuba.log();
     }

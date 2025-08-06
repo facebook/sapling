@@ -46,16 +46,19 @@ justknobs = { version = "0.1.0", git = "https://github.com/facebookexperimental/
 lazy_static = "1.5"
 metaconfig_parser = { version = "0.1.0", path = "../metaconfig/parser" }
 metaconfig_types = { version = "0.1.0", path = "../metaconfig/types" }
+metadata = { version = "0.1.0", path = "../common/metadata" }
 mime = "0.3.14"
 mononoke_api = { version = "0.1.0", path = "../mononoke_api" }
 mononoke_app = { version = "0.1.0", path = "../cmdlib/mononoke_app" }
 mononoke_macros = { version = "0.1.0", path = "../mononoke_macros" }
 mononoke_repos = { version = "0.1.0", path = "../mononoke_repos" }
 mononoke_types = { version = "0.1.0", path = "../mononoke_types" }
+ods_counters = { version = "0.1.0", path = "../common/ods_counters" }
 packetline = { version = "0.1.0", path = "../git/packetline" }
 packfile = { version = "0.1.0", path = "../git/packfile" }
 permission_checker = { version = "0.1.0", path = "../permission_checker" }
 protocol = { version = "0.1.0", path = "../git/protocol" }
+rate_limiting = { version = "0.1.0", path = "../rate_limiting" }
 repo_authorization = { version = "0.1.0", path = "../repo_authorization" }
 repo_blobstore = { version = "0.1.0", path = "../repo_attributes/repo_blobstore" }
 repo_identity = { version = "0.1.0", path = "../repo_attributes/repo_identity" }

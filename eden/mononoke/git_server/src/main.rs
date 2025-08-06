@@ -65,12 +65,15 @@ use mononoke_app::args::TLSArgs;
 use mononoke_app::args::WarmBookmarksCacheExtension;
 use mononoke_app::monitoring::AliveService;
 use mononoke_app::monitoring::MonitoringAppExtension;
+use ods_counters::OdsCounterManager;
+use rate_limiting::RateLimitEnvironment;
 use slog::info;
 use tokio::net::TcpListener;
 
 use crate::middleware::Ods3Middleware;
 use crate::middleware::RequestContentEncodingMiddleware;
 use crate::middleware::ResponseContentTypeMiddleware;
+use crate::middleware::UploadPackRateLimitingMiddleware;
 use crate::model::GitServerContext;
 use crate::scuba::MononokeGitScubaHandler;
 use crate::service::build_router;
@@ -91,7 +94,8 @@ const SERVICE_NAME: &str = "mononoke_git_server";
 const SM_CLEANUP_TIMEOUT_SECS: u64 = 60;
 /// The sampling rate for perf logging, default to 1 for no sampling
 const PERF_LOG_SAMPLING: u64 = 1;
-
+/// Configerator path for rate limiting config
+const CONFIGERATOR_RATE_LIMITING_CONFIG: &str = "scm/mononoke/ratelimiting/git_ratelimits";
 // Used to determine how many entries are in cachelib's HashTable. A smaller
 // object size results in more entries and possibly higher idle memory usage.
 // More info: https://fburl.com/wiki/i78i3uzk
@@ -188,7 +192,7 @@ fn main(fb: FacebookInit) -> Result<(), Error> {
     let bound_addr_path = args.bound_address_file.clone();
 
     let addr = format!("{}:{}", listen_host, listen_port);
-
+    let common_config = app.repo_configs().common.clone();
     let tls_acceptor = args
         .tls_params
         .clone()
@@ -224,6 +228,27 @@ fn main(fb: FacebookInit) -> Result<(), Error> {
         .map(|_| ShardedService::MononokeGitServer);
     app.start_monitoring(app.runtime(), SERVICE_NAME, AliveService)?;
     app.start_stats_aggregation()?;
+    let rate_limiter = {
+        let handle = app
+            .environment()
+            .config_store
+            .get_config_handle_DEPRECATED(CONFIGERATOR_RATE_LIMITING_CONFIG.to_string())
+            .ok();
+
+        let ods_counter_manager = OdsCounterManager::new(fb);
+
+        handle.and_then(|handle| {
+            common_config.loadlimiter_category.clone().map(|category| {
+                RateLimitEnvironment::new_with_runtime(
+                    fb,
+                    category,
+                    handle,
+                    ods_counter_manager,
+                    runtime.clone(),
+                )
+            })
+        })
+    };
 
     let requests_counter = Arc::new(AtomicI64::new(0));
     let (shutdown_tx, shutdown_rx) = oneshot::channel::<()>();
@@ -285,6 +310,11 @@ fn main(fb: FacebookInit) -> Result<(), Error> {
                     git_scuba,
                     None,
                     args.readonly.readonly,
+                ))
+                .add(UploadPackRateLimitingMiddleware::new(
+                    scuba.clone(),
+                    logger.clone(),
+                    rate_limiter,
                 ))
                 .add(PushvarsParsingMiddleware {})
                 .add(ResponseContentTypeMiddleware {})
