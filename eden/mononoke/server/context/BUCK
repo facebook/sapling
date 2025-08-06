@@ -16,10 +16,10 @@ rust_library(
         "//eden/mononoke/common/rust/sql_ext/sql_query_telemetry:sql_query_telemetry",
         "//eden/mononoke/common/scribe_ext:scribe_ext",
         "//eden/mononoke/common/scuba_ext:scuba_ext",
+        "//eden/mononoke/common/session_id:session_id",
         "//eden/mononoke/permission_checker:permission_checker",
         "//eden/mononoke/rate_limiting:rate_limiting",
         "//eden/mononoke/server/metadata:metadata",
-        "//eden/mononoke/server/session_id:session_id",
         "//eden/scm/lib/clientinfo:clientinfo",
     ],
 )
