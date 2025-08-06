@@ -84,13 +84,4 @@ char scmStatusCodeChar(ScmFileStatus code) {
       static_cast<typename std::underlying_type<ScmFileStatus>::type>(code));
 }
 
-std::ostream& operator<<(std::ostream& os, const ScmStatus& status) {
-  os << "{";
-  for (const auto& pair : *status.entries()) {
-    os << scmStatusCodeChar(pair.second) << " " << pair.first << "; ";
-  }
-  os << "}";
-  return os;
-}
-
 } // namespace facebook::eden

@@ -53,6 +53,4 @@ class ScmStatusDiffCallback : public DiffCallback {
  */
 char scmStatusCodeChar(ScmFileStatus code);
 
-std::ostream& operator<<(std::ostream& os, const ScmStatus& status);
-
 } // namespace facebook::eden
