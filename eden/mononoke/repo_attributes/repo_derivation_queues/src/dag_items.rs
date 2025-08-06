@@ -74,6 +74,7 @@ pub struct DagItemInfo {
     bubble_id: Option<BubbleId>,
     enqueue_timestamp: Option<Timestamp>,
     client_info: Option<ClientInfo>,
+    retry_count: u64,
 }
 
 impl DagItemInfo {
@@ -88,6 +89,7 @@ impl DagItemInfo {
             bubble_id,
             enqueue_timestamp,
             client_info: client_info.cloned(),
+            retry_count: 0,
         }
     }
 
@@ -100,6 +102,7 @@ impl DagItemInfo {
                 .client_info
                 .as_ref()
                 .and_then(|info| info.to_json().ok()),
+            retry_count: Some(self.retry_count as i64),
         }
     }
 
@@ -118,6 +121,7 @@ impl DagItemInfo {
                 .client_info
                 .as_deref()
                 .and_then(|info| ClientInfo::from_json(info).ok()),
+            retry_count: dag_item_info.retry_count.unwrap_or(0) as u64,
         })
     }
 
@@ -127,6 +131,10 @@ impl DagItemInfo {
 
     pub fn deserialize(data: &[u8]) -> Result<Self> {
         Self::from_thrift(compact_protocol::deserialize(data)?)
+    }
+
+    pub fn increment_retry_count(&mut self) {
+        self.retry_count += 1;
     }
 }
 
@@ -196,6 +204,10 @@ impl DerivationDagItem {
 
     pub fn client_info(&self) -> Option<&ClientInfo> {
         self.dag_item_info.client_info.as_ref()
+    }
+
+    pub fn retry_count(&self) -> u64 {
+        self.dag_item_info.retry_count
     }
 
     pub fn deps(&self) -> &Vec<DagItemId> {

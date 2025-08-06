@@ -15,4 +15,5 @@ struct DagItemInfo {
   2: optional time.Timestamp enqueue_timestamp;
   3: optional string client_info;
   4: optional i64 bubble_id;
+  5: optional i64 retry_count;
 }

@@ -61,7 +61,7 @@ pub trait DerivationQueue {
 
     async fn ack(&self, ctx: &CoreContext, item_id: DagItemId) -> Result<(), InternalError>;
 
-    async fn nack(&self, ctx: &CoreContext, item_id: DagItemId) -> Result<(), InternalError>;
+    async fn nack(&self, ctx: &CoreContext, item: DerivationDagItem) -> Result<(), InternalError>;
 
     async fn unsafe_evict(
         &self,
