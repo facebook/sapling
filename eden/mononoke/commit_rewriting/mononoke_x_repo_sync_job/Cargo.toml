@@ -28,7 +28,7 @@ futures_stats = { version = "0.1.0", git = "https://github.com/facebookexperimen
 indicatif = { version = "0.17.6", features = ["futures", "improved_unicode", "rayon", "tokio"] }
 live_commit_sync_config = { version = "0.1.0", path = "../live_commit_sync_config" }
 metaconfig_types = { version = "0.1.0", path = "../../metaconfig/types" }
-metadata = { version = "0.1.0", path = "../../server/metadata" }
+metadata = { version = "0.1.0", path = "../../common/metadata" }
 mononoke_api = { version = "0.1.0", path = "../../mononoke_api" }
 mononoke_app = { version = "0.1.0", path = "../../cmdlib/mononoke_app" }
 mononoke_types = { version = "0.1.0", path = "../../mononoke_types" }

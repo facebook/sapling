@@ -53,6 +53,7 @@ rust_library(
         "//eden/mononoke/common/dedupmap:dedupmap",
         "//eden/mononoke/common/futures_watchdog:futures_watchdog",
         "//eden/mononoke/common/memory:memory",
+        "//eden/mononoke/common/metadata:metadata",
         "//eden/mononoke/common/scribe_ext:scribe_ext",
         "//eden/mononoke/common/scuba_ext:scuba_ext",
         "//eden/mononoke/derived_data:derived_data_manager",
@@ -76,7 +77,6 @@ rust_library(
         "//eden/mononoke/scs/if:source_control-rust-services",
         "//eden/mononoke/scs/scs_errors:scs_errors",
         "//eden/mononoke/server/context:context",
-        "//eden/mononoke/server/metadata:metadata",
         "//eden/scm/lib/clientinfo:clientinfo",
         "//login/if:login_objects_thrift-rust",
     ] + ([] if rust_oss.is_oss_build() else [

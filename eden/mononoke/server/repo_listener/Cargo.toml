@@ -31,7 +31,7 @@ hyper = { version = "0.14.26", features = ["client", "http1", "http2", "stream"]
 justknobs = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 lazy_static = "1.5"
 metaconfig_types = { version = "0.1.0", path = "../../metaconfig/types" }
-metadata = { version = "0.1.0", path = "../metadata" }
+metadata = { version = "0.1.0", path = "../../common/metadata" }
 mononoke_api = { version = "0.1.0", path = "../../mononoke_api" }
 mononoke_app = { version = "0.1.0", path = "../../cmdlib/mononoke_app" }
 mononoke_configs = { version = "0.1.0", path = "../../mononoke_configs" }

@@ -29,7 +29,7 @@ futures = { version = "0.3.31", features = ["async-await", "compat"] }
 live_commit_sync_config = { version = "0.1.0", path = "../../live_commit_sync_config" }
 mercurial_derivation = { version = "0.1.0", path = "../../../derived_data/mercurial_derivation" }
 mercurial_types = { version = "0.1.0", path = "../../../mercurial/types" }
-metadata = { version = "0.1.0", path = "../../../server/metadata" }
+metadata = { version = "0.1.0", path = "../../../common/metadata" }
 mononoke_app = { version = "0.1.0", path = "../../../cmdlib/mononoke_app" }
 mononoke_types = { version = "0.1.0", path = "../../../mononoke_types" }
 repo_identity = { version = "0.1.0", path = "../../../repo_attributes/repo_identity" }

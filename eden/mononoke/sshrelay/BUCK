@@ -16,6 +16,6 @@ rust_library(
         "fbsource//third-party/rust:zstd",
         "fbsource//third-party/rust:zstd-safe",
         "//common/rust/shed/netstring:netstring",
-        "//eden/mononoke/server/metadata:metadata",
+        "//eden/mononoke/common/metadata:metadata",
     ],
 )

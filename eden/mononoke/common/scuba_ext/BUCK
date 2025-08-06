@@ -15,10 +15,10 @@ rust_library(
         "//common/rust/shed/scuba_stub:scuba",
         "//common/rust/shed/time_ext:time_ext",
         "//eden/mononoke/common/memory:memory",
+        "//eden/mononoke/common/metadata:metadata",
         "//eden/mononoke/common/scribe_ext:scribe_ext",
         "//eden/mononoke/observability:observability",
         "//eden/mononoke/permission_checker:permission_checker",
-        "//eden/mononoke/server/metadata:metadata",
         "//eden/scm/lib/clientinfo:clientinfo",
     ],
 )

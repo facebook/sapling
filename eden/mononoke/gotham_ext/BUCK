@@ -39,6 +39,7 @@ rust_library(
         "//common/rust/shed/time_ext:time_ext",
         "//eden/mononoke/cats:cats",
         "//eden/mononoke/common/connection_security_checker:connection_security_checker",
+        "//eden/mononoke/common/metadata:metadata",
         "//eden/mononoke/common/scuba_ext:scuba_ext",
         "//eden/mononoke/common/yield_stream:yield_stream",
         "//eden/mononoke/metaconfig:metaconfig_types",
@@ -48,7 +49,6 @@ rust_library(
         "//eden/mononoke/quiet_stream:quiet_stream",
         "//eden/mononoke/rate_limiting:rate_limiting",
         "//eden/mononoke/server/context:context",
-        "//eden/mononoke/server/metadata:metadata",
         "//eden/scm/lib/clientinfo:clientinfo",
     ],
 )

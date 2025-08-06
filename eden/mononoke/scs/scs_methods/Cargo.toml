@@ -43,7 +43,7 @@ megarepo_api = { version = "0.1.0", path = "../../megarepo_api" }
 megarepo_config = { version = "0.1.0", path = "../../megarepo_api/megarepo_config" }
 memory = { version = "0.1.0", path = "../../common/memory" }
 metaconfig_types = { version = "0.1.0", path = "../../metaconfig/types" }
-metadata = { version = "0.1.0", path = "../../server/metadata" }
+metadata = { version = "0.1.0", path = "../../common/metadata" }
 mononoke_api = { version = "0.1.0", path = "../../mononoke_api" }
 mononoke_api_hg = { version = "0.1.0", path = "../../mononoke_api_hg" }
 mononoke_app = { version = "0.1.0", path = "../../cmdlib/mononoke_app" }

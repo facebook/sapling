@@ -9,7 +9,7 @@ rust_library(
     ],
     deps = [
         "//common/rust/shed/fbinit:fbinit",
-        "//eden/mononoke/server/metadata:metadata",
+        "//eden/mononoke/common/metadata:metadata",
         "//eden/scm/lib/clientinfo:clientinfo",
     ],
 )

@@ -31,9 +31,9 @@ rust_binary(
         "//common/rust/shed/fbinit:fbinit",
         "//eden/mononoke/bookmarks:bookmarks",
         "//eden/mononoke/cmdlib/mononoke_app:mononoke_app",
+        "//eden/mononoke/common/metadata:metadata",
         "//eden/mononoke/repo_attributes/repo_identity:repo_identity",
         "//eden/mononoke/server/context:context",
-        "//eden/mononoke/server/metadata:metadata",
         "//eden/scm/lib/clientinfo:clientinfo",
     ],
 )
