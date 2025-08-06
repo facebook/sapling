@@ -8,7 +8,6 @@
 #pragma once
 
 #include <folly/futures/Future.h>
-#include <ostream>
 
 #include "eden/common/utils/CaseSensitivity.h"
 #include "eden/common/utils/DirType.h"
@@ -432,12 +431,5 @@ class GlobNodeImpl {
   // - it was created with includeDotfiles=true.
   bool alwaysMatch_{false};
 };
-
-// Streaming operators for logging and printing
-inline std::ostream& operator<<(std::ostream& stream, const GlobResult& a) {
-  stream << "GlobResult{\"" << a.name << "\", dtype=" << enumValue(a.dtype)
-         << "}";
-  return stream;
-}
 
 } // namespace facebook::eden
