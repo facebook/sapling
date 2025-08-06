@@ -1,3 +1,4 @@
+load("@fbsource//tools/target_determinator/macros:ci.bzl", "ci")
 load("//windtunnel/cogwheel:defs.bzl", "cogwheel_test", "create_cogwheel_config")
 
 oncall("scm_server_treehugger")
@@ -6,6 +7,9 @@ cogwheel_test(
     name = "cogwheel_edenapi_replay_test",
     srcs = [
         "EdenAPIReplayTest.py",
+    ],
+    labels = [
+        ci.heavyweight(),
     ],
     main_function = "eden.mononoke.facebook.replay.EdenAPIReplayTest.main",
     workload_config = create_cogwheel_config(

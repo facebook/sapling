@@ -1,5 +1,6 @@
 load("@fbcode_macros//build_defs:cpp_library.bzl", "cpp_library")
 load("@fbcode_macros//build_defs:rust_binary.bzl", "rust_binary")
+load("@fbsource//tools/target_determinator/macros:ci.bzl", "ci")
 load("//eden/mononoke/facebook:lib.bzl", "tokio_dependency_test")
 
 oncall("scm_server_infra")
@@ -11,6 +12,9 @@ rust_binary(
         ":metadata",
     ],
     cxx_bridge = "src/metadata.rs",
+    labels = [
+        ci.heavyweight(),
+    ],
     named_deps = {"slog": "//common/rust/shed/tracing_slog_compat:tracing_slog_compat"},
     deps = [
         "fbsource//third-party/rust:anyhow",
