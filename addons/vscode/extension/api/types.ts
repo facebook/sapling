@@ -87,6 +87,11 @@ export interface SaplingRepository {
     callback: (changes: ReadonlyArray<SaplingChangedFile>) => void,
   ): vscode.Disposable;
 
+  /**
+   * Get the current stack of commits.
+   *
+   * Ordered from newest to oldest, with the current commit at the front.
+   */
   getCurrentStack(): Promise<ReadonlyArray<SaplingCommitInfo>>;
 
   // TODO: refresh
