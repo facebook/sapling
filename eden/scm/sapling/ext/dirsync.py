@@ -141,7 +141,7 @@ def _bypassdirsync(orig, ui, repo, *args, **kwargs):
         _disabled[0] = False
 
 
-def getconfigs(wctx) -> sortdict:
+def getconfigs(wctx) -> tuple[sortdict, dict]:
     """returns {name: [path]}.
     [path] under a same name are synced. name is not useful.
     """
@@ -156,6 +156,7 @@ def getconfigs(wctx) -> sortdict:
         cfg.parse("[dirsync]\n%s" % content, filename)
 
     maps = util.sortdict()
+    scripts = {}
     repo = wctx.repo()
     cfg_items = {name: cfg.get("dirsync", name) for name in cfg.names("dirsync")}
     for key, value in repo.ui.configitems("dirsync") + list(cfg_items.items()):
@@ -168,7 +169,20 @@ def getconfigs(wctx) -> sortdict:
         if name not in maps:
             maps[name] = []
         maps[name].append(value)
-    return maps
+
+    scripts.update(repo.ui.configitems("dirsync-scripts"))
+
+    # For security reasons, `[dirsync-scripts]` in `.hgdirsyncrc` is ignored,
+    # unless `dirsync.allow-in-repo-scripts` is set to true.
+    if repo.ui.configbool("dirsync", "allow-in-repo-scripts"):
+        scripts.update(
+            {
+                name: cfg.get("dirsync-scripts", name)
+                for name in cfg.names("dirsync-scripts")
+            }
+        )
+
+    return maps, scripts
 
 
 def configstomatcher(configs):
@@ -305,7 +319,7 @@ def dirsyncctx(ctx, matcher=None):
     This function does not change working copy or dirstate.
     """
     repo = ctx.repo()
-    maps = getconfigs(ctx)
+    maps, scripts = getconfigs(ctx)
     resultmirrored = set()
     resultctx = ctx
 
