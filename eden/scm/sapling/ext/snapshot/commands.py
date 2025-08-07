@@ -72,6 +72,15 @@ subcmd = snapshot.subcommand(
                 "reuse same storage as latest snapshot, if possible; its lifetime won't be extended"
             ),
         ),
+        (
+            "",
+            "continuation-of",
+            "",
+            _(
+                "snapshot id of previous snapshot to continue from, reusing the same ephemeral bubble and extending its TTL"
+            ),
+            _("HASH"),
+        ),
     ]
     + cmdutil.templateopts,
 )

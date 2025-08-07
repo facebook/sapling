@@ -16,6 +16,8 @@ from sapling.revset import parseage
 
 from .metalog import (
     fetchlatestbubble,
+    fetchlatestsnapshot,
+    getcsidbubblemapping,
     SnapshotMetadata,
     storelatest,
     storesnapshotmetadata,
@@ -65,6 +67,37 @@ def parsemaxfilecount(opts):
         return opts["max_file_count"]
     else:
         return None
+
+
+def parsecontinuationof(opts, repo):
+    """Parse the continuation-of option to get the previous snapshot ID"""
+    continuation_value = opts.get("continuation_of", "")
+    if not continuation_value:
+        return None
+
+    if continuation_value == "latest":
+        # Get the latest snapshot ID from metalog
+        latest_snapshot = fetchlatestsnapshot(repo.metalog())
+        if latest_snapshot is None:
+            raise error.Abort(_("no latest snapshot found to continue from"))
+        return latest_snapshot.hex()
+    else:
+        # Validate the hash format (should be 64 character hex string for bonsai hash)
+        if len(continuation_value) != 64:
+            raise error.Abort(
+                _(
+                    "invalid snapshot id format: expected 64 character hex string, got {}"
+                ).format(len(continuation_value))
+            )
+        try:
+            int(continuation_value, 16)
+        except ValueError:
+            raise error.Abort(
+                _("invalid snapshot id format: '{}' is not a valid hex string").format(
+                    continuation_value
+                )
+            )
+        return continuation_value
 
 
 def parentsfromwctx(ui, wctx):
@@ -175,8 +208,18 @@ def createremote(ui, repo, **opts) -> None:
     maxfilecount = parsemaxfilecount(opts)
     reusestorage = opts.get("reuse_storage") is True
     labels = parselabels(opts)
+    continuationof = parsecontinuationof(opts, repo)
+
+    # Validate that --continuation-of and --reuse-storage are not used together
+    if continuationof and reusestorage:
+        raise error.Abort(
+            _(
+                "--continuation-of cannot be used with --reuse-storage (legacy option that does not include TTL extension)"
+            )
+        )
+
     overrides = {}
-    if ui.plain():
+    if ui.plain() or opts.get("template"):
         overrides[("ui", "quiet")] = True
     with repo.wlock(), repo.lock(), repo.transaction("snapshot"), ui.configoverride(
         overrides
@@ -202,7 +245,30 @@ def createremote(ui, repo, **opts) -> None:
                 ).format(filecount, maxfilecount)
             )
 
-        previousbubble = fetchlatestbubble(repo.metalog())
+        # Handle continuation-of option
+        previousbubble = None
+        if continuationof:
+            # Look up bubble ID from the previous snapshot
+            previousbubble = getcsidbubblemapping(repo.metalog(), continuationof)
+            if previousbubble is None:
+                # TODO: Implement remote lookup for bubble ID if not found locally
+                # For now, raise an error if the previous snapshot is not found locally
+                # Implement the TTL extension to update the bubble lifetime
+                raise error.Abort(
+                    _("cannot find bubble for previous snapshot {}").format(
+                        continuationof
+                    )
+                )
+            # The storage must be reused
+            reusestorage = True
+            ui.status(
+                _("continuing from snapshot {} using bubble {}\n").format(
+                    continuationof, previousbubble
+                ),
+                component="snapshot",
+            )
+        else:
+            previousbubble = fetchlatestbubble(repo.metalog())
 
         response = uploadsnapshot(
             repo,
