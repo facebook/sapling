@@ -10,10 +10,13 @@ use anyhow::anyhow;
 use clap::Args;
 use context::CoreContext;
 use futures::StreamExt;
+use futures::TryStreamExt;
 use mononoke_app::args::MultiDerivedDataArgs;
+use mononoke_types::DerivableType;
 use prettytable::Table;
 use prettytable::cell;
 use prettytable::row;
+use repo_derivation_queues::DerivationQueueSummary;
 use repo_derivation_queues::RepoDerivationQueuesRef;
 
 use super::Repo;
@@ -31,6 +34,10 @@ pub struct SummaryArgs {
     /// Filter by derived data types.
     #[clap(flatten)]
     multi_derived_data_args: MultiDerivedDataArgs,
+
+    /// Whether to output in JSON format.
+    #[clap(long)]
+    json: bool,
 }
 
 pub async fn summary(
@@ -46,6 +53,40 @@ pub async fn summary(
 
     let summary = derivation_queue.summary(ctx).await?;
 
+    let derived_data_types = args
+        .multi_derived_data_args
+        .resolve_types(derivation_queue.derived_data_manager().config())?;
+
+    if args.json {
+        print_json(ctx, args, summary).await?
+    } else {
+        print_table(ctx, args, summary, derived_data_types).await?;
+    }
+
+    Ok(())
+}
+
+async fn print_json(
+    _ctx: &CoreContext,
+    args: SummaryArgs,
+    summary: DerivationQueueSummary<'_>,
+) -> Result<()> {
+    let items = summary
+        .items
+        .take(args.limit)
+        .try_collect::<Vec<_>>()
+        .await?;
+    println!("{}", serde_json::to_string(&items)?);
+
+    Ok(())
+}
+
+async fn print_table(
+    _ctx: &CoreContext,
+    args: SummaryArgs,
+    summary: DerivationQueueSummary<'_>,
+    derived_data_types: Vec<DerivableType>,
+) -> Result<()> {
     let mut table = Table::new();
 
     let mut titles = row![
@@ -60,10 +101,6 @@ pub async fn summary(
         titles.add_cell(cell!["client info"]);
     }
     table.set_titles(titles);
-
-    let derived_data_types = args
-        .multi_derived_data_args
-        .resolve_types(derivation_queue.derived_data_manager().config())?;
 
     println!("Number of items in the queue: {}", summary.queue_size);
     let mut item_stream = summary.items.take(args.limit);

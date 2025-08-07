@@ -7,6 +7,8 @@
 
 use anyhow::Result;
 use anyhow::bail;
+use serde::Deserialize;
+use serde::Serialize;
 use strum::AsRefStr;
 use strum::Display;
 use strum::EnumIter;
@@ -22,8 +24,20 @@ use crate::thrift;
 /// It also provides `as_ref()` method for serialization.
 /// and implements FromStr trait for deserialization.
 #[derive(
-    AsRefStr, EnumString, Display, Debug, Clone, Copy, PartialEq, Eq, Hash, EnumIter, Ord,
-    PartialOrd
+    AsRefStr,
+    EnumString,
+    Display,
+    Debug,
+    Clone,
+    Copy,
+    PartialEq,
+    Eq,
+    Hash,
+    EnumIter,
+    Ord,
+    PartialOrd,
+    Serialize,
+    Deserialize
 )]
 pub enum DerivableType {
     BlameV2,

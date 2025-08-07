@@ -89,7 +89,18 @@ impl StorageLocation {
 }
 
 /// Ephemeral Blobstore Bubble ID.
-#[derive(Copy, Clone, Debug, Eq, PartialEq, Ord, PartialOrd, Hash)]
+#[derive(
+    Copy,
+    Clone,
+    Debug,
+    Eq,
+    PartialEq,
+    Ord,
+    PartialOrd,
+    Hash,
+    Serialize,
+    Deserialize
+)]
 pub struct BubbleId(NonZeroU64);
 
 impl fmt::Display for BubbleId {

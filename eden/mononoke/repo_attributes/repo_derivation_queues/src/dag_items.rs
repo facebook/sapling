@@ -18,17 +18,19 @@ use fbthrift::compact_protocol;
 use mononoke_types::ChangesetId;
 use mononoke_types::RepositoryId;
 use mononoke_types::Timestamp;
+use serde::Deserialize;
+use serde::Serialize;
 
 use crate::InternalError;
 
-#[derive(Clone, Debug, PartialEq, Eq)]
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
 pub struct DerivationDagItem {
     pub dag_item_id: DagItemId,
     pub dag_item_info: DagItemInfo,
     pub deps: Vec<DagItemId>,
 }
 
-#[derive(Clone, Debug, PartialEq, Eq, Hash)]
+#[derive(Clone, Debug, PartialEq, Eq, Hash, Serialize, Deserialize)]
 pub struct DagItemId {
     pub repo_id: RepositoryId,
     pub config_name: String,
@@ -68,7 +70,7 @@ impl DagItemId {
     }
 }
 
-#[derive(Clone, Debug, PartialEq, Eq)]
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
 pub struct DagItemInfo {
     head_cs_id: ChangesetId,
     bubble_id: Option<BubbleId>,
