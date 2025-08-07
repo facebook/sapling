@@ -301,7 +301,6 @@ def createremote(ui, repo, **opts) -> None:
                         component="snapshot",
                     )
 
-            # TODO(liubod): TTL extension is not implemented yet
             # The storage must be reused
             reusestorage = True
             ui.status(

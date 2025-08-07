@@ -125,6 +125,17 @@ pub async fn upload_snapshot(
         .collect();
 
     let bubble_id = if let Some(id) = use_bubble {
+        // Extend the lifetime of the existing bubble while reusing it
+        // Please, see the documentation of ephemeral_extend for more details.
+        // If the requested duration is shorter than the existing bubble's lifetime,
+        // the lifetime will not be changed.
+        // If the requested duration is not provided, the lifetime will be extended to the default lifetime from this moment or
+        // remaining lifetime of the existing bubble, whichever is longer.
+        // Note: Bubbles with labels remain active even past their expiry time and can be extended successfully.
+        // Only bubbles without labels that have expired will cause the request to fail.
+        api.ephemeral_extend(id, custom_duration_secs)
+            .await
+            .context("Failed to extend ephemeral bubble lifetime")?;
         id
     } else {
         api.ephemeral_prepare(custom_duration_secs.map(Duration::from_secs), labels)
