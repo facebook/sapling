@@ -6,7 +6,7 @@
 from sapling import cmdutil, error, registrar
 from sapling.i18n import _
 
-from . import createremote, isworkingcopy, labels, latest, show, update
+from . import createremote, isworkingcopy, labels, latest, list, show, update
 
 cmdtable = {}
 command = registrar.command(cmdtable)
@@ -24,7 +24,7 @@ def snapshot(ui, repo, **opts):
 subcmd = snapshot.subcommand(
     categories=[
         ("Manage snapshots", ["create", "update", "add-labels", "remove-labels"]),
-        ("Query snapshots", ["show"]),
+        ("Query snapshots", ["show", "list"]),
     ]
 )
 
@@ -206,3 +206,28 @@ def add_labels(*args, **kwargs) -> None:
 def remove_labels(*args, **kwargs) -> None:
     """Remove associated labels from an existing snapshot"""
     labels.remove_labels(*args, **kwargs)
+
+
+@subcmd(
+    "list",
+    [
+        (
+            "l",
+            "limit",
+            "",
+            _("limit the number of snapshots to show"),
+            _("NUM"),
+        ),
+        (
+            "s",
+            "since",
+            "",
+            _("show snapshots created since this date/time"),
+            _("DATE"),
+        ),
+    ]
+    + cmdutil.templateopts,
+)
+def listcmd(*args, **kwargs) -> None:
+    """list locally known snapshots"""
+    list.list_snapshots(*args, **kwargs)
