@@ -81,7 +81,3 @@ Try out syncing in the other direction:
   $ cat ../a/x.log
   The year is 2024.
   Another 2024.
-
-In-repo `.hgdirsync` 
-  $ setconfig dirsync.allow-in-repo-scripts=true
-
