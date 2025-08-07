@@ -23,6 +23,8 @@ from .metalog import (
     storesnapshotmetadata,
 )
 
+from .update import fetchsnapshot
+
 
 @util.timefunction("snapshot_backup_parents", 0, "ui")
 def _backupparents(repo, wctx) -> None:
@@ -98,6 +100,24 @@ def parsecontinuationof(opts, repo):
                 )
             )
         return continuation_value
+
+
+def _fetchremotebubble(repo, cs_id):
+    """Fetch bubble ID for a changeset from the remote server"""
+    try:
+        response = fetchsnapshot(repo, bytes.fromhex(cs_id))
+        bubble_id = response.get("bubble_id")
+        if bubble_id is not None:
+            return bubble_id
+        else:
+            return None
+
+    except Exception as e:
+        # Log the error but don't fail the operation
+        repo.ui.debug(
+            _("failed to fetch remote bubble for {}: {}\n").format(cs_id, str(e))
+        )
+        return None
 
 
 def parentsfromwctx(ui, wctx):
@@ -251,14 +271,37 @@ def createremote(ui, repo, **opts) -> None:
             # Look up bubble ID from the previous snapshot
             previousbubble = getcsidbubblemapping(repo.metalog(), continuationof)
             if previousbubble is None:
-                # TODO: Implement remote lookup for bubble ID if not found locally
-                # For now, raise an error if the previous snapshot is not found locally
-                # Implement the TTL extension to update the bubble lifetime
-                raise error.Abort(
-                    _("cannot find bubble for previous snapshot {}").format(
+                # Try remote lookup for bubble ID if not found locally
+                ui.status(
+                    _("bubble not found locally for {}, trying remote lookup\n").format(
                         continuationof
-                    )
+                    ),
+                    component="snapshot",
                 )
+                previousbubble = _fetchremotebubble(repo, continuationof)
+
+                if previousbubble is None:
+                    # Still not found, raise an error
+                    raise error.Abort(
+                        _(
+                            "cannot find bubble for previous snapshot {} (checked both local and remote)"
+                        ).format(continuationof)
+                    )
+                else:
+                    # Cache the remote result locally for future use
+                    with repo.transaction("snapshot_cache_bubble"):
+                        metadata = SnapshotMetadata(
+                            bubble=previousbubble, created_at=mtime.time()
+                        )
+                        storesnapshotmetadata(repo, continuationof, metadata)
+                    ui.status(
+                        _("found bubble {} for {} via remote lookup\n").format(
+                            previousbubble, continuationof
+                        ),
+                        component="snapshot",
+                    )
+
+            # TODO(liubod): TTL extension is not implemented yet
             # The storage must be reused
             reusestorage = True
             ui.status(
