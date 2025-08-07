@@ -229,13 +229,41 @@ def createremote(ui, repo, **opts) -> None:
 
     csid = csid.hex()
 
-    if ui.plain():
-        ui.status(f"{csid}\n")
-    elif labels:
-        labels = ",".join(labels)
-        ui.status(
-            _("Snapshot created with id {} and labels {}\n").format(csid, labels),
-            component="snapshot",
-        )
+    # Use formatter for JSON output support
+    if opts.get("template"):
+        with ui.formatter("snapshot", opts) as fm:
+            fm.startitem()
+            fm.data(id=csid)
+            fm.data(bubble=bubble)
+            # the variable actually always holds p1
+            parent = hgparents.hex()
+            fm.data(parent=parent)
+            if labels:
+                fm.data(labels=labels)
+
+            # For non-JSON output, provide the traditional format
+            if not ui.quiet:
+                if ui.plain():
+                    fm.plain(f"{csid}\n")
+                elif labels:
+                    labels_str = ",".join(labels)
+                    fm.plain(
+                        _(
+                            "snapshot: Snapshot created with id {} and labels {}\n"
+                        ).format(csid, labels_str)
+                    )
+                else:
+                    fm.plain(_("snapshot: Snapshot created with id {}\n").format(csid))
     else:
-        ui.status(_("Snapshot created with id {}\n").format(csid), component="snapshot")
+        if ui.plain():
+            ui.status(f"{csid}\n")
+        elif labels:
+            labels = ",".join(labels)
+            ui.status(
+                _("Snapshot created with id {} and labels {}\n").format(csid, labels),
+                component="snapshot",
+            )
+        else:
+            ui.status(
+                _("Snapshot created with id {}\n").format(csid), component="snapshot"
+            )

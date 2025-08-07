@@ -3,7 +3,7 @@
 # This software may be used and distributed according to the terms of the
 # GNU General Public License version 2.
 
-from sapling import error, registrar
+from sapling import cmdutil, error, registrar
 from sapling.i18n import _
 
 from . import createremote, isworkingcopy, labels, latest, show, update
@@ -72,7 +72,8 @@ subcmd = snapshot.subcommand(
                 "reuse same storage as latest snapshot, if possible; its lifetime won't be extended"
             ),
         ),
-    ],
+    ]
+    + cmdutil.templateopts,
 )
 def createremotecmd(*args, **kwargs) -> None:
     """
