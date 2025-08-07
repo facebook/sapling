@@ -277,18 +277,6 @@ dott_test(
 )
 
 dott_test(
-    name = "snapshot",
-    dott_files = glob(["test-snapshot*.t"]),
-    deps = [
-        "//eden/mononoke:mononoke",
-        "//eden/mononoke/scs/client:scsc",
-        "//eden/mononoke/scs/scs_server:scs_server",
-        "//eden/mononoke/tools/admin:admin",
-        "//eden/mononoke/tools/testtool:testtool",
-    ],
-)
-
-dott_test(
     name = "slow-bookmark-mover",
     dott_files = glob([
         "test-mononoke-slow-bookmark-mover*.t",
