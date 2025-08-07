@@ -3,6 +3,7 @@
 # This software may be used and distributed according to the terms of the
 # GNU General Public License version 2.
 
+import time as mtime
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Optional
@@ -13,7 +14,12 @@ from sapling.i18n import _
 from sapling.node import nullid
 from sapling.revset import parseage
 
-from .metalog import fetchlatestbubble, storelatest
+from .metalog import (
+    fetchlatestbubble,
+    SnapshotMetadata,
+    storelatest,
+    storesnapshotmetadata,
+)
 
 
 @util.timefunction("snapshot_backup_parents", 0, "ui")
@@ -214,7 +220,13 @@ def createremote(ui, repo, **opts) -> None:
         csid = bytes(response["changeset_token"]["data"]["id"]["BonsaiChangesetId"])
         bubble = response["bubble_id"]
 
+        # Store latest snapshot and bubble mapping in the local cache
         storelatest(repo, csid, bubble)
+
+        # Store metadata for this snapshot in the local cache
+        metadata = SnapshotMetadata(bubble=bubble, created_at=mtime.time())
+        storesnapshotmetadata(repo, csid.hex(), metadata)
+
     csid = csid.hex()
 
     if ui.plain():
