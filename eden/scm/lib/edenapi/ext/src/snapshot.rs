@@ -152,11 +152,6 @@ pub async fn upload_snapshot_with_cache(
             for FileData(content_id, data) in upload_data_for_cache {
                 if let Err(e) = cache.store_with_content_id(content_id, &data) {
                     tracing::warn!("Failed to cache file content during upload: {}", e);
-                } else {
-                    tracing::debug!(
-                        "Cached file content during upload with ContentId: {}",
-                        content_id
-                    );
                 }
             }
         }))

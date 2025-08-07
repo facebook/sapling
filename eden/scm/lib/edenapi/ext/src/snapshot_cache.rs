@@ -25,7 +25,6 @@ use minibytes::Bytes;
 use revisionstore::indexedlogutil::Store;
 use revisionstore::indexedlogutil::StoreOpenOptions;
 use tracing::debug;
-use tracing::info;
 use tracing::warn;
 
 /// Default maximum size of file content to cache (10MB)
@@ -236,7 +235,7 @@ impl SnapshotFileCache {
             )
         })?;
 
-        info!(
+        debug!(
             "Cached file content ({} bytes) with ContentId: {}",
             content.len(),
             content_id
