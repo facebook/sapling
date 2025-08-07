@@ -31,13 +31,38 @@ arbitrary number of directories::
     projectY.dir3 = foo/goo/hoo
 
 If you wish to exclude a subdirectory from being synced, for every rule in a group,
-create a rule for the subdirectory and prefix it with "exclude":
+create a rule for the subdirectory and prefix it with "exclude"::
 
-        [dirsync]
-        projectX.dir1 = dir1/foo
-        exclude.projectX.dir1 = dir1/foo/bar
-        projectX.dir2 = dir2/dir1/foo
-        exclude.projectX.dir2 = dir2/dir1/foo/bar
+    [dirsync]
+    projectX.dir1 = dir1/foo
+    exclude.projectX.dir1 = dir1/foo/bar
+    projectX.dir2 = dir2/dir1/foo
+    exclude.projectX.dir2 = dir2/dir1/foo/bar
+
+If you want to customize the mirror behavior, you can write a script like::
+
+    # dirsync/projectX.py
+    def mirror_path(src_dir, dst_dir, src_rel):
+        # Optional function to customize mirrored path.
+        # Example: src_dir="a/dir1/", dst_dir="a/dir2/", src_rel="c/d.txt"
+        # The full path of source file is src_dir + src_rel, "a/dir1/c/d.txt".
+        # The mirrored path will be dst_dir + return value.
+        # If return value is None, the mirror behavior will be skipped.
+        return src_rel
+
+    def mirror_data(src_dir, dst_dir, src_rel, src_data: bytes) -> bytes:
+        # Optional function to customize mirrored file content.
+        # Similar to mirror_path, but returns the content of the mirrored file.
+        return src_data
+
+then specify the script in the ``[dirsync-scripts]`` config section::
+
+    [dirsync-scripts]
+    projectX = dirsync/projectX.py
+
+The ``[dirsync]`` configs can also be part of the ``.hgdirsync`` file in the
+repo root. The ``[dirsync-scripts]`` in ``.hgdirsync`` is ignored by default,
+unless the ``dirsync.allow-in-repo-scripts`` config is enabled.
 """
 
 from typing import Optional, Sized
@@ -404,11 +429,14 @@ def dirsyncctx(ctx, matcher=None):
                 )
                 continue
             mod = load_script(ctx, scripts, mirrorname, module_cache)
+            mirror_path = getattr(mod, "mirror_path", _default_mirror_path)
+            mirror_data = getattr(mod, "mirror_data", None)
 
             dstpaths = []  # [(dstpath, dstmirror)]
             for dstmirror in (m for m in mirrors if m != srcmirror):
-                dst = _mirror_full_path(srcmirror, dstmirror, src)
-                dstpaths.append((dst, dstmirror))
+                dst = _mirror_full_path(srcmirror, dstmirror, src, mirror_path)
+                if dst is not None:
+                    dstpaths.append((dst, dstmirror))
 
             if action == "r":
                 fsrc = None
@@ -447,7 +475,9 @@ def dirsyncctx(ctx, matcher=None):
                 msg = None
                 if renamed:
                     copyfrom, copynode = renamed
-                    newcopyfrom = _mirror_full_path(srcmirror, dstmirror, copyfrom)
+                    newcopyfrom = _mirror_full_path(
+                        srcmirror, dstmirror, copyfrom, mirror_path
+                    )
                     if newcopyfrom:
                         if action == "a":
                             msg = _("mirrored copy '%s -> %s' to '%s -> %s'\n") % (
@@ -458,6 +488,19 @@ def dirsyncctx(ctx, matcher=None):
                             )
                         fmirror = context.overlayfilectx(
                             fsrc, copied=(newcopyfrom, copynode)
+                        )
+
+                if mirror_data is not None:
+                    src_data = fsrc.data()
+                    dst_data = mirror_data(srcmirror, dstmirror, src, src_data)
+                    if dst_data != src_data:
+                        if not isinstance(dst_data, bytes):
+                            raise error.ProgrammingError(
+                                "mirror_data result should be bytes, got %s"
+                                % type(dst_data)
+                            )
+                        fmirror = context.overlayfilectx(
+                            fmirror, datafunc=lambda: dst_data
                         )
 
                 mctx[dst] = fmirror
