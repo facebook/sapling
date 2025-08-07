@@ -360,7 +360,7 @@ mod facebook {
         let expected_logs = vec![
             ScubaTelemetryLogSample {
                 success: true,
-                repo_ids: vec![100.into(), 100.into(), 200.into()],
+                repo_ids: vec![100.into(), 200.into()],
                 granularity: TelemetryGranularity::Query,
                 query_name: Some("WriteQuery2".to_string()),
                 shard_name: TEST_XDB_NAME.to_string(),

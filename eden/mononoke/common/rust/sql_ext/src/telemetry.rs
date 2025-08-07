@@ -395,6 +395,7 @@ fn setup_scuba_sample(
         repo_ids
             .into_iter()
             .sorted()
+            .dedup()
             .map(|id| id.to_string())
             .collect::<Vec<_>>(),
     );
