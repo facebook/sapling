@@ -8,6 +8,8 @@ rust_python_library(
     crate_root = "src/lib.rs",
     deps = [
         "//eden/scm/lib/async-runtime:async-runtime",
+        "//eden/scm/lib/config/model:configmodel",
+        "//eden/scm/lib/config/set:configset",
         "//eden/scm/lib/cpython-ext:cpython-ext",
         "//eden/scm/lib/dag:dag",
         "//eden/scm/lib/eagerepo:eagerepo",

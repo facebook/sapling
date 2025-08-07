@@ -12,6 +12,7 @@ futures = { version = "0.3.31", features = ["async-await", "compat"] }
 pyconfigloader = { version = "0.1.0", path = "../pyconfigloader" }
 pyrevisionstore = { version = "0.1.0", path = "../pyrevisionstore" }
 sapling-async-runtime = { version = "0.1.0", path = "../../../../lib/async-runtime" }
+sapling-configmodel = { version = "0.1.0", path = "../../../../lib/config/model" }
 sapling-cpython-async = { version = "0.1.0", path = "../../../../lib/cpython-async" }
 sapling-cpython-ext = { version = "0.1.0", path = "../../../../lib/cpython-ext" }
 sapling-dag-types = { version = "0.1.0", path = "../../../../lib/dag/dag-types" }

@@ -10,6 +10,8 @@ use std::path::PathBuf;
 use std::sync::Arc;
 
 use async_runtime::block_on;
+use configmodel::Config;
+use configset::config::ConfigSet;
 use cpython::*;
 use cpython_ext::PyNone;
 use cpython_ext::PyPath;
@@ -38,13 +40,14 @@ pub fn init_module(py: Python, package: &str) -> PyResult<PyModule> {
 py_class!(class EagerRepo |py| {
     data path: PathBuf;
     data inner: RefCell<RustEagerRepo>;
+    data config: Arc<dyn Config>;
 
     /// Construct `EagerRepo` from a directory.
     @staticmethod
     def open(dir: &PyPath) -> PyResult<Self> {
         let path = dir.as_path().to_path_buf();
         let inner = RustEagerRepo::open(&path).map_pyerr(py)?;
-        Self::create_instance(py, path, RefCell::new(inner))
+        Self::create_instance(py, path, RefCell::new(inner), Arc::new(ConfigSet::new()))
     }
 
     /// Construct `EagerRepo` from a URL.
@@ -57,7 +60,7 @@ py_class!(class EagerRepo |py| {
             None => return Err(PyErr::new::<exc::ValueError, _>(py, "invalid url")),
         };
         let inner = RustEagerRepo::open(&dir).map_pyerr(py)?;
-        Self::create_instance(py, dir, RefCell::new(inner))
+        Self::create_instance(py, dir, RefCell::new(inner), Arc::new(config))
     }
 
     /// Write pending changes to disk.
@@ -109,7 +112,7 @@ py_class!(class EagerRepo |py| {
     /// It re-opens the on-disk state so pending changes won't be exposed.
     def edenapiclient(&self) -> PyResult<PyClient> {
         let inner = RustEagerRepo::open(self.path(py)).map_pyerr(py)?;
-        PyClient::from_edenapi(py, Arc::new(inner))
+        PyClient::from_edenapi(py, Arc::new(inner), self.config(py).clone())
     }
 
     /// Obtain a dag snapshot.

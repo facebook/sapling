@@ -11,6 +11,8 @@ pyconfigloader = { version = "0.1.0", path = "../pyconfigloader" }
 pydag = { version = "0.1.0", path = "../pydag" }
 pyedenapi = { version = "0.1.0", path = "../pyedenapi" }
 sapling-async-runtime = { version = "0.1.0", path = "../../../../lib/async-runtime" }
+sapling-configmodel = { version = "0.1.0", path = "../../../../lib/config/model" }
+sapling-configset = { version = "0.1.0", path = "../../../../lib/config/set" }
 sapling-cpython-ext = { version = "0.1.0", path = "../../../../lib/cpython-ext" }
 sapling-dag = { version = "0.1.0", path = "../../../../lib/dag" }
 sapling-eagerepo = { version = "0.1.0", path = "../../../../lib/eagerepo" }

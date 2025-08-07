@@ -11,6 +11,7 @@ use std::sync::Arc;
 use std::time::Duration;
 
 use async_runtime::block_unless_interrupted;
+use configmodel::Config;
 use cpython::*;
 use cpython_async::PyFuture;
 use cpython_async::TStream;
@@ -22,9 +23,10 @@ use cpython_ext::convert::Serde;
 use edenapi::Builder;
 use edenapi::SaplingRemoteApi;
 use edenapi::UploadLookupPolicy;
+use edenapi_ext::SharedSnapshotFileCache;
 use edenapi_ext::check_files;
 use edenapi_ext::download_files;
-use edenapi_ext::upload_snapshot;
+use edenapi_ext::upload_snapshot_with_cache;
 use edenapi_types::AlterSnapshotRequest;
 use edenapi_types::AlterSnapshotResponse;
 use edenapi_types::AnyFileContentId;
@@ -104,6 +106,7 @@ use crate::util::to_path;
 // the `SaplingRemoteApiPyExt` trait.
 py_class!(pub class client |py| {
     data inner: Arc<dyn SaplingRemoteApi>;
+    data config: Arc<dyn Config>;
 
     def __new__(
         _cls,
@@ -129,7 +132,7 @@ py_class!(pub class client |py| {
             .build()
             .map_pyerr(py)?;
 
-        client::create_instance(py, inner)
+        Self::create_instance(py, inner, Arc::new(config))
     }
 
     /// The URL that is intended to match `paths.default`.
@@ -436,14 +439,18 @@ py_class!(pub class client |py| {
         let api = self.inner(py).as_ref();
         let copy_from_bubble_id = copy_from_bubble_id.and_then(NonZeroU64::new);
         let use_bubble = use_bubble.and_then(NonZeroU64::new);
+        // Use stored Rust config to initialize cache
+        let cache = SharedSnapshotFileCache::from_config(self.config(py).as_ref()).ok();
+
         py.allow_threads(|| {
-            block_unless_interrupted(upload_snapshot(
+            block_unless_interrupted(upload_snapshot_with_cache(
                 api,
                 data.0,
                 custom_duration_secs,
                 copy_from_bubble_id,
                 use_bubble,
                 labels,
+                cache,
             ))
         })
         .map_pyerr(py)?
@@ -699,7 +706,11 @@ impl ExtractInnerRef for client {
 }
 
 impl client {
-    pub fn from_edenapi(py: Python, client: Arc<dyn SaplingRemoteApi>) -> PyResult<Self> {
-        Self::create_instance(py, client)
+    pub fn from_edenapi(
+        py: Python,
+        inner: Arc<dyn SaplingRemoteApi>,
+        config: Arc<dyn Config>,
+    ) -> PyResult<Self> {
+        Self::create_instance(py, inner, config)
     }
 }
