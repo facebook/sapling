@@ -37,6 +37,11 @@ pub fn init_module(py: Python, package: &str) -> PyResult<PyModule> {
     )?;
     m.add(
         py,
+        "load_source",
+        py_fn!(py, load_source(source: &str, module_name: &str)),
+    )?;
+    m.add(
+        py,
         "run_python_hook",
         py_fn!(py, run_python_hook_py(repo: Option<pyrepo::repo>, spec: &str, hook_name: &str, kwargs: Option<PyDict> = None)),
     )?;
