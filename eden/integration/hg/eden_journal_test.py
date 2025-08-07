@@ -35,17 +35,17 @@ class EdenJournalTest(EdenHgTestCase):
         repo.write_file("foo/bar.txt", "bar\n")
         self.commit2 = repo.commit("Commit 2")
 
-    def test_journal_position_write(self) -> None:
+    async def test_journal_position_write(self) -> None:
         """
         Verify that the journal is updated when writing to the working copy.
         """
-        with self.get_thrift_client_legacy() as client:
-            before = client.getCurrentJournalPosition(self.mount_path_bytes)
+        async with self.get_thrift_client() as client:
+            before = await client.getCurrentJournalPosition(self.mount_path_bytes)
 
         self.repo.write_file("hello.txt", "hola\n")
 
-        with self.get_thrift_client_legacy() as client:
-            after = client.getCurrentJournalPosition(self.mount_path_bytes)
+        async with self.get_thrift_client() as client:
+            after = await client.getCurrentJournalPosition(self.mount_path_bytes)
 
         self.assertNotEqual(before, after)
 
