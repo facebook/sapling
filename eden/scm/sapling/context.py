@@ -1128,12 +1128,16 @@ class basefilectx:
                         repo.ui, git_url, from_commit
                     )
                 srcfilectx = from_repo[from_commit][source_path]
-                prev = srcfilectx._annotated_lines(follow, linenumber, diffopts)
+                prev = srcfilectx._annotated_lines(
+                    follow, linenumber, diffopts, is_crossrepo=True
+                )
         parents = [prev] if prev else []
         (annotatedlines, text) = annotate.annotatepair(parents, curr, diffopts=diffopts)
         return zip(annotatedlines, text.splitlines(True))
 
-    def _annotated_lines(self, follow=False, linenumber=False, diffopts=None):
+    def _annotated_lines(
+        self, follow=False, linenumber=False, diffopts=None, is_crossrepo=False
+    ):
         decorate = annotate.create_line_decorator(linenumber)
         repo = self.repo()
 
@@ -1141,6 +1145,7 @@ class basefilectx:
             repo.ui.configbool("experimental", "edenapi-blame")
             and follow  # would be extra work to _not_ follow renames
             and repo.nullableedenapi
+            and not is_crossrepo
         ):
             data = self._edenapi_annotated_lines(linenumber, diffopts)
             if data is not None:
