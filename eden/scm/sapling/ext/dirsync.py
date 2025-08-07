@@ -407,7 +407,7 @@ def dirsyncctx(ctx, matcher=None):
 
             dstpaths = []  # [(dstpath, dstmirror)]
             for dstmirror in (m for m in mirrors if m != srcmirror):
-                dst = _mirrorpath(srcmirror, dstmirror, src)
+                dst = _mirror_full_path(srcmirror, dstmirror, src)
                 dstpaths.append((dst, dstmirror))
 
             if action == "r":
@@ -447,7 +447,7 @@ def dirsyncctx(ctx, matcher=None):
                 msg = None
                 if renamed:
                     copyfrom, copynode = renamed
-                    newcopyfrom = _mirrorpath(srcmirror, dstmirror, copyfrom)
+                    newcopyfrom = _mirror_full_path(srcmirror, dstmirror, copyfrom)
                     if newcopyfrom:
                         if action == "a":
                             msg = _("mirrored copy '%s -> %s' to '%s -> %s'\n") % (
@@ -481,16 +481,43 @@ def dirsyncctx(ctx, matcher=None):
     return resultctx, resultmirrored
 
 
-def _mirrorpath(srcdir: Sized, dstdir, src):
-    """Mirror src path from srcdir to dstdir. Return None if src is not in srcdir."""
+def _default_mirror_path(_srcdir: str, _dstdir: str, relsrc: str):
+    """Return `reldst`. Custom scripts can redefine this function.
+
+    The repo-relative path of the source file to mirror is: srcdir + relsrc.
+    The repo-relative path of the destination path is: dstdir + return value
+    (reldst).
+    If return None, the mirror behavior will be cancelled.
+    """
+    # By default, the relative path in destination dir is the same as the
+    # relative path in the source dir.
+    return relsrc
+
+
+def _mirror_full_path(
+    srcdir: str, dstdir: str, src: str, mirror_path=_default_mirror_path
+):
+    """Mirror src path from srcdir to dstdir.
+    Return None if src is not in srcdir.
+
+    mirror_path is a function that takes (srcdir, dstdir, relsrc),
+    and returns reldst (relative path in the destination directory).
+    If mirror_path returns None, then the file won't be mirrored.
+    """
+    reldst = None
     if src + "/" == srcdir:
         # special case: src is a file to mirror
-        return dstdir.rstrip("/")
+        reldst = mirror_path(srcdir, dstdir, "")
     elif src.startswith(srcdir):
         relsrc = src[len(srcdir) :]
-        return dstdir + relsrc
-    else:
-        return None
+        reldst = mirror_path(srcdir, dstdir, relsrc)
+    if reldst is not None:
+        if ".." in reldst and ".." in reldst.split("/"):
+            raise error.ProgrammingError(
+                "mirror_path result cannot contain '..' path component"
+            )
+        return (dstdir + reldst).rstrip("/")
+    return None
 
 
 def _adjuststatus(status, ctx1, ctx2, matcher) -> status:
