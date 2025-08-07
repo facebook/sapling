@@ -312,6 +312,39 @@ def _mctxstatus(ctx, matcher):
     return mctx, status
 
 
+def load_script(ctx, scripts: dict[str, str], mirrorname: str, cache):
+    """load python module (source file defined as scripts[mirrorname])
+
+    Return None if the source file is not in ctx.
+    Print warnings if anything goes wrong (like Python syntax error),
+    and return None.
+
+    cache is a dict {mirrorname: module} to avoid re-reading files.
+    """
+    path = scripts.get(mirrorname)
+    if not path:
+        return None
+
+    result = cache.get(mirrorname)
+    if result is not None:
+        return result
+
+    ui = ctx.repo().ui
+    try:
+        script = ctx[path].data().decode("utf-8")
+        mod = bindings.hook.load_source(script, f"dirsync_{mirrorname}")
+        cache[mirrorname] = mod
+        return mod
+    except Exception as e:
+        ui.warn(
+            _(
+                "warning: ignored problematic dirsync script %s defined as %s.script in .hgdirsync: %s\n"
+            )
+            % (path, mirrorname, e)
+        )
+        return None
+
+
 def dirsyncctx(ctx, matcher=None):
     """for changes in ctx that matches matcher, apply dirsync rules
 
@@ -356,6 +389,8 @@ def dirsyncctx(ctx, matcher=None):
     modified = set(status.modified)
     removed = set(status.removed)
 
+    module_cache = {}
+
     for action, paths in (
         ("a", status.added),
         ("m", status.modified),
@@ -368,6 +403,7 @@ def dirsyncctx(ctx, matcher=None):
                     _("dirsync: %s file %s has no mirrored path\n") % (action, src)
                 )
                 continue
+            mod = load_script(ctx, scripts, mirrorname, module_cache)
 
             dstpaths = []  # [(dstpath, dstmirror)]
             for dstmirror in (m for m in mirrors if m != srcmirror):
