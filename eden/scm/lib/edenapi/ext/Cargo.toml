@@ -19,9 +19,17 @@ cloned = { version = "0.1.0", git = "https://github.com/facebookexperimental/rus
 crossbeam = "0.8"
 futures = { version = "0.3.31", features = ["async-await", "compat"] }
 itertools = "0.14.0"
+parking_lot = { version = "0.12.1", features = ["send_guard"] }
+sapling-configmodel = { version = "0.1.0", path = "../../config/model" }
 sapling-edenapi = { version = "0.1.0", path = ".." }
 sapling-edenapi_types = { version = "0.1.0", path = "../types" }
+sapling-indexedlog = { version = "0.1.0", path = "../../indexedlog" }
 sapling-minibytes = { version = "0.1.0", path = "../../minibytes" }
+sapling-revisionstore = { version = "0.1.0", path = "../../revisionstore" }
 sapling-types = { version = "0.1.0", path = "../../types" }
 sapling-vfs = { version = "0.1.0", path = "../../vfs" }
 tokio = { version = "1.46.1", features = ["full", "test-util", "tracing"] }
+tracing = { version = "0.1.41", features = ["attributes", "valuable"] }
+
+[dev-dependencies]
+tempfile = "3.15"

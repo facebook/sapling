@@ -15,9 +15,12 @@
 
 mod files;
 mod snapshot;
+mod snapshot_cache;
 mod util;
 
 pub use files::check_files;
 pub use files::download_files;
 pub use snapshot::upload_snapshot;
+pub use snapshot_cache::SharedSnapshotFileCache;
+pub use snapshot_cache::SnapshotFileCache;
 pub use util::calc_contentid;

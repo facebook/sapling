@@ -97,7 +97,6 @@
 //! The produced stores must implement the `HgIdDataStore` trait.
 
 mod indexedloghistorystore;
-mod indexedlogutil;
 mod lfs;
 mod metadatastore;
 mod missing;
@@ -114,6 +113,7 @@ pub mod historystore;
 pub mod indexedlogauxstore;
 pub mod indexedlogdatastore;
 pub mod indexedlogtreeauxstore;
+pub mod indexedlogutil;
 pub mod localstore;
 pub mod scmstore;
 pub mod trait_impls;
