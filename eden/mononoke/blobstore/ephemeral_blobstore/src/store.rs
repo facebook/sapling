@@ -1816,4 +1816,337 @@ mod test {
         assert_eq!(opened_bubble.labels().await?, bubble1.labels().await?);
         Ok(())
     }
+
+    // Tests for lifetime extension logic
+    #[mononoke::fbinit_test]
+    async fn extend_bubble_ttl_with_longer_duration_test(fb: FacebookInit) -> Result<()> {
+        let initial = Duration::from_secs(60); // 1 minute initial lifespan
+        let grace = Duration::from_secs(30);
+        let (ctx, _, _, eph) = bootstrap(fb, initial, grace, BubbleDeletionMode::MarkAndDelete)?;
+
+        // Create a bubble
+        let bubble = eph.create_bubble(&ctx, None, vec![]).await?;
+        let bubble_id = bubble.bubble_id();
+
+        // Extend TTL with a longer duration (2 minutes)
+        let result = eph
+            .extend_bubble_ttl(&ctx, bubble_id, Some(Duration::from_secs(120)))
+            .await?;
+
+        // Should return Extended with the new timestamp
+        match result {
+            ExtendBubbleTtlOutcome::Extended(timestamp) => {
+                // The new expiration should be approximately 2 minutes from now
+                let now = DateTime::now();
+                let expected_expiry = now + to_chrono(Duration::from_secs(120));
+                let actual_expiry: DateTime = timestamp.into();
+
+                // Allow for some time difference due to test execution time
+                let actual_chrono = actual_expiry.into_chrono();
+                let expected_chrono = expected_expiry.into_chrono();
+                let diff_abs = if actual_chrono > expected_chrono {
+                    actual_chrono - expected_chrono
+                } else {
+                    expected_chrono - actual_chrono
+                };
+                assert!(
+                    diff_abs < to_chrono(Duration::from_secs(5)),
+                    "Expiry time should be close to expected"
+                );
+            }
+            ExtendBubbleTtlOutcome::NotChanged(_) => {
+                return Err(anyhow!(
+                    "Expected TTL to be extended but it was not changed"
+                ));
+            }
+        }
+
+        Ok(())
+    }
+
+    #[mononoke::fbinit_test]
+    async fn extend_bubble_ttl_with_shorter_duration_test(fb: FacebookInit) -> Result<()> {
+        let initial = Duration::from_secs(120); // 2 minutes initial lifespan
+        let grace = Duration::from_secs(30);
+        let (ctx, _, _, eph) = bootstrap(fb, initial, grace, BubbleDeletionMode::MarkAndDelete)?;
+
+        // Create a bubble
+        let bubble = eph.create_bubble(&ctx, None, vec![]).await?;
+        let bubble_id = bubble.bubble_id();
+
+        // Try to extend TTL with a shorter duration (30 seconds)
+        let result = eph
+            .extend_bubble_ttl(&ctx, bubble_id, Some(Duration::from_secs(30)))
+            .await?;
+
+        // Should return NotChanged since the requested duration is shorter than remaining time
+        match result {
+            ExtendBubbleTtlOutcome::NotChanged(timestamp) => {
+                // The timestamp should be approximately the original expiration time
+                let now = DateTime::now();
+                let expected_expiry = now + to_chrono(Duration::from_secs(120));
+                let actual_expiry: DateTime = timestamp.into();
+
+                // Allow for some time difference due to test execution time
+                let actual_chrono = actual_expiry.into_chrono();
+                let expected_chrono = expected_expiry.into_chrono();
+                let diff = if actual_chrono > expected_chrono {
+                    actual_chrono - expected_chrono
+                } else {
+                    expected_chrono - actual_chrono
+                };
+                assert!(
+                    diff < to_chrono(Duration::from_secs(5)),
+                    "Expiry time should be close to original"
+                );
+            }
+            ExtendBubbleTtlOutcome::Extended(_) => {
+                return Err(anyhow!(
+                    "Expected TTL to remain unchanged but it was extended"
+                ));
+            }
+        }
+
+        Ok(())
+    }
+
+    #[mononoke::fbinit_test]
+    async fn extend_bubble_ttl_without_duration_test(fb: FacebookInit) -> Result<()> {
+        let initial = Duration::from_secs(60); // 1 minute initial lifespan
+        let grace = Duration::from_secs(30);
+        let (ctx, _, _, eph) = bootstrap(fb, initial, grace, BubbleDeletionMode::MarkAndDelete)?;
+
+        // Create a bubble
+        let bubble = eph.create_bubble(&ctx, None, vec![]).await?;
+        let bubble_id = bubble.bubble_id();
+
+        // Wait a bit to let some time pass
+        tokio::time::sleep(Duration::from_millis(100)).await;
+
+        // Extend TTL without specifying duration (should reset to default or keep current, whichever is greater)
+        let result = eph.extend_bubble_ttl(&ctx, bubble_id, None).await?;
+
+        // Should return Extended since we're resetting to the default lifetime
+        match result {
+            ExtendBubbleTtlOutcome::Extended(timestamp) => {
+                // The new expiration should be approximately 1 minute from now (default lifetime)
+                let now = DateTime::now();
+                let expected_expiry = now + to_chrono(Duration::from_secs(60));
+                let actual_expiry: DateTime = timestamp.into();
+
+                // Allow for some time difference due to test execution time
+                let actual_chrono = actual_expiry.into_chrono();
+                let expected_chrono = expected_expiry.into_chrono();
+                let diff = if actual_chrono > expected_chrono {
+                    actual_chrono - expected_chrono
+                } else {
+                    expected_chrono - actual_chrono
+                };
+                assert!(
+                    diff < to_chrono(Duration::from_secs(5)),
+                    "Expiry time should be close to expected"
+                );
+            }
+            ExtendBubbleTtlOutcome::NotChanged(_) => {
+                // This could happen if the remaining time is already greater than the default
+                // This is also a valid outcome
+            }
+        }
+
+        Ok(())
+    }
+
+    #[mononoke::fbinit_test]
+    async fn extend_bubble_ttl_expired_bubble_test(fb: FacebookInit) -> Result<()> {
+        let initial = Duration::from_secs(0); // Immediately expiring bubble
+        let grace = Duration::from_secs(0);
+        let (ctx, _, _, eph) = bootstrap(fb, initial, grace, BubbleDeletionMode::MarkOnly)?;
+
+        // Create a bubble that expires immediately
+        let bubble = eph.create_bubble(&ctx, None, vec![]).await?;
+        let bubble_id = bubble.bubble_id();
+
+        // Mark the bubble as expired
+        eph.delete_bubble(&ctx, bubble_id).await?;
+
+        // Try to extend TTL of the expired bubble
+        let result = eph
+            .extend_bubble_ttl(&ctx, bubble_id, Some(Duration::from_secs(60)))
+            .await;
+
+        // Should return an error since the bubble is expired
+        match result {
+            Err(e) => match e.downcast_ref::<EphemeralBlobstoreError>() {
+                Some(EphemeralBlobstoreError::NoSuchBubble(_)) => Ok(()),
+                _ => Err(anyhow!(
+                    "Expected NoSuchBubble error but got different error"
+                )),
+            },
+            Ok(_) => Err(anyhow!(
+                "Expected error when extending TTL of expired bubble"
+            )),
+        }
+    }
+
+    #[mononoke::fbinit_test]
+    async fn extend_bubble_ttl_nonexistent_bubble_test(fb: FacebookInit) -> Result<()> {
+        let initial = Duration::from_secs(60);
+        let grace = Duration::from_secs(30);
+        let (ctx, _, _, eph) = bootstrap(fb, initial, grace, BubbleDeletionMode::MarkAndDelete)?;
+
+        // Try to extend TTL of a non-existent bubble
+        let fake_bubble_id = BubbleId::new(std::num::NonZeroU64::new(99999).unwrap());
+        let result = eph
+            .extend_bubble_ttl(&ctx, fake_bubble_id, Some(Duration::from_secs(60)))
+            .await;
+
+        // Should return an error since the bubble doesn't exist
+        match result {
+            Err(e) => match e.downcast_ref::<EphemeralBlobstoreError>() {
+                Some(EphemeralBlobstoreError::NoSuchBubble(_)) => Ok(()),
+                _ => Err(anyhow!(
+                    "Expected NoSuchBubble error but got different error"
+                )),
+            },
+            Ok(_) => Err(anyhow!(
+                "Expected error when extending TTL of non-existent bubble"
+            )),
+        }
+    }
+
+    #[mononoke::fbinit_test]
+    async fn extend_bubble_ttl_with_labels_test(fb: FacebookInit) -> Result<()> {
+        let initial = Duration::from_secs(60);
+        let grace = Duration::from_secs(30);
+        let (ctx, _, _, eph) = bootstrap(fb, initial, grace, BubbleDeletionMode::MarkAndDelete)?;
+
+        // Create a bubble with labels
+        let labels = vec!["test".to_string(), "workspace".to_string()];
+        let bubble = eph.create_bubble(&ctx, None, labels.clone()).await?;
+        let bubble_id = bubble.bubble_id();
+
+        // Extend TTL with a longer duration
+        let result = eph
+            .extend_bubble_ttl(&ctx, bubble_id, Some(Duration::from_secs(120)))
+            .await?;
+
+        // Should return Extended
+        match result {
+            ExtendBubbleTtlOutcome::Extended(_) => {
+                // Verify the bubble can still be opened and has the same labels
+                let reopened_bubble = eph.open_bubble(&ctx, bubble_id).await?;
+                assert_eq!(reopened_bubble.labels().await?, labels);
+            }
+            ExtendBubbleTtlOutcome::NotChanged(_) => {
+                return Err(anyhow!("Expected TTL to be extended"));
+            }
+        }
+
+        Ok(())
+    }
+
+    #[mononoke::fbinit_test]
+    async fn extend_bubble_ttl_multiple_times_test(fb: FacebookInit) -> Result<()> {
+        let initial = Duration::from_secs(60);
+        let grace = Duration::from_secs(30);
+        let (ctx, _, _, eph) = bootstrap(fb, initial, grace, BubbleDeletionMode::MarkAndDelete)?;
+
+        // Create a bubble
+        let bubble = eph.create_bubble(&ctx, None, vec![]).await?;
+        let bubble_id = bubble.bubble_id();
+
+        // First extension
+        let result1 = eph
+            .extend_bubble_ttl(&ctx, bubble_id, Some(Duration::from_secs(120)))
+            .await?;
+        assert!(matches!(result1, ExtendBubbleTtlOutcome::Extended(_)));
+
+        // Second extension with even longer duration
+        let result2 = eph
+            .extend_bubble_ttl(&ctx, bubble_id, Some(Duration::from_secs(180)))
+            .await?;
+        assert!(matches!(result2, ExtendBubbleTtlOutcome::Extended(_)));
+
+        // Third extension with shorter duration (should not change)
+        let result3 = eph
+            .extend_bubble_ttl(&ctx, bubble_id, Some(Duration::from_secs(60)))
+            .await?;
+        assert!(matches!(result3, ExtendBubbleTtlOutcome::NotChanged(_)));
+
+        // Forth extension with even shorter duration (should not change)
+        let result4 = eph
+            .extend_bubble_ttl(&ctx, bubble_id, Some(Duration::from_secs(0)))
+            .await?;
+        assert!(matches!(result4, ExtendBubbleTtlOutcome::NotChanged(_)));
+
+        // Verify bubble is still accessible
+        let reopened_bubble = eph.open_bubble(&ctx, bubble_id).await?;
+        assert_eq!(reopened_bubble.bubble_id(), bubble_id);
+
+        Ok(())
+    }
+
+    #[mononoke::fbinit_test]
+    async fn extend_bubble_ttl_outcome_timestamps_test(fb: FacebookInit) -> Result<()> {
+        let initial = Duration::from_secs(60);
+        let grace = Duration::from_secs(30);
+        let (ctx, _, _, eph) = bootstrap(fb, initial, grace, BubbleDeletionMode::MarkAndDelete)?;
+
+        // Create a bubble
+        let bubble = eph.create_bubble(&ctx, None, vec![]).await?;
+        let bubble_id = bubble.bubble_id();
+
+        // Get the original expiration time (approximately)
+        let now_before = DateTime::now();
+
+        // Extend with a longer duration
+        let result = eph
+            .extend_bubble_ttl(&ctx, bubble_id, Some(Duration::from_secs(120)))
+            .await?;
+
+        match result {
+            ExtendBubbleTtlOutcome::Extended(new_timestamp) => {
+                let new_expiry: DateTime = new_timestamp.into();
+                let expected_expiry = now_before + to_chrono(Duration::from_secs(120));
+
+                // The new expiry should be approximately 2 minutes from the original time
+                let new_expiry_chrono = new_expiry.into_chrono();
+                let expected_expiry_chrono = expected_expiry.into_chrono();
+                let diff = if new_expiry_chrono > expected_expiry_chrono {
+                    new_expiry_chrono - expected_expiry_chrono
+                } else {
+                    expected_expiry_chrono - new_expiry_chrono
+                };
+                assert!(
+                    diff < to_chrono(Duration::from_secs(5)),
+                    "New expiry time should be close to expected"
+                );
+            }
+            ExtendBubbleTtlOutcome::NotChanged(_) => {
+                return Err(anyhow!("Expected TTL to be extended"));
+            }
+        }
+
+        // Now try with a shorter duration
+        let result2 = eph
+            .extend_bubble_ttl(&ctx, bubble_id, Some(Duration::from_secs(30)))
+            .await?;
+
+        match result2 {
+            ExtendBubbleTtlOutcome::NotChanged(unchanged_timestamp) => {
+                // The timestamp should be the same as the previous extension
+                if let ExtendBubbleTtlOutcome::Extended(prev_timestamp) = result {
+                    assert_eq!(
+                        unchanged_timestamp, prev_timestamp,
+                        "Timestamp should remain the same when not extended"
+                    );
+                }
+            }
+            ExtendBubbleTtlOutcome::Extended(_) => {
+                return Err(anyhow!("Expected TTL to remain unchanged"));
+            }
+        }
+
+        Ok(())
+    }
 }
