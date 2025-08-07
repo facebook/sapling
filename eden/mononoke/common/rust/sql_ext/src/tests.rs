@@ -312,6 +312,7 @@ mod facebook {
             &[
                 (&1i64, &RepositoryId::new(100)),
                 (&2i64, &RepositoryId::new(200)),
+                (&1i64, &RepositoryId::new(100)),
             ],
         )
         .await?;
@@ -359,7 +360,7 @@ mod facebook {
         let expected_logs = vec![
             ScubaTelemetryLogSample {
                 success: true,
-                repo_ids: vec![100.into(), 200.into()],
+                repo_ids: vec![100.into(), 100.into(), 200.into()],
                 granularity: TelemetryGranularity::Query,
                 query_name: Some("WriteQuery2".to_string()),
                 shard_name: TEST_XDB_NAME.to_string(),
