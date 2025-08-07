@@ -29,6 +29,7 @@ pub use crate::commit_graph::EphemeralOnlyChangesetStorage;
 pub use crate::error::EphemeralBlobstoreError;
 pub use crate::handle::EphemeralHandle;
 pub use crate::store::ArcRepoEphemeralStore;
+pub use crate::store::ExtendBubbleTtlOutcome;
 pub use crate::store::RepoEphemeralStore;
 pub use crate::store::RepoEphemeralStoreArc;
 pub use crate::store::RepoEphemeralStoreRef;

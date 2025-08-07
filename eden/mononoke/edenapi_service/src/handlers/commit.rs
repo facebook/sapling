@@ -52,6 +52,7 @@ use edenapi_types::EphemeralExtendRequest;
 use edenapi_types::EphemeralExtendResponse;
 use edenapi_types::EphemeralPrepareRequest;
 use edenapi_types::EphemeralPrepareResponse;
+use edenapi_types::ExtendBubbleTtlOutcome;
 use edenapi_types::FetchSnapshotRequest;
 use edenapi_types::FetchSnapshotResponse;
 use edenapi_types::HgChangesetContent;
@@ -878,18 +879,25 @@ impl SaplingRemoteApiHandler for EphemeralExtendHandler {
     ) -> HandlerResult<'async_trait, Self::Response> {
         let repo = ectx.repo();
         Ok(stream::once(async move {
-            // Placeholder implementation: verify bubble exists and return success
-            // TODO: Implement actual bubble TTL extension logic
             let bubble_id = BubbleId::new(request.bubble_id);
-            let _bubble = repo
+            let custom_duration = request.custom_duration_secs.map(Duration::from_secs);
+            // Extend the bubble's TTL using the new method
+            let store_outcome = repo
                 .ephemeral_store()
-                .open_bubble(repo.ctx(), bubble_id)
+                .extend_bubble_ttl(repo.ctx(), bubble_id, custom_duration)
                 .await?;
-
-            // For now, just return success without actually extending the TTL
-            // The actual implementation would extend the bubble's expiration time
+            // Convert the store outcome to the API outcome
+            let api_outcome = match store_outcome {
+                ephemeral_blobstore::ExtendBubbleTtlOutcome::Extended(timestamp) => {
+                    ExtendBubbleTtlOutcome::Extended(timestamp.timestamp_seconds())
+                }
+                ephemeral_blobstore::ExtendBubbleTtlOutcome::NotChanged(timestamp) => {
+                    ExtendBubbleTtlOutcome::NotChanged(timestamp.timestamp_seconds())
+                }
+            };
             Ok(EphemeralExtendResponse {
                 bubble_id: request.bubble_id,
+                result: api_outcome,
             })
         })
         .boxed())

@@ -31,6 +31,15 @@ use crate::bubble::BubbleId;
 use crate::bubble::ExpiryStatus;
 use crate::error::EphemeralBlobstoreError;
 
+/// Outcome of extending a bubble's TTL
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum ExtendBubbleTtlOutcome {
+    /// The bubble's TTL was extended to the new timestamp
+    Extended(Timestamp),
+    /// The bubble's TTL was not changed, current expiration timestamp
+    NotChanged(Timestamp),
+}
+
 /// Ephemeral Store.
 #[derive(Derivative)]
 #[derivative(Debug)]
@@ -109,7 +118,7 @@ mononoke_queries! {
         bubble_id = {id}"
     }
 
-    cacheable read SelectBubbleById(
+    read SelectBubbleById(
         id: BubbleId,
     ) -> (Timestamp, ExpiryStatus, Option<String>) {
         "SELECT expires_at, expired, owner_identity FROM ephemeral_bubbles
@@ -130,6 +139,13 @@ mononoke_queries! {
         "SELECT bubble_id
         FROM ephemeral_bubble_changeset_mapping
         WHERE repo_id = {repo_id} AND cs_id = {cs_id}"
+    }
+
+    cacheable read SelectBubbleByIdMaybeStale(
+         id: BubbleId,
+    ) -> (Timestamp, ExpiryStatus, Option<String>) {
+         "SELECT expires_at, expired, owner_identity FROM ephemeral_bubbles
+         WHERE id={id}"
     }
 
     read SelectChangesetFromBubble(
@@ -171,6 +187,16 @@ mononoke_queries! {
         "UPDATE ephemeral_bubbles
         SET expired={expired}
         WHERE id={id}"
+    }
+
+    write UpdateBubbleExpiration(
+        expires_at: Timestamp,
+        id: BubbleId
+    ) {
+        none,
+        "UPDATE ephemeral_bubbles
+        SET expires_at={expires_at}
+        WHERE id={id} AND expired = 0"
     }
 
     write DeleteBubble(
@@ -504,8 +530,6 @@ impl RepoEphemeralStoreInner {
         ctx.perf_counters()
             .increment_counter(PerfCounterType::SqlReadsReplica);
         let mut bubble_rows = SelectBubbleById::query(
-            self.sql_config.as_ref(),
-            None,
             &self.connections.read_connection,
             ctx.sql_query_telemetry(),
             &bubble_id,
@@ -537,8 +561,6 @@ impl RepoEphemeralStoreInner {
             ctx.perf_counters()
                 .increment_counter(PerfCounterType::SqlReadsMaster);
             bubble_rows = SelectBubbleById::query(
-                self.sql_config.as_ref(),
-                None,
                 &self.connections.read_master_connection,
                 ctx.sql_query_telemetry(),
                 &bubble_id,
@@ -551,8 +573,6 @@ impl RepoEphemeralStoreInner {
                 ctx.perf_counters()
                     .increment_counter(PerfCounterType::SqlReadsMaster);
                 bubble_rows = SelectBubbleById::query(
-                    self.sql_config.as_ref(),
-                    None,
                     &self.connections.read_master_connection,
                     ctx.sql_query_telemetry(),
                     &bubble_id,
@@ -568,16 +588,35 @@ impl RepoEphemeralStoreInner {
         }
         // TODO(mbthomas): check owner_identity
         let (expires_at, expiry_status, ref _owner_identity) = bubble_rows[0];
-        let expires_at: DateTime = expires_at.into();
-        // Checking only the expiry_status and not the expired_date since a bubble could
-        // be active even if its past its expiry date if it has labels associated with it.
-        if fail_on_expired && expiry_status == ExpiryStatus::Expired {
-            return Err(EphemeralBlobstoreError::NoSuchBubble(bubble_id).into());
+        let db_expires_at: DateTime = expires_at.into();
+        let expires_at = db_expires_at + self.bubble_expiration_grace;
+        let now = DateTime::now();
+
+        // Check if the bubble has expired based on both the expiry_status and the actual expiration time
+        if fail_on_expired {
+            // If the bubble is marked as expired, it's definitely expired
+            if expiry_status == ExpiryStatus::Expired {
+                return Err(EphemeralBlobstoreError::NoSuchBubble(bubble_id).into());
+            }
+
+            // Even if not marked as expired, check if it has actually expired based on time
+            // Note: expires_at from the database is the original expiration time without grace period
+            // Only allow access if the bubble has labels (which would keep it alive past expiry)
+            if now > expires_at {
+                // Check if the bubble has labels that would keep it alive
+                let labels = labels_lazy
+                    .get_or_init(|| async { Ok(Vec::new()) })
+                    .await
+                    .map_err(|_| EphemeralBlobstoreError::NoSuchBubble(bubble_id))?;
+                if labels.is_empty() {
+                    return Err(EphemeralBlobstoreError::NoSuchBubble(bubble_id).into());
+                }
+            }
         }
 
         Ok(Bubble::new(
             bubble_id,
-            expires_at + self.bubble_expiration_grace,
+            expires_at,
             self.blobstore.clone(),
             self.connections.clone(),
             expiry_status,
@@ -587,6 +626,77 @@ impl RepoEphemeralStoreInner {
 
     async fn open_bubble(&self, ctx: &CoreContext, bubble_id: BubbleId) -> Result<Bubble> {
         self.open_bubble_raw(ctx, bubble_id, true).await
+    }
+
+    /// Extends the TTL of an ephemeral bubble.
+    /// The lifetime remains unchanged if the specified duration is shorter than the current remaining lifetime.
+    /// If no duration is provided, the lifetime resets to the greater of the default lifetime or the remaining lifetime.
+    /// Returns an error if the bubble has expired.
+    async fn extend_bubble_ttl(
+        &self,
+        ctx: &CoreContext,
+        bubble_id: BubbleId,
+        custom_duration: Option<Duration>,
+    ) -> Result<ExtendBubbleTtlOutcome> {
+        // First, get the current bubble information to check its current expiration
+        // This will fail if the bubble has expired, which is the desired behavior
+        let bubble = self.open_bubble_raw(ctx, bubble_id, true).await?;
+        let current_expires_at = bubble.expires_at();
+
+        // Note: We need to subtract the grace period because the database stores the original expiration time
+        // without grace period, but bubble.expires_at() includes the grace period
+        let db_current_expires_at = current_expires_at - self.bubble_expiration_grace;
+
+        // Calculate the new expiration time
+        let now = DateTime::now();
+        let new_db_expires_at = match custom_duration {
+            None => {
+                // No duration provided: reset to the greater of default lifetime or remaining lifetime
+                let default_expires_at = now + self.initial_bubble_lifespan;
+                default_expires_at.max(db_current_expires_at)
+            }
+            Some(duration) => {
+                // Only extend if the requested duration is longer than the current remaining lifetime
+                let requested_expires_at = now + to_chrono(duration);
+                // Only extend if the new expiration is later than the current one
+                if requested_expires_at > db_current_expires_at {
+                    requested_expires_at
+                } else {
+                    // Don't change the expiration if the requested duration is shorter
+                    db_current_expires_at
+                }
+            }
+        };
+
+        // Only perform the database update if the new expiration time is different from the current one
+        if new_db_expires_at != db_current_expires_at {
+            // This query will only update active bubbles (expired = 0)
+            ctx.perf_counters()
+                .increment_counter(PerfCounterType::SqlWrites);
+            let result = UpdateBubbleExpiration::query(
+                &self.connections.write_connection,
+                ctx.sql_query_telemetry(),
+                &Timestamp::from(new_db_expires_at),
+                &bubble_id,
+            )
+            .await?;
+
+            // Check if any rows were actually updated
+            if result.affected_rows() == 0 {
+                // No rows were updated, which means the bubble was already expired/deleted
+                return Err(EphemeralBlobstoreError::NoSuchBubble(bubble_id).into());
+            }
+
+            // TTL was extended
+            Ok(ExtendBubbleTtlOutcome::Extended(Timestamp::from(
+                new_db_expires_at,
+            )))
+        } else {
+            // TTL was not changed
+            Ok(ExtendBubbleTtlOutcome::NotChanged(Timestamp::from(
+                db_current_expires_at,
+            )))
+        }
     }
 }
 
@@ -740,6 +850,20 @@ impl RepoEphemeralStore {
         bubble_id: &BubbleId,
     ) -> Result<Vec<String>> {
         self.inner()?.labels_from_bubble(ctx, bubble_id).await
+    }
+
+    /// Extends the TTL of an ephemeral bubble.
+    /// The lifetime remains unchanged if the specified duration is shorter than the current remaining lifetime.
+    /// If no duration is provided, the lifetime resets to the greater of the default lifetime or the remaining lifetime.
+    pub async fn extend_bubble_ttl(
+        &self,
+        ctx: &CoreContext,
+        bubble_id: BubbleId,
+        custom_duration: Option<Duration>,
+    ) -> Result<ExtendBubbleTtlOutcome> {
+        self.inner()?
+            .extend_bubble_ttl(ctx, bubble_id, custom_duration)
+            .await
     }
 }
 

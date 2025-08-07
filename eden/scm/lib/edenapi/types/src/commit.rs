@@ -31,6 +31,16 @@ use crate::FileType;
 use crate::ServerError;
 use crate::UploadToken;
 
+/// Outcome of extending a bubble's TTL
+#[derive(Clone, Debug, Deserialize, Serialize, Eq, PartialEq)]
+#[cfg_attr(any(test, feature = "for-tests"), derive(Arbitrary))]
+pub enum ExtendBubbleTtlOutcome {
+    /// The bubble's TTL was extended to the new timestamp
+    Extended(i64),
+    /// The bubble's TTL was not changed, current expiration timestamp
+    NotChanged(i64),
+}
+
 /// Given a graph location, return `count` hashes following first parent links.
 ///
 /// Example:
@@ -467,6 +477,7 @@ pub struct EphemeralExtendRequest {
 #[cfg_attr(any(test, feature = "for-tests"), derive(Arbitrary))]
 pub struct EphemeralExtendResponse {
     pub bubble_id: NonZeroU64,
+    pub result: ExtendBubbleTtlOutcome,
 }
 
 #[cfg(any(test, feature = "for-tests"))]

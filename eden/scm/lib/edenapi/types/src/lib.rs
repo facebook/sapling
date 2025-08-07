@@ -135,6 +135,7 @@ pub use crate::commit::EphemeralExtendRequest;
 pub use crate::commit::EphemeralExtendResponse;
 pub use crate::commit::EphemeralPrepareRequest;
 pub use crate::commit::EphemeralPrepareResponse;
+pub use crate::commit::ExtendBubbleTtlOutcome;
 pub use crate::commit::Extra;
 pub use crate::commit::FetchSnapshotRequest;
 pub use crate::commit::FetchSnapshotResponse;

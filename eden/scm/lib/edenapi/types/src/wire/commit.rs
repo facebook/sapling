@@ -22,6 +22,7 @@ use crate::commit::CommitHashToLocationRequestBatch;
 use crate::commit::CommitHashToLocationResponse;
 use crate::commit::EphemeralExtendResponse;
 use crate::commit::EphemeralPrepareResponse;
+use crate::commit::ExtendBubbleTtlOutcome;
 pub use crate::commit::WireBonsaiExtra;
 pub use crate::commit::WireCommitGraphEntry;
 pub use crate::commit::WireCommitGraphRequest;
@@ -476,9 +477,57 @@ impl Arbitrary for WireEphemeralPrepareResponse {
 }
 
 #[derive(Clone, Debug, Serialize, Deserialize, Eq, PartialEq)]
+pub enum WireExtendBubbleTtlOutcome {
+    #[serde(rename = "1")]
+    Extended(i64),
+    #[serde(rename = "2")]
+    NotChanged(i64),
+}
+
+impl ToWire for ExtendBubbleTtlOutcome {
+    type Wire = WireExtendBubbleTtlOutcome;
+
+    fn to_wire(self) -> Self::Wire {
+        match self {
+            ExtendBubbleTtlOutcome::Extended(timestamp) => {
+                WireExtendBubbleTtlOutcome::Extended(timestamp)
+            }
+            ExtendBubbleTtlOutcome::NotChanged(timestamp) => {
+                WireExtendBubbleTtlOutcome::NotChanged(timestamp)
+            }
+        }
+    }
+}
+
+impl ToApi for WireExtendBubbleTtlOutcome {
+    type Api = ExtendBubbleTtlOutcome;
+    type Error = WireToApiConversionError;
+
+    fn to_api(self) -> Result<Self::Api, Self::Error> {
+        match self {
+            WireExtendBubbleTtlOutcome::Extended(timestamp) => {
+                Ok(ExtendBubbleTtlOutcome::Extended(timestamp))
+            }
+            WireExtendBubbleTtlOutcome::NotChanged(timestamp) => {
+                Ok(ExtendBubbleTtlOutcome::NotChanged(timestamp))
+            }
+        }
+    }
+}
+
+#[cfg(any(test, feature = "for-tests"))]
+impl Arbitrary for WireExtendBubbleTtlOutcome {
+    fn arbitrary(g: &mut quickcheck::Gen) -> Self {
+        ExtendBubbleTtlOutcome::arbitrary(g).to_wire()
+    }
+}
+
+#[derive(Clone, Debug, Serialize, Deserialize, Eq, PartialEq)]
 pub struct WireEphemeralExtendResponse {
     #[serde(rename = "1")]
     pub bubble_id: Option<NonZeroU64>,
+    #[serde(rename = "2")]
+    pub result: Option<WireExtendBubbleTtlOutcome>,
 }
 
 impl ToWire for EphemeralExtendResponse {
@@ -487,6 +536,7 @@ impl ToWire for EphemeralExtendResponse {
     fn to_wire(self) -> Self::Wire {
         Self::Wire {
             bubble_id: Some(self.bubble_id),
+            result: Some(self.result.to_wire()),
         }
     }
 }
@@ -500,6 +550,12 @@ impl ToApi for WireEphemeralExtendResponse {
             bubble_id: self.bubble_id.ok_or(
                 WireToApiConversionError::CannotPopulateRequiredField("bubble_id"),
             )?,
+            result: self
+                .result
+                .ok_or(WireToApiConversionError::CannotPopulateRequiredField(
+                    "result",
+                ))?
+                .to_api()?,
         })
     }
 }

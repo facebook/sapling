@@ -109,6 +109,7 @@ pub use crate::wire::commit::WireEphemeralExtendRequest;
 pub use crate::wire::commit::WireEphemeralExtendResponse;
 pub use crate::wire::commit::WireEphemeralPrepareRequest;
 pub use crate::wire::commit::WireEphemeralPrepareResponse;
+pub use crate::wire::commit::WireExtendBubbleTtlOutcome;
 pub use crate::wire::commit::WireExtra;
 pub use crate::wire::commit::WireFetchSnapshotRequest;
 pub use crate::wire::commit::WireFetchSnapshotResponse;
