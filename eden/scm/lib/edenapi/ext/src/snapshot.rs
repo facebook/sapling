@@ -28,7 +28,9 @@ use edenapi_types::SnapshotRawFiles;
 use edenapi_types::UploadSnapshotResponse;
 use futures::TryStreamExt;
 use minibytes::Bytes;
+use tokio::task;
 
+use crate::snapshot_cache::SharedSnapshotFileCache;
 use crate::util::calc_contentid;
 
 #[derive(PartialEq, Eq)]
@@ -39,6 +41,7 @@ enum TrackedType {
 use TrackedType::*;
 
 struct FileMetadata(RepoPathBuf, FileType, ContentId, TrackedType);
+#[derive(Clone)]
 struct FileData(ContentId, Bytes);
 
 fn load_files(
@@ -75,6 +78,28 @@ pub async fn upload_snapshot(
     copy_from_bubble_id: Option<NonZeroU64>,
     use_bubble: Option<NonZeroU64>,
     labels: Option<Vec<String>>,
+) -> Result<UploadSnapshotResponse> {
+    upload_snapshot_with_cache(
+        api,
+        data,
+        custom_duration_secs,
+        copy_from_bubble_id,
+        use_bubble,
+        labels,
+        None,
+    )
+    .await
+}
+
+/// Upload snapshot with optional local cache support
+pub async fn upload_snapshot_with_cache(
+    api: &(impl SaplingRemoteApi + ?Sized),
+    data: SnapshotRawData,
+    custom_duration_secs: Option<u64>,
+    copy_from_bubble_id: Option<NonZeroU64>,
+    use_bubble: Option<NonZeroU64>,
+    labels: Option<Vec<String>>,
+    cache: Option<SharedSnapshotFileCache>,
 ) -> Result<UploadSnapshotResponse> {
     let SnapshotRawData {
         files,
@@ -119,6 +144,26 @@ pub async fn upload_snapshot(
     // Deduplicate upload data
     let mut uniques = BTreeSet::new();
     upload_data.retain(|FileData(content_id, _)| uniques.insert(*content_id));
+
+    // Start caching task concurrently with upload if caching is enabled
+    let cache_task = if let Some(cache) = cache.clone() {
+        let upload_data_for_cache = upload_data.clone();
+        Some(task::spawn(async move {
+            for FileData(content_id, data) in upload_data_for_cache {
+                if let Err(e) = cache.store_with_content_id(content_id, &data) {
+                    tracing::warn!("Failed to cache file content during upload: {}", e);
+                } else {
+                    tracing::debug!(
+                        "Cached file content during upload with ContentId: {}",
+                        content_id
+                    );
+                }
+            }
+        }))
+    } else {
+        None
+    };
+
     let upload_data = upload_data
         .into_iter()
         .map(|FileData(content_id, data)| (AnyFileContentId::ContentId(content_id), data))
@@ -218,6 +263,13 @@ pub async fn upload_snapshot(
         )
         .await
         .context("Failed to create changeset")?;
+
+    // Wait for caching task to complete if it was started
+    if let Some(task) = cache_task {
+        if let Err(e) = task.await {
+            tracing::warn!("Cache task failed: {}", e);
+        }
+    }
 
     Ok(UploadSnapshotResponse {
         changeset_token: changeset_response.token,
