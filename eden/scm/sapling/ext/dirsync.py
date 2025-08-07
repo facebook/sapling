@@ -40,7 +40,7 @@ create a rule for the subdirectory and prefix it with "exclude":
         exclude.projectX.dir2 = dir2/dir1/foo/bar
 """
 
-from typing import Sized
+from typing import Optional, Sized
 
 import bindings
 
@@ -198,11 +198,14 @@ def configstomatcher(configs):
     return matchmod.treematcher("", "", rules=sorted(rules))
 
 
-def getmirrors(maps, filename):
-    """Returns (srcmirror, mirrors)
+def getmirrors(maps, filename) -> tuple[Optional[str], Optional[str], list[str]]:
+    """Returns (name, srcmirror, mirrors)
 
+    name is the mirror name (config name before ".").
     srcmirror is the mirror path the filename is in.
     mirrors is a list of mirror paths, including srcmirror.
+
+    name and srcmirror can be None.
     """
     # The getconfigs() code above adds "/" to the end of all of the entries.
     # This makes it easy to check that we are only matching full directory path name
@@ -217,14 +220,14 @@ def getmirrors(maps, filename):
     if EXCLUDE_PATHS in maps:
         for subdir in maps[EXCLUDE_PATHS]:
             if checkpath.startswith(subdir):
-                return None, []
+                return None, None, []
 
-    for mirrordirs in maps.values():
+    for mirrorname, mirrordirs in maps.items():
         for subdir in mirrordirs:
             if checkpath.startswith(subdir):
-                return subdir, mirrordirs
+                return mirrorname, subdir, mirrordirs
 
-    return None, []
+    return None, None, []
 
 
 def _mctxstatus(ctx, matcher):
@@ -359,7 +362,7 @@ def dirsyncctx(ctx, matcher=None):
         ("r", status.removed),
     ):
         for src in paths:
-            srcmirror, mirrors = getmirrors(maps, src)
+            mirrorname, srcmirror, mirrors = getmirrors(maps, src)
             if not mirrors:
                 repo.ui.debug(
                     _("dirsync: %s file %s has no mirrored path\n") % (action, src)
