@@ -1949,7 +1949,6 @@ impl RepoFactory {
         &self,
         repo_identity: &ArcRepoIdentity,
         repo_config: &ArcRepoConfig,
-        common_config: &ArcCommonConfig,
     ) -> Result<ArcCommitGraph> {
         let sql_storage = self
             .open_sql::<SqlCommitGraphStorageBuilder>(repo_config)
@@ -1974,13 +1973,11 @@ impl RepoFactory {
                 if !self.env.commit_graph_options.skip_preloading_commit_graph =>
             {
                 let blobstore_without_cache = self
-                    .repo_blobstore_from_blobstore(
+                    .mutable_repo_blobstore_from_blobstore(
                         repo_identity,
-                        repo_config,
                         &self
                             .blobstore_no_cache(&repo_config.storage_config.blobstore)
                             .await?,
-                        common_config,
                     )
                     .await?;
 
