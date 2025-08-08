@@ -21,7 +21,6 @@ use mononoke_app::MononokeApp;
 use requests_table::SqlLongRunningRequestsQueue;
 use slog::debug;
 use sql_construct::SqlConstructFromDatabaseConfig;
-use sql_ext::facebook::MysqlOptions;
 
 /// Build a new async requests queue client. If the repos argument is specified,
 /// then the client will only be able to access the repos specified in the argument.
@@ -50,12 +49,7 @@ pub async fn open_sql_connection(
             app.logger(),
             "Initializing async_requests with an explicit config"
         );
-        SqlLongRunningRequestsQueue::with_database_config(
-            fb,
-            &config,
-            &MysqlOptions::default(),
-            false,
-        )
+        SqlLongRunningRequestsQueue::with_database_config(fb, &config, app.mysql_options(), false)
     } else {
         bail!("async_requests config is missing");
     }
