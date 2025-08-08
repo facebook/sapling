@@ -150,26 +150,6 @@ dott_test(
 )
 
 dott_test(
-    name = "hooks",
-    dott_files =
-        glob(
-            [
-                "test-hook-*.t",
-            ],
-            exclude = [
-                "test-hook-verify-integrity.t",
-            ],
-        ),
-    deps = [
-        "//common/tools/thriftdbg:thriftdbg",
-        "//eden/mononoke:blobimport",
-        "//eden/mononoke:mononoke",
-        "//eden/mononoke/tools/testtool:testtool",
-        "//signedsources:fixtures",
-    ],
-)
-
-dott_test(
     name = "lfs-server",
     # These tests have been vetted to run well without network access. Please investigate any failure thoroughly before disabling.
     disable_all_network_access_target = True,
