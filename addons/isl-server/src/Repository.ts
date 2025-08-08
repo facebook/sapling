@@ -1023,32 +1023,37 @@ export class Repository {
   }
 
   async fetchSubmoduleMap(): Promise<void> {
-    try {
-      const proc = await this.runCommand(
-        ['debuggitmodules', '--json'],
-        'LogCommand',
-        this.initialConnectionContext,
-      );
-      const submodules = JSON.parse(proc.stdout) as Submodules;
-      // debuggitmodules returns an empty vec
-      // when submodule is not supported by the repo at all
-      if (submodules.length > 0) {
-        this.submodulesByRoot = new Map([[this.info.repoRoot, {value: submodules}]]);
-      }
-      this.submodulesChangesEmitter.emit('change', this.submodulesByRoot ?? new Map());
-    } catch (err) {
-      let error = err;
-      if (isEjecaError(error)) {
-        // debuggitmodules may not be supported by older versions of Sapling
-        error = error.stderr.includes('unknown command')
-          ? Error('debuggitmodules command is not supported by your sapling version.')
-          : simplifyEjecaError(error);
-      }
-      this.initialConnectionContext.logger.error('Error fetching submodules: ', error);
-
-      this.submodulesByRoot = new Map([[this.info.repoRoot, {error: new Error(err as string)}]]);
-      this.submodulesChangesEmitter.emit('change', this.submodulesByRoot);
+    if (this.info.repoRoots == null) {
+      return;
     }
+    const submoduleMap = new Map();
+    await Promise.all(
+      this.info.repoRoots?.map(async root => {
+        try {
+          const proc = await this.runCommand(
+            ['debuggitmodules', '--json', '--repo', root],
+            'LogCommand',
+            this.initialConnectionContext,
+          );
+          const submodules = JSON.parse(proc.stdout) as Submodules;
+          submoduleMap.set(root, {value: submodules?.length === 0 ? undefined : submodules});
+        } catch (err) {
+          let error = err;
+          if (isEjecaError(error)) {
+            // debuggitmodules may not be supported by older versions of Sapling
+            error = error.stderr.includes('unknown command')
+              ? Error('debuggitmodules command is not supported by your sapling version.')
+              : simplifyEjecaError(error);
+          }
+          this.initialConnectionContext.logger.error('Error fetching submodules: ', error);
+
+          submoduleMap.set(root, {error: new Error(err as string)});
+        }
+      }),
+    );
+
+    this.submodulesByRoot = submoduleMap;
+    this.submodulesChangesEmitter.emit('change', submoduleMap);
   }
 
   private catLimiter = new RateLimiter(MAX_SIMULTANEOUS_CAT_CALLS, s =>
