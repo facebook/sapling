@@ -5,6 +5,10 @@
  * GNU General Public License version 2.
  */
 
+use std::collections::hash_map::DefaultHasher;
+use std::hash::Hash;
+use std::hash::Hasher;
+
 use anyhow::Result;
 use anyhow::bail;
 use similar::ChangeTag;
@@ -15,13 +19,19 @@ const MAX_FILE_SIZE: usize = 512 * 1024 * 1024; // 512MB
 // Ref: https://fburl.com/tse8f9js
 const CHUNK_SIZE: usize = 64;
 
-fn normalize_text(text: &[u8]) -> Vec<&[u8]> {
+fn hash_bytes(data: &[u8]) -> u8 {
+    let mut hasher = DefaultHasher::new();
+    data.hash(&mut hasher);
+    hasher.finish().to_be_bytes()[0]
+}
+
+fn normalize_text(text: &[u8]) -> Vec<u8> {
     text.split(|&b| b == b'\n')
         .flat_map(|line| line.trim_ascii().chunks(CHUNK_SIZE))
+        .map(hash_bytes)
         .collect()
 }
 
-// Trim leading/trailing whitespaces from each line before comparison
 // Return a value between 0.0 (no similarity) and 1.0 (identical)
 pub fn estimate_similarity(text1: &[u8], text2: &[u8]) -> Result<f64> {
     if text1.len() >= MAX_FILE_SIZE || text2.len() >= MAX_FILE_SIZE {
@@ -46,7 +56,11 @@ pub fn estimate_similarity(text1: &[u8], text2: &[u8]) -> Result<f64> {
     let mut total_chars = 0;
     let mut unchanged_chars = 0;
 
-    let diff = TextDiff::from_slices(&lines1, &lines2);
+    let bucket_size = (lines1.len().max(lines2.len()) / 1_024).clamp(1, CHUNK_SIZE);
+    let buf1 = lines1.chunks(bucket_size).collect::<Vec<_>>();
+    let buf2 = lines2.chunks(bucket_size).collect::<Vec<_>>();
+
+    let diff = TextDiff::from_slices(&buf1, &buf2);
     for change in diff.iter_all_changes() {
         let text = change.value();
         let char_count = text.len();
@@ -177,7 +191,7 @@ function main() {
         let original = b"Short file";
         let modified = "Short file\n".to_string() + &"New line\n".repeat(100);
         let similarity = estimate_similarity(original, modified.as_bytes()).unwrap();
-        assert_approx_eq!(similarity, 0.012346); // Original content becomes tiny fraction
+        assert_approx_eq!(similarity, 0.009901); // Original content becomes tiny fraction
     }
 
     #[mononoke::test]

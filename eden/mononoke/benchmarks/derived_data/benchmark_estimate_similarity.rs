@@ -5,6 +5,8 @@
  * GNU General Public License version 2.
  */
 
+#![feature(iter_intersperse)]
+
 // This benchmark generates two single line text files, in various sizes.
 // Their contents are half matching with the delta evenly distributed
 // throughout the line, e.g. 111111 vs 121212
@@ -29,12 +31,15 @@ fn main(_fb: FacebookInit) -> Result<(), Error> {
 
     let mut group = c.benchmark_group("estimate_similarity");
 
+    let text1 = std::iter::repeat_n(b'1', 4 * MB).collect::<Vec<_>>();
+    let text2 = std::iter::repeat(b'1')
+        .intersperse(b'2')
+        .take(4 * MB)
+        .collect::<Vec<_>>();
     for size in [64, KB, MB, 4 * MB] {
         group.throughput(Throughput::Bytes(size as u64));
         group.bench_with_input(BenchmarkId::from_parameter(size), &size, |b, &size| {
-            let text1 = "1".repeat(size);
-            let text2 = "12".repeat(size / 2);
-            b.iter(|| estimate_similarity(text1.as_bytes(), text2.as_bytes()));
+            b.iter(|| estimate_similarity(&text1[..size], &text2[..size]));
         });
     }
     group.finish();
