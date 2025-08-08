@@ -28,10 +28,10 @@ import stat
 import time
 
 import bindings
-from sapling import dispatch, encoding, extensions, util
+from sapling import dispatch, encoding, error, extensions, util
 from sapling.i18n import _
 
-from . import workspace
+from . import service, workspace
 
 
 def extsetup(ui):
@@ -135,11 +135,36 @@ def _runcommand(orig, lui, repo, cmd, fullargs, *args):
 def backgroundbackup(repo, reason=None):
     """start background backup"""
     ui = repo.ui
+    maybeworkspacename = repo.ui.config("commitcloud", "autojoinworkspace")
+    reponame = os.path.basename(repo.sharedroot)
+
     if workspace.currentworkspace(repo):
         background_cmd = util.hgcmd() + ["cloud", "sync", "--best-effort"]
         background_cmd += ["--reason", reason]
+
     else:
-        background_cmd = util.hgcmd() + ["cloud", "upload"]
+        if maybeworkspacename:
+            try:
+                serv = service.get(repo.ui, repo)
+                if serv.getworkspace(reponame, maybeworkspacename):
+                    background_cmd = util.hgcmd() + [
+                        "cloud",
+                        "join",
+                        "--raw-workspace",
+                        maybeworkspacename,
+                    ]
+            except error.HttpError as e:
+                ui.warn(
+                    _(
+                        "failed to join workspace '%s' due to error %s. Attempting cloud upload.\n"
+                    )
+                    % maybeworkspacename,
+                    e,
+                )
+                background_cmd = util.hgcmd() + ["cloud", "upload"]
+        else:
+            background_cmd = util.hgcmd() + ["cloud", "upload"]
+
     infinitepush_bgssh = ui.config("infinitepush", "bgssh")
     if infinitepush_bgssh:
         background_cmd += ["--config", "ui.ssh=%s" % infinitepush_bgssh]
