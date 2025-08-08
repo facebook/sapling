@@ -50,49 +50,12 @@ buck_sh_binary(
 )
 
 dott_test(
-    name = "derived-data-service",
-    dott_files = glob(["test-derived-data-service*.t"]),
+    name = "backfill-bonsai-blob-mapping",
+    dott_files = glob(["test-backfill-bonsai-blob-mapping-*.t"]),
     deps = [
         "//eden/mononoke:mononoke",
-        "//eden/mononoke/facebook/derived_data_service:2ds_client",
-        "//eden/mononoke/facebook/derived_data_service:derivation_worker",
-        "//eden/mononoke/facebook/derived_data_service:derived_data_service",
-        "//eden/mononoke/scs/client:scsc",
-        "//eden/mononoke/scs/scs_server:scs_server",
         "//eden/mononoke/tools/admin:admin",
         "//eden/mononoke/tools/facebook/backfill_bonsai_blob_mapping:backfill_bonsai_blob_mapping",
-        "//eden/mononoke/tools/testtool:testtool",
-        "//zeus/zelos/interactive_cli:zeloscli",
-    ],
-)
-
-dott_test(
-    name = "derived-data-tailer",
-    dott_files = glob(["test-derived-data-tailer*.t"]),
-    deps = [
-        "//eden/mononoke/tools/admin:admin",
-        "//eden/mononoke/tools/facebook/derived_data_tailer:derived_data_tailer",
-        "//eden/mononoke/tools/testtool:testtool",
-    ],
-)
-
-dott_test(
-    name = "test-bookmark-service",
-    dott_files = glob(["test-bookmark-service*.t"]),
-    deps = [
-        "//eden/mononoke/facebook/bookmark_service:bookmark_service_client_cli",
-        "//eden/mononoke/facebook/bookmark_service:bookmark_service_server",
-        "//eden/mononoke/tools/testtool:testtool",
-    ],
-)
-
-dott_test(
-    name = "test-server-and-bookmark-service",
-    dott_files = glob(["test-server-and-bookmark-service-*.t"]),
-    deps = [
-        "//eden/mononoke:mononoke",
-        "//eden/mononoke/facebook/bookmark_service:bookmark_service_client_cli",
-        "//eden/mononoke/facebook/bookmark_service:bookmark_service_server",
         "//eden/mononoke/tools/testtool:testtool",
     ],
 )
@@ -115,41 +78,10 @@ dott_test(
 )
 
 dott_test(
-    name = "verify-integrity",
-    dott_files = [
-        "test-hook-verify-integrity.t",
-    ],
+    name = "repo_metadata_logger",
+    dott_files = glob(["test-repo-metadata-logger-*.t"]),
     deps = [
-        "//common/tools/thriftdbg:thriftdbg",
-        "//eden/mononoke:blobimport",
-        "//eden/mononoke:mononoke",
-        "//eden/mononoke/tools/testtool:testtool",
-        "//security/source_control/verify_integrity:verify_integrity",
-        "//security/source_control/verify_integrity/service:verify_integrity_service",
-    ],
-)
-
-dott_test(
-    name = "lfs-server",
-    # These tests have been vetted to run well without network access. Please investigate any failure thoroughly before disabling.
-    disable_all_network_access_target = True,
-    dott_files = glob(["test-lfs-server*.t"]),
-    deps = [
-        "//eden/mononoke/lfs_server:lfs_server",
-    ],
-)
-
-dott_test(
-    name = "server-needs-network",
-    dott_files = [
-        # Purposely not disabling network as this tests reverse dns lookups
-        "test-metadata-fb-host.t",
-        "test-metadata.t",
-        # Purposely not disabling network as this needs to make TLS connections.
-        "test-cat-auth.t",
-    ],
-    deps = [
-        "//eden/mononoke:mononoke",
+        "//eden/mononoke/tools/facebook/repo_metadata_logger:repo_metadata_logger",
         "//eden/mononoke/tools/testtool:testtool",
     ],
 )
@@ -181,26 +113,16 @@ dott_test(
 )
 
 dott_test(
-    name = "tools-example",
-    dott_files = glob(
-        [
-            "test-tools-example*.t",
-        ],
-    ),
-    deps = [
-        "//eden/mononoke/tools/example:example",
+    name = "server-needs-network",
+    dott_files = [
+        # Purposely not disabling network as this tests reverse dns lookups
+        "test-metadata-fb-host.t",
+        "test-metadata.t",
+        # Purposely not disabling network as this needs to make TLS connections.
+        "test-cat-auth.t",
     ],
-)
-
-dott_test(
-    name = "land_service",
-    dott_files = glob(["test-land-service*.t"]),
     deps = [
-        "//eden/mononoke:backfill_mapping",
         "//eden/mononoke:mononoke",
-        "//eden/mononoke/commit_rewriting/backsyncer:backsyncer_cmd",
-        "//eden/mononoke/land_service/facebook/server:land_service",
-        "//eden/mononoke/tools/admin:admin",
         "//eden/mononoke/tools/testtool:testtool",
     ],
 )
@@ -220,37 +142,6 @@ dott_test(
 )
 
 dott_test(
-    name = "admin",
-    dott_files = glob(["test-admin-*.t"]),
-    deps = [
-        "//eden/mononoke:mononoke",
-        "//eden/mononoke/tools/admin:admin",
-        "//eden/mononoke/tools/facebook/backfill_bonsai_blob_mapping:backfill_bonsai_blob_mapping",
-        "//eden/mononoke/tools/testtool:testtool",
-    ],
-)
-
-dott_test(
-    name = "backfill-bonsai-blob-mapping",
-    dott_files = glob(["test-backfill-bonsai-blob-mapping-*.t"]),
-    deps = [
-        "//eden/mononoke:mononoke",
-        "//eden/mononoke/tools/admin:admin",
-        "//eden/mononoke/tools/facebook/backfill_bonsai_blob_mapping:backfill_bonsai_blob_mapping",
-        "//eden/mononoke/tools/testtool:testtool",
-    ],
-)
-
-dott_test(
-    name = "repo_metadata_logger",
-    dott_files = glob(["test-repo-metadata-logger-*.t"]),
-    deps = [
-        "//eden/mononoke/tools/facebook/repo_metadata_logger:repo_metadata_logger",
-        "//eden/mononoke/tools/testtool:testtool",
-    ],
-)
-
-dott_test(
     name = "sql-telemetry",
     dott_files = ["test-sql-telemetry.t"],
     use_mysql = True,
@@ -258,5 +149,51 @@ dott_test(
         "//eden/mononoke:mononoke",
         "//eden/mononoke/tools/admin:admin",
         "//eden/mononoke/tools/testtool:testtool",
+    ],
+)
+
+dott_test(
+    name = "test-bookmark-service",
+    dott_files = glob(["test-bookmark-service*.t"]),
+    deps = [
+        "//eden/mononoke/facebook/bookmark_service:bookmark_service_client_cli",
+        "//eden/mononoke/facebook/bookmark_service:bookmark_service_server",
+        "//eden/mononoke/tools/testtool:testtool",
+    ],
+)
+
+dott_test(
+    name = "test-server-and-bookmark-service",
+    dott_files = glob(["test-server-and-bookmark-service-*.t"]),
+    deps = [
+        "//eden/mononoke:mononoke",
+        "//eden/mononoke/facebook/bookmark_service:bookmark_service_client_cli",
+        "//eden/mononoke/facebook/bookmark_service:bookmark_service_server",
+        "//eden/mononoke/tools/testtool:testtool",
+    ],
+)
+
+dott_test(
+    name = "tools-example",
+    dott_files = glob([
+        "test-tools-example*.t",
+    ]),
+    deps = [
+        "//eden/mononoke/tools/example:example",
+    ],
+)
+
+dott_test(
+    name = "verify-integrity",
+    dott_files = [
+        "test-hook-verify-integrity.t",
+    ],
+    deps = [
+        "//common/tools/thriftdbg:thriftdbg",
+        "//eden/mononoke:blobimport",
+        "//eden/mononoke:mononoke",
+        "//eden/mononoke/tools/testtool:testtool",
+        "//security/source_control/verify_integrity:verify_integrity",
+        "//security/source_control/verify_integrity/service:verify_integrity_service",
     ],
 )
