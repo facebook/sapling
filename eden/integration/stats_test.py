@@ -13,10 +13,10 @@ import time
 import typing
 from pathlib import Path, PurePath
 
-from facebook.eden.constants import STATS_MOUNTS_STATS
-from facebook.eden.ttypes import (
+from eden.fs.service.eden.thrift_types import (
     GetStatInfoParams,
     JournalInfo,
+    STATS_MOUNTS_STATS,
     SynchronizeWorkingCopyParams,
     TimeSpec,
 )
@@ -192,7 +192,7 @@ class ObjectCacheStatsTest(testcase.EdenRepoTest):
 
         self.repo.commit("Initial commit.")
 
-    def test_get_tree_memory(self) -> None:
+    async def test_get_tree_memory(self) -> None:
         MEMORY_COUNTER = "object_store.get_tree.memory.count"
 
         list(os.scandir(Path(self.mount) / "dir"))
@@ -202,12 +202,14 @@ class ObjectCacheStatsTest(testcase.EdenRepoTest):
         # To exercise the in-memory tree cache we have to first unload the
         # corresponding inodes (which contains its own cache of directory
         # entries) and OS kernel caches.
-        with self.get_thrift_client_legacy() as thrift_client:
-            thrift_client.unloadInodeForPath(
+        async with self.get_thrift_client() as thrift_client:
+            await thrift_client.unloadInodeForPath(
                 self.mount.encode("utf-8"), b"", TimeSpec(seconds=0, nanoSeconds=0)
             )
 
-            thrift_client.invalidateKernelInodeCache(self.mount.encode("utf-8"), b"dir")
+            await thrift_client.invalidateKernelInodeCache(
+                self.mount.encode("utf-8"), b"dir"
+            )
 
         # List the directory again, which should result in a TreeCache hit this
         # time around.  We use os.scandir because Path.glob seems to do some
@@ -454,13 +456,13 @@ class SaplingBackingStoreStatsTest(testcase.EdenRepoTest):
 
 @testcase.eden_repo_test
 class JournalInfoTest(testcase.EdenRepoTest):
-    def test_journal_info(self) -> None:
-        journal = self.journal_stats()
+    async def test_journal_info(self) -> None:
+        journal = await self.journal_stats()
         old_mem = journal.memoryUsage
         old_data_counts = journal.entryCount
         path = Path(self.mount) / "new_file"
         path.write_bytes(b"hello")
-        journal = self.journal_stats()
+        journal = await self.journal_stats()
         new_mem = journal.memoryUsage
         new_data_counts = journal.entryCount
         self.assertLess(
@@ -472,13 +474,13 @@ class JournalInfoTest(testcase.EdenRepoTest):
             old_mem, new_mem, "Changing the repo should cause memory usage to increase"
         )
 
-    def journal_stats(self) -> JournalInfo:
-        with self.get_thrift_client_legacy() as thrift_client:
-            thrift_client.synchronizeWorkingCopy(
+    async def journal_stats(self) -> JournalInfo:
+        async with self.get_thrift_client() as thrift_client:
+            await thrift_client.synchronizeWorkingCopy(
                 self.mount.encode("utf-8"), SynchronizeWorkingCopyParams()
             )
 
-            stats = thrift_client.getStatInfo(
+            stats = await thrift_client.getStatInfo(
                 GetStatInfoParams(statsMask=STATS_MOUNTS_STATS)
             )
             journal_key = self.mount.encode()
