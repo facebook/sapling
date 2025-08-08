@@ -5,7 +5,7 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-import type {RunnableOperation} from 'isl/src/types';
+import type {AbsolutePath, RunnableOperation, Submodules} from 'isl/src/types';
 import type {ResolveCommandConflictOutput} from '../commands';
 import type {ServerPlatform} from '../serverPlatform';
 import type {RepositoryContext} from '../serverTypes';
@@ -1046,5 +1046,123 @@ describe('getCwdInfo', () => {
     ).resolves.toEqual({
       cwd: '/path/ro/myRepo/some/subdir',
     });
+  });
+});
+
+describe('fetchSubmoduleMap', () => {
+  let myRepoRoot: AbsolutePath;
+  let ctx: RepositoryContext;
+  beforeEach(() => {
+    myRepoRoot = '/data/users/name/myRepo';
+    ctx = {
+      cmd: 'sl',
+      cwd: myRepoRoot,
+      logger: mockLogger,
+      tracker: mockTracker,
+    };
+  });
+
+  it('simple', async () => {
+    const submodules: Submodules = [
+      {
+        name: 'submoduleA',
+        url: 'https://ghe.myCompany.com/myUsername/myRepo/submoduleA',
+        path: 'submoduleA',
+        active: true,
+      },
+      {
+        name: 'submoduleB',
+        url: 'https://ghe.myCompany.com/myUsername/myRepo/submoduleB',
+        path: 'submoduleB',
+        active: false,
+      },
+    ];
+    const submodulesJson = JSON.stringify(submodules);
+    mockEjeca([
+      [/^sl root/, {stdout: myRepoRoot}],
+      [/^sl debugroots/, {stdout: myRepoRoot}],
+      [/^sl debuggitmodules/, {stdout: submodulesJson}],
+    ]);
+    const info = (await Repository.getRepoInfo(ctx)) as ValidatedRepoInfo;
+    const repo = new Repository(info, ctx);
+    await repo.fetchSubmoduleMap();
+    const fetchedSubmoduleMap = repo.getSubmoduleMap();
+    expect(fetchedSubmoduleMap).not.toBeUndefined();
+    expect(fetchedSubmoduleMap?.get(myRepoRoot)?.value).toEqual(submodules);
+  });
+
+  it('no submodules', async () => {
+    const submodules: Submodules = [];
+    const submodulesJson = JSON.stringify(submodules);
+    mockEjeca([
+      [/^sl root/, {stdout: myRepoRoot}],
+      [/^sl debugroots/, {stdout: myRepoRoot}],
+      [/^sl debuggitmodules/, {stdout: submodulesJson}],
+    ]);
+    const info = (await Repository.getRepoInfo(ctx)) as ValidatedRepoInfo;
+    const repo = new Repository(info, ctx);
+    await repo.fetchSubmoduleMap();
+    const fetchedSubmoduleMap = repo.getSubmoduleMap();
+    expect(fetchedSubmoduleMap).not.toBeUndefined();
+    expect(fetchedSubmoduleMap?.get(myRepoRoot)?.value).toBeUndefined();
+  });
+
+  it('nested', async () => {
+    const submodulesOfMyRepo: Submodules = [
+      {
+        name: 'submoduleA',
+        url: 'https://ghe.myCompany.com/myUsername/myRepo/submoduleA',
+        path: 'submoduleA',
+        active: true,
+      },
+    ];
+    const submoduleARoot = myRepoRoot + '/submoduleA';
+    const submodulesOfA: Submodules = [
+      {
+        name: 'submoduleB',
+        url: 'https://ghe.myCompany.com/myUsername/myRepo/submoduleA/submoduleB',
+        path: 'submoduleB',
+        active: true,
+      },
+    ];
+    const submoduleBRoot = submoduleARoot + '/submoduleB';
+    mockEjeca([
+      [
+        new RegExp(`^sl debuggitmodules --json --repo ${submoduleARoot}`),
+        {stdout: JSON.stringify(submodulesOfA)},
+      ],
+      [
+        new RegExp(`^sl debuggitmodules --json --repo ${myRepoRoot}`),
+        {stdout: JSON.stringify(submodulesOfMyRepo)},
+      ],
+      [/^sl root/, {stdout: submoduleBRoot}],
+      [/^sl debugroots/, {stdout: myRepoRoot + '\n' + submoduleARoot + '\n' + submoduleBRoot}],
+    ]);
+    const updatedCtx = {...ctx, cwd: submoduleBRoot};
+    const info = (await Repository.getRepoInfo(updatedCtx)) as ValidatedRepoInfo;
+    const repo = new Repository(info, updatedCtx);
+    await repo.fetchSubmoduleMap();
+    const fetchedSubmoduleMap = repo.getSubmoduleMap();
+
+    expect(fetchedSubmoduleMap).not.toBeUndefined();
+    expect(fetchedSubmoduleMap?.get(myRepoRoot)?.value).toEqual(submodulesOfMyRepo);
+    expect(fetchedSubmoduleMap?.get(submoduleARoot)?.value).toEqual(submodulesOfA);
+  });
+
+  it('error', async () => {
+    const msg = 'mock sapling error';
+    mockEjeca([
+      [/^sl root/, {stdout: myRepoRoot}],
+      [/^sl debugroots/, {stdout: myRepoRoot}],
+      [/^sl debuggitmodules/, new Error(msg)],
+    ]);
+    const info = (await Repository.getRepoInfo(ctx)) as ValidatedRepoInfo;
+    const repo = new Repository(info, ctx);
+    await repo.fetchSubmoduleMap();
+    const fetchedSubmoduleMap = repo.getSubmoduleMap();
+
+    expect(fetchedSubmoduleMap).not.toBeUndefined();
+    expect(fetchedSubmoduleMap?.get(myRepoRoot)?.value).toBeUndefined();
+    expect(fetchedSubmoduleMap?.get(myRepoRoot)?.error?.message).toMatch(msg);
   });
 });
