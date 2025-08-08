@@ -1173,18 +1173,58 @@ def setup_mononoke_storage_config(
     test_tmp = env.getenv("TESTTMP")
     blobstore_path = f"{test_tmp}/{blobstore_name}"
 
-    bubble_deletion_mode = env.getenv("BUBBLE_DELETION_MODE", "0")
-    bubble_lifespan_secs = env.getenv("BUBBLE_LIFESPAN_SECS", "1000")
-    bubble_expiration_secs = env.getenv("BUBBLE_EXPIRATION_SECS", "1000")
+    storage_config = _generate_storage_config(
+        underlying_storage, blobstore_name, blobstore_path, fs, stderr, env
+    )
 
+    with fs.open("common/storage.toml", "a") as f:
+        f.write(storage_config.encode())
+
+    return 0
+
+
+def _generate_storage_config(
+    underlying_storage: str,
+    blobstore_name: str,
+    blobstore_path: str,
+    fs: ShellFS,
+    stderr: BinaryIO,
+    env: Env,
+) -> str:
     multiplexed = env.getenv("MULTIPLEXED")
+
     if multiplexed:
-        quorum = "write_quorum"
-        btype = "multiplexed_wal"
-        scuba = (
-            f'multiplex_scuba_table = "file://{test_tmp}/blobstore_trace_scuba.json"'
+        return _generate_multiplexed_config(
+            underlying_storage,
+            blobstore_name,
+            blobstore_path,
+            multiplexed,
+            fs,
+            stderr,
+            env,
         )
-        storage_config = f"""{db_config([blobstore_name], stderr, env)}
+    else:
+        return _generate_standard_config(
+            underlying_storage, blobstore_name, blobstore_path, fs, stderr, env
+        )
+
+
+def _generate_multiplexed_config(
+    underlying_storage: str,
+    blobstore_name: str,
+    blobstore_path: str,
+    multiplexed: str,
+    fs: ShellFS,
+    stderr: BinaryIO,
+    env: Env,
+) -> str:
+    test_tmp = env.getenv("TESTTMP")
+    quorum = "write_quorum"
+    btype = "multiplexed_wal"
+    scuba = f'multiplex_scuba_table = "file://{test_tmp}/blobstore_trace_scuba.json"'
+
+    # Start with database configuration
+    config = f"""{db_config([blobstore_name], stderr, env)}
 [{blobstore_name}.blobstore.{btype}]
 multiplex_id = 1
 {blobstore_db_config(fs, env)}
@@ -1192,19 +1232,38 @@ multiplex_id = 1
 {scuba}
 components = [
 """
-        for i in range(int(multiplexed) + 1):
-            fs.mkdir(f"{blobstore_path}/{i}/blobs")
-            if env.getenv("PACK_BLOB") and i <= int(env.getenv("PACK_BLOB")):
-                storage_config += f'  {{ blobstore_id = {i}, blobstore = {{ pack = {{ blobstore = {{ {underlying_storage} = {{ path = "{blobstore_path}/{i}" }} }} }} }} }},\n'
-            else:
-                storage_config += f'  {{ blobstore_id = {i}, blobstore = {{ {underlying_storage} = {{ path = "{blobstore_path}/{i}" }} }} }},\n'
-        storage_config += "]\n"
-    else:
-        fs.mkdir(f"{blobstore_path}/blobs")
-        ephem_db_cfg = ephemeral_db_config(
-            [f"{blobstore_name}.ephemeral_blobstore"], stderr, env
-        )
-        storage_config = f"""{db_config([blobstore_name], stderr, env)}
+
+    for i in range(int(multiplexed) + 1):
+        fs.mkdir(f"{blobstore_path}/{i}/blobs")
+
+        if env.getenv("PACK_BLOB") and i <= int(env.getenv("PACK_BLOB")):
+            config += f'  {{ blobstore_id = {i}, blobstore = {{ pack = {{ blobstore = {{ {underlying_storage} = {{ path = "{blobstore_path}/{i}" }} }} }} }} }},\n'
+        else:
+            config += f'  {{ blobstore_id = {i}, blobstore = {{ {underlying_storage} = {{ path = "{blobstore_path}/{i}" }} }} }},\n'
+
+    config += "]\n"
+    return config
+
+
+def _generate_standard_config(
+    underlying_storage: str,
+    blobstore_name: str,
+    blobstore_path: str,
+    fs: ShellFS,
+    stderr: BinaryIO,
+    env: Env,
+) -> str:
+    fs.mkdir(f"{blobstore_path}/blobs")
+
+    bubble_deletion_mode = env.getenv("BUBBLE_DELETION_MODE", "0")
+    bubble_lifespan_secs = env.getenv("BUBBLE_LIFESPAN_SECS", "1000")
+    bubble_expiration_secs = env.getenv("BUBBLE_EXPIRATION_SECS", "1000")
+
+    ephem_db_cfg = ephemeral_db_config(
+        [f"{blobstore_name}.ephemeral_blobstore"], stderr, env
+    )
+
+    config = f"""{db_config([blobstore_name], stderr, env)}
 [{blobstore_name}.ephemeral_blobstore]
 initial_bubble_lifespan_secs = {bubble_lifespan_secs}
 bubble_expiration_grace_secs = {bubble_expiration_secs}
@@ -1215,17 +1274,13 @@ blobstore = {{ blob_files = {{ path = "{blobstore_path}" }} }}
 
 [{blobstore_name}.blobstore]
 """
-        if env.getenv("PACK_BLOB"):
-            storage_config += f'  pack = {{ blobstore = {{ {underlying_storage} = {{ path = "{blobstore_path}" }} }} }}\n'
-        else:
-            storage_config += (
-                f'  {underlying_storage} = {{ path = "{blobstore_path}" }}\n'
-            )
 
-    with fs.open("common/storage.toml", "a") as f:
-        f.write(storage_config.encode())
+    if env.getenv("PACK_BLOB"):
+        config += f'  pack = {{ blobstore = {{ {underlying_storage} = {{ path = "{blobstore_path}" }} }} }}\n'
+    else:
+        config += f'  {underlying_storage} = {{ path = "{blobstore_path}" }}\n'
 
-    return 0
+    return config
 
 
 def ephemeral_db_config(args: List[str], stderr: BinaryIO, env: Env) -> str:
