@@ -20,6 +20,7 @@ rust_binary(
         "//common/rust/shed/cloned:cloned",
         "//common/rust/shed/facet:facet",
         "//common/rust/shed/fbinit:fbinit",
+        "//common/rust/shed/futures_retry:futures_retry",
         "//common/rust/shed/futures_stats:futures_stats",
         "//common/rust/shed/justknobs_stub:justknobs",
         "//eden/mononoke/bookmarks:bookmarks",
