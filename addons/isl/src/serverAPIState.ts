@@ -10,7 +10,7 @@ import type {
   ApplicationInfo,
   ChangedFile,
   CommitInfo,
-  FetchedSubmodules,
+  SubmodulesByRoot,
   MergeConflicts,
   RepoInfo,
   SmartlogCommits,
@@ -432,15 +432,15 @@ registerDisposable(
   import.meta.hot,
 );
 
-export const latestSubmodulesData = atom<FetchedSubmodules>({
-  value: undefined,
-});
+export const submodulesByRoot = atom<SubmodulesByRoot>(new Map());
 
 registerCleanup(
-  latestSubmodulesData,
-  subscriptionEffect('submodules', fetchedSubmodules => {
-    writeAtom(latestSubmodulesData, _prev_data => {
-      return fetchedSubmodules;
+  submodulesByRoot,
+  subscriptionEffect('submodules', fetchedSubmoduleMap => {
+    writeAtom(submodulesByRoot, _prev_data => {
+      // TODO: In the future we may add more granular client-server API
+      // to update submodules. For now we just replace the whole map when the active repo updates.
+      return fetchedSubmoduleMap;
     });
   }),
   import.meta.hot,

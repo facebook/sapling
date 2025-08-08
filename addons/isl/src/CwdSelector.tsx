@@ -6,7 +6,13 @@
  */
 
 import type {ReactNode} from 'react';
-import type {AbsolutePath, CwdInfo, CwdRelativePath, RepoRelativePath} from './types';
+import type {
+  AbsolutePath,
+  CwdInfo,
+  CwdRelativePath,
+  RepoRelativePath,
+  ValidatedRepoInfo,
+} from './types';
 
 import * as stylex from '@stylexjs/stylex';
 import {Badge} from 'isl-components/Badge';
@@ -29,10 +35,10 @@ import {DropdownField, DropdownFields} from './DropdownFields';
 import {useCommandEvent} from './ISLShortcuts';
 import {codeReviewProvider} from './codeReview/CodeReviewInfo';
 import {T, t} from './i18n';
-import {writeAtom} from './jotaiUtils';
+import {useAtomGet, writeAtom} from './jotaiUtils';
 import platform from './platform';
 import {serverCwd} from './repositoryData';
-import {latestSubmodulesData, repositoryInfo} from './serverAPIState';
+import {submodulesByRoot, repositoryInfo} from './serverAPIState';
 import {registerCleanup, registerDisposable} from './utils';
 
 /**
@@ -134,7 +140,7 @@ export function CwdSelector() {
   const additionalToggles = useCommandEvent('ToggleCwdDropdown');
   const allCwdOptions = useCwdOptions();
   const cwdOptions = allCwdOptions.filter(opt => opt.valid);
-  const allSubmoduleOptions = useSubmoduleOptions();
+  const allSubmoduleOptions = useSubmoduleOptions(info);
   const submoduleOptions = allSubmoduleOptions?.filter(opt => opt.valid);
   const hasSubmodules = submoduleOptions != null && submoduleOptions.length > 0;
   if (info == null) {
@@ -254,12 +260,15 @@ function useCwdOptions() {
   }));
 }
 
-function useSubmoduleOptions():
-  | {id: RepoRelativePath; label: string; valid: boolean}[]
-  | undefined {
-  const fetchedSubmodules = useAtomValue(latestSubmodulesData);
+function useSubmoduleOptions(
+  info: ValidatedRepoInfo | undefined,
+): {id: RepoRelativePath; label: string; valid: boolean}[] | undefined {
+  const fetchedSubmodules = useAtomGet(submodulesByRoot, info?.repoRoot);
+  if (info == null) {
+    return undefined;
+  }
 
-  return fetchedSubmodules.value?.map(m => ({
+  return fetchedSubmodules?.value?.map(m => ({
     id: m.path,
     label: m.name,
     valid: m.active,

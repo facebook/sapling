@@ -12,7 +12,6 @@ import type {
   CodeReviewProviderSpecificClientToServerMessages,
   Disposable,
   FetchedCommits,
-  FetchedSubmodules,
   FetchedUncommittedChanges,
   FileABugProgress,
   LandInfo,
@@ -22,6 +21,7 @@ import type {
   Result,
   ServerToClientMessage,
   StableLocationData,
+  SubmodulesByRoot,
 } from 'isl/src/types';
 import type {EjecaError} from 'shared/ejeca';
 import type {ExportStack, ImportedStack} from 'shared/types/stack';
@@ -422,19 +422,19 @@ export default class ServerToClientAPI {
             break;
           }
           case 'submodules': {
-            const postSubmodules = (submodules: FetchedSubmodules) => {
+            const postSubmodules = (submodulesByRoot: SubmodulesByRoot) => {
               this.postMessage({
                 type: 'subscriptionResult',
                 kind: 'submodules',
                 subscriptionID,
-                data: submodules,
+                data: submodulesByRoot,
               });
             };
-            const submodules = repo.getSubmodules();
-            if (submodules !== undefined) {
-              postSubmodules({value: submodules});
+            const submoduleMap = repo.getSubmoduleMap();
+            if (submoduleMap !== undefined) {
+              postSubmodules(submoduleMap);
             }
-            repo.fetchSubmodules();
+            repo.fetchSubmoduleMap();
 
             const disposable = repo.subscribeToSubmodulesChanges(postSubmodules);
             this.subscriptions.set(subscriptionID, {

@@ -536,7 +536,7 @@ export type SubmoduleInfo = {
   name: string;
   path: RepoRelativePath;
   url: string;
-  ref: string | undefined;
+  ref?: string;
   active: boolean;
 };
 export type Submodules = Array<SubmoduleInfo>;
@@ -545,6 +545,7 @@ export type Submodules = Array<SubmoduleInfo>;
  * An error if unexpected errors occurred during the fetch process.
  */
 export type FetchedSubmodules = Result<Submodules | undefined>;
+export type SubmodulesByRoot = Map<AbsolutePath, FetchedSubmodules>;
 
 export type AlertSeverity = 'SEV 0' | 'SEV 1' | 'SEV 2' | 'SEV 3' | 'SEV 4' | 'UBN';
 export type Alert = {
@@ -969,7 +970,7 @@ export type SubscriptionResultsData = {
   uncommittedChanges: FetchedUncommittedChanges;
   smartlogCommits: FetchedCommits;
   mergeConflicts: MergeConflicts | undefined;
-  submodules: FetchedSubmodules;
+  submodules: SubmodulesByRoot;
 };
 
 export type SubscriptionResult<K extends SubscriptionKind> = {

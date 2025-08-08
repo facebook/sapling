@@ -17,7 +17,6 @@ import type {
   DiffId,
   Disposable,
   FetchedCommits,
-  FetchedSubmodules,
   FetchedUncommittedChanges,
   Hash,
   MergeConflicts,
@@ -33,6 +32,7 @@ import type {
   ShelvedChange,
   StableInfo,
   Submodules,
+  SubmodulesByRoot,
   UncommittedChanges,
   ValidatedRepoInfo,
 } from 'isl/src/types';
@@ -114,12 +114,12 @@ export class Repository {
   private mergeConflicts: MergeConflicts | undefined = undefined;
   private uncommittedChanges: FetchedUncommittedChanges | null = null;
   private smartlogCommits: FetchedCommits | null = null;
-  private submodules: Submodules | undefined = undefined;
+  private submodulesByRoot: SubmodulesByRoot | undefined = undefined;
 
   private mergeConflictsEmitter = new TypedEventEmitter<'change', MergeConflicts | undefined>();
   private uncommittedChangesEmitter = new TypedEventEmitter<'change', FetchedUncommittedChanges>();
   private smartlogCommitsChangesEmitter = new TypedEventEmitter<'change', FetchedCommits>();
-  private submodulesChangesEmitter = new TypedEventEmitter<'change', FetchedSubmodules>();
+  private submodulesChangesEmitter = new TypedEventEmitter<'change', SubmodulesByRoot>();
 
   private smartlogCommitsBeginFetchingEmitter = new TypedEventEmitter<'start', undefined>();
   private uncommittedChangesBeginFetchingEmitter = new TypedEventEmitter<'start', undefined>();
@@ -911,7 +911,7 @@ export class Repository {
     };
   }
 
-  subscribeToSubmodulesChanges(callback: (result: FetchedSubmodules) => unknown) {
+  subscribeToSubmodulesChanges(callback: (result: SubmodulesByRoot) => unknown) {
     this.submodulesChangesEmitter.on('change', callback);
     return {
       dispose: () => {
@@ -1015,11 +1015,11 @@ export class Repository {
     };
   }
 
-  getSubmodules(): Submodules | undefined {
-    return this.submodules;
+  getSubmoduleMap(): SubmodulesByRoot | undefined {
+    return this.submodulesByRoot;
   }
 
-  async fetchSubmodules(): Promise<void> {
+  async fetchSubmoduleMap(): Promise<void> {
     try {
       const proc = await this.runCommand(
         ['debuggitmodules', '--json'],
@@ -1029,8 +1029,10 @@ export class Repository {
       const submodules = JSON.parse(proc.stdout) as Submodules;
       // debuggitmodules returns an empty vec
       // when submodule is not supported by the repo at all
-      this.submodules = submodules?.length === 0 ? undefined : submodules;
-      this.submodulesChangesEmitter.emit('change', {value: this.submodules});
+      if (submodules.length > 0) {
+        this.submodulesByRoot = new Map([[this.info.repoRoot, {value: submodules}]]);
+      }
+      this.submodulesChangesEmitter.emit('change', this.submodulesByRoot ?? new Map());
     } catch (err) {
       let error = err;
       if (isEjecaError(error)) {
@@ -1041,9 +1043,8 @@ export class Repository {
       }
       this.initialConnectionContext.logger.error('Error fetching submodules: ', error);
 
-      this.submodulesChangesEmitter.emit('change', {
-        error: error instanceof Error ? error : new Error(error as string),
-      });
+      this.submodulesByRoot = new Map([[this.info.repoRoot, {error: new Error(err as string)}]]);
+      this.submodulesChangesEmitter.emit('change', this.submodulesByRoot);
     }
   }
 
