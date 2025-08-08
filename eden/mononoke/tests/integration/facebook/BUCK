@@ -77,6 +77,25 @@ dott_test(
 )
 
 dott_test(
+    name = "cross-repo-and-scs",
+    dott_files = glob([
+        "test-cross-repo-and-scs-*.t",
+    ]),
+    deps = [
+        "//eden/mononoke:mononoke",
+        "//eden/mononoke/commit_rewriting/backsyncer:backsyncer_cmd",
+        "//eden/mononoke/commit_rewriting/commit_validator:commit_validator",
+        "//eden/mononoke/commit_rewriting/mononoke_x_repo_sync_job:mononoke_x_repo_sync_job",
+        "//eden/mononoke/git/gitimport:gitimport",
+        "//eden/mononoke/git_server:git_server",
+        "//eden/mononoke/scs/client:scsc",
+        "//eden/mononoke/scs/scs_server:scs_server",
+        "//eden/mononoke/tools/admin:admin",
+        "//eden/mononoke/tools/testtool:testtool",
+    ],
+)
+
+dott_test(
     name = "test-bookmark-service",
     dott_files = glob(["test-bookmark-service*.t"]),
     deps = [
@@ -214,56 +233,6 @@ dott_test(
 )
 
 dott_test(
-    name = "scs",
-    dott_files = glob(
-        ["test-scs*.t"],
-        exclude = [
-            "test-scs-git*.t",
-            "test-scs-land-service*.t",
-        ],
-    ),
-    enable_async_requests_worker = True,
-    deps = [
-        "//eden/mononoke:backfill_mapping",
-        "//eden/mononoke:blobimport",
-        "//eden/mononoke:mononoke",
-        "//eden/mononoke/commit_rewriting/backsyncer:backsyncer_cmd",
-        "//eden/mononoke/scs/client:scsc",
-        "//eden/mononoke/scs/scs_server:scs_server",
-        "//eden/mononoke/tools/admin:admin",
-        "//eden/mononoke/tools/testtool:testtool",
-        "//metalos/facebook/fb303-status:fb303-status",
-    ],
-)
-
-dott_test(
-    name = "scs-git",
-    dott_files = glob(["test-scs-git*.t"]),
-    deps = [
-        "//eden/mononoke:mononoke",
-        "//eden/mononoke/git/gitimport:gitimport",
-        "//eden/mononoke/scs/client:scsc",
-        "//eden/mononoke/scs/scs_server:scs_server",
-        "//eden/mononoke/tools/admin:admin",
-        "//eden/mononoke/tools/testtool:testtool",
-    ],
-)
-
-dott_test(
-    name = "scs-land-service",
-    dott_files = glob(["test-scs-land-service*.t"]),
-    deps = [
-        "//eden/mononoke:mononoke",
-        "//eden/mononoke/commit_rewriting/backsyncer:backsyncer_cmd",
-        "//eden/mononoke/land_service/facebook/server:land_service",
-        "//eden/mononoke/scs/client:scsc",
-        "//eden/mononoke/scs/scs_server:scs_server",
-        "//eden/mononoke/tools/admin:admin",
-        "//eden/mononoke/tools/testtool:testtool",
-    ],
-)
-
-dott_test(
     name = "land_service",
     dott_files = glob(["test-land-service*.t"]),
     deps = [
@@ -306,25 +275,6 @@ dott_test(
 )
 
 dott_test(
-    name = "cross-repo-and-scs",
-    dott_files = glob([
-        "test-cross-repo-and-scs-*.t",
-    ]),
-    deps = [
-        "//eden/mononoke:mononoke",
-        "//eden/mononoke/commit_rewriting/backsyncer:backsyncer_cmd",
-        "//eden/mononoke/commit_rewriting/commit_validator:commit_validator",
-        "//eden/mononoke/commit_rewriting/mononoke_x_repo_sync_job:mononoke_x_repo_sync_job",
-        "//eden/mononoke/git/gitimport:gitimport",
-        "//eden/mononoke/git_server:git_server",
-        "//eden/mononoke/scs/client:scsc",
-        "//eden/mononoke/scs/scs_server:scs_server",
-        "//eden/mononoke/tools/admin:admin",
-        "//eden/mononoke/tools/testtool:testtool",
-    ],
-)
-
-dott_test(
     name = "admin",
     dott_files = glob(["test-admin-*.t"]),
     deps = [
@@ -351,6 +301,33 @@ dott_test(
     dott_files = glob(["test-repo-metadata-logger-*.t"]),
     deps = [
         "//eden/mononoke/tools/facebook/repo_metadata_logger:repo_metadata_logger",
+        "//eden/mononoke/tools/testtool:testtool",
+    ],
+)
+
+dott_test(
+    name = "scs-git",
+    dott_files = glob(["test-scs-git*.t"]),
+    deps = [
+        "//eden/mononoke:mononoke",
+        "//eden/mononoke/git/gitimport:gitimport",
+        "//eden/mononoke/scs/client:scsc",
+        "//eden/mononoke/scs/scs_server:scs_server",
+        "//eden/mononoke/tools/admin:admin",
+        "//eden/mononoke/tools/testtool:testtool",
+    ],
+)
+
+dott_test(
+    name = "scs-land-service",
+    dott_files = glob(["test-scs-land-service*.t"]),
+    deps = [
+        "//eden/mononoke:mononoke",
+        "//eden/mononoke/commit_rewriting/backsyncer:backsyncer_cmd",
+        "//eden/mononoke/land_service/facebook/server:land_service",
+        "//eden/mononoke/scs/client:scsc",
+        "//eden/mononoke/scs/scs_server:scs_server",
+        "//eden/mononoke/tools/admin:admin",
         "//eden/mononoke/tools/testtool:testtool",
     ],
 )
