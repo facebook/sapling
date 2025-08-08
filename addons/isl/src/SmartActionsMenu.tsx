@@ -73,6 +73,7 @@ function SmartActions({commit, dismiss}: {commit: CommitInfo; dismiss: () => voi
       <ResolveCommentsButton
         key="resolve-comments"
         diffId={commit.diffId}
+        filePathsSample={commit.filePathsSample}
         dismiss={dismiss}
         disabled={!commit.isDot}
         disabledReason="This action is only available for the current commit."
@@ -124,11 +125,13 @@ function AutoSplitButton({commit, dismiss}: {commit: CommitInfo; dismiss: () => 
 /** Prompt Devmate to resolve all comments on a diff. */
 function ResolveCommentsButton({
   diffId,
+  filePathsSample,
   dismiss,
   disabled,
   disabledReason,
 }: {
   diffId: string;
+  filePathsSample: readonly string[];
   dismiss: () => void;
   disabled?: boolean;
   disabledReason?: string;
@@ -151,6 +154,7 @@ function ResolveCommentsButton({
           type: 'platform/resolveAllCommentsWithAI',
           diffId,
           comments: diffComments.data,
+          filePaths: [...filePathsSample],
           repoPath,
         });
         dismiss();

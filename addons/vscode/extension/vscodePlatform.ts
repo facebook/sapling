@@ -250,9 +250,9 @@ export const getVSCodePlatform = (context: vscode.ExtensionContext): VSCodeServe
           break;
         }
         case 'platform/resolveAllCommentsWithAI': {
-          const {diffId, comments, repoPath} = message;
+          const {diffId, comments, filePaths, repoPath} = message;
           promptDevmate(
-            {type: 'resolveAllComments', diffId, comments, repoPath},
+            {type: 'resolveAllComments', diffId, comments, filePaths, repoPath},
             ActionTriggerType.ISL2SmartActions,
           );
           break;

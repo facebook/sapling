@@ -697,6 +697,7 @@ export type PlatformSpecificClientToServerMessages =
       type: 'platform/resolveAllCommentsWithAI';
       diffId: string;
       comments: Array<DiffComment>;
+      filePaths: Array<RepoRelativePath>;
       repoPath?: string;
     }
   | {
