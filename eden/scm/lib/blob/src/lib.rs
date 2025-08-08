@@ -46,7 +46,8 @@ impl Blob {
     #[cfg(fbcode_build)]
     pub fn into_iobuf(self) -> iobuf::IOBufShared {
         match self {
-            Self::Bytes(bytes) => iobuf::IOBufShared::from(bytes),
+            // safety: `minibytes::Bytes`'s deref as `[u8]` is valid when `bytes` is alive.
+            Self::Bytes(bytes) => unsafe { iobuf::IOBufShared::from_owner(bytes) },
             Self::IOBuf(buf) => buf,
         }
     }
