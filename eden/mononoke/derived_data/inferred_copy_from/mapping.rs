@@ -86,6 +86,14 @@ impl BonsaiDerivable for RootInferredCopyFromId {
         derive_impl(ctx, derivation_ctx, &bonsai).await
     }
 
+    async fn derive_from_predecessor(
+        ctx: &CoreContext,
+        derivation_ctx: &DerivationContext,
+        bonsai: BonsaiChangeset,
+    ) -> Result<Self> {
+        derive_impl(ctx, derivation_ctx, &bonsai).await
+    }
+
     async fn derive_batch(
         ctx: &CoreContext,
         derivation_ctx: &DerivationContext,
