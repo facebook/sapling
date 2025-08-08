@@ -158,7 +158,32 @@ def subtree_copy(ui, repo, *args, **opts):
     _("-r REV [--from-path PATH] --to-path PATH ..."),
 )
 def subtree_import(ui, repo, *args, **opts):
-    """import an external repository into current repository at the specified path"""
+    """import an external repository into current repository at the specified path
+
+    Import an external (Git) repository into the current @Product@ repository at
+    a specified destination path. This preserves the external repository's metadata.
+
+    The command requires specifying the external repository URL (HTTPS or SSH),
+    a specific commit hash to import, and the destination path within the current
+    repository.
+
+    Optionally, a source path within the external repository can be specified to
+    import only a subdirectory.
+
+    Examples:
+
+    - Import entire repository::
+
+        @prog@ subtree import --url https://github.com/owner/foo.git \\
+            --to-path vendor/foo --rev abc123
+
+    - Import specific subdirectory::
+
+        @prog@ subtree import --url git@github.com:owner/foo.git \\
+            --from-path src --to-path vendor/foo_src --rev def456
+
+    Use --force to overwrite existing destination paths.
+    """
     with repo.wlock(), repo.lock():
         return _do_import(ui, repo, *args, **opts)
 
