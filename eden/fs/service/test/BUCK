@@ -79,3 +79,13 @@ cpp_unittest(
         "//eden/fs/testharness:test_server_state",
     ],
 )
+
+cpp_unittest(
+    name = "pretty_printers_test",
+    srcs = ["PrettyPrintersTest.cpp"],
+    supports_static_listing = False,
+    deps = [
+        "//eden/common/utils:utils",
+        "//eden/fs/service:pretty_printers",
+    ],
+)
