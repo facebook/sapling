@@ -11,9 +11,9 @@ import os
 import sys
 from pathlib import Path
 
-from eden.thrift.legacy import EdenClient
+from eden.fs.service.eden.thrift_clients import EdenService
 
-from facebook.eden.ttypes import (
+from eden.fs.service.eden.thrift_types import (
     BlobMetadataOrError,
     BlobMetadataWithOrigin,
     DataFetchOrigin,
@@ -43,9 +43,9 @@ class DebugBlobTest(testcase.EdenRepoTest):
         self.repo.commit("Initial commit.")
 
     # TODO: enable when using the modern Python 3 Thrift API
-    def xtest_debug_blob_prints_binary_data(self) -> None:
-        with self.eden.get_thrift_client_legacy() as client:
-            debugInfo = client.debugInodeStatus(
+    async def xtest_debug_blob_prints_binary_data(self) -> None:
+        async with self.eden.get_thrift_client() as client:
+            debugInfo = await client.debugInodeStatus(
                 os.fsencode(self.mount), b".", flags=0, sync=SyncBehavior()
             )
 
@@ -67,10 +67,10 @@ class DebugBlobHgTest(testcase.HgRepoTestMixin, testcase.EdenRepoTest):
         self.repo.write_file("binary", b"\xff\xfe\xfd\xfc")
         self.repo.commit("Initial commit.")
 
-    def assert_blob_not_available(
-        self, client: EdenClient, blob_id: bytes, origin: int
+    async def assert_blob_not_available(
+        self, client: EdenService.Async, blob_id: bytes, origin: int
     ) -> None:
-        response = client.debugGetBlob(
+        response = await client.debugGetBlob(
             DebugGetScmBlobRequest(
                 mountId=MountId(mountPoint=self.mount.encode()),
                 id=blob_id,
@@ -79,16 +79,16 @@ class DebugBlobHgTest(testcase.HgRepoTestMixin, testcase.EdenRepoTest):
         )
         print(response)
         # this should not error
-        (response.blobs[0].blob.get_error(),)
+        (response.blobs[0].blob.error)
 
-    def assert_blob_available(
+    async def assert_blob_available(
         self,
-        client: EdenClient,
+        client: EdenService.Async,
         blob_id: bytes,
         origin: DataFetchOrigin,
         data: bytes,
     ) -> None:
-        response = client.debugGetBlob(
+        response = await client.debugGetBlob(
             DebugGetScmBlobRequest(
                 mountId=MountId(mountPoint=self.mount.encode()),
                 id=blob_id,
@@ -103,9 +103,9 @@ class DebugBlobHgTest(testcase.HgRepoTestMixin, testcase.EdenRepoTest):
             response,
         )
 
-    def test_debug_blob_locations(self) -> None:
-        with self.eden.get_thrift_client_legacy() as client:
-            debugInfo = client.debugInodeStatus(
+    async def test_debug_blob_locations(self) -> None:
+        async with self.eden.get_thrift_client() as client:
+            debugInfo = await client.debugInodeStatus(
                 os.fsencode(self.mount), b".", flags=0, sync=SyncBehavior()
             )
         [root] = [entry for entry in debugInfo if entry.path == b""]
@@ -119,7 +119,7 @@ class DebugBlobHgTest(testcase.HgRepoTestMixin, testcase.EdenRepoTest):
 
         self.eden.run_cmd("gc", cwd=self.mount)
 
-        with self.eden.get_thrift_client_legacy() as client:
+        async with self.eden.get_thrift_client() as client:
             # not present in the local storage yet
             for origin in [
                 DataFetchOrigin.MEMORY_CACHE,
@@ -127,14 +127,14 @@ class DebugBlobHgTest(testcase.HgRepoTestMixin, testcase.EdenRepoTest):
             ]:
                 print(origin)
                 print(file.hash)
-                self.assert_blob_not_available(
+                await self.assert_blob_not_available(
                     client,
                     file.hash,
                     origin,
                 )
 
             # "fetch from network"
-            self.assert_blob_available(
+            await self.assert_blob_available(
                 client,
                 file.hash,
                 DataFetchOrigin.ANYWHERE,
@@ -150,12 +150,12 @@ class DebugBlobHgTest(testcase.HgRepoTestMixin, testcase.EdenRepoTest):
                 # DataFetchFromWhere.MEMORY_CACHE,
             ]:
                 print(fromWhere)
-                self.assert_blob_available(
+                await self.assert_blob_available(
                     client, file.hash, fromWhere, b"\xff\xfe\xfd\xfc"
                 )
 
             # check a request from multiple places:
-            response = client.debugGetBlob(
+            response = await client.debugGetBlob(
                 DebugGetScmBlobRequest(
                     mountId=MountId(mountPoint=self.mount.encode()),
                     id=file.hash,
@@ -171,15 +171,15 @@ class DebugBlobHgTest(testcase.HgRepoTestMixin, testcase.EdenRepoTest):
             self.assertEqual(5, len(response.blobs))
             for blob in response.blobs:
                 if blob.origin == DataFetchOrigin.MEMORY_CACHE:
-                    blob.blob.get_error()
+                    blob.blob.error
                 elif blob.origin == DataFetchOrigin.DISK_CACHE:
-                    blob.blob.get_error()
+                    blob.blob.error
                 elif blob.origin == DataFetchOrigin.LOCAL_BACKING_STORE:
-                    self.assertEqual(b"\xff\xfe\xfd\xfc", blob.blob.get_blob())
+                    self.assertEqual(b"\xff\xfe\xfd\xfc", blob.blob.blob)
                 elif blob.origin == DataFetchOrigin.REMOTE_BACKING_STORE:
-                    blob.blob.get_error()
+                    blob.blob.error
                 elif blob.origin == DataFetchOrigin.ANYWHERE:
-                    self.assertEqual(b"\xff\xfe\xfd\xfc", blob.blob.get_blob())
+                    self.assertEqual(b"\xff\xfe\xfd\xfc", blob.blob.blob)
 
             if sys.platform != "win32":
                 # on non windows platforms materializing an inode does cache it's
@@ -187,7 +187,7 @@ class DebugBlobHgTest(testcase.HgRepoTestMixin, testcase.EdenRepoTest):
                 with open(Path(self.mount) / "binary", "a") as binary_file:
                     binary_file.buffer.write(b"\xfc")
 
-                self.assert_blob_available(
+                await self.assert_blob_available(
                     client,
                     file.hash,
                     DataFetchOrigin.MEMORY_CACHE,
@@ -201,10 +201,10 @@ class DebugBlobMetadataHgTest(testcase.HgRepoTestMixin, testcase.EdenRepoTest):
         self.repo.write_file("binary", b"\xff\xfe\xfd\xfc")
         self.repo.commit("Initial commit.")
 
-    def assert_metadata_not_available(
-        self, client: EdenClient, blob_id: bytes, origin: int
+    async def assert_metadata_not_available(
+        self, client: EdenService.Async, blob_id: bytes, origin: int
     ) -> None:
-        response = client.debugGetBlobMetadata(
+        response = await client.debugGetBlobMetadata(
             DebugGetBlobMetadataRequest(
                 mountId=MountId(mountPoint=self.mount.encode()),
                 id=blob_id,
@@ -213,17 +213,17 @@ class DebugBlobMetadataHgTest(testcase.HgRepoTestMixin, testcase.EdenRepoTest):
         )
         print(response)
         # this should not error
-        (response.metadatas[0].metadata.get_error(),)
+        (response.metadatas[0].metadata.error)
 
-    def assert_metadata_available(
+    async def assert_metadata_available(
         self,
-        client: EdenClient,
+        client: EdenService.Async,
         blob_id: bytes,
         origin: DataFetchOrigin,
         sha1: bytes,
         size: int,
     ) -> None:
-        response = client.debugGetBlobMetadata(
+        response = await client.debugGetBlobMetadata(
             DebugGetBlobMetadataRequest(
                 mountId=MountId(mountPoint=self.mount.encode()),
                 id=blob_id,
@@ -245,9 +245,9 @@ class DebugBlobMetadataHgTest(testcase.HgRepoTestMixin, testcase.EdenRepoTest):
             response,
         )
 
-    def test_debug_blob_metadata_locations(self) -> None:
-        with self.eden.get_thrift_client_legacy() as client:
-            debugInfo = client.debugInodeStatus(
+    async def test_debug_blob_metadata_locations(self) -> None:
+        async with self.eden.get_thrift_client() as client:
+            debugInfo = await client.debugInodeStatus(
                 os.fsencode(self.mount), b".", flags=0, sync=SyncBehavior()
             )
         [root] = [entry for entry in debugInfo if entry.path == b""]
@@ -262,7 +262,7 @@ class DebugBlobMetadataHgTest(testcase.HgRepoTestMixin, testcase.EdenRepoTest):
         self.eden.run_cmd("gc", cwd=self.mount)
         self.eden.restart()
 
-        with self.eden.get_thrift_client_legacy() as client:
+        async with self.eden.get_thrift_client() as client:
             # not present in the local storage yet
             for origin in [
                 DataFetchOrigin.MEMORY_CACHE,
@@ -270,14 +270,14 @@ class DebugBlobMetadataHgTest(testcase.HgRepoTestMixin, testcase.EdenRepoTest):
             ]:
                 print(origin)
                 print(file.hash)
-                self.assert_metadata_not_available(
+                await self.assert_metadata_not_available(
                     client,
                     file.hash,
                     origin,
                 )
 
             # "fetch from network"
-            self.assert_metadata_available(
+            await self.assert_metadata_available(
                 client,
                 file.hash,
                 DataFetchOrigin.ANYWHERE,
@@ -292,7 +292,7 @@ class DebugBlobMetadataHgTest(testcase.HgRepoTestMixin, testcase.EdenRepoTest):
                 DataFetchOrigin.LOCAL_BACKING_STORE,
             ]:
                 print(fromWhere)
-                self.assert_metadata_available(
+                await self.assert_metadata_available(
                     client,
                     file.hash,
                     fromWhere,
@@ -301,7 +301,7 @@ class DebugBlobMetadataHgTest(testcase.HgRepoTestMixin, testcase.EdenRepoTest):
                 )
 
             # check a request from multiple places:
-            response = client.debugGetBlobMetadata(
+            response = await client.debugGetBlobMetadata(
                 DebugGetBlobMetadataRequest(
                     mountId=MountId(mountPoint=self.mount.encode()),
                     id=file.hash,
@@ -318,13 +318,13 @@ class DebugBlobMetadataHgTest(testcase.HgRepoTestMixin, testcase.EdenRepoTest):
             for metadata in response.metadatas:
                 self.assertEqual(
                     4,
-                    metadata.metadata.get_metadata().size,
-                    f"wrong size for origin={DataFetchOrigin._VALUES_TO_NAMES[metadata.origin]}",
+                    metadata.metadata.metadata.size,
+                    f"wrong size for origin={metadata.origin.name}",
                 )
                 self.assertEqual(
                     b"\x007\xc9\xb5h<\x0e\x8d\x8c\xa6qM\xb2\xf1Q\x9b#.\x10\xe2",
-                    metadata.metadata.get_metadata().contentsSha1,
-                    f"wrong contentsSha1 for origin={DataFetchOrigin._VALUES_TO_NAMES[metadata.origin]}",
+                    metadata.metadata.metadata.contentsSha1,
+                    f"wrong contentsSha1 for origin={metadata.origin.name}",
                 )
 
 
@@ -334,10 +334,10 @@ class DebugTreeHgTest(testcase.HgRepoTestMixin, testcase.EdenRepoTest):
         self.repo.write_file("testDir/testTree/binary", b"\xff\xfe\xfd\xfc")
         self.repo.commit("Initial commit.")
 
-    def assert_tree_not_available(
-        self, client: EdenClient, tree_id: bytes, origin: int
+    async def assert_tree_not_available(
+        self, client: EdenService.Async, tree_id: bytes, origin: int
     ) -> None:
-        response = client.debugGetTree(
+        response = await client.debugGetTree(
             DebugGetScmTreeRequest(
                 mountId=MountId(mountPoint=self.mount.encode()),
                 id=tree_id,
@@ -346,18 +346,18 @@ class DebugTreeHgTest(testcase.HgRepoTestMixin, testcase.EdenRepoTest):
         )
         print(response)
         # this should not error
-        response.trees[0].scmTreeData.get_error()
+        response.trees[0].scmTreeData.error
 
-    def assert_tree_available(
+    async def assert_tree_available(
         self,
-        client: EdenClient,
+        client: EdenService.Async,
         tree_id: bytes,
         origin: DataFetchOrigin,
         name: bytes,
         mode: int,
         thrift_obj_id: bytes,
     ) -> None:
-        response = client.debugGetTree(
+        response = await client.debugGetTree(
             DebugGetScmTreeRequest(
                 mountId=MountId(mountPoint=self.mount.encode()),
                 id=tree_id,
@@ -381,9 +381,9 @@ class DebugTreeHgTest(testcase.HgRepoTestMixin, testcase.EdenRepoTest):
             response,
         )
 
-    def test_debug_tree_locations(self) -> None:
-        with self.eden.get_thrift_client_legacy() as client:
-            debugInfo = client.debugInodeStatus(
+    async def test_debug_tree_locations(self) -> None:
+        async with self.eden.get_thrift_client() as client:
+            debugInfo = await client.debugInodeStatus(
                 os.fsencode(self.mount),
                 b"testDir/testTree",
                 flags=0,
@@ -417,12 +417,12 @@ class DebugTreeHgTest(testcase.HgRepoTestMixin, testcase.EdenRepoTest):
         self.eden.run_cmd("gc", cwd=self.mount)  # this clears cache in disk
         self.eden.restart()  # this clears cache in memory
 
-        with self.eden.get_thrift_client_legacy() as client:
+        async with self.eden.get_thrift_client() as client:
             # not present in the local storage yet
             for origin in [DataFetchOrigin.MEMORY_CACHE, DataFetchOrigin.DISK_CACHE]:
-                self.assert_tree_not_available(client, treeInfo.treeHash, origin)
+                await self.assert_tree_not_available(client, treeInfo.treeHash, origin)
 
-            debugInfo = client.debugInodeStatus(
+            debugInfo = await client.debugInodeStatus(
                 os.fsencode(self.mount),
                 b"testDir/testTree",
                 flags=0,
@@ -430,7 +430,7 @@ class DebugTreeHgTest(testcase.HgRepoTestMixin, testcase.EdenRepoTest):
             )
 
             # "fetch from network"
-            self.assert_tree_available(
+            await self.assert_tree_available(
                 client,
                 treeInfo.treeHash,
                 DataFetchOrigin.ANYWHERE,
@@ -445,7 +445,7 @@ class DebugTreeHgTest(testcase.HgRepoTestMixin, testcase.EdenRepoTest):
                 DataFetchOrigin.DISK_CACHE,
                 DataFetchOrigin.LOCAL_BACKING_STORE,
             ]:
-                self.assert_tree_available(
+                await self.assert_tree_available(
                     client,
                     treeInfo.treeHash,
                     fromWhere,
@@ -455,7 +455,7 @@ class DebugTreeHgTest(testcase.HgRepoTestMixin, testcase.EdenRepoTest):
                 )
 
             # check a request from multiple places:
-            response = client.debugGetTree(
+            response = await client.debugGetTree(
                 DebugGetScmTreeRequest(
                     mountId=MountId(mountPoint=self.mount.encode()),
                     id=treeInfo.treeHash,
@@ -481,7 +481,7 @@ class DebugTreeHgTest(testcase.HgRepoTestMixin, testcase.EdenRepoTest):
                 origin=16)
                 """
                 if tree.origin == DataFetchOrigin.REMOTE_BACKING_STORE:
-                    tree.scmTreeData.get_error()
+                    tree.scmTreeData.error
                 else:
                     self.assertEqual(
                         ScmTreeOrError(
@@ -494,5 +494,5 @@ class DebugTreeHgTest(testcase.HgRepoTestMixin, testcase.EdenRepoTest):
                             ]
                         ),
                         tree.scmTreeData,
-                        f"unexpected response {tree.scmTreeData} for origin {DataFetchOrigin._VALUES_TO_NAMES[tree.origin]}",
+                        f"unexpected response {tree.scmTreeData} for origin {tree.origin.name}",
                     )
