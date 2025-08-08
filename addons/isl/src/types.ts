@@ -212,9 +212,19 @@ export type ValidatedRepoInfo = {
   /** Which cli command name this repository should use for sapling, e.g. `sl`  */
   command: string;
   /**
-   * Repo root, which cwd may be a subset of. `undefined` if the cwd is not a valid repository.
+   * Direct repo root that is the closest to the cwd.
    */
   repoRoot: AbsolutePath;
+  /**
+   * All the nested repo roots up to the system root,
+   * in the order of furthest to closest to the cwd.
+   *
+   * For instance, ['/repo', '/repo/submodule', '/repo/submodule/nested_submodule']
+   *
+   * The repoRoot above is not simply replaced with this because of different error conditions -
+   * Sapling may refuse to return the list when it's nested illegally, while repoRoot can still be valid.
+   */
+  repoRoots?: AbsolutePath[];
   /**
    * Directory containing sl internal information for this repo, usually `${repoRoot}/.sl`.
    */

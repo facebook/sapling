@@ -105,6 +105,7 @@ describe('Repository', () => {
       mockEjeca([
         [/^sl root --dotdir/, {stdout: '/path/to/myRepo/.sl'}],
         [/^sl root/, {stdout: '/path/to/myRepo'}],
+        [/^sl debugroots/, {stdout: '/path/to/myRepo'}],
         [
           /^gh auth status --hostname gitlab.myCompany.com/,
           new Error('not authenticated on this hostname'),
@@ -121,6 +122,7 @@ describe('Repository', () => {
         type: 'success',
         command: 'sl',
         repoRoot: '/path/to/myRepo',
+        repoRoots: ['/path/to/myRepo'],
         dotdir: '/path/to/myRepo/.sl',
         codeReviewSystem: {
           type: 'github',
@@ -140,6 +142,7 @@ describe('Repository', () => {
         type: 'success',
         command: 'sl',
         repoRoot: '/path/to/myRepo',
+        repoRoots: ['/path/to/myRepo'],
         dotdir: '/path/to/myRepo/.sl',
         codeReviewSystem: {
           type: 'github',
@@ -159,6 +162,7 @@ describe('Repository', () => {
         type: 'success',
         command: 'sl',
         repoRoot: '/path/to/myRepo',
+        repoRoots: ['/path/to/myRepo'],
         dotdir: '/path/to/myRepo/.sl',
         codeReviewSystem: {
           type: 'unknown',
@@ -183,6 +187,7 @@ describe('Repository', () => {
     mockEjeca([
       [/^sl root --dotdir/, {stdout: '/path/to/myRepo/.sl'}],
       [/^sl root/, {stdout: '/path/to/myRepo'}],
+      [/^sl debugroots/, {stdout: '/path/to/myRepo/submodule\n/path/to/myRepo'}],
     ]);
     const info = (await Repository.getRepoInfo(ctx)) as ValidatedRepoInfo;
     const repo = new Repository(info, ctx);
@@ -190,6 +195,7 @@ describe('Repository', () => {
       type: 'success',
       command: 'sl',
       repoRoot: '/path/to/myRepo',
+      repoRoots: ['/path/to/myRepo', '/path/to/myRepo/submodule'],
       dotdir: '/path/to/myRepo/.sl',
       codeReviewSystem: expect.anything(),
       pullRequestDomain: undefined,

@@ -102,6 +102,12 @@ export const mainCommandName = atom(get => {
   return info?.command ?? 'sl';
 });
 
+/** List of repo roots. Useful when cwd is in nested submodules. */
+export const repoRoots = atom(get => {
+  const info = get(repositoryInfo);
+  return info?.repoRoots;
+});
+
 export const applicationinfo = atom<ApplicationInfo | undefined>(undefined);
 registerDisposable(
   applicationinfo,

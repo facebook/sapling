@@ -72,6 +72,7 @@ import {
   extractRepoInfoFromUrl,
   findDotDir,
   findRoot,
+  findRoots,
   getConfigs,
   getExecParams,
   runCommand,
@@ -474,8 +475,9 @@ export class Repository {
    */
   static async getRepoInfo(ctx: RepositoryContext): Promise<RepoInfo> {
     const {cmd, cwd, logger} = ctx;
-    const [repoRoot, dotdir, configs] = await Promise.all([
+    const [repoRoot, repoRoots, dotdir, configs] = await Promise.all([
       findRoot(ctx).catch((err: Error) => err),
+      findRoots(ctx),
       findDotDir(ctx),
       // TODO: This should actually use expanded paths, since the config won't handle custom schemes.
       // However, `sl debugexpandpaths` is currently too slow and impacts startup time.
@@ -542,6 +544,7 @@ export class Repository {
       command: cmd,
       dotdir,
       repoRoot,
+      repoRoots,
       codeReviewSystem,
       pullRequestDomain,
       preferredSubmitCommand: preferredSubmitCommand as PreferredSubmitCommand | undefined,

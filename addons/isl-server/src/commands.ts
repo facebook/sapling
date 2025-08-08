@@ -114,6 +114,18 @@ export async function findRoot(ctx: RepositoryContext): Promise<AbsolutePath | u
   }
 }
 
+/**
+ * Ask sapling to recursively list all the repo roots up to the system root.
+ */
+export async function findRoots(ctx: RepositoryContext): Promise<AbsolutePath[] | undefined> {
+  try {
+    return (await runCommand(ctx, ['debugroots'])).stdout.split('\n').reverse();
+  } catch (error) {
+    ctx.logger.error(`Failed to find repository roots starting from ${ctx.cwd}`, error);
+    return undefined;
+  }
+}
+
 export async function findDotDir(ctx: RepositoryContext): Promise<AbsolutePath | undefined> {
   try {
     return (await runCommand(ctx, ['root', '--dotdir'])).stdout;
