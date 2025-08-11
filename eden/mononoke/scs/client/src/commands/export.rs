@@ -105,10 +105,10 @@ pub(super) struct CommandArgs {
     #[clap(long)]
     /// Filename of a file containing a list of paths (relative to PATH) to exclude
     exclude_path_list_file: Option<String>,
-    #[clap(long)]
+    #[clap(long, hide = true)]
     /// Exclude files >= specified byte size.
     file_size_threshold: Option<ByteSize>,
-    #[clap(long)]
+    #[clap(long, hide = true)]
     /// Exclude binary files >= specified byte size.
     binary_file_size_threshold: Option<ByteSize>,
     #[clap(long)]
