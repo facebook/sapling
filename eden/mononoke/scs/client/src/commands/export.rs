@@ -316,10 +316,9 @@ fn export_tree_entry(
             if filter.matches_file(&casefold.of(&name)) {
                 Some(ExportItem::File {
                     path: join_path(path, &name),
-                    id: info.id,
+                    file: info,
                     tx,
                     destination: destination.join(&name),
-                    size: info.file_size as u64,
                     type_: entry.r#type,
                 })
             } else {
@@ -408,24 +407,24 @@ async fn export_tree(
 async fn export_file(
     connection: ScsClient,
     repo: thrift::RepoSpecifier,
-    id: Vec<u8>,
+    file: thrift::FileInfo,
     tx: FileSender,
     destination: PathBuf,
-    size: u64,
     _type_: thrift::EntryType,
     file_size_threshold: Option<u64>,
 ) -> Result<()> {
     let mut file_metadata = FileMetadata {
-        size,
+        size: file.file_size as u64,
         path: destination.clone(),
         entry_type: _type_,
     };
 
-    let responses = if file_size_threshold.is_some_and(|t| size >= t) {
+    let responses = if file_size_threshold.is_some_and(|t| file.file_size as u64 >= t) {
         // File is above size threshold - export placeholder content.
         let placeholder = format!(
-            "This is a placeholder for a large file\n\nOriginal file id: {}\nOriginal file size: {size}\n",
-            faster_hex::hex_string(&id),
+            "This is a placeholder for a large file\n\nOriginal file id: {}\nOriginal file size: {}\n",
+            faster_hex::hex_string(&file.id),
+            file.file_size,
         );
         file_metadata.size = placeholder.len() as u64;
         stream::once(future::ready(
@@ -441,23 +440,23 @@ async fn export_file(
             .boxed(),
         ))
         .right_stream()
-    } else if size > 0 {
-        let file = thrift::FileSpecifier::by_id(thrift::FileIdSpecifier {
+    } else if file.file_size > 0 {
+        let file_spec = thrift::FileSpecifier::by_id(thrift::FileIdSpecifier {
             repo: repo.clone(),
-            id,
+            id: file.id,
             ..Default::default()
         });
-        stream::iter((0..size).step_by(FILE_CHUNK_SIZE as usize))
+        stream::iter((0..file.file_size).step_by(FILE_CHUNK_SIZE as usize))
             .map({
                 move |offset| {
                     cloned!(repo);
                     let params = thrift::FileContentChunkParams {
-                        offset: offset as i64,
+                        offset,
                         size: FILE_CHUNK_SIZE,
                         ..Default::default()
                     };
                     connection
-                        .file_content_chunk(&file, &params)
+                        .file_content_chunk(&file_spec, &params)
                         .map_err(move |e| e.handle_selection_error(&repo))
                         .map_ok({
                             cloned!(file_metadata);
@@ -523,19 +522,17 @@ async fn export_item(
         }
         ExportItem::File {
             path,
-            id,
             tx,
+            file,
             destination,
-            size,
             type_,
         } => {
             export_file(
                 connection,
                 repo,
-                id,
+                file,
                 tx,
                 destination,
-                size,
                 type_,
                 file_size_threshold,
             )
@@ -556,10 +553,9 @@ enum ExportItem {
     },
     File {
         path: String,
-        id: Vec<u8>,
+        file: thrift::FileInfo,
         tx: FileSender,
         destination: PathBuf,
-        size: u64,
         type_: thrift::EntryType,
     },
 }
@@ -916,10 +912,9 @@ pub(super) async fn run(app: ScscApp, args: CommandArgs) -> Result<()> {
             }
             ExportItem::File {
                 path,
-                id: info.id,
+                file: info,
                 tx,
                 destination: root,
-                size: info.file_size as u64,
                 type_,
             }
         }
