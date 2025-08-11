@@ -1473,7 +1473,6 @@ impl RepoFactory {
 
     pub async fn repo_ephemeral_store(
         &self,
-        sql_query_config: &ArcSqlQueryConfig,
         repo_identity: &ArcRepoIdentity,
         repo_config: &ArcRepoConfig,
     ) -> Result<ArcRepoEphemeralStore> {
@@ -1490,7 +1489,6 @@ impl RepoFactory {
             .build(
                 repo_identity.id(),
                 blobstore,
-                sql_query_config.clone(),
                 ephemeral_config.initial_bubble_lifespan,
                 ephemeral_config.bubble_expiration_grace,
                 ephemeral_config.bubble_deletion_mode,

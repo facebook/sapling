@@ -49,10 +49,6 @@ struct RepoEphemeralStoreInner {
     pub(crate) blobstore: Arc<dyn BlobstoreEnumerableWithUnlink>,
 
     #[derivative(Debug = "ignore")]
-    /// Config used to do SQL queries to underlying DB
-    pub(crate) sql_config: Arc<SqlQueryConfig>,
-
-    #[derivative(Debug = "ignore")]
     /// Database used to manage the ephemeral store.
     pub(crate) connections: SqlConnections,
 
@@ -705,7 +701,6 @@ impl RepoEphemeralStore {
         repo_id: RepositoryId,
         connections: SqlConnections,
         blobstore: Arc<dyn BlobstoreEnumerableWithUnlink>,
-        sql_config: Arc<SqlQueryConfig>,
         initial_bubble_lifespan: Duration,
         bubble_expiration_grace: Duration,
         bubble_deletion_mode: BubbleDeletionMode,
@@ -714,7 +709,6 @@ impl RepoEphemeralStore {
             repo_id,
             inner: Some(Arc::new(RepoEphemeralStoreInner {
                 blobstore,
-                sql_config,
                 connections,
                 initial_bubble_lifespan: to_chrono(initial_bubble_lifespan),
                 bubble_expiration_grace: to_chrono(bubble_expiration_grace),
@@ -914,11 +908,9 @@ mod test {
             REPO_ZERO,
             MononokeScubaSampleBuilder::with_discard(),
         );
-        let sql_config = Arc::new(SqlQueryConfig { caching: None });
         let eph = RepoEphemeralStoreBuilder::with_sqlite_in_memory()?.build(
             REPO_ZERO,
             blobstore.clone(),
-            sql_config,
             initial_lifespan,
             grace_period,
             deletion_mode,
