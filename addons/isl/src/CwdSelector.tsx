@@ -35,7 +35,7 @@ import {DropdownField, DropdownFields} from './DropdownFields';
 import {useCommandEvent} from './ISLShortcuts';
 import {codeReviewProvider} from './codeReview/CodeReviewInfo';
 import {T, t} from './i18n';
-import {useAtomGet, writeAtom} from './jotaiUtils';
+import {writeAtom} from './jotaiUtils';
 import platform from './platform';
 import {serverCwd} from './repositoryData';
 import {submodulesByRoot, repositoryInfo} from './serverAPIState';
@@ -150,8 +150,6 @@ export function CwdSelector() {
   const info = useAtomValue(repositoryInfo);
   const currentCwd = useAtomValue(serverCwd);
   const allSubmoduleOptions = useSubmoduleOptions(info);
-  const submoduleOptions = allSubmoduleOptions?.filter(opt => opt.valid);
-  const hasSubmodules = submoduleOptions != null && submoduleOptions.length > 0;
   if (info == null) {
     return null;
   }
@@ -162,12 +160,18 @@ export function CwdSelector() {
 
   const mainLabel = getMainSelectorLabel(repoRoot, repoRoots, currentCwd);
 
+  const submoduleOptions = allSubmoduleOptions?.get(repoRoot)?.filter(opt => opt.valid);
+  const hasSubmodules = submoduleOptions != null && submoduleOptions.length > 0;
+
   return (
     <div {...stylex.props(styles.container)}>
       <MainCwdSelector
         currentCwd={currentCwd}
         label={mainLabel}
-        hideRightBorder={(repoRoots && repoRoots.length > 1) || allSubmoduleOptions != null}
+        hideRightBorder={
+          (repoRoots && repoRoots.length > 1) ||
+          (allSubmoduleOptions?.get(repoRoot)?.length ?? 0) > 0
+        }
       />
       {/* Submodule dropdown if available */}
       {hasSubmodules && (
@@ -300,17 +304,23 @@ function useCwdOptions() {
 
 function useSubmoduleOptions(
   info: ValidatedRepoInfo | undefined,
-): {id: RepoRelativePath; label: string; valid: boolean}[] | undefined {
-  const fetchedSubmodules = useAtomGet(submodulesByRoot, info?.repoRoot);
-  if (info == null) {
-    return undefined;
-  }
+): Map<AbsolutePath, {id: RepoRelativePath; label: string; valid: boolean}[] | undefined> {
+  const repoRoots = info?.repoRoots;
+  const submodulesMap = useAtomValue(submodulesByRoot);
 
-  return fetchedSubmodules?.value?.map(m => ({
-    id: m.path,
-    label: m.name,
-    valid: m.active,
-  }));
+  return new Map(
+    repoRoots?.map(root => {
+      const fetchedSubmodules = submodulesMap.get(root);
+      return [
+        root,
+        fetchedSubmodules?.value?.map(m => ({
+          id: m.path,
+          label: m.name,
+          valid: m.active,
+        })),
+      ];
+    }),
+  );
 }
 
 function guessPathSep(path: string): '/' | '\\' {
