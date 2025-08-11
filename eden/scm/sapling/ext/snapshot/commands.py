@@ -69,7 +69,9 @@ subcmd = snapshot.subcommand(
             "reuse-storage",
             None,
             _(
-                "reuse same storage as latest snapshot, if possible; its lifetime won't be extended"
+                "reuse same storage as latest snapshot, if possible; "
+                "extending its TTL if necessary; "
+                "the option is equivalent '--continuation-of latest'"
             ),
         ),
         (
@@ -77,7 +79,9 @@ subcmd = snapshot.subcommand(
             "continuation-of",
             "",
             _(
-                "snapshot id of previous snapshot to continue from, reusing the same ephemeral bubble and extending its TTL"
+                "snapshot id of previous snapshot to continue from; "
+                "reusing the same ephemeral bubble and extending its TTL; "
+                "'latest' is an alias for the hash of the last created snapshot in the checkout"
             ),
             _("HASH"),
         ),
@@ -85,10 +89,23 @@ subcmd = snapshot.subcommand(
     + cmdutil.templateopts,
 )
 def createremotecmd(*args, **kwargs) -> None:
-    """
-    upload to the server a snapshot of the current uncommitted changes.
+    """upload to the server a snapshot of the current uncommitted changes
 
-    exits with code 2 if the file count in the snapshot will exceed max-file-count.
+    The --continuation-of option allows you to continue from a previous
+    snapshot, reusing the same ephemeral storage and extending its TTL. This is
+    useful for creating a series of related snapshots that share the same
+    storage. Note that Source Control ephemeral storage is internally called "ephemeral bubble".
+
+    Lifetime Management:
+      Extends the TTL of ephemeral storage when using '--continuation-of'.
+      The lifetime remains unchanged if the duration specified via --lifetime
+        is shorter than the current remaining lifetime.
+      If no --lifetime is provided, the lifetime resets to the greater of the
+        default lifetime or the remaining lifetime.
+      Returns an error if the storage has expired.
+
+    Exits with code 2 if the file count in the snapshot will exceed max-file-
+    count.
     """
     createremote.createremote(*args, **kwargs)
 
