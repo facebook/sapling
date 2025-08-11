@@ -51,7 +51,5 @@ TEST(PrettyPrinters, ostream_format_scm_file_status) {
 }
 
 TEST(PrettyPrinters, ostream_format_mount_state) {
-  std::ostringstream os;
-  os << MountState::RUNNING;
-  EXPECT_EQ("RUNNING", os.str());
+  EXPECT_EQ("RUNNING", folly::to<std::string>(MountState::RUNNING));
 }

@@ -26,14 +26,14 @@ std::ostream& outputThriftEnum(
 
 template <typename ThriftEnum>
 void appendThriftEnum(
-    ThriftEnum value,
+    const ThriftEnum& value,
     std::string* result,
     folly::StringPiece typeName) {
   const char* name = apache::thrift::TEnumTraits<ThriftEnum>::findName(value);
   if (name) {
-    result->append(name);
+    folly::toAppend(name, result);
   } else {
-    result->append(folly::to<std::string>(typeName, "::", int(value)));
+    folly::toAppend(typeName, "::", int(value), result);
   }
 }
 } // unnamed namespace
@@ -54,11 +54,7 @@ std::ostream& operator<<(std::ostream& os, ScmFileStatus scmFileStatus) {
   return outputThriftEnum(os, scmFileStatus, "ScmFileStatus");
 }
 
-std::ostream& operator<<(std::ostream& os, MountState mountState) {
-  return outputThriftEnum(os, mountState, "MountState");
-}
-
-void toAppend(MountState mountState, std::string* result) {
+void toAppend(const MountState& mountState, std::string* result) {
   appendThriftEnum(mountState, result, "MountState");
 }
 
