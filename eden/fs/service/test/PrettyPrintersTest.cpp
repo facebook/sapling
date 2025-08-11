@@ -45,9 +45,7 @@ TEST(PrettyPrinters, ostream_format_checkout_conflict_error) {
 }
 
 TEST(PrettyPrinters, ostream_format_scm_file_status) {
-  std::ostringstream os;
-  os << ScmFileStatus::REMOVED;
-  EXPECT_EQ("REMOVED", os.str());
+  EXPECT_EQ("REMOVED", folly::to<std::string>(ScmFileStatus::REMOVED));
 }
 
 TEST(PrettyPrinters, ostream_format_mount_state) {

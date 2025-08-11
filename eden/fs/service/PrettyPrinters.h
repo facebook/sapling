@@ -20,7 +20,7 @@
 namespace facebook::eden {
 std::ostream& operator<<(std::ostream& os, ConflictType conflictType);
 std::ostream& operator<<(std::ostream& os, const CheckoutConflict& conflict);
-std::ostream& operator<<(std::ostream& os, ScmFileStatus scmFileStatus);
 
+void toAppend(const ScmFileStatus& scmFileStatus, std::string* result);
 void toAppend(const MountState& mountState, std::string* result);
 } // namespace facebook::eden

@@ -50,8 +50,8 @@ std::ostream& operator<<(std::ostream& os, const CheckoutConflict& conflict) {
   return os;
 }
 
-std::ostream& operator<<(std::ostream& os, ScmFileStatus scmFileStatus) {
-  return outputThriftEnum(os, scmFileStatus, "ScmFileStatus");
+void toAppend(const ScmFileStatus& scmFileStatus, std::string* result) {
+  appendThriftEnum(scmFileStatus, result, "ScmFileStatus");
 }
 
 void toAppend(const MountState& mountState, std::string* result) {
