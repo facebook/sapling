@@ -932,6 +932,8 @@ pub struct StorageConfig {
     /// Blobstore for ephemeral changesets and snapshots.  If omitted
     /// then this repo cannot store ephemeral changesets or snapshots.
     pub ephemeral_blobstore: Option<EphemeralBlobstoreConfig>,
+    /// Mutable blobstore, for storing mutable data like microwave
+    pub mutable_blobstore: Option<BlobConfig>,
 }
 
 /// Whether we should read from this blobstore normally in a Multiplex,

@@ -69,6 +69,7 @@ impl Convert for RawStorageConfig {
                 .ephemeral_blobstore
                 .map(RawEphemeralBlobstoreConfig::convert)
                 .transpose()?,
+            mutable_blobstore: self.mutable_blobstore.convert()?,
         })
     }
 }

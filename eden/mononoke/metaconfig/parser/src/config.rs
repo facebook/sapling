@@ -1018,6 +1018,20 @@ mod test {
         [files.blobstore.blob_files]
         path = "/tmp/www"
 
+        [main.mutable_blobstore.multiplexed_wal]
+        multiplex_id = 1
+        inner_blobstores_scuba_table = "blobstore_scuba_table"
+        multiplex_scuba_table = "multiplex_scuba_table"
+        write_quorum = 1
+        components = [
+            { blobstore_id = 0, blobstore = { manifold = { manifold_bucket = "bucket" } } },
+            { blobstore_id = 1, blobstore = { blob_files = { path = "/tmp/foo" } } },
+        ]
+        queue_db = { remote = { shard_map = "queue_db_address", shard_num = 13 } }
+
+        [files.mutable_blobstore.blob_files]
+        path = "/tmp/www"
+
         [files.ephemeral_blobstore]
         initial_bubble_lifespan_secs = 86400
         bubble_expiration_grace_secs = 3600
@@ -1086,7 +1100,7 @@ mod test {
             }),
         };
         let main_storage_config = StorageConfig {
-            blobstore: multiplex,
+            blobstore: multiplex.clone(),
             metadata: MetadataDatabaseConfig::Remote(RemoteMetadataDatabaseConfig {
                 primary: RemoteDatabaseConfig {
                     db_address: "db_address".into(),
@@ -1121,6 +1135,7 @@ mod test {
                 }),
             }),
             ephemeral_blobstore: None,
+            mutable_blobstore: Some(multiplex),
         };
 
         let mut repos = HashMap::new();
@@ -1407,6 +1422,9 @@ mod test {
                         bubble_expiration_grace: Duration::from_secs(3600),
                         bubble_deletion_mode: BubbleDeletionMode::MarkOnly,
                     }),
+                    mutable_blobstore: Some(BlobConfig::Files {
+                        path: "/tmp/www".into(),
+                    }),
                 },
                 generation_cache_size: 10 * 1024 * 1024,
                 repoid: RepositoryId::new(1),
@@ -1633,6 +1651,14 @@ mod test {
         ]
         queue_db = { remote = { shard_map = "queue_db_address", shard_num = 1 } }
         write_quorum = 1
+
+        [multiplex_store.mutable_blobstore.multiplexed_wal]
+        multiplex_id = 1
+        components = [
+            { blobstore_id = 1, blobstore = { blob_files = { path = "/tmp/foo" } } },
+        ]
+        queue_db = { remote = { shard_map = "queue_db_address", shard_num = 1 } }
+        write_quorum = 1
         "#;
 
         const REPO: &str = r#"
@@ -1723,6 +1749,24 @@ mod test {
                         })
                     }),
                     ephemeral_blobstore: None,
+                    mutable_blobstore: Some(BlobConfig::MultiplexedWal {
+                        multiplex_id: MultiplexId::new(1),
+                        inner_blobstores_scuba_table: None,
+                        multiplex_scuba_table: None,
+                        scuba_sample_rate: nonzero!(100u64),
+                        blobstores: vec![
+                            (BlobstoreId::new(1), MultiplexedStoreType::Normal, BlobConfig::Files {
+                                path: "/tmp/foo".into()
+                            })
+                        ],
+                        write_quorum: 1,
+                        queue_db: ShardedDatabaseConfig::Sharded(
+                            ShardedRemoteDatabaseConfig {
+                                shard_map: "queue_db_address".into(),
+                                shard_num: nonzero!(1usize),
+                            }
+                        ),
+                    }),
                 },
                 repoid: RepositoryId::new(123),
                 generation_cache_size: 10 * 1024 * 1024,
@@ -1778,6 +1822,9 @@ mod test {
 
         [storage.multiplex_store.blobstore]
         disabled = {}
+
+        [storage.multiplex_store.mutable_blobstore]
+        disabled = {}
         "#;
 
         const REPO_DEF: &str = r#"
@@ -1826,6 +1873,8 @@ mod test {
                     }),
 
                     ephemeral_blobstore: None,
+
+                    mutable_blobstore: Some(BlobConfig::Disabled),
                 },
                 repoid: RepositoryId::new(123),
                 generation_cache_size: 10 * 1024 * 1024,

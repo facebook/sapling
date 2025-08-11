@@ -163,6 +163,7 @@ pub struct TestRepoFactory {
     name: String,
     config: RepoConfig,
     blobstore: Arc<dyn Blobstore>,
+    mutable_blobstore: Arc<dyn Blobstore>,
     bookmarks_cache: Option<ArcBookmarksCache>,
     git_symbolic_refs: Option<ArcGitSymbolicRefs>,
     live_commit_sync_config: Option<Arc<dyn LiveCommitSyncConfig>>,
@@ -301,6 +302,7 @@ impl TestRepoFactory {
             name: "repo".to_string(),
             config: default_test_repo_config(),
             blobstore: Arc::new(Memblob::default()),
+            mutable_blobstore: Arc::new(Memblob::default()),
             metadata_db,
             hg_mutation_db,
             redacted: None,
@@ -676,7 +678,7 @@ impl TestRepoFactory {
         repo_identity: &ArcRepoIdentity,
     ) -> ArcMutableRepoBlobstore {
         let mutable_repo_blobstore =
-            MutableRepoBlobstore::new(self.blobstore.clone(), repo_identity.id());
+            MutableRepoBlobstore::new(self.mutable_blobstore.clone(), repo_identity.id());
         Arc::new(mutable_repo_blobstore)
     }
 

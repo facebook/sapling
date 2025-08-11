@@ -1242,6 +1242,12 @@ components = [
             config += f'  {{ blobstore_id = {i}, blobstore = {{ {underlying_storage} = {{ path = "{blobstore_path}/{i}" }} }} }},\n'
 
     config += "]\n"
+
+    # Add mutable blobstore config
+    config += f"""
+    [{blobstore_name}.mutable_blobstore]
+      {underlying_storage} = {{ path = "{blobstore_path}/mutable" }}\n
+    """
     return config
 
 
@@ -1279,6 +1285,12 @@ blobstore = {{ blob_files = {{ path = "{blobstore_path}" }} }}
         config += f'  pack = {{ blobstore = {{ {underlying_storage} = {{ path = "{blobstore_path}" }} }} }}\n'
     else:
         config += f'  {underlying_storage} = {{ path = "{blobstore_path}" }}\n'
+
+    # Add mutable blobstore config
+    config += f"""
+    [{blobstore_name}.mutable_blobstore]
+      {underlying_storage} = {{ path = "{blobstore_path}" }}\n
+    """
 
     return config
 

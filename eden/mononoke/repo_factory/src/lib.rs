@@ -22,7 +22,6 @@ use acl_regions::ArcAclRegions;
 use acl_regions::build_acl_regions;
 use anyhow::Context;
 use anyhow::Result;
-#[cfg(fbcode_build)]
 use anyhow::anyhow;
 use async_once_cell::AsyncOnceCell;
 use blobstore::Blobstore;
@@ -1418,13 +1417,19 @@ impl RepoFactory {
         repo_identity: &ArcRepoIdentity,
         repo_config: &ArcRepoConfig,
     ) -> Result<ArcMutableRepoBlobstore> {
-        let blobstore = self
-            .blobstore(&repo_config.storage_config.blobstore)
-            .await?;
-        Ok(Arc::new(
-            self.mutable_repo_blobstore_from_blobstore(repo_identity, &blobstore)
-                .await?,
-        ))
+        match &repo_config.storage_config.mutable_blobstore {
+            Some(mutable_blobstore) => {
+                let blobstore = self.blobstore(mutable_blobstore).await?;
+                Ok(Arc::new(
+                    self.mutable_repo_blobstore_from_blobstore(repo_identity, &blobstore)
+                        .await?,
+                ))
+            }
+            None => Err(anyhow!(
+                "No mutable blobstore configured for repo {}",
+                repo_identity.name()
+            )),
+        }
     }
 
     pub async fn repo_blobstore_unlink_ops(
