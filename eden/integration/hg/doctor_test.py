@@ -10,8 +10,12 @@ import os
 import subprocess
 from pathlib import Path
 
+from eden.fs.service.eden.thrift_types import (
+    ResetParentCommitsParams,
+    WorkingDirectoryParents,
+)
+
 from eden.integration.lib import hgrepo
-from facebook.eden.ttypes import ResetParentCommitsParams, WorkingDirectoryParents
 
 from .lib.hg_extension_test_base import EdenHgTestCase, hg_test
 
@@ -58,7 +62,7 @@ class DoctorTest(EdenHgTestCase):
         data = self.eden.run_cmd("debug", "parents", cwd=self.mount)
         return data.rstrip()
 
-    def test_eden_doctor_fixes_valid_mismatched_parents(self) -> None:
+    async def test_eden_doctor_fixes_valid_mismatched_parents(self) -> None:
         # this test is only meaningful when the default behavior of fixing the
         # dirstate is disabled
         self.hg("config", "--local", "experimental.repair-eden-dirstate", "False")
@@ -71,8 +75,8 @@ class DoctorTest(EdenHgTestCase):
         # second commit
         parents = WorkingDirectoryParents(parent1=self.commit1.encode("utf-8"))
         params = ResetParentCommitsParams()
-        with self.eden.get_thrift_client_legacy() as client:
-            client.resetParentCommits(
+        async with self.eden.get_thrift_client() as client:
+            await client.resetParentCommits(
                 mountPoint=bytes(mount_path), parents=parents, params=params
             )
 
