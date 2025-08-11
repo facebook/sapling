@@ -21,7 +21,8 @@ use slog::error;
 
 use crate::scuba::MononokeGitScubaHandler;
 
-const GIT_UPLOAD_PACK: &str = "git-upload-pack";
+const GIT_UPLOAD_PACK: &str = "/git-upload-pack";
+const SERVER_PATH_PREFIX: &str = "/repos/git/";
 
 #[derive(Clone)]
 pub struct UploadPackRateLimitingMiddleware {
@@ -55,6 +56,11 @@ impl Middleware for UploadPackRateLimitingMiddleware {
         if let Some(uri) = Uri::try_borrow_from(state)
             && uri.path().contains(GIT_UPLOAD_PACK)
         {
+            let repo_name = Uri::try_borrow_from(state)
+                .and_then(|uri| uri.path().strip_suffix(GIT_UPLOAD_PACK))
+                .and_then(|path| path.strip_prefix(SERVER_PATH_PREFIX))
+                .and_then(|path| path.split_once('/').map(|(_, repo_name)| repo_name))
+                .unwrap_or("");
             let metadata = if let Some(metadata_state) = MetadataState::try_borrow_from(state) {
                 metadata_state.metadata().clone()
             } else {
@@ -72,6 +78,7 @@ impl Middleware for UploadPackRateLimitingMiddleware {
             ) {
                 MononokeGitScubaHandler::log_rejected(
                     scuba,
+                    repo_name,
                     main_client_id,
                     metadata.identities(),
                     format!(

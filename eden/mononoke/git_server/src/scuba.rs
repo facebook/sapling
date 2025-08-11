@@ -187,10 +187,12 @@ impl MononokeGitScubaHandler {
 
     pub(crate) fn log_rejected(
         mut scuba: MononokeScubaSampleBuilder,
+        repo_name: &str,
         main_client_id: Option<String>,
         identities: &MononokeIdentitySet,
         error: String,
     ) {
+        scuba.add(MononokeGitScubaKey::Repo, repo_name.to_string());
         scuba.add(MononokeGitScubaKey::Error, error);
         scuba.add_opt(MononokeGitScubaKey::ClientMainId, main_client_id);
         scuba.add(
