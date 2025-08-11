@@ -13,6 +13,7 @@
 #include <folly/futures/Future.h>
 #include <folly/futures/Promise.h>
 #include <folly/synchronization/CallOnce.h>
+#include <gtest/gtest_prod.h>
 #include <stdlib.h>
 #include <condition_variable>
 #include <iosfwd>
@@ -660,6 +661,10 @@ class FuseChannel final : public FsChannel {
       std::ostream& os,
       const InvalidationEntry& entry);
 
+  FRIEND_TEST(FuseChannelTest, formatting_inode);
+  FRIEND_TEST(FuseChannelTest, formatting_dir);
+  FRIEND_TEST(FuseChannelTest, formatting_flush);
+  FRIEND_TEST(FuseChannelTest, formatting_unknown);
   /**
    * Private destructor.
    *

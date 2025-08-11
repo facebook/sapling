@@ -24,6 +24,7 @@ cpp_library(
         "//folly/system:thread_name",
     ],
     exported_deps = [
+        "fbsource//third-party/googletest:gtest_headers",
         "//eden/common/os:os",
         "//eden/common/telemetry:telemetry",
         "//eden/common/utils:case_sensitivity",
