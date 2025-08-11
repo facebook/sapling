@@ -86,7 +86,7 @@ impl CommitInfo {
     }
 }
 
-fn extract_differential_revision(message: &str) -> Option<&str> {
+pub fn extract_differential_revision(message: &str) -> Option<&str> {
     static RE: Lazy<Regex> = Lazy::new(|| {
         Regex::new(r"(?m)^Differential Revision: [^\n]*/D([0-9]+)")
             .expect("Failed to compile differential revision regex")
