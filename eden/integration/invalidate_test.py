@@ -10,12 +10,11 @@ import os
 import time
 from typing import Dict, List
 
-from facebook.eden.constants import STATS_MOUNTS_STATS
-
-from facebook.eden.ttypes import (
+from eden.fs.service.eden.thrift_types import (
     DebugInvalidateRequest,
     GetStatInfoParams,
     MountId,
+    STATS_MOUNTS_STATS,
     TimeSpec,
 )
 
@@ -38,9 +37,11 @@ class InvalidateTest(testcase.EdenRepoTest):
                 self.repo.write_file(f"{directory}/{i}", f"{i}\n")
         self.repo.commit("Initial commit.")
 
-    def get_loaded_count(self) -> int:
-        with self.get_thrift_client_legacy() as client:
-            stats = client.getStatInfo(GetStatInfoParams(statsMask=STATS_MOUNTS_STATS))
+    async def get_loaded_count(self) -> int:
+        async with self.get_thrift_client() as client:
+            stats = await client.getStatInfo(
+                GetStatInfoParams(statsMask=STATS_MOUNTS_STATS)
+            )
         mountPointInfo = stats.mountPointInfo
         if mountPointInfo is None:
             raise Exception("stats.mountPointInfo is not set")
@@ -50,16 +51,19 @@ class InvalidateTest(testcase.EdenRepoTest):
             return info.loadedFileCount + info.loadedTreeCount
         return 0  # Apppease pyre
 
-    def invalidate(self, path: str, seconds: int = 0, background: bool = False) -> int:
-        with self.get_thrift_client_legacy() as client:
-            return client.debugInvalidateNonMaterialized(
+    async def invalidate(
+        self, path: str, seconds: int = 0, background: bool = False
+    ) -> int:
+        async with self.get_thrift_client() as client:
+            result = await client.debugInvalidateNonMaterialized(
                 DebugInvalidateRequest(
                     mount=MountId(mountPoint=self.mount_path_bytes),
                     path=os.fsencode(path),
                     age=TimeSpec(seconds=seconds, nanoSeconds=0),
                     background=background,
                 )
-            ).numInvalidated
+            )
+            return result.numInvalidated
 
     def read_directory(
         self, directory: str, start: int = 0, stop: int = num_files
@@ -72,77 +76,79 @@ class InvalidateTest(testcase.EdenRepoTest):
         for directory in self.directories:
             self.read_directory(directory)
 
-    def test_invalidate_all(self) -> None:
-        initial_loaded = self.get_loaded_count()
+    async def test_invalidate_all(self) -> None:
+        initial_loaded = await self.get_loaded_count()
         self.read_all()
-        self.assertEqual(self.get_loaded_count(), initial_loaded + 33)
-        invalidated = self.invalidate("")
+        self.assertEqual(await self.get_loaded_count(), initial_loaded + 33)
+        invalidated = await self.invalidate("")
         self.assertEqual(invalidated, 33)
-        self.assertAlmostEqual(self.get_loaded_count(), initial_loaded, delta=1)
+        self.assertAlmostEqual(await self.get_loaded_count(), initial_loaded, delta=1)
         self.read_all()
 
-    def test_invalidate_subdir(self) -> None:
-        initial_loaded = self.get_loaded_count()
+    async def test_invalidate_subdir(self) -> None:
+        initial_loaded = await self.get_loaded_count()
         self.read_all()
-        self.assertEqual(self.get_loaded_count(), initial_loaded + 33)
-        invalidated = self.invalidate("a")
+        self.assertEqual(await self.get_loaded_count(), initial_loaded + 33)
+        invalidated = await self.invalidate("a")
         self.assertEqual(invalidated, 10)
-        self.assertEqual(self.get_loaded_count(), initial_loaded + 23)
+        self.assertEqual(await self.get_loaded_count(), initial_loaded + 23)
         self.read_all()
 
-    def test_no_invalidation_with_age(self) -> None:
-        initial_loaded = self.get_loaded_count()
+    async def test_no_invalidation_with_age(self) -> None:
+        initial_loaded = await self.get_loaded_count()
         self.read_all()
-        self.assertEqual(self.get_loaded_count(), initial_loaded + 33)
-        invalidated = self.invalidate("a", seconds=3600)
+        self.assertEqual(await self.get_loaded_count(), initial_loaded + 33)
+        invalidated = await self.invalidate("a", seconds=3600)
         self.assertEqual(invalidated, 0)
-        self.assertEqual(self.get_loaded_count(), initial_loaded + 33)
+        self.assertEqual(await self.get_loaded_count(), initial_loaded + 33)
 
-    def test_invalidate_with_age(self) -> None:
-        initial_loaded = self.get_loaded_count()
+    async def test_invalidate_with_age(self) -> None:
+        initial_loaded = await self.get_loaded_count()
         self.read_all()
-        self.assertEqual(self.get_loaded_count(), initial_loaded + 33)
+        self.assertEqual(await self.get_loaded_count(), initial_loaded + 33)
         time.sleep(10)
-        invalidated = self.invalidate("a", seconds=5)
+        invalidated = await self.invalidate("a", seconds=5)
         self.assertEqual(invalidated, 10)
-        self.assertEqual(self.get_loaded_count(), initial_loaded + 23)
+        self.assertEqual(await self.get_loaded_count(), initial_loaded + 23)
         self.read_all()
 
-    def test_partial_invalidate(self) -> None:
-        initial_loaded = self.get_loaded_count()
+    async def test_partial_invalidate(self) -> None:
+        initial_loaded = await self.get_loaded_count()
         self.read_directory("a")
-        self.assertEqual(self.get_loaded_count(), initial_loaded + 11)
+        self.assertEqual(await self.get_loaded_count(), initial_loaded + 11)
         time.sleep(10)
         self.read_directory("b")
-        self.assertEqual(self.get_loaded_count(), initial_loaded + 22)
-        invalidated = self.invalidate("", seconds=5)
+        self.assertEqual(await self.get_loaded_count(), initial_loaded + 22)
+        invalidated = await self.invalidate("", seconds=5)
         self.assertEqual(invalidated, 11)
-        self.assertAlmostEqual(self.get_loaded_count(), initial_loaded + 11, delta=1)
+        self.assertAlmostEqual(
+            await self.get_loaded_count(), initial_loaded + 11, delta=1
+        )
         self.read_all()
 
-    def test_partial_directory_invalidate(self) -> None:
-        initial_loaded = self.get_loaded_count()
+    async def test_partial_directory_invalidate(self) -> None:
+        initial_loaded = await self.get_loaded_count()
         self.read_directory("a", 0, 6)
-        self.assertEqual(self.get_loaded_count(), initial_loaded + 7)
+        self.assertEqual(await self.get_loaded_count(), initial_loaded + 7)
         time.sleep(10)
         self.read_directory("a", 6)
-        self.assertEqual(self.get_loaded_count(), initial_loaded + 11)
-        invalidated = self.invalidate("a", seconds=5)
+        self.assertEqual(await self.get_loaded_count(), initial_loaded + 11)
+        invalidated = await self.invalidate("a", seconds=5)
         self.assertEqual(invalidated, 6)
-        self.assertEqual(self.get_loaded_count(), initial_loaded + 5)
+        self.assertEqual(await self.get_loaded_count(), initial_loaded + 5)
         self.read_all()
 
-    def test_invalidate_background(self) -> None:
+    async def test_invalidate_background(self) -> None:
         """Verify that starting an invalidation in the background doesn't crash EdenFS."""
         self.read_all()
-        self.invalidate("", seconds=10, background=True)
+        await self.invalidate("", seconds=10, background=True)
         time.sleep(2)
 
-    def test_invalidate_keep_timestamp(self) -> None:
+    async def test_invalidate_keep_timestamp(self) -> None:
         self.read_all()
         st_before = os.stat(self.get_path("a/1"))
         time.sleep(5)
-        self.invalidate("", seconds=0)
+        await self.invalidate("", seconds=0)
         st_after = os.stat(self.get_path("a/1"))
 
         self.assertEqual(st_before.st_mtime, st_after.st_mtime)
