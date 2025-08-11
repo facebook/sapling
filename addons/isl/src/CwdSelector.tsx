@@ -165,9 +165,6 @@ export function CwdSelector() {
 
   const mainLabel = getMainSelectorLabel(repoRoot, repoRoots, currentCwd);
 
-  const submoduleOptions = allSubmoduleOptions?.get(repoRoot)?.filter(opt => opt.valid);
-  const hasSubmodules = submoduleOptions != null && submoduleOptions.length > 0;
-
   return (
     <div {...stylex.props(styles.container)}>
       <MainCwdSelector
@@ -178,19 +175,7 @@ export function CwdSelector() {
           (allSubmoduleOptions?.get(repoRoot)?.length ?? 0) > 0
         }
       />
-      {/* Submodule dropdown if available */}
-      {hasSubmodules && (
-        <SubmoduleSelector
-          options={submoduleOptions}
-          selected={submoduleOptions.find(opt => opt.id === relativePath(repoRoot, currentCwd))}
-          onChangeSelected={value => {
-            if (value.id !== relativePath(repoRoot, currentCwd)) {
-              changeCwd(joinPaths(repoRoot, value.id));
-            }
-          }}
-          hideRightBorder={false}
-        />
-      )}
+      <SubmoduleSelectorGroup repoRoots={repoRoots} submoduleOptions={allSubmoduleOptions} />
     </div>
   );
 }
@@ -256,6 +241,64 @@ function MainCwdSelector({
       )}
     </Tooltip>
   );
+}
+
+function SubmoduleSelectorGroup({
+  repoRoots,
+  submoduleOptions,
+}: {
+  repoRoots: AbsolutePath[] | undefined;
+  submoduleOptions: Map<
+    AbsolutePath,
+    {id: RepoRelativePath; label: string; valid: boolean}[] | undefined
+  >;
+}) {
+  const currentCwd = useAtomValue(serverCwd);
+  // console.log('submoduleOptions', submoduleOptions);
+  if (repoRoots == null) {
+    return null;
+  }
+
+  const numRoots = repoRoots.length;
+  const directRepoRoot = repoRoots[numRoots - 1];
+  const submodulesToBeSelected = submoduleOptions.get(directRepoRoot);
+
+  const out = [];
+  for (let i = 1; i < numRoots; i++) {
+    const currRoot = repoRoots[i];
+    const prevRoot = repoRoots[i - 1];
+    const submodules = submoduleOptions.get(prevRoot);
+    if (submodules != null && submodules.length > 0) {
+      out.push(
+        <SubmoduleSelector
+          options={submodules}
+          selected={submodules?.find(opt => opt.id === relativePath(prevRoot, currRoot))}
+          onChangeSelected={value => {
+            if (value.id !== relativePath(prevRoot, currRoot)) {
+              changeCwd(joinPaths(prevRoot, value.id));
+            }
+          }}
+          hideRightBorder={i < numRoots - 1 || submodulesToBeSelected != undefined}
+        />,
+      );
+    }
+  }
+
+  if (submodulesToBeSelected != undefined) {
+    out.push(
+      <SubmoduleSelector
+        options={submodulesToBeSelected}
+        onChangeSelected={value => {
+          if (value.id !== relativePath(directRepoRoot, currentCwd)) {
+            changeCwd(joinPaths(directRepoRoot, value.id));
+          }
+        }}
+        hideRightBorder={false}
+      />,
+    );
+  }
+
+  return out;
 }
 
 function CwdDetails({dismiss}: {dismiss: () => unknown}) {
@@ -390,7 +433,7 @@ function SubmoduleSelector<T extends {label: ReactNode; id: string}>({
   hideRightBorder = true,
 }: {
   options: ReadonlyArray<T>;
-  selected: T | undefined;
+  selected?: T;
   onChangeSelected: (newSelected: T) => unknown;
   hideRightBorder?: boolean;
 }) {
