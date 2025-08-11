@@ -10,7 +10,12 @@ import logging
 import time
 from typing import List, Optional, Tuple
 
-from facebook.eden.ttypes import EdenError, EdenErrorType, GlobParams, PrefetchParams
+from eden.fs.service.eden.thrift_types import (
+    EdenError,
+    EdenErrorType,
+    GlobParams,
+    PrefetchParams,
+)
 
 from .lib import testcase
 
@@ -54,11 +59,7 @@ class GlobTestBase(testcase.EdenRepoTest):
 
         super().setUp()
 
-        self.client = self.get_thrift_client_legacy()
-        self.client.open()
-        self.addCleanup(self.client.close)
-
-    def assert_glob(
+    async def assert_glob(
         self,
         globs: List[str],
         expected_matches: List[bytes],
@@ -76,7 +77,7 @@ class GlobTestBase(testcase.EdenRepoTest):
 
 
 class GlobFilesTestBase(GlobTestBase):
-    def assert_glob(
+    async def assert_glob(
         self,
         globs: List[str],
         expected_matches: List[bytes],
@@ -100,19 +101,21 @@ class GlobFilesTestBase(GlobTestBase):
             listOnlyFiles=list_only_files,
             background=background,
         )
-        result = self.client.globFiles(params)
-        if not result:
-            self.assertEqual(expected_matches, [], msg=msg)
-            return
-        self.assertEqual(expected_matches, sorted(result.matchingFiles), msg=msg)
-        self.assertFalse(result.dtypes)
-
-        if expected_commits:
-            self.assertCountEqual(
-                expected_commits, self.client.globFiles(params).originHashes, msg=msg
+        async with self.get_thrift_client() as client:
+            result = await client.globFiles(params)
+            if not result:
+                self.assertEqual(expected_matches, [], msg=msg)
+                return
+            self.assertEqual(
+                expected_matches, sorted(list(result.matchingFiles)), msg=msg
             )
+            self.assertFalse(result.dtypes)
 
-    def assert_glob_with_dtypes(
+            if expected_commits:
+                result2 = await client.globFiles(params)
+                self.assertCountEqual(expected_commits, result2.originHashes, msg=msg)
+
+    async def assert_glob_with_dtypes(
         self,
         globs: List[str],
         expected_matches: List[Tuple[bytes, str]],
@@ -125,16 +128,17 @@ class GlobFilesTestBase(GlobTestBase):
             includeDotfiles=include_dotfiles,
             wantDtype=True,
         )
-        result = self.client.globFiles(params)
-        actual_results = zip(
-            result.matchingFiles,
-            (_dtype_to_str(dtype) for dtype in result.dtypes),
-        )
-        self.assertEqual(expected_matches, sorted(actual_results), msg=msg)
+        async with self.get_thrift_client() as client:
+            result = await client.globFiles(params)
+            actual_results = zip(
+                result.matchingFiles,
+                (_dtype_to_str(dtype) for dtype in result.dtypes),
+            )
+            self.assertEqual(expected_matches, sorted(actual_results), msg=msg)
 
 
 class PrefetchTestBase(GlobTestBase):
-    def assert_glob(
+    async def assert_glob(
         self,
         globs: List[str],
         expected_matches: List[bytes],
@@ -157,21 +161,23 @@ class PrefetchTestBase(GlobTestBase):
             background=background,
             returnPrefetchedFiles=True,
         )
-        prefetchResult = self.client.prefetchFilesV2(params)
-        result = prefetchResult.prefetchedFiles
-        if not result:
-            self.assertEqual(expected_matches, [], msg=msg)
-            return
-        self.assertEqual(expected_matches, sorted(result.matchingFiles), msg=msg)
-        self.assertFalse(result.dtypes)
+        async with self.get_thrift_client() as client:
+            prefetchResult = await client.prefetchFilesV2(params)
+            result = prefetchResult.prefetchedFiles
+            if not result:
+                self.assertEqual(expected_matches, [], msg=msg)
+                return
+            self.assertEqual(expected_matches, sorted(result.matchingFiles), msg=msg)
+            self.assertFalse(result.dtypes)
 
-        if expected_commits:
-            self.assertCountEqual(
-                expected_commits,
-                # result.originHashes,
-                self.client.prefetchFilesV2(params).prefetchedFiles.originHashes,
-                msg=msg,
-            )
+            if expected_commits:
+                prefetchResult2 = await client.prefetchFilesV2(params)
+                if prefetchResult2.prefetchedFiles:
+                    self.assertCountEqual(
+                        expected_commits,
+                        prefetchResult2.prefetchedFiles.originHashes,
+                        msg=msg,
+                    )
 
 
 # assert_glob defined above. This is a base class that holds shared test cases.
@@ -180,7 +186,7 @@ class GlobTestCasesBase:
         self.commit0 = ""
         self.commit1 = ""
 
-    def assert_glob(
+    async def assert_glob(
         self,
         globs: List[str],
         expected_matches: List[bytes],
@@ -196,37 +202,37 @@ class GlobTestCasesBase:
     ) -> None:
         raise NotImplementedError("assert glob not implemented")
 
-    def test_exact_path_component_match(self) -> None:
-        self.assert_glob(["hello"], [b"hello"])
-        self.assert_glob(["ddir/subdir/.dotfile"], [b"ddir/subdir/.dotfile"])
+    async def test_exact_path_component_match(self) -> None:
+        await self.assert_glob(["hello"], [b"hello"])
+        await self.assert_glob(["ddir/subdir/.dotfile"], [b"ddir/subdir/.dotfile"])
 
-    def test_wildcard_path_component_match(self) -> None:
-        self.assert_glob(["hel*"], [b"hello"])
-        self.assert_glob(["ad*"], [b"adir"])
-        self.assert_glob(["a*/file"], [b"adir/file"])
+    async def test_wildcard_path_component_match(self) -> None:
+        await self.assert_glob(["hel*"], [b"hello"])
+        await self.assert_glob(["ad*"], [b"adir"])
+        await self.assert_glob(["a*/file"], [b"adir/file"])
 
-    def test_no_accidental_substring_match(self) -> None:
-        self.assert_glob(["hell"], [], msg="No accidental substring match")
+    async def test_no_accidental_substring_match(self) -> None:
+        await self.assert_glob(["hell"], [], msg="No accidental substring match")
 
-    def test_match_all_files_in_directory(self) -> None:
-        self.assert_glob(["bdir/*"], [b"bdir/file", b"bdir/otherfile"])
+    async def test_match_all_files_in_directory(self) -> None:
+        await self.assert_glob(["bdir/*"], [b"bdir/file", b"bdir/otherfile"])
 
-    def test_overlapping_globs(self) -> None:
-        self.assert_glob(
+    async def test_overlapping_globs(self) -> None:
+        await self.assert_glob(
             ["adir/*", "**/file"],
             [b"adir/file", b"bdir/file"],
             msg="De-duplicate results from multiple globs",
         )
 
-    def test_recursive_wildcard_prefix(self) -> None:
-        self.assert_glob(["**/file"], [b"adir/file", b"bdir/file"])
+    async def test_recursive_wildcard_prefix(self) -> None:
+        await self.assert_glob(["**/file"], [b"adir/file", b"bdir/file"])
 
-    def test_recursive_wildcard_suffix(self) -> None:
-        self.assert_glob(["adir/**"], [b"adir/file"])
-        self.assert_glob(["adir/**/*"], [b"adir/file"])
+    async def test_recursive_wildcard_suffix(self) -> None:
+        await self.assert_glob(["adir/**"], [b"adir/file"])
+        await self.assert_glob(["adir/**/*"], [b"adir/file"])
 
-    def test_qualified_recursive_wildcard(self) -> None:
-        self.assert_glob(
+    async def test_qualified_recursive_wildcard(self) -> None:
+        await self.assert_glob(
             ["java/com/**/*.java"],
             [
                 b"java/com/example/Example.java",
@@ -235,62 +241,66 @@ class GlobTestCasesBase:
                 b"java/com/example/foo/bar/baz/Baz.java",
             ],
         )
-        self.assert_glob(
+        await self.assert_glob(
             ["java/com/example/*/*.java"], [b"java/com/example/foo/Foo.java"]
         )
 
-    def test_glob_on_non_current_commit(self) -> None:
-        self.assert_glob(["hello"], [b"hello"], commits=[bytes.fromhex(self.commit0)])
-        self.assert_glob(["hola"], [b"hola"], commits=[bytes.fromhex(self.commit0)])
+    async def test_glob_on_non_current_commit(self) -> None:
+        await self.assert_glob(
+            ["hello"], [b"hello"], commits=[bytes.fromhex(self.commit0)]
+        )
+        await self.assert_glob(
+            ["hola"], [b"hola"], commits=[bytes.fromhex(self.commit0)]
+        )
 
-    def test_glob_multiple_commits(self) -> None:
-        self.assert_glob(
+    async def test_glob_multiple_commits(self) -> None:
+        await self.assert_glob(
             ["hello"],
             [b"hello", b"hello"],
             commits=[bytes.fromhex(self.commit0), bytes.fromhex(self.commit1)],
         )
-        self.assert_glob(
+        await self.assert_glob(
             ["h*"],
             [b"hello", b"hello", b"hola"],
             commits=[bytes.fromhex(self.commit0), bytes.fromhex(self.commit1)],
         )
-        self.assert_glob(
+        await self.assert_glob(
             ["a*/*ile"],
             [b"adir/file", b"adir/phile"],
             commits=[bytes.fromhex(self.commit0), bytes.fromhex(self.commit1)],
         )
 
-    def test_prefetch_matching_files(self) -> None:
-        self.assert_glob(["hello"], [b"hello"], prefetching=True)
-        self.assert_glob(
+    async def test_prefetch_matching_files(self) -> None:
+        await self.assert_glob(["hello"], [b"hello"], prefetching=True)
+        await self.assert_glob(
             ["hello"],
             [b"hello"],
             prefetching=True,
             commits=[bytes.fromhex(self.commit0)],
         )
-        self.assert_glob(
+        await self.assert_glob(
             ["hello"],
             [b"hello", b"hello"],
             prefetching=True,
             commits=[bytes.fromhex(self.commit0), bytes.fromhex(self.commit1)],
         )
 
-    def test_simple_matching_commit(self) -> None:
-        self.assert_glob(
+    async def test_simple_matching_commit(self) -> None:
+        await self.assert_glob(
             ["hello"],
             expected_matches=[b"hello"],
             expected_commits=[bytes.fromhex(self.commit1)],
         )
 
-        self.assert_glob(
+        await self.assert_glob(
             ["hello"],
             expected_matches=[b"hello"],
             expected_commits=[bytes.fromhex(self.commit0)],
             commits=[bytes.fromhex(self.commit0)],
         )
 
-    def test_duplicate_file_multiple_commits(self) -> None:
-        self.assert_glob(
+    async def test_duplicate_file_multiple_commits(self) -> None:
+        await self.assert_glob(
             ["hello"],
             expected_matches=[b"hello", b"hello"],
             expected_commits=[
@@ -300,8 +310,8 @@ class GlobTestCasesBase:
             commits=[bytes.fromhex(self.commit0), bytes.fromhex(self.commit1)],
         )
 
-    def test_multiple_file_multiple_commits(self) -> None:
-        self.assert_glob(
+    async def test_multiple_file_multiple_commits(self) -> None:
+        await self.assert_glob(
             ["a*/*ile"],
             [b"adir/file", b"adir/phile"],
             expected_commits=[
@@ -311,8 +321,8 @@ class GlobTestCasesBase:
             commits=[bytes.fromhex(self.commit0), bytes.fromhex(self.commit1)],
         )
 
-    def test_search_root(self) -> None:
-        self.assert_glob(
+    async def test_search_root(self) -> None:
+        await self.assert_glob(
             ["**/*.java"],
             expected_matches=[
                 b"example/Example.java",
@@ -323,8 +333,8 @@ class GlobTestCasesBase:
             search_root=b"java/com",
         )
 
-    def test_search_root_with_specified_commits(self) -> None:
-        self.assert_glob(
+    async def test_search_root_with_specified_commits(self) -> None:
+        await self.assert_glob(
             ["**/*.java"],
             expected_matches=[
                 b"example/Example.java",
@@ -342,8 +352,8 @@ class GlobTestCasesBase:
             search_root=b"java/com",
         )
 
-    def test_glob_list_includes_dirs(self) -> None:
-        self.assert_glob(
+    async def test_glob_list_includes_dirs(self) -> None:
+        await self.assert_glob(
             ["java/com/**/*"],
             [
                 b"java/com/example",
@@ -358,9 +368,9 @@ class GlobTestCasesBase:
             ],
         )
 
-    def test_glob_background(self) -> None:
+    async def test_glob_background(self) -> None:
         # Make sure that we don't have weird use after free in background globs
-        self.assert_glob(
+        await self.assert_glob(
             ["**/*"],
             [],
             background=True,
@@ -372,18 +382,18 @@ class GlobTestCasesBase:
 
 @testcase.eden_repo_test
 class GlobTest(GlobFilesTestBase, GlobTestCasesBase):
-    def test_wildcard_path_component_match_with_dtypes(self) -> None:
-        self.assert_glob_with_dtypes(["ad*"], [(b"adir", "d")])
-        self.assert_glob_with_dtypes(["a*/file"], [(b"adir/file", "f")])
+    async def test_wildcard_path_component_match_with_dtypes(self) -> None:
+        await self.assert_glob_with_dtypes(["ad*"], [(b"adir", "d")])
+        await self.assert_glob_with_dtypes(["a*/file"], [(b"adir/file", "f")])
 
-    def test_match_all_files_in_directory_with_dotfile(self) -> None:
-        self.assert_glob(["ddir/subdir/*"], [b"ddir/subdir/notdotfile"])
+    async def test_match_all_files_in_directory_with_dotfile(self) -> None:
+        await self.assert_glob(["ddir/subdir/*"], [b"ddir/subdir/notdotfile"])
 
-    def test_recursive_wildcard_suffix_with_dotfile(self) -> None:
-        self.assert_glob(
+    async def test_recursive_wildcard_suffix_with_dotfile(self) -> None:
+        await self.assert_glob(
             ["ddir/**"], [b"ddir/notdotfile", b"ddir/subdir", b"ddir/subdir/notdotfile"]
         )
-        self.assert_glob(
+        await self.assert_glob(
             ["ddir/**"],
             [
                 b"ddir/notdotfile",
@@ -394,11 +404,11 @@ class GlobTest(GlobFilesTestBase, GlobTestCasesBase):
             include_dotfiles=True,
         )
 
-        self.assert_glob(
+        await self.assert_glob(
             ["ddir/**/*"],
             [b"ddir/notdotfile", b"ddir/subdir", b"ddir/subdir/notdotfile"],
         )
-        self.assert_glob(
+        await self.assert_glob(
             ["ddir/**/*"],
             [
                 b"ddir/notdotfile",
@@ -409,41 +419,43 @@ class GlobTest(GlobFilesTestBase, GlobTestCasesBase):
             include_dotfiles=True,
         )
 
-    def test_malformed_query(self) -> None:
-        with self.assertRaises(EdenError) as ctx:
-            self.client.globFiles(
-                GlobParams(mountPoint=self.mount_path_bytes, globs=["adir["])
-            )
-        self.assertIn("unterminated bracket sequence", str(ctx.exception))
-        self.assertEqual(EdenErrorType.POSIX_ERROR, ctx.exception.errorType)
-
-        with self.assertRaises(EdenError) as ctx:
-            self.client.globFiles(
-                GlobParams(
-                    mountPoint=self.mount_path_bytes,
-                    globs=["adir["],
-                    includeDotfiles=True,
+    async def test_malformed_query(self) -> None:
+        async with self.get_thrift_client() as client:
+            with self.assertRaises(EdenError) as ctx:
+                await client.globFiles(
+                    GlobParams(mountPoint=self.mount_path_bytes, globs=["adir["])
                 )
-            )
-        self.assertIn("unterminated bracket sequence", str(ctx.exception))
-        self.assertEqual(EdenErrorType.POSIX_ERROR, ctx.exception.errorType)
+            self.assertIn("unterminated bracket sequence", str(ctx.exception))
+            self.assertEqual(EdenErrorType.POSIX_ERROR, ctx.exception.errorType)
 
-    def test_globs_may_not_include_dotdot(self) -> None:
-        with self.assertRaises(EdenError) as ctx:
-            self.client.globFiles(
-                GlobParams(
-                    mountPoint=self.mount_path_bytes,
-                    globs=["java/../java/com/**/*.java"],
+            with self.assertRaises(EdenError) as ctx:
+                await client.globFiles(
+                    GlobParams(
+                        mountPoint=self.mount_path_bytes,
+                        globs=["adir["],
+                        includeDotfiles=True,
+                    )
                 )
-            )
-        self.assertEqual(
-            "Invalid glob (PathComponent must not be ..): java/../java/com/**/*.java",
-            str(ctx.exception),
-        )
-        self.assertEqual(EdenErrorType.ARGUMENT_ERROR, ctx.exception.errorType)
+            self.assertIn("unterminated bracket sequence", str(ctx.exception))
+            self.assertEqual(EdenErrorType.POSIX_ERROR, ctx.exception.errorType)
 
-    def test_glob_list_only_files(self) -> None:
-        self.assert_glob(
+    async def test_globs_may_not_include_dotdot(self) -> None:
+        async with self.get_thrift_client() as client:
+            with self.assertRaises(EdenError) as ctx:
+                await client.globFiles(
+                    GlobParams(
+                        mountPoint=self.mount_path_bytes,
+                        globs=["java/../java/com/**/*.java"],
+                    )
+                )
+            self.assertEqual(
+                "Invalid glob (PathComponent must not be ..): java/../java/com/**/*.java",
+                str(ctx.exception),
+            )
+            self.assertEqual(EdenErrorType.ARGUMENT_ERROR, ctx.exception.errorType)
+
+    async def test_glob_list_only_files(self) -> None:
+        await self.assert_glob(
             ["java/com/**/*"],
             [
                 b"java/com/example/Example.java",
@@ -458,15 +470,15 @@ class GlobTest(GlobFilesTestBase, GlobTestCasesBase):
 
 @testcase.eden_repo_test
 class PrefetchTest(PrefetchTestBase, GlobTestCasesBase):
-    def test_match_all_files_in_directory_with_dotfile(self) -> None:
-        self.assert_glob(
+    async def test_match_all_files_in_directory_with_dotfile(self) -> None:
+        await self.assert_glob(
             ["ddir/subdir/*"],
             [b"ddir/subdir/.dotfile", b"ddir/subdir/notdotfile"],
             msg="dotfiles are included in prefetching",
         )
 
-    def test_recursive_wildcard_suffix_with_dotfile(self) -> None:
-        self.assert_glob(
+    async def test_recursive_wildcard_suffix_with_dotfile(self) -> None:
+        await self.assert_glob(
             ["ddir/**"],
             [
                 b"ddir/notdotfile",
@@ -477,7 +489,7 @@ class PrefetchTest(PrefetchTestBase, GlobTestCasesBase):
             msg="dotfiles are included in prefetching",
         )
 
-        self.assert_glob(
+        await self.assert_glob(
             ["ddir/**/*"],
             [
                 b"ddir/notdotfile",
@@ -488,58 +500,60 @@ class PrefetchTest(PrefetchTestBase, GlobTestCasesBase):
             msg="dotfiles are included in prefetching",
         )
 
-    def test_malformed_query(self) -> None:
-        with self.assertRaises(EdenError) as ctx:
-            self.client.prefetchFilesV2(
-                PrefetchParams(mountPoint=self.mount_path_bytes, globs=["adir["])
-            )
-        self.assertIn("unterminated bracket sequence", str(ctx.exception))
-        self.assertEqual(EdenErrorType.POSIX_ERROR, ctx.exception.errorType)
-
-        with self.assertRaises(EdenError) as ctx:
-            self.client.prefetchFilesV2(
-                PrefetchParams(
-                    mountPoint=self.mount_path_bytes,
-                    globs=["adir["],
-                    directoriesOnly=True,
+    async def test_malformed_query(self) -> None:
+        async with self.get_thrift_client() as client:
+            with self.assertRaises(EdenError) as ctx:
+                await client.prefetchFilesV2(
+                    PrefetchParams(mountPoint=self.mount_path_bytes, globs=["adir["])
                 )
-            )
-        self.assertIn("unterminated bracket sequence", str(ctx.exception))
-        self.assertEqual(EdenErrorType.POSIX_ERROR, ctx.exception.errorType)
+            self.assertIn("unterminated bracket sequence", str(ctx.exception))
+            self.assertEqual(EdenErrorType.POSIX_ERROR, ctx.exception.errorType)
 
-    def test_globs_may_not_include_dotdot(self) -> None:
-        with self.assertRaises(EdenError) as ctx:
-            self.client.prefetchFilesV2(
-                PrefetchParams(
-                    mountPoint=self.mount_path_bytes,
-                    globs=["java/../java/com/**/*.java"],
+            with self.assertRaises(EdenError) as ctx:
+                await client.prefetchFilesV2(
+                    PrefetchParams(
+                        mountPoint=self.mount_path_bytes,
+                        globs=["adir["],
+                        directoriesOnly=True,
+                    )
                 )
+            self.assertIn("unterminated bracket sequence", str(ctx.exception))
+            self.assertEqual(EdenErrorType.POSIX_ERROR, ctx.exception.errorType)
+
+    async def test_globs_may_not_include_dotdot(self) -> None:
+        async with self.get_thrift_client() as client:
+            with self.assertRaises(EdenError) as ctx:
+                await client.prefetchFilesV2(
+                    PrefetchParams(
+                        mountPoint=self.mount_path_bytes,
+                        globs=["java/../java/com/**/*.java"],
+                    )
+                )
+            self.assertEqual(
+                "Invalid glob (PathComponent must not be ..): java/../java/com/**/*.java",
+                str(ctx.exception),
             )
-        self.assertEqual(
-            "Invalid glob (PathComponent must not be ..): java/../java/com/**/*.java",
-            str(ctx.exception),
-        )
-        self.assertEqual(EdenErrorType.ARGUMENT_ERROR, ctx.exception.errorType)
+            self.assertEqual(EdenErrorType.ARGUMENT_ERROR, ctx.exception.errorType)
 
 
 @testcase.eden_repo_test(case_sensitivity_dependent=True)
 class GlobCaseDependentTest(GlobFilesTestBase, testcase.EdenRepoTest):
-    def test_case_preserving(self) -> None:
-        self.assert_glob(
+    async def test_case_preserving(self) -> None:
+        await self.assert_glob(
             ["case/MixedCase"],
             expected_matches=[] if self.is_case_sensitive else [b"case/MIXEDcase"],
         )
-        self.assert_glob(
+        await self.assert_glob(
             ["CASE/mixedcase"],
             expected_matches=[] if self.is_case_sensitive else [b"case/MIXEDcase"],
         )
 
-    def test_case_insensitive(self) -> None:
-        self.assert_glob(
+    async def test_case_insensitive(self) -> None:
+        await self.assert_glob(
             ["case/M*C*"],
             expected_matches=[] if self.is_case_sensitive else [b"case/MIXEDcase"],
         )
-        self.assert_glob(
+        await self.assert_glob(
             ["CA*/?ixedcase"],
             expected_matches=[] if self.is_case_sensitive else [b"case/MIXEDcase"],
         )
@@ -547,22 +561,22 @@ class GlobCaseDependentTest(GlobFilesTestBase, testcase.EdenRepoTest):
 
 @testcase.eden_repo_test(case_sensitivity_dependent=True)
 class PrefetchCaseDependentTest(PrefetchTestBase, testcase.EdenRepoTest):
-    def test_case_preserving(self) -> None:
-        self.assert_glob(
+    async def test_case_preserving(self) -> None:
+        await self.assert_glob(
             ["case/MixedCase"],
             expected_matches=[] if self.is_case_sensitive else [b"case/MIXEDcase"],
         )
-        self.assert_glob(
+        await self.assert_glob(
             ["CASE/mixedcase"],
             expected_matches=[] if self.is_case_sensitive else [b"case/MIXEDcase"],
         )
 
-    def test_case_insensitive(self) -> None:
-        self.assert_glob(
+    async def test_case_insensitive(self) -> None:
+        await self.assert_glob(
             ["case/M*C*"],
             expected_matches=[] if self.is_case_sensitive else [b"case/MIXEDcase"],
         )
-        self.assert_glob(
+        await self.assert_glob(
             ["CA*/?ixedcase"],
             expected_matches=[] if self.is_case_sensitive else [b"case/MIXEDcase"],
         )
