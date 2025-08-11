@@ -719,6 +719,9 @@ export type PlatformSpecificClientToServerMessages =
   | {
       type: 'platform/fillDevMateCommitMessage';
       id: string;
+    }
+  | {
+      type: 'platform/devmateCreateTestForModifiedCode';
     };
 
 /**

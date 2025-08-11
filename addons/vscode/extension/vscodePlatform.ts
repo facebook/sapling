@@ -26,7 +26,7 @@ import {PERSISTED_STORAGE_KEY_PREFIX} from './config';
 import {t} from './i18n';
 import {Internal} from './Internal';
 import openFile from './openFile';
-import {promptDevmate} from './facebook/metamate/command';
+import {promptDevmate, promptTestGeneration} from './facebook/metamate/command';
 import {ActionTriggerType} from './facebook/metamate/types';
 
 export type VSCodeServerPlatform = ServerPlatform & {
@@ -268,6 +268,10 @@ export const getVSCodePlatform = (context: vscode.ExtensionContext): VSCodeServe
         case 'platform/fillDevMateCommitMessage': {
           // Call DevMate to generate a commit message based on the current changes
           promptDevmate({type: 'fillCommitMessage'}, ActionTriggerType.ISL2FillCommitMessage);
+          break;
+        }
+        case 'platform/devmateCreateTestForModifiedCode': {
+          promptTestGeneration();
           break;
         }
       }

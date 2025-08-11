@@ -97,6 +97,14 @@ function SmartActions({commit, dismiss}: {commit: CommitInfo; dismiss: () => voi
     );
   }
 
+  const devmateGenerateTestsForModifiedCodeEnabled = useAtomValue(
+    featureFlagAsync(Internal.featureFlags?.DevmateGenerateTestsForModifiedCode),
+  );
+  // For now, only support this in VS Code since the devmate can only be triggered from VS Code
+  if (devmateGenerateTestsForModifiedCodeEnabled && platform.platformName === 'vscode') {
+    actions.push(<GenerateTestsForModifiedCodeButton key="generate-tests" dismiss={dismiss} />);
+  }
+
   return (
     <DropdownFields
       title={<T>Smart Actions</T>}
@@ -215,4 +223,22 @@ function ResolveFailedSignalsButton({
   );
 
   return disabled ? <Tooltip title={disabledReason}>{button}</Tooltip> : button;
+}
+
+function GenerateTestsForModifiedCodeButton({dismiss}: {dismiss: () => void}) {
+  const button = (
+    <Button
+      data-testid="generate-tests-for-modified-code-button"
+      onClick={e => {
+        serverAPI.postMessage({
+          type: 'platform/devmateCreateTestForModifiedCode',
+        });
+        dismiss();
+        e.stopPropagation();
+      }}>
+      <Icon icon="sparkle" />
+      <T>Generate tests for changes</T>
+    </Button>
+  );
+  return button;
 }
