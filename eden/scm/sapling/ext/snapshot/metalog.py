@@ -3,9 +3,10 @@
 # This software may be used and distributed according to the terms of the
 # GNU General Public License version 2.
 
-import json
 import time
 from typing import Dict, Optional, TypedDict
+
+from bindings import serde
 
 from sapling import perftrace
 
@@ -39,7 +40,7 @@ class SnapshotMetadatas(TypedDict, total=False):
         snapshots: Mapping from changeset ID to its metadata
     """
 
-    snapshots: Dict[str, SnapshotMetadata]
+    snapshots: Dict[bytes, SnapshotMetadata]
 
 
 LATESTBUBBLE = "latestbubble"
@@ -96,8 +97,8 @@ def readmetadatas(ml) -> SnapshotMetadatas:
     data = ml.get(SNAPSHOT_METADATA)
     if data is not None:
         try:
-            return json.loads(data.decode("utf-8"))
-        except (json.JSONDecodeError, UnicodeDecodeError):
+            return serde.cbor_loads(data)
+        except Exception:
             # Return empty metadatas if corrupted
             return {}
     return {}
@@ -127,7 +128,7 @@ def _evictoldentries(metadatas: SnapshotMetadatas) -> None:
 
 
 @perftrace.tracefunc("Store snapshot metadata")
-def storesnapshotmetadata(repo, cs_id: str, metadata: SnapshotMetadata) -> None:
+def storesnapshotmetadata(repo, cs_id: bytes, metadata: SnapshotMetadata) -> None:
     """
     Store or update metadata for a specific snapshot/changeset.
 
@@ -135,17 +136,17 @@ def storesnapshotmetadata(repo, cs_id: str, metadata: SnapshotMetadata) -> None:
 
     Args:
         repo: Repository instance
-        cs_id: Changeset ID
+        cs_id: Changeset ID (binary)
         metadata: Snapshot metadata to store (type-safe)
 
     Example:
         # Store bubble for a changeset
         metadata = {"bubble": 123}
-        storesnapshotmetadata(repo, changeset_id, metadata)
+        storesnapshotmetadata(repo, changeset_id_bytes, metadata)
 
         # Store multiple fields at once
         metadata = {"bubble": 123, "created_at": time.time()}
-        storesnapshotmetadata(repo, changeset_id, metadata)
+        storesnapshotmetadata(repo, changeset_id_bytes, metadata)
     """
     assert repo.currenttransaction(), "Must be called within a transaction"
     ml = repo.metalog()
@@ -169,7 +170,7 @@ def storesnapshotmetadata(repo, cs_id: str, metadata: SnapshotMetadata) -> None:
     _evictoldentries(metadatas)
 
     # Save back to metalog
-    ml.set(SNAPSHOT_METADATA, json.dumps(metadatas).encode("utf-8"))
+    ml.set(SNAPSHOT_METADATA, serde.cbor_dumps(metadatas))
 
 
 @perftrace.tracefunc("Get snapshot metadata")
@@ -179,14 +180,16 @@ def getsnapshotmetadata(ml, cs_id: str) -> Optional[SnapshotMetadata]:
 
     Args:
         ml: Metalog instance
-        cs_id: Changeset ID to lookup
+        cs_id: Changeset ID (hex string) to lookup
 
     Returns:
         Optional[SnapshotMetadata]: Metadata if found, None otherwise
     """
     metadatas = readmetadatas(ml)
     snapshots = metadatas.get("snapshots", {})
-    return snapshots.get(cs_id)
+    # Convert hex string to bytes for lookup
+    cs_id_bytes = bytes.fromhex(cs_id)
+    return snapshots.get(cs_id_bytes)
 
 
 @perftrace.tracefunc("Get changeset ID to bubble mapping")
@@ -214,7 +217,7 @@ def deletesnapshotmetadata(repo, cs_id: str) -> bool:
 
     Args:
         repo: Repository instance
-        cs_id: Changeset ID to remove
+        cs_id: Changeset ID (hex string) to remove
 
     Returns:
         bool: True if the metadata was found and deleted, False otherwise
@@ -225,10 +228,12 @@ def deletesnapshotmetadata(repo, cs_id: str) -> bool:
     metadatas = readmetadatas(ml)
     snapshots = metadatas.get("snapshots", {})
 
-    if cs_id in snapshots:
-        del snapshots[cs_id]
+    # Convert hex string to bytes for lookup
+    cs_id_bytes = bytes.fromhex(cs_id)
+    if cs_id_bytes in snapshots:
+        del snapshots[cs_id_bytes]
         metadatas["snapshots"] = snapshots
-        ml.set(SNAPSHOT_METADATA, json.dumps(metadatas).encode("utf-8"))
+        ml.set(SNAPSHOT_METADATA, serde.cbor_dumps(metadatas))
         return True
 
     return False

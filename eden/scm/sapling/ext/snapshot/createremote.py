@@ -102,10 +102,10 @@ def parsecontinuationof(opts, repo):
         return continuation_value
 
 
-def _fetchremotebubble(repo, cs_id):
+def _fetchremotebubble(repo, cs_id_bytes):
     """Fetch bubble ID for a changeset from the remote server"""
     try:
-        response = fetchsnapshot(repo, bytes.fromhex(cs_id))
+        response = fetchsnapshot(repo, cs_id_bytes)
         bubble_id = response.get("bubble_id")
         if bubble_id is not None:
             return bubble_id
@@ -115,7 +115,9 @@ def _fetchremotebubble(repo, cs_id):
     except Exception as e:
         # Log the error but don't fail the operation
         repo.ui.debug(
-            _("failed to fetch remote bubble for {}: {}\n").format(cs_id, str(e))
+            _("failed to fetch remote bubble for {}: {}\n").format(
+                cs_id_bytes.hex(), str(e)
+            )
         )
         return None
 
@@ -278,7 +280,8 @@ def createremote(ui, repo, **opts) -> None:
                     ),
                     component="snapshot",
                 )
-                previousbubble = _fetchremotebubble(repo, continuationof)
+                continuationof_bytes = bytes.fromhex(continuationof)
+                previousbubble = _fetchremotebubble(repo, continuationof_bytes)
 
                 if previousbubble is None:
                     # Still not found, raise an error
@@ -293,7 +296,7 @@ def createremote(ui, repo, **opts) -> None:
                         metadata = SnapshotMetadata(
                             bubble=previousbubble, created_at=mtime.time()
                         )
-                        storesnapshotmetadata(repo, continuationof, metadata)
+                        storesnapshotmetadata(repo, continuationof_bytes, metadata)
                     ui.status(
                         _("found bubble {} for {} via remote lookup\n").format(
                             previousbubble, continuationof
@@ -333,7 +336,7 @@ def createremote(ui, repo, **opts) -> None:
 
         # Store metadata for this snapshot in the local cache
         metadata = SnapshotMetadata(bubble=bubble, created_at=mtime.time())
-        storesnapshotmetadata(repo, csid.hex(), metadata)
+        storesnapshotmetadata(repo, csid, metadata)
 
     csid = csid.hex()
 

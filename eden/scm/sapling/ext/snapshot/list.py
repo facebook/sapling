@@ -94,6 +94,7 @@ def list_snapshots(ui, repo, **opts) -> None:
             )
 
         for cs_id, metadata in snapshot_items:
+            cs_id = cs_id.hex()
             fm.startitem()
             fm.data(id=cs_id)
             fm.data(created_at=metadata.get("created_at"))
