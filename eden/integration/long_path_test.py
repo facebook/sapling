@@ -8,7 +8,7 @@
 
 from typing import Dict
 
-from facebook.eden.ttypes import GetScmStatusParams, ScmFileStatus
+from eden.fs.service.eden.thrift_types import GetScmStatusParams, ScmFileStatus
 
 from .lib import testcase
 
@@ -28,9 +28,11 @@ class LongPathsTest(testcase.EdenRepoTest):
     def test_read(self) -> None:
         self.assertEqual(self.read_file(self.file), "Long path!\n")
 
-    def _eden_status(self, listIgnored: bool = False) -> Dict[bytes, ScmFileStatus]:
-        with self.eden.get_thrift_client_legacy() as client:
-            status = client.getScmStatusV2(
+    async def _eden_status(
+        self, listIgnored: bool = False
+    ) -> Dict[bytes, ScmFileStatus]:
+        async with self.eden.get_thrift_client() as client:
+            status = await client.getScmStatusV2(
                 GetScmStatusParams(
                     mountPoint=self.mount.encode(),
                     commit=self.initial_commit.encode(),
@@ -38,9 +40,10 @@ class LongPathsTest(testcase.EdenRepoTest):
                     rootIdOptions=None,
                 )
             )
-            return status.status.entries
+            return dict(status.status.entries)
 
-    def test_materialize(self) -> None:
+    async def test_materialize(self) -> None:
         e = self.path + "/" + "e"
         self.write_file(e, "Small file in long path!\n")
-        self.assertEqual(self._eden_status(), {e.encode(): ScmFileStatus.ADDED})
+        status = await self._eden_status()
+        self.assertEqual(status, {e.encode(): ScmFileStatus.ADDED})

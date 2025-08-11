@@ -233,12 +233,11 @@ python_unittest(
 )
 
 python_unittest(
-    name = "long_path_test",
+    name = "long_path",
     srcs = ["long_path_test.py"],
     env = artifacts["env"],
     supports_static_listing = False,
     deps = [
-        "//eden/fs/service:thrift-py-deprecated",
         "//eden/integration/lib:lib",
     ],
 )
