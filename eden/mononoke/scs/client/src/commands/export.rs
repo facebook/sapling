@@ -35,6 +35,7 @@ use futures::stream::TryStreamExt;
 use scs_client_raw::ScsClient;
 use scs_client_raw::thrift;
 use source_control::FileChunk;
+use source_control::FileIdSpecifier;
 use tokio::io::AsyncBufReadExt;
 use tokio::io::AsyncWriteExt;
 use tokio::io::BufWriter;
@@ -107,6 +108,9 @@ pub(super) struct CommandArgs {
     #[clap(long)]
     /// Exclude files >= specified byte size.
     file_size_threshold: Option<ByteSize>,
+    #[clap(long)]
+    /// Exclude binary files >= specified byte size.
+    binary_file_size_threshold: Option<ByteSize>,
     #[clap(long)]
     /// Perform additional requests to try for case insensitive matches
     case_insensitive: bool,
@@ -411,7 +415,7 @@ async fn export_file(
     tx: FileSender,
     destination: PathBuf,
     _type_: thrift::EntryType,
-    file_size_threshold: Option<u64>,
+    file_filter: FileFilter,
 ) -> Result<()> {
     let mut file_metadata = FileMetadata {
         size: file.file_size as u64,
@@ -419,7 +423,28 @@ async fn export_file(
         entry_type: _type_,
     };
 
-    let responses = if file_size_threshold.is_some_and(|t| file.file_size as u64 >= t) {
+    let too_big = match file_filter.filter_size(file.file_size as u64) {
+        FilterDecision::Allow => false,
+        FilterDecision::TooBig => true,
+        FilterDecision::MaybeTooBig => {
+            // Fetch full file metadata.
+            // TODO: make tree_list() optionally include the fully populated FileInfo.
+            let file_info = connection
+                .file_info(
+                    &source_control::FileSpecifier::by_id(FileIdSpecifier {
+                        repo: repo.clone(),
+                        id: file.id.clone(),
+                        ..Default::default()
+                    }),
+                    &Default::default(),
+                )
+                .await?;
+
+            file_filter.too_big(&file_info)
+        }
+    };
+
+    let responses = if too_big {
         // File is above size threshold - export placeholder content.
         let placeholder = format!(
             "This is a placeholder for a large file\n\nOriginal file id: {}\nOriginal file size: {}\n",
@@ -495,7 +520,7 @@ async fn export_item(
     item: ExportItem,
     casefold: Casefold,
     create_dirs: CreateDirs,
-    file_size_threshold: Option<u64>,
+    file_filter: FileFilter,
     files_written: Arc<AtomicU64>,
 ) -> Result<(Option<String>, Vec<ExportItem>)> {
     match item {
@@ -527,16 +552,7 @@ async fn export_item(
             destination,
             type_,
         } => {
-            export_file(
-                connection,
-                repo,
-                file,
-                tx,
-                destination,
-                type_,
-                file_size_threshold,
-            )
-            .await?;
+            export_file(connection, repo, file, tx, destination, type_, file_filter).await?;
             files_written.fetch_add(1, Ordering::Relaxed);
             Ok((Some(path), Vec::new()))
         }
@@ -743,6 +759,52 @@ enum Destination {
     Stdout,
 }
 
+#[derive(Debug, Clone, Copy)]
+struct FileFilter {
+    size_threshold: Option<u64>,
+    binary_size_threshold: Option<u64>,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq)]
+enum FilterDecision {
+    Allow,
+    TooBig,
+    MaybeTooBig,
+}
+
+impl FileFilter {
+    fn filter_size(&self, size: u64) -> FilterDecision {
+        if let Some(threshold) = self.size_threshold {
+            if size >= threshold {
+                return FilterDecision::TooBig;
+            }
+        }
+
+        if let Some(threshold) = self.binary_size_threshold {
+            if size >= threshold {
+                // Not sure if the file is binary yet.
+                return FilterDecision::MaybeTooBig;
+            }
+        }
+
+        FilterDecision::Allow
+    }
+
+    fn too_big(&self, file: &thrift::FileInfo) -> bool {
+        if self.filter_size(file.file_size as u64) == FilterDecision::TooBig {
+            return true;
+        }
+
+        if let Some(threshold) = self.binary_size_threshold {
+            if file.file_size as u64 >= threshold && file.is_binary {
+                return true;
+            }
+        }
+
+        false
+    }
+}
+
 pub(super) async fn run(app: ScscApp, args: CommandArgs) -> Result<()> {
     let destination = match args.output.as_ref() {
         "-" => {
@@ -823,7 +885,10 @@ pub(super) async fn run(app: ScscApp, args: CommandArgs) -> Result<()> {
         ..Default::default()
     };
 
-    let file_size_threshold = args.file_size_threshold.map(|bs| bs.0);
+    let file_filter = FileFilter {
+        size_threshold: args.file_size_threshold.map(|bs| bs.0),
+        binary_size_threshold: args.binary_file_size_threshold.map(|bs| bs.0),
+    };
 
     let params = thrift::CommitPathInfoParams {
         ..Default::default()
@@ -932,7 +997,7 @@ pub(super) async fn run(app: ScscApp, args: CommandArgs) -> Result<()> {
                 item,
                 casefold,
                 create_dirs,
-                file_size_threshold,
+                file_filter,
                 files_written.clone(),
             )
             .boxed()
