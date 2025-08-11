@@ -64,7 +64,23 @@ use crate::init;
 use crate::trees::TreeManifestResolver;
 
 const DEFAULT_CAPABILITIES: [&str; 1] = ["sapling-common"];
+
 type Capabilities = HashSet<String>;
+
+#[derive(Debug, Default, Clone)]
+struct LazyCapabilities {
+    caps: Arc<OnceCell<Capabilities>>,
+}
+
+impl LazyCapabilities {
+    fn get(
+        &self,
+        eden_api: Arc<dyn SaplingRemoteApi>,
+    ) -> Result<&Capabilities, SaplingRemoteApiError> {
+        self.caps
+            .get_or_try_init(|| block_on(eden_api.capabilities()).map(|c| c.into_iter().collect()))
+    }
+}
 
 #[derive(Clone)]
 pub struct Repo {
@@ -72,7 +88,7 @@ pub struct Repo {
     config: Arc<dyn Config>,
     repo_name: Option<String>,
     metalog: OnceCell<Arc<RwLock<MetaLog>>>,
-    eden_api: OnceCell<(Capabilities, Arc<dyn SaplingRemoteApi>)>,
+    eden_api: OnceCell<(LazyCapabilities, Arc<dyn SaplingRemoteApi>)>,
     dag_commits: OnceCell<Arc<RwLock<Box<dyn DagCommits + Send + 'static>>>>,
     file_store: OnceCell<Arc<dyn FileStore>>,
     file_scm_store: OnceCell<Arc<scmstore::FileStore>>,
@@ -296,7 +312,7 @@ impl Repo {
                     .config
                     .must_get::<bool>("edenapi", "ignore-capabilities")
                     .unwrap_or_default()
-                    && !capabilities.is_subset(&caps)
+                    && !capabilities.is_subset(caps.get(edenapi.clone())?)
                 {
                     return Err(SaplingRemoteApiError::Other(anyhow!(
                         "SaplingRemoteAPI is requested but capabilities {:?} are not supported within {:?}",
@@ -317,9 +333,9 @@ impl Repo {
     fn force_construct_eden_api(
         &self,
         maybe_repo_url: Option<RepoUrl>,
-    ) -> Result<(Capabilities, Arc<dyn SaplingRemoteApi>), SaplingRemoteApiError> {
+    ) -> Result<(LazyCapabilities, Arc<dyn SaplingRemoteApi>), SaplingRemoteApiError> {
         let (caps, eden_api) = self.eden_api.get_or_try_init(
-            || -> Result<(Capabilities, Arc<dyn SaplingRemoteApi>), SaplingRemoteApiError> {
+            || -> Result<(LazyCapabilities, Arc<dyn SaplingRemoteApi>), SaplingRemoteApiError> {
                 tracing::trace!(target: "repo::eden_api", "creating edenapi");
                 let mut builder = Builder::from_config(&self.config)?;
                 if let Some(path) = maybe_repo_url {
@@ -331,20 +347,7 @@ impl Repo {
                 }
                 let eden_api = builder.build()?;
                 tracing::info!(url=eden_api.url(), path=?self.path, "SaplingRemoteApi built");
-                let caps_set = if !self
-                    .config
-                    .must_get::<bool>("edenapi", "ignore-capabilities")
-                    .unwrap_or_default()
-                {
-                    let caps = block_on(eden_api.capabilities())?;
-                    caps.into_iter().collect::<HashSet<String>>()
-                } else {
-                    // If we turned on ignore-capabilities, means something is failing fetching the capabilities.
-                    // We put this as a placeholder to avoid breaking the code, it won't affect behaviour because the check for it is also disabled by the same config.
-                    HashSet::new()
-                };
-
-                Ok((caps_set, eden_api))
+                Ok((LazyCapabilities::default(), eden_api))
             },
         )?;
         Ok((caps.clone(), eden_api.clone()))
@@ -356,7 +359,21 @@ impl Repo {
     pub fn optional_eden_api(
         &self,
     ) -> Result<Option<Arc<dyn SaplingRemoteApi>>, SaplingRemoteApiError> {
+        // We know a priori that git repos (currently) never support the common facilities. This
+        // avoids the eager "capabilities()" remote call.
+        if self.has_requirement("git") && !self.has_requirement("remotefilelog") {
+            return Ok(None);
+        }
+
         if let Some((caps, edenapi)) = self.optional_eden_api_with_capabilities()? {
+            if self.has_requirement("remotefilelog") {
+                // We know a priori that if we can construct a SLAPI client in a "remotefilelog"
+                // repo, the client supports the "common" facilities. This avoids the eager
+                // "capabilities()" remote call.
+                return Ok(Some(edenapi));
+            }
+
+            let caps = caps.get(edenapi.clone())?;
             let supports_caps = DEFAULT_CAPABILITIES.iter().all(|&r| caps.contains(r));
             if !supports_caps
                 && !self
@@ -379,7 +396,7 @@ impl Repo {
     /// Returns `None` if SaplingRemoteAPI should not be used.
     fn optional_eden_api_with_capabilities(
         &self,
-    ) -> Result<Option<(Capabilities, Arc<dyn SaplingRemoteApi>)>, SaplingRemoteApiError> {
+    ) -> Result<Option<(LazyCapabilities, Arc<dyn SaplingRemoteApi>)>, SaplingRemoteApiError> {
         if matches!(
             self.config.get_opt::<bool>("edenapi", "enable"),
             Ok(Some(false))

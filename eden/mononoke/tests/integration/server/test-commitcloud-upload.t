@@ -104,7 +104,6 @@ This test also checks file content deduplication. We upload 1 file content and 1
   {"536d3fb3929eab4b01e63ab7fc9b25a5c8a08bc9": false} (no-eol)
 
   $ EDENSCM_LOG="edenapi::client=info" hg cloud upload
-   INFO edenapi::client: Requesting capabilities for repo repo
    INFO edenapi::client: Requesting lookup for 1 item(s)
   commitcloud: head '536d3fb3929e' hasn't been uploaded yet
   edenapi: queue 1 commit for upload
@@ -124,15 +123,12 @@ This test also checks file content deduplication. We upload 1 file content and 1
   edenapi: uploaded 1 changeset
 
   $ EDENSCM_LOG="edenapi::client=info" hg cloud check -r 536d3fb3929eab4b01e63ab7fc9b25a5c8a08bc9   # no remote check
-   INFO edenapi::client: Requesting capabilities for repo repo
   536d3fb3929eab4b01e63ab7fc9b25a5c8a08bc9 backed up
 
   $ EDENSCM_LOG="edenapi::client=info" hg cloud check -r 536d3fb3929eab4b01e63ab7fc9b25a5c8a08bc9 --json  # no remote check (json)
-   INFO edenapi::client: Requesting capabilities for repo repo
   {"536d3fb3929eab4b01e63ab7fc9b25a5c8a08bc9": true} (no-eol)
 
   $ EDENSCM_LOG="edenapi::client=info" hg cloud check -r 536d3fb3929eab4b01e63ab7fc9b25a5c8a08bc9 --remote  # remote check
-   INFO edenapi::client: Requesting capabilities for repo repo
    INFO edenapi::client: Requesting lookup for 1 item(s)
   536d3fb3929eab4b01e63ab7fc9b25a5c8a08bc9 backed up
 
@@ -152,7 +148,6 @@ The files of the second commit are identical to the files of the first commit, s
   65289540f44d80cecffca8a3fd655c0ca6243cd9 not backed up
 
   $ EDENSCM_LOG="edenapi::client=info" hg cloud upload
-   INFO edenapi::client: Requesting capabilities for repo repo
    INFO edenapi::client: Requesting lookup for 1 item(s)
   commitcloud: head '65289540f44d' hasn't been uploaded yet
   edenapi: queue 1 commit for upload
@@ -165,16 +160,13 @@ The files of the second commit are identical to the files of the first commit, s
   edenapi: uploaded 1 changeset
 
   $ EDENSCM_LOG="edenapi::client=info" hg cloud upload
-   INFO edenapi::client: Requesting capabilities for repo repo
   commitcloud: nothing to upload
 
 The eden api version performs a remote lookup with the `--remote` option only
   $ EDENSCM_LOG="edenapi::client=info" hg cloud check -r 65289540f44d80cecffca8a3fd655c0ca6243cd9
-   INFO edenapi::client: Requesting capabilities for repo repo
   65289540f44d80cecffca8a3fd655c0ca6243cd9 backed up
  
   $ EDENSCM_LOG="edenapi::client=info" hg cloud check -r 65289540f44d80cecffca8a3fd655c0ca6243cd9 --remote
-   INFO edenapi::client: Requesting capabilities for repo repo
    INFO edenapi::client: Requesting lookup for 1 item(s)
   65289540f44d80cecffca8a3fd655c0ca6243cd9 backed up
 
@@ -190,20 +182,16 @@ Try pull an uploaded commit from another client
   @  8b2dca0c8a72 'base_commit'
   
   $ EDENSCM_LOG="edenapi::client=info" hg cloud check -r 65289540f44d  # pull doesn't update backup state
-   INFO edenapi::client: Requesting capabilities for repo repo
   65289540f44d80cecffca8a3fd655c0ca6243cd9 not backed up
 
   $ EDENSCM_LOG="edenapi::client=info" hg cloud upload
-   INFO edenapi::client: Requesting capabilities for repo repo
    INFO edenapi::client: Requesting lookup for 1 item(s)
   commitcloud: nothing to upload
 
   $ EDENSCM_LOG="edenapi::client=info" hg cloud upload # upload does, no remote calls for the second call
-   INFO edenapi::client: Requesting capabilities for repo repo
   commitcloud: nothing to upload
 
   $ EDENSCM_LOG="edenapi::client=info" hg cloud check -r 65289540f44d --debug # upload does, no remote calls
-   INFO edenapi::client: Requesting capabilities for repo repo
   65289540f44d80cecffca8a3fd655c0ca6243cd9 backed up
 
   $ cd ..
@@ -243,7 +231,6 @@ Also, check that upload will not reupload file contents again.
 Try `cloud sync` now. Expected that nothing new is either uploaded or pulled.
 Remote lookup is expected because `hg pull` command doesn't update backup state.
   $ EDENSCM_LOG="edenapi::client=info" hg cloud sync
-   INFO edenapi::client: Requesting capabilities for repo repo
   commitcloud: synchronizing 'repo' with 'user/test/default'
    INFO edenapi::client: Requesting lookup for 1 item(s)
   commitcloud: nothing to upload
@@ -253,7 +240,6 @@ Remote lookup is expected because `hg pull` command doesn't update backup state.
 
 Check that the second run doesn't perform remote lookup because the previous command should update local backed up state.
   $ EDENSCM_LOG="edenapi::client=info" hg cloud sync
-   INFO edenapi::client: Requesting capabilities for repo repo
   commitcloud: synchronizing 'repo' with 'user/test/default'
   commitcloud: nothing to upload
   commitcloud: commits synchronized
@@ -266,7 +252,6 @@ Also, dedup for file contents is expected to work (see queue 100 files but only 
   $ hg mv dir2 dir3 -q
   $ hg commit -m "New files Dir3 moved from Dir2" -q
   $ EDENSCM_LOG="edenapi::client=info" hg cloud sync
-   INFO edenapi::client: Requesting capabilities for repo repo
   commitcloud: synchronizing 'repo' with 'user/test/default'
    INFO edenapi::client: Requesting lookup for 1 item(s)
   commitcloud: head '32551ca74417' hasn't been uploaded yet
@@ -352,16 +337,13 @@ So, this information is expected to be preserved on the client1.
 
 Check both ways to specify a commit to back up work - even though we're going through a compat alias
   $ EDENSCM_LOG="edenapi::client=info" hg cloud backup c8b3ca487837
-   INFO edenapi::client: Requesting capabilities for repo repo
   commitcloud: nothing to upload
  
   $ EDENSCM_LOG="edenapi::client=info" hg cloud backup -r c8b3ca487837
-   INFO edenapi::client: Requesting capabilities for repo repo
   commitcloud: nothing to upload
 
 Check the force flag for backup. Local cache checks must be ignoree
   $ EDENSCM_LOG="edenapi::client=info" hg cloud backup -r c8b3ca487837 --force
-   INFO edenapi::client: Requesting capabilities for repo repo
   commitcloud: head 'c8b3ca487837' hasn't been uploaded yet
   edenapi: queue 3 commits for upload
   edenapi: queue 300 files for upload
@@ -382,7 +364,6 @@ Remove the local cache, check that the sync operation will restore the cache and
   $ rm -rf .hg/commitcloud/backedupheads*
 
   $ EDENSCM_LOG="edenapi::client=info" hg cloud sync
-   INFO edenapi::client: Requesting capabilities for repo repo
   commitcloud: synchronizing 'repo' with 'user/test/default'
    INFO edenapi::client: Requesting lookup for 4 item(s)
   commitcloud: nothing to upload
@@ -396,7 +377,6 @@ Remove the local cache, check that the upload operation will restore the cache a
   $ rm -rf .hg/commitcloud/backedupheads*
 
   $ EDENSCM_LOG="edenapi::client=info" hg cloud upload
-   INFO edenapi::client: Requesting capabilities for repo repo
    INFO edenapi::client: Requesting lookup for 4 item(s)
   commitcloud: nothing to upload
 
@@ -407,7 +387,6 @@ Remove the local cache, check that the upload operation will restore the cache a
 Check that `hg cloud sync` command can self recover from corrupted local backed up state
   $ echo "trash" > .hg/commitcloud/backedupheads*
   $ EDENSCM_LOG="edenapi::client=info" hg cloud sync --debug
-   INFO edenapi::client: Requesting capabilities for repo repo
   commitcloud: synchronizing 'repo' with 'user/test/default'
   unrecognized backedupheads version 'trash', ignoring
    INFO edenapi::client: Requesting lookup for 4 item(s)
