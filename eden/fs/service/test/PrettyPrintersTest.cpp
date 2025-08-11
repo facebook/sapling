@@ -13,9 +13,7 @@
 using namespace facebook::eden;
 
 TEST(PrettyPrinters, ostream_format_conflict_type) {
-  std::ostringstream os;
-  os << ConflictType::MODIFIED_REMOVED;
-  EXPECT_EQ("MODIFIED_REMOVED", os.str());
+  EXPECT_EQ("MODIFIED_REMOVED", fmt::to_string(ConflictType::MODIFIED_REMOVED));
 }
 
 TEST(PrettyPrinters, ostream_format_checkout_conflict) {
@@ -24,11 +22,9 @@ TEST(PrettyPrinters, ostream_format_checkout_conflict) {
   conflict.type() = ConflictType::REMOVED_MODIFIED;
   conflict.dtype() = static_cast<Dtype>(dtype_t::Regular);
 
-  std::ostringstream os;
-  os << conflict;
   EXPECT_EQ(
       "CheckoutConflict(type=REMOVED_MODIFIED, path=\"some/test/path\", message=\"\")",
-      os.str());
+      fmt::to_string(conflict));
 }
 
 TEST(PrettyPrinters, ostream_format_checkout_conflict_error) {
@@ -37,17 +33,15 @@ TEST(PrettyPrinters, ostream_format_checkout_conflict_error) {
   conflict.type() = ConflictType::ERROR;
   conflict.message() = "Error invalidating path";
 
-  std::ostringstream os;
-  os << conflict;
   EXPECT_EQ(
       "CheckoutConflict(type=ERROR, path=\"some/test/path\", message=\"Error invalidating path\")",
-      os.str());
+      fmt::to_string(conflict));
 }
 
 TEST(PrettyPrinters, ostream_format_scm_file_status) {
-  EXPECT_EQ("REMOVED", folly::to<std::string>(ScmFileStatus::REMOVED));
+  EXPECT_EQ("REMOVED", fmt::to_string(ScmFileStatus::REMOVED));
 }
 
 TEST(PrettyPrinters, ostream_format_mount_state) {
-  EXPECT_EQ("RUNNING", folly::to<std::string>(MountState::RUNNING));
+  EXPECT_EQ("RUNNING", fmt::to_string(MountState::RUNNING));
 }

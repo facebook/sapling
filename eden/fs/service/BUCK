@@ -535,6 +535,7 @@ cpp_library(
         "//folly:conv",
     ],
     exported_deps = [
+        "fbsource//third-party/fmt:fmt",
         ":thrift-cpp2-types",
     ],
 )

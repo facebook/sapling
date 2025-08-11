@@ -1765,9 +1765,12 @@ ImmediateFuture<CheckoutResult> EdenMount::checkout(
                            << " more checkout conflicts";
                 break;
               }
-              XLOG(DBG2) << "Checkout conflict on: " << conflict << " of type "
-                         << conflict.type().value() << " with dtype "
-                         << static_cast<int>(conflict.dtype().value());
+              XLOGF(
+                  DBG2,
+                  "Checkout conflict on: {} of type {} with dtype {}",
+                  conflict,
+                  conflict.type().value(),
+                  static_cast<int>(conflict.dtype().value()));
               printedConflicts++;
             }
           }
