@@ -149,9 +149,6 @@ const styles = stylex.create({
 export function CwdSelector() {
   const info = useAtomValue(repositoryInfo);
   const currentCwd = useAtomValue(serverCwd);
-  const additionalToggles = useCommandEvent('ToggleCwdDropdown');
-  const allCwdOptions = useCwdOptions();
-  const cwdOptions = allCwdOptions.filter(opt => opt.valid);
   const allSubmoduleOptions = useSubmoduleOptions(info);
   const submoduleOptions = allSubmoduleOptions?.filter(opt => opt.valid);
   const hasSubmodules = submoduleOptions != null && submoduleOptions.length > 0;
@@ -167,49 +164,11 @@ export function CwdSelector() {
 
   return (
     <div {...stylex.props(styles.container)}>
-      <Tooltip
-        trigger="click"
-        component={dismiss => <CwdDetails dismiss={dismiss} />}
-        additionalToggles={additionalToggles.asEventTarget()}
-        group="topbar"
-        placement="bottom"
-        title={
-          <T replace={{$shortcut: <Kbd keycode={KeyCode.C} modifiers={[Modifier.ALT]} />}}>
-            Repository info & cwd ($shortcut)
-          </T>
-        }>
-        {hasSubmodules || cwdOptions.length < 2 ? (
-          <Button
-            icon
-            data-testid="cwd-dropdown-button"
-            {...stylex.props(hasSubmodules && styles.hideRightBorder)}>
-            <Icon icon="folder" />
-            {repoLabel}
-          </Button>
-        ) : (
-          // use a ButtonDropdown as a shortcut to quickly change cwd
-          <ButtonDropdown
-            data-testid="cwd-dropdown-button"
-            kind="icon"
-            options={cwdOptions}
-            selected={
-              cwdOptions.find(opt => opt.id === currentCwd) ?? {
-                id: currentCwd,
-                label: repoLabel,
-                valid: true,
-              }
-            }
-            icon={<Icon icon="folder" />}
-            onClick={
-              () => null // fall through to the Tooltip
-            }
-            onChangeSelected={value => {
-              if (value.id !== currentCwd) {
-                changeCwd(value.id);
-              }
-            }}></ButtonDropdown>
-        )}
-      </Tooltip>
+      <MainCwdSelector
+        currentCwd={currentCwd}
+        label={mainLabel}
+        hideRightBorder={(repoRoots && repoRoots.length > 1) || allSubmoduleOptions != null}
+      />
       {/* Submodule dropdown if available */}
       {hasSubmodules && (
         <SubmoduleSelector
@@ -224,6 +183,69 @@ export function CwdSelector() {
         />
       )}
     </div>
+  );
+}
+
+/**
+ * The leftmost tooltip that can show cwd and repo details.
+ */
+function MainCwdSelector({
+  currentCwd,
+  label,
+  hideRightBorder,
+}: {
+  currentCwd: AbsolutePath;
+  label: string;
+  hideRightBorder: boolean;
+}) {
+  const allCwdOptions = useCwdOptions();
+  const cwdOptions = allCwdOptions.filter(opt => opt.valid);
+  const additionalToggles = useCommandEvent('ToggleCwdDropdown');
+
+  return (
+    <Tooltip
+      trigger="click"
+      component={dismiss => <CwdDetails dismiss={dismiss} />}
+      additionalToggles={additionalToggles.asEventTarget()}
+      group="topbar"
+      placement="bottom"
+      title={
+        <T replace={{$shortcut: <Kbd keycode={KeyCode.C} modifiers={[Modifier.ALT]} />}}>
+          Repository info & cwd ($shortcut)
+        </T>
+      }>
+      {hideRightBorder || cwdOptions.length < 2 ? (
+        <Button
+          icon
+          data-testid="cwd-dropdown-button"
+          {...stylex.props(hideRightBorder && styles.hideRightBorder)}>
+          <Icon icon="folder" />
+          {label}
+        </Button>
+      ) : (
+        // use a ButtonDropdown as a shortcut to quickly change cwd
+        <ButtonDropdown
+          data-testid="cwd-dropdown-button"
+          kind="icon"
+          options={cwdOptions}
+          selected={
+            cwdOptions.find(opt => opt.id === currentCwd) ?? {
+              id: currentCwd,
+              label,
+              valid: true,
+            }
+          }
+          icon={<Icon icon="folder" />}
+          onClick={
+            () => null // fall through to the Tooltip
+          }
+          onChangeSelected={value => {
+            if (value.id !== currentCwd) {
+              changeCwd(value.id);
+            }
+          }}></ButtonDropdown>
+      )}
+    </Tooltip>
   );
 }
 
