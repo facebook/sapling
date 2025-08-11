@@ -8,8 +8,12 @@
 
 from pathlib import Path
 
+from eden.fs.service.eden.thrift_types import (
+    ResetParentCommitsParams,
+    WorkingDirectoryParents,
+)
+
 from eden.integration.lib import hgrepo
-from facebook.eden.ttypes import ResetParentCommitsParams, WorkingDirectoryParents
 
 from .lib.hg_extension_test_base import EdenHgTestCase, hg_test
 
@@ -42,15 +46,15 @@ class DebugGetParentsTest(EdenHgTestCase):
         )
         self.assertEqual(output_hg, expected)
 
-    def test_different_parents(self) -> None:
+    async def test_different_parents(self) -> None:
         mount_path = Path(self.mount)
 
         # set eden to point at the first commit, while keeping mercurial at the
         # second commit
         parents = WorkingDirectoryParents(parent1=self.commit1.encode("utf-8"))
         params = ResetParentCommitsParams()
-        with self.eden.get_thrift_client_legacy() as client:
-            client.resetParentCommits(
+        async with self.eden.get_thrift_client() as client:
+            await client.resetParentCommits(
                 mountPoint=bytes(mount_path), parents=parents, params=params
             )
 
