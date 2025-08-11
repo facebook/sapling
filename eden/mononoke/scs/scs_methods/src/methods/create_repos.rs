@@ -13,10 +13,27 @@ use anyhow::Result;
 use context::CoreContext;
 use futures::future::try_join_all;
 use mononoke_api::MononokeError;
+use permission_checker::AclProvider;
 use repo_authorization::AuthorizationContext;
 use source_control as thrift;
 
 use crate::source_control_impl::SourceControlServiceImpl;
+
+async fn ensure_acls_allow_repo_creation(
+    ctx: CoreContext,
+    repos: &[thrift::RepoCreationRequest],
+    acl_provider: &dyn AclProvider,
+) -> Result<(), scs_errors::ServiceError> {
+    let authz = AuthorizationContext::new(&ctx);
+    try_join_all(
+        repos
+            .iter()
+            .map(|repo| authz.require_repo_create(&ctx, &repo.repo_name, acl_provider)),
+    )
+    .await
+    .map_err(Into::<MononokeError>::into)?;
+    Ok(())
+}
 
 async fn create_repos_in_metagit(
     params: thrift::CreateReposParams,
@@ -70,13 +87,7 @@ impl SourceControlServiceImpl {
         ctx: CoreContext,
         params: thrift::CreateReposParams,
     ) -> Result<thrift::CreateReposToken, scs_errors::ServiceError> {
-        let authz = AuthorizationContext::new(&ctx);
-        try_join_all(params.repos.iter().map(|repo| {
-            authz.require_repo_create(&ctx, &repo.repo_name, self.acl_provider.as_ref())
-        }))
-        .await
-        .map_err(Into::<MononokeError>::into)?;
-
+        ensure_acls_allow_repo_creation(ctx, &params.repos, self.acl_provider.as_ref()).await?;
         create_repos_in_metagit(params).await?;
 
         Ok(thrift::CreateReposToken {
