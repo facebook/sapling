@@ -61,6 +61,15 @@ dott_test(
 )
 
 dott_test(
+    name = "commit_metadata_scraper",
+    dott_files = ["test-commit-metadata-scraper.t"],
+    deps = [
+        "//eden/mononoke/tools/facebook/commit_metadata_scraper:commit_metadata_scraper",
+        "//eden/mononoke/tools/testtool:testtool",
+    ],
+)
+
+dott_test(
     name = "gitbundle",
     dott_files = glob([
         "test-gitbundle*.t",

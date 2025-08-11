@@ -42,6 +42,7 @@ MONONOKE_TARGETS_TO_ENV = {
     "//eden/mononoke/tools/admin:admin": "MONONOKE_ADMIN",
     "//eden/mononoke/tools/example:example": "MONONOKE_EXAMPLE",
     "//eden/mononoke/tools/facebook/backfill_bonsai_blob_mapping:backfill_bonsai_blob_mapping": "MONONOKE_BACKFILL_BONSAI_BLOB_MAPPING",
+    "//eden/mononoke/tools/facebook/commit_metadata_scraper:commit_metadata_scraper": "COMMIT_METADATA_SCRAPER",
     "//eden/mononoke/tools/facebook/derived_data_tailer:derived_data_tailer": "DERIVED_DATA_TAILER",
     "//eden/mononoke/tools/facebook/repo_metadata_logger:repo_metadata_logger": "REPO_METADATA_LOGGER",
     "//eden/mononoke/tools/import:import": "MONONOKE_IMPORT",

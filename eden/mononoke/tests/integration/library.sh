@@ -294,6 +294,15 @@ function repo_metadata_logger {
     "$@"
 }
 
+function commit_metadata_scraper {
+  GLOG_minloglevel=5 "$COMMIT_METADATA_SCRAPER" \
+    "${CACHE_ARGS[@]}" \
+    "${COMMON_ARGS[@]}" \
+    --mononoke-config-path "$TESTTMP"/mononoke-config \
+    --tracing-test-format \
+    "$@"
+}
+
 function wait_for_json_record_count {
   # We ask jq to count records for us, so that we're a little more robust ot
   # newlines and such.
