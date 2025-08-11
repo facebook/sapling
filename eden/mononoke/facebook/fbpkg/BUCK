@@ -303,3 +303,11 @@ tw.container(
     oncall = "scm_server_infra",
     parent = "//tupperware/image/source_control:scm",
 )
+
+mononoke_fbpkg(
+    name = "mononoke.commit_metadata_scraper",
+    compress_type = None,
+    path_actions = {
+        "commit_metadata_scraper": "//eden/mononoke/tools/facebook/commit_metadata_scraper:commit_metadata_scraper",
+    },
+)
