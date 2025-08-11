@@ -15,6 +15,7 @@ use std::path::PathBuf;
 use std::sync::Arc;
 use std::sync::atomic::AtomicU64;
 use std::sync::atomic::Ordering;
+use std::time::Duration;
 
 use anyhow::Context;
 use anyhow::Result;
@@ -36,6 +37,7 @@ use scs_client_raw::ScsClient;
 use scs_client_raw::thrift;
 use source_control::FileChunk;
 use source_control::FileIdSpecifier;
+use source_control::FileInfoParams;
 use tokio::io::AsyncBufReadExt;
 use tokio::io::AsyncWriteExt;
 use tokio::io::BufWriter;
@@ -133,17 +135,20 @@ async fn stream_tree_elements(
         path: path.to_string(),
         ..Default::default()
     });
-    let response = connection
-        .tree_list(
-            &tree,
-            &thrift::TreeListParams {
-                offset: 0,
-                limit: source_control::TREE_LIST_MAX_LIMIT,
-                ..Default::default()
-            },
-        )
-        .await
-        .map_err(|e| e.handle_selection_error(&commit.repo))?;
+
+    let params = thrift::TreeListParams {
+        offset: 0,
+        limit: source_control::TREE_LIST_MAX_LIMIT,
+        ..Default::default()
+    };
+    let response = request_with_retries(
+        connection.clone(),
+        tree.clone(),
+        params,
+        async |client, tree, params| client.tree_list(tree, params).await,
+    )
+    .await
+    .map_err(|e| e.handle_selection_error(&commit.repo))?;
 
     Ok(stream::iter(response.entries)
         .map(|entry| Ok(entry.name))
@@ -154,14 +159,19 @@ async fn stream_tree_elements(
             )
             .map({
                 let connection = connection.clone();
+                let tree = tree.clone();
                 move |offset| {
-                    connection.tree_list(
-                        &tree,
-                        &thrift::TreeListParams {
-                            offset,
-                            limit: source_control::TREE_LIST_MAX_LIMIT,
-                            ..Default::default()
-                        },
+                    let params = thrift::TreeListParams {
+                        offset,
+                        limit: source_control::TREE_LIST_MAX_LIMIT,
+                        ..Default::default()
+                    };
+
+                    request_with_retries(
+                        connection.clone(),
+                        tree.clone(),
+                        params,
+                        async |client, tree, params| client.tree_list(tree, params).await,
                     )
                 }
             })
@@ -357,10 +367,14 @@ async fn export_tree(
         limit: TREE_CHUNK_SIZE,
         ..Default::default()
     };
-    let response = connection
-        .tree_list(&tree, &params)
-        .await
-        .map_err(|e| e.handle_selection_error(&repo))?;
+    let response = request_with_retries(
+        connection.clone(),
+        tree.clone(),
+        params.clone(),
+        async |client, tree, params| client.tree_list(tree, params).await,
+    )
+    .await
+    .map_err(|e| e.handle_selection_error(&repo))?;
     let count = response.count;
     let other_tree_chunks =
         stream::iter((TREE_CHUNK_SIZE..count).step_by(TREE_CHUNK_SIZE as usize))
@@ -377,11 +391,15 @@ async fn export_tree(
                             ..Default::default()
                         };
                         anyhow::Ok(
-                            connection
-                                .tree_list(&tree, &params)
-                                .await
-                                .map_err(|e| e.handle_selection_error(&repo))?
-                                .entries,
+                            request_with_retries(
+                                connection,
+                                tree.clone(),
+                                params,
+                                async |client, tree, params| client.tree_list(tree, params).await,
+                            )
+                            .await
+                            .map_err(|e| e.handle_selection_error(&repo))?
+                            .entries,
                         )
                     }
                 }
@@ -429,16 +447,17 @@ async fn export_file(
         FilterDecision::MaybeTooBig => {
             // Fetch full file metadata.
             // TODO: make tree_list() optionally include the fully populated FileInfo.
-            let file_info = connection
-                .file_info(
-                    &source_control::FileSpecifier::by_id(FileIdSpecifier {
-                        repo: repo.clone(),
-                        id: file.id.clone(),
-                        ..Default::default()
-                    }),
-                    &Default::default(),
-                )
-                .await?;
+            let file_info = request_with_retries(
+                connection.clone(),
+                source_control::FileSpecifier::by_id(FileIdSpecifier {
+                    repo: repo.clone(),
+                    id: file.id.clone(),
+                    ..Default::default()
+                }),
+                FileInfoParams::default(),
+                async |client, file, params| client.file_info(file, params).await,
+            )
+            .await?;
 
             file_filter.too_big(&file_info)
         }
@@ -480,14 +499,18 @@ async fn export_file(
                         size: FILE_CHUNK_SIZE,
                         ..Default::default()
                     };
-                    connection
-                        .file_content_chunk(&file_spec, &params)
-                        .map_err(move |e| e.handle_selection_error(&repo))
-                        .map_ok({
-                            cloned!(file_metadata);
-                            move |chunk| (file_metadata, chunk)
-                        })
-                        .boxed()
+                    request_with_retries(
+                        connection.clone(),
+                        file_spec.clone(),
+                        params,
+                        async |client, file, params| client.file_content_chunk(file, params).await,
+                    )
+                    .map_err(move |e| e.handle_selection_error(&repo))
+                    .map_ok({
+                        cloned!(file_metadata);
+                        move |chunk| (file_metadata, chunk)
+                    })
+                    .boxed()
                 }
             })
             .left_stream()
@@ -1029,4 +1052,35 @@ pub(super) async fn run(app: ScscApp, args: CommandArgs) -> Result<()> {
     app.target.render_stderr(&(), render).await?;
     file_writer.await??;
     downloader.await?
+}
+
+async fn request_with_retries<V, E: std::fmt::Debug, S, P>(
+    client: ScsClient,
+    specifier: S,
+    params: P,
+    do_query: impl AsyncFn(&ScsClient, &S, &P) -> Result<V, E>,
+) -> Result<V, E> {
+    const MAX_RETRIES: usize = 10;
+
+    const MIN_BACKOFF: Duration = Duration::from_secs(1);
+    const MAX_BACKOFF: Duration = Duration::from_secs(30);
+
+    let mut backoff = MIN_BACKOFF;
+
+    let mut retries = MAX_RETRIES;
+    loop {
+        match do_query(&client, &specifier, &params).await {
+            Ok(v) => return Ok(v),
+            Err(e) => {
+                eprintln!("SCS error (retries={retries}, backoff={backoff:?}): {e:?}");
+                if retries == 0 {
+                    return Err(e);
+                }
+                retries -= 1;
+                tokio::time::sleep(backoff).await;
+                backoff *= 2;
+                backoff = backoff.min(MAX_BACKOFF);
+            }
+        }
+    }
 }
