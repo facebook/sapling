@@ -1204,12 +1204,16 @@ def diffidtonode(repo, diffid, localreponame=None, version=None):
             node = bin(hexnode)
             unfi = repo
             if node in unfi:
-                # Find a successor.
-                successors = list(
-                    unfi.nodes("last(successors(%n)-%n-obsolete())", node, node)
-                )
-                if successors:
-                    return successors[0]
+                # Find latest successor whose description still links to the target diff id.
+                # successors() skips hidden commits. We don't subtract obsolete() because we want to
+                # return obsolete-but-visible commits (if that happens to be the newest local
+                # version of a diff).
+                for successor in unfi.nodes("sort(successors(%n)-%n,-rev)", node, node):
+                    if (
+                        diffprops.parserevfromcommitmsg(repo[successor].description())
+                        == diffid
+                    ):
+                        return successor
             if (
                 vcs == "git"
                 and repo.ui.configbool("phrevset", "abort-if-git-diff-unavailable")
