@@ -546,14 +546,14 @@ mononoke_queries! {
         "SELECT cs.cs_id, cs.id FROM commit_graph_edges cs WHERE cs.repo_id = {repo_id} AND cs.cs_id IN {cs_ids}"
     }
 
-    write InsertMergeParents(values: (id: u64, parent_num: usize, parent: u64)) {
+    write InsertMergeParents(values: (id: u64, parent_num: usize, parent: u64, repo_id: RepositoryId)) {
         insert_or_ignore,
-        "{insert_or_ignore} INTO commit_graph_merge_parents (id, parent_num, parent) VALUES {values}"
+        "{insert_or_ignore} INTO commit_graph_merge_parents (id, parent_num, parent, repo_id) VALUES {values}"
     }
 
-    write InsertSubtreeSources(values: (id: u64, subtree_source_num: usize, subtree_source: u64)) {
+    write InsertSubtreeSources(values: (id: u64, subtree_source_num: usize, subtree_source: u64, repo_id: RepositoryId)) {
         insert_or_ignore,
-        "{insert_or_ignore} INTO commit_graph_subtree_sources (id, subtree_source_num, subtree_source) VALUES {values}"
+        "{insert_or_ignore} INTO commit_graph_subtree_sources (id, subtree_source_num, subtree_source, repo_id) VALUES {values}"
     }
 
     read SelectManyChangesets(repo_id: RepositoryId, >list cs_ids: ChangesetId) -> (
@@ -1746,7 +1746,14 @@ impl SqlCommitGraphStorage {
                     .iter()
                     .enumerate()
                     .skip(1)
-                    .map(|(parent_num, node)| Ok((get_id(&edges.node)?, parent_num, get_id(node)?)))
+                    .map(|(parent_num, node)| {
+                        Ok((
+                            get_id(&edges.node)?,
+                            parent_num,
+                            get_id(node)?,
+                            self.repo_id,
+                        ))
+                    })
             })
             .collect::<Result<Vec<_>>>()?;
 
@@ -1756,7 +1763,7 @@ impl SqlCommitGraphStorage {
             #[allow(clippy::map_identity)]
             merge_parent_rows
                 .iter()
-                .map(|(a, b, c)| (a, b, c))
+                .map(|(a, b, c, d)| (a, b, c, d))
                 .collect::<Vec<_>>()
                 .as_slice(),
         )
@@ -1770,7 +1777,12 @@ impl SqlCommitGraphStorage {
                     .iter()
                     .enumerate()
                     .map(|(subtree_source_num, node)| {
-                        Ok((get_id(&edges.node)?, subtree_source_num, get_id(node)?))
+                        Ok((
+                            get_id(&edges.node)?,
+                            subtree_source_num,
+                            get_id(node)?,
+                            self.repo_id,
+                        ))
                     })
             })
             .collect::<Result<Vec<_>>>()?;
@@ -1781,7 +1793,7 @@ impl SqlCommitGraphStorage {
             #[allow(clippy::map_identity)]
             subtree_source_rows
                 .iter()
-                .map(|(a, b, c)| (a, b, c))
+                .map(|(a, b, c, d)| (a, b, c, d))
                 .collect::<Vec<_>>()
                 .as_slice(),
         )
@@ -1914,6 +1926,7 @@ impl CommitGraphStorage for SqlCommitGraphStorage {
                             *merge_parent_cs_id_to_id
                                 .get(&node.cs_id)
                                 .ok_or_else(|| anyhow!("Failed to fetch id for {}", node.cs_id))?,
+                            self.repo_id,
                         ))
                     })
                     .collect::<Result<Vec<_>>>()?;
@@ -1924,7 +1937,7 @@ impl CommitGraphStorage for SqlCommitGraphStorage {
                     #[allow(clippy::map_identity)]
                     merge_parent_rows
                         .iter()
-                        .map(|(a, b, c)| (a, b, c))
+                        .map(|(a, b, c, d)| (a, b, c, d))
                         .collect::<Vec<_>>()
                         .as_slice(),
                 )
@@ -1941,6 +1954,7 @@ impl CommitGraphStorage for SqlCommitGraphStorage {
                             *subtree_source_cs_id_to_id
                                 .get(&node.cs_id)
                                 .ok_or_else(|| anyhow!("Failed to fetch id for {}", node.cs_id))?,
+                            self.repo_id,
                         ))
                     })
                     .collect::<Result<Vec<_>>>()?;
@@ -1951,7 +1965,7 @@ impl CommitGraphStorage for SqlCommitGraphStorage {
                     #[allow(clippy::map_identity)]
                     subtree_source_rows
                         .iter()
-                        .map(|(a, b, c)| (a, b, c))
+                        .map(|(a, b, c, d)| (a, b, c, d))
                         .collect::<Vec<_>>()
                         .as_slice(),
                 )

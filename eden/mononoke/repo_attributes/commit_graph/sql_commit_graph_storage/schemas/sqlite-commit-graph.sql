@@ -31,6 +31,7 @@ CREATE TABLE IF NOT EXISTS `commit_graph_merge_parents` (
   `id` INTEGER NOT NULL,
   `parent_num` INTEGER NOT NULL,
   `parent` INTEGER NOT NULL,
+  `repo_id` INTEGER NOT NULL,
   PRIMARY KEY (`id`, `parent_num`)
 );
 
@@ -38,5 +39,6 @@ CREATE TABLE IF NOT EXISTS `commit_graph_subtree_sources` (
   `id` INTEGER NOT NULL,
   `subtree_source_num` INTEGER NOT NULL,
   `subtree_source` INTEGER NOT NULL,
+  `repo_id` INTEGER NOT NULL,
   PRIMARY KEY (`id`, `subtree_source_num`)
 );
