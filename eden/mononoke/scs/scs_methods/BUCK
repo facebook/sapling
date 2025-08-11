@@ -12,7 +12,7 @@ rust_library(
     } | ({} if rust_oss.is_oss_build() else {
         "MononokeScsRequest_ods3_types": "//eden/mononoke/facebook/ods3_schemas:MononokeScsRequest_ods3-rust",
     }),
-    deps = [
+    deps = ([
         "fbsource//third-party/rust:anyhow",
         "fbsource//third-party/rust:async-stream",
         "fbsource//third-party/rust:async-trait",
@@ -82,5 +82,6 @@ rust_library(
     ] + ([] if rust_oss.is_oss_build() else [
         "fbsource//third-party/rust:lazy_static",
         "//eden/mononoke/facebook/ods3_schemas:MononokeScsRequest_ods3-rs_bindings",
-    ]),
+        "//common/rust/configo:configo",
+    ])),
 )
