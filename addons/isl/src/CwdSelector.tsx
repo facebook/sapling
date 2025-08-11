@@ -72,10 +72,22 @@ function maybeTrim(s: string, c: string): string {
   return s.endsWith(c) ? s.slice(0, -c.length) : s;
 }
 
-function getRepoLabel(repoRoot: AbsolutePath, cwd: string) {
+function getMainSelectorLabel(
+  directRepoRoot: AbsolutePath,
+  nestedRepoRoots: AbsolutePath[] | undefined,
+  cwd: string,
+) {
   const sep = guessPathSep(cwd);
-  const repoBasename = maybeTrim(basename(repoRoot, sep), sep);
-  const repoRelativeCwd = relativePath(repoRoot, cwd);
+
+  // If there are multiple nested repo roots,
+  // show the first one as there will be following selectors for the rest
+  if (nestedRepoRoots && nestedRepoRoots.length > 1) {
+    return maybeTrim(basename(nestedRepoRoots[0], sep), sep);
+  }
+
+  // Otherwise, build the label with the direct and only repo root
+  const repoBasename = maybeTrim(basename(directRepoRoot, sep), sep);
+  const repoRelativeCwd = relativePath(directRepoRoot, cwd);
   if (repoRelativeCwd === '') {
     return repoBasename;
   }
@@ -146,8 +158,12 @@ export function CwdSelector() {
   if (info == null) {
     return null;
   }
+  // The most direct root of the cwd
   const repoRoot = info.repoRoot;
-  const repoLabel = getRepoLabel(repoRoot, currentCwd);
+  // The list of repo roots down to the cwd, in order from furthest to closest
+  const repoRoots = info.repoRoots;
+
+  const mainLabel = getMainSelectorLabel(repoRoot, repoRoots, currentCwd);
 
   return (
     <div {...stylex.props(styles.container)}>
