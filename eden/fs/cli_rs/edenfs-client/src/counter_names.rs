@@ -14,6 +14,7 @@ pub use fs_counters::*;
 pub use lfs_backend::*;
 pub use lfs_local_cache::*;
 pub use metadata_aux_cache::*;
+pub use monorepo_inodes::*;
 pub use sapling_local_cache::*;
 
 // Filesystem counters
@@ -235,3 +236,9 @@ pub const COUNTER_TREE_METADATA_LOCAL_STORE: &str =
     "object_store.get_tree_metadata.local_store.count";
 pub const COUNTER_TREE_METADATA_BACKING_STORE: &str =
     "object_store.get_tree_metadata.backing_store.count";
+
+// Monorepo inodes counters
+pub mod monorepo_inodes {
+    pub const COUNTER_INODEMAP_FBSOURCE_LOADED: &str = "inodemap.fbsource.loaded";
+    pub const COUNTER_INODEMAP_FBSOURCE_UNLOADED: &str = "inodemap.fbsource.unloaded";
+}

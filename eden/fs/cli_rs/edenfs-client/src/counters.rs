@@ -566,6 +566,48 @@ impl Sub for TreeMetadataTelemetry {
     }
 }
 
+/// MonorepoInodes stats for fbsource repository
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub struct MonorepoInodesTelemetry {
+    /// The number of loaded inodes in fbsource repository (populated on fetch)
+    pub loaded_inodes: Option<u64>,
+    /// The number of unloaded inodes in fbsource repository (populated on fetch)
+    pub unloaded_inodes: Option<u64>,
+    /// The increase in loaded inodes (populated on sub operation, only if positive)
+    pub loaded_inodes_increase: Option<u64>,
+    /// The increase in unloaded inodes (populated on sub operation, only if positive)
+    pub unloaded_inodes_increase: Option<u64>,
+}
+
+impl Sub for MonorepoInodesTelemetry {
+    type Output = Self;
+
+    fn sub(self, rhs: Self) -> Self::Output {
+        let loaded_increase = match (self.loaded_inodes, rhs.loaded_inodes) {
+            (Some(current), Some(previous)) => {
+                let diff = current.saturating_sub(previous);
+                if diff > 0 { Some(diff) } else { None }
+            }
+            _ => None,
+        };
+
+        let unloaded_increase = match (self.unloaded_inodes, rhs.unloaded_inodes) {
+            (Some(current), Some(previous)) => {
+                let diff = current.saturating_sub(previous);
+                if diff > 0 { Some(diff) } else { None }
+            }
+            _ => None,
+        };
+
+        Self {
+            loaded_inodes: None,   // Don't populate absolute values on sub operation
+            unloaded_inodes: None, // Don't populate absolute values on sub operation
+            loaded_inodes_increase: loaded_increase,
+            unloaded_inodes_increase: unloaded_increase,
+        }
+    }
+}
+
 /// EdenFS cumulative counters
 /// This is a subset of the counters that are available as part of the EdenFS telemetry
 /// Only covers cumulative counters that are incremented on operations during the lifetime of the EdenFS daemon
@@ -578,6 +620,7 @@ pub struct TelemetryCounters {
     pub local_cache_stats: LocalCacheTelemetryCounters,
     pub file_metadata_stats: Option<FileMetadataTelemetry>,
     pub tree_metadata_stats: Option<TreeMetadataTelemetry>,
+    pub monorepo_inodes_stats: Option<MonorepoInodesTelemetry>,
 }
 
 impl TelemetryCounters {
@@ -778,6 +821,11 @@ impl Sub for TelemetryCounters {
                 (lhs, None) => lhs,
                 (None, _) => None,
             },
+            monorepo_inodes_stats: match (self.monorepo_inodes_stats, rhs.monorepo_inodes_stats) {
+                (Some(lhs), Some(rhs)) => Some(lhs - rhs),
+                (lhs, None) => lhs,
+                (None, _) => None,
+            },
         }
     }
 }
@@ -972,6 +1020,11 @@ impl EdenFsClient {
             COUNTER_TREE_METADATA_BACKING_STORE,
         ];
 
+        let monorepo_inodes_counters = [
+            COUNTER_INODEMAP_FBSOURCE_LOADED,
+            COUNTER_INODEMAP_FBSOURCE_UNLOADED,
+        ];
+
         // Combine all counter keys into a single vector
         let mut keys: Vec<String> = Vec::new();
         keys.extend(filesystem_counters.iter().map(|&s| s.to_string()));
@@ -1008,6 +1061,7 @@ impl EdenFsClient {
                 .map(|&s| s.to_string()),
         );
         keys.extend(tree_metadata_counters.iter().map(|&s| s.to_string()));
+        keys.extend(monorepo_inodes_counters.iter().map(|&s| s.to_string()));
 
         // Fetch the counters
         let counters = self.get_selected_counters(&keys).await?;
@@ -1298,6 +1352,18 @@ impl EdenFsClient {
                 fetched_from_backing_store: *counters
                     .get(COUNTER_TREE_METADATA_BACKING_STORE)
                     .unwrap_or(&0) as u64,
+            }),
+            monorepo_inodes_stats: Some(MonorepoInodesTelemetry {
+                loaded_inodes: Some(
+                    *counters.get(COUNTER_INODEMAP_FBSOURCE_LOADED).unwrap_or(&0) as u64,
+                ),
+                unloaded_inodes: Some(
+                    *counters
+                        .get(COUNTER_INODEMAP_FBSOURCE_UNLOADED)
+                        .unwrap_or(&0) as u64,
+                ),
+                loaded_inodes_increase: None,
+                unloaded_inodes_increase: None,
             }),
         };
 
