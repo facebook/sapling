@@ -49,7 +49,8 @@ export function relativePath(root: AbsolutePath, path: AbsolutePath) {
   if (root == null || path === '') {
     return '';
   }
-  return path.replace(root, '');
+  const sep = guessPathSep(path);
+  return maybeTrimPrefix(path.replace(root, ''), sep);
 }
 
 /**
@@ -68,8 +69,12 @@ export function joinPaths(root: AbsolutePath, path: CwdRelativePath): AbsolutePa
  * maybeTrim('abc/', '/') -> 'abc'
  * maybeTrim('abc', '/') -> 'abc'
  */
-function maybeTrim(s: string, c: string): string {
+function maybeTrimSuffix(s: string, c: string): string {
   return s.endsWith(c) ? s.slice(0, -c.length) : s;
+}
+
+function maybeTrimPrefix(s: string, c: string): string {
+  return s.startsWith(c) ? s.slice(c.length) : s;
 }
 
 function getMainSelectorLabel(
@@ -82,11 +87,11 @@ function getMainSelectorLabel(
   // If there are multiple nested repo roots,
   // show the first one as there will be following selectors for the rest
   if (nestedRepoRoots && nestedRepoRoots.length > 1) {
-    return maybeTrim(basename(nestedRepoRoots[0], sep), sep);
+    return maybeTrimPrefix(basename(nestedRepoRoots[0], sep), sep);
   }
 
   // Otherwise, build the label with the direct and only repo root
-  const repoBasename = maybeTrim(basename(directRepoRoot, sep), sep);
+  const repoBasename = maybeTrimPrefix(basename(directRepoRoot, sep), sep);
   const repoRelativeCwd = relativePath(directRepoRoot, cwd);
   if (repoRelativeCwd === '') {
     return repoBasename;
