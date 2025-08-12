@@ -655,8 +655,8 @@ impl TelemetryCounters {
 /// Please, note that this is approximate as if blob accessed multiple times during the workload
 /// it will be counted every time it was accessed. The same applies to trees.
 /// For example, read of a large file will be counted many times as the file is read in chunks.
-/// For the remote fetches some fetches might be triggered by the prefetching logic and not on the critical path of the workload.
-/// In this cases, they will be accounted as both remote and local cache fetches.
+/// Remote fetches and prefetches are now tracked separately to distinguish between critical path operations and background prefetching.
+/// Prefetch operations are tracked in separate fields to provide better visibility into background vs on-demand data access patterns.
 /// Finally, any data served from filesystem cache will not be accounted for as they do not come to EdenFS.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct CrawlingScore {
@@ -664,10 +664,18 @@ pub struct CrawlingScore {
     pub remote_blob_fetches: u64,
     /// Total number of tree fetches from remote backends
     pub remote_tree_fetches: u64,
+    /// Total number of blob prefetches from remote backends (while eden prefetch, crawling prediction prefetch, etc)
+    pub remote_blob_prefetches: u64,
+    /// Total number of tree prefetches from remote backends (while eden prefetch, crawling prediction prefetch, etc)
+    pub remote_tree_prefetches: u64,
     /// Total number of blob hits from local caches
-    pub local_cache_blob_hits: u64,
+    pub local_cache_blob_fetch_hits: u64,
     /// Total number of tree hits from local caches
-    pub local_cache_tree_hits: u64,
+    pub local_cache_tree_fetch_hits: u64,
+    /// Total number of blob prefetch hits from local caches (while eden prefetch, crawling prediction prefetch, etc)
+    pub local_cache_blob_prefetch_hits: u64,
+    /// Total number of tree prefetch hits from local caches (while eden prefetch, crawling prediction prefetch, etc)
+    pub local_cache_tree_prefetch_hits: u64,
     /// Total number of filesystem open and read operations
     pub fs_open_plus_read: u64,
     /// Total number of filesystem readdir operations (includes both readdir and readdirplus)
@@ -679,10 +687,14 @@ impl CrawlingScore {
     pub fn from_telemetry(counters: &TelemetryCounters) -> Self {
         let mut remote_blob_fetches = 0;
         let mut remote_tree_fetches = 0;
-        let mut local_cache_blob_hits = 0;
-        let mut local_cache_tree_hits = 0;
+        let mut remote_blob_prefetches = 0;
+        let mut remote_tree_prefetches = 0;
+        let mut local_cache_blob_fetch_hits = 0;
+        let mut local_cache_tree_fetch_hits = 0;
+        let mut local_cache_blob_prefetch_hits = 0;
+        let mut local_cache_tree_prefetch_hits = 0;
 
-        // Aggregate remote backend fetches (both fetch and prefetch)
+        // Aggregate remote backend fetches
         if let Some(edenapi) = &counters.backend_stats.fetch.edenapi_backend {
             remote_blob_fetches += edenapi.edenapi_fetches_blobs;
             remote_tree_fetches += edenapi.edenapi_fetches_trees;
@@ -695,49 +707,51 @@ impl CrawlingScore {
             remote_blob_fetches += lfs.lfs_fetches_blobs;
         }
 
+        // Aggregate remote backend prefetches
         if let Some(edenapi) = &counters.backend_stats.prefetch.edenapi_backend {
-            remote_blob_fetches += edenapi.edenapi_fetches_blobs;
-            remote_tree_fetches += edenapi.edenapi_fetches_trees;
+            remote_blob_prefetches += edenapi.edenapi_fetches_blobs;
+            remote_tree_prefetches += edenapi.edenapi_fetches_trees;
         }
         if let Some(casc) = &counters.backend_stats.prefetch.casc_backend {
-            remote_blob_fetches += casc.cas_fetches_blobs;
-            remote_tree_fetches += casc.cas_fetches_trees;
+            remote_blob_prefetches += casc.cas_fetches_blobs;
+            remote_tree_prefetches += casc.cas_fetches_trees;
         }
         if let Some(lfs) = &counters.backend_stats.prefetch.lfs_backend {
-            remote_blob_fetches += lfs.lfs_fetches_blobs;
+            remote_blob_prefetches += lfs.lfs_fetches_blobs;
         }
 
-        // Aggregate local cache hits (both fetch and prefetch)
+        // Aggregate local cache fetch hits
         if let Some(sapling) = &counters.local_cache_stats.fetch.sapling_cache {
-            local_cache_blob_hits += sapling.blobs_hits;
-            local_cache_tree_hits += sapling.trees_hits;
+            local_cache_blob_fetch_hits += sapling.blobs_hits;
+            local_cache_tree_fetch_hits += sapling.trees_hits;
         }
         if let Some(sapling_lfs) = &counters.local_cache_stats.fetch.sapling_lfs_cache {
-            local_cache_blob_hits += sapling_lfs.blobs_hits;
+            local_cache_blob_fetch_hits += sapling_lfs.blobs_hits;
         }
         if let Some(casc_local) = &counters.local_cache_stats.fetch.casc_local_cache {
-            local_cache_blob_hits += casc_local.blobs_hits;
-            local_cache_tree_hits += casc_local.trees_hits;
+            local_cache_blob_fetch_hits += casc_local.blobs_hits;
+            local_cache_tree_fetch_hits += casc_local.trees_hits;
         }
         if let Some(local_store) = &counters.local_cache_stats.fetch.local_store_cache {
-            local_cache_blob_hits += local_store.blobs_hits;
-            local_cache_tree_hits += local_store.trees_hits;
+            local_cache_blob_fetch_hits += local_store.blobs_hits;
+            local_cache_tree_fetch_hits += local_store.trees_hits;
         }
         if let Some(in_memory) = &counters.local_cache_stats.fetch.in_memory_local_cache {
-            local_cache_blob_hits += in_memory.blobs_hits;
-            local_cache_tree_hits += in_memory.trees_hits;
+            local_cache_blob_fetch_hits += in_memory.blobs_hits;
+            local_cache_tree_fetch_hits += in_memory.trees_hits;
         }
 
+        // Aggregate local cache prefetch hits
         if let Some(sapling) = &counters.local_cache_stats.prefetch.sapling_cache {
-            local_cache_blob_hits += sapling.blobs_hits;
-            local_cache_tree_hits += sapling.trees_hits;
+            local_cache_blob_prefetch_hits += sapling.blobs_hits;
+            local_cache_tree_prefetch_hits += sapling.trees_hits;
         }
         if let Some(sapling_lfs) = &counters.local_cache_stats.prefetch.sapling_lfs_cache {
-            local_cache_blob_hits += sapling_lfs.blobs_hits;
+            local_cache_blob_prefetch_hits += sapling_lfs.blobs_hits;
         }
         if let Some(casc_local) = &counters.local_cache_stats.prefetch.casc_local_cache {
-            local_cache_blob_hits += casc_local.blobs_hits;
-            local_cache_tree_hits += casc_local.trees_hits;
+            local_cache_blob_prefetch_hits += casc_local.blobs_hits;
+            local_cache_tree_prefetch_hits += casc_local.trees_hits;
         }
 
         // Get filesystem operations
@@ -747,8 +761,12 @@ impl CrawlingScore {
         Self {
             remote_blob_fetches,
             remote_tree_fetches,
-            local_cache_blob_hits,
-            local_cache_tree_hits,
+            remote_blob_prefetches,
+            remote_tree_prefetches,
+            local_cache_blob_fetch_hits,
+            local_cache_tree_fetch_hits,
+            local_cache_blob_prefetch_hits,
+            local_cache_tree_prefetch_hits,
             fs_open_plus_read,
             fs_readdir,
         }
@@ -761,7 +779,7 @@ impl CrawlingScore {
 
     /// Returns the total number of local cache hits (blobs + trees)
     pub fn total_local_cache_hits(&self) -> u64 {
-        self.local_cache_blob_hits + self.local_cache_tree_hits
+        self.local_cache_blob_fetch_hits + self.local_cache_tree_fetch_hits
     }
 
     /// Returns the total number of fetches and hits (remote + local cache)
@@ -794,8 +812,16 @@ impl Sub for CrawlingScore {
         Self {
             remote_blob_fetches: self.remote_blob_fetches - rhs.remote_blob_fetches,
             remote_tree_fetches: self.remote_tree_fetches - rhs.remote_tree_fetches,
-            local_cache_blob_hits: self.local_cache_blob_hits - rhs.local_cache_blob_hits,
-            local_cache_tree_hits: self.local_cache_tree_hits - rhs.local_cache_tree_hits,
+            remote_blob_prefetches: self.remote_blob_prefetches - rhs.remote_blob_prefetches,
+            remote_tree_prefetches: self.remote_tree_prefetches - rhs.remote_tree_prefetches,
+            local_cache_blob_fetch_hits: self.local_cache_blob_fetch_hits
+                - rhs.local_cache_blob_fetch_hits,
+            local_cache_tree_fetch_hits: self.local_cache_tree_fetch_hits
+                - rhs.local_cache_tree_fetch_hits,
+            local_cache_blob_prefetch_hits: self.local_cache_blob_prefetch_hits
+                - rhs.local_cache_blob_prefetch_hits,
+            local_cache_tree_prefetch_hits: self.local_cache_tree_prefetch_hits
+                - rhs.local_cache_tree_prefetch_hits,
             fs_open_plus_read: self.fs_open_plus_read - rhs.fs_open_plus_read,
             fs_readdir: self.fs_readdir - rhs.fs_readdir,
         }
