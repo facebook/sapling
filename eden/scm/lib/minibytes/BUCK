@@ -5,8 +5,7 @@ oncall("sapling")
 fb_xplat_rust_library(
     name = "minibytes",
     srcs = glob(["src/**/*.rs"]),
-    crate_root = "src/lib.rs",
-    cxx_autocargo = {"cargo_toml_config": {
+    autocargo = {"cargo_toml_config": {
         "features": {
             "default": [
                 "frombytes",
@@ -27,11 +26,7 @@ fb_xplat_rust_library(
             "repository": "https://github.com/facebook/sapling",
         },
     }},
-    # A test inside this target is using #[should_panic], setting the backtrace
-    # to false here, otherwise the test binary will try to extract the backtrace
-    # and the test will fail with leak sanitizer.
-    cxx_test_env = {"RUST_BACKTRACE": "0"},
-    cxx_test_labels = ["tpx-rust-no-backtrace-workaround"],
+    crate_root = "src/lib.rs",
     features = [
         "frombytes",
         "frommmap",
@@ -41,6 +36,11 @@ fb_xplat_rust_library(
         "fbsource//third-party/rust:quickcheck",
         "fbsource//third-party/rust:serde_cbor",
     ],
+    # A test inside this target is using #[should_panic], setting the backtrace
+    # to false here, otherwise the test binary will try to extract the backtrace
+    # and the test will fail with leak sanitizer.
+    test_env = {"RUST_BACKTRACE": "0"},
+    test_labels = ["tpx-rust-no-backtrace-workaround"],
     visibility = ["PUBLIC"],
     deps = [
         "fbsource//third-party/rust:bytes",

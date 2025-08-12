@@ -42,7 +42,7 @@ fb_xplat_rust_library(
         "src/*.rs",
         "src/tests/*.rs",
     ]),
-    cxx_autocargo = {
+    autocargo = {
         "cargo_toml_config": {
             "package": {
                 "publish": False,
