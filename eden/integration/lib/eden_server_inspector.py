@@ -7,10 +7,9 @@
 # pyre-unsafe
 
 import os
-from typing import Iterable
+from typing import AsyncGenerator
 
-from eden.thrift.legacy import EdenClient
-from facebook.eden.ttypes import SyncBehavior, TimeSpec
+from eden.fs.service.eden.thrift_types import SyncBehavior, TimeSpec
 
 from . import edenclient
 
@@ -27,26 +26,23 @@ class EdenServerInspector:
         self._eden = eden
         self._mount_point = mount_point
 
-    def create_thrift_client(self) -> EdenClient:
-        return self._eden.get_thrift_client_legacy()
-
-    def unload_inode_for_path(self, path: str = "") -> None:
+    async def unload_inode_for_path(self, path: str = "") -> None:
         """path: relative path to a directory under the mount."""
-        with self.create_thrift_client() as client:
-            client.unloadInodeForPath(
+        async with self._eden.get_thrift_client() as client:
+            await client.unloadInodeForPath(
                 os.fsencode(self._mount_point),
                 os.fsencode(path),
                 age=TimeSpec(seconds=0, nanoSeconds=0),
             )
 
-    def get_inode_count(self, path: str = "") -> int:
+    async def get_inode_count(self, path: str = "") -> int:
         """path: relative path to a directory under the mount.
 
         Use '' for the root. Note that this will include the inode count for
         the root .hg and .eden entries.
         """
-        with self.create_thrift_client() as client:
-            debug_info = client.debugInodeStatus(
+        async with self._eden.get_thrift_client() as client:
+            debug_info = await client.debugInodeStatus(
                 os.fsencode(self._mount_point),
                 os.fsencode(path),
                 flags=0,
@@ -57,10 +53,10 @@ class EdenServerInspector:
             count += sum(1 for entry in tree_inode_debug_info.entries if entry.loaded)
         return count
 
-    def get_paths_for_inodes(self, path: str = "") -> Iterable[str]:
+    async def get_paths_for_inodes(self, path: str = "") -> AsyncGenerator:
         """path: relative path to a directory under the mount."""
-        with self.create_thrift_client() as client:
-            debug_info = client.debugInodeStatus(
+        async with self._eden.get_thrift_client() as client:
+            debug_info = await client.debugInodeStatus(
                 os.fsencode(self._mount_point),
                 os.fsencode(path),
                 flags=0,

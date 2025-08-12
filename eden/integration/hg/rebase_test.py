@@ -77,7 +77,7 @@ class RebaseTest(EdenHgTestCase):
     @unittest.skip(
         "T199782635: This test is failing when comparing `hg update` with expected output"
     )
-    def test_rebase_commit_with_independent_folder(self) -> None:
+    async def test_rebase_commit_with_independent_folder(self) -> None:
         #
         # We explicitly test non-in-memory rebase here, since the in-memory code path
         # doesn't use the working directory and therefore doesn't interact with EdenFS.
@@ -118,8 +118,8 @@ class RebaseTest(EdenHgTestCase):
 
         # Record the pre-update inode count.
         inspector = eden_server_inspector.EdenServerInspector(self.eden, self.repo.path)
-        inspector.unload_inode_for_path("numbers")
-        pre_update_count = inspector.get_inode_count("numbers")
+        await inspector.unload_inode_for_path("numbers")
+        pre_update_count = await inspector.get_inode_count("numbers")
         print(f"loaded inode count before `hg update`: {pre_update_count}")
 
         # Verify that updating to the new head that was created as a result of
@@ -137,7 +137,7 @@ class RebaseTest(EdenHgTestCase):
         )
 
         # Verify the post-update inode count.
-        post_update_count = inspector.get_inode_count("numbers")
+        post_update_count = await inspector.get_inode_count("numbers")
         print(f"loaded inode count after `hg update`: {post_update_count}")
         self.assertGreaterEqual(
             post_update_count,
