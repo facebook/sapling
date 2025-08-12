@@ -92,6 +92,7 @@ import {latestHeadCommit, uncommittedChangesFetchError} from './serverAPIState';
 import {GeneratedStatus} from './types';
 
 import './UncommittedChanges.css';
+import {SmartActionsMenu} from './SmartActionsMenu';
 
 export type UIChangedFile = {
   path: RepoRelativePath;
@@ -802,6 +803,9 @@ export function UncommittedChanges({place}: {place: Place}) {
                 <T>Shelve</T>
               </Button>
             </Tooltip>
+            <span className="show-on-hover">
+              <SmartActionsMenu key="smartActions" />
+            </span>
           </div>
           {canAmend && (
             <div className="button-row">

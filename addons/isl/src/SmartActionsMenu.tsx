@@ -19,12 +19,14 @@ import {diffCommentData} from './codeReview/codeReviewAtoms';
 import {diffSummary} from './codeReview/CodeReviewInfo';
 import {useAtomValue} from 'jotai';
 import serverAPI from './ClientToServerAPI';
+import {randomId} from 'shared/utils';
+import {tracker} from './analytics';
 
 import './SmartActionsMenu.css';
 import platform from './platform';
 import {repositoryInfo} from './serverAPIState';
 
-export function SmartActionsMenu({commit}: {commit: CommitInfo}) {
+export function SmartActionsMenu({commit}: {commit?: CommitInfo}) {
   const [dropdownVisible, setDropdownVisible] = useState(false);
 
   const smartActionsMenuEnabled = useFeatureFlagSync(Internal.featureFlags?.SmartActionsMenu);
@@ -56,11 +58,11 @@ export function SmartActionsMenu({commit}: {commit: CommitInfo}) {
   );
 }
 
-function SmartActions({commit, dismiss}: {commit: CommitInfo; dismiss: () => void}) {
+function SmartActions({commit, dismiss}: {commit?: CommitInfo; dismiss: () => void}) {
   const actions = [];
 
   const aiCommitSplitEnabled = useAtomValue(featureFlagAsync(Internal.featureFlags?.AICommitSplit));
-  if (aiCommitSplitEnabled) {
+  if (commit && aiCommitSplitEnabled) {
     actions.push(<AutoSplitButton key="auto-split" commit={commit} dismiss={dismiss} />);
   }
 
@@ -68,7 +70,7 @@ function SmartActions({commit, dismiss}: {commit: CommitInfo; dismiss: () => voi
     featureFlagAsync(Internal.featureFlags?.InlineCommentDevmateResolve),
   );
   // For now, only support this in VS Code
-  if (devmateResolveCommentsEnabled && commit.diffId && platform.platformName === 'vscode') {
+  if (devmateResolveCommentsEnabled && commit?.diffId && platform.platformName === 'vscode') {
     actions.push(
       <ResolveCommentsButton
         key="resolve-comments"
@@ -85,7 +87,7 @@ function SmartActions({commit, dismiss}: {commit: CommitInfo; dismiss: () => voi
     featureFlagAsync(Internal.featureFlags?.DevmateResolveFailedSignals),
   );
   // For now, only support this in VS Code
-  if (devmateResolveFailedSignalsEnabled && commit.diffId && platform.platformName === 'vscode') {
+  if (devmateResolveFailedSignalsEnabled && commit?.diffId && platform.platformName === 'vscode') {
     actions.push(
       <ResolveFailedSignalsButton
         key="resolve-failed-signals"
@@ -103,6 +105,14 @@ function SmartActions({commit, dismiss}: {commit: CommitInfo; dismiss: () => voi
   // For now, only support this in VS Code since the devmate can only be triggered from VS Code
   if (devmateGenerateTestsForModifiedCodeEnabled && platform.platformName === 'vscode') {
     actions.push(<GenerateTestsForModifiedCodeButton key="generate-tests" dismiss={dismiss} />);
+  }
+
+  const devmateGenerateCommitMessageEnabled = useAtomValue(
+    featureFlagAsync(Internal.featureFlags?.DevmateGenerateCommitMessage),
+  );
+  // For now, only support this in VS Code
+  if (!commit && devmateGenerateCommitMessageEnabled && platform.platformName === 'vscode') {
+    actions.push(<FillCommitInfoButton key="fill-commit-info" dismiss={dismiss} />);
   }
 
   return (
@@ -175,6 +185,23 @@ function ResolveCommentsButton({
   );
 
   return disabled ? <Tooltip title={disabledReason}>{button}</Tooltip> : button;
+}
+
+/** Prompt Devmate to fill commit info. */
+function FillCommitInfoButton({dismiss}: {dismiss: () => void}) {
+  return (
+    <Button
+      data-testid="fill-commit-info-button"
+      onClick={e => {
+        tracker.track('DevmateFillCommitMessage');
+        serverAPI.postMessage({type: 'platform/fillDevMateCommitMessage', id: randomId()});
+        dismiss();
+        e.stopPropagation();
+      }}>
+      <Icon icon="sparkle" />
+      <T>Fill commit info from DevMate</T>
+    </Button>
+  );
 }
 
 /** Prompt Devmate to resolve failed signals on a diff. */
