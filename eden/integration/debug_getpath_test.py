@@ -10,7 +10,7 @@ import os
 import stat
 import time
 
-from facebook.eden.ttypes import TimeSpec
+from eden.fs.service.eden.thrift_types import TimeSpec
 
 from .lib import edenclient, testcase
 
@@ -54,7 +54,7 @@ class DebugGetPathTest(testcase.EdenRepoTest):
                 "unknown inode number 1234", context.exception.stderr.decode()
             )
 
-    def test_getpath_unloaded_inode(self) -> None:
+    async def test_getpath_unloaded_inode(self) -> None:
         """
         Test that calling `eden debug getpath` on an unloaded inode returns the
         correct path and indicates that it is unloaded
@@ -66,14 +66,14 @@ class DebugGetPathTest(testcase.EdenRepoTest):
         self.write_file(os.path.join("dir", "file"), "blah")
         # Get the inodeNumber
         stat = os.stat(filepath)
-        self.unload_one_inode_under("dir")
+        await self.unload_one_inode_under("dir")
 
         # Get the path for dir/file from its inodeNumber
         output = self.eden.run_cmd("debug", "getpath", str(stat.st_ino), cwd=self.mount)
 
         self.assertEqual(f"unloaded {filepath}\n", output)
 
-    def test_getpath_unloaded_inode_rename_parent(self) -> None:
+    async def test_getpath_unloaded_inode_rename_parent(self) -> None:
         """
         Test that when an unloaded inode has one of its parents renamed,
         `eden debug getpath` returns the new path
@@ -84,7 +84,7 @@ class DebugGetPathTest(testcase.EdenRepoTest):
         # Get the inodeNumber
         stat = os.stat(os.path.join(dirpath, "test.txt"))
 
-        self.unload_one_inode_under(os.path.join("foo", "bar"))
+        await self.unload_one_inode_under(os.path.join("foo", "bar"))
 
         # Rename the foo directory
         os.rename(os.path.join(self.mount, "foo"), os.path.join(self.mount, "newname"))
@@ -96,14 +96,14 @@ class DebugGetPathTest(testcase.EdenRepoTest):
             output,
         )
 
-    def unload_one_inode_under(self, path: str) -> None:
+    async def unload_one_inode_under(self, path: str) -> None:
         # TODO: To support unloading more than one inode, sum the return value
         # until count is reached our the attempt limit has been reached.
         remaining_attempts = 5
         while True:
             age = TimeSpec()  # zero
-            with self.eden.get_thrift_client_legacy() as client:
-                count = client.unloadInodeForPath(
+            async with self.eden.get_thrift_client() as client:
+                count = await client.unloadInodeForPath(
                     os.fsencode(self.mount), os.fsencode(path), age
                 )
             if remaining_attempts == 1:
