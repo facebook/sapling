@@ -33,7 +33,7 @@ sapling-config-remote-loader = { version = "0.1.0", path = "../../../scm/lib/con
 sapling-http-client = { version = "0.1.0", path = "../../../scm/lib/http-client" }
 sapling-thrift-types = { version = "0.1.0", path = "../../../scm/lib/thrift-types" }
 serde = { version = "1.0.219", features = ["derive", "rc"] }
-serde_json = { version = "1.0.140", features = ["alloc", "float_roundtrip", "unbounded_depth"] }
+serde_json = { version = "1.0.140", features = ["alloc", "float_roundtrip", "raw_value", "unbounded_depth"] }
 shlex = "1.3"
 strum = { version = "0.27.1", features = ["derive"] }
 subprocess = "0.2.9"
