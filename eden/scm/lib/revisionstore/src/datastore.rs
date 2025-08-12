@@ -148,12 +148,21 @@ impl<T: HgIdMutableDeltaStore + ?Sized, U: Deref<Target = T> + Send + Sync> HgId
 mod tests {
     use std::io::Cursor;
 
+    use revisionstore_types::InternalMetadata;
+
     use super::*;
 
     fn roundtrip_meta_serialize(meta: &Metadata) {
         let mut buf = vec![];
-        meta.write(&mut buf).expect("write");
-        let read_meta = Metadata::read(&mut Cursor::new(&buf)).expect("meta");
+        InternalMetadata {
+            api: *meta,
+            uncompressed: false,
+        }
+        .write(&mut buf)
+        .expect("write");
+        let read_meta = InternalMetadata::read(&mut Cursor::new(&buf))
+            .expect("meta")
+            .api;
         assert!(*meta == read_meta);
     }
 

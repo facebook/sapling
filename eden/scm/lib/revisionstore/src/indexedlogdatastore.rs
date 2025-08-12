@@ -11,6 +11,7 @@ use std::path::Path;
 use std::path::PathBuf;
 
 use anyhow::Result;
+use anyhow::anyhow;
 use anyhow::bail;
 use anyhow::ensure;
 use byteorder::BigEndian;
@@ -25,6 +26,7 @@ use lz4_pyframe::compress;
 use lz4_pyframe::decompress;
 use minibytes::Bytes;
 use once_cell::sync::OnceCell;
+use revisionstore_types::InternalMetadata;
 use storemodel::SerializationFormat;
 use tracing::warn;
 use types::HgId;
@@ -66,6 +68,9 @@ pub struct Entry {
 
     content: OnceCell<Bytes>,
     compressed_content: Option<Bytes>,
+
+    #[cfg(test)]
+    should_compress: bool,
 }
 
 impl std::cmp::PartialEq for Entry {
@@ -86,6 +91,8 @@ impl Entry {
             metadata,
             content: OnceCell::with_value(content),
             compressed_content: None,
+            #[cfg(test)]
+            should_compress: true,
         }
     }
 
@@ -112,18 +119,25 @@ impl Entry {
         let name_len = cur.read_u16::<BigEndian>()? as u64;
         cur.set_position(cur.position() + name_len);
 
-        let metadata = Metadata::read(&mut cur)?;
+        let metadata = InternalMetadata::read(&mut cur)?;
 
-        let compressed_len = cur.read_u64::<BigEndian>()?;
-        let compressed =
-            data.get_err(cur.position() as usize..(cur.position() + compressed_len) as usize)?;
-        let bytes = bytes.slice_to_bytes(compressed);
+        let body_len = cur.read_u64::<BigEndian>()?;
+        let body = data.get_err(cur.position() as usize..(cur.position() + body_len) as usize)?;
+        let body = bytes.slice_to_bytes(body);
+
+        let (content, compressed_content) = if metadata.uncompressed {
+            (OnceCell::with_value(body), None)
+        } else {
+            (OnceCell::new(), Some(body))
+        };
 
         Ok(Entry {
             node: hgid,
-            metadata,
-            content: OnceCell::new(),
-            compressed_content: Some(bytes),
+            metadata: metadata.api,
+            content,
+            compressed_content,
+            #[cfg(test)]
+            should_compress: true,
         })
     }
 
@@ -149,23 +163,38 @@ impl Entry {
     }
 
     fn serialize(&self, buf: &mut Vec<u8>) -> Result<()> {
+        #[cfg(test)]
+        let should_compress = self.should_compress;
+
+        #[cfg(not(test))]
+        // Always compress for now (compatible with old and new code).
+        let should_compress = true;
+
         buf.write_all(self.node.as_ref())?;
 
         // write empty name (i.e. zero length)
         buf.write_u16::<BigEndian>(0)?;
 
-        self.metadata.write(buf)?;
+        let metadata = InternalMetadata {
+            api: self.metadata,
+            uncompressed: !should_compress,
+        };
+        metadata.write(buf)?;
 
-        let compressed = if let Some(compressed) = &self.compressed_content {
+        let body = if let (true, Some(compressed)) = (should_compress, &self.compressed_content) {
             compressed.clone()
-        } else if let Some(raw) = self.content.get() {
-            compress(raw)?.into()
         } else {
-            bail!("No content");
+            let content = self.content.get().ok_or_else(|| anyhow!("No content"))?;
+
+            if should_compress {
+                compress(content)?.into()
+            } else {
+                content.clone()
+            }
         };
 
-        buf.write_u64::<BigEndian>(compressed.len() as u64)?;
-        buf.write_all(&compressed)?;
+        buf.write_u64::<BigEndian>(body.len() as u64)?;
+        buf.write_all(&body)?;
 
         Ok(())
     }
@@ -955,6 +984,29 @@ mod tests {
 
         // Notice it is indeed compressed.
         assert_eq!(serialized, b"\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x01\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x145\x00\x00\x00ohello \x06\x00\x17Phello");
+
+        let got = Entry::from_bytes(serialized.into())?;
+
+        assert_eq!(got.content()?, content);
+
+        Ok(())
+    }
+
+    #[test]
+    fn test_serialization_no_compression() -> Result<()> {
+        let key = key("a", "1");
+        let content = Bytes::from_static(b"hello hello hello hello hello hello hello hello hello");
+
+        let mut entry = Entry::new(key.hgid, content.clone(), Metadata::default());
+
+        // Enable compression.
+        entry.should_compress = false;
+
+        let mut serialized = Vec::new();
+        entry.serialize(&mut serialized)?;
+
+        // Notice it is indeed not compressed.
+        assert_eq!(serialized, b"\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x01\x00\x00\x00\x00\x00\x01u\x00\x00\x00\x00\x00\x00\x005hello hello hello hello hello hello hello hello hello");
 
         let got = Entry::from_bytes(serialized.into())?;
 

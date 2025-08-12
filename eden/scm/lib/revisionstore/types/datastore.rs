@@ -25,6 +25,14 @@ pub struct Metadata {
     pub flags: Option<u64>,
 }
 
+/// InternalMetadata combines the "external" metadata about the entry with "internal" metadata
+/// specific to how we store/serialize it.
+#[derive(Clone, Copy, Debug, Default)]
+pub struct InternalMetadata {
+    pub api: Metadata,
+    pub uncompressed: bool,
+}
+
 impl Metadata {
     pub const LFS_FLAG: u64 = 0x2000;
 
@@ -36,15 +44,32 @@ impl Metadata {
         }
     }
 
+    pub fn read(cur: &mut Cursor<&[u8]>) -> Result<Self> {
+        Ok(InternalMetadata::read(cur)?.api)
+    }
+
+    pub fn write<T: Write>(&self, writer: &mut T) -> Result<()> {
+        InternalMetadata {
+            api: *self,
+            uncompressed: false,
+        }
+        .write(writer)
+    }
+}
+
+impl InternalMetadata {
     pub fn write<T: Write>(&self, writer: &mut T) -> Result<()> {
         let mut buf = vec![];
-        if let Some(flags) = self.flags {
+        if let Some(flags) = self.api.flags {
             if flags != 0 {
-                Metadata::write_meta(b'f', flags, &mut buf)?;
+                Self::write_meta(b'f', flags, &mut buf)?;
             }
         }
-        if let Some(size) = self.size {
-            Metadata::write_meta(b's', size, &mut buf)?;
+        if let Some(size) = self.api.size {
+            Self::write_meta(b's', size, &mut buf)?;
+        }
+        if self.uncompressed {
+            buf.write_u8(b'u')?;
         }
 
         writer.write_u32::<BigEndian>(buf.len() as u32)?;
@@ -59,13 +84,21 @@ impl Metadata {
         Ok(())
     }
 
-    pub fn read(cur: &mut Cursor<&[u8]>) -> Result<Metadata> {
+    pub fn read(cur: &mut Cursor<&[u8]>) -> Result<Self> {
         let metadata_len = cur.read_u32::<BigEndian>()? as u64;
         let mut size: Option<u64> = None;
         let mut flags: Option<u64> = None;
+        let mut uncompressed = false;
         let start_offset = cur.position();
         while cur.position() < start_offset + metadata_len {
             let key = cur.read_u8()?;
+
+            if key == b'u' {
+                // Boolean flag - has no value.
+                uncompressed = true;
+                continue;
+            }
+
             let value_len = cur.read_u16::<BigEndian>()? as usize;
             match key {
                 b'f' => {
@@ -87,7 +120,10 @@ impl Metadata {
             cur.set_position(cur_pos + value_len as u64);
         }
 
-        Ok(Metadata { flags, size })
+        Ok(Self {
+            api: Metadata { flags, size },
+            uncompressed,
+        })
     }
 }
 
@@ -146,12 +182,12 @@ mod tests {
         }
 
         fn test_roundtrip_metadata(size: Option<u64>, flags: Option<u64>) -> bool {
-            let meta = Metadata { size, flags };
+            let meta = InternalMetadata { api: Metadata {size, flags }, uncompressed: false };
             let mut buf: Vec<u8> = vec![];
             meta.write(&mut buf).expect("write");
-            let read_meta = Metadata::read(&mut Cursor::new(&buf)).expect("read");
+            let read_meta = InternalMetadata::read(&mut Cursor::new(&buf)).expect("read");
 
-            meta.size == read_meta.size && (meta.flags == read_meta.flags || (meta.flags == Some(0)))
+            meta.api.size == read_meta.api.size && (meta.api.flags == read_meta.api.flags || (meta.api.flags == Some(0)))
         }
     }
 }

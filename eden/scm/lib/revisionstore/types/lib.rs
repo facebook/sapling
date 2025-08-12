@@ -9,4 +9,5 @@
 
 mod datastore;
 
+pub use crate::datastore::InternalMetadata;
 pub use crate::datastore::Metadata;
