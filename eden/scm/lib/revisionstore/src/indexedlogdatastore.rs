@@ -942,4 +942,24 @@ mod tests {
         assert_eq!(hg_blob, Bytes::from(&b"this is a blob"[..]));
         Ok(())
     }
+
+    #[test]
+    fn test_serialization_compression() -> Result<()> {
+        let key = key("a", "1");
+        let content = Bytes::from_static(b"hello hello hello hello hello hello hello hello hello");
+
+        let entry = Entry::new(key.hgid, content.clone(), Metadata::default());
+
+        let mut serialized = Vec::new();
+        entry.serialize(&mut serialized)?;
+
+        // Notice it is indeed compressed.
+        assert_eq!(serialized, b"\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x01\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x145\x00\x00\x00ohello \x06\x00\x17Phello");
+
+        let got = Entry::from_bytes(serialized.into())?;
+
+        assert_eq!(got.content()?, content);
+
+        Ok(())
+    }
 }
