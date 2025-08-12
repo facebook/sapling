@@ -1250,9 +1250,9 @@ void EdenServer::createOrUpdateEdenHeartbeatFile() {
   // Create the heartbeat file and write the current timestamp to it
   auto now = std::chrono::system_clock::now();
   auto now_c = std::chrono::system_clock::to_time_t(now);
-  folly::StringPiece now_str(
-      std::to_string(now_c)); // Convert time_t to StringPiece
-  auto result = writeFileAtomic(heartbeatFilePath_, now_str);
+  std::string now_str = std::to_string(now_c);
+  auto result =
+      writeFileAtomic(heartbeatFilePath_, folly::StringPiece(now_str));
   if (result.hasException()) {
     XLOGF(
         ERR,
