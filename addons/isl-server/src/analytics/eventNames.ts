@@ -44,6 +44,7 @@ export type TrackEventName =
   | 'ClickPullButton'
   | 'ClickSuggestedRebase'
   | 'ClickedConfigureExternalMergeTool'
+  | 'DevmateFillCommitMessage'
   | 'DiscardOperation'
   | 'DiagnosticsConfirmationOpportunity'
   | 'DiagnosticsConfirmationAction'
