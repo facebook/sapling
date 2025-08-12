@@ -39,6 +39,7 @@ import {
   parseCommitMessageFields,
 } from './CommitMessageFields';
 import {SmallCapsTitle} from './utils';
+import {useFeatureFlagSync} from '../featureFlags';
 
 /**
  * The last entry in a tokenized field value is used as the value being typed in the editor.
@@ -58,6 +59,7 @@ function forceTokenizeAllFields(fields: CommitMessageFields): CommitMessageField
 }
 
 const fillCommitMessageMethods: Array<{
+  key: string;
   label: string;
   getMessage: (
     commit: CommitInfo,
@@ -66,6 +68,7 @@ const fillCommitMessageMethods: Array<{
   tooltip: string;
 }> = [
   {
+    key: 'last-commit',
     label: t('last commit'),
     tooltip: t("Fill in the previous commit's message here."),
     getMessage: (commit: CommitInfo, mode: CommitInfoMode) => {
@@ -90,6 +93,7 @@ const fillCommitMessageMethods: Array<{
     },
   },
   {
+    key: 'template-file',
     label: t('template file'),
     tooltip: t(
       'Fill in your configured commit message template.\nSee `sl help config` for more information.',
@@ -171,33 +175,40 @@ export function FillCommitMessage({commit, mode}: {commit: CommitInfo; mode: Com
     [commit, mode, showModal],
   );
 
+  const showDevmate =
+    useFeatureFlagSync(Internal.featureFlags?.DevmateGenerateCommitMessage) &&
+    platform.platformName === 'vscode';
+
   const methods = (
     <>
-      {fillCommitMessageMethods.map(method => (
-        <Tooltip
-          title={method.tooltip}
-          key={method.label}
-          placement="bottom"
-          delayMs={DOCUMENTATION_DELAY}>
-          <LinkButton
-            onClick={() => {
-              tracker.operation(
-                'FillCommitMessage',
-                'FetchError',
-                {extras: {method: method.label}},
-                async () => {
-                  const newMessage = await method.getMessage(commit, mode);
-                  if (newMessage == null) {
-                    return;
-                  }
-                  fillMessage(newMessage);
-                },
-              );
-            }}>
-            {method.label}
-          </LinkButton>
-        </Tooltip>
-      ))}
+      {fillCommitMessageMethods
+        // Only show Devmate option if allowlisted in GK
+        .filter(method => method.key !== 'devmate' || showDevmate)
+        .map(method => (
+          <Tooltip
+            title={method.tooltip}
+            key={method.key}
+            placement="bottom"
+            delayMs={DOCUMENTATION_DELAY}>
+            <LinkButton
+              onClick={() => {
+                tracker.operation(
+                  'FillCommitMessage',
+                  'FetchError',
+                  {extras: {method: method.label}},
+                  async () => {
+                    const newMessage = await method.getMessage(commit, mode);
+                    if (newMessage == null) {
+                      return;
+                    }
+                    fillMessage(newMessage);
+                  },
+                );
+              }}>
+              {method.label}
+            </LinkButton>
+          </Tooltip>
+        ))}
     </>
   );
   return (
