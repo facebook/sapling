@@ -90,6 +90,12 @@ pub fn http_config(
                 .unwrap_or_else(|_| vec![]),
         ),
         verbose: config.get_or_default("http", "verbose").unwrap_or(false),
+        http_proxy_host: config
+            .get_or_default("http_proxy", "host")
+            .unwrap_or_default(),
+        http_no_proxy: config
+            .get_or_default("http_proxy", "no")
+            .unwrap_or_default(),
         ..Default::default()
     };
 
