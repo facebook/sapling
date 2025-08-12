@@ -582,6 +582,7 @@ rust_library(
         "fbsource//third-party/rust:futures",
         "fbsource//third-party/rust:itertools",
         "fbsource//third-party/rust:similar",
+        "fbsource//third-party/rust:tokio",
         "fbsource//third-party/rust:vec1",
         ":basename_suffix_skeleton_manifest_v3",
         ":fsnodes",

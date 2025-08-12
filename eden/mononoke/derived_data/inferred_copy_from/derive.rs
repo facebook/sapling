@@ -142,7 +142,10 @@ async fn find_best_candidate_by_partial_content_match(
                     _ => return Ok::<_, Error>(None),
                 };
 
-                let similarity = estimate_similarity(&src_bytes, &dst_bytes);
+                let similarity = tokio::task::spawn_blocking({
+                    move || estimate_similarity(&dst_bytes, &src_bytes)
+                })
+                .await?;
                 Ok(similarity
                     .ok()
                     .filter(|&s| s >= CONTENT_SIMILARITY_RATIO_THRESHOLD)
