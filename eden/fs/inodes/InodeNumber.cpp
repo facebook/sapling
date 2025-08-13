@@ -8,13 +8,8 @@
 #include "eden/fs/inodes/InodeNumber.h"
 
 #include <folly/Conv.h>
-#include <ostream>
 
 namespace facebook::eden {
-
-std::ostream& operator<<(std::ostream& os, InodeNumber ino) {
-  return os << ino.getRawValue();
-}
 
 void toAppend(InodeNumber ino, std::string* result) {
   folly::toAppend(ino.getRawValue(), result);

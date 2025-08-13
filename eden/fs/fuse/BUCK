@@ -7,7 +7,6 @@ cpp_library(
     srcs = glob(["*.cpp"]),
     headers = glob(["*.h"]),
     deps = [
-        "fbsource//third-party/fmt:fmt",
         "//eden/common/telemetry:structured_logger",
         "//eden/common/utils:bug",
         "//eden/common/utils:synchronized",
@@ -24,6 +23,7 @@ cpp_library(
         "//folly/system:thread_name",
     ],
     exported_deps = [
+        "fbsource//third-party/fmt:fmt",
         "fbsource//third-party/googletest:gtest_headers",
         "//eden/common/os:os",
         "//eden/common/telemetry:telemetry",

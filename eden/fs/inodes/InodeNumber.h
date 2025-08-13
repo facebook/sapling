@@ -98,8 +98,6 @@ inline bool operator>=(InodeNumber lhs, InodeNumber rhs) {
   return lhs.getRawValue() >= rhs.getRawValue();
 }
 
-std::ostream& operator<<(std::ostream& os, InodeNumber ino);
-
 // Define toAppend() so folly::to<string>(ino) will work.
 void toAppend(InodeNumber ino, std::string* result);
 

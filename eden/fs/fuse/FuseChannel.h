@@ -36,6 +36,8 @@
 #include "eden/fs/utils/FsChannelTypes.h"
 #include "eden/fs/utils/ProcessAccessLog.h"
 
+#include <fmt/format.h>
+
 #ifndef _WIN32
 #include <sys/uio.h>
 #endif
@@ -657,9 +659,12 @@ class FuseChannel final : public FsChannel {
     std::vector<InvalidationEntry> queue;
     bool stop{false};
   };
-  friend std::ostream& operator<<(
-      std::ostream& os,
-      const InvalidationEntry& entry);
+
+  friend void toAppend(
+      const FuseChannel::InvalidationEntry& entry,
+      std::string* result);
+
+  friend struct fmt::formatter<facebook::eden::FuseChannel::InvalidationEntry>;
 
   FRIEND_TEST(FuseChannelTest, formatting_inode);
   FRIEND_TEST(FuseChannelTest, formatting_dir);
@@ -993,5 +998,20 @@ class FuseDeviceUnmountedDuringInitialization : public std::runtime_error {
 };
 
 #endif
-
 } // namespace facebook::eden
+
+#ifndef _WIN32
+namespace fmt {
+template <>
+struct formatter<facebook::eden::FuseChannel::InvalidationEntry>
+    : formatter<string_view> {
+  template <typename FormatContext>
+  auto format(
+      const facebook::eden::FuseChannel::InvalidationEntry& entry,
+      FormatContext& ctx) {
+    // TODO: Avoid allocation here.
+    return formatter<string_view>::format(folly::to<std::string>(entry), ctx);
+  }
+};
+} // namespace fmt
+#endif

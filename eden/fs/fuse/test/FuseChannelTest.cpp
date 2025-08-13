@@ -389,32 +389,24 @@ TEST_F(FuseChannelTest, interruptLookups) {
 TEST_F(FuseChannelTest, formatting_inode) {
   FuseChannel::InvalidationEntry entry(
       InodeNumber(10), PathComponentPiece{"test"});
-  std::ostringstream os;
-  os << entry;
-  EXPECT_EQ("(inode 10, child \"test\")", os.str());
+  EXPECT_EQ("(inode 10, child \"test\")", fmt::to_string(entry));
 }
 
 TEST_F(FuseChannelTest, formatting_dir) {
   FuseChannel::InvalidationEntry entry(InodeNumber(20), 10, 100);
-  std::ostringstream os;
-  os << entry;
-  EXPECT_EQ("(inode 20, offset 10, length 100)", os.str());
+  EXPECT_EQ("(inode 20, offset 10, length 100)", fmt::to_string(entry));
 }
 
 TEST_F(FuseChannelTest, formatting_flush) {
   FuseChannel::InvalidationEntry entry(
       folly::Promise<folly::Unit>::makeEmpty());
-  std::ostringstream os;
-  os << entry;
-  EXPECT_EQ("(invalidation flush)", os.str());
+  EXPECT_EQ("(invalidation flush)", fmt::to_string(entry));
 }
 
 TEST_F(FuseChannelTest, formatting_unknown) {
   FuseChannel::InvalidationEntry entry(InodeNumber(20), 10, 100);
   entry.type = static_cast<FuseChannel::InvalidationType>(11);
-  std::ostringstream os;
-  os << entry;
-  EXPECT_EQ("(unknown invalidation type 11 inode 20)", os.str());
+  EXPECT_EQ("(unknown invalidation type 11 inode 20)", fmt::to_string(entry));
   // change the type back so the destructor doesn't throw
   entry.type = FuseChannel::InvalidationType::DIR_ENTRY;
 }

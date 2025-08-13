@@ -752,26 +752,31 @@ FuseChannel::InvalidationEntry::
   }
 }
 
-std::ostream& operator<<(
-    std::ostream& os,
-    const FuseChannel::InvalidationEntry& entry) {
+void toAppend(
+    const FuseChannel::InvalidationEntry& entry,
+    std::string* result) {
   switch (entry.type) {
     case FuseChannel::InvalidationType::INODE:
-      return os << fmt::format(
-                 "(inode {}, offset {}, length {})",
-                 entry.inode,
-                 entry.range.offset,
-                 entry.range.length);
+      *result += fmt::format(
+          "(inode {}, offset {}, length {})",
+          entry.inode,
+          entry.range.offset,
+          entry.range.length);
+      return;
     case FuseChannel::InvalidationType::DIR_ENTRY:
-      return os << fmt::format(
-                 "(inode {}, child \"{}\")", entry.inode, entry.name);
+      *result +=
+          fmt::format("(inode {}, child \"{}\")", entry.inode, entry.name);
+      return;
     case FuseChannel::InvalidationType::FLUSH:
-      return os << "(invalidation flush)";
+      *result += "(invalidation flush)";
+      return;
+    default:
+      *result += fmt::format(
+          "(unknown invalidation type {} inode {})",
+          static_cast<uint64_t>(entry.type),
+          entry.inode);
+      return;
   }
-  return os << fmt::format(
-             "(unknown invalidation type {} inode {})",
-             static_cast<uint64_t>(entry.type),
-             entry.inode);
 }
 
 void FuseChannel::replyError(const fuse_in_header& request, int errorCode) {
@@ -1115,7 +1120,7 @@ ImmediateFuture<folly::Unit> FuseChannel::completeInvalidations() {
 void FuseChannel::sendInvalidation(InvalidationEntry& entry) {
   // We catch any exceptions that occur and simply log an error message.
   // There is not much else we can do in this situation.
-  XLOG(DBG6) << "sending invalidation request: " << entry;
+  XLOGF(DBG6, "sending invalidation request: {}", entry);
   try {
     switch (entry.type) {
       case InvalidationType::INODE:
@@ -1138,15 +1143,21 @@ void FuseChannel::sendInvalidation(InvalidationEntry& entry) {
     // that we allocated on our own and haven't actually told the kernel about
     // yet.
     if (isEnoent(ex)) {
-      XLOG(DBG3) << "received ENOENT when sending invalidation request: "
-                 << entry;
+      XLOGF(
+          DBG3, "received ENOENT when sending invalidation request: {}", entry);
     } else {
-      XLOG(ERR) << "error sending invalidation request: " << entry << ": "
-                << folly::exceptionStr(ex);
+      XLOGF(
+          ERR,
+          "error sending invalidation request: {}:{}",
+          entry,
+          folly::exceptionStr(ex));
     }
   } catch (const std::exception& ex) {
-    XLOG(ERR) << "error sending invalidation request: " << entry << ": "
-              << folly::exceptionStr(ex);
+    XLOGF(
+        ERR,
+        "error sending invalidation request: {}:{}",
+        entry,
+        folly::exceptionStr(ex));
   }
 }
 
