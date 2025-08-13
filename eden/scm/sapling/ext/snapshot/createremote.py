@@ -27,8 +27,14 @@ from .update import fetchsnapshot
 
 # Binary conversion constant
 MIB_TO_BYTES = 1048576  # 1 MiB = 1,048,576 bytes
-# Default maximum untracked file size (1GB in bytes)
-DEFAULT_MAX_UNTRACKED_SIZE_BYTES = 1073741824
+
+
+def getdefaultmaxuntrackedsize(ui):
+    """Get the default maximum untracked file size in bytes from config.
+
+    Default is 1GB if not configured.
+    """
+    return ui.configbytes("snapshot", "maxuntrackedsize", "1GB")
 
 
 @util.timefunction("snapshot_backup_parents", 0, "ui")
@@ -261,9 +267,9 @@ def createremote(ui, repo, *pats, **opts) -> None:
     continuationof = parsecontinuationof(opts, repo)
     allowempty = ui.configbool("snapshot", "allowempty", True)
 
-    # Use bytes-based limit if specified, otherwise fall back to MiB-based limit
+    # Use bytes-based limit if specified, otherwise fall back to MiB-based limit, then config default
     effective_max_untracked_size = (
-        maxuntrackedsizebytes or maxuntrackedsize or DEFAULT_MAX_UNTRACKED_SIZE_BYTES
+        maxuntrackedsizebytes or maxuntrackedsize or getdefaultmaxuntrackedsize(ui)
     )
 
     # Validate that --continuation-of and --reuse-storage are not used together

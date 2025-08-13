@@ -6,7 +6,11 @@
 from sapling import error
 from sapling.i18n import _
 
-from .createremote import parsemaxuntracked, parsemaxuntrackedbytes
+from .createremote import (
+    getdefaultmaxuntrackedsize,
+    parsemaxuntracked,
+    parsemaxuntrackedbytes,
+)
 from .latest import _isworkingcopy
 
 
@@ -26,8 +30,10 @@ def cmd(ui, repo, csid=None, *pats, **opts):
     maxuntrackedsize = parsemaxuntracked(opts)
     maxuntrackedsizebytes = parsemaxuntrackedbytes(opts)
 
-    # Use bytes-based limit if specified, otherwise fall back to MiB-based limit
-    effective_max_untracked_size = maxuntrackedsizebytes or maxuntrackedsize
+    # Use bytes-based limit if specified, otherwise fall back to MiB-based limit, then config default
+    effective_max_untracked_size = (
+        maxuntrackedsizebytes or maxuntrackedsize or getdefaultmaxuntrackedsize(ui)
+    )
 
     iswc, reason = _isworkingcopy(
         ui, repo, snapshot, effective_max_untracked_size, pats, opts

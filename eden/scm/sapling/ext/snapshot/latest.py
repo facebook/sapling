@@ -7,7 +7,12 @@ from sapling import error, node
 from sapling.edenapi_upload import filetypefromfile
 from sapling.i18n import _
 
-from .createremote import parsemaxuntracked, parsemaxuntrackedbytes, workingcopy
+from .createremote import (
+    getdefaultmaxuntrackedsize,
+    parsemaxuntracked,
+    parsemaxuntrackedbytes,
+    workingcopy,
+)
 from .metalog import fetchlatestsnapshot
 from .update import fetchsnapshot
 
@@ -102,15 +107,20 @@ def latest(ui, repo, **opts):
     maxuntrackedsize = parsemaxuntracked(opts)
     maxuntrackedsizebytes = parsemaxuntrackedbytes(opts)
 
-    # Use bytes-based limit if specified, otherwise fall back to MiB-based limit
-    effective_max_untracked_size = maxuntrackedsizebytes or maxuntrackedsize
-
-    if effective_max_untracked_size is not None and isworkingcopy is False:
+    if (
+        maxuntrackedsizebytes or maxuntrackedsize
+    ) is not None and isworkingcopy is False:
         raise error.Abort(
             _(
                 "--max-untracked-size/--max-untracked-size-bytes can only be used together with --is-working-copy"
             )
         )
+
+    # Use bytes-based limit if specified, otherwise fall back to MiB-based limit, then config default
+    effective_max_untracked_size = (
+        maxuntrackedsizebytes or maxuntrackedsize or getdefaultmaxuntrackedsize(ui)
+    )
+
     if csid is None:
         if isworkingcopy:
             raise error.Abort(_("latest snapshot not found"))
