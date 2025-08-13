@@ -89,6 +89,7 @@ cpp_binary(
                 "//eden/fs/store/facebook/recas:recas",
                 "//eden/fs/telemetry/facebook:activity_recorder",
                 "//eden/fs/telemetry/facebook:scribe_logger",
+                "//services_efficiency/heap:init",
             ],
         ),
         (
