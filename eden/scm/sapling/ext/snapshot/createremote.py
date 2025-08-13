@@ -417,6 +417,13 @@ def createremote(ui, repo, *pats, **opts) -> None:
         _("{} files untracked").format(len(wc.untracked)),
     ]
 
+    # Add skipped large files counter with bold formatting if any files were skipped
+    if wc.skipped_large_untracked:
+        skipped_text = _("{} large files skipped").format(
+            len(wc.skipped_large_untracked)
+        )
+        status_parts.append(ui.label(skipped_text, "bold"))
+
     status_summary = ", ".join(status_parts)
 
     # Use formatter for JSON output support
