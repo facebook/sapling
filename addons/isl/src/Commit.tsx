@@ -733,9 +733,13 @@ async function maybeWarnAboutRebaseOffWarm(dest: CommitInfo): Promise<boolean> {
             'Do you want to `goto` anyway?',
       ),
     });
+    const userEnv = (await Internal.getDevEnvType?.()) ?? 'NotImplemented';
+    const cwd = readAtom(repoRelativeCwd);
     tracker.track('WarnAboutRebaseOffWarm', {
       extras: {
         userAction: answer,
+        envType: userEnv,
+        cwd,
       },
     });
     if (answer === buttons[0]) {
@@ -788,9 +792,13 @@ async function maybeWarnAboutRebaseOntoMaster(commit: CommitInfo): Promise<boole
             'Do you want to `rebase` anyway?',
       ),
     });
+    const userEnv = (await Internal.getDevEnvType?.()) ?? 'NotImplemented';
+    const cwd = readAtom(repoRelativeCwd);
     tracker.track('WarnAboutRebaseOntoMaster', {
       extras: {
         userAction: answer,
+        envType: userEnv,
+        cwd,
       },
     });
     if (answer === buttons[0]) {
@@ -898,9 +906,13 @@ async function maybeWarnAboutDistantRebase(commit: CommitInfo): Promise<boolean>
         },
       ),
     });
+    const userEnv = (await Internal.getDevEnvType?.()) ?? 'NotImplemented';
+    const cwd = readAtom(repoRelativeCwd);
     tracker.track('WarnAboutDistantRebase', {
       extras: {
         userAction: answer,
+        envType: userEnv,
+        cwd,
       },
     });
     if (answer === buttons[0]) {

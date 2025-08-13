@@ -950,6 +950,25 @@ export default class ServerToClientAPI {
         );
         break;
       }
+      case 'fetchDevEnvType': {
+        if (Internal.getDevEnvType == null) {
+          break;
+        }
+
+        Internal.getDevEnvType()
+          .catch((error: Error) => {
+            this.logger.error('Error getting dev env type:', error);
+            return 'error';
+          })
+          .then((result: string) => {
+            this.postMessage({
+              type: 'fetchedDevEnvType',
+              envType: result,
+              id: data.id,
+            });
+          });
+        break;
+      }
       case 'generateSuggestionWithAI': {
         if (Internal.generateSuggestionWithAI == null) {
           break;

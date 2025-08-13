@@ -923,6 +923,7 @@ export type ClientToServerMessage =
   | {type: 'fetchQeFlag'; name: string}
   | {type: 'fetchFeatureFlag'; name: string}
   | {type: 'fetchInternalUserInfo'}
+  | {type: 'fetchDevEnvType'; id: string}
   | {
       type: 'generateSuggestionWithAI';
       id: string;
@@ -1057,6 +1058,7 @@ export type ServerToClientMessage =
   | {type: 'fetchedQeFlag'; name: string; passes: boolean}
   | {type: 'fetchedFeatureFlag'; name: string; passes: boolean}
   | {type: 'fetchedInternalUserInfo'; info: Serializable}
+  | {type: 'fetchedDevEnvType'; envType: string; id: string}
   | {
       type: 'generatedSuggestionWithAI';
       message: Result<string>;
