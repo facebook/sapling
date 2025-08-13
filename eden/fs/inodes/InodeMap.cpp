@@ -184,11 +184,10 @@ void InodeMap::initializeFromTakeover(
 
   for (const auto& entry : *takeover.unloadedInodes()) {
     if (*entry.numFsReferences() < 0) {
-      auto message = folly::to<std::string>(
-          "inode number ",
-          *entry.inodeNumber(),
-          " has a negative numFsReferences number");
-      XLOG(ERR) << message;
+      auto message = fmt::format(
+          "inode number {} has a negative numFsReferences number",
+          *entry.inodeNumber());
+      XLOG(ERR, message);
       throw std::runtime_error(message);
     }
 
@@ -291,7 +290,7 @@ ImmediateFuture<InodePtr> InodeMap::lookupInode(InodeNumber number) {
   if (UNLIKELY(unloadedIter == data->unloadedInodes_.end())) {
     stats_->increment(&InodeMapStats::lookupInodeError);
     if (mount_->throwEstaleIfInodeIsMissing()) {
-      XLOG(DBG3) << "NFS inode " << number << " stale";
+      XLOGF(DBG3, "NFS inode {} stale", number);
       // windows does not have ESTALE. We need some other error to turn into the
       // nfs stale error. For now let's just let it throw.
 #ifndef _WIN32
@@ -304,7 +303,7 @@ ImmediateFuture<InodePtr> InodeMap::lookupInode(InodeNumber number) {
     // should always know about it.  It's a bug if our caller calls us with an
     // invalid InodeNumber number.
     return EDEN_BUG_FUTURE(InodePtr)
-        << "InodeMap called with unknown inode number " << number;
+        << fmt::format("InodeMap called with unknown inode number {}", number);
   }
 
   // Check to see if anyone else has already started loading this inode.
@@ -475,8 +474,7 @@ InodeMap::PromiseVector InodeMap::inodeLoadComplete(InodeBase* inode) {
   auto number = inode->getNodeId();
   // Since XLOG only evaluates the arguments if it is going to log, its cheaper
   // in the most common case to not save the inode log path to a local variable
-  XLOG(DBG5) << "successfully loaded inode " << number << ": "
-             << inode->getLogPath();
+  XLOGF(DBG5, "successfully loaded inode {}: {}", number, inode->getLogPath());
 
   PromiseVector promises;
   try {
@@ -484,9 +482,10 @@ InodeMap::PromiseVector InodeMap::inodeLoadComplete(InodeBase* inode) {
     {
       auto data = data_.wlock();
       auto it = data->unloadedInodes_.find(number);
-      XCHECK(it != data->unloadedInodes_.end())
-          << "failed to find unloaded inode data when finishing load of inode "
-          << number << ": " << inode->getLogPath();
+      XCHECK(it != data->unloadedInodes_.end()) << fmt::format(
+          "failed to find unloaded inode data when finishing load of inode {}: {}",
+          number,
+          inode->getLogPath());
       swap(promises, it->second.promises);
 
       inode->setChannelRefcount(it->second.numFsReferences);
@@ -513,7 +512,7 @@ InodeMap::PromiseVector InodeMap::inodeLoadComplete(InodeBase* inode) {
     return promises;
   } catch (...) {
     auto ew = folly::exception_wrapper{std::current_exception()};
-    XLOG(ERR) << "error marking inode " << number << " loaded: " << ew;
+    XLOGF(ERR, "error marking inode {} loaded: {}", number, ew.what());
     for (auto& promise : promises) {
       promise.setException(ew);
     }
@@ -566,9 +565,10 @@ std::optional<InodeTraceEvent> InodeMap::createInodeLoadFailEvent(
   auto data = data_.rlock();
   auto it = data->unloadedInodes_.find(number);
   if (it != data->unloadedInodes_.end()) {
-    XLOG(ERR)
-        << "failed to find unloaded inode data when finishing load of inode "
-        << number;
+    XLOGF(
+        ERR,
+        "failed to find unloaded inode data when finishing load of inode {}",
+        number);
     return std::nullopt;
   }
   return InodeTraceEvent(
@@ -585,9 +585,9 @@ InodeMap::PromiseVector InodeMap::extractPendingPromises(InodeNumber number) {
   {
     auto data = data_.wlock();
     auto it = data->unloadedInodes_.find(number);
-    XCHECK(it != data->unloadedInodes_.end())
-        << "failed to find unloaded inode data when finishing load of inode "
-        << number;
+    XCHECK(it != data->unloadedInodes_.end()) << fmt::format(
+        "failed to find unloaded inode data when finishing load of inode {}",
+        number);
     swap(promises, it->second.promises);
   }
   return promises;
@@ -727,8 +727,12 @@ InodePtr InodeMap::decFsRefcountHelper(
   // unloadedInodes_ map.
   if (unloadedEntry.numFsReferences == 0 && unloadedEntry.promises.empty()) {
     // We can completely forget about this unloaded inode now.
-    XLOG(DBG5) << "forgetting unloaded inode " << number << ": "
-               << unloadedEntry.parent << ":" << unloadedEntry.name;
+    XLOGF(
+        DBG5,
+        "forgetting unloaded inode {}: {}:{}",
+        number,
+        unloadedEntry.parent,
+        unloadedEntry.name);
     data->unloadedInodes_.erase(unloadedIter);
   }
   return nullptr;
@@ -766,14 +770,16 @@ void InodeMap::forgetStaleInodes() {
     auto data = data_.wlock();
 
     for (auto& inode : data->unloadedInodes_) {
-      XLOG(DBG9) << "Considering forgetting unloaded inode " << inode.first;
+      XLOGF(DBG9, "Considering forgetting unloaded inode {}", inode.first);
       if (inode.second.isUnlinked) {
         // We can't directly call decFsRefcountHelper here because it will
         // invalidate the iterator we are using for this for loop.
         unloadedInodesToClearFSRef.push_back(inode.first);
       } else {
-        XLOG(DBG9) << "Not forgetting unloaded inode " << inode.first
-                   << " because inode is still linked";
+        XLOGF(
+            DBG9,
+            "Not forgetting unloaded inode {} because inode is still linked",
+            inode.first);
       }
     }
 
@@ -793,7 +799,7 @@ void InodeMap::forgetStaleInodes() {
     // be unloaded. Thus this will create lots of unloaded inodes. we don't want
     // to double decRef them, so we decref loaded inodes after unloaded ones.
     for (auto& inode : data->loadedInodes_) {
-      XLOG(DBG9) << "Considering forgetting loaded inode " << inode.first;
+      XLOGF(DBG9, "Considering forgetting loaded inode {}", inode.first);
       auto inodePtr = decFsRefcountHelper(
           data,
           inode.first,
@@ -804,27 +810,30 @@ void InodeMap::forgetStaleInodes() {
         auto unlinked = inodePtr->isUnlinked();
         if (unlinked &&
             inode.second->getMetadata().timestamps.atime < cutoff_ts) {
-          XLOG(DBG9) << "Will forget loaded inode " << inode.first;
+          XLOGF(DBG9, "Will forget loaded inode {}", inode.first);
           toClearFSRef.push_back(inodePtr);
         } else {
           // even though we are not going to do anything with these inodes we
           // need to keep them around until we let go of the lock. It is not
           // safe to drop an inodePtr while holding the lock.
           if (!unlinked) {
-            XLOG(DBG9) << "Not forgetting loaded inode " << inode.first
-                       << " because it is still linked";
+            XLOGF(
+                DBG9,
+                "Not forgetting loaded inode {} because it is still linked",
+                inode.first);
           } else {
-            XLOG(DBG9) << "Not forgetting loaded inode " << inode.first
-                       << " because it was referenced."
-                       << durationStr(
-                              config_->getEdenConfig()
-                                  ->postCheckoutDelayToUnloadInodes.getValue() -
-                              std::chrono::nanoseconds{
-                                  inode.second->getMetadata()
-                                      .timestamps.atime.toTimespec()
-                                      .tv_nsec -
-                                  cutoff_ts.tv_nsec})
-                       << " ago";
+            XLOGF(
+                DBG9,
+                "Not forgetting loaded inode {} because it was referenced {} ago",
+                inode.first,
+                durationStr(
+                    config_->getEdenConfig()
+                        ->postCheckoutDelayToUnloadInodes.getValue() -
+                    std::chrono::nanoseconds{
+                        inode.second->getMetadata()
+                            .timestamps.atime.toTimespec()
+                            .tv_nsec -
+                        cutoff_ts.tv_nsec}));
           }
           justToHoldBeyondScopeOfLock.push_back(inodePtr);
         }
@@ -835,7 +844,7 @@ void InodeMap::forgetStaleInodes() {
   }
 
   for (auto& inodePtr : toClearFSRef) {
-    XLOG(DBG7) << "forgetting NFS inode: " << inodePtr->getNodeId();
+    XLOGF(DBG7, "forgetting NFS inode: {}", inodePtr->getNodeId());
     inodePtr->clearFsRefcount();
   }
   XLOG(DBG2) << "forgetting stale inodes complete";
@@ -946,8 +955,12 @@ Future<SerializedInodeMap> InodeMap::shutdown(
     for (const auto& [inodeNumber, entry] : data->unloadedInodes_) {
       SerializedInodeMapEntry serializedEntry;
 
-      XLOG(DBG5) << "  serializing unloaded inode " << inodeNumber
-                 << " parent=" << entry.parent.get() << " name=" << entry.name;
+      XLOGF(
+          DBG5,
+          "  serializing unloaded inode {} parent={} name={}",
+          inodeNumber,
+          entry.parent.get(),
+          entry.name);
 
       serializedEntry.inodeNumber() = inodeNumber.get();
       serializedEntry.parentInode() = entry.parent.get();
@@ -976,8 +989,8 @@ void InodeMap::shutdownComplete(
   // the root to unloadedInodes here as it has been freed and we don't want to
   // serialize the freed root during graceful shutdown for takeover.
   auto numErased = data->loadedInodes_.erase(kRootNodeId);
-  XCHECK_EQ(numErased, 1u) << "inconsistent loaded inodes data: "
-                           << kRootNodeId;
+  XCHECK_EQ(numErased, 1u) << fmt::format(
+      "inconsistent loaded inodes data: {}", kRootNodeId);
   --data->numTreeInodes_;
   delete root_.get();
   root_.resetNoDecRef();
@@ -1003,8 +1016,11 @@ bool InodeMap::isInodeLoadedOrRemembered(InodeNumber ino) const {
 void InodeMap::onInodeUnreferenced(
     InodeBase* inode,
     ParentInodeInfo&& parentInfo) {
-  XLOG(DBG8) << "inode " << inode->getNodeId()
-             << " unreferenced: " << inode->getLogPath();
+  XLOGF(
+      DBG8,
+      "inode {} unreferenced: {}",
+      inode->getNodeId(),
+      inode->getLogPath());
   // Acquire our lock.
   auto data = data_.wlock();
 
@@ -1094,8 +1110,8 @@ void InodeMap::unloadInode(
       updateOverlayForUnload(inode, parent, name, isUnlinked, data);
   if (unloadedEntry) {
     // Insert the unloaded entry
-    XLOG(DBG7) << "inserting unloaded map entry for inode "
-               << inode->getNodeId();
+    XLOGF(
+        DBG7, "inserting unloaded map entry for inode {}", inode->getNodeId());
     auto ret = data->unloadedInodes_.emplace(
         inode->getNodeId(), std::move(unloadedEntry.value()));
     XCHECK(ret.second);
@@ -1135,9 +1151,12 @@ optional<InodeMap::UnloadedInode> InodeMap::updateOverlayForUnload(
       // The most common case where this can occur if the overlay file was
       // already corrupt (say, because of a hard reboot that did not sync
       // filesystem state).
-      XLOG(ERR) << "error saving overlay state while unloading inode "
-                << inode->getNodeId() << " (" << inode->getLogPath()
-                << "): " << folly::exceptionStr(ex);
+      XLOGF(
+          ERR,
+          "error saving overlay state while unloading inode {} ({}): {}",
+          inode->getNodeId(),
+          inode->getLogPath(),
+          folly::exceptionStr(ex));
     }
   }
 
@@ -1146,16 +1165,22 @@ optional<InodeMap::UnloadedInode> InodeMap::updateOverlayForUnload(
   // Everything is unreferenced by FS after an unmount operation, and we no
   // longer need to remember anything in the unloadedInodes_ map.
   if (data->isUnmounted_) {
-    XLOG(DBG5) << "forgetting unreferenced inode " << inode->getNodeId()
-               << " after unmount: " << inode->getLogPath();
+    XLOGF(
+        DBG5,
+        "forgetting unreferenced inode {} after unmount: {}",
+        inode->getNodeId(),
+        inode->getLogPath());
     return std::nullopt;
   }
 
   // If the tree is unlinked and no longer referenced we can delete it from
   // the overlay and completely forget about it.
   if (isUnlinked && fsCount == 0) {
-    XLOG(DBG5) << "forgetting unreferenced unlinked inode "
-               << inode->getNodeId() << ": " << inode->getLogPath();
+    XLOGF(
+        DBG5,
+        "forgetting unreferenced unlinked inode {}: {}",
+        inode->getNodeId(),
+        inode->getLogPath());
     return std::nullopt;
   }
 
@@ -1170,9 +1195,12 @@ optional<InodeMap::UnloadedInode> InodeMap::updateOverlayForUnload(
 
     // If the fs refcount is non-zero we have to remember this inode.
     if (fsCount > 0) {
-      XLOG(DBG5) << "unloading tree inode " << inode->getNodeId()
-                 << " with Fs refcount=" << fsCount << ": "
-                 << inode->getLogPath();
+      XLOGF(
+          DBG5,
+          "unloading tree inode {} with Fs refcount={}: {}",
+          inode->getNodeId(),
+          fsCount,
+          inode->getLogPath());
       return UnloadedInode(
           parent, name, isUnlinked, treeContents.treeHash, fsCount);
     }
@@ -1183,9 +1211,12 @@ optional<InodeMap::UnloadedInode> InodeMap::updateOverlayForUnload(
       const auto& childName = pair.first;
       const auto& entry = pair.second;
       if (data->unloadedInodes_.contains(entry.getInodeNumber())) {
-        XLOG(DBG5) << "remembering inode " << asTree->getNodeId() << " ("
-                   << asTree->getLogPath() << ") because its child "
-                   << childName << " was remembered";
+        XLOGF(
+            DBG5,
+            "remembering inode {} ({}) because its child {} was remembered",
+            asTree->getNodeId(),
+            asTree->getLogPath(),
+            childName);
         return UnloadedInode(
             parent, name, isUnlinked, treeContents.treeHash, fsCount);
       }
@@ -1194,14 +1225,20 @@ optional<InodeMap::UnloadedInode> InodeMap::updateOverlayForUnload(
   } else {
     // We have to remember files only if their FS refcount is non-zero
     if (fsCount > 0) {
-      XLOG(DBG5) << "unloading file inode " << inode->getNodeId()
-                 << " with FS refcount=" << fsCount << ": "
-                 << inode->getLogPath();
+      XLOGF(
+          DBG5,
+          "unloading file inode {} with FS refcount={}: {}",
+          inode->getNodeId(),
+          fsCount,
+          inode->getLogPath());
       auto* asFile = boost::polymorphic_downcast<FileInode*>(inode);
       return UnloadedInode(asFile, parent, name, isUnlinked, fsCount);
     } else {
-      XLOG(DBG5) << "forgetting unreferenced file inode " << inode->getNodeId()
-                 << " : " << inode->getLogPath();
+      XLOGF(
+          DBG5,
+          "forgetting unreferenced file inode {}: {}",
+          inode->getNodeId(),
+          inode->getLogPath());
       return std::nullopt;
     }
   }
@@ -1253,8 +1290,11 @@ bool InodeMap::startLoadingChildIfNotLoading(
 }
 
 void InodeMap::inodeCreated(const InodePtr& inode) {
-  XLOG(DBG4) << "created new inode " << inode->getNodeId() << ": "
-             << inode->getLogPath();
+  XLOGF(
+      DBG4,
+      "created new inode {}: {}",
+      inode->getNodeId(),
+      inode->getLogPath());
   auto data = data_.wlock();
   insertLoadedInode(data, inode.get());
 }
