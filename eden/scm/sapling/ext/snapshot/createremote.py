@@ -259,7 +259,7 @@ def createremote(ui, repo, *pats, **opts) -> None:
     reusestorage = opts.get("reuse_storage") is True
     labels = parselabels(opts)
     continuationof = parsecontinuationof(opts, repo)
-    skipempty = opts.get("skip_empty") is True
+    allowempty = ui.configbool("snapshot", "allowempty", True)
 
     # Use bytes-based limit if specified, otherwise fall back to MiB-based limit
     effective_max_untracked_size = (
@@ -294,8 +294,8 @@ def createremote(ui, repo, *pats, **opts) -> None:
         wc = workingcopy.fromrepo(repo, effective_max_untracked_size, pats, opts)
         filecount = wc.filecount()
 
-        # Check for --skip-empty option and handle empty working copy
-        if skipempty and filecount == 0:
+        # Check for allowempty config and handle empty working copy
+        if not allowempty and filecount == 0:
             parent_hex = hgparents.hex()
 
             # Handle JSON output if template is specified

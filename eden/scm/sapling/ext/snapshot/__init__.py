@@ -6,6 +6,11 @@
 """stores snapshots of uncommitted changes
 
 Configs::
+
+    [snapshot]
+    # Whether to allow creating empty snapshots (default: True)
+    # When set to False, snapshot creation will be skipped if there are no uncommitted changes
+    allowempty = True
 """
 
 from . import commands

@@ -94,14 +94,6 @@ subcmd = snapshot.subcommand(
             ),
             _("HASH"),
         ),
-        (
-            "",
-            "skip-empty",
-            None,
-            _(
-                "skip creating snapshot if there are no uncommitted changes, and print parent commit instead (default: create empty snapshot)"
-            ),
-        ),
     ]
     + cmdutil.walkopts
     + cmdutil.templateopts,
