@@ -21,8 +21,8 @@ ImmediateFuture<fuse_entry_out> TestDispatcher::lookup(
     InodeNumber parent,
     PathComponentPiece name,
     const ObjectFetchContextPtr& /*context*/) {
-  XLOG(DBG5) << "received lookup " << requestID << ": parent=" << parent
-             << ", name=" << name;
+  XLOGF(
+      DBG5, "received lookup {}: parent={}, name={}", requestID, parent, name);
   auto result = ImmediateFuture<fuse_entry_out>::makeEmpty();
   {
     // Whenever we receive a lookup request just add it to the pendingLookups_

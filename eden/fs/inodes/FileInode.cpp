@@ -1113,9 +1113,10 @@ ImmediateFuture<std::tuple<BufVec, bool>> FileInode::read(
 
         state->readByteRanges.add(off, off + size);
         if (state->readByteRanges.covers(0, blob->getSize())) {
-          XLOG(DBG4)
-              << "Inode " << self->getNodeId()
-              << " dropping interest for blob because it's been fully read.";
+          XLOGF(
+              DBG4,
+              "Inode {} dropping interest for blob because it's been fully read.",
+              self->getNodeId());
           state->interestHandle.reset();
           state->readByteRanges.clear();
         }

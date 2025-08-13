@@ -365,9 +365,13 @@ TEST(InodeMap, lookingUpAnUnloadedInodeAddsLoadsToTraceBus) {
       fmt::format("inodeMapTest-{}", edenMount->getPath().basename()),
       [&](const InodeTraceEvent& event) {
         if (event.eventType == InodeEventType::LOAD) {
-          std::cout << "Event: " << event.getPath() << " " << event.ino << " "
-                    << ((event.progress == InodeEventProgress::END) ? "End"
-                                                                    : "Start")
+          std::cout << fmt::format(
+                           "Event: {} {} {} ",
+                           event.getPath(),
+                           event.ino,
+                           ((event.progress == InodeEventProgress::END)
+                                ? "End"
+                                : "Start"))
                     << std::endl;
           queue.enqueue(event);
         }

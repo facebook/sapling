@@ -80,8 +80,8 @@ void OverlayFileAccess::createEmptyFile(
     const std::optional<std::string>& maybeBlake3Key) {
   auto file = overlay_->createOverlayFile(ino, folly::ByteRange{});
   auto state = state_.wlock();
-  XCHECK(!state->entries.exists(ino))
-      << "Cannot create overlay file " << ino << " when it's already open!";
+  XCHECK(!state->entries.exists(ino)) << fmt::format(
+      "Cannot create overlay file {} when it's already open!", ino);
 
   // Computing the empty BLAKE3 hash for the given key
   auto blake3 = Blake3::create(maybeBlake3Key);
@@ -101,8 +101,8 @@ void OverlayFileAccess::createFile(
     const std::optional<Hash32>& blake3) {
   auto file = overlay_->createOverlayFile(ino, blob.getContents());
   auto state = state_.wlock();
-  XCHECK(!state->entries.exists(ino))
-      << "Cannot create overlay file " << ino << " when it's already open!";
+  XCHECK(!state->entries.exists(ino)) << fmt::format(
+      "Cannot create overlay file {} when it's already open!", ino);
   state->entries.set(
       ino,
       std::make_shared<Entry>(std::move(file), blob.getSize(), sha1, blake3));
@@ -137,8 +137,11 @@ FileOffset OverlayFileAccess::getFileSize(InodeNumber ino, InodeBase* inode) {
     // Truncated overlay files can sometimes occur after a hard reboot
     // where the overlay file data was not flushed to disk before the
     // system powered off.
-    XLOG(ERR) << "overlay file for " << ino
-              << " is too short for header: size=" << st.st_size;
+    XLOGF(
+        ERR,
+        "overlay file for {} is too short for header: size={}",
+        ino,
+        st.st_size);
     throw InodeError(
         EIO,
         inode ? inode->inodePtrFromThis() : InodePtr{},

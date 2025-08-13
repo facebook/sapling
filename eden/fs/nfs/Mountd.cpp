@@ -212,9 +212,11 @@ void MountdServerProcessor::registerMount(
     InodeNumber ino) {
   auto map = mountPoints_.wlock();
   auto [iter, inserted] = map->emplace(path.copy(), ino);
-  XCHECK_EQ(inserted, true)
-      << ". The mount point " << path << " (ino: " << ino
-      << ") is already inserted into the mount map as " << iter->second;
+  XCHECK_EQ(inserted, true) << fmt::format(
+      ". The mount point {} (ino: {}) is already inserted into the mount map as {}",
+      path,
+      ino,
+      iter->second);
 }
 
 void MountdServerProcessor::unregisterMountImpl(

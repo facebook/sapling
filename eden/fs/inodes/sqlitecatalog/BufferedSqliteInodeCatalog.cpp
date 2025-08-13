@@ -155,8 +155,11 @@ void BufferedSqliteInodeCatalog::process(
   try {
     state->waitingOperation[operationKey] = operation;
   } catch (const std::exception& e) {
-    XLOG(ERR) << "Failed to push work onto overlay buffer for inode "
-              << operationKey << ": " << e.what();
+    XLOGF(
+        ERR,
+        "Failed to push work onto overlay buffer for inode {}: {}",
+        operationKey,
+        e.what());
     state->work.pop_back(); // no-throw guarantee since state->work is not empty
     // Immediately rethrow in the case of a failed enqueue. We don't need to
     // notify a waiting thread since there is no new waiting work.

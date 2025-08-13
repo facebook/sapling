@@ -124,9 +124,12 @@ ImmediateFuture<fuse_entry_out> FuseDispatcherImpl::lookup(
                 // the child inode number, the kernel does not appear to send a
                 // FUSE_UNLINK request to us if it could not get the child inode
                 // number first.)
-                XLOG(WARN) << "error getting attributes for inode "
-                           << inode->getNodeId() << " (" << inode->getLogPath()
-                           << "): " << maybeStat.exception().what();
+                XLOGF(
+                    WARN,
+                    "error getting attributes for inode {} ({}): {}",
+                    inode->getNodeId(),
+                    inode->getLogPath(),
+                    maybeStat.exception().what());
                 inode->incFsRefcount();
                 return computeEntryParam(
                     attrForInodeWithCorruptOverlay(inode->getNodeId()));

@@ -641,7 +641,7 @@ void FsFileContentStore::removeOverlayFile(InodeNumber inodeNumber) {
   auto path = getFilePath(inodeNumber);
   int result = ::unlinkat(dirFile_.fd(), path.c_str(), 0);
   if (result == 0) {
-    XLOG(DBG4) << "removed overlay data for inode " << inodeNumber;
+    XLOGF(DBG4, "removed overlay data for inode {}", inodeNumber);
   } else if (errno != ENOENT) {
     folly::throwSystemError(
         "error unlinking overlay file: ", RelativePathPiece{path}.view());
