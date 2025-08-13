@@ -717,7 +717,7 @@ export type PlatformSpecificClientToServerMessages =
       repoPath?: string;
     }
   | {
-      type: 'platform/fillDevMateCommitMessage';
+      type: 'platform/fillDevmateCommitMessage';
       id: string;
     }
   | {

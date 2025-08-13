@@ -265,8 +265,8 @@ export const getVSCodePlatform = (context: vscode.ExtensionContext): VSCodeServe
           );
           break;
         }
-        case 'platform/fillDevMateCommitMessage': {
-          // Call DevMate to generate a commit message based on the current changes
+        case 'platform/fillDevmateCommitMessage': {
+          // Call Devmate to generate a commit message based on the current changes
           promptDevmate({type: 'fillCommitMessage'}, ActionTriggerType.ISL2FillCommitMessage);
           break;
         }

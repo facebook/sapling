@@ -194,12 +194,12 @@ function FillCommitInfoButton({dismiss}: {dismiss: () => void}) {
       data-testid="fill-commit-info-button"
       onClick={e => {
         tracker.track('DevmateFillCommitMessage');
-        serverAPI.postMessage({type: 'platform/fillDevMateCommitMessage', id: randomId()});
+        serverAPI.postMessage({type: 'platform/fillDevmateCommitMessage', id: randomId()});
         dismiss();
         e.stopPropagation();
       }}>
       <Icon icon="sparkle" />
-      <T>Fill commit info from DevMate</T>
+      <T>Fill commit info</T>
     </Button>
   );
 }
