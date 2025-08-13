@@ -138,6 +138,10 @@ impl DagItemInfo {
     pub fn increment_retry_count(&mut self) {
         self.retry_count += 1;
     }
+
+    pub fn retry_count(&self) -> u64 {
+        self.retry_count
+    }
 }
 
 impl DerivationDagItem {

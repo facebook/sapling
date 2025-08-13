@@ -49,7 +49,8 @@
     "scm/mononoke:disable_xdb_blobstore_reads": false,
     "scm/mononoke:scs_repo_create_commit_git_restrictions": true,
     "scm/mononoke:cacheblob_use_set_or_replace": true,
-    "scm/mononoke:caching_ext_use_set_or_replace": true
+    "scm/mononoke:caching_ext_use_set_or_replace": true,
+    "scm/mononoke:derivation_queue_enable_automated_eviction": true
   },
   "ints": {
     "scm/mononoke_timeouts:repo_client_clone_timeout_secs": 14400,
@@ -90,6 +91,7 @@
     "scm/mononoke:build_underived_batched_graph_max_failed_attempts": 3,
     "scm/mononoke:git_bundle_generator_packfile_concurrency": 18000,
     "scm/mononoke:git_server_max_packfile_size": 7516192768,
-    "scm/mononoke:sql_telemetry_sample_rate": 1
+    "scm/mononoke:sql_telemetry_sample_rate": 1,
+    "scm/mononoke:derivation_queue_max_retry_count": 20
   }
 }
