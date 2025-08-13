@@ -101,3 +101,7 @@ function assert_on_base_snapshot {
     [[ ! -f missing_file ]] || echo Existing missing_file
     )
 }
+
+function clean_checkout {
+    hg revert -a -C -q && hg purge --files -q
+}
