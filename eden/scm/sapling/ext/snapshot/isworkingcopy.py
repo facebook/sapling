@@ -10,7 +10,7 @@ from .createremote import parsemaxuntracked, parsemaxuntrackedbytes
 from .latest import _isworkingcopy
 
 
-def cmd(ui, repo, csid=None, **opts):
+def cmd(ui, repo, csid=None, *pats, **opts):
     if csid is None:
         raise error.CommandError("snapshot isworkingcopy", _("missing snapshot id"))
 
@@ -25,7 +25,9 @@ def cmd(ui, repo, csid=None, **opts):
     # Use bytes-based limit if specified, otherwise fall back to MiB-based limit
     effective_max_untracked_size = maxuntrackedsizebytes or maxuntrackedsize
 
-    iswc, reason = _isworkingcopy(ui, repo, snapshot, effective_max_untracked_size)
+    iswc, reason = _isworkingcopy(
+        ui, repo, snapshot, effective_max_untracked_size, pats, opts
+    )
     if iswc:
         if not ui.plain():
             ui.status(_("snapshot is the working copy\n"))

@@ -103,6 +103,7 @@ subcmd = snapshot.subcommand(
             ),
         ),
     ]
+    + cmdutil.walkopts
     + cmdutil.templateopts,
 )
 def createremotecmd(*args, **kwargs) -> None:
@@ -176,11 +177,32 @@ def showcmd(*args, **kwargs) -> None:
             _("filter out any untracked files larger than this size, in bytes"),
             _("MAX_SIZE_BYTES"),
         ),
-    ],
+    ]
+    + cmdutil.walkopts,
     _("ID"),
 )
 def isworkingcopycmd(*args, **kwargs) -> None:
-    """test if a given snapshot is the working copy"""
+    """test if a given snapshot is the working copy
+
+    This command compares the current working copy state against a previously
+    created snapshot to determine if they match.
+
+    Include/Exclude Pattern Behavior:
+      When using -I (include) or -X (exclude) patterns, the comparison applies
+      the same filtering to BOTH the working copy and the snapshot files.
+
+      For example:
+        hg snapshot isworkingcopy SNAPSHOT_ID -X '*.tmp'
+
+      This ignores all .tmp files when comparing, regardless of whether the
+      original snapshot included .tmp files or not. The patterns control
+      which files are considered for the comparison, not which files the
+      snapshot should have contained.
+
+    This allows you to check working copy equivalence while ignoring certain
+    file types (e.g., temporary files, build artifacts) that may have been
+    present when the snapshot was created.
+    """
     isworkingcopy.cmd(*args, **kwargs)
 
 

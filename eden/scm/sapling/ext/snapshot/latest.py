@@ -12,8 +12,14 @@ from .metalog import fetchlatestsnapshot
 from .update import fetchsnapshot
 
 
-def _isworkingcopy(ui, repo, snapshot, maxuntrackedsize):
+def _isworkingcopy(ui, repo, snapshot, maxuntrackedsize, pats=None, opts=None):
     """Fails if working copy is not the provided snapshot"""
+    from sapling import scmutil
+
+    if pats is None:
+        pats = []
+    if opts is None:
+        opts = {}
 
     if (
         repo.dirstate.p1() != snapshot["hg_parents"]
@@ -21,10 +27,29 @@ def _isworkingcopy(ui, repo, snapshot, maxuntrackedsize):
     ):
         return False, _("parent commits differ")
 
-    wc = workingcopy.fromrepo(repo, maxuntrackedsize)
+    wc = workingcopy.fromrepo(repo, maxuntrackedsize, pats, opts)
     filechanges = snapshot["file_changes"]
 
-    allpaths = {path for (path, _) in filechanges}
+    # Apply the same pattern filtering to snapshot paths
+    wctx = repo[None]
+    matcher = scmutil.match(wctx, pats, opts)
+    filtered_filechanges = [(path, fc) for (path, fc) in filechanges if matcher(path)]
+
+    # Log excluded files (from the snapshot side) for user awareness
+    all_snapshot_paths = {path for (path, _) in filechanges}
+    filtered_snapshot_paths = {path for (path, _) in filtered_filechanges}
+    excluded_files = all_snapshot_paths - filtered_snapshot_paths
+
+    if excluded_files and not ui.plain():
+        ui.status(
+            _(
+                "snapshot has {} file(s) that are excluded due to the provided filters\n"
+            ).format(len(excluded_files)),
+            component="snapshot",
+        )
+
+    allpaths = {path for (path, _) in filtered_filechanges}
+
     if set(wc.all()) != allpaths:
         diff = set(wc.all()).symmetric_difference(allpaths)
         return False, _("some paths are differently modified: {}").format(
@@ -34,8 +59,7 @@ def _isworkingcopy(ui, repo, snapshot, maxuntrackedsize):
     incorrectmod = _("'{}' has incorrect modification")
     incorrectfiletype = _("'{}' has incorrect file type")
     files2check = []
-    wctx = repo[None]
-    for path, fc in filechanges:
+    for path, fc in filtered_filechanges:
         if fc == "Deletion":
             if path not in wc.removed:
                 return False, incorrectmod.format(path)
@@ -96,7 +120,7 @@ def latest(ui, repo, **opts):
         if isworkingcopy:
             snapshot = fetchsnapshot(repo, csid)
             iswc, reason = _isworkingcopy(
-                ui, repo, snapshot, effective_max_untracked_size
+                ui, repo, snapshot, effective_max_untracked_size, [], {}
             )
             if iswc:
                 if not ui.plain():

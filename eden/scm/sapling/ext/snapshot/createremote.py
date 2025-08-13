@@ -179,8 +179,11 @@ class workingcopy:
 
     @staticmethod
     @perftrace.tracefunc("Create working copy")
-    def fromrepo(repo, maxuntrackedsize):
+    def fromrepo(repo, maxuntrackedsize, pats, opts):
+        from sapling import scmutil
+
         wctx = repo[None]
+        matcher = scmutil.match(wctx, pats, opts)
 
         def filterlarge(f):
             if maxuntrackedsize is None:
@@ -194,27 +197,31 @@ class workingcopy:
                         repo.ui.warn(
                             _(
                                 "Not snapshotting '{}' because it is {} bytes large, and max untracked size is {} bytes\n"
-                            ).format(f, size, maxuntrackedsize)
+                            ).format(f, size, maxuntrackedsize),
+                            component="snapshot",
                         )
                     return False
 
-        untracked = [f for f in wctx.status(listunknown=True).unknown if filterlarge(f)]
+        # Use single status call with matcher
+        status = repo.status(match=matcher, unknown=True)
+
+        untracked = [f for f in status.unknown if filterlarge(f)]
         removed = []
-        for f in wctx.removed():
-            # If a file is marked as removed but still exists, it means it was hg rm'ed
-            # but then new content was written to it, in which case we consider it as
-            # untracked changes.
+
+        # Process removed files - check if they still exist (were hg rm'ed but recreated)
+        for f in status.removed:
             if wctx[f].exists():
-                untracked.append(f)
+                if filterlarge(f):
+                    untracked.append(f)
             else:
                 removed.append(f)
 
         return workingcopy(
             untracked=untracked,
             removed=removed,
-            modified=wctx.modified(),
-            added=wctx.added(),
-            missing=wctx.deleted(),
+            modified=list(status.modified),
+            added=list(status.added),
+            missing=list(status.deleted),
         )
 
 
@@ -244,7 +251,7 @@ def uploadsnapshot(
     )
 
 
-def createremote(ui, repo, **opts) -> None:
+def createremote(ui, repo, *pats, **opts) -> None:
     lifetime = _parselifetime(opts)
     maxuntrackedsize = parsemaxuntracked(opts)
     maxuntrackedsizebytes = parsemaxuntrackedbytes(opts)
@@ -284,7 +291,7 @@ def createremote(ui, repo, **opts) -> None:
         _backupparents(repo, wctx)
 
         # Get working copy state
-        wc = workingcopy.fromrepo(repo, effective_max_untracked_size)
+        wc = workingcopy.fromrepo(repo, effective_max_untracked_size, pats, opts)
         filecount = wc.filecount()
 
         # Check for --skip-empty option and handle empty working copy
@@ -391,6 +398,17 @@ def createremote(ui, repo, **opts) -> None:
 
     csid = csid.hex()
 
+    # Create file status summary with all counts (even 0) using "/" delimiter
+    status_parts = [
+        _("{} modified").format(len(wc.modified)),
+        _("{} added").format(len(wc.added)),
+        _("{} removed").format(len(wc.removed)),
+        _("{} missing").format(len(wc.missing)),
+        _("{} untracked").format(len(wc.untracked)),
+    ]
+
+    status_summary = " ({})".format("/".join(status_parts))
+
     # Use formatter for JSON output support
     if opts.get("template"):
         with ui.formatter("snapshot", opts) as fm:
@@ -403,6 +421,13 @@ def createremote(ui, repo, **opts) -> None:
             if labels:
                 fm.data(labels=labels)
 
+            # Add individual flat fields for template access
+            fm.data(snapshot_modified=len(wc.modified))
+            fm.data(snapshot_added=len(wc.added))
+            fm.data(snapshot_removed=len(wc.removed))
+            fm.data(snapshot_missing=len(wc.missing))
+            fm.data(snapshot_untracked=len(wc.untracked))
+
             # For non-JSON output, provide the traditional format
             if not ui.quiet:
                 if ui.plain():
@@ -411,21 +436,28 @@ def createremote(ui, repo, **opts) -> None:
                     labels_str = ",".join(labels)
                     fm.plain(
                         _(
-                            "snapshot: Snapshot created with id {} and labels {}\n"
-                        ).format(csid, labels_str)
+                            "snapshot: Snapshot created with id {} and labels {}{}\n"
+                        ).format(csid, labels_str, status_summary)
                     )
                 else:
-                    fm.plain(_("snapshot: Snapshot created with id {}\n").format(csid))
+                    fm.plain(
+                        _("snapshot: Snapshot created with id {}{}\n").format(
+                            csid, status_summary
+                        )
+                    )
     else:
         if ui.plain():
             ui.status(f"{csid}\n")
         elif labels:
             labels = ",".join(labels)
             ui.status(
-                _("Snapshot created with id {} and labels {}\n").format(csid, labels),
+                _("Snapshot created with id {} and labels {}{}\n").format(
+                    csid, labels, status_summary
+                ),
                 component="snapshot",
             )
         else:
             ui.status(
-                _("Snapshot created with id {}\n").format(csid), component="snapshot"
+                _("Snapshot created with id {}{}\n").format(csid, status_summary),
+                component="snapshot",
             )
