@@ -138,6 +138,7 @@ def _download_files_and_fix_status(ui, repo, snapshot) -> None:
                         filetype,
                     )
                 )
+
     ui.status(
         _("Downloading {count} files for restoring snapshot\n").format(
             count=len(files2download)

@@ -25,7 +25,7 @@ use edenapi::SaplingRemoteApi;
 use edenapi::UploadLookupPolicy;
 use edenapi_ext::SharedSnapshotFileCache;
 use edenapi_ext::check_files;
-use edenapi_ext::download_files;
+use edenapi_ext::download_files_with_cache;
 use edenapi_ext::upload_snapshot_with_cache;
 use edenapi_types::AlterSnapshotRequest;
 use edenapi_types::AlterSnapshotResponse;
@@ -439,7 +439,6 @@ py_class!(pub class client |py| {
         let api = self.inner(py).as_ref();
         let copy_from_bubble_id = copy_from_bubble_id.and_then(NonZeroU64::new);
         let use_bubble = use_bubble.and_then(NonZeroU64::new);
-        // Use stored Rust config to initialize cache
         let cache = SharedSnapshotFileCache::from_config(self.config(py).as_ref()).ok();
 
         py.allow_threads(|| {
@@ -486,7 +485,8 @@ py_class!(pub class client |py| {
             .into_iter()
             .map(|(p, token, tp)| Ok((to_path(py, &p)?, token.0, tp.0)))
             .collect::<Result<Vec<_>, PyErr>>()?;
-        py.allow_threads(|| block_unless_interrupted(download_files(api, &root.0, files)))
+        let cache = SharedSnapshotFileCache::from_config(self.config(py).as_ref()).ok();
+        py.allow_threads(|| block_unless_interrupted(download_files_with_cache(api, &root.0, files, cache)))
             .map_pyerr(py)?
             .map_pyerr(py)
             .map(|_| true)

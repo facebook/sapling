@@ -19,7 +19,7 @@ mod snapshot_cache;
 mod util;
 
 pub use files::check_files;
-pub use files::download_files;
+pub use files::download_files_with_cache;
 pub use snapshot::upload_snapshot;
 pub use snapshot::upload_snapshot_with_cache;
 pub use snapshot_cache::SharedSnapshotFileCache;

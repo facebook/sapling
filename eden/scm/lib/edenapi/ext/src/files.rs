@@ -26,6 +26,7 @@ use vfs::AsyncVfsWriter;
 use vfs::UpdateFlag;
 use vfs::VFS;
 
+use crate::SharedSnapshotFileCache;
 use crate::calc_contentid;
 
 fn abs_path(root: &RepoPathBuf, rel_path: &RepoPathBuf) -> RepoPathBuf {
@@ -170,56 +171,90 @@ pub async fn check_files(
     .await
 }
 
+#[allow(dead_code)]
 pub async fn download_files(
     api: &(impl SaplingRemoteApi + ?Sized),
     root: &RepoPathBuf,
     files: impl IntoIterator<Item = (RepoPathBuf, UploadToken, FileType)>,
 ) -> Result<()> {
+    download_files_with_cache(api, root, files, None).await
+}
+
+pub async fn download_files_with_cache(
+    api: &(impl SaplingRemoteApi + ?Sized),
+    root: &RepoPathBuf,
+    files: impl IntoIterator<Item = (RepoPathBuf, UploadToken, FileType)>,
+    cache: Option<SharedSnapshotFileCache>,
+) -> Result<()> {
     let vfs = VFS::new(std::path::PathBuf::from(root.as_str()))?;
     let writer = AsyncVfsWriter::spawn_new(vfs, WORKERS);
     let writer = &writer;
 
-    stream::iter(merge_tokens(files).map(|value| async move {
-        let OnDiskOptimizationResponse {
-            correct_paths,
-            incorrect_paths,
-            content,
-        } = on_disk_optimization(root, value.paths, &value.token, true).await?;
-        for (path, file_type) in correct_paths {
-            match file_type {
-                FileType::Regular => writer.set_executable(path, false).await?,
-                FileType::Executable => writer.set_executable(path, true).await?,
-                FileType::Symlink => {}
+    stream::iter(merge_tokens(files).map(|value| {
+        cloned!(cache);
+        async move {
+            let OnDiskOptimizationResponse {
+                correct_paths,
+                incorrect_paths,
+                content,
+            } = on_disk_optimization(root, value.paths, &value.token, true).await?;
+            for (path, file_type) in correct_paths {
+                match file_type {
+                    FileType::Regular => writer.set_executable(path, false).await?,
+                    FileType::Executable => writer.set_executable(path, true).await?,
+                    FileType::Symlink => {}
+                }
             }
-        }
-        let len = incorrect_paths.len();
-        if len == 0 {
-            return Ok(());
-        }
-        let content = match content {
-            Some(bytes) => bytes,
-            None => api.download_file(value.token).await?,
-        };
-        let write_paths = incorrect_paths
-            .into_iter()
-            // We're zipping and using repeat_n to avoid cloning the
-            // whole content unnecessarily. One file should be the most
-            // common case.
-            .zip(itertools::repeat_n(content, len))
-            .map(|((path, file_type), content)| {
-                (
-                    path,
-                    content,
-                    match file_type {
-                        FileType::Regular => UpdateFlag::Regular,
-                        FileType::Symlink => UpdateFlag::Symlink,
-                        FileType::Executable => UpdateFlag::Executable,
-                    },
-                )
-            });
-        writer.write_batch(write_paths).await?;
+            let len = incorrect_paths.len();
+            if len == 0 {
+                return Ok(());
+            }
+            let content = match content {
+                Some(bytes) => bytes,
+                None => {
+                    if let Some(ref cache) = cache {
+                        if let AnyId::AnyFileContentId(AnyFileContentId::ContentId(cid)) =
+                            value.token.data.id
+                        {
+                            if let Ok(Some(cached_bytes)) = cache.get(&cid) {
+                                cached_bytes
+                            } else {
+                                // Cache miss, download and store in cache
+                                let downloaded_bytes = api.download_file(value.token).await?;
+                                let _ = cache.store_with_content_id(cid, &downloaded_bytes);
+                                downloaded_bytes
+                            }
+                        } else {
+                            // Invalid token format, just download without caching
+                            api.download_file(value.token).await?
+                        }
+                    } else {
+                        // No cache provided, just download directly
+                        api.download_file(value.token).await?
+                    }
+                }
+            };
+            let write_paths = incorrect_paths
+                .into_iter()
+                // We're zipping and using repeat_n to avoid cloning the
+                // whole content unnecessarily. One file should be the most
+                // common case.
+                .zip(itertools::repeat_n(content, len))
+                .map(|((path, file_type), content)| {
+                    (
+                        path,
+                        content,
+                        match file_type {
+                            FileType::Regular => UpdateFlag::Regular,
+                            FileType::Symlink => UpdateFlag::Symlink,
+                            FileType::Executable => UpdateFlag::Executable,
+                        },
+                    )
+                });
+            writer.write_batch(write_paths).await?;
 
-        Ok(())
+            Ok(())
+        }
     }))
     .buffered(WORKERS)
     .try_collect()
