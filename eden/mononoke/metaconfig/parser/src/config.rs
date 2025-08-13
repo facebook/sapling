@@ -162,6 +162,7 @@ fn parse_with_repo_definition(
         backup_source_repo_name: _,
         acl_region_config,
         default_commit_identity_scheme,
+        enable_git_bundle_uri: _,
     } = repo_definition;
 
     let default_commit_identity_scheme = default_commit_identity_scheme
