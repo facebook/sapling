@@ -356,6 +356,9 @@ pub struct DerivedDataConfig {
 
     /// Config to use for remote derivation
     pub remote_derivation_config: Option<RemoteDerivationConfig>,
+
+    /// Commits with blocked derivation
+    pub blocked_derivation: HashMap<ChangesetId, Option<HashSet<DerivableType>>>,
 }
 
 impl DerivedDataConfig {
@@ -394,6 +397,17 @@ impl DerivedDataConfig {
     /// Returns DerivedDataTypesConfig for the given name from the list of available configs.
     pub fn get_config(&self, name: &str) -> Option<&DerivedDataTypesConfig> {
         self.available_configs.get(name)
+    }
+
+    /// Returns true if derivation is blocked for a commit and type.
+    pub fn is_derivation_blocked(&self, derivable_type: DerivableType, csid: ChangesetId) -> bool {
+        self.blocked_derivation
+            .get(&csid)
+            .is_some_and(|blocked_types| {
+                blocked_types
+                    .as_ref()
+                    .is_none_or(|types| types.contains(&derivable_type))
+            })
     }
 }
 

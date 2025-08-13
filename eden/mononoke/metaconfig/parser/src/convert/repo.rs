@@ -6,6 +6,8 @@
  */
 
 use std::collections::HashMap;
+use std::collections::HashSet;
+use std::str::FromStr;
 
 use anyhow::Context;
 use anyhow::Result;
@@ -66,6 +68,7 @@ use metaconfig_types::WalkerJobType;
 use metaconfig_types::XRepoSyncSourceConfig;
 use metaconfig_types::XRepoSyncSourceConfigMapping;
 use metaconfig_types::ZelosConfig;
+use mononoke_types::ChangesetId;
 use mononoke_types::DerivableType;
 use mononoke_types::NonRootMPath;
 use mononoke_types::PrefixTrie;
@@ -80,6 +83,8 @@ use repos::RawCommitCloudConfig;
 use repos::RawCommitGraphConfig;
 use repos::RawCommitIdentityScheme;
 use repos::RawCrossRepoCommitValidationConfig;
+use repos::RawDerivedDataBlockedChangesetDerivation;
+use repos::RawDerivedDataBlockedDerivation;
 use repos::RawDerivedDataConfig;
 use repos::RawDerivedDataTypesConfig;
 use repos::RawGitBundleURIConfig;
@@ -589,7 +594,40 @@ impl Convert for RawDerivedDataConfig {
                 .remote_derivation_config
                 .map(|raw| raw.convert())
                 .transpose()?,
+            blocked_derivation: self
+                .blocked_derivation
+                .map(|blocked_derivation| blocked_derivation.convert())
+                .transpose()?
+                .unwrap_or_default(),
         })
+    }
+}
+
+impl Convert for RawDerivedDataBlockedDerivation {
+    type Output = HashMap<ChangesetId, Option<HashSet<DerivableType>>>;
+
+    fn convert(self) -> Result<Self::Output> {
+        self.changesets
+            .into_iter()
+            .map(|(csid, blocked_derivation)| {
+                Ok((ChangesetId::from_str(&csid)?, blocked_derivation.convert()?))
+            })
+            .collect()
+    }
+}
+
+impl Convert for RawDerivedDataBlockedChangesetDerivation {
+    type Output = Option<HashSet<DerivableType>>;
+
+    fn convert(self) -> Result<Self::Output> {
+        self.blocked_derived_data_types
+            .map(|types| {
+                types
+                    .into_iter()
+                    .map(|ty| DerivableType::from_name(&ty))
+                    .collect::<Result<HashSet<_>, _>>()
+            })
+            .transpose()
     }
 }
 

@@ -202,14 +202,12 @@ pub fn default_test_repo_config() -> RepoConfig {
     let derived_data_types_config = default_test_repo_derived_data_types_config();
     RepoConfig {
         derived_data_config: DerivedDataConfig {
-            scuba_table: None,
             enabled_config_name: "default".to_string(),
             available_configs: hashmap![
                 "default".to_string() => derived_data_types_config.clone(),
                 "backfilling".to_string() => derived_data_types_config
             ],
-            derivation_queue_scuba_table: None,
-            remote_derivation_config: None,
+            ..Default::default()
         },
         infinitepush: InfinitepushParams {
             namespace: Some(InfinitepushNamespace::new(

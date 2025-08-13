@@ -591,6 +591,7 @@ mod test {
     use mononoke_types::NonRootMPath;
     use mononoke_types::path::MPath;
     use mononoke_types_mocks::changesetid::ONES_CSID;
+    use mononoke_types_mocks::changesetid::THREES_CSID;
     use nonzero_ext::nonzero;
     use pretty_assertions::assert_eq;
     use regex::Regex;
@@ -851,6 +852,9 @@ mod test {
             unode_version = 2
             blame_filesize_limit = 101
             derivation_batch_sizes = { "fsnodes" = 20, "unodes" = 20, "blame" = 20 }
+
+            [derived_data_config.blocked_derivation.changesets]
+            "3333333333333333333333333333333333333333333333333333333333333333" = { blocked_derived_data_types = ["unodes"] }
 
             [[bookmarks]]
             name="master"
@@ -1304,6 +1308,9 @@ mod test {
                     scuba_table: None,
                     derivation_queue_scuba_table: None,
                     remote_derivation_config: None,
+                    blocked_derivation: hashmap! {
+                        THREES_CSID => Some(hashset! { DerivableType::Unodes, }),
+                    },
                 },
                 enforce_lfs_acl_check: false,
                 repo_client_use_warm_bookmarks_cache: true,
