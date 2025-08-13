@@ -170,6 +170,7 @@ class workingcopy:
     modified: list
     added: list
     missing: list
+    skipped_large_untracked: list
 
     def all(self):
         return self.untracked + self.removed + self.modified + self.added + self.missing
@@ -190,6 +191,7 @@ class workingcopy:
 
         wctx = repo[None]
         matcher = scmutil.match(wctx, pats, opts)
+        skipped_large_files = []
 
         def filterlarge(f):
             if maxuntrackedsize is None:
@@ -199,6 +201,7 @@ class workingcopy:
                 if size <= maxuntrackedsize:
                     return True
                 else:
+                    skipped_large_files.append(f)
                     if not repo.ui.plain():
                         repo.ui.warn(
                             _(
@@ -228,6 +231,7 @@ class workingcopy:
             modified=list(status.modified),
             added=list(status.added),
             missing=list(status.deleted),
+            skipped_large_untracked=skipped_large_files,
         )
 
 
@@ -433,6 +437,10 @@ def createremote(ui, repo, *pats, **opts) -> None:
             fm.data(snapshot_removed=len(wc.removed))
             fm.data(snapshot_missing=len(wc.missing))
             fm.data(snapshot_untracked=len(wc.untracked))
+
+            # Add skipped large untracked files to JSON output
+            if wc.skipped_large_untracked:
+                fm.data(skipped_large_untracked=wc.skipped_large_untracked)
 
             # For non-JSON output, provide the traditional format
             if not ui.quiet:

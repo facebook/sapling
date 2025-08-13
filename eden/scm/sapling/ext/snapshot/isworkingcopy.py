@@ -35,7 +35,7 @@ def cmd(ui, repo, csid=None, *pats, **opts):
         maxuntrackedsizebytes or maxuntrackedsize or getdefaultmaxuntrackedsize(ui)
     )
 
-    iswc, reason = _isworkingcopy(
+    iswc, reason, wc = _isworkingcopy(
         ui, repo, snapshot, effective_max_untracked_size, pats, opts
     )
 
@@ -47,6 +47,10 @@ def cmd(ui, repo, csid=None, *pats, **opts):
             fm.data(is_working_copy=iswc)
             if not iswc:
                 fm.data(reason=reason)
+
+            # Add skipped large untracked files to JSON output
+            if wc and wc.skipped_large_untracked:
+                fm.data(skipped_large_untracked=wc.skipped_large_untracked)
 
             # For non-JSON/template output, still show human-readable text
             if not ui.quiet and not ui.plain():

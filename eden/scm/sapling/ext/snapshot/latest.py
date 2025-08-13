@@ -30,7 +30,7 @@ def _isworkingcopy(ui, repo, snapshot, maxuntrackedsize, pats=None, opts=None):
         repo.dirstate.p1() != snapshot["hg_parents"]
         or repo.dirstate.p2() != node.nullid
     ):
-        return False, _("parent commits differ")
+        return False, _("parent commits differ"), None
 
     wc = workingcopy.fromrepo(repo, maxuntrackedsize, pats, opts)
     filechanges = snapshot["file_changes"]
@@ -57,8 +57,10 @@ def _isworkingcopy(ui, repo, snapshot, maxuntrackedsize, pats=None, opts=None):
 
     if set(wc.all()) != allpaths:
         diff = set(wc.all()).symmetric_difference(allpaths)
-        return False, _("some paths are differently modified: {}").format(
-            sorted(diff)[:3]
+        return (
+            False,
+            _("some paths are differently modified: {}").format(sorted(diff)[:3]),
+            wc,
         )
 
     incorrectmod = _("'{}' has incorrect modification")
@@ -67,23 +69,23 @@ def _isworkingcopy(ui, repo, snapshot, maxuntrackedsize, pats=None, opts=None):
     for path, fc in filtered_filechanges:
         if fc == "Deletion":
             if path not in wc.removed:
-                return False, incorrectmod.format(path)
+                return False, incorrectmod.format(path), wc
         elif fc == "UntrackedDeletion":
             if path not in wc.missing:
-                return False, incorrectmod.format(path)
+                return False, incorrectmod.format(path), wc
         elif "Change" in fc:
             if path not in wc.added and path not in wc.modified:
-                return False, incorrectmod.format(path)
+                return False, incorrectmod.format(path), wc
             filetype = fc["Change"]["file_type"]
             if filetype != filetypefromfile(wctx[path]):
-                return False, incorrectfiletype.format(path)
+                return False, incorrectfiletype.format(path), wc
             files2check.append((path, fc["Change"]["upload_token"], filetype))
         elif "UntrackedChange" in fc:
             if path not in wc.untracked:
-                return False, incorrectmod.format(path)
+                return False, incorrectmod.format(path), wc
             filetype = fc["UntrackedChange"]["file_type"]
             if filetype != filetypefromfile(wctx[path]):
-                return False, incorrectfiletype.format(path)
+                return False, incorrectfiletype.format(path), wc
             files2check.append(
                 (
                     path,
@@ -94,11 +96,13 @@ def _isworkingcopy(ui, repo, snapshot, maxuntrackedsize, pats=None, opts=None):
 
     differentfiles = repo.edenapi.checkfiles(repo.root, files2check)
     if differentfiles:
-        return False, _("files differ in content: {}").format(
-            sorted(differentfiles)[:3]
+        return (
+            False,
+            _("files differ in content: {}").format(sorted(differentfiles)[:3]),
+            wc,
         )
 
-    return True, ""
+    return True, "", wc
 
 
 def latest(ui, repo, **opts):
@@ -129,7 +133,7 @@ def latest(ui, repo, **opts):
     else:
         if isworkingcopy:
             snapshot = fetchsnapshot(repo, csid)
-            iswc, reason = _isworkingcopy(
+            iswc, reason, _wc = _isworkingcopy(
                 ui, repo, snapshot, effective_max_untracked_size, [], {}
             )
             if iswc:
