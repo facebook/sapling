@@ -518,8 +518,10 @@ InodeNumber TreeInode::getChildInodeNumber(PathComponentPiece name) {
   auto& ent = iter->second;
   XDCHECK(
       !ent.getInode() || ent.getInode()->getNodeId() == ent.getInodeNumber())
-      << "inode number mismatch: " << ent.getInode()->getNodeId()
-      << " != " << ent.getInodeNumber();
+      << fmt::format(
+             "inode number mismatch: {} != {}",
+             ent.getInode()->getNodeId(),
+             ent.getInodeNumber());
   return ent.getInodeNumber();
 }
 
@@ -752,8 +754,12 @@ Future<unique_ptr<InodeBase>> TreeInode::startLoadingInode(
     const DirEntry& entry,
     PathComponentPiece name,
     const ObjectFetchContextPtr& fetchContext) {
-  XLOG(DBG5) << "starting to load inode " << entry.getInodeNumber() << ": "
-             << getLogPath() << " / \"" << name << "\"";
+  XLOGF(
+      DBG5,
+      "starting to load inode {}: {} / \"{}\"",
+      entry.getInodeNumber(),
+      getLogPath(),
+      name);
   XDCHECK(entry.getInode() == nullptr);
   if (!entry.isDirectory()) {
     // If this is a file we can just go ahead and create it now;
@@ -802,16 +808,20 @@ Future<unique_ptr<InodeBase>> TreeInode::startLoadingInode(
                     diffString += diff;
                     diffString += '\n';
                   }
-                  XLOG(ERR)
-                      << "loaded entry " << self->getLogPath() << " / "
-                      << childName << " (inode number " << number
-                      << ") from overlay but the entries don't correspond with "
-                         "the tree.  Something is wrong!\n"
-                      << diffString;
+                  XLOGF(
+                      ERR,
+                      "loaded entry {} / {} (inode number {}) from overlay but the entries don't correspond with the tree.  Something is wrong!\n{}",
+                      self->getLogPath(),
+                      childName,
+                      number,
+                      diffString);
                 }
 
-                XLOG(DBG6) << "found entry " << childName
-                           << " with inode number " << number << " in overlay";
+                XLOGF(
+                    DBG6,
+                    "found entry {} with inode number {} in overlay",
+                    childName,
+                    number);
                 return make_unique<TreeInode>(
                     number,
                     std::move(self),
@@ -2487,14 +2497,14 @@ ImmediateFuture<Unit> TreeInode::diff(
     auto contents = contents_.wlock();
 
     // TODO: support trees.size() != 1
-    XLOG(DBG7) << "diff() on directory " << getLogPath() << " (" << getNodeId()
-               << ", "
-               << (contents->isMaterialized()
-                       ? "materialized"
-                       : contents->treeHash->toLogString())
-               << ") vs "
-               << (trees.size() == 1 ? trees[0]->getHash().toLogString()
-                                     : "null tree");
+    XLOGF(
+        DBG7,
+        "diff() on directory {} ({}, {}) vs {}",
+        getLogPath(),
+        getNodeId(),
+        (contents->isMaterialized() ? "materialized"
+                                    : contents->treeHash->toLogString()),
+        (trees.size() == 1 ? trees[0]->getHash().toLogString() : "null tree"));
 
     // Check to see if we can short-circuit the diff operation if we have the
     // same hash as the tree we are being compared to.
@@ -3475,7 +3485,7 @@ std::shared_ptr<CheckoutAction> TreeInode::processCheckoutEntryImpl(
       getInodeMap()->isInodeRemembered(entry.getInodeNumber()) ||
       (kPreciseInodeNumberMemory && entry.isDirectory() &&
        getOverlay()->hasOverlayDir(entry.getInodeNumber()))) {
-    XLOG(DBG6) << "must load child: inode=" << getNodeId() << " child=" << name;
+    XLOGF(DBG6, "must load child: inode={} child={}", getNodeId(), name);
     // This child is potentially modified (or has saved state that must be
     // updated), but is not currently loaded. Start loading it and create a
     // CheckoutAction to process it once it is loaded.
@@ -3484,8 +3494,7 @@ std::shared_ptr<CheckoutAction> TreeInode::processCheckoutEntryImpl(
     return std::make_shared<CheckoutAction>(
         ctx, oldScmEntry, newScmEntry, std::move(inodeFuture));
   } else {
-    XLOG(DBG6) << "not loading child: inode=" << getNodeId()
-               << " child=" << name;
+    XLOGF(DBG6, "not loading child: inode={} child={}", getNodeId(), name);
   }
 
   // Check for conflicts
@@ -3570,8 +3579,11 @@ std::shared_ptr<CheckoutAction> TreeInode::processCheckoutEntryImpl(
       // the directory was already loaded.
       if (auto* exc = success.tryGetExceptionObject<std::system_error>();
           exc && isEnotempty(*exc)) {
-        XLOG(DBG6) << "loading child inode after invalidation failed: inode="
-                   << getNodeId() << " child=" << name;
+        XLOGF(
+            DBG6,
+            "loading child inode after invalidation failed: inode={} child={}",
+            getNodeId(),
+            name);
         auto inodeFuture = loadChildLocked(
             contents, name, entry, pendingLoads, ctx->getFetchContext());
         return std::make_shared<CheckoutAction>(
@@ -3606,9 +3618,12 @@ std::shared_ptr<CheckoutAction> TreeInode::processCheckoutEntryImpl(
   // from scratch.  (Note: if anything uses Watchman and cares precisely about
   // inode numbers, it could miss changes.)
   if (!kPreciseInodeNumberMemory && entry.isDirectory()) {
-    XLOG(DBG5) << "recursively removing overlay data for "
-               << oldEntryInodeNumber << "(" << getLogPath() << " / " << name
-               << ")";
+    XLOGF(
+        DBG5,
+        "recursively removing overlay data for {}({} / {})",
+        oldEntryInodeNumber,
+        getLogPath(),
+        name);
     getOverlay()->recursivelyRemoveOverlayDir(oldEntryInodeNumber);
   }
 

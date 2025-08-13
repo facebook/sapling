@@ -32,8 +32,12 @@ InodeBase::InodeBase(EdenMount* mount)
       location_{LocationInfo{
           nullptr,
           PathComponentPiece{"", detail::SkipPathSanityCheck()}}} {
-  XLOG(DBG5) << "root inode " << this << " (" << ino_ << ") created for mount "
-             << mount_->getPath();
+  XLOGF(
+      DBG5,
+      "root inode {} ({}) created for mount {}",
+      static_cast<void*>(this),
+      ino_,
+      mount_->getPath());
 
 #ifndef _WIN32
   mount->getInodeMetadataTable()->populateIfNotSet(
@@ -54,8 +58,12 @@ InodeBase::InodeBase(
   // Inode numbers generally shouldn't be 0.
   // Older versions of glibc have bugs handling files with an inode number of 0
   XDCHECK(ino_.hasValue());
-  XLOG(DBG5) << "inode " << this << " (" << ino_
-             << ") created: " << getLogPath();
+  XLOGF(
+      DBG5,
+      "inode {} ({}) created: {}",
+      static_cast<void*>(this),
+      ino_,
+      getLogPath());
 
 #ifndef _WIN32
   mount_->getInodeMetadataTable()->populateIfNotSet(ino_, [&] {
@@ -89,8 +97,12 @@ InodeBase::InodeBase(
 }
 
 InodeBase::~InodeBase() {
-  XLOG(DBG5) << "inode " << this << " (" << ino_
-             << ") destroyed: " << getLogPath();
+  XLOGF(
+      DBG5,
+      "inode {} ({}) destroyed: {}",
+      static_cast<void*>(this),
+      ino_,
+      getLogPath());
   auto p = getParentRacy();
   while (p) {
     p->increaseInMemoryDescendants(-1);
@@ -386,7 +398,7 @@ void InodeBase::updateAtime() {
 
 void InodeBase::updateMtimeAndCtime([[maybe_unused]] EdenTimestamp now) {
 #ifndef _WIN32
-  XLOG(DBG9) << "Updating timestamps for : " << ino_;
+  XLOGF(DBG9, "Updating timestamps for: {}", ino_);
   getMount()->getInodeMetadataTable()->modifyOrThrow(
       getNodeId(), [&](auto& record) {
         record.timestamps.ctime = now;
