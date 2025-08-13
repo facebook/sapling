@@ -7,7 +7,7 @@ from sapling import error, node
 from sapling.edenapi_upload import filetypefromfile
 from sapling.i18n import _
 
-from .createremote import parsemaxuntracked, workingcopy
+from .createremote import parsemaxuntracked, parsemaxuntrackedbytes, workingcopy
 from .metalog import fetchlatestsnapshot
 from .update import fetchsnapshot
 
@@ -76,9 +76,16 @@ def latest(ui, repo, **opts):
     csid = fetchlatestsnapshot(repo.metalog())
     isworkingcopy = opts.get("is_working_copy") is True
     maxuntrackedsize = parsemaxuntracked(opts)
-    if maxuntrackedsize is not None and isworkingcopy is False:
+    maxuntrackedsizebytes = parsemaxuntrackedbytes(opts)
+
+    # Use bytes-based limit if specified, otherwise fall back to MiB-based limit
+    effective_max_untracked_size = maxuntrackedsizebytes or maxuntrackedsize
+
+    if effective_max_untracked_size is not None and isworkingcopy is False:
         raise error.Abort(
-            _("--max-untracked-size can only be used together with --is-working-copy")
+            _(
+                "--max-untracked-size/--max-untracked-size-bytes can only be used together with --is-working-copy"
+            )
         )
     if csid is None:
         if isworkingcopy:
@@ -88,7 +95,9 @@ def latest(ui, repo, **opts):
     else:
         if isworkingcopy:
             snapshot = fetchsnapshot(repo, csid)
-            iswc, reason = _isworkingcopy(ui, repo, snapshot, maxuntrackedsize)
+            iswc, reason = _isworkingcopy(
+                ui, repo, snapshot, effective_max_untracked_size
+            )
             if iswc:
                 if not ui.plain():
                     ui.status(_("latest snapshot is the working copy\n"))

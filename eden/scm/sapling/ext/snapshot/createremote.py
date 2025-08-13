@@ -27,6 +27,8 @@ from .update import fetchsnapshot
 
 # Binary conversion constant
 MIB_TO_BYTES = 1048576  # 1 MiB = 1,048,576 bytes
+# Default maximum untracked file size (1GB in bytes)
+DEFAULT_MAX_UNTRACKED_SIZE_BYTES = 1073741824
 
 
 @util.timefunction("snapshot_backup_parents", 0, "ui")
@@ -71,6 +73,13 @@ def mib_to_bytes(mib: float) -> int:
 def parsemaxuntracked(opts) -> Optional[int]:
     if opts["max_untracked_size"] != "":
         return mib_to_bytes(float(opts["max_untracked_size"]))
+    else:
+        return None
+
+
+def parsemaxuntrackedbytes(opts) -> Optional[int]:
+    if opts["max_untracked_size_bytes"] != "":
+        return int(opts["max_untracked_size_bytes"])
     else:
         return None
 
@@ -238,11 +247,17 @@ def uploadsnapshot(
 def createremote(ui, repo, **opts) -> None:
     lifetime = _parselifetime(opts)
     maxuntrackedsize = parsemaxuntracked(opts)
+    maxuntrackedsizebytes = parsemaxuntrackedbytes(opts)
     maxfilecount = parsemaxfilecount(opts)
     reusestorage = opts.get("reuse_storage") is True
     labels = parselabels(opts)
     continuationof = parsecontinuationof(opts, repo)
     skipempty = opts.get("skip_empty") is True
+
+    # Use bytes-based limit if specified, otherwise fall back to MiB-based limit
+    effective_max_untracked_size = (
+        maxuntrackedsizebytes or maxuntrackedsize or DEFAULT_MAX_UNTRACKED_SIZE_BYTES
+    )
 
     # Validate that --continuation-of and --reuse-storage are not used together
     if continuationof and reusestorage:
@@ -269,7 +284,7 @@ def createremote(ui, repo, **opts) -> None:
         _backupparents(repo, wctx)
 
         # Get working copy state
-        wc = workingcopy.fromrepo(repo, maxuntrackedsize)
+        wc = workingcopy.fromrepo(repo, effective_max_untracked_size)
         filecount = wc.filecount()
 
         # Check for --skip-empty option and handle empty working copy

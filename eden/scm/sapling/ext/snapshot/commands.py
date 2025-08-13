@@ -53,9 +53,18 @@ subcmd = snapshot.subcommand(
         (
             "",
             "max-untracked-size",
-            "1000",
-            _("filter out any untracked files larger than this size, in megabytes"),
+            "",
+            _(
+                "filter out any untracked files larger than this size, in megabytes (DEPRECATED)"
+            ),
             _("MAX_SIZE"),
+        ),
+        (
+            "",
+            "max-untracked-size-bytes",
+            "",
+            _("filter out any untracked files larger than this size, in bytes"),
+            _("MAX_SIZE_BYTES"),
         ),
         (
             "",
@@ -155,8 +164,17 @@ def showcmd(*args, **kwargs) -> None:
             "",
             "max-untracked-size",
             "",
-            _("filter out any untracked files larger than this size, in megabytes"),
+            _(
+                "filter out any untracked files larger than this size, in megabytes (DEPRECATED)"
+            ),
             _("MAX_SIZE"),
+        ),
+        (
+            "",
+            "max-untracked-size-bytes",
+            "",
+            _("filter out any untracked files larger than this size, in bytes"),
+            _("MAX_SIZE_BYTES"),
         ),
     ],
     _("ID"),
@@ -179,8 +197,17 @@ def isworkingcopycmd(*args, **kwargs) -> None:
             "",
             "max-untracked-size",
             "",
-            _("filter out any untracked files larger than this size, in megabytes"),
+            _(
+                "filter out any untracked files larger than this size, in megabytes (DEPRECATED)"
+            ),
             _("MAX_SIZE"),
+        ),
+        (
+            "",
+            "max-untracked-size-bytes",
+            "",
+            _("filter out any untracked files larger than this size, in bytes"),
+            _("MAX_SIZE_BYTES"),
         ),
     ],
 )
