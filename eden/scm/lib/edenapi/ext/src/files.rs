@@ -155,7 +155,7 @@ fn merge_tokens(
     to_download.into_values()
 }
 
-const WORKERS: usize = 10;
+const WORKERS: usize = 50;
 
 /// Return which files differ in content or symlinkness from the given upload tokens.
 /// Note: does not return files that differ in executable permission.
