@@ -757,17 +757,21 @@ std::ostream& operator<<(
     const FuseChannel::InvalidationEntry& entry) {
   switch (entry.type) {
     case FuseChannel::InvalidationType::INODE:
-      return os << "(inode " << entry.inode << ", offset " << entry.range.offset
-                << ", length " << entry.range.length << ")";
+      return os << fmt::format(
+                 "(inode {}, offset {}, length {})",
+                 entry.inode,
+                 entry.range.offset,
+                 entry.range.length);
     case FuseChannel::InvalidationType::DIR_ENTRY:
-      return os << "(inode " << entry.inode << ", child \"" << entry.name
-                << "\")";
+      return os << fmt::format(
+                 "(inode {}, child \"{}\")", entry.inode, entry.name);
     case FuseChannel::InvalidationType::FLUSH:
       return os << "(invalidation flush)";
   }
-  return os << "(unknown invalidation type "
-            << static_cast<uint64_t>(entry.type) << " inode " << entry.inode
-            << ")";
+  return os << fmt::format(
+             "(unknown invalidation type {} inode {})",
+             static_cast<uint64_t>(entry.type),
+             entry.inode);
 }
 
 void FuseChannel::replyError(const fuse_in_header& request, int errorCode) {
@@ -1155,8 +1159,7 @@ void FuseChannel::sendInvalidateInode(
     InodeNumber ino,
     int64_t off,
     int64_t len) {
-  XLOG(DBG3) << "sendInvalidateInode(ino=" << ino << ", off=" << off
-             << ", len=" << len << ")";
+  XLOGF(DBG3, "sendInvalidateInode(ino={}, off={}, len={})", ino, off, len);
   fuse_notify_inval_inode_out notify;
   notify.ino = ino.get();
   notify.off = off;
@@ -1176,19 +1179,28 @@ void FuseChannel::sendInvalidateInode(
 
   try {
     sendRawReply(iov.data(), iov.size());
-    XLOG(DBG7) << "sendInvalidateInode(ino=" << ino << ", off=" << off
-               << ", len=" << len << ") OK!";
+    XLOGF(
+        DBG7, "sendInvalidateInode(ino={}, off={}, len={}) OK!", ino, off, len);
   } catch (const std::system_error& exc) {
     // Ignore ENOENT.  This can happen for inode numbers that we allocated on
     // our own and haven't actually told the kernel about yet.
     if (!isEnoent(exc)) {
-      XLOG(ERR) << "sendInvalidateInode(ino=" << ino << ", off=" << off
-                << ", len=" << len << ") failed: " << exc.what();
+      XLOGF(
+          ERR,
+          "sendInvalidateInode(ino={}, off={}, len={}) failed: {}",
+          ino,
+          off,
+          len,
+          exc.what());
       throwSystemErrorExplicit(
           exc.code().value(), "error invalidating FUSE inode ", ino);
     } else {
-      XLOG(DBG6) << "sendInvalidateInode(ino=" << ino << ", off=" << off
-                 << ", len=" << len << ") failed with ENOENT";
+      XLOGF(
+          DBG6,
+          "sendInvalidateInode(ino={}, off={}, len={}) failed with ENOENT",
+          ino,
+          off,
+          len);
     }
   }
 }
@@ -1201,8 +1213,7 @@ void FuseChannel::sendInvalidateInode(
 void FuseChannel::sendInvalidateEntry(
     InodeNumber parent,
     PathComponentPiece name) {
-  XLOG(DBG3) << "sendInvalidateEntry(parent=" << parent << ", name=" << name
-             << ")";
+  XLOGF(DBG3, "sendInvalidateEntry(parent={}, name={})", parent, name);
 
   auto namePiece = name.view();
 
@@ -1246,8 +1257,11 @@ void FuseChannel::sendInvalidateEntry(
           " in directory inode ",
           parent);
     } else {
-      XLOG(DBG3) << "sendInvalidateEntry(parent=" << parent
-                 << ", name=" << namePiece << ") failed with ENOENT";
+      XLOGF(
+          DBG3,
+          "sendInvalidateEntry(parent={}, name={}) failed with ENOENT",
+          parent,
+          namePiece);
     }
   }
 }
@@ -2075,7 +2089,7 @@ ImmediateFuture<folly::Unit> FuseChannel::fuseLookup(
       reinterpret_cast<const char*>(arg.data()), requireUtf8Path_);
   const auto parent = InodeNumber{header.nodeid};
 
-  XLOG(DBG7) << "FUSE_LOOKUP parent=" << parent << " name=" << name;
+  XLOGF(DBG7, "FUSE_LOOKUP parent={} name={}", parent, name);
 
   return dispatcher_
       ->lookup(header.unique, parent, name, request.getObjectFetchContext())
@@ -2089,8 +2103,8 @@ ImmediateFuture<folly::Unit> FuseChannel::fuseForget(
     const fuse_in_header& header,
     ByteRange arg) {
   auto forget = reinterpret_cast<const fuse_forget_in*>(arg.data());
-  XLOG(DBG7) << "FUSE_FORGET inode=" << header.nodeid
-             << " nlookup=" << forget->nlookup;
+  XLOGF(
+      DBG7, "FUSE_FORGET inode={} nlookup={}", header.nodeid, forget->nlookup);
   dispatcher_->forget(InodeNumber{header.nodeid}, forget->nlookup);
   request.replyNone();
   return folly::unit;
@@ -2100,7 +2114,7 @@ ImmediateFuture<folly::Unit> FuseChannel::fuseGetAttr(
     FuseRequestContext& request,
     const fuse_in_header& header,
     ByteRange /*arg*/) {
-  XLOG(DBG7) << "FUSE_GETATTR inode=" << header.nodeid;
+  XLOGF(DBG7, "FUSE_GETATTR inode={}", header.nodeid);
   return dispatcher_
       ->getattr(InodeNumber{header.nodeid}, request.getObjectFetchContext())
       .thenValue([&request](FuseDispatcher::Attr attr) {
@@ -2113,7 +2127,7 @@ ImmediateFuture<folly::Unit> FuseChannel::fuseSetAttr(
     const fuse_in_header& header,
     ByteRange arg) {
   const auto setattr = reinterpret_cast<const fuse_setattr_in*>(arg.data());
-  XLOG(DBG7) << "FUSE_SETATTR inode=" << header.nodeid;
+  XLOGF(DBG7, "FUSE_SETATTR inode={}", header.nodeid);
   return dispatcher_
       ->setattr(
           InodeNumber{header.nodeid}, *setattr, request.getObjectFetchContext())
@@ -2126,7 +2140,7 @@ ImmediateFuture<folly::Unit> FuseChannel::fuseReadLink(
     FuseRequestContext& request,
     const fuse_in_header& header,
     ByteRange /*arg*/) {
-  XLOG(DBG7) << "FUSE_READLINK inode=" << header.nodeid;
+  XLOGF(DBG7, "FUSE_READLINK inode={}", header.nodeid);
   bool kernelCachesReadlink = false;
 #ifdef FUSE_CACHE_SYMLINKS
   kernelCachesReadlink = connInfo_->flags & FUSE_CACHE_SYMLINKS;
