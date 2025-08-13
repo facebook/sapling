@@ -129,7 +129,7 @@ def createremotecmd(*args, **kwargs) -> None:
 
 
 @subcmd(
-    "update|restore|checkout|co|up",
+    "update|restore|checkout|co|up|goto",
     [
         (
             "C",
