@@ -75,6 +75,7 @@ pub struct MononokeAppBuilder {
     defaults: HashMap<&'static str, String>,
     bookmark_cache_options: BookmarkCacheOptions,
     client_entry_point_for_service: ClientEntryPoint,
+    override_cmd_args: Option<Vec<String>>,
 }
 
 #[derive(Args, Debug)]
@@ -137,6 +138,7 @@ impl MononokeAppBuilder {
             defaults: HashMap::new(),
             bookmark_cache_options: Default::default(),
             client_entry_point_for_service: Default::default(),
+            override_cmd_args: None,
         }
     }
 
@@ -173,6 +175,12 @@ impl MononokeAppBuilder {
     {
         self.extensions
             .push((TypeId::of::<Ext>(), AppExtensionBox::new(ext)));
+        self
+    }
+
+    /// Allows overriding the command line arguments and build the app with ad-hoc arguments.
+    pub fn with_cmd_args(mut self, cmd_args: Vec<String>) -> Self {
+        self.override_cmd_args = Some(cmd_args);
         self
     }
 
@@ -240,7 +248,11 @@ impl MononokeAppBuilder {
             app = app.mut_arg(name, |arg| arg.default_value(default));
         }
 
-        let args = app.get_matches();
+        let args = if let Some(ref override_cmd_args) = self.override_cmd_args {
+            app.get_matches_from(override_cmd_args)
+        } else {
+            app.get_matches()
+        };
 
         let extension_args = self
             .extensions
