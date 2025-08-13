@@ -29,6 +29,7 @@ use filenodes::Filenodes;
 use filestore::FilestoreConfig;
 use metaconfig_types::DerivedDataConfig;
 use metaconfig_types::DerivedDataTypesConfig;
+use metaconfig_types::RepoConfig;
 use mononoke_types::ChangesetId;
 use mononoke_types::RepositoryId;
 use repo_blobstore::RepoBlobstore;
@@ -57,6 +58,7 @@ impl RepoDerivedData {
         bonsai_git_mapping: Arc<dyn BonsaiGitMapping>,
         filenodes: Arc<dyn Filenodes>,
         repo_blobstore: RepoBlobstore,
+        repo_config: Arc<RepoConfig>,
         filestore_config: FilestoreConfig,
         lease: Arc<dyn LeaseOps>,
         scuba: MononokeScubaSampleBuilder,
@@ -77,6 +79,7 @@ impl RepoDerivedData {
                         bonsai_git_mapping.clone(),
                         filenodes.clone(),
                         repo_blobstore.clone(),
+                        repo_config.clone(),
                         filestore_config,
                         lease.clone(),
                         scuba.clone(),

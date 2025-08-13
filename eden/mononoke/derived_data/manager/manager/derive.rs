@@ -361,8 +361,12 @@ impl DerivedDataManager {
         Derivable: BonsaiDerivable,
     {
         if let Some(value) = self.fetch_derived(ctx, csid, rederivation.clone()).await? {
-            Ok(value)
-        } else if let Some(value) = self
+            return Ok(value);
+        }
+
+        self.check_blocked_derivation::<Derivable>(&[csid])?;
+
+        if let Some(value) = self
             .derive_remotely(ctx, csid, rederivation.clone())
             .map_err(SharedDerivationError::from)
             .await?
@@ -710,6 +714,7 @@ impl DerivedDataManager {
                 (csids, future::ready(Ok(Duration::ZERO)).right_future())
             };
             self.check_enabled::<Derivable>()?;
+            self.check_blocked_derivation::<Derivable>(&csids)?;
             let mut derivation_ctx = self.derivation_context(rederivation.clone());
 
             // Enable write batching, so that writes are stored in memory

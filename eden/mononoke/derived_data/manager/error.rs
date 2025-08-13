@@ -8,6 +8,7 @@
 use std::time::Duration;
 
 use anyhow::Error;
+use mononoke_types::ChangesetId;
 use mononoke_types::RepositoryId;
 use shared_error::std::SharedError;
 use thiserror::Error;
@@ -20,6 +21,8 @@ pub enum DerivationError {
     Timeout(&'static str, Duration),
     #[error("Derivation of {0} failed after {1} attempts")]
     Failed(&'static str, u32, #[source] Error),
+    #[error("Derivation of {0} for {1} is blocked in config")]
+    Blocked(&'static str, ChangesetId),
     #[error(transparent)]
     Error(#[from] Error),
 }

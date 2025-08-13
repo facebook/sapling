@@ -5,9 +5,9 @@
  * GNU General Public License version 2.
  */
 
-use anyhow::Result;
 use context::CoreContext;
 use context::SessionClass;
+use mononoke_types::ChangesetId;
 
 use super::DerivedDataManager;
 use crate::derivable::BonsaiDerivable;
@@ -43,5 +43,21 @@ impl DerivedDataManager {
                 self.repo_name().to_string(),
             ))
         }
+    }
+
+    pub(super) fn check_blocked_derivation<Derivable>(
+        &self,
+        csids: &[ChangesetId],
+    ) -> Result<(), DerivationError>
+    where
+        Derivable: BonsaiDerivable,
+    {
+        let derived_data_config = &self.repo_config().derived_data_config;
+        for csid in csids {
+            if derived_data_config.is_derivation_blocked(Derivable::VARIANT, *csid) {
+                return Err(DerivationError::Blocked(Derivable::NAME, *csid));
+            }
+        }
+        Ok(())
     }
 }

@@ -18,6 +18,7 @@ use ephemeral_blobstore::BubbleId;
 use filenodes::Filenodes;
 use filestore::FilestoreConfig;
 use metaconfig_types::DerivedDataTypesConfig;
+use metaconfig_types::RepoConfig;
 use mononoke_types::ChangesetId;
 use mononoke_types::RepositoryId;
 use repo_blobstore::RepoBlobstore;
@@ -48,6 +49,7 @@ pub struct DerivedDataManagerInner {
     bubble_id: Option<BubbleId>,
     commit_graph: Arc<CommitGraph>,
     repo_blobstore: RepoBlobstore,
+    repo_config: Arc<RepoConfig>,
     lease: DerivedDataLease,
     scuba: MononokeScubaSampleBuilder,
     /// If a (primary) manager has a secondary manager, that means some of the
@@ -91,6 +93,7 @@ impl DerivedDataManager {
         bonsai_git_mapping: Arc<dyn BonsaiGitMapping>,
         filenodes: Arc<dyn Filenodes>,
         repo_blobstore: RepoBlobstore,
+        repo_config: Arc<RepoConfig>,
         filestore_config: FilestoreConfig,
         lease: Arc<dyn LeaseOps>,
         scuba: MononokeScubaSampleBuilder,
@@ -106,6 +109,7 @@ impl DerivedDataManager {
                 bubble_id: None,
                 commit_graph,
                 repo_blobstore: repo_blobstore.clone(),
+                repo_config,
                 lease,
                 scuba,
                 secondary: None,
@@ -272,6 +276,10 @@ impl DerivedDataManager {
 
     pub fn scuba(&self) -> &MononokeScubaSampleBuilder {
         &self.inner.scuba
+    }
+
+    pub fn repo_config(&self) -> &RepoConfig {
+        self.inner.repo_config.as_ref()
     }
 
     pub fn config(&self) -> &DerivedDataTypesConfig {

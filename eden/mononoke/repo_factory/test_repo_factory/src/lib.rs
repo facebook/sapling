@@ -651,6 +651,7 @@ impl TestRepoFactory {
             bonsai_git_mapping.clone(),
             filenodes.clone(),
             repo_blobstore.as_ref().clone(),
+            repo_config.clone(),
             **filestore_config,
             lease,
             MononokeScubaSampleBuilder::with_discard(),
