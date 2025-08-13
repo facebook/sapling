@@ -231,6 +231,7 @@ def createremote(ui, repo, **opts) -> None:
     reusestorage = opts.get("reuse_storage") is True
     labels = parselabels(opts)
     continuationof = parsecontinuationof(opts, repo)
+    skipempty = opts.get("skip_empty") is True
 
     # Validate that --continuation-of and --reuse-storage are not used together
     if continuationof and reusestorage:
@@ -253,12 +254,35 @@ def createremote(ui, repo, **opts) -> None:
         if hgparents is None:
             raise error.Abort(_("snapshot creation requires working copy checkout"))
 
+        # Always backup parents first
         _backupparents(repo, wctx)
 
-        (time, tz) = wctx.date()
-
+        # Get working copy state
         wc = workingcopy.fromrepo(repo, maxuntrackedsize)
         filecount = wc.filecount()
+
+        # Check for --skip-empty option and handle empty working copy
+        if skipempty and filecount == 0:
+            parent_hex = hgparents.hex()
+
+            # Handle JSON output if template is specified
+            if opts.get("template"):
+                with ui.formatter("snapshot", opts) as fm:
+                    fm.startitem()
+                    fm.data(message="no changes")
+                    fm.data(parent=parent_hex)
+                    if not ui.quiet and not ui.plain():
+                        fm.plain(
+                            _("nothing to snapshot, parent commit is {}\n").format(
+                                parent_hex
+                            )
+                        )
+            else:
+                ui.status(
+                    _("nothing to snapshot, parent commit is {}\n").format(parent_hex),
+                    component="snapshot",
+                )
+            return
 
         if filecount > maxfilecount:
             raise error.AbortSnapshotFileCountLimit(
@@ -315,6 +339,7 @@ def createremote(ui, repo, **opts) -> None:
         else:
             previousbubble = fetchlatestbubble(repo.metalog())
 
+        (time, tz) = wctx.date()
         response = uploadsnapshot(
             repo,
             wctx,
