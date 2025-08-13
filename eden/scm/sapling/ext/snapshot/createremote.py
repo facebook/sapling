@@ -25,6 +25,9 @@ from .metalog import (
 
 from .update import fetchsnapshot
 
+# Binary conversion constant
+MIB_TO_BYTES = 1048576  # 1 MiB = 1,048,576 bytes
+
 
 @util.timefunction("snapshot_backup_parents", 0, "ui")
 def _backupparents(repo, wctx) -> None:
@@ -57,9 +60,17 @@ def parselabels(opts):
         return None
 
 
+def mib_to_bytes(mib: float) -> int:
+    """
+    Convert mebibytes (MiB) to bytes (binary).
+    1 MiB = 1,048,576 bytes
+    """
+    return int(mib * MIB_TO_BYTES)
+
+
 def parsemaxuntracked(opts) -> Optional[int]:
     if opts["max_untracked_size"] != "":
-        return int(opts["max_untracked_size"]) * 1000 * 1000
+        return mib_to_bytes(float(opts["max_untracked_size"]))
     else:
         return None
 
