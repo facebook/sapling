@@ -478,8 +478,10 @@ class OverlayChecker::OrphanInode : public OverlayChecker::Error {
         // Look up the previously loaded children data
         auto iter = repair.checker()->impl_->inodes.find(number_);
         if (iter == repair.checker()->impl_->inodes.end()) {
-          XLOG(DFATAL) << "failed to look up previously-loaded children for "
-                       << "orphan directory inode " << number_;
+          XLOGF(
+              DFATAL,
+              "failed to look up previously-loaded children for orphan directory inode {}",
+              number_);
           return false;
         }
         auto outputPath = repair.getLostAndFoundPath(number_);
@@ -492,8 +494,11 @@ class OverlayChecker::OrphanInode : public OverlayChecker::Error {
       }
     }
 
-    XLOG(DFATAL) << "unexpected inode type " << enumValue(type_)
-                 << " when processing orphan inode " << number_;
+    XLOGF(
+        DFATAL,
+        "unexpected inode type {} when processing orphan inode {}",
+        enumValue(type_),
+        number_);
     return false;
   }
 
@@ -565,8 +570,11 @@ class OverlayChecker::OrphanInode : public OverlayChecker::Error {
         return;
     }
 
-    XLOG(DFATAL) << "unexpected inode type " << enumValue(info->type)
-                 << " when processing orphan inode " << info->number;
+    XLOGF(
+        DFATAL,
+        "unexpected inode type {} when processing orphan inode {}",
+        enumValue(info->type),
+        info->number);
     throw std::runtime_error("unexpected inode type");
   }
 
@@ -668,8 +676,11 @@ class OverlayChecker::OrphanInode : public OverlayChecker::Error {
       // If we fail to remove the file log an error, but proceed with the rest
       // of the fsck repairs rather than letting the exception propagate up
       // to our caller.
-      XLOG(ERR) << "error removing overlay file for orphaned directory inode "
-                << number << " after archiving it: " << ex.what();
+      XLOGF(
+          ERR,
+          "error removing overlay file for orphaned directory inode {} after archiving it: {}",
+          number,
+          ex.what());
     }
   }
 
@@ -680,8 +691,11 @@ class OverlayChecker::OrphanInode : public OverlayChecker::Error {
       // If we fail to remove the file log an error, but proceed with the rest
       // of the fsck repairs rather than letting the exception propagate up
       // to our caller.
-      XLOG(ERR) << "error removing overlay file for orphaned file inode "
-                << number << " after archiving it: " << ex.what();
+      XLOGF(
+          ERR,
+          "error removing overlay file for orphaned file inode {} after archiving it: {}",
+          number,
+          ex.what());
     }
   }
 
@@ -893,7 +907,7 @@ OverlayChecker::PathInfo OverlayChecker::computePath(InodeNumber number) {
     if (!info) {
       // We don't normally expect computePath() to be called on unknown inode
       // numbers.
-      XLOG(WARN) << "computePath() called on unknown inode " << number;
+      XLOGF(WARN, "computePath() called on unknown inode {}", number);
       return PathInfo(number);
     } else if (info->parents.empty()) {
       // This inode is unlinked/orphaned
@@ -928,8 +942,11 @@ OverlayChecker::PathInfo OverlayChecker::computePath(
   if (!parentInfo) {
     // This shouldn't ever happen unless we have a bug in the fsck code somehow.
     // The parent relationships are only set up if we found both inodes.
-    XLOG(DFATAL) << "bug in fsck code: previously found parent " << parent
-                 << " of " << child << " but can no longer find parent";
+    XLOGF(
+        DFATAL,
+        "bug in fsck code: previously found parent {} of {} but can no longer find parent",
+        parent,
+        child);
     return PathInfo(child);
   }
 
@@ -956,8 +973,11 @@ PathComponent OverlayChecker::findChildName(
   // We should only get here if linkInodeChildren() found a parent-child
   // relationship between these two inodes, and that relationship shouldn't ever
   // change during the fsck run.
-  XLOG(DFATAL) << "bug in fsck code: cannot find child " << child
-               << " in directory listing of parent " << parentInfo.number;
+  XLOGF(
+      DFATAL,
+      "bug in fsck code: cannot find child {} in directory listing of parent {}",
+      child,
+      parentInfo.number);
   return PathComponent(folly::to<string>("[missing_child(", child, ")]"));
 }
 
@@ -1086,7 +1106,7 @@ std::optional<InodeInfo> OverlayChecker::loadInodeSharded(
     InodeNumber number,
     ShardID shardID,
     folly::Synchronized<std::vector<std::unique_ptr<Error>>>& errors) const {
-  XLOG(DBG9) << "fsck: loading inode " << number;
+  XLOGF(DBG9, "fsck: loading inode {}", number);
 
   // Verify that we found this inode in the correct shard subdirectory.
   // Ignore the data if it is in the wrong directory.

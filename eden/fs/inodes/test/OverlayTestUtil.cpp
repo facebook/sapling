@@ -14,11 +14,10 @@ void debugDumpOverlayInodes(
     InodeNumber rootInode,
     folly::StringPiece path,
     std::ostringstream& out) {
-  out << path << "\n";
-  out << "  Inode number: " << rootInode << "\n";
+  out << fmt::format("{}\n  Inode number: {}\n", path, rootInode);
 
   auto dir = overlay.loadOverlayDir(rootInode);
-  out << "  Entries (" << dir.size() << " total):\n";
+  out << fmt::format("  Entries ({} total):\n", dir.size());
 
   auto dtypeToString = [](dtype_t dtype) noexcept -> const char* {
     switch (dtype) {
@@ -33,9 +32,12 @@ void debugDumpOverlayInodes(
 
   for (const auto& [entryPath, entry] : dir) {
     auto permissions = entry.getInitialMode() & ~S_IFMT;
-    out << "  " << std::dec << std::setw(11) << entry.getInodeNumber() << " "
-        << dtypeToString(entry.getDtype()) << " " << std::oct << std::setw(4)
-        << permissions << " " << entryPath << "\n";
+    out << fmt::format(
+        "{:>13} {}  {:3o} {}\n",
+        entry.getInodeNumber(),
+        dtypeToString(entry.getDtype()),
+        permissions,
+        entryPath.value());
   }
   for (const auto& [entryPath, entry] : dir) {
     if (entry.getDtype() == dtype_t::Dir) {

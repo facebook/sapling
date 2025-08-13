@@ -529,9 +529,9 @@ overlay::OverlayDir Overlay::serializeOverlayDir(
     const auto& entName = entIter.first;
     const auto& ent = entIter.second;
 
-    XCHECK_NE(entName, "")
-        << "serializeOverlayDir called with entry with an empty path for directory with inodeNumber="
-        << inodeNumber;
+    XCHECK_NE(entName, "") << fmt::format(
+        "serializeOverlayDir called with entry with an empty path for directory with inodeNumber={}",
+        inodeNumber);
     XCHECK_LT(ent.getInodeNumber().get(), nextInodeNumber)
         << "serializeOverlayDir called with entry using unallocated inode number";
 
@@ -549,8 +549,7 @@ void Overlay::saveOverlayDir(InodeNumber inodeNumber, const DirContents& dir) {
         inodeNumber, serializeOverlayDir(inodeNumber, dir));
     stats_->increment(&OverlayStats::saveOverlayDirSuccessful);
   } catch (const std::exception& e) {
-    XLOG(ERR) << "Failed to save overlay dir " << inodeNumber << " "
-              << e.what();
+    XLOGF(ERR, "Failed to save overlay dir {} {}", inodeNumber, e.what());
     stats_->increment(&OverlayStats::saveOverlayDirFailure);
     throw;
   }
@@ -578,8 +577,7 @@ void Overlay::removeOverlayFile(InodeNumber inodeNumber) {
     (void)inodeNumber;
 #endif
   } catch (const std::exception& e) {
-    XLOG(ERR) << "Failed to remove overlay file " << inodeNumber << " "
-              << e.what();
+    XLOGF(ERR, "Failed to remove overlay file {} {}", inodeNumber, e.what());
     stats_->increment(&OverlayStats::removeOverlayFileFailure);
     throw;
   }
@@ -594,8 +592,7 @@ void Overlay::removeOverlayDir(InodeNumber inodeNumber) {
     inodeCatalog_->removeOverlayDir(inodeNumber);
     stats_->increment(&OverlayStats::removeOverlayDirSuccessful);
   } catch (const std::exception& e) {
-    XLOG(ERR) << "Failed to remove overlay dir " << inodeNumber << " "
-              << e.what();
+    XLOGF(ERR, "Failed to remove overlay dir {} {}", inodeNumber, e.what());
     stats_->increment(&OverlayStats::removeOverlayDirFailure);
     throw;
   }
@@ -621,8 +618,11 @@ void Overlay::recursivelyRemoveOverlayDir(InodeNumber inodeNumber) {
       stats_->increment(&OverlayStats::recursivelyRemoveOverlayDirSuccessful);
     }
   } catch (const std::exception& e) {
-    XLOG(ERR) << "Failed to recursively remove overlay dir " << inodeNumber
-              << " " << e.what();
+    XLOGF(
+        ERR,
+        "Failed to recursively remove overlay dir {} {}",
+        inodeNumber,
+        e.what());
     stats_->increment(&OverlayStats::recursivelyRemoveOverlayDirFailure);
     throw;
   }
@@ -647,8 +647,11 @@ bool Overlay::hasOverlayDir(InodeNumber inodeNumber) {
     stats_->increment(&OverlayStats::hasOverlayDirSuccessful);
     return has_overlay_dir;
   } catch (const std::exception& e) {
-    XLOG(ERR) << "Failed to check if overlay dir exists " << inodeNumber << " "
-              << e.what();
+    XLOGF(
+        ERR,
+        "Failed to check if overlay dir exists {} {}",
+        inodeNumber,
+        e.what());
     stats_->increment(&OverlayStats::hasOverlayDirFailure);
     throw;
   }
@@ -665,8 +668,11 @@ bool Overlay::hasOverlayFile(InodeNumber inodeNumber) {
     stats_->increment(&OverlayStats::hasOverlayFileSuccessful);
     return has_overlay_file;
   } catch (const std::exception& e) {
-    XLOG(ERR) << "Failed to check if overlay file exists " << inodeNumber << " "
-              << e.what();
+    XLOGF(
+        ERR,
+        "Failed to check if overlay file exists {} {}",
+        inodeNumber,
+        e.what());
     stats_->increment(&OverlayStats::hasOverlayFileFailure);
     throw;
   }
@@ -686,8 +692,7 @@ OverlayFile Overlay::openFile(
     stats_->increment(&OverlayStats::openOverlayFileSuccessful);
     return file;
   } catch (const std::exception& e) {
-    XLOG(ERR) << "Failed to open file " << inodeNumber << " " << headerId << " "
-              << e.what();
+    XLOGF(ERR, "Failed to open file {} {} {}", inodeNumber, headerId, e.what());
     stats_->increment(&OverlayStats::openOverlayFileFailure);
     throw;
   }
@@ -703,7 +708,7 @@ OverlayFile Overlay::openFileNoVerify(InodeNumber inodeNumber) {
     stats_->increment(&OverlayStats::openOverlayFileSuccessful);
     return file;
   } catch (const std::exception& e) {
-    XLOG(ERR) << "Failed to open file " << inodeNumber << " " << e.what();
+    XLOGF(ERR, "Failed to open file {} {}", inodeNumber, e.what());
     stats_->increment(&OverlayStats::openOverlayFileFailure);
     throw;
   }
@@ -725,7 +730,7 @@ OverlayFile Overlay::createOverlayFile(
     stats_->increment(&OverlayStats::createOverlayFileSuccessful);
     return file;
   } catch (const std::exception& e) {
-    XLOG(ERR) << "Failed to create file " << inodeNumber << " " << e.what();
+    XLOGF(ERR, "Failed to create file {} {}", inodeNumber, e.what());
     stats_->increment(&OverlayStats::createOverlayFileFailure);
     throw;
   }
@@ -747,7 +752,7 @@ OverlayFile Overlay::createOverlayFile(
     stats_->increment(&OverlayStats::createOverlayFileSuccessful);
     return file;
   } catch (const std::exception& e) {
-    XLOG(ERR) << "Failed to create file " << inodeNumber << " " << e.what();
+    XLOGF(ERR, "Failed to create file {} {}", inodeNumber, e.what());
     stats_->increment(&OverlayStats::createOverlayFileFailure);
     throw;
   }
@@ -858,8 +863,11 @@ void Overlay::handleGCRequest(GCRequest& request) {
     try {
       removeOverlayFile(inodeNumber);
     } catch (const std::exception& e) {
-      XLOG(ERR) << "Failed to remove overlay data for file inode "
-                << inodeNumber << ": " << e.what();
+      XLOGF(
+          ERR,
+          "Failed to remove overlay data for file inode {}: {}",
+          inodeNumber,
+          e.what());
     }
   };
 
@@ -896,14 +904,17 @@ void Overlay::handleGCRequest(GCRequest& request) {
       freeInodeFromMetadataTable(ino);
       auto dirData = inodeCatalog_->loadAndRemoveOverlayDir(ino);
       if (!dirData.has_value()) {
-        XLOG(DBG7) << "no dir data for inode " << ino;
+        XLOGF(DBG7, "no dir data for inode {}", ino);
         continue;
       } else {
         dir = std::move(*dirData);
       }
     } catch (const std::exception& e) {
-      XLOG(ERR) << "While collecting, failed to load tree data for inode "
-                << ino << ": " << e.what();
+      XLOGF(
+          ERR,
+          "While collecting, failed to load tree data for inode {}: {}",
+          ino,
+          e.what());
       continue;
     }
 
