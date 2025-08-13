@@ -14,11 +14,15 @@ def cmd(ui, repo, csid=None, *pats, **opts):
     if csid is None:
         raise error.CommandError("snapshot isworkingcopy", _("missing snapshot id"))
 
-    snapshot = repo.edenapi.fetchsnapshot(
-        {
-            "cs_id": bytes.fromhex(csid),
-        },
-    )
+    try:
+        snapshot = repo.edenapi.fetchsnapshot(
+            {
+                "cs_id": bytes.fromhex(csid),
+            },
+        )
+    except Exception:
+        raise error.Abort(_("snapshot doesn't exist"))
+
     maxuntrackedsize = parsemaxuntracked(opts)
     maxuntrackedsizebytes = parsemaxuntrackedbytes(opts)
 
@@ -28,8 +32,31 @@ def cmd(ui, repo, csid=None, *pats, **opts):
     iswc, reason = _isworkingcopy(
         ui, repo, snapshot, effective_max_untracked_size, pats, opts
     )
-    if iswc:
-        if not ui.plain():
-            ui.status(_("snapshot is the working copy\n"))
+
+    # Use formatter for JSON output support and template support for automation
+    if opts.get("template"):
+        with ui.formatter("snapshot", opts) as fm:
+            fm.startitem()
+            fm.data(id=csid)
+            fm.data(is_working_copy=iswc)
+            if not iswc:
+                fm.data(reason=reason)
+
+            # For non-JSON/template output, still show human-readable text
+            if not ui.quiet and not ui.plain():
+                if iswc:
+                    fm.plain(_("snapshot {} is the working copy\n").format(csid))
+                else:
+                    fm.plain(
+                        _("snapshot {} is not the working copy: {}\n").format(
+                            csid, reason
+                        )
+                    )
     else:
-        raise error.Abort(_("snapshot is not the working copy: {}").format(reason))
+        # Legacy output - abort on mismatch for non-template mode: to be deprecated in flavor of
+        # better separation of output and error handling
+        if iswc:
+            if not ui.plain():
+                ui.status(_("snapshot is the working copy\n"))
+        else:
+            raise error.Abort(_("snapshot is not the working copy: {}").format(reason))

@@ -178,7 +178,8 @@ def showcmd(*args, **kwargs) -> None:
             _("MAX_SIZE_BYTES"),
         ),
     ]
-    + cmdutil.walkopts,
+    + cmdutil.walkopts
+    + cmdutil.templateopts,
     _("ID"),
 )
 def isworkingcopycmd(*args, **kwargs) -> None:
