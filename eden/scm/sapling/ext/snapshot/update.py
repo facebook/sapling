@@ -151,14 +151,18 @@ def _download_files_and_fix_status(ui, repo, snapshot) -> None:
     duration = time.perf_counter() - start_download
     ui.status(
         _(
-            "Downloaded files for restoring snapshot in {duration:0.5f} seconds ({fetched} fetched/{unchanged} unchanged/{cached} cached)\n"
+            "Downloaded files for restoring snapshot in {duration:0.5f} seconds\n"
+        ).format(duration=duration),
+        component="snapshot",
+    )
+    ui.status(
+        _(
+            "{fetched} files fetched, {unchanged} files unchanged, {cached} files cached\n"
         ).format(
-            duration=duration,
             fetched=download_stats.blobs_fetched_remotely(),
             unchanged=download_stats.blobs_from_disk_state(),
             cached=download_stats.blobs_from_local_cache(),
         ),
-        component="snapshot",
     )
     with perftrace.trace("Post-fix status"):
         # Need to add changed files after they are populated in the working dir

@@ -16,21 +16,25 @@ setup configuration
   $ cd test_tmp
   $ echo "a file content" > a
   $ hg snapshot create
-  snapshot: Snapshot created with id 60ba9e25af931d7b1669e121cb4f42ad0eeca14462e8e8126140ca63a25bee8e (0 modified/0 added/0 removed/0 missing/1 untracked)
+  snapshot: Snapshot created with id 60ba9e25af931d7b1669e121cb4f42ad0eeca14462e8e8126140ca63a25bee8e
+  0 files modified, 0 files added, 0 files removed, 0 files missing, 1 files untracked
   $ echo "b file content" > b
   $ hg add b
   $ hg snapshot create
-  snapshot: Snapshot created with id 41b1e99e2b81202d04b4817e3fa7ebdb936184626f74af23b865a80fa71b5561 (0 modified/1 added/0 removed/0 missing/1 untracked)
+  snapshot: Snapshot created with id 41b1e99e2b81202d04b4817e3fa7ebdb936184626f74af23b865a80fa71b5561
+  0 files modified, 1 files added, 0 files removed, 0 files missing, 1 files untracked
   $ echo "c file content" > c
   $ hg snapshot create
-  snapshot: Snapshot created with id 2a2db020a9a64a3541d655f0b8a14c4df3f26ce584d5e1945da2b5ef4aefe43c (0 modified/1 added/0 removed/0 missing/2 untracked)
+  snapshot: Snapshot created with id 2a2db020a9a64a3541d655f0b8a14c4df3f26ce584d5e1945da2b5ef4aefe43c
+  0 files modified, 1 files added, 0 files removed, 0 files missing, 2 files untracked
   $ echo "d file content" > d
   $ echo "e file content" > e
   $ echo "f file content" > f
   $ echo "g file content" > g
   $ hg add g
   $ hg snapshot create
-  snapshot: Snapshot created with id 059a7eb7b90ca07b7a13ab036cc3c58c3914c89ff7a4dab05dc33bfe5c3f2348 (0 modified/2 added/0 removed/0 missing/5 untracked)
+  snapshot: Snapshot created with id 059a7eb7b90ca07b7a13ab036cc3c58c3914c89ff7a4dab05dc33bfe5c3f2348
+  0 files modified, 2 files added, 0 files removed, 0 files missing, 5 files untracked
 # Ensure bubbles are expired before moving forward
   $ sleep 10
 

@@ -22,7 +22,8 @@ setup configuration
   $ echo "f file content" > f
   $ hg add f
   $ hg snapshot create
-  snapshot: Snapshot created with id 2a4cebaabddd194bda1812da6b762215dfbbe7f9ed1cfe03d3b1e02ea6e9c320 (0 modified/2 added/0 removed/0 missing/4 untracked)
+  snapshot: Snapshot created with id 2a4cebaabddd194bda1812da6b762215dfbbe7f9ed1cfe03d3b1e02ea6e9c320
+  0 files modified, 2 files added, 0 files removed, 0 files missing, 4 files untracked
 
 List the blob contents of a bubble without passing any argument:
   $ mononoke_admin ephemeral-store -R repo list

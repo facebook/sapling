@@ -408,16 +408,16 @@ def createremote(ui, repo, *pats, **opts) -> None:
 
     csid = csid.hex()
 
-    # Create file status summary with all counts (even 0) using "/" delimiter
+    # Create file status summary
     status_parts = [
-        _("{} modified").format(len(wc.modified)),
-        _("{} added").format(len(wc.added)),
-        _("{} removed").format(len(wc.removed)),
-        _("{} missing").format(len(wc.missing)),
-        _("{} untracked").format(len(wc.untracked)),
+        _("{} files modified").format(len(wc.modified)),
+        _("{} files added").format(len(wc.added)),
+        _("{} files removed").format(len(wc.removed)),
+        _("{} files missing").format(len(wc.missing)),
+        _("{} files untracked").format(len(wc.untracked)),
     ]
 
-    status_summary = " ({})".format("/".join(status_parts))
+    status_summary = ", ".join(status_parts)
 
     # Use formatter for JSON output support
     if opts.get("template"):
@@ -450,12 +450,12 @@ def createremote(ui, repo, *pats, **opts) -> None:
                     labels_str = ",".join(labels)
                     fm.plain(
                         _(
-                            "snapshot: Snapshot created with id {} and labels {}{}\n"
+                            "snapshot: Snapshot created with id {} and labels {}\n{}\n"
                         ).format(csid, labels_str, status_summary)
                     )
                 else:
                     fm.plain(
-                        _("snapshot: Snapshot created with id {}{}\n").format(
+                        _("snapshot: Snapshot created with id {}\n{}\n").format(
                             csid, status_summary
                         )
                     )
@@ -465,13 +465,13 @@ def createremote(ui, repo, *pats, **opts) -> None:
         elif labels:
             labels = ",".join(labels)
             ui.status(
-                _("Snapshot created with id {} and labels {}{}\n").format(
+                _("Snapshot created with id {} and labels {}\n{}\n").format(
                     csid, labels, status_summary
                 ),
                 component="snapshot",
             )
         else:
             ui.status(
-                _("Snapshot created with id {}{}\n").format(csid, status_summary),
+                _("Snapshot created with id {}\n{}\n").format(csid, status_summary),
                 component="snapshot",
             )
