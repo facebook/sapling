@@ -12,6 +12,7 @@
 use cpython::*;
 
 mod client;
+mod downloadfilestats;
 mod pyext;
 mod pytypes;
 mod stats;
@@ -23,6 +24,7 @@ pub fn init_module(py: Python, package: &str) -> PyResult<PyModule> {
     let name = [package, "edenapi"].join(".");
     let m = PyModule::new(py, &name)?;
     m.add_class::<client::client>(py)?;
+    m.add_class::<downloadfilestats::downloadfilestats>(py)?;
     m.add_class::<stats::stats>(py)?;
     Ok(m)
 }

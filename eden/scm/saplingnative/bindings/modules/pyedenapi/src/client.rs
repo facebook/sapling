@@ -95,6 +95,7 @@ use types::FetchContext;
 use types::HgId;
 use types::RepoPathBuf;
 
+use crate::downloadfilestats::downloadfilestats;
 use crate::pyext::SaplingRemoteApiPyExt;
 use crate::stats::stats;
 use crate::util::to_path;
@@ -474,22 +475,23 @@ py_class!(pub class client |py| {
     }
 
     /// Downloads files from given upload tokens to given paths
+    /// Returns download blob stats showing blobs from disk/cache/remote
     def downloadfiles(
         &self,
         root: Serde<RepoPathBuf>,
         // (path to download, content id)
         files: Vec<(PyPathBuf, Serde<UploadToken>, Serde<FileType>)>,
-    ) -> PyResult<bool> {
+    ) -> PyResult<downloadfilestats> {
         let api = self.inner(py).as_ref();
         let files = files
             .into_iter()
             .map(|(p, token, tp)| Ok((to_path(py, &p)?, token.0, tp.0)))
             .collect::<Result<Vec<_>, PyErr>>()?;
         let cache = SharedSnapshotFileCache::from_config(self.config(py).as_ref()).ok();
-        py.allow_threads(|| block_unless_interrupted(download_files_with_cache(api, &root.0, files, cache)))
+        let stats = py.allow_threads(|| block_unless_interrupted(download_files_with_cache(api, &root.0, files, cache)))
             .map_pyerr(py)?
-            .map_pyerr(py)
-            .map(|_| true)
+            .map_pyerr(py)?;
+        downloadfilestats::new(py, stats)
     }
 
     /// Checks which files differ from

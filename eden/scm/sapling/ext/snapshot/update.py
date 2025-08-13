@@ -147,12 +147,17 @@ def _download_files_and_fix_status(ui, repo, snapshot) -> None:
     )
     start_download = time.perf_counter()
     with perftrace.trace("Download via EdenAPI"):
-        repo.edenapi.downloadfiles(repo.root, files2download)
+        download_stats = repo.edenapi.downloadfiles(repo.root, files2download)
     duration = time.perf_counter() - start_download
     ui.status(
         _(
-            "Downloaded files for restoring snapshot in {duration:0.5f} seconds\n"
-        ).format(duration=duration),
+            "Downloaded files for restoring snapshot in {duration:0.5f} seconds ({fetched} fetched/{unchanged} unchanged/{cached} cached)\n"
+        ).format(
+            duration=duration,
+            fetched=download_stats.blobs_fetched_remotely(),
+            unchanged=download_stats.blobs_from_disk_state(),
+            cached=download_stats.blobs_from_local_cache(),
+        ),
         component="snapshot",
     )
     with perftrace.trace("Post-fix status"):

@@ -7,7 +7,12 @@
 
 use std::collections::BTreeMap;
 use std::collections::BTreeSet;
+use std::fmt;
 use std::num::NonZeroU64;
+use std::ops::AddAssign;
+use std::sync::Arc;
+use std::sync::atomic::AtomicUsize;
+use std::sync::atomic::Ordering;
 use std::time::Duration;
 
 use anyhow::Context;
@@ -32,6 +37,126 @@ use tokio::task;
 
 use crate::snapshot_cache::SharedSnapshotFileCache;
 use crate::util::calc_contentid;
+
+/// Statistics for blob downloads tracking different sources using atomic counters
+/// This provides thread-safe, lock-free counting for concurrent async operations
+///
+/// Note: Tracks by blobs (content) rather than file paths, since multiple paths
+/// can reference the same blob content. This makes it easier to reason about.
+#[derive(Debug, Default)]
+pub struct DownloadFileStats {
+    /// Number of blobs found on disk with correct content
+    blobs_from_disk_state: AtomicUsize,
+    /// Number of blobs retrieved from local cache
+    blobs_from_local_cache: AtomicUsize,
+    /// Number of blobs fetched remotely from server
+    blobs_fetched_remotely: AtomicUsize,
+}
+
+impl DownloadFileStats {
+    pub fn new() -> Self {
+        Self::default()
+    }
+
+    /// Total number of blobs processed
+    pub fn total_blobs(&self) -> usize {
+        self.blobs_from_disk_state.load(Ordering::Relaxed)
+            + self.blobs_from_local_cache.load(Ordering::Relaxed)
+            + self.blobs_fetched_remotely.load(Ordering::Relaxed)
+    }
+
+    /// Number of blobs found on disk
+    pub fn blobs_from_disk_state(&self) -> usize {
+        self.blobs_from_disk_state.load(Ordering::Relaxed)
+    }
+
+    /// Number of blobs from local cache
+    pub fn blobs_from_local_cache(&self) -> usize {
+        self.blobs_from_local_cache.load(Ordering::Relaxed)
+    }
+
+    /// Number of blobs fetched remotely
+    pub fn blobs_fetched_remotely(&self) -> usize {
+        self.blobs_fetched_remotely.load(Ordering::Relaxed)
+    }
+
+    /// Add stats for a blob found on disk
+    pub fn add_disk_blob(&self) {
+        self.blobs_from_disk_state.fetch_add(1, Ordering::Relaxed);
+    }
+
+    /// Add stats for a blob from cache
+    pub fn add_cached_blob(&self) {
+        self.blobs_from_local_cache.fetch_add(1, Ordering::Relaxed);
+    }
+
+    /// Add stats for a blob fetched remotely
+    pub fn add_remote_blob(&self) {
+        self.blobs_fetched_remotely.fetch_add(1, Ordering::Relaxed);
+    }
+
+    /// Get a snapshot of the current stats as regular usize values
+    pub fn snapshot(&self) -> DownloadFileStatsSnapshot {
+        DownloadFileStatsSnapshot {
+            blobs_from_disk_state: self.blobs_from_disk_state(),
+            blobs_from_local_cache: self.blobs_from_local_cache(),
+            blobs_fetched_remotely: self.blobs_fetched_remotely(),
+        }
+    }
+}
+
+impl fmt::Display for DownloadFileStats {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(
+            f,
+            "Downloaded {} blobs (disk: {}, cache: {}, remote: {})",
+            self.total_blobs(),
+            self.blobs_from_disk_state(),
+            self.blobs_from_local_cache(),
+            self.blobs_fetched_remotely()
+        )
+    }
+}
+
+/// A snapshot of download blob stats at a point in time
+/// This is useful for returning stats from async functions
+#[derive(Clone, Debug, Default, Eq, PartialEq)]
+pub struct DownloadFileStatsSnapshot {
+    /// Number of blobs found on disk with correct content
+    pub blobs_from_disk_state: usize,
+    /// Number of blobs retrieved from local cache
+    pub blobs_from_local_cache: usize,
+    /// Number of blobs fetched remotely from server
+    pub blobs_fetched_remotely: usize,
+}
+
+impl DownloadFileStatsSnapshot {
+    /// Total number of blobs processed
+    pub fn total_blobs(&self) -> usize {
+        self.blobs_from_disk_state + self.blobs_from_local_cache + self.blobs_fetched_remotely
+    }
+}
+
+impl fmt::Display for DownloadFileStatsSnapshot {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(
+            f,
+            "Downloaded {} blobs (disk: {}, cache: {}, remote: {})",
+            self.total_blobs(),
+            self.blobs_from_disk_state,
+            self.blobs_from_local_cache,
+            self.blobs_fetched_remotely
+        )
+    }
+}
+
+impl AddAssign for DownloadFileStatsSnapshot {
+    fn add_assign(&mut self, rhs: Self) {
+        self.blobs_from_disk_state += rhs.blobs_from_disk_state;
+        self.blobs_from_local_cache += rhs.blobs_from_local_cache;
+        self.blobs_fetched_remotely += rhs.blobs_fetched_remotely;
+    }
+}
 
 #[derive(PartialEq, Eq)]
 enum TrackedType {

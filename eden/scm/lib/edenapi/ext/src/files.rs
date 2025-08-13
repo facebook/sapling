@@ -6,6 +6,7 @@
  */
 
 use std::collections::HashMap;
+use std::sync::Arc;
 
 use anyhow::Context;
 use anyhow::Result;
@@ -28,6 +29,8 @@ use vfs::VFS;
 
 use crate::SharedSnapshotFileCache;
 use crate::calc_contentid;
+use crate::snapshot::DownloadFileStats;
+use crate::snapshot::DownloadFileStatsSnapshot;
 
 fn abs_path(root: &RepoPathBuf, rel_path: &RepoPathBuf) -> RepoPathBuf {
     let mut abs_path = root.clone();
@@ -176,7 +179,7 @@ pub async fn download_files(
     api: &(impl SaplingRemoteApi + ?Sized),
     root: &RepoPathBuf,
     files: impl IntoIterator<Item = (RepoPathBuf, UploadToken, FileType)>,
-) -> Result<()> {
+) -> Result<DownloadFileStatsSnapshot> {
     download_files_with_cache(api, root, files, None).await
 }
 
@@ -185,19 +188,24 @@ pub async fn download_files_with_cache(
     root: &RepoPathBuf,
     files: impl IntoIterator<Item = (RepoPathBuf, UploadToken, FileType)>,
     cache: Option<SharedSnapshotFileCache>,
-) -> Result<()> {
+) -> Result<DownloadFileStatsSnapshot> {
     let vfs = VFS::new(std::path::PathBuf::from(root.as_str()))?;
     let writer = AsyncVfsWriter::spawn_new(vfs, WORKERS);
     let writer = &writer;
 
+    // Create shared stats using atomic counters for thread-safe access
+    let stats = Arc::new(DownloadFileStats::new());
+
     stream::iter(merge_tokens(files).map(|value| {
-        cloned!(cache);
+        cloned!(cache, stats);
         async move {
             let OnDiskOptimizationResponse {
                 correct_paths,
                 incorrect_paths,
                 content,
             } = on_disk_optimization(root, value.paths, &value.token, true).await?;
+
+            // Handle file permissions for paths that already have correct content
             for (path, file_type) in correct_paths {
                 match file_type {
                     FileType::Regular => writer.set_executable(path, false).await?,
@@ -207,30 +215,47 @@ pub async fn download_files_with_cache(
             }
             let len = incorrect_paths.len();
             if len == 0 {
-                return Ok(());
+                // All paths for this blob were found on disk with correct content
+                // Track this as 1 blob from disk (not by number of paths)
+                stats.add_disk_blob();
+                return Ok::<(), anyhow::Error>(());
             }
             let content = match content {
-                Some(bytes) => bytes,
+                Some(bytes) => {
+                    // Blob content was found on disk - track as 1 blob from disk
+                    stats.add_disk_blob();
+                    bytes
+                }
                 None => {
                     if let Some(ref cache) = cache {
                         if let AnyId::AnyFileContentId(AnyFileContentId::ContentId(cid)) =
                             value.token.data.id
                         {
                             if let Ok(Some(cached_bytes)) = cache.get(&cid) {
+                                // Track as 1 blob retrieved from local cache
+                                stats.add_cached_blob();
                                 cached_bytes
                             } else {
                                 // Cache miss, download and store in cache
                                 let downloaded_bytes = api.download_file(value.token).await?;
                                 let _ = cache.store_with_content_id(cid, &downloaded_bytes);
+                                // Track as 1 blob fetched remotely
+                                stats.add_remote_blob();
                                 downloaded_bytes
                             }
                         } else {
                             // Invalid token format, just download without caching
-                            api.download_file(value.token).await?
+                            let downloaded_bytes = api.download_file(value.token).await?;
+                            // Track as 1 blob fetched remotely
+                            stats.add_remote_blob();
+                            downloaded_bytes
                         }
                     } else {
                         // No cache provided, just download directly
-                        api.download_file(value.token).await?
+                        let downloaded_bytes = api.download_file(value.token).await?;
+                        // Track as 1 blob fetched remotely
+                        stats.add_remote_blob();
+                        downloaded_bytes
                     }
                 }
             };
@@ -257,6 +282,9 @@ pub async fn download_files_with_cache(
         }
     }))
     .buffered(WORKERS)
-    .try_collect()
-    .await
+    .try_collect::<()>()
+    .await?;
+
+    // Return a snapshot of the final stats
+    Ok(stats.snapshot())
 }
