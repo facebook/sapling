@@ -24,9 +24,10 @@ from typing import Any, cast, Dict, List, Optional, TextIO, Tuple, Union
 
 from eden.fs.cli import util
 from eden.fs.service.eden.thrift_clients import EdenService
+from eden.fs.service.eden.thrift_types import MountState
 from eden.thrift import legacy
 from eden.thrift.legacy import EdenClient
-from facebook.eden.ttypes import MountState
+from facebook.eden.ttypes import MountState as LegacyMountState
 from fb303_core.ttypes import fb303_status
 from thrift.python.client import ClientType, get_client
 
@@ -724,7 +725,7 @@ class EdenFS:
 
     def get_mount_state(
         self, mount: pathlib.Path, client: Optional[EdenClient] = None
-    ) -> Optional[MountState]:
+    ) -> Optional[LegacyMountState]:
         """
         Query edenfs over thrift for the state of the specified mount.
 
@@ -736,6 +737,26 @@ class EdenFS:
                 return self.get_mount_state(mount, client)
         else:
             for entry in client.listMounts():
+                entry_path = pathlib.Path(os.fsdecode(entry.mountPoint))
+                if entry_path == mount:
+                    return entry.state
+            return None
+
+    async def get_mount_state_async(
+        self, mount: pathlib.Path, client: Optional[EdenService.Async] = None
+    ) -> Optional[MountState]:
+        """
+        Query edenfs over thrift for the state of the specified mount.
+
+        Returns the MountState enum, or None if edenfs does not currently know about
+        this mount path.
+        """
+        if client is None:
+            async with self.get_thrift_client() as client:
+                return await self.get_mount_state_async(mount, client)
+        else:
+            mounts = await client.listMounts()
+            for entry in mounts:
                 entry_path = pathlib.Path(os.fsdecode(entry.mountPoint))
                 if entry_path == mount:
                     return entry.state
