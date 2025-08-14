@@ -66,8 +66,8 @@ export function joinPaths(root: AbsolutePath, path: CwdRelativePath): AbsolutePa
 
 /**
  * Trim a suffix if it exists
- * maybeTrim('abc/', '/') -> 'abc'
- * maybeTrim('abc', '/') -> 'abc'
+ * maybeTrimSuffix('abc/', '/') -> 'abc'
+ * maybeTrimSuffix('abc', '/') -> 'abc'
  */
 function maybeTrimSuffix(s: string, c: string): string {
   return s.endsWith(c) ? s.slice(0, -c.length) : s;
@@ -87,11 +87,11 @@ function getMainSelectorLabel(
   // If there are multiple nested repo roots,
   // show the first one as there will be following selectors for the rest
   if (nestedRepoRoots && nestedRepoRoots.length > 1) {
-    return maybeTrimPrefix(basename(nestedRepoRoots[0], sep), sep);
+    return maybeTrimSuffix(basename(nestedRepoRoots[0], sep), sep);
   }
 
   // Otherwise, build the label with the direct and only repo root
-  const repoBasename = maybeTrimPrefix(basename(directRepoRoot, sep), sep);
+  const repoBasename = maybeTrimSuffix(basename(directRepoRoot, sep), sep);
   const repoRelativeCwd = relativePath(directRepoRoot, cwd);
   if (repoRelativeCwd === '') {
     return repoBasename;
