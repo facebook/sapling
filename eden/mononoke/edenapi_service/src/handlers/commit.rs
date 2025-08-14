@@ -63,6 +63,7 @@ use edenapi_types::UploadIdenticalChangesetsRequest;
 use edenapi_types::UploadToken;
 use edenapi_types::UploadTokensResponse;
 use ephemeral_blobstore::BubbleId;
+use ephemeral_blobstore::EphemeralBlobstoreError;
 use futures::FutureExt;
 use futures::Stream;
 use futures::StreamExt;
@@ -878,29 +879,50 @@ impl SaplingRemoteApiHandler for EphemeralExtendHandler {
         request: Self::Request,
     ) -> HandlerResult<'async_trait, Self::Response> {
         let repo = ectx.repo();
-        Ok(stream::once(async move {
-            let bubble_id = BubbleId::new(request.bubble_id);
-            let custom_duration = request.custom_duration_secs.map(Duration::from_secs);
-            // Extend the bubble's TTL using the new method
-            let store_outcome = repo
-                .ephemeral_store()
-                .extend_bubble_ttl(repo.ctx(), bubble_id, custom_duration)
-                .await?;
-            // Convert the store outcome to the API outcome
-            let api_outcome = match store_outcome {
-                ephemeral_blobstore::ExtendBubbleTtlOutcome::Extended(timestamp) => {
-                    ExtendBubbleTtlOutcome::Extended(timestamp.timestamp_seconds())
-                }
-                ephemeral_blobstore::ExtendBubbleTtlOutcome::NotChanged(timestamp) => {
-                    ExtendBubbleTtlOutcome::NotChanged(timestamp.timestamp_seconds())
-                }
-            };
-            Ok(EphemeralExtendResponse {
-                bubble_id: request.bubble_id,
-                result: api_outcome,
-            })
-        })
-        .boxed())
+        let bubble_id = BubbleId::new(request.bubble_id);
+        let custom_duration = request.custom_duration_secs.map(Duration::from_secs);
+
+        // Extend the bubble's TTL using the new method
+        let store_outcome = match repo
+            .ephemeral_store()
+            .extend_bubble_ttl(repo.ctx(), bubble_id, custom_duration)
+            .await
+        {
+            Ok(outcome) => outcome,
+            Err(e) => {
+                let bubble_expired =
+                    e.downcast_ref::<EphemeralBlobstoreError>()
+                        .is_some_and(|ephemeral_err| {
+                            matches!(ephemeral_err, EphemeralBlobstoreError::NoSuchBubble(_))
+                        });
+                let err = if bubble_expired {
+                    HttpError::e400(MononokeError::NotAvailable(format!(
+                        "Bubble with ID {} expired",
+                        bubble_id
+                    )))
+                } else {
+                    HttpError::e500(MononokeError::from(e))
+                };
+                return Err(err.into());
+            }
+        };
+
+        // Convert the store outcome to the API outcome
+        let api_outcome = match store_outcome {
+            ephemeral_blobstore::ExtendBubbleTtlOutcome::Extended(timestamp) => {
+                ExtendBubbleTtlOutcome::Extended(timestamp.timestamp_seconds())
+            }
+            ephemeral_blobstore::ExtendBubbleTtlOutcome::NotChanged(timestamp) => {
+                ExtendBubbleTtlOutcome::NotChanged(timestamp.timestamp_seconds())
+            }
+        };
+
+        let response = EphemeralExtendResponse {
+            bubble_id: request.bubble_id,
+            result: api_outcome,
+        };
+
+        Ok(stream::once(async move { Ok(response) }).boxed())
     }
 }
 
