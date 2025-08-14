@@ -442,8 +442,12 @@ std::unique_ptr<JournalDeltaRange> Journal::accumulateRange(
               if (resultInfo->existedBefore != currentInfo.existedAfter) {
                 auto event1 = eventCharacterizationFor(currentInfo);
                 auto event2 = eventCharacterizationFor(*resultInfo);
-                XLOG(ERR) << "Journal for " << name << " holds invalid "
-                          << event1 << ", " << event2 << " sequence";
+                XLOGF(
+                    ERR,
+                    "Journal for {} holds invalid {}, {} sequence",
+                    name,
+                    event1,
+                    event2);
               }
 
               resultInfo->existedBefore = currentInfo.existedBefore;

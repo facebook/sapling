@@ -137,8 +137,9 @@ void CheckoutContext::addConflict(
     RelativePathPiece path,
     dtype_t dtype) {
   // Errors should be added using addError()
-  XCHECK(type != ConflictType::ERROR)
-      << "attempted to add error using addConflict(): " << path;
+  XCHECK(
+      type != ConflictType::ERROR,
+      fmt::format("attempted to add error using addConflict(): {}", path));
 
   CheckoutConflict conflict;
   conflict.path() = std::string{path.value()};

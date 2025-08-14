@@ -42,8 +42,11 @@ void ScmStatusDiffCallback::modifiedPath(RelativePathPiece path, dtype_t type) {
 void ScmStatusDiffCallback::diffError(
     RelativePathPiece path,
     const folly::exception_wrapper& ew) {
-  XLOG(WARNING) << "error computing status data for " << path << ": "
-                << folly::exceptionStr(ew);
+  XLOGF(
+      WARNING,
+      "error computing status data for {}: {}",
+      path,
+      folly::exceptionStr(ew));
   data_.wlock()->errors()->emplace(
       path.asString(), folly::exceptionStr(ew).toStdString());
 }

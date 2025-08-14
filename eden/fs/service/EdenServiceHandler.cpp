@@ -5759,8 +5759,10 @@ EdenServiceHandler::semifuture_invalidateKernelInodeCache(
 #else
   auto toInvalidate = relpathFromUserPath(*path);
 
-  XLOG(WARN) << "Manually invalidating \"" << toInvalidate
-             << "\". This is unsupported and may lead to strange behavior.";
+  XLOGF(
+      WARN,
+      "Manually invalidating \"{}\". This is unsupported and may lead to strange behavior.",
+      toInvalidate);
   if (auto* prjfsChannel = mountHandle.getEdenMount().getPrjfsChannel()) {
     return makeImmediateFutureWith(
                [&] { return prjfsChannel->removeCachedFile(toInvalidate); })

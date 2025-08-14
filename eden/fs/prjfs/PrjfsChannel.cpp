@@ -259,8 +259,10 @@ HRESULT runCallback(
  */
 void allowRecursiveCallbacks(const PRJ_CALLBACK_DATA* callbackData) {
   if (callbackData->TriggeringProcessId == GetCurrentProcessId()) {
-    XLOG(DBG6) << "Recursive EdenFS call for: "
-               << RelativePath(callbackData->FilePathName);
+    XLOGF(
+        DBG6,
+        "Recursive EdenFS call for: {}",
+        RelativePath(callbackData->FilePathName));
   }
 }
 
@@ -902,7 +904,7 @@ folly::Try<folly::Unit> removeCachedFileImpl(
 
   auto winPath = path.wide();
 
-  XLOG(DBG6) << "Invalidating: " << path;
+  XLOGF(DBG6, "Invalidating: {}", path);
 
   PRJ_UPDATE_FAILURE_CAUSES failureReason;
   auto result = PrjDeleteFile(
@@ -1535,7 +1537,7 @@ HRESULT PrjfsChannelInner::notification(
     // end up in a deadlock. To prevent this, let's simply bail here when this
     // happens.
     if (callbackData->TriggeringProcessId == GetCurrentProcessId()) {
-      XLOG(ERR) << "Recursive EdenFS call are disallowed for: " << relPath;
+      XLOGF(ERR, "Recursive EdenFS call are disallowed for: {}", relPath);
       return HRESULT_FROM_WIN32(ERROR_ACCESS_DENIED);
     }
 

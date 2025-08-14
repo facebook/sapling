@@ -163,8 +163,11 @@ class EdenMount::JournalDiffCallback : public DiffCallback {
       override {
     // TODO: figure out what we should do to notify the user, if anything.
     // perhaps we should just add this path to the list of unclean files?
-    XLOG(WARNING) << "error computing journal diff data for " << path << ": "
-                  << folly::exceptionStr(ew);
+    XLOGF(
+        WARNING,
+        "error computing journal diff data for {}: {}",
+        path,
+        folly::exceptionStr(ew));
   }
 
   FOLLY_NODISCARD ImmediateFuture<StatsFetchContext> performDiff(
@@ -797,8 +800,12 @@ ImmediateFuture<SetPathObjectIdResultAndTimes> EdenMount::setPathsToObjectIds(
      * So we use read lock instead assuming the contents of loaded rootId
      * objects are not weaving too much
      */
-    XLOG(DBG3) << "adding " << objectStore_->renderObjectId(object.id)
-               << " to mount " << this->getPath() << " at path " << object.path;
+    XLOGF(
+        DBG3,
+        "adding {} to mount {} at path {}",
+        objectStore_->renderObjectId(object.id),
+        this->getPath(),
+        object.path);
     auto& path = object.path;
     if (path.empty()) {
       // If the path is root, only setting to a tree is allowed

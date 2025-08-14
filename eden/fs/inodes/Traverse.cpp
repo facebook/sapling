@@ -40,7 +40,7 @@ void traverseTreeInodeChildren(
     const std::optional<ObjectId>& hash,
     uint64_t fsRefcount,
     TraversalCallbacks& callbacks) {
-  XLOG(DBG7) << "Traversing: " << rootPath;
+  XLOGF(DBG7, "Traversing: {}", rootPath);
   callbacks.visitTreeInode(rootPath, ino, hash, fsRefcount, children);
   for (auto& entry : children) {
     auto childPath = rootPath + entry.name;

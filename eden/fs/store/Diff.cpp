@@ -213,7 +213,7 @@ FOLLY_NODISCARD ImmediateFuture<Unit> waitOnResults(
           if (!result.hasException()) {
             continue;
           }
-          XLOG(ERR) << "error computing SCM diff for " << paths.at(idx);
+          XLOGF(ERR, "error computing SCM diff for {}", paths.at(idx));
           context->callback->diffError(paths.at(idx), result.exception());
         }
       });
@@ -282,8 +282,10 @@ FOLLY_NODISCARD ImmediateFuture<Unit> diffTrees(
     TreePtr scmTree,
     TreePtr wdTree) {
   if (context->isCancelled()) {
-    XLOG(DBG7) << "diff() on directory " << currentPath
-               << " cancelled due to client request no longer being active";
+    XLOGF(
+        DBG7,
+        "diff() on directory {} cancelled due to client request no longer being active",
+        currentPath);
     return folly::unit;
   }
 

@@ -617,7 +617,7 @@ ImmediateFuture<std::optional<LookupResult>> PrjfsDispatcherImpl::lookup(
                         return folly::Try{std::optional{LookupResult{
                             std::move(path), 0, true, std::nullopt}}};
                       } else {
-                        XLOG(DBG6) << path << ": File not found";
+                        XLOGF(DBG6, "{}: File not found", path);
                         return folly::Try<std::optional<LookupResult>>{
                             std::nullopt};
                       }
@@ -706,8 +706,11 @@ ImmediateFuture<TreeInodePtr> createDirInode(
         if (auto* exc = result.tryGetExceptionObject<std::system_error>();
             exc && isEnoent(*exc)) {
           mount.getStats()->increment(&PrjfsStats::outOfOrderCreate);
-          XLOG_EVERY_MS(DBG2, 1000)
-              << "Out of order directory creation notification for: " << path;
+          XLOGF_EVERY_MS(
+              DBG2,
+              1000,
+              "Out of order directory creation notification for: {}",
+              path);
 
           /*
            * ProjectedFS notifications are asynchronous and sent after the
@@ -807,10 +810,10 @@ ImmediateFuture<OnDiskState> getOnDiskState(
     return OnDiskState(OnDiskStateTypes::NotPresent);
   } else if (fileType == boost::filesystem::status_error) {
     if (retry == 5) {
-      XLOG(WARN) << "Assuming path is not present: " << path;
+      XLOGF(WARN, "Assuming path is not present: {}", path);
       return OnDiskState(OnDiskStateTypes::NotPresent);
     }
-    XLOG(WARN) << "Error: " << ec.message() << " for path: " << path;
+    XLOGF(WARN, "Error: {} for path: {}", ec.message(), path);
     return ImmediateFuture{folly::futures::sleep(retry * 5ms)}.thenValue(
         [&mount, path = path.copy(), receivedAt, retry](folly::Unit&&) {
           return getOnDiskState(mount, path, receivedAt, retry + 1);
@@ -1226,30 +1229,29 @@ ImmediateFuture<folly::Unit> fileNotification(
             &PrjfsStats::queuedFileNotification, watch.elapsed());
         return folly::unit;
       })
-      .thenError([path, &mount, dfatal_error](
-                     const folly::exception_wrapper& ew) {
-        if (ew.get_exception<QuietFault>()) {
-          XLOG(ERR) << "While handling notification on: " << path << ": " << ew;
-          return folly::unit;
-        }
+      .thenError(
+          [path, &mount, dfatal_error](const folly::exception_wrapper& ew) {
+            if (ew.get_exception<QuietFault>()) {
+              XLOGF(ERR, "While handling notification on: {}: {}", path, ew);
+              return folly::unit;
+            }
 
-        // These should in theory never happen, but they sometimes happen
-        // due to filesystem errors, antivirus scanning, etc. During
-        // test, these should be treated as fatal errors, so we don't let
-        // errors silently pass tests. In release builds, let's be less
-        // aggressive and just log.
-        mount.getServerState()->getStructuredLogger()->logEvent(
-            PrjFSFileNotificationFailure{
-                folly::exceptionStr(ew).toStdString(), path.asString()});
-        if (dfatal_error) {
-          XLOG(DFATAL) << "While handling notification on: " << path << ": "
-                       << ew;
-          return folly::unit;
-        } else {
-          XLOG(ERR) << "While handling notification on: " << path << ": " << ew;
-          ew.throw_exception();
-        }
-      });
+            // These should in theory never happen, but they sometimes happen
+            // due to filesystem errors, antivirus scanning, etc. During
+            // test, these should be treated as fatal errors, so we don't let
+            // errors silently pass tests. In release builds, let's be less
+            // aggressive and just log.
+            mount.getServerState()->getStructuredLogger()->logEvent(
+                PrjFSFileNotificationFailure{
+                    folly::exceptionStr(ew).toStdString(), path.asString()});
+            if (dfatal_error) {
+              XLOGF(DFATAL, "While handling notification on: {}: {}", path, ew);
+              return folly::unit;
+            } else {
+              XLOGF(ERR, "While handling notification on: {}: {}", path, ew);
+              ew.throw_exception();
+            }
+          });
 }
 
 } // namespace

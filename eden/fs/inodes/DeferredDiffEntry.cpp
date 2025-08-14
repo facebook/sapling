@@ -109,11 +109,11 @@ class ModifiedDiffEntry : public DeferredDiffEntry {
       // tree as removed.
       if (isIgnored_) {
         if (context_->listIgnored) {
-          XLOG(DBG6) << "directory --> ignored file: " << getPath();
+          XLOGF(DBG6, "directory --> ignored file: {}", getPath());
           context_->callback->ignoredPath(getPath(), inode->getType());
         }
       } else {
-        XLOG(DBG6) << "directory --> untracked file: " << getPath();
+        XLOGF(DBG6, "directory --> untracked file: {}", getPath());
         context_->callback->addedPath(getPath(), inode->getType());
       }
       // Since this is a file or symlink in the current filesystem state, but a
@@ -171,7 +171,7 @@ class ModifiedDiffEntry : public DeferredDiffEntry {
       // Report this file as removed, and everything in the source control
       // tree as untracked/ignored.
       auto path = getPath();
-      XLOG(DBG5) << "removed file: " << path;
+      XLOGF(DBG5, "removed file: {}", path);
       context_->callback->removedPath(
           path,
           filteredEntryDtype(
@@ -197,7 +197,7 @@ class ModifiedDiffEntry : public DeferredDiffEntry {
     return std::move(isSameAsFut)
         .thenValue([this, fileInode = std::move(fileInode)](bool isSame) {
           if (!isSame) {
-            XLOG(DBG5) << "modified file: " << getPath();
+            XLOGF(DBG5, "modified file: {}", getPath());
             context_->callback->modifiedPath(getPath(), fileInode->getType());
           }
         });
@@ -229,7 +229,7 @@ class ModifiedBlobDiffEntry : public DeferredDiffEntry {
             scmEntry_.getHash(), currentBlobHash_, context_->getFetchContext())
         .thenValue([this](bool equal) {
           if (!equal) {
-            XLOG(DBG5) << "modified file: " << getPath();
+            XLOGF(DBG5, "modified file: {}", getPath());
             context_->callback->modifiedPath(getPath(), currentDType_);
           }
         });

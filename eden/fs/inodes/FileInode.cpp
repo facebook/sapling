@@ -1213,8 +1213,11 @@ ImmediateFuture<folly::Unit> FileInode::ensureMaterialized(
                 return folly::unit;
               }
 
-              XLOG(DBG4) << "Materialize symlink " << getLogPath()
-                         << ", whose target is" << targetPath.value();
+              XLOGF(
+                  DBG4,
+                  "Materialize symlink {}, whose target is {}",
+                  getLogPath(),
+                  targetPath.value());
               return getMount()
                   ->getInodeSlow(targetPath.value(), fetchContext)
                   .thenValue(

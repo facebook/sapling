@@ -2752,19 +2752,19 @@ ImmediateFuture<Unit> TreeInode::computeDiff(
         if (ignoreStatus == GitIgnore::HIDDEN) {
           // Completely skip over hidden entries.
           // This is used for reserved directories like .hg and .eden
-          XLOG(DBG9) << "diff: hidden entry: " << entryPath;
+          XLOGF(DBG9, "diff: hidden entry: {}", entryPath);
           return;
         }
         entryIgnored = (ignoreStatus == GitIgnore::EXCLUDE);
       }
 
       if (!entryIgnored) {
-        XLOG(DBG8) << "diff: untracked file: " << entryPath;
+        XLOGF(DBG8, "diff: untracked file: {}", entryPath);
         context->callback->addedPath(
             entryPath,
             filteredEntryDtype(inodeEntry->getDtype(), windowsSymlinksEnabled));
       } else if (context->listIgnored) {
-        XLOG(DBG9) << "diff: ignored file: " << entryPath;
+        XLOGF(DBG9, "diff: ignored file: {}", entryPath);
         context->callback->ignoredPath(
             entryPath,
             filteredEntryDtype(inodeEntry->getDtype(), windowsSymlinksEnabled));
@@ -2812,7 +2812,7 @@ ImmediateFuture<Unit> TreeInode::computeDiff(
     };
 
     auto processRemoved = [&](const Tree::value_type& scmEntry) {
-      XLOG(DBG5) << "diff: removed file: " << currentPath + scmEntry.first;
+      XLOGF(DBG5, "diff: removed file: {}", currentPath + scmEntry.first);
       context->callback->removedPath(
           currentPath + scmEntry.first,
           filteredEntryDtype(
@@ -2901,7 +2901,7 @@ ImmediateFuture<Unit> TreeInode::computeDiff(
 
         if (exactMatch) {
           // This file or directory is unchanged.  We can skip it.
-          XLOG(DBG9) << "diff: unchanged unloaded file: " << entryPath;
+          XLOGF(DBG9, "diff: unchanged unloaded file: {}", entryPath);
         } else if (inodeEntry->isDirectory()) {
           // This is a modified directory. Since it is not materialized we can
           // directly compare the source control objects.
@@ -2921,14 +2921,14 @@ ImmediateFuture<Unit> TreeInode::computeDiff(
           // removed.
           if (entryIgnored) {
             if (context->listIgnored) {
-              XLOG(DBG6) << "diff: directory --> ignored file: " << entryPath;
+              XLOGF(DBG6, "diff: directory --> ignored file: {}", entryPath);
               context->callback->ignoredPath(
                   entryPath,
                   filteredEntryDtype(
                       inodeEntry->getDtype(), windowsSymlinksEnabled));
             }
           } else {
-            XLOG(DBG6) << "diff: directory --> untracked file: " << entryPath;
+            XLOGF(DBG6, "diff: directory --> untracked file: {}", entryPath);
             context->callback->addedPath(
                 entryPath,
                 filteredEntryDtype(
@@ -2956,8 +2956,8 @@ ImmediateFuture<Unit> TreeInode::computeDiff(
           if (treeEntryTypeFromMode(inodeEntry->getInitialMode()) !=
               filteredEntryType(scmEntry.getType(), windowsSymlinksEnabled)) {
             // The mode is definitely modified
-            XLOG(DBG5) << "diff: file modified due to mode change: "
-                       << entryPath;
+            XLOGF(
+                DBG5, "diff: file modified due to mode change: {}", entryPath);
             context->callback->modifiedPath(
                 entryPath,
                 filteredEntryDtype(
@@ -3108,9 +3108,11 @@ ImmediateFuture<Unit> TreeInode::computeDiff(
         for (size_t n = 0; n < results.size(); ++n) {
           auto& result = results[n];
           if (result.hasException()) {
-            XLOG(WARN) << "exception processing diff for "
-                       << deferredJobs[n]->getPath() << ": "
-                       << folly::exceptionStr(result.exception());
+            XLOGF(
+                WARN,
+                "exception processing diff for {}: {}",
+                deferredJobs[n]->getPath(),
+                folly::exceptionStr(result.exception()));
             context->callback->diffError(
                 deferredJobs[n]->getPath(), result.exception());
           }
