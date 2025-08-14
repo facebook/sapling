@@ -1059,25 +1059,28 @@ Do you want to run `eden mount %s` instead?"""
         shutil._rmtree_unsafe = old_rmtree_unsafe
         shutil._rmtree_safe_fd = old_rmtree_safe_fd
 
+    def _cleanup_unix_mount(self, path: Path, preserve_mount_point: bool) -> None:
+        # Delete the mount point
+        # It should normally contain the readme file that we put there, but nothing
+        # else.  We only delete these specific files for now rather than using
+        # shutil.rmtree() to avoid deleting files we did not create.
+        #
+        # Previous versions of EdenFS made the mount point directory read-only
+        # as part of "eden clone".  Make sure it is writable now so we can clean it up.
+        path.chmod(0o755)
+        try:
+            (path / NOT_MOUNTED_README_PATH).unlink()
+        except OSError as ex:
+            if ex.errno != errno.ENOENT:
+                raise
+        if not preserve_mount_point:
+            path.rmdir()
+
     def cleanup_mount(
         self, path: Path, preserve_mount_point: bool = False, debug: bool = False
     ) -> None:
         if sys.platform != "win32":
-            # Delete the mount point
-            # It should normally contain the readme file that we put there, but nothing
-            # else.  We only delete these specific files for now rather than using
-            # shutil.rmtree() to avoid deleting files we did not create.
-            #
-            # Previous versions of EdenFS made the mount point directory read-only
-            # as part of "eden clone".  Make sure it is writable now so we can clean it up.
-            path.chmod(0o755)
-            try:
-                (path / NOT_MOUNTED_README_PATH).unlink()
-            except OSError as ex:
-                if ex.errno != errno.ENOENT:
-                    raise
-            if not preserve_mount_point:
-                path.rmdir()
+            self._cleanup_unix_mount(path, preserve_mount_point)
         else:
             # On Windows, the mount point contains ProjectedFS placeholder and
             # files, remove all of them.
