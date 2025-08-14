@@ -264,7 +264,7 @@ FakeTreeBuilder::EntryInfo::EntryInfo(ExplicitClone, const EntryInfo& orig)
     entries = make_unique<PathMap<EntryInfo>>(kPathMapDefaultCaseSensitive);
     for (const auto& e : *orig.entries) {
       auto ret = entries->emplace(e.first, EntryInfo{CLONE, e.second});
-      XCHECK(ret.second) << "failed to insert " << e.first;
+      XCHECK(ret.second, fmt::format("failed to insert {}", e.first));
     }
   }
 }

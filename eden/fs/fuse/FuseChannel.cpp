@@ -2199,7 +2199,7 @@ ImmediateFuture<folly::Unit> FuseChannel::fuseMknod(
   }
 
   const auto name = extractPathComponent(nameStr, requireUtf8Path_);
-  XLOG(DBG7) << "FUSE_MKNOD " << name;
+  XLOGF(DBG7, "FUSE_MKNOD {}", name);
 
   InodeNumber parent{header.nodeid};
   return dispatcher_
@@ -2218,7 +2218,7 @@ ImmediateFuture<folly::Unit> FuseChannel::fuseMkdir(
   const auto nameStr = reinterpret_cast<const char*>(dir + 1);
   const auto name = extractPathComponent(nameStr, requireUtf8Path_);
 
-  XLOG(DBG7) << "FUSE_MKDIR " << name;
+  XLOGF(DBG7, "FUSE_MKDIR {}", name);
 
   // Kernel passes umask in fuse_mkdir_in, but unless FUSE_CAP_DONT_MASK is
   // set, the kernel has already masked it out in mode.
@@ -2241,7 +2241,7 @@ ImmediateFuture<folly::Unit> FuseChannel::fuseUnlink(
   const auto nameStr = reinterpret_cast<const char*>(arg.data());
   const auto name = extractPathComponent(nameStr, requireUtf8Path_);
 
-  XLOG(DBG7) << "FUSE_UNLINK " << name;
+  XLOGF(DBG7, "FUSE_UNLINK {}", name);
 
   InodeNumber parent{header.nodeid};
   return dispatcher_->unlink(parent, name, request.getObjectFetchContext())
@@ -2255,7 +2255,7 @@ ImmediateFuture<folly::Unit> FuseChannel::fuseRmdir(
   const auto nameStr = reinterpret_cast<const char*>(arg.data());
   const auto name = extractPathComponent(nameStr, requireUtf8Path_);
 
-  XLOG(DBG7) << "FUSE_RMDIR " << name;
+  XLOGF(DBG7, "FUSE_RMDIR {}", name);
   InodeNumber parent{header.nodeid};
   return dispatcher_->rmdir(parent, name, request.getObjectFetchContext())
       .thenValue([&request](auto&&) { request.replyError(0); });
@@ -2272,7 +2272,7 @@ ImmediateFuture<folly::Unit> FuseChannel::fuseRename(
 
   InodeNumber parent{header.nodeid};
   InodeNumber newParent{rename->newdir};
-  XLOG(DBG7) << "FUSE_RENAME " << oldName << " -> " << newName;
+  XLOGF(DBG7, "FUSE_RENAME {} -> {}", oldName, newName);
   return dispatcher_
       ->rename(
           parent,
@@ -2291,7 +2291,7 @@ ImmediateFuture<folly::Unit> FuseChannel::fuseLink(
   const auto nameStr = reinterpret_cast<const char*>(link + 1);
   const auto newName = extractPathComponent(nameStr, requireUtf8Path_);
 
-  XLOG(DBG7) << "FUSE_LINK " << newName;
+  XLOGF(DBG7, "FUSE_LINK {}", newName);
 
   InodeNumber ino{link->oldnodeid};
   InodeNumber newParent{header.nodeid};
@@ -2547,7 +2547,7 @@ ImmediateFuture<folly::Unit> FuseChannel::fuseCreate(
   const auto create = reinterpret_cast<const fuse_create_in*>(arg.data());
   const auto name = extractPathComponent(
       reinterpret_cast<const char*>(create + 1), requireUtf8Path_);
-  XLOG(DBG7) << "FUSE_CREATE " << name;
+  XLOGF(DBG7, "FUSE_CREATE {}", name);
   auto ino = InodeNumber{header.nodeid};
   return dispatcher_
       ->create(

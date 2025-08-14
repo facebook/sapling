@@ -282,8 +282,13 @@ void InodeBase::updateLocation(
     TreeInodePtr newParent,
     PathComponentPiece newName,
     const RenameLock& renameLock) {
-  XLOG(DBG5) << "inode " << this << " renamed: " << getLogPath() << " --> "
-             << newParent->getLogPath() << " / \"" << newName << "\"";
+  XLOGF(
+      DBG5,
+      "inode {:p} renamed: {} --> {} / \"{}\"",
+      static_cast<const void*>(this),
+      getLogPath(),
+      newParent->getLogPath(),
+      newName);
   XDCHECK(renameLock.isHeld(mount_));
   XDCHECK_EQ(mount_, newParent->mount_);
 

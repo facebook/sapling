@@ -238,8 +238,11 @@ std::optional<ImmediateFuture<VirtualInode>> TreeInode::rlockGetOrFindChild(
   // Check if the child is already loaded and return it if so
   auto iter = contents.entries.find(name);
   if (iter == contents.entries.end()) {
-    XLOG(DBG7) << "attempted to load non-existent entry \"" << name << "\" in "
-               << getLogPath();
+    XLOGF(
+        DBG7,
+        "attempted to load non-existent entry \"{}\" in {}",
+        name,
+        getLogPath());
     return std::make_optional(
         ImmediateFuture<VirtualInode>{folly::Try<VirtualInode>{
             InodeError(ENOENT, inodePtrFromThis(), name)}});
@@ -666,8 +669,11 @@ void TreeInode::inodeLoadComplete(
       // but the loading process would have to be significantly more
       // complicated to deal with this, both here and in the parent lookup
       // process in InodeMap::lookupInode().)
-      XLOG(ERR) << "child " << childName << " in " << getLogPath()
-                << " removed before it finished loading";
+      XLOGF(
+          ERR,
+          "child {} in {} removed before it finished loading",
+          childName,
+          getLogPath());
       throw InodeError(
           ENOENT,
           inodePtrFromThis(),
@@ -2001,17 +2007,25 @@ ImmediateFuture<Unit> TreeInode::rename(
       // or the exact same directory.
       if (locks.destChildExists()) {
         if (!locks.destChildIsDirectory()) {
-          XLOG(DBG4) << "attempted to rename directory " << getLogPath() << "/"
-                     << name << " over file " << destParent->getLogPath() << "/"
-                     << destName;
+          XLOGF(
+              DBG4,
+              "attempted to rename directory {}/{} over file {}/{}",
+              getLogPath(),
+              name,
+              destParent->getLogPath(),
+              destName);
           return ImmediateFuture<Unit>{
               folly::Try<Unit>{InodeError{ENOTDIR, destParent, destName}}};
         } else if (
             locks.destChild() != srcEntry.getInode() &&
             !locks.destChildIsEmpty()) {
-          XLOG(DBG4) << "attempted to rename directory " << getLogPath() << "/"
-                     << name << " over non-empty directory "
-                     << destParent->getLogPath() << "/" << destName;
+          XLOGF(
+              DBG4,
+              "attempted to rename directory {}/{} over non-empty directory {}/{}",
+              getLogPath(),
+              name,
+              destParent->getLogPath(),
+              destName);
           return ImmediateFuture<Unit>{
               folly::Try<Unit>{InodeError{ENOTEMPTY, destParent, destName}}};
         }
@@ -2020,9 +2034,13 @@ ImmediateFuture<Unit> TreeInode::rename(
       // The source is not a directory.
       // The destination must not exist, or must not be a directory.
       if (locks.destChildExists() && locks.destChildIsDirectory()) {
-        XLOG(DBG4) << "attempted to rename file " << getLogPath() << "/" << name
-                   << " over directory " << destParent->getLogPath() << "/"
-                   << destName;
+        XLOGF(
+            DBG4,
+            "attempted to rename file {}/{} over directory {}/{}",
+            getLogPath(),
+            name,
+            destParent->getLogPath(),
+            destName);
         return ImmediateFuture<Unit>{
             folly::Try<Unit>{InodeError{EISDIR, destParent, destName}}};
       }
@@ -2030,9 +2048,13 @@ ImmediateFuture<Unit> TreeInode::rename(
 
     // Make sure the destination directory is not unlinked.
     if (destParent->isUnlinked()) {
-      XLOG(DBG4) << "attempted to rename file " << getLogPath() << "/" << name
-                 << " into deleted directory " << destParent->getLogPath()
-                 << " ( as " << destName << ")";
+      XLOGF(
+          DBG4,
+          "attempted to rename file {}/{} into deleted directory {} ( as {} )",
+          getLogPath(),
+          name,
+          destParent->getLogPath(),
+          destName);
       return ImmediateFuture<Unit>{
           folly::Try<Unit>{InodeError{ENOENT, destParent}}};
     }
@@ -3692,9 +3714,11 @@ std::shared_ptr<CheckoutAction> TreeInode::processAbsentCheckoutEntry(
       if (folly::kIsWindows) {
         if (auto* exc = success.tryGetExceptionObject<std::system_error>();
             exc && isEnotempty(*exc)) {
-          XLOG(DBG6)
-              << "entry was created on disk while checkout is in progress: "
-              << getLogPath() << "/" << name;
+          XLOGF(
+              DBG6,
+              "entry was created on disk while checkout is in progress: {}/{}",
+              getLogPath(),
+              name);
           if (oldScmEntry) {
             ctx->addConflict(
                 ConflictType::MODIFIED_MODIFIED, this, name, dtype);
@@ -4598,8 +4622,12 @@ TreeInode::invalidateChildrenNotMaterialized(
             auto invalidateResult = self->invalidateChannelEntryCache(
                 *contents, entry.first, inodeNumber, nullptr);
             if (invalidateResult.hasException()) {
-              XLOG(DBG5) << "Couldn't invalidate: " << self->getLogPath() << "/"
-                         << entry.first << ": " << invalidateResult.exception();
+              XLOGF(
+                  DBG5,
+                  "Couldn't invalidate: {}/{}: {}",
+                  self->getLogPath(),
+                  entry.first,
+                  invalidateResult.exception());
             } else {
               numInvalidated++;
               isThisTreeInvalidated = true;

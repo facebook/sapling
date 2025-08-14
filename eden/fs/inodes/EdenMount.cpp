@@ -490,8 +490,10 @@ ImmediateFuture<Unit> ensureDotEdenSymlink(
           // We'll continue mounting the checkout, but this symlink won't be
           // set up.  This potentially could confuse applications that look
           // for it later.
-          XLOG(ERR) << "error setting up .eden/" << symlinkName
-                    << " symlink: a directory exists at this location";
+          XLOGF(
+              ERR,
+              "error setting up .eden/{} symlink: a directory exists at this location",
+              symlinkName);
           return Action::Nothing;
         }
 
@@ -534,8 +536,11 @@ ImmediateFuture<Unit> ensureDotEdenSymlink(
       })
       .thenTry([symlinkName](folly::Try<folly::Unit>&& try_) {
         if (try_.hasException()) {
-          XLOG(ERR) << "error setting up .eden/" << symlinkName
-                    << " symlink: " << try_.exception().what();
+          XLOGF(
+              ERR,
+              "error setting up .eden/{} symlink: {}",
+              symlinkName,
+              try_.exception().what());
           return ImmediateFuture<Unit>(std::move(try_).exception());
         }
         return ImmediateFuture<Unit>(folly::unit);

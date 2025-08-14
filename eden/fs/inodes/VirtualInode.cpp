@@ -836,8 +836,11 @@ ImmediateFuture<VirtualInode> getOrFindChildHelper(
   if (it == tree->cend()) {
     // Note that the path printed below is the requested path that is being
     // walked, childName may appear anywhere in the path.
-    XLOG(DBG7) << "attempted to find non-existent TreeEntry \"" << childName
-               << "\" in " << path;
+    XLOGF(
+        DBG7,
+        "attempted to find non-existent TreeEntry \"{}\" in {}",
+        childName,
+        path);
     return makeImmediateFuture<VirtualInode>(
         std::system_error(ENOENT, std::generic_category()));
   }

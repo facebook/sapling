@@ -936,7 +936,7 @@ void Overlay::addChild(
     }
     stats_->increment(&OverlayStats::addChildSuccessful);
   } catch (const std::exception& e) {
-    XLOG(ERR) << "Failed to add child " << childEntry.first << " " << e.what();
+    XLOGF(ERR, "Failed to add child {} {}", childEntry.first, e.what());
     stats_->increment(&OverlayStats::addChildFailure);
     throw;
   }
@@ -957,7 +957,7 @@ void Overlay::removeChild(
       stats_->increment(&OverlayStats::removeChildSuccessful);
     }
   } catch (const std::exception& e) {
-    XLOG(ERR) << "Failed to remove child " << childName << " " << e.what();
+    XLOGF(ERR, "Failed to remove child {} {}", childName, e.what());
     stats_->increment(&OverlayStats::removeChildFailure);
     throw;
   }
@@ -994,7 +994,7 @@ void Overlay::renameChild(
     }
     stats_->increment(&OverlayStats::renameChildSuccessful);
   } catch (const std::exception& e) {
-    XLOG(ERR) << "Failed to rename child " << srcName << " " << e.what();
+    XLOGF(ERR, "Failed to rename child {} {}", srcName, e.what());
     stats_->increment(&OverlayStats::renameChildFailure);
     throw;
   }
