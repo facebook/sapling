@@ -239,7 +239,7 @@ ObjectStore::getTreeEntryForObjectId(
     const ObjectId& objectId,
     TreeEntryType treeEntryType,
     const ObjectFetchContextPtr& context) const {
-  XLOG(DBG3) << "getTreeEntryForRootId(" << objectId << ")";
+  XLOGF(DBG3, "getTreeEntryForRootId({})", objectId);
 
   return backingStore_
       ->getTreeEntryForObjectId(objectId, treeEntryType, context)

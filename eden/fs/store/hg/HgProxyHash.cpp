@@ -127,8 +127,11 @@ HgProxyHash HgProxyHash::load(
   // Read the path name and file rev hash
   auto infoResult = store->get(KeySpace::HgProxyHashFamily, edenObjectId);
   if (!infoResult.isValid()) {
-    XLOG(ERR) << "received unknown mercurial proxy hash " << edenObjectId
-              << " in " << context;
+    XLOGF(
+        ERR,
+        "received unknown mercurial proxy hash {} in {}",
+        edenObjectId,
+        context);
     // Fall through and let infoResult.extractValue() throw
   }
 
@@ -177,8 +180,11 @@ HgProxyHash::HgProxyHash(
     StoreResult& infoResult,
     StringPiece context) {
   if (!infoResult.isValid()) {
-    XLOG(ERR) << "received unknown mercurial proxy hash " << edenBlobHash
-              << " in " << context;
+    XLOGF(
+        ERR,
+        "received unknown mercurial proxy hash {} in {}",
+        edenBlobHash,
+        context);
     // Fall through and let infoResult.extractValue() throw
   }
 

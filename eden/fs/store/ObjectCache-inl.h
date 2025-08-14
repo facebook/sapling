@@ -104,7 +104,7 @@ typename std::enable_if_t<
 ObjectCache<ObjectType, Flavor, ObjectCacheStats>::getInterestHandle(
     const ObjectId& hash,
     Interest interest) {
-  XLOG(DBG6) << "ObjectCache::getInterestHandle " << hash;
+  XLOGF(DBG6, "ObjectCache::getInterestHandle {}", hash);
   // Acquires ObjectCache's lock upon destruction by calling dropInterestHandle,
   // so ensure that, if an exception is thrown below, the ~ObjectInterestHandle
   // runs after the lock is released.
@@ -170,7 +170,7 @@ typename std::enable_if_t<
     typename ObjectCache<ObjectType, Flavor, ObjectCacheStats>::ObjectPtr>
 ObjectCache<ObjectType, Flavor, ObjectCacheStats>::getSimple(
     const ObjectId& hash) {
-  XLOG(DBG6) << "ObjectCache::getSimple " << hash;
+  XLOGF(DBG6, "ObjectCache::getSimple {}", hash);
   auto state = state_.lock();
 
   if (auto item = getImpl(hash, *state)) {
@@ -187,7 +187,7 @@ typename ObjectCache<ObjectType, Flavor, ObjectCacheStats>::CacheItem*
 ObjectCache<ObjectType, Flavor, ObjectCacheStats>::getImpl(
     const ObjectId& hash,
     State& state) {
-  XLOG(DBG6) << "ObjectCache::getImpl " << hash;
+  XLOGF(DBG6, "ObjectCache::getImpl {}", hash);
   auto* item = folly::get_ptr(state.items, hash);
   if (!item) {
     XLOG(DBG6) << "ObjectCache::getImpl missed";
@@ -220,7 +220,7 @@ ObjectCache<ObjectType, Flavor, ObjectCacheStats>::insertInterestHandle(
     ObjectId id,
     ObjectPtr object,
     Interest interest) {
-  XLOG(DBG6) << "ObjectCache::insertInterestHandle " << id;
+  XLOGF(DBG6, "ObjectCache::insertInterestHandle {}", id);
   // Acquires ObjectCache's lock upon destruction by calling dropInterestHandle,
   // so ensure that, if an exception is thrown below, the ~ObjectInterestHandle
   // runs after the lock is released.
@@ -320,7 +320,7 @@ typename std::enable_if_t<F == ObjectCacheFlavor::Simple, void>
 ObjectCache<ObjectType, Flavor, ObjectCacheStats>::insertSimple(
     ObjectId id,
     ObjectCache<ObjectType, Flavor, ObjectCacheStats>::ObjectPtr object) {
-  XLOG(DBG6) << "ObjectCache::insertSimple " << id;
+  XLOGF(DBG6, "ObjectCache::insertSimple {}", id);
   auto state = state_.lock();
   insertImpl(std::move(id), std::move(object), *state);
 }
@@ -336,7 +336,7 @@ ObjectCache<ObjectType, Flavor, ObjectCacheStats>::insertImpl(
     ObjectId id,
     ObjectPtr object,
     State& state) {
-  XLOG(DBG6) << "ObjectCache::insertImpl " << id;
+  XLOGF(DBG6, "ObjectCache::insertImpl {}", id);
 
   auto size = object->getSizeBytes();
   ObjectId key = id;
@@ -448,7 +448,7 @@ template <
 void ObjectCache<ObjectType, Flavor, ObjectCacheStats>::dropInterestHandle(
     const ObjectId& hash,
     uint64_t generation) noexcept {
-  XLOG(DBG6) << "dropInterestHandle " << hash << " generation=" << generation;
+  XLOGF(DBG6, "dropInterestHandle {} generation={}", hash, generation);
   auto state = state_.lock();
 
   auto* item = folly::get_ptr(state->items, hash);
@@ -464,9 +464,10 @@ void ObjectCache<ObjectType, Flavor, ObjectCacheStats>::dropInterestHandle(
   }
 
   if (item->referenceCount == 0) {
-    XLOG(WARN)
-        << "Reference count on item for " << hash
-        << " was already zero: an exception must have been thrown during get()";
+    XLOGF(
+        WARN,
+        "Reference count on item for {} was already zero: an exception must have been thrown during get()",
+        hash);
     return;
   }
 
@@ -513,8 +514,11 @@ template <
 void ObjectCache<ObjectType, Flavor, ObjectCacheStats>::evictItem(
     State& state,
     const CacheItem& item) noexcept {
-  XLOG(DBG6) << "ObjectCache::evictItem " << "evicting " << item.id
-             << " generation=" << item.generation;
+  XLOGF(
+      DBG6,
+      "ObjectCache::evictItem evicting {} generation={}",
+      item.id,
+      item.generation);
   auto size = item.object->getSizeBytes();
   // TODO: Releasing this ObjectPtr here can run arbitrary deleters which
   // could, in theory, try to reacquire the ObjectCache's lock. The object
@@ -531,7 +535,7 @@ template <
     typename ObjectCacheStats>
 void ObjectCache<ObjectType, Flavor, ObjectCacheStats>::invalidate(
     const ObjectId& id) noexcept {
-  XLOG(DBG6) << "ObjectCache::invalidate " << id;
+  XLOGF(DBG6, "ObjectCache::invalidate {}", id);
   auto state = state_.lock();
 
   if (auto item = getImpl(id, *state)) {

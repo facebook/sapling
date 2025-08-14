@@ -161,7 +161,7 @@ SemiFuture<BackingStore::GetTreeResult> GitBackingStore::getTree(
 }
 
 TreePtr GitBackingStore::getTreeImpl(const ObjectId& id) {
-  XLOG(DBG4) << "importing tree " << id;
+  XLOGF(DBG4, "importing tree {}", id);
 
   git_oid treeOID = hash2Oid(id);
   git_tree* gitTree = nullptr;
@@ -223,7 +223,7 @@ SemiFuture<BackingStore::GetBlobResult> GitBackingStore::getBlob(
 }
 
 BlobPtr GitBackingStore::getBlobImpl(const ObjectId& id) {
-  XLOG(DBG5) << "importing blob " << id;
+  XLOGF(DBG5, "importing blob {}", id);
 
   auto blobOID = hash2Oid(id);
   git_blob* blob = nullptr;

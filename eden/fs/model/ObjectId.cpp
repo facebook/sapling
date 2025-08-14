@@ -73,9 +73,4 @@ void ObjectId::throwInvalidArgument(const char* message, size_t number) {
   throw_<std::invalid_argument>(message, number);
 }
 
-std::ostream& operator<<(std::ostream& os, const ObjectId& hash) {
-  os << hash.toLogString();
-  return os;
-}
-
 } // namespace facebook::eden

@@ -707,7 +707,7 @@ TEST(FileInode, reloadsBlobIfCacheIsEvicted) {
 
   inode->read(4, 4, ObjectFetchContext::getNullContext()).get(0ms);
   EXPECT_TRUE(blobCache->contains(hash))
-      << "reading should insert hash " << hash << " into cache";
+      << fmt::format("reading should insert hash {} into cache", hash);
 }
 
 // TODO: test multiple flags together

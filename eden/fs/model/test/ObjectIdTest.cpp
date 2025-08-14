@@ -110,18 +110,14 @@ TEST(ObjectId, testFormattingHashCodeExact) {
       0x00, 0x00, 0xff, 0xff, 0x00, 0x00, 0xff, 0xff);
   auto byteRange = folly::ByteRange(bytes.data(), bytes.size());
   auto exactObjectId = ObjectId(byteRange);
-  std::ostringstream os;
-  os << exactObjectId;
-  EXPECT_EQ("0000ffff0000ffff", os.str());
+  EXPECT_EQ("0000ffff0000ffff", fmt::to_string(exactObjectId));
 }
 
 TEST(ObjectId, testFormattingHashCodeShort) {
   auto bytes = folly::make_array<uint8_t>(0x00, 0xff);
   auto byteRange = folly::ByteRange(bytes.data(), bytes.size());
   auto shortObjectId = ObjectId(byteRange);
-  std::ostringstream os;
-  os << shortObjectId;
-  EXPECT_EQ("00ff", os.str());
+  EXPECT_EQ("00ff", fmt::to_string(shortObjectId));
 }
 
 TEST(ObjectId, testFormattingHashCodeLong) {
@@ -157,9 +153,9 @@ TEST(ObjectId, testFormattingHashCodeLong) {
       0x04);
   auto byteRange = folly::ByteRange(bytes.data(), bytes.size());
   auto longObjectId = ObjectId(byteRange);
-  std::ostringstream os;
-  os << longObjectId;
-  EXPECT_EQ("010101010101010102020202020202020404040404040404", os.str());
+  EXPECT_EQ(
+      "010101010101010102020202020202020404040404040404",
+      fmt::to_string(longObjectId));
 }
 
 TEST(ObjectId, testFormattingHashCodeNotMod8) {
@@ -182,8 +178,6 @@ TEST(ObjectId, testFormattingHashCodeNotMod8) {
       0x00);
   auto byteRange = folly::ByteRange(bytes.data(), bytes.size());
   auto notMod8ObjectId = ObjectId(byteRange);
-  std::ostringstream os;
-  os << notMod8ObjectId;
-  EXPECT_EQ("ffffffffffffffff00000000", os.str());
+  EXPECT_EQ("ffffffffffffffff00000000", fmt::to_string(notMod8ObjectId));
 }
 } // namespace

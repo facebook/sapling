@@ -98,7 +98,7 @@ ObjectId insertBlobImportRequest(
     SaplingImportRequestQueue& queue,
     ImportPriority priority) {
   auto [hash, request] = makeBlobImportRequest(priority);
-  XLOG(INFO) << "enqueuing blob:" << hash;
+  XLOGF(INFO, "enqueuing blob:{}", hash);
   queue.enqueueBlob(std::move(request));
   return hash;
 }
@@ -107,7 +107,7 @@ ObjectId insertTreeImportRequest(
     SaplingImportRequestQueue& queue,
     ImportPriority priority) {
   auto [hash, request] = makeTreeImportRequest(priority);
-  XLOG(INFO) << "enqueuing tree:" << hash;
+  XLOGF(INFO, "enqueuing tree:{}", hash);
   queue.enqueueTree(std::move(request));
   return hash;
 }

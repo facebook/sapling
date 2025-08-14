@@ -181,13 +181,6 @@ class ObjectId {
 using ObjectIdRange = folly::Range<const ObjectId*>;
 
 /**
- * Output stream operator for ObjectId.
- *
- * This makes it possible to easily use ObjectId in glog statements.
- */
-std::ostream& operator<<(std::ostream& os, const ObjectId& hash);
-
-/**
  * The meaning of an ObjectId is defined by the BackingStore implementation.
  * Allow it to also define how object IDs are parsed and rendered at API
  * boundaries such as Thrift.
@@ -229,6 +222,7 @@ template <>
 struct fmt::formatter<facebook::eden::ObjectId> : formatter<std::string> {
   template <typename Context>
   auto format(const facebook::eden::ObjectId& id, Context& ctx) const {
+    // TODO: avoid allocation here
     return formatter<std::string>::format(id.toLogString(), ctx);
   }
 };
