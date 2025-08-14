@@ -10,13 +10,12 @@ import subprocess
 import time
 from pathlib import Path
 
-from eden.thrift.legacy import EdenClient
-from facebook.eden.eden_config.ttypes import (
+from eden.fs.config.eden_config.thrift_types import (
     ConfigReloadBehavior,
     ConfigSourceType,
     EdenConfigData,
 )
-from facebook.eden.ttypes import GetConfigParams
+from eden.fs.service.eden.thrift_types import GetConfigParams
 
 from .lib import testcase
 
@@ -38,12 +37,12 @@ class ConfigTest(testcase.EdenTestCase):
         self.assertEqual(value, actual_value.parsedValue)
         self.assertEqual(sourceType, actual_value.sourceType)
 
-    def test_get_config(self) -> None:
+    async def test_get_config(self) -> None:
         self.maxDiff = None
 
-        with self.get_thrift_client_legacy() as client:
+        async with self.get_thrift_client() as client:
             # Check the initial config values
-            config = client.getConfig(GetConfigParams())
+            config = await client.getConfig(GetConfigParams())
 
             # The edenDirectory property is currently always recorded as being set from
             # the command line, regardless of how it was actually determined.
@@ -80,7 +79,7 @@ ignoreFile = "{new_ignore_path}"
 
             # Get the config, asking just for the cached config values without
             # attempting to reload them from disk.
-            config = client.getConfig(
+            config = await client.getConfig(
                 GetConfigParams(reload=ConfigReloadBehavior.NoReload)
             )
             # The ignore path should be unchanged
@@ -93,7 +92,7 @@ ignoreFile = "{new_ignore_path}"
 
             # Now get the config, asking for a reload
             # attempting to reload them from disk.
-            config = client.getConfig(
+            config = await client.getConfig(
                 GetConfigParams(reload=ConfigReloadBehavior.ForceReload)
             )
             # The ignore path should be updated
@@ -104,11 +103,11 @@ ignoreFile = "{new_ignore_path}"
                 ConfigSourceType.UserConfig,
             )
 
-    def test_periodic_reload(self) -> None:
-        with self.get_thrift_client_legacy() as client:
-            self._test_periodic_reload(client)
+    async def test_periodic_reload(self) -> None:
+        async with self.get_thrift_client() as client:
+            await self._test_periodic_reload(client)
 
-    def _test_periodic_reload(self, client: EdenClient) -> None:
+    async def _test_periodic_reload(self, client) -> None:
         def write_user_config(reload_interval: str) -> None:
             config_text = f"""
 [config]
@@ -116,23 +115,23 @@ reload-interval = "{reload_interval}"
 """
             self.eden.user_rc_path.write_text(config_text)
 
-        def assert_current_interval(expected: str) -> None:
+        async def assert_current_interval(expected: str) -> None:
             no_reload_params = GetConfigParams(reload=ConfigReloadBehavior.NoReload)
-            config = client.getConfig(no_reload_params)
+            config = await client.getConfig(no_reload_params)
             current_interval = config.values["config:reload-interval"].parsedValue
             self.assertEqual(expected, current_interval)
 
         # By default EdenFS currently automatically reloads
         # the config every 5 minutes
         default_interval = "5m"
-        assert_current_interval(default_interval)
+        await assert_current_interval(default_interval)
 
         # Tell EdenFS to reload the config file every 10ms
         write_user_config("10ms")
 
         # Make EdenFS reload the config immediately to get the new config values
-        client.reloadConfig()
-        assert_current_interval("10ms")
+        await client.reloadConfig()
+        await assert_current_interval("10ms")
 
         # Update the reload interval again to 0ms.
         # This tells EdenFS not to auto-reload the config any more.
@@ -141,30 +140,30 @@ reload-interval = "{reload_interval}"
         # This change should be picked up automatically after ~10ms
         # Sleep for longer than this, then verify the config was updated.
         time.sleep(0.200)
-        assert_current_interval("0ns")
+        await assert_current_interval("0ns")
 
         # Update the reload interval to 6ms.
         # This shouldn't be picked up automatically, since auto-reloads are disabled
         # right now.
         write_user_config("6ms")
         time.sleep(0.200)
-        assert_current_interval("0ns")
+        await assert_current_interval("0ns")
         # Force this change to be picked up  now
-        client.reloadConfig()
-        assert_current_interval("6ms")
+        await client.reloadConfig()
+        await assert_current_interval("6ms")
 
         # Update the reload interval again.
         # This should be picked up automatically again now that re-enabled the
         # periodic reload interval.
         write_user_config("7ms")
         time.sleep(0.200)
-        assert_current_interval("7ms")
+        await assert_current_interval("7ms")
 
         # If we put a bogus value in the config file it should be ignored,
         # and the normal default (5 minutes) should be used.
         write_user_config("bogus value")
         time.sleep(0.200)
-        assert_current_interval(default_interval)
+        await assert_current_interval(default_interval)
 
 
 @testcase.eden_repo_test

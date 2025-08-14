@@ -62,9 +62,6 @@ python_unittest(
     env = artifacts["env"],
     supports_static_listing = False,
     deps = [
-        "//eden/fs/config:config_thrift-py-deprecated",
-        "//eden/fs/py/eden/thrift:legacy",
-        "//eden/fs/service:thrift-py-deprecated",
         "//eden/integration/lib:lib",
     ],
 )
