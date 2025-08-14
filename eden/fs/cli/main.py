@@ -2235,6 +2235,8 @@ Do you still want to delete {path}?"""
                     except Exception as ex:
                         msg = f"error cleaning up mount {mount}: {ex}"
                         telemetry_sample.fail(msg)
+                        if isinstance(ex, OSError) and ex.errno == errno.ENOTEMPTY:
+                            msg += "\nPlease remove the entries and re-run eden rm."
                         print_stderr(msg)
                         exit_code = 1
                         self.optional_traceback(ex, args.debug)
