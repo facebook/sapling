@@ -10,9 +10,9 @@ import os
 import shutil
 import subprocess
 from pathlib import Path
-from typing import Dict, List, Optional, Set, Tuple, Union
+from typing import Dict, List, Optional, Sequence, Set, Tuple, Union
 
-from facebook.eden.ttypes import (
+from eden.fs.service.eden.thrift_types import (
     CheckoutConflict,
     CheckoutMode,
     CheckOutRevisionParams,
@@ -560,9 +560,9 @@ class WindowsFsckTest(prjfs_test.PrjFSTestBase):
             },
         )
 
-    def _update_clean(self) -> List[CheckoutConflict]:
-        with self.eden.get_thrift_client_legacy() as client:
-            conflicts = client.checkOutRevision(
+    async def _update_clean(self) -> Sequence[CheckoutConflict]:
+        async with self.get_thrift_client() as client:
+            conflicts = await client.checkOutRevision(
                 mountPoint=self.mount.encode(),
                 snapshotHash=self.initial_commit.encode(),
                 checkoutMode=CheckoutMode.FORCE,
@@ -570,7 +570,9 @@ class WindowsFsckTest(prjfs_test.PrjFSTestBase):
             )
         return conflicts
 
-    def test_fsck_rename_with_different_case_and_modify_while_stopped(self) -> None:
+    async def test_fsck_rename_with_different_case_and_modify_while_stopped(
+        self,
+    ) -> None:
         # Materialize the file and its parent by removing and re-creating them.
         self.rm("adir/file")
         self.rmdir("adir")
@@ -586,17 +588,17 @@ class WindowsFsckTest(prjfs_test.PrjFSTestBase):
         self.assertEqual(self.eden_status(), {b"adir/file": 1})
 
         # Make sure we can revert the change:
-        self._update_clean()
+        await self._update_clean()
         self.assertEqual(self.eden_status(), {})
 
-    def test_loaded_inodes_not_loaded_on_restart(self) -> None:
+    async def test_loaded_inodes_not_loaded_on_restart(self) -> None:
         """Verifies that a loaded inode not present on disk doesn't get loaded
         with a positive refcount on restart.
         """
 
-        def get_all_loaded_under(path: str) -> List[Tuple[Path, int]]:
-            with self.eden.get_thrift_client_legacy() as client:
-                all_loaded = client.debugInodeStatus(
+        async def get_all_loaded_under(path: str) -> List[Tuple[Path, int]]:
+            async with self.get_thrift_client() as client:
+                all_loaded = await client.debugInodeStatus(
                     self.mount_path_bytes,
                     path.encode(),
                     0,
@@ -610,13 +612,13 @@ class WindowsFsckTest(prjfs_test.PrjFSTestBase):
             return ret
 
         # This relies on debugInodeStatus to load the inode for the directory.
-        loaded = get_all_loaded_under("subdir/bdir")
+        loaded = await get_all_loaded_under("subdir/bdir")
         self.assertEqual(loaded, [(Path("subdir/bdir"), 0)])
 
         self.eden.shutdown()
         self.eden.start()
 
-        loaded = get_all_loaded_under("subdir/bdir")
+        loaded = await get_all_loaded_under("subdir/bdir")
         self.assertEqual(loaded, [(Path("subdir/bdir"), 0)])
 
 
@@ -647,9 +649,9 @@ class WindowsRebuildOverlayTest(testcase.EdenRepoTest):
     def select_storage_engine(self) -> str:
         return "sqlite"
 
-    def _eden_inode_info(self) -> List[TreeInodeDebugInfo]:
-        with self.eden.get_thrift_client_legacy() as client:
-            return client.debugInodeStatus(
+    async def _eden_inode_info(self) -> Sequence[TreeInodeDebugInfo]:
+        async with self.get_thrift_client() as client:
+            return await client.debugInodeStatus(
                 mountPoint=self.mount.encode(),
                 path=b"",
                 # Force it to return all inodes, not just loaded ones.
@@ -657,8 +659,8 @@ class WindowsRebuildOverlayTest(testcase.EdenRepoTest):
                 sync=SyncBehavior(),
             )
 
-    def get_inodes(self) -> Set[Tuple[str, int, bool, bytes]]:
-        inodes = self._eden_inode_info()
+    async def get_inodes(self) -> Set[Tuple[str, int, bool, bytes]]:
+        inodes = await self._eden_inode_info()
         entries = set()
         ignored = {
             b".hg",
@@ -679,21 +681,21 @@ class WindowsRebuildOverlayTest(testcase.EdenRepoTest):
                 )
         return entries
 
-    def stop_eden(self) -> Set[Tuple[str, int, bool, bytes]]:
-        preInodes = self.get_inodes()
+    async def stop_eden(self) -> Set[Tuple[str, int, bool, bytes]]:
+        preInodes = await self.get_inodes()
         self.eden.shutdown()
         self.assertTrue(preInodes)
         return preInodes
 
-    def start_eden(self) -> Set[Tuple[str, int, bool, bytes]]:
+    async def start_eden(self) -> Set[Tuple[str, int, bool, bytes]]:
         self.eden.start()
-        postInodes = self.get_inodes()
+        postInodes = await self.get_inodes()
         return postInodes
 
-    def rebuild_overlay(
+    async def rebuild_overlay(
         self, from_backup=False
     ) -> Dict[str, Tuple[Union[bool, bytes, int, str], ...]]:
-        preInodes = self.stop_eden()
+        preInodes = await self.stop_eden()
 
         if from_backup:
             self.restore_overlay()
@@ -705,7 +707,7 @@ class WindowsRebuildOverlayTest(testcase.EdenRepoTest):
                 )
             )
 
-        postInodes = self.start_eden()
+        postInodes = await self.start_eden()
         if preInodes != postInodes:
             print("PreInodes: %s" % preInodes)
         self.assertEqual(preInodes, postInodes)
@@ -731,30 +733,30 @@ class WindowsRebuildOverlayTest(testcase.EdenRepoTest):
         )
         shutil.copy(backup, path)
 
-    def test_rebuild_entire_overlay(self) -> None:
+    async def test_rebuild_entire_overlay(self) -> None:
         # Test a not yet loaded overlay
-        self.rebuild_overlay()
+        await self.rebuild_overlay()
 
         # Test an empty overlay
         self.repo.update("null")
         self.repo.update(self.initial_commit)
-        self.rebuild_overlay()
+        await self.rebuild_overlay()
 
         # Test a partially materialized overlay
         self.read_file("subdir/bdir/file2")
-        self.rebuild_overlay()
+        await self.rebuild_overlay()
 
         # Test with non-tracked changes
         self.write_file("subdir/bdir/untracked", "asdf")
-        self.rebuild_overlay()
+        await self.rebuild_overlay()
 
-    def test_rebuild_partial_overlay(self) -> None:
+    async def test_rebuild_partial_overlay(self) -> None:
         # Clear then partially load the overlay
         self.repo.update("null")
         self.repo.update(self.initial_commit)
         self.read_file("subdir/bdir/file2")
 
-        initialInodes = self.get_inodes()
+        initialInodes = await self.get_inodes()
         initialInodes = {inode[0]: inode[1:] for inode in initialInodes}
         self.assertEqual(initialInodes["subdir"][1], UNMATERIALIZED)
 
@@ -779,7 +781,7 @@ class WindowsRebuildOverlayTest(testcase.EdenRepoTest):
         # Test deleting a file in a directory
         self.rm("otherdir/file4")
 
-        inodes = self.rebuild_overlay(from_backup=True)
+        inodes = await self.rebuild_overlay(from_backup=True)
         self.assertEqual(inodes["file1"][1], UNMATERIALIZED)
         self.assertTrue(".gitignore" not in inodes)
         self.assertEqual(inodes["untracked"][1], MATERIALIZED)
