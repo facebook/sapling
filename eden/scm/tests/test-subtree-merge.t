@@ -392,15 +392,30 @@ test multiple subtree merge from source -> dest, then dest -> source
   merge base: 9998a5c40732
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
   (subtree merge, don't forget to commit)
+  $ hg diff
+  diff --git a/foo2/x b/foo2/x
+  --- a/foo2/x
+  +++ b/foo2/x
+  @@ -1,1 +1,2 @@
+   aaa
+  +source
   $ hg ci -m "merge foo to foo2"
+  $ echo "dest2" >> foo2/x
   $ echo "dest2" >> foo2/y && hg ci -m "update foo2 again"
   $ hg subtree merge --from-path foo2 --to-path foo
   searching for merge base ...
   found the last subtree merge commit a26d75b3506f
   merge base: a1e3d459ad62
-  1 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  2 files updated, 0 files merged, 0 files removed, 0 files unresolved
   (subtree merge, don't forget to commit)
   $ hg diff
+  diff --git a/foo/x b/foo/x
+  --- a/foo/x
+  +++ b/foo/x
+  @@ -1,2 +1,3 @@
+   aaa
+   source
+  +dest2
   diff --git a/foo/y b/foo/y
   --- a/foo/y
   +++ b/foo/y

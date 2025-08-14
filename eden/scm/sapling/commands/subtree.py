@@ -336,7 +336,7 @@ def subtree_merge(ui, repo, **opts):
         repo, ctx, to_paths[0], from_ctx, from_paths[0], opts
     )
     ui.status("merge base: %s\n" % merge_base_ctx)
-    cmdutil.registerdiffgrafts(from_paths, to_paths, ctx, from_ctx)
+    cmdutil.registerdiffgrafts(from_paths, to_paths, from_ctx)
 
     with ui.configoverride(
         {
@@ -445,8 +445,6 @@ def _subtree_merge_base(repo, to_ctx, to_path, from_ctx, from_path, opts):
         # it is a reverse merge
         if heads_index == 0:
             cmdutil.registerdiffgrafts([from_path], [to_path], merge_base_ctx)
-        else:
-            cmdutil.registerdiffgrafts([to_path], [from_path], merge_base_ctx)
         return merge_base_ctx
 
     def get_p1(dag, node):
