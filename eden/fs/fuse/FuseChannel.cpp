@@ -729,8 +729,8 @@ FuseChannel::InvalidationEntry::~InvalidationEntry() {
       promise.~Promise();
       return;
   }
-  XLOG(FATAL) << "unknown InvalidationEntry type: "
-              << static_cast<uint64_t>(type);
+  XLOGF(
+      FATAL, "unknown InvalidationEntry type: {}", static_cast<uint64_t>(type));
 }
 
 FuseChannel::InvalidationEntry::
@@ -784,8 +784,12 @@ void FuseChannel::replyError(const fuse_in_header& request, int errorCode) {
   err.len = sizeof(err);
   err.error = -errorCode;
   err.unique = request.unique;
-  XLOG(DBG7) << "replyError unique=" << err.unique << " error=" << errorCode
-             << " " << folly::errnoStr(errorCode);
+  XLOGF(
+      DBG7,
+      "replyError unique={} error={} {}",
+      err.unique,
+      errorCode,
+      folly::errnoStr(errorCode));
   auto res = write(fuseDevice_.fd(), &err, sizeof(err));
   if (res != sizeof(err)) {
     if (res < 0) {
@@ -850,17 +854,21 @@ void FuseChannel::sendRawReply(const iovec iov[], size_t count) const {
 
   const auto res = writev(fuseDevice_.fd(), iov, count);
   const int err = errno;
-  XLOG(DBG7) << "sendRawReply: unique=" << header->unique
-             << " header->len=" << header->len << " wrote=" << res;
+  XLOGF(
+      DBG7,
+      "sendRawReply: unique={} header->len={} wrote={}",
+      header->unique,
+      header->len,
+      res);
 
   if (res < 0) {
     if (err == ENOENT) {
       // Interrupted by a signal.  We don't need to log this,
       // but will propagate it back to our caller.
     } else if (!isFuseDeviceValid(state_.rlock()->stopReason)) {
-      XLOG(INFO) << "error writing to fuse device: session closed";
+      XLOG(INFO, "error writing to fuse device: session closed");
     } else {
-      XLOG(WARNING) << "error writing to fuse device: " << folly::errnoStr(err);
+      XLOGF(WARNING, "error writing to fuse device: {}", folly::errnoStr(err));
     }
     throwSystemErrorExplicit(err, "error writing to fuse device");
   }
@@ -988,9 +996,12 @@ FuseChannel::StopFuture FuseChannel::initializeFromTakeover(
     fuse_init_out connInfo) {
   connInfo_ = connInfo;
   dispatcher_->initConnection(connInfo);
-  XLOG(DBG1) << "Takeover using max_write=" << connInfo_->max_write
-             << ", max_readahead=" << connInfo_->max_readahead
-             << ", want=" << capsFlagsToLabel(connInfo_->flags);
+  XLOGF(
+      DBG1,
+      "Takeover using max_write={}, max_readahead={}, want={}",
+      connInfo_->max_write,
+      connInfo_->max_readahead,
+      capsFlagsToLabel(connInfo_->flags));
   startWorkerThreads();
   return sessionCompletePromise_.getFuture();
 }
@@ -1023,7 +1034,7 @@ void FuseChannel::startWorkerThreads() {
 
     invalidationThread_ = std::thread([this] { invalidationThread(); });
   } catch (const std::exception& ex) {
-    XLOG(ERR) << "Error starting FUSE worker threads: " << exceptionStr(ex);
+    XLOGF(ERR, "Error starting FUSE worker threads: {}", exceptionStr(ex));
     // Request any threads we did start to stop now.
     requestSessionExit(state, StopReason::INIT_FAILED);
     stopInvalidationThread();
@@ -1041,8 +1052,9 @@ void FuseChannel::destroy() {
 
   for (auto& thread : threads) {
     if (std::this_thread::get_id() == thread.get_id()) {
-      XLOG(FATAL) << "cannot destroy a FuseChannel from inside one of "
-                     "its own worker threads";
+      XLOG(
+          FATAL,
+          "cannot destroy a FuseChannel from inside one of its own worker threads");
     }
     thread.join();
   }
@@ -1363,7 +1375,7 @@ void FuseChannel::initWorkerThread() noexcept {
     startWorkerThreads();
   } catch (...) {
     auto ew = folly::exception_wrapper(std::current_exception());
-    XLOG(ERR) << "Error performing FUSE channel initialization: " << ew;
+    XLOGF(ERR, "Error performing FUSE channel initialization: {}", ew);
     // Indicate that initialization failed.
     initPromise_.setException(std::move(ew));
     return;
@@ -1386,7 +1398,7 @@ void FuseChannel::fuseWorkerThread() noexcept {
   try {
     processSession();
   } catch (const std::exception& ex) {
-    XLOG(ERR) << "unexpected error in FUSE worker thread: " << exceptionStr(ex);
+    XLOGF(ERR, "unexpected error in FUSE worker thread: {}", exceptionStr(ex));
     // Request that all other FUSE threads exit.
     // This will cause us to stop processing the mount and signal our session
     // complete future.
@@ -1716,8 +1728,10 @@ void FuseChannel::processSession() {
         requestSessionExit(StopReason::UNMOUNTED);
         break;
       } else {
-        XLOG(WARNING) << "error reading from fuse channel: "
-                      << folly::errnoStr(error);
+        XLOGF(
+            WARNING,
+            "error reading from fuse channel: {}",
+            folly::errnoStr(error));
         requestSessionExit(StopReason::FUSE_READ_ERROR);
         break;
       }
@@ -1735,8 +1749,10 @@ void FuseChannel::processSession() {
       } else {
         // We got a partial FUSE header.  This shouldn't ever happen unless
         // there is a bug in the FUSE kernel code.
-        XLOG(ERR) << "read truncated message from kernel fuse device: len="
-                  << arg_size;
+        XLOGF(
+            ERR,
+            "read truncated message from kernel fuse device: len={}",
+            arg_size);
         requestSessionExit(StopReason::FUSE_TRUNCATED_REQUEST);
       }
       return;
@@ -1747,11 +1763,17 @@ void FuseChannel::processSession() {
         reinterpret_cast<const uint8_t*>(header + 1),
         arg_size - sizeof(fuse_in_header)};
 
-    XLOG(DBG7) << "fuse request opcode=" << header->opcode << " "
-               << fuseOpcodeName(header->opcode) << " unique=" << header->unique
-               << " len=" << header->len << " nodeid=" << header->nodeid
-               << " uid=" << header->uid << " gid=" << header->gid
-               << " pid=" << header->pid;
+    XLOGF(
+        DBG7,
+        "fuse request opcode={} {} unique={} len={} nodeid={} uid={} gid={} pid={}",
+        header->opcode,
+        fuseOpcodeName(header->opcode),
+        header->unique,
+        header->len,
+        header->nodeid,
+        header->uid,
+        header->gid,
+        header->pid);
 
     // On Linux, if security caps are enabled and the FUSE filesystem implements
     // xattr support, every FUSE_WRITE opcode is preceded by FUSE_GETXATTR for
@@ -1799,9 +1821,12 @@ void FuseChannel::processSession() {
     // system.
     if (UNLIKELY(static_cast<pid_t>(header->pid) == myPid)) {
       replyError(*header, EIO);
-      XLOG(CRITICAL) << "Received FUSE request from our own pid: opcode="
-                     << header->opcode << " nodeid=" << header->nodeid
-                     << " pid=" << header->pid;
+      XLOGF(
+          CRITICAL,
+          "Received FUSE request from our own pid: opcode={} nodeid={} pid={}",
+          header->opcode,
+          header->nodeid,
+          header->pid);
       continue;
     }
 
@@ -1821,7 +1846,7 @@ void FuseChannel::processSession() {
       case FUSE_SETLKW:
         // Deliberately not handling locking; this causes
         // the kernel to do it for us
-        XLOG(DBG7) << fuseOpcodeName(header->opcode);
+        XLOGF(DBG7, "{}", fuseOpcodeName(header->opcode));
         replyError(*header, ENOSYS);
         break;
 
@@ -1830,20 +1855,20 @@ void FuseChannel::processSession() {
         // We only support stateless file handles, so lseek() is meaningless
         // for us.  Returning ENOSYS causes the kernel to implement it for us,
         // and will cause it to stop sending subsequent FUSE_LSEEK requests.
-        XLOG(DBG7) << "FUSE_LSEEK";
+        XLOG(DBG7, "FUSE_LSEEK");
         replyError(*header, ENOSYS);
         break;
 #endif
 
       case FUSE_POLL:
         // We do not currently implement FUSE_POLL.
-        XLOG(DBG7) << "FUSE_POLL";
+        XLOG(DBG7, "FUSE_POLL");
         replyError(*header, ENOSYS);
         break;
 
       case FUSE_INTERRUPT: {
         // no reply is required
-        XLOG(DBG7) << "FUSE_INTERRUPT";
+        XLOG(DBG7, "FUSE_INTERRUPT");
         // Ignore it: we don't have a reliable way to guarantee
         // that interrupting functions correctly.
         // In addition, the kernel (certainly on macOS) may recycle
@@ -1852,7 +1877,7 @@ void FuseChannel::processSession() {
       }
 
       case FUSE_DESTROY:
-        XLOG(DBG7) << "FUSE_DESTROY";
+        XLOG(DBG7, "FUSE_DESTROY");
         dispatcher_->destroy();
         // FUSE on linux doesn't care whether we reply to FUSE_DESTROY
         // but the macOS implementation blocks the unmount syscall until
@@ -1863,7 +1888,7 @@ void FuseChannel::processSession() {
         break;
 
       case FUSE_NOTIFY_REPLY:
-        XLOG(DBG7) << "FUSE_NOTIFY_REPLY";
+        XLOG(DBG7, "FUSE_NOTIFY_REPLY");
         // Don't strictly need to do anything here, but may want to
         // turn the kernel notifications in Futures and use this as
         // a way to fulfil the promise
@@ -1993,8 +2018,11 @@ void FuseChannel::processSession() {
               return std::nullopt;
             },
             [&](auto& unhandledOpcodes) -> folly::Unit {
-              XLOG(WARN) << "unhandled fuse opcode " << opcode << "("
-                         << fuseOpcodeName(opcode) << ")";
+              XLOGF(
+                  WARN,
+                  "unhandled fuse opcode {}({})",
+                  opcode,
+                  fuseOpcodeName(opcode));
               unhandledOpcodes->insert(opcode);
               return folly::unit;
             });
@@ -2002,7 +2030,7 @@ void FuseChannel::processSession() {
         try {
           replyError(*header, ENOSYS);
         } catch (const std::system_error& exc) {
-          XLOG(ERR) << "Failed to write error response to fuse: " << exc.what();
+          XLOGF(ERR, "Failed to write error response to fuse: {}", exc.what());
           requestSessionExit(StopReason::FUSE_WRITE_ERROR);
           return;
         }
@@ -2049,7 +2077,7 @@ ImmediateFuture<folly::Unit> FuseChannel::fuseRead(
     ByteRange arg) {
   const auto read = reinterpret_cast<const fuse_read_in*>(arg.data());
 
-  XLOG(DBG7) << "FUSE_READ";
+  XLOG(DBG7, "FUSE_READ");
 
   auto ino = InodeNumber{header.nodeid};
   return dispatcher_
@@ -2067,7 +2095,7 @@ ImmediateFuture<folly::Unit> FuseChannel::fuseWrite(
     bufPtr =
         reinterpret_cast<const char*>(arg.data()) + FUSE_COMPAT_WRITE_IN_SIZE;
   }
-  XLOG(DBG7) << "FUSE_WRITE " << write->size << " @" << write->offset;
+  XLOGF(DBG7, "FUSE_WRITE {} @{}", write->size, write->offset);
 
   auto ino = InodeNumber{header.nodeid};
   return dispatcher_
@@ -2174,7 +2202,7 @@ ImmediateFuture<folly::Unit> FuseChannel::fuseSymlink(
     const fuse_in_header& header,
     ByteRange arg) {
   const auto nameStr = reinterpret_cast<const char*>(arg.data());
-  XLOG(DBG7) << "FUSE_SYMLINK";
+  XLOG(DBG7, "FUSE_SYMLINK");
   const auto name = extractPathComponent(nameStr, requireUtf8Path_);
   const StringPiece link{nameStr + name.view().size() + 1};
 
@@ -2229,7 +2257,7 @@ ImmediateFuture<folly::Unit> FuseChannel::fuseMkdir(
   // set, the kernel has already masked it out in mode.
   // https://sourceforge.net/p/fuse/mailman/message/22844100/
 
-  XLOG(DBG7) << "mode = " << dir->mode << "; umask = " << dir->umask;
+  XLOGF(DBG7, "mode = {}; umask = {}", dir->mode, dir->umask);
 
   InodeNumber parent{header.nodeid};
   mode_t mode = dir->mode & ~dir->umask;
@@ -2311,7 +2339,7 @@ ImmediateFuture<folly::Unit> FuseChannel::fuseOpen(
     const fuse_in_header& header,
     ByteRange arg) {
   const auto open = reinterpret_cast<const fuse_open_in*>(arg.data());
-  XLOG(DBG7) << "FUSE_OPEN";
+  XLOG(DBG7, "FUSE_OPEN");
   auto ino = InodeNumber{header.nodeid};
   return dispatcher_->open(ino, open->flags).thenValue([&request](uint64_t fh) {
     fuse_open_out out = {};
@@ -2325,7 +2353,7 @@ ImmediateFuture<folly::Unit> FuseChannel::fuseStatFs(
     FuseRequestContext& request,
     const fuse_in_header& header,
     ByteRange /*arg*/) {
-  XLOG(DBG7) << "FUSE_STATFS";
+  XLOG(DBG7, "FUSE_STATFS");
   return dispatcher_->statfs(InodeNumber{header.nodeid})
       .thenValue([&request](struct fuse_kstatfs&& info) {
         fuse_statfs_out out = {};
@@ -2338,7 +2366,7 @@ ImmediateFuture<folly::Unit> FuseChannel::fuseRelease(
     FuseRequestContext& request,
     const fuse_in_header& header,
     ByteRange arg) {
-  XLOG(DBG7) << "FUSE_RELEASE";
+  XLOG(DBG7, "FUSE_RELEASE");
   auto ino = InodeNumber{header.nodeid};
   auto release = reinterpret_cast<const fuse_release_in*>(arg.data());
   return dispatcher_->release(ino, release->fh)
@@ -2353,7 +2381,7 @@ ImmediateFuture<folly::Unit> FuseChannel::fuseFsync(
   // There's no symbolic constant for this :-/
   const bool datasync = fsync->fsync_flags & 1;
 
-  XLOG(DBG7) << "FUSE_FSYNC";
+  XLOG(DBG7, "FUSE_FSYNC");
 
   auto ino = InodeNumber{header.nodeid};
   return dispatcher_->fsync(ino, datasync).thenValue([&request](auto&&) {
@@ -2371,7 +2399,7 @@ ImmediateFuture<folly::Unit> FuseChannel::fuseSetXAttr(
   const auto bufPtr = nameStr + attrName.size() + 1;
   const StringPiece value(bufPtr, setxattr->size);
 
-  XLOG(DBG7) << "FUSE_SETXATTR";
+  XLOG(DBG7, "FUSE_SETXATTR");
 
   return dispatcher_
       ->setxattr(InodeNumber{header.nodeid}, attrName, value, setxattr->flags)
@@ -2385,7 +2413,7 @@ ImmediateFuture<folly::Unit> FuseChannel::fuseGetXAttr(
   const auto getxattr = reinterpret_cast<const fuse_getxattr_in*>(arg.data());
   const auto nameStr = reinterpret_cast<const char*>(getxattr + 1);
   const StringPiece attrName{nameStr};
-  XLOG(DBG7) << "FUSE_GETXATTR";
+  XLOG(DBG7, "FUSE_GETXATTR");
   InodeNumber ino{header.nodeid};
   return dispatcher_->getxattr(ino, attrName, request.getObjectFetchContext())
       .thenValue([&request, size = getxattr->size](const std::string& attr) {
@@ -2406,7 +2434,7 @@ ImmediateFuture<folly::Unit> FuseChannel::fuseListXAttr(
     const fuse_in_header& header,
     ByteRange arg) {
   const auto listattr = reinterpret_cast<const fuse_getxattr_in*>(arg.data());
-  XLOG(DBG7) << "FUSE_LISTXATTR";
+  XLOG(DBG7, "FUSE_LISTXATTR");
   InodeNumber ino{header.nodeid};
   return dispatcher_->listxattr(ino).thenValue(
       [&request, size = listattr->size](std::vector<std::string> attrs) {
@@ -2423,8 +2451,8 @@ ImmediateFuture<folly::Unit> FuseChannel::fuseListXAttr(
           out.size = count;
           request.sendReply(out);
         } else if (size < count) {
-          XLOG(DBG7) << "LISTXATTR input size is " << size << " and count is "
-                     << count;
+          XLOGF(
+              DBG7, "LISTXATTR input size is {} and count is {}", size, count);
           request.replyError(ERANGE);
         } else {
           std::string buf;
@@ -2433,7 +2461,7 @@ ImmediateFuture<folly::Unit> FuseChannel::fuseListXAttr(
             buf.append(attr);
             buf.push_back(0);
           }
-          XLOG(DBG7) << "LISTXATTR: " << buf;
+          XLOGF(DBG7, "LISTXATTR: {}", buf);
           request.sendReply(folly::StringPiece(buf));
         }
       });
@@ -2445,7 +2473,7 @@ ImmediateFuture<folly::Unit> FuseChannel::fuseRemoveXAttr(
     ByteRange arg) {
   const auto nameStr = reinterpret_cast<const char*>(arg.data());
   const StringPiece attrName{nameStr};
-  XLOG(DBG7) << "FUSE_REMOVEXATTR";
+  XLOG(DBG7, "FUSE_REMOVEXATTR");
   return dispatcher_->removexattr(InodeNumber{header.nodeid}, attrName)
       .thenValue([&request](auto&&) { request.replyError(0); });
 }
@@ -2455,7 +2483,7 @@ ImmediateFuture<folly::Unit> FuseChannel::fuseFlush(
     const fuse_in_header& header,
     ByteRange arg) {
   const auto flush = reinterpret_cast<const fuse_flush_in*>(arg.data());
-  XLOG(DBG7) << "FUSE_FLUSH";
+  XLOG(DBG7, "FUSE_FLUSH");
 
   auto ino = InodeNumber{header.nodeid};
   return dispatcher_->flush(ino, flush->lock_owner)
@@ -2467,7 +2495,7 @@ ImmediateFuture<folly::Unit> FuseChannel::fuseOpenDir(
     const fuse_in_header& header,
     ByteRange arg) {
   const auto open = reinterpret_cast<const fuse_open_in*>(arg.data());
-  XLOG(DBG7) << "FUSE_OPENDIR";
+  XLOG(DBG7, "FUSE_OPENDIR");
   auto ino = InodeNumber{header.nodeid};
   auto minorVersion = connInfo_->minor;
   return dispatcher_->opendir(ino, open->flags)
@@ -2491,7 +2519,7 @@ ImmediateFuture<folly::Unit> FuseChannel::fuseReadDir(
     const fuse_in_header& header,
     ByteRange arg) {
   auto read = reinterpret_cast<const fuse_read_in*>(arg.data());
-  XLOG(DBG7) << "FUSE_READDIR";
+  XLOG(DBG7, "FUSE_READDIR");
   auto ino = InodeNumber{header.nodeid};
   return dispatcher_
       ->readdir(
@@ -2510,7 +2538,7 @@ ImmediateFuture<folly::Unit> FuseChannel::fuseReleaseDir(
     FuseRequestContext& request,
     const fuse_in_header& header,
     ByteRange arg) {
-  XLOG(DBG7) << "FUSE_RELEASEDIR";
+  XLOG(DBG7, "FUSE_RELEASEDIR");
   auto ino = InodeNumber{header.nodeid};
   auto release = reinterpret_cast<const fuse_release_in*>(arg.data());
   return dispatcher_->releasedir(ino, release->fh)
@@ -2525,7 +2553,7 @@ ImmediateFuture<folly::Unit> FuseChannel::fuseFsyncDir(
   // There's no symbolic constant for this :-/
   const bool datasync = fsync->fsync_flags & 1;
 
-  XLOG(DBG7) << "FUSE_FSYNCDIR";
+  XLOG(DBG7, "FUSE_FSYNCDIR");
 
   auto ino = InodeNumber{header.nodeid};
   return dispatcher_->fsyncdir(ino, datasync).thenValue([&request](auto&&) {
@@ -2538,7 +2566,7 @@ ImmediateFuture<folly::Unit> FuseChannel::fuseAccess(
     const fuse_in_header& header,
     ByteRange arg) {
   const auto access = reinterpret_cast<const fuse_access_in*>(arg.data());
-  XLOG(DBG7) << "FUSE_ACCESS";
+  XLOG(DBG7, "FUSE_ACCESS");
   InodeNumber ino{header.nodeid};
   return dispatcher_->access(ino, access->mask).thenValue([&request](auto&&) {
     request.replyError(0);
@@ -2565,7 +2593,7 @@ ImmediateFuture<folly::Unit> FuseChannel::fuseCreate(
         fuse_open_out out = {};
         out.open_flags |= FOPEN_KEEP_CACHE;
 
-        XLOG(DBG7) << "CREATE fh=" << out.fh << " flags=" << out.open_flags;
+        XLOGF(DBG7, "CREATE fh={} flags={}", out.fh, out.open_flags);
 
         folly::fbvector<iovec> vec;
 
@@ -2583,7 +2611,7 @@ ImmediateFuture<folly::Unit> FuseChannel::fuseBmap(
     const fuse_in_header& header,
     ByteRange arg) {
   const auto bmap = reinterpret_cast<const fuse_bmap_in*>(arg.data());
-  XLOG(DBG7) << "FUSE_BMAP";
+  XLOG(DBG7, "FUSE_BMAP");
   return dispatcher_
       ->bmap(InodeNumber{header.nodeid}, bmap->blocksize, bmap->block)
       .thenValue([&request](uint64_t resultIdx) {
@@ -2601,7 +2629,7 @@ ImmediateFuture<folly::Unit> FuseChannel::fuseBatchForget(
       reinterpret_cast<const fuse_batch_forget_in*>(arg.data());
   auto item = reinterpret_cast<const fuse_forget_one*>(forgets + 1);
   const auto end = item + forgets->count;
-  XLOG(DBG7) << "FUSE_BATCH_FORGET";
+  XLOG(DBG7, "FUSE_BATCH_FORGET");
 
   while (item != end) {
     dispatcher_->forget(InodeNumber{item->nodeid}, item->nlookup);
@@ -2616,7 +2644,7 @@ ImmediateFuture<folly::Unit> FuseChannel::fuseFallocate(
     const fuse_in_header& header,
     ByteRange arg) {
   const auto* allocate = reinterpret_cast<const fuse_fallocate_in*>(arg.data());
-  XLOG(DBG7) << "FUSE_FALLOCATE";
+  XLOG(DBG7, "FUSE_FALLOCATE");
 
   // We only care to avoid the glibc fallback implementation for
   // posix_fallocate, so don't even pretend to support all the fancy extra modes

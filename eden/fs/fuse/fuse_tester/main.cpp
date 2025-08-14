@@ -66,7 +66,7 @@ class TestDispatcher : public FuseDispatcher {
 void ensureEmptyDirectory(AbsolutePathPiece path) {
   boost::filesystem::path boostPath(path.view().begin(), path.view().end());
 
-  XLOG(INFO) << "boost path: " << boostPath.native();
+  XLOGF(INFO, "boost path: {}", boostPath.native());
   if (!boost::filesystem::create_directories(boostPath)) {
     // This directory already existed.  Make sure it is empty.
     if (!boost::filesystem::is_empty(boostPath)) {
@@ -155,13 +155,13 @@ int main(int argc, char** argv) {
       /*useWriteBackCache=*/false,
       /*fuseTraceBusCapacity=*/kTraceBusCapacity);
 
-  XLOG(INFO) << "Starting FUSE...";
+  XLOG(INFO, "Starting FUSE...");
   auto completionFuture = channel->initialize().get();
-  XLOG(INFO) << "FUSE started";
+  XLOG(INFO, "FUSE started");
 
   auto stopDataPtr = std::move(completionFuture).get();
   auto& stopData = dynamic_cast<FuseChannel::StopData&>(*stopDataPtr);
-  XLOG(INFO) << "FUSE channel done; stop_reason=" << enumValue(stopData.reason);
+  XLOGF(INFO, "FUSE channel done; stop_reason={}", enumValue(stopData.reason));
 
   return EX_OK;
 }

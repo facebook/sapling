@@ -610,7 +610,7 @@ ImmediateFuture<folly::Unit> EdenMount::setupDotEden(TreeInodePtr root) {
                         dotEdenInode](auto&& results) {
               for (auto& t : results) {
                 if (t.hasException()) {
-                  XLOG(ERR) << "Symlink setup failed: " << t.exception().what();
+                  XLOGF(ERR, "Symlink setup failed: {}", t.exception().what());
                   return ImmediateFuture<Unit>(std::move(t).exception());
                 }
               }
@@ -1513,7 +1513,7 @@ ImmediateFuture<CheckoutResult> EdenMount::checkout(
   return serverState_->getFaultInjector()
       .checkAsync("checkout", getPath().view())
       .thenValue([this, ctx, parent1Hash = oldParent, snapshotHash](auto&&) {
-        XLOG(DBG7) << "Checkout: getRoots";
+        XLOG(DBG7, "Checkout: getRoots");
         auto fromTreeFuture =
             objectStore_->getRootTree(parent1Hash, ctx->getFetchContext());
         auto toTreeFuture =
@@ -1521,7 +1521,7 @@ ImmediateFuture<CheckoutResult> EdenMount::checkout(
         return collectAllSafe(fromTreeFuture, toTreeFuture);
       })
       .thenValue([this](RootTreeTuple treeResults) {
-        XLOG(DBG7) << "Checkout: waitForPendingWrites";
+        XLOG(DBG7, "Checkout: waitForPendingWrites");
         return waitForPendingWrites().thenValue(
             [treeResults = std::move(treeResults)](auto&&) {
               return treeResults;
@@ -1538,7 +1538,7 @@ ImmediateFuture<CheckoutResult> EdenMount::checkout(
                std::holds_alternative<ParentCommitState::InterruptedCheckout>(
                    oldState)](
               RootTreeTuple treeResults) -> ImmediateFuture<RootTreeTuple> {
-            XLOG(DBG7) << "Checkout: performDiff";
+            XLOG(DBG7, "Checkout: performDiff");
             checkoutTimes->didLookupTrees = stopWatch.elapsed();
             // Call JournalDiffCallback::performDiff() to compute the changes
             // between the original working directory state and the source
@@ -1775,8 +1775,10 @@ ImmediateFuture<CheckoutResult> EdenMount::checkout(
             uint64_t printedConflicts = 0ull;
             for (const auto& conflict : conflicts) {
               if (printedConflicts == maxConflictsToPrint) {
-                XLOG(DBG2) << "And " << (numConflicts - printedConflicts)
-                           << " more checkout conflicts";
+                XLOGF(
+                    DBG2,
+                    "And {} more checkout conflicts",
+                    (numConflicts - printedConflicts));
                 break;
               }
               XLOGF(
@@ -1817,14 +1819,14 @@ void EdenMount::forgetStaleInodes() {
 }
 
 ImmediateFuture<folly::Unit> EdenMount::flushInvalidations() {
-  XLOG(DBG4) << "waiting for inode invalidations to complete";
+  XLOG(DBG4, "waiting for inode invalidations to complete");
   // TODO: If it's possible for flushInvalidations() and unmount() to run
   // concurrently, accessing the channel_ pointer here is racy. It's deallocated
   // by unmount(). We need to either guarantee these functions can never run
   // concurrently or use some sort of lock or atomic pointer.
   if (auto* fsChannel = getFsChannel()) {
     return fsChannel->completeInvalidations().thenValue([](folly::Unit) {
-      XLOG(DBG4) << "finished processing inode invalidations";
+      XLOG(DBG4, "finished processing inode invalidations");
     });
   } else {
     return folly::unit;
@@ -2014,7 +2016,8 @@ ImmediateFuture<Unit> EdenMount::diff(
     auto latestInfo = getJournal().getLatest();
     if (latestInfo.has_value()) {
       auto key = ScmStatusCache::makeKey(commitHash, listIgnored);
-      XLOG(DBG7) << fmt::format(
+      XLOGF(
+          DBG7,
           "ScmStatusCache: hash={}, listIgnored={}, key={}",
           commitHash.value(),
           listIgnored,
@@ -2310,15 +2313,17 @@ folly::Future<NfsServer::NfsMountInfo> makeNfsChannel(
         auto [channel, mountdAddr] = std::move(mountInfo);
 
         if (connectedSocket) {
-          XLOG(DBG4) << "Mount takeover: Initiating nfsd with socket: "
-                     << connectedSocket.value().fd();
+          XLOGF(
+              DBG4,
+              "Mount takeover: Initiating nfsd with socket: {}",
+              connectedSocket.value().fd());
           channel->initialize(std::move(connectedSocket.value()));
           // TODO: we should register the NFS server on takeover too. but
           // we only transfer the connected socket not the listening socket.
           // the listening one is the one we wanna register. So we need to
           // transfer that socket to be able to register it.
         } else {
-          XLOG(DBG4) << "Normal Start: Initiating nfsd from scratch: ";
+          XLOG(DBG4, "Normal Start: Initiating nfsd from scratch: ");
           std::optional<AbsolutePath> unixSocketPath;
           if (mount->getServerState()
                   ->getEdenConfig()
@@ -2591,7 +2596,7 @@ void EdenMount::preparePostFsChannelCompletion(
             });
           })
           .deferError([this](folly::exception_wrapper&& ew) {
-            XLOG(ERR) << "session complete with err: " << ew.what();
+            XLOGF(ERR, "session complete with err: {}", ew.what());
             fsChannelCompletionPromise_.setException(std::move(ew));
           }));
 }
@@ -2720,7 +2725,7 @@ void EdenMount::publishInodeTraceEvent(InodeTraceEvent&& event) noexcept {
   try {
     inodeTraceBus_->publish(event);
   } catch (const std::exception& e) {
-    XLOG(DBG3) << "Error publishing inode event to tracebus: " << e.what();
+    XLOGF(DBG3, "Error publishing inode event to tracebus: {}", e.what());
   }
 }
 

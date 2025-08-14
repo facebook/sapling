@@ -138,11 +138,11 @@ ImmediateFuture<InvalidationRequired> CheckoutAction::run(
               // propagate up the first one.  If necessary we could change this
               // to create a single exception that contains all of the messages
               // concatenated together.
-              XLOG(ERR) << "multiple errors while attempting to load data for "
-                           "checkout action:";
+              XLOG(
+                  ERR,
+                  "multiple errors while attempting to load data for checkout action:");
               for (const auto& ew : self->errors_) {
-                XLOG(ERR) << "CheckoutAction error: "
-                          << folly::exceptionStr(ew);
+                XLOGF(ERR, "CheckoutAction error: {}", folly::exceptionStr(ew));
               }
               return makeImmediateFuture<InvalidationRequired>(
                   self->errors_[0]);
@@ -184,7 +184,7 @@ void CheckoutAction::setInode(InodePtr inode) {
 void CheckoutAction::error(
     folly::StringPiece msg,
     folly::exception_wrapper&& ew) {
-  XLOG(ERR) << "error performing checkout action: " << msg << ": " << ew;
+  XLOGF(ERR, "error performing checkout action: {}: {}", msg, ew);
   errors_.push_back(std::move(ew));
 }
 
