@@ -444,7 +444,11 @@ def _subtree_merge_base(repo, to_ctx, to_path, from_ctx, from_path, opts):
         # the merge direction matches the original copy direction, otherwise
         # it is a reverse merge
         if heads_index == 0:
-            cmdutil.registerdiffgrafts([from_path], [to_path], merge_base_ctx)
+            curr_from_path = paths[1]
+            cmdutil.registerdiffgrafts([curr_from_path], [to_path], merge_base_ctx)
+        else:
+            curr_to_path = paths[0]
+            cmdutil.registerdiffgrafts([curr_to_path], [to_path], merge_base_ctx)
         return merge_base_ctx
 
     def get_p1(dag, node):
@@ -470,6 +474,7 @@ def _subtree_merge_base(repo, to_ctx, to_path, from_ctx, from_path, opts):
             hint=_("valid strategies: %s") % ", ".join(MERGE_BASE_STRATEGIES),
         )
 
+    paths = [to_path, from_path]
     dag = repo.changelog.dag
     if from_path == to_path:
         nodes = [from_ctx.node(), to_ctx.node()]
@@ -481,9 +486,8 @@ def _subtree_merge_base(repo, to_ctx, to_path, from_ctx, from_path, opts):
     isancestor = dag.isancestor
     to_hist = get_to_path_history(repo, to_ctx.node(), to_path, strategy)
     from_hist = get_from_path_history(repo, from_ctx.node(), from_path, strategy)
-
+    # `iter`'s order should match the order of `paths`
     iters = [to_hist, from_hist]
-    paths = [to_path, from_path]
 
     # we ensure that 'from_path' and 'to_path' exist, so it should be safe to call
     # next() on both iterators.
@@ -535,12 +539,14 @@ def _subtree_merge_base(repo, to_ctx, to_path, from_ctx, from_path, opts):
                     )
                     merge_base_ctx = repo[branch.from_commit]
                     return registerdiffgrafts(merge_base_ctx, i)
-                elif branch.to_path == paths[i] and branch.from_path == paths[i]:
+                elif branch.to_path == paths[i]:
                     # subtree copy overwrite, follow the source commit
                     source_node = node.bin(branch.from_commit)
+                    paths[i] = branch.from_path
                     hist = pathlog.pathlog(
                         repo, source_node, paths[i], is_prefetch_commit_text=True
                     )
+                    # XXX: handle normal merge base
                     iters[i] = hist
 
             try:
