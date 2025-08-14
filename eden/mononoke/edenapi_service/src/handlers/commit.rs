@@ -702,7 +702,12 @@ impl SaplingRemoteApiHandler for FetchSnapshotHandler {
         let cs = match fallible_cs {
             Ok(cs) => cs.into_mut(),
             Err(e) => {
-                let bubble_expired = format!("{:?}", e).contains("has expired");
+                // Check if this is a bubble expiration error by downcasting
+                let bubble_expired =
+                    e.downcast_ref::<EphemeralBlobstoreError>()
+                        .is_some_and(|ephemeral_err| {
+                            matches!(ephemeral_err, EphemeralBlobstoreError::NoSuchBubble(_))
+                        });
                 let err = if bubble_expired {
                     HttpError::e400(MononokeError::NotAvailable(format!(
                         "Snapshot for changeset {} with bubble ID {} expired",
