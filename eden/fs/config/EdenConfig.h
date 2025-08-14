@@ -1610,6 +1610,19 @@ class EdenConfig : private ConfigSettingManager {
       false,
       this};
 
+  /**
+   * Controls whether eden rm command attempts to clean up mount directory
+   * recursively. eden rm currently assumes nothing exist after unmounting and
+   * directly removes the directory, which leads to ENOTEMPTY for lots of users.
+   *
+   * This will be rolled out once we have a good understanding of what exist
+   * behind our mount.
+   */
+  ConfigSetting<bool> removeMountRecursively{
+      "experimental:remove-mount-recursively",
+      false,
+      this};
+
   // [blobcache]
 
   /**
