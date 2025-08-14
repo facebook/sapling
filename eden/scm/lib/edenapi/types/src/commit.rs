@@ -213,12 +213,12 @@ pub fn make_hash_lookup_request(prefix: String) -> Result<CommitHashLookupReques
     let suffix_len = HgId::hex_len() - prefix.len();
     let low_hex = prefix
         .chars()
-        .chain(iter::repeat('0').take(suffix_len))
+        .chain(iter::repeat_n('0', suffix_len))
         .collect::<String>();
     let low_id = HgId::from_hex(low_hex.as_bytes())?;
     let high_hex = prefix
         .chars()
-        .chain(iter::repeat('f').take(suffix_len))
+        .chain(iter::repeat_n('f', suffix_len))
         .collect::<String>();
     let high_id = HgId::from_hex(high_hex.as_bytes())?;
     Ok(CommitHashLookupRequest::InclusiveRange(low_id, high_id))
