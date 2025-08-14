@@ -1387,7 +1387,7 @@ class LogCmd(Subcmd):
             proc = None
             sink = rage_mod.IOWithRedaction(sys.stdout.buffer)
 
-        rage_mod.print_log_file(eden_log_path, sink, args.full, args.size)
+        rage_mod.print_log_file(eden_log_path, sink, tail_limit=args.size)
         if proc:
             sink.wrapped.close()
             proc.wait()
