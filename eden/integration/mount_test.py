@@ -17,9 +17,9 @@ from typing import Optional, Set
 from eden.fs.cli import mtab
 from eden.fs.cli.doctor import check_stale_mounts
 
-from eden.fs.cli.util import poll_until
-from eden.thrift.legacy import EdenClient, EdenNotRunningError
-from facebook.eden.ttypes import (
+from eden.fs.cli.util import poll_until_async
+from eden.fs.service.eden.thrift_clients import EdenService
+from eden.fs.service.eden.thrift_types import (
     EdenError,
     EdenErrorType,
     FaultDefinition,
@@ -30,8 +30,8 @@ from facebook.eden.ttypes import (
     UnblockFaultArg,
     WorkingDirectoryParents,
 )
-from fb303_core.ttypes import fb303_status
-from thrift.Thrift import TException  # @manual=//thrift/lib/py:base
+from fb303_core.thrift_types import fb303_status
+from thrift.python.exceptions import TransportError
 
 from .lib import testcase
 from .lib.edenclient import EdenCommandError
@@ -130,13 +130,13 @@ class MountTest(testcase.EdenRepoTest):
         # gone away.
         os.close(fd)
 
-    def test_mount_init_state(self) -> None:
+    async def test_mount_init_state(self) -> None:
         self.eden.run_cmd("unmount", self.mount)
         self.assertEqual({self.mount: "NOT_RUNNING"}, self.eden.list_cmd_simple())
 
-        with self.eden.get_thrift_client_legacy() as client:
+        async with self.eden.get_thrift_client() as client:
             fault = FaultDefinition(keyClass="mount", keyValueRegex=".*", block=True)
-            client.injectFault(fault)
+            await client.injectFault(fault)
 
             # Run the "eden mount" CLI command.
             # This won't succeed until we unblock the mount.
@@ -146,8 +146,11 @@ class MountTest(testcase.EdenRepoTest):
             mount_proc = subprocess.Popen(mount_cmd, env=edenfsctl_env)
 
             # Wait for the new mount to be reported by edenfs
-            def mount_started() -> Optional[bool]:
-                if self.eden.get_mount_state(Path(self.mount), client) is not None:
+            async def mount_started() -> Optional[bool]:
+                if (
+                    await self.eden.get_mount_state_async(Path(self.mount), client)
+                    is not None
+                ):
                     return True
                 if mount_proc.poll() is not None:
                     raise Exception(
@@ -157,34 +160,36 @@ class MountTest(testcase.EdenRepoTest):
                     )
                 return None
 
-            poll_until(mount_started, timeout=30)
+            await poll_until_async(mount_started, timeout=30)
             self.wait_on_fault_hit(key_class="mount")
             self.assertEqual({self.mount: "INITIALIZING"}, self.eden.list_cmd_simple())
 
             # Most thrift calls to access the mount should be disallowed while it is
             # still initializing.
-            self._assert_thrift_calls_fail_during_mount_init(client)
+            await self._assert_thrift_calls_fail_during_mount_init(client)
 
-            client.unblockFault(UnblockFaultArg(keyClass="mount", keyValueRegex=".*"))
-            self._wait_for_mount_running(client)
+            await client.unblockFault(
+                UnblockFaultArg(keyClass="mount", keyValueRegex=".*")
+            )
+            await self._wait_for_mount_running(client)
 
             self.assertEqual({self.mount: "RUNNING"}, self.eden.list_cmd_simple())
 
             mount_proc.wait()
 
-    def _assert_thrift_calls_fail_during_mount_init(self, client: EdenClient) -> None:
+    async def _assert_thrift_calls_fail_during_mount_init(self, client) -> None:
         error_regex = "mount point .* is still initializing"
         mount_path = Path(self.mount)
         null_commit = b"\00" * 20
 
         with self.assertRaisesRegex(EdenError, error_regex) as ctx:
-            client.getFileInformation(
+            await client.getFileInformation(
                 mountPoint=bytes(mount_path), paths=[b""], sync=SyncBehavior()
             )
         self.assertEqual(EdenErrorType.POSIX_ERROR, ctx.exception.errorType)
 
         with self.assertRaisesRegex(EdenError, error_regex) as ctx:
-            client.getScmStatus(
+            await client.getScmStatus(
                 mountPoint=bytes(mount_path), listIgnored=False, commit=null_commit
             )
         self.assertEqual(EdenErrorType.POSIX_ERROR, ctx.exception.errorType)
@@ -192,23 +197,23 @@ class MountTest(testcase.EdenRepoTest):
         parents = WorkingDirectoryParents(parent1=null_commit)
         params = ResetParentCommitsParams()
         with self.assertRaisesRegex(EdenError, error_regex) as ctx:
-            client.resetParentCommits(
+            await client.resetParentCommits(
                 mountPoint=bytes(mount_path), parents=parents, params=params
             )
         self.assertEqual(EdenErrorType.POSIX_ERROR, ctx.exception.errorType)
 
-    def _wait_until_initializing(self, num_mounts: int = 1) -> None:
+    async def _wait_until_initializing(self, num_mounts: int = 1) -> None:
         """Wait until EdenFS is initializing mount points.
         This is primarily intended to be used to wait until the mount points are
         initializing when starting EdenFS with --fault_injection_block_mounts.
         """
 
-        def is_initializing() -> Optional[bool]:
+        async def is_initializing() -> Optional[bool]:
             try:
-                with self.eden.get_thrift_client_legacy() as client:
+                async with self.eden.get_thrift_client() as client:
                     # Return successfully when listMounts() reports the number of
                     # mounts that we expect.
-                    mounts = client.listMounts()
+                    mounts = await client.listMounts()
                     if len(mounts) == num_mounts:
                         return True
                 edenfs_process = self.eden._process
@@ -216,48 +221,52 @@ class MountTest(testcase.EdenRepoTest):
                 if edenfs_process.poll():
                     self.fail("eden exited before becoming healthy")
                 return None
-            except (EdenNotRunningError, TException):
+            except TransportError:
                 return None
 
-        poll_until(is_initializing, timeout=60)
+        await poll_until_async(is_initializing, 60)
 
-    def test_start_blocked_mount_init(self) -> None:
+    async def test_start_blocked_mount_init(self) -> None:
         self.eden.shutdown()
         self.eden.spawn_nowait(
             extra_args=["--enable_fault_injection", "--fault_injection_block_mounts"]
         )
 
         # Wait for eden to report the mount point in the listMounts() output
-        self._wait_until_initializing()
+        await self._wait_until_initializing()
 
-        with self.eden.get_thrift_client_legacy() as client:
+        async with self.eden.get_thrift_client() as client:
             # Since we blocked mount initialization the mount should still
             # report as INITIALIZING, and edenfs should report itself STARTING
             self.assertEqual(
                 {self.mount: "INITIALIZING"},
                 self.eden.list_cmd_simple({"EDENFS_SKIP_DAEMON_READY_CHECK": "1"}),
             )
-            self.assertEqual(fb303_status.STARTING, client.getDaemonInfo().status)
+            daemon_info = await client.getDaemonInfo()
+            self.assertEqual(fb303_status.STARTING, daemon_info.status)
 
             # Unblock mounting and wait for the mount to transition to running
-            client.unblockFault(UnblockFaultArg(keyClass="mount", keyValueRegex=".*"))
-            self._wait_for_mount_running(client)
-            self._wait_until_alive(client)
-            self.assertEqual(fb303_status.ALIVE, client.getDaemonInfo().status)
+            await client.unblockFault(
+                UnblockFaultArg(keyClass="mount", keyValueRegex=".*")
+            )
+            await self._wait_for_mount_running(client)
+            await self._wait_until_alive(client)
+            daemon_info = await client.getDaemonInfo()
+            self.assertEqual(fb303_status.ALIVE, daemon_info.status)
 
         self.assertEqual({self.mount: "RUNNING"}, self.eden.list_cmd_simple())
 
-    def test_remount_after_initialization_failure(self) -> None:
+    async def test_remount_after_initialization_failure(self) -> None:
         # Unmount and inject a fault that blocks subsequent mount attempts
         self.eden.run_cmd("unmount", self.mount)
-        with self.eden.get_thrift_client_legacy() as client:
+        async with self.eden.get_thrift_client() as client:
             fault = FaultDefinition(
                 keyClass="failMountInitialization",
                 keyValueRegex=".*",
                 errorType="runtime_error",
                 errorMessage="PC LOAD LETTER",
             )
-            client.injectFault(fault)
+            await client.injectFault(fault)
 
         # Run the "eden mount" CLI command.
         # This will fail because we injected an exception
@@ -265,8 +274,8 @@ class MountTest(testcase.EdenRepoTest):
             self.eden.run_cmd("mount", self.mount)
 
         # Remove the previously added fault
-        with self.eden.get_thrift_client_legacy() as client:
-            client.removeFault(
+        async with self.eden.get_thrift_client() as client:
+            await client.removeFault(
                 RemoveFaultArg(keyClass="failMountInitialization", keyValueRegex=".*")
             )
 
@@ -280,25 +289,29 @@ class MountTest(testcase.EdenRepoTest):
             self.eden.list_cmd_simple(),
         )
 
-    def _wait_for_mount_running(
-        self, client: EdenClient, path: Optional[Path] = None
+    async def _wait_for_mount_running(
+        self, client, path: Optional[Path] = None
     ) -> None:
         mount_path = path if path is not None else Path(self.mount)
 
-        def mount_running() -> Optional[bool]:
-            if self.eden.get_mount_state(mount_path, client) == MountState.RUNNING:
+        async def mount_running() -> Optional[bool]:
+            if (
+                await self.eden.get_mount_state_async(mount_path, client)
+                == MountState.RUNNING
+            ):
                 return True
             return None
 
-        poll_until(mount_running, timeout=60)
+        await poll_until_async(mount_running, timeout=60)
 
-    def _wait_until_alive(self, client: EdenClient) -> None:
-        def is_alive() -> Optional[bool]:
-            if client.getDaemonInfo().status == fb303_status.ALIVE:
+    async def _wait_until_alive(self, client: EdenService.Async) -> None:
+        async def is_alive() -> Optional[bool]:
+            info = await client.getDaemonInfo()
+            if info.status == fb303_status.ALIVE:
                 return True
             return None
 
-        poll_until(is_alive, timeout=60)
+        await poll_until_async(is_alive, timeout=60)
 
     def test_remount_creates_mount_point_dir(self) -> None:
         """Test that eden will automatically create the mount point directory if
@@ -350,7 +363,7 @@ class MountTest(testcase.EdenRepoTest):
             self.eden.list_cmd_simple(),
         )
 
-    def test_start_with_mount_failures(self) -> None:
+    async def test_start_with_mount_failures(self) -> None:
         # Clone a few other checkouts
         mount2 = os.path.join(self.mounts_dir, "extra_mount_1")
         self.eden.clone(self.repo.path, mount2)
@@ -368,9 +381,9 @@ class MountTest(testcase.EdenRepoTest):
         )
 
         # Wait for eden to have started mount point initialization
-        self._wait_until_initializing(num_mounts=3)
+        await self._wait_until_initializing(num_mounts=3)
 
-        with self.eden.get_thrift_client_legacy() as client:
+        async with self.eden.get_thrift_client() as client:
             # Since we blocked mount initialization the mount should still
             # report as INITIALIZING, and edenfs should report itself STARTING
             self.assertEqual(
@@ -381,10 +394,11 @@ class MountTest(testcase.EdenRepoTest):
                 },
                 self.eden.list_cmd_simple({"EDENFS_SKIP_DAEMON_READY_CHECK": "1"}),
             )
-            self.assertEqual(fb303_status.STARTING, client.getDaemonInfo().status)
+            daemon_info = await client.getDaemonInfo()
+            self.assertEqual(fb303_status.STARTING, daemon_info.status)
 
             # Fail mounting of the additional 2 mounts we created
-            client.unblockFault(
+            await client.unblockFault(
                 UnblockFaultArg(
                     keyClass="mount",
                     keyValueRegex=".*/extra_mount.*",
@@ -393,11 +407,11 @@ class MountTest(testcase.EdenRepoTest):
                 )
             )
             # Unblock mounting of the first mount
-            client.unblockFault(
+            await client.unblockFault(
                 UnblockFaultArg(keyClass="mount", keyValueRegex=re.escape(self.mount))
             )
             # Wait until EdenFS reports itself as alive
-            self._wait_until_alive(client)
+            await self._wait_until_alive(client)
 
         self.assertEqual(
             {self.mount: "RUNNING", mount2: "NOT_RUNNING", mount3: "NOT_RUNNING"},
@@ -405,8 +419,8 @@ class MountTest(testcase.EdenRepoTest):
         )
         # The startup_mount_failures counter should indicate that 2 mounts failed to
         # remount.
-        with self.eden.get_thrift_client_legacy() as client:
-            mount_failures = client.getCounter("startup_mount_failures")
+        async with self.eden.get_thrift_client() as client:
+            mount_failures = await client.getCounter("startup_mount_failures")
             self.assertEqual(2, mount_failures)
 
     def test_start_with_hanging_mounts(self) -> None:
