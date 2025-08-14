@@ -175,8 +175,7 @@ std::unique_ptr<SqliteDatabase> openAndVerifyDb(
 
   } catch (const std::exception& ex) {
     if (folly::kIsWindows) {
-      XLOG(WARN) << "SqliteDatabase (" << path
-                 << ") failed to open: " << ex.what();
+      XLOGF(WARN, "SqliteDatabase ({}) failed to open: {}", path, ex.what());
       return removeAndRecreateDb(path);
     }
     throw;

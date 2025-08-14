@@ -86,7 +86,7 @@ int main(int argc, char* argv[]) {
           std::get<facebook::eden::NfsChannelData>(mount.channelInfo);
       mountFD = &nfsChannelData.nfsdSocketFd;
     }
-    XLOG(INFO) << "mount " << mount.mountPath << ": fd=" << mountFD->fd();
+    XLOGF(INFO, "mount {}: fd={}", mount.mountPath, mountFD->fd());
   }
   return EX_OK;
 }

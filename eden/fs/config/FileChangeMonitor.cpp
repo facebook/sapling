@@ -150,8 +150,11 @@ FileChangeMonitor::checkIfUpdated(bool noThrottle) {
       int currentStatErrno{0};
       if (current.hasError()) {
         currentStatErrno = current.error();
-        XLOG(WARN) << "error calling getFileStat() on " << filePath_ << ": "
-                   << folly::errnoStr(currentStatErrno);
+        XLOGF(
+            WARN,
+            "error calling getFileStat() on {}: {}",
+            filePath_,
+            folly::errnoStr(currentStatErrno));
       } else {
         fileStat_ = current.value();
       }
@@ -161,8 +164,11 @@ FileChangeMonitor::checkIfUpdated(bool noThrottle) {
       int currentOpenErrno{errno};
       // Log an error only if the error code has changed
       if (currentOpenErrno != openErrno_) {
-        XLOG(WARN) << "error accessing file " << filePath_ << ": "
-                   << folly::errnoStr(currentOpenErrno);
+        XLOGF(
+            WARN,
+            "error accessing file {}: {}",
+            filePath_,
+            folly::errnoStr(currentOpenErrno));
       } else {
         // Open is failing, for the same reason. It is possible that the file
         // has changed, but, not meaningful for the client.
@@ -194,8 +200,11 @@ bool FileChangeMonitor::isChanged() {
     // Also only log when the error changes, so that we don't repeatedly log
     // the same message.
     if (statErrno_ != ENOENT && statErrno_ != prevStatErrno) {
-      XLOG(WARN) << "error accessing file " << filePath_ << ": "
-                 << folly::errnoStr(statErrno_);
+      XLOGF(
+          WARN,
+          "error accessing file {}: {}",
+          filePath_,
+          folly::errnoStr(statErrno_));
     }
   } else {
     currentStat = rslt.value();

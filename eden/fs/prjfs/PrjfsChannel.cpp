@@ -1727,7 +1727,7 @@ folly::Future<FsChannel::StopFuture> PrjfsChannel::initialize() {
   // negative path result is cached by Windows without rebooting.
   flushNegativePathCache();
 
-  XLOG(INFO) << "Started PrjfsChannel for: " << mountPath_;
+  XLOGF(INFO, "Started PrjfsChannel for: {}", mountPath_);
 
   stopPromise_ = folly::Promise<FsStopDataPtr>{};
   return folly::makeFuture<FsChannel::StopFuture>(getStopFuture());
@@ -1765,7 +1765,7 @@ FsChannelInfo PrjfsChannel::StopData::extractTakeoverInfo() {
 
 folly::SemiFuture<folly::Unit> PrjfsChannel::unmount(
     UnmountOptions /* options */) {
-  XLOG(INFO) << "Stopping PrjfsChannel for: " << mountPath_;
+  XLOGF(INFO, "Stopping PrjfsChannel for: {}", mountPath_);
   XCHECK(!stopPromise_.isFulfilled());
 
   inner_.store(nullptr, std::memory_order_release);

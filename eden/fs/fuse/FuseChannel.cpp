@@ -1623,13 +1623,18 @@ void FuseChannel::readInitPacket() {
   // Only return the capabilities the kernel supports.
   want &= capable;
 
-  XLOG(DBG1) << "Speaking fuse protocol kernel=" << init.init.major << "."
-             << init.init.minor << " local=" << FUSE_KERNEL_VERSION << "."
-             << FUSE_KERNEL_MINOR_VERSION << " on mount \"" << mountPath_
-             << "\", max_write=" << connInfo.max_write
-             << ", max_readahead=" << connInfo.max_readahead
-             << ", capable=" << capsFlagsToLabel(capable)
-             << ", want=" << capsFlagsToLabel(want);
+  XLOGF(
+      DBG1,
+      "Speaking fuse protocol kernel={}.{} local={}.{} on mount \"{}\", max_write={}, max_readahead={}, capable={}, want={}",
+      init.init.major,
+      init.init.minor,
+      FUSE_KERNEL_VERSION,
+      FUSE_KERNEL_MINOR_VERSION,
+      mountPath_,
+      connInfo.max_write,
+      connInfo.max_readahead,
+      capsFlagsToLabel(capable),
+      capsFlagsToLabel(want));
 
   if (init.init.major != FUSE_KERNEL_VERSION) {
     replyError(init.header, EPROTO);
@@ -1706,7 +1711,7 @@ void FuseChannel::processSession() {
       } else if (error == ENODEV) {
         // ENODEV means the filesystem was unmounted
         folly::call_once(unmountLogFlag_, [this] {
-          XLOG(DBG3) << "received unmount event ENODEV on mount " << mountPath_;
+          XLOGF(DBG3, "received unmount event ENODEV on mount {}", mountPath_);
         });
         requestSessionExit(StopReason::UNMOUNTED);
         break;

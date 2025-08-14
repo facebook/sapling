@@ -34,7 +34,7 @@ DEFINE_string(
 void createGoldMasterOverlay(AbsolutePath overlayPath) {
   struct stat overlayStat;
   XCHECK_EQ(-1, stat(overlayPath.c_str(), &overlayStat))
-      << "given overlay path " << overlayPath << " already exists";
+      << fmt::format("given overlay path {} already exists", overlayPath);
   XCHECK_EQ(ENOENT, errno) << "error must be ENOENT";
 
   ObjectId hash1{folly::ByteRange{"abcdabcdabcdabcdabcd"_sp}};

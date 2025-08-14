@@ -25,8 +25,11 @@ size_t getFileSize(
     return st.st_size;
   } else {
     int errnum = errno;
-    XLOG(WARN) << "unable to get file size of " << path << ": "
-               << folly::errnoStr(errnum);
+    XLOGF(
+        WARN,
+        "unable to get file size of {}: {}",
+        path,
+        folly::errnoStr(errnum));
     // If we fail to get the file size don't bail out entirely,
     // just treat the file size as 0 for the purposes of log rotation.
     return 0;
@@ -84,7 +87,7 @@ void LogFile::rotate() {
   // runs with a single main thread and performs all logging in this thread.
   // If we ever changed to logging from multiple threads we would need to add
   // synchronization here.  e.g., by putting our state in a folly::Synchronized.
-  XLOG(DBG1) << "rotating log file " << path_;
+  XLOGF(DBG1, "rotating log file {}", path_);
 
   if (!rotationStrategy_) {
     return;
@@ -95,8 +98,11 @@ void LogFile::rotate() {
   try {
     newLog = mainThreadRotation();
   } catch (const std::exception& ex) {
-    XLOG(ERR) << "failed to rotate log file " << path_ << ": "
-              << folly::exceptionStr(ex);
+    XLOGF(
+        ERR,
+        "failed to rotate log file {}: {}",
+        path_,
+        folly::exceptionStr(ex));
     // Return, and keep writing to the old log file even though it was renamed
     // to a different location now.
     return;
@@ -115,10 +121,13 @@ folly::File LogFile::mainThreadRotation() {
     // Continue trying to re-open the log file anyway.  For instance, maybe our
     // log file was deleted out from under us, in which case the rename will
     // fail with ENOENT, but re-opening the file will re-create a new log file.
-    XLOG(WARN) << "failed to rename log file " << path_
-               << " for rotation: " << folly::exceptionStr(ex);
+    XLOGF(
+        WARN,
+        "failed to rename log file {} for rotation: {}",
+        path_,
+        folly::exceptionStr(ex));
   }
-  XLOG(DBG3) << "new log path " << newPath;
+  XLOGF(DBG3, "new log path {}", newPath);
 
   // Open the new log file.
   folly::File newLog(
@@ -156,8 +165,11 @@ void LogFile::runRotateThread() {
     try {
       rotationStrategy_->performRotation(path);
     } catch (const std::exception& ex) {
-      XLOG(ERR) << "error performing log rotation for " << path << ": "
-                << folly::exceptionStr(ex);
+      XLOGF(
+          ERR,
+          "error performing log rotation for {}: {}",
+          path,
+          folly::exceptionStr(ex));
       // Even if we fail on one rotation attempt, continue looping for
       // subsequent rotation requests anyway.  We don't want to abort the entire
       // program on rotation failure, nor do we want to just stop trying future

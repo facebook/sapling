@@ -214,15 +214,17 @@ void InodeMap::initializeFromTakeover(
         folly::to<uint32_t>(*entry.numFsReferences()));
   }
 
-  XLOG(DBG2) << "InodeMap initialized mount " << mount_->getPath()
-             << " from takeover, " << data->unloadedInodes_.size()
-             << " inodes registered";
+  XLOGF(
+      DBG2,
+      "InodeMap initialized mount {} from takeover, {} inodes registered",
+      mount_->getPath(),
+      data->unloadedInodes_.size());
 }
 
 void InodeMap::initializeFromOverlay(TreeInodePtr root, Overlay& overlay) {
   XCHECK(mount_->isWorkingCopyPersistent());
 
-  XLOG(DBG2) << "Initializing InodeMap for " << mount_->getPath();
+  XLOGF(DBG2, "Initializing InodeMap for {}", mount_->getPath());
 
   auto data = data_.wlock();
   initializeRoot(data, std::move(root));
@@ -263,9 +265,11 @@ void InodeMap::initializeFromOverlay(TreeInodePtr root, Overlay& overlay) {
     }
   }
 
-  XLOG(DBG2) << "InodeMap initialized mount " << mount_->getPath()
-             << " from overlay, " << data->unloadedInodes_.size()
-             << " inodes registered";
+  XLOGF(
+      DBG2,
+      "InodeMap initialized mount {} from overlay, {} inodes registered",
+      mount_->getPath(),
+      data->unloadedInodes_.size());
 }
 
 ImmediateFuture<InodePtr> InodeMap::lookupInode(InodeNumber number) {
@@ -863,9 +867,9 @@ Future<SerializedInodeMap> InodeMap::shutdown(
   auto future = Future<folly::Unit>::makeEmpty();
   {
     auto data = data_.wlock();
-    XCHECK(!data->shutdownPromise.has_value())
-        << "shutdown() invoked more than once on InodeMap for "
-        << mount_->getPath();
+    XCHECK(!data->shutdownPromise.has_value()) << fmt::format(
+        "shutdown() invoked more than once on InodeMap for {}",
+        mount_->getPath());
     data->shutdownPromise.emplace(Promise<Unit>{});
     future = data->shutdownPromise->getFuture();
 

@@ -41,7 +41,7 @@ TEST(TimestampLogRotation, rotation) {
   auto tempdir = makeTempDir();
   auto dir = canonicalPath(tempdir.path().native());
   auto logPath = dir + "test.log"_pc;
-  XLOG(DBG1) << "log path: " << logPath;
+  XLOGF(DBG1, "log path: {}", logPath);
 
   // Set a very small file size limit, so that we exceed it with each message
   constexpr size_t maxFileSize = 10;
@@ -91,7 +91,7 @@ TEST(TimestampLogRotation, removeOldLogFiles) {
   auto tempdir = makeTempDir();
   auto dir = canonicalPath(tempdir.path().native());
   auto logPath = dir + "test.log"_pc;
-  XLOG(DBG1) << "log path: " << logPath;
+  XLOGF(DBG1, "log path: {}", logPath);
 
   auto createFile = [&](StringPiece name) {
     auto full_path = dir + PathComponent(name);

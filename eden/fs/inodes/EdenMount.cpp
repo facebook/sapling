@@ -930,15 +930,17 @@ ImmediateFuture<SetPathObjectIdResultAndTimes> EdenMount::setPathsToObjectIds(
             .thenTry([this, ctx](
                          Try<SetPathObjectIdResultAndTimes>&& resultAndTimes) {
               auto fetchStats = ctx->getStatsContext().computeStatistics();
-              XLOG(DBG4) << (resultAndTimes.hasValue() ? "" : "failed ")
-                         << "setPathObjectId for " << this->getPath()
-                         << " accessed " << fetchStats.tree.accessCount
-                         << " trees (" << fetchStats.tree.cacheHitRate
-                         << "% chr), " << fetchStats.blob.accessCount
-                         << " blobs (" << fetchStats.blob.cacheHitRate
-                         << "% chr), and " << fetchStats.blobAuxData.accessCount
-                         << " metadata (" << fetchStats.blobAuxData.cacheHitRate
-                         << "% chr).";
+              XLOGF(
+                  DBG4,
+                  "{}setPathObjectId for {} accessed {} trees ({}% chr), {} blobs ({}% chr), and {} metadata ({}% chr).",
+                  (resultAndTimes.hasValue() ? "" : "failed "),
+                  this->getPath(),
+                  fetchStats.tree.accessCount,
+                  fetchStats.tree.cacheHitRate,
+                  fetchStats.blob.accessCount,
+                  fetchStats.blob.cacheHitRate,
+                  fetchStats.blobAuxData.accessCount,
+                  fetchStats.blobAuxData.cacheHitRate);
 
               return std::move(resultAndTimes);
             });
@@ -972,7 +974,7 @@ ImmediateFuture<SetPathObjectIdResultAndTimes> EdenMount::setPathsToObjectIds(
 
 void EdenMount::destroy() {
   auto oldState = state_.exchange(State::DESTROYING, std::memory_order_acq_rel);
-  XLOG(DBG4) << "attempting to destroy EdenMount " << getPath();
+  XLOGF(DBG4, "attempting to destroy EdenMount {}", getPath());
   switch (oldState) {
     case State::UNINITIALIZED:
     case State::INITIALIZING: {
@@ -1002,7 +1004,7 @@ void EdenMount::destroy() {
       return;
     case State::SHUT_DOWN:
       // We were already shut down, and can delete ourselves immediately.
-      XLOG(DBG1) << "destroying shut-down EdenMount " << getPath();
+      XLOGF(DBG1, "destroying shut-down EdenMount {}", getPath());
       delete this;
       return;
     case State::DESTROYING:
@@ -1020,7 +1022,7 @@ void EdenMount::destroy() {
 folly::SemiFuture<SerializedInodeMap> EdenMount::shutdown(
     bool doTakeover,
     bool allowFuseNotStarted) {
-  XLOG(DBG4) << "attempting to shutdown EdenMount " << getPath();
+  XLOGF(DBG4, "attempting to shutdown EdenMount {}", getPath());
   // shutdown() should only be called on mounts that have not yet reached
   // SHUTTING_DOWN or later states.  Confirm this is the case, and move to
   // SHUTTING_DOWN.
@@ -1044,17 +1046,17 @@ folly::SemiFuture<SerializedInodeMap> EdenMount::shutdown(
 
 folly::SemiFuture<SerializedInodeMap> EdenMount::shutdownImpl(bool doTakeover) {
   journal_->cancelAllSubscribers();
-  XLOG(DBG1) << "beginning shutdown for EdenMount " << getPath();
+  XLOGF(DBG1, "beginning shutdown for EdenMount {}", getPath());
 
   return inodeMap_->shutdown(doTakeover)
       .thenValue([this](SerializedInodeMap inodeMap) {
-        XLOG(DBG1) << "shutdown complete for EdenMount " << getPath();
+        XLOGF(DBG1, "shutdown complete for EdenMount {}", getPath());
         // Close the Overlay object to make sure we have released its lock.
         // This is important during graceful restart to ensure that we have
         // released the lock before the new edenfs process begins to take over
         // the mount point.
         overlay_->close();
-        XLOG(DBG1) << "successfully closed overlay at " << getPath();
+        XLOGF(DBG1, "successfully closed overlay at {}", getPath());
         auto oldState =
             state_.exchange(State::SHUT_DOWN, std::memory_order_acq_rel);
         if (oldState == State::DESTROYING) {

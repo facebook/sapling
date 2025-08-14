@@ -29,7 +29,7 @@ namespace facebook::eden {
 
 HgRepo::HgRepo(AbsolutePathPiece path, AbsolutePath hgCmd)
     : hgCmd_(hgCmd), path_(path) {
-  XLOG(DBG1) << "Using hg command: " << hgCmd_;
+  XLOGF(DBG1, "Using hg command: {}", hgCmd_);
 
   // Set up hgEnv_
   std::vector<const char*> passthroughVars{
@@ -75,7 +75,7 @@ SpawnedProcess HgRepo::invokeHg(
     SpawnedProcess::Options&& options) {
   args.insert(args.begin(), {"hg", "--traceback"});
 
-  XLOG(DBG1) << "repo " << path_ << " running: " << folly::join(" ", args);
+  XLOGF(DBG1, "repo {} running: {}", path_, folly::join(" ", args));
   options.environment() = hgEnv_;
   options.executablePath(hgCmd_);
   return SpawnedProcess(args, std::move(options));
@@ -85,7 +85,7 @@ void HgRepo::hgInit(
     AbsolutePathPiece cacheDirectory,
     std::vector<std::string> extraArgs,
     bool isEagerRepo) {
-  XLOG(DBG1) << "creating new hg repository at " << path_;
+  XLOGF(DBG1, "creating new hg repository at {}", path_);
 
   // Invoke SpawnedProcess directly here rather than using our hg() helper
   // function.  The hg() function requires the repository directory to already
@@ -136,8 +136,7 @@ void HgRepo::hgInit(
 void HgRepo::cloneFrom(
     StringPiece serverRepoUrl,
     std::vector<std::string> extraArgs) {
-  XLOG(DBG1) << "cloning new hg repository at " << path_ << " from "
-             << serverRepoUrl;
+  XLOGF(DBG1, "cloning new hg repository at {} from {}", path_, serverRepoUrl);
 
   std::vector<std::string> args = {"hg", "clone"};
   args.insert(args.end(), extraArgs.begin(), extraArgs.end());

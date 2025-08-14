@@ -45,8 +45,11 @@ void TimestampLogRotation::init(AbsolutePathPiece path) {
   try {
     removeOldLogFiles();
   } catch (const std::exception& ex) {
-    XLOG(ERR) << "error cleaning up old log files for " << path << ": "
-              << folly::exceptionStr(ex);
+    XLOGF(
+        ERR,
+        "error cleaning up old log files for {}: {}",
+        path,
+        folly::exceptionStr(ex));
     // Continue anyway.
     // Clean-up errors end up getting ignored during normal rotation as well,
     // since we want to proceed and still process logs rather than aborting

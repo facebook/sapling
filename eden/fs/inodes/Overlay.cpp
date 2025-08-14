@@ -307,8 +307,11 @@ folly::SemiFuture<Unit> Overlay::initialize(
           lookupCallback);
     } catch (...) {
       auto ew = folly::exception_wrapper{std::current_exception()};
-      XLOG(ERR) << "overlay initialization failed for " << localDir_ << ": "
-                << ew;
+      XLOGF(
+          ERR,
+          "overlay initialization failed for {}: {}",
+          localDir_,
+          folly::exceptionStr(ew));
       promise.setException(std::move(ew));
       return;
     }
@@ -358,8 +361,10 @@ void Overlay::initOverlay(
     //
     // Use OverlayChecker to scan the overlay for any issues, and also compute
     // correct next inode number as it does so.
-    XLOG(WARN) << "Overlay " << localDir_
-               << " was not shut down cleanly.  Performing fsck scan.";
+    XLOGF(
+        WARN,
+        "Overlay {} was not shut down cleanly.  Performing fsck scan.",
+        localDir_);
 
     // TODO(zeyi): `OverlayCheck` should be associated with the specific
     // Overlay implementation.

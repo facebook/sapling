@@ -124,8 +124,8 @@ class CachedParsedFileMonitor {
         parsedData_ = rslt.value();
       }
     } catch (const std::exception& ex) {
-      XLOG(WARN) << "error parsing file " << filePath << ": "
-                 << folly::exceptionStr(ex);
+      XLOGF(
+          WARN, "error parsing file {}: {}", filePath, folly::exceptionStr(ex));
       setUnknownError();
     }
   }

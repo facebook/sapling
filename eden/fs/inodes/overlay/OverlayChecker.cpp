@@ -87,7 +87,7 @@ class OverlayChecker::RepairState {
   void warn(const Arg1& arg1, const Args&... args) {
     auto msg = fmt::to_string(
         fmt::join(std::make_tuple<const Arg1&, const Args&...>(arg1, args...)));
-    XLOG(WARN) << "fsck:" << checker_->impl_->fcs->getLocalDir() << ":" << msg;
+    XLOGF(WARN, "fsck:{}:{}", checker_->impl_->fcs->getLocalDir(), msg);
     logLine(msg);
   }
 
@@ -774,7 +774,7 @@ OverlayChecker::OverlayChecker(
 OverlayChecker::~OverlayChecker() = default;
 
 void OverlayChecker::scanForErrors(const ProgressCallback& progressCallback) {
-  XLOG(INFO) << "Starting fsck scan on overlay " << impl_->fcs->getLocalDir();
+  XLOGF(INFO, "Starting fsck scan on overlay {}", impl_->fcs->getLocalDir());
   if (auto callback = progressCallback) {
     callback(0);
   }
@@ -784,12 +784,16 @@ void OverlayChecker::scanForErrors(const ProgressCallback& progressCallback) {
   checkNextInodeNumber();
 
   if (errors_.empty()) {
-    XLOG(INFO) << "fsck:" << impl_->fcs->getLocalDir()
-               << ": completed checking for errors, no problems found";
+    XLOGF(
+        INFO,
+        "fsck:{}: completed checking for errors, no problems found",
+        impl_->fcs->getLocalDir());
   } else {
-    XLOG(ERR) << "fsck:" << impl_->fcs->getLocalDir()
-              << ": completed checking for errors, found " << errors_.size()
-              << " problems";
+    XLOGF(
+        ERR,
+        "fsck:{}: completed checking for errors, found {} problems",
+        impl_->fcs->getLocalDir(),
+        errors_.size());
   }
 }
 
@@ -814,8 +818,7 @@ optional<OverlayChecker::RepairResult> OverlayChecker::repairErrors() {
     ++errnum;
     auto description = error->getMessage(this);
     if (errnum < maxPrintedErrors) {
-      XLOG(ERR) << "fsck:" << impl_->fcs->getLocalDir()
-                << ": error: " << description;
+      XLOGF(ERR, "fsck:{}: error: {}", impl_->fcs->getLocalDir(), description);
     }
     repair.log("error ", errnum, ": ", description);
     try {
@@ -827,9 +830,11 @@ optional<OverlayChecker::RepairResult> OverlayChecker::repairErrors() {
         repair.log("  ! unable to repair error ", errnum);
       }
     } catch (const std::exception& ex) {
-      XLOG(ERR) << "fsck:" << impl_->fcs->getLocalDir()
-                << ": unexpected error occurred while attempting repair: "
-                << folly::exceptionStr(ex);
+      XLOGF(
+          ERR,
+          "fsck:{}: unexpected error occurred while attempting repair: {}",
+          impl_->fcs->getLocalDir(),
+          folly::exceptionStr(ex));
       repair.log(
           "  ! failed to repair error ",
           errnum,
@@ -852,15 +857,18 @@ optional<OverlayChecker::RepairResult> OverlayChecker::repairErrors() {
         "successfully repaired all ", result.fixedErrors, " problems");
   }
   repair.log(finalMsg);
-  XLOG(INFO) << "fsck:" << impl_->fcs->getLocalDir() << ": " << finalMsg;
+  XLOGF(INFO, "fsck:{}: {}", impl_->fcs->getLocalDir(), finalMsg);
 
   return result;
 }
 
 void OverlayChecker::logErrors() {
   for (const auto& error : errors_) {
-    XLOG(ERR) << "fsck:" << impl_->fcs->getLocalDir()
-              << ": error: " << error->getMessage(this);
+    XLOGF(
+        ERR,
+        "fsck:{}: error: {}",
+        impl_->fcs->getLocalDir(),
+        error->getMessage(this));
   }
 }
 
@@ -1017,8 +1025,8 @@ void OverlayChecker::readInodes(const ProgressCallback& progressCallback) {
             FsFileContentStore::formatSubdirShardPath(shardID, subdir);
             auto path = impl_->fcs->getLocalDir() + PathComponentPiece{subdir};
 
-            XLOG(DBG5) << "fsck:" << impl_->fcs->getLocalDir() << ": scanning "
-                       << path;
+            XLOGF(
+                DBG5, "fsck:{}: scanning {}", impl_->fcs->getLocalDir(), path);
 
             std::vector<std::tuple<uint64_t, uint32_t>> inodes;
 
@@ -1072,9 +1080,12 @@ void OverlayChecker::readInodes(const ProgressCallback& progressCallback) {
           ShardID shardID = static_cast<ShardID>(inodeInfo.number.get() & 0xff);
           uint32_t progress = (10 * shardID) / FsFileContentStore::kNumShards;
           if (progress > progress10pct) {
-            XLOG(INFO) << "fsck:" << impl_->fcs->getLocalDir() << ": scan "
-                       << progress << "0% complete: " << impl_->inodes.size()
-                       << " inodes scanned";
+            XLOGF(
+                INFO,
+                "fsck:{}: scan {}0% complete: {} inodes scanned",
+                impl_->fcs->getLocalDir(),
+                progress,
+                impl_->inodes.size());
             if (auto callback = progressCallback) {
               callback(progress);
             }
@@ -1084,8 +1095,11 @@ void OverlayChecker::readInodes(const ProgressCallback& progressCallback) {
           updateMaxInodeNumber(inodeInfo.number);
           impl_->inodes.emplace(inodeInfo.number, inodeInfo);
           if (impl_->inodes.size() % 10000 == 0) {
-            XLOG(DBG5) << "fsck: " << impl_->fcs->getLocalDir() << ": scanned "
-                       << impl_->inodes.size() << " inodes";
+            XLOGF(
+                DBG5,
+                "fsck: {}: scanned {} inodes",
+                impl_->fcs->getLocalDir(),
+                impl_->inodes.size());
           }
         }
         return true;
@@ -1098,8 +1112,11 @@ void OverlayChecker::readInodes(const ProgressCallback& progressCallback) {
     errorsLock->pop_back();
   }
 
-  XLOG(INFO) << "fsck:" << impl_->fcs->getLocalDir() << ": scanned "
-             << impl_->inodes.size() << " inodes";
+  XLOGF(
+      INFO,
+      "fsck:{}: scanned {} inodes",
+      impl_->fcs->getLocalDir(),
+      impl_->inodes.size());
 }
 
 std::optional<InodeInfo> OverlayChecker::loadInodeSharded(
@@ -1221,8 +1238,11 @@ void OverlayChecker::addError(unique_ptr<Error> error) {
   // When addError() is called we often haven't fully computed the inode
   // relationships yet, so computePath() won't return correct results for any
   // error messages that want to include path names.
-  XLOG(DBG7) << "fsck: addError() called for " << impl_->fcs->getLocalDir()
-             << ": " << error->getMessage(this);
+  XLOGF(
+      DBG7,
+      "fsck: addError() called for {}: {}",
+      impl_->fcs->getLocalDir(),
+      error->getMessage(this));
   errors_.push_back(std::move(error));
 }
 

@@ -60,12 +60,18 @@ class TestFileParser {
 
       return fileContents;
     } catch (const std::system_error& ex) {
-      XLOG(WARNING) << "error reading file " << filePath
-                    << folly::exceptionStr(ex);
+      XLOGF(
+          WARNING,
+          "error reading file {}: {}",
+          filePath,
+          folly::exceptionStr(ex));
       return folly::makeUnexpected<int>((int)errno);
     } catch (const std::exception& ex) {
-      XLOG(WARNING) << "error reading file " << filePath
-                    << folly::exceptionStr(ex);
+      XLOGF(
+          WARNING,
+          "error reading file {}: {}",
+          filePath,
+          folly::exceptionStr(ex));
       return folly::makeUnexpected<int>((int)errno);
     }
   }

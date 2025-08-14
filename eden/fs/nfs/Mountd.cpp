@@ -118,7 +118,7 @@ ImmediateFuture<folly::Unit> MountdServerProcessor::mount(
   serializeReply(ser, accept_stat::SUCCESS, xid);
 
   AbsolutePath path = canonicalPath(XdrTrait<std::string>::deserialize(deser));
-  XLOG(DBG7) << "Mounting: " << path;
+  XLOGF(DBG7, "Mounting: {}", path);
 
   auto mounts = mountPoints_.rlock();
   auto found = mounts->find(path);

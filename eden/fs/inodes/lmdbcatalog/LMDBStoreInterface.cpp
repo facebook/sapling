@@ -45,8 +45,7 @@ std::unique_ptr<LMDBDatabase> openAndVerifyDb(
     return std::make_unique<LMDBDatabase>(path);
   } catch (const std::exception& ex) {
     if (folly::kIsWindows) {
-      XLOG(WARN) << "LMDBDatabase (" << path
-                 << ") failed to open: " << ex.what();
+      XLOGF(WARN, "LMDBDatabase ({}) failed to open: {}", path, ex.what());
       return removeAndRecreateDb(path);
     }
     throw;

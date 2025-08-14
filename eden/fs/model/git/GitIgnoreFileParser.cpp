@@ -32,13 +32,19 @@ folly::Expected<GitIgnore, int> GitIgnoreFileParser::operator()(
       errNum = ex.code().value();
     }
     if (errNum != ENOENT) {
-      XLOG(WARNING) << "error reading file " << filePath
-                    << folly::exceptionStr(ex);
+      XLOGF(
+          WARNING,
+          "error reading file {}: {}",
+          filePath,
+          folly::exceptionStr(ex));
     }
     return folly::makeUnexpected(static_cast<int>(errNum));
   } catch (const std::exception& ex) {
-    XLOG(WARNING) << "error reading file " << filePath
-                  << folly::exceptionStr(ex);
+    XLOGF(
+        WARNING,
+        "error reading file {}: {}",
+        filePath,
+        folly::exceptionStr(ex));
     return folly::makeUnexpected<int>((int)EIO);
   }
   return gitIgnore;
