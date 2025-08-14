@@ -67,8 +67,11 @@ class FsObjectFetchContext : public ObjectFetchContext {
     priority_.compare_exchange_strong(
         prev, prev.adjusted(-delta), std::memory_order_acq_rel);
     if (auto client_pid = getClientPid()) {
-      XLOG(DBG7) << "priority for " << client_pid.value()
-                 << " has changed to: " << priority_.load().value();
+      XLOGF(
+          DBG7,
+          "priority for {} has changed to: {}",
+          client_pid.value(),
+          priority_.load().value());
     }
   }
 

@@ -113,8 +113,12 @@ void ObjectStore::sendFetchHeavyEvent(ProcessId pid, uint64_t fetch_count)
   auto processName = processInfoCache_->getProcessName(pid.get());
   if (processName) {
     std::replace(processName->begin(), processName->end(), '\0', ' ');
-    XLOG(WARN) << "Heavy fetches (" << fetch_count << ") from process "
-               << *processName << "(pid=" << pid << ")";
+    XLOGF(
+        WARN,
+        "Heavy fetches ({}) from process {}(pid={})",
+        fetch_count,
+        *processName,
+        pid);
     auto repoName = backingStore_->getRepoName();
     std::optional<uint64_t> loadedInodes = [repoName]() {
       auto counterValue = fb303::ServiceData::get()->getCounterIfExists(
@@ -127,8 +131,7 @@ void ObjectStore::sendFetchHeavyEvent(ProcessId pid, uint64_t fetch_count)
     structuredLogger_->logEvent(
         FetchHeavy{processName.value(), pid, fetch_count, loadedInodes});
   } else {
-    XLOG(WARN) << "Heavy fetches (" << fetch_count << ") from pid " << pid
-               << ")";
+    XLOGF(WARN, "Heavy fetches ({}) from pid {})", fetch_count, pid);
   }
 }
 
