@@ -8,7 +8,7 @@
 
 from typing import List
 
-from facebook.eden.ttypes import (
+from eden.fs.service.eden.thrift_types import (
     EdenError,
     EdenErrorType,
     FaultDefinition,
@@ -41,9 +41,9 @@ class PrjfsMatchFsTest(prjfs_test.PrjFSTestBase):
     def get_initial_commit(self) -> str:
         return self.initial_commit
 
-    def match_fs(self, files: List[bytes]) -> None:
-        with self.eden.get_thrift_client_legacy() as client:
-            errors = client.matchFilesystem(
+    async def match_fs(self, files: List[bytes]) -> None:
+        async with self.eden.get_thrift_client() as client:
+            errors = await client.matchFilesystem(
                 MatchFileSystemRequest(
                     mountPoint=MountId(mountPoint=self.mount.encode()), paths=files
                 )
@@ -51,14 +51,14 @@ class PrjfsMatchFsTest(prjfs_test.PrjFSTestBase):
             for error in errors.results:
                 self.assertEqual(error.error, None)
 
-    def test_fix_no_problems(self) -> None:
+    async def test_fix_no_problems(self) -> None:
         self.assertNotInStatus(b"adir/file")
 
-        self.match_fs([b"adir/file"])
+        await self.match_fs([b"adir/file"])
 
         self.assertNotInStatus(b"adir/file")
 
-    def test_fix_missed_removal(self) -> None:
+    async def test_fix_missed_removal(self) -> None:
         self.assertNotInStatus(b"adir/file")
 
         with self.run_with_notifications_dropped_fault():
@@ -66,14 +66,14 @@ class PrjfsMatchFsTest(prjfs_test.PrjFSTestBase):
             afile.unlink()
 
         self.assertNotInStatus(b"adir/file")
-        self.match_fs([b"adir/file"])
+        await self.match_fs([b"adir/file"])
 
         self.assertEqual(
             self.eden_status(),
             {b"adir/file": ScmFileStatus.REMOVED},
         )
 
-    def test_fix_missed_addition(self) -> None:
+    async def test_fix_missed_addition(self) -> None:
         self.assertNotInStatus(b"adir/anewfile")
 
         with self.run_with_notifications_dropped_fault():
@@ -81,14 +81,14 @@ class PrjfsMatchFsTest(prjfs_test.PrjFSTestBase):
             afile.touch()
 
         self.assertNotInStatus(b"adir/anewfile")
-        self.match_fs([b"adir/anewfile"])
+        await self.match_fs([b"adir/anewfile"])
 
         self.assertEqual(
             self.eden_status(),
             {b"adir/anewfile": ScmFileStatus.ADDED},
         )
 
-    def test_fix_missed_directory_delete(self) -> None:
+    async def test_fix_missed_directory_delete(self) -> None:
         self.assertNotInStatus(b"adir/file")
 
         with self.run_with_notifications_dropped_fault():
@@ -98,14 +98,14 @@ class PrjfsMatchFsTest(prjfs_test.PrjFSTestBase):
             adir.rmdir()
 
         self.assertNotInStatus(b"adir/file")
-        self.match_fs([b"adir"])
+        await self.match_fs([b"adir"])
 
         self.assertEqual(
             self.eden_status(),
             {b"adir/file": ScmFileStatus.REMOVED},
         )
 
-    def test_fix_missed_directory_addition(self) -> None:
+    async def test_fix_missed_directory_addition(self) -> None:
         self.assertNotInStatus(b"adir/asubdir/anewfile")
 
         with self.run_with_notifications_dropped_fault():
@@ -115,14 +115,14 @@ class PrjfsMatchFsTest(prjfs_test.PrjFSTestBase):
             afile.touch()
 
         self.assertNotInStatus(b"adir/asubdir/anewfile")
-        self.match_fs([b"adir/asubdir"])
+        await self.match_fs([b"adir/asubdir"])
 
         self.assertEqual(
             self.eden_status(),
             {b"adir/asubdir/anewfile": ScmFileStatus.ADDED},
         )
 
-    def test_fix_failed(self) -> None:
+    async def test_fix_failed(self) -> None:
         self.assertNotInStatus(b"adir/file")
 
         with self.run_with_notifications_dropped_fault():
@@ -131,8 +131,8 @@ class PrjfsMatchFsTest(prjfs_test.PrjFSTestBase):
 
         self.assertNotInStatus(b"adir/file")
 
-        with self.eden.get_thrift_client_legacy() as client:
-            client.injectFault(
+        async with self.eden.get_thrift_client() as client:
+            await client.injectFault(
                 FaultDefinition(
                     keyClass="PrjfsDispatcherImpl::fileNotification",
                     keyValueRegex=".*",
@@ -140,7 +140,7 @@ class PrjfsMatchFsTest(prjfs_test.PrjFSTestBase):
                     errorType="runtime_error",
                 )
             )
-            errors = client.matchFilesystem(
+            errors = await client.matchFilesystem(
                 MatchFileSystemRequest(
                     mountPoint=MountId(mountPoint=self.mount.encode()),
                     paths=[b"adir/file"],
