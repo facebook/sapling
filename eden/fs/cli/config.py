@@ -1062,15 +1062,11 @@ Do you want to run `eden mount %s` instead?"""
     def _cleanup_unix_mount(self, path: Path, preserve_mount_point: bool) -> None:
         import pwd
 
-        # Delete the mount point
-        # It should normally contain the readme file that we put there, but nothing
-        # else.  We only delete these specific files for now rather than using
-        # shutil.rmtree() to avoid deleting files we did not create.
-        #
         # Previous versions of EdenFS made the mount point directory read-only
         # as part of "eden clone".  Make sure it is writable now so we can clean it up.
         path.chmod(0o755)
 
+        # Remove README_EDEN file that's known to be put there by us.
         try:
             (path / NOT_MOUNTED_README_PATH).unlink()
         except OSError as ex:
@@ -1078,26 +1074,33 @@ Do you want to run `eden mount %s` instead?"""
                 raise
 
         if not preserve_mount_point:
-            entries: list[tuple[str, str]] = []
-            entry_limit_hit = False
-            with os.scandir(path) as it:
-                for i, entry in enumerate(it):
-                    if i == 10:
-                        entry_limit_hit = True
-                        break
-                    entry_path = entry.path
-                    owner_uid = entry.stat().st_uid
-                    owner_name = pwd.getpwuid(owner_uid).pw_name
-                    entries.append((entry_path, owner_name))
-            if entries:
-                msg = os.strerror(errno.ENOTEMPTY)
-                if entry_limit_hit:
-                    msg += "\nFound 10+ entries. Samples:\n"
-                else:
-                    msg += "\nFound entries:\n"
-                msg += "\n".join(f"{p} owned by {o}" for p, o in entries)
-                raise OSError(errno.ENOTEMPTY, msg)
-            path.rmdir()
+            if self.get_config_bool("experimental.remove-mount-recursively", False):
+                # Nuke everything under the mount path.
+                shutil.rmtree(path)
+            else:
+                # Originally, rmdir() is directly called on the mount path.
+                # This branch adds scandir() to first check the directory, and
+                # throws ENOTEMPTY with entry info if it is not empty.
+                entries: list[tuple[str, str]] = []
+                entry_limit_hit = False
+                with os.scandir(path) as it:
+                    for i, entry in enumerate(it):
+                        if i == 10:
+                            entry_limit_hit = True
+                            break
+                        entry_path = entry.path
+                        owner_uid = entry.stat().st_uid
+                        owner_name = pwd.getpwuid(owner_uid).pw_name
+                        entries.append((entry_path, owner_name))
+                if entries:
+                    msg = os.strerror(errno.ENOTEMPTY)
+                    if entry_limit_hit:
+                        msg += "\nFound 10+ entries. Samples:\n"
+                    else:
+                        msg += "\nFound entries:\n"
+                    msg += "\n".join(f"{p} owned by {o}" for p, o in entries)
+                    raise OSError(errno.ENOTEMPTY, msg)
+                path.rmdir()
 
     def cleanup_mount(
         self, path: Path, preserve_mount_point: bool = False, debug: bool = False
