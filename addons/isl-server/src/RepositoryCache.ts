@@ -82,6 +82,11 @@ class RepositoryCache {
   private activeReposEmitter = new TypedEventEmitter<'change', undefined>();
 
   private lookup(dirGuess: AbsolutePath): RefCounted<Repository> | undefined {
+    const found = this.reposByRoot.get(dirGuess);
+    return found && !found.isDisposed ? found : undefined;
+  }
+
+  private lookupByPrefix(dirGuess: AbsolutePath): RefCounted<Repository> | undefined {
     for (const repo of this.reposByRoot.values()) {
       if (
         dirGuess === repo.value.info.repoRoot ||
@@ -168,9 +173,12 @@ class RepositoryCache {
 
   /**
    * Lookup a cached repository without creating a new one if it doesn't exist
+   *
+   * TODO: This is used for figuring out repo that a file belongs to.
+   * With submodules, we should stop looking up by prefix.
    */
   public cachedRepositoryForPath(path: AbsolutePath): Repository | undefined {
-    const ref = this.lookup(path);
+    const ref = this.lookupByPrefix(path);
     return ref?.value;
   }
 
