@@ -49,6 +49,7 @@ use metaconfig_types::Redaction;
 use metaconfig_types::RepoConfig;
 use metaconfig_types::ShardedService;
 use mononoke_configs::MononokeConfigs;
+#[allow(unused)]
 use mononoke_macros::mononoke;
 use mononoke_types::RepositoryId;
 use prefixblob::PrefixBlobstore;
@@ -194,13 +195,13 @@ impl MononokeApp {
     pub fn run_basic<F, Fut>(mut self, main: F) -> Result<()>
     where
         F: Fn(MononokeApp) -> Fut,
-        Fut: Future<Output = Result<()>> + Send + 'static,
+        Fut: Future<Output = Result<()>>,
     {
         let runtime = self
             .runtime
             .take()
             .ok_or_else(|| anyhow!("MononokeApp already started"))?;
-        runtime.block_on(async move { mononoke::spawn_task(main(self)).await? })
+        runtime.block_on(main(self))
     }
 
     /// Execute a future on this app's runtime.
