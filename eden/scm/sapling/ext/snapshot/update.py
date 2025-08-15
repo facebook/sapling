@@ -65,7 +65,7 @@ def _fullclean(ui, repo, exclude) -> None:
 def _parent_update(ui, repo, parent) -> None:
     start_parent_update = time.perf_counter()
     ui.status(
-        _("Updating to parent {}\n").format(parent.hex()),
+        _("updating to parent {}\n").format(parent.hex()),
         component="snapshot",
     )
 
@@ -80,7 +80,7 @@ def _parent_update(ui, repo, parent) -> None:
     hg.updatetotally(ui, repo, parent, None, clean=False, updatecheck="abort")
     duration = time.perf_counter() - start_parent_update
     ui.status(
-        _("Updated to parent {parent} in {duration:0.5f} seconds\n").format(
+        _("updated to parent {parent} in {duration:0.5f} seconds\n").format(
             parent=parent.hex(), duration=duration
         ),
         component="snapshot",
@@ -140,7 +140,7 @@ def _download_files_and_fix_status(ui, repo, snapshot) -> None:
                 )
 
     ui.status(
-        _("Downloading {count} files for restoring snapshot\n").format(
+        _("downloading {count} files for restoring snapshot\n").format(
             count=len(files2download)
         ),
         component="snapshot",
@@ -151,7 +151,7 @@ def _download_files_and_fix_status(ui, repo, snapshot) -> None:
     duration = time.perf_counter() - start_download
     ui.status(
         _(
-            "Downloaded files for restoring snapshot in {duration:0.5f} seconds\n"
+            "downloaded files for restoring snapshot in {duration:0.5f} seconds\n"
         ).format(duration=duration),
         component="snapshot",
     )
@@ -174,7 +174,7 @@ def _download_files_and_fix_status(ui, repo, snapshot) -> None:
 
 def update(ui, repo, csid: str, clean: bool = False) -> None:
     ui.status(
-        _("Will restore snapshot {}\n").format(csid.format()), component="snapshot"
+        _("will restore snapshot {}\n").format(csid.format()), component="snapshot"
     )
     start_snapshot = time.perf_counter()
     csid_bytes = bytes.fromhex(csid)
@@ -218,7 +218,7 @@ def update(ui, repo, csid: str, clean: bool = False) -> None:
 
         duration = time.perf_counter() - start_snapshot
         ui.status(
-            _("Restored snapshot in {duration:0.5f} seconds\n").format(
+            _("restored snapshot in {duration:0.5f} seconds\n").format(
                 duration=duration
             ),
             component="snapshot",

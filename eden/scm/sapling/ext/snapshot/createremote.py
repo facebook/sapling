@@ -205,7 +205,7 @@ class workingcopy:
                     if not repo.ui.plain():
                         repo.ui.warn(
                             _(
-                                "Not snapshotting '{}' because it is {} bytes large, and max untracked size is {} bytes\n"
+                                "not snapshotting '{}' because it is {} bytes large, and max untracked size is {} bytes\n"
                             ).format(f, size, maxuntrackedsize),
                             component="snapshot",
                         )
