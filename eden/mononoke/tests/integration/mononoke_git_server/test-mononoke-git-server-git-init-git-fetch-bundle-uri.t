@@ -7,6 +7,9 @@
   $ . "${TEST_FIXTURES}/library.sh"
   $ REPOTYPE="blob_files"
   $ setup_common_config $REPOTYPE
+  $ cat >> repo_definitions/repo/server.toml <<EOF
+  > enable_git_bundle_uri=true
+  > EOF
   $ GIT_REPO_ORIGIN="${TESTTMP}/origin/repo-git"
   $ GIT_REPO="${TESTTMP}/repo-git"
   $ BUNDLE_PATH="${TESTTMP}/repo_bundle.bundle"

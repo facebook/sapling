@@ -7,6 +7,9 @@
   $ . "${TEST_FIXTURES}/library.sh"
   $ REPOTYPE="blob_files"
   $ setup_common_config $REPOTYPE
+  $ cat >> repo_definitions/repo/server.toml <<EOF
+  > enable_git_bundle_uri=true
+  > EOF
   $ GIT_REPO_ORIGIN="${TESTTMP}/origin/repo-git"
   $ GIT_REPO="${TESTTMP}/repo-git"
   $ BUNDLE_PATH="${TESTTMP}/repo_bundle.bundle"
@@ -38,15 +41,6 @@
 
 # Create a bundle on disk
   $ mononoke_admin git-bundle create from-repo -R repo --output-location "$BUNDLE_PATH"
-
-# Enable bundle-uri capability for the repo
-  $ merge_just_knobs <<EOF
-  > {
-  >   "bools": {
-  >     "scm/mononoke:git_bundle_uri_capability": true
-  >   }
-  > }
-  > EOF
 
 # Set Mononoke as the Source of Truth
   $ set_mononoke_as_source_of_truth_for_git

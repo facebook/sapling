@@ -270,6 +270,9 @@ pub struct RepoConfig {
     /// Configuration controlling the caching mechanism used for different types of Mononoke metadata
     /// (e.g. bookmarks, bonsai hash mappings, git symref mappings, etc.)
     pub metadata_cache_config: Option<MetadataCacheConfig>,
+    /// Configuration whether we should advertise bundle-uri capability and serve bundle-uri
+    /// endpoint.
+    pub enable_git_bundle_uri: bool,
 }
 
 /// Config determining if the repo is deep sharded in the context of a service.

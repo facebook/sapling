@@ -162,8 +162,10 @@ fn parse_with_repo_definition(
         backup_source_repo_name: _,
         acl_region_config,
         default_commit_identity_scheme,
-        enable_git_bundle_uri: _,
+        enable_git_bundle_uri,
     } = repo_definition;
+
+    let enable_git_bundle_uri = enable_git_bundle_uri.unwrap_or(false);
 
     let default_commit_identity_scheme = default_commit_identity_scheme
         .convert()?
@@ -406,6 +408,7 @@ fn parse_with_repo_definition(
         modern_sync_config,
         log_repo_stats,
         metadata_cache_config,
+        enable_git_bundle_uri,
     })
 }
 
@@ -1147,6 +1150,7 @@ mod test {
         repos.insert(
             "fbsource".to_string(),
             RepoConfig {
+                enable_git_bundle_uri: false,
                 enabled: true,
                 default_commit_identity_scheme: CommitIdentityScheme::default(),
                 storage_config: main_storage_config.clone(),
@@ -1410,6 +1414,7 @@ mod test {
         repos.insert(
             "www".to_string(),
             RepoConfig {
+                enable_git_bundle_uri: false,
                 default_commit_identity_scheme: CommitIdentityScheme::default(),
                 enabled: true,
                 storage_config: StorageConfig {
