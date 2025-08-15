@@ -104,7 +104,7 @@ class Enumeration {
    */
   inline std::optional<PrjfsDirEntry::Ready> getNext() {
     if (iter_ == dirEntries_.end()) {
-      XLOG(FATAL) << "Attempted to iterate past end of ProjFS Enumerator";
+      XLOG(FATAL, "Attempted to iterate past end of ProjFS Enumerator");
     }
     ++iter_;
     return getCurrent();

@@ -946,12 +946,16 @@ void PrivHelperServer::unmount(
   // add "--no-force" as an option. The other options are not checked until
   // we need to support valid use cases for them.
   if (!options.detach || options.expire) {
-    XLOG(DFATAL) << "Unsupported unmount option provided: 'detach'"
-                 << options.detach;
+    XLOGF(
+        DFATAL,
+        "Unsupported unmount option provided: 'detach'{}",
+        options.detach);
   }
   if (options.expire) {
-    XLOG(DFATAL) << "Unsupported unmount option provided: 'expire'"
-                 << options.detach;
+    XLOGF(
+        DFATAL,
+        "Unsupported unmount option provided: 'expire'{}",
+        options.expire);
   }
   if (options.force) {
     umountFlags |= MNT_FORCE;
@@ -1175,8 +1179,9 @@ UnixSocket::Message PrivHelperServer::processStartFam(
 
   // sanity check to make sure we have at least one path
   if (paths.empty()) {
-    XLOG(ERR)
-        << "Empty list of paths: At least one path should be provided to start FAM";
+    XLOG(
+        ERR,
+        "Empty list of paths: At least one path should be provided to start FAM");
     throwf<std::runtime_error>("expected at least one path to start FAM");
   }
 
@@ -1228,10 +1233,10 @@ UnixSocket::Message PrivHelperServer::processStopFam() {
   auto status =
       famProcess_->proc.terminateOrKill(std::chrono::milliseconds(500));
   if (famProcess_->proc.terminated()) {
-    XLOG(DBG3) << "FAM process pid: " << pid << " terminated";
+    XLOGF(DBG3, "FAM process pid: {} terminated", pid);
   } else {
-    XLOG(ERR) << "Failed to terminate FAM pid: {} " << pid;
-    XLOG(ERR) << "FAM process status: " << status.str();
+    XLOGF(ERR, "Failed to terminate FAM pid: {}", pid);
+    XLOGF(ERR, "FAM process status: {}", status.str());
 
     throwf<std::runtime_error>("Failed to terminate FAM pid: {}", pid);
   }

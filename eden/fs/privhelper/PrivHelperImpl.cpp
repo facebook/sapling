@@ -624,7 +624,7 @@ int PrivHelperClientImpl::getPid() {
     try {
       pid_ = getServerPid().get();
     } catch (const facebook::eden::PrivHelperError& ex) {
-      XLOG(ERR) << "Failed to get pid from privhelper: " << ex.what();
+      XLOGF(ERR, "Failed to get pid from privhelper: {}", ex.what());
       return -1;
     }
   }
@@ -781,7 +781,7 @@ startOrConnectToPrivHelper(const UserInfo& userInfo, int argc, char** argv) {
       },
       std::move(opts));
 
-  XLOG(DBG1) << "Spawned mount helper process: pid=" << proc.pid();
+  XLOGF(DBG1, "Spawned mount helper process: pid={}", proc.pid());
   return make_unique<PrivHelperClientImpl>(
       std::move(clientConn), std::move(proc));
 }

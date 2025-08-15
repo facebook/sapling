@@ -110,8 +110,10 @@ bool disallowMisbehavingApplications(PCWSTR fullAppName) noexcept {
   auto appName = basenameFromAppName(fullAppName);
   for (auto misbehavingApp : misbehavingApps) {
     if (appName == misbehavingApp) {
-      XLOG(DBG6) << "Stopping \"" << wideToMultibyteString<std::string>(appName)
-                 << "\" from accessing the repository.";
+      XLOGF(
+          DBG6,
+          "Stopping \"{}\" from accessing the repository.",
+          wideToMultibyteString<std::string>(appName));
       return true;
     }
   }
@@ -341,8 +343,8 @@ HRESULT getFileData(
 void cancelCommand(const PRJ_CALLBACK_DATA* callbackData) noexcept {
   allowRecursiveCallbacks(callbackData);
   // TODO(T67329233): Interrupt the future.
-  XLOG(DBG6) << "Cancellation requested for command: "
-             << callbackData->CommandId;
+  XLOGF(
+      DBG6, "Cancellation requested for command: {}", callbackData->CommandId);
 }
 
 namespace {
@@ -575,7 +577,7 @@ HRESULT PrjfsChannelInner::getEnumerationData(
 
   auto optEnumerator = findDirectoryEnumeration(guid);
   if (!optEnumerator.has_value()) {
-    XLOG(DBG5) << "Directory enumeration not found: " << guid;
+    XLOGF(DBG5, "Directory enumeration not found: {}", guid);
     return HRESULT_FROM_WIN32(ERROR_INVALID_PARAMETER);
   }
   auto enumerator = std::move(optEnumerator).value();
@@ -1082,8 +1084,7 @@ HRESULT PrjfsChannelInner::getFileData(
                                   path)
                               .semi()
                               .deferValue([inner, path](auto&&) mutable {
-                                XLOG(DBG2)
-                                    << "Invalidating file with torn read.";
+                                XLOG(DBG2, "Invalidating file with torn read.");
                                 // this might fail for example if there is an
                                 // open handle to the file still. The file will
                                 // stay in the bad state and the user will have
@@ -1101,9 +1102,9 @@ HRESULT PrjfsChannelInner::getFileData(
                                 try {
                                   removeCachedFileImpl(inner, path);
                                 } catch (std::exception& ex) {
-                                  XLOG(DBG3) << fmt::format(
-                                      "Failed to invalidate file post torn "
-                                      "read {} : {}",
+                                  XLOGF(
+                                      DBG3,
+                                      "Failed to invalidate file post torn read {} : {}",
                                       path,
                                       folly::exceptionStr(ex));
                                 }
@@ -1520,7 +1521,7 @@ HRESULT PrjfsChannelInner::notification(
     PRJ_NOTIFICATION_PARAMETERS* /*notificationParameters*/) {
   auto it = notificationHandlerMap.find(notificationType);
   if (it == notificationHandlerMap.end()) {
-    XLOG(WARN) << "Unrecognized notification: " << notificationType;
+    XLOGF(WARN, "Unrecognized notification: {}", notificationType);
     return HRESULT_FROM_WIN32(ERROR_INVALID_PARAMETER);
   } else {
     auto duration = it->second.duration;
@@ -1594,8 +1595,11 @@ void sendReply(
     PRJ_COMPLETE_COMMAND_EXTENDED_PARAMETERS* FOLLY_NULLABLE extra) {
   result = PrjCompleteCommand(context, commandId, result, extra);
   if (FAILED(result)) {
-    XLOG(ERR) << "Couldn't complete command: " << commandId << ": "
-              << win32ErrorToString(result);
+    XLOGF(
+        ERR,
+        "Couldn't complete command: {}: {}",
+        commandId,
+        win32ErrorToString(result));
   }
 }
 } // namespace
@@ -1851,7 +1855,7 @@ void PrjfsChannel::flushNegativePathCache() {
   }
 
   if (useNegativePathCaching_) {
-    XLOG(DBG6) << "Flushing negative path cache";
+    XLOG(DBG6, "Flushing negative path cache");
 
     uint32_t numFlushed = 0;
     auto result =
