@@ -7,20 +7,18 @@
 # pyre-strict
 
 import os
-from contextlib import contextmanager
+from contextlib import asynccontextmanager
 from pathlib import Path
-from typing import Dict, Generator, Optional, Set, Tuple
+from typing import AsyncGenerator, Mapping, Set, Tuple
 
-from eden.fs.cli import util
-from facebook.eden.constants import DIS_REQUIRE_MATERIALIZED
-from facebook.eden.ttypes import (
+from eden.fs.service.eden.thrift_types import (
     FaultDefinition,
     GetScmStatusParams,
     RemoveFaultArg,
     ScmFileStatus,
     SyncBehavior,
-    UnblockFaultArg,
 )
+from facebook.eden.constants import DIS_REQUIRE_MATERIALIZED
 
 from . import testcase
 
@@ -34,9 +32,11 @@ class PrjFSTestBase(testcase.EdenRepoTest):
     def get_initial_commit(self) -> str:
         raise NotImplementedError
 
-    def eden_status(self, listIgnored: bool = False) -> Dict[bytes, ScmFileStatus]:
-        with self.eden.get_thrift_client_legacy() as client:
-            status = client.getScmStatusV2(
+    async def eden_status(
+        self, listIgnored: bool = False
+    ) -> Mapping[bytes, ScmFileStatus]:
+        async with self.eden.get_thrift_client() as client:
+            status = await client.getScmStatusV2(
                 GetScmStatusParams(
                     mountPoint=self.mount.encode(),
                     commit=self.get_initial_commit().encode(),
@@ -46,23 +46,25 @@ class PrjFSTestBase(testcase.EdenRepoTest):
             )
             return status.status.entries
 
-    def assertInStatus(self, *files: bytes) -> None:
-        status = self.eden_status(listIgnored=True).keys()
+    async def assertInStatus(self, *files: bytes) -> None:
+        status_dict = await self.eden_status(listIgnored=True)
+        status = status_dict.keys()
         for filename in files:
             self.assertIn(filename, status)
 
-    def assertNotInStatus(self, *files: bytes) -> None:
-        status = self.eden_status(listIgnored=True).keys()
+    async def assertNotInStatus(self, *files: bytes) -> None:
+        status_dict = await self.eden_status(listIgnored=True)
+        status = status_dict.keys()
         for filename in files:
             self.assertNotIn(filename, status)
 
-    def make_eden_drop_all_notifications(
+    async def make_eden_drop_all_notifications(
         self,
         keyClass: str = "PrjfsDispatcherImpl::fileNotification",
         keyValueRegex: str = ".*",
     ) -> None:
-        with self.eden.get_thrift_client_legacy() as client:
-            client.injectFault(
+        async with self.eden.get_thrift_client() as client:
+            await client.injectFault(
                 FaultDefinition(
                     keyClass=keyClass,
                     keyValueRegex=keyValueRegex,
@@ -71,30 +73,30 @@ class PrjFSTestBase(testcase.EdenRepoTest):
                 )
             )
 
-    def make_eden_start_processing_notifications_again(
+    async def make_eden_start_processing_notifications_again(
         self,
         keyClass: str = "PrjfsDispatcherImpl::fileNotification",
         keyValueRegex: str = ".*",
     ) -> None:
-        with self.eden.get_thrift_client_legacy() as client:
-            client.removeFault(
+        async with self.eden.get_thrift_client() as client:
+            await client.removeFault(
                 RemoveFaultArg(keyClass=keyClass, keyValueRegex=keyValueRegex)
             )
 
-    @contextmanager
-    def run_with_notifications_dropped_fault(self) -> Generator[None, None, None]:
-        self.make_eden_drop_all_notifications()
+    @asynccontextmanager
+    async def run_with_notifications_dropped_fault(self) -> AsyncGenerator[None, None]:
+        await self.make_eden_drop_all_notifications()
         try:
             yield
         finally:
-            self.make_eden_start_processing_notifications_again()
+            await self.make_eden_start_processing_notifications_again()
 
-    def getAllMaterialized(self, waitTime: int = 5) -> Set[Tuple[Path, int]]:
+    async def getAllMaterialized(self, waitTime: int = 5) -> Set[Tuple[Path, int]]:
         """Return all the materialized files/directories minus .hg and .eden"""
         res = set()
 
-        with self.eden.get_thrift_client_legacy() as client:
-            inodes = client.debugInodeStatus(
+        async with self.eden.get_thrift_client() as client:
+            inodes = await client.debugInodeStatus(
                 self.mount_path_bytes,
                 b"",
                 DIS_REQUIRE_MATERIALIZED,
@@ -111,22 +113,22 @@ class PrjFSTestBase(testcase.EdenRepoTest):
 
         return res
 
-    def assertNotMaterialized(self, path: str, waitTime: int = 5) -> None:
-        materialized = self.getAllMaterialized(waitTime)
+    async def assertNotMaterialized(self, path: str, waitTime: int = 5) -> None:
+        materialized = await self.getAllMaterialized(waitTime)
         self.assertNotIn(
             Path(path),
             {materialized_path for materialized_path, mode in materialized},
             msg=f"{path} is materialized",
         )
 
-    def assertMaterialized(self, path: str, mode: int, waitTime: int = 5) -> None:
-        materialized = self.getAllMaterialized(waitTime)
+    async def assertMaterialized(self, path: str, mode: int, waitTime: int = 5) -> None:
+        materialized = await self.getAllMaterialized(waitTime)
         self.assertIn(
             (Path(path), mode), materialized, msg=f"{path} is not materialized"
         )
 
-    def assertAllMaterialized(
+    async def assertAllMaterialized(
         self, paths: Set[Tuple[str, int]], waitTime: int = 5
     ) -> None:
-        materialized = self.getAllMaterialized(waitTime)
+        materialized = await self.getAllMaterialized(waitTime)
         self.assertSetEqual(materialized, {(Path(path), mode) for path, mode in paths})

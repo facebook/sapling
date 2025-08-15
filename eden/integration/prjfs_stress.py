@@ -38,7 +38,7 @@ class PrjFSStress(PrjFSStressBase):
         result.setdefault("prjfs", []).append("listen-to-pre-convert-to-full = true")
         return result
 
-    def test_create_and_remove_file(self) -> None:
+    async def test_create_and_remove_file(self) -> None:
         with self.run_with_blocking_fault(
             keyClass="PrjfsDispatcherImpl::fileNotification"
         ):
@@ -48,9 +48,9 @@ class PrjFSStress(PrjFSStressBase):
             self.rm("foo")
             self.wait_on_fault_unblock(keyClass="PrjfsDispatcherImpl::fileNotification")
 
-            self.assertNotMaterialized("foo")
+            await self.assertNotMaterialized("foo")
 
-    def test_create_already_removed(self) -> None:
+    async def test_create_already_removed(self) -> None:
         with self.run_with_blocking_fault(
             keyClass="PrjfsDispatcherImpl::fileNotification"
         ):
@@ -62,9 +62,9 @@ class PrjFSStress(PrjFSStressBase):
                 keyClass="PrjfsDispatcherImpl::fileNotification", numToUnblock=2
             )
 
-            self.assertNotMaterialized("foo")
+            await self.assertNotMaterialized("foo")
 
-    def test_create_file_to_directory(self) -> None:
+    async def test_create_file_to_directory(self) -> None:
         with self.run_with_blocking_fault(
             keyClass="PrjfsDispatcherImpl::fileNotification"
         ):
@@ -78,9 +78,9 @@ class PrjFSStress(PrjFSStressBase):
                 keyClass="PrjfsDispatcherImpl::fileNotification", numToUnblock=3
             )
 
-            self.assertMaterialized("foo", stat.S_IFDIR)
+            await self.assertMaterialized("foo", stat.S_IFDIR)
 
-    def test_create_directory_to_file(self) -> None:
+    async def test_create_directory_to_file(self) -> None:
         with self.run_with_blocking_fault(
             keyClass="PrjfsDispatcherImpl::fileNotification"
         ):
@@ -91,9 +91,9 @@ class PrjFSStress(PrjFSStressBase):
                 keyClass="PrjfsDispatcherImpl::fileNotification", numToUnblock=3
             )
 
-            self.assertMaterialized("foo", stat.S_IFREG)
+            await self.assertMaterialized("foo", stat.S_IFREG)
 
-    def test_rename_hierarchy(self) -> None:
+    async def test_rename_hierarchy(self) -> None:
         with self.run_with_blocking_fault(
             keyClass="PrjfsDispatcherImpl::fileNotification"
         ):
@@ -109,10 +109,10 @@ class PrjFSStress(PrjFSStressBase):
                 keyClass="PrjfsDispatcherImpl::fileNotification", numToUnblock=2
             )  # A rename is a total removal and a total creation
 
-            self.assertMaterialized("bar", stat.S_IFDIR)
-            self.assertNotMaterialized("foo")
+            await self.assertMaterialized("bar", stat.S_IFDIR)
+            await self.assertNotMaterialized("foo")
 
-    def test_rename_to_file(self) -> None:
+    async def test_rename_to_file(self) -> None:
         with self.run_with_blocking_fault(
             keyClass="PrjfsDispatcherImpl::fileNotification"
         ):
@@ -133,10 +133,10 @@ class PrjFSStress(PrjFSStressBase):
                 keyClass="PrjfsDispatcherImpl::fileNotification", numToUnblock=6
             )
 
-            self.assertMaterialized("bar", stat.S_IFREG)
-            self.assertNotMaterialized("foo")
+            await self.assertMaterialized("bar", stat.S_IFREG)
+            await self.assertNotMaterialized("foo")
 
-    def test_rename_and_replace(self) -> None:
+    async def test_rename_and_replace(self) -> None:
         with self.run_with_blocking_fault(
             keyClass="PrjfsDispatcherImpl::fileNotification"
         ):
@@ -155,7 +155,7 @@ class PrjFSStress(PrjFSStressBase):
                 keyClass="PrjfsDispatcherImpl::fileNotification", numToUnblock=4
             )
 
-            self.assertAllMaterialized(
+            await self.assertAllMaterialized(
                 {
                     ("adir", stat.S_IFDIR),
                     ("bar", stat.S_IFDIR),
@@ -167,7 +167,7 @@ class PrjFSStress(PrjFSStressBase):
                 }
             )
 
-    def test_out_of_order_file_removal(self) -> None:
+    async def test_out_of_order_file_removal(self) -> None:
         with self.run_with_blocking_fault(
             keyClass="PrjfsDispatcherImpl::fileNotification"
         ):
@@ -195,7 +195,7 @@ class PrjFSStress(PrjFSStressBase):
                 keyClass="PrjfsDispatcherImpl::fileNotification", numToUnblock=3
             )
 
-            self.assertAllMaterialized(
+            await self.assertAllMaterialized(
                 {
                     ("a/b", stat.S_IFREG),
                     ("a", stat.S_IFDIR),
@@ -208,7 +208,7 @@ class PrjFSStress(PrjFSStressBase):
             self.wait_on_fault_unblock(
                 keyClass="PrjfsDispatcherImpl::fileNotification", numToUnblock=2
             )
-            self.assertAllMaterialized(
+            await self.assertAllMaterialized(
                 {
                     ("a/b", stat.S_IFREG),
                     ("a", stat.S_IFDIR),
@@ -217,7 +217,7 @@ class PrjFSStress(PrjFSStressBase):
                 }
             )
 
-    def test_out_of_order_file_removal_to_renamed(self) -> None:
+    async def test_out_of_order_file_removal_to_renamed(self) -> None:
         with self.run_with_blocking_fault(
             keyClass="PrjfsDispatcherImpl::fileNotification"
         ):
@@ -248,7 +248,7 @@ class PrjFSStress(PrjFSStressBase):
                 keyClass="PrjfsDispatcherImpl::fileNotification", numToUnblock=3
             )
 
-            self.assertAllMaterialized(
+            await self.assertAllMaterialized(
                 {
                     ("a/b", stat.S_IFDIR),
                     ("a", stat.S_IFDIR),
@@ -264,7 +264,7 @@ class PrjFSStress(PrjFSStressBase):
             self.wait_on_fault_unblock(
                 keyClass="PrjfsDispatcherImpl::fileNotification", numToUnblock=3
             )
-            self.assertAllMaterialized(
+            await self.assertAllMaterialized(
                 {
                     ("a/b/x", stat.S_IFREG),
                     ("a/b/y", stat.S_IFREG),
@@ -275,7 +275,7 @@ class PrjFSStress(PrjFSStressBase):
                 }
             )
 
-    def test_rename_twice(self) -> None:
+    async def test_rename_twice(self) -> None:
         with self.run_with_blocking_fault(
             keyClass="PrjfsDispatcherImpl::fileNotification"
         ):
@@ -295,7 +295,7 @@ class PrjFSStress(PrjFSStressBase):
                 keyClass="PrjfsDispatcherImpl::fileNotification", numToUnblock=12
             )
 
-            self.assertAllMaterialized(
+            await self.assertAllMaterialized(
                 {
                     ("adir", stat.S_IFDIR),
                     ("first", stat.S_IFDIR),
@@ -342,15 +342,15 @@ class PrjFSStress(PrjFSStressBase):
 
             self.assertTrue(self.eden.is_healthy())
 
-    def test_truncate(self) -> None:
+    async def test_truncate(self) -> None:
         rel_path = "adir/file"
         path = self.mount_path / rel_path
 
-        self.assertNotMaterialized(rel_path)
+        await self.assertNotMaterialized(rel_path)
         subprocess.run(["powershell.exe", "Clear-Content", str(path)])
 
         # file should be materialized at this point.
-        self.assertMaterialized(rel_path, stat.S_IFREG)
+        await self.assertMaterialized(rel_path, stat.S_IFREG)
 
         st = os.lstat(path)
         with path.open("rb") as f:
@@ -394,15 +394,15 @@ class PrjfsStressNoListenToFull(PrjFSStressBase):
 
     # this test should start failing once msft fixes the bug on their side.
     # i.e. once truncation starts to send file closed and modified notifications.
-    def test_truncate(self) -> None:
+    async def test_truncate(self) -> None:
         rel_path = "adir/file"
         path = self.mount_path / rel_path
 
-        self.assertNotMaterialized(rel_path)
+        await self.assertNotMaterialized(rel_path)
         subprocess.run(["powershell.exe", "Clear-Content", str(path)])
 
         # file should be materialized at this point.
-        self.assertNotMaterialized(rel_path, stat.S_IFREG)
+        await self.assertNotMaterialized(rel_path, stat.S_IFREG)
 
         st = os.lstat(path)
         with path.open("rb") as f:

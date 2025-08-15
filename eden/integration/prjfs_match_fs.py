@@ -52,84 +52,84 @@ class PrjfsMatchFsTest(prjfs_test.PrjFSTestBase):
                 self.assertEqual(error.error, None)
 
     async def test_fix_no_problems(self) -> None:
-        self.assertNotInStatus(b"adir/file")
+        await self.assertNotInStatus(b"adir/file")
 
         await self.match_fs([b"adir/file"])
 
-        self.assertNotInStatus(b"adir/file")
+        await self.assertNotInStatus(b"adir/file")
 
     async def test_fix_missed_removal(self) -> None:
-        self.assertNotInStatus(b"adir/file")
+        await self.assertNotInStatus(b"adir/file")
 
-        with self.run_with_notifications_dropped_fault():
+        async with self.run_with_notifications_dropped_fault():
             afile = self.mount_path / "adir" / "file"
             afile.unlink()
 
-        self.assertNotInStatus(b"adir/file")
+        await self.assertNotInStatus(b"adir/file")
         await self.match_fs([b"adir/file"])
 
         self.assertEqual(
-            self.eden_status(),
+            await self.eden_status(),
             {b"adir/file": ScmFileStatus.REMOVED},
         )
 
     async def test_fix_missed_addition(self) -> None:
-        self.assertNotInStatus(b"adir/anewfile")
+        await self.assertNotInStatus(b"adir/anewfile")
 
-        with self.run_with_notifications_dropped_fault():
+        async with self.run_with_notifications_dropped_fault():
             afile = self.mount_path / "adir" / "anewfile"
             afile.touch()
 
-        self.assertNotInStatus(b"adir/anewfile")
+        await self.assertNotInStatus(b"adir/anewfile")
         await self.match_fs([b"adir/anewfile"])
 
         self.assertEqual(
-            self.eden_status(),
+            await self.eden_status(),
             {b"adir/anewfile": ScmFileStatus.ADDED},
         )
 
     async def test_fix_missed_directory_delete(self) -> None:
-        self.assertNotInStatus(b"adir/file")
+        await self.assertNotInStatus(b"adir/file")
 
-        with self.run_with_notifications_dropped_fault():
+        async with self.run_with_notifications_dropped_fault():
             adir = self.mount_path / "adir"
             afile = adir / "file"
             afile.unlink()
             adir.rmdir()
 
-        self.assertNotInStatus(b"adir/file")
+        await self.assertNotInStatus(b"adir/file")
         await self.match_fs([b"adir"])
 
         self.assertEqual(
-            self.eden_status(),
+            await self.eden_status(),
             {b"adir/file": ScmFileStatus.REMOVED},
         )
 
     async def test_fix_missed_directory_addition(self) -> None:
-        self.assertNotInStatus(b"adir/asubdir/anewfile")
+        await self.assertNotInStatus(b"adir/asubdir/anewfile")
 
-        with self.run_with_notifications_dropped_fault():
+        async with self.run_with_notifications_dropped_fault():
             asubdir = self.mount_path / "adir" / "asubdir"
             afile = asubdir / "anewfile"
             asubdir.mkdir()
             afile.touch()
 
-        self.assertNotInStatus(b"adir/asubdir/anewfile")
+        await self.assertNotInStatus(b"adir/asubdir/anewfile")
         await self.match_fs([b"adir/asubdir"])
 
         self.assertEqual(
-            self.eden_status(),
+            await self.eden_status(),
             {b"adir/asubdir/anewfile": ScmFileStatus.ADDED},
         )
 
     async def test_fix_failed(self) -> None:
-        self.assertNotInStatus(b"adir/file")
+        await self.assertNotInStatus(b"adir/file")
 
-        with self.run_with_notifications_dropped_fault():
+        async with self.run_with_notifications_dropped_fault():
             afile = self.mount_path / "adir" / "file"
             afile.unlink()
 
-        self.assertNotInStatus(b"adir/file")
+        await self.assertNotInStatus(b"adir/file")
 
         async with self.eden.get_thrift_client() as client:
             await client.injectFault(
