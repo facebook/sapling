@@ -14,7 +14,7 @@ from pathlib import Path
 
 from eden.fs.cli.util import mkscratch_bin
 
-from facebook.eden.ttypes import (
+from eden.fs.service.eden.thrift_types import (
     ListRedirectionsRequest,
     MountId,
     Redirection,
@@ -82,7 +82,7 @@ via-profile = "bind"
             ],
         )
 
-    def test_disallow_bind_mount_outside_repo(self) -> None:
+    async def test_disallow_bind_mount_outside_repo(self) -> None:
         dir_to_mount = os.path.join(self.tmp_dir, "to-mount")
         os.mkdir(dir_to_mount)
         mount_point = os.path.join(self.tmp_dir, "mount-point")
@@ -90,9 +90,9 @@ via-profile = "bind"
 
         mount_point_bytes = mount_point.encode("utf-8")
         dir_to_mount_bytes = dir_to_mount.encode("utf-8")
-        with self.get_thrift_client_legacy() as client:
+        async with self.get_thrift_client() as client:
             with self.assertRaises(Exception) as ctx:
-                client.addBindMount(
+                await client.addBindMount(
                     mount_point_bytes, mount_point_bytes, dir_to_mount_bytes
                 )
             self.assertIn(
@@ -102,7 +102,7 @@ via-profile = "bind"
             )
 
             with self.assertRaises(Exception) as ctx:
-                client.addBindMount(
+                await client.addBindMount(
                     self.mount.encode("utf-8"), mount_point_bytes, dir_to_mount_bytes
                 )
             self.assertIn(
@@ -113,7 +113,7 @@ via-profile = "bind"
 
             rel_mount = os.path.relpath(mount_point, self.mount).encode("utf-8")
             with self.assertRaises(Exception) as ctx:
-                client.addBindMount(
+                await client.addBindMount(
                     self.mount.encode("utf-8"), rel_mount, dir_to_mount_bytes
                 )
                 self.assertIn(
@@ -279,7 +279,7 @@ via-profile = "bind"
             msg="symlink is gone",
         )
 
-    def test_list_with_thrift(self) -> None:
+    async def test_list_with_thrift(self) -> None:
         # Redirection via profile
         profile_repo_path = "via-profile"
         profile_target_path = scratch_path(
@@ -298,10 +298,10 @@ via-profile = "bind"
         thrift_req = ListRedirectionsRequest(mount=thrift_mount)
 
         # List via thrift
-        with self.get_thrift_client_legacy() as client:
-            thrift_output = client.listRedirections(thrift_req)
+        async with self.get_thrift_client() as client:
+            thrift_output = await client.listRedirections(thrift_req)
             self.assertListEqual(
-                thrift_output.redirections,
+                list(thrift_output.redirections),
                 [
                     Redirection(
                         repoPath=profile_repo_path.encode("utf-8"),
@@ -320,10 +320,10 @@ via-profile = "bind"
         self.assertEqual(output, "", msg="we believe we set up a new bind mount")
 
         # List via thrift
-        with self.get_thrift_client_legacy() as client:
-            thrift_output = client.listRedirections(thrift_req)
+        async with self.get_thrift_client() as client:
+            thrift_output = await client.listRedirections(thrift_req)
             self.assertListEqual(
-                thrift_output.redirections,
+                list(thrift_output.redirections),
                 [
                     Redirection(
                         repoPath=repo_path.encode("utf-8"),
@@ -359,10 +359,10 @@ via-profile = "bind"
         self.assertEqual(output, "", msg="we believe we switched to a symlink")
 
         # List via thrift
-        with self.get_thrift_client_legacy() as client:
-            thrift_output = client.listRedirections(thrift_req)
+        async with self.get_thrift_client() as client:
+            thrift_output = await client.listRedirections(thrift_req)
             self.assertListEqual(
-                thrift_output.redirections,
+                list(thrift_output.redirections),
                 [
                     Redirection(
                         repoPath=repo_path.encode("utf-8"),
@@ -387,10 +387,10 @@ via-profile = "bind"
         self.assertEqual(output, "", msg="we believe we removed the symlink")
 
         # List via thrift
-        with self.get_thrift_client_legacy() as client:
-            thrift_output = client.listRedirections(thrift_req)
+        async with self.get_thrift_client() as client:
+            thrift_output = await client.listRedirections(thrift_req)
             self.assertListEqual(
-                thrift_output.redirections,
+                list(thrift_output.redirections),
                 [
                     Redirection(
                         repoPath=profile_repo_path.encode("utf-8"),
