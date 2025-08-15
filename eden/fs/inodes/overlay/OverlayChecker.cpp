@@ -275,8 +275,10 @@ class OverlayChecker::RepairState {
         folly::writeFull(logFile_.fd(), fullMsg.data(), fullMsg.size());
     if (result == -1) {
       int errnum = errno;
-      XLOG(ERR) << "error writing to fsck repair log file: "
-                << folly::errnoStr(errnum);
+      XLOGF(
+          ERR,
+          "error writing to fsck repair log file: {}",
+          folly::errnoStr(errnum));
     }
   }
 

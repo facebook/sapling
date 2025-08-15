@@ -162,9 +162,9 @@ std::unique_ptr<SqliteDatabase> openAndVerifyDb(
       logger->logEvent(SqliteIntegrityCheck{
           runtimeInSeconds, folly::to_signed(errors.size())});
       if (folly::kIsWindows) {
-        XLOG(WARN) << "SqliteDatabase is corrupted";
+        XLOG(WARN, "SqliteDatabase is corrupted");
         for (auto& error : errors) {
-          XLOG(WARN) << "Sqlite error: " << error;
+          XLOGF(WARN, "Sqlite error: {}", error);
         }
         db.reset();
         return removeAndRecreateDb(path);
@@ -216,8 +216,9 @@ SqliteTreeStore::SqliteTreeStore(
   SqliteStatement(dbLock, "PRAGMA locking_mode=EXCLUSIVE").step();
 
   if (synchronous_mode == SqliteTreeStore::SynchronousMode::Off) {
-    XLOG(INFO)
-        << "Synchronous mode is off. Data loss may happen when system crashes.";
+    XLOG(
+        INFO,
+        "Synchronous mode is off. Data loss may happen when system crashes.");
     SqliteStatement(dbLock, "PRAGMA synchronous=OFF").step();
   }
 }

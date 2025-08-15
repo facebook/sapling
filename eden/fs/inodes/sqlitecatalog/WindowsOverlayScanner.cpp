@@ -55,14 +55,14 @@ int main(int argc, char** argv) {
   SqliteInodeCatalog inodeCatalog(
       overlayPath, std::make_shared<NullStructuredLogger>());
   inodeCatalog.initOverlay(/*createIfNonExisting=*/true);
-  XLOG(INFO) << "start scanning";
+  XLOG(INFO, "start scanning");
   InodeCatalog::LookupCallback lookup = [](auto, auto) {
     return makeImmediateFuture<InodeCatalog::LookupCallbackValue>(
         std::runtime_error("no lookup callback"));
   };
   inodeCatalog.scanLocalChanges(
       EdenConfig::createTestEdenConfig(), mountPath, true, lookup);
-  XLOG(INFO) << "scanning end";
+  XLOG(INFO, "scanning end");
 
   return 0;
 }

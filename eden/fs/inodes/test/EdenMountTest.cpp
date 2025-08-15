@@ -1156,7 +1156,7 @@ void logAndSwallowExceptions(Func&& function) {
   try {
     std::forward<Func>(function)();
   } catch (const std::exception& e) {
-    XLOG(ERR) << "Ignoring exception: " << e.what();
+    XLOGF(ERR, "Ignoring exception: {}", e.what());
   }
 }
 
