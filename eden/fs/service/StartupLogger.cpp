@@ -153,8 +153,10 @@ void DaemonStartupLogger::sendResult(ResultType result) {
   if (pipe_) {
     auto try_ = pipe_.writeFull(&result, sizeof(result));
     if (try_.hasException()) {
-      XLOG(ERR) << "error writing result to startup log pipe: "
-                << folly::exceptionStr(try_.exception());
+      XLOGF(
+          ERR,
+          "error writing result to startup log pipe: {}",
+          folly::exceptionStr(try_.exception()));
     }
     pipe_.close();
   }

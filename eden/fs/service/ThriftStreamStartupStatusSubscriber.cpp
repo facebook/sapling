@@ -27,7 +27,10 @@ ThriftStreamStartupStatusSubscriber::
       std::move(publisher_).complete();
     });
     if (ew) {
-      XLOG(ERR) << "Completing a thrift ServerStreamPublisher failed: " << ew;
+      XLOGF(
+          ERR,
+          "Completing a thrift ServerStreamPublisher failed: {}",
+          ew.what());
     }
   }
 }

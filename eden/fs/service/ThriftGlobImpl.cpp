@@ -79,7 +79,7 @@ ImmediateFuture<std::unique_ptr<LocalFiles>> computeLocalFiles(
                   suffixGlobs,
                   includeDotfiles](auto&& status) {
         if (!status->errors_ref().value().empty()) {
-          XLOG(DBG4) << "Error getting local changes";
+          XLOG(DBG4, "Error getting local changes");
           throw newEdenError(
               EINVAL,
               EdenErrorType::POSIX_ERROR,
@@ -95,14 +95,13 @@ ImmediateFuture<std::unique_ptr<LocalFiles>> computeLocalFiles(
           }
         }
         for (auto& glob : suffixGlobs) {
-          XLOG(DBG4) << "Creating glob matcher for glob: " << glob;
+          XLOGF(DBG4, "Creating glob matcher for glob: {}", glob);
           auto expectGlobMatcher = GlobMatcher::create("**/*" + glob, options);
           if (expectGlobMatcher.hasValue()) {
-            XLOG(DBG4) << "Successfully created glob matcher for glob: "
-                       << glob;
+            XLOGF(DBG4, "Successfully created glob matcher for glob: {}", glob);
             globMatchers.push_back(expectGlobMatcher.value());
           } else {
-            XLOG(ERR) << "Invalid glob: " << glob;
+            XLOGF(ERR, "Invalid glob: {}", glob);
           }
         }
 
@@ -371,7 +370,7 @@ getLocalGlobResults(
     const TreeInodePtr& rootInode,
     const ObjectFetchContextPtr& context) {
   // Use current commit hash
-  XLOG(DBG3) << "No commit hash in input, using current hash";
+  XLOG(DBG3, "No commit hash in input, using current hash");
   auto rootId = edenMount->getCheckedOutRootId();
   auto& store = edenMount->getObjectStore();
   return store->getGlobFiles(rootId, suffixGlobs, prefixes, context)

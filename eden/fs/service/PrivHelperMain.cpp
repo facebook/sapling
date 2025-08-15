@@ -48,9 +48,9 @@ int main(int argc, char** argv) {
     server.run();
     return 0;
   } catch (const std::exception& ex) {
-    XLOG(ERR) << "error inside mount helper: " << folly::exceptionStr(ex);
+    XLOGF(ERR, "error inside mount helper: {}", folly::exceptionStr(ex));
   } catch (...) {
-    XLOG(ERR) << "invalid type thrown inside mount helper";
+    XLOG(ERR, "invalid type thrown inside mount helper");
   }
 
   return 1;
