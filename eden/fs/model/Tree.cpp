@@ -93,19 +93,19 @@ IOBuf Tree::serialize() const {
 
 TreePtr Tree::tryDeserialize(ObjectId hash, folly::StringPiece data) {
   if (data.size() < sizeof(uint32_t)) {
-    XLOG(ERR) << "Can not read tree version, bytes remaining " << data.size();
+    XLOGF(ERR, "Can not read tree version, bytes remaining {}", data.size());
     return nullptr;
   }
   uint32_t version;
   memcpy(&version, data.data(), sizeof(uint32_t));
   data.advance(sizeof(uint32_t));
   if (version != V1_VERSION && version != V2_VERSION) {
-    XLOG(WARN) << "Git tree version? " << version;
+    XLOGF(WARN, "Git tree version? {}", version);
     return nullptr;
   }
 
   if (data.size() < sizeof(uint32_t)) {
-    XLOG(ERR) << "Can not read tree size, bytes remaining " << data.size();
+    XLOGF(ERR, "Can not read tree size, bytes remaining {}", data.size());
     return nullptr;
   }
   uint32_t num_entries;

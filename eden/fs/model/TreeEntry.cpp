@@ -74,7 +74,7 @@ mode_t modeFromTreeEntryType(TreeEntryType ft) {
     case TreeEntryType::SYMLINK:
       return S_IFLNK | 0755;
   }
-  XLOG(FATAL) << "illegal file type " << enumValue(ft);
+  XLOGF(FATAL, "illegal file type {}", enumValue(ft));
 }
 
 TreeEntryType filteredEntryType(TreeEntryType ft, bool windowsSymlinksEnabled) {
@@ -175,8 +175,7 @@ std::optional<std::pair<PathComponent, TreeEntry>> TreeEntry::deserialize(
     folly::StringPiece& data) {
   uint8_t type;
   if (data.size() < sizeof(uint8_t)) {
-    XLOG(ERR) << "Can not read tree entry type, bytes remaining "
-              << data.size();
+    XLOGF(ERR, "Can not read tree entry type, bytes remaining {}", data.size());
     return std::nullopt;
   }
   memcpy(&type, data.data(), sizeof(uint8_t));
@@ -184,16 +183,21 @@ std::optional<std::pair<PathComponent, TreeEntry>> TreeEntry::deserialize(
 
   uint16_t hash_size;
   if (data.size() < sizeof(uint16_t)) {
-    XLOG(ERR) << "Can not read tree entry hash size, bytes remaining "
-              << data.size();
+    XLOGF(
+        ERR,
+        "Can not read tree entry hash size, bytes remaining {}",
+        data.size());
     return std::nullopt;
   }
   memcpy(&hash_size, data.data(), sizeof(uint16_t));
   data.advance(sizeof(uint16_t));
 
   if (data.size() < hash_size) {
-    XLOG(ERR) << "Can not read tree entry hash, bytes remaining " << data.size()
-              << " need " << hash_size;
+    XLOGF(
+        ERR,
+        "Can not read tree entry hash, bytes remaining {} need {}",
+        data.size(),
+        hash_size);
     return std::nullopt;
   }
   auto hash_bytes = ByteRange{StringPiece{data, 0, hash_size}};
@@ -202,16 +206,21 @@ std::optional<std::pair<PathComponent, TreeEntry>> TreeEntry::deserialize(
 
   uint16_t name_size;
   if (data.size() < sizeof(uint16_t)) {
-    XLOG(ERR) << "Can not read tree entry name size, bytes remaining "
-              << data.size();
+    XLOGF(
+        ERR,
+        "Can not read tree entry name size, bytes remaining {}",
+        data.size());
     return std::nullopt;
   }
   memcpy(&name_size, data.data(), sizeof(uint16_t));
   data.advance(sizeof(uint16_t));
 
   if (data.size() < name_size) {
-    XLOG(ERR) << "Can not read tree entry name, bytes remaining " << data.size()
-              << " need " << name_size;
+    XLOGF(
+        ERR,
+        "Can not read tree entry name, bytes remaining {} need {}",
+        data.size(),
+        name_size);
     return std::nullopt;
   }
   auto name_bytes = StringPiece{data, 0, name_size};
@@ -219,8 +228,7 @@ std::optional<std::pair<PathComponent, TreeEntry>> TreeEntry::deserialize(
   data.advance(name_size);
 
   if (data.size() < sizeof(uint64_t)) {
-    XLOG(ERR) << "Can not read tree entry size, bytes remaining "
-              << data.size();
+    XLOGF(ERR, "Can not read tree entry size, bytes remaining {}", data.size());
     return std::nullopt;
   }
   uint64_t size_bytes;
@@ -234,8 +242,7 @@ std::optional<std::pair<PathComponent, TreeEntry>> TreeEntry::deserialize(
   }
 
   if (data.size() < Hash20::RAW_SIZE) {
-    XLOG(ERR) << "Can not read tree entry sha1, bytes remaining "
-              << data.size();
+    XLOGF(ERR, "Can not read tree entry sha1, bytes remaining {}", data.size());
     return std::nullopt;
   }
   Hash20::Storage sha1_bytes;

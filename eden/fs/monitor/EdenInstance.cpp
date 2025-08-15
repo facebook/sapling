@@ -226,7 +226,7 @@ Future<Unit> SpawnedEdenInstance::start() {
   // (and the checking cancelled) if we are destroyed.
   startupChecker_ = std::make_unique<StartupStatusChecker>(this);
   return startupChecker_->start().thenTry([this](Try<Unit> result) {
-    XLOG(INFO) << "EdenFS pid " << getPid() << " has finished starting";
+    XLOGF(INFO, "EdenFS pid {} has finished starting", getPid());
     startupChecker_.reset();
     return result;
   });
@@ -239,8 +239,10 @@ void SpawnedEdenInstance::takeover(pid_t pid, int logFD) {
   logPipe_ = FileDescriptor(logFD, "takeover", FileDescriptor::FDType::Generic);
   auto rc = fcntl(logPipe_.fd(), F_SETFD, FD_CLOEXEC);
   if (rc != 0) {
-    XLOG(ERR) << "failed to restore CLOEXEC flag on log pipe during restart: "
-              << folly::errnoStr(errno);
+    XLOGF(
+        ERR,
+        "failed to restore CLOEXEC flag on log pipe during restart: {}",
+        folly::errnoStr(errno));
   }
   beginProcessingLogPipe();
 }
@@ -250,8 +252,10 @@ void SpawnedEdenInstance::handlerReady(uint16_t events) noexcept {
   try {
     forwardLogOutput();
   } catch (const std::exception& ex) {
-    XLOG(ERR) << "unexpected error forwarding EdenFS log output: "
-              << folly::exceptionStr(ex);
+    XLOGF(
+        ERR,
+        "unexpected error forwarding EdenFS log output: {}",
+        folly::exceptionStr(ex));
     closeLogPipe();
   }
 }
@@ -289,9 +293,11 @@ void SpawnedEdenInstance::timeoutExpired() noexcept {
     SpawnedProcess(argv, std::move(options)).detach();
   } catch (const std::exception& ex) {
     // Log an error.  There isn't a whole lot else we can do in this case.
-    XLOG(ERR) << "failed to spawn " << FLAGS_cat_exe
-              << " for forwarding logs from exited EdenFS process: "
-              << folly::exceptionStr(ex);
+    XLOGF(
+        ERR,
+        "failed to spawn {} for forwarding logs from exited EdenFS process: {}",
+        FLAGS_cat_exe,
+        folly::exceptionStr(ex));
   }
 
   monitor_->edenInstanceFinished(this);
@@ -313,8 +319,10 @@ void SpawnedEdenInstance::forwardLogOutput() {
   // writing to the log file at the same time.
   auto result = logPipe_.readNoInt(logBuffer_.data(), logBuffer_.size());
   if (result.hasException()) {
-    XLOG(ERR) << "error reading EdenFS output: "
-              << folly::exceptionStr(result.exception());
+    XLOGF(
+        ERR,
+        "error reading EdenFS output: {}",
+        folly::exceptionStr(result.exception()));
     if (auto exc = result.tryGetExceptionObject<std::system_error>()) {
       if (exc->code() == std::error_code(EAGAIN, std::generic_category())) {
         // This isn't really expected, since we were told that the fd was ready.
@@ -328,14 +336,14 @@ void SpawnedEdenInstance::forwardLogOutput() {
 
   auto bytesRead = result.value();
   if (bytesRead == 0) {
-    XLOG(DBG1) << "EdenFS output closed";
+    XLOG(DBG1, "EdenFS output closed");
     closeLogPipe();
     return;
   }
 
   auto errnum = log_->write(logBuffer_.data(), bytesRead);
   if (errnum == 0) {
-    XLOG(DBG3) << "forwarded " << bytesRead << " log bytes";
+    XLOGF(DBG3, "forwarded {} log bytes", bytesRead);
   } else {
     // On a write error we generally still want to keep reading from EdenFS's
     // output and attempting to write to the log file.
@@ -387,7 +395,7 @@ void SpawnedEdenInstance::checkLivenessImpl() {
   }
   auto returnCode = cmd_.wait();
 
-  XLOG(INFO) << "EdenFS process " << getPid() << " exited " << returnCode.str();
+  XLOGF(INFO, "EdenFS process {} exited {}", getPid(), returnCode.str());
 
   // If the log pipe has been closed then we are done, and can notify monitor_
   // that EdenFS is exited.

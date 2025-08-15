@@ -50,7 +50,7 @@ TEST(FuseTest, initMount) {
   auto initFuture =
       testMount.getEdenMount()
           ->startFsChannel(false)
-          .thenValue([](auto&&) { XLOG(INFO) << "startFsChannel() succeeded"; })
+          .thenValue([](auto&&) { XLOG(INFO, "startFsChannel() succeeded"); })
           .thenError([&](const folly::exception_wrapper& ew) {
             ADD_FAILURE() << "startFuse() failed: " << folly::exceptionStr(ew);
           });

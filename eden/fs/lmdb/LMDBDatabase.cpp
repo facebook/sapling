@@ -19,7 +19,7 @@ void checkLMDBResult(int mdb_status) {
   if (mdb_status != MDB_SUCCESS) {
     auto error = fmt::format(
         "lmdb error ({}): {}", mdb_status, mdb_strerror(mdb_status));
-    XLOG(ERR) << error;
+    XLOG(ERR, error);
     throw std::runtime_error(error);
   }
 }
@@ -28,7 +28,7 @@ void logLMDBError(int mdb_status) {
   if (mdb_status != MDB_SUCCESS) {
     auto error = fmt::format(
         "lmdb error ({}): {}", mdb_status, mdb_strerror(mdb_status));
-    XLOG(ERR) << error;
+    XLOG(ERR, error);
     if (mdb_status == MDB_NOTFOUND) {
       errno = ENOENT;
     } else {
@@ -91,12 +91,12 @@ void LMDBDatabase::openDb() {
   auto result = mdb_env_open(conn->mdb_env_, dbPath_.c_str(), flags, 0664);
 
   if (result != MDB_SUCCESS) {
-    XLOG(ERR) << "Failed to open lmdb db at" << dbPath_;
+    XLOGF(ERR, "Failed to open lmdb db at {}", dbPath_);
     conn->status = LMDBDbStatus::FAILED_TO_OPEN;
     mdb_env_close(conn->mdb_env_);
     checkLMDBResult(result);
   } else {
-    XLOG(DBG3) << "Opened lmdb db at" << dbPath_;
+    XLOGF(DBG3, "Opened lmdb db at {}", dbPath_);
     conn->status = LMDBDbStatus::OPEN;
   }
 }
@@ -108,7 +108,7 @@ void LMDBDatabase::close() {
     mdb_env_close(conn->mdb_env_);
     conn->mdb_env_ = nullptr;
   }
-  XLOG(DBG3) << "Closed lmdb db at" << dbPath_;
+  XLOGF(DBG3, "Closed lmdb db at {}", dbPath_);
 }
 
 LMDBDatabase::~LMDBDatabase() {
@@ -143,14 +143,14 @@ void LMDBDatabase::transaction(
     mdb_dbi_close(conn->mdb_env_, conn->mdb_dbi_);
   } catch (const std::exception& ex) {
     mdb_txn_abort(conn->mdb_txn_);
-    XLOG(WARN) << "LMDB transaction failed: " << ex.what();
+    XLOGF(WARN, "LMDB transaction failed: {}", ex.what());
     throw;
   }
 }
 
 void LMDBDatabase::checkpoint() {
   if (auto conn = conn_.tryWLock()) {
-    XLOG(DBG6) << "Sync thread acquired LMDB lock";
+    XLOG(DBG6, "Sync thread acquired LMDB lock");
     try {
       checkLMDBResult(mdb_env_sync(conn->mdb_env_, true));
       XLOGF(DBG6, "Sync performed");
@@ -158,7 +158,7 @@ void LMDBDatabase::checkpoint() {
       // Exception is logged in `checkLMDBResult`
     }
   } else {
-    XLOG(DBG6) << "Sync skipped: write lock is held by other threads";
+    XLOG(DBG6, "Sync skipped: write lock is held by other threads");
   }
 }
 } // namespace facebook::eden
