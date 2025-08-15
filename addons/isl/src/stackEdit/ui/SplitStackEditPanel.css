@@ -69,10 +69,11 @@
 }
 
 .split-range-selector {
-  overflow: visible;
+  overflow: auto;
   display: flex;
   flex-direction: column;
   gap: var(--pad);
+  max-height: 50vh;
 }
 .split-range-selector .inner-commit-group {
   margin-left: var(--halfpad);
