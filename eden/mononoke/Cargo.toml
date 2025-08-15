@@ -206,7 +206,6 @@ members = [
   "cas_client/scm_client",
   "cats",
   "changesets/changesets_creation",
-  "cmdlib",
   "cmdlib/base_app",
   "cmdlib/caching",
   "cmdlib/commit_id",
