@@ -56,12 +56,12 @@ int main(int argc, char** argv) {
     nextInodeNumber = fsInodeCatalog->initOverlay(
         /*createIfNonExisting=*/false, /*bypassLockFile=*/FLAGS_force);
   } catch (std::exception& ex) {
-    XLOG(ERR) << "unable to open overlay: " << folly::exceptionStr(ex);
+    XLOGF(ERR, "unable to open overlay: {}", folly::exceptionStr(ex));
     return 1;
   }
 
   if (!nextInodeNumber.has_value()) {
-    XLOG(INFO) << "Overlay was shut down uncleanly";
+    XLOG(INFO, "Overlay was shut down uncleanly");
   }
 
   InodeCatalog::LookupCallback lookup = [](auto&&, auto&&) {

@@ -197,14 +197,18 @@ std::optional<InodeNumber> FsFileContentStore::tryLoadNextInodeNumber() {
         "Failed to read ", kNextInodeNumberFile, " from overlay");
   }
   if (readResult != sizeof(nextInodeNumber)) {
-    XLOG(WARN) << "Failed to read entire inode number. Only read " << readResult
-               << " bytes. Full overlay scan required.";
+    XLOGF(
+        WARN,
+        "Failed to read entire inode number. Only read {} bytes. Full overlay scan required.",
+        readResult);
     return std::nullopt;
   }
 
   if (nextInodeNumber <= kRootNodeId.get()) {
-    XLOG(WARN) << "Invalid max inode number " << nextInodeNumber
-               << ". Full overlay scan required.";
+    XLOGF(
+        WARN,
+        "Invalid max inode number {}. Full overlay scan required.",
+        nextInodeNumber);
     return std::nullopt;
   }
   return InodeNumber{nextInodeNumber};

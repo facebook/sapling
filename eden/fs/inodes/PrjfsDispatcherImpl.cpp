@@ -224,8 +224,11 @@ PrjfsDispatcherImpl::determineTargetType(
   try {
     absTarget = canonicalPath(targetString);
   } catch (const std::exception& exc) {
-    XLOG(DBG6) << "unable to normalize target " << symlink.asString() << ": "
-               << exc.what();
+    XLOGF(
+        DBG6,
+        "unable to normalize target {}: {}",
+        symlink.asString(),
+        exc.what());
     throw exc;
   }
   RelativePath target;
@@ -1356,9 +1359,10 @@ ImmediateFuture<folly::Unit> PrjfsDispatcherImpl::preDirDelete(
     // If it is a symlink then clear its content, else if directory/file then
     // let post delete notification handle it.
     if (std::filesystem::is_symlink(full_path.c_str())) {
-      XLOG(INFO)
-          << "Redirected path '" << full_path.asString()
-          << "' is directed to be deleted. Not actually deleting the directory, instead deleting its content.";
+      XLOGF(
+          INFO,
+          "Redirected path '{}' is directed to be deleted. Not actually deleting the directory, instead deleting its content.",
+          full_path.asString());
       handleRedirectedPathPreDeletion(
           full_path, redirection_targets->at(path.asString()));
 
@@ -1396,28 +1400,32 @@ int PrjfsDispatcherImpl::handleRedirectedPathPreDeletion(
     std::string targetPath) {
   auto symlinkTarget = std::filesystem::read_symlink(symlinkPath.asString());
   if (symlinkTarget != targetPath) {
-    XLOG(ERR) << "Symlink target '" << symlinkTarget
-              << "' is not same as config target '" << targetPath
-              << "'. Overriding with the config target.";
+    XLOGF(
+        ERR,
+        "Symlink target '{}' is not same as config target '{}'. Overriding with the config target.",
+        symlinkPath,
+        targetPath);
     // Remove the symlink and create a new symlink to the config target.
     try {
       std::filesystem::remove(symlinkPath.asString());
-      XLOG(DBG2) << "Symlink deletion successful.";
+      XLOG(DBG2, "Symlink deletion successful.");
     } catch (const std::filesystem::filesystem_error& e) {
-      XLOG(INFO) << "Error deleting symlink: " << e.what();
+      XLOGF(INFO, "Error deleting symlink: {}", e.what());
       return 1;
     }
   }
 
   if (std::filesystem::exists(targetPath.c_str())) {
-    XLOG(INFO) << "Symlink target '" << targetPath.c_str()
-               << "' already exists. Trying to delete its content.";
+    XLOGF(
+        INFO,
+        "Symlink target '{}' already exists. Trying to delete its content.",
+        targetPath.c_str());
     try {
       std::filesystem::remove_all(targetPath.c_str());
       std::filesystem::create_directory(targetPath.c_str());
-      XLOG(DBG2) << "Symlink target contents deleted successfully.";
+      XLOG(DBG2, "Symlink target contents deleted successfully.");
     } catch (const std::filesystem::filesystem_error& e) {
-      XLOG(INFO) << "Error deleting symlink target contents: " << e.what();
+      XLOGF(INFO, "Error deleting symlink target contents: {}", e.what());
       return 1;
     }
   } else {

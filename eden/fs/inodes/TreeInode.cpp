@@ -120,8 +120,9 @@ class TreeInode::IncompleteInodeLoad {
     // otherwise never be notified about the success or failure of this load
     // attempt, and requests for this inode would just be stuck forever.
     if (treeInode_) {
-      XLOG(WARNING) << "IncompleteInodeLoad destroyed without explicitly "
-                    << "calling finish()";
+      XLOG(
+          WARNING,
+          "IncompleteInodeLoad destroyed without explicitly calling finish()");
       finish();
     }
   }
@@ -2374,7 +2375,7 @@ bool TreeInode::readdirImpl(
    * - https://lwn.net/Articles/544520/
    */
   if (off < 0) {
-    XLOG(ERR) << "Negative readdir offsets are illegal, off = " << off;
+    XLOGF(ERR, "Negative readdir offsets are illegal, off = {}", off);
     folly::throwSystemErrorExplicit(EINVAL);
   }
   updateAtime();
@@ -2505,8 +2506,10 @@ ImmediateFuture<Unit> TreeInode::diff(
     const GitIgnoreStack* parentIgnore,
     bool isIgnored) {
   if (context->isCancelled()) {
-    XLOG(DBG7) << "diff() on directory " << getLogPath()
-               << " cancelled due to client request no longer being active";
+    XLOGF(
+        DBG7,
+        "diff() on directory {} cancelled due to client request no longer being active",
+        getLogPath());
     return folly::unit;
   }
 
@@ -2572,7 +2575,7 @@ ImmediateFuture<Unit> TreeInode::diff(
       gitignoreEntry = &iter->second;
       if (gitignoreEntry->isDirectory()) {
         // Ignore .gitignore directories
-        XLOG(DBG4) << "Ignoring .gitignore directory in " << getLogPath();
+        XLOGF(DBG4, "Ignoring .gitignore directory in {}", getLogPath());
         gitignoreEntry = nullptr;
       }
     }
@@ -2587,7 +2590,7 @@ ImmediateFuture<Unit> TreeInode::diff(
           isIgnored);
     }
 
-    XLOG(DBG7) << "Loading ignore file for " << getLogPath();
+    XLOGF(DBG7, "Loading ignore file for {}", getLogPath());
     inode = gitignoreEntry->getInodePtr();
     if (!inode) {
       gitignoreInodeFuture = loadChildLocked(
@@ -2643,9 +2646,10 @@ ImmediateFuture<Unit> TreeInode::loadGitIgnoreThenDiff(
                                   context] {
            auto fileInode = gitignoreInode.asFileOrNull();
            if (!fileInode) {
-             XLOG(WARN)
-                 << "loadGitIgnoreThenDiff() invoked with a non-file inode: "
-                 << gitignoreInode->getLogPath();
+             XLOGF(
+                 WARN,
+                 "loadGitIgnoreThenDiff() invoked with a non-file inode: {}",
+                 gitignoreInode->getLogPath());
              return makeImmediateFuture<std::string>(
                  InodeError(EISDIR, gitignoreInode));
            } else {
@@ -2658,28 +2662,30 @@ ImmediateFuture<Unit> TreeInode::loadGitIgnoreThenDiff(
              return fileInode->readAll(context->getFetchContext());
            }
          })
-      .thenTry([self = inodePtrFromThis(),
+      .thenTry(
+          [self = inodePtrFromThis(),
+           context,
+           currentPath = RelativePath{currentPath}, // deep copy
+           trees = std::move(trees),
+           parentIgnore,
+           isIgnored](folly::Try<std::string> ignoreFileContentsTry) mutable {
+            std::string ignoreFileContents;
+            if (ignoreFileContentsTry.hasException()) {
+              XLOGF(
+                  WARN,
+                  "error reading ignore file: {}",
+                  folly::exceptionStr(ignoreFileContentsTry.exception()));
+            } else {
+              ignoreFileContents = std::move(ignoreFileContentsTry).value();
+            }
+            return self->computeDiff(
+                self->contents_.wlock(),
                 context,
-                currentPath = RelativePath{currentPath}, // deep copy
-                trees = std::move(trees),
-                parentIgnore,
-                isIgnored](
-                   folly::Try<std::string> ignoreFileContentsTry) mutable {
-        std::string ignoreFileContents;
-        if (ignoreFileContentsTry.hasException()) {
-          XLOG(WARN) << "error reading ignore file: "
-                     << folly::exceptionStr(ignoreFileContentsTry.exception());
-        } else {
-          ignoreFileContents = std::move(ignoreFileContentsTry).value();
-        }
-        return self->computeDiff(
-            self->contents_.wlock(),
-            context,
-            currentPath,
-            std::move(trees),
-            make_unique<GitIgnoreStack>(parentIgnore, ignoreFileContents),
-            isIgnored);
-      });
+                currentPath,
+                std::move(trees),
+                make_unique<GitIgnoreStack>(parentIgnore, ignoreFileContents),
+                isIgnored);
+          });
 }
 
 /*
@@ -3128,10 +3134,12 @@ ImmediateFuture<Unit> TreeInode::checkout(
     CheckoutContext* ctx,
     std::shared_ptr<const Tree> fromTree,
     std::shared_ptr<const Tree> toTree) {
-  XLOG(DBG4) << "checkout: starting update of " << getLogPath() << ": "
-             << (fromTree ? fromTree->getHash().toLogString() : "<none>")
-             << " --> "
-             << (toTree ? toTree->getHash().toLogString() : "<none>");
+  XLOGF(
+      DBG4,
+      "checkout: starting update of {}: {} --> {}",
+      getLogPath(),
+      (fromTree ? fromTree->getHash().toLogString() : "<none>"),
+      (toTree ? toTree->getHash().toLogString() : "<none>"));
 
   std::vector<std::shared_ptr<CheckoutAction>> actions;
   std::vector<IncompleteInodeLoad> pendingLoads;
@@ -3243,9 +3251,11 @@ ImmediateFuture<Unit> TreeInode::checkout(
                       // Update our state in the overlay
                       self->saveOverlayPostCheckout(ctx, toTree.get());
 
-                      XLOG(DBG4) << "checkout: finished update of "
-                                 << self->getLogPath() << ": " << numErrors
-                                 << " errors";
+                      XLOGF(
+                          DBG4,
+                          "checkout: finished update of {}: {} errors",
+                          self->getLogPath(),
+                          numErrors);
                     });
           })
       .ensure([ctx] { ctx->increaseCheckoutCounter(1); });
@@ -3443,14 +3453,14 @@ std::shared_ptr<CheckoutAction> TreeInode::processCheckoutEntryImpl(
     const Tree::value_type* newScmEntry,
     vector<IncompleteInodeLoad>& pendingLoads,
     bool& wasDirectoryListModified) {
-  XLOG(DBG5) << "processCheckoutEntryImpl(" << getLogPath() << "): "
-             << (oldScmEntry
-                     ? oldScmEntry->second.toLogString(oldScmEntry->first)
-                     : "(null)")
-             << " -> "
-             << (newScmEntry
-                     ? newScmEntry->second.toLogString(newScmEntry->first)
-                     : "(null)");
+  XLOGF(
+      DBG5,
+      "processCheckoutEntryImpl({}): {} -> {}",
+      getLogPath(),
+      (oldScmEntry ? oldScmEntry->second.toLogString(oldScmEntry->first)
+                   : "(null)"),
+      (newScmEntry ? newScmEntry->second.toLogString(newScmEntry->first)
+                   : "(null)"));
   // At most one of oldScmEntry and newScmEntry may be null.
   XDCHECK(oldScmEntry || newScmEntry);
 
@@ -3797,9 +3807,10 @@ ImmediateFuture<InvalidationRequired> TreeInode::checkoutUpdateEntry(
         if (folly::kIsWindows) {
           if (auto* exc = success.tryGetExceptionObject<std::system_error>();
               exc && isEnotempty(*exc)) {
-            XLOG(DBG6) << "entry changed on disk from a file to a "
-                       << "non-empty directory while checkout is in progress: "
-                       << inode->getLogPath();
+            XLOGF(
+                DBG6,
+                "entry changed on disk from a file to a non-empty directory while checkout is in progress: {}",
+                inode->getLogPath());
             if (newScmEntry) {
               ctx->addConflict(
                   ConflictType::MODIFIED_MODIFIED,
@@ -4044,7 +4055,7 @@ folly::Try<folly::Unit> TreeInode::nfsInvalidateCacheEntryForGC(
                 }
               }
             } else {
-              XLOG(WARN) << "InodeMap is killed before GC completes";
+              XLOG(WARN, "InodeMap is killed before GC completes");
             }
           });
     }
@@ -4253,13 +4264,15 @@ void TreeInode::saveOverlayPostCheckout(
       stateChanged = true;
     }
 
-    XLOG(DBG4) << "saveOverlayPostCheckout(" << getLogPath() << ", " << tree
-               << "): oldHash="
-               << (oldHash ? oldHash.value().toLogString() : "none")
-               << " newHash="
-               << (contents->treeHash ? contents->treeHash.value().toLogString()
-                                      : "none")
-               << " isMaterialized=" << isMaterialized;
+    XLOGF(
+        DBG4,
+        "saveOverlayPostCheckout({}, {}): oldHash={} newHash={} isMaterialized={}",
+        getLogPath(),
+        fmt::ptr(tree),
+        (oldHash ? oldHash.value().toLogString() : "none"),
+        (contents->treeHash ? contents->treeHash.value().toLogString()
+                            : "none"),
+        isMaterialized);
 
     // Update the overlay to include the new entries, even if dematerialized.
     saveOverlayDir(contents->entries);
@@ -4904,8 +4917,10 @@ void TreeInode::doPrefetch(
       break;
   }
   if (!prefetchSet) {
-    XLOG(DBG4) << "skipping prefetch for " << getLogPath()
-               << ": filtered out by configuration";
+    XLOGF(
+        DBG4,
+        "skipping prefetch for {}: filtered out by configuration",
+        getLogPath());
     return;
   }
 
@@ -4917,20 +4932,24 @@ void TreeInode::doPrefetch(
   auto prefetchLease =
       getMount()->tryStartTreePrefetch(inodePtrFromThis(), context);
   if (!prefetchLease) {
-    XLOG(DBG3) << "skipping prefetch for " << getLogPath()
-               << ": too many prefetches already in progress";
+    XLOGF(
+        DBG3,
+        "skipping prefetch for {}: too many prefetches already in progress",
+        getLogPath());
     // TODO(chadaustin): Ideally, we'd roll back the prefetchState, but I intend
     // to remove TreePrefetchLease entirely.
     return;
   }
-  XLOG(DBG4) << "starting prefetch for " << getLogPath() << " of "
-             << ((prefetchSet & (PrefetchFiles | PrefetchTrees)) ==
-                         (PrefetchFiles | PrefetchTrees)
-                     ? "files and trees"
-                     : (prefetchSet & PrefetchFiles) == PrefetchFiles ? "files"
-                     : (prefetchSet & PrefetchTrees) == PrefetchTrees
-                     ? "trees"
-                     : "nothing");
+  XLOGF(
+      DBG4,
+      "starting prefetch for {} of {}",
+      getLogPath(),
+      ((prefetchSet & (PrefetchFiles | PrefetchTrees)) ==
+               (PrefetchFiles | PrefetchTrees)
+           ? "files and trees"
+           : (prefetchSet & PrefetchFiles) == PrefetchFiles ? "files"
+           : (prefetchSet & PrefetchTrees) == PrefetchTrees ? "trees"
+                                                            : "nothing"));
 
   folly::via(
       getMount()->getServerThreadPool().get(),
@@ -4986,8 +5005,10 @@ void TreeInode::doPrefetch(
 
         return collectAllSafe(std::move(inodeFutures))
             .thenTry([lease = std::move(lease)](auto&&) {
-              XLOG(DBG4) << "finished prefetch for "
-                         << lease.getTreeInode()->getLogPath();
+              XLOGF(
+                  DBG4,
+                  "finished prefetch for {}",
+                  lease.getTreeInode()->getLogPath());
             })
             .semi();
       });
@@ -5009,7 +5030,7 @@ ImmediateFuture<struct stat> TreeInode::setattr(
 
     if (existing.shouldShortCircuitMetadataUpdate(desired)) {
       existing.applyToStat(result);
-      XLOG(DBG7) << "Skipping materialization because setattr is a noop";
+      XLOG(DBG7, "Skipping materialization because setattr is a noop");
       return result;
     }
   }

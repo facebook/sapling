@@ -70,7 +70,7 @@ RequestContext::~RequestContext() noexcept {
       pal_.recordDuration(pid.value().get(), diff_ns);
     }
   } catch (const std::exception& ex) {
-    XLOG(WARN) << "Failed to complete request: " << folly::exceptionStr(ex);
+    XLOGF(WARN, "Failed to complete request: {}", folly::exceptionStr(ex));
   }
 }
 
