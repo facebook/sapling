@@ -78,11 +78,11 @@ uint32_t StreamClient::fillFrameAndSend(
 
   auto totalLen = bytes.size();
   auto data = bytes.data();
-  XLOG(DBG8) << "sending:\n" << folly::hexDump(data, totalLen);
+  XLOGF(DBG8, "sending:\n{}", folly::hexDump(data, totalLen));
   while (totalLen > 0) {
     auto len = folly::netops::send(s_, data, totalLen, 0);
     folly::checkUnixError(len, "send failed");
-    XLOG(DBG8) << "sent " << len << " bytes";
+    XLOGF(DBG8, "sent {} bytes", len);
     totalLen -= len;
     data += len;
   }
@@ -101,7 +101,7 @@ StreamClient::receiveChunk() {
     }
 
     frag = folly::Endian::big(frag);
-    XLOG(DBG8) << "resp frag: " << std::hex << frag;
+    XLOGF(DBG8, "resp frag: {:x}", frag);
 
     bool isLast = (frag & 0x80000000) != 0;
     auto fragLen = frag & 0x7fffffff;
@@ -121,7 +121,7 @@ StreamClient::receiveChunk() {
   }
 
   auto buf = readBuf_.pop_front();
-  XLOG(DBG8) << "recv:\n" << folly::hexDump(buf->data(), buf->length());
+  XLOGF(DBG8, "recv:\n{}", folly::hexDump(buf->data(), buf->length()));
   folly::io::Cursor cursor(buf.get());
 
   rpc_msg_reply reply = XdrTrait<rpc_msg_reply>::deserialize(cursor);

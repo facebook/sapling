@@ -43,11 +43,14 @@ class StreamClient {
       const T& request) {
     auto [buf, appender] =
         serializeCallHeader(progNumber, progVersion, procNumber);
-    XLOG(DBG9) << "header: " << buf->chainLength() << " request memory size is "
-               << sizeof(request);
+    XLOGF(
+        DBG9,
+        "header: {} request memory size is {}",
+        buf->chainLength(),
+        sizeof(request));
 
     XdrTrait<T>::serialize(appender, request);
-    XLOG(DBG9) << "after req : " << buf->chainLength();
+    XLOGF(DBG9, "after req : {}", buf->chainLength());
     return fillFrameAndSend(std::move(buf));
   }
 

@@ -94,7 +94,7 @@ void RpcConnectionHandler::readEOF() noexcept {
 
 void RpcConnectionHandler::readErr(
     const folly::AsyncSocketException& ex) noexcept {
-  XLOG(ERR) << "Error while reading: " << folly::exceptionStr(ex);
+  XLOGF(ERR, "Error while reading: {}", folly::exceptionStr(ex));
   // Reading from the socket failed. There's nothing else to do, so
   // close the connection.  See the comment in readEOF() for more
   // context.
@@ -111,7 +111,7 @@ void RpcConnectionHandler::writeErr(
     const folly::AsyncSocketException& ex) noexcept {
   // TODO: Should we assume the connection is broken, and we should close the
   // socket, aborting existing requests?
-  XLOG(ERR) << "Error while writing: " << folly::exceptionStr(ex);
+  XLOGF(ERR, "Error while writing: {}", folly::exceptionStr(ex));
 }
 
 RpcConnectionHandler::RpcConnectionHandler(
@@ -135,7 +135,7 @@ RpcConnectionHandler::RpcConnectionHandler(
 }
 
 folly::SemiFuture<folly::Unit> RpcConnectionHandler::takeoverStop() {
-  XLOG(DBG4) << "Takeover requested: locking state to change the status";
+  XLOG(DBG4, "Takeover requested: locking state to change the status");
   // note its essential that this runs inline with the pending requests
   // check in resetReader. This ensures that we don't double set the pending
   // requests promise.
@@ -151,7 +151,7 @@ folly::SemiFuture<folly::Unit> RpcConnectionHandler::takeoverStop() {
       });
     }
   }
-  XLOG(DBG4) << "Stop reading from the socket";
+  XLOG(DBG4, "Stop reading from the socket");
   // as far as I can tell this will deliver all reads to the reader before this
   // completes. So we should not see any new requests after this point.
   // Note: it is important this is done inline with the caller. i.e. if we start
@@ -195,17 +195,18 @@ folly::SemiFuture<folly::Unit> RpcConnectionHandler::resetReader(
     // Note this must run on the main eventbase for the socket, and inline with
     // setting the stop reason This ensures that we don't accidentally set this
     // promise twice.
-    XLOG(DBG4) << "Pending requests: " << state.pendingRequests;
+    XLOGF(DBG4, "Pending requests: {}", state.pendingRequests);
     if (state.pendingRequests == 0) {
       pendingRequestsComplete_.setValue();
     }
   }
 
-  XLOG(DBG4) << "waiting for pending requests to complete";
+  XLOG(DBG4, "waiting for pending requests to complete");
   return pendingRequestsComplete_.getFuture().ensure(
       [this, proc = proc_, dg = std::move(dg), stopReason]() {
-        XLOG(DBG4) << "Pending requests complete; "
-                   << "finishing destroying this RPC handler";
+        XLOG(
+            DBG4,
+            "Pending requests complete; finishing destroying this RPC handler");
         this->sock_->getEventBase()->checkIsInEventBaseThread();
         if (auto owningServer = this->owningServer_.lock()) {
           owningServer->unregisterRpcHandler(this);
@@ -244,7 +245,7 @@ void RpcConnectionHandler::tryConsumeReadBuffer() noexcept {
     if (!buf) {
       break;
     }
-    XLOG(DBG7) << "received a request";
+    XLOG(DBG7, "received a request");
 
     auto now = std::chrono::steady_clock::now();
     auto should_log = false;
@@ -271,7 +272,7 @@ void RpcConnectionHandler::tryConsumeReadBuffer() noexcept {
     // requests that can be handled concurrently.
     threadPool_->add(
         [this, buf = std::move(buf), guard = DestructorGuard(this)]() mutable {
-          XLOG(DBG8) << "Received:\n" << displayBuffer(buf.get());
+          XLOGF(DBG8, "Received:\n{}", displayBuffer(buf.get()));
           // We use a scope so that the cursor is not still around after we
           // delete part of the IOBuf later. Attempting to use this cursor
           // after mutating the buffer could result in bad memory accesses.
@@ -381,8 +382,10 @@ std::unique_ptr<folly::IOBuf> finalizeFragment(
   auto fragment = (uint32_t*)resultBuffer->writableData();
   *fragment = folly::Endian::big(len | 0x80000000);
 
-  XLOG(DBG8) << "Sending:\n"
-             << folly::hexDump(resultBuffer->data(), resultBuffer->length());
+  XLOGF(
+      DBG8,
+      "Sending:\n{}",
+      folly::hexDump(resultBuffer->data(), resultBuffer->length()));
   return resultBuffer;
 }
 } // namespace
@@ -396,7 +399,7 @@ void RpcConnectionHandler::recordParsingError(
       err.getProcedureContext(),
       folly::hexlify(input->coalesce()));
 
-  XLOG(ERR) << message;
+  XLOG(ERR, message);
 
   errorLogger_->logEvent(NfsParsingError{
       folly::to<std::string>("FS", " - ", err.getProcedureContext()), message});
@@ -439,7 +442,7 @@ void RpcConnectionHandler::dispatchAndReply(
           return finalizeFragment(std::move(iobufQueue));
         }
 
-        XLOG(DBG7) << "dispatching a request";
+        XLOG(DBG7, "dispatching a request");
         auto fut = makeImmediateFutureWith([&]() mutable {
           return proc_->dispatchRpc(
               std::move(deser),
@@ -455,7 +458,7 @@ void RpcConnectionHandler::dispatchAndReply(
              input = std::move(input),
              iobufQueue = std::move(iobufQueue),
              call = std::move(call)](folly::Try<folly::Unit> result) mutable {
-              XLOG(DBG7) << "Request done, sending response.";
+              XLOG(DBG7, "Request done, sending response.");
               if (result.hasException()) {
                 if (auto* err =
                         result.exception().get_exception<RpcParsingError>()) {
@@ -496,17 +499,17 @@ void RpcConnectionHandler::dispatchAndReply(
           // XXX: This should never happen.
         } else {
           auto resultBuffer = std::move(result).value();
-          XLOG(DBG7) << "About to write to the socket.";
+          XLOG(DBG7, "About to write to the socket.");
           // TODO: Wait until the write completes before considering
           // the request finished.
           sock_->writeChain(this, std::move(resultBuffer));
         }
       })
       .ensure([this, guard = std::move(guard)]() {
-        XLOG(DBG7) << "Request complete";
+        XLOG(DBG7, "Request complete");
         auto& state = this->state_.get();
         state.pendingRequests -= 1;
-        XLOG(DBG7) << state.pendingRequests << " more requests to process";
+        XLOGF(DBG7, "{} more requests to process", state.pendingRequests);
         if (state.pendingRequests == 0 && state.stopReason.has_value()) {
           // We are shutting down and the last request has been
           // handled, so signal that all pending requests have
@@ -520,7 +523,7 @@ void RpcServer::connectionAccepted(
     folly::NetworkSocket fd,
     const folly::SocketAddress& clientAddr,
     AcceptInfo /* info */) noexcept {
-  XLOG(DBG7) << "Accepted connection from: " << clientAddr;
+  XLOGF(DBG7, "Accepted connection from: {}", clientAddr.describe());
   auto socket = AsyncSocket::newSocket(evb_, fd);
   auto& state = state_.get();
   state.connectionHandlers.push_back(RpcConnectionHandler::create(
@@ -543,7 +546,7 @@ void RpcServer::connectionAccepted(
 }
 
 void RpcServer::acceptError(const std::exception& ex) noexcept {
-  XLOG(ERR) << "acceptError: " << folly::exceptionStr(ex);
+  XLOGF(ERR, "acceptError: {}", folly::exceptionStr(ex));
 }
 
 void RpcServer::acceptStopped() noexcept {
@@ -620,7 +623,7 @@ void RpcServer::initialize(folly::SocketAddress addr) {
 }
 
 void RpcServer::initializeConnectedSocket(folly::File socket) {
-  XLOG(DBG7) << "Initializing server from connected socket: " << socket.fd();
+  XLOGF(DBG7, "Initializing server from connected socket: {}", socket.fd());
   // Note we don't initialize the accepting socket in this case. This is
   // meant for server that only ever has one connected socket (nfsd3). Since
   // we already have the one connected socket, we will not need the
@@ -640,7 +643,7 @@ void RpcServer::initializeConnectedSocket(folly::File socket) {
 void RpcServer::initializeServerSocket(folly::File socket) {
   evb_->checkIsInEventBaseThread();
 
-  XLOG(DBG7) << "Initializing server from server socket: " << socket.fd();
+  XLOGF(DBG7, "Initializing server from server socket: {}", socket.fd());
 
   serverSocket_->useExistingSocket(
       folly::NetworkSocket::fromFd(socket.release()));
@@ -664,7 +667,7 @@ void RpcServer::unregisterRpcHandler(RpcConnectionHandler* handlerToErase) {
 folly::SemiFuture<folly::File> RpcServer::takeoverStop() {
   auto& state = state_.get();
 
-  XLOG(DBG7) << "Removing accept callback";
+  XLOG(DBG7, "Removing accept callback");
 
   if (serverSocket_->getAccepting()) {
     serverSocket_->removeAcceptCallback(this, nullptr);
@@ -677,7 +680,7 @@ folly::SemiFuture<folly::File> RpcServer::takeoverStop() {
 
   // No more connections will be made after this point.
 
-  XLOG(DBG7) << "calling takeover stop on handlers";
+  XLOG(DBG7, "calling takeover stop on handlers");
   // todo should this return the file descriptor for the socket?
   std::vector<RpcConnectionHandler::UniquePtr> handlers;
   handlers.swap(state.connectionHandlers);

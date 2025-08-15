@@ -140,20 +140,20 @@ ImmediateFuture<folly::Unit> RpcbinddServerProcessor::getport(
   serializeReply(ser, accept_stat::SUCCESS, xid);
 
   auto args = XdrTrait<PortmapMapping2>::deserialize(deser);
-  XLOG(DBG7) << "prog: " << args.prog;
-  XLOG(DBG7) << "vers: " << args.vers;
-  XLOG(DBG7) << "protocol: " << args.prot;
+  XLOGF(DBG7, "prog: {}", args.prog);
+  XLOGF(DBG7, "vers: {}", args.vers);
+  XLOGF(DBG7, "protocol: {}", args.prot);
   if (args.prot == PortmapMapping2::kTcpProto) {
     auto lockedServers = registeredServers_.rlock();
     auto maybePort = lockedServers->find(std::make_pair<uint32_t, uint32_t>(
         std::move(args.prog), std::move(args.vers)));
     if (maybePort != lockedServers->end()) {
-      XLOG(DBG7) << "port: " << maybePort->second;
+      XLOGF(DBG7, "port: {}", maybePort->second);
       XdrTrait<uint32_t>::serialize(ser, maybePort->second);
       return folly::unit;
     }
   }
-  XLOG(DBG7) << "port : none";
+  XLOG(DBG7, "port : none");
   XdrTrait<uint32_t>::serialize(ser, 0);
   return folly::unit;
 }
@@ -181,15 +181,15 @@ ImmediateFuture<folly::Unit> RpcbinddServerProcessor::dispatchRpc(
     uint32_t progNumber,
     uint32_t progVersion,
     uint32_t procNumber) {
-  XLOG(DBG7) << "dispatchRpc";
+  XLOG(DBG7, "dispatchRpc");
   if (progNumber != kPortmapProgNumber) {
-    XLOG(DBG7) << "prog: " << progNumber;
+    XLOGF(DBG7, "prog: {}", progNumber);
     serializeReply(ser, accept_stat::PROG_UNAVAIL, xid);
     return folly::unit;
   }
 
   if (progVersion != kPortmapVersion2) {
-    XLOG(DBG7) << "vers: " << progVersion;
+    XLOGF(DBG7, "vers: {}", progVersion);
     serializeReply(ser, accept_stat::PROG_MISMATCH, xid);
     XdrTrait<mismatch_info>::serialize(
         ser, mismatch_info{kPortmapVersion2, kPortmapVersion2});
@@ -197,14 +197,14 @@ ImmediateFuture<folly::Unit> RpcbinddServerProcessor::dispatchRpc(
   }
 
   if (procNumber >= kRpcbindHandlers.size()) {
-    XLOG(DBG7) << "Invalid procedure: " << procNumber;
+    XLOGF(DBG7, "Invalid procedure: {}", procNumber);
     serializeReply(ser, accept_stat::PROC_UNAVAIL, xid);
     return folly::unit;
   }
 
   auto handlerEntry = kRpcbindHandlers[procNumber];
 
-  XLOG(DBG7) << handlerEntry.name;
+  XLOG(DBG7, handlerEntry.name);
   return (this->*handlerEntry.handler)(std::move(deser), std::move(ser), xid);
 }
 

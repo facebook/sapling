@@ -23,18 +23,19 @@ int main(int argc, char** argv) {
 
   auto addr = client.getAddr(PortmapMapping4{100003, 3, "", "", ""});
 
-  XLOG(INFO) << "Got addr: " << addr;
+  XLOGF(INFO, "Got addr: {}", addr);
 
   // Try to set a bogus address for NFS.
   // This will fail if there is already an NFS daemon running
-  XLOG(INFO) << "Set mapping: "
-             << client.setMapping(
-                    PortmapMapping4{100003, 3, "tcp6", "::123", "edenfs"});
+  XLOGF(
+      INFO,
+      "Set mapping: {}",
+      client.setMapping(PortmapMapping4{100003, 3, "tcp6", "::123", "edenfs"}));
 
   // Read back the current address
   auto newAddr = client.getAddr(PortmapMapping4{100003, 3, "", "", ""});
 
-  XLOG(INFO) << "Got new addr: " << newAddr;
+  XLOGF(INFO, "Got new addr: {}", newAddr);
 
   return 0;
 }
