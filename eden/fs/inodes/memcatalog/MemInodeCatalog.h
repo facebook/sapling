@@ -21,9 +21,8 @@ class OverlayDir;
 class NonEmptyError : public std::exception {
  public:
   explicit NonEmptyError(std::string&& str)
-      : message_(folly::to<std::string>(
-            "Invalid operation on non-empty entity: ",
-            str)) {}
+      : message_(
+            fmt::format("Invalid operation on non-empty entity: {}", str)) {}
 
   const char* what() const noexcept override {
     return message_.c_str();
