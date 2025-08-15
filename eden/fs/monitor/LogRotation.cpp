@@ -170,7 +170,7 @@ void TimestampLogRotation::removeOldLogFiles() {
 
   auto prefix = path_.value() + "-";
   fs::path dirname(folly::StringPiece{path_.dirname().value()});
-  XLOG(DBG4) << "removing old rotated log files in " << dirname;
+  XLOGF(DBG4, "removing old rotated log files in {}", dirname.string());
   for (const auto& entry : fs::directory_iterator(dirname)) {
     // Only match files that start with our log file prefix
     auto entryPath = entry.path().string();
@@ -185,18 +185,21 @@ void TimestampLogRotation::removeOldLogFiles() {
       continue;
     }
 
-    XLOG(DBG9) << "log cleanup match: " << entry;
+    XLOGF(DBG9, "log cleanup match: {}", entry.path().string());
     filesToKeep.emplace(suffix.value());
     if (filesToKeep.size() > numFilesToKeep_) {
       // delete the last file.
       auto pathToRemove = appendLogSuffix(prefix, filesToKeep.top());
       filesToKeep.pop();
-      XLOG(DBG5) << "remove oldest: " << pathToRemove;
+      XLOGF(DBG5, "remove oldest: {}", pathToRemove);
       int rc = unlink(pathToRemove.c_str());
       if (rc != 0) {
         int errnum = errno;
-        XLOG(WARN) << "error removing rotated log file " << pathToRemove << ": "
-                   << folly::errnoStr(errnum);
+        XLOGF(
+            WARN,
+            "error removing rotated log file {}: {}",
+            pathToRemove,
+            folly::errnoStr(errnum));
         // Continue anyway.
       }
     }

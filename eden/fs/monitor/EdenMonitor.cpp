@@ -63,12 +63,15 @@ class EdenMonitor::SignalHandler : public folly::AsyncSignalHandler {
       : AsyncSignalHandler{monitor->getEventBase()}, monitor_{monitor} {}
 
   void signalReceived(int sig) noexcept override {
-    XLOG(DBG1) << "received signal " << sig;
+    XLOGF(DBG1, "received signal {}", sig);
     try {
       monitor_->signalReceived(sig);
     } catch (const std::exception& ex) {
-      XLOG(ERR) << "unexpected error handling signal " << sig << ": "
-                << folly::exceptionStr(ex);
+      XLOGF(
+          ERR,
+          "unexpected error handling signal {}: {}",
+          sig,
+          folly::exceptionStr(ex));
     }
   }
 
@@ -113,7 +116,7 @@ void EdenMonitor::run() {
   // Schedule our start operation to run once we start the EventBase loop
   eventBase_.runInLoop([this] {
     start().thenError([this](auto&& error) {
-      XLOG(ERR) << "error starting EdenMonitor: " << error.what();
+      XLOGF(ERR, "error starting EdenMonitor: {}", error.what());
       eventBase_.terminateLoopSoon();
     });
   });
@@ -129,7 +132,7 @@ Future<Unit> EdenMonitor::start() {
 #ifdef __linux__
     auto rc = sd_notify(/*unset_environment=*/false, "READY=1");
     if (rc < 0) {
-      XLOG(ERR) << "sd_notify READY=1 failed: " << folly::errnoStr(-rc);
+      XLOGF(ERR, "sd_notify READY=1 failed: {}", folly::errnoStr(-rc));
     }
 #endif
   });
@@ -139,8 +142,10 @@ Future<Unit> EdenMonitor::getEdenInstance() {
   // If --restart was specified and we are restarting with an existing child
   // EdenFS process, create a SpawnedEdenInstance object to take it over.
   if (FLAGS_restart && FLAGS_childEdenFSPid) {
-    XLOG(INFO) << "taking over management of existing EdenFS daemon "
-               << FLAGS_childEdenFSPid;
+    XLOGF(
+        INFO,
+        "taking over management of existing EdenFS daemon {}",
+        FLAGS_childEdenFSPid);
     auto edenfs = std::make_unique<SpawnedEdenInstance>(this, log_);
     edenfs->takeover(FLAGS_childEdenFSPid, FLAGS_childEdenFSPipe);
     edenfs_ = std::move(edenfs);
@@ -157,13 +162,13 @@ Future<Unit> EdenMonitor::getEdenInstance() {
   return client->future_getPid().thenTry([client, this](Try<int64_t> pid) {
     auto future = Future<Unit>::makeEmpty();
     if (pid.hasValue()) {
-      XLOG(INFO) << "found existing EdenFS process " << pid.value();
+      XLOGF(INFO, "found existing EdenFS process {}", pid.value());
       edenfs_ = std::make_unique<ExistingEdenInstance>(this, pid.value());
       future = edenfs_->start();
     } else {
       edenfs_ = std::make_unique<SpawnedEdenInstance>(this, log_);
       future = edenfs_->start();
-      XLOG(INFO) << "starting new EdenFS process " << edenfs_->getPid();
+      XLOGF(INFO, "starting new EdenFS process {}", edenfs_->getPid());
     }
     return future;
   });
@@ -181,7 +186,7 @@ std::shared_ptr<EdenServiceAsyncClient> EdenMonitor::createEdenThriftClient() {
 }
 
 void EdenMonitor::edenInstanceFinished(EdenInstance* /*instance*/) {
-  XLOG(DBG1) << "EdenFS has exited; terminating the monitor";
+  XLOG(DBG1, "EdenFS has exited; terminating the monitor");
   eventBase_.terminateLoopSoon();
 }
 
@@ -192,9 +197,9 @@ void EdenMonitor::performSelfRestart() {
   // not allow self-restarts during this time.  Being able to perform a
   // self-restart while EdenFS is restarting is not terribly important.
   if (state_ == State::Starting) {
-    XLOG(WARN)
-        << "ignoring self-restart request for the EdenFS monitor: "
-        << "EdenFS is still starting.  Attempt this again once EdenFS has started.";
+    XLOG(
+        WARN,
+        "ignoring self-restart request for the EdenFS monitor: EdenFS is still starting.  Attempt this again once EdenFS has started.");
     return;
   }
 
@@ -235,19 +240,21 @@ void EdenMonitor::performSelfRestart() {
     folly::checkUnixError(rc, "failed to clear CLOEXEC flag on child log pipe");
   }
 
-  XLOG(INFO) << "Restarting EdenFS monitor in place...";
-  XLOG(DBG2) << "Restart exe: " << selfExe_;
-  XLOG(DBG2) << "Restart args: "
-             << folly::join(" ", argv.begin(), argv.end() - 1);
+  XLOG(INFO, "Restarting EdenFS monitor in place...");
+  XLOGF(DBG2, "Restart exe: {}", selfExe_);
+  XLOGF(
+      DBG2, "Restart args: {}", folly::join(" ", argv.begin(), argv.end() - 1));
   execv(selfExe_.c_str(), const_cast<char**>(argv.data()));
 
-  XLOG(ERR) << "failed to perform self-restart: " << folly::errnoStr(errno);
+  XLOGF(ERR, "failed to perform self-restart: {}", folly::errnoStr(errno));
   // Restore the O_CLOEXEC flag on the child pipe
   if (childPipeFd != -1) {
     int rc = fcntl(childPipeFd, F_SETFD, FD_CLOEXEC);
     if (rc != 0) {
-      XLOG(ERR) << "failed to restore CLOEXEC flag on log pipe: "
-                << folly::errnoStr(errno);
+      XLOGF(
+          ERR,
+          "failed to restore CLOEXEC flag on log pipe: {}",
+          folly::errnoStr(errno));
     }
   }
 }
@@ -255,7 +262,7 @@ void EdenMonitor::performSelfRestart() {
 void EdenMonitor::signalReceived(int sig) {
   switch (sig) {
     case SIGCHLD:
-      XLOG(DBG2) << "got SIGCHLD";
+      XLOG(DBG2, "got SIGCHLD");
       edenfs_->checkLiveness();
 #ifndef _WIN32
       {
@@ -263,7 +270,7 @@ void EdenMonitor::signalReceived(int sig) {
         int status;
         pid_t pid;
         while ((pid = waitpid(-1, &status, WNOHANG)) > 0) {
-          XLOG(DBG3) << "waited pid " << pid << " status " << status;
+          XLOGF(DBG3, "waited pid {} status {}", pid, status);
         }
       }
 #endif
@@ -274,17 +281,20 @@ void EdenMonitor::signalReceived(int sig) {
     case SIGINT:
     case SIGTERM:
       // Forward the signal to the edenfs instance
-      XLOG(DBG1) << "received terminal signal " << sig;
+      XLOGF(DBG1, "received terminal signal {}", sig);
       auto pid = edenfs_->getPid();
       XCHECK_GE(pid, 0);
       auto rc = kill(pid, sig);
       if (rc != 0) {
-        XLOG(WARN) << "error forwarding signal " << sig
-                   << " to EdenFS: " << folly::errnoStr(errno);
+        XLOGF(
+            WARN,
+            "error forwarding signal {} to EdenFS: {}",
+            sig,
+            folly::errnoStr(errno));
       }
       return;
   }
-  XLOG(WARN) << "received unexpected signal " << sig;
+  XLOGF(WARN, "received unexpected signal {}", sig);
 }
 
 } // namespace facebook::eden

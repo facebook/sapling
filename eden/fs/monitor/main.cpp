@@ -84,7 +84,7 @@ void newProcessGroup() {
     // Child process.
     auto rc = setsid();
     if (rc == -1) {
-      XLOG(ERR) << "setsid() failed: " << folly::errnoStr(errno);
+      XLOGF(ERR, "setsid() failed: {}", folly::errnoStr(errno));
       // continue anyway
     }
     return;
@@ -106,7 +106,7 @@ void newProcessGroup() {
       if (errno == EINTR) {
         continue;
       }
-      XLOG(ERR) << "error waiting on forked child" << folly::errnoStr(errno);
+      XLOGF(ERR, "error waiting on forked child{}", folly::errnoStr(errno));
       _exit(1);
     }
     break;
@@ -172,7 +172,7 @@ int main(int argc, char* argv[]) {
     return EX_SOFTWARE;
   }
 
-  XLOG(INFO) << "Starting EdenFS monitor: pid " << getpid();
+  XLOGF(INFO, "Starting EdenFS monitor: pid {}", getpid());
   EdenMonitor monitor(std::move(config), selfExe, initialArgv);
   monitor.run();
   return EX_OK;

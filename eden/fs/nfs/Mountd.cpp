@@ -196,14 +196,14 @@ ImmediateFuture<folly::Unit> MountdServerProcessor::dispatchRpc(
   }
 
   if (procNumber >= kMountHandlers.size()) {
-    XLOG(ERR) << "Invalid procedure: " << procNumber;
+    XLOGF(ERR, "Invalid procedure: {}", procNumber);
     serializeReply(ser, accept_stat::PROC_UNAVAIL, xid);
     return folly::unit;
   }
 
   auto handlerEntry = kMountHandlers[procNumber];
 
-  XLOG(DBG7) << handlerEntry.name;
+  XLOG(DBG7, handlerEntry.name);
   return (this->*handlerEntry.handler)(std::move(deser), std::move(ser), xid);
 }
 
@@ -257,7 +257,7 @@ void Mountd::initialize(folly::SocketAddress addr, bool registerWithRpcbind) {
 }
 
 void Mountd::initialize(folly::File socket) {
-  XLOG(DBG7) << "initializing mountd: " << socket.fd();
+  XLOGF(DBG7, "initializing mountd: {}", socket.fd());
   server_->initializeServerSocket(std::move(socket));
 }
 

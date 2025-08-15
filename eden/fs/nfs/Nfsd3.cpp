@@ -361,7 +361,7 @@ ImmediateFuture<folly::Unit> Nfsd3ServerProcessor::setattr(
 
   if (args.guard.tag) {
     // TODO(xavierd): we probably need to support this.
-    XLOG(WARN) << "Guarded setattr aren't supported.";
+    XLOG(WARN, "Guarded setattr aren't supported.");
     SETATTR3res res{{{nfsstat3::NFS3ERR_INVAL, SETATTR3resfail{}}}};
     XdrTrait<SETATTR3res>::serialize(ser, res);
     return folly::unit;
@@ -405,7 +405,7 @@ ImmediateFuture<folly::Unit> Nfsd3ServerProcessor::setattr(
     //
     // Ignoring `atime` is not strictly necessary to work around bugs
     // on macOS ARM64 with nop changes since `atime` is empty but let's be safe.
-    XLOG(DBG7) << "Treating atime-only NFS SETATTR as a no-op";
+    XLOG(DBG7, "Treating atime-only NFS SETATTR as a no-op");
     desired.atime = std::nullopt;
   }
 
@@ -806,7 +806,7 @@ ImmediateFuture<folly::Unit> Nfsd3ServerProcessor::create(
         if (try_.hasException()) {
           if (createmode == createmode3::UNCHECKED &&
               isEexist(try_.exception())) {
-            XLOG(WARN) << "Unchecked file creation returned EEXIST";
+            XLOG(WARN, "Unchecked file creation returned EEXIST");
             // A file already exist at that location, since this is an
             // UNCHECKED creation, just pretend the file was created just fine.
             // Since no fields are populated, this forces the client to issue a
@@ -2037,7 +2037,7 @@ ImmediateFuture<folly::Unit> Nfsd3ServerProcessor::dispatchRpc(
   }
 
   if (procNumber >= kNfs3dHandlers.size()) {
-    XLOG(ERR) << "Invalid procedure: " << procNumber;
+    XLOGF(ERR, "Invalid procedure: {}", procNumber);
     serializeReply(ser, accept_stat::PROC_UNAVAIL, xid);
     return folly::unit;
   }
@@ -2216,8 +2216,10 @@ void Nfsd3::initialize(folly::SocketAddress addr, bool registerWithRpcbind) {
 }
 
 void Nfsd3::initialize(folly::File connectedSocket) {
-  XLOG(DBG7) << "Initializing nfsd3 with connected socket: "
-             << connectedSocket.fd();
+  XLOGF(
+      DBG7,
+      "Initializing nfsd3 with connected socket: {}",
+      connectedSocket.fd());
   server_->initializeConnectedSocket(std::move(connectedSocket));
 }
 
@@ -2229,27 +2231,27 @@ void Nfsd3::invalidate(
     AbsolutePath path,
     mode_t mode,
     std::function<void()> onSuccess) {
-  invalidationExecutor_->add(
-      [path = std::move(path), mode, onSuccess = std::move(onSuccess)]() {
-        XLOG(DBG9) << "Invalidating: " << path.c_str() << " mode: " << mode;
-        if (chmod(path.c_str(), mode) == 0) {
-          XLOG(DBG9) << "Finished invalidating: " << path.c_str();
-          if (onSuccess) {
-            onSuccess();
-          }
-        } else if (errno == ENOENT) {
-          // ENOENT is expected after removing files.
-          XLOG(DBG9) << "Finished invalidating (no longer exists): "
-                     << path.c_str();
-        } else {
-          XLOGF(
-              DFATAL,
-              "Error invalidating path {} to mode {} using chmod: {}",
-              path,
-              mode,
-              folly::errnoStr(errno));
-        }
-      });
+  invalidationExecutor_->add([path = std::move(path),
+                              mode,
+                              onSuccess = std::move(onSuccess)]() {
+    XLOGF(DBG9, "Invalidating: {} mode: {}", path.c_str(), mode);
+    if (chmod(path.c_str(), mode) == 0) {
+      XLOGF(DBG9, "Finished invalidating: {}", path.c_str());
+      if (onSuccess) {
+        onSuccess();
+      }
+    } else if (errno == ENOENT) {
+      // ENOENT is expected after removing files.
+      XLOGF(DBG9, "Finished invalidating (no longer exists): {}", path.c_str());
+    } else {
+      XLOGF(
+          DFATAL,
+          "Error invalidating path {} to mode {} using chmod: {}",
+          path,
+          mode,
+          folly::errnoStr(errno));
+    }
+  });
 }
 
 uint32_t Nfsd3::getProgramNumber() {
@@ -2317,7 +2319,7 @@ folly::SemiFuture<FsStopDataPtr> Nfsd3::getStopFuture() {
 }
 
 bool Nfsd3::takeoverStop() {
-  XLOG(DBG7) << "calling takeover stop on the nfs RpcServer";
+  XLOG(DBG7, "calling takeover stop on the nfs RpcServer");
 
   // There are a couple of nuances in the following code:
   //
