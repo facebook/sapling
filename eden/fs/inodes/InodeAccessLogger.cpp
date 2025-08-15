@@ -51,7 +51,7 @@ InodeAccessLogger::~InodeAccessLogger() {
   // the infinite work loop in processInodeAccessEvents and would never join
   sem_.post();
   workerThread_.join();
-  XLOG(INFO) << "InodeAccessLogger shut down";
+  XLOG(INFO, "InodeAccessLogger shut down");
 }
 
 bool InodeAccessLogger::filterDirectory(
@@ -116,8 +116,9 @@ void InodeAccessLogger::processInodeAccessEvents() {
           auto repo_optional =
               mount->getObjectStore()->getBackingStore()->getRepoName();
           if (repo_optional == std::nullopt) {
-            XLOG(DBG5)
-                << "InodeAccessLogger couldn't get repo name from backing store";
+            XLOG(
+                DBG5,
+                "InodeAccessLogger couldn't get repo name from backing store");
             continue;
           }
           repo = repo_optional.value();
@@ -133,8 +134,10 @@ void InodeAccessLogger::processInodeAccessEvents() {
         // process these events in an async queue, it is possible that the
         // inode is invalidated before we get to it. In this case, just
         // continue to the next event.
-        XLOG_EVERY_MS(WARN, 30000)
-            << "Error looking up inode path: " << ex.what();
+        XLOG_EVERY_MS(
+            WARN,
+            30000,
+            fmt::format("Error looking up inode path: {}", ex.what()));
         path = std::nullopt;
       }
 

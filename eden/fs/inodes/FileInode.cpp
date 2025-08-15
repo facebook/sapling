@@ -441,7 +441,7 @@ FileInode::truncateAndRun(LockedState state, Fn&& fn) {
       return std::forward<Fn>(fn)(std::move(state));
   }
 
-  XLOG(FATAL) << "unexpected FileInode state " << state->tag;
+  XLOGF(FATAL, "unexpected FileInode state {}", state->tag);
 }
 #endif // !_WIN32
 
@@ -508,7 +508,7 @@ void FileInodeState::checkInvariants() {
       return;
   }
 
-  XLOG(FATAL) << "Unexpected tag value: " << tag;
+  XLOGF(FATAL, "Unexpected tag value: {}", tag);
 }
 
 Hash20 FileInodeState::MaterializedState::getSha1(FileInode& inode) {
@@ -602,7 +602,7 @@ ImmediateFuture<struct stat> FileInode::setattr(
     // On ARM64, macOS will send empty/nop `setattr` requests,
     // so we need to filter those out, otherwise we will cause
     // spurious notification changes.
-    XLOG(DBG7) << "Skipping nop setattr without ignoring `atime`";
+    XLOG(DBG7, "Skipping nop setattr without ignoring `atime`");
     return this->stat(fetchContext);
   }
 
@@ -727,7 +727,7 @@ ImmediateFuture<bool> FileInode::isSameAsSlow(
   return getSha1(fetchContext)
       .thenTry([expectedBlobSha1](folly::Try<Hash20>&& try_) {
         if (try_.hasException()) {
-          XLOG(DBG2) << "Assuming changed: " << try_.exception();
+          XLOGF(DBG2, "Assuming changed: {}", try_.exception());
           return false;
         } else {
           return try_.value() == expectedBlobSha1;
@@ -776,7 +776,7 @@ ImmediateFuture<bool> FileInode::isSameAs(
   return collectAllSafe(f1, f2).thenTry(
       [](folly::Try<std::tuple<Hash20, Hash20>>&& try_) {
         if (try_.hasException()) {
-          XLOG(DBG2) << "Assuming changed: " << try_.exception();
+          XLOGF(DBG2, "Assuming changed: {}", try_.exception());
           return false;
         } else {
           auto hashes = std::move(try_).value();
@@ -887,7 +887,7 @@ ImmediateFuture<Hash20> FileInode::getSha1(
           [&] { return state->materializedState.getSha1(*this); });
   }
 
-  XLOG(FATAL) << "FileInode in illegal state: " << state->tag;
+  XLOGF(FATAL, "FileInode in illegal state: {}", state->tag);
 }
 
 ImmediateFuture<Hash32> FileInode::getBlake3(
@@ -908,7 +908,7 @@ ImmediateFuture<Hash32> FileInode::getBlake3(
       });
   }
 
-  XLOG(FATAL) << "FileInode in illegal state: " << state->tag;
+  XLOGF(FATAL, "FileInode in illegal state: {}", state->tag);
 }
 
 ImmediateFuture<BlobAuxData> FileInode::getBlobAuxData(
@@ -933,7 +933,7 @@ ImmediateFuture<BlobAuxData> FileInode::getBlobAuxData(
       });
   }
 
-  XLOG(FATAL) << "FileInode in illegal state: " << state->tag;
+  XLOGF(FATAL, "FileInode in illegal state: {}", state->tag);
 }
 
 ImmediateFuture<struct stat> FileInode::stat(
@@ -1195,8 +1195,10 @@ ImmediateFuture<folly::Unit> FileInode::ensureMaterialized(
                 auto target) -> ImmediateFuture<folly::Unit> {
               auto filePath = getPath();
               if (!filePath) {
-                XLOG(DBG4) << "Skip materialization of the symlink "
-                           << getLogPath() << ": file is unlinked";
+                XLOGF(
+                    DBG4,
+                    "Skip materialization of the symlink {}: file is unlinked",
+                    getLogPath());
                 return folly::unit;
               }
 
@@ -1208,8 +1210,11 @@ ImmediateFuture<folly::Unit> FileInode::ensureMaterialized(
               auto targetPath =
                   joinAndNormalize(filePath.value().dirname(), target);
               if (targetPath.hasError()) {
-                XLOG(DBG4) << "Skip materialization of the symlink "
-                           << getLogPath() << ": " << targetPath.error();
+                XLOGF(
+                    DBG4,
+                    "Skip materialization of the symlink {}: {}",
+                    getLogPath(),
+                    targetPath.error());
                 return folly::unit;
               }
 
@@ -1229,7 +1234,7 @@ ImmediateFuture<folly::Unit> FileInode::ensureMaterialized(
             });
   }
 
-  XLOG(DBG4) << "ensureMaterialize " << getLogPath();
+  XLOGF(DBG4, "ensureMaterialize {}", getLogPath());
   return runWhileMaterialized(
       LockedState{this},
       nullptr,
@@ -1370,8 +1375,9 @@ ImmediateFuture<BlobPtr> FileInode::startLoadingData(
             // TODO(xavierd): Calling FileInode::completeDataLoad with the
             // exception might be sufficient to propagate the error and reset
             // the loading state.
-            XLOG(FATAL)
-                << "Failed to propagate failure in getBlob(), no choice but to die";
+            XLOG(
+                FATAL,
+                "Failed to propagate failure in getBlob(), no choice but to die");
           });
 
   // This is using `collect` instead of `collectAll` to handle the case where

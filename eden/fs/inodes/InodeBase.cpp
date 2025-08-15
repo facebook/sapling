@@ -241,7 +241,7 @@ std::unique_ptr<InodeBase> InodeBase::markUnlinked(
     TreeInode* parent,
     PathComponentPiece name,
     const RenameLock& renameLock) {
-  XLOG(DBG5) << "inode " << this << " unlinked: " << getLogPath();
+  XLOGF(DBG5, "inode {} unlinked: {}", fmt::ptr(this), getLogPath());
   XDCHECK(renameLock.isHeld(mount_));
 
   {
@@ -336,8 +336,10 @@ ParentInodeInfo InodeBase::getParentInfo() const {
       auto loc = location_.rlock();
       parent = loc->parent;
       if (loc->unlinked) {
-        XLOG(DBG6) << "getParentInfo(): unlinked inode detected after "
-                   << numTries << " tries";
+        XLOGF(
+            DBG6,
+            "getParentInfo(): unlinked inode detected after {} tries",
+            numTries);
         return ParentInodeInfo{
             loc->name, loc->parent, loc->unlinked, ParentContentsPtr{}};
       }
@@ -362,15 +364,19 @@ ParentInodeInfo InodeBase::getParentInfo() const {
       auto loc = location_.rlock();
       if (loc->unlinked) {
         // This file was unlinked since we checked earlier
-        XLOG(DBG6) << "getParentInfo(): file is newly unlinked on try "
-                   << numTries;
+        XLOGF(
+            DBG6,
+            "getParentInfo(): file is newly unlinked on try {}",
+            numTries);
         return ParentInodeInfo{
             loc->name, loc->parent, loc->unlinked, ParentContentsPtr{}};
       }
       if (loc->parent == parent) {
         // Our parent is still the same.  We're done.
-        XLOG(DBG9) << "getParentInfo() acquired parent lock after " << numTries
-                   << " tries";
+        XLOGF(
+            DBG9,
+            "getParentInfo() acquired parent lock after {} tries",
+            numTries);
         return ParentInodeInfo{
             loc->name, loc->parent, loc->unlinked, std::move(parentContents)};
       }

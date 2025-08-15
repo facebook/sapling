@@ -74,26 +74,27 @@ std::unique_ptr<InodeCatalog> makeInodeCatalog(
     if (inodeCatalogOptions.containsAllOf(INODE_CATALOG_SYNCHRONOUS_OFF)) {
       // Controlled via EdenConfig::overlayBuffered
       if (inodeCatalogOptions.containsAllOf(INODE_CATALOG_BUFFERED)) {
-        XLOG(DBG2)
-            << "Buffered Sqlite overlay being used with synchronous-mode = off";
+        XLOG(
+            DBG2,
+            "Buffered Sqlite overlay being used with synchronous-mode = off");
         return std::make_unique<BufferedSqliteInodeCatalog>(
             localDir, logger, config, SqliteTreeStore::SynchronousMode::Off);
       } else {
-        XLOG(DBG2) << "Sqlite overlay being used with synchronous-mode = off";
+        XLOG(DBG2, "Sqlite overlay being used with synchronous-mode = off");
         return std::make_unique<SqliteInodeCatalog>(
             localDir, logger, SqliteTreeStore::SynchronousMode::Off);
       }
     }
     // Controlled via EdenConfig::overlayBuffered
     if (inodeCatalogOptions.containsAllOf(INODE_CATALOG_BUFFERED)) {
-      XLOG(DBG4) << "Buffered Sqlite overlay being used";
+      XLOG(DBG4, "Buffered Sqlite overlay being used");
       return std::make_unique<BufferedSqliteInodeCatalog>(
           localDir, logger, config);
     }
-    XLOG(DBG4) << "Sqlite overlay being used.";
+    XLOG(DBG4, "Sqlite overlay being used.");
     return std::make_unique<SqliteInodeCatalog>(localDir, logger);
   } else if (inodeCatalogType == InodeCatalogType::InMemory) {
-    XLOG(DBG4) << "In-memory overlay being used.";
+    XLOG(DBG4, "In-memory overlay being used.");
     return std::make_unique<MemInodeCatalog>();
   }
 #ifdef _WIN32
@@ -105,25 +106,25 @@ std::unique_ptr<InodeCatalog> makeInodeCatalog(
     throw std::runtime_error(
         "LMDB overlay type is not supported. Please reclone.");
   }
-  XLOG(DBG4) << "Sqlite overlay being used.";
+  XLOG(DBG4, "Sqlite overlay being used.");
   return std::make_unique<SqliteInodeCatalog>(localDir, logger);
 #else
   if (inodeCatalogType == InodeCatalogType::LMDB) {
     if (inodeCatalogOptions.containsAllOf(INODE_CATALOG_BUFFERED)) {
-      XLOG(DBG4) << "Buffered LMDB overlay being used";
+      XLOG(DBG4, "Buffered LMDB overlay being used");
       return std::make_unique<BufferedLMDBInodeCatalog>(
           static_cast<LMDBFileContentStore*>(fileContentStore), config);
     }
-    XLOG(DBG4) << "LMDB overlay being used";
+    XLOG(DBG4, "LMDB overlay being used");
     return std::make_unique<LMDBInodeCatalog>(
         static_cast<LMDBFileContentStore*>(fileContentStore));
   }
   if (inodeCatalogType == InodeCatalogType::LegacyDev) {
-    XLOG(DBG4) << "LegacyDev overlay being used.";
+    XLOG(DBG4, "LegacyDev overlay being used.");
     return std::make_unique<FsInodeCatalogDev>(
         static_cast<FsFileContentStoreDev*>(fileContentStore));
   }
-  XLOG(DBG4) << "Legacy overlay being used.";
+  XLOG(DBG4, "Legacy overlay being used.");
   return std::make_unique<FsInodeCatalog>(
       static_cast<FsFileContentStore*>(fileContentStore));
 #endif
@@ -836,8 +837,10 @@ void Overlay::gcThread() noexcept {
       try {
         handleGCRequest(request);
       } catch (const std::exception& e) {
-        XLOG(ERR) << "handleGCRequest should never throw, but it did: "
-                  << e.what();
+        XLOGF(
+            ERR,
+            "handleGCRequest should never throw, but it did: {}",
+            e.what());
       }
     }
   }
@@ -974,7 +977,7 @@ void Overlay::removeChildren(InodeNumber parent, const DirContents& content) {
     saveOverlayDir(parent, content);
     stats_->increment(&OverlayStats::removeChildrenSuccessful);
   } catch (const std::exception& e) {
-    XLOG(ERR) << "Failed to remove children " << e.what();
+    XLOGF(ERR, "Failed to remove children {}", e.what());
     stats_->increment(&OverlayStats::removeChildrenFailure);
     throw;
   }

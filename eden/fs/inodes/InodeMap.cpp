@@ -171,7 +171,7 @@ void InodeMap::initializeUnloadedInode(
     auto message = fmt::format(
         "failed to emplace inode number {}; is it already present in the InodeMap?",
         ino);
-    XLOG(ERR) << message;
+    XLOG(ERR, message);
     throw std::runtime_error(message);
   }
 }
@@ -760,7 +760,7 @@ void InodeMap::forgetStaleInodes() {
   // TODO add a checkout decRef counter
   // TODO: this will unload by atime, atime is not updated by stat -- fix it
 
-  XLOG(DBG2) << "forgetting stale inodes";
+  XLOG(DBG2, "forgetting stale inodes");
   // We have to destroy InodePtrs outside of the data lock. These hold all the
   // InodePtrs we created.
   std::vector<InodePtr> toClearFSRef;
@@ -851,7 +851,7 @@ void InodeMap::forgetStaleInodes() {
     XLOGF(DBG7, "forgetting NFS inode: {}", inodePtr->getNodeId());
     inodePtr->clearFsRefcount();
   }
-  XLOG(DBG2) << "forgetting stale inodes complete";
+  XLOG(DBG2, "forgetting stale inodes complete");
 #endif
 }
 
@@ -873,9 +873,11 @@ Future<SerializedInodeMap> InodeMap::shutdown(
     data->shutdownPromise.emplace(Promise<Unit>{});
     future = data->shutdownPromise->getFuture();
 
-    XLOG(DBG3) << "starting InodeMap::shutdown: loadedCount="
-               << data->loadedInodes_.size()
-               << " unloadedCount=" << data->unloadedInodes_.size();
+    XLOGF(
+        DBG3,
+        "starting InodeMap::shutdown: loadedCount={} unloadedCount={}",
+        data->loadedInodes_.size(),
+        data->unloadedInodes_.size());
   }
 
   // If an error occurs during mount point initialization, shutdown() can be
