@@ -583,7 +583,7 @@ int runEdenMain(EdenMain&& main, int argc, char** argv) {
   server->removeEdenHeartbeatFile();
 #endif
 
-  XLOG(INFO) << "EdenFS exiting successfully";
+  XLOG(INFO, "EdenFS exiting successfully");
   return kExitCodeSuccess;
 }
 

@@ -455,9 +455,12 @@ class SuffixGlobRequestScope {
     auto elapsed = itcTimer_.elapsed();
     auto duration = std::chrono::duration<double>{elapsed}.count();
     std::string client_cmdline = getClientCmdline(serverState_, context_);
-    XLOG(DBG4) << "EdenFS asked to evaluate suffix glob by caller '"
-               << client_cmdline << "':" << globberLogString_
-               << ": duration=" << duration << "s";
+    XLOGF(
+        DBG4,
+        "EdenFS asked to evaluate suffix glob by caller '{}'{}: duration={}s",
+        client_cmdline,
+        globberLogString_,
+        duration);
     serverState_->getStructuredLogger()->logEvent(SuffixGlob{
         duration, globberLogString_, std::move(client_cmdline), isLocal_});
   }
@@ -493,9 +496,12 @@ class GlobFilesRequestScope {
     // Logging completion time for the request
     auto elapsed = itcTimer_.elapsed();
     auto duration = std::chrono::duration<double>{elapsed}.count();
-    XLOG(DBG4) << "EdenFS completed globFiles request in " << duration << "s"
-               << " using " << (local ? "Local" : "SaplingRemoteAPI")
-               << (fallback ? " Fallback" : "");
+    XLOGF(
+        DBG4,
+        "EdenFS completed globFiles request in {}s using {}{}",
+        duration,
+        (local ? "Local" : "SaplingRemoteAPI"),
+        (fallback ? " Fallback" : ""));
 
     // Log if this request is an expensive request
     if (duration >= EXPENSIVE_GLOB_FILES_DURATION) {
@@ -526,7 +532,7 @@ class GlobFilesRequestScope {
             &ThriftStats::globFilesSaplingRemoteAPISuccess);
       }
     }
-    XLOG(DBG4) << "End of globFiles";
+    XLOG(DBG4, "End of globFiles");
   }
 
   void setLocal(bool isLocal) {
@@ -590,19 +596,21 @@ bool shouldUseSaplingRemoteAPI(
 
   // Handle unsupported flags
   if (*params.prefetchFiles() || *params.suppressFileList()) {
-    XLOG(DBG3)
-        << "globFiles request cannot be offloaded to SaplingRemoteAPI due to prefetching: prefetchFiles="
-        << *params.prefetchFiles()
-        << ", suppressFileList=" << *params.suppressFileList()
-        << ". Falling back to local pathway";
+    XLOGF(
+        DBG3,
+        "globFiles request cannot be offloaded to SaplingRemoteAPI due to prefetching: prefetchFiles={}, suppressFileList={}. Falling back to local pathway",
+        *params.prefetchFiles(),
+        *params.suppressFileList());
     useSaplingRemoteAPISuffixes = false;
   } else if (params.predictiveGlob()) {
-    XLOG(DBG3)
-        << "globFiles request cannot be offloaded to SaplingRemoteAPI due to predictiveGlob, falling back to local pathway";
+    XLOG(
+        DBG3,
+        "globFiles request cannot be offloaded to SaplingRemoteAPI due to predictiveGlob, falling back to local pathway");
     useSaplingRemoteAPISuffixes = false;
   } else if (!(*params.listOnlyFiles())) {
-    XLOG(DBG3)
-        << "globFiles request cannot be offloaded to SaplingRemoteAPI due to asking for files and directories, falling back to local pathway";
+    XLOG(
+        DBG3,
+        "globFiles request cannot be offloaded to SaplingRemoteAPI due to asking for files and directories, falling back to local pathway");
     useSaplingRemoteAPISuffixes = false;
   }
 
@@ -795,7 +803,7 @@ folly::SemiFuture<folly::Unit> EdenServiceHandler::semifuture_mount(
                    ->mount(std::move(initialConfig), *argument->readOnly())
                    .unit();
              }).thenError([](const folly::exception_wrapper& ex) {
-               XLOG(ERR) << "Error: " << ex.what();
+               XLOGF(ERR, "Error: {}", ex.what());
                throw newEdenError(ex);
              }))
       .semi();
@@ -1241,7 +1249,7 @@ EdenServiceHandler::streamJournalChanged(
 
   // This is called when the subscription channel is torn down
   auto onDisconnect = [weakMount, handle, disconnected] {
-    XLOG(INFO) << "streaming client disconnected";
+    XLOG(INFO, "streaming client disconnected");
     auto mount = weakMount.lock();
     if (mount) {
       disconnected->store(true);
@@ -2430,8 +2438,9 @@ void EdenServiceHandler::sync_changesSinceV2(
         std::nullopt,
         [&](const FileChangeJournalDelta& current) -> bool {
           if (!current.isPath1Valid) {
-            XLOG(DFATAL)
-                << "FileChangeJournalDetal::isPath1Valid should never be false";
+            XLOG(
+                DFATAL,
+                "FileChangeJournalDetal::isPath1Valid should never be false");
           }
 
           // Changes can effect either path1 or both paths
@@ -3741,8 +3750,11 @@ void maybeLogExpensiveGlob(
   if (shouldLogExpensiveGlob) {
     auto logString = globber.logString(globs);
     std::string client_cmdline = getClientCmdline(serverState, context);
-    XLOG(WARN) << "EdenFS asked to evaluate expensive glob by caller "
-               << client_cmdline << " : " << logString;
+    XLOGF(
+        WARN,
+        "EdenFS asked to evaluate expensive glob by caller {} : {}",
+        client_cmdline,
+        logString);
     serverState->getStructuredLogger()->logEvent(
         StarGlob{std::move(logString), std::move(client_cmdline)});
   }
@@ -3912,8 +3924,10 @@ EdenServiceHandler::semifuture_predictiveGlobFiles(
                        folly::Try<std::unique_ptr<Glob>> tryGlob) {
             if (tryGlob.hasException()) {
               auto& ew = tryGlob.exception();
-              XLOG(ERR) << "Error fetching predictive file globs: "
-                        << folly::exceptionStr(ew);
+              XLOGF(
+                  ERR,
+                  "Error fetching predictive file globs: {}",
+                  folly::exceptionStr(ew));
             }
             return tryGlob;
           });
@@ -3997,8 +4011,9 @@ EdenServiceHandler::semifuture_globFiles(std::unique_ptr<GlobParams> params) {
       context);
 
   if (requestIsOffloadable) {
-    XLOG(DBG4)
-        << "globFiles request is only suffix globs, can be offloaded to EdenAPI";
+    XLOG(
+        DBG4,
+        "globFiles request is only suffix globs, can be offloaded to EdenAPI");
     auto suffixGlobLogString = globber.logString(suffixGlobs);
     suffixGlobRequestScope = std::make_unique<SuffixGlobRequestScope>(
         suffixGlobLogString,
@@ -4009,7 +4024,7 @@ EdenServiceHandler::semifuture_globFiles(std::unique_ptr<GlobParams> params) {
 
   if (useSaplingRemoteAPISuffixes) {
     if (requestIsOffloadable) {
-      XLOG(DBG4) << "globFiles request offloaded to EdenAPI";
+      XLOG(DBG4, "globFiles request offloaded to EdenAPI");
       // Only use BSSM if there are only suffix queries
       globFilesRequestScope->setLocal(false);
       // Attempt to resolve all EdenAPI futures. If any of
@@ -4083,8 +4098,11 @@ EdenServiceHandler::semifuture_globFiles(std::unique_ptr<GlobParams> params) {
                       for (auto component : rp.components()) {
                         // Use facebook::eden string_view
                         if (string_view{component.view()}.starts_with(".")) {
-                          XLOG(DBG5) << "Skipping dotfile: " << component.view()
-                                     << " in " << entry;
+                          XLOGF(
+                              DBG5,
+                              "Skipping dotfile: {} in {}",
+                              component.view(),
+                              entry);
                           skip_due_to_dotfile = true;
                           break;
                         }
@@ -4171,8 +4189,8 @@ EdenServiceHandler::semifuture_globFiles(std::unique_ptr<GlobParams> params) {
                     .thenValue([searchRoot,
                                 wantDtype](auto&& globEntries) mutable {
                       // Windows
-                      XLOG(DBG5)
-                          << "Building Glob with searchroot " << searchRoot;
+                      XLOGF(
+                          DBG5, "Building Glob with searchroot {}", searchRoot);
                       auto glob = std::make_unique<Glob>();
                       std::sort(
                           globEntries.begin(),
@@ -4212,47 +4230,50 @@ EdenServiceHandler::semifuture_globFiles(std::unique_ptr<GlobParams> params) {
                         glob->originHashes().value().emplace_back(
                             globEntry.originHash);
                       }
-                      XLOG(DBG5)
-                          << "Glob successfully created, returning SaplingRemoteAPI results";
+                      XLOG(
+                          DBG5,
+                          "Glob successfully created, returning SaplingRemoteAPI results");
                       return glob;
                     });
               })
-              .thenError([mountHandle,
-                          globFilesRequestScope,
+              .thenError(
+                  [mountHandle,
+                   globFilesRequestScope,
+                   serverState = server_->getServerState(),
+                   globs = std::move(*params->globs()),
+                   globber = std::move(globber),
+                   &context](const folly::exception_wrapper& ex) mutable {
+                    // Fallback to local if an error was encountered while using
+                    // the SaplingRemoteAPI method
+                    XLOGF(
+                        DBG3,
+                        "Encountered error when evaluating globFiles: {}",
+                        ex.what());
+                    XLOG(DBG3, "Using local globFiles");
+                    globFilesRequestScope->setFallback(true);
+                    return globber.glob(
+                        mountHandle.getEdenMountPtr(),
+                        serverState,
+                        std::move(globs),
+                        context);
+                  });
+    } else {
+      globFut =
+          std::move(backgroundFuture)
+              .thenValue([mountHandle,
                           serverState = server_->getServerState(),
                           globs = std::move(*params->globs()),
                           globber = std::move(globber),
-                          &context](
-                             const folly::exception_wrapper& ex) mutable {
-                // Fallback to local if an error was encountered while using
-                // the SaplingRemoteAPI method
-                XLOG(DBG3) << "Encountered error when evaluating globFiles: "
-                           << ex.what();
-                XLOG(DBG3) << "Using local globFiles";
-                globFilesRequestScope->setFallback(true);
+                          &context](auto&&) mutable {
+                XLOG(DBG3, "No suffixes, or mixed suffixes and non-suffixes");
+                XLOG(DBG3, "Using local globFiles");
+                // TODO: Insert ODS log for globs here
                 return globber.glob(
                     mountHandle.getEdenMountPtr(),
                     serverState,
                     std::move(globs),
                     context);
               });
-    } else {
-      globFut = std::move(backgroundFuture)
-                    .thenValue([mountHandle,
-                                serverState = server_->getServerState(),
-                                globs = std::move(*params->globs()),
-                                globber = std::move(globber),
-                                &context](auto&&) mutable {
-                      XLOG(DBG3)
-                          << "No suffixes, or mixed suffixes and non-suffixes";
-                      XLOG(DBG3) << "Using local globFiles";
-                      // TODO: Insert ODS log for globs here
-                      return globber.glob(
-                          mountHandle.getEdenMountPtr(),
-                          serverState,
-                          std::move(globs),
-                          context);
-                    });
     }
   } else {
     globFut = std::move(backgroundFuture)
@@ -4261,7 +4282,7 @@ EdenServiceHandler::semifuture_globFiles(std::unique_ptr<GlobParams> params) {
                               globs = std::move(*params->globs()),
                               globber = std::move(globber),
                               &context](auto&&) mutable {
-                    XLOG(DBG3) << "Using local globFiles";
+                    XLOG(DBG3, "Using local globFiles");
                     // TODO: Insert ODS log for globs here
                     return globber.glob(
                         mountHandle.getEdenMountPtr(),
@@ -5774,11 +5795,11 @@ EdenServiceHandler::semifuture_invalidateKernelInodeCache(
 }
 
 void EdenServiceHandler::enableTracing() {
-  XLOG(INFO) << "Enabling tracing";
+  XLOG(INFO, "Enabling tracing");
   eden::enableTracing();
 }
 void EdenServiceHandler::disableTracing() {
-  XLOG(INFO) << "Disabling tracing";
+  XLOG(INFO, "Disabling tracing");
   eden::disableTracing();
 }
 
@@ -6084,7 +6105,7 @@ void EdenServiceHandler::getCheckoutProgressInfo(
 
 void EdenServiceHandler::initiateShutdown(std::unique_ptr<std::string> reason) {
   auto helper = INSTRUMENT_THRIFT_CALL(INFO);
-  XLOG(INFO) << "initiateShutdown requested, reason: " << *reason;
+  XLOGF(INFO, "initiateShutdown requested, reason: {}", *reason);
   server_->stop();
 }
 

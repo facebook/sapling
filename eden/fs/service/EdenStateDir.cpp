@@ -114,17 +114,19 @@ bool EdenStateDir::isLockValid() const {
   int rc = stat(lockPath_.c_str(), &st);
   if (rc != 0) {
     int errnum = errno;
-    XLOG(ERR) << "EdenFS lock file no longer appears valid: "
-                 "failed to stat lock file: "
-              << folly::errnoStr(errnum);
+    XLOGF(
+        ERR,
+        "EdenFS lock file no longer appears valid: failed to stat lock file: {}",
+        folly::errnoStr(errnum));
     return false;
   }
 
   bool isSameFile =
       (st.st_dev == lockFileStat_.st_dev && st.st_ino == lockFileStat_.st_ino);
   if (!isSameFile) {
-    XLOG(ERR) << "EdenFS lock file no longer appears valid: "
-                 "file has been replaced";
+    XLOG(
+        ERR,
+        "EdenFS lock file no longer appears valid: file has been replaced");
     return false;
   }
 #endif

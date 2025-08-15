@@ -54,8 +54,11 @@ RocksHandles::RocksHandles(
         DB::Open(options, dbPathStr, columnDescriptors, &columnHandles, &dbRaw);
   }
   if (!status.ok()) {
-    XLOG(ERR) << "Error opening RocksDB storage at " << dbPathStr << ": "
-              << status.ToString();
+    XLOGF(
+        ERR,
+        "Error opening RocksDB storage at {}: {}",
+        dbPathStr,
+        status.ToString());
     throw RocksException::build(
         status, "error opening RocksDB storage at", dbPathStr);
   }

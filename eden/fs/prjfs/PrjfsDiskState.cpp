@@ -158,8 +158,10 @@ void populateDiskState(
     if (renamedPlaceholderResult.hasValue()) {
       state.renamedPlaceholder = renamedPlaceholderResult.value();
     } else {
-      XLOG(DBG9) << "Error checking rename: "
-                 << renamedPlaceholderResult.exception();
+      XLOGF(
+          DBG9,
+          "Error checking rename: {}",
+          folly::exceptionStr(renamedPlaceholderResult.exception()));
     }
   }
 
