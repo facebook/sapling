@@ -9,7 +9,9 @@ thrift_library(
         "cpp2",
         "rust",
         "py-deprecated",
+        "python",
     ],
+    py3_namespace = "facebook.eden",
     py_base_module = "facebook.eden",
     thrift_srcs = {
         "overlay.thrift": [],
