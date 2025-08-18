@@ -76,7 +76,10 @@ export async function activate(
     let firstPassCodeReviewDiagnosticsProvider;
     if (Internal.firstPassCodeReviewDiagnosticsProvider != null) {
       firstPassCodeReviewDiagnosticsProvider = Internal.firstPassCodeReviewDiagnosticsProvider();
-      if (firstPassCodeReviewDiagnosticsProvider != null) {
+      if (
+        enabledSCMApiFeatures.has('aiFirstPassCodeReview') &&
+        firstPassCodeReviewDiagnosticsProvider != null
+      ) {
         context.subscriptions.push(firstPassCodeReviewDiagnosticsProvider);
       }
     }
