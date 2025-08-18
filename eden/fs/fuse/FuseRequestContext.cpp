@@ -74,8 +74,8 @@ void FuseRequestContext::genericErrorHandler(
 void FuseRequestContext::timeoutErrorHandler(
     const folly::FutureTimeout& err,
     Notifier* FOLLY_NULLABLE notifier) {
-  XLOG_EVERY_MS(WARN, 1000)
-      << "FUSE request timed out: " << folly::exceptionStr(err);
+  XLOGF_EVERY_MS(
+      WARN, 1000, "FUSE request timed out: {}", folly::exceptionStr(err));
   replyError(ETIMEDOUT);
   if (notifier) {
     notifier->showNetworkNotification(err);

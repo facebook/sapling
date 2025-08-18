@@ -357,8 +357,11 @@ void SpawnedEdenInstance::forwardLogOutput() {
     //
     // Only try to log about this error every minute, so we don't end up trying
     // to log a lot of messages ourself when the disk is full.
-    XLOG_EVERY_MS(ERR, 60s)
-        << "error writing EdenFS log output: " << folly::errnoStr(errnum);
+    XLOGF_EVERY_MS(
+        ERR,
+        60s,
+        "error writing EdenFS log output: {}",
+        folly::errnoStr(errnum));
   }
 }
 

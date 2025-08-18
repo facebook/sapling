@@ -514,8 +514,9 @@ void windowsFsckScanLocalChanges(
         .get();
     XLOGF(INFO, "Scanning complete for {}", mountPath);
   } else {
-    XLOG(INFO)
-        << "Unable to start fsck since root inode is not present and not an InMemory overlay. Possibly new mount.";
+    XLOG(
+        INFO,
+        "Unable to start fsck since root inode is not present and not an InMemory overlay. Possibly new mount.");
   }
 }
 

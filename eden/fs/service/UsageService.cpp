@@ -18,8 +18,10 @@ folly::SemiFuture<std::vector<std::string>> NullUsageService::getTopUsedDirs(
     std::optional<uint64_t> /*startTime*/,
     std::optional<uint64_t> /*endTime*/,
     std::optional<std::string> /*scAlias*/) {
-  XLOG_EVERY_MS(WARN, 60000)
-      << "getTopUsedDirs not supported - returning empty directory list";
+  XLOG_EVERY_MS(
+      WARN,
+      60000,
+      "getTopUsedDirs not supported - returning empty directory list");
   return std::vector<std::string>{};
 }
 
