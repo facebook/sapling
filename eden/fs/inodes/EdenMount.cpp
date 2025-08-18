@@ -2323,13 +2323,16 @@ folly::Future<NfsServer::NfsMountInfo> makeNfsChannel(
           // the listening one is the one we wanna register. So we need to
           // transfer that socket to be able to register it.
         } else {
-          XLOG(DBG4, "Normal Start: Initiating nfsd from scratch: ");
           std::optional<AbsolutePath> unixSocketPath;
           if (mount->getServerState()
                   ->getEdenConfig()
                   ->useUnixSocket.getValue()) {
             unixSocketPath = mount->getCheckoutConfig()->getClientDirectory() +
                 kNfsdSocketName;
+            XLOGF(
+                DBG4,
+                "Normal Start: Initiating nfsd from scratch: {}",
+                unixSocketPath.value());
           }
           channel->initialize(makeNfsSocket(std::move(unixSocketPath)), false);
           // we can't register uds sockets with our portmapper (portmapper v2
@@ -2480,9 +2483,10 @@ folly::Future<folly::Unit> EdenMount::fsChannelMount(bool readOnly) {
                               // TODO(strager): Should we make
                               // EdenMount::unmount() also fail with the same
                               // exception?
-                              XLOG(ERR)
-                                  << "fuseMount was cancelled, but rollback (fuseUnmount) failed: "
-                                  << unmountError.what();
+                              XLOGF(
+                                  ERR,
+                                  "fuseMount was cancelled, but rollback (fuseUnmount) failed: {}",
+                                  unmountError.what());
                               throw std::move(unmountError);
                             })
                         .thenValue([mountPath, mountPromise](folly::Unit&&) {

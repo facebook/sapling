@@ -944,10 +944,11 @@ Future<SerializedInodeMap> InodeMap::shutdown(
     }
 
     auto data = data_.wlock();
-    XLOG(DBG3)
-        << "InodeMap::shutdown after releasing inodesToClear: loadedCount="
-        << data->loadedInodes_.size()
-        << " unloadedCount=" << data->unloadedInodes_.size();
+    XLOGF(
+        DBG3,
+        "InodeMap::shutdown after releasing inodesToClear: loadedCount={} unloadedCount={}",
+        data->loadedInodes_.size(),
+        data->unloadedInodes_.size());
 
     if (!data->loadedInodes_.empty()) {
       EDEN_BUG() << "After InodeMap::shutdown() finished, "

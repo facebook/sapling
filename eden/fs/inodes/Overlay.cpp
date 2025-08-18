@@ -59,13 +59,15 @@ std::unique_ptr<InodeCatalog> makeInodeCatalog(
     if (inodeCatalogOptions.containsAllOf(INODE_CATALOG_UNSAFE_IN_MEMORY)) {
       // Controlled via EdenConfig::overlayBuffered
       if (inodeCatalogOptions.containsAllOf(INODE_CATALOG_BUFFERED)) {
-        XLOG(WARN)
-            << "In-memory Sqlite buffered overlay requested. This will cause data loss.";
+        XLOG(
+            WARN,
+            "In-memory Sqlite buffered overlay requested. This will cause data loss.");
         return std::make_unique<BufferedSqliteInodeCatalog>(
             std::make_unique<SqliteDatabase>(SqliteDatabase::inMemory), config);
       } else {
-        XLOG(WARN)
-            << "In-memory Sqlite overlay requested. This will cause data loss.";
+        XLOG(
+            WARN,
+            "In-memory Sqlite overlay requested. This will cause data loss.");
         return std::make_unique<SqliteInodeCatalog>(
             std::make_unique<SqliteDatabase>(SqliteDatabase::inMemory));
       }

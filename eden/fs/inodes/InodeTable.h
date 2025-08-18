@@ -312,9 +312,13 @@ class InodeTable {
         }
         auto ret = indices.insert({entry.inode, i});
         if (!ret.second) {
-          XLOG_FIRST_N(WARNING, 100)
-              << "Duplicate records for the same inode: indices "
-              << indices[entry.inode] << " and " << i;
+          XLOG_FIRST_N(
+              WARNING,
+              100,
+              fmt::format(
+                  "Duplicate records for the same inode: indices {} and {}",
+                  indices[entry.inode],
+                  i));
           continue;
         }
       }
