@@ -244,7 +244,7 @@ static TreeEntryType treeEntryTypeFromBlobType(FakeBlobType type) {
     case FakeBlobType::SYMLINK:
       return TreeEntryType::SYMLINK;
   }
-  XLOG(FATAL) << "Unknown fake blob type " << enumValue(type);
+  XLOGF(FATAL, "Unknown fake blob type {}", enumValue(type));
 }
 
 FakeBackingStore::TreeEntryData::TreeEntryData(

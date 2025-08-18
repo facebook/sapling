@@ -254,7 +254,7 @@ void HgProxyHash::validate(ObjectId edenBlobHash) {
         "mercurial blob info data for {} is too short ({} bytes)",
         edenBlobHash,
         infoBytes.size());
-    XLOG(ERR) << msg;
+    XLOG(ERR, msg);
     throw std::length_error(msg);
   }
 
@@ -270,7 +270,7 @@ void HgProxyHash::validate(ObjectId edenBlobHash) {
     auto msg = fmt::format(
         "mercurial blob info data for {} has inconsistent path length",
         edenBlobHash);
-    XLOG(ERR) << msg;
+    XLOG(ERR, msg);
     throw std::length_error(msg);
   }
 }

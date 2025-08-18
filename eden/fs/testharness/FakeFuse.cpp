@@ -61,8 +61,7 @@ void FakeFuse::setTimeout(std::chrono::milliseconds timeout) {
 uint32_t FakeFuse::sendRequest(uint32_t opcode, uint64_t inode, ByteRange arg) {
   auto requestID = requestID_;
   ++requestID_;
-  XLOG(DBG5) << "injecting FUSE request ID " << requestID
-             << ": opcode= " << opcode;
+  XLOGF(DBG5, "injecting FUSE request ID {}: opcode= {}", requestID, opcode);
 
   fuse_in_header header = {};
   header.len = sizeof(struct fuse_in_header) + arg.size();

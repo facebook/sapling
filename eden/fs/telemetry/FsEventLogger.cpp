@@ -35,8 +35,7 @@ std::string getConfigsString(std::shared_ptr<const EdenConfig> config) {
         fmt::format_to(inserter, "{}:{};", configKey, value.value());
       }
     } catch (const std::exception& ex) {
-      XLOG(ERR) << "config key " << configKey
-                << " is ill-formed: " << ex.what();
+      XLOGF(ERR, "config key {} is ill-formed: {}", configKey, ex.what());
     }
   }
 
