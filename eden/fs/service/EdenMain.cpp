@@ -22,8 +22,15 @@
 #include <folly/portability/Unistd.h>
 #include <folly/stop_watch.h>
 #include <gflags/gflags.h>
+#ifdef __APPLE__
+#include <sys/sysctl.h>
+#include <sys/time.h>
+#endif
 #include <thrift/lib/cpp2/Flags.h>
 #include <thrift/lib/cpp2/server/ThriftServer.h>
+#ifdef __APPLE__
+#include <ctime>
+#endif
 #include <filesystem>
 
 #include "eden/common/telemetry/SessionInfo.h"
@@ -254,6 +261,19 @@ std::shared_ptr<IScribeLogger> DefaultEdenMain::getScribeLogger(
     std::shared_ptr<EdenConfig> /*edenConfig*/) {
   return std::make_shared<NullScribeLogger>();
 }
+
+#ifdef __APPLE__
+time_t getBootTimeSysctl() {
+  struct timeval boottime;
+  size_t size = sizeof(boottime);
+  int mib[2] = {CTL_KERN, KERN_BOOTTIME};
+  if (sysctl(mib, 2, &boottime, &size, nullptr, 0) < 0) {
+    // It cannot find the last system boot time, just return -1
+    return -1;
+  }
+  return boottime.tv_sec;
+}
+#endif
 
 int runEdenMain(EdenMain&& main, int argc, char** argv) {
   ////////////////////////////////////////////////////////////////////
@@ -547,9 +567,16 @@ int runEdenMain(EdenMain&& main, int argc, char** argv) {
                   "ERROR: The previous edenFS daemon exited silently with signal {}",
                   daemon_exit_signal == 0 ? "Unknown"
                                           : std::to_string(daemon_exit_signal));
+#ifdef __APPLE__
+              time_t bootTime = getBootTimeSysctl();
+#else
+              time_t bootTime = 0;
+#endif
               // Log a crash event
-              structuredLogger->logEvent(
-                  SilentDaemonExit{latestDaemonHeartbeat, daemon_exit_signal});
+              structuredLogger->logEvent(SilentDaemonExit{
+                  latestDaemonHeartbeat,
+                  daemon_exit_signal,
+                  static_cast<uint64_t>(bootTime)});
 
               std::remove(entry.path().string().c_str());
               // Remove any existing daemon exit signal file to clean up
