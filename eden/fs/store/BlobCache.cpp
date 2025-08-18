@@ -59,7 +59,7 @@ BlobCache::BlobCache(
       stats_{std::move(stats)} {
   registerStats();
   if (!enabled_) {
-    XLOG(DBG2) << "In-memory blob caching is disabled due to configuration";
+    XLOG(DBG2, "In-memory blob caching is disabled due to configuration");
   }
 }
 

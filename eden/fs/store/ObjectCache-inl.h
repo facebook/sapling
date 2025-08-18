@@ -190,11 +190,11 @@ ObjectCache<ObjectType, Flavor, ObjectCacheStats>::getImpl(
   XLOGF(DBG6, "ObjectCache::getImpl {}", hash);
   auto* item = folly::get_ptr(state.items, hash);
   if (!item) {
-    XLOG(DBG6) << "ObjectCache::getImpl missed";
+    XLOG(DBG6, "ObjectCache::getImpl missed");
     state.stats->increment(&ObjectCacheStats::getMiss);
 
   } else {
-    XLOG(DBG6) << "ObjectCache::getImpl hit";
+    XLOG(DBG6, "ObjectCache::getImpl hit");
 
     // TODO: Should we avoid promoting if interest is UnlikelyNeededAgain?
     // For now, we'll try not to be too clever.
@@ -230,8 +230,10 @@ ObjectCache<ObjectType, Flavor, ObjectCacheStats>::insertInterestHandle(
     return std::move(preProcessRes.interestHandle);
   }
 
-  XLOG(DBG6) << " creating entry with generation="
-             << preProcessRes.cacheItemGeneration;
+  XLOGF(
+      DBG6,
+      " creating entry with generation={}",
+      preProcessRes.cacheItemGeneration);
 
   auto state = state_.lock();
   return insertInterestHandleCore(
@@ -301,7 +303,7 @@ ObjectCache<ObjectType, Flavor, ObjectCacheStats>::insertInterestHandleCore(
   if (inserted) { // new entry we need to set the generation number
     item->generation = cacheItemGeneration;
   } else {
-    XLOG(DBG6) << "duplicate entry, using generation " << item->generation;
+    XLOGF(DBG6, "duplicate entry, using generation {}", item->generation);
     // Inserting duplicate entry - use its generation.
     interestHandle.cacheItemGeneration_ = item->generation;
     // note we can skip eviction here because we didn't insert anything new,
@@ -380,7 +382,7 @@ template <
     ObjectCacheFlavor Flavor,
     typename ObjectCacheStats>
 void ObjectCache<ObjectType, Flavor, ObjectCacheStats>::clear() {
-  XLOG(DBG6) << "ObjectCache::clear";
+  XLOG(DBG6, "ObjectCache::clear");
   auto state = state_.lock();
   state->totalSize = 0;
   state->evictionQueue.clear();
@@ -484,11 +486,13 @@ template <
     typename ObjectCacheStats>
 void ObjectCache<ObjectType, Flavor, ObjectCacheStats>::evictUntilFits(
     State& state) noexcept {
-  XLOG(DBG6) << "ObjectCache::evictUntilFits "
-             << "state.totalSize=" << state.totalSize
-             << ", maximumCacheSizeBytes_=" << maximumCacheSizeBytes_
-             << ", evictionQueue.size()=" << state.evictionQueue.size()
-             << ", minimumEntryCount_=" << minimumEntryCount_;
+  XLOGF(
+      DBG6,
+      "ObjectCache::evictUntilFits state.totalSize={}, maximumCacheSizeBytes_={}, evictionQueue.size()={}, minimumEntryCount_={}",
+      state.totalSize,
+      maximumCacheSizeBytes_,
+      state.evictionQueue.size(),
+      minimumEntryCount_);
   while (state.totalSize > maximumCacheSizeBytes_ &&
          state.evictionQueue.size() > minimumEntryCount_) {
     evictOne(state);

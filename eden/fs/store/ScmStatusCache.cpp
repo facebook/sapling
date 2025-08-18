@@ -36,7 +36,8 @@ std::variant<StatusResultFuture, StatusResultPromise> ScmStatusCache::get(
     JournalDelta::SequenceNumber curSeq) {
   auto internalCachedItem = getSimple(key);
   if (internalCachedItem && isSequenceValid(curSeq, internalCachedItem->seq)) {
-    XLOG(DBG7) << fmt::format(
+    XLOGF(
+        DBG7,
         "hit internal cache: key={}, curSeq={}, cachedSeq={}",
         key,
         curSeq,
@@ -48,7 +49,8 @@ std::variant<StatusResultFuture, StatusResultPromise> ScmStatusCache::get(
 
   auto it = promiseMap_.find(key);
   if (it != promiseMap_.end() && isSequenceValid(curSeq, it->second.first)) {
-    XLOG(DBG7) << fmt::format(
+    XLOGF(
+        DBG7,
         "hit promise map: key={}, curSeq={}, cachedSeq={}",
         key,
         curSeq,
@@ -61,7 +63,7 @@ std::variant<StatusResultFuture, StatusResultPromise> ScmStatusCache::get(
   auto promise = std::make_shared<folly::SharedPromise<ScmStatus>>();
   promiseMap_.insert_or_assign(key, std::make_pair(curSeq, promise));
 
-  XLOG(DBG7) << fmt::format("cache miss: key={}, curSeq={}", key, curSeq);
+  XLOGF(DBG7, "cache miss: key={}, curSeq={}", key, curSeq);
   return promise;
 }
 
@@ -121,7 +123,8 @@ bool ScmStatusCache::isSequenceValid(
   bool valid = !range->isTruncated && range->containsHgOnlyChanges &&
       !range->containsRootUpdate;
 
-  XLOG(DBG7) << fmt::format(
+  XLOGF(
+      DBG7,
       "range: from={}, truncated={}, hgOnly={}, rootUpdate={}",
       cachedSeq,
       range->isTruncated,
@@ -131,7 +134,8 @@ bool ScmStatusCache::isSequenceValid(
 }
 
 void ScmStatusCache::clear() {
-  XLOG(DBG7) << fmt::format(
+  XLOGF(
+      DBG7,
       "clearing cache: cachedRoot={}, cacheSize={}",
       cachedWorkingCopyParentRootId_.value(),
       getObjectCount());
@@ -142,7 +146,8 @@ void ScmStatusCache::clear() {
 }
 
 bool ScmStatusCache::isCachedWorkingDirValid(RootId& curWorkingDir) const {
-  XLOG(DBG7) << fmt::format(
+  XLOGF(
+      DBG7,
       "cachedRoot={}, currentRoot={}",
       cachedWorkingCopyParentRootId_.value(),
       curWorkingDir.value());
