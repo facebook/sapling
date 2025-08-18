@@ -19,6 +19,7 @@ python_library(
         "//eden/fs/cli:lib",
         "//eden/fs/cli:proc_utils",
         "//eden/fs/py/eden:config",
+        "//eden/fs/py/eden/thrift:client",
         "//eden/fs/py/eden/thrift:legacy",
         "//eden/fs/py/eden/thrift:windows_thrift",
         "//eden/fs/service:thrift-py-deprecated",
@@ -28,7 +29,6 @@ python_library(
         "//eden/integration/facebook/lib:lib",
         "//eden/test_support:py",
         "//fb303/thrift:fb303_core-py-deprecated",
-        "//thrift/lib/python/client:base",
     ],
 )
 
