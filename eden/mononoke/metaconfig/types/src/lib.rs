@@ -1053,21 +1053,6 @@ pub enum BlobConfig {
         /// Optional configuration for setting things like default compression levels
         pack_config: Option<PackConfig>,
     },
-    /// Store in a S3 compatible storage
-    S3 {
-        /// Bucket to connect to
-        bucket: String,
-        /// Name of keychain group, to retrieve access key
-        keychain_group: String,
-        /// Name of the region, currently arbitrary
-        region_name: String,
-        /// S3 host:port to connect to
-        endpoint: String,
-        /// Limit the number of concurrent operations to S3 blobstore.
-        num_concurrent_operations: Option<usize>,
-        /// Name of the secret key within the keychain group
-        secret_name: Option<String>,
-    },
     /// Store in an AWS S3 bucket
     AwsS3 {
         /// Bucket to connect to
@@ -1087,9 +1072,7 @@ impl BlobConfig {
 
         match self {
             Disabled | Files { .. } | Sqlite { .. } => true,
-            Manifold { .. } | Mysql { .. } | ManifoldWithTtl { .. } | S3 { .. } | AwsS3 { .. } => {
-                false
-            }
+            Manifold { .. } | Mysql { .. } | ManifoldWithTtl { .. } | AwsS3 { .. } => false,
             MultiplexedWal { blobstores, .. } => blobstores
                 .iter()
                 .map(|(_, _, config)| config)

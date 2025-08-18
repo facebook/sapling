@@ -57,8 +57,6 @@ use packblob::PackOptions;
 use readonlyblob::ReadOnlyBlobstore;
 use s3blob::awss3client::AwsS3ClientPool;
 use s3blob::store::S3Blob;
-#[cfg(fbcode_build)]
-use s3pool::S3ClientPool;
 use samplingblob::ComponentSamplingHandler;
 use samplingblob::SamplingBlobstoreUnlinkOps;
 use scuba_ext::MononokeScubaSampleBuilder;
@@ -593,46 +591,6 @@ pub fn make_blobstore_unlink_ops<'a>(
             )
             .await
             .map(|store| Arc::new(store) as Arc<dyn BlobstoreUnlinkOps>)?,
-            S3 {
-                bucket,
-                keychain_group,
-                region_name,
-                endpoint,
-                num_concurrent_operations,
-                secret_name,
-            } => {
-                #[cfg(fbcode_build)]
-                {
-                    let client_backend = S3ClientPool::new(
-                        fb,
-                        keychain_group,
-                        secret_name,
-                        region_name,
-                        endpoint,
-                        logger,
-                        num_concurrent_operations,
-                    )
-                    .await?;
-
-                    S3Blob::new(bucket, client_backend, blobstore_options.put_behaviour)
-                        .watched(logger)
-                        .await
-                        .context(ErrorKind::StateOpen)
-                        .map(|store| Arc::new(store) as Arc<dyn BlobstoreUnlinkOps>)?
-                }
-                #[cfg(not(fbcode_build))]
-                {
-                    let _ = (
-                        bucket,
-                        keychain_group,
-                        secret_name,
-                        region_name,
-                        endpoint,
-                        num_concurrent_operations,
-                    );
-                    unimplemented!("This is implemented only for fbcode_build")
-                }
-            }
             AwsS3 {
                 bucket,
                 region,

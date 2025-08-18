@@ -186,17 +186,6 @@ impl Convert for RawBlobstoreConfig {
                 blobconfig: Box::new(raw.blobstore.convert()?),
                 pack_config: raw.pack_config.map(|c| c.convert()).transpose()?,
             },
-            RawBlobstoreConfig::s3(raw) => BlobConfig::S3 {
-                bucket: raw.bucket,
-                keychain_group: raw.keychain_group,
-                region_name: raw.region_name,
-                endpoint: raw.endpoint,
-                num_concurrent_operations: raw
-                    .num_concurrent_operations
-                    .map(|x| x.try_into())
-                    .transpose()?,
-                secret_name: raw.secret_name,
-            },
             RawBlobstoreConfig::aws_s3(raw) => BlobConfig::AwsS3 {
                 bucket: raw.bucket,
                 region: rusoto_core::Region::from_str(&raw.region)?,
