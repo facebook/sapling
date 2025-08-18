@@ -18,6 +18,7 @@ import type {TypeaheadKind} from './CommitInfoView/types';
 import type {InternalTypes} from './InternalTypes';
 import type {Serializable} from './serialize';
 import type {Args, DiffCommit, PartiallySelectedDiffCommit} from './stackEdit/diffSplitTypes';
+import type {CodeReviewIssue} from './firstPassCodeReview/types';
 
 export type Result<T> = {value: T; error?: undefined} | {value?: undefined; error: Error};
 
@@ -722,6 +723,10 @@ export type PlatformSpecificClientToServerMessages =
     }
   | {
       type: 'platform/devmateCreateTestForModifiedCode';
+    }
+  | {
+      type: 'platform/setFirstPassCodeReviewDiagnostics';
+      issueMap: Map<string, Array<CodeReviewIssue>>;
     };
 
 /**

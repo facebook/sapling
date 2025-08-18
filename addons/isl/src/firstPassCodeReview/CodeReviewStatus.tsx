@@ -13,6 +13,7 @@ import {useAtomValue} from 'jotai';
 import {serverCwd} from '../repositoryData';
 
 import './CodeReviewStatus.css';
+import clientToServerAPI from '../ClientToServerAPI';
 
 export function CodeReviewStatus(): JSX.Element {
   const cwd = useAtomValue(serverCwd);
@@ -23,7 +24,21 @@ export function CodeReviewStatus(): JSX.Element {
         <b>
           <T>Review your code using Devmate.</T>
         </b>
-        <Button onClick={() => runCodeReview(cwd)}>
+        <Button
+          onClick={async () => {
+            let results;
+            try {
+              results = await runCodeReview(cwd);
+            } catch (e) {
+              // eslint-disable-next-line no-console
+              console.error(e);
+              return;
+            }
+            clientToServerAPI.postMessage({
+              type: 'platform/setFirstPassCodeReviewDiagnostics',
+              issueMap: results,
+            });
+          }}>
           <T>Try it!</T>
         </Button>
       </div>

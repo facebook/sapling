@@ -8,10 +8,12 @@
 /* eslint-disable no-console */
 
 import serverAPI from '../ClientToServerAPI';
+import {joinPaths} from '../CwdSelector';
+import type {CodeReviewResult, CodeReviewIssue} from './types';
 
-export async function runCodeReview(cwd: string): Promise<void> {
+export async function runCodeReview(cwd: string): Promise<Map<string, Array<CodeReviewIssue>>> {
   if (!(await checkIfDevmateInstalled(cwd))) {
-    return;
+    throw new Error('Devmate is not installed.');
   }
 
   // Run code review
@@ -26,17 +28,33 @@ export async function runCodeReview(cwd: string): Promise<void> {
     // Devmate failed to run code review
     console.log('Devmate failed to run code review.');
     console.log(codeReviewResult.stderr);
-    return;
+    throw new Error('Devmate failed to run code review.');
   }
 
   console.log('Code review completed successfully!');
   // Parse the output of the code review command
+  let parsedResults: Array<CodeReviewResult> = [];
   try {
-    const parsedResult = parseDevmateResponse(codeReviewResult.stdout);
-    console.log('Code review result:', parsedResult);
+    parsedResults = parseDevmateResponse(codeReviewResult.stdout);
+    console.log('Code review result:', parsedResults);
   } catch (error) {
     console.error('Error parsing code review result:', error);
+    throw new Error(`Error parsing code review result: ${error}`);
   }
+
+  const fileToIssueMap = new Map<string, Array<CodeReviewIssue>>();
+  for (const result of parsedResults) {
+    for (const issue of result.codeIssues) {
+      const filePath = joinPaths(cwd, issue.filepath);
+      if (fileToIssueMap.has(filePath)) {
+        fileToIssueMap.get(filePath)?.push({...issue, filepath: filePath});
+      } else {
+        fileToIssueMap.set(filePath, [{...issue, filepath: filePath}]);
+      }
+    }
+  }
+
+  return fileToIssueMap;
 }
 
 async function checkIfDevmateInstalled(cwd: string): Promise<boolean> {
@@ -52,18 +70,6 @@ async function checkIfDevmateInstalled(cwd: string): Promise<boolean> {
   }
   return true;
 }
-
-/* Format is subject to change */
-type CodeReviewResult = {
-  reviewerName: string;
-  codeIssues: Array<{
-    filepath: string;
-    description: string;
-    start_line: number;
-    end_line: number;
-    severity: 'error' | 'warning' | 'information';
-  }>;
-};
 
 function parseDevmateResponse(devmateResponse: string): Array<CodeReviewResult> {
   // Remove box-drawing characters and pipes, and normalize whitespace

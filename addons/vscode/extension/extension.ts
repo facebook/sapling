@@ -73,6 +73,13 @@ export async function activate(
         context.subscriptions.push(inlineCommentsProvider);
       }
     }
+    let firstPassCodeReviewDiagnosticsProvider;
+    if (Internal.firstPassCodeReviewDiagnosticsProvider != null) {
+      firstPassCodeReviewDiagnosticsProvider = Internal.firstPassCodeReviewDiagnosticsProvider();
+      if (firstPassCodeReviewDiagnosticsProvider != null) {
+        context.subscriptions.push(firstPassCodeReviewDiagnosticsProvider);
+      }
+    }
     if (Internal.SaplingISLUriHandler != null) {
       context.subscriptions.push(
         vscode.window.registerUriHandler(
