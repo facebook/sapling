@@ -613,14 +613,20 @@ struct WorkingCopyGc : public EdenFSEvent {
 struct SilentDaemonExit : public EdenFSEvent {
   uint64_t last_daemon_heartbeat = 0;
   uint8_t daemon_exit_signal = 0;
+  uint64_t last_mac_boot_timestamp = 0;
 
-  SilentDaemonExit(uint64_t last_daemon_heartbeat, uint8_t daemon_exit_signal)
+  SilentDaemonExit(
+      uint64_t last_daemon_heartbeat,
+      uint8_t daemon_exit_signal,
+      uint64_t last_mac_boot_timestamp = 0)
       : last_daemon_heartbeat(last_daemon_heartbeat),
-        daemon_exit_signal(daemon_exit_signal) {}
+        daemon_exit_signal(daemon_exit_signal),
+        last_mac_boot_timestamp(last_mac_boot_timestamp) {}
 
   void populate(DynamicEvent& event) const override {
     event.addInt("last_daemon_heartbeat", last_daemon_heartbeat);
     event.addInt("exit_signal", daemon_exit_signal);
+    event.addInt("last_mac_boot_timestamp", last_mac_boot_timestamp);
   }
 
   const char* getType() const override {
