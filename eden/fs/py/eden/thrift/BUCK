@@ -28,3 +28,16 @@ python_library(
         "//thrift/lib/py:server_base",
     ],
 )
+
+python_library(
+    name = "client",
+    srcs = ["client.py"],
+    base_module = "eden.thrift",
+    labels = ["autodeps2_generated"],
+    deps = [
+        "//eden/fs/service:thrift-python-clients",
+        "//eden/fs/service:thrift-python-services",
+        "//eden/fs/service:thrift-python-types",
+        "//thrift/lib/python/client:base",
+    ],
+)
