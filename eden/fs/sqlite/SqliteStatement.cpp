@@ -26,7 +26,7 @@ SqliteStatement::SqliteStatement(
 }
 
 bool SqliteStatement::step() {
-  XLOG(DBG9) << "Executing: " << sqlite3_sql(stmt_);
+  XLOGF(DBG9, "Executing: {}", sqlite3_sql(stmt_));
   auto result = sqlite3_step(stmt_);
   switch (result) {
     case SQLITE_ROW:
@@ -77,7 +77,7 @@ void SqliteStatement::bind(size_t paramNo, uint32_t id) {
 }
 
 void SqliteStatement::reset() {
-  XLOG(DBG9) << "reset bindings";
+  XLOG(DBG9, "reset bindings");
   // We are intentionally not checking the result here since `sqlite3_reset`
   // will simply return the same result from `sqlite3_step` -- it should already
   // be handled.

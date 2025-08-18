@@ -432,7 +432,7 @@ void xlogsAfterSuccessAreWrittenToStandardErrorChild() {
   auto startupStatusChannel = std::make_shared<StartupStatusChannel>();
   auto logger = ForegroundStartupLogger{startupStatusChannel};
   logger.success(31);
-  XLOG(ERR) << "test error message with xlog";
+  XLOG(ERR, "test error message with xlog");
 }
 
 TEST(ForegroundStartupLoggerTest, successWritesStartedMessageToStandardError) {
@@ -547,7 +547,7 @@ FunctionResult runFunctionInSeparateProcess(
         auto argument = std::string{arguments.at(0)};
         function(std::move(argument));
       } else {
-        XLOG(FATAL) << "Unsupported function type";
+        XLOG(FATAL, "Unsupported function type");
       }
       std::exit(0);
     }

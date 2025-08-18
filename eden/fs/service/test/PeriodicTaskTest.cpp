@@ -96,10 +96,10 @@ class PeriodicTaskTest : public ::testing::Test {
     // because EdenServer took a long time to start, so our 200ms timeout
     // expired before the server had actually run for any significant length of
     // time.
-    XLOG(INFO) << "serve start";
+    XLOG(INFO, "serve start");
     auto& thriftServer = getServer().getServer();
     thriftServer->serve();
-    XLOG(INFO) << "serve done";
+    XLOG(INFO, "serve done");
   }
 
   /**
@@ -125,7 +125,7 @@ class PeriodicTaskTest : public ::testing::Test {
           --delayLoops_;
           eventBase_->runInLoop(this);
         } else {
-          XLOG(INFO) << "server started";
+          XLOG(INFO, "server started");
           fn_();
           delete this;
         }
@@ -171,17 +171,17 @@ PeriodicTaskTest::MultiTaskResult PeriodicTaskTest::runMultipleTasks(
   size_t tasksRunning = numTasks;
   for (size_t n = 0; n < numTasks; ++n) {
     tasks.emplace_back(&server, folly::to<string>("task", n), [&, n] {
-      XLOG(INFO) << "task " << n << " iteration " << taskInvocations[n].size();
+      XLOGF(INFO, "task {} iteration {}", n, taskInvocations[n].size());
       taskInvocations[n].emplace_back();
       if (taskInvocations[n].size() == runsPerTask) {
-        XLOG(INFO) << "stopping task " << n;
+        XLOGF(INFO, "stopping task {}", n);
         tasks[n].updateInterval(0ms);
         --tasksRunning;
         if (tasksRunning == 0) {
           server.stop();
         }
       } else if (taskInvocations[n].size() > runsPerTask) {
-        XLOG(FATAL) << "task " << n << " invoked too many times";
+        XLOGF(FATAL, "task {} invoked too many times", n);
       }
     });
   }

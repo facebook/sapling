@@ -33,13 +33,13 @@ void checkSqliteResult(sqlite3* db, int result) {
         result,
         sqlite3_errstr(result),
         sqlite3_errmsg(db));
-    XLOG(DBG6) << error;
+    XLOG(DBG6, error);
     throw std::runtime_error(error);
   } else {
     // otherwise resort to a simpler number->string mapping
     auto error =
         fmt::format("sqlite error ({}): {}", result, sqlite3_errstr(result));
-    XLOG(DBG6) << error;
+    XLOG(DBG6, error);
     throw std::runtime_error(error);
   }
 }
@@ -124,14 +124,14 @@ void SqliteDatabase::transaction(
     cache_->commitTransaction.get(conn)->step();
   } catch (const std::exception& ex) {
     cache_->rollbackTransaction.get(conn)->step();
-    XLOG(WARN) << "SQLite transaction failed: " << ex.what();
+    XLOGF(WARN, "SQLite transaction failed: {}", ex.what());
     throw;
   }
 }
 
 void SqliteDatabase::checkpoint() {
   if (auto conn = conn_.tryWLock()) {
-    XLOG(DBG6) << "Checkpoint thread acquired SQLite lock";
+    XLOG(DBG6, "Checkpoint thread acquired SQLite lock");
     try {
       int pnLog, pnCkpt;
       checkSqliteResult(
@@ -147,7 +147,7 @@ void SqliteDatabase::checkpoint() {
       // Exception is logged in `checkSqliteResult`
     }
   } else {
-    XLOG(DBG6) << "Checkpoint skipped: write lock is held by other threads";
+    XLOG(DBG6, "Checkpoint skipped: write lock is held by other threads");
   }
 }
 } // namespace facebook::eden
