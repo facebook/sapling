@@ -1155,13 +1155,13 @@ export default class ServerToClientAPI {
           .then((result: EjecaReturn) => {
             this.postMessage({
               type: 'devmateCommandResult',
-              result: {type: 'value', stdout: result.stdout},
+              result: {type: 'value', stdout: result.stdout, requestId: data.requestId},
             });
           })
           .catch((error: EjecaError) => {
             this.postMessage({
               type: 'devmateCommandResult',
-              result: {type: 'error', stderr: error.stderr},
+              result: {type: 'error', stderr: error.stderr, requestId: data.requestId},
             });
           });
         break;

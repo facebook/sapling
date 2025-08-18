@@ -7,9 +7,12 @@
 
 /* eslint-disable no-console */
 
+import {randomId} from 'shared/utils';
 import serverAPI from '../ClientToServerAPI';
 import {joinPaths} from '../CwdSelector';
 import type {CodeReviewResult, CodeReviewIssue} from './types';
+
+const REQUEST_PREFIX = 'code-review-';
 
 export async function runCodeReview(cwd: string): Promise<Map<string, Array<CodeReviewIssue>>> {
   if (!(await checkIfDevmateInstalled(cwd))) {
@@ -17,13 +20,19 @@ export async function runCodeReview(cwd: string): Promise<Map<string, Array<Code
   }
 
   // Run code review
+  const devmateCodeReviewRequestId = `${REQUEST_PREFIX}${randomId()}`;
   serverAPI.postMessage({
     type: 'runDevmateCommand',
     args: ['run', 'mcp_servers/code_review/review_code.md'],
     cwd,
+    requestId: devmateCodeReviewRequestId,
   });
-  const codeReviewResult = (await serverAPI.nextMessageMatching('devmateCommandResult', () => true))
-    .result;
+  const codeReviewResult = (
+    await serverAPI.nextMessageMatching(
+      'devmateCommandResult',
+      message => message.result.requestId === devmateCodeReviewRequestId,
+    )
+  ).result;
   if (codeReviewResult.type === 'error') {
     // Devmate failed to run code review
     console.log('Devmate failed to run code review.');
@@ -58,9 +67,18 @@ export async function runCodeReview(cwd: string): Promise<Map<string, Array<Code
 }
 
 async function checkIfDevmateInstalled(cwd: string): Promise<boolean> {
-  serverAPI.postMessage({type: 'runDevmateCommand', args: ['--help'], cwd});
+  const devmateHelpRequestId = `${REQUEST_PREFIX}${randomId()}`;
+  serverAPI.postMessage({
+    type: 'runDevmateCommand',
+    args: ['--help'],
+    cwd,
+    requestId: devmateHelpRequestId,
+  });
   const devmateInstallationStatus = (
-    await serverAPI.nextMessageMatching('devmateCommandResult', () => true)
+    await serverAPI.nextMessageMatching(
+      'devmateCommandResult',
+      message => message.result.requestId === devmateHelpRequestId,
+    )
   ).result;
   if (devmateInstallationStatus.type === 'error') {
     // Devmate is not available, so we can't run code review

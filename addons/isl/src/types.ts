@@ -988,6 +988,7 @@ export type ClientToServerMessage =
       type: 'runDevmateCommand';
       args: Array<string>;
       cwd: string;
+      requestId: string;
     };
 
 export type SubscriptionResultsData = {
@@ -1132,7 +1133,7 @@ export type ServerToClientMessage =
     }
   | {
       type: 'devmateCommandResult';
-      result:
+      result: (
         | {
             type: 'value';
             stdout: string;
@@ -1140,7 +1141,8 @@ export type ServerToClientMessage =
         | {
             type: 'error';
             stderr: string;
-          };
+          }
+      ) & {requestId: string};
     };
 
 export type Disposable = {
