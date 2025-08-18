@@ -104,7 +104,15 @@ function SmartActions({commit, dismiss}: {commit?: CommitInfo; dismiss: () => vo
   );
   // For now, only support this in VS Code since the devmate can only be triggered from VS Code
   if (devmateGenerateTestsForModifiedCodeEnabled && platform.platformName === 'vscode') {
-    actions.push(<GenerateTestsForModifiedCodeButton key="generate-tests" dismiss={dismiss} />);
+    const enabled = !commit || commit.isDot; // Enabled for `uncommitted changes` or the `current commit`.
+    actions.push(
+      <GenerateTestsForModifiedCodeButton
+        key="generate-tests"
+        dismiss={dismiss}
+        disabled={!enabled}
+        disabledReason="This action is only available for the current commit and uncommitted changes."
+      />,
+    );
   }
 
   const devmateGenerateCommitMessageEnabled = useAtomValue(
@@ -252,7 +260,15 @@ function ResolveFailedSignalsButton({
   return disabled ? <Tooltip title={disabledReason}>{button}</Tooltip> : button;
 }
 
-function GenerateTestsForModifiedCodeButton({dismiss}: {dismiss: () => void}) {
+function GenerateTestsForModifiedCodeButton({
+  dismiss,
+  disabled,
+  disabledReason,
+}: {
+  dismiss: () => void;
+  disabled?: boolean;
+  disabledReason?: string;
+}) {
   const button = (
     <Button
       data-testid="generate-tests-for-modified-code-button"
@@ -262,10 +278,12 @@ function GenerateTestsForModifiedCodeButton({dismiss}: {dismiss: () => void}) {
         });
         dismiss();
         e.stopPropagation();
-      }}>
+      }}
+      disabled={disabled}>
       <Icon icon="sparkle" />
       <T>Generate tests for changes</T>
     </Button>
   );
-  return button;
+
+  return disabled ? <Tooltip title={disabledReason}>{button}</Tooltip> : button;
 }
