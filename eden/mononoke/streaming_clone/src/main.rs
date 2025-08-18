@@ -36,8 +36,8 @@ use mercurial_revlog::revlog::Revlog;
 use mononoke_app::MononokeApp;
 use mononoke_app::MononokeAppBuilder;
 use mononoke_app::args::RepoArgs;
-use repo_blobstore::RepoBlobstore;
-use repo_blobstore::RepoBlobstoreRef;
+use mutable_blobstore::MutableRepoBlobstore;
+use mutable_blobstore::MutableRepoBlobstoreRef;
 use repo_identity::RepoIdentity;
 use repo_identity::RepoIdentityRef;
 use slog::Logger;
@@ -98,7 +98,7 @@ struct Repo {
     repo_identity: RepoIdentity,
 
     #[facet]
-    repo_blobstore: RepoBlobstore,
+    mutable_repo_blobstore: MutableRepoBlobstore,
 
     #[facet]
     streaming_clone: StreamingClone,
@@ -430,7 +430,7 @@ async fn upload_data(
 
     let key = generate_key(chunk_id, &data, suffix);
 
-    repo.repo_blobstore()
+    repo.mutable_repo_blobstore()
         .put(ctx, key.clone(), BlobstoreBytes::from_bytes(data))
         .await?;
 

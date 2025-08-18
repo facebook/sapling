@@ -13,7 +13,7 @@ use context::PerfCounterType;
 use futures::future::BoxFuture;
 use futures::future::FutureExt;
 use mononoke_types::RepositoryId;
-use repo_blobstore::ArcRepoBlobstore;
+use mutable_blobstore::ArcMutableRepoBlobstore;
 use sql_construct::SqlConstruct;
 use sql_construct::SqlConstructFromMetadataDatabaseConfig;
 use sql_ext::SqlConnections;
@@ -24,7 +24,7 @@ use thiserror::Error;
 pub struct StreamingClone {
     connections: SqlConnections,
     repo_id: RepositoryId,
-    repo_blobstore: ArcRepoBlobstore,
+    mutable_repo_blobstore: ArcMutableRepoBlobstore,
 }
 
 pub struct StreamingCloneBuilder {
@@ -124,11 +124,15 @@ impl SqlConstruct for StreamingCloneBuilder {
 impl SqlConstructFromMetadataDatabaseConfig for StreamingCloneBuilder {}
 
 impl StreamingCloneBuilder {
-    pub fn build(self, repo_id: RepositoryId, repo_blobstore: ArcRepoBlobstore) -> StreamingClone {
+    pub fn build(
+        self,
+        repo_id: RepositoryId,
+        mutable_repo_blobstore: ArcMutableRepoBlobstore,
+    ) -> StreamingClone {
         StreamingClone {
             connections: self.connections,
             repo_id,
-            repo_blobstore,
+            mutable_repo_blobstore,
         }
     }
 }
@@ -200,13 +204,13 @@ impl StreamingClone {
                 res.index_size += idx_size;
                 res.data_blobs.push(fetch_blob(
                     ctx.clone(),
-                    self.repo_blobstore.clone(),
+                    self.mutable_repo_blobstore.clone(),
                     &data_blob_name,
                     data_size,
                 ));
                 res.index_blobs.push(fetch_blob(
                     ctx.clone(),
-                    self.repo_blobstore.clone(),
+                    self.mutable_repo_blobstore.clone(),
                     &idx_blob_name,
                     idx_size,
                 ));

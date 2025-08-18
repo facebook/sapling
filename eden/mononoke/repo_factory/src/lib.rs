@@ -1777,13 +1777,13 @@ impl RepoFactory {
         &self,
         repo_config: &ArcRepoConfig,
         repo_identity: &ArcRepoIdentity,
-        repo_blobstore: &ArcRepoBlobstore,
+        mutable_repo_blobstore: &ArcMutableRepoBlobstore,
     ) -> Result<ArcStreamingClone> {
         let streaming_clone = self
             .open_sql::<StreamingCloneBuilder>(repo_config)
             .await
             .context(RepoFactoryError::StreamingClone)?
-            .build(repo_identity.id(), repo_blobstore.clone());
+            .build(repo_identity.id(), mutable_repo_blobstore.clone());
         Ok(Arc::new(streaming_clone))
     }
 

@@ -865,11 +865,11 @@ impl TestRepoFactory {
     pub fn streaming_clone(
         &self,
         repo_identity: &ArcRepoIdentity,
-        repo_blobstore: &ArcRepoBlobstore,
+        mutable_repo_blobstore: &ArcMutableRepoBlobstore,
     ) -> ArcStreamingClone {
         Arc::new(
             StreamingCloneBuilder::from_sql_connections(self.metadata_db.clone())
-                .build(repo_identity.id(), repo_blobstore.clone()),
+                .build(repo_identity.id(), mutable_repo_blobstore.clone()),
         )
     }
 
