@@ -978,6 +978,11 @@ export type ClientToServerMessage =
       type: 'fetchABPropDetails';
       id: string;
       name: string;
+    }
+  | {
+      type: 'runDevmateCommand';
+      args: Array<string>;
+      cwd: string;
     };
 
 export type SubscriptionResultsData = {
@@ -1119,6 +1124,18 @@ export type ServerToClientMessage =
       type: 'fetchedTaskDetails';
       id: string;
       result: Result<InternalTypes['InternalTaskDetails']>;
+    }
+  | {
+      type: 'devmateCommandResult';
+      result:
+        | {
+            type: 'value';
+            stdout: string;
+          }
+        | {
+            type: 'error';
+            stderr: string;
+          };
     };
 
 export type Disposable = {

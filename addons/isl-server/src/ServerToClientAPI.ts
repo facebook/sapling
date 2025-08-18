@@ -23,7 +23,7 @@ import type {
   StableLocationData,
   SubmodulesByRoot,
 } from 'isl/src/types';
-import type {EjecaError} from 'shared/ejeca';
+import type {EjecaError, EjecaReturn} from 'shared/ejeca';
 import type {ExportStack, ImportedStack} from 'shared/types/stack';
 import type {ClientConnection} from '.';
 import type {RepositoryReference} from './RepositoryCache';
@@ -1148,6 +1148,22 @@ export default class ServerToClientAPI {
             this.postMessage({type: 'fetchedTaskDetails', id: data.id, result: {value: task}});
           },
         );
+        break;
+      }
+      case 'runDevmateCommand': {
+        Internal.runDevmateCommand?.(data.args, data.cwd)
+          .then((result: EjecaReturn) => {
+            this.postMessage({
+              type: 'devmateCommandResult',
+              result: {type: 'value', stdout: result.stdout},
+            });
+          })
+          .catch((error: EjecaError) => {
+            this.postMessage({
+              type: 'devmateCommandResult',
+              result: {type: 'error', stderr: error.stderr},
+            });
+          });
         break;
       }
       default: {
