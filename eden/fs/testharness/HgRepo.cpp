@@ -142,7 +142,7 @@ void HgRepo::cloneFrom(
   args.insert(args.end(), extraArgs.begin(), extraArgs.end());
   args.push_back(serverRepoUrl.str());
   args.push_back(path_.value());
-  XLOG(DBG1) << "running: " << folly::join(" ", args);
+  XLOGF(DBG1, "running: {}", folly::join(" ", args));
 
   SpawnedProcess::Options opts;
   opts.executablePath(hgCmd_);

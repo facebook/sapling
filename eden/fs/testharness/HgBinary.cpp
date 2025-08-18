@@ -53,7 +53,7 @@ AbsolutePath findHgBinary() {
   for (const auto& dir : pathEnvParts) {
     for (const auto& name : {"hg.real", "hg.real.exe", "hg", "hg.exe"}) {
       auto exePath = folly::to<std::string>(dir, "/", name);
-      XLOG(DBG5) << "Checking for hg at " << exePath;
+      XLOGF(DBG5, "Checking for hg at {}", exePath);
       if (access(exePath.c_str(), X_OK) == 0) {
         return realpath(exePath);
       }

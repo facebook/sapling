@@ -164,14 +164,14 @@ std::vector<std::unordered_map<std::string, std::string>> parseProcSmaps(
       headerFound = true;
     } else {
       if (!headerFound) {
-        XLOG(WARN) << "Failed to parse smaps file ";
+        XLOG(WARN, "Failed to parse smaps file");
         continue;
       }
       auto keyValue = getKeyValuePair(line, ":");
       if (!keyValue.first.empty()) {
         currentMap[keyValue.first] = keyValue.second;
       } else {
-        XLOG(WARN) << "Failed to parse smaps field in smaps file ";
+        XLOG(WARN, "Failed to parse smaps field in smaps file");
       }
     }
   }
@@ -191,7 +191,7 @@ std::vector<std::unordered_map<std::string, std::string>> loadProcSmaps(
     std::ifstream input(procSmapsPath.data());
     return parseProcSmaps(input);
   } catch (const std::exception& ex) {
-    XLOG(WARN) << "Failed to parse memory usage: " << ex.what();
+    XLOGF(WARN, "Failed to parse memory usage: {}", ex.what());
   }
   return std::vector<std::unordered_map<std::string, std::string>>();
 }
@@ -208,17 +208,25 @@ std::optional<size_t> calculatePrivateBytes(
         try {
           count += std::stoull(countString) * 1024;
         } catch (const std::invalid_argument& ex) {
-          XLOG(WARN) << "Failed to extract long from /proc/smaps value ''"
-                     << countString << "' error: " << ex.what();
+          XLOGF(
+              WARN,
+              "Failed to extract long from /proc/smaps value '{}' error: {}",
+              countString,
+              ex.what());
           return std::nullopt;
         } catch (const std::out_of_range& ex) {
-          XLOG(WARN) << "Failed to extract long from proc/status value ''"
-                     << countString << "' error: " << ex.what();
+          XLOGF(
+              WARN,
+              "Failed to extract long from proc/status value '{}' error: {}",
+              countString,
+              ex.what());
           return std::nullopt;
         }
       } else {
-        XLOG(WARN) << "Failed to find Private_Dirty units in: "
-                   << kLinuxProcSmapsPath;
+        XLOGF(
+            WARN,
+            "Failed to find Private_Dirty units in: {}",
+            kLinuxProcSmapsPath);
         return std::nullopt;
       }
     }
@@ -233,7 +241,7 @@ std::optional<size_t> calculatePrivateBytes() {
     std::ifstream input(kLinuxProcSmapsPath.data());
     return calculatePrivateBytes(parseProcSmaps(input));
   } catch (const std::exception& ex) {
-    XLOG(WARN) << "Failed to parse file " << kLinuxProcSmapsPath << ex.what();
+    XLOGF(WARN, "Failed to parse file {}: {}", kLinuxProcSmapsPath, ex.what());
     return std::nullopt;
   }
 #else

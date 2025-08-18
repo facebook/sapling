@@ -458,8 +458,10 @@ void TestMount::remountGracefully() {
       << "All references to EdenMount should be released before calling "
          "remountGracefully()";
 
-  XLOG(DBG1) << "number of unloaded inodes transferred on graceful remount: "
-             << takeoverData.unloadedInodes()->size();
+  XLOGF(
+      DBG1,
+      "number of unloaded inodes transferred on graceful remount: {}",
+      takeoverData.unloadedInodes()->size());
 
   // Create a new EdenMount object.
   edenMount_ = EdenMount::create(
