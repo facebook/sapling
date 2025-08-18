@@ -142,6 +142,10 @@ impl DagItemInfo {
     pub fn retry_count(&self) -> u64 {
         self.retry_count
     }
+
+    pub fn head_cs_id(&self) -> ChangesetId {
+        self.head_cs_id
+    }
 }
 
 impl DerivationDagItem {
