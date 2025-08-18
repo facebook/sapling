@@ -748,24 +748,20 @@ impl Request {
             easy.post_redirections(PostRedirections::new().redirect_all(true))?;
         }
 
-        match self.http_proxy_host {
-            Some(host) => {
-                easy.proxy(&host)?;
-            }
-            None => match std::env::var("HTTP_PROXY") {
-                Ok(proxy) => easy.proxy(&proxy)?,
-                Err(_) => (),
-            },
+        if let Some(proxy) = self.http_proxy_host {
+            easy.proxy(&proxy)?;
+        } else if let Ok(proxy) = std::env::var("http_proxy") {
+            easy.proxy(&proxy)?;
+        } else if let Ok(proxy) = std::env::var("HTTP_PROXY") {
+            easy.proxy(&proxy)?;
         }
 
-        match self.http_no_proxy {
-            Some(no_proxy) => {
-                easy.noproxy(&no_proxy)?;
-            }
-            None => match std::env::var("NO_PROXY") {
-                Ok(no_proxy) => easy.noproxy(&no_proxy)?,
-                Err(_) => (),
-            },
+        if let Some(no_proxy) = self.http_no_proxy {
+            easy.noproxy(&no_proxy)?;
+        } else if let Ok(no_proxy) = std::env::var("no_proxy") {
+            easy.noproxy(&no_proxy)?;
+        } else if let Ok(no_proxy) = std::env::var("NO_PROXY") {
+            easy.noproxy(&no_proxy)?;
         }
 
         // Configure the handle for the desired HTTP method.
