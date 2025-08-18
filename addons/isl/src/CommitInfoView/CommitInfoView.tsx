@@ -109,6 +109,7 @@ import {useFeatureFlagSync} from '../featureFlags';
 import {Internal} from '../Internal';
 import {confirmSuggestedEditsForFiles} from '../SuggestedEdits';
 import './CommitInfoView.css';
+import {CodeReviewStatus} from '../firstPassCodeReview/CodeReviewStatus';
 
 export function CommitInfoSidebar() {
   const commitsToShow = useAtomValue(commitInfoViewCurrentCommits);
@@ -184,6 +185,9 @@ function useFetchActiveDiffDetails(diffId?: string) {
 
 export function CommitInfoDetails({commit}: {commit: CommitInfo}) {
   const rollbackFeatureEnabled = useFeatureFlagSync(Internal.featureFlags?.ShowRollbackPlan);
+  const aiFirstPassCodeReviewEnabled = useFeatureFlagSync(
+    Internal.featureFlags?.AIFirstPassCodeReview,
+  );
   const [mode, setMode] = useAtom(commitMode);
   const isCommitMode = mode === 'commit';
   const hashOrHead = isCommitMode ? 'head' : commit.hash;
@@ -418,6 +422,7 @@ export function CommitInfoDetails({commit}: {commit: CommitInfo}) {
             <FoldPreviewActions />
           ) : (
             <>
+              {aiFirstPassCodeReviewEnabled && <CodeReviewStatus />}
               <ActionsBar
                 commit={commit}
                 latestMessage={parsedFields}
