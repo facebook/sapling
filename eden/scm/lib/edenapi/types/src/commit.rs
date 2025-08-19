@@ -421,6 +421,60 @@ pub struct FetchSnapshotResponse {
     pub labels: Vec<String>,
 }
 
+/// A cacheable version of snapshot data compatible with FetchSnapshotResponse
+/// This can be constructed from local bonsai data and cached using CBOR serialization
+/// This is a separate type with an ability to diverge from the FetchSnapshotResponse
+/// All changes to this type should be backward compatible as it is used for caching
+#[derive(Clone, Debug, Deserialize, Serialize, Eq, PartialEq)]
+#[cfg_attr(any(test, feature = "for-tests"), derive(Arbitrary))]
+pub struct CacheableSnapshot {
+    /// Parent commit hashes from Mercurial
+    pub hg_parents: Parents,
+    /// List of file changes included in this snapshot
+    pub file_changes: Vec<(RepoPathBuf, BonsaiFileChange)>,
+    /// Author who created the snapshot
+    pub author: String,
+    /// Unix timestamp when the snapshot was created
+    pub time: i64,
+    /// Timezone offset in seconds from UTC
+    pub tz: i32,
+    /// Optional identifier for ephemeral commits/bubbles
+    pub bubble_id: Option<NonZeroU64>,
+    /// Labels associated with this snapshot
+    pub labels: Vec<String>,
+    /// Whether this snapshot data was retrieved from local cache bypassing the server
+    pub cached: Option<bool>,
+}
+
+impl From<CacheableSnapshot> for FetchSnapshotResponse {
+    fn from(cacheable: CacheableSnapshot) -> Self {
+        Self {
+            hg_parents: cacheable.hg_parents,
+            file_changes: cacheable.file_changes,
+            author: cacheable.author,
+            time: cacheable.time,
+            tz: cacheable.tz,
+            bubble_id: cacheable.bubble_id,
+            labels: cacheable.labels,
+        }
+    }
+}
+
+impl From<FetchSnapshotResponse> for CacheableSnapshot {
+    fn from(response: FetchSnapshotResponse) -> Self {
+        Self {
+            hg_parents: response.hg_parents,
+            file_changes: response.file_changes,
+            author: response.author,
+            time: response.time,
+            tz: response.tz,
+            bubble_id: response.bubble_id,
+            labels: response.labels,
+            cached: Some(false), // Mark as not cached when converting from FetchSnapshotResponse
+        }
+    }
+}
+
 #[derive(Clone, Debug, Deserialize, Serialize, Eq, PartialEq)]
 #[cfg_attr(any(test, feature = "for-tests"), derive(Arbitrary))]
 #[auto_wire]

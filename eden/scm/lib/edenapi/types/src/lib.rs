@@ -112,6 +112,7 @@ pub use crate::commit::AlterSnapshotRequest;
 pub use crate::commit::AlterSnapshotResponse;
 pub use crate::commit::BonsaiChangesetContent;
 pub use crate::commit::BonsaiFileChange;
+pub use crate::commit::CacheableSnapshot;
 pub use crate::commit::CommitGraphEntry;
 pub use crate::commit::CommitGraphRequest;
 pub use crate::commit::CommitGraphSegmentParent;

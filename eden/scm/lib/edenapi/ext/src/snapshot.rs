@@ -10,7 +10,6 @@ use std::collections::BTreeSet;
 use std::fmt;
 use std::num::NonZeroU64;
 use std::ops::AddAssign;
-use std::sync::Arc;
 use std::sync::atomic::AtomicUsize;
 use std::sync::atomic::Ordering;
 use std::time::Duration;
@@ -25,6 +24,7 @@ use edenapi_types::AnyFileContentId;
 use edenapi_types::AnyId;
 use edenapi_types::BonsaiChangesetContent;
 use edenapi_types::BonsaiFileChange;
+use edenapi_types::CacheableSnapshot;
 use edenapi_types::ContentId;
 use edenapi_types::FileType;
 use edenapi_types::RepoPathBuf;
@@ -303,10 +303,13 @@ pub async fn upload_snapshot_with_cache(
             .context("Failed to extend ephemeral bubble lifetime")?;
         id
     } else {
-        api.ephemeral_prepare(custom_duration_secs.map(Duration::from_secs), labels)
-            .await
-            .context("Failed to create ephemeral bubble")?
-            .bubble_id
+        api.ephemeral_prepare(
+            custom_duration_secs.map(Duration::from_secs),
+            labels.clone(),
+        )
+        .await
+        .context("Failed to create ephemeral bubble")?
+        .bubble_id
     };
     let file_content_tokens = {
         let downcast_error = "incorrect upload token, failed to downcast 'token.data.id' to 'AnyId::AnyFileContentId::ContentId' type";
@@ -331,51 +334,53 @@ pub async fn upload_snapshot_with_cache(
         })
         .collect::<Result<BTreeMap<_, _>, _>>()?
     };
+    let file_changes = need_upload
+        .into_iter()
+        .map(|FileMetadata(path, file_type, cid, tracked)| {
+            let upload_token = file_content_tokens
+                .get(&cid)
+                .with_context(|| {
+                    format_err!(
+                        "unexpected error: upload token is missing for ContentId({})",
+                        cid
+                    )
+                })?
+                .clone();
+            let change = if tracked == Tracked {
+                BonsaiFileChange::Change {
+                    file_type,
+                    upload_token,
+                    copy_info: None, // TODO(yancouto): Add copy info on tracked changes
+                }
+            } else {
+                BonsaiFileChange::UntrackedChange {
+                    file_type,
+                    upload_token,
+                }
+            };
+            Ok((path, change))
+        })
+        .chain(
+            removed
+                .into_iter()
+                .map(|path| Ok((path, BonsaiFileChange::Deletion))),
+        )
+        .chain(
+            missing
+                .into_iter()
+                .map(|path| Ok((path, BonsaiFileChange::UntrackedDeletion))),
+        )
+        .collect::<anyhow::Result<Vec<_>>>()?;
+
     let changeset_response = api
         .upload_bonsai_changeset(
             BonsaiChangesetContent {
                 hg_parents,
-                author,
+                author: author.clone(),
                 time,
                 tz,
                 extra: vec![],
-                file_changes: need_upload
-                    .into_iter()
-                    .map(|FileMetadata(path, file_type, cid, tracked)| {
-                        let upload_token = file_content_tokens
-                            .get(&cid)
-                            .with_context(|| {
-                                format_err!(
-                                    "unexpected error: upload token is missing for ContentId({})",
-                                    cid
-                                )
-                            })?
-                            .clone();
-                        let change = if tracked == Tracked {
-                            BonsaiFileChange::Change {
-                                file_type,
-                                upload_token,
-                                copy_info: None, // TODO(yancouto): Add copy info on tracked changes
-                            }
-                        } else {
-                            BonsaiFileChange::UntrackedChange {
-                                file_type,
-                                upload_token,
-                            }
-                        };
-                        Ok((path, change))
-                    })
-                    .chain(
-                        removed
-                            .into_iter()
-                            .map(|path| Ok((path, BonsaiFileChange::Deletion))),
-                    )
-                    .chain(
-                        missing
-                            .into_iter()
-                            .map(|path| Ok((path, BonsaiFileChange::UntrackedDeletion))),
-                    )
-                    .collect::<anyhow::Result<_>>()?,
+                file_changes: file_changes.clone(),
                 message: "".to_string(),
                 is_snapshot: true,
             },
@@ -391,8 +396,82 @@ pub async fn upload_snapshot_with_cache(
         }
     }
 
+    // Cache the snapshot data if caching is enabled
+    if let Some(cache) = cache {
+        if let AnyId::BonsaiChangesetId(changeset_id) = changeset_response.token.data.id {
+            let cacheable_snapshot = CacheableSnapshot {
+                hg_parents,
+                file_changes,
+                author,
+                time,
+                tz,
+                bubble_id: Some(bubble_id),
+                labels: labels.unwrap_or_default(),
+                cached: None, // Don't store the cached flag
+            };
+
+            if let Err(e) = cache.store_snapshot(changeset_id, &cacheable_snapshot) {
+                tracing::warn!("Failed to cache snapshot data: {}", e);
+            } else {
+                tracing::debug!(
+                    "Successfully cached snapshot data for changeset: {}",
+                    changeset_id
+                );
+            }
+        } else {
+            tracing::warn!("Unexpected changeset token type, cannot cache snapshot");
+        }
+    }
+
     Ok(UploadSnapshotResponse {
         changeset_token: changeset_response.token,
         bubble_id,
     })
+}
+
+/// Fetch snapshot with optional local cache support
+/// This function checks the cache first before making a remote request
+pub async fn fetch_snapshot_with_cache(
+    api: &(impl SaplingRemoteApi + ?Sized),
+    request: edenapi_types::FetchSnapshotRequest,
+    cache: Option<SharedSnapshotFileCache>,
+) -> Result<edenapi_types::CacheableSnapshot, edenapi::SaplingRemoteApiError> {
+    // Check cache first if available
+    if let Some(cache) = &cache {
+        if let Ok(Some(mut cached_snapshot)) = cache.get_snapshot(&request.cs_id) {
+            cached_snapshot.cached = Some(true); // Mark as cached
+            return Ok(cached_snapshot);
+        }
+    }
+
+    // Fetch from remote if not in cache
+    tracing::debug!(
+        "Fetching snapshot from remote for changeset: {}",
+        request.cs_id
+    );
+    let response = api.fetch_snapshot(request.clone()).await?;
+
+    // Convert to CacheableSnapshot and mark as not cached
+    let mut cacheable_snapshot: edenapi_types::CacheableSnapshot = response.into();
+    cacheable_snapshot.cached = Some(false);
+
+    // Cache the response if caching is enabled
+    if let Some(cache) = cache {
+        // Create a version without the cached flag for storage
+        let storage_snapshot = edenapi_types::CacheableSnapshot {
+            hg_parents: cacheable_snapshot.hg_parents.clone(),
+            file_changes: cacheable_snapshot.file_changes.clone(),
+            author: cacheable_snapshot.author.clone(),
+            time: cacheable_snapshot.time,
+            tz: cacheable_snapshot.tz,
+            bubble_id: cacheable_snapshot.bubble_id,
+            labels: cacheable_snapshot.labels.clone(),
+            cached: None, // Don't store the cached flag
+        };
+
+        if let Err(e) = cache.store_snapshot(request.cs_id, &storage_snapshot) {
+            tracing::warn!("Failed to cache snapshot response: {}", e);
+        }
+    }
+    Ok(cacheable_snapshot)
 }

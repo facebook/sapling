@@ -5,11 +5,12 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-//! Local caching implementation for snapshot file content using indexedlog.
+//! Local caching implementation for snapshot cache items using indexedlog.
 //!
-//! This module provides functionality to cache file content blobs locally
-//! during snapshot upload and retrieve them during snapshot restoration,
-//! reducing the need to download files from remote storage.
+//! The cache serves dual purposes: it stores both file content blobs (indexed by their
+//! content-addressable ContentId) and snapshot changeset metadata (indexed by their
+//! BonsaiChangesetId). This unified caching approach optimizes both file retrieval
+//! and changeset metadata access during snapshot operations.
 
 use std::path::Path;
 use std::sync::Arc;
@@ -19,6 +20,8 @@ use anyhow::Result;
 use configmodel::Config;
 use configmodel::ConfigExt;
 use configmodel::convert::ByteCount;
+use edenapi_types::BonsaiChangesetId;
+use edenapi_types::CacheableSnapshot;
 use edenapi_types::ContentId;
 use indexedlog::log::IndexOutput;
 use minibytes::Bytes;
@@ -27,7 +30,7 @@ use revisionstore::indexedlogutil::StoreOpenOptions;
 use tracing::debug;
 use tracing::warn;
 
-/// Default maximum size of file content to cache (10MB)
+/// Default maximum size of cache items to cache (10MB)
 const DEFAULT_MAX_CACHE_FILE_SIZE: usize = 10 * 1024 * 1024;
 
 /// Default auto-sync threshold for indexedlog (1MB)
@@ -196,20 +199,20 @@ impl SnapshotFileCache {
         Self::with_config(cache_dir, cache_config)
     }
 
-    /// Store file content in the cache, calculating the ContentId automatically
+    /// Store cache item, calculating the ContentId automatically
     pub fn store(&mut self, content: &Bytes) -> Result<ContentId> {
         let content_id = crate::util::calc_contentid(content);
         self.store_with_content_id(content_id, content)?;
         Ok(content_id)
     }
 
-    /// Store file content in the cache using the provided ContentId
+    /// Store cache item using the provided ContentId
     /// This avoids recalculating the hash if we already have it from upload
     pub fn store_with_content_id(&mut self, content_id: ContentId, content: &Bytes) -> Result<()> {
-        // Skip caching very large files to avoid bloating the cache
+        // Skip caching very large items to avoid bloating the cache
         if content.len() > self.config.max_file_size {
             debug!(
-                "Skipping cache for large file ({} bytes > {} bytes)",
+                "Skipping cache for large item ({} bytes > {} bytes)",
                 content.len(),
                 self.config.max_file_size
             );
@@ -236,7 +239,7 @@ impl SnapshotFileCache {
         })?;
 
         debug!(
-            "Cached file content ({} bytes) with ContentId: {}",
+            "Cached content ({} bytes) with ContentId: {}",
             content.len(),
             content_id
         );
@@ -257,7 +260,7 @@ impl SnapshotFileCache {
             })
     }
 
-    /// Retrieve file content from the cache by ContentId
+    /// Retrieve cache item from the cache by ContentId
     pub fn get(&self, content_id: &ContentId) -> Result<Option<Bytes>> {
         let store_read = self.store.read();
         let lookup_result = store_read
@@ -362,7 +365,8 @@ impl OptionalSnapshotFileCache {
         Ok(Self { inner })
     }
 
-    /// Store file content in the cache, calculating the ContentId automatically (no-op if caching is disabled)
+    /// Store cache item, calculating the ContentId automatically (no-op if caching is disabled)
+    /// This assumes that the intention is to store content-addressable blobs, not metadata
     pub fn store(&mut self, content: &Bytes) -> Result<Option<ContentId>> {
         if let Some(cache) = &mut self.inner {
             Ok(Some(cache.store(content)?))
@@ -371,7 +375,7 @@ impl OptionalSnapshotFileCache {
         }
     }
 
-    /// Store file content in the cache (no-op if caching is disabled)
+    /// Store cache item (no-op if caching is disabled)
     pub fn store_with_content_id(&mut self, content_id: ContentId, content: &Bytes) -> Result<()> {
         if let Some(cache) = &mut self.inner {
             cache.store_with_content_id(content_id, content)
@@ -389,7 +393,7 @@ impl OptionalSnapshotFileCache {
         }
     }
 
-    /// Retrieve file content from the cache (returns None if caching is disabled)
+    /// Retrieve cache item from the cache (returns None if caching is disabled)
     pub fn get(&self, content_id: &ContentId) -> Result<Option<Bytes>> {
         if let Some(cache) = &self.inner {
             cache.get(content_id)
@@ -435,12 +439,12 @@ impl SharedSnapshotFileCache {
         })
     }
 
-    /// Store file content in the cache, calculating the ContentId automatically (thread-safe)
+    /// Store cache item, calculating the ContentId automatically (thread-safe)
     pub fn store(&self, content: &Bytes) -> Result<Option<ContentId>> {
         self.inner.lock().store(content)
     }
 
-    /// Store file content in the cache using ContentId (thread-safe)
+    /// Store cache item using ContentId (thread-safe)
     pub fn store_with_content_id(&self, content_id: ContentId, content: &Bytes) -> Result<()> {
         self.inner.lock().store_with_content_id(content_id, content)
     }
@@ -450,7 +454,7 @@ impl SharedSnapshotFileCache {
         self.inner.lock().contains(content_id)
     }
 
-    /// Retrieve file content from the cache by ContentId (thread-safe)
+    /// Retrieve cache item from the cache by ContentId (thread-safe)
     pub fn get(&self, content_id: &ContentId) -> Result<Option<Bytes>> {
         self.inner.lock().get(content_id)
     }
@@ -463,6 +467,53 @@ impl SharedSnapshotFileCache {
     /// Check if caching is enabled (thread-safe)
     pub fn is_enabled(&self) -> bool {
         self.inner.lock().is_enabled()
+    }
+
+    /// Store CacheableSnapshot in the cache using BonsaiChangesetId as key
+    /// Since BonsaiChangesetId and ContentId are both 32 bytes,
+    /// we can reuse the same cache infrastructure to cache the bonsai changeset and its metadata
+    pub fn store_snapshot(
+        &self,
+        changeset_id: BonsaiChangesetId,
+        snapshot: &CacheableSnapshot,
+    ) -> Result<()> {
+        // Serialize the snapshot using CBOR
+        let serialized = serde_cbor::to_vec(snapshot)
+            .context("Failed to serialize CacheableSnapshot to CBOR")?;
+        let content = Bytes::from(serialized);
+
+        // Convert BonsaiChangesetId to ContentId for storage
+        // Both are 32-byte hashes, so we can safely reinterpret BonsaiChangesetId as ContentId
+        // with compile time checks
+        let storage_key = ContentId::from_byte_array(changeset_id.into_byte_array());
+        self.store_with_content_id(storage_key, &content)
+    }
+
+    /// Retrieve CacheableSnapshot from the cache using BonsaiChangesetId as key
+    pub fn get_snapshot(
+        &self,
+        changeset_id: &BonsaiChangesetId,
+    ) -> Result<Option<CacheableSnapshot>> {
+        // Convert BonsaiChangesetId to ContentId for lookup
+        let storage_key = ContentId::from_slice(changeset_id.as_ref())
+            .context("Failed to create ContentId from BonsaiChangesetId bytes")?;
+
+        let content = self.get(&storage_key)?;
+        if let Some(content) = content {
+            // Deserialize from CBOR
+            let snapshot = serde_cbor::from_slice(&content)
+                .context("Failed to deserialize CacheableSnapshot from CBOR")?;
+            Ok(Some(snapshot))
+        } else {
+            Ok(None)
+        }
+    }
+
+    /// Check if snapshot exists in the cache by BonsaiChangesetId
+    pub fn contains_snapshot(&self, changeset_id: &BonsaiChangesetId) -> Result<bool> {
+        let storage_key = ContentId::from_slice(changeset_id.as_ref())
+            .context("Failed to create ContentId from BonsaiChangesetId bytes")?;
+        self.contains(&storage_key)
     }
 }
 
@@ -493,6 +544,7 @@ impl Drop for OptionalSnapshotFileCache {
 #[cfg(test)]
 mod tests {
     use tempfile::TempDir;
+    use types::Parents;
 
     use super::*;
     use crate::util::calc_contentid;
@@ -667,6 +719,65 @@ mod tests {
         let retrieved = cache.get(&content_id)?;
         assert!(retrieved.is_none());
 
+        Ok(())
+    }
+
+    #[test]
+    fn test_snapshot_caching_with_bonsai_changeset_id() -> Result<()> {
+        let temp_dir = TempDir::new()?;
+        let config = SnapshotCacheConfig::default().cache_path(Some(temp_dir.path()));
+        let cache = SharedSnapshotFileCache::with_config(config)?;
+
+        // Create a test CacheableSnapshot
+        let snapshot = CacheableSnapshot {
+            hg_parents: Parents::None,
+            file_changes: vec![],
+            author: "test_author".to_string(),
+            time: 1234567890,
+            tz: 0,
+            bubble_id: None,
+            labels: vec!["test".to_string()],
+            cached: None,
+        };
+
+        // Create a test BonsaiChangesetId
+        let changeset_id = BonsaiChangesetId::from_byte_array([0x42u8; 32]);
+
+        // Store the snapshot
+        cache.store_snapshot(changeset_id, &snapshot)?;
+
+        // Verify it can be retrieved and matches the original snapshot
+        let retrieved = cache.get_snapshot(&changeset_id)?;
+        assert!(retrieved.is_some());
+        let retrieved_snapshot = retrieved.unwrap();
+        assert_eq!(retrieved_snapshot, snapshot);
+
+        // Verify contains check works
+        assert!(cache.contains_snapshot(&changeset_id)?);
+
+        // Test with a different changeset ID that doesn't exist
+        let other_changeset_id = BonsaiChangesetId::from_byte_array([0x43u8; 32]);
+        assert!(!cache.contains_snapshot(&other_changeset_id)?);
+        assert!(cache.get_snapshot(&other_changeset_id)?.is_none());
+
+        Ok(())
+    }
+
+    #[test]
+    fn test_snapshot_cbor_roundtrip() -> Result<()> {
+        let snapshot = CacheableSnapshot {
+            hg_parents: Parents::None,
+            file_changes: vec![],
+            author: "test_author".to_string(),
+            time: 1234567890,
+            tz: -28800, // PST timezone
+            bubble_id: Some(std::num::NonZeroU64::new(42).unwrap()),
+            labels: vec!["label1".to_string(), "label2".to_string()],
+            cached: None,
+        };
+        let serialized = serde_cbor::to_vec(&snapshot)?;
+        let deserialized: CacheableSnapshot = serde_cbor::from_slice(&serialized)?;
+        assert_eq!(snapshot, deserialized);
         Ok(())
     }
 }

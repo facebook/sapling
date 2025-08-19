@@ -22,6 +22,7 @@ pub use files::check_files;
 pub use files::download_files_with_cache;
 pub use snapshot::DownloadFileStats;
 pub use snapshot::DownloadFileStatsSnapshot;
+pub use snapshot::fetch_snapshot_with_cache;
 pub use snapshot::upload_snapshot;
 pub use snapshot::upload_snapshot_with_cache;
 pub use snapshot_cache::SharedSnapshotFileCache;

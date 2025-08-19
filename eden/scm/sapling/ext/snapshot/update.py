@@ -181,6 +181,13 @@ def update(ui, repo, csid: str, clean: bool = False) -> None:
 
     snapshot = fetchsnapshot(repo, csid_bytes)
 
+    # Log changeset cache statistics
+    cached = snapshot.get("cached")
+    if cached is True:
+        ui.status(_("0 changesets fetched, 1 changesets cached\n"))
+    elif cached is False:
+        ui.status(_("1 changesets fetched, 0 changesets cached\n"))
+
     # Once merges/conflicted states are supported, we'll need to support more
     # than one parent
     assert isinstance(snapshot["hg_parents"], bytes)

@@ -10,6 +10,8 @@ use std::num::NonZeroU64;
 use std::sync::Arc;
 use std::time::Duration;
 
+use anyhow::Context;
+use anyhow::format_err;
 use async_runtime::block_unless_interrupted;
 use configmodel::Config;
 use cpython::*;
@@ -26,12 +28,14 @@ use edenapi::UploadLookupPolicy;
 use edenapi_ext::SharedSnapshotFileCache;
 use edenapi_ext::check_files;
 use edenapi_ext::download_files_with_cache;
+use edenapi_ext::fetch_snapshot_with_cache;
 use edenapi_ext::upload_snapshot_with_cache;
 use edenapi_types::AlterSnapshotRequest;
 use edenapi_types::AlterSnapshotResponse;
 use edenapi_types::AnyFileContentId;
 use edenapi_types::BlameResult;
 use edenapi_types::BookmarkResult;
+use edenapi_types::CacheableSnapshot;
 use edenapi_types::CloudShareWorkspaceRequest;
 use edenapi_types::CloudShareWorkspaceResponse;
 use edenapi_types::CommitGraphEntry;
@@ -462,8 +466,21 @@ py_class!(pub class client |py| {
     def fetchsnapshot(
         &self,
         data: Serde<FetchSnapshotRequest>,
-    ) -> PyResult<Serde<FetchSnapshotResponse>> {
-        self.inner(py).as_ref().fetchsnapshot_py(py, data)
+    ) -> PyResult<Serde<CacheableSnapshot>> {
+        let api = self.inner(py).as_ref();
+        let cache = SharedSnapshotFileCache::from_config(self.config(py).as_ref()).ok();
+
+        py.allow_threads(|| {
+            block_unless_interrupted(async move {
+                let cs_id = data.0.cs_id;
+                fetch_snapshot_with_cache(api, data.0, cache)
+                    .await
+                    .with_context(|| format_err!("Failed to find snapshot {}", cs_id))
+            })
+        })
+        .map_pyerr(py)?
+        .map_pyerr(py)
+        .map(Serde)
     }
 
     /// Alter the properties of an existing snapshot
