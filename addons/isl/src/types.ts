@@ -727,6 +727,9 @@ export type PlatformSpecificClientToServerMessages =
   | {
       type: 'platform/setFirstPassCodeReviewDiagnostics';
       issueMap: Map<string, Array<CodeReviewIssue>>;
+    }
+  | {
+      type: 'platform/devmateValidateChanges';
     };
 
 /**

@@ -284,6 +284,10 @@ export const getVSCodePlatform = (context: vscode.ExtensionContext): VSCodeServe
           }
           break;
         }
+        case 'platform/devmateValidateChanges': {
+          promptDevmate({type: 'validateChanges'}, ActionTriggerType.ISL2SmartActions);
+          break;
+        }
       }
     } catch (err) {
       vscode.window.showErrorMessage(`error handling message ${JSON.stringify(message)}\n${err}`);

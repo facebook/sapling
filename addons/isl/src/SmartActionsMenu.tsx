@@ -123,6 +123,14 @@ function SmartActions({commit, dismiss}: {commit?: CommitInfo; dismiss: () => vo
     actions.push(<FillCommitInfoButton key="fill-commit-info" dismiss={dismiss} />);
   }
 
+  const devmateValidateChangesEnabled = useAtomValue(
+    featureFlagAsync(Internal.featureFlags?.DevmateValidateChanges),
+  );
+  // For now, only support this in VS Code
+  if (!commit && devmateValidateChangesEnabled && platform.platformName === 'vscode') {
+    actions.push(<ValidateChangesButton key="validate-changes" dismiss={dismiss} />);
+  }
+
   return (
     <DropdownFields
       title={<T>Smart Actions</T>}
@@ -286,4 +294,22 @@ function GenerateTestsForModifiedCodeButton({
   );
 
   return disabled ? <Tooltip title={disabledReason}>{button}</Tooltip> : button;
+}
+
+/** Prompt Devmate to validate code and fix errors in the working copy. */
+function ValidateChangesButton({dismiss}: {dismiss: () => void}) {
+  return (
+    <Button
+      data-testid="validate-changes-button"
+      onClick={e => {
+        serverAPI.postMessage({
+          type: 'platform/devmateValidateChanges',
+        });
+        dismiss();
+        e.stopPropagation();
+      }}>
+      <Icon icon="sparkle" />
+      <T>Validate Changes</T>
+    </Button>
+  );
 }
