@@ -19,7 +19,7 @@ use crate::writer::FilenodesWriter;
 pub fn build_shard() -> Result<Connection, Error> {
     let con = SqliteConnection::open_in_memory()?;
     con.execute_batch(NewFilenodesBuilder::CREATION_QUERY)?;
-    Ok(Connection::with_sqlite(con)?)
+    Connection::with_sqlite(con)
 }
 
 pub fn build_reader_writer(shards: Vec1<Connection>) -> (FilenodesReader, FilenodesWriter) {
