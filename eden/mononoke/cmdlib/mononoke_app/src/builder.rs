@@ -76,6 +76,7 @@ pub struct MononokeAppBuilder {
     bookmark_cache_options: BookmarkCacheOptions,
     client_entry_point_for_service: ClientEntryPoint,
     override_cmd_args: Option<Vec<String>>,
+    with_logging: bool,
 }
 
 #[derive(Args, Debug)]
@@ -139,6 +140,7 @@ impl MononokeAppBuilder {
             bookmark_cache_options: Default::default(),
             client_entry_point_for_service: Default::default(),
             override_cmd_args: None,
+            with_logging: true,
         }
     }
 
@@ -154,6 +156,15 @@ impl MononokeAppBuilder {
 
     pub fn with_bookmarks_cache(mut self, bookmark_cache_options: BookmarkCacheOptions) -> Self {
         self.bookmark_cache_options = bookmark_cache_options;
+        self
+    }
+
+    /// Give the app the option to disable setting up tracing completely.
+    /// This is useful for cases where the app wants to setup its own tracing stack. You can only have
+    /// one global tracing subscriber per process so if Mononoke sets one app the applications can't do
+    /// later.
+    pub fn with_logging(mut self, with_logging: bool) -> Self {
+        self.with_logging = with_logging;
         self
     }
 
@@ -307,7 +318,11 @@ impl MononokeAppBuilder {
 
         gflags_args.propagate(self.fb)?;
 
-        let logger = logging_args.setup_logging(self.fb)?;
+        let logger = if self.with_logging {
+            logging_args.setup_logging(self.fb)?
+        } else {
+            Logger::Tracing
+        };
 
         let config_store = config_args
             .create_config_store(self.fb, logger.clone())
