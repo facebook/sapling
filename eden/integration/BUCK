@@ -401,7 +401,7 @@ python_unittest(
     supports_static_listing = False,
     deps = [
         "//eden/fs/cli:lib",
-        "//eden/fs/py/eden/thrift:legacy",
+        "//eden/fs/py/eden/thrift:client",
         "//eden/integration/lib:lib",
     ],
 )
