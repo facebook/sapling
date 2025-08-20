@@ -831,7 +831,14 @@ where
         || file_is_binary(&new_file)
         || file_is_omitted(&old_file)
         || file_is_omitted(&new_file))
-        && !(old_file_has_git_lfs_pointer && new_file_has_git_lfs_pointer)
+        && !(
+            // Cases where we explicitly diff the LFS pointers
+            // 1. Both sides have pointers
+            // 2. If only one side exists, the other has pointer
+            old_file_has_git_lfs_pointer && new_file_has_git_lfs_pointer
+                || old_file.is_none() && new_file_has_git_lfs_pointer
+                || new_file.is_none() && old_file_has_git_lfs_pointer
+        )
     {
         match (old_file, new_file) {
             (Some(old_file), None) => state.emit_binary_has_changed(old_file.path.as_ref()),
@@ -921,6 +928,26 @@ where
                 seed,
                 reduce,
             )
+        }
+        (
+            Some(FileContent::Omitted {
+                content_hash: _,
+                git_lfs_pointer: Some(old_git_lfs_pointer),
+            }),
+            None,
+        ) => {
+            // File with Git LFS pointer was removed
+            gen_diff_unified_headerless_entire_file(b'-', old_git_lfs_pointer, seed, reduce)
+        }
+        (
+            None,
+            Some(FileContent::Omitted {
+                content_hash: _,
+                git_lfs_pointer: Some(new_git_lfs_pointer),
+            }),
+        ) => {
+            // File with Git LFS pointer was added
+            gen_diff_unified_headerless_entire_file(b'+', new_git_lfs_pointer, seed, reduce)
         }
         (Some(FileContent::Inline(old_file)), None) => {
             // Degenerated case of all-minus diff.
@@ -1283,7 +1310,12 @@ Binary file x has changed
             )),
             r"diff --git a/x b/x
 new file mode 100644
-Binary file x has changed
+--- /dev/null
++++ b/x
+@@ -0,0 +1,3 @@
++version https://git-lfs.github.com/spec/v1
++oid sha256:hash1
++size 123
 "
         );
         // Delete file
@@ -1302,7 +1334,12 @@ Binary file x has changed
             )),
             r"diff --git a/x b/x
 deleted file mode 100644
-Binary file x has changed
+--- a/x
++++ /dev/null
+@@ -1,3 +0,0 @@
+-version https://git-lfs.github.com/spec/v1
+-oid sha256:hash1
+-size 123
 "
         );
 
