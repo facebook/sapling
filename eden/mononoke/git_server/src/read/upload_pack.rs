@@ -425,7 +425,9 @@ bundle.heuristic=creationToken
 "#
     .into();
 
-    if !request_context.ctx.metadata().client_untrusted() {
+    let bundle_trusted_only = request_context.bundle_uri_trusted_only();
+
+    if !bundle_trusted_only || !request_context.ctx.metadata().client_untrusted() {
         let bundle_uri = &request_context.repo.git_bundle_uri;
         let bundle_list = bundle_uri
             .get_latest_bundle_list(&request_context.ctx)

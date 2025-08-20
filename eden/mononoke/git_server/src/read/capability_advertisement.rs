@@ -52,7 +52,8 @@ async fn advertise_capability(
     service_type: Service,
     use_bundle_uri: bool,
 ) -> Result<Vec<u8>, Error> {
-    let client_untrusted = request_context.ctx.metadata().client_untrusted();
+    let client_trusted = !request_context.ctx.metadata().client_untrusted();
+    let bundle_trusted_only = request_context.bundle_uri_trusted_only();
 
     let mut output = Vec::new();
 
@@ -64,7 +65,13 @@ async fn advertise_capability(
     flush_to_write(&mut output).await?;
     match service_type {
         Service::GitUploadPack => {
-            read_advertisement(&mut output, client_untrusted, use_bundle_uri).await?
+            read_advertisement(
+                &mut output,
+                client_trusted,
+                use_bundle_uri,
+                bundle_trusted_only,
+            )
+            .await?
         }
         Service::GitReceivePack => write_advertisement(request_context, &mut output).await?,
     }
@@ -74,15 +81,16 @@ async fn advertise_capability(
 
 async fn read_advertisement(
     output: &mut Vec<u8>,
-    client_untrusted: bool,
+    client_trusted: bool,
     use_bundle_uri: bool,
+    bundle_trusted_only: bool,
 ) -> Result<(), Error> {
     write_text_packetline(format!("version {}", VERSION).as_bytes(), output).await?;
     for capability in UPLOAD_PACK_CAPABILITIES {
         write_text_packetline(capability.as_bytes(), output).await?;
     }
-
-    if use_bundle_uri && !client_untrusted {
+    let client_validated = !bundle_trusted_only || client_trusted;
+    if use_bundle_uri && client_validated {
         write_text_packetline(BUNDLE_URI_CAPABILITY.as_bytes(), output).await?;
     }
     Ok(())

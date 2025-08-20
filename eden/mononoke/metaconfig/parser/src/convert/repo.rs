@@ -874,15 +874,18 @@ impl Convert for RawGitBundleURIConfig {
                     bucket: cdn.bucket,
                     api_key: cdn.api_key,
                 },
+                trusted_only: self.trusted_only,
             }),
             RawUriGeneratorType::manifold(manifold) => Ok(GitBundleURIConfig {
                 uri_generator_type: UriGeneratorType::Manifold {
                     bucket: manifold.bucket,
                     api_key: manifold.api_key,
                 },
+                trusted_only: self.trusted_only,
             }),
             RawUriGeneratorType::local_fs(_) => Ok(GitBundleURIConfig {
                 uri_generator_type: UriGeneratorType::LocalFS,
+                trusted_only: self.trusted_only,
             }),
             RawUriGeneratorType::UnknownField(f) => {
                 Err(anyhow!("Unknown variant {} of RawGitBundleURIConfig", f))

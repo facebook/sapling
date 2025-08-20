@@ -54,6 +54,16 @@ impl RepositoryRequestContext {
     pub fn _logger(&self) -> &Logger {
         self.ctx.logger()
     }
+
+    pub fn bundle_uri_trusted_only(&self) -> bool {
+        self.repo
+            .repo_config
+            .as_ref()
+            .git_configs
+            .git_bundle_uri
+            .as_ref()
+            .is_none_or(|buri| buri.trusted_only)
+    }
 }
 
 #[derive(Clone)]

@@ -1913,6 +1913,8 @@ pub enum ZelosConfig {
 pub struct GitBundleURIConfig {
     /// Specifies what flavor of uri generator should be used.
     pub uri_generator_type: UriGeneratorType,
+    /// Whether to support bundle-uri for untrusted clients
+    pub trusted_only: bool,
 }
 
 /// Configuration for git's bundle-uri url-gen component
