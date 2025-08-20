@@ -5,7 +5,7 @@
  * GNU General Public License version 2.
  */
 
-#![feature(duration_constructors)]
+#![feature(duration_constructors_lite)]
 #![feature(trait_alias)]
 
 use anyhow::Result;

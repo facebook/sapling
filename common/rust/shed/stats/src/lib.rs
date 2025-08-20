@@ -15,6 +15,7 @@
 #![deny(warnings, missing_docs, clippy::all, rustdoc::broken_intra_doc_links)]
 
 pub mod macros;
+#[allow(dead_code)]
 mod noop_stats;
 pub mod thread_local_aggregator;
 

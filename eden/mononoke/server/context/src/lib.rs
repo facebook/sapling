@@ -6,7 +6,6 @@
  */
 
 #![feature(never_type)]
-#![feature(result_flattening)]
 
 pub use session_id::SessionId;
 
