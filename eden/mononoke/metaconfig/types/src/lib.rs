@@ -950,7 +950,7 @@ pub struct StorageConfig {
     /// then this repo cannot store ephemeral changesets or snapshots.
     pub ephemeral_blobstore: Option<EphemeralBlobstoreConfig>,
     /// Mutable blobstore, for storing mutable data like microwave
-    pub mutable_blobstore: Option<BlobConfig>,
+    pub mutable_blobstore: BlobConfig,
 }
 
 /// Whether we should read from this blobstore normally in a Multiplex,

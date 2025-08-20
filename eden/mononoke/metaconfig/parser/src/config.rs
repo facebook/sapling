@@ -788,6 +788,9 @@ mod test {
 
             [storage.files.blobstore.blob_files]
             path = "/tmp/www"
+
+            [storage.files.mutable_blobstore.blob_files]
+            path = "/tmp/www_mutable"
         "#;
         let common_content = r#"
             loadlimiter_category="test-category"
@@ -1143,7 +1146,7 @@ mod test {
                 }),
             }),
             ephemeral_blobstore: None,
-            mutable_blobstore: Some(multiplex),
+            mutable_blobstore: multiplex,
         };
 
         let mut repos = HashMap::new();
@@ -1435,9 +1438,9 @@ mod test {
                         bubble_expiration_grace: Duration::from_secs(3600),
                         bubble_deletion_mode: BubbleDeletionMode::MarkOnly,
                     }),
-                    mutable_blobstore: Some(BlobConfig::Files {
+                    mutable_blobstore: BlobConfig::Files {
                         path: "/tmp/www".into(),
-                    }),
+                    },
                 },
                 generation_cache_size: 10 * 1024 * 1024,
                 repoid: RepositoryId::new(1),
@@ -1603,6 +1606,9 @@ mod test {
 
                 [storage.storage.blobstore.blob_sqlite]
                 path = "/tmp/fbsource"
+
+                [storage.storage.mutable_blobstore.blob_files]
+                path = "/tmp/foo1"
             "#;
 
             let content_def = r#"
@@ -1762,7 +1768,7 @@ mod test {
                         })
                     }),
                     ephemeral_blobstore: None,
-                    mutable_blobstore: Some(BlobConfig::MultiplexedWal {
+                    mutable_blobstore: BlobConfig::MultiplexedWal {
                         multiplex_id: MultiplexId::new(1),
                         inner_blobstores_scuba_table: None,
                         multiplex_scuba_table: None,
@@ -1779,7 +1785,7 @@ mod test {
                                 shard_num: nonzero!(1usize),
                             }
                         ),
-                    }),
+                    },
                 },
                 repoid: RepositoryId::new(123),
                 generation_cache_size: 10 * 1024 * 1024,
@@ -1811,6 +1817,16 @@ mod test {
         queue_db = { remote = { shard_map = "queue_db_address", shard_num = 1 } }
         write_quorum = 1
 
+        [multiplex_store.mutable_blobstore.multiplexed_wal]
+        multiplex_id = 1
+        components = [
+            { blobstore_id = 1, blobstore = { blob_files = { path = "/tmp/foo" } } },
+        ]
+        queue_db = { remote = { shard_map = "queue_db_address", shard_num = 1 } }
+        write_quorum = 1
+
+
+
         [manifold_store.metadata.remote]
         primary = { db_address = "other_db" }
         filenodes = { sharded = { shard_map = "other-shards", shard_num = 456 } }
@@ -1818,6 +1834,9 @@ mod test {
 
         [manifold_store.blobstore.manifold]
         manifold_bucket = "bucketybucket"
+
+        [manifold_store.mutable_blobstore.manifold]
+        manifold_bucket = "mutable_bucketybucket"
         "#;
 
         const REPO: &str = r#"
@@ -1887,7 +1906,7 @@ mod test {
 
                     ephemeral_blobstore: None,
 
-                    mutable_blobstore: Some(BlobConfig::Disabled),
+                    mutable_blobstore: BlobConfig::Disabled,
                 },
                 repoid: RepositoryId::new(123),
                 generation_cache_size: 10 * 1024 * 1024,
@@ -1920,6 +1939,10 @@ mod test {
         ]
         queue_db = { remote = { shard_map = "queue_db_address", shard_num = 1 } }
         write_quorum = 2
+
+        [multiplex_store.mutable_blobstore.blob_files]
+        path = "/tmp/foo4"
+
         "#;
 
         const REPO: &str = r#"

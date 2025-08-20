@@ -1418,19 +1418,13 @@ impl RepoFactory {
         repo_identity: &ArcRepoIdentity,
         repo_config: &ArcRepoConfig,
     ) -> Result<ArcMutableRepoBlobstore> {
-        match &repo_config.storage_config.mutable_blobstore {
-            Some(mutable_blobstore) => {
-                let blobstore = self.blobstore(mutable_blobstore).await?;
-                Ok(Arc::new(
-                    self.mutable_repo_blobstore_from_blobstore(repo_identity, &blobstore)
-                        .await?,
-                ))
-            }
-            None => Err(anyhow!(
-                "No mutable blobstore configured for repo {}",
-                repo_identity.name()
-            )),
-        }
+        let blobstore = self
+            .blobstore(&repo_config.storage_config.mutable_blobstore)
+            .await?;
+        Ok(Arc::new(
+            self.mutable_repo_blobstore_from_blobstore(repo_identity, &blobstore)
+                .await?,
+        ))
     }
 
     pub async fn repo_blobstore_unlink_ops(
