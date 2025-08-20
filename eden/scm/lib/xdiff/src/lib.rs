@@ -1267,6 +1267,26 @@ Binary file x has changed
         );
 
         // Only one file exists
+        // Add file
+        assert_eq!(
+            String::from_utf8_lossy(&diff_unified(
+                None,
+                Some(DiffFile {
+                    contents: content_with_lfs_1.clone(),
+                    path: "x",
+                    file_type: FileType::Regular,
+                }),
+                DiffOpts {
+                    context: 10,
+                    copy_info: CopyInfo::None,
+                }
+            )),
+            r"diff --git a/x b/x
+new file mode 100644
+Binary file x has changed
+"
+        );
+        // Delete file
         assert_eq!(
             String::from_utf8_lossy(&diff_unified(
                 Some(DiffFile {
