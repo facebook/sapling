@@ -35,6 +35,7 @@ rust_library(
         "//eden/scm/lib/config/model:configmodel",
         "//eden/scm/lib/dag:dag",
         "//eden/scm/lib/edenapi/trait:edenapi_trait",
+        "//eden/scm/lib/edenapi/types:edenapi_types",
         "//eden/scm/lib/identity:identity",
         "//eden/scm/lib/manifest:manifest",
         "//eden/scm/lib/manifest-augmented-tree:manifest-augmented-tree",

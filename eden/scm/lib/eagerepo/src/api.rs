@@ -83,6 +83,7 @@ use edenapi::types::UploadTreeEntry;
 use edenapi::types::UploadTreeResponse;
 use edenapi::types::make_hash_lookup_request;
 use edenapi_trait as edenapi;
+use edenapi_types::bookmark::Freshness;
 use format_util::git_sha1_deserialize;
 use format_util::hg_sha1_deserialize;
 use futures::StreamExt;
@@ -626,7 +627,11 @@ impl SaplingRemoteApi for EagerRepo {
         Ok(graph_segments.segments)
     }
 
-    async fn bookmarks(&self, bookmarks: Vec<String>) -> edenapi::Result<Vec<BookmarkEntry>> {
+    async fn bookmarks(
+        &self,
+        bookmarks: Vec<String>,
+        _freshness: Option<Freshness>,
+    ) -> edenapi::Result<Vec<BookmarkEntry>> {
         debug!("bookmarks {}", debug_string_list(&bookmarks));
         self.refresh_for_api();
         let mut values = Vec::new();

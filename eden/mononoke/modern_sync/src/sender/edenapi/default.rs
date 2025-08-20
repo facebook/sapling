@@ -100,6 +100,7 @@ impl DefaultEdenapiSenderBuilder {
             .http_config(http_config.clone())
             .http_version(HttpVersion::V11)
             .timeout(Duration::from_secs(timeout))
+            .use_bookmarks2(true)
             .build()
             .with_context(|| "building http client")?;
 
@@ -334,21 +335,14 @@ impl EdenapiSender for DefaultEdenapiSender {
     async fn read_bookmark(&self, bookmark: String) -> Result<Option<HgChangesetId>> {
         let res = self
             .client
-            .bookmarks2(vec![bookmark], Some(Freshness::MostRecent))
+            .bookmarks(vec![bookmark], Some(Freshness::MostRecent))
             .await
             .with_context(|| "reading bookmark")?;
 
         Ok(res
             .into_iter()
             .next()
-            .map(|entry| {
-                anyhow::Ok(
-                    entry
-                        .data
-                        .with_context(|| "extracting bookmark response")?
-                        .hgid,
-                )
-            })
+            .map(|entry| anyhow::Ok(entry.hgid))
             .transpose()
             .with_context(|| "processing bookmark response")?
             .flatten()

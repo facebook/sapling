@@ -51,7 +51,7 @@ pub fn clone(
 ) -> Result<BTreeMap<String, HgId>> {
     // The "bookmarks" API result is unordered.
     let bookmarks =
-        block_on(edenapi.bookmarks(bookmark_names.clone())).map_err(|e| e.tag_network())?;
+        block_on(edenapi.bookmarks(bookmark_names.clone(), None)).map_err(|e| e.tag_network())?;
     let bookmarks = bookmarks
         .into_iter()
         .filter_map(|bm| bm.hgid.map(|id| (bm.bookmark, id)))

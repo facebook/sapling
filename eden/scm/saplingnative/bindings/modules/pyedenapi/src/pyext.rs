@@ -31,7 +31,6 @@ use edenapi_types::AlterSnapshotRequest;
 use edenapi_types::AlterSnapshotResponse;
 use edenapi_types::AnyFileContentId;
 use edenapi_types::AnyId;
-use edenapi_types::BookmarkResult;
 use edenapi_types::CloudShareWorkspaceRequest;
 use edenapi_types::CloudShareWorkspaceResponse;
 use edenapi_types::CommitGraphEntry;
@@ -247,9 +246,16 @@ pub trait SaplingRemoteApiPyExt: SaplingRemoteApi {
         Ok((commits_py.into(), stats_py))
     }
 
-    fn bookmarks_py(&self, py: Python, bookmarks: Vec<String>) -> PyResult<PyDict> {
+    fn bookmarks_py(
+        &self,
+        py: Python,
+        bookmarks: Vec<String>,
+        freshness: Option<Serde<Freshness>>,
+    ) -> PyResult<PyDict> {
         let response = py
-            .allow_threads(|| block_unless_interrupted(self.bookmarks(bookmarks)))
+            .allow_threads(|| {
+                block_unless_interrupted(self.bookmarks(bookmarks, freshness.map(|v| v.0)))
+            })
             .map_pyerr(py)?
             .map_pyerr(py)?;
 
@@ -258,19 +264,6 @@ pub trait SaplingRemoteApiPyExt: SaplingRemoteApi {
             bookmarks.set_item(py, entry.bookmark, entry.hgid.map(|id| id.to_hex()))?;
         }
         Ok(bookmarks)
-    }
-
-    fn bookmarks2_py(
-        &self,
-        py: Python,
-        bookmarks: Vec<String>,
-        freshness: Option<Freshness>,
-    ) -> PyResult<Serde<Vec<BookmarkResult>>> {
-        let items = py
-            .allow_threads(|| block_unless_interrupted(self.bookmarks2(bookmarks, freshness)))
-            .map_pyerr(py)?
-            .map_pyerr(py)?;
-        Ok(Serde(items))
     }
 
     fn set_bookmark_py(

@@ -149,6 +149,7 @@ pub struct HttpClientBuilder {
     handler_min_transfer_speeds: HashMap<String, MinTransferSpeed>,
     max_retry_per_request: usize,
     http_config: http_client::Config,
+    use_bookmarks2: bool,
 }
 
 impl HttpClientBuilder {
@@ -308,6 +309,9 @@ impl HttpClientBuilder {
         let max_concurrent_streams =
             get_config::<usize>(config, "edenapi", "max-concurrent-streams")?;
 
+        let use_bookmarks2 =
+            get_config::<bool>(config, "edenapi", "use-bookmarks2")?.unwrap_or(false);
+
         let mut http_config = hg_http::http_config(config, &server_url)?;
         http_config.verbose_stats |= debug;
         http_config.max_concurrent_requests = max_requests;
@@ -340,6 +344,7 @@ impl HttpClientBuilder {
             handler_min_transfer_speeds,
             max_retry_per_request,
             http_config,
+            use_bookmarks2,
         };
 
         tracing::debug!(?builder);
@@ -474,6 +479,12 @@ impl HttpClientBuilder {
         self.http_config = http_config;
         self
     }
+
+    /// Override which bookmark endpoint to use. This is primarily useful for Modern sync until we roll it out.
+    pub fn use_bookmarks2(mut self, use_bookmarks2: bool) -> Self {
+        self.use_bookmarks2 = use_bookmarks2;
+        self
+    }
 }
 
 fn get_config<T: FromConfigValue>(
@@ -527,6 +538,7 @@ pub(crate) struct Config {
     pub(crate) handler_min_transfer_speeds: HashMap<String, MinTransferSpeed>,
     pub(crate) max_retry_per_request: usize,
     pub(crate) http_config: http_client::Config,
+    pub(crate) use_bookmarks2: bool,
 }
 
 impl TryFrom<HttpClientBuilder> for Config {
@@ -559,6 +571,7 @@ impl TryFrom<HttpClientBuilder> for Config {
             handler_min_transfer_speeds,
             max_retry_per_request,
             http_config,
+            use_bookmarks2,
         } = builder;
 
         // Check for missing required fields.
@@ -605,6 +618,7 @@ impl TryFrom<HttpClientBuilder> for Config {
             handler_min_transfer_speeds,
             max_retry_per_request,
             http_config,
+            use_bookmarks2,
         })
     }
 }

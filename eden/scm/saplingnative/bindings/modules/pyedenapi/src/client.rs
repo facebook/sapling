@@ -34,7 +34,6 @@ use edenapi_types::AlterSnapshotRequest;
 use edenapi_types::AlterSnapshotResponse;
 use edenapi_types::AnyFileContentId;
 use edenapi_types::BlameResult;
-use edenapi_types::BookmarkResult;
 use edenapi_types::CacheableSnapshot;
 use edenapi_types::CloudShareWorkspaceRequest;
 use edenapi_types::CloudShareWorkspaceResponse;
@@ -51,7 +50,6 @@ use edenapi_types::CommitTranslateIdResponse;
 use edenapi_types::EphemeralExtendResponse;
 use edenapi_types::EphemeralPrepareResponse;
 use edenapi_types::FetchSnapshotRequest;
-use edenapi_types::FetchSnapshotResponse;
 use edenapi_types::FileResponse;
 use edenapi_types::FileSpec;
 use edenapi_types::FileType;
@@ -86,6 +84,7 @@ use edenapi_types::UploadToken;
 use edenapi_types::UploadTokensResponse;
 use edenapi_types::WorkspaceDataResponse;
 use edenapi_types::WorkspacesDataResponse;
+use edenapi_types::bookmark::Freshness;
 use edenapi_types::cloud::SmartlogDataResponse;
 use futures::TryStreamExt;
 use minibytes::Bytes;
@@ -235,18 +234,10 @@ py_class!(pub class client |py| {
     /// Resolve remote bookmarks.
     def bookmarks(
         &self,
-        bookmarks: Vec<String>
+        bookmarks: Vec<String>,
+        freshness: Option<Serde<Freshness>> = None,
     ) -> PyResult<PyDict> {
-        self.inner(py).as_ref().bookmarks_py(py, bookmarks)
-    }
-
-    /// bookmarks([name]) -> {name: node|None}
-    ///
-    /// Resolve remote bookmarks.
-    def bookmarks2(&self, bookmarks: Vec<String>)
-        -> PyResult<Serde<Vec<BookmarkResult>>>
-    {
-        self.inner(py).as_ref().bookmarks2_py(py, bookmarks, None)
+        self.inner(py).as_ref().bookmarks_py(py, bookmarks, freshness)
     }
 
     /// setbookmark(bookmark, to, from, pushvars)
