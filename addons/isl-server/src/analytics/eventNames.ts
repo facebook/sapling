@@ -135,6 +135,8 @@ export type TrackEventName =
   | 'ExportStackCommand'
   | 'ExitMessageOutOfOrder'
   | 'ShowBugButtonNux'
+  | 'SmartActionClicked'
+  | 'SmartActionsMenuOpened'
   | 'StackEditMetrics'
   | 'StackEditChangeTab'
   | 'StackEditInlineSplitButton'

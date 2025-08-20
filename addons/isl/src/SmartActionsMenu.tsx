@@ -51,6 +51,7 @@ export function SmartActionsMenu({commit}: {commit?: CommitInfo}) {
       <Button
         icon
         data-testid="smart-actions-button"
+        onClick={() => tracker.track('SmartActionsMenuOpened')}
         className={'smart-actions-button' + (dropdownVisible ? ' dropdown-visible' : '')}>
         <Icon icon="lightbulb-sparkle" />
       </Button>
@@ -149,7 +150,10 @@ function AutoSplitButton({commit, dismiss}: {commit: CommitInfo; dismiss: () => 
       commit={commit}
       trackerEventName="SplitOpenFromSmartActions"
       autoSplit={true}
-      onSplitInitiated={dismiss}>
+      onSplitInitiated={() => {
+        tracker.track('SmartActionClicked', {extras: {action: 'AutoSplit'}});
+        dismiss();
+      }}>
       <Icon icon="sparkle" />
       <T>Auto-split</T>
     </BaseSplitButton>
@@ -184,6 +188,7 @@ function ResolveCommentsButton({
     <Button
       data-testid="review-comments-button"
       onClick={e => {
+        tracker.track('SmartActionClicked', {extras: {action: 'ResolveAllComments'}});
         serverAPI.postMessage({
           type: 'platform/resolveAllCommentsWithAI',
           diffId,
@@ -209,7 +214,7 @@ function FillCommitInfoButton({dismiss}: {dismiss: () => void}) {
     <Button
       data-testid="fill-commit-info-button"
       onClick={e => {
-        tracker.track('DevmateFillCommitMessage');
+        tracker.track('SmartActionClicked', {extras: {action: 'FillCommitMessage'}});
         serverAPI.postMessage({type: 'platform/fillDevmateCommitMessage', id: randomId()});
         dismiss();
         e.stopPropagation();
@@ -251,6 +256,7 @@ function ResolveFailedSignalsButton({
     <Button
       data-testid="resolve-failed-signals-button"
       onClick={e => {
+        tracker.track('SmartActionClicked', {extras: {action: 'ResolveFailedSignals'}});
         serverAPI.postMessage({
           type: 'platform/resolveFailedSignalsWithAI',
           diffId,
@@ -281,6 +287,7 @@ function GenerateTestsForModifiedCodeButton({
     <Button
       data-testid="generate-tests-for-modified-code-button"
       onClick={e => {
+        tracker.track('SmartActionClicked', {extras: {action: 'GenerateTests'}});
         serverAPI.postMessage({
           type: 'platform/devmateCreateTestForModifiedCode',
         });
@@ -302,6 +309,7 @@ function ValidateChangesButton({dismiss}: {dismiss: () => void}) {
     <Button
       data-testid="validate-changes-button"
       onClick={e => {
+        tracker.track('SmartActionClicked', {extras: {action: 'ValidateChanges'}});
         serverAPI.postMessage({
           type: 'platform/devmateValidateChanges',
         });
