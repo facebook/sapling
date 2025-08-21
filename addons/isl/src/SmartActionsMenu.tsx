@@ -215,7 +215,11 @@ function FillCommitInfoButton({dismiss}: {dismiss: () => void}) {
       data-testid="fill-commit-info-button"
       onClick={e => {
         tracker.track('SmartActionClicked', {extras: {action: 'FillCommitMessage'}});
-        serverAPI.postMessage({type: 'platform/fillDevmateCommitMessage', id: randomId()});
+        serverAPI.postMessage({
+          type: 'platform/fillDevmateCommitMessage',
+          id: randomId(),
+          source: 'smartAction',
+        });
         dismiss();
         e.stopPropagation();
       }}>

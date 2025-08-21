@@ -266,8 +266,14 @@ export const getVSCodePlatform = (context: vscode.ExtensionContext): VSCodeServe
           break;
         }
         case 'platform/fillDevmateCommitMessage': {
+          const {source} = message;
           // Call Devmate to generate a commit message based on the current changes
-          promptDevmate({type: 'fillCommitMessage'}, ActionTriggerType.ISL2FillCommitMessage);
+          promptDevmate(
+            {type: 'fillCommitMessage'},
+            source === 'commitInfoView'
+              ? ActionTriggerType.ISL2CommitInfoView
+              : ActionTriggerType.ISL2SmartActions,
+          );
           break;
         }
         case 'platform/devmateCreateTestForModifiedCode': {

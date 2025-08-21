@@ -720,6 +720,7 @@ export type PlatformSpecificClientToServerMessages =
   | {
       type: 'platform/fillDevmateCommitMessage';
       id: string;
+      source: 'commitInfoView' | 'smartAction';
     }
   | {
       type: 'platform/devmateCreateTestForModifiedCode';
