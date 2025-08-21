@@ -61,6 +61,11 @@ use crate::commands;
 /// Run a Rust or Python command.
 ///
 /// Have side effect on `io` and return the command exit code.
+///
+/// THIS FUNCTION IS NOT LIKE `main` ENTRY POINT.: This function might be called
+/// MULTIPLE TIMES in one process, or might be called RECURSIVELY (ex. another
+/// `run_command` called inside a `run_command`). If you want to change one-time
+/// process initialization, use `fn main` from `hgmain` instead.
 pub fn run_command(args: Vec<String>, io: &IO) -> i32 {
     let start_time = StartTime::now();
     let start_blocked = io.time_interval().total_blocked_ms();
