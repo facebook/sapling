@@ -62,6 +62,30 @@ class RefCounted<T extends {dispose: () => void}> {
   }
 }
 
+class RepoMap {
+  /**
+   * Previously distributed RepositoryReferences, keyed by repository root path
+   * Note that Repositories do not define their own `cwd`, and can be reused across cwds.
+   */
+  private reposByRoot = new Map<AbsolutePath, RefCounted<Repository>>();
+
+  public get(repoRoot: AbsolutePath): RefCounted<Repository> | undefined {
+    return this.reposByRoot.get(repoRoot);
+  }
+
+  public set(repoRoot: AbsolutePath, repoRef: RefCounted<Repository>) {
+    this.reposByRoot.set(repoRoot, repoRef);
+  }
+
+  public values(): IterableIterator<RefCounted<Repository>> {
+    return this.reposByRoot.values();
+  }
+
+  public forEach(callback: (value: RefCounted<Repository>) => void) {
+    this.reposByRoot.forEach(callback);
+  }
+}
+
 /**
  * Allow reusing Repository instances by storing instances by path,
  * and controlling how Repositories are created.
@@ -74,20 +98,16 @@ class RepositoryCache {
   // allow mocking Repository in tests
   constructor(private RepositoryType = Repository) {}
 
-  /**
-   * Previously distributed RepositoryReferences, keyed by repository root path
-   * Note that Repositories do not define their own `cwd`, and can be reused across cwds.
-   */
-  private reposByRoot = new Map<AbsolutePath, RefCounted<Repository>>();
+  private repoMap = new RepoMap();
   private activeReposEmitter = new TypedEventEmitter<'change', undefined>();
 
   private lookup(dirGuess: AbsolutePath): RefCounted<Repository> | undefined {
-    const found = this.reposByRoot.get(dirGuess);
+    const found = this.repoMap.get(dirGuess);
     return found && !found.isDisposed ? found : undefined;
   }
 
   private lookupByPrefix(dirGuess: AbsolutePath): RefCounted<Repository> | undefined {
-    for (const repo of this.reposByRoot.values()) {
+    for (const repo of this.repoMap.values()) {
       if (
         dirGuess === repo.value.info.repoRoot ||
         dirGuess.startsWith(ensureTrailingPathSep(repo.value.info.repoRoot))
@@ -158,7 +178,7 @@ class RepositoryCache {
       const internalRef = new RefCounted(repo);
       internalRef.ref();
       ref.internalReference = internalRef;
-      this.reposByRoot.set(repoInfo.repoRoot, internalRef);
+      this.repoMap.set(repoInfo.repoRoot, internalRef);
       this.activeReposEmitter.emit('change');
       return repo;
     };
@@ -184,7 +204,7 @@ class RepositoryCache {
 
   public onChangeActiveRepos(cb: (repos: Array<Repository>) => unknown): () => unknown {
     const onChange = () => {
-      cb([...this.reposByRoot.values()].map(ref => ref.value));
+      cb([...this.repoMap.values()].map(ref => ref.value));
     };
     this.activeReposEmitter.on('change', onChange);
     // start with initial repos set
@@ -194,14 +214,14 @@ class RepositoryCache {
 
   /** Clean up all known repos. Mostly useful for testing. */
   clearCache() {
-    this.reposByRoot.forEach(value => value.dispose());
-    this.reposByRoot = new Map();
+    this.repoMap.forEach(repo => repo.dispose());
+    this.repoMap = new RepoMap();
     this.activeReposEmitter.removeAllListeners();
   }
 
   public numberOfActiveServers(): number {
     let numActive = 0;
-    for (const repo of this.reposByRoot.values()) {
+    for (const repo of this.repoMap.values()) {
       numActive += repo.getNumberOfReferences();
     }
     return numActive;
