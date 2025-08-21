@@ -87,7 +87,12 @@ impl SnapshotCacheConfig {
                     debug!("Snapshot cache disabled - cache path is empty");
                     None
                 } else {
-                    Some(std::path::PathBuf::from(path_str))
+                    let mut path = std::path::PathBuf::from(path_str);
+                    let repo_name = config
+                        .get("remotefilelog", "reponame")
+                        .map_or("default".to_string(), |s| s.to_string());
+                    path.push(repo_name);
+                    Some(path)
                 }
             });
 
