@@ -69,12 +69,31 @@ class RepoMap {
    */
   private reposByRoot = new Map<AbsolutePath, RefCounted<Repository>>();
 
+  /**
+   * Ordered by length from longest to shortest, for quick longest prefix match.
+   * Used with reposByRoot to achieve O(n) prefix lookup.
+   */
+  private orderedRoots: string[] = [];
+
+  private static cmpRoots = (a: string, b: string) => b.length - a.length;
+
   public get(repoRoot: AbsolutePath): RefCounted<Repository> | undefined {
     return this.reposByRoot.get(repoRoot);
   }
 
+  public getLongestPrefixMatch(path: AbsolutePath): RefCounted<Repository> | undefined {
+    for (const repoRoot of this.orderedRoots) {
+      if (path === repoRoot || path.startsWith(ensureTrailingPathSep(repoRoot))) {
+        return this.reposByRoot.get(repoRoot);
+      }
+    }
+    return undefined;
+  }
+
   public set(repoRoot: AbsolutePath, repoRef: RefCounted<Repository>) {
     this.reposByRoot.set(repoRoot, repoRef);
+    this.orderedRoots.push(repoRoot);
+    this.orderedRoots.sort(RepoMap.cmpRoots);
   }
 
   public values(): IterableIterator<RefCounted<Repository>> {

@@ -308,4 +308,31 @@ describe('RepoMap', () => {
     repoMap.forEach(repo => repo.dispose());
     repoMap.forEach(repo => expect(repo.getNumberOfReferences()).toBe(0));
   });
+
+  it('longest prefix match', async () => {
+    const createRefCountedRepo = async (ctx: RepositoryContext) => {
+      const repoInfo = await SimpleMockRepository.getRepoInfo(ctx);
+      const repo = new SimpleMockRepository(repoInfo as ValidatedRepoInfo, ctx);
+      return new RefCounted(repo);
+    };
+    const a = await createRefCountedRepo({...ctx, cwd: '/path/to/submoduleA/cwd'});
+    const b = await createRefCountedRepo({...ctx, cwd: '/path/to/submoduleB/cwd'});
+    const nested = await createRefCountedRepo({
+      ...ctx,
+      cwd: '/path/to/submoduleA/submoduleNested/cwd',
+    });
+
+    const repoMap = new RepoMap();
+    // A raw map would iterate in insertion order, so we
+    // call set in reverse order to test longest prefix match
+    repoMap.set('/path/to/submoduleA/submoduleNested', nested);
+    repoMap.set('/path/to/submoduleB', b);
+    repoMap.set('/path/to/submoduleA', a);
+
+    expect(repoMap.get('/path/to/submoduleA')).toBe(a);
+    expect(repoMap.get('/path/to/submoduleA/some/dir')).toBeUndefined();
+    expect(repoMap.getLongestPrefixMatch('/path/to/submoduleA/some/dir')).toBe(a);
+    expect(repoMap.getLongestPrefixMatch('/path/to/submoduleB/some/dir')).toBe(b);
+    expect(repoMap.getLongestPrefixMatch('/path/to/submoduleA/submoduleNested/dir')).toBe(nested);
+  });
 });
