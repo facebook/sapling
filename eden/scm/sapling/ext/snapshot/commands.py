@@ -94,6 +94,13 @@ subcmd = snapshot.subcommand(
             ),
             _("HASH"),
         ),
+        (
+            "",
+            "reason",
+            "",
+            _("specify the reason for creating this snapshot for logging purposes"),
+            _("REASON"),
+        ),
     ]
     + cmdutil.walkopts
     + cmdutil.templateopts,

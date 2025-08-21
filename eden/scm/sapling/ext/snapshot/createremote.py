@@ -262,6 +262,12 @@ def uploadsnapshot(
 
 
 def createremote(ui, repo, *pats, **opts) -> None:
+    reason = opts.get("reason")
+    if reason:
+        ui.log("snapshot_create_reason", snapshot_create_reason=reason)
+    elif ui.interactive():
+        ui.log("snapshot_create_reason", snapshot_create_reason="manual run")
+
     lifetime = _parselifetime(opts)
     maxuntrackedsize = parsemaxuntracked(opts)
     maxuntrackedsizebytes = parsemaxuntrackedbytes(opts)
