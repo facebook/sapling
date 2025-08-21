@@ -228,6 +228,6 @@ class RepositoryCache {
   }
 }
 
-export const __TEST__ = {RepositoryCache};
+export const __TEST__ = {RepositoryCache, RepoMap, RefCounted};
 
 export const repositoryCache = new RepositoryCache();

@@ -5,7 +5,7 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-import type {RepoInfo, RepositoryError} from 'isl/src/types';
+import type {RepoInfo, RepositoryError, ValidatedRepoInfo} from 'isl/src/types';
 import type {Repository} from '../Repository';
 import type {Logger} from '../logger';
 import type {ServerPlatform} from '../serverPlatform';
@@ -17,7 +17,7 @@ import {__TEST__} from '../RepositoryCache';
 import {makeServerSideTracker} from '../analytics/serverSideTracker';
 import {ensureTrailingPathSep} from 'shared/pathUtils';
 
-const {RepositoryCache} = __TEST__;
+const {RepositoryCache, RepoMap, RefCounted} = __TEST__;
 
 const mockTracker = makeServerSideTracker(
   mockLogger,
@@ -273,5 +273,39 @@ describe('RepositoryCache', () => {
 
     ref1.unref();
     ref2.unref();
+  });
+});
+
+describe('RepoMap', () => {
+  it('iteration with values() and forEach()', async () => {
+    const repoNum = 10;
+    const repoRoots = [];
+    const promises = [];
+    const createRefCountedRepo = async (ctx: RepositoryContext) => {
+      const repoInfo = await SimpleMockRepository.getRepoInfo(ctx);
+      const repo = new SimpleMockRepository(repoInfo as ValidatedRepoInfo, ctx);
+      return new RefCounted(repo);
+    };
+    for (let i = 0; i < repoNum; i++) {
+      repoRoots.push(`/path/to/submodule${i}`);
+      promises.push(createRefCountedRepo({...ctx, cwd: `/path/to/submodule${i}`}));
+    }
+    const repos = await Promise.all(promises);
+
+    const repoMap = new RepoMap();
+    for (let i = 0; i < repoNum; i++) {
+      repos[i].ref();
+      repoMap.set(repoRoots[i], repos[i]);
+    }
+
+    const values = [...repoMap.values()];
+    expect(values.length).toBe(repoNum);
+    for (let i = 0; i < repoNum; i++) {
+      expect(values[i].value.info.repoRoot).toBe(repoRoots[i]);
+    }
+
+    repoMap.forEach(repo => expect(repo.getNumberOfReferences()).toBe(1));
+    repoMap.forEach(repo => repo.dispose());
+    repoMap.forEach(repo => expect(repo.getNumberOfReferences()).toBe(0));
   });
 });
