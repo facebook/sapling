@@ -254,7 +254,6 @@ function SubmoduleSelectorGroup({
   >;
 }) {
   const currentCwd = useAtomValue(serverCwd);
-  // console.log('submoduleOptions', submoduleOptions);
   if (repoRoots == null) {
     return null;
   }
@@ -279,6 +278,7 @@ function SubmoduleSelectorGroup({
             }
           }}
           hideRightBorder={i < numRoots - 1 || submodulesToBeSelected != undefined}
+          key={prevRoot}
         />,
       );
     }
@@ -294,6 +294,7 @@ function SubmoduleSelectorGroup({
           }
         }}
         hideRightBorder={false}
+        key={repoRoots[numRoots - 1]}
       />,
     );
   }
