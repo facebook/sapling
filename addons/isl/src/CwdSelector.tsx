@@ -96,7 +96,7 @@ function getMainSelectorLabel(
   if (repoRelativeCwd === '') {
     return repoBasename;
   }
-  return repoBasename + repoRelativeCwd;
+  return joinPaths(repoBasename, repoRelativeCwd);
 }
 
 export const availableCwds = atom<Array<CwdInfo>>([]);
