@@ -15,6 +15,7 @@ import {mockLogger} from 'shared/testUtils';
 import {defer} from 'shared/utils';
 import {__TEST__} from '../RepositoryCache';
 import {makeServerSideTracker} from '../analytics/serverSideTracker';
+import {ensureTrailingPathSep} from 'shared/pathUtils';
 
 const {RepositoryCache} = __TEST__;
 
@@ -38,6 +39,11 @@ class SimpleMockRepositoryImpl {
       data = {
         repoRoot: '/path/to/anotherrepo',
         dotdir: '/path/to/anotherrepo/.sl',
+      };
+    } else if (cwd.includes('/path/to/submodule')) {
+      data = {
+        repoRoot: cwd.endsWith('/cwd') ? cwd.slice(0, -4) : cwd,
+        dotdir: ensureTrailingPathSep(cwd) + '.sl',
       };
     } else {
       return Promise.resolve({type: 'cwdNotARepository', cwd} as RepositoryError);
