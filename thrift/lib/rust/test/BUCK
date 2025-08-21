@@ -1,5 +1,5 @@
-load("@fbcode_macros//build_defs:rust_binary.bzl", "rust_binary")
 load("@fbcode_macros//build_defs:thrift_library.bzl", "thrift_library")
+load("@fbsource//tools/build_defs:rust_binary.bzl", "rust_binary")
 load(
     "@fbsource//xplat/thrift:defs.bzl",
     "thrift_ci_hint",
