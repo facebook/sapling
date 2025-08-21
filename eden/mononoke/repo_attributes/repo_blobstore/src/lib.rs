@@ -190,6 +190,13 @@ impl Blobstore for RepoBlobstoreUnlinkOps {
     ) -> Result<Option<BlobstoreGetData>> {
         self.0.0.get(ctx, key).await
     }
+    async fn get_metadata<'a>(
+        &'a self,
+        ctx: &'a CoreContext,
+        key: &'a str,
+    ) -> Result<Option<BlobstoreMetadata>> {
+        self.0.0.get_metadata(ctx, key).await
+    }
     async fn put<'a>(
         &'a self,
         ctx: &'a CoreContext,
