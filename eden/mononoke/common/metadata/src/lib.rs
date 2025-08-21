@@ -5,6 +5,8 @@
  * GNU General Public License version 2.
  */
 
+#![feature(result_flattening)]
+
 pub mod security;
 
 use std::net::IpAddr;
