@@ -12,19 +12,19 @@ import time
 from typing import Dict, List, Optional
 
 from facebook.eden.ttypes import (
-    ChangeNotification,
-    ChangesSinceV2Params,
-    ChangesSinceV2Result,
-    Dtype,
-    SmallChangeNotification,
-    SynchronizeWorkingCopyParams,
+    ChangeNotification as ChangeNotificationLegacy,
+    ChangesSinceV2Params as ChangesSinceV2ParamsLegacy,
+    ChangesSinceV2Result as ChangesSinceV2ResultLegacy,
+    Dtype as DtypeLegacy,
+    SmallChangeNotification as SmallChangeNotificationLegacy,
+    SynchronizeWorkingCopyParams as SynchronizeWorkingCopyParamsLegacy,
 )
 
 from . import testcase
 from .thrift_objects import buildSmallChange
 
 
-class JournalTestBase(testcase.EdenRepoTest):
+class JournalTestBaseLegacy(testcase.EdenRepoTest):
     git_test_supported = False
 
     def edenfs_extra_config(self) -> Optional[Dict[str, List[str]]]:
@@ -78,15 +78,15 @@ class JournalTestBase(testcase.EdenRepoTest):
         included_suffixes=None,
         excluded_suffixes=None,
         root=None,
-    ) -> ChangesSinceV2Result:
+    ) -> ChangesSinceV2ResultLegacy:
         if sys.platform == "win32":
             # On Windows, we need to wait for the file system to settle before
             # calling getChangesSinceV2. Otherwise, we may get missing results.
             self.client.synchronizeWorkingCopy(
-                self.mount_path_bytes, SynchronizeWorkingCopyParams()
+                self.mount_path_bytes, SynchronizeWorkingCopyParamsLegacy()
             )
         return self.client.changesSinceV2(
-            ChangesSinceV2Params(
+            ChangesSinceV2ParamsLegacy(
                 mountPoint=self.mount_path_bytes,
                 fromPosition=position,
                 includedRoots=included_roots,
@@ -100,17 +100,17 @@ class JournalTestBase(testcase.EdenRepoTest):
     def repo_write_file(self, path, contents, mode=None, add=True) -> None:
         self.eden_repo.write_file(path, contents, mode, add)
 
-    def setup_test_add_file(self) -> ChangesSinceV2Result:
+    def setup_test_add_file(self) -> ChangesSinceV2ResultLegacy:
         position = self.client.getCurrentJournalPosition(self.mount_path_bytes)
         self.repo_write_file("test_file", "", add=False)
         return self.getChangesSinceV2(position=position)
 
-    def setup_test_add_file_root(self, root) -> ChangesSinceV2Result:
+    def setup_test_add_file_root(self, root) -> ChangesSinceV2ResultLegacy:
         position = self.client.getCurrentJournalPosition(self.mount_path_bytes)
         self.repo_write_file(f"{root}/test_file", "", add=False)
         return self.getChangesSinceV2(position=position, root=root)
 
-    def setup_test_rename_file(self) -> ChangesSinceV2Result:
+    def setup_test_rename_file(self) -> ChangesSinceV2ResultLegacy:
         self.repo_write_file("test_file", "", add=False)
         position = self.client.getCurrentJournalPosition(self.mount_path_bytes)
         self.rename("test_file", "best_file")
@@ -121,22 +121,26 @@ class JournalTestBase(testcase.EdenRepoTest):
 
     def add_file_expect(
         self, path, contents, mode=None, add=True
-    ) -> List[ChangeNotification]:
+    ) -> List[ChangeNotificationLegacy]:
         self.repo_write_file(path, contents, mode, add)
         return [
             buildSmallChange(
-                SmallChangeNotification.ADDED, Dtype.REGULAR, path=path.encode()
+                SmallChangeNotificationLegacy.ADDED,
+                DtypeLegacy.REGULAR,
+                path=path.encode(),
             ),
             buildSmallChange(
-                SmallChangeNotification.MODIFIED, Dtype.REGULAR, path=path.encode()
+                SmallChangeNotificationLegacy.MODIFIED,
+                DtypeLegacy.REGULAR,
+                path=path.encode(),
             ),
         ]
 
-    def add_folder_expect(self, path) -> List[ChangeNotification]:
+    def add_folder_expect(self, path) -> List[ChangeNotificationLegacy]:
         self.mkdir(path)
         return [
             buildSmallChange(
-                SmallChangeNotification.ADDED, Dtype.DIR, path=path.encode()
+                SmallChangeNotificationLegacy.ADDED, DtypeLegacy.DIR, path=path.encode()
             ),
         ]
 
@@ -150,7 +154,7 @@ class JournalTestBase(testcase.EdenRepoTest):
         subprocess.call(cmd)
 
 
-class WindowsJournalTestBase(JournalTestBase):
+class WindowsJournalTestBaseLegacy(JournalTestBaseLegacy):
     # This class is intended to test the journal system for EdenFS on Windows.
     # This is required because file changes are not immediately reported to Eden,
     # so we need to wait for the journal to update before checking its status
@@ -203,10 +207,12 @@ class WindowsJournalTestBase(JournalTestBase):
 
     def add_file_expect(
         self, path, contents, mode=None, add=True
-    ) -> List[ChangeNotification]:
+    ) -> List[ChangeNotificationLegacy]:
         self.repo_write_file(path, contents, mode, add)
         return [
             buildSmallChange(
-                SmallChangeNotification.ADDED, Dtype.REGULAR, path=path.encode()
+                SmallChangeNotificationLegacy.ADDED,
+                DtypeLegacy.REGULAR,
+                path=path.encode(),
             ),
         ]

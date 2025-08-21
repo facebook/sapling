@@ -21,13 +21,13 @@ from facebook.eden.ttypes import (
 )
 
 from .lib import testcase
-from .lib.journal_test_base import JournalTestBase, WindowsJournalTestBase
+from .lib.journal_test_base import JournalTestBaseLegacy, WindowsJournalTestBaseLegacy
 from .lib.thrift_objects import buildLargeChange, buildSmallChange, getLargeChangeSafe
 
 if sys.platform == "win32":
-    testBase = WindowsJournalTestBase
+    testBase = WindowsJournalTestBaseLegacy
 else:
-    testBase = JournalTestBase
+    testBase = JournalTestBaseLegacy
 
 
 @testcase.eden_repo_test
@@ -556,7 +556,7 @@ class ChangesTestCommon(testBase):
 
 
 @testcase.eden_repo_test
-class ChangesTestNix(JournalTestBase):
+class ChangesTestNix(JournalTestBaseLegacy):
     def test_add_file(self):
         # When adding a file, it is technically written to so there's an additional modified operation
         changes = self.setup_test_add_file()
@@ -953,7 +953,7 @@ class ChangesTestNix(JournalTestBase):
 
 
 @testcase.eden_repo_test
-class ChangesTestWin(WindowsJournalTestBase):
+class ChangesTestWin(WindowsJournalTestBaseLegacy):
     def test_add_file(self):
         # In windows, the file is created and then modified in projfs, then eden gets
         # a single ADDED notification
