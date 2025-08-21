@@ -119,6 +119,10 @@ fn main() {
     #[cfg(windows)]
     windows::enable_vt_processing().unwrap();
 
+    // Disable potentially noisy C++ logs.
+    #[cfg(fbcode_build)]
+    cpp_log_spew::disable(fbinit::expect_init());
+
     let mut io = clidispatch::io::IO::stdio();
 
     let _ = io.setup_term();

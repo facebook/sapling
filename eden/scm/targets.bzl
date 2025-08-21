@@ -120,6 +120,7 @@ def hg_binary(name, extra_deps = [], extra_features = [], **kwargs):
             "//eden/scm/lib/util/atexit:atexit",
         ] + extra_deps + ([] if rust_oss.is_oss_build() else [
             "//common/rust/shed/fbinit:fbinit",
+            "//common/rust/cpp_log_spew:cpp_log_spew",
         ]),
         **kwargs
     )
