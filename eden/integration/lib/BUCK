@@ -29,6 +29,7 @@ python_library(
         "//eden/integration/facebook/lib:lib",
         "//eden/test_support:py",
         "//fb303/thrift:fb303_core-py-deprecated",
+        "//thrift/lib/python:types",
     ],
 )
 
