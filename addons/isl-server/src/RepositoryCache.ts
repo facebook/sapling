@@ -125,18 +125,10 @@ class RepositoryCache {
     return found && !found.isDisposed ? found : undefined;
   }
 
+  // Longest match is necessary because repos can be nested (as submodules).
   private lookupByPrefix(dirGuess: AbsolutePath): RefCounted<Repository> | undefined {
-    for (const repo of this.repoMap.values()) {
-      if (
-        dirGuess === repo.value.info.repoRoot ||
-        dirGuess.startsWith(ensureTrailingPathSep(repo.value.info.repoRoot))
-      ) {
-        if (!repo.isDisposed) {
-          return repo;
-        }
-      }
-    }
-    return undefined;
+    const found = this.repoMap.getLongestPrefixMatch(dirGuess);
+    return found && !found.isDisposed ? found : undefined;
   }
 
   /**
@@ -212,9 +204,6 @@ class RepositoryCache {
 
   /**
    * Lookup a cached repository without creating a new one if it doesn't exist
-   *
-   * TODO: This is used for figuring out repo that a file belongs to.
-   * With submodules, we should stop looking up by prefix.
    */
   public cachedRepositoryForPath(path: AbsolutePath): Repository | undefined {
     const ref = this.lookupByPrefix(path);

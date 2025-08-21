@@ -223,6 +223,30 @@ describe('RepositoryCache', () => {
     expect(cache.cachedRepositoryForPath('/path/to/repo-1')).toEqual(undefined);
 
     ref1.unref();
+    expect(cache.cachedRepositoryForPath('/path/to/repo')).toEqual(undefined);
+
+    // Test longest prefix match for nested repos/submodules
+    const refSubmodule = cache.getOrCreate({...ctx, cwd: '/path/to/submodule'});
+    await refSubmodule.promise;
+    const refSubmoduleNested = cache.getOrCreate({...ctx, cwd: '/path/to/submodule/nested'});
+    await refSubmoduleNested.promise;
+
+    const repoSubmodule = cache.cachedRepositoryForPath('/path/to/submodule');
+    const repoSubmoduleFoo = cache.cachedRepositoryForPath('/path/to/submodule/foo');
+    const repoNested = cache.cachedRepositoryForPath('/path/to/submodule/nested');
+    const repoNestedBar = cache.cachedRepositoryForPath('/path/to/submodule/nested/bar');
+
+    expect(repoSubmodule?.info.repoRoot).toEqual('/path/to/submodule');
+    expect(repoSubmoduleFoo).toEqual(repoSubmodule);
+    expect(repoNested?.info.repoRoot).toEqual('/path/to/submodule/nested');
+    expect(repoNestedBar).toEqual(repoNested);
+
+    refSubmoduleNested.unref();
+    expect(cache.cachedRepositoryForPath('/path/to/submodule/nested')).toEqual(undefined);
+    expect(cache.cachedRepositoryForPath('/path/to/submodule')).not.toEqual(undefined);
+
+    refSubmodule.unref();
+    expect(cache.cachedRepositoryForPath('/path/to/submodule')).toEqual(undefined);
   });
 
   it('only creates one Repository even when racing lookups', async () => {
