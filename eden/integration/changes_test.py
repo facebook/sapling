@@ -22,7 +22,11 @@ from facebook.eden.ttypes import (
 
 from .lib import testcase
 from .lib.journal_test_base import JournalTestBaseLegacy, WindowsJournalTestBaseLegacy
-from .lib.thrift_objects import buildLargeChange, buildSmallChange, getLargeChangeSafe
+from .lib.thrift_objects_legacy import (
+    buildLargeChange,
+    buildSmallChange,
+    getLargeChangeSafe,
+)
 
 if sys.platform == "win32":
     testBase = WindowsJournalTestBaseLegacy

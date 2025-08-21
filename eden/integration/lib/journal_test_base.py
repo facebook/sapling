@@ -21,7 +21,7 @@ from facebook.eden.ttypes import (
 )
 
 from . import testcase
-from .thrift_objects import buildSmallChange
+from .thrift_objects_legacy import buildSmallChange as buildSmallChangeLegacy
 
 
 class JournalTestBaseLegacy(testcase.EdenRepoTest):
@@ -124,12 +124,12 @@ class JournalTestBaseLegacy(testcase.EdenRepoTest):
     ) -> List[ChangeNotificationLegacy]:
         self.repo_write_file(path, contents, mode, add)
         return [
-            buildSmallChange(
+            buildSmallChangeLegacy(
                 SmallChangeNotificationLegacy.ADDED,
                 DtypeLegacy.REGULAR,
                 path=path.encode(),
             ),
-            buildSmallChange(
+            buildSmallChangeLegacy(
                 SmallChangeNotificationLegacy.MODIFIED,
                 DtypeLegacy.REGULAR,
                 path=path.encode(),
@@ -139,7 +139,7 @@ class JournalTestBaseLegacy(testcase.EdenRepoTest):
     def add_folder_expect(self, path) -> List[ChangeNotificationLegacy]:
         self.mkdir(path)
         return [
-            buildSmallChange(
+            buildSmallChangeLegacy(
                 SmallChangeNotificationLegacy.ADDED, DtypeLegacy.DIR, path=path.encode()
             ),
         ]
@@ -210,7 +210,7 @@ class WindowsJournalTestBaseLegacy(JournalTestBaseLegacy):
     ) -> List[ChangeNotificationLegacy]:
         self.repo_write_file(path, contents, mode, add)
         return [
-            buildSmallChange(
+            buildSmallChangeLegacy(
                 SmallChangeNotificationLegacy.ADDED,
                 DtypeLegacy.REGULAR,
                 path=path.encode(),
