@@ -907,20 +907,7 @@ havefanotify = (
 extmodules = []
 
 
-libraries = [
-    (
-        "mpatch",
-        {
-            "sources": ["sapling/mpatch.c"],
-            "depends": [
-                "sapling/bitmanipulation.h",
-                "sapling/compat.h",
-                "sapling/mpatch.h",
-            ],
-            "include_dirs": ["."] + include_dirs,
-        },
-    ),
-]
+libraries = []
 
 if not iswindows:
     libraries.append(
