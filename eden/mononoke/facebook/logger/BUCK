@@ -22,6 +22,7 @@ cpp_library(
     undefined_symbols = True,
     visibility = [],
     deps = [
+        ":mononoke_new_commit@header",
         "//dsi/reader/schema/mononoke_new_commit:reader",
         "//folly:base64",
         "//folly:range",
