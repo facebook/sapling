@@ -19,6 +19,7 @@ use blobstore::Loadable;
 use bytes::Bytes;
 use context::CoreContext;
 use fastlog::fetch_fastlog_batch_by_unode_id;
+use fastlog::fetch_flattened;
 use futures::future::try_join_all;
 use futures::stream;
 use futures::stream::TryStreamExt;
@@ -314,9 +315,9 @@ async fn get_csids_that_added_path(
     let fastlog_batch =
         fetch_fastlog_batch_by_unode_id(ctx, repo.repo_blobstore(), &unode_entry).await?;
     if let Some(fastlog_batch) = fastlog_batch {
+        let flattened = fetch_flattened(&fastlog_batch, ctx, repo.repo_blobstore()).await?;
         // Find changesets with empty parents
-        Ok(fastlog_batch
-            .latest()
+        Ok(flattened
             .iter()
             .filter_map(|(csid, parents)| {
                 if parents.is_empty() {
