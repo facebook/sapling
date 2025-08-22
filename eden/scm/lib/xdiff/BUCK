@@ -1,6 +1,6 @@
-load("@fbcode_macros//build_defs:rust_binary.bzl", "rust_binary")
-load("@fbcode_macros//build_defs:rust_library.bzl", "rust_library")
 load("@fbsource//tools/build_defs:cram_test.bzl", "cram_test")
+load("@fbsource//tools/build_defs:rust_binary.bzl", "rust_binary")
+load("@fbsource//tools/build_defs:rust_library.bzl", "rust_library")
 
 oncall("sapling")
 

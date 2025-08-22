@@ -1,5 +1,5 @@
 load("@fbcode_macros//build_defs:cpp_library.bzl", "cpp_library")
-load("@fbcode_macros//build_defs:rust_binary.bzl", "rust_binary")
+load("@fbsource//tools/build_defs:rust_binary.bzl", "rust_binary")
 load("@fbsource//tools/target_determinator/macros:ci.bzl", "ci")
 load("//eden/mononoke/facebook:lib.bzl", "tokio_dependency_test")
 

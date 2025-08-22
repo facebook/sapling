@@ -1,5 +1,5 @@
 load("@fbcode_macros//build_defs:native_rules.bzl", "buck_filegroup")
-load("@fbcode_macros//build_defs:rust_library.bzl", "rust_library")
+load("@fbsource//tools/build_defs:rust_library.bzl", "rust_library")
 
 oncall("scm_server_infra")
 

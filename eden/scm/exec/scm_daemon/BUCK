@@ -1,5 +1,5 @@
-load("@fbcode_macros//build_defs:rust_binary.bzl", "rust_binary")
 load("@fbcode_macros//build_defs:rust_universal_binary.bzl", "rust_universal_binary")
+load("@fbsource//tools/build_defs:rust_binary.bzl", "rust_binary")
 
 oncall("sapling")
 
