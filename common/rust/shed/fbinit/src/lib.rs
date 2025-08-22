@@ -17,13 +17,13 @@
 //! Provides [FacebookInit] structure that must be used in Facebook code that
 //! requires pre-initialization, e.g. like C++'s logging.
 
-#[cfg(not(fbcode_build))]
+#[cfg(not(any(conda_build, fbcode_build)))]
 mod oss;
 
 pub use fbinit_macros::main;
 pub use fbinit_macros::nested_test;
 pub use fbinit_macros::test;
-#[cfg(not(fbcode_build))]
+#[cfg(not(any(conda_build, fbcode_build)))]
 pub use oss::*;
-#[cfg(fbcode_build)]
+#[cfg(any(conda_build, fbcode_build))]
 pub use real_fbinit::*;

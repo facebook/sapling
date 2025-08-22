@@ -26,4 +26,4 @@ quickcheck = "1.0"
 fbinit-tokio = { version = "0.1.2", path = "fbinit-tokio" }
 
 [lints]
-rust = { unexpected_cfgs = { check-cfg = ["cfg(fbcode_build)"], level = "warn" } }
+rust = { unexpected_cfgs = { check-cfg = ["cfg(conda_build)", "cfg(fbcode_build)"], level = "warn" } }
