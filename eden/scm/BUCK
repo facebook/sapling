@@ -145,7 +145,6 @@ hg_binary(
                 ],
             },
             "features": {
-                "buildinfo": [],
                 "default": [],
                 "eden": [
                     "sapling-clidispatch/eden",

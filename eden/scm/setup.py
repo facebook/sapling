@@ -457,79 +457,6 @@ write_if_changed(
 )
 
 
-def writebuildinfoc():
-    """Write build/buildinfo.c"""
-    commithash = hgtemplate("{node}")
-    commitunixtime = hgtemplate('{sub("[^0-9].*","",date)}', cast=int)
-
-    # Search 'extractBuildInfoFromELF' in fbcode for supported fields.
-    buildinfo = {
-        "Host": socket.gethostname(),
-        "PackageName": os.environ.get("RPM_PACKAGE_NAME")
-        or os.environ.get("PACKAGE_NAME"),
-        "PackageRelease": os.environ.get("RPM_PACKAGE_RELEASE")
-        or os.environ.get("PACKAGE_RELEASE"),
-        "PackageVersion": os.environ.get("RPM_PACKAGE_VERSION")
-        or os.environ.get("PACKAGE_VERSION"),
-        "Path": os.getcwd(),
-        "Platform": os.environ.get("RPM_OS"),
-        "Revision": commithash,
-        "RevisionCommitTimeUnix": commitunixtime,
-        "TimeUnix": int(time.time()),
-        "UpstreamRevision": commithash,
-        "UpstreamRevisionCommitTimeUnix": commitunixtime,
-        "User": os.environ.get("USER"),
-    }
-
-    buildinfosrc = """
-#include <stdio.h>
-#include <time.h>
-"""
-    for name, value in sorted(buildinfo.items()):
-        if isinstance(value, str):
-            buildinfosrc += 'const char *BuildInfo_k%s = "%s";\n' % (
-                name,
-                value.replace('"', '\\"'),
-            )
-        elif isinstance(value, int):
-            # The only usage of int is timestamp
-            buildinfosrc += "const time_t BuildInfo_k%s = %d;\n" % (name, value)
-
-    buildinfosrc += """
-/* This function keeps references of the symbols and prevents them from being
- * optimized out if this function is used. */
-void print_buildinfo() {
-"""
-    for name, value in sorted(buildinfo.items()):
-        if isinstance(value, str):
-            buildinfosrc += (
-                '  fprintf(stderr, "%(name)s: %%s (at %%p)\\n", BuildInfo_k%(name)s, BuildInfo_k%(name)s);\n'
-                % {"name": name}
-            )
-        elif isinstance(value, int):
-            buildinfosrc += (
-                '  fprintf(stderr, "%(name)s: %%lu (at %%p)\\n", (long unsigned)BuildInfo_k%(name)s, &BuildInfo_k%(name)s) ;\n'
-                % {"name": name}
-            )
-    buildinfosrc += """
-}
-"""
-
-    path = pjoin(builddir, "buildinfo.c")
-    write_if_changed(path, buildinfosrc.encode())
-    return path
-
-
-# If NEED_BUILDINFO is set, write buildinfo.
-# For rpmbuild, imply NEED_BUILDINFO.
-needbuildinfo = bool(
-    os.environ.get("NEED_BUILDINFO", "RPM_PACKAGE_NAME" in os.environ and not ossbuild)
-)
-
-if needbuildinfo:
-    buildinfocpath = writebuildinfoc()
-
-
 class hgbuild(build):
     # Insert hgbuildmo first so that files in mercurial/locale/ are found
     # when build_py is run next. Also, normally build_scripts is automatically
@@ -994,16 +921,6 @@ libraries = [
         },
     ),
 ]
-if needbuildinfo:
-    libraries += [
-        (
-            "buildinfo",
-            {
-                "sources": [buildinfocpath],
-                "extra_args": filter(None, cflags + [WALL, PIC]),
-            },
-        )
-    ]
 
 if not iswindows:
     libraries.append(
@@ -1148,7 +1065,6 @@ hgmainfeatures = (
         filter(
             None,
             [
-                "buildinfo" if needbuildinfo else None,
                 "with_chg" if not iswindows else None,
                 "fb" if havefb else None,
                 "eden" if not ossbuild else None,

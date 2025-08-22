@@ -37,7 +37,6 @@ anyhow = "1.0.98"
 winapi = { version = "0.3", features = ["everything", "std"] }
 
 [features]
-buildinfo = []
 default = []
 eden = ["commands/eden", "sapling-clidispatch/eden"]
 fb = ["commands/fb"]

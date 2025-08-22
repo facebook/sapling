@@ -9,7 +9,6 @@
 
 use clidispatch::dispatch;
 
-mod buildinfo;
 #[cfg(all(feature = "with_chg", not(windows)))]
 mod chg;
 #[cfg(all(feature = "with_chg", not(windows)))]
@@ -78,21 +77,7 @@ fn main() {
         }
     }
 
-    match full_args.first().map(AsRef::as_ref) {
-        Some("buildinfo") => {
-            // This code path keeps buildinfo-related symbols alive.
-            #[cfg(feature = "buildinfo")]
-            unsafe {
-                buildinfo::print_buildinfo();
-            }
-
-            #[cfg(not(feature = "buildinfo"))]
-            {
-                eprintln!("buildinfo not compiled in!");
-            }
-
-            return;
-        }
+    match full_args.first().map(AsRef::<str>::as_ref) {
         Some(name) => {
             #[cfg(windows)]
             let name = name.strip_suffix(".exe").unwrap_or(name);
