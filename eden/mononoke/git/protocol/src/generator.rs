@@ -593,6 +593,7 @@ async fn tags_packfile_stream<'a>(
     repo: &'a impl Repo,
     requested_commits: Vec<ChangesetId>,
     requested_tag_names: Arc<FxHashSet<String>>,
+    refs_source: RefsSource,
 ) -> Result<(BoxStream<'a, Result<PackfileItem>>, usize)> {
     let (ctx, filter, blobstore, concurrency) = (
         fetch_container.ctx.clone(),
@@ -611,7 +612,7 @@ async fn tags_packfile_stream<'a>(
     // NOTE: Fun git trick. If the client says it doesn't want tags, then instead of excluding all tags (like regular systems)
     // we still send the tags that were explicitly part of the client's WANT request :)
     let required_tag_names = match include_tags {
-        true => list_tags(&ctx, repo, RefsSource::WarmBookmarksCache) // Use WBC for read path
+        true => list_tags(&ctx, repo, refs_source)
             .await
             .map(|entries| {
                 entries
@@ -928,6 +929,7 @@ pub async fn fetch_response<'a>(
         repo,
         target_commits,
         translated_sha_heads.tag_names.clone(),
+        request.refs_source,
     )
     .try_timed()
     .await

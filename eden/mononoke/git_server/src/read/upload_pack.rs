@@ -499,7 +499,7 @@ pub async fn ls_refs(
     let response = ls_refs_response(
         &request_context.ctx,
         &request_context.repo,
-        args.into_request(),
+        args.into_request(request_context.pushvars.bypass_bookmark_cache()),
     )
     .await?;
     let mut output = Vec::new();
@@ -583,8 +583,11 @@ pub async fn fetch(
                         .send("Packfile will be created using only offset deltas\n".to_string())
                         .await?;
                 }
-                let fetch_request =
-                    args.into_request(concurrency(&request_context), shallow_response);
+                let fetch_request = args.into_request(
+                    concurrency(&request_context),
+                    shallow_response,
+                    request_context.pushvars.bypass_bookmark_cache(),
+                );
                 let request_signature = fetch_request.hash_heads_and_bases();
                 let response_stream = fetch_response(
                     request_context.ctx.clone(),

@@ -17,6 +17,7 @@ use protocol::types::ChainBreakingMode;
 use protocol::types::FetchFilter;
 use protocol::types::FetchRequest;
 use protocol::types::PackfileConcurrency;
+use protocol::types::RefsSource;
 use protocol::types::ShallowInfoRequest;
 use protocol::types::ShallowInfoResponse;
 use protocol::types::ShallowVariant;
@@ -350,6 +351,7 @@ impl FetchArgs {
         self,
         concurrency: PackfileConcurrency,
         shallow_info: Option<ShallowInfoResponse>,
+        bypass_cache: bool,
     ) -> FetchRequest {
         FetchRequest {
             heads: self.wants,
@@ -361,6 +363,10 @@ impl FetchArgs {
             concurrency,
             shallow_info,
             chain_breaking_mode: ChainBreakingMode::Stochastic,
+            refs_source: match bypass_cache {
+                true => RefsSource::DatabaseFollower,
+                false => RefsSource::WarmBookmarksCache,
+            },
         }
     }
 

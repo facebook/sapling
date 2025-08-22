@@ -115,6 +115,21 @@ async fn list_bookmarks(
                 .try_collect::<Vec<_>>()
                 .await
         }
+        RefsSource::DatabaseFollower => {
+            repo.bookmarks()
+                .list(
+                    ctx.clone(),
+                    Freshness::MaybeStale,
+                    bookmark_prefix,
+                    BookmarkCategory::ALL,
+                    BookmarkKind::ALL_PUBLISHING,
+                    &BookmarkPagination::FromStart,
+                    u64::MAX,
+                )
+                .map_ok(|(bookmark, cs_id)| (bookmark.key, (cs_id, bookmark.kind)))
+                .try_collect::<Vec<_>>()
+                .await
+        }
     }
 }
 

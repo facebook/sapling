@@ -75,7 +75,7 @@ impl LsRefsArgs {
         Ok(ls_ref_args)
     }
 
-    pub fn into_request(self) -> LsRefsRequest {
+    pub fn into_request(self, bypass_cache: bool) -> LsRefsRequest {
         let requested_symrefs = if self.symrefs {
             RequestedSymrefs::IncludeAll(SymrefFormat::NameWithTarget)
         } else {
@@ -95,8 +95,11 @@ impl LsRefsArgs {
             requested_symrefs,
             tag_inclusion,
             requested_refs,
-            // Use WBC since this request is for read path
-            refs_source: RefsSource::WarmBookmarksCache,
+            // Use WBC since this request is for read path, unless explicily asked not to
+            refs_source: match bypass_cache {
+                false => RefsSource::WarmBookmarksCache,
+                true => RefsSource::DatabaseFollower,
+            },
         }
     }
 }

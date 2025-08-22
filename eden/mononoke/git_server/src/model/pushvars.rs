@@ -14,6 +14,7 @@ const WAIT_FOR_WBC_UPDATE: &str = "x-git-read-after-write-consistency";
 const METAGIT_BYPASS_ALL_HOOKS: &str = "x-metagit-bypass-hooks";
 const USE_ONLY_OFFSET_DELTA: &str = "x-git-only-offset-delta";
 const PUSH_CONCURRENCY: &str = "x-git-push-concurrency";
+const BYPASS_BOOKMARK_CACHE: &str = "x-git-bypass-bookmark-cache";
 
 #[derive(Clone, StateData)]
 pub struct Pushvars(HashMap<String, Bytes>);
@@ -43,6 +44,12 @@ impl Pushvars {
     pub fn use_only_offset_delta(&self) -> bool {
         self.0
             .get(USE_ONLY_OFFSET_DELTA)
+            .is_some_and(|v| **v == *b"1")
+    }
+
+    pub fn bypass_bookmark_cache(&self) -> bool {
+        self.0
+            .get(BYPASS_BOOKMARK_CACHE)
             .is_some_and(|v| **v == *b"1")
     }
 

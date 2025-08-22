@@ -267,6 +267,9 @@ pub enum RefsSource {
     /// Fetch refs from the master instance of the bookmarks DB. This will always
     /// show the latest state of refs
     DatabaseMaster,
+    /// Bypass the cache but use the follower instance of the bookmarks DB instead of
+    /// going to the master
+    DatabaseFollower,
 }
 
 /// The request parameters used to specify the constraints that need to be
@@ -406,6 +409,8 @@ pub struct FetchRequest {
     pub concurrency: PackfileConcurrency,
     /// The mode to be used to break chains of delta packfile items
     pub chain_breaking_mode: ChainBreakingMode,
+    /// The source to be used to fetch the refs
+    pub refs_source: RefsSource,
 }
 
 impl FetchRequest {
