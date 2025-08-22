@@ -145,7 +145,7 @@ unsigned long long mycgroupid() {
   char cgroup_path[PATH_MAX];
   int r = snprintf(
       cgroup_path, sizeof(cgroup_path), "/sys/fs/cgroup%s", cgroup_name);
-  if (r < 0 || r >= sizeof(cgroup_path)) {
+  if (r < 0 || (size_t)r >= sizeof(cgroup_path)) {
     goto done;
   }
 
