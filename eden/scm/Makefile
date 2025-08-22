@@ -60,13 +60,6 @@ endif
 SL_NAME = sl
 ISL_NAME ?= isl-dist.tar.xz
 
-# Set this to e.g. "mingw32" to use a non-default compiler.
-COMPILER=
-
-COMPILERFLAG_tmp_ =
-COMPILERFLAG_tmp_${COMPILER} ?= -c $(COMPILER)
-COMPILERFLAG=${COMPILERFLAG_tmp_${COMPILER}}
-
 MAKE_PID := $(shell echo $$PPID)
 JOBS := $(shell ps T | sed -n -Ee 's%.*$(MAKE_PID).*$(MAKE).* (-j|--jobs=) *([0-9][0-9]*).*%\2%p')
 
@@ -109,7 +102,6 @@ local:
 	SAPLING_OSS_BUILD=$(OSS) HGNAME=$(HGNAME) \
 	  $(PYTHON_SYS_EXECUTABLE) setup.py $(PURE) \
 	  build_interactive_smartlog \
-	  build_clib $(COMPILERFLAG) \
 	  build_rust_ext -i -l $(RUST_FLAG) \
 	  build_mo
 ifneq ($(OS),Windows_NT)
@@ -119,7 +111,6 @@ endif
 
 hg:
 	SAPLING_SKIP_OTHER_RUST_BINARIES=true $(PYTHON_SYS_EXECUTABLE) setup.py $(PURE) \
-	  build_clib $(COMPILERFLAG) \
 	  build_rust_ext -i -l $(RUST_FLAG) \
 	  build_mo
 ifneq ($(OS),Windows_NT)
