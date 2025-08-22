@@ -14,7 +14,6 @@ use encoding::osstring_to_local_cstring;
 use libc::c_char;
 use libc::c_int;
 
-#[cfg_attr(not(fb_buck_build), link(name = "chg", kind = "static"))]
 unsafe extern "C" {
     fn chg_main(
         argc: c_int,

@@ -450,7 +450,6 @@ sapling_versionhash = str(
 )
 sapling_versionhashb = sapling_versionhash.encode("ascii")
 
-chgcflags = ["-std=c99", "-D_GNU_SOURCE", "-DHAVE_VERSIONHASH", "-I%s" % builddir]
 versionhashpath = pjoin(builddir, "versionhash.h")
 write_if_changed(
     versionhashpath, b"#define HGVERSIONHASH %sULL\n" % sapling_versionhashb
@@ -908,30 +907,6 @@ extmodules = []
 
 
 libraries = []
-
-if not iswindows:
-    libraries.append(
-        (
-            "chg",
-            {
-                "sources": [
-                    "contrib/chg/chg.c",
-                    "contrib/chg/hgclient.c",
-                    "contrib/chg/procutil.c",
-                    "contrib/chg/util.c",
-                ],
-                "depends": [versionhashpath],
-                "include_dirs": ["contrib/chg"] + include_dirs,
-                "extra_args": filter(None, cflags + chgcflags + [STDC99, WALL, PIC]),
-                # chg uses libc::unistd/getgroups() to check that chg and the
-                # sl cli have the same permissions (see D43676809).
-                # However, on macOS, getgroups() is limited to NGROUPS_MAX (16) groups by default.
-                # We can work around this by defining _DARWIN_UNLIMITED_GETGROUPS
-                # see https://opensource.apple.com/source/xnu/xnu-3247.1.106/bsd/man/man2/getgroups.2.auto.html
-                "macros": [("_DARWIN_UNLIMITED_GETGROUPS", "1")],
-            },
-        )
-    )
 
 # let's add EXTRA_LIBS to every buildable
 for extmodule in extmodules:

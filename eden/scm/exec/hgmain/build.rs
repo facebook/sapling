@@ -58,4 +58,31 @@ fn main() {
             println!("cargo:rustc-link-arg=-Wl,--export-dynamic");
         }
     }
+
+    if !cfg!(windows) {
+        use std::path::Path;
+        let chg_dir = Path::new("../../contrib/chg");
+        let mut c = cc::Build::new();
+        c.files([
+            chg_dir.join("hgclient.c"),
+            chg_dir.join("procutil.c"),
+            chg_dir.join("util.c"),
+            chg_dir.join("chg.c"),
+        ])
+        .include(chg_dir)
+        .define("_GNU_SOURCE", "1")
+        .warnings_into_errors(false)
+        .flag("-std=c99");
+
+        // chg uses libc::unistd/getgroups() to check that chg and the
+        // sl cli have the same permissions (see D43676809).
+        // However, on macOS, getgroups() is limited to NGROUPS_MAX (16) groups by default.
+        // We can work around this by defining _DARWIN_UNLIMITED_GETGROUPS
+        // see https://opensource.apple.com/source/xnu/xnu-3247.1.106/bsd/man/man2/getgroups.2.auto.html
+        if cfg!(target_os = "macos") {
+            c.define("_DARWIN_UNLIMITED_GETGROUPS", "1");
+        }
+
+        c.compile("chg");
+    }
 }

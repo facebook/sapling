@@ -15,6 +15,7 @@ sapling-clidispatch = { version = "0.1.0", path = "../../lib/clidispatch" }
 tracing = { version = "0.1.41", features = ["attributes", "valuable"] }
 
 [build-dependencies]
+cc = "1.2.10"
 sapling-python-sysconfig = { version = "0.1.0", path = "../../lib/util/python-sysconfig" }
 
 [target.'cfg(target_os = "linux")'.dependencies]
