@@ -27,5 +27,5 @@ mononoke_types = { version = "0.1.0", path = "../../../mononoke_types" }
 scuba_ext = { version = "0.1.0", path = "../../../common/scuba_ext" }
 slog = { package = "tracing_slog_compat", version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 smallvec = { version = "1.15", features = ["impl_bincode", "serde", "specialization", "union"] }
-tokio = { version = "1.46.1", features = ["full", "test-util", "tracing"] }
+tokio = { version = "1.47.1", features = ["full", "test-util", "tracing"] }
 vec1 = { version = "1", features = ["serde"] }

@@ -39,7 +39,7 @@ strum = { version = "0.27.1", features = ["derive"] }
 subprocess = "0.2.9"
 sysinfo = "0.35.1"
 thrift_streaming_clients = { version = "0.1.0", path = "../../service/thrift_streaming/clients" }
-tokio = { version = "1.46.1", features = ["full", "test-util", "tracing"] }
+tokio = { version = "1.47.1", features = ["full", "test-util", "tracing"] }
 toml = { version = "0.9.2", features = ["preserve_order"] }
 tracing = { version = "0.1.41", features = ["attributes", "valuable"] }
 uuid = { version = "1.2", features = ["serde", "v4", "v5", "v6", "v7", "v8"] }

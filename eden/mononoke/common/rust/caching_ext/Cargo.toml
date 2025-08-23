@@ -25,4 +25,4 @@ stats = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust
 [dev-dependencies]
 maplit = "1.0"
 quickcheck = "1.0"
-tokio = { version = "1.46.1", features = ["full", "test-util", "tracing"] }
+tokio = { version = "1.47.1", features = ["full", "test-util", "tracing"] }

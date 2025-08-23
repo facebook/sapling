@@ -19,4 +19,4 @@ thiserror = "2.0.12"
 [dev-dependencies]
 maplit = "1.0"
 mercurial_types-mocks = { version = "0.1.0", path = "../../mercurial/types/mocks" }
-tokio = { version = "1.46.1", features = ["full", "test-util", "tracing"] }
+tokio = { version = "1.47.1", features = ["full", "test-util", "tracing"] }

@@ -14,4 +14,4 @@ clap = { version = "4.5.42", features = ["derive", "env", "string", "unicode", "
 fbinit = { version = "0.2.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 mononoke_configs = { version = "0.1.0", path = "../../mononoke_configs" }
 slog = { package = "tracing_slog_compat", version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
-tokio = { version = "1.46.1", features = ["full", "test-util", "tracing"] }
+tokio = { version = "1.47.1", features = ["full", "test-util", "tracing"] }

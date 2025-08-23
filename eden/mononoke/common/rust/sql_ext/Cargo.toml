@@ -42,7 +42,7 @@ sql_query_config = { version = "0.1.0", path = "../../../repo_attributes/sql_que
 sql_query_telemetry = { version = "0.1.0", path = "sql_query_telemetry" }
 stats = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 time_measuring = { version = "0.1.0", path = "../../time_measuring" }
-tokio = { version = "1.46.1", features = ["full", "test-util", "tracing"] }
+tokio = { version = "1.47.1", features = ["full", "test-util", "tracing"] }
 tracing = { version = "0.1.41", features = ["attributes", "valuable"] }
 twox-hash = "1.6.1"
 vec1 = { version = "1", features = ["serde"] }

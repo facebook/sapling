@@ -37,6 +37,6 @@ sapling-version = { version = "0.1.0", path = "../version" }
 serde = { version = "1.0.219", features = ["derive", "rc"] }
 serde_cbor = "0.11"
 serde_json = { version = "1.0.140", features = ["alloc", "float_roundtrip", "raw_value", "unbounded_depth"] }
-tokio = { version = "1.46.1", features = ["full", "test-util", "tracing"] }
+tokio = { version = "1.47.1", features = ["full", "test-util", "tracing"] }
 tracing = { version = "0.1.41", features = ["attributes", "valuable"] }
 url = "2.5.4"

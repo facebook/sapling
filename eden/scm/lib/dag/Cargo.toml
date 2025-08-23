@@ -45,7 +45,7 @@ sapling-dev-logger = { version = "0.1.0", path = "../dev-logger" }
 sapling-indexedlog = { version = "0.1.0", path = "../indexedlog" }
 sapling-renderdag = { version = "0.1.0", path = "../renderdag" }
 tempfile = "3.15"
-tokio = { version = "1.46.1", features = ["full", "test-util", "tracing"] }
+tokio = { version = "1.47.1", features = ["full", "test-util", "tracing"] }
 
 [features]
 default = ["indexedlog-backend", "render"]

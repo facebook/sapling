@@ -13,4 +13,4 @@ git2 = "0.20.2"
 mononoke_macros = { version = "0.1.0", path = "../../mononoke_macros" }
 num_cpus = "1.16"
 r2d2 = "0.8.8"
-tokio = { version = "1.46.1", features = ["full", "test-util", "tracing"] }
+tokio = { version = "1.47.1", features = ["full", "test-util", "tracing"] }

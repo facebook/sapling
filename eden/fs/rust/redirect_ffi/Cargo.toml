@@ -11,4 +11,4 @@ license = "GPLv2+"
 anyhow = "1.0.98"
 cxx = "1.0.119"
 edenfs-client = { version = "0.1.0", path = "../../cli_rs/edenfs-client" }
-tokio = { version = "1.46.1", features = ["full", "test-util", "tracing"] }
+tokio = { version = "1.47.1", features = ["full", "test-util", "tracing"] }

@@ -23,4 +23,4 @@ futures_ext = { version = "0.1.0", git = "https://github.com/facebookexperimenta
 mononoke_types = { version = "0.1.0", path = "../../mononoke_types" }
 slog = { package = "tracing_slog_compat", version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 thiserror = "2.0.12"
-tokio = { version = "1.46.1", features = ["full", "test-util", "tracing"] }
+tokio = { version = "1.47.1", features = ["full", "test-util", "tracing"] }

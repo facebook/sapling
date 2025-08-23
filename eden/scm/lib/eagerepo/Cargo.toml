@@ -45,4 +45,4 @@ tracing = { version = "0.1.41", features = ["attributes", "valuable"] }
 
 [dev-dependencies]
 tempfile = "3.15"
-tokio = { version = "1.46.1", features = ["full", "test-util", "tracing"] }
+tokio = { version = "1.47.1", features = ["full", "test-util", "tracing"] }

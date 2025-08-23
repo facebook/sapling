@@ -28,4 +28,4 @@ blob = { version = "0.1.0", path = "../blob" }
 sapling-dev-logger = { version = "0.1.0", path = "../dev-logger" }
 sapling-manifest = { version = "0.1.0", path = "../manifest" }
 sha1 = "0.10.5"
-tokio = { version = "1.46.1", features = ["full", "test-util", "tracing"] }
+tokio = { version = "1.47.1", features = ["full", "test-util", "tracing"] }

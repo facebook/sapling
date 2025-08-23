@@ -46,4 +46,4 @@ rustc-hash = "2.1.1"
 scuba_ext = { version = "0.1.0", path = "../../common/scuba_ext" }
 sha1 = "0.10.5"
 tempfile = "3.15"
-tokio = { version = "1.46.1", features = ["full", "test-util", "tracing"] }
+tokio = { version = "1.47.1", features = ["full", "test-util", "tracing"] }

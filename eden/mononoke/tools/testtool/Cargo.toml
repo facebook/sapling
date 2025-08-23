@@ -33,5 +33,5 @@ serde_json = { version = "1.0.140", features = ["alloc", "float_roundtrip", "raw
 smallvec = { version = "1.15", features = ["impl_bincode", "serde", "specialization", "union"] }
 sorted_vector_map = { version = "0.2.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 tests_utils = { version = "0.1.0", path = "../../tests/utils" }
-tokio = { version = "1.46.1", features = ["full", "test-util", "tracing"] }
+tokio = { version = "1.47.1", features = ["full", "test-util", "tracing"] }
 topo_sort = { version = "0.1.0", path = "../../common/topo_sort" }

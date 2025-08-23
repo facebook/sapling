@@ -68,4 +68,4 @@ pretty_assertions = { version = "1.2", features = ["alloc"], default-features = 
 quickcheck_async = "0.1.1"
 rand = { version = "0.8", features = ["small_rng"] }
 serde_json = { version = "1.0.140", features = ["alloc", "float_roundtrip", "raw_value", "unbounded_depth"] }
-tokio = { version = "1.46.1", features = ["full", "test-util", "tracing"] }
+tokio = { version = "1.47.1", features = ["full", "test-util", "tracing"] }

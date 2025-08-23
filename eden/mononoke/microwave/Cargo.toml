@@ -20,4 +20,4 @@ mononoke_types = { version = "0.1.0", path = "../mononoke_types" }
 mutable_blobstore = { version = "0.1.0", path = "../repo_attributes/mutable_blobstore" }
 repo_identity = { version = "0.1.0", path = "../repo_attributes/repo_identity" }
 slog = { package = "tracing_slog_compat", version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
-tokio = { version = "1.46.1", features = ["full", "test-util", "tracing"] }
+tokio = { version = "1.47.1", features = ["full", "test-util", "tracing"] }

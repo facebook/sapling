@@ -11,7 +11,7 @@ license = "GPLv2+"
 anyhow = "1.0.98"
 lru-cache = "0.1.2"
 thiserror = "2.0.12"
-tokio = { version = "1.46.1", features = ["full", "test-util", "tracing"] }
+tokio = { version = "1.47.1", features = ["full", "test-util", "tracing"] }
 
 [dev-dependencies]
 edenfs-client = { version = "0.1.0", path = "../edenfs-client" }

@@ -16,4 +16,4 @@ metaconfig_types = { version = "0.1.0", path = "../../metaconfig/types" }
 replication_lag_config = { version = "0.1.0", path = "../../../../configerator/structs/scm/mononoke/mysql/replication_lag" }
 slog = { package = "tracing_slog_compat", version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 sql_ext = { version = "0.1.0", path = "../rust/sql_ext" }
-tokio = { version = "1.46.1", features = ["full", "test-util", "tracing"] }
+tokio = { version = "1.47.1", features = ["full", "test-util", "tracing"] }

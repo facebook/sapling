@@ -52,4 +52,4 @@ slog = { package = "tracing_slog_compat", version = "0.1.0", git = "https://gith
 smallvec = { version = "1.15", features = ["impl_bincode", "serde", "specialization", "union"] }
 sorted_vector_map = { version = "0.2.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 tls = { version = "0.1.0", path = "../../cmdlib/mononoke_app/tls" }
-tokio = { version = "1.46.1", features = ["full", "test-util", "tracing"] }
+tokio = { version = "1.47.1", features = ["full", "test-util", "tracing"] }

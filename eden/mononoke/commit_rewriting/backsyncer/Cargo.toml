@@ -42,7 +42,7 @@ slog = { package = "tracing_slog_compat", version = "0.1.0", git = "https://gith
 sql_ext = { version = "0.1.0", path = "../../common/rust/sql_ext" }
 sql_query_config = { version = "0.1.0", path = "../../repo_attributes/sql_query_config" }
 thiserror = "2.0.12"
-tokio = { version = "1.46.1", features = ["full", "test-util", "tracing"] }
+tokio = { version = "1.47.1", features = ["full", "test-util", "tracing"] }
 wireproto_handler = { version = "0.1.0", path = "../../wireproto_handler" }
 
 [dev-dependencies]

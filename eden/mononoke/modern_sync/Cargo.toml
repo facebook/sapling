@@ -50,7 +50,7 @@ scuba_ext = { version = "0.1.0", path = "../common/scuba_ext" }
 sharding_ext = { version = "0.1.0", path = "../cmdlib/sharding_ext" }
 sorted_vector_map = { version = "0.2.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 stats = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
-tokio = { version = "1.46.1", features = ["full", "test-util", "tracing"] }
+tokio = { version = "1.47.1", features = ["full", "test-util", "tracing"] }
 tracing = { version = "0.1.41", features = ["attributes", "valuable"] }
 url = "2.5.4"
 uuid = { version = "1.2", features = ["serde", "v4", "v5", "v6", "v7", "v8"] }

@@ -12,5 +12,5 @@ anyhow = "1.0.98"
 permission_checker = { version = "0.1.0", path = "../../permission_checker" }
 sapling-clientinfo = { version = "0.1.0", path = "../../../scm/lib/clientinfo" }
 session_id = { version = "0.1.0", path = "../session_id" }
-tokio = { version = "1.46.1", features = ["full", "test-util", "tracing"] }
+tokio = { version = "1.47.1", features = ["full", "test-util", "tracing"] }
 trust-dns-resolver = "0.20"

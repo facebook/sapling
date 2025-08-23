@@ -17,4 +17,4 @@ metaconfig_types = { version = "0.1.0", path = "../../metaconfig/types" }
 mockall = "0.13.1"
 permission_checker = { version = "0.1.0", path = "../../permission_checker" }
 slog = { package = "tracing_slog_compat", version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
-tokio = { version = "1.46.1", features = ["full", "test-util", "tracing"] }
+tokio = { version = "1.47.1", features = ["full", "test-util", "tracing"] }

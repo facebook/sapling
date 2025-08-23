@@ -36,7 +36,7 @@ scuba_ext = { version = "0.1.0", path = "../../common/scuba_ext" }
 stats = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 thiserror = "2.0.12"
 time_ext = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
-tokio = { version = "1.46.1", features = ["full", "test-util", "tracing"] }
+tokio = { version = "1.47.1", features = ["full", "test-util", "tracing"] }
 unodes = { version = "0.1.0", path = "../../derived_data/unodes" }
 
 [dev-dependencies]

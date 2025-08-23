@@ -44,8 +44,8 @@ scuba_ext = { version = "0.1.0", path = "../common/scuba_ext" }
 serde_json = { version = "1.0.140", features = ["alloc", "float_roundtrip", "raw_value", "unbounded_depth"] }
 slog = { package = "tracing_slog_compat", version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 time_ext = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
-tokio = { version = "1.46.1", features = ["full", "test-util", "tracing"] }
-tokio-openssl = "0.6"
+tokio = { version = "1.47.1", features = ["full", "test-util", "tracing"] }
+tokio-openssl = "0.6.5"
 tokio-util = { version = "0.7.15", features = ["full"] }
 trust-dns-resolver = "0.20"
 yield_stream = { version = "0.1.0", path = "../common/yield_stream" }

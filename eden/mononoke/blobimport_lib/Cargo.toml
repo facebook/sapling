@@ -41,4 +41,4 @@ repo_derived_data = { version = "0.1.0", path = "../repo_attributes/repo_derived
 repo_identity = { version = "0.1.0", path = "../repo_attributes/repo_identity" }
 slog = { package = "tracing_slog_compat", version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 synced_commit_mapping = { version = "0.1.0", path = "../commit_rewriting/synced_commit_mapping" }
-tokio = { version = "1.46.1", features = ["full", "test-util", "tracing"] }
+tokio = { version = "1.47.1", features = ["full", "test-util", "tracing"] }

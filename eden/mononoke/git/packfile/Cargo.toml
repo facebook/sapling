@@ -22,7 +22,7 @@ rustc-hash = "2.1.1"
 sha1 = "0.10.5"
 sha1-checked = "0.10.0"
 thiserror = "2.0.12"
-tokio = { version = "1.46.1", features = ["full", "test-util", "tracing"] }
+tokio = { version = "1.47.1", features = ["full", "test-util", "tracing"] }
 
 [dev-dependencies]
 bytes = { version = "1.10", features = ["serde"] }

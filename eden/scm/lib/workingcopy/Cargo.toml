@@ -47,7 +47,7 @@ sapling-vfs = { version = "0.1.0", path = "../vfs" }
 serde = { version = "1.0.219", features = ["derive", "rc"] }
 serde_json = { version = "1.0.140", features = ["alloc", "float_roundtrip", "raw_value", "unbounded_depth"] }
 thiserror = "2.0.12"
-tokio = { version = "1.46.1", features = ["full", "test-util", "tracing"] }
+tokio = { version = "1.47.1", features = ["full", "test-util", "tracing"] }
 tracing = { version = "0.1.41", features = ["attributes", "valuable"] }
 watchman_client = { version = "0.9.0", git = "https://github.com/facebook/watchman.git", branch = "main" }
 whoami = "1.5"

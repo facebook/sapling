@@ -34,4 +34,4 @@ repo_identity = { version = "0.1.0", path = "../repo_attributes/repo_identity" }
 sharding_ext = { version = "0.1.0", path = "../cmdlib/sharding_ext" }
 slog = { package = "tracing_slog_compat", version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 sql_commit_graph_storage = { version = "0.1.0", path = "../repo_attributes/commit_graph/sql_commit_graph_storage" }
-tokio = { version = "1.46.1", features = ["full", "test-util", "tracing"] }
+tokio = { version = "1.47.1", features = ["full", "test-util", "tracing"] }
