@@ -500,7 +500,7 @@ def dirsyncctx(ctx, matcher=None):
                                 % type(dst_data)
                             )
                         fmirror = context.overlayfilectx(
-                            fmirror, datafunc=lambda: dst_data
+                            fmirror, datafunc=lambda data=dst_data: data
                         )
 
                 mctx[dst] = fmirror
