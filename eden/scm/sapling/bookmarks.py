@@ -1076,8 +1076,6 @@ def saveremotenames(repo, remotebookmarks, override: bool = True) -> None:
     if not remotebookmarks:
         return
 
-    from . import extensions
-
     with repo.lock():
         # read in all data first before opening file to write
         olddata = set(readremotenames(repo))
