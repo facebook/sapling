@@ -484,6 +484,11 @@ def _cleanuplanded(repo, dryrun=False):
     This uses mutation and visibility directly.
     """
     ui = repo.ui
+    # return empty dict if there are no remote bookmarks
+    if not len(repo._remotenames["bookmarks"]):
+        ui.status(_("no remote bookmarks, cleanup skipped.\n"))
+        return {}
+
     difftodraft = _get_diff_to_draft(repo)
     query_result = _query_phabricator(
         repo, list(difftodraft.keys()), ["Closed", "Abandoned"]
