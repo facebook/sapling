@@ -44,6 +44,7 @@ cpp_library(
     headers = ["stats_sys/stats.h"],
     preferred_linkage = "static",
     undefined_symbols = True,
+    deps = [":stats_facebook@header"],
     exported_deps = [
         "fbsource//third-party/rust:cxx-core",
         ":stats_facebook@header",
