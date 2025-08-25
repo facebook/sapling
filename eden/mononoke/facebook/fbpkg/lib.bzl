@@ -35,7 +35,6 @@ def mononoke_fbpkg(
     else:
         buck_opts["config"].update({
             "fbcode.build_dwp_targets": "false",
-            "fbcode.dwp": "false",
             "fbcode.package_dwp_targets": "false",
         })
 
