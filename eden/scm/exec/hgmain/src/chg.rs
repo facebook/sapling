@@ -20,6 +20,7 @@ unsafe extern "C" {
         argv: *mut *mut c_char,
         envp: *mut *mut c_char,
         cli_name: *const c_char,
+        versionhash: u64,
     ) -> c_int;
 }
 
@@ -31,15 +32,20 @@ fn chg_main_wrapper(args: Vec<CString>, envs: Vec<CString>) -> i32 {
     envp.push(std::ptr::null_mut());
     let name = identity::default().cli_name();
     let name = CString::new(name).unwrap();
-    let rc = unsafe {
+    const VERSION_HASH_INT: u64 = match u64::from_str_radix(::version::VERSION_HASH, 10) {
+        Err(_) => 0,
+        Ok(v) => v,
+    };
+
+    unsafe {
         chg_main(
             (argv.len() - 1) as c_int,
             argv.as_mut_ptr(),
             envp.as_mut_ptr(),
             name.as_c_str().as_ptr(),
+            VERSION_HASH_INT,
         )
-    };
-    rc
+    }
 }
 
 /// Turn `OsString` args into `CString` for ffi

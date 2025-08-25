@@ -9,6 +9,8 @@
 
 #include <errno.h>
 #include <fcntl.h>
+#include <inttypes.h>
+#include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -21,11 +23,6 @@
 #include "hgclient.h"
 #include "procutil.h"
 #include "util.h"
-
-/* Written by setup.py */
-#ifdef HAVE_VERSIONHASH
-#include "versionhash.h" // @manual
-#endif
 
 #ifndef PATH_MAX
 #define PATH_MAX 4096
@@ -414,7 +411,11 @@ static const char* gethgcmd(const char* cli_name) {
   }
 
   int chg_main(
-      int argc, const char* argv[], const char* envp[], const char* cli_name) {
+      int argc,
+      const char* argv[],
+      const char* envp[],
+      const char* cli_name,
+      uint64_t client_versionhash) {
     if (configint("CHGDEBUG", 0)) {
       enabledebugmsg();
     }
@@ -476,21 +477,19 @@ static const char* gethgcmd(const char* cli_name) {
         abortmsg("cannot open hg client");
       }
       int needreconnect = 0;
-#ifdef HAVE_VERSIONHASH
-      unsigned long long versionhash = hgc_versionhash(hgc);
+      uint64_t server_versionhash = hgc_versionhash(hgc);
       // Skip version check if there is an explicit socket path set,
       // which is used in tests.
-      if (versionhash != HGVERSIONHASH && !getenv("CHGSOCKNAME")) {
+      if (server_versionhash != client_versionhash && !getenv("CHGSOCKNAME")) {
         debugmsg(
-            "version mismatch (client %llu, server %llu)",
-            HGVERSIONHASH,
-            versionhash);
+            "version mismatch (client %" PRIu64 ", server %" PRIu64 ")",
+            client_versionhash,
+            server_versionhash);
         killcmdserver(&opts);
         needreconnect = 1;
       } else {
-        debugmsg("version matched (%llu)", versionhash);
+        debugmsg("version matched (%" PRIu64 ")", client_versionhash);
       }
-#endif
       // If a client has a higher RLIMIT_NOFILE, do not reuse the existing
       // server.
       unsigned long nofile = hgc_nofile(hgc);
