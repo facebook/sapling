@@ -1123,10 +1123,8 @@ def saveremotenames(repo, remotebookmarks, override: bool = True) -> None:
 
         _recordbookmarksupdate(repo, journal)
 
-        # Old paths have been deleted, refresh remotenames
-        if hasattr(repo, "_remotenames"):
-            # This will bump _changecount.
-            repo._remotenames.clearnames()
+        # This will bump _changecount.
+        repo._remotenames.clearnames()
 
         # If narrowheads is enabled, updating remotenames can affect phases
         # (and other revsets). Therefore invalidate them.
