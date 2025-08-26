@@ -4770,11 +4770,7 @@ Disk[410]: Root { radix: Disk[402] }
                 index = open_opts().logical_len(len.into()).open(dir.path().join("a")).unwrap();
             }
 
-            map.iter().all(|(key, value)| {
-                let link_offset = index.get(key).expect("lookup");
-                assert!(!link_offset.is_null());
-                link_offset.value_and_next(&index).unwrap().0 == *value
-            })
+            index.verify_against_hashmap(&map)
         }
 
         fn test_multiple_values(map: HashMap<Vec<u8>, Vec<u64>>) -> bool {
@@ -4860,6 +4856,17 @@ Disk[410]: Root { radix: Disk[402] }
                     .map(|s| s.unwrap().0.as_ref().to_vec())
                     .collect::<Vec<_>>()
                     == set.iter().cloned().collect::<Vec<_>>()
+            })
+        }
+    }
+
+    impl Index {
+        fn verify_against_hashmap(&self, map: &HashMap<Vec<u8>, u64>) -> bool {
+            let index = self;
+            map.iter().all(|(key, value)| {
+                let link_offset = index.get(key).expect("lookup");
+                assert!(!link_offset.is_null());
+                link_offset.value_and_next(&index).unwrap().0 == *value
             })
         }
     }
