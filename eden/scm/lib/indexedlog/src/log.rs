@@ -722,8 +722,7 @@ impl Log {
     ) -> crate::Result<()> {
         for &index_id in index_ids.iter() {
             let metaname = self.open_options.index_defs[index_id].metaname();
-            let new_length = self.indexes[index_id].flush();
-            let new_length = self.maybe_set_index_error(new_length)?;
+            let new_length = self.indexes[index_id].flush()?;
             self.meta.indexes.insert(metaname, new_length);
             trace!(
                 name = "Log::flush_lagging_index",
@@ -834,8 +833,7 @@ impl Log {
 
                 // Flush all indexes.
                 for i in 0..self.indexes.len() {
-                    let new_length = self.indexes[i].flush();
-                    let new_length = self.maybe_set_index_error(new_length)?;
+                    let new_length = self.indexes[i].flush()?;
                     let name = self.open_options.index_defs[i].metaname();
                     self.meta.indexes.insert(name, new_length);
                 }
