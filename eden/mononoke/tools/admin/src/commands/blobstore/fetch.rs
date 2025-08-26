@@ -46,6 +46,8 @@ use mononoke_types::content_manifest::ContentManifestEntry;
 use mononoke_types::deleted_manifest_v2::DeletedManifestV2;
 use mononoke_types::fastlog_batch::FastlogBatch;
 use mononoke_types::fsnode::Fsnode;
+use mononoke_types::inferred_copy_from::InferredCopyFrom;
+use mononoke_types::inferred_copy_from::InferredCopyFromEntry;
 use mononoke_types::sharded_map::ShardedMapNode;
 use mononoke_types::sharded_map_v2::ShardedMapV2Node;
 use mononoke_types::skeleton_manifest::SkeletonManifest;
@@ -117,6 +119,8 @@ pub enum DecodeAs {
     TestShardedManifestMapNode,
     ContentManifest,
     ContentManifestMapNode,
+    InferredCopyFrom,
+    InferredCopyFromMapNode,
 }
 
 impl DecodeAs {
@@ -173,6 +177,8 @@ impl DecodeAs {
                 ("changeset_info.", DecodeAs::ChangesetInfo),
                 ("contentmf.map2node.", DecodeAs::ContentManifestMapNode),
                 ("contentmf.", DecodeAs::ContentManifest),
+                ("icf.map2node.", DecodeAs::InferredCopyFromMapNode),
+                ("icf.", DecodeAs::InferredCopyFrom),
             ] {
                 if key[index..].starts_with(prefix) {
                     return Some(auto_decode_as);
@@ -331,6 +337,14 @@ async fn decode(
         }
         DecodeAs::ContentManifestMapNode => {
             Decoded::try_debug(ShardedMapV2Node::<ContentManifestEntry>::from_bytes(
+                &data.into_raw_bytes(),
+            ))
+        }
+        DecodeAs::InferredCopyFrom => {
+            Decoded::try_debug(InferredCopyFrom::from_bytes(&data.into_raw_bytes()))
+        }
+        DecodeAs::InferredCopyFromMapNode => {
+            Decoded::try_debug(ShardedMapV2Node::<InferredCopyFromEntry>::from_bytes(
                 &data.into_raw_bytes(),
             ))
         }
