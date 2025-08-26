@@ -721,6 +721,7 @@ impl SaplingRemoteApiHandler for FetchSnapshotHandler {
         };
         let time = cs.author_date.timestamp_secs();
         let tz = cs.author_date.tz_offset_secs();
+        let parents = cs.parents.clone();
         let response = FetchSnapshotResponse {
             author: cs.author,
             time,
@@ -754,7 +755,17 @@ impl SaplingRemoteApiHandler for FetchSnapshotHandler {
                                     Some(bubble_id.into()),
                                 ),
                                 file_type: tc.file_type().try_into()?,
-                                copy_info: None, // TODO: Add copy info on tracked changes
+                                copy_info: tc.copy_from().and_then(|(copy_path, copy_cs_id)| {
+                                    // Find the parent index for the copy source changeset
+                                    parents
+                                        .iter()
+                                        .position(|&parent_cs_id| parent_cs_id == *copy_cs_id)
+                                        .and_then(|parent_index| {
+                                            to_hg_path(copy_path)
+                                                .ok()
+                                                .map(|path| (path, parent_index))
+                                        })
+                                }),
                             },
                             FileChange::UntrackedChange(uc) => BonsaiFileChange::UntrackedChange {
                                 upload_token: UploadToken::new_fake_token(

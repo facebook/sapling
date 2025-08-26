@@ -335,6 +335,8 @@ pub enum BonsaiFileChange {
         /// Token proving the file was uploaded, and containing its content id and size
         upload_token: UploadToken,
         file_type: FileType,
+        /// Copy information: (source_path, parent_index) where parent_index indicates
+        /// which parent changeset the file was copied from (0 = first parent, 1 = second parent, etc.)
         copy_info: Option<(RepoPathBuf, usize)>,
     },
     Deletion,
