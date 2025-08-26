@@ -2771,30 +2771,31 @@ impl Index {
                 test_only_fail_point!(self.fail_on_flush == 6);
                 let bytes = mmap_bytes(lock.as_ref(), None).context(&path, "cannot mmap")?;
 
-                self.buf = bytes;
-
                 // 'path' should not have changed.
                 debug_assert_eq!(&self.path, &path);
 
                 // This is to workaround the borrow checker.
-                let this = SimpleIndexBuf(&self.buf, &path);
+                let this = SimpleIndexBuf(&bytes, &path);
 
                 // Sanity check - the length should be expected. Otherwise, the lock
                 // is somehow ineffective.
                 test_only_fail_point!(self.fail_on_flush == 7);
-                if self.buf.len() as u64 != new_len {
+                if bytes.len() as u64 != new_len {
                     return Err(this.corruption("file changed unexpectedly"));
                 }
 
                 // Reload root and checksum.
                 test_only_fail_point!(self.fail_on_flush == 8);
-                let (root, checksum) =
-                    read_root_checksum_at_end(&path, &self.buf, new_len as usize)?;
+                let (root, checksum) = read_root_checksum_at_end(&path, &bytes, new_len as usize)?;
 
+                // Only mutate `self` when everything is ready, without possible IO errors
+                // in remaining operations. This avoids "partial updated, inconsistent"
+                // `self` state.
                 debug_assert_eq!(checksum.end, new_checksum.end);
                 debug_assert_eq!(&checksum.xxhash_list, &new_checksum.xxhash_list);
                 self.checksum = checksum;
                 self.clean_root = root;
+                self.buf = bytes;
             }
 
             // Outside critical section
@@ -4860,7 +4861,9 @@ Disk[410]: Root { radix: Disk[402] }
             (1..=8).all(|flush_failure| {
                 let mut index = index.try_clone().expect("clone");
                 index.fail_on_flush = flush_failure;
+                let old_index_buf_len = index.buf.len();
                 assert_eq!(index.flush().is_err(), should_fail);
+                assert_eq!(old_index_buf_len, index.buf.len());
 
                 // Verify entries in map.
                 let mut verified = index.verify_against_hashmap(&map);
