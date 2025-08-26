@@ -4784,6 +4784,41 @@ Disk[410]: Root { radix: Disk[402] }
         assert_eq!(len1, len2);
     }
 
+    #[test]
+    fn test_flush_with_replaced_file() {
+        let dir = tempdir().unwrap();
+        let path1 = dir.path().join("1");
+        let path2 = dir.path().join("2");
+        let mut index1 = open_opts().open(&path1).unwrap();
+        let mut index2 = open_opts().open(&path2).unwrap();
+
+        index1.insert(b"foo1", 1).unwrap();
+        index1.insert(b"z1", 1).unwrap();
+        index2.insert(b"foo1", 2).unwrap();
+        index2.insert(b"z1", 2).unwrap();
+
+        let len1 = index1.flush().unwrap();
+        let len2 = index2.flush().unwrap();
+
+        assert_eq!(len1, len2);
+
+        // Modify index1 so it has pending in-memory changes.
+        index1.insert(b"z1", 3).unwrap();
+
+        // Attempt to modify index1 by replacing its underlying file. This won't actaully break
+        // index1, because Index operates at the file descriptor level, not the path level (unlike
+        // Log), Index will not reload the file from the same path on flush.
+        fs::rename(&path1, &path1.with_extension("bak")).unwrap();
+        fs::rename(&path2, &path1).unwrap();
+
+        // "index1.flush" failure shouldn't change its internal state.
+        index1.fail_on_flush = 8;
+        index1.flush().unwrap_err();
+        let link_offset = index1.get(b"foo1").expect("lookup");
+        // "foo1" in index1 should still be "1", not "2" in index2.
+        assert_eq!(link_offset.value_and_next(&index1).unwrap().0, 1);
+    }
+
     quickcheck! {
         fn test_single_value(map: HashMap<Vec<u8>, u64>, flush: bool) -> bool {
             let dir = tempdir().unwrap();
