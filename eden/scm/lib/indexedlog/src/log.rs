@@ -159,7 +159,7 @@ pub struct Log {
     // If this is set, then index-based reads (lookups) should return errors because it can no
     // longer be trusted.
     // This could be improved to be per index. For now, it's a single state for simplicity.
-    index_corrupted: bool,
+    index_out_of_sync: Option<String>,
     open_options: OpenOptions,
     // Indicate an active reader. Destrictive writes (repair) are unsafe.
     reader_lock: Option<ScopedDirLock>,
@@ -441,7 +441,7 @@ impl Log {
                 &self.disk_folds
             }
             .clone(),
-            index_corrupted: false,
+            index_out_of_sync: None,
             open_options: self.open_options.clone(),
             reader_lock,
             change_detector: self.change_detector.clone(),
@@ -1164,7 +1164,7 @@ impl Log {
         data_offset: u64,
     ) -> crate::Result<()> {
         let result = self.update_indexes_for_in_memory_entry_unchecked(data, offset, data_offset);
-        self.maybe_set_index_error(result)
+        self.maybe_set_index_out_of_sync(result)
     }
 
     /// Similar to `update_indexes_for_in_memory_entry`. But updates `fold` instead.
@@ -1236,7 +1236,7 @@ impl Log {
     /// Returns number of entries built per index.
     fn update_indexes_for_on_disk_entries(&mut self) -> crate::Result<()> {
         let result = self.update_indexes_for_on_disk_entries_unchecked();
-        self.maybe_set_index_error(result)
+        self.maybe_set_index_out_of_sync(result)
     }
 
     fn update_indexes_for_on_disk_entries_unchecked(&mut self) -> crate::Result<()> {
@@ -1576,19 +1576,19 @@ impl Log {
     /// Wrapper around a `Result` returned by an index write operation.
     /// Make sure all index write operations are wrapped by this method.
     #[inline]
-    fn maybe_set_index_error<T>(&mut self, result: crate::Result<T>) -> crate::Result<T> {
-        if result.is_err() && !self.index_corrupted {
-            self.index_corrupted = true;
+    fn maybe_set_index_out_of_sync<T>(&mut self, result: crate::Result<T>) -> crate::Result<T> {
+        if let (Err(e), None) = (&result, &self.index_out_of_sync) {
+            self.index_out_of_sync = Some(format!("{} ({:?})", e, e));
         }
         result
     }
 
-    /// Wrapper to return an error if `index_corrupted` is set.
+    /// Wrapper to return an error if `index_out_of_sync` is set.
     /// Use this before doing index read operations.
     #[inline]
     fn maybe_return_index_error(&self) -> crate::Result<()> {
-        if self.index_corrupted {
-            let msg = "index is corrupted".to_string();
+        if let Some(msg) = &self.index_out_of_sync {
+            let msg = format!("index was out of sync: {}", msg);
             Err(self.corruption(msg))
         } else {
             Ok(())
