@@ -11,17 +11,41 @@ import {T} from '../i18n';
 import {runCodeReview} from './runCodeReview';
 import {useAtomValue} from 'jotai';
 import {serverCwd} from '../repositoryData';
-
-import './CodeReviewStatus.css';
 import clientToServerAPI from '../ClientToServerAPI';
 import {useState} from 'react';
 import {Icon} from 'isl-components/Icon';
+import type {CommitInfo} from '../types';
+
+import './CodeReviewStatus.css';
+import {Tooltip} from 'isl-components/Tooltip';
 
 type CodeReviewProgressStatus = 'running' | 'success' | 'error';
 
-export function CodeReviewStatus(): JSX.Element {
+export function CodeReviewStatus({commit}: {commit: CommitInfo}): JSX.Element {
   const cwd = useAtomValue(serverCwd);
   const [status, setStatus] = useState<CodeReviewProgressStatus | null>(null);
+
+  const button = (
+    <Button
+      onClick={async () => {
+        let results;
+        setStatus('running');
+        try {
+          results = await runCodeReview(cwd);
+        } catch (e) {
+          setStatus('error');
+          return;
+        }
+        clientToServerAPI.postMessage({
+          type: 'platform/setFirstPassCodeReviewDiagnostics',
+          issueMap: results,
+        });
+        setStatus('success');
+      }}
+      disabled={!commit.isDot}>
+      {status == null ? <T>Try it!</T> : <T>Try again</T>}
+    </Button>
+  );
 
   return (
     <Banner kind={getBannerKind(status)}>
@@ -31,25 +55,10 @@ export function CodeReviewStatus(): JSX.Element {
         </b>
         {status === 'running' ? (
           <Icon icon="loading" />
+        ) : commit.isDot ? (
+          button
         ) : (
-          <Button
-            onClick={async () => {
-              let results;
-              setStatus('running');
-              try {
-                results = await runCodeReview(cwd);
-              } catch (e) {
-                setStatus('error');
-                return;
-              }
-              clientToServerAPI.postMessage({
-                type: 'platform/setFirstPassCodeReviewDiagnostics',
-                issueMap: results,
-              });
-              setStatus('success');
-            }}>
-            {status == null ? <T>Try it!</T> : <T>Try again</T>}
-          </Button>
+          <Tooltip title="This action is only available for the current commit.">{button}</Tooltip>
         )}
       </div>
     </Banner>

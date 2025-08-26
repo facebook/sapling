@@ -422,7 +422,7 @@ export function CommitInfoDetails({commit}: {commit: CommitInfo}) {
             <FoldPreviewActions />
           ) : (
             <>
-              {aiFirstPassCodeReviewEnabled && <CodeReviewStatus />}
+              {aiFirstPassCodeReviewEnabled && <CodeReviewStatus commit={commit} />}
               <ActionsBar
                 commit={commit}
                 latestMessage={parsedFields}
