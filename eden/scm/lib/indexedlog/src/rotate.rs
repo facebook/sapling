@@ -383,7 +383,7 @@ impl RotateLog {
         &self,
         index_id: usize,
         key: impl Into<Bytes>,
-    ) -> crate::Result<RotateLogLookupIter> {
+    ) -> crate::Result<RotateLogLookupIter<'_>> {
         let key = key.into();
         let result: crate::Result<_> = (|| {
             Ok(RotateLogLookupIter {
@@ -430,7 +430,7 @@ impl RotateLog {
         &self,
         index_id: usize,
         key: impl AsRef<[u8]>,
-    ) -> crate::Result<log::LogLookupIter> {
+    ) -> crate::Result<log::LogLookupIter<'_>> {
         let key = key.as_ref();
         assert!(
             self.open_options.log_open_options.flush_filter.is_some(),

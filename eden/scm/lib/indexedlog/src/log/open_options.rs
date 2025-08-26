@@ -497,7 +497,7 @@ impl OpenOptions {
 }
 
 impl IndexOutput {
-    pub(crate) fn into_cow(self, data: &[u8]) -> crate::Result<Cow<[u8]>> {
+    pub(crate) fn into_cow(self, data: &[u8]) -> crate::Result<Cow<'_, [u8]>> {
         Ok(match self {
             IndexOutput::Reference(range) => Cow::Borrowed(
                 data.get(range.start as usize..range.end as usize)

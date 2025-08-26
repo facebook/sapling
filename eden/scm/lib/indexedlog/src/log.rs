@@ -975,7 +975,11 @@ impl Log {
     /// `index_defs` passed to [`Log::open`].
     ///
     /// Return an iterator of `Result<&[u8]>`, in reverse insertion order.
-    pub fn lookup<K: AsRef<[u8]>>(&self, index_id: usize, key: K) -> crate::Result<LogLookupIter> {
+    pub fn lookup<K: AsRef<[u8]>>(
+        &self,
+        index_id: usize,
+        key: K,
+    ) -> crate::Result<LogLookupIter<'_>> {
         let result: crate::Result<_> = (|| {
             self.maybe_return_index_error()?;
             if let Some(index) = self.indexes.get(index_id) {
@@ -1012,7 +1016,7 @@ impl Log {
         &self,
         index_id: usize,
         prefix: K,
-    ) -> crate::Result<LogRangeIter> {
+    ) -> crate::Result<LogRangeIter<'_>> {
         let prefix = prefix.as_ref();
         let result: crate::Result<_> = (|| {
             let index = self.indexes.get(index_id).unwrap();
@@ -1041,7 +1045,7 @@ impl Log {
         &self,
         index_id: usize,
         range: impl RangeBounds<&'a [u8]>,
-    ) -> crate::Result<LogRangeIter> {
+    ) -> crate::Result<LogRangeIter<'_>> {
         let start = range.start_bound();
         let end = range.end_bound();
         let result: crate::Result<_> = (|| {
@@ -1074,7 +1078,7 @@ impl Log {
         &self,
         index_id: usize,
         hex_prefix: K,
-    ) -> crate::Result<LogRangeIter> {
+    ) -> crate::Result<LogRangeIter<'_>> {
         let prefix = hex_prefix.as_ref();
         let result: crate::Result<_> = (|| {
             let index = self.indexes.get(index_id).unwrap();
@@ -1092,7 +1096,7 @@ impl Log {
     }
 
     /// Return an iterator for all entries.
-    pub fn iter(&self) -> LogIter {
+    pub fn iter(&self) -> LogIter<'_> {
         LogIter {
             log: self,
             next_offset: PRIMARY_START_OFFSET,
@@ -1103,7 +1107,7 @@ impl Log {
     /// Return an iterator for in-memory entries that haven't been flushed to disk.
     ///
     /// For in-memory Logs, this is the same as [`Log::iter`].
-    pub fn iter_dirty(&self) -> LogIter {
+    pub fn iter_dirty(&self) -> LogIter<'_> {
         LogIter {
             log: self,
             next_offset: self.meta.primary_len,
@@ -1458,7 +1462,7 @@ impl Log {
     /// Read the entry at the given offset. Return `None` if offset is out of bound, or the content
     /// of the data, the real offset of the data, and the next offset. Raise errors if
     /// integrity-check failed.
-    fn read_entry(&self, offset: u64) -> crate::Result<Option<EntryResult>> {
+    fn read_entry(&self, offset: u64) -> crate::Result<Option<EntryResult<'_>>> {
         let result = if offset < self.meta.primary_len {
             let entry = Self::read_entry_from_buf(&self.dir, &self.disk_buf, offset)?;
             if let Some(ref entry) = entry {

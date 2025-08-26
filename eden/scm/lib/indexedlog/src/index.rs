@@ -2865,7 +2865,7 @@ impl Index {
     pub fn scan_prefix_base16(
         &self,
         mut base16: impl Iterator<Item = u8>,
-    ) -> crate::Result<RangeIter> {
+    ) -> crate::Result<RangeIter<'_>> {
         let mut offset: Offset = self.dirty_root.radix_offset.into();
         let mut front_stack = Vec::<IterState>::new();
 
@@ -2921,7 +2921,7 @@ impl Index {
 
     /// Scan entries which match the given prefix in base256 form.
     /// Return [`RangeIter`] which allows accesses to keys and values.
-    pub fn scan_prefix<B: AsRef<[u8]>>(&self, prefix: B) -> crate::Result<RangeIter> {
+    pub fn scan_prefix<B: AsRef<[u8]>>(&self, prefix: B) -> crate::Result<RangeIter<'_>> {
         self.scan_prefix_base16(Base16Iter::from_base256(&prefix))
             .context(|| format!("in Index::scan_prefix({:?})", prefix.as_ref()))
             .context(|| format!("  Index.path = {:?}", self.path))
@@ -2929,7 +2929,7 @@ impl Index {
 
     /// Scan entries which match the given prefix in hex form.
     /// Return [`RangeIter`] which allows accesses to keys and values.
-    pub fn scan_prefix_hex<B: AsRef<[u8]>>(&self, prefix: B) -> crate::Result<RangeIter> {
+    pub fn scan_prefix_hex<B: AsRef<[u8]>>(&self, prefix: B) -> crate::Result<RangeIter<'_>> {
         // Invalid hex chars will be caught by `radix.child`
         let base16 = prefix.as_ref().iter().cloned().map(single_hex_to_base16);
         self.scan_prefix_base16(base16)
@@ -2941,7 +2941,7 @@ impl Index {
     ///
     /// Returns a double-ended iterator, which provides accesses to keys and
     /// values.
-    pub fn range<'a>(&self, range: impl RangeBounds<&'a [u8]>) -> crate::Result<RangeIter> {
+    pub fn range<'a>(&self, range: impl RangeBounds<&'a [u8]>) -> crate::Result<RangeIter<'_>> {
         let is_empty_range = match (range.start_bound(), range.end_bound()) {
             (Included(start), Included(end)) => start > end,
             (Included(start), Excluded(end)) => start > end,
