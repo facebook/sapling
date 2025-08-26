@@ -7,23 +7,31 @@
 
 import {Banner, BannerKind} from 'isl-components/Banner';
 import {Button} from 'isl-components/Button';
-import {T} from '../i18n';
-import {runCodeReview} from './runCodeReview';
-import {useAtomValue} from 'jotai';
-import {serverCwd} from '../repositoryData';
-import clientToServerAPI from '../ClientToServerAPI';
-import {useState} from 'react';
 import {Icon} from 'isl-components/Icon';
-import type {CommitInfo} from '../types';
+import {Tooltip} from 'isl-components/Tooltip';
+import {atom, useAtom, useAtomValue} from 'jotai';
+import clientToServerAPI from '../ClientToServerAPI';
+import {T} from '../i18n';
+import {atomFamilyWeak} from '../jotaiUtils';
+import {serverCwd} from '../repositoryData';
+import type {CommitInfo, Hash} from '../types';
+import {runCodeReview} from './runCodeReview';
 
 import './CodeReviewStatus.css';
-import {Tooltip} from 'isl-components/Tooltip';
 
 type CodeReviewProgressStatus = 'running' | 'success' | 'error';
 
+/**
+ * Atom family to store code review status per commit hash.
+ * Each commit gets its own atom to track its code review progress.
+ */
+const codeReviewStatusAtom = atomFamilyWeak((_hash: Hash) =>
+  atom<CodeReviewProgressStatus | null>(null),
+);
+
 export function CodeReviewStatus({commit}: {commit: CommitInfo}): JSX.Element {
   const cwd = useAtomValue(serverCwd);
-  const [status, setStatus] = useState<CodeReviewProgressStatus | null>(null);
+  const [status, setStatus] = useAtom(codeReviewStatusAtom(commit.hash));
 
   const button = (
     <Button
