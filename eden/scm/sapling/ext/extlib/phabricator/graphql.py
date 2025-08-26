@@ -418,8 +418,8 @@ class Client:
 
         if signalstatus:
             signalquery = """
-                signal_summary {
-                  signals_status
+                signal_overall_status {
+                  core_ci_signals_state
                 }"""
 
         return (
@@ -503,16 +503,14 @@ class Client:
 
                 info["signal_status"] = None
                 if (
-                    # signal_summary can be:
-                    # 1. missing; 2. present, "None" (ex. D17868094)
-                    node.get("signal_summary")
-                    and "signals_status" in node["signal_summary"]
+                    # core_ci_signals_state can be:
+                    # https://fburl.com/code/t6ub6fly
+                    node.get("signal_overall_status")
+                    and "core_ci_signals_state" in node["signal_overall_status"]
                 ):
-                    info["signal_status"] = (
-                        node["signal_summary"]["signals_status"]
-                        .title()
-                        .replace("_", " ")
-                    )
+                    info["signal_status"] = node["signal_overall_status"][
+                        "core_ci_signals_state"
+                    ]
 
                 alldiffversions = {}
                 phabversions = node.get("phabricator_versions", {}).get("nodes", [])
