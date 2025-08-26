@@ -144,10 +144,21 @@ pub struct Log {
     // all_folds includes both clean (on-disk) and dirty (in-memory) entries.
     disk_folds: Vec<FoldState>,
     all_folds: Vec<FoldState>,
-    // Whether the index and the log is out-of-sync. In which case, index-based reads (lookups)
-    // should return errors because it can no longer be trusted.
-    // This could be improved to be per index. For now, it's a single state for simplicity. It's
-    // probably fine considering index corruptions are rare.
+    // Whether the index and the log is potentially out-of-sync.
+    // For example:
+    // - update_indexes_for_on_disk_entries_unchecked failure.
+    //   On-disk indexes are intentionally lagging behind the on-disk primary
+    //   logs to reduce disk space usage.
+    //   When opening a log, we try to make the index "catch up" (in memory)
+    //   with the log. If this fails, the index is incomplete and cannot query
+    //   the lagged portion of the log.
+    // - update_indexes_for_in_memory_entry failure.
+    //   When appending an entry to the (in-memory portion of) log, we need to
+    //   update the indexes. If this fails, the index will not cover the appended
+    //   entry.
+    // If this is set, then index-based reads (lookups) should return errors because it can no
+    // longer be trusted.
+    // This could be improved to be per index. For now, it's a single state for simplicity.
     index_corrupted: bool,
     open_options: OpenOptions,
     // Indicate an active reader. Destrictive writes (repair) are unsafe.
