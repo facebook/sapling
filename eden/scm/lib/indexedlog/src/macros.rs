@@ -71,3 +71,13 @@ macro_rules! impl_offset {
         }
     };
 }
+
+// Fail point for tests only.
+macro_rules! test_only_fail_point {
+    ($condition: expr) => {
+        #[cfg(test)]
+        if $condition {
+            return Err(crate::Error::blank().message("injected failure"));
+        }
+    };
+}

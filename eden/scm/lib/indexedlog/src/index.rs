@@ -2011,6 +2011,10 @@ pub struct Index {
     // Additional buffer for external keys.
     // Log::sync needs write access to this field.
     pub(crate) key_buf: Arc<dyn ReadonlyBuffer + Send + Sync>,
+
+    // Emulate errors during flush.
+    #[cfg(test)]
+    fail_on_flush: u16,
 }
 
 /// Abstraction of the "external key buffer".
@@ -2247,6 +2251,8 @@ impl OpenOptions {
                 dirty_keys: vec![],
                 dirty_ext_keys: vec![],
                 key_buf: key_buf.unwrap_or_else(|| Arc::new(&b""[..])),
+                #[cfg(test)]
+                fail_on_flush: 0,
             };
 
             Ok(index)
@@ -2287,6 +2293,8 @@ impl OpenOptions {
                 dirty_keys: vec![],
                 dirty_ext_keys: vec![],
                 key_buf: key_buf.unwrap_or_else(|| Arc::new(&b""[..])),
+                #[cfg(test)]
+                fail_on_flush: 0,
             })
         })();
         result.context("in index::OpenOptions::create_in_memory")
@@ -2483,6 +2491,8 @@ impl Index {
                 dirty_links: self.dirty_links.clone(),
                 dirty_radixes: self.dirty_radixes.clone(),
                 key_buf: self.key_buf.clone(),
+                #[cfg(test)]
+                fail_on_flush: self.fail_on_flush,
             }
         } else {
             Index {
@@ -2507,6 +2517,8 @@ impl Index {
                     Vec::new()
                 },
                 key_buf: self.key_buf.clone(),
+                #[cfg(test)]
+                fail_on_flush: self.fail_on_flush,
             }
         };
 
@@ -2580,6 +2592,8 @@ impl Index {
     ///
     /// For in-memory-only indexes, this function does nothing and returns 0,
     /// unless read-only was set at open time.
+    ///
+    /// If `flush` fails, the index could still be queried and flush again.
     pub fn flush(&mut self) -> crate::Result<u64> {
         let result: crate::Result<_> = (|| {
             let span = debug_span!("Index::flush", path = self.path.to_string_lossy().as_ref());
@@ -2623,6 +2637,8 @@ impl Index {
                     .as_mut()
                     .seek(SeekFrom::End(0))
                     .context(&path, "cannot seek to end")?;
+
+                test_only_fail_point!(self.fail_on_flush == 1);
                 if len < old_len {
                     let message = format!(
                         "on-disk index is unexpectedly smaller ({} bytes) than its previous version ({} bytes)",
@@ -2715,6 +2731,8 @@ impl Index {
 
                 // Update and write Checksum if it's enabled.
                 let mut new_checksum = self.checksum.clone();
+
+                test_only_fail_point!(self.fail_on_flush == 2);
                 let checksum_len = if self.checksum_enabled {
                     new_checksum
                         .update(&self.buf, lock.as_mut(), len, &buf)
@@ -2733,19 +2751,26 @@ impl Index {
                 write_reversed_vlq(&mut buf, root_len + checksum_len).infallible()?;
 
                 new_len = buf.len() as u64 + len;
+
+                test_only_fail_point!(self.fail_on_flush == 3);
                 lock.as_mut()
                     .seek(SeekFrom::Start(len))
                     .context(&path, "cannot seek")?;
+
+                test_only_fail_point!(self.fail_on_flush == 4);
                 lock.as_mut()
                     .write_all(&buf)
                     .context(&path, "cannot write new data to index")?;
 
+                test_only_fail_point!(self.fail_on_flush == 5);
                 if self.fsync || config::get_global_fsync() {
                     lock.as_mut().sync_all().context(&path, "cannot sync")?;
                 }
 
                 // Remap and update root since length has changed
+                test_only_fail_point!(self.fail_on_flush == 6);
                 let bytes = mmap_bytes(lock.as_ref(), None).context(&path, "cannot mmap")?;
+
                 self.buf = bytes;
 
                 // 'path' should not have changed.
@@ -2756,11 +2781,13 @@ impl Index {
 
                 // Sanity check - the length should be expected. Otherwise, the lock
                 // is somehow ineffective.
+                test_only_fail_point!(self.fail_on_flush == 7);
                 if self.buf.len() as u64 != new_len {
                     return Err(this.corruption("file changed unexpectedly"));
                 }
 
                 // Reload root and checksum.
+                test_only_fail_point!(self.fail_on_flush == 8);
                 let (root, checksum) =
                     read_root_checksum_at_end(&path, &self.buf, new_len as usize)?;
 
@@ -2771,6 +2798,7 @@ impl Index {
             }
 
             // Outside critical section
+            // Drop the in-memory state only after a successful file write.
             self.clear_dirty();
 
             if cfg!(all(debug_assertions, test)) {
@@ -4771,6 +4799,46 @@ Disk[410]: Root { radix: Disk[402] }
             }
 
             index.verify_against_hashmap(&map)
+        }
+
+        fn test_flush_failure(map: HashMap<Vec<u8>, u64>) -> bool {
+            let dir = tempdir().unwrap();
+            let mut index = open_opts().open(dir.path().join("a")).expect("open");
+
+            // Populate `index` - some entries on disk, some in memory.
+            for (key, value) in &map {
+                if value % 2 == 0 {
+                    index.insert(key, *value).expect("insert");
+                }
+            }
+            index.flush().expect("flush");
+
+            // flush should only fail if it is not a no-op - has pending entries in memory.
+            let mut should_fail = false;
+            for (key, value) in &map {
+                if value % 2 == 1 {
+                    index.insert(key, *value).expect("insert");
+                    should_fail = true;
+                }
+            }
+
+            (1..=8).all(|flush_failure| {
+                let mut index = index.try_clone().expect("clone");
+                index.fail_on_flush = flush_failure;
+                assert_eq!(index.flush().is_err(), should_fail);
+
+                // Verify entries in map.
+                let mut verified = index.verify_against_hashmap(&map);
+
+                // Try flush again - should succeed.
+                if !should_fail {
+                    index.fail_on_flush = 0;
+                    index.flush().expect("flush should succeed");
+                    verified &= index.verify_against_hashmap(&map)
+                }
+
+                verified
+            })
         }
 
         fn test_multiple_values(map: HashMap<Vec<u8>, Vec<u64>>) -> bool {
