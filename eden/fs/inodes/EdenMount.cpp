@@ -557,7 +557,7 @@ ImmediateFuture<folly::Unit> EdenMount::setupDotEden(TreeInodePtr root) {
   static auto context =
       ObjectFetchContext::getNullContextWithCauseDetail("setupDotEden");
   return root->getOrLoadChildTree(PathComponentPiece{kDotEdenName}, context)
-      .thenTry([=](Try<TreeInodePtr>&& lookupResult) {
+      .thenTry([=, this](Try<TreeInodePtr>&& lookupResult) {
         TreeInodePtr dotEdenInode;
         if (lookupResult.hasValue()) {
           dotEdenInode = *lookupResult;
