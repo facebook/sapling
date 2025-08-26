@@ -7,7 +7,7 @@
 
 // Implement traits for typed offset structs.
 macro_rules! impl_offset {
-    ($type:ident, $type_int:expr_2021, $name:expr_2021) => {
+    ($type:ident, $type_int:expr, $name:expr) => {
         impl TypedOffsetMethods for $type {
             #[inline]
             fn type_int() -> u8 {

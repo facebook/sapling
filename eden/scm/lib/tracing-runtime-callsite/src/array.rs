@@ -99,7 +99,7 @@ impl<T> From<Vec<T>> for Array<T> {
 
 #[macro_export]
 macro_rules! call_array {
-    ($e0:ident $(.$e:ident)* ($a:expr_2021)) => {
+    ($e0:ident $(.$e:ident)* ($a:expr)) => {
         match $a {
             /* [[[cog
                 import cog

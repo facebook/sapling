@@ -125,7 +125,7 @@ macro_rules! bail_request {
     ($msg:literal $(,)?) => {
         return Err($crate::MegarepoError::RequestError($crate::RequestError(::std::sync::Arc::new($crate::macro_reexport::anyhow!($msg)))))
     };
-    ($fmt:expr_2021, $($arg:tt)*) => {
+    ($fmt:expr, $($arg:tt)*) => {
         return Err($crate::MegarepoError::RequestError($crate::RequestError(::std::sync::Arc::new($crate::macro_reexport::anyhow!($fmt, $($arg)*)))))
     };
 }
@@ -135,7 +135,7 @@ macro_rules! bail_internal {
     ($msg:literal $(,)?) => {
         return Err($crate::MegarepoError::InternalError($crate::InternalError(::std::sync::Arc::new($crate::macro_reexport::anyhow!($msg)))))
     };
-    ($fmt:expr_2021, $($arg:tt)*) => {
+    ($fmt:expr, $($arg:tt)*) => {
         return Err($crate::MegarepoError::InternalError($crate::InternalError(::std::sync::Arc::new($crate::macro_reexport::anyhow!($fmt, $($arg)*)))))
     };
 }

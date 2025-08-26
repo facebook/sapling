@@ -475,10 +475,10 @@ mod tests {
     use super::*;
 
     macro_rules! response {
-        ($status:expr_2021 $(, $name:tt : $val:tt)* $(,)?) => {
+        ($status:expr $(, $name:tt : $val:tt)* $(,)?) => {
             response!($status, b"", $($name : $val,)*)
         };
-        ($status:expr_2021, $body:expr_2021 $(, $name:tt : $val:tt)* $(,)?) => {
+        ($status:expr, $body:expr $(, $name:tt : $val:tt)* $(,)?) => {
             HttpResponse {
                 status: $status,
                 headers: (&HashMap::<String, String>::from([$(($name.to_string(), $val.to_string()),)*])).try_into().unwrap(),

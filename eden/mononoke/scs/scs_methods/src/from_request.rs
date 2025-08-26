@@ -271,7 +271,7 @@ impl FromRequest<thrift::RepoResolveCommitPrefixParams> for ChangesetPrefixSpeci
 }
 
 macro_rules! impl_from_request_binary_id(
-    ($t:ty, $name:expr_2021) => {
+    ($t:ty, $name:expr) => {
         impl FromRequest<Vec<u8>> for $t {
             fn from_request(id: &Vec<u8>) -> Result<Self, thrift::RequestError> {
                 <$t>::from_bytes(id).map_err(|e| {

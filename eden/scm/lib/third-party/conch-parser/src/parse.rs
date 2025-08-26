@@ -370,19 +370,19 @@ impl<I: Iterator<Item = Token>, B: Builder + Default> Parser<I, B> {
 /// A macro that will consume and return a token that matches a specified pattern
 /// from a parser's token iterator. If no matching token is found, None will be yielded.
 macro_rules! eat_maybe {
-    ($parser:expr_2021, { $($tok:pat => $blk:block),+; _ => $default:block, }) => {
+    ($parser:expr, { $($tok:pat => $blk:block),+; _ => $default:block, }) => {
         eat_maybe!($parser, { $($tok => $blk),+; _ => $default })
     };
 
-    ($parser:expr_2021, { $($tok:pat => $blk:block),+,}) => {
+    ($parser:expr, { $($tok:pat => $blk:block),+,}) => {
         eat_maybe!($parser, { $($tok => $blk),+ })
     };
 
-    ($parser:expr_2021, { $($tok:pat => $blk:block),+ }) => {
+    ($parser:expr, { $($tok:pat => $blk:block),+ }) => {
         eat_maybe!($parser, { $($tok => $blk),+; _ => {} })
     };
 
-    ($parser:expr_2021, { $($tok:pat => $blk:block),+; _ => $default:block }) => {
+    ($parser:expr, { $($tok:pat => $blk:block),+; _ => $default:block }) => {
         $(if let Some(&$tok) = $parser.iter.peek() {
             $parser.iter.next();
             $blk
@@ -396,8 +396,8 @@ macro_rules! eat_maybe {
 /// an run a corresponding action block to do something with the token,
 /// or it will construct and return an appropriate Unexpected(EOF) error.
 macro_rules! eat {
-    ($parser:expr_2021, { $($tok:pat => $blk:block),+, }) => { eat!($parser, {$($tok => $blk),+}) };
-    ($parser:expr_2021, {$($tok:pat => $blk:block),+}) => {
+    ($parser:expr, { $($tok:pat => $blk:block),+, }) => { eat!($parser, {$($tok => $blk),+}) };
+    ($parser:expr, {$($tok:pat => $blk:block),+}) => {
         eat_maybe!($parser, {$($tok => $blk),+; _ => { return Err($parser.make_unexpected_err()) } })
     };
 }
@@ -754,7 +754,7 @@ impl<I: Iterator<Item = Token>, B: Builder> Parser<I, B> {
         self.skip_whitespace();
 
         macro_rules! get_path {
-            ($parser:expr_2021) => {
+            ($parser:expr) => {
                 match $parser.word_preserve_trailing_whitespace_raw()? {
                     Some(p) => $parser.builder.word(p)?,
                     None => return Err(self.make_unexpected_err()),
@@ -763,7 +763,7 @@ impl<I: Iterator<Item = Token>, B: Builder> Parser<I, B> {
         }
 
         macro_rules! get_dup_path {
-            ($parser:expr_2021) => {{
+            ($parser:expr) => {{
                 let path = if $parser.peek_reserved_token(&[Dash]).is_some() {
                     let dash = $parser.reserved_token(&[Dash])?;
                     Single(Simple(SimpleWordKind::Literal(dash.to_string())))
@@ -831,7 +831,7 @@ impl<I: Iterator<Item = Token>, B: Builder> Parser<I, B> {
     /// descriptor for redirection.
     pub fn redirect_heredoc(&mut self, src_fd: Option<u16>) -> ParseResult<B::Redirect, B::Error> {
         macro_rules! try_map {
-            ($result:expr_2021) => {
+            ($result:expr) => {
                 $result.map_err(|e: iter::UnmatchedError| ParseError::Unmatched(e.0, e.1))?
             };
         }
@@ -1278,7 +1278,7 @@ impl<I: Iterator<Item = Token>, B: Builder> Parser<I, B> {
             }
 
             macro_rules! store {
-                ($word:expr_2021) => {{
+                ($word:expr) => {{
                     if !buf.is_empty() {
                         words.push(SimpleWordKind::Literal(buf));
                         buf = String::new();

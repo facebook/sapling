@@ -169,10 +169,10 @@ async fn missing<B: Blobstore>(fb: FacebookInit, blobstore: B) -> Result<(), Err
 
 macro_rules! blobstore_test_impl {
     ($mod_name: ident => {
-        state: $state: expr_2021,
-        new: $new_cb: expr_2021,
-        persistent: $persistent: expr_2021,
-        has_ctime: $has_ctime: expr_2021,
+        state: $state: expr,
+        new: $new_cb: expr,
+        persistent: $persistent: expr,
+        has_ctime: $has_ctime: expr,
     }) => {
         mod $mod_name {
             use super::*;

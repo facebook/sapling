@@ -347,7 +347,7 @@ mod test {
     struct StubBar(String, Vec<StubBar>);
 
     macro_rules! bar {
-        ($topic:tt $(, $child:expr_2021 )*) => {
+        ($topic:tt $(, $child:expr )*) => {
             StubBar($topic.to_string(), vec![$($child,)*])
         };
     }

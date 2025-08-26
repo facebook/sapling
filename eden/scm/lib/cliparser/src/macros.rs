@@ -25,7 +25,7 @@ macro_rules! define_flags {
 macro_rules! _define_flags_impl {
     // Nothing left to parse
     ( input []
-      flags [ $( ($short:literal, $field:ident, $doc:expr_2021, $type:ty, $default:expr_2021, $argtype:literal) )* ]
+      flags [ $( ($short:literal, $field:ident, $doc:expr, $type:ty, $default:expr, $argtype:literal) )* ]
       arg0 ( $( $arg0:ident )? )
       args [ $( ($arg:ident, $arg_index:tt) )* ]
       varargs ( $($varargs:ident)? )
@@ -78,7 +78,7 @@ macro_rules! _define_flags_impl {
     //
     //    /// description
     //    name: type,
-    ( input [ #[doc=$doc:expr_2021] $field:ident : $type:ty, $($rest:tt)* ]
+    ( input [ #[doc=$doc:expr] $field:ident : $type:ty, $($rest:tt)* ]
       flags [ $( $flags:tt )* ]
       arg0 $arg0:tt
       args $args:tt
@@ -102,7 +102,7 @@ macro_rules! _define_flags_impl {
     //    /// description
     //    #[argtype("type")]
     //    name: type,
-    ( input [ #[doc=$doc:expr_2021] #[argtype($argtype:literal)] $field:ident : $type:ty, $($rest:tt)* ]
+    ( input [ #[doc=$doc:expr] #[argtype($argtype:literal)] $field:ident : $type:ty, $($rest:tt)* ]
       flags [ $( $flags:tt )* ]
       arg0 $arg0:tt
       args $args:tt
@@ -127,7 +127,7 @@ macro_rules! _define_flags_impl {
     //    #[argtype("type")]
     //    #[short('s')]
     //    name: type,
-    ( input [ #[doc=$doc:expr_2021] #[argtype($argtype:literal)] #[short($short:literal)] $field:ident : $type:ty, $($rest:tt)* ]
+    ( input [ #[doc=$doc:expr] #[argtype($argtype:literal)] #[short($short:literal)] $field:ident : $type:ty, $($rest:tt)* ]
       flags [ $( $flags:tt )* ]
       arg0 $arg0:tt
       args $args:tt
@@ -150,7 +150,7 @@ macro_rules! _define_flags_impl {
     //
     //    /// description
     //    name: type = default,
-    ( input [ #[doc=$doc:expr_2021] $field:ident : $type:ty = $default:tt, $($rest:tt)* ]
+    ( input [ #[doc=$doc:expr] $field:ident : $type:ty = $default:tt, $($rest:tt)* ]
       flags [ $( $flags:tt )* ]
       arg0 $arg0:tt
       args $args:tt
@@ -174,7 +174,7 @@ macro_rules! _define_flags_impl {
     //    /// description
     //    #[short('s')]
     //    name: type,
-    ( input [ #[doc=$doc:expr_2021] #[short($short:literal)] $field:ident : $type:ty, $($rest:tt)* ]
+    ( input [ #[doc=$doc:expr] #[short($short:literal)] $field:ident : $type:ty, $($rest:tt)* ]
       flags [ $( $flags:tt )* ]
       arg0 $arg0:tt
       args $args:tt
@@ -199,7 +199,7 @@ macro_rules! _define_flags_impl {
     //    #[short('s')]
     //    #[argtype("type")]
     //    name: type,
-    ( input [ #[doc=$doc:expr_2021] #[short($short:literal)] #[argtype($argtype:literal)] $field:ident : $type:ty, $($rest:tt)* ]
+    ( input [ #[doc=$doc:expr] #[short($short:literal)] #[argtype($argtype:literal)] $field:ident : $type:ty, $($rest:tt)* ]
       flags [ $( $flags:tt )* ]
       arg0 $arg0:tt
       args $args:tt
@@ -223,7 +223,7 @@ macro_rules! _define_flags_impl {
     //    /// description
     //    #[short('s')]
     //    name: type = default,
-    ( input [ #[doc=$doc:expr_2021] #[short($short:literal)] $field:ident : $type:ty = $default:tt, $($rest:tt)* ]
+    ( input [ #[doc=$doc:expr] #[short($short:literal)] $field:ident : $type:ty = $default:tt, $($rest:tt)* ]
       flags [ $( $flags:tt )* ]
       arg0 $arg0:tt
       args $args:tt

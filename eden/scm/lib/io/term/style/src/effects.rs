@@ -308,7 +308,7 @@ mod test {
     use super::*;
 
     macro_rules! assert_spec {
-        ($level:ident, $specs:tt, $want:expr_2021 $(,)?) => {
+        ($level:ident, $specs:tt, $want:expr $(,)?) => {
             let bytes = specs_to_bytes($level, $specs);
             assert_eq!(bytes, $want, $specs);
         };

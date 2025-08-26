@@ -37,7 +37,7 @@ macro_rules! atom {
     };
 
     // Derived atom. `value` impls `PartialEq`. Avoids unnecessary updates.
-    ($name:ident, $value:ty, |$store:ident| $body:expr_2021) => {
+    ($name:ident, $value:ty, |$store:ident| $body:expr) => {
         $crate::atom!($name, $value, |$store, prev| {
             let value: $crate::Result<::std::sync::Arc<Self::Value>> = $body;
             let value = value?;
@@ -51,7 +51,7 @@ macro_rules! atom {
     };
 
     // Derived atom. Customized `prev` logic.
-    ($name:ident, $value:ty, |$store:ident, $prev:ident| $body:expr_2021) => {
+    ($name:ident, $value:ty, |$store:ident, $prev:ident| $body:expr) => {
         pub struct $name;
         impl $crate::Atom for $name {
             type Value = $value;
@@ -65,7 +65,7 @@ macro_rules! atom {
     };
 
     // Primitive atom with initial value.
-    ($name:ident, $value:ty, $initial:expr_2021) => {
+    ($name:ident, $value:ty, $initial:expr) => {
         $crate::atom!($name, $value, |_store, _prev| Ok(::std::sync::Arc::new($initial)));
     };
 }

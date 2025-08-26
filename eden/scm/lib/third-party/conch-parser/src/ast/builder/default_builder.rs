@@ -541,7 +541,7 @@ where
     /// Constructs a `ast::Word` from the provided input.
     fn word(&mut self, kind: ComplexWordKind<Self::Command>) -> Result<Self::Word, Self::Error> {
         macro_rules! map {
-            ($pat:expr_2021) => {
+            ($pat:expr) => {
                 match $pat {
                     Some(w) => Some(self.word(w)?),
                     None => None,

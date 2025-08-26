@@ -52,7 +52,7 @@ pub fn py_main(args: &[String]) -> u8 {
 }
 
 macro_rules! check_status {
-    ($status: expr_2021, $config: expr_2021) => {
+    ($status: expr, $config: expr) => {
         let status = $status;
         if ffi::PyStatus_Exception(status) != 0 {
             if let Some(mut config) = $config {

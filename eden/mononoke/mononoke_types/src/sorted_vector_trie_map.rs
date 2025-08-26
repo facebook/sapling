@@ -166,7 +166,7 @@ mod tests {
     use crate::TrieMap;
 
     macro_rules! check_eq {
-        ($a:expr_2021, $b:expr_2021) => {
+        ($a:expr, $b:expr) => {
             if ($a) != ($b) {
                 return false;
             }

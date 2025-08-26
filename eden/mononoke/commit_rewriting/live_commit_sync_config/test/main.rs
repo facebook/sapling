@@ -19,7 +19,7 @@ use live_commit_sync_config::CfgrLiveCommitSyncConfig;
 use pushredirect::TestPushRedirectionConfig;
 
 macro_rules! is_error_kind {
-    ($result_expression:expr_2021, $( $pattern:pat_param )|+ $( if $guard: expr_2021 )?) => {
+    ($result_expression:expr, $( $pattern:pat_param )|+ $( if $guard: expr )?) => {
         match $result_expression {
             Ok(_) => false,
             Err(e) => match e.downcast_ref::<ErrorKind>() {

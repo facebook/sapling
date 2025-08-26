@@ -20,7 +20,7 @@ use crate::ipc;
 
 macro_rules! or {
     // `$rest` could be: `continue`, `return None`.
-    ($result:expr_2021, $($rest:tt)*) => {
+    ($result:expr, $($rest:tt)*) => {
         match $result {
             Ok(value) => value,
             Err(_) => $($rest)*,

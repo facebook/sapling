@@ -258,7 +258,7 @@ mod tests {
     use super::*;
 
     macro_rules! check_round_trip {
-        ($N: expr_2021) => {{
+        ($N: expr) => {{
             let mut v = vec![];
             let mut x = $N;
             v.write_vlq(x).expect("write");

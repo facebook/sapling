@@ -197,7 +197,7 @@ macro_rules! define_stats {
     ($( $name:ident: $stat_type:tt($( $params:tt )*), )*) =>
         (define_stats!(prefix = ""; $( $name: $stat_type($( $params )*), )*););
 
-    (prefix = $prefix:expr_2021;
+    (prefix = $prefix:expr;
      $( $name:ident: $stat_type:tt($( $params:tt )*), )*) => (
         #[allow(non_snake_case, non_upper_case_globals, unused_imports, clippy::redundant_pub_crate)]
         pub(crate) mod STATS {
@@ -219,7 +219,7 @@ macro_rules! define_stats {
 #[doc(hidden)]
 #[macro_export]
 macro_rules! __define_key_generator {
-    ($name:ident($prefix:literal, $key:expr_2021; $( $placeholder:ident: $type:ty ),+)) => (
+    ($name:ident($prefix:literal, $key:expr; $( $placeholder:ident: $type:ty ),+)) => (
         fn $name(&($( ref $placeholder, )+): &($( $type, )+)) -> String {
             if $prefix.is_empty() {
                 format!($key, $( $placeholder ),+)
@@ -228,7 +228,7 @@ macro_rules! __define_key_generator {
             }
         }
     );
-    ($name:ident($prefix:expr_2021, $key:expr_2021)) => (
+    ($name:ident($prefix:expr, $key:expr)) => (
         fn $name() -> String {
             if $prefix.is_empty() {
                 $key
@@ -237,7 +237,7 @@ macro_rules! __define_key_generator {
             }
         }
     );
-    ($name:ident($prefix:expr_2021, $key:expr_2021; $placeholder:ident: $type:ty )) => (
+    ($name:ident($prefix:expr, $key:expr; $placeholder:ident: $type:ty )) => (
         fn $name(&( ref $placeholder, ): &( $type, )) -> String {
             if $prefix.is_empty() {
                 format!($key, $placeholder)
@@ -246,7 +246,7 @@ macro_rules! __define_key_generator {
             }
         }
     );
-    ($name:ident($prefix:expr_2021, $key:expr_2021; $placeholder1:ident: $type1:ty, $placeholder2:ident: $type2:ty )) => (
+    ($name:ident($prefix:expr, $key:expr; $placeholder1:ident: $type1:ty, $placeholder2:ident: $type2:ty )) => (
         fn $name(&( ref $placeholder1, ref $placeholder2, ): &( $type1, $type2, )) -> String {
             if $prefix.is_empty() {
                 format!($key, $placeholder1, $placeholder2)
@@ -255,7 +255,7 @@ macro_rules! __define_key_generator {
             }
         }
     );
-    ($name:ident($prefix:expr_2021, $key:expr_2021; $placeholder1:ident: $type1:ty, $placeholder2:ident: $type2:ty, $placeholder3:ident: $type3:ty )) => (
+    ($name:ident($prefix:expr, $key:expr; $placeholder1:ident: $type1:ty, $placeholder2:ident: $type2:ty, $placeholder3:ident: $type3:ty )) => (
         fn $name(&( ref $placeholder1, ref $placeholder2, ref $placeholder3,): &( $type1, $type2, $type3,)) -> String {
             if $prefix.is_empty() {
                 format!($key, $placeholder1, $placeholder2, $placeholder3)
@@ -264,7 +264,7 @@ macro_rules! __define_key_generator {
             }
         }
     );
-    ($name:ident($prefix:expr_2021, $key:expr_2021; $( $placeholder:ident: $type:ty ),+)) => (
+    ($name:ident($prefix:expr, $key:expr; $( $placeholder:ident: $type:ty ),+)) => (
         fn $name(&($( ref $placeholder, )+): &($( $type, )+)) -> String {
             let key = format!($key, $( $placeholder ),+);
             if $prefix.is_empty() {
@@ -280,19 +280,19 @@ macro_rules! __define_key_generator {
 #[doc(hidden)]
 #[macro_export]
 macro_rules! __define_stat {
-    ($prefix:expr_2021; $name:ident: singleton_counter()) => (
+    ($prefix:expr; $name:ident: singleton_counter()) => (
         $crate::__define_stat!($prefix; $name: singleton_counter(stringify!($name)));
     );
 
-    ($prefix:expr_2021; $name:ident: singleton_counter($key:expr_2021)) => (
+    ($prefix:expr; $name:ident: singleton_counter($key:expr)) => (
         pub static $name: LazyLock<BoxSingletonCounter> = LazyLock::new(|| create_singleton_counter($crate::__create_stat_key!($prefix, $key).to_string()));
     );
 
-    ($prefix:expr_2021; $name:ident: counter()) => (
+    ($prefix:expr; $name:ident: counter()) => (
         $crate::__define_stat!($prefix; $name: counter(stringify!($name)));
     );
 
-    ($prefix:expr_2021; $name:ident: counter($key:expr_2021)) => (
+    ($prefix:expr; $name:ident: counter($key:expr)) => (
         thread_local! {
             pub static $name: BoxLocalCounter = TL_STATS.with(|stats| {
                 stats.create_counter(&$crate::__create_stat_key!($prefix, $key))
@@ -304,13 +304,13 @@ macro_rules! __define_stat {
     // STATS::name), the key (used in ODS or to query the key), the export types (SUM, RATE, etc.),
     // and the intervals (e.g. 60, 600). The key defaults to the name, and the intervals default to
     // whatever default Folly uses (which happens to be 60, 600, 3600);
-    ($prefix:expr_2021; $name:ident: timeseries($( $aggregation_type:expr_2021 ),*)) => (
+    ($prefix:expr; $name:ident: timeseries($( $aggregation_type:expr ),*)) => (
         $crate::__define_stat!($prefix; $name: timeseries(stringify!($name); $( $aggregation_type ),*));
     );
-    ($prefix:expr_2021; $name:ident: timeseries($key:expr_2021; $( $aggregation_type:expr_2021 ),*)) => (
+    ($prefix:expr; $name:ident: timeseries($key:expr; $( $aggregation_type:expr ),*)) => (
         $crate::__define_stat!($prefix; $name: timeseries($key; $( $aggregation_type ),* ; ));
     );
-    ($prefix:expr_2021; $name:ident: timeseries($key:expr_2021; $( $aggregation_type:expr_2021 ),* ; $( $interval: expr_2021 ),*)) => (
+    ($prefix:expr; $name:ident: timeseries($key:expr; $( $aggregation_type:expr ),* ; $( $interval: expr ),*)) => (
         thread_local! {
             pub static $name: BoxLocalTimeseries = TL_STATS.with(|stats| {
                 stats.create_timeseries(
@@ -322,12 +322,12 @@ macro_rules! __define_stat {
         }
     );
 
-    ($prefix:expr_2021;
-     $name:ident: histogram($bucket_width:expr_2021,
-                            $min:expr_2021,
-                            $max:expr_2021
-                            $(, $aggregation_type:expr_2021 )*
-                            $(; P $percentile:expr_2021 )*)) => (
+    ($prefix:expr;
+     $name:ident: histogram($bucket_width:expr,
+                            $min:expr,
+                            $max:expr
+                            $(, $aggregation_type:expr )*
+                            $(; P $percentile:expr )*)) => (
         $crate::__define_stat!($prefix;
                       $name: histogram(stringify!($name);
                                        $bucket_width,
@@ -337,13 +337,13 @@ macro_rules! __define_stat {
                                        $(; P $percentile )*));
     );
 
-    ($prefix:expr_2021;
-     $name:ident: histogram($key:expr_2021;
-                            $bucket_width:expr_2021,
-                            $min:expr_2021,
-                            $max:expr_2021
-                            $(, $aggregation_type:expr_2021 )*
-                            $(; P $percentile:expr_2021 )*)) => (
+    ($prefix:expr;
+     $name:ident: histogram($key:expr;
+                            $bucket_width:expr,
+                            $min:expr,
+                            $max:expr
+                            $(, $aggregation_type:expr )*
+                            $(; P $percentile:expr )*)) => (
         thread_local! {
             pub static $name: BoxLocalHistogram = TL_STATS.with(|stats| {
                 stats.create_histogram(
@@ -359,11 +359,11 @@ macro_rules! __define_stat {
         }
     );
 
-    ($prefix:expr_2021;
+    ($prefix:expr;
         $name:ident: quantile_stat(
-            $( $aggregation_type:expr_2021 ),*
-            ; $( P $percentile:expr_2021 ),*
-            ; $( $interval:expr_2021 ),*
+            $( $aggregation_type:expr ),*
+            ; $( P $percentile:expr ),*
+            ; $( $interval:expr ),*
         )) => (
             $crate::__define_stat!($prefix;
                  $name: quantile_stat(stringify!($name)
@@ -372,11 +372,11 @@ macro_rules! __define_stat {
                                      ; $( $interval ),*));
        );
 
-    ($prefix:expr_2021;
-        $name:ident: quantile_stat($key:expr_2021
-            ; $( $aggregation_type:expr_2021 ),*
-            ; $( P $percentile:expr_2021 ),*
-            ; $( $interval:expr_2021 ),*
+    ($prefix:expr;
+        $name:ident: quantile_stat($key:expr
+            ; $( $aggregation_type:expr ),*
+            ; $( P $percentile:expr ),*
+            ; $( $interval:expr ),*
         )) => (
                 pub static $name: LazyLock<BoxHistogram> = LazyLock::new(|| {
                     STATS_MANAGER.create_quantile_stat(
@@ -389,8 +389,8 @@ macro_rules! __define_stat {
 
        );
 
-    ($prefix:expr_2021;
-     $name:ident: dynamic_singleton_counter($key:expr_2021, ($( $placeholder:ident: $type:ty ),+))) => (
+    ($prefix:expr;
+     $name:ident: dynamic_singleton_counter($key:expr, ($( $placeholder:ident: $type:ty ),+))) => (
         thread_local! {
             pub static $name: DynamicStat<($( $type, )+), BoxSingletonCounter> = {
                 $crate::__define_key_generator!(
@@ -406,8 +406,8 @@ macro_rules! __define_stat {
         }
     );
 
-    ($prefix:expr_2021;
-     $name:ident: dynamic_counter($key:expr_2021, ($( $placeholder:ident: $type:ty ),+))) => (
+    ($prefix:expr;
+     $name:ident: dynamic_counter($key:expr, ($( $placeholder:ident: $type:ty ),+))) => (
         thread_local! {
             pub static $name: DynamicStat<($( $type, )+), BoxLocalCounter> = {
                 $crate::__define_key_generator!(
@@ -425,9 +425,9 @@ macro_rules! __define_stat {
         }
     );
 
-    ($prefix:expr_2021;
-     $name:ident: dynamic_timeseries($key:expr_2021, ($( $placeholder:ident: $type:ty ),+);
-                                     $( $aggregation_type:expr_2021 ),*)) => (
+    ($prefix:expr;
+     $name:ident: dynamic_timeseries($key:expr, ($( $placeholder:ident: $type:ty ),+);
+                                     $( $aggregation_type:expr ),*)) => (
         $crate::__define_stat!(
             $prefix;
             $name: dynamic_timeseries(
@@ -438,9 +438,9 @@ macro_rules! __define_stat {
         );
     );
 
-    ($prefix:expr_2021;
-     $name:ident: dynamic_timeseries($key:expr_2021, ($( $placeholder:ident: $type:ty ),+);
-                                     $( $aggregation_type:expr_2021 ),* ; $( $interval:expr_2021 ),*)) => (
+    ($prefix:expr;
+     $name:ident: dynamic_timeseries($key:expr, ($( $placeholder:ident: $type:ty ),+);
+                                     $( $aggregation_type:expr ),* ; $( $interval:expr ),*)) => (
         thread_local! {
             pub static $name: DynamicStat<($( $type, )+), BoxLocalTimeseries> = {
                 $crate::__define_key_generator!(
@@ -458,13 +458,13 @@ macro_rules! __define_stat {
         }
     );
 
-    ($prefix:expr_2021;
-     $name:ident: dynamic_histogram($key:expr_2021, ($( $placeholder:ident: $type:ty ),+);
-                                    $bucket_width:expr_2021,
-                                    $min:expr_2021,
-                                    $max:expr_2021
-                                    $(, $aggregation_type:expr_2021 )*
-                                    $(; P $percentile:expr_2021 )*)) => (
+    ($prefix:expr;
+     $name:ident: dynamic_histogram($key:expr, ($( $placeholder:ident: $type:ty ),+);
+                                    $bucket_width:expr,
+                                    $min:expr,
+                                    $max:expr
+                                    $(, $aggregation_type:expr )*
+                                    $(; P $percentile:expr )*)) => (
         thread_local! {
             pub static $name: DynamicStat<($( $type, )+), BoxLocalHistogram> = {
                 $crate::__define_key_generator!(
@@ -489,11 +489,11 @@ macro_rules! __define_stat {
         }
     );
 
-    ($prefix:expr_2021;
-     $name:ident: dynamic_quantile_stat($key:expr_2021, ($( $placeholder:ident: $type:ty ),+) ;
-                                        $( $aggregation_type:expr_2021 ),* ;
-                                        $( P $percentile:expr_2021 ),* ;
-                                        $( $interval:expr_2021 ),*)) => (
+    ($prefix:expr;
+     $name:ident: dynamic_quantile_stat($key:expr, ($( $placeholder:ident: $type:ty ),+) ;
+                                        $( $aggregation_type:expr ),* ;
+                                        $( P $percentile:expr ),* ;
+                                        $( $interval:expr ),*)) => (
                 pub static $name: LazyLock<DynamicStatSync<($( $type, )+), BoxHistogram>> = LazyLock::new(|| {
                     $crate::__define_key_generator!(
                         __key_generator($prefix, $key; $( $placeholder: $type ),+)
@@ -515,7 +515,7 @@ macro_rules! __define_stat {
 #[doc(hidden)]
 #[macro_export]
 macro_rules! __create_stat_key {
-    ($prefix:expr_2021, $key:expr_2021) => {{
+    ($prefix:expr, $key:expr) => {{
         use std::borrow::Cow;
         if $prefix.is_empty() {
             Cow::Borrowed($key)
@@ -558,26 +558,26 @@ macro_rules! __create_stat_key {
 #[macro_export]
 macro_rules! define_stats_struct {
     // Handle trailing comma
-    ($name:ident ($key:expr_2021, $($pr_name:ident: $pr_type:ty),*) ,
+    ($name:ident ($key:expr, $($pr_name:ident: $pr_type:ty),*) ,
         $( $stat_name:ident: $stat_type:tt($( $params:tt )*) , )+) => {
         define_stats_struct!($name ( $key, $($pr_name: $pr_type),*),
             $($stat_name: $stat_type($($params)*)),* );
     };
 
     // Handle no params
-    ($name:ident ($key:expr_2021) ,
+    ($name:ident ($key:expr) ,
         $( $stat_name:ident: $stat_type:tt($( $params:tt )*) ),*) => {
         define_stats_struct!($name ( $key, ),
             $($stat_name: $stat_type($($params)*)),* );
     };
-    ($name:ident ($key:expr_2021) ,
+    ($name:ident ($key:expr) ,
         $( $stat_name:ident: $stat_type:tt($( $params:tt )*) , )+) => {
         define_stats_struct!($name ( $key, ),
             $($stat_name: $stat_type($($params)*)),* );
     };
 
     // Define struct and its methods.
-    ($name:ident ($key:expr_2021, $($pr_name:ident: $pr_type:ty),*) ,
+    ($name:ident ($key:expr, $($pr_name:ident: $pr_type:ty),*) ,
         $( $stat_name:ident: $stat_type:tt($( $params:tt )*) ),*) => {
         #[allow(missing_docs)]
         pub struct $name {
@@ -642,15 +642,15 @@ macro_rules! __struct_thread_local_init {
     ($name:ident, singleton_counter, ) => {
         $crate::__struct_thread_local_init!($name, singleton_counter, stringify!($name))
     };
-    ($name:ident, singleton_counter, $key:expr_2021) => {};
+    ($name:ident, singleton_counter, $key:expr) => {};
 
     ($name:ident, counter, ) => {
         $crate::__struct_thread_local_init! { $name, counter, stringify!($name)}
     };
-    ($name:ident, counter, $key:expr_2021) => {
+    ($name:ident, counter, $key:expr) => {
         $crate::__struct_thread_local_init! { $name, counter, $key ; }
     };
-    ($name:ident, counter, $key:expr_2021 ; ) => {
+    ($name:ident, counter, $key:expr ; ) => {
         thread_local! {
             static $name: FieldStatThreadLocal<BoxLocalCounter> = {
 
@@ -665,13 +665,13 @@ macro_rules! __struct_thread_local_init {
         }
     };
 
-    ($name:ident, timeseries, $( $aggregation_type:expr_2021 ),+) => {
+    ($name:ident, timeseries, $( $aggregation_type:expr ),+) => {
         $crate::__struct_thread_local_init! { $name, timeseries, stringify!($name) ; $($aggregation_type),*}
     };
-    ($name:ident, timeseries, $key:expr_2021 ; $( $aggregation_type:expr_2021 ),* ) => {
+    ($name:ident, timeseries, $key:expr ; $( $aggregation_type:expr ),* ) => {
         $crate::__struct_thread_local_init! { $name, timeseries, $key ; $($aggregation_type),* ;}
     };
-    ($name:ident, timeseries, $key:expr_2021 ; $( $aggregation_type:expr_2021 ),* ; $( $interval:expr_2021 ),* ) => {
+    ($name:ident, timeseries, $key:expr ; $( $aggregation_type:expr ),* ; $( $interval:expr ),* ) => {
         thread_local! {
 
             static $name: FieldStatThreadLocal<BoxLocalTimeseries> = {
@@ -688,15 +688,15 @@ macro_rules! __struct_thread_local_init {
     };
 
     ($name:ident, histogram,
-        $bucket_width:expr_2021, $min:expr_2021, $max:expr_2021 $(, $aggregation_type:expr_2021)*
-        $(; P $percentile:expr_2021 )*) => {
+        $bucket_width:expr, $min:expr, $max:expr $(, $aggregation_type:expr)*
+        $(; P $percentile:expr )*) => {
         $crate::__struct_thread_local_init! { $name, histogram,
             stringify!($name) ; $bucket_width, $min, $max $(, $aggregation_type)*
             $(; P $percentile)* }
     };
-    ($name:ident, histogram, $key:expr_2021 ;
-        $bucket_width:expr_2021, $min:expr_2021, $max:expr_2021 $(, $aggregation_type:expr_2021)*
-        $(; P $percentile:expr_2021 )*) => {
+    ($name:ident, histogram, $key:expr ;
+        $bucket_width:expr, $min:expr, $max:expr $(, $aggregation_type:expr)*
+        $(; P $percentile:expr )*) => {
 
         thread_local! {
             static $name: FieldStatThreadLocal<BoxLocalHistogram> = {
@@ -719,67 +719,67 @@ macro_rules! __struct_thread_local_init {
         }
     };
     ($name:ident, quantile_stat,
-        $( $aggregation_type:expr_2021 ),*
-        ; $( P $percentile:expr_2021 ),*
-        ; $( $interval:expr_2021 ),*) => ();
-    ($name:ident, quantile_stat, $key:expr_2021
-        ; $( $aggregation_type:expr_2021 ),*
-        ; $( P $percentile:expr_2021 ),*
-        ; $( $interval:expr_2021 ),*) => ();
+        $( $aggregation_type:expr ),*
+        ; $( P $percentile:expr ),*
+        ; $( $interval:expr ),*) => ();
+    ($name:ident, quantile_stat, $key:expr
+        ; $( $aggregation_type:expr ),*
+        ; $( P $percentile:expr ),*
+        ; $( $interval:expr ),*) => ();
 }
 
 #[macro_export]
 #[doc(hidden)]
 macro_rules! __struct_field_init {
-    ($prefix:expr_2021, $name:ident, singleton_counter, ) => {
+    ($prefix:expr, $name:ident, singleton_counter, ) => {
         $crate::__struct_field_init!($prefix, $name, singleton_counter, stringify!($name))
     };
-    ($prefix:expr_2021, $name:ident, singleton_counter, $key:expr_2021) => {{ create_singleton_counter(format!("{}.{}", $prefix, $key)) }};
+    ($prefix:expr, $name:ident, singleton_counter, $key:expr) => {{ create_singleton_counter(format!("{}.{}", $prefix, $key)) }};
 
-    ($prefix:expr_2021, $name:ident, counter, ) => {
+    ($prefix:expr, $name:ident, counter, ) => {
         $crate::__struct_field_init!($prefix, $name, counter, stringify!($name) ;)
     };
-    ($prefix:expr_2021, $name:ident, counter, $key:expr_2021) => {
+    ($prefix:expr, $name:ident, counter, $key:expr) => {
         $crate::__struct_field_init!($prefix, $name, counter, $key ;)
     };
-    ($prefix:expr_2021, $name:ident, counter, $key:expr_2021 ; $(params:tt)*) => {{ Box::new(FieldStat::new(&$name, format!("{}.{}", $prefix, $key))) }};
+    ($prefix:expr, $name:ident, counter, $key:expr ; $(params:tt)*) => {{ Box::new(FieldStat::new(&$name, format!("{}.{}", $prefix, $key))) }};
 
 
-    ($prefix:expr_2021, $name:ident, timeseries, $( $aggregation_type:expr_2021 ),+) => {
+    ($prefix:expr, $name:ident, timeseries, $( $aggregation_type:expr ),+) => {
         $crate::__struct_field_init!($prefix, $name, timeseries, stringify!($name) ; $($aggregation_type),*)
     };
-    ($prefix:expr_2021, $name:ident, timeseries, $key:expr_2021 ; $( $aggregation_type:expr_2021 ),* ) => {
+    ($prefix:expr, $name:ident, timeseries, $key:expr ; $( $aggregation_type:expr ),* ) => {
         $crate::__struct_field_init!($prefix, $name, timeseries, $key ; $($aggregation_type),* ;)
     };
-    ($prefix:expr_2021, $name:ident, timeseries, $key:expr_2021 ; $( $aggregation_type:expr_2021 ),* ; $( $interval:expr_2021 ),* ) => {{
+    ($prefix:expr, $name:ident, timeseries, $key:expr ; $( $aggregation_type:expr ),* ; $( $interval:expr ),* ) => {{
         Box::new(FieldStat::new(&$name, format!("{}.{}", $prefix, $key)))
     }};
 
-    ($prefix:expr_2021, $name:ident, histogram,
-        $bucket_width:expr_2021, $min:expr_2021, $max:expr_2021 $(, $aggregation_type:expr_2021)*
-        $(; P $percentile:expr_2021 )*) => {
+    ($prefix:expr, $name:ident, histogram,
+        $bucket_width:expr, $min:expr, $max:expr $(, $aggregation_type:expr)*
+        $(; P $percentile:expr )*) => {
         $crate::__struct_field_init!($prefix, $name, histogram,
             stringify!($name) ; $bucket_width, $min, $max $(, $aggregation_type)*
             $(; P $percentile)*)
     };
-    ($prefix:expr_2021, $name:ident, histogram, $key:expr_2021 ;
-        $bucket_width:expr_2021, $min:expr_2021, $max:expr_2021 $(, $aggregation_type:expr_2021)*
-        $(; P $percentile:expr_2021 )*) => {{ Box::new(FieldStat::new(&$name, format!("{}.{}", $prefix, $key))) }};
-    ($prefix:expr_2021, $name:ident, quantile_stat,
-        $( $aggregation_type:expr_2021 ),*
-        ; $( P $percentile:expr_2021 ),*
-        ; $( $interval:expr_2021 ),*) => {
+    ($prefix:expr, $name:ident, histogram, $key:expr ;
+        $bucket_width:expr, $min:expr, $max:expr $(, $aggregation_type:expr)*
+        $(; P $percentile:expr )*) => {{ Box::new(FieldStat::new(&$name, format!("{}.{}", $prefix, $key))) }};
+    ($prefix:expr, $name:ident, quantile_stat,
+        $( $aggregation_type:expr ),*
+        ; $( P $percentile:expr ),*
+        ; $( $interval:expr ),*) => {
             $crate::__struct_field_init!($prefix, $name, quantile_stat,
                 stringify!($name)
                 ; $( $aggregation_type ),*
                 ; $( P $percentile ),*
                 ; $( $interval ),*)
     };
-    ($prefix:expr_2021, $name:ident, quantile_stat,
-        $key:expr_2021
-        ; $( $aggregation_type:expr_2021 ),*
-        ; $( P $percentile:expr_2021 ),*
-        ; $( $interval:expr_2021 ),*) => {{
+    ($prefix:expr, $name:ident, quantile_stat,
+        $key:expr
+        ; $( $aggregation_type:expr ),*
+        ; $( P $percentile:expr ),*
+        ; $( $interval:expr ),*) => {{
             STATS_MANAGER.create_quantile_stat(
                 &$crate::__create_stat_key!($prefix, $key),
                 &[$( $aggregation_type ),*],

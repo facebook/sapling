@@ -40,7 +40,7 @@ type ReferenceMap = BTreeMap<String, ReferenceValue>;
 
 // This is a macro, not a function, because it uses "return".
 macro_rules! return_ok_if_not_found {
-    ($expr:expr_2021) => {{
+    ($expr:expr) => {{
         match $expr {
             Err(e) if e.kind() == ::std::io::ErrorKind::NotFound => return Ok(()),
             v => v,

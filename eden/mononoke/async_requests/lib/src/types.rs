@@ -370,7 +370,7 @@ macro_rules! impl_async_svc_method_types_result {
 /// * token_thrift_type:        the Thrift struct holding the token returned by the method and accepted by the poll method
 macro_rules! impl_async_svc_method_types {
     {
-        method_name => $method_name: expr_2021,
+        method_name => $method_name: expr,
         request_struct => $request_struct: ident,
 
         params_value_thrift_type => $params_value_thrift_type: ident,
@@ -481,7 +481,7 @@ macro_rules! impl_async_svc_method_types {
 /// Legacy version of impl_async_svc_method_types_legacy to maintain backward compatibility.
 macro_rules! impl_async_svc_method_types_legacy {
     {
-        method_name => $method_name: expr_2021,
+        method_name => $method_name: expr,
         request_struct => $request_struct: ident,
 
         params_value_thrift_type => $params_value_thrift_type: ident,
@@ -893,7 +893,7 @@ mod test {
     macro_rules! test_blobstore_key {
         {
             $type: ident,
-            $prefix: expr_2021
+            $prefix: expr
         } => {
             let id = $type::from_byte_array([1; 32]);
             assert_eq!(id.blobstore_key(), format!(concat!($prefix, ".blake2.{}"), id));

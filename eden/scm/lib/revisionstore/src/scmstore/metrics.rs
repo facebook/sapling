@@ -38,7 +38,7 @@ pub struct FetchMetrics {
 
 /// Define a static Counter for FetchMetrics fields, and then construct a static FetchMetrics instance.
 macro_rules! static_fetch_metrics {
-    ($name:ident, $prefix:expr_2021) => {
+    ($name:ident, $prefix:expr) => {
         paste::paste! {
             mod [<fetch_metrics_ $name:lower>] {
                 pub static REQUESTS: ::metrics::Counter = ::metrics::Counter::new_counter(concat!($prefix, ".requests"));

@@ -66,7 +66,7 @@ pub fn run(
 /// stored on disk.
 #[macro_export]
 macro_rules! assert_json {
-    ($value: expr_2021, $test_name: ident) => {{
+    ($value: expr, $test_name: ident) => {{
         $crate::setup();
 
         $crate::run(

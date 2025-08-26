@@ -11,7 +11,7 @@ use crate::global_flags::HgGlobalOpts;
 
 #[macro_export]
 macro_rules! abort_if {
-    ( $cond:expr_2021, $($arg:tt)+ ) => {
+    ( $cond:expr, $($arg:tt)+ ) => {
         if $cond {
             $crate::abort!($($arg)*);
         }

@@ -44,7 +44,7 @@ macro_rules! mononoke_queries {
         $vi:vis read $name:ident (
             $( $pname:ident: $ptype:ty ),* $(,)*
             $( >list $lname:ident: $ltype:ty )*
-        ) -> ($( $rtype:ty ),* $(,)*) { $q:expr_2021 }
+        ) -> ($( $rtype:ty ),* $(,)*) { $q:expr }
         $( $rest:tt )*
     ) => {
         $crate::mononoke_queries! {
@@ -60,7 +60,7 @@ macro_rules! mononoke_queries {
         $vi:vis cacheable read $name:ident (
             $( $pname:ident: $ptype:ty ),* $(,)*
             $( >list $lname:ident: $ltype:ty )*
-        ) -> ($( $rtype:ty ),* $(,)*) { $q:expr_2021 }
+        ) -> ($( $rtype:ty ),* $(,)*) { $q:expr }
         $( $rest:tt )*
     ) => {
         $crate::mononoke_queries! {
@@ -77,7 +77,7 @@ macro_rules! mononoke_queries {
         $vi:vis read $name:ident (
             $( $pname:ident: $ptype:ty ),* $(,)*
             $( >list $lname:ident: $ltype:ty )*
-        ) -> ($( $rtype:ty ),* $(,)*) { mysql($mysql_q:expr_2021) sqlite($sqlite_q:expr_2021) }
+        ) -> ($( $rtype:ty ),* $(,)*) { mysql($mysql_q:expr) sqlite($sqlite_q:expr) }
         $( $rest:tt )*
     ) => {
         $crate::_macro_internal::paste::item! {
@@ -179,7 +179,7 @@ macro_rules! mononoke_queries {
         $vi:vis cacheable read $name:ident (
             $( $pname:ident: $ptype:ty ),* $(,)*
             $( >list $lname:ident: $ltype:ty )*
-        ) -> ($( $rtype:ty ),* $(,)*) { mysql($mysql_q:expr_2021) sqlite($sqlite_q:expr_2021) }
+        ) -> ($( $rtype:ty ),* $(,)*) { mysql($mysql_q:expr) sqlite($sqlite_q:expr) }
         $( $rest:tt )*
     ) => {
         $crate::_macro_internal::paste::item! {
@@ -301,7 +301,7 @@ macro_rules! mononoke_queries {
         $vi:vis write $name:ident (
             values: ($( $vname:ident: $vtype:ty ),* $(,)*)
             $( , $pname:ident: $ptype:ty )* $(,)*
-        ) { $qtype:ident, $q:expr_2021 }
+        ) { $qtype:ident, $q:expr }
         $( $rest:tt )*
     ) => {
         $crate::mononoke_queries! {
@@ -318,7 +318,7 @@ macro_rules! mononoke_queries {
         $vi:vis write $name:ident (
             values: ($( $vname:ident: $vtype:ty ),* $(,)*)
             $( , $pname:ident: $ptype:ty )* $(,)*
-        ) { $qtype:ident, mysql($mysql_q:expr_2021) sqlite($sqlite_q:expr_2021) }
+        ) { $qtype:ident, mysql($mysql_q:expr) sqlite($sqlite_q:expr) }
         $( $rest:tt )*
     ) => {
         $crate::_macro_internal::paste::item! {
@@ -471,7 +471,7 @@ macro_rules! mononoke_queries {
         $vi:vis write $name:ident (
             $( $pname:ident: $ptype:ty ),* $(,)*
             $( >list $lname:ident: $ltype:ty )*
-        ) { $qtype:ident, $q:expr_2021 }
+        ) { $qtype:ident, $q:expr }
         $( $rest:tt )*
     ) => {
         $crate::mononoke_queries! {
@@ -488,7 +488,7 @@ macro_rules! mononoke_queries {
         $vi:vis write $name:ident (
             $( $pname:ident: $ptype:ty ),* $(,)*
             $( >list $lname:ident: $ltype:ty )*
-        ) { $qtype:ident, mysql($mysql_q:expr_2021) sqlite($sqlite_q:expr_2021) }
+        ) { $qtype:ident, mysql($mysql_q:expr) sqlite($sqlite_q:expr) }
         $( $rest:tt )*
     ) => {
         $crate::_macro_internal::paste::item! {

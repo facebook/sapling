@@ -188,7 +188,7 @@ impl Entry {
     pub fn update_status(&mut self, progress: Vec<Progress>) -> bool {
         let (download_bytes, upload_bytes, _) = hg_http::current_progress();
         macro_rules! try_to_update {
-            ($original_stat:expr_2021,$new_stat:expr_2021) => {{
+            ($original_stat:expr,$new_stat:expr) => {{
                 if $original_stat == $new_stat {
                     false
                 } else {

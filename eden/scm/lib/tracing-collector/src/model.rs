@@ -790,13 +790,13 @@ impl<'a> RefValue<'a> {
 }
 
 macro_rules! object {
-    ({ $( $k:ident : $v:expr_2021, )* }) => {{
+    ({ $( $k:ident : $v:expr, )* }) => {{
         #[allow(unused_mut)]
         let mut obj = IndexMap::new();
         $( obj.insert(stringify!($k), object!($v)); )*
         $crate::model::RefValue::Map(obj)
     }};
-    ($v: expr_2021) => { RefValue::from($v) };
+    ($v: expr) => { RefValue::from($v) };
 }
 
 impl TracingData {
