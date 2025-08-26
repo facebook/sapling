@@ -417,7 +417,7 @@ export class VSCodeRepo implements vscode.QuickDiffProvider, SaplingRepository {
   }
 
   async getCurrentStack(): Promise<ReadonlyArray<SaplingCommitInfo>> {
-    const revset = 'sort(draft() and ancestors(.), -date)';
+    const revset = 'sort(draft() and ancestors(.), topo)';
     const result = await this.runSlCommand([
       'log',
       '--rev',
