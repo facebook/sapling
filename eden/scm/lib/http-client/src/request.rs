@@ -850,7 +850,7 @@ impl Request {
         unsafe {
             // Tell curl to suppress CONNECT response from proxy. The proxy response is
             // difficult to handle correctly since you receive two sets of status
-            // codes/headers, have have to "know" it is coming. See
+            // codes/headers, and have to "know" it is coming. See
             // https://curl.se/libcurl/c/CURLOPT_SUPPRESS_CONNECT_HEADERS.html.
             let mut rc = curl_sys::curl_easy_setopt(easy.raw(), CURLOPT_SUPPRESS_CONNECT_HEADERS);
 
