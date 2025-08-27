@@ -234,4 +234,22 @@ class Helper {
         let similarity2 = estimate_similarity(single_newline, multiple_newlines).unwrap();
         assert_approx_eq!(similarity2, 1.0);
     }
+
+    #[mononoke::test]
+    fn test_large_files_small_changes() {
+        let mut lines = (0..2500).map(|i| i.to_string()).collect::<Vec<_>>();
+        let original = lines.join("\n");
+        // Alter some lines
+        lines.insert(100, "line1".to_string());
+        lines.remove(200);
+        lines.remove(300);
+        lines.remove(400);
+        lines.insert(1000, "line2".to_string());
+        lines.remove(1100);
+        lines.insert(1500, "line3".to_string());
+        lines.insert(2300, "line4".to_string());
+        let modified = lines.join("\n");
+        let similarity = estimate_similarity(original.as_bytes(), modified.as_bytes()).unwrap();
+        assert_approx_eq!(similarity, 0.388889);
+    }
 }
