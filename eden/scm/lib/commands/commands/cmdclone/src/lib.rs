@@ -153,7 +153,17 @@ fn run_eden(
     {
         let dest_str = destination.to_string_lossy();
         if !preferred_regex.is_match(&dest_str) {
-            logger.warn(format!("WARNING: Clone destination {dest_str} is not a preferred location and may result in a bad experience. Preferred locations match the regex '{}'.", preferred_regex.as_str()));
+            logger.warn(format!("WARNING: Clone destination {dest_str} is not a preferred location and may result in a bad experience."));
+            if let Some(default) = ctx
+                .config()
+                .get_opt::<PathBuf>("clone", "default-destination-dir")?
+            {
+                logger.warn(format!(
+                    "         Consider cloning to the default location '{}'.",
+                    default.join(reponame).display()
+                ));
+            }
+            logger.warn("         Run '@prog@ config clone.eden-preferred-destination-regex' to see the preferred location regex.");
         }
     }
 
