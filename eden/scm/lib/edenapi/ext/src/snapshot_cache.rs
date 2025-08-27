@@ -87,11 +87,31 @@ impl SnapshotCacheConfig {
                     debug!("Snapshot cache disabled - cache path is empty");
                     None
                 } else {
-                    let mut path = std::path::PathBuf::from(path_str);
                     let repo_name = config
                         .get("remotefilelog", "reponame")
                         .map_or("default".to_string(), |s| s.to_string());
-                    path.push(repo_name);
+
+                    let path = if path_str.trim() == "hgcache" {
+                        // Special handling for "hgcache" - use remotefilelog.cachepath
+                        // and append repo name and "snapshots"
+                        match config.get_opt::<String>("remotefilelog", "cachepath") {
+                            Ok(Some(cache_path)) => {
+                                let mut hg_cache_path = std::path::PathBuf::from(cache_path);
+                                hg_cache_path.push(&repo_name);
+                                hg_cache_path.push("snapshots");
+                                hg_cache_path
+                            }
+                            _ => {
+                                debug!("Snapshot cache disabled - remotefilelog.cachepath not set for hgcache mode");
+                                return None;
+                            }
+                        }
+                    } else {
+                        let mut path = std::path::PathBuf::from(path_str);
+                        path.push(&repo_name);
+                        path
+                    };
+
                     Some(path)
                 }
             });
