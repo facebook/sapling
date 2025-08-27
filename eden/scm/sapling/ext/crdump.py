@@ -112,7 +112,9 @@ def crdump(ui, repo, *revs, **opts):
     try:
         # notbackedup is a revset
         notbackedup = revs
-        if ui.configbool("crdump", "commitcloud", False):
+        if ui.configbool(
+            "crdump", "commitcloud", False
+        ) and commitcloud.util.is_supported(repo):
             try:
                 oldquiet = repo.ui.quiet
                 # Silence any output from commitcloud

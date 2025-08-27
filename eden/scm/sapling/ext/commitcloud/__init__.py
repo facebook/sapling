@@ -180,6 +180,7 @@ def reposetup(ui, repo):
                 automigrate
                 and not workspace.disconnected(self)
                 and background.autobackupenabled(self)
+                and ccutil.is_supported(repo)
             ):
                 workspacename = None
                 if self.ui.configbool("commitcloud", "automigratehostworkspace"):

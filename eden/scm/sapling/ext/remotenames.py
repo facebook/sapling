@@ -884,7 +884,7 @@ def expushcmd(orig, ui, repo, dest=None, **opts):
     edenapi = pushmod.get_edenapi_for_dest(repo, dest)
 
     is_scratch = False
-    if extensions.isenabled(ui, "commitcloud"):
+    if extensions.isenabled(ui, "commitcloud") and ccutil.is_supported(repo):
         bookname = opargs["to"] or opargs["delete"]
         scratchmatcher = ccutil.scratchbranchmatcher(ui)
         # infinitepush "scratch" branches don't work over the regular

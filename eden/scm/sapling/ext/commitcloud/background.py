@@ -31,7 +31,7 @@ import bindings
 from sapling import dispatch, encoding, error, extensions, util
 from sapling.i18n import _
 
-from . import service, workspace
+from . import service, util as ccutil, workspace
 
 
 def extsetup(ui):
@@ -101,7 +101,9 @@ def autobackupenabled(repo):
     timestamp = autobackupdisableduntil(repo)
     if timestamp is not None and time.time() <= timestamp:
         return False
-    return repo.ui.configbool("infinitepushbackup", "autobackup")
+    return repo.ui.configbool(
+        "infinitepushbackup", "autobackup"
+    ) and ccutil.is_supported(repo)
 
 
 def _runcommand(orig, lui, repo, cmd, fullargs, *args):
