@@ -46,12 +46,14 @@ DEFINE_string(
     xattrType,
     kXattrSha1.data(),
     "Type of xattrs to request. Options are: "
-    "\"user.sha1\" (sha1 of files) or "
-    "\"user.blake3\" (blake3 of files)");
+    "\"user.sha1\" (sha1 of files), "
+    "\"user.blake3\" (blake3 of files), "
+    "\"user.digesthash\" (digest hash of file/dirs)");
 
 enum XAttrType {
   Sha1,
   Blake3,
+  DigestHash,
 };
 
 std::string_view xAttrTypeToString(XAttrType xtype) {
@@ -61,6 +63,9 @@ std::string_view xAttrTypeToString(XAttrType xtype) {
     }
     case XAttrType::Blake3: {
       return kXattrBlake3;
+    }
+    case XAttrType::DigestHash: {
+      return kXattrDigestHash;
     }
     default:
       throw std::invalid_argument(
@@ -73,6 +78,8 @@ XAttrType stringToXAttrType(std::string_view str) {
     return XAttrType::Sha1;
   } else if (str == kXattrBlake3) {
     return XAttrType::Blake3;
+  } else if (str == kXattrDigestHash) {
+    return XAttrType::DigestHash;
   } else {
     throw std::invalid_argument(
         fmt::format("cannot convert {} to valid XAttrType", str));
@@ -84,6 +91,7 @@ size_t getXAttrTypeSize(XAttrType xtype) {
     case XAttrType::Sha1:
       return 40;
     case XAttrType::Blake3:
+    case XAttrType::DigestHash:
       return 64;
     default:
       throw std::invalid_argument(
@@ -337,6 +345,18 @@ int main(int argc, char** argv) {
                   thrift_samples[samples_index]);
               break;
             }
+            case XAttrType::DigestHash: {
+              recordThriftSample<DigestHashResult>(
+                  thrift_files[files_index],
+                  repo_path,
+                  client,
+                  &EdenServiceAsyncClient::sync_getDigestHash,
+                  thrift_samples[samples_index]);
+              break;
+            }
+            default:
+              throw std::invalid_argument(fmt::format(
+                  "cannot fetch unknown attr via thrift: {}", xAttrType));
           }
         }
 
