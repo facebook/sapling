@@ -237,8 +237,8 @@ int main(int argc, char** argv) {
 
       gate.wait();
       for (unsigned j = 0; j < samples_per_thread; ++j) {
-        auto files_index = j * thread_number % thrift_files.size();
         auto samples_index = thread_number * samples_per_thread + j;
+        auto files_index = samples_index % thrift_files.size();
         if (shouldRecordThriftSamples(interface)) {
           recordThriftSample(
               thrift_files[files_index],
