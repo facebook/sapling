@@ -542,6 +542,10 @@ impl ShardedProcessHandler {
                         anyhow::Ok((new_repo, execution_process))
                     };
                     setups.push(setup.boxed());
+                } else {
+                    // If the repo was already present in the map, then it means it was either being setup
+                    // or already executing. Either case, it counts as a successful setup.
+                    shard_setup_count += 1;
                 }
             }
             while let Some(setup_result) = setups.next().await {
