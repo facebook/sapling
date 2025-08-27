@@ -75,6 +75,7 @@ cpp_binary(
     ],
     deps = [
         "fbsource//third-party/benchmark:benchmark",
+        "//eden/common/utils:utils",
         "//eden/common/utils/benchharness:benchharness",
         "//eden/fs/service:thrift-cpp2-services",
         "//folly:file",

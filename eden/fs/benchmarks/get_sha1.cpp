@@ -26,6 +26,7 @@
 #include <folly/synchronization/test/Barrier.h>
 #include <thrift/lib/cpp2/async/HeaderClientChannel.h>
 
+#include "eden/common/utils/XAttr.h"
 #include "eden/common/utils/benchharness/Bench.h"
 #include "eden/fs/service/gen-cpp2/EdenService.h"
 
@@ -37,10 +38,58 @@ DEFINE_string(repo, "", "Path to Eden repository");
 DEFINE_string(
     interface,
     "",
-    "Way to get sha1s. Options are: "
+    "Way to get xattrs. Options are: "
     "\"thrift\" (query EdenFS's thrift interface), "
     "\"filesystem\" (getxattr calls through the filesystem), or "
     "\"both\" (try both and display separate results).");
+DEFINE_string(
+    xattrType,
+    kXattrSha1.data(),
+    "Type of xattrs to request. Options are: "
+    "\"user.sha1\" (sha1 of files) or "
+    "\"user.blake3\" (blake3 of files)");
+
+enum XAttrType {
+  Sha1,
+  Blake3,
+};
+
+std::string_view xAttrTypeToString(XAttrType xtype) {
+  switch (xtype) {
+    case XAttrType::Sha1: {
+      return kXattrSha1;
+    }
+    case XAttrType::Blake3: {
+      return kXattrBlake3;
+    }
+    default:
+      throw std::invalid_argument(
+          fmt::format("invalid xattr type selected: {}", xtype));
+  }
+}
+
+XAttrType stringToXAttrType(std::string_view str) {
+  if (str == kXattrSha1) {
+    return XAttrType::Sha1;
+  } else if (str == kXattrBlake3) {
+    return XAttrType::Blake3;
+  } else {
+    throw std::invalid_argument(
+        fmt::format("cannot convert {} to valid XAttrType", str));
+  }
+}
+
+size_t getXAttrTypeSize(XAttrType xtype) {
+  switch (xtype) {
+    case XAttrType::Sha1:
+      return 40;
+    case XAttrType::Blake3:
+      return 64;
+    default:
+      throw std::invalid_argument(
+          fmt::format("invalid xattr type selected: {}", xtype));
+  }
+}
 
 bool shouldRecordThriftSamples(std::string& interface) {
   return interface == "both" || interface == "thrift";
@@ -51,63 +100,81 @@ bool shouldRecordFilesystemSamples(std::string& interface) {
 }
 
 /**
- * Record a sample in `samples` of how long it takes to read a file's sha1 from
+ * Record a sample in `samples` of how long it takes to read a file's xattr from
  * EdenFS's thrift interface.
  */
+template <typename ThriftResultT>
 void recordThriftSample(
     std::string& file,
     boost::filesystem::path& repo_path,
     std::unique_ptr<EdenServiceAsyncClient>& client,
+    void (EdenServiceAsyncClient::*method)(
+        std::vector<ThriftResultT>&,
+        const PathString&,
+        const std::vector<PathString>&,
+        const SyncBehavior&),
     uint64_t& sample) {
   auto start = getTime();
-  std::vector<SHA1Result> res;
+  std::vector<ThriftResultT> res;
   // see notes in recordFilesystemSample about these DoNotOptimize protecting
   // ordering here
   benchmark::DoNotOptimize(file);
   auto sync = SyncBehavior{};
-  client->sync_getSHA1(res, repo_path.native(), {file}, sync);
+  (client.get()->*method)(res, repo_path.native(), {file}, sync);
   benchmark::DoNotOptimize(res);
   auto duration = std::chrono::nanoseconds(getTime() - start);
   sample =
       std::chrono::duration_cast<std::chrono::microseconds>(duration).count();
-
   if (UNLIKELY(res.empty())) {
     throw std::runtime_error("No results!");
   }
   if (UNLIKELY(
-          res.size() != 1 || res.at(0).getType() == SHA1Result::Type::error)) {
+          res.size() != 1 ||
+          res.at(0).getType() == ThriftResultT::Type::error)) {
     throw res.at(0).get_error();
   }
 }
 
 /**
- * Record a sample in `samples` of how long it takes to read a file's sha1 using
- * a call through the filesystem (getxattr).
+ * Record a sample in `samples` of how long it takes to read a file's xattr
+ * using a call through the filesystem (getxattr).
  */
-void recordFilesystemSample(std::string& file, uint64_t& sample) {
-  constexpr size_t res_size = 40;
-  std::array<char, res_size> res{};
+void recordFilesystemSample(
+    std::string& file,
+    uint64_t& sample,
+    std::string& xattr_type,
+    size_t xattr_type_size) {
+  std::vector<char> res{};
+  res.reserve(xattr_type_size);
   auto start = getTime();
-  // The DoNotOptimize calls "fence" in the sha1 access and make it reliable to
+  // The DoNotOptimize calls "fence" in the xattr access and make it reliable to
   // time:
   // https://stackoverflow.com/questions/37786547/enforcing-statement-order-in-c
   benchmark::DoNotOptimize(file); // this is just used so that the ordering of
-                                  // start time and the sha1 access can not be
+                                  // start time and the xattr access can not be
                                   // reordered by the compiler
   ssize_t success{0};
 #ifdef __APPLE__
-  success = getxattr(file.c_str(), "user.sha1", res.data(), res_size, 0, 0);
+  success = getxattr(
+      file.c_str(), xattr_type.c_str(), res.data(), xattr_type_size, 0, 0);
 #elif __linux__
-  success = getxattr(file.c_str(), "user.sha1", res.data(), res_size);
+  success =
+      getxattr(file.c_str(), xattr_type.c_str(), res.data(), xattr_type_size);
 #endif
   benchmark::DoNotOptimize(res); // this is just used so that the ordering of
-                                 // recording the end time and the sha1 access
+                                 // recording the end time and the xattr access
                                  // can not be reordered by the compiler
   auto duration = std::chrono::nanoseconds(getTime() - start);
   sample =
       std::chrono::duration_cast<std::chrono::microseconds>(duration).count();
 
   if (UNLIKELY(success == -1)) {
+    XLOGF(
+        ERR,
+        "failed to get xattr for file '{}': {} - {}\n",
+        file,
+        errno,
+        folly::errnoStr(errno));
     throw std::system_error{std::error_code{errno, std::system_category()}};
   }
 }
@@ -151,6 +218,15 @@ int main(int argc, char** argv) {
     return 1;
   }
 
+  auto xAttrType = XAttrType::Sha1;
+  try {
+    xAttrType = stringToXAttrType(FLAGS_xattrType);
+  } catch (std::invalid_argument& e) {
+    std::cerr << "Must specify a valid xattr type: " << e.what() << std::endl;
+    gflags::ShowUsageWithFlagsRestrict(argv[0], __FILE__);
+    return 1;
+  }
+
   auto real_path = realpath(FLAGS_repo.c_str(), nullptr);
   if (!real_path) {
     perror("realpath on given repo failed");
@@ -178,7 +254,7 @@ int main(int argc, char** argv) {
 
 #ifdef _WIN32
   if (shouldRecordFilesystemSamples(FLAGS_interface)) {
-    std::cerr << "Filesystem sha1 not currently supported" << std::endl;
+    std::cerr << "Filesystem xattr not currently supported" << std::endl;
     return 1;
   }
 #endif
@@ -219,7 +295,8 @@ int main(int argc, char** argv) {
                           &filesystem_samples,
                           &thrift_files,
                           &filesystem_files,
-                          &interface = FLAGS_interface] {
+                          &interface = FLAGS_interface,
+                          &xAttrType] {
       // The order of these variables matters, the client MUST be
       // destroyed before the event base because the client
       // destructor is gonna touch the eventbase.
@@ -236,20 +313,39 @@ int main(int argc, char** argv) {
       }
 
       gate.wait();
+      auto xattr_type_size = getXAttrTypeSize(xAttrType);
       for (unsigned j = 0; j < samples_per_thread; ++j) {
         auto samples_index = thread_number * samples_per_thread + j;
         auto files_index = samples_index % thrift_files.size();
         if (shouldRecordThriftSamples(interface)) {
-          recordThriftSample(
-              thrift_files[files_index],
-              repo_path,
-              client,
-              thrift_samples[samples_index]);
+          switch (xAttrType) {
+            case XAttrType::Sha1: {
+              recordThriftSample<SHA1Result>(
+                  thrift_files[files_index],
+                  repo_path,
+                  client,
+                  &EdenServiceAsyncClient::sync_getSHA1,
+                  thrift_samples[samples_index]);
+              break;
+            }
+            case XAttrType::Blake3: {
+              recordThriftSample<Blake3Result>(
+                  thrift_files[files_index],
+                  repo_path,
+                  client,
+                  &EdenServiceAsyncClient::sync_getBlake3,
+                  thrift_samples[samples_index]);
+              break;
+            }
+          }
         }
 
         if (shouldRecordFilesystemSamples(interface)) {
           recordFilesystemSample(
-              filesystem_files[files_index], filesystem_samples[samples_index]);
+              filesystem_files[files_index],
+              filesystem_samples[samples_index],
+              FLAGS_xattrType,
+              xattr_type_size);
         }
       }
     });
