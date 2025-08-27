@@ -101,6 +101,14 @@ pub fn embedded_load(info: RepoInfo, pinned: &[PinnedConfig]) -> Result<ConfigSe
     load_with_options(info, pinned, opts)
 }
 
+/// Like `load`, but only use local configs (i.e. don't request remote config).
+/// Errors out if the remote config is required but not populated in local cache.
+pub fn local_load(info: RepoInfo, pinned: &[PinnedConfig]) -> Result<ConfigSet> {
+    let mut opts: Options = Default::default();
+    opts.local_only = true;
+    load_with_options(info, pinned, opts)
+}
+
 fn load_with_options(info: RepoInfo, pinned: &[PinnedConfig], opts: Options) -> Result<ConfigSet> {
     let mut cfg = ConfigSet::new().named("root");
     let mut errors = Vec::new();
@@ -907,10 +915,16 @@ fn load_dynamic(
     domain_override: Option<Text>,
     errors: &mut Vec<Error>,
 ) -> Result<ConfigSet> {
+    use crate::fb::dynamic_system::remote_cache_path;
     use crate::fb::internalconfig::Domain;
     use crate::fb::internalconfig::vpnless_config_path;
 
-    let mode = FbConfigMode::from_identity(identity);
+    let mut mode = FbConfigMode::from_identity(identity);
+
+    if opts.local_only && matches!(mode, FbConfigMode::Full) {
+        mode = FbConfigMode::OfflineJsonOverride(remote_cache_path(&get_config_dir(None)?));
+    }
+
     let mut this = ConfigSet::new().named("dynamic");
 
     tracing::debug!("FbConfigMode is {:?}", &mode);

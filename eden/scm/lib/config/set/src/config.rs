@@ -71,6 +71,9 @@ pub struct Options {
     /// This is useful for programs that embed us (like EdenFS) to avoid dynamic config
     /// flapping due to version string mismatch.
     pub minimize_dynamic_gen: bool,
+
+    /// Don't fetch any remote configs. Error out if local caches are empty.
+    pub local_only: bool,
 }
 
 impl Config for ConfigSet {
