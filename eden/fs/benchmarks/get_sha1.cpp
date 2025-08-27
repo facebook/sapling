@@ -49,6 +49,10 @@ DEFINE_string(
     "\"user.sha1\" (sha1 of files), "
     "\"user.blake3\" (blake3 of files), "
     "\"user.digesthash\" (digest hash of file/dirs)");
+DEFINE_bool(
+    noAttrIsFatal,
+    false,
+    "Short-circuit the benchmark if any request fails with ENOATTR");
 
 enum XAttrType {
   Sha1,
@@ -107,9 +111,27 @@ bool shouldRecordFilesystemSamples(std::string& interface) {
   return interface == "both" || interface == "filesystem";
 }
 
+template <typename ThriftResultT>
+bool isThriftResultFatal(const ThriftResultT& res) {
+  // Result is only fatal iff:
+  // 1) The result is an error type
+  // 2) The error is not ATTRIBUTE_UNAVAILABLE, or the user specified that
+  //    ATTRIBUTE_UNAVAILABLE errors should be fatal
+  if (res.getType() == ThriftResultT::Type::error) {
+    // Always log that an error occurred
+    XLOGF(DBG3, "Thrift request failed with: {}", res.get_error().what());
+
+    // The error should only be fatal in some cases
+    return res.get_error().errorType().value() !=
+        EdenErrorType::ATTRIBUTE_UNAVAILABLE ||
+        FLAGS_noAttrIsFatal;
+  }
+  return false;
+}
+
 /**
- * Record a sample in `samples` of how long it takes to read a file's xattr from
- * EdenFS's thrift interface.
+ * Record a sample in `samples` of how long it takes to read a file's xattr
+ * from EdenFS's thrift interface.
  */
 template <typename ThriftResultT>
 void recordThriftSample(
@@ -136,9 +158,7 @@ void recordThriftSample(
   if (UNLIKELY(res.empty())) {
     throw std::runtime_error("No results!");
   }
-  if (UNLIKELY(
-          res.size() != 1 ||
-          res.at(0).getType() == ThriftResultT::Type::error)) {
+  if (UNLIKELY(res.size() != 1 || isThriftResultFatal(res.at(0)))) {
     throw res.at(0).get_error();
   }
 }
@@ -178,12 +198,14 @@ void recordFilesystemSample(
 
   if (UNLIKELY(success == -1)) {
     XLOGF(
-        ERR,
+        DBG3,
         "failed to get xattr for file '{}': {} - {}\n",
         file,
         errno,
         folly::errnoStr(errno));
-    throw std::system_error{std::error_code{errno, std::system_category()}};
+    if (errno != kENOATTR || FLAGS_noAttrIsFatal) {
+      throw std::system_error{std::error_code{errno, std::system_category()}};
+    }
   }
 }
 
