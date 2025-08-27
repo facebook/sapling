@@ -473,8 +473,15 @@ class unixforkingservice:
         self._servicehandler.bindsocket(self._sock, self.address)
         if hasattr(util, "unblocksignal"):
             util.unblocksignal(signal.SIGCHLD)
-        o = util.signal(signal.SIGCHLD, self._sigchldhandler)
-        self._oldsigchldhandler = o
+        self._oldsigchldhandler = util.signal(signal.SIGCHLD, self._sigchldhandler)
+
+        def raisesignalexception(*args):
+            raise error.SignalInterrupt
+
+        # Rust's "ctrlc" SIGINT/SIGTERM handlers are not in place - we need to handle signals.
+        self._oldsigtermhandler = util.signal(signal.SIGTERM, raisesignalexception)
+        self._oldsiginthandler = util.signal(signal.SIGINT, raisesignalexception)
+
         self._socketunlinked = False
 
     def _unlinksocket(self):
@@ -484,6 +491,8 @@ class unixforkingservice:
 
     def _cleanup(self):
         util.signal(signal.SIGCHLD, self._oldsigchldhandler)
+        util.signal(signal.SIGTERM, self._oldsigtermhandler)
+        util.signal(signal.SIGINT, self._oldsiginthandler)
         self._sock.close()
         self._unlinksocket()
         # don't kill child processes as they have active clients, just wait
