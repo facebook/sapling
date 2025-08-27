@@ -8,8 +8,10 @@
 use std::ffi::CString;
 use std::ffi::OsString;
 use std::path::Path;
+use std::time::Instant;
 
 use clidispatch::io::IsTty;
+use configmodel::ConfigExt;
 use encoding::osstring_to_local_cstring;
 use libc::c_char;
 use libc::c_int;
@@ -165,10 +167,58 @@ fn should_call_chg(args: &[String]) -> (bool, &'static str) {
 /// Note that this function terminates the process
 /// if it decides to pass control to chg
 pub fn maybe_call_chg(args: &[String]) {
-    let (should_use, reason) = should_call_chg(args);
+    let (mut should_use, mut reason) = should_call_chg(args);
 
-    if std::env::var_os("CHGDEBUG").is_some_and(|x| x == "1") {
-        eprintln!("using chg: {}, because {}", should_use, reason);
+    let chgdebug = std::env::var_os("CHGDEBUG").is_some_and(|x| x == "1");
+
+    if should_use {
+        let start_time = Instant::now();
+        match configloader::hg::local_load(configloader::hg::RepoInfo::NoRepo, &[]) {
+            Ok(config) => {
+                if config.must_get("chg", "disable").unwrap_or(false) {
+                    should_use = false;
+                    reason = "chg.disable=true in config";
+                } else if cfg!(target_os = "linux") {
+                    if let Ok(cgroup_regex) =
+                        config.must_get::<configmodel::Regex>("chg", "cgroup-regex")
+                    {
+                        if let Ok(my_cgroup) = std::fs::read_to_string("/proc/self/cgroup") {
+                            let my_cgroup = my_cgroup.trim();
+                            if chgdebug {
+                                eprintln!(
+                                    "chg: debug: my cgroup: {my_cgroup}, cgroup regex: {}",
+                                    cgroup_regex.as_str()
+                                );
+                            }
+                            if !cgroup_regex.is_match(my_cgroup) {
+                                should_use = false;
+                                reason = "chg.cgroup-regex set and doesn't match /proc/self/cgroup";
+                            }
+                        }
+                    }
+                }
+            }
+            Err(err) => {
+                if chgdebug {
+                    eprintln!(
+                        "chg: debug: error loading config: {}",
+                        format!("{err:?}").trim()
+                    );
+                }
+                should_use = false;
+                reason = "error loading config";
+            }
+        }
+        if chgdebug {
+            eprintln!(
+                "chg: debug: config based decision took {:?}",
+                start_time.elapsed()
+            );
+        }
+    }
+
+    if chgdebug {
+        eprintln!("chg: debug: using chg: {}, because {}", should_use, reason);
     }
 
     if !should_use {

@@ -22,3 +22,5 @@ pub type Result<T> = std::result::Result<T, Error>;
 
 // Re-export
 pub use minibytes::Text;
+#[cfg(feature = "convert-regex")]
+pub use regex::Regex;

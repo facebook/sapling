@@ -21,6 +21,8 @@ sapling-python-sysconfig = { version = "0.1.0", path = "../../lib/util/python-sy
 [target.'cfg(target_os = "linux")'.dependencies]
 dirs = { version = "6.0", optional = true }
 libc = "0.2.139"
+sapling-configloader = { version = "0.1.0", path = "../../lib/config/loader" }
+sapling-configmodel = { version = "0.1.0", path = "../../lib/config/model" }
 sapling-encoding = { version = "0.1.0", path = "../../lib/encoding" }
 sapling-identity = { version = "0.1.0", path = "../../lib/identity", optional = true }
 sapling-version = { version = "0.1.0", path = "../../lib/version" }
@@ -28,6 +30,8 @@ sapling-version = { version = "0.1.0", path = "../../lib/version" }
 [target.'cfg(target_os = "macos")'.dependencies]
 dirs = { version = "6.0", optional = true }
 libc = "0.2.139"
+sapling-configloader = { version = "0.1.0", path = "../../lib/config/loader" }
+sapling-configmodel = { version = "0.1.0", path = "../../lib/config/model" }
 sapling-encoding = { version = "0.1.0", path = "../../lib/encoding" }
 sapling-identity = { version = "0.1.0", path = "../../lib/identity", optional = true }
 sapling-version = { version = "0.1.0", path = "../../lib/version" }
