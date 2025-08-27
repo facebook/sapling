@@ -62,8 +62,32 @@ export const getVSCodePlatform = (context: vscode.ExtensionContext): VSCodeServe
       switch (message.type) {
         case 'platform/openFiles': {
           for (const path of message.paths) {
+            if (repo == null) {
+              return;
+            }
             // don't use preview mode for opening multiple files, since they would overwrite each other
-            openFile(repo, path, message.options?.line, /* preview */ false);
+            openFile(
+              repo,
+              path,
+              message.options?.line,
+              /* preview */ false,
+              /* onError */ (err: Error) => {
+                // Opening multiple files at once can throw errors even when the files are successfully opened
+                // We check here if the error is unwarranted and the file actually exists in the tab group
+                const uri = vscode.Uri.file(pathModule.join(repo.info.repoRoot, path));
+                const isTabOpen = vscode.window.tabGroups.all
+                  .flatMap(group => group.tabs)
+                  .some(
+                    tab =>
+                      tab.input instanceof vscode.TabInputText &&
+                      uri.fsPath == tab.input.uri.fsPath,
+                  );
+
+                if (!isTabOpen) {
+                  vscode.window.showErrorMessage(err.message ?? String(err));
+                }
+              },
+            );
           }
           break;
         }

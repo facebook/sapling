@@ -23,6 +23,7 @@ export default function openFile(
   filePath: string,
   line?: number,
   preview?: boolean,
+  onError?: (err: Error) => void,
   onOpened?: (editor: vscode.TextEditor) => void,
   disableScroll: boolean = false,
 ) {
@@ -55,7 +56,11 @@ export default function openFile(
         onOpened?.(editor);
       },
       err => {
-        vscode.window.showErrorMessage(err.message ?? String(err));
+        if (onError) {
+          onError(err);
+        } else {
+          vscode.window.showErrorMessage(err.message ?? String(err));
+        }
       },
     );
 }
