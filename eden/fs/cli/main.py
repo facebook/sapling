@@ -1392,11 +1392,17 @@ class HealthReportCmd(Subcmd):
         if util.is_sandcastle() or util.x2p_enabled():
             return True
 
-        if (cert := check_x509.find_x509_path()) and check_x509.validate_x509(cert):
+        if not (cert := check_x509.find_x509_path()):
+            error_str = "Could not find x509 certificate path"
+        else:
+            error_str = check_x509.validate_x509(cert)
+
+        if error_str == "":
             return True
+
         # cert error!
         self.error_codes[HealthReportCmd.ErrorCode.INVALID_CERTS] = (
-            "Failed to validate x509 certificates."
+            f"Failed to validate x509 certificates: {error_str}"
         )
         return False
 
