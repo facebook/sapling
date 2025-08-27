@@ -805,12 +805,19 @@ fn log_end(
         tracing::debug!(target: "commands::run::blocked", total=total_blocked_ms, start=start_blocked, "blocked total");
     }
 
+    let cgroup = if cfg!(target_os = "linux") {
+        std::fs::read_to_string("/proc/self/cgroup").unwrap_or_default()
+    } else {
+        String::new()
+    };
+
     tracing::info!(
         target: "command_info",
         exit_code=exit_code,
         max_rss=max_rss,
         total_blocked_ms=total_blocked_ms,
         is_plain=hgplain::is_plain(None),
+        cgroup=cgroup.trim(),
     );
 
     blackbox::log(&blackbox::event::Event::Finish {
