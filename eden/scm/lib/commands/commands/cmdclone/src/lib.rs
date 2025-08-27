@@ -410,7 +410,7 @@ pub fn run(mut ctx: ReqCtx<CloneOpts>) -> Result<u8> {
             // defaulting to "some_repo" or similar if the canonical repo name
             // contains a slash, but using just "repo" probably has less
             // friction with current workflows/expectations.
-            let basename = match reponame.split(&['/', '\\']).last() {
+            let basename = match reponame.rsplit(&['/', '\\']).next() {
                 Some(name) if !name.is_empty() => name,
                 _ => abort!("invalid reponame {reponame}"),
             };
