@@ -8,9 +8,15 @@
 
 import hashlib
 import os
+import sys
 from typing import Dict
 
 from .lib import testcase
+
+if sys.platform == "linux":
+    from errno import ENODATA as kENODATA
+else:
+    from errno import ENOATTR as kENODATA
 
 
 def getallxattrs(abspath: str) -> Dict[str, bytes]:
@@ -30,6 +36,8 @@ class XattrTest(testcase.EdenRepoTest):
         self.repo.write_file("hello", "hola\n")
         self.repo.write_file("subdir/file", "contents")
         self.repo.commit("Initial commit.")
+        if self.repo_type in ["hg", "filteredhg"]:
+            self.repo.push(".", "master", create=True)
 
     def test_get_sha1_xattr(self) -> None:
         filename = os.path.join(self.mount, "hello")
@@ -72,3 +80,29 @@ class XattrTest(testcase.EdenRepoTest):
             contents = f.read()
         expected_sha1 = sha1(contents)
         self.assertEqual(expected_sha1, xattr)
+
+    def test_get_digest_hash_xattr(self) -> None:
+        filename = os.path.join(self.mount, "hello")
+        dirname = os.path.join(self.mount, "subdir")
+
+        # The directory digest hash xattr is only supported on hg repos
+        if self.repo.get_type() not in ["hg", "filteredhg"]:
+            with self.assertRaises(OSError):
+                os.getxattr(dirname, "user.digesthash")
+            return
+
+        # For hg repos, we expect digest hashes to be available for all files and unmaterialized dirs
+        with self.assertRaises(OSError) as cm:
+            os.getxattr(filename, "user.digesthash")
+        self.assertEqual(cm.exception.errno, kENODATA)
+        with self.assertRaises(OSError) as cm:
+            os.getxattr(dirname, "user.digesthash")
+        self.assertEqual(cm.exception.errno, kENODATA)
+
+        # and test what happens as we materialize the directory
+        with open(os.path.join(dirname, "new_file"), "w") as f:
+            f.write("foo")
+            f.flush()
+            with self.assertRaises(OSError) as cm:
+                self.assertEqual(kENODATA, os.getxattr(dirname, "user.digesthash"))
+            self.assertEqual(kENODATA, cm.exception.errno)

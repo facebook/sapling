@@ -386,6 +386,7 @@ if sys.platform.startswith("linux"):
         "xattr_test.XattrTest": [  # T89439481
             "test_get_sha1_xattr",
             "test_get_sha1_xattr_succeeds_after_querying_xattr_on_dir",
+            "test_get_digest_hash_xattr",
         ],
         "setattr_test.SetAttrTest": [  # T89439721
             "test_chown_gid_as_nonroot_fails_if_not_member",
