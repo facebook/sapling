@@ -1305,6 +1305,7 @@ mod test {
                         blame_version: BlameVersion::V2,
                         git_delta_manifest_version: Default::default(),
                         git_delta_manifest_v2_config: Default::default(),
+                        git_delta_manifest_v3_config: Default::default(),
                         derivation_batch_sizes: hashmap! {
                             DerivableType::Fsnodes => 20,
                             DerivableType::Unodes => 20,

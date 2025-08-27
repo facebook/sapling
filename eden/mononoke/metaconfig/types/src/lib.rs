@@ -453,6 +453,9 @@ pub struct DerivedDataTypesConfig {
     /// Config for git delta manifest v2
     pub git_delta_manifest_v2_config: Option<GitDeltaManifestV2Config>,
 
+    /// Config for git delta manifest v3
+    pub git_delta_manifest_v3_config: Option<GitDeltaManifestV3Config>,
+
     /// For each Derived Data Type, what batch size should we use during derivation?
     pub derivation_batch_sizes: HashMap<DerivableType, usize>,
 
@@ -493,6 +496,19 @@ pub struct GitDeltaManifestV2Config {
     pub max_inlined_delta_size: u64,
     /// Chunk size for delta instructions.
     pub delta_chunk_size: u64,
+}
+
+/// Config for git delta manifest v3
+#[derive(Eq, Clone, Copy, Debug, Default, PartialEq)]
+pub struct GitDeltaManifestV3Config {
+    /// Maximum size allowed for an inlined full object.
+    pub max_inlined_object_size: usize,
+    /// Maximum size allowed for an inlined delta.
+    pub max_inlined_delta_size: u64,
+    /// Chunk size for delta instructions.
+    pub delta_chunk_size: u64,
+    /// Chunk size for git delta manifest entry.
+    pub entry_chunk_size: usize,
 }
 
 /// Config for inferred copy from
