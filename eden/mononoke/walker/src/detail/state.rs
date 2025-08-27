@@ -172,7 +172,7 @@ where
     //
     // From `DashMap::get()` documentation:
     // **Locking behaviour:** May deadlock if called when holding a mutable reference into the map.
-    fn get(&self, k: &K) -> Option<Ref<K, V, RandomState>> {
+    fn get(&self, k: &K) -> Option<Ref<'_, K, V, RandomState>> {
         self.interned.get(k)
     }
 

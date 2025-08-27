@@ -56,7 +56,7 @@ enum ScubaLoggingType<'a> {
     LocalFile(&'a str),
 }
 
-fn get_scuba_logging_type(arg: &str) -> ScubaLoggingType {
+fn get_scuba_logging_type(arg: &str) -> ScubaLoggingType<'_> {
     if let Some(path) = arg.strip_prefix(FILE_PREFIX) {
         ScubaLoggingType::LocalFile(path)
     } else {
@@ -107,7 +107,7 @@ impl MononokeScubaSampleBuilder {
         })
     }
 
-    fn get_logging_decision_fields(&self) -> ScubaLoggingDecisionFields {
+    fn get_logging_decision_fields(&self) -> ScubaLoggingDecisionFields<'_> {
         ScubaLoggingDecisionFields {
             maybe_session_id: self.get("session_uuid"),
             maybe_unix_username: self.get("unix_username"),
@@ -444,7 +444,7 @@ impl MononokeScubaSampleBuilder {
         self.inner.log_with_time(time)
     }
 
-    pub fn entry<K: Into<String>>(&mut self, key: K) -> Entry<String, ScubaValue> {
+    pub fn entry<K: Into<String>>(&mut self, key: K) -> Entry<'_, String, ScubaValue> {
         self.inner.entry(key)
     }
 

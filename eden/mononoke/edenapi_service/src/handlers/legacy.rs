@@ -16,6 +16,7 @@ use super::SaplingRemoteApiMethod;
 use super::handler::SaplingRemoteApiContext;
 
 /// Legacy streaming changelog handler from wireproto.
+#[allow(dead_code)]
 pub struct StreamingCloneHandler;
 
 #[async_trait]

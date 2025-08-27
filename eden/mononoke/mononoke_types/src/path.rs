@@ -383,7 +383,7 @@ impl MPath {
             .map(|(first, rest)| (first, Self::from_elements(rest.iter())))
     }
 
-    pub fn iter(&self) -> Iter<MPathElement> {
+    pub fn iter(&self) -> Iter<'_, MPathElement> {
         self.elements.iter()
     }
 
@@ -732,14 +732,14 @@ impl NonRootMPath {
         }
     }
 
-    pub fn iter_opt(path: Option<&Self>) -> Iter<MPathElement> {
+    pub fn iter_opt(path: Option<&Self>) -> Iter<'_, MPathElement> {
         match path {
             Some(path) => path.into_iter(),
             None => [].iter(),
         }
     }
 
-    pub fn iter(&self) -> Iter<MPathElement> {
+    pub fn iter(&self) -> Iter<'_, MPathElement> {
         self.0.iter()
     }
 

@@ -5,7 +5,7 @@
  * GNU General Public License version 2.
  */
 
-#![allow(elided_named_lifetimes)]
+#![allow(mismatched_lifetime_syntaxes)]
 
 use std::collections::HashMap;
 use std::iter;
