@@ -5062,11 +5062,21 @@ ImmediateFuture<struct stat> TreeInode::setattr(
 
 #ifndef _WIN32
 ImmediateFuture<std::vector<std::string>> TreeInode::listxattr() {
+  // TODO: Re-evaluate if we should return a valid list of attributes now that
+  // appledouble files can be turned off via an EdenFS config option.
   return std::vector<std::string>{};
 }
 ImmediateFuture<std::string> TreeInode::getxattr(
-    folly::StringPiece /*name*/,
-    const ObjectFetchContextPtr& /*context*/) {
+    folly::StringPiece name,
+    const ObjectFetchContextPtr& context) {
+  if (name == kXattrDigestHash) {
+    return getDigestHash(context).thenValue(
+        [self = inodePtrFromThis()](std::optional<Hash32> hash) {
+          return hash.has_value()
+              ? hash.value().toString()
+              : makeImmediateFuture<std::string>(InodeError(kENOATTR, self));
+        });
+  }
   return makeImmediateFuture<std::string>(
       InodeError(kENOATTR, inodePtrFromThis()));
 }

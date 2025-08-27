@@ -831,6 +831,9 @@ void FileInode::materializeInParent() {
 #ifndef _WIN32
 ImmediateFuture<vector<string>> FileInode::listxattr() {
   vector<string> attributes;
+  // TODO: Re-evaluate if we should return a valid list of attributes now that
+  // appledouble files can be turned off via an EdenFS config option.
+  //
   // We used to return kXattrSha1 here for regular files, but
   // that caused some annoying behavior with appledouble
   // metadata files being created by various tools that wanted
@@ -849,7 +852,7 @@ ImmediateFuture<string> FileInode::getxattr(
         [](Hash20 hash) { return hash.toString(); });
   }
 
-  if (name == kXattrBlake3) {
+  if (name == kXattrBlake3 || name == kXattrDigestHash) {
     return getBlake3(context).thenValue(
         [](Hash32 hash) { return hash.toString(); });
   }

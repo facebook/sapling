@@ -32,6 +32,14 @@ def sha1(value: bytes) -> bytes:
 
 @testcase.eden_repo_test
 class XattrTest(testcase.EdenRepoTest):
+    # There's currently no good way to calculate these on the fly. Precompute them for testing purposes.
+    expected_file_digest_hash = (
+        b"507c3561b91c17f73b215cc95b4456194c2fea86e484339c744065fdb7817ad9"
+    )
+    expected_dir_digest_hash = (
+        b"bd2ac888be110f12ab95a80ed850049c85f759113728271bcb98e11f00fb6bc8"
+    )
+
     def populate_repo(self) -> None:
         self.repo.write_file("hello", "hola\n")
         self.repo.write_file("subdir/file", "contents")
@@ -92,12 +100,10 @@ class XattrTest(testcase.EdenRepoTest):
             return
 
         # For hg repos, we expect digest hashes to be available for all files and unmaterialized dirs
-        with self.assertRaises(OSError) as cm:
-            os.getxattr(filename, "user.digesthash")
-        self.assertEqual(cm.exception.errno, kENODATA)
-        with self.assertRaises(OSError) as cm:
-            os.getxattr(dirname, "user.digesthash")
-        self.assertEqual(cm.exception.errno, kENODATA)
+        file_xattr = os.getxattr(filename, "user.digesthash")
+        dir_xattr = os.getxattr(dirname, "user.digesthash")
+        self.assertEqual(self.expected_file_digest_hash, file_xattr)
+        self.assertEqual(self.expected_dir_digest_hash, dir_xattr)
 
         # and test what happens as we materialize the directory
         with open(os.path.join(dirname, "new_file"), "w") as f:
