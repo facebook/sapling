@@ -30,6 +30,17 @@
 #include "eden/common/utils/benchharness/Bench.h"
 #include "eden/fs/service/gen-cpp2/EdenService.h"
 
+// TODO: This benchmark needs major clean-up:
+// 1. It should allow the user to specify a glob directly, and resolve the glob
+// via Thrift or the filesystem. This avoids shell expansion which could
+// possibly pass too many args.
+// 2. It should allow all errors to be ignored, such as EISDIR and other special
+// cases which are perfectly valid results for certain attributes.
+// 3. It should allow you to specify whether you want the xattrs to be fetched
+// for files, directories, or both.
+// 4. The benchmark doesn't work if you try to query attributes via just 1
+// endpoint (i.e. just thrift or just filesystem).
+
 using namespace facebook::eden;
 using namespace boost::filesystem;
 

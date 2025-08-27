@@ -15,7 +15,7 @@ namespace {
 
 DEFINE_string(
     filename,
-    "getxattr.tmp",
+    "syscall.tmp",
     "Path which should be opened and repeatedly getxattr'd");
 
 /*

@@ -67,8 +67,8 @@ cpp_binary(
 )
 
 cpp_binary(
-    name = "get_sha1",
-    srcs = ["get_sha1.cpp"],
+    name = "get_xattr",
+    srcs = ["get_xattr.cpp"],
     compatible_with = [
         "ovr_config//os:linux",
         "ovr_config//os:macos",
@@ -92,8 +92,8 @@ cpp_binary(
 )
 
 cpp_binary(
-    name = "getxattr",
-    srcs = ["getxattr.cpp"],
+    name = "syscall",
+    srcs = ["syscall.cpp"],
     compatible_with = [
         "ovr_config//os:linux",
         "ovr_config//os:macos",
