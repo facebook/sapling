@@ -656,7 +656,7 @@ impl Log {
             let (disk_buf, indexes) = Self::load_log_and_indexes(
                 &self.dir,
                 &meta,
-                &self.open_options.index_defs,
+                &self.open_options,
                 &self.mem_buf,
                 if changed {
                     // Existing indexes cannot be reused.
@@ -677,7 +677,6 @@ impl Log {
                     Self::set_index_log_len(self.indexes.iter_mut(), meta.primary_len);
                     Some(&self.indexes)
                 },
-                self.open_options.fsync,
             )?;
 
             self.disk_buf = disk_buf;
@@ -1361,10 +1360,9 @@ impl Log {
     fn load_log_and_indexes(
         dir: &GenericPath,
         meta: &LogMetadata,
-        index_defs: &[IndexDef],
+        open_options: &OpenOptions,
         mem_buf: &Pin<Box<Vec<u8>>>,
         reuse_indexes: Option<&Vec<Index>>,
-        fsync: bool,
     ) -> crate::Result<(Bytes, Vec<Index>)> {
         let primary_buf = match dir.as_opt_path() {
             Some(dir) => mmap_path(&dir.join(PRIMARY_FILE), meta.primary_len)?,
@@ -1379,6 +1377,8 @@ impl Log {
             mem_buf,
         });
 
+        let index_defs = &open_options.index_defs;
+
         let indexes = match reuse_indexes {
             None => {
                 // No indexes are reused, reload them.
@@ -1390,7 +1390,7 @@ impl Log {
                         def,
                         index_len,
                         key_buf.clone(),
-                        fsync,
+                        open_options.fsync,
                     )?);
                 }
                 indexes
@@ -1403,7 +1403,7 @@ impl Log {
                 for (index, def) in indexes.iter().zip(index_defs) {
                     let index_len = meta.indexes.get(&def.metaname()).cloned().unwrap_or(0);
                     let index = if index_len > Self::get_index_log_len(index, true).unwrap_or(0) {
-                        Self::load_index(dir, def, index_len, key_buf.clone(), fsync)?
+                        Self::load_index(dir, def, index_len, key_buf.clone(), open_options.fsync)?
                     } else {
                         let mut index = index.try_clone()?;
                         index.key_buf = key_buf.clone();

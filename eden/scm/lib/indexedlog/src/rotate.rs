@@ -163,6 +163,13 @@ impl OpenOptions {
         self
     }
 
+    /// Enable btrfs aware mode where we rotate based on "physical" file size instead of apparent
+    /// file size to account for transparent btrfs compression.
+    pub fn btrfs_compression(mut self, btrfs: bool) -> Self {
+        self.log_open_options = self.log_open_options.btrfs_compression(btrfs);
+        self
+    }
+
     /// Open [`RotateLog`] at given location.
     pub fn open(&self, dir: impl AsRef<Path>) -> crate::Result<RotateLog> {
         let dir = dir.as_ref();
