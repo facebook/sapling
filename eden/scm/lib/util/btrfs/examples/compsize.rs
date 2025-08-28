@@ -10,7 +10,7 @@ fn main() {
     for file in std::env::args().skip(1) {
         println!(
             "{file}: {:?}",
-            btrfs::physical_size(&std::fs::File::open(&file).unwrap())
+            btrfs::physical_size(&std::fs::File::open(&file).unwrap(), None)
         );
     }
 }
