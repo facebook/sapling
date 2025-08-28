@@ -53,6 +53,7 @@ pub fn run(ctx: ReqCtx<DebugstoreOpts>, repo: &Repo) -> Result<u8> {
         max_log_count,
         max_bytes_per_log,
         max_bytes,
+        btrfs_compression: false,
     };
 
     let indexedstore = Box::new(

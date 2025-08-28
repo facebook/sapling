@@ -180,6 +180,7 @@ impl<'a> FileStoreBuilder<'a> {
                 max_log_count: None,
                 max_bytes_per_log: None,
                 max_bytes: None,
+                btrfs_compression: false,
             };
             Some(Arc::new(IndexedLogHgIdDataStore::new(
                 self.config,
@@ -213,6 +214,7 @@ impl<'a> FileStoreBuilder<'a> {
             max_log_count,
             max_bytes_per_log,
             max_bytes,
+            btrfs_compression: false,
         };
         Ok(Some(Arc::new(IndexedLogHgIdDataStore::new(
             self.config,
@@ -532,6 +534,7 @@ impl<'a> TreeStoreBuilder<'a> {
                 max_log_count: None,
                 max_bytes_per_log: None,
                 max_bytes: None,
+                btrfs_compression: false,
             };
             Some(Arc::new(IndexedLogHgIdDataStore::new(
                 self.config,
@@ -565,6 +568,7 @@ impl<'a> TreeStoreBuilder<'a> {
             max_log_count,
             max_bytes_per_log,
             max_bytes,
+            btrfs_compression: false,
         };
 
         Ok(Some(Arc::new(IndexedLogHgIdDataStore::new(

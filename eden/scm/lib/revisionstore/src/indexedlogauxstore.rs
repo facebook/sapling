@@ -413,6 +413,7 @@ mod tests {
             max_log_count: None,
             max_bytes_per_log: None,
             max_bytes: None,
+            btrfs_compression: false,
         };
         let content = Arc::new(IndexedLogHgIdDataStore::new(
             &BTreeMap::<&str, &str>::new(),

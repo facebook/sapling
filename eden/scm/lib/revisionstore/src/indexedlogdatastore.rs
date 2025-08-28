@@ -53,6 +53,7 @@ pub struct IndexedLogHgIdDataStoreConfig {
     pub max_log_count: Option<u8>,
     pub max_bytes_per_log: Option<ByteCount>,
     pub max_bytes: Option<ByteCount>,
+    pub btrfs_compression: bool,
 }
 
 pub struct IndexedLogHgIdDataStore {
@@ -274,6 +275,7 @@ impl IndexedLogHgIdDataStore {
             .auto_sync_threshold(50 * 1024 * 1024)
             .load_specific_config(config, "hgdata")
             .create(true)
+            .btrfs_compression(log_config.btrfs_compression)
             .index("node", |_| {
                 vec![IndexOutput::Reference(0..HgId::len() as u64)]
             });
@@ -483,6 +485,7 @@ mod tests {
             max_log_count: None,
             max_bytes_per_log: None,
             max_bytes: None,
+            btrfs_compression: false,
         };
         let log = IndexedLogHgIdDataStore::new(
             &BTreeMap::<&str, &str>::new(),
@@ -502,6 +505,7 @@ mod tests {
             max_log_count: None,
             max_bytes_per_log: None,
             max_bytes: None,
+            btrfs_compression: false,
         };
         let log = IndexedLogHgIdDataStore::new(
             &BTreeMap::<&str, &str>::new(),
@@ -530,6 +534,7 @@ mod tests {
             max_log_count: None,
             max_bytes_per_log: None,
             max_bytes: None,
+            btrfs_compression: false,
         };
         let log = IndexedLogHgIdDataStore::new(
             &BTreeMap::<&str, &str>::new(),
@@ -554,6 +559,7 @@ mod tests {
             max_log_count: None,
             max_bytes_per_log: None,
             max_bytes: None,
+            btrfs_compression: false,
         };
         let log = IndexedLogHgIdDataStore::new(
             &BTreeMap::<&str, &str>::new(),
@@ -574,6 +580,7 @@ mod tests {
             max_log_count: None,
             max_bytes_per_log: None,
             max_bytes: None,
+            btrfs_compression: false,
         };
         let log = IndexedLogHgIdDataStore::new(
             &BTreeMap::<&str, &str>::new(),
@@ -595,6 +602,7 @@ mod tests {
             max_log_count: None,
             max_bytes_per_log: None,
             max_bytes: None,
+            btrfs_compression: false,
         };
         let log = IndexedLogHgIdDataStore::new(
             &BTreeMap::<&str, &str>::new(),
@@ -622,6 +630,7 @@ mod tests {
             max_log_count: None,
             max_bytes_per_log: None,
             max_bytes: None,
+            btrfs_compression: false,
         };
         let log = IndexedLogHgIdDataStore::new(
             &BTreeMap::<&str, &str>::new(),
@@ -655,6 +664,7 @@ mod tests {
             max_log_count: None,
             max_bytes_per_log: None,
             max_bytes: None,
+            btrfs_compression: false,
         };
         let log = IndexedLogHgIdDataStore::new(
             &BTreeMap::<&str, &str>::new(),
@@ -686,6 +696,7 @@ mod tests {
             max_log_count: None,
             max_bytes_per_log: None,
             max_bytes: None,
+            btrfs_compression: false,
         };
         let log = IndexedLogHgIdDataStore::new(
             &BTreeMap::<&str, &str>::new(),
@@ -716,6 +727,7 @@ mod tests {
             max_log_count: None,
             max_bytes_per_log: None,
             max_bytes: None,
+            btrfs_compression: false,
         };
         let log = IndexedLogHgIdDataStore::new(
             &BTreeMap::<&str, &str>::new(),
@@ -760,6 +772,7 @@ mod tests {
             max_log_count: None,
             max_bytes_per_log: None,
             max_bytes: None,
+            btrfs_compression: false,
         };
         let local = Arc::new(IndexedLogHgIdDataStore::new(
             &BTreeMap::<&str, &str>::new(),
@@ -805,6 +818,7 @@ mod tests {
             max_log_count: None,
             max_bytes_per_log: None,
             max_bytes: None,
+            btrfs_compression: false,
         };
         let local = Arc::new(IndexedLogHgIdDataStore::new(
             &BTreeMap::<&str, &str>::new(),
@@ -845,6 +859,7 @@ mod tests {
             max_log_count: None,
             max_bytes_per_log: None,
             max_bytes: None,
+            btrfs_compression: false,
         };
         let log = IndexedLogHgIdDataStore::new(
             &BTreeMap::<&str, &str>::new(),
@@ -904,6 +919,7 @@ mod tests {
             max_log_count: None,
             max_bytes_per_log: None,
             max_bytes: None,
+            btrfs_compression: false,
         };
         let log = IndexedLogHgIdDataStore::new(
             &BTreeMap::<&str, &str>::new(),
@@ -930,6 +946,7 @@ mod tests {
             max_log_count: None,
             max_bytes_per_log: None,
             max_bytes: None,
+            btrfs_compression: false,
         };
 
         // Using Git Serialization format, we should parse the blob as is (despite it looking like

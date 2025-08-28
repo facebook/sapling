@@ -44,6 +44,7 @@ pub fn repair(
         max_log_count,
         max_bytes_per_log,
         max_bytes,
+        btrfs_compression: false,
     };
 
     repair_str += &IndexedLogHgIdDataStore::repair(

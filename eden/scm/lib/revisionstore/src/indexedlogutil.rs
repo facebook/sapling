@@ -40,6 +40,7 @@ pub struct Store {
     auto_sync_count: AtomicU64,
     // Configured by scmstore.sync-logs-if-changed-on-disk (defaults to disabled if not configured).
     sync_if_changed_on_disk: bool,
+    should_compress: bool,
 }
 
 pub enum Inner {
@@ -74,6 +75,10 @@ impl Store {
     /// Attempt to make slice backed by the mmap buffer to avoid heap allocation.
     pub fn slice_to_bytes(&self, slice: &[u8]) -> Bytes {
         self.read().slice_to_bytes(slice)
+    }
+
+    pub fn should_compress(&self) -> bool {
+        self.should_compress
     }
 
     /// Append a batch of items to the store. This is optimized to reduce lock churn, which helps a
@@ -273,6 +278,7 @@ pub struct StoreOpenOptions {
     pub max_bytes_per_log: Option<u64>,
     indexes: Vec<IndexDef>,
     create: bool,
+    btrfs_compression: bool,
 }
 
 impl StoreOpenOptions {
@@ -286,6 +292,7 @@ impl StoreOpenOptions {
             sync_if_changed_on_disk: config
                 .must_get("scmstore", "sync-logs-if-changed-on-disk")
                 .unwrap_or_default(),
+            btrfs_compression: false,
         }
     }
 
@@ -333,6 +340,12 @@ impl StoreOpenOptions {
         self
     }
 
+    /// Rely on btrfs compression.
+    pub fn btrfs_compression(mut self, btrfs: bool) -> Self {
+        self.btrfs_compression = btrfs;
+        self
+    }
+
     pub fn create(mut self, create: bool) -> Self {
         self.create = create;
         self
@@ -351,6 +364,7 @@ impl StoreOpenOptions {
     /// data consistency.
     pub fn permanent(self, path: impl AsRef<Path>) -> Result<Store> {
         let sync_if_changed_on_disk = self.sync_if_changed_on_disk;
+        let should_compress = !self.btrfs_compression;
         Ok(Store {
             inner: RwLock::new(Inner::Permanent(
                 self.into_permanent_open_options()
@@ -358,6 +372,7 @@ impl StoreOpenOptions {
             )),
             auto_sync_count: AtomicU64::new(0),
             sync_if_changed_on_disk,
+            should_compress,
         })
     }
 
@@ -387,6 +402,7 @@ impl StoreOpenOptions {
     /// and `max_bytes_per_log`.
     pub fn rotated(self, path: impl AsRef<Path>) -> Result<Store> {
         let sync_if_changed_on_disk = self.sync_if_changed_on_disk;
+        let should_compress = !self.btrfs_compression;
         let opts = self.into_rotated_open_options();
         let mut rotate_log = opts.open_with_repair(path.as_ref())?;
         // Attempt to clean up old logs that might be left around. On Windows, other
@@ -399,6 +415,7 @@ impl StoreOpenOptions {
             inner: RwLock::new(Inner::Rotated(rotate_log)),
             auto_sync_count: AtomicU64::new(0),
             sync_if_changed_on_disk,
+            should_compress,
         })
     }
 

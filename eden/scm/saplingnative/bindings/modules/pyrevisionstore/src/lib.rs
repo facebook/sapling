@@ -137,7 +137,7 @@ py_class!(class indexedlogdatastore |py| {
     data store: Box<IndexedLogHgIdDataStore>;
 
     def __new__(_cls, path: &PyPath) -> PyResult<indexedlogdatastore> {
-        let config = IndexedLogHgIdDataStoreConfig { max_log_count: None, max_bytes_per_log: None, max_bytes: None };
+        let config = IndexedLogHgIdDataStoreConfig { max_log_count: None, max_bytes_per_log: None, max_bytes: None, btrfs_compression: false };
         indexedlogdatastore::create_instance(
             py,
             Box::new(IndexedLogHgIdDataStore::new(
@@ -218,6 +218,7 @@ fn make_mutabledeltastore(
         max_log_count: None,
         max_bytes_per_log: None,
         max_bytes: None,
+        btrfs_compression: false,
     };
     Ok(Arc::new(IndexedLogHgIdDataStore::new(
         &BTreeMap::<&str, &str>::new(),

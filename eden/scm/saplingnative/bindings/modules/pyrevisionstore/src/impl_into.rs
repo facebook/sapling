@@ -23,7 +23,6 @@ use storemodel::FileStore;
 use storemodel::KeyStore;
 use storemodel::SerializationFormat;
 use storemodel::TreeStore;
-use storemodel::minibytes::Bytes;
 use types::Key;
 use types::RepoPath;
 
