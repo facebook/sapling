@@ -7,3 +7,4 @@
 
 pub(crate) use btrfs::Metadata;
 pub(crate) use btrfs::physical_size;
+pub(crate) use btrfs::set_property;

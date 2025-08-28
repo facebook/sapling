@@ -20,3 +20,7 @@ impl Metadata {
 pub(crate) fn physical_size(_file: &File, _since: Option<Metadata>) -> io::Result<Metadata> {
     Err(std::io::Error::other("btrfs not supported"))
 }
+
+pub(crate) fn set_property(_file: &File, _name: &str, _value: &str) -> io::Result<()> {
+    Err(std::io::Error::other("btrfs not supported"))
+}

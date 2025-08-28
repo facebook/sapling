@@ -74,6 +74,7 @@ use crate::index::ReadonlyBuffer;
 use crate::lock::READER_LOCK_OPTS;
 use crate::lock::ScopedDirLock;
 use crate::utils;
+use crate::utils::mmap_bytes;
 use crate::utils::mmap_path;
 use crate::utils::xxhash;
 use crate::utils::xxhash32;
@@ -1384,7 +1385,32 @@ impl Log {
         reuse_indexes: Option<&Vec<Index>>,
     ) -> crate::Result<(Bytes, Vec<Index>)> {
         let primary_buf = match dir.as_opt_path() {
-            Some(dir) => mmap_path(&dir.join(PRIMARY_FILE), meta.primary_len)?,
+            Some(dir) => {
+                let primary_path = dir.join(PRIMARY_FILE);
+                if open_options.btrfs_compression {
+                    // Setting the btrfs property requires write access and must be done before mmap.
+                    if let Ok(file) = std::fs::OpenOptions::new()
+                        .read(true)
+                        .write(true)
+                        .open(&primary_path)
+                    {
+                        if let Err(err) = btrfs::set_property(&file, "btrfs.compression", "zstd") {
+                            tracing::warn!(
+                                file = %primary_path.display(),
+                                ?err,
+                                "error setting btrfs compression"
+                            );
+                        }
+                        // Reuse the file since we already have it open.
+                        mmap_bytes(&file, Some(meta.primary_len))
+                            .context(&primary_path, "cannot mmap")?
+                    } else {
+                        mmap_path(&primary_path, meta.primary_len)?
+                    }
+                } else {
+                    mmap_path(&primary_path, meta.primary_len)?
+                }
+            }
             None => Bytes::new(),
         };
 
