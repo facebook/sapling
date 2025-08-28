@@ -269,19 +269,37 @@ struct hash<facebook::eden::Hash32> {
 } // namespace std
 
 template <>
-struct fmt::formatter<facebook::eden::Hash20> : formatter<string_view> {
+struct fmt::formatter<facebook::eden::Hash20> {
+  constexpr auto parse(format_parse_context& ctx) {
+    return ctx.begin();
+  }
+
   template <typename Context>
   auto format(const facebook::eden::Hash20& h, Context& ctx) const {
-    // TODO: Avoid allocation here.
-    return formatter<string_view>::format(h.toString(), ctx);
+    auto out = ctx.out();
+    auto bytes = h.getBytes();
+    for (uint8_t byte : bytes) {
+      *out++ = facebook::eden::detail::kLookup[(byte >> 4) & 0x0F];
+      *out++ = facebook::eden::detail::kLookup[byte & 0x0F];
+    }
+    return out;
   }
 };
 
 template <>
-struct fmt::formatter<facebook::eden::Hash32> : formatter<string_view> {
+struct fmt::formatter<facebook::eden::Hash32> {
+  constexpr auto parse(format_parse_context& ctx) {
+    return ctx.begin();
+  }
+
   template <typename Context>
   auto format(const facebook::eden::Hash32& h, Context& ctx) const {
-    // TODO: Avoid allocation here.
-    return formatter<string_view>::format(h.toString(), ctx);
+    auto out = ctx.out();
+    auto bytes = h.getBytes();
+    for (uint8_t byte : bytes) {
+      *out++ = facebook::eden::detail::kLookup[(byte >> 4) & 0x0F];
+      *out++ = facebook::eden::detail::kLookup[byte & 0x0F];
+    }
+    return out;
   }
 };
