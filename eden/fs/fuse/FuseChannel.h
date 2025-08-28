@@ -660,10 +660,6 @@ class FuseChannel final : public FsChannel {
     bool stop{false};
   };
 
-  friend void toAppend(
-      const FuseChannel::InvalidationEntry& entry,
-      std::string* result);
-
   friend struct fmt::formatter<facebook::eden::FuseChannel::InvalidationEntry>;
 
   FRIEND_TEST(FuseChannelTest, formatting_inode);
@@ -1009,8 +1005,27 @@ struct formatter<facebook::eden::FuseChannel::InvalidationEntry>
   auto format(
       const facebook::eden::FuseChannel::InvalidationEntry& entry,
       FormatContext& ctx) {
-    // TODO: Avoid allocation here.
-    return formatter<string_view>::format(folly::to<std::string>(entry), ctx);
+    auto out = ctx.out();
+    switch (entry.type) {
+      case facebook::eden::FuseChannel::InvalidationType::INODE:
+        return fmt::format_to(
+            out,
+            "(inode {}, offset {}, length {})",
+            entry.inode,
+            entry.range.offset,
+            entry.range.length);
+      case facebook::eden::FuseChannel::InvalidationType::DIR_ENTRY:
+        return fmt::format_to(
+            out, "(inode {}, child \"{}\")", entry.inode, entry.name);
+      case facebook::eden::FuseChannel::InvalidationType::FLUSH:
+        return fmt::format_to(out, "(invalidation flush)");
+      default:
+        return fmt::format_to(
+            out,
+            "(unknown invalidation type {} inode {})",
+            static_cast<int>(entry.type),
+            entry.inode);
+    }
   }
 };
 } // namespace fmt

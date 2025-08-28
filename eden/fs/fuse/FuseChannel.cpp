@@ -752,33 +752,6 @@ FuseChannel::InvalidationEntry::
   }
 }
 
-void toAppend(
-    const FuseChannel::InvalidationEntry& entry,
-    std::string* result) {
-  switch (entry.type) {
-    case FuseChannel::InvalidationType::INODE:
-      *result += fmt::format(
-          "(inode {}, offset {}, length {})",
-          entry.inode,
-          entry.range.offset,
-          entry.range.length);
-      return;
-    case FuseChannel::InvalidationType::DIR_ENTRY:
-      *result +=
-          fmt::format("(inode {}, child \"{}\")", entry.inode, entry.name);
-      return;
-    case FuseChannel::InvalidationType::FLUSH:
-      *result += "(invalidation flush)";
-      return;
-    default:
-      *result += fmt::format(
-          "(unknown invalidation type {} inode {})",
-          static_cast<uint64_t>(entry.type),
-          entry.inode);
-      return;
-  }
-}
-
 void FuseChannel::replyError(const fuse_in_header& request, int errorCode) {
   fuse_out_header err;
   err.len = sizeof(err);
