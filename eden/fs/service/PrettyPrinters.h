@@ -18,61 +18,83 @@
 
 #include <fmt/format.h>
 
-namespace facebook::eden {
-void toAppend(const ConflictType& conflictType, std::string* result);
-void toAppend(const CheckoutConflict& conflict, std::string* result);
-void toAppend(const ScmFileStatus& scmFileStatus, std::string* result);
-void toAppend(const MountState& mountState, std::string* result);
-} // namespace facebook::eden
+namespace facebook::eden::detail {
+template <typename ThriftEnum, typename OutputIt>
+OutputIt formatThriftEnum(
+    OutputIt out,
+    const ThriftEnum& value,
+    folly::StringPiece typeName) {
+  const char* name = apache::thrift::TEnumTraits<ThriftEnum>::findName(value);
+  if (name) {
+    return fmt::format_to(out, "{}", name);
+  } else {
+    return fmt::format_to(out, "{}::{}", typeName, static_cast<int>(value));
+  }
+}
+} // namespace facebook::eden::detail
 
 template <>
-struct fmt::formatter<facebook::eden::ConflictType>
-    : fmt::formatter<string_view> {
+struct fmt::formatter<facebook::eden::ConflictType> {
+  constexpr auto parse(format_parse_context& ctx) {
+    return ctx.begin();
+  }
+
   template <typename FormatContext>
   auto format(
       const facebook::eden::ConflictType& conflictType,
-      FormatContext& ctx) {
-    // TODO: Avoid allocation here.
-    return formatter<string_view>::format(
-        folly::to<std::string>(conflictType), ctx);
+      FormatContext& ctx) const {
+    return facebook::eden::detail::formatThriftEnum(
+        ctx.out(), conflictType, "ConflictType");
   }
 };
 
 template <>
-struct fmt::formatter<facebook::eden::CheckoutConflict>
-    : fmt::formatter<string_view> {
+struct fmt::formatter<facebook::eden::CheckoutConflict> {
+  constexpr auto parse(format_parse_context& ctx) {
+    return ctx.begin();
+  }
+
   template <typename FormatContext>
   auto format(
       const facebook::eden::CheckoutConflict& conflict,
-      FormatContext& ctx) {
-    // TODO: Avoid allocation here.
-    return formatter<string_view>::format(
-        folly::to<std::string>(conflict), ctx);
+      FormatContext& ctx) const {
+    auto out = ctx.out();
+    out = fmt::format_to(out, "CheckoutConflict(type=");
+    out = facebook::eden::detail::formatThriftEnum(
+        out, *conflict.type(), "ConflictType");
+    return fmt::format_to(
+        out,
+        ", path=\"{}\", message=\"{}\")",
+        *conflict.path(),
+        *conflict.message());
   }
 };
 
 template <>
-struct fmt::formatter<facebook::eden::ScmFileStatus>
-    : fmt::formatter<string_view> {
+struct fmt::formatter<facebook::eden::ScmFileStatus> {
+  constexpr auto parse(format_parse_context& ctx) {
+    return ctx.begin();
+  }
+
   template <typename FormatContext>
   auto format(
       const facebook::eden::ScmFileStatus& scmFileStatus,
-      FormatContext& ctx) {
-    // TODO: Avoid allocation here.
-    return formatter<string_view>::format(
-        folly::to<std::string>(scmFileStatus), ctx);
+      FormatContext& ctx) const {
+    return facebook::eden::detail::formatThriftEnum(
+        ctx.out(), scmFileStatus, "ScmFileStatus");
   }
 };
 
 template <>
-struct fmt::formatter<facebook::eden::MountState>
-    : fmt::formatter<string_view> {
+struct fmt::formatter<facebook::eden::MountState> {
+  constexpr auto parse(format_parse_context& ctx) {
+    return ctx.begin();
+  }
+
   template <typename FormatContext>
-  auto format(
-      const facebook::eden::MountState& mountState,
-      FormatContext& ctx) {
-    // TODO: Avoid allocation here.
-    return formatter<string_view>::format(
-        folly::to<std::string>(mountState), ctx);
+  auto format(const facebook::eden::MountState& mountState, FormatContext& ctx)
+      const {
+    return facebook::eden::detail::formatThriftEnum(
+        ctx.out(), mountState, "MountState");
   }
 };

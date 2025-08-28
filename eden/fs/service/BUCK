@@ -530,11 +530,7 @@ thrift_library(
 # thrift or thrift-streaming rules above.
 cpp_library(
     name = "pretty_printers",
-    srcs = ["PrettyPrinters.cpp"],
     headers = ["PrettyPrinters.h"],
-    deps = [
-        "//folly:conv",
-    ],
     exported_deps = [
         "fbsource//third-party/fmt:fmt",
         ":thrift-cpp2-types",
