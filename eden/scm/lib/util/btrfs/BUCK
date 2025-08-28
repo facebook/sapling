@@ -37,3 +37,16 @@ rust_binary(
         ":btrfs",
     ],
 )
+
+rust_binary(
+    name = "setprop",
+    srcs = ["examples/setprop.rs"],
+    autocargo = {"ignore_rule": True},
+    compatible_with = [
+        "ovr_config//os:linux",
+    ],
+    unittests = False,
+    deps = [
+        ":btrfs",
+    ],
+)

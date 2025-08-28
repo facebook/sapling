@@ -197,3 +197,20 @@ pub fn physical_size(file: &File, since: Option<Metadata>) -> io::Result<Metadat
         args.key.nr_items = u32::MAX;
     }
 }
+
+pub fn set_property(file: &File, name: &str, value: &str) -> io::Result<()> {
+    if unsafe {
+        libc::fsetxattr(
+            file.as_raw_fd(),
+            name.as_ptr() as _,
+            value.as_ptr() as _,
+            value.len() as _,
+            0,
+        )
+    } != 0
+    {
+        Err(io::Error::last_os_error())
+    } else {
+        Ok(())
+    }
+}
