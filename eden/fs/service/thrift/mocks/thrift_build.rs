@@ -20,12 +20,12 @@ fn main() {
     let out_dir = env::var_os("OUT_DIR").expect("OUT_DIR env not provided");
     let cratemap_path = Path::new(&out_dir).join("cratemap");
     fs::write(cratemap_path, CRATEMAP).expect("Failed to write cratemap");
-    Config::from_env(GenContext::Types)
+    Config::from_env(GenContext::Mocks)
         .expect("Failed to instantiate thrift_compiler::Config")
-        .base_path("../../..")
+        .base_path("../../../../..")
         .types_crate("thrift__types")
         .clients_crate("thrift__clients")
         .options("deprecated_default_enum_min_i32")
-        .run(["eden.thrift"])
+        .run(["../../eden.thrift"])
         .expect("Failed while running thrift compilation");
 }
