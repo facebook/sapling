@@ -512,11 +512,13 @@ impl FetchState {
                 }
                 lfsptr = Some(ptr);
             } else {
-                if indexedlog_cache.is_some() {
+                if let Some(cache) = &indexedlog_cache {
                     let mut e = Entry::new(hgid, entry.data()?, entry.metadata()?.clone());
+
                     // Pre-compress content here since we are being called in parallel (and
                     // compression is CPU intensive).
-                    e.compress_content()?;
+                    cache.maybe_compress_content(&mut e)?;
+
                     cache_entry = Some(e);
                 }
 

@@ -199,7 +199,7 @@ impl Entry {
     }
 
     // Pre-compress content in preparation for insertion into cache.
-    pub fn compress_content(&mut self) -> Result<()> {
+    fn compress_content(&mut self) -> Result<()> {
         if self.compressed_content.is_some() {
             return Ok(());
         }
@@ -353,6 +353,15 @@ impl IndexedLogHgIdDataStore {
             // cache.
             false,
         )
+    }
+
+    /// Pre-compress content of entry if compression is enabled.
+    pub fn maybe_compress_content(&self, entry: &mut Entry) -> Result<()> {
+        if !self.store.should_compress() {
+            return Ok(());
+        }
+
+        entry.compress_content()
     }
 }
 
