@@ -183,6 +183,7 @@ members = [
   "lib/types/bench",
   "lib/util",
   "lib/util/atexit",
+  "lib/util/btrfs",
   "lib/util/factory",
   "lib/util/format-util",
   "lib/util/hgplain",

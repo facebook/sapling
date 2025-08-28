@@ -1,0 +1,39 @@
+load("@fbcode_macros//build_defs:rust_binary.bzl", "rust_binary")
+load("@fbcode_macros//build_defs:rust_library.bzl", "rust_library")
+
+oncall("sapling")
+
+rust_library(
+    name = "btrfs",
+    srcs = glob(["src/**/*.rs"]),
+    autocargo = {"cargo_toml_config": {
+        "lib": {"name": "btrfs"},
+        "package": {
+            "authors": ["Meta Source Control Team <sourcecontrol-dev@meta.com>"],
+            "homepage": "https://sapling-scm.com/",
+            "license": "MIT",
+            "name": "sapling-btrfs",
+            "repository": "https://github.com/facebook/sapling",
+        },
+    }},
+    compatible_with = [
+        "ovr_config//os:linux",
+    ],
+    crate_root = "src/lib.rs",
+    deps = [
+        "fbsource//third-party/rust:libc",
+    ],
+)
+
+rust_binary(
+    name = "compsize",
+    srcs = ["examples/compsize.rs"],
+    autocargo = {"ignore_rule": True},
+    compatible_with = [
+        "ovr_config//os:linux",
+    ],
+    unittests = False,
+    deps = [
+        ":btrfs",
+    ],
+)
