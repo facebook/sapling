@@ -180,7 +180,9 @@ impl<'a> FileStoreBuilder<'a> {
                 max_log_count: None,
                 max_bytes_per_log: None,
                 max_bytes: None,
-                btrfs_compression: false,
+                btrfs_compression: self
+                    .config
+                    .get_or_default("indexedlog", "data.btrfs-compression")?,
             };
             Some(Arc::new(IndexedLogHgIdDataStore::new(
                 self.config,
@@ -214,7 +216,9 @@ impl<'a> FileStoreBuilder<'a> {
             max_log_count,
             max_bytes_per_log,
             max_bytes,
-            btrfs_compression: false,
+            btrfs_compression: self
+                .config
+                .get_or_default("indexedlog", "data.btrfs-compression")?,
         };
         Ok(Some(Arc::new(IndexedLogHgIdDataStore::new(
             self.config,
@@ -534,7 +538,9 @@ impl<'a> TreeStoreBuilder<'a> {
                 max_log_count: None,
                 max_bytes_per_log: None,
                 max_bytes: None,
-                btrfs_compression: false,
+                btrfs_compression: self
+                    .config
+                    .get_or_default("indexedlog", "manifest.btrfs-compression")?,
             };
             Some(Arc::new(IndexedLogHgIdDataStore::new(
                 self.config,
@@ -568,7 +574,9 @@ impl<'a> TreeStoreBuilder<'a> {
             max_log_count,
             max_bytes_per_log,
             max_bytes,
-            btrfs_compression: false,
+            btrfs_compression: self
+                .config
+                .get_or_default("indexedlog", "manifest.btrfs-compression")?,
         };
 
         Ok(Some(Arc::new(IndexedLogHgIdDataStore::new(

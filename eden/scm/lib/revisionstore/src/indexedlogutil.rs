@@ -312,6 +312,7 @@ impl StoreOpenOptions {
         {
             self.max_log_count = Some(v)
         }
+
         self
     }
 
@@ -364,10 +365,11 @@ impl StoreOpenOptions {
     /// data consistency.
     pub fn permanent(self, path: impl AsRef<Path>) -> Result<Store> {
         let sync_if_changed_on_disk = self.sync_if_changed_on_disk;
-        let should_compress = !self.btrfs_compression;
+        let should_compress = self.should_compress(path.as_ref())?;
         Ok(Store {
             inner: RwLock::new(Inner::Permanent(
                 self.into_permanent_open_options()
+                    .btrfs_compression(!should_compress)
                     .open_with_repair(path.as_ref())?,
             )),
             auto_sync_count: AtomicU64::new(0),
@@ -402,8 +404,10 @@ impl StoreOpenOptions {
     /// and `max_bytes_per_log`.
     pub fn rotated(self, path: impl AsRef<Path>) -> Result<Store> {
         let sync_if_changed_on_disk = self.sync_if_changed_on_disk;
-        let should_compress = !self.btrfs_compression;
-        let opts = self.into_rotated_open_options();
+        let should_compress = self.should_compress(path.as_ref())?;
+        let opts = self
+            .into_rotated_open_options()
+            .btrfs_compression(!should_compress);
         let mut rotate_log = opts.open_with_repair(path.as_ref())?;
         // Attempt to clean up old logs that might be left around. On Windows, other
         // Mercurial processes that have the store opened might prevent their removal.
@@ -438,6 +442,24 @@ impl StoreOpenOptions {
         self.into_rotated_open_options()
             .repair(path)
             .map_err(|e| e.into())
+    }
+
+    fn should_compress(&self, path: &Path) -> Result<bool> {
+        Ok(!self.btrfs_compression || !is_btrfs(path))
+    }
+}
+
+fn is_btrfs(path: &Path) -> bool {
+    if cfg!(target_os = "linux") {
+        match fsinfo::fstype(path) {
+            Ok(fstype) => fstype == fsinfo::FsType::BTRFS,
+            Err(err) => {
+                tracing::error!(?err, "error detecting filesystem type for btrfs decision");
+                false
+            }
+        }
+    } else {
+        false
     }
 }
 

@@ -69,9 +69,6 @@ pub struct Entry {
 
     content: OnceCell<Bytes>,
     compressed_content: Option<Bytes>,
-
-    #[cfg(test)]
-    should_compress: bool,
 }
 
 impl std::cmp::PartialEq for Entry {
@@ -92,8 +89,6 @@ impl Entry {
             metadata,
             content: OnceCell::with_value(content),
             compressed_content: None,
-            #[cfg(test)]
-            should_compress: true,
         }
     }
 
@@ -137,8 +132,6 @@ impl Entry {
             metadata: metadata.api,
             content,
             compressed_content,
-            #[cfg(test)]
-            should_compress: true,
         })
     }
 
@@ -159,18 +152,11 @@ impl Entry {
     /// Write an entry to the IndexedLog. See [`from_log`] for the detail about the on-disk format.
     pub fn write_to_log(self, log: &Store) -> Result<()> {
         let mut buf = Vec::new();
-        self.serialize(&mut buf)?;
+        self.serialize(&mut buf, log.should_compress())?;
         log.write().append(buf)
     }
 
-    fn serialize(&self, buf: &mut Vec<u8>) -> Result<()> {
-        #[cfg(test)]
-        let should_compress = self.should_compress;
-
-        #[cfg(not(test))]
-        // Always compress for now (compatible with old and new code).
-        let should_compress = true;
-
+    fn serialize(&self, buf: &mut Vec<u8>, should_compress: bool) -> Result<()> {
         buf.write_all(self.node.as_ref())?;
 
         // write empty name (i.e. zero length)
@@ -358,9 +344,10 @@ impl IndexedLogHgIdDataStore {
     }
 
     pub fn put_batch(&self, entries: Vec<(HgId, Entry)>) -> Result<()> {
+        let compress = self.store.should_compress();
         self.store.append_batch(
             entries,
-            |_, entry, buf| entry.serialize(buf),
+            |_, entry, buf| entry.serialize(buf, compress),
             // Files and trees are, in general, not remotely fetched when they are already in local
             // caches, so we don't need to do an extra read-before-write before inserting into
             // cache.
@@ -997,7 +984,8 @@ mod tests {
         let entry = Entry::new(key.hgid, content.clone(), Metadata::default());
 
         let mut serialized = Vec::new();
-        entry.serialize(&mut serialized)?;
+        // Enable compression.
+        entry.serialize(&mut serialized, true)?;
 
         // Notice it is indeed compressed.
         assert_eq!(serialized, b"\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x01\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x145\x00\x00\x00ohello \x06\x00\x17Phello");
@@ -1014,13 +1002,11 @@ mod tests {
         let key = key("a", "1");
         let content = Bytes::from_static(b"hello hello hello hello hello hello hello hello hello");
 
-        let mut entry = Entry::new(key.hgid, content.clone(), Metadata::default());
-
-        // Enable compression.
-        entry.should_compress = false;
+        let entry = Entry::new(key.hgid, content.clone(), Metadata::default());
 
         let mut serialized = Vec::new();
-        entry.serialize(&mut serialized)?;
+        // Disable compression.
+        entry.serialize(&mut serialized, false)?;
 
         // Notice it is indeed not compressed.
         assert_eq!(serialized, b"\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x01\x00\x00\x00\x00\x00\x01u\x00\x00\x00\x00\x00\x00\x005hello hello hello hello hello hello hello hello hello");
