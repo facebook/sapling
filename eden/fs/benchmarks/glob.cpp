@@ -7,7 +7,8 @@
 
 #include <folly/io/async/EventBaseThread.h>
 #include <thrift/lib/cpp2/async/HeaderClientChannel.h>
-
+#include <filesystem>
+#include <fstream>
 #include "eden/common/utils/PathFuncs.h"
 #include "eden/common/utils/benchharness/Bench.h"
 #include "eden/fs/service/gen-cpp2/EdenService.h"
@@ -22,6 +23,62 @@ namespace {
 
 using namespace facebook::eden;
 using namespace watchman;
+
+#ifdef _WIN32
+std::optional<AbsolutePath> getSocketPathFromConfig(
+    const AbsolutePath& mountPath) {
+  auto configPath = mountPath + ".eden/config"_relpath;
+
+  if (!std::filesystem::exists(configPath.asString())) {
+    return std::nullopt;
+  }
+
+  std::ifstream configFile(configPath.asString());
+  if (!configFile.is_open()) {
+    return std::nullopt;
+  }
+
+  std::string line;
+  while (std::getline(configFile, line)) {
+    line.erase(0, line.find_first_not_of(" \t\r\n"));
+    line.erase(line.find_last_not_of(" \t\r\n") + 1);
+
+    if (line.find("socket = ") == 0) {
+      std::string socketPart = line.substr(9); // Remove "socket = "
+
+      if (!socketPart.empty() &&
+          ((socketPart.front() == '"' && socketPart.back() == '"') ||
+           (socketPart.front() == '\'' && socketPart.back() == '\''))) {
+        socketPart = socketPart.substr(1, socketPart.length() - 2);
+      }
+
+      try {
+        return canonicalPath(socketPart);
+      } catch (const std::exception&) {
+        return std::nullopt;
+      }
+    }
+  }
+
+  return std::nullopt;
+}
+#endif
+
+AbsolutePath getEdenSocketPath(const AbsolutePath& mountPath) {
+#ifdef _WIN32
+  // On Windows, always read from .eden/config
+  auto socketPath = getSocketPathFromConfig(mountPath);
+  if (socketPath) {
+    return *socketPath;
+  }
+  throw std::runtime_error(
+      "Could not find socket path in .eden/config file for Windows mount: " +
+      mountPath.asString());
+#else
+  // On Linux and Mac, we can assume the default socket path
+  return mountPath + ".eden/socket"_relpath;
+#endif
+}
 
 AbsolutePath validateArguments() {
   if (FLAGS_query.empty()) {
@@ -38,7 +95,8 @@ AbsolutePath validateArguments() {
 void eden_glob(benchmark::State& state) {
   auto path = validateArguments();
 
-  auto socketPath = path + ".eden/socket"_relpath;
+  // Use the new socket identification logic
+  auto socketPath = getEdenSocketPath(path);
 
   auto evbThread = folly::EventBaseThread();
   auto eventBase = evbThread.getEventBase();
@@ -72,6 +130,19 @@ void eden_glob(benchmark::State& state) {
   }
 }
 
+BENCHMARK(eden_glob)
+    ->UseManualTime()
+    ->Unit(benchmark::kMillisecond)
+    ->Threads(1)
+    ->Threads(2)
+    ->Threads(4)
+    ->Threads(8)
+    ->Threads(16)
+    ->Threads(32);
+
+#ifndef _WIN32
+// Watchman benchmark
+// TODO: Figure out watchman socket connection on Windows
 void watchman_glob(benchmark::State& state) {
   auto path = validateArguments();
 
@@ -104,16 +175,6 @@ void watchman_glob(benchmark::State& state) {
   }
 }
 
-BENCHMARK(eden_glob)
-    ->UseManualTime()
-    ->Unit(benchmark::kMillisecond)
-    ->Threads(1)
-    ->Threads(2)
-    ->Threads(4)
-    ->Threads(8)
-    ->Threads(16)
-    ->Threads(32);
-
 BENCHMARK(watchman_glob)
     ->UseManualTime()
     ->Unit(benchmark::kMillisecond)
@@ -123,6 +184,7 @@ BENCHMARK(watchman_glob)
     ->Threads(8)
     ->Threads(16)
     ->Threads(32);
+#endif
 
 } // namespace
 

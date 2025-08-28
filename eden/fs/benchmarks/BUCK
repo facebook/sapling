@@ -131,10 +131,6 @@ cpp_binary(
 cpp_binary(
     name = "glob",
     srcs = ["glob.cpp"],
-    compatible_with = [
-        "ovr_config//os:linux",
-        "ovr_config//os:macos",
-    ],
     deps = [
         "//eden/common/utils:path",
         "//eden/common/utils/benchharness:benchharness",
