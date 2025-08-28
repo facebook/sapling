@@ -52,6 +52,7 @@ sapling-minibench = { version = "0.1.0", path = "../minibench" }
 [target.'cfg(target_os = "linux")'.dependencies]
 hex = { version = "0.4.3", features = ["alloc"] }
 libc = "0.2.139"
+sapling-btrfs = { version = "0.1.0", path = "../util/btrfs", optional = true }
 
 [target.'cfg(target_os = "linux")'.dev-dependencies]
 tempfile = "3.15"
@@ -67,5 +68,6 @@ tempfile = "3.15"
 winapi = { version = "0.3", features = ["everything", "std"] }
 
 [features]
+btrfs = ["sapling-btrfs"]
 configurable = ["sapling-configmodel"]
 sigbus-handler = []

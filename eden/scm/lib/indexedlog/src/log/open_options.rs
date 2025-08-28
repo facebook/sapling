@@ -398,6 +398,7 @@ impl OpenOptions {
                 open_options: self.clone(),
                 reader_lock: None,
                 change_detector: None,
+                prev_btrfs_metadata: None,
             })
         })();
 
@@ -466,6 +467,7 @@ impl OpenOptions {
             open_options: self.clone(),
             reader_lock,
             change_detector,
+            prev_btrfs_metadata: None,
         };
         log.update_indexes_for_on_disk_entries()?;
         log.update_and_flush_disk_folds()?;

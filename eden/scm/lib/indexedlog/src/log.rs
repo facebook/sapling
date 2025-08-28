@@ -59,6 +59,7 @@ use tracing::trace;
 use vlqencoding::VLQDecodeAt;
 use vlqencoding::VLQEncode;
 
+use crate::btrfs;
 use crate::change_detect::SharedChangeDetector;
 use crate::config;
 use crate::errors::IoResultExt;
@@ -165,6 +166,8 @@ pub struct Log {
     reader_lock: Option<ScopedDirLock>,
     // Cross-process cheap change detector backed by mmap.
     change_detector: Option<SharedChangeDetector>,
+    // Btrfs metadata from last time we checked log's physical size. Used to make subsequent checks faster.
+    prev_btrfs_metadata: Option<btrfs::Metadata>,
 }
 
 /// Iterator over all entries in a [`Log`].
@@ -445,6 +448,7 @@ impl Log {
             open_options: self.open_options.clone(),
             reader_lock,
             change_detector: self.change_detector.clone(),
+            prev_btrfs_metadata: self.prev_btrfs_metadata,
         };
 
         if !copy_dirty {
@@ -702,6 +706,21 @@ impl Log {
         result
             .context("in Log::sync")
             .context(|| format!("  Log.dir = {:?}", self.dir))
+    }
+
+    pub(crate) fn btrfs_size(&mut self) -> crate::Result<u64> {
+        match &self.dir {
+            GenericPath::Filesystem(dir) => {
+                let log_path = dir.join(PRIMARY_FILE);
+                let log_file = File::open(&log_path)
+                    .context(&log_path, "opening log to perform btrfs size check")?;
+                let btrfs_metadata = btrfs::physical_size(&log_file, self.prev_btrfs_metadata)
+                    .context(&log_path, "reading btrfs size")?;
+                self.prev_btrfs_metadata = Some(btrfs_metadata);
+                Ok(btrfs_metadata.size())
+            }
+            _ => Err("btrfs_size only supported for normal filesystem logs".into()),
+        }
     }
 
     pub(crate) fn update_change_detector_to_match_meta(&self) {

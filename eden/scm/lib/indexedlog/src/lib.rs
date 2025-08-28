@@ -34,6 +34,12 @@ pub mod utils;
 #[cfg(all(unix, feature = "sigbus-handler"))]
 mod sigbus;
 
+#[cfg_attr(
+    not(all(target_os = "linux", feature = "btrfs")),
+    path = "dummy_btrfs.rs"
+)]
+mod btrfs;
+
 pub use errors::Error;
 pub use errors::Result;
 pub use repair::DefaultOpenOptions;
