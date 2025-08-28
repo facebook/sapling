@@ -52,9 +52,6 @@ class RootId {
   std::string id_;
 };
 
-// Make folly::to<string>(RootId) work.
-void toAppend(const RootId&, std::string* result);
-
 /**
  * The meaning of a RootId is defined by the BackingStore implementation. Allow
  * it to also define how root IDs are parsed and rendered at API boundaries such

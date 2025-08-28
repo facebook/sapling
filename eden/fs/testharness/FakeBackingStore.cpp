@@ -76,8 +76,7 @@ ImmediateFuture<BackingStore::GetRootTreeResult> FakeBackingStore::getRootTree(
     auto commitIter = data->commits.find(commitID);
     if (commitIter == data->commits.end()) {
       // Throw immediately, for the same reasons mentioned in getTree()
-      throw std::domain_error(
-          folly::to<std::string>("commit ", commitID, " not found"));
+      throw std::domain_error(fmt::format("commit {} not found", commitID));
     }
 
     storedTreeHash = commitIter->second.get();
@@ -382,8 +381,8 @@ StoredHash* FakeBackingStore::putCommit(
     auto data = data_.wlock();
     auto ret = data->commits.emplace(commitHash, std::move(storedHash));
     if (!ret.second) {
-      throw std::domain_error(folly::to<std::string>(
-          "commit with hash ", commitHash, " already exists"));
+      throw std::domain_error(
+          fmt::format("commit with hash {} already exists", commitHash));
     }
     return ret.first->second.get();
   }

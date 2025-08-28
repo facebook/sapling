@@ -7,7 +7,6 @@ cpp_library(
     srcs = [
         "Hash.cpp",
         "ObjectId.cpp",
-        "RootId.cpp",
         "Tree.cpp",
         "TreeEntry.cpp",
     ],
@@ -17,6 +16,7 @@ cpp_library(
         "EntryAttributeFlags.h",
         "GlobEntry.h",
         "LocalFiles.h",
+        "RootId.h",
         "TreeAuxData.h",
     ],
     deps = [

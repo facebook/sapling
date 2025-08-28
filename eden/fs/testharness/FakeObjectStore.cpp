@@ -38,8 +38,8 @@ void FakeObjectStore::setTreeForCommit(const RootId& commitID, Tree&& tree) {
     // Warn the caller that a Tree has already been specified for this commit,
     // which is likely a logical error. If this turns out to be something that
     // we want to do in a test, then we can change this behavior.
-    throw std::runtime_error(folly::to<std::string>(
-        "tree already added for commit with id ", commitID));
+    throw std::runtime_error(
+        fmt::format("tree already added for commit with id {}", commitID));
   }
 }
 
@@ -49,9 +49,8 @@ ImmediateFuture<IObjectStore::GetRootTreeResult> FakeObjectStore::getRootTree(
   ++commitAccessCounts_[commitID];
   auto iter = commits_.find(commitID);
   if (iter == commits_.end()) {
-    return makeSemiFuture<GetRootTreeResult>(
-        std::domain_error(folly::to<std::string>(
-            "tree data for commit ", commitID, " not found")));
+    return makeSemiFuture<GetRootTreeResult>(std::domain_error(
+        fmt::format("tree data for commit {} not found", commitID)));
   }
   auto tree = make_shared<const Tree>(iter->second);
   return GetRootTreeResult{tree, tree->getHash()};
