@@ -56,6 +56,11 @@ pub struct RotateLog {
     // Indicate an active reader. Destrictive writes (repair) are unsafe.
     reader_lock: Option<ScopedDirLock>,
     change_detector: Option<SharedChangeDetector>,
+
+    // At what apparent file size we should check the btrfs "physical" size when checking if we
+    // should rotate. This is to minimize checks of the btrfs size.
+    next_btrfs_size_check: Option<u64>,
+
     // Run after log.sync(). For testing purpose only.
     #[cfg(test)]
     hook_after_log_sync: Option<Box<dyn Fn()>>,
@@ -111,6 +116,12 @@ impl OpenOptions {
     pub fn max_bytes_per_log(mut self, bytes: u64) -> Self {
         assert!(bytes > 0);
         self.max_bytes_per_log = bytes;
+        self
+    }
+
+    /// Set `fysnc` open for underlying [`Log`] objects.
+    pub fn fsync(mut self, fsync: bool) -> Self {
+        self.log_open_options = self.log_open_options.fsync(fsync);
         self
     }
 
@@ -253,6 +264,7 @@ impl OpenOptions {
                 latest,
                 reader_lock: Some(reader_lock),
                 change_detector: Some(change_detector),
+                next_btrfs_size_check: None,
                 #[cfg(test)]
                 hook_after_log_sync: None,
             };
@@ -278,6 +290,7 @@ impl OpenOptions {
                 latest: 0,
                 reader_lock: None,
                 change_detector: None,
+                next_btrfs_size_check: None,
                 #[cfg(test)]
                 hook_after_log_sync: None,
             })
@@ -539,7 +552,13 @@ impl RotateLog {
                     func();
                 }
 
-                if size >= self.open_options.max_bytes_per_log {
+                let needs_rotation = if self.open_options.log_open_options.btrfs_compression {
+                    self.btrfs_needs_rotation(size)?
+                } else {
+                    size >= self.open_options.max_bytes_per_log
+                };
+
+                if needs_rotation {
                     // `self.writable_log()` will be rotated (i.e., becomes immutable).
                     // Make sure indexes are up-to-date so reading it would not require
                     // building missing indexes in-memory.
@@ -555,6 +574,54 @@ impl RotateLog {
         result
             .context("in RotateLog::sync")
             .context(|| format!("  RotateLog.dir = {:?}", self.dir))
+    }
+
+    fn btrfs_needs_rotation(&mut self, apparent_size: u64) -> crate::Result<bool> {
+        // Use predicted threshold based on btrfs compression ratio, if available.
+        let threshold = self
+            .next_btrfs_size_check
+            .unwrap_or(self.open_options.max_bytes_per_log);
+
+        if apparent_size < threshold {
+            // Avoid checking btrfs size if we haven't reached the threshold yet.
+            return Ok(false);
+        }
+
+        let btrfs_size = self.writable_log().btrfs_size()?;
+
+        debug!(btrfs_size, apparent_size, "btrfs physical size");
+
+        if btrfs_size >= self.open_options.max_bytes_per_log {
+            // Physical log size has passed the threshold - time to rotate.
+            return Ok(true);
+        }
+
+        if btrfs_size > 0 && apparent_size > 0 && !self.open_options.log_open_options.fsync {
+            // If we aren't fsyncing, compute compression ratio and predict when we
+            // are going to need rotation. This is to minimize btrfs size queries,
+            // which are relatively slow because they fsync the file.
+            let compression_ratio = (btrfs_size as f64) / (apparent_size as f64);
+            if compression_ratio > 0f64 {
+                let predicted_threshold =
+                    (self.open_options.max_bytes_per_log as f64 / compression_ratio) as u64;
+
+                // Cap our predicted threshold increase to self.open_options.max_bytes_per_log. For
+                // example, if max_bytes_per_log=10MB, and after 10MB of writes the log is only
+                // 100KB, we would "predict" a new threshold of 1GB based on the 1% compression
+                // ratio. Instead, cap the threshold at 20MB, lest the high compression was just
+                // temporary.
+                let predicted_threshold =
+                    predicted_threshold.min(apparent_size + self.open_options.max_bytes_per_log);
+
+                debug!(
+                    predicted_threshold,
+                    compression_ratio, "setting predicted rotation threshold"
+                );
+                self.next_btrfs_size_check = Some(predicted_threshold);
+            }
+        }
+
+        Ok(false)
     }
 
     fn update_change_detector_to_match_meta(&mut self) {
@@ -603,6 +670,9 @@ impl RotateLog {
     fn rotate_internal(&mut self, lock: &ScopedDirLock) -> crate::Result<()> {
         ROTATE_COUNT.fetch_add(1, Ordering::Relaxed);
 
+        // This is relative to the primary log, so clear it out when rotating.
+        self.next_btrfs_size_check.take();
+
         let span = debug_span!("RotateLog::rotate", latest = self.latest as u32);
         if let Some(dir) = &self.dir {
             span.record("dir", dir.to_string_lossy().as_ref());
@@ -633,6 +703,8 @@ impl RotateLog {
     }
 
     fn set_logs(&mut self, logs: Vec<OnceCell<Log>>) {
+        // This is relative to the primary log, so clear it out when logs changed.
+        self.next_btrfs_size_check.take();
         self.logs_len = AtomicUsize::new(logs.len());
         self.logs = logs;
     }
@@ -1944,5 +2016,51 @@ Reset latest to 2"#
         let log = open_opts.open(dir.path()).unwrap();
         let count = log.iter().count() as u64;
         assert_eq!(count, THREAD_COUNT as u64 * WRITE_COUNT_PER_THREAD as u64);
+    }
+
+    #[test]
+    fn test_btrfs_rotate() {
+        let dir = tempdir().unwrap();
+
+        if fsinfo::fstype(dir.path()).unwrap() != fsinfo::FsType::BTRFS {
+            return;
+        }
+
+        #[cfg(target_os = "linux")]
+        {
+            use rand::RngCore;
+
+            let mut rotate = OpenOptions::new()
+                .create(true)
+                .max_bytes_per_log(50)
+                .max_log_count(2)
+                .index("first-byte", |_| vec![IndexOutput::Reference(0..1)])
+                .btrfs_compression(true)
+                .open(&dir)
+                .unwrap();
+
+            // No rotation - log is compressed well.
+            let aaa = vec![b'a'; 100];
+            rotate.append(&aaa).unwrap();
+            assert_eq!(rotate.sync().unwrap(), 0);
+            assert_eq!(lookup(&rotate, b"a"), vec![&aaa]);
+
+            // Sanity check we compressed well.
+            let btrfs_size = rotate.writable_log().btrfs_size().unwrap();
+            assert!(btrfs_size > 0);
+            assert!(btrfs_size < 50);
+
+            // Rotate triggered.
+            let mut random_bytes = vec![0u8; 100];
+            rand::thread_rng().fill_bytes(&mut random_bytes);
+            random_bytes[0] = b'b';
+            rotate.append(&random_bytes).unwrap();
+            assert_eq!(rotate.sync().unwrap(), 1);
+            assert_eq!(lookup(&rotate, b"a"), vec![&aaa]);
+            assert_eq!(lookup(&rotate, b"b"), vec![&random_bytes]);
+
+            let rotated_btrfs_size = rotate.logs[1].get_mut().unwrap().btrfs_size().unwrap();
+            assert!(rotated_btrfs_size >= 50);
+        }
     }
 }

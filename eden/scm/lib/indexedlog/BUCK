@@ -72,6 +72,7 @@ rust_library(
     test_deps = [
         "fbsource//third-party/rust:quickcheck",
         "//eden/scm/lib/dev-logger:dev-logger",
+        "//eden/scm/lib/fsinfo:fsinfo",
     ],
     # A test inside this target is using #[should_panic], setting the backtrace
     # to false here, otherwise the test binary will try to extract the backtrace
