@@ -23,6 +23,7 @@ use crate::PushAuthoredBy;
 
 #[derive(Clone, Debug, Deserialize)]
 pub struct BlockMergeCommitsConfig {
+    disable_merge_bypass: bool,
     disable_merge_bypass_on_bookmarks: Vec<String>,
     commit_message_bypass_tag: String,
 }
@@ -68,16 +69,26 @@ impl ChangesetHook for BlockMergeCommitsHook {
             .disable_merge_bypass_on_bookmarks
             .contains(&bookmark);
 
-        match (is_bypass_tag, is_nonbypassable_bookmark) {
-            (true, true) => Ok(HookExecution::Rejected(HookRejectionInfo::new_long(
+        let is_nonbypassable_repository = self.config.disable_merge_bypass;
+
+        match (
+            is_bypass_tag,
+            is_nonbypassable_repository,
+            is_nonbypassable_bookmark,
+        ) {
+            (true, true, _) => Ok(HookExecution::Rejected(HookRejectionInfo::new_long(
+                "Merge commit is not allowed in this repository despite the bypass tag in commit message",
+                "This repository can't have merge commits".to_string(),
+            ))),
+            (true, false, true) => Ok(HookExecution::Rejected(HookRejectionInfo::new_long(
                 "Merge commit is not allowed on this bookmark despite the bypass tag in commit message",
                 "This bookmark can't have merge commits".to_string(),
             ))),
-            (false, _) => Ok(HookExecution::Rejected(HookRejectionInfo::new_long(
+            (false, _, _) => Ok(HookExecution::Rejected(HookRejectionInfo::new_long(
                 "Merge commit is not allowed",
                 "You must not commit merge commits".to_string(),
             ))),
-            (true, false) => Ok(HookExecution::Accepted),
+            (true, false, false) => Ok(HookExecution::Accepted),
         }
     }
 }

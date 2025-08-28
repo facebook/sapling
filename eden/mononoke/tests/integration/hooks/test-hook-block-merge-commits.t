@@ -9,6 +9,7 @@
   > block_merge_commits <( \
   >   cat <<CONF
   > config_json='''{
+  >  "disable_merge_bypass": false,
   >  "disable_merge_bypass_on_bookmarks": [
   >     "bypass_disabled_on_this_bookmark"
   >  ],

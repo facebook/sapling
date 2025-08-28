@@ -9,6 +9,7 @@
   > block_merge_commits <( \
   >   cat <<CONF
   > config_json='''{
+  >  "disable_merge_bypass": true,
   >  "disable_merge_bypass_on_bookmarks": [
   >     "master_bookmark"
   >  ],
@@ -61,6 +62,33 @@ Should fail
   [255]
 
   $ hg metaedit -m "commit message with bypass @merge-commit in message"
+  $ hg push -r . --to master_bookmark
+  pushing rev 1275765c7903 to destination mono:repo bookmark master_bookmark
+  searching for changes
+  remote: Command failed
+  remote:   Error:
+  remote:     hooks failed:
+  remote:     block_merge_commits for 1275765c7903f2c109380a6d47bab8bebf29b7e9: This repository can't have merge commits
+  abort: unexpected EOL, expected netstring digit
+  [255]
+
+Disable the repository level merge bypass disable to test bookmark level merge
+bypass disable.
+  $ hook_test_setup \
+  > block_merge_commits <( \
+  >   cat <<CONF
+  > config_json='''{
+  >  "disable_merge_bypass": false,
+  >  "disable_merge_bypass_on_bookmarks": [
+  >     "master_bookmark"
+  >  ],
+  >  "commit_message_bypass_tag": "@merge-commit"
+  > }'''
+  > CONF
+  > )
+  abort: destination 'repo2' is not empty
+  $ force_update_configerator
+
   $ hg push -r . --to master_bookmark
   pushing rev 1275765c7903 to destination mono:repo bookmark master_bookmark
   searching for changes
