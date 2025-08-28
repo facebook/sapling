@@ -47,7 +47,6 @@ cpp_library(
     deps = [":stats_facebook@header"],
     exported_deps = [
         "fbsource//third-party/rust:cxx-core",
-        ":stats_facebook@header",
         "//fb303:export_type",
         "//fb303:service_data",
         "//fb303:thread_local_stats",
