@@ -65,7 +65,7 @@ repo root. The ``[dirsync-scripts]`` in ``.hgdirsync`` is ignored by default,
 unless the ``dirsync.allow-in-repo-scripts`` config is enabled.
 """
 
-from typing import Optional, Sized
+from typing import Optional
 
 import bindings
 

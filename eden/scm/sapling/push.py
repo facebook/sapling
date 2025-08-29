@@ -7,7 +7,7 @@ from collections import defaultdict
 from enum import Enum
 from typing import Dict, List, Optional
 
-from . import edenapi_upload, error, hg, mutation, phases, scmutil
+from . import edenapi_upload, error, hg, mutation, scmutil
 from .bookmarks import readremotenames, saveremotenames
 from .i18n import _, _n, _x
 from .node import bin, hex, nullhex, short
