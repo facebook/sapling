@@ -45,7 +45,7 @@
   IN  > POST /lfs_upstream/objects/batch -
   OUT < POST /lfs_upstream/objects/batch 200 OK
   IN  > GET /lfs_upstream/download/d28548bc21aabf04d143886d717d72375e3deecd0dafb3d110676b70a192cb5d?server_hostname=* - (glob)
-  OUT < GET /lfs_upstream/download/d28548bc21aabf04d143886d717d72375e3deecd0dafb3d110676b70a192cb5d?server_hostname=* 200 OK (glob)
+  OUT < GET /lfs_upstream/download/d28548bc21aabf04d143886d717d72375e3deecd0dafb3d110676b70a192cb5d?server_hostname=* 2* (glob)
 
   $ truncate -s 0 "$log_proxy" "$log_upstream"
 
@@ -105,7 +105,7 @@
   IN  > POST /lfs_proxy/objects/batch -
   OUT < POST /lfs_proxy/objects/batch 200 OK
   IN  > GET /lfs_proxy/download/2e8e6e2dda2bb7b6458146a1c1bf301e4856293e1cc258ab789c63df2254693c?server_hostname=* - (glob)
-  OUT < GET /lfs_proxy/download/2e8e6e2dda2bb7b6458146a1c1bf301e4856293e1cc258ab789c63df2254693c?server_hostname=* 200 OK (glob)
+  OUT < GET /lfs_proxy/download/2e8e6e2dda2bb7b6458146a1c1bf301e4856293e1cc258ab789c63df2254693c?server_hostname=* 2* (glob)
 
   $ cat "$log_upstream"
   IN  > POST /lfs_upstream/objects/batch -
@@ -113,6 +113,6 @@
   IN  > POST /lfs_upstream/objects/batch -
   OUT < POST /lfs_upstream/objects/batch 200 OK
   IN  > GET /lfs_upstream/download/2e8e6e2dda2bb7b6458146a1c1bf301e4856293e1cc258ab789c63df2254693c?server_hostname=* - (glob)
-  OUT < GET /lfs_upstream/download/2e8e6e2dda2bb7b6458146a1c1bf301e4856293e1cc258ab789c63df2254693c?server_hostname=* 200 OK (glob)
+  OUT < GET /lfs_upstream/download/2e8e6e2dda2bb7b6458146a1c1bf301e4856293e1cc258ab789c63df2254693c?server_hostname=* 2* (glob)
 
   $ truncate -s 0 "$log_proxy" "$log_upstream"

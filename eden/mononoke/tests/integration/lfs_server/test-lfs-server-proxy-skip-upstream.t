@@ -49,7 +49,7 @@
   IN  > POST /lfs_repo/objects/batch -
   OUT < POST /lfs_repo/objects/batch 200 OK
   IN  > GET /lfs_repo/download/d28548bc21aabf04d143886d717d72375e3deecd0dafb3d110676b70a192cb5d?server_hostname=* - (glob)
-  OUT < GET /lfs_repo/download/d28548bc21aabf04d143886d717d72375e3deecd0dafb3d110676b70a192cb5d?server_hostname=* 200 OK (glob)
+  OUT < GET /lfs_repo/download/d28548bc21aabf04d143886d717d72375e3deecd0dafb3d110676b70a192cb5d?server_hostname=* 2* (glob)
 
   $ wait_for_json_record_count "$scuba_proxy" 2
   $ jq -S .normal.batch_order < "$scuba_proxy"

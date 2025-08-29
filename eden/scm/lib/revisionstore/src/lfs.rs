@@ -131,7 +131,7 @@ pub struct HttpLfsRemote {
     url: Url,
     client: Arc<HttpClient>,
     concurrent_fetches: usize,
-    download_chunk_size: Option<NonZeroU64>,
+    download_chunk_size: NonZeroU64,
     max_batch_size: usize,
     http_options: Arc<HttpOptions>,
 }
@@ -1014,10 +1014,12 @@ impl LfsRemote {
                     window: low_speed_grace_period,
                 });
 
-            let download_chunk_size = config.get_opt::<u64>("lfs", "download-chunk-size")?;
-            let download_chunk_size = download_chunk_size
-                .map(|s| NonZeroU64::new(s).context("download chunk size cannot be 0"))
-                .transpose()?;
+            let download_chunk_size =
+                config.get_or::<ByteCount>("lfs", "download-chunk-size", || {
+                    (5 * 1024 * 1024).into()
+                })?;
+            let download_chunk_size = NonZeroU64::new(download_chunk_size.value())
+                .context("download chunk size cannot be 0")?;
 
             // Pick something relatively low. Doesn't seem like we need many concurrent LFS downloads to saturate available BW.
             let max_batch_size = config.get_or("lfs", "max-batch-size", || 100)?;
@@ -1331,7 +1333,7 @@ impl LfsRemote {
     async fn process_download(
         fctx: Option<FetchContext>,
         client: Arc<HttpClient>,
-        chunk_size: Option<NonZeroU64>,
+        chunk_size: NonZeroU64,
         action: ObjectAction,
         oid: Sha256,
         size: u64,
@@ -1339,65 +1341,57 @@ impl LfsRemote {
     ) -> Result<(Sha256, Bytes)> {
         let url = Url::from_str(&action.href.to_string())?;
 
-        let data = match chunk_size {
-            Some(chunk_size) => {
-                let chunk_increment = chunk_size.get() - 1;
+        let chunk_increment = chunk_size.get() - 1;
 
-                async {
-                    let mut chunks = Vec::new();
-                    let mut chunk_start = 0;
+        let data = async {
+            let mut chunks = Vec::new();
+            let mut chunk_start = 0;
 
-                    let file_end = size.saturating_sub(1);
+            let file_end = size.saturating_sub(1);
 
-                    while chunk_start < file_end {
-                        let chunk_end = std::cmp::min(file_end, chunk_start + chunk_increment);
-                        let range = format!("bytes={}-{}", chunk_start, chunk_end);
+            while chunk_start < file_end {
+                let chunk_end = std::cmp::min(file_end, chunk_start + chunk_increment);
+                let range = format!("bytes={}-{}", chunk_start, chunk_end);
 
-                        let chunk = LfsRemote::send_with_retry(
-                            fctx.clone(),
-                            client.clone(),
-                            Method::Get,
-                            url.clone(),
-                            |builder| {
-                                let builder = add_action_headers_to_request(builder, &action);
-                                builder.header("Range", &range)
-                            },
-                            |status| {
-                                if status == http::StatusCode::PARTIAL_CONTENT {
-                                    return Ok(());
-                                }
-
-                                Err(TransferError::UnexpectedHttpStatus {
-                                    expected: http::StatusCode::PARTIAL_CONTENT,
-                                    received: status,
-                                })
-                            },
-                            http_options.clone(),
-                        )
-                        .await?;
-
-                        chunks.push(chunk);
-
-                        chunk_start = chunk_end + 1;
-                    }
-
-                    Result::<_, FetchError>::Ok(join_chunks(&chunks))
-                }
-                .await
-            }
-            None => {
-                LfsRemote::send_with_retry(
-                    fctx,
-                    client,
+                let chunk = LfsRemote::send_with_retry(
+                    fctx.clone(),
+                    client.clone(),
                     Method::Get,
-                    url,
-                    |builder| add_action_headers_to_request(builder, &action),
-                    |_| Ok(()),
-                    http_options,
+                    url.clone(),
+                    |builder| {
+                        let builder = add_action_headers_to_request(builder, &action);
+                        builder.header("Range", &range)
+                    },
+                    |status| {
+                        if status == http::StatusCode::PARTIAL_CONTENT {
+                            return Ok(());
+                        }
+
+                        // 200 is okay if we requested the entire file in one chunk.
+                        if chunk_start == 0
+                            && chunk_end == file_end
+                            && status == http::StatusCode::OK
+                        {
+                            return Ok(());
+                        }
+
+                        Err(TransferError::UnexpectedHttpStatus {
+                            expected: http::StatusCode::PARTIAL_CONTENT,
+                            received: status,
+                        })
+                    },
+                    http_options.clone(),
                 )
-                .await
+                .await?;
+
+                chunks.push(chunk);
+
+                chunk_start = chunk_end + 1;
             }
-        };
+
+            Result::<_, FetchError>::Ok(join_chunks(&chunks))
+        }
+        .await;
 
         let data = match data {
             Ok(data) => data,
