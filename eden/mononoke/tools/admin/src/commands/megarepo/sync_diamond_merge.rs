@@ -269,7 +269,12 @@ pub async fn do_sync_diamond_merge(
 
     let maybe_onto_value = large_repo
         .bookmarks()
-        .get(ctx.clone(), &onto_bookmark)
+        .get(
+            ctx.clone(),
+            &onto_bookmark,
+            // TODO(T236130401): confirm if this needs read from primary
+            bookmarks::Freshness::MostRecent,
+        )
         .await?;
 
     let onto_value =

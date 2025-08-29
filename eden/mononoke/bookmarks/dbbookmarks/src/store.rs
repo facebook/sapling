@@ -522,6 +522,9 @@ impl SqlBookmarks {
         &self,
         ctx: CoreContext,
         key: &BookmarkKey,
+        // TODO(T236130401): use freshness arg to control whether to read from
+        // master or replica
+        _freshness: Freshness,
     ) -> impl Future<Output = Result<Option<(ChangesetId, Option<u64>)>>> + 'static + use<> {
         STATS::get_bookmark.add_value(1);
         ctx.perf_counters()
@@ -574,8 +577,9 @@ impl Bookmarks for SqlBookmarks {
         &self,
         ctx: CoreContext,
         name: &BookmarkKey,
+        freshness: Freshness,
     ) -> BoxFuture<'static, Result<Option<ChangesetId>>> {
-        self.get_raw(ctx, name)
+        self.get_raw(ctx, name, freshness)
             .map_ok(|maybe_row| maybe_row.map(|(cs_id, _log_id)| cs_id))
             .boxed()
     }

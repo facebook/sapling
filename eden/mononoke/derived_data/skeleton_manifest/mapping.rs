@@ -335,7 +335,12 @@ mod test {
         let master_book = BookmarkKey::new("master").unwrap();
         let bcs_id = repo
             .bookmarks()
-            .get(ctx.clone(), &master_book)
+            .get(
+                ctx.clone(),
+                &master_book,
+                // TODO(T236130401): confirm if this needs read from primary
+                bookmarks::Freshness::MostRecent,
+            )
             .await?
             .unwrap();
 

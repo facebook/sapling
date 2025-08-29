@@ -1755,7 +1755,16 @@ mod test {
         let large_repo = commit_sync_data.get_large_repo();
 
         let master = BookmarkKey::new("master")?;
-        let maybe_master_val = small_repo.bookmarks().get(ctx.clone(), &master).await?;
+
+        let maybe_master_val = small_repo
+            .bookmarks()
+            .get(
+                ctx.clone(),
+                &master,
+                // TODO(T236130401): confirm if this needs read from primary
+                bookmarks::Freshness::MostRecent,
+            )
+            .await?;
         let master_val = maybe_master_val.ok_or_else(|| Error::msg("master not found"))?;
 
         // Everything is identical - no diff at all
@@ -2146,7 +2155,15 @@ mod test {
             SubmoduleDeps::ForSync(HashMap::new()),
         );
 
-        let maybe_master_val = small_repo.bookmarks().get(ctx.clone(), &master).await?;
+        let maybe_master_val = small_repo
+            .bookmarks()
+            .get(
+                ctx.clone(),
+                &master,
+                // TODO(T236130401): confirm if this needs read from primary
+                bookmarks::Freshness::MostRecent,
+            )
+            .await?;
 
         let master_val = maybe_master_val.ok_or_else(|| Error::msg("master not found"))?;
         let changesets = small_repo

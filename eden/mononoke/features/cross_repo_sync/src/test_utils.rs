@@ -167,7 +167,12 @@ where
     let maybe_bookmark_val = commit_sync_data
         .get_target_repo()
         .bookmarks()
-        .get(ctx.clone(), &bookmark_name)
+        .get(
+            ctx.clone(),
+            &bookmark_name,
+            // TODO(T236130401): confirm if this needs read from primary
+            bookmarks::Freshness::MostRecent,
+        )
         .await?;
 
     let source_repo = commit_sync_data.get_source_repo();

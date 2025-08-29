@@ -217,9 +217,15 @@ pub(crate) async fn build_submodule_sync_test_data(
     let _master_bookmark_key = bookmark_update_ctx.set_to(large_repo_root).await?;
 
     println!("Got small/large repos, mapping and config stores");
+
     let b_master_cs = repo_b
         .bookmarks()
-        .get(ctx.clone(), &BookmarkKey::new(MASTER_BOOKMARK_NAME)?)
+        .get(
+            ctx.clone(),
+            &BookmarkKey::new(MASTER_BOOKMARK_NAME)?,
+            // TODO(T236130401): confirm if this needs read from primary
+            bookmarks::Freshness::MostRecent,
+        )
         .await?
         .expect("Failed to get master bookmark changeset id of repo B");
     let b_master_git_sha1 = repo_b
@@ -599,7 +605,12 @@ pub(crate) async fn get_all_changeset_data_from_repo(
 ) -> Result<Vec<ChangesetData>> {
     let master_cs_id = repo
         .bookmarks()
-        .get(ctx.clone(), &BookmarkKey::new(MASTER_BOOKMARK_NAME)?)
+        .get(
+            ctx.clone(),
+            &BookmarkKey::new(MASTER_BOOKMARK_NAME)?,
+            // TODO(T236130401): confirm if this needs read from primary
+            bookmarks::Freshness::MostRecent,
+        )
         .await?
         .ok_or(anyhow!(
             "Failed to get master bookmark changeset id of repo {}",
@@ -844,7 +855,12 @@ pub(crate) async fn sync_changeset_and_derive_all_types(
 
 pub(crate) async fn master_cs_id(ctx: &CoreContext, repo: &TestRepo) -> Result<ChangesetId> {
     repo.bookmarks()
-        .get(ctx.clone(), &BookmarkKey::new(MASTER_BOOKMARK_NAME)?)
+        .get(
+            ctx.clone(),
+            &BookmarkKey::new(MASTER_BOOKMARK_NAME)?,
+            // TODO(T236130401): confirm if this needs read from primary
+            bookmarks::Freshness::MostRecent,
+        )
         .await?
         .ok_or(anyhow!(
             "Failed to get master bookmark changeset id of repo {}",

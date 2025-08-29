@@ -477,7 +477,12 @@ where
         let large_repo = commit_sync_data.get_target_repo();
         let mut book_values = vec![];
         for common_bookmark in common_pushrebase_bookmarks {
-            book_values.push(large_repo.bookmarks().get(ctx.clone(), common_bookmark));
+            book_values.push(large_repo.bookmarks().get(
+                ctx.clone(),
+                common_bookmark,
+                // TODO(T236130401): confirm if this needs read from primary
+                bookmarks::Freshness::MostRecent,
+            ));
         }
 
         let book_values = try_join_all(book_values).await?;
@@ -969,7 +974,15 @@ async fn delete_bookmark(
     bookmark: &BookmarkKey,
 ) -> Result<(), Error> {
     let mut book_txn = repo.bookmarks().create_transaction(ctx.clone());
-    let maybe_bookmark_val = repo.bookmarks().get(ctx.clone(), bookmark).await?;
+    let maybe_bookmark_val = repo
+        .bookmarks()
+        .get(
+            ctx.clone(),
+            bookmark,
+            // TODO(T236130401): confirm if this needs read from primary
+            bookmarks::Freshness::MostRecent,
+        )
+        .await?;
     if let Some(bookmark_value) = maybe_bookmark_val {
         book_txn.delete(bookmark, bookmark_value, BookmarkUpdateReason::XRepoSync)?;
         let res = book_txn.commit().await?.is_some();
@@ -997,7 +1010,15 @@ async fn move_or_create_bookmark(
     bookmark: &BookmarkKey,
     cs_id: ChangesetId,
 ) -> Result<(), Error> {
-    let maybe_bookmark_val = repo.bookmarks().get(ctx.clone(), bookmark).await?;
+    let maybe_bookmark_val = repo
+        .bookmarks()
+        .get(
+            ctx.clone(),
+            bookmark,
+            // TODO(T236130401): confirm if this needs read from primary
+            bookmarks::Freshness::MostRecent,
+        )
+        .await?;
 
     let mut book_txn = repo.bookmarks().create_transaction(ctx.clone());
     match maybe_bookmark_val {

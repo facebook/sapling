@@ -52,10 +52,17 @@ pub trait Bookmarks: Send + Sync + 'static {
     /// Get the current value of a bookmark.
     ///
     /// Returns `Some(ChangesetId)` if the bookmark exists, or `None` if doesn't
+    ///
+    /// If `freshness` is `Freshness::MostRecent`, then the bookmark will be read
+    /// from the primary replica, otherwise it will be read from the replica,
+    /// which might be 500ms to 1s stale.
+    /// **Only use `Freshness::MostRecent` if you REALLY need the freshest data**,
+    /// because unnecessary calls might hit the limit of connections.
     fn get(
         &self,
         ctx: CoreContext,
         name: &BookmarkKey,
+        freshness: Freshness,
     ) -> BoxFuture<'static, Result<Option<ChangesetId>>>;
 
     /// List bookmarks that match certain parameters.

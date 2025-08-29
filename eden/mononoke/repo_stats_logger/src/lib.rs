@@ -176,7 +176,14 @@ async fn get_repo_objects_count(
             Ok(over)
         }
         None => {
-            let maybe_bookmark = bookmarks.get(ctx.clone(), bookmark_name).await?;
+            let maybe_bookmark = bookmarks
+                .get(
+                    ctx.clone(),
+                    bookmark_name,
+                    // TODO(T236130401): confirm if this needs read from primary
+                    bookmarks::Freshness::MostRecent,
+                )
+                .await?;
             if let Some(cs_id) = maybe_bookmark {
                 let count = get_descendant_count(
                     ctx,

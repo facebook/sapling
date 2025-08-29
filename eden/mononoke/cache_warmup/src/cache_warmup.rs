@@ -216,7 +216,12 @@ async fn do_cache_warmup(
     let bcs_id = match target {
         CacheWarmupTarget::Bookmark(bookmark) => repo
             .bookmarks()
-            .get(ctx.clone(), &bookmark)
+            .get(
+                ctx.clone(),
+                &bookmark,
+                // TODO(T236130401): confirm if this needs read from primary
+                bookmarks::Freshness::MostRecent,
+            )
             .await?
             .ok_or(errors::ErrorKind::BookmarkNotFound(bookmark))?,
         CacheWarmupTarget::Changeset(bcs_id) => bcs_id,

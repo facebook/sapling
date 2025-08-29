@@ -503,7 +503,12 @@ pub async fn extend_from_dag_with_actions<'a, R: Repo>(
                 .ok_or_else(|| anyhow!("No commit {} for bookmark {}", name, bookmark))?;
             let old_value = repo
                 .bookmarks()
-                .get(ctx.clone(), &bookmark)
+                .get(
+                    ctx.clone(),
+                    &bookmark,
+                    // TODO(T236130401): confirm if this needs read from primary
+                    bookmarks::Freshness::MostRecent,
+                )
                 .await
                 .with_context(|| format!("Failed to resolve bookmark '{}'", bookmark))?;
             // It's better to update/create rather than force_set which doesn't

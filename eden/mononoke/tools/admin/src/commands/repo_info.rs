@@ -59,7 +59,12 @@ pub async fn run(app: MononokeApp, args: CommandArgs) -> Result<()> {
     let main_bookmark = BookmarkKey::new("master")?;
     let main_bookmark_value = repo
         .bookmarks()
-        .get(ctx.clone(), &main_bookmark)
+        .get(
+            ctx.clone(),
+            &main_bookmark,
+            // TODO(T236130401): confirm if this needs read from primary
+            bookmarks::Freshness::MostRecent,
+        )
         .await
         .with_context(|| format!("Failed to resolve main bookmark ({})", main_bookmark))?
         .as_ref()

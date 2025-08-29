@@ -378,7 +378,14 @@ impl BookmarksCache for NoopBookmarksCache {
         ctx: &CoreContext,
         bookmark: &BookmarkKey,
     ) -> Result<Option<ChangesetId>, Error> {
-        self.bookmarks.get(ctx.clone(), bookmark).await
+        self.bookmarks
+            .get(
+                ctx.clone(),
+                bookmark,
+                // TODO(T236130401): confirm if this needs read from primary
+                bookmarks::Freshness::MostRecent,
+            )
+            .await
     }
 
     async fn list(
@@ -656,7 +663,14 @@ async fn move_bookmark_back_in_history_until_derived(
             Ok(maybe_cs_id_and_ts.map(|(cs_id, _)| cs_id))
         }
         LatestDerivedBookmarkEntry::NotFound => {
-            let cur_bookmark_value = bookmarks.get(ctx.clone(), book).await?;
+            let cur_bookmark_value = bookmarks
+                .get(
+                    ctx.clone(),
+                    book,
+                    // TODO(T236130401): confirm if this needs read from primary
+                    bookmarks::Freshness::MostRecent,
+                )
+                .await?;
             tracing::warn!(
                 "cannot find previous derived version of {}, returning current version {:?}",
                 book,
@@ -721,7 +735,14 @@ pub async fn find_latest_derived_and_underived(
 
         if log_entries.is_empty() {
             tracing::debug!("bookmark {} has no history in the log", book);
-            let maybe_cs_id = bookmarks.get(ctx.clone(), book).await?;
+            let maybe_cs_id = bookmarks
+                .get(
+                    ctx.clone(),
+                    book,
+                    // TODO(T236130401): confirm if this needs read from primary
+                    bookmarks::Freshness::MostRecent,
+                )
+                .await?;
             // If a bookmark has no history then we add a fake entry saying that
             // timestamp is unknown.
             log_entries.push((maybe_cs_id, None));
@@ -1821,7 +1842,12 @@ mod tests {
             .derive::<RootUnodeManifestId>(
                 &ctx,
                 repo.bookmarks()
-                    .get(ctx.clone(), &BookmarkKey::new("master")?)
+                    .get(
+                        ctx.clone(),
+                        &BookmarkKey::new("master")?,
+                        // TODO(T236130401): confirm if this needs read from primary
+                        bookmarks::Freshness::MostRecent,
+                    )
                     .await?
                     .unwrap(),
             )

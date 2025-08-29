@@ -983,7 +983,12 @@ async fn test_hg_commit_generation_many_diamond(fb: FacebookInit) {
     let book = bookmarks::BookmarkKey::new("master").unwrap();
     let bcs_id = repo
         .bookmarks()
-        .get(ctx.clone(), &book)
+        .get(
+            ctx.clone(),
+            &book,
+            // TODO(T236130401): confirm if this needs read from primary
+            bookmarks::Freshness::MostRecent,
+        )
         .await
         .unwrap()
         .unwrap();

@@ -123,7 +123,12 @@ pub(crate) async fn ensure_ancestor_of(
 ) -> Result<bool, BookmarkMovementError> {
     let descendant_cs_id = repo
         .bookmarks()
-        .get(ctx.clone(), descendant_bookmark)
+        .get(
+            ctx.clone(),
+            descendant_bookmark,
+            // TODO(T236130401): confirm if this needs read from primary
+            bookmarks::Freshness::MostRecent,
+        )
         .await?
         .ok_or_else(|| {
             anyhow::anyhow!(

@@ -348,11 +348,12 @@ impl Bookmarks for CachedBookmarks {
         &self,
         ctx: CoreContext,
         bookmark: &BookmarkKey,
+        freshness: Freshness,
     ) -> BoxFuture<'static, Result<Option<ChangesetId>>> {
         // NOTE: If you to implement a Freshness notion here and try to fetch from cache, be
         // mindful that not all bookmarks are cached, so a cache miss here does not necessarily
         // mean that the Bookmark does not exist.
-        self.bookmarks.get(ctx, bookmark)
+        self.bookmarks.get(ctx, bookmark, freshness)
     }
 
     /// Drop this cache without kicking off a refresh right now.
@@ -570,6 +571,7 @@ mod tests {
             &self,
             _ctx: CoreContext,
             _name: &BookmarkKey,
+            _freshness: Freshness,
         ) -> BoxFuture<'static, Result<Option<ChangesetId>>> {
             unimplemented!()
         }

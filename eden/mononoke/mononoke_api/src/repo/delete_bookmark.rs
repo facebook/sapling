@@ -38,7 +38,12 @@ impl<R: MononokeRepo> RepoContext<R> {
             None => self
                 .repo()
                 .bookmarks()
-                .get(self.ctx().clone(), bookmark)
+                .get(
+                    self.ctx().clone(),
+                    bookmark,
+                    // TODO(T236130401): confirm if this needs read from primary
+                    bookmarks::Freshness::MostRecent,
+                )
                 .await
                 .context("Failed to fetch old bookmark target")?
                 .ok_or_else(|| {

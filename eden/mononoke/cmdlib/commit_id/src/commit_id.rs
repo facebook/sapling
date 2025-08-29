@@ -278,13 +278,19 @@ pub async fn resolve_commit_ids(
                         .parse_commit_id(ctx, repo, &rev.to_string())
                         .await
                 }
-                CommitId::Bookmark(bookmark) => repo
-                    .bookmarks()
-                    .get(ctx.clone(), &BookmarkKey::new(bookmark)?)
-                    .await
-                    .and_then(|cs_id| {
-                        cs_id.ok_or_else(|| anyhow!("bookmark {} not found", bookmark))
-                    }),
+                CommitId::Bookmark(bookmark) => {
+                    repo.bookmarks()
+                        .get(
+                            ctx.clone(),
+                            &BookmarkKey::new(bookmark)?,
+                            // TODO(T236130401): confirm if this needs read from primary
+                            bookmarks::Freshness::MostRecent,
+                        )
+                        .await
+                        .and_then(|cs_id| {
+                            cs_id.ok_or_else(|| anyhow!("bookmark {} not found", bookmark))
+                        })
+                }
                 CommitId::Resolve(cs_id_hash) => parse_commit_id(ctx, repo, cs_id_hash).await,
                 _ => Err(anyhow!("Unsupported commit id type"))?,
             }
