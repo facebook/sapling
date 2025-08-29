@@ -23,6 +23,7 @@ use indexedlog::log::IndexOutput;
 use indexedlog::log::Log;
 use indexedlog::log::LogLookupIter;
 use indexedlog::rotate;
+use indexedlog::rotate::ConsistentReadGuard;
 use indexedlog::rotate::RotateLog;
 use indexedlog::rotate::RotateLogLookupIter;
 use minibytes::Bytes;
@@ -241,6 +242,13 @@ impl Inner {
         match self {
             Self::Permanent(log) => log.is_changed_on_disk(),
             Self::Rotated(log) => log.is_changed_on_disk(),
+        }
+    }
+
+    pub(crate) fn with_consistent_reads(&mut self) -> Option<ConsistentReadGuard> {
+        match self {
+            Inner::Permanent(_log) => None,
+            Inner::Rotated(rotate_log) => Some(rotate_log.with_consistent_reads()),
         }
     }
 }

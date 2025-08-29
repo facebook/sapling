@@ -60,6 +60,7 @@ use indexedlog::DefaultOpenOptions;
 use indexedlog::Repair;
 use indexedlog::log::IndexOutput;
 use indexedlog::rotate;
+use indexedlog::rotate::ConsistentReadGuard;
 use itertools::Itertools;
 use lfs_protocol::ObjectAction;
 use lfs_protocol::ObjectStatus;
@@ -752,6 +753,16 @@ impl LfsStore {
         let pointers = LfsPointersStore::rotated(path, config)?;
         let blobs = LfsBlobsStore::rotated_or_loose_objects(path, config)?;
         LfsStore::new(pointers, blobs)
+    }
+
+    /// Open a critical section where cache writes are guaranteed to be present on subsequent read
+    /// (if underlying store is indexedlog RotateLog).
+    pub(crate) fn with_consistent_reads(&self) -> Option<ConsistentReadGuard> {
+        if let LfsBlobsStore::IndexedLog(store) = &self.blobs {
+            store.inner.write().with_consistent_reads()
+        } else {
+            None
+        }
     }
 
     pub fn repair(path: impl AsRef<Path>) -> Result<String> {
