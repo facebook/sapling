@@ -76,6 +76,7 @@ use rand::thread_rng;
 use redacted::is_redacted;
 use serde_derive::Deserialize;
 use serde_derive::Serialize;
+use sha2::Digest;
 use storemodel::SerializationFormat;
 use tokio::task::spawn_blocking;
 use tokio::time::sleep;
@@ -611,6 +612,103 @@ fn create_loose_file(path: &Path, hash: &Sha256, is_local: bool) -> Result<File>
     }
 
     Ok(File::create(path)?)
+}
+
+/// Streaming LFS chunk inserter to insert into LFS blob store without holding the entire blob in
+/// memory.
+struct StreamingInserter {
+    expected_hash: Sha256,
+    got_hash: sha2::Sha256,
+    // We buffer one chunk so we can verify the content hash before inserting the final chunk.
+    prev_chunk: Option<Bytes>,
+    state: StreamingState,
+}
+
+enum StreamingState {
+    // Store, reusable buffer, written so far
+    Log(LfsIndexedLogBlobsStore, Vec<u8>, usize),
+    // File to append chunks to
+    File(File),
+}
+
+impl StreamingState {
+    fn write_chunk(&mut self, chunk: Bytes, hash: Sha256, force: bool) -> Result<()> {
+        match self {
+            StreamingState::Log(store, buf, len) => {
+                buf.extend_from_slice(chunk.as_ref());
+
+                // Accumulate chunks until we get to the desired storage chunk size.
+                if force || buf.len() >= store.chunk_size {
+                    let data_len = buf.len();
+                    let entry = LfsIndexedLogBlobsEntry {
+                        sha256: hash,
+                        range: *len..*len + data_len,
+                        // Convert our reusable buf into Bytes, temporarily.
+                        data: std::mem::take(buf).into(),
+                    };
+                    let serialized = serialize(&entry)?;
+                    store.inner.append(&serialized)?;
+                    *len += data_len;
+                    // Now that we are done serializing, recover our buf.
+                    *buf = entry.data.into_vec();
+                    buf.clear();
+                }
+                Ok(())
+            }
+            StreamingState::File(file) => Ok(file.write_all(&chunk)?),
+        }
+    }
+}
+
+impl StreamingInserter {
+    pub(crate) fn new(store: &LfsBlobsStore, hash: Sha256) -> Result<Self> {
+        match &store {
+            LfsBlobsStore::Loose(path, local) => Ok(Self {
+                expected_hash: hash,
+                got_hash: sha2::Sha256::new(),
+                prev_chunk: None,
+                state: StreamingState::File(create_loose_file(path, &hash, *local)?),
+            }),
+            LfsBlobsStore::IndexedLog(store) => Ok(Self {
+                expected_hash: hash,
+                got_hash: sha2::Sha256::new(),
+                prev_chunk: None,
+                state: StreamingState::Log(store.clone(), Vec::new(), 0),
+            }),
+            LfsBlobsStore::Union(a, _) => Self::new(a, hash),
+        }
+    }
+
+    pub(crate) fn add_chunk(&mut self, chunk: Bytes) -> Result<()> {
+        self.got_hash.update(chunk.as_ref());
+        if let Some(prev) = self.prev_chunk.replace(chunk) {
+            self.state.write_chunk(prev, self.expected_hash, false)?;
+        }
+        Ok(())
+    }
+
+    fn finish(mut self) -> Result<()> {
+        // Check content hash before inserting the final chunks. This ensures we don't insert a
+        // "full" corrupted LFS blob.
+        let got_hash: [u8; Sha256::len()] = self.got_hash.finalize().into();
+        let got_hash = Sha256::from(got_hash);
+        if got_hash != self.expected_hash {
+            bail!(
+                "content hash mismatch: {} != {}",
+                self.expected_hash,
+                got_hash
+            );
+        }
+        if let Some(chunk) = self.prev_chunk {
+            self.state.write_chunk(chunk, self.expected_hash, true)?;
+        }
+
+        if let StreamingState::File(file) = self.state {
+            file.sync_all()?;
+        }
+
+        Ok(())
+    }
 }
 
 pub(crate) enum LfsStoreEntry {
@@ -2779,6 +2877,80 @@ mod tests {
         test_with_config("")?;
         test_with_config("0")?;
         test_with_config("0,0,0")?;
+
+        Ok(())
+    }
+
+    #[test]
+    fn test_streaming_inserter() -> Result<()> {
+        let dir = TempDir::new()?;
+        let config = BTreeMap::<&str, &str>::new();
+
+        let store =
+            LfsBlobsStore::IndexedLog(LfsIndexedLogBlobsStore::rotated(dir.path(), &config)?);
+
+        let data = Bytes::from_static(b"abc");
+        let expected_hash = ContentHash::sha256(&data).unwrap_sha256();
+
+        {
+            // Incomplete write
+            let mut inserter = StreamingInserter::new(&store, expected_hash)?;
+            inserter.add_chunk(data.slice(0..1))?;
+            inserter.add_chunk(data.slice(1..2))?;
+            assert!(inserter.finish().is_err());
+            assert!(store.get(&expected_hash, data.len() as u64)?.is_none());
+        }
+
+        {
+            // Corrupted data
+            let mut inserter = StreamingInserter::new(&store, expected_hash)?;
+            inserter.add_chunk(data.slice(0..1))?;
+            inserter.add_chunk(data.slice(1..2))?;
+            inserter.add_chunk(Bytes::from_static(b"z"))?;
+            assert!(inserter.finish().is_err());
+            assert!(store.get(&expected_hash, data.len() as u64)?.is_none());
+        }
+
+        {
+            // Good
+            let mut inserter = StreamingInserter::new(&store, expected_hash)?;
+            inserter.add_chunk(data.slice(0..1))?;
+            inserter.add_chunk(data.slice(1..2))?;
+            inserter.add_chunk(data.slice(2..3))?;
+            assert!(inserter.finish().is_ok());
+            assert_eq!(
+                store.get(&expected_hash, data.len() as u64)?.unwrap(),
+                data.clone().into()
+            );
+        }
+
+        {
+            // Insert in a single chunk
+            let mut inserter = StreamingInserter::new(&store, expected_hash)?;
+            inserter.add_chunk(data.clone())?;
+            assert!(inserter.finish().is_ok());
+            assert_eq!(
+                store.get(&expected_hash, data.len() as u64)?.unwrap(),
+                data.clone().into()
+            );
+        }
+
+        {
+            // Multiple storage chunks.
+            let mut idl_store = LfsIndexedLogBlobsStore::rotated(dir.path(), &config)?;
+            idl_store.chunk_size = 2;
+            let store = LfsBlobsStore::IndexedLog(idl_store);
+
+            let mut inserter = StreamingInserter::new(&store, expected_hash)?;
+            inserter.add_chunk(data.slice(0..1))?;
+            inserter.add_chunk(data.slice(1..2))?;
+            inserter.add_chunk(data.slice(2..3))?;
+            assert!(inserter.finish().is_ok());
+            assert_eq!(
+                store.get(&expected_hash, data.len() as u64)?.unwrap(),
+                data.into()
+            );
+        }
 
         Ok(())
     }
