@@ -158,10 +158,11 @@ pub enum LfsRemote {
     File(LfsBlobsStore),
 }
 
+#[derive(Clone)]
 pub struct LfsClient {
-    local: Option<Arc<LfsStore>>,
+    pub(crate) local: Option<Arc<LfsStore>>,
     pub(crate) shared: Arc<LfsStore>,
-    pub(crate) remote: LfsRemote,
+    pub(crate) remote: Arc<LfsRemote>,
     move_after_upload: bool,
 }
 
@@ -1798,7 +1799,7 @@ impl LfsClient {
             shared,
             local,
             move_after_upload,
-            remote: LfsRemote::from_config(config)?,
+            remote: Arc::new(LfsRemote::from_config(config)?),
         })
     }
 
@@ -1812,7 +1813,7 @@ impl LfsClient {
         mut done_cb: impl FnMut(Sha256),
         error_handler: impl FnMut(Sha256, Error),
     ) -> Result<()> {
-        match &self.remote {
+        match self.remote.as_ref() {
             LfsRemote::Http(http) => {
                 let make_inserter =
                     |hash, size| StreamingInserter::new(&self.shared.blobs, hash, size);
@@ -1917,6 +1918,26 @@ impl LfsClient {
         }
 
         Ok(not_found)
+    }
+
+    pub(crate) fn with_shared_only(&self) -> Self {
+        let mut c = self.clone();
+        c.local = Some(self.shared.clone());
+        c
+    }
+
+    pub(crate) fn flush(&self) -> Result<()> {
+        let mut res = Ok(());
+
+        if let Some(err) = self.local.as_ref().and_then(|l| l.flush().err()) {
+            res = Err(err);
+        }
+
+        if let Some(err) = self.shared.flush().err() {
+            res = Err(err);
+        }
+
+        res
     }
 }
 

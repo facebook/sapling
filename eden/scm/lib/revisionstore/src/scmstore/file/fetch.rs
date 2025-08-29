@@ -938,7 +938,7 @@ impl FetchState {
         self.metrics.cas_local_cache.update(&total_stats);
     }
 
-    pub(crate) fn fetch_lfs_remote(&mut self, client: Arc<LfsClient>, buffer_in_memory: bool) {
+    pub(crate) fn fetch_lfs_remote(&mut self, client: &LfsClient, buffer_in_memory: bool) {
         let cache = &client.shared;
 
         let errors = &mut self.errors;
