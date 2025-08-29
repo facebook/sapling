@@ -848,12 +848,6 @@ fn load_log(dir: &Path, id: u8, open_options: log::OpenOptions) -> crate::Result
 pub trait RotateLowLevelExt {
     /// Get a view of all individual logs. Newest first.
     fn logs(&self) -> Vec<&Log>;
-
-    /// Forced rotate. This can be useful as a quick way to ensure new
-    /// data can be written when data corruption happens.
-    ///
-    /// Data not written will get lost.
-    fn force_rotate(&mut self) -> crate::Result<()>;
 }
 
 impl RotateLowLevelExt for RotateLog {
@@ -866,24 +860,6 @@ impl RotateLowLevelExt for RotateLog {
             })
             .map(|res| res.unwrap().unwrap())
             .collect()
-    }
-
-    fn force_rotate(&mut self) -> crate::Result<()> {
-        if self.dir.is_none() {
-            // rotate does not make sense for an in-memory RotateLog.
-            return Ok(());
-        }
-        // Read-write path. Take the directory lock.
-        let dir = self.dir.clone().unwrap();
-        let lock = ScopedDirLock::new(&dir)?;
-        self.latest = read_latest(self.dir.as_ref().unwrap())?;
-        self.rotate_internal(&lock)?;
-        self.set_logs(read_logs(
-            self.dir.as_ref().unwrap(),
-            &self.open_options,
-            self.latest,
-        )?);
-        Ok(())
     }
 }
 
@@ -1292,26 +1268,6 @@ mod tests {
     #[test]
     fn test_wrapping_rotate_255() {
         test_wrapping_rotate(255)
-    }
-
-    #[test]
-    fn test_force_rotate() {
-        let dir = tempdir().unwrap();
-        let mut rotate = OpenOptions::new()
-            .create(true)
-            .max_bytes_per_log(1 << 30)
-            .max_log_count(3)
-            .open(&dir)
-            .unwrap();
-
-        use super::RotateLowLevelExt;
-        assert_eq!(rotate.logs().len(), 1);
-        rotate.force_rotate().unwrap();
-        assert_eq!(rotate.logs().len(), 2);
-        rotate.force_rotate().unwrap();
-        assert_eq!(rotate.logs().len(), 3);
-        rotate.force_rotate().unwrap();
-        assert_eq!(rotate.logs().len(), 3);
     }
 
     #[test]
