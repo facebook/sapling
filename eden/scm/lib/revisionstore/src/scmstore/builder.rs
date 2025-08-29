@@ -419,6 +419,10 @@ impl<'a> FileStoreBuilder<'a> {
             unbounded_queue: self
                 .config
                 .get_or_default("experimental", "unbounded-scmstore-queue")?,
+
+            lfs_buffer_in_memory: self
+                .config
+                .get_or_default("experimental", "lfs-buffer-in-memory")?,
         })
     }
 }

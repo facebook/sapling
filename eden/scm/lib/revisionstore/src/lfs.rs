@@ -157,7 +157,7 @@ pub enum LfsRemote {
 
 pub struct LfsClient {
     local: Option<Arc<LfsStore>>,
-    shared: Arc<LfsStore>,
+    pub(crate) shared: Arc<LfsStore>,
     pub(crate) remote: LfsRemote,
     move_after_upload: bool,
 }
@@ -324,7 +324,7 @@ impl LfsIndexedLogBlobsStore {
         StoreOpenOptions::new(config)
             .max_log_count(4)
             .max_bytes_per_log(20_000_000_000 / 4)
-            .auto_sync_threshold(50 * 1024 * 1024)
+            .auto_sync_threshold(250 * 1024 * 1024)
             .load_specific_config(config, "lfs")
             .index("sha256", |_| {
                 vec![IndexOutput::Reference(0..Sha256::len() as u64)]
@@ -857,6 +857,10 @@ impl LfsStore {
             Some(v) => v,
         };
         self.blobs.get(hash.sha256_ref(), pointer.size)
+    }
+
+    pub fn get_blob(&self, hash: &Sha256, size: u64) -> Result<Option<Blob>> {
+        self.blobs.get(hash, size)
     }
 
     pub fn add_blob(&self, hash: &Sha256, blob: Bytes) -> Result<()> {

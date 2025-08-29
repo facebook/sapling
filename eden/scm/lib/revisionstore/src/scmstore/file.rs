@@ -121,6 +121,9 @@ pub struct FileStore {
 
     // Temporary escape hatch to disable bounding of queue.
     pub(crate) unbounded_queue: bool,
+
+    // Temporary escape hatch to disable streaming of LFS data to caches.
+    pub(crate) lfs_buffer_in_memory: bool,
 }
 
 impl Drop for FileStore {
@@ -298,6 +301,8 @@ impl FileStore {
         let fetch_local = fctx.mode().contains(FetchMode::LOCAL);
         let fetch_remote = fctx.mode().contains(FetchMode::REMOTE);
 
+        let lfs_buffer_in_memory = self.lfs_buffer_in_memory;
+
         let process_func = move || {
             // Set bar as this thread's active bar. We don't do it when we create the bar
             // since we might be in a different thread now.
@@ -421,11 +426,7 @@ impl FileStore {
                         format == SerializationFormat::Hg,
                         "LFS cannot be used with non-Hg serialization format"
                     );
-                    state.fetch_lfs_remote(
-                        &lfs_remote.remote,
-                        lfs_local.clone(),
-                        lfs_cache.clone(),
-                    );
+                    state.fetch_lfs_remote(lfs_remote.clone(), lfs_buffer_in_memory);
                 }
 
                 fctx.inc_remote(fetched_since_last_time(&state));
@@ -629,6 +630,8 @@ impl FileStore {
             progress_bar: AggregatingProgressBar::new("", ""),
 
             unbounded_queue: false,
+
+            lfs_buffer_in_memory: false,
         }
     }
 
@@ -680,6 +683,8 @@ impl FileStore {
             progress_bar: self.progress_bar.clone(),
 
             unbounded_queue: self.unbounded_queue,
+
+            lfs_buffer_in_memory: self.lfs_buffer_in_memory,
         }
     }
 
