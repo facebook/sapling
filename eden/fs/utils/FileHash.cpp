@@ -8,7 +8,7 @@
 #include <folly/portability/OpenSSL.h>
 #include <filesystem>
 
-#include "eden/common/utils/WinError.h"
+#include "eden/common/utils/windows/WinError.h"
 #include "eden/fs/digest/Blake3.h"
 #include "eden/fs/utils/FileHash.h"
 

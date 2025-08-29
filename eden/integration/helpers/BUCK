@@ -100,7 +100,7 @@ cpp_binary(
         "//eden/common/utils:file_utils",
         "//eden/common/utils:path",
         "//eden/common/utils:stringconv",
-        "//eden/common/utils:win_error",
+        "//eden/common/utils/windows:win_error",
         "//folly:string",
         "//folly/init:init",
         "//folly/portability:gflags",

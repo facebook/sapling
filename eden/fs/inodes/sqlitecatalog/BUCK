@@ -39,7 +39,7 @@ cpp_library(
         "//eden/common/utils:case_sensitivity",
         "//eden/common/utils:file_utils",
         "//eden/common/utils:utils",
-        "//eden/common/utils:win_error",
+        "//eden/common/utils/windows:win_error",
         "//eden/fs/inodes:inode_number",
         "//eden/fs/inodes/overlay:serialization-cpp2-types",
         "//eden/fs/prjfs:disk_state",

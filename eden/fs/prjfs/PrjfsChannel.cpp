@@ -18,7 +18,7 @@
 #include "eden/common/utils/ImmediateFuture.h"
 #include "eden/common/utils/PathFuncs.h"
 #include "eden/common/utils/StringConv.h"
-#include "eden/common/utils/WinError.h"
+#include "eden/common/utils/windows/WinError.h"
 #include "eden/fs/config/EdenConfig.h"
 #include "eden/fs/notifications/Notifier.h"
 #include "eden/fs/prjfs/PrjfsDispatcher.h"

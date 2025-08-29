@@ -16,7 +16,7 @@
 #include "eden/common/utils/CaseSensitivity.h"
 #include "eden/common/utils/DirType.h"
 #include "eden/common/utils/FileUtils.h"
-#include "eden/common/utils/WinError.h"
+#include "eden/common/utils/windows/WinError.h"
 #include "eden/fs/config/EdenConfig.h"
 #include "eden/fs/inodes/InodeNumber.h"
 #include "eden/fs/inodes/overlay/gen-cpp2/overlay_types.h"

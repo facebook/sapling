@@ -8,7 +8,7 @@
 #include "eden/fs/utils/EdenError.h"
 
 #include "eden/common/utils/SystemError.h"
-#include "eden/common/utils/WinError.h"
+#include "eden/common/utils/windows/WinError.h"
 
 namespace facebook::eden {
 

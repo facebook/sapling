@@ -27,7 +27,7 @@ cpp_library(
         "//eden/common/utils:bug",
         "//eden/common/utils:fault_injector",
         "//eden/common/utils:stringconv",
-        "//eden/common/utils:win_error",
+        "//eden/common/utils/windows:win_error",
         "//eden/fs/config:config",
         "//eden/fs/notifications:notifier",
         "//eden/fs/telemetry:log_info",
@@ -69,7 +69,7 @@ cpp_library(
     deps = [
         "//eden/common/utils:case_sensitivity",
         "//eden/common/utils:file_utils",
-        "//eden/common/utils:win_error",
+        "//eden/common/utils/windows:win_error",
         "//eden/fs/config:config",
         "//eden/fs/inodes:inode_number",
         "//eden/fs/utils:projfs_util",

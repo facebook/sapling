@@ -14,7 +14,7 @@
 #include "eden/common/utils/FileUtils.h"
 #include "eden/common/utils/PathFuncs.h"
 #include "eden/common/utils/StringConv.h"
-#include "eden/common/utils/WinError.h"
+#include "eden/common/utils/windows/WinError.h"
 
 DEFINE_string(path, "", "The path to the file to check for rename.");
 

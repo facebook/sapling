@@ -41,7 +41,7 @@ cpp_library(
     deps = [
         "//eden/common/utils:path",
         "//eden/common/utils:stringconv",
-        "//eden/common/utils:win_error",
+        "//eden/common/utils/windows:win_error",
         "//folly:c_portability",
         "//folly/portability:windows",
     ],
@@ -110,7 +110,7 @@ cpp_library(
     ],
     deps = [
         "//eden/common/utils:system_error",
-        "//eden/common/utils:win_error",
+        "//eden/common/utils/windows:win_error",
     ],
     exported_deps = [
         "fbsource//third-party/fmt:fmt",
@@ -129,7 +129,7 @@ cpp_library(
         "FileHash.h",
     ],
     deps = [
-        "//eden/common/utils:win_error",
+        "//eden/common/utils/windows:win_error",
         "//eden/fs/digest:blake3_hash",
         "//folly/portability:openssl",
     ],

@@ -16,7 +16,7 @@
 
 #include "eden/common/utils/PathFuncs.h"
 #include "eden/common/utils/StringConv.h"
-#include "eden/common/utils/WinError.h"
+#include "eden/common/utils/windows/WinError.h"
 
 #ifndef OUT
 #define OUT
