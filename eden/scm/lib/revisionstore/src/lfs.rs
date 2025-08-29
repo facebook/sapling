@@ -62,7 +62,6 @@ use indexedlog::Repair;
 use indexedlog::log::IndexOutput;
 use indexedlog::rotate;
 use indexedlog::rotate::ConsistentReadGuard;
-use itertools::Itertools;
 use lfs_protocol::ObjectAction;
 use lfs_protocol::ObjectStatus;
 use lfs_protocol::Operation;
@@ -138,7 +137,6 @@ pub struct HttpLfsRemote {
     client: Arc<HttpClient>,
     concurrent_fetches: usize,
     download_chunk_size: NonZeroU64,
-    max_batch_size: usize,
     http_options: Arc<HttpOptions>,
     buf_pool: LimitedBufferPool,
 }
@@ -1236,9 +1234,6 @@ impl LfsRemote {
             let download_chunk_size = NonZeroU64::new(download_chunk_size.value())
                 .context("download chunk size cannot be 0")?;
 
-            // Pick something relatively low. Doesn't seem like we need many concurrent LFS downloads to saturate available BW.
-            let max_batch_size = config.get_or("lfs", "max-batch-size", || 100)?;
-
             let client = http_client("lfs", http_config(config, &url)?);
 
             Ok(Self::Http(HttpLfsRemote {
@@ -1246,7 +1241,6 @@ impl LfsRemote {
                 client: Arc::new(client),
                 concurrent_fetches,
                 download_chunk_size,
-                max_batch_size,
                 buf_pool: LimitedBufferPool::new(concurrent_fetches),
                 http_options: Arc::new(HttpOptions {
                     accept_zstd,
@@ -1672,86 +1666,83 @@ impl LfsRemote {
         mut done_cb: impl FnMut(Sha256, StreamingState) -> Result<()>,
         mut error_handler: impl FnMut(Sha256, Error),
     ) -> Result<()> {
-        let request_objs_iter = objs.iter().map(|(oid, size)| RequestObject {
-            oid: LfsSha256(oid.into_inner()),
-            size: *size as u64,
-        });
+        let objs = objs
+            .iter()
+            .map(|(oid, size)| RequestObject {
+                oid: LfsSha256(oid.into_inner()),
+                size: *size as u64,
+            })
+            .collect::<Vec<_>>();
 
-        for request_objs_chunk in &request_objs_iter.chunks(http.max_batch_size) {
-            let response = LfsRemote::send_batch_request(
-                fctx.clone(),
-                http,
-                request_objs_chunk.collect(),
-                operation,
-            )?;
-            let response = match response {
-                None => return Ok(()),
-                Some(response) => response,
+        let response = LfsRemote::send_batch_request(fctx.clone(), http, objs, operation)?;
+
+        let response = match response {
+            None => return Ok(()),
+            Some(response) => response,
+        };
+
+        let mut futures = Vec::new();
+
+        for object in response.objects {
+            let oid = object.object.oid;
+            let actions = match object.status {
+                ObjectStatus::Ok {
+                    authenticated: _,
+                    actions,
+                } => Some(actions),
+                ObjectStatus::Err { error: e } => {
+                    error_handler(
+                        Sha256::from(oid.0),
+                        anyhow!("LFS fetch error {} - {}", e.code, e.message),
+                    );
+                    None
+                }
             };
 
-            let mut futures = Vec::new();
+            for (op, action) in actions.into_iter().flat_map(|h| h.into_iter()) {
+                let oid = Sha256::from(oid.0);
 
-            for object in response.objects {
-                let oid = object.object.oid;
-                let actions = match object.status {
-                    ObjectStatus::Ok {
-                        authenticated: _,
-                        actions,
-                    } => Some(actions),
-                    ObjectStatus::Err { error: e } => {
-                        error_handler(
-                            Sha256::from(oid.0),
-                            anyhow!("LFS fetch error {} - {}", e.code, e.message),
-                        );
-                        None
-                    }
+                let fut = match op {
+                    Operation::Upload => LfsRemote::process_upload(
+                        http.client.clone(),
+                        action,
+                        oid,
+                        object.object.size,
+                        read_from_store.clone(),
+                        http.http_options.clone(),
+                    )
+                    .map(|res| match res {
+                        Ok(()) => None,
+                        Err(err) => Some(Err(err)),
+                    })
+                    .left_future(),
+                    Operation::Download => LfsRemote::process_download(
+                        fctx.clone(),
+                        http.client.clone(),
+                        http.download_chunk_size,
+                        action,
+                        object.object.size,
+                        http.http_options.clone(),
+                        make_inserter(oid, object.object.size)?,
+                        http.buf_pool.clone(),
+                    )
+                    .map(Some)
+                    .right_future(),
                 };
 
-                for (op, action) in actions.into_iter().flat_map(|h| h.into_iter()) {
-                    let oid = Sha256::from(oid.0);
-
-                    let fut = match op {
-                        Operation::Upload => LfsRemote::process_upload(
-                            http.client.clone(),
-                            action,
-                            oid,
-                            object.object.size,
-                            read_from_store.clone(),
-                            http.http_options.clone(),
-                        )
-                        .map(|res| match res {
-                            Ok(()) => None,
-                            Err(err) => Some(Err(err)),
-                        })
-                        .left_future(),
-                        Operation::Download => LfsRemote::process_download(
-                            fctx.clone(),
-                            http.client.clone(),
-                            http.download_chunk_size,
-                            action,
-                            object.object.size,
-                            http.http_options.clone(),
-                            make_inserter(oid, object.object.size)?,
-                            http.buf_pool.clone(),
-                        )
-                        .map(Some)
-                        .right_future(),
-                    };
-
-                    futures.push(fut);
-                }
+                futures.push(fut);
             }
+        }
 
-            // Request blobs concurrently.
-            let stream = stream_to_iter(iter(futures).buffer_unordered(http.concurrent_fetches));
+        // Request blobs concurrently.
+        let stream = stream_to_iter(iter(futures).buffer_unordered(http.concurrent_fetches));
 
-            // It's awkward that the futures are shared for uploading and downloading. We use Some(_)
-            // to indicate if the result came from the download path, and 'flatten' filters out the
-            // Nones.
-            for result in stream.flatten() {
-                let (sha, state) = result?;
-                done_cb(sha, state)?;
-            }
+        // It's awkward that the futures are shared for uploading and downloading. We use Some(_)
+        // to indicate if the result came from the download path, and 'flatten' filters out the
+        // Nones.
+        for result in stream.flatten() {
+            let (sha, state) = result?;
+            done_cb(sha, state)?;
         }
 
         Ok(())
