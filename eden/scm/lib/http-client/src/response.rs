@@ -188,7 +188,7 @@ pub struct AsyncBody {
     body: ByteStream,
 }
 
-pub type CborStreamBody<T> = CborStream<T, ByteStream, Vec<u8>, HttpClientError>;
+pub type CborStreamBody<T> = CborStream<T, ByteStream, HttpClientError>;
 
 impl AsyncBody {
     /// Get a stream of the response's body content.

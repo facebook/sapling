@@ -37,7 +37,7 @@ const SMALL_BUFFER_SIZE: usize = 1024 * 8;
 /// efficiency since libcurl will typically return a stream of small packets.
 #[pin_project]
 #[must_use = "streams do nothing unless polled"]
-pub struct CborStream<T, S, B, E> {
+pub struct CborStream<T, S, E> {
     #[pin]
     incoming: S,
     incoming_done: bool,
@@ -46,10 +46,10 @@ pub struct CborStream<T, S, B, E> {
     threshold: usize,
     position: usize,
     terminated: bool,
-    _phantom: PhantomData<(T, B, E)>,
+    _phantom: PhantomData<(T, E)>,
 }
 
-impl<T, S, B, E> CborStream<T, S, B, E> {
+impl<T, S, E> CborStream<T, S, E> {
     pub(crate) fn new(body: S) -> Self {
         Self {
             incoming: body,
@@ -64,11 +64,10 @@ impl<T, S, B, E> CborStream<T, S, B, E> {
     }
 }
 
-impl<T, S, B, E> Stream for CborStream<T, S, B, E>
+impl<T, S, E> Stream for CborStream<T, S, E>
 where
     T: DeserializeOwned,
-    S: Stream<Item = Result<B, E>> + Send + 'static,
-    B: AsRef<[u8]>,
+    S: Stream<Item = Result<Vec<u8>, E>> + Send + 'static,
     E: From<CborStreamError>,
 {
     type Item = Result<T, E>;
@@ -156,7 +155,16 @@ where
             // Poll the underlying stream for more incoming data, reading until we have self.threshold data.
             while this.buffer.len() - *this.position < *this.threshold {
                 match ready!(this.incoming.as_mut().poll_next(cx)) {
-                    Some(Ok(chunk)) => this.buffer.extend_from_slice(chunk.as_ref()),
+                    Some(Ok(chunk)) => {
+                        if this.buffer.is_empty() && this.buffer.capacity() < chunk.len() {
+                            // Optimize the fetching-single-item case to not copy the data. For
+                            // example, fetching a single tree/file will often come in via a single
+                            // data chunk from curl.
+                            *this.buffer = chunk;
+                        } else {
+                            this.buffer.extend_from_slice(&chunk);
+                        }
+                    }
                     Some(Err(e)) => return Poll::Ready(Some(Err(e))),
                     None => {
                         // Underlying stream is done.
