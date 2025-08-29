@@ -629,6 +629,8 @@ enum StreamingState {
     Log(LfsIndexedLogBlobsStore, Vec<u8>, usize),
     // File to append chunks to
     File(File),
+    // Store in memory
+    Memory(Vec<u8>),
 }
 
 impl StreamingState {
@@ -656,6 +658,10 @@ impl StreamingState {
                 Ok(())
             }
             StreamingState::File(file) => Ok(file.write_all(&chunk)?),
+            StreamingState::Memory(buf) => {
+                buf.extend_from_slice(chunk.as_ref());
+                Ok(())
+            }
         }
     }
 }
@@ -679,6 +685,15 @@ impl StreamingInserter {
         }
     }
 
+    pub(crate) fn memory(hash: Sha256, capacity: usize) -> Self {
+        Self {
+            expected_hash: hash,
+            got_hash: sha2::Sha256::new(),
+            prev_chunk: None,
+            state: StreamingState::Memory(Vec::with_capacity(capacity)),
+        }
+    }
+
     pub(crate) fn add_chunk(&mut self, chunk: Bytes) -> Result<()> {
         self.got_hash.update(chunk.as_ref());
         if let Some(prev) = self.prev_chunk.replace(chunk) {
@@ -687,7 +702,7 @@ impl StreamingInserter {
         Ok(())
     }
 
-    fn finish(mut self) -> Result<()> {
+    fn finish(mut self) -> Result<StreamingState> {
         // Check content hash before inserting the final chunks. This ensures we don't insert a
         // "full" corrupted LFS blob.
         let got_hash: [u8; Sha256::len()] = self.got_hash.finalize().into();
@@ -703,11 +718,11 @@ impl StreamingInserter {
             self.state.write_chunk(chunk, self.expected_hash, true)?;
         }
 
-        if let StreamingState::File(file) = self.state {
+        if let StreamingState::File(file) = &mut self.state {
             file.sync_all()?;
         }
 
-        Ok(())
+        Ok(self.state)
     }
 }
 
@@ -2948,8 +2963,20 @@ mod tests {
             assert!(inserter.finish().is_ok());
             assert_eq!(
                 store.get(&expected_hash, data.len() as u64)?.unwrap(),
-                data.into()
+                data.clone().into()
             );
+        }
+
+        {
+            // Stream to in-memory buffer
+            let mut inserter = StreamingInserter::memory(expected_hash, 0);
+            inserter.add_chunk(data.clone())?;
+
+            let state = inserter.finish()?;
+            match state {
+                StreamingState::Memory(buf) => assert_eq!(buf, data.as_ref()),
+                _ => panic!("bad state"),
+            }
         }
 
         Ok(())
