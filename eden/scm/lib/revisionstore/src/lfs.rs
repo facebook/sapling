@@ -140,6 +140,7 @@ pub struct HttpLfsRemote {
     download_chunk_size: NonZeroU64,
     max_batch_size: usize,
     http_options: Arc<HttpOptions>,
+    buf_pool: LimitedBufferPool,
 }
 
 struct HttpOptions {
@@ -1180,7 +1181,7 @@ impl LfsRemote {
                 format!("Sapling/{}", ::version::VERSION)
             })?;
 
-            let concurrent_fetches = config.get_or("lfs", "concurrentfetches", || 4)?;
+            let concurrent_fetches = config.get_or("lfs", "concurrentfetches", || 30)?;
 
             let backoff_times = config.get_or("lfs", "backofftimes", || vec![1f32, 4f32, 8f32])?;
 
@@ -1245,6 +1246,7 @@ impl LfsRemote {
                 concurrent_fetches,
                 download_chunk_size,
                 max_batch_size,
+                buf_pool: LimitedBufferPool::new(concurrent_fetches),
                 http_options: Arc::new(HttpOptions {
                     accept_zstd,
                     http_version,
@@ -1574,6 +1576,7 @@ impl LfsRemote {
         size: u64,
         http_options: Arc<HttpOptions>,
         mut inserter: StreamingInserter,
+        buf_pool: LimitedBufferPool,
     ) -> Result<(Sha256, StreamingState)> {
         let url = Url::from_str(&action.href.to_string())?;
 
@@ -1584,7 +1587,11 @@ impl LfsRemote {
         let file_end = size.saturating_sub(1);
 
         // Recyclable buffer we use for each chunk.
-        let mut buf = Some(Vec::with_capacity(chunk_size.get().min(size) as usize));
+        let (pool_handle, mut buf) = buf_pool.get().await;
+
+        buf.reserve(chunk_size.get().min(size) as usize);
+
+        let mut buf = Some(buf);
 
         while chunk_start < file_end {
             let chunk_end = std::cmp::min(file_end, chunk_start + chunk_increment);
@@ -1639,6 +1646,10 @@ impl LfsRemote {
             };
 
             chunk_start = chunk_end + 1;
+        }
+
+        if let Some(buf) = buf {
+            pool_handle.put(buf);
         }
 
         inserter.finish()
@@ -1720,6 +1731,7 @@ impl LfsRemote {
                             object.object.size,
                             http.http_options.clone(),
                             make_inserter(oid, object.object.size)?,
+                            http.buf_pool.clone(),
                         )
                         .map(Some)
                         .right_future(),
