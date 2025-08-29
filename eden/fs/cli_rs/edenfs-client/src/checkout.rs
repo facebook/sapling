@@ -1145,6 +1145,7 @@ impl EdenFsCheckout {
                 trees_profile_set.insert("third-party/**/*".to_owned());
                 trees_profile_set.insert("tools/**/*".to_owned());
                 trees_profile_set.insert("xplat/**/*".to_owned());
+                trees_profile_set.insert("whatsapp/**/*".to_owned());
             }
 
             if !trees_profile_set.is_empty() {
