@@ -75,6 +75,11 @@ impl Store {
         self.write().append(buf)
     }
 
+    /// Write to the store directly.
+    pub fn append_direct(&self, cb: impl Fn(&mut dyn ExtendWrite) -> Result<()>) -> Result<()> {
+        self.write().append_direct(cb)
+    }
+
     /// Attempt to make slice backed by the mmap buffer to avoid heap allocation.
     pub fn slice_to_bytes(&self, slice: &[u8]) -> Bytes {
         self.read().slice_to_bytes(slice)

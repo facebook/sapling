@@ -71,6 +71,7 @@ use lfs_protocol::ResponseBatch;
 use lfs_protocol::Sha256 as LfsSha256;
 use mincode::deserialize;
 use mincode::serialize;
+use mincode::serialize_into;
 use minibytes::Bytes;
 use rand::Rng;
 use rand::thread_rng;
@@ -649,8 +650,9 @@ impl StreamingState {
                         // Convert our reusable buf into Bytes, temporarily.
                         data: std::mem::take(buf).into(),
                     };
-                    let serialized = serialize(&entry)?;
-                    store.inner.append(&serialized)?;
+                    store
+                        .inner
+                        .append_direct(|buf| Ok(serialize_into(buf, &entry)?))?;
                     *len += data_len;
                     // Now that we are done serializing, recover our buf.
                     *buf = entry.data.into_vec();
