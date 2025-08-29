@@ -31,7 +31,6 @@ use crate::header::Header;
 use crate::receiver::ResponseStreams;
 use crate::request::Encoding;
 use crate::request::RequestInfo;
-use crate::stream::BufferedStream;
 use crate::stream::CborStream;
 
 #[derive(Debug)]
@@ -190,7 +189,6 @@ pub struct AsyncBody {
 }
 
 pub type CborStreamBody<T> = CborStream<T, ByteStream, Vec<u8>, HttpClientError>;
-pub type BufferedStreamBody = BufferedStream<ByteStream, Vec<u8>, HttpClientError>;
 
 impl AsyncBody {
     /// Get a stream of the response's body content.
@@ -229,17 +227,6 @@ impl AsyncBody {
     /// Attempt to deserialize the incoming data as a stream of CBOR values.
     pub fn cbor<T: DeserializeOwned>(self) -> CborStreamBody<T> {
         CborStream::new(self.decoded())
-    }
-
-    /// Attempt to deserialize the incoming data as a stream of CBOR values.
-    pub fn cbor_with_buffer_size<T: DeserializeOwned>(self, size: usize) -> CborStreamBody<T> {
-        CborStream::with_buffer_size(self.decoded(), size)
-    }
-
-    /// Create a buffered body stream that ensures that all yielded chunks
-    /// (except the last) are at least as large as the given chunk size.
-    pub fn buffered(self, size: usize) -> BufferedStreamBody {
-        BufferedStream::new(self.decoded(), size)
     }
 }
 

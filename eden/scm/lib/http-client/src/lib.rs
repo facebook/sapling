@@ -79,7 +79,6 @@ pub use response::AsyncBody;
 pub use response::AsyncResponse;
 pub use response::Response;
 pub use stats::Stats;
-pub use stream::BufferedStream;
 pub use stream::CborStream;
 
 /// The only Easy2 type used by this crate.
