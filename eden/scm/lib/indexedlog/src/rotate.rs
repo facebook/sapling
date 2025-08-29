@@ -30,6 +30,7 @@ use crate::errors::ResultExt;
 use crate::lock::READER_LOCK_OPTS;
 use crate::lock::ScopedDirLock;
 use crate::log;
+use crate::log::ExtendWrite;
 use crate::log::FlushFilterContext;
 use crate::log::FlushFilterFunc;
 use crate::log::FlushFilterOutput;
@@ -393,12 +394,40 @@ impl fmt::Debug for OpenOptions {
 impl RotateLog {
     /// Append data to the writable [`Log`].
     pub fn append(&mut self, data: impl AsRef<[u8]>) -> crate::Result<()> {
+        self.append_internal(
+            |buf| {
+                buf.extend_from_slice(data.as_ref());
+                crate::Result::Ok(())
+            },
+            Some(data.as_ref().len()),
+        )
+    }
+
+    /// Append data directly to the writable [`Log`]'s in-memory buffer.
+    pub fn append_direct<E>(
+        &mut self,
+        cb: impl Fn(&mut dyn ExtendWrite) -> Result<(), E>,
+    ) -> crate::Result<()>
+    where
+        E: Into<Box<dyn std::error::Error + Send + Sync + 'static>>,
+    {
+        self.append_internal(cb, None)
+    }
+
+    fn append_internal<E>(
+        &mut self,
+        cb: impl Fn(&mut dyn ExtendWrite) -> Result<(), E>,
+        data_len: Option<usize>,
+    ) -> crate::Result<()>
+    where
+        E: Into<Box<dyn std::error::Error + Send + Sync + 'static>>,
+    {
         self.maybe_clear_pinned_logs();
 
         (|| -> crate::Result<_> {
             let threshold = self.open_options.auto_sync_threshold;
             let log = self.writable_log();
-            log.append(data)?;
+            log.append_internal(cb, data_len)?;
             if let Some(threshold) = threshold {
                 if log.mem_buf.len() as u64 >= threshold {
                     self.sync()

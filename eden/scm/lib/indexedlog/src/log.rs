@@ -309,7 +309,7 @@ impl Log {
     /// Append data written by `cb` to the [`Log`].
     ///
     /// If known, specifying size of data to be written via `data_len` saves a call to `cb`.
-    fn append_internal<E>(
+    pub(crate) fn append_internal<E>(
         &mut self,
         cb: impl Fn(&mut dyn ExtendWrite) -> Result<(), E>,
         data_len: Option<usize>,
