@@ -25,6 +25,7 @@ use bookmarks::BookmarkPrefix;
 use bookmarks::Bookmarks;
 use bytes::Bytes;
 use changeset_info::ChangesetInfo;
+use commit_graph::CommitGraph;
 use context::CoreContext;
 use fsnodes::RootFsnodeId;
 use futures::future;
@@ -33,6 +34,7 @@ use manifest::Diff;
 use manifest::Entry;
 use manifest::ManifestOps;
 use metaconfig_types::RepoConfig;
+use mononoke_types::BonsaiChangeset;
 use mononoke_types::ChangesetId;
 use mononoke_types::ContentId;
 use mononoke_types::ContentMetadataV2;
@@ -80,6 +82,9 @@ pub struct HookRepo {
 
     #[facet]
     pub repo_cross_repo: RepoCrossRepo,
+
+    #[facet]
+    pub commit_graph: CommitGraph,
 }
 
 impl HookRepo {
@@ -91,6 +96,14 @@ impl HookRepo {
         filestore::get_metadata(&self.repo_blobstore, ctx, &id.into())
             .await?
             .ok_or_else(|| anyhow!("Content with id '{id}' not found"))
+    }
+
+    pub async fn get_bonsai_changeset<'a>(
+        &'a self,
+        ctx: &'a CoreContext,
+        id: ChangesetId,
+    ) -> Result<BonsaiChangeset> {
+        Ok(id.load(ctx, &self.repo_blobstore).await?)
     }
 
     pub async fn get_file_text<'a>(

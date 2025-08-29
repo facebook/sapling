@@ -22,6 +22,7 @@ bookmarks_types = { version = "0.1.0", path = "../../../bookmarks/bookmarks_type
 bytes = { version = "1.10", features = ["serde"] }
 changeset_info = { version = "0.1.0", path = "../../../derived_data/changeset_info" }
 cloned = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
+commit_graph = { version = "0.1.0", path = "../../commit_graph/commit_graph" }
 context = { version = "0.1.0", path = "../../../server/context" }
 facet = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 fbinit = { version = "0.2.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
