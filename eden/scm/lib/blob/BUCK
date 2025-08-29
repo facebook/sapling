@@ -21,12 +21,12 @@ rust_library(
     },
     deps = [
         "fbsource//third-party/rust:blake3",
-        "fbsource//third-party/rust:bytes",
         "fbsource//third-party/rust:sha1",
         "//common/rust/folly:iobuf",
         "//eden/scm/lib/minibytes:minibytes",
         "//eden/scm/lib/types:types",
     ] + ([] if rust_oss.is_oss_build() else [
+        "fbsource//third-party/rust:bytes",
         "//common/rust/folly:iobuf",
     ]),
 )
