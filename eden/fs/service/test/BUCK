@@ -10,6 +10,7 @@ cpp_unittest(
     ],
     deps = [
         "fbsource//third-party/googletest:gmock",
+        "fbsource//third-party/googletest:gtest",
         "//eden/common/telemetry:log_info",
         "//eden/common/utils:file_utils",
         "//eden/common/utils:process",
@@ -28,6 +29,7 @@ cpp_unittest(
     srcs = ["StartupStatusSubscriberTest.cpp"],
     supports_static_listing = False,
     deps = [
+        "fbsource//third-party/googletest:gtest",
         "//eden/fs/service:startup_status_subscriber",
         "//eden/fs/utils:eden_error",
     ],
@@ -38,6 +40,7 @@ cpp_unittest(
     srcs = ["ThriftStreamStartupStatusSubscriberTest.cpp"],
     supports_static_listing = False,
     deps = [
+        "fbsource//third-party/googletest:gtest",
         "//eden/fs/service:thrift_startup_status_subscriber",
     ],
 )
@@ -52,6 +55,7 @@ cpp_unittest(
     supports_static_listing = False,
     deps = [
         "fbsource//third-party/googletest:gmock",
+        "fbsource//third-party/googletest:gtest",
         "//eden/fs/service:server",
         "//eden/fs/testharness:test_server",
         "//folly/io/async/test:util",
@@ -70,6 +74,7 @@ cpp_unittest(
     ],
     supports_static_listing = False,
     deps = [
+        "fbsource//third-party/googletest:gtest",
         "//eden/fs/inodes:inodes",
         "//eden/fs/service:thrift-cpp2-types",
         "//eden/fs/service:thrift_glob_impl",
@@ -85,6 +90,7 @@ cpp_unittest(
     srcs = ["PrettyPrintersTest.cpp"],
     supports_static_listing = False,
     deps = [
+        "fbsource//third-party/googletest:gtest",
         "//eden/common/utils:utils",
         "//eden/fs/service:pretty_printers",
     ],

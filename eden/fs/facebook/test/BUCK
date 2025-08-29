@@ -11,6 +11,7 @@ cpp_unittest(
     },
     supports_static_listing = False,
     deps = [
+        "fbsource//third-party/googletest:gtest",
         "//eden/common/utils:file_utils",
         "//eden/common/utils:path",
         "//eden/common/utils:string",

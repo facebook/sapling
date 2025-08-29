@@ -6,6 +6,7 @@ cpp_unittest(
     name = "lmdb_store_if",
     srcs = ["LMDBStoreInterfaceTest.cpp"],
     deps = [
+        "fbsource//third-party/googletest:gtest",
         "//eden/common/testharness:temp_file",
         "//eden/common/utils:path",
         "//eden/common/utils:utils",
@@ -23,6 +24,7 @@ cpp_unittest(
     srcs = ["LMDBOverlayTest.cpp"],
     supports_static_listing = False,
     deps = [
+        "fbsource//third-party/googletest:gtest",
         "//eden/common/telemetry:structured_logger",
         "//eden/common/testharness:temp_file",
         "//eden/fs/config:config",

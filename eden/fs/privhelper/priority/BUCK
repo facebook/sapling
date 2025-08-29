@@ -53,6 +53,8 @@ cpp_library(
         ),
     ],
     deps = [
+        ":darwin_memory_priority",
+        ":linux_memory_priority",
         "//folly/logging:logging",
     ],
     exported_deps = [
