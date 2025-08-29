@@ -161,6 +161,18 @@ impl MononokeScubaSampleBuilder {
                 .add("disabled_reads_blobstore_ids", disabled_reads_blobstore_ids);
         }
 
+        let read_bookmarks_from_xdb_replica = justknobs::eval(
+            "scm/mononoke:read_bookmarks_from_xdb_replica",
+            Some(client_info.correlator.as_str()),
+            None,
+        )
+        .unwrap_or(false);
+
+        self.inner.add(
+            "read_bookmarks_from_xdb_replica",
+            read_bookmarks_from_xdb_replica,
+        );
+
         self
     }
 

@@ -50,7 +50,8 @@
     "scm/mononoke:scs_repo_create_commit_git_restrictions": true,
     "scm/mononoke:cacheblob_use_set_or_replace": true,
     "scm/mononoke:caching_ext_use_set_or_replace": true,
-    "scm/mononoke:derivation_queue_enable_automated_eviction": true
+    "scm/mononoke:derivation_queue_enable_automated_eviction": true,
+    "scm/mononoke:read_bookmarks_from_xdb_replica": true
   },
   "ints": {
     "scm/mononoke_timeouts:repo_client_clone_timeout_secs": 14400,
@@ -92,6 +93,7 @@
     "scm/mononoke:git_bundle_generator_packfile_concurrency": 18000,
     "scm/mononoke:git_server_max_packfile_size": 7516192768,
     "scm/mononoke:sql_telemetry_sample_rate": 1,
-    "scm/mononoke:derivation_queue_max_retry_count": 20
+    "scm/mononoke:derivation_queue_max_retry_count": 20,
+    "scm/mononoke:bookmark_creation_delay_ms": 500
   }
 }

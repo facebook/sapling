@@ -87,6 +87,7 @@
       "http_path": "/lfs1/objects/batch",
       "http_user_agent": "Sapling/*", (glob)
       "method": "batch",
+      "read_bookmarks_from_xdb_replica": "true",
       "repository": "lfs1",
       "request_id": "*", (glob)
       "sandcastle_alias": null,
@@ -151,6 +152,7 @@
       "http_query": "server_hostname=*", (glob)
       "http_user_agent": "Sapling/*", (glob)
       "method": "upload",
+      "read_bookmarks_from_xdb_replica": "true",
       "repository": "lfs1",
       "request_id": "*", (glob)
       "sandcastle_alias": null,
@@ -219,6 +221,7 @@
       "http_path": "/lfs1/objects/batch",
       "http_user_agent": "Sapling/*", (glob)
       "method": "batch",
+      "read_bookmarks_from_xdb_replica": "true",
       "repository": "lfs1",
       "request_id": "*", (glob)
       "sandcastle_alias": null,
@@ -289,6 +292,7 @@
       "http_query": "server_hostname=*", (glob)
       "http_user_agent": "Sapling/*", (glob)
       "method": "download",
+      "read_bookmarks_from_xdb_replica": "true",
       "repository": "lfs1",
       "request_id": "*", (glob)
       "response_content_encoding": "zstd",
@@ -346,6 +350,7 @@
       "http_path": "/config",
       "http_query": "foo=bar",
       "http_user_agent": "curl/*", (glob)
+      "read_bookmarks_from_xdb_replica": "true",
       "request_id": "*", (glob)
       "sandcastle_alias": null,
       "sandcastle_nonce": null,
