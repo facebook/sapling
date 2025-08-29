@@ -639,7 +639,21 @@ impl StreamingState {
     fn write_chunk(&mut self, chunk: Bytes, hash: Sha256, force: bool) -> Result<()> {
         match self {
             StreamingState::Log(store, buf, len) => {
-                buf.extend_from_slice(chunk.as_ref());
+                match chunk.take_vec() {
+                    Ok(chunk_vec) => {
+                        // If buf is empty and chunk_vec is bigger, just use it. The main goal here
+                        // is to optimize allocations when a single network chunk satisfies
+                        // store.chunk_size (i.e. we don't need to allocate buf at all).
+                        if buf.is_empty() && buf.capacity() < chunk_vec.len() {
+                            *buf = chunk_vec;
+                        } else {
+                            buf.extend_from_slice(&chunk_vec);
+                        }
+                    }
+                    Err(chunk) => {
+                        buf.extend_from_slice(chunk.as_ref());
+                    }
+                }
 
                 // Accumulate chunks until we get to the desired storage chunk size.
                 if force || buf.len() >= store.chunk_size {
@@ -3009,6 +3023,23 @@ mod tests {
             inserter.add_chunk(data.slice(0..1))?;
             inserter.add_chunk(data.slice(1..2))?;
             inserter.add_chunk(data.slice(2..3))?;
+            assert!(inserter.finish().is_ok());
+            assert_eq!(
+                store.get(&expected_hash, data.len() as u64)?.unwrap(),
+                data.clone().into()
+            );
+        }
+
+        {
+            // Multiple owned storage chunks.
+            let mut idl_store = LfsIndexedLogBlobsStore::rotated(dir.path(), &config)?;
+            idl_store.chunk_size = 2;
+            let store = LfsBlobsStore::IndexedLog(idl_store);
+
+            let mut inserter = StreamingInserter::new(&store, expected_hash)?;
+            inserter.add_chunk(data.slice(0..1).to_vec().into())?;
+            inserter.add_chunk(data.slice(1..2).to_vec().into())?;
+            inserter.add_chunk(data.slice(2..3).to_vec().into())?;
             assert!(inserter.finish().is_ok());
             assert_eq!(
                 store.get(&expected_hash, data.len() as u64)?.unwrap(),
