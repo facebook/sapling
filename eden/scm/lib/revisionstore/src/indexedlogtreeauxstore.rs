@@ -72,7 +72,7 @@ fn serialize(hgid: HgId, tree_aux_data: &TreeAuxData) -> Result<Vec<u8>> {
     Ok(buf.into())
 }
 
-fn serialize_to(hgid: HgId, tree_aux_data: &TreeAuxData, buf: &mut Vec<u8>) -> Result<()> {
+fn serialize_to(hgid: HgId, tree_aux_data: &TreeAuxData, buf: &mut dyn Write) -> Result<()> {
     buf.write_all(hgid.as_ref())?;
     buf.write_u8(0)?; // version
     buf.write_all(tree_aux_data.augmented_manifest_id.as_ref())?;

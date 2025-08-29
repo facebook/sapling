@@ -58,7 +58,7 @@ impl Metadata {
 }
 
 impl InternalMetadata {
-    pub fn write<T: Write>(&self, writer: &mut T) -> Result<()> {
+    pub fn write(&self, writer: &mut dyn Write) -> Result<()> {
         let mut buf = vec![];
         if let Some(flags) = self.api.flags {
             if flags != 0 {

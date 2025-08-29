@@ -156,7 +156,7 @@ impl Entry {
         log.write().append(buf)
     }
 
-    fn serialize(&self, buf: &mut Vec<u8>, should_compress: bool) -> Result<()> {
+    fn serialize(&self, buf: &mut dyn Write, should_compress: bool) -> Result<()> {
         buf.write_all(self.node.as_ref())?;
 
         // write empty name (i.e. zero length)

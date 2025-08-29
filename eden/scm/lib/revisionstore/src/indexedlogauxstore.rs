@@ -50,7 +50,7 @@ pub(crate) fn serialize(hgid: HgId, aux: &FileAuxData) -> Result<Bytes> {
     Ok(buf.into())
 }
 
-fn serialize_to(hgid: HgId, aux: &FileAuxData, buf: &mut Vec<u8>) -> Result<()> {
+fn serialize_to(hgid: HgId, aux: &FileAuxData, buf: &mut dyn Write) -> Result<()> {
     buf.write_all(hgid.as_ref())?;
     buf.write_u8(2)?; // write version
     buf.write_vlq(aux.total_size)?;

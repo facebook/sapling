@@ -6,6 +6,7 @@
  */
 
 use std::io::ErrorKind;
+use std::io::Write;
 use std::path::Path;
 use std::path::PathBuf;
 use std::sync::atomic;
@@ -18,6 +19,7 @@ use configmodel::convert::ByteCount;
 use indexedlog::OpenWithRepair;
 use indexedlog::Result as IndexedlogResult;
 use indexedlog::log;
+use indexedlog::log::ExtendWrite;
 use indexedlog::log::IndexDef;
 use indexedlog::log::IndexOutput;
 use indexedlog::log::Log;
@@ -84,10 +86,10 @@ impl Store {
 
     /// Append a batch of items to the store. This is optimized to reduce lock churn, which helps a
     /// lot when there is multi-threaded contention.
-    pub fn append_batch<K: AsRef<[u8]>, V>(
+    pub fn append_batch<K: AsRef<[u8]> + Copy, V>(
         &self,
         mut items: Vec<(K, V)>,
-        serialize: impl Fn(K, &V, &mut Vec<u8>) -> Result<()>,
+        serialize: impl Fn(K, &V, &mut dyn Write) -> Result<()>,
         // Filter out items already present in the store before inserting.
         read_before_write: bool,
     ) -> Result<()> {
@@ -111,26 +113,10 @@ impl Store {
             items.truncate(insert_idx);
         }
 
-        // Pre-serialize all the items into a single buffer. This reduces allocations and minimizes
-        // the work we do inside the critical write lock section below (at the cost of using more
-        // memory).
-
-        // Buffer to hold all the items' serialized data.
-        let mut buf = Vec::new();
-        // Indexes of the ends of each item within buf.
-        let mut ends = Vec::with_capacity(items.len());
-
-        for (k, v) in items {
-            serialize(k, &v, &mut buf)?;
-            ends.push(buf.len());
-        }
-
         let mut log = self.write();
 
-        let mut start = 0;
-        for end in ends {
-            log.append(&buf[start..end])?;
-            start = end;
+        for (k, v) in items {
+            log.append_direct(|buf| serialize(k, &v, buf))?;
         }
 
         Ok(())
@@ -198,6 +184,13 @@ impl Inner {
         match self {
             Self::Permanent(log) => Ok(log.append(buf)?),
             Self::Rotated(log) => Ok(log.append(buf)?),
+        }
+    }
+
+    pub fn append_direct(&mut self, cb: impl Fn(&mut dyn ExtendWrite) -> Result<()>) -> Result<()> {
+        match self {
+            Self::Permanent(log) => Ok(log.append_direct(cb)?),
+            Self::Rotated(log) => Ok(log.append_direct(cb)?),
         }
     }
 
