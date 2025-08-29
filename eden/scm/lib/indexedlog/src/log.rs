@@ -272,8 +272,68 @@ impl Log {
     ///
     /// To write in-memory entries and indexes to disk, call [`Log::sync`].
     pub fn append<T: AsRef<[u8]>>(&mut self, data: T) -> crate::Result<()> {
-        let result: crate::Result<_> = (|| {
+        self.append_internal::<crate::Error>(
+            |buf| {
+                buf.extend_from_slice(data.as_ref());
+                Ok::<_, crate::Error>(())
+            },
+            Some(data.as_ref().len()),
+        )
+        .context(|| {
             let data = data.as_ref();
+            if data.len() < 128 {
+                format!("in Log::append({:?})", data)
+            } else {
+                format!("in Log::append(<a {}-byte long slice>)", data.len())
+            }
+        })
+    }
+
+    /// Similar to [`Log::append`], but data is written via a callback. This allows the caller to
+    /// reduce allocations by serializing directly to the [`Log`]'s internal buffer. The `cb` is
+    /// called twice, first to get the data length, second to write the data. It must produce the
+    /// same data.
+    ///
+    /// If `cb` returns an error, the operation is undone and the error is propagated.
+    pub fn append_direct<E>(
+        &mut self,
+        cb: impl Fn(&mut dyn ExtendWrite) -> Result<(), E>,
+    ) -> crate::Result<()>
+    where
+        // This works for anyhow::Error and crate::Error. Other error types will need to box.
+        E: Into<Box<dyn std::error::Error + Send + Sync + 'static>>,
+    {
+        self.append_internal(cb, None)
+    }
+
+    /// Append data written by `cb` to the [`Log`].
+    ///
+    /// If known, specifying size of data to be written via `data_len` saves a call to `cb`.
+    fn append_internal<E>(
+        &mut self,
+        cb: impl Fn(&mut dyn ExtendWrite) -> Result<(), E>,
+        data_len: Option<usize>,
+    ) -> crate::Result<()>
+    where
+        // This works for anyhow::Error and crate::Error. Other error types will need to box.
+        E: Into<Box<dyn std::error::Error + Send + Sync + 'static>>,
+    {
+        let result: crate::Result<_> = (|| {
+            let data_len = match data_len {
+                Some(data_len) => data_len,
+                None => {
+                    // Get length of data by passing a byte-counting writer to the callback.
+                    let mut counter = WriteCounter { len: 0 };
+
+                    if let Err(err) = cb(&mut counter) {
+                        return Err(crate::Error::blank()
+                            .message("append_direct callback error")
+                            .source_dyn(err.into()));
+                    }
+
+                    counter.len as usize
+                }
+            };
 
             let checksum_type = if self.open_options.checksum_type == ChecksumType::Auto {
                 // xxhash64 is slower for smaller data. A quick benchmark on x64 platform shows:
@@ -293,7 +353,7 @@ impl Log {
                 //  120       3000      3428
                 //  128       3459      4266
                 const XXHASH64_THRESHOLD: usize = 88;
-                if data.len() >= XXHASH64_THRESHOLD {
+                if data_len >= XXHASH64_THRESHOLD {
                     ChecksumType::Xxhash64
                 } else {
                     ChecksumType::Xxhash32
@@ -318,22 +378,36 @@ impl Log {
                 ChecksumType::Auto => unreachable!(),
             };
 
-            self.mem_buf.write_vlq(entry_flags).infallible()?;
+            let mem_buf_start_len = self.mem_buf.len();
 
-            self.mem_buf.write_vlq(data.len() as u64).infallible()?;
+            self.mem_buf.write_vlq(entry_flags).infallible()?;
+            self.mem_buf.write_vlq(data_len as u64).infallible()?;
+
             let checksum_offset = self.mem_buf.len();
 
+            // Reserve space for writing the checksum.
             let checksum_len = match checksum_type {
                 ChecksumType::Auto => unreachable!(),
                 ChecksumType::Xxhash64 => 8,
                 ChecksumType::Xxhash32 => 4,
             };
             let data_offset = checksum_offset + checksum_len;
-
-            // Reserve space for writing the checksum.
             self.mem_buf.resize(data_offset, 0);
 
-            self.mem_buf.write_all(data).infallible()?;
+            if let Err(err) = cb(Pin::as_mut(&mut self.mem_buf).get_mut()) {
+                // User error producing the bytes to serialize - undo whatever we've done so far.
+                self.mem_buf.truncate(mem_buf_start_len);
+                return Err(crate::Error::blank()
+                    .message("append_direct callback error")
+                    .source_dyn(err.into()));
+            }
+
+            // Make sure we wrote the expected amount of data.
+            let apparent_len = self.mem_buf.len() - data_offset;
+            if data_len != apparent_len {
+                self.mem_buf.truncate(mem_buf_start_len);
+                return Err(crate::Error::blank().message(format!("append_direct length mismatch: {data_len} (expected) != {apparent_len} (apparent)")));
+            }
 
             match checksum_type {
                 ChecksumType::Xxhash64 => {
@@ -375,16 +449,7 @@ impl Log {
             Ok(())
         })();
 
-        result
-            .context(|| {
-                let data = data.as_ref();
-                if data.len() < 128 {
-                    format!("in Log::append({:?})", data)
-                } else {
-                    format!("in Log::append(<a {}-byte long slice>)", data.len())
-                }
-            })
-            .context(|| format!("  Log.dir = {:?}", self.dir))
+        result.context(|| format!("  Log.dir = {:?}", self.dir))
     }
 
     /// Remove dirty (in-memory) state. Restore the [`Log`] to the state as
@@ -1944,5 +2009,38 @@ impl ReadonlyBuffer for ExternalKeyBuffer {
             let mem_buf = unsafe { &*self.mem_buf };
             mem_buf.get((start as usize)..(start + len) as usize)
         }
+    }
+}
+
+// Wraps infallible writer (like Vec<u8>) to implement std::io::Write and provide infallible
+// extend_from_slice(), but hide the ability to change previous data in the vector.
+pub trait ExtendWrite: Write {
+    fn extend_from_slice(&mut self, buf: &[u8]);
+}
+
+impl ExtendWrite for Vec<u8> {
+    fn extend_from_slice(&mut self, buf: &[u8]) {
+        Vec::extend_from_slice(self, buf);
+    }
+}
+
+struct WriteCounter {
+    len: u64,
+}
+
+impl ExtendWrite for WriteCounter {
+    fn extend_from_slice(&mut self, buf: &[u8]) {
+        self.len += buf.len() as u64;
+    }
+}
+
+impl Write for WriteCounter {
+    fn write(&mut self, buf: &[u8]) -> io::Result<usize> {
+        self.len += buf.len() as u64;
+        Ok(buf.len())
+    }
+
+    fn flush(&mut self) -> io::Result<()> {
+        Ok(())
     }
 }

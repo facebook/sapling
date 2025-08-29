@@ -1641,6 +1641,57 @@ fn test_wait_for_changes() {
     assert_eq!(rx.recv().unwrap(), 102);
 }
 
+#[test]
+fn test_append_direct() {
+    let dir = tempdir().unwrap();
+
+    let mut log = OpenOptions::new()
+        .create(true)
+        .index("index", |_| vec![IndexOutput::Reference(0..1)])
+        .open(dir.path())
+        .unwrap();
+
+    log.append_direct(|buf| {
+        buf.extend_from_slice(b"hello");
+        crate::Result::Ok(())
+    })
+    .unwrap();
+
+    // Check that errors cause write to get rolled back.
+    let res = log.append_direct(|buf| {
+        buf.extend_from_slice(b"oops");
+        Err(crate::Error::from("oops!"))
+    });
+    assert!(res.is_err());
+    assert!(log.lookup(0, b"o").unwrap().is_empty());
+
+    log.append_direct(|buf| {
+        buf.extend_from_slice(b"world");
+        crate::Result::Ok(())
+    })
+    .unwrap();
+
+    assert_eq!(
+        log.lookup(0, b"h").unwrap().into_vec().unwrap(),
+        vec![b"hello"]
+    );
+    assert_eq!(
+        log.lookup(0, b"w").unwrap().into_vec().unwrap(),
+        vec![b"world"]
+    );
+
+    log.sync().unwrap();
+
+    assert_eq!(
+        log.lookup(0, b"h").unwrap().into_vec().unwrap(),
+        vec![b"hello"]
+    );
+    assert_eq!(
+        log.lookup(0, b"w").unwrap().into_vec().unwrap(),
+        vec![b"world"]
+    );
+}
+
 fn index_ref(data: &[u8]) -> Vec<IndexOutput> {
     vec![IndexOutput::Reference(0..data.len() as u64)]
 }

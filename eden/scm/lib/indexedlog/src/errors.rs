@@ -95,7 +95,10 @@ impl Error {
         self.source_dyn(Box::new(source))
     }
 
-    fn source_dyn(mut self, source: Box<dyn std::error::Error + Send + Sync + 'static>) -> Self {
+    pub(crate) fn source_dyn(
+        mut self,
+        source: Box<dyn std::error::Error + Send + Sync + 'static>,
+    ) -> Self {
         // Inherit the data corruption flag.
         if let Some(err) = source.downcast_ref::<Error>() {
             if err.is_corruption() {
