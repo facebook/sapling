@@ -6,9 +6,6 @@ rust_library(
     name = "edenfs-asserted-states",
     srcs = glob(["src/**/*.rs"]),
     crate_root = "src/lib.rs",
-    test_deps = [
-        "//common/rust/shed/fbinit:fbinit",
-    ],
     deps = [
         "fbsource//third-party/rust:anyhow",
         "fbsource//third-party/rust:fs-err",

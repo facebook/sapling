@@ -534,12 +534,10 @@ impl ChangeEvents {
 
 #[cfg(test)]
 mod tests {
-    use fbinit::FacebookInit;
-
     use crate::*;
 
-    #[fbinit::test]
-    fn test_enter_state(_fb: FacebookInit) -> anyhow::Result<()> {
+    #[test]
+    fn test_enter_state() -> anyhow::Result<()> {
         let mount_point = std::env::temp_dir().join("test_mount");
         let client = StreamingChangesClient::new(&mount_point)?;
         let state = "test_state1";
@@ -549,8 +547,8 @@ mod tests {
         Ok(())
     }
 
-    #[fbinit::test]
-    fn test_state_leave(_fb: FacebookInit) -> anyhow::Result<()> {
+    #[test]
+    fn test_state_leave() -> anyhow::Result<()> {
         let mount_point = std::env::temp_dir().join("test_mount1");
         let client = StreamingChangesClient::new(&mount_point)?;
         let state = "test_state2";
@@ -563,8 +561,8 @@ mod tests {
         Ok(())
     }
 
-    #[fbinit::test]
-    fn test_state_leave_implicit(_fb: FacebookInit) -> anyhow::Result<()> {
+    #[test]
+    fn test_state_leave_implicit() -> anyhow::Result<()> {
         let mount_point = std::env::temp_dir().join("test_mount");
         let client = StreamingChangesClient::new(&mount_point)?;
         let state = "test_state2";
@@ -578,8 +576,8 @@ mod tests {
         Ok(())
     }
 
-    #[fbinit::test]
-    fn test_get_asserted_states_empty(_fb: FacebookInit) -> anyhow::Result<()> {
+    #[test]
+    fn test_get_asserted_states_empty() -> anyhow::Result<()> {
         let mount_point = std::env::temp_dir().join("test_mount2");
         let client = StreamingChangesClient::new(&mount_point)?;
         let asserted_states = client.get_asserted_states()?;
@@ -587,8 +585,8 @@ mod tests {
         Ok(())
     }
 
-    #[fbinit::test]
-    fn test_get_asserted_states(_fb: FacebookInit) -> anyhow::Result<()> {
+    #[test]
+    fn test_get_asserted_states() -> anyhow::Result<()> {
         let mount_point = std::env::temp_dir().join("test_mount3");
         let client = StreamingChangesClient::new(&mount_point)?;
         let state1 = "test_state1";
@@ -611,8 +609,8 @@ mod tests {
         Ok(())
     }
 
-    #[fbinit::test]
-    fn test_try_guarded_lock(_fb: FacebookInit) -> anyhow::Result<()> {
+    #[test]
+    fn test_try_guarded_lock() -> anyhow::Result<()> {
         let mount_point = std::env::temp_dir().join("test_try_lock_mount");
         let state = "test_state";
         let state_path = mount_point.join(state);
@@ -631,8 +629,8 @@ mod tests {
         Ok(())
     }
 
-    #[fbinit::test]
-    fn test_multiple_mount(_fb: FacebookInit) -> anyhow::Result<()> {
+    #[test]
+    fn test_multiple_mount() -> anyhow::Result<()> {
         let mount_point1 = std::env::temp_dir().join("test_mount4");
         let mount_point2 = std::env::temp_dir().join("test_mount4a");
         let client1 = StreamingChangesClient::new(&mount_point1)?;
@@ -654,8 +652,8 @@ mod tests {
         Ok(())
     }
 
-    #[fbinit::test]
-    fn test_repeat_enter(_fb: FacebookInit) -> anyhow::Result<()> {
+    #[test]
+    fn test_repeat_enter() -> anyhow::Result<()> {
         let mount_point = std::env::temp_dir().join("test_mount6");
         let client = StreamingChangesClient::new(&mount_point)?;
         let state = "test_state";
@@ -674,8 +672,8 @@ mod tests {
         Ok(())
     }
 
-    #[fbinit::test]
-    fn test_try_lock_state(_fb: FacebookInit) -> anyhow::Result<()> {
+    #[test]
+    fn test_try_lock_state() -> anyhow::Result<()> {
         let mount = "test_mount8";
         let state = "test.state";
 
@@ -691,8 +689,8 @@ mod tests {
         Ok(())
     }
 
-    #[fbinit::test]
-    fn test_states_asserted(_fb: FacebookInit) -> anyhow::Result<()> {
+    #[test]
+    fn test_states_asserted() -> anyhow::Result<()> {
         let mount_point = std::env::temp_dir().join("test_mount7");
         let client = StreamingChangesClient::new(&mount_point)?;
         let state = "test_state";
@@ -708,8 +706,8 @@ mod tests {
         Ok(())
     }
 
-    #[fbinit::test]
-    fn test_is_path_notify_file(_fb: FacebookInit) -> anyhow::Result<()> {
+    #[test]
+    fn test_is_path_notify_file() -> anyhow::Result<()> {
         let mount_point = std::env::temp_dir().join("test_mount9");
         let client = StreamingChangesClient::new(&mount_point)?;
         let state = "test_state";
