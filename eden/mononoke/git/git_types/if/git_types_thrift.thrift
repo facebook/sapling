@@ -110,6 +110,79 @@ typedef id.Id GDMV2InstructionsChunkId
 @rust.NewType
 typedef data.LargeBinary GDMV2InstructionsChunk
 
+/// Manifest that contains an entry for each Git object that was added or modified as part of
+/// a commit. The object needs to be different from all objects at the same path in all parents
+/// for it to be included.
+union GitDeltaManifestV3 {
+  /// The entries are stored inlined in the manifest
+  1: list<GDMV3Entry> inlined;
+  /// The entries are stored in separate chunked blobs, with only
+  /// a list of their ids stored in the manifest
+  2: list<GDMV3ChunkId> chunked;
+}
+
+/// Identifier for GitDeltaManifestV3 blob
+@rust.NewType
+typedef id.Id GitDeltaManifestV3Id
+
+/// Identifier for a blob representing a chunk of the entries in GitDeltaManifestV3
+@rust.NewType
+typedef id.Id GDMV3ChunkId
+
+/// A chunk of the entries in GitDeltaManifestV3
+struct GDMV3Chunk {
+  1: list<GDMV3Entry> entries;
+}
+
+/// An entry in the GitDeltaManifestV3 corresponding to a path
+struct GDMV3Entry {
+  /// The path that this entry corresponds to
+  1: path.MPath path;
+  /// The full object that this entry represents
+  2: GDMV3ObjectEntry full_object;
+  /// A delta entry corresponding to a way to represent this object
+  /// as a delta
+  3: optional GDMV3DeltaEntry delta;
+}
+
+/// Struct representing a delta in GitDeltaManifestV3
+struct GDMV3ObjectEntry {
+  1: id.GitSha1 oid;
+  2: i64 size;
+  3: ObjectKind kind;
+  4: optional data.LargeBinary inlined_bytes;
+}
+
+/// Struct representing a delta in GitDeltaManifestV3
+struct GDMV3DeltaEntry {
+  1: GDMV3ObjectEntry base_object;
+  2: GDMV3Instructions instructions;
+}
+
+/// Struct representing the instructions of a delta in GitDeltaManifestV3
+struct GDMV3Instructions {
+  1: i64 uncompressed_size;
+  2: i64 compressed_size;
+  3: GDMV3InstructionBytes instruction_bytes;
+}
+
+/// Struct representing the bytes of the instructions of a delta in GitDeltaManifestV3
+union GDMV3InstructionBytes {
+  /// The instruction bytes are stored inlined
+  1: data.LargeBinary inlined;
+  /// The instruction bytes are stored in separate chunked blobs, with only
+  /// a list of their ids stored inline
+  2: list<GDMV3InstructionsChunkId> chunked;
+}
+
+/// Identifier for a chunk of delta instructions in GitDeltaManifestV3
+@rust.NewType
+typedef id.Id GDMV3InstructionsChunkId
+
+/// The byte content of an individual chunk of delta instructions in GitDeltaManifestV3
+@rust.NewType
+typedef data.LargeBinary GDMV3InstructionsChunk
+
 /// Struct representing the raw packfile item for base objects in Git
 @rust.Exhaustive
 struct GitPackfileBaseItem {
