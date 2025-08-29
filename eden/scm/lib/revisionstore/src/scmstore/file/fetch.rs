@@ -993,7 +993,7 @@ impl FetchState {
                 // `pending` and all of its entries were put in `key_map`.
                 for (key, ptr) in key_map.get(&sha256).unwrap().iter() {
                     let file = StoreFile {
-                        content: Some(LazyFile::Lfs(data.clone(), ptr.clone(), self.format)),
+                        content: Some(LazyFile::Lfs(data.clone().into(), ptr.clone(), self.format)),
                         ..Default::default()
                     };
 

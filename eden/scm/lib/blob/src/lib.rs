@@ -8,6 +8,7 @@
 #![allow(unexpected_cfgs)]
 
 use bytes::Buf;
+pub use minibytes::Bytes;
 use types::Blake3;
 use types::Sha1;
 
@@ -144,6 +145,12 @@ impl PartialEq for Blob {
                 buf.len() == bytes.len() && buf == &iobuf_from_bytes(bytes.clone())
             }
         }
+    }
+}
+
+impl From<minibytes::Bytes> for Blob {
+    fn from(value: minibytes::Bytes) -> Self {
+        Self::Bytes(value)
     }
 }
 

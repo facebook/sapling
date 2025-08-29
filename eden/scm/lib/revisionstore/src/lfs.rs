@@ -35,6 +35,7 @@ use anyhow::ensure;
 use anyhow::format_err;
 use async_runtime::block_on;
 use async_runtime::stream_to_iter;
+use blob::Blob;
 use configmodel::Config;
 use configmodel::ConfigExt;
 use configmodel::convert::ByteCount;
@@ -360,7 +361,7 @@ impl LfsIndexedLogBlobsStore {
         })
     }
 
-    pub fn get(&self, hash: &Sha256, total_size: u64) -> Result<Option<Bytes>> {
+    pub fn get(&self, hash: &Sha256, total_size: u64) -> Result<Option<Blob>> {
         let log = self.inner.read();
         let chunks_iter = log.lookup(0, hash)?.map(|data| {
             let data: Bytes = log.slice_to_bytes(data?);
@@ -422,7 +423,7 @@ impl LfsIndexedLogBlobsStore {
         // Skip SHA256 hash check on reading. Data integrity is checked by indexedlog xxhash and
         // length. The SHA256 check can be slow (~90% of data reading time!).
         if data.len() as u64 == total_size || is_redacted(&data) {
-            Ok(Some(data))
+            Ok(Some(data.into()))
         } else {
             Ok(None)
         }
@@ -518,7 +519,7 @@ impl LfsBlobsStore {
     /// Read the blob matching the content hash.
     ///
     /// Blob hash should be validated by the underlying store.
-    pub fn get(&self, hash: &Sha256, size: u64) -> Result<Option<Bytes>> {
+    pub fn get(&self, hash: &Sha256, size: u64) -> Result<Option<Blob>> {
         let blob = match self {
             LfsBlobsStore::Loose(path, _) => {
                 let path = LfsBlobsStore::path(path, hash);
@@ -537,7 +538,7 @@ impl LfsBlobsStore {
                 file.read_to_end(&mut buf)?;
                 let blob = Bytes::from(buf);
                 if &ContentHash::sha256(&blob).unwrap_sha256() == hash || is_redacted(&blob) {
-                    Some(blob)
+                    Some(blob.into())
                 } else {
                     None
                 }
@@ -618,7 +619,7 @@ impl LfsBlobsStore {
 
 pub(crate) enum LfsStoreEntry {
     PointerOnly(LfsPointersEntry),
-    PointerAndBlob(LfsPointersEntry, Bytes),
+    PointerAndBlob(LfsPointersEntry, Blob),
 }
 
 impl LfsStore {
@@ -677,7 +678,7 @@ impl LfsStore {
                                 hgid,
                             )))
                         }
-                        Some(blob) => Ok(StoreResult::Found((entry, blob))),
+                        Some(blob) => Ok(StoreResult::Found((entry, blob.into_bytes()))),
                     }
                 }
             },
@@ -706,7 +707,10 @@ impl LfsStore {
                         match self.blobs.contains(&content_hash.clone().unwrap_sha256())? {
                             false => Ok(Some(LfsStoreEntry::PointerOnly(entry))),
                             // Insert stub entry since the result doesn't matter.
-                            true => Ok(Some(LfsStoreEntry::PointerAndBlob(entry, Bytes::new()))),
+                            true => Ok(Some(LfsStoreEntry::PointerAndBlob(
+                                entry,
+                                Bytes::new().into(),
+                            ))),
                         }
                     } else {
                         match self
@@ -723,7 +727,7 @@ impl LfsStore {
     }
 
     /// Directly get the local content. Do not ask remote servers.
-    pub(crate) fn get_local_content_direct(&self, id: &HgId) -> Result<Option<Bytes>> {
+    pub(crate) fn get_local_content_direct(&self, id: &HgId) -> Result<Option<Blob>> {
         let pointer = match self.pointers.get_by_hgid(id)? {
             None => return Ok(None),
             Some(v) => v,
@@ -1582,7 +1586,7 @@ impl LfsRemote {
     ) -> Result<()> {
         for (hash, size) in objs {
             if let Some(data) = file.get(hash, *size as u64)? {
-                write_to_store(*hash, data)?;
+                write_to_store(*hash, data.into_bytes())?;
             }
         }
 
@@ -1744,7 +1748,7 @@ fn move_blob(hash: &Sha256, size: u64, from: &LfsStore, to: &LfsStore) -> Result
             .get(hash, size)?
             .ok_or_else(|| format_err!("Cannot find blob for {}", hash))?;
 
-        to.blobs.add(hash, blob)?;
+        to.blobs.add(hash, blob.into_bytes())?;
         from.blobs.remove(hash)?;
 
         (|| -> Result<()> {
@@ -2016,7 +2020,7 @@ mod tests {
         assert!(indexedlog_blobs.contains(&hash)?);
 
         assert_eq!(
-            Some(delta.data.clone()),
+            Some(delta.data.clone().into()),
             indexedlog_blobs.get(&hash, delta.data.len() as u64)?
         );
 
@@ -2036,7 +2040,10 @@ mod tests {
         loose_store.add(&sha256, data.clone())?;
 
         assert!(blob_store.contains(&sha256)?);
-        assert_eq!(blob_store.get(&sha256, data.len() as u64)?, Some(data));
+        assert_eq!(
+            blob_store.get(&sha256, data.len() as u64)?,
+            Some(data.into())
+        );
 
         Ok(())
     }
@@ -2134,7 +2141,7 @@ mod tests {
         store.flush()?;
 
         // Make sure we get the new data.
-        assert_eq!(store.get(&hash, data.len() as u64)?, Some(data));
+        assert_eq!(store.get(&hash, data.len() as u64)?, Some(data.into()));
 
         Ok(())
     }
@@ -2232,7 +2239,7 @@ mod tests {
 
         store.flush()?;
 
-        assert_eq!(store.get(&sha256, data.len() as u64)?, Some(data));
+        assert_eq!(store.get(&sha256, data.len() as u64)?, Some(data.into()));
 
         Ok(())
     }
@@ -2275,7 +2282,7 @@ mod tests {
 
         store.flush()?;
 
-        assert_eq!(store.get(&sha256, data.len() as u64)?, Some(data));
+        assert_eq!(store.get(&sha256, data.len() as u64)?, Some(data.into()));
 
         Ok(())
     }
@@ -2877,17 +2884,22 @@ mod tests {
             .collect::<HashSet<_>>();
         remote.batch_upload(
             &objs,
-            move |sha256, size| local_lfs.blobs.get(&sha256, size),
+            move |sha256, size| {
+                local_lfs
+                    .blobs
+                    .get(&sha256, size)
+                    .map(|r| r.map(|b| b.into_bytes()))
+            },
             |_, _| {},
         )?;
 
         assert_eq!(
             remote_lfs_file_store.get(&blob1.0, blob1.1 as u64)?,
-            Some(blob1.2)
+            Some(blob1.2.into())
         );
         assert_eq!(
             remote_lfs_file_store.get(&blob2.0, blob2.1 as u64)?,
-            Some(blob2.2)
+            Some(blob2.2.into())
         );
 
         Ok(())
