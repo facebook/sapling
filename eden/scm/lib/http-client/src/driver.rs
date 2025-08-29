@@ -25,9 +25,7 @@ use crate::stats::Stats;
 /// `Multi::wait`. The Multi session maintains its own timeout internally based
 /// on the state of the underlying transfers; this default value will only be
 /// used if there is no internal timer value set at the time `wait` is called.
-/// Note that "paused" transfers might need to wait this timeout before we
-/// attempt to unpause, so don't set too large.
-const MULTI_WAIT_TIMEOUT: Duration = Duration::from_millis(100);
+const MULTI_WAIT_TIMEOUT: Duration = Duration::from_secs(10);
 
 /// A complete transfer, along with the associated error
 /// if the transfer did not complete successfully.
@@ -164,8 +162,22 @@ impl<'a> MultiDriver<'a> {
                 break;
             }
 
-            tracing::trace!("Waiting for socket activity");
-            let active_sockets = self.multi.wait(&mut [], MULTI_WAIT_TIMEOUT)?;
+            let has_paused_transfer = self
+                .handles
+                .borrow()
+                .iter()
+                .any(|easy| easy.as_ref().is_some_and(|easy| easy.get_ref().is_paused()));
+
+            // Use a small timeout if we have paused transfers. We are waiting for the application
+            // to consume response data - it shouldn't take very long.
+            let timeout = if has_paused_transfer {
+                Duration::from_millis(1)
+            } else {
+                MULTI_WAIT_TIMEOUT
+            };
+
+            tracing::trace!(?timeout, "Waiting for socket activity");
+            let active_sockets = self.multi.wait(&mut [], timeout)?;
             if active_sockets == 0 {
                 tracing::trace!("Timed out waiting for activity");
             }

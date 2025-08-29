@@ -46,6 +46,11 @@ pub trait Receiver: Send + 'static {
     fn needs_unpause(&mut self) -> bool {
         false
     }
+
+    /// Report whether this receiver is paused.
+    fn is_paused(&self) -> bool {
+        false
+    }
 }
 
 #[cfg(test)]

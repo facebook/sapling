@@ -41,7 +41,7 @@ impl ChannelReceiver {
 
         // Arbitrary queue limit. Big enough to keep the pipeline full, but small enough
         // to not use "all" the memory with potentially hundreds of concurrent requests.
-        const BODY_CHUNK_QUEUE_SIZE: usize = 1000;
+        const BODY_CHUNK_QUEUE_SIZE: usize = 100;
 
         let (body_tx, body_rx) = if limit_buffer {
             flume::bounded(BODY_CHUNK_QUEUE_SIZE)
@@ -102,5 +102,9 @@ impl Receiver for ChannelReceiver {
         }
 
         !self.body_tx.is_full()
+    }
+
+    fn is_paused(&self) -> bool {
+        self.is_paused
     }
 }

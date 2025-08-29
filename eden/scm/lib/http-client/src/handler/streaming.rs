@@ -182,6 +182,10 @@ impl HandlerExt for Streaming {
     fn needs_unpause(&mut self) -> bool {
         self.receiver.as_mut().is_some_and(|r| r.needs_unpause())
     }
+
+    fn is_paused(&self) -> bool {
+        self.receiver.as_ref().is_some_and(|r| r.is_paused())
+    }
 }
 
 #[cfg(test)]
