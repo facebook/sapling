@@ -1164,6 +1164,8 @@ impl LfsRemote {
         }
     }
 
+    /// Legacy API that reads entire LFS object into memory, passing to callback.
+    /// Prefer using LfsClient::batch_fetch.
     pub fn batch_fetch(
         &self,
         fctx: FetchContext,
@@ -1677,15 +1679,40 @@ impl LfsClient {
         })
     }
 
-    fn batch_fetch(
+    /// Fetch specified objects from remote server, saving results into shared cache. Results are
+    /// streamed into shared cache, skipping only the final chunk if there is a content hash
+    /// mismatch.
+    pub fn batch_fetch(
         &self,
         fctx: FetchContext,
         objs: &HashSet<(Sha256, usize)>,
-        write_to_store: impl FnMut(Sha256, Bytes) -> Result<()>,
+        mut done_cb: impl FnMut(Sha256),
         error_handler: impl FnMut(Sha256, Error),
     ) -> Result<()> {
-        self.remote
-            .batch_fetch(fctx, objs, write_to_store, error_handler)
+        match &self.remote {
+            LfsRemote::Http(http) => {
+                let make_inserter = |hash, _size| StreamingInserter::new(&self.shared.blobs, hash);
+
+                let done_cb = |hash: Sha256, _state: StreamingState| Ok(done_cb(hash));
+
+                LfsRemote::batch_http(
+                    Some(fctx),
+                    http,
+                    objs,
+                    Operation::Download,
+                    |_sha256, _size| unreachable!(),
+                    make_inserter,
+                    done_cb,
+                    error_handler,
+                )
+            }
+
+            LfsRemote::File(file) => LfsRemote::batch_fetch_file(file, objs, |hash, bytes| {
+                self.shared.add_blob(&hash, bytes)?;
+                done_cb(hash);
+                Ok(())
+            }),
+        }
     }
 
     fn batch_upload(
@@ -2303,7 +2330,7 @@ mod tests {
             let resp = remote.batch_fetch(
                 FetchContext::default(),
                 &objs,
-                |_, _| unreachable!(),
+                |_| unreachable!(),
                 |_, _| {},
             );
             // ex. [56] Failure when receiving data from the peer (Proxy CONNECT aborted)
@@ -2337,7 +2364,7 @@ mod tests {
             let resp = remote.batch_fetch(
                 FetchContext::default(),
                 &objs,
-                |_, _| unreachable!(),
+                |_| unreachable!(),
                 |_, _| {},
             );
             assert!(resp.is_err());
@@ -2372,7 +2399,7 @@ mod tests {
                 .iter()
                 .cloned()
                 .collect::<HashSet<_>>();
-            remote.batch_fetch(
+            remote.remote.batch_fetch(
                 FetchContext::default(),
                 &objs,
                 sentinel.as_callback(),
@@ -2415,7 +2442,7 @@ mod tests {
             .collect::<HashSet<_>>();
 
             let out = Arc::new(Mutex::new(Vec::new()));
-            remote.batch_fetch(
+            remote.remote.batch_fetch(
                 FetchContext::default(),
                 &objs,
                 {
@@ -2547,7 +2574,7 @@ mod tests {
             let res = remote.batch_fetch(
                 FetchContext::default(),
                 &objs,
-                |_, _| unreachable!(),
+                |_| unreachable!(),
                 |_, _| {},
             );
             assert!(res.is_err());
@@ -2588,7 +2615,7 @@ mod tests {
                 .cloned()
                 .collect::<HashSet<_>>();
 
-            remote.batch_fetch(
+            remote.remote.batch_fetch(
                 FetchContext::default(),
                 &objs,
                 |_, data| {
@@ -2642,7 +2669,7 @@ mod tests {
             .collect::<HashSet<_>>();
         let out = Arc::new(Mutex::new(Vec::new()));
 
-        remote.batch_fetch(
+        remote.remote.batch_fetch(
             FetchContext::default(),
             &objs,
             {
@@ -2883,7 +2910,7 @@ mod tests {
             // Make sure we get an error (but don't panic).
             assert!(
                 remote
-                    .batch_fetch(FetchContext::default(), &objs, |_, _| Ok(()), |_, _| {})
+                    .batch_fetch(FetchContext::default(), &objs, |_| (), |_, _| {})
                     .is_err()
             );
 
