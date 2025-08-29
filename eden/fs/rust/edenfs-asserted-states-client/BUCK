@@ -1,0 +1,17 @@
+load("@fbsource//tools/build_defs:rust_library.bzl", "rust_library")
+
+oncall("scm_client_infra")
+
+rust_library(
+    name = "edenfs-asserted-states-client",
+    srcs = glob(["src/**/*.rs"]),
+    crate_root = "src/lib.rs",
+    deps = [
+        "fbsource//third-party/rust:anyhow",
+        "fbsource//third-party/rust:fs-err",
+        "fbsource//third-party/rust:serde",
+        "fbsource//third-party/rust:thiserror",
+        "fbsource//third-party/rust:tracing",
+        "//eden/scm/lib/util:util",
+    ],
+)
