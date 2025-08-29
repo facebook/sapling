@@ -562,16 +562,7 @@ impl LfsBlobsStore {
     pub fn add(&self, hash: &Sha256, blob: Bytes) -> Result<()> {
         match self {
             LfsBlobsStore::Loose(path, is_local) => {
-                let path = LfsBlobsStore::path(path, hash);
-                let parent_path = path.parent().unwrap();
-
-                if *is_local {
-                    create_dir(parent_path)?;
-                } else {
-                    create_shared_dir(parent_path)?;
-                }
-
-                let mut file = File::create(path)?;
+                let mut file = create_loose_file(path, hash, *is_local)?;
                 file.write_all(&blob)?;
 
                 if *is_local {
@@ -607,6 +598,19 @@ impl LfsBlobsStore {
             _ => Ok(()),
         }
     }
+}
+
+fn create_loose_file(path: &Path, hash: &Sha256, is_local: bool) -> Result<File> {
+    let path = LfsBlobsStore::path(path, hash);
+    let parent_path = path.parent().unwrap();
+
+    if is_local {
+        create_dir(parent_path)?;
+    } else {
+        create_shared_dir(parent_path)?;
+    }
+
+    Ok(File::create(path)?)
 }
 
 pub(crate) enum LfsStoreEntry {
