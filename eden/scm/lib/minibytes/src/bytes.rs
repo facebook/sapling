@@ -185,31 +185,26 @@ impl Bytes {
     }
 
     /// Convert to `Vec<u8>`, in a zero-copy way if possible.
-    pub fn into_vec(mut self) -> Vec<u8> {
-        let len = self.len();
+    pub fn into_vec(self) -> Vec<u8> {
+        self.take_vec().unwrap_or_else(|b| b.as_slice().to_vec())
+    }
 
-        'zero_copy: {
-            let arc_owner = match self.owner.as_mut() {
-                None => break 'zero_copy,
-                Some(owner) => owner,
-            };
-            let owner = match Arc::get_mut(arc_owner) {
-                None => break 'zero_copy,
-                Some(owner) => owner,
-            };
+    /// Convert to `Vec<u8>` in a zero-copy way if possible, else self.
+    pub fn take_vec(mut self) -> Result<Vec<u8>, Self> {
+        (|| -> Option<Vec<u8>> {
+            let len = self.len();
+            let arc_owner = self.owner.as_mut()?;
+            let owner = Arc::get_mut(arc_owner)?;
             let any = owner.as_any_mut();
-            let mut maybe_vec = any.downcast_mut::<Vec<u8>>();
-            match maybe_vec {
-                Some(ref mut owner) if owner.len() == len => {
-                    let mut result: Vec<u8> = Vec::new();
-                    std::mem::swap(&mut result, owner);
-                    return result;
-                }
-                _ => break 'zero_copy,
-            }
-        }
+            let vec = any.downcast_mut::<Vec<u8>>()?;
 
-        self.as_slice().to_vec()
+            if vec.len() == len {
+                Some(std::mem::take(vec))
+            } else {
+                None
+            }
+        })()
+        .ok_or(self)
     }
 }
 

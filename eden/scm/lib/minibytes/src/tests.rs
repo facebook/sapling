@@ -92,6 +92,20 @@ fn test_into_vec() {
 }
 
 #[test]
+fn test_take_vec() {
+    let v = b"abcd".to_vec();
+    let ptr1 = &v[0] as *const u8;
+    let b = Bytes::from(v);
+    let v = b.take_vec().unwrap(); // zero-copy
+    let ptr2 = &v[0] as *const u8;
+    assert_eq!(ptr1, ptr2);
+
+    let b = Bytes::from(v);
+    let c = b.clone();
+    assert_eq!(b.take_vec().unwrap_err().as_ref(), c.as_ref()); // not zero-copy because refcount > 1
+}
+
+#[test]
 fn test_bytes_debug_format() {
     let v = b"printable\t\r\n\'\"\\\x00\x01\x02printable".to_vec();
     let b = Bytes::from(v);
