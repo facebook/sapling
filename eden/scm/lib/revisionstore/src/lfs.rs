@@ -13,7 +13,6 @@ use std::io::ErrorKind;
 use std::io::Read;
 use std::io::Write;
 use std::iter;
-use std::mem;
 use std::num::NonZeroU64;
 use std::ops::Range;
 use std::path::Path;
@@ -31,7 +30,6 @@ use anyhow::Error;
 use anyhow::Result;
 use anyhow::anyhow;
 use anyhow::bail;
-use anyhow::ensure;
 use anyhow::format_err;
 use async_runtime::block_on;
 use async_runtime::stream_to_iter;
@@ -73,7 +71,6 @@ use lfs_protocol::Sha256 as LfsSha256;
 use mincode::deserialize;
 use mincode::serialize;
 use minibytes::Bytes;
-use parking_lot::Mutex;
 use rand::Rng;
 use rand::thread_rng;
 use redacted::is_redacted;
@@ -98,20 +95,11 @@ use util::path::create_shared_dir;
 use util::path::remove_file;
 
 use crate::datastore::ContentMetadata;
-use crate::datastore::Delta;
-use crate::datastore::HgIdDataStore;
-use crate::datastore::HgIdMutableDeltaStore;
-use crate::datastore::Metadata;
-use crate::datastore::RemoteDataStore;
 use crate::datastore::StoreResult;
 use crate::error::FetchError;
 use crate::error::TransferError;
-use crate::historystore::HgIdMutableHistoryStore;
-use crate::historystore::RemoteHistoryStore;
 use crate::indexedlogutil::Store;
 use crate::indexedlogutil::StoreOpenOptions;
-use crate::localstore::LocalStore;
-use crate::remotestore::HgIdRemoteStore;
 use crate::types::ContentHash;
 use crate::types::StoreKey;
 use crate::util::get_lfs_blobs_path;
@@ -168,7 +156,6 @@ pub struct LfsClient {
     shared: Arc<LfsStore>,
     pub(crate) remote: LfsRemote,
     move_after_upload: bool,
-    ignore_prefetch_errors: bool,
 }
 
 /// Main LFS store to be used within the `ContentStore`.
@@ -746,44 +733,21 @@ impl LfsStore {
         self.blobs.add(hash, blob)
     }
 
+    pub(crate) fn add_blob_and_pointer(&self, key: Key, bytes: Bytes) -> Result<()> {
+        let (lfs_pointer, lfs_blob) = lfs_from_hg_file_blob(key.hgid, &bytes)?;
+        let sha256 = lfs_pointer.sha256();
+        self.blobs.add(&sha256, lfs_blob)?;
+        self.add_pointer(lfs_pointer)
+    }
+
     pub(crate) fn add_pointer(&self, pointer_entry: LfsPointersEntry) -> Result<()> {
         self.pointers.add(pointer_entry)
     }
-}
 
-impl LocalStore for LfsStore {
-    fn get_missing(&self, keys: &[StoreKey]) -> Result<Vec<StoreKey>> {
-        Ok(keys
-            .iter()
-            .filter_map(|k| match k {
-                StoreKey::HgId(key) => {
-                    let entry = self.pointers.get(&k.clone());
-                    match entry {
-                        Ok(None) | Err(_) => Some(k.clone()),
-                        Ok(Some(entry)) => match entry.content_hashes.get(&ContentHashType::Sha256)
-                        {
-                            None => None,
-                            Some(content_hash) => {
-                                let sha256 = content_hash.clone().unwrap_sha256();
-                                match self.blobs.contains(&sha256) {
-                                    Ok(true) => None,
-                                    Ok(false) | Err(_) => Some(StoreKey::Content(
-                                        content_hash.clone(),
-                                        Some(key.clone()),
-                                    )),
-                                }
-                            }
-                        },
-                    }
-                }
-                StoreKey::Content(content_hash, _) => match content_hash {
-                    ContentHash::Sha256(hash) => match self.blobs.contains(hash) {
-                        Ok(true) => None,
-                        Ok(false) | Err(_) => Some(k.clone()),
-                    },
-                },
-            })
-            .collect())
+    pub fn flush(&self) -> Result<()> {
+        self.blobs.flush()?;
+        self.pointers.0.flush()?;
+        Ok(())
     }
 }
 
@@ -832,38 +796,6 @@ pub(crate) fn lfs_from_hg_file_blob(
     let (data, copy_from) = strip_file_metadata(raw_content, SerializationFormat::Hg)?;
     let pointer = LfsPointersEntry::from_file_content(hgid, &data, copy_from)?;
     Ok((pointer, data))
-}
-
-impl HgIdDataStore for LfsStore {
-    fn get(&self, key: StoreKey) -> Result<StoreResult<Vec<u8>>> {
-        match self.blob_impl(key)? {
-            StoreResult::Found((entry, content)) => {
-                let content = rebuild_metadata(content, &entry);
-                // PERF: Consider changing HgIdDataStore::get() to return Bytes to avoid copying data.
-                Ok(StoreResult::Found(content.as_ref().to_vec()))
-            }
-            StoreResult::NotFound(key) => Ok(StoreResult::NotFound(key)),
-        }
-    }
-
-    fn refresh(&self) -> Result<()> {
-        Ok(())
-    }
-}
-
-impl HgIdMutableDeltaStore for LfsStore {
-    fn add(&self, delta: &Delta, _metadata: &Metadata) -> Result<()> {
-        ensure!(delta.base.is_none(), "Deltas aren't supported.");
-        let (lfs_pointer_entry, blob) = lfs_from_hg_file_blob(delta.key.hgid, &delta.data)?;
-        self.blobs.add(&lfs_pointer_entry.sha256(), blob)?;
-        self.pointers.add(lfs_pointer_entry)
-    }
-
-    fn flush(&self) -> Result<Option<Vec<PathBuf>>> {
-        self.blobs.flush()?;
-        self.pointers.0.flush()?;
-        Ok(None)
-    }
 }
 
 impl From<LfsPointersEntry> for ContentMetadata {
@@ -1618,12 +1550,10 @@ impl LfsClient {
         config: &dyn Config,
     ) -> Result<Self> {
         let move_after_upload = config.get_or("lfs", "moveafterupload", || false)?;
-        let ignore_prefetch_errors = config.get_or("lfs", "ignore-prefetch-errors", || false)?;
 
         Ok(Self {
             shared,
             local,
-            ignore_prefetch_errors,
             move_after_upload,
             remote: LfsRemote::from_config(config)?,
         })
@@ -1721,25 +1651,6 @@ impl LfsClient {
     }
 }
 
-impl HgIdRemoteStore for LfsClient {
-    fn datastore(
-        self: Arc<Self>,
-        store: Arc<dyn HgIdMutableDeltaStore>,
-    ) -> Arc<dyn RemoteDataStore> {
-        Arc::new(LfsRemoteStore {
-            store,
-            remote: self,
-        })
-    }
-
-    fn historystore(
-        self: Arc<Self>,
-        _store: Arc<dyn HgIdMutableHistoryStore>,
-    ) -> Arc<dyn RemoteHistoryStore> {
-        unreachable!()
-    }
-}
-
 /// Move a blob contained in `from` to the store `to`.
 ///
 /// After this succeeds, the blob's lifetime will be similar to any shared blob, it is the caller's
@@ -1764,129 +1675,6 @@ fn move_blob(hash: &Sha256, size: u64, from: &LfsStore, to: &LfsStore) -> Result
         .with_context(|| format!("Cannot move pointer for {}", hash))
     })()
     .with_context(|| format!("Cannot move blob {}", hash))
-}
-
-struct LfsRemoteStore {
-    store: Arc<dyn HgIdMutableDeltaStore>,
-    remote: Arc<LfsClient>,
-}
-
-impl RemoteDataStore for LfsRemoteStore {
-    fn prefetch(&self, keys: &[StoreKey]) -> Result<Vec<StoreKey>> {
-        let mut not_found = Vec::new();
-
-        let stores = if let Some(local_store) = self.remote.local.as_ref() {
-            vec![
-                (self.remote.shared.clone(), false),
-                (local_store.clone(), true),
-            ]
-        } else {
-            vec![(self.remote.shared.clone(), false)]
-        };
-
-        let mut obj_set = HashMap::new();
-        let objs = keys
-            .iter()
-            .map(|k| {
-                for (store, is_local) in &stores {
-                    if let Some(pointer) = store.pointers.entry(k)? {
-                        if let Some(content_hash) =
-                            pointer.content_hashes.get(&ContentHashType::Sha256)
-                        {
-                            obj_set.insert(
-                                content_hash.clone().unwrap_sha256(),
-                                (k.clone(), *is_local),
-                            );
-                            return Ok(Some((
-                                content_hash.clone().unwrap_sha256(),
-                                pointer.size.try_into()?,
-                            )));
-                        }
-                    }
-                }
-
-                not_found.push(k.clone());
-                Ok(None)
-            })
-            .filter_map(|res| res.transpose())
-            .collect::<Result<HashSet<_>>>()?;
-
-        // If there are no objects involved at all, then don't make an (expensive) remote request!
-        if objs.is_empty() {
-            return Ok(not_found);
-        }
-
-        let span = info_span!(
-            "LfsRemoteStore::prefetch",
-            num_blobs = objs.len(),
-            size = &0
-        );
-        let _guard = span.enter();
-
-        let size = Arc::new(AtomicUsize::new(0));
-        let obj_set = Arc::new(Mutex::new(obj_set));
-
-        let fctx = FetchContext::sapling_prefetch();
-
-        self.remote.batch_fetch(
-            fctx,
-            &objs,
-            {
-                let remote = self.remote.clone();
-                let size = size.clone();
-                let obj_set = obj_set.clone();
-
-                move |sha256, data| {
-                    size.fetch_add(data.len(), Ordering::Relaxed);
-                    let (_, is_local) = obj_set
-                        .lock()
-                        .remove(&sha256)
-                        .ok_or_else(|| format_err!("Cannot find {}", sha256))?;
-
-                    if is_local {
-                        // Safe to unwrap as the sha256 is coming from a local LFS pointer.
-                        remote.local.as_ref().unwrap().blobs.add(&sha256, data)
-                    } else {
-                        remote.shared.blobs.add(&sha256, data)
-                    }
-                }
-            },
-            |_, _| {},
-        )?;
-        span.record("size", size.load(Ordering::Relaxed));
-
-        let obj_set = mem::take(&mut *obj_set.lock());
-        not_found.extend(obj_set.into_iter().map(|(sha256, (k, _))| match k {
-            StoreKey::Content(content, hgid) => StoreKey::Content(content, hgid),
-            StoreKey::HgId(hgid) => StoreKey::Content(ContentHash::Sha256(sha256), Some(hgid)),
-        }));
-
-        Ok(not_found)
-    }
-
-    fn upload(&self, keys: &[StoreKey]) -> Result<Vec<StoreKey>> {
-        self.remote.upload(keys)
-    }
-}
-
-impl HgIdDataStore for LfsRemoteStore {
-    fn get(&self, key: StoreKey) -> Result<StoreResult<Vec<u8>>> {
-        match self.prefetch(&[key.clone()]) {
-            Ok(_) => self.store.get(key),
-            Err(_) if self.remote.ignore_prefetch_errors => Ok(StoreResult::NotFound(key)),
-            Err(e) => Err(e.context(format!("Failed to fetch: {:?}", key))),
-        }
-    }
-
-    fn refresh(&self) -> Result<()> {
-        Ok(())
-    }
-}
-
-impl LocalStore for LfsRemoteStore {
-    fn get_missing(&self, keys: &[StoreKey]) -> Result<Vec<StoreKey>> {
-        self.store.get_missing(keys)
-    }
 }
 
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
@@ -1952,6 +1740,7 @@ fn join_chunks<T: AsRef<[u8]>>(chunks: &[T]) -> Bytes {
 mod tests {
     use std::str::FromStr;
 
+    use parking_lot::Mutex;
     use quickcheck::quickcheck;
     use storemodel::SerializationFormat;
     use tempfile::TempDir;
@@ -2008,23 +1797,19 @@ mod tests {
         let store = LfsStore::rotated(&dir, &config)?;
 
         let k1 = key("a", "2");
-        let delta = Delta {
-            data: Bytes::from(&[1, 2, 3, 4][..]),
-            base: None,
-            key: k1,
-        };
 
-        store.add(&delta, &Default::default())?;
+        let data = Bytes::from(&[1, 2, 3, 4][..]);
+        store.add_blob_and_pointer(k1, data.clone())?;
         store.flush()?;
 
         let indexedlog_blobs = LfsIndexedLogBlobsStore::rotated(dir.path(), &config)?;
-        let hash = ContentHash::sha256(&delta.data).unwrap_sha256();
+        let hash = ContentHash::sha256(&data).unwrap_sha256();
 
         assert!(indexedlog_blobs.contains(&hash)?);
 
         assert_eq!(
-            Some(delta.data.clone().into()),
-            indexedlog_blobs.get(&hash, delta.data.len() as u64)?
+            Some(data.clone().into()),
+            indexedlog_blobs.get(&hash, data.len() as u64)?
         );
 
         Ok(())
@@ -2052,30 +1837,6 @@ mod tests {
     }
 
     #[test]
-    fn test_add_get_missing() -> Result<()> {
-        let dir = TempDir::new()?;
-        let server = mockito::Server::new();
-        let config = make_lfs_config(&server, &dir, "test_add_get_missing");
-        let store = LfsStore::rotated(&dir, &config)?;
-
-        let k1 = key("a", "2");
-        let delta = Delta {
-            data: Bytes::from(&[1, 2, 3, 4][..]),
-            base: None,
-            key: k1.clone(),
-        };
-
-        assert_eq!(
-            store.get_missing(&[StoreKey::from(&k1)])?,
-            vec![StoreKey::from(&k1)]
-        );
-        store.add(&delta, &Default::default())?;
-        assert_eq!(store.get_missing(&[StoreKey::from(k1)])?, vec![]);
-
-        Ok(())
-    }
-
-    #[test]
     fn test_add_get() -> Result<()> {
         let dir = TempDir::new()?;
         let server = mockito::Server::new();
@@ -2083,15 +1844,12 @@ mod tests {
         let store = LfsStore::rotated(&dir, &config)?;
 
         let k1 = key("a", "2");
-        let delta = Delta {
-            data: Bytes::from(&[1, 2, 3, 4][..]),
-            base: None,
-            key: k1.clone(),
-        };
+        let data = Bytes::from(&[1, 2, 3, 4][..]);
 
-        store.add(&delta, &Default::default())?;
-        let stored = store.get(StoreKey::hgid(k1))?;
-        assert_eq!(StoreResult::Found(delta.data.as_ref().to_vec()), stored);
+        store.add_blob_and_pointer(k1.clone(), data.clone())?;
+
+        let stored = store.blob(StoreKey::hgid(k1))?;
+        assert_eq!(StoreResult::Found(data), stored);
 
         Ok(())
     }
@@ -2159,21 +1917,17 @@ mod tests {
         let store = LfsStore::rotated(&dir, &config)?;
 
         let k1 = key("a", "2");
-        let delta = Delta {
-            data: Bytes::from(&[1, 2, 3, 4][..]),
-            base: None,
-            key: k1.clone(),
-        };
+        let data = Bytes::from(&[1, 2, 3, 4][..]);
 
-        store.add(&delta, &Default::default())?;
+        store.add_blob_and_pointer(k1.clone(), data.clone())?;
         let k = StoreKey::hgid(k1);
-        let stored = store.get(k.clone())?;
-        assert_eq!(StoreResult::Found(delta.data.as_ref().to_vec()), stored);
+        let stored = store.blob(k.clone())?;
+        assert_eq!(StoreResult::Found(data.clone()), stored);
 
         store.flush()?;
 
-        let stored = store.get(k)?;
-        assert_eq!(StoreResult::Found(delta.data.as_ref().to_vec()), stored);
+        let stored = store.blob(k)?;
+        assert_eq!(StoreResult::Found(data), stored);
 
         Ok(())
     }
@@ -2320,21 +2074,17 @@ mod tests {
         let store = LfsStore::rotated(&dir, &config)?;
 
         let k1 = key("a", "2");
-        let delta = Delta {
-            data: Bytes::copy_from_slice(
-                format!(
-                    "\x01\ncopy: {}\ncopyrev: {}\n\x01\nthis is a blob",
-                    k1.path, k1.hgid
-                )
-                .as_bytes(),
-            ),
-            base: None,
-            key: k1.clone(),
-        };
+        let data = Bytes::copy_from_slice(
+            format!(
+                "\x01\ncopy: {}\ncopyrev: {}\n\x01\nthis is a blob",
+                k1.path, k1.hgid
+            )
+            .as_bytes(),
+        );
 
-        store.add(&delta, &Default::default())?;
-        let stored = store.get(StoreKey::hgid(k1))?;
-        assert_eq!(StoreResult::Found(delta.data.as_ref().to_vec()), stored);
+        store.add_blob_and_pointer(k1.clone(), data.clone())?;
+        let stored = store.blob(StoreKey::hgid(k1))?;
+        assert_eq!(StoreResult::Found(Bytes::from("this is a blob")), stored);
 
         Ok(())
     }
@@ -2400,7 +2150,7 @@ mod tests {
                 .iter()
                 .cloned()
                 .collect::<HashSet<_>>();
-            remote.batch_fetch(
+            remote.remote.batch_fetch(
                 FetchContext::default(),
                 &objs,
                 sentinel.as_callback(),
@@ -2687,56 +2437,6 @@ mod tests {
             Ok(())
         }
 
-        #[test]
-        fn test_lfs_remote_datastore() -> Result<()> {
-            let _env_lock = crate::env_lock();
-
-            let cachedir = TempDir::new()?;
-            let lfsdir = TempDir::new()?;
-            let mut server = mockito::Server::new();
-            let config = make_lfs_config(&server, &cachedir, "test_lfs_remote_datastore");
-
-            let blob = &example_blob();
-
-            let _m1 = get_lfs_batch_mock(&mut server, 200, &[blob]);
-            let _m2 = get_lfs_download_mock(&mut server, 200, blob);
-
-            let lfs = Arc::new(LfsStore::rotated(&lfsdir, &config)?);
-            let remote = Arc::new(LfsClient::new(lfs.clone(), None, &config)?);
-
-            let key = key("a/b", "1234");
-
-            let mut content_hashes = HashMap::new();
-            content_hashes.insert(ContentHashType::Sha256, ContentHash::Sha256(blob.sha));
-
-            let pointer = LfsPointersEntry {
-                hgid: key.hgid.clone(),
-                size: blob.size as u64,
-                is_binary: false,
-                copy_from: None,
-                content_hashes,
-            };
-
-            // Populate the pointer store. Usually, this would be done via a previous remotestore call.
-            lfs.pointers.add(pointer)?;
-
-            let remotedatastore = remote.datastore(lfs);
-
-            let expected_delta = Delta {
-                data: blob.content.clone(),
-                base: None,
-                key: key.clone(),
-            };
-
-            let stored = remotedatastore.get(StoreKey::hgid(key))?;
-            assert_eq!(
-                stored,
-                StoreResult::Found(expected_delta.data.as_ref().to_vec())
-            );
-
-            Ok(())
-        }
-
         #[cfg(fbcode_build)]
         #[test]
         fn test_lfs_redacted() -> Result<()> {
@@ -2921,13 +2621,9 @@ mod tests {
         let local_lfs = Arc::new(LfsStore::permanent(&lfsdir, &config)?);
 
         let k1 = key("a", "2");
-        let delta = Delta {
-            data: Bytes::from("THIS IS A LARGE BLOB"),
-            base: None,
-            key: k1.clone(),
-        };
+        let data = Bytes::from("THIS IS A LARGE BLOB");
 
-        local_lfs.add(&delta, &Default::default())?;
+        local_lfs.add_blob_and_pointer(k1.clone(), data.clone())?;
 
         let remote_dir = TempDir::new()?;
         let url = Url::from_file_path(&remote_dir).unwrap();
@@ -2938,15 +2634,14 @@ mod tests {
             Some(local_lfs.clone()),
             &config,
         )?);
-        let remote = remote.datastore(shared_lfs.clone());
         let k = StoreKey::hgid(k1.clone());
         remote.upload(&[k.clone()])?;
 
-        let contentk = StoreKey::Content(ContentHash::sha256(&delta.data), Some(k1));
+        let contentk = StoreKey::Content(ContentHash::sha256(&data), Some(k1));
 
         // The blob was moved from the local store to the shared store.
-        assert_eq!(local_lfs.get(k.clone())?, StoreResult::NotFound(contentk));
-        assert_eq!(shared_lfs.get(k)?, StoreResult::Found(delta.data.to_vec()));
+        assert_eq!(local_lfs.blob(k.clone())?, StoreResult::NotFound(contentk));
+        assert_eq!(shared_lfs.blob(k)?, StoreResult::Found(data));
 
         Ok(())
     }
@@ -2960,16 +2655,11 @@ mod tests {
 
         let data = Bytes::from(&[1, 2, 3, 4][..]);
         let k1 = key("a", "2");
-        let delta = Delta {
-            data,
-            base: None,
-            key: k1.clone(),
-        };
 
-        store.add(&delta, &Default::default())?;
+        store.add_blob_and_pointer(k1.clone(), data.clone())?;
 
         let blob = store.blob(StoreKey::from(k1))?;
-        assert_eq!(blob, StoreResult::Found(delta.data));
+        assert_eq!(blob, StoreResult::Found(data));
 
         Ok(())
     }
@@ -2984,13 +2674,8 @@ mod tests {
         let k1 = key("a", "2");
         let data = Bytes::from(&[1, 2, 3, 4][..]);
         let hash = ContentHash::sha256(&data);
-        let delta = Delta {
-            data,
-            base: None,
-            key: k1.clone(),
-        };
 
-        store.add(&delta, &Default::default())?;
+        store.add_blob_and_pointer(k1.clone(), data)?;
 
         let metadata = store.metadata(StoreKey::from(k1))?;
         assert_eq!(
@@ -3001,29 +2686,6 @@ mod tests {
                 hash,
             })
         );
-
-        Ok(())
-    }
-
-    #[test]
-    fn test_lfs_skips_server_for_empty_batch() -> Result<()> {
-        let cachedir = TempDir::new()?;
-        let lfsdir = TempDir::new()?;
-        let server = mockito::Server::new();
-        let mut config =
-            make_lfs_config(&server, &cachedir, "test_lfs_skips_server_for_empty_batch");
-
-        let store = Arc::new(LfsStore::permanent(&lfsdir, &config)?);
-
-        // 192.0.2.0 won't be routable, since that's TEST-NET-1. This test will fail if we attempt
-        // to connect.
-        setconfig(&mut config, "lfs", "url", "http://192.0.2.0/");
-
-        let lfs = Arc::new(LfsStore::rotated(&lfsdir, &config)?);
-        let remote = Arc::new(LfsClient::new(lfs, None, &config)?);
-
-        let resp = remote.datastore(store).prefetch(&[]);
-        assert!(resp.is_ok());
 
         Ok(())
     }

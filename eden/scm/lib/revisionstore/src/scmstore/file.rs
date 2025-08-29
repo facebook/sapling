@@ -66,7 +66,6 @@ use crate::indexedlogdatastore::IndexedLogHgIdDataStore;
 use crate::lfs::LfsClient;
 use crate::lfs::LfsPointersEntry;
 use crate::lfs::LfsStore;
-use crate::lfs::lfs_from_hg_file_blob;
 use crate::scmstore::activitylogger::ActivityLogger;
 use crate::scmstore::fetch::FetchResults;
 use crate::scmstore::metrics::StoreLocation;
@@ -498,11 +497,8 @@ impl FileStore {
             self.format() == SerializationFormat::Hg,
             "LFS cannot be used with non-Hg serialization format"
         );
-        let (lfs_pointer, lfs_blob) = lfs_from_hg_file_blob(key.hgid, &bytes)?;
-        let sha256 = lfs_pointer.sha256();
 
-        lfs_local.add_blob(&sha256, lfs_blob)?;
-        lfs_local.add_pointer(lfs_pointer)?;
+        lfs_local.add_blob_and_pointer(key, bytes)?;
 
         Ok(())
     }
