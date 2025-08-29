@@ -47,7 +47,7 @@ impl Blob {
     pub fn into_iobuf(self) -> iobuf::IOBufShared {
         match self {
             // safety: `minibytes::Bytes`'s deref as `[u8]` is valid when `bytes` is alive.
-            Self::Bytes(bytes) => unsafe { iobuf::IOBufShared::from_owner(bytes) },
+            Self::Bytes(bytes) => iobuf_from_bytes(bytes),
             Self::IOBuf(buf) => buf,
         }
     }
@@ -124,6 +124,29 @@ impl Blob {
     }
 }
 
+#[cfg(fbcode_build)]
+fn iobuf_from_bytes(bytes: minibytes::Bytes) -> iobuf::IOBufShared {
+    unsafe { iobuf::IOBufShared::from_owner(bytes) }
+}
+
+impl PartialEq for Blob {
+    fn eq(&self, other: &Self) -> bool {
+        match (self, other) {
+            (Self::Bytes(l), Self::Bytes(r)) => l == r,
+            #[cfg(fbcode_build)]
+            (Self::IOBuf(l), Self::IOBuf(r)) => l == r,
+            #[cfg(fbcode_build)]
+            (Self::IOBuf(buf), Self::Bytes(bytes)) => {
+                buf.len() == bytes.len() && buf == &iobuf_from_bytes(bytes.clone())
+            }
+            #[cfg(fbcode_build)]
+            (Self::Bytes(bytes), Self::IOBuf(buf)) => {
+                buf.len() == bytes.len() && buf == &iobuf_from_bytes(bytes.clone())
+            }
+        }
+    }
+}
+
 #[cfg(test)]
 mod test {
     use super::*;
@@ -141,5 +164,29 @@ mod test {
 
         assert_eq!(blob1.sha1(), blob2.sha1());
         assert_eq!(blob1.blake3(), blob2.blake3());
+    }
+
+    #[test]
+    fn test_blob_eq() {
+        let a = Blob::Bytes(minibytes::Bytes::from("hello world!"));
+        let b = Blob::Bytes(minibytes::Bytes::from("hello world!"));
+        assert_eq!(a, b);
+
+        let a = Blob::Bytes(minibytes::Bytes::from("hello world!"));
+        let b = Blob::Bytes(minibytes::Bytes::from("oops"));
+        assert!(a != b);
+
+        #[cfg(fbcode_build)]
+        {
+            let a = Blob::Bytes(minibytes::Bytes::from("hello world!"));
+            let b = Blob::IOBuf(iobuf::IOBufShared::from("hello world!"));
+            assert_eq!(a, b);
+            assert_eq!(b, a);
+
+            let a = Blob::Bytes(minibytes::Bytes::from("hello world!"));
+            let b = Blob::IOBuf(iobuf::IOBufShared::from("oops"));
+            assert!(a != b);
+            assert!(b != a);
+        }
     }
 }
