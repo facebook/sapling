@@ -1041,34 +1041,48 @@ impl FetchState {
                 },
             );
 
-            // Sync buffered chunks to indexedlog so the fetching below hits the mmap'd back data.
-            // The goal is to never hold an entire LFS file's content on the heap.
-            if let Err(err) = cache.flush() {
-                self.errors.other_error(err);
+            if !self.fctx.mode().ignore_result() {
+                // Sync buffered chunks to indexedlog so the fetching below hits the mmap'd back data.
+                // The goal is to never hold an entire LFS file's content on the heap.
+                if let Err(err) = cache.flush() {
+                    self.errors.other_error(err);
+                }
             }
 
             // Unwrap is safe because the only place sha256 could come from is
             // `pending` and all of its entries were put in `key_map`.
             for hash in successful_hashes {
                 for (key, ptr) in key_map.get(&hash).unwrap().iter() {
-                    let data = match cache.get_blob(&hash, ptr.size()) {
-                        Ok(Some(data)) => data,
-                        Ok(None) => {
-                            self.errors.keyed_error(
-                                key.clone(),
-                                anyhow!("LFS file missing from cache after download"),
-                            );
-                            continue;
+                    let file = if self.fctx.mode().ignore_result() {
+                        // Caller doesn't want data - send stub value.
+                        StoreFile {
+                            content: Some(LazyFile::Lfs(
+                                Bytes::new().into(),
+                                ptr.clone(),
+                                self.format,
+                            )),
+                            ..Default::default()
                         }
-                        Err(err) => {
-                            self.errors.keyed_error(key.clone(), err);
-                            continue;
-                        }
-                    };
+                    } else {
+                        let data = match cache.get_blob(&hash, ptr.size()) {
+                            Ok(Some(data)) => data,
+                            Ok(None) => {
+                                self.errors.keyed_error(
+                                    key.clone(),
+                                    anyhow!("LFS file missing from cache after download"),
+                                );
+                                continue;
+                            }
+                            Err(err) => {
+                                self.errors.keyed_error(key.clone(), err);
+                                continue;
+                            }
+                        };
 
-                    let file = StoreFile {
-                        content: Some(LazyFile::Lfs(data, ptr.clone(), self.format)),
-                        ..Default::default()
+                        StoreFile {
+                            content: Some(LazyFile::Lfs(data, ptr.clone(), self.format)),
+                            ..Default::default()
+                        }
                     };
 
                     self.found_attributes(key.clone(), file);
