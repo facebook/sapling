@@ -715,6 +715,8 @@ where
                 resolve(i, result);
             }
         } else {
+            let ignore_result = fctx.mode().ignore_result();
+
             let mut key_to_index = indexed_keys(&keys);
             let mut remaining = keys.len();
             let mut errors = Vec::new();
@@ -741,12 +743,27 @@ where
                 }
             }
             if remaining > 0 {
-                // Report errors. We don't know the index -> error mapping so
-                // we bundle all errors we received.
-                let error = ErrorCollection(Arc::new(errors));
-                for (_key, entry) in key_to_index.into_iter() {
-                    if let Some(index) = entry {
-                        resolve(index, Err(error.clone().into()));
+                if ignore_result {
+                    // In ignore_result mode, we (intentionally) don't get any results. Propagate as `None`.
+                    for (_key, entry) in key_to_index.into_iter() {
+                        if let Some(index) = entry {
+                            resolve(index, Ok(None));
+                        }
+                    }
+                } else {
+                    // In ffi.rs, the error is converted to a String where, later, empty string is assumed to mean no error.
+                    // Ensure we have some error.
+                    if errors.is_empty() {
+                        errors.push(anyhow!("{remaining} items in batch missing, but got no errors from get_batch_iter"));
+                    }
+
+                    // Report errors. We don't know the index -> error mapping so
+                    // we bundle all errors we received.
+                    let error = ErrorCollection(Arc::new(errors));
+                    for (_key, entry) in key_to_index.into_iter() {
+                        if let Some(index) = entry {
+                            resolve(index, Err(error.clone().into()));
+                        }
                     }
                 }
             }

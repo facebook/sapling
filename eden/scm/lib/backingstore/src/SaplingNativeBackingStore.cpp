@@ -207,6 +207,7 @@ folly::Try<std::unique_ptr<folly::IOBuf>> SaplingNativeBackingStore::getBlob(
 void SaplingNativeBackingStore::getBlobBatch(
     SaplingRequestRange requests,
     sapling::FetchMode fetch_mode,
+    bool allow_ignore_result,
     folly::FunctionRef<void(size_t, folly::Try<std::unique_ptr<folly::IOBuf>>)>
         resolve) {
   auto count = requests.size();
@@ -243,6 +244,7 @@ void SaplingNativeBackingStore::getBlobBatch(
       *store_.get(),
       rust::Slice<const Request>{raw_requests.data(), raw_requests.size()},
       fetch_mode,
+      allow_ignore_result,
       std::move(resolver));
 }
 

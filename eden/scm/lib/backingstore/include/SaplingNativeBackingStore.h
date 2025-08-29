@@ -117,6 +117,7 @@ class SaplingNativeBackingStore {
   void getBlobBatch(
       SaplingRequestRange requests,
       sapling::FetchMode fetchMode,
+      bool allowIgnoreResult,
       folly::FunctionRef<
           void(size_t, folly::Try<std::unique_ptr<folly::IOBuf>>)> resolve);
 
