@@ -181,7 +181,7 @@ impl FetchState {
     fn cache_entry(&mut self, entry: Entry) {
         self.files_to_cache.push((entry.node(), entry));
         if self.files_to_cache.len() >= 1_000 {
-            self.flush_to_cache();
+            self.flush_to_indexedlog();
         }
     }
 
@@ -685,6 +685,11 @@ impl FetchState {
             };
         }
 
+        // Flush buffered entries to indexedlog so they are visible to other readers sooner (i.e.
+        // don't wait until after LFS fetching is done). This appends to the indexedlog in-memory
+        // buffer, but will not necessarily sync the logs to disk.
+        self.flush_to_indexedlog();
+
         if found != 0 {
             debug!("    Found = {found}", found = found);
         }
@@ -1181,8 +1186,9 @@ impl FetchState {
 }
 
 impl FetchState {
-    // Flush pending files to file cache.
-    fn flush_to_cache(&mut self) {
+    // Flush pending files to indexedlog file cache. This appends to the indexedlog in-memory
+    // buffer, but will not necessarily sync the logs to disk.
+    fn flush_to_indexedlog(&mut self) {
         if let Some(file_cache) = &self.file_cache {
             if let Err(err) = file_cache.put_batch(std::mem::take(&mut self.files_to_cache)) {
                 self.errors.other_error(err);
@@ -1199,7 +1205,7 @@ impl FetchState {
 
 impl Drop for FetchState {
     fn drop(&mut self) {
-        self.flush_to_cache();
+        self.flush_to_indexedlog();
 
         self.common.results(std::mem::take(&mut self.errors), false);
     }
