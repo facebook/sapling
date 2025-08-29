@@ -20,6 +20,7 @@ use std::path::PathBuf;
 use std::str;
 use std::str::FromStr;
 use std::sync::Arc;
+use std::sync::atomic::AtomicBool;
 use std::sync::atomic::AtomicUsize;
 use std::sync::atomic::Ordering;
 use std::time::Duration;
@@ -1992,6 +1993,70 @@ fn join_chunks<T: AsRef<[u8]>>(chunks: &[T]) -> Bytes {
     result.into()
 }
 
+/// LimitedBufferPool acts both as a pool to reuse Vec<u8> buffers, and as a request limiter
+/// to only allow N concurrent requests at once.
+#[derive(Clone)]
+struct LimitedBufferPool {
+    tx: flume::Sender<Vec<u8>>,
+    rx: flume::Receiver<Vec<u8>>,
+}
+
+impl LimitedBufferPool {
+    pub(crate) fn new(max: usize) -> Self {
+        let (tx, rx) = flume::bounded(max);
+
+        for _ in 0..max {
+            tx.send(Vec::new()).unwrap();
+        }
+
+        Self { tx, rx }
+    }
+
+    /// Get a PoolHandle and a buffer. You should call `handle.put(buf)` when you are done with the
+    /// buf.
+    pub(crate) async fn get(&self) -> (PoolHandle, Vec<u8>) {
+        let mut buf = self.rx.recv_async().await.unwrap();
+        buf.clear();
+
+        (
+            PoolHandle {
+                pool: self.clone(),
+                returned: AtomicBool::new(false),
+            },
+            buf,
+        )
+    }
+
+    /// Internal method - put buf back.
+    fn put(&self, buf: Vec<u8>) {
+        self.tx.try_send(buf).ok();
+    }
+}
+
+struct PoolHandle {
+    pool: LimitedBufferPool,
+    returned: AtomicBool,
+}
+
+impl Drop for PoolHandle {
+    /// User didn't call PoolHandle::put() - release the spot in pool even though we don't have a
+    /// buffer to return.
+    fn drop(&mut self) {
+        if !self.returned.swap(true, Ordering::AcqRel) {
+            self.pool.put(Vec::new());
+        }
+    }
+}
+
+impl PoolHandle {
+    /// Put buf back in pool for reuse.
+    pub(crate) fn put(self, buf: Vec<u8>) {
+        if !self.returned.swap(true, Ordering::AcqRel) {
+            self.pool.put(buf);
+        }
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use std::str::FromStr;
@@ -3138,6 +3203,40 @@ mod tests {
                 _ => panic!("bad state"),
             }
         }
+
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn test_limited_buffer_pool() -> Result<()> {
+        let pool = LimitedBufferPool::new(2);
+
+        let (handle1, mut buf1) = pool.get().await;
+        assert!(buf1.is_empty());
+
+        let (handle2, buf2) = pool.get().await;
+        assert!(buf2.is_empty());
+
+        // Pool empty.
+        assert!(pool.get().now_or_never().is_none());
+
+        // Use buf2 and then put back.
+        buf1.extend_from_slice(b"hello");
+        handle1.put(buf1);
+
+        // Now we can get buf1 back.
+        let (handle1, buf1) = pool.get().await;
+        assert!(buf1.is_empty());
+        assert!(buf1.capacity() >= b"hello".len());
+
+        // Oops - forgot to put back buf2.
+        drop(handle2);
+
+        // That's okay - a spot was still freed up.
+        let (_handle2, buf2) = pool.get().await;
+        assert!(buf2.is_empty());
+
+        drop(handle1);
 
         Ok(())
     }
