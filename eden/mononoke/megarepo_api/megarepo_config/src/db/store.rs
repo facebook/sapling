@@ -56,6 +56,7 @@ mononoke_queries! {
         "SELECT id, repo_id, bookmark, version, serialized_config
         FROM megarepo_sync_config
         WHERE repo_id = {repo_id} AND bookmark = {bookmark} AND version = {version}
+        LIMIT 1
         "
     }
 }
