@@ -109,13 +109,15 @@ use crate::util::get_lfs_pointers_path;
 /// The `LfsPointersStore` holds the mapping between a `HgId` and the content hash (sha256) of the LFS blob.
 struct LfsPointersStore(Store);
 
+#[derive(Clone)]
 pub struct LfsIndexedLogBlobsStore {
-    inner: Store,
+    inner: Arc<Store>,
     chunk_size: usize,
 }
 
 /// The `LfsBlobsStore` holds the actual blobs. Lookup is done via the content hash (sha256) of the
 /// blob.
+#[derive(Clone)]
 pub enum LfsBlobsStore {
     /// Blobs are stored on-disk and will stay on it until garbage collected.
     Loose(PathBuf, bool),
@@ -124,7 +126,7 @@ pub enum LfsBlobsStore {
     IndexedLog(LfsIndexedLogBlobsStore),
 
     /// Allow blobs to be searched in both stores. Writes will only be done to the first one.
-    Union(Box<LfsBlobsStore>, Box<LfsBlobsStore>),
+    Union(Arc<LfsBlobsStore>, Arc<LfsBlobsStore>),
 }
 
 pub struct HttpLfsRemote {
@@ -343,7 +345,7 @@ impl LfsIndexedLogBlobsStore {
     pub fn rotated(path: &Path, config: &dyn Config) -> Result<Self> {
         let path = get_lfs_blobs_path(path)?;
         Ok(Self {
-            inner: LfsIndexedLogBlobsStore::open_options(config)?.rotated(path)?,
+            inner: Arc::new(LfsIndexedLogBlobsStore::open_options(config)?.rotated(path)?),
             chunk_size: LfsIndexedLogBlobsStore::chunk_size(config)?,
         })
     }
@@ -475,10 +477,10 @@ impl LfsBlobsStore {
     /// Store the blobs in a rotated `IndexedLog`, but still allow reading blobs in their loose
     /// format.
     pub fn rotated_or_loose_objects(path: &Path, config: &dyn Config) -> Result<Self> {
-        let indexedlog = Box::new(LfsBlobsStore::IndexedLog(LfsIndexedLogBlobsStore::rotated(
+        let indexedlog = Arc::new(LfsBlobsStore::IndexedLog(LfsIndexedLogBlobsStore::rotated(
             path, config,
         )?));
-        let loose = Box::new(LfsBlobsStore::Loose(get_lfs_objects_path(path)?, false));
+        let loose = Arc::new(LfsBlobsStore::Loose(get_lfs_objects_path(path)?, false));
 
         Ok(LfsBlobsStore::union(indexedlog, loose))
     }
@@ -489,7 +491,7 @@ impl LfsBlobsStore {
         LfsBlobsStore::Loose(path, false)
     }
 
-    fn union(first: Box<LfsBlobsStore>, second: Box<LfsBlobsStore>) -> Self {
+    fn union(first: Arc<LfsBlobsStore>, second: Arc<LfsBlobsStore>) -> Self {
         LfsBlobsStore::Union(first, second)
     }
 
