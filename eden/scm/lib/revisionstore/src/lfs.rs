@@ -636,9 +636,11 @@ enum StreamingState {
 }
 
 impl StreamingState {
-    fn write_chunk(&mut self, chunk: Bytes, hash: Sha256, force: bool) -> Result<()> {
+    fn write_chunk(&mut self, chunk: Bytes, hash: Sha256, force: bool) -> Result<Option<Vec<u8>>> {
         match self {
             StreamingState::Log(store, buf, len) => {
+                let mut took_chunk = false;
+
                 match chunk.take_vec() {
                     Ok(chunk_vec) => {
                         // If buf is empty and chunk_vec is bigger, just use it. The main goal here
@@ -646,6 +648,7 @@ impl StreamingState {
                         // store.chunk_size (i.e. we don't need to allocate buf at all).
                         if buf.is_empty() && buf.capacity() < chunk_vec.len() {
                             *buf = chunk_vec;
+                            took_chunk = true;
                         } else {
                             buf.extend_from_slice(&chunk_vec);
                         }
@@ -668,16 +671,25 @@ impl StreamingState {
                         .inner
                         .append_direct(|buf| Ok(serialize_into(buf, &entry)?))?;
                     *len += data_len;
-                    // Now that we are done serializing, recover our buf.
-                    *buf = entry.data.into_vec();
-                    buf.clear();
+
+                    if took_chunk {
+                        // If we took the vec out of `chunk`, return it back to caller so it can be reused.
+                        return Ok(entry.data.take_vec().ok());
+                    } else {
+                        // Now that we are done serializing, recover our buf for future buffering.
+                        *buf = entry.data.into_vec();
+                        buf.clear();
+                    }
                 }
-                Ok(())
+                Ok(None)
             }
-            StreamingState::File(file) => Ok(file.write_all(&chunk)?),
+            StreamingState::File(file) => {
+                file.write_all(&chunk)?;
+                Ok(chunk.take_vec().ok())
+            }
             StreamingState::Memory(buf) => {
                 buf.extend_from_slice(chunk.as_ref());
-                Ok(())
+                Ok(None)
             }
         }
     }
@@ -711,12 +723,16 @@ impl StreamingInserter {
         }
     }
 
-    pub(crate) fn add_chunk(&mut self, chunk: Bytes) -> Result<()> {
+    pub(crate) fn add_chunk(&mut self, chunk: Bytes) -> Result<Option<Vec<u8>>> {
         self.got_hash.update(chunk.as_ref());
         if let Some(prev) = self.prev_chunk.replace(chunk) {
-            self.state.write_chunk(prev, self.expected_hash, false)?;
+            if let Some(mut buf) = self.state.write_chunk(prev, self.expected_hash, false)? {
+                buf.clear();
+                return Ok(Some(buf));
+            }
         }
-        Ok(())
+
+        Ok(None)
     }
 
     fn finish(mut self) -> Result<(Sha256, StreamingState)> {
@@ -1256,6 +1272,7 @@ impl LfsRemote {
         add_extra: impl Fn(Request) -> Request,
         check_status: impl Fn(StatusCode) -> Result<(), TransferError>,
         http_options: Arc<HttpOptions>,
+        mut chunk_buf: Option<Vec<u8>>,
     ) -> Result<Bytes, FetchError> {
         let span = trace_span!("LfsRemote::send_with_retry", url = %url);
 
@@ -1270,6 +1287,8 @@ impl LfsRemote {
 
             loop {
                 attempt += 1;
+
+                let mut chunk_buf = chunk_buf.take();
 
                 let mut req = client
                     .new_request(url.clone(), method)
@@ -1325,7 +1344,7 @@ impl LfsRemote {
 
                     let start = Instant::now();
                     let mut body = body.decoded();
-                    let mut chunks: Vec<Vec<u8>> = vec![];
+                    let mut chunks: Vec<Vec<u8>> = Vec::new();
                     while let Some(res) = timeout(request_timeout, body.next()).await.transpose() {
                         let chunk = res.map_err(|_| {
                             let request_id = head
@@ -1344,10 +1363,18 @@ impl LfsRemote {
                             }
                         })??;
 
-                        chunks.push(chunk);
+                        if let Some(buf) = chunk_buf.as_mut() {
+                            buf.extend_from_slice(&chunk);
+                        } else {
+                            chunks.push(chunk);
+                        }
                     }
 
-                    Result::<_, TransferError>::Ok(join_chunks(&chunks))
+                    if let Some(buf) = chunk_buf {
+                        Result::<_, TransferError>::Ok(buf.into())
+                    } else {
+                        Result::<_, TransferError>::Ok(join_chunks(&chunks))
+                    }
                 }
                 .await;
 
@@ -1449,6 +1476,7 @@ impl LfsRemote {
                 move |builder| builder.body(batch_json.clone()),
                 |_| Ok(()),
                 http.http_options.clone(),
+                None,
             )
             .await
         };
@@ -1484,6 +1512,7 @@ impl LfsRemote {
             },
             |_| Ok(()),
             http_options,
+            None,
         )
         .await?;
 
@@ -1506,6 +1535,9 @@ impl LfsRemote {
         let mut chunk_start = 0;
 
         let file_end = size.saturating_sub(1);
+
+        // Recyclable buffer we use for each chunk.
+        let mut buf = Some(Vec::with_capacity(chunk_size.get().min(size) as usize));
 
         while chunk_start < file_end {
             let chunk_end = std::cmp::min(file_end, chunk_start + chunk_increment);
@@ -1536,6 +1568,7 @@ impl LfsRemote {
                     })
                 },
                 http_options.clone(),
+                buf,
             )
             .await;
 
@@ -1543,9 +1576,9 @@ impl LfsRemote {
                 Ok(chunk) => {
                     // add_chunk() is blocking and quite slow (sha256 hash and indexedlog append).
                     // It slows down the async execution by more than 50% - we must spawn_blocking.
-                    inserter = spawn_blocking(move || {
-                        inserter.add_chunk(chunk)?;
-                        Ok::<_, Error>(inserter)
+                    (inserter, buf) = spawn_blocking(move || {
+                        let buf = inserter.add_chunk(chunk)?;
+                        Ok::<_, Error>((inserter, buf))
                     })
                     .await??;
                 }
