@@ -43,6 +43,7 @@ use std::io;
 use std::io::Seek;
 use std::io::SeekFrom;
 use std::io::Write;
+use std::ops::Range;
 use std::ops::RangeBounds;
 use std::path::Path;
 use std::pin::Pin;
@@ -318,26 +319,50 @@ impl Log {
             };
 
             self.mem_buf.write_vlq(entry_flags).infallible()?;
-            self.mem_buf.write_vlq(data.len()).infallible()?;
+
+            self.mem_buf.write_vlq(data.len() as u64).infallible()?;
+            let checksum_offset = self.mem_buf.len();
+
+            let checksum_len = match checksum_type {
+                ChecksumType::Auto => unreachable!(),
+                ChecksumType::Xxhash64 => 8,
+                ChecksumType::Xxhash32 => 4,
+            };
+            let data_offset = checksum_offset + checksum_len;
+
+            // Reserve space for writing the checksum.
+            self.mem_buf.resize(data_offset, 0);
+
+            self.mem_buf.write_all(data).infallible()?;
 
             match checksum_type {
                 ChecksumType::Xxhash64 => {
-                    self.mem_buf
-                        .write_u64::<LittleEndian>(xxhash(data))
+                    let hash = xxhash(&self.mem_buf[data_offset..]);
+                    (&mut self.mem_buf[checksum_offset..])
+                        .write_u64::<LittleEndian>(hash)
                         .infallible()?;
                 }
                 ChecksumType::Xxhash32 => {
-                    self.mem_buf
-                        .write_u32::<LittleEndian>(xxhash32(data))
+                    let hash = xxhash32(&self.mem_buf[data_offset..]);
+                    (&mut self.mem_buf[checksum_offset..])
+                        .write_u32::<LittleEndian>(hash)
                         .infallible()?;
                 }
                 ChecksumType::Auto => unreachable!(),
             };
-            let data_offset = self.meta.primary_len + self.mem_buf.len() as u64;
 
-            self.mem_buf.write_all(data).infallible()?;
-            self.update_indexes_for_in_memory_entry(data, offset, data_offset)?;
-            self.update_fold_for_in_memory_entry(data, offset, data_offset)?;
+            let log_data_offset = self.meta.primary_len + data_offset as u64;
+
+            self.update_indexes_for_in_memory_entry(
+                data_offset..self.mem_buf.len(),
+                offset,
+                log_data_offset,
+            )?;
+            self.update_fold_for_in_memory_entry(
+                data_offset..self.mem_buf.len(),
+                offset,
+                log_data_offset,
+            )?;
 
             if let Some(threshold) = self.open_options.auto_sync_threshold {
                 if self.mem_buf.len() as u64 >= threshold {
@@ -1182,21 +1207,23 @@ impl Log {
     /// length, and checksum header in the entry).
     fn update_indexes_for_in_memory_entry(
         &mut self,
-        data: &[u8],
+        mem_offset: Range<usize>,
         offset: u64,
         data_offset: u64,
     ) -> crate::Result<()> {
-        let result = self.update_indexes_for_in_memory_entry_unchecked(data, offset, data_offset);
+        let result =
+            self.update_indexes_for_in_memory_entry_unchecked(mem_offset, offset, data_offset);
         self.maybe_set_index_out_of_sync(result)
     }
 
     /// Similar to `update_indexes_for_in_memory_entry`. But updates `fold` instead.
     fn update_fold_for_in_memory_entry(
         &mut self,
-        data: &[u8],
+        mem_offset: Range<usize>,
         offset: u64,
         data_offset: u64,
     ) -> crate::Result<()> {
+        let data = &self.mem_buf[mem_offset];
         for fold_state in self.all_folds.iter_mut() {
             fold_state.process_entry(data, offset, data_offset + data.len() as u64)?;
         }
@@ -1205,10 +1232,11 @@ impl Log {
 
     fn update_indexes_for_in_memory_entry_unchecked(
         &mut self,
-        data: &[u8],
+        mem_offset: Range<usize>,
         offset: u64,
         data_offset: u64,
     ) -> crate::Result<()> {
+        let data = &self.mem_buf[mem_offset];
         for (index, def) in self.indexes.iter_mut().zip(&self.open_options.index_defs) {
             for index_output in (def.func)(data) {
                 match index_output {
