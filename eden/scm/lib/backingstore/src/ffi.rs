@@ -277,7 +277,8 @@ impl From<ffi::FetchCause> for FetchCause {
 
 /// Select the most popular cause from a list of causes.
 /// If no cause is more than half of the total, return EdenMixed.
-fn select_cause(fetch_causes_iter: impl Iterator<Item = ffi::FetchCause>) -> FetchCause {
+/// Bool return value is `true` if all fetch causes are the same.
+fn select_cause(fetch_causes_iter: impl Iterator<Item = ffi::FetchCause>) -> (FetchCause, bool) {
     let mut most_popular_cause = None;
     let mut len = 0;
     let mut max_count = 0;
@@ -301,12 +302,12 @@ fn select_cause(fetch_causes_iter: impl Iterator<Item = ffi::FetchCause>) -> Fet
         Some(cause) => {
             if max_count > len / 2 {
                 // If the most popular cause is more than half of the total, return it.
-                cause.into()
+                (cause.into(), max_count == len)
             } else {
-                FetchCause::EdenMixed
+                (FetchCause::EdenMixed, false)
             }
         }
-        None => FetchCause::EdenUnknown,
+        None => (FetchCause::EdenUnknown, false),
     }
 }
 
@@ -356,7 +357,7 @@ pub fn sapling_backingstore_get_tree_batch(
     resolver: SharedPtr<ffi::GetTreeBatchResolver>,
 ) {
     let keys: Vec<Key> = requests.iter().map(|req| req.key()).collect();
-    let cause = select_cause(requests.iter().map(|req| req.cause));
+    let cause = select_cause(requests.iter().map(|req| req.cause)).0;
     let fetch_mode = FetchMode::from(fetch_mode);
 
     store.get_tree_batch(
@@ -418,7 +419,7 @@ pub fn sapling_backingstore_get_tree_aux_batch(
     resolver: SharedPtr<ffi::GetTreeAuxBatchResolver>,
 ) {
     let keys: Vec<Key> = requests.iter().map(|req| req.key()).collect();
-    let cause = select_cause(requests.iter().map(|req| req.cause));
+    let cause = select_cause(requests.iter().map(|req| req.cause)).0;
 
     store.get_tree_aux_batch(
         FetchContext::new_with_cause(FetchMode::from(fetch_mode), cause),
@@ -459,7 +460,7 @@ pub fn sapling_backingstore_get_blob_batch(
     resolver: SharedPtr<ffi::GetBlobBatchResolver>,
 ) {
     let keys: Vec<Key> = requests.iter().map(|req| req.key()).collect();
-    let cause = select_cause(requests.iter().map(|req| req.cause));
+    let cause = select_cause(requests.iter().map(|req| req.cause)).0;
 
     store.get_blob_batch(
         FetchContext::new_with_cause(FetchMode::from(fetch_mode), cause),
@@ -498,7 +499,7 @@ pub fn sapling_backingstore_get_file_aux_batch(
     resolver: SharedPtr<ffi::GetFileAuxBatchResolver>,
 ) {
     let keys: Vec<Key> = requests.iter().map(|req| req.key()).collect();
-    let cause = select_cause(requests.iter().map(|req| req.cause));
+    let cause = select_cause(requests.iter().map(|req| req.cause)).0;
 
     store.get_file_aux_batch(
         FetchContext::new_with_cause(FetchMode::from(fetch_mode), cause),
@@ -593,23 +594,32 @@ mod tests {
             ffi::FetchCause::Fs,
         ];
         for cause in causes.iter().cloned() {
-            let selected = select_cause(std::iter::repeat(cause).take(3));
+            let selected = select_cause(std::iter::repeat_n(cause, 3)).0;
             // Repeating causes should always return the same cause
             assert_eq!(selected, cause.into());
         }
         let selected = select_cause(
-            std::iter::repeat(ffi::FetchCause::Thrift)
-                .take(3)
-                .chain(std::iter::repeat(ffi::FetchCause::Prefetch).take(2)),
+            std::iter::repeat_n(ffi::FetchCause::Thrift, 3)
+                .chain(std::iter::repeat_n(ffi::FetchCause::Prefetch, 2)),
         );
 
         // Thrift is more popular than Prefetch (> 50%)
-        assert_eq!(selected, FetchCause::EdenThrift);
+        assert_eq!(selected, (FetchCause::EdenThrift, false));
 
         // There is no single most popular cause
-        assert_eq!(select_cause(causes.into_iter()), FetchCause::EdenMixed);
+        assert_eq!(
+            select_cause(causes.into_iter()),
+            (FetchCause::EdenMixed, false)
+        );
 
         // Empty causes
-        assert_eq!(select_cause(std::iter::empty()), FetchCause::EdenUnknown);
+        assert_eq!(
+            select_cause(std::iter::empty()),
+            (FetchCause::EdenUnknown, false)
+        );
+
+        // All the same cause - return `true`.
+        let selected = select_cause(std::iter::repeat_n(ffi::FetchCause::Prefetch, 5));
+        assert_eq!(selected, (FetchCause::EdenPrefetch, true));
     }
 }
