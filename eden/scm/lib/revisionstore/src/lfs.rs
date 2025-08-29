@@ -621,8 +621,9 @@ fn create_loose_file(path: &Path, hash: &Sha256, is_local: bool) -> Result<File>
 struct StreamingInserter {
     expected_hash: Sha256,
     got_hash: sha2::Sha256,
-    // We buffer one chunk so we can verify the content hash before inserting the final chunk.
-    prev_chunk: Option<Bytes>,
+    size: u64,
+    written_so_far: u64,
+    redacted: bool,
     state: StreamingState,
 }
 
@@ -696,66 +697,111 @@ impl StreamingState {
 }
 
 impl StreamingInserter {
-    pub(crate) fn new(store: &LfsBlobsStore, hash: Sha256) -> Result<Self> {
+    pub(crate) fn new(store: &LfsBlobsStore, hash: Sha256, size: u64) -> Result<Self> {
         match &store {
             LfsBlobsStore::Loose(path, local) => Ok(Self {
                 expected_hash: hash,
                 got_hash: sha2::Sha256::new(),
-                prev_chunk: None,
+                size,
+                written_so_far: 0,
+                redacted: false,
                 state: StreamingState::File(create_loose_file(path, &hash, *local)?),
             }),
             LfsBlobsStore::IndexedLog(store) => Ok(Self {
                 expected_hash: hash,
                 got_hash: sha2::Sha256::new(),
-                prev_chunk: None,
+                size,
+                written_so_far: 0,
+                redacted: false,
                 state: StreamingState::Log(store.clone(), Vec::new(), 0),
             }),
-            LfsBlobsStore::Union(a, _) => Self::new(a, hash),
+            LfsBlobsStore::Union(a, _) => Self::new(a, hash, size),
         }
     }
 
-    pub(crate) fn memory(hash: Sha256, capacity: usize) -> Self {
+    pub(crate) fn memory(hash: Sha256, size: u64) -> Self {
         Self {
             expected_hash: hash,
             got_hash: sha2::Sha256::new(),
-            prev_chunk: None,
-            state: StreamingState::Memory(Vec::with_capacity(capacity)),
+            size,
+            written_so_far: 0,
+            redacted: false,
+            state: StreamingState::Memory(Vec::with_capacity(size as usize)),
         }
     }
 
     pub(crate) fn add_chunk(&mut self, chunk: Bytes) -> Result<Option<Vec<u8>>> {
+        if self.redacted {
+            bail!("can't add chunk - already redacted");
+        }
+
+        if self.written_so_far + chunk.len() as u64 > self.size {
+            bail!(
+                "too much data written: {} > {}",
+                self.written_so_far,
+                self.size
+            );
+        }
+
         self.got_hash.update(chunk.as_ref());
-        if let Some(prev) = self.prev_chunk.replace(chunk) {
-            if let Some(mut buf) = self.state.write_chunk(prev, self.expected_hash, false)? {
-                buf.clear();
-                return Ok(Some(buf));
+
+        if self.written_so_far + chunk.len() as u64 == self.size {
+            // Check content hash before inserting the final chunk.
+            let got_hash: [u8; Sha256::len()] =
+                std::mem::take(&mut self.got_hash).finalize().into();
+            let got_hash = Sha256::from(got_hash);
+            if got_hash != self.expected_hash {
+                bail!(
+                    "content hash mismatch: {} != {}",
+                    self.expected_hash,
+                    got_hash
+                );
             }
+        }
+
+        self.written_so_far += chunk.len() as u64;
+
+        if let Some(mut buf) =
+            self.state
+                .write_chunk(chunk, self.expected_hash, self.written_so_far == self.size)?
+        {
+            buf.clear();
+            return Ok(Some(buf));
         }
 
         Ok(None)
     }
 
-    fn finish(mut self) -> Result<(Sha256, StreamingState)> {
-        // Check content hash before inserting the final chunks. This ensures we don't insert a
-        // "full" corrupted LFS blob.
-        let got_hash: [u8; Sha256::len()] = self.got_hash.finalize().into();
-        let got_hash = Sha256::from(got_hash);
-        if got_hash != self.expected_hash && got_hash != redacted::REDACTED_SHA256 {
-            bail!(
-                "content hash mismatch: {} != {}",
-                self.expected_hash,
-                got_hash
-            );
+    pub(crate) fn redact(&mut self) -> Result<()> {
+        if self.written_so_far > 0 {
+            bail!("can't redact - already wrote {} bytes", self.written_so_far);
         }
-        if let Some(chunk) = self.prev_chunk {
-            self.state.write_chunk(chunk, self.expected_hash, true)?;
+
+        self.state.write_chunk(
+            redacted::REDACTED_CONTENT.to_vec().into(),
+            self.expected_hash,
+            true,
+        )?;
+
+        self.redacted = true;
+
+        Ok(())
+    }
+
+    fn finish(mut self) -> Result<(Sha256, StreamingState)> {
+        if !self.redacted && self.written_so_far < self.size {
+            bail!(
+                "not enough data written: {} < {}",
+                self.written_so_far,
+                self.size
+            );
         }
 
         if let StreamingState::File(file) = &mut self.state {
             file.sync_all()?;
         }
 
-        Ok((got_hash, self.state))
+        Ok((self.expected_hash, self.state))
     }
 }
 
@@ -1221,7 +1267,7 @@ impl LfsRemote {
         error_handler: impl FnMut(Sha256, Error),
     ) -> Result<()> {
         let read_from_store = |_sha256, _size| unreachable!();
-        let make_inserter = |hash, size| Ok(StreamingInserter::memory(hash, size as usize));
+        let make_inserter = |hash, size| Ok(StreamingInserter::memory(hash, size));
         let done_cb = |hash, state| match state {
             StreamingState::Memory(buf) => write_to_store(hash, buf.into()),
             _ => bail!("unexpected StreamingState"),
@@ -1584,7 +1630,7 @@ impl LfsRemote {
                 }
                 Err(err) => match err.error {
                     TransferError::HttpStatus(http::StatusCode::GONE, _) => {
-                        inserter.add_chunk(Bytes::from_static(redacted::REDACTED_CONTENT))?;
+                        inserter.redact()?;
                         return inserter.finish();
                     }
                     _ => return Err(err.into()),
@@ -1755,7 +1801,8 @@ impl LfsClient {
     ) -> Result<()> {
         match &self.remote {
             LfsRemote::Http(http) => {
-                let make_inserter = |hash, _size| StreamingInserter::new(&self.shared.blobs, hash);
+                let make_inserter =
+                    |hash, size| StreamingInserter::new(&self.shared.blobs, hash, size);
 
                 let done_cb = |hash: Sha256, _state: StreamingState| Ok(done_cb(hash));
 
@@ -3005,7 +3052,7 @@ mod tests {
 
         {
             // Incomplete write
-            let mut inserter = StreamingInserter::new(&store, expected_hash)?;
+            let mut inserter = StreamingInserter::new(&store, expected_hash, data.len() as u64)?;
             inserter.add_chunk(data.slice(0..1))?;
             inserter.add_chunk(data.slice(1..2))?;
             assert!(inserter.finish().is_err());
@@ -3014,17 +3061,17 @@ mod tests {
 
         {
             // Corrupted data
-            let mut inserter = StreamingInserter::new(&store, expected_hash)?;
+            let mut inserter = StreamingInserter::new(&store, expected_hash, data.len() as u64)?;
             inserter.add_chunk(data.slice(0..1))?;
             inserter.add_chunk(data.slice(1..2))?;
-            inserter.add_chunk(Bytes::from_static(b"z"))?;
+            assert!(inserter.add_chunk(Bytes::from_static(b"z")).is_err());
             assert!(inserter.finish().is_err());
             assert!(store.get(&expected_hash, data.len() as u64)?.is_none());
         }
 
         {
             // Good
-            let mut inserter = StreamingInserter::new(&store, expected_hash)?;
+            let mut inserter = StreamingInserter::new(&store, expected_hash, data.len() as u64)?;
             inserter.add_chunk(data.slice(0..1))?;
             inserter.add_chunk(data.slice(1..2))?;
             inserter.add_chunk(data.slice(2..3))?;
@@ -3037,7 +3084,7 @@ mod tests {
 
         {
             // Insert in a single chunk
-            let mut inserter = StreamingInserter::new(&store, expected_hash)?;
+            let mut inserter = StreamingInserter::new(&store, expected_hash, data.len() as u64)?;
             inserter.add_chunk(data.clone())?;
             assert!(inserter.finish().is_ok());
             assert_eq!(
@@ -3052,7 +3099,7 @@ mod tests {
             idl_store.chunk_size = 2;
             let store = LfsBlobsStore::IndexedLog(idl_store);
 
-            let mut inserter = StreamingInserter::new(&store, expected_hash)?;
+            let mut inserter = StreamingInserter::new(&store, expected_hash, data.len() as u64)?;
             inserter.add_chunk(data.slice(0..1))?;
             inserter.add_chunk(data.slice(1..2))?;
             inserter.add_chunk(data.slice(2..3))?;
@@ -3069,7 +3116,7 @@ mod tests {
             idl_store.chunk_size = 2;
             let store = LfsBlobsStore::IndexedLog(idl_store);
 
-            let mut inserter = StreamingInserter::new(&store, expected_hash)?;
+            let mut inserter = StreamingInserter::new(&store, expected_hash, data.len() as u64)?;
             inserter.add_chunk(data.slice(0..1).to_vec().into())?;
             inserter.add_chunk(data.slice(1..2).to_vec().into())?;
             inserter.add_chunk(data.slice(2..3).to_vec().into())?;
@@ -3082,7 +3129,7 @@ mod tests {
 
         {
             // Stream to in-memory buffer
-            let mut inserter = StreamingInserter::memory(expected_hash, 0);
+            let mut inserter = StreamingInserter::memory(expected_hash, data.len() as u64);
             inserter.add_chunk(data.clone())?;
 
             let state = inserter.finish()?.1;
