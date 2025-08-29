@@ -1220,6 +1220,39 @@ function mkgitcommit() {
   git commit -aqm "$1"
 }
 
+function showgitrepo() {
+  git log --all  --oneline --graph --decorate
+}
+
+function createdivergentgitbranches() {
+  local branch1
+  local branch2
+  local current_head
+  local changed_file
+  local file_content_override
+
+  current_head=$(git rev-parse --abbrev-ref HEAD)
+  branch1="$1"
+  branch2="$2"
+  changed_file="$3"
+  file_content_override="$4"
+
+  git branch "$branch1" 2>/dev/null
+  git branch "$branch2" 2>/dev/null
+
+  git checkout "$branch1" -q
+  echo "${file_content_override:-This is $changed_file on $branch1}" > file1
+  git add .
+  git commit -qam "Changed $changed_file on $branch1"
+
+  git checkout "$branch2" -q
+  echo "${file_content_override:-This is $changed_file on $branch2}" > file1
+  git add .
+  git commit -qam "Changed $changed_file on $branch2"
+
+  git checkout "$current_head" -q
+}
+
 function enable_replay_verification_hook {
 
 cat >> "$TESTTMP"/replayverification.py <<EOF
