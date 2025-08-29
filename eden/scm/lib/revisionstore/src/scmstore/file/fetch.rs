@@ -639,17 +639,28 @@ impl FetchState {
 
             fetching_keys.remove(&key);
             match res {
-                Ok((file, maybe_lfsptr, cache_entry)) => {
+                Ok((mut file, maybe_lfsptr, cache_entry)) => {
                     if let Some(lfsptr) = maybe_lfsptr {
                         found_pointers += 1;
                         self.found_pointer(key.clone(), lfsptr, false);
                     } else {
                         found += 1;
+
+                        if self.fctx.mode().ignore_result() {
+                            // If caller doesn't care about content, swap to a stub file to avoid
+                            // needlessly shuffling data around.
+                            file = StoreFile {
+                                // We obviously aren't Cas, but this is the simplest LazyFile variant to stub.
+                                content: Some(LazyFile::Cas(Blob::Bytes(minibytes::Bytes::new()))),
+                                aux_data: file.aux_data,
+                            }
+                        }
                     }
-                    self.found_attributes(key, file);
                     if let Some(cache_entry) = cache_entry {
                         self.cache_entry(cache_entry);
                     }
+
+                    self.found_attributes(key, file);
                 }
                 Err(err) => {
                     errors += 1;
