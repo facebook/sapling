@@ -51,6 +51,19 @@ pub trait VLQEncode<T> {
     fn write_vlq(&mut self, value: T) -> io::Result<()>;
 }
 
+pub trait VLQLen {
+    /// Report byte len of encoded value.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use vlqencoding::VLQLen;
+    /// assert_eq!(0u8.vlq_len(), 1);
+    /// assert_eq!(128u8.vlq_len(), 2);
+    /// ```
+    fn vlq_len(self) -> usize;
+}
+
 pub trait VLQDecode<T> {
     /// Read a VLQ byte array from stream and decode it to an integer.
     ///
@@ -208,6 +221,19 @@ macro_rules! impl_unsigned_primitive {
                 Ok((value, size))
             }
         }
+
+        impl VLQLen for $T {
+            fn vlq_len(mut self) -> usize {
+                let mut byte_count = 0;
+                loop {
+                    byte_count += 1;
+                    self >>= 7;
+                    if self == 0 {
+                        return byte_count;
+                    }
+                }
+            }
+        }
     };
 }
 
@@ -237,6 +263,12 @@ macro_rules! impl_signed_primitive {
                     .map(|(n, s)| (((n >> 1) as $T) ^ -((n & 1) as $T), s))
             }
         }
+
+        impl VLQLen for $T {
+            fn vlq_len(self) -> usize {
+                (((self << 1) ^ (self >> (<$U>::BITS - 1))) as $U).vlq_len()
+            }
+        }
     };
 }
 
@@ -263,6 +295,8 @@ mod tests {
             let mut x = $N;
             v.write_vlq(x).expect("write");
 
+            let byte_len = v.len();
+
             // `z` and `y` below are helpful for the compiler to figure out the return type of
             // `read_vlq_at`, and `read_vlq`.
             #[allow(unused_assignments)]
@@ -273,7 +307,7 @@ mod tests {
             let mut c = Cursor::new(v);
             let y = x;
             x = c.read_vlq().unwrap();
-            x == y && y == z && t.1 == c.position() as usize
+            x == y && y == z && t.1 == c.position() as usize && x.vlq_len() == byte_len
         }};
     }
 
