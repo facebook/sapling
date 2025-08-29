@@ -1937,6 +1937,11 @@ impl LfsClient {
             res = Err(err);
         }
 
+        if let LfsRemote::Http(http) = self.remote.as_ref() {
+            // Try to drop any big buffers we are holding on to.
+            http.buf_pool.gc();
+        }
+
         res
     }
 }
@@ -2030,25 +2035,32 @@ fn join_chunks<T: AsRef<[u8]>>(chunks: &[T]) -> Bytes {
 /// to only allow N concurrent requests at once.
 #[derive(Clone)]
 struct LimitedBufferPool {
-    tx: flume::Sender<Vec<u8>>,
-    rx: flume::Receiver<Vec<u8>>,
+    tx: flume::Sender<(Vec<u8>, Instant)>,
+    rx: flume::Receiver<(Vec<u8>, Instant)>,
+    gc_timeout: Duration,
 }
 
 impl LimitedBufferPool {
     pub(crate) fn new(max: usize) -> Self {
         let (tx, rx) = flume::bounded(max);
 
+        let pool = Self {
+            tx,
+            rx,
+            gc_timeout: Duration::from_secs(60),
+        };
+
         for _ in 0..max {
-            tx.send(Vec::new()).unwrap();
+            pool.put(Vec::new());
         }
 
-        Self { tx, rx }
+        pool
     }
 
     /// Get a PoolHandle and a buffer. You should call `handle.put(buf)` when you are done with the
     /// buf.
     pub(crate) async fn get(&self) -> (PoolHandle, Vec<u8>) {
-        let mut buf = self.rx.recv_async().await.unwrap();
+        let (mut buf, _) = self.rx.recv_async().await.unwrap();
         buf.clear();
 
         (
@@ -2062,7 +2074,28 @@ impl LimitedBufferPool {
 
     /// Internal method - put buf back.
     fn put(&self, buf: Vec<u8>) {
-        self.tx.try_send(buf).ok();
+        self.tx.try_send((buf, Instant::now())).ok();
+    }
+
+    /// Drop buffers that haven't been used in the last 1 minute.
+    pub(crate) fn gc(&self) {
+        // Bound our iterations to capacity to be extra sure we can't get stuck looping.
+        for _ in 0..self.tx.capacity().unwrap_or_default() {
+            // Iterate through buffers, oldest first.
+            if let Ok((buf, ts)) = self.rx.try_recv() {
+                if ts.elapsed() < self.gc_timeout {
+                    // Buffer was used in last minute - put it back and stop gc().
+                    self.put(buf);
+                    break;
+                } else {
+                    // Buffer wasn't used in last minute - drop it and put an empty buffer back in.
+                    if buf.capacity() > 0 {
+                        tracing::trace!("dropping LFS buffer of capacity {}", buf.capacity());
+                    }
+                    self.put(Vec::new());
+                }
+            }
+        }
     }
 }
 
@@ -3242,7 +3275,10 @@ mod tests {
 
     #[tokio::test]
     async fn test_limited_buffer_pool() -> Result<()> {
-        let pool = LimitedBufferPool::new(2);
+        let mut pool = LimitedBufferPool::new(2);
+
+        // So buffers are cleared instantly on pool.gc().
+        pool.gc_timeout = Duration::ZERO;
 
         let (handle1, mut buf1) = pool.get().await;
         assert!(buf1.is_empty());
@@ -3266,10 +3302,35 @@ mod tests {
         drop(handle2);
 
         // That's okay - a spot was still freed up.
-        let (_handle2, buf2) = pool.get().await;
+        let (handle2, buf2) = pool.get().await;
         assert!(buf2.is_empty());
 
         drop(handle1);
+        drop(handle2);
+
+        // Put an allocated buffer back.
+        let (handle1, mut buf1) = pool.get().await;
+        buf1.reserve(100);
+        handle1.put(buf1);
+
+        // Take the empty buffer.
+        let (_handle2, _buf2) = pool.get().await;
+        assert_eq!(buf2.capacity(), 0);
+
+        // Sanity check pool has one item in it.
+        assert_eq!(pool.rx.capacity(), Some(2));
+        assert_eq!(pool.rx.len(), 1);
+
+        // Run gc.
+        pool.gc();
+
+        // Pool has same amount of items after gc.
+        assert_eq!(pool.rx.capacity(), Some(2));
+        assert_eq!(pool.rx.len(), 1);
+
+        // Our allocated buffer is now empty.
+        let (_handle1, buf1) = pool.get().await;
+        assert_eq!(buf1.capacity(), 0);
 
         Ok(())
     }
