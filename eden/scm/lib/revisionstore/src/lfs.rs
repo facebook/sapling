@@ -702,12 +702,12 @@ impl StreamingInserter {
         Ok(())
     }
 
-    fn finish(mut self) -> Result<StreamingState> {
+    fn finish(mut self) -> Result<(Sha256, StreamingState)> {
         // Check content hash before inserting the final chunks. This ensures we don't insert a
         // "full" corrupted LFS blob.
         let got_hash: [u8; Sha256::len()] = self.got_hash.finalize().into();
         let got_hash = Sha256::from(got_hash);
-        if got_hash != self.expected_hash {
+        if got_hash != self.expected_hash && got_hash != redacted::REDACTED_SHA256 {
             bail!(
                 "content hash mismatch: {} != {}",
                 self.expected_hash,
@@ -722,7 +722,7 @@ impl StreamingInserter {
             file.sync_all()?;
         }
 
-        Ok(self.state)
+        Ok((got_hash, self.state))
     }
 }
 
@@ -1168,10 +1168,15 @@ impl LfsRemote {
         &self,
         fctx: FetchContext,
         objs: &HashSet<(Sha256, usize)>,
-        write_to_store: impl FnMut(Sha256, Bytes) -> Result<()>,
+        mut write_to_store: impl FnMut(Sha256, Bytes) -> Result<()>,
         error_handler: impl FnMut(Sha256, Error),
     ) -> Result<()> {
         let read_from_store = |_sha256, _size| unreachable!();
+        let make_inserter = |hash, size| Ok(StreamingInserter::memory(hash, size as usize));
+        let done_cb = |hash, state| match state {
+            StreamingState::Memory(buf) => write_to_store(hash, buf.into()),
+            _ => bail!("unexpected StreamingState"),
+        };
         match self {
             LfsRemote::Http(http) => Self::batch_http(
                 Some(fctx),
@@ -1179,7 +1184,8 @@ impl LfsRemote {
                 objs,
                 Operation::Download,
                 read_from_store,
-                write_to_store,
+                make_inserter,
+                done_cb,
                 error_handler,
             ),
             LfsRemote::File(file) => Self::batch_fetch_file(file, objs, write_to_store),
@@ -1192,7 +1198,8 @@ impl LfsRemote {
         read_from_store: impl Fn(Sha256, u64) -> Result<Option<Bytes>> + Send + Clone + 'static,
         error_handler: impl FnMut(Sha256, Error),
     ) -> Result<()> {
-        let write_to_store = |_, _| unreachable!();
+        let make_inserter = |_, _| unreachable!();
+        let done = |_, _| unreachable!();
         match self {
             LfsRemote::Http(http) => Self::batch_http(
                 None,
@@ -1200,7 +1207,8 @@ impl LfsRemote {
                 objs,
                 Operation::Upload,
                 read_from_store,
-                write_to_store,
+                make_inserter,
+                done,
                 error_handler,
             ),
             LfsRemote::File(file) => Self::batch_upload_file(file, objs, read_from_store),
@@ -1454,77 +1462,73 @@ impl LfsRemote {
         client: Arc<HttpClient>,
         chunk_size: NonZeroU64,
         action: ObjectAction,
-        oid: Sha256,
         size: u64,
         http_options: Arc<HttpOptions>,
-    ) -> Result<(Sha256, Bytes)> {
+        mut inserter: StreamingInserter,
+    ) -> Result<(Sha256, StreamingState)> {
         let url = Url::from_str(&action.href.to_string())?;
 
         let chunk_increment = chunk_size.get() - 1;
 
-        let data = async {
-            let mut chunks = Vec::new();
-            let mut chunk_start = 0;
+        let mut chunk_start = 0;
 
-            let file_end = size.saturating_sub(1);
+        let file_end = size.saturating_sub(1);
 
-            while chunk_start < file_end {
-                let chunk_end = std::cmp::min(file_end, chunk_start + chunk_increment);
-                let range = format!("bytes={}-{}", chunk_start, chunk_end);
+        while chunk_start < file_end {
+            let chunk_end = std::cmp::min(file_end, chunk_start + chunk_increment);
+            let range = format!("bytes={}-{}", chunk_start, chunk_end);
 
-                let chunk = LfsRemote::send_with_retry(
-                    fctx.clone(),
-                    client.clone(),
-                    Method::Get,
-                    url.clone(),
-                    |builder| {
-                        let builder = add_action_headers_to_request(builder, &action);
-                        builder.header("Range", &range)
-                    },
-                    |status| {
-                        if status == http::StatusCode::PARTIAL_CONTENT {
-                            return Ok(());
-                        }
+            let chunk_res = LfsRemote::send_with_retry(
+                fctx.clone(),
+                client.clone(),
+                Method::Get,
+                url.clone(),
+                |builder| {
+                    let builder = add_action_headers_to_request(builder, &action);
+                    builder.header("Range", &range)
+                },
+                |status| {
+                    if status == http::StatusCode::PARTIAL_CONTENT {
+                        return Ok(());
+                    }
 
-                        // 200 is okay if we requested the entire file in one chunk.
-                        if chunk_start == 0
-                            && chunk_end == file_end
-                            && status == http::StatusCode::OK
-                        {
-                            return Ok(());
-                        }
+                    // 200 is okay if we requested the entire file in one chunk.
+                    if chunk_start == 0 && chunk_end == file_end && status == http::StatusCode::OK {
+                        return Ok(());
+                    }
 
-                        Err(TransferError::UnexpectedHttpStatus {
-                            expected: http::StatusCode::PARTIAL_CONTENT,
-                            received: status,
-                        })
-                    },
-                    http_options.clone(),
-                )
-                .await?;
+                    Err(TransferError::UnexpectedHttpStatus {
+                        expected: http::StatusCode::PARTIAL_CONTENT,
+                        received: status,
+                    })
+                },
+                http_options.clone(),
+            )
+            .await;
 
-                chunks.push(chunk);
+            match chunk_res {
+                Ok(chunk) => {
+                    // add_chunk() is blocking and quite slow (sha256 hash and indexedlog append).
+                    // It slows down the async execution by more than 50% - we must spawn_blocking.
+                    inserter = spawn_blocking(move || {
+                        inserter.add_chunk(chunk)?;
+                        Ok::<_, Error>(inserter)
+                    })
+                    .await??;
+                }
+                Err(err) => match err.error {
+                    TransferError::HttpStatus(http::StatusCode::GONE, _) => {
+                        inserter.add_chunk(Bytes::from_static(redacted::REDACTED_CONTENT))?;
+                        return inserter.finish();
+                    }
+                    _ => return Err(err.into()),
+                },
+            };
 
-                chunk_start = chunk_end + 1;
-            }
-
-            Result::<_, FetchError>::Ok(join_chunks(&chunks))
+            chunk_start = chunk_end + 1;
         }
-        .await;
 
-        let data = match data {
-            Ok(data) => data,
-            Err(err) => match err.error {
-                TransferError::HttpStatus(http::StatusCode::GONE, _) => {
-                    Bytes::from_static(redacted::REDACTED_CONTENT)
-                }
-                _ => {
-                    return Err(err.into());
-                }
-            },
-        };
-
-        Ok((oid, data))
+        inserter.finish()
     }
 
     /// Fetch and Upload blobs from the LFS server.
@@ -1539,7 +1543,8 @@ impl LfsRemote {
         objs: &HashSet<(Sha256, usize)>,
         operation: Operation,
         read_from_store: impl Fn(Sha256, u64) -> Result<Option<Bytes>> + Send + Clone + 'static,
-        mut write_to_store: impl FnMut(Sha256, Bytes) -> Result<()>,
+        mut make_inserter: impl FnMut(Sha256, u64) -> Result<StreamingInserter>,
+        mut done_cb: impl FnMut(Sha256, StreamingState) -> Result<()>,
         mut error_handler: impl FnMut(Sha256, Error),
     ) -> Result<()> {
         let request_objs_iter = objs.iter().map(|(oid, size)| RequestObject {
@@ -1599,9 +1604,9 @@ impl LfsRemote {
                             http.client.clone(),
                             http.download_chunk_size,
                             action,
-                            oid,
                             object.object.size,
                             http.http_options.clone(),
+                            make_inserter(oid, object.object.size)?,
                         )
                         .map(Some)
                         .right_future(),
@@ -1618,8 +1623,8 @@ impl LfsRemote {
             // to indicate if the result came from the download path, and 'flatten' filters out the
             // Nones.
             for result in stream.flatten() {
-                let (sha, data) = result?;
-                write_to_store(sha, data)?;
+                let (sha, state) = result?;
+                done_cb(sha, state)?;
             }
         }
 
@@ -2972,7 +2977,7 @@ mod tests {
             let mut inserter = StreamingInserter::memory(expected_hash, 0);
             inserter.add_chunk(data.clone())?;
 
-            let state = inserter.finish()?;
+            let state = inserter.finish()?.1;
             match state {
                 StreamingState::Memory(buf) => assert_eq!(buf, data.as_ref()),
                 _ => panic!("bad state"),

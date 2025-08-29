@@ -7,3 +7,4 @@ edition = "2024"
 
 [dependencies]
 blob = { version = "0.1.0", path = "../../blob" }
+sapling-types = { version = "0.1.0", path = "../../types" }

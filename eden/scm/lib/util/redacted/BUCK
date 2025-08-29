@@ -8,5 +8,6 @@ rust_library(
     crate_root = "src/lib.rs",
     deps = [
         "//eden/scm/lib/blob:blob",
+        "//eden/scm/lib/types:types",
     ],
 )
