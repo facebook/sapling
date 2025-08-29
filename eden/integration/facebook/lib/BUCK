@@ -1,8 +1,0 @@
-load("@fbcode_macros//build_defs:python_library.bzl", "python_library")
-
-oncall("scm_client_infra")
-
-python_library(
-    name = "lib",
-    srcs = ["skip.py"],
-)

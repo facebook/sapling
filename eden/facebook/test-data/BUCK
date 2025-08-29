@@ -1,8 +1,0 @@
-load("@fbcode_macros//build_defs:native_rules.bzl", "buck_filegroup")
-
-oncall("scm_client_infra")
-
-buck_filegroup(
-    name = "normalized-hostname",
-    srcs = glob(["**/*"]),
-)
