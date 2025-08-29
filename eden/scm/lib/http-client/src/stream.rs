@@ -119,9 +119,19 @@ where
                         return Poll::Ready(Some(Err(E::from(e))));
                     }
 
-                    // Try converting our deserializing Bytes back to Vec<u8>. This will be
-                    // zero-copy if T::deserialize did not retain any slices.
-                    *this.buffer = std::mem::take(this.deserializing).into_vec();
+                    match std::mem::take(this.deserializing).take_vec() {
+                        Ok(vec) => {
+                            // We recovered the buffer zero-copy - reuse the entire thing.
+                            *this.buffer = vec;
+                        }
+                        Err(bytes) => {
+                            // Couldn't recover the buffer (because T::deserialize retained a slice).
+                            // Copy unused part into a new buffer.
+                            *this.buffer = Vec::with_capacity(*this.threshold);
+                            this.buffer.extend_from_slice(&bytes[*this.position..]);
+                            *this.position = 0;
+                        }
+                    }
                 }
             }
 
