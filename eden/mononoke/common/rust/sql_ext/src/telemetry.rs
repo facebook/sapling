@@ -134,7 +134,7 @@ fn log_query_telemetry_impl(
     #[cfg(not(fbcode_build))]
     {
         // To remove typechecker unused variable warning in OSS
-        let _ = (sql_query_tel, granularity, repo_ids, query_name);
+        let _ = (sql_query_tel, granularity, repo_ids, query_name, shard_name);
     }
     match query_tel {
         #[cfg(fbcode_build)]
@@ -441,6 +441,11 @@ define_stats! {
         Sum, Average
     ),
     error: dynamic_timeseries("{}.error", (shard_name: String); Sum, Average),
+    query_retry_attempts: dynamic_timeseries(
+        "{}.{}.{}.retry_attempts",
+        (shard_name: String, query_name: String, error_key: String);
+        Sum, Average, Count;
+    ),
 
     // Wait stats
     wait_count: dynamic_timeseries(
