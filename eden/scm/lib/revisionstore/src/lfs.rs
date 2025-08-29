@@ -390,7 +390,7 @@ impl LfsIndexedLogBlobsStore {
         // unwrap safety: chunks isn't empty.
         let size = chunks.last().unwrap().1.range.end;
 
-        let mut res = Vec::with_capacity(size);
+        let mut blob_builder = blob::Builder::with_capacity(size);
 
         let mut next_start = 0;
         for (_, entry) in chunks.into_iter() {
@@ -416,14 +416,15 @@ impl LfsIndexedLogBlobsStore {
 
             next_start = entry.range.end;
 
-            res.extend_from_slice(entry.data.slice(range_in_data).as_ref());
+            blob_builder.append(entry.data.slice(range_in_data));
         }
 
-        let data: Bytes = res.into();
+        let data = blob_builder.into_blob();
+
         // Skip SHA256 hash check on reading. Data integrity is checked by indexedlog xxhash and
         // length. The SHA256 check can be slow (~90% of data reading time!).
         if data.len() as u64 == total_size || is_redacted(&data) {
-            Ok(Some(data.into()))
+            Ok(Some(data))
         } else {
             Ok(None)
         }
@@ -438,7 +439,7 @@ impl LfsIndexedLogBlobsStore {
     fn chunk(mut data: Bytes, chunk_size: usize) -> impl Iterator<Item = (Range<usize>, Bytes)> {
         let mut start = 0;
         iter::from_fn(move || {
-            if data.len() == 0 {
+            if data.is_empty() {
                 None
             } else {
                 let size = min(chunk_size, data.len());
@@ -536,9 +537,11 @@ impl LfsBlobsStore {
 
                 let mut buf = Vec::new();
                 file.read_to_end(&mut buf)?;
-                let blob = Bytes::from(buf);
-                if &ContentHash::sha256(&blob).unwrap_sha256() == hash || is_redacted(&blob) {
-                    Some(blob.into())
+                let bytes = Bytes::from(buf);
+                let apparent_hash = ContentHash::sha256(&bytes).unwrap_sha256();
+                let blob = Blob::from(bytes);
+                if &apparent_hash == hash || is_redacted(&blob) {
+                    Some(blob)
                 } else {
                     None
                 }
@@ -2771,7 +2774,7 @@ mod tests {
                 FetchContext::default(),
                 &objs,
                 |_, data| {
-                    assert!(is_redacted(&data));
+                    assert!(is_redacted(&data.into()));
                     Ok(())
                 },
                 |_, _| {},
