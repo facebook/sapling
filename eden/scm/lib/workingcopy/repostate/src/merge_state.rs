@@ -52,11 +52,7 @@ use types::hgid::NULL_ID;
 /// x: unsupported advisory record type (used in tests)
 /// l: the labels for the parts of the merge.
 ///
-/// Merge driver run states (experimental):
-/// u: driver-resolved files unmarked -- needs to be run next time we're about
-///    to resolve or commit
-/// m: driver-resolved files marked -- only needs to be run before commit
-/// s: success/skipped -- does not need to be run any more
+/// Merge driver run states (experimental), see [`MergeDriverState`] for the details.
 ///
 /// Merge record states (stored in self._state, indexed by filename):
 /// u: unresolved conflict
@@ -693,6 +689,11 @@ impl ConflictState {
     }
 }
 
+/// Merge driver run states:
+/// u: driver-resolved files unmarked -- needs to be run next time we're about
+///    to resolve or commit
+/// m: driver-resolved files marked -- only needs to be run before commit
+/// s: success/skipped -- does not need to be run any more
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub enum MergeDriverState {
     Unmarked,
