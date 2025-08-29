@@ -42,6 +42,7 @@ pub struct CborStream<T, S, B, E> {
     incoming: S,
     incoming_done: bool,
     buffer: Vec<u8>,
+    deserializing: minibytes::Bytes,
     threshold: usize,
     position: usize,
     terminated: bool,
@@ -54,6 +55,7 @@ impl<T, S, B, E> CborStream<T, S, B, E> {
             incoming: body,
             incoming_done: false,
             buffer: Vec::new(),
+            deserializing: minibytes::Bytes::new(),
             threshold: SMALL_BUFFER_SIZE,
             position: 0,
             terminated: false,
@@ -74,12 +76,25 @@ where
     fn poll_next(self: Pin<&mut Self>, cx: &mut Context) -> Poll<Option<Self::Item>> {
         let mut this = self.project();
 
-        while !(*this.terminated || *this.incoming_done && *this.position == this.buffer.len()) {
+        while !(*this.terminated
+            || *this.incoming_done
+                && *this.position == this.buffer.len().max(this.deserializing.len()))
+        {
+            if this.deserializing.is_empty() {
+                // Before we try deserializing, shuffle this.buffer to this.deserializing.
+                // This lets us use as_deserialize_hint() for zero copy Bytes deserializing.
+                *this.deserializing = std::mem::take(this.buffer).into();
+            }
+
+            let deserialized = this.deserializing.as_deserialize_hint(|| {
+                let mut de = Deserializer::from_slice(&this.deserializing[*this.position..]);
+                T::deserialize(&mut de).map(|t| (t, de.byte_offset()))
+            });
+
             // Attempt to deserialize a single item from the buffer.
-            let mut de = Deserializer::from_slice(&this.buffer[*this.position..]);
-            match T::deserialize(&mut de) {
-                Ok(value) => {
-                    *this.position += de.byte_offset();
+            match deserialized {
+                Ok((value, byte_offset)) => {
+                    *this.position += byte_offset;
 
                     // Reset the buffer threshold in case we had expanded it to fit a very large
                     // value. Do not shrink it to smaller size than MEDIUM_BUFFER_SIZE, lest
@@ -99,9 +114,15 @@ where
 
                     // Check if underlying stream is done.
                     if *this.incoming_done {
-                        let e = CborStreamError::TrailingData(this.buffer.len() - *this.position);
+                        let e = CborStreamError::TrailingData(
+                            this.deserializing.len() - *this.position,
+                        );
                         return Poll::Ready(Some(Err(E::from(e))));
                     }
+
+                    // Try converting our deserializing Bytes back to Vec<u8>. This will be
+                    // zero-copy if T::deserialize did not retain any slices.
+                    *this.buffer = std::mem::take(this.deserializing).into_vec();
                 }
             }
 
