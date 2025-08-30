@@ -570,8 +570,8 @@ ImmediateFuture<EntryAttributes> VirtualInode::getEntryAttributes(
   // means there's no need for a Tree case, as Trees are always
   // directories. It's included to check that the visitor here is
   // exhaustive.
-  auto entryTypeFuture = ImmediateFuture<std::optional<TreeEntryType>>{
-      PathError{EINVAL, path, std::string_view{"type not requested"}}};
+  auto entryTypeFuture =
+      ImmediateFuture<std::optional<TreeEntryType>>{std::nullopt};
   if (requestedAttributes.contains(ENTRY_ATTRIBUTE_SOURCE_CONTROL_TYPE)) {
     entryTypeFuture =
         getTreeEntryType(path, fetchContext, windowsSymlinksEnabled);
