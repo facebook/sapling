@@ -46,7 +46,7 @@ class SqliteInodeCatalogTest
 };
 
 TEST_P(SqliteInodeCatalogTest, roundTripThroughSaveAndLoad) {
-  auto hash = ObjectId::fromHex("0123456789012345678901234567890123456789");
+  auto id = ObjectId::fromHex("0123456789012345678901234567890123456789");
 
   auto overlay = mount_.getEdenMount()->getOverlay();
 
@@ -55,7 +55,7 @@ TEST_P(SqliteInodeCatalogTest, roundTripThroughSaveAndLoad) {
   auto ino3 = overlay->allocateInodeNumber();
 
   DirContents dir(kPathMapDefaultCaseSensitive);
-  dir.emplace("one"_pc, S_IFREG | 0644, ino2, hash);
+  dir.emplace("one"_pc, S_IFREG | 0644, ino2, id);
   dir.emplace("two"_pc, S_IFDIR | 0755, ino3);
 
   overlay->saveOverlayDir(ino1, dir);

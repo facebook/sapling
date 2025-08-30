@@ -14,15 +14,15 @@ namespace facebook::eden {
 class LoggingFetchContext : public ObjectFetchContext {
  public:
   struct Request {
-    Request(ObjectType t, ObjectId h, Origin o) : type{t}, hash{h}, origin{o} {}
+    Request(ObjectType t, ObjectId h, Origin o) : type{t}, id{h}, origin{o} {}
 
     ObjectType type;
-    ObjectId hash;
+    ObjectId id;
     Origin origin;
   };
 
-  void didFetch(ObjectType type, const ObjectId& hash, Origin origin) override {
-    requests.emplace_back(type, hash, origin);
+  void didFetch(ObjectType type, const ObjectId& id, Origin origin) override {
+    requests.emplace_back(type, id, origin);
   }
 
   OptionalProcessId getClientPid() const override {

@@ -178,9 +178,9 @@ TEST_F(FakeSubstringFilteredBackingStoreTest, getNonExistent) {
           ObjectFetchContext::getNullContext()),
       std::domain_error,
       "commit 1 not found");
-  auto hash = makeTestHash("1");
+  auto id = makeTestId("1");
   auto blobFilterId =
-      FilteredObjectId(hash, FilteredObjectIdType::OBJECT_TYPE_BLOB);
+      FilteredObjectId(id, FilteredObjectIdType::OBJECT_TYPE_BLOB);
   EXPECT_THROW_RE(
       filteredStore_->getBlob(
           ObjectId{blobFilterId.getValue()},
@@ -188,7 +188,7 @@ TEST_F(FakeSubstringFilteredBackingStoreTest, getNonExistent) {
       std::domain_error,
       "blob 0.*1 not found");
   auto relPath = RelativePathPiece{"foo/bar"};
-  auto treeFilterId = FilteredObjectId(relPath, kTestFilter1, hash);
+  auto treeFilterId = FilteredObjectId(relPath, kTestFilter1, id);
   EXPECT_THROW_RE(
       filteredStore_->getTree(
           ObjectId{treeFilterId.getValue()},
@@ -199,11 +199,10 @@ TEST_F(FakeSubstringFilteredBackingStoreTest, getNonExistent) {
 
 TEST_F(FakeSubstringFilteredBackingStoreTest, getBlob) {
   // Add a blob to the tree
-  auto hash = makeTestHash("1");
-  auto filteredHash =
-      ObjectId{FilteredObjectId{hash, FilteredObjectIdType::OBJECT_TYPE_BLOB}
-                   .getValue()};
-  auto* storedBlob = wrappedStore_->putBlob(hash, "foobar");
+  auto id = makeTestId("1");
+  auto filteredId = ObjectId{
+      FilteredObjectId{id, FilteredObjectIdType::OBJECT_TYPE_BLOB}.getValue()};
+  auto* storedBlob = wrappedStore_->putBlob(id, "foobar");
   EXPECT_EQ("foobar", blobContents(storedBlob->get()));
 
   auto executor = folly::ManualExecutor();
@@ -211,13 +210,11 @@ TEST_F(FakeSubstringFilteredBackingStoreTest, getBlob) {
   // The blob is not ready yet, so calling getBlob() should yield not-ready
   // Future objects.
   auto future1 =
-      filteredStore_
-          ->getBlob(filteredHash, ObjectFetchContext::getNullContext())
+      filteredStore_->getBlob(filteredId, ObjectFetchContext::getNullContext())
           .via(&executor);
   EXPECT_FALSE(future1.isReady());
   auto future2 =
-      filteredStore_
-          ->getBlob(filteredHash, ObjectFetchContext::getNullContext())
+      filteredStore_->getBlob(filteredId, ObjectFetchContext::getNullContext())
           .via(&executor);
   EXPECT_FALSE(future2.isReady());
 
@@ -231,13 +228,11 @@ TEST_F(FakeSubstringFilteredBackingStoreTest, getBlob) {
 
   // But subsequent calls to getBlob() should still yield unready futures.
   auto future3 =
-      filteredStore_
-          ->getBlob(filteredHash, ObjectFetchContext::getNullContext())
+      filteredStore_->getBlob(filteredId, ObjectFetchContext::getNullContext())
           .via(&executor);
   EXPECT_FALSE(future3.isReady());
   auto future4 =
-      filteredStore_
-          ->getBlob(filteredHash, ObjectFetchContext::getNullContext())
+      filteredStore_->getBlob(filteredId, ObjectFetchContext::getNullContext())
           .via(&executor);
   EXPECT_FALSE(future4.isReady());
   bool future4Failed = false;
@@ -266,8 +261,7 @@ TEST_F(FakeSubstringFilteredBackingStoreTest, getBlob) {
   // Calling setReady() should make the pending futures ready, as well
   // as all subsequent Futures returned by getBlob()
   auto future5 =
-      filteredStore_
-          ->getBlob(filteredHash, ObjectFetchContext::getNullContext())
+      filteredStore_->getBlob(filteredId, ObjectFetchContext::getNullContext())
           .via(&executor);
   EXPECT_FALSE(future5.isReady());
 
@@ -279,8 +273,7 @@ TEST_F(FakeSubstringFilteredBackingStoreTest, getBlob) {
   // Subsequent calls to getBlob() should return Futures that are immediately
   // ready since we called setReady() above.
   auto future6 =
-      filteredStore_
-          ->getBlob(filteredHash, ObjectFetchContext::getNullContext())
+      filteredStore_->getBlob(filteredId, ObjectFetchContext::getNullContext())
           .via(&executor);
   executor.drain();
   ASSERT_TRUE(future6.isReady());
@@ -291,28 +284,28 @@ TEST_F(FakeSubstringFilteredBackingStoreTest, getTree) {
   // Populate some files in the store
   auto [runme, runme_id] =
       wrappedStore_->putBlob("#!/bin/sh\necho 'hello world!'\n");
-  auto foo_id = makeTestHash("f00");
+  auto foo_id = makeTestId("f00");
   (void)wrappedStore_->putBlob(foo_id, "this is foo\n");
   auto [bar, bar_id] = wrappedStore_->putBlob("barbarbarbar\n");
 
   // Populate a couple directories as well
   auto* dir1 = wrappedStore_->putTree(
-      makeTestHash("abc"),
+      makeTestId("abc"),
       {
           // "foo" will be filtered once the filter is applied
           {"foo", foo_id},
           {"runme", runme_id, FakeBlobType::EXECUTABLE_FILE},
       });
-  EXPECT_EQ(makeTestHash("abc"), dir1->get().getObjectId());
+  EXPECT_EQ(makeTestId("abc"), dir1->get().getObjectId());
   auto* dir2 = wrappedStore_->putTree(
       {{"README", wrappedStore_->putBlob("docs go here")}});
 
   // Create a root directory and populate the root tree
-  auto rootHash = makeTestHash("10101010");
-  auto treeHash = FilteredObjectId(RelativePath{""}, kTestFilter1, rootHash);
-  auto treeOID = ObjectId{treeHash.getValue()};
+  auto rootId = makeTestId("10101010");
+  auto treeId = FilteredObjectId(RelativePath{""}, kTestFilter1, rootId);
+  auto treeOID = ObjectId{treeId.getValue()};
   auto* rootDir = wrappedStore_->putTree(
-      rootHash,
+      rootId,
       {
           {"bar", bar_id},
           {"dir1", dir1},
@@ -420,14 +413,14 @@ TEST_F(FakeSubstringFilteredBackingStoreTest, getTree) {
 
 TEST_F(FakeSubstringFilteredBackingStoreTest, getRootTree) {
   // Set up one commit with a root tree
-  auto dir1Hash = makeTestHash("abc");
-  auto dir1FOID = FilteredObjectId(RelativePath{""}, kTestFilter1, dir1Hash);
+  auto dir1Id = makeTestId("abc");
+  auto dir1FOID = FilteredObjectId(RelativePath{""}, kTestFilter1, dir1Id);
   auto* dir1 = wrappedStore_->putTree(
-      dir1Hash, {{"foo", wrappedStore_->putBlob("foo\n")}});
+      dir1Id, {{"foo", wrappedStore_->putBlob("foo\n")}});
   auto* commit1 = wrappedStore_->putCommit(RootId{"1"}, dir1);
   // Set up a second commit, but don't actually add the tree object for this
   // one
-  auto* commit2 = wrappedStore_->putCommit(RootId{"2"}, makeTestHash("3"));
+  auto* commit2 = wrappedStore_->putCommit(RootId{"2"}, makeTestId("3"));
 
   auto executor = folly::ManualExecutor();
 
@@ -526,33 +519,33 @@ TEST_F(FakeSubstringFilteredBackingStoreTest, testCompareBlobObjectsById) {
   // Populate some blobs for testing.
   //
   // NOTE: FakeBackingStore is very dumb and implements its
-  // compareObjectsById function as a bytewise comparison of hashes. Therefore,
-  // in order for two blobs to be equal, their hashes (NOT their contents) need
+  // compareObjectsById function as a bytewise comparison of ids. Therefore,
+  // in order for two blobs to be equal, their ids (NOT their contents) need
   // to be equal.
-  auto foobarHash = makeTestHash("f00");
-  (void)wrappedStore_->putBlob(foobarHash, "foobar");
-  auto footballHash = makeTestHash("f001ba11");
-  (void)wrappedStore_->putBlob(footballHash, "football");
+  auto foobarId = makeTestId("f00");
+  (void)wrappedStore_->putBlob(foobarId, "foobar");
+  auto footballId = makeTestId("f001ba11");
+  (void)wrappedStore_->putBlob(footballId, "football");
 
   // populate some trees
-  auto rootDirHash = makeTestHash("f00d");
+  auto rootDirId = makeTestId("f00d");
   auto* rootDirTree = wrappedStore_->putTree(
-      rootDirHash,
+      rootDirId,
       {
-          {"foobar1", foobarHash},
-          {"foobar2", foobarHash},
-          {"football1", footballHash},
-          {"football2", footballHash},
+          {"foobar1", foobarId},
+          {"foobar2", foobarId},
+          {"football1", footballId},
+          {"football2", footballId},
       });
-  auto fooDirExtendedHash = makeTestHash("f00d1e");
+  auto fooDirExtendedId = makeTestId("f00d1e");
   auto* fooDirExtendedTree = wrappedStore_->putTree(
-      fooDirExtendedHash,
+      fooDirExtendedId,
       {
-          {"foobar1", foobarHash},
-          {"foobar2", foobarHash},
-          {"foobar3", foobarHash},
-          {"football1", footballHash},
-          {"football2", footballHash},
+          {"foobar1", foobarId},
+          {"foobar2", foobarId},
+          {"foobar3", foobarId},
+          {"football1", footballId},
+          {"football2", footballId},
       });
 
   // Set up one commit with a root tree
@@ -661,52 +654,52 @@ TEST_F(FakeSubstringFilteredBackingStoreTest, testCompareTreeObjectsById) {
   // Populate some blobs for testing.
   //
   // NOTE: FakeBackingStore is very dumb and implements its
-  // compareObjectsById function as a bytewise comparison of hashes. Therefore,
-  // in order for two blobs to be equal, their hashes (NOT their contents) need
+  // compareObjectsById function as a bytewise comparison of ids. Therefore,
+  // in order for two blobs to be equal, their ids (NOT their contents) need
   // to be equal.
-  auto foobarHash = makeTestHash("f00");
-  (void)wrappedStore_->putBlob(foobarHash, "foobar");
-  auto footballHash = makeTestHash("f001ba11");
-  (void)wrappedStore_->putBlob(footballHash, "football");
-  auto bazbarHash = makeTestHash("ba5ba4");
-  (void)wrappedStore_->putBlob(bazbarHash, "bazbar");
-  auto bazballHash = makeTestHash("ba5ba11");
-  (void)wrappedStore_->putBlob(bazballHash, "bazball");
+  auto foobarId = makeTestId("f00");
+  (void)wrappedStore_->putBlob(foobarId, "foobar");
+  auto footballId = makeTestId("f001ba11");
+  (void)wrappedStore_->putBlob(footballId, "football");
+  auto bazbarId = makeTestId("ba5ba4");
+  (void)wrappedStore_->putBlob(bazbarId, "bazbar");
+  auto bazballId = makeTestId("ba5ba11");
+  (void)wrappedStore_->putBlob(bazballId, "bazball");
 
   // populate some trees
-  auto grandchildTreeHash = makeTestHash("ba5");
+  auto grandchildTreeId = makeTestId("ba5");
   auto grandchildTree = wrappedStore_->putTree(
-      grandchildTreeHash,
+      grandchildTreeId,
       {
-          {"bazbar", bazbarHash},
-          {"bazball", bazballHash},
+          {"bazbar", bazbarId},
+          {"bazball", bazballId},
       });
-  auto childTreeHash = makeTestHash("f00ba5");
+  auto childTreeId = makeTestId("f00ba5");
   auto childTree =
-      wrappedStore_->putTree(childTreeHash, {{"grandchild", grandchildTree}});
-  auto modifiedChildTreeHash = makeTestHash("f00ba52");
+      wrappedStore_->putTree(childTreeId, {{"grandchild", grandchildTree}});
+  auto modifiedChildTreeId = makeTestId("f00ba52");
   auto modifiedChildTree = wrappedStore_->putTree(
-      modifiedChildTreeHash,
-      {{"grandchild", grandchildTree}, {"newentry", foobarHash}});
-  auto rootDirHash = makeTestHash("f00d");
+      modifiedChildTreeId,
+      {{"grandchild", grandchildTree}, {"newentry", foobarId}});
+  auto rootDirId = makeTestId("f00d");
   auto* rootDirTree = wrappedStore_->putTree(
-      rootDirHash,
+      rootDirId,
       {
-          {"foobar1", foobarHash},
-          {"foobar2", foobarHash},
-          {"football1", footballHash},
-          {"football2", footballHash},
+          {"foobar1", foobarId},
+          {"foobar2", foobarId},
+          {"football1", footballId},
+          {"football2", footballId},
           {"child", childTree},
       });
 
-  auto modifiedRootDirHash = makeTestHash("f00e");
+  auto modifiedRootDirId = makeTestId("f00e");
   auto* modifiedRootDirTree = wrappedStore_->putTree(
-      modifiedRootDirHash,
+      modifiedRootDirId,
       {
-          {"foobar1", foobarHash},
-          {"foobar2", foobarHash},
-          {"football1", footballHash},
-          {"football2", footballHash},
+          {"foobar1", foobarId},
+          {"foobar2", foobarId},
+          {"football1", footballId},
+          {"football2", footballId},
           {"child", modifiedChildTree},
       });
 
@@ -932,7 +925,7 @@ TEST_F(FakePrefixFilteredBackingStoreTest, testCompareSimilarTreeObjectsById) {
   // comparison logic caused them to evaluate as identical.
   auto substringFilter = std::make_unique<FakePrefixFilter>();
   auto treeFOID =
-      FilteredObjectId{RelativePath{"bar"}, "foooo", makeTestHash("0000")};
+      FilteredObjectId{RelativePath{"bar"}, "foooo", makeTestId("0000")};
   auto treeFOIDFilter = treeFOID.filter();
   auto similarFilter = treeFOIDFilter.subpiece(0, treeFOIDFilter.size() - 2);
   // Ensure the two filters have the same coverage
@@ -942,7 +935,7 @@ TEST_F(FakePrefixFilteredBackingStoreTest, testCompareSimilarTreeObjectsById) {
       substringFilter->getFilterCoverageForPath(treeFOID.path(), treeFOIDFilter)
           .get());
   // Ensure that the two objects are not identical
-  auto similarObject = makeTestHash("e1e10");
+  auto similarObject = makeTestId("e1e10");
   EXPECT_NE(
       wrappedStore_->compareObjectsById(similarObject, treeFOID.object()),
       ObjectComparison::Identical);

@@ -50,16 +50,16 @@ struct FsckFileState {
 
   bool inOverlay = false;
   dtype_t overlayDtype = dtype_t::Unknown;
-  std::optional<ObjectId> overlayHash = std::nullopt;
+  std::optional<ObjectId> overlayId = std::nullopt;
   std::optional<overlay::OverlayEntry> overlayEntry = std::nullopt;
 
   bool inScm = false;
   dtype_t scmDtype = dtype_t::Unknown;
-  std::optional<ObjectId> scmHash = std::nullopt;
+  std::optional<ObjectId> scmId = std::nullopt;
 
   bool shouldExist = false;
   dtype_t desiredDtype = dtype_t::Unknown;
-  std::optional<ObjectId> desiredHash = std::nullopt;
+  std::optional<ObjectId> desiredId = std::nullopt;
 };
 
 /**

@@ -37,10 +37,10 @@ void createGoldMasterOverlay(AbsolutePath overlayPath) {
       << fmt::format("given overlay path {} already exists", overlayPath);
   XCHECK_EQ(ENOENT, errno) << "error must be ENOENT";
 
-  ObjectId hash1{folly::ByteRange{"abcdabcdabcdabcdabcd"_sp}};
-  ObjectId hash2{folly::ByteRange{"01234012340123401234"_sp}};
-  ObjectId hash3{folly::ByteRange{"e0e0e0e0e0e0e0e0e0e0"_sp}};
-  ObjectId hash4{folly::ByteRange{"44444444444444444444"_sp}};
+  ObjectId id1{folly::ByteRange{"abcdabcdabcdabcdabcd"_sp}};
+  ObjectId id2{folly::ByteRange{"01234012340123401234"_sp}};
+  ObjectId id3{folly::ByteRange{"e0e0e0e0e0e0e0e0e0e0"_sp}};
+  ObjectId id4{folly::ByteRange{"44444444444444444444"_sp}};
 
   auto overlay = Overlay::create(
       overlayPath,
@@ -59,12 +59,12 @@ void createGoldMasterOverlay(AbsolutePath overlayPath) {
   auto helloInode = overlay->allocateInodeNumber();
 
   DirContents root(CaseSensitivity::Sensitive);
-  root.emplace("file"_pc, S_IFREG | 0644, fileInode, hash1);
-  root.emplace("subdir"_pc, S_IFDIR | 0755, subdirInode, hash2);
+  root.emplace("file"_pc, S_IFREG | 0644, fileInode, id1);
+  root.emplace("subdir"_pc, S_IFDIR | 0755, subdirInode, id2);
 
   DirContents subdir(CaseSensitivity::Sensitive);
-  subdir.emplace("empty"_pc, S_IFDIR | 0755, emptyDirInode, hash3);
-  subdir.emplace("hello"_pc, S_IFREG | 0644, helloInode, hash4);
+  subdir.emplace("empty"_pc, S_IFDIR | 0755, emptyDirInode, id3);
+  subdir.emplace("hello"_pc, S_IFREG | 0644, helloInode, id4);
 
   DirContents emptyDir(CaseSensitivity::Sensitive);
 

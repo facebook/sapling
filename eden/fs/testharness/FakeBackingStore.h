@@ -65,25 +65,25 @@ class FakeBackingStore final : public BackingStore {
   /**
    * Add a Blob to the backing store
    *
-   * If a hash is not explicitly given, one will be computed automatically.
-   * (The test code may not use the same hashing scheme as a production
+   * If an id is not explicitly given, one will be computed automatically.
+   * (The test code may not use the same id scheme as a production
    * mercurial- or git-backed store, but it will be consistent for the
    * duration of the test.)
    */
   std::pair<StoredBlob*, ObjectId> putBlob(folly::StringPiece contents);
-  StoredBlob* putBlob(ObjectId hash, folly::StringPiece contents);
+  StoredBlob* putBlob(ObjectId id, folly::StringPiece contents);
 
   /**
    * Add a blob to the backing store, or return the StoredBlob already present
-   * with this hash.
+   * with this id.
    *
    * The boolean in the return value is true if a new StoredBlob was created by
-   * this call, or false if a StoredBlob already existed with this hash.
+   * this call, or false if a StoredBlob already existed with this id.
    */
   std::tuple<StoredBlob*, ObjectId, bool> maybePutBlob(
       folly::StringPiece contents);
   std::tuple<StoredBlob*, ObjectId, bool> maybePutBlob(
-      ObjectId hash,
+      ObjectId id,
       folly::StringPiece contents);
 
   static Blob makeBlob(folly::StringPiece contents);
@@ -101,31 +101,29 @@ class FakeBackingStore final : public BackingStore {
    */
   StoredTree* putTree(const std::initializer_list<TreeEntryData>& entries);
   StoredTree* putTree(
-      ObjectId hash,
+      ObjectId id,
       const std::initializer_list<TreeEntryData>& entries);
   StoredTree* putTree(Tree::container entries);
-  StoredTree* putTree(ObjectId hash, Tree::container entries);
+  StoredTree* putTree(ObjectId id, Tree::container entries);
 
   /**
    * Add a tree to the backing store, or return the StoredTree already present
-   * with this hash.
+   * with this id.
    *
    * The boolean in the return value is true if a new StoredTree was created by
-   * this call, or false if a StoredTree already existed with this hash.
+   * this call, or false if a StoredTree already existed with this id.
    */
   std::pair<StoredTree*, bool> maybePutTree(
       const std::initializer_list<TreeEntryData>& entries);
   std::pair<StoredTree*, bool> maybePutTree(Tree::container entries);
 
   /**
-   * Add a mapping from a commit ID to a root tree hash.
+   * Add a mapping from a commit ID to a root tree id.
    */
-  StoredHash* putCommit(const RootId& commitHash, const StoredTree* tree);
-  StoredHash* putCommit(const RootId& commitHash, ObjectId treeHash);
-  StoredHash* putCommit(
-      const RootId& commitHash,
-      const FakeTreeBuilder& builder);
-  StoredHash* putCommit(
+  StoredId* putCommit(const RootId& commitId, const StoredTree* tree);
+  StoredId* putCommit(const RootId& commitId, ObjectId treeId);
+  StoredId* putCommit(const RootId& commitId, const FakeTreeBuilder& builder);
+  StoredId* putCommit(
       folly::StringPiece commitStr,
       const FakeTreeBuilder& builder);
 
@@ -139,21 +137,21 @@ class FakeBackingStore final : public BackingStore {
   /**
    * Look up a StoredTree.
    *
-   * Throws an error if the specified hash does not exist.  Never returns null.
+   * Throws an error if the specified id does not exist.  Never returns null.
    */
-  StoredTree* getStoredTree(ObjectId hash);
+  StoredTree* getStoredTree(ObjectId id);
 
   /**
    * Look up a StoredBlob.
    *
-   * Throws an error if the specified hash does not exist.  Never returns null.
+   * Throws an error if the specified id does not exist.  Never returns null.
    */
-  StoredBlob* getStoredBlob(ObjectId hash);
+  StoredBlob* getStoredBlob(ObjectId id);
 
   /**
    * Look up a StoredGlob.
    *
-   * Throws an error if the specified hash does not exist.  Never returns null.
+   * Throws an error if the specified id does not exist.  Never returns null.
    */
   StoredGlob* getStoredGlob(std::pair<RootId, std::string> suffixQuery);
 
@@ -164,10 +162,10 @@ class FakeBackingStore final : public BackingStore {
   void discardOutstandingRequests();
 
   /**
-   * Returns the number of times this hash has been queried by either getTree,
+   * Returns the number of times this id has been queried by either getTree,
    * getBlob, or getTreeForCommit.
    */
-  size_t getAccessCount(const ObjectId& hash) const;
+  size_t getAccessCount(const ObjectId& id) const;
 
   // TODO(T119221752): Implement for all BackingStore subclasses
   int64_t dropAllPendingRequestsFromQueue() override {
@@ -183,7 +181,7 @@ class FakeBackingStore final : public BackingStore {
 
  private:
   struct Data {
-    std::unordered_map<RootId, std::unique_ptr<StoredHash>> commits;
+    std::unordered_map<RootId, std::unique_ptr<StoredId>> commits;
     std::unordered_map<ObjectId, std::unique_ptr<StoredTree>> trees;
     std::unordered_map<ObjectId, std::unique_ptr<StoredBlob>> blobs;
     std::unordered_map<
@@ -198,10 +196,10 @@ class FakeBackingStore final : public BackingStore {
 
   static Tree::container buildTreeEntries(
       const std::initializer_list<TreeEntryData>& entryArgs);
-  static ObjectId computeTreeHash(const Tree::container& sortedEntries);
-  StoredTree* putTreeImpl(ObjectId hash, Tree::container&& sortedEntries);
+  static ObjectId computeTreeId(const Tree::container& sortedEntries);
+  StoredTree* putTreeImpl(ObjectId id, Tree::container&& sortedEntries);
   std::pair<StoredTree*, bool> maybePutTreeImpl(
-      ObjectId hash,
+      ObjectId id,
       Tree::container&& sortedEntries);
 
   FRIEND_TEST(FakeBackingStoreTest, getNonExistent);

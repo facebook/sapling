@@ -194,7 +194,7 @@ std::string resolveRootId(
   }
 }
 
-// parseRootId() assumes that the provided hash will contain information
+// parseRootId() assumes that the provided id will contain information
 // about the active filter. Some legacy code paths do not respect
 // filters (or accept Filters as arguments), so we need to construct a
 // FilteredRootId using the last active filter. For non-FilteredFS repos, the
@@ -875,15 +875,15 @@ EdenServiceHandler::semifuture_checkOutRevision(
   auto mountHandle = lookupMount(mountPoint);
 
   // If we were passed a FilterID, create a RootID that contains the
-  // filter and a varint that indicates the length of the original hash.
-  std::string parsedHash =
+  // filter and a varint that indicates the length of the original id.
+  std::string parsedId =
       resolveRootId(std::move(*hash), rootIdOptions, mountHandle);
   hash.reset();
 
   auto mountPath = absolutePathFromThrift(*mountPoint);
   auto checkoutFuture = server_->checkOutRevision(
       mountPath,
-      parsedHash,
+      parsedId,
       params->hgRootManifest().to_optional(),
       fetchContext,
       helper->getFunctionName(),
@@ -917,7 +917,7 @@ EdenServiceHandler::semifuture_resetParentCommits(
   auto mountHandle = lookupMount(mountPoint);
 
   // If we were passed a FilterID, create a RootID that contains the filter and
-  // a varint that indicates the length of the original hash.
+  // a varint that indicates the length of the original id.
   std::string parsedParent =
       resolveRootId(std::move(*parents->parent1()), rootIdOptions, mountHandle);
   auto parent1 = mountHandle.getObjectStore().parseRootId(parsedParent);
@@ -1218,7 +1218,7 @@ void EdenServiceHandler::getCurrentJournalPosition(
   if (latest) {
     out.sequenceNumber() = latest->sequenceID;
     out.snapshotHash() =
-        mountHandle.getObjectStore().renderRootId(latest->toHash);
+        mountHandle.getObjectStore().renderRootId(latest->toRoot);
   } else {
     out.sequenceNumber() = 0;
     out.snapshotHash() = mountHandle.getObjectStore().renderRootId(RootId{});
@@ -2361,12 +2361,12 @@ void EdenServiceHandler::sync_changesSinceV2(
 
   auto latestJournalEntry = mountHandle.getJournal().getLatest();
   std::optional<JournalDelta::SequenceNumber> toSequence;
-  RootId toSnapshotHash = RootId{};
+  RootId toSnapshotId = RootId{};
   if (latestJournalEntry.has_value()) {
     toSequence = latestJournalEntry->sequenceID;
-    toSnapshotHash = latestJournalEntry->toHash;
+    toSnapshotId = latestJournalEntry->toRoot;
   }
-  RootId currentHash = toSnapshotHash;
+  RootId currentRoot = toSnapshotId;
   RootIdCodec& rootIdCodec = mountHandle.getObjectStore();
 
   auto& fetchContext = helper->getFetchContext();
@@ -2625,9 +2625,9 @@ void EdenServiceHandler::sync_changesSinceV2(
         },
         [&](const RootUpdateJournalDelta& current) -> bool {
           CommitTransition commitTransition;
-          commitTransition.from() = rootIdCodec.renderRootId(current.fromHash);
-          commitTransition.to() = rootIdCodec.renderRootId(currentHash);
-          currentHash = current.fromHash;
+          commitTransition.from() = rootIdCodec.renderRootId(current.fromRoot);
+          commitTransition.to() = rootIdCodec.renderRootId(currentRoot);
+          currentRoot = current.fromRoot;
 
           LargeChangeNotification largeChange;
           largeChange.commitTransition() = std::move(commitTransition);
@@ -2673,7 +2673,7 @@ void EdenServiceHandler::sync_changesSinceV2(
     toPosition.mountGeneration() =
         mountHandle.getEdenMount().getMountGeneration();
     toPosition.sequenceNumber() = toSequence.value();
-    toPosition.snapshotHash() = rootIdCodec.renderRootId(toSnapshotHash);
+    toPosition.snapshotHash() = rootIdCodec.renderRootId(toSnapshotId);
 
     result.toPosition() = std::move(toPosition);
   }
@@ -2971,8 +2971,8 @@ void EdenServiceHandler::getFilesChangedSince(
     }
 
     out.snapshotTransitions()->reserve(summed->snapshotTransitions.size());
-    for (auto& hash : summed->snapshotTransitions) {
-      out.snapshotTransitions()->push_back(rootIdCodec.renderRootId(hash));
+    for (auto& id : summed->snapshotTransitions) {
+      out.snapshotTransitions()->push_back(rootIdCodec.renderRootId(id));
     }
   }
 }
@@ -4089,7 +4089,7 @@ EdenServiceHandler::semifuture_globFiles(std::unique_ptr<GlobParams> params) {
                 auto edenMount = mountHandle.getEdenMountPtr();
                 std::vector<ImmediateFuture<GlobEntry>> globEntryFuts;
                 for (auto& glob : globResults) {
-                  std::string originHash =
+                  std::string originId =
                       mountHandle.getObjectStore().renderRootId(glob.rootId);
                   for (auto& entry : glob.globFiles) {
                     if (!includeDotfiles) {
@@ -4119,12 +4119,12 @@ EdenServiceHandler::semifuture_globFiles(std::unique_ptr<GlobParams> params) {
                             rootInode
                                 ->getChildRecursive(
                                     RelativePathPiece{entry}, context)
-                                .thenValue([entry, originHash](
-                                               InodePtr child) mutable {
+                                .thenValue([entry,
+                                            originId](InodePtr child) mutable {
                                   return ImmediateFuture<GlobEntry>{GlobEntry{
                                       std::move(entry),
                                       static_cast<OsDtype>(child->getType()),
-                                      std::move(originHash)}};
+                                      std::move(originId)}};
                                 });
                       } else {
                         // TODO(T192408118) get the root tree a single time
@@ -4144,7 +4144,7 @@ EdenServiceHandler::semifuture_globFiles(std::unique_ptr<GlobParams> params) {
                                       edenMount->getObjectStore(),
                                       std::move(context));
                                 })
-                                .thenValue([entry, originHash](
+                                .thenValue([entry, originId](
                                                auto&& treeEntry) mutable {
                                   if (TreeEntry* treeEntryPtr =
                                           std::get_if<TreeEntry>(&treeEntry)) {
@@ -4152,7 +4152,7 @@ EdenServiceHandler::semifuture_globFiles(std::unique_ptr<GlobParams> params) {
                                     return ImmediateFuture<GlobEntry>{GlobEntry{
                                         std::move(entry),
                                         static_cast<OsDtype>(dtype),
-                                        std::move(originHash)}};
+                                        std::move(originId)}};
                                   } else {
                                     EDEN_BUG()
                                         << "Received a Tree when expecting TreeEntry for path "
@@ -4163,7 +4163,7 @@ EdenServiceHandler::semifuture_globFiles(std::unique_ptr<GlobParams> params) {
                       globEntryFuts.emplace_back(
                           std::move(entryFuture)
                               .thenError([entry,
-                                          originHash,
+                                          originId,
                                           isLocal = glob.isLocal](
                                              const folly::exception_wrapper&
                                                  ex) mutable {
@@ -4176,12 +4176,12 @@ EdenServiceHandler::semifuture_globFiles(std::unique_ptr<GlobParams> params) {
                                 return ImmediateFuture<GlobEntry>{GlobEntry{
                                     std::move(entry),
                                     DT_UNKNOWN,
-                                    std::move(originHash)}};
+                                    std::move(originId)}};
                               }));
                     } else {
                       globEntryFuts.emplace_back(ImmediateFuture<GlobEntry>{
                           folly::Try<GlobEntry>{GlobEntry{
-                              std::move(entry), DT_UNKNOWN, originHash}}});
+                              std::move(entry), DT_UNKNOWN, originId}}});
                     }
                   }
                 }
@@ -4228,7 +4228,7 @@ EdenServiceHandler::semifuture_globFiles(std::unique_ptr<GlobParams> params) {
                           glob->dtypes().value().emplace_back(globEntry.dType);
                         }
                         glob->originHashes().value().emplace_back(
-                            globEntry.originHash);
+                            globEntry.originId);
                       }
                       XLOG(
                           DBG5,
@@ -4482,7 +4482,7 @@ EdenServiceHandler::semifuture_getScmStatusV2(
   auto mountHandle = lookupMount(params->mountPoint());
 
   // If we were passed a FilterID, create a RootID that contains the filter
-  // and a varint that indicates the length of the original hash.
+  // and a varint that indicates the length of the original id.
   std::string parsedCommit =
       resolveRootId(std::move(*params->commit()), rootIdOptions, mountHandle);
   auto rootId = mountHandle.getObjectStore().parseRootId(parsedCommit);
@@ -4530,18 +4530,18 @@ EdenServiceHandler::semifuture_getScmStatus(
   // callers of this method can deal with the error.
   auto mountHandle = lookupMount(mountPoint);
 
-  // parseRootId assumes that the passed in hash will contain information
+  // parseRootId assumes that the passed in id will contain information
   // about the active filter. This legacy code path does not respect filters,
   // so the last active filter will always be passed in if it exists. For
   // non-FFS repos, the last filterID will be std::nullopt.
   std::string parsedCommit =
       resolveRootIdWithLastFilter(std::move(*commitHash), mountHandle);
-  auto hash = mountHandle.getObjectStore().parseRootId(parsedCommit);
+  auto id = mountHandle.getObjectStore().parseRootId(parsedCommit);
   return wrapImmediateFuture(
              std::move(helper),
              mountHandle.getEdenMount().diff(
                  mountHandle.getRootInode(),
-                 hash,
+                 id,
                  context->getConnectionContext()->getCancellationToken(),
                  fetchContext,
                  listIgnored,
@@ -4564,19 +4564,19 @@ EdenServiceHandler::semifuture_getScmStatusBetweenRevisions(
   auto mountHandle = lookupMount(mountPoint);
   auto& fetchContext = helper->getFetchContext();
 
-  // parseRootId assumes that the passed in hash will contain information
+  // parseRootId assumes that the passed in id will contain information
   // about the active filter. This legacy code path does not respect filters,
   // so the last active filter will always be passed in if it exists. For
   // non-FFS repos, the last filterID will be std::nullopt.
-  std::string resolvedOldHash =
+  std::string resolvedOldId =
       resolveRootIdWithLastFilter(std::move(*oldHash), mountHandle);
-  std::string resolvedNewHash =
+  std::string resolvedNewId =
       resolveRootIdWithLastFilter(std::move(*newHash), mountHandle);
 
   auto callback = std::make_unique<ScmStatusDiffCallback>();
   auto diffFuture = diffBetweenRoots(
-      mountHandle.getObjectStore().parseRootId(resolvedOldHash),
-      mountHandle.getObjectStore().parseRootId(resolvedNewHash),
+      mountHandle.getObjectStore().parseRootId(resolvedOldId),
+      mountHandle.getObjectStore().parseRootId(resolvedNewId),
       *mountHandle.getEdenMount().getCheckoutConfig(),
       mountHandle.getObjectStorePtr(),
       context->getConnectionContext()->getCancellationToken(),
@@ -4966,7 +4966,7 @@ class InodeStatusCallbacks : public TraversalCallbacks {
   void visitTreeInode(
       RelativePathPiece path,
       InodeNumber ino,
-      const std::optional<ObjectId>& hash,
+      const std::optional<ObjectId>& id,
       uint64_t fsRefcount,
       const std::vector<ChildEntry>& entries) override {
 #ifndef _WIN32
@@ -4976,9 +4976,9 @@ class InodeStatusCallbacks : public TraversalCallbacks {
     TreeInodeDebugInfo info;
     info.inodeNumber() = ino.get();
     info.path() = path.asString();
-    info.materialized() = !hash.has_value();
-    if (hash.has_value()) {
-      info.treeHash() = mount_->getObjectStore()->renderObjectId(hash.value());
+    info.materialized() = !id.has_value();
+    if (id.has_value()) {
+      info.treeHash() = mount_->getObjectStore()->renderObjectId(id.value());
     }
     info.refcount() = fsRefcount;
 
@@ -5003,18 +5003,18 @@ class InodeStatusCallbacks : public TraversalCallbacks {
 #endif
 
       entryInfo.loaded() = entry.loadedChild != nullptr;
-      entryInfo.materialized() = !entry.hash.has_value();
-      if (entry.hash.has_value()) {
+      entryInfo.materialized() = !entry.id.has_value();
+      if (entry.id.has_value()) {
         entryInfo.hash() =
-            mount_->getObjectStore()->renderObjectId(entry.hash.value());
+            mount_->getObjectStore()->renderObjectId(entry.id.value());
       }
 
       if ((flags_ & eden_constants::DIS_COMPUTE_BLOB_SIZES_) &&
           dtype_t::Dir != entry.dtype) {
-        if (entry.hash.has_value()) {
+        if (entry.id.has_value()) {
           // schedule fetching size from ObjectStore::getBlobSize
           requestedSizes_.push_back(RequestedSize{
-              results_.size(), info.entries()->size(), entry.hash.value()});
+              results_.size(), info.entries()->size(), entry.id.value()});
         } else {
 #ifndef _WIN32
           entryInfo.fileSize() = mount_->getOverlayFileAccess()->getFileSize(
@@ -5024,7 +5024,7 @@ class InodeStatusCallbacks : public TraversalCallbacks {
           // directory. This is safe to do as Windows works very differently
           // from Linux/macOS when dealing with materialized files. In this
           // code, we know that the file is materialized because we do not
-          // have a hash for it, and every materialized file is present on
+          // have a id for it, and every materialized file is present on
           // disk and reading/stating it is guaranteed to be done without
           // EdenFS involvement. If somehow EdenFS is wrong, and this ends up
           // triggering a recursive call into EdenFS, we are detecting this
@@ -5056,7 +5056,7 @@ class InodeStatusCallbacks : public TraversalCallbacks {
       return false;
     }
     if ((flags_ & eden_constants::DIS_REQUIRE_MATERIALIZED_) &&
-        entry.hash.has_value()) {
+        entry.id.has_value()) {
       return false;
     }
     return true;
@@ -5067,7 +5067,7 @@ class InodeStatusCallbacks : public TraversalCallbacks {
     futures.reserve(requestedSizes_.size());
     for (auto& request : requestedSizes_) {
       futures.push_back(mount_->getObjectStore()
-                            ->getBlobSize(request.hash, fetchContext)
+                            ->getBlobSize(request.id, fetchContext)
                             .thenValue([this, request](uint64_t blobSize) {
                               results_.at(request.resultIndex)
                                   .entries()
@@ -5082,7 +5082,7 @@ class InodeStatusCallbacks : public TraversalCallbacks {
   struct RequestedSize {
     size_t resultIndex;
     size_t entryIndex;
-    ObjectId hash;
+    ObjectId id;
   };
 
   EdenMount* mount_;

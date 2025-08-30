@@ -101,9 +101,9 @@ void ScmStatusCache::dropPromise(
   }
 }
 
-ObjectId ScmStatusCache::makeKey(const RootId& commitHash, bool listIgnored) {
+ObjectId ScmStatusCache::makeKey(const RootId& commitId, bool listIgnored) {
   return ObjectId(
-      folly::fbstring(fmt::format("{}:{}", commitHash.value(), listIgnored)));
+      folly::fbstring(fmt::format("{}:{}", commitId.value(), listIgnored)));
 }
 
 bool ScmStatusCache::isSequenceValid(

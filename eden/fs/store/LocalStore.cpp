@@ -239,7 +239,7 @@ void LocalStore::putBlob(const ObjectId& id, const Blob* blob) {
   // the immediate putBlob to the method on the WriteBatch.
   // Pre-allocate a buffer of approximately the right size; it
   // needs to hold the blob content plus have room for a couple of
-  // hashes for the keys, plus some padding.
+  // ids for the keys, plus some padding.
   auto batch = beginWrite(blob->getSize() + 64);
   batch->putBlob(id, blob);
   batch->flush();
@@ -248,28 +248,28 @@ void LocalStore::putBlob(const ObjectId& id, const Blob* blob) {
 void LocalStore::putBlobAuxData(
     const ObjectId& id,
     const BlobAuxData& auxData) {
-  auto hashBytes = id.getBytes();
+  auto idBytes = id.getBytes();
   SerializedBlobAuxData auxDataBytes(auxData);
 
-  put(KeySpace::BlobAuxDataFamily, hashBytes, auxDataBytes.slice());
+  put(KeySpace::BlobAuxDataFamily, idBytes, auxDataBytes.slice());
 }
 
 void LocalStore::WriteBatch::putBlobAuxData(
     const ObjectId& id,
     const BlobAuxData& auxData) {
-  auto hashBytes = id.getBytes();
+  auto idBytes = id.getBytes();
   SerializedBlobAuxData auxDataBytes(auxData);
 
-  put(KeySpace::BlobAuxDataFamily, hashBytes, auxDataBytes.slice());
+  put(KeySpace::BlobAuxDataFamily, idBytes, auxDataBytes.slice());
 }
 
 void LocalStore::putTreeAuxData(
     const ObjectId& id,
     const TreeAuxData& auxData) {
-  auto hashBytes = id.getBytes();
+  auto idBytes = id.getBytes();
   SerializedTreeAuxData auxDataBytes(auxData);
 
-  put(KeySpace::TreeAuxDataFamily, hashBytes, auxDataBytes.slice());
+  put(KeySpace::TreeAuxDataFamily, idBytes, auxDataBytes.slice());
 }
 
 void LocalStore::put(
@@ -292,7 +292,7 @@ void LocalStore::WriteBatch::put(
 
 void LocalStore::WriteBatch::putBlob(const ObjectId& id, const Blob* blob) {
   const IOBuf& contents = blob->getContents();
-  auto hashSlice = id.getBytes();
+  auto idSlice = id.getBytes();
 
   // Add a git-style blob prefix
   auto prefix = folly::to<string>("blob ", blob->getSize());
@@ -311,7 +311,7 @@ void LocalStore::WriteBatch::putBlob(const ObjectId& id, const Blob* blob) {
     cursor.skip(bytes.size());
   }
 
-  put(KeySpace::BlobFamily, hashSlice, bodySlices);
+  put(KeySpace::BlobFamily, idSlice, bodySlices);
 }
 
 LocalStore::WriteBatch::~WriteBatch() = default;

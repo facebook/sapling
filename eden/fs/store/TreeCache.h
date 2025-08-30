@@ -47,10 +47,10 @@ class TreeCache
   ~TreeCache();
 
   /**
-   * If a tree for the given hash is in cache, return it. If the tree is not in
+   * If a tree for the given id is in cache, return it. If the tree is not in
    * cache, return nullptr.
    */
-  std::shared_ptr<const Tree> get(const ObjectId& hash);
+  std::shared_ptr<const Tree> get(const ObjectId& id);
 
   /**
    * Inserts a tree into the cache for future lookup. If the new total size

@@ -26,11 +26,11 @@ using std::string;
 string toBinaryHash(const string& hex);
 
 TEST(GitTree, testDeserialize) {
-  // This is a hash for a tree object in https://github.com/facebook/nuclide.git
+  // This is an id for a tree object in https://github.com/facebook/nuclide.git
   // You can verify its contents with:
   // `git cat-file -p 8e073e366ed82de6465d1209d3f07da7eebabb93`.
-  string treeHash("8e073e366ed82de6465d1209d3f07da7eebabb93");
-  ObjectId hash = ObjectId::fromHex(treeHash);
+  string treeId("8e073e366ed82de6465d1209d3f07da7eebabb93");
+  ObjectId id = ObjectId::fromHex(treeId);
 
   auto gitTreeObject = folly::to<string>(
       string("tree 424\x00", 9),
@@ -68,9 +68,9 @@ TEST(GitTree, testDeserialize) {
       string("100644 xdebug.ini\x00", 18),
       toBinaryHash("9ed5bbccd1b9b0077561d14c0130dc086ab27e04"));
 
-  auto tree = deserializeGitTree(hash, StringPiece(gitTreeObject));
+  auto tree = deserializeGitTree(id, StringPiece(gitTreeObject));
   EXPECT_EQ(11, tree->size());
-  EXPECT_EQ(treeHash, Hash20::sha1(StringPiece{gitTreeObject}).toString())
+  EXPECT_EQ(treeId, Hash20::sha1(StringPiece{gitTreeObject}).toString())
       << "SHA-1 of contents should match key";
 
   // Ordinary, non-executable file.
@@ -112,11 +112,11 @@ TEST(GitTree, testDeserialize) {
 }
 
 TEST(GitTree, testDeserializeWithSymlink) {
-  // This is a hash for a tree object in https://github.com/atom/atom.git
+  // This is an id for a tree object in https://github.com/atom/atom.git
   // You can verify its contents with:
   // `git cat-file -p 013b7865a6da317bc8d82c7225eb93615f1b1eca`.
-  string treeHash("013b7865a6da317bc8d82c7225eb93615f1b1eca");
-  ObjectId hash = ObjectId::fromHex(treeHash);
+  string treeId("013b7865a6da317bc8d82c7225eb93615f1b1eca");
+  ObjectId id = ObjectId::fromHex(treeId);
 
   auto gitTreeObject = folly::to<string>(
       string("tree 223\x00", 9),
@@ -136,9 +136,9 @@ TEST(GitTree, testDeserializeWithSymlink) {
       string("120000 contributing.md\x00", 23),
       toBinaryHash("44fcc63439371c8c829df00eec6aedbdc4d0e4cd"));
 
-  auto tree = deserializeGitTree(hash, StringPiece(gitTreeObject));
+  auto tree = deserializeGitTree(id, StringPiece(gitTreeObject));
   EXPECT_EQ(5, tree->size());
-  EXPECT_EQ(treeHash, Hash20::sha1(StringPiece{gitTreeObject}).toString())
+  EXPECT_EQ(treeId, Hash20::sha1(StringPiece{gitTreeObject}).toString())
       << "SHA-1 of contents should match key";
 
   // Ordinary, non-executable file.
@@ -194,7 +194,7 @@ TEST(GitTree, testBadDeserialize) {
   a.push(StringPiece("100644 apm-rest-api.md"));
   EXPECT_ANY_THROW(deserializeGitTree(zero, &buf));
 
-  // Truncated before entry hash
+  // Truncated before entry id
   buf.clear();
   a = Appender(&buf, 1024);
   a.push(StringPiece("tree 23"));

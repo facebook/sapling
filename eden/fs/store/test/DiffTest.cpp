@@ -105,8 +105,8 @@ class DiffTest : public ::testing::Test {
   }
 
   ImmediateFuture<ScmStatus> diffCommitsFuture(
-      ObjectId hash1,
-      ObjectId hash2,
+      ObjectId id1,
+      ObjectId id2,
       std::string userIgnoreContents = {},
       std::string systemIgnoreContents = {},
       bool listIgnored = true,
@@ -117,7 +117,7 @@ class DiffTest : public ::testing::Test {
     auto diffContext = makeDiffContext(
         callback.get(), std::move(topLevelIgnores), listIgnored, caseSensitive);
 
-    auto fut = diffTrees(diffContext.get(), RelativePathPiece{}, hash1, hash2);
+    auto fut = diffTrees(diffContext.get(), RelativePathPiece{}, id1, id2);
     return std::move(fut)
         .thenValue([callback = std::move(callback)](auto&&) {
           return callback->extractStatus();
@@ -145,15 +145,15 @@ class DiffTest : public ::testing::Test {
   }
 
   ScmStatus diffCommitsWithGitIgnore(
-      ObjectId hash1,
-      ObjectId hash2,
+      ObjectId id1,
+      ObjectId id2,
       std::string userIgnoreContents = {},
       std::string systemIgnoreContents = {},
       bool listIgnored = true,
       CaseSensitivity caseSensitive = kPathMapDefaultCaseSensitive) {
     return diffCommitsFuture(
-               hash1,
-               hash2,
+               id1,
+               id2,
                userIgnoreContents,
                systemIgnoreContents,
                listIgnored,

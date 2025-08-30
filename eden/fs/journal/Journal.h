@@ -35,8 +35,8 @@ struct InternalJournalStats {
 };
 
 struct JournalDeltaInfo {
-  RootId fromHash;
-  RootId toHash;
+  RootId fromRoot;
+  RootId toRoot;
   JournalDelta::SequenceNumber sequenceID;
   std::chrono::steady_clock::time_point time;
 };
@@ -51,7 +51,7 @@ struct JournalDeltaInfo {
  *
  * In the initial implementation we are recording file names from the overlay
  * but will expand this to record things like checking out different
- * revisions (the prior and new revision hash) from which we can derive
+ * revisions (the prior and new revision root) from which we can derive
  * the larger list of files.
  *
  * The Journal class is thread-safe.  Subscribers are called on the thread
@@ -63,7 +63,7 @@ class Journal {
   using SubscriberId = uint64_t;
   using SubscriberCallback = std::function<void()>;
   using FileChangeCallback = std::function<bool(const FileChangeJournalDelta&)>;
-  using HashUpdateCallback = std::function<bool(const RootUpdateJournalDelta&)>;
+  using RootUpdateCallback = std::function<bool(const RootUpdateJournalDelta&)>;
 
   explicit Journal(EdenStatsPtr edenStats);
 
@@ -94,22 +94,22 @@ class Journal {
       dtype_t type);
 
   /**
-   * Creates a journal delta that updates the root to this new hash
+   * Creates a journal delta that updates the root to this new root
    */
-  void recordHashUpdate(RootId toHash);
+  void recordRootUpdate(RootId toRoot);
 
   /**
-   * Creates a journal delta that updates the root from fromHash to toHash
+   * Creates a journal delta that updates the root from fromRoot to toRoot
    */
-  void recordHashUpdate(RootId fromHash, RootId toHash);
+  void recordRootUpdate(RootId fromRoot, RootId toRoot);
 
   /**
-   * Creates a journal delta that updates the root from fromHash to toHash and
+   * Creates a journal delta that updates the root from fromRoot to toRoot and
    * also sets uncleanPaths
    */
   void recordUncleanPaths(
-      RootId fromHash,
-      RootId toHash,
+      RootId fromRoot,
+      RootId toRoot,
       std::unordered_set<RelativePath> uncleanPaths);
 
   // Functions for reading the current state of the journal:
@@ -143,7 +143,7 @@ class Journal {
       JournalDelta::SequenceNumber from,
       std::optional<size_t> lengthLimit,
       FileChangeCallback&& fileChangeCallback,
-      HashUpdateCallback&& hashUpdateCallback);
+      RootUpdateCallback&& rootUpdateCallback);
 
   // Subscription functionality:
 
@@ -220,8 +220,8 @@ class Journal {
      * the appropriate deque.
      */
     std::deque<FileChangeJournalDelta> fileChangeDeltas;
-    std::deque<RootUpdateJournalDelta> hashUpdateDeltas;
-    RootId currentHash;
+    std::deque<RootUpdateJournalDelta> rootUpdateDeltas;
+    RootId currentRoot;
     /// The stats about this Journal up to the latest delta.
     std::optional<InternalJournalStats> stats;
     size_t memoryLimit = kDefaultJournalMemoryLimit;
@@ -237,7 +237,7 @@ class Journal {
     JournalDeltaPtr backPtr() noexcept;
 
     bool empty() const {
-      return fileChangeDeltas.empty() && hashUpdateDeltas.empty();
+      return fileChangeDeltas.empty() && rootUpdateDeltas.empty();
     }
 
     bool isFileChangeInFront() const;
@@ -250,7 +250,7 @@ class Journal {
       if (isFileChangeInFront()) {
         return fileChangeDeltas.front().sequenceID;
       } else {
-        return hashUpdateDeltas.front().sequenceID;
+        return rootUpdateDeltas.front().sequenceID;
       }
     }
   };
@@ -303,7 +303,7 @@ class Journal {
       JournalDelta::SequenceNumber from,
       std::optional<size_t> lengthLimit,
       FileChangeCallback&& fileChangeDeltaCallback,
-      HashUpdateCallback&& hashUpdateDeltaCallback) const;
+      RootUpdateCallback&& rootUpdateDeltaCallback) const;
 
   folly::Synchronized<SubscriberState> subscriberState_;
 

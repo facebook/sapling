@@ -134,7 +134,7 @@ std::shared_ptr<const Blob> FileInode::LockedState::getCachedBlob(
   // check the BlobCache, but by checking it here, we can avoid a transition to
   // BLOB_LOADING and back, and also avoid allocating some futures and closures.
   auto result =
-      mount->getBlobCache()->get(ptr_->nonMaterializedState.hash, interest);
+      mount->getBlobCache()->get(ptr_->nonMaterializedState.id, interest);
   if (result.object) {
     ptr_->interestHandle = std::move(result.interestHandle);
     return std::move(result.object);
@@ -577,9 +577,9 @@ FileInode::FileInode(
     PathComponentPiece name,
     mode_t initialMode,
     const std::optional<InodeTimestamps>& initialTimestamps,
-    const ObjectId* hash)
+    const ObjectId* id)
     : Base(ino, initialMode, initialTimestamps, std::move(parentInode), name),
-      state_(std::in_place, hash) {}
+      state_(std::in_place, id) {}
 
 // The FileInode is in MATERIALIZED_IN_OVERLAY state.
 FileInode::FileInode(
@@ -710,7 +710,7 @@ std::optional<bool> FileInode::isSameAsFast(
   }
 
   switch (getObjectStore().compareObjectsById(
-      state->nonMaterializedState.hash, blobID)) {
+      state->nonMaterializedState.id, blobID)) {
     case ObjectComparison::Unknown:
       return std::nullopt;
     case ObjectComparison::Identical:
@@ -779,8 +779,8 @@ ImmediateFuture<bool> FileInode::isSameAs(
           XLOGF(DBG2, "Assuming changed: {}", try_.exception());
           return false;
         } else {
-          auto hashes = std::move(try_).value();
-          return std::get<0>(hashes) == std::get<1>(hashes);
+          auto ids = std::move(try_).value();
+          return std::get<0>(ids) == std::get<1>(ids);
         }
       });
 }
@@ -814,7 +814,7 @@ void FileInode::forceMetadataUpdate() {
 
 std::optional<ObjectId> FileInode::getObjectId() const {
   if (auto state = state_.rlock(); !state->isMaterialized()) {
-    return state->nonMaterializedState.hash;
+    return state->nonMaterializedState.id;
   } else {
     return std::nullopt;
   }
@@ -886,9 +886,9 @@ ImmediateFuture<Hash20> FileInode::getSha1(
   switch (state->tag) {
     case State::BLOB_NOT_LOADING:
     case State::BLOB_LOADING:
-      // If a file is not materialized, it should have a hash value.
+      // If a file is not materialized, it should have a id value.
       return getObjectStore().getBlobSha1(
-          state->nonMaterializedState.hash, fetchContext);
+          state->nonMaterializedState.id, fetchContext);
     case State::MATERIALIZED_IN_OVERLAY:
       return makeImmediateFutureWith(
           [&] { return state->materializedState.getSha1(*this); });
@@ -905,9 +905,9 @@ ImmediateFuture<Hash32> FileInode::getBlake3(
   switch (state->tag) {
     case State::BLOB_NOT_LOADING:
     case State::BLOB_LOADING:
-      // If a file is not materialized, it should have a hash value.
+      // If a file is not materialized, it should have a id value.
       return getObjectStore().getBlobBlake3(
-          state->nonMaterializedState.hash, fetchContext);
+          state->nonMaterializedState.id, fetchContext);
     case State::MATERIALIZED_IN_OVERLAY:
       return makeImmediateFutureWith([&] {
         return state->materializedState.getBlake3(
@@ -927,9 +927,9 @@ ImmediateFuture<BlobAuxData> FileInode::getBlobAuxData(
   switch (state->tag) {
     case State::BLOB_NOT_LOADING:
     case State::BLOB_LOADING:
-      // If a file is not materialized, it should have a hash value.
+      // If a file is not materialized, it should have a id value.
       return getObjectStore().getBlobAuxData(
-          state->nonMaterializedState.hash, fetchContext, blake3Required);
+          state->nonMaterializedState.id, fetchContext, blake3Required);
     case State::MATERIALIZED_IN_OVERLAY:
       return makeImmediateFutureWith([&] {
         return BlobAuxData{
@@ -976,7 +976,7 @@ ImmediateFuture<struct stat> FileInode::stat(
     // a win after restarting Eden - size can be loaded from the local cache
     // more cheaply than deserializing an entire blob.
     auto sizeFut =
-        getObjectStore().getBlobSize(state->nonMaterializedState.hash, context);
+        getObjectStore().getBlobSize(state->nonMaterializedState.id, context);
     state.unlock();
 
     return std::move(sizeFut).thenValue(
@@ -1352,7 +1352,7 @@ ImmediateFuture<BlobPtr> FileInode::startLoadingData(
   // Ideally the state transition is no-except in tandem with the
   // Future's .then call.
   auto getBlobFuture = getMount()->getBlobAccess()->getBlob(
-      state->nonMaterializedState.hash, fetchContext, interest);
+      state->nonMaterializedState.id, fetchContext, interest);
   auto blobLoadingPromise =
       std::make_unique<FileInodeState::BlobLoadingPromise>();
 
@@ -1456,17 +1456,17 @@ void FileInode::materializeNow(
 
   // If the blob aux data is immediately available, use it to populate the SHA-1
   // value in the overlay for this file.
-  // Since this uses state->nonMaterializedState.hash we perform this before
+  // Since this uses state->nonMaterializedState.id we perform this before
   // calling state.setMaterialized().
   auto blobSha1Future = getObjectStore().getBlobSha1(
-      state->nonMaterializedState.hash, fetchContext);
+      state->nonMaterializedState.id, fetchContext);
   std::optional<Hash20> blobSha1;
   if (blobSha1Future.isReady()) {
     blobSha1 = std::move(blobSha1Future).get();
   }
 
   auto blobBlake3Future = getObjectStore().getBlobBlake3(
-      state->nonMaterializedState.hash, fetchContext);
+      state->nonMaterializedState.id, fetchContext);
   std::optional<Hash32> blobBlake3;
   if (blobBlake3Future.isReady()) {
     blobBlake3 = std::move(blobBlake3Future).get();

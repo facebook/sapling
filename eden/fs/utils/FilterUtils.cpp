@@ -25,7 +25,7 @@ std::tuple<RootId, std::string> parseFilterIdFromRootId(const RootId& rootId) {
   if (UNLIKELY(!expectedLength)) {
     throwf<std::invalid_argument>(
         "Could not decode varint; FilteredBackingStore expects a root ID in "
-        "the form of <hashLengthVarint><scmHash><filterId>, got {}",
+        "the form of <idLengthVarint><scmId><filterId>, got {}",
         rootId.value());
   }
   auto root = RootId{std::string{rootRange.begin(), expectedLength.value()}};

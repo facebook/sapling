@@ -20,9 +20,9 @@ using namespace facebook::eden;
 using namespace folly;
 
 TEST_P(LocalStoreTest, testReadAndWriteTree) {
-  ObjectId hash{"3a8f8eb91101860fd8484154885838bf322964d0aacc"};
-  ObjectId childHash1("8e073e366ed82de6465d1209d3f07da7eebabb93bbdd");
-  ObjectId childHash2("8e073e366ed82de6465d1209d3f07da7eebabb939988");
+  ObjectId id{"3a8f8eb91101860fd8484154885838bf322964d0aacc"};
+  ObjectId childId1("8e073e366ed82de6465d1209d3f07da7eebabb93bbdd");
+  ObjectId childId2("8e073e366ed82de6465d1209d3f07da7eebabb939988");
 
   StringPiece childContents("blah\n");
   auto childSha1 = Hash20::sha1(folly::ByteRange{childContents});
@@ -31,12 +31,12 @@ TEST_P(LocalStoreTest, testReadAndWriteTree) {
   Tree::container entries{kPathMapDefaultCaseSensitive};
   entries.emplace(
       "entry1"_pc,
-      childHash1,
+      childId1,
       TreeEntryType::REGULAR_FILE,
       size,
       childSha1,
       childBlake3);
-  entries.emplace("entry2"_pc, childHash2, TreeEntryType::REGULAR_FILE);
+  entries.emplace("entry2"_pc, childId2, TreeEntryType::REGULAR_FILE);
 
   StringPiece digest("blahblah");
   auto treeDigestHash = Hash32::blake3(folly::ByteRange{digest});
@@ -44,20 +44,20 @@ TEST_P(LocalStoreTest, testReadAndWriteTree) {
   auto treeAuxPtr =
       std::make_shared<TreeAuxData>(std::move(treeDigestHash), treeDigestSize);
 
-  auto tree = Tree{hash, std::move(entries), treeAuxPtr};
+  auto tree = Tree{id, std::move(entries), treeAuxPtr};
 
   auto serialized = tree.serialize();
   serialized.coalesce();
 
   store_->put(
       KeySpace::TreeFamily,
-      hash.getBytes(),
+      id.getBytes(),
       folly::ByteRange(serialized.data(), serialized.length()));
 
-  auto outResult = store_->get(KeySpace::TreeFamily, hash);
+  auto outResult = store_->get(KeySpace::TreeFamily, id);
   ASSERT_TRUE(outResult.isValid());
 
-  auto outTree = Tree::tryDeserialize(hash, outResult.piece());
+  auto outTree = Tree::tryDeserialize(id, outResult.piece());
 
   ASSERT_TRUE(outTree);
   ASSERT_TRUE(outTree->getAuxData());
@@ -68,9 +68,9 @@ TEST_P(LocalStoreTest, testReadAndWriteTree) {
 }
 
 TEST_P(LocalStoreTest, testReadLegacyTree) {
-  ObjectId hash{"3a8f8eb91101860fd8484154885838bf322964d0aacc"};
-  ObjectId childHash1("8e073e366ed82de6465d1209d3f07da7eebabb93bbdd");
-  ObjectId childHash2("8e073e366ed82de6465d1209d3f07da7eebabb939988");
+  ObjectId id{"3a8f8eb91101860fd8484154885838bf322964d0aacc"};
+  ObjectId childId1("8e073e366ed82de6465d1209d3f07da7eebabb93bbdd");
+  ObjectId childId2("8e073e366ed82de6465d1209d3f07da7eebabb939988");
 
   StringPiece childContents("blah\n");
   auto childSha1 = Hash20::sha1(folly::ByteRange{childContents});
@@ -79,27 +79,27 @@ TEST_P(LocalStoreTest, testReadLegacyTree) {
   Tree::container entries{kPathMapDefaultCaseSensitive};
   entries.emplace(
       "entry1"_pc,
-      childHash1,
+      childId1,
       TreeEntryType::REGULAR_FILE,
       size,
       childSha1,
       childBlake3);
-  entries.emplace("entry2"_pc, childHash2, TreeEntryType::REGULAR_FILE);
+  entries.emplace("entry2"_pc, childId2, TreeEntryType::REGULAR_FILE);
 
-  auto tree = Tree{std::move(entries), hash};
+  auto tree = Tree{std::move(entries), id};
 
   auto serialized = tree.serialize_v1();
   serialized.coalesce();
 
   store_->put(
       KeySpace::TreeFamily,
-      hash.getBytes(),
+      id.getBytes(),
       folly::ByteRange(serialized.data(), serialized.length()));
 
-  auto outResult = store_->get(KeySpace::TreeFamily, hash);
+  auto outResult = store_->get(KeySpace::TreeFamily, id);
   ASSERT_TRUE(outResult.isValid());
 
-  auto outTree = Tree::tryDeserialize(hash, outResult.piece());
+  auto outTree = Tree::tryDeserialize(id, outResult.piece());
 
   ASSERT_TRUE(outTree);
   ASSERT_FALSE(outTree->getAuxData());

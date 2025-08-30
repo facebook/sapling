@@ -79,23 +79,23 @@ dtype_t filteredEntryDtype(dtype_t mode, bool windowsSymlinksEnabled);
 
 class TreeEntry {
  public:
-  explicit TreeEntry(const ObjectId& hash, TreeEntryType type)
-      : type_(type), hash_(std::move(hash)) {}
+  explicit TreeEntry(const ObjectId& id, TreeEntryType type)
+      : type_(type), id_(std::move(id)) {}
 
   explicit TreeEntry(
-      const ObjectId& hash,
+      const ObjectId& id,
       TreeEntryType type,
       std::optional<uint64_t> size,
       std::optional<Hash20> contentSha1,
       std::optional<Hash32> contentBlake3)
       : type_(type),
-        hash_(std::move(hash)),
+        id_(std::move(id)),
         size_(size),
         contentSha1_(contentSha1),
         contentBlake3_(contentBlake3) {}
 
   const ObjectId& getObjectId() const {
-    return hash_;
+    return id_;
   }
 
   bool isTree() const {
@@ -164,7 +164,7 @@ class TreeEntry {
 
  private:
   TreeEntryType type_;
-  ObjectId hash_;
+  ObjectId id_;
   std::optional<uint64_t> size_;
   std::optional<Hash20> contentSha1_;
   std::optional<Hash32> contentBlake3_;

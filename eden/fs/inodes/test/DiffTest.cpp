@@ -94,21 +94,20 @@ class DiffTest {
         mount_.getEdenMount()->getObjectStore(),
         std::make_unique<TopLevelIgnores>(
             systemWideIgnoreFileContents, userIgnoreFileContents)};
-    auto commitHash = mount_.getEdenMount()->getCheckedOutRootId();
-    auto diffFuture =
-        mount_.getEdenMount()
-            ->diff(mount_.getRootInode(), &diffContext, commitHash)
-            .semi()
-            .via(mount_.getServerExecutor().get());
+    auto commitId = mount_.getEdenMount()->getCheckedOutRootId();
+    auto diffFuture = mount_.getEdenMount()
+                          ->diff(mount_.getRootInode(), &diffContext, commitId)
+                          .semi()
+                          .via(mount_.getServerExecutor().get());
     mount_.drainServerExecutor();
     EXPECT_FUTURE_RESULT(diffFuture);
     return callback.extractStatus();
   }
   ImmediateFuture<ScmStatus> diffFuture(bool listIgnored = false) {
-    auto commitHash = mount_.getEdenMount()->getWorkingCopyParent();
+    auto commitId = mount_.getEdenMount()->getWorkingCopyParent();
     auto diffFuture = mount_.getEdenMount()->diff(
         mount_.getRootInode(),
-        commitHash,
+        commitId,
         folly::CancellationToken{},
         ObjectFetchContext::getNullContext(),
         listIgnored,
@@ -1489,9 +1488,9 @@ TEST(DiffTest, fileNotReady) {
 
   // Add tree2 to the backing store and create a commit pointing to it.
   auto rootTree2 = builder2.finalize(backingStore, /*setReady=*/false);
-  auto commitHash2 = mount.nextCommitHash();
+  auto commitId2 = mount.nextCommitId();
   auto* commit2 =
-      backingStore->putCommit(commitHash2, rootTree2->get().getObjectId());
+      backingStore->putCommit(commitId2, rootTree2->get().getObjectId());
   commit2->setReady();
   builder2.getRoot()->setReady();
 
@@ -1499,7 +1498,7 @@ TEST(DiffTest, fileNotReady) {
   auto diffFuture = mount.getEdenMount()
                         ->diff(
                             mount.getRootInode(),
-                            commitHash2,
+                            commitId2,
                             folly::CancellationToken{},
                             ObjectFetchContext::getNullContext(),
                             /*listIgnored=*/false,
@@ -1617,9 +1616,9 @@ TEST(DiffTest, cancelledDiff) {
   mount.initialize(builder1);
 
   auto rootTree2 = builder2.finalize(backingStore, /*setReady=*/false);
-  auto commitHash2 = mount.nextCommitHash();
+  auto commitId2 = mount.nextCommitId();
   auto* commit2 =
-      backingStore->putCommit(commitHash2, rootTree2->get().getObjectId());
+      backingStore->putCommit(commitId2, rootTree2->get().getObjectId());
   commit2->setReady();
   builder2.getRoot()->setReady();
 
@@ -1628,7 +1627,7 @@ TEST(DiffTest, cancelledDiff) {
   auto diffFuture = mount.getEdenMount()
                         ->diff(
                             mount.getRootInode(),
-                            commitHash2,
+                            commitId2,
                             cancellationSource.getToken(),
                             ObjectFetchContext::getNullContext(),
                             /*listIgnored=*/false,
@@ -1677,11 +1676,11 @@ class DiffTestNonMateralized : public ::testing::Test {
     });
   }
 
-  std::unique_ptr<ScmStatus> diff(const RootId& hash) {
+  std::unique_ptr<ScmStatus> diff(const RootId& id) {
     auto fut = testMount_.getEdenMount()
                    ->diff(
                        testMount_.getRootInode(),
-                       hash,
+                       id,
                        folly::CancellationToken{},
                        ObjectFetchContext::getNullContext(),
                        /*listIgnored=*/true,
@@ -1727,14 +1726,14 @@ TEST_F(DiffTestNonMateralized, diff_modified_trees_top_level_not_materialized) {
 
   // Add tree2 to the backing store and create a commit pointing to it.
   auto rootTree2 = builder2.finalize(backingStore, /*setReady=*/true);
-  auto commitHash2 = testMount_.nextCommitHash();
+  auto commitId2 = testMount_.nextCommitId();
   auto* commit2 =
-      backingStore->putCommit(commitHash2, rootTree2->get().getObjectId());
+      backingStore->putCommit(commitId2, rootTree2->get().getObjectId());
   commit2->setReady();
 
   // Run the diff. This will enter store/Diff.cpp via root/src using
   // a ModifiedScmEntry
-  auto result = diff(commitHash2);
+  auto result = diff(commitId2);
 
   EXPECT_THAT(
       *result->entries(),
@@ -1766,14 +1765,14 @@ TEST_F(
 
   // Add tree2 to the backing store and create a commit pointing to it.
   auto rootTree2 = builder2.finalize(backingStore, /*setReady=*/true);
-  auto commitHash2 = testMount_.nextCommitHash();
+  auto commitId2 = testMount_.nextCommitId();
   auto* commit2 =
-      backingStore->putCommit(commitHash2, rootTree2->get().getObjectId());
+      backingStore->putCommit(commitId2, rootTree2->get().getObjectId());
   commit2->setReady();
 
   // Run the diff. This will enter store/Diff.cpp via root/src using
   // a ModifiedScmEntry
-  auto result = diff(commitHash2);
+  auto result = diff(commitId2);
 
   EXPECT_THAT(
       *result->entries(),
@@ -1805,14 +1804,14 @@ TEST_F(DiffTestNonMateralized, diff_modified_trees_low_level_not_materialized) {
 
   // Add tree2 to the backing store and create a commit pointing to it.
   auto rootTree2 = builder2.finalize(backingStore, /*setReady=*/true);
-  auto commitHash2 = testMount_.nextCommitHash();
+  auto commitId2 = testMount_.nextCommitId();
   auto* commit2 =
-      backingStore->putCommit(commitHash2, rootTree2->get().getObjectId());
+      backingStore->putCommit(commitId2, rootTree2->get().getObjectId());
   commit2->setReady();
 
   // Run the diff. This will enter store/Diff.cpp via root/doc/src using
   // diffTrees from a ModifiedDiffEntry
-  auto result = diff(commitHash2);
+  auto result = diff(commitId2);
 
   EXPECT_THAT(
       *result->entries(),
@@ -1850,14 +1849,14 @@ TEST_F(
 
   // Add tree2 to the backing store and create a commit pointing to it.
   auto rootTree2 = builder2.finalize(backingStore, /*setReady=*/true);
-  auto commitHash2 = testMount_.nextCommitHash();
+  auto commitId2 = testMount_.nextCommitId();
   auto* commit2 =
-      backingStore->putCommit(commitHash2, rootTree2->get().getObjectId());
+      backingStore->putCommit(commitId2, rootTree2->get().getObjectId());
   commit2->setReady();
 
   // Run the diff. This will enter store/Diff.cpp via root/doc/src using
   // diffTrees from a DeferredDiffEntry
-  auto result = diff(commitHash2);
+  auto result = diff(commitId2);
 
   EXPECT_THAT(
       *result->entries(),
@@ -1886,14 +1885,14 @@ TEST_F(DiffTestNonMateralized, diff_added_tree_top_level_not_materialized) {
 
   // Add tree2 to the backing store and create a commit pointing to it.
   auto rootTree2 = builder2.finalize(backingStore, /*setReady=*/true);
-  auto commitHash2 = testMount_.nextCommitHash();
+  auto commitId2 = testMount_.nextCommitId();
   auto* commit2 =
-      backingStore->putCommit(commitHash2, rootTree2->get().getObjectId());
+      backingStore->putCommit(commitId2, rootTree2->get().getObjectId());
   commit2->setReady();
 
   // Run the diff. This will enter store/Diff.cpp via root/src using
   // createAddedScmEntry
-  auto result = diff(commitHash2);
+  auto result = diff(commitId2);
 
   EXPECT_THAT(
       *result->entries(),
@@ -1926,14 +1925,14 @@ TEST_F(
 
   // Add tree2 to the backing store and create a commit pointing to it.
   auto rootTree2 = builder2.finalize(backingStore, /*setReady=*/true);
-  auto commitHash2 = testMount_.nextCommitHash();
+  auto commitId2 = testMount_.nextCommitId();
   auto* commit2 =
-      backingStore->putCommit(commitHash2, rootTree2->get().getObjectId());
+      backingStore->putCommit(commitId2, rootTree2->get().getObjectId());
   commit2->setReady();
 
   // Run the diff. This will enter store/Diff.cpp via root/src using
   // createAddedScmEntry
-  auto result = diff(commitHash2);
+  auto result = diff(commitId2);
 
   EXPECT_THAT(
       *result->entries(),
@@ -1962,14 +1961,14 @@ TEST_F(DiffTestNonMateralized, diff_removed_tree_top_level_not_materialized) {
 
   // Add tree2 to the backing store and create a commit pointing to it.
   auto rootTree2 = builder2.finalize(backingStore, /*setReady=*/true);
-  auto commitHash2 = testMount_.nextCommitHash();
+  auto commitId2 = testMount_.nextCommitId();
   auto* commit2 =
-      backingStore->putCommit(commitHash2, rootTree2->get().getObjectId());
+      backingStore->putCommit(commitId2, rootTree2->get().getObjectId());
   commit2->setReady();
 
   // Run the diff. This will enter store/Diff.cpp via root/src using
   // RemovedScmEntry via processRemoved
-  auto result = diff(commitHash2);
+  auto result = diff(commitId2);
 
   EXPECT_THAT(
       *result->entries(),
@@ -2001,14 +2000,14 @@ TEST_F(
 
   // Add tree2 to the backing store and create a commit pointing to it.
   auto rootTree2 = builder2.finalize(backingStore, /*setReady=*/true);
-  auto commitHash2 = testMount_.nextCommitHash();
+  auto commitId2 = testMount_.nextCommitId();
   auto* commit2 =
-      backingStore->putCommit(commitHash2, rootTree2->get().getObjectId());
+      backingStore->putCommit(commitId2, rootTree2->get().getObjectId());
   commit2->setReady();
 
   // Run the diff. This will enter store/Diff.cpp via root/src using
   // RemovedScmEntry via processBothPresent
-  auto result = diff(commitHash2);
+  auto result = diff(commitId2);
 
   EXPECT_THAT(
       *result->entries(),
@@ -2042,14 +2041,14 @@ TEST_F(DiffTestNonMateralized, diff_removed_tree_low_level_not_materialized) {
 
   // Add tree2 to the backing store and create a commit pointing to it.
   auto rootTree2 = builder2.finalize(backingStore, /*setReady=*/true);
-  auto commitHash2 = testMount_.nextCommitHash();
+  auto commitId2 = testMount_.nextCommitId();
   auto* commit2 =
-      backingStore->putCommit(commitHash2, rootTree2->get().getObjectId());
+      backingStore->putCommit(commitId2, rootTree2->get().getObjectId());
   commit2->setReady();
 
   // Run the diff. This will enter store/Diff.cpp via root/doc/src using
   // diffRemovedTree from a ModifiedDiffEntry
-  auto result = diff(commitHash2);
+  auto result = diff(commitId2);
 
   EXPECT_THAT(
       *result->entries(),

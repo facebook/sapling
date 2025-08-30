@@ -31,7 +31,7 @@ namespace facebook::eden {
  * For non-recursive globs this allows an efficient walk and compare
  * as we work through the tree.  Path components that have no glob
  * special characters can be looked up directly from the directory
- * contents as a hash lookup, rather than by repeatedly matching the
+ * contents as an id lookup, rather than by repeatedly matching the
  * pattern against each entry.
  */
 class GlobNodeImpl {

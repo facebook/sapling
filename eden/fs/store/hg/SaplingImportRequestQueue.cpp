@@ -51,9 +51,9 @@ ImmediateFuture<std::shared_ptr<const T>> SaplingImportRequestQueue::enqueue(
   auto* importQueue = getImportQueue<const T>(state);
   auto* requestQueue = &importQueue->queue;
 
-  const auto& hash = request->getRequest<ImportType>()->hash;
+  const auto& id = request->getRequest<ImportType>()->id;
   if (auto* existingRequestPtr =
-          folly::get_ptr(importQueue->requestTracker, hash)) {
+          folly::get_ptr(importQueue->requestTracker, id)) {
     auto& existingRequest = *existingRequestPtr;
     auto* trackedImport = existingRequest->template getRequest<ImportType>();
 
@@ -84,7 +84,7 @@ ImmediateFuture<std::shared_ptr<const T>> SaplingImportRequestQueue::enqueue(
   requestQueue->emplace_back(request);
   auto promise = request->getPromise<std::shared_ptr<const T>>();
 
-  importQueue->requestTracker.emplace(hash, std::move(request));
+  importQueue->requestTracker.emplace(id, std::move(request));
 
   std::push_heap(
       requestQueue->begin(),

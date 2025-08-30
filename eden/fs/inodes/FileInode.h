@@ -60,7 +60,7 @@ struct FileInodeState {
     MATERIALIZED_IN_OVERLAY,
   };
 
-  explicit FileInodeState(const ObjectId* hash);
+  explicit FileInodeState(const ObjectId* id);
   explicit FileInodeState();
   ~FileInodeState();
 
@@ -82,7 +82,7 @@ struct FileInodeState {
   static constexpr uint64_t kUnknownSize = std::numeric_limits<uint64_t>::max();
 
   struct NonMaterializedState {
-    ObjectId hash;
+    ObjectId id;
 
     /**
      * Cached size to speedup FileInode::stat calls. The max uint64_t value is
@@ -91,7 +91,7 @@ struct FileInodeState {
      */
     uint64_t size{kUnknownSize};
 
-    explicit NonMaterializedState(const ObjectId& hash) : hash(hash) {}
+    explicit NonMaterializedState(const ObjectId& id) : id(id) {}
   };
 
   struct MaterializedState {
@@ -187,8 +187,8 @@ class FileInode final : public InodeBaseMetadata<FileInodeState> {
   enum : int { WRONG_TYPE_ERRNO = EISDIR };
 
   /**
-   * If hash is nullptr, this opens the file in the overlay and leaves the inode
-   * in MATERIALIZED_IN_OVERLAY state.  If hash is set, the inode is in
+   * If id is nullptr, this opens the file in the overlay and leaves the inode
+   * in MATERIALIZED_IN_OVERLAY state.  If id is set, the inode is in
    * NOT_LOADED state.
    */
   FileInode(
@@ -197,7 +197,7 @@ class FileInode final : public InodeBaseMetadata<FileInodeState> {
       PathComponentPiece name,
       mode_t initialMode,
       const std::optional<InodeTimestamps>& initialTimestamps,
-      const ObjectId* hash);
+      const ObjectId* id);
 
   /**
    * Construct an inode using a freshly created overlay file.
@@ -238,7 +238,7 @@ class FileInode final : public InodeBaseMetadata<FileInodeState> {
    * and the same tree entry type.
    *
    * This is more efficient than manually comparing the contents, as it may be
-   * able to perform a simple hash check if the file is not materialized.
+   * able to perform a simple id check if the file is not materialized.
    */
   ImmediateFuture<bool> isSameAs(
       const ObjectId& blobID,

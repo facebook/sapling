@@ -42,8 +42,8 @@ constexpr folly::Duration kSmallTimeout =
 folly::Future<std::vector<GlobResult>> evaluateGlob(
     TestMount& mount,
     GlobNode& globRoot,
-    std::shared_ptr<PrefetchList> prefetchHashes,
-    const RootId& commitHash) {
+    std::shared_ptr<PrefetchList> prefetchIds,
+    const RootId& commitId) {
   auto rootInode = mount.getTreeInode(RelativePathPiece());
   auto objectStore = mount.getEdenMount()->getObjectStore();
   auto globResults =
@@ -54,9 +54,9 @@ folly::Future<std::vector<GlobResult>> evaluateGlob(
           ObjectFetchContext::getNullContext(),
           RelativePathPiece(),
           rootInode,
-          prefetchHashes.get(),
+          prefetchIds.get(),
           *globResults,
-          commitHash)
+          commitId)
       .thenValue([globResults](auto&&) {
         std::vector<GlobResult> result;
         std::swap(result, *globResults->wlock());
@@ -84,34 +84,34 @@ class GlobNodeTest : public ::testing::TestWithParam<
                          std::pair<enum StartReady, enum Prefetch>> {
  protected:
   void SetUp() override {
-    // The file contents are coupled with AHash, BHash and WatHash below.
+    // The file contents are coupled with AId, BId and WatId below.
     builder_.setFiles(
         {{"dir/a.txt", "a"},
          {"dir/sub/b.txt", "b"},
          {".watchmanconfig", "wat"}});
     mount_.initialize(builder_, /*startReady=*/GetParam().first);
-    prefetchHashes_ = nullptr;
+    prefetchIds_ = nullptr;
   }
 
   std::vector<GlobResult> doGlob(
       folly::StringPiece pattern,
       bool includeDotfiles,
-      const RootId& commitHash) {
+      const RootId& commitId) {
     GlobNode globRoot(
         /*includeDotfiles=*/includeDotfiles,
         mount_.getConfig()->getCaseSensitive());
     globRoot.parse(pattern);
-    return doGlob(globRoot, commitHash);
+    return doGlob(globRoot, commitId);
   }
 
-  std::vector<GlobResult> doGlob(GlobNode& globRoot, const RootId& commitHash) {
+  std::vector<GlobResult> doGlob(GlobNode& globRoot, const RootId& commitId) {
     globRoot.debugDump();
 
     if (shouldPrefetch()) {
-      prefetchHashes_ = std::make_shared<GlobNode::PrefetchList>();
+      prefetchIds_ = std::make_shared<GlobNode::PrefetchList>();
     }
 
-    auto future = evaluateGlob(mount_, globRoot, prefetchHashes_, commitHash);
+    auto future = evaluateGlob(mount_, globRoot, prefetchIds_, commitId);
 
     if (!GetParam().first) {
       builder_.setAllReady();
@@ -122,45 +122,45 @@ class GlobNodeTest : public ::testing::TestWithParam<
 
   std::vector<GlobResult> doGlobIncludeDotFiles(
       folly::StringPiece pattern,
-      const RootId& commitHash) {
-    return doGlob(pattern, true, commitHash);
+      const RootId& commitId) {
+    return doGlob(pattern, true, commitId);
   }
 
   std::vector<GlobResult> doGlobExcludeDotFiles(
       folly::StringPiece pattern,
-      const RootId& commitHash) {
-    return doGlob(pattern, false, commitHash);
+      const RootId& commitId) {
+    return doGlob(pattern, false, commitId);
   }
 
   bool shouldPrefetch() const {
     return GetParam().second;
   }
 
-  std::vector<ObjectId> getPrefetchHashes() const {
-    return *prefetchHashes_->rlock();
+  std::vector<ObjectId> getPrefetchIds() const {
+    return *prefetchIds_->rlock();
   }
 
   TestMount mount_;
   FakeTreeBuilder builder_;
-  std::shared_ptr<GlobNode::PrefetchList> prefetchHashes_;
+  std::shared_ptr<GlobNode::PrefetchList> prefetchIds_;
 };
 
 TEST_P(GlobNodeTest, starTxt) {
   auto matches = doGlobIncludeDotFiles("*.txt", kZeroRootId);
   EXPECT_TRUE(matches.empty());
   if (shouldPrefetch()) {
-    EXPECT_TRUE(getPrefetchHashes().empty());
+    EXPECT_TRUE(getPrefetchIds().empty());
   }
 }
 
-// hash of "a"
-const ObjectId AHash =
+// id of "a"
+const ObjectId AId =
     ObjectId::fromHex("86f7e437faa5a7fce15d1ddcb9eaeaea377667b8");
-// hash of "b"
-const ObjectId BHash =
+// id of "b"
+const ObjectId BId =
     ObjectId::fromHex("e9d71f5ee7c92d6dc9e92ffdad17b8bd49418f98");
-// hash of "wat"
-const ObjectId WatHash =
+// id of "wat"
+const ObjectId WatId =
     ObjectId::fromHex("a3bbe1a8f2f025b8b6c5b66937763bb2b9bebdf2");
 
 TEST_P(GlobNodeTest, matchFilesByExtensionRecursively) {
@@ -173,8 +173,8 @@ TEST_P(GlobNodeTest, matchFilesByExtensionRecursively) {
   EXPECT_EQ(expect, matches);
 
   if (shouldPrefetch()) {
-    std::vector<ObjectId> expectHashes{AHash, BHash};
-    EXPECT_EQ(expectHashes, getPrefetchHashes());
+    std::vector<ObjectId> expectIds{AId, BId};
+    EXPECT_EQ(expectIds, getPrefetchIds());
   }
 }
 
@@ -188,8 +188,8 @@ TEST_P(GlobNodeTest, star) {
   EXPECT_EQ(expect, matches);
 
   if (shouldPrefetch()) {
-    std::vector<ObjectId> expectHashes{WatHash};
-    EXPECT_EQ(expectHashes, getPrefetchHashes());
+    std::vector<ObjectId> expectIds{WatId};
+    EXPECT_EQ(expectIds, getPrefetchIds());
   }
 }
 
@@ -247,12 +247,12 @@ TEST_P(GlobNodeTest, recursiveTxtWithChanges) {
   EXPECT_EQ(expect, matches);
 
   if (shouldPrefetch()) {
-    std::vector<ObjectId> expectHashes{
+    std::vector<ObjectId> expectIds{
         // No root.txt, as it is in the overlay
         // No sym.txt, as it is in the overlay
-        // No AHash as we chmod'd the file and thus materialized it
-        BHash};
-    EXPECT_EQ(expectHashes, getPrefetchHashes());
+        // No AId as we chmod'd the file and thus materialized it
+        BId};
+    EXPECT_EQ(expectIds, getPrefetchIds());
   }
 }
 #endif
@@ -352,8 +352,8 @@ TEST(GlobNodeTest, matchingDirectoryDoesNotLoadTree) {
 
     auto matches = std::vector<GlobResult>{};
     try {
-      auto fut = evaluateGlob(
-          mount, globRoot, /*prefetchHashes=*/nullptr, kZeroRootId);
+      auto fut =
+          evaluateGlob(mount, globRoot, /*prefetchIds=*/nullptr, kZeroRootId);
       mount.drainServerExecutor();
       matches = std::move(fut).get(kSmallTimeout);
     } catch (const folly::FutureTimeout&) {
@@ -398,7 +398,7 @@ TEST(GlobNodeTest, treeLoadError) {
     globRoot.parse("dir/**/a.txt");
 
     auto globFuture =
-        evaluateGlob(mount, globRoot, /*prefetchHashes=*/nullptr, kZeroRootId);
+        evaluateGlob(mount, globRoot, /*prefetchIds=*/nullptr, kZeroRootId);
     mount.drainServerExecutor();
     EXPECT_FALSE(globFuture.isReady())
         << "glob should not finish when some subtrees are not read";
@@ -435,20 +435,20 @@ TEST(GlobNodeTest, treeLoadError) {
   }
 }
 
-TEST_P(GlobNodeTest, testCommitHashSet) {
-  const RootId randomHash{"37ce5515c1b313ce722366c31c10db0883fff7e0"};
+TEST_P(GlobNodeTest, testCommitIdSet) {
+  const RootId randomId{"37ce5515c1b313ce722366c31c10db0883fff7e0"};
 
-  auto matches = doGlobIncludeDotFiles("**/*.txt", randomHash);
+  auto matches = doGlobIncludeDotFiles("**/*.txt", randomId);
 
   std::vector<GlobResult> expect{
-      GlobResult("dir/a.txt"_relpath, dtype_t::Regular, randomHash),
-      GlobResult("dir/sub/b.txt"_relpath, dtype_t::Regular, randomHash),
+      GlobResult("dir/a.txt"_relpath, dtype_t::Regular, randomId),
+      GlobResult("dir/sub/b.txt"_relpath, dtype_t::Regular, randomId),
   };
   EXPECT_EQ(expect, matches);
 
   if (shouldPrefetch()) {
-    std::vector<ObjectId> expectHashes{AHash, BHash};
-    EXPECT_EQ(expectHashes, getPrefetchHashes());
+    std::vector<ObjectId> expectIds{AId, BId};
+    EXPECT_EQ(expectIds, getPrefetchIds());
   }
 }
 
@@ -467,7 +467,7 @@ TEST(GlobNodeTest, testCaseInsensitive) {
 
   auto matches = std::vector<GlobResult>{};
   auto fut =
-      evaluateGlob(mount, globRoot, /*prefetchHashes=*/nullptr, kZeroRootId);
+      evaluateGlob(mount, globRoot, /*prefetchIds=*/nullptr, kZeroRootId);
   mount.drainServerExecutor();
   matches = std::move(fut).get(kSmallTimeout);
 

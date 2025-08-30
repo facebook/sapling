@@ -73,7 +73,7 @@ class ScmStatusCache : public ObjectCache<
       const EdenConfig* configPtr,
       EdenStatsPtr stats,
       std::shared_ptr<Journal> journal);
-  static ObjectId makeKey(const RootId& commitHash, bool listIgnored);
+  static ObjectId makeKey(const RootId& commitId, bool listIgnored);
 
   /**
    * Query the cache and see if we can reuse an existing result.

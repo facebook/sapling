@@ -17,18 +17,18 @@ namespace facebook::eden {
 struct GlobResult {
   RelativePath name;
   dtype_t dtype;
-  // Currently this is the commit hash for the commit to which this file
-  // belongs. But should eden move away from commit hashes this may become
-  // the tree hash of the root tree to which this file belongs.
+  // Currently this is the commit id for the commit to which this file
+  // belongs. But should eden move away from commit ids this may become
+  // the tree id of the root tree to which this file belongs.
   // This should never become a dangling reference because the caller
-  // of Globresult::evaluate ensures that the hashes have a lifetime that
+  // of Globresult::evaluate ensures that the ids have a lifetime that
   // exceeds that of the GlobResults returned.
-  const RootId* originHash;
+  const RootId* originId;
 
   // Comparison operator for testing purposes
   bool operator==(const GlobResult& other) const noexcept {
     return name == other.name && dtype == other.dtype &&
-        originHash == other.originHash;
+        originId == other.originId;
   }
   bool operator!=(const GlobResult& other) const noexcept {
     return !(*this == other);
@@ -37,20 +37,20 @@ struct GlobResult {
   bool operator<(const GlobResult& other) const noexcept {
     return name < other.name || (name == other.name && dtype < other.dtype) ||
         (name == other.name && dtype == other.dtype &&
-         originHash < other.originHash);
+         originId < other.originId);
   }
 
-  // originHash should never become a dangling reference because the caller
-  // of Globresult::evaluate ensures that the hashes have a lifetime that
+  // originId should never become a dangling reference because the caller
+  // of Globresult::evaluate ensures that the ids have a lifetime that
   // exceeds that of the GlobResults returned.
-  GlobResult(RelativePathPiece name, dtype_t dtype, const RootId& originHash)
-      : name(name.copy()), dtype(dtype), originHash(&originHash) {}
+  GlobResult(RelativePathPiece name, dtype_t dtype, const RootId& originId)
+      : name(name.copy()), dtype(dtype), originId(&originId) {}
 
   GlobResult(
       RelativePath&& name,
       dtype_t dtype,
-      const RootId& originHash) noexcept
-      : name(std::move(name)), dtype(dtype), originHash(&originHash) {}
+      const RootId& originId) noexcept
+      : name(std::move(name)), dtype(dtype), originId(&originId) {}
 };
 
 using ResultList = folly::Synchronized<std::vector<GlobResult>>;

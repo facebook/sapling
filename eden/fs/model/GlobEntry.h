@@ -15,7 +15,7 @@ namespace facebook::eden {
 struct GlobEntry {
   std::string file;
   OsDtype dType;
-  std::string originHash;
+  std::string originId;
 };
 
 } // namespace facebook::eden

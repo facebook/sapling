@@ -140,14 +140,14 @@ class RootUpdateJournalDelta : public JournalDelta {
   RootUpdateJournalDelta& operator=(const RootUpdateJournalDelta&) = delete;
 
   /**
-   * The snapshot hash that we started and ended up on.
+   * The snapshot id that we started and ended up on.
    * This will often be the same unless we perform a checkout or make
    * a new snapshot from the snapshotable files in the overlay.
    */
-  RootId fromHash;
+  RootId fromRoot;
 
   /** The set of files that had differing status across a checkout or
-   * some other operation that changes the snapshot hash */
+   * some other operation that changes the snapshot id */
   std::unordered_set<RelativePath> uncleanPaths;
 
   /** Get memory used (in bytes) by this Delta */
@@ -197,9 +197,9 @@ struct JournalDeltaRange {
 
   /**
    * If the current commit did not change during this window, the list contains
-   * one entry: the current snapshot hash. If the range contains an update
-   * operation, the list contains two entries: the previous hash and the new
-   * hash. If two commits have occurred in this range, there are three entries,
+   * one entry: the current snapshot id. If the range contains an update
+   * operation, the list contains two entries: the previous id and the new
+   * id. If two commits have occurred in this range, there are three entries,
    * and so on.
    *
    * This entries in this list are not unique. [A, B, C] is different than [A,
@@ -213,7 +213,7 @@ struct JournalDeltaRange {
    */
   std::unordered_map<RelativePath, PathChangeInfo> changedFilesInOverlay;
   /** The set of files that had differing status across a checkout or
-   * some other operation that changes the snapshot hash */
+   * some other operation that changes the snapshot id */
   std::unordered_set<RelativePath> uncleanPaths;
 
   bool isTruncated = false;

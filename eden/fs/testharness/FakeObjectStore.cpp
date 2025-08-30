@@ -24,8 +24,8 @@ FakeObjectStore::FakeObjectStore() = default;
 FakeObjectStore::~FakeObjectStore() = default;
 
 void FakeObjectStore::addTree(Tree&& tree) {
-  auto treeHash = tree.getObjectId();
-  trees_.emplace(std::move(treeHash), std::move(tree));
+  auto treeId = tree.getObjectId();
+  trees_.emplace(std::move(treeId), std::move(tree));
 }
 
 void FakeObjectStore::addBlob(ObjectId id, Blob&& blob) {
@@ -86,8 +86,8 @@ ImmediateFuture<folly::Unit> FakeObjectStore::prefetchBlobs(
   return folly::unit;
 }
 
-size_t FakeObjectStore::getAccessCount(const ObjectId& hash) const {
-  if (auto* item = folly::get_ptr(accessCounts_, hash)) {
+size_t FakeObjectStore::getAccessCount(const ObjectId& id) const {
+  if (auto* item = folly::get_ptr(accessCounts_, id)) {
     return *item;
   } else {
     return 0;

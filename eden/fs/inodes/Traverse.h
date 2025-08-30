@@ -27,7 +27,7 @@ struct ChildEntry {
   PathComponent name;
   dtype_t dtype;
   InodeNumber ino;
-  std::optional<ObjectId> hash;
+  std::optional<ObjectId> id;
 
   // Null if the entry has no loaded inode.
   InodePtr loadedChild;
@@ -42,7 +42,7 @@ struct TraversalCallbacks {
   virtual void visitTreeInode(
       RelativePathPiece path,
       InodeNumber ino,
-      const std::optional<ObjectId>& hash,
+      const std::optional<ObjectId>& id,
       uint64_t fsRefcount,
       const std::vector<ChildEntry>& entries) = 0;
 

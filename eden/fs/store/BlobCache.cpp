@@ -15,11 +15,11 @@ static constexpr folly::StringPiece kBlobCacheMemory{"blob_cache.memory"};
 static constexpr folly::StringPiece kBlobCacheItems{"blob_cache.items"};
 
 ObjectCache<Blob, ObjectCacheFlavor::InterestHandle, BlobCacheStats>::GetResult
-BlobCache::get(const ObjectId& hash, Interest interest) {
+BlobCache::get(const ObjectId& id, Interest interest) {
   if (!enabled_) {
     interest = Interest::None;
   }
-  auto handle = getInterestHandle(hash, interest);
+  auto handle = getInterestHandle(id, interest);
   if (handle.object) {
     stats_->increment(&ObjectStoreStats::getBlobFromMemory);
   }

@@ -1783,13 +1783,13 @@ TEST(Checkout, diffFailsOnInProgressCheckout) {
   EXPECT_FALSE(checkoutTo1.isReady());
 
   // Call getStatus and make sure it fails.
-  auto commitHash = RootId{"1"};
+  auto commitId = RootId{"1"};
 
   try {
     testMount.getEdenMount()
         ->diff(
             testMount.getRootInode(),
-            commitHash,
+            commitId,
             folly::CancellationToken{},
             ObjectFetchContext::getNullContext())
         .get();
@@ -1809,7 +1809,7 @@ TEST(Checkout, diffFailsOnInProgressCheckout) {
   // Try to diff again just to make sure we don't block again.
   auto diff2 = testMount.getEdenMount()->diff(
       testMount.getRootInode(),
-      commitHash,
+      commitId,
       folly::CancellationToken{},
       ObjectFetchContext::getNullContext());
   EXPECT_NO_THROW(std::move(diff2).get());

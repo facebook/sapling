@@ -142,7 +142,7 @@ class OverlayChecker::RepairState {
     //
     // TODO: It would be somewhat nicer to look in the ObjectStore and see what
     // data would exist at this path in the current commit (if this path
-    // exists).  If we can find contents hash that way, it would be nicer to
+    // exists).  If we can find contents id that way, it would be nicer to
     // just dematerialize this inode's entry in its parent directory.
     // That said, in practice most of the times when we have seen files or
     // directories get corrupted they are generated files that are updated
@@ -166,7 +166,7 @@ class OverlayChecker::RepairState {
     auto treeOrTreeEntry = checker_->lookup(path.path).getTry();
 
     if (treeOrTreeEntry.hasValue()) {
-      ObjectId hash = std::visit(
+      ObjectId id = std::visit(
           folly::overload(
               [](std::shared_ptr<const Tree>& tree) {
                 return tree->getObjectId();
@@ -184,7 +184,7 @@ class OverlayChecker::RepairState {
           auto result = entries->find(childName.asString());
           if (result != entries->end()) {
             overlay::OverlayEntry& entry = result->second;
-            entry.hash() = hash.asString();
+            entry.hash() = id.asString();
             entry.inodeNumber() = 0;
 
             inodeCatalog()->saveOverlayDir(parent, std::move(parentDir));
@@ -1184,9 +1184,9 @@ void OverlayChecker::linkInodeChildren() {
       updateMaxInodeNumber(childInodeNumber);
       auto childInfo = getInodeInfo(childInodeNumber);
       if (!childInfo) {
-        const auto& hash = child.hash();
-        if (!hash.has_value() || hash->empty()) {
-          // This child is materialized (since it doesn't have a hash
+        const auto& id = child.hash();
+        if (!id.has_value() || id->empty()) {
+          // This child is materialized (since it doesn't have a id
           // linking it to a source control object).  It's a problem if the
           // materialized data isn't actually present in the overlay.
           addError<MissingMaterializedInode>(

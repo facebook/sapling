@@ -136,7 +136,7 @@ constexpr PathComponentPiece kNfsdSocketName{"nfsd.socket"_pc};
  *
  * This DiffCallback instance is used to compute the set
  * of unclean files before and after actions that change the
- * current commit hash of the mount point.
+ * current commit id of the mount point.
  */
 class EdenMount::JournalDiffCallback : public DiffCallback {
  public:
@@ -402,7 +402,7 @@ FOLLY_NODISCARD ImmediateFuture<folly::Unit> EdenMount::initialize(
             // Record the transition from no snapshot to the current snapshot in
             // the journal.  This also sets things up so that we can carry the
             // snapshot id forward through subsequent journal entries.
-            journal_->recordHashUpdate(parent);
+            journal_->recordRootUpdate(parent);
 
             // Initialize the overlay.
             // This must be performed before we do any operations that may
@@ -453,7 +453,7 @@ TreeInodePtr EdenMount::createRootInode(std::shared_ptr<const Tree> tree) {
   // Load the overlay, if present.
   auto rootOverlayDir = overlay_->loadOverlayDir(kRootNodeId);
   if (!rootOverlayDir.empty()) {
-    // No hash is necessary because the root is always materialized.
+    // No id is necessary because the root is always materialized.
     return TreeInodePtr::makeNew(this, std::move(rootOverlayDir), std::nullopt);
   }
 
@@ -1423,7 +1423,7 @@ constexpr const char* interruptedCheckoutAdvice =
 
 ImmediateFuture<CheckoutResult> EdenMount::checkout(
     TreeInodePtr rootInode,
-    const RootId& snapshotHash,
+    const RootId& snapshotId,
     const ObjectFetchContextPtr& fetchContext,
     folly::StringPiece thriftMethodCaller,
     CheckoutMode checkoutMode) {
@@ -1449,7 +1449,7 @@ ImmediateFuture<CheckoutResult> EdenMount::checkout(
         auto& interruptedCheckout =
             std::get<ParentCommitState::InterruptedCheckout>(
                 parentLock->checkoutState);
-        if (interruptedCheckout.toCommit != snapshotHash) {
+        if (interruptedCheckout.toCommit != snapshotId) {
           return makeFuture<CheckoutResult>(newEdenError(
               EdenErrorType::CHECKOUT_IN_PROGRESS,
               fmt::format(
@@ -1495,7 +1495,7 @@ ImmediateFuture<CheckoutResult> EdenMount::checkout(
       "starting checkout for {}: {} to {}",
       this->getPath(),
       oldParent,
-      snapshotHash);
+      snapshotId);
 
   // Update lastCheckoutTime_ before starting the checkout operation.
   // This ensures that any inode objects created once the checkout starts will
@@ -1503,7 +1503,7 @@ ImmediateFuture<CheckoutResult> EdenMount::checkout(
   // checkout
   setLastCheckoutTime(EdenTimestamp{clock_->getRealtime()});
 
-  objectStore_->workingCopyParentHint(snapshotHash);
+  objectStore_->workingCopyParentHint(snapshotId);
 
   auto journalDiffCallback = std::make_shared<JournalDiffCallback>();
 
@@ -1512,12 +1512,12 @@ ImmediateFuture<CheckoutResult> EdenMount::checkout(
 
   return serverState_->getFaultInjector()
       .checkAsync("checkout", getPath().view())
-      .thenValue([this, ctx, parent1Hash = oldParent, snapshotHash](auto&&) {
+      .thenValue([this, ctx, parent1Id = oldParent, snapshotId](auto&&) {
         XLOG(DBG7, "Checkout: getRoots");
         auto fromTreeFuture =
-            objectStore_->getRootTree(parent1Hash, ctx->getFetchContext());
+            objectStore_->getRootTree(parent1Id, ctx->getFetchContext());
         auto toTreeFuture =
-            objectStore_->getRootTree(snapshotHash, ctx->getFetchContext());
+            objectStore_->getRootTree(snapshotId, ctx->getFetchContext());
         return collectAllSafe(fromTreeFuture, toTreeFuture);
       })
       .thenValue([this](RootTreeTuple treeResults) {
@@ -1563,7 +1563,7 @@ ImmediateFuture<CheckoutResult> EdenMount::checkout(
                   return treeResults;
                 });
           })
-      .thenValue([this, rootInode, ctx, checkoutTimes, stopWatch, snapshotHash](
+      .thenValue([this, rootInode, ctx, checkoutTimes, stopWatch, snapshotId](
                      RootTreeTuple treeResults) {
         checkoutTimes->didDiff = stopWatch.elapsed();
 
@@ -1574,7 +1574,7 @@ ImmediateFuture<CheckoutResult> EdenMount::checkout(
         ctx->start(
             std::move(renameLock),
             parentState_.wlock(),
-            snapshotHash,
+            snapshotId,
             std::get<1>(treeResults).tree);
 
         checkoutTimes->didAcquireRenameLock = stopWatch.elapsed();
@@ -1610,13 +1610,13 @@ ImmediateFuture<CheckoutResult> EdenMount::checkout(
               return rootInode->checkout(ctx.get(), fromTree.tree, toTree.tree);
             });
       })
-      .thenValue([ctx, checkoutTimes, stopWatch, snapshotHash](auto&&) {
+      .thenValue([ctx, checkoutTimes, stopWatch, snapshotId](auto&&) {
         checkoutTimes->didCheckout = stopWatch.elapsed();
 
         // Complete the checkout
-        return ctx->finish(snapshotHash);
+        return ctx->finish(snapshotId);
       })
-      .thenTry([this, ctx, oldState, oldParent, snapshotHash](
+      .thenTry([this, ctx, oldState, oldParent, snapshotId](
                    folly::Try<
                        CheckoutContext::CheckoutConflictsAndInvalidations>&&
                        res) {
@@ -1642,7 +1642,7 @@ ImmediateFuture<CheckoutResult> EdenMount::checkout(
           // checkout succeeded.
           parentLock->checkoutState = ParentCommitState::InterruptedCheckout{
               oldParent,
-              snapshotHash,
+              snapshotId,
           };
           return folly::Try<CheckoutContext::CheckoutConflictsAndInvalidations>{
               newEdenError(res.exception())};
@@ -1659,7 +1659,7 @@ ImmediateFuture<CheckoutResult> EdenMount::checkout(
            checkoutTimes,
            stopWatch,
            oldParent,
-           snapshotHash,
+           snapshotId,
            journalDiffCallback](
               CheckoutContext::CheckoutConflictsAndInvalidations&& conflicts) {
             checkoutTimes->didFinish = stopWatch.elapsed();
@@ -1688,7 +1688,7 @@ ImmediateFuture<CheckoutResult> EdenMount::checkout(
             // includes information that these files changed.
             auto uncleanPaths = journalDiffCallback->stealUncleanPaths();
             journal_->recordUncleanPaths(
-                oldParent, snapshotHash, std::move(uncleanPaths));
+                oldParent, snapshotId, std::move(uncleanPaths));
 
             // Record journal entries for file changes caused by
             // a force checkout. Do this here after the checkout finishes
@@ -1742,7 +1742,7 @@ ImmediateFuture<CheckoutResult> EdenMount::checkout(
             }
             return result;
           })
-      .thenTry([this, ctx, stopWatch, oldParent, snapshotHash, checkoutMode](
+      .thenTry([this, ctx, stopWatch, oldParent, snapshotId, checkoutMode](
                    Try<CheckoutResult>&& result) {
         auto fetchStats = ctx->getStatsContext().computeStatistics();
         auto inodeCounts = getInodeMap()->getInodeCounts();
@@ -1753,7 +1753,7 @@ ImmediateFuture<CheckoutResult> EdenMount::checkout(
             result.hasValue() ? "" : "failed ",
             this->getPath(),
             oldParent,
-            snapshotHash,
+            snapshotId,
             fetchStats.tree.accessCount,
             fetchStats.tree.cacheHitRate,
             fetchStats.blob.accessCount,
@@ -1927,13 +1927,13 @@ std::unique_ptr<DiffContext> EdenMount::createDiffContext(
 ImmediateFuture<Unit> EdenMount::diff(
     TreeInodePtr rootInode,
     DiffContext* ctxPtr,
-    const RootId& commitHash) const {
+    const RootId& commitId) const {
   auto faultTry = this->serverState_->getFaultInjector().checkTry(
-      "EdenMount::diff", commitHash.value());
+      "EdenMount::diff", commitId.value());
   if (faultTry.hasException()) {
     return folly::Try<folly::Unit>{faultTry.exception()};
   }
-  return objectStore_->getRootTree(commitHash, ctxPtr->getFetchContext())
+  return objectStore_->getRootTree(commitId, ctxPtr->getFetchContext())
       .thenValue([this](ObjectStore::GetRootTreeResult rootTree) {
         return waitForPendingWrites().thenValue(
             [rootTree = std::move(rootTree)](auto&&) { return rootTree; });
@@ -1952,7 +1952,7 @@ ImmediateFuture<Unit> EdenMount::diff(
 ImmediateFuture<Unit> EdenMount::diff(
     TreeInodePtr rootInode,
     ScmStatusDiffCallback* callback,
-    const RootId& commitHash,
+    const RootId& commitId,
     bool listIgnored,
     bool enforceCurrentParent,
     folly::CancellationToken cancellation,
@@ -1976,21 +1976,21 @@ ImmediateFuture<Unit> EdenMount::diff(
             fmt::format(interruptedCheckoutAdvice, interrupted->toCommit)));
       }
 
-      if (currentWorkingCopyParentRootId != commitHash) {
+      if (currentWorkingCopyParentRootId != commitId) {
         // TODO: We should really add a method to FilteredBackingStore that
         // allows us to render a FOID as the underlying ObjectId. This would
         // avoid the round trip we're doing here.
         auto renderedParentRootId =
             objectStore_->renderRootId(currentWorkingCopyParentRootId);
-        auto renderedCommitHash = objectStore_->renderRootId(commitHash);
+        auto renderedCommitId = objectStore_->renderRootId(commitId);
 
         // Log this occurrence to Scuba
         getServerState()->getStructuredLogger()->logEvent(ParentMismatch{
-            commitHash.value(), currentWorkingCopyParentRootId.value()});
+            commitId.value(), currentWorkingCopyParentRootId.value()});
         return makeImmediateFuture<Unit>(newEdenError(
             EdenErrorType::OUT_OF_DATE_PARENT,
             "error computing status: requested parent commit is out-of-date: requested ",
-            folly::hexlify(renderedCommitHash),
+            folly::hexlify(renderedCommitId),
             ", but current parent commit is ",
             folly::hexlify(renderedParentRootId),
             ".\nTry running `eden doctor` to remediate"));
@@ -2015,11 +2015,11 @@ ImmediateFuture<Unit> EdenMount::diff(
   if (getEdenConfig()->hgEnableCachedResultForStatusRequest.getValue()) {
     auto latestInfo = getJournal().getLatest();
     if (latestInfo.has_value()) {
-      auto key = ScmStatusCache::makeKey(commitHash, listIgnored);
+      auto key = ScmStatusCache::makeKey(commitId, listIgnored);
       XLOGF(
           DBG7,
-          "ScmStatusCache: hash={}, listIgnored={}, key={}",
-          commitHash.value(),
+          "ScmStatusCache: id={}, listIgnored={}, key={}",
+          commitId.value(),
           listIgnored,
           key);
       auto curSequenceID = latestInfo.value().sequenceID;
@@ -2058,7 +2058,7 @@ ImmediateFuture<Unit> EdenMount::diff(
 
       // we fall back to the no-cache flow if somehow the promise is nullptr
       if (promise.get() != nullptr) {
-        return diff(rootInode, ctxPtr, commitHash)
+        return diff(rootInode, ctxPtr, commitId)
             .thenTry([this,
                       curSequenceID,
                       callback,
@@ -2126,20 +2126,20 @@ ImmediateFuture<Unit> EdenMount::diff(
       }
       XLOGF(
           ERR,
-          "ScmStatusCache returned nullptr for promise: key={}, commitHash={}, listIgnored={}, curSequenceID={}. Falling back to no-cache path for this request",
+          "ScmStatusCache returned nullptr for promise: key={}, commitId={}, listIgnored={}, curSequenceID={}. Falling back to no-cache path for this request",
           key,
-          commitHash,
+          commitId,
           listIgnored,
           curSequenceID);
     }
   }
 
-  return diff(rootInode, ctxPtr, commitHash).ensure(std::move(stateHolder));
+  return diff(rootInode, ctxPtr, commitId).ensure(std::move(stateHolder));
 }
 
 ImmediateFuture<std::unique_ptr<ScmStatus>> EdenMount::diff(
     TreeInodePtr rootInode,
-    const RootId& commitHash,
+    const RootId& commitId,
     folly::CancellationToken cancellation,
     const ObjectFetchContextPtr& fetchContext,
     bool listIgnored,
@@ -2151,7 +2151,7 @@ ImmediateFuture<std::unique_ptr<ScmStatus>> EdenMount::diff(
       ->diff(
           std::move(rootInode),
           callbackPtr,
-          commitHash,
+          commitId,
           listIgnored,
           enforceCurrentParent,
           std::move(cancellation),
@@ -2186,7 +2186,7 @@ void EdenMount::resetParent(const RootId& parent) {
   parentLock->workingCopyParentRootId = parent;
   objectStore_->workingCopyParentHint(parent);
 
-  journal_->recordHashUpdate(oldParent, parent);
+  journal_->recordRootUpdate(oldParent, parent);
 }
 
 EdenTimestamp EdenMount::getLastCheckoutTime() const {

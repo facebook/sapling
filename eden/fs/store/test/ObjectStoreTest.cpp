@@ -191,7 +191,7 @@ TEST_P(ObjectStoreTest, getBlob_tracks_backing_store_read) {
   ASSERT_EQ(1, loggingContext->requests.size());
   auto& request = loggingContext->requests[0];
   EXPECT_EQ(ObjectFetchContext::Blob, request.type);
-  EXPECT_EQ(readyBlobId, request.hash);
+  EXPECT_EQ(readyBlobId, request.id);
   EXPECT_EQ(ObjectFetchContext::FromNetworkFetch, request.origin);
 }
 
@@ -301,7 +301,7 @@ TEST_P(ObjectStoreTest, getBlob_tracks_second_read_from_cache) {
   ASSERT_EQ(2, loggingContext->requests.size());
   auto& request = loggingContext->requests[1];
   EXPECT_EQ(ObjectFetchContext::Blob, request.type);
-  EXPECT_EQ(readyBlobId, request.hash);
+  EXPECT_EQ(readyBlobId, request.id);
   EXPECT_EQ(ObjectFetchContext::FromDiskCache, request.origin);
 }
 
@@ -310,7 +310,7 @@ TEST_P(ObjectStoreTest, getTree_tracks_backing_store_read) {
   ASSERT_EQ(1, loggingContext->requests.size());
   auto& request = loggingContext->requests[0];
   EXPECT_EQ(ObjectFetchContext::Tree, request.type);
-  EXPECT_EQ(readyTreeId, request.hash);
+  EXPECT_EQ(readyTreeId, request.id);
   EXPECT_EQ(ObjectFetchContext::FromNetworkFetch, request.origin);
 }
 
@@ -320,7 +320,7 @@ TEST_P(ObjectStoreTest, getTree_tracks_second_read_from_cache) {
   ASSERT_EQ(2, loggingContext->requests.size());
   auto& request = loggingContext->requests[1];
   EXPECT_EQ(ObjectFetchContext::Tree, request.type);
-  EXPECT_EQ(readyTreeId, request.hash);
+  EXPECT_EQ(readyTreeId, request.id);
   EXPECT_EQ(ObjectFetchContext::FromMemoryCache, request.origin);
 }
 
@@ -334,7 +334,7 @@ TEST_P(ObjectStoreTest, getTree_tracks_second_read_from_local_store) {
   ASSERT_EQ(2, loggingContext->requests.size());
   auto& request = loggingContext->requests[1];
   EXPECT_EQ(ObjectFetchContext::Tree, request.type);
-  EXPECT_EQ(readyTreeId, request.hash);
+  EXPECT_EQ(readyTreeId, request.id);
   EXPECT_EQ(ObjectFetchContext::FromDiskCache, request.origin);
 }
 
@@ -362,7 +362,7 @@ TEST_P(ObjectStoreTest, getBlobSize_tracks_backing_store_read) {
   ASSERT_EQ(1, loggingContext->requests.size());
   auto& request = loggingContext->requests[0];
   EXPECT_EQ(ObjectFetchContext::BlobAuxData, request.type);
-  EXPECT_EQ(readyBlobId, request.hash);
+  EXPECT_EQ(readyBlobId, request.id);
   EXPECT_EQ(ObjectFetchContext::FromNetworkFetch, request.origin);
 }
 
@@ -372,7 +372,7 @@ TEST_P(ObjectStoreTest, getBlobSize_tracks_second_read_from_cache) {
   ASSERT_EQ(2, loggingContext->requests.size());
   auto& request = loggingContext->requests[1];
   EXPECT_EQ(ObjectFetchContext::BlobAuxData, request.type);
-  EXPECT_EQ(readyBlobId, request.hash);
+  EXPECT_EQ(readyBlobId, request.id);
   EXPECT_EQ(ObjectFetchContext::FromMemoryCache, request.origin);
 }
 
@@ -587,7 +587,7 @@ TEST_P(
   auto context = makeRefPtr<FetchContext>();
 
   auto one = putReadyBlob("foo");
-  auto two = ObjectId{"not_a_constant_hash"};
+  auto two = ObjectId{"not_a_constant_id"};
   auto storedBlob = fakeBackingStore->putBlob(two, "foo");
   storedBlob->setReady();
 

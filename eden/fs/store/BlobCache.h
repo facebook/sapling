@@ -68,7 +68,7 @@ class BlobCache : public ObjectCache<
   ~BlobCache();
 
   /**
-   * If a blob for the given hash is in cache, return it. If the blob is not in
+   * If a blob for the given id is in cache, return it. If the blob is not in
    * cache, return nullptr (and an empty interest handle).
    *
    * If a blob is returned and interest is WantHandle, then a movable handle
@@ -80,7 +80,7 @@ class BlobCache : public ObjectCache<
    * it still exists in memory and the BlobCache has evicted its reference.
    */
   GetResult get(
-      const ObjectId& hash,
+      const ObjectId& id,
       Interest interest = Interest::LikelyNeededAgain);
 
   /**

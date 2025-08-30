@@ -56,7 +56,7 @@ class BlobAccess {
    * be dropped when the blob is no longer needed.
    */
   ImmediateFuture<BlobCache::GetResult> getBlob(
-      const ObjectId& hash,
+      const ObjectId& id,
       const ObjectFetchContextPtr& context,
       BlobCache::Interest interest = BlobCache::Interest::LikelyNeededAgain);
 

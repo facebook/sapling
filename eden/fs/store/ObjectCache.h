@@ -62,7 +62,7 @@ class ObjectInterestHandle {
           ObjectType,
           ObjectCacheFlavor::InterestHandle,
           ObjectCacheStats>> objectCache,
-      ObjectId hash,
+      ObjectId id,
       std::weak_ptr<const ObjectType> object,
       uint64_t generation) noexcept;
 
@@ -72,8 +72,8 @@ class ObjectInterestHandle {
       ObjectCacheStats>>
       objectCache_;
 
-  // hash_ is only accessed if ObjectCache_ is non-expired.
-  ObjectId hash_;
+  // id_ is only accessed if ObjectCache_ is non-expired.
+  ObjectId id_;
 
   // In the situation that the object exists even if it's been evicted, allow
   // retrieving it anyway.
@@ -178,7 +178,7 @@ class ObjectCache : public std::enable_shared_from_this<
   }
 
   /**
-   * If a object for the given hash is in cache, return it. If the object is not
+   * If a object for the given id is in cache, return it. If the object is not
    * in cache, return nullptr (and an empty interest handle).
    *
    * If a object is returned and interest is WantHandle, then a movable handle
@@ -194,18 +194,18 @@ class ObjectCache : public std::enable_shared_from_this<
       F == ObjectCacheFlavor::InterestHandle,
       typename ObjectCache<ObjectType, Flavor, ObjectCacheStats>::GetResult>
   getInterestHandle(
-      const ObjectId& hash,
+      const ObjectId& id,
       Interest interest = Interest::LikelyNeededAgain);
 
   /**
-   * If a object for the given hash is in cache, return it. If the object is not
+   * If a object for the given id is in cache, return it. If the object is not
    * in cache, return nullptr.
    */
   template <ObjectCacheFlavor F = Flavor>
   typename std::enable_if_t<
       F == ObjectCacheFlavor::Simple,
       typename ObjectCache<ObjectType, Flavor, ObjectCacheStats>::ObjectPtr>
-  getSimple(const ObjectId& hash);
+  getSimple(const ObjectId& id);
 
   /**
    * Inserts a object into the cache for future lookup. If the new total size
@@ -235,9 +235,9 @@ class ObjectCache : public std::enable_shared_from_this<
       ObjectPtr object);
 
   /**
-   * Returns true if the cache contains a object for the given hash.
+   * Returns true if the cache contains a object for the given id.
    */
-  bool contains(const ObjectId& hash) const;
+  bool contains(const ObjectId& id) const;
 
   /**
    * Evicts everything from cache.
@@ -278,7 +278,7 @@ class ObjectCache : public std::enable_shared_from_this<
    *
    * But should we ever decide to optimize it, storing the array of CacheItem
    * nodes in a std::vector with indices to its siblings and to the next node
-   * in the hash chain would be more efficient, especially since the indices
+   * in the id chain would be more efficient, especially since the indices
    * could be smaller than a pointer.
    */
 
@@ -339,7 +339,7 @@ class ObjectCache : public std::enable_shared_from_this<
       typename ObjectCache<ObjectType, Flavor, ObjectCacheStats>::GetResult>
   getInterestHandleCore(
       LockedState& state,
-      const ObjectId& hash,
+      const ObjectId& id,
       Interest interest) noexcept;
 
   /**
@@ -382,12 +382,12 @@ class ObjectCache : public std::enable_shared_from_this<
   preProcessInterestHandle(ObjectId id, ObjectPtr object, Interest interest);
 
   /**
-   * If an object for the given hash is in cache, return it. If the object is
+   * If an object for the given id is in cache, return it. If the object is
    * not in cache, return nullptr (and an empty interest handle).
    *
    * Does not do anything related to interest handles.
    */
-  CacheItem* getImpl(const ObjectId& hash, State& state);
+  CacheItem* getImpl(const ObjectId& id, State& state);
 
   /**
    * Inserts an object into the cache for future lookup. If the new total size
@@ -401,7 +401,7 @@ class ObjectCache : public std::enable_shared_from_this<
   std::pair<CacheItem*, bool>
   insertImpl(ObjectId id, ObjectPtr object, State& state);
 
-  void dropInterestHandle(const ObjectId& hash, uint64_t generation) noexcept;
+  void dropInterestHandle(const ObjectId& id, uint64_t generation) noexcept;
 
   void evictUntilFits(State& state) noexcept;
   void evictOne(State& state) noexcept;

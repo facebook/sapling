@@ -2293,14 +2293,14 @@ EdenMountHandle EdenServer::getMount(AbsolutePathPiece mountPath) const {
 
 ImmediateFuture<CheckoutResult> EdenServer::checkOutRevision(
     AbsolutePathPiece mountPath,
-    std::string& rootHash,
+    std::string& rootId,
     std::optional<folly::StringPiece> rootHgManifest,
     const ObjectFetchContextPtr& fetchContext,
     StringPiece callerName,
     CheckoutMode checkoutMode) {
   auto mountHandle = getMount(mountPath);
   auto& edenMount = mountHandle.getEdenMount();
-  auto rootId = edenMount.getObjectStore()->parseRootId(rootHash);
+  auto root = edenMount.getObjectStore()->parseRootId(rootId);
   if (rootHgManifest.has_value()) {
     // The hg client has told us what the root manifest is.
     //
@@ -2311,7 +2311,7 @@ ImmediateFuture<CheckoutResult> EdenServer::checkOutRevision(
     auto rootManifest = hash20FromThrift(rootHgManifest.value());
     edenMount.getObjectStore()
         ->getBackingStore()
-        ->importManifestForRoot(rootId, rootManifest, fetchContext)
+        ->importManifestForRoot(root, rootManifest, fetchContext)
         .get();
   }
 
@@ -2325,7 +2325,7 @@ ImmediateFuture<CheckoutResult> EdenServer::checkOutRevision(
       edenMount
           .checkout(
               mountHandle.getRootInode(),
-              rootId,
+              root,
               fetchContext,
               callerName,
               checkoutMode)

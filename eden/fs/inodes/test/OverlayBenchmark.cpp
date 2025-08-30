@@ -53,20 +53,20 @@ void benchmarkOverlayTreeWrites(
 
   printf("Overlay initialized. Starting benchmark...\n");
 
-  ObjectId hash1{folly::ByteRange{"abcdabcdabcdabcdabcd"_sp}};
-  ObjectId hash2{folly::ByteRange{"01234012340123401234"_sp}};
+  ObjectId id1{folly::ByteRange{"abcdabcdabcdabcdabcd"_sp}};
+  ObjectId id2{folly::ByteRange{"01234012340123401234"_sp}};
 
   DirContents contents(kPathMapDefaultCaseSensitive);
   contents.emplace(
       PathComponent{"one"},
       S_IFREG | 0644,
       overlay->allocateInodeNumber(),
-      hash1);
+      id1);
   contents.emplace(
       PathComponent{"two"},
       S_IFDIR | 0755,
       overlay->allocateInodeNumber(),
-      hash2);
+      id2);
 
   uint64_t N = 500000;
 

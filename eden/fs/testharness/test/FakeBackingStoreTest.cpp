@@ -54,33 +54,33 @@ TEST_F(FakeBackingStoreTest, getNonExistent) {
       store_->getRootTree(RootId{"1"}, ObjectFetchContext::getNullContext()),
       std::domain_error,
       "commit 1 not found");
-  auto hash = makeTestHash("1");
+  auto id = makeTestId("1");
   EXPECT_THROW_RE(
-      store_->getBlob(hash, ObjectFetchContext::getNullContext()),
+      store_->getBlob(id, ObjectFetchContext::getNullContext()),
       std::domain_error,
       "blob 0+1 not found");
   EXPECT_THROW_RE(
-      store_->getTree(hash, ObjectFetchContext::getNullContext()),
+      store_->getTree(id, ObjectFetchContext::getNullContext()),
       std::domain_error,
       "tree 0+1 not found");
 }
 
 TEST_F(FakeBackingStoreTest, getBlob) {
   // Add a blob to the tree
-  auto hash = makeTestHash("1");
-  auto* storedBlob = store_->putBlob(hash, "foobar");
+  auto id = makeTestId("1");
+  auto* storedBlob = store_->putBlob(id, "foobar");
   EXPECT_EQ("foobar", blobContents(storedBlob->get()));
 
   auto executor = folly::ManualExecutor();
 
   // The blob is not ready yet, so calling getBlob() should yield not-ready
   // Future objects.
-  auto future1 = store_->getBlob(hash, ObjectFetchContext::getNullContext())
-                     .via(&executor);
+  auto future1 =
+      store_->getBlob(id, ObjectFetchContext::getNullContext()).via(&executor);
   executor.drain();
   EXPECT_FALSE(future1.isReady());
-  auto future2 = store_->getBlob(hash, ObjectFetchContext::getNullContext())
-                     .via(&executor);
+  auto future2 =
+      store_->getBlob(id, ObjectFetchContext::getNullContext()).via(&executor);
   executor.drain();
   EXPECT_FALSE(future2.isReady());
 
@@ -93,11 +93,11 @@ TEST_F(FakeBackingStoreTest, getBlob) {
   EXPECT_EQ("foobar", blobContents(*std::move(future2).get(0ms).blob));
 
   // But subsequent calls to getBlob() should still yield unready futures.
-  auto future3 = store_->getBlob(hash, ObjectFetchContext::getNullContext())
-                     .via(&executor);
+  auto future3 =
+      store_->getBlob(id, ObjectFetchContext::getNullContext()).via(&executor);
   EXPECT_FALSE(future3.isReady());
-  auto future4 = store_->getBlob(hash, ObjectFetchContext::getNullContext())
-                     .via(&executor);
+  auto future4 =
+      store_->getBlob(id, ObjectFetchContext::getNullContext()).via(&executor);
   EXPECT_FALSE(future4.isReady());
   bool future4Failed = false;
   folly::exception_wrapper future4Error;
@@ -123,8 +123,8 @@ TEST_F(FakeBackingStoreTest, getBlob) {
 
   // Calling setReady() should make the pending futures ready, as well
   // as all subsequent Futures returned by getBlob()
-  auto future5 = store_->getBlob(hash, ObjectFetchContext::getNullContext())
-                     .via(&executor);
+  auto future5 =
+      store_->getBlob(id, ObjectFetchContext::getNullContext()).via(&executor);
   executor.drain();
   EXPECT_FALSE(future5.isReady());
 
@@ -135,8 +135,8 @@ TEST_F(FakeBackingStoreTest, getBlob) {
 
   // Subsequent calls to getBlob() should return Futures that are immediately
   // ready since we called setReady() above.
-  auto future6 = store_->getBlob(hash, ObjectFetchContext::getNullContext())
-                     .via(&executor);
+  auto future6 =
+      store_->getBlob(id, ObjectFetchContext::getNullContext()).via(&executor);
   executor.drain();
   ASSERT_TRUE(future6.isReady());
   EXPECT_EQ("foobar", blobContents(*std::move(future6).get(0ms).blob));
@@ -145,25 +145,25 @@ TEST_F(FakeBackingStoreTest, getBlob) {
 TEST_F(FakeBackingStoreTest, getTree) {
   // Populate some files and directories in the store
   auto [runme, runme_id] = store_->putBlob("#!/bin/sh\necho 'hello world!'\n");
-  auto foo_id = makeTestHash("f00");
+  auto foo_id = makeTestId("f00");
   auto* foo = store_->putBlob(foo_id, "this is foo\n");
   auto [bar, bar_id] = store_->putBlob("barbarbarbar\n");
 
   (void)foo;
 
   auto* dir1 = store_->putTree(
-      makeTestHash("abc"),
+      makeTestId("abc"),
       {
           {"foo", foo_id},
           {"runme", runme_id, FakeBlobType::EXECUTABLE_FILE},
       });
-  EXPECT_EQ(makeTestHash("abc"), dir1->get().getObjectId());
+  EXPECT_EQ(makeTestId("abc"), dir1->get().getObjectId());
   auto* dir2 =
       store_->putTree({{"README", store_->putBlob("docs go here").second}});
 
-  auto rootHash = makeTestHash("10101010");
+  auto rootId = makeTestId("10101010");
   auto* rootDir = store_->putTree(
-      rootHash,
+      rootId,
       {
           {"bar", bar_id},
           {"dir1", dir1},
@@ -174,7 +174,7 @@ TEST_F(FakeBackingStoreTest, getTree) {
   auto executor = folly::ManualExecutor();
 
   // Try getting the root tree but failing it with triggerError()
-  auto future1 = store_->getTree(rootHash, ObjectFetchContext::getNullContext())
+  auto future1 = store_->getTree(rootId, ObjectFetchContext::getNullContext())
                      .via(&executor);
   EXPECT_FALSE(future1.isReady());
   rootDir->triggerError(std::runtime_error("cosmic rays"));
@@ -183,10 +183,10 @@ TEST_F(FakeBackingStoreTest, getTree) {
       std::move(future1).get(0ms), std::runtime_error, "cosmic rays");
 
   // Now try using trigger()
-  auto future2 = store_->getTree(rootHash, ObjectFetchContext::getNullContext())
+  auto future2 = store_->getTree(rootId, ObjectFetchContext::getNullContext())
                      .via(&executor);
   EXPECT_FALSE(future2.isReady());
-  auto future3 = store_->getTree(rootHash, ObjectFetchContext::getNullContext())
+  auto future3 = store_->getTree(rootId, ObjectFetchContext::getNullContext())
                      .via(&executor);
   EXPECT_FALSE(future3.isReady());
   rootDir->trigger();
@@ -195,7 +195,7 @@ TEST_F(FakeBackingStoreTest, getTree) {
   ASSERT_TRUE(future3.isReady());
 
   auto tree2 = std::move(future2).get(0ms).tree;
-  EXPECT_EQ(rootHash, tree2->getObjectId());
+  EXPECT_EQ(rootId, tree2->getObjectId());
   EXPECT_EQ(4, tree2->size());
 
   auto [barName, barTreeEntry] = *tree2->find("bar"_pc);
@@ -217,32 +217,32 @@ TEST_F(FakeBackingStoreTest, getTree) {
   EXPECT_EQ(foo_id, zzzTreeEntry.getObjectId());
   EXPECT_EQ(TreeEntryType::REGULAR_FILE, zzzTreeEntry.getType());
 
-  EXPECT_EQ(rootHash, std::move(future3).get(0ms).tree->getObjectId());
+  EXPECT_EQ(rootId, std::move(future3).get(0ms).tree->getObjectId());
 
   // Now try using setReady()
-  auto future4 = store_->getTree(rootHash, ObjectFetchContext::getNullContext())
+  auto future4 = store_->getTree(rootId, ObjectFetchContext::getNullContext())
                      .via(&executor);
   EXPECT_FALSE(future4.isReady());
   rootDir->setReady();
   executor.drain();
   ASSERT_TRUE(future4.isReady());
-  EXPECT_EQ(rootHash, std::move(future4).get(0ms).tree->getObjectId());
+  EXPECT_EQ(rootId, std::move(future4).get(0ms).tree->getObjectId());
 
-  auto future5 = store_->getTree(rootHash, ObjectFetchContext::getNullContext())
+  auto future5 = store_->getTree(rootId, ObjectFetchContext::getNullContext())
                      .via(&executor);
   executor.drain();
   ASSERT_TRUE(future5.isReady());
-  EXPECT_EQ(rootHash, std::move(future5).get(0ms).tree->getObjectId());
+  EXPECT_EQ(rootId, std::move(future5).get(0ms).tree->getObjectId());
 }
 
 TEST_F(FakeBackingStoreTest, getRootTree) {
   // Set up one commit with a root tree
-  auto dir1Hash = makeTestHash("abc");
+  auto dir1Id = makeTestId("abc");
   auto* dir1 =
-      store_->putTree(dir1Hash, {{"foo", store_->putBlob("foo\n").second}});
+      store_->putTree(dir1Id, {{"foo", store_->putBlob("foo\n").second}});
   auto* commit1 = store_->putCommit(RootId{"1"}, dir1);
   // Set up a second commit, but don't actually add the tree object for this one
-  auto* commit2 = store_->putCommit(RootId{"2"}, makeTestHash("3"));
+  auto* commit2 = store_->putCommit(RootId{"2"}, makeTestId("3"));
 
   auto executor = folly::ManualExecutor();
 
@@ -263,7 +263,7 @@ TEST_F(FakeBackingStoreTest, getRootTree) {
   EXPECT_FALSE(future1.isReady());
   dir1->trigger();
   executor.drain();
-  EXPECT_EQ(dir1Hash, std::move(future1).get(0ms).treeId);
+  EXPECT_EQ(dir1Id, std::move(future1).get(0ms).treeId);
 
   // future2 should still be pending
   EXPECT_FALSE(future2.isReady());
@@ -284,7 +284,7 @@ TEST_F(FakeBackingStoreTest, getRootTree) {
   EXPECT_FALSE(future3.isReady());
   dir1->trigger();
   executor.drain();
-  EXPECT_EQ(dir1Hash, std::move(future3).get(0ms).treeId);
+  EXPECT_EQ(dir1Id, std::move(future3).get(0ms).treeId);
 
   // Try triggering errors
   auto future4 =

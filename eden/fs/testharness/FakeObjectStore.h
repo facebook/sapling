@@ -50,7 +50,7 @@ class FakeObjectStore final : public IObjectStore {
       const ObjectFetchContextPtr& context =
           ObjectFetchContext::getNullContext()) const override;
 
-  size_t getAccessCount(const ObjectId& hash) const;
+  size_t getAccessCount(const ObjectId& id) const;
 
  private:
   std::unordered_map<RootId, Tree> commits_;

@@ -129,7 +129,7 @@ class ModifiedDiffEntry : public DeferredDiffEntry {
       if (!contents->isMaterialized()) {
         for (auto& scmEntry : scmEntries_) {
           if (context_->store->areObjectsKnownIdentical(
-                  contents->treeHash.value(), scmEntry.getObjectId())) {
+                  contents->treeId.value(), scmEntry.getObjectId())) {
             // It did not change since it was loaded,
             // and it matches the scmEntry we're diffing against.
             return folly::unit;
@@ -139,10 +139,10 @@ class ModifiedDiffEntry : public DeferredDiffEntry {
         // If it didn't exactly match any of the trees, then just diff with the
         // first scmEntry.
         context_->callback->modifiedPath(getPath(), scmEntries_[0].getDtype());
-        auto contentsHash = contents->treeHash.value();
+        auto contentsId = contents->treeId.value();
         contents.unlock();
         return diffTrees(
-            context_, getPath(), scmEntries_[0].getObjectId(), contentsHash);
+            context_, getPath(), scmEntries_[0].getObjectId(), contentsId);
       }
     }
 
@@ -216,18 +216,18 @@ class ModifiedBlobDiffEntry : public DeferredDiffEntry {
       DiffContext* context,
       RelativePath path,
       const TreeEntry& scmEntry,
-      ObjectId currentBlobHash,
+      ObjectId currentBlobId,
       dtype_t currentDType)
       : DeferredDiffEntry{context, std::move(path)},
         scmEntry_{scmEntry},
-        currentBlobHash_{std::move(currentBlobHash)},
+        currentBlobId_{std::move(currentBlobId)},
         currentDType_{currentDType} {}
 
   ImmediateFuture<folly::Unit> run() override {
     return context_->store
         ->areBlobsEqual(
             scmEntry_.getObjectId(),
-            currentBlobHash_,
+            currentBlobId_,
             context_->getFetchContext())
         .thenValue([this](bool equal) {
           if (!equal) {
@@ -239,7 +239,7 @@ class ModifiedBlobDiffEntry : public DeferredDiffEntry {
 
  private:
   TreeEntry scmEntry_;
-  ObjectId currentBlobHash_;
+  ObjectId currentBlobId_;
   dtype_t currentDType_;
 };
 
@@ -248,45 +248,45 @@ class ModifiedScmDiffEntry : public DeferredDiffEntry {
   ModifiedScmDiffEntry(
       DiffContext* context,
       RelativePath path,
-      ObjectId scmHash,
-      ObjectId wdHash)
+      ObjectId scmId,
+      ObjectId wdId)
       : DeferredDiffEntry{context, std::move(path)},
-        scmHash_{scmHash},
-        wdHash_{wdHash} {}
+        scmId_{scmId},
+        wdId_{wdId} {}
 
   ImmediateFuture<folly::Unit> run() override {
-    return diffTrees(context_, getPath(), scmHash_, wdHash_);
+    return diffTrees(context_, getPath(), scmId_, wdId_);
   }
 
  private:
-  ObjectId scmHash_;
-  ObjectId wdHash_;
+  ObjectId scmId_;
+  ObjectId wdId_;
 };
 
 class AddedScmDiffEntry : public DeferredDiffEntry {
  public:
-  AddedScmDiffEntry(DiffContext* context, RelativePath path, ObjectId wdHash)
-      : DeferredDiffEntry{context, std::move(path)}, wdHash_{wdHash} {}
+  AddedScmDiffEntry(DiffContext* context, RelativePath path, ObjectId wdId)
+      : DeferredDiffEntry{context, std::move(path)}, wdId_{wdId} {}
 
   ImmediateFuture<folly::Unit> run() override {
-    return diffAddedTree(context_, getPath(), wdHash_);
+    return diffAddedTree(context_, getPath(), wdId_);
   }
 
  private:
-  ObjectId wdHash_;
+  ObjectId wdId_;
 };
 
 class RemovedScmDiffEntry : public DeferredDiffEntry {
  public:
-  RemovedScmDiffEntry(DiffContext* context, RelativePath path, ObjectId scmHash)
-      : DeferredDiffEntry{context, std::move(path)}, scmHash_{scmHash} {}
+  RemovedScmDiffEntry(DiffContext* context, RelativePath path, ObjectId scmId)
+      : DeferredDiffEntry{context, std::move(path)}, scmId_{scmId} {}
 
   ImmediateFuture<folly::Unit> run() override {
-    return diffRemovedTree(context_, getPath(), scmHash_);
+    return diffRemovedTree(context_, getPath(), scmId_);
   }
 
  private:
-  ObjectId scmHash_;
+  ObjectId scmId_;
 };
 
 } // unnamed namespace
@@ -322,37 +322,37 @@ unique_ptr<DeferredDiffEntry> DeferredDiffEntry::createModifiedEntry(
     DiffContext* context,
     RelativePath path,
     const TreeEntry& scmEntry,
-    ObjectId currentBlobHash,
+    ObjectId currentBlobId,
     dtype_t currentDType) {
   return make_unique<ModifiedBlobDiffEntry>(
       context,
       std::move(path),
       scmEntry,
-      std::move(currentBlobHash),
+      std::move(currentBlobId),
       currentDType);
 }
 
 unique_ptr<DeferredDiffEntry> DeferredDiffEntry::createModifiedScmEntry(
     DiffContext* context,
     RelativePath path,
-    ObjectId scmHash,
-    ObjectId wdHash) {
+    ObjectId scmId,
+    ObjectId wdId) {
   return make_unique<ModifiedScmDiffEntry>(
-      context, std::move(path), scmHash, wdHash);
+      context, std::move(path), scmId, wdId);
 }
 
 unique_ptr<DeferredDiffEntry> DeferredDiffEntry::createAddedScmEntry(
     DiffContext* context,
     RelativePath path,
-    ObjectId wdHash) {
-  return make_unique<AddedScmDiffEntry>(context, std::move(path), wdHash);
+    ObjectId wdId) {
+  return make_unique<AddedScmDiffEntry>(context, std::move(path), wdId);
 }
 
 unique_ptr<DeferredDiffEntry> DeferredDiffEntry::createRemovedScmEntry(
     DiffContext* context,
     RelativePath path,
-    ObjectId scmHash) {
-  return make_unique<RemovedScmDiffEntry>(context, std::move(path), scmHash);
+    ObjectId scmId) {
+  return make_unique<RemovedScmDiffEntry>(context, std::move(path), scmId);
 }
 
 } // namespace facebook::eden

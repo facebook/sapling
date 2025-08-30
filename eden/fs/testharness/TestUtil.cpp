@@ -17,10 +17,10 @@ using namespace std::chrono_literals;
 namespace facebook::eden {
 constexpr auto materializationTimeoutLimit = 1000ms;
 
-ObjectId makeTestHash(folly::StringPiece value) {
+ObjectId makeTestId(folly::StringPiece value) {
   constexpr size_t ASCII_SIZE = 2 * Hash20::RAW_SIZE;
   if (value.size() > ASCII_SIZE) {
-    throw std::invalid_argument(value.toString() + " is too big for Hash");
+    throw std::invalid_argument(value.toString() + " is too big for ObjectId");
   }
   std::array<char, ASCII_SIZE> fullValue;
   memset(fullValue.data(), '0', fullValue.size());
@@ -34,7 +34,7 @@ ObjectId makeTestHash(folly::StringPiece value) {
 Hash20 makeTestHash20(folly::StringPiece value) {
   constexpr size_t ASCII_SIZE = 2 * Hash20::RAW_SIZE;
   if (value.size() > ASCII_SIZE) {
-    throw std::invalid_argument(value.toString() + " is too big for Hash");
+    throw std::invalid_argument(value.toString() + " is too big for Hash20");
   }
   std::array<char, ASCII_SIZE> fullValue;
   memset(fullValue.data(), '0', fullValue.size());

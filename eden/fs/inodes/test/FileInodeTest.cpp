@@ -620,18 +620,18 @@ TEST(FileInode, dropsCacheWhenFullyRead) {
   auto blobCache = mount.getBlobCache();
 
   auto inode = mount.getFileInode("bigfile.txt");
-  auto hash = inode->getObjectId().value();
+  auto id = inode->getObjectId().value();
 
-  EXPECT_FALSE(blobCache->get(hash).object);
+  EXPECT_FALSE(blobCache->get(id).object);
 
   inode->read(4, 0, ObjectFetchContext::getNullContext()).get(0ms);
-  EXPECT_TRUE(blobCache->contains(hash));
+  EXPECT_TRUE(blobCache->contains(id));
 
   inode->read(4, 4, ObjectFetchContext::getNullContext()).get(0ms);
-  EXPECT_TRUE(blobCache->contains(hash));
+  EXPECT_TRUE(blobCache->contains(id));
 
   inode->read(4, 8, ObjectFetchContext::getNullContext()).get(0ms);
-  EXPECT_FALSE(blobCache->contains(hash));
+  EXPECT_FALSE(blobCache->contains(id));
 }
 
 TEST(FileInode, keepsCacheIfPartiallyReread) {
@@ -641,22 +641,22 @@ TEST(FileInode, keepsCacheIfPartiallyReread) {
   auto blobCache = mount.getBlobCache();
 
   auto inode = mount.getFileInode("bigfile.txt");
-  auto hash = inode->getObjectId().value();
+  auto id = inode->getObjectId().value();
 
-  EXPECT_FALSE(blobCache->contains(hash));
+  EXPECT_FALSE(blobCache->contains(id));
 
   inode->read(6, 0, ObjectFetchContext::getNullContext()).get(0ms);
-  EXPECT_TRUE(blobCache->contains(hash));
+  EXPECT_TRUE(blobCache->contains(id));
 
   inode->read(6, 6, ObjectFetchContext::getNullContext()).get(0ms);
-  EXPECT_FALSE(blobCache->contains(hash));
+  EXPECT_FALSE(blobCache->contains(id));
 
   inode->read(6, 0, ObjectFetchContext::getNullContext()).get(0ms);
-  EXPECT_TRUE(blobCache->contains(hash));
+  EXPECT_TRUE(blobCache->contains(id));
 
   // Evicts again on the second full read!
   inode->read(6, 6, ObjectFetchContext::getNullContext()).get(0ms);
-  EXPECT_FALSE(blobCache->contains(hash));
+  EXPECT_FALSE(blobCache->contains(id));
 }
 
 TEST(FileInode, dropsCacheWhenMaterialized) {
@@ -666,16 +666,16 @@ TEST(FileInode, dropsCacheWhenMaterialized) {
   auto blobCache = mount.getBlobCache();
 
   auto inode = mount.getFileInode("bigfile.txt");
-  auto hash = inode->getObjectId().value();
+  auto id = inode->getObjectId().value();
 
-  EXPECT_FALSE(blobCache->get(hash).object);
+  EXPECT_FALSE(blobCache->get(id).object);
 
   inode->read(4, 0, ObjectFetchContext::getNullContext()).get(0ms);
-  EXPECT_TRUE(blobCache->contains(hash));
+  EXPECT_TRUE(blobCache->contains(id));
 
   inode->write("data"_sp, 0, ObjectFetchContext::getNullContext()).get(0ms);
   EXPECT_TRUE(inode->isMaterialized());
-  EXPECT_FALSE(blobCache->contains(hash));
+  EXPECT_FALSE(blobCache->contains(id));
 }
 
 TEST(FileInode, dropsCacheWhenUnloaded) {
@@ -685,14 +685,14 @@ TEST(FileInode, dropsCacheWhenUnloaded) {
   auto blobCache = mount.getBlobCache();
 
   auto inode = mount.getFileInode("bigfile.txt");
-  auto hash = inode->getObjectId().value();
+  auto id = inode->getObjectId().value();
 
   inode->read(4, 0, ObjectFetchContext::getNullContext()).get(0ms);
-  EXPECT_TRUE(blobCache->contains(hash));
+  EXPECT_TRUE(blobCache->contains(id));
 
   inode.reset();
   mount.getEdenMount()->getRootInode()->unloadChildrenNow();
-  EXPECT_FALSE(blobCache->contains(hash));
+  EXPECT_FALSE(blobCache->contains(id));
 }
 
 TEST(FileInode, reloadsBlobIfCacheIsEvicted) {
@@ -702,15 +702,15 @@ TEST(FileInode, reloadsBlobIfCacheIsEvicted) {
   auto blobCache = mount.getBlobCache();
 
   auto inode = mount.getFileInode("bigfile.txt");
-  auto hash = inode->getObjectId().value();
+  auto id = inode->getObjectId().value();
 
   inode->read(4, 0, ObjectFetchContext::getNullContext()).get(0ms);
   blobCache->clear();
-  EXPECT_FALSE(blobCache->contains(hash));
+  EXPECT_FALSE(blobCache->contains(id));
 
   inode->read(4, 4, ObjectFetchContext::getNullContext()).get(0ms);
-  EXPECT_TRUE(blobCache->contains(hash))
-      << fmt::format("reading should insert hash {} into cache", hash);
+  EXPECT_TRUE(blobCache->contains(id))
+      << fmt::format("reading should insert id {} into cache", id);
 }
 
 // TODO: test multiple flags together

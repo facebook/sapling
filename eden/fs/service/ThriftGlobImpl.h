@@ -52,7 +52,7 @@ class ThriftGlobImpl {
   bool suppressFileList_{false};
   bool wantDtype_{false};
   bool listOnlyFiles_{false};
-  std::vector<std::string> rootHashes_;
+  std::vector<std::string> rootIds_;
   folly::StringPiece searchRootUser_;
 };
 

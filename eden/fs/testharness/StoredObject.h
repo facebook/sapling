@@ -19,14 +19,14 @@ class Tree;
 template <typename T>
 class StoredObject;
 using StoredBlob = StoredObject<const Blob>;
-using StoredHash = StoredObject<ObjectId>;
+using StoredId = StoredObject<ObjectId>;
 using StoredTree = StoredObject<const Tree>;
 using StoredGlob = StoredObject<const std::vector<std::string>>;
 
 /**
  * A helper class for TestBackingStore.
  *
- * This contains a Tree, Blob, Glob, or Hash, but allows tracking when it should
+ * This contains a Tree, Blob, Glob, or Id, but allows tracking when it should
  * actually be marked ready to return to callers.  The getFuture() API can be
  * used to get a folly::Future that will be fulfilled when the object is marked
  * ready.

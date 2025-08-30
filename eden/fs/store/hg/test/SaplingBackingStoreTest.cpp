@@ -424,20 +424,20 @@ TEST_F(SaplingBackingStoreNoFaultInjectorTest, cachingPolicyConstruction) {
 TEST_F(
     SaplingBackingStoreNoFaultInjectorTest,
     sameRequestsDifferentFetchCause) {
-  auto treeHash = HgProxyHash::makeEmbeddedProxyHash1(
+  auto treeId = HgProxyHash::makeEmbeddedProxyHash1(
       queuedBackingStore->getManifestNode(ObjectId::fromHex(commit1.value()))
           .value(),
       RelativePathPiece{});
 
   HgProxyHash proxyHash =
-      HgProxyHash::load(localStore.get(), treeHash, "getTree", *stats);
+      HgProxyHash::load(localStore.get(), treeId, "getTree", *stats);
 
   auto fsRequestContext = ObjectFetchContext::getNullFsContext();
   auto prefetchRequestContext = ObjectFetchContext::getNullPrefetchContext();
   auto fsRequest = SaplingImportRequest::makeTreeImportRequest(
-      treeHash, proxyHash, fsRequestContext);
+      treeId, proxyHash, fsRequestContext);
   auto prefetchRequest = SaplingImportRequest::makeTreeImportRequest(
-      treeHash, proxyHash, prefetchRequestContext);
+      treeId, proxyHash, prefetchRequestContext);
 
   auto executor = std::make_shared<folly::CPUThreadPoolExecutor>(1);
   auto treeFuture = via(executor.get(), [&]() {
@@ -462,17 +462,17 @@ TEST_F(SaplingBackingStoreWithFaultInjectorIgnoreConfigTest, getTreeBatch) {
           {"hg:filtered-paths", "['foo']"},
       });
 
-  auto tree1Hash = HgProxyHash::makeEmbeddedProxyHash1(
+  auto tree1Id = HgProxyHash::makeEmbeddedProxyHash1(
       queuedBackingStore->getManifestNode(ObjectId::fromHex(commit1.value()))
           .value(),
       RelativePathPiece{});
 
   HgProxyHash proxyHash =
-      HgProxyHash::load(localStore.get(), tree1Hash, "getTree", *stats);
+      HgProxyHash::load(localStore.get(), tree1Id, "getTree", *stats);
 
   auto requestContext = ObjectFetchContext::getNullContext();
   auto request = SaplingImportRequest::makeTreeImportRequest(
-      tree1Hash, proxyHash, requestContext);
+      tree1Id, proxyHash, requestContext);
 
   auto executor = std::make_shared<folly::CPUThreadPoolExecutor>(1);
   auto tree1fut = via(executor.get(), [&]() {
@@ -498,17 +498,17 @@ TEST_F(SaplingBackingStoreWithFaultInjectorTest, getTreeBatch) {
         });
   }
   faultInjector.injectBlock("SaplingBackingStore::getTreeBatch", ".*");
-  auto tree1Hash = HgProxyHash::makeEmbeddedProxyHash1(
+  auto tree1Id = HgProxyHash::makeEmbeddedProxyHash1(
       queuedBackingStore->getManifestNode(ObjectId::fromHex(commit1.value()))
           .value(),
       RelativePathPiece{});
 
   HgProxyHash proxyHash =
-      HgProxyHash::load(localStore.get(), tree1Hash, "getTree", *stats);
+      HgProxyHash::load(localStore.get(), tree1Id, "getTree", *stats);
 
   auto requestContext = ObjectFetchContext::getNullContext();
   auto request = SaplingImportRequest::makeTreeImportRequest(
-      tree1Hash, proxyHash, requestContext);
+      tree1Id, proxyHash, requestContext);
 
   auto executor = std::make_shared<folly::CPUThreadPoolExecutor>(1);
   auto tree1fut = via(executor.get(), [&]() {
@@ -543,11 +543,10 @@ TEST_F(SaplingBackingStoreWithFaultInjectorTest, getTreeBatch) {
 }
 
 TEST(SaplingBackingStoreObjectId, round_trip_object_IDs) {
-  Hash20 testHash{
-      folly::StringPiece{"0123456789abcdef0123456789abcdef01234567"}};
+  Hash20 testId{folly::StringPiece{"0123456789abcdef0123456789abcdef01234567"}};
 
   {
-    ObjectId legacy{testHash.toByteString()};
+    ObjectId legacy{testId.toByteString()};
     EXPECT_EQ(
         "proxy-0123456789abcdef0123456789abcdef01234567",
         SaplingBackingStore::staticRenderObjectId(legacy));
@@ -560,7 +559,7 @@ TEST(SaplingBackingStoreObjectId, round_trip_object_IDs) {
 
   {
     ObjectId with_path{HgProxyHash::makeEmbeddedProxyHash1(
-        testHash, RelativePathPiece{"foo/bar/baz"})};
+        testId, RelativePathPiece{"foo/bar/baz"})};
     EXPECT_EQ(
         "0123456789abcdef0123456789abcdef01234567:foo/bar/baz",
         SaplingBackingStore::staticRenderObjectId(with_path));
@@ -572,15 +571,15 @@ TEST(SaplingBackingStoreObjectId, round_trip_object_IDs) {
   }
 
   {
-    ObjectId hash_only{HgProxyHash::makeEmbeddedProxyHash2(testHash)};
+    ObjectId id_only{HgProxyHash::makeEmbeddedProxyHash2(testId)};
     EXPECT_EQ(
         "0123456789abcdef0123456789abcdef01234567",
-        SaplingBackingStore::staticRenderObjectId(hash_only));
+        SaplingBackingStore::staticRenderObjectId(id_only));
 
     EXPECT_EQ(
-        hash_only,
+        id_only,
         SaplingBackingStore::staticParseObjectId(
-            SaplingBackingStore::staticRenderObjectId(hash_only)));
+            SaplingBackingStore::staticRenderObjectId(id_only)));
   }
 }
 } // namespace facebook::eden

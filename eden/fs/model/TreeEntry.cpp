@@ -133,21 +133,21 @@ std::string TreeEntry::toLogString(PathComponentPiece name) const {
       break;
   }
 
-  return fmt::format("({}, {}, {})", name, hash_, fileTypeChar);
+  return fmt::format("({}, {}, {})", name, id_, fileTypeChar);
 }
 
 size_t TreeEntry::serializedSize(PathComponentPiece name) const {
-  return sizeof(uint8_t) + sizeof(uint16_t) + hash_.size() + sizeof(uint16_t) +
+  return sizeof(uint8_t) + sizeof(uint16_t) + id_.size() + sizeof(uint16_t) +
       name.view().size() + sizeof(uint64_t) + Hash20::RAW_SIZE +
       sizeof(uint8_t) + Hash32::RAW_SIZE;
 }
 
 void TreeEntry::serialize(PathComponentPiece name, Appender& appender) const {
   appender.write<uint8_t>(static_cast<uint8_t>(type_));
-  auto hash = hash_.getBytes();
-  XCHECK_LE(hash.size(), std::numeric_limits<uint16_t>::max());
-  appender.write<uint16_t>(folly::to_narrow(hash.size()));
-  appender.push(hash);
+  auto id = id_.getBytes();
+  XCHECK_LE(id.size(), std::numeric_limits<uint16_t>::max());
+  appender.write<uint16_t>(folly::to_narrow(id.size()));
+  appender.push(id);
   auto nameStringPiece = name.view();
   XCHECK_LE(nameStringPiece.size(), std::numeric_limits<uint16_t>::max());
   appender.write<uint16_t>(folly::to_narrow(nameStringPiece.size()));
@@ -181,28 +181,28 @@ std::optional<std::pair<PathComponent, TreeEntry>> TreeEntry::deserialize(
   memcpy(&type, data.data(), sizeof(uint8_t));
   data.advance(sizeof(uint8_t));
 
-  uint16_t hash_size;
+  uint16_t id_size;
   if (data.size() < sizeof(uint16_t)) {
     XLOGF(
         ERR,
-        "Can not read tree entry hash size, bytes remaining {}",
+        "Can not read tree entry id size, bytes remaining {}",
         data.size());
     return std::nullopt;
   }
-  memcpy(&hash_size, data.data(), sizeof(uint16_t));
+  memcpy(&id_size, data.data(), sizeof(uint16_t));
   data.advance(sizeof(uint16_t));
 
-  if (data.size() < hash_size) {
+  if (data.size() < id_size) {
     XLOGF(
         ERR,
-        "Can not read tree entry hash, bytes remaining {} need {}",
+        "Can not read tree entry id, bytes remaining {} need {}",
         data.size(),
-        hash_size);
+        id_size);
     return std::nullopt;
   }
-  auto hash_bytes = ByteRange{StringPiece{data, 0, hash_size}};
-  auto hash = ObjectId{hash_bytes};
-  data.advance(hash_size);
+  auto id_bytes = ByteRange{StringPiece{data, 0, id_size}};
+  auto id = ObjectId{id_bytes};
+  data.advance(id_size);
 
   uint16_t name_size;
   if (data.size() < sizeof(uint16_t)) {
@@ -272,8 +272,7 @@ std::optional<std::pair<PathComponent, TreeEntry>> TreeEntry::deserialize(
   }
 
   return std::pair{
-      std::move(name),
-      TreeEntry{hash, (TreeEntryType)type, size, sha1, blake3}};
+      std::move(name), TreeEntry{id, (TreeEntryType)type, size, sha1, blake3}};
 }
 
 } // namespace facebook::eden

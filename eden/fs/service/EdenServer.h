@@ -342,7 +342,7 @@ class EdenServer : private TakeoverHandler {
 
   ImmediateFuture<CheckoutResult> checkOutRevision(
       AbsolutePathPiece mountPath,
-      std::string& rootHash,
+      std::string& rootId,
       std::optional<folly::StringPiece> rootHgManifest,
       const ObjectFetchContextPtr& fetchContext,
       folly::StringPiece callerName,

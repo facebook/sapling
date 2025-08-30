@@ -16,26 +16,16 @@ using namespace facebook::eden;
 using namespace folly::literals;
 
 namespace {
-const auto hash0 =
-    ObjectId::fromHex("0000000000000000000000000000000000000000");
-const auto hash1 =
-    ObjectId::fromHex("0000000000000000000000000000000000000001");
-const auto hash2 =
-    ObjectId::fromHex("0000000000000000000000000000000000000002");
-const auto hash3 =
-    ObjectId::fromHex("0000000000000000000000000000000000000003");
-const auto hash4 =
-    ObjectId::fromHex("0000000000000000000000000000000000000004");
-const auto hash5 =
-    ObjectId::fromHex("0000000000000000000000000000000000000005");
-const auto hash6 =
-    ObjectId::fromHex("0000000000000000000000000000000000000006");
-const auto hash7 =
-    ObjectId::fromHex("0000000000000000000000000000000000000007");
-const auto hash8 =
-    ObjectId::fromHex("0000000000000000000000000000000000000008");
-const auto hash9 =
-    ObjectId::fromHex("0000000000000000000000000000000000000009");
+const auto id0 = ObjectId::fromHex("0000000000000000000000000000000000000000");
+const auto id1 = ObjectId::fromHex("0000000000000000000000000000000000000001");
+const auto id2 = ObjectId::fromHex("0000000000000000000000000000000000000002");
+const auto id3 = ObjectId::fromHex("0000000000000000000000000000000000000003");
+const auto id4 = ObjectId::fromHex("0000000000000000000000000000000000000004");
+const auto id5 = ObjectId::fromHex("0000000000000000000000000000000000000005");
+const auto id6 = ObjectId::fromHex("0000000000000000000000000000000000000006");
+const auto id7 = ObjectId::fromHex("0000000000000000000000000000000000000007");
+const auto id8 = ObjectId::fromHex("0000000000000000000000000000000000000008");
+const auto id9 = ObjectId::fromHex("0000000000000000000000000000000000000009");
 
 const auto entry0Name = PathComponent{"a"};
 const auto entry1Name = PathComponent{"b"};
@@ -43,33 +33,33 @@ const auto entry2Name = PathComponent{"c"};
 const auto entry3Name = PathComponent{"d"};
 const auto entry4Name = PathComponent{"e"};
 
-const auto entry0 = TreeEntry{hash0, TreeEntryType::REGULAR_FILE};
-const auto entry1 = TreeEntry{hash1, TreeEntryType::REGULAR_FILE};
-const auto entry2 = TreeEntry{hash2, TreeEntryType::REGULAR_FILE};
-const auto entry3 = TreeEntry{hash3, TreeEntryType::REGULAR_FILE};
-const auto entry4 = TreeEntry{hash4, TreeEntryType::REGULAR_FILE};
+const auto entry0 = TreeEntry{id0, TreeEntryType::REGULAR_FILE};
+const auto entry1 = TreeEntry{id1, TreeEntryType::REGULAR_FILE};
+const auto entry2 = TreeEntry{id2, TreeEntryType::REGULAR_FILE};
+const auto entry3 = TreeEntry{id3, TreeEntryType::REGULAR_FILE};
+const auto entry4 = TreeEntry{id4, TreeEntryType::REGULAR_FILE};
 
-const auto tree0_id = hash5;
+const auto tree0_id = id5;
 const auto tree0 = std::make_shared<const Tree>(
     Tree::container{{{entry0Name, entry0}}, kPathMapDefaultCaseSensitive},
     tree0_id);
 
-const auto tree1_id = hash6;
+const auto tree1_id = id6;
 const auto tree1 = std::make_shared<const Tree>(
     Tree::container{{{entry1Name, entry1}}, kPathMapDefaultCaseSensitive},
     tree1_id);
 
-const auto tree2_id = hash7;
+const auto tree2_id = id7;
 const auto tree2 = std::make_shared<const Tree>(
     Tree::container{{{entry2Name, entry2}}, kPathMapDefaultCaseSensitive},
     tree2_id);
 
-const auto tree3_id = hash8;
+const auto tree3_id = id8;
 const auto tree3 = std::make_shared<const Tree>(
     Tree::container{{{entry3Name, entry3}}, kPathMapDefaultCaseSensitive},
     tree3_id);
 
-const auto tree4_id = hash9;
+const auto tree4_id = id9;
 const auto tree4 = std::make_shared<const Tree>(
     Tree::container{
         {{entry0Name, entry0},

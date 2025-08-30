@@ -45,28 +45,28 @@ constexpr folly::StringPiece kDotEdenName{".eden"};
  * The state of a TreeInode as held in memory.
  */
 struct TreeInodeState {
-  explicit TreeInodeState(DirContents&& dir, std::optional<ObjectId> hash)
-      : entries{std::forward<DirContents>(dir)}, treeHash{std::move(hash)} {}
+  explicit TreeInodeState(DirContents&& dir, std::optional<ObjectId> id)
+      : entries{std::forward<DirContents>(dir)}, treeId{std::move(id)} {}
 
   bool isMaterialized() const {
-    return !treeHash.has_value();
+    return !treeId.has_value();
   }
   void setMaterialized() {
-    treeHash = std::nullopt;
+    treeId = std::nullopt;
   }
 
   DirContents entries;
 
   /**
    * If this TreeInode is unmaterialized (identical to an existing source
-   * control Tree), treeHash contains the ID of the source control Tree
+   * control Tree), treeId contains the ID of the source control Tree
    * that this TreeInode is identical to.
    *
    * If this TreeInode is materialized (possibly modified from source
    * control, and backed by the Overlay instead of a source control Tree),
-   * treeHash will be none.
+   * treeId will be none.
    */
-  std::optional<ObjectId> treeHash;
+  std::optional<ObjectId> treeId;
 };
 
 /**
@@ -98,7 +98,7 @@ class TreeInode final : public InodeBaseMetadata<DirContents> {
       mode_t initialMode,
       const std::optional<InodeTimestamps>& initialTimestamps,
       DirContents&& dir,
-      std::optional<ObjectId> treeHash);
+      std::optional<ObjectId> treeId);
 
   /**
    * Construct the root TreeInode from a source control commit's root.
@@ -111,7 +111,7 @@ class TreeInode final : public InodeBaseMetadata<DirContents> {
   TreeInode(
       EdenMount* mount,
       DirContents&& dir,
-      std::optional<ObjectId> treeHash);
+      std::optional<ObjectId> treeId);
 
   ~TreeInode() override;
 
@@ -226,7 +226,7 @@ class TreeInode final : public InodeBaseMetadata<DirContents> {
   }
 
   /**
-   * Get the digest hash for this inode.
+   * Get the digest id for this inode.
    */
   ImmediateFuture<std::optional<Hash32>> getDigestHash(
       const ObjectFetchContextPtr& fetchContext);
@@ -416,7 +416,7 @@ class TreeInode final : public InodeBaseMetadata<DirContents> {
   void childDematerialized(
       const RenameLock& renameLock,
       PathComponentPiece childName,
-      ObjectId childScmHash);
+      ObjectId childScmId);
 
   /**
    * Internal API only for use by InodeMap.
@@ -439,7 +439,7 @@ class TreeInode final : public InodeBaseMetadata<DirContents> {
   void loadUnlinkedChildInode(
       PathComponentPiece name,
       InodeNumber number,
-      std::optional<ObjectId> hash,
+      std::optional<ObjectId> id,
       mode_t mode);
 
   /**
@@ -791,10 +791,10 @@ class TreeInode final : public InodeBaseMetadata<DirContents> {
    * Check to see if we can break out of a checkout() operation early.
    *
    * This should only be called for non-materialized TreeInodes that have a
-   * source control hash.
+   * source control id.
    *
    * @param ctx The CheckoutContext
-   * @param treeHash The source control hash for the TreeInode being updated.
+   * @param treeId The source control id for the TreeInode being updated.
    * @param fromTree The source control Tree that this checkout operation is
    *        moving away from.  This may be null if there was no source control
    *        state at this location previously.
@@ -804,7 +804,7 @@ class TreeInode final : public InodeBaseMetadata<DirContents> {
    */
   static bool canShortCircuitCheckout(
       CheckoutContext* ctx,
-      const ObjectId& treeHash,
+      const ObjectId& treeId,
       const Tree* fromTree,
       const Tree* toTree);
   void computeCheckoutActions(

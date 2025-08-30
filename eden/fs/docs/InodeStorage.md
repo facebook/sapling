@@ -50,12 +50,12 @@ between states as filesystem operations are performed on it.
 
 Eden inodes transition between a series of states:
 
-Once the parent tree has been loaded, the names, types, and hashes of its
-children are known. At this point, questions like "does this entry exist?" or
-"what is its hash?" can be answered, in addition to providing any metadata we
-have from the backing version control system. (For example, Mononoke will
-provide file sizes and SHA-1 hashes so Eden does not have to actually load the
-files and compute them.)
+Once the parent tree has been loaded, the names, types, and ids of its children
+are known. At this point, questions like "does this entry exist?" or "what is
+its id?" can be answered, in addition to providing any metadata we have from the
+backing version control system. (For example, Mononoke will provide file sizes
+and SHA-1 hashes so Eden does not have to actually load the files and compute
+them.)
 
 To satisfy readdir() or stat() calls, however, we must give the entry an inode
 number. Once an inode number has been allocated to an entry and handed out via
@@ -101,8 +101,8 @@ The other half of an inode is its data: the contents of a file (or symlink) and
 the entries of a tree. (Note that it's possible for an inode's data to be
 modified but metadata untouched or vice versa.)
 
-When an entry's parent is loaded, the child's name, type, and hash are known,
-and read operations can be satisfied by fetching a blob of data from the backing
+When an entry's parent is loaded, the child's name, type, and id are known, and
+read operations can be satisfied by fetching a blob of data from the backing
 store.
 
 When an inode's data is modified, its state transitions to materialized.
@@ -133,7 +133,7 @@ control state at the end.
 This document talks about an inode entering and leaving the 'materialized'
 state. It's a bit of an unintuitive concept. If an inode is materialized, it is
 potentially modified relative to its original source control object, as
-indicated by its parent's entry's source control hash.
+indicated by its parent's entry's source control id.
 
 Note that being materialized is orthogonal to whether a file is considered
 modified or not. If a file has been overwritten with its original contents, it
@@ -168,9 +168,9 @@ blob or not.
 
 Inode tree nodes currently loaded in memory.
 
-- For files, that includes their hashes, blob loading state, file handles into
-  the overlay, timestamps, and permission bits.
-- For trees, that includes tree hashes, entries, timestamps.
+- For files, that includes their ids, blob loading state, file handles into the
+  overlay, timestamps, and permission bits.
+- For trees, that includes tree ids, entries, timestamps.
 - For both, the entry type, fuse reference count, internal reference count,
   location.
 - If a child is in loadedInodes*, its parent must be in loadedInodes* too.
@@ -182,7 +182,7 @@ unloaded, if it has a nonzero FUSE reference count, it is registered into this
 table, which contains:
 
 - its FUSE refcount
-- its hash (if not materialized)
+- its id (if not materialized)
 - its permission bits
 - parent inode number and child name (if not unlinked)
 
@@ -198,7 +198,7 @@ loadedInodes* or unloadedInodes*.
 The Overlay is an on-disk map from inode number to its timestamps plus the
 file's or tree's contents.
 
-If a tree's child entry does not have a hash (that is, it's marked as
+If a tree's child entry does not have an id (that is, it's marked as
 materialized), then data for that inode must be in the overlay. Because of this
 invariant, we must write the child's overlay data prior to setting it
 materialized in the parent. When dematerializing, we must mark the child as

@@ -15,9 +15,9 @@ namespace facebook::eden {
 static constexpr folly::StringPiece kTreeCacheMemory{"tree_cache.memory"};
 static constexpr folly::StringPiece kTreeCacheItems{"tree_cache.items"};
 
-std::shared_ptr<const Tree> TreeCache::get(const ObjectId& hash) {
+std::shared_ptr<const Tree> TreeCache::get(const ObjectId& id) {
   if (config_->getEdenConfig()->enableInMemoryTreeCaching.getValue()) {
-    return getSimple(hash);
+    return getSimple(id);
   }
   return nullptr;
 }

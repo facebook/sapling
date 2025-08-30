@@ -61,20 +61,20 @@ TEST_P(OpenCloseLocalStoreTest, closeWhileOpen) {
 }
 
 TEST_P(LocalStoreTest, testReadAndWriteBlob) {
-  ObjectId hash = ObjectId::fromHex("3a8f8eb91101860fd8484154885838bf322964d0");
+  ObjectId id = ObjectId::fromHex("3a8f8eb91101860fd8484154885838bf322964d0");
 
   StringPiece contents("{\n  \"breakConfig\": true\n}\n");
   auto buf =
       folly::IOBuf{folly::IOBuf::WRAP_BUFFER, folly::ByteRange{contents}};
 
   auto inBlob = Blob{std::move(buf)};
-  store_->putBlob(hash, &inBlob);
+  store_->putBlob(id, &inBlob);
 
-  auto outBlob = store_->getBlob(hash).get(10s);
+  auto outBlob = store_->getBlob(id).get(10s);
   EXPECT_EQ(contents, outBlob->getContents().clone()->to<std::string>());
 
   {
-    auto retrievedAuxData = store_->getBlobAuxData(hash).get(10s);
+    auto retrievedAuxData = store_->getBlobAuxData(id).get(10s);
     ASSERT_EQ(retrievedAuxData, nullptr);
   }
 }
@@ -114,9 +114,9 @@ TEST_P(LocalStoreTest, testReadAndWriteAuxDataWithBlake3) {
 TEST_P(LocalStoreTest, testReadNonexistent) {
   using namespace std::chrono_literals;
 
-  ObjectId hash = ObjectId::fromHex("aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa");
-  EXPECT_EQ(store_->getBlob(hash).get(10s), nullptr);
-  auto retrievedAuxData = store_->getBlobAuxData(hash).get(10s);
+  ObjectId id = ObjectId::fromHex("aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa");
+  EXPECT_EQ(store_->getBlob(id).get(10s), nullptr);
+  auto retrievedAuxData = store_->getBlobAuxData(id).get(10s);
   EXPECT_EQ(retrievedAuxData, nullptr);
 }
 
@@ -124,7 +124,7 @@ TEST_P(LocalStoreTest, testReadsAndWriteTree) {
   using folly::unhexlify;
   using std::string;
 
-  ObjectId hash = ObjectId::fromHex("8e073e366ed82de6465d1209d3f07da7eebabb93");
+  ObjectId id = ObjectId::fromHex("8e073e366ed82de6465d1209d3f07da7eebabb93");
 
   auto gitTreeObject = folly::to<string>(
       string("tree 424\x00", 9),
@@ -162,9 +162,8 @@ TEST_P(LocalStoreTest, testReadsAndWriteTree) {
       string("100644 xdebug.ini\x00", 18),
       unhexlify("9ed5bbccd1b9b0077561d14c0130dc086ab27e04"));
 
-  store_->put(
-      KeySpace::TreeFamily, hash.getBytes(), StringPiece{gitTreeObject});
-  auto tree = store_->getTree(hash).get(10s);
+  store_->put(KeySpace::TreeFamily, id.getBytes(), StringPiece{gitTreeObject});
+  auto tree = store_->getTree(id).get(10s);
   EXPECT_EQ(
       "8e073e366ed82de6465d1209d3f07da7eebabb93",
       tree->getObjectId().asHexString());

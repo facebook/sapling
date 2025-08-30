@@ -40,16 +40,16 @@ class Tree {
    * mount case sensitivity, the caller is responsible for constructing a new
    * Tree with the case sensitivity flipped.
    */
-  explicit Tree(container entries, ObjectId hash)
-      : hash_{std::move(hash)}, entries_{std::move(entries)} {}
+  explicit Tree(container entries, ObjectId id)
+      : id_{std::move(id)}, entries_{std::move(entries)} {}
 
-  explicit Tree(ObjectId hash, container entries, TreeAuxDataPtr auxData)
-      : hash_{std::move(hash)},
+  explicit Tree(ObjectId id, container entries, TreeAuxDataPtr auxData)
+      : id_{std::move(id)},
         entries_{std::move(entries)},
         auxData_(std::move(auxData)) {}
 
   const ObjectId& getObjectId() const {
-    return hash_;
+    return id_;
   }
 
   const TreeAuxDataPtr getAuxData() const {
@@ -117,12 +117,12 @@ class Tree {
    * version identifier. Currently only V1_VERSION is supported, along with
    * git tree format.
    */
-  static TreePtr tryDeserialize(ObjectId hash, folly::StringPiece data);
+  static TreePtr tryDeserialize(ObjectId id, folly::StringPiece data);
 
  private:
   friend bool operator==(const Tree& tree1, const Tree& tree2);
 
-  ObjectId hash_;
+  ObjectId id_;
   container entries_;
   TreeAuxDataPtr auxData_;
 

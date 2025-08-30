@@ -92,15 +92,15 @@ void removeOverlayEntry(
 //
 // for path in union(onDisk_paths, inOverlay_paths, inScm_paths):
 //   disk  overlay  scm   action
-//    y       n      n      add to inodeCatalog, no scm hash.   (If is_placeholder() error since there's no scm to fill it? We could call PrjDeleteFile on it.)
+//    y       n      n      add to inodeCatalog, no scm id.   (If is_placeholder() error since there's no scm to fill it? We could call PrjDeleteFile on it.)
 //    y       y      n      fix overlay mode_t to match disk if necessary. (If is_placeholder(), error since there's no scm to fill it?)
-//    y       n      y      add to inodeCatalog, use scm hash if placeholder-file or empty-placeholder-directory.
+//    y       n      y      add to inodeCatalog, use scm id if placeholder-file or empty-placeholder-directory.
 //    y       y      y      fix overlay mode_t to match disk if necessary
 //    T       n      *      do nothing
 //    T       y      *      drop from inodeCatalog, recursively
 //    n       y      n      remove from overlay
 //    n       y      y      fix overlay mode_t to match scm if necessary.
-//    n       n      y      add to inodeCatalog, use scm hash
+//    n       n      y      add to inodeCatalog, use scm id
 //
 // Notes:
 // - A directory can be "placeholder" even if one of it's recursive descendants
@@ -109,9 +109,9 @@ void removeOverlayEntry(
 //   appears with a delay after eden closes.
 // - I think the overlay will treat HydratedPlaceholder, DirtyPlaceholder, and
 //   Full identical. All mean the data is on disk and the overlay entry will be a
-//   no-scm-hash entry.
-// - Since we'll have the scm hash during fsck, we could also verify the overlay
-//   hash is correct.
+//   no-scm-id entry.
+// - Since we'll have the scm id during fsck, we could also verify the overlay
+//   id is correct.
 // clang-format on
 
 void populateOverlayState(
@@ -123,9 +123,9 @@ void populateOverlayState(
       mode_to_dtype(*overlayEntry.mode()), windowsSymlinksEnabled);
   if (overlayEntry.hash().has_value() && !overlayEntry.hash().value().empty()) {
     auto objId = ObjectId(*overlayEntry.hash());
-    state.overlayHash = std::move(objId);
+    state.overlayId = std::move(objId);
   } else {
-    state.overlayHash = std::nullopt;
+    state.overlayId = std::nullopt;
   }
   state.overlayEntry = overlayEntry;
 }
@@ -134,7 +134,7 @@ void populateScmState(
     FsckFileState& state,
     const TreeEntry& treeEntry,
     bool windowsSymlinksEnabled) {
-  state.scmHash = treeEntry.getObjectId();
+  state.scmId = treeEntry.getObjectId();
   state.scmDtype =
       filteredEntryDtype(treeEntry.getDtype(), windowsSymlinksEnabled);
   state.inScm = true;
@@ -145,7 +145,7 @@ InodeNumber addOrUpdateOverlay(
     InodeNumber parentInodeNum,
     PathComponentPiece name,
     dtype_t dtype,
-    std::optional<ObjectId> hash,
+    std::optional<ObjectId> id,
     const PathMap<overlay::OverlayEntry>& parentInsensitiveOverlayDir) {
   if (inodeCatalog.hasChild(parentInodeNum, name)) {
     XLOGF(DBG9, "Updating overlay: {}", name);
@@ -163,8 +163,8 @@ InodeNumber addOrUpdateOverlay(
     // It's a new entry, so give it a new inode number.
     overlayEntry.inodeNumber() = inodeCatalog.nextInodeNumber().get();
   }
-  if (hash.has_value()) {
-    overlayEntry.hash() = hash->asString();
+  if (id.has_value()) {
+    overlayEntry.hash() = id->asString();
   } else {
     overlayEntry.hash().reset();
   }
@@ -189,7 +189,7 @@ std::optional<InodeNumber> fixup(
       // state.shouldExist defaults to false
     } else if (state.inScm) {
       state.desiredDtype = state.scmDtype;
-      state.desiredHash = state.scmHash;
+      state.desiredId = state.scmId;
       state.shouldExist = true;
     }
   } else if (state.diskTombstone) {
@@ -199,7 +199,7 @@ std::optional<InodeNumber> fixup(
     // that can be regular placeholders in projfs and represented by
     // materialized inodes on disk.
     state.desiredDtype = state.diskDtype;
-    state.desiredHash =
+    state.desiredId =
         std::nullopt; // renamed files should always be materialized in EdenFS.
     // This could cause hg status and hg diff to make recersive calls in EdenFS,
     // but this is ok because the read will be served out of source control
@@ -218,8 +218,8 @@ std::optional<InodeNumber> fixup(
       return std::nullopt;
     } else {
       state.desiredDtype = state.diskDtype;
-      state.desiredHash =
-          state.populatedOrFullOrTomb ? std::nullopt : state.scmHash;
+      state.desiredId =
+          state.populatedOrFullOrTomb ? std::nullopt : state.scmId;
       state.shouldExist = true;
     }
   }
@@ -237,18 +237,18 @@ std::optional<InodeNumber> fixup(
   if (state.shouldExist) {
     bool out_of_sync = !state.inOverlay ||
         state.overlayDtype != state.desiredDtype ||
-        state.overlayHash.has_value() != state.desiredHash.has_value() ||
-        (state.overlayHash.has_value() &&
-         !state.overlayHash.value().bytesEqual(state.desiredHash.value()));
+        state.overlayId.has_value() != state.desiredId.has_value() ||
+        (state.overlayId.has_value() &&
+         !state.overlayId.value().bytesEqual(state.desiredId.value()));
     if (out_of_sync) {
       XLOG(DBG9, "Out of sync: adding/updating entry");
       XLOGF(
           DBG9,
-          "overlayDtype={} vs desiredDtype={}, overlayHash={} vs desiredHash={}",
+          "overlayDtype={} vs desiredDtype={}, overlayId={} vs desiredId={}",
           fmt::underlying(state.overlayDtype),
           fmt::underlying(state.desiredDtype),
-          state.overlayHash ? state.overlayHash->toLogString() : "<null>",
-          state.desiredHash ? state.desiredHash->toLogString() : "<null>");
+          state.overlayId ? state.overlayId->toLogString() : "<null>",
+          state.desiredId ? state.desiredId->toLogString() : "<null>");
       if (state.inOverlay && state.overlayDtype != state.desiredDtype) {
         // If the file/directory type doesn't match, remove the old entry
         // entirely, since we need to recursively remove a directory in order to
@@ -262,7 +262,7 @@ std::optional<InodeNumber> fixup(
           parentInodeNum,
           name,
           state.desiredDtype,
-          state.desiredHash,
+          state.desiredId,
           insensitiveOverlayDir);
     } else {
       auto inodeNumber = InodeNumber(*state.overlayEntry->inodeNumber());
@@ -423,24 +423,24 @@ ImmediateFuture<bool> processChildren(
                 childState.populatedOrFullOrTomb |= childPopulatedOrFullOrTomb;
 
                 if (childPopulatedOrFullOrTomb &&
-                    childState.desiredHash != std::nullopt) {
+                    childState.desiredId != std::nullopt) {
                   XLOGF(
                       DBG9,
                       "Directory {} has a materialized child, and therefore is materialized too. Marking.",
                       childPath);
-                  childState.desiredHash = std::nullopt;
+                  childState.desiredId = std::nullopt;
 
                   auto updatedOverlayDir =
                       inodeCatalog.loadOverlayDir(inodeNumber);
                   auto updatedInsensitiveOverlayDir =
                       toPathMap(updatedOverlayDir);
-                  // Update the overlay entry to remove the scmHash.
+                  // Update the overlay entry to remove the scmId.
                   addOrUpdateOverlay(
                       inodeCatalog,
                       inodeNumber,
                       childPath.basename(),
                       childState.desiredDtype,
-                      childState.desiredHash,
+                      childState.desiredId,
                       updatedInsensitiveOverlayDir);
                 }
                 return folly::unit;

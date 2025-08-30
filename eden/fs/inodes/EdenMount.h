@@ -699,7 +699,7 @@ class EdenMount : public std::enable_shared_from_this<EdenMount> {
 
   /**
    * Loads and returns the Tree corresponding to the root of the mount's working
-   * copy parent (commit hash or root ID). Note that the returned Tree may not
+   * copy parent (commit id or root ID). Note that the returned Tree may not
    * corresponding to the mount's current inode structure.
    */
   std::shared_ptr<const Tree> getCheckedOutRootTree() const;
@@ -781,11 +781,11 @@ class EdenMount : public std::enable_shared_from_this<EdenMount> {
    * Check out the specified commit.
    *
    * This updates the checkedOutRootId as well as the workingCopyParentRootId to
-   * the passed in snapshotHash.
+   * the passed in snapshotId.
    */
   ImmediateFuture<CheckoutResult> checkout(
       TreeInodePtr rootInode,
-      const RootId& snapshotHash,
+      const RootId& snapshotId,
       const ObjectFetchContextPtr& fetchContext,
       folly::StringPiece thriftMethodCaller,
       CheckoutMode checkoutMode = CheckoutMode::NORMAL);
@@ -803,9 +803,9 @@ class EdenMount : public std::enable_shared_from_this<EdenMount> {
    *     When listIgnored is set to false can speed up the diff computation, as
    *     the code does not need to descend into ignored directories at all.
    * @param enforceCurrentParent Whether or not to return an error if the
-   *     specified commitHash does not match the actual current working
+   *     specified commitId does not match the actual current working
    *     directory parent.  If this is false the code will still compute a diff
-   *     against the specified commitHash even the working directory parent
+   *     against the specified commitId even the working directory parent
    *     points elsewhere, or when a checkout is currently in progress.
    * @param request This ResponseChannelRequest is passed from the
    *     ServiceHandler and is used to check if the request is still active,
@@ -820,7 +820,7 @@ class EdenMount : public std::enable_shared_from_this<EdenMount> {
    */
   FOLLY_NODISCARD ImmediateFuture<std::unique_ptr<ScmStatus>> diff(
       TreeInodePtr rootInode,
-      const RootId& commitHash,
+      const RootId& commitId,
       folly::CancellationToken cancellation,
       const ObjectFetchContextPtr& fetchContext,
       bool listIgnored = false,
@@ -835,7 +835,7 @@ class EdenMount : public std::enable_shared_from_this<EdenMount> {
   FOLLY_NODISCARD ImmediateFuture<folly::Unit> diff(
       TreeInodePtr rootInode,
       DiffContext* ctxPtr,
-      const RootId& commitHash) const;
+      const RootId& commitId) const;
 
   /**
    * Reset the state to point to the specified parent commit, without
@@ -1242,7 +1242,7 @@ class EdenMount : public std::enable_shared_from_this<EdenMount> {
   FOLLY_NODISCARD ImmediateFuture<folly::Unit> diff(
       TreeInodePtr rootInode,
       ScmStatusDiffCallback* callback,
-      const RootId& commitHash,
+      const RootId& commitId,
       bool listIgnored,
       bool enforceCurrentParent,
       folly::CancellationToken cancellation,

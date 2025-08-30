@@ -16,50 +16,41 @@ namespace {
 class CacheObject {
  public:
   const ObjectId& getObjectId() const {
-    return hash_;
+    return id_;
   }
 
   size_t getSizeBytes() const {
     return size_;
   }
 
-  CacheObject(ObjectId hash, size_t size) : hash_{hash}, size_{size} {}
+  CacheObject(ObjectId id, size_t size) : id_{id}, size_{size} {}
 
  private:
-  ObjectId hash_;
+  ObjectId id_;
   size_t size_;
 };
 
-const auto hash3 =
-    ObjectId::fromHex("0000000000000000000000000000000000000000");
-const auto hash3a =
-    ObjectId::fromHex("0000000000000000000000000000000000000010");
-const auto hash3b =
-    ObjectId::fromHex("0000000000000000000000000000000000000020");
-const auto hash3c =
-    ObjectId::fromHex("0000000000000000000000000000000000000030");
-const auto hash4 =
-    ObjectId::fromHex("0000000000000000000000000000000000000001");
-const auto hash5 =
-    ObjectId::fromHex("0000000000000000000000000000000000000002");
-const auto hash6 =
-    ObjectId::fromHex("0000000000000000000000000000000000000003");
-const auto hash9 =
-    ObjectId::fromHex("0000000000000000000000000000000000000004");
-const auto hash11 =
-    ObjectId::fromHex("0000000000000000000000000000000000000005");
+const auto id3 = ObjectId::fromHex("0000000000000000000000000000000000000000");
+const auto id3a = ObjectId::fromHex("0000000000000000000000000000000000000010");
+const auto id3b = ObjectId::fromHex("0000000000000000000000000000000000000020");
+const auto id3c = ObjectId::fromHex("0000000000000000000000000000000000000030");
+const auto id4 = ObjectId::fromHex("0000000000000000000000000000000000000001");
+const auto id5 = ObjectId::fromHex("0000000000000000000000000000000000000002");
+const auto id6 = ObjectId::fromHex("0000000000000000000000000000000000000003");
+const auto id9 = ObjectId::fromHex("0000000000000000000000000000000000000004");
+const auto id11 = ObjectId::fromHex("0000000000000000000000000000000000000005");
 
 // Each object's name corresponds to its length in bytes.
 
-const auto object3 = std::make_shared<CacheObject>(hash3, 3);
-const auto object3a = std::make_shared<CacheObject>(hash3a, 3);
-const auto object3b = std::make_shared<CacheObject>(hash3b, 3);
-const auto object3c = std::make_shared<CacheObject>(hash3c, 3);
-const auto object4 = std::make_shared<CacheObject>(hash4, 4);
-const auto object5 = std::make_shared<CacheObject>(hash5, 5);
-const auto object6 = std::make_shared<CacheObject>(hash6, 6);
-const auto object9 = std::make_shared<CacheObject>(hash9, 9);
-const auto object11 = std::make_shared<CacheObject>(hash11, 11);
+const auto object3 = std::make_shared<CacheObject>(id3, 3);
+const auto object3a = std::make_shared<CacheObject>(id3a, 3);
+const auto object3b = std::make_shared<CacheObject>(id3b, 3);
+const auto object3c = std::make_shared<CacheObject>(id3c, 3);
+const auto object4 = std::make_shared<CacheObject>(id4, 4);
+const auto object5 = std::make_shared<CacheObject>(id5, 5);
+const auto object6 = std::make_shared<CacheObject>(id6, 6);
+const auto object9 = std::make_shared<CacheObject>(id9, 9);
+const auto object11 = std::make_shared<CacheObject>(id11, 11);
 } // namespace
 
 /**
@@ -243,16 +234,16 @@ TEST(ObjectCache, interest_handle_evicts_oldest_on_insertion) {
   cache->insertInterestHandle(
       object5->getObjectId(), object5); // evicts object3
   EXPECT_EQ(9, cache->getTotalSizeBytes());
-  EXPECT_EQ(nullptr, cache->getInterestHandle(hash3).object)
+  EXPECT_EQ(nullptr, cache->getInterestHandle(id3).object)
       << "Inserting object5 should evict oldest (object3)";
-  EXPECT_EQ(object4, cache->getInterestHandle(hash4).object)
+  EXPECT_EQ(object4, cache->getInterestHandle(id4).object)
       << "But object4 still fits";
   cache->insertInterestHandle(
       object3->getObjectId(), object3); // evicts object5
   EXPECT_EQ(7, cache->getTotalSizeBytes());
-  EXPECT_EQ(nullptr, cache->getInterestHandle(hash5).object)
+  EXPECT_EQ(nullptr, cache->getInterestHandle(id5).object)
       << "Inserting object3 again evicts object5 because object4 was accessed";
-  EXPECT_EQ(object4, cache->getInterestHandle(hash4).object);
+  EXPECT_EQ(object4, cache->getInterestHandle(id4).object);
 }
 
 TEST(
@@ -264,9 +255,9 @@ TEST(
   cache->insertInterestHandle(object3->getObjectId(), object3);
   cache->insertInterestHandle(object4->getObjectId(), object4);
   cache->insertInterestHandle(object9->getObjectId(), object9);
-  EXPECT_FALSE(cache->getInterestHandle(hash3).object);
-  EXPECT_FALSE(cache->getInterestHandle(hash4).object);
-  EXPECT_EQ(object9, cache->getInterestHandle(hash9).object);
+  EXPECT_FALSE(cache->getInterestHandle(id3).object);
+  EXPECT_FALSE(cache->getInterestHandle(id4).object);
+  EXPECT_EQ(object9, cache->getInterestHandle(id9).object);
 }
 
 TEST(
@@ -280,9 +271,9 @@ TEST(
   cache->insertInterestHandle(object3->getObjectId(), object3);
   cache->insertInterestHandle(object5->getObjectId(), object5); // evicts 4
 
-  EXPECT_EQ(object3, cache->getInterestHandle(hash3).object);
-  EXPECT_FALSE(cache->getInterestHandle(hash4).object);
-  EXPECT_EQ(object5, cache->getInterestHandle(hash5).object);
+  EXPECT_EQ(object3, cache->getInterestHandle(id3).object);
+  EXPECT_FALSE(cache->getInterestHandle(id4).object);
+  EXPECT_EQ(object5, cache->getInterestHandle(id5).object);
 }
 
 TEST(
@@ -296,9 +287,9 @@ TEST(
   cache->insertInterestHandle(object5->getObjectId(), object5);
 
   EXPECT_EQ(12, cache->getTotalSizeBytes());
-  EXPECT_TRUE(cache->getInterestHandle(hash3).object);
-  EXPECT_TRUE(cache->getInterestHandle(hash4).object);
-  EXPECT_TRUE(cache->getInterestHandle(hash5).object);
+  EXPECT_TRUE(cache->getInterestHandle(id3).object);
+  EXPECT_TRUE(cache->getInterestHandle(id4).object);
+  EXPECT_TRUE(cache->getInterestHandle(id5).object);
 }
 
 TEST(ObjectCache, interest_handle_preserves_minimum_number_of_entries) {
@@ -311,10 +302,10 @@ TEST(ObjectCache, interest_handle_preserves_minimum_number_of_entries) {
   cache->insertInterestHandle(object6->getObjectId(), object6);
 
   EXPECT_EQ(15, cache->getTotalSizeBytes());
-  EXPECT_FALSE(cache->getInterestHandle(hash3).object);
-  EXPECT_TRUE(cache->getInterestHandle(hash4).object);
-  EXPECT_TRUE(cache->getInterestHandle(hash5).object);
-  EXPECT_TRUE(cache->getInterestHandle(hash6).object);
+  EXPECT_FALSE(cache->getInterestHandle(id3).object);
+  EXPECT_TRUE(cache->getInterestHandle(id4).object);
+  EXPECT_TRUE(cache->getInterestHandle(id5).object);
+  EXPECT_TRUE(cache->getInterestHandle(id6).object);
 }
 
 TEST(ObjectCache, interest_handle_can_forget_cached_entries) {
@@ -322,13 +313,13 @@ TEST(ObjectCache, interest_handle_can_forget_cached_entries) {
       ObjectCache<CacheObject, ObjectCacheFlavor::InterestHandle, FakeStats>::
           create(100, 0, makeRefPtr<EdenStats>());
   auto handle3 = cache->insertInterestHandle(
-      hash3,
-      std::make_shared<CacheObject>(hash3, 3),
+      id3,
+      std::make_shared<CacheObject>(id3, 3),
       ObjectCache<CacheObject, ObjectCacheFlavor::InterestHandle, FakeStats>::
           Interest::WantHandle);
   auto handle4 = cache->insertInterestHandle(
-      hash4,
-      std::make_shared<CacheObject>(hash4, 4),
+      id4,
+      std::make_shared<CacheObject>(id4, 4),
       ObjectCache<CacheObject, ObjectCacheFlavor::InterestHandle, FakeStats>::
           Interest::WantHandle);
 
@@ -336,8 +327,8 @@ TEST(ObjectCache, interest_handle_can_forget_cached_entries) {
   handle3.reset();
   handle4.reset();
 
-  EXPECT_FALSE(cache->getInterestHandle(hash3).object);
-  EXPECT_FALSE(cache->getInterestHandle(hash4).object);
+  EXPECT_FALSE(cache->getInterestHandle(id3).object);
+  EXPECT_FALSE(cache->getInterestHandle(id4).object);
 }
 
 TEST(
@@ -347,21 +338,21 @@ TEST(
       ObjectCache<CacheObject, ObjectCacheFlavor::InterestHandle, FakeStats>::
           create(100, 0, makeRefPtr<EdenStats>());
   auto handle3 = cache->insertInterestHandle(
-      hash3,
-      std::make_shared<CacheObject>(hash3, 3),
+      id3,
+      std::make_shared<CacheObject>(id3, 3),
       ObjectCache<CacheObject, ObjectCacheFlavor::InterestHandle, FakeStats>::
           Interest::WantHandle);
   auto handle4 = cache->insertInterestHandle(
-      hash4,
-      std::make_shared<CacheObject>(hash4, 4),
+      id4,
+      std::make_shared<CacheObject>(id4, 4),
       ObjectCache<CacheObject, ObjectCacheFlavor::InterestHandle, FakeStats>::
           Interest::WantHandle);
 
   handle4.reset();
   handle3.reset();
 
-  EXPECT_FALSE(cache->getInterestHandle(hash3).object);
-  EXPECT_FALSE(cache->getInterestHandle(hash4).object);
+  EXPECT_FALSE(cache->getInterestHandle(id3).object);
+  EXPECT_FALSE(cache->getInterestHandle(id4).object);
 }
 
 TEST(ObjectCache, interest_handle_can_forget_cached_entry_in_middle) {
@@ -369,26 +360,26 @@ TEST(ObjectCache, interest_handle_can_forget_cached_entry_in_middle) {
       ObjectCache<CacheObject, ObjectCacheFlavor::InterestHandle, FakeStats>::
           create(100, 0, makeRefPtr<EdenStats>());
   auto handle3 = cache->insertInterestHandle(
-      hash3,
-      std::make_shared<CacheObject>(hash3, 3),
+      id3,
+      std::make_shared<CacheObject>(id3, 3),
       ObjectCache<CacheObject, ObjectCacheFlavor::InterestHandle, FakeStats>::
           Interest::WantHandle);
   auto handle4 = cache->insertInterestHandle(
-      hash4,
-      std::make_shared<CacheObject>(hash4, 4),
+      id4,
+      std::make_shared<CacheObject>(id4, 4),
       ObjectCache<CacheObject, ObjectCacheFlavor::InterestHandle, FakeStats>::
           Interest::WantHandle);
   auto handle5 = cache->insertInterestHandle(
-      hash5,
-      std::make_shared<CacheObject>(hash5, 5),
+      id5,
+      std::make_shared<CacheObject>(id5, 5),
       ObjectCache<CacheObject, ObjectCacheFlavor::InterestHandle, FakeStats>::
           Interest::WantHandle);
 
   handle4.reset();
 
-  EXPECT_TRUE(cache->getInterestHandle(hash3).object);
-  EXPECT_FALSE(cache->getInterestHandle(hash4).object);
-  EXPECT_TRUE(cache->getInterestHandle(hash5).object);
+  EXPECT_TRUE(cache->getInterestHandle(id3).object);
+  EXPECT_FALSE(cache->getInterestHandle(id4).object);
+  EXPECT_TRUE(cache->getInterestHandle(id5).object);
 }
 
 TEST(
@@ -397,7 +388,7 @@ TEST(
   auto cache =
       ObjectCache<CacheObject, ObjectCacheFlavor::InterestHandle, FakeStats>::
           create(100, 0, makeRefPtr<EdenStats>());
-  auto object = std::make_shared<CacheObject>(hash3, 3);
+  auto object = std::make_shared<CacheObject>(id3, 3);
   auto weak = std::weak_ptr<CacheObject>{object};
   auto handle1 = cache->insertInterestHandle(
       object->getObjectId(),
@@ -425,16 +416,16 @@ TEST(
       ObjectCache<CacheObject, ObjectCacheFlavor::InterestHandle, FakeStats>::
           create(100, 0, makeRefPtr<EdenStats>());
   cache->insertInterestHandle(
-      hash6,
-      std::make_shared<CacheObject>(hash6, 6),
+      id6,
+      std::make_shared<CacheObject>(id6, 6),
       ObjectCache<CacheObject, ObjectCacheFlavor::InterestHandle, FakeStats>::
           Interest::UnlikelyNeededAgain);
   auto result1 = cache->getInterestHandle(
-      hash6,
+      id6,
       ObjectCache<CacheObject, ObjectCacheFlavor::InterestHandle, FakeStats>::
           Interest::WantHandle);
   auto result2 = cache->getInterestHandle(
-      hash6,
+      id6,
       ObjectCache<CacheObject, ObjectCacheFlavor::InterestHandle, FakeStats>::
           Interest::WantHandle);
   EXPECT_TRUE(result1.object);
@@ -492,13 +483,13 @@ TEST(
       ObjectCache<CacheObject, ObjectCacheFlavor::InterestHandle, FakeStats>::
           create(10, 0, makeRefPtr<EdenStats>());
   auto handle3 = cache->insertInterestHandle(
-      hash3,
-      std::make_shared<CacheObject>(hash3, 3),
+      id3,
+      std::make_shared<CacheObject>(id3, 3),
       ObjectCache<CacheObject, ObjectCacheFlavor::InterestHandle, FakeStats>::
           Interest::WantHandle);
   auto handle4 = cache->insertInterestHandle(
-      hash4,
-      std::make_shared<CacheObject>(hash4, 4),
+      id4,
+      std::make_shared<CacheObject>(id4, 4),
       ObjectCache<CacheObject, ObjectCacheFlavor::InterestHandle, FakeStats>::
           Interest::WantHandle);
 
@@ -520,7 +511,7 @@ TEST(ObjectCache, interest_handle_can_return_object_even_if_it_was_evicted) {
   auto handle4 = cache->insertInterestHandle(object4->getObjectId(), object4);
   auto handle5 = cache->insertInterestHandle(object5->getObjectId(), object5);
 
-  EXPECT_FALSE(cache->getInterestHandle(hash3).object)
+  EXPECT_FALSE(cache->getInterestHandle(id3).object)
       << "Inserting object5 evicts object3";
   EXPECT_EQ(object3, handle3.getObject())
       << "Object accessible even though it's been evicted";
@@ -542,7 +533,7 @@ TEST(
   cache->clear();
   cache->insertInterestHandle(object3->getObjectId(), object3);
   handle3.reset();
-  EXPECT_TRUE(cache->contains(hash3));
+  EXPECT_TRUE(cache->contains(id3));
 }
 
 TEST(
@@ -564,5 +555,5 @@ TEST(
       ObjectCache<CacheObject, ObjectCacheFlavor::InterestHandle, FakeStats>::
           Interest::WantHandle);
   handle3.reset();
-  EXPECT_TRUE(cache->contains(hash3));
+  EXPECT_TRUE(cache->contains(id3));
 }

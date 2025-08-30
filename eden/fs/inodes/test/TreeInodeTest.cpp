@@ -37,14 +37,14 @@ namespace {
 constexpr auto kFutureTimeout = 10s;
 constexpr auto materializationTimeoutLimit = 1000ms;
 
-std::string testHashHex{
+std::string testIdHex{
     "faceb00c"
     "deadbeef"
     "c00010ff"
     "1badb002"
     "8badf00d"};
 
-ObjectId testHash(testHashHex);
+ObjectId testId(testIdHex);
 
 DirEntry makeDirEntry() {
   return DirEntry{S_IFREG | 0644, 1_ino, ObjectId{}};
@@ -63,7 +63,7 @@ TEST(TreeInode, findEntryDifferencesWithSameEntriesReturnsNone) {
   Tree tree{
       {{makeTreeEntry("one"), makeTreeEntry("two")},
        CaseSensitivity::Sensitive},
-      testHash};
+      testId};
 
   EXPECT_FALSE(findEntryDifferences(dir, tree));
 }
@@ -75,7 +75,7 @@ TEST(TreeInode, findEntryDifferencesReturnsAdditionsAndSubtractions) {
   Tree tree{
       {{makeTreeEntry("one"), makeTreeEntry("three")},
        CaseSensitivity::Sensitive},
-      testHash};
+      testId};
 
   auto differences = findEntryDifferences(dir, tree);
   EXPECT_TRUE(differences);
@@ -86,7 +86,7 @@ TEST(TreeInode, findEntryDifferencesWithOneSubtraction) {
   DirContents dir(CaseSensitivity::Sensitive);
   dir.emplace("one"_pc, makeDirEntry());
   dir.emplace("two"_pc, makeDirEntry());
-  Tree tree{{{makeTreeEntry("one")}, CaseSensitivity::Sensitive}, testHash};
+  Tree tree{{{makeTreeEntry("one")}, CaseSensitivity::Sensitive}, testId};
 
   auto differences = findEntryDifferences(dir, tree);
   EXPECT_TRUE(differences);
@@ -100,7 +100,7 @@ TEST(TreeInode, findEntryDifferencesWithOneAddition) {
   Tree tree{
       {{makeTreeEntry("one"), makeTreeEntry("two"), makeTreeEntry("three")},
        CaseSensitivity::Sensitive},
-      testHash};
+      testId};
 
   auto differences = findEntryDifferences(dir, tree);
   EXPECT_TRUE(differences);

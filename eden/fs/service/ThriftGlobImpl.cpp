@@ -145,13 +145,13 @@ ThriftGlobImpl::ThriftGlobImpl(const GlobParams& params)
       suppressFileList_{*params.suppressFileList()},
       wantDtype_{*params.wantDtype()},
       listOnlyFiles_{*params.listOnlyFiles()},
-      rootHashes_{*params.revisions()},
+      rootIds_{*params.revisions()},
       searchRootUser_{*params.searchRoot()} {}
 
 ThriftGlobImpl::ThriftGlobImpl(const PrefetchParams& params)
     : includeDotfiles_{true},
       prefetchFiles_{!*params.directoriesOnly()},
-      rootHashes_{*params.revisions()},
+      rootIds_{*params.revisions()},
       searchRootUser_{*params.searchRoot()} {}
 
 ImmediateFuture<std::unique_ptr<Glob>> ThriftGlobImpl::glob(
@@ -165,8 +165,8 @@ ImmediateFuture<std::unique_ptr<Glob>> ThriftGlobImpl::glob(
   auto fileBlobsToPrefetch =
       prefetchFiles_ ? std::make_shared<PrefetchList>() : nullptr;
 
-  // These hashes must outlive the GlobResult created by evaluate as the
-  // GlobResults will hold on to references to these hashes
+  // These ids must outlive the GlobResult created by evaluate as the
+  // GlobResults will hold on to references to these ids
   auto originRootIds = std::make_unique<std::vector<RootId>>();
 
   // Globs will be evaluated against the specified commits or the current commit
@@ -181,20 +181,20 @@ ImmediateFuture<std::unique_ptr<Glob>> ThriftGlobImpl::glob(
   std::shared_ptr<GlobTree> globTree = nullptr;
   std::shared_ptr<GlobNode> globNode = nullptr;
 
-  if (!rootHashes_.empty()) {
+  if (!rootIds_.empty()) {
     // Note that we MUST reserve here, otherwise while emplacing we might
-    // invalidate the earlier commitHash references
-    globFutures.reserve(rootHashes_.size());
-    originRootIds->reserve(rootHashes_.size());
+    // invalidate the earlier commitId references
+    globFutures.reserve(rootIds_.size());
+    originRootIds->reserve(rootIds_.size());
     globTree = std::make_shared<GlobTree>(
         includeDotfiles_,
         serverState->getEdenConfig()->globUseMountCaseSensitivity.getValue()
             ? edenMount->getCheckoutConfig()->getCaseSensitive()
             : CaseSensitivity::Sensitive);
     compileGlobs(globs, *globTree);
-    for (auto& rootHash : rootHashes_) {
+    for (auto& rootId : rootIds_) {
       const RootId& originRootId = originRootIds->emplace_back(
-          edenMount->getObjectStore()->parseRootId(rootHash));
+          edenMount->getObjectStore()->parseRootId(rootId));
 
       globFutures.emplace_back(
           edenMount->getObjectStore()
@@ -322,7 +322,7 @@ ImmediateFuture<std::unique_ptr<Glob>> ThriftGlobImpl::glob(
 
                       out->originHashes()->emplace_back(
                           edenMount->getObjectStore()->renderRootId(
-                              *entry.originHash));
+                              *entry.originId));
                     }
                   }
                 }
@@ -369,8 +369,8 @@ getLocalGlobResults(
     const std::vector<std::string>& prefixes,
     const TreeInodePtr& rootInode,
     const ObjectFetchContextPtr& context) {
-  // Use current commit hash
-  XLOG(DBG3, "No commit hash in input, using current hash");
+  // Use current commit id
+  XLOG(DBG3, "No commit id in input, using current id");
   auto rootId = edenMount->getCheckedOutRootId();
   auto& store = edenMount->getObjectStore();
   return store->getGlobFiles(rootId, suffixGlobs, prefixes, context)
@@ -418,27 +418,27 @@ getLocalGlobResults(
 
 std::string ThriftGlobImpl::logString() {
   return fmt::format(
-      "ThriftGlobImpl {{ includeDotFiles={}, prefetchFiles={}, suppressFileList={}, wantDtype={}, listOnlyFiles={}, rootHashes={}, searchRootUser={} }}",
+      "ThriftGlobImpl {{ includeDotFiles={}, prefetchFiles={}, suppressFileList={}, wantDtype={}, listOnlyFiles={}, rootIds={}, searchRootUser={} }}",
       includeDotfiles_,
       prefetchFiles_,
       suppressFileList_,
       wantDtype_,
       listOnlyFiles_,
-      fmt::join(rootHashes_, ", "),
+      fmt::join(rootIds_, ", "),
       searchRootUser_);
 }
 
 std::string ThriftGlobImpl::logString(
     const std::vector<std::string>& globs) const {
   return fmt::format(
-      "ThriftGlobImpl {{ globs={}, includeDotFiles={}, prefetchFiles={}, suppressFileList={}, wantDtype={}, listOnlyFiles={}, rootHashes={}, searchRootUser={} }}",
+      "ThriftGlobImpl {{ globs={}, includeDotFiles={}, prefetchFiles={}, suppressFileList={}, wantDtype={}, listOnlyFiles={}, rootIds={}, searchRootUser={} }}",
       fmt::join(globs, ", "),
       includeDotfiles_,
       prefetchFiles_,
       suppressFileList_,
       wantDtype_,
       listOnlyFiles_,
-      fmt::join(rootHashes_, ", "),
+      fmt::join(rootIds_, ", "),
       searchRootUser_);
 }
 

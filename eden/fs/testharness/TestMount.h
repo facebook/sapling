@@ -51,7 +51,7 @@ class TreeInode;
 class MockInodeAccessLogger;
 template <typename T>
 class StoredObject;
-using StoredHash = StoredObject<ObjectId>;
+using StoredId = StoredObject<ObjectId>;
 
 struct TestMountFile {
   RelativePath path;
@@ -101,7 +101,7 @@ class TestMount {
    * However, the root Tree object is always marked ready.  This is necessary
    * to create the EdenMount object.
    *
-   * If an initialCommitHash is not explicitly specified, makeTestHash("1")
+   * If an initialCommitId is not explicitly specified, makeTestId("1")
    * will be used.
    *
    * enableActivityBuffer can be set false to turn off the ActivityBuffer in the
@@ -117,7 +117,7 @@ class TestMount {
       bool enableActivityBuffer = true,
       CaseSensitivity caseSensitivity = kPathMapDefaultCaseSensitive);
   TestMount(
-      const RootId& initialCommitHash,
+      const RootId& initialCommitId,
       FakeTreeBuilder& rootBuilder,
       bool startReady = true,
       bool enableActivityBuffer = true,
@@ -132,8 +132,8 @@ class TestMount {
    * The caller must have already defined the root commit.  The lastCheckoutTime
    * is read from the FakeClock.
    */
-  void initialize(const RootId& initialCommitHash) {
-    initialize(initialCommitHash, getClock().getTimePoint());
+  void initialize(const RootId& initialCommitId) {
+    initialize(initialCommitId, getClock().getTimePoint());
   }
 
   /**
@@ -143,7 +143,7 @@ class TestMount {
    * The caller must have already defined the root commit.
    */
   void initialize(
-      const RootId& initialCommitHash,
+      const RootId& initialCommitId,
       std::chrono::system_clock::time_point lastCheckoutTime);
 
   /**
@@ -152,18 +152,18 @@ class TestMount {
    * This should only be used if the TestMount was default-constructed.
    * The caller must have already defined the root Tree in the object store.
    */
-  void initialize(const RootId& initialCommitHash, ObjectId rootTreeHash);
+  void initialize(const RootId& initialCommitId, ObjectId rootTreeId);
 
   /**
    * Initialize the mount from the given root tree.
    *
    * This should only be used if the TestMount was default-constructed.
    *
-   * If an initialCommitHash is not explicitly specified, makeTestHash("1")
+   * If an initialCommitId is not explicitly specified, makeTestId("1")
    * will be used.
    */
   void initialize(
-      const RootId& initialCommitHash,
+      const RootId& initialCommitId,
       FakeTreeBuilder& rootBuilder,
       bool startReady = true,
       InodeCatalogType inodeCatalogType = kDefaultInodeCatalogType,
@@ -180,7 +180,7 @@ class TestMount {
    * This should only be used if the TestMount was default-constructed.
    */
   void createMountWithoutInitializing(
-      const RootId& initialCommitHash,
+      const RootId& initialCommitId,
       FakeTreeBuilder& rootBuilder,
       bool startReady,
       InodeCatalogType inodeCatalogType = kDefaultInodeCatalogType,
@@ -355,7 +355,7 @@ class TestMount {
   }
 
   /**
-   * Get a hash to use for the next commit.
+   * Get an id to use for the next commit.
    *
    * This mostly just helps pick easily readable commit IDs that increment
    * over the course of a test.
@@ -363,17 +363,15 @@ class TestMount {
    * This returns "0000000000000000000000000000000000000001" on the first call,
    * "0000000000000000000000000000000000000002" on the second, etc.
    */
-  RootId nextCommitHash();
+  RootId nextCommitId();
 
   /**
    * Helper function to create a commit from a FakeTreeBuilder and call
    * EdenMount::resetCommit() with the result.
    */
   void resetCommit(FakeTreeBuilder& builder, bool setReady);
-  void resetCommit(
-      const RootId& commitHash,
-      FakeTreeBuilder& builder,
-      bool setReady);
+  void
+  resetCommit(const RootId& commitId, FakeTreeBuilder& builder, bool setReady);
 
   /**
    * Returns true if the overlay contains a directory record for this inode.
@@ -399,8 +397,8 @@ class TestMount {
       InodeCatalogType InodeCatalogType = kDefaultInodeCatalogType,
       InodeCatalogOptions inodeCatalogOptions = kDefaultInodeCatalogOptions);
   void initTestDirectory(CaseSensitivity caseSensitivity);
-  void setInitialCommit(const RootId& commitHash);
-  void setInitialCommit(const RootId& commitHash, ObjectId rootTreeHash);
+  void setInitialCommit(const RootId& commitId);
+  void setInitialCommit(const RootId& commitId, ObjectId rootTreeId);
 
   /**
    * Initialize the Eden mount. This is an internal function to initialize and
@@ -441,7 +439,7 @@ class TestMount {
   std::unique_ptr<CheckoutConfig> config_;
 
   /**
-   * A counter for creating temporary commit hashes via the nextCommitHash()
+   * A counter for creating temporary commit ids via the nextCommitId()
    * function.
    *
    * This is atomic just in case, but in general I would expect most tests to

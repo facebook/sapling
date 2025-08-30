@@ -36,22 +36,22 @@ struct JournalDeltaTest : ::testing::Test {
   Journal journal{edenStats.copy()};
   IdentityCodec codec;
 
-  RootId hash0;
-  RootId hash1{"1111111111111111111111111111111111111111"};
-  RootId hash2{"2222222222222222222222222222222222222222"};
-  RootId hash3{"3333333333333333333333333333333333333333"};
+  RootId root0;
+  RootId root1{"1111111111111111111111111111111111111111"};
+  RootId root2{"2222222222222222222222222222222222222222"};
+  RootId root3{"3333333333333333333333333333333333333333"};
 
   std::vector<int> expectedFileChangeSequences;
   std::vector<RelativePathPiece> expectedFileChangeNames;
   std::vector<dtype_t> expectedFileChangeDtypes;
-  std::vector<int> expectedHashUpdateSequences;
-  std::vector<RootId> expectedHashUpdateHashes;
+  std::vector<int> expectedRootUpdateSequences;
+  std::vector<RootId> expectedRootUpdateRoots;
 
   std::vector<int> fileChangeSequences;
   std::vector<RelativePathPiece> fileChangeNames;
   std::vector<dtype_t> fileChangeDtypes;
-  std::vector<int> hashUpdateSequences;
-  std::vector<RootId> hashUpdateHashes;
+  std::vector<int> rootUpdateSequences;
+  std::vector<RootId> rootUpdateRoots;
 
   void addFileChange(
       RelativePathPiece path,
@@ -70,25 +70,25 @@ struct JournalDeltaTest : ::testing::Test {
     expectedFileChangeDtypes.clear();
     expectedFileChangeNames.clear();
     expectedFileChangeSequences.clear();
-    expectedHashUpdateHashes.clear();
-    expectedHashUpdateSequences.clear();
+    expectedRootUpdateRoots.clear();
+    expectedRootUpdateSequences.clear();
 
-    expectedHashUpdateSequences.push_back(journal.getLatest()->sequenceID);
-    expectedHashUpdateHashes.push_back(journal.getLatest()->toHash);
+    expectedRootUpdateSequences.push_back(journal.getLatest()->sequenceID);
+    expectedRootUpdateRoots.push_back(journal.getLatest()->toRoot);
   }
 
-  void addHashUpdate(RootId to, JournalDelta::SequenceNumber after = 0) {
-    addHashUpdate(hash0, std::move(to), after);
+  void addRootUpdate(RootId to, JournalDelta::SequenceNumber after = 0) {
+    addRootUpdate(root0, std::move(to), after);
   }
 
-  void addHashUpdate(
+  void addRootUpdate(
       const RootId& from,
       RootId to,
       JournalDelta::SequenceNumber after = 0) {
-    journal.recordHashUpdate(from, std::move(to));
+    journal.recordRootUpdate(from, std::move(to));
     if (journal.getLatest()->sequenceID >= after) {
-      expectedHashUpdateSequences.push_back(journal.getLatest()->sequenceID);
-      expectedHashUpdateHashes.push_back(from);
+      expectedRootUpdateSequences.push_back(journal.getLatest()->sequenceID);
+      expectedRootUpdateRoots.push_back(from);
     }
   }
 
@@ -96,35 +96,35 @@ struct JournalDeltaTest : ::testing::Test {
     EXPECT_EQ(expectedFileChangeSequences, fileChangeSequences);
     EXPECT_EQ(expectedFileChangeNames, fileChangeNames);
     EXPECT_EQ(expectedFileChangeDtypes, fileChangeDtypes);
-    EXPECT_EQ(expectedHashUpdateSequences, hashUpdateSequences);
-    EXPECT_EQ(expectedHashUpdateHashes, hashUpdateHashes);
+    EXPECT_EQ(expectedRootUpdateSequences, rootUpdateSequences);
+    EXPECT_EQ(expectedRootUpdateRoots, rootUpdateRoots);
   }
 
   void reverseResults() {
     std::reverse(fileChangeSequences.begin(), fileChangeSequences.end());
     std::reverse(fileChangeNames.begin(), fileChangeNames.end());
     std::reverse(fileChangeDtypes.begin(), fileChangeDtypes.end());
-    std::reverse(hashUpdateSequences.begin(), hashUpdateSequences.end());
-    std::reverse(hashUpdateHashes.begin(), hashUpdateHashes.end());
+    std::reverse(rootUpdateSequences.begin(), rootUpdateSequences.end());
+    std::reverse(rootUpdateRoots.begin(), rootUpdateRoots.end());
   }
 
   /*
     This sets the journal state to be in a post-flush state.
-    The current hash will be set to hash1
+    The current root will be set to root1
     The current sequence will be set to 5
   */
   void setupFlushedJournal() {
-    journal.recordHashUpdate(hash1);
+    journal.recordRootUpdate(root1);
     journal.recordChanged("foo1"_relpath, dtype_t::Regular);
     journal.recordChanged("foo2"_relpath, dtype_t::Symlink);
     flush();
   }
 
   /*
-   * Set up journal state with a mix of fileChanges and hashUpdates
+   * Set up journal state with a mix of fileChanges and rootUpdates
    */
   void setupGeneric(JournalDelta::SequenceNumber after) {
-    addHashUpdate(hash1, after);
+    addRootUpdate(root1, after);
     addFileChange("foo1"_relpath, dtype_t::Regular, after);
     addFileChange("foo2"_relpath, dtype_t::Regular, after);
     addFileChange("foo1"_relpath, dtype_t::Regular, after);
@@ -133,8 +133,8 @@ struct JournalDeltaTest : ::testing::Test {
     addFileChange("foo3"_relpath, dtype_t::Regular, after);
     addFileChange("foo4"_relpath, dtype_t::Regular, after);
     EXPECT_EQ(7u, journal.getLatest()->sequenceID);
-    addHashUpdate(hash1, hash2, after);
-    addHashUpdate(hash2, hash1, after);
+    addRootUpdate(root1, root2, after);
+    addRootUpdate(root2, root1, after);
     EXPECT_EQ(9u, journal.getLatest()->sequenceID);
   }
 };
@@ -284,13 +284,13 @@ TEST_F(JournalTest, accumulateRangeRemoveCreateUpdate) {
 
 namespace {
 
-void checkHashMatches(
+void checkRootMatches(
     const std::vector<RootId>& transitions,
     Journal& journal) {
   auto latest = journal.getLatest();
   ASSERT_TRUE(latest);
-  EXPECT_EQ(transitions.front(), latest->fromHash);
-  EXPECT_EQ(transitions.back(), latest->toHash);
+  EXPECT_EQ(transitions.front(), latest->fromRoot);
+  EXPECT_EQ(transitions.back(), latest->toRoot);
 
   auto range = journal.accumulateRange(latest->sequenceID);
   ASSERT_TRUE(range);
@@ -310,38 +310,38 @@ void checkHashMatches(
 } // namespace
 
 TEST_F(JournalTest, accumulate_range_with_hash_updates) {
-  RootId hash0;
-  RootId hash1{"1111111111111111111111111111111111111111"};
-  RootId hash2{"2222222222222222222222222222222222222222"};
+  RootId root0;
+  RootId root1{"1111111111111111111111111111111111111111"};
+  RootId root2{"2222222222222222222222222222222222222222"};
   // Empty journals have no range to accumulate over
   EXPECT_FALSE(journal.getLatest());
   EXPECT_EQ(nullptr, journal.accumulateRange());
 
   // Make an initial entry.
   journal.recordChanged("foo/bar"_relpath, dtype_t::Dir);
-  checkHashMatches({hash0}, journal);
+  checkRootMatches({root0}, journal);
 
-  // Update to a new hash using 'to' syntax
-  journal.recordHashUpdate(hash1);
-  checkHashMatches({hash0, hash1}, journal);
-
-  journal.recordChanged("foo/bar"_relpath, dtype_t::Dir);
-  checkHashMatches({hash1}, journal);
-
-  // Update to a new hash using 'from/to' syntax
-  journal.recordHashUpdate(hash1, hash2);
-  checkHashMatches({hash1, hash2}, journal);
+  // Update to a new root using 'to' syntax
+  journal.recordRootUpdate(root1);
+  checkRootMatches({root0, root1}, journal);
 
   journal.recordChanged("foo/bar"_relpath, dtype_t::Dir);
-  checkHashMatches({hash2}, journal);
+  checkRootMatches({root1}, journal);
+
+  // Update to a new root using 'from/to' syntax
+  journal.recordRootUpdate(root1, root2);
+  checkRootMatches({root1, root2}, journal);
+
+  journal.recordChanged("foo/bar"_relpath, dtype_t::Dir);
+  checkRootMatches({root2}, journal);
 
   auto uncleanPaths = std::unordered_set<RelativePath>();
   uncleanPaths.insert(RelativePath("foo/bar"));
-  journal.recordUncleanPaths(hash2, hash1, std::move(uncleanPaths));
-  checkHashMatches({hash2, hash1}, journal);
+  journal.recordUncleanPaths(root2, root1, std::move(uncleanPaths));
+  checkRootMatches({root2, root1}, journal);
 
   journal.recordChanged("foo/bar"_relpath, dtype_t::Dir);
-  checkHashMatches({hash1}, journal);
+  checkRootMatches({root1}, journal);
 }
 
 TEST_F(JournalTest, debugRawJournalInfoRemoveCreateUpdate) {
@@ -383,16 +383,16 @@ TEST_F(JournalTest, debugRawJournalInfoRemoveCreateUpdate) {
 }
 
 TEST_F(JournalTest, debugRawJournalInfoHashUpdates) {
-  auto hash0 = RootId{};
-  auto hash1 = RootId{"1111111111111111111111111111111111111111"};
-  auto hash2 = RootId{"2222222222222222222222222222222222222222"};
+  auto root0 = RootId{};
+  auto root1 = RootId{"1111111111111111111111111111111111111111"};
+  auto root2 = RootId{"2222222222222222222222222222222222222222"};
 
-  // Go from hash0 to hash1
-  journal.recordHashUpdate(hash0, hash1);
+  // Go from root0 to root1
+  journal.recordRootUpdate(root0, root1);
   // Create test.txt
   journal.recordCreated("test.txt"_relpath, dtype_t::Regular);
-  // Go from hash1 to hash2
-  journal.recordHashUpdate(hash1, hash2);
+  // Go from root1 to root2
+  journal.recordRootUpdate(root1, root2);
 
   long mountGen = 333;
 
@@ -403,19 +403,19 @@ TEST_F(JournalTest, debugRawJournalInfoHashUpdates) {
   EXPECT_TRUE(debugDeltas[0].changedPaths()->empty());
   EXPECT_EQ(*debugDeltas[0].fromPosition()->mountGeneration(), mountGen);
   EXPECT_EQ(*debugDeltas[0].fromPosition()->sequenceNumber(), 3);
-  EXPECT_EQ(*debugDeltas[0].fromPosition()->snapshotHash(), hash1.value());
-  EXPECT_EQ(*debugDeltas[0].toPosition()->snapshotHash(), hash2.value());
+  EXPECT_EQ(*debugDeltas[0].fromPosition()->snapshotHash(), root1.value());
+  EXPECT_EQ(*debugDeltas[0].toPosition()->snapshotHash(), root2.value());
   EXPECT_FALSE(*debugDeltas[1].changedPaths()["test.txt"].existedBefore());
   EXPECT_TRUE(*debugDeltas[1].changedPaths()["test.txt"].existedAfter());
   EXPECT_EQ(*debugDeltas[1].fromPosition()->mountGeneration(), mountGen);
   EXPECT_EQ(*debugDeltas[1].fromPosition()->sequenceNumber(), 2);
-  EXPECT_EQ(*debugDeltas[1].fromPosition()->snapshotHash(), hash1.value());
-  EXPECT_EQ(*debugDeltas[1].toPosition()->snapshotHash(), hash1.value());
+  EXPECT_EQ(*debugDeltas[1].fromPosition()->snapshotHash(), root1.value());
+  EXPECT_EQ(*debugDeltas[1].toPosition()->snapshotHash(), root1.value());
   EXPECT_TRUE(debugDeltas[2].changedPaths()->empty());
   EXPECT_EQ(*debugDeltas[2].fromPosition()->mountGeneration(), mountGen);
   EXPECT_EQ(*debugDeltas[2].fromPosition()->sequenceNumber(), 1);
-  EXPECT_EQ(*debugDeltas[2].fromPosition()->snapshotHash(), hash0.value());
-  EXPECT_EQ(*debugDeltas[2].toPosition()->snapshotHash(), hash1.value());
+  EXPECT_EQ(*debugDeltas[2].fromPosition()->snapshotHash(), root0.value());
+  EXPECT_EQ(*debugDeltas[2].toPosition()->snapshotHash(), root1.value());
 }
 
 TEST_F(JournalTest, destruction_does_not_overflow_stack_on_long_chain) {
@@ -672,48 +672,48 @@ TEST_F(JournalTest, compaction) {
 }
 
 TEST_F(JournalTest, update_transitions_are_all_recorded) {
-  RootId hash1{"0000000000000000000000000000000000000001"};
-  RootId hash2{"0000000000000000000000000000000000000002"};
-  RootId hash3{"0000000000000000000000000000000000000003"};
-  journal.recordHashUpdate(hash1, hash2);
-  journal.recordHashUpdate(hash2, hash3);
+  RootId root1{"0000000000000000000000000000000000000001"};
+  RootId root2{"0000000000000000000000000000000000000002"};
+  RootId root3{"0000000000000000000000000000000000000003"};
+  journal.recordRootUpdate(root1, root2);
+  journal.recordRootUpdate(root2, root3);
 
   auto summed = journal.accumulateRange();
   EXPECT_EQ(3, summed->snapshotTransitions.size());
-  EXPECT_EQ(hash1, summed->snapshotTransitions[0]);
-  EXPECT_EQ(hash2, summed->snapshotTransitions[1]);
-  EXPECT_EQ(hash3, summed->snapshotTransitions[2]);
+  EXPECT_EQ(root1, summed->snapshotTransitions[0]);
+  EXPECT_EQ(root2, summed->snapshotTransitions[1]);
+  EXPECT_EQ(root3, summed->snapshotTransitions[2]);
 }
 
 TEST_F(JournalTest, update_transitions_are_coalesced) {
-  RootId hash1{"0000000000000000000000000000000000000001"};
-  RootId hash2{"0000000000000000000000000000000000000002"};
-  RootId hash3{"0000000000000000000000000000000000000003"};
-  journal.recordHashUpdate(hash1, hash2);
-  journal.recordHashUpdate(hash2, hash2);
-  journal.recordHashUpdate(hash2, hash3);
+  RootId root1{"0000000000000000000000000000000000000001"};
+  RootId root2{"0000000000000000000000000000000000000002"};
+  RootId root3{"0000000000000000000000000000000000000003"};
+  journal.recordRootUpdate(root1, root2);
+  journal.recordRootUpdate(root2, root2);
+  journal.recordRootUpdate(root2, root3);
 
   auto summed = journal.accumulateRange();
   EXPECT_EQ(3, summed->snapshotTransitions.size());
-  EXPECT_EQ(hash1, summed->snapshotTransitions[0]);
-  EXPECT_EQ(hash2, summed->snapshotTransitions[1]);
-  EXPECT_EQ(hash3, summed->snapshotTransitions[2]);
+  EXPECT_EQ(root1, summed->snapshotTransitions[0]);
+  EXPECT_EQ(root2, summed->snapshotTransitions[1]);
+  EXPECT_EQ(root3, summed->snapshotTransitions[2]);
 }
 
 TEST_F(JournalTest, update_transitions_with_unclean_files_are_not_coalesced) {
-  RootId hash1{"0000000000000000000000000000000000000001"};
-  RootId hash2{"0000000000000000000000000000000000000002"};
-  RootId hash3{"0000000000000000000000000000000000000003"};
-  journal.recordHashUpdate(hash1, hash2);
-  journal.recordUncleanPaths(hash2, hash2, {RelativePath{"foo"}});
-  journal.recordHashUpdate(hash2, hash3);
+  RootId root1{"0000000000000000000000000000000000000001"};
+  RootId root2{"0000000000000000000000000000000000000002"};
+  RootId root3{"0000000000000000000000000000000000000003"};
+  journal.recordRootUpdate(root1, root2);
+  journal.recordUncleanPaths(root2, root2, {RelativePath{"foo"}});
+  journal.recordRootUpdate(root2, root3);
 
   auto summed = journal.accumulateRange();
   EXPECT_EQ(4, summed->snapshotTransitions.size());
-  EXPECT_EQ(hash1, summed->snapshotTransitions[0]);
-  EXPECT_EQ(hash2, summed->snapshotTransitions[1]);
-  EXPECT_EQ(hash2, summed->snapshotTransitions[2]);
-  EXPECT_EQ(hash3, summed->snapshotTransitions[3]);
+  EXPECT_EQ(root1, summed->snapshotTransitions[0]);
+  EXPECT_EQ(root2, summed->snapshotTransitions[1]);
+  EXPECT_EQ(root2, summed->snapshotTransitions[2]);
+  EXPECT_EQ(root3, summed->snapshotTransitions[3]);
 }
 
 TEST_F(JournalTest, subscribers_are_notified_of_changes) {
@@ -785,11 +785,11 @@ TEST_F(JournalDeltaTest, for_each_delta) {
   addFileChange("foo3"_relpath, dtype_t::Regular);
   addFileChange("foo4"_relpath, dtype_t::Symlink);
   EXPECT_EQ(4u, journal.getLatest()->sequenceID);
-  addHashUpdate(hash1, hash2);
+  addRootUpdate(root1, root2);
   EXPECT_EQ(5u, journal.getLatest()->sequenceID);
   addFileChange("foo6"_relpath, dtype_t::Regular);
   addFileChange("foo7"_relpath, dtype_t::Regular);
-  addHashUpdate(hash2, hash1);
+  addRootUpdate(root2, root1);
 
   bool truncated = journal.forEachDelta(
       1u,
@@ -801,8 +801,8 @@ TEST_F(JournalDeltaTest, for_each_delta) {
         return true;
       },
       [&](const RootUpdateJournalDelta& current) -> bool {
-        hashUpdateSequences.push_back(current.sequenceID);
-        hashUpdateHashes.push_back(current.fromHash);
+        rootUpdateSequences.push_back(current.sequenceID);
+        rootUpdateRoots.push_back(current.fromRoot);
         return true;
       });
   EXPECT_FALSE(truncated);
@@ -812,7 +812,7 @@ TEST_F(JournalDeltaTest, for_each_delta) {
 
 /*
  * This test covers the case where 'from' is a value below the sequence number
- * of the first delta in fileChanges and there are hashUpdates present between
+ * of the first delta in fileChanges and there are rootUpdates present between
  * the two. It checks that fileChanges starts from the first entry in the
  * fileChanges vector.
  */
@@ -820,9 +820,9 @@ TEST_F(JournalDeltaTest, for_each_delta_file_change_ends_above_from) {
   setupFlushedJournal();
   EXPECT_EQ(5u, journal.getLatest()->sequenceID);
 
-  // Create hashUpdates after from and before file changes
-  addHashUpdate(hash1, hash2);
-  addHashUpdate(hash2, hash1);
+  // Create rootUpdates after from and before file changes
+  addRootUpdate(root1, root2);
+  addRootUpdate(root2, root1);
   EXPECT_EQ(7u, journal.getLatest()->sequenceID);
 
   // Create file changes
@@ -840,8 +840,8 @@ TEST_F(JournalDeltaTest, for_each_delta_file_change_ends_above_from) {
         return true;
       },
       [&](const RootUpdateJournalDelta& current) -> bool {
-        hashUpdateSequences.push_back(current.sequenceID);
-        hashUpdateHashes.push_back(current.fromHash);
+        rootUpdateSequences.push_back(current.sequenceID);
+        rootUpdateRoots.push_back(current.fromRoot);
         return true;
       });
   EXPECT_FALSE(truncated);
@@ -851,22 +851,22 @@ TEST_F(JournalDeltaTest, for_each_delta_file_change_ends_above_from) {
 
 /*
  * This test covers the case where 'from' is a value below the sequence number
- * of the first delta in hashUpdates and there are fileChanges present between
- * the two. It checks that hashUpdates starts from the first entry in the
- * hashUpdates vector.
+ * of the first delta in rootUpdates and there are fileChanges present between
+ * the two. It checks that rootUpdates starts from the first entry in the
+ * rootUpdates vector.
  */
 TEST_F(JournalDeltaTest, for_each_delta_hash_update_ends_above_from) {
   setupFlushedJournal();
   EXPECT_EQ(5u, journal.getLatest()->sequenceID);
 
-  // Create file changes after from and before hashUpdates
+  // Create file changes after from and before rootUpdates
   addFileChange("foo3"_relpath, dtype_t::Regular);
   addFileChange("foo4"_relpath, dtype_t::Symlink);
   EXPECT_EQ(7u, journal.getLatest()->sequenceID);
 
-  // Create hashUpdates
-  addHashUpdate(hash1, hash2);
-  addHashUpdate(hash2, hash1);
+  // Create rootUpdates
+  addRootUpdate(root1, root2);
+  addRootUpdate(root2, root1);
   EXPECT_EQ(9u, journal.getLatest()->sequenceID);
 
   bool truncated = journal.forEachDelta(
@@ -879,8 +879,8 @@ TEST_F(JournalDeltaTest, for_each_delta_hash_update_ends_above_from) {
         return true;
       },
       [&](const RootUpdateJournalDelta& current) -> bool {
-        hashUpdateSequences.push_back(current.sequenceID);
-        hashUpdateHashes.push_back(current.fromHash);
+        rootUpdateSequences.push_back(current.sequenceID);
+        rootUpdateRoots.push_back(current.fromRoot);
         return true;
       });
   EXPECT_FALSE(truncated);
@@ -904,8 +904,8 @@ TEST_F(JournalDeltaTest, for_each_delta_partial_results) {
         return true;
       },
       [&](const RootUpdateJournalDelta& current) -> bool {
-        hashUpdateSequences.push_back(current.sequenceID);
-        hashUpdateHashes.push_back(current.fromHash);
+        rootUpdateSequences.push_back(current.sequenceID);
+        rootUpdateRoots.push_back(current.fromRoot);
         return true;
       });
   EXPECT_FALSE(truncated);
@@ -914,7 +914,7 @@ TEST_F(JournalDeltaTest, for_each_delta_partial_results) {
 }
 
 /*
- * Tests that when 'from' is higher than the current sequence id,
+ * Tests that when 'from' is higher than the current sequence root,
  * returns no values.
  */
 TEST_F(JournalDeltaTest, for_each_delta_no_results) {
@@ -929,8 +929,8 @@ TEST_F(JournalDeltaTest, for_each_delta_no_results) {
         return true;
       },
       [&](const RootUpdateJournalDelta& current) -> bool {
-        hashUpdateSequences.push_back(current.sequenceID);
-        hashUpdateHashes.push_back(current.fromHash);
+        rootUpdateSequences.push_back(current.sequenceID);
+        rootUpdateRoots.push_back(current.fromRoot);
         return true;
       });
   EXPECT_FALSE(truncated);
@@ -953,8 +953,8 @@ TEST_F(JournalDeltaTest, for_each_delta_early_exit_file) {
   expectedFileChangeSequences = {};
   expectedFileChangeNames = {};
   expectedFileChangeDtypes = {};
-  expectedHashUpdateSequences = {8, 9};
-  expectedHashUpdateHashes = {hash1, hash2};
+  expectedRootUpdateSequences = {8, 9};
+  expectedRootUpdateRoots = {root1, root2};
 
   bool truncated = journal.forEachDelta(
       6u,
@@ -969,8 +969,8 @@ TEST_F(JournalDeltaTest, for_each_delta_early_exit_file) {
         return true;
       },
       [&](const RootUpdateJournalDelta& current) -> bool {
-        hashUpdateSequences.push_back(current.sequenceID);
-        hashUpdateHashes.push_back(current.fromHash);
+        rootUpdateSequences.push_back(current.sequenceID);
+        rootUpdateRoots.push_back(current.fromRoot);
         return true;
       });
   EXPECT_FALSE(truncated);
@@ -979,7 +979,7 @@ TEST_F(JournalDeltaTest, for_each_delta_early_exit_file) {
 }
 
 /*
- * Tests that when the hashUpdate callback returns false, iteration stops
+ * Tests that when the rootUpdate callback returns false, iteration stops
  * Since iteration is backwards, the contents will be from most recent to
  * stopping point
  */
@@ -989,12 +989,12 @@ TEST_F(JournalDeltaTest, for_each_delta_early_exit_hash) {
   setupGeneric(0u);
 
   // We expect to stop when sequenceID == 9, so only the first entry is
-  // populated in hashUpdate
+  // populated in rootUpdate
   expectedFileChangeSequences = {};
   expectedFileChangeNames = {};
   expectedFileChangeDtypes = {};
-  expectedHashUpdateSequences = {9};
-  expectedHashUpdateHashes = {hash2};
+  expectedRootUpdateSequences = {9};
+  expectedRootUpdateRoots = {root2};
 
   bool truncated = journal.forEachDelta(
       6u,
@@ -1009,8 +1009,8 @@ TEST_F(JournalDeltaTest, for_each_delta_early_exit_hash) {
         if (current.sequenceID == 8) {
           return false;
         }
-        hashUpdateSequences.push_back(current.sequenceID);
-        hashUpdateHashes.push_back(current.fromHash);
+        rootUpdateSequences.push_back(current.sequenceID);
+        rootUpdateRoots.push_back(current.fromRoot);
         return true;
       });
   EXPECT_FALSE(truncated);
@@ -1019,7 +1019,7 @@ TEST_F(JournalDeltaTest, for_each_delta_early_exit_hash) {
 }
 
 /*
- * Tests all file change dtypes and empty hash update
+ * Tests all file change dtypes and empty root update
  */
 TEST_F(JournalDeltaTest, for_each_delta_file_changes_only) {
   addFileChange("foo1"_relpath, dtype_t::Unknown);
@@ -1047,13 +1047,13 @@ TEST_F(JournalDeltaTest, for_each_delta_file_changes_only) {
 }
 
 /*
- * Tests hashUpdate with empty fileChange
+ * Tests rootUpdate with empty fileChange
  */
 TEST_F(JournalDeltaTest, for_each_delta_hash_update_only) {
-  addHashUpdate(hash1);
-  addHashUpdate(hash1, hash2);
-  addHashUpdate(hash2, hash1);
-  addHashUpdate(hash1, hash3);
+  addRootUpdate(root1);
+  addRootUpdate(root1, root2);
+  addRootUpdate(root2, root1);
+  addRootUpdate(root1, root3);
   EXPECT_EQ(4u, journal.getLatest()->sequenceID);
 
   bool truncated = journal.forEachDelta(
@@ -1061,8 +1061,8 @@ TEST_F(JournalDeltaTest, for_each_delta_hash_update_only) {
       std::nullopt,
       [&](const FileChangeJournalDelta& /*current*/) -> bool { return true; },
       [&](const RootUpdateJournalDelta& current) -> bool {
-        hashUpdateSequences.push_back(current.sequenceID);
-        hashUpdateHashes.push_back(current.fromHash);
+        rootUpdateSequences.push_back(current.sequenceID);
+        rootUpdateRoots.push_back(current.fromRoot);
         return true;
       });
   reverseResults();

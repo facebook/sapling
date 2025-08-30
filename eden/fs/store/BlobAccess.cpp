@@ -23,19 +23,18 @@ BlobAccess::BlobAccess(
 BlobAccess::~BlobAccess() = default;
 
 ImmediateFuture<BlobCache::GetResult> BlobAccess::getBlob(
-    const ObjectId& hash,
+    const ObjectId& id,
     const ObjectFetchContextPtr& context,
     BlobCache::Interest interest) {
-  auto result = blobCache_->get(hash, interest);
+  auto result = blobCache_->get(id, interest);
   if (result.object) {
     return folly::Future<BlobCache::GetResult>{std::move(result)};
   }
 
-  return objectStore_->getBlob(hash, context)
-      .thenValue([blobCache = blobCache_, hash = hash, interest](
+  return objectStore_->getBlob(id, context)
+      .thenValue([blobCache = blobCache_, oid = id, interest](
                      std::shared_ptr<const Blob> blob) mutable {
-        auto interestHandle =
-            blobCache->insert(std::move(hash), blob, interest);
+        auto interestHandle = blobCache->insert(std::move(oid), blob, interest);
         return BlobCache::GetResult{std::move(blob), std::move(interestHandle)};
       });
 }

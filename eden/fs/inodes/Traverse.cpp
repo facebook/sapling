@@ -24,7 +24,7 @@ std::vector<ChildEntry> parseDirContents(const DirContents& contents) {
         name,
         entry.getDtype(),
         entry.getInodeNumber(),
-        entry.getOptionalHash(),
+        entry.getOptionalObjectId(),
         entry.getInodePtr()});
   }
   return results;
@@ -37,11 +37,11 @@ void traverseTreeInodeChildren(
     const std::vector<ChildEntry>& children,
     RelativePathPiece rootPath,
     InodeNumber ino,
-    const std::optional<ObjectId>& hash,
+    const std::optional<ObjectId>& id,
     uint64_t fsRefcount,
     TraversalCallbacks& callbacks) {
   XLOGF(DBG7, "Traversing: {}", rootPath);
-  callbacks.visitTreeInode(rootPath, ino, hash, fsRefcount, children);
+  callbacks.visitTreeInode(rootPath, ino, id, fsRefcount, children);
   for (auto& entry : children) {
     auto childPath = rootPath + entry.name;
     if (auto child = entry.loadedChild) {
@@ -62,7 +62,7 @@ void traverseTreeInodeChildren(
                 parseDirContents(contents),
                 childPath,
                 entry.ino,
-                entry.hash,
+                entry.id,
                 0,
                 callbacks);
           }
@@ -79,11 +79,11 @@ void traverseObservedInodes(
   auto* overlay = root.getMount()->getOverlay();
 
   std::vector<ChildEntry> children;
-  std::optional<ObjectId> hash;
+  std::optional<ObjectId> id;
   {
     auto contents = root.getContents().rlock();
     children = parseDirContents(contents->entries);
-    hash = contents->treeHash;
+    id = contents->treeId;
   }
 
   traverseTreeInodeChildren(
@@ -91,7 +91,7 @@ void traverseObservedInodes(
       children,
       rootPath,
       root.getNodeId(),
-      hash,
+      id,
       root.debugGetFsRefcount(),
       callbacks);
 }

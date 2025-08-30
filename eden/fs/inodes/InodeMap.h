@@ -429,7 +429,7 @@ class InodeMap {
     /**
      * Constructor only using parentNum, entryName, and mode. Only used by
      * InodeMap::startLoadingChildIfNotLoading. Note, when this is used, the
-     * hash (which gets set to a default empty string) may not be accurate for
+     * id (which gets set to a default empty string) may not be accurate for
      * unmaterialized inodes. Also, the mode, which is based off of the
      * initial_mode retrieved from a Directory Entry, should have correct
      * file/directory bits. However, it may not have fully accurate permission
@@ -445,13 +445,13 @@ class InodeMap {
         PathComponentPiece entryName,
         bool isUnlinked,
         mode_t mode,
-        std::optional<ObjectId> hash,
+        std::optional<ObjectId> id,
         uint32_t fsRefcount);
     UnloadedInode(
         TreeInode* parent,
         PathComponentPiece entryName,
         bool isUnlinked,
-        std::optional<ObjectId> hash,
+        std::optional<ObjectId> id,
         uint32_t fsRefcount);
     UnloadedInode(
         FileInode* inode,
@@ -481,13 +481,13 @@ class InodeMap {
     InodeType getInodeType() const;
 
     /**
-     * If the entry is not materialized, this contains the hash
+     * If the entry is not materialized, this contains the id
      * identifying the source control Tree (if this is a directory) or Blob
      * (if this is a file) that contains the entry contents.
      *
      * If the entry is materialized, this field is not set.
      */
-    std::optional<ObjectId> const hash;
+    std::optional<ObjectId> const id;
 
     /**
      * A list of promises waiting on this inode to be loaded.
@@ -613,14 +613,14 @@ class InodeMap {
       PathComponentPiece childName,
       bool isUnlinked,
       InodeNumber childInodeNumber,
-      std::optional<ObjectId> hash,
+      std::optional<ObjectId> id,
       mode_t mode);
   void startChildLookup(
       const InodePtr& parent,
       PathComponentPiece childName,
       bool isUnlinked,
       InodeNumber childInodeNumber,
-      std::optional<ObjectId> hash,
+      std::optional<ObjectId> id,
       mode_t mode);
 
   /**

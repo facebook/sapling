@@ -77,10 +77,10 @@ TEST(OverlayGoldMasterTest, can_load_overlay_v2) {
       *EdenConfig::createTestEdenConfig());
   overlay->initialize(EdenConfig::createTestEdenConfig()).get();
 
-  ObjectId hash1{folly::ByteRange{"abcdabcdabcdabcdabcd"_sp}};
-  ObjectId hash2{folly::ByteRange{"01234012340123401234"_sp}};
-  ObjectId hash3{folly::ByteRange{"e0e0e0e0e0e0e0e0e0e0"_sp}};
-  ObjectId hash4{folly::ByteRange{"44444444444444444444"_sp}};
+  ObjectId id1{folly::ByteRange{"abcdabcdabcdabcdabcd"_sp}};
+  ObjectId id2{folly::ByteRange{"01234012340123401234"_sp}};
+  ObjectId id3{folly::ByteRange{"e0e0e0e0e0e0e0e0e0e0"_sp}};
+  ObjectId id4{folly::ByteRange{"44444444444444444444"_sp}};
 
   auto rootTree = overlay->loadOverlayDir(kRootNodeId);
   auto file =
@@ -94,11 +94,11 @@ TEST(OverlayGoldMasterTest, can_load_overlay_v2) {
   EXPECT_EQ(2, rootTree.size());
   const auto& fileEntry = rootTree.at("file"_pc);
   EXPECT_EQ(2_ino, fileEntry.getInodeNumber());
-  EXPECT_EQ(hash1, fileEntry.getObjectId());
+  EXPECT_EQ(id1, fileEntry.getObjectId());
   EXPECT_EQ(S_IFREG | 0644, fileEntry.getInitialMode());
   const auto& subdirEntry = rootTree.at("subdir"_pc);
   EXPECT_EQ(3_ino, subdirEntry.getInodeNumber());
-  EXPECT_EQ(hash2, subdirEntry.getObjectId());
+  EXPECT_EQ(id2, subdirEntry.getObjectId());
   EXPECT_EQ(S_IFDIR | 0755, subdirEntry.getInitialMode());
 
   EXPECT_TRUE(
@@ -111,11 +111,11 @@ TEST(OverlayGoldMasterTest, can_load_overlay_v2) {
   EXPECT_EQ(2, subdir.size());
   const auto& emptyEntry = subdir.at("empty"_pc);
   EXPECT_EQ(4_ino, emptyEntry.getInodeNumber());
-  EXPECT_EQ(hash3, emptyEntry.getObjectId());
+  EXPECT_EQ(id3, emptyEntry.getObjectId());
   EXPECT_EQ(S_IFDIR | 0755, emptyEntry.getInitialMode());
   const auto& helloEntry = subdir.at("hello"_pc);
   EXPECT_EQ(5_ino, helloEntry.getInodeNumber());
-  EXPECT_EQ(hash4, helloEntry.getObjectId());
+  EXPECT_EQ(id4, helloEntry.getObjectId());
   EXPECT_EQ(S_IFREG | 0644, helloEntry.getInitialMode());
 
   ASSERT_TRUE(emptyDir.empty());
@@ -206,7 +206,7 @@ TEST_F(OverlayTest, testTimeStampsInOverlayOnMountAndUnmount) {
 }
 
 TEST_F(OverlayTest, roundTripThroughSaveAndLoad) {
-  auto hash = ObjectId::fromHex("0123456789012345678901234567890123456789");
+  auto id = ObjectId::fromHex("0123456789012345678901234567890123456789");
 
   auto overlay = mount_.getEdenMount()->getOverlay();
 
@@ -215,7 +215,7 @@ TEST_F(OverlayTest, roundTripThroughSaveAndLoad) {
   auto ino3 = overlay->allocateInodeNumber();
 
   DirContents dir(kPathMapDefaultCaseSensitive);
-  dir.emplace("one"_pc, S_IFREG | 0644, ino2, hash);
+  dir.emplace("one"_pc, S_IFREG | 0644, ino2, id);
   dir.emplace("two"_pc, S_IFDIR | 0755, ino3);
 
   overlay->saveOverlayDir(ino1, dir);

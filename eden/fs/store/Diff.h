@@ -33,7 +33,7 @@ diffRoots(DiffContext* context, const RootId& root1, const RootId& root2);
 
 /**
  * Compute the diff between a source control Tree and the current directory
- * state. This function is called with the hashes of a source control tree
+ * state. This function is called with the ids of a source control tree
  * entry and an unmaterialized inode entry.
  *
  * The path argument specifies the path to these trees, and will be prefixed
@@ -48,12 +48,12 @@ diffRoots(DiffContext* context, const RootId& root1, const RootId& root2);
 ImmediateFuture<folly::Unit> diffTrees(
     DiffContext* context,
     RelativePathPiece currentPath,
-    ObjectId scmHash,
-    ObjectId wdHash);
+    ObjectId scmId,
+    ObjectId wdId);
 
 /**
  * Process an added tree (present locally but not present in the source control
- * tree). This function is called with the hash of an unmaterialized inode
+ * tree). This function is called with the id of an unmaterialized inode
  * entry. This whole subtree is marked as added using the DiffContext.
  *
  * The path argument specifies the path to these trees, and will be prefixed
@@ -68,11 +68,11 @@ ImmediateFuture<folly::Unit> diffTrees(
 ImmediateFuture<folly::Unit> diffAddedTree(
     DiffContext* context,
     RelativePathPiece currentPath,
-    ObjectId wdHash);
+    ObjectId wdId);
 
 /**
  * Process a removed tree (not present locally but present in the source control
- * tree). This function is called with the hash of the source control tree
+ * tree). This function is called with the id of the source control tree
  * entry. This whole subtree is marked as removed using the DiffContext.
  *
  * The path argument specifies the path to these trees, and will be prefixed
@@ -87,6 +87,6 @@ ImmediateFuture<folly::Unit> diffAddedTree(
 ImmediateFuture<folly::Unit> diffRemovedTree(
     DiffContext* context,
     RelativePathPiece currentPath,
-    ObjectId scmHash);
+    ObjectId scmId);
 
 } // namespace facebook::eden

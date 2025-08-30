@@ -44,7 +44,7 @@ class FsObjectFetchContext : public ObjectFetchContext {
 
   // ObjectFetchContext overrides:
 
-  void didFetch(ObjectType /*type*/, const ObjectId& /*hash*/, Origin origin)
+  void didFetch(ObjectType /*type*/, const ObjectId& /*id*/, Origin origin)
       override {
     edenTopStats_.setFetchOrigin(origin);
   }

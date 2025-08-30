@@ -319,31 +319,31 @@ TEST_F(CheckoutConfigTest, testWriteSnapshot) {
   auto config =
       CheckoutConfig::loadFromClientDirectory(mountPoint_, clientDir_);
 
-  RootId hash1{"99887766554433221100aabbccddeeffabcdef99"};
-  RootId hash2{"abcdef98765432100123456789abcdef00112233"};
+  RootId id1{"99887766554433221100aabbccddeeffabcdef99"};
+  RootId id2{"abcdef98765432100123456789abcdef00112233"};
 
   // Write out a single parent and read it back
-  config->setCheckedOutCommit(hash1);
+  config->setCheckedOutCommit(id1);
   auto parent = config->getParentCommit();
   EXPECT_EQ(
       ParentCommit(
-          ParentCommit::WorkingCopyParentAndCheckedOutRevision{hash1, hash1}),
+          ParentCommit::WorkingCopyParentAndCheckedOutRevision{id1, id1}),
       parent);
 
   // Change the parent
-  config->setCheckedOutCommit(hash2);
+  config->setCheckedOutCommit(id2);
   parent = config->getParentCommit();
   EXPECT_EQ(
       ParentCommit(
-          ParentCommit::WorkingCopyParentAndCheckedOutRevision{hash2, hash2}),
+          ParentCommit::WorkingCopyParentAndCheckedOutRevision{id2, id2}),
       parent);
 
   // Change the parent back
-  config->setCheckedOutCommit(hash1);
+  config->setCheckedOutCommit(id1);
   parent = config->getParentCommit();
   EXPECT_EQ(
       ParentCommit(
-          ParentCommit::WorkingCopyParentAndCheckedOutRevision{hash1, hash1}),
+          ParentCommit::WorkingCopyParentAndCheckedOutRevision{id1, id1}),
       parent);
 }
 
@@ -391,7 +391,7 @@ TEST_F(CheckoutConfigTest, testBadSnapshotV1) {
 
   // The error type and message for this will probably change in the future
   // when we drop support for the legacy SNAPSHOT file format (of a 40-byte
-  // ASCII string containing the snapshot hash).
+  // ASCII string containing the snapshot id).
   testBadSnapshot(
       StringPiece{
           "xden\00\00\00\01"

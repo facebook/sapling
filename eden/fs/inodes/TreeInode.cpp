@@ -170,9 +170,9 @@ TreeInode::TreeInode(
     mode_t initialMode,
     const std::optional<InodeTimestamps>& initialTimestamps,
     DirContents&& dir,
-    std::optional<ObjectId> treeHash)
+    std::optional<ObjectId> treeId)
     : Base(ino, initialMode, initialTimestamps, parent, name),
-      contents_(std::in_place, std::move(dir), std::move(treeHash)) {
+      contents_(std::in_place, std::move(dir), std::move(treeId)) {
   XDCHECK_NE(ino, kRootNodeId);
 }
 
@@ -185,8 +185,8 @@ TreeInode::TreeInode(EdenMount* mount, std::shared_ptr<const Tree>&& tree)
 TreeInode::TreeInode(
     EdenMount* mount,
     DirContents&& dir,
-    std::optional<ObjectId> treeHash)
-    : Base(mount), contents_(std::in_place, std::move(dir), treeHash) {}
+    std::optional<ObjectId> treeId)
+    : Base(mount), contents_(std::in_place, std::move(dir), treeId) {}
 
 TreeInode::~TreeInode() = default;
 
@@ -269,12 +269,12 @@ std::optional<ImmediateFuture<VirtualInode>> TreeInode::rlockGetOrFindChild(
   // modified/materialized yet (it has to have been loaded prior),
   // so it's safe here to ignore the loading inode and instead
   // query the object store for information about the path.
-  auto hash = entry.getObjectId();
+  auto id = entry.getObjectId();
   if (entry.isDirectory()) {
     // This is a directory, always get the tree corresponding to
-    // the hash
+    // the id
     return getObjectStore()
-        .getTree(hash, context)
+        .getTree(id, context)
         .thenValue([mode = entry.getInitialMode()](
                        std::shared_ptr<const Tree>&& tree) {
           return VirtualInode(std::move(tree), mode);
@@ -282,7 +282,7 @@ std::optional<ImmediateFuture<VirtualInode>> TreeInode::rlockGetOrFindChild(
   }
   // This is a file, return the DirEntry if this was the last
   // path component. Note that because the entry is not loaded and
-  // is not materialized, it's guaranteed to have a hash set, and
+  // is not materialized, it's guaranteed to have a id set, and
   // the constructor of UnmaterializedUnloadedBlobDirEntry can be
   // called safely.
   return VirtualInode{UnmaterializedUnloadedBlobDirEntry(entry)};
@@ -532,7 +532,7 @@ InodeNumber TreeInode::getChildInodeNumber(PathComponentPiece name) {
 void TreeInode::loadUnlinkedChildInode(
     PathComponentPiece name,
     InodeNumber number,
-    std::optional<ObjectId> hash,
+    std::optional<ObjectId> id,
     mode_t mode) {
   try {
     InodeMap::PromiseVector promises;
@@ -545,12 +545,12 @@ void TreeInode::loadUnlinkedChildInode(
           name,
           mode,
           std::nullopt,
-          hash ? &*hash : nullptr);
+          id ? &*id : nullptr);
       promises = getInodeMap()->inodeLoadComplete(file.get());
       inodePtr = InodePtr::takeOwnership(std::move(file));
     } else {
       auto overlayContents = getOverlay()->loadOverlayDir(number);
-      if (!hash) {
+      if (!id) {
         // If the inode is materialized, the overlay must have an entry
         // for the directory.
         // Note that the .value() call will throw if we couldn't
@@ -571,7 +571,7 @@ void TreeInode::loadUnlinkedChildInode(
           mode,
           std::nullopt,
           std::move(overlayContents),
-          hash ? std::optional<ObjectId>{*hash} : std::nullopt);
+          id ? std::optional<ObjectId>{*id} : std::nullopt);
       promises = getInodeMap()->inodeLoadComplete(tree.get());
       inodePtr = InodePtr::takeOwnership(std::move(tree));
     }
@@ -781,7 +781,7 @@ Future<unique_ptr<InodeBase>> TreeInode::startLoadingInode(
         name,
         entry.getInitialMode(),
         std::nullopt,
-        entry.getHashPtr());
+        entry.getObjectIdPtr());
   }
 
   if (!entry.isMaterialized()) {
@@ -792,7 +792,7 @@ Future<unique_ptr<InodeBase>> TreeInode::startLoadingInode(
         .thenValue(
             [self = inodePtrFromThis(),
              childName = PathComponent{name},
-             treeHash = entry.getObjectId(),
+             treeId = entry.getObjectId(),
              entryMode = entry.getInitialMode(),
              number = entry.getInodeNumber()](
                 std::shared_ptr<const Tree> tree) mutable
@@ -836,7 +836,7 @@ Future<unique_ptr<InodeBase>> TreeInode::startLoadingInode(
                     entryMode,
                     std::nullopt,
                     std::move(overlayDir),
-                    treeHash);
+                    treeId);
               }
 
               return make_unique<TreeInode>(
@@ -893,10 +893,10 @@ void TreeInode::materialize(const RenameLock* renameLock) {
     // don't have overlay data present.
     //
     // In the former case, our overlay data should still be identical to the
-    // hash mentioned in the parent, so that's fine and we'll still be able to
+    // id mentioned in the parent, so that's fine and we'll still be able to
     // load data correctly the next time we restart.  However, if our parent
     // says we are materialized but we don't actually have overlay data present
-    // we won't have any state indicating which source control hash our
+    // we won't have any state indicating which source control id our
     // contents are from.
     {
       auto contents = contents_.wlock();
@@ -995,7 +995,7 @@ void TreeInode::childMaterialized(
 void TreeInode::childDematerialized(
     const RenameLock& renameLock,
     PathComponentPiece childName,
-    ObjectId childScmHash) {
+    ObjectId childScmId) {
   auto startTime = std::chrono::system_clock::now();
   bool wasAlreadyMaterialized = false;
   {
@@ -1024,18 +1024,18 @@ void TreeInode::childDematerialized(
     // are compatible, we want to migrate our inode to the new ID scheme, which
     // requires writing it to the overlay.
     if (!childEntry.isMaterialized() &&
-        childEntry.getObjectId().bytesEqual(childScmHash)) {
+        childEntry.getObjectId().bytesEqual(childScmId)) {
       // Nothing to do.  Our child's state and our own are both unchanged.
       return;
     }
 
     // Mark the child dematerialized.
-    childEntry.setDematerialized(childScmHash);
+    childEntry.setDematerialized(childScmId);
 
     // Mark us materialized!
     //
     // Even though our child is dematerialized, we always materialize ourself
-    // so we make sure we record the correct source control hash for our child.
+    // so we make sure we record the correct source control id for our child.
     // Currently dematerialization only happens on the checkout() flow.  Once
     // checkout finishes processing all of the children it will call
     // saveOverlayPostCheckout() on this directory, and here we will check to
@@ -1240,7 +1240,7 @@ FileInodePtr TreeInode::createImpl(
 
 std::optional<ObjectId> TreeInode::getObjectId() const {
   auto state = contents_.rlock();
-  return state->treeHash;
+  return state->treeId;
 }
 
 ImmediateFuture<std::optional<Hash32>> TreeInode::getDigestHash(
@@ -1249,11 +1249,10 @@ ImmediateFuture<std::optional<Hash32>> TreeInode::getDigestHash(
   auto state = contents_.rlock();
 
   if (!state->isMaterialized()) {
-    // If a tree is not materialized, it should have a hash value.
+    // If a tree is not materialized, it should have an id value.
     return getObjectStore()
-        .getTreeDigestHash(state->treeHash.value(), fetchContext)
-        .thenValue(
-            [](std::optional<Hash32>&& hash) { return std::move(hash); });
+        .getTreeDigestHash(state->treeId.value(), fetchContext)
+        .thenValue([](std::optional<Hash32>&& id) { return std::move(id); });
   }
   return ImmediateFuture<std::optional<Hash32>>{std::nullopt};
 }
@@ -1264,9 +1263,9 @@ ImmediateFuture<std::optional<uint64_t>> TreeInode::getDigestSize(
   auto state = contents_.rlock();
 
   if (!state->isMaterialized()) {
-    // If a tree is not materialized, it should have a hash size.
+    // If a tree is not materialized, it should have an id size.
     return getObjectStore()
-        .getTreeDigestSize(state->treeHash.value(), fetchContext)
+        .getTreeDigestSize(state->treeId.value(), fetchContext)
         .thenValue(
             [](std::optional<uint64_t>&& size) { return std::move(size); });
   }
@@ -1281,7 +1280,7 @@ ImmediateFuture<std::optional<TreeAuxData>> TreeInode::getTreeAuxData(
   if (!state->isMaterialized()) {
     // If a tree is not materialized, it should have aux data.
     return getObjectStore()
-        .getTreeAuxData(state->treeHash.value(), fetchContext)
+        .getTreeAuxData(state->treeId.value(), fetchContext)
         .thenValue([](std::optional<TreeAuxData>&& treeAux) {
           return std::move(treeAux);
         });
@@ -2181,7 +2180,7 @@ ImmediateFuture<Unit> TreeInode::doRename(
   }
 
   // Success.
-  // Update the destination with the source data (this copies in the hash if
+  // Update the destination with the source data (this copies in the id if
   // it happens to be set).
   std::unique_ptr<InodeBase> deletedInode;
   auto* childInode = srcEntry.getInode();
@@ -2528,16 +2527,16 @@ ImmediateFuture<Unit> TreeInode::diff(
         getLogPath(),
         getNodeId(),
         (contents->isMaterialized() ? "materialized"
-                                    : contents->treeHash->toLogString()),
+                                    : contents->treeId->toLogString()),
         (trees.size() == 1 ? trees[0]->getObjectId().toLogString()
                            : "null tree"));
 
     // Check to see if we can short-circuit the diff operation if we have the
-    // same hash as the tree we are being compared to.
+    // same id as the tree we are being compared to.
     if (!contents->isMaterialized()) {
       for (auto& tree : trees) {
         if (getObjectStore().areObjectsKnownIdentical(
-                contents->treeHash.value(), tree->getObjectId())) {
+                contents->treeId.value(), tree->getObjectId())) {
           // There are no changes in our tree or any children subtrees.
           return folly::unit;
         }
@@ -2949,11 +2948,11 @@ ImmediateFuture<Unit> TreeInode::computeDiff(
           deferredEntries.emplace_back(DeferredDiffEntry::createRemovedScmEntry(
               context, entryPath, scmEntry.getObjectId()));
         } else {
-          // This file corresponds to a different blob hash, or has a
+          // This file corresponds to a different blob id, or has a
           // different mode.
           //
           // Ideally we should be able to assume that the file is
-          // modified--if two blobs have different hashes we should be able
+          // modified--if two blobs have different ids we should be able
           // to assume that their contents are different.  Unfortunately this
           // is not the case for now with our mercurial blob IDs, since the
           // mercurial blob data includes the path name and past history
@@ -3266,7 +3265,7 @@ ImmediateFuture<Unit> TreeInode::checkout(
 
 bool TreeInode::canShortCircuitCheckout(
     CheckoutContext* ctx,
-    const ObjectId& treeHash,
+    const ObjectId& treeId,
     const Tree* fromTree,
     const Tree* toTree) {
   if (ctx->isDryRun()) {
@@ -3275,14 +3274,14 @@ bool TreeInode::canShortCircuitCheckout(
     // updates we can bail out early as long as there are no conflicts.
     if (fromTree) {
       return ctx->getObjectStore()->areObjectsKnownIdentical(
-          treeHash, fromTree->getObjectId());
+          treeId, fromTree->getObjectId());
     } else {
       // There is no fromTree.  If we are already in the desired destination
       // state we don't have conflicts.  Otherwise we have to continue and
       // check for conflicts.
       return !toTree ||
           ctx->getObjectStore()->areObjectsKnownIdentical(
-              treeHash, toTree->getObjectId());
+              treeId, toTree->getObjectId());
     }
   }
 
@@ -3290,7 +3289,7 @@ bool TreeInode::canShortCircuitCheckout(
   // the desired destination state.
   if (!toTree ||
       !ctx->getObjectStore()->areObjectsKnownIdentical(
-          treeHash, toTree->getObjectId())) {
+          treeId, toTree->getObjectId())) {
     // If the objects are known different or not known identical, we must take
     // the slow path.
     return false;
@@ -3314,7 +3313,7 @@ bool TreeInode::canShortCircuitCheckout(
 
   // Allow short circuiting if we are also the same as the fromTree state.
   return ctx->getObjectStore()->areObjectsKnownIdentical(
-      treeHash, fromTree->getObjectId());
+      treeId, fromTree->getObjectId());
 }
 
 void TreeInode::computeCheckoutActions(
@@ -3330,9 +3329,9 @@ void TreeInode::computeCheckoutActions(
   // If we are the same as some known source control Tree, check to see if we
   // can quickly tell if we have nothing to do for this checkout operation and
   // can return early.
-  if (contents->treeHash.has_value() &&
+  if (contents->treeId.has_value() &&
       canShortCircuitCheckout(
-          ctx, contents->treeHash.value(), fromTree, toTree)) {
+          ctx, contents->treeId.value(), fromTree, toTree)) {
     ctx->increaseCheckoutCounter(this->getInMemoryDescendants());
     return;
   }
@@ -4239,7 +4238,7 @@ void TreeInode::saveOverlayPostCheckout(
       // TreeInode::saveoverlayPostCheckout. The issue is that setPathRootId
       // synthesizes a fake Tree and then calls checkout, which might notice
       // that the previous fake Tree and the current fake Tree have the same
-      // hash, which will incorrectly dematerialized this inode. The fake hash
+      // id, which will incorrectly dematerialized this inode. The fake id
       // cannot be reconstituted from the backing store, so this makes the
       // directory structure unreadable. The correct long-term fix is to
       // remove getObjectId() from Tree and pass around ObjectIds explicitly if
@@ -4253,16 +4252,16 @@ void TreeInode::saveOverlayPostCheckout(
       return tree->getObjectId();
     };
 
-    auto oldHash = contents->treeHash;
-    auto newHash = tryToDematerialize();
-    contents->treeHash = newHash;
+    auto oldId = contents->treeId;
+    auto newId = tryToDematerialize();
+    contents->treeId = newId;
     isMaterialized = contents->isMaterialized();
-    // If our tree hash changed, even if it references the same contents, we
-    // must tell the parent so it can update its hash. Therefore, don't use
+    // If our tree id changed, even if it references the same contents, we
+    // must tell the parent so it can update its id. Therefore, don't use
     // BackingStore::areObjectsKnownIdentical here.
-    if (oldHash.has_value() && newHash.has_value()) {
-      stateChanged = !oldHash->bytesEqual(*newHash);
-    } else if (!oldHash.has_value() && !contents->treeHash.has_value()) {
+    if (oldId.has_value() && newId.has_value()) {
+      stateChanged = !oldId->bytesEqual(*newId);
+    } else if (!oldId.has_value() && !contents->treeId.has_value()) {
       stateChanged = false;
     } else {
       stateChanged = true;
@@ -4270,12 +4269,11 @@ void TreeInode::saveOverlayPostCheckout(
 
     XLOGF(
         DBG4,
-        "saveOverlayPostCheckout({}, {}): oldHash={} newHash={} isMaterialized={}",
+        "saveOverlayPostCheckout({}, {}): oldId={} newId={} isMaterialized={}",
         getLogPath(),
         fmt::ptr(tree),
-        (oldHash ? oldHash.value().toLogString() : "none"),
-        (contents->treeHash ? contents->treeHash.value().toLogString()
-                            : "none"),
+        (oldId ? oldId.value().toLogString() : "none"),
+        (contents->treeId ? contents->treeId.value().toLogString() : "none"),
         isMaterialized);
 
     // Update the overlay to include the new entries, even if dematerialized.

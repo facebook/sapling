@@ -46,13 +46,13 @@ InodeMap::UnloadedInode::UnloadedInode(
     PathComponentPiece entryName,
     bool isUnlinked,
     mode_t mode,
-    std::optional<ObjectId> hash,
+    std::optional<ObjectId> id,
     uint32_t fsRefcount)
     : parent(parentNum),
       name(entryName),
       isUnlinked{isUnlinked},
       mode{mode},
-      hash{std::move(hash)},
+      id{std::move(id)},
       numFsReferences{fsRefcount} {
   if (folly::kIsWindows) {
     XDCHECK_LE(numFsReferences, 1u);
@@ -63,7 +63,7 @@ InodeMap::UnloadedInode::UnloadedInode(
     TreeInode* parent,
     PathComponentPiece entryName,
     bool isUnlinked,
-    std::optional<ObjectId> hash,
+    std::optional<ObjectId> id,
     uint32_t fsRefcount)
     : parent{parent->getNodeId()},
       name{entryName},
@@ -73,7 +73,7 @@ InodeMap::UnloadedInode::UnloadedInode(
       // this specific mode bit pattern in eden so we can
       // force the value down here.
       mode{S_IFDIR | 0755},
-      hash{std::move(hash)},
+      id{std::move(id)},
       numFsReferences{fsRefcount} {
   if (folly::kIsWindows) {
     XDCHECK_LE(numFsReferences, 1u);
@@ -90,7 +90,7 @@ InodeMap::UnloadedInode::UnloadedInode(
       name{entryName},
       isUnlinked{isUnlinked},
       mode{inode->getMode()},
-      hash{inode->getObjectId()},
+      id{inode->getObjectId()},
       numFsReferences{fsRefcount} {
   if (folly::kIsWindows) {
     XDCHECK_LE(numFsReferences, 1u);
@@ -191,16 +191,16 @@ void InodeMap::initializeFromTakeover(
       throw std::runtime_error(message);
     }
 
-    std::optional<ObjectId> hash;
+    std::optional<ObjectId> id;
     if (entry.hash().has_value()) {
       const std::string& value = entry.hash().value();
       if (value.empty()) {
         // LEGACY: Old versions of EdenFS sent the empty string to mean
         // materialized. When a BackingStore wants to support the empty ObjectId
         // as a valid identifier, remove this code path.
-        hash = std::nullopt;
+        id = std::nullopt;
       } else {
-        hash = ObjectId{value};
+        id = ObjectId{value};
       }
     }
     initializeUnloadedInode(
@@ -210,7 +210,7 @@ void InodeMap::initializeFromTakeover(
         PathComponentPiece{*entry.name()},
         *entry.isUnlinked(),
         *entry.mode(),
-        std::move(hash),
+        std::move(id),
         folly::to<uint32_t>(*entry.numFsReferences()));
   }
 
@@ -260,7 +260,7 @@ void InodeMap::initializeFromOverlay(TreeInodePtr root, Overlay& overlay) {
           name,
           false,
           dirent.getInitialMode(),
-          dirent.getOptionalHash(),
+          dirent.getOptionalObjectId(),
           1);
     }
   }
@@ -351,7 +351,7 @@ ImmediateFuture<InodePtr> InodeMap::lookupInode(InodeNumber number) {
       InodePtr firstLoadedParent = loadedIter->second.getPtr();
       PathComponent requiredChildName = unloadedData->name;
       bool isUnlinked = unloadedData->isUnlinked;
-      std::optional<ObjectId> optionalHash = unloadedData->hash;
+      std::optional<ObjectId> optionalId = unloadedData->id;
       auto mode = unloadedData->mode;
       // Unlock data and publish load events before starting the child lookup
       data.unlock();
@@ -364,7 +364,7 @@ ImmediateFuture<InodePtr> InodeMap::lookupInode(InodeNumber number) {
           requiredChildName,
           isUnlinked,
           childInodeNumber,
-          optionalHash,
+          optionalId,
           mode);
       return result;
     }
@@ -404,7 +404,7 @@ ImmediateFuture<InodePtr> InodeMap::lookupInode(InodeNumber number) {
         unloadedData->name,
         unloadedData->isUnlinked,
         childInodeNumber,
-        unloadedData->hash,
+        unloadedData->id,
         unloadedData->mode);
 
     if (alreadyLoading) {
@@ -428,16 +428,16 @@ void InodeMap::setupParentLookupPromise(
     PathComponentPiece childName,
     bool isUnlinked,
     InodeNumber childInodeNumber,
-    std::optional<ObjectId> hash,
+    std::optional<ObjectId> id,
     mode_t mode) {
   promise.getFuture()
       .thenValue([name = PathComponent(childName),
                   this,
                   isUnlinked,
                   childInodeNumber,
-                  hash,
+                  id,
                   mode](const InodePtr& inode) {
-        startChildLookup(inode, name, isUnlinked, childInodeNumber, hash, mode);
+        startChildLookup(inode, name, isUnlinked, childInodeNumber, id, mode);
       })
       .thenError([this, childInodeNumber](const folly::exception_wrapper& ex) {
         // Fail all pending lookups on the child
@@ -450,7 +450,7 @@ void InodeMap::startChildLookup(
     PathComponentPiece childName,
     bool isUnlinked,
     InodeNumber childInodeNumber,
-    std::optional<ObjectId> hash,
+    std::optional<ObjectId> id,
     mode_t mode) {
   auto treeInode = parent.asTreePtrOrNull();
   if (!treeInode) {
@@ -461,7 +461,7 @@ void InodeMap::startChildLookup(
   }
 
   if (isUnlinked) {
-    treeInode->loadUnlinkedChildInode(childName, childInodeNumber, hash, mode);
+    treeInode->loadUnlinkedChildInode(childName, childInodeNumber, id, mode);
     return;
   }
 
@@ -974,10 +974,10 @@ Future<SerializedInodeMap> InodeMap::shutdown(
       serializedEntry.name() = entry.name.asString();
       serializedEntry.isUnlinked() = entry.isUnlinked;
       serializedEntry.numFsReferences() = entry.numFsReferences;
-      if (entry.hash.has_value()) {
-        serializedEntry.hash() = entry.hash.value().asString();
+      if (entry.id.has_value()) {
+        serializedEntry.hash() = entry.id.value().asString();
       }
-      // If entry.hash is empty, the inode is materialized.
+      // If entry.id is empty, the inode is materialized.
       serializedEntry.mode() = entry.mode;
 
       result.unloadedInodes()->emplace_back(std::move(serializedEntry));
@@ -1209,7 +1209,7 @@ optional<InodeMap::UnloadedInode> InodeMap::updateOverlayForUnload(
           fsCount,
           inode->getLogPath());
       return UnloadedInode(
-          parent, name, isUnlinked, treeContents.treeHash, fsCount);
+          parent, name, isUnlinked, treeContents.treeId, fsCount);
     }
 
     // If any of this inode's childrens are in unloadedInodes_, then this
@@ -1225,7 +1225,7 @@ optional<InodeMap::UnloadedInode> InodeMap::updateOverlayForUnload(
             asTree->getLogPath(),
             childName);
         return UnloadedInode(
-            parent, name, isUnlinked, treeContents.treeHash, fsCount);
+            parent, name, isUnlinked, treeContents.treeId, fsCount);
       }
     }
     return std::nullopt;
@@ -1266,7 +1266,7 @@ bool InodeMap::startLoadingChildIfNotLoading(
     if (iter == data->unloadedInodes_.end()) {
       InodeNumber parentNumber = parent->getNodeId();
       // T127459236: not all attributes of the UnloadedInode are set here. For
-      // example, isUnlinked, hash, and numFsReferences are set to default
+      // example, isUnlinked, id, and numFsReferences are set to default
       // values
       auto newUnloadedData = UnloadedInode(parentNumber, name, mode);
       auto ret =

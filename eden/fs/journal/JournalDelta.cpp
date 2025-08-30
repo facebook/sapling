@@ -69,7 +69,7 @@ size_t FileChangeJournalDelta::estimateMemoryUsage() const {
 
   /* NOTE: The following code assumes an unordered_set is separated into an
    * array of buckets, each one being a chain of nodes containing a next
-   * pointer, a key-value pair, and a stored hash
+   * pointer, a key-value pair, and a stored Id
    */
   if (isPath1Valid) {
     mem += facebook::eden::estimateIndirectMemoryUsage(path1);
@@ -86,7 +86,7 @@ size_t RootUpdateJournalDelta::estimateMemoryUsage() const {
 
   /* NOTE: The following code assumes an unordered_set is separated into an
    * array of buckets, each one being a chain of nodes containing a next
-   * pointer, a key-value pair, and a stored hash
+   * pointer, a key-value pair, and a stored Id
    */
 
   // Calculate Memory For Nodes in Each Bucket (Pointer to element and next)

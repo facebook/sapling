@@ -31,31 +31,31 @@ namespace facebook::eden {
  * - The child may or may not be materialized in the overlay.
  *   If the child contents are identical to an existing source control Tree
  *   or Blob then it does not need to be materialized, and the Entry may only
- *   contain the hash identifying the Tree/Blob. If the entry is materialized,
- *   no hash is set and the entry's materialized contents are available in the
+ *   contain the id identifying the Tree/Blob. If the entry is materialized,
+ *   no id is set and the entry's materialized contents are available in the
  *   Overlay under the entry's inode number.
  */
 class DirEntry {
  public:
   /**
-   * Create a hash for a non-materialized entry.
+   * Create an id for a non-materialized entry.
    */
-  DirEntry(mode_t m, InodeNumber number, ObjectId hash)
+  DirEntry(mode_t m, InodeNumber number, ObjectId id)
       : initialMode_{m},
-        hasHash_{true},
+        hasId_{true},
         hasInodePointer_{false},
-        hash_{hash},
+        id_{id},
         inodeNumber_{number} {
     XCHECK_EQ(m, m & 0x3fffffff);
     XDCHECK(number.hasValue());
   }
 
   /**
-   * Create a hash for a materialized entry.
+   * Create an id for a materialized entry.
    */
   DirEntry(mode_t m, InodeNumber number)
       : initialMode_{m},
-        hasHash_{false},
+        hasId_{false},
         hasInodePointer_{false},
         inodeNumber_{number} {
     XCHECK_EQ(m, m & 0x3fffffff);
@@ -71,7 +71,7 @@ class DirEntry {
     // TODO: In the future we should probably only allow callers to invoke
     // this method when inode is not set.  If inode is set it should be the
     // authoritative source of data.
-    return !hasHash_;
+    return !hasId_;
   }
 
   /**
@@ -85,8 +85,8 @@ class DirEntry {
     // TODO: In the future we should probably only allow callers to invoke
     // this method when inode is not set.  If inode is set it should be the
     // authoritative source of data.
-    XDCHECK(hasHash_);
-    return hash_;
+    XDCHECK(hasId_);
+    return id_;
   }
 
   /**
@@ -96,17 +96,17 @@ class DirEntry {
    * CAREFUL: the returned pointer may only be accessed while the TreeInode's
    * contents lock is held.
    */
-  const ObjectId* getHashPtr() const {
-    if (hasHash_) {
-      return &hash_;
+  const ObjectId* getObjectIdPtr() const {
+    if (hasId_) {
+      return &id_;
     } else {
       return nullptr;
     }
   }
 
-  std::optional<ObjectId> getOptionalHash() const {
-    if (hasHash_) {
-      return hash_;
+  std::optional<ObjectId> getOptionalObjectId() const {
+    if (hasId_) {
+      return id_;
     } else {
       return std::nullopt;
     }
@@ -115,13 +115,13 @@ class DirEntry {
   InodeNumber getInodeNumber() const;
 
   void setMaterialized() {
-    hasHash_ = false;
+    hasId_ = false;
   }
 
-  void setDematerialized(ObjectId hash) {
+  void setDematerialized(ObjectId id) {
     XDCHECK(hasInodePointer_);
-    hasHash_ = true;
-    hash_ = hash;
+    hasId_ = true;
+    id_ = id;
   }
 
   /**
@@ -209,10 +209,10 @@ class DirEntry {
   uint32_t initialMode_ : 30;
 
   /**
-   * Whether the hash_ field matches the contents from source control. If
-   * hasHash_ is false, the entry is materialized.
+   * Whether the id_ field matches the contents from source control. If
+   * hasId_ is false, the entry is materialized.
    */
-  uint32_t hasHash_ : 1;
+  uint32_t hasId_ : 1;
 
   /**
    * If true, the inode_ field is valid. If false, inodeNumber_ is valid.
@@ -221,16 +221,16 @@ class DirEntry {
   uint32_t hasInodePointer_ : 1;
 
   /**
-   * If the entry is not materialized, this contains the hash
+   * If the entry is not materialized, this contains the id
    * identifying the source control Tree (if this is a directory) or Blob
    * (if this is a file) that contains the entry contents.
    *
-   * If the entry is materialized, hasHash_ is false.
+   * If the entry is materialized, hasId_ is false.
    *
    * TODO: If inode is set, this field generally should not be used, and the
    * child InodeBase should be consulted instead.
    */
-  ObjectId hash_;
+  ObjectId id_;
 
   union {
     /**
@@ -238,7 +238,7 @@ class DirEntry {
      * not allocated.
      *
      * An inode number is required for materialized entries, so this is always
-     * non-zero if hash_ is not set.  (It may also be non-zero even when hash_
+     * non-zero if id_ is not set.  (It may also be non-zero even when id_
      * is set.)
      */
     InodeNumber inodeNumber_{0};

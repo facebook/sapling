@@ -28,7 +28,7 @@ enum GitModeMask {
   SYMLINK = 0120000,
 };
 
-TreePtr deserializeGitTree(const ObjectId& hash, const IOBuf* treeData) {
+TreePtr deserializeGitTree(const ObjectId& id, const IOBuf* treeData) {
   folly::io::Cursor cursor(treeData);
 
   // Find the end of the header and extract the size.
@@ -61,9 +61,9 @@ TreePtr deserializeGitTree(const ObjectId& hash, const IOBuf* treeData) {
     // Extract the name.
     auto name = cursor.readTerminatedString();
 
-    // Extract the hash.
-    Hash20::Storage hashBytes;
-    cursor.pull(hashBytes.data(), hashBytes.size());
+    // Extract the id.
+    Hash20::Storage idBytes;
+    cursor.pull(idBytes.data(), idBytes.size());
 
     // Determine the individual fields from the mode.
 
@@ -78,25 +78,23 @@ TreePtr deserializeGitTree(const ObjectId& hash, const IOBuf* treeData) {
       fileType = TreeEntryType::SYMLINK;
     } else if (mode == GitModeMask::GIT_LINK) {
       throwf<std::domain_error>(
-          "Gitlinks are not currently supported: {:o} in object {}",
-          mode,
-          hash);
+          "Gitlinks are not currently supported: {:o} in object {}", mode, id);
     } else {
       throw invalid_argument(
-          fmt::format("Unrecognized mode: {:o} in object {}", mode, hash));
+          fmt::format("Unrecognized mode: {:o} in object {}", mode, id));
     }
 
     auto pathName = PathComponentPiece{name};
-    entries.emplace(pathName, ObjectId(hashBytes), fileType);
+    entries.emplace(pathName, ObjectId(idBytes), fileType);
   }
 
-  return std::make_shared<TreePtr::element_type>(std::move(entries), hash);
+  return std::make_shared<TreePtr::element_type>(std::move(entries), id);
 }
 
 // Convenience wrapper which accepts a ByteRange
-TreePtr deserializeGitTree(const ObjectId& hash, folly::ByteRange treeData) {
+TreePtr deserializeGitTree(const ObjectId& id, folly::ByteRange treeData) {
   IOBuf buf(IOBuf::WRAP_BUFFER, treeData);
-  return deserializeGitTree(hash, &buf);
+  return deserializeGitTree(id, &buf);
 }
 
 } // namespace facebook::eden

@@ -23,13 +23,13 @@ using std::string;
 // Test deserializing from an unmanaged IOBuf, which doesn't control the
 // lifetime of the underlying data
 TEST(GitBlob, testDeserializeUnmanaged) {
-  string blobHash("3a8f8eb91101860fd8484154885838bf322964d0");
-  ObjectId hash(blobHash);
+  string blobId("3a8f8eb91101860fd8484154885838bf322964d0");
+  ObjectId id(blobId);
 
   string contents("{\n  \"breakConfig\": true\n}\n");
   auto gitBlobObjectStr = folly::to<string>(string("blob 26\x00", 8), contents);
   folly::ByteRange gitBlobObject = folly::StringPiece{gitBlobObjectStr};
-  EXPECT_EQ(blobHash, Hash20::sha1(gitBlobObject).toString())
+  EXPECT_EQ(blobId, Hash20::sha1(gitBlobObject).toString())
       << "SHA-1 of contents should match key";
 
   IOBuf buf(IOBuf::WRAP_BUFFER, gitBlobObject);
@@ -48,8 +48,8 @@ TEST(GitBlob, testDeserializeUnmanaged) {
 }
 
 TEST(GitBlob, testDeserializeManaged) {
-  string blobHash("3a8f8eb91101860fd8484154885838bf322964d0");
-  ObjectId hash(blobHash);
+  string blobId("3a8f8eb91101860fd8484154885838bf322964d0");
+  ObjectId id(blobId);
 
   string contents("{\n  \"breakConfig\": true\n}\n");
 

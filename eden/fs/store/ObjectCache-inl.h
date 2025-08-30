@@ -20,18 +20,18 @@ ObjectInterestHandle<ObjectType, ObjectCacheStats>::ObjectInterestHandle(
         ObjectType,
         ObjectCacheFlavor::InterestHandle,
         ObjectCacheStats>> objectCache,
-    ObjectId hash,
+    ObjectId id,
     std::weak_ptr<const ObjectType> object,
     uint64_t generation) noexcept
     : objectCache_{std::move(objectCache)},
-      hash_{std::move(hash)},
+      id_{std::move(id)},
       object_{std::move(object)},
       cacheItemGeneration_{generation} {}
 
 template <typename ObjectType, typename ObjectCacheStats>
 void ObjectInterestHandle<ObjectType, ObjectCacheStats>::reset() noexcept {
   if (auto objectCache = objectCache_.lock()) {
-    objectCache->dropInterestHandle(hash_, cacheItemGeneration_);
+    objectCache->dropInterestHandle(id_, cacheItemGeneration_);
   }
   objectCache_.reset();
 }
@@ -45,7 +45,7 @@ ObjectInterestHandle<ObjectType, ObjectCacheStats>::getObject() const {
     // handle nor bump the refcount.
     auto object = objectCache
                       ->getInterestHandle(
-                          hash_,
+                          id_,
                           ObjectCache<
                               ObjectType,
                               ObjectCacheFlavor::InterestHandle,
@@ -102,9 +102,9 @@ typename std::enable_if_t<
     F == ObjectCacheFlavor::InterestHandle,
     typename ObjectCache<ObjectType, Flavor, ObjectCacheStats>::GetResult>
 ObjectCache<ObjectType, Flavor, ObjectCacheStats>::getInterestHandle(
-    const ObjectId& hash,
+    const ObjectId& id,
     Interest interest) {
-  XLOGF(DBG6, "ObjectCache::getInterestHandle {}", hash);
+  XLOGF(DBG6, "ObjectCache::getInterestHandle {}", id);
   // Acquires ObjectCache's lock upon destruction by calling dropInterestHandle,
   // so ensure that, if an exception is thrown below, the ~ObjectInterestHandle
   // runs after the lock is released.
@@ -113,7 +113,7 @@ ObjectCache<ObjectType, Flavor, ObjectCacheStats>::getInterestHandle(
     return GetResult{};
   }
   auto state = state_.lock();
-  return getInterestHandleCore(state, hash, interest);
+  return getInterestHandleCore(state, id, interest);
 }
 
 template <
@@ -126,10 +126,10 @@ typename std::enable_if_t<
     typename ObjectCache<ObjectType, Flavor, ObjectCacheStats>::GetResult>
 ObjectCache<ObjectType, Flavor, ObjectCacheStats>::getInterestHandleCore(
     LockedState& state,
-    const ObjectId& hash,
+    const ObjectId& id,
     Interest interest) noexcept {
   ObjectInterestHandle<ObjectType, ObjectCacheStats> interestHandle;
-  auto item = getImpl(hash, *state);
+  auto item = getImpl(id, *state);
   if (!item) {
     return GetResult{};
   }
@@ -140,7 +140,7 @@ ObjectCache<ObjectType, Flavor, ObjectCacheStats>::getInterestHandleCore(
       break;
     case Interest::WantHandle:
       interestHandle = ObjectInterestHandle<ObjectType, ObjectCacheStats>{
-          this->shared_from_this(), hash, item->object, item->generation};
+          this->shared_from_this(), id, item->object, item->generation};
       ++item->referenceCount;
       break;
     case Interest::LikelyNeededAgain:
@@ -169,11 +169,11 @@ typename std::enable_if_t<
     F == ObjectCacheFlavor::Simple,
     typename ObjectCache<ObjectType, Flavor, ObjectCacheStats>::ObjectPtr>
 ObjectCache<ObjectType, Flavor, ObjectCacheStats>::getSimple(
-    const ObjectId& hash) {
-  XLOGF(DBG6, "ObjectCache::getSimple {}", hash);
+    const ObjectId& id) {
+  XLOGF(DBG6, "ObjectCache::getSimple {}", id);
   auto state = state_.lock();
 
-  if (auto item = getImpl(hash, *state)) {
+  if (auto item = getImpl(id, *state)) {
     return item->object;
   }
   return nullptr;
@@ -185,10 +185,10 @@ template <
     typename ObjectCacheStats>
 typename ObjectCache<ObjectType, Flavor, ObjectCacheStats>::CacheItem*
 ObjectCache<ObjectType, Flavor, ObjectCacheStats>::getImpl(
-    const ObjectId& hash,
+    const ObjectId& id,
     State& state) {
-  XLOGF(DBG6, "ObjectCache::getImpl {}", hash);
-  auto* item = folly::get_ptr(state.items, hash);
+  XLOGF(DBG6, "ObjectCache::getImpl {}", id);
+  auto* item = folly::get_ptr(state.items, id);
   if (!item) {
     XLOG(DBG6, "ObjectCache::getImpl missed");
     state.stats->increment(&ObjectCacheStats::getMiss);
@@ -372,9 +372,9 @@ template <
     ObjectCacheFlavor Flavor,
     typename ObjectCacheStats>
 bool ObjectCache<ObjectType, Flavor, ObjectCacheStats>::contains(
-    const ObjectId& hash) const {
+    const ObjectId& id) const {
   auto state = state_.lock();
-  return 1 == state->items.count(hash);
+  return 1 == state->items.count(id);
 }
 
 template <
@@ -448,12 +448,12 @@ template <
     ObjectCacheFlavor Flavor,
     typename ObjectCacheStats>
 void ObjectCache<ObjectType, Flavor, ObjectCacheStats>::dropInterestHandle(
-    const ObjectId& hash,
+    const ObjectId& id,
     uint64_t generation) noexcept {
-  XLOGF(DBG6, "dropInterestHandle {} generation={}", hash, generation);
+  XLOGF(DBG6, "dropInterestHandle {} generation={}", id, generation);
   auto state = state_.lock();
 
-  auto* item = folly::get_ptr(state->items, hash);
+  auto* item = folly::get_ptr(state->items, id);
   if (!item) {
     // Cached item already evicted.
     return;
@@ -469,7 +469,7 @@ void ObjectCache<ObjectType, Flavor, ObjectCacheStats>::dropInterestHandle(
     XLOGF(
         WARN,
         "Reference count on item for {} was already zero: an exception must have been thrown during get()",
-        hash);
+        id);
     return;
   }
 

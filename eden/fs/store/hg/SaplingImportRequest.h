@@ -36,10 +36,10 @@ class SaplingImportRequest {
   template <typename ResponseT>
   struct BaseImport {
     using Response = ResponseT;
-    BaseImport(ObjectId hash, HgProxyHash proxyHash)
-        : hash{std::move(hash)}, proxyHash{std::move(proxyHash)} {}
+    BaseImport(ObjectId id, HgProxyHash proxyHash)
+        : id{std::move(id)}, proxyHash{std::move(proxyHash)} {}
 
-    ObjectId hash;
+    ObjectId id;
     HgProxyHash proxyHash;
 
     // In the case where requests de-duplicate to this one, the requests
@@ -56,7 +56,7 @@ class SaplingImportRequest {
    * Allocate a blob request.
    */
   static std::shared_ptr<SaplingImportRequest> makeBlobImportRequest(
-      const ObjectId& hash,
+      const ObjectId& id,
       const HgProxyHash& proxyHash,
       const ObjectFetchContextPtr& context);
 
@@ -64,17 +64,17 @@ class SaplingImportRequest {
    * Allocate a tree request.
    */
   static std::shared_ptr<SaplingImportRequest> makeTreeImportRequest(
-      const ObjectId& hash,
+      const ObjectId& id,
       const HgProxyHash& proxyHash,
       const ObjectFetchContextPtr& context);
 
   static std::shared_ptr<SaplingImportRequest> makeBlobAuxImportRequest(
-      const ObjectId& hash,
+      const ObjectId& id,
       const HgProxyHash& proxyHash,
       const ObjectFetchContextPtr& context);
 
   static std::shared_ptr<SaplingImportRequest> makeTreeAuxImportRequest(
-      const ObjectId& hash,
+      const ObjectId& id,
       const HgProxyHash& proxyHash,
       const ObjectFetchContextPtr& context);
 

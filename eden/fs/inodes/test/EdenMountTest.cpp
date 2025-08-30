@@ -137,7 +137,7 @@ class EdenMountShutdownBlocker {
 } // namespace
 
 TEST(EdenMount, initFailure) {
-  // Test initializing an EdenMount with a commit hash that does not exist.
+  // Test initializing an EdenMount with a commit id that does not exist.
   // This should fail with an exception, and not crash.
   TestMount testMount;
   EXPECT_THROW_RE(
@@ -281,8 +281,8 @@ TEST(EdenMount, resetParents) {
       edenMount->getCheckoutConfig()->getParentCommit());
   auto latestJournalEntry = edenMount->getJournal().getLatest();
   ASSERT_TRUE(latestJournalEntry);
-  EXPECT_EQ(RootId("1"), latestJournalEntry->fromHash);
-  EXPECT_EQ(RootId("1"), latestJournalEntry->toHash);
+  EXPECT_EQ(RootId("1"), latestJournalEntry->fromRoot);
+  EXPECT_EQ(RootId("1"), latestJournalEntry->toRoot);
   EXPECT_FILE_INODE(testMount.getFileInode("src/test.c"), "testy tests", 0644);
   EXPECT_FALSE(testMount.hasFileAt("src/extra.h"));
 
@@ -296,8 +296,8 @@ TEST(EdenMount, resetParents) {
       edenMount->getCheckoutConfig()->getParentCommit());
   latestJournalEntry = edenMount->getJournal().getLatest();
   ASSERT_TRUE(latestJournalEntry);
-  EXPECT_EQ(RootId("1"), latestJournalEntry->fromHash);
-  EXPECT_EQ(RootId("2"), latestJournalEntry->toHash);
+  EXPECT_EQ(RootId("1"), latestJournalEntry->fromRoot);
+  EXPECT_EQ(RootId("2"), latestJournalEntry->toRoot);
   // The file contents should not have changed.
   // Even though we are pointing at commit2, the working directory contents
   // still look like commit1.

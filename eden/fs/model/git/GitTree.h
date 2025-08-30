@@ -17,9 +17,9 @@ class ObjectId;
 
 /**
  * Creates an Eden Tree from the serialized version of a Git tree object.
- * As such, the SHA-1 of the gitTreeObject should match the hash.
+ * As such, the SHA-1 of the gitTreeObject should match the id.
  */
-TreePtr deserializeGitTree(const ObjectId& hash, const folly::IOBuf* treeData);
-TreePtr deserializeGitTree(const ObjectId& hash, folly::ByteRange treeData);
+TreePtr deserializeGitTree(const ObjectId& id, const folly::IOBuf* treeData);
+TreePtr deserializeGitTree(const ObjectId& id, folly::ByteRange treeData);
 
 } // namespace facebook::eden

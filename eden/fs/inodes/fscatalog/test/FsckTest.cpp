@@ -131,30 +131,30 @@ class TestDir {
 
   TestDir mkdir(
       StringPiece name,
-      std::optional<ObjectId> hash = std::nullopt,
+      std::optional<ObjectId> id = std::nullopt,
       mode_t permissions = 0755) {
-    auto number = addEntry(name, hash, S_IFDIR | (permissions & 07777));
+    auto number = addEntry(name, id, S_IFDIR | (permissions & 07777));
     return TestDir(overlay_, number);
   }
 
   TestDir linkFile(
       InodeNumber number,
       StringPiece name,
-      std::optional<ObjectId> hash = std::nullopt,
+      std::optional<ObjectId> id = std::nullopt,
       mode_t permissions = 0755) {
-    addEntry(name, hash, S_IFREG | (permissions & 07777), number.get());
+    addEntry(name, id, S_IFREG | (permissions & 07777), number.get());
     return TestDir(overlay_, number);
   }
 
   TestFile create(
       StringPiece name,
       ByteRange contents,
-      std::optional<ObjectId> hash = std::nullopt,
+      std::optional<ObjectId> id = std::nullopt,
       mode_t permissions = 0644) {
-    auto number = addEntry(name, hash, S_IFREG | (permissions & 07777));
+    auto number = addEntry(name, id, S_IFREG | (permissions & 07777));
     // The file should only be created in the overlay if it is materialized
     folly::File file;
-    if (!hash.has_value()) {
+    if (!id.has_value()) {
       file = std::get<folly::File>(
           overlay_->fcs().createOverlayFile(number, contents));
     }
@@ -164,9 +164,9 @@ class TestDir {
   TestFile create(
       StringPiece name,
       StringPiece contents,
-      std::optional<ObjectId> hash = std::nullopt,
+      std::optional<ObjectId> id = std::nullopt,
       mode_t permissions = 0644) {
-    return create(name, ByteRange(contents), hash, permissions);
+    return create(name, ByteRange(contents), id, permissions);
   }
 
   void save() {
@@ -177,7 +177,7 @@ class TestDir {
  private:
   InodeNumber addEntry(
       StringPiece name,
-      std::optional<ObjectId> hash,
+      std::optional<ObjectId> id,
       mode_t mode,
       uint64_t number = 0) {
     auto insertResult =
@@ -193,11 +193,11 @@ class TestDir {
     auto& entry = insertResult.first->second;
     entry.mode() = mode;
     entry.inodeNumber() = static_cast<int64_t>(number);
-    if (hash) {
-      auto hashBytes = hash->getBytes();
+    if (id) {
+      auto idBytes = id->getBytes();
       entry.hash() = std::string{
 
-          reinterpret_cast<const char*>(hashBytes.data()), hashBytes.size()};
+          reinterpret_cast<const char*>(idBytes.data()), idBytes.size()};
     }
     return InodeNumber(number);
   }
@@ -267,8 +267,7 @@ class SimpleOverlayLayout {
   // src/: materialized
   TestDir src{root_->mkdir("src")};
   // src/readme.txt: non-materialized
-  TestFile src_readmeTxt{
-      src.create("readme.txt", "readme\n", makeTestHash("1"))};
+  TestFile src_readmeTxt{src.create("readme.txt", "readme\n", makeTestId("1"))};
   // src/todo.txt: materialized
   TestFile src_todoTxt{src.create("todo.txt", "write tests\n")};
   // src/foo/: materialized
@@ -277,7 +276,7 @@ class SimpleOverlayLayout {
   TestFile src_foo_testTxt{src_foo.create("test.txt", "just some test data\n")};
   // src/foo/bar.txt: non-materialized
   TestFile src_foo_barTxt{
-      src_foo.create("bar.txt", "not-materialized\n", makeTestHash("1111"))};
+      src_foo.create("bar.txt", "not-materialized\n", makeTestId("1111"))};
   // src/foo/x/: materialized
   TestDir src_foo_x{src_foo.mkdir("x")};
   // src/foo/x/y/: materialized
@@ -293,26 +292,25 @@ class SimpleOverlayLayout {
   // src/foo/x/y/sub/xxx.txt: materialized
   TestFile src_foo_x_y_sub_xxxTxt{src_foo_x_y_sub.create("xxx.txt", "x y z")};
   // test/: non-materialized, present in overlay
-  TestDir test{root_->mkdir("test", makeTestHash("1234"))};
+  TestDir test{root_->mkdir("test", makeTestId("1234"))};
   // test/a/: non-materialized, present in overlay
-  TestDir test_a{test.mkdir("a", makeTestHash("5678"))};
+  TestDir test_a{test.mkdir("a", makeTestId("5678"))};
   // test/b.txt: non-materialized
-  TestFile test_bTxt{
-      test.create("b.txt", "b contents\n", makeTestHash("9abc"))};
+  TestFile test_bTxt{test.create("b.txt", "b contents\n", makeTestId("9abc"))};
   // test/a/subdir/: non-materialized, present in overlay
-  TestDir test_a_subdir{test_a.mkdir("subdir", makeTestHash("abcd"))};
+  TestDir test_a_subdir{test_a.mkdir("subdir", makeTestId("abcd"))};
   // test/a/subdir/dir1/: non-materialized, not present in overlay
-  TestDir test_a_subdir_dir1{test_a_subdir.mkdir("dir1", makeTestHash("a"))};
+  TestDir test_a_subdir_dir1{test_a_subdir.mkdir("dir1", makeTestId("a"))};
   // test/a/subdir/dir2/: non-materialized, present in overlay
-  TestDir test_a_subdir_dir2{test_a_subdir.mkdir("dir2", makeTestHash("b"))};
+  TestDir test_a_subdir_dir2{test_a_subdir.mkdir("dir2", makeTestId("b"))};
   // test/a/subdir/dir3/: non-materialized, not present in overlay
-  TestDir test_a_subdir_dir3{test_a_subdir.mkdir("dir3", makeTestHash("c"))};
+  TestDir test_a_subdir_dir3{test_a_subdir.mkdir("dir3", makeTestId("c"))};
   // test/a/subdir/file1 non-materialized
   TestFile test_a_subdir_file1{
-      test_a_subdir.create("file1", "1\n", makeTestHash("d"))};
+      test_a_subdir.create("file1", "1\n", makeTestId("d"))};
   // test/a/subdir/file2 non-materialized
   TestFile test_a_subdir_file2{
-      test_a_subdir.create("file2", "2\n", makeTestHash("e"))};
+      test_a_subdir.create("file2", "2\n", makeTestId("e"))};
 };
 
 std::vector<string> errorMessages(OverlayChecker& checker) {

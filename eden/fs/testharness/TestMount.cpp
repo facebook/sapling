@@ -167,7 +167,7 @@ TestMount::TestMount(
 }
 
 TestMount::TestMount(
-    const RootId& initialCommitHash,
+    const RootId& initialCommitId,
     FakeTreeBuilder& rootBuilder,
     bool startReady,
     bool enableActivityBuffer,
@@ -179,7 +179,7 @@ TestMount::TestMount(
   auto edenConfig = std::make_shared<ReloadableConfig>(
       edenConfig_, ConfigReloadBehavior::NoReload);
   treeCache_ = TreeCache::create(edenConfig, makeRefPtr<EdenStats>());
-  initialize(initialCommitHash, rootBuilder, startReady);
+  initialize(initialCommitId, rootBuilder, startReady);
 }
 
 TestMount::TestMount(CaseSensitivity caseSensitivity)
@@ -199,10 +199,10 @@ TestMount::~TestMount() {
 }
 
 void TestMount::initialize(
-    const RootId& initialCommitHash,
+    const RootId& initialCommitId,
     std::chrono::system_clock::time_point lastCheckoutTime) {
   // Set the initial commit ID
-  setInitialCommit(initialCommitHash);
+  setInitialCommit(initialCommitId);
 
   // Create edenMount_
   createMount();
@@ -212,9 +212,9 @@ void TestMount::initialize(
       EdenTimestamp{folly::to<struct timespec>(lastCheckoutTime)});
 }
 
-void TestMount::initialize(const RootId& commitHash, ObjectId rootTreeHash) {
+void TestMount::initialize(const RootId& commitId, ObjectId rootTreeId) {
   // Set the initial commit ID
-  setInitialCommit(commitHash, rootTreeHash);
+  setInitialCommit(commitId, rootTreeId);
 
   // Create edenMount_
   createMount();
@@ -222,13 +222,13 @@ void TestMount::initialize(const RootId& commitHash, ObjectId rootTreeHash) {
 }
 
 void TestMount::initialize(
-    const RootId& initialCommitHash,
+    const RootId& initialCommitId,
     FakeTreeBuilder& rootBuilder,
     bool startReady,
     InodeCatalogType inodeCatalogType,
     InodeCatalogOptions inodeCatalogOptions) {
   createMountWithoutInitializing(
-      initialCommitHash,
+      initialCommitId,
       rootBuilder,
       startReady,
       inodeCatalogType,
@@ -245,7 +245,7 @@ void TestMount::initializeEdenMount() {
 }
 
 void TestMount::createMountWithoutInitializing(
-    const RootId& initialCommitHash,
+    const RootId& initialCommitId,
     FakeTreeBuilder& rootBuilder,
     bool startReady,
     InodeCatalogType inodeCatalogType,
@@ -257,8 +257,8 @@ void TestMount::createMountWithoutInitializing(
   // blocks until it is available, so we will hang below if it isn't ready.
   rootTree->setReady();
 
-  // Set the commit to tree mapping, and record the current commit hash
-  setInitialCommit(initialCommitHash, rootTree->get().getObjectId());
+  // Set the commit to tree mapping, and record the current commit id
+  setInitialCommit(initialCommitId, rootTree->get().getObjectId());
 
   // Create edenMount_
   createMount(inodeCatalogType, inodeCatalogOptions);
@@ -299,13 +299,13 @@ void TestMount::registerFakeFuse(std::shared_ptr<FakeFuse> fuse) {
 }
 #endif
 
-RootId TestMount::nextCommitHash() {
+RootId TestMount::nextCommitId() {
   auto number = commitNumber_.fetch_add(1);
   return RootId{folly::to<string>(number)};
 }
 
 void TestMount::initialize(FakeTreeBuilder& rootBuilder, bool startReady) {
-  initialize(nextCommitHash(), rootBuilder, startReady);
+  initialize(nextCommitId(), rootBuilder, startReady);
 }
 
 void TestMount::initialize(
@@ -313,7 +313,7 @@ void TestMount::initialize(
     InodeCatalogType inodeCatalogType,
     InodeCatalogOptions inodeCatalogOptions) {
   initialize(
-      nextCommitHash(),
+      nextCommitId(),
       rootBuilder,
       /* startReady */ true,
       inodeCatalogType,
@@ -323,7 +323,7 @@ void TestMount::initialize(
 void TestMount::createMountWithoutInitializing(
     FakeTreeBuilder& rootBuilder,
     bool startReady) {
-  createMountWithoutInitializing(nextCommitHash(), rootBuilder, startReady);
+  createMountWithoutInitializing(nextCommitId(), rootBuilder, startReady);
 }
 
 void TestMount::initTestDirectory(CaseSensitivity caseSensitivity) {
@@ -486,16 +486,16 @@ void TestMount::remountGracefully() {
 #endif
 
 void TestMount::resetCommit(FakeTreeBuilder& builder, bool setReady) {
-  resetCommit(nextCommitHash(), builder, setReady);
+  resetCommit(nextCommitId(), builder, setReady);
 }
 
 void TestMount::resetCommit(
-    const RootId& commitHash,
+    const RootId& commitId,
     FakeTreeBuilder& builder,
     bool setReady) {
   auto* rootTree = builder.finalize(backingStore_, setReady);
   auto* storedCommit =
-      backingStore_->putCommit(commitHash, rootTree->get().getObjectId());
+      backingStore_->putCommit(commitId, rootTree->get().getObjectId());
   storedCommit->setReady();
 
   // The root tree needs to be made ready too, even if setReady is false.
@@ -504,7 +504,7 @@ void TestMount::resetCommit(
     rootTree->setReady();
   }
 
-  edenMount_->resetParent(commitHash);
+  edenMount_->resetParent(commitId);
 }
 
 bool TestMount::hasOverlayDir(InodeNumber ino) const {
@@ -523,20 +523,18 @@ size_t TestMount::drainServerExecutor() {
   return serverExecutor_->drain();
 }
 
-void TestMount::setInitialCommit(const RootId& commitHash) {
-  // Write the commit hash to the snapshot file
-  config_->setCheckedOutCommit(commitHash);
+void TestMount::setInitialCommit(const RootId& commitId) {
+  // Write the commit id to the snapshot file
+  config_->setCheckedOutCommit(commitId);
 }
 
-void TestMount::setInitialCommit(
-    const RootId& commitHash,
-    ObjectId rootTreeHash) {
-  // Record the commit hash to root tree hash mapping in the BackingStore
-  auto* storedCommit = backingStore_->putCommit(commitHash, rootTreeHash);
+void TestMount::setInitialCommit(const RootId& commitId, ObjectId rootTreeId) {
+  // Record the commit id to root tree id mapping in the BackingStore
+  auto* storedCommit = backingStore_->putCommit(commitId, rootTreeId);
   storedCommit->setReady();
 
-  // Call setInitialCommit(hash) to write the snapshot file
-  setInitialCommit(commitHash);
+  // Call setInitialCommit(id) to write the snapshot file
+  setInitialCommit(commitId);
 }
 
 void TestMount::addFile(folly::StringPiece path, folly::StringPiece contents) {

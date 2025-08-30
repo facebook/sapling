@@ -13,19 +13,19 @@ namespace facebook::eden {
 
 JournalDeltaPtr Journal::DeltaState::frontPtr() noexcept {
   bool isFileChangeEmpty = fileChangeDeltas.empty();
-  bool isHashUpdateEmpty = hashUpdateDeltas.empty();
-  if (!isFileChangeEmpty && !isHashUpdateEmpty) {
+  bool isRootUpdateEmpty = rootUpdateDeltas.empty();
+  if (!isFileChangeEmpty && !isRootUpdateEmpty) {
     if (fileChangeDeltas.front().sequenceID <
-        hashUpdateDeltas.front().sequenceID) {
+        rootUpdateDeltas.front().sequenceID) {
       return &fileChangeDeltas.front();
     } else {
-      return &hashUpdateDeltas.front();
+      return &rootUpdateDeltas.front();
     }
   }
   if (!isFileChangeEmpty) {
     return &fileChangeDeltas.front();
-  } else if (!isHashUpdateEmpty) {
-    return &hashUpdateDeltas.front();
+  } else if (!isRootUpdateEmpty) {
+    return &rootUpdateDeltas.front();
   } else {
     return nullptr;
   }
@@ -33,36 +33,36 @@ JournalDeltaPtr Journal::DeltaState::frontPtr() noexcept {
 
 void Journal::DeltaState::popFront() {
   bool isFileChangeEmpty = fileChangeDeltas.empty();
-  bool isHashUpdateEmpty = hashUpdateDeltas.empty();
-  if (!isFileChangeEmpty && !isHashUpdateEmpty) {
+  bool isRootUpdateEmpty = rootUpdateDeltas.empty();
+  if (!isFileChangeEmpty && !isRootUpdateEmpty) {
     if (fileChangeDeltas.front().sequenceID <
-        hashUpdateDeltas.front().sequenceID) {
+        rootUpdateDeltas.front().sequenceID) {
       fileChangeDeltas.pop_front();
     } else {
-      hashUpdateDeltas.pop_front();
+      rootUpdateDeltas.pop_front();
     }
   } else if (!isFileChangeEmpty) {
     fileChangeDeltas.pop_front();
-  } else if (!isHashUpdateEmpty) {
-    hashUpdateDeltas.pop_front();
+  } else if (!isRootUpdateEmpty) {
+    rootUpdateDeltas.pop_front();
   }
 }
 
 JournalDeltaPtr Journal::DeltaState::backPtr() noexcept {
   bool isFileChangeEmpty = fileChangeDeltas.empty();
-  bool isHashUpdateEmpty = hashUpdateDeltas.empty();
-  if (!isFileChangeEmpty && !isHashUpdateEmpty) {
+  bool isRootUpdateEmpty = rootUpdateDeltas.empty();
+  if (!isFileChangeEmpty && !isRootUpdateEmpty) {
     if (fileChangeDeltas.back().sequenceID >
-        hashUpdateDeltas.back().sequenceID) {
+        rootUpdateDeltas.back().sequenceID) {
       return &fileChangeDeltas.back();
     } else {
-      return &hashUpdateDeltas.back();
+      return &rootUpdateDeltas.back();
     }
   }
   if (!isFileChangeEmpty) {
     return &fileChangeDeltas.back();
-  } else if (!isHashUpdateEmpty) {
-    return &hashUpdateDeltas.back();
+  } else if (!isRootUpdateEmpty) {
+    return &rootUpdateDeltas.back();
   } else {
     return nullptr;
   }
@@ -70,22 +70,22 @@ JournalDeltaPtr Journal::DeltaState::backPtr() noexcept {
 
 bool Journal::DeltaState::isFileChangeInFront() const {
   bool isFileChangeEmpty = fileChangeDeltas.empty();
-  bool isHashUpdateEmpty = hashUpdateDeltas.empty();
-  if (!isFileChangeEmpty && !isHashUpdateEmpty) {
+  bool isRootUpdateEmpty = rootUpdateDeltas.empty();
+  if (!isFileChangeEmpty && !isRootUpdateEmpty) {
     return fileChangeDeltas.front().sequenceID <
-        hashUpdateDeltas.front().sequenceID;
+        rootUpdateDeltas.front().sequenceID;
   }
-  return !isFileChangeEmpty && isHashUpdateEmpty;
+  return !isFileChangeEmpty && isRootUpdateEmpty;
 }
 
 bool Journal::DeltaState::isFileChangeInBack() const {
   bool isFileChangeEmpty = fileChangeDeltas.empty();
-  bool isHashUpdateEmpty = hashUpdateDeltas.empty();
-  if (!isFileChangeEmpty && !isHashUpdateEmpty) {
+  bool isRootUpdateEmpty = rootUpdateDeltas.empty();
+  if (!isFileChangeEmpty && !isRootUpdateEmpty) {
     return fileChangeDeltas.back().sequenceID >
-        hashUpdateDeltas.back().sequenceID;
+        rootUpdateDeltas.back().sequenceID;
   }
-  return !isFileChangeEmpty && isHashUpdateEmpty;
+  return !isFileChangeEmpty && isRootUpdateEmpty;
 }
 
 void Journal::DeltaState::appendDelta(FileChangeJournalDelta&& delta) {
@@ -93,7 +93,7 @@ void Journal::DeltaState::appendDelta(FileChangeJournalDelta&& delta) {
 }
 
 void Journal::DeltaState::appendDelta(RootUpdateJournalDelta&& delta) {
-  hashUpdateDeltas.emplace_back(std::move(delta));
+  rootUpdateDeltas.emplace_back(std::move(delta));
 }
 
 Journal::Journal(EdenStatsPtr edenStats) : edenStats_{std::move(edenStats)} {
@@ -132,30 +132,30 @@ void Journal::recordReplaced(
       oldName, newName, type, FileChangeJournalDelta::REPLACED));
 }
 
-void Journal::recordHashUpdate(RootId toHash) {
-  addDelta(RootUpdateJournalDelta{}, std::move(toHash));
+void Journal::recordRootUpdate(RootId toRoot) {
+  addDelta(RootUpdateJournalDelta{}, std::move(toRoot));
 }
 
-void Journal::recordHashUpdate(RootId fromHash, RootId toHash) {
-  if (fromHash == toHash) {
+void Journal::recordRootUpdate(RootId fromRoot, RootId toRoot) {
+  if (fromRoot == toRoot) {
     return;
   }
   RootUpdateJournalDelta delta;
-  delta.fromHash = std::move(fromHash);
-  addDelta(std::move(delta), toHash);
+  delta.fromRoot = std::move(fromRoot);
+  addDelta(std::move(delta), toRoot);
 }
 
 void Journal::recordUncleanPaths(
-    RootId fromHash,
-    RootId toHash,
+    RootId fromRoot,
+    RootId toRoot,
     std::unordered_set<RelativePath> uncleanPaths) {
-  if (fromHash == toHash && uncleanPaths.empty()) {
+  if (fromRoot == toRoot && uncleanPaths.empty()) {
     return;
   }
   RootUpdateJournalDelta delta;
-  delta.fromHash = std::move(fromHash);
+  delta.fromRoot = std::move(fromRoot);
   delta.uncleanPaths = std::move(uncleanPaths);
-  addDelta(std::move(delta), std::move(toHash));
+  addDelta(std::move(delta), std::move(toRoot));
 }
 
 void Journal::truncateIfNecessary(DeltaState& deltaState) {
@@ -249,13 +249,13 @@ void Journal::addDelta(RootUpdateJournalDelta&& delta, RootId newRootId) {
   {
     auto deltaState = deltaState_.lock();
 
-    // If the hashes were not set to anything, default to copying
+    // If the roots were not set to anything, default to copying
     // the value from the prior journal entry
-    if (delta.fromHash == RootId{}) {
-      delta.fromHash = deltaState->currentHash;
+    if (delta.fromRoot == RootId{}) {
+      delta.fromRoot = deltaState->currentRoot;
     }
     shouldNotify = addDeltaBeforeNotifying(std::move(delta), *deltaState);
-    deltaState->currentHash = std::move(newRootId);
+    deltaState->currentRoot = std::move(newRootId);
   }
   if (shouldNotify) {
     notifySubscribers();
@@ -271,14 +271,14 @@ std::optional<JournalDeltaInfo> Journal::getLatest() {
     if (deltaState->isFileChangeInBack()) {
       const FileChangeJournalDelta& back = deltaState->fileChangeDeltas.back();
       return JournalDeltaInfo{
-          deltaState->currentHash,
-          deltaState->currentHash,
+          deltaState->currentRoot,
+          deltaState->currentRoot,
           back.sequenceID,
           back.time};
     } else {
-      const RootUpdateJournalDelta& back = deltaState->hashUpdateDeltas.back();
+      const RootUpdateJournalDelta& back = deltaState->rootUpdateDeltas.back();
       return JournalDeltaInfo{
-          back.fromHash, deltaState->currentHash, back.sequenceID, back.time};
+          back.fromRoot, deltaState->currentRoot, back.sequenceID, back.time};
     }
   }
 }
@@ -365,7 +365,7 @@ size_t Journal::estimateMemoryUsage(const DeltaState& deltaState) const {
   size_t memoryUsage = folly::goodMallocSize(sizeof(Journal));
   // Account for overhead of dequeues which have a maximum buffer size of 512.
   memoryUsage += getPaddingAmount(deltaState.fileChangeDeltas);
-  memoryUsage += getPaddingAmount(deltaState.hashUpdateDeltas);
+  memoryUsage += getPaddingAmount(deltaState.rootUpdateDeltas);
 
   if (deltaState.stats) {
     memoryUsage += deltaState.deltaMemoryUsage;
@@ -378,19 +378,19 @@ void Journal::flush() {
   {
     auto deltaState = deltaState_.lock();
     ++deltaState->nextSequence;
-    auto lastHash = deltaState->currentHash;
+    auto lastRoot = deltaState->currentRoot;
     deltaState->fileChangeDeltas.clear();
-    deltaState->hashUpdateDeltas.clear();
+    deltaState->rootUpdateDeltas.clear();
     deltaState->stats = std::nullopt;
     auto delta = RootUpdateJournalDelta();
-    /* Tracking the hash correctly when the journal is flushed is important
-     * since Watchman uses the hash to correctly determine what additional files
+    /* Tracking the root correctly when the journal is flushed is important
+     * since Watchman uses the root to correctly determine what additional files
      * were changed when a checkout happens, journals have at least one entry
      * unless they are on the null commit with no modifications done. A flush
      * operation should leave us on the same checkout we were on before the
      * flush operation.
      */
-    delta.fromHash = lastHash;
+    delta.fromRoot = lastRoot;
     shouldNotify = addDeltaBeforeNotifying(std::move(delta), *deltaState);
   }
   if (shouldNotify) {
@@ -421,7 +421,7 @@ std::unique_ptr<JournalDeltaRange> Journal::accumulateRange(
             result = std::make_unique<JournalDeltaRange>();
             result->toSequence = current.sequenceID;
             result->toTime = current.time;
-            result->snapshotTransitions.push_back(deltaState->currentHash);
+            result->snapshotTransitions.push_back(deltaState->currentRoot);
           }
           // Capture the lower bound.
           result->fromSequence = current.sequenceID;
@@ -461,12 +461,12 @@ std::unique_ptr<JournalDeltaRange> Journal::accumulateRange(
             result = std::make_unique<JournalDeltaRange>();
             result->toSequence = current.sequenceID;
             result->toTime = current.time;
-            result->snapshotTransitions.push_back(deltaState->currentHash);
+            result->snapshotTransitions.push_back(deltaState->currentRoot);
           }
           // Capture the lower bound.
           result->fromSequence = current.sequenceID;
           result->fromTime = current.time;
-          result->snapshotTransitions.push_back(current.fromHash);
+          result->snapshotTransitions.push_back(current.fromRoot);
 
           // Merge the unclean status list
           result->uncleanPaths.insert(
@@ -502,7 +502,7 @@ bool Journal::forEachDelta(
     SequenceNumber from,
     std::optional<size_t> lengthLimit,
     FileChangeCallback&& fileChangeCallback,
-    HashUpdateCallback&& hashUpdateCallback) {
+    RootUpdateCallback&& rootUpdateCallback) {
   XDCHECK(from > 0);
   auto deltaState = deltaState_.lock();
   // If this is going to be truncated, handle it before iterating.
@@ -514,7 +514,7 @@ bool Journal::forEachDelta(
         from,
         lengthLimit,
         std::forward<FileChangeCallback>(fileChangeCallback),
-        std::forward<HashUpdateCallback>(hashUpdateCallback));
+        std::forward<RootUpdateCallback>(rootUpdateCallback));
   }
   deltaState->lastModificationHasBeenObserved = true;
   return false;
@@ -527,7 +527,7 @@ std::vector<DebugJournalDelta> Journal::getDebugRawJournalInfo(
     RootIdCodec& rootIdCodec) const {
   auto result = std::vector<DebugJournalDelta>();
   auto deltaState = deltaState_.lock();
-  RootId currentHash = deltaState->currentHash;
+  RootId currentRoot = deltaState->currentRoot;
   forEachDelta(
       *deltaState,
       from,
@@ -537,13 +537,13 @@ std::vector<DebugJournalDelta> Journal::getDebugRawJournalInfo(
         JournalPosition fromPosition;
         fromPosition.mountGeneration() = mountGeneration;
         fromPosition.sequenceNumber() = current.sequenceID;
-        fromPosition.snapshotHash() = rootIdCodec.renderRootId(currentHash);
+        fromPosition.snapshotHash() = rootIdCodec.renderRootId(currentRoot);
         delta.fromPosition() = fromPosition;
 
         JournalPosition toPosition;
         toPosition.mountGeneration() = mountGeneration;
         toPosition.sequenceNumber() = current.sequenceID;
-        toPosition.snapshotHash() = rootIdCodec.renderRootId(currentHash);
+        toPosition.snapshotHash() = rootIdCodec.renderRootId(currentRoot);
         delta.toPosition() = toPosition;
 
         for (const auto& entry : current.getChangedFilesInOverlay()) {
@@ -566,15 +566,15 @@ std::vector<DebugJournalDelta> Journal::getDebugRawJournalInfo(
         fromPosition.mountGeneration() = mountGeneration;
         fromPosition.sequenceNumber() = current.sequenceID;
         fromPosition.snapshotHash() =
-            rootIdCodec.renderRootId(current.fromHash);
+            rootIdCodec.renderRootId(current.fromRoot);
         delta.fromPosition() = fromPosition;
 
         JournalPosition toPosition;
         toPosition.mountGeneration() = mountGeneration;
         toPosition.sequenceNumber() = current.sequenceID;
-        toPosition.snapshotHash() = rootIdCodec.renderRootId(currentHash);
+        toPosition.snapshotHash() = rootIdCodec.renderRootId(currentRoot);
         delta.toPosition() = toPosition;
-        currentHash = current.fromHash;
+        currentRoot = current.fromRoot;
 
         for (auto& path : current.uncleanPaths) {
           delta.uncleanPaths()->emplace(path.asString());
@@ -592,18 +592,18 @@ void Journal::forEachDelta(
     JournalDelta::SequenceNumber from,
     std::optional<size_t> lengthLimit,
     FileChangeCallback&& fileChangeDeltaCallback,
-    HashUpdateCallback&& hashUpdateDeltaCallback) const {
+    RootUpdateCallback&& rootUpdateDeltaCallback) const {
   size_t iters = 0;
   auto fileChangeIt = deltaState.fileChangeDeltas.rbegin();
-  auto hashUpdateIt = deltaState.hashUpdateDeltas.rbegin();
+  auto rootUpdateIt = deltaState.rootUpdateDeltas.rbegin();
   auto fileChangeRend = deltaState.fileChangeDeltas.rend();
-  auto hashUpdateRend = deltaState.hashUpdateDeltas.rend();
-  while (fileChangeIt != fileChangeRend || hashUpdateIt != hashUpdateRend) {
-    bool isFileChange = hashUpdateIt == hashUpdateRend ||
+  auto rootUpdateRend = deltaState.rootUpdateDeltas.rend();
+  while (fileChangeIt != fileChangeRend || rootUpdateIt != rootUpdateRend) {
+    bool isFileChange = rootUpdateIt == rootUpdateRend ||
         (fileChangeIt != fileChangeRend &&
-         fileChangeIt->sequenceID > hashUpdateIt->sequenceID);
+         fileChangeIt->sequenceID > rootUpdateIt->sequenceID);
     const Journal::SequenceNumber currentSequenceID =
-        isFileChange ? fileChangeIt->sequenceID : hashUpdateIt->sequenceID;
+        isFileChange ? fileChangeIt->sequenceID : rootUpdateIt->sequenceID;
     if (currentSequenceID < from) {
       break;
     }
@@ -616,10 +616,10 @@ void Journal::forEachDelta(
       };
       ++fileChangeIt;
     } else {
-      if (!hashUpdateDeltaCallback(*hashUpdateIt)) {
+      if (!rootUpdateDeltaCallback(*rootUpdateIt)) {
         break;
       }
-      ++hashUpdateIt;
+      ++rootUpdateIt;
     }
 
     ++iters;

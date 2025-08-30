@@ -68,7 +68,7 @@ class DeferredDiffEntry {
       DiffContext* context,
       RelativePath path,
       const TreeEntry& scmEntry,
-      ObjectId currentBlobHash,
+      ObjectId currentBlobId,
       dtype_t currentDType);
 
   static std::unique_ptr<DeferredDiffEntry> createModifiedEntry(
@@ -82,16 +82,16 @@ class DeferredDiffEntry {
   static std::unique_ptr<DeferredDiffEntry> createModifiedScmEntry(
       DiffContext* context,
       RelativePath path,
-      ObjectId scmHash,
-      ObjectId wdHash);
+      ObjectId scmId,
+      ObjectId wdId);
 
   static std::unique_ptr<DeferredDiffEntry>
-  createAddedScmEntry(DiffContext* context, RelativePath path, ObjectId wdHash);
+  createAddedScmEntry(DiffContext* context, RelativePath path, ObjectId wdId);
 
   static std::unique_ptr<DeferredDiffEntry> createRemovedScmEntry(
       DiffContext* context,
       RelativePath path,
-      ObjectId scmHash);
+      ObjectId scmId);
 
  protected:
   DiffContext* const context_;

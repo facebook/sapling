@@ -25,14 +25,10 @@ using namespace std::chrono_literals;
 using namespace facebook::eden;
 
 namespace {
-const auto hash3 =
-    ObjectId::fromHex("0000000000000000000000000000000000000000");
-const auto hash4 =
-    ObjectId::fromHex("0000000000000000000000000000000000000001");
-const auto hash5 =
-    ObjectId::fromHex("0000000000000000000000000000000000000002");
-const auto hash6 =
-    ObjectId::fromHex("0000000000000000000000000000000000000003");
+const auto id3 = ObjectId::fromHex("0000000000000000000000000000000000000000");
+const auto id4 = ObjectId::fromHex("0000000000000000000000000000000000000001");
+const auto id5 = ObjectId::fromHex("0000000000000000000000000000000000000002");
+const auto id6 = ObjectId::fromHex("0000000000000000000000000000000000000003");
 
 const auto blob3 = std::make_shared<Blob>("333"_sp);
 const auto blob4 = std::make_shared<Blob>("4444"_sp);
@@ -109,14 +105,14 @@ struct BlobAccessTest : ::testing::Test {
 
     blobAccess = std::make_shared<BlobAccess>(objectStore, blobCache);
 
-    backingStore->putBlob(hash3, "333"_sp)->setReady();
-    backingStore->putBlob(hash4, "4444"_sp)->setReady();
-    backingStore->putBlob(hash5, "55555"_sp)->setReady();
-    backingStore->putBlob(hash6, "666666"_sp)->setReady();
+    backingStore->putBlob(id3, "333"_sp)->setReady();
+    backingStore->putBlob(id4, "4444"_sp)->setReady();
+    backingStore->putBlob(id5, "55555"_sp)->setReady();
+    backingStore->putBlob(id6, "666666"_sp)->setReady();
   }
 
-  std::shared_ptr<const Blob> getBlobBlocking(const ObjectId& hash) {
-    return blobAccess->getBlob(hash, ObjectFetchContext::getNullContext())
+  std::shared_ptr<const Blob> getBlobBlocking(const ObjectId& id) {
+    return blobAccess->getBlob(id, ObjectFetchContext::getNullContext())
         .get(0ms)
         .object;
   }
@@ -131,48 +127,48 @@ struct BlobAccessTest : ::testing::Test {
 } // namespace
 
 TEST_F(BlobAccessTest, remembers_blobs) {
-  auto blob1 = getBlobBlocking(hash4);
-  auto blob2 = getBlobBlocking(hash4);
+  auto blob1 = getBlobBlocking(id4);
+  auto blob2 = getBlobBlocking(id4);
 
   EXPECT_EQ(blob1, blob2);
   EXPECT_EQ(4, blob1->getSize());
-  EXPECT_EQ(1, backingStore->getAccessCount(hash4));
+  EXPECT_EQ(1, backingStore->getAccessCount(id4));
 }
 
 TEST_F(BlobAccessTest, drops_blobs_when_size_is_exceeded) {
-  auto blob0 = getBlobBlocking(hash6);
-  auto blob1 = getBlobBlocking(hash5);
-  auto blob2 = getBlobBlocking(hash6);
+  auto blob0 = getBlobBlocking(id6);
+  auto blob1 = getBlobBlocking(id5);
+  auto blob2 = getBlobBlocking(id6);
 
   EXPECT_EQ(6, blob0->getSize());
   EXPECT_EQ(5, blob1->getSize());
   EXPECT_EQ(6, blob2->getSize());
 
-  EXPECT_EQ(1, backingStore->getAccessCount(hash5));
-  EXPECT_EQ(2, backingStore->getAccessCount(hash6));
+  EXPECT_EQ(1, backingStore->getAccessCount(id5));
+  EXPECT_EQ(2, backingStore->getAccessCount(id6));
 }
 
 TEST_F(BlobAccessTest, drops_oldest_blobs) {
-  getBlobBlocking(hash3);
-  getBlobBlocking(hash4);
+  getBlobBlocking(id3);
+  getBlobBlocking(id4);
 
-  // Evicts hash3
-  getBlobBlocking(hash5);
-  EXPECT_EQ(1, backingStore->getAccessCount(hash3));
-  EXPECT_EQ(1, backingStore->getAccessCount(hash4));
-  EXPECT_EQ(1, backingStore->getAccessCount(hash5));
+  // Evicts id3
+  getBlobBlocking(id5);
+  EXPECT_EQ(1, backingStore->getAccessCount(id3));
+  EXPECT_EQ(1, backingStore->getAccessCount(id4));
+  EXPECT_EQ(1, backingStore->getAccessCount(id5));
 
-  // Evicts hash4 but not hash5
-  getBlobBlocking(hash3);
-  getBlobBlocking(hash5);
-  EXPECT_EQ(2, backingStore->getAccessCount(hash3));
-  EXPECT_EQ(1, backingStore->getAccessCount(hash4));
-  EXPECT_EQ(1, backingStore->getAccessCount(hash5));
+  // Evicts id4 but not id5
+  getBlobBlocking(id3);
+  getBlobBlocking(id5);
+  EXPECT_EQ(2, backingStore->getAccessCount(id3));
+  EXPECT_EQ(1, backingStore->getAccessCount(id4));
+  EXPECT_EQ(1, backingStore->getAccessCount(id5));
 
-  // Evicts hash3
-  getBlobBlocking(hash4);
-  getBlobBlocking(hash5);
-  EXPECT_EQ(2, backingStore->getAccessCount(hash3));
-  EXPECT_EQ(2, backingStore->getAccessCount(hash4));
-  EXPECT_EQ(1, backingStore->getAccessCount(hash5));
+  // Evicts id3
+  getBlobBlocking(id4);
+  getBlobBlocking(id5);
+  EXPECT_EQ(2, backingStore->getAccessCount(id3));
+  EXPECT_EQ(2, backingStore->getAccessCount(id4));
+  EXPECT_EQ(1, backingStore->getAccessCount(id5));
 }

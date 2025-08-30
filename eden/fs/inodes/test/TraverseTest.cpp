@@ -21,12 +21,12 @@ struct TestCallbacks : TraversalCallbacks {
   void visitTreeInode(
       RelativePathPiece path,
       InodeNumber ino,
-      const std::optional<ObjectId>& hash,
+      const std::optional<ObjectId>& id,
       uint64_t fuseRefcount,
       const std::vector<ChildEntry>& entries) override {
     paths.emplace_back(path);
     (void)ino;
-    (void)hash;
+    (void)id;
     (void)fuseRefcount;
     (void)entries;
   }

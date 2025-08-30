@@ -16,21 +16,21 @@
 namespace facebook::eden {
 
 namespace {
-std::string testHashHex = folly::to<std::string>(
+std::string testIdHex = folly::to<std::string>(
     "faceb00c",
     "deadbeef",
     "c00010ff",
     "1badb002",
     "8badf00d");
 
-ObjectId testHash(testHashHex);
+ObjectId testId(testIdHex);
 } // namespace
 
 TEST(Tree, testFind) {
   Tree::container entries{CaseSensitivity::Insensitive};
   auto aFileName = PathComponent{"a_file"};
-  entries.emplace(aFileName, testHash, TreeEntryType::REGULAR_FILE);
-  Tree tree(std::move(entries), testHash);
+  entries.emplace(aFileName, testId, TreeEntryType::REGULAR_FILE);
+  Tree tree(std::move(entries), testId);
 
   // Verify existent path.
   PathComponentPiece existentPath("a_file");
@@ -63,7 +63,7 @@ TEST(Tree, testFind) {
 
 TEST(Tree, testSize) {
   auto entryType = TreeEntryType::REGULAR_FILE;
-  TreeEntry entry{testHash, entryType};
+  TreeEntry entry{testId, entryType};
   auto entrySize = sizeof(entry);
 
   auto numEntries = 5;
@@ -73,7 +73,7 @@ TEST(Tree, testSize) {
     auto entryName = fmt::format("file{}.txt", i);
     entries.emplace(PathComponentPiece{entryName}, entry);
   }
-  Tree tree(std::move(entries), testHash);
+  Tree tree(std::move(entries), testId);
 
   // testing the actual size is difficult without just copy pasting the
   // size caalculations, so we are just testing that the size estimate is
