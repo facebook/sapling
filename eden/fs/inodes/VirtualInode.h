@@ -71,6 +71,8 @@ class VirtualInode {
 
   std::optional<ObjectId> getObjectId() const;
 
+  bool isMaterialized() const;
+
   /**
    * Discover the contained data type.
    *

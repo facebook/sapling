@@ -55,6 +55,15 @@ std::optional<ObjectId> VirtualInode::getObjectId() const {
       });
 }
 
+bool VirtualInode::isMaterialized() const {
+  return match(
+      variant_,
+      [](const InodePtr& inode) { return inode->isMaterialized(); },
+      [](const TreePtr&) { return false; },
+      [](const UnmaterializedUnloadedBlobDirEntry&) { return false; },
+      [](const TreeEntry&) { return false; });
+}
+
 VirtualInode::ContainedType VirtualInode::testGetContainedType() const {
   return match(
       variant_,

@@ -482,26 +482,7 @@ void verifyTreeState(
         auto inode = virtualInode.asInodePtr();
         EXPECT_TRUE(!!inode);
         isLoaded = true;
-
-        if (auto fileInode = inode.asFilePtrOrNull()) {
-          // There is no exposed method to get the martialized status of a
-          // FileInode. But we can get the parent inode, and ask about the
-          // materialization status of it's children. There's ALWAYS a parent
-          // for a file, because the root is a directory.
-          auto renameLock = mount.getEdenMount()->acquireRenameLock();
-          auto location = fileInode->getLocationInfo(renameLock);
-          auto parent = fileInode->getParent(renameLock);
-          auto contents = parent->getContents().rlock();
-          auto entry = contents->entries.find(location.name);
-          ASSERT_TRUE(entry != contents->entries.end());
-          isMaterialized = entry->second.isMaterialized();
-        } else if (auto treeInode = inode.asTreePtrOrNull()) {
-          const auto& contents = treeInode->getContents().rlock();
-          isMaterialized = contents->isMaterialized();
-        } else {
-          EXPECT_TRUE(false)
-              << dbgMsg << " is neither a FileInode or TreeInode";
-        }
+        isMaterialized = inode->isMaterialized();
       } else {
         // No inode, so it must not be loaded or materialized
         isLoaded = false;
