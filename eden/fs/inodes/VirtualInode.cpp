@@ -472,19 +472,20 @@ namespace {
 void populateBlobAuxAttributes(
     EntryAttributes& attributes,
     EntryAttributeFlags requestedAttributes,
-    const folly::Try<BlobAuxData>& blobAuxTry) {
+    const folly::Try<std::optional<BlobAuxData>>& blobAuxTry) {
   if (requestedAttributes.contains(ENTRY_ATTRIBUTE_SHA1)) {
     attributes.sha1 = blobAuxTry.hasException()
         ? folly::Try<Hash20>(blobAuxTry.exception())
-        : folly::Try<Hash20>(blobAuxTry.value().sha1);
+        : folly::Try<Hash20>(blobAuxTry.value().value().sha1);
   }
 
   if (requestedAttributes.contains(ENTRY_ATTRIBUTE_BLAKE3)) {
     if (blobAuxTry.hasException()) {
       attributes.blake3 = folly::Try<Hash32>(blobAuxTry.exception());
     } else {
-      attributes.blake3 = blobAuxTry.value().blake3.has_value()
-          ? std::optional<folly::Try<Hash32>>(blobAuxTry.value().blake3.value())
+      attributes.blake3 = blobAuxTry.value().value().blake3.has_value()
+          ? std::optional<folly::Try<Hash32>>(
+                blobAuxTry.value().value().blake3.value())
           : std::nullopt;
     }
   }
@@ -492,24 +493,29 @@ void populateBlobAuxAttributes(
   if (requestedAttributes.contains(ENTRY_ATTRIBUTE_SIZE)) {
     attributes.size = blobAuxTry.hasException()
         ? folly::Try<uint64_t>(blobAuxTry.exception())
-        : folly::Try<uint64_t>(blobAuxTry.value().size);
+        : folly::Try<uint64_t>(blobAuxTry.value().value().size);
   }
 
   if (requestedAttributes.contains(ENTRY_ATTRIBUTE_DIGEST_SIZE)) {
     attributes.digestSize = blobAuxTry.hasException()
         ? folly::Try<uint64_t>(blobAuxTry.exception())
-        : folly::Try<uint64_t>(blobAuxTry.value().size);
+        : folly::Try<uint64_t>(blobAuxTry.value().value().size);
   }
 
   if (requestedAttributes.contains(ENTRY_ATTRIBUTE_DIGEST_HASH)) {
     if (blobAuxTry.hasException()) {
       attributes.digestHash = folly::Try<Hash32>(blobAuxTry.exception());
     } else {
-      attributes.digestHash = blobAuxTry.value().blake3.has_value()
-          ? std::optional<folly::Try<Hash32>>(blobAuxTry.value().blake3.value())
+      attributes.digestHash = blobAuxTry.value().value().blake3.has_value()
+          ? std::optional<folly::Try<Hash32>>(
+                blobAuxTry.value().value().blake3.value())
           : std::nullopt;
     }
   }
+}
+
+bool shouldRequestBlobAuxDataForEntry(EntryAttributeFlags entryAttributes) {
+  return entryAttributes.containsAnyOf(ENTRY_ATTRIBUTES_FROM_BLOB_AUX);
 }
 } // namespace
 
@@ -571,15 +577,21 @@ ImmediateFuture<EntryAttributes> VirtualInode::getEntryAttributes(
         getTreeEntryType(path, fetchContext, windowsSymlinksEnabled);
   }
 
-  auto blobAuxdataFuture = ImmediateFuture<BlobAuxData>{PathError{
-      EINVAL, path, std::string_view{"neither sha1 nor size requested"}}};
-  if (requestedAttributes.containsAnyOf(ENTRY_ATTRIBUTES_FROM_BLOB_AUX)) {
-    blobAuxdataFuture = getBlobAuxData(
-        path,
-        objectStore,
-        fetchContext,
-        requestedAttributes.containsAnyOf(
-            ENTRY_ATTRIBUTE_BLAKE3 | ENTRY_ATTRIBUTE_DIGEST_HASH));
+  auto blobAuxdataFuture =
+      ImmediateFuture<std::optional<BlobAuxData>>{std::nullopt};
+  auto shouldRequestBlobAux =
+      shouldRequestBlobAuxDataForEntry(requestedAttributes);
+  if (shouldRequestBlobAux) {
+    blobAuxdataFuture =
+        getBlobAuxData(
+            path,
+            objectStore,
+            fetchContext,
+            requestedAttributes.containsAnyOf(
+                ENTRY_ATTRIBUTE_BLAKE3 | ENTRY_ATTRIBUTE_DIGEST_HASH))
+            .thenValue([](facebook::eden::BlobAuxData&& data) {
+              return std::optional<BlobAuxData>(data);
+            });
   }
 
   auto statFuture = ImmediateFuture<std::optional<struct stat>>{std::nullopt};
@@ -604,12 +616,13 @@ ImmediateFuture<EntryAttributes> VirtualInode::getEntryAttributes(
           [requestedAttributes,
            entryObjectId = std::move(objectId),
            shouldRequestStat,
+           shouldRequestBlobAux,
            filePath = RelativePath{path}](
               std::tuple<
                   folly::Try<std::optional<TreeEntryType>>,
-                  folly::Try<BlobAuxData>,
-                  folly::Try<std::optional<struct stat>>> rawAttributeData)
-              -> EntryAttributes {
+                  folly::Try<std::optional<BlobAuxData>>,
+                  folly::Try<std::optional<struct stat>>>
+                  rawAttributeData) mutable -> EntryAttributes {
             auto attributes = EntryAttributes{};
             auto& [entryTypeTry, blobAuxTry, statTry] = rawAttributeData;
 
@@ -623,11 +636,13 @@ ImmediateFuture<EntryAttributes> VirtualInode::getEntryAttributes(
                   folly::Try<std::optional<ObjectId>>{std::move(entryObjectId)};
             }
 
+            if (shouldRequestBlobAux) {
+              populateBlobAuxAttributes(
+                  attributes, requestedAttributes, std::move(blobAuxTry));
+            }
             if (shouldRequestStat) {
               populateStatAttributes(attributes, requestedAttributes, statTry);
             }
-            populateBlobAuxAttributes(
-                attributes, requestedAttributes, std::move(blobAuxTry));
 
             return attributes;
           });
