@@ -239,7 +239,10 @@ TEST_F(FileInodeTest, setattrTruncateAllMaterialized) {
   // Modify the inode before running the test, so that
   // it will be materialized in the overlay.
   auto inode = mount_.getFileInode("dir/a.txt");
-  inode->write("THIS IS A.TXT.\n", 0, ObjectFetchContext::getNullContext());
+  auto written =
+      inode->write("THIS IS A.TXT.\n", 0, ObjectFetchContext::getNullContext())
+          .get();
+  EXPECT_EQ(15, written);
   inode.reset();
 
   testSetattrTruncateAll(mount_);
@@ -371,7 +374,10 @@ TEST_F(FileInodeTest, setattrMtimeMaterialized) {
   // Modify the inode before running the test, so that
   // it will be materialized in the overlay.
   auto inode = mount_.getFileInode("dir/a.txt");
-  inode->write("THIS IS A.TXT.\n", 0, ObjectFetchContext::getNullContext());
+  auto written =
+      inode->write("THIS IS A.TXT.\n", 0, ObjectFetchContext::getNullContext())
+          .get();
+  EXPECT_EQ(15, written);
   inode.reset();
 
   testSetattrMtime(mount_);
