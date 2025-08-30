@@ -290,10 +290,10 @@ namespace {
 bool shouldRequestTreeAuxDataForEntry(
     const std::optional<TreeEntryType>& entryType,
     EntryAttributeFlags entryAttributes,
-    const std::optional<ObjectId>& oid) {
+    const bool isMaterialized) {
   return (entryType.value_or(TreeEntryType::SYMLINK) == TreeEntryType::TREE) &&
       entryAttributes.containsAnyOf(ENTRY_ATTRIBUTES_FROM_TREE_AUX) &&
-      oid.has_value();
+      !isMaterialized;
 }
 
 bool shouldRequestStatForEntry(EntryAttributeFlags entryAttributes) {
@@ -433,8 +433,8 @@ ImmediateFuture<EntryAttributes> VirtualInode::getEntryAttributesForNonFile(
 
   auto treeAuxFuture =
       ImmediateFuture<std::optional<TreeAuxData>>{std::nullopt};
-  auto shouldRequestTreeAux =
-      shouldRequestTreeAuxDataForEntry(entryType, requestedAttributes, oid);
+  auto shouldRequestTreeAux = shouldRequestTreeAuxDataForEntry(
+      entryType, requestedAttributes, !oid.has_value() || isMaterialized());
   // The entry is a tree, and therefore we can attempt to compute tree
   // aux data for it. However, we can only compute the additional attributes
   // of trees that have ObjectIds. In other words, the tree must be
