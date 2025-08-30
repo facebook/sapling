@@ -174,14 +174,16 @@ TEST_F(SaplingBackingStoreNoFaultInjectorTest, getBlob) {
     if (name == "foo.txt") {
       auto [blob, origin] =
           queuedBackingStore
-              ->getBlob(entry.getHash(), ObjectFetchContext::getNullContext())
+              ->getBlob(
+                  entry.getObjectId(), ObjectFetchContext::getNullContext())
               .get(kTestTimeout);
 
       EXPECT_EQ(blob->getContents().cloneAsValue().moveToFbString(), "foo\n");
     } else if (name == "bar.txt") {
       auto [blob, origin] =
           queuedBackingStore
-              ->getBlob(entry.getHash(), ObjectFetchContext::getNullContext())
+              ->getBlob(
+                  entry.getObjectId(), ObjectFetchContext::getNullContext())
               .get(kTestTimeout);
 
       EXPECT_EQ(blob->getContents().cloneAsValue().moveToFbString(), "bar\n");
@@ -201,14 +203,16 @@ TEST_F(SaplingBackingStoreWithFaultInjectorTest, getBlob) {
     if (name == "foo.txt") {
       auto [blob, origin] =
           queuedBackingStore
-              ->getBlob(entry.getHash(), ObjectFetchContext::getNullContext())
+              ->getBlob(
+                  entry.getObjectId(), ObjectFetchContext::getNullContext())
               .get(kTestTimeout);
 
       EXPECT_EQ(blob->getContents().cloneAsValue().moveToFbString(), "foo\n");
     } else if (name == "bar.txt") {
       auto [blob, origin] =
           queuedBackingStore
-              ->getBlob(entry.getHash(), ObjectFetchContext::getNullContext())
+              ->getBlob(
+                  entry.getObjectId(), ObjectFetchContext::getNullContext())
               .get(kTestTimeout);
 
       EXPECT_EQ(blob->getContents().cloneAsValue().moveToFbString(), "bar\n");

@@ -28,7 +28,7 @@ TreeLookupProcessor::next(std::shared_ptr<const Tree> tree) {
 
   if (iter_ == iterRange_.end()) {
     if (it->second.isTree()) {
-      return objectStore_->getTree(it->second.getHash(), context_)
+      return objectStore_->getTree(it->second.getObjectId(), context_)
           .thenValue(
               [](std::shared_ptr<const Tree> tree) -> RetType { return tree; });
     } else {
@@ -39,7 +39,7 @@ TreeLookupProcessor::next(std::shared_ptr<const Tree> tree) {
       return makeImmediateFuture<RetType>(
           std::system_error(ENOTDIR, std::generic_category()));
     } else {
-      return objectStore_->getTree(it->second.getHash(), context_)
+      return objectStore_->getTree(it->second.getObjectId(), context_)
           .thenValue([this](std::shared_ptr<const Tree> tree) {
             return next(std::move(tree));
           });

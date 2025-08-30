@@ -114,7 +114,8 @@ ImmediateFuture<std::vector<PrjfsDirEntry>> PrjfsDispatcherImpl::opendir(
                       ? std::make_optional(
                             objectStore
                                 ->getBlob(
-                                    treeEntry.second.getHash(), context.copy())
+                                    treeEntry.second.getObjectId(),
+                                    context.copy())
                                 .thenValue(
                                     [this,
                                      name = treeEntry.first,
@@ -145,7 +146,7 @@ ImmediateFuture<std::vector<PrjfsDirEntry>> PrjfsDispatcherImpl::opendir(
                       false,
                       std::move(optSymlinkTargetFut),
                       objectStore->getBlobSize(
-                          treeEntry.second.getHash(), context.copy()));
+                          treeEntry.second.getObjectId(), context.copy()));
                 }
               }
 
@@ -302,7 +303,7 @@ PrjfsDispatcherImpl::resolveSymlinkPathImpl(
               return std::move(path);
             }
             return mount_->getObjectStore()
-                ->getBlob(entry.getHash(), context)
+                ->getBlob(entry.getObjectId(), context)
                 .thenValue(
                     [this,
                      context = context.copy(),
@@ -453,7 +454,7 @@ ImmediateFuture<bool> PrjfsDispatcherImpl::isFinalSymlinkPathDirectory(
                                  return false;
                                }
                                return mount_->getObjectStore()
-                                   ->getBlob(entry.getHash(), context)
+                                   ->getBlob(entry.getObjectId(), context)
                                    .thenValue([this,
                                                context = context.copy(),
                                                path = std::move(target),
@@ -498,14 +499,14 @@ ImmediateFuture<std::optional<LookupResult>> PrjfsDispatcherImpl::lookup(
                   : std::make_optional(std::get<TreeEntry>(treeOrTreeEntry));
               auto sizeFut = isDir ? ImmediateFuture<uint64_t>{0ull}
                                    : mount_->getObjectStore()->getBlobSize(
-                                         treeEntry->getHash(), context);
+                                         treeEntry->getObjectId(), context);
               bool isSymlink = !symlinksEnabled_ || isDir
                   ? false
                   : treeEntry->getDtype() == dtype_t::Symlink;
 
               auto symlinkAttrsFut = isSymlink
                   ? mount_->getObjectStore()
-                        ->getBlob(treeEntry->getHash(), context)
+                        ->getBlob(treeEntry->getObjectId(), context)
                         .thenValue(
                             [this,
                              path = path.copy(),
@@ -672,7 +673,7 @@ ImmediateFuture<std::string> PrjfsDispatcherImpl::read(
                            std::variant<std::shared_ptr<const Tree>, TreeEntry>
                                treeOrTreeEntry) {
               auto& treeEntry = std::get<TreeEntry>(treeOrTreeEntry);
-              return objectStore->getBlob(treeEntry.getHash(), context)
+              return objectStore->getBlob(treeEntry.getObjectId(), context)
                   .thenValue([](std::shared_ptr<const Blob> blob) {
                     // TODO(xavierd): directly return the Blob to the
                     // caller.

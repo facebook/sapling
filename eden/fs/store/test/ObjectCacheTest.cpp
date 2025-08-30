@@ -15,7 +15,7 @@ namespace {
 
 class CacheObject {
  public:
-  const ObjectId& getHash() const {
+  const ObjectId& getObjectId() const {
     return hash_;
   }
 
@@ -71,10 +71,10 @@ TEST(ObjectCache, testSimpleInsert) {
       ObjectCache<CacheObject, ObjectCacheFlavor::Simple, FakeStats>::create(
           10, 1, makeRefPtr<EdenStats>());
 
-  cache->insertSimple(object3->getHash(), object3);
+  cache->insertSimple(object3->getObjectId(), object3);
 
-  EXPECT_TRUE(cache->contains(object3->getHash()));
-  EXPECT_EQ(object3, cache->getSimple(object3->getHash()));
+  EXPECT_TRUE(cache->contains(object3->getObjectId()));
+  EXPECT_EQ(object3, cache->getSimple(object3->getObjectId()));
 }
 
 TEST(ObjectCache, testMultipleInsert) {
@@ -82,16 +82,16 @@ TEST(ObjectCache, testMultipleInsert) {
       ObjectCache<CacheObject, ObjectCacheFlavor::Simple, FakeStats>::create(
           10, 1, makeRefPtr<EdenStats>());
 
-  cache->insertSimple(object3->getHash(), object3);
-  cache->insertSimple(object3a->getHash(), object3a);
-  cache->insertSimple(object3b->getHash(), object3b);
+  cache->insertSimple(object3->getObjectId(), object3);
+  cache->insertSimple(object3a->getObjectId(), object3a);
+  cache->insertSimple(object3b->getObjectId(), object3b);
 
-  EXPECT_TRUE(cache->contains(object3->getHash()));
-  EXPECT_EQ(object3, cache->getSimple(object3->getHash()));
-  EXPECT_TRUE(cache->contains(object3a->getHash()));
-  EXPECT_EQ(object3a, cache->getSimple(object3a->getHash()));
-  EXPECT_TRUE(cache->contains(object3b->getHash()));
-  EXPECT_EQ(object3b, cache->getSimple(object3b->getHash()));
+  EXPECT_TRUE(cache->contains(object3->getObjectId()));
+  EXPECT_EQ(object3, cache->getSimple(object3->getObjectId()));
+  EXPECT_TRUE(cache->contains(object3a->getObjectId()));
+  EXPECT_EQ(object3a, cache->getSimple(object3a->getObjectId()));
+  EXPECT_TRUE(cache->contains(object3b->getObjectId()));
+  EXPECT_EQ(object3b, cache->getSimple(object3b->getObjectId()));
 }
 
 TEST(ObjectCache, testSizeOverflowInsert) {
@@ -99,21 +99,21 @@ TEST(ObjectCache, testSizeOverflowInsert) {
       ObjectCache<CacheObject, ObjectCacheFlavor::Simple, FakeStats>::create(
           10, 1, makeRefPtr<EdenStats>());
 
-  cache->insertSimple(object3->getHash(), object3);
-  cache->insertSimple(object3a->getHash(), object3a);
-  cache->insertSimple(object3b->getHash(), object3b);
-  cache->insertSimple(object3c->getHash(), object3c);
+  cache->insertSimple(object3->getObjectId(), object3);
+  cache->insertSimple(object3a->getObjectId(), object3a);
+  cache->insertSimple(object3b->getObjectId(), object3b);
+  cache->insertSimple(object3c->getObjectId(), object3c);
 
-  EXPECT_FALSE(cache->contains(object3->getHash()));
+  EXPECT_FALSE(cache->contains(object3->getObjectId()));
   EXPECT_EQ(
       std::shared_ptr<CacheObject>{nullptr},
-      cache->getSimple(object3->getHash()));
-  EXPECT_TRUE(cache->contains(object3a->getHash()));
-  EXPECT_EQ(object3a, cache->getSimple(object3a->getHash()));
-  EXPECT_TRUE(cache->contains(object3b->getHash()));
-  EXPECT_EQ(object3b, cache->getSimple(object3b->getHash()));
-  EXPECT_TRUE(cache->contains(object3c->getHash()));
-  EXPECT_EQ(object3c, cache->getSimple(object3c->getHash()));
+      cache->getSimple(object3->getObjectId()));
+  EXPECT_TRUE(cache->contains(object3a->getObjectId()));
+  EXPECT_EQ(object3a, cache->getSimple(object3a->getObjectId()));
+  EXPECT_TRUE(cache->contains(object3b->getObjectId()));
+  EXPECT_EQ(object3b, cache->getSimple(object3b->getObjectId()));
+  EXPECT_TRUE(cache->contains(object3c->getObjectId()));
+  EXPECT_EQ(object3c, cache->getSimple(object3c->getObjectId()));
 }
 
 TEST(ObjectCache, testLRUSimpleInsert) {
@@ -121,24 +121,24 @@ TEST(ObjectCache, testLRUSimpleInsert) {
       ObjectCache<CacheObject, ObjectCacheFlavor::Simple, FakeStats>::create(
           10, 1, makeRefPtr<EdenStats>());
 
-  cache->insertSimple(object3->getHash(), object3);
-  cache->insertSimple(object3a->getHash(), object3a);
-  cache->insertSimple(object3b->getHash(), object3b);
+  cache->insertSimple(object3->getObjectId(), object3);
+  cache->insertSimple(object3a->getObjectId(), object3a);
+  cache->insertSimple(object3b->getObjectId(), object3b);
 
-  cache->getSimple(object3->getHash()); // object3 should not be evicted now
+  cache->getSimple(object3->getObjectId()); // object3 should not be evicted now
 
-  cache->insertSimple(object3c->getHash(), object3c);
+  cache->insertSimple(object3c->getObjectId(), object3c);
 
-  EXPECT_TRUE(cache->contains(object3->getHash()));
-  EXPECT_EQ(object3, cache->getSimple(object3->getHash()));
-  EXPECT_FALSE(cache->contains(object3a->getHash()));
+  EXPECT_TRUE(cache->contains(object3->getObjectId()));
+  EXPECT_EQ(object3, cache->getSimple(object3->getObjectId()));
+  EXPECT_FALSE(cache->contains(object3a->getObjectId()));
   EXPECT_EQ(
       std::shared_ptr<CacheObject>{nullptr},
-      cache->getSimple(object3a->getHash()));
-  EXPECT_TRUE(cache->contains(object3b->getHash()));
-  EXPECT_EQ(object3b, cache->getSimple(object3b->getHash()));
-  EXPECT_TRUE(cache->contains(object3c->getHash()));
-  EXPECT_EQ(object3c, cache->getSimple(object3c->getHash()));
+      cache->getSimple(object3a->getObjectId()));
+  EXPECT_TRUE(cache->contains(object3b->getObjectId()));
+  EXPECT_EQ(object3b, cache->getSimple(object3b->getObjectId()));
+  EXPECT_TRUE(cache->contains(object3c->getObjectId()));
+  EXPECT_EQ(object3c, cache->getSimple(object3c->getObjectId()));
 }
 
 TEST(ObjectCache, testLargeInsert) {
@@ -146,10 +146,10 @@ TEST(ObjectCache, testLargeInsert) {
       ObjectCache<CacheObject, ObjectCacheFlavor::Simple, FakeStats>::create(
           10, 1, makeRefPtr<EdenStats>());
 
-  cache->insertSimple(object11->getHash(), object11);
+  cache->insertSimple(object11->getObjectId(), object11);
 
-  EXPECT_TRUE(cache->contains(object11->getHash()));
-  EXPECT_EQ(object11, cache->getSimple(object11->getHash()));
+  EXPECT_TRUE(cache->contains(object11->getObjectId()));
+  EXPECT_EQ(object11, cache->getSimple(object11->getObjectId()));
 }
 
 TEST(ObjectCache, testSizeOverflowLargeInsert) {
@@ -157,25 +157,25 @@ TEST(ObjectCache, testSizeOverflowLargeInsert) {
       ObjectCache<CacheObject, ObjectCacheFlavor::Simple, FakeStats>::create(
           10, 1, makeRefPtr<EdenStats>());
 
-  cache->insertSimple(object3->getHash(), object3);
-  cache->insertSimple(object3a->getHash(), object3a);
-  cache->insertSimple(object3b->getHash(), object3b);
-  cache->insertSimple(object11->getHash(), object11);
+  cache->insertSimple(object3->getObjectId(), object3);
+  cache->insertSimple(object3a->getObjectId(), object3a);
+  cache->insertSimple(object3b->getObjectId(), object3b);
+  cache->insertSimple(object11->getObjectId(), object11);
 
-  EXPECT_FALSE(cache->contains(object3->getHash()));
+  EXPECT_FALSE(cache->contains(object3->getObjectId()));
   EXPECT_EQ(
       std::shared_ptr<const CacheObject>{nullptr},
-      cache->getSimple(object3->getHash()));
-  EXPECT_FALSE(cache->contains(object3a->getHash()));
+      cache->getSimple(object3->getObjectId()));
+  EXPECT_FALSE(cache->contains(object3a->getObjectId()));
   EXPECT_EQ(
       std::shared_ptr<const CacheObject>{nullptr},
-      cache->getSimple(object3a->getHash()));
-  EXPECT_FALSE(cache->contains(object3b->getHash()));
+      cache->getSimple(object3a->getObjectId()));
+  EXPECT_FALSE(cache->contains(object3b->getObjectId()));
   EXPECT_EQ(
       std::shared_ptr<const CacheObject>{nullptr},
-      cache->getSimple(object3b->getHash()));
-  EXPECT_TRUE(cache->contains(object11->getHash()));
-  EXPECT_EQ(object11, cache->getSimple(object11->getHash()));
+      cache->getSimple(object3b->getObjectId()));
+  EXPECT_TRUE(cache->contains(object11->getObjectId()));
+  EXPECT_EQ(object11, cache->getSimple(object11->getObjectId()));
 }
 
 TEST(ObjectCache, testDuplicateInsert) {
@@ -183,25 +183,25 @@ TEST(ObjectCache, testDuplicateInsert) {
       ObjectCache<CacheObject, ObjectCacheFlavor::Simple, FakeStats>::create(
           10, 1, makeRefPtr<EdenStats>());
 
-  cache->insertSimple(object3->getHash(), object3);
-  cache->insertSimple(object3a->getHash(), object3a);
-  cache->insertSimple(object3b->getHash(), object3b);
+  cache->insertSimple(object3->getObjectId(), object3);
+  cache->insertSimple(object3a->getObjectId(), object3a);
+  cache->insertSimple(object3b->getObjectId(), object3b);
 
   cache->insertSimple(
-      object3->getHash(), object3); // object3 should not be evicted now
+      object3->getObjectId(), object3); // object3 should not be evicted now
 
-  cache->insertSimple(object3c->getHash(), object3c);
+  cache->insertSimple(object3c->getObjectId(), object3c);
 
-  EXPECT_TRUE(cache->contains(object3->getHash()));
-  EXPECT_EQ(object3, cache->getSimple(object3->getHash()));
-  EXPECT_FALSE(cache->contains(object3a->getHash()));
+  EXPECT_TRUE(cache->contains(object3->getObjectId()));
+  EXPECT_EQ(object3, cache->getSimple(object3->getObjectId()));
+  EXPECT_FALSE(cache->contains(object3a->getObjectId()));
   EXPECT_EQ(
       std::shared_ptr<CacheObject>{nullptr},
-      cache->getSimple(object3a->getHash()));
-  EXPECT_TRUE(cache->contains(object3b->getHash()));
-  EXPECT_EQ(object3b, cache->getSimple(object3b->getHash()));
-  EXPECT_TRUE(cache->contains(object3c->getHash()));
-  EXPECT_EQ(object3c, cache->getSimple(object3c->getHash()));
+      cache->getSimple(object3a->getObjectId()));
+  EXPECT_TRUE(cache->contains(object3b->getObjectId()));
+  EXPECT_EQ(object3b, cache->getSimple(object3b->getObjectId()));
+  EXPECT_TRUE(cache->contains(object3c->getObjectId()));
+  EXPECT_EQ(object3c, cache->getSimple(object3c->getObjectId()));
 }
 
 TEST(ObjectCache, testReinsert) {
@@ -209,22 +209,22 @@ TEST(ObjectCache, testReinsert) {
       ObjectCache<CacheObject, ObjectCacheFlavor::Simple, FakeStats>::create(
           10, 1, makeRefPtr<EdenStats>());
 
-  cache->insertSimple(object3->getHash(), object3);
-  cache->insertSimple(object3a->getHash(), object3a);
-  cache->insertSimple(object3b->getHash(), object3b);
-  cache->insertSimple(object3c->getHash(), object3c);
-  cache->insertSimple(object3->getHash(), object3);
+  cache->insertSimple(object3->getObjectId(), object3);
+  cache->insertSimple(object3a->getObjectId(), object3a);
+  cache->insertSimple(object3b->getObjectId(), object3b);
+  cache->insertSimple(object3c->getObjectId(), object3c);
+  cache->insertSimple(object3->getObjectId(), object3);
 
-  EXPECT_TRUE(cache->contains(object3->getHash()));
-  EXPECT_EQ(object3, cache->getSimple(object3->getHash()));
-  EXPECT_FALSE(cache->contains(object3a->getHash()));
+  EXPECT_TRUE(cache->contains(object3->getObjectId()));
+  EXPECT_EQ(object3, cache->getSimple(object3->getObjectId()));
+  EXPECT_FALSE(cache->contains(object3a->getObjectId()));
   EXPECT_EQ(
       std::shared_ptr<CacheObject>{nullptr},
-      cache->getSimple(object3a->getHash()));
-  EXPECT_TRUE(cache->contains(object3b->getHash()));
-  EXPECT_EQ(object3b, cache->getSimple(object3b->getHash()));
-  EXPECT_TRUE(cache->contains(object3c->getHash()));
-  EXPECT_EQ(object3c, cache->getSimple(object3c->getHash()));
+      cache->getSimple(object3a->getObjectId()));
+  EXPECT_TRUE(cache->contains(object3b->getObjectId()));
+  EXPECT_EQ(object3b, cache->getSimple(object3b->getObjectId()));
+  EXPECT_TRUE(cache->contains(object3c->getObjectId()));
+  EXPECT_EQ(object3c, cache->getSimple(object3c->getObjectId()));
 }
 
 /**
@@ -235,18 +235,20 @@ TEST(ObjectCache, interest_handle_evicts_oldest_on_insertion) {
   auto cache =
       ObjectCache<CacheObject, ObjectCacheFlavor::InterestHandle, FakeStats>::
           create(10, 0, makeRefPtr<EdenStats>());
-  cache->insertInterestHandle(object3->getHash(), object3);
+  cache->insertInterestHandle(object3->getObjectId(), object3);
   cache->insertInterestHandle(
-      object4->getHash(),
+      object4->getObjectId(),
       object4); // object4 is considered more recent than object3
   EXPECT_EQ(7, cache->getTotalSizeBytes());
-  cache->insertInterestHandle(object5->getHash(), object5); // evicts object3
+  cache->insertInterestHandle(
+      object5->getObjectId(), object5); // evicts object3
   EXPECT_EQ(9, cache->getTotalSizeBytes());
   EXPECT_EQ(nullptr, cache->getInterestHandle(hash3).object)
       << "Inserting object5 should evict oldest (object3)";
   EXPECT_EQ(object4, cache->getInterestHandle(hash4).object)
       << "But object4 still fits";
-  cache->insertInterestHandle(object3->getHash(), object3); // evicts object5
+  cache->insertInterestHandle(
+      object3->getObjectId(), object3); // evicts object5
   EXPECT_EQ(7, cache->getTotalSizeBytes());
   EXPECT_EQ(nullptr, cache->getInterestHandle(hash5).object)
       << "Inserting object3 again evicts object5 because object4 was accessed";
@@ -259,9 +261,9 @@ TEST(
   auto cache =
       ObjectCache<CacheObject, ObjectCacheFlavor::InterestHandle, FakeStats>::
           create(10, 0, makeRefPtr<EdenStats>());
-  cache->insertInterestHandle(object3->getHash(), object3);
-  cache->insertInterestHandle(object4->getHash(), object4);
-  cache->insertInterestHandle(object9->getHash(), object9);
+  cache->insertInterestHandle(object3->getObjectId(), object3);
+  cache->insertInterestHandle(object4->getObjectId(), object4);
+  cache->insertInterestHandle(object9->getObjectId(), object9);
   EXPECT_FALSE(cache->getInterestHandle(hash3).object);
   EXPECT_FALSE(cache->getInterestHandle(hash4).object);
   EXPECT_EQ(object9, cache->getInterestHandle(hash9).object);
@@ -273,10 +275,10 @@ TEST(
   auto cache =
       ObjectCache<CacheObject, ObjectCacheFlavor::InterestHandle, FakeStats>::
           create(8, 0, makeRefPtr<EdenStats>());
-  cache->insertInterestHandle(object3->getHash(), object3);
-  cache->insertInterestHandle(object4->getHash(), object4);
-  cache->insertInterestHandle(object3->getHash(), object3);
-  cache->insertInterestHandle(object5->getHash(), object5); // evicts 4
+  cache->insertInterestHandle(object3->getObjectId(), object3);
+  cache->insertInterestHandle(object4->getObjectId(), object4);
+  cache->insertInterestHandle(object3->getObjectId(), object3);
+  cache->insertInterestHandle(object5->getObjectId(), object5); // evicts 4
 
   EXPECT_EQ(object3, cache->getInterestHandle(hash3).object);
   EXPECT_FALSE(cache->getInterestHandle(hash4).object);
@@ -289,9 +291,9 @@ TEST(
   auto cache =
       ObjectCache<CacheObject, ObjectCacheFlavor::InterestHandle, FakeStats>::
           create(1, 3, makeRefPtr<EdenStats>());
-  cache->insertInterestHandle(object3->getHash(), object3);
-  cache->insertInterestHandle(object4->getHash(), object4);
-  cache->insertInterestHandle(object5->getHash(), object5);
+  cache->insertInterestHandle(object3->getObjectId(), object3);
+  cache->insertInterestHandle(object4->getObjectId(), object4);
+  cache->insertInterestHandle(object5->getObjectId(), object5);
 
   EXPECT_EQ(12, cache->getTotalSizeBytes());
   EXPECT_TRUE(cache->getInterestHandle(hash3).object);
@@ -303,10 +305,10 @@ TEST(ObjectCache, interest_handle_preserves_minimum_number_of_entries) {
   auto cache =
       ObjectCache<CacheObject, ObjectCacheFlavor::InterestHandle, FakeStats>::
           create(1, 3, makeRefPtr<EdenStats>());
-  cache->insertInterestHandle(object3->getHash(), object3);
-  cache->insertInterestHandle(object4->getHash(), object4);
-  cache->insertInterestHandle(object5->getHash(), object5);
-  cache->insertInterestHandle(object6->getHash(), object6);
+  cache->insertInterestHandle(object3->getObjectId(), object3);
+  cache->insertInterestHandle(object4->getObjectId(), object4);
+  cache->insertInterestHandle(object5->getObjectId(), object5);
+  cache->insertInterestHandle(object6->getObjectId(), object6);
 
   EXPECT_EQ(15, cache->getTotalSizeBytes());
   EXPECT_FALSE(cache->getInterestHandle(hash3).object);
@@ -398,12 +400,12 @@ TEST(
   auto object = std::make_shared<CacheObject>(hash3, 3);
   auto weak = std::weak_ptr<CacheObject>{object};
   auto handle1 = cache->insertInterestHandle(
-      object->getHash(),
+      object->getObjectId(),
       object,
       ObjectCache<CacheObject, ObjectCacheFlavor::InterestHandle, FakeStats>::
           Interest::WantHandle);
   auto handle2 = cache->insertInterestHandle(
-      object->getHash(),
+      object->getObjectId(),
       object,
       ObjectCache<CacheObject, ObjectCacheFlavor::InterestHandle, FakeStats>::
           Interest::WantHandle);
@@ -456,11 +458,11 @@ TEST(ObjectCache, interest_handle_redundant_inserts_are_ignored) {
       ObjectCache<CacheObject, ObjectCacheFlavor::InterestHandle, FakeStats>::
           create(10, 0, makeRefPtr<EdenStats>());
   auto object = std::make_shared<CacheObject>(ObjectId{}, 9);
-  cache->insertInterestHandle(object->getHash(), object);
+  cache->insertInterestHandle(object->getObjectId(), object);
   EXPECT_EQ(9, cache->getTotalSizeBytes());
-  cache->insertInterestHandle(object->getHash(), object);
+  cache->insertInterestHandle(object->getObjectId(), object);
   EXPECT_EQ(9, cache->getTotalSizeBytes());
-  cache->insertInterestHandle(object->getHash(), object);
+  cache->insertInterestHandle(object->getObjectId(), object);
   EXPECT_EQ(9, cache->getTotalSizeBytes());
 }
 
@@ -471,12 +473,12 @@ TEST(
       ObjectCache<CacheObject, ObjectCacheFlavor::InterestHandle, FakeStats>::
           create(10, 0, makeRefPtr<EdenStats>());
   auto handle3 = cache->insertInterestHandle(
-      object3->getHash(),
+      object3->getObjectId(),
       object3,
       ObjectCache<CacheObject, ObjectCacheFlavor::InterestHandle, FakeStats>::
           Interest::WantHandle);
   cache->insertInterestHandle(
-      object3->getHash(),
+      object3->getObjectId(),
       object3,
       ObjectCache<CacheObject, ObjectCacheFlavor::InterestHandle, FakeStats>::
           Interest::WantHandle);
@@ -503,7 +505,7 @@ TEST(
   // Normally, inserting object5 would cause object3 to get evicted since it was
   // the first one inserted. Access object3 through its interest handle.
   EXPECT_TRUE(handle3.getObject());
-  cache->insertInterestHandle(object5->getHash(), object5);
+  cache->insertInterestHandle(object5->getObjectId(), object5);
   EXPECT_TRUE(handle3.getObject());
   EXPECT_EQ(nullptr, handle4.getObject());
 }
@@ -514,9 +516,9 @@ TEST(ObjectCache, interest_handle_can_return_object_even_if_it_was_evicted) {
           create(10, 0, makeRefPtr<EdenStats>());
   // Insert multiple objects that are never collected. Also, don't ask for
   // scoped interest.
-  auto handle3 = cache->insertInterestHandle(object3->getHash(), object3);
-  auto handle4 = cache->insertInterestHandle(object4->getHash(), object4);
-  auto handle5 = cache->insertInterestHandle(object5->getHash(), object5);
+  auto handle3 = cache->insertInterestHandle(object3->getObjectId(), object3);
+  auto handle4 = cache->insertInterestHandle(object4->getObjectId(), object4);
+  auto handle5 = cache->insertInterestHandle(object5->getObjectId(), object5);
 
   EXPECT_FALSE(cache->getInterestHandle(hash3).object)
       << "Inserting object5 evicts object3";
@@ -533,12 +535,12 @@ TEST(
       ObjectCache<CacheObject, ObjectCacheFlavor::InterestHandle, FakeStats>::
           create(10, 0, makeRefPtr<EdenStats>());
   auto handle3 = cache->insertInterestHandle(
-      object3->getHash(),
+      object3->getObjectId(),
       object3,
       ObjectCache<CacheObject, ObjectCacheFlavor::InterestHandle, FakeStats>::
           Interest::WantHandle);
   cache->clear();
-  cache->insertInterestHandle(object3->getHash(), object3);
+  cache->insertInterestHandle(object3->getObjectId(), object3);
   handle3.reset();
   EXPECT_TRUE(cache->contains(hash3));
 }
@@ -550,14 +552,14 @@ TEST(
       ObjectCache<CacheObject, ObjectCacheFlavor::InterestHandle, FakeStats>::
           create(10, 0, makeRefPtr<EdenStats>());
   auto handle3 = cache->insertInterestHandle(
-      object3->getHash(),
+      object3->getObjectId(),
       object3,
       ObjectCache<CacheObject, ObjectCacheFlavor::InterestHandle, FakeStats>::
           Interest::WantHandle);
-  cache->insertInterestHandle(object4->getHash(), object4);
-  cache->insertInterestHandle(object5->getHash(), object5);
+  cache->insertInterestHandle(object4->getObjectId(), object4);
+  cache->insertInterestHandle(object5->getObjectId(), object5);
   auto handle3again = cache->insertInterestHandle(
-      object3->getHash(),
+      object3->getObjectId(),
       object3,
       ObjectCache<CacheObject, ObjectCacheFlavor::InterestHandle, FakeStats>::
           Interest::WantHandle);

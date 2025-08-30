@@ -81,7 +81,7 @@ class DirEntry {
    * The returned reference is only valid while the TreeInode's contents lock is
    * held.
    */
-  const ObjectId& getHash() const {
+  const ObjectId& getObjectId() const {
     // TODO: In the future we should probably only allow callers to invoke
     // this method when inode is not set.  If inode is set it should be the
     // authoritative source of data.

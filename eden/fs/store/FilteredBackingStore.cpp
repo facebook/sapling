@@ -234,14 +234,14 @@ FilteredBackingStore::filterImpl(
                     // We can't guarantee all the trees descendents are
                     // filtered, so we need to create a normal tree FOID
                     auto foid = FilteredObjectId(
-                        relPath.piece(), filterId, entry->second.getHash());
+                        relPath.piece(), filterId, entry->second.getObjectId());
                     oid = ObjectId{foid.getValue()};
                   } else {
                     // We can guarantee that all the descendents of this tree
                     // are unfiltered. We can special case this tree to avoid
                     // recursive filter lookups in the future.
                     auto foid = FilteredObjectId{
-                        entry->second.getHash(),
+                        entry->second.getObjectId(),
                         FilteredObjectIdType::OBJECT_TYPE_UNFILTERED_TREE};
                     oid = ObjectId{foid.getValue()};
                   }
@@ -249,7 +249,7 @@ FilteredBackingStore::filterImpl(
                   // Blobs are the same regardless of recursive/non-recursive
                   // FilterCoverage.
                   auto foid = FilteredObjectId{
-                      entry->second.getHash(),
+                      entry->second.getObjectId(),
                       FilteredObjectIdType::OBJECT_TYPE_BLOB};
                   oid = ObjectId{foid.getValue()};
                 }

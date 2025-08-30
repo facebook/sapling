@@ -4670,7 +4670,7 @@ void EdenServiceHandler::debugGetScmTree(
     auto& out = entries.back();
     out.name() = name.asString();
     out.mode() = modeFromTreeEntryType(treeEntry.getType());
-    out.id() = store.renderObjectId(treeEntry.getHash());
+    out.id() = store.renderObjectId(treeEntry.getObjectId());
   }
 }
 

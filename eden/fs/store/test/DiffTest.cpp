@@ -550,7 +550,8 @@ TEST_F(DiffTest, nonignored_added_modified_and_removed_files) {
   backingStore_->putCommit("2", builder2)->setReady();
 
   auto result = diffCommitsWithGitIgnore(
-      builder.getRoot()->get().getHash(), builder2.getRoot()->get().getHash());
+      builder.getRoot()->get().getObjectId(),
+      builder2.getRoot()->get().getObjectId());
   EXPECT_THAT(*result.errors(), UnorderedElementsAre());
   EXPECT_THAT(
       *result.entries(),
@@ -580,7 +581,8 @@ TEST_F(DiffTest, nonignored_added_files) {
   backingStore_->putCommit("2", builder2)->setReady();
 
   auto result = diffCommitsWithGitIgnore(
-      builder.getRoot()->get().getHash(), builder2.getRoot()->get().getHash());
+      builder.getRoot()->get().getObjectId(),
+      builder2.getRoot()->get().getObjectId());
   EXPECT_THAT(*result.errors(), UnorderedElementsAre());
   EXPECT_THAT(
       *result.entries(),
@@ -599,7 +601,7 @@ TEST_F(DiffTest, nonignored_added_files) {
                      RelativePathPiece{"src/bar/foo"},
                      builder2.getStoredTree(RelativePathPiece{"src/bar/foo"})
                          ->get()
-                         .getHash())
+                         .getObjectId())
                      .thenValue([callback = std::move(callback2)](auto&&) {
                        return callback->extractStatus();
                      })
@@ -633,7 +635,8 @@ TEST_F(DiffTest, nonignored_removed_files) {
   backingStore_->putCommit("2", builder2)->setReady();
 
   auto result = diffCommitsWithGitIgnore(
-      builder.getRoot()->get().getHash(), builder2.getRoot()->get().getHash());
+      builder.getRoot()->get().getObjectId(),
+      builder2.getRoot()->get().getObjectId());
   EXPECT_THAT(*result.errors(), UnorderedElementsAre());
   EXPECT_THAT(
       *result.entries(),
@@ -652,7 +655,7 @@ TEST_F(DiffTest, nonignored_removed_files) {
                      RelativePathPiece{"src/bar/foo"},
                      builder.getStoredTree(RelativePathPiece{"src/bar/foo"})
                          ->get()
-                         .getHash())
+                         .getObjectId())
                      .thenValue([callback = std::move(callback2)](auto&&) {
                        return callback->extractStatus();
                      })
@@ -691,7 +694,8 @@ TEST_F(DiffTest, diff_trees_with_tracked_ignored_file_modified) {
   backingStore_->putCommit("2", builder2)->setReady();
 
   auto result = diffCommitsWithGitIgnore(
-      builder.getRoot()->get().getHash(), builder2.getRoot()->get().getHash());
+      builder.getRoot()->get().getObjectId(),
+      builder2.getRoot()->get().getObjectId());
   EXPECT_THAT(*result.errors(), UnorderedElementsAre());
   EXPECT_THAT(
       *result.entries(),
@@ -725,7 +729,8 @@ TEST_F(DiffTest, ignored_added_modified_and_removed_files) {
   backingStore_->putCommit("2", builder2)->setReady();
 
   auto result = diffCommitsWithGitIgnore(
-      builder.getRoot()->get().getHash(), builder2.getRoot()->get().getHash());
+      builder.getRoot()->get().getObjectId(),
+      builder2.getRoot()->get().getObjectId());
   EXPECT_THAT(*result.errors(), UnorderedElementsAre());
   EXPECT_THAT(
       *result.entries(),
@@ -757,7 +762,8 @@ TEST_F(DiffTest, ignored_added_files) {
   backingStore_->putCommit("2", builder2)->setReady();
 
   auto result = diffCommitsWithGitIgnore(
-      builder.getRoot()->get().getHash(), builder2.getRoot()->get().getHash());
+      builder.getRoot()->get().getObjectId(),
+      builder2.getRoot()->get().getObjectId());
   EXPECT_THAT(*result.errors(), UnorderedElementsAre());
   EXPECT_THAT(
       *result.entries(),
@@ -792,7 +798,8 @@ TEST_F(DiffTest, ignored_removed_files) {
   backingStore_->putCommit("2", builder2)->setReady();
 
   auto result = diffCommitsWithGitIgnore(
-      builder.getRoot()->get().getHash(), builder2.getRoot()->get().getHash());
+      builder.getRoot()->get().getObjectId(),
+      builder2.getRoot()->get().getObjectId());
   EXPECT_THAT(*result.errors(), UnorderedElementsAre());
   EXPECT_THAT(
       *result.entries(),
@@ -826,7 +833,8 @@ TEST_F(DiffTest, ignoreToplevelOnly) {
   backingStore_->putCommit("2", builder2)->setReady();
 
   auto result = diffCommitsWithGitIgnore(
-      builder.getRoot()->get().getHash(), builder2.getRoot()->get().getHash());
+      builder.getRoot()->get().getObjectId(),
+      builder2.getRoot()->get().getObjectId());
 
   EXPECT_THAT(*result.errors(), UnorderedElementsAre());
   EXPECT_THAT(
@@ -871,7 +879,8 @@ TEST_F(DiffTest, ignored_file_local_and_in_tree) {
   backingStore_->putCommit("2", builder2)->setReady();
 
   auto result = diffCommitsWithGitIgnore(
-      builder.getRoot()->get().getHash(), builder2.getRoot()->get().getHash());
+      builder.getRoot()->get().getObjectId(),
+      builder2.getRoot()->get().getObjectId());
   EXPECT_THAT(
       *result.entries(),
       UnorderedElementsAre(
@@ -916,7 +925,8 @@ TEST_F(DiffTest, ignored_file_not_local_but_is_in_tree) {
   backingStore_->putCommit("2", builder2)->setReady();
 
   auto result = diffCommitsWithGitIgnore(
-      builder.getRoot()->get().getHash(), builder2.getRoot()->get().getHash());
+      builder.getRoot()->get().getObjectId(),
+      builder2.getRoot()->get().getObjectId());
   EXPECT_THAT(
       *result.entries(),
       UnorderedElementsAre(
@@ -949,8 +959,8 @@ TEST_F(DiffTest, ignoreSystemLevelAndUser) {
   backingStore_->putCommit("2", builder2)->setReady();
 
   auto result = diffCommitsWithGitIgnore(
-      builder.getRoot()->get().getHash(),
-      builder2.getRoot()->get().getHash(),
+      builder.getRoot()->get().getObjectId(),
+      builder2.getRoot()->get().getObjectId(),
       "skip_global.txt\n",
       "skip_user.txt\n");
   EXPECT_THAT(
@@ -980,8 +990,8 @@ TEST_F(DiffTest, ignoreUserLevel) {
   backingStore_->putCommit("2", builder2)->setReady();
 
   auto result = diffCommitsWithGitIgnore(
-      builder.getRoot()->get().getHash(),
-      builder2.getRoot()->get().getHash(),
+      builder.getRoot()->get().getObjectId(),
+      builder2.getRoot()->get().getObjectId(),
       "",
       "skip_user.txt\n");
   EXPECT_THAT(
@@ -1011,8 +1021,8 @@ TEST_F(DiffTest, ignoreSystemLevel) {
   backingStore_->putCommit("2", builder2)->setReady();
 
   auto result = diffCommitsWithGitIgnore(
-      builder.getRoot()->get().getHash(),
-      builder2.getRoot()->get().getHash(),
+      builder.getRoot()->get().getObjectId(),
+      builder2.getRoot()->get().getObjectId(),
       "skip_global.txt\n",
       "");
   EXPECT_THAT(
@@ -1047,7 +1057,8 @@ TEST_F(DiffTest, directory_to_file_with_directory_ignored) {
   backingStore_->putCommit("2", builder2)->setReady();
 
   auto result = diffCommitsWithGitIgnore(
-      builder.getRoot()->get().getHash(), builder2.getRoot()->get().getHash());
+      builder.getRoot()->get().getObjectId(),
+      builder2.getRoot()->get().getObjectId());
   EXPECT_THAT(
       *result.entries(),
       UnorderedElementsAre(
@@ -1082,7 +1093,8 @@ TEST_F(DiffTest, directory_to_file_with_file_ignored) {
   backingStore_->putCommit("2", builder2)->setReady();
 
   auto result = diffCommitsWithGitIgnore(
-      builder.getRoot()->get().getHash(), builder2.getRoot()->get().getHash());
+      builder.getRoot()->get().getObjectId(),
+      builder2.getRoot()->get().getObjectId());
   EXPECT_THAT(
       *result.entries(),
       UnorderedElementsAre(
@@ -1117,7 +1129,8 @@ TEST_F(DiffTest, file_to_directory_with_gitignore) {
   backingStore_->putCommit("2", builder2)->setReady();
 
   auto result = diffCommitsWithGitIgnore(
-      builder.getRoot()->get().getHash(), builder2.getRoot()->get().getHash());
+      builder.getRoot()->get().getObjectId(),
+      builder2.getRoot()->get().getObjectId());
   EXPECT_THAT(
       *result.entries(),
       UnorderedElementsAre(
@@ -1157,8 +1170,8 @@ TEST_F(DiffTest, addIgnoredDirectory) {
   // is excluded.
   auto systemIgnore = "a/b/r/\n!a/b/r/d/g.txt\n";
   auto result = diffCommitsWithGitIgnore(
-      builder.getRoot()->get().getHash(),
-      builder2.getRoot()->get().getHash(),
+      builder.getRoot()->get().getObjectId(),
+      builder2.getRoot()->get().getObjectId(),
       systemIgnore);
 
   EXPECT_THAT(
@@ -1196,8 +1209,8 @@ TEST_F(DiffTest, nestedGitIgnoreFiles) {
 
   auto systemIgnore = "a/b/r/*\n!a/b/r/.gitignore\n";
   auto result = diffCommitsWithGitIgnore(
-      builder.getRoot()->get().getHash(),
-      builder2.getRoot()->get().getHash(),
+      builder.getRoot()->get().getObjectId(),
+      builder2.getRoot()->get().getObjectId(),
       systemIgnore);
   EXPECT_THAT(
       *result.entries(),
@@ -1228,7 +1241,8 @@ TEST_F(DiffTest, hiddenFolder) {
   backingStore_->putCommit("2", builder2)->setReady();
 
   auto result = diffCommitsWithGitIgnore(
-      builder.getRoot()->get().getHash(), builder2.getRoot()->get().getHash());
+      builder.getRoot()->get().getObjectId(),
+      builder2.getRoot()->get().getObjectId());
   EXPECT_THAT(
       *result.entries(),
       UnorderedElementsAre(std::make_pair("a/c.txt", ScmFileStatus::ADDED)));
@@ -1246,8 +1260,8 @@ TEST_F(DiffTest, caseSensitivity) {
   backingStore_->putCommit("2", builder2)->setReady();
 
   auto resultInsensitive = diffCommitsWithGitIgnore(
-      builder1.getRoot()->get().getHash(),
-      builder2.getRoot()->get().getHash(),
+      builder1.getRoot()->get().getObjectId(),
+      builder2.getRoot()->get().getObjectId(),
       "",
       "",
       true,
@@ -1255,8 +1269,8 @@ TEST_F(DiffTest, caseSensitivity) {
   EXPECT_THAT(*resultInsensitive.entries(), UnorderedElementsAre());
 
   auto resultSensitive = diffCommitsWithGitIgnore(
-      builder1.getRoot()->get().getHash(),
-      builder2.getRoot()->get().getHash(),
+      builder1.getRoot()->get().getObjectId(),
+      builder2.getRoot()->get().getObjectId(),
       "",
       "",
       true,
@@ -1346,8 +1360,8 @@ TEST_F(DiffTest, directoryDiff) {
   diffTrees(
       diffContext.get(),
       RelativePathPiece{},
-      builder1.getRoot()->get().getHash(),
-      builder2.getRoot()->get().getHash())
+      builder1.getRoot()->get().getObjectId(),
+      builder2.getRoot()->get().getObjectId())
       .get();
   auto status = callback->extractStatus();
   EXPECT_THAT(

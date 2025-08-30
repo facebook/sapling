@@ -224,14 +224,14 @@ void LocalStore::putTree(const Tree& tree) {
   auto serialized = LocalStore::serializeTree(tree);
   ByteRange treeData = serialized.coalesce();
 
-  put(KeySpace::TreeFamily, tree.getHash().getBytes(), treeData);
+  put(KeySpace::TreeFamily, tree.getObjectId().getBytes(), treeData);
 }
 
 void LocalStore::WriteBatch::putTree(const Tree& tree) {
   auto serialized = LocalStore::serializeTree(tree);
   ByteRange treeData = serialized.coalesce();
 
-  put(KeySpace::TreeFamily, tree.getHash().getBytes(), treeData);
+  put(KeySpace::TreeFamily, tree.getObjectId().getBytes(), treeData);
 }
 
 void LocalStore::putBlob(const ObjectId& id, const Blob* blob) {

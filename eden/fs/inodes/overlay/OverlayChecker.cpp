@@ -168,8 +168,10 @@ class OverlayChecker::RepairState {
     if (treeOrTreeEntry.hasValue()) {
       ObjectId hash = std::visit(
           folly::overload(
-              [](std::shared_ptr<const Tree>& tree) { return tree->getHash(); },
-              [](TreeEntry& treeEntry) { return treeEntry.getHash(); }),
+              [](std::shared_ptr<const Tree>& tree) {
+                return tree->getObjectId();
+              },
+              [](TreeEntry& treeEntry) { return treeEntry.getObjectId(); }),
           treeOrTreeEntry.value());
 
       auto parentDirOpt = inodeCatalog()->loadOverlayDir(parent);

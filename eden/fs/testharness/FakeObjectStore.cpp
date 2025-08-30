@@ -24,7 +24,7 @@ FakeObjectStore::FakeObjectStore() = default;
 FakeObjectStore::~FakeObjectStore() = default;
 
 void FakeObjectStore::addTree(Tree&& tree) {
-  auto treeHash = tree.getHash();
+  auto treeHash = tree.getObjectId();
   trees_.emplace(std::move(treeHash), std::move(tree));
 }
 
@@ -53,7 +53,7 @@ ImmediateFuture<IObjectStore::GetRootTreeResult> FakeObjectStore::getRootTree(
         fmt::format("tree data for commit {} not found", commitID)));
   }
   auto tree = make_shared<const Tree>(iter->second);
-  return GetRootTreeResult{tree, tree->getHash()};
+  return GetRootTreeResult{tree, tree->getObjectId()};
 }
 
 ImmediateFuture<std::shared_ptr<const Tree>> FakeObjectStore::getTree(

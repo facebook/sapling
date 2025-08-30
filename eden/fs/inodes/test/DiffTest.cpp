@@ -1491,7 +1491,7 @@ TEST(DiffTest, fileNotReady) {
   auto rootTree2 = builder2.finalize(backingStore, /*setReady=*/false);
   auto commitHash2 = mount.nextCommitHash();
   auto* commit2 =
-      backingStore->putCommit(commitHash2, rootTree2->get().getHash());
+      backingStore->putCommit(commitHash2, rootTree2->get().getObjectId());
   commit2->setReady();
   builder2.getRoot()->setReady();
 
@@ -1619,7 +1619,7 @@ TEST(DiffTest, cancelledDiff) {
   auto rootTree2 = builder2.finalize(backingStore, /*setReady=*/false);
   auto commitHash2 = mount.nextCommitHash();
   auto* commit2 =
-      backingStore->putCommit(commitHash2, rootTree2->get().getHash());
+      backingStore->putCommit(commitHash2, rootTree2->get().getObjectId());
   commit2->setReady();
   builder2.getRoot()->setReady();
 
@@ -1729,7 +1729,7 @@ TEST_F(DiffTestNonMateralized, diff_modified_trees_top_level_not_materialized) {
   auto rootTree2 = builder2.finalize(backingStore, /*setReady=*/true);
   auto commitHash2 = testMount_.nextCommitHash();
   auto* commit2 =
-      backingStore->putCommit(commitHash2, rootTree2->get().getHash());
+      backingStore->putCommit(commitHash2, rootTree2->get().getObjectId());
   commit2->setReady();
 
   // Run the diff. This will enter store/Diff.cpp via root/src using
@@ -1768,7 +1768,7 @@ TEST_F(
   auto rootTree2 = builder2.finalize(backingStore, /*setReady=*/true);
   auto commitHash2 = testMount_.nextCommitHash();
   auto* commit2 =
-      backingStore->putCommit(commitHash2, rootTree2->get().getHash());
+      backingStore->putCommit(commitHash2, rootTree2->get().getObjectId());
   commit2->setReady();
 
   // Run the diff. This will enter store/Diff.cpp via root/src using
@@ -1807,7 +1807,7 @@ TEST_F(DiffTestNonMateralized, diff_modified_trees_low_level_not_materialized) {
   auto rootTree2 = builder2.finalize(backingStore, /*setReady=*/true);
   auto commitHash2 = testMount_.nextCommitHash();
   auto* commit2 =
-      backingStore->putCommit(commitHash2, rootTree2->get().getHash());
+      backingStore->putCommit(commitHash2, rootTree2->get().getObjectId());
   commit2->setReady();
 
   // Run the diff. This will enter store/Diff.cpp via root/doc/src using
@@ -1852,7 +1852,7 @@ TEST_F(
   auto rootTree2 = builder2.finalize(backingStore, /*setReady=*/true);
   auto commitHash2 = testMount_.nextCommitHash();
   auto* commit2 =
-      backingStore->putCommit(commitHash2, rootTree2->get().getHash());
+      backingStore->putCommit(commitHash2, rootTree2->get().getObjectId());
   commit2->setReady();
 
   // Run the diff. This will enter store/Diff.cpp via root/doc/src using
@@ -1888,7 +1888,7 @@ TEST_F(DiffTestNonMateralized, diff_added_tree_top_level_not_materialized) {
   auto rootTree2 = builder2.finalize(backingStore, /*setReady=*/true);
   auto commitHash2 = testMount_.nextCommitHash();
   auto* commit2 =
-      backingStore->putCommit(commitHash2, rootTree2->get().getHash());
+      backingStore->putCommit(commitHash2, rootTree2->get().getObjectId());
   commit2->setReady();
 
   // Run the diff. This will enter store/Diff.cpp via root/src using
@@ -1928,7 +1928,7 @@ TEST_F(
   auto rootTree2 = builder2.finalize(backingStore, /*setReady=*/true);
   auto commitHash2 = testMount_.nextCommitHash();
   auto* commit2 =
-      backingStore->putCommit(commitHash2, rootTree2->get().getHash());
+      backingStore->putCommit(commitHash2, rootTree2->get().getObjectId());
   commit2->setReady();
 
   // Run the diff. This will enter store/Diff.cpp via root/src using
@@ -1964,7 +1964,7 @@ TEST_F(DiffTestNonMateralized, diff_removed_tree_top_level_not_materialized) {
   auto rootTree2 = builder2.finalize(backingStore, /*setReady=*/true);
   auto commitHash2 = testMount_.nextCommitHash();
   auto* commit2 =
-      backingStore->putCommit(commitHash2, rootTree2->get().getHash());
+      backingStore->putCommit(commitHash2, rootTree2->get().getObjectId());
   commit2->setReady();
 
   // Run the diff. This will enter store/Diff.cpp via root/src using
@@ -2003,7 +2003,7 @@ TEST_F(
   auto rootTree2 = builder2.finalize(backingStore, /*setReady=*/true);
   auto commitHash2 = testMount_.nextCommitHash();
   auto* commit2 =
-      backingStore->putCommit(commitHash2, rootTree2->get().getHash());
+      backingStore->putCommit(commitHash2, rootTree2->get().getObjectId());
   commit2->setReady();
 
   // Run the diff. This will enter store/Diff.cpp via root/src using
@@ -2044,7 +2044,7 @@ TEST_F(DiffTestNonMateralized, diff_removed_tree_low_level_not_materialized) {
   auto rootTree2 = builder2.finalize(backingStore, /*setReady=*/true);
   auto commitHash2 = testMount_.nextCommitHash();
   auto* commit2 =
-      backingStore->putCommit(commitHash2, rootTree2->get().getHash());
+      backingStore->putCommit(commitHash2, rootTree2->get().getObjectId());
   commit2->setReady();
 
   // Run the diff. This will enter store/Diff.cpp via root/doc/src using

@@ -96,7 +96,7 @@ TEST(Dematerialize, test_dematerialization_migrates_to_the_new_ID_scheme) {
   auto* root2 = builder2.finalize(backingStore, /*setReady=*/true);
 
   // The two trees should have different IDs, even if contents are identical.
-  EXPECT_NE(root1->get().getHash(), root2->get().getHash());
+  EXPECT_NE(root1->get().getObjectId(), root2->get().getObjectId());
 
   backingStore->putCommit("1", builder1)->setReady();
   backingStore->putCommit("2", builder2)->setReady();

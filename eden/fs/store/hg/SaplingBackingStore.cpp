@@ -1599,16 +1599,16 @@ SaplingBackingStore::getRootTree(
                         DBG1,
                         "imported mercurial commit {} as tree {}",
                         commitId,
-                        rootTree->getHash());
+                        rootTree->getObjectId());
                     stats_->addDuration(
                         &SaplingBackingStoreStats::getRootTree,
                         watch.elapsed());
                     localStore_->put(
                         KeySpace::HgCommitToTreeFamily,
                         commitId,
-                        rootTree->getHash().getBytes());
+                        rootTree->getObjectId().getBytes());
                     return BackingStore::GetRootTreeResult{
-                        rootTree, rootTree->getHash()};
+                        rootTree, rootTree->getObjectId()};
                   });
             }
 
@@ -1624,7 +1624,8 @@ SaplingBackingStore::getRootTree(
                 .thenValue([this, watch](TreePtr tree) {
                   stats_->addDuration(
                       &SaplingBackingStoreStats::getRootTree, watch.elapsed());
-                  return BackingStore::GetRootTreeResult{tree, tree->getHash()};
+                  return BackingStore::GetRootTreeResult{
+                      tree, tree->getObjectId()};
                 });
           });
 }
@@ -2051,14 +2052,14 @@ ImmediateFuture<folly::Unit> SaplingBackingStore::importManifestForRoot(
                       "imported mercurial commit {} with manifest {} as tree {}",
                       commitId,
                       manifestId,
-                      rootTree->getHash());
+                      rootTree->getObjectId());
                   stats_->addDuration(
                       &SaplingBackingStoreStats::importManifestForRoot,
                       watch.elapsed());
                   localStore_->put(
                       KeySpace::HgCommitToTreeFamily,
                       commitId,
-                      rootTree->getHash().getBytes());
+                      rootTree->getObjectId().getBytes());
                 });
           });
 }

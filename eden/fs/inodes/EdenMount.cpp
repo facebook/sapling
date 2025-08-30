@@ -1313,7 +1313,7 @@ class CanonicalizeProcessor {
         return makeImmediateFuture<RelativePath>(
             std::system_error(ENOTDIR, std::generic_category()));
       } else {
-        return objectStore_->getTree(it->second.getHash(), context_)
+        return objectStore_->getTree(it->second.getObjectId(), context_)
             .thenValue([this](std::shared_ptr<const Tree> tree) {
               return next(std::move(tree));
             });

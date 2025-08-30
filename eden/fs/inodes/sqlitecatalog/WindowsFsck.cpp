@@ -134,7 +134,7 @@ void populateScmState(
     FsckFileState& state,
     const TreeEntry& treeEntry,
     bool windowsSymlinksEnabled) {
-  state.scmHash = treeEntry.getHash();
+  state.scmHash = treeEntry.getObjectId();
   state.scmDtype =
       filteredEntryDtype(treeEntry.getDtype(), windowsSymlinksEnabled);
   state.inScm = true;

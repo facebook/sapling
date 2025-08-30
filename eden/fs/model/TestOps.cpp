@@ -10,7 +10,7 @@
 namespace facebook::eden {
 
 bool operator==(const TreeEntry& entry1, const TreeEntry& entry2) {
-  return (entry1.getHash() == entry2.getHash()) &&
+  return (entry1.getObjectId() == entry2.getObjectId()) &&
       (entry1.getType() == entry2.getType());
 }
 
@@ -19,7 +19,7 @@ bool operator!=(const TreeEntry& entry1, const TreeEntry& entry2) {
 }
 
 bool operator==(const Tree& tree1, const Tree& tree2) {
-  return (tree1.getHash() == tree2.getHash()) &&
+  return (tree1.getObjectId() == tree2.getObjectId()) &&
       (tree1.entries_ == tree2.entries_);
 }
 

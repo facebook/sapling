@@ -186,7 +186,7 @@ TEST(EdenMount, getTreeOrTreeEntry) {
             .get(0ms);
     auto& tree = std::get<std::shared_ptr<const Tree>>(variant);
     auto& storedTree = builder.getStoredTree("bar/baz"_relpath)->get();
-    EXPECT_EQ(tree->getHash(), storedTree.getHash());
+    EXPECT_EQ(tree->getObjectId(), storedTree.getObjectId());
   }
 
   {

@@ -132,7 +132,7 @@ struct ObjectStoreTest : public ::testing::TestWithParam<CaseSensitivity> {
         fakeBackingStoreWithTreeAuxPrefetching->putTree({});
     storedTree->setReady();
 
-    return storedTree->get().getHash();
+    return storedTree->get().getObjectId();
   }
 
   ObjectId putReadyTree(const Tree::container& entries) {
@@ -149,7 +149,7 @@ struct ObjectStoreTest : public ::testing::TestWithParam<CaseSensitivity> {
     StoredTree* storedTree =
         fakeBackingStoreWithTreeAuxPrefetching->putTree(entries);
     storedTree->setReady();
-    return storedTree->get().getHash();
+    return storedTree->get().getObjectId();
   }
 
   void putReadyGlob(

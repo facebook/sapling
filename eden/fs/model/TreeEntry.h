@@ -98,11 +98,6 @@ class TreeEntry {
     return hash_;
   }
 
-  // TODO: Replace with the more-accurate getObjectId() accessor.
-  const ObjectId& getHash() const {
-    return hash_;
-  }
-
   bool isTree() const {
     return type_ == TreeEntryType::TREE;
   }

@@ -157,7 +157,7 @@ TEST_F(FakeBackingStoreTest, getTree) {
           {"foo", foo_id},
           {"runme", runme_id, FakeBlobType::EXECUTABLE_FILE},
       });
-  EXPECT_EQ(makeTestHash("abc"), dir1->get().getHash());
+  EXPECT_EQ(makeTestHash("abc"), dir1->get().getObjectId());
   auto* dir2 =
       store_->putTree({{"README", store_->putBlob("docs go here").second}});
 
@@ -195,7 +195,7 @@ TEST_F(FakeBackingStoreTest, getTree) {
   ASSERT_TRUE(future3.isReady());
 
   auto tree2 = std::move(future2).get(0ms).tree;
-  EXPECT_EQ(rootHash, tree2->getHash());
+  EXPECT_EQ(rootHash, tree2->getObjectId());
   EXPECT_EQ(4, tree2->size());
 
   auto [barName, barTreeEntry] = *tree2->find("bar"_pc);
@@ -206,18 +206,18 @@ TEST_F(FakeBackingStoreTest, getTree) {
   EXPECT_EQ(TreeEntryType::REGULAR_FILE, barTreeEntry.getType());
   EXPECT_EQ(bar_id, barTreeEntry.getObjectId());
   EXPECT_EQ("dir1"_pc, dir1Name);
-  EXPECT_EQ(dir1->get().getHash(), dir1TreeEntry.getHash());
+  EXPECT_EQ(dir1->get().getObjectId(), dir1TreeEntry.getObjectId());
   EXPECT_EQ(TreeEntryType::TREE, dir1TreeEntry.getType());
   EXPECT_EQ("readonly"_pc, readonlyName);
-  EXPECT_EQ(dir2->get().getHash(), readonlyTreeEntry.getHash());
+  EXPECT_EQ(dir2->get().getObjectId(), readonlyTreeEntry.getObjectId());
   // TreeEntry objects only tracking the owner executable bit, so even though we
   // input the permissions as 0500 above this really ends up returning 0755
   EXPECT_EQ(TreeEntryType::TREE, readonlyTreeEntry.getType());
   EXPECT_EQ("zzz"_pc, zzzName);
-  EXPECT_EQ(foo_id, zzzTreeEntry.getHash());
+  EXPECT_EQ(foo_id, zzzTreeEntry.getObjectId());
   EXPECT_EQ(TreeEntryType::REGULAR_FILE, zzzTreeEntry.getType());
 
-  EXPECT_EQ(rootHash, std::move(future3).get(0ms).tree->getHash());
+  EXPECT_EQ(rootHash, std::move(future3).get(0ms).tree->getObjectId());
 
   // Now try using setReady()
   auto future4 = store_->getTree(rootHash, ObjectFetchContext::getNullContext())
@@ -226,13 +226,13 @@ TEST_F(FakeBackingStoreTest, getTree) {
   rootDir->setReady();
   executor.drain();
   ASSERT_TRUE(future4.isReady());
-  EXPECT_EQ(rootHash, std::move(future4).get(0ms).tree->getHash());
+  EXPECT_EQ(rootHash, std::move(future4).get(0ms).tree->getObjectId());
 
   auto future5 = store_->getTree(rootHash, ObjectFetchContext::getNullContext())
                      .via(&executor);
   executor.drain();
   ASSERT_TRUE(future5.isReady());
-  EXPECT_EQ(rootHash, std::move(future5).get(0ms).tree->getHash());
+  EXPECT_EQ(rootHash, std::move(future5).get(0ms).tree->getObjectId());
 }
 
 TEST_F(FakeBackingStoreTest, getRootTree) {

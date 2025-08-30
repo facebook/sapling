@@ -94,11 +94,11 @@ TEST(OverlayGoldMasterTest, can_load_overlay_v2) {
   EXPECT_EQ(2, rootTree.size());
   const auto& fileEntry = rootTree.at("file"_pc);
   EXPECT_EQ(2_ino, fileEntry.getInodeNumber());
-  EXPECT_EQ(hash1, fileEntry.getHash());
+  EXPECT_EQ(hash1, fileEntry.getObjectId());
   EXPECT_EQ(S_IFREG | 0644, fileEntry.getInitialMode());
   const auto& subdirEntry = rootTree.at("subdir"_pc);
   EXPECT_EQ(3_ino, subdirEntry.getInodeNumber());
-  EXPECT_EQ(hash2, subdirEntry.getHash());
+  EXPECT_EQ(hash2, subdirEntry.getObjectId());
   EXPECT_EQ(S_IFDIR | 0755, subdirEntry.getInitialMode());
 
   EXPECT_TRUE(
@@ -111,11 +111,11 @@ TEST(OverlayGoldMasterTest, can_load_overlay_v2) {
   EXPECT_EQ(2, subdir.size());
   const auto& emptyEntry = subdir.at("empty"_pc);
   EXPECT_EQ(4_ino, emptyEntry.getInodeNumber());
-  EXPECT_EQ(hash3, emptyEntry.getHash());
+  EXPECT_EQ(hash3, emptyEntry.getObjectId());
   EXPECT_EQ(S_IFDIR | 0755, emptyEntry.getInitialMode());
   const auto& helloEntry = subdir.at("hello"_pc);
   EXPECT_EQ(5_ino, helloEntry.getInodeNumber());
-  EXPECT_EQ(hash4, helloEntry.getHash());
+  EXPECT_EQ(hash4, helloEntry.getObjectId());
   EXPECT_EQ(S_IFREG | 0644, helloEntry.getInitialMode());
 
   ASSERT_TRUE(emptyDir.empty());

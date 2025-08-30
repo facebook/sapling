@@ -138,12 +138,12 @@ TEST_F(TreeCacheTest, testMultipleInsert) {
   cache->insert(tree1_id, tree1);
   cache->insert(tree2_id, tree2);
 
-  EXPECT_TRUE(cache->contains(tree0->getHash()));
-  EXPECT_EQ(tree0, cache->get(tree0->getHash()));
-  EXPECT_TRUE(cache->contains(tree1->getHash()));
-  EXPECT_EQ(tree1, cache->get(tree1->getHash()));
-  EXPECT_TRUE(cache->contains(tree2->getHash()));
-  EXPECT_EQ(tree2, cache->get(tree2->getHash()));
+  EXPECT_TRUE(cache->contains(tree0->getObjectId()));
+  EXPECT_EQ(tree0, cache->get(tree0->getObjectId()));
+  EXPECT_TRUE(cache->contains(tree1->getObjectId()));
+  EXPECT_EQ(tree1, cache->get(tree1->getObjectId()));
+  EXPECT_TRUE(cache->contains(tree2->getObjectId()));
+  EXPECT_EQ(tree2, cache->get(tree2->getObjectId()));
 }
 
 TEST_F(TreeCacheTest, testSizeOverflowInsert) {
@@ -152,21 +152,22 @@ TEST_F(TreeCacheTest, testSizeOverflowInsert) {
   cache->insert(tree2_id, tree2);
   cache->insert(tree3_id, tree3);
 
-  EXPECT_FALSE(cache->contains(tree0->getHash()));
-  EXPECT_EQ(std::shared_ptr<const Tree>{nullptr}, cache->get(tree0->getHash()));
-  EXPECT_TRUE(cache->contains(tree1->getHash()));
-  EXPECT_EQ(tree1, cache->get(tree1->getHash()));
-  EXPECT_TRUE(cache->contains(tree2->getHash()));
-  EXPECT_EQ(tree2, cache->get(tree2->getHash()));
-  EXPECT_TRUE(cache->contains(tree3->getHash()));
-  EXPECT_EQ(tree3, cache->get(tree3->getHash()));
+  EXPECT_FALSE(cache->contains(tree0->getObjectId()));
+  EXPECT_EQ(
+      std::shared_ptr<const Tree>{nullptr}, cache->get(tree0->getObjectId()));
+  EXPECT_TRUE(cache->contains(tree1->getObjectId()));
+  EXPECT_EQ(tree1, cache->get(tree1->getObjectId()));
+  EXPECT_TRUE(cache->contains(tree2->getObjectId()));
+  EXPECT_EQ(tree2, cache->get(tree2->getObjectId()));
+  EXPECT_TRUE(cache->contains(tree3->getObjectId()));
+  EXPECT_EQ(tree3, cache->get(tree3->getObjectId()));
 }
 
 TEST_F(TreeCacheTest, testLargeInsert) {
   cache->insert(tree4_id, tree4);
 
-  EXPECT_TRUE(cache->contains(tree4->getHash()));
-  EXPECT_EQ(tree4, cache->get(tree4->getHash()));
+  EXPECT_TRUE(cache->contains(tree4->getObjectId()));
+  EXPECT_EQ(tree4, cache->get(tree4->getObjectId()));
 }
 
 TEST_F(TreeCacheTest, testSizeOverflowLargeInsert) {
@@ -175,12 +176,15 @@ TEST_F(TreeCacheTest, testSizeOverflowLargeInsert) {
   cache->insert(tree2_id, tree2);
   cache->insert(tree4_id, tree4);
 
-  EXPECT_FALSE(cache->contains(tree0->getHash()));
-  EXPECT_EQ(std::shared_ptr<const Tree>{nullptr}, cache->get(tree0->getHash()));
-  EXPECT_FALSE(cache->contains(tree1->getHash()));
-  EXPECT_EQ(std::shared_ptr<const Tree>{nullptr}, cache->get(tree1->getHash()));
-  EXPECT_FALSE(cache->contains(tree2->getHash()));
-  EXPECT_EQ(std::shared_ptr<const Tree>{nullptr}, cache->get(tree2->getHash()));
-  EXPECT_TRUE(cache->contains(tree4->getHash()));
-  EXPECT_EQ(tree4, cache->get(tree4->getHash()));
+  EXPECT_FALSE(cache->contains(tree0->getObjectId()));
+  EXPECT_EQ(
+      std::shared_ptr<const Tree>{nullptr}, cache->get(tree0->getObjectId()));
+  EXPECT_FALSE(cache->contains(tree1->getObjectId()));
+  EXPECT_EQ(
+      std::shared_ptr<const Tree>{nullptr}, cache->get(tree1->getObjectId()));
+  EXPECT_FALSE(cache->contains(tree2->getObjectId()));
+  EXPECT_EQ(
+      std::shared_ptr<const Tree>{nullptr}, cache->get(tree2->getObjectId()));
+  EXPECT_TRUE(cache->contains(tree4->getObjectId()));
+  EXPECT_EQ(tree4, cache->get(tree4->getObjectId()));
 }

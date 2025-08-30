@@ -267,14 +267,14 @@ FakeBackingStore::TreeEntryData::TreeEntryData(
     const Tree& tree)
     : entry{
           PathComponent{name},
-          TreeEntry{tree.getHash(), TreeEntryType::TREE}} {}
+          TreeEntry{tree.getObjectId(), TreeEntryType::TREE}} {}
 
 FakeBackingStore::TreeEntryData::TreeEntryData(
     folly::StringPiece name,
     const StoredTree* tree)
     : entry{
           PathComponent{name},
-          TreeEntry{tree->get().getHash(), TreeEntryType::TREE}} {}
+          TreeEntry{tree->get().getObjectId(), TreeEntryType::TREE}} {}
 
 StoredTree* FakeBackingStore::putTree(
     const std::initializer_list<TreeEntryData>& entryArgs) {
@@ -331,7 +331,7 @@ ObjectId FakeBackingStore::computeTreeHash(
 
   for (const auto& entry : sortedEntries) {
     digest.hash_update(ByteRange{entry.first.view()});
-    digest.hash_update(entry.second.getHash().getBytes());
+    digest.hash_update(entry.second.getObjectId().getBytes());
     mode_t mode = modeFromTreeEntryType(entry.second.getType());
     digest.hash_update(
         ByteRange(reinterpret_cast<const uint8_t*>(&mode), sizeof(mode)));
@@ -370,7 +370,7 @@ std::pair<StoredTree*, bool> FakeBackingStore::maybePutTreeImpl(
 StoredHash* FakeBackingStore::putCommit(
     const RootId& commitHash,
     const StoredTree* tree) {
-  return putCommit(commitHash, tree->get().getHash());
+  return putCommit(commitHash, tree->get().getObjectId());
 }
 
 StoredHash* FakeBackingStore::putCommit(
@@ -391,7 +391,7 @@ StoredHash* FakeBackingStore::putCommit(
 StoredHash* FakeBackingStore::putCommit(
     const RootId& commitHash,
     const FakeTreeBuilder& builder) {
-  return putCommit(commitHash, builder.getRoot()->get().getHash());
+  return putCommit(commitHash, builder.getRoot()->get().getObjectId());
 }
 
 StoredHash* FakeBackingStore::putCommit(

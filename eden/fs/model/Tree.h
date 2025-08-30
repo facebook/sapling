@@ -48,7 +48,7 @@ class Tree {
         entries_{std::move(entries)},
         auxData_(std::move(auxData)) {}
 
-  const ObjectId& getHash() const {
+  const ObjectId& getObjectId() const {
     return hash_;
   }
 

@@ -49,7 +49,7 @@ ImmediateFuture<std::shared_ptr<const Tree>> resolveTree(
         ctx->components[index]);
   }
 
-  return objectStore.getTree(child->second.getHash(), fetchContext)
+  return objectStore.getTree(child->second.getObjectId(), fetchContext)
       .thenValue([ctx = std::move(ctx),
                   &objectStore,
                   fetchContext = fetchContext.copy(),

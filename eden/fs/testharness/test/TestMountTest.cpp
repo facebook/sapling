@@ -53,7 +53,7 @@ TEST(TestMount, createSimpleTestMount) {
     auto& rootEntries = dir->entries;
     auto& path1Entry = rootEntries.at("path1"_pc);
     ASSERT_FALSE(path1Entry.isMaterialized());
-    EXPECT_EQ(expectedSha1, path1Entry.getHash())
+    EXPECT_EQ(expectedSha1, path1Entry.getObjectId())
         << "Getting the Entry from the root Dir should also work.";
   }
 

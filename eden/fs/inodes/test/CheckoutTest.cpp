@@ -1377,7 +1377,7 @@ void runTestSetPathObjectId(
   builder2.finalize(testMount.getBackingStore(), true);
   auto storeTree = builder2.getStoredTree(RelativePathPiece{});
   auto commit2 = testMount.getBackingStore()->putCommit(
-      storeTree->get().getHash().asString(), builder2);
+      storeTree->get().getObjectId().asString(), builder2);
   commit2->setReady();
 
   // Insert file2 to pathToSet
@@ -1386,7 +1386,7 @@ void runTestSetPathObjectId(
           ->setPathsToObjectIds(
               getObjects(
                   RelativePathPiece{pathToSet},
-                  storeTree->get().getHash().asString(),
+                  storeTree->get().getObjectId().asString(),
                   facebook::eden::ObjectType::TREE),
               facebook::eden::CheckoutMode::NORMAL,
               ObjectFetchContext::getNullContext())
@@ -1463,7 +1463,7 @@ TEST(Checkout, testSetPathObjectIdConflict) {
           ->setPathsToObjectIds(
               getObjects(
                   path,
-                  storeTree->get().getHash().asString(),
+                  storeTree->get().getObjectId().asString(),
                   facebook::eden::ObjectType::TREE),
               facebook::eden::CheckoutMode::NORMAL,
               ObjectFetchContext::getNullContext())
@@ -1545,7 +1545,7 @@ TEST(Checkout, testSetPathObjectIdLastCheckoutTime) {
           ->setPathsToObjectIds(
               getObjects(
                   path,
-                  storeTree->get().getHash().asString(),
+                  storeTree->get().getObjectId().asString(),
                   facebook::eden::ObjectType::TREE),
               facebook::eden::CheckoutMode::NORMAL,
               ObjectFetchContext::getNullContext())

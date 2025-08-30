@@ -77,7 +77,7 @@ void processRemovedSide(
     return;
   }
   auto childFuture =
-      diffRemovedTree(context, entryPath, scmEntry.second.getHash());
+      diffRemovedTree(context, entryPath, scmEntry.second.getObjectId());
   childFutures.add(std::move(entryPath), std::move(childFuture));
 }
 
@@ -102,7 +102,7 @@ void processAddedSide(
 
   if (wdEntry.second.isTree()) {
     auto childFuture =
-        diffAddedTree(context, entryPath, wdEntry.second.getHash());
+        diffAddedTree(context, entryPath, wdEntry.second.getObjectId());
     childFutures.add(std::move(entryPath), std::move(childFuture));
   }
 }
@@ -126,15 +126,15 @@ void processBothPresent(
       // tree-to-tree diff
       XDCHECK_EQ(scmEntry.second.getType(), wdEntry.second.getType());
       if (context->store->areObjectsKnownIdentical(
-              scmEntry.second.getHash(), wdEntry.second.getHash())) {
+              scmEntry.second.getObjectId(), wdEntry.second.getObjectId())) {
         return;
       }
       context->callback->modifiedPath(entryPath, wdEntry.second.getDtype());
       auto childFuture = diffTrees(
           context,
           entryPath,
-          scmEntry.second.getHash(),
-          wdEntry.second.getHash());
+          scmEntry.second.getObjectId(),
+          wdEntry.second.getObjectId());
       childFutures.add(std::move(entryPath), std::move(childFuture));
     } else {
       // tree-to-file
@@ -147,7 +147,7 @@ void processBothPresent(
       // Report everything in scmTree as REMOVED
       context->callback->removedPath(entryPath, scmEntry.second.getDtype());
       auto childFuture =
-          diffRemovedTree(context, entryPath, scmEntry.second.getHash());
+          diffRemovedTree(context, entryPath, scmEntry.second.getObjectId());
       childFutures.add(std::move(entryPath), std::move(childFuture));
     }
   } else {
@@ -162,7 +162,7 @@ void processBothPresent(
       // Report everything in wdEntry as ADDED
       context->callback->addedPath(entryPath, wdEntry.second.getDtype());
       auto childFuture =
-          diffAddedTree(context, entryPath, wdEntry.second.getHash());
+          diffAddedTree(context, entryPath, wdEntry.second.getObjectId());
       childFutures.add(std::move(entryPath), std::move(childFuture));
     } else {
       // file-to-file diff
@@ -182,8 +182,8 @@ void processBothPresent(
         auto compareEntryContents =
             context->store
                 ->areBlobsEqual(
-                    scmEntry.second.getHash(),
-                    wdEntry.second.getHash(),
+                    scmEntry.second.getObjectId(),
+                    wdEntry.second.getObjectId(),
                     context->getFetchContext())
                 .thenValue([entryPath = entryPath.copy(),
                             context,

@@ -30,9 +30,9 @@ namespace facebook::eden {
 class UnmaterializedUnloadedBlobDirEntry {
  public:
   // Note that these objects are only constructed when it is known that the
-  // entry.getHash() exists. See TreeInode::getOrFindChild()
+  // entry.getObjectId() exists. See TreeInode::getOrFindChild()
   explicit UnmaterializedUnloadedBlobDirEntry(const DirEntry& entry)
-      : objectId_(entry.getHash()),
+      : objectId_(entry.getObjectId()),
         dtype_(entry.getDtype()),
         initialMode_(entry.getInitialMode()) {}
 

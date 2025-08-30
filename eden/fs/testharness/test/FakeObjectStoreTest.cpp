@@ -40,7 +40,7 @@ TEST(FakeObjectStore, getObjectsOfAllTypesFromStore) {
   store.addTree(std::move(tree1));
   auto foundTree = store.getTree(tree1Hash).get();
   EXPECT_TRUE(foundTree);
-  EXPECT_EQ(tree1Hash, foundTree->getHash());
+  EXPECT_EQ(tree1Hash, foundTree->getObjectId());
 
   // Test getBlob().
   auto buf1 = IOBuf();

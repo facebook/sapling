@@ -161,7 +161,7 @@ TreeInode::TreeInode(
           initialMode,
           std::nullopt,
           saveDirFromTree(ino, tree.get(), parent->getMount()),
-          tree->getHash()) {}
+          tree->getObjectId()) {}
 
 TreeInode::TreeInode(
     InodeNumber ino,
@@ -180,7 +180,7 @@ TreeInode::TreeInode(EdenMount* mount, std::shared_ptr<const Tree>&& tree)
     : TreeInode(
           mount,
           saveDirFromTree(kRootNodeId, tree.get(), mount),
-          tree->getHash()) {}
+          tree->getObjectId()) {}
 
 TreeInode::TreeInode(
     EdenMount* mount,
@@ -269,7 +269,7 @@ std::optional<ImmediateFuture<VirtualInode>> TreeInode::rlockGetOrFindChild(
   // modified/materialized yet (it has to have been loaded prior),
   // so it's safe here to ignore the loading inode and instead
   // query the object store for information about the path.
-  auto hash = entry.getHash();
+  auto hash = entry.getObjectId();
   if (entry.isDirectory()) {
     // This is a directory, always get the tree corresponding to
     // the hash
@@ -786,13 +786,13 @@ Future<unique_ptr<InodeBase>> TreeInode::startLoadingInode(
 
   if (!entry.isMaterialized()) {
     return getObjectStore()
-        .getTree(entry.getHash(), fetchContext)
+        .getTree(entry.getObjectId(), fetchContext)
         .semi()
         .via(&folly::QueuedImmediateExecutor::instance())
         .thenValue(
             [self = inodePtrFromThis(),
              childName = PathComponent{name},
-             treeHash = entry.getHash(),
+             treeHash = entry.getObjectId(),
              entryMode = entry.getInitialMode(),
              number = entry.getInodeNumber()](
                 std::shared_ptr<const Tree> tree) mutable
@@ -1024,7 +1024,7 @@ void TreeInode::childDematerialized(
     // are compatible, we want to migrate our inode to the new ID scheme, which
     // requires writing it to the overlay.
     if (!childEntry.isMaterialized() &&
-        childEntry.getHash().bytesEqual(childScmHash)) {
+        childEntry.getObjectId().bytesEqual(childScmHash)) {
       // Nothing to do.  Our child's state and our own are both unchanged.
       return;
     }
@@ -1117,7 +1117,7 @@ DirContents TreeInode::buildDirFromTree(
         modeFromTreeEntryType(filteredEntryType(
             treeEntry.second.getType(), windowsSymlinksEnabled)),
         overlay->allocateInodeNumber(),
-        treeEntry.second.getHash());
+        treeEntry.second.getObjectId());
   }
   return dir;
 }
@@ -2529,14 +2529,15 @@ ImmediateFuture<Unit> TreeInode::diff(
         getNodeId(),
         (contents->isMaterialized() ? "materialized"
                                     : contents->treeHash->toLogString()),
-        (trees.size() == 1 ? trees[0]->getHash().toLogString() : "null tree"));
+        (trees.size() == 1 ? trees[0]->getObjectId().toLogString()
+                           : "null tree"));
 
     // Check to see if we can short-circuit the diff operation if we have the
     // same hash as the tree we are being compared to.
     if (!contents->isMaterialized()) {
       for (auto& tree : trees) {
         if (getObjectStore().areObjectsKnownIdentical(
-                contents->treeHash.value(), tree->getHash())) {
+                contents->treeHash.value(), tree->getObjectId())) {
           // There are no changes in our tree or any children subtrees.
           return folly::unit;
         }
@@ -2811,7 +2812,7 @@ ImmediateFuture<Unit> TreeInode::computeDiff(
             // Collect this future to complete with other
             // deferred entries.
             deferredEntries.emplace_back(DeferredDiffEntry::createAddedScmEntry(
-                context, entryPath, inodeEntry->getHash()));
+                context, entryPath, inodeEntry->getObjectId()));
           }
         }
       }
@@ -2825,7 +2826,9 @@ ImmediateFuture<Unit> TreeInode::computeDiff(
               scmEntry.second.getDtype(), windowsSymlinksEnabled));
       if (scmEntry.second.isTree()) {
         deferredEntries.emplace_back(DeferredDiffEntry::createRemovedScmEntry(
-            context, currentPath + scmEntry.first, scmEntry.second.getHash()));
+            context,
+            currentPath + scmEntry.first,
+            scmEntry.second.getObjectId()));
       }
     };
 
@@ -2897,7 +2900,7 @@ ImmediateFuture<Unit> TreeInode::computeDiff(
                   filteredEntryType(
                       scmEntry.getType(), windowsSymlinksEnabled) &&
               getObjectStore().areObjectsKnownIdentical(
-                  inodeEntry->getHash(), scmEntry.getHash())) {
+                  inodeEntry->getObjectId(), scmEntry.getObjectId())) {
             exactMatch = true;
             break;
           }
@@ -2918,8 +2921,8 @@ ImmediateFuture<Unit> TreeInode::computeDiff(
               DeferredDiffEntry::createModifiedScmEntry(
                   context,
                   entryPath,
-                  scmEntry.getHash(),
-                  inodeEntry->getHash()));
+                  scmEntry.getObjectId(),
+                  inodeEntry->getObjectId()));
         } else if (scmEntry.isTree()) {
           // This used to be a directory in the source control state,
           // but is now a file or symlink.  Report the new file, then add a
@@ -2944,7 +2947,7 @@ ImmediateFuture<Unit> TreeInode::computeDiff(
               entryPath,
               filteredEntryDtype(scmEntry.getDtype(), windowsSymlinksEnabled));
           deferredEntries.emplace_back(DeferredDiffEntry::createRemovedScmEntry(
-              context, entryPath, scmEntry.getHash()));
+              context, entryPath, scmEntry.getObjectId()));
         } else {
           // This file corresponds to a different blob hash, or has a
           // different mode.
@@ -2977,7 +2980,7 @@ ImmediateFuture<Unit> TreeInode::computeDiff(
                 context,
                 entryPath,
                 scmEntry,
-                inodeEntry->getHash(),
+                inodeEntry->getObjectId(),
                 filteredEntryDtype(
                     inodeEntry->getDtype(), windowsSymlinksEnabled)));
           }
@@ -3138,8 +3141,8 @@ ImmediateFuture<Unit> TreeInode::checkout(
       DBG4,
       "checkout: starting update of {}: {} --> {}",
       getLogPath(),
-      (fromTree ? fromTree->getHash().toLogString() : "<none>"),
-      (toTree ? toTree->getHash().toLogString() : "<none>"));
+      (fromTree ? fromTree->getObjectId().toLogString() : "<none>"),
+      (toTree ? toTree->getObjectId().toLogString() : "<none>"));
 
   std::vector<std::shared_ptr<CheckoutAction>> actions;
   std::vector<IncompleteInodeLoad> pendingLoads;
@@ -3272,14 +3275,14 @@ bool TreeInode::canShortCircuitCheckout(
     // updates we can bail out early as long as there are no conflicts.
     if (fromTree) {
       return ctx->getObjectStore()->areObjectsKnownIdentical(
-          treeHash, fromTree->getHash());
+          treeHash, fromTree->getObjectId());
     } else {
       // There is no fromTree.  If we are already in the desired destination
       // state we don't have conflicts.  Otherwise we have to continue and
       // check for conflicts.
       return !toTree ||
           ctx->getObjectStore()->areObjectsKnownIdentical(
-              treeHash, toTree->getHash());
+              treeHash, toTree->getObjectId());
     }
   }
 
@@ -3287,7 +3290,7 @@ bool TreeInode::canShortCircuitCheckout(
   // the desired destination state.
   if (!toTree ||
       !ctx->getObjectStore()->areObjectsKnownIdentical(
-          treeHash, toTree->getHash())) {
+          treeHash, toTree->getObjectId())) {
     // If the objects are known different or not known identical, we must take
     // the slow path.
     return false;
@@ -3311,7 +3314,7 @@ bool TreeInode::canShortCircuitCheckout(
 
   // Allow short circuiting if we are also the same as the fromTree state.
   return ctx->getObjectStore()->areObjectsKnownIdentical(
-      treeHash, fromTree->getHash());
+      treeHash, fromTree->getObjectId());
 }
 
 void TreeInode::computeCheckoutActions(
@@ -3481,7 +3484,8 @@ std::shared_ptr<CheckoutAction> TreeInode::processCheckoutEntryImpl(
           filteredEntryType(
               newScmEntry->second.getType(), windowsSymlinksEnabled) &&
       getObjectStore().areObjectsKnownIdentical(
-          oldScmEntry->second.getHash(), newScmEntry->second.getHash())) {
+          oldScmEntry->second.getObjectId(),
+          newScmEntry->second.getObjectId())) {
     // TODO: Should we perhaps fall through anyway to report conflicts for
     // locally modified files?
     return nullptr;
@@ -3538,7 +3542,7 @@ std::shared_ptr<CheckoutAction> TreeInode::processCheckoutEntryImpl(
   } else if (
       newScmEntry &&
       getObjectStore().areObjectsKnownIdentical(
-          entry.getHash(), newScmEntry->second.getHash())) {
+          entry.getObjectId(), newScmEntry->second.getObjectId())) {
     if (filteredEntryType(
             oldScmEntry->second.getType(), windowsSymlinksEnabled) ==
         filteredEntryType(
@@ -3550,7 +3554,7 @@ std::shared_ptr<CheckoutAction> TreeInode::processCheckoutEntryImpl(
     // entry. An example is when a file goes from REGULAR -> EXECUTABLE.
   } else {
     switch (getObjectStore().compareObjectsById(
-        entry.getHash(), oldScmEntry->second.getHash())) {
+        entry.getObjectId(), oldScmEntry->second.getObjectId())) {
       case ObjectComparison::Unknown: {
         // We don't know if the files are different or not. The only way to know
         // for sure is to load the inode.
@@ -3640,7 +3644,7 @@ std::shared_ptr<CheckoutAction> TreeInode::processCheckoutEntryImpl(
         modeFromTreeEntryType(filteredEntryType(
             newScmEntry->second.getType(), windowsSymlinksEnabled)),
         getOverlay()->allocateInodeNumber(),
-        newScmEntry->second.getHash());
+        newScmEntry->second.getObjectId());
   }
 
   wasDirectoryListModified = true;
@@ -3720,7 +3724,7 @@ std::shared_ptr<CheckoutAction> TreeInode::processAbsentCheckoutEntry(
           modeFromTreeEntryType(filteredEntryType(
               newScmEntry->second.getType(), ctx->getWindowsSymlinksEnabled())),
           getOverlay()->allocateInodeNumber(),
-          newScmEntry->second.getHash());
+          newScmEntry->second.getObjectId());
       XDCHECK(inserted);
     } else {
       if (folly::kIsWindows) {
@@ -3842,7 +3846,7 @@ ImmediateFuture<InvalidationRequired> TreeInode::checkoutUpdateEntry(
             modeFromTreeEntryType(filteredEntryType(
                 newScmEntry->second.getType(), windowsSymlinksEnabled)),
             getOverlay()->allocateInodeNumber(),
-            newScmEntry->second.getHash());
+            newScmEntry->second.getObjectId());
         XDCHECK(inserted);
       }
     }
@@ -3986,7 +3990,7 @@ ImmediateFuture<InvalidationRequired> TreeInode::checkoutUpdateEntry(
                   modeFromTreeEntryType(filteredEntryType(
                       newScmEntry->second.getType(), windowsSymlinksEnabled)),
                   parentInode->getOverlay()->allocateInodeNumber(),
-                  newScmEntry->second.getHash());
+                  newScmEntry->second.getObjectId());
               inserted = ret.second;
             }
 
@@ -4215,7 +4219,7 @@ void TreeInode::saveOverlayPostCheckout(
         // control object.  However, if it isn't the same as the object in our
         // Tree, we have to materialize ourself.
         switch (getObjectStore().compareObjectsById(
-            inodeIter->second.getHash(), scmIter->second.getHash())) {
+            inodeIter->second.getObjectId(), scmIter->second.getObjectId())) {
           case ObjectComparison::Unknown:
             // Assume the child is different, and leave materialized.
             return std::nullopt;
@@ -4238,15 +4242,15 @@ void TreeInode::saveOverlayPostCheckout(
       // hash, which will incorrectly dematerialized this inode. The fake hash
       // cannot be reconstituted from the backing store, so this makes the
       // directory structure unreadable. The correct long-term fix is to
-      // remove getHash() from Tree and pass around ObjectIds explicitly if
+      // remove getObjectId() from Tree and pass around ObjectIds explicitly if
       // known.
-      if (tree->getHash().size() == 0) {
+      if (tree->getObjectId().size() == 0) {
         return std::nullopt;
       }
 
       // If we're still here we are identical to the source control Tree.
       // We can be dematerialized and marked identical to the input Tree.
-      return tree->getHash();
+      return tree->getObjectId();
     };
 
     auto oldHash = contents->treeHash;
@@ -4303,7 +4307,7 @@ void TreeInode::saveOverlayPostCheckout(
         loc.parent->childMaterialized(ctx->renameLock(), loc.name);
       } else {
         loc.parent->childDematerialized(
-            ctx->renameLock(), loc.name, tree->getHash());
+            ctx->renameLock(), loc.name, tree->getObjectId());
       }
     }
   }

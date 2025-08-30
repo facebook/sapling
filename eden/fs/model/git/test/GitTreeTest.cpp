@@ -77,7 +77,7 @@ TEST(GitTree, testDeserialize) {
   auto babelrc = *tree->find(".babelrc"_pc);
   EXPECT_EQ(
       ObjectId::fromHex("3a8f8eb91101860fd8484154885838bf322964d0"),
-      babelrc.second.getHash());
+      babelrc.second.getObjectId());
   EXPECT_EQ(".babelrc", babelrc.first);
   EXPECT_EQ(false, babelrc.second.isTree());
   EXPECT_EQ(
@@ -87,7 +87,7 @@ TEST(GitTree, testDeserialize) {
   auto nuclideStartServer = *tree->find("nuclide-start-server"_pc);
   EXPECT_EQ(
       ObjectId::fromHex("006babcf5734d028098961c6f4b6b6719656924b"),
-      nuclideStartServer.second.getHash());
+      nuclideStartServer.second.getObjectId());
   EXPECT_EQ("nuclide-start-server", nuclideStartServer.first);
   EXPECT_EQ(false, nuclideStartServer.second.isTree());
   // TODO: T66590035
@@ -101,7 +101,7 @@ TEST(GitTree, testDeserialize) {
   auto lib = *tree->find("lib"_pc);
   EXPECT_EQ(
       ObjectId::fromHex("e95798e17f694c227b7a8441cc5c7dae50a187d0"),
-      lib.second.getHash());
+      lib.second.getObjectId());
   EXPECT_EQ("lib", lib.first);
   EXPECT_EQ(true, lib.second.isTree());
   EXPECT_EQ(facebook::eden::TreeEntryType::TREE, lib.second.getType());
@@ -145,7 +145,7 @@ TEST(GitTree, testDeserializeWithSymlink) {
   auto contributing = *tree->find("contributing.md"_pc);
   EXPECT_EQ(
       ObjectId::fromHex("44fcc63439371c8c829df00eec6aedbdc4d0e4cd"),
-      contributing.second.getHash());
+      contributing.second.getObjectId());
   EXPECT_EQ("contributing.md", contributing.first);
   EXPECT_EQ(false, contributing.second.isTree());
 

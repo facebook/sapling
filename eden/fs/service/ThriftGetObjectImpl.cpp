@@ -65,8 +65,8 @@ ScmTreeWithOrigin transformToTreeFromOrigin(
         auto& out = treeOrError.treeEntries()->back();
         out.name() = name.asString();
         out.mode() = modeFromTreeEntryType(treeEntry.getType());
-        out.id() =
-            edenMount->getObjectStore()->renderObjectId(treeEntry.getHash());
+        out.id() = edenMount->getObjectStore()->renderObjectId(
+            treeEntry.getObjectId());
       }
 
       if (tree.value()->getAuxData()) {

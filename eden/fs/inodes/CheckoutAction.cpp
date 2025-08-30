@@ -71,7 +71,8 @@ ImmediateFuture<InvalidationRequired> CheckoutAction::run(
       const auto& oldEntry = oldScmEntry_.value();
       if (oldEntry.second.isTree()) {
         loadFutures.emplace_back(
-            store->getTree(oldEntry.second.getHash(), ctx->getFetchContext())
+            store
+                ->getTree(oldEntry.second.getObjectId(), ctx->getFetchContext())
                 .thenValue([self = shared_from_this()](
                                std::shared_ptr<const Tree> oldTree) {
                   self->setOldTree(std::move(oldTree));
@@ -82,7 +83,8 @@ ImmediateFuture<InvalidationRequired> CheckoutAction::run(
       } else {
         loadFutures.emplace_back(
             store
-                ->getBlobSha1(oldEntry.second.getHash(), ctx->getFetchContext())
+                ->getBlobSha1(
+                    oldEntry.second.getObjectId(), ctx->getFetchContext())
                 .thenValue([self = shared_from_this()](Hash20 oldBlobSha1) {
                   self->setOldBlob(std::move(oldBlobSha1));
                 })
@@ -97,7 +99,8 @@ ImmediateFuture<InvalidationRequired> CheckoutAction::run(
       const auto& newEntry = newScmEntry_.value();
       if (newEntry.second.isTree()) {
         loadFutures.emplace_back(
-            store->getTree(newEntry.second.getHash(), ctx->getFetchContext())
+            store
+                ->getTree(newEntry.second.getObjectId(), ctx->getFetchContext())
                 .thenValue([self = shared_from_this()](
                                std::shared_ptr<const Tree> newTree) {
                   self->setNewTree(std::move(newTree));
@@ -260,7 +263,7 @@ ImmediateFuture<bool> CheckoutAction::hasConflict() {
     // Check that the file contents are the same as the old source control entry
     return fileInode
         ->isSameAs(
-            oldScmEntry_.value().second.getHash(),
+            oldScmEntry_.value().second.getObjectId(),
             oldBlobSha1_.value(),
             filteredEntryType(
                 oldScmEntry_.value().second.getType(),

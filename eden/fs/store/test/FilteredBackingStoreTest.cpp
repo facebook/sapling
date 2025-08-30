@@ -303,7 +303,7 @@ TEST_F(FakeSubstringFilteredBackingStoreTest, getTree) {
           {"foo", foo_id},
           {"runme", runme_id, FakeBlobType::EXECUTABLE_FILE},
       });
-  EXPECT_EQ(makeTestHash("abc"), dir1->get().getHash());
+  EXPECT_EQ(makeTestHash("abc"), dir1->get().getObjectId());
   auto* dir2 = wrappedStore_->putTree(
       {{"README", wrappedStore_->putBlob("docs go here")}});
 
@@ -341,7 +341,7 @@ TEST_F(FakeSubstringFilteredBackingStoreTest, getTree) {
 
   // Get the root tree object from the future
   auto tree2 = std::move(future2).get(0ms).tree;
-  EXPECT_EQ(treeOID, tree2->getHash());
+  EXPECT_EQ(treeOID, tree2->getObjectId());
   EXPECT_EQ(4, tree2->size());
 
   // Get the tree entries for the root tree
@@ -356,7 +356,7 @@ TEST_F(FakeSubstringFilteredBackingStoreTest, getTree) {
 
   // Get the subtree for dir1
   auto dir1FOID = FilteredObjectId(
-      RelativePath{"dir1"}, kTestFilter1, dir1->get().getHash());
+      RelativePath{"dir1"}, kTestFilter1, dir1->get().getObjectId());
   auto subTreefuture = filteredStore_->getTree(
       ObjectId{dir1FOID.getValue()}, ObjectFetchContext::getNullContext());
   dir1->trigger();
@@ -373,7 +373,7 @@ TEST_F(FakeSubstringFilteredBackingStoreTest, getTree) {
   } else {
     EXPECT_EQ(TreeEntryType::EXECUTABLE_FILE, runmeTreeEntry.getType());
   }
-  EXPECT_EQ(runmeFOID.getValue(), runmeTreeEntry.getHash().asString());
+  EXPECT_EQ(runmeFOID.getValue(), runmeTreeEntry.getObjectId().asString());
 
   // We don't expect foo to be in the subtree. It should be filtered out.
   EXPECT_EQ(subTree->find("foo"_pc), subTree->cend());
@@ -382,17 +382,17 @@ TEST_F(FakeSubstringFilteredBackingStoreTest, getTree) {
   EXPECT_EQ("bar"_pc, barName);
   auto barFOID =
       FilteredObjectId(bar_id, FilteredObjectIdType::OBJECT_TYPE_BLOB);
-  EXPECT_EQ(barFOID.getValue(), barTreeEntry.getHash().asString());
+  EXPECT_EQ(barFOID.getValue(), barTreeEntry.getObjectId().asString());
   EXPECT_EQ(TreeEntryType::REGULAR_FILE, barTreeEntry.getType());
 
   EXPECT_EQ("dir1"_pc, dir1Name);
-  EXPECT_EQ(dir1FOID.getValue(), dir1TreeEntry.getHash().asString());
+  EXPECT_EQ(dir1FOID.getValue(), dir1TreeEntry.getObjectId().asString());
   EXPECT_EQ(TreeEntryType::TREE, dir1TreeEntry.getType());
 
   EXPECT_EQ("readonly"_pc, readonlyName);
   auto dir2FOID = FilteredObjectId{
-      RelativePath{"readonly"}, kTestFilter1, dir2->get().getHash()};
-  EXPECT_EQ(dir2FOID.getValue(), readonlyTreeEntry.getHash().asString());
+      RelativePath{"readonly"}, kTestFilter1, dir2->get().getObjectId()};
+  EXPECT_EQ(dir2FOID.getValue(), readonlyTreeEntry.getObjectId().asString());
   // TreeEntry objects only tracking the owner executable bit, so even though
   // we input the permissions as 0500 above this really ends up returning 0755
   EXPECT_EQ(TreeEntryType::TREE, readonlyTreeEntry.getType());
@@ -400,22 +400,22 @@ TEST_F(FakeSubstringFilteredBackingStoreTest, getTree) {
   EXPECT_EQ("zzz"_pc, zzzName);
   auto zzzFOID =
       FilteredObjectId{foo_id, FilteredObjectIdType::OBJECT_TYPE_BLOB};
-  EXPECT_EQ(zzzFOID.getValue(), zzzTreeEntry.getHash().asString());
+  EXPECT_EQ(zzzFOID.getValue(), zzzTreeEntry.getObjectId().asString());
   EXPECT_EQ(TreeEntryType::REGULAR_FILE, zzzTreeEntry.getType());
 
   // We expect future3 to also contain the root tree object
-  EXPECT_EQ(treeOID, std::move(future3).get(0ms).tree->getHash());
+  EXPECT_EQ(treeOID, std::move(future3).get(0ms).tree->getObjectId());
 
   // Now try using setReady()
   auto future4 =
       filteredStore_->getTree(treeOID, ObjectFetchContext::getNullContext());
   EXPECT_FALSE(future4.isReady());
   rootDir->setReady();
-  EXPECT_EQ(treeOID, std::move(future4).get(0ms).tree->getHash());
+  EXPECT_EQ(treeOID, std::move(future4).get(0ms).tree->getObjectId());
 
   auto future5 =
       filteredStore_->getTree(treeOID, ObjectFetchContext::getNullContext());
-  EXPECT_EQ(treeOID, std::move(future5).get(0ms).tree->getHash());
+  EXPECT_EQ(treeOID, std::move(future5).get(0ms).tree->getObjectId());
 }
 
 TEST_F(FakeSubstringFilteredBackingStoreTest, getRootTree) {
@@ -587,12 +587,12 @@ TEST_F(FakeSubstringFilteredBackingStoreTest, testCompareBlobObjectsById) {
 
   // Get the object IDs of all the blobs from commit 1.
   auto [foobar1Name1, foobar1TreeEntry1] = *fooDirRes.tree->find("foobar1"_pc);
-  auto foobar1OID1 = foobar1TreeEntry1.getHash();
+  auto foobar1OID1 = foobar1TreeEntry1.getObjectId();
   auto [foobar2Name1, foobar2TreeEntry1] = *fooDirRes.tree->find("foobar2"_pc);
-  auto foobar2OID1 = foobar2TreeEntry1.getHash();
+  auto foobar2OID1 = foobar2TreeEntry1.getObjectId();
   auto [football1Name1, football1TreeEntry1] =
       *fooDirRes.tree->find("football1"_pc);
-  auto football1OID1 = football1TreeEntry1.getHash();
+  auto football1OID1 = football1TreeEntry1.getObjectId();
 
   // We expect all the foo blobs in commit 1 to NOT be filtered. Therefore, foos
   // should equal foos. Football2 is filtered, and therefore unavailable for
@@ -623,16 +623,16 @@ TEST_F(FakeSubstringFilteredBackingStoreTest, testCompareBlobObjectsById) {
   // Get the object IDs of all the blobs from commit 1.
   auto [foobar1Name2, foobar1TreeEntry2] =
       *fooDirExtRes.tree->find("foobar1"_pc);
-  auto foobar1OID2 = foobar1TreeEntry2.getHash();
+  auto foobar1OID2 = foobar1TreeEntry2.getObjectId();
   auto [foobar2Name2, foobar2TreeEntry2] =
       *fooDirExtRes.tree->find("foobar2"_pc);
-  auto foobar2OID2 = foobar2TreeEntry2.getHash();
+  auto foobar2OID2 = foobar2TreeEntry2.getObjectId();
   auto [football1Name2, football1TreeEntry2] =
       *fooDirExtRes.tree->find("football1"_pc);
-  auto football1OID2 = football1TreeEntry2.getHash();
+  auto football1OID2 = football1TreeEntry2.getObjectId();
   auto [football2Name2, football2TreeEntry2] =
       *fooDirExtRes.tree->find("football2"_pc);
-  auto football2OID2 = football2TreeEntry2.getHash();
+  auto football2OID2 = football2TreeEntry2.getObjectId();
 
   // Only football3 is unavailable for comparison in commit2. Let's make sure
   // all the corresponding blobs evaluate to equal even if they have different
@@ -742,13 +742,13 @@ TEST_F(FakeSubstringFilteredBackingStoreTest, testCompareTreeObjectsById) {
 
   // Get the object IDs of all the trees from commit 1.
   auto [childName, childEntry] = *rootDirRes1.tree->find("child"_pc);
-  auto childOID = childEntry.getHash();
+  auto childOID = childEntry.getObjectId();
   auto childFuture1 =
       filteredStore_->getTree(childOID, ObjectFetchContext::getNullContext());
   childTree->trigger();
   auto childDirRes1 = std::move(childFuture1).get(0ms).tree;
   auto [grandchildName, grandchildEntry] = *childDirRes1->find("grandchild"_pc);
-  auto grandchildOID = grandchildEntry.getHash();
+  auto grandchildOID = grandchildEntry.getObjectId();
 
   // Trigger commit2, then rootDirTreeExtended to make rootFuture2 ready.
   commit2->trigger();
@@ -759,14 +759,14 @@ TEST_F(FakeSubstringFilteredBackingStoreTest, testCompareTreeObjectsById) {
 
   // Get the object IDs of all the blobs from commit 1.
   auto [childName2, childEntry2] = *rootDirCommit2Res.tree->find("child"_pc);
-  auto childOID2 = childEntry2.getHash();
+  auto childOID2 = childEntry2.getObjectId();
   auto childFuture2 =
       filteredStore_->getTree(childOID2, ObjectFetchContext::getNullContext());
   modifiedChildTree->trigger();
   auto childDirRes2 = std::move(childFuture2).get(0ms).tree;
   auto [grandchildName2, grandchildEntry2] =
       *childDirRes2->find("grandchild"_pc);
-  auto grandchildOID2 = grandchildEntry2.getHash();
+  auto grandchildOID2 = grandchildEntry2.getObjectId();
 
   // The child tree should know it changed between filters (since the actual
   // contents changed), BUT FakeBackingStore is dumb and can't determine that.
@@ -778,12 +778,13 @@ TEST_F(FakeSubstringFilteredBackingStoreTest, testCompareTreeObjectsById) {
   // Unknown.
   EXPECT_EQ(
       filteredStore_->compareObjectsById(
-          rootDirRes1.tree->getHash(), rootDirCommit2Res.tree->getHash()),
+          rootDirRes1.tree->getObjectId(),
+          rootDirCommit2Res.tree->getObjectId()),
       ObjectComparison::Unknown);
   // The root tree should be identical to itself
   EXPECT_EQ(
       filteredStore_->compareObjectsById(
-          rootDirRes1.tree->getHash(), rootDirRes1.tree->getHash()),
+          rootDirRes1.tree->getObjectId(), rootDirRes1.tree->getObjectId()),
       ObjectComparison::Identical);
   // The grandchild tree got filtered, but it isn't aware that its children were
   // filtered. We return Unknown in this case.
@@ -981,11 +982,11 @@ TEST_F(SaplingFilteredBackingStoreTest, testMercurialFFI) {
 
   // Get all the files from the trees from commit 1.
   auto dir2Future = filteredStoreFFI_->getTree(
-      dir2Entry.getHash(), ObjectFetchContext::getNullContext());
+      dir2Entry.getObjectId(), ObjectFetchContext::getNullContext());
   auto dir2Res = std::move(dir2Future).get(kTestTimeout).tree;
   auto readmeFindRes = dir2Res->find("README"_pc);
   auto srcFuture = filteredStoreFFI_->getTree(
-      srcEntry.getHash(), ObjectFetchContext::getNullContext());
+      srcEntry.getObjectId(), ObjectFetchContext::getNullContext());
   auto srcRes = std::move(srcFuture).get(kTestTimeout).tree;
   auto helloFindRes = srcRes->find("hello.txt"_pc);
 
@@ -1019,11 +1020,11 @@ TEST_F(SaplingFilteredBackingStoreTest, testMercurialFFINullFilter) {
 
   // Get all the files from the trees from commit 1.
   auto dir2Future = filteredStoreFFI_->getTree(
-      dir2Entry.getHash(), ObjectFetchContext::getNullContext());
+      dir2Entry.getObjectId(), ObjectFetchContext::getNullContext());
   auto dir2Res = std::move(dir2Future).get(kTestTimeout).tree;
   auto readmeFindRes = dir2Res->find("README"_pc);
   auto srcFuture = filteredStoreFFI_->getTree(
-      srcEntry.getHash(), ObjectFetchContext::getNullContext());
+      srcEntry.getObjectId(), ObjectFetchContext::getNullContext());
   auto srcRes = std::move(srcFuture).get(kTestTimeout).tree;
   auto helloFindRes = srcRes->find("hello.txt"_pc);
 
@@ -1058,13 +1059,15 @@ TEST_F(SaplingFilteredBackingStoreTest, testMercurialFFIInvalidFOID) {
   // Get all the files from the trees from commit 1. We intentionally use the
   // wrapped ObjectId instead of the FilteredObjectId to test whether we handle
   // invalid FOIDs correctly.
-  auto dir2OID = FilteredObjectId::fromObjectId(dir2Entry.getHash()).object();
+  auto dir2OID =
+      FilteredObjectId::fromObjectId(dir2Entry.getObjectId()).object();
   EXPECT_THROW_RE(
       filteredStoreFFI_->getTree(dir2OID, ObjectFetchContext::getNullContext()),
       std::invalid_argument,
       ".*Invalid FilteredObjectId type byte 1.*");
 
-  auto src2OID = FilteredObjectId::fromObjectId(srcEntry.getHash()).object();
+  auto src2OID =
+      FilteredObjectId::fromObjectId(srcEntry.getObjectId()).object();
   EXPECT_THROW_RE(
       filteredStoreFFI_->getTree(src2OID, ObjectFetchContext::getNullContext()),
       std::invalid_argument,

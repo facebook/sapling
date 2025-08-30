@@ -258,7 +258,7 @@ void TestMount::createMountWithoutInitializing(
   rootTree->setReady();
 
   // Set the commit to tree mapping, and record the current commit hash
-  setInitialCommit(initialCommitHash, rootTree->get().getHash());
+  setInitialCommit(initialCommitHash, rootTree->get().getObjectId());
 
   // Create edenMount_
   createMount(inodeCatalogType, inodeCatalogOptions);
@@ -495,7 +495,7 @@ void TestMount::resetCommit(
     bool setReady) {
   auto* rootTree = builder.finalize(backingStore_, setReady);
   auto* storedCommit =
-      backingStore_->putCommit(commitHash, rootTree->get().getHash());
+      backingStore_->putCommit(commitHash, rootTree->get().getObjectId());
   storedCommit->setReady();
 
   // The root tree needs to be made ready too, even if setReady is false.

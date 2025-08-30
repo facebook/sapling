@@ -121,7 +121,7 @@ class ModifiedDiffEntry : public DeferredDiffEntry {
       // Tree as removed. We can delegate this work to the source control tree
       // differ.
       context_->callback->removedPath(getPath(), scmEntries_[0].getDtype());
-      return diffRemovedTree(context_, getPath(), scmEntries_[0].getHash());
+      return diffRemovedTree(context_, getPath(), scmEntries_[0].getObjectId());
     }
 
     {
@@ -129,7 +129,7 @@ class ModifiedDiffEntry : public DeferredDiffEntry {
       if (!contents->isMaterialized()) {
         for (auto& scmEntry : scmEntries_) {
           if (context_->store->areObjectsKnownIdentical(
-                  contents->treeHash.value(), scmEntry.getHash())) {
+                  contents->treeHash.value(), scmEntry.getObjectId())) {
             // It did not change since it was loaded,
             // and it matches the scmEntry we're diffing against.
             return folly::unit;
@@ -142,7 +142,7 @@ class ModifiedDiffEntry : public DeferredDiffEntry {
         auto contentsHash = contents->treeHash.value();
         contents.unlock();
         return diffTrees(
-            context_, getPath(), scmEntries_[0].getHash(), contentsHash);
+            context_, getPath(), scmEntries_[0].getObjectId(), contentsHash);
       }
     }
 
@@ -151,7 +151,7 @@ class ModifiedDiffEntry : public DeferredDiffEntry {
     fetches.reserve(scmEntries_.size());
     for (auto& scmEntry : scmEntries_) {
       fetches.push_back(context_->store->getTree(
-          scmEntry.getHash(), context_->getFetchContext()));
+          scmEntry.getObjectId(), context_->getFetchContext()));
     }
     return collectAllSafe(std::move(fetches))
         .thenValue([this, treeInode = std::move(treeInode)](
@@ -190,7 +190,7 @@ class ModifiedDiffEntry : public DeferredDiffEntry {
     }
 
     auto isSameAsFut = fileInode->isSameAs(
-        scmEntries_[0].getHash(),
+        scmEntries_[0].getObjectId(),
         filteredEntryType(
             scmEntries_[0].getType(), context_->getWindowsSymlinksEnabled()),
         context_->getFetchContext());
@@ -226,7 +226,9 @@ class ModifiedBlobDiffEntry : public DeferredDiffEntry {
   ImmediateFuture<folly::Unit> run() override {
     return context_->store
         ->areBlobsEqual(
-            scmEntry_.getHash(), currentBlobHash_, context_->getFetchContext())
+            scmEntry_.getObjectId(),
+            currentBlobHash_,
+            context_->getFetchContext())
         .thenValue([this](bool equal) {
           if (!equal) {
             XLOGF(DBG5, "modified file: {}", getPath());

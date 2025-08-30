@@ -48,7 +48,7 @@ std::optional<ObjectId> VirtualInode::getObjectId() const {
       variant_,
       [](const InodePtr& inode) { return inode->getObjectId(); },
       [](const TreePtr& tree) -> std::optional<ObjectId> {
-        return tree->getHash();
+        return tree->getObjectId();
       },
       [](const auto& entry) -> std::optional<ObjectId> {
         return entry.getObjectId();
@@ -116,7 +116,7 @@ ImmediateFuture<Hash32> VirtualInode::getBlake3(
           return ImmediateFuture<Hash32>(hash.value());
         }
         // Revert to querying the objectStore for the file's metadata
-        return objectStore->getBlobBlake3(entry.getHash(), fetchContext);
+        return objectStore->getBlobBlake3(entry.getObjectId(), fetchContext);
       });
 }
 
@@ -157,10 +157,12 @@ ImmediateFuture<std::optional<Hash32>> VirtualInode::getDigestHash(
             entry.getObjectId(), fetchContext);
       },
       [&](const TreePtr& tree) {
-        return objectStore->getTreeDigestHash(tree->getHash(), fetchContext);
+        return objectStore->getTreeDigestHash(
+            tree->getObjectId(), fetchContext);
       },
       [&](const TreeEntry& entry) {
-        return objectStore->getTreeDigestHash(entry.getHash(), fetchContext);
+        return objectStore->getTreeDigestHash(
+            entry.getObjectId(), fetchContext);
       });
 }
 
@@ -205,7 +207,7 @@ ImmediateFuture<Hash20> VirtualInode::getSHA1(
           return ImmediateFuture<Hash20>(hash.value());
         }
         // Revert to querying the objectStore for the file's metadata
-        return objectStore->getBlobSha1(entry.getHash(), fetchContext);
+        return objectStore->getBlobSha1(entry.getObjectId(), fetchContext);
       });
 }
 
@@ -279,7 +281,7 @@ ImmediateFuture<std::optional<TreeAuxData>> VirtualInode::getTreeAuxData(
         return inode.asTreePtr()->getTreeAuxData(fetchContext);
       },
       [&](const TreePtr& tree) {
-        return objectStore->getTreeAuxData(tree->getHash(), fetchContext);
+        return objectStore->getTreeAuxData(tree->getObjectId(), fetchContext);
       },
       [&](auto& entry) {
         return objectStore->getTreeAuxData(entry.getObjectId(), fetchContext);
@@ -687,7 +689,7 @@ ImmediateFuture<struct stat> VirtualInode::stat(
           st.st_size = 0U;
           return st;
         } else if constexpr (std::is_same_v<T, TreeEntry>) {
-          objectId = arg.getHash();
+          objectId = arg.getObjectId();
           mode = modeFromTreeEntryType(filteredEntryType(
               arg.getType(), objectStore->getWindowsSymlinksEnabled()));
           // fallthrough
@@ -731,7 +733,7 @@ getChildrenHelper(
     if (treeEntry->isTree()) {
       result.emplace_back(
           child.first,
-          objectStore->getTree(treeEntry->getHash(), fetchContext)
+          objectStore->getTree(treeEntry->getObjectId(), fetchContext)
               .thenValue([mode = modeFromTreeEntryType(treeEntry->getType())](
                              TreePtr tree) {
                 return VirtualInode{std::move(tree), mode};
@@ -865,7 +867,7 @@ ImmediateFuture<VirtualInode> getOrFindChildHelper(
   // Always descend if the treeEntry is a Tree
   const auto* treeEntry = &it->second;
   if (treeEntry->isTree()) {
-    return objectStore->getTree(treeEntry->getHash(), fetchContext)
+    return objectStore->getTree(treeEntry->getObjectId(), fetchContext)
         .thenValue(
             [mode = modeFromTreeEntryType(treeEntry->getType())](TreePtr tree) {
               return VirtualInode{std::move(tree), mode};

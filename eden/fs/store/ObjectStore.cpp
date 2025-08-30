@@ -185,7 +185,7 @@ std::shared_ptr<const Tree> changeCaseSensitivity(
     auto treeEntries = Tree::container{
         tree->cbegin(), tree->cend(), caseSensitive}; // Explicit copy.
     return std::make_shared<const Tree>(
-        std::move(treeEntries), tree->getHash());
+        std::move(treeEntries), tree->getObjectId());
   }
 }
 
@@ -289,7 +289,7 @@ ImmediateFuture<shared_ptr<const Tree>> ObjectStore::getTree(
         TaskTraceBlock block2{"ObjectStore::getTree::thenValue"};
         auto tree =
             changeCaseSensitivity(std::move(result.tree), self->caseSensitive_);
-        self->treeCache_->insert(tree->getHash(), tree);
+        self->treeCache_->insert(tree->getObjectId(), tree);
         fetchContext->didFetch(ObjectFetchContext::Tree, id, result.origin);
         self->updateProcessFetch(*fetchContext);
         return tree;
@@ -323,7 +323,7 @@ void ObjectStore::maybeCacheTreeAndAuxInLocalStore(
       const auto& blake3 = treeEntry.getContentBlake3();
       if (treeEntry.getType() == TreeEntryType::REGULAR_FILE && size && sha1) {
         batch->putBlobAuxData(
-            treeEntry.getHash(), BlobAuxData{*sha1, blake3, *size});
+            treeEntry.getObjectId(), BlobAuxData{*sha1, blake3, *size});
       }
     }
   }
