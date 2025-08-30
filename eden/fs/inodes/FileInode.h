@@ -296,6 +296,19 @@ class FileInode final : public InodeBaseMetadata<FileInodeState> {
   std::optional<ObjectId> getObjectId() const override;
 
   /**
+   * Returns whether the file is materialized in the overlay.
+   *
+   * Beware that the file's materialization state may have changed by the time
+   * you use the return value of this method.  This method is primarily
+   * intended for use in tests and debugging functions.  Its return value
+   * generally cannot be trusted in situations where there may be concurrent
+   * modifications by other threads.
+   *
+   * Do not call this function while the inode's lock is held.
+   */
+  bool isMaterialized() const override;
+
+  /**
    * Read the entire file contents, and return them as a string.
    *
    * Note that this API generally should only be used for fairly small files.

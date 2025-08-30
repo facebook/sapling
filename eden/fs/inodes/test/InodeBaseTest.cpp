@@ -92,14 +92,10 @@ class InodeBaseEnsureMaterializedTest : public ::testing::Test {
 
 #ifndef _WIN32
 namespace {
-bool isInodeMaterialized(const TreeInodePtr& inode) {
-  return inode->getContents().wlock()->isMaterialized();
+template <typename T>
+bool isInodeMaterialized(const T& inode) {
+  return inode->isMaterialized();
 }
-
-bool isInodeMaterialized(const FileInodePtr& inode) {
-  return !inode->getObjectId().has_value();
-}
-
 } // namespace
 
 TEST_F(InodeBaseEnsureMaterializedTest, testFile) {

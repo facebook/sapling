@@ -243,6 +243,7 @@ TEST_F(FileInodeTest, setattrTruncateAllMaterialized) {
       inode->write("THIS IS A.TXT.\n", 0, ObjectFetchContext::getNullContext())
           .get();
   EXPECT_EQ(15, written);
+  EXPECT_TRUE(inode->isMaterialized());
   inode.reset();
 
   testSetattrTruncateAll(mount_);
@@ -378,31 +379,26 @@ TEST_F(FileInodeTest, setattrMtimeMaterialized) {
       inode->write("THIS IS A.TXT.\n", 0, ObjectFetchContext::getNullContext())
           .get();
   EXPECT_EQ(15, written);
+  EXPECT_TRUE(inode->isMaterialized());
   inode.reset();
 
   testSetattrMtime(mount_);
 }
-
-namespace {
-bool isInodeMaterialized(const TreeInodePtr& inode) {
-  return inode->getContents().wlock()->isMaterialized();
-}
-} // namespace
 
 TEST_F(FileInodeTest, writingMaterializesParent) {
   auto inode = mount_.getFileInode("dir/sub/b.txt");
   auto parent = mount_.getTreeInode("dir/sub");
   auto grandparent = mount_.getTreeInode("dir");
 
-  EXPECT_EQ(false, isInodeMaterialized(grandparent));
-  EXPECT_EQ(false, isInodeMaterialized(parent));
+  EXPECT_EQ(false, grandparent->isMaterialized());
+  EXPECT_EQ(false, parent->isMaterialized());
 
   auto written =
       inode->write("abcd", 0, ObjectFetchContext::getNullContext()).get();
   EXPECT_EQ(4, written);
 
-  EXPECT_EQ(true, isInodeMaterialized(grandparent));
-  EXPECT_EQ(true, isInodeMaterialized(parent));
+  EXPECT_EQ(true, grandparent->isMaterialized());
+  EXPECT_EQ(true, parent->isMaterialized());
 }
 
 TEST_F(FileInodeTest, truncatingMaterializesParent) {
@@ -410,15 +406,15 @@ TEST_F(FileInodeTest, truncatingMaterializesParent) {
   auto parent = mount_.getTreeInode("dir/sub");
   auto grandparent = mount_.getTreeInode("dir");
 
-  EXPECT_EQ(false, isInodeMaterialized(grandparent));
-  EXPECT_EQ(false, isInodeMaterialized(parent));
+  EXPECT_EQ(false, grandparent->isMaterialized());
+  EXPECT_EQ(false, parent->isMaterialized());
 
   DesiredMetadata desired;
   desired.size = 0;
   (void)inode->setattr(desired, ObjectFetchContext::getNullContext()).get(0ms);
 
-  EXPECT_EQ(true, isInodeMaterialized(grandparent));
-  EXPECT_EQ(true, isInodeMaterialized(parent));
+  EXPECT_EQ(true, grandparent->isMaterialized());
+  EXPECT_EQ(true, parent->isMaterialized());
 }
 
 TEST_F(FileInodeTest, addNewMaterializationsToInodeTraceBus) {
@@ -678,6 +674,7 @@ TEST(FileInode, dropsCacheWhenMaterialized) {
   EXPECT_TRUE(blobCache->contains(hash));
 
   inode->write("data"_sp, 0, ObjectFetchContext::getNullContext()).get(0ms);
+  EXPECT_TRUE(inode->isMaterialized());
   EXPECT_FALSE(blobCache->contains(hash));
 }
 

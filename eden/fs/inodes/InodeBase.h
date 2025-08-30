@@ -186,6 +186,13 @@ class InodeBase {
   virtual std::optional<ObjectId> getObjectId() const = 0;
 
   /**
+   * Returns whether the file is materialized in the overlay.
+   *
+   * Never call isMaterialized() while the inode's lock is held.
+   */
+  virtual bool isMaterialized() const = 0;
+
+  /**
    * Check if this Inode has been unlinked from its parent TreeInode.
    *
    * Once an inode is unlinked it is no longer part of the file system tree.

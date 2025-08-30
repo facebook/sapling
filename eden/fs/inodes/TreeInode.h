@@ -221,6 +221,10 @@ class TreeInode final : public InodeBaseMetadata<DirContents> {
 
   std::optional<ObjectId> getObjectId() const override;
 
+  bool isMaterialized() const override {
+    return contents_.rlock()->isMaterialized();
+  }
+
   /**
    * Get the digest hash for this inode.
    */

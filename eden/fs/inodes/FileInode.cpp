@@ -820,6 +820,10 @@ std::optional<ObjectId> FileInode::getObjectId() const {
   }
 }
 
+bool FileInode::isMaterialized() const {
+  return state_.rlock()->isMaterialized();
+}
+
 void FileInode::materializeInParent() {
   auto renameLock = getMount()->acquireRenameLock();
   auto loc = getLocationInfo(renameLock);

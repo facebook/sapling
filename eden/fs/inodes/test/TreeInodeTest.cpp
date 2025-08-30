@@ -490,10 +490,10 @@ TEST(TreeInode, setattr) {
   TestMount mount{builder};
   auto somedir = mount.getTreeInode("somedir"_relpath);
 
-  EXPECT_FALSE(somedir->getContents().rlock()->isMaterialized());
+  EXPECT_FALSE(somedir->isMaterialized());
   DesiredMetadata emptyMetadata{};
   somedir->setattr(emptyMetadata, ObjectFetchContext::getNullContext());
-  EXPECT_FALSE(somedir->getContents().rlock()->isMaterialized());
+  EXPECT_FALSE(somedir->isMaterialized());
 
   auto oldauxData = somedir->getMetadata();
   DesiredMetadata sameMetadata{
@@ -504,7 +504,7 @@ TEST(TreeInode, setattr) {
       oldauxData.timestamps.atime.toTimespec(),
       oldauxData.timestamps.mtime.toTimespec()};
   somedir->setattr(sameMetadata, ObjectFetchContext::getNullContext());
-  EXPECT_FALSE(somedir->getContents().rlock()->isMaterialized());
+  EXPECT_FALSE(somedir->isMaterialized());
 
   DesiredMetadata newMetadata{
       std::nullopt,
@@ -514,7 +514,7 @@ TEST(TreeInode, setattr) {
       oldauxData.timestamps.atime.toTimespec(),
       oldauxData.timestamps.mtime.toTimespec()};
   somedir->setattr(newMetadata, ObjectFetchContext::getNullContext());
-  EXPECT_TRUE(somedir->getContents().rlock()->isMaterialized());
+  EXPECT_TRUE(somedir->isMaterialized());
 }
 
 TEST(TreeInode, addNewMaterializationsToInodeTraceBus) {
@@ -648,6 +648,7 @@ TEST(TreeInode, getOrFindChildrenMaterializedLoadedChild) {
   TestMount mount{builder};
   auto somedir = mount.getTreeInode("somedir"_relpath);
   somedir->mknod("newfile.txt"_pc, S_IFREG | 0740, 0, InvalidationRequired::No);
+  EXPECT_TRUE(somedir->isMaterialized());
 
   auto result =
       somedir->getChildren(ObjectFetchContext::getNullContext(), false);

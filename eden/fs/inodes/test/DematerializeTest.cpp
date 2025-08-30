@@ -51,7 +51,7 @@ TEST(
       preInode->readAll(ObjectFetchContext::getNullContext()).get());
 
   EXPECT_EQ(std::nullopt, preInode->getObjectId());
-  EXPECT_TRUE(mount.getTreeInode("a")->getContents().rlock()->isMaterialized());
+  EXPECT_TRUE(mount.getTreeInode("a")->isMaterialized());
 
   // Now checkout 2.
 
@@ -72,8 +72,7 @@ TEST(
 
   // Checkout replaces the inode, so we need to look up the file again.
 
-  EXPECT_FALSE(
-      mount.getTreeInode("a")->getContents().rlock()->isMaterialized());
+  EXPECT_FALSE(mount.getTreeInode("a")->isMaterialized());
   EXPECT_EQ(
       std::make_optional(ObjectId{"object2"}),
       mount.getFileInode("a/test.txt")->getObjectId());
@@ -112,10 +111,8 @@ TEST(Dematerialize, test_dematerialization_migrates_to_the_new_ID_scheme) {
   auto inode = mount.overwriteFile("foo/bar/file.txt", "contents");
 
   EXPECT_EQ(std::nullopt, inode->getObjectId());
-  EXPECT_TRUE(
-      mount.getTreeInode("foo")->getContents().rlock()->isMaterialized());
-  EXPECT_TRUE(
-      mount.getTreeInode("foo/bar")->getContents().rlock()->isMaterialized());
+  EXPECT_TRUE(mount.getTreeInode("foo")->isMaterialized());
+  EXPECT_TRUE(mount.getTreeInode("foo/bar")->isMaterialized());
 
   // Now checkout 2.
 
@@ -134,10 +131,8 @@ TEST(Dematerialize, test_dematerialization_migrates_to_the_new_ID_scheme) {
 
   // Checkout replaces the inode, so we need to look up the file again.
 
-  EXPECT_FALSE(
-      mount.getTreeInode("foo")->getContents().rlock()->isMaterialized());
-  EXPECT_FALSE(
-      mount.getTreeInode("foo/bar")->getContents().rlock()->isMaterialized());
+  EXPECT_FALSE(mount.getTreeInode("foo")->isMaterialized());
+  EXPECT_FALSE(mount.getTreeInode("foo/bar")->isMaterialized());
   EXPECT_EQ(
       std::make_optional(ObjectId{"scheme 2"}),
       mount.getFileInode("foo/bar/file.txt")->getObjectId());
