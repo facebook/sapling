@@ -410,9 +410,12 @@ ImmediateFuture<EntryAttributes> VirtualInode::getEntryAttributesForNonFile(
     attributes.type = folly::Try<std::optional<TreeEntryType>>{entryType};
   }
 
-  auto oid = getObjectId();
+  auto isMat = false;
   if (requestedAttributes.contains(ENTRY_ATTRIBUTE_OBJECT_ID)) {
-    attributes.objectId = folly::Try<std::optional<ObjectId>>{oid};
+    attributes.objectId = folly::Try<std::optional<ObjectId>>{getObjectId()};
+    isMat = !attributes.objectId.value().value().has_value();
+  } else {
+    isMat = isMaterialized();
   }
 
   // Fill in any attributes that may be invalid for NonFile types
@@ -433,19 +436,18 @@ ImmediateFuture<EntryAttributes> VirtualInode::getEntryAttributesForNonFile(
 
   auto treeAuxFuture =
       ImmediateFuture<std::optional<TreeAuxData>>{std::nullopt};
-  auto shouldRequestTreeAux = shouldRequestTreeAuxDataForEntry(
-      entryType, requestedAttributes, !oid.has_value() || isMaterialized());
+  auto shouldRequestTreeAux =
+      shouldRequestTreeAuxDataForEntry(entryType, requestedAttributes, isMat);
   // The entry is a tree, and therefore we can attempt to compute tree
   // aux data for it. However, we can only compute the additional attributes
   // of trees that have ObjectIds. In other words, the tree must be
   // unmaterialized.
   if (shouldRequestTreeAux) {
-    treeAuxFuture = objectStore->getTreeAuxData(oid.value(), fetchContext);
+    treeAuxFuture = getTreeAuxData(objectStore, fetchContext);
   } // We return empty tree aux data attributes for materialized directories
   return collectAll(std::move(statFuture), std::move(treeAuxFuture))
       .thenValue([entryAttributes = std::move(attributes),
                   requestedAttributes,
-                  oid,
                   shouldRequestStat,
                   shouldRequestTreeAux](const std::tuple<
                                         folly::Try<struct stat>,
