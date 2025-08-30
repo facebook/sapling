@@ -378,17 +378,17 @@ void populateTreeAuxAttributes(
 void populateStatAttributes(
     EntryAttributes& attributes,
     EntryAttributeFlags requestedAttributes,
-    const folly::Try<struct stat>& statTry) {
+    const folly::Try<std::optional<struct stat>>& statTry) {
   if (requestedAttributes.contains(ENTRY_ATTRIBUTE_MTIME)) {
     attributes.mtime = statTry.hasException()
         ? folly::Try<timespec>{statTry.exception()}
-        : folly::Try<timespec>{stMtime(statTry.value())};
+        : folly::Try<timespec>{stMtime(statTry.value().value())};
   }
 
   if (requestedAttributes.contains(ENTRY_ATTRIBUTE_MODE)) {
     attributes.mode = statTry.hasException()
         ? folly::Try<mode_t>{statTry.exception()}
-        : folly::Try<mode_t>{statTry.value().st_mode};
+        : folly::Try<mode_t>{statTry.value().value().st_mode};
   }
 }
 } // namespace
@@ -427,11 +427,13 @@ ImmediateFuture<EntryAttributes> VirtualInode::getEntryAttributesForNonFile(
       entryType,
       additionalErrorContext);
 
-  struct stat empty_stat {};
-  auto statFuture = ImmediateFuture<struct stat>{std::move(empty_stat)};
+  auto statFuture = ImmediateFuture<std::optional<struct stat>>{std::nullopt};
   auto shouldRequestStat = shouldRequestStatForEntry(requestedAttributes);
   if (shouldRequestStat) {
-    statFuture = stat(lastCheckoutTime, objectStore, fetchContext);
+    statFuture = stat(lastCheckoutTime, objectStore, fetchContext)
+                     .thenValue([](auto&& data) {
+                       return std::optional<struct stat>(data);
+                     });
   }
 
   auto treeAuxFuture =
@@ -450,7 +452,7 @@ ImmediateFuture<EntryAttributes> VirtualInode::getEntryAttributesForNonFile(
                   requestedAttributes,
                   shouldRequestStat,
                   shouldRequestTreeAux](const std::tuple<
-                                        folly::Try<struct stat>,
+                                        folly::Try<std::optional<struct stat>>,
                                         folly::Try<std::optional<TreeAuxData>>>&
                                             rawAttributeData) mutable {
         auto& [statData, treeAuxTry] = rawAttributeData;
@@ -580,10 +582,13 @@ ImmediateFuture<EntryAttributes> VirtualInode::getEntryAttributes(
             ENTRY_ATTRIBUTE_BLAKE3 | ENTRY_ATTRIBUTE_DIGEST_HASH));
   }
 
-  auto statFuture = ImmediateFuture<struct stat>{PathError{
-      EINVAL, path, std::string_view{"neither mode nor mtime requested"}}};
-  if (requestedAttributes.containsAnyOf(ENTRY_ATTRIBUTES_FROM_STAT)) {
-    statFuture = stat(lastCheckoutTime, objectStore, fetchContext);
+  auto statFuture = ImmediateFuture<std::optional<struct stat>>{std::nullopt};
+  auto shouldRequestStat = shouldRequestStatForEntry(requestedAttributes);
+  if (shouldRequestStat) {
+    statFuture = stat(lastCheckoutTime, objectStore, fetchContext)
+                     .thenValue([](auto&& data) {
+                       return std::optional<struct stat>(data);
+                     });
   }
 
   std::optional<ObjectId> objectId;
@@ -598,12 +603,13 @@ ImmediateFuture<EntryAttributes> VirtualInode::getEntryAttributes(
       .thenValue(
           [requestedAttributes,
            entryObjectId = std::move(objectId),
+           shouldRequestStat,
            filePath = RelativePath{path}](
               std::tuple<
                   folly::Try<std::optional<TreeEntryType>>,
                   folly::Try<BlobAuxData>,
-                  folly::Try<struct stat>> rawAttributeData) mutable
-          -> EntryAttributes {
+                  folly::Try<std::optional<struct stat>>> rawAttributeData)
+              -> EntryAttributes {
             auto attributes = EntryAttributes{};
             auto& [entryTypeTry, blobAuxTry, statTry] = rawAttributeData;
 
@@ -617,9 +623,11 @@ ImmediateFuture<EntryAttributes> VirtualInode::getEntryAttributes(
                   folly::Try<std::optional<ObjectId>>{std::move(entryObjectId)};
             }
 
+            if (shouldRequestStat) {
+              populateStatAttributes(attributes, requestedAttributes, statTry);
+            }
             populateBlobAuxAttributes(
                 attributes, requestedAttributes, std::move(blobAuxTry));
-            populateStatAttributes(attributes, requestedAttributes, statTry);
 
             return attributes;
           });
