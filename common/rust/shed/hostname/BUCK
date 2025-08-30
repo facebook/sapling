@@ -16,7 +16,10 @@ rust_library(
             "lints": {
                 "rust": {
                     "unexpected_cfgs": {
-                        "check-cfg": ["cfg(fbcode_build)"],
+                        "check-cfg": [
+                            "cfg(conda_build)",
+                            "cfg(fbcode_build)",
+                        ],
                         "level": "warn",
                     },
                 },

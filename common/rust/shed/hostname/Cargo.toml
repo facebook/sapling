@@ -15,4 +15,4 @@ anyhow = "1.0.98"
 real_hostname = { package = "hostname", version = "0.3" }
 
 [lints]
-rust = { unexpected_cfgs = { check-cfg = ["cfg(fbcode_build)"], level = "warn" } }
+rust = { unexpected_cfgs = { check-cfg = ["cfg(conda_build)", "cfg(fbcode_build)"], level = "warn" } }

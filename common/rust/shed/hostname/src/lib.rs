@@ -16,6 +16,7 @@
 use anyhow::Result;
 
 /// Returns hostname as reported by the system
+#[allow(clippy::collapsible_if)]
 pub fn get_hostname() -> Result<String> {
     if let Ok(aws) = std::env::var("AWS_REGION") {
         if !aws.is_empty() {
@@ -26,12 +27,12 @@ pub fn get_hostname() -> Result<String> {
         }
     }
 
-    #[cfg(not(fbcode_build))]
+    #[cfg(not(any(conda_build, fbcode_build)))]
     {
         Ok(::real_hostname::get()?.to_string_lossy().into_owned())
     }
 
-    #[cfg(fbcode_build)]
+    #[cfg(any(conda_build, fbcode_build))]
     {
         fbwhoami::FbWhoAmI::get()?
             .name
