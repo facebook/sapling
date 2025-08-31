@@ -122,35 +122,32 @@ static constexpr auto kAddLoadTypes = folly::make_array(
     LoadBehavior::PARENT,
     LoadBehavior::ALL);
 
-std::string loadBehaviorToString(LoadBehavior loadType) {
-  switch (loadType) {
-    case LoadBehavior::NONE:
-      return "NONE";
-    case LoadBehavior::ASSIGN_PARENT_INODE:
-      return "ASSIGN_PARENT_INODE";
-    case LoadBehavior::PARENT:
-      return "PARENT";
-    case LoadBehavior::ASSIGN_INODE:
-      return "ASSIGN_INODE";
-    case LoadBehavior::INODE:
-      return "INODE";
-    case LoadBehavior::ALL:
-      return "ALL";
+} // namespace
+
+template <>
+struct fmt::formatter<LoadBehavior> : formatter<string_view> {
+  template <typename FormatContext>
+  auto format(LoadBehavior loadType, FormatContext& ctx) const {
+    switch (loadType) {
+      case LoadBehavior::NONE:
+        return formatter<string_view>::format("NONE", ctx);
+      case LoadBehavior::ASSIGN_PARENT_INODE:
+        return formatter<string_view>::format("ASSIGN_PARENT_INODE", ctx);
+      case LoadBehavior::PARENT:
+        return formatter<string_view>::format("PARENT", ctx);
+      case LoadBehavior::ASSIGN_INODE:
+        return formatter<string_view>::format("ASSIGN_INODE", ctx);
+      case LoadBehavior::INODE:
+        return formatter<string_view>::format("INODE", ctx);
+      case LoadBehavior::ALL:
+        return formatter<string_view>::format("ALL", ctx);
+    }
+    return fmt::format_to(
+        ctx.out(), "<unknown LoadBehavior {}>", static_cast<int>(loadType));
   }
-  return folly::to<std::string>("<unknown LoadBehavior ", int(loadType), ">");
-}
+};
 
-template <typename TargetType>
-typename std::enable_if<folly::IsSomeString<TargetType>::value>::type toAppend(
-    LoadBehavior loadType,
-    TargetType* result) {
-  result->append(loadBehaviorToString(loadType));
-}
-
-std::ostream& operator<<(std::ostream& os, LoadBehavior loadType) {
-  os << loadBehaviorToString(loadType);
-  return os;
-}
+namespace {
 
 void loadInodes(
     TestMount& testMount,
@@ -195,7 +192,7 @@ void loadInodes(
       return;
   }
 
-  FAIL() << "unknown load behavior: " << loadType;
+  FAIL() << fmt::format("unknown load behavior: {}", loadType);
 }
 
 void loadInodes(
@@ -307,7 +304,7 @@ void testAddFile(
 
 void runAddFileTests(folly::StringPiece path) {
   for (auto loadType : kAddLoadTypes) {
-    SCOPED_TRACE(folly::to<string>("add ", path, " load type ", loadType));
+    SCOPED_TRACE(fmt::format("add {} load type {}", path, loadType));
     testAddFile(path, loadType);
     testAddFile(path, loadType, 0755);
   }
@@ -365,7 +362,7 @@ void testRemoveFile(folly::StringPiece filePath, LoadBehavior loadType) {
 void runRemoveFileTests(folly::StringPiece path) {
   // Modify just the file contents, but not the permissions
   for (auto loadType : kAllLoadTypes) {
-    SCOPED_TRACE(folly::to<string>("remove ", path, " load type ", loadType));
+    SCOPED_TRACE(fmt::format("remove {} load type {}", path, loadType));
     testRemoveFile(path, loadType);
   }
 }
@@ -462,8 +459,8 @@ void testModifyFile(
 void runModifyFileTests(folly::StringPiece path) {
   // Modify just the file contents, but not the permissions
   for (auto loadType : kAllLoadTypes) {
-    SCOPED_TRACE(folly::to<string>(
-        "contents change, path ", path, " load type ", loadType));
+    SCOPED_TRACE(
+        fmt::format("contents change, path {} load type {}", path, loadType));
     testModifyFile(
         path,
         loadType,
@@ -476,14 +473,14 @@ void runModifyFileTests(folly::StringPiece path) {
   // Modify just the permissions, but not the contents
   for (auto loadType : kAllLoadTypes) {
     SCOPED_TRACE(
-        folly::to<string>("mode change, path ", path, " load type ", loadType));
+        fmt::format("mode change, path {} load type {}", path, loadType));
     testModifyFile(path, loadType, "unchanged", 0755, "unchanged", 0644);
   }
 
   // Modify the contents and the permissions
   for (auto loadType : kAllLoadTypes) {
-    SCOPED_TRACE(folly::to<string>(
-        "contents+mode change, path ", path, " load type ", loadType));
+    SCOPED_TRACE(fmt::format(
+        "contents+mode change, path {} load type {}", path, loadType));
     testModifyFile(
         path, loadType, "contents v1", 0644, "executable contents", 0755);
   }
@@ -693,8 +690,8 @@ void runModifyConflictTests(CheckoutMode checkoutMode) {
   // exercise all code paths in TreeInode::computeCheckoutActions()
   for (StringPiece path : {"a/b/aaa.txt", "a/b/mmm.txt", "a/b/zzz.tzt"}) {
     for (auto loadType : kAllLoadTypes) {
-      SCOPED_TRACE(folly::to<string>(
-          "path ", path, " load type ", loadType, " force=", checkoutMode));
+      SCOPED_TRACE(fmt::format(
+          "path {} load type {} force={}", path, loadType, checkoutMode));
       testModifyConflict(
           path,
           loadType,
@@ -1006,7 +1003,7 @@ TEST(Checkout, addSubdirectory) {
   // the start of the directory listing, at the end, and in the middle.
   for (const auto& path : {"src/aaa", "src/ppp", "src/zzz"}) {
     for (auto loadType : kAddLoadTypes) {
-      SCOPED_TRACE(folly::to<string>("path ", path, " load type ", loadType));
+      SCOPED_TRACE(fmt::format("path {} load type {}", path, loadType));
       testAddSubdirectory(path, loadType);
     }
   }
@@ -1061,7 +1058,7 @@ void testRemoveSubdirectory(LoadBehavior loadType) {
 // Remove a subdirectory with no conflicts or untracked files left behind
 TEST(Checkout, removeSubdirectorySimple) {
   for (auto loadType : kAllLoadTypes) {
-    SCOPED_TRACE(folly::to<string>(" load type ", loadType));
+    SCOPED_TRACE(fmt::format(" load type {}", loadType));
     testRemoveSubdirectory(loadType);
   }
 }
