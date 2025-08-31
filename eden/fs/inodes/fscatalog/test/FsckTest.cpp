@@ -184,7 +184,7 @@ class TestDir {
         contents_.entries()->emplace(name, overlay::OverlayEntry{});
     if (!insertResult.second) {
       throw std::runtime_error(
-          folly::to<string>("an entry named \"", name, "\" already exists"));
+          fmt::format("an entry named \"{}\" already exists", name));
     }
 
     if (number == 0) {
@@ -353,8 +353,7 @@ std::string readLostNFoundFile(
     InodeNumber number,
     StringPiece suffix) {
   auto archivePath = result.repairDir + "lost+found"_pc +
-      PathComponent(folly::to<string>(number.get())) +
-      RelativePathPiece(suffix);
+      PathComponent(fmt::to_string(number.get())) + RelativePathPiece(suffix);
   return readFileContents(archivePath);
 }
 
@@ -484,8 +483,8 @@ TEST_P(FsckTest, testBadNextInodeNumber) {
   checker.scanForErrors();
   EXPECT_THAT(
       errorMessages(checker),
-      UnorderedElementsAre(folly::to<string>(
-          "bad stored next inode number: read 2 but should be at least ",
+      UnorderedElementsAre(fmt::format(
+          "bad stored next inode number: read 2 but should be at least {}",
           actualNextInodeNumber)));
   EXPECT_EQ(checker.getNextInodeNumber(), actualNextInodeNumber);
   catalog->close(checker.getNextInodeNumber());
@@ -513,10 +512,9 @@ TEST_P(FsckTest, testBadFileData) {
   checker.scanForErrors();
   EXPECT_THAT(
       errorMessages(checker),
-      UnorderedElementsAre(folly::to<string>(
-          "error reading data for inode ",
+      UnorderedElementsAre(fmt::format(
+          "error reading data for inode {}: unknown overlay file format version {}",
           layout.src_foo_testTxt.number(),
-          ": unknown overlay file format version ",
           0x55555555)));
 
   // Repair the problems
@@ -573,20 +571,19 @@ TEST_P(FsckTest, testTruncatedDirData) {
   EXPECT_THAT(
       errorMessages(checker),
       UnorderedElementsAre(
-          folly::to<string>(
-              "error reading data for inode ",
-              layout.src.number(),
-              ": file was too short to contain overlay header: "
-              "read 0 bytes, expected 64 bytes"),
-          folly::to<string>(
-              "found orphan directory inode ", layout.src_foo.number()),
-          folly::to<string>(
-              "found orphan file inode ", layout.src_todoTxt.number())));
+          fmt::format(
+              "error reading data for inode {}: file was too short to contain overlay header: "
+              "read 0 bytes, expected 64 bytes",
+              layout.src.number()),
+          fmt::format(
+              "found orphan directory inode {}", layout.src_foo.number()),
+          fmt::format(
+              "found orphan file inode {}", layout.src_todoTxt.number())));
 
   // Test path computation for one of the orphaned inodes
   EXPECT_EQ(
-      folly::to<string>(
-          "[unlinked(", layout.src_foo.number(), ")]/x/y/another_child.txt"),
+      fmt::format(
+          "[unlinked({})]/x/y/another_child.txt", layout.src_foo.number()),
       checker.computePath(layout.src_foo_x_y.number(), "another_child.txt"_pc)
           .toString());
 
@@ -675,26 +672,22 @@ TEST_P(FsckTest, testMissingDirData) {
   EXPECT_THAT(
       errorMessages(checker),
       UnorderedElementsAre(
-          folly::to<string>(
-              "missing overlay file for materialized directory inode ",
-              layout.src.number(),
-              " (src)"),
-          folly::to<string>(
-              "found orphan directory inode ", layout.src_foo.number()),
-          folly::to<string>(
-              "found orphan file inode ", layout.src_todoTxt.number()),
-          folly::to<string>(
-              "missing overlay file for materialized directory inode ",
+          fmt::format(
+              "missing overlay file for materialized directory inode {} (src)",
+              layout.src.number()),
+          fmt::format(
+              "found orphan directory inode {}", layout.src_foo.number()),
+          fmt::format(
+              "found orphan file inode {}", layout.src_todoTxt.number()),
+          fmt::format(
+              "missing overlay file for materialized directory inode {} ([unlinked({})]/x)",
               layout.src_foo_x.number(),
-              " ([unlinked(",
-              layout.src_foo.number(),
-              ")]/x)"),
-          folly::to<string>(
-              "found orphan directory inode ", layout.src_foo_x_y.number()),
-          folly::to<string>(
-              "error reading data for inode ",
+              layout.src_foo.number()),
+          fmt::format(
+              "found orphan directory inode {}", layout.src_foo_x_y.number()),
+          fmt::format(
+              "error reading data for inode {}: unknown overlay file format version {}",
               layout.src_foo_testTxt.number(),
-              ": unknown overlay file format version ",
               0x55555555)));
 
   // Repair the problems
@@ -768,12 +761,9 @@ TEST_P(FsckTest, testHardLink) {
   checker.scanForErrors();
   EXPECT_THAT(
       errorMessages(checker),
-      UnorderedElementsAre(folly::to<string>(
-          "found hard linked inode ",
-          layout.src_foo_x_y_zTxt.number(),
-          ":\n",
-          "- src/foo/also_z.txt\n",
-          "- src/foo/x/y/z.txt")));
+      UnorderedElementsAre(fmt::format(
+          "found hard linked inode {}:\n- src/foo/also_z.txt\n- src/foo/x/y/z.txt",
+          layout.src_foo_x_y_zTxt.number())));
   testOverlay->inodeCatalog()->close(checker.getNextInodeNumber());
 }
 

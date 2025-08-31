@@ -151,7 +151,7 @@ class InodeTable {
       return *rv;
     } else {
       throw std::out_of_range(
-          folly::to<std::string>("no entry in InodeTable for inode ", ino));
+          fmt::format("no entry in InodeTable for inode {}", ino));
     }
   }
 
@@ -186,7 +186,7 @@ class InodeTable {
     auto iter = state->indices.find(ino);
     if (iter == state->indices.end()) {
       throw std::out_of_range(
-          folly::to<std::string>("no entry in InodeTable for inode ", ino));
+          fmt::format("no entry in InodeTable for inode {}", ino));
     }
     auto index = iter->second;
     XCHECK_LT(index, state->storage.size());
