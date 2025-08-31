@@ -40,6 +40,9 @@ GIT_FORMAT_REQUIREMENT = "git"
 # Whether to be compatible with `.git/`.
 DOTGIT_REQUIREMENT = "dotgit"
 
+# ref to push to when doing commit cloud uploads
+COMMIT_CLOUD_UPLOAD_REF = "refs/commitcloud/upload"
+
 
 class GitCommandError(error.Abort):
     def __init__(self, git_command, git_exitcode, git_output, **kwargs):
@@ -794,7 +797,8 @@ def push(repo, dest, pushnode_to_pairs, force=False):
             if pushnode is None:
                 namenodes.pop(name, None)
             else:
-                namenodes[name] = pushnode
+                if not to.startswith(COMMIT_CLOUD_UPLOAD_REF):
+                    namenodes[name] = pushnode
             metalog["remotenames"] = bookmod.encoderemotenames(namenodes)
     return ret
 

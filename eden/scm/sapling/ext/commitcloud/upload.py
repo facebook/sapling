@@ -79,7 +79,7 @@ def upload(repo, revs, force=False, localbackupstate=None):
     if git.isgitformat(repo):
         # Use `git push` to upload the commits.
         pairs = [
-            (h, f"refs/commitcloud/upload{i}")
+            (h, f"{git.COMMIT_CLOUD_UPLOAD_REF}{i}")
             for i, h in enumerate(sorted(missingheads))
         ]
         ret = git.push(repo, "default", pairs)
