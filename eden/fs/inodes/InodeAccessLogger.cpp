@@ -134,10 +134,8 @@ void InodeAccessLogger::processInodeAccessEvents() {
         // process these events in an async queue, it is possible that the
         // inode is invalidated before we get to it. In this case, just
         // continue to the next event.
-        XLOG_EVERY_MS(
-            WARN,
-            30000,
-            fmt::format("Error looking up inode path: {}", ex.what()));
+        XLOGF_EVERY_MS(
+            WARN, 30000, "Error looking up inode path: {}", ex.what());
         path = std::nullopt;
       }
 

@@ -54,7 +54,7 @@ void FuseRequestContext::systemErrorHandler(
   if (isErrnoError(err)) {
     errnum = err.code().value();
   }
-  XLOGF(DBG5, "{}", folly::exceptionStr(err));
+  XLOG(DBG5, folly::exceptionStr(err));
   replyError(errnum);
   if (notifier) {
     notifier->showNetworkNotification(err);
@@ -64,7 +64,7 @@ void FuseRequestContext::systemErrorHandler(
 void FuseRequestContext::genericErrorHandler(
     const std::exception& err,
     Notifier* FOLLY_NULLABLE notifier) {
-  XLOGF(DBG5, "{}", folly::exceptionStr(err));
+  XLOG(DBG5, folly::exceptionStr(err));
   replyError(EIO);
   if (notifier) {
     notifier->showNetworkNotification(err);

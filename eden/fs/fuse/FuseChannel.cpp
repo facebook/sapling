@@ -1820,7 +1820,7 @@ void FuseChannel::processSession() {
       case FUSE_SETLKW:
         // Deliberately not handling locking; this causes
         // the kernel to do it for us
-        XLOGF(DBG7, "{}", fuseOpcodeName(header->opcode));
+        XLOG(DBG7, fuseOpcodeName(header->opcode));
         replyError(*header, ENOSYS);
         break;
 

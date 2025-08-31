@@ -197,7 +197,7 @@ bool FilteredObjectId::operator<(const FilteredObjectId& otherId) const {
 
 void FilteredObjectId::validate() {
   ByteRange infoBytes = folly::Range{value_.data(), value_.size()};
-  XLOGF(DBG9, "{}", value_);
+  XLOG(DBG9, value_);
 
   // Ensure the type byte is valid
   auto typeByte = infoBytes.front();
@@ -206,7 +206,7 @@ void FilteredObjectId::validate() {
       typeByte != FilteredObjectIdType::OBJECT_TYPE_UNFILTERED_TREE) {
     auto msg = fmt::format(
         "Invalid FilteredObjectId type byte {}. Value_ = {}", typeByte, value_);
-    XLOGF(ERR, "{}", msg);
+    XLOG(ERR, msg);
     throw std::invalid_argument(msg);
   }
   static_assert(
