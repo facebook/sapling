@@ -31,20 +31,41 @@ using namespace std::chrono_literals;
 
 constexpr auto materializationTimeoutLimit = 1000ms;
 
-std::ostream& operator<<(std::ostream& os, const timespec& ts) {
-  return os << fmt::format("{}.{:09d}", ts.tv_sec, ts.tv_nsec);
-}
+template <>
+struct fmt::formatter<timespec> {
+  constexpr auto parse(format_parse_context& ctx) {
+    return ctx.begin();
+  }
 
-namespace std::chrono {
-std::ostream& operator<<(
-    std::ostream& os,
-    const std::chrono::system_clock::time_point& tp) {
-  auto duration = tp.time_since_epoch();
-  auto secs = duration_cast<std::chrono::seconds>(duration);
-  auto nsecs = duration_cast<std::chrono::nanoseconds>(duration - secs);
-  return os << fmt::format("{}.{:09d}", secs.count(), nsecs.count());
+  template <typename FormatContext>
+  auto format(const timespec& ts, FormatContext& ctx) {
+    return fmt::format_to(ctx.out(), "{}.{:09d}", ts.tv_sec, ts.tv_nsec);
+  }
+};
+
+template <>
+struct fmt::formatter<std::chrono::system_clock::time_point> {
+  constexpr auto parse(format_parse_context& ctx) {
+    return ctx.begin();
+  }
+
+  template <typename FormatContext>
+  auto format(
+      const std::chrono::system_clock::time_point& tp,
+      FormatContext& ctx) {
+    auto duration = tp.time_since_epoch();
+    auto secs = std::chrono::duration_cast<std::chrono::seconds>(duration);
+    auto nsecs =
+        std::chrono::duration_cast<std::chrono::nanoseconds>(duration - secs);
+    return fmt::format_to(ctx.out(), "{}.{:09d}", secs.count(), nsecs.count());
+  }
+};
+
+// Helper function to avoid GoogleTest formatting issues with chrono types
+template <typename T>
+std::string formatTimePoint(const T& tp) {
+  return fmt::format("{}", tp);
 }
-} // namespace std::chrono
 
 /*
  * Helper functions for comparing timespec structs from file attributes
@@ -212,9 +233,9 @@ TEST_F(FileInodeTest, getattrFromOverlay) {
   EXPECT_EQ((S_IFREG | 0644), attr.st_mode);
   EXPECT_EQ(12, attr.st_size);
   EXPECT_EQ(1, attr.st_blocks);
-  EXPECT_EQ(stAtimepoint(attr), start);
-  EXPECT_EQ(stMtimepoint(attr), start);
-  EXPECT_EQ(stCtimepoint(attr), start);
+  EXPECT_EQ(formatTimePoint(stAtimepoint(attr)), formatTimePoint(start));
+  EXPECT_EQ(formatTimePoint(stMtimepoint(attr)), formatTimePoint(start));
+  EXPECT_EQ(formatTimePoint(stCtimepoint(attr)), formatTimePoint(start));
 }
 
 void testSetattrTruncateAll(TestMount& mount) {
@@ -335,8 +356,8 @@ TEST_F(FileInodeTest, setattrAtime) {
 
   BASIC_ATTR_XCHECKS(inode, attr);
   EXPECT_EQ(
-      mount_.getClock().getTimePoint(),
-      folly::to<FakeClock::time_point>(stAtime(attr)));
+      formatTimePoint(mount_.getClock().getTimePoint()),
+      formatTimePoint(folly::to<FakeClock::time_point>(stAtime(attr))));
 }
 
 void testSetattrMtime(TestMount& mount) {
@@ -364,7 +385,9 @@ void testSetattrMtime(TestMount& mount) {
   attr = setFileAttr(mount, inode, desired);
 
   BASIC_ATTR_XCHECKS(inode, attr);
-  EXPECT_EQ(start, folly::to<FakeClock::time_point>(stMtime(attr)));
+  EXPECT_EQ(
+      formatTimePoint(start),
+      formatTimePoint(folly::to<FakeClock::time_point>(stMtime(attr))));
 }
 
 TEST_F(FileInodeTest, setattrMtime) {
