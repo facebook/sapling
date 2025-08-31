@@ -668,7 +668,8 @@ std::optional<RelativePath> InodeMap::getPathForInodeHelper(
       }
       return *dir + unloadedIt->second.name;
     } else {
-      throwSystemErrorExplicit(EINVAL, "unknown inode number ", inodeNumber);
+      throwSystemErrorExplicit(
+          EINVAL, fmt::format("unknown inode number {}", inodeNumber));
     }
   }
 }

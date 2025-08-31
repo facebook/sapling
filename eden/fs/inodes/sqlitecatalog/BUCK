@@ -45,6 +45,7 @@ cpp_library(
         "//eden/fs/prjfs:disk_state",
         "//eden/fs/utils:projfs_util",
         "//folly:file",
+        "//folly:format",
         "//folly/executors:serial_executor",
         "//folly/portability:windows",
     ],

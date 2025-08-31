@@ -180,10 +180,10 @@ std::variant<folly::File, InodeNumber> LMDBFileContentStore::openFileNoVerify(
   if (!store_.hasBlob(inodeNumber)) {
     folly::throwSystemErrorExplicit(
         ENOENT,
-        "failed to read overlay file for inode ",
-        inodeNumber,
-        " in ",
-        path_.view());
+        fmt::format(
+            "failed to read overlay file for inode {} in {}",
+            inodeNumber,
+            path_.view()));
   }
   return inodeNumber;
 }

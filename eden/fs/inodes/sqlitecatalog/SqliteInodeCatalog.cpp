@@ -8,6 +8,8 @@
 #include "eden/fs/inodes/sqlitecatalog/SqliteInodeCatalog.h"
 
 #include <folly/File.h>
+#include <folly/Format.h>
+
 #include "eden/common/utils/Bug.h"
 #include "eden/fs/inodes/InodeNumber.h"
 #include "eden/fs/inodes/overlay/gen-cpp2/overlay_types.h"
@@ -96,7 +98,7 @@ std::optional<fsck::InodeInfo> SqliteInodeCatalog::loadInodeInfo(
     InodeNumber number) {
   auto inodeError = [number](auto&&... args) -> std::optional<fsck::InodeInfo> {
     return {fsck::InodeInfo(
-        number, fsck::InodeType::Error, folly::to<std::string>(args...))};
+        number, fsck::InodeType::Error, folly::sformat(args...))};
   };
 
   if (!hasOverlayDir(number)) {
@@ -106,7 +108,8 @@ std::optional<fsck::InodeInfo> SqliteInodeCatalog::loadInodeInfo(
   auto overlayDir = loadOverlayDir(number);
 
   if (!overlayDir.has_value()) {
-    return inodeError("unable to load directory contents for inode ", number);
+    return inodeError(fmt::format(
+        "unable to load directory contents for inode {}", number.get()));
   }
 
   return {fsck::InodeInfo(number, std::move(overlayDir.value()))};

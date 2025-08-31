@@ -1189,7 +1189,8 @@ void FuseChannel::sendInvalidateInode(
           len,
           exc.what());
       throwSystemErrorExplicit(
-          exc.code().value(), "error invalidating FUSE inode ", ino);
+          exc.code().value(),
+          fmt::format("error invalidating FUSE inode {}", ino));
     } else {
       XLOGF(
           DBG6,
@@ -1248,10 +1249,10 @@ void FuseChannel::sendInvalidateEntry(
     if (!isEnoent(exc)) {
       throwSystemErrorExplicit(
           exc.code().value(),
-          "error invalidating FUSE entry ",
-          namePiece,
-          " in directory inode ",
-          parent);
+          fmt::format(
+              "error invalidating FUSE entry {} in directory inode {}",
+              namePiece,
+              parent));
     } else {
       XLOGF(
           DBG3,
