@@ -712,17 +712,6 @@ Future<unique_ptr<InodeBase>> TreeInode::startLoadingInodeNoThrow(
       [&] { return startLoadingInode(entry, name, fetchContext); });
 }
 
-template <typename T>
-inline std::ostream& operator<<(
-    std::ostream& os,
-    const std::optional<T>& value) {
-  if (value) {
-    return os << "some(" << *value << ")";
-  } else {
-    return os << "none";
-  }
-}
-
 static std::vector<std::string> computeEntryDifferences(
     const DirContents& dir,
     const Tree& tree) {
