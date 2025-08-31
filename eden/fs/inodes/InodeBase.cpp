@@ -35,7 +35,7 @@ InodeBase::InodeBase(EdenMount* mount)
   XLOGF(
       DBG5,
       "root inode {} ({}) created for mount {}",
-      static_cast<void*>(this),
+      fmt::ptr(this),
       ino_,
       mount_->getPath());
 
@@ -58,12 +58,7 @@ InodeBase::InodeBase(
   // Inode numbers generally shouldn't be 0.
   // Older versions of glibc have bugs handling files with an inode number of 0
   XDCHECK(ino_.hasValue());
-  XLOGF(
-      DBG5,
-      "inode {} ({}) created: {}",
-      static_cast<void*>(this),
-      ino_,
-      getLogPath());
+  XLOGF(DBG5, "inode {} ({}) created: {}", fmt::ptr(this), ino_, getLogPath());
 
 #ifndef _WIN32
   mount_->getInodeMetadataTable()->populateIfNotSet(ino_, [&] {
@@ -98,11 +93,7 @@ InodeBase::InodeBase(
 
 InodeBase::~InodeBase() {
   XLOGF(
-      DBG5,
-      "inode {} ({}) destroyed: {}",
-      static_cast<void*>(this),
-      ino_,
-      getLogPath());
+      DBG5, "inode {} ({}) destroyed: {}", fmt::ptr(this), ino_, getLogPath());
   auto p = getParentRacy();
   while (p) {
     p->increaseInMemoryDescendants(-1);
@@ -285,7 +276,7 @@ void InodeBase::updateLocation(
   XLOGF(
       DBG5,
       "inode {:p} renamed: {} --> {} / \"{}\"",
-      static_cast<const void*>(this),
+      fmt::ptr(this),
       getLogPath(),
       newParent->getLogPath(),
       newName);

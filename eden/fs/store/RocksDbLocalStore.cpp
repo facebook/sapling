@@ -286,7 +286,7 @@ RocksDbLocalStore::RockDBState::RockDBState() {
   XLOGF(
       DBG2,
       "Making a new RockDB localstore ( {} ). Debug information for T136469251.",
-      (void*)this);
+      fmt::ptr(this));
 }
 
 RocksDbLocalStore::RocksDbLocalStore(
@@ -310,14 +310,14 @@ RocksDbLocalStore::RocksDbLocalStore(
       DBG2,
       "Making a new {} RockDB localstore ( {} ). Debug information for T136469251.",
       isAsync_ ? "async" : "sync",
-      (void*)this);
+      fmt::ptr(this));
 }
 
 void RocksDbLocalStore::open() {
   XLOGF(
       DBG2,
       "Opening Rocksdb localstore ( {} ). Debug information for T136469251.",
-      (void*)this);
+      fmt::ptr(this));
   {
     auto handles = dbHandles_.wlock();
     switch (handles->status) {
@@ -343,7 +343,7 @@ void RocksDbLocalStore::open() {
   XLOGF(
       DBG2,
       "RocksDB setup complete. ( {} ). Debug information for T136469251.",
-      (void*)this);
+      fmt::ptr(this));
 }
 
 RocksDbLocalStore::~RocksDbLocalStore() {
@@ -363,7 +363,7 @@ void RocksDbLocalStore::close() {
   XLOGF(
       DBG2,
       "Closing Rocksdb localstore ( {} ). Debug information for T136469251.",
-      (void*)this);
+      fmt::ptr(this));
 }
 
 folly::Synchronized<RocksDbLocalStore::RockDBState>::ConstRLockedPtr
