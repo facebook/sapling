@@ -15,11 +15,7 @@ cpp_library(
 
 cpp_library(
     name = "inode_number",
-    srcs = ["InodeNumber.cpp"],
     headers = ["InodeNumber.h"],
-    deps = [
-        "//folly:conv",
-    ],
     exported_deps = [
         "fbsource//third-party/fmt:fmt",
         "//folly/logging:logging",

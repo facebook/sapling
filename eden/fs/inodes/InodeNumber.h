@@ -98,12 +98,6 @@ inline bool operator>=(InodeNumber lhs, InodeNumber rhs) {
   return lhs.getRawValue() >= rhs.getRawValue();
 }
 
-// Define toAppend() so folly::to<string>(ino) will work.
-void toAppend(InodeNumber ino, std::string* result);
-
-// Define toAppend() so folly::to<fbstring>(ino) will work.
-void toAppend(InodeNumber ino, folly::fbstring* result);
-
 constexpr InodeNumber operator""_ino(unsigned long long ino) {
   return InodeNumber{ino};
 }
