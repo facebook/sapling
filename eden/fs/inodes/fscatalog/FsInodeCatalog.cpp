@@ -368,10 +368,10 @@ std::optional<overlay::OverlayDir> FsFileContentStore::deserializeOverlayDir(
     }
     folly::throwSystemErrorExplicit(
         err,
-        "error opening overlay file for inode ",
-        inodeNumber,
-        " in ",
-        localDir_.view());
+        fmt::format(
+            "error opening overlay file for inode {} in {}",
+            inodeNumber,
+            localDir_.view()));
   }
   folly::File file{fd, /* ownsFd */ true};
 
@@ -433,10 +433,10 @@ std::variant<folly::File, InodeNumber> FsFileContentStore::openFile(
   if (!folly::readFile(file.fd(), contents, kHeaderLength)) {
     folly::throwSystemErrorExplicit(
         errno,
-        "failed to read overlay file for inode ",
-        inodeNumber,
-        " in ",
-        localDir_.view());
+        fmt::format(
+            "failed to read overlay file for inode {} in {}",
+            inodeNumber,
+            localDir_.view()));
   }
 
   validateHeader(inodeNumber, contents, headerId);
@@ -450,10 +450,10 @@ std::variant<folly::File, InodeNumber> FsFileContentStore::openFileNoVerify(
   int fd = openat(dirFile_.fd(), path.c_str(), O_RDWR | O_CLOEXEC | O_NOFOLLOW);
   folly::checkUnixError(
       fd,
-      "error opening overlay file for inode ",
-      inodeNumber,
-      " in ",
-      localDir_.view());
+      fmt::format(
+          "error opening overlay file for inode {} in {}",
+          inodeNumber,
+          localDir_.view()));
   return folly::File{fd, /* ownsFd */ true};
 }
 
@@ -504,10 +504,10 @@ folly::File FsFileContentStore::createOverlayFileImpl(
       0600);
   folly::checkUnixError(
       tmpFD,
-      "failed to create temporary overlay file for inode ",
-      inodeNumber,
-      " in ",
-      localDir_.view());
+      fmt::format(
+          "failed to create temporary overlay file for inode {} in {}",
+          inodeNumber,
+          localDir_.view()));
   folly::File file{tmpFD, /* ownsFd */ true};
   bool success = false;
   SCOPE_EXIT {
@@ -519,10 +519,10 @@ folly::File FsFileContentStore::createOverlayFileImpl(
   auto sizeWritten = folly::writevFull(tmpFD, iov, iovCount);
   folly::checkUnixError(
       sizeWritten,
-      "error writing to overlay file for inode ",
-      inodeNumber,
-      " in ",
-      localDir_.view());
+      fmt::format(
+          "error writing to overlay file for inode {} in {}",
+          inodeNumber,
+          localDir_.view()));
 
   // fdatasync() is required to ensure that we are really reliably and
   // atomically writing out the new file.  Without calling fdatasync() the file
@@ -543,20 +543,20 @@ folly::File FsFileContentStore::createOverlayFileImpl(
     auto syncReturnCode = folly::fdatasyncNoInt(tmpFD);
     folly::checkUnixError(
         syncReturnCode,
-        "error flushing data to overlay file for inode ",
-        inodeNumber,
-        " in ",
-        localDir_.view());
+        fmt::format(
+            "error flushing data to overlay file for inode {} in {}",
+            inodeNumber,
+            localDir_.view()));
   }
 
   auto returnCode =
       renameat(dirFile_.fd(), tmpPath.data(), dirFile_.fd(), path.c_str());
   folly::checkUnixError(
       returnCode,
-      "error committing overlay file for inode ",
-      inodeNumber,
-      " in ",
-      localDir_.view());
+      fmt::format(
+          "error committing overlay file for inode {} in {}",
+          inodeNumber,
+          localDir_.view()));
   // We do not want to unlink the temporary file on exit now that we have
   // successfully renamed it.
   success = true;
