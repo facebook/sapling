@@ -18,6 +18,7 @@
 #include <folly/ExceptionWrapper.h>
 #include <folly/File.h>
 #include <folly/FileUtil.h>
+#include <folly/Format.h>
 #include <folly/Overload.h>
 #include <folly/String.h>
 #include <folly/gen/Base.h>
@@ -119,7 +120,7 @@ class OverlayChecker::RepairState {
       InodeNumber number,
       StringPiece suffix = {}) {
     return getLostAndFoundPath() +
-        PathComponent(folly::to<string>(number, suffix));
+        PathComponent(fmt::format("{}{}", number, suffix));
   }
 
   AbsolutePath getLostAndFoundPath(const OverlayChecker::PathInfo& pathInfo) {
@@ -128,7 +129,7 @@ class OverlayChecker::RepairState {
     // in the lost+found directory if the root inode contained some children
     // whose names could also be the same as some other inode number.
     return getLostAndFoundPath() +
-        PathComponent(folly::to<string>(pathInfo.parent)) + pathInfo.path;
+        PathComponent(fmt::to_string(pathInfo.parent)) + pathInfo.path;
   }
 
   /**
@@ -234,8 +235,8 @@ class OverlayChecker::RepairState {
       if (iter == 0) {
         path = baseDir + PathComponentPiece(timestampStr);
       } else {
-        path = baseDir +
-            PathComponentPiece(folly::to<string>(timestampStr, ".", iter));
+        path =
+            baseDir + PathComponent(fmt::format("{}.{}", timestampStr, iter));
       }
 
       int rc = mkdir(path.c_str(), 0700);
@@ -269,7 +270,7 @@ class OverlayChecker::RepairState {
         timeFields.tm_min,
         timeFields.tm_sec,
         us.count());
-    auto fullMsg = folly::to<string>(header, msg, "\n");
+    auto fullMsg = fmt::format("{}{}\n", header, msg);
 
     // We don't buffer output to the log file, and write each message
     // immediately.
@@ -344,12 +345,10 @@ class OverlayChecker::UnexpectedInodeShard : public OverlayChecker::Error {
       : number_(number), shardID_(shardID) {}
 
   string getMessage(OverlayChecker*) const override {
-    return folly::to<string>(
-        "found a data file for inode ",
+    return fmt::format(
+        "found a data file for inode {} in the wrong shard directory ({})",
         number_,
-        " in the wrong shard directory (",
-        shardID_,
-        ")");
+        shardID_);
   }
 
   bool repair(RepairState& /* repair */) const override {
@@ -367,11 +366,11 @@ class OverlayChecker::InodeDataError : public OverlayChecker::Error {
   template <typename... Args>
   explicit InodeDataError(InodeNumber number, Args&&... args)
       : number_(number),
-        message_(folly::to<string>(std::forward<Args>(args)...)) {}
+        message_(folly::sformat(std::forward<Args>(args)...)) {}
 
   string getMessage(OverlayChecker*) const override {
-    return folly::to<string>(
-        "error reading data for inode ", number_, ": ", message_);
+    return fmt::format(
+        "error reading data for inode {}: {}", number_, message_);
   }
 
   bool repair(RepairState& repair) const override {
@@ -417,14 +416,11 @@ class OverlayChecker::MissingMaterializedInode : public OverlayChecker::Error {
         ? "directory"
         : (S_ISLNK(*childInfo_.mode()) ? "symlink" : "file");
     auto path = checker->computePath(parent_, childName_);
-    return folly::to<string>(
-        "missing overlay file for materialized ",
+    return fmt::format(
+        "missing overlay file for materialized {} inode {} ({})",
         fileTypeStr,
-        " inode ",
         *childInfo_.inodeNumber(),
-        " (",
-        path.toString(),
-        ")");
+        path.toString());
   }
 
   bool repair(RepairState& repair) const override {
@@ -464,10 +460,9 @@ class OverlayChecker::OrphanInode : public OverlayChecker::Error {
       : number_(info.number), type_(info.type) {}
 
   string getMessage(OverlayChecker*) const override {
-    return folly::to<string>(
-        "found orphan ",
+    return fmt::format(
+        "found orphan {} inode {}",
         type_ == InodeType::Dir ? "directory" : "file",
-        " inode ",
         number_);
   }
 
@@ -519,8 +514,9 @@ class OverlayChecker::OrphanInode : public OverlayChecker::Error {
       // part of our orphaned subtree.
       folly::checkUnixError(
           rc,
-          "failed to create directory to archive orphan directory inode ",
-          number);
+          fmt::format(
+              "failed to create directory to archive orphan directory inode {}",
+              number));
     }
 
     auto* const checker = repair.checker();
@@ -609,11 +605,10 @@ class OverlayChecker::OrphanInode : public OverlayChecker::Error {
           contents.size(),
           FsFileContentStore::kHeaderLength);
       if (bytesRead < 0) {
-        folly::throwSystemError(
-            "read error while copying symlink data from inode ",
+        folly::throwSystemError(fmt::format(
+            "read error while copying symlink data from inode {} to {}",
             number,
-            " to ",
-            archivePath.view());
+            archivePath.view()));
       }
       if (0 < bytesRead && static_cast<size_t>(bytesRead) < maxLength) {
         auto rc = ::symlink(contents.data(), archivePath.value().c_str());
@@ -638,11 +633,10 @@ class OverlayChecker::OrphanInode : public OverlayChecker::Error {
       auto bytesRead =
           folly::readFull(input.fd(), buffer.data(), buffer.size());
       if (bytesRead < 0) {
-        folly::throwSystemError(
-            "read error while copying data from inode ",
+        folly::throwSystemError(fmt::format(
+            "read error while copying data from inode {} to {}",
             number,
-            " to ",
-            archivePath.view());
+            archivePath.view()));
       } else if (bytesRead == 0) {
         break;
       }
@@ -650,10 +644,10 @@ class OverlayChecker::OrphanInode : public OverlayChecker::Error {
           folly::writeFull(output.fd(), buffer.data(), bytesRead);
       folly::checkUnixError(
           bytesWritten,
-          "write error while copying data from inode ",
-          number,
-          " to ",
-          archivePath.view());
+          fmt::format(
+              "write error while copying data from inode {} to {}",
+              number,
+              archivePath.view()));
     }
 
     // Now remove the orphan inode file
@@ -718,7 +712,7 @@ class OverlayChecker::HardLinkedInode : public OverlayChecker::Error {
   }
 
   string getMessage(OverlayChecker* checker) const override {
-    auto msg = folly::to<string>("found hard linked inode ", number_, ":");
+    auto msg = fmt::format("found hard linked inode {}:", number_);
     for (auto parent : parents_) {
       msg += "\n- " + checker->computePath(parent, number_).toString();
     }
@@ -741,10 +735,9 @@ class OverlayChecker::BadNextInodeNumber : public OverlayChecker::Error {
       : loadedNumber_(loadedNumber), expectedNumber_(expectedNumber) {}
 
   string getMessage(OverlayChecker*) const override {
-    return folly::to<string>(
-        "bad stored next inode number: read ",
+    return fmt::format(
+        "bad stored next inode number: read {} but should be at least {}",
         loadedNumber_,
-        " but should be at least ",
         expectedNumber_);
   }
 
@@ -880,7 +873,7 @@ std::string OverlayChecker::PathInfo::toString() const {
   if (parent == kRootNodeId) {
     return path.value();
   }
-  return folly::to<string>("[unlinked(", parent.get(), ")]/", path.value());
+  return fmt::format("[unlinked({})]/{}", parent.get(), path.value());
 }
 
 template <typename Fn>
@@ -990,7 +983,7 @@ PathComponent OverlayChecker::findChildName(
       "bug in fsck code: cannot find child {} in directory listing of parent {}",
       child,
       parentInfo.number);
-  return PathComponent(folly::to<string>("[missing_child(", child, ")]"));
+  return PathComponent(fmt::format("[missing_child({})]", child));
 }
 
 template <typename ErrorType, typename... Args>
