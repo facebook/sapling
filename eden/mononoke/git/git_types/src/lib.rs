@@ -33,7 +33,7 @@ use std::io::Write;
 
 use anyhow::Context;
 use anyhow::Result;
-pub use delta_manifest_v2::ObjectKind as DeltaObjectKind;
+pub use delta_manifest_ops::ObjectKind as DeltaObjectKind;
 use gix_hash::ObjectId;
 use gix_hash::oid;
 use gix_object::Object;
