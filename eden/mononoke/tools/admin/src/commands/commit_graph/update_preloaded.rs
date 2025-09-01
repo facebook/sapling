@@ -64,6 +64,11 @@ pub struct UpdatePreloadedArgs {
     /// Sleep time before exiting the program in seconds.
     #[clap(long, default_value_t = 60)]
     sleep_before_exit_secs: u64,
+
+    /// The maximum number of concurrent updates to run. This is useful when updating the
+    /// preloaded commit graph for multiple repos.
+    #[clap(long, default_value_t = 100)]
+    concurrency: usize,
 }
 
 async fn try_fetch_chunk(
@@ -243,7 +248,7 @@ pub(super) async fn update_preloaded_all_repos(
                 anyhow::Ok(())
             }
         })
-        .try_buffer_unordered(10) // Preloading the commit graph can be a heavy operation
+        .try_buffer_unordered(args.concurrency) // Preloading the commit graph can be a heavy operation
         .try_collect::<Vec<_>>()
         .await?;
 
