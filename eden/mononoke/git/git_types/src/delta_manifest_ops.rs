@@ -15,8 +15,6 @@ use blobstore::Blobstore;
 use blobstore::Loadable;
 use bytes::Bytes;
 use context::CoreContext;
-use futures::StreamExt;
-use futures::TryStreamExt;
 use futures::stream::BoxStream;
 use gix_hash::ObjectId;
 use metaconfig_types::GitDeltaManifestVersion;
@@ -27,9 +25,6 @@ use mononoke_types::path::MPath;
 use repo_derived_data::RepoDerivedData;
 
 use crate::RootGitDeltaManifestV2Id;
-use crate::delta_manifest_v2::GDMV2DeltaEntry;
-use crate::delta_manifest_v2::GDMV2Entry;
-use crate::delta_manifest_v2::GitDeltaManifestV2;
 use crate::delta_manifest_v2::ObjectKind;
 
 /// Fetches GitDeltaManifest for a given changeset with the given version.
@@ -81,22 +76,6 @@ pub trait GitDeltaManifestOps {
     ) -> BoxStream<'a, Result<Box<dyn GitDeltaManifestEntryOps + Send>>>;
 }
 
-impl GitDeltaManifestOps for GitDeltaManifestV2 {
-    fn into_entries<'a>(
-        self: Box<Self>,
-        ctx: &'a CoreContext,
-        blobstore: &'a Arc<dyn Blobstore>,
-    ) -> BoxStream<'a, Result<Box<dyn GitDeltaManifestEntryOps + Send>>> {
-        GitDeltaManifestV2::into_entries(*self, ctx, blobstore)
-            .map_ok(
-                |(path, entry)| -> Box<dyn GitDeltaManifestEntryOps + Send> {
-                    Box::new((path, entry))
-                },
-            )
-            .boxed()
-    }
-}
-
 /// Trait representing a subentry of a GitDeltaManifest.
 pub trait GitDeltaManifestEntryOps {
     /// Returns the path of the subentry.
@@ -127,43 +106,6 @@ pub trait GitDeltaManifestEntryOps {
     fn deltas(&self) -> Box<dyn Iterator<Item = &(dyn ObjectDeltaOps + Sync)> + '_>;
 }
 
-impl GitDeltaManifestEntryOps for (MPath, GDMV2Entry) {
-    fn path(&self) -> &MPath {
-        let (path, _) = self;
-        path
-    }
-
-    fn full_object_size(&self) -> u64 {
-        let (_, entry) = self;
-        entry.full_object.size
-    }
-
-    fn full_object_oid(&self) -> ObjectId {
-        let (_, entry) = self;
-        entry.full_object.oid
-    }
-
-    fn full_object_kind(&self) -> ObjectKind {
-        let (_, entry) = self;
-        entry.full_object.kind
-    }
-
-    fn full_object_inlined_bytes(&self) -> Option<Bytes> {
-        let (_, entry) = self;
-        entry.full_object.inlined_bytes.clone()
-    }
-
-    fn deltas(&self) -> Box<dyn Iterator<Item = &(dyn ObjectDeltaOps + Sync)> + '_> {
-        let (_, entry) = self;
-        Box::new(
-            entry
-                .deltas
-                .iter()
-                .map(|delta| delta as &(dyn ObjectDeltaOps + Sync)),
-        )
-    }
-}
-
 /// Trait representing a delta in a GitDeltaManifest.
 #[async_trait]
 pub trait ObjectDeltaOps {
@@ -191,43 +133,4 @@ pub trait ObjectDeltaOps {
         ctx: &CoreContext,
         blobstore: &Arc<dyn Blobstore>,
     ) -> Result<Bytes>;
-}
-
-#[async_trait]
-impl ObjectDeltaOps for GDMV2DeltaEntry {
-    fn instructions_uncompressed_size(&self) -> u64 {
-        self.instructions.uncompressed_size
-    }
-
-    fn instructions_compressed_size(&self) -> u64 {
-        self.instructions.compressed_size
-    }
-
-    fn base_object_oid(&self) -> ObjectId {
-        self.base_object.oid
-    }
-
-    fn base_object_path(&self) -> &MPath {
-        &self.base_object_path
-    }
-
-    fn base_object_kind(&self) -> ObjectKind {
-        self.base_object.kind
-    }
-
-    fn base_object_size(&self) -> u64 {
-        self.base_object.size
-    }
-
-    async fn instruction_bytes(
-        &self,
-        ctx: &CoreContext,
-        blobstore: &Arc<dyn Blobstore>,
-    ) -> Result<Bytes> {
-        self.instructions
-            .instruction_bytes
-            .clone()
-            .into_raw_bytes(ctx, blobstore)
-            .await
-    }
 }

@@ -7,6 +7,7 @@
 
 use std::io::Write;
 use std::str::FromStr;
+use std::sync::Arc;
 
 use anyhow::Context;
 use anyhow::Result;
@@ -42,8 +43,11 @@ use mononoke_types::sharded_map_v2::ShardedMapV2Node;
 use mononoke_types::sharded_map_v2::ShardedMapV2Value;
 use mononoke_types::typed_hash::IdContext;
 
+use crate::GitDeltaManifestEntryOps;
+use crate::GitDeltaManifestOps;
 use crate::GitLeaf;
 use crate::GitTreeId;
+use crate::ObjectDeltaOps;
 use crate::thrift;
 
 /// A manifest that contains an entry for each Git object that was added or modified as part of
@@ -465,6 +469,98 @@ impl BlobstoreValue for GitDeltaManifestV2 {
 
     fn from_blob(blob: Blob<Self::Key>) -> Result<Self> {
         Self::from_bytes(blob.data())
+    }
+}
+
+impl GitDeltaManifestOps for GitDeltaManifestV2 {
+    fn into_entries<'a>(
+        self: Box<Self>,
+        ctx: &'a CoreContext,
+        blobstore: &'a Arc<dyn Blobstore>,
+    ) -> BoxStream<'a, Result<Box<dyn GitDeltaManifestEntryOps + Send>>> {
+        GitDeltaManifestV2::into_entries(*self, ctx, blobstore)
+            .map_ok(
+                |(path, entry)| -> Box<dyn GitDeltaManifestEntryOps + Send> {
+                    Box::new((path, entry))
+                },
+            )
+            .boxed()
+    }
+}
+
+impl GitDeltaManifestEntryOps for (MPath, GDMV2Entry) {
+    fn path(&self) -> &MPath {
+        let (path, _) = self;
+        path
+    }
+
+    fn full_object_size(&self) -> u64 {
+        let (_, entry) = self;
+        entry.full_object.size
+    }
+
+    fn full_object_oid(&self) -> ObjectId {
+        let (_, entry) = self;
+        entry.full_object.oid
+    }
+
+    fn full_object_kind(&self) -> ObjectKind {
+        let (_, entry) = self;
+        entry.full_object.kind
+    }
+
+    fn full_object_inlined_bytes(&self) -> Option<Bytes> {
+        let (_, entry) = self;
+        entry.full_object.inlined_bytes.clone()
+    }
+
+    fn deltas(&self) -> Box<dyn Iterator<Item = &(dyn ObjectDeltaOps + Sync)> + '_> {
+        let (_, entry) = self;
+        Box::new(
+            entry
+                .deltas
+                .iter()
+                .map(|delta| delta as &(dyn ObjectDeltaOps + Sync)),
+        )
+    }
+}
+
+#[async_trait]
+impl ObjectDeltaOps for GDMV2DeltaEntry {
+    fn instructions_uncompressed_size(&self) -> u64 {
+        self.instructions.uncompressed_size
+    }
+
+    fn instructions_compressed_size(&self) -> u64 {
+        self.instructions.compressed_size
+    }
+
+    fn base_object_oid(&self) -> ObjectId {
+        self.base_object.oid
+    }
+
+    fn base_object_path(&self) -> &MPath {
+        &self.base_object_path
+    }
+
+    fn base_object_kind(&self) -> ObjectKind {
+        self.base_object.kind
+    }
+
+    fn base_object_size(&self) -> u64 {
+        self.base_object.size
+    }
+
+    async fn instruction_bytes(
+        &self,
+        ctx: &CoreContext,
+        blobstore: &Arc<dyn Blobstore>,
+    ) -> Result<Bytes> {
+        self.instructions
+            .instruction_bytes
+            .clone()
+            .into_raw_bytes(ctx, blobstore)
+            .await
     }
 }
 
