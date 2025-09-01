@@ -35,6 +35,7 @@ use futures::TryStreamExt;
 use futures::stream;
 use git_types::MappedGitCommitId;
 use git_types::RootGitDeltaManifestV2Id;
+use git_types::RootGitDeltaManifestV3Id;
 use inferred_copy_from::RootInferredCopyFromId;
 use itertools::Itertools;
 use mercurial_derivation::MappedHgChangesetId;
@@ -403,6 +404,9 @@ fn manager_for_type(
         DerivableType::GitCommits => Arc::new(SingleTypeManager::<MappedGitCommitId>::new(manager)),
         DerivableType::GitDeltaManifestsV2 => {
             Arc::new(SingleTypeManager::<RootGitDeltaManifestV2Id>::new(manager))
+        }
+        DerivableType::GitDeltaManifestsV3 => {
+            Arc::new(SingleTypeManager::<RootGitDeltaManifestV3Id>::new(manager))
         }
         DerivableType::InferredCopyFrom => {
             Arc::new(SingleTypeManager::<RootInferredCopyFromId>::new(manager))

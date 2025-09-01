@@ -90,6 +90,7 @@ union DerivedData {
   21: DerivedDataCcsm ccsm;
   22: DerivedDataContentManifest content_manifest;
   23: DerivedDataInferredCopyFrom inferred_copy_from;
+  24: DerivedDataGitDeltaManifestV3 git_delta_manifest_v3;
 }
 
 union DerivedDataFsnode {
@@ -174,6 +175,9 @@ union DerivedDataHgAugmentedManifest {
 }
 union DerivedDataGitDeltaManifestV2 {
   1: git_types_thrift.GitDeltaManifestV2Id root_git_delta_manifest_v2_id;
+}
+union DerivedDataGitDeltaManifestV3 {
+  1: git_types_thrift.GitDeltaManifestV3Id root_git_delta_manifest_v3_id;
 }
 
 union DerivedDataContentManifest {

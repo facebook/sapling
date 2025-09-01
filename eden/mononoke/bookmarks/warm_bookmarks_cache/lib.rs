@@ -314,6 +314,7 @@ impl WarmBookmarksCacheBuilder {
             >(
                 &self.ctx, repo_derived_data.clone()
             )),
+            DerivableType::GitDeltaManifestsV3 => None,
             DerivableType::BssmV3 => Some(create_derived_data_warmer::<RootBssmV3DirectoryId>(
                 &self.ctx,
                 repo_derived_data.clone(),

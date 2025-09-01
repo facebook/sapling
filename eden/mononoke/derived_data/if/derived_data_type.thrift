@@ -37,4 +37,5 @@ enum DerivedDataType {
   CCSM = 21,
   CONTENT_MANIFEST = 22,
   INFERRED_COPY_FROM = 23,
+  GIT_DELTA_MANIFEST_V3 = 24,
 }

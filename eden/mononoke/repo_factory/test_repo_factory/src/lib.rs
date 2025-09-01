@@ -72,6 +72,7 @@ use metaconfig_types::BlameVersion;
 use metaconfig_types::DerivedDataConfig;
 use metaconfig_types::DerivedDataTypesConfig;
 use metaconfig_types::GitDeltaManifestV2Config;
+use metaconfig_types::GitDeltaManifestV3Config;
 use metaconfig_types::HookManagerParams;
 use metaconfig_types::InferredCopyFromConfig;
 use metaconfig_types::InfinitepushNamespace;
@@ -180,13 +181,21 @@ pub struct TestRepoFactory {
 /// This configuration enables all derived data types at the latest version.
 pub fn default_test_repo_derived_data_types_config() -> DerivedDataTypesConfig {
     DerivedDataTypesConfig {
-        types: DerivableType::iter().collect(),
+        types: DerivableType::iter()
+            .filter(|t| *t != DerivableType::GitDeltaManifestsV3)
+            .collect(),
         unode_version: UnodeVersion::V2,
         blame_version: BlameVersion::V2,
         git_delta_manifest_v2_config: Some(GitDeltaManifestV2Config {
             max_inlined_object_size: 100,
             max_inlined_delta_size: 100,
             delta_chunk_size: 1000,
+        }),
+        git_delta_manifest_v3_config: Some(GitDeltaManifestV3Config {
+            max_inlined_object_size: 100,
+            max_inlined_delta_size: 100,
+            delta_chunk_size: 1000,
+            entry_chunk_size: 1000,
         }),
         inferred_copy_from_config: Some(InferredCopyFromConfig {
             dir_level_for_basename_lookup: 1,
