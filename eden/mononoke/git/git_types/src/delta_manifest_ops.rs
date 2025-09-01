@@ -78,7 +78,7 @@ pub trait GitDeltaManifestOps {
         self: Box<Self>,
         ctx: &'a CoreContext,
         blobstore: &'a Arc<dyn Blobstore>,
-    ) -> BoxStream<'a, Result<(MPath, Box<dyn GitDeltaManifestEntryOps + Send>)>>;
+    ) -> BoxStream<'a, Result<Box<dyn GitDeltaManifestEntryOps + Send>>>;
 }
 
 impl GitDeltaManifestOps for GitDeltaManifestV2 {
@@ -86,11 +86,11 @@ impl GitDeltaManifestOps for GitDeltaManifestV2 {
         self: Box<Self>,
         ctx: &'a CoreContext,
         blobstore: &'a Arc<dyn Blobstore>,
-    ) -> BoxStream<'a, Result<(MPath, Box<dyn GitDeltaManifestEntryOps + Send>)>> {
+    ) -> BoxStream<'a, Result<Box<dyn GitDeltaManifestEntryOps + Send>>> {
         GitDeltaManifestV2::into_entries(*self, ctx, blobstore)
             .map_ok(
-                |(path, entry)| -> (_, Box<dyn GitDeltaManifestEntryOps + Send>) {
-                    (path, Box::new(entry))
+                |(path, entry)| -> Box<dyn GitDeltaManifestEntryOps + Send> {
+                    Box::new((path, entry))
                 },
             )
             .boxed()
@@ -99,6 +99,9 @@ impl GitDeltaManifestOps for GitDeltaManifestV2 {
 
 /// Trait representing a subentry of a GitDeltaManifest.
 pub trait GitDeltaManifestEntryOps {
+    /// Returns the path of the subentry.
+    fn path(&self) -> &MPath;
+
     /// Returns the size of the full object.
     fn full_object_size(&self) -> u64;
 
@@ -124,26 +127,37 @@ pub trait GitDeltaManifestEntryOps {
     fn deltas(&self) -> Box<dyn Iterator<Item = &(dyn ObjectDeltaOps + Sync)> + '_>;
 }
 
-impl GitDeltaManifestEntryOps for GDMV2Entry {
+impl GitDeltaManifestEntryOps for (MPath, GDMV2Entry) {
+    fn path(&self) -> &MPath {
+        let (path, _) = self;
+        path
+    }
+
     fn full_object_size(&self) -> u64 {
-        self.full_object.size
+        let (_, entry) = self;
+        entry.full_object.size
     }
 
     fn full_object_oid(&self) -> ObjectId {
-        self.full_object.oid
+        let (_, entry) = self;
+        entry.full_object.oid
     }
 
     fn full_object_kind(&self) -> ObjectKind {
-        self.full_object.kind
+        let (_, entry) = self;
+        entry.full_object.kind
     }
 
     fn full_object_inlined_bytes(&self) -> Option<Bytes> {
-        self.full_object.inlined_bytes.clone()
+        let (_, entry) = self;
+        entry.full_object.inlined_bytes.clone()
     }
 
     fn deltas(&self) -> Box<dyn Iterator<Item = &(dyn ObjectDeltaOps + Sync)> + '_> {
+        let (_, entry) = self;
         Box::new(
-            self.deltas
+            entry
+                .deltas
                 .iter()
                 .map(|delta| delta as &(dyn ObjectDeltaOps + Sync)),
         )
@@ -176,8 +190,6 @@ pub trait ObjectDeltaOps {
         &self,
         ctx: &CoreContext,
         blobstore: &Arc<dyn Blobstore>,
-        cs_id: ChangesetId,
-        path: MPath,
     ) -> Result<Bytes>;
 }
 
@@ -211,8 +223,6 @@ impl ObjectDeltaOps for GDMV2DeltaEntry {
         &self,
         ctx: &CoreContext,
         blobstore: &Arc<dyn Blobstore>,
-        _cs_id: ChangesetId,
-        _path: MPath,
     ) -> Result<Bytes> {
         self.instructions
             .instruction_bytes

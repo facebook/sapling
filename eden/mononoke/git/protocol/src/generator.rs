@@ -33,7 +33,6 @@ use gix_hash::ObjectId;
 use manifest::ManifestOps;
 use mononoke_types::ChangesetId;
 use mononoke_types::hash::GitSha1;
-use mononoke_types::path::MPath;
 use rustc_hash::FxHashSet;
 use scuba_ext::FutureStatsScubaExt;
 use scuba_ext::MononokeScubaSampleBuilder;
@@ -195,12 +194,12 @@ async fn trees_and_blobs_count(
                 // in the packfile
                 let objects = delta_manifest
                     .into_entries(&ctx, &blobstore.boxed())
-                    .try_filter_map(|(path, entry)| {
+                    .try_filter_map(|entry| {
                         cloned!(filter);
                         async move {
                             let (kind, size) = (entry.full_object_kind(), entry.full_object_size());
                             // If the entry does not pass the filter, then it should not be included in the count
-                            if !filter_object(filter.clone(), &path, kind, size) {
+                            if !filter_object(filter.clone(), entry.path(), kind, size) {
                                 return Ok(None);
                             }
                             let delta = delta_base(
@@ -259,9 +258,7 @@ async fn trees_and_blobs_count(
 
 async fn boundary_stream(
     fetch_container: FetchContainer,
-) -> Result<
-    BoxStream<'static, Result<(ChangesetId, MPath, Box<dyn GitDeltaManifestEntryOps + Send>)>>,
-> {
+) -> Result<BoxStream<'static, Result<(ChangesetId, Box<dyn GitDeltaManifestEntryOps + Send>)>>> {
     let objects = boundary_trees_and_blobs(fetch_container)
         .await?
         .into_iter()
@@ -269,8 +266,8 @@ async fn boundary_stream(
             let cs_id = full_entry.cs_id;
             let path = full_entry.path.clone();
             let delta_manifest_entry: Box<dyn GitDeltaManifestEntryOps + Send> =
-                Box::new(full_entry.into_delta_manifest_entry());
-            Ok((cs_id, path, delta_manifest_entry))
+                Box::new((path, full_entry.into_delta_manifest_entry()));
+            Ok((cs_id, delta_manifest_entry))
         });
     Ok(stream::iter(objects).boxed())
 }
@@ -349,7 +346,7 @@ fn packfile_stream_from_changesets<'a>(
         }
 
         while packfile_items_futures.len() < concurrency.trees_and_blobs {
-            if let Some((_, _, entry)) = delta_manifest_entries_buffer.front() {
+            if let Some((_, entry)) = delta_manifest_entries_buffer.front() {
                 // If the next future will tip memory usage over the memory bound then don't start polling it,
                 // unless `packfile_items_futures` is empty in which case we add the future regardless to make
                 // sure we always make progress.
@@ -365,12 +362,10 @@ fn packfile_stream_from_changesets<'a>(
                 }
             }
 
-            if let Some((cs_id, path, entry)) = delta_manifest_entries_buffer.pop_front() {
+            if let Some((_cs_id, entry)) = delta_manifest_entries_buffer.pop_front() {
                 packfile_items_futures.push_back(packfile_item_for_delta_manifest_entry(
                     fetch_container.clone(),
                     base_set.clone(),
-                    cs_id,
-                    path,
                     entry,
                 ));
             } else {
@@ -413,17 +408,10 @@ async fn tree_and_blob_packfile_stream<'a>(
         .await?
         .map_ok({
             cloned!(fetch_container, base_set);
-            move |(changeset_id, path, entry)| {
+            move |(_changeset_id, entry)| {
                 cloned!(fetch_container, base_set);
                 async move {
-                    packfile_item_for_delta_manifest_entry(
-                        fetch_container,
-                        base_set,
-                        changeset_id,
-                        path,
-                        entry,
-                    )
-                    .await
+                    packfile_item_for_delta_manifest_entry(fetch_container, base_set, entry).await
                 }
             }
         })

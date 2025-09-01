@@ -27,7 +27,6 @@ use git_types::upload_packfile_base_item;
 use gix_hash::ObjectId;
 use metaconfig_types::GitDeltaManifestVersion;
 use mononoke_types::ChangesetId;
-use mononoke_types::MPath;
 use repo_blobstore::ArcRepoBlobstore;
 use repo_derived_data::ArcRepoDerivedData;
 use rustc_hash::FxHashSet;
@@ -170,7 +169,7 @@ pub(crate) async fn changeset_delta_manifest_entries(
     derived_data: ArcRepoDerivedData,
     git_delta_manifest_version: GitDeltaManifestVersion,
     changeset_id: ChangesetId,
-) -> Result<Vec<(ChangesetId, MPath, Box<dyn GitDeltaManifestEntryOps + Send>)>> {
+) -> Result<Vec<(ChangesetId, Box<dyn GitDeltaManifestEntryOps + Send>)>> {
     let delta_manifest = fetch_git_delta_manifest(
         &ctx,
         &derived_data,
@@ -184,7 +183,7 @@ pub(crate) async fn changeset_delta_manifest_entries(
     // which significantly slows down the entire process.
     delta_manifest
         .into_entries(&ctx, &blobstore.boxed())
-        .map_ok(|(path, entry)| (changeset_id, path, entry))
+        .map_ok(|entry| (changeset_id, entry))
         .try_collect::<Vec<_>>()
         .await
 }
@@ -193,8 +192,6 @@ pub(crate) async fn changeset_delta_manifest_entries(
 pub(crate) async fn packfile_item_for_delta_manifest_entry(
     fetch_container: FetchContainer,
     base_set: Arc<FxHashSet<ObjectId>>,
-    cs_id: ChangesetId,
-    path: MPath,
     entry: Box<dyn GitDeltaManifestEntryOps + Send>,
 ) -> Result<Option<PackfileItem>> {
     let FetchContainer {
@@ -213,7 +210,7 @@ pub(crate) async fn packfile_item_for_delta_manifest_entry(
         // This object is already present at the client, so do not include it in the packfile
         return Ok(None);
     }
-    if !filter_object(filter.clone(), &path, kind, size) {
+    if !filter_object(filter.clone(), entry.path(), kind, size) {
         // This object does not pass the filter specified by the client, so do not include it in the packfile
         return Ok(None);
     }
@@ -221,9 +218,7 @@ pub(crate) async fn packfile_item_for_delta_manifest_entry(
     let delta = delta_base(entry.as_ref(), delta_inclusion, filter, chain_breaking_mode);
     match delta {
         Some(delta) => {
-            let instruction_bytes = delta
-                .instruction_bytes(&ctx, &blobstore.boxed(), cs_id, path)
-                .await?;
+            let instruction_bytes = delta.instruction_bytes(&ctx, &blobstore.boxed()).await?;
 
             let packfile_item = PackfileItem::new_delta(
                 entry.full_object_oid(),
