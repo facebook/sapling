@@ -5,19 +5,41 @@
  * GNU General Public License version 2.
  */
 
+use std::collections::HashSet;
 use std::env;
 use std::process::Command;
 
 use anyhow::Error;
 use anyhow::Result;
+use auth_consts::AUTH_SET;
+use auth_consts::ONCALL;
+use auth_consts::REPO;
+use auth_consts::SANDCASTLE_CMD;
+use auth_consts::SANDCASTLE_TAG;
+use auth_consts::SERVICE_IDENTITY;
 #[cfg(fbcode_build)]
 #[allow(unused)]
 use configo::ConfigoClient;
 use context::CoreContext;
 use futures::future::try_join_all;
+use infrasec_authorization::ACL;
+use infrasec_authorization::Identity;
+use infrasec_authorization::consts as auth_consts;
+use infrasec_authorization_service::CommitChangeSpecificationRequest;
+use infrasec_authorization_service_srclients::make_AuthorizationService_srclient;
+use infrasec_authorization_service_srclients::thrift::ChangeSpecification;
+use infrasec_authorization_service_srclients::thrift::errors::AsNoConfigExistsException;
 use mononoke_api::MononokeError;
+use oncall::OncallClient;
 use permission_checker::AclProvider;
 use repo_authorization::AuthorizationContext;
+use review_thrift::AclChange;
+use review_thrift::AclMetadata;
+use review_thrift::AclPermissionChange;
+use review_thrift::ChangeContents;
+use review_thrift::ChangeOperation;
+use review_thrift::EntryChange;
+use review_thrift::GroupChange;
 use source_control as thrift;
 
 use crate::source_control_impl::SourceControlServiceImpl;
@@ -42,24 +64,335 @@ async fn ensure_acls_allow_repo_creation(
     Ok(())
 }
 
-async fn update_repos_acls(
-    _params: &thrift::CreateReposParams,
+#[cfg(fbcode_build)]
+fn initial_acl_grants(hipster_group: &str) -> Vec<AclPermissionChange> {
+    [
+        (
+            "read",
+            vec![
+                (AUTH_SET, "cocomatic_service_identities"),
+                (AUTH_SET, "svcscm_read_all"),
+                (AUTH_SET, "svnuser"),
+                (SERVICE_IDENTITY, "aosp_megarepo_service_identity"),
+                (SERVICE_IDENTITY, "gitremoteimport"),
+                (SERVICE_IDENTITY, "scm_service_identity"),
+                (SANDCASTLE_TAG, "skycastle_gitimport"),
+                (SANDCASTLE_TAG, "skycastle_gitimport"),
+                (SANDCASTLE_CMD, "SandcastleLandCommand"),
+                (SANDCASTLE_CMD, "SandcastlePushCommand"),
+            ],
+        ),
+        (
+            "write",
+            vec![
+                (AUTH_SET, "svnuser"),
+                (SANDCASTLE_CMD, "SandcastleLandCommand"),
+                (SANDCASTLE_CMD, "SandcastlePushCommand"),
+            ],
+        ),
+        (
+            "bypass_readonly",
+            vec![(AUTH_SET, "scm"), (SERVICE_IDENTITY, "gitremoteimport")],
+        ),
+        ("maintainers", vec![(AUTH_SET, hipster_group)]),
+    ]
+    .into_iter()
+    .map(|(action, identities)| AclPermissionChange {
+        action: action.to_string(),
+        operation: ChangeOperation::UPDATE,
+        entry_changes: identities
+            .into_iter()
+            .map(|(id_type, id_data)| EntryChange {
+                entry: Identity {
+                    id_type: id_type.to_string(),
+                    id_data: id_data.to_string(),
+                    ..Default::default()
+                },
+                operation: ChangeOperation::UPDATE,
+                ..Default::default()
+            })
+            .collect(),
+        ..Default::default()
+    })
+    .collect()
+}
+
+#[cfg(fbcode_build)]
+fn make_initial_acl_creation_request(
+    acl_name: &str,
+    oncall_name: &str,
+    hipster_group: &str,
+) -> CommitChangeSpecificationRequest {
+    let grants = initial_acl_grants(hipster_group);
+    let repo_group = Identity {
+        id_type: REPO.to_string(),
+        id_data: acl_name.to_string(),
+        ..Default::default()
+    };
+    let acl_change = AclChange {
+        acl: repo_group,
+        permission_changes: grants,
+        operation: ChangeOperation::UPDATE,
+        metadata_update: Some(AclMetadata {
+            oncall: Some(oncall_name.to_string()),
+            ..Default::default()
+        }),
+        ..Default::default()
+    };
+    let group_change = GroupChange {
+        change_data: acl_change,
+        ..Default::default()
+    };
+    let change_contents = ChangeContents {
+        group_changes: vec![group_change],
+        ..Default::default()
+    };
+    let spec = ChangeSpecification::contents(change_contents);
+    let reason = "automated repo creation".to_string();
+    CommitChangeSpecificationRequest {
+        spec,
+        commit_message: reason,
+        ..Default::default()
+    }
+}
+
+#[cfg(fbcode_build)]
+async fn create_repo_acl(
+    ctx: CoreContext,
+    acl_name: &str,
+    oncall_name: &str,
+    hipster_group: &str,
 ) -> Result<(), scs_errors::ServiceError> {
-    // TODO (Pierre):
-    // ## What:
-    // Ensure all these repos have the necessary ACLs set-up.
-    // We need it here as it needs to happen prior to both creating the repositories in Mononoke
-    // and in Metagit.
-    // Also, eventually, we will remove `create_repos_in_metagit` and we will need for the ACLs to
-    // be updated in that case too.
-    // It's probably OK to create them here and let `scmadmin` attempt to create them, which will
-    // become a no-op. That will mean that `scmadmin` will still function both as stand-alone or
-    // when called from here.
-    //
-    // ## How:
-    // All the ACL logic currently lives in `scmadmin`: https://www.internalfb.com/code/fbsource/[9e94dda302f98eb670145fd69e62bf10520fe414]/fbcode/scm/scmadmin/commands/repo.py?lines=240
-    // Use the `commitChangeSpecification` thrift endpoint [see code](https://www.internalfb.com/code/fbsource/[2627fc9342e5ce9f58e5dcccbc82f3ee35ca1ee8]/fbcode/infrasec/authorization/if/authorization.thrift?lines=1500)
-    // See [example use](https://www.internalfb.com/code/fbsource/[207c62c9a0ec60970a06de4e5366fe92231cdfedf]/fbcode/icsp/rust/acl_fixer/src/update_acl.rs?lines=29)
+    let request = make_initial_acl_creation_request(acl_name, oncall_name, hipster_group);
+    let thrift_client = make_AuthorizationService_srclient!(ctx.fb)
+        .map_err(|e| scs_errors::internal_error(format!("{e:#}")))?;
+    thrift_client
+        .commitChangeSpecification(&request)
+        .await
+        .map_err(|e| scs_errors::internal_error(format!("{e:#}")))?;
+    Ok(())
+}
+
+#[cfg(fbcode_build)]
+async fn is_valid_oncall_name(
+    ctx: CoreContext,
+    oncall_name: &str,
+    valid_oncall_names_cache: &mut HashSet<String>,
+) -> Result<bool, scs_errors::ServiceError> {
+    // Check the cache first
+    if valid_oncall_names_cache.contains(oncall_name) {
+        Ok(true)
+    } else {
+        // Sanity check the syntax to avoid making an unnecessary call to the oncall service
+        if oncall_name
+            .chars()
+            .any(|c| !(c.is_ascii_digit() || c.is_ascii_lowercase() || c == '_'))
+        {
+            return Ok(false);
+        }
+        // Validate the oncall actually exists
+        match OncallClient::new(ctx.fb)
+            .map_err(|e| scs_errors::internal_error(format!("{e:#}")))?
+            .get_current_oncall(oncall_name)
+            .await
+        {
+            Ok(_) => {
+                // Cache the successful result to avoid unnecessary calls in the future
+                valid_oncall_names_cache.insert(oncall_name.to_string());
+                Ok(true)
+            }
+            Err(_) => Ok(false),
+        }
+    }
+}
+
+#[cfg(fbcode_build)]
+async fn is_valid_hipster_group(
+    ctx: CoreContext,
+    hipster_group: &str,
+    valid_hipster_groups_cache: &mut HashSet<String>,
+) -> Result<bool, scs_errors::ServiceError> {
+    // Check the cache first
+    if valid_hipster_groups_cache.contains(hipster_group) {
+        Ok(true)
+    } else {
+        // Sanity check the syntax to avoid making an unnecessary call to the oncall service
+        if hipster_group
+            .chars()
+            .any(|c| !(c.is_ascii_digit() || c.is_ascii_lowercase() || c == '_'))
+        {
+            return Ok(false);
+        }
+        // Validate the hipster group actually exists
+        let thrift_client = make_AuthorizationService_srclient!(ctx.fb)
+            .map_err(|e| scs_errors::internal_error(format!("{e:#}")))?;
+        let hipster_group_identity = Identity {
+            id_type: AUTH_SET.to_string(),
+            id_data: hipster_group.to_string(),
+            ..Default::default()
+        };
+        let exists = thrift_client
+            .aclExists(&hipster_group_identity)
+            .await
+            .map_err(|e| scs_errors::internal_error(format!("{e:#}")))?;
+        if exists {
+            // Cache the successful result to avoid unnecessary calls in the future
+            valid_hipster_groups_cache.insert(hipster_group.to_string());
+        }
+        Ok(exists)
+    }
+}
+
+#[cfg(fbcode_build)]
+async fn validate_repo_acl(
+    acl: ACL,
+    acl_name: &str,
+    oncall_name: &str,
+    hipster_group: &str,
+) -> Result<(), scs_errors::ServiceError> {
+    // Ensure this hipster group (as AUTH_SET or ONCALL_GROUP type) is a maintainer for this ACL
+    if !acl.permissions.iter().any(|permission| {
+        permission.action == "maintainers"
+            && permission.entries.iter().any(|entry| {
+                entry.identity.id_data == hipster_group
+                    && (entry.identity.id_type == AUTH_SET || entry.identity.id_type == ONCALL)
+            })
+    }) {
+        return Err(scs_errors::invalid_request(format!(
+            "Hipster group: {} is not a maintainer for acl: {}",
+            hipster_group, acl_name
+        ))
+        .into());
+    }
+    // Ensure this oncall is point of contact for this ACL
+    if acl.point_of_contact.id_data != oncall_name {
+        return Err(scs_errors::invalid_request(format!(
+            "Oncall: {} is not a point of contact for acl: {}",
+            oncall_name, acl_name
+        ))
+        .into());
+    }
+    Ok(())
+}
+
+#[cfg(fbcode_build)]
+async fn try_fetching_repo_acl(
+    ctx: CoreContext,
+    acl_name: &str,
+) -> Result<Option<ACL>, scs_errors::ServiceError> {
+    let thrift_client = make_AuthorizationService_srclient!(ctx.fb)
+        .map_err(|e| scs_errors::internal_error(format!("{e:#}")))?;
+
+    let repo_group = Identity {
+        id_type: REPO.to_string(),
+        id_data: acl_name.to_string(),
+        ..Default::default()
+    };
+    match thrift_client.getAuthConfig(&repo_group).await {
+        Err(e) => {
+            if e.as_no_config_exists_exception().is_some() {
+                Ok(None)
+            } else {
+                Err(scs_errors::internal_error(format!("{e:#}")).into())
+            }
+        }
+        Ok(auth_config) => Ok(Some(auth_config.acl)),
+    }
+}
+
+#[cfg(fbcode_build)]
+fn make_full_acl_name_from_repo_name(repo_name: &str) -> String {
+    format!("REPOS:repos/git/{}", repo_name)
+}
+
+#[cfg(fbcode_build)]
+fn make_top_level_acl_name_from_repo_name(repo_name: &str) -> String {
+    let (top_level, _rest) = repo_name.split_once('/').unwrap_or((repo_name, ""));
+    format!("REPOS:repos/git/{}", top_level)
+}
+
+/// Ensure all repos have the necessary ACLs set-up.
+/// Note: Currently, this duplicates the logic that happens when creating the repositories in
+/// Metagit by forking to `scmadmin` in `create_repos_in_metagit`, but this will go away
+/// eventually, so we need this to happen here to prepare for that
+#[cfg(fbcode_build)]
+async fn update_repos_acls(
+    ctx: CoreContext,
+    params: &thrift::CreateReposParams,
+) -> Result<(), scs_errors::ServiceError> {
+    let mut valid_oncall_names_cache = HashSet::new();
+    let mut valid_hipster_groups_cache = HashSet::new();
+    for repo_creation_request in &params.repos {
+        // If a custom acl is provided, we need to ensure it exists and is valid or create it
+        if let Some(custom_acl) = &repo_creation_request.custom_acl {
+            let acl_name = make_full_acl_name_from_repo_name(&repo_creation_request.repo_name);
+            if !is_valid_oncall_name(
+                ctx.clone(),
+                &repo_creation_request.oncall_name,
+                &mut valid_oncall_names_cache,
+            )
+            .await?
+            {
+                return Err(scs_errors::invalid_request(format!(
+                    "Invalid oncall name: {}",
+                    repo_creation_request.oncall_name
+                ))
+                .into());
+            };
+            if !is_valid_hipster_group(
+                ctx.clone(),
+                &custom_acl.hipster_group,
+                &mut valid_hipster_groups_cache,
+            )
+            .await?
+            {
+                return Err(scs_errors::invalid_request(format!(
+                    "Invalid hipster group: {}",
+                    custom_acl.hipster_group
+                ))
+                .into());
+            }
+            if let Some(acl) = try_fetching_repo_acl(ctx.clone(), &acl_name).await? {
+                validate_repo_acl(
+                    acl,
+                    &acl_name,
+                    &repo_creation_request.oncall_name,
+                    &custom_acl.hipster_group,
+                )
+                .await?;
+            } else if !params.dry_run {
+                create_repo_acl(
+                    ctx.clone(),
+                    &acl_name,
+                    &repo_creation_request.oncall_name,
+                    &custom_acl.hipster_group,
+                )
+                .await?;
+            }
+        }
+        // If no custom acl is provided, we need to ensure the top level acl exists
+        else {
+            let acl_name = make_top_level_acl_name_from_repo_name(&repo_creation_request.repo_name);
+            if try_fetching_repo_acl(ctx.clone(), &acl_name)
+                .await?
+                .is_none()
+            {
+                return Err(scs_errors::invalid_request(format!(
+                    "Top level acl {acl_name} does not exist!"
+                ))
+                .into());
+            }
+        }
+    }
+    Ok(())
+}
+
+#[cfg(not(fbcode_build))]
+async fn update_repos_acls(
+    ctx: CoreContext,
+    params: &thrift::CreateReposParams,
+) -> Result<(), scs_errors::ServiceError> {
+    println!("No access to hipster in oss build");
     Ok(())
 }
 
@@ -152,9 +485,14 @@ impl SourceControlServiceImpl {
         ctx: CoreContext,
         params: thrift::CreateReposParams,
     ) -> Result<thrift::CreateReposToken, scs_errors::ServiceError> {
-        ensure_acls_allow_repo_creation(ctx, &params.repos, self.acl_provider.as_ref()).await?;
-        update_repos_acls(&params).await?;
-        create_repos_in_mononoke(&params).await?;
+        ensure_acls_allow_repo_creation(ctx.clone(), &params.repos, self.acl_provider.as_ref())
+            .await?;
+        if justknobs::eval("scm/mononoke:scs_create_repos_in_mononoke", None, None)
+            .map_err(|e| scs_errors::internal_error(format!("{e:#}")))?
+        {
+            update_repos_acls(ctx, &params).await?;
+            create_repos_in_mononoke(&params).await?;
+        }
         create_repos_in_metagit(params).await?;
 
         Ok(thrift::CreateReposToken {
