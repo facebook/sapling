@@ -50,7 +50,6 @@ repo_update_logger = { version = "0.1.0", path = "../../features/repo_update_log
 skeleton_manifest = { version = "0.1.0", path = "../../derived_data/skeleton_manifest" }
 sql_ext = { version = "0.1.0", path = "../../common/rust/sql_ext" }
 thiserror = "2.0.12"
-tokio = { version = "1.47.1", features = ["full", "test-util", "tracing"] }
 
 [dev-dependencies]
 facet = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }

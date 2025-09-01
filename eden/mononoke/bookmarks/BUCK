@@ -227,7 +227,6 @@ rust_library(
         "fbsource//third-party/rust:futures",
         "fbsource//third-party/rust:itertools",
         "fbsource//third-party/rust:thiserror",
-        "fbsource//third-party/rust:tokio",
         ":bookmarks",
         ":bookmarks_types",
         "//common/rust/shed/borrowed:borrowed",

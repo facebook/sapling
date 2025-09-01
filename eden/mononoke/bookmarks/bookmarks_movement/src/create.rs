@@ -252,25 +252,6 @@ impl<'op> CreateBookmarkOp<'op> {
             .await?;
         let log_id = info_txn.commit_and_log(ctx, repo).await?;
 
-        let client_correlator = ctx
-            .metadata()
-            .client_info()
-            .and_then(|ci| ci.request_info.as_ref().map(|cri| cri.correlator.as_str()));
-
-        if justknobs::eval(
-            "scm/mononoke:read_bookmarks_from_xdb_replica",
-            client_correlator,
-            None,
-        )
-        .unwrap_or(false)
-        {
-            // If bookmarks are being read from replicas, set a small delay to
-            // ensure that reads-after-writes are consistent.
-            let delay_ms =
-                justknobs::get_as::<u64>("scm/mononoke:bookmark_creation_delay_ms", None)
-                    .unwrap_or(500);
-            tokio::time::sleep(std::time::Duration::from_millis(delay_ms)).await;
-        };
         Ok(log_id)
     }
 }
