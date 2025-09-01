@@ -34,12 +34,9 @@ use mononoke_types::BlobstoreKey;
 use mononoke_types::BlobstoreValue;
 use mononoke_types::MononokeId;
 use mononoke_types::ThriftConvert;
-use mononoke_types::hash::BLAKE2_HASH_LENGTH_BYTES;
 use mononoke_types::hash::Blake2;
 use mononoke_types::impl_typed_hash;
 use mononoke_types::path::MPath;
-use mononoke_types::sharded_map_v2::ShardedMapV2Node;
-use mononoke_types::sharded_map_v2::ShardedMapV2Value;
 use mononoke_types::typed_hash::IdContext;
 
 use crate::GitLeaf;
@@ -50,107 +47,142 @@ use crate::thrift;
 /// a commit. The object needs to be different from all objects at the same path in all parents
 /// for it to be included.
 #[derive(ThriftConvert, Clone, Debug, Eq, PartialEq, Hash)]
-#[thrift(thrift::GitDeltaManifestV2)]
-pub struct GitDeltaManifestV2 {
-    entries: ShardedMapV2Node<GDMV2Entry>,
+#[thrift(thrift::GitDeltaManifestV3)]
+pub enum GitDeltaManifestV3 {
+    Inlined(Vec<GDMV3Entry>),
+    Chunked(Vec<GDMV3ChunkId>),
 }
 
-impl GitDeltaManifestV2 {
+impl GitDeltaManifestV3 {
     pub async fn from_entries(
         ctx: &CoreContext,
         blobstore: &impl Blobstore,
-        entries: impl IntoIterator<Item = (MPath, GDMV2Entry)>,
+        entries: Vec<GDMV3Entry>,
+        max_inlinable_size: usize,
     ) -> Result<Self> {
-        Ok(Self {
-            entries: ShardedMapV2Node::from_entries(
-                ctx,
-                blobstore,
-                entries.into_iter().map(|(path, entry)| {
-                    // Convert the MPath into Vec<u8> by merging MPathElements with null byte as the separator. We use the null-separated
-                    // path as the key in the ShardedMap to allow for proper ordering of paths.
-                    (path.to_null_separated_bytes(), entry)
-                }),
-            )
-            .await?,
-        })
+        let total_inlined_bytes_size: usize =
+            entries.iter().map(|entry| entry.inlined_bytes_size()).sum();
+
+        if total_inlined_bytes_size <= max_inlinable_size {
+            return Ok(Self::Inlined(entries));
+        }
+
+        let mut chunks = vec![];
+        let mut last_chunk = vec![];
+        let mut last_chunk_size = 0;
+        for entry in entries {
+            let entry_size = entry.inlined_bytes_size();
+            if !last_chunk.is_empty() && last_chunk_size + entry_size > max_inlinable_size {
+                chunks.push(last_chunk);
+                last_chunk = vec![entry];
+                last_chunk_size = entry_size;
+            } else {
+                last_chunk.push(entry);
+                last_chunk_size += entry_size;
+            }
+        }
+        if !last_chunk.is_empty() {
+            chunks.push(last_chunk);
+        }
+
+        Ok(Self::Chunked(
+            stream::iter(chunks)
+                .map(async |chunk| {
+                    let chunk = GDMV3Chunk { entries: chunk };
+                    chunk.into_blob().store(ctx, blobstore).await
+                })
+                .buffered(24)
+                .try_collect::<Vec<_>>()
+                .await?,
+        ))
     }
 
     pub fn into_entries<'a>(
         self,
         ctx: &'a CoreContext,
         blobstore: &'a impl Blobstore,
-    ) -> BoxStream<'a, Result<(MPath, GDMV2Entry)>> {
-        self.entries
-            .into_entries_unordered(ctx, blobstore, 200)
-            .and_then(|(bytes, entry)| async move {
-                let path = MPath::from_null_separated_bytes(bytes.to_vec())?;
-                anyhow::Ok((path, entry))
-            })
-            .boxed()
-    }
-
-    pub async fn lookup(
-        &self,
-        ctx: &CoreContext,
-        blobstore: &impl Blobstore,
-        name: &MPath,
-    ) -> Result<Option<GDMV2Entry>> {
-        let path = name.to_null_separated_bytes();
-        self.entries.lookup(ctx, blobstore, path.as_ref()).await
+    ) -> BoxStream<'a, Result<GDMV3Entry>> {
+        match self {
+            Self::Inlined(entries) => stream::iter(entries).map(Ok).boxed(),
+            Self::Chunked(chunk_ids) => stream::iter(chunk_ids)
+                .map(async |chunk_id| {
+                    let chunk = chunk_id.load(ctx, blobstore).await?;
+                    anyhow::Ok(stream::iter(chunk.entries).map(Ok))
+                })
+                .buffered(24)
+                .try_flatten()
+                .boxed(),
+        }
     }
 }
 
-/// An entry in the GitDeltaManifestV2 corresponding to a path
 #[derive(ThriftConvert, Clone, Debug, Eq, PartialEq, Hash)]
-#[thrift(thrift::GDMV2Entry)]
-pub struct GDMV2Entry {
-    /// The full object that this entry represents
-    pub full_object: GDMV2ObjectEntry,
-    /// A list of entries corresponding to ways to represent this object
-    /// as a delta
-    pub deltas: Vec<GDMV2DeltaEntry>,
+#[thrift(thrift::GDMV3Chunk)]
+pub struct GDMV3Chunk {
+    pub entries: Vec<GDMV3Entry>,
 }
 
-impl ShardedMapV2Value for GDMV2Entry {
-    type NodeId = ShardedMapV2GDMV2EntryId;
-    type Context = ShardedMapV2GDMV2EntryIdContext;
-    type RollupData = ();
+/// An entry in the GitDeltaManifestV3 corresponding to a path
+#[derive(Clone, Debug, Eq, PartialEq, Hash)]
+pub struct GDMV3Entry {
+    /// The path of the object
+    pub path: MPath,
+    /// The full object that this entry represents
+    pub full_object: GDMV3ObjectEntry,
+    /// A delta entry corresponding to a way to represent this object
+    /// as a delta
+    pub delta: Option<GDMV3DeltaEntry>,
+}
 
-    const WEIGHT_LIMIT: usize = 1_000_000;
-
-    fn weight(&self) -> usize {
-        // This is an approximation of the number of bytes in the entry.
-        let inlined_bytes_size = self
-            .full_object
+impl GDMV3Entry {
+    fn inlined_bytes_size(&self) -> usize {
+        self.full_object
             .inlined_bytes
             .as_ref()
-            .map_or(0, |bytes| bytes.len());
-        let deltas_size = self
-            .deltas
-            .iter()
-            .map(|delta| delta.instructions.instruction_bytes.approximate_size())
-            .sum::<usize>();
-        1 + inlined_bytes_size + deltas_size
+            .map_or(0, |bytes| bytes.len())
+            + self
+                .delta
+                .as_ref()
+                .map_or(0, |delta| match &delta.instructions.instruction_bytes {
+                    GDMV3InstructionBytes::Inlined(bytes) => bytes.len(),
+                    GDMV3InstructionBytes::Chunked(_chunks) => 0,
+                })
     }
 }
 
-impl GDMV2Entry {
-    pub fn has_deltas(&self) -> bool {
-        !self.deltas.is_empty()
+impl ThriftConvert for GDMV3Entry {
+    const NAME: &'static str = "GDMV3Entry";
+    type Thrift = thrift::GDMV3Entry;
+
+    fn from_thrift(thrift: Self::Thrift) -> Result<Self> {
+        Ok(Self {
+            path: MPath::from_thrift(thrift.path)?,
+            full_object: GDMV3ObjectEntry::from_thrift(thrift.full_object)?,
+            delta: thrift.delta.map(GDMV3DeltaEntry::from_thrift).transpose()?,
+        })
+    }
+
+    fn into_thrift(self) -> Self::Thrift {
+        thrift::GDMV3Entry {
+            path: self.path.into_thrift(),
+            full_object: self.full_object.into_thrift(),
+            delta: self.delta.map(GDMV3DeltaEntry::into_thrift),
+            ..Default::default()
+        }
     }
 }
 
 /// Struct representing a Git object's metadata in GitDeltaManifestV2.
 /// Contains inlined bytes of the object if it's considered small enough.
 #[derive(Clone, Debug, Eq, PartialEq, Hash)]
-pub struct GDMV2ObjectEntry {
+pub struct GDMV3ObjectEntry {
     pub oid: ObjectId,
     pub size: u64,
     pub kind: ObjectKind,
     pub inlined_bytes: Option<Bytes>,
 }
 
-impl GDMV2ObjectEntry {
+impl GDMV3ObjectEntry {
     pub async fn from_tree_entry(
         ctx: &CoreContext,
         blobstore: &impl Blobstore,
@@ -166,7 +198,7 @@ impl GDMV2ObjectEntry {
             Entry::Tree(tree) => (tree.0, tree.size(ctx, blobstore).await?, ObjectKind::Tree),
         };
 
-        Ok(GDMV2ObjectEntry {
+        Ok(GDMV3ObjectEntry {
             oid,
             size,
             kind,
@@ -235,22 +267,21 @@ impl ThriftConvert for ObjectKind {
 }
 
 #[derive(ThriftConvert, Clone, Debug, Eq, PartialEq, Hash)]
-#[thrift(thrift::GDMV2DeltaEntry)]
-pub struct GDMV2DeltaEntry {
-    pub base_object: GDMV2ObjectEntry,
-    pub base_object_path: MPath,
-    pub instructions: GDMV2Instructions,
+#[thrift(thrift::GDMV3DeltaEntry)]
+pub struct GDMV3DeltaEntry {
+    pub base_object: GDMV3ObjectEntry,
+    pub instructions: GDMV3Instructions,
 }
 
 #[derive(ThriftConvert, Clone, Debug, Eq, PartialEq, Hash)]
-#[thrift(thrift::GDMV2Instructions)]
-pub struct GDMV2Instructions {
+#[thrift(thrift::GDMV3Instructions)]
+pub struct GDMV3Instructions {
     pub uncompressed_size: u64,
     pub compressed_size: u64,
-    pub instruction_bytes: GDMV2InstructionBytes,
+    pub instruction_bytes: GDMV3InstructionBytes,
 }
 
-impl GDMV2Instructions {
+impl GDMV3Instructions {
     pub async fn from_raw_delta(
         ctx: &CoreContext,
         blobstore: &impl Blobstore,
@@ -279,14 +310,14 @@ impl GDMV2Instructions {
         let instruction_bytes = match chunk_stream {
             filestore::Chunks::Inline(fallible_bytes) => {
                 if compressed_size <= max_inlinable_size {
-                    GDMV2InstructionBytes::Inlined(
+                    GDMV3InstructionBytes::Inlined(
                         fallible_bytes
                             .await
                             .context("Error in getting inlined bytes from chunk stream")?,
                     )
                 } else {
-                    GDMV2InstructionBytes::Chunked(vec![
-                        GDMV2InstructionsChunk(
+                    GDMV3InstructionBytes::Chunked(vec![
+                        GDMV3InstructionsChunk(
                             fallible_bytes
                                 .await
                                 .context("Error in getting bytes from chunk stream")?,
@@ -298,12 +329,12 @@ impl GDMV2Instructions {
                 }
             }
             filestore::Chunks::Chunked(_, bytes_stream) => {
-                GDMV2InstructionBytes::Chunked(
+                GDMV3InstructionBytes::Chunked(
                     bytes_stream
                         .enumerate()
                         .map(|(idx, fallible_bytes)| async move {
                             let instructions_chunk =
-                                GDMV2InstructionsChunk(fallible_bytes.with_context(|| {
+                                GDMV3InstructionsChunk(fallible_bytes.with_context(|| {
                                     format!(
                                         "Error in getting bytes from chunk {} in chunked stream",
                                         idx
@@ -326,17 +357,17 @@ impl GDMV2Instructions {
     }
 }
 
-impl GDMV2InstructionBytes {
+impl GDMV3InstructionBytes {
     pub async fn into_raw_bytes(
         self,
         ctx: &CoreContext,
         blobstore: &impl Blobstore,
     ) -> Result<Bytes> {
         match self {
-            GDMV2InstructionBytes::Inlined(bytes) => Ok(bytes),
-            GDMV2InstructionBytes::Chunked(chunks) => {
+            GDMV3InstructionBytes::Inlined(bytes) => Ok(bytes),
+            GDMV3InstructionBytes::Chunked(chunks) => {
                 Ok(stream::iter(chunks)
-                    .map(|chunk: GDMV2InstructionsChunkId| async move {
+                    .map(|chunk: GDMV3InstructionsChunkId| async move {
                         chunk.load(ctx, blobstore).await
                     })
                     .buffered(24)
@@ -352,38 +383,29 @@ impl GDMV2InstructionBytes {
 }
 
 #[derive(ThriftConvert, Clone, Debug, Eq, PartialEq, Hash)]
-#[thrift(thrift::GDMV2InstructionBytes)]
-pub enum GDMV2InstructionBytes {
+#[thrift(thrift::GDMV3InstructionBytes)]
+pub enum GDMV3InstructionBytes {
     /// The instruction bytes are stored inlined
     Inlined(Bytes),
     /// The instruction bytes are stored in separate chunked blobs, with only
     /// a list of their ids stored inline
-    Chunked(Vec<GDMV2InstructionsChunkId>),
+    Chunked(Vec<GDMV3InstructionsChunkId>),
 }
 
-impl GDMV2InstructionBytes {
-    fn approximate_size(&self) -> usize {
-        match self {
-            GDMV2InstructionBytes::Inlined(bytes) => bytes.len(),
-            GDMV2InstructionBytes::Chunked(chunks) => chunks.len() * BLAKE2_HASH_LENGTH_BYTES,
-        }
-    }
-}
-
-pub struct GDMV2InstructionsChunk(Bytes);
+pub struct GDMV3InstructionsChunk(Bytes);
 
 #[derive(Clone, Copy, Debug, Hash, Eq, PartialEq)]
-pub struct GDMV2InstructionsChunkId(Blake2);
+pub struct GDMV3InstructionsChunkId(Blake2);
 
 #[derive(Clone, Copy, Debug, Hash, Eq, PartialEq)]
-pub struct ShardedMapV2GDMV2EntryId(Blake2);
+pub struct GDMV3ChunkId(Blake2);
 
 #[derive(Clone, Copy, Debug, Hash, Eq, PartialEq)]
-pub struct GitDeltaManifestV2Id(Blake2);
+pub struct GitDeltaManifestV3Id(Blake2);
 
-impl ThriftConvert for GDMV2ObjectEntry {
-    const NAME: &'static str = "GDMV2ObjectEntry";
-    type Thrift = thrift::GDMV2ObjectEntry;
+impl ThriftConvert for GDMV3ObjectEntry {
+    const NAME: &'static str = "GDMV3ObjectEntry";
+    type Thrift = thrift::GDMV3ObjectEntry;
 
     fn from_thrift(thrift: Self::Thrift) -> Result<Self> {
         Ok(Self {
@@ -394,7 +416,7 @@ impl ThriftConvert for GDMV2ObjectEntry {
         })
     }
     fn into_thrift(self) -> Self::Thrift {
-        thrift::GDMV2ObjectEntry {
+        thrift::GDMV3ObjectEntry {
             oid: mononoke_types_serialization::id::GitSha1(self.oid.as_bytes().into()),
             size: self.size as i64,
             kind: self.kind.into_thrift(),
@@ -404,48 +426,48 @@ impl ThriftConvert for GDMV2ObjectEntry {
     }
 }
 
-impl ThriftConvert for GDMV2InstructionsChunk {
-    const NAME: &'static str = "GDMV2InstructionsChunk";
-    type Thrift = thrift::GDMV2InstructionsChunk;
+impl ThriftConvert for GDMV3InstructionsChunk {
+    const NAME: &'static str = "GDMV3InstructionsChunk";
+    type Thrift = thrift::GDMV3InstructionsChunk;
 
     fn from_thrift(thrift: Self::Thrift) -> Result<Self> {
         Ok(Self(thrift.0))
     }
     fn into_thrift(self) -> Self::Thrift {
-        thrift::GDMV2InstructionsChunk(self.0)
+        thrift::GDMV3InstructionsChunk(self.0)
     }
 }
 
 impl_typed_hash! {
-    hash_type => GitDeltaManifestV2Id,
-    thrift_hash_type => thrift::GitDeltaManifestV2Id,
-    value_type => GitDeltaManifestV2,
-    context_type => GitDeltaManifestV2IdContext,
-    context_key => "gdm2",
+    hash_type => GitDeltaManifestV3Id,
+    thrift_hash_type => thrift::GitDeltaManifestV3Id,
+    value_type => GitDeltaManifestV3,
+    context_type => GitDeltaManifestV3IdContext,
+    context_key => "gdm3",
 }
 
 impl_typed_hash! {
-    hash_type => GDMV2InstructionsChunkId,
-    thrift_hash_type => thrift::GDMV2InstructionsChunkId,
-    value_type => GDMV2InstructionsChunk,
-    context_type => GDMV2InstructionsChunkIdContext,
-    context_key => "gdm2_instructions_chunk",
+    hash_type => GDMV3ChunkId,
+    thrift_hash_type => thrift::GDMV3ChunkId,
+    value_type => GDMV3Chunk,
+    context_type => GDMV3ChunkIdContext,
+    context_key => "gdm3_instructions_chunk",
 }
 
 impl_typed_hash! {
-    hash_type => ShardedMapV2GDMV2EntryId,
-    thrift_hash_type => mononoke_types_serialization::id::ShardedMapV2NodeId,
-    value_type => ShardedMapV2Node<GDMV2Entry>,
-    context_type => ShardedMapV2GDMV2EntryIdContext,
-    context_key => "gdm2.map2node",
+    hash_type => GDMV3InstructionsChunkId,
+    thrift_hash_type => thrift::GDMV3InstructionsChunkId,
+    value_type => GDMV3InstructionsChunk,
+    context_type => GDMV3InstructionsChunkIdContext,
+    context_key => "gdm3_instructions_chunk",
 }
 
-impl BlobstoreValue for GDMV2InstructionsChunk {
-    type Key = GDMV2InstructionsChunkId;
+impl BlobstoreValue for GDMV3InstructionsChunk {
+    type Key = GDMV3InstructionsChunkId;
 
     fn into_blob(self) -> Blob<Self::Key> {
         let data = self.into_bytes();
-        let id = GDMV2InstructionsChunkIdContext::id_from_data(&data);
+        let id = GDMV3InstructionsChunkIdContext::id_from_data(&data);
         Blob::new(id, data)
     }
 
@@ -454,12 +476,26 @@ impl BlobstoreValue for GDMV2InstructionsChunk {
     }
 }
 
-impl BlobstoreValue for GitDeltaManifestV2 {
-    type Key = GitDeltaManifestV2Id;
+impl BlobstoreValue for GDMV3Chunk {
+    type Key = GDMV3ChunkId;
 
     fn into_blob(self) -> Blob<Self::Key> {
         let data = self.into_bytes();
-        let id = GitDeltaManifestV2IdContext::id_from_data(&data);
+        let id = GDMV3ChunkIdContext::id_from_data(&data);
+        Blob::new(id, data)
+    }
+
+    fn from_blob(blob: Blob<Self::Key>) -> Result<Self> {
+        Self::from_bytes(blob.data())
+    }
+}
+
+impl BlobstoreValue for GitDeltaManifestV3 {
+    type Key = GitDeltaManifestV3Id;
+
+    fn into_blob(self) -> Blob<Self::Key> {
+        let data = self.into_bytes();
+        let id = GitDeltaManifestV3IdContext::id_from_data(&data);
         Blob::new(id, data)
     }
 
@@ -479,7 +515,7 @@ mod tests {
     use super::*;
 
     #[mononoke::fbinit_test]
-    async fn test_gdm_v2_delta_instructions_round_trip(fb: FacebookInit) {
+    async fn test_gdm_v3_delta_instructions_round_trip(fb: FacebookInit) {
         let ctx = CoreContext::test_mock(fb);
         let blobstore = DelayedBlobstore::new(
             Memblob::default(),
@@ -491,7 +527,7 @@ mod tests {
         let chunk_size = 1;
         let max_inlinable_size = 0;
 
-        let gdm_v2_instructions = GDMV2Instructions::from_raw_delta(
+        let gdm_v3_instructions = GDMV3Instructions::from_raw_delta(
             &ctx,
             &blobstore,
             delta.clone(),
@@ -501,7 +537,7 @@ mod tests {
         .await
         .unwrap();
 
-        let delta_bytes = gdm_v2_instructions
+        let delta_bytes = gdm_v3_instructions
             .instruction_bytes
             .into_raw_bytes(&ctx, &blobstore)
             .await

@@ -18,6 +18,7 @@ pub mod thrift {
 mod commit;
 mod delta_manifest_ops;
 mod delta_manifest_v2;
+mod delta_manifest_v3;
 mod derive_commit;
 mod derive_delta_manifest_v2;
 mod errors;
