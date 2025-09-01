@@ -39,6 +39,7 @@ use maplit::hashmap;
 use maplit::hashset;
 use metaconfig_types::DerivedDataTypesConfig;
 use metaconfig_types::GitDeltaManifestV2Config;
+use metaconfig_types::GitDeltaManifestV3Config;
 use mononoke_api::BookmarkKey;
 use mononoke_api::ChangesetContext;
 use mononoke_api::CoreContext;
@@ -568,6 +569,12 @@ async fn create_temp_repo(fb: FacebookInit, ctx: &CoreContext) -> Result<RepoCon
             max_inlined_object_size: 2_000,
             max_inlined_delta_size: 2_000,
             delta_chunk_size: 1_000_000,
+        }),
+        git_delta_manifest_v3_config: Some(GitDeltaManifestV3Config {
+            max_inlined_object_size: 100_000,
+            max_inlined_delta_size: 100_000,
+            delta_chunk_size: 1_000_000,
+            entry_chunk_size: 100_000,
         }),
         ..Default::default()
     };

@@ -34,6 +34,7 @@ mod tests {
     use futures::stream::TryStreamExt;
     use git_types::MappedGitCommitId;
     use git_types::RootGitDeltaManifestV2Id;
+    use git_types::RootGitDeltaManifestV3Id;
     use live_commit_sync_config::CONFIGERATOR_ALL_COMMIT_SYNC_CONFIGS;
     use live_commit_sync_config::CfgrLiveCommitSyncConfig;
     use live_commit_sync_config::LiveCommitSyncConfig;
@@ -106,6 +107,7 @@ mod tests {
                 // Repo import has no need of these derived data types
                 config.types.remove(&MappedGitCommitId::VARIANT);
                 config.types.remove(&RootGitDeltaManifestV2Id::VARIANT);
+                config.types.remove(&RootGitDeltaManifestV3Id::VARIANT);
             })
             .with_id(RepositoryId::new(id))
             .build()
@@ -127,6 +129,7 @@ mod tests {
                 // Repo import has no need of these derived data types
                 config.types.remove(&MappedGitCommitId::VARIANT);
                 config.types.remove(&RootGitDeltaManifestV2Id::VARIANT);
+                config.types.remove(&RootGitDeltaManifestV3Id::VARIANT);
             })
             .with_live_commit_sync_config(live_commit_sync_config.clone())
             .with_id(RepositoryId::new(id))
