@@ -202,26 +202,21 @@ pub(crate) async fn tag_entries_to_hashes(
 ) -> Result<FxHashSet<GitSha1>> {
     stream::iter(tag_entries)
         .map(Ok)
-        .map_ok(|entry| {
-            cloned!(ctx, blobstore);
-            async move {
-                let tag_hash = entry.tag_hash.to_object_id()?;
-                // If the target is tag, make sure to fetch all the nested tags
-                if entry.target_is_tag {
-                    fetch_nested_tags(&ctx, &blobstore, tag_hash.clone())
-                        .await
-                        .with_context(|| {
-                            format!("Error in fetching nested tags for entry {:?}", entry)
-                        })
-                } else {
-                    Ok(vec![tag_hash])
-                }
+        .map_ok(async |entry| {
+            let tag_hash = entry.tag_hash.to_object_id()?;
+            // If the target is tag, make sure to fetch all the nested tags
+            if entry.target_is_tag {
+                fetch_nested_tags(&ctx, &blobstore, tag_hash.clone())
+                    .await
+                    .with_context(|| format!("Error in fetching nested tags for entry {:?}", entry))
+            } else {
+                Ok(vec![tag_hash])
             }
         })
         .try_buffer_unordered(tag_concurrency)
         .try_fold(
             FxHashSet::default(), // Dedupe based on tag hashes so we don't double count
-            |mut output_hashes, tag_hashes| async move {
+            async |mut output_hashes, tag_hashes| {
                 for tag_hash in tag_hashes.into_iter() {
                     let tag_sha = GitSha1::from_object_id(tag_hash.as_ref())?;
                     output_hashes.insert(tag_sha);

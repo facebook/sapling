@@ -94,52 +94,42 @@ async fn boundary_trees_and_blobs(
         None => Vec::new(),
     };
     stream::iter(boundary_commits.into_iter().map(|entry| Ok((entry.csid(), entry.oid()))))
-        .map_ok(|(changeset_id, git_commit_id)| {
-            cloned!(ctx, blobstore, filter);
-            async move {
-                let root_tree = fetch_non_blob_git_object(&ctx, &blobstore, &git_commit_id)
-                    .await
-                    .context("Error in fetching boundary commit")?
-                    .with_parsed_as_commit(|commit| GitTreeId(commit.tree()))
-                    .ok_or_else(|| anyhow::anyhow!("Git object {:?} is not a commit", git_commit_id))?;
-                let objects = root_tree.list_all_entries((*ctx).clone(), blobstore.clone()).try_collect::<Vec<_>>().await?;
-                let objects = stream::iter(objects).map(|(path, entry)| {
-                    cloned!(ctx, blobstore, filter);
-                    async move {
-                        let filter = Arc::unwrap_or_clone(filter);
-                        // If the entry is a submodule OR if the request has no filter or doesn't care about size, then let's assume size as 0
-                        let size = if entry.is_submodule() || filter.is_none_or(|filter| filter.no_size_constraint()) {
-                            0
-                        } else {
-                            entry.size(&ctx, &blobstore).await?
-                        };
-                        Ok((path, entry, size))
-                    }
-                })
-                .buffer_unordered(concurrency.trees_and_blobs)
-                .try_filter_map(|(path, entry, size)|{
-                    cloned!(filter);
-                    async move {
-                        let kind = entry.kind();
-                        let oid = entry.oid();
-                        // If the entry corresponds to a submodules (and shows up as a commit), then we ignore it
-                        // If the object is ignored by the filter, then we ignore it
-                        if !filter_object(filter, &path, kind, size) || entry.is_submodule() {
-                            Ok(None)
-                        } else {
-                            Ok(Some(FullObjectEntry::new(changeset_id, path, oid, size, kind)))
-                        }
-                    }
-                })
-                .try_collect::<FxHashSet<_>>()
+        .map_ok(async |(changeset_id, git_commit_id)| {
+            let root_tree = fetch_non_blob_git_object(&ctx, &blobstore, &git_commit_id)
                 .await
-                .with_context(|| {
-                    format!(
-                        "Error while listing all entries from GitTree for changeset {changeset_id:?} and root tree {root_tree:?}",
-                    )
-                })?;
-                Ok(objects)
-            }
+                .context("Error in fetching boundary commit")?
+                .with_parsed_as_commit(|commit| GitTreeId(commit.tree()))
+                .ok_or_else(|| anyhow::anyhow!("Git object {:?} is not a commit", git_commit_id))?;
+            let objects = root_tree.list_all_entries((*ctx).clone(), blobstore.clone()).try_collect::<Vec<_>>().await?;
+            let objects = stream::iter(objects).map(async |(path, entry)| {
+                // If the entry is a submodule OR if the request has no filter or doesn't care about size, then let's assume size as 0
+                let size = if entry.is_submodule() || filter.as_ref().as_ref().is_none_or(|filter| filter.no_size_constraint()) {
+                    0
+                } else {
+                    entry.size(&ctx, &blobstore).await?
+                };
+                Ok((path, entry, size))
+            })
+            .buffer_unordered(concurrency.trees_and_blobs)
+            .try_filter_map(async |(path, entry, size)| {
+                let kind = entry.kind();
+                let oid = entry.oid();
+                // If the entry corresponds to a submodules (and shows up as a commit), then we ignore it
+                // If the object is ignored by the filter, then we ignore it
+                if !filter_object(filter.clone(), &path, kind, size) || entry.is_submodule() {
+                    Ok(None)
+                } else {
+                    Ok(Some(FullObjectEntry::new(changeset_id, path, oid, size, kind)))
+                }
+            })
+            .try_collect::<FxHashSet<_>>()
+            .await
+            .with_context(|| {
+                format!(
+                    "Error while listing all entries from GitTree for changeset {changeset_id:?} and root tree {root_tree:?}",
+                )
+            })?;
+            Ok(objects)
         })
         .try_buffered(concurrency.shallow)
         .try_concat()
@@ -179,52 +169,46 @@ async fn trees_and_blobs_count(
     });
     // Sum up the entries in the delta manifest for each commit included in packfile
     let body_stream = target_commits
-        .map_ok(|changeset_id| {
-            cloned!(ctx, derived_data, blobstore, filter);
-            async move {
-                let delta_manifest = fetch_git_delta_manifest(
-                    &ctx,
-                    &derived_data,
-                    &blobstore,
-                    git_delta_manifest_version,
-                    changeset_id,
-                )
-                .await?;
-                // Get the FxHashSet of the tree and blob object Ids that will be included
-                // in the packfile
-                let objects = delta_manifest
-                    .into_entries(&ctx, &blobstore.boxed())
-                    .try_filter_map(|entry| {
-                        cloned!(filter);
-                        async move {
-                            let (kind, size) = (entry.full_object_kind(), entry.full_object_size());
-                            // If the entry does not pass the filter, then it should not be included in the count
-                            if !filter_object(filter.clone(), entry.path(), kind, size) {
-                                return Ok(None);
-                            }
-                            let delta = delta_base(
-                                entry.as_ref(),
-                                delta_inclusion,
-                                filter,
-                                chain_breaking_mode,
-                            );
-                            let output = (
-                                entry.full_object_oid(),
-                                delta.map(|delta| delta.base_object_oid()),
-                            );
-                            Ok(Some(output))
-                        }
-                    })
-                    .try_collect::<Vec<_>>()
-                    .await
-                    .with_context(|| {
-                        format!(
-                            "Error while listing entries from GitDeltaManifest for changeset {:?}",
-                            changeset_id,
-                        )
-                    })?;
-                Ok(objects)
-            }
+        .map_ok(async |changeset_id| {
+            let delta_manifest = fetch_git_delta_manifest(
+                &ctx,
+                &derived_data,
+                &blobstore,
+                git_delta_manifest_version,
+                changeset_id,
+            )
+            .await?;
+            // Get the FxHashSet of the tree and blob object Ids that will be included
+            // in the packfile
+            let objects = delta_manifest
+                .into_entries(&ctx, &blobstore.boxed())
+                .try_filter_map(async |entry| {
+                    let (kind, size) = (entry.full_object_kind(), entry.full_object_size());
+                    // If the entry does not pass the filter, then it should not be included in the count
+                    if !filter_object(filter.clone(), entry.path(), kind, size) {
+                        return Ok(None);
+                    }
+                    let delta = delta_base(
+                        entry.as_ref(),
+                        delta_inclusion,
+                        filter.clone(),
+                        chain_breaking_mode,
+                    );
+                    let output = (
+                        entry.full_object_oid(),
+                        delta.map(|delta| delta.base_object_oid()),
+                    );
+                    Ok(Some(output))
+                })
+                .try_collect::<Vec<_>>()
+                .await
+                .with_context(|| {
+                    format!(
+                        "Error while listing entries from GitDeltaManifest for changeset {:?}",
+                        changeset_id,
+                    )
+                })?;
+            Ok(objects)
         })
         .try_buffered(concurrency.trees_and_blobs);
     let object_set = explicitly_requested_objects
@@ -234,7 +218,7 @@ async fn trees_and_blobs_count(
         .chain(body_stream)
         .try_fold(
             (object_set, FxHashSet::default()),
-            |(mut object_set, mut base_set), objects_with_bases| async move {
+            async |(mut object_set, mut base_set), objects_with_bases| {
                 for (object, base) in objects_with_bases {
                     // If the object is already used as a base, then it should NOT be
                     // part of the packfile
@@ -537,7 +521,7 @@ async fn tag_packfile_stream<'a>(
     // Since we need the count of items, we would have to consume the stream either for counting or collecting the items.
     // This is fine, since unlike commits, blobs and trees there will only be thousands of tags in the worst case.
     let annotated_tags = stream::iter(bookmarks.entries.keys())
-        .filter_map(|bookmark| async move {
+        .filter_map(async |bookmark| {
             // If the bookmark is actually a tag but there is no mapping in bonsai_tag_mapping table for it, then it
             // means that its a simple tag and won't be included in the packfile as an object. If a mapping exists, then
             // it will be included in the packfile as a raw Git

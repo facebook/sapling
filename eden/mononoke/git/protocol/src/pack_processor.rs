@@ -15,7 +15,6 @@ use std::sync::atomic::AtomicBool;
 use anyhow::Context;
 use anyhow::Result;
 use bytes::Bytes;
-use cloned::cloned;
 use context::CoreContext;
 use data::entry::Header::RefDelta;
 use futures::StreamExt;
@@ -170,22 +169,23 @@ async fn fetch_prereq_objects(
         }
     }
     stream::iter(base_items)
-        .map(|object_id| {
-            cloned!(ctx, blobstore);
-            async move {
-                let git_identifier =
-                    GitIdentifier::Basic(GitSha1::from_object_id(object_id.as_ref())?);
-                anyhow::Ok(
-                    fetch_git_object_bytes(&ctx, blobstore, &git_identifier, HeaderState::Included)
-                        .await
-                        .ok()
-                        .and_then(|git_bytes| {
-                            ObjectContent::try_from_loose(git_bytes)
-                                .ok()
-                                .map(|content| (object_id, content))
-                        }),
+        .map(async |object_id| {
+            let git_identifier = GitIdentifier::Basic(GitSha1::from_object_id(object_id.as_ref())?);
+            anyhow::Ok(
+                fetch_git_object_bytes(
+                    ctx,
+                    blobstore.clone(),
+                    &git_identifier,
+                    HeaderState::Included,
                 )
-            }
+                .await
+                .ok()
+                .and_then(|git_bytes| {
+                    ObjectContent::try_from_loose(git_bytes)
+                        .ok()
+                        .map(|content| (object_id, content))
+                }),
+            )
         })
         .buffer_unordered(concurrency)
         .try_filter_map(|maybe_object| future::ready(Ok(maybe_object)))
