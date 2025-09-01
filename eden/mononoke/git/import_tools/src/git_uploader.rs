@@ -448,7 +448,9 @@ pub async fn finalize_batch(
         .types(&config.types)
         .into_iter()
         .filter(|dt| match dt {
-            DerivableType::GitCommits | DerivableType::GitDeltaManifestsV2 => false,
+            DerivableType::GitCommits
+            | DerivableType::GitDeltaManifestsV2
+            | DerivableType::GitDeltaManifestsV3 => false,
             _ => true,
         })
         .collect::<Vec<_>>();
@@ -481,7 +483,7 @@ pub async fn finalize_batch(
         .types(&config.types)
         .into_iter()
         .filter(|dt| match dt {
-            DerivableType::GitDeltaManifestsV2 => true,
+            DerivableType::GitDeltaManifestsV2 | DerivableType::GitDeltaManifestsV3 => true,
             _ => false,
         })
         .collect::<Vec<_>>();

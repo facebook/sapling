@@ -7,6 +7,7 @@
 
 use std::io::Write;
 use std::str::FromStr;
+use std::sync::Arc;
 
 use anyhow::Context;
 use anyhow::Result;
@@ -38,8 +39,11 @@ use mononoke_types::impl_typed_hash;
 use mononoke_types::path::MPath;
 use mononoke_types::typed_hash::IdContext;
 
+use crate::GitDeltaManifestEntryOps;
+use crate::GitDeltaManifestOps;
 use crate::GitLeaf;
 use crate::GitTreeId;
+use crate::ObjectDeltaOps;
 use crate::delta_manifest_ops::ObjectKind;
 use crate::thrift;
 
@@ -442,6 +446,83 @@ impl BlobstoreValue for GitDeltaManifestV3 {
 
     fn from_blob(blob: Blob<Self::Key>) -> Result<Self> {
         Self::from_bytes(blob.data())
+    }
+}
+
+impl GitDeltaManifestOps for GitDeltaManifestV3 {
+    fn into_entries<'a>(
+        self: Box<Self>,
+        ctx: &'a CoreContext,
+        blobstore: &'a Arc<dyn Blobstore>,
+    ) -> BoxStream<'a, Result<Box<dyn GitDeltaManifestEntryOps + Send>>> {
+        GitDeltaManifestV3::into_entries(*self, ctx, blobstore)
+            .map_ok(|entry| -> Box<dyn GitDeltaManifestEntryOps + Send> { Box::new(entry) })
+            .boxed()
+    }
+}
+
+impl GitDeltaManifestEntryOps for GDMV3Entry {
+    fn path(&self) -> &MPath {
+        &self.path
+    }
+
+    fn full_object_size(&self) -> u64 {
+        self.full_object.size
+    }
+
+    fn full_object_oid(&self) -> ObjectId {
+        self.full_object.oid
+    }
+
+    fn full_object_kind(&self) -> ObjectKind {
+        self.full_object.kind
+    }
+
+    fn full_object_inlined_bytes(&self) -> Option<Bytes> {
+        self.full_object.inlined_bytes.clone()
+    }
+
+    fn deltas(&self) -> Box<dyn Iterator<Item = &(dyn ObjectDeltaOps + Sync)> + '_> {
+        Box::new(
+            self.delta
+                .iter()
+                .map(|delta| delta as &(dyn ObjectDeltaOps + Sync)),
+        )
+    }
+}
+
+#[async_trait]
+impl ObjectDeltaOps for GDMV3DeltaEntry {
+    fn instructions_uncompressed_size(&self) -> u64 {
+        self.instructions.uncompressed_size
+    }
+
+    fn instructions_compressed_size(&self) -> u64 {
+        self.instructions.compressed_size
+    }
+
+    fn base_object_oid(&self) -> ObjectId {
+        self.base_object.oid
+    }
+
+    fn base_object_kind(&self) -> ObjectKind {
+        self.base_object.kind
+    }
+
+    fn base_object_size(&self) -> u64 {
+        self.base_object.size
+    }
+
+    async fn instruction_bytes(
+        &self,
+        ctx: &CoreContext,
+        blobstore: &Arc<dyn Blobstore>,
+    ) -> Result<Bytes> {
+        self.instructions
+            .instruction_bytes
+            .clone()
+            .into_raw_bytes(ctx, blobstore)
+            .await
     }
 }
 

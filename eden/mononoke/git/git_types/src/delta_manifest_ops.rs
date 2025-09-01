@@ -27,6 +27,7 @@ use mononoke_types::path::MPath;
 use repo_derived_data::RepoDerivedData;
 
 use crate::RootGitDeltaManifestV2Id;
+use crate::RootGitDeltaManifestV3Id;
 use crate::thrift;
 
 /// Fetches GitDeltaManifest for a given changeset with the given version.
@@ -58,6 +59,30 @@ pub async fn fetch_git_delta_manifest(
                     .with_context(|| {
                         format!(
                             "Error in loading GitDeltaManifestV2 from root id {:?}",
+                            root_mf_id
+                        )
+                    })?,
+            ))
+        }
+        GitDeltaManifestVersion::V3 => {
+            let root_mf_id = derived_data
+                .derive::<RootGitDeltaManifestV3Id>(ctx, cs_id)
+                .await
+                .with_context(|| {
+                    format!(
+                        "Error in deriving RootGitDeltaManifestV3Id for changeset {:?}",
+                        cs_id
+                    )
+                })?;
+
+            Ok(Box::new(
+                root_mf_id
+                    .manifest_id()
+                    .load(ctx, blobstore)
+                    .await
+                    .with_context(|| {
+                        format!(
+                            "Error in loading GitDeltaManifestV3 from root id {:?}",
                             root_mf_id
                         )
                     })?,
@@ -178,9 +203,6 @@ pub trait ObjectDeltaOps {
 
     /// Returns the OID of the base object.
     fn base_object_oid(&self) -> ObjectId;
-
-    /// Returns the path of the base object.
-    fn base_object_path(&self) -> &MPath;
 
     /// Returns the kind of the base object.
     fn base_object_kind(&self) -> ObjectKind;

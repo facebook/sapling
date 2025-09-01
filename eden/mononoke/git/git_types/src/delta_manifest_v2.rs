@@ -480,10 +480,6 @@ impl ObjectDeltaOps for GDMV2DeltaEntry {
         self.base_object.oid
     }
 
-    fn base_object_path(&self) -> &MPath {
-        &self.base_object_path
-    }
-
     fn base_object_kind(&self) -> ObjectKind {
         self.base_object.kind
     }

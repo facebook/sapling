@@ -121,7 +121,6 @@ pub(crate) fn delta_base(
                     .cmp(&b.instructions_compressed_size())
             })
             .filter(|delta| {
-                let path = delta.base_object_path();
                 let kind = delta.base_object_kind();
                 let size = delta.base_object_size();
                 // Is the delta defined in terms of itself (i.e. A as delta of A)? If yes, then we
@@ -129,7 +128,7 @@ pub(crate) fn delta_base(
                 let is_self_delta = delta.base_object_oid() == entry.full_object_oid();
                 // Only use the delta if it is below the threshold and passes the filter
                 delta_below_threshold(*delta, entry.full_object_size(), inclusion_threshold)
-                    && filter_object(filter, path, kind, size)
+                    && filter_object(filter, entry.path(), kind, size)
                     && !is_self_delta
             }),
         // Can't use the delta variant if the request prevents us from using it
