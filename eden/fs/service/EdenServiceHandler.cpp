@@ -2327,6 +2327,7 @@ void EdenServiceHandler::sync_changesSinceV2(
     ChangesSinceV2Result& result,
     std::unique_ptr<ChangesSinceV2Params> params) {
   uint64_t numSmallChanges = 0;
+  uint64_t numStateChanges = 0;
   uint64_t numRenamedDirectory = 0;
   uint64_t numCommitTransition = 0;
   std::optional<uint64_t> lostChangesReason;
@@ -2500,6 +2501,7 @@ void EdenServiceHandler::sync_changesSinceV2(
                   StateChangeNotification(stateChange);
               change.stateChange_ref() = std::move(stateChange);
               result.changes_ref()->push_back(std::move(change));
+              numStateChanges += 1;
             }
             // Return value = Should continue
             return true;
@@ -2755,6 +2757,7 @@ void EdenServiceHandler::sync_changesSinceV2(
           excludedSuffixes,
           includeVCSRoots,
           numSmallChanges,
+          numStateChanges,
           numRenamedDirectory,
           numCommitTransition,
           lostChangesReason,

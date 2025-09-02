@@ -890,6 +890,7 @@ struct ChangesSince : public EdenFSEvent {
   std::vector<std::string> excluded_suffixes;
   bool include_vcs;
   uint64_t num_small_changes;
+  uint64_t num_state_changes;
   uint64_t num_renamed_directories;
   uint64_t num_commit_transitions;
   std::optional<uint64_t> lost_changes;
@@ -906,6 +907,7 @@ struct ChangesSince : public EdenFSEvent {
       std::vector<std::string> excluded_suffixes,
       bool include_vcs,
       uint64_t num_small_changes,
+      uint64_t num_state_changes,
       uint64_t num_renamed_directories,
       uint64_t num_commit_transitions,
       std::optional<uint64_t> lost_changes,
@@ -920,6 +922,7 @@ struct ChangesSince : public EdenFSEvent {
         excluded_suffixes(std::move(excluded_suffixes)),
         include_vcs(include_vcs),
         num_small_changes(num_small_changes),
+        num_state_changes(num_state_changes),
         num_renamed_directories(num_renamed_directories),
         num_commit_transitions(num_commit_transitions),
         lost_changes(lost_changes),
@@ -936,6 +939,7 @@ struct ChangesSince : public EdenFSEvent {
     event.addStringVec("excluded_suffixes", excluded_suffixes);
     event.addBool("include_vcs", include_vcs);
     event.addInt("num_small_changes", num_small_changes);
+    event.addInt("num_state_changes", num_state_changes);
     event.addInt("num_renamed_directory", num_renamed_directories);
     event.addInt("num_commit_transition", num_commit_transitions);
     if (lost_changes.has_value()) {
