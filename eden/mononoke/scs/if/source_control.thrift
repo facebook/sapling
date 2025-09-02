@@ -10,6 +10,7 @@ include "thrift/annotation/thrift.thrift"
 include "eden/mononoke/megarepo_api/if/megarepo_configs.thrift"
 include "eden/mononoke/derived_data/if/derived_data_type.thrift"
 include "thrift/annotation/rust.thrift"
+include "thrift/annotation/hack.thrift"
 
 namespace cpp2 facebook.scm.service
 namespace php SourceControlService
@@ -83,6 +84,7 @@ struct EphemeralBonsai {
 ///    - In Rust: `faster_hex::hex_decode`
 ///    - In Python: `bytes.fromhex`
 ///    - In PHP/Hack: `Str::hex2bin`
+@hack.MigrationBlockingLegacyJSONSerialization
 @rust.Ord
 union CommitId {
   /// Commit identified by the hash of Mononoke's bonsai changeset.
@@ -134,6 +136,7 @@ struct TreeIdSpecifier {
   2: binary id;
 }
 
+@hack.MigrationBlockingLegacyJSONSerialization
 union TreeSpecifier {
   /// Specify a tree by its path in a commit.
   1: CommitPathSpecifier by_commit_path;
@@ -160,6 +163,7 @@ struct FileContentHashSpecifier {
   2: binary content_hash;
 }
 
+@hack.MigrationBlockingLegacyJSONSerialization
 union FileSpecifier {
   /// Specify a file by its path in a commit.
   1: CommitPathSpecifier by_commit_path;
@@ -353,6 +357,7 @@ struct TreeInfo {
   8: i64 descendant_files_total_size;
 }
 
+@hack.MigrationBlockingLegacyJSONSerialization
 union EntryInfo {
   1: TreeInfo tree;
   2: FileInfo file;
@@ -449,6 +454,7 @@ enum DiffFormat {
 }
 
 /// The formats in which we can render the diff.
+@hack.MigrationBlockingLegacyJSONSerialization
 union Diff {
   1: RawDiff raw_diff;
   2: MetadataDiff metadata_diff;
@@ -581,6 +587,7 @@ enum BlameFormatOption {
   INCLUDE_COMMIT_NUMBERS = 5,
 }
 
+@hack.MigrationBlockingLegacyJSONSerialization
 union Blame {
   2: BlameCompact blame_compact;
 }
@@ -727,6 +734,7 @@ enum MutationHistoryFormat {
   COMMIT_ID = 1,
 }
 
+@hack.MigrationBlockingLegacyJSONSerialization
 union History {
   1: list<CommitInfo> commit_infos;
   2: list<map<CommitIdentityScheme, CommitId>> commit_ids;
@@ -765,6 +773,7 @@ typedef string SparseProfileName
 struct AllSparseProfiles {}
 
 /// Which sparse profiles should be analysed
+@hack.MigrationBlockingLegacyJSONSerialization
 union SparseProfiles {
   /// Given list of names
   1: list<SparseProfileName> profiles;
@@ -787,6 +796,7 @@ struct SparseProfileSizeChanged {
   1: i64 size_change;
 }
 
+@hack.MigrationBlockingLegacyJSONSerialization
 union SparseProfileChangeElement {
   1: SparseProfileAdded added;
   2: SparseProfileRemoved removed;
@@ -905,6 +915,7 @@ enum RepoCreateCommitParamsFileType {
   GIT_SUBMODULE = 4,
 }
 
+@hack.MigrationBlockingLegacyJSONSerialization
 union RepoCreateCommitParamsFileContent {
   /// Create the file using the provided data.
   1: binary data;
@@ -932,6 +943,7 @@ struct RepoCreateCommitParamsFileCopyInfo {
   2: i32 parent_index;
 }
 
+@hack.MigrationBlockingLegacyJSONSerialization
 union RepoCreateCommitParamsGitLfs {
   // File should be served as full text (bool val is ignored)
   1: bool full_content;
@@ -958,6 +970,7 @@ struct RepoCreateCommitParamsFileChanged {
 
 struct RepoCreateCommitParamsFileDeleted {}
 
+@hack.MigrationBlockingLegacyJSONSerialization
 union RepoCreateCommitParamsChange {
   /// The file was created or changed.
   1: RepoCreateCommitParamsFileChanged changed;
@@ -1618,6 +1631,7 @@ struct FileDiffParams {
   4: i64 context = 3;
 }
 
+@hack.MigrationBlockingLegacyJSONSerialization
 union CandidateSelectionHint {
   /// Select an ancestor of a given bookmark
   1: string bookmark_ancestor;
@@ -1998,6 +2012,7 @@ struct RepoUpdateSubmoduleExpansionResponse {
   1: map<CommitIdentityScheme, CommitId> ids;
 }
 
+@hack.MigrationBlockingLegacyJSONSerialization
 union RepoUpdateSubmoduleExpansionResult {
   1: RepoUpdateSubmoduleExpansionResponse success;
   2: MegarepoAsynchronousRequestError error;
@@ -2091,6 +2106,7 @@ struct HookOutcomeRejected {
   2: string long_description;
 }
 
+@hack.MigrationBlockingLegacyJSONSerialization
 union HookOutcome {
   1: HookOutcomeAccepted accepted;
   3: list<HookOutcomeRejected> rejections;
@@ -2116,6 +2132,7 @@ struct SubtreeImport {
   3: string source_url;
 }
 
+@hack.MigrationBlockingLegacyJSONSerialization
 union SubtreeChange {
   1: SubtreeCopy subtree_copy;
 
@@ -2133,6 +2150,7 @@ struct CommitHgMutationHistoryResponse {
   1: HgMutationHistory hg_mutation_history;
 }
 
+@hack.MigrationBlockingLegacyJSONSerialization
 union HgMutationHistory {
   1: list<CommitId> commit_ids;
 }
@@ -2205,6 +2223,7 @@ struct CommitSparseProfileDeltaResponse {
   1: optional SparseProfileDeltaSizes changed_sparse_profiles;
 }
 
+@hack.MigrationBlockingLegacyJSONSerialization
 union CommitSparseProfileDeltaPollResponse {
   1: PollPending poll_pending;
   2: CommitSparseProfileDeltaResponse response;
@@ -2214,6 +2233,7 @@ struct CommitSparseProfileSizeResponse {
   1: SparseProfileSizes profiles_size;
 }
 
+@hack.MigrationBlockingLegacyJSONSerialization
 union CommitSparseProfileSizeResult {
   1: CommitSparseProfileSizeResponse success;
   2: AsyncRequestError error;
@@ -2221,6 +2241,7 @@ union CommitSparseProfileSizeResult {
 
 struct PollPending {}
 
+@hack.MigrationBlockingLegacyJSONSerialization
 union CommitSparseProfileSizePollResponse {
   1: PollPending poll_pending;
   2: CommitSparseProfileSizeResponse response;
@@ -2263,6 +2284,7 @@ struct MegarepoAddTargetResponse {
   1: megarepo_configs.ChangesetId cs_id;
 }
 
+@hack.MigrationBlockingLegacyJSONSerialization
 union MegarepoAddTargetResult {
   1: MegarepoAddTargetResponse success;
   2: MegarepoAsynchronousRequestError error;
@@ -2278,6 +2300,7 @@ struct MegarepoAddBranchingTargetResponse {
   1: megarepo_configs.ChangesetId cs_id;
 }
 
+@hack.MigrationBlockingLegacyJSONSerialization
 union MegarepoAddBranchingTargetResult {
   1: MegarepoAddBranchingTargetResponse success;
   2: MegarepoAsynchronousRequestError error;
@@ -2294,6 +2317,7 @@ struct MegarepoChangeTargetConfigResponse {
   1: megarepo_configs.ChangesetId cs_id;
 }
 
+@hack.MigrationBlockingLegacyJSONSerialization
 union MegarepoChangeTargetConfigResult {
   1: MegarepoChangeTargetConfigResponse success;
   2: MegarepoAsynchronousRequestError error;
@@ -2310,6 +2334,7 @@ struct MegarepoSyncChangesetResponse {
   1: megarepo_configs.ChangesetId cs_id;
 }
 
+@hack.MigrationBlockingLegacyJSONSerialization
 union MegarepoSyncChangesetResult {
   1: MegarepoSyncChangesetResponse success;
   2: MegarepoAsynchronousRequestError error;
@@ -2326,6 +2351,7 @@ struct MegarepoRemergeSourceResponse {
   1: megarepo_configs.ChangesetId cs_id;
 }
 
+@hack.MigrationBlockingLegacyJSONSerialization
 union MegarepoRemergeSourceResult {
   1: MegarepoRemergeSourceResponse success;
   2: MegarepoAsynchronousRequestError error;
@@ -2468,6 +2494,7 @@ struct AsyncPingResponse {
   1: string payload;
 }
 
+@hack.MigrationBlockingLegacyJSONSerialization
 union AsyncPingPollResponse {
   1: PollPending poll_pending;
   2: AsyncPingResponse response;
@@ -2525,11 +2552,13 @@ struct InternalErrorStruct {
   3: list<string> source_chain;
 }
 
+@hack.MigrationBlockingLegacyJSONSerialization
 union AsyncRequestError {
   1: RequestErrorStruct request_error;
   2: InternalErrorStruct internal_error;
 }
 
+@hack.MigrationBlockingLegacyJSONSerialization
 union MegarepoAsynchronousRequestError {
   1: RequestErrorStruct request_error;
   2: InternalErrorStruct internal_error;
