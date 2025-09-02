@@ -115,7 +115,6 @@ async fn test_for_fixture<F: TestRepoFixture + Send>(fb: FacebookInit) -> Result
         .get(
             ctx.clone(),
             &BookmarkKey::new("master").unwrap(),
-            // TODO(T236130401): confirm if this needs read from primary
             bookmarks::Freshness::MostRecent,
         )
         .await?
