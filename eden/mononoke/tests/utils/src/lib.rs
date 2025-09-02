@@ -798,12 +798,7 @@ pub async fn resolve_cs_id(
         Bookmark(bookmark) => {
             let maybe_cs_id = repo
                 .bookmarks()
-                .get(
-                    ctx.clone(),
-                    &bookmark,
-                    // TODO(T236130401): confirm if this needs read from primary
-                    bookmarks::Freshness::MostRecent,
-                )
+                .get(ctx.clone(), &bookmark, bookmarks::Freshness::MostRecent)
                 .await?;
             maybe_cs_id.ok_or_else(|| format_err!("{} not found", bookmark))
         }
@@ -811,12 +806,7 @@ pub async fn resolve_cs_id(
             if let Ok(name) = BookmarkKey::new(hash_or_bookmark.clone()) {
                 if let Ok(Some(csid)) = repo
                     .bookmarks()
-                    .get(
-                        ctx.clone(),
-                        &name,
-                        // TODO(T236130401): confirm if this needs read from primary
-                        bookmarks::Freshness::MostRecent,
-                    )
+                    .get(ctx.clone(), &name, bookmarks::Freshness::MostRecent)
                     .await
                 {
                     return Ok(csid);
