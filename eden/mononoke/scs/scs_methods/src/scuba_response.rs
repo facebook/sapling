@@ -48,6 +48,8 @@ impl AddScubaResponse for thrift::RepoCreateBookmarkResponse {}
 
 impl AddScubaResponse for thrift::RepoMoveBookmarkResponse {}
 
+impl AddScubaResponse for thrift::RepoMultipleCommitLookupResponse {}
+
 impl AddScubaResponse for thrift::RepoDeleteBookmarkResponse {}
 
 impl AddScubaResponse for thrift::RepoLandStackResponse {}

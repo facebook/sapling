@@ -1274,6 +1274,11 @@ impl SourceControlService for SourceControlServiceThriftImpl {
             params: thrift::CommitLookupParams,
         ) -> Result<thrift::CommitLookupResponse, service::CommitLookupExn>;
 
+        async fn repo_multiple_commit_lookup(
+            repo: thrift::RepoSpecifier,
+            params: thrift::RepoMultipleCommitLookupParams,
+        ) -> Result<thrift::RepoMultipleCommitLookupResponse, service::RepoMultipleCommitLookupExn>;
+
         async fn commit_lookup_pushrebase_history(
             commit: thrift::CommitSpecifier,
             params: thrift::CommitLookupPushrebaseHistoryParams,

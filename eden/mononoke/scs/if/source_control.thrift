@@ -2818,6 +2818,8 @@ service SourceControlService extends fb303_core.BaseService {
     3: OverloadError overload_error,
   );
 
+  /// Look-up a list of commits to see if they exists and find alternative IDs.
+  /// Note that this API does not trigger git commit derivation.
   RepoMultipleCommitLookupResponse repo_multiple_commit_lookup(
     1: RepoSpecifier repo,
     2: RepoMultipleCommitLookupParams params,

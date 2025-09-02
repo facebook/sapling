@@ -350,6 +350,7 @@ impl_into_thrift_error!(service::RepoCreateCommitExn);
 impl_into_thrift_error!(service::RepoCreateStackExn);
 impl_into_thrift_error!(service::RepoCreateBookmarkExn);
 impl_into_thrift_error!(service::RepoMoveBookmarkExn);
+impl_into_thrift_error!(service::RepoMultipleCommitLookupExn);
 impl_into_thrift_error!(service::RepoDeleteBookmarkExn);
 impl_into_thrift_error!(service::RepoLandStackExn);
 impl_into_thrift_error!(service::RepoBookmarkInfoExn);

@@ -318,6 +318,12 @@ impl AddScubaParams for thrift::CommitLookupParams {
     }
 }
 
+impl AddScubaParams for thrift::RepoMultipleCommitLookupParams {
+    fn add_scuba_params(&self, scuba: &mut MononokeScubaSampleBuilder) {
+        self.identity_schemes.add_scuba_params(scuba);
+    }
+}
+
 impl AddScubaParams for thrift::CommitLookupPushrebaseHistoryParams {}
 
 impl AddScubaParams for thrift::CommitHistoryParams {

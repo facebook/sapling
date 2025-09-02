@@ -363,6 +363,89 @@ impl SourceControlServiceImpl {
         }
     }
 
+    /// Look up several commits. Note that this method doesn't trigger git commit derivation.
+    pub(crate) async fn repo_multiple_commit_lookup(
+        &self,
+        ctx: CoreContext,
+        repo: thrift::RepoSpecifier,
+        params: thrift::RepoMultipleCommitLookupParams,
+    ) -> Result<thrift::RepoMultipleCommitLookupResponse, scs_errors::ServiceError> {
+        let repo = self.repo(ctx, &repo).await?;
+        let id_and_empty_result_or_ctx = stream::iter(params.commit_ids)
+            .map(|commit_id| {
+                borrowed!(repo);
+                async move {
+                    let change_context = repo
+                        .changeset(ChangesetSpecifier::from_request(&commit_id)?)
+                        .await?;
+                    let changeset_ctx_or_error = change_context.map_or_else(
+                        || {
+                            let response = thrift::CommitLookupResponse {
+                                exists: false,
+                                ids: None,
+                                ..Default::default()
+                            };
+                            Either::Left(thrift::CommitLookupEntry {
+                                commit_id: commit_id.clone(),
+                                commit_lookup_response: response,
+                                ..Default::default()
+                            })
+                        },
+                        Either::Right,
+                    );
+                    Ok::<_, scs_errors::ServiceError>((commit_id, changeset_ctx_or_error))
+                }
+            })
+            .buffer_unordered(CONCURRENCY_LIMIT)
+            .try_collect::<Vec<_>>()
+            .await?;
+
+        let mut responses = Vec::new();
+        let mut id_changeset_pairs = Vec::new();
+        for (id, ctx_or_error) in id_and_empty_result_or_ctx.into_iter() {
+            match ctx_or_error {
+                Either::Left(lookup_entry) => responses.push(lookup_entry),
+                Either::Right(ctx) => id_changeset_pairs.push((id, ctx.id())),
+            }
+        }
+
+        let id_map = map_commit_identities(
+            &repo,
+            id_changeset_pairs
+                .clone()
+                .into_iter()
+                .map(|(_, cs)| cs)
+                .collect(),
+            &params.identity_schemes,
+        )
+        .await?;
+
+        for (requested_id, cs_id) in id_changeset_pairs {
+            let ids: Result<
+                BTreeMap<thrift::CommitIdentityScheme, thrift::CommitId>,
+                scs_errors::ServiceError,
+            > = id_map.get(&cs_id).cloned().ok_or_else(|| {
+                scs_errors::internal_error("programming error, commit id not found in id map")
+                    .into()
+            });
+            let response = thrift::CommitLookupResponse {
+                exists: true,
+                ids: Some(ids?),
+                ..Default::default()
+            };
+            responses.push(thrift::CommitLookupEntry {
+                commit_id: requested_id,
+                commit_lookup_response: response,
+                ..Default::default()
+            });
+        }
+
+        Ok(thrift::RepoMultipleCommitLookupResponse {
+            responses,
+            ..Default::default()
+        })
+    }
+
     /// Get diff.
     pub(crate) async fn commit_file_diffs(
         &self,
