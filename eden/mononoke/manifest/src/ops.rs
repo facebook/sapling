@@ -480,11 +480,28 @@ where
                         Diff::Added(path, tree) => {
                             let manifest = tree.load(ctx, &other_store).await?;
                             let mut stream = manifest.list(ctx, &other_store).await?;
-                            while let Some((name, entry)) = stream.try_next().await? {
+                            while let Some((name, right)) = stream.try_next().await? {
+                                tokio::task::consume_budget().await;
+
                                 let path = path.join(&name);
-                                match entry {
-                                    Entry::Tree(tree) => recurse.push(Diff::Added(path, tree), Default::default()),
-                                    _ => output.push(Diff::Added(path, entry)),
+                                let (replacement, child_replacements) = replacements.remove(&name).unwrap_or_default().deconstruct();
+                                match (replacement, right) {
+                                    (None, Entry::Tree(tree)) => recurse.push(Diff::Added(path, tree), child_replacements),
+                                    (None, right) => output.push(Diff::Added(path, right)),
+                                    (Some(left @ Entry::Leaf(_)), right @ Entry::Leaf(_)) => {
+                                        output.push(Diff::Changed(path, left, right));
+                                    }
+                                    (Some(Entry::Tree(tree)), right @ Entry::Leaf(_)) => {
+                                        output.push(Diff::Added(path.clone(), right));
+                                        recurse.push(Diff::Removed(path, tree), child_replacements);
+                                    }
+                                    (Some(left @ Entry::Leaf(_)), Entry::Tree(tree)) => {
+                                        output.push(Diff::Removed(path.clone(), left));
+                                        recurse.push(Diff::Added(path, tree), child_replacements);
+                                    }
+                                    (Some(Entry::Tree(left)), Entry::Tree(right)) => {
+                                        recurse.push(Diff::Changed(path, left, right), child_replacements)
+                                    }
                                 }
                             }
                             ReplacementsHolder::finalize(&path, replacements)?;
@@ -495,6 +512,8 @@ where
                             let manifest = tree.load(ctx, &store).await?;
                             let mut stream = manifest.list(ctx, &store).await?;
                             while let Some((name, entry)) = stream.try_next().await? {
+                                tokio::task::consume_budget().await;
+
                                 let path = path.join(&name);
                                 let (replacement, child_replacements) = replacements.remove(&name).unwrap_or_default().deconstruct();
                                 let entry = replacement.unwrap_or(entry);
