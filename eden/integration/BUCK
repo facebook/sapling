@@ -620,8 +620,12 @@ python_unittest(
     supports_static_listing = False,
     deps = [
         "//eden/integration/lib:lib",
-        "//eden/integration/lib:ntapi",
-    ],
+    ] + select({
+        "DEFAULT": [],
+        "ovr_config//os:windows": [
+            "//eden/integration/lib:ntapi",
+        ],
+    }),
 )
 
 # Also run basic sanity tests on the non-oss build flavor.
