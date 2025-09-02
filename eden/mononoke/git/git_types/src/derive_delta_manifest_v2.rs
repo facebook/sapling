@@ -515,7 +515,6 @@ mod tests {
             .get(
                 ctx.clone(),
                 &BookmarkKey::from_str("master")?,
-                // TODO(T236130401): confirm if this needs read from primary
                 bookmarks::Freshness::MostRecent,
             )
             .await?
