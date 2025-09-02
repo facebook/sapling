@@ -2207,10 +2207,12 @@ EdenServiceHandler::streamChangesSince(
 std::pair<std::vector<RelativePath>, std::vector<RelativePath>>
 buildIncludedAndExcludedRoots(
     bool includeVCSRoots,
+    bool includeStateChanges,
     const std::vector<RelativePath>& vcsDirectories,
     const std::vector<PathString>& includedRoots,
     const std::vector<PathString>& excludedRoots,
-    const RelativePathPiece& root) {
+    const RelativePathPiece& root,
+    const RelativePathPiece& notificationsStateDirectory) {
   // This uses/returns RelativePath instead of RelativePathPiece due to the
   // value constructed with the root + include/excludeRoot going out of
   // scope
@@ -2230,6 +2232,9 @@ buildIncludedAndExcludedRoots(
     // If there are no includedRoots and there is a root, use
     // it as an includedRoot
     outIncludedRoots.emplace_back(root);
+  }
+  if (includeStateChanges) {
+    outIncludedRoots.emplace_back(notificationsStateDirectory);
   }
 
   std::vector<RelativePath> outExcludedRoots(excludedRoots.size());
@@ -2347,17 +2352,22 @@ void EdenServiceHandler::sync_changesSinceV2(
       ? params->excludedSuffixes().value()
       : std::vector<std::string>{};
 
+  auto includeStateChanges = params->includeStateChanges().has_value()
+      ? params->includeStateChanges().value()
+      : false;
+
   auto helper = INSTRUMENT_THRIFT_CALL(
       DBG3,
       *params->mountPoint(),
       fmt::format(
-          "fromPosition={}, root:{}, includedRoots:{}, excludedRoots:{}, includedSuffixes:{}, excludedSuffixes:{}",
+          "fromPosition={}, root:{}, includedRoots:{}, excludedRoots:{}, includedSuffixes:{}, excludedSuffixes:{}, includeStateChanges: {}",
           logPosition(fromPosition),
           root,
           toLogArg(includedRoots),
           toLogArg(excludedRoots),
           toLogArg(includedSuffixes),
-          toLogArg(excludedSuffixes)));
+          toLogArg(excludedSuffixes),
+          includeStateChanges));
 
   auto latestJournalEntry = mountHandle.getJournal().getLatest();
   std::optional<JournalDelta::SequenceNumber> toSequence;
@@ -2424,12 +2434,16 @@ void EdenServiceHandler::sync_changesSinceV2(
     // TODO: move to helper
     auto config = server_->getServerState()->getEdenConfig();
     auto maxNumberOfChanges = config->notifyMaxNumberOfChanges.getValue();
+    auto notificationsStateDirectory =
+        config->notificationsStateDirectory.getValue();
     auto includedAndExcludedRoots = buildIncludedAndExcludedRoots(
         includeVCSRoots,
+        includeStateChanges,
         config->vcsDirectories.getValue(),
         includedRoots,
         excludedRoots,
-        root);
+        root,
+        notificationsStateDirectory);
     auto includedAndExcludedSuffixes =
         std::make_pair(includedSuffixes, excludedSuffixes);
 
@@ -2456,6 +2470,7 @@ void EdenServiceHandler::sync_changesSinceV2(
           ChangeNotification change;
           LargeChangeNotification largeChange;
           SmallChangeNotification smallChange;
+
           if (current.isPath2Valid) {
             // Determine if path2 passes filters, but only if path1 one
             // doesn't to avoid an extra lookup
@@ -2482,6 +2497,7 @@ void EdenServiceHandler::sync_changesSinceV2(
               bool path1InRoot = pathString1.isSubDirOf(root);
               bool path2InRoot = pathString2.isSubDirOf(root);
 
+              // if state change, skip over root handling
               if (!root.empty()) {
                 // Filters include the path that matches the filter, but we want
                 // to exclude it from a root
@@ -2584,6 +2600,7 @@ void EdenServiceHandler::sync_changesSinceV2(
             // mac/windows
             RelativePathPiece pathString = current.path1;
 
+            // if state change, skip over roots truncation
             if (!root.empty()) {
               pathString = pathString.substr(root.view().size());
             }
