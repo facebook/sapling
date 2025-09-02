@@ -506,9 +506,106 @@ impl From<LargeChangeNotification> for thrift_types::edenfs::LargeChangeNotifica
 }
 
 #[derive(Clone, Debug, PartialEq, Serialize)]
+pub struct StateEntered {
+    pub name: String,
+}
+
+impl fmt::Display for StateEntered {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(f, "{}", &self.name)
+    }
+}
+
+impl From<thrift_types::edenfs::StateEntered> for StateEntered {
+    fn from(from: thrift_types::edenfs::StateEntered) -> Self {
+        Self { name: from.name }
+    }
+}
+
+impl From<StateEntered> for thrift_types::edenfs::StateEntered {
+    fn from(from: StateEntered) -> Self {
+        Self {
+            name: from.name,
+            ..Default::default()
+        }
+    }
+}
+
+#[derive(Clone, Debug, PartialEq, Serialize)]
+pub struct StateLeft {
+    pub name: String,
+}
+
+impl fmt::Display for StateLeft {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(f, "{}", &self.name,)
+    }
+}
+
+impl From<thrift_types::edenfs::StateLeft> for StateLeft {
+    fn from(from: thrift_types::edenfs::StateLeft) -> Self {
+        Self { name: from.name }
+    }
+}
+
+impl From<StateLeft> for thrift_types::edenfs::StateLeft {
+    fn from(from: StateLeft) -> Self {
+        Self {
+            name: from.name,
+            ..Default::default()
+        }
+    }
+}
+
+#[derive(Clone, Debug, PartialEq, Serialize)]
+pub enum StateChangeNotification {
+    StateEntered(StateEntered),
+    StateLeft(StateLeft),
+}
+
+impl fmt::Display for StateChangeNotification {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        match self {
+            StateChangeNotification::StateEntered(state_entered) => {
+                write!(f, "Entered {}", state_entered)
+            }
+            StateChangeNotification::StateLeft(state_left) => {
+                write!(f, "Left {}", state_left)
+            }
+        }
+    }
+}
+
+impl From<thrift_types::edenfs::StateChangeNotification> for StateChangeNotification {
+    fn from(from: thrift_types::edenfs::StateChangeNotification) -> Self {
+        match from {
+            thrift_types::edenfs::StateChangeNotification::stateEntered(state_entered) => {
+                StateChangeNotification::StateEntered(state_entered.into())
+            }
+            thrift_types::edenfs::StateChangeNotification::stateLeft(state_left) => {
+                StateChangeNotification::StateLeft(state_left.into())
+            }
+            _ => panic!("Unknown StateChangeNotification"),
+        }
+    }
+}
+
+impl From<StateChangeNotification> for thrift_types::edenfs::StateChangeNotification {
+    fn from(from: StateChangeNotification) -> Self {
+        match from {
+            StateChangeNotification::StateEntered(state_entered) => {
+                Self::stateEntered(state_entered.into())
+            }
+            StateChangeNotification::StateLeft(state_left) => Self::stateLeft(state_left.into()),
+        }
+    }
+}
+
+#[derive(Clone, Debug, PartialEq, Serialize)]
 pub enum ChangeNotification {
     SmallChange(SmallChangeNotification),
     LargeChange(LargeChangeNotification),
+    StateChange(StateChangeNotification),
 }
 
 impl fmt::Display for ChangeNotification {
@@ -519,6 +616,9 @@ impl fmt::Display for ChangeNotification {
             }
             ChangeNotification::LargeChange(large_change) => {
                 write!(f, "large: {}", large_change)
+            }
+            ChangeNotification::StateChange(state_change) => {
+                write!(f, "state: {}", state_change)
             }
         }
     }
@@ -533,6 +633,9 @@ impl From<thrift_types::edenfs::ChangeNotification> for ChangeNotification {
             thrift_types::edenfs::ChangeNotification::largeChange(large_change) => {
                 ChangeNotification::LargeChange(large_change.into())
             }
+            thrift_types::edenfs::ChangeNotification::stateChange(state_change) => {
+                ChangeNotification::StateChange(state_change.into())
+            }
             _ => panic!("Unknown ChangeNotification"),
         }
     }
@@ -543,6 +646,7 @@ impl From<ChangeNotification> for thrift_types::edenfs::ChangeNotification {
         match from {
             ChangeNotification::SmallChange(small_change) => Self::smallChange(small_change.into()),
             ChangeNotification::LargeChange(large_change) => Self::largeChange(large_change.into()),
+            ChangeNotification::StateChange(state_change) => Self::stateChange(state_change.into()),
         }
     }
 }
