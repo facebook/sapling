@@ -57,6 +57,7 @@ import {tracker} from './analytics';
 import {latestCommitMessageFields} from './codeReview/CodeReviewInfo';
 import {islDrawerState} from './drawerState';
 import {externalMergeToolAtom} from './externalMergeTool';
+import {DevmateIcon} from './facebook/icons/DevmateIcon';
 import {T, t} from './i18n';
 import {DownwardArrow} from './icons/DownwardIcon';
 import {localStorageBackedAtom, readAtom, useAtomGet, writeAtom} from './jotaiUtils';
@@ -88,11 +89,13 @@ import {
   useIsOperationRunningOrQueued,
 } from './previews';
 import {selectedCommits} from './selection';
+import serverAPI from './ClientToServerAPI';
 import {latestHeadCommit, uncommittedChangesFetchError} from './serverAPIState';
 import {GeneratedStatus} from './types';
 
 import './UncommittedChanges.css';
 import {SmartActionsMenu} from './SmartActionsMenu';
+import {featureFlagAsync} from './featureFlags';
 
 export type UIChangedFile = {
   path: RepoRelativePath;
@@ -930,6 +933,10 @@ function MergeConflictButtons({
 
   const externalMergeTool = useAtomValue(externalMergeToolAtom);
 
+  const devmateResolveConflictsEnabled = useAtomValue(
+    featureFlagAsync(Internal.featureFlags?.DevmateResolveConflicts),
+  );
+
   return (
     <Row style={{flexWrap: 'wrap', marginBottom: 'var(--pad)'}}>
       <Button
@@ -957,6 +964,26 @@ function MergeConflictButtons({
         <Icon slot="start" icon={isRunningAbort ? 'loading' : 'circle-slash'} />
         <T>Abort</T>
       </Button>
+      {devmateResolveConflictsEnabled && platform.platformName === 'vscode' && (
+        <Tooltip
+          title={t(
+            'Use Devmate to automatically resolve all merge conflicts. This will attempt to intelligently merge the conflicting changes.',
+          )}>
+          <Button
+            disabled={allConflictsResolved || shouldDisableButtons}
+            data-testid="devmate-resolve-all-conflicts-button"
+            onClick={() => {
+              tracker.track('DevmateResolveAllConflicts');
+              serverAPI.postMessage({
+                type: 'platform/devmateResolveAllConflicts',
+                conflicts,
+              });
+            }}>
+            <DevmateIcon />
+            <T>Resolve with Devmate</T>
+          </Button>
+        </Tooltip>
+      )}
       {externalMergeTool == null ? (
         platform.upsellExternalMergeTool ? (
           <Tooltip

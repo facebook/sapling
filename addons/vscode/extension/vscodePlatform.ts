@@ -318,6 +318,14 @@ export const getVSCodePlatform = (context: vscode.ExtensionContext): VSCodeServe
           promptDevmate({type: 'validateChanges'}, ActionTriggerType.ISL2SmartActions);
           break;
         }
+        case 'platform/devmateResolveAllConflicts': {
+          const {conflicts} = message;
+          promptDevmate(
+            {type: 'resolveAllConflicts', conflicts, repoPath: repo?.info.repoRoot},
+            ActionTriggerType.ISL2MergeConflictView,
+          );
+          break;
+        }
       }
     } catch (err) {
       vscode.window.showErrorMessage(`error handling message ${JSON.stringify(message)}\n${err}`);

@@ -731,6 +731,10 @@ export type PlatformSpecificClientToServerMessages =
     }
   | {
       type: 'platform/devmateValidateChanges';
+    }
+  | {
+      type: 'platform/devmateResolveAllConflicts';
+      conflicts: MergeConflicts;
     };
 
 /**
