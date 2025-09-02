@@ -219,10 +219,21 @@ struct hash<facebook::eden::ObjectId> {
 } // namespace std
 
 template <>
-struct fmt::formatter<facebook::eden::ObjectId> : formatter<std::string> {
+struct fmt::formatter<facebook::eden::ObjectId> {
+  constexpr auto parse(fmt::format_parse_context& ctx) {
+    return ctx.begin();
+  }
+
   template <typename Context>
   auto format(const facebook::eden::ObjectId& id, Context& ctx) const {
-    // TODO: avoid allocation here
-    return formatter<std::string>::format(id.toLogString(), ctx);
+    auto out = ctx.out();
+    constexpr char hexValues[] = "0123456789abcdef";
+
+    auto bytes = id.getBytes();
+    for (unsigned char b : bytes) {
+      *out++ = hexValues[b >> 4];
+      *out++ = hexValues[b & 0x0f];
+    }
+    return out;
   }
 };
