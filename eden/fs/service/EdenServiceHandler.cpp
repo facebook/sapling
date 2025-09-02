@@ -2457,6 +2457,54 @@ void EdenServiceHandler::sync_changesSinceV2(
                 "FileChangeJournalDetal::isPath1Valid should never be false");
           }
 
+          // Check if it's a notifications state event.
+          // Changes that happen inside the notifications state directory
+          // will not be reported with other changes.
+          if (notificationsStateDirectory.isParentDirOf(current.path1)) {
+            XLOGF(
+                DBG3,
+                "Eden notifications file event at path {}",
+                current.path1.asString());
+            const auto& info = current.info1;
+            ChangeNotification change;
+            StateChangeNotification stateChange;
+            if (ends_with(current.path1.asString(), ".notify")) {
+              if (!info.existedBefore) {
+                StateEntered stateEntered;
+                XLOGF(
+                    DBG3,
+                    "Entered notifications state {}",
+                    current.path1.stem().asString());
+                stateEntered.name() = current.path1.stem().asString();
+                stateChange.stateEntered_ref() = std::move(stateEntered);
+              } else if (!info.existedAfter) {
+                StateLeft stateLeft;
+                XLOGF(
+                    DBG3,
+                    "Left notifications state {}",
+                    current.path1.stem().asString());
+                stateLeft.name() = current.path1.stem().asString();
+                stateChange.stateLeft_ref() = std::move(stateLeft);
+              } else {
+                // Modified state file happens on linux platforms immediately
+                // after creation. Ignore it, since it doesn't change the state
+                return true;
+              }
+            } else {
+              // Other changes caused by the locking mechanism. Ignored
+              // Return value = Should continue
+              return true;
+            }
+            if (includeStateChanges) {
+              StateChangeNotification stateChangeCopy =
+                  StateChangeNotification(stateChange);
+              change.stateChange_ref() = std::move(stateChange);
+              result.changes_ref()->push_back(std::move(change));
+            }
+            // Return value = Should continue
+            return true;
+          }
+
           // Changes can effect either path1 or both paths
           // Determine if path1 pass the filters and default path2 to not
           bool includePath1 = isPathIncluded(
