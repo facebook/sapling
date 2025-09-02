@@ -331,6 +331,10 @@ function DiffSignalSummary({diff}: {diff: DiffSummary}) {
         'Test Signals were not fully successful for this Diff. See Diff for more details.',
       );
       break;
+    case 'land-cancelled':
+      icon = <CircleExclamationIcon />;
+      tooltip = t('Land is cancelled for this Diff. See Diff for more details.');
+      break;
   }
   return (
     <div className={`diff-signal-summary diff-signal-${diff.signalSummary}`}>

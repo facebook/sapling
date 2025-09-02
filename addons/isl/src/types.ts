@@ -167,7 +167,13 @@ export type DiffComment = {
  * 'pass' if ALL signals succeed and not still running.
  * 'failed' if ANY signal doesn't succeed, even if some are still running.
  */
-export type DiffSignalSummary = 'running' | 'pass' | 'failed' | 'warning' | 'no-signal';
+export type DiffSignalSummary =
+  | 'running'
+  | 'pass'
+  | 'failed'
+  | 'warning'
+  | 'no-signal'
+  | 'land-cancelled';
 
 /**
  * Information about a land request, specific to each Code Review Provider.

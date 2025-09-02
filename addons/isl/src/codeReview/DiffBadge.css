@@ -56,3 +56,6 @@
 .diff-signal-warning {
   color: var(--signal-medium-bg);
 }
+.diff-signal-land-cancelled {
+  color: var(--signal-medium-bg);
+}
