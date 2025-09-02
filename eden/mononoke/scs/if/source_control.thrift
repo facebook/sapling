@@ -1228,6 +1228,14 @@ struct CommitLookupParams {
   1: set<CommitIdentityScheme> identity_schemes;
 }
 
+struct RepoMultipleCommitLookupParams {
+  /// List of commit IDs to return.
+  1: list<CommitId> commit_ids;
+
+  /// Commit identity schemes to return for each changeset.
+  2: set<CommitIdentityScheme> identity_schemes;
+}
+
 struct CommitLookupPushrebaseHistoryParams {}
 
 struct CommitInfoParams {
@@ -2060,6 +2068,15 @@ struct CommitLookupResponse {
   2: optional map<CommitIdentityScheme, CommitId> ids;
 }
 
+struct CommitLookupEntry {
+  1: CommitId commit_id;
+  2: CommitLookupResponse commit_lookup_response;
+}
+
+struct RepoMultipleCommitLookupResponse {
+  1: list<CommitLookupEntry> responses;
+}
+
 struct CommitLookupPushrebaseHistoryResponse {
   1: list<CommitSpecifier> history;
   /// Always equals to the last element of history
@@ -2795,6 +2812,15 @@ service SourceControlService extends fb303_core.BaseService {
   CommitLookupResponse commit_lookup(
     1: CommitSpecifier commit,
     2: CommitLookupParams params,
+  ) throws (
+    1: RequestError request_error,
+    2: InternalError internal_error,
+    3: OverloadError overload_error,
+  );
+
+  RepoMultipleCommitLookupResponse repo_multiple_commit_lookup(
+    1: RepoSpecifier repo,
+    2: RepoMultipleCommitLookupParams params,
   ) throws (
     1: RequestError request_error,
     2: InternalError internal_error,
