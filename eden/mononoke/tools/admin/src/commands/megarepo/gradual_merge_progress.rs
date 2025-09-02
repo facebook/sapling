@@ -198,7 +198,6 @@ async fn find_unmerged_commits(
         .get(
             ctx.clone(),
             bookmark_to_merge_into,
-            // TODO(T236130401): confirm if this needs read from primary
             bookmarks::Freshness::MostRecent,
         )
         .await?

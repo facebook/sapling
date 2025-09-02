@@ -161,12 +161,7 @@ impl<'a, R: MononokeRepo> AddSyncTarget<'a, R> {
         let maybe_cs_id = repo
             .repo()
             .bookmarks()
-            .get(
-                ctx.clone(),
-                &bookmark,
-                // TODO(T236130401): confirm if this needs read from primary
-                bookmarks::Freshness::MostRecent,
-            )
+            .get(ctx.clone(), &bookmark, bookmarks::Freshness::MostRecent)
             .map_err(MegarepoError::internal)
             .await?;
 

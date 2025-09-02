@@ -163,7 +163,6 @@ async fn find_unmerged_commits(
         .get(
             ctx.clone(),
             bookmark_to_merge_into,
-            // TODO(T236130401): confirm if this needs read from primary
             bookmarks::Freshness::MostRecent,
         )
         .await?
@@ -245,7 +244,6 @@ async fn push_merge_commit(
         .get(
             ctx.clone(),
             bookmark_to_merge_into,
-            // TODO(T236130401): confirm if this needs read from primary
             bookmarks::Freshness::MostRecent,
         )
         .await?
@@ -455,12 +453,7 @@ mod test {
         // Now merge a single commit into "head"
         let head_value = repo
             .bookmarks()
-            .get(
-                ctx.clone(),
-                &head,
-                // TODO(T236130401): confirm if this needs read from primary
-                bookmarks::Freshness::MostRecent,
-            )
+            .get(ctx.clone(), &head, bookmarks::Freshness::MostRecent)
             .await?
             .ok_or_else(|| anyhow::anyhow!("Bookmark {} doesn't exist", head))?;
 
@@ -482,12 +475,7 @@ mod test {
         // Merge next commit into head
         let head_value = repo
             .bookmarks()
-            .get(
-                ctx.clone(),
-                &head,
-                // TODO(T236130401): confirm if this needs read from primary
-                bookmarks::Freshness::MostRecent,
-            )
+            .get(ctx.clone(), &head, bookmarks::Freshness::MostRecent)
             .await?
             .ok_or_else(|| anyhow::anyhow!("Bookmark {} doesn't exist", head))?;
 

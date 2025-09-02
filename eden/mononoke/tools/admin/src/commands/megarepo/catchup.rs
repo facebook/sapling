@@ -75,7 +75,6 @@ pub async fn create_deletion_head_commits<'a>(
             .get(
                 ctx.clone(),
                 &head_bookmark,
-                // TODO(T236130401): confirm if this needs read from primary
                 bookmarks::Freshness::MostRecent,
             )
             .await?;
@@ -198,12 +197,7 @@ async fn find_files_that_need_to_be_deleted(
 ) -> Result<Vec<NonRootMPath>, Error> {
     let maybe_head_bookmark_val = repo
         .bookmarks()
-        .get(
-            ctx.clone(),
-            head_bookmark,
-            // TODO(T236130401): confirm if this needs read from primary
-            bookmarks::Freshness::MostRecent,
-        )
+        .get(ctx.clone(), head_bookmark, bookmarks::Freshness::MostRecent)
         .await?;
 
     let head_bookmark_val =

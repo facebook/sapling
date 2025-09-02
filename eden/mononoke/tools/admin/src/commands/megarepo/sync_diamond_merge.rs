@@ -272,7 +272,6 @@ pub async fn do_sync_diamond_merge(
         .get(
             ctx.clone(),
             &onto_bookmark,
-            // TODO(T236130401): confirm if this needs read from primary
             bookmarks::Freshness::MostRecent,
         )
         .await?;

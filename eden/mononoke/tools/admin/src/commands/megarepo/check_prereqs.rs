@@ -72,7 +72,6 @@ pub async fn run(ctx: &CoreContext, app: MononokeApp, args: CheckPrereqsArgs) ->
             .get(
                 ctx.clone(),
                 &BookmarkKey::new(bookmark)?,
-                // TODO(T236130401): confirm if this needs read from primary
                 bookmarks::Freshness::MostRecent,
             )
             .await
@@ -94,7 +93,6 @@ pub async fn run(ctx: &CoreContext, app: MononokeApp, args: CheckPrereqsArgs) ->
             .get(
                 ctx.clone(),
                 &BookmarkKey::new(bookmark)?,
-                // TODO(T236130401): confirm if this needs read from primary
                 bookmarks::Freshness::MostRecent,
             )
             .await
