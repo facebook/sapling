@@ -274,12 +274,7 @@ async fn find_mapping_version(
     let bookmark_val = large_to_small_syncer
         .get_large_repo()
         .bookmarks()
-        .get(
-            ctx.clone(),
-            dest_bookmark,
-            // TODO(T236130401): confirm if this needs read from primary
-            bookmarks::Freshness::MostRecent,
-        )
+        .get(ctx.clone(), dest_bookmark, bookmarks::Freshness::MostRecent)
         .await?
         .ok_or_else(|| format_err!("{} not found", dest_bookmark))?;
 
@@ -428,12 +423,7 @@ async fn move_bookmark(
 
     let maybe_old_csid = repo
         .bookmarks()
-        .get(
-            ctx.clone(),
-            bookmark,
-            // TODO(T236130401): confirm if this needs read from primary
-            bookmarks::Freshness::MostRecent,
-        )
+        .get(ctx.clone(), bookmark, bookmarks::Freshness::MostRecent)
         .await?;
 
     /* If the bookmark already exists, we should continue moving the
@@ -520,7 +510,6 @@ async fn move_bookmark(
                 .get(
                     ctx.clone(),
                     &small_repo_back_sync_vars.small_repo_bookmark,
-                    // TODO(T236130401): confirm if this needs read from primary
                     bookmarks::Freshness::MostRecent,
                 )
                 .await?
@@ -573,12 +562,7 @@ async fn merge_imported_commit(
     );
     let master_cs_id = match repo
         .bookmarks()
-        .get(
-            ctx.clone(),
-            dest_bookmark,
-            // TODO(T236130401): confirm if this needs read from primary
-            bookmarks::Freshness::MostRecent,
-        )
+        .get(ctx.clone(), dest_bookmark, bookmarks::Freshness::MostRecent)
         .await?
     {
         Some(id) => id,
@@ -1389,7 +1373,6 @@ async fn repo_import(
         .get(
             ctx.clone(),
             &repo_import_setting.importing_bookmark,
-            // TODO(T236130401): confirm if this needs read from primary
             bookmarks::Freshness::MostRecent,
         )
         .await?
@@ -1535,12 +1518,7 @@ async fn check_megarepo_large_repo_import_requirements(
 ) -> Result<(), Error> {
     let dest_cs_id = repo
         .bookmarks()
-        .get(
-            ctx.clone(),
-            dest_bookmark,
-            // TODO(T236130401): confirm if this needs read from primary
-            bookmarks::Freshness::MostRecent,
-        )
+        .get(ctx.clone(), dest_bookmark, bookmarks::Freshness::MostRecent)
         .await?
         .ok_or_else(|| anyhow!("Bookmark not found: {}", dest_bookmark))?;
     if let Some(version) = repo
