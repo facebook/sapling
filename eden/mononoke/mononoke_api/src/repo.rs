@@ -616,12 +616,7 @@ async fn report_bookmark_age_difference(
     let maybe_bcs_id_from_service = repo.bookmarks_cache().get(ctx, bookmark).await?;
     let maybe_bcs_id_from_blobrepo = repo
         .bookmarks()
-        .get(
-            ctx.clone(),
-            bookmark,
-            // TODO(T236130401): confirm if this needs read from primary
-            bookmarks::Freshness::MostRecent,
-        )
+        .get(ctx.clone(), bookmark, bookmarks::Freshness::MostRecent)
         .await?;
 
     if maybe_bcs_id_from_blobrepo.is_none() {

@@ -41,7 +41,6 @@ impl<R: MononokeRepo> RepoContext<R> {
                 .get(
                     self.ctx().clone(),
                     bookmark,
-                    // TODO(T236130401): confirm if this needs read from primary
                     bookmarks::Freshness::MostRecent,
                 )
                 .await

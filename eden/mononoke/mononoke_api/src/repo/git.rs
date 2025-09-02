@@ -426,12 +426,7 @@ pub async fn get_bookmark_state<'a, 'b>(
 ) -> anyhow::Result<BookmarkState> {
     let maybe_bookmark_val = repo
         .bookmarks()
-        .get(
-            ctx.clone(),
-            bookmark,
-            // TODO(T236130401): confirm if this needs read from primary
-            bookmarks::Freshness::MostRecent,
-        )
+        .get(ctx.clone(), bookmark, bookmarks::Freshness::MostRecent)
         .await
         .with_context(|| format!("Error fetching bookmark: {}", bookmark))?;
     if let Some(cs_id) = maybe_bookmark_val {
