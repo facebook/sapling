@@ -37,12 +37,7 @@ pub async fn get(ctx: &CoreContext, repo: &Repo, get_args: BookmarksGetArgs) -> 
     let key = BookmarkKey::with_name_and_category(get_args.name, get_args.category);
     let bookmark_value = repo
         .bookmarks()
-        .get(
-            ctx.clone(),
-            &key,
-            // TODO(T236130401): confirm if this needs read from primary
-            bookmarks::Freshness::MostRecent,
-        )
+        .get(ctx.clone(), &key, bookmarks::Freshness::MostRecent)
         .await
         .with_context(|| format!("Failed to resolve bookmark '{}'", key))?;
     match bookmark_value {

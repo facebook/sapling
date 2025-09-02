@@ -62,7 +62,6 @@ pub async fn run(app: MononokeApp, args: CommandArgs) -> Result<()> {
         .get(
             ctx.clone(),
             &main_bookmark,
-            // TODO(T236130401): confirm if this needs read from primary
             bookmarks::Freshness::MostRecent,
         )
         .await

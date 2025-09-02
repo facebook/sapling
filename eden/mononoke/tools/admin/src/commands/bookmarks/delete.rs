@@ -68,7 +68,6 @@ pub async fn delete(
             .get(
                 ctx.clone(),
                 &delete_args.name,
-                // TODO(T236130401): confirm if this needs read from primary
                 bookmarks::Freshness::MostRecent,
             )
             .await

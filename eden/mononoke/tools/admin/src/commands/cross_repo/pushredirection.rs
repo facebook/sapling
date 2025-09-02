@@ -525,12 +525,7 @@ async fn get_bookmark_value(
 ) -> Result<ChangesetId> {
     let maybe_bookmark_value = repo
         .bookmarks()
-        .get(
-            ctx.clone(),
-            bookmark,
-            // TODO(T236130401): confirm if this needs read from primary
-            bookmarks::Freshness::MostRecent,
-        )
+        .get(ctx.clone(), bookmark, bookmarks::Freshness::MostRecent)
         .await?;
 
     maybe_bookmark_value.ok_or_else(|| {

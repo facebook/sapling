@@ -76,7 +76,6 @@ pub async fn set(ctx: &CoreContext, repo: &Repo, set_args: BookmarksSetArgs) -> 
             .get(
                 ctx.clone(),
                 &set_args.name,
-                // TODO(T236130401): confirm if this needs read from primary
                 bookmarks::Freshness::MostRecent,
             )
             .await

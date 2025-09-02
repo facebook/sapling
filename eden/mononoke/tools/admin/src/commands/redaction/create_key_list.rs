@@ -233,7 +233,6 @@ pub async fn create_key_list_from_commit_files(
         .get(
             ctx.clone(),
             &create_args.main_bookmark,
-            // TODO(T236130401): confirm if this needs read from primary
             bookmarks::Freshness::MostRecent,
         )
         .await?
