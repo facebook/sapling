@@ -2088,6 +2088,14 @@ class EdenConfig : private ConfigSettingManager {
       {RelativePath{".hg"}, RelativePath{".git"}, RelativePath{".sl"}},
       this};
 
+  /**
+   * In-repo location for notifications states
+   */
+  ConfigSetting<RelativePath> notificationsStateDirectory{
+      "notify:state-directory",
+      RelativePath{".edenfs-notifications-state"},
+      this};
+
 // [facebook]
 // Facebook internal
 
