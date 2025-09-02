@@ -170,7 +170,6 @@ where
         .get(
             ctx.clone(),
             &bookmark_name,
-            // TODO(T236130401): confirm if this needs read from primary
             bookmarks::Freshness::MostRecent,
         )
         .await?;

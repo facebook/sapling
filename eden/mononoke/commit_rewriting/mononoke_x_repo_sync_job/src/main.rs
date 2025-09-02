@@ -358,7 +358,6 @@ async fn run_in_tailing_mode(
                             .get(
                                 ctx.clone(),
                                 target_bookmark,
-                                // TODO(T236130401): confirm if this needs read from primary
                                 bookmarks::Freshness::MostRecent,
                             )
                             .await?

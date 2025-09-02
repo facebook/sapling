@@ -1475,12 +1475,7 @@ async fn init_repos(
     let master = BookmarkKey::new("master")?;
     let master_val = large_repo
         .bookmarks()
-        .get(
-            ctx.clone(),
-            &master,
-            // TODO(T236130401): confirm if this needs read from primary
-            bookmarks::Freshness::MostRecent,
-        )
+        .get(ctx.clone(), &master, bookmarks::Freshness::MostRecent)
         .await?
         .unwrap();
 
@@ -2055,12 +2050,7 @@ async fn move_bookmark(
 
     let prev_bcs_id = repo
         .bookmarks()
-        .get(
-            ctx,
-            bookmark,
-            // TODO(T236130401): confirm if this needs read from primary
-            bookmarks::Freshness::MostRecent,
-        )
+        .get(ctx, bookmark, bookmarks::Freshness::MostRecent)
         .await?;
 
     match prev_bcs_id {

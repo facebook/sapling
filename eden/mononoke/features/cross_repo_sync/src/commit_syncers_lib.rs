@@ -400,7 +400,6 @@ where
         .get(
             ctx.clone(),
             &target_bookmark.0,
-            // TODO(T236130401): confirm if this needs read from primary
             bookmarks::Freshness::MostRecent,
         )
         .await?
@@ -547,7 +546,6 @@ where
         .get(
             ctx.clone(),
             &target_bookmark.0,
-            // TODO(T236130401): confirm if this needs read from primary
             bookmarks::Freshness::MostRecent,
         )
         .await?

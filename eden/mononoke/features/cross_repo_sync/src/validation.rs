@@ -1758,12 +1758,7 @@ mod test {
 
         let maybe_master_val = small_repo
             .bookmarks()
-            .get(
-                ctx.clone(),
-                &master,
-                // TODO(T236130401): confirm if this needs read from primary
-                bookmarks::Freshness::MostRecent,
-            )
+            .get(ctx.clone(), &master, bookmarks::Freshness::MostRecent)
             .await?;
         let master_val = maybe_master_val.ok_or_else(|| Error::msg("master not found"))?;
 
@@ -2157,12 +2152,7 @@ mod test {
 
         let maybe_master_val = small_repo
             .bookmarks()
-            .get(
-                ctx.clone(),
-                &master,
-                // TODO(T236130401): confirm if this needs read from primary
-                bookmarks::Freshness::MostRecent,
-            )
+            .get(ctx.clone(), &master, bookmarks::Freshness::MostRecent)
             .await?;
 
         let master_val = maybe_master_val.ok_or_else(|| Error::msg("master not found"))?;

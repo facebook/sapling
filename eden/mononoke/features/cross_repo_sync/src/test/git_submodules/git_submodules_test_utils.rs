@@ -223,7 +223,6 @@ pub(crate) async fn build_submodule_sync_test_data(
         .get(
             ctx.clone(),
             &BookmarkKey::new(MASTER_BOOKMARK_NAME)?,
-            // TODO(T236130401): confirm if this needs read from primary
             bookmarks::Freshness::MostRecent,
         )
         .await?
@@ -608,7 +607,6 @@ pub(crate) async fn get_all_changeset_data_from_repo(
         .get(
             ctx.clone(),
             &BookmarkKey::new(MASTER_BOOKMARK_NAME)?,
-            // TODO(T236130401): confirm if this needs read from primary
             bookmarks::Freshness::MostRecent,
         )
         .await?
@@ -858,7 +856,6 @@ pub(crate) async fn master_cs_id(ctx: &CoreContext, repo: &TestRepo) -> Result<C
         .get(
             ctx.clone(),
             &BookmarkKey::new(MASTER_BOOKMARK_NAME)?,
-            // TODO(T236130401): confirm if this needs read from primary
             bookmarks::Freshness::MostRecent,
         )
         .await?

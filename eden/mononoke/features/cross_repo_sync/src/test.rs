@@ -140,12 +140,7 @@ async fn create_empty_commit(ctx: CoreContext, repo: &TestRepo) -> ChangesetId {
     let bookmark = BookmarkKey::new("master").unwrap();
     let p1 = repo
         .bookmarks()
-        .get(
-            ctx.clone(),
-            &bookmark,
-            // TODO(T236130401): confirm if this needs read from primary
-            bookmarks::Freshness::MostRecent,
-        )
+        .get(ctx.clone(), &bookmark, bookmarks::Freshness::MostRecent)
         .await
         .unwrap()
         .unwrap();
@@ -674,12 +669,7 @@ async fn test_sync_copyinfo(fb: FacebookInit) -> Result<(), Error> {
         let bookmark = BookmarkKey::new("master").unwrap();
         linear
             .bookmarks()
-            .get(
-                ctx.clone(),
-                &bookmark,
-                // TODO(T236130401): confirm if this needs read from primary
-                bookmarks::Freshness::MostRecent,
-            )
+            .get(ctx.clone(), &bookmark, bookmarks::Freshness::MostRecent)
             .await?
             .unwrap()
     };
