@@ -451,7 +451,7 @@ class IORequest {
       throw std::system_error(
           EIO,
           std::generic_category(),
-          folly::to<std::string>("cannot access overlay after it is closed"));
+          "cannot access overlay after it is closed");
     }
   }
 
