@@ -24,7 +24,6 @@ cpp_library(
     ],
     exported_deps = [
         "fbsource//third-party/fmt:fmt",
-        "fbsource//third-party/googletest:gtest",
         "fbsource//third-party/googletest:gtest_headers",
         "//eden/common/os:os",
         "//eden/common/telemetry:telemetry",

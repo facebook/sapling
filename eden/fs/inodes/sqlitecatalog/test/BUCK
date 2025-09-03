@@ -7,7 +7,6 @@ cpp_unittest(
     srcs = ["SqliteInodeCatalogTest.cpp"],
     supports_static_listing = False,
     deps = [
-        "fbsource//third-party/googletest:gtest",
         "//eden/common/telemetry:structured_logger",
         "//eden/common/testharness:temp_file",
         "//eden/fs/config:config",
@@ -29,7 +28,6 @@ cpp_unittest(
     srcs = ["SqliteTreeStoreTest.cpp"],
     supports_static_listing = False,
     deps = [
-        "fbsource//third-party/googletest:gtest",
         "//eden/common/utils:path",
         "//eden/common/utils:utils",
         "//eden/fs/inodes:inode_number",

@@ -10,7 +10,6 @@ cpp_unittest(
     ],
     supports_static_listing = False,
     deps = [
-        "fbsource//third-party/googletest:gtest",
         "//eden/fs/telemetry:task_trace",
         "//folly/futures:core",
     ],
@@ -23,7 +22,6 @@ cpp_unittest(
     ],
     supports_static_listing = False,
     deps = [
-        "fbsource//third-party/googletest:gtest",
         "//eden/fs/telemetry:activity_buffer",
     ],
 )
@@ -70,7 +68,6 @@ cpp_unittest(
     supports_static_listing = False,
     deps = [
         "fbsource//third-party/googletest:gmock",
-        "fbsource//third-party/googletest:gtest",
         "//eden/common/telemetry:log_info",
         "//eden/common/telemetry:scribe_logger",
         "//eden/fs/telemetry:structured_logger",

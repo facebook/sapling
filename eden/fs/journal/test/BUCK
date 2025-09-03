@@ -8,7 +8,6 @@ cpp_unittest(
     supports_static_listing = False,
     deps = [
         "fbsource//third-party/googletest:gmock",
-        "fbsource//third-party/googletest:gtest",
         "//eden/fs/journal:journal",
         "//eden/fs/model:model",
     ],

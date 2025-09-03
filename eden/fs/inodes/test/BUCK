@@ -11,7 +11,6 @@ cpp_unittest(
     supports_static_listing = False,
     deps = [
         "fbsource//third-party/googletest:gmock",
-        "fbsource//third-party/googletest:gtest",
         "//eden/common/utils:fault_injector",
         "//eden/common/utils:file_utils",
         "//eden/common/utils:utils",
@@ -53,7 +52,6 @@ cpp_unittest(
     srcs = ["DematerializeTest.cpp"],
     supports_static_listing = False,
     deps = [
-        "fbsource//third-party/googletest:gtest",
         "//eden/fs/inodes:inodes",
         "//eden/fs/model:testutil",
         "//eden/fs/service:pretty_printers",
@@ -69,7 +67,6 @@ cpp_unittest(
     supports_static_listing = False,
     deps = [
         "fbsource//third-party/googletest:gmock",
-        "fbsource//third-party/googletest:gtest",
         "//eden/fs/config:config",
         "//eden/fs/inodes:inodes",
         "//eden/fs/model/git:gitignore",
@@ -90,7 +87,6 @@ cpp_unittest(
     srcs = ["EdenDispatcherTest.cpp"],
     supports_static_listing = False,
     deps = [
-        "fbsource//third-party/googletest:gtest",
         "//eden/fs/fuse:fuse",
         "//eden/fs/model:model",
         "//eden/fs/store:context",
@@ -112,7 +108,6 @@ cpp_unittest(
     ],
     supports_static_listing = False,
     deps = [
-        "fbsource//third-party/googletest:gtest",
         "//eden/fs/config:config",
         "//eden/fs/fuse:fuse",
         "//eden/fs/inodes:inodes",
@@ -142,7 +137,6 @@ cpp_unittest(
     supports_static_listing = False,
     deps = [
         "fbsource//third-party/fmt:fmt",
-        "fbsource//third-party/googletest:gtest",
         "//eden/common/utils:utils",
         "//eden/fs/inodes:inodes",
         "//eden/fs/store:store",
@@ -164,7 +158,6 @@ cpp_unittest(
     ],
     deps = [
         "fbsource//third-party/googletest:gmock",
-        "fbsource//third-party/googletest:gtest",
         "//eden/common/utils:utils",
         "//eden/fs/testharness:fake_backing_store_and_tree_builder",
         "//eden/fs/testharness:fake_fuse",
@@ -183,7 +176,6 @@ cpp_unittest(
     supports_static_listing = False,
     deps = [
         "fbsource//third-party/googletest:gmock",
-        "fbsource//third-party/googletest:gtest",
         "//eden/fs/inodes:inodes",
         "//eden/fs/model:testutil",
         "//eden/fs/testharness:fake_backing_store_and_tree_builder",
@@ -203,7 +195,6 @@ cpp_unittest(
     srcs = ["InodeBaseTest.cpp"],
     supports_static_listing = False,
     deps = [
-        "fbsource//third-party/googletest:gtest",
         "//eden/fs/inodes:inodes",
         "//eden/fs/store:context",
         "//eden/fs/testharness:fake_backing_store_and_tree_builder",
@@ -216,7 +207,6 @@ cpp_unittest(
     srcs = ["VirtualInodeLoaderTest.cpp"],
     supports_static_listing = False,
     deps = [
-        "fbsource//third-party/googletest:gtest",
         "//eden/fs/inodes:inodes",
         "//eden/fs/testharness:fake_backing_store_and_tree_builder",
         "//eden/fs/testharness:test_checks",
@@ -231,7 +221,6 @@ cpp_unittest(
     srcs = ["InodeMapTest.cpp"],
     supports_static_listing = False,
     deps = [
-        "fbsource//third-party/googletest:gtest",
         "//eden/common/utils:bug",
         "//eden/fs/inodes:inodes",
         "//eden/fs/store:context",
@@ -248,7 +237,6 @@ cpp_unittest(
     srcs = ["InodePtrTest.cpp"],
     supports_static_listing = False,
     deps = [
-        "fbsource//third-party/googletest:gtest",
         "//eden/fs/inodes:inodes",
         "//eden/fs/testharness:fake_backing_store_and_tree_builder",
         "//eden/fs/testharness:test_mount",
@@ -261,7 +249,6 @@ cpp_unittest(
     srcs = ["InodeTableTest.cpp"],
     supports_static_listing = False,
     deps = [
-        "fbsource//third-party/googletest:gtest",
         "//eden/fs/inodes:inodes",
         "//eden/fs/telemetry:stats",
         "//folly/chrono:conv",
@@ -275,7 +262,6 @@ cpp_unittest(
     srcs = ["InodeTimestampsTest.cpp"],
     supports_static_listing = False,
     deps = [
-        "fbsource//third-party/googletest:gtest",
         "//eden/fs/inodes:inode_metadata",
         "//folly:portability",
         "//folly:utility",
@@ -287,7 +273,6 @@ cpp_unittest(
     srcs = ["InodeMetadataTest.cpp"],
     supports_static_listing = False,
     deps = [
-        "fbsource//third-party/googletest:gtest",
         "//eden/fs/inodes:inode_metadata",
     ],
 )
@@ -297,7 +282,6 @@ cpp_unittest(
     srcs = ["JournalUpdateTest.cpp"],
     supports_static_listing = False,
     deps = [
-        "fbsource//third-party/googletest:gtest",
         "//eden/fs/journal:journal",
         "//eden/fs/testharness:fake_backing_store_and_tree_builder",
         "//eden/fs/testharness:test_mount",
@@ -323,7 +307,6 @@ cpp_unittest(
     },
     supports_static_listing = False,
     deps = [
-        "fbsource//third-party/googletest:gtest",
         ":overlay_test_util",
         "//eden/common/telemetry:structured_logger",
         "//eden/common/testharness:temp_file",
@@ -354,7 +337,6 @@ cpp_unittest(
     supports_static_listing = False,
     deps = [
         "fbsource//third-party/fmt:fmt",
-        "fbsource//third-party/googletest:gtest",
         ":overlay_test_util",
         "//eden/common/telemetry:structured_logger",
         "//eden/common/testharness:temp_file",
@@ -375,7 +357,6 @@ cpp_unittest(
     srcs = ["RemoveTest.cpp"],
     supports_static_listing = False,
     deps = [
-        "fbsource//third-party/googletest:gtest",
         "//eden/fs/inodes:inodes",
         "//eden/fs/testharness:fake_backing_store_and_tree_builder",
         "//eden/fs/testharness:test_checks",
@@ -389,7 +370,6 @@ cpp_unittest(
     srcs = ["RenameTest.cpp"],
     supports_static_listing = False,
     deps = [
-        "fbsource//third-party/googletest:gtest",
         "//eden/common/utils:bug",
         "//eden/fs/inodes:inodes",
         "//eden/fs/store:context",
@@ -405,7 +385,6 @@ cpp_unittest(
     srcs = ["SymlinkTest.cpp"],
     supports_static_listing = False,
     deps = [
-        "fbsource//third-party/googletest:gtest",
         "//eden/common/utils:bug",
         "//eden/fs/inodes:inodes",
         "//eden/fs/store:context",
@@ -421,7 +400,6 @@ cpp_unittest(
     srcs = ["TraverseTest.cpp"],
     supports_static_listing = False,
     deps = [
-        "fbsource//third-party/googletest:gtest",
         "//eden/fs/inodes:inodes",
         "//eden/fs/testharness:fake_backing_store_and_tree_builder",
         "//eden/fs/testharness:test_mount",
@@ -434,7 +412,6 @@ cpp_unittest(
     supports_static_listing = False,
     deps = [
         "fbsource//third-party/googletest:gmock",
-        "fbsource//third-party/googletest:gtest",
         "//eden/common/utils:case_sensitivity",
         "//eden/common/utils:fault_injector",
         "//eden/fs/fuse:fuse",
@@ -460,7 +437,6 @@ cpp_unittest(
     supports_static_listing = False,
     deps = [
         "fbsource//third-party/googletest:gmock",
-        "fbsource//third-party/googletest:gtest",
         "//eden/common/utils:case_sensitivity",
         "//eden/common/utils:fault_injector",
         "//eden/common/utils:utils",
@@ -488,7 +464,6 @@ cpp_unittest(
     srcs = ["UnloadTest.cpp"],
     supports_static_listing = False,
     deps = [
-        "fbsource//third-party/googletest:gtest",
         "//eden/fs/inodes:inodes",
         "//eden/fs/store:context",
         "//eden/fs/testharness:fake_backing_store_and_tree_builder",
@@ -504,7 +479,6 @@ cpp_unittest(
     supports_static_listing = False,
     deps = [
         "fbsource//third-party/googletest:gmock",
-        "fbsource//third-party/googletest:gtest",
         "//eden/common/utils:path",
         "//eden/fs/inodes:inodes",
         "//eden/fs/model:model",

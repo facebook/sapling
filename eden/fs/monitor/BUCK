@@ -61,7 +61,6 @@ cpp_library(
         "//thrift/lib/cpp2/async:header_client_channel",
     ],
     exported_deps = [
-        "fbsource//third-party/googletest:gtest",
         "fbsource//third-party/googletest:gtest_headers",
         "//eden/common/utils:path",
         "//eden/common/utils:process",

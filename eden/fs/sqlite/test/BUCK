@@ -7,7 +7,6 @@ cpp_unittest(
     srcs = ["SqliteTest.cpp"],
     supports_static_listing = False,
     deps = [
-        "fbsource//third-party/googletest:gtest",
         "//eden/fs/sqlite:sqlite",
     ],
 )

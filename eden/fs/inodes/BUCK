@@ -163,9 +163,6 @@ cpp_library(
         "//eden/common/utils:synchronized",
         "//eden/common/utils:system_error",
         "//eden/fs/digest:blake3_hash",
-        "//eden/fs/inodes/lmdbcatalog:buffered_lmdb_inode_catalog",
-        "//eden/fs/inodes/lmdbcatalog:lmdb_file_content_store",
-        "//eden/fs/inodes/lmdbcatalog:lmdb_inode_catalog",
         "//eden/fs/inodes/memcatalog:meminodecatalog",
         "//eden/fs/inodes/sqlitecatalog:bufferedsqliteinodecatalog",
         "//eden/fs/inodes/sqlitecatalog:sqliteinodecatalog",
@@ -206,7 +203,6 @@ cpp_library(
         "//thrift/lib/cpp2/protocol:protocol",
     ],
     exported_deps = [
-        "fbsource//third-party/googletest:gtest",
         "fbsource//third-party/googletest:gtest_headers",
         ":fs_channel",
         ":inode_metadata",

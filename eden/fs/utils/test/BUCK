@@ -8,7 +8,6 @@ cpp_unittest(
     srcs = ["ChronoTest.cpp"],
     supports_static_listing = False,
     deps = [
-        "fbsource//third-party/googletest:gtest",
         "//eden/fs/utils:chrono",
         "//folly:conv",
     ],
@@ -19,7 +18,6 @@ cpp_unittest(
     srcs = ["ChronoUnitTest.cpp"],
     supports_static_listing = False,
     deps = [
-        "fbsource//third-party/googletest:gtest",
         "//eden/fs/utils:chrono",
     ],
 )
@@ -32,7 +30,6 @@ cpp_unittest(
     },
     supports_static_listing = False,
     deps = [
-        "fbsource//third-party/googletest:gtest",
         "//eden/common/utils:path",
         "//eden/fs/utils:proc_util",
         "//folly:portability",
@@ -45,7 +42,6 @@ cpp_unittest(
     supports_static_listing = False,
     deps = [
         "fbsource//third-party/googletest:gmock",
-        "fbsource//third-party/googletest:gtest",
         "//eden/common/utils:process_info_cache",
         "//eden/fs/utils:process_access_log",
     ],
@@ -57,7 +53,6 @@ cpp_unittest(
     supports_static_listing = False,
     deps = [
         "fbsource//third-party/googletest:gmock",
-        "fbsource//third-party/googletest:gtest",
         "//eden/fs/utils:ring_buffer",
     ],
 )
@@ -69,7 +64,6 @@ cpp_unittest(
     deps = [
         "fbsource//third-party/fmt:fmt",
         "fbsource//third-party/googletest:gmock",
-        "fbsource//third-party/googletest:gtest",
         "//eden/fs/utils:source_location",
     ],
 )
@@ -80,7 +74,6 @@ cpp_unittest(
     supports_static_listing = False,
     deps = [
         "fbsource//third-party/fmt:fmt",
-        "fbsource//third-party/googletest:gtest",
         "//eden/fs/utils:matcher",
     ],
 )
@@ -90,7 +83,6 @@ cpp_unittest(
     srcs = ["RequestPermitVendorTest.cpp"],
     supports_static_listing = False,
     deps = [
-        "fbsource//third-party/googletest:gtest",
         "//eden/fs/utils:request_permit_vendor",
     ],
 )
