@@ -220,7 +220,7 @@ impl WorkingCopy {
         &self.dot_hg_path
     }
 
-    pub fn lock(&self) -> Result<LockedWorkingCopy, repolock::LockError> {
+    pub fn lock(&self) -> Result<LockedWorkingCopy<'_>, repolock::LockError> {
         let locked_path = self.locker.lock_working_copy(self.dot_hg_path.clone())?;
         Ok(LockedWorkingCopy {
             dot_hg_path: locked_path,
