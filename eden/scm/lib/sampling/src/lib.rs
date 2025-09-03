@@ -111,7 +111,7 @@ impl SamplingConfig {
         self.keys.get(key).map(|c| &**c)
     }
 
-    pub fn file(&self) -> MutexGuard<File> {
+    pub fn file(&self) -> MutexGuard<'_, File> {
         self.file.lock()
     }
 
