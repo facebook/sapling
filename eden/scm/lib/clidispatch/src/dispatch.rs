@@ -504,7 +504,7 @@ impl Dispatcher {
     }
 }
 
-fn opt_value_to_str(value: Option<&Value>) -> Cow<str> {
+fn opt_value_to_str(value: Option<&Value>) -> Cow<'_, str> {
     let opt_str: Option<Cow<str>> = value.and_then(|v| match v {
         Value::Bool(b) => b.map(|b| Cow::Borrowed(if b { "true" } else { "false" })),
         Value::Str(s) => s.as_ref().map(|s| Cow::Borrowed(s.as_ref())),
