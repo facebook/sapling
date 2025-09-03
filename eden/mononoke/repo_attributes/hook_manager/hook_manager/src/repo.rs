@@ -145,12 +145,7 @@ impl HookRepo {
     ) -> Result<HashMap<NonRootMPath, PathContent>> {
         let changeset_id = self
             .bookmarks
-            .get(
-                ctx.clone(),
-                &bookmark,
-                // TODO(T236130401): confirm if this needs read from primary
-                bookmarks::Freshness::MostRecent,
-            )
+            .get(ctx.clone(), &bookmark, bookmarks::Freshness::MostRecent)
             .await
             .with_context(|| format!("Error fetching bookmark: {}", bookmark))?
             .ok_or_else(|| anyhow!("Bookmark {} does not exist", bookmark))?;
@@ -251,12 +246,7 @@ impl HookRepo {
     ) -> Result<HashMap<NonRootMPath, ChangesetInfo>> {
         let changeset_id = self
             .bookmarks
-            .get(
-                ctx.clone(),
-                &bookmark,
-                // TODO(T236130401): confirm if this needs read from primary
-                bookmarks::Freshness::MostRecent,
-            )
+            .get(ctx.clone(), &bookmark, bookmarks::Freshness::MostRecent)
             .await
             .with_context(|| format!("Error fetching bookmark: {}", bookmark))?
             .ok_or_else(|| anyhow!("Bookmark {} does not exist", bookmark))?;
@@ -335,12 +325,7 @@ impl HookRepo {
     ) -> Result<BookmarkState> {
         let maybe_bookmark_val = self
             .bookmarks
-            .get(
-                ctx.clone(),
-                bookmark,
-                // TODO(T236130401): confirm if this needs read from primary
-                bookmarks::Freshness::MostRecent,
-            )
+            .get(ctx.clone(), bookmark, bookmarks::Freshness::MostRecent)
             .await
             .with_context(|| format!("Error fetching bookmark: {}", bookmark))?;
         if let Some(cs_id) = maybe_bookmark_val {

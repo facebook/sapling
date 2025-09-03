@@ -380,12 +380,7 @@ impl BookmarksCache for NoopBookmarksCache {
         bookmark: &BookmarkKey,
     ) -> Result<Option<ChangesetId>, Error> {
         self.bookmarks
-            .get(
-                ctx.clone(),
-                bookmark,
-                // TODO(T236130401): confirm if this needs read from primary
-                bookmarks::Freshness::MostRecent,
-            )
+            .get(ctx.clone(), bookmark, bookmarks::Freshness::MostRecent)
             .await
     }
 
@@ -665,12 +660,7 @@ async fn move_bookmark_back_in_history_until_derived(
         }
         LatestDerivedBookmarkEntry::NotFound => {
             let cur_bookmark_value = bookmarks
-                .get(
-                    ctx.clone(),
-                    book,
-                    // TODO(T236130401): confirm if this needs read from primary
-                    bookmarks::Freshness::MostRecent,
-                )
+                .get(ctx.clone(), book, bookmarks::Freshness::MostRecent)
                 .await?;
             tracing::warn!(
                 "cannot find previous derived version of {}, returning current version {:?}",
@@ -737,12 +727,7 @@ pub async fn find_latest_derived_and_underived(
         if log_entries.is_empty() {
             tracing::debug!("bookmark {} has no history in the log", book);
             let maybe_cs_id = bookmarks
-                .get(
-                    ctx.clone(),
-                    book,
-                    // TODO(T236130401): confirm if this needs read from primary
-                    bookmarks::Freshness::MostRecent,
-                )
+                .get(ctx.clone(), book, bookmarks::Freshness::MostRecent)
                 .await?;
             // If a bookmark has no history then we add a fake entry saying that
             // timestamp is unknown.
@@ -1846,7 +1831,6 @@ mod tests {
                     .get(
                         ctx.clone(),
                         &BookmarkKey::new("master")?,
-                        // TODO(T236130401): confirm if this needs read from primary
                         bookmarks::Freshness::MostRecent,
                     )
                     .await?

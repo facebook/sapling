@@ -126,7 +126,6 @@ pub(crate) async fn ensure_ancestor_of(
         .get(
             ctx.clone(),
             descendant_bookmark,
-            // TODO(T236130401): confirm if this needs read from primary
             bookmarks::Freshness::MostRecent,
         )
         .await?

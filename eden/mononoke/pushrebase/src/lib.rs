@@ -899,12 +899,7 @@ async fn get_bookmark_value(
 ) -> Result<Option<ChangesetId>, PushrebaseError> {
     let maybe_cs_id = repo
         .bookmarks()
-        .get(
-            ctx.clone(),
-            bookmark_name,
-            // TODO(T236130401): confirm if this needs read from primary
-            bookmarks::Freshness::MostRecent,
-        )
+        .get(ctx.clone(), bookmark_name, bookmarks::Freshness::MostRecent)
         .await?;
 
     Ok(maybe_cs_id)

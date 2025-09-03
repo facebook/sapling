@@ -86,12 +86,7 @@ async fn test_simple_unconditional_set_get(fb: FacebookInit) {
 
     assert_eq!(
         bookmarks
-            .get_raw(
-                ctx.clone(),
-                &name_correct,
-                // TODO(T236130401): confirm if this needs read from primary
-                bookmarks::Freshness::MostRecent
-            )
+            .get_raw(ctx.clone(), &name_correct, bookmarks::Freshness::MostRecent)
             .await
             .unwrap(),
         Some((ONES_CSID, Some(1)))
@@ -101,7 +96,6 @@ async fn test_simple_unconditional_set_get(fb: FacebookInit) {
             .get_raw(
                 ctx.clone(),
                 &name_incorrect,
-                // TODO(T236130401): confirm if this needs read from primary
                 bookmarks::Freshness::MostRecent
             )
             .await
@@ -150,12 +144,7 @@ async fn test_multi_unconditional_set_get(fb: FacebookInit) {
 
     assert_eq!(
         bookmarks
-            .get_raw(
-                ctx.clone(),
-                &key_1,
-                // TODO(T236130401): confirm if this needs read from primary
-                bookmarks::Freshness::MostRecent
-            )
+            .get_raw(ctx.clone(), &key_1, bookmarks::Freshness::MostRecent)
             .await
             .unwrap(),
         Some((ONES_CSID, Some(1)))
@@ -163,12 +152,7 @@ async fn test_multi_unconditional_set_get(fb: FacebookInit) {
 
     assert_eq!(
         bookmarks
-            .get_raw(
-                ctx.clone(),
-                &key_2,
-                // TODO(T236130401): confirm if this needs read from primary
-                bookmarks::Freshness::MostRecent
-            )
+            .get_raw(ctx.clone(), &key_2, bookmarks::Freshness::MostRecent)
             .await
             .unwrap(),
         Some((TWOS_CSID, Some(2)))
@@ -195,12 +179,7 @@ async fn test_unconditional_set_same_bookmark(fb: FacebookInit) {
 
     assert_eq!(
         bookmarks
-            .get_raw(
-                ctx.clone(),
-                &key_1,
-                // TODO(T236130401): confirm if this needs read from primary
-                bookmarks::Freshness::MostRecent
-            )
+            .get_raw(ctx.clone(), &key_1, bookmarks::Freshness::MostRecent)
             .await
             .unwrap(),
         Some((ONES_CSID, Some(2)))
@@ -222,12 +201,7 @@ async fn test_simple_create(fb: FacebookInit) {
 
     assert_eq!(
         bookmarks
-            .get_raw(
-                ctx.clone(),
-                &key_1,
-                // TODO(T236130401): confirm if this needs read from primary
-                bookmarks::Freshness::MostRecent
-            )
+            .get_raw(ctx.clone(), &key_1, bookmarks::Freshness::MostRecent)
             .await
             .unwrap(),
         Some((ONES_CSID, Some(1)))
@@ -368,12 +342,7 @@ async fn test_simple_update_bookmark(fb: FacebookInit) {
 
     assert_eq!(
         bookmarks
-            .get_raw(
-                ctx.clone(),
-                &key_1,
-                // TODO(T236130401): confirm if this needs read from primary
-                bookmarks::Freshness::MostRecent
-            )
+            .get_raw(ctx.clone(), &key_1, bookmarks::Freshness::MostRecent)
             .await
             .unwrap(),
         Some((TWOS_CSID, Some(2)))
@@ -422,12 +391,7 @@ async fn test_noop_update(fb: FacebookInit) {
 
     assert_eq!(
         bookmarks
-            .get_raw(
-                ctx.clone(),
-                &key_1,
-                // TODO(T236130401): confirm if this needs read from primary
-                bookmarks::Freshness::MostRecent
-            )
+            .get_raw(ctx.clone(), &key_1, bookmarks::Freshness::MostRecent)
             .await
             .unwrap(),
         Some((ONES_CSID, Some(2)))
@@ -452,12 +416,7 @@ async fn test_scratch_update_bookmark(fb: FacebookInit) {
 
     assert_eq!(
         bookmarks
-            .get_raw(
-                ctx.clone(),
-                &key_1,
-                // TODO(T236130401): confirm if this needs read from primary
-                bookmarks::Freshness::MostRecent
-            )
+            .get_raw(ctx.clone(), &key_1, bookmarks::Freshness::MostRecent)
             .await
             .unwrap(),
         Some((TWOS_CSID, None))
@@ -526,12 +485,7 @@ async fn test_force_delete(fb: FacebookInit) {
 
     assert_eq!(
         bookmarks
-            .get_raw(
-                ctx.clone(),
-                &key_1,
-                // TODO(T236130401): confirm if this needs read from primary
-                bookmarks::Freshness::MostRecent,
-            )
+            .get_raw(ctx.clone(), &key_1, bookmarks::Freshness::MostRecent,)
             .await
             .unwrap(),
         None
@@ -543,12 +497,7 @@ async fn test_force_delete(fb: FacebookInit) {
     assert!(txn.commit().await.unwrap().is_some());
     assert_eq!(
         bookmarks
-            .get_raw(
-                ctx.clone(),
-                &key_1,
-                // TODO(T236130401): confirm if this needs read from primary
-                bookmarks::Freshness::MostRecent,
-            )
+            .get_raw(ctx.clone(), &key_1, bookmarks::Freshness::MostRecent,)
             .await
             .unwrap(),
         Some((ONES_CSID, Some(2)))
@@ -561,12 +510,7 @@ async fn test_force_delete(fb: FacebookInit) {
 
     assert_eq!(
         bookmarks
-            .get_raw(
-                ctx.clone(),
-                &key_1,
-                // TODO(T236130401): confirm if this needs read from primary
-                bookmarks::Freshness::MostRecent,
-            )
+            .get_raw(ctx.clone(), &key_1, bookmarks::Freshness::MostRecent,)
             .await
             .unwrap(),
         None
@@ -614,12 +558,7 @@ async fn test_delete(fb: FacebookInit) {
     assert!(txn.commit().await.unwrap().is_some());
     assert_eq!(
         bookmarks
-            .get_raw(
-                ctx.clone(),
-                &key_1,
-                // TODO(T236130401): confirm if this needs read from primary
-                bookmarks::Freshness::MostRecent,
-            )
+            .get_raw(ctx.clone(), &key_1, bookmarks::Freshness::MostRecent,)
             .await
             .unwrap(),
         Some((ONES_CSID, Some(1)))
@@ -667,12 +606,7 @@ async fn test_delete_incorrect_hash(fb: FacebookInit) {
     assert!(txn.commit().await.unwrap().is_some());
     assert_eq!(
         bookmarks
-            .get_raw(
-                ctx.clone(),
-                &key_1,
-                // TODO(T236130401): confirm if this needs read from primary
-                bookmarks::Freshness::MostRecent,
-            )
+            .get_raw(ctx.clone(), &key_1, bookmarks::Freshness::MostRecent,)
             .await
             .unwrap(),
         Some((ONES_CSID, Some(1)))
@@ -792,12 +726,7 @@ async fn test_create_different_repos(fb: FacebookInit) {
 
     assert_eq!(
         bookmarks_0
-            .get(
-                ctx.clone(),
-                &key_1,
-                // TODO(T236130401): confirm if this needs read from primary
-                bookmarks::Freshness::MostRecent
-            )
+            .get(ctx.clone(), &key_1, bookmarks::Freshness::MostRecent)
             .await
             .unwrap(),
         Some(ONES_CSID)
@@ -805,12 +734,7 @@ async fn test_create_different_repos(fb: FacebookInit) {
 
     assert_eq!(
         bookmarks_1
-            .get(
-                ctx.clone(),
-                &key_1,
-                // TODO(T236130401): confirm if this needs read from primary
-                bookmarks::Freshness::MostRecent
-            )
+            .get(ctx.clone(), &key_1, bookmarks::Freshness::MostRecent)
             .await
             .unwrap(),
         Some(TWOS_CSID)
@@ -824,12 +748,7 @@ async fn test_create_different_repos(fb: FacebookInit) {
 
     assert_eq!(
         bookmarks_0
-            .get(
-                ctx.clone(),
-                &key_1,
-                // TODO(T236130401): confirm if this needs read from primary
-                bookmarks::Freshness::MostRecent
-            )
+            .get(ctx.clone(), &key_1, bookmarks::Freshness::MostRecent)
             .await
             .unwrap(),
         Some(ONES_CSID)
