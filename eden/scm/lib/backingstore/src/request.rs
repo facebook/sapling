@@ -11,7 +11,6 @@ use types::Key;
 use types::Node;
 use types::RepoPathBuf;
 
-pub use crate::ffi::ffi::FetchCause;
 use crate::ffi::ffi::Request;
 
 // Number of bytes of a node.
@@ -21,9 +20,5 @@ impl Request {
     pub fn key(&self) -> Key {
         let node: &[u8] = unsafe { slice::from_raw_parts(self.node, NODE_LENGTH) };
         Key::new(RepoPathBuf::new(), Node::from_slice(node).unwrap())
-    }
-
-    pub fn cause(&self) -> FetchCause {
-        self.cause
     }
 }
