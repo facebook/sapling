@@ -43,7 +43,7 @@ impl Header {
     /// they are limited to ASCII characters, so for simplicity we reject
     /// non-UTF-8 header values. Aside from the values, the specification
     /// restricts all other parts of a header line to be limited to ASCII.
-    pub fn parse(line: &[u8]) -> Result<Self, BadHeader> {
+    pub fn parse(line: &[u8]) -> Result<Self, BadHeader<'_>> {
         let header = str::from_utf8(line)
             .map_err(|_| BadHeader(line))?
             .trim_end(); // Strip off trailing CRLF.
