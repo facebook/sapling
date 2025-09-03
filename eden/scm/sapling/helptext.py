@@ -4311,6 +4311,10 @@ Some sample command line templates:
 
    $ @prog@ log -r 0 --template "pythonfiles: {join(files('**.py'), ', ')}\n"
 
+- Count the number of changed files ending with ".py"::
+
+   $ @prog@ log -r 0 -T "{filterby('**.py', files) | count}\n"
+
 - Separate non-empty arguments by a " "::
 
    $ @prog@ log -r 0 --template "{separate(' ', node, bookmarks, tags}\n"

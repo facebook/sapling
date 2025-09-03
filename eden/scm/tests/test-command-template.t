@@ -3630,6 +3630,20 @@
   
   0
 
+# Test filterby function
+  $ hg log -T "{rev}\n{join(files, '\n')}\n"
+  2
+  aa
+  b
+  1
+  
+  0
+  a
+  $ hg log -r . -T "{filterby('path:aa', files)}\n"
+  aa
+  $ hg log -r . -T "{filterby('path:aa', files) | count}\n"
+  1
+
 # Test relpath function
 
   $ hg log -r0 -T '{files % "{file|relpath}\n"}'

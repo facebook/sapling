@@ -1345,6 +1345,21 @@ def startswith(context, mapping, args):
     return ""
 
 
+@templatefunc("filterby(pattern, files)")
+def filterby(context, mapping, args):
+    """Returns the files that match the given "pattern". See :prog:`help patterns`."""
+    if len(args) != 2:
+        raise error.ParseError(_("filterby expects two arguments"))
+
+    patn = evalstring(context, mapping, args[0])
+    texts = evalfuncarg(context, mapping, args[1])
+
+    ctx = mapping["ctx"]
+    m = ctx.match([patn])
+    texts = [t for t in texts if m.matchfn(t)]
+    return templatekw.showlist("text", texts, mapping)
+
+
 @templatefunc("truncate(text, maxlines, [suffix])")
 def truncate(context, mapping, args):
     """Truncate text to no more than "maxlines" in length. If "suffix" is
