@@ -32,6 +32,8 @@ use executor_lib::args::ShardedExecutorArgs;
 use factory_group::FactoryGroup;
 use fb303_core_services::make_BaseService_server;
 use fbinit::FacebookInit;
+use git_source_of_truth::GitSourceOfTruthConfig;
+use git_source_of_truth::SqlGitSourceOfTruthConfigBuilder;
 use megarepo_api::MegarepoApi;
 use metaconfig_types::ShardedService;
 use mononoke_api::CoreContext;
@@ -42,11 +44,16 @@ use mononoke_app::args::HooksAppExtension;
 use mononoke_app::args::RepoFilterAppExtension;
 use mononoke_app::args::ShutdownTimeoutArgs;
 use mononoke_app::args::WarmBookmarksCacheExtension;
+use mysql_client::ConnectionOptionsBuilder;
+use mysql_client::ConnectionPoolOptionsBuilder;
 use panichandler::Fate;
 use scs_methods::source_control_impl::SourceControlServiceImpl;
 use sharding_ext::RepoShard;
 use slog::info;
 use source_control_services::make_SourceControlService_server;
+use sql_construct::SqlConstruct;
+use sql_storage::Destination;
+use sql_storage::XdbFactory;
 use srserver::ThriftExecutor;
 use srserver::ThriftServer;
 use srserver::ThriftServerBuilder;
@@ -65,6 +72,7 @@ mod metadata;
 mod monitoring;
 
 const SERVICE_NAME: &str = "mononoke_scs_server";
+const MONONOKE_PRODUCTION_SHARD_NAME: &str = "xdb.mononoke_production";
 const SM_CLEANUP_TIMEOUT_SECS: u64 = 60;
 const NUM_PRIORITY_QUEUES: usize = 2;
 
@@ -222,6 +230,27 @@ impl RepoShardedProcessExecutor for ScsServerProcessExecutor {
     }
 }
 
+async fn create_git_source_of_truth_config(
+    fb: FacebookInit,
+) -> Result<Arc<dyn GitSourceOfTruthConfig>, Error> {
+    let pool_options = ConnectionPoolOptionsBuilder::default()
+        .build()
+        .map_err(Error::msg)?;
+
+    let conn_options = ConnectionOptionsBuilder::default()
+        .build()
+        .map_err(Error::msg)?;
+    let destination = Destination::Prod;
+    let xdb_factory = XdbFactory::new(fb, destination, pool_options, conn_options)?;
+    let mononoke_production_xdb = xdb_factory
+        .create_or_get_shard(MONONOKE_PRODUCTION_SHARD_NAME)
+        .await?;
+    let connections = mononoke_production_xdb.read_conns().await?;
+    Ok(Arc::new(
+        SqlGitSourceOfTruthConfigBuilder::from_sql_connections(connections).build(),
+    ))
+}
+
 #[fbinit::main]
 fn main(fb: FacebookInit) -> Result<(), Error> {
     panichandler::set_panichandler(Fate::Abort);
@@ -272,6 +301,8 @@ fn main(fb: FacebookInit) -> Result<(), Error> {
         Some(Arc::new(queue_client))
     };
 
+    let git_source_of_truth_config = runtime.block_on(create_git_source_of_truth_config(fb))?;
+
     let source_control_server = {
         let maybe_factory_group = if let ThriftServerMode::FactoryGroup = args.thift_server_mode {
             let worker_counts: [usize; NUM_PRIORITY_QUEUES] =
@@ -302,6 +333,7 @@ fn main(fb: FacebookInit) -> Result<(), Error> {
             &app.repo_configs().common,
             maybe_factory_group,
             async_requests_queue_client,
+            git_source_of_truth_config,
             args.watchdog_method_max_poll,
         ))?
     };

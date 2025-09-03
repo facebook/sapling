@@ -48,6 +48,7 @@ use futures_stats::TimedFutureExt;
 use futures_stats::TimedTryStreamExt;
 use futures_stats::TryStreamStats;
 use futures_watchdog::WatchdogExt;
+use git_source_of_truth::GitSourceOfTruthConfig;
 use identity::Identity;
 #[cfg(fbcode_build)]
 use lazy_static::lazy_static;
@@ -152,6 +153,8 @@ pub struct SourceControlServiceImpl {
     pub(crate) async_requests_queue: Option<Arc<AsyncMethodRequestQueue>>,
     identity_proxy_checker: Arc<ConnectionSecurityChecker>,
     pub(crate) acl_provider: Arc<dyn AclProvider>,
+    #[allow(unused)]
+    pub(crate) git_source_of_truth_config: Arc<dyn GitSourceOfTruthConfig>,
     pub(crate) watchdog_max_poll: u64,
 }
 
@@ -171,6 +174,7 @@ impl SourceControlServiceImpl {
         common_config: &CommonConfig,
         factory_group: Option<Arc<FactoryGroup<2>>>,
         async_requests_queue: Option<Arc<AsyncMethodRequestQueue>>,
+        git_source_of_truth_config: Arc<dyn GitSourceOfTruthConfig>,
         watchdog_max_poll: u64,
     ) -> Result<Self, anyhow::Error> {
         scuba_builder.add_common_server_data();
@@ -191,6 +195,7 @@ impl SourceControlServiceImpl {
             factory_group,
             async_requests_queue,
             acl_provider: app.environment().acl_provider.clone(),
+            git_source_of_truth_config,
             watchdog_max_poll,
         })
     }
