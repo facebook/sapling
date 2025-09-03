@@ -51,7 +51,7 @@ class OverlayFileAccess {
    *
    * The caller must verify the overlay file does not already exist. Calls to
    * any other OverlayFileAccess functions for this inode must occur after
-   * createEmptyFile returns.
+   * createFile returns.
    */
   void createFile(
       InodeNumber ino,
@@ -108,6 +108,8 @@ class OverlayFileAccess {
   void truncate(FileInode& inode, FileOffset size = 0);
 
   /**
+   * Flushes inode data to disk.
+   *
    * If datasync is true, only the user data should be flushed, not the
    * metadata. It corresponds to datasync parameter to fuse_lowlevel_ops::fsync.
    */

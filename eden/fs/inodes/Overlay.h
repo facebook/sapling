@@ -148,7 +148,7 @@ class Overlay : public std::enable_shared_from_this<Overlay> {
   bool isClosed();
 
   /**
-   * True if either a new verlay was created on disk or initialize() returned
+   * True if either a new overlay was created on disk or initialize() returned
    * after opening an overlay that had been cleanly shut down. False prior to
    * initialize() being called or if a consistency check was required.
    */
