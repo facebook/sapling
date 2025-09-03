@@ -816,7 +816,7 @@ impl DerefMut for LockedIOState<'_> {
 
 impl Inner {
     /// Lock, and track the interval as "blocking".
-    fn locked_with_blocked_interval(&self) -> LockedIOState {
+    fn locked_with_blocked_interval(&self) -> LockedIOState<'_> {
         let interval = self.time_interval.scoped_blocked_interval("stdio".into());
         let inner = self.io_state.lock();
         LockedIOState {
