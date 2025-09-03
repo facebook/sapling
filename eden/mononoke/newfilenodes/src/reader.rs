@@ -233,53 +233,28 @@ impl FilenodesReader {
                     )
                     .await
                     {
-                        Ok(FilenodeResult::Disabled) => {
-                            return Ok(FilenodeResult::Disabled);
-                        }
-                        Ok(FilenodeResult::Present(Some(res))) => {
-                            return Ok(FilenodeResult::Present(Some(res)));
-                        }
                         Ok(FilenodeResult::Present(None))
                         | Err(ErrorKind::FixedCopyInfoMissing(_))
                         | Err(ErrorKind::PathNotFound(_)) => {
                             // If the filenode wasn't found, or its copy info was missing, it might be present
                             // on the master.
+                            STATS::gets_master.add_value(1);
+
+                            Ok(select_filenode_from_sql(
+                                &ctx,
+                                cache_filler,
+                                &self.read_master_connections,
+                                repo_id,
+                                &pwh,
+                                filenode,
+                                &PerfCounterRecorder {
+                                    ctx: &ctx,
+                                    counter: PerfCounterType::SqlReadsMaster,
+                                },
+                            )
+                            .await?)
                         }
-                        Err(e) => {
-                            return Err(e.into());
-                        }
-                    }
-
-                    let disable_fallback_to_master = justknobs::eval(
-                        "scm/mononoke:filenodes_disable_master_fallback",
-                        None,
-                        None,
-                    )
-                    .unwrap_or(false);
-
-                    if disable_fallback_to_master {
-                        return Ok(FilenodeResult::Disabled);
-                    }
-
-                    STATS::gets_master.add_value(1);
-
-                    let res = select_filenode_from_sql(
-                        &ctx,
-                        cache_filler,
-                        &self.read_master_connections,
-                        repo_id,
-                        &pwh,
-                        filenode,
-                        &PerfCounterRecorder {
-                            ctx: &ctx,
-                            counter: PerfCounterType::SqlReadsMaster,
-                        },
-                    )
-                    .await?;
-
-                    match res {
-                        FilenodeResult::Present(res) => Ok(FilenodeResult::Present(res)),
-                        FilenodeResult::Disabled => Ok(FilenodeResult::Disabled),
+                        res => Ok(res?),
                     }
                 }
             })
