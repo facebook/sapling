@@ -85,7 +85,7 @@ impl Config for UnionConfig {
         None
     }
 
-    fn sections(&self) -> Cow<[Text]> {
+    fn sections(&self) -> Cow<'_, [Text]> {
         let mut result: IndexSet<Text> = Default::default();
         // normal order: match order loading configs
         for config in self.configs.iter() {
@@ -97,7 +97,7 @@ impl Config for UnionConfig {
         result.into()
     }
 
-    fn get_sources(&self, section: &str, name: &str) -> Cow<[ValueSource]> {
+    fn get_sources(&self, section: &str, name: &str) -> Cow<'_, [ValueSource]> {
         // The last "Source" counts.
         // normal order: match order loading configs
         let mut result = Vec::new();
@@ -108,7 +108,7 @@ impl Config for UnionConfig {
         result.into()
     }
 
-    fn files(&self) -> Cow<[(PathBuf, Option<ContentHash>)]> {
+    fn files(&self) -> Cow<'_, [(PathBuf, Option<ContentHash>)]> {
         let mut result: IndexSet<(PathBuf, Option<ContentHash>)> = Default::default();
         // normal order: match order loading configs
         for config in self.configs.iter() {

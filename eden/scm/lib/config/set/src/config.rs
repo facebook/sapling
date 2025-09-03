@@ -126,7 +126,7 @@ impl Config for ConfigSet {
     }
 
     /// Get config sections.
-    fn sections(&self) -> Cow<[Text]> {
+    fn sections(&self) -> Cow<'_, [Text]> {
         let pinned: Cow<[Text]> = Cow::Owned(self.pinned.keys().cloned().collect());
         let main: Cow<[Text]> = Cow::Owned(self.sections.keys().cloned().collect());
         let self_sections = merge_cow_list(pinned, main);
@@ -142,7 +142,7 @@ impl Config for ConfigSet {
     /// The last item in the returned vector is the latest value that is considered effective.
     ///
     /// Return an empty vector if the config does not exist.
-    fn get_sources(&self, section: &str, name: &str) -> Cow<[ValueSource]> {
+    fn get_sources(&self, section: &str, name: &str) -> Cow<'_, [ValueSource]> {
         let pinned_sources = self
             .pinned
             .get(section)
@@ -180,7 +180,7 @@ impl Config for ConfigSet {
     }
 
     /// Get on-disk files loaded for this `Config`.
-    fn files(&self) -> Cow<[(PathBuf, Option<ContentHash>)]> {
+    fn files(&self) -> Cow<'_, [(PathBuf, Option<ContentHash>)]> {
         let self_files: Cow<[(PathBuf, Option<ContentHash>)]> = Cow::Borrowed(&self.files);
         if let Some(secondary) = &self.secondary {
             let secondary_files = secondary.files();

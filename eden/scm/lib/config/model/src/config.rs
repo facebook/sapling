@@ -55,13 +55,13 @@ pub trait Config: Send + Sync {
     }
 
     /// Get config sections.
-    fn sections(&self) -> Cow<[Text]>;
+    fn sections(&self) -> Cow<'_, [Text]>;
 
     /// Get the sources of a config.
-    fn get_sources(&self, section: &str, name: &str) -> Cow<[ValueSource]>;
+    fn get_sources(&self, section: &str, name: &str) -> Cow<'_, [ValueSource]>;
 
     /// Get on-disk files loaded for this `Config`.
-    fn files(&self) -> Cow<[(PathBuf, Option<ContentHash>)]> {
+    fn files(&self) -> Cow<'_, [(PathBuf, Option<ContentHash>)]> {
         Cow::Borrowed(&[])
     }
 
@@ -148,7 +148,7 @@ impl Config for BTreeMap<&str, &str> {
             .collect()
     }
 
-    fn sections(&self) -> Cow<[Text]> {
+    fn sections(&self) -> Cow<'_, [Text]> {
         let mut sections = Vec::new();
         let mut last_section = None;
         for section in BTreeMap::keys(self).filter_map(|k| k.split('.').next()) {
@@ -165,7 +165,7 @@ impl Config for BTreeMap<&str, &str> {
         BTreeMap::get(self, &key).map(|v| Some(v.to_string().into()))
     }
 
-    fn get_sources(&self, section: &str, name: &str) -> Cow<[ValueSource]> {
+    fn get_sources(&self, section: &str, name: &str) -> Cow<'_, [ValueSource]> {
         match Config::get(self, section, name) {
             None => Cow::Borrowed(&[]),
             Some(value) => Cow::Owned(vec![ValueSource {
@@ -189,7 +189,7 @@ impl Config for BTreeMap<String, String> {
             .collect()
     }
 
-    fn sections(&self) -> Cow<[Text]> {
+    fn sections(&self) -> Cow<'_, [Text]> {
         let mut sections = Vec::new();
         let mut last_section = None;
         for section in BTreeMap::keys(self).filter_map(|k| k.split('.').next()) {
@@ -205,7 +205,7 @@ impl Config for BTreeMap<String, String> {
         BTreeMap::get(self, &format!("{}.{}", section, name)).map(|v| Some(v.clone().into()))
     }
 
-    fn get_sources(&self, section: &str, name: &str) -> Cow<[ValueSource]> {
+    fn get_sources(&self, section: &str, name: &str) -> Cow<'_, [ValueSource]> {
         match Config::get(self, section, name) {
             None => Cow::Borrowed(&[]),
             Some(value) => Cow::Owned(vec![ValueSource {

@@ -125,12 +125,12 @@ impl Config for StaticConfig {
         }
     }
 
-    fn sections(&self) -> Cow<[Text]> {
+    fn sections(&self) -> Cow<'_, [Text]> {
         let sections: Vec<Text> = self.sections.keys().map(|n| Text::from_static(n)).collect();
         sections.into()
     }
 
-    fn get_sources(&self, section: &str, name: &str) -> Cow<[ValueSource]> {
+    fn get_sources(&self, section: &str, name: &str) -> Cow<'_, [ValueSource]> {
         match self.get_considering_unset(section, name) {
             Some(value) => Cow::Owned(vec![ValueSource {
                 value,
