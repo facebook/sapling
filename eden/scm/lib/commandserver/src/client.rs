@@ -165,7 +165,7 @@ fn forward_signals(props: &ProcessProps) {
         if pgid > 1 {
             unsafe { libc::kill(-(pgid as i32), sig) };
         } else {
-            forward_signal_process(sig);
+            unsafe { forward_signal_process(sig) };
         }
     }
 
