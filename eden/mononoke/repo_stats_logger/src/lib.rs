@@ -180,8 +180,9 @@ async fn get_repo_objects_count(
                 .get(
                     ctx.clone(),
                     bookmark_name,
-                    // TODO(T236130401): confirm if this needs read from primary
-                    bookmarks::Freshness::MostRecent,
+                    // Staleness is rarely close to 1s, so repo_stats_logger should
+                    // be able to read bookmark values from replicas
+                    bookmarks::Freshness::MaybeStale,
                 )
                 .await?;
             if let Some(cs_id) = maybe_bookmark {

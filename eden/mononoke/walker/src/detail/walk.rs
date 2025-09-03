@@ -299,8 +299,9 @@ async fn bookmark_step<V: VisitOne>(
                 .get(
                     ctx,
                     &b,
-                    // TODO(T236130401): confirm if this needs read from primary
-                    bookmarks::Freshness::MostRecent,
+                    // Staleness is rarely close to 1s, so the walker should
+                    // be able to read bookmark values from replicas
+                    bookmarks::Freshness::MaybeStale,
                 )
                 .await?
         }
