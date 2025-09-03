@@ -125,12 +125,12 @@ where
     }
 
     // Returns an iterator over the pairs of entries in the map.
-    pub fn iter(&self) -> Iter<K, V> {
+    pub fn iter(&self) -> Iter<'_, K, V> {
         Iter(self.vec.iter())
     }
 
     /// Returns a mutable iterator over the pairs of entries in the map.
-    pub fn iter_mut(&mut self) -> IterMut<K, V> {
+    pub fn iter_mut(&mut self) -> IterMut<'_, K, V> {
         IterMut(self.vec.iter_mut())
     }
 
@@ -175,7 +175,7 @@ where
     }
 
     /// Returns an iterator over the given range of keys.
-    pub fn range<Q>(&self, range: (Bound<&Q>, Bound<&Q>)) -> Iter<K, V>
+    pub fn range<Q>(&self, range: (Bound<&Q>, Bound<&Q>)) -> Iter<'_, K, V>
     where
         K: Borrow<Q>,
         Q: Ord + ?Sized,
@@ -186,7 +186,7 @@ where
     }
 
     /// Returns a mutuable iterator over the given range of keys.
-    pub fn range_mut<Q>(&mut self, range: (Bound<&Q>, Bound<&Q>)) -> IterMut<K, V>
+    pub fn range_mut<Q>(&mut self, range: (Bound<&Q>, Bound<&Q>)) -> IterMut<'_, K, V>
     where
         K: Borrow<Q>,
         Q: Ord + ?Sized,
