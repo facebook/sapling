@@ -382,7 +382,7 @@ pub(crate) mod test_utils {
     impl IdConvert for StrIdMap {
         async fn vertex_id(&self, name: Vertex) -> Result<Id> {
             let slice: [u8; 8] = name.as_ref().try_into().unwrap();
-            let id = u64::from_le(unsafe { std::mem::transmute::<[u8; 8], u64>(slice) });
+            let id = u64::from_le_bytes(slice);
             Ok(Id(id))
         }
         async fn vertex_id_with_max_group(
