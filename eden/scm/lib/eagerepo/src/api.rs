@@ -1082,7 +1082,7 @@ impl SaplingRemoteApi for EagerRepo {
         scheme: CommitIdScheme,
         from_repo: Option<String>,
         to_repo: Option<String>,
-        lookup_behavior: Option<String>,
+        _lookup_behavior: Option<String>,
     ) -> Result<Response<CommitTranslateIdResponse>, SaplingRemoteApiError> {
         debug!("files {commits:?} -> {scheme:?}");
 

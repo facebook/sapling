@@ -731,7 +731,7 @@ impl EagerRepo {
     }
 
     /// Obtain a reference to the metalog.
-    pub fn metalog(&self) -> RwLockReadGuard<RawRwLock, MetaLog> {
+    pub fn metalog(&self) -> RwLockReadGuard<'_, RawRwLock, MetaLog> {
         self.metalog.read()
     }
 
