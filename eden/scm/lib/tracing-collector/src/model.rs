@@ -1712,7 +1712,7 @@ impl<'a, S: Eq + Hash> Iterator for TreeWalker<'a, S> {
 
 impl<S: Eq + Hash> TreeSpans<S> {
     /// Walk through the tree.
-    pub fn walk(&self) -> TreeWalker<S> {
+    pub fn walk(&self) -> TreeWalker<'_, S> {
         TreeWalker {
             spans: self,
             stack: vec![(0, 0)],
