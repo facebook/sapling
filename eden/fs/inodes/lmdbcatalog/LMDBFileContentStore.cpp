@@ -55,7 +55,7 @@ bool LMDBFileContentStore::initialize(
     // This is an existing overlay directory.
     // Read the info file and make sure we are compatible with its version.
     infoFile_ = folly::File{fd, /* ownsFd */ true};
-    readExistingOverlay(infoFile_.fd());
+    validateExistingOverlay(infoFile_.fd());
   } else if (errno != ENOENT) {
     folly::throwSystemError(
         "error reading eden overlay info file ", infoPath.view());
@@ -89,7 +89,7 @@ bool LMDBFileContentStore::initialize(
   return overlayCreated;
 }
 
-void LMDBFileContentStore::readExistingOverlay(int infoFD) {
+void LMDBFileContentStore::validateExistingOverlay(int infoFD) {
   // Read the info file header
   std::array<uint8_t, kInfoHeaderSize> infoHeader;
   auto sizeRead = folly::readFull(infoFD, infoHeader.data(), infoHeader.size());

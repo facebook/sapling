@@ -194,7 +194,7 @@ class FsFileContentStoreDev : public FileContentStore {
    * Validate an existing overlay's info file exists, is valid and contains the
    * correct version.
    */
-  void readExistingOverlay(int infoFD);
+  void validateExistingOverlay(int infoFD);
 
   void saveNextInodeNumber(InodeNumber nextInodeNumber);
 

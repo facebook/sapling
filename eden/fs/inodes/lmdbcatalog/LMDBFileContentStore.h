@@ -173,7 +173,7 @@ class LMDBFileContentStore : public FileContentStore {
   FileOffset truncateOverlayFile(InodeNumber inodeNumber, FileOffset length);
 
  private:
-  void readExistingOverlay(int infoFD);
+  void validateExistingOverlay(int infoFD);
 
   friend class LMDBInodeCatalog;
   const AbsolutePath path_;
