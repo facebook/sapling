@@ -21,7 +21,10 @@ use types::SerializationFormat;
 /// `format` decides which set of rules to apply. Git is a bit stricter:
 /// - "test" (no email) is okay as-is for hg, but we need to use "test <>" for git.
 /// - "<email>" (no user) is okay as-is for hg, but forbidden by git.
-pub(crate) fn normalize_email_user(name: &str, format: SerializationFormat) -> Result<Cow<str>> {
+pub(crate) fn normalize_email_user(
+    name: &str,
+    format: SerializationFormat,
+) -> Result<Cow<'_, str>> {
     let name = name.trim();
     ensure!(!name.is_empty(), "invalid name (empty): {:?}", name);
 
