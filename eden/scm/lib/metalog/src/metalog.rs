@@ -1178,7 +1178,7 @@ mod tests {
         assert_eq!(metalog.keys(), map.keys().collect::<Vec<_>>());
     }
 
-    fn commit_opt(message: &str, timestamp: u64) -> CommitOptions {
+    fn commit_opt(message: &str, timestamp: u64) -> CommitOptions<'_> {
         CommitOptions {
             message,
             timestamp: Some(timestamp),
