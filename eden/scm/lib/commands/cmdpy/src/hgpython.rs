@@ -42,6 +42,9 @@ pub struct HgPython {
 
 /// Configuration for Rust commands used by Python.
 /// This needs to be manually configured to avoid cyclic dependency.
+// The PartialEq implementation for RustCommandConfig compares function pointers by address.
+// This is intentional and safe in this context.
+#[allow(unpredictable_function_pointer_comparisons)]
 #[derive(Clone, Copy, Eq, PartialEq, Debug)]
 pub struct RustCommandConfig {
     /// How to obtain the command table.
