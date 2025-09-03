@@ -154,7 +154,7 @@ rust_binary(
         "//eden/mononoke/blobstore:fileblob",
         "//eden/mononoke/blobstore:redactedblobstore",
         "//eden/mononoke/facebook/git_server/push_poller/lib/command:command",
-        "//eden/mononoke/facebook/git_server/push_poller/lib/storage:storage",
+        "//eden/mononoke/common/facebook/sql_storage:sql_storage",
         "//eden/mononoke/repo_attributes/bonsai_blob_mapping:bonsai_blob_mapping",
         "//eden/mononoke/repo_attributes/deletion_log:deletion_log",
     ]),
