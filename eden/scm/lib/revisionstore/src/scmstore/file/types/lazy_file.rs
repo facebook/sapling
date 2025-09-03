@@ -15,7 +15,6 @@ use minibytes::Bytes;
 use storemodel::SerializationFormat;
 use types::HgId;
 
-use crate::Metadata;
 use crate::indexedlogdatastore::Entry;
 use crate::lfs::LfsPointersEntry;
 use crate::lfs::content_header_from_pointer;
@@ -131,22 +130,6 @@ impl LazyFile {
             Lfs(blob, ptr, _) => rebuild_metadata(blob.to_bytes(), ptr),
             SaplingRemoteApi(entry, _) => entry.data()?,
             Cas(_) => bail!("CAS data has no copy info"),
-        })
-    }
-
-    pub(crate) fn metadata(&self) -> Result<Metadata> {
-        use LazyFile::*;
-        Ok(match self {
-            IndexedLog(entry, _) => entry.metadata().clone(),
-            Lfs(_, ptr, _) => Metadata {
-                size: Some(ptr.size()),
-                flags: None,
-            },
-            SaplingRemoteApi(entry, _) => entry.metadata()?.clone(),
-            Cas(data) => Metadata {
-                size: Some(data.len() as u64),
-                flags: None,
-            },
         })
     }
 }

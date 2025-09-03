@@ -280,11 +280,6 @@ impl LfsPointersStore {
         Self::get_from_slice(buf).map(Some)
     }
 
-    /// Find the pointer corresponding to the passed in `Key`.
-    fn get(&self, key: &StoreKey) -> Result<Option<LfsPointersEntry>> {
-        self.entry(key)
-    }
-
     /// Find the pointer corresponding to the passed in `HgId`.
     fn get_by_hgid(&self, hgid: &HgId) -> Result<Option<LfsPointersEntry>> {
         let log = self.0.read();

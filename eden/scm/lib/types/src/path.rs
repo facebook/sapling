@@ -653,10 +653,6 @@ impl PathComponentBuf {
         self
     }
 
-    fn from_string_unchecked(s: String) -> Self {
-        PathComponentBuf(s)
-    }
-
     pub fn is_empty(&self) -> bool {
         self.0.is_empty()
     }

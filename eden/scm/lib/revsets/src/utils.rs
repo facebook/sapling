@@ -5,8 +5,6 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-use std::collections::BTreeMap;
-
 use anyhow::Context;
 use anyhow::Result;
 use anyhow::anyhow;
@@ -20,8 +18,6 @@ use dag::Vertex;
 use dag::ops::IdConvert;
 use edenapi::SaplingRemoteApi;
 use metalog::MetaLog;
-use refencode::decode_bookmarks;
-use refencode::decode_remotenames;
 use treestate::treestate::TreeState;
 use types::HgId;
 use types::hgid::NULL_ID;

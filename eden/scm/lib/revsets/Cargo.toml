@@ -20,7 +20,6 @@ sapling-dag = { version = "0.1.0", path = "../dag" }
 sapling-edenapi = { version = "0.1.0", path = "../edenapi" }
 sapling-hgplain = { version = "0.1.0", path = "../util/hgplain" }
 sapling-metalog = { version = "0.1.0", path = "../metalog" }
-sapling-refencode = { version = "0.1.0", path = "../refencode" }
 sapling-treestate = { version = "0.1.0", path = "../treestate" }
 sapling-types = { version = "0.1.0", path = "../types" }
 thiserror = "2.0.12"

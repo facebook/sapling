@@ -54,8 +54,6 @@ pub struct FileStoreBuilder<'a> {
 
     indexedlog_local: Option<Arc<IndexedLogHgIdDataStore>>,
     indexedlog_cache: Option<Arc<IndexedLogHgIdDataStore>>,
-    lfs_local: Option<Arc<LfsStore>>,
-    lfs_cache: Option<Arc<LfsStore>>,
 
     edenapi: Option<Arc<SaplingRemoteApiFileStore>>,
     cas_client: Option<Arc<dyn CasClient>>,
@@ -71,8 +69,6 @@ impl<'a> FileStoreBuilder<'a> {
             override_edenapi: None,
             indexedlog_local: None,
             indexedlog_cache: None,
-            lfs_local: None,
-            lfs_cache: None,
             edenapi: None,
             cas_client: None,
             format: None,
