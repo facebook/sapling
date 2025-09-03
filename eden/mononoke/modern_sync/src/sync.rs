@@ -703,8 +703,7 @@ pub async fn process_one_changeset(
             .get(
                 ctx.clone(),
                 &BookmarkKey::new(bookmark_name)?,
-                // TODO(T236130401): confirm if this needs read from primary
-                bookmarks::Freshness::MostRecent,
+                bookmarks::Freshness::MaybeStale,
             )
             .await?
         {
