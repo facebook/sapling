@@ -748,7 +748,7 @@ pub trait AsyncSetQuery: Any + Debug + Send + Sync {
     }
 
     /// Specialized "flatten_id" implementation.
-    fn specialized_flatten_id(&self) -> Option<Cow<IdStaticSet>> {
+    fn specialized_flatten_id(&self) -> Option<Cow<'_, IdStaticSet>> {
         None
     }
 }

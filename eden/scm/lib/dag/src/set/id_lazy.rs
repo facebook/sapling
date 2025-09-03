@@ -216,7 +216,7 @@ impl IdLazySet {
         ))
     }
 
-    fn load_all(&self) -> Result<MutexGuard<Inner>> {
+    fn load_all(&self) -> Result<MutexGuard<'_, Inner>> {
         let mut inner = self.inner.lock().unwrap();
         inner.load_more(usize::MAX, None)?;
         Ok(inner)

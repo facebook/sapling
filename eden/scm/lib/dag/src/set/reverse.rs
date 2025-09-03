@@ -96,7 +96,7 @@ impl AsyncSetQuery for ReverseSet {
         Some(self.inner.clone())
     }
 
-    fn specialized_flatten_id(&self) -> Option<Cow<IdStaticSet>> {
+    fn specialized_flatten_id(&self) -> Option<Cow<'_, IdStaticSet>> {
         let inner = self.inner.specialized_flatten_id()?;
         let result = inner.into_owned().reversed();
         Some(Cow::Owned(result))

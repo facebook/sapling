@@ -353,7 +353,7 @@ impl AsyncSetQuery for SliceSet {
         &self.hints
     }
 
-    fn specialized_flatten_id(&self) -> Option<Cow<IdStaticSet>> {
+    fn specialized_flatten_id(&self) -> Option<Cow<'_, IdStaticSet>> {
         // Attention! `inner` might have lost order. So we might not have a fast path.
         // For example, this is flawed:
         let inner = self.inner.specialized_flatten_id()?.into_owned();

@@ -181,7 +181,7 @@ impl AsyncSetQuery for UnionSet {
         &self.hints
     }
 
-    fn specialized_flatten_id(&self) -> Option<Cow<IdStaticSet>> {
+    fn specialized_flatten_id(&self) -> Option<Cow<'_, IdStaticSet>> {
         let mut result = self.sets[0].specialized_flatten_id()?;
         for set in &self.sets[1..] {
             let other = set.specialized_flatten_id()?;

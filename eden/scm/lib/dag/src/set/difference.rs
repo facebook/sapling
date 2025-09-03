@@ -111,7 +111,7 @@ impl AsyncSetQuery for DifferenceSet {
         &self.hints
     }
 
-    fn specialized_flatten_id(&self) -> Option<Cow<IdStaticSet>> {
+    fn specialized_flatten_id(&self) -> Option<Cow<'_, IdStaticSet>> {
         let lhs = self.lhs.specialized_flatten_id()?;
         let rhs = self.rhs.specialized_flatten_id()?;
         let result = IdStaticSet::from_edit_spans(&lhs, &rhs, |a, b| a.difference(b))?;

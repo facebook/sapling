@@ -586,7 +586,7 @@ impl AsyncSetQuery for IdStaticSet {
     }
 
     /// Specialized "flatten_id" implementation.
-    fn specialized_flatten_id(&self) -> Option<Cow<IdStaticSet>> {
+    fn specialized_flatten_id(&self) -> Option<Cow<'_, IdStaticSet>> {
         Some(Cow::Borrowed(self))
     }
 }
