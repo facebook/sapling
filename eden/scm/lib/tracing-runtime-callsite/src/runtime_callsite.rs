@@ -304,7 +304,7 @@ impl<K: KindType> Callsite for RuntimeCallsite<K> {
         self.interest.store(interest, Ordering::SeqCst);
     }
 
-    fn metadata(&self) -> &Metadata {
+    fn metadata(&self) -> &Metadata<'_> {
         &self.meta
     }
 }
