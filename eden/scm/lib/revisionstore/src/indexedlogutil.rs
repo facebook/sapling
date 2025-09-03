@@ -169,7 +169,7 @@ impl Inner {
 
     /// Find the key in the store. Returns an `Iterator` over all the values that this store
     /// contains for the key.
-    pub fn lookup(&self, index_id: usize, key: impl AsRef<[u8]>) -> Result<LookupIter> {
+    pub fn lookup(&self, index_id: usize, key: impl AsRef<[u8]>) -> Result<LookupIter<'_>> {
         let key = key.as_ref();
         match self {
             Self::Permanent(log) => Ok(LookupIter::Permanent(log.lookup(index_id, key)?)),
