@@ -180,7 +180,7 @@ fn normalize_remote_name(name: &str) -> &str {
 }
 
 /// translate "a@b:c" to "ssh://a@b/c".
-fn translate_scp_url_to_ssh(value: &str) -> Cow<str> {
+fn translate_scp_url_to_ssh(value: &str) -> Cow<'_, str> {
     // Check "man git-clone", "GIT URLS" for the specification.
     'not_scp: {
         if value.contains("://") {
