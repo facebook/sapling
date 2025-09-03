@@ -17,8 +17,10 @@ use std::path::PathBuf;
 use anyhow::Context;
 use anyhow::Error;
 use anyhow::Result;
+use derivative::Derivative;
 use once_cell::sync::Lazy;
 use parking_lot::RwLock;
+
 pub mod dotgit;
 
 #[derive(PartialEq, Debug, Clone, Copy)]
@@ -75,7 +77,8 @@ struct UserIdentity {
     scripting_except_env_var: &'static str,
 }
 
-#[derive(PartialEq, Debug, Clone, Copy)]
+#[derive(Derivative, Debug, Clone, Copy)]
+#[derivative(PartialEq)]
 struct RepoIdentity {
     /// Metadata directory of the current identity. If this directory exists in the current repo, it
     /// implies that the repo is using this identity.
@@ -103,6 +106,7 @@ struct RepoIdentity {
     sniff_initial_cli_names: Option<&'static str>,
 
     /// Function. Turn (working_copy_root, dot_dir) to full_dot_dir.
+    #[derivative(PartialEq = "ignore")]
     resolve_dot_dir_func: fn(&Path, &'static str) -> PathBuf,
 }
 
