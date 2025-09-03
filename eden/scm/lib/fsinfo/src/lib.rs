@@ -343,7 +343,7 @@ mod linux {
     fn get_dev_major_minor(path: &Path) -> Option<String> {
         path.symlink_metadata().ok().map(|m| {
             let st_dev = m.st_dev();
-            let (major, minor) = unsafe { (libc::major(st_dev), libc::minor(st_dev)) };
+            let (major, minor) = (libc::major(st_dev), libc::minor(st_dev));
             format!("{}:{}", major, minor)
         })
     }
