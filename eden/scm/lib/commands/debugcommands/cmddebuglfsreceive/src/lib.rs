@@ -27,7 +27,7 @@ define_flags! {
     }
 }
 
-pub fn run(ctx: ReqCtx<DebugLfsReceiveOpts>, repo: Option<&Repo>) -> Result<u8> {
+pub fn run(ctx: ReqCtx<DebugLfsReceiveOpts>, _repo: Option<&Repo>) -> Result<u8> {
     let mut config = ConfigSet::wrap(ctx.config().clone());
 
     abort_if!(
