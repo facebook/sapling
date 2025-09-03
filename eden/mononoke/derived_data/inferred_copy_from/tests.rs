@@ -230,14 +230,6 @@ async fn derive_single_test(fb: FacebookInit) -> Result<()> {
         &repo,
         repo_ctx.changeset(changesets["h"]).await?.unwrap().id(),
         &[
-            // This shouldn't be here!
-            (
-                MPath::new("test/file2")?,
-                InferredCopyFromEntry {
-                    from_csid: changesets["g"],
-                    from_path: MPath::new("test/file2")?,
-                },
-            ),
             (
                 MPath::new("test/partial/match/file1")?,
                 InferredCopyFromEntry {

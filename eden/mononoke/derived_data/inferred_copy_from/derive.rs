@@ -427,13 +427,28 @@ async fn find_partial_matches(
 
     let mut matched = vec![];
     for (dst_content_id, fc) in content_to_metadata {
+        let dst_paths = content_to_paths.get(&dst_content_id);
         // Trim candidate list by comparing file metadata (e.g. type, size)
         let filtered_content_to_candidates = content_to_candidates
             .iter()
             .filter_map(|(src_content_id, candidates)| {
                 let filtered = candidates
                     .iter()
-                    .filter(|candidate| filter_by_metadata(fc, candidate))
+                    .filter(|candidate| {
+                        // Make sure we don't include the dest path itself as candidate
+                        let candidate_non_root_path =
+                            candidate.path.clone().into_optional_non_root_path();
+                        if let (Some(dst_paths), Some(candidate_path)) =
+                            (dst_paths, candidate_non_root_path)
+                        {
+                            if dst_paths.contains(&candidate_path) {
+                                // Skip if the candidate path is the same as the dest
+                                return false;
+                            }
+                        }
+                        // Filter out candidates whose metadata are too different from dest
+                        filter_by_metadata(fc, candidate)
+                    })
                     .collect::<Vec<_>>();
                 if filtered.is_empty() {
                     None
