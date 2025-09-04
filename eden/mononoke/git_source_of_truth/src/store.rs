@@ -76,6 +76,13 @@ mononoke_queries! {
         mysql("INSERT INTO git_repositories_source_of_truth (repo_id, repo_name, source_of_truth) VALUES ({repo_id}, {repo_name}, {source_of_truth}) ON DUPLICATE KEY UPDATE source_of_truth = {source_of_truth}")
         sqlite("REPLACE INTO git_repositories_source_of_truth (repo_id, repo_name, source_of_truth) VALUES ({repo_id}, {repo_name}, {source_of_truth})")
     }
+
+    write InsertRepos(
+        values: (repo_id: RepositoryId, repo_name: RepositoryName, source_of_truth: GitSourceOfTruth)
+    ) {
+        none,
+        "INSERT INTO git_repositories_source_of_truth (repo_id, repo_name, source_of_truth) VALUES {values}"
+    }
 }
 
 fn row_to_entry(
@@ -144,6 +151,21 @@ impl GitSourceOfTruthConfig for SqlGitSourceOfTruthConfig {
             &repo_id,
             &repo_name,
             &source_of_truth,
+        )
+        .await?;
+        Ok(())
+    }
+
+    async fn insert_repos(
+        &self,
+        ctx: &CoreContext,
+        repos: &[(RepositoryId, RepositoryName, GitSourceOfTruth)],
+    ) -> Result<()> {
+        let repos_refs = repos.iter().map(|(a, b, c)| (a, b, c)).collect::<Vec<_>>();
+        InsertRepos::query(
+            &self.connections.write_connection,
+            ctx.sql_query_telemetry(),
+            &repos_refs,
         )
         .await?;
         Ok(())
@@ -266,6 +288,146 @@ mod test {
         assert!(entry.is_some());
         let entry = entry.unwrap();
         assert_eq!(entry.source_of_truth, GitSourceOfTruth::Mononoke);
+
+        Ok(())
+    }
+
+    #[mononoke::fbinit_test]
+    async fn test_insert_repos(fb: FacebookInit) -> Result<()> {
+        let ctx = CoreContext::test_mock(fb);
+        let builder = SqlGitSourceOfTruthConfigBuilder::with_sqlite_in_memory()?;
+        let push = builder.clone().build();
+
+        // insert many
+        push.insert_repos(
+            &ctx,
+            &[
+                (
+                    RepositoryId::new(1),
+                    RepositoryName("test1".to_string()),
+                    GitSourceOfTruth::Mononoke,
+                ),
+                (
+                    RepositoryId::new(2),
+                    RepositoryName("test2".to_string()),
+                    GitSourceOfTruth::Metagit,
+                ),
+                (
+                    RepositoryId::new(3),
+                    RepositoryName("test3".to_string()),
+                    GitSourceOfTruth::Mononoke,
+                ),
+            ],
+        )
+        .await?;
+
+        // get each and confirm it worked
+        let entry = push
+            .get_by_repo_name(
+                &ctx,
+                &RepositoryName("test1".to_string()),
+                Staleness::MostRecent,
+            )
+            .await?;
+        assert!(entry.is_some());
+        let entry = entry.unwrap();
+        assert_eq!(entry.source_of_truth, GitSourceOfTruth::Mononoke);
+
+        let entry = push
+            .get_by_repo_name(
+                &ctx,
+                &RepositoryName("test2".to_string()),
+                Staleness::MostRecent,
+            )
+            .await?;
+        assert!(entry.is_some());
+        let entry = entry.unwrap();
+        assert_eq!(entry.source_of_truth, GitSourceOfTruth::Metagit);
+
+        let entry = push
+            .get_by_repo_name(
+                &ctx,
+                &RepositoryName("test3".to_string()),
+                Staleness::MostRecent,
+            )
+            .await?;
+        assert!(entry.is_some());
+        let entry = entry.unwrap();
+        assert_eq!(entry.source_of_truth, GitSourceOfTruth::Mononoke);
+
+        // update many should fail if any id is not unique as we don't allow duplicate ids
+        let result = push
+            .insert_repos(
+                &ctx,
+                &[
+                    (
+                        RepositoryId::new(2),
+                        RepositoryName("test2_renamed".to_string()),
+                        GitSourceOfTruth::Mononoke,
+                    ),
+                    (
+                        RepositoryId::new(4),
+                        RepositoryName("test4".to_string()),
+                        GitSourceOfTruth::Metagit,
+                    ),
+                ],
+            )
+            .await;
+        assert!(result.is_err());
+
+        // update many should fail if any name is not unique
+        let result = push
+            .insert_repos(
+                &ctx,
+                &[(
+                    RepositoryId::new(4),
+                    RepositoryName("test2".to_string()),
+                    GitSourceOfTruth::Mononoke,
+                )],
+            )
+            .await;
+        assert!(result.is_err());
+
+        // insert many new repos should succeed
+        push.insert_repos(
+            &ctx,
+            &[
+                (
+                    RepositoryId::new(4),
+                    RepositoryName("test4".to_string()),
+                    GitSourceOfTruth::Mononoke,
+                ),
+                (
+                    RepositoryId::new(5),
+                    RepositoryName("test5".to_string()),
+                    GitSourceOfTruth::Metagit,
+                ),
+            ],
+        )
+        .await?;
+
+        // get each and confirm it worked
+        let entry = push
+            .get_by_repo_name(
+                &ctx,
+                &RepositoryName("test4".to_string()),
+                Staleness::MostRecent,
+            )
+            .await?;
+        assert!(entry.is_some());
+        let entry = entry.unwrap();
+        assert_eq!(entry.source_of_truth, GitSourceOfTruth::Mononoke);
+
+        let entry = push
+            .get_by_repo_name(
+                &ctx,
+                &RepositoryName("test5".to_string()),
+                Staleness::MostRecent,
+            )
+            .await?;
+        assert!(entry.is_some());
+        let entry = entry.unwrap();
+        assert_eq!(entry.source_of_truth, GitSourceOfTruth::Metagit);
 
         Ok(())
     }

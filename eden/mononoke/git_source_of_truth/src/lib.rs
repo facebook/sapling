@@ -43,6 +43,12 @@ pub trait GitSourceOfTruthConfig: Send + Sync {
         source_of_truth: GitSourceOfTruth,
     ) -> Result<()>;
 
+    async fn insert_repos(
+        &self,
+        _ctx: &CoreContext,
+        _repos: &[(RepositoryId, RepositoryName, GitSourceOfTruth)],
+    ) -> Result<()>;
+
     async fn get_max_id(&self, ctx: &CoreContext) -> Result<Option<RepositoryId>>;
 
     async fn get_by_repo_name(
@@ -76,6 +82,14 @@ impl GitSourceOfTruthConfig for NoopGitSourceOfTruthConfig {
         _repo_id: RepositoryId,
         _repo_name: RepositoryName,
         _source_of_truth: GitSourceOfTruth,
+    ) -> Result<()> {
+        Ok(())
+    }
+
+    async fn insert_repos(
+        &self,
+        _ctx: &CoreContext,
+        _repos: &[(RepositoryId, RepositoryName, GitSourceOfTruth)],
     ) -> Result<()> {
         Ok(())
     }
@@ -144,6 +158,36 @@ impl GitSourceOfTruthConfig for TestGitSourceOfTruthConfig {
                 source_of_truth,
             },
         );
+        Ok(())
+    }
+
+    async fn insert_repos(
+        &self,
+        _ctx: &CoreContext,
+        repos: &[(RepositoryId, RepositoryName, GitSourceOfTruth)],
+    ) -> Result<()> {
+        let mut map = self.entries.lock().expect("poisoned lock");
+        if map.values().any(|config_entry| {
+            for (repo_id, repo_name, _) in repos {
+                if repo_id == &config_entry.repo_id || repo_name == &config_entry.repo_name {
+                    return true;
+                }
+            }
+            false
+        }) {
+            anyhow::bail!("Attempting to insert duplicate entry");
+        }
+        for (repo_id, repo_name, source_of_truth) in repos {
+            map.insert(
+                repo_name.to_owned(),
+                GitSourceOfTruthConfigEntry {
+                    id: RowId(0),
+                    repo_id: *repo_id,
+                    repo_name: repo_name.clone(),
+                    source_of_truth: *source_of_truth,
+                },
+            );
+        }
         Ok(())
     }
 
