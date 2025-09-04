@@ -7,6 +7,7 @@
 
 mod context;
 mod method;
+mod push_data;
 mod pushvars;
 
 pub use context::GitServerContext;
@@ -17,6 +18,7 @@ pub use method::BundleUriOutcome;
 pub use method::GitMethod;
 pub use method::GitMethodInfo;
 pub use method::PushValidationErrors;
+pub use push_data::PushData;
 pub use pushvars::Pushvars;
 use serde::Deserialize;
 

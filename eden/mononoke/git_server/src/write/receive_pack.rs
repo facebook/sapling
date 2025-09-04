@@ -39,10 +39,10 @@ use crate::command::RefUpdate;
 use crate::command::RequestCommand;
 use crate::model::GitMethodInfo;
 use crate::model::GitServerContext;
+use crate::model::PushData;
 use crate::model::PushValidationErrors;
 use crate::model::RepositoryParams;
 use crate::model::RepositoryRequestContext;
-use crate::scuba::MononokeGitScubaKey;
 use crate::scuba::scuba_from_state;
 use crate::service::GitMappingsStore;
 use crate::service::GitObjectStore;
@@ -98,8 +98,8 @@ async fn push(
             &request_context.ctx.clone_with_repo_name(&repo_name),
             request_context.repo.repo_blobstore_arc().clone(),
         );
-        let mut scuba = scuba_from_state(ctx, state);
-        scuba.add(MononokeGitScubaKey::PackfileSize, pack_file.get_ref().len());
+        PushData::inject_in_state(state, pack_file.get_ref().len());
+        let scuba = scuba_from_state(ctx, state);
         // If Mononoke is not the source of truth for this repo, then we need to prevent the push
         if !mononoke_source_of_truth(&request_context.ctx, request_context.repo.clone()).await? {
             return reject_non_sot_push(repo_name.as_str(), state, &ref_updates).await;

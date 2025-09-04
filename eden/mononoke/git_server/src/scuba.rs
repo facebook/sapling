@@ -18,6 +18,7 @@ use scuba_ext::MononokeScubaSampleBuilder;
 
 use crate::model::BundleUriOutcome;
 use crate::model::GitMethodInfo;
+use crate::model::PushData;
 use crate::model::PushValidationErrors;
 
 #[derive(Copy, Clone, Debug)]
@@ -83,6 +84,7 @@ pub struct MononokeGitScubaHandler {
     bundle_uri_outcome: Option<BundleUriOutcome>,
     client_username: Option<String>,
     slapi_handler_info: Option<SlapiHandlerInfo>,
+    push_data: Option<PushData>,
 }
 
 pub(crate) fn scuba_from_state(ctx: &CoreContext, state: &State) -> MononokeScubaSampleBuilder {
@@ -127,6 +129,7 @@ impl MononokeGitScubaHandler {
                 .and_then(|metadata_state| metadata_state.metadata().identities().username())
                 .map(ToString::to_string),
             slapi_handler_info: state.try_borrow::<SlapiHandlerInfo>().cloned(),
+            push_data: state.try_borrow::<PushData>().cloned(),
         }
     }
 
@@ -169,6 +172,9 @@ impl MononokeGitScubaHandler {
                     scuba.add(MononokeGitScubaKey::BundleUriError, error_msg);
                 }
             }
+        }
+        if let Some(push_data) = self.push_data {
+            scuba.add(MononokeGitScubaKey::PackfileSize, push_data.packfile_size);
         }
         if let Some(err) = info.first_error() {
             scuba.add(MononokeGitScubaKey::Error, format!("{:?}", err));
