@@ -51,6 +51,7 @@ import {Row} from './ComponentUtils';
 import {FileTree, FileTreeFolderHeader} from './FileTree';
 import {useGeneratedFileStatuses} from './GeneratedFile';
 import {Internal} from './Internal';
+import {SmartActionsMenu} from './SmartActionsMenu';
 import {AbsorbButton} from './StackActions';
 import {confirmSuggestedEditsForFiles} from './SuggestedEdits';
 import {UnsavedFilesCount, confirmUnsavedFiles} from './UnsavedFiles';
@@ -59,6 +60,7 @@ import {latestCommitMessageFields} from './codeReview/CodeReviewInfo';
 import {islDrawerState} from './drawerState';
 import {externalMergeToolAtom} from './externalMergeTool';
 import {DevmateIcon} from './facebook/icons/DevmateIcon';
+import {useFeatureFlagSync} from './featureFlags';
 import {T, t} from './i18n';
 import {DownwardArrow} from './icons/DownwardIcon';
 import {localStorageBackedAtom, readAtom, useAtomGet, writeAtom} from './jotaiUtils';
@@ -93,9 +95,7 @@ import {selectedCommits} from './selection';
 import {latestHeadCommit, uncommittedChangesFetchError} from './serverAPIState';
 import {GeneratedStatus} from './types';
 
-import {SmartActionsMenu} from './SmartActionsMenu';
 import './UncommittedChanges.css';
-import {useFeatureFlagAsync} from './featureFlags';
 
 export type UIChangedFile = {
   path: RepoRelativePath;
@@ -933,7 +933,7 @@ function MergeConflictButtons({
 
   const externalMergeTool = useAtomValue(externalMergeToolAtom);
 
-  const devmateResolveConflictsEnabled = useFeatureFlagAsync(
+  const devmateResolveConflictsEnabled = useFeatureFlagSync(
     Internal.featureFlags?.DevmateResolveConflicts,
   );
 
