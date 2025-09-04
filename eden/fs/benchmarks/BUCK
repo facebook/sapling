@@ -171,3 +171,13 @@ cpp_binary(
         "//folly:format",
     ],
 )
+
+cpp_binary(
+    name = "pid_fetch_count",
+    srcs = ["pid_fetch_count.cpp"],
+    deps = [
+        "//eden/common/os:os",
+        "//eden/common/utils/benchharness:benchharness",
+        "//eden/fs/store:store",
+    ],
+)
