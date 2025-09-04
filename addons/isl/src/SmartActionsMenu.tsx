@@ -8,23 +8,23 @@
 import {Button} from 'isl-components/Button';
 import {Icon} from 'isl-components/Icon';
 import {Tooltip} from 'isl-components/Tooltip';
+import {useAtomValue} from 'jotai';
+import {Suspense, useState} from 'react';
+import {randomId} from 'shared/utils';
+import {tracker} from './analytics';
+import serverAPI from './ClientToServerAPI';
+import {diffCommentData} from './codeReview/codeReviewAtoms';
+import {diffSummary} from './codeReview/CodeReviewInfo';
 import {DropdownFields} from './DropdownFields';
-import {featureFlagAsync, useFeatureFlagSync} from './featureFlags';
+import {useFeatureFlagAsync, useFeatureFlagSync} from './featureFlags';
 import {T} from './i18n';
 import {Internal} from './Internal';
 import {BaseSplitButton} from './stackEdit/ui/BaseSplitButton';
 import type {CommitInfo} from './types';
-import {Suspense, useState} from 'react';
-import {diffCommentData} from './codeReview/codeReviewAtoms';
-import {diffSummary} from './codeReview/CodeReviewInfo';
-import {useAtomValue} from 'jotai';
-import serverAPI from './ClientToServerAPI';
-import {randomId} from 'shared/utils';
-import {tracker} from './analytics';
 
-import './SmartActionsMenu.css';
 import platform from './platform';
 import {repositoryInfo} from './serverAPIState';
+import './SmartActionsMenu.css';
 
 export function SmartActionsMenu({commit}: {commit?: CommitInfo}) {
   const [dropdownVisible, setDropdownVisible] = useState(false);
@@ -62,13 +62,13 @@ export function SmartActionsMenu({commit}: {commit?: CommitInfo}) {
 function SmartActions({commit, dismiss}: {commit?: CommitInfo; dismiss: () => void}) {
   const actions = [];
 
-  const aiCommitSplitEnabled = useAtomValue(featureFlagAsync(Internal.featureFlags?.AICommitSplit));
+  const aiCommitSplitEnabled = useFeatureFlagAsync(Internal.featureFlags?.AICommitSplit);
   if (commit && aiCommitSplitEnabled) {
     actions.push(<AutoSplitButton key="auto-split" commit={commit} dismiss={dismiss} />);
   }
 
-  const devmateResolveCommentsEnabled = useAtomValue(
-    featureFlagAsync(Internal.featureFlags?.InlineCommentDevmateResolve),
+  const devmateResolveCommentsEnabled = useFeatureFlagAsync(
+    Internal.featureFlags?.InlineCommentDevmateResolve,
   );
   // For now, only support this in VS Code
   if (devmateResolveCommentsEnabled && commit?.diffId && platform.platformName === 'vscode') {
@@ -84,8 +84,8 @@ function SmartActions({commit, dismiss}: {commit?: CommitInfo; dismiss: () => vo
     );
   }
 
-  const devmateResolveFailedSignalsEnabled = useAtomValue(
-    featureFlagAsync(Internal.featureFlags?.DevmateResolveFailedSignals),
+  const devmateResolveFailedSignalsEnabled = useFeatureFlagAsync(
+    Internal.featureFlags?.DevmateResolveFailedSignals,
   );
   // For now, only support this in VS Code
   if (devmateResolveFailedSignalsEnabled && commit?.diffId && platform.platformName === 'vscode') {
@@ -100,8 +100,8 @@ function SmartActions({commit, dismiss}: {commit?: CommitInfo; dismiss: () => vo
     );
   }
 
-  const devmateGenerateTestsForModifiedCodeEnabled = useAtomValue(
-    featureFlagAsync(Internal.featureFlags?.DevmateGenerateTestsForModifiedCode),
+  const devmateGenerateTestsForModifiedCodeEnabled = useFeatureFlagAsync(
+    Internal.featureFlags?.DevmateGenerateTestsForModifiedCode,
   );
   // For now, only support this in VS Code since the devmate can only be triggered from VS Code
   if (devmateGenerateTestsForModifiedCodeEnabled && platform.platformName === 'vscode') {
@@ -116,16 +116,16 @@ function SmartActions({commit, dismiss}: {commit?: CommitInfo; dismiss: () => vo
     );
   }
 
-  const devmateGenerateCommitMessageEnabled = useAtomValue(
-    featureFlagAsync(Internal.featureFlags?.DevmateGenerateCommitMessage),
+  const devmateGenerateCommitMessageEnabled = useFeatureFlagAsync(
+    Internal.featureFlags?.DevmateGenerateCommitMessage,
   );
   // For now, only support this in VS Code
   if (!commit && devmateGenerateCommitMessageEnabled && platform.platformName === 'vscode') {
     actions.push(<FillCommitInfoButton key="fill-commit-info" dismiss={dismiss} />);
   }
 
-  const devmateValidateChangesEnabled = useAtomValue(
-    featureFlagAsync(Internal.featureFlags?.DevmateValidateChanges),
+  const devmateValidateChangesEnabled = useFeatureFlagAsync(
+    Internal.featureFlags?.DevmateValidateChanges,
   );
   // For now, only support this in VS Code
   if (!commit && devmateValidateChangesEnabled && platform.platformName === 'vscode') {

@@ -9,7 +9,16 @@ import {atom, useAtomValue} from 'jotai';
 import {loadable} from 'jotai/utils';
 import {randomId} from 'shared/utils';
 import serverAPI from './ClientToServerAPI';
+import {Internal} from './Internal';
 import {atomFamilyWeak, readAtom} from './jotaiUtils';
+
+const bulkFetchedFlagsAtom = atom<Promise<Record<string, boolean>>>(() => {
+  if (Internal.featureFlags == null) {
+    return Promise.resolve({});
+  }
+  const knownFlags = Object.values(Internal.featureFlags ?? {});
+  return bulkFetchFeatureFlags(knownFlags);
+});
 
 /**
  * Boolean values to enable features via remote config.
@@ -19,6 +28,11 @@ export const featureFlagAsync = atomFamilyWeak((name?: string) => {
   if (name == null) {
     // OSS doesn't have access to feature flags, so they are always "false" by setting the name to null
     return atom(Promise.resolve(false));
+  }
+
+  const knownFlags = Object.values(Internal.featureFlags ?? {});
+  if (knownFlags.includes(name)) {
+    return atom(get => get(bulkFetchedFlagsAtom).then(flags => flags[name]));
   }
 
   return atom(fetchFeatureFlag(name));
@@ -36,10 +50,16 @@ const featureFlagLoadable = atomFamilyWeak((name?: string) => {
   return loadable(featureFlagAsync(name));
 });
 
-/** Access recoil featureFlag state without suspending or throwing */
+/** Access featureFlag state without suspending or throwing */
 export function useFeatureFlagSync(name: string | undefined) {
   const flag = useAtomValue(featureFlagLoadable(name));
   return flag.state === 'hasData' ? flag.data : false;
+}
+
+/** Access featureFlag, suspending if not yet loaded */
+export function useFeatureFlagAsync(name: string | undefined) {
+  const flag = useAtomValue(featureFlagAsync(name));
+  return flag;
 }
 
 export function getFeatureFlag(name: string | undefined, default_?: boolean): Promise<boolean> {
@@ -86,9 +106,23 @@ async function fetchQeFlag(name: string | undefined, default_?: boolean): Promis
   return response.passes;
 }
 
+let featureFlagOverrides: Record<string, boolean> | undefined = undefined;
+export const __TEST__ = {
+  overrideFeatureFlag: (name: string, value: boolean) => {
+    featureFlagOverrides ??= {};
+    featureFlagOverrides[name] = value;
+  },
+  clearFeatureFlagOverrides: () => {
+    featureFlagOverrides = undefined;
+  },
+};
+
 export async function bulkFetchFeatureFlags(
   names: Array<string>,
 ): Promise<Record<string, boolean>> {
+  if (featureFlagOverrides) {
+    return Object.fromEntries(names.map(name => [name, featureFlagOverrides?.[name] ?? false]));
+  }
   const id = randomId();
   serverAPI.postMessage({
     type: 'bulkFetchFeatureFlags',

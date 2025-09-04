@@ -31,6 +31,7 @@ import {
   type ChangedFilesDisplayType,
   changedFilesDisplayType,
 } from './ChangedFileDisplayTypePicker';
+import serverAPI from './ClientToServerAPI';
 import {Collapsable} from './Collapsable';
 import {Commit} from './Commit';
 import {
@@ -89,13 +90,12 @@ import {
   useIsOperationRunningOrQueued,
 } from './previews';
 import {selectedCommits} from './selection';
-import serverAPI from './ClientToServerAPI';
 import {latestHeadCommit, uncommittedChangesFetchError} from './serverAPIState';
 import {GeneratedStatus} from './types';
 
-import './UncommittedChanges.css';
 import {SmartActionsMenu} from './SmartActionsMenu';
-import {featureFlagAsync} from './featureFlags';
+import './UncommittedChanges.css';
+import {useFeatureFlagAsync} from './featureFlags';
 
 export type UIChangedFile = {
   path: RepoRelativePath;
@@ -933,8 +933,8 @@ function MergeConflictButtons({
 
   const externalMergeTool = useAtomValue(externalMergeToolAtom);
 
-  const devmateResolveConflictsEnabled = useAtomValue(
-    featureFlagAsync(Internal.featureFlags?.DevmateResolveConflicts),
+  const devmateResolveConflictsEnabled = useFeatureFlagAsync(
+    Internal.featureFlags?.DevmateResolveConflicts,
   );
 
   return (
