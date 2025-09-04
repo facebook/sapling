@@ -66,6 +66,7 @@ class Dirstate;
 class EdenConfig;
 class EdenMount;
 class EdenServiceHandler;
+class HeartbeatManager;
 class SaplingBackingStore;
 class IScribeLogger;
 class Journal;
@@ -403,6 +404,7 @@ class EdenServer : private TakeoverHandler {
   void removeEdenHeartbeatFile() const;
   void removeDaemonExitSignalFile() const;
   int readDaemonExitSignal() const;
+  bool checkForPreviousHeartbeat(bool takeover);
 #endif
 
   const std::shared_ptr<ServerState>& getServerState() const {
@@ -806,6 +808,11 @@ class EdenServer : private TakeoverHandler {
    * Notifications telemetry logger.
    */
   std::shared_ptr<StructuredLogger> notificationsStructuredLogger_;
+
+  /**
+   * HeartbeatManager to handle all heartbeat-related operations
+   */
+  std::unique_ptr<HeartbeatManager> heartbeatManager_;
 
   /**
    * Common state shared by all of the EdenMount objects.

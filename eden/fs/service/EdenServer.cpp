@@ -19,6 +19,8 @@
 #include <sstream>
 #include <string>
 
+#include "eden/fs/service/HeartbeatManager.h"
+
 #include <fb303/ServiceData.h>
 #include <fmt/core.h>
 #include <folly/Exception.h>
@@ -143,7 +145,6 @@ DEFINE_bool(
 
 #define DEFAULT_STORAGE_ENGINE "rocksdb"
 #define SUPPORTED_STORAGE_ENGINES "rocksdb|sqlite|memory"
-#define DAEMON_EXIT_SIGNAL_FILE_NAME "daemon_exit_signal"
 
 DEFINE_string(
     local_storage_engine_unsafe,
@@ -489,14 +490,6 @@ EdenServer::EdenServer(
     std::string version)
     : originalCommandLine_{std::move(originalCommandLine)},
       edenDir_{edenConfig->edenDir.getValue()},
-      heartbeatFilePath_{
-          edenDir_.getPath() +
-          PathComponentPiece{getEdenHeartbeatFileNameStr()}},
-      heartbeatFilePathString_{heartbeatFilePath_.c_str()},
-      daemonExitSignalFilePath_{
-          edenDir_.getPath() +
-          PathComponentPiece{DAEMON_EXIT_SIGNAL_FILE_NAME}},
-      daemonExitSignalFilePathString_{daemonExitSignalFilePath_.c_str()},
       activityRecorderFactory_{std::move(activityRecorderFactory)},
       backingStoreFactory_{backingStoreFactory},
       config_{std::make_shared<ReloadableConfig>(edenConfig)},
@@ -518,6 +511,8 @@ EdenServer::EdenServer(
               edenConfig->notificationsScribeCategory.getValue(),
               sessionInfo,
               edenStats.copy())},
+      heartbeatManager_{
+          std::make_unique<HeartbeatManager>(edenDir_, structuredLogger_)},
       serverState_{make_shared<ServerState>(
           std::move(userInfo),
           std::move(edenStats),
@@ -1232,8 +1227,7 @@ void EdenServer::serve() const {
 }
 
 std::string EdenServer::getEdenHeartbeatFileNameStr() const {
-  const auto pidContents = folly::to<std::string>(getpid());
-  return edenDir_.getHeartbeatFileNamePrefix().toString() + pidContents;
+  return heartbeatManager_->getHeartbeatFileName();
 }
 
 std::optional<std::string> EdenServer::getOldEdenHeartbeatFileNameStr() const {
@@ -1247,104 +1241,28 @@ std::optional<std::string> EdenServer::getOldEdenHeartbeatFileNameStr() const {
 
 #ifndef _WIN32
 void EdenServer::createOrUpdateEdenHeartbeatFile() {
-  // Create the heartbeat file and write the current timestamp to it
-  auto now = std::chrono::system_clock::now();
-  auto now_c = std::chrono::system_clock::to_time_t(now);
-  std::string now_str = std::to_string(now_c);
-  auto result =
-      writeFileAtomic(heartbeatFilePath_, folly::StringPiece(now_str));
-  if (result.hasException()) {
-    XLOGF(
-        ERR,
-        "Failed to create or update heartbeat flag file: {}",
-        result.exception());
-  }
-}
-
-// Convert integer to string in a signal-safe way (simple itoa)
-// return the length of the string
-int int_to_str(int val, char* buf, size_t buf_size) {
-  if (buf_size == 0) {
-    return 0;
-  }
-  size_t i = buf_size - 1;
-  buf[i] = '\0';
-  i--;
-  unsigned int v;
-  bool negative = false;
-  if (val < 0) {
-    negative = true;
-    v = -val;
-  } else {
-    v = val;
-  }
-  if (v == 0) {
-    buf[i--] = '0';
-  } else {
-    while (v > 0 && i > 0) {
-      buf[i--] = '0' + (v % 10);
-      v /= 10;
-    }
-  }
-  if (negative && i > 0) {
-    buf[i--] = '-';
-  }
-  // Shift string to start of buffer
-  int start = i + 1;
-  int j = 0;
-  while (buf[start] != '\0') {
-    buf[j++] = buf[start++];
-  }
-  buf[j] = '\0';
-  return j;
+  heartbeatManager_->createOrUpdateHeartbeatFile();
 }
 
 void EdenServer::createDaemonExitSignalFile(int signal) {
-  // Create the daemon exit signal file and write the signal to it
-  // createDaemonExitSignalFile() should be an async-signal-safe function.
-  // It get called from signal handlers. Full rulles:
-  // https://man7.org/linux/man-pages/man7/signal-safety.7.html
-  int fileno =
-      open(daemonExitSignalFilePathString_, O_WRONLY | O_CREAT | O_TRUNC, 0644);
-  if (fileno == -1) {
-    return;
-  }
-  char buf[10];
-  int str_len = int_to_str(signal, buf, sizeof(buf));
-  write(fileno, buf, str_len);
-  close(fileno);
+  heartbeatManager_->createDaemonExitSignalFile(signal);
 }
 
 void EdenServer::removeEdenHeartbeatFile() const {
-  const int rc = unlink(heartbeatFilePathString_);
-  if (rc != 0 && errno != ENOENT) {
-    XLOGF(ERR, "Failed to remove eden heartbeat file: {}", errno);
-  }
-  removeDaemonExitSignalFile();
+  heartbeatManager_->removeHeartbeatFile();
 }
 
 void EdenServer::removeDaemonExitSignalFile() const {
-  // Remove the daemon exit signal file if it exists
-  const int rc = unlink(daemonExitSignalFilePathString_);
-  if (rc != 0 && errno != ENOENT) {
-    XLOGF(ERR, "Failed to remove daemon exit signal file: {}", errno);
-  }
+  heartbeatManager_->removeDaemonExitSignalFile();
 }
 
 int EdenServer::readDaemonExitSignal() const {
-  // Read the signal from the daemon exit signal file
-  std::string signalStr;
-  if (folly::readFile(daemonExitSignalFilePathString_, signalStr)) {
-    // Optionally trim whitespace/newlines
-    folly::trimWhitespace(signalStr);
-    try {
-      return folly::to<uint8_t>(signalStr);
-    } catch (const std::exception&) {
-      return 0;
-    }
-  }
-  // File does not exist or is empty, return 0
-  return 0;
+  return heartbeatManager_->readDaemonExitSignal();
+}
+
+bool EdenServer::checkForPreviousHeartbeat(bool takeover) {
+  return heartbeatManager_->checkForPreviousHeartbeat(
+      takeover, getOldEdenHeartbeatFileNameStr());
 }
 #endif
 

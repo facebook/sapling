@@ -328,6 +328,7 @@ cpp_library(
         "EdenServer.cpp",
         "EdenServiceHandler.cpp",
         "EdenStateDir.cpp",
+        "HeartbeatManager.cpp",
         "PeriodicTask.cpp",
         "ThriftPermissionChecker.cpp",
     ],

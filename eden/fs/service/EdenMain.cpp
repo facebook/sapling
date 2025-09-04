@@ -494,105 +494,34 @@ int runEdenMain(EdenMain&& main, int argc, char** argv) {
             std::chrono::duration<double>{daemonStart.elapsed()}.count();
         startupLogger->success(startTimeInSeconds);
       })
-      .ensure([daemonStart,
-               structuredLogger =
-                   server->getServerState()->getStructuredLogger(),
-               takeover = FLAGS_takeover,
-               &server] {
-        // This value is slightly different from `startTimeInSeconds`
-        // we pass into `startupLogger->success()`, but should be
-        // identical.
-        auto startTimeInSeconds =
-            std::chrono::duration<double>{daemonStart.elapsed()}.count();
-        // Here we log a success even if we did not successfully remount
-        // all repositories (if prepareFuture had an exception). In the
-        // future it would be helpful to log number of successful vs
-        // unsuccessful remounts
-        structuredLogger->logEvent(
-            DaemonStart{startTimeInSeconds, takeover, true /*success*/});
+      .ensure(
+          [daemonStart,
+           structuredLogger = server->getServerState()->getStructuredLogger(),
+           takeover = FLAGS_takeover,
+           &server] {
+            // This value is slightly different from `startTimeInSeconds`
+            // we pass into `startupLogger->success()`, but should be
+            // identical.
+            auto startTimeInSeconds =
+                std::chrono::duration<double>{daemonStart.elapsed()}.count();
+            // Here we log a success even if we did not successfully remount
+            // all repositories (if prepareFuture had an exception). In the
+            // future it would be helpful to log number of successful vs
+            // unsuccessful remounts
+            structuredLogger->logEvent(
+                DaemonStart{startTimeInSeconds, takeover, true /*success*/});
 
 #ifndef _WIN32
-        auto edenDir = server->getEdenDir();
-        folly::StringPiece heartbeatFileNamePrefix =
-            server->getHeartbeatFileNamePrefix();
-        std::optional<std::string> oldEdenHeartbeatFileNameStr =
-            server->getOldEdenHeartbeatFileNameStr();
-        std::string edenHeartbeatPathFileNameStr =
-            server->getEdenHeartbeatFileNameStr();
-        // Create a heartbeat file to indicate that the daemon has
-        // started successfully. This heartbeat get updated by a periodic
-        // task in eden server. This file should be deleted on eden exit.
-        // If the previous heartbeat file was not deleted, it indicates that
-        // the previous EdenFS daemon exited due to SIGKILL.
-        //
-        // First check if the previous eden has crashed
-        for (const auto& entry :
-             std::filesystem::directory_iterator(edenDir.asString())) {
-          if (entry.is_regular_file() &&
-              entry.path().filename().string().starts_with(
-                  heartbeatFileNamePrefix.toString())) {
-            if (oldEdenHeartbeatFileNameStr.has_value() && takeover &&
-                entry.path().filename().string() ==
-                    oldEdenHeartbeatFileNameStr.value()) {
-              // We have a heartbeat file from the previous eden. But it is
-              // not a crash because eden is taking over the previous eden
-              // during graceful restart. This heartbeat file will be
-              // deleted when the previous eden cleanups.
-              continue;
-            } else if (
-                entry.path().filename().string() ==
-                edenHeartbeatPathFileNameStr) {
-              // We have a heartbeat file but it is from the current eden.
-              // It could happen during graceful restart when takeover fail
-              // and it fallback to the previous eden. We should not delete
-              // the heartbeat file in this case.
-              continue;
-            } else {
-              // Read the latest timestamp from the heartbeat file
-              std::string latestDaemonHeartbeatStr;
-              uint64_t latestDaemonHeartbeat = 0;
-              uint8_t daemon_exit_signal = 0;
-              if (folly::readFile(
-                      entry.path().string().c_str(),
-                      latestDaemonHeartbeatStr)) {
-                // Convert latestDaemonHeartbeatStr to uint64_t
-                latestDaemonHeartbeat =
-                    folly::to<uint64_t>(latestDaemonHeartbeatStr);
-              }
-              // read the exit signal from daemon_exit_signal file if it
-              // exists
-              daemon_exit_signal = server->readDaemonExitSignal();
-              XLOGF(
-                  ERR,
-                  "ERROR: The previous edenFS daemon exited silently with signal {}",
-                  daemon_exit_signal == 0 ? "Unknown"
-                                          : std::to_string(daemon_exit_signal));
-#ifdef __APPLE__
-              time_t bootTime = getBootTimeSysctl();
-#else
-              time_t bootTime = 0;
-#endif
-              // Log a crash event
-              structuredLogger->logEvent(SilentDaemonExit{
-                  latestDaemonHeartbeat,
-                  daemon_exit_signal,
-                  static_cast<uint64_t>(bootTime)});
+            // Check for previous heartbeat files and handle crash detection
+            server->checkForPreviousHeartbeat(takeover);
 
-              std::remove(entry.path().string().c_str());
-              // Remove any existing daemon exit signal file to clean up
-              // signals for the new edenFS daemon
-              server->removeDaemonExitSignalFile();
-            }
-          }
-        }
-
-        // Create a new heartbeat file
-        server->createOrUpdateEdenHeartbeatFile();
+            // Create a new heartbeat file
+            server->createOrUpdateEdenHeartbeatFile();
 #else
-        // On Windows, EdenFS does not create a heartbeat file.
-        (void)server;
+            // On Windows, EdenFS does not create a heartbeat file.
+            (void)server;
 #endif
-      });
+          });
 
   while (true) {
     main.runServer(server.value());
