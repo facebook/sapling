@@ -9,6 +9,7 @@
 
 #include <folly/Synchronized.h>
 #include <folly/container/EvictingCacheMap.h>
+#include <atomic>
 #include <memory>
 #include <unordered_map>
 
@@ -42,12 +43,40 @@ enum class ObjectComparison : uint8_t;
 using EdenStatsPtr = RefPtr<EdenStats>;
 
 struct PidFetchCounts {
-  folly::Synchronized<std::unordered_map<ProcessId, uint64_t>> map_;
+  // TODO(xavierd): Incrementing the count still requires multiple atomics: the
+  // lock then the atomic. This could in theory be lowered based on the
+  // observation that iterating through the map is safe from multiple threads as
+  // long as no modification to it is done. Here, updating the count doesn't
+  // modify the map, it merely modifies the stored value which wouldn't
+  // invalidate iterators.
+  //
+  // A mechanism like RCU (https://en.wikipedia.org/wiki/Read-copy-update) like
+  // from folly::AtomicReadMostlyMainPtr could be a way to achieve this.
+  folly::Synchronized<std::unordered_map<ProcessId, std::atomic<uint64_t>>>
+      map_;
 
   uint64_t recordProcessFetch(ProcessId pid) {
-    auto map_lock = map_.wlock();
-    auto fetch_count = (*map_lock)[pid]++;
-    return fetch_count;
+    // First, check if the pid is already in the map by taking the read lock.
+    // Taking the read lock is much cheaper than the write lock as it's expected
+    // that FS heavy application will live for a long time and thus the cost of
+    // contending on the write lock will be minimized.
+    {
+      // It is safe to get a non-const reference to the value as the value is
+      // atomic.
+      auto rlock = map_.rlock();
+      auto& map_lock = rlock.asNonConstUnsafe();
+      if (auto fetch_count = map_lock.find(pid);
+          fetch_count != map_lock.end()) {
+        return fetch_count->second.fetch_add(1, std::memory_order_relaxed) + 1;
+      }
+    }
+
+    // Then, if the pid isn't found, take the write lock and insert it.
+    {
+      auto map_lock = map_.wlock();
+      auto [it, inserted] = map_lock->try_emplace(pid, 0);
+      return it->second.fetch_add(1, std::memory_order_relaxed) + 1;
+    }
   }
 
   void clear() {
@@ -338,7 +367,7 @@ class ObjectStore : public IObjectStore,
     backingStore_->workingCopyParentHint(parent);
   }
 
-  folly::Synchronized<std::unordered_map<ProcessId, uint64_t>>&
+  folly::Synchronized<std::unordered_map<ProcessId, std::atomic<uint64_t>>>&
   getPidFetches() {
     return pidFetchCounts_->map_;
   }
