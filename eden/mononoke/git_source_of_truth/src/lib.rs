@@ -35,7 +35,7 @@ pub enum Staleness {
 #[facet::facet]
 #[async_trait]
 pub trait GitSourceOfTruthConfig: Send + Sync {
-    async fn set(
+    async fn insert_or_update_repo(
         &self,
         ctx: &CoreContext,
         repo_id: RepositoryId,
@@ -70,7 +70,7 @@ pub struct NoopGitSourceOfTruthConfig {}
 
 #[async_trait]
 impl GitSourceOfTruthConfig for NoopGitSourceOfTruthConfig {
-    async fn set(
+    async fn insert_or_update_repo(
         &self,
         _ctx: &CoreContext,
         _repo_id: RepositoryId,
@@ -127,7 +127,7 @@ impl TestGitSourceOfTruthConfig {
 
 #[async_trait]
 impl GitSourceOfTruthConfig for TestGitSourceOfTruthConfig {
-    async fn set(
+    async fn insert_or_update_repo(
         &self,
         _ctx: &CoreContext,
         repo_id: RepositoryId,
