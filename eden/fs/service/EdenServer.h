@@ -402,8 +402,6 @@ class EdenServer : private TakeoverHandler {
   void createOrUpdateEdenHeartbeatFile();
   void createDaemonExitSignalFile(int signal);
   void removeEdenHeartbeatFile() const;
-  void removeDaemonExitSignalFile() const;
-  int readDaemonExitSignal() const;
   bool checkForPreviousHeartbeat(bool takeover);
 #endif
 
@@ -713,10 +711,6 @@ class EdenServer : private TakeoverHandler {
 
   const std::vector<std::string> originalCommandLine_;
   EdenStateDir edenDir_;
-  AbsolutePath heartbeatFilePath_;
-  const char* heartbeatFilePathString_;
-  AbsolutePath daemonExitSignalFilePath_;
-  const char* daemonExitSignalFilePathString_;
 
   // During graceful restart, this will be the pid of the old edenfs daemon.
   // This is used because at some point we have both edenfs daemon processes

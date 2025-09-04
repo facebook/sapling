@@ -63,6 +63,7 @@ class HeartbeatManager {
       const std::optional<std::string>& oldEdenHeartbeatFileNameStr =
           std::nullopt);
 
+#ifndef _WIN32
   /**
    * Create a daemon exit signal file with the given signal number.
    * This is called from signal handlers and must be async-signal-safe.
@@ -73,6 +74,7 @@ class HeartbeatManager {
    * Remove the daemon exit signal file
    */
   void removeDaemonExitSignalFile();
+#endif
 
   /**
    * Read the signal number from the daemon exit signal file

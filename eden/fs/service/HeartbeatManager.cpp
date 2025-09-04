@@ -164,8 +164,8 @@ bool HeartbeatManager::checkForPreviousHeartbeat(
 #endif
 }
 
-void HeartbeatManager::createDaemonExitSignalFile(int signal) {
 #ifndef _WIN32
+void HeartbeatManager::createDaemonExitSignalFile(int signal) {
   // Create the daemon exit signal file and write the signal to it
   // createDaemonExitSignalFile() should be an async-signal-safe function.
   // It get called from signal handlers. Full rules:
@@ -181,18 +181,16 @@ void HeartbeatManager::createDaemonExitSignalFile(int signal) {
   int str_len = intToStrSafe(signal, buf, sizeof(buf));
   write(fileno, buf, str_len);
   close(fileno);
-#endif
 }
 
 void HeartbeatManager::removeDaemonExitSignalFile() {
-#ifndef _WIN32
   // Remove the daemon exit signal file if it exists
   const int rc = unlink(daemonExitSignalFilePathString_.c_str());
   if (rc != 0 && errno != ENOENT) {
     XLOGF(ERR, "Failed to remove daemon exit signal file: {}", errno);
   }
-#endif
 }
+#endif
 
 int HeartbeatManager::readDaemonExitSignal() {
 #ifdef _WIN32

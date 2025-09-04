@@ -1252,14 +1252,6 @@ void EdenServer::removeEdenHeartbeatFile() const {
   heartbeatManager_->removeHeartbeatFile();
 }
 
-void EdenServer::removeDaemonExitSignalFile() const {
-  heartbeatManager_->removeDaemonExitSignalFile();
-}
-
-int EdenServer::readDaemonExitSignal() const {
-  return heartbeatManager_->readDaemonExitSignal();
-}
-
 bool EdenServer::checkForPreviousHeartbeat(bool takeover) {
   return heartbeatManager_->checkForPreviousHeartbeat(
       takeover, getOldEdenHeartbeatFileNameStr());
