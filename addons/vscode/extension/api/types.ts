@@ -94,6 +94,12 @@ export interface SaplingRepository {
    */
   getCurrentStack(): Promise<ReadonlyArray<SaplingCommitInfo>>;
 
+  /**
+   *
+   * Get the diff for the specified commit. If not provided, get the diff for the current commit.
+   */
+  getDiff(commit?: string): Promise<string>;
+
   // TODO: refresh
   // TODO: moveFile / copyFile
   // TODO: run operations (commit, amend, discard, purge, rebase, pull, ...)

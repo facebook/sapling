@@ -431,6 +431,16 @@ export class VSCodeRepo implements vscode.QuickDiffProvider, SaplingRepository {
       throw new Error(result.stderr);
     }
   }
+
+  async getDiff(commit?: string): Promise<string> {
+    const result = await this.runSlCommand(['diff', '-c', commit || '.']);
+
+    if (result.exitCode === 0) {
+      return result.stdout;
+    } else {
+      throw new Error(result.stderr);
+    }
+  }
 }
 
 const themeColors = {
