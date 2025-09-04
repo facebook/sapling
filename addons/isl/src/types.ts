@@ -116,6 +116,12 @@ export enum ArchivedReasonType {
   STALE_FILE_CHANGED = 'STALE_FILE_CHANGED',
 }
 
+export enum WarningCheckResult {
+  PASS = 'PASS',
+  FAIL = 'FAIL',
+  BYPASS = 'BYPASS',
+}
+
 export type CodeChange = {
   oldContent?: string;
   newContent?: string;

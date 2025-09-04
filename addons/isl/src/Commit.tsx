@@ -10,6 +10,7 @@ import type {ContextMenuItem} from 'shared/ContextMenu';
 import type {UICodeReviewProvider} from './codeReview/UICodeReviewProvider';
 import type {DagCommitInfo} from './dag/dag';
 import type {CommitInfo, SuccessorInfo} from './types';
+import {WarningCheckResult, succeedableRevset} from './types';
 
 import * as stylex from '@stylexjs/stylex';
 import {Button} from 'isl-components/Button';
@@ -76,7 +77,6 @@ import {SplitButton} from './stackEdit/ui/SplitButton';
 import {editingStackIntentionHashes} from './stackEdit/ui/stackEditState';
 import {latestSuccessorUnlessExplicitlyObsolete} from './successionUtils';
 import {copyAndShowToast} from './toast';
-import {succeedableRevset} from './types';
 import {showModal} from './useModal';
 import {short} from './utils';
 
@@ -662,7 +662,7 @@ function ObsoleteTipInner(props: {isSuccessorPublic?: boolean}) {
   );
 }
 
-function maybeWarnAboutOldDestination(dest: CommitInfo): Promise<boolean> {
+async function maybeWarnAboutOldDestination(dest: CommitInfo): Promise<WarningCheckResult> {
   const provider = readAtom(codeReviewProvider);
   // Cutoff age is determined by the code review provider since internal repos have different requirements than GitHub-backed repos.
   const MAX_AGE_CUTOFF_MS = provider?.gotoDistanceWarningAgeCutoff ?? 30 * MS_PER_DAY;
@@ -672,17 +672,17 @@ function maybeWarnAboutOldDestination(dest: CommitInfo): Promise<boolean> {
   const destBase = findPublicBaseAncestor(dag, dest.hash);
   if (!currentBase || !destBase) {
     // can't determine if we can show warning
-    return Promise.resolve(true);
+    return Promise.resolve(WarningCheckResult.PASS);
   }
 
   const ageDiff = currentBase.date.valueOf() - destBase.date.valueOf();
   if (ageDiff < MAX_AGE_CUTOFF_MS) {
     // Either destination base is within time limit or destination base is newer than the current base.
     // No need to warn.
-    return Promise.resolve(true);
+    return Promise.resolve(WarningCheckResult.PASS);
   }
 
-  return platform.confirm(
+  const confirmed = await platform.confirm(
     t(
       Internal.warnAboutOldGotoReason ??
         'The destination commit is $age older than the current commit. ' +
@@ -695,16 +695,17 @@ function maybeWarnAboutOldDestination(dest: CommitInfo): Promise<boolean> {
       },
     ),
   );
+  return confirmed ? WarningCheckResult.BYPASS : WarningCheckResult.FAIL;
 }
 
-async function maybeWarnAboutRebaseOffWarm(dest: CommitInfo): Promise<boolean> {
+async function maybeWarnAboutRebaseOffWarm(dest: CommitInfo): Promise<WarningCheckResult> {
   const isRebaseOffWarmWarningEnabled = readAtom(rebaseOffWarmWarningEnabled);
   if (!isRebaseOffWarmWarningEnabled) {
-    return true;
+    return WarningCheckResult.PASS;
   }
 
   if (dest.stableCommitMetadata == null) {
-    return true;
+    return WarningCheckResult.PASS;
   }
   // iterate through stable commit metadata and see if this commit is warmed up commit
   const dag = readAtom(dagWithPreviews);
@@ -719,7 +720,7 @@ async function maybeWarnAboutRebaseOffWarm(dest: CommitInfo): Promise<boolean> {
     const buttons = [
       t('Opt Out of Future Warnings'),
       {label: t('Cancel'), primary: true},
-      t('Goto Anyway'),
+      t('Continue Anyway'),
     ];
     const answer = await showModal({
       type: 'confirm',
@@ -730,7 +731,7 @@ async function maybeWarnAboutRebaseOffWarm(dest: CommitInfo): Promise<boolean> {
           "The commit you're on is a warmed up commit. Moving off will cause slower builds and performance.\n" +
             "It's recommended to rebase your changes onto the warmed up commit instead.\n" +
             "If you need fresher changes, it's recommended to reserve a new OD and work off the warm commit.\n" +
-            'Do you want to `goto` anyway?',
+            'Do you want to continue anyway?',
       ),
     });
     const userEnv = (await Internal.getDevEnvType?.()) ?? 'NotImplemented';
@@ -744,30 +745,27 @@ async function maybeWarnAboutRebaseOffWarm(dest: CommitInfo): Promise<boolean> {
     });
     if (answer === buttons[0]) {
       writeAtom(rebaseOffWarmWarningEnabled, false);
-      return true;
+      return WarningCheckResult.PASS;
     }
-    return answer === buttons[2];
+    return answer === buttons[2] ? WarningCheckResult.BYPASS : WarningCheckResult.FAIL;
   }
 
-  return true;
+  return WarningCheckResult.PASS;
 }
 
-async function maybeWarnAboutRebaseOntoMaster(commit: CommitInfo): Promise<boolean> {
+async function maybeWarnAboutRebaseOntoMaster(commit: CommitInfo): Promise<WarningCheckResult> {
   const isRebaseOntoMasterWarningEnabled = readAtom(rebaseOntoMasterWarningEnabled);
   if (!isRebaseOntoMasterWarningEnabled) {
-    return true;
+    return WarningCheckResult.PASS;
   }
 
   const dag = readAtom(dagWithPreviews);
-  const onto = dag.get(commit.parents[0]);
-  if (!onto) {
-    return true;
-  }
   const src = findPublicBaseAncestor(dag);
-  const destBase = findPublicBaseAncestor(dag, onto.hash);
+  const destBase = findPublicBaseAncestor(dag, commit.hash);
+
   if (!destBase) {
     // can't determine if we can show warning
-    return Promise.resolve(true);
+    return Promise.resolve(WarningCheckResult.PASS);
   }
 
   const warning = Promise.resolve(
@@ -778,7 +776,7 @@ async function maybeWarnAboutRebaseOntoMaster(commit: CommitInfo): Promise<boole
     const buttons = [
       t('Opt Out of Future Warnings'),
       {label: t('Cancel'), primary: true},
-      t('Rebase Anyway'),
+      t('Continue Anyway'),
     ];
     const answer = await showModal({
       type: 'confirm',
@@ -789,7 +787,7 @@ async function maybeWarnAboutRebaseOntoMaster(commit: CommitInfo): Promise<boole
           'You are about to rebase directly onto master/main. ' +
             'This is generally not recommended as it can cause unexpected failures and slower builds. ' +
             'Consider rebasing onto a stable or warm branch instead. ' +
-            'Do you want to `rebase` anyway?',
+            'Do you want to continue anyway?',
       ),
     });
     const userEnv = (await Internal.getDevEnvType?.()) ?? 'NotImplemented';
@@ -803,47 +801,51 @@ async function maybeWarnAboutRebaseOntoMaster(commit: CommitInfo): Promise<boole
     });
     if (answer === buttons[0]) {
       writeAtom(rebaseOntoMasterWarningEnabled, false);
-      return true;
+      return WarningCheckResult.PASS;
     }
-    return answer === buttons[2];
+    return answer === buttons[2] ? WarningCheckResult.BYPASS : WarningCheckResult.FAIL;
   }
 
-  return true;
+  return WarningCheckResult.PASS;
 }
 
 async function gotoAction(runOperation: ReturnType<typeof useRunOperation>, commit: CommitInfo) {
+  const shouldProceed = await runWarningChecks([
+    () => maybeWarnAboutRebaseOntoMaster(commit),
+    () => maybeWarnAboutOldDestination(commit),
+    () => maybeWarnAboutRebaseOffWarm(commit),
+  ]);
+
+  if (!shouldProceed) {
+    return;
+  }
+
   const dest =
     // If the commit has a remote bookmark, use that instead of the hash. This is easier to read in the command history
     // and works better with optimistic state
     commit.remoteBookmarks.length > 0
       ? succeedableRevset(commit.remoteBookmarks[0])
       : latestSuccessorUnlessExplicitlyObsolete(commit);
-  const shouldRebaseOffWarm = await maybeWarnAboutRebaseOffWarm(commit);
-  if (!shouldRebaseOffWarm) {
-    return;
-  }
-  const shouldContinue = await maybeWarnAboutOldDestination(commit);
-  if (!shouldContinue) {
-    return;
-  }
   runOperation(new GotoOperation(dest));
-
   // Instead of propagating, ensure we remove the selection, so we view the new head commit by default
   // (since the head commit is the default thing shown in the sidebar)
   writeAtom(selectedCommits, new Set());
 }
+
 const ObsoleteTip = React.memo(ObsoleteTipInner);
 
 /**
- * Runs a series of validation checks sequentially. Returns true if all checks return true
- * (allowing the operation to proceed), otherwise returns false if any check returns false.
+ * Runs a series of validation checks sequentially. Returns true if all checks pass
+ * or the user manually bypassed a warning, otherwise returns false if any check fails.
  */
-async function runChecks(checks: Array<() => Promise<boolean>>): Promise<boolean> {
+async function runWarningChecks(
+  checks: Array<() => Promise<WarningCheckResult>>,
+): Promise<boolean> {
   for (const check of checks) {
     // eslint-disable-next-line no-await-in-loop
     const result = await check();
-    if (!result) {
-      return false;
+    if (result !== WarningCheckResult.PASS) {
+      return result === WarningCheckResult.BYPASS;
     }
   }
   return true;
@@ -853,43 +855,45 @@ async function handleRebaseConfirmation(
   commit: CommitInfo,
   handlePreviewedOperation: (cancel: boolean) => void,
 ): Promise<void> {
-  const shouldProceed = await runChecks([
-    () => maybeWarnAboutRebaseOffWarm(commit),
-    () => maybeWarnAboutDistantRebase(commit),
+  const shouldProceed = await runWarningChecks([
     () => maybeWarnAboutRebaseOntoMaster(commit),
+    () => maybeWarnAboutDistantRebase(commit),
+    () => maybeWarnAboutRebaseOffWarm(commit),
   ]);
 
-  if (shouldProceed) {
-    handlePreviewedOperation(/* cancel */ false);
+  if (!shouldProceed) {
+    return;
+  }
 
-    const dag = readAtom(dagWithPreviews);
-    const onto = dag.get(commit.parents[0]);
-    if (onto) {
-      tracker.track('ConfirmDragAndDropRebase', {
-        extras: {
-          remoteBookmarks: onto.remoteBookmarks,
-          locations: onto.stableCommitMetadata?.map(s => s.value),
-        },
-      });
-    }
+  handlePreviewedOperation(/* cancel */ false);
+
+  const dag = readAtom(dagWithPreviews);
+  const onto = dag.get(commit.parents[0]);
+  if (onto) {
+    tracker.track('ConfirmDragAndDropRebase', {
+      extras: {
+        remoteBookmarks: onto.remoteBookmarks,
+        locations: onto.stableCommitMetadata?.map(s => s.value),
+      },
+    });
   }
 }
 
-async function maybeWarnAboutDistantRebase(commit: CommitInfo): Promise<boolean> {
+async function maybeWarnAboutDistantRebase(commit: CommitInfo): Promise<WarningCheckResult> {
   const isDistantRebaseWarningEnabled = readAtom(distantRebaseWarningEnabled);
   if (!isDistantRebaseWarningEnabled) {
-    return true;
+    return WarningCheckResult.PASS;
   }
   const dag = readAtom(dagWithPreviews);
   const onto = dag.get(commit.parents[0]);
   if (!onto) {
-    return true; // If there's no target commit, proceed without warning
+    return WarningCheckResult.PASS; // If there's no target commit, proceed without warning
   }
   const currentBase = findPublicBaseAncestor(dag);
   const destBase = findPublicBaseAncestor(dag, onto.hash);
   if (!currentBase || !destBase) {
     // can't determine if we can show warning
-    return Promise.resolve(true);
+    return Promise.resolve(WarningCheckResult.PASS);
   }
   const warning = Promise.resolve(
     Internal.maybeWarnAboutDistantRebase?.(currentBase, destBase) ?? false,
@@ -929,10 +933,10 @@ async function maybeWarnAboutDistantRebase(commit: CommitInfo): Promise<boolean>
     });
     if (answer === buttons[0]) {
       writeAtom(distantRebaseWarningEnabled, false);
-      return true;
+      return WarningCheckResult.PASS;
     }
-    return answer === buttons[2];
+    return answer === buttons[2] ? WarningCheckResult.BYPASS : WarningCheckResult.FAIL;
   }
 
-  return true;
+  return WarningCheckResult.PASS;
 }
