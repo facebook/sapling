@@ -269,12 +269,11 @@ std::optional<ImmediateFuture<VirtualInode>> TreeInode::rlockGetOrFindChild(
   // modified/materialized yet (it has to have been loaded prior),
   // so it's safe here to ignore the loading inode and instead
   // query the object store for information about the path.
-  auto id = entry.getObjectId();
   if (entry.isDirectory()) {
     // This is a directory, always get the tree corresponding to
     // the id
     return getObjectStore()
-        .getTree(id, context)
+        .getTree(entry.getObjectId(), context)
         .thenValue([mode = entry.getInitialMode()](
                        std::shared_ptr<const Tree>&& tree) {
           return VirtualInode(std::move(tree), mode);
