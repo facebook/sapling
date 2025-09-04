@@ -222,6 +222,16 @@ impl GitSourceOfTruthConfig for SqlGitSourceOfTruthConfig {
         Ok(rows.into_iter().map(row_to_entry).collect())
     }
 
+    async fn get_reserved(&self, ctx: &CoreContext) -> Result<Vec<GitSourceOfTruthConfigEntry>> {
+        let rows = GetByGitSourceOfTruth::query(
+            &self.connections.read_master_connection,
+            ctx.sql_query_telemetry(),
+            &GitSourceOfTruth::Reserved,
+        )
+        .await?;
+        Ok(rows.into_iter().map(row_to_entry).collect())
+    }
+
     async fn get_max_id(&self, ctx: &CoreContext) -> Result<Option<RepositoryId>> {
         let from_db = GetMaxId::query(
             &self.connections.read_master_connection,

@@ -39,6 +39,7 @@ pub enum GitSourceOfTruth {
     Mononoke,
     Metagit,
     Locked,
+    Reserved,
 }
 
 impl From<RowId> for Value {
