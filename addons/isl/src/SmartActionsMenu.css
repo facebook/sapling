@@ -5,18 +5,18 @@
  * LICENSE file in the root directory of this source tree.
  */
 
- .commit .smart-actions-button {
-    opacity: 0;
-    transition: opacity 0.1s;
- }
+.commit .smart-actions-button {
+  opacity: 0;
+  transition: opacity 0.1s;
+}
 
- .commit:hover .smart-actions-button {
-    opacity: 1;
- }
+.commit:hover .smart-actions-button {
+  opacity: 1;
+}
 
- .smart-actions-button.dropdown-visible {
-   opacity: 1;
- }
+.smart-actions-button.dropdown-visible {
+  opacity: 1;
+}
 
 .smart-actions-dropdown vscode-button,
 .smart-actions-dropdown button {

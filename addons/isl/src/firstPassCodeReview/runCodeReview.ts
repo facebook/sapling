@@ -10,7 +10,7 @@
 import {randomId} from 'shared/utils';
 import serverAPI from '../ClientToServerAPI';
 import {joinPaths} from '../CwdSelector';
-import type {CodeReviewResult, CodeReviewIssue} from './types';
+import type {CodeReviewIssue, CodeReviewResult} from './types';
 
 const REQUEST_PREFIX = 'code-review-';
 

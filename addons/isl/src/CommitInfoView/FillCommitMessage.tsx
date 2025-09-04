@@ -20,6 +20,7 @@ import {font, spacing} from '../../../components/theme/tokens.stylex';
 import {FlexSpacer} from '../ComponentUtils';
 import {Internal} from '../Internal';
 import {tracker} from '../analytics';
+import {useFeatureFlagSync} from '../featureFlags';
 import {T, t} from '../i18n';
 import {readAtom, writeAtom} from '../jotaiUtils';
 import platform from '../platform';
@@ -39,7 +40,6 @@ import {
   parseCommitMessageFields,
 } from './CommitMessageFields';
 import {SmallCapsTitle} from './utils';
-import {useFeatureFlagSync} from '../featureFlags';
 
 /**
  * The last entry in a tokenized field value is used as the value being typed in the editor.

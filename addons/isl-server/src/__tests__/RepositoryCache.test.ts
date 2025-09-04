@@ -11,11 +11,11 @@ import type {Logger} from '../logger';
 import type {ServerPlatform} from '../serverPlatform';
 import type {RepositoryContext} from '../serverTypes';
 
+import {ensureTrailingPathSep} from 'shared/pathUtils';
 import {mockLogger} from 'shared/testUtils';
 import {defer} from 'shared/utils';
 import {__TEST__} from '../RepositoryCache';
 import {makeServerSideTracker} from '../analytics/serverSideTracker';
-import {ensureTrailingPathSep} from 'shared/pathUtils';
 
 const {RepositoryCache, RepoMap, RefCounted} = __TEST__;
 

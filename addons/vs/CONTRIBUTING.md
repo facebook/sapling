@@ -19,7 +19,6 @@ Below are guidelines for building, running, testing, dogfooding, and debugging t
 ## Building & Running Locally
 
 1. **Prerequisites:**
-
    - Visual Studio 2022 (Community, Professional, or Enterprise)
    - .NET Framework 4.7.2 development tools
    - [WebView2](https://developer.microsoft.com/en-us/microsoft-edge/webview2/) runtime installed
@@ -29,7 +28,6 @@ Below are guidelines for building, running, testing, dogfooding, and debugging t
    git clone <repo-url>
 
 3. **Open the Solution:**
-
    - Open `InteractiveSmartlogVSExtension.sln` in Visual Studio.
 
 4. **Restore NuGet Packages:**
@@ -40,11 +38,9 @@ Below are guidelines for building, running, testing, dogfooding, and debugging t
 ## Compiling for Local Debugging
 
 1. **Set the Startup Project:**
-
    - Right-click the `InteractiveSmartlogVSExtension` project and select **Set as Startup Project**.
 
 2. **Start Debugging:**
-
    - Press `F5` or select **Debug > Start Debugging**.
    - This will launch a new experimental instance of Visual Studio with the extension loaded.
 
@@ -58,13 +54,11 @@ Below are guidelines for building, running, testing, dogfooding, and debugging t
 ## Testing the Extension
 
 - **Manual Testing:**
-
   - Open the extension in an experimental instance as described above.
   - Perform source control operations (view commits, add changes, rebase, merge, etc.) in the Interactive Smartlog tool window.
   - Ensure the tool window loads correctly and interacts with your Sapling repository.
 
 - **Repository Requirement:**
-
   - The extension requires a valid Sapling repository. Make sure to open a solution that is part of such a repository before launching the Interactive Smartlog view.
 
 - **Reloading:**
@@ -75,16 +69,13 @@ Below are guidelines for building, running, testing, dogfooding, and debugging t
 ## Debugging
 
 - **Attach Debugger:**
-
   - Use `F5` to launch the experimental instance with debugging enabled.
   - Set breakpoints in your code as needed.
 
 - **Logging:**
-
   - The extension uses logging (see `LoggingHelper`) to output diagnostic information. Check the "ISL for Visual Studio" Output window for logs.
 
 - **Activity Log:**
-
   - Launch Visual Studio with the `/log` flag to generate an activity log: devenv.exe /log
   - Review `%APPDATA%\Microsoft\VisualStudio\<version>\ActivityLog.xml` for errors.
 
@@ -97,11 +88,9 @@ Below are guidelines for building, running, testing, dogfooding, and debugging t
 ## Additional Notes
 
 - **Tool Window Access:**
-
   - The extension adds a tool window accessible via **View > Other Windows > Interactive Smartlog**.
 
 - **Reloading:**
-
   - The tool window can be reloaded via **Tools > Reload ISL**.
 
 - **Contribution Guidelines:**

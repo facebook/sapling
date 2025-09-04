@@ -67,7 +67,9 @@
   height: 16px;
   width: 16px;
   box-sizing: border-box;
-  transition: transform 0.2s, box-shadow 0.3s;
+  transition:
+    transform 0.2s,
+    box-shadow 0.3s;
 }
 
 /* Avatar may render below the top of the border,

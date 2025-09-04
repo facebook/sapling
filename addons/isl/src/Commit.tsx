@@ -10,7 +10,7 @@ import type {ContextMenuItem} from 'shared/ContextMenu';
 import type {UICodeReviewProvider} from './codeReview/UICodeReviewProvider';
 import type {DagCommitInfo} from './dag/dag';
 import type {CommitInfo, SuccessorInfo} from './types';
-import {WarningCheckResult, succeedableRevset} from './types';
+import {succeedableRevset, WarningCheckResult} from './types';
 
 import * as stylex from '@stylexjs/stylex';
 import {Button} from 'isl-components/Button';

@@ -65,5 +65,7 @@
 .text-editable-selection-highlight-line {
   position: absolute;
   background: var(--editor-selectionBackground);
-  transition: left 0.06s ease-out, width 0.06s ease-out;
+  transition:
+    left 0.06s ease-out,
+    width 0.06s ease-out;
 }

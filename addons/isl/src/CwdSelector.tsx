@@ -38,7 +38,7 @@ import {T, t} from './i18n';
 import {writeAtom} from './jotaiUtils';
 import platform from './platform';
 import {serverCwd} from './repositoryData';
-import {submodulesByRoot, repositoryInfo} from './serverAPIState';
+import {repositoryInfo, submodulesByRoot} from './serverAPIState';
 import {registerCleanup, registerDisposable} from './utils';
 
 /**

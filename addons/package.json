@@ -16,7 +16,7 @@
     "eslint-plugin-import": "^2.25.4",
     "eslint-plugin-react-hooks": "^4.3.0",
     "eslint-plugin-rulesdir": "^0.2.1",
-    "prettier": "2.8.8",
+    "prettier": "3.6.2",
     "prettier-plugin-organize-imports": "^4.1.0",
     "ts-node": "10.9.2",
     "tsx": "^4.19.2"

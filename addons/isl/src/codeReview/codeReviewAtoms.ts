@@ -5,9 +5,9 @@
  * LICENSE file in the root directory of this source tree.
  */
 
+import serverAPI from '../ClientToServerAPI';
 import {atomFamilyWeak, atomLoadableWithRefresh} from '../jotaiUtils';
 import type {DiffId} from '../types';
-import serverAPI from '../ClientToServerAPI';
 
 export const diffCommentData = atomFamilyWeak((diffId: DiffId) =>
   atomLoadableWithRefresh(async () => {

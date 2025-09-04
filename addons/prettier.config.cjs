@@ -50,7 +50,7 @@ if (isArcLint) {
   // Normally, you'd just use 'prettier-plugin-organize-imports',
   // but it incorrectly looks for this relative to the monorepo prettier,
   // but we want it to find it in our workspace's node_modules.
-  config.plugins = [path.join(__dirname, 'node_modules/prettier-plugin-organize-imports')];
+  config.plugins = [path.join(__dirname, 'node_modules/prettier-plugin-organize-imports/index.js')];
 }
 
 module.exports = config;

@@ -5,11 +5,11 @@
  * LICENSE file in the root directory of this source tree.
  */
 
- .code-review-status-inner {
-    display: flex;
-    align-items: center;
-    width: 100%;
-    justify-content: space-between;
-    min-height: 24px;
-    padding: 5px;
- }
+.code-review-status-inner {
+  display: flex;
+  align-items: center;
+  width: 100%;
+  justify-content: space-between;
+  min-height: 24px;
+  padding: 5px;
+}
