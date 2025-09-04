@@ -7,6 +7,7 @@
 
 import {atom, useAtomValue} from 'jotai';
 import {loadable} from 'jotai/utils';
+import {randomId} from 'shared/utils';
 import serverAPI from './ClientToServerAPI';
 import {atomFamilyWeak, readAtom} from './jotaiUtils';
 
@@ -83,4 +84,20 @@ async function fetchQeFlag(name: string | undefined, default_?: boolean): Promis
     message => message.name === name,
   );
   return response.passes;
+}
+
+export async function bulkFetchFeatureFlags(
+  names: Array<string>,
+): Promise<Record<string, boolean>> {
+  const id = randomId();
+  serverAPI.postMessage({
+    type: 'bulkFetchFeatureFlags',
+    names,
+    id,
+  });
+  const response = await serverAPI.nextMessageMatching(
+    'bulkFetchedFeatureFlags',
+    message => message.id === id,
+  );
+  return response.result;
 }

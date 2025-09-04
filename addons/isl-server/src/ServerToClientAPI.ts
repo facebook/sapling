@@ -915,6 +915,15 @@ export default class ServerToClientAPI {
         );
         break;
       }
+      case 'bulkFetchFeatureFlags': {
+        Internal.bulkFetchFeatureFlags?.(repo.initialConnectionContext, data.names).then(
+          (result: Record<string, boolean>) => {
+            this.logger.info(`feature flags ${JSON.stringify(result, null, 2)}`);
+            this.postMessage({type: 'bulkFetchedFeatureFlags', id: data.id, result});
+          },
+        );
+        break;
+      }
       case 'fetchInternalUserInfo': {
         Internal.fetchUserInfo?.(repo.initialConnectionContext).then((info: Serializable) => {
           this.logger.info('user info:', info);

@@ -16,9 +16,9 @@ import type {Hash} from 'shared/types/common';
 import type {ExportStack, ImportedStack, ImportStack} from 'shared/types/stack';
 import type {TypeaheadKind} from './CommitInfoView/types';
 import type {InternalTypes} from './InternalTypes';
+import type {CodeReviewIssue} from './firstPassCodeReview/types';
 import type {Serializable} from './serialize';
 import type {Args, DiffCommit, PartiallySelectedDiffCommit} from './stackEdit/diffSplitTypes';
-import type {CodeReviewIssue} from './firstPassCodeReview/types';
 
 export type Result<T> = {value: T; error?: undefined} | {value?: undefined; error: Error};
 
@@ -947,6 +947,7 @@ export type ClientToServerMessage =
   | {type: 'importStack'; stack: ImportStack}
   | {type: 'fetchQeFlag'; name: string}
   | {type: 'fetchFeatureFlag'; name: string}
+  | {type: 'bulkFetchFeatureFlags'; id: string; names: Array<string>}
   | {type: 'fetchInternalUserInfo'}
   | {type: 'fetchDevEnvType'; id: string}
   | {
@@ -1088,6 +1089,7 @@ export type ServerToClientMessage =
   | {type: 'importedStack'; imported: ImportedStack; error: string | undefined}
   | {type: 'fetchedQeFlag'; name: string; passes: boolean}
   | {type: 'fetchedFeatureFlag'; name: string; passes: boolean}
+  | {type: 'bulkFetchedFeatureFlags'; id: string; result: Record<string, boolean>}
   | {type: 'fetchedInternalUserInfo'; info: Serializable}
   | {type: 'fetchedDevEnvType'; envType: string; id: string}
   | {
