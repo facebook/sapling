@@ -834,33 +834,45 @@ async function gotoAction(runOperation: ReturnType<typeof useRunOperation>, comm
 }
 const ObsoleteTip = React.memo(ObsoleteTipInner);
 
-function handleRebaseConfirmation(
+/**
+ * Runs a series of validation checks sequentially. Returns true if all checks return true
+ * (allowing the operation to proceed), otherwise returns false if any check returns false.
+ */
+async function runChecks(checks: Array<() => Promise<boolean>>): Promise<boolean> {
+  for (const check of checks) {
+    // eslint-disable-next-line no-await-in-loop
+    const result = await check();
+    if (!result) {
+      return false;
+    }
+  }
+  return true;
+}
+
+async function handleRebaseConfirmation(
   commit: CommitInfo,
   handlePreviewedOperation: (cancel: boolean) => void,
 ): Promise<void> {
-  return maybeWarnAboutDistantRebase(commit)
-    .then(shouldProceed => {
-      if (!shouldProceed) {
-        return false;
-      }
-      return maybeWarnAboutRebaseOntoMaster(commit);
-    })
-    .then(shouldProceed => {
-      if (shouldProceed) {
-        handlePreviewedOperation(/* cancel */ false);
+  const shouldProceed = await runChecks([
+    () => maybeWarnAboutRebaseOffWarm(commit),
+    () => maybeWarnAboutDistantRebase(commit),
+    () => maybeWarnAboutRebaseOntoMaster(commit),
+  ]);
 
-        const dag = readAtom(dagWithPreviews);
-        const onto = dag.get(commit.parents[0]);
-        if (onto) {
-          tracker.track('ConfirmDragAndDropRebase', {
-            extras: {
-              remoteBookmarks: onto.remoteBookmarks,
-              locations: onto.stableCommitMetadata?.map(s => s.value),
-            },
-          });
-        }
-      }
-    });
+  if (shouldProceed) {
+    handlePreviewedOperation(/* cancel */ false);
+
+    const dag = readAtom(dagWithPreviews);
+    const onto = dag.get(commit.parents[0]);
+    if (onto) {
+      tracker.track('ConfirmDragAndDropRebase', {
+        extras: {
+          remoteBookmarks: onto.remoteBookmarks,
+          locations: onto.stableCommitMetadata?.map(s => s.value),
+        },
+      });
+    }
+  }
 }
 
 async function maybeWarnAboutDistantRebase(commit: CommitInfo): Promise<boolean> {
