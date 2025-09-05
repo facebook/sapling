@@ -83,6 +83,17 @@ mononoke_queries! {
         none,
         "INSERT INTO git_repositories_source_of_truth (repo_id, repo_name, source_of_truth) VALUES {values}"
     }
+
+    write UpdateSourceOfTruthByRepoNames(
+        source_of_truth: GitSourceOfTruth,
+        >list repo_names: RepositoryName
+    ) {
+        none,
+        "UPDATE git_repositories_source_of_truth
+         SET source_of_truth = {source_of_truth}
+         WHERE repo_name IN {repo_names}"
+    }
+
 }
 
 fn row_to_entry(
@@ -166,6 +177,22 @@ impl GitSourceOfTruthConfig for SqlGitSourceOfTruthConfig {
             &self.connections.write_connection,
             ctx.sql_query_telemetry(),
             &repos_refs,
+        )
+        .await?;
+        Ok(())
+    }
+
+    async fn update_source_of_truth_by_repo_names(
+        &self,
+        ctx: &CoreContext,
+        source_of_truth: GitSourceOfTruth,
+        repo_names: &[RepositoryName],
+    ) -> Result<()> {
+        UpdateSourceOfTruthByRepoNames::query(
+            &self.connections.write_connection,
+            ctx.sql_query_telemetry(),
+            &source_of_truth,
+            repo_names,
         )
         .await?;
         Ok(())
@@ -432,6 +459,97 @@ mod test {
             .get_by_repo_name(
                 &ctx,
                 &RepositoryName("test5".to_string()),
+                Staleness::MostRecent,
+            )
+            .await?;
+        assert!(entry.is_some());
+        let entry = entry.unwrap();
+        assert_eq!(entry.source_of_truth, GitSourceOfTruth::Metagit);
+
+        Ok(())
+    }
+
+    #[mononoke::fbinit_test]
+    async fn test_update_source_of_truth_by_repo_names(fb: FacebookInit) -> Result<()> {
+        let ctx = CoreContext::test_mock(fb);
+        let builder = SqlGitSourceOfTruthConfigBuilder::with_sqlite_in_memory()?;
+        let push = builder.clone().build();
+
+        // insert many
+        push.insert_repos(
+            &ctx,
+            &[
+                (
+                    RepositoryId::new(1),
+                    RepositoryName("test1".to_string()),
+                    GitSourceOfTruth::Mononoke,
+                ),
+                (
+                    RepositoryId::new(2),
+                    RepositoryName("test2".to_string()),
+                    GitSourceOfTruth::Metagit,
+                ),
+                (
+                    RepositoryId::new(3),
+                    RepositoryName("test3".to_string()),
+                    GitSourceOfTruth::Mononoke,
+                ),
+                (
+                    RepositoryId::new(4),
+                    RepositoryName("test4".to_string()),
+                    GitSourceOfTruth::Mononoke,
+                ),
+            ],
+        )
+        .await?;
+
+        push.update_source_of_truth_by_repo_names(
+            &ctx,
+            GitSourceOfTruth::Metagit,
+            &[
+                RepositoryName("test2".to_string()),
+                RepositoryName("test4".to_string()),
+            ],
+        )
+        .await?;
+
+        let entry = push
+            .get_by_repo_name(
+                &ctx,
+                &RepositoryName("test1".to_string()),
+                Staleness::MostRecent,
+            )
+            .await?;
+        assert!(entry.is_some());
+        let entry = entry.unwrap();
+        assert_eq!(entry.source_of_truth, GitSourceOfTruth::Mononoke);
+
+        let entry = push
+            .get_by_repo_name(
+                &ctx,
+                &RepositoryName("test2".to_string()),
+                Staleness::MostRecent,
+            )
+            .await?;
+        assert!(entry.is_some());
+        let entry = entry.unwrap();
+        assert_eq!(entry.source_of_truth, GitSourceOfTruth::Metagit);
+
+        let entry = push
+            .get_by_repo_name(
+                &ctx,
+                &RepositoryName("test3".to_string()),
+                Staleness::MostRecent,
+            )
+            .await?;
+        assert!(entry.is_some());
+        let entry = entry.unwrap();
+        assert_eq!(entry.source_of_truth, GitSourceOfTruth::Mononoke);
+
+        let entry = push
+            .get_by_repo_name(
+                &ctx,
+                &RepositoryName("test4".to_string()),
                 Staleness::MostRecent,
             )
             .await?;
