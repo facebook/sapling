@@ -23,7 +23,6 @@ import * as pathModule from 'node:path';
 import * as vscode from 'vscode';
 import {executeVSCodeCommand} from './commands';
 import {PERSISTED_STORAGE_KEY_PREFIX} from './config';
-import {promptDevmate, promptTestGeneration} from './facebook/metamate/command';
 import {ActionTriggerType} from './facebook/metamate/types';
 import {t} from './i18n';
 import {Internal} from './Internal';
@@ -275,7 +274,7 @@ export const getVSCodePlatform = (context: vscode.ExtensionContext): VSCodeServe
         }
         case 'platform/resolveAllCommentsWithAI': {
           const {diffId, comments, filePaths, repoPath} = message;
-          promptDevmate(
+          Internal.promptAIAgent?.(
             {type: 'resolveAllComments', diffId, comments, filePaths, repoPath},
             ActionTriggerType.ISL2SmartActions,
           );
@@ -283,7 +282,7 @@ export const getVSCodePlatform = (context: vscode.ExtensionContext): VSCodeServe
         }
         case 'platform/resolveFailedSignalsWithAI': {
           const {diffId, repoPath} = message;
-          promptDevmate(
+          Internal.promptAIAgent?.(
             {type: 'resolveFailedSignals', diffId, repoPath},
             ActionTriggerType.ISL2SmartActions,
           );
@@ -292,7 +291,7 @@ export const getVSCodePlatform = (context: vscode.ExtensionContext): VSCodeServe
         case 'platform/fillDevmateCommitMessage': {
           const {source} = message;
           // Call Devmate to generate a commit message based on the current changes
-          promptDevmate(
+          Internal.promptAIAgent?.(
             {type: 'fillCommitMessage'},
             source === 'commitInfoView'
               ? ActionTriggerType.ISL2CommitInfoView
@@ -301,7 +300,7 @@ export const getVSCodePlatform = (context: vscode.ExtensionContext): VSCodeServe
           break;
         }
         case 'platform/devmateCreateTestForModifiedCode': {
-          promptTestGeneration();
+          Internal.promptTestGeneration?.();
           break;
         }
         case 'platform/setFirstPassCodeReviewDiagnostics': {
@@ -315,12 +314,12 @@ export const getVSCodePlatform = (context: vscode.ExtensionContext): VSCodeServe
           break;
         }
         case 'platform/devmateValidateChanges': {
-          promptDevmate({type: 'validateChanges'}, ActionTriggerType.ISL2SmartActions);
+          Internal.promptAIAgent?.({type: 'validateChanges'}, ActionTriggerType.ISL2SmartActions);
           break;
         }
         case 'platform/devmateResolveAllConflicts': {
           const {conflicts} = message;
-          promptDevmate(
+          Internal.promptAIAgent?.(
             {type: 'resolveAllConflicts', conflicts, repoPath: repo?.info.repoRoot},
             ActionTriggerType.ISL2MergeConflictView,
           );
