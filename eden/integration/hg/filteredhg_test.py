@@ -6,8 +6,9 @@
 # pyre-unsafe
 
 
+import abc
 import os
-from pathlib import Path
+import time
 from typing import Optional, Set
 
 from eden.integration.hg.lib.hg_extension_test_base import (
@@ -17,9 +18,7 @@ from eden.integration.hg.lib.hg_extension_test_base import (
 from eden.integration.lib import hgrepo
 
 
-@filteredhg_test
-# pyre-ignore[13]: T62487924
-class FilteredFSBase(FilteredHgTestCase):
+class FilteredFSBase(FilteredHgTestCase, metaclass=abc.ABCMeta):
     """Exercise some fundamental operations with filters enabled/disabled."""
 
     testFilterEmpty: str = ""
@@ -63,7 +62,6 @@ bdir
 bdir/README.md
 """
 
-    # pyre-fixme[13]: Attribute `initial_commit` is never initialized.
     initial_commit: str
 
     def populate_backing_repo(self, repo: hgrepo.HgRepository) -> None:
@@ -148,6 +146,10 @@ bdir/README.md
     def show_active_filter(self) -> str:
         return self.hg("filteredfs", "show")
 
+
+@filteredhg_test
+# pyre-ignore[13]: T62487924
+class FilteredFSBasic(FilteredFSBase):
     def test_filter_enable(self) -> None:
         self.set_active_filter("top_level_filter")
         self.assertEqual(self.get_active_filter_path(), "top_level_filter")
