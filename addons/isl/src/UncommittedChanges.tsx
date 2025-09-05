@@ -31,7 +31,6 @@ import {
   type ChangedFilesDisplayType,
   changedFilesDisplayType,
 } from './ChangedFileDisplayTypePicker';
-import serverAPI from './ClientToServerAPI';
 import {Collapsable} from './Collapsable';
 import {Commit} from './Commit';
 import {
@@ -59,8 +58,6 @@ import {tracker} from './analytics';
 import {latestCommitMessageFields} from './codeReview/CodeReviewInfo';
 import {islDrawerState} from './drawerState';
 import {externalMergeToolAtom} from './externalMergeTool';
-import {DevmateIcon} from './facebook/icons/DevmateIcon';
-import {useFeatureFlagSync} from './featureFlags';
 import {T, t} from './i18n';
 import {DownwardArrow} from './icons/DownwardIcon';
 import {localStorageBackedAtom, readAtom, useAtomGet, writeAtom} from './jotaiUtils';
@@ -933,10 +930,6 @@ function MergeConflictButtons({
 
   const externalMergeTool = useAtomValue(externalMergeToolAtom);
 
-  const devmateResolveConflictsEnabled = useFeatureFlagSync(
-    Internal.featureFlags?.DevmateResolveConflicts,
-  );
-
   return (
     <Row style={{flexWrap: 'wrap', marginBottom: 'var(--pad)'}}>
       <Button
@@ -964,26 +957,12 @@ function MergeConflictButtons({
         <Icon slot="start" icon={isRunningAbort ? 'loading' : 'circle-slash'} />
         <T>Abort</T>
       </Button>
-      {devmateResolveConflictsEnabled && platform.platformName === 'vscode' && (
-        <Tooltip
-          title={t(
-            'Use Devmate to automatically resolve all merge conflicts. This will attempt to intelligently merge the conflicting changes.',
-          )}>
-          <Button
-            disabled={allConflictsResolved || shouldDisableButtons}
-            data-testid="devmate-resolve-all-conflicts-button"
-            onClick={() => {
-              tracker.track('DevmateResolveAllConflicts');
-              serverAPI.postMessage({
-                type: 'platform/devmateResolveAllConflicts',
-                conflicts,
-              });
-            }}>
-            <DevmateIcon />
-            <T>Resolve with Devmate</T>
-          </Button>
-        </Tooltip>
-      )}
+      {Internal.ResolveMergeConflictsWithAIButton ? (
+        <Internal.ResolveMergeConflictsWithAIButton
+          conflicts={conflicts}
+          disabled={allConflictsResolved || shouldDisableButtons}
+        />
+      ) : null}
       {externalMergeTool == null ? (
         platform.upsellExternalMergeTool ? (
           <Tooltip
