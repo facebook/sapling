@@ -412,7 +412,10 @@ class FilteredFSRepoCacheTest(FilteredFSBase):
         self.set_active_filter("top_level_filter")
 
         counters_final = self.get_counters()
-        final_cache_cleanups = counters_final.get("edenffi.ffs.repo_cache_cleanups", 0)  # noqa
+        final_cache_cleanups = counters_final.get("edenffi.ffs.repo_cache_cleanups", 0)
+
+        # We should see cache cleanups have occurred
+        self.assertGreater(final_cache_cleanups, initial_cache_cleanups)
 
 
 @filteredhg_test
@@ -445,4 +448,6 @@ class FilteredFSRepoCacheNeverExpiresTest(FilteredFSBase):
 
         counters_final = self.get_counters()
         final_cache_cleanups = counters_final.get("edenffi.ffs.repo_cache_cleanups", 0)
-        self.assertEqual(initial_cache_cleanups, final_cache_cleanups)
+
+        # We should see cache cleanups have occurred
+        self.assertEqual(final_cache_cleanups, initial_cache_cleanups)

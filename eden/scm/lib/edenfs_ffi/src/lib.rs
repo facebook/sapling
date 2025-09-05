@@ -9,9 +9,13 @@ use std::collections::HashMap;
 use std::fmt;
 use std::path::PathBuf;
 use std::str::FromStr;
+use std::thread;
+use std::time::Duration;
+use std::time::Instant;
 
 use anyhow::Context;
 use anyhow::anyhow;
+use configmodel::config::ConfigExt;
 use cxx::SharedPtr;
 use cxx::UniquePtr;
 use manifest::FileMetadata;
@@ -37,13 +41,55 @@ use crate::ffi::set_matcher_promise_error;
 use crate::ffi::set_matcher_promise_result;
 use crate::ffi::set_matcher_result;
 
-static REPO_HASHMAP: Lazy<Mutex<HashMap<PathBuf, Repo>>> = Lazy::new(|| Mutex::new(HashMap::new()));
+struct CachedRepo {
+    repo: Repo,
+    expiration: Option<Instant>,
+}
+
+static REPO_HASHMAP: Lazy<Mutex<HashMap<PathBuf, CachedRepo>>> = Lazy::new(|| {
+    let map = Mutex::new(HashMap::new());
+
+    // Start the cleanup thread that checks for evictions every ~15 seconds
+    thread::spawn(cleanup_expired_repos);
+
+    map
+});
 
 static LOOKUPS: Counter = Counter::new_counter("edenffi.ffs.lookups");
 static LOOKUP_FAILURES: Counter = Counter::new_counter("edenffi.ffs.lookup_failures");
 static INVALID_REPO: Counter = Counter::new_counter("edenffi.ffs.invalid_repo");
 static REPO_CACHE_MISSES: Counter = Counter::new_counter("edenffi.ffs.repo_cache_misses");
 static REPO_CACHE_HITS: Counter = Counter::new_counter("edenffi.ffs.repo_cache_hits");
+static REPO_CACHE_CLEANUPS: Counter = Counter::new_counter("edenffi.ffs.repo_cache_cleanups");
+
+const DEFAULT_CACHE_EXPIRY_DURATION: Duration = Duration::from_secs(300); // 5 minutes
+
+// Background thread to clean up expired repos
+fn cleanup_expired_repos() {
+    loop {
+        // Check for expired cache entries every 15 seconds
+        thread::sleep(Duration::from_secs(15));
+
+        let mut repo_map = REPO_HASHMAP.lock();
+        let now = Instant::now();
+        let initial_count = repo_map.len();
+
+        // Only keep repos that aren't expired
+        repo_map.retain(|_path, cached_repo| cached_repo.expiration.is_none_or(|exp| now < exp));
+
+        let final_count = repo_map.len();
+        drop(repo_map);
+
+        let cleaned_count = initial_count.saturating_sub(final_count);
+        if cleaned_count > 0 {
+            tracing::info!(
+                "Cleaned up {} expired repo entries from cache",
+                cleaned_count
+            );
+            REPO_CACHE_CLEANUPS.add(cleaned_count);
+        }
+    }
+}
 
 // A helper class to parse/validate FilterIDs that are passed to Mercurial
 struct FilterId {
@@ -234,11 +280,22 @@ fn _profile_contents_from_repo(
         let repo = Repo::load(&abs_repo_path, &[]).with_context(|| {
             anyhow!("failed to load Repo object for {}", abs_repo_path.display())
         })?;
-        repo_map.insert(abs_repo_path.clone(), repo);
+        let ttl = repo
+            .config()
+            .must_get("edenfs", "ffs-repo-cache-ttl")
+            .unwrap_or(DEFAULT_CACHE_EXPIRY_DURATION);
+        let expiration = if ttl == Duration::ZERO {
+            None
+        } else {
+            Some(Instant::now() + ttl)
+        };
+        repo_map.insert(abs_repo_path.clone(), CachedRepo { repo, expiration });
     } else {
         REPO_CACHE_HITS.increment();
     }
-    let repo = repo_map.get_mut(&abs_repo_path).context("loading repo")?;
+
+    let cached_repo = repo_map.get_mut(&abs_repo_path).context("loading repo")?;
+    let repo = &mut cached_repo.repo;
 
     // Create the tree manifest for the root tree of the repo
     let tree_manifest = match repo.tree_resolver()?.get(&id.hg_id) {
@@ -285,6 +342,10 @@ fn _profile_contents_from_repo(
         let data = repo_store
             .get_content(FetchContext::default(), &id.repo_path, file_id)?
             .into_bytes();
+
+        // We no longer need to hold the lock on the repo_map
+        drop(repo_map);
+
         let mut root = Root::single_profile(data, id.repo_path.to_string())?;
         root.set_version_override(Some("2".to_owned()));
         let matcher = root.matcher(|_| Ok(Some(vec![])))?;
