@@ -23,10 +23,10 @@ import * as pathModule from 'node:path';
 import * as vscode from 'vscode';
 import {executeVSCodeCommand} from './commands';
 import {PERSISTED_STORAGE_KEY_PREFIX} from './config';
-import {ActionTriggerType} from './facebook/metamate/types';
 import {t} from './i18n';
 import {Internal} from './Internal';
 import openFile from './openFile';
+import {ActionTriggerType} from './types';
 
 export type VSCodeServerPlatform = ServerPlatform & {
   panelOrView: undefined | vscode.WebviewPanel | vscode.WebviewView;
