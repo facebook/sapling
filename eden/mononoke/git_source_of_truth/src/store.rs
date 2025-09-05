@@ -411,6 +411,9 @@ mod test {
             )
             .await;
         assert!(result.is_err());
+        let error_trace = format!("{:#}", result.unwrap_err());
+        assert!(error_trace.contains("UNIQUE constraint failed"));
+        assert!(error_trace.contains("git_repositories_source_of_truth.repo_id"));
 
         // update many should fail if any name is not unique
         let result = push
@@ -424,6 +427,9 @@ mod test {
             )
             .await;
         assert!(result.is_err());
+        let error_trace = format!("{:#}", result.unwrap_err());
+        assert!(error_trace.contains("UNIQUE constraint failed"));
+        assert!(error_trace.contains("git_repositories_source_of_truth.repo_name"));
 
         // insert many new repos should succeed
         push.insert_repos(

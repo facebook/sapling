@@ -40,6 +40,7 @@ rust_library(
         "//common/rust/shed/sorted_vector_map:sorted_vector_map",
         "//common/rust/shed/stats:stats",
         "//common/rust/shed/time_ext:time_ext",
+        "//common/rust/shed/futures_retry:futures_retry",
         "//common/rust/srserver:srserver",
         "//configerator/structs/common/fbtype:fbtypes-rust",
         "//eden/mononoke/async_requests:async_requests",
@@ -84,6 +85,7 @@ rust_library(
         "//eden/mononoke/scs/scs_errors:scs_errors",
         "//eden/mononoke/server/context:context",
         "//eden/scm/lib/clientinfo:clientinfo",
+        "//eden/mononoke/git_source_of_truth:git_source_of_truth",
         "//login/if:login_objects_thrift-rust",
     ] + ([] if rust_oss.is_oss_build() else [
         "fbsource//third-party/rust:lazy_static",

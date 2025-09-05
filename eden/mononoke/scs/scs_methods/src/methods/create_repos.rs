@@ -8,6 +8,7 @@
 use std::collections::HashSet;
 use std::env;
 use std::process::Command;
+use std::time::Duration;
 
 use anyhow::Error;
 use anyhow::Result;
@@ -22,6 +23,10 @@ use auth_consts::SERVICE_IDENTITY;
 use configo::ConfigoClient;
 use context::CoreContext;
 use futures::future::try_join_all;
+use futures_retry::retry;
+use git_source_of_truth::GitSourceOfTruth;
+use git_source_of_truth::GitSourceOfTruthConfig;
+use git_source_of_truth::RepositoryName;
 use infrasec_authorization::ACL;
 use infrasec_authorization::Identity;
 use infrasec_authorization::consts as auth_consts;
@@ -30,6 +35,7 @@ use infrasec_authorization_service_srclients::make_AuthorizationService_srclient
 use infrasec_authorization_service_srclients::thrift::ChangeSpecification;
 use infrasec_authorization_service_srclients::thrift::errors::AsNoConfigExistsException;
 use mononoke_api::MononokeError;
+use mononoke_api::RepositoryId;
 use oncall::OncallClient;
 use permission_checker::AclProvider;
 use repo_authorization::AuthorizationContext;
@@ -397,21 +403,102 @@ async fn update_repos_acls(
 }
 
 #[cfg(fbcode_build)]
-async fn create_repos_in_mononoke(
-    _params: &thrift::CreateReposParams,
+async fn reserve_repos_ids(
+    ctx: CoreContext,
+    git_source_of_truth_config: &dyn GitSourceOfTruthConfig,
+    params: &thrift::CreateReposParams,
+) -> Result<Vec<(RepositoryId, RepositoryName)>, scs_errors::ServiceError> {
+    let max_id = git_source_of_truth_config
+        .get_max_id(&ctx)
+        .await
+        .map_err(|e| scs_errors::internal_error(format!("{e:#}")))?;
+    if let Some(max_id) = max_id {
+        let mut repo_id = max_id.id();
+        let repos = params
+            .repos
+            .iter()
+            .map(|request| {
+                repo_id += 1;
+                (
+                    RepositoryId::new(repo_id),
+                    RepositoryName(request.repo_name.clone()),
+                    GitSourceOfTruth::Reserved,
+                )
+            })
+            .collect::<Vec<_>>();
+        let result = git_source_of_truth_config.insert_repos(&ctx, &repos).await;
+        match result {
+            Ok(_) => Ok(repos
+                .into_iter()
+                .map(|(repo_id, repo_name, _sot)| (repo_id, repo_name))
+                .collect()),
+            Err(e) => {
+                let error_trace = format!("{e:#}");
+                if error_trace.contains("UNIQUE constraint failed")
+                    && error_trace.contains("git_repositories_source_of_truth.repo_name")
+                {
+                    Err(scs_errors::invalid_request(format!(
+                        "Repo name should be unique but isn't. Details: {error_trace}"
+                    ))
+                    .into())
+                } else {
+                    Err(scs_errors::internal_error(format!(
+                        "Failed to write row to git_repositories_source_of_truth. Details: {error_trace}"
+                    ))
+                    .into())
+                }
+            }
+        }
+    } else {
+        Err(scs_errors::internal_error(
+            "No rows in git_repositories_source_of_truth. That's unexpected",
+        )
+        .into())
+    }
+}
+
+async fn create_repo_configs_in_mononoke() -> Result<(), scs_errors::ServiceError> {
+    // TODO (Pierre) Implement
+    Err(
+        scs_errors::internal_error("Creating the repo in configerator is still unimplemented")
+            .into(),
+    )
+}
+
+async fn update_source_of_truth_to_mononoke(
+    ctx: CoreContext,
+    git_source_of_truth_config: &dyn GitSourceOfTruthConfig,
+    params: &thrift::CreateReposParams,
 ) -> Result<(), scs_errors::ServiceError> {
-    // TODO (Pierre):
+    git_source_of_truth_config
+        .update_source_of_truth_by_repo_names(
+            &ctx,
+            GitSourceOfTruth::Mononoke,
+            &params
+                .repos
+                .iter()
+                .map(|request| RepositoryName(request.repo_name.clone()))
+                .collect::<Vec<_>>(),
+        )
+        .await
+        .map_err(|e| scs_errors::internal_error(format!("{e:#}")))?;
+    Ok(())
+}
+
+#[cfg(fbcode_build)]
+async fn create_repos_in_mononoke(
+    ctx: CoreContext,
+    git_source_of_truth_config: &dyn GitSourceOfTruthConfig,
+    params: &thrift::CreateReposParams,
+) -> Result<(), scs_errors::ServiceError> {
     // ## What:
     // Create these repositories in Mononoke.
     //
     // ## How:
-    // * a) Find the free range of repository ids by calling `get_max_id` on `GitSourceOfTruthConfig`
-    //   See [code](https://www.internalfb.com/code/fbsource/[1855d0a75c2214080433754d4b70010d9a997594]/fbcode/eden/mononoke/git_source_of_truth/src/lib.rs?lines=46)
-    // * b) Try to write the list of new repos (repo, id, state == "reserved") at max_id + 1, max_id + 2, ...
-    // * c) This query can fail for 2 reasons:
-    //   * Id is not unique <- This indicates contention. Go back to a)
-    //   * Repo name is not unique <- Fail with a descritive Error
-    // * d) At this stage, we have reserved the repo ids we need, so we're not in contention
+    // * a) Mark these repositories as reserved in the git_repositories_source_of_truth table. This
+    //      will ensure that another instance of `create_repos` won't compete with us on creating these
+    //      repositories
+    // * b) At this stage, we have reserved the repo ids we need, so we're not in contention
     //   anymore. We have time to do slow things, such as configuring these repositories in
     //   configerator to add the to Mononoke.
     //   Use configo to make a diff adding these repositories to quick_repo_definitions using
@@ -419,9 +506,37 @@ async fn create_repos_in_mononoke(
     //   Note: for authoring a config change, the configo API is what I need:
     //   https://www.internalfb.com/intern/rustdoc/fbcode/common/rust/configo:configo/configo/index.html
     //   Create the mutation, validate it and land it.
-    // * e) Repo creation was successful, overwrite "reserved" with "mononoke" for these
+    // * c) Repo creation was successful, overwrite "reserved" with "mononoke" for these
     //   repositories. At this point, the repos were created and empty, so it's OK for their Source
     //   Of Truth to be in Mononoke already, ahead of creating them in Metagit and allowing pushes.
+
+    let _repo_ids_and_names = retry(
+        |_| reserve_repos_ids(ctx.clone(), git_source_of_truth_config, params),
+        Duration::from_millis(1_000),
+    )
+    .binary_exponential_backoff()
+    .max_attempts(5)
+    .retry_if(|_attempt, error| match error {
+        // No need to retry on request error. Let's report back to the user
+        scs_errors::ServiceError::Request(_) => false,
+        // Internal error can indicate a db error or contention on the ids. Retry with exponential
+        // backoff
+        _ => true,
+    })
+    .await?;
+
+    // We have reserved the repo ids. Now it's time to actually create the repos, safe in the
+    // knowledge that no-one will compete with us
+    create_repo_configs_in_mononoke().await?;
+
+    retry(
+        |_| update_source_of_truth_to_mononoke(ctx.clone(), git_source_of_truth_config, params),
+        Duration::from_millis(1_000),
+    )
+    .binary_exponential_backoff()
+    .max_attempts(5)
+    .await?;
+
     Ok(())
 }
 
@@ -490,8 +605,9 @@ impl SourceControlServiceImpl {
         if justknobs::eval("scm/mononoke:scs_create_repos_in_mononoke", None, None)
             .map_err(|e| scs_errors::internal_error(format!("{e:#}")))?
         {
-            update_repos_acls(ctx, &params).await?;
-            create_repos_in_mononoke(&params).await?;
+            update_repos_acls(ctx.clone(), &params).await?;
+            create_repos_in_mononoke(ctx, self.git_source_of_truth_config.as_ref(), &params)
+                .await?;
         }
         create_repos_in_metagit(params).await?;
 
