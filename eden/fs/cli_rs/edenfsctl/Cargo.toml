@@ -15,7 +15,7 @@ fail = { version = "0.4", features = ["failpoints"] }
 fbinit = { version = "0.2.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 sapling-testutil = { version = "0.1.0", path = "../../../scm/lib/util/testutil" }
 tracing = { version = "0.1.41", features = ["attributes", "valuable"] }
-tracing-subscriber = { version = "0.3.19", features = ["chrono", "env-filter", "json", "local-time", "parking_lot", "registry"] }
+tracing-subscriber = { version = "0.3.20", features = ["chrono", "env-filter", "json", "local-time", "parking_lot", "registry"] }
 
 [dev-dependencies]
 tempfile = "3.15"

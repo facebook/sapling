@@ -39,7 +39,7 @@ sapling-testutil = { version = "0.1.0", path = "../util/testutil" }
 sapling-types = { version = "0.1.0", path = "../types" }
 sapling-walkdetector = { version = "0.1.0", path = "../walkdetector" }
 tracing = { version = "0.1.41", features = ["attributes", "valuable"] }
-tracing-subscriber = { version = "0.3.19", features = ["chrono", "env-filter", "json", "local-time", "parking_lot", "registry"] }
+tracing-subscriber = { version = "0.3.20", features = ["chrono", "env-filter", "json", "local-time", "parking_lot", "registry"] }
 
 [dev-dependencies]
 rand_chacha = "0.3"

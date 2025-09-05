@@ -88,7 +88,7 @@ sapling-tracing-sampler = { version = "0.1.0", path = "../tracing-sampler" }
 sapling-version = { version = "0.1.0", path = "../version" }
 serde = { version = "1.0.219", features = ["derive", "rc"] }
 tracing = { version = "0.1.41", features = ["attributes", "valuable"] }
-tracing-subscriber = { version = "0.3.19", features = ["chrono", "env-filter", "json", "local-time", "parking_lot", "registry"] }
+tracing-subscriber = { version = "0.3.20", features = ["chrono", "env-filter", "json", "local-time", "parking_lot", "registry"] }
 zstd = { version = "0.13", features = ["experimental", "zstdmt"] }
 
 [features]

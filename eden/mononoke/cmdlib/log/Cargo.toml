@@ -28,4 +28,4 @@ slog = { package = "tracing_slog_compat", version = "0.1.0", git = "https://gith
 tracing = { version = "0.1.41", features = ["attributes", "valuable"] }
 tracing-glog = { version = "0.4.1", features = ["ansi", "tracing-log"] }
 tracing-log = "0.2.0"
-tracing-subscriber = { version = "0.3.19", features = ["chrono", "env-filter", "json", "local-time", "parking_lot", "registry"] }
+tracing-subscriber = { version = "0.3.20", features = ["chrono", "env-filter", "json", "local-time", "parking_lot", "registry"] }
