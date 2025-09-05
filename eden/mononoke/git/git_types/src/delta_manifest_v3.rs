@@ -396,7 +396,7 @@ impl_typed_hash! {
     thrift_hash_type => thrift::GDMV3ChunkId,
     value_type => GDMV3Chunk,
     context_type => GDMV3ChunkIdContext,
-    context_key => "gdm3_instructions_chunk",
+    context_key => "gdm3_chunk",
 }
 
 impl_typed_hash! {
