@@ -13,7 +13,6 @@ use blobstore::BlobCopier;
 use blobstore::Blobstore;
 use blobstore::BlobstoreGetData;
 use blobstore::BlobstoreIsPresent;
-use blobstore::BlobstoreMetadata;
 use blobstore::BlobstorePutOps;
 use blobstore::BlobstoreUnlinkOps;
 use blobstore::GenericBlobstoreCopier;
@@ -113,13 +112,6 @@ impl Blobstore for RepoBlobstore {
         key: &'a str,
     ) -> Result<Option<BlobstoreGetData>> {
         self.0.0.get(ctx, key).await
-    }
-    async fn get_metadata<'a>(
-        &'a self,
-        ctx: &'a CoreContext,
-        key: &'a str,
-    ) -> Result<Option<BlobstoreMetadata>> {
-        self.0.0.get_metadata(ctx, key).await
     }
     async fn put<'a>(
         &'a self,
