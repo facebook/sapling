@@ -24,7 +24,7 @@ import {DEFAULT_DAYS_OF_COMMITS_TO_LOAD} from 'isl-server/src/constants';
 import {atom} from 'jotai';
 import {reuseEqualObjects} from 'shared/deepEqualExt';
 import {randomId} from 'shared/utils';
-import {hiddenRemoteBookmarksAtom} from './BookmarksData';
+import {type BookmarksData, bookmarksDataStorage} from './BookmarksData';
 import serverAPI from './ClientToServerAPI';
 import {latestSuccessorsMapAtom, successionTracker} from './SuccessionTracker';
 import {Dag, DagCommitInfo} from './dag/dag';
@@ -33,6 +33,7 @@ import {atomFamilyWeak, configBackedAtom, readAtom, writeAtom} from './jotaiUtil
 import platform from './platform';
 import {atomResetOnCwdChange, repositoryData} from './repositoryData';
 import {registerCleanup, registerDisposable} from './utils';
+import {Internal} from './Internal';
 
 export {repositoryData};
 
@@ -293,26 +294,34 @@ export const latestCommits = atom(get => {
 export const latestDag = atom(get => {
   const commits = get(latestCommits);
   const successorMap = get(latestSuccessorsMapAtom);
-  const hiddenRemoteBookmarks = get(hiddenRemoteBookmarksAtom);
+  const bookmarksData = get(bookmarksDataStorage);
   const commitDag = undefined; // will be populated from `commits`
   const dag = Dag.fromDag(commitDag, successorMap)
     .add(
       commits.map(c => {
-        return DagCommitInfo.fromCommitInfo(removeHiddenBookmarks(hiddenRemoteBookmarks, c));
+        return DagCommitInfo.fromCommitInfo(filterBookmarks(bookmarksData, c));
       }),
     )
     .maybeForceConnectPublic();
   return dag;
 });
 
-function removeHiddenBookmarks(hiddenBookmarks: Set<string>, commit: CommitInfo): CommitInfo {
+function filterBookmarks(bookmarksData: BookmarksData, commit: CommitInfo): CommitInfo {
   if (commit.phase !== 'public') {
     return commit;
   }
+
+  const hiddenBookmarks = new Set(bookmarksData.hiddenRemoteBookmarks);
+  const recommendedBookmarks = new Set(Internal.getRecommendedBookmarks?.());
+
+  // Filter by recommended bookmarks or hidden remote bookmarks
+  const bookmarkFilter = (b: string) =>
+    bookmarksData.useRecommendedBookmark ? recommendedBookmarks.has(b) : !hiddenBookmarks.has(b);
+
   return {
     ...commit,
-    remoteBookmarks: commit.remoteBookmarks.filter(b => !hiddenBookmarks.has(b)),
-    bookmarks: commit.bookmarks.filter(b => !hiddenBookmarks.has(b)),
+    remoteBookmarks: commit.remoteBookmarks.filter(bookmarkFilter),
+    bookmarks: commit.bookmarks.filter(bookmarkFilter),
     stableCommitMetadata: commit.stableCommitMetadata?.filter(b => !hiddenBookmarks.has(b.value)),
   };
 }

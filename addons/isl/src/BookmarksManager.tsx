@@ -43,7 +43,7 @@ import {T, t} from './i18n';
 import {readAtom} from './jotaiUtils';
 import {latestDag} from './serverAPIState';
 
-const styles = stylex.create({
+export const styles = stylex.create({
   container: {
     alignItems: 'flex-start',
     gap: spacing.double,
@@ -88,6 +88,7 @@ export function BookmarksManagerMenu() {
 
 function BookmarksManager(_props: {dismiss: () => void}) {
   const bookmarks = useAtomValue(remoteBookmarks);
+  const bookmarksData = useAtomValue(bookmarksDataStorage);
 
   return (
     <DropdownFields
@@ -95,10 +96,15 @@ function BookmarksManager(_props: {dismiss: () => void}) {
       icon="bookmark"
       data-testid="bookmarks-manager-dropdown">
       <Column xstyle={styles.container}>
+        {Internal.RecommendedBookmarkSection?.()}
         <Section
           title={<T>Remote Bookmarks</T>}
           description={<T>Uncheck remote bookmarks you don't use to hide them</T>}>
-          <BookmarksList bookmarks={bookmarks} kind="remote" />
+          <BookmarksList
+            bookmarks={bookmarks}
+            kind="remote"
+            disabled={bookmarksData.useRecommendedBookmark}
+          />
         </Section>
         <StableLocationsSection />
       </Column>
@@ -293,7 +299,7 @@ function AddStableLocation() {
   );
 }
 
-function Section({
+export function Section({
   title,
   description,
   children,
@@ -314,6 +320,7 @@ function Section({
 function BookmarksList({
   bookmarks,
   kind,
+  disabled = false,
 }: {
   bookmarks: Array<
     | string
@@ -321,6 +328,7 @@ function BookmarksList({
     | {kind: 'custom'; custom: ReactNode}
   >;
   kind: BookmarkKind;
+  disabled?: boolean;
 }) {
   const [bookmarksData, setBookmarksData] = useAtom(bookmarksDataStorage);
   if (bookmarks.length == 0) {
@@ -341,6 +349,7 @@ function BookmarksList({
             <Checkbox
               key={name}
               checked={!bookmarksData.hiddenRemoteBookmarks.includes(name)}
+              disabled={disabled}
               onChange={checked => {
                 const shouldBeDeselected = !checked;
                 let hiddenRemoteBookmarks = bookmarksData.hiddenRemoteBookmarks;

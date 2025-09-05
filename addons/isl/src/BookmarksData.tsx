@@ -13,15 +13,18 @@ import {localStorageBackedAtom, readAtom, writeAtom} from './jotaiUtils';
 import {latestCommits} from './serverAPIState';
 import {registerDisposable} from './utils';
 
-type BookmarksData = {
+export type BookmarksData = {
   /** These bookmarks should be hidden from the automatic set of remote bookmarks */
   hiddenRemoteBookmarks: Array<string>;
   /** These stables should be requested by the server to fetch additional stables */
   additionalStables?: Array<string>;
+  /** Whether to use the recommended bookmark instead of user-selected bookmarks */
+  useRecommendedBookmark?: boolean;
 };
 export const bookmarksDataStorage = localStorageBackedAtom<BookmarksData>('isl.bookmarks', {
   hiddenRemoteBookmarks: [],
   additionalStables: [],
+  useRecommendedBookmark: false,
 });
 export const hiddenRemoteBookmarksAtom = atom(get => {
   return new Set(get(bookmarksDataStorage).hiddenRemoteBookmarks);
