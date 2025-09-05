@@ -8,7 +8,6 @@
 #pragma once
 
 #include <folly/Synchronized.h>
-#include <folly/container/EvictingCacheMap.h>
 #include <atomic>
 #include <memory>
 #include <unordered_map>
@@ -26,8 +25,8 @@
 #include "eden/fs/model/TreeFwd.h"
 #include "eden/fs/store/BackingStore.h"
 #include "eden/fs/store/IObjectStore.h"
-#include "eden/fs/store/ImportPriority.h"
 #include "eden/fs/store/ObjectFetchContext.h"
+#include "eden/fs/utils/ShardedLruCache.h"
 
 namespace facebook::eden {
 
@@ -461,15 +460,10 @@ class ObjectStore : public IObjectStore,
    * nodes densely, so there may also be some jemalloc tracking overhead and
    * some internal fragmentation depending on whether the node fits cleanly
    * into one of jemalloc's size classes.
-   *
-   * TODO: It never makes sense to rlock an LRU cache, since cache hits mutate
-   * the data structure. Thus, should we use a more appropriate type of lock?
    */
-  mutable folly::Synchronized<folly::EvictingCacheMap<ObjectId, BlobAuxData>>
-      blobAuxDataCache_;
+  mutable ShardedLruCache<BlobAuxData> blobAuxDataCache_;
 
-  mutable folly::Synchronized<folly::EvictingCacheMap<ObjectId, TreeAuxData>>
-      treeAuxDataCache_;
+  mutable ShardedLruCache<TreeAuxData> treeAuxDataCache_;
 
   /**
    * During glob, we need to read a lot of trees, but we avoid loading inodes,

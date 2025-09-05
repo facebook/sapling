@@ -74,9 +74,11 @@ ObjectStore::ObjectStore(
     std::shared_ptr<ReloadableConfig> edenConfig,
     bool windowsSymlinksEnabled,
     CaseSensitivity caseSensitive)
-    : blobAuxDataCache_{std::in_place, edenConfig->getEdenConfig()->metadataCacheSize.getValue()},
+    : blobAuxDataCache_{
+          edenConfig->getEdenConfig()->metadataCacheShards.getValue(),
+          edenConfig->getEdenConfig()->metadataCacheSize.getValue()},
       treeAuxDataCache_{
-          std::in_place,
+          edenConfig->getEdenConfig()->metadataCacheShards.getValue(),
           edenConfig->getEdenConfig()->metadataCacheSize.getValue()},
       treeCache_{std::move(treeCache)},
       backingStore_{std::move(backingStore)},
@@ -350,7 +352,7 @@ void ObjectStore::maybeCacheTreeAuxInMemCache(
           ->warmTreeAuxMemCacheIfTreeFromBackingStore.getValue()) {
     stats_->increment(
         &ObjectStoreStats::prewarmTreeAuxMemCacheForTreeFromBackingStore);
-    treeAuxDataCache_.wlock()->set(id, *treeResult.tree->getAuxData());
+    treeAuxDataCache_.store(id, *treeResult.tree->getAuxData());
   }
 }
 
@@ -478,7 +480,7 @@ ImmediateFuture<std::optional<TreeAuxData>> ObjectStore::getTreeAuxData(
               return std::nullopt;
             }
             auto auxData = std::move(result.treeAux);
-            self->treeAuxDataCache_.wlock()->set(id, *auxData);
+            self->treeAuxDataCache_.store(id, *auxData);
             fetchContext->didFetch(
                 ObjectFetchContext::TreeAuxData, id, result.origin);
             self->updateProcessFetch(*fetchContext);
@@ -665,21 +667,17 @@ folly::SemiFuture<BackingStore::GetBlobResult> ObjectStore::getBlobImpl(
 std::optional<BlobAuxData> ObjectStore::getBlobAuxDataFromInMemoryCache(
     const ObjectId& id,
     const ObjectFetchContextPtr& context) const {
-  // Check in-memory cache
-  {
-    auto auxDataCache = blobAuxDataCache_.wlock();
-    auto cacheIter = auxDataCache->find(id);
-    if (cacheIter != auxDataCache->end()) {
-      context->didFetch(
-          ObjectFetchContext::BlobAuxData,
-          id,
-          ObjectFetchContext::FromMemoryCache);
+  auto ret = blobAuxDataCache_.get(id);
+  if (ret) {
+    context->didFetch(
+        ObjectFetchContext::BlobAuxData,
+        id,
+        ObjectFetchContext::FromMemoryCache);
 
-      updateProcessFetch(*context);
-      return cacheIter->second;
-    }
+    updateProcessFetch(*context);
   }
-  return std::nullopt;
+
+  return ret;
 }
 
 // TODO: This code is "identical" to the blob code. Though it is small today, it
@@ -688,21 +686,17 @@ std::optional<BlobAuxData> ObjectStore::getBlobAuxDataFromInMemoryCache(
 std::optional<TreeAuxData> ObjectStore::getTreeAuxDataFromInMemoryCache(
     const ObjectId& id,
     const ObjectFetchContextPtr& context) const {
-  // Check in-memory cache
-  {
-    auto auxDataCache = treeAuxDataCache_.wlock();
-    auto cacheIter = auxDataCache->find(id);
-    if (cacheIter != auxDataCache->end()) {
-      context->didFetch(
-          ObjectFetchContext::TreeAuxData,
-          id,
-          ObjectFetchContext::FromMemoryCache);
+  auto ret = treeAuxDataCache_.get(id);
+  if (ret) {
+    context->didFetch(
+        ObjectFetchContext::TreeAuxData,
+        id,
+        ObjectFetchContext::FromMemoryCache);
 
-      updateProcessFetch(*context);
-      return cacheIter->second;
-    }
+    updateProcessFetch(*context);
   }
-  return std::nullopt;
+
+  return ret;
 }
 
 ImmediateFuture<BlobAuxData> ObjectStore::getBlobAuxData(
@@ -727,7 +721,7 @@ ImmediateFuture<BlobAuxData> ObjectStore::getBlobAuxData(
                 // updating the aux data with the computed blake3 hash and
                 // update the cache
                 auxData.blake3.emplace(blake3);
-                self->blobAuxDataCache_.wlock()->set(id, auxData);
+                self->blobAuxDataCache_.store(id, auxData);
                 self->stats_->increment(
                     &ObjectStoreStats::getBlobAuxDataFromBlob);
                 self->stats_->addDuration(
@@ -772,11 +766,11 @@ ImmediateFuture<BlobAuxData> ObjectStore::getBlobAuxData(
                         // and update the cache
                         auto auxDataCopy = *auxData;
                         auxDataCopy.blake3.emplace(blake3);
-                        self->blobAuxDataCache_.wlock()->set(id, auxDataCopy);
+                        self->blobAuxDataCache_.store(id, auxDataCopy);
                         return auxDataCopy;
                       });
             } else {
-              self->blobAuxDataCache_.wlock()->set(id, *auxData);
+              self->blobAuxDataCache_.store(id, *auxData);
               fetchContext->didFetch(
                   ObjectFetchContext::BlobAuxData, id, result.origin);
               self->updateProcessFetch(*fetchContext);

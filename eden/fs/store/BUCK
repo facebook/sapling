@@ -211,6 +211,7 @@ cpp_library(
         "//eden/fs/model:model-fwd",
         "//eden/fs/service:thrift-cpp2-types",
         "//eden/fs/telemetry:stats",
+        "//eden/fs/utils:sharded_lru_cache",
         "//folly:cancellation_token",
         "//folly:executor",
         "//folly:intrusive_list",

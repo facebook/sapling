@@ -645,6 +645,18 @@ class EdenConfig : private ConfigSettingManager {
       this};
 
   /**
+   * Number of shards to use for the metadata cache.
+   *
+   * This is used to reduce lock contention on the metadata cache. Higher number
+   * means lower contention, but more imperfect LRU property (each shard has its
+   * own LRU).
+   */
+  ConfigSetting<uint64_t> metadataCacheShards{
+      "store:metadata-cache-shards",
+      32,
+      this};
+
+  /**
    * Controls if RocksDbLocalStore operations should run asynchronously or
    * synchronously.
    *

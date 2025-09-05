@@ -312,3 +312,13 @@ cpp_library(
         "//folly/fibers:semaphore",
     ],
 )
+
+cpp_library(
+    name = "sharded_lru_cache",
+    headers = ["ShardedLruCache.h"],
+    exported_deps = [
+        "//eden/fs/model:model",
+        "//folly:synchronized",
+        "//folly/container:evicting_cache_map",
+    ],
+)

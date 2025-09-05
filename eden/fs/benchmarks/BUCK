@@ -181,3 +181,13 @@ cpp_binary(
         "//eden/fs/store:store",
     ],
 )
+
+cpp_binary(
+    name = "lru_cache",
+    srcs = ["lru_cache.cpp"],
+    deps = [
+        "//eden/common/utils/benchharness:benchharness",
+        "//eden/fs/model:model",
+        "//eden/fs/utils:sharded_lru_cache",
+    ],
+)
