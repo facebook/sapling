@@ -116,6 +116,7 @@ module.exports = {
     'rulesdir/jotai-maybe-use-family': 'error',
     'rulesdir/stylex-import': 'error',
     'rulesdir/internal-promise-callback-types': 'error',
+    'rulesdir/no-facebook-imports': 'error',
 
     // WARNINGS
     'require-await': 'warn',
