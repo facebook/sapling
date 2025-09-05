@@ -340,17 +340,6 @@ pub trait Blobstore: fmt::Display + fmt::Debug + Send + Sync {
         key: String,
         value: BlobstoreBytes,
     ) -> Result<()>;
-    /// Fetch the blob metadata associated with a key, or None if no value is present.
-    /// The default implementation just calls `get` and unwrap the metadata. It can be overridden
-    /// to directly fetch metadata from the underlying store.
-    async fn get_metadata<'a>(
-        &'a self,
-        ctx: &'a CoreContext,
-        key: &'a str,
-    ) -> Result<Option<BlobstoreMetadata>> {
-        let full = self.get(ctx, key).await?;
-        Ok(full.map(|full| full.meta))
-    }
     /// Check that `get` will return a value for a given `key`, and not None. The provided
     /// implementation just calls `get`, and discards the return value; this can be overridden to
     /// avoid transferring data. In the absence of concurrent `put` calls, this must return

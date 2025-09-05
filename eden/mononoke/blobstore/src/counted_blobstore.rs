@@ -20,7 +20,6 @@ use crate::BlobstoreGetData;
 use crate::BlobstoreIsPresent;
 use crate::BlobstoreKeyParam;
 use crate::BlobstoreKeySource;
-use crate::BlobstoreMetadata;
 use crate::BlobstorePutOps;
 use crate::BlobstoreUnlinkOps;
 use crate::OverwriteStatus;
@@ -31,9 +30,6 @@ define_stats_struct! {
     get: timeseries(Rate, Sum),
     get_ok: timeseries(Rate, Sum),
     get_err: timeseries(Rate, Sum),
-    get_metadata: timeseries(Rate, Sum),
-    get_metadata_ok: timeseries(Rate, Sum),
-    get_metadata_err: timeseries(Rate, Sum),
     put: timeseries(Rate, Sum),
     put_ok: timeseries(Rate, Sum),
     put_err: timeseries(Rate, Sum),
@@ -96,20 +92,6 @@ impl<T: Blobstore> Blobstore for CountedBlobstore<T> {
         match res {
             Ok(_) => self.stats.get_ok.add_value(1),
             Err(_) => self.stats.get_err.add_value(1),
-        }
-        res
-    }
-
-    async fn get_metadata<'a>(
-        &'a self,
-        ctx: &'a CoreContext,
-        key: &'a str,
-    ) -> Result<Option<BlobstoreMetadata>> {
-        self.stats.get_metadata.add_value(1);
-        let res = self.blobstore.get_metadata(ctx, key).await;
-        match res {
-            Ok(_) => self.stats.get_metadata_ok.add_value(1),
-            Err(_) => self.stats.get_metadata_err.add_value(1),
         }
         res
     }
