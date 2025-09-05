@@ -23,7 +23,9 @@ use cmdlib_displaying::hexdump;
 use context::CoreContext;
 use futures::TryStreamExt;
 use git_types::GDMV2Entry;
+use git_types::GDMV3Chunk;
 use git_types::GitDeltaManifestV2;
+use git_types::GitDeltaManifestV3;
 use mercurial_types::HgAugmentedManifestEntry;
 use mercurial_types::HgAugmentedManifestEnvelope;
 use mercurial_types::HgChangesetEnvelope;
@@ -97,6 +99,8 @@ pub enum DecodeAs {
     ShardedHgAugmentedManifest,
     GitDeltaManifestV2MapNode,
     GitDeltaManifestV2,
+    GitDeltaManifestV3Chunk,
+    GitDeltaManifestV3,
     SkeletonManifest,
     SkeletonManifestV2MapNode,
     SkeletonManifestV2,
@@ -143,6 +147,8 @@ impl DecodeAs {
                 ("hgaugmentedmanifest.", DecodeAs::HgAugmentedManifest),
                 ("gdm2.map2node.", DecodeAs::GitDeltaManifestV2MapNode),
                 ("gdm2.", DecodeAs::GitDeltaManifestV2),
+                ("gdm3_chunk.", DecodeAs::GitDeltaManifestV3Chunk),
+                ("gdm3.", DecodeAs::GitDeltaManifestV3),
                 ("skeletonmanifest.", DecodeAs::SkeletonManifest),
                 ("skmf2.map2node.", DecodeAs::SkeletonManifestV2MapNode),
                 ("skmf2.", DecodeAs::SkeletonManifestV2),
@@ -268,6 +274,12 @@ async fn decode(
         DecodeAs::GitDeltaManifestV2MapNode => Decoded::try_debug(
             ShardedMapV2Node::<GDMV2Entry>::from_bytes(&data.into_raw_bytes()),
         ),
+        DecodeAs::GitDeltaManifestV3 => {
+            Decoded::try_debug(GitDeltaManifestV3::from_bytes(&data.into_raw_bytes()))
+        }
+        DecodeAs::GitDeltaManifestV3Chunk => {
+            Decoded::try_debug(GDMV3Chunk::from_bytes(&data.into_raw_bytes()))
+        }
         DecodeAs::SkeletonManifestV2 => {
             Decoded::try_debug(SkeletonManifestV2::from_bytes(&data.into_raw_bytes()))
         }

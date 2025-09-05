@@ -52,6 +52,8 @@ pub use crate::delta_manifest_ops::fetch_git_delta_manifest;
 pub use crate::delta_manifest_v2::GDMV2Entry;
 pub use crate::delta_manifest_v2::GDMV2ObjectEntry;
 pub use crate::delta_manifest_v2::GitDeltaManifestV2;
+pub use crate::delta_manifest_v3::GDMV3Chunk;
+pub use crate::delta_manifest_v3::GitDeltaManifestV3;
 pub use crate::derive_delta_manifest_v2::RootGitDeltaManifestV2Id;
 pub use crate::derive_delta_manifest_v3::RootGitDeltaManifestV3Id;
 pub use crate::errors::GitError;
