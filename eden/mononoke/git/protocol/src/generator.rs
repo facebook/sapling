@@ -12,6 +12,8 @@ use std::task::Poll;
 use anyhow::Context;
 use anyhow::Ok;
 use anyhow::Result;
+use buffered_weighted::FutureWithWeight;
+use buffered_weighted::GlobalWeight;
 use buffered_weighted::MemoryBound;
 use cloned::cloned;
 use commit_graph_types::frontier::AncestorsWithinDistance;
@@ -75,6 +77,8 @@ use crate::utils::filter_object;
 use crate::utils::tag_entries_to_hashes;
 use crate::utils::to_commit_stream;
 use crate::utils::to_git_object_stream;
+
+const DEFAULT_GIT_GENERATOR_BUFFER_BYTES: usize = 104_857_600; // 100 MB
 
 /// Fetch and collect the tree and blob objects that are expressed as full objects
 /// for the boundary commits of a shallow fetch
@@ -289,6 +293,9 @@ fn packfile_stream_from_changesets<'a>(
     let mut delta_manifest_entries_buffer = VecDeque::new();
     let mut delta_manifest_entries_futures = FuturesOrdered::new();
     let mut packfile_items_futures = FuturesOrdered::new();
+    let max_buffer = justknobs::get_as::<usize>("scm/mononoke:git_generator_buffer_bytes", None)
+        .unwrap_or(DEFAULT_GIT_GENERATOR_BUFFER_BYTES);
+    let mut buffer_weight = GlobalWeight::new(max_buffer); // ~100 MB
 
     stream::poll_fn(move |cx| {
         if cs_ids.is_empty()
@@ -300,7 +307,7 @@ fn packfile_stream_from_changesets<'a>(
         }
 
         while delta_manifest_entries_futures.len() + delta_manifest_entries_buffer.len()
-            < 2 * concurrency.trees_and_blobs
+            < concurrency.trees_and_blobs
         {
             if let Some(cs_id) = cs_ids.pop_front() {
                 delta_manifest_entries_futures.push_back(changeset_delta_manifest_entries(
@@ -329,29 +336,41 @@ fn packfile_stream_from_changesets<'a>(
             }
         }
 
-        while packfile_items_futures.len() < concurrency.trees_and_blobs {
+        loop {
             if let Some((_, entry)) = delta_manifest_entries_buffer.front() {
-                // If the next future will tip memory usage over the memory bound then don't start polling it,
-                // unless `packfile_items_futures` is empty in which case we add the future regardless to make
-                // sure we always make progress.
-                if !packfile_items_futures.is_empty()
-                    && !MemoryBound::new(Some(concurrency.memory_bound)).within_bound(entry_weight(
+                // If `packfile_items_futures` is empty, then we have to poll the next item regardless of the current memory usage to
+                // ensure that the stream makes progress
+                if !packfile_items_futures.is_empty() {
+                    let weight = entry_weight(
                         entry.as_ref(),
                         delta_inclusion,
                         filter.clone(),
                         chain_breaking_mode,
-                    ))
-                {
-                    break;
+                    );
+                    // If the next future will tip memory usage over the memory bound OR if we don't have enough buffer budget for it,
+                    // then don't start polling it
+                    if !buffer_weight.has_space_for(weight)
+                        || !MemoryBound::new(Some(concurrency.memory_bound)).within_bound(weight)
+                    {
+                        break;
+                    }
                 }
             }
 
             if let Some((_cs_id, entry)) = delta_manifest_entries_buffer.pop_front() {
-                packfile_items_futures.push_back(packfile_item_for_delta_manifest_entry(
+                let weight = entry_weight(
+                    entry.as_ref(),
+                    delta_inclusion,
+                    filter.clone(),
+                    chain_breaking_mode,
+                );
+                buffer_weight.add_weight(weight);
+                let fut = packfile_item_for_delta_manifest_entry(
                     fetch_container.clone(),
                     base_set.clone(),
                     entry,
-                ));
+                );
+                packfile_items_futures.push_back(FutureWithWeight::new(weight, fut));
             } else {
                 break;
             }
@@ -363,7 +382,14 @@ fn packfile_stream_from_changesets<'a>(
             cx.waker().wake_by_ref();
             Poll::Pending
         } else {
-            packfile_items_futures.poll_next_unpin(cx)
+            match packfile_items_futures.poll_next_unpin(cx) {
+                Poll::Ready(Some((weight, output))) => {
+                    buffer_weight.sub_weight(weight);
+                    Poll::Ready(Some(output))
+                }
+                Poll::Ready(None) => Poll::Ready(None),
+                Poll::Pending => Poll::Pending,
+            }
         }
     })
     .try_filter_map(futures::future::ok)

@@ -24,6 +24,7 @@ rust_library(
         "//common/rust/shed/buffered_weighted:buffered_weighted",
         "//common/rust/shed/cloned:cloned",
         "//common/rust/shed/futures_stats:futures_stats",
+        "//common/rust/shed/justknobs_stub:justknobs",
         "//eden/mononoke/blobstore:blobstore",
         "//eden/mononoke/bonsai_git_mapping:bonsai_git_mapping",
         "//eden/mononoke/bookmarks:bookmarks",
