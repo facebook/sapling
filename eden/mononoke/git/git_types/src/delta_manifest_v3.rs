@@ -307,9 +307,9 @@ impl GDMV3InstructionBytes {
         self,
         ctx: &CoreContext,
         blobstore: &impl Blobstore,
-    ) -> Result<Bytes> {
+    ) -> Result<Vec<u8>> {
         match self {
-            GDMV3InstructionBytes::Inlined(bytes) => Ok(bytes),
+            GDMV3InstructionBytes::Inlined(bytes) => Ok(bytes.into()),
             GDMV3InstructionBytes::Chunked(chunks) => {
                 Ok(stream::iter(chunks)
                     .map(|chunk: GDMV3InstructionsChunkId| async move {
@@ -321,7 +321,7 @@ impl GDMV3InstructionBytes {
                         Ok(acc)
                     })
                     .await?
-                    .freeze())
+                    .to_vec())
             }
         }
     }
@@ -478,8 +478,11 @@ impl GitDeltaManifestEntryOps for GDMV3Entry {
         self.full_object.kind
     }
 
-    fn full_object_inlined_bytes(&self) -> Option<Bytes> {
-        self.full_object.inlined_bytes.clone()
+    fn into_full_object_inlined_bytes(&mut self) -> Option<Vec<u8>> {
+        self.full_object
+            .inlined_bytes
+            .take()
+            .map(|bytes| bytes.into())
     }
 
     fn deltas(&self) -> Box<dyn Iterator<Item = &(dyn ObjectDeltaOps + Sync)> + '_> {
@@ -517,7 +520,7 @@ impl ObjectDeltaOps for GDMV3DeltaEntry {
         &self,
         ctx: &CoreContext,
         blobstore: &Arc<dyn Blobstore>,
-    ) -> Result<Bytes> {
+    ) -> Result<Vec<u8>> {
         self.instructions
             .instruction_bytes
             .clone()

@@ -282,7 +282,7 @@ where
         .get(ctx, &blobstore_key)
         .await
         .map_err(|e| GitError::StorageFailure(git_hash.to_hex().to_string(), e.into()))?
-        .map(|obj| GitPackfileBaseItem::from_encoded_bytes(obj.into_raw_bytes()))
+        .map(|obj| GitPackfileBaseItem::from_encoded_bytes(obj.into_raw_bytes().to_vec()))
         .transpose()
         .map_err(|_| GitError::InvalidPackfileItem(git_hash.to_hex().to_string()))
 }

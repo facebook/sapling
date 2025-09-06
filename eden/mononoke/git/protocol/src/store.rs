@@ -192,7 +192,7 @@ pub(crate) async fn changeset_delta_manifest_entries(
 pub(crate) async fn packfile_item_for_delta_manifest_entry(
     fetch_container: FetchContainer,
     base_set: Arc<FxHashSet<ObjectId>>,
-    entry: Box<dyn GitDeltaManifestEntryOps + Send>,
+    mut entry: Box<dyn GitDeltaManifestEntryOps + Send>,
 ) -> Result<Option<PackfileItem>> {
     let FetchContainer {
         ctx,
@@ -230,7 +230,7 @@ pub(crate) async fn packfile_item_for_delta_manifest_entry(
         }
         None => {
             // Use the full object instead
-            if let Some(inlined_bytes) = entry.full_object_inlined_bytes() {
+            if let Some(inlined_bytes) = entry.into_full_object_inlined_bytes() {
                 Ok(Some(PackfileItem::new_encoded_base(
                     GitPackfileBaseItem::from_encoded_bytes(inlined_bytes)
                         .with_context(|| {

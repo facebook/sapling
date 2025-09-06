@@ -13,7 +13,6 @@ use anyhow::Result;
 use async_trait::async_trait;
 use blobstore::Blobstore;
 use blobstore::Loadable;
-use bytes::Bytes;
 use context::CoreContext;
 use futures::stream::BoxStream;
 use gix_hash::ObjectId;
@@ -186,7 +185,7 @@ pub trait GitDeltaManifestEntryOps {
         Ok(RichGitSha1::from_sha1(sha1, ty, self.full_object_size()))
     }
 
-    fn full_object_inlined_bytes(&self) -> Option<Bytes>;
+    fn into_full_object_inlined_bytes(&mut self) -> Option<Vec<u8>>;
 
     /// Returns an iterator over the deltas of the subentry.
     fn deltas(&self) -> Box<dyn Iterator<Item = &(dyn ObjectDeltaOps + Sync)> + '_>;
@@ -215,5 +214,5 @@ pub trait ObjectDeltaOps {
         &self,
         ctx: &CoreContext,
         blobstore: &Arc<dyn Blobstore>,
-    ) -> Result<Bytes>;
+    ) -> Result<Vec<u8>>;
 }

@@ -151,7 +151,7 @@ pub struct GDMV2ObjectEntry {
     pub oid: ObjectId,
     pub size: u64,
     pub kind: ObjectKind,
-    pub inlined_bytes: Option<Bytes>,
+    pub inlined_bytes: Option<Vec<u8>>,
 }
 
 impl GDMV2ObjectEntry {
@@ -174,7 +174,7 @@ impl GDMV2ObjectEntry {
             oid,
             size,
             kind,
-            inlined_bytes,
+            inlined_bytes: inlined_bytes.map(|bytes| bytes.to_vec()),
         })
     }
 }
@@ -276,9 +276,9 @@ impl GDMV2InstructionBytes {
         self,
         ctx: &CoreContext,
         blobstore: &impl Blobstore,
-    ) -> Result<Bytes> {
+    ) -> Result<Vec<u8>> {
         match self {
-            GDMV2InstructionBytes::Inlined(bytes) => Ok(bytes),
+            GDMV2InstructionBytes::Inlined(bytes) => Ok(bytes.to_vec()),
             GDMV2InstructionBytes::Chunked(chunks) => {
                 Ok(stream::iter(chunks)
                     .map(|chunk: GDMV2InstructionsChunkId| async move {
@@ -290,7 +290,7 @@ impl GDMV2InstructionBytes {
                         Ok(acc)
                     })
                     .await?
-                    .freeze())
+                    .to_vec())
             }
         }
     }
@@ -335,7 +335,7 @@ impl ThriftConvert for GDMV2ObjectEntry {
             oid: oid::try_from_bytes(&thrift.oid.0)?.to_owned(),
             size: thrift.size as u64,
             kind: ObjectKind::from_thrift(thrift.kind)?,
-            inlined_bytes: thrift.inlined_bytes,
+            inlined_bytes: thrift.inlined_bytes.map(Vec::from),
         })
     }
     fn into_thrift(self) -> Self::Thrift {
@@ -343,7 +343,7 @@ impl ThriftConvert for GDMV2ObjectEntry {
             oid: mononoke_types_serialization::id::GitSha1(self.oid.as_bytes().into()),
             size: self.size as i64,
             kind: self.kind.into_thrift(),
-            inlined_bytes: self.inlined_bytes,
+            inlined_bytes: self.inlined_bytes.map(Bytes::from),
             ..Default::default()
         }
     }
@@ -450,9 +450,9 @@ impl GitDeltaManifestEntryOps for (MPath, GDMV2Entry) {
         entry.full_object.kind
     }
 
-    fn full_object_inlined_bytes(&self) -> Option<Bytes> {
+    fn into_full_object_inlined_bytes(&mut self) -> Option<Vec<u8>> {
         let (_, entry) = self;
-        entry.full_object.inlined_bytes.clone()
+        entry.full_object.inlined_bytes.take()
     }
 
     fn deltas(&self) -> Box<dyn Iterator<Item = &(dyn ObjectDeltaOps + Sync)> + '_> {
@@ -492,7 +492,7 @@ impl ObjectDeltaOps for GDMV2DeltaEntry {
         &self,
         ctx: &CoreContext,
         blobstore: &Arc<dyn Blobstore>,
-    ) -> Result<Bytes> {
+    ) -> Result<Vec<u8>> {
         self.instructions
             .instruction_bytes
             .clone()

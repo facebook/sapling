@@ -8,7 +8,6 @@
 use std::io::Write;
 use std::sync::atomic::AtomicBool;
 
-use bytes::Bytes;
 use bytes::BytesMut;
 use flate2::Compression;
 use flate2::write::ZlibDecoder;
@@ -78,7 +77,7 @@ async fn get_objects_stream(
         let decompressed_size = raw_instructions.len() as u64;
         let mut encoder = ZlibEncoder::new(Vec::new(), Compression::default());
         encoder.write_all(&raw_instructions)?;
-        let compressed_instruction_bytes = Bytes::from(encoder.finish()?);
+        let compressed_instruction_bytes = encoder.finish()?;
         let pack_item = PackfileItem::new_delta(
             another_tag_hash,
             tag_hash,

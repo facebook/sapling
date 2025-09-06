@@ -53,7 +53,7 @@ impl PackfileItem {
         oid: ObjectId,
         base_oid: ObjectId,
         decompressed_size: u64,
-        compressed_data: Bytes,
+        compressed_data: Vec<u8>,
     ) -> Self {
         Self::OidDelta(DeltaOidObject::new(
             oid,
@@ -87,7 +87,7 @@ pub struct DeltaOidObject {
     /// The size of the delta instructions object once it is decompressed
     decompressed_size: usize,
     /// The compressed/encoded data of the delta instructions object
-    compressed_data: Bytes,
+    compressed_data: Vec<u8>,
 }
 
 impl DeltaOidObject {
@@ -95,7 +95,7 @@ impl DeltaOidObject {
         oid: ObjectId,
         base_oid: ObjectId,
         decompressed_size: u64,
-        compressed_data: Bytes,
+        compressed_data: Vec<u8>,
     ) -> Self {
         Self {
             oid,
@@ -120,7 +120,7 @@ impl TryFrom<DeltaOidObject> for output::Entry {
         let entry = Self {
             id: value.oid,
             decompressed_size: value.decompressed_size,
-            compressed_data: value.compressed_data.to_vec(),
+            compressed_data: value.compressed_data,
             kind,
         };
         anyhow::Ok(entry)
@@ -290,7 +290,7 @@ impl TryFrom<GitPackfileBaseItem> for output::Entry {
 }
 
 impl GitPackfileBaseItem {
-    pub fn from_encoded_bytes(encoded_bytes: Bytes) -> Result<Self> {
+    pub fn from_encoded_bytes(encoded_bytes: Vec<u8>) -> Result<Self> {
         let thrift_item: thrift::GitPackfileBaseItem = compact_protocol::deserialize(encoded_bytes)
             .with_context(|| {
                 MononokeTypeError::BlobDeserializeError("GitPackfileBaseItem".into())
