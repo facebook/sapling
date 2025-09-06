@@ -286,8 +286,27 @@ async fn bookmark_operation(
         for bookmark_prefix_path in MPath::new(bookmark_prefix_str.as_str())?.into_ancestors() {
             let bookmark_prefix_path =
                 BookmarkKey::from_str(std::str::from_utf8(&bookmark_prefix_path.to_vec())?)?;
+
+            let client_correlator = ctx
+                .metadata()
+                .client_info()
+                .and_then(|ci| ci.request_info.as_ref().map(|cri| cri.correlator.as_str()));
+
+            let read_from_replica = justknobs::eval(
+                "scm/mononoke:use_maybe_stale_freshness_for_bookmarks",
+                client_correlator,
+                Some("mononoke_api::repo::git::get_bookmark_state"),
+            )
+            .unwrap_or(false);
+
+            let freshness = if read_from_replica {
+                bookmarks::Freshness::MaybeStale
+            } else {
+                bookmarks::Freshness::MostRecent
+            };
+
             // Check if the path ancestors of this bookmark already exist as bookmark in the repo
-            if get_bookmark_state(ctx, &repo, &bookmark_prefix_path)
+            if get_bookmark_state(ctx, &repo, &bookmark_prefix_path, freshness)
                 .await?
                 .is_existing()
             {

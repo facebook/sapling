@@ -423,10 +423,11 @@ pub async fn get_bookmark_state<'a, 'b>(
     ctx: &'a CoreContext,
     repo: &'a impl Repo,
     bookmark: &'b BookmarkKey,
+    freshness: bookmarks::Freshness,
 ) -> anyhow::Result<BookmarkState> {
     let maybe_bookmark_val = repo
         .bookmarks()
-        .get(ctx.clone(), bookmark, bookmarks::Freshness::MostRecent)
+        .get(ctx.clone(), bookmark, freshness)
         .await
         .with_context(|| format!("Error fetching bookmark: {}", bookmark))?;
     if let Some(cs_id) = maybe_bookmark_val {

@@ -51,7 +51,8 @@
     "scm/mononoke:cacheblob_use_set_or_replace": true,
     "scm/mononoke:caching_ext_use_set_or_replace": true,
     "scm/mononoke:derivation_queue_enable_automated_eviction": true,
-    "scm/mononoke:read_bookmarks_from_xdb_replica": true
+    "scm/mononoke:read_bookmarks_from_xdb_replica": true,
+    "scm/mononoke:use_maybe_stale_freshness_for_bookmarks": true
   },
   "ints": {
     "scm/mononoke_timeouts:repo_client_clone_timeout_secs": 14400,

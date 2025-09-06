@@ -84,15 +84,15 @@ Try again and fail because reads for all blobstores will be disabled
         "1",
         "2",
         "3"
-      ]
-    }
+      ],
+      "use_maybe_stale_freshness_for_bookmarks": [
   --
       "disabled_reads_blobstore_ids": [
         "1",
         "2",
         "3"
-      ]
-    }
+      ],
+      "use_maybe_stale_freshness_for_bookmarks": [
 
 
 Enable all blobstores again

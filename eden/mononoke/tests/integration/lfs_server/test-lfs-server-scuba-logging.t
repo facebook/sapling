@@ -95,7 +95,10 @@
       "sandcastle_vcs": null
     },
     "normvector": {
-      "client_identities": []
+      "client_identities": [],
+      "use_maybe_stale_freshness_for_bookmarks": [
+        "mononoke_api::repo::git::get_bookmark_state"
+      ]
     }
   }
   {
@@ -160,7 +163,10 @@
       "sandcastle_vcs": null
     },
     "normvector": {
-      "client_identities": []
+      "client_identities": [],
+      "use_maybe_stale_freshness_for_bookmarks": [
+        "mononoke_api::repo::git::get_bookmark_state"
+      ]
     }
   }
   {
@@ -230,7 +236,10 @@
     },
     "normvector": {
       "batch_internal_missing_blobs": [],
-      "client_identities": []
+      "client_identities": [],
+      "use_maybe_stale_freshness_for_bookmarks": [
+        "mononoke_api::repo::git::get_bookmark_state"
+      ]
     }
   }
   {
@@ -301,7 +310,10 @@
       "sandcastle_vcs": null
     },
     "normvector": {
-      "client_identities": []
+      "client_identities": [],
+      "use_maybe_stale_freshness_for_bookmarks": [
+        "mononoke_api::repo::git::get_bookmark_state"
+      ]
     }
   }
   {
@@ -357,7 +369,10 @@
       "sandcastle_vcs": null
     },
     "normvector": {
-      "client_identities": []
+      "client_identities": [],
+      "use_maybe_stale_freshness_for_bookmarks": [
+        "mononoke_api::repo::git::get_bookmark_state"
+      ]
     }
   }
 
