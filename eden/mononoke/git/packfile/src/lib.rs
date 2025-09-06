@@ -7,4 +7,5 @@
 
 pub mod bundle;
 mod hash_writer;
+pub mod owned_async_writer;
 pub mod pack;

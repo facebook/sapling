@@ -15,7 +15,6 @@ use bonsai_git_mapping::BonsaiGitMappingRef;
 use bonsai_git_mapping::BonsaisOrGitShas;
 use bytes::Bytes;
 use either::Either;
-use futures::SinkExt;
 use futures::StreamExt;
 use futures::future::try_join4;
 use git_env::GitHost;
@@ -41,6 +40,7 @@ use packetline::encode::write_data_channel;
 use packetline::encode::write_error_channel;
 use packetline::encode::write_progress_channel;
 use packetline::encode::write_text_packetline;
+use packfile::owned_async_writer::WrapperSender;
 use packfile::pack::DeltaForm;
 use packfile::pack::PackfileWriter;
 use protocol::generator::fetch_response;
@@ -53,11 +53,7 @@ use protocol::types::ShallowInfoResponse;
 use repo_identity::RepoIdentityRef;
 use rustc_hash::FxHashSet;
 use scuba_ext::MononokeScubaSampleBuilder;
-use tokio::io::ErrorKind;
 use tokio::sync::mpsc;
-use tokio_util::io::CopyToBytes;
-use tokio_util::io::SinkWriter;
-use tokio_util::sync::PollSender;
 
 use crate::command::Command;
 use crate::command::FetchArgs;
@@ -86,6 +82,8 @@ const SHALLOW_INFO_HEADER: &[u8] = b"shallow-info";
 const ACK: &str = "ACK";
 /// Acknowledgement that the object sent by the client does not exist on the server
 const NAK: &[u8] = b"NAK";
+/// The default number of bytes to be bufferred at the writer layer
+const DEFAULT_GIT_WRITER_BUFFER_BYTES: usize = 52_428_800; // 50 MB
 
 #[derive(Debug, Clone)]
 struct FetchResponseHeaders {
@@ -516,12 +514,9 @@ pub async fn fetch(
 ) -> Result<impl TryIntoResponse + use<>, Error> {
     let n_haves = args.haves().len();
     let n_wants = args.wants().len();
-    let (writer, reader) = mpsc::channel::<Bytes>(100_000_000);
+    let (writer, reader) = mpsc::channel::<Vec<u8>>(100);
     let (progress_writer, mut progress_reader) = mpsc::channel::<String>(50);
     let (error_writer, mut err_reader) = mpsc::channel::<String>(50);
-    let sink_writer = SinkWriter::new(CopyToBytes::new(
-        PollSender::new(writer).sink_map_err(|_| std::io::Error::from(ErrorKind::BrokenPipe)),
-    ));
     let mut fetch_response_headers =
         FetchResponseHeaders::from_request(request_context.clone(), args.clone()).await?;
     let include_pack = fetch_response_headers.include_pack();
@@ -531,17 +526,19 @@ pub async fn fetch(
     } else {
         DeltaForm::RefAndOffset
     };
-
+    let max_buffer = justknobs::get_as::<usize>("scm/mononoke:git_writer_buffer_bytes", None)
+        .unwrap_or(DEFAULT_GIT_WRITER_BUFFER_BYTES);
     // Some repos might be configured to display a message to users when they
     // run `git pull`.
     let mb_fetch_msg = git_fetch_message(request_context).await?;
     let bytes_stream = ResponseStream::new(try_stream! {
+        let mut container = Vec::with_capacity(max_buffer);
         for header in fetch_response_headers {
             yield header;
         }
         // Only include the packfile if it is requested by client
         if include_pack {
-            let mut pack_reader = tokio_stream::wrappers::ReceiverStream::new(reader).ready_chunks(100_000_000);
+            let mut pack_reader = tokio_stream::wrappers::ReceiverStream::new(reader);
             if let Some(fetch_msg) = mb_fetch_msg {
                 let mut buf = Vec::with_capacity(fetch_msg.len());
                 write_progress_channel(fetch_msg.as_ref(), &mut buf).await?;
@@ -552,19 +549,23 @@ pub async fn fetch(
                 write_progress_channel(progress.as_ref(), &mut buf).await?;
                 yield Bytes::from(buf);
             }
-            while let Some(chunks) = pack_reader.next().await {
-                for chunk in chunks {
-                    let mut buf = Vec::with_capacity(chunk.len());
-                    // Write the actual packfile content to the data channel
-                    write_data_channel(chunk.as_ref(), &mut buf).await?;
-                    yield Bytes::from(buf);
+            while let Some(chunk) = pack_reader.next().await {
+                if container.len() >= max_buffer {
+                    yield Bytes::from(container);
+                    container = Vec::with_capacity(max_buffer);
                 }
+                // Write the actual packfile content to the data channel
+                write_data_channel(chunk.as_ref(), &mut container).await?;
+
             }
             while let Some(err_msg) = err_reader.recv().await {
                 let mut buf = Vec::with_capacity(err_msg.len());
                 write_error_channel(err_msg.as_ref(), &mut buf).await?;
                 yield Bytes::from(buf);
             }
+        }
+        if !container.is_empty() {
+            yield Bytes::from(container);
         }
         let mut buf = Vec::with_capacity(FLUSH_LINE.len());
         flush_to_write(&mut buf).await?;
@@ -601,7 +602,7 @@ pub async fn fetch(
                 perf_scuba.add(MononokeGitScubaKey::NHaves, n_haves);
                 packfile_stats_to_scuba(&response_stream, &mut perf_scuba, request_signature);
                 let mut pack_writer = PackfileWriter::new(
-                    sink_writer,
+                    WrapperSender::new(writer),
                     response_stream.num_objects() as u32,
                     5000,
                     delta_form,

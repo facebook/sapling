@@ -11,7 +11,7 @@ use std::io::Write;
 use anyhow::Context;
 use anyhow::Result;
 use futures::Stream;
-use futures::StreamExt;
+use futures::TryStreamExt;
 use git_types::PackfileItem;
 use gix_hash::ObjectId;
 use gix_pack::data::Version;
@@ -21,10 +21,9 @@ use rustc_hash::FxBuildHasher;
 use rustc_hash::FxHashMap;
 use sha1_checked::Digest;
 use thiserror::Error;
-use tokio::io::AsyncWrite;
-use tokio::io::AsyncWriteExt;
 
 use crate::hash_writer::AsyncHashWriter;
+use crate::owned_async_writer::OwnedAsyncWrite;
 
 #[derive(Error, Debug)]
 #[error(transparent)]
@@ -46,7 +45,7 @@ pub enum DeltaForm {
 /// writer are sorted topologically
 pub struct PackfileWriter<T>
 where
-    T: AsyncWrite + Unpin,
+    T: OwnedAsyncWrite,
 {
     /// Writer used for writing the raw byte content of packfile
     pub hash_writer: AsyncHashWriter<T>,
@@ -72,7 +71,7 @@ where
     object_id_with_index: FxHashMap<ObjectId, usize>,
 }
 
-impl<T: AsyncWrite + Unpin> PackfileWriter<T> {
+impl<T: OwnedAsyncWrite> PackfileWriter<T> {
     /// Create a new packfile writer based on `raw_writer` for writing `count` entries to the Packfile.
     pub fn new(raw_writer: T, count: u32, concurrency: usize, delta_form: DeltaForm) -> Self {
         let hash_writer = AsyncHashWriter::new(raw_writer);
@@ -94,7 +93,7 @@ impl<T: AsyncWrite + Unpin> PackfileWriter<T> {
     async fn write_header(&mut self) -> Result<()> {
         if let Some((version, count)) = self.header_info.take() {
             let header_bytes = header::encode(version, count);
-            self.hash_writer.write_all(&header_bytes[..]).await?;
+            self.hash_writer.write_all(Vec::from(header_bytes)).await?;
             self.size += header_bytes.len() as u64;
         }
         Ok(())
@@ -107,54 +106,47 @@ impl<T: AsyncWrite + Unpin> PackfileWriter<T> {
     ) -> Result<()> {
         // Write the packfile header if applicable
         self.write_header().await?;
-        let mut entries_stream = Box::pin(entries_stream.ready_chunks(self.concurrency));
-        while let Some(entries) = entries_stream.next().await {
-            let entries = entries
-                .into_iter()
-                .map(|entry| {
-                    let entry: Entry = entry
-                        .context("Failure in fetching Packfile Item from stream")?
-                        .try_into()
-                        .context("Failure in converting PackfileItem to Entry")?;
-                    anyhow::Ok(entry)
-                })
-                .collect::<Result<Vec<_>>>()?;
-
-            for mut entry in entries {
-                // TODO(rajshar): Add support for preventing cycles in on-disk bundle for partial repo
-                // If the entry is already written to the packfile, skip writing it again
-                if self.object_id_with_index.contains_key(&entry.id) {
-                    continue;
-                }
-                self.record_entry(&entry);
-                // If the current entry is a ref delta and we can only have offset deltas, then convert the ref delta
-                // to an offset delta. Otherwise, return the entry as-is
-                entry = self.convert_ref_delta_to_offset_delta(entry)?;
-                // Since the packfile is version 2, the entry should follow the same version
-                let header = entry.to_entry_header(Version::V2, |index| {
+        let mut entries_stream = Box::pin(entries_stream);
+        while let Some(entry) = entries_stream
+            .try_next()
+            .await
+            .context("Failure in fetching Packfile Item from stream")?
+        {
+            let mut entry: Entry = entry
+                .try_into()
+                .context("Failure in converting PackfileItem to Entry")?;
+            // TODO(rajshar): Add support for preventing cycles in on-disk bundle for partial repo
+            // If the entry is already written to the packfile, skip writing it again
+            if self.object_id_with_index.contains_key(&entry.id) {
+                continue;
+            }
+            self.record_entry(&entry);
+            // If the current entry is a ref delta and we can only have offset deltas, then convert the ref delta
+            // to an offset delta. Otherwise, return the entry as-is
+            entry = self.convert_ref_delta_to_offset_delta(entry)?;
+            // Since the packfile is version 2, the entry should follow the same version
+            let header = entry.to_entry_header(Version::V2, |index| {
                     let (base_offset, is_valid_object) = self.object_offset_with_validity[index];
                     if !is_valid_object {
                         unreachable!("Encountered an offset delta that points to an object which does not exist in the packfile.")
                     }
                     self.size - base_offset
                 });
-                // Write the header to a vec buffer instead of writing directly to hash_writer since the Header type expects
-                // an impl Write instance and not an impl AsyncWrite instance. This is fine since the header is always a handful of bytes.
-                let mut header_buffer = Vec::new();
-                let header_written_size =
-                    header.write_to(entry.decompressed_size as u64, &mut header_buffer.by_ref())?;
-                // Write the header to the async hash writer
-                self.hash_writer
-                    .write_all(&header_buffer[..header_written_size])
-                    .await?;
-                // Record the written bytes
-                self.size += header_written_size as u64;
-                // Write the compressed contents of the entry to the packfile
-                self.size +=
-                    tokio::io::copy(&mut &*entry.compressed_data, &mut self.hash_writer).await?;
-                // Increment the number of entries written in the packfile
-                self.num_entries += 1;
-            }
+            // Write the header to a vec buffer instead of writing directly to hash_writer since the Header type expects
+            // an impl Write instance and not an impl AsyncWrite instance. This is fine since the header is always a handful of bytes.
+            let mut header_buffer = Vec::new();
+            let header_written_size =
+                header.write_to(entry.decompressed_size as u64, &mut header_buffer.by_ref())?;
+            // Write the header to the async hash writer
+            self.hash_writer.write_all(header_buffer).await?;
+            // Record the written bytes
+            self.size += header_written_size as u64;
+            // Write the compressed contents of the entry to the packfile
+            let compressed_data_len = entry.compressed_data.len() as u64;
+            self.hash_writer.write_all(entry.compressed_data).await?;
+            self.size += compressed_data_len;
+            // Increment the number of entries written in the packfile
+            self.num_entries += 1;
         }
         Ok(())
     }
@@ -165,7 +157,7 @@ impl<T: AsyncWrite + Unpin> PackfileWriter<T> {
         // Get the hash of all the content written so far
         let digest = self.hash_writer.hasher.clone().finalize();
         // Append the hash to the end of the packfile as a checksum
-        self.hash_writer.inner.write_all(&digest[..]).await?;
+        OwnedAsyncWrite::write_all(&mut self.hash_writer.inner, Vec::from(&digest[..])).await?;
         self.size += digest.len() as u64;
         self.hash_writer.inner.flush().await?;
         // Update the hash for the writer indicating that we have finished writing

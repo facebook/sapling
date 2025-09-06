@@ -5,21 +5,18 @@
  * GNU General Public License version 2.
  */
 
-use std::pin::Pin;
-use std::task::Context;
-use std::task::Poll;
-
 use pin_project::pin_project;
 use sha1_checked::Digest;
 use sha1_checked::Sha1;
-use tokio::io::AsyncWrite;
+
+use crate::owned_async_writer::OwnedAsyncWrite;
 
 /// A writer that uses the underlying write handle for writing data while at
 /// the same time hashing the content written so far.
 #[pin_project]
 pub struct AsyncHashWriter<T>
 where
-    T: AsyncWrite,
+    T: OwnedAsyncWrite,
 {
     /// Underlying write handle.
     #[pin]
@@ -28,7 +25,7 @@ where
     pub hasher: Sha1,
 }
 
-impl<T: AsyncWrite> AsyncHashWriter<T> {
+impl<T: OwnedAsyncWrite> AsyncHashWriter<T> {
     pub fn new(inner: T) -> Self {
         Self {
             inner,
@@ -37,30 +34,13 @@ impl<T: AsyncWrite> AsyncHashWriter<T> {
     }
 }
 
-impl<T: AsyncWrite> AsyncWrite for AsyncHashWriter<T> {
-    fn poll_write(
-        self: Pin<&mut Self>,
-        cx: &mut Context<'_>,
-        buf: &[u8],
-    ) -> Poll<Result<usize, std::io::Error>> {
-        let this = self.project();
-        match this.inner.poll_write(cx, buf) {
-            Poll::Ready(Ok(written)) => {
-                this.hasher.update(&buf[..written]);
-                Poll::Ready(Ok(written))
-            }
-            other_state => other_state,
-        }
+impl<T: OwnedAsyncWrite> OwnedAsyncWrite for AsyncHashWriter<T> {
+    async fn write_all(&mut self, src: Vec<u8>) -> anyhow::Result<()> {
+        self.hasher.update(src.as_slice());
+        self.inner.write_all(src).await
     }
 
-    fn poll_flush(self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<Result<(), std::io::Error>> {
-        self.project().inner.poll_flush(cx)
-    }
-
-    fn poll_shutdown(
-        self: Pin<&mut Self>,
-        cx: &mut Context<'_>,
-    ) -> Poll<Result<(), std::io::Error>> {
-        self.project().inner.poll_flush(cx)
+    async fn flush(&mut self) -> anyhow::Result<()> {
+        self.inner.flush().await
     }
 }
