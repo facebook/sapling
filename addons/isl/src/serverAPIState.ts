@@ -26,6 +26,7 @@ import {reuseEqualObjects} from 'shared/deepEqualExt';
 import {randomId} from 'shared/utils';
 import {type BookmarksData, bookmarksDataStorage} from './BookmarksData';
 import serverAPI from './ClientToServerAPI';
+import {Internal} from './Internal';
 import {latestSuccessorsMapAtom, successionTracker} from './SuccessionTracker';
 import {Dag, DagCommitInfo} from './dag/dag';
 import {readInterestingAtoms, serializeAtomsState} from './debug/getInterestingAtoms';
@@ -33,7 +34,6 @@ import {atomFamilyWeak, configBackedAtom, readAtom, writeAtom} from './jotaiUtil
 import platform from './platform';
 import {atomResetOnCwdChange, repositoryData} from './repositoryData';
 import {registerCleanup, registerDisposable} from './utils';
-import {Internal} from './Internal';
 
 export {repositoryData};
 
