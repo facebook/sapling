@@ -817,6 +817,10 @@ def is_remote_execution() -> bool:
     return "REMOTE_EXECUTION_SCM_REPO" in os.environ or "INSIDE_RE_WORKER" in os.environ
 
 
+def is_devcompute() -> bool:
+    return "DEVCOMPUTE" in os.environ
+
+
 def is_apple_silicon() -> bool:
     if sys.platform == "darwin":
         return "ARM64" in os.uname().version
