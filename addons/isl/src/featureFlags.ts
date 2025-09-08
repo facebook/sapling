@@ -16,7 +16,7 @@ const bulkFetchedFlagsAtom = atom<Promise<Record<string, boolean>>>(() => {
   if (Internal.featureFlags == null) {
     return Promise.resolve({});
   }
-  const knownFlags = Object.values(Internal.featureFlags ?? {});
+  const knownFlags: Array<string> = Object.values(Internal.featureFlags ?? {});
   return bulkFetchFeatureFlags(knownFlags);
 });
 
@@ -30,7 +30,7 @@ export const featureFlagAsync = atomFamilyWeak((name?: string) => {
     return atom(Promise.resolve(false));
   }
 
-  const knownFlags = Object.values(Internal.featureFlags ?? {});
+  const knownFlags: Array<string> = Object.values(Internal.featureFlags ?? {});
   if (knownFlags.includes(name)) {
     return atom(get => get(bulkFetchedFlagsAtom).then(flags => flags[name]));
   }
