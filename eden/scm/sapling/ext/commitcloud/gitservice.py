@@ -19,9 +19,6 @@ class GitService(
     def check(self):
         return True
 
-    def getsmartlog(self, reponame, workspace, repo, limit, flags=[]):
-        raise error.GitUnsupportedError(self.ui)
-
     def getsmartlogbyversion(
         self, reponame, workspace, repo, date, version, limit, flags=[]
     ):

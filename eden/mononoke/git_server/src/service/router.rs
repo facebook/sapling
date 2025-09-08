@@ -176,6 +176,7 @@ pub fn build_router(context: GitServerContext) -> Router {
         GitHandlers::setup::<edenapi_service::handlers::commit_cloud::CommitCloudWorkspaces>(route);
         GitHandlers::setup::<edenapi_service::handlers::commit_cloud::CommitCloudWorkspace>(route);
         GitHandlers::setup::<edenapi_service::handlers::commit_cloud::CommitCloudReferences>(route);
+        GitHandlers::setup::<edenapi_service::handlers::commit_cloud::CommitCloudSmartlog>(route);
         GitHandlers::setup::<edenapi_service::handlers::commit_cloud::CommitCloudUpdateReferences>(
             route,
         );

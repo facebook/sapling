@@ -7,7 +7,6 @@
 
 use std::sync::Arc;
 
-use blobrepo_hg::BlobRepoHg;
 use bonsai_git_mapping::BonsaiGitMappingArc;
 use bonsai_hg_mapping::BonsaiHgMappingArc;
 use borrowed::borrowed;
@@ -16,6 +15,8 @@ use commit_cloud::CommitCloudRef;
 use commit_cloud::Phase;
 use commit_cloud::ctx::CommitCloudContext;
 use commit_cloud::utils::get_bonsai_from_cloud_ids;
+use commit_cloud::utils::get_cloud_ids_from_bonsais;
+use commit_cloud_types::ChangesetScheme;
 use commit_cloud_types::ClientInfo;
 use commit_cloud_types::HistoricalVersion;
 use commit_cloud_types::LocalBookmarksMap;
@@ -34,6 +35,8 @@ use futures::StreamExt;
 use futures::TryStreamExt;
 use futures::stream;
 use futures_util::future::try_join_all;
+use metaconfig_types::CommitIdentityScheme;
+use metaconfig_types::RepoConfigRef;
 use mononoke_types::ChangesetId;
 use phases::PhasesRef;
 
@@ -114,18 +117,18 @@ impl<R: MononokeRepo> RepoContext<R> {
         reponame: &str,
         flags: &[SmartlogFlag],
     ) -> Result<SmartlogData, MononokeError> {
-        let cc_ctx = CommitCloudContext::new(workspace, reponame)?;
+        let cc_ctx = self.commit_cloud_context_with_scheme(workspace, reponame)?;
         let raw_data = self
             .repo()
             .commit_cloud()
             .get_smartlog_raw_info(self.ctx(), &cc_ctx)
             .await?;
-        let hg_ids = raw_data.collapse_into_vec(flags);
-
+        let cloud_ids = raw_data.collapse_into_vec(flags);
+        eprintln!("cloud_ids: {:?}", cloud_ids);
         let nodes = self
             .form_smartlog_with_info(
                 cc_ctx,
-                hg_ids,
+                cloud_ids,
                 raw_data.local_bookmarks,
                 raw_data.remote_bookmarks,
                 flags,
@@ -150,17 +153,19 @@ impl<R: MononokeRepo> RepoContext<R> {
         let ctx = self.ctx();
         let repo = self.repo();
 
-        let cs_ids = get_bonsai_from_cloud_ids(
+        let cl_ids_mapping = get_bonsai_from_cloud_ids(
             ctx,
             &cc_ctx,
             repo.bonsai_hg_mapping_arc(),
             repo.bonsai_git_mapping_arc(),
             c_ids,
         )
-        .await?
-        .into_iter()
-        .map(|(_, cs_id)| cs_id)
-        .collect::<Vec<ChangesetId>>();
+        .await?;
+
+        let cs_ids = cl_ids_mapping
+            .iter()
+            .map(|(_, cs_id)| *cs_id)
+            .collect::<Vec<ChangesetId>>();
 
         let public_frontier = repo
             .commit_graph()
@@ -206,34 +211,49 @@ impl<R: MononokeRepo> RepoContext<R> {
             (Phase::Public, public_commits_ctx),
             (Phase::Draft, draft_commits_ctx),
         ] {
+            let ids = changesets
+                .iter()
+                .flatten()
+                .map(|cs| cs.id())
+                .collect::<Vec<ChangesetId>>();
+
+            let cloud_ids = get_cloud_ids_from_bonsais(
+                ctx,
+                &cc_ctx,
+                ids,
+                repo.bonsai_hg_mapping_arc(),
+                repo.bonsai_git_mapping_arc(),
+            )
+            .await?;
+
             let changesets = stream::iter(changesets.into_iter().flatten())
                 .map(|changeset| {
-                    cloned!(rbs, lbs, phase);
+                    cloned!(rbs, lbs, phase, cloud_ids, cc_ctx);
                     async move {
-                        let res = repo
-                            .get_hg_changeset_and_parents_from_bonsai(
-                                self.ctx().clone(),
-                                changeset.id(),
-                            )
-                            .await;
-                        match res {
-                            Ok((hg_id, hg_parents)) => {
-                                let c_id = CloudChangesetId::from(hg_id);
-                                let parents_c_ids = hg_parents
-                                    .into_iter()
-                                    .map(CloudChangesetId::from)
-                                    .collect::<Vec<_>>();
-                                self.repo().commit_cloud().make_smartlog_node(
-                                    &c_id,
-                                    &parents_c_ids,
-                                    &changeset.changeset_info().await?,
-                                    &lbs.get(&c_id).cloned(),
-                                    &rbs.get(&c_id).cloned(),
-                                    &phase,
-                                )
-                            }
-                            Err(e) => Err(e),
-                        }
+                        let cloud_id = cloud_ids
+                            .get(&changeset.id())
+                            .ok_or(anyhow::anyhow!("no changeset id found for bonsai"))?;
+
+                        let parents = changeset.parents().await?;
+                        let parents_c_ids = get_cloud_ids_from_bonsais(
+                            ctx,
+                            &cc_ctx,
+                            parents,
+                            repo.bonsai_hg_mapping_arc(),
+                            repo.bonsai_git_mapping_arc(),
+                        )
+                        .await?
+                        .into_values()
+                        .collect::<Vec<_>>();
+
+                        self.repo().commit_cloud().make_smartlog_node(
+                            cloud_id,
+                            &parents_c_ids,
+                            &changeset.changeset_info().await?,
+                            &lbs.get(cloud_id).cloned(),
+                            &rbs.get(cloud_id).cloned(),
+                            &phase,
+                        )
                     }
                 })
                 .buffer_unordered(100)
@@ -380,5 +400,28 @@ impl<R: MononokeRepo> RepoContext<R> {
             .commit_cloud()
             .get_other_repo_workspaces(workspace)
             .await?)
+    }
+
+    fn commit_cloud_context_with_scheme(
+        &self,
+        workspace: &str,
+        reponame: &str,
+    ) -> Result<CommitCloudContext, MononokeError> {
+        let default_commit_identity_scheme_conf =
+            &self.repo().repo_config().default_commit_identity_scheme;
+
+        let scheme = match default_commit_identity_scheme_conf {
+            CommitIdentityScheme::HG => ChangesetScheme::Hg,
+            CommitIdentityScheme::GIT => ChangesetScheme::Git,
+            _ => {
+                return Err(MononokeError::InvalidRequest(format!(
+                    "Unsupported commit identity scheme: {:?}",
+                    self.repo().repo_config().default_commit_identity_scheme
+                )));
+            }
+        };
+        Ok(CommitCloudContext::new_with_scheme(
+            workspace, reponame, scheme,
+        )?)
     }
 }

@@ -91,12 +91,7 @@ impl CommitCloud {
         ctx: &CoreContext,
         cc_ctx: &CommitCloudContext,
     ) -> anyhow::Result<RawSmartlogData> {
-        RawSmartlogData::fetch_smartlog_references(
-            ctx,
-            &CommitCloudContext::new(&cc_ctx.workspace, &cc_ctx.reponame)?,
-            &self.storage,
-        )
-        .await
+        RawSmartlogData::fetch_smartlog_references(ctx, cc_ctx, &self.storage).await
     }
 
     pub fn make_smartlog_node(
