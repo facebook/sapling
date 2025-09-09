@@ -74,10 +74,15 @@ Dirsync should respect the script. Rename '.log' to '.txt', skip '.zip' and upda
   The year is 2025.
 
 Try out syncing in the other direction:
+Mirror 2 files. They should have different content. See D80959221.
 
   $ echo 'Another 2025.' >> x.txt
-  $ hg amend
+  $ echo 'Different 2025.' >> y.txt
+  $ hg amend -A x.txt y.txt
   mirrored adding 'b/x.txt' to 'a/x.log'
+  mirrored adding 'b/y.txt' to 'a/y.log'
   $ cat ../a/x.log
   The year is 2024.
   Another 2024.
+  $ cat ../a/y.log
+  Different 2024.
