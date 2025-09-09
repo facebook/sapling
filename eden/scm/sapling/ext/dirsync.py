@@ -494,17 +494,24 @@ def dirsyncctx(ctx, matcher=None):
                         )
 
                 if mirror_data is not None and fsrc is not None:
-                    src_data = fsrc.data()
-                    dst_data = mirror_data(srcmirror, dstmirror, src, src_data)
-                    if dst_data != src_data:
+
+                    def datafunc(
+                        fsrc=fsrc,
+                        mirror_data=mirror_data,
+                        src=src,
+                        srcmirror=srcmirror,
+                        dstmirror=dstmirror,
+                    ):
+                        src_data = fsrc.data()
+                        dst_data = mirror_data(srcmirror, dstmirror, src, src_data)
                         if not isinstance(dst_data, bytes):
                             raise error.ProgrammingError(
                                 "mirror_data result should be bytes, got %s"
                                 % type(dst_data)
                             )
-                        fmirror = context.overlayfilectx(
-                            fmirror, datafunc=lambda data=dst_data: data
-                        )
+                        return dst_data
+
+                    fmirror = context.overlayfilectx(fmirror, datafunc=datafunc)
 
                 mctx[dst] = fmirror
                 resultmirrored.add(dst)
