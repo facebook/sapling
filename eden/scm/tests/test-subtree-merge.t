@@ -930,7 +930,6 @@ test subtree merge with subtree copy overwriting a path
   o  0a99ffb8a8f3 A
   $ hg log -r "subtreemergebase("foo", "foo2")" -T '{node|short}\n'
   0a99ffb8a8f3
-tofix: merge base search should follow the overwrite link and skip a5697510be4b
   $ hg subtree merge --from-path foo --to-path foo2
   searching for merge base ...
   found the last subtree copy commit 9b7364fcbb0b
