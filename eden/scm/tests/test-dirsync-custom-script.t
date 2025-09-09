@@ -105,6 +105,17 @@ Test that rebase works with custom script:
   getting a/y.zip
   getting b/x.txt
   getting b/y.txt
-  abort: path 'a/x.log' needs to be mirrored to 'b/x.txt', but the target already has pending changes
-  (to disable dirsync temporarily for a command, use "--config extensions.dirsync=!")
-  [255]
+  not mirroring 'a/x.log' to 'b/x.txt'; it already matches
+  not mirroring 'a/y.log' to 'b/y.txt'; it already matches
+  not mirroring 'b/x.txt' to 'a/x.log'; it already matches
+  not mirroring 'b/y.txt' to 'a/y.log'; it already matches
+  committing files:
+  a/x.log
+  a/y.log
+  a/y.zip
+  b/x.txt
+  b/y.txt
+  committing manifest
+  committing changelog
+  rebase merging completed
+  rebase completed

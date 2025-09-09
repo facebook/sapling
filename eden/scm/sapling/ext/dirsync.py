@@ -443,12 +443,34 @@ def dirsyncctx(ctx, matcher=None):
             else:
                 fsrc = ctx[src]
             for dst, dstmirror in dstpaths:
+                fmirror = fsrc
+
+                if mirror_data is not None and fsrc is not None:
+
+                    def datafunc(
+                        fsrc=fsrc,
+                        mirror_data=mirror_data,
+                        src=src,
+                        srcmirror=srcmirror,
+                        dstmirror=dstmirror,
+                    ):
+                        src_data = fsrc.data()
+                        dst_data = mirror_data(srcmirror, dstmirror, src, src_data)
+                        if not isinstance(dst_data, bytes):
+                            raise error.ProgrammingError(
+                                "mirror_data result should be bytes, got %s"
+                                % type(dst_data)
+                            )
+                        return dst_data
+
+                    fmirror = context.overlayfilectx(fmirror, datafunc=datafunc)
+
                 # changed: whether ctx[dst] is changed, according to status.
                 # conflict: whether the dst change conflicts with src change.
                 if dst in removed:
                     conflict, changed = (action != "r"), True
                 elif dst in modified or dst in added:
-                    conflict, changed = (fsrc is None or ctx[dst].cmp(fsrc)), True
+                    conflict, changed = (fmirror is None or ctx[dst].cmp(fmirror)), True
                 else:
                     conflict = changed = False
                 if conflict:
@@ -474,7 +496,6 @@ def dirsyncctx(ctx, matcher=None):
 
                 # Mirror copyfrom, too.
                 renamed = fsrc and fsrc.renamed()
-                fmirror = fsrc
                 msg = None
                 if renamed:
                     copyfrom, copynode = renamed
@@ -492,26 +513,6 @@ def dirsyncctx(ctx, matcher=None):
                         fmirror = context.overlayfilectx(
                             fmirror, copied=(newcopyfrom, copynode)
                         )
-
-                if mirror_data is not None and fsrc is not None:
-
-                    def datafunc(
-                        fsrc=fsrc,
-                        mirror_data=mirror_data,
-                        src=src,
-                        srcmirror=srcmirror,
-                        dstmirror=dstmirror,
-                    ):
-                        src_data = fsrc.data()
-                        dst_data = mirror_data(srcmirror, dstmirror, src, src_data)
-                        if not isinstance(dst_data, bytes):
-                            raise error.ProgrammingError(
-                                "mirror_data result should be bytes, got %s"
-                                % type(dst_data)
-                            )
-                        return dst_data
-
-                    fmirror = context.overlayfilectx(fmirror, datafunc=datafunc)
 
                 mctx[dst] = fmirror
                 resultmirrored.add(dst)
