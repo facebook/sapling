@@ -106,4 +106,5 @@ Test that rebase works with custom script:
   getting b/x.txt
   getting b/y.txt
   abort: path 'a/x.log' needs to be mirrored to 'b/x.txt', but the target already has pending changes
+  (to disable dirsync temporarily for a command, use "--config extensions.dirsync=!")
   [255]

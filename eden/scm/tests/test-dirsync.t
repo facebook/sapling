@@ -97,6 +97,7 @@ Test conflicting edits
   adding dir1/a
   adding dir2/subdir/a
   abort: path 'dir1/a' needs to be mirrored to 'dir2/subdir/a', but the target already has pending changes
+  (to disable dirsync temporarily for a command, use "--config extensions.dirsync=!")
   [255]
 
 Test non-conflicting edits

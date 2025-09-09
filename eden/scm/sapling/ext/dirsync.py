@@ -457,7 +457,10 @@ def dirsyncctx(ctx, matcher=None):
                             "path '%s' needs to be mirrored to '%s', but "
                             "the target already has pending changes"
                         )
-                        % (src, dst)
+                        % (src, dst),
+                        hint=_(
+                            'to disable dirsync temporarily for a command, use "--config extensions.dirsync=!"'
+                        ),
                     )
                 if changed:
                     if action == "r":
