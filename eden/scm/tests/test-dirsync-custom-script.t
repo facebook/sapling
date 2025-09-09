@@ -86,3 +86,24 @@ Mirror 2 files. They should have different content. See D80959221.
   Another 2024.
   $ cat ../a/y.log
   Different 2024.
+
+Test that rebase works with custom script:
+
+  $ enable rebase
+  $ sl log -r '::.' -GT '{desc}'
+  @  test dirsync 2
+  │
+  o  test dirsync 1
+  │
+  o  init dirsync
+
+  $ sl rebase -r '.' -d 'desc(init)' -v
+  rebasing 182621759218 "test dirsync 2"
+  resolving manifests
+  getting a/x.log
+  getting a/y.log
+  getting a/y.zip
+  getting b/x.txt
+  getting b/y.txt
+  abort: path 'a/x.log' needs to be mirrored to 'b/x.txt', but the target already has pending changes
+  [255]
