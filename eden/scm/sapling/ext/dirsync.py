@@ -493,7 +493,7 @@ def dirsyncctx(ctx, matcher=None):
                             fmirror, copied=(newcopyfrom, copynode)
                         )
 
-                if mirror_data is not None:
+                if mirror_data is not None and fsrc is not None:
                     src_data = fsrc.data()
                     dst_data = mirror_data(srcmirror, dstmirror, src, src_data)
                     if dst_data != src_data:
