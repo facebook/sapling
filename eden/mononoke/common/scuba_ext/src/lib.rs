@@ -173,19 +173,21 @@ impl MononokeScubaSampleBuilder {
             read_bookmarks_from_xdb_replica,
         );
 
-        let use_maybe_stale_freshness_for_bookmarks =
-            ["mononoke_api::repo::git::get_bookmark_state"]
-                .into_iter()
-                .map(|id| id.to_string())
-                .filter(|id| {
-                    justknobs::eval(
-                        "scm/mononoke:use_maybe_stale_freshness_for_bookmarks",
-                        Some(client_info.correlator.as_str()),
-                        Some(id),
-                    )
-                    .unwrap_or(false)
-                })
-                .collect::<Vec<_>>();
+        let use_maybe_stale_freshness_for_bookmarks = [
+            "mononoke_api::repo::git::get_bookmark_state",
+            "cache_warmup::do_cache_warmup",
+        ]
+        .into_iter()
+        .map(|id| id.to_string())
+        .filter(|id| {
+            justknobs::eval(
+                "scm/mononoke:use_maybe_stale_freshness_for_bookmarks",
+                Some(client_info.correlator.as_str()),
+                Some(id),
+            )
+            .unwrap_or(false)
+        })
+        .collect::<Vec<_>>();
 
         if !use_maybe_stale_freshness_for_bookmarks.is_empty() {
             self.inner.add(

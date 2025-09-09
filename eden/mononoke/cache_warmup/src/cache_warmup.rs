@@ -213,10 +213,28 @@ async fn do_cache_warmup(
 ) -> Result<(), Error> {
     let ctx = ctx.clone_and_reset();
 
+    let client_correlator = ctx
+        .metadata()
+        .client_info()
+        .and_then(|ci| ci.request_info.as_ref().map(|cri| cri.correlator.as_str()));
+
+    let read_from_replica = justknobs::eval(
+        "scm/mononoke:use_maybe_stale_freshness_for_bookmarks",
+        client_correlator,
+        Some("cache_warmup::do_cache_warmup"),
+    )
+    .unwrap_or(false);
+
+    let freshness = if read_from_replica {
+        bookmarks::Freshness::MaybeStale
+    } else {
+        bookmarks::Freshness::MostRecent
+    };
+
     let bcs_id = match target {
         CacheWarmupTarget::Bookmark(bookmark) => repo
             .bookmarks()
-            .get(ctx.clone(), &bookmark, bookmarks::Freshness::MostRecent)
+            .get(ctx.clone(), &bookmark, freshness)
             .await?
             .ok_or(errors::ErrorKind::BookmarkNotFound(bookmark))?,
         CacheWarmupTarget::Changeset(bcs_id) => bcs_id,

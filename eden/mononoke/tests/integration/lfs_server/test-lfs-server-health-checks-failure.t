@@ -77,7 +77,8 @@
     "normvector": {
       "client_identities": [],
       "use_maybe_stale_freshness_for_bookmarks": [
-        "mononoke_api::repo::git::get_bookmark_state"
+        "mononoke_api::repo::git::get_bookmark_state",
+        "cache_warmup::do_cache_warmup"
       ]
     }
   }
