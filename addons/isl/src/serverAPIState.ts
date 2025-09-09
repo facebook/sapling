@@ -312,11 +312,12 @@ function filterBookmarks(bookmarksData: BookmarksData, commit: CommitInfo): Comm
   }
 
   const hiddenBookmarks = new Set(bookmarksData.hiddenRemoteBookmarks);
-  const recommendedBookmarks = new Set(Internal.getRecommendedBookmarks?.());
+  const recommendedBookmarks = new Set(Internal.getRecommendedBookmarks?.() || []);
 
   // Filter by recommended bookmarks or hidden remote bookmarks
   const bookmarkFilter = (b: string) =>
-    bookmarksData.useRecommendedBookmark ? recommendedBookmarks.has(b) : !hiddenBookmarks.has(b);
+    !hiddenBookmarks.has(b) &&
+    (!bookmarksData.useRecommendedBookmark || recommendedBookmarks.has(b));
 
   return {
     ...commit,

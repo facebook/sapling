@@ -43,7 +43,7 @@ import {T, t} from './i18n';
 import {readAtom} from './jotaiUtils';
 import {latestDag} from './serverAPIState';
 
-export const styles = stylex.create({
+const styles = stylex.create({
   container: {
     alignItems: 'flex-start',
     gap: spacing.double,
@@ -89,6 +89,16 @@ export function BookmarksManagerMenu() {
 function BookmarksManager(_props: {dismiss: () => void}) {
   const bookmarks = useAtomValue(remoteBookmarks);
   const bookmarksData = useAtomValue(bookmarksDataStorage);
+  const recommendedBookmarks = new Set(Internal.getRecommendedBookmarks?.() || []);
+
+  // Order recommended bookmarks first, then the rest
+  const orderedBookmarks =
+    bookmarksData.useRecommendedBookmark && recommendedBookmarks.size > 0
+      ? [
+          ...bookmarks.filter(b => recommendedBookmarks.has(b)),
+          ...bookmarks.filter(b => !recommendedBookmarks.has(b)),
+        ]
+      : bookmarks;
 
   return (
     <DropdownFields
@@ -100,11 +110,7 @@ function BookmarksManager(_props: {dismiss: () => void}) {
         <Section
           title={<T>Remote Bookmarks</T>}
           description={<T>Uncheck remote bookmarks you don't use to hide them</T>}>
-          <BookmarksList
-            bookmarks={bookmarks}
-            kind="remote"
-            disabled={bookmarksData.useRecommendedBookmark}
-          />
+          <BookmarksList bookmarks={orderedBookmarks} kind="remote" />
         </Section>
         <StableLocationsSection />
       </Column>
@@ -320,7 +326,6 @@ export function Section({
 function BookmarksList({
   bookmarks,
   kind,
-  disabled = false,
 }: {
   bookmarks: Array<
     | string
@@ -328,12 +333,12 @@ function BookmarksList({
     | {kind: 'custom'; custom: ReactNode}
   >;
   kind: BookmarkKind;
-  disabled?: boolean;
 }) {
   const [bookmarksData, setBookmarksData] = useAtom(bookmarksDataStorage);
   if (bookmarks.length == 0) {
     return null;
   }
+  const recommendedBookmarks = new Set(Internal.getRecommendedBookmarks?.() || []);
 
   return (
     <ScrollY maxSize={300}>
@@ -345,6 +350,11 @@ function BookmarksList({
           const name = typeof bookmark === 'string' ? bookmark : bookmark.name;
           const tooltip = typeof bookmark === 'string' ? undefined : bookmark.info;
           const extra = typeof bookmark === 'string' ? undefined : bookmark.extra;
+          const disabled =
+            kind === 'remote' &&
+            bookmarksData.useRecommendedBookmark &&
+            !recommendedBookmarks.has(name);
+
           return (
             <Checkbox
               key={name}
