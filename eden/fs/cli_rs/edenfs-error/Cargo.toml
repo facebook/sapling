@@ -9,9 +9,11 @@ license = "GPLv2+"
 
 [dependencies]
 anyhow = "1.0.98"
+sapling-thrift-types = { version = "0.1.0", path = "../../../scm/lib/thrift-types" }
 thrift = { version = "0.1.0", path = "../../service/thrift" }
 thiserror = "2.0.12"
 thrift_clients = { version = "0.1.0", path = "../../service/thrift/clients" }
 thrift_streaming__types = { package = "thrift_streaming", version = "0.1.0", path = "../../service/thrift_streaming" }
 thrift_streaming_clients = { version = "0.1.0", path = "../../service/thrift_streaming/clients" }
+thrift_thriftclients = { version = "0.1.0", path = "../../service/oss-thriftclients" }
 tokio = { version = "1.47.1", features = ["full", "test-util", "tracing"] }
