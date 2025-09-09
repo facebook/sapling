@@ -2550,6 +2550,41 @@ def _hexlist(repo, subset, x, order):
         return _orderedhexlist(repo, subset, x)
 
 
+@predicate("subtreemergebase(from_path, to_path[, from_rev])")
+def subtreemergebase(repo, subset, x):
+    """Subtree merge base of the specified from/to paths (EXPERIMENTAL)
+
+    If no from_rev is specified, current working copy parent is assumed.
+    """
+    args = getargs(x, 2, 3, _("subtreemergebase expects two or three arguments"))
+    from_path = getstring(args[0], _("from_path expected a path"))
+    to_path = getstring(args[1], _("to_path expected a path"))
+    if len(args) == 3:
+        from_rev = getstring(args[2], _("from_rev expected a revision"))
+    else:
+        from_rev = "."
+
+    ui = repo.ui
+    ctx = repo["."]
+    from_ctx = scmutil.revsingle(repo, from_rev)
+    from_path = scmutil.rootrelpath(ctx, from_path)
+    to_path = scmutil.rootrelpath(ctx, to_path)
+
+    from sapling.commands import subtree
+    from sapling.utils import subtreeutil
+
+    subtreeutil.validate_path_overlap([from_path], [to_path])
+    subtreeutil.validate_path_exist(ui, from_ctx, [from_path], abort_on_missing=True)
+    subtreeutil.validate_path_exist(ui, ctx, [to_path], abort_on_missing=True)
+    subtreeutil.validate_path_depth(ui, [from_path, to_path])
+
+    with repo.ui.configoverride({("ui", "quiet"): True}):
+        merge_base_ctx = subtree._subtree_merge_base(
+            repo, ctx, to_path, from_ctx, from_path, opts={}
+        )
+    return subset & smartset.baseset({merge_base_ctx.rev()}, repo=repo)
+
+
 methods = {
     "range": rangeset,
     "rangeall": rangeall,

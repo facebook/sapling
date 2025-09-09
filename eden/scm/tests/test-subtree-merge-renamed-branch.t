@@ -37,6 +37,8 @@ test source directory is renamed
   │
   o  3203ffa6f201 A
 merge the changes of foo and foo1 to bar
+  $ hg log -r "subtreemergebase("foo1", "bar")" -T '{node|short}\n'
+  9032e003042c
   $ hg subtree merge --from-path foo1 --to-path bar
   searching for merge base ...
   found the last subtree copy commit 52cd91b6716a
@@ -59,6 +61,8 @@ merge the changes of foo and foo1 to bar
   $ hg go -C .
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
 merge the change of bar to foo1
+  $ hg log -r "subtreemergebase("bar", "foo1")" -T '{node|short}\n'
+  9032e003042c
   $ hg subtree merge --from-path bar --to-path foo1
   searching for merge base ...
   found the last subtree copy commit 52cd91b6716a
@@ -120,6 +124,8 @@ test both source and dest directories are renamed
   │
   o  0a81f6dee7d1 A
 merge the changes of foo and foo1 to bar1
+  $ hg log -r "subtreemergebase("foo1", "bar1")" -T '{node|short}\n'
+  22a57b56f0ee
   $ hg subtree merge --from-path foo1 --to-path bar1
   searching for merge base ...
   found the last subtree copy commit e6969568e795
@@ -144,6 +150,8 @@ merge the changes of foo and foo1 to bar1
   $ hg go -C .
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
 merge the change of bar1 and bar to foo1
+  $ hg log -r "subtreemergebase("bar1", "foo1")" -T '{node|short}\n'
+  22a57b56f0ee
   $ hg subtree merge --from-path bar1 --to-path foo1
   searching for merge base ...
   found the last subtree copy commit e6969568e795
