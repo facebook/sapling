@@ -28,6 +28,7 @@ use cas_client_lib::RemoteExecutionMetadata;
 use cas_client_lib::RemoteFetchPolicy;
 use cas_client_lib::TCode;
 use cas_client_lib::THashAlgo;
+use cas_client_lib::TQuotaPoolInfo;
 use cas_client_lib::create_default_config;
 use configmodel::Config;
 use configmodel::ConfigExt;
@@ -174,7 +175,13 @@ impl RichCasClient {
             shared_cache: Default::default(),
             verbose: config.get_or_default("cas", "verbose")?,
             metadata: RemoteExecutionMetadata {
-                use_case_id: use_case,
+                use_case_id: use_case.clone(),
+                quota_pool_info: TQuotaPoolInfo {
+                    // TODO(T228252905)
+                    budget_entity: "3199644040305541".to_string(),
+                    quota_pool: use_case,
+                    ..Default::default()
+                },
                 re_session_id: Some(RESessionID {
                     id: session_id.clone(),
                     ..Default::default()
