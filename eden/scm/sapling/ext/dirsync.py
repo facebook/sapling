@@ -487,7 +487,7 @@ def dirsyncctx(ctx, matcher=None):
                                 dst,
                             )
                         fmirror = context.overlayfilectx(
-                            fsrc, copied=(newcopyfrom, copynode)
+                            fmirror, copied=(newcopyfrom, copynode)
                         )
 
                 if mirror_data is not None:
