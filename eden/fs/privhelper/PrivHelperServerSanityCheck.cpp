@@ -146,6 +146,7 @@ void sanityCheckFs(const std::string& mountPoint) {
       0x01021994 /* TMPFS_MAGIC */,
       0x24051905 /* UBIFS_SUPER_MAGIC */,
       0x736675005346544e /* UFSD */,
+      0x18031977 /* WEKA */,
       0x58465342 /* XFS_SB_MAGIC */,
       0x2FC12FC1 /* ZFS_SUPER_MAGIC */,
   };
