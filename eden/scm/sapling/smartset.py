@@ -16,7 +16,7 @@ import weakref
 
 import bindings
 
-from . import error, parser, streams, util
+from . import error, streams, util
 from .i18n import _
 from .node import nullrev
 

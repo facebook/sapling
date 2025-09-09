@@ -19,7 +19,6 @@ from . import (
     autopull,
     bookmarks,
     dagop,
-    encoding,
     error,
     hbisect,
     hintutil,

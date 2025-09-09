@@ -16,7 +16,7 @@ import os
 import socket
 import sys
 
-from . import encoding, error, hook, util, wireproto
+from . import encoding, error, util, wireproto
 from .i18n import _
 
 

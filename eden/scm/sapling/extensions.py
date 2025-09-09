@@ -362,7 +362,6 @@ def load(ui, name, path):
     # If the entry point is not 'hg', the code was executed in a non-standard
     # way and we cannot assume the filesystem layout. Be permissive to avoid
     # false positives.
-    from . import dispatch  # noqa: F401; avoid cycles
 
     mod = _importext(shortname, path, bind(_reportimporterror, ui))
 

@@ -10,7 +10,7 @@ from sapling import error
 from sapling.ext import megarepo
 from sapling.i18n import _
 
-from . import service, sync, syncstate, util as ccutil, workspace
+from . import util as ccutil, workspace
 
 
 hg_commit_scheme = "Hg"

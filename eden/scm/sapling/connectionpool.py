@@ -9,7 +9,7 @@
 import os
 import time
 
-from . import json, sshpeer, util
+from . import json, sshpeer
 
 
 class connectionpool:

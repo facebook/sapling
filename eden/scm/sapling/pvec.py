@@ -56,7 +56,6 @@ Uses:
 import base64
 from typing import List, Tuple
 
-from . import util
 from .node import nullrev
 
 _size = 448  # 70 chars b85-encoded

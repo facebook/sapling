@@ -15,7 +15,7 @@ from sapling import error, filelog, revlog
 from sapling.i18n import _, _x
 from sapling.node import bin, hex, nullid, short
 
-from . import constants, fileserverclient, shallowrepo, shallowutil
+from . import fileserverclient, shallowrepo, shallowutil
 from .contentstore import unioncontentstore
 from .lz4wrapper import lz4decompress
 

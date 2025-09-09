@@ -21,7 +21,6 @@ from . import (
     bundle2,
     changegroup as changegroupmod,
     discovery,
-    encoding,
     error,
     exchange,
     extensions,

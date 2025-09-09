@@ -2,7 +2,6 @@
 
 import copy
 
-from ._compat import iteritems
 from ._make import NOTHING, _obj_setattr, fields
 from .exceptions import AttrsAttributeNotFoundError
 

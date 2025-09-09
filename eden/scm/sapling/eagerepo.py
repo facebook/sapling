@@ -5,7 +5,7 @@
 
 import bindings
 
-from . import ancestor, error, filelog, revlog
+from . import error, filelog, revlog
 from .i18n import _
 from .node import bin, nullid
 

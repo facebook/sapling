@@ -14,7 +14,6 @@ import bindings
 from . import (
     bookmarks as bookmod,
     changelog as changelogmod,
-    encoding,
     error,
     git,
     mdiff,

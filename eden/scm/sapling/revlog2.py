@@ -575,9 +575,9 @@ class Index:
 def patch_types():
     """replace revlog with revlog2 for revlog's subclasses"""
     # Ensure those types are seen.
-    from .bundlerepo import bundlerevlog
-    from .filelog import filelog
-    from .manifest import manifestrevlog
+    from .bundlerepo import bundlerevlog  # noqa: F401
+    from .filelog import filelog  # noqa: F401
+    from .manifest import manifestrevlog  # noqa: F401
 
     for klass in orig_revlog.__subclasses__():
         bases = tuple((t is orig_revlog and revlog2 or t for t in klass.__bases__))

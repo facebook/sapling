@@ -12,7 +12,7 @@
 # GNU General Public License version 2 or any later version.
 
 
-from . import error, util
+from . import error
 
 
 # abstract batching support

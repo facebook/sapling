@@ -22,7 +22,7 @@
 # __call__(program) parses program into a labeled tree
 
 
-from . import encoding, error, util
+from . import error, util
 from .i18n import _
 
 

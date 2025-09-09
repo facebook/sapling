@@ -6,7 +6,7 @@
 
 import bindings
 
-from . import error, mutation, node as nodemod, util
+from . import error, mutation, node as nodemod
 from .i18n import _, _n
 
 TOKEN_KEY = "token"

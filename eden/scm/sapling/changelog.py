@@ -17,7 +17,7 @@ from typing import Dict, List, Optional, Tuple, Union
 
 import bindings
 
-from . import encoding, error, revlog, util
+from . import error, revlog, util
 from .i18n import _
 from .node import bbin, hex, nullid
 from .thirdparty import attr

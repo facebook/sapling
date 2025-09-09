@@ -18,7 +18,6 @@ import msvcrt
 import os
 import random
 
-from . import encoding
 
 # pyre-fixme[16]: Module `ctypes` has no attribute `WinDLL`.
 _kernel32 = ctypes.WinDLL("kernel32", use_last_error=True)

@@ -5,7 +5,7 @@ import linecache
 from operator import itemgetter
 
 from . import _config
-from ._compat import isclass, iteritems, iterkeys, metadata_proxy
+from ._compat import isclass, metadata_proxy
 from .exceptions import (
     DefaultAlreadySetError,
     FrozenInstanceError,

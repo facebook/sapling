@@ -7,7 +7,7 @@
 import collections
 from typing import Set, Tuple
 
-from .. import cmdutil, graphmod, phases, util
+from .. import cmdutil, graphmod, util
 from ..i18n import _
 from ..node import bin, hex, short
 from .cmdtable import command
