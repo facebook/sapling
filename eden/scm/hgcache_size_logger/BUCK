@@ -1,3 +1,4 @@
+load("@fbcode//registry:defs.bzl", "rpm")
 load("@fbcode_macros//build_defs:python_binary.bzl", "python_binary")
 
 oncall("sapling")
@@ -10,4 +11,24 @@ python_binary(
         "//libfb/py:log",
         "//rfe/scubadata:scubadata_py3",
     ],
+)
+
+rpm.builder(
+    name = "fb-hgcache_size_logger",
+    configurations = [
+        rpm.configuration(
+            arch = "x86_64",
+        ),
+        rpm.configuration(
+            arch = "aarch64",
+        ),
+    ],
+    features = [
+        rpm.install(
+            src = "fbcode//eden/scm/hgcache_size_logger:hgcache_size_logger",
+            dst = "/usr/local/bin/hgcache_size_logger",
+        ),
+    ],
+    oncall = "source_control",
+    summary = "A tool to track size of hgcache",
 )
