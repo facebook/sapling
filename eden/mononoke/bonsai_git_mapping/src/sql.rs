@@ -217,7 +217,18 @@ impl BonsaiGitMapping for SqlBonsaiGitMapping {
         let left_to_fetch_count = left_to_fetch.count().try_into().map_err(Error::from)?;
         STATS::left_to_fetch.add_value(left_to_fetch_count);
 
-        if !left_to_fetch.is_empty() {
+        let client_correlator = ctx.client_correlator();
+
+        // Callsites that don't require the most recent bookmark value should
+        // read from a replica. More context on D81212709.
+        let disable_primary_fallback = justknobs::eval(
+            "scm/mononoke:disable_bonsai_mapping_read_fallback_to_primary",
+            client_correlator,
+            Some("git"),
+        )
+        .unwrap_or(false);
+
+        if !left_to_fetch.is_empty() && !disable_primary_fallback {
             STATS::gets_master.add_value(1);
             ctx.perf_counters()
                 .increment_counter(PerfCounterType::SqlReadsMaster);

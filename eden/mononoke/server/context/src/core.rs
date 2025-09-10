@@ -173,4 +173,10 @@ impl CoreContext {
         let metadata = self.metadata();
         SqlQueryTelemetry::new(fb, metadata.clone())
     }
+
+    pub fn client_correlator(&self) -> Option<&str> {
+        self.metadata()
+            .client_info()
+            .and_then(|ci| ci.request_info.as_ref().map(|cri| cri.correlator.as_str()))
+    }
 }

@@ -96,7 +96,10 @@
     },
     "normvector": {
       "client_identities": [],
-      "enabled_experiments_jk": [],
+      "enabled_experiments_jk": [
+        "scm/mononoke:disable_bonsai_mapping_read_fallback_to_primary::git",
+        "scm/mononoke:disable_bonsai_mapping_read_fallback_to_primary"
+      ],
       "use_maybe_stale_freshness_for_bookmarks": [
         "mononoke_api::repo::git::get_bookmark_state",
         "cache_warmup::do_cache_warmup"
@@ -166,7 +169,10 @@
     },
     "normvector": {
       "client_identities": [],
-      "enabled_experiments_jk": [],
+      "enabled_experiments_jk": [
+        "scm/mononoke:disable_bonsai_mapping_read_fallback_to_primary::git",
+        "scm/mononoke:disable_bonsai_mapping_read_fallback_to_primary"
+      ],
       "use_maybe_stale_freshness_for_bookmarks": [
         "mononoke_api::repo::git::get_bookmark_state",
         "cache_warmup::do_cache_warmup"
@@ -241,7 +247,10 @@
     "normvector": {
       "batch_internal_missing_blobs": [],
       "client_identities": [],
-      "enabled_experiments_jk": [],
+      "enabled_experiments_jk": [
+        "scm/mononoke:disable_bonsai_mapping_read_fallback_to_primary::git",
+        "scm/mononoke:disable_bonsai_mapping_read_fallback_to_primary"
+      ],
       "use_maybe_stale_freshness_for_bookmarks": [
         "mononoke_api::repo::git::get_bookmark_state",
         "cache_warmup::do_cache_warmup"
@@ -317,7 +326,10 @@
     },
     "normvector": {
       "client_identities": [],
-      "enabled_experiments_jk": [],
+      "enabled_experiments_jk": [
+        "scm/mononoke:disable_bonsai_mapping_read_fallback_to_primary::git",
+        "scm/mononoke:disable_bonsai_mapping_read_fallback_to_primary"
+      ],
       "use_maybe_stale_freshness_for_bookmarks": [
         "mononoke_api::repo::git::get_bookmark_state",
         "cache_warmup::do_cache_warmup"
@@ -378,7 +390,10 @@
     },
     "normvector": {
       "client_identities": [],
-      "enabled_experiments_jk": [],
+      "enabled_experiments_jk": [
+        "scm/mononoke:disable_bonsai_mapping_read_fallback_to_primary::git",
+        "scm/mononoke:disable_bonsai_mapping_read_fallback_to_primary"
+      ],
       "use_maybe_stale_freshness_for_bookmarks": [
         "mononoke_api::repo::git::get_bookmark_state",
         "cache_warmup::do_cache_warmup"

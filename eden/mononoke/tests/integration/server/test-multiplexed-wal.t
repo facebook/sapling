@@ -85,14 +85,14 @@ Try again and fail because reads for all blobstores will be disabled
         "2",
         "3"
       ],
-      "enabled_experiments_jk": [],
+      "enabled_experiments_jk": [
   --
       "disabled_reads_blobstore_ids": [
         "1",
         "2",
         "3"
       ],
-      "enabled_experiments_jk": [],
+      "enabled_experiments_jk": [
 
 
 Enable all blobstores again
