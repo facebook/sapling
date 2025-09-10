@@ -722,6 +722,7 @@ def setup_mononoke_repo_config(
             "fsnodes",
             "git_commits",
             "git_delta_manifests_v2",
+            "git_delta_manifests_v3",
             "unodes",
             "hgchangesets",
             "hg_augmented_manifests",
@@ -981,10 +982,14 @@ scuba_table = "file://{}/derived_data_scuba.json"
         f"""
 [derived_data_config.available_configs.default]
 types = {enabled_derived_data}
-git_delta_manifest_version = 2
+git_delta_manifest_version = 3
 git_delta_manifest_v2_config.max_inlined_object_size = 20
 git_delta_manifest_v2_config.max_inlined_delta_size = 20
 git_delta_manifest_v2_config.delta_chunk_size = 1000
+git_delta_manifest_v3_config.max_inlined_object_size = 20
+git_delta_manifest_v3_config.max_inlined_delta_size = 20
+git_delta_manifest_v3_config.delta_chunk_size = 1000
+git_delta_manifest_v3_config.entry_chunk_size = 1000
 """
     )
 
