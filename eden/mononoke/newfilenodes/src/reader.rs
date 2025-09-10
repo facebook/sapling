@@ -34,6 +34,7 @@ use sql_ext::Connection;
 use sql_ext::mononoke_queries;
 use stats::prelude::*;
 use thiserror::Error;
+use tokio::time::error::Elapsed;
 use tokio::time::timeout;
 use vec1::Vec1;
 
@@ -67,20 +68,20 @@ const DEFAULT_SQL_TIMEOUT_MILLIS: u64 = 5_000;
 
 #[derive(Debug, Error)]
 pub enum ErrorKind {
-    #[error("Internal error: path is not found: {0:?}")]
+    #[error("Filenodes internal error: path is not found: {0:?}")]
     PathNotFound(PathHashBytes),
 
-    #[error("Internal error: invalid path: {0:?}")]
+    #[error("Filenodes internal error: invalid path: {0:?}")]
     InvalidPath(PathBytes, #[source] Error),
 
-    #[error("Internal error: fixedcopyinfo is missing for filenode: {0:?}")]
+    #[error("Filenodes internal error: fixedcopyinfo is missing for filenode: {0:?}")]
     FixedCopyInfoMissing(HgFileNodeId),
 
-    #[error("Internal error: SQL error")]
+    #[error("Filenodes internal error: SQL error")]
     SqlError(#[source] Error),
 
-    #[error("Internal error: SQL timeout")]
-    SqlTimeout,
+    #[error("Filenodes internal error: SQL timeout after {0}")]
+    SqlTimeout(Elapsed),
 }
 
 struct PerfCounterRecorder<'a> {
@@ -676,9 +677,9 @@ where
     {
         Ok(Ok(r)) => Ok(r),
         Ok(Err(e)) => Err(ErrorKind::SqlError(e)),
-        Err(_) => {
+        Err(e) => {
             STATS::sql_timeouts.add_value(1);
-            Err(ErrorKind::SqlTimeout)
+            Err(ErrorKind::SqlTimeout(e))
         }
     }
 }
