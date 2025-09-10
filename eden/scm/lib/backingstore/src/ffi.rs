@@ -206,7 +206,6 @@ pub(crate) mod ffi {
             store: &BackingStore,
             requests: &[Request],
             fetch_mode: FetchMode,
-            allow_ignore_result: bool,
             resolver: SharedPtr<GetBlobBatchResolver>,
         );
 
@@ -458,39 +457,19 @@ pub fn sapling_backingstore_get_blob_batch(
     store: &BackingStore,
     requests: &[ffi::Request],
     fetch_mode: ffi::FetchMode,
-    allow_ignore_result: bool,
     resolver: SharedPtr<ffi::GetBlobBatchResolver>,
 ) {
     let keys: Vec<Key> = requests.iter().map(|req| req.key()).collect();
-    let (cause, all_match) = select_cause(requests.iter().map(|req| req.cause));
-
-    // EdenPrefetch means eden doesn't care about the content - we can set the IGNORE_RESULT flag to
-    // make ScmStore optimize things.
-    let mut fetch_mode = FetchMode::from(fetch_mode);
-    if cause == FetchCause::EdenPrefetch && all_match && allow_ignore_result {
-        fetch_mode |= FetchMode::IGNORE_RESULT;
-    }
+    let cause = select_cause(requests.iter().map(|req| req.cause)).0;
 
     store.get_blob_batch(
-        FetchContext::new_with_cause(fetch_mode, cause),
+        FetchContext::new_with_cause(FetchMode::from(fetch_mode), cause),
         keys,
         |idx, result| {
+            let result = result.and_then(|opt| opt.ok_or_else(|| Error::msg("no blob found")));
             let resolver = resolver.clone();
-
             let (error, blob) = match result {
-                Ok(blob) => {
-                    match blob {
-                        None => {
-                            if fetch_mode.ignore_result() {
-                                // ignore_result means data is not propagated - allow nullptr in this case.
-                                (String::default(), UniquePtr::null())
-                            } else {
-                                ("no blob found".to_string(), UniquePtr::null())
-                            }
-                        }
-                        Some(blob) => (String::default(), blob.into_iobuf().into()),
-                    }
-                }
+                Ok(blob) => (String::default(), blob.into_iobuf().into()),
                 Err(error) => (format!("{:?}", error), UniquePtr::null()),
             };
             unsafe { ffi::sapling_backingstore_get_blob_batch_handler(resolver, idx, error, blob) };

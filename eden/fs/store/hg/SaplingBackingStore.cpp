@@ -486,13 +486,9 @@ void SaplingBackingStore::getBlobBatch(
   auto requests = std::move(preparedRequests.second);
   folly::stop_watch<std::chrono::milliseconds> batchWatch;
 
-  auto allowIgnoreResult =
-      config_->getEdenConfig()->ignorePrefetchResult.getValue();
-
   store_.getBlobBatch(
       folly::range(requests),
       fetchMode,
-      allowIgnoreResult,
       // store_->getBlobBatch is blocking, hence we can take these by reference.
       [&](size_t index, folly::Try<std::unique_ptr<folly::IOBuf>> content) {
         if (content.hasException()) {
@@ -526,14 +522,8 @@ void SaplingBackingStore::getBlobBatch(
         auto& [importRequestList, watch] = importRequestsMap[nodeId];
         auto result = content.hasException()
             ? folly::Try<BlobPtr>{content.exception()}
-            : content.value()
-            ? folly::Try{std::make_shared<BlobPtr::element_type>(
-                  *content.value())}
-            // Propagate null content as nullptr. This happens when we use the
-            // IGNORE_RESULT flag during blob prefetching. I think nullptr is
-            // "safer" than setting an empty blob since we want to be confident
-            // that no code uses the blob thinking there is content.
-            : folly::Try<BlobPtr>{nullptr};
+            : folly::Try{
+                  std::make_shared<BlobPtr::element_type>(*content.value())};
         for (auto& importRequest : importRequestList) {
           importRequest->getPromise<BlobPtr>()->setWith(
               [&]() -> folly::Try<BlobPtr> { return result; });
