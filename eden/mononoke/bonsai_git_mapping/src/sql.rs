@@ -34,6 +34,10 @@ define_stats! {
     gets: timeseries(Rate, Sum),
     gets_master: timeseries(Rate, Sum),
     adds: timeseries(Rate, Sum),
+    // Number of mappings that were not found in the replica
+    left_to_fetch: timeseries(Sum, Average, Count),
+    // Number of mappings that were fetched from the master
+    fetched_from_master: timeseries(Sum, Average, Count),
 }
 
 pub struct SqlBonsaiGitMapping {
@@ -210,6 +214,9 @@ impl BonsaiGitMapping for SqlBonsaiGitMapping {
         .await?;
         let left_to_fetch = filter_fetched_ids(objects, &mappings[..]);
 
+        let left_to_fetch_count = left_to_fetch.count().try_into().map_err(Error::from)?;
+        STATS::left_to_fetch.add_value(left_to_fetch_count);
+
         if !left_to_fetch.is_empty() {
             STATS::gets_master.add_value(1);
             ctx.perf_counters()
@@ -221,6 +228,10 @@ impl BonsaiGitMapping for SqlBonsaiGitMapping {
                 &left_to_fetch,
             )
             .await?;
+
+            let fetched_from_master_count =
+                master_mappings.len().try_into().map_err(Error::from)?;
+            STATS::fetched_from_master.add_value(fetched_from_master_count);
             mappings.append(&mut master_mappings);
         }
         Ok(mappings)
