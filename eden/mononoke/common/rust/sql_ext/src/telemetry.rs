@@ -112,7 +112,7 @@ pub fn log_query_error(
 
     scuba.add("error", format!("{:?}", err));
     scuba.add("success", 0);
-    STATS::error.add_value(1, (shard_name.to_string(),));
+    STATS::success.add_value(0, (shard_name.to_string(),));
 
     // Log the Scuba sample for debugging when log-level is set to trace.
     tracing::trace!(
@@ -440,7 +440,6 @@ define_stats! {
         "{}.success.instance.{}", (shard_name: String, instance_type: String);
         Sum, Average
     ),
-    error: dynamic_timeseries("{}.error", (shard_name: String); Sum, Average),
     query_retry_attempts: dynamic_timeseries(
         "{}.{}.{}.retry_attempts",
         (shard_name: String, query_name: String, error_key: String);
