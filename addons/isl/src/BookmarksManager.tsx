@@ -39,6 +39,7 @@ import {Column, Row, ScrollY} from './ComponentUtils';
 import {DropdownFields} from './DropdownFields';
 import {useCommandEvent} from './ISLShortcuts';
 import {Internal} from './Internal';
+import {useFeatureFlagSync} from './featureFlags';
 import {T, t} from './i18n';
 import {readAtom} from './jotaiUtils';
 import {latestDag} from './serverAPIState';
@@ -335,6 +336,8 @@ function BookmarksList({
   kind: BookmarkKind;
 }) {
   const [bookmarksData, setBookmarksData] = useAtom(bookmarksDataStorage);
+  const recommendedBookmarksGK = useFeatureFlagSync('isl_recommended_bookmarks');
+
   if (bookmarks.length == 0) {
     return null;
   }
@@ -348,12 +351,17 @@ function BookmarksList({
             return bookmark.custom;
           }
           const name = typeof bookmark === 'string' ? bookmark : bookmark.name;
-          const tooltip = typeof bookmark === 'string' ? undefined : bookmark.info;
           const extra = typeof bookmark === 'string' ? undefined : bookmark.extra;
+          const isRecommended = recommendedBookmarksGK && recommendedBookmarks.has(name);
+          const tooltip =
+            typeof bookmark === 'string'
+              ? isRecommended
+                ? Internal.recommendedBookmarkInfo
+                : undefined
+              : bookmark.info;
+
           const disabled =
-            kind === 'remote' &&
-            bookmarksData.useRecommendedBookmark &&
-            !recommendedBookmarks.has(name);
+            kind === 'remote' && bookmarksData.useRecommendedBookmark && !isRecommended;
 
           return (
             <Checkbox
@@ -370,7 +378,12 @@ function BookmarksList({
                 }
                 setBookmarksData({...bookmarksData, hiddenRemoteBookmarks});
               }}>
-              <Bookmark fullLength key={name} kind={kind} tooltip={tooltip}>
+              <Bookmark
+                fullLength
+                key={name}
+                kind={kind}
+                tooltip={tooltip}
+                isRecommended={isRecommended}>
                 {name}
               </Bookmark>
               {extra}
