@@ -195,6 +195,42 @@ impl MononokeScubaSampleBuilder {
                 use_maybe_stale_freshness_for_bookmarks,
             );
         }
+
+        // Add all the JKs (with their switches) that are hashed consistently
+        // against client correlator, so all Scuba logs can be split by
+        // feature being enabled or disabled.
+        // This generalizes what was done in D76728908 and D81212709.
+        let jk_and_switches: Vec<(&'static str, Vec<&'static str>)> = vec![];
+        let enabled_experiments_jk: Vec<String> = jk_and_switches
+            .into_iter()
+            .flat_map(|(jk, opt_switches)| {
+                // Get the JK value for each switch
+                opt_switches
+                    .into_iter()
+                    .map(Some)
+                    // Also make sure you get the value without any switch
+                    .chain(vec![(None)])
+                    .filter_map(move |opt_switch| {
+                        let enabled = justknobs::eval(
+                            jk,
+                            Some(client_info.correlator.as_str()),
+                            opt_switch.clone(),
+                        )
+                        .unwrap_or(false);
+                        // If it's enabled, log either the JK name (no switch)
+                        // or `<JK>::<switch>`
+                        enabled.then(|| {
+                            opt_switch
+                                .map(|switch| format!("{jk}::{switch}"))
+                                .unwrap_or(jk.to_string())
+                        })
+                    })
+            })
+            .collect();
+
+        self.inner
+            .add("enabled_experiments_jk", enabled_experiments_jk);
+
         self
     }
 

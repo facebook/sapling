@@ -96,6 +96,7 @@
     },
     "normvector": {
       "client_identities": [],
+      "enabled_experiments_jk": [],
       "use_maybe_stale_freshness_for_bookmarks": [
         "mononoke_api::repo::git::get_bookmark_state",
         "cache_warmup::do_cache_warmup"
@@ -165,6 +166,7 @@
     },
     "normvector": {
       "client_identities": [],
+      "enabled_experiments_jk": [],
       "use_maybe_stale_freshness_for_bookmarks": [
         "mononoke_api::repo::git::get_bookmark_state",
         "cache_warmup::do_cache_warmup"
@@ -239,6 +241,7 @@
     "normvector": {
       "batch_internal_missing_blobs": [],
       "client_identities": [],
+      "enabled_experiments_jk": [],
       "use_maybe_stale_freshness_for_bookmarks": [
         "mononoke_api::repo::git::get_bookmark_state",
         "cache_warmup::do_cache_warmup"
@@ -314,6 +317,7 @@
     },
     "normvector": {
       "client_identities": [],
+      "enabled_experiments_jk": [],
       "use_maybe_stale_freshness_for_bookmarks": [
         "mononoke_api::repo::git::get_bookmark_state",
         "cache_warmup::do_cache_warmup"
@@ -374,6 +378,7 @@
     },
     "normvector": {
       "client_identities": [],
+      "enabled_experiments_jk": [],
       "use_maybe_stale_freshness_for_bookmarks": [
         "mononoke_api::repo::git::get_bookmark_state",
         "cache_warmup::do_cache_warmup"
