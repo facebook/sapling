@@ -104,42 +104,42 @@ impl ChangesetHook for LimitSubmoduleEditsHook {
             &self.changes_allowed_with_marker_options,
             get_submodule_mpath(changeset),
         ) {
-            (_, None) => return Ok(HookExecution::Accepted),
+            (_, None) => Ok(HookExecution::Accepted),
             (None, Some(submodule_path)) => {
-                return Ok(HookExecution::Rejected(HookRejectionInfo::new_long(
+                Ok(HookExecution::Rejected(HookRejectionInfo::new_long(
                     "Git submodules or any changes to them are not allowed in this repository.",
                     format!(
                         "Commit creates or edits a submodule at path {}",
                         submodule_path
                     ),
-                )));
+                )))
             }
             (Some(options), Some(submodule_path)) => {
-                if let Some(path_from_marked_commit) = extract_path_from_marker(options, changeset)
-                {
-                    if path_from_marked_commit == submodule_path.to_string() {
-                        return Ok(HookExecution::Accepted);
-                    } else {
-                        return Ok(HookExecution::Rejected(HookRejectionInfo::new_long(
-                            "Changed to git submodules are restricted in this repository.",
-                            format!(
-                                "Commit creates or edits a submodule at path {}. The content of the \"{}\" marker, do not match the path of the submodule: \"{}\" != \"{}\"",
-                                submodule_path,
-                                options.marker,
-                                path_from_marked_commit,
-                                submodule_path,
-                            ),
-                        )));
+                match extract_path_from_marker(options, changeset) {
+                    Some(path_from_marked_commit) => {
+                        if path_from_marked_commit == submodule_path.to_string() {
+                            Ok(HookExecution::Accepted)
+                        } else {
+                            Ok(HookExecution::Rejected(HookRejectionInfo::new_long(
+                                "Changes to git submodules are restricted in this repository.",
+                                format!(
+                                    "Commit creates or edits a submodule at path {}. The content of the \"{}\" marker, do not match the path of the submodule: \"{}\" != \"{}\"",
+                                    submodule_path,
+                                    options.marker,
+                                    path_from_marked_commit,
+                                    submodule_path,
+                                ),
+                            )))
+                        }
                     }
+                    None => Ok(HookExecution::Rejected(HookRejectionInfo::new_long(
+                        "Changes to git submodules are restricted in this repository.",
+                        format!(
+                            "Commit creates or edits a submodule at path {}. If you did mean to do this, add \"{}: {}\" to your commit message",
+                            submodule_path, options.marker, submodule_path,
+                        ),
+                    ))),
                 }
-
-                return Ok(HookExecution::Rejected(HookRejectionInfo::new_long(
-                    "Changed to git submodules are restricted in this repository.",
-                    format!(
-                        "Commit creates or edits a submodule at path {}. If you did mean to do this, add \"{}: {}\" to your commit message",
-                        submodule_path, options.marker, submodule_path,
-                    ),
-                )));
             }
         }
     }
