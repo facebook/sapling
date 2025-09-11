@@ -814,7 +814,7 @@ def is_sandcastle() -> bool:
 
 
 def is_remote_execution() -> bool:
-    return "REMOTE_EXECUTION_SCM_REPO" in os.environ or "INSIDE_RE_WORKER" in os.environ
+    return os.environ.get("REMOTE_EXECUTION_SCM_REPO") == "1"
 
 
 def is_devcompute() -> bool:
