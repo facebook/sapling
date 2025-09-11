@@ -341,7 +341,7 @@ function BookmarksList({
   kind: BookmarkKind;
 }) {
   const [bookmarksData, setBookmarksData] = useAtom(bookmarksDataStorage);
-  const recommendedBookmarksGK = useFeatureFlagSync('isl_recommended_bookmarks');
+  const recommendedBookmarksGK = useFeatureFlagSync(Internal.featureFlags?.RecommendedBookmarks);
 
   if (bookmarks.length == 0) {
     return null;

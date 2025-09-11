@@ -121,7 +121,7 @@ export function AllBookmarksTruncated({
 }) {
   const bookmarksData = useAtomValue(bookmarksDataStorage);
   const recommendedBookmarks = new Set(Internal.getRecommendedBookmarks?.() || []);
-  const recommendedBookmarksGK = useFeatureFlagSync('isl_recommended_bookmarks');
+  const recommendedBookmarksGK = useFeatureFlagSync(Internal.featureFlags?.RecommendedBookmarks);
 
   const finalBookmarks = (
     [
