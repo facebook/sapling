@@ -165,7 +165,7 @@ class PrivHelperThreadedTestServer : public PrivHelperServer {
     Future<folly::File> future = Future<folly::File>::makeEmpty();
     {
       auto data = data_.wlock();
-      data->requestedVfsTypes.push_back(std::string(vfsType));
+      data->requestedVfsTypes.emplace_back(vfsType);
       future = getResultFuture(data->fuseMountResults, mountPath);
     }
     return std::move(future).get(1s);

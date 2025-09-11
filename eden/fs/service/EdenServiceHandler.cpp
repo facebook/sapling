@@ -4247,9 +4247,8 @@ EdenServiceHandler::semifuture_globFiles(std::unique_ptr<GlobParams> params) {
                                     std::move(originId)}};
                               }));
                     } else {
-                      globEntryFuts.emplace_back(ImmediateFuture<GlobEntry>{
-                          folly::Try<GlobEntry>{GlobEntry{
-                              std::move(entry), DT_UNKNOWN, originId}}});
+                      globEntryFuts.emplace_back(folly::Try<GlobEntry>{
+                          GlobEntry{std::move(entry), DT_UNKNOWN, originId}});
                     }
                   }
                 }

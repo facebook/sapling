@@ -144,7 +144,7 @@ std::vector<InodeNumber> LMDBStoreInterface::getAllParentInodeNumbers() {
     while (result == MDB_SUCCESS) {
       auto key = std::stoull(
           std::string{static_cast<char*>(mdb_key.mv_data), mdb_key.mv_size});
-      inodes.push_back(InodeNumber{key});
+      inodes.emplace_back(key);
       result = mdb_cursor_get(cursor, &mdb_key, &mdb_value, MDB_NEXT);
     }
 

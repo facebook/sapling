@@ -45,7 +45,7 @@ void getBlobAuxData(benchmark::State& st) {
   std::vector<BlobAuxData> auxData;
   auxData.reserve(N);
   for (size_t i = 0; i < N; ++i) {
-    auxData.push_back(BlobAuxData{Hash20{}, std::nullopt, i});
+    auxData.emplace_back(Hash20{}, std::nullopt, i);
   }
 
   for (size_t i = 0; i < N; ++i) {
