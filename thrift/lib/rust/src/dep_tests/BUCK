@@ -1,7 +1,7 @@
 load("@fbcode_macros//build_defs:thrift_library.bzl", "thrift_library")
 load(
     "@fbsource//xplat/thrift:defs.bzl",
-    "thrift_cxx_unittest",
+    "thrift_cxx_test",
     "thrift_rust_unittest",
 )
 
@@ -77,11 +77,12 @@ thrift_rust_unittest(
     ],
 )
 
-thrift_cxx_unittest(
+thrift_cxx_test(
     name = "cpp_compat_test",
     srcs = [
         "cpp_compat_test.cpp",
     ],
+    fbcode_only = True,
     deps = [
         "fbcode//common/gtest:gtest",
         "fbcode//thrift/lib/cpp/util:enum_utils",
