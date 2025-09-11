@@ -52,7 +52,6 @@ export async function activate(
         new Set<EnabledSCMApiFeature>(['blame', 'sidebar', 'autoresolve']),
     ]);
     logger.info('enabled features: ', [...enabledSCMApiFeatures].join(', '));
-    Internal.maybeOverwriteIslEnabledSetting?.(ctx);
     context.subscriptions.push(registerISLCommands(context, platform, logger));
     context.subscriptions.push(outputChannel);
     const reposList = new VSCodeReposList(logger, extensionTracker, enabledSCMApiFeatures);
