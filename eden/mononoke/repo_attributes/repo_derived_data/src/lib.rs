@@ -347,4 +347,17 @@ impl RepoDerivedData {
             .fetch_derived::<Derivable>(ctx, csid, None)
             .await
     }
+
+    pub async fn fetch_derived_direct<Derivable>(
+        &self,
+        ctx: &CoreContext,
+        csid: ChangesetId,
+    ) -> Result<Option<Derivable::Value>, DerivationError>
+    where
+        Derivable: BonsaiDerivable,
+    {
+        self.manager()
+            .fetch_derived_direct::<Derivable>(ctx, csid, None)
+            .await
+    }
 }

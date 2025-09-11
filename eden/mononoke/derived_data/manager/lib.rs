@@ -5,6 +5,8 @@
  * GNU General Public License version 2.
  */
 
+#![feature(associated_type_defaults)]
+
 pub mod context;
 pub mod derivable;
 pub mod error;

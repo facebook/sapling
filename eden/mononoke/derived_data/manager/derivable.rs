@@ -70,6 +70,11 @@ pub trait BonsaiDerivable: Sized + Send + Sync + Clone + Debug + 'static {
     /// Use the `dependencies!` macro to populate this type.
     type PredecessorDependencies: DerivationDependencies;
 
+    /// The underlying type of the value of the derived data. This is used
+    /// by the `fetch_direct` method to fetch the derived data value directly
+    /// without going through the mapping.
+    type Value: Send + Sync + 'static = ();
+
     /// Derive data for a single changeset.
     ///
     /// If the implementation generates any other data (e.g. manifest nodes
@@ -169,6 +174,19 @@ pub trait BonsaiDerivable: Sized + Send + Sync + Clone + Debug + 'static {
         derivation: &DerivationContext,
         csid: ChangesetId,
     ) -> Result<Option<Self>>;
+
+    /// Fetch the underlying value of previously derived and persisted data,
+    /// without going through the mapping.
+    ///
+    /// Returns None if the given changeset has not had derived data
+    /// persisted previously.
+    async fn fetch_direct(
+        _ctx: &CoreContext,
+        _derivation: &DerivationContext,
+        _csid: ChangesetId,
+    ) -> Result<Option<Self::Value>> {
+        unimplemented!("fetch_direct is not implemented for {}", Self::NAME)
+    }
 
     /// Fetch a batch of previously derived data.
     ///

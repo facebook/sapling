@@ -10,15 +10,12 @@ use std::io::Write;
 use std::sync::Arc;
 
 use anyhow::Context;
-use anyhow::Error;
 use anyhow::Result;
 use anyhow::anyhow;
 use anyhow::bail;
 use async_trait::async_trait;
 use blobstore::Blobstore;
 use blobstore::BlobstoreBytes;
-use blobstore::BlobstoreGetData;
-use blobstore::Storable;
 use bytes::Bytes;
 use cloned::cloned;
 use context::CoreContext;
@@ -39,7 +36,6 @@ use manifest::Entry;
 use manifest::ManifestOps;
 use metaconfig_types::GitDeltaManifestV3Config;
 use mononoke_macros::mononoke;
-use mononoke_types::BlobstoreValue;
 use mononoke_types::BonsaiChangeset;
 use mononoke_types::ChangesetId;
 use mononoke_types::ThriftConvert;
@@ -55,19 +51,12 @@ use crate::delta_manifest_v3::GDMV3Entry;
 use crate::delta_manifest_v3::GDMV3Instructions;
 use crate::delta_manifest_v3::GDMV3ObjectEntry;
 use crate::delta_manifest_v3::GitDeltaManifestV3;
-use crate::delta_manifest_v3::GitDeltaManifestV3Id;
 use crate::store::HeaderState;
 use crate::store::fetch_git_object_bytes;
 use crate::tree::GitEntry;
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq, Hash)]
-pub struct RootGitDeltaManifestV3Id(GitDeltaManifestV3Id);
-
-impl RootGitDeltaManifestV3Id {
-    pub fn manifest_id(&self) -> &GitDeltaManifestV3Id {
-        &self.0
-    }
-}
+pub struct RootGitDeltaManifestV3Id;
 
 pub fn format_key(derivation_ctx: &DerivationContext, changeset_id: ChangesetId) -> String {
     let root_prefix = "derived_root_gdm3.";
@@ -75,24 +64,13 @@ pub fn format_key(derivation_ctx: &DerivationContext, changeset_id: ChangesetId)
     format!("{}{}{}", root_prefix, key_prefix, changeset_id)
 }
 
-impl TryFrom<BlobstoreBytes> for RootGitDeltaManifestV3Id {
-    type Error = Error;
-    fn try_from(blob_bytes: BlobstoreBytes) -> Result<Self> {
-        GitDeltaManifestV3Id::from_bytes(blob_bytes.into_bytes()).map(RootGitDeltaManifestV3Id)
-    }
-}
-
-impl TryFrom<BlobstoreGetData> for RootGitDeltaManifestV3Id {
-    type Error = Error;
-    fn try_from(blob_val: BlobstoreGetData) -> Result<Self> {
-        blob_val.into_bytes().try_into()
-    }
-}
-
-impl From<RootGitDeltaManifestV3Id> for BlobstoreBytes {
-    fn from(root_mf_id: RootGitDeltaManifestV3Id) -> Self {
-        BlobstoreBytes::from_bytes(root_mf_id.0.into_bytes())
-    }
+pub fn format_manifest_key(
+    derivation_ctx: &DerivationContext,
+    changeset_id: ChangesetId,
+) -> String {
+    let manifest_prefix = "gdm3.";
+    let key_prefix = derivation_ctx.mapping_key_prefix::<RootGitDeltaManifestV3Id>();
+    format!("{}{}{}", manifest_prefix, key_prefix, changeset_id)
 }
 
 async fn derive_single(
@@ -131,9 +109,15 @@ async fn derive_single(
 
     let manifest =
         GitDeltaManifestV3::from_entries(ctx, blobstore, entries, config.entry_chunk_size).await?;
-    let mf_id = manifest.into_blob().store(ctx, blobstore).await?;
+    blobstore
+        .put(
+            ctx,
+            format_manifest_key(derivation_ctx, cs_id),
+            BlobstoreBytes::from_bytes(manifest.into_bytes()),
+        )
+        .await?;
 
-    Ok(RootGitDeltaManifestV3Id(mf_id))
+    Ok(RootGitDeltaManifestV3Id)
 }
 
 async fn gdm_v3_entries_root(
@@ -378,6 +362,7 @@ impl BonsaiDerivable for RootGitDeltaManifestV3Id {
 
     type Dependencies = dependencies![MappedGitCommitId];
     type PredecessorDependencies = dependencies![];
+    type Value = GitDeltaManifestV3;
 
     async fn derive_single(
         ctx: &CoreContext,
@@ -431,7 +416,10 @@ impl BonsaiDerivable for RootGitDeltaManifestV3Id {
         changeset_id: ChangesetId,
     ) -> Result<()> {
         let key = format_key(derivation_ctx, changeset_id);
-        derivation_ctx.blobstore().put(ctx, key, self.into()).await
+        derivation_ctx
+            .blobstore()
+            .put(ctx, key, BlobstoreBytes::empty())
+            .await
     }
 
     async fn fetch(
@@ -444,16 +432,26 @@ impl BonsaiDerivable for RootGitDeltaManifestV3Id {
             .blobstore()
             .get(ctx, &key)
             .await?
-            .map(TryInto::try_into)
+            .map(|_| Self))
+    }
+
+    async fn fetch_direct(
+        ctx: &CoreContext,
+        derivation_ctx: &DerivationContext,
+        changeset_id: ChangesetId,
+    ) -> Result<Option<Self::Value>> {
+        let key = format_manifest_key(derivation_ctx, changeset_id);
+        Ok(derivation_ctx
+            .blobstore()
+            .get(ctx, &key)
+            .await?
+            .map(|bytes| Self::Value::from_bytes(bytes.into_bytes().as_bytes()))
             .transpose()?)
     }
 
     fn from_thrift(data: thrift::DerivedData) -> Result<Self> {
-        if let thrift::DerivedData::git_delta_manifest_v3(
-            thrift::DerivedDataGitDeltaManifestV3::root_git_delta_manifest_v3_id(id),
-        ) = data
-        {
-            GitDeltaManifestV3Id::from_thrift(id).map(Self)
+        if let thrift::DerivedData::git_delta_manifest_v3(_) = data {
+            Ok(Self)
         } else {
             Err(anyhow!(
                 "Can't convert {} from provided thrift::DerivedData",
@@ -462,11 +460,11 @@ impl BonsaiDerivable for RootGitDeltaManifestV3Id {
         }
     }
 
-    fn into_thrift(data: Self) -> Result<thrift::DerivedData> {
+    fn into_thrift(_data: Self) -> Result<thrift::DerivedData> {
         Ok(thrift::DerivedData::git_delta_manifest_v3(
-            thrift::DerivedDataGitDeltaManifestV3::root_git_delta_manifest_v3_id(
-                data.0.into_thrift(),
-            ),
+            thrift::DerivedDataGitDeltaManifestV3 {
+                ..Default::default()
+            },
         ))
     }
 }
@@ -480,7 +478,6 @@ mod tests {
     use anyhow::Result;
     use anyhow::format_err;
     use async_compression::tokio::write::ZlibDecoder;
-    use blobstore::Loadable;
     use bonsai_hg_mapping::BonsaiHgMapping;
     use bookmarks::BookmarkKey;
     use bookmarks::Bookmarks;
@@ -522,7 +519,7 @@ mod tests {
     async fn common_gdm_v3_validation(
         repo: &Repo,
         ctx: &CoreContext,
-    ) -> Result<(RootGitDeltaManifestV3Id, ChangesetId)> {
+    ) -> Result<(GitDeltaManifestV3, ChangesetId)> {
         let cs_id = repo
             .bookmarks()
             .get(
@@ -533,10 +530,19 @@ mod tests {
             .await?
             .ok_or_else(|| format_err!("no master"))?;
         // Validate that the derivation of the GitDeltaManifestV3 for the head commit succeeds
-        let root_mf_id = repo
-            .repo_derived_data()
+        repo.repo_derived_data()
             .derive::<RootGitDeltaManifestV3Id>(ctx, cs_id)
             .await?;
+        let manifest = repo
+            .repo_derived_data()
+            .fetch_derived_direct::<RootGitDeltaManifestV3Id>(ctx, cs_id)
+            .await?
+            .ok_or_else(|| {
+                format_err!(
+                    "GitDeltaManifestV3 should be present for changeset {}",
+                    cs_id
+                )
+            })?;
         // Validate the derivation of all the commits in this repo succeeds
         let all_cs_ids = repo
             .commit_graph()
@@ -558,7 +564,7 @@ mod tests {
                 )
             })?;
 
-        Ok((root_mf_id, cs_id))
+        Ok((manifest, cs_id))
     }
 
     #[mononoke::fbinit_test]
@@ -566,8 +572,7 @@ mod tests {
         let repo: Repo = fixtures::Linear::get_repo(fb).await;
         let ctx = CoreContext::test_mock(fb);
         let blobstore = repo.repo_blobstore();
-        let (master_mf_id, _) = common_gdm_v3_validation(&repo, &ctx).await?;
-        let gdm_v3 = master_mf_id.0.load(&ctx, blobstore).await?;
+        let (gdm_v3, _) = common_gdm_v3_validation(&repo, &ctx).await?;
         let expected_paths = vec![MPath::ROOT, MPath::new("10")?] //MPath::ROOT for root directory
             .into_iter()
             .collect::<HashSet<_>>();
@@ -596,8 +601,7 @@ mod tests {
         let repo: Repo = fixtures::BranchEven::get_repo(fb).await;
         let ctx = CoreContext::test_mock(fb);
         let blobstore = repo.repo_blobstore();
-        let (master_mf_id, _) = common_gdm_v3_validation(&repo, &ctx).await?;
-        let gdm_v3 = master_mf_id.0.load(&ctx, blobstore).await?;
+        let (gdm_v3, _) = common_gdm_v3_validation(&repo, &ctx).await?;
         let expected_paths = vec![MPath::ROOT, MPath::new("base")?] //MPath::ROOT for root directory
             .into_iter()
             .collect::<HashSet<_>>();
@@ -626,8 +630,7 @@ mod tests {
         let repo: Repo = fixtures::BranchUneven::get_repo(fb).await;
         let ctx = CoreContext::test_mock(fb);
         let blobstore = repo.repo_blobstore();
-        let (master_mf_id, _) = common_gdm_v3_validation(&repo, &ctx).await?;
-        let gdm_v3 = master_mf_id.0.load(&ctx, blobstore).await?;
+        let (gdm_v3, _) = common_gdm_v3_validation(&repo, &ctx).await?;
         let expected_paths = vec![MPath::ROOT, MPath::new("5")?] //MPath::ROOT for root directory
             .into_iter()
             .collect::<HashSet<_>>();
@@ -669,8 +672,7 @@ mod tests {
         let repo: Repo = fixtures::BranchWide::get_repo(fb).await;
         let ctx = CoreContext::test_mock(fb);
         let blobstore = repo.repo_blobstore();
-        let (master_mf_id, _) = common_gdm_v3_validation(&repo, &ctx).await?;
-        let gdm_v3 = master_mf_id.0.load(&ctx, blobstore).await?;
+        let (gdm_v3, _) = common_gdm_v3_validation(&repo, &ctx).await?;
         let expected_paths = vec![MPath::ROOT, MPath::new("3")?] //MPath::ROOT for root directory
             .into_iter()
             .collect::<HashSet<_>>();
@@ -712,8 +714,7 @@ mod tests {
         let repo: Repo = fixtures::MergeEven::get_repo(fb).await;
         let ctx = CoreContext::test_mock(fb);
         let blobstore = repo.repo_blobstore();
-        let (master_mf_id, _) = common_gdm_v3_validation(&repo, &ctx).await?;
-        let gdm_v3 = master_mf_id.0.load(&ctx, blobstore).await?;
+        let (gdm_v3, _) = common_gdm_v3_validation(&repo, &ctx).await?;
         let gdm_v3_entries = gdm_v3
             .into_entries(&ctx, blobstore)
             .map_ok(|entry| (entry.path.clone(), entry))
@@ -732,8 +733,7 @@ mod tests {
         let repo: Repo = fixtures::ManyFilesDirs::get_repo(fb).await;
         let ctx = CoreContext::test_mock(fb);
         let blobstore = repo.repo_blobstore();
-        let (master_mf_id, _) = common_gdm_v3_validation(&repo, &ctx).await?;
-        let gdm_v3 = master_mf_id.0.load(&ctx, blobstore).await?;
+        let (gdm_v3, _) = common_gdm_v3_validation(&repo, &ctx).await?;
         let expected_paths = vec![MPath::ROOT, MPath::new("1")?] //MPath::ROOT for root directory
             .into_iter()
             .collect::<HashSet<_>>();
@@ -762,8 +762,7 @@ mod tests {
         let repo: Repo = fixtures::MergeUneven::get_repo(fb).await;
         let ctx = CoreContext::test_mock(fb);
         let blobstore = repo.repo_blobstore();
-        let (master_mf_id, _) = common_gdm_v3_validation(&repo, &ctx).await?;
-        let gdm_v3 = master_mf_id.0.load(&ctx, blobstore).await?;
+        let (gdm_v3, _) = common_gdm_v3_validation(&repo, &ctx).await?;
         let gdm_v3_entries = gdm_v3
             .into_entries(&ctx, blobstore)
             .map_ok(|entry| (entry.path.clone(), entry))
@@ -778,8 +777,7 @@ mod tests {
         let repo: Repo = fixtures::MergeMultipleFiles::get_repo(fb).await;
         let ctx = CoreContext::test_mock(fb);
         let blobstore = repo.repo_blobstore();
-        let (master_mf_id, _) = common_gdm_v3_validation(&repo, &ctx).await?;
-        let gdm_v3 = master_mf_id.0.load(&ctx, blobstore).await?;
+        let (gdm_v3, _) = common_gdm_v3_validation(&repo, &ctx).await?;
         let expected_paths = vec![
             MPath::ROOT,
             MPath::new("2")?,
@@ -829,8 +827,7 @@ mod tests {
         let repo: Repo = fixtures::Linear::get_repo(fb).await;
         let ctx = CoreContext::test_mock(fb);
         let blobstore = repo.repo_blobstore();
-        let (master_mf_id, _) = common_gdm_v3_validation(&repo, &ctx).await?;
-        let gdm_v3 = master_mf_id.0.load(&ctx, &blobstore).await?;
+        let (gdm_v3, _) = common_gdm_v3_validation(&repo, &ctx).await?;
         let gdm_v3_entries = gdm_v3
             .into_entries(&ctx, blobstore)
             .map_ok(|entry| (entry.path.clone(), entry))

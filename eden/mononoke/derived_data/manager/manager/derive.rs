@@ -937,6 +937,40 @@ impl DerivedDataManager {
         Ok(derived)
     }
 
+    /// Fetch the underlying value of derived data for a changeset if it has previously been derived
+    /// directly without going through the mapping.
+    pub async fn fetch_derived_direct<Derivable>(
+        &self,
+        ctx: &CoreContext,
+        csid: ChangesetId,
+        rederivation: Option<Arc<dyn Rederivation>>,
+    ) -> Result<Option<Derivable::Value>, DerivationError>
+    where
+        Derivable: BonsaiDerivable,
+    {
+        self.get_manager(ctx, csid)
+            .await?
+            .fetch_derived_direct_impl::<Derivable>(ctx, csid, rederivation)
+            .await
+    }
+
+    async fn fetch_derived_direct_impl<Derivable>(
+        &self,
+        ctx: &CoreContext,
+        csid: ChangesetId,
+        rederivation: Option<Arc<dyn Rederivation>>,
+    ) -> Result<Option<Derivable::Value>, DerivationError>
+    where
+        Derivable: BonsaiDerivable,
+    {
+        self.check_enabled::<Derivable>()?;
+        let derivation_ctx = self.derivation_context(rederivation);
+        let derived = derivation_ctx
+            .fetch_derived_direct::<Derivable>(ctx, csid)
+            .await?;
+        Ok(derived)
+    }
+
     #[async_recursion]
     /// Fetch derived data for a batch of changesets if they have previously
     /// been derived.

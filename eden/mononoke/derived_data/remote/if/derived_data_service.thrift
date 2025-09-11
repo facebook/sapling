@@ -176,9 +176,7 @@ union DerivedDataHgAugmentedManifest {
 union DerivedDataGitDeltaManifestV2 {
   1: git_types_thrift.GitDeltaManifestV2Id root_git_delta_manifest_v2_id;
 }
-union DerivedDataGitDeltaManifestV3 {
-  1: git_types_thrift.GitDeltaManifestV3Id root_git_delta_manifest_v3_id;
-}
+struct DerivedDataGitDeltaManifestV3 {}
 
 union DerivedDataContentManifest {
   1: id.ContentManifestId root_content_manifest_id;

@@ -153,6 +153,25 @@ impl DerivationContext {
         Ok(derived)
     }
 
+    /// Directly fetch the value of previously derived data without going through
+    /// the mapping.
+    pub async fn fetch_derived_direct<Derivable>(
+        &self,
+        ctx: &CoreContext,
+        csid: ChangesetId,
+    ) -> Result<Option<Derivable::Value>>
+    where
+        Derivable: BonsaiDerivable,
+    {
+        if let Some(rederivation) = self.rederivation.as_ref() {
+            if rederivation.needs_rederive(Derivable::VARIANT, csid) {
+                return Ok(None);
+            }
+        }
+        let derived = Derivable::fetch_direct(ctx, self, csid).await?;
+        Ok(derived)
+    }
+
     /// Fetch a batch of previously derived data.
     pub async fn fetch_derived_batch<Derivable>(
         &self,

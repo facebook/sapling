@@ -121,10 +121,6 @@ union GitDeltaManifestV3 {
   2: list<GDMV3ChunkId> chunked;
 }
 
-/// Identifier for GitDeltaManifestV3 blob
-@rust.NewType
-typedef id.Id GitDeltaManifestV3Id
-
 /// Identifier for a blob representing a chunk of the entries in GitDeltaManifestV3
 @rust.NewType
 typedef id.Id GDMV3ChunkId

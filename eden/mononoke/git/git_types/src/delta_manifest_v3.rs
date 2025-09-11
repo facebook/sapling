@@ -345,9 +345,6 @@ pub struct GDMV3InstructionsChunkId(Blake2);
 #[derive(Clone, Copy, Debug, Hash, Eq, PartialEq)]
 pub struct GDMV3ChunkId(Blake2);
 
-#[derive(Clone, Copy, Debug, Hash, Eq, PartialEq)]
-pub struct GitDeltaManifestV3Id(Blake2);
-
 impl ThriftConvert for GDMV3ObjectEntry {
     const NAME: &'static str = "GDMV3ObjectEntry";
     type Thrift = thrift::GDMV3ObjectEntry;
@@ -381,14 +378,6 @@ impl ThriftConvert for GDMV3InstructionsChunk {
     fn into_thrift(self) -> Self::Thrift {
         thrift::GDMV3InstructionsChunk(self.0)
     }
-}
-
-impl_typed_hash! {
-    hash_type => GitDeltaManifestV3Id,
-    thrift_hash_type => thrift::GitDeltaManifestV3Id,
-    value_type => GitDeltaManifestV3,
-    context_type => GitDeltaManifestV3IdContext,
-    context_key => "gdm3",
 }
 
 impl_typed_hash! {
@@ -427,20 +416,6 @@ impl BlobstoreValue for GDMV3Chunk {
     fn into_blob(self) -> Blob<Self::Key> {
         let data = self.into_bytes();
         let id = GDMV3ChunkIdContext::id_from_data(&data);
-        Blob::new(id, data)
-    }
-
-    fn from_blob(blob: Blob<Self::Key>) -> Result<Self> {
-        Self::from_bytes(blob.data())
-    }
-}
-
-impl BlobstoreValue for GitDeltaManifestV3 {
-    type Key = GitDeltaManifestV3Id;
-
-    fn into_blob(self) -> Blob<Self::Key> {
-        let data = self.into_bytes();
-        let id = GitDeltaManifestV3IdContext::id_from_data(&data);
         Blob::new(id, data)
     }
 

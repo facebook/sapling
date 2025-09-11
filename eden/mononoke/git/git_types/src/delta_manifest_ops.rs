@@ -10,6 +10,7 @@ use std::sync::Arc;
 
 use anyhow::Context;
 use anyhow::Result;
+use anyhow::anyhow;
 use async_trait::async_trait;
 use blobstore::Blobstore;
 use blobstore::Loadable;
@@ -64,8 +65,11 @@ pub async fn fetch_git_delta_manifest(
             ))
         }
         GitDeltaManifestVersion::V3 => {
-            let root_mf_id = derived_data
-                .derive::<RootGitDeltaManifestV3Id>(ctx, cs_id)
+            // Try to directly fetch the manifest blob. If it's not present, derive it.
+            // For most cases, the manifest blob will be present so this will allow us to
+            // avoid fetching the mapping blob.
+            let gdm_v3 = derived_data
+                .fetch_derived_direct::<RootGitDeltaManifestV3Id>(ctx, cs_id)
                 .await
                 .with_context(|| {
                     format!(
@@ -74,18 +78,35 @@ pub async fn fetch_git_delta_manifest(
                     )
                 })?;
 
-            Ok(Box::new(
-                root_mf_id
-                    .manifest_id()
-                    .load(ctx, blobstore)
-                    .await
-                    .with_context(|| {
-                        format!(
-                            "Error in loading GitDeltaManifestV3 from root id {:?}",
-                            root_mf_id
-                        )
-                    })?,
-            ))
+            let gdm_v3 = match gdm_v3 {
+                Some(gdm_v3) => gdm_v3,
+                None => {
+                    derived_data
+                        .derive::<RootGitDeltaManifestV3Id>(ctx, cs_id)
+                        .await
+                        .with_context(|| {
+                            format!(
+                                "Error in deriving RootGitDeltaManifestV3Id for changeset {:?}",
+                                cs_id
+                            )
+                        })?;
+
+                    derived_data
+                        .fetch_derived_direct::<RootGitDeltaManifestV3Id>(ctx, cs_id)
+                        .await
+                        .with_context(|| {
+                            format!(
+                                "Error in deriving RootGitDeltaManifestV3Id for changeset {:?}",
+                                cs_id
+                            )
+                        })?
+                        .ok_or_else(|| {
+                            anyhow!("GitDeltaManifestV3 not found for changeset {:?}", cs_id)
+                        })?
+                }
+            };
+
+            Ok(Box::new(gdm_v3))
         }
     }
 }
