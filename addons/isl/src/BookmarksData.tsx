@@ -90,3 +90,14 @@ export const remoteBookmarks = atom(get => {
   commits.sort((a, b) => b.date.valueOf() - a.date.valueOf());
   return commits.flatMap(commit => commit.remoteBookmarks);
 });
+
+/**
+ * Tracks when the user was last shown the bookmark recommendation prompt.
+ */
+export const recommendedBookmarksReminder = localStorageBackedAtom<{
+  shouldShow: boolean;
+  lastShown: number;
+}>('isl.recommended-bookmarks-reminder', {
+  shouldShow: true,
+  lastShown: 0,
+});

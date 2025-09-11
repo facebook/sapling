@@ -862,6 +862,7 @@ export type SettableConfigName = (typeof settableConfigNames)[number];
 export type LocalStorageName =
   | 'isl.drawer-state'
   | 'isl.bookmarks'
+  | 'isl.recommended-bookmarks-reminder'
   | 'isl.ui-zoom'
   | 'isl.has-shown-getting-started'
   | 'isl.dismissed-split-suggestion'

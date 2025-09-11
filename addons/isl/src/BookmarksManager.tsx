@@ -64,11 +64,13 @@ const styles = stylex.create({
 export function BookmarksManagerMenu() {
   const additionalToggles = useCommandEvent('ToggleBookmarksManagerDropdown');
   const bookmarks = useAtomValue(remoteBookmarks);
+
   if (bookmarks.length < 2) {
     // No use showing bookmarks menu if there's only one remote bookmark
     return null;
   }
-  return (
+
+  const menuButton = (
     <Tooltip
       component={dismiss => <BookmarksManager dismiss={dismiss} />}
       trigger="click"
@@ -85,6 +87,9 @@ export function BookmarksManagerMenu() {
       </Button>
     </Tooltip>
   );
+
+  const Reminder = Internal.RecommendedBookmarkReminder;
+  return Reminder ? <Reminder>{menuButton}</Reminder> : menuButton;
 }
 
 function BookmarksManager(_props: {dismiss: () => void}) {
