@@ -142,6 +142,20 @@ cpp_binary(
 )
 
 cpp_binary(
+    name = "get_blob",
+    srcs = ["get_blob.cpp"],
+    deps = [
+        "//eden/common/utils:path",
+        "//eden/common/utils:process",
+        "//eden/common/utils/benchharness:benchharness",
+        "//eden/fs/service:thrift-cpp2-services",
+        "//eden/fs/service:thrift_get_object_impl",
+        "//folly/io/async:event_base_thread",
+        "//thrift/lib/cpp2/async:header_client_channel",
+    ],
+)
+
+cpp_binary(
     name = "set_path_object_id",
     srcs = ["set_path_object_id.cpp"],
     compatible_with = [
