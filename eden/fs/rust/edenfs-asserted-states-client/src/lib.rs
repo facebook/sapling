@@ -36,7 +36,7 @@ fn ensure_directory(path: &Path) -> anyhow::Result<()> {
     Ok(())
 }
 
-pub struct StreamingChangesClient {
+pub struct AssertedStatesClient {
     states_root: PathBuf,
 }
 
@@ -52,12 +52,12 @@ pub enum StateError {
     OtherError(#[from] anyhow::Error),
 }
 
-impl StreamingChangesClient {
+impl AssertedStatesClient {
     pub fn new(mount_point: &Path) -> Result<Self, StateError> {
         let states_root = mount_point.join(ASSERTED_STATE_DIR);
         ensure_directory(&states_root)?;
 
-        Ok(StreamingChangesClient { states_root })
+        Ok(AssertedStatesClient { states_root })
     }
 
     #[allow(dead_code)]
@@ -199,7 +199,7 @@ mod tests {
     #[test]
     fn test_enter_state() -> anyhow::Result<()> {
         let mount_point = std::env::temp_dir().join("test_mount");
-        let client = StreamingChangesClient::new(&mount_point)?;
+        let client = AssertedStatesClient::new(&mount_point)?;
         let state = "test_state1";
         let _result = client.enter_state(state)?;
         let check_state = client.is_state_asserted(state)?;
@@ -210,7 +210,7 @@ mod tests {
     #[test]
     fn test_state_leave() -> anyhow::Result<()> {
         let mount_point = std::env::temp_dir().join("test_mount1");
-        let client = StreamingChangesClient::new(&mount_point)?;
+        let client = AssertedStatesClient::new(&mount_point)?;
         let state = "test_state2";
         let guard = client.enter_state(state)?;
         let check_state = client.is_state_asserted(state)?;
@@ -224,7 +224,7 @@ mod tests {
     #[test]
     fn test_state_leave_implicit() -> anyhow::Result<()> {
         let mount_point = std::env::temp_dir().join("test_mount");
-        let client = StreamingChangesClient::new(&mount_point)?;
+        let client = AssertedStatesClient::new(&mount_point)?;
         let state = "test_state2";
         {
             let _guard = client.enter_state(state)?;
@@ -239,7 +239,7 @@ mod tests {
     #[test]
     fn test_get_asserted_states_empty() -> anyhow::Result<()> {
         let mount_point = std::env::temp_dir().join("test_mount2");
-        let client = StreamingChangesClient::new(&mount_point)?;
+        let client = AssertedStatesClient::new(&mount_point)?;
         let asserted_states = client.get_asserted_states()?;
         assert!(asserted_states.is_empty());
         Ok(())
@@ -248,7 +248,7 @@ mod tests {
     #[test]
     fn test_get_asserted_states() -> anyhow::Result<()> {
         let mount_point = std::env::temp_dir().join("test_mount3");
-        let client = StreamingChangesClient::new(&mount_point)?;
+        let client = AssertedStatesClient::new(&mount_point)?;
         let state1 = "test_state1";
         let state2 = "test_state2";
 
@@ -293,8 +293,8 @@ mod tests {
     fn test_multiple_mount() -> anyhow::Result<()> {
         let mount_point1 = std::env::temp_dir().join("test_mount4");
         let mount_point2 = std::env::temp_dir().join("test_mount4a");
-        let client1 = StreamingChangesClient::new(&mount_point1)?;
-        let client2 = StreamingChangesClient::new(&mount_point2)?;
+        let client1 = AssertedStatesClient::new(&mount_point1)?;
+        let client2 = AssertedStatesClient::new(&mount_point2)?;
         let state1 = "test_state1";
         let state2 = "test_state2";
         let guard_result = client1.enter_state(state1)?;
@@ -315,7 +315,7 @@ mod tests {
     #[test]
     fn test_repeat_enter() -> anyhow::Result<()> {
         let mount_point = std::env::temp_dir().join("test_mount6");
-        let client = StreamingChangesClient::new(&mount_point)?;
+        let client = AssertedStatesClient::new(&mount_point)?;
         let state = "test_state";
         let result = client.enter_state(state);
         let result2 = client.enter_state(state);
@@ -352,7 +352,7 @@ mod tests {
     #[test]
     fn test_states_asserted() -> anyhow::Result<()> {
         let mount_point = std::env::temp_dir().join("test_mount7");
-        let client = StreamingChangesClient::new(&mount_point)?;
+        let client = AssertedStatesClient::new(&mount_point)?;
         let state = "test_state";
         let state2 = "test_state2";
         let guard_result = client.enter_state(state)?;
