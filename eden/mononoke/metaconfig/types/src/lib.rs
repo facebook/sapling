@@ -307,6 +307,8 @@ pub enum ShardedService {
     DerivedDataTailer,
     /// Alias Verify
     AliasVerify,
+    /// Diff Service,
+    DiffService,
     /// Draft Commit Deletion,
     DraftCommitDeletion,
     /// Mononoke Git Server
