@@ -264,7 +264,7 @@ impl PartialOrd for RepoPathBuf {
 impl Deref for RepoPathBuf {
     type Target = RepoPath;
     fn deref(&self) -> &Self::Target {
-        RepoPath::from_str_unchecked(&self.0)
+        unsafe { RepoPath::from_str_unchecked(&self.0) }
     }
 }
 
@@ -302,7 +302,7 @@ impl RepoPath {
     /// Returns an empty `RepoPath`. Parallel to `RepoPathBuf::new()`. This path will have no
     /// components and will be equivalent to the root of the repository.
     pub fn empty() -> &'static RepoPath {
-        RepoPath::from_str_unchecked("")
+        unsafe { RepoPath::from_str_unchecked("") }
     }
 
     /// Returns whether the current `RepoPath` has no components. Since `RepoPath`
@@ -324,7 +324,7 @@ impl RepoPath {
     /// the `RepoPath` rules.
     pub fn from_str(s: &str) -> Result<&RepoPath, ParseError> {
         validate_path(s).map_err(|e| ParseError::ValidationError(s.to_string(), e))?;
-        Ok(RepoPath::from_str_unchecked(s))
+        Ok(unsafe { RepoPath::from_str_unchecked(s) })
     }
 
     /// `const_fn` version of `from_str`.
@@ -340,11 +340,11 @@ impl RepoPath {
         if validate_path(s).is_err() {
             panic!("invalid RepoPath::from_static_str");
         }
-        RepoPath::from_str_unchecked(s)
+        unsafe { RepoPath::from_str_unchecked(s) }
     }
 
     #[ref_cast_custom]
-    const fn from_str_unchecked(s: &str) -> &RepoPath;
+    pub const unsafe fn from_str_unchecked(s: &str) -> &RepoPath;
 
     /// Returns the underlying bytes of the `RepoPath`.
     pub fn as_byte_slice(&self) -> &[u8] {
@@ -378,7 +378,7 @@ impl RepoPath {
         }
         match self.0.rfind(SEPARATOR) {
             Some(pos) => Some((
-                RepoPath::from_str_unchecked(&self.0[..pos]),
+                unsafe { RepoPath::from_str_unchecked(&self.0[..pos]) },
                 PathComponent::from_str_unchecked(&self.0[(pos + 1)..]),
             )),
             None => Some((
@@ -395,10 +395,9 @@ impl RepoPath {
             return None;
         }
         match self.0.find(SEPARATOR) {
-            Some(pos) => Some((
-                PathComponent::from_str_unchecked(&self.0[..pos]),
-                RepoPath::from_str_unchecked(&self.0[(pos + 1)..]),
-            )),
+            Some(pos) => Some((PathComponent::from_str_unchecked(&self.0[..pos]), unsafe {
+                RepoPath::from_str_unchecked(&self.0[(pos + 1)..])
+            })),
             None => Some((
                 PathComponent::from_str_unchecked(&self.0),
                 RepoPath::empty(),
@@ -498,11 +497,13 @@ impl RepoPath {
             if self.0.len() == base.0.len() {
                 Some(Self::empty())
             } else {
-                Some(Self::from_str_unchecked(if prefix {
-                    &self.0[end + 1..]
-                } else {
-                    &self.0[..start - 1]
-                }))
+                Some(unsafe {
+                    Self::from_str_unchecked(if prefix {
+                        &self.0[end + 1..]
+                    } else {
+                        &self.0[..start - 1]
+                    })
+                })
             }
         } else {
             None
@@ -521,7 +522,9 @@ impl RepoPath {
                 (_, None) => return other,
                 (l, r) => {
                     if l != r {
-                        return Self::from_str_unchecked(&self.0[..position.saturating_sub(1)]);
+                        return unsafe {
+                            Self::from_str_unchecked(&self.0[..position.saturating_sub(1)])
+                        };
                     }
                 }
             }
@@ -764,13 +767,13 @@ impl AsRef<PathComponent> for PathComponent {
 
 impl AsRef<RepoPath> for PathComponent {
     fn as_ref(&self) -> &RepoPath {
-        RepoPath::from_str_unchecked(&self.0)
+        unsafe { RepoPath::from_str_unchecked(&self.0) }
     }
 }
 
 impl AsRef<RepoPath> for PathComponentBuf {
     fn as_ref(&self) -> &RepoPath {
-        RepoPath::from_str_unchecked(&self.0)
+        unsafe { RepoPath::from_str_unchecked(&self.0) }
     }
 }
 
@@ -885,7 +888,7 @@ impl<'a> Iterator for Parents<'a> {
             match self.path.0[*position..].find(SEPARATOR) {
                 Some(delta) => {
                     let end = *position + delta;
-                    let result = RepoPath::from_str_unchecked(&self.path.0[..end]);
+                    let result = unsafe { RepoPath::from_str_unchecked(&self.path.0[..end]) };
                     *position = end + 1;
                     Some(result)
                 }
@@ -930,7 +933,7 @@ impl<'a> Iterator for ReverseParents<'a> {
     fn next(&mut self) -> Option<Self::Item> {
         match self.position {
             Some(ref mut position) if *position != 0 => {
-                let result = RepoPath::from_str_unchecked(&self.path.0[0..*position]);
+                let result = unsafe { RepoPath::from_str_unchecked(&self.path.0[0..*position]) };
                 *position = self.path.0[..*position].rfind(SEPARATOR).unwrap_or(0);
                 Some(result)
             }

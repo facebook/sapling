@@ -670,14 +670,9 @@ pub fn sapling_backingstore_witness_file_read(
     local: bool,
     pid: u32,
 ) {
-    match RepoPath::from_str(path) {
-        Ok(path) => {
-            store.witness_file_read(path, local, pid);
-        }
-        Err(err) => {
-            tracing::warn!("invalid witnessed file path {path}: {err:?}");
-        }
-    }
+    // `path` comes from eden's RelativePath type, which validates for utf-8 and illegal chars.
+    // This is performance sensitive code, so skip the checks.
+    store.witness_file_read(unsafe { RepoPath::from_str_unchecked(path) }, local, pid);
 }
 
 pub fn sapling_backingstore_witness_dir_read(
@@ -688,14 +683,15 @@ pub fn sapling_backingstore_witness_dir_read(
     local: bool,
     pid: u32,
 ) {
-    match RepoPath::from_utf8(path) {
-        Ok(path) => {
-            store.witness_dir_read(path, local, num_files, num_dirs, pid);
-        }
-        Err(err) => {
-            tracing::warn!("invalid witnessed dir path {path:?}: {err:?}");
-        }
-    }
+    store.witness_dir_read(
+        // `path` comes from eden's RelativePath type, which validates for utf-8 and illegal chars.
+        // This is performance sensitive code, so skip the checks.
+        unsafe { RepoPath::from_str_unchecked(str::from_utf8_unchecked(path)) },
+        local,
+        num_files,
+        num_dirs,
+        pid,
+    );
 }
 
 #[cfg(test)]
