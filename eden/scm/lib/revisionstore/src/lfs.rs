@@ -597,6 +597,15 @@ impl LfsBlobsStore {
             _ => Ok(()),
         }
     }
+
+    pub(crate) fn with_consistent_reads(&self) -> Option<ConsistentReadGuard> {
+        match self {
+            LfsBlobsStore::IndexedLog(store) => store.inner.write().with_consistent_reads(),
+            LfsBlobsStore::Loose(_, _) => None,
+            // Store writes only go to the first/primary, so we only need consistent reads on that one.
+            LfsBlobsStore::Union(primary, _) => primary.with_consistent_reads(),
+        }
+    }
 }
 
 fn create_loose_file(path: &Path, hash: &Sha256, is_local: bool) -> Result<File> {
@@ -832,11 +841,7 @@ impl LfsStore {
     /// Open a critical section where cache writes are guaranteed to be present on subsequent read
     /// (if underlying store is indexedlog RotateLog).
     pub(crate) fn with_consistent_reads(&self) -> Option<ConsistentReadGuard> {
-        if let LfsBlobsStore::IndexedLog(store) = &self.blobs {
-            store.inner.write().with_consistent_reads()
-        } else {
-            None
-        }
+        self.blobs.with_consistent_reads()
     }
 
     pub fn repair(path: impl AsRef<Path>) -> Result<String> {

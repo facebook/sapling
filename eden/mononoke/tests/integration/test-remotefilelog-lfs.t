@@ -158,9 +158,6 @@ Now try with a small LFS cache size:
   $ hg pull -v
   pulling from mono:repo
  
- FIXME
+ Works even though the cache rotated out from under us.
   $ hg update -r master_bookmark -v
-  abort: error fetching files:
-   232ec9b974a9df3d48c2b740396691fb8939976c lfs-largefile: LFS file missing from cache after download
-   97346a10a3be00a6e8d0bbadfb329c3a079c05b4 lfs-largefile-renamed: LFS file missing from cache after download
-  [255]
+  3 files updated, 0 files merged, 0 files removed, 0 files unresolved
