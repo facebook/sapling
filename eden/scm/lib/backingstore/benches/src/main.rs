@@ -232,6 +232,8 @@ impl TempDirExt for tempfile::TempDir {
         } else {
             let keys = load_test_keys();
             store.get_blob_batch(FetchContext::default(), keys.clone(), |_, _| ());
+            // Fetching files does not fetch aux data by default. Normally aux data is fetched when we fetch trees, but this benchmark fetches unrelated trees and files, so we need to explicitly warm file aux cache.
+            store.get_file_aux_batch(FetchContext::default(), keys.clone(), |_, _| ());
         }
         store.flush();
     }
