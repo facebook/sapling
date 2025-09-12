@@ -6,6 +6,7 @@
  */
 
 use storemodel::BoxIterator;
+use storemodel::BoxRefIterator;
 use storemodel::TreeEntry;
 use storemodel::TreeItemFlag;
 use types::HgId;
@@ -14,11 +15,20 @@ use types::PathComponentBuf;
 use types::SerializationFormat;
 
 impl TreeEntry for crate::store::Entry {
-    fn iter(
+    fn iter<'a>(
+        &'a self,
+    ) -> anyhow::Result<BoxRefIterator<anyhow::Result<(&'a PathComponent, HgId, TreeItemFlag)>>>
+    {
+        let elements = self.elements_ref();
+        let iter = elements
+            .map(move |fallible_element| fallible_element.map(|e| (e.component, e.hgid, e.flag)));
+        Ok(Box::new(iter))
+    }
+
+    fn iter_owned(
         &self,
     ) -> anyhow::Result<BoxIterator<anyhow::Result<(PathComponentBuf, HgId, TreeItemFlag)>>> {
-        let entry = self.clone();
-        let elements = entry.elements();
+        let elements = self.elements();
         let iter = elements
             .map(move |fallible_element| fallible_element.map(|e| (e.component, e.hgid, e.flag)));
         Ok(Box::new(iter))

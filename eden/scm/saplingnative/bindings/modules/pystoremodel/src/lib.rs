@@ -210,7 +210,7 @@ py_class!(pub class TreeEntry |py| {
 
     def __iter__(&self) -> PyResult<PyIter> {
         let inner = self.inner(py);
-        let iter = inner.iter().map_pyerr(py)?;
+        let iter = inner.iter_owned().map_pyerr(py)?;
         let iter = PyIter::new(py, iter)?;
         Ok(iter)
     }
@@ -320,7 +320,7 @@ fn deserialize_tree(
     format: Serde<SerializationFormat>,
 ) -> PyResult<Serde<Vec<(PathComponentBuf, Id20, TreeItemFlag)>>> {
     let tree_entry = storemodel::basic_parse_tree(data.0, format.0).map_pyerr(py)?;
-    let iter = tree_entry.iter().map_pyerr(py)?;
+    let iter = tree_entry.iter_owned().map_pyerr(py)?;
     let result = iter.collect::<Result<Vec<_>, _>>().map_pyerr(py)?;
     Ok(Serde(result))
 }

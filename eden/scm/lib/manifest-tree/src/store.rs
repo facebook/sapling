@@ -127,6 +127,15 @@ impl Entry {
         Elements::from_bytes(self.0.clone(), self.1)
     }
 
+    /// Like `elements`, but yields borrowed `&PathElement` instead of `PathElementBuf`.
+    pub fn elements_ref(&self) -> ElementsRef<'_> {
+        ElementsRef {
+            bytes: &self.0,
+            position: 0,
+            format: self.1,
+        }
+    }
+
     /// The primary builder of an Entry, from a list of `Element`.
     pub fn from_elements(mut elements: Vec<Element>, format: SerializationFormat) -> Entry {
         let cmp = crate::namecmp::get_namecmp_func(format);

@@ -45,6 +45,7 @@ use progress_model::AggregatingProgressBar;
 use progress_model::ProgressBar;
 use progress_model::Registry;
 use storemodel::BoxIterator;
+use storemodel::BoxRefIterator;
 use storemodel::InsertOpts;
 use storemodel::KeyStore;
 use storemodel::SerializationFormat;
@@ -1034,8 +1035,14 @@ impl ScmStoreTreeEntry {
 
 impl TreeEntry for ScmStoreTreeEntry {
     // TODO (liubovd): We should support iter directly for CAS.
-    fn iter(&self) -> Result<BoxIterator<Result<(PathComponentBuf, HgId, TreeItemFlag)>>> {
+    fn iter<'a>(
+        &'a self,
+    ) -> Result<BoxRefIterator<Result<(&'a PathComponent, HgId, TreeItemFlag)>>> {
         self.basic_tree_entry()?.iter()
+    }
+
+    fn iter_owned(&self) -> Result<BoxIterator<Result<(PathComponentBuf, HgId, TreeItemFlag)>>> {
+        self.basic_tree_entry()?.iter_owned()
     }
 
     fn lookup(&self, name: &PathComponent) -> Result<Option<(HgId, TreeItemFlag)>> {

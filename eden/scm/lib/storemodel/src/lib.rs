@@ -54,6 +54,9 @@ pub use types::tree::TreeItemFlag;
 /// Boxed dynamic iterator. Similar to `BoxStream`.
 pub type BoxIterator<T> = Box<dyn Iterator<Item = T> + Send + 'static>;
 
+/// Boxed dynamic iterator with lifetime.
+pub type BoxRefIterator<'a, T> = Box<dyn Iterator<Item = T> + Send + 'a>;
+
 /// A store where content is indexed by "(path, hash)", aka "Key".
 pub trait KeyStore: Send + Sync {
     /// Read the content of specified files.
@@ -300,12 +303,15 @@ pub trait ReadRootTreeIds {
 
 /// Abstracted tree entry.
 pub trait TreeEntry: Send + 'static {
-    // PERF: PathComponentBuf is used because manifest-tree implementation detail.
-    // There should be a way to avoid allocation.
     /// Iterate through the tree items.
     /// Note the iteration order is serialization format defined.
     /// Practically, Git appends `/` to directories when sorting them.
-    fn iter(
+    fn iter<'a>(
+        &'a self,
+    ) -> anyhow::Result<BoxRefIterator<anyhow::Result<(&'a PathComponent, HgId, TreeItemFlag)>>>;
+
+    /// Like `iter()`, but yields owned `PathComponentBuf`.
+    fn iter_owned(
         &self,
     ) -> anyhow::Result<BoxIterator<anyhow::Result<(PathComponentBuf, HgId, TreeItemFlag)>>>;
 
