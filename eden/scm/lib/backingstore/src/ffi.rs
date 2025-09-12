@@ -60,12 +60,20 @@ pub(crate) mod ffi {
         RemoteOnly,
     }
 
+    #[namespace = "facebook::eden"]
     #[repr(u8)]
     pub enum TreeEntryType {
-        Tree,
-        RegularFile,
-        ExecutableFile,
-        Symlink,
+        TREE,
+        REGULAR_FILE,
+        EXECUTABLE_FILE,
+        SYMLINK,
+    }
+
+    #[namespace = "facebook::eden"]
+    unsafe extern "C++" {
+        include!("eden/fs/model/TreeEntry.h");
+
+        type TreeEntryType;
     }
 
     pub struct TreeEntry {

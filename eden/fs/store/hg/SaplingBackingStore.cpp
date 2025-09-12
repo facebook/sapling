@@ -81,21 +81,6 @@ std::unique_ptr<SaplingBackingStoreOptions> computeRuntimeOptions(
   return options;
 }
 
-TreeEntryType fromRawTreeEntryType(sapling::TreeEntryType type) {
-  switch (type) {
-    case sapling::TreeEntryType::RegularFile:
-      return TreeEntryType::REGULAR_FILE;
-    case sapling::TreeEntryType::Tree:
-      return TreeEntryType::TREE;
-    case sapling::TreeEntryType::ExecutableFile:
-      return TreeEntryType::EXECUTABLE_FILE;
-    case sapling::TreeEntryType::Symlink:
-      return TreeEntryType::SYMLINK;
-  }
-  EDEN_BUG() << "unknown tree entry type " << static_cast<uint32_t>(type)
-             << " loaded from data store";
-}
-
 Tree::value_type fromRawTreeEntry(
     sapling::TreeEntry entry,
     RelativePathPiece path,
@@ -123,12 +108,8 @@ Tree::value_type fromRawTreeEntry(
   auto fullPath = path + name;
   auto proxyHash = HgProxyHash::store(fullPath, hash, hgObjectIdFormat);
 
-  auto treeEntry = TreeEntry{
-      proxyHash,
-      fromRawTreeEntryType(entry.ttype),
-      size,
-      contentSha1,
-      contentBlake3};
+  auto treeEntry =
+      TreeEntry{proxyHash, entry.ttype, size, contentSha1, contentBlake3};
   return {std::move(name), std::move(treeEntry)};
 }
 

@@ -27,9 +27,9 @@ impl TreeEntryType {
     /// Returns `None` for entries that need to be skipped.
     fn from_file_type(file_type: FileType) -> Option<Self> {
         let entry_type = match file_type {
-            FileType::Regular => TreeEntryType::RegularFile,
-            FileType::Executable => TreeEntryType::ExecutableFile,
-            FileType::Symlink => TreeEntryType::Symlink,
+            FileType::Regular => TreeEntryType::REGULAR_FILE,
+            FileType::Executable => TreeEntryType::EXECUTABLE_FILE,
+            FileType::Symlink => TreeEntryType::SYMLINK,
             FileType::GitSubmodule => return None,
         };
         Some(entry_type)
@@ -44,7 +44,7 @@ impl TreeEntry {
         aux: &HashMap<HgId, FileAuxData>,
     ) -> Option<Result<Self>> {
         let (ttype, hash, size, content_sha1, content_blake3) = match flag {
-            TreeItemFlag::Directory => (TreeEntryType::Tree, hgid, None, None, None),
+            TreeItemFlag::Directory => (TreeEntryType::TREE, hgid, None, None, None),
             TreeItemFlag::File(file_type) => {
                 let entry_type = TreeEntryType::from_file_type(file_type)?;
                 if let Some(aux_data) = aux.get(&hgid) {
