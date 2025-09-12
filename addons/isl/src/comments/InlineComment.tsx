@@ -162,8 +162,8 @@ export const InlineComment = forwardRef(
                   isLatestVersion={versionInfo?.isLatestVersion}
                   versionAbbr={versionInfo?.versionAbbr}
                 />
-                {comment.replies.map(reply => (
-                  <InlineCommentContent comment={reply} />
+                {comment.replies.map((reply, i) => (
+                  <InlineCommentContent comment={reply} key={i} />
                 ))}
               </Column>
               <Row xstyle={styles.headerControl}>{headerControls}</Row>
