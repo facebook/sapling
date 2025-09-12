@@ -93,12 +93,11 @@ pub(crate) mod ffi {
         digest_hash: [u8; 32],
     }
 
-    pub struct Request {
+    pub struct Request<'a> {
         node: *const u8,
         cause: FetchCause,
 
-        path_data: *const c_char,
-        path_len: usize,
+        path: &'a [u8],
 
         pid: u32,
         // TODO: mode: FetchMode
@@ -372,19 +371,11 @@ pub fn sapling_backingstore_get_tree_batch(
                 Err(error) => (format!("{:?}", error), SharedPtr::null()),
             };
 
-            if requests[idx].cause != ffi::FetchCause::Prefetch
-                && !requests[idx].path_data.is_null()
-            {
+            if requests[idx].cause != ffi::FetchCause::Prefetch && !requests[idx].path.is_empty() {
                 if let Some(tree) = tree.as_ref() {
-                    let path_bytes: &[u8] = unsafe {
-                        std::slice::from_raw_parts(
-                            requests[idx].path_data as *const u8,
-                            requests[idx].path_len,
-                        )
-                    };
                     sapling_backingstore_witness_dir_read(
                         store,
-                        path_bytes,
+                        requests[idx].path,
                         tree,
                         fetch_mode.is_local(),
                         requests[idx].pid,

@@ -120,8 +120,9 @@ void SaplingNativeBackingStore::getTreeBatch(
     raw_requests.push_back(Request{
         request.node.data(),
         request.cause,
-        request.path.view().data(),
-        request.path.view().size(),
+        rust::Slice<const uint8_t>{
+            reinterpret_cast<const uint8_t*>(request.path.view().data()),
+            request.path.view().size()},
         request.context->getClientPid().valueOrZero().get(),
     });
   }

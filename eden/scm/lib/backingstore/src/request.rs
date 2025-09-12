@@ -16,7 +16,7 @@ use crate::ffi::ffi::Request;
 // Number of bytes of a node.
 const NODE_LENGTH: usize = 20;
 
-impl Request {
+impl Request<'_> {
     pub fn key(&self) -> Key {
         let node: &[u8] = unsafe { slice::from_raw_parts(self.node, NODE_LENGTH) };
         Key::new(RepoPathBuf::new(), Node::from_slice(node).unwrap())
