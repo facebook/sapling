@@ -145,10 +145,8 @@ facebook::eden::ObjectId TreeBuilder::make_entry_oid(
   // Construct the entry's oid.
   auto piece = facebook::eden::PathComponentPiece{
       std::string_view{name.data(), name.length()}};
-  facebook::eden::RelativePath fullPath =
-      facebook::eden::operator+(path_, piece);
   return facebook::eden::HgProxyHash::store(
-      fullPath, facebook::eden::Hash20{hg_node}, objectIdFormat_);
+      path_, piece, facebook::eden::Hash20{hg_node}, objectIdFormat_);
 }
 
 void TreeBuilder::set_aux_data(

@@ -152,6 +152,21 @@ ObjectId HgProxyHash::store(
              << fmt::underlying(hgObjectIdFormat);
 }
 
+ObjectId HgProxyHash::store(
+    RelativePathPiece basePath,
+    PathComponentPiece leafName,
+    const Hash20& hgRevHash,
+    HgObjectIdFormat hgObjectIdFormat) {
+  switch (hgObjectIdFormat) {
+    case HgObjectIdFormat::WithPath:
+      return makeEmbeddedProxyHash1(hgRevHash, basePath, leafName);
+    case HgObjectIdFormat::HashOnly:
+      return makeEmbeddedProxyHash2(hgRevHash);
+  }
+  EDEN_BUG() << "Unsupported hgObjectIdFormat: "
+             << fmt::underlying(hgObjectIdFormat);
+}
+
 ObjectId HgProxyHash::makeEmbeddedProxyHash1(
     const Hash20& hgRevHash,
     RelativePathPiece path) {
@@ -163,6 +178,26 @@ ObjectId HgProxyHash::makeEmbeddedProxyHash1(
   str.push_back(TYPE_HG_ID_WITH_PATH);
   str.append(hashPiece.data(), hashPiece.size());
   str.append(pathPiece.data(), pathPiece.size());
+  return ObjectId{std::move(str)};
+}
+
+ObjectId HgProxyHash::makeEmbeddedProxyHash1(
+    const Hash20& hgRevHash,
+    RelativePathPiece basePath,
+    PathComponentPiece leafName) {
+  folly::StringPiece hashPiece{hgRevHash.getBytes()};
+  std::string_view basePathPiece{basePath};
+  std::string_view leafNamePiece{leafName};
+
+  folly::fbstring str;
+  str.reserve(21 + basePathPiece.size() + 1 + leafNamePiece.size());
+  str.push_back(TYPE_HG_ID_WITH_PATH);
+  str.append(hashPiece.data(), hashPiece.size());
+  str.append(basePathPiece.data(), basePathPiece.size());
+  if (!basePathPiece.empty()) {
+    str.push_back(kDirSeparator);
+  }
+  str.append(leafNamePiece.data(), leafNamePiece.size());
   return ObjectId{std::move(str)};
 }
 

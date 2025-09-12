@@ -124,11 +124,31 @@ class HgProxyHash {
       HgObjectIdFormat hgObjectIdFormat);
 
   /**
+   * Encode an ObjectId from path pieces, manifest ID, and format.
+   * This overload avoids allocating a full path string by taking the path
+   * components separately.
+   */
+  static ObjectId store(
+      RelativePathPiece basePath,
+      PathComponentPiece leafName,
+      const Hash20& hgRevHash,
+      HgObjectIdFormat hgObjectIdFormat);
+
+  /**
    * Generate an ObjectId that contains both the hgRevHash and a path.
    */
   static ObjectId makeEmbeddedProxyHash1(
       const Hash20& hgRevHash,
       RelativePathPiece path);
+
+  /**
+   * Generate an ObjectId that contains both the hgRevHash and a path built from
+   * path components. This overload avoids allocating a full path string.
+   */
+  static ObjectId makeEmbeddedProxyHash1(
+      const Hash20& hgRevHash,
+      RelativePathPiece basePath,
+      PathComponentPiece leafName);
 
   /**
    * Generate an ObjectId that contains hgRevHash directly without a path.
