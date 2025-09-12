@@ -1314,14 +1314,11 @@ TreePtr SaplingBackingStore::getTreeLocal(
       context,
       sapling::FetchMode::LocalOnly);
 
-  if (tree.hasValue() && tree.value()) {
-    auto hgObjectIdFormat =
-        config_->getEdenConfig()->hgObjectIdFormat.getValue();
-    return fromRawTree(
-        tree.value().get(), edenTreeId, proxyHash.path(), hgObjectIdFormat);
+  if (tree.hasValue()) {
+    return std::move(tree).value();
+  } else {
+    return nullptr;
   }
-
-  return nullptr;
 }
 
 folly::Try<TreePtr> SaplingBackingStore::getTreeRemote(
@@ -1329,27 +1326,12 @@ folly::Try<TreePtr> SaplingBackingStore::getTreeRemote(
     const Hash20& manifestId,
     const ObjectId& edenTreeId,
     const ObjectFetchContextPtr& context) {
-  auto tree = store_.getTree(
+  return store_.getTree(
       manifestId.getBytes(),
       path,
       edenTreeId,
       context,
       sapling::FetchMode::RemoteOnly /*, sapling::ClientRequestInfo(context)*/);
-
-  using GetTreeResult = folly::Try<TreePtr>;
-
-  if (tree.hasValue()) {
-    if (tree.value()) {
-      auto hgObjectIdFormat =
-          config_->getEdenConfig()->hgObjectIdFormat.getValue();
-      return GetTreeResult{fromRawTree(
-          tree.value().get(), edenTreeId, path, std::move(hgObjectIdFormat))};
-    } else {
-      return GetTreeResult{nullptr};
-    }
-  } else {
-    return GetTreeResult{tree.exception()};
-  }
 }
 
 folly::SemiFuture<BackingStore::GetBlobResult> SaplingBackingStore::getBlob(
@@ -1724,7 +1706,8 @@ folly::Try<TreePtr> SaplingBackingStore::getTreeFromBackingStore(
     const ObjectId& edenTreeId,
     ObjectFetchContextPtr context,
     const ObjectFetchContext::ObjectType type) {
-  folly::Try<std::shared_ptr<sapling::Tree>> tree;
+  using GetTreeResult = folly::Try<TreePtr>;
+
   sapling::FetchMode fetch_mode = sapling::FetchMode::AllowRemote;
   // For root trees we will try getting the tree locally first.  This allows
   // us to catch when Mercurial might have just written a tree to the store,
@@ -1735,7 +1718,7 @@ folly::Try<TreePtr> SaplingBackingStore::getTreeFromBackingStore(
   if (path.empty()) {
     fetch_mode = sapling::FetchMode::LocalOnly;
   }
-  tree = store_.getTree(
+  GetTreeResult tree = store_.getTree(
       manifestId.getBytes(), path, edenTreeId, context, fetch_mode);
   if (tree.hasValue() && !tree.value() &&
       fetch_mode == sapling::FetchMode::LocalOnly) {
@@ -1747,16 +1730,12 @@ folly::Try<TreePtr> SaplingBackingStore::getTreeFromBackingStore(
         manifestId.getBytes(), path, edenTreeId, context, fetch_mode);
   }
 
-  using GetTreeResult = folly::Try<TreePtr>;
-
   if (tree.hasValue()) {
     if (!tree.value()) {
-      return GetTreeResult{std::runtime_error{
+      tree = GetTreeResult{std::runtime_error{
           fmt::format("no tree found for {} (path={})", manifestId, path)}};
     }
 
-    auto hgObjectIdFormat =
-        config_->getEdenConfig()->hgObjectIdFormat.getValue();
     switch (fetch_mode) {
       case sapling::FetchMode::LocalOnly:
         context->setFetchedSource(
@@ -1771,11 +1750,9 @@ folly::Try<TreePtr> SaplingBackingStore::getTreeFromBackingStore(
             ObjectFetchContext::FetchedSource::Unknown, type, stats_.copy());
         break;
     }
-    return GetTreeResult{fromRawTree(
-        tree.value().get(), edenTreeId, path, std::move(hgObjectIdFormat))};
-  } else {
-    return GetTreeResult{tree.exception()};
   }
+
+  return tree;
 }
 
 folly::SemiFuture<folly::Unit> SaplingBackingStore::prefetchBlobs(

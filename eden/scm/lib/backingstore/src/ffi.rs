@@ -237,8 +237,9 @@ pub(crate) mod ffi {
         pub fn sapling_backingstore_get_tree(
             store: &BackingStore,
             node: &[u8],
+            tree_builder: Pin<&mut TreeBuilder>,
             fetch_mode: FetchMode,
-        ) -> Result<SharedPtr<Tree>>;
+        ) -> Result<()>;
 
         pub fn sapling_backingstore_get_tree_batch(
             store: &BackingStore,
@@ -305,7 +306,8 @@ pub(crate) mod ffi {
         pub fn sapling_backingstore_witness_dir_read(
             store: &BackingStore,
             path: &[u8],
-            tree: &Tree,
+            num_files: usize,
+            num_dirs: usize,
             local: bool,
             pid: u32,
         );
@@ -400,18 +402,20 @@ pub fn sapling_backingstore_get_manifest(store: &BackingStore, node: &[u8]) -> R
 pub fn sapling_backingstore_get_tree(
     store: &BackingStore,
     node: &[u8],
+    tree_builder: Pin<&mut ffi::TreeBuilder>,
     fetch_mode: ffi::FetchMode,
-) -> Result<SharedPtr<ffi::Tree>> {
-    Ok(
-        // the cause is not propagated for this API
-        match store.get_tree(
-            FetchContext::new_with_cause(FetchMode::from(fetch_mode), FetchCause::EdenUnknown),
-            node,
-        )? {
-            Some(entry) => SharedPtr::new(entry.try_into()?),
-            None => SharedPtr::null(),
-        },
-    )
+) -> Result<()> {
+    // the cause is not propagated for this API
+    match store.get_tree(
+        FetchContext::new_with_cause(FetchMode::from(fetch_mode), FetchCause::EdenUnknown),
+        node,
+    )? {
+        Some(entry) => add_tree_to_builder(tree_builder, entry),
+        None => {
+            tree_builder.mark_missing();
+            Ok(())
+        }
+    }
 }
 
 // Convert the `TreeEntry` trait object into an EdenFS Tree by adding each entry to the TreeBuilder
@@ -492,7 +496,8 @@ pub fn sapling_backingstore_get_tree_batch(
                     sapling_backingstore_witness_dir_read(
                         store,
                         requests[idx].path,
-                        tree,
+                        tree.num_files,
+                        tree.num_dirs,
                         fetch_mode.is_local(),
                         requests[idx].pid,
                     );
@@ -674,13 +679,14 @@ pub fn sapling_backingstore_witness_file_read(
 pub fn sapling_backingstore_witness_dir_read(
     store: &BackingStore,
     path: &[u8],
-    tree: &Tree,
+    num_files: usize,
+    num_dirs: usize,
     local: bool,
     pid: u32,
 ) {
     match RepoPath::from_utf8(path) {
         Ok(path) => {
-            store.witness_dir_read(path, local, tree.num_files, tree.num_dirs, pid);
+            store.witness_dir_read(path, local, num_files, num_dirs, pid);
         }
         Err(err) => {
             tracing::warn!("invalid witnessed dir path {path:?}: {err:?}");

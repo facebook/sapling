@@ -7,6 +7,8 @@
 
 #include "eden/scm/lib/backingstore/include/SaplingNativeBackingStore.h"
 
+#include "eden/common/utils/CaseSensitivity.h"
+#include "eden/fs/model/TreeFwd.h"
 #include "eden/scm/lib/backingstore/src/ffi.rs.h" // @manual
 
 #include <folly/Range.h>
@@ -70,7 +72,7 @@ std::optional<ManifestId> SaplingNativeBackingStore::getManifestNode(
 
 // Fetch a single tree. "Not found" is propagated as nullptr to avoid exception
 // overhead.
-folly::Try<std::shared_ptr<Tree>> SaplingNativeBackingStore::getTree(
+folly::Try<facebook::eden::TreePtr> SaplingNativeBackingStore::getTree(
     NodeId node,
     RepoPath path,
     const ObjectId& oid,
@@ -78,10 +80,15 @@ folly::Try<std::shared_ptr<Tree>> SaplingNativeBackingStore::getTree(
     FetchMode fetch_mode) {
   XLOGF(DBG7, "Importing tree node={} from hgcache", folly::hexlify(node));
   return folly::makeTryWith([&] {
-    auto tree = sapling_backingstore_get_tree(
+    TreeBuilder tb = TreeBuilder{oid, path, caseSensitive_, objectIdFormat_};
+
+    sapling_backingstore_get_tree(
         *store_.get(),
         rust::Slice<const uint8_t>{node.data(), node.size()},
+        tb,
         fetch_mode);
+
+    facebook::eden::TreePtr tree = tb.build();
 
     if (tree && context->getCause() != FetchCause::Prefetch) {
       sapling_backingstore_witness_dir_read(
@@ -89,7 +96,8 @@ folly::Try<std::shared_ptr<Tree>> SaplingNativeBackingStore::getTree(
           rust::Slice<const uint8_t>{
               reinterpret_cast<const uint8_t*>(path.view().data()),
               path.view().size()},
-          *tree,
+          tb.num_files(),
+          tb.num_dirs(),
           fetch_mode == FetchMode::LocalOnly,
           context->getClientPid().valueOrZero().get());
     }

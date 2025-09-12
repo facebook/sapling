@@ -19,6 +19,7 @@
 #include "eden/fs/config/HgObjectIdFormat.h"
 #include "eden/fs/model/ObjectId.h"
 #include "eden/fs/model/RootId.h"
+#include "eden/fs/model/TreeFwd.h"
 #include "eden/fs/store/ObjectFetchContext.h"
 #include "eden/scm/lib/backingstore/src/ffi.rs.h"
 
@@ -93,7 +94,7 @@ class SaplingNativeBackingStore {
 
   std::optional<ManifestId> getManifestNode(NodeId node);
 
-  folly::Try<std::shared_ptr<Tree>> getTree(
+  folly::Try<facebook::eden::TreePtr> getTree(
       NodeId node,
       RepoPath path,
       const ObjectId& oid,
