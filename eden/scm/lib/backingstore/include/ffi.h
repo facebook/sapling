@@ -146,6 +146,11 @@ class TreeBuilder {
   // Set aux data for tree itself (if available).
   void set_aux_data(const std::array<uint8_t, 32>& digest, uint64_t size);
 
+  // Reserve space in vector for `size` entries.
+  void reserve(size_t size) {
+    entries_.reserve(size);
+  }
+
   // Mark tree as "missing", causing `build()` to return `nullptr`.
   void mark_missing() {
     missing_ = true;

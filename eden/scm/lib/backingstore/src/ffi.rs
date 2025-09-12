@@ -192,6 +192,8 @@ pub(crate) mod ffi {
 
         fn mark_missing(self: Pin<&mut TreeBuilder>);
 
+        fn reserve(self: Pin<&mut TreeBuilder>, capacity: usize);
+
         fn set_aux_data(self: Pin<&mut TreeBuilder>, digest: &[u8; 32], size: u64);
 
         fn num_files(&self) -> usize;
@@ -409,6 +411,11 @@ fn add_tree_to_builder(
     // TODO: Make the aux data available in `TreeEntry::iter()` so we don't have to do this HashMap business.
     let aux_map: HashMap<HgId, ScmStoreFileAuxData> =
         tree.file_aux_iter()?.collect::<Result<_>>()?;
+
+    // Pre-allocate the per-entry storage.
+    if let Some(hint) = tree.size_hint() {
+        builder.as_mut().reserve(hint);
+    }
 
     for entry in tree.iter()? {
         let (name, node, flag) = entry?;
