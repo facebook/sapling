@@ -140,3 +140,27 @@ Create a new client repository, using getpack (with its own cachepath)
   A lfs-largefile-renamed
     lfs-largefile-for-rename
   R lfs-largefile-for-rename
+
+
+Now try with a small LFS cache size:
+  $ hg clone -q mono:repo repo-lfs4 --noupdate
+  $ cd repo-lfs4
+  $ setup_hg_modern_lfs "$lfs_uri" 1000B "$TESTTMP/lfs-cache4"
+
+  $ cat >> .hg/hgrc <<EOF
+  > [remotefilelog]
+  > cachepath=$TESTTMP/cachepath-alt2
+  > [indexedlog]
+  > lfs.max-bytes-per-log=1
+  > lfs.max-log-count=1
+  > EOF
+
+  $ hg pull -v
+  pulling from mono:repo
+ 
+ FIXME
+  $ hg update -r master_bookmark -v
+  abort: error fetching files:
+   232ec9b974a9df3d48c2b740396691fb8939976c lfs-largefile: LFS file missing from cache after download
+   97346a10a3be00a6e8d0bbadfb329c3a079c05b4 lfs-largefile-renamed: LFS file missing from cache after download
+  [255]
