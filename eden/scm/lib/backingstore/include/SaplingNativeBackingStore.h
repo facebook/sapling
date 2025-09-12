@@ -148,6 +148,10 @@ class SaplingNativeBackingStore {
 
   void flush();
 
+  static void flushCounters() {
+    sapling_flush_counters();
+  }
+
  private:
   std::unique_ptr<sapling::BackingStore, void (*)(sapling::BackingStore*)>
       store_;

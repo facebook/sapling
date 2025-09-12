@@ -2841,6 +2841,9 @@ const EdenStatsPtr& EdenServer::getStats() const {
 
 void EdenServer::flushStatsNow() {
   serverState_->getStats()->flush();
+
+  // Sapling ODS counters are buffered somewhat in memory - flush them now.
+  SaplingBackingStore::flushCounters();
 }
 
 void EdenServer::reportMemoryStats() {

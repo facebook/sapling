@@ -299,6 +299,8 @@ pub(crate) mod ffi {
         pub fn sapling_dogfooding_host(store: &BackingStore) -> Result<bool>;
 
         pub fn sapling_backingstore_set_parent_hint(store: &BackingStore, parent_id: &str);
+
+        pub fn sapling_flush_counters();
     }
 }
 
@@ -692,6 +694,10 @@ pub fn sapling_backingstore_witness_dir_read(
         num_dirs,
         pid,
     );
+}
+
+pub fn sapling_flush_counters() {
+    metrics::Registry::global().sync();
 }
 
 #[cfg(test)]

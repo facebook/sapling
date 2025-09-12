@@ -17,10 +17,21 @@ use parking_lot::RwLock;
 #[cfg_attr(not(feature = "ods"), path = "dummy_ods.rs")]
 pub mod ods;
 
+// In-memory counter that transparently syncs to ODS.
+// ODS is updated 0.1% of the time, and otherwise every 60s via EdenFS backingstore flush task.
 pub struct Counter {
     name: &'static str,
-    counter: OnceCell<(AtomicUsize, ods::Counter)>,
+    counter: OnceCell<Inner>,
     gauge: bool,
+}
+
+struct Inner {
+    // In-memory counter value we increment eagerly.
+    counter: AtomicUsize,
+    // Last counter value we synced to ODS.
+    last_sync: AtomicUsize,
+    // ODS counter.
+    ods: ods::Counter,
 }
 
 impl Counter {
@@ -46,19 +57,19 @@ impl Counter {
     }
 
     pub fn add(&'static self, val: usize) {
-        let (counter, ods) = self.counter();
+        let counter = &self.counter().counter;
         counter.fetch_add(val, Ordering::Relaxed);
-        ods::increment(ods, self.name, val as i64);
+        self.maybe_sync();
     }
 
     pub fn sub(&'static self, val: usize) {
-        let (counter, ods) = self.counter();
+        let counter = &self.counter().counter;
         counter.fetch_sub(val, Ordering::Relaxed);
-        ods::increment(ods, self.name, -(val as i64));
+        self.maybe_sync();
     }
 
     pub fn value(&'static self) -> usize {
-        self.counter().0.load(Ordering::Relaxed)
+        self.counter().counter.load(Ordering::Relaxed)
     }
 
     /// Increment counter by v and decrement it back by v when returned guard is dropped
@@ -71,10 +82,49 @@ impl Counter {
         self.gauge
     }
 
-    fn counter(&'static self) -> &'static (AtomicUsize, ods::Counter) {
+    // Sync to ODS 0.1% of time.
+    fn maybe_sync(&'static self) {
+        if fastrand::f64() < 0.001 {
+            self.sync();
+        }
+    }
+
+    // Sync current counter value to ODS, if necessary.
+    fn sync(&'static self) {
+        let Inner {
+            counter,
+            last_sync,
+            ods,
+        } = self.counter();
+
+        loop {
+            let current = counter.load(Ordering::Acquire);
+            let last = last_sync.load(Ordering::Acquire);
+
+            // Store `current` into `last_sync`, and then increment by the delta.
+            if last_sync
+                .compare_exchange(last, current, Ordering::AcqRel, Ordering::Relaxed)
+                .is_err()
+            {
+                continue;
+            }
+
+            let delta = (current as i64) - (last as i64);
+            if delta != 0 {
+                ods::increment(ods, self.name, delta);
+            }
+            break;
+        }
+    }
+
+    fn counter(&'static self) -> &'static Inner {
         self.counter.get_or_init(|| {
             Registry::global().register_counter(self);
-            (AtomicUsize::new(0), ods::new_counter(self.name))
+            Inner {
+                counter: AtomicUsize::new(0),
+                last_sync: AtomicUsize::new(0),
+                ods: ods::new_counter(self.name),
+            }
         })
     }
 }
@@ -122,7 +172,14 @@ impl Registry {
 
     pub fn reset(&self) {
         for counter in self.counters.read().values() {
-            counter.counter().0.store(0, Ordering::Relaxed);
+            counter.counter().counter.store(0, Ordering::Relaxed);
+        }
+    }
+
+    // Sync all counters to ODS.
+    pub fn sync(&self) {
+        for counter in self.counters.read().values() {
+            counter.sync();
         }
     }
 }

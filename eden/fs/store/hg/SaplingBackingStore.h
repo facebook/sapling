@@ -237,6 +237,10 @@ class SaplingBackingStore final : public BackingStore {
     store_.flush();
   }
 
+  static void flushCounters() {
+    sapling::SaplingNativeBackingStore::flushCounters();
+  }
+
   ObjectComparison compareObjectsById(const ObjectId& one, const ObjectId& two)
       override;
 

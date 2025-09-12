@@ -638,6 +638,9 @@ impl Inner {
     fn flush(&self) {
         self.filestore.flush().ok();
         self.treestore.flush().ok();
+
+        // Sync pending counters to ODS/OBC.
+        metrics::Registry::global().sync();
     }
 
     fn notify_prefetch(&self) {
