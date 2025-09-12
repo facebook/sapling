@@ -343,6 +343,7 @@ pub struct RepoFactory {
     scrub_handler: Arc<dyn ScrubHandler>,
     blobstore_component_sampler: Option<Arc<dyn ComponentSamplingHandler>>,
     bonsai_hg_mapping_overwrite: bool,
+    derived_data_scuba_table_overwrite: Option<String>,
 }
 
 impl RepoFactory {
@@ -360,6 +361,7 @@ impl RepoFactory {
             blobstore_component_sampler: None,
             bonsai_hg_mapping_overwrite: false,
             env,
+            derived_data_scuba_table_overwrite: None,
         }
     }
 
@@ -394,6 +396,11 @@ impl RepoFactory {
 
     pub fn with_bonsai_hg_mapping_override(&mut self) -> &mut Self {
         self.bonsai_hg_mapping_overwrite = true;
+        self
+    }
+
+    pub fn with_derived_data_scuba_table(&mut self, scuba_table: String) -> &mut Self {
+        self.derived_data_scuba_table_overwrite = Some(scuba_table);
         self
     }
 
@@ -1364,12 +1371,12 @@ impl RepoFactory {
         filestore_config: &ArcFilestoreConfig,
     ) -> Result<ArcRepoDerivedData> {
         let config = repo_config.derived_data_config.clone();
+        let scuba_table = self
+            .derived_data_scuba_table_overwrite
+            .clone()
+            .or(config.scuba_table.clone());
         let lease = self.lease(DERIVED_DATA_LEASE)?;
-        let scuba = build_scuba(
-            self.env.fb,
-            config.scuba_table.clone(),
-            repo_identity.name(),
-        )?;
+        let scuba = build_scuba(self.env.fb, scuba_table, repo_identity.name())?;
         let derivation_service_client = get_derivation_client(
             self.env.fb,
             self.env.remote_derivation_options.clone(),
