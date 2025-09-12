@@ -121,7 +121,7 @@ impl StreamingChangesClient {
         }
     }
 
-    pub async fn stream_changes_since_with_states<'a>(
+    pub async fn stream_changes_since_with_states_wrapper<'a>(
         &'a self,
         inner_stream: BoxStream<'a, Result<ChangesSinceV2Result>>,
         states: &'a [String],

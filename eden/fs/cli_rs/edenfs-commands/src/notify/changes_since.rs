@@ -164,7 +164,7 @@ impl crate::Subcommand for ChangesSinceCmd {
             if !self.states.is_empty() {
                 self.print_change_events(&ChangeEvents::new());
                 let wrapped_stream = stream_client
-                    .stream_changes_since_with_states(stream, &self.states)
+                    .stream_changes_since_with_states_wrapper(stream, &self.states)
                     .await?;
                 wrapped_stream
                     .for_each(|result| async {
