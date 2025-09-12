@@ -2040,4 +2040,25 @@ mod tests {
             .unwrap();
         assert!(tree.is_dirty());
     }
+
+    #[test]
+    fn test_hg_size_hint() {
+        use storemodel::TreeEntry;
+
+        let entry = store::Entry::from_elements_hg(Vec::new());
+        assert_eq!(entry.size_hint(), Some(0));
+
+        let entry = store::Entry::from_elements_hg(vec![store_element(
+            "foo",
+            "123",
+            store::Flag::File(FileType::Regular),
+        )]);
+        assert_eq!(entry.size_hint(), Some(1));
+
+        let entry = store::Entry::from_elements_hg(vec![
+            store_element("foo", "123", store::Flag::File(FileType::Regular)),
+            store_element("bar", "456", store::Flag::Directory),
+        ]);
+        assert_eq!(entry.size_hint(), Some(2));
+    }
 }

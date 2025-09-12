@@ -1072,6 +1072,18 @@ impl TreeEntry for ScmStoreTreeEntry {
     fn aux_data(&self) -> anyhow::Result<Option<TreeAuxData>> {
         Ok(self.tree.aux_data())
     }
+
+    fn size_hint(&self) -> Option<usize> {
+        match &self.tree {
+            LazyTree::IndexedLog(_) => self
+                .basic_tree_entry()
+                .map(|t| t.size_hint())
+                .unwrap_or_default(),
+            LazyTree::SaplingRemoteApi(slapi) => slapi.children.as_ref().map(|c| c.len()),
+            LazyTree::Cas(cas) => Some(cas.augmented_tree.entries.len()),
+            LazyTree::Null => Some(0),
+        }
+    }
 }
 
 /// ScmStoreTreeEntry is a wrapper around a LazyTree that implements `TreeEntry` with aux data support.

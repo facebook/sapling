@@ -11,6 +11,7 @@ use storemodel::TreeItemFlag;
 use types::HgId;
 use types::PathComponent;
 use types::PathComponentBuf;
+use types::SerializationFormat;
 
 impl TreeEntry for crate::store::Entry {
     fn iter(
@@ -25,5 +26,14 @@ impl TreeEntry for crate::store::Entry {
 
     fn lookup(&self, name: &PathComponent) -> anyhow::Result<Option<(HgId, TreeItemFlag)>> {
         self.elements().lookup(name)
+    }
+
+    fn size_hint(&self) -> Option<usize> {
+        match self.1 {
+            // Hg format has no binary data, so we can just count the newlines.
+            SerializationFormat::Hg => Some(bytecount::count(self.0.as_ref(), b'\n')),
+            // Git format has binary data - slightly more work. Skip hint for now.
+            SerializationFormat::Git => None,
+        }
     }
 }

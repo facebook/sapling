@@ -332,6 +332,9 @@ pub trait TreeEntry: Send + 'static {
     fn aux_data(&self) -> anyhow::Result<Option<TreeAuxData>> {
         Ok(None)
     }
+
+    /// Get number of entries, if available. Useful to pre-allocate vector capacity, etc.
+    fn size_hint(&self) -> Option<usize>;
 }
 
 /// The `TreeStore` is an abstraction layer for the tree manifest that decouples how or where the
