@@ -94,6 +94,18 @@ class TreeEntry {
         contentSha1_(contentSha1),
         contentBlake3_(contentBlake3) {}
 
+  explicit TreeEntry(
+      ObjectId&& id,
+      TreeEntryType type,
+      std::optional<uint64_t> size,
+      std::optional<Hash20> contentSha1,
+      std::optional<Hash32> contentBlake3)
+      : type_(type),
+        id_(std::move(id)),
+        size_(size),
+        contentSha1_(contentSha1),
+        contentBlake3_(contentBlake3) {}
+
   const ObjectId& getObjectId() const {
     return id_;
   }
