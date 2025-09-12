@@ -7,6 +7,7 @@
 
 //! Provides the c-bindings for `crate::backingstore`.
 
+use std::collections::HashMap;
 use std::ffi::CStr;
 use std::os::raw::c_char;
 use std::pin::Pin;
@@ -18,7 +19,11 @@ use cxx::SharedPtr;
 use cxx::UniquePtr;
 use iobuf::IOBuf;
 use storemodel::FileAuxData as ScmStoreFileAuxData;
+use storemodel::FileType;
+use storemodel::TreeEntry;
+use storemodel::TreeItemFlag;
 use types::FetchContext;
+use types::HgId;
 use types::Key;
 use types::RepoPath;
 use types::fetch_cause::FetchCause;
@@ -407,6 +412,57 @@ pub fn sapling_backingstore_get_tree(
             None => SharedPtr::null(),
         },
     )
+}
+
+// Convert the `TreeEntry` trait object into an EdenFS Tree by adding each entry to the TreeBuilder
+// object.
+fn add_tree_to_builder(
+    mut builder: Pin<&mut ffi::TreeBuilder>,
+    tree: Box<dyn TreeEntry>,
+) -> Result<()> {
+    // TODO: Make the aux data available in `TreeEntry::iter()` so we don't have to do this HashMap business.
+    let aux_map: HashMap<HgId, ScmStoreFileAuxData> =
+        tree.file_aux_iter()?.collect::<Result<_>>()?;
+
+    for entry in tree.iter()? {
+        let (name, node, flag) = entry?;
+
+        let ttype = match flag {
+            TreeItemFlag::Directory => ffi::TreeEntryType::TREE,
+            TreeItemFlag::File(FileType::Regular) => ffi::TreeEntryType::REGULAR_FILE,
+            TreeItemFlag::File(FileType::Executable) => ffi::TreeEntryType::EXECUTABLE_FILE,
+            TreeItemFlag::File(FileType::Symlink) => ffi::TreeEntryType::SYMLINK,
+            TreeItemFlag::File(FileType::GitSubmodule) => {
+                // Submodules shouldn't show up, and we don't have a way to handle them, so just skip.
+                tracing::warn!(%name, %node, "skipping git submodule tree entry");
+                continue;
+            }
+        };
+
+        if let Some(aux) = aux_map.get(&node) {
+            builder.as_mut().add_entry_with_aux_data(
+                name.as_str(),
+                node.as_byte_array(),
+                ttype,
+                aux.total_size,
+                aux.sha1.as_byte_array(),
+                aux.blake3.as_byte_array(),
+            );
+        } else {
+            builder
+                .as_mut()
+                .add_entry(name.as_str(), node.as_byte_array(), ttype);
+        }
+    }
+
+    if let Some(aux) = tree.aux_data()? {
+        builder.as_mut().set_aux_data(
+            aux.augmented_manifest_id.as_byte_array(),
+            aux.augmented_manifest_size,
+        );
+    }
+
+    Ok(())
 }
 
 pub fn sapling_backingstore_get_tree_batch(

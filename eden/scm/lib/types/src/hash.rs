@@ -123,6 +123,10 @@ impl<I, const N: usize> AbstractHashType<I, N> {
         self.0
     }
 
+    pub fn as_byte_array(&self) -> &[u8; N] {
+        &self.0
+    }
+
     pub fn from_another<S>(another: AbstractHashType<S, N>) -> Self {
         Self::from_byte_array(another.into())
     }
