@@ -171,9 +171,7 @@ class TreeBuilder {
 
  private:
   // Emplace entry into our vector and perform some bookkeeping.
-  void emplace_entry(
-      facebook::eden::PathComponent&& name,
-      facebook::eden::TreeEntry&& entry);
+  void emplace_entry(rust::Str name, facebook::eden::TreeEntry&& entry);
 
   // Construct oid for an entry with given name.
   facebook::eden::ObjectId make_entry_oid(

@@ -97,8 +97,7 @@ void TreeBuilder::add_entry(
     const std::array<uint8_t, 20>& hg_node,
     facebook::eden::TreeEntryType ttype) {
   emplace_entry(
-      facebook::eden::PathComponent{
-          std::string_view{name.data(), name.length()}},
+      name,
       facebook::eden::TreeEntry{
           make_entry_oid(hg_node, name),
           ttype,
@@ -116,8 +115,7 @@ void TreeBuilder::add_entry_with_aux_data(
     const std::array<uint8_t, 20>& sha1,
     const std::array<uint8_t, 32>& blake3) {
   emplace_entry(
-      facebook::eden::PathComponent{
-          std::string_view{name.data(), name.length()}},
+      name,
       facebook::eden::TreeEntry{
           make_entry_oid(hg_node, name),
           ttype,
@@ -128,25 +126,45 @@ void TreeBuilder::add_entry_with_aux_data(
 }
 
 void TreeBuilder::emplace_entry(
-    facebook::eden::PathComponent&& name,
+    rust::Str name,
     facebook::eden::TreeEntry&& entry) {
+  auto nameView = std::string_view{name.data(), name.length()};
+
   if (entry.isTree()) {
     numDirs_++;
   } else {
     numFiles_++;
   }
 
-  entries_.emplace_back(std::move(name), std::move(entry));
+  // We skip the path sanity check below, but let's check in debug builds, just
+  // in case.
+  XDCHECK_EQ(facebook::eden::RelativePathPiece{nameView}.view(), nameView);
+
+  entries_.emplace_back(
+      // This name comes from Sapling's PathComponent type, which is already
+      // validated.
+      facebook::eden::PathComponentPiece{
+          nameView, facebook::eden::detail::SkipPathSanityCheck{}},
+      std::move(entry));
 }
 
 facebook::eden::ObjectId TreeBuilder::make_entry_oid(
     const std::array<uint8_t, 20>& hg_node,
     rust::Str name) {
-  // Construct the entry's oid.
-  auto piece = facebook::eden::PathComponentPiece{
-      std::string_view{name.data(), name.length()}};
+  auto nameView = std::string_view{name.data(), name.length()};
+
+  // We skip the path sanity check below, but let's check in debug builds, just
+  // in case.
+  XDCHECK_EQ(facebook::eden::RelativePathPiece{nameView}.view(), nameView);
+
   return facebook::eden::HgProxyHash::store(
-      path_, piece, facebook::eden::Hash20{hg_node}, objectIdFormat_);
+      path_,
+      // This name comes from Sapling's PathComponent type, which is already
+      // validated.
+      facebook::eden::PathComponentPiece{
+          nameView, facebook::eden::detail::SkipPathSanityCheck{}},
+      facebook::eden::Hash20{hg_node},
+      objectIdFormat_);
 }
 
 void TreeBuilder::set_aux_data(
@@ -171,10 +189,19 @@ std::unique_ptr<TreeBuilder> new_builder(
     facebook::eden::HgObjectIdFormat oidFormat,
     const rust::Slice<const uint8_t> oid,
     const rust::Slice<const uint8_t> path) {
+  auto pathView =
+      std::string_view{reinterpret_cast<const char*>(path.data()), path.size()};
+
+  // We skip the path sanity check below, but let's check in debug builds, just
+  // in case.
+  XDCHECK_EQ(facebook::eden::RelativePathPiece{pathView}.view(), pathView);
+
   return std::make_unique<TreeBuilder>(TreeBuilder{
       facebook::eden::ObjectId{folly::ByteRange{oid.data(), oid.size()}},
-      facebook::eden::RelativePathPiece{std::string_view{
-          reinterpret_cast<const char*>(path.data()), path.size()}},
+      // Skip the sanity check since this path came from a validated
+      // RelativePathPiece, but just lost its type going through Rust.
+      facebook::eden::RelativePathPiece{
+          pathView, facebook::eden::detail::SkipPathSanityCheck{}},
       caseSensitive ? facebook::eden::CaseSensitivity::Sensitive
                     : facebook::eden::CaseSensitivity::Insensitive,
       oidFormat,
