@@ -9,6 +9,7 @@ use std::collections::BTreeMap;
 use std::collections::HashMap;
 use std::marker::PhantomData;
 
+use anyhow::Context;
 use anyhow::Error;
 use anyhow::anyhow;
 use borrowed::borrowed;
@@ -473,7 +474,7 @@ where
                                     }
                                 }
                             }
-                            ReplacementsHolder::finalize(&path, replacements)?;
+                            ReplacementsHolder::finalize(&path, replacements).context("Failed to finalize replacements for changed tree")?;
                             output.push(Diff::Changed(path, Entry::Tree(left), Entry::Tree(right)));
                             anyhow::Ok((output.into_output(), recurse.into_diffs()))
                         }
@@ -504,7 +505,7 @@ where
                                     }
                                 }
                             }
-                            ReplacementsHolder::finalize(&path, replacements)?;
+                            ReplacementsHolder::finalize(&path, replacements).context("Failed to finalize replacements for added tree")?;
                             output.push(Diff::Added(path, Entry::Tree(tree)));
                             anyhow::Ok((output.into_output(), recurse.into_diffs()))
                         }
@@ -522,7 +523,7 @@ where
                                     _ => output.push(Diff::Removed(path, entry)),
                                 }
                             }
-                            ReplacementsHolder::finalize(&path, replacements)?;
+                            ReplacementsHolder::finalize(&path, replacements).context("Failed to finalize replacements for removed tree")?;
                             output.push(Diff::Removed(path, Entry::Tree(tree)));
                             anyhow::Ok((output.into_output(), recurse.into_diffs()))
                         }

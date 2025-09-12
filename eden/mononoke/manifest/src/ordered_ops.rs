@@ -9,6 +9,7 @@ use std::cmp::Ordering;
 use std::collections::HashMap;
 use std::iter::Peekable;
 
+use anyhow::Context;
 use anyhow::Error;
 use anyhow::anyhow;
 use borrowed::borrowed;
@@ -419,11 +420,11 @@ where
                                     right_mf.list_weighted(ctx, other_store).watched(ctx.logger()).await?.try_collect::<Vec<_>>().watched(ctx.logger()).await?.into_iter(),
                                 );
                                 for (name, left, right) in iter {
+                                    let (replacement, child_replacements) = replacements.remove(&name).unwrap_or_default().deconstruct();
+                                    let left = replacement.or(left);
                                     if after.skip(&name) || left == right {
                                         continue;
                                     }
-                                    let (replacement, child_replacements) = replacements.remove(&name).unwrap_or_default().deconstruct();
-                                    let left = replacement.or(left);
                                     let path = path.join(&name);
                                     match (left, right) {
                                         (Some(Entry::Leaf(left)), Some(Entry::Leaf(right))) => {
@@ -534,7 +535,7 @@ where
                                         (None, None) => {}
                                     }
                                 }
-                                ReplacementsHolder::finalize(&path, replacements)?;
+                                ReplacementsHolder::finalize(&path, replacements).context("Failed to finalize replacements for changed tree")?;
                             }
                             Diff::Added(path, tree) => {
                                 if after.include_self() {
@@ -545,22 +546,25 @@ where
                                 }
                                 let manifest = tree.load(ctx, other_store).watched(ctx.logger()).await?;
                                 let mut stream = manifest.list_weighted(ctx, store).watched(ctx.logger()).await?;
-                                while let Some((name, entry)) = stream.try_next().watched(ctx.logger()).await? {
+                                while let Some((name, right)) = stream.try_next().watched(ctx.logger()).await? {
+                                    let (replacement, child_replacements) = replacements.remove(&name).unwrap_or_default().deconstruct();
                                     if after.skip(&name) {
+                                        // Note: we must do this *after* extracting the replacement so that the finalize
+                                        // check below doesn't see it as a leftover replacement.
                                         continue;
                                     }
                                     let path = path.join(&name);
-                                    match entry {
-                                        Entry::Tree((weight, tree)) => {
+                                    match (replacement, right) {
+                                        (None, Entry::Tree((weight, tree))) => {
                                             push_recurse(
                                                 &mut output,
                                                 weight,
                                                 Diff::Added(path, tree),
                                                 after.enter_dir(&name),
-                                                Default::default(),
+                                                child_replacements,
                                             );
                                         }
-                                        Entry::Leaf(leaf) => {
+                                        (None, Entry::Leaf(leaf)) => {
                                             if after.include_file(&name) {
                                                 push_output(
                                                     &mut output,
@@ -568,9 +572,57 @@ where
                                                 );
                                             }
                                         }
+                                        (Some(Entry::Leaf(left)), Entry::Leaf(right)) => {
+                                            if after.include_file(&name) {
+                                                push_output(
+                                                    &mut output,
+                                                    Diff::Changed(path, Entry::Leaf(left), Entry::Leaf(right)),
+                                                );
+                                            }
+                                        }
+                                        (Some(Entry::Tree((weight, tree))), Entry::Leaf(right)) => {
+                                            if after.include_file(&name) {
+                                                push_output(
+                                                    &mut output,
+                                                    Diff::Added(path.clone(), Entry::Leaf(right)),
+                                                );
+                                            }
+                                            push_recurse(
+                                                &mut output,
+                                                weight,
+                                                Diff::Removed(path, tree),
+                                                after.enter_dir(&name),
+                                                child_replacements,
+                                            );
+                                        }
+                                        (Some(Entry::Leaf(left)), Entry::Tree((weight, tree))) => {
+                                            if after.include_file(&name) {
+                                                push_output(
+                                                    &mut output,
+                                                    Diff::Removed(path.clone(), Entry::Leaf(left)),
+                                                );
+                                            }
+                                            push_recurse(
+                                                &mut output,
+                                                weight,
+                                                Diff::Added(path, tree),
+                                                after.enter_dir(&name),
+                                                child_replacements,
+                                            );
+                                        }
+                                        (Some(Entry::Tree((left_weight, left))), Entry::Tree((right_weight, right))) => {
+                                            let weight = left_weight.max(right_weight);
+                                            push_recurse(
+                                                &mut output,
+                                                weight,
+                                                Diff::Changed(path, left, right),
+                                                after.enter_dir(&name),
+                                                child_replacements,
+                                            );
+                                        }
                                     }
                                 }
-                                ReplacementsHolder::finalize(&path, replacements)?;
+                                ReplacementsHolder::finalize(&path, replacements).context("Failed to finalize replacements for added tree")?;
                             }
                             Diff::Removed(path, tree) => {
                                 if after.include_self() {
@@ -608,7 +660,7 @@ where
                                         }
                                     }
                                 }
-                                ReplacementsHolder::finalize(&path, replacements)?;
+                                ReplacementsHolder::finalize(&path, replacements).context("Failed to finalize replacements for removed tree")?;
                             }
                         }
                         Ok(output)
