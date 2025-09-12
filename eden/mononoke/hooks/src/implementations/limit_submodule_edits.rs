@@ -5,6 +5,8 @@
  * GNU General Public License version 2.
  */
 
+use std::collections::BTreeSet;
+
 use anyhow::Error;
 use anyhow::Result;
 use async_trait::async_trait;
@@ -13,7 +15,6 @@ use context::CoreContext;
 use mononoke_types::BonsaiChangeset;
 use mononoke_types::FileChange;
 use mononoke_types::FileType;
-use mononoke_types::NonRootMPath;
 use regex::Regex;
 use serde::Deserialize;
 
@@ -68,25 +69,27 @@ impl LimitSubmoduleEditsHook {
     }
 }
 
-fn get_submodule_mpath(changeset: &BonsaiChangeset) -> Option<&NonRootMPath> {
-    for (mpath, fc) in changeset.file_changes() {
-        if let FileChange::Change(tfc) = fc {
-            if tfc.file_type() == FileType::GitSubmodule {
-                return Some(mpath);
+fn get_submodule_mpaths(changeset: &BonsaiChangeset) -> BTreeSet<String> {
+    changeset
+        .file_changes()
+        .filter_map(|(mpath, fc)| match fc {
+            FileChange::Change(tfc) if tfc.file_type() == FileType::GitSubmodule => {
+                Some(mpath.to_string())
             }
-        }
-    }
-    None
+            _ => None,
+        })
+        .collect()
 }
 
-fn extract_path_from_marker<'a>(
-    options: &'a ChangesAllowedWithMarkerOptions,
-    changeset: &'a BonsaiChangeset,
-) -> Option<&'a str> {
-    let captures = options
+fn extract_paths_from_markers(
+    options: &ChangesAllowedWithMarkerOptions,
+    changeset: &BonsaiChangeset,
+) -> BTreeSet<String> {
+    options
         .marker_extraction_regex
-        .captures(changeset.message())?;
-    Some(captures.name(NAMED_CAPTURE_NAME)?.as_str())
+        .captures_iter(changeset.message())
+        .filter_map(|caps| caps.name(NAMED_CAPTURE_NAME).map(|m| m.as_str().to_owned()))
+        .collect()
 }
 
 #[async_trait]
@@ -100,46 +103,53 @@ impl ChangesetHook for LimitSubmoduleEditsHook {
         _cross_repo_push_source: CrossRepoPushSource,
         _push_authored_by: PushAuthoredBy,
     ) -> Result<HookExecution, Error> {
-        match (
-            &self.changes_allowed_with_marker_options,
-            get_submodule_mpath(changeset),
-        ) {
-            (_, None) => Ok(HookExecution::Accepted),
-            (None, Some(submodule_path)) => {
-                Ok(HookExecution::Rejected(HookRejectionInfo::new_long(
+        let submodule_paths = get_submodule_mpaths(changeset);
+        if submodule_paths.is_empty() {
+            Ok(HookExecution::Accepted)
+        } else {
+            match &self.changes_allowed_with_marker_options {
+                Some(options) => {
+                    let allowlisted_submodule_paths =
+                        extract_paths_from_markers(options, changeset);
+                    let blocked_submodule_paths: BTreeSet<_> = submodule_paths
+                        .difference(&allowlisted_submodule_paths)
+                        .cloned()
+                        .collect();
+                    if blocked_submodule_paths.is_empty() {
+                        Ok(HookExecution::Accepted)
+                    } else {
+                        Ok(HookExecution::Rejected(HookRejectionInfo::new_long(
+                            "Changes to git submodules are restricted in this repository.",
+                            format!(
+                                "Commit creates or edits submodules at the following paths:\n{}\n  If you did mean to do this, add the following lines to your commit message:\n{}",
+                                blocked_submodule_paths
+                                    .iter()
+                                    .map(|submodule_path| format!("    - {}", submodule_path))
+                                    .collect::<Vec<_>>()
+                                    .join("\n"),
+                                blocked_submodule_paths
+                                    .iter()
+                                    .map(|submodule_path| format!(
+                                        "  {}: {}",
+                                        options.marker, submodule_path
+                                    ))
+                                    .collect::<Vec<_>>()
+                                    .join("\n"),
+                            ),
+                        )))
+                    }
+                }
+                None => Ok(HookExecution::Rejected(HookRejectionInfo::new_long(
                     "Git submodules or any changes to them are not allowed in this repository.",
                     format!(
-                        "Commit creates or edits a submodule at path {}",
-                        submodule_path
+                        "Commit creates or edits submodules at the following paths:\n{}",
+                        submodule_paths
+                            .iter()
+                            .map(|submodule_path| format!("    - {}", submodule_path))
+                            .collect::<Vec<_>>()
+                            .join("\n"),
                     ),
-                )))
-            }
-            (Some(options), Some(submodule_path)) => {
-                match extract_path_from_marker(options, changeset) {
-                    Some(path_from_marked_commit) => {
-                        if path_from_marked_commit == submodule_path.to_string() {
-                            Ok(HookExecution::Accepted)
-                        } else {
-                            Ok(HookExecution::Rejected(HookRejectionInfo::new_long(
-                                "Changes to git submodules are restricted in this repository.",
-                                format!(
-                                    "Commit creates or edits a submodule at path {}. The content of the \"{}\" marker, do not match the path of the submodule: \"{}\" != \"{}\"",
-                                    submodule_path,
-                                    options.marker,
-                                    path_from_marked_commit,
-                                    submodule_path,
-                                ),
-                            )))
-                        }
-                    }
-                    None => Ok(HookExecution::Rejected(HookRejectionInfo::new_long(
-                        "Changes to git submodules are restricted in this repository.",
-                        format!(
-                            "Commit creates or edits a submodule at path {}. If you did mean to do this, add \"{}: {}\" to your commit message",
-                            submodule_path, options.marker, submodule_path,
-                        ),
-                    ))),
-                }
+                ))),
             }
         }
     }
