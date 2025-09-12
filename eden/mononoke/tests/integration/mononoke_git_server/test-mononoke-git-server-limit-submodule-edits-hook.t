@@ -4,6 +4,8 @@
 # GNU General Public License found in the LICENSE file in the root
 # directory of this source tree.
 
+#testcases with-markers-disallowed with-markers-allowed
+
   $ . "${TEST_FIXTURES}/library.sh"
 
   $ REPOTYPE="blob_files"
@@ -12,6 +14,7 @@
   $ GIT_REPO_SUBMODULE="${TESTTMP}/origin/repo-submodule-git"
   $ GIT_REPO="${TESTTMP}/repo-git"
 
+#if with-markers-allowed
   $ cat >> repos/repo/server.toml <<EOF
   > [[bookmarks]]
   > name="heads/master_bookmark"
@@ -23,6 +26,17 @@
   > "allow_edits_with_marker": "@update-submodule"
   > }'''
   > EOF
+#else
+  $ cat >> repos/repo/server.toml <<EOF
+  > [[bookmarks]]
+  > name="heads/master_bookmark"
+  > [[bookmarks.hooks]]
+  > hook_name="limit_submodule_edits"
+  > [[hooks]]
+  > name="limit_submodule_edits"
+  > config_json="{}"
+  > EOF
+#endif
 
 # Setup git repository
   $ mkdir -p "$GIT_REPO_ORIGIN"
@@ -65,6 +79,14 @@
 
 # Add some new commits to the cloned repo and push it to remote
   $ cd repo
+  $ touch file
+  $ git add .
+  $ git commit -qam "Commit with a simple file"
+  $ git_client push origin --all
+  To https://localhost:$LOCAL_PORT/repos/git/ro/repo.git
+     *..*  master_bookmark -> master_bookmark (glob)
+
+# Add a submodule commit and test pushing it.
   $ git -c protocol.file.allow=always submodule add "$GIT_REPO_SUBMODULE" submodule_path
   Cloning into '$TESTTMP/repo/submodule_path'...
   done.
@@ -73,6 +95,8 @@
 
 # The git-receive-pack endpoint accepts pushes without moving the bookmarks in the backend
 # but stores all the git and bonsai objects in the server
+
+#if with-markers-allowed
   $ git_client push origin --all
   To https://localhost:$LOCAL_PORT/repos/git/ro/repo.git
    ! [remote rejected] master_bookmark -> master_bookmark (hooks failed:
@@ -81,14 +105,20 @@
   For more information about hooks and bypassing, refer https://fburl.com/wiki/mb4wtk1j)
   error: failed to push some refs to 'https://localhost:$LOCAL_PORT/repos/git/ro/repo.git'
   [1]
+#else
+  $ git_client push origin --all
+  To https://localhost:$LOCAL_PORT/repos/git/ro/repo.git
+   ! [remote rejected] master_bookmark -> master_bookmark (hooks failed:
+    limit_submodule_edits for *: Commit creates or edits a submodule at path submodule_path (glob)
+  
+  For more information about hooks and bypassing, refer https://fburl.com/wiki/mb4wtk1j)
+  error: failed to push some refs to 'https://localhost:$LOCAL_PORT/repos/git/ro/repo.git'
+  [1]
+#endif
 
 # Change the commit message and try to push with the marker containing a wrong path.
-  $ git commit --amend -m "@update-submodule: wrong_path"
-  [master_bookmark *] @update-submodule: wrong_path (glob)
-   Date: Sat Jan 1 00:00:00 2000 +0000
-   2 files changed, 4 insertions(+)
-   create mode 100644 .gitmodules
-   create mode 160000 submodule_path
+  $ git commit --amend -qm "@update-submodule: wrong_path"
+#if with-markers-allowed
   $ git_client push origin --all
   To https://localhost:$LOCAL_PORT/repos/git/ro/repo.git
    ! [remote rejected] master_bookmark -> master_bookmark (hooks failed:
@@ -97,14 +127,108 @@
   For more information about hooks and bypassing, refer https://fburl.com/wiki/mb4wtk1j)
   error: failed to push some refs to 'https://localhost:$LOCAL_PORT/repos/git/ro/repo.git'
   [1]
+#else
+  $ git_client push origin --all
+  To https://localhost:$LOCAL_PORT/repos/git/ro/repo.git
+   ! [remote rejected] master_bookmark -> master_bookmark (hooks failed:
+    limit_submodule_edits for *: Commit creates or edits a submodule at path submodule_path (glob)
+  
+  For more information about hooks and bypassing, refer https://fburl.com/wiki/mb4wtk1j)
+  error: failed to push some refs to 'https://localhost:$LOCAL_PORT/repos/git/ro/repo.git'
+  [1]
+#endif
 
 # Change the commit message and try to push with the marker containing the path.
-  $ git commit --amend -m "@update-submodule: submodule_path rest of the commit message"
-  [master_bookmark *] @update-submodule: submodule_path rest of the commit message (glob)
-   Date: Sat Jan 1 00:00:00 2000 +0000
-   2 files changed, 4 insertions(+)
-   create mode 100644 .gitmodules
-   create mode 160000 submodule_path
+  $ git commit --amend -qm "@update-submodule: submodule_path rest of the commit message"
+#if with-markers-allowed
   $ git_client push origin --all
   To https://localhost:$LOCAL_PORT/repos/git/ro/repo.git
      *..*  master_bookmark -> master_bookmark (glob)
+#else
+  $ git_client push origin --all
+  To https://localhost:$LOCAL_PORT/repos/git/ro/repo.git
+   ! [remote rejected] master_bookmark -> master_bookmark (hooks failed:
+    limit_submodule_edits for *: Commit creates or edits a submodule at path submodule_path (glob)
+  
+  For more information about hooks and bypassing, refer https://fburl.com/wiki/mb4wtk1j)
+  error: failed to push some refs to 'https://localhost:$LOCAL_PORT/repos/git/ro/repo.git'
+  [1]
+#endif
+
+# Add multiple submodules in a commit and test pushing it.
+  $ git -c protocol.file.allow=always submodule add "$GIT_REPO_SUBMODULE" submodule_path1
+  Cloning into '$TESTTMP/repo/submodule_path1'...
+  done.
+  $ git -c protocol.file.allow=always submodule add "$GIT_REPO_SUBMODULE" submodule_path2
+  Cloning into '$TESTTMP/repo/submodule_path2'...
+  done.
+  $ git add .
+  $ git commit -qam "Commit with multiple submodules"
+#if with-markers-allowed
+  $ git_client push origin --all
+  To https://localhost:$LOCAL_PORT/repos/git/ro/repo.git
+   ! [remote rejected] master_bookmark -> master_bookmark (hooks failed:
+    limit_submodule_edits for *: Commit creates or edits a submodule at path submodule_path1. If you did mean to do this, add "@update-submodule: submodule_path1" to your commit message (glob)
+  
+  For more information about hooks and bypassing, refer https://fburl.com/wiki/mb4wtk1j)
+  error: failed to push some refs to 'https://localhost:$LOCAL_PORT/repos/git/ro/repo.git'
+  [1]
+#else
+  $ git_client push origin --all
+  To https://localhost:$LOCAL_PORT/repos/git/ro/repo.git
+   ! [remote rejected] master_bookmark -> master_bookmark (hooks failed:
+    limit_submodule_edits for *: Commit creates or edits a submodule at path submodule_path1 (glob)
+    limit_submodule_edits for *: Commit creates or edits a submodule at path submodule_path (glob)
+  
+  For more information about hooks and bypassing, refer https://fburl.com/wiki/mb4wtk1j)
+  error: failed to push some refs to 'https://localhost:$LOCAL_PORT/repos/git/ro/repo.git'
+  [1]
+#endif
+
+# Change the commit message and try to push with the markers containing a wrong path.
+  $ git commit --amend -qm "@update-submodule: submodule_path2" -m "@update-submodule: wrong_path rest of the commit message"
+#if with-markers-allowed
+  $ git_client push origin --all
+  To https://localhost:$LOCAL_PORT/repos/git/ro/repo.git
+   ! [remote rejected] master_bookmark -> master_bookmark (hooks failed:
+    limit_submodule_edits for *: Commit creates or edits a submodule at path submodule_path1. The content of the "@update-submodule" marker, do not match the path of the submodule: "submodule_path2" != "submodule_path1" (glob)
+  
+  For more information about hooks and bypassing, refer https://fburl.com/wiki/mb4wtk1j)
+  error: failed to push some refs to 'https://localhost:$LOCAL_PORT/repos/git/ro/repo.git'
+  [1]
+#else
+  $ git_client push origin --all
+  To https://localhost:$LOCAL_PORT/repos/git/ro/repo.git
+   ! [remote rejected] master_bookmark -> master_bookmark (hooks failed:
+    limit_submodule_edits for *: Commit creates or edits a submodule at path submodule_path1 (glob)
+    limit_submodule_edits for *: Commit creates or edits a submodule at path submodule_path (glob)
+  
+  For more information about hooks and bypassing, refer https://fburl.com/wiki/mb4wtk1j)
+  error: failed to push some refs to 'https://localhost:$LOCAL_PORT/repos/git/ro/repo.git'
+  [1]
+#endif
+
+# Change the commit message and try to push with the markers containing correct paths.
+  $ git commit --amend -qm "@update-submodule: submodule_path2" -m "@update-submodule: submodule_path1 rest of the commit message"
+#if with-markers-allowed
+# This is a bug because the commit push should not have failed since the
+# appropriate markers exist as desired.
+  $ git_client push origin --all
+  To https://localhost:$LOCAL_PORT/repos/git/ro/repo.git
+   ! [remote rejected] master_bookmark -> master_bookmark (hooks failed:
+    limit_submodule_edits for *: Commit creates or edits a submodule at path submodule_path1. The content of the "@update-submodule" marker, do not match the path of the submodule: "submodule_path2" != "submodule_path1" (glob)
+  
+  For more information about hooks and bypassing, refer https://fburl.com/wiki/mb4wtk1j)
+  error: failed to push some refs to 'https://localhost:$LOCAL_PORT/repos/git/ro/repo.git'
+  [1]
+#else
+  $ git_client push origin --all
+  To https://localhost:$LOCAL_PORT/repos/git/ro/repo.git
+   ! [remote rejected] master_bookmark -> master_bookmark (hooks failed:
+    limit_submodule_edits for *: Commit creates or edits a submodule at path submodule_path1 (glob)
+    limit_submodule_edits for *: Commit creates or edits a submodule at path submodule_path (glob)
+  
+  For more information about hooks and bypassing, refer https://fburl.com/wiki/mb4wtk1j)
+  error: failed to push some refs to 'https://localhost:$LOCAL_PORT/repos/git/ro/repo.git'
+  [1]
+#endif
