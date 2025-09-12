@@ -177,63 +177,11 @@ impl Elements {
     }
 
     fn next_hg(&mut self) -> Option<Result<Element>> {
-        if self.position >= self.bytes.len() {
-            return None;
-        }
-        let end = match self.bytes[self.position..]
-            .iter()
-            .position(|&byte| byte == b'\n')
-        {
-            None => {
-                return Some(Err(format_err!(
-                    "failed to deserialize tree manifest entry, missing line feed\n{:?}",
-                    String::from_utf8_lossy(&self.bytes[..])
-                )));
-            }
-            Some(delta) => self.position + delta,
-        };
-        let result = Element::from_byte_slice_hg(&self.bytes[self.position..end]);
-        self.position = end + 1;
-        Some(result)
+        Some(next_hg_ref(&mut self.position, &self.bytes)?.map(|e| e.into()))
     }
 
     fn next_git(&mut self) -> Option<Result<Element>> {
-        let slice = match self.bytes.get(self.position..) {
-            None => return None,
-            Some([]) => return None,
-            Some(s) => s,
-        };
-
-        let (mode_len, name_len) = find_git_entry_positions(slice)?;
-
-        let flag = match parse_git_mode(&slice[..mode_len]) {
-            Ok(flag) => flag,
-            Err(e) => return Some(Err(e)),
-        };
-
-        let mut offset = mode_len + 1;
-        let name = &slice[offset..offset + name_len];
-        let component = match PathComponent::from_utf8(name) {
-            Ok(p) => p.to_owned(),
-            Err(e) => return Some(Err(e.into())),
-        };
-
-        offset += name_len + 1;
-        let hgid = if let Some(id_slice) = slice.get(offset..offset + HgId::len()) {
-            HgId::from_slice(id_slice).expect("id_slice has the right length")
-        } else {
-            return Some(Err(format_err!("SHA1 is incomplete")));
-        };
-
-        offset += HgId::len();
-        self.position += offset;
-
-        let element = Element {
-            component,
-            hgid,
-            flag,
-        };
-        Some(Ok(element))
+        Some(next_git_ref(&mut self.position, &self.bytes)?.map(|e| e.into()))
     }
 
     /// Look up an item.
@@ -356,6 +304,63 @@ impl Iterator for Elements {
     }
 }
 
+fn next_hg_ref<'a>(position: &mut usize, bytes: &'a Bytes) -> Option<Result<ElementRef<'a>>> {
+    if *position >= bytes.len() {
+        return None;
+    }
+    let end = match bytes[*position..].iter().position(|&byte| byte == b'\n') {
+        None => {
+            return Some(Err(format_err!(
+                "failed to deserialize tree manifest entry, missing line feed\n{:?}",
+                String::from_utf8_lossy(&bytes[..])
+            )));
+        }
+        Some(delta) => *position + delta,
+    };
+    let result = ElementRef::from_byte_slice_hg(&bytes[*position..end]);
+    *position = end + 1;
+    Some(result)
+}
+
+fn next_git_ref<'a>(position: &mut usize, bytes: &'a Bytes) -> Option<Result<ElementRef<'a>>> {
+    let slice = match bytes.get(*position..) {
+        None => return None,
+        Some([]) => return None,
+        Some(s) => s,
+    };
+
+    let (mode_len, name_len) = find_git_entry_positions(slice)?;
+
+    let flag = match parse_git_mode(&slice[..mode_len]) {
+        Ok(flag) => flag,
+        Err(e) => return Some(Err(e)),
+    };
+
+    let mut offset = mode_len + 1;
+    let name = &slice[offset..offset + name_len];
+    let component = match PathComponent::from_utf8(name) {
+        Ok(p) => p,
+        Err(e) => return Some(Err(e.into())),
+    };
+
+    offset += name_len + 1;
+    let hgid = if let Some(id_slice) = slice.get(offset..offset + HgId::len()) {
+        HgId::from_slice(id_slice).expect("id_slice has the right length")
+    } else {
+        return Some(Err(format_err!("SHA1 is incomplete")));
+    };
+
+    offset += HgId::len();
+    *position += offset;
+
+    let element = ElementRef {
+        component,
+        hgid,
+        flag,
+    };
+    Some(Ok(element))
+}
+
 impl TryFrom<Entry> for manifest::List {
     type Error = anyhow::Error;
 
@@ -387,26 +392,7 @@ impl Element {
     }
 
     fn from_byte_slice_hg(byte_slice: &[u8]) -> Result<Element> {
-        let path_len = match byte_slice.iter().position(|&x| x == b'\0') {
-            Some(position) => position,
-            None => return Err(format_err!("did not find path delimiter")),
-        };
-        let component = PathComponent::from_utf8(&byte_slice[..path_len])?.to_owned();
-        if path_len + HgId::hex_len() > byte_slice.len() {
-            return Err(format_err!("hgid length is shorter than expected"));
-        }
-        if byte_slice.len() > path_len + HgId::hex_len() + 2 {
-            return Err(format_err!("entry longer than expected"));
-        }
-        let hex_slice = &byte_slice[path_len + 1..path_len + HgId::hex_len() + 1];
-        let hgid = HgId::from_hex(hex_slice)?;
-        let flag = parse_hg_flag(byte_slice.get(path_len + HgId::hex_len() + 1))?;
-        let element = Element {
-            component,
-            hgid,
-            flag,
-        };
-        Ok(element)
+        Ok(ElementRef::from_byte_slice_hg(byte_slice)?.into())
     }
 
     fn to_byte_vec_hg(&self) -> Vec<u8> {
@@ -448,6 +434,65 @@ impl Element {
         buffer.push(b'\0');
         buffer.extend_from_slice(self.hgid.as_ref());
         buffer
+    }
+}
+
+// Container to make lifetime relationship to Bytes explicit so we can implement a borrowing
+// Iterator that avoids allocating PathComponentBuf.
+pub struct ElementsRef<'a> {
+    bytes: &'a Bytes,
+    position: usize,
+    format: SerializationFormat,
+}
+impl<'a> Iterator for ElementsRef<'a> {
+    type Item = Result<ElementRef<'a>>;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        match self.format {
+            SerializationFormat::Hg => next_hg_ref(&mut self.position, self.bytes),
+            SerializationFormat::Git => next_git_ref(&mut self.position, self.bytes),
+        }
+    }
+}
+
+pub struct ElementRef<'a> {
+    pub component: &'a PathComponent,
+    pub hgid: HgId,
+    pub flag: Flag,
+}
+
+impl<'a> ElementRef<'a> {
+    fn from_byte_slice_hg(byte_slice: &'a [u8]) -> Result<ElementRef<'a>> {
+        let path_len = match byte_slice.iter().position(|&x| x == b'\0') {
+            Some(position) => position,
+            None => return Err(format_err!("did not find path delimiter")),
+        };
+        let component = PathComponent::from_utf8(&byte_slice[..path_len])?;
+        if path_len + HgId::hex_len() > byte_slice.len() {
+            return Err(format_err!("hgid length is shorter than expected"));
+        }
+        if byte_slice.len() > path_len + HgId::hex_len() + 2 {
+            return Err(format_err!("entry longer than expected"));
+        }
+        let hex_slice = &byte_slice[path_len + 1..path_len + HgId::hex_len() + 1];
+        let hgid = HgId::from_hex(hex_slice)?;
+        let flag = parse_hg_flag(byte_slice.get(path_len + HgId::hex_len() + 1))?;
+        let element = ElementRef {
+            component,
+            hgid,
+            flag,
+        };
+        Ok(element)
+    }
+}
+
+impl<'a> From<ElementRef<'a>> for Element {
+    fn from(value: ElementRef<'a>) -> Self {
+        Element {
+            component: value.component.to_owned(),
+            hgid: value.hgid,
+            flag: value.flag,
+        }
     }
 }
 
