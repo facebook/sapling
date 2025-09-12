@@ -292,13 +292,13 @@ void eden_debug_get_blob(benchmark::State& state) {
       // Check for errors
       bool hasError = true;
       if (apache::thrift::is_non_optional_field_set_manually_or_by_serializer(
-              result.blobs_ref()) &&
-          !result.blobs_ref()->empty()) {
-        for (const auto& blobWithOrigin : *result.blobs_ref()) {
+              result.blobs()) &&
+          !result.blobs()->empty()) {
+        for (const auto& blobWithOrigin : *result.blobs()) {
           if (apache::thrift::
                   is_non_optional_field_set_manually_or_by_serializer(
-                      blobWithOrigin.blob_ref())) {
-            const auto& blobOrError = *blobWithOrigin.blob_ref();
+                      blobWithOrigin.blob())) {
+            const auto& blobOrError = *blobWithOrigin.blob();
             if (blobOrError.getType() == ScmBlobOrError::Type::blob) {
               const auto& blobData = blobOrError.get_blob();
               if (!blobData.empty()) {
