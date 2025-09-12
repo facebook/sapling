@@ -136,12 +136,13 @@ namespace {
 std::shared_ptr<SaplingBackingStore> createSaplingBackingStore(
     const BackingStoreFactory::CreateParams& params,
     const AbsolutePath& repoPath,
-    const AbsolutePath& mountPath,
+    const CheckoutConfig& config,
     std::shared_ptr<ReloadableConfig> reloadableConfig,
     std::unique_ptr<SaplingBackingStoreOptions> runtimeOptions) {
   return std::make_shared<SaplingBackingStore>(
       repoPath,
-      mountPath,
+      config.getMountPath(),
+      config.getCaseSensitive(),
       params.localStore,
       params.sharedStats.copy(),
       params.serverState->getThreadPool().get(),
@@ -170,7 +171,7 @@ void EdenMain::registerStandardBackingStores() {
     return createSaplingBackingStore(
         params,
         repoPath,
-        params.config.getMountPath(),
+        params.config,
         reloadableConfig,
         std::move(runtimeOptions));
   });
@@ -186,7 +187,7 @@ void EdenMain::registerStandardBackingStores() {
         auto saplingBackingStore = createSaplingBackingStore(
             params,
             repoPath,
-            params.config.getMountPath(),
+            params.config,
             reloadableConfig,
             std::move(options));
         return std::make_shared<FilteredBackingStore>(

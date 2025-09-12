@@ -16,6 +16,7 @@
 #include <gtest/gtest.h>
 
 #include "eden/common/telemetry/NullStructuredLogger.h"
+#include "eden/common/utils/CaseSensitivity.h"
 #include "eden/common/utils/FaultInjector.h"
 #include "eden/common/utils/PathFuncs.h"
 #include "eden/fs/config/ReloadableConfig.h"
@@ -148,6 +149,7 @@ struct SaplingFilteredBackingStoreTest : TestRepo, ::testing::Test {
       std::make_shared<SaplingBackingStore>(
           repo.path(),
           repo.path(),
+          kPathMapDefaultCaseSensitive,
           localStore,
           stats.copy(),
           &executor_,

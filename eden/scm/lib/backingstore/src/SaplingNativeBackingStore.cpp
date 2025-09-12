@@ -25,7 +25,9 @@ namespace sapling {
 
 SaplingNativeBackingStore::SaplingNativeBackingStore(
     std::string_view repository,
-    std::string_view mount)
+    std::string_view mount,
+    facebook::eden::HgObjectIdFormat objectIdFormat,
+    facebook::eden::CaseSensitivity caseSensitive)
     : store_{
           sapling_backingstore_new(
               rust::Slice<const char>{repository.data(), repository.size()},
@@ -33,7 +35,7 @@ SaplingNativeBackingStore::SaplingNativeBackingStore(
               .into_raw(),
           [](BackingStore* backingStore) {
             auto box = rust::Box<BackingStore>::from_raw(backingStore);
-          }} {
+          }}, objectIdFormat_{objectIdFormat}, caseSensitive_{caseSensitive} {
   try {
     repoName_ = std::string(sapling_backingstore_get_name(*store_.get()));
   } catch (const rust::Error& error) {

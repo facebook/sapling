@@ -161,6 +161,7 @@ class SaplingBackingStore final : public BackingStore {
   SaplingBackingStore(
       AbsolutePathPiece repository,
       AbsolutePathPiece mount,
+      CaseSensitivity caseSensitive,
       std::shared_ptr<LocalStore> localStore,
       EdenStatsPtr stats,
       UnboundedQueueExecutor* serverThreadPool,
@@ -178,6 +179,7 @@ class SaplingBackingStore final : public BackingStore {
   SaplingBackingStore(
       AbsolutePathPiece repository,
       AbsolutePathPiece mount,
+      CaseSensitivity caseSensitive,
       std::shared_ptr<LocalStore> localStore,
       EdenStatsPtr stats,
       folly::InlineExecutor* inlineExecutor,

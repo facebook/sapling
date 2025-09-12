@@ -30,6 +30,7 @@ cpp_unittest(
     supports_static_listing = False,
     deps = [
         "//eden/common/telemetry:structured_logger",
+        "//eden/common/utils:case_sensitivity",
         "//eden/common/utils:fault_injector",
         "//eden/common/utils:path",
         "//eden/fs/config:config",

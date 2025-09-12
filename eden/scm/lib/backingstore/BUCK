@@ -27,7 +27,9 @@ cpp_library(
     exported_deps = [
         "fbsource//third-party/rust:cxx-core",
         ":backingstore@header",
+        "//eden/common/utils:case_sensitivity",
         "//eden/common/utils:path",
+        "//eden/fs/config:config",
         "//eden/fs/model:model",
         "//eden/fs/store:context",
         "//folly:function",

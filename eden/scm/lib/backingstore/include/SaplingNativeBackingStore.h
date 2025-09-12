@@ -14,7 +14,9 @@
 #include <optional>
 #include <string_view>
 
+#include "eden/common/utils/CaseSensitivity.h"
 #include "eden/common/utils/PathFuncs.h"
+#include "eden/fs/config/HgObjectIdFormat.h"
 #include "eden/fs/model/ObjectId.h"
 #include "eden/fs/model/RootId.h"
 #include "eden/fs/store/ObjectFetchContext.h"
@@ -79,7 +81,9 @@ class SaplingNativeBackingStore {
  public:
   explicit SaplingNativeBackingStore(
       std::string_view repository,
-      std::string_view mount);
+      std::string_view mount,
+      facebook::eden::HgObjectIdFormat objectIdFormat,
+      facebook::eden::CaseSensitivity caseSensitive);
 
   std::string_view getRepoName() const {
     return repoName_;
@@ -147,6 +151,8 @@ class SaplingNativeBackingStore {
   std::unique_ptr<sapling::BackingStore, void (*)(sapling::BackingStore*)>
       store_;
   std::string repoName_;
+  facebook::eden::HgObjectIdFormat objectIdFormat_;
+  facebook::eden::CaseSensitivity caseSensitive_;
 };
 
 } // namespace sapling

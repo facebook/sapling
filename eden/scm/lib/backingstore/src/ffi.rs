@@ -123,6 +123,20 @@ pub(crate) mod ffi {
         content_blake3: [u8; 32],
     }
 
+    #[namespace = "facebook::eden"]
+    #[repr(u8)]
+    pub enum HgObjectIdFormat {
+        WithPath,
+        HashOnly,
+    }
+
+    #[namespace = "facebook::eden"]
+    unsafe extern "C++" {
+        include!("eden/fs/config/HgObjectIdFormat.h");
+
+        type HgObjectIdFormat;
+    }
+
     unsafe extern "C++" {
         include!("eden/scm/lib/backingstore/include/ffi.h");
 

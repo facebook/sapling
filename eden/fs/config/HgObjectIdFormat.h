@@ -11,7 +11,7 @@
 
 namespace facebook::eden {
 
-enum class HgObjectIdFormat {
+enum class HgObjectIdFormat : uint8_t {
   // We used to support a ProxyHash format that indexed through a LocalStore
   // keyspace in order to map fixed-size IDs onto variable-size
   // SaplingBackingStore

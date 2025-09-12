@@ -83,6 +83,7 @@ struct SaplingBackingStoreNoFaultInjectorTest : SaplingBackingStoreTestBase {
       std::make_unique<SaplingBackingStore>(
           repo.path(),
           repo.path(),
+          kPathMapDefaultCaseSensitive,
           localStore,
           stats.copy(),
           &executor,
@@ -103,6 +104,7 @@ struct SaplingBackingStoreWithFaultInjectorTest : SaplingBackingStoreTestBase {
       std::make_unique<SaplingBackingStore>(
           repo.path(),
           repo.path(),
+          kPathMapDefaultCaseSensitive,
           localStore,
           stats.copy(),
           &executor,
@@ -124,6 +126,7 @@ struct SaplingBackingStoreWithFaultInjectorIgnoreConfigTest
       std::make_unique<SaplingBackingStore>(
           repo.path(),
           repo.path(),
+          kPathMapDefaultCaseSensitive,
           localStore,
           stats.copy(),
           &executor,

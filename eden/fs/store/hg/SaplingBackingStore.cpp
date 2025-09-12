@@ -29,6 +29,7 @@
 #include "eden/common/telemetry/RequestMetricsScope.h"
 #include "eden/common/telemetry/StructuredLogger.h"
 #include "eden/common/utils/Bug.h"
+#include "eden/common/utils/CaseSensitivity.h"
 #include "eden/common/utils/EnumValue.h"
 #include "eden/common/utils/FaultInjector.h"
 #include "eden/common/utils/PathFuncs.h"
@@ -178,6 +179,7 @@ HgImportTraceEvent::HgImportTraceEvent(
 SaplingBackingStore::SaplingBackingStore(
     AbsolutePathPiece repository,
     AbsolutePathPiece mount,
+    CaseSensitivity caseSensitive,
     std::shared_ptr<LocalStore> localStore,
     EdenStatsPtr stats,
     UnboundedQueueExecutor* serverThreadPool,
@@ -201,7 +203,11 @@ SaplingBackingStore::SaplingBackingStore(
       traceBus_{TraceBus<HgImportTraceEvent>::create(
           "hg",
           config_->getEdenConfig()->HgTraceBusCapacity.getValue())},
-      store_{repository.view(), mount.view()} {
+      store_{
+          repository.view(),
+          mount.view(),
+          config_->getEdenConfig()->hgObjectIdFormat.getValue(),
+          caseSensitive} {
   uint8_t numberThreads =
       config_->getEdenConfig()->numBackingstoreThreads.getValue();
   if (!numberThreads) {
@@ -232,6 +238,7 @@ SaplingBackingStore::SaplingBackingStore(
 SaplingBackingStore::SaplingBackingStore(
     AbsolutePathPiece repository,
     AbsolutePathPiece mount,
+    CaseSensitivity caseSensitive,
     std::shared_ptr<LocalStore> localStore,
     EdenStatsPtr stats,
     folly::InlineExecutor* inlineExecutor,
@@ -255,7 +262,11 @@ SaplingBackingStore::SaplingBackingStore(
       traceBus_{TraceBus<HgImportTraceEvent>::create(
           "hg",
           config_->getEdenConfig()->HgTraceBusCapacity.getValue())},
-      store_{repository.view(), mount.view()} {
+      store_{
+          repository.view(),
+          mount.view(),
+          config_->getEdenConfig()->hgObjectIdFormat.getValue(),
+          caseSensitive} {
   uint8_t numberThreads =
       config_->getEdenConfig()->numBackingstoreThreads.getValue();
   if (!numberThreads) {
