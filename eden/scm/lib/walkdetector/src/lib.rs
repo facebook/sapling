@@ -323,7 +323,7 @@ impl Detector {
 
         // Remember interesting directory metadata, even though directory is being loaded from cache.
         // It could still be involved in ongoing or future walk activity that involves remote fetches.
-        if interesting_metadata(
+        if important_metadata(
             self.config.walk_threshold,
             self.config.walk_ratio,
             Some(num_files),
