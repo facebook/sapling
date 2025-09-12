@@ -1,4 +1,5 @@
 load("@fbcode_macros//build_defs:cpp_library.bzl", "cpp_library")
+load("@fbcode_macros//build_defs:cpp_unittest.bzl", "cpp_unittest")
 load("@fbsource//tools/build_defs:fb_native_wrapper.bzl", "fb_native")
 load("@fbsource//tools/build_defs:rust_library.bzl", "rust_library")
 
@@ -31,10 +32,13 @@ cpp_library(
         "//eden/common/utils:path",
         "//eden/fs/config:config",
         "//eden/fs/model:model",
+        "//eden/fs/model:model-fwd",
         "//eden/fs/store:context",
+        "//eden/fs/store/hg:hg_proxy_hash",
         "//folly:function",
         "//folly:range",
         "//folly:try",
+        "//folly/container:fbvector",
         "//folly/futures:core",
     ],
 )
@@ -65,7 +69,6 @@ rust_library(
     },
     cpp_deps = [
         ":sapling_native_backingstore",
-        "//eden/common/utils:path",
         "//eden/fs/store:context",
     ],
     crate_root = "src/lib.rs",
@@ -120,5 +123,20 @@ rust_library(
         "//eden/scm/lib/types:types",
         "//eden/scm/lib/util/testutil:testutil",
         "//eden/scm/lib/walkdetector:walkdetector",
+    ],
+)
+
+cpp_unittest(
+    name = "tree_builder_test",
+    srcs = [
+        "test/TreeBuilderTest.cpp",
+    ],
+    supports_static_listing = False,
+    deps = [
+        ":backingstore",
+        ":sapling_native_backingstore",
+        "//eden/common/utils:path",
+        "//eden/fs/config:config",
+        "//eden/fs/model:model",
     ],
 )

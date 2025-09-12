@@ -9,6 +9,7 @@
 
 use std::ffi::CStr;
 use std::os::raw::c_char;
+use std::pin::Pin;
 
 use anyhow::Error;
 use anyhow::Result;
@@ -175,6 +176,42 @@ pub(crate) mod ffi {
             error: String,
             blob: SharedPtr<FileAuxData>,
         );
+    }
+
+    unsafe extern "C++" {
+        type TreeBuilder;
+
+        fn new_builder(
+            case_sensitive: bool,
+            oid_format: HgObjectIdFormat,
+            oid: &[u8],
+            path: &[u8],
+        ) -> UniquePtr<TreeBuilder>;
+
+        fn add_entry(
+            self: Pin<&mut TreeBuilder>,
+            name: &str,
+            hg_node: &[u8; 20],
+            ttype: TreeEntryType,
+        );
+
+        fn add_entry_with_aux_data(
+            self: Pin<&mut TreeBuilder>,
+            name: &str,
+            hg_node: &[u8; 20],
+            ttype: TreeEntryType,
+            size: u64,
+            sha1: &[u8; 20],
+            blake3: &[u8; 32],
+        );
+
+        fn mark_missing(self: Pin<&mut TreeBuilder>);
+
+        fn set_aux_data(self: Pin<&mut TreeBuilder>, digest: &[u8; 32], size: u64);
+
+        fn num_files(&self) -> usize;
+
+        fn num_dirs(&self) -> usize;
     }
 
     extern "Rust" {
