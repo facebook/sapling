@@ -49,7 +49,7 @@ export async function activate(
     const [, enabledSCMApiFeatures] = await Promise.all([
       ensureTranslationsLoaded(context),
       Internal.getEnabledSCMApiFeatures?.(ctx) ??
-        new Set<EnabledSCMApiFeature>(['blame', 'sidebar', 'autoresolve']),
+        new Set<EnabledSCMApiFeature>(['blame', 'sidebar']),
     ]);
     logger.info('enabled features: ', [...enabledSCMApiFeatures].join(', '));
     context.subscriptions.push(registerISLCommands(context, platform, logger));
