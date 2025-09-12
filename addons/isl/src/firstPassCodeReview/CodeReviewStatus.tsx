@@ -18,6 +18,7 @@ import type {CommitInfo, Hash} from '../types';
 import {runCodeReview} from './runCodeReview';
 
 import './CodeReviewStatus.css';
+import {firstPassCommentData} from './firstPassCodeReviewAtoms';
 
 type CodeReviewProgressStatus = 'running' | 'success' | 'error';
 
@@ -32,6 +33,7 @@ const codeReviewStatusAtom = atomFamilyWeak((_hash: Hash) =>
 export function CodeReviewStatus({commit}: {commit: CommitInfo}): JSX.Element {
   const cwd = useAtomValue(serverCwd);
   const [status, setStatus] = useAtom(codeReviewStatusAtom(commit.hash));
+  const [, setIssues] = useAtom(firstPassCommentData(commit.hash));
 
   const button = (
     <Button
@@ -44,9 +46,13 @@ export function CodeReviewStatus({commit}: {commit: CommitInfo}): JSX.Element {
           setStatus('error');
           return;
         }
+        setIssues([...results.values()].flat());
         clientToServerAPI.postMessage({
           type: 'platform/setFirstPassCodeReviewDiagnostics',
           issueMap: results,
+        });
+        clientToServerAPI.postMessage({
+          type: 'platform/setFirstPassCodeReviewComments',
         });
         setStatus('success');
       }}

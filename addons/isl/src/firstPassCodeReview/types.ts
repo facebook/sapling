@@ -12,9 +12,10 @@ export type CodeReviewResult = {
 };
 
 export type CodeReviewIssue = {
+  issueID: string;
   filepath: string;
   description: string;
   startLine: number;
   endLine: number;
-  severity: 'error' | 'warning' | 'information';
+  severity: 'high' | 'medium' | 'low';
 };

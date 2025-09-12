@@ -747,6 +747,9 @@ export type PlatformSpecificClientToServerMessages =
   | {
       type: 'platform/devmateResolveAllConflicts';
       conflicts: MergeConflicts;
+    }
+  | {
+      type: 'platform/setFirstPassCodeReviewComments';
     };
 
 /**
@@ -884,9 +887,10 @@ export type LocalStorageName =
   | 'isl.distant-rebase-warning-enabled'
   | 'isl.rebase-onto-master-warning-enabled'
   | 'isl.experimental-features-local-override'
-  // These keys are prefixes, with further dynamic keys appended afterwards
+  | 'isl.partial-abort'
+  // The keys below are prefixes, with further dynamic keys appended afterwards
   | 'isl.edited-commit-messages:'
-  | 'isl.partial-abort';
+  | 'isl.first-pass-comments:';
 
 export type ClientToServerMessage =
   | {type: 'heartbeat'; id: string}

@@ -325,6 +325,10 @@ export const getVSCodePlatform = (context: vscode.ExtensionContext): VSCodeServe
           );
           break;
         }
+        case 'platform/setFirstPassCodeReviewComments': {
+          vscode.commands.executeCommand('sapling.refresh-first-pass-comments');
+          break;
+        }
       }
     } catch (err) {
       vscode.window.showErrorMessage(`error handling message ${JSON.stringify(message)}\n${err}`);
