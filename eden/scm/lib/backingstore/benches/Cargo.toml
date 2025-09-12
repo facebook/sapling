@@ -6,6 +6,7 @@ version = "0.1.0"
 edition = "2024"
 
 [dependencies]
+fbinit = { version = "0.2.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 sapling-backingstore = { version = "0.1.0", path = ".." }
 sapling-configloader = { version = "0.1.0", path = "../../config/loader" }
 sapling-identity = { version = "0.1.0", path = "../../identity" }

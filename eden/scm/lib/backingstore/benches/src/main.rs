@@ -35,6 +35,7 @@ use types::Key;
 use types::RepoPathBuf;
 use types::fetch_mode::FetchMode;
 
+#[cfg_attr(fbcode_build, fbinit::main)]
 fn main() {
     // This sets up things like tracing logger, factory constructors, and other global tweaks eden does.
     backingstore_global_init();

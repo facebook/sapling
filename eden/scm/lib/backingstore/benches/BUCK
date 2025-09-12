@@ -1,3 +1,4 @@
+load("@fbcode_macros//build_defs/lib:rust_oss.bzl", "rust_oss")
 load("@fbsource//tools/build_defs:rust_binary.bzl", "rust_binary")
 
 oncall("sapling")
@@ -8,7 +9,10 @@ rust_binary(
         "src/**/*.rs",
     ]),
     autocargo = {"cargo_toml_config": {
-        "extra_buck_dependencies": {"dependencies": ["//eden/scm/lib/config/loader:configloader"]},
+        "extra_buck_dependencies": {"dependencies": [
+            "//common/rust/shed/fbinit:fbinit",
+            "//eden/scm/lib/config/loader:configloader",
+        ]},
         "features": {"fb": ["sapling-configloader/fb"]},
     }},
     crate_root = "src/main.rs",
@@ -25,5 +29,7 @@ rust_binary(
         "//eden/scm/lib/procinfo:procinfo",
         "//eden/scm/lib/repo:repo",
         "//eden/scm/lib/types:types",
-    ],
+    ] + ([] if rust_oss.is_oss_build() else [
+        "//common/rust/shed/fbinit:fbinit",
+    ]),
 )
