@@ -67,9 +67,9 @@ pub fn print_error(err: &anyhow::Error, io: &crate::io::IO, traceback: bool) {
     use cliparser::parser::ParseError;
     let cli_name = identity::cli_name();
     if err.downcast_ref::<configloader::Error>().is_some() {
-        let _ = io.write_err(format!("{cli_name}: parse error: {err}\n"));
+        let _ = io.write_err(format!("{cli_name}: parse error: {err:?}\n"));
     } else if err.downcast_ref::<configloader::Errors>().is_some() {
-        let _ = io.write_err(format!("{cli_name}: parse errors: {err}\n"));
+        let _ = io.write_err(format!("{cli_name}: parse errors: {err:?}\n"));
     } else if let Some(ParseError::AmbiguousCommand {
         command_name: _,
         possibilities,

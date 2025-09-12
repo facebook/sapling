@@ -1,6 +1,7 @@
 
 #require no-eden
 
+  $ export RUST_BACKTRACE=0
 
 hide outer repo
   $ hg init

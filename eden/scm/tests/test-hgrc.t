@@ -1,7 +1,7 @@
 
 #require no-eden
 
-
+  $ export RUST_BACKTRACE=0
 
 Use hgrc within $TESTTMP
 
