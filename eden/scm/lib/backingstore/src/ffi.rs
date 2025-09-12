@@ -81,25 +81,6 @@ pub(crate) mod ffi {
         type TreeEntryType;
     }
 
-    pub struct TreeEntry {
-        hash: [u8; 20],
-        name: Vec<u8>,
-        ttype: TreeEntryType,
-        has_size: bool,
-        size: u64,
-        has_sha1: bool,
-        content_sha1: [u8; 20],
-        has_blake3: bool,
-        content_blake3: [u8; 32],
-    }
-
-    pub struct Tree {
-        entries: Vec<TreeEntry>,
-        aux_data: TreeAuxData,
-        num_files: usize,
-        num_dirs: usize,
-    }
-
     #[derive(Debug)]
     pub struct TreeAuxData {
         digest_size: u64,
