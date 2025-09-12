@@ -178,6 +178,7 @@ impl crate::Subcommand for SubscribeCmd {
                 &None,
                 &None,
                 false,
+                false,
             )
             .await?;
 

@@ -139,6 +139,7 @@ impl crate::Subcommand for ChangesSinceCmd {
                 &self.excluded_roots,
                 &self.excluded_suffixes,
                 self.include_vcs_roots,
+                !self.states.is_empty(),
             )
             .await?;
 
@@ -157,6 +158,7 @@ impl crate::Subcommand for ChangesSinceCmd {
                     &self.excluded_roots,
                     &self.excluded_suffixes,
                     self.include_vcs_roots,
+                    !self.states.is_empty(),
                 )
                 .await?;
             if !self.states.is_empty() {

@@ -704,6 +704,7 @@ impl EdenFsClient {
             &None,
             &None,
             false,
+            false,
         )
         .await
     }
@@ -719,6 +720,7 @@ impl EdenFsClient {
         excluded_roots: &Option<Vec<PathBuf>>,
         excluded_suffixes: &Option<Vec<String>>,
         include_vcs_roots: bool,
+        include_state_changes: bool,
     ) -> Result<ChangesSinceV2Result> {
         // Temporary code to prefix from roots - will be removed when implemented in daemon
         let included_roots = prefix_paths(root, included_roots, |p| {
@@ -740,6 +742,7 @@ impl EdenFsClient {
             includedSuffixes: included_suffixes.clone(),
             excludedRoots: excluded_roots,
             excludedSuffixes: excluded_suffixes.clone(),
+            includeStateChanges: Some(include_state_changes),
             ..Default::default()
         };
         let mut result: ChangesSinceV2Result = self
@@ -804,6 +807,7 @@ impl EdenFsClient {
     /// * `excluded_roots` - Optional list of directories within the root to exclude.
     /// * `excluded_suffixes` - Optional list of file suffixes to exclude.
     /// * `include_vcs_roots` - Whether to include VCS root directories.
+    /// * `include_state_changes` - Whether to include state change events.
     ///
     /// # Returns
     ///
@@ -848,6 +852,7 @@ impl EdenFsClient {
     ///             &None, // No excluded roots
     ///             &None, // No excluded suffixes
     ///             false, // Don't include VCS roots
+    ///             false, // Don't include state changes
     ///         )
     ///         .await
     ///         .expect("Failed to create stream");
@@ -882,6 +887,7 @@ impl EdenFsClient {
         excluded_roots: &Option<Vec<PathBuf>>,
         excluded_suffixes: &Option<Vec<String>>,
         include_vcs_roots: bool,
+        include_state_changes: bool,
     ) -> Result<BoxStream<'a, Result<ChangesSinceV2Result>>> {
         struct State<'a> {
             mount_point: Option<PathBuf>,
@@ -892,6 +898,7 @@ impl EdenFsClient {
             excluded_roots: Option<Vec<PathBuf>>,
             excluded_suffixes: Option<Vec<String>>,
             include_vcs_roots: bool,
+            include_state_changes: bool,
             subscription: BoxStream<'a, Result<JournalPosition>>,
             last: Instant,
             throttle: Duration,
@@ -912,6 +919,7 @@ impl EdenFsClient {
             excluded_roots: excluded_roots.clone(),
             excluded_suffixes: excluded_suffixes.clone(),
             include_vcs_roots: include_vcs_roots.clone(),
+            include_state_changes: include_state_changes.clone(),
             // Locals
             subscription: self.stream_journal_changed(mount_point).await?,
             last: Instant::now(),
@@ -979,6 +987,7 @@ impl EdenFsClient {
                         &state.excluded_roots,
                         &state.excluded_suffixes,
                         state.include_vcs_roots,
+                        state.include_state_changes,
                     )
                     .await;
                 match result {
@@ -1070,7 +1079,9 @@ mod tests {
 
         // invoke get_changes_since and check results
         let result = client
-            .get_changes_since(&None, &position, &None, &None, &None, &None, &None, false)
+            .get_changes_since(
+                &None, &position, &None, &None, &None, &None, &None, false, false,
+            )
             .await;
         assert!(result.is_ok());
         assert_eq!(result.unwrap(), changes_since_result);
@@ -1120,7 +1131,9 @@ mod tests {
 
         // invoke stream_changes_since and check result
         let result = client
-            .stream_changes_since(&None, 0, position, &None, &None, &None, &None, &None, false)
+            .stream_changes_since(
+                &None, 0, position, &None, &None, &None, &None, &None, false, false,
+            )
             .await;
         assert!(result.is_ok());
 
@@ -1172,7 +1185,9 @@ mod tests {
 
         // invoke stream_changes_since and check result
         let result = client
-            .stream_changes_since(&None, 0, position, &None, &None, &None, &None, &None, false)
+            .stream_changes_since(
+                &None, 0, position, &None, &None, &None, &None, &None, false, false,
+            )
             .await;
         assert!(result.is_ok());
 
@@ -1256,7 +1271,9 @@ mod tests {
 
         // invoke stream_changes_since and check result
         let result = client
-            .stream_changes_since(&None, 0, position, &None, &None, &None, &None, &None, false)
+            .stream_changes_since(
+                &None, 0, position, &None, &None, &None, &None, &None, false, false,
+            )
             .await;
         assert!(result.is_ok());
 
