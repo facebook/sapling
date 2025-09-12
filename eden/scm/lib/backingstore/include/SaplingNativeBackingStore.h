@@ -104,7 +104,7 @@ class SaplingNativeBackingStore {
   void getTreeBatch(
       SaplingRequestRange requests,
       sapling::FetchMode fetch_mode,
-      folly::FunctionRef<void(size_t, folly::Try<std::shared_ptr<Tree>>)>
+      folly::FunctionRef<void(size_t, folly::Try<facebook::eden::TreePtr>)>
           resolve);
 
   folly::Try<std::shared_ptr<TreeAuxData>> getTreeAuxData(

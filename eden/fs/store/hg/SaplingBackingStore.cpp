@@ -82,73 +82,6 @@ std::unique_ptr<SaplingBackingStoreOptions> computeRuntimeOptions(
   return options;
 }
 
-Tree::value_type fromRawTreeEntry(
-    sapling::TreeEntry entry,
-    RelativePathPiece path,
-    HgObjectIdFormat hgObjectIdFormat) {
-  std::optional<uint64_t> size;
-  std::optional<Hash20> contentSha1;
-  std::optional<Hash32> contentBlake3;
-
-  if (entry.has_size) {
-    size = entry.size;
-  }
-
-  if (entry.has_sha1) {
-    contentSha1.emplace(Hash20(std::move(entry.content_sha1)));
-  }
-
-  if (entry.has_blake3) {
-    contentBlake3.emplace(Hash32(std::move(entry.content_blake3)));
-  }
-
-  auto name = PathComponent(folly::StringPiece{
-      folly::ByteRange{entry.name.data(), entry.name.size()}});
-  Hash20 hash(std::move(entry.hash));
-
-  auto fullPath = path + name;
-  auto proxyHash = HgProxyHash::store(fullPath, hash, hgObjectIdFormat);
-
-  auto treeEntry =
-      TreeEntry{proxyHash, entry.ttype, size, contentSha1, contentBlake3};
-  return {std::move(name), std::move(treeEntry)};
-}
-
-TreePtr fromRawTree(
-    const sapling::Tree* tree,
-    const ObjectId& edenTreeId,
-    RelativePathPiece path,
-    HgObjectIdFormat hgObjectIdFormat) {
-  Tree::container entries{kPathMapDefaultCaseSensitive};
-
-  entries.reserve(tree->entries.size());
-  for (uintptr_t i = 0; i < tree->entries.size(); i++) {
-    try {
-      auto entry = fromRawTreeEntry(tree->entries[i], path, hgObjectIdFormat);
-      entries.emplace(entry.first, std::move(entry.second));
-    } catch (const PathComponentContainsDirectorySeparator& ex) {
-      XLOGF(WARN, "Ignoring directory entry: {}", ex.what());
-    }
-  }
-  if (tree->aux_data.digest_size != 0) {
-    XLOGF(
-        DBG5,
-        "Tree aux data returned from Sapling backing store when tree(id={}) is queried",
-        edenTreeId);
-    return std::make_shared<TreePtr::element_type>(
-        edenTreeId,
-        std::move(entries),
-        std::make_shared<TreeAuxDataPtr::element_type>(
-            Hash32{tree->aux_data.digest_hash}, tree->aux_data.digest_size));
-  }
-  XLOGF(
-      DBG5,
-      "No tree aux data returned from Sapling backing store when tree(id={}) is queried",
-      edenTreeId);
-  return std::make_shared<TreePtr::element_type>(
-      std::move(entries), edenTreeId);
-}
-
 } // namespace
 
 HgImportTraceEvent::HgImportTraceEvent(
@@ -585,7 +518,6 @@ void SaplingBackingStore::getTreeBatch(
       importRequests, SaplingImportObject::TREE);
   auto importRequestsMap = std::move(preparedRequests.first);
   auto requests = std::move(preparedRequests.second);
-  auto hgObjectIdFormat = config_->getEdenConfig()->hgObjectIdFormat.getValue();
 
   faultInjector_.check("SaplingBackingStore::getTreeBatch", "");
   store_.getTreeBatch(
@@ -593,8 +525,7 @@ void SaplingBackingStore::getTreeBatch(
       fetch_mode,
       // getTreeBatch is blocking, hence we can take these by
       // reference.
-      [&](size_t index,
-          folly::Try<std::shared_ptr<sapling::Tree>> content) mutable {
+      [&](size_t index, folly::Try<TreePtr> content) mutable {
         if (content.hasException()) {
           XLOGF(
               DBG4,
@@ -632,19 +563,7 @@ void SaplingBackingStore::getTreeBatch(
         XLOGF(DBG9, "Imported Tree node={}", folly::hexlify(nodeId));
         auto& [importRequestList, watch] = importRequestsMap[nodeId];
         for (auto& importRequest : importRequestList) {
-          auto* treeRequest =
-              importRequest->getRequest<SaplingImportRequest::TreeImport>();
-          importRequest->getPromise<TreePtr>()->setWith(
-              [&]() -> folly::Try<TreePtr> {
-                if (content.hasException()) {
-                  return folly::Try<TreePtr>{content.exception()};
-                }
-                return folly::Try{fromRawTree(
-                    content.value().get(),
-                    treeRequest->id,
-                    treeRequest->proxyHash.path(),
-                    hgObjectIdFormat)};
-              });
+          importRequest->getPromise<TreePtr>()->setValue(content);
         }
 
         // Make sure that we're stopping this watch.

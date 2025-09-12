@@ -110,7 +110,7 @@ folly::Try<facebook::eden::TreePtr> SaplingNativeBackingStore::getTree(
 void SaplingNativeBackingStore::getTreeBatch(
     SaplingRequestRange requests,
     sapling::FetchMode fetch_mode,
-    folly::FunctionRef<void(size_t, folly::Try<std::shared_ptr<Tree>>)>
+    folly::FunctionRef<void(size_t, folly::Try<facebook::eden::TreePtr>)>
         resolve) {
   auto count = requests.size();
   if (count == 0) {
@@ -128,7 +128,7 @@ void SaplingNativeBackingStore::getTreeBatch(
   std::vector<Request> raw_requests;
   raw_requests.reserve(count);
   for (auto& request : requests) {
-    raw_requests.push_back(Request{
+    raw_requests.emplace_back(Request{
         request.node.data(),
         request.cause,
         rust::Slice<const uint8_t>{
@@ -145,6 +145,8 @@ void SaplingNativeBackingStore::getTreeBatch(
       *store_.get(),
       rust::Slice<const Request>{raw_requests.data(), raw_requests.size()},
       fetch_mode,
+      objectIdFormat_,
+      caseSensitive_ == facebook::eden::CaseSensitivity::Sensitive,
       std::move(resolver));
 }
 

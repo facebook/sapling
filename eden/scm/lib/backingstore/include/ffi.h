@@ -45,11 +45,11 @@ class TreeBuilder;
  */
 struct GetTreeBatchResolver {
   explicit GetTreeBatchResolver(
-      folly::FunctionRef<void(size_t, folly::Try<std::shared_ptr<Tree>>)>
+      folly::FunctionRef<void(size_t, folly::Try<facebook::eden::TreePtr>)>
           resolve)
       : resolve{std::move(resolve)} {}
 
-  folly::FunctionRef<void(size_t, folly::Try<std::shared_ptr<Tree>>)> resolve;
+  folly::FunctionRef<void(size_t, folly::Try<facebook::eden::TreePtr>)> resolve;
 };
 
 /**
@@ -95,7 +95,7 @@ void sapling_backingstore_get_tree_batch_handler(
     std::shared_ptr<GetTreeBatchResolver> resolver,
     size_t index,
     rust::String error,
-    std::shared_ptr<Tree> tree);
+    std::unique_ptr<TreeBuilder> builder);
 
 void sapling_backingstore_get_tree_aux_batch_handler(
     std::shared_ptr<GetTreeAuxBatchResolver> resolver,

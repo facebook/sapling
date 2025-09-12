@@ -30,7 +30,6 @@ use types::fetch_cause::FetchCause;
 use types::fetch_mode::FetchMode;
 
 use crate::backingstore::BackingStore;
-use crate::ffi::ffi::Tree;
 
 #[cxx::bridge(namespace = sapling)]
 pub(crate) mod ffi {
@@ -158,7 +157,7 @@ pub(crate) mod ffi {
             resolve_state: SharedPtr<GetTreeBatchResolver>,
             index: usize,
             error: String,
-            tree: SharedPtr<Tree>,
+            builder: UniquePtr<TreeBuilder>,
         );
 
         unsafe fn sapling_backingstore_get_tree_aux_batch_handler(
@@ -245,6 +244,8 @@ pub(crate) mod ffi {
             store: &BackingStore,
             requests: &[Request],
             fetch_mode: FetchMode,
+            oid_format: HgObjectIdFormat,
+            case_sensitive: bool,
             resolver: SharedPtr<GetTreeBatchResolver>,
         );
 
@@ -473,6 +474,8 @@ pub fn sapling_backingstore_get_tree_batch(
     store: &BackingStore,
     requests: &[ffi::Request],
     fetch_mode: ffi::FetchMode,
+    oid_format: ffi::HgObjectIdFormat,
+    case_sensitive: bool,
     resolver: SharedPtr<ffi::GetTreeBatchResolver>,
 ) {
     let keys: Vec<Key> = requests.iter().map(|req| req.key()).collect();
@@ -483,28 +486,41 @@ pub fn sapling_backingstore_get_tree_batch(
         FetchContext::new_with_cause(fetch_mode, cause),
         keys,
         |idx, result| {
-            let result: Result<Box<dyn storemodel::TreeEntry>> =
-                result.and_then(|opt| opt.ok_or_else(|| Error::msg("no tree found")));
-            let resolver = resolver.clone();
-            let (error, tree) = match result.and_then(|list| list.try_into()) {
-                Ok(tree) => (String::default(), SharedPtr::<Tree>::new(tree)),
-                Err(error) => (format!("{:?}", error), SharedPtr::null()),
+            let req = &requests[idx];
+
+            let mut builder = ffi::new_builder(case_sensitive, oid_format, req.oid, req.path);
+
+            let error = match result {
+                Ok(Some(sl_tree)) => {
+                    if let Err(err) = add_tree_to_builder(builder.pin_mut(), sl_tree) {
+                        format!("{err:?}")
+                    } else {
+                        String::default()
+                    }
+                }
+                Ok(None) => {
+                    builder.pin_mut().mark_missing();
+                    String::default()
+                }
+                Err(err) => format!("{err:?}"),
             };
 
-            if requests[idx].cause != ffi::FetchCause::Prefetch && !requests[idx].path.is_empty() {
-                if let Some(tree) = tree.as_ref() {
-                    sapling_backingstore_witness_dir_read(
-                        store,
-                        requests[idx].path,
-                        tree.num_files,
-                        tree.num_dirs,
-                        fetch_mode.is_local(),
-                        requests[idx].pid,
-                    );
-                }
+            let resolver = resolver.clone();
+
+            if req.cause != ffi::FetchCause::Prefetch && !req.path.is_empty() && error.is_empty() {
+                sapling_backingstore_witness_dir_read(
+                    store,
+                    req.path,
+                    builder.num_files(),
+                    builder.num_dirs(),
+                    fetch_mode.is_local(),
+                    req.pid,
+                );
             }
 
-            unsafe { ffi::sapling_backingstore_get_tree_batch_handler(resolver, idx, error, tree) };
+            unsafe {
+                ffi::sapling_backingstore_get_tree_batch_handler(resolver, idx, error, builder)
+            };
         },
     );
 }

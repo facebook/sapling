@@ -20,13 +20,18 @@ void sapling_backingstore_get_tree_batch_handler(
     std::shared_ptr<GetTreeBatchResolver> resolver,
     size_t index,
     rust::String error,
-    std::shared_ptr<Tree> tree) {
-  using ResolveResult = folly::Try<std::shared_ptr<Tree>>;
+    std::unique_ptr<TreeBuilder> builder) {
+  using ResolveResult = folly::Try<facebook::eden::TreePtr>;
 
   resolver->resolve(
       index, folly::makeTryWith([&] {
         if (error.empty()) {
-          return ResolveResult{tree};
+          facebook::eden::TreePtr tree = builder->build();
+          if (tree) {
+            return ResolveResult{tree};
+          } else {
+            return ResolveResult{SaplingFetchError{"no tree found"}};
+          }
         } else {
           return ResolveResult{SaplingFetchError{std::string(error)}};
         }
