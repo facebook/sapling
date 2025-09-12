@@ -181,7 +181,10 @@ export type TrackEventName =
   | 'WarnAboutSuggestedEdits'
   | 'SaplingISLUriHandlerHandle'
   | 'CommitInfoFieldEditFieldClick'
-  | 'ReadWarmCommit';
+  | 'ReadWarmCommit'
+  | 'RecommendedBookmarksToggle'
+  | 'RecommendedBookmarksReminderShown'
+  | 'RecommendedBookmarksReminderResponse';
 
 export type TrackErrorName =
   | 'BlameError'
