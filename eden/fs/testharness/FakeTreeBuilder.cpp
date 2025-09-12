@@ -285,7 +285,7 @@ StoredTree* FakeTreeBuilder::EntryInfo::finalizeTree(
       auto [storedBlob, id] = entryInfo.finalizeBlob(builder, setReady);
       oid = id;
     }
-    treeEntries.emplace(e.first, oid, entryInfo.type);
+    treeEntries.emplace(e.first, std::move(oid), entryInfo.type);
   }
 
   auto* storedTree = builder->store_->maybePutTree(treeEntries).first;

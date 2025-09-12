@@ -79,20 +79,8 @@ dtype_t filteredEntryDtype(dtype_t mode, bool windowsSymlinksEnabled);
 
 class TreeEntry {
  public:
-  explicit TreeEntry(const ObjectId& id, TreeEntryType type)
+  explicit TreeEntry(ObjectId&& id, TreeEntryType type)
       : type_(type), id_(std::move(id)) {}
-
-  explicit TreeEntry(
-      const ObjectId& id,
-      TreeEntryType type,
-      std::optional<uint64_t> size,
-      std::optional<Hash20> contentSha1,
-      std::optional<Hash32> contentBlake3)
-      : type_(type),
-        id_(std::move(id)),
-        size_(size),
-        contentSha1_(contentSha1),
-        contentBlake3_(contentBlake3) {}
 
   explicit TreeEntry(
       ObjectId&& id,

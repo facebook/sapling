@@ -35,7 +35,7 @@ TEST(FakeObjectStore, getObjectsOfAllTypesFromStore) {
 
   // Test getTree().
   Tree::container entries1{kPathMapDefaultCaseSensitive};
-  entries1.emplace(aFilePath, fileId, TreeEntryType::REGULAR_FILE);
+  entries1.emplace(aFilePath, ObjectId{fileId}, TreeEntryType::REGULAR_FILE);
   Tree tree1(std::move(entries1), tree1Id);
   store.addTree(std::move(tree1));
   auto foundTree = store.getTree(tree1Id).get();
@@ -51,7 +51,7 @@ TEST(FakeObjectStore, getObjectsOfAllTypesFromStore) {
 
   // Test getTreeForCommit().
   Tree::container entries2{kPathMapDefaultCaseSensitive};
-  entries2.emplace(aFilePath, fileId, TreeEntryType::REGULAR_FILE);
+  entries2.emplace(aFilePath, ObjectId{fileId}, TreeEntryType::REGULAR_FILE);
   Tree tree2(std::move(entries2), tree2Id);
   store.setTreeForCommit(commId, std::move(tree2));
   auto foundTreeForCommit = store.getRootTree(commId).get();

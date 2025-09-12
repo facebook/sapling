@@ -33,11 +33,11 @@ const auto entry2Name = PathComponent{"c"};
 const auto entry3Name = PathComponent{"d"};
 const auto entry4Name = PathComponent{"e"};
 
-const auto entry0 = TreeEntry{id0, TreeEntryType::REGULAR_FILE};
-const auto entry1 = TreeEntry{id1, TreeEntryType::REGULAR_FILE};
-const auto entry2 = TreeEntry{id2, TreeEntryType::REGULAR_FILE};
-const auto entry3 = TreeEntry{id3, TreeEntryType::REGULAR_FILE};
-const auto entry4 = TreeEntry{id4, TreeEntryType::REGULAR_FILE};
+const auto entry0 = TreeEntry{ObjectId{id0}, TreeEntryType::REGULAR_FILE};
+const auto entry1 = TreeEntry{ObjectId{id1}, TreeEntryType::REGULAR_FILE};
+const auto entry2 = TreeEntry{ObjectId{id2}, TreeEntryType::REGULAR_FILE};
+const auto entry3 = TreeEntry{ObjectId{id3}, TreeEntryType::REGULAR_FILE};
+const auto entry4 = TreeEntry{ObjectId{id4}, TreeEntryType::REGULAR_FILE};
 
 const auto tree0_id = id5;
 const auto tree0 = std::make_shared<const Tree>(

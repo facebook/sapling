@@ -29,7 +29,7 @@ ObjectId testId(testIdHex);
 TEST(Tree, testFind) {
   Tree::container entries{CaseSensitivity::Insensitive};
   auto aFileName = PathComponent{"a_file"};
-  entries.emplace(aFileName, testId, TreeEntryType::REGULAR_FILE);
+  entries.emplace(aFileName, ObjectId{testId}, TreeEntryType::REGULAR_FILE);
   Tree tree(std::move(entries), testId);
 
   // Verify existent path.
@@ -63,7 +63,7 @@ TEST(Tree, testFind) {
 
 TEST(Tree, testSize) {
   auto entryType = TreeEntryType::REGULAR_FILE;
-  TreeEntry entry{testId, entryType};
+  TreeEntry entry{ObjectId{testId}, entryType};
   auto entrySize = sizeof(entry);
 
   auto numEntries = 5;

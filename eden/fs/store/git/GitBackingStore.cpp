@@ -209,7 +209,7 @@ TreePtr GitBackingStore::getTreeImpl(const ObjectId& id) {
     }
     auto entryHash = oid2Hash(git_tree_entry_id(gitEntry));
     auto name = PathComponentPiece{entryName};
-    entries.emplace(name, entryHash, fileType);
+    entries.emplace(name, std::move(entryHash), fileType);
   }
   return std::make_shared<TreePtr::element_type>(std::move(entries), id);
 }

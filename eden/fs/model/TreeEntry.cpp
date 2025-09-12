@@ -272,7 +272,8 @@ std::optional<std::pair<PathComponent, TreeEntry>> TreeEntry::deserialize(
   }
 
   return std::pair{
-      std::move(name), TreeEntry{id, (TreeEntryType)type, size, sha1, blake3}};
+      std::move(name),
+      TreeEntry{std::move(id), (TreeEntryType)type, size, sha1, blake3}};
 }
 
 } // namespace facebook::eden

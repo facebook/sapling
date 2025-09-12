@@ -63,7 +63,7 @@ FakeBackingStore::getTreeEntryForObjectId(
     TreeEntryType treeEntryType,
     const ObjectFetchContextPtr& /* context */) {
   return folly::makeSemiFuture(
-      std::make_shared<TreeEntry>(commitID, treeEntryType));
+      std::make_shared<TreeEntry>(ObjectId{commitID}, treeEntryType));
 }
 
 ImmediateFuture<BackingStore::GetRootTreeResult> FakeBackingStore::getRootTree(
@@ -250,7 +250,7 @@ FakeBackingStore::TreeEntryData::TreeEntryData(
     FakeBlobType type)
     : entry{
           PathComponent{name},
-          TreeEntry{id, treeEntryTypeFromBlobType(type)}} {}
+          TreeEntry{ObjectId{id}, treeEntryTypeFromBlobType(type)}} {}
 
 FakeBackingStore::TreeEntryData::TreeEntryData(
     folly::StringPiece name,
@@ -258,21 +258,23 @@ FakeBackingStore::TreeEntryData::TreeEntryData(
     FakeBlobType type)
     : entry{
           PathComponent{name},
-          TreeEntry{blob.second, treeEntryTypeFromBlobType(type)}} {}
+          TreeEntry{ObjectId{blob.second}, treeEntryTypeFromBlobType(type)}} {}
 
 FakeBackingStore::TreeEntryData::TreeEntryData(
     folly::StringPiece name,
     const Tree& tree)
     : entry{
           PathComponent{name},
-          TreeEntry{tree.getObjectId(), TreeEntryType::TREE}} {}
+          TreeEntry{ObjectId{tree.getObjectId()}, TreeEntryType::TREE}} {}
 
 FakeBackingStore::TreeEntryData::TreeEntryData(
     folly::StringPiece name,
     const StoredTree* tree)
     : entry{
           PathComponent{name},
-          TreeEntry{tree->get().getObjectId(), TreeEntryType::TREE}} {}
+          TreeEntry{
+              ObjectId{tree->get().getObjectId()},
+              TreeEntryType::TREE}} {}
 
 StoredTree* FakeBackingStore::putTree(
     const std::initializer_list<TreeEntryData>& entryArgs) {

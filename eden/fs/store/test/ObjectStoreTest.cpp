@@ -646,13 +646,15 @@ TEST_P(ObjectStoreTest, get_tree_with_different_sensitivities) {
   // put a tree with the correct case sensitivity
   auto treeId = putReadyTree(
       {{{PathComponent{"Bar"},
-         TreeEntry{blobOne, TreeEntryType::EXECUTABLE_FILE}}},
+         TreeEntry{ObjectId{blobOne}, TreeEntryType::EXECUTABLE_FILE}}},
        GetParam()});
 
   // put a tree with the opposite case sensitivity
   auto oppositeSensitivityTreeId = putReadyTree(
-      {{{PathComponent{"foo"}, TreeEntry{blobOne, TreeEntryType::REGULAR_FILE}},
-        {PathComponent{"Baz"}, TreeEntry{readyTreeId, TreeEntryType::TREE}}},
+      {{{PathComponent{"foo"},
+         TreeEntry{std::move(blobOne), TreeEntryType::REGULAR_FILE}},
+        {PathComponent{"Baz"},
+         TreeEntry{ObjectId{readyTreeId}, TreeEntryType::TREE}}},
        getOppositeCaseSensitivity()});
 
   // fetch the "GetParam() case sensitivity" tree from the "GetParam() case

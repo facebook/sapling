@@ -31,12 +31,12 @@ TEST_P(LocalStoreTest, testReadAndWriteTree) {
   Tree::container entries{kPathMapDefaultCaseSensitive};
   entries.emplace(
       "entry1"_pc,
-      childId1,
+      ObjectId{childId1},
       TreeEntryType::REGULAR_FILE,
       size,
       childSha1,
       childBlake3);
-  entries.emplace("entry2"_pc, childId2, TreeEntryType::REGULAR_FILE);
+  entries.emplace("entry2"_pc, ObjectId{childId2}, TreeEntryType::REGULAR_FILE);
 
   StringPiece digest("blahblah");
   auto treeDigestHash = Hash32::blake3(folly::ByteRange{digest});
@@ -79,12 +79,12 @@ TEST_P(LocalStoreTest, testReadLegacyTree) {
   Tree::container entries{kPathMapDefaultCaseSensitive};
   entries.emplace(
       "entry1"_pc,
-      childId1,
+      ObjectId{childId1},
       TreeEntryType::REGULAR_FILE,
       size,
       childSha1,
       childBlake3);
-  entries.emplace("entry2"_pc, childId2, TreeEntryType::REGULAR_FILE);
+  entries.emplace("entry2"_pc, ObjectId{childId2}, TreeEntryType::REGULAR_FILE);
 
   auto tree = Tree{std::move(entries), id};
 
