@@ -15,6 +15,7 @@
 #include <string_view>
 
 #include "eden/common/utils/PathFuncs.h"
+#include "eden/fs/model/ObjectId.h"
 #include "eden/fs/model/RootId.h"
 #include "eden/fs/store/ObjectFetchContext.h"
 #include "eden/scm/lib/backingstore/src/ffi.rs.h"
@@ -35,6 +36,7 @@ using NodeId = folly::ByteRange;
 using FetchCause = facebook::eden::ObjectFetchContext::Cause;
 using RepoPath = facebook::eden::RelativePathPiece;
 using RootId = facebook::eden::RootId;
+using ObjectId = facebook::eden::ObjectId;
 using ObjectFetchContextPtr = facebook::eden::ObjectFetchContextPtr;
 
 struct SaplingRequest {
@@ -42,6 +44,7 @@ struct SaplingRequest {
   // SaplingImportRequest - be cognizant of lifetimes.
   NodeId node;
   RepoPath path;
+  ObjectId& oid;
 
   FetchCause cause;
   ObjectFetchContextPtr context;
@@ -89,6 +92,7 @@ class SaplingNativeBackingStore {
   folly::Try<std::shared_ptr<Tree>> getTree(
       NodeId node,
       RepoPath path,
+      const ObjectId& oid,
       const ObjectFetchContextPtr& context,
       sapling::FetchMode fetch_mode);
 

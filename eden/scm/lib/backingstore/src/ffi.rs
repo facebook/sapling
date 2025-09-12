@@ -97,8 +97,9 @@ pub(crate) mod ffi {
         node: *const u8,
         cause: FetchCause,
 
+        // Only populated for get_tree_batch
         path: &'a [u8],
-
+        oid: &'a [u8],
         pid: u32,
         // TODO: mode: FetchMode
         // TODO: cri: ClientRequestInfo

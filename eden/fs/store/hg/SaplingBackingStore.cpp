@@ -761,6 +761,7 @@ SaplingBackingStore::prepareRequests(
     requests.push_back(sapling::SaplingRequest{
         importRequestsIdPair.first,
         importRequestsForId[0]->getRequest<T>()->proxyHash.path(),
+        importRequestsForId[0]->getRequest<T>()->id,
         fetchCause,
         importRequestsForId[0]->getContext().copy(),
     });
@@ -1317,6 +1318,7 @@ TreePtr SaplingBackingStore::getTreeLocal(
   auto tree = store_.getTree(
       proxyHash.byteHash(),
       proxyHash.path(),
+      edenTreeId,
       context,
       sapling::FetchMode::LocalOnly);
 
@@ -1338,6 +1340,7 @@ folly::Try<TreePtr> SaplingBackingStore::getTreeRemote(
   auto tree = store_.getTree(
       manifestId.getBytes(),
       path,
+      edenTreeId,
       context,
       sapling::FetchMode::RemoteOnly /*, sapling::ClientRequestInfo(context)*/);
 
@@ -1740,14 +1743,16 @@ folly::Try<TreePtr> SaplingBackingStore::getTreeFromBackingStore(
   if (path.empty()) {
     fetch_mode = sapling::FetchMode::LocalOnly;
   }
-  tree = store_.getTree(manifestId.getBytes(), path, context, fetch_mode);
+  tree = store_.getTree(
+      manifestId.getBytes(), path, edenTreeId, context, fetch_mode);
   if (tree.hasValue() && !tree.value() &&
       fetch_mode == sapling::FetchMode::LocalOnly) {
     // Mercurial might have just written the tree to the store. Refresh the
     // store and try again, this time allowing remote fetches.
     store_.flush();
     fetch_mode = sapling::FetchMode::AllowRemote;
-    tree = store_.getTree(manifestId.getBytes(), path, context, fetch_mode);
+    tree = store_.getTree(
+        manifestId.getBytes(), path, edenTreeId, context, fetch_mode);
   }
 
   using GetTreeResult = folly::Try<TreePtr>;

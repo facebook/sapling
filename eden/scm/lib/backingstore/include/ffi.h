@@ -9,6 +9,7 @@
 
 #include <folly/futures/Future.h>
 #include <rust/cxx.h>
+#include "eden/fs/model/ObjectId.h"
 
 namespace sapling {
 

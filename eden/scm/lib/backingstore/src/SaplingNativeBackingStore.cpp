@@ -71,6 +71,7 @@ std::optional<ManifestId> SaplingNativeBackingStore::getManifestNode(
 folly::Try<std::shared_ptr<Tree>> SaplingNativeBackingStore::getTree(
     NodeId node,
     RepoPath path,
+    const ObjectId& oid,
     const ObjectFetchContextPtr& context,
     FetchMode fetch_mode) {
   XLOGF(DBG7, "Importing tree node={} from hgcache", folly::hexlify(node));
@@ -123,6 +124,9 @@ void SaplingNativeBackingStore::getTreeBatch(
         rust::Slice<const uint8_t>{
             reinterpret_cast<const uint8_t*>(request.path.view().data()),
             request.path.view().size()},
+        rust::Slice<const uint8_t>{
+            reinterpret_cast<const uint8_t*>(request.oid.getBytes().data()),
+            request.oid.size()},
         request.context->getClientPid().valueOrZero().get(),
     });
   }
