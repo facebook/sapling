@@ -10,6 +10,7 @@ use sha1::Digest;
 use sha1::Sha1;
 use types::HgId;
 use types::RepoPathBuf;
+use types::path::PathComponent;
 
 fn hgid_from_hex(hash: &[u8]) -> [u8; HgId::len()] {
     HgId::from_hex(hash).unwrap().into_byte_array()
@@ -126,4 +127,25 @@ fn main() {
             criterion::black_box(path.depth());
         })
     });
+
+    path_depth_group.finish();
+
+    let mut validate_group = criterion.benchmark_group("PathComponent");
+
+    validate_group.bench_function("PathComponent short", |b| {
+        b.iter(|| {
+            criterion::black_box(PathComponent::from_str("foo").unwrap());
+        })
+    });
+
+    validate_group.bench_function("PathComponent long", |b| {
+        b.iter(|| {
+            criterion::black_box(
+                PathComponent::from_str("very_long_file_name_with_underscores_and_numbers_123456")
+                    .unwrap(),
+            );
+        })
+    });
+
+    validate_group.finish();
 }
