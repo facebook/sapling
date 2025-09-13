@@ -499,7 +499,7 @@ impl fmt::Display for StateChange {
     }
 }
 
-#[derive(Debug, Serialize)]
+#[derive(Debug, Serialize, PartialEq)]
 pub struct ChangeEvent {
     event_type: StateChange,
     state: String,
@@ -509,6 +509,21 @@ pub struct ChangeEvent {
 impl fmt::Display for ChangeEvent {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         write!(f, "{} {} at {}", self.event_type, self.state, self.position)
+    }
+}
+
+#[derive(Debug, PartialEq)]
+pub enum Changes {
+    ChangeEvent(ChangeEvent),
+    ChangesSince(ChangesSinceV2Result),
+}
+
+impl AsRef<JournalPosition> for Changes {
+    fn as_ref(&self) -> &JournalPosition {
+        match self {
+            Changes::ChangeEvent(change_event) => &change_event.position,
+            Changes::ChangesSince(changes_since_v2_result) => &changes_since_v2_result.to_position,
+        }
     }
 }
 
