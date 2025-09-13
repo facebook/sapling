@@ -21,4 +21,4 @@ thiserror = "2.0.12"
 [dev-dependencies]
 quickcheck = "1.0"
 sapling-types = { version = "0.1.0", path = "../types", features = ["for-tests"], default-features = false }
-tempfile = "3.15"
+tempfile = "3.22"

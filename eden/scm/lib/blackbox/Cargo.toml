@@ -32,4 +32,4 @@ serde_json = { version = "1.0.140", features = ["alloc", "float_roundtrip", "raw
 
 [dev-dependencies]
 sapling-minibench = { version = "0.1.0", path = "../minibench" }
-tempfile = "3.15"
+tempfile = "3.22"

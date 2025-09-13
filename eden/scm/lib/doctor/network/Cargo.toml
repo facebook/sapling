@@ -23,4 +23,4 @@ tracing = { version = "0.1.41", features = ["attributes", "valuable"] }
 url = "2.5.4"
 
 [dev-dependencies]
-tempfile = "3.15"
+tempfile = "3.22"
