@@ -75,21 +75,10 @@ impl Blob {
 
         let mut hasher = sha1::Sha1::new();
 
-        match self {
-            Self::Bytes(bytes) => {
-                hasher.update(bytes);
-            }
-            #[cfg(fbcode_build)]
-            Self::IOBuf(buf) => {
-                let mut cur = buf.clone().cursor();
-
-                while cur.has_remaining() {
-                    let b = cur.chunk();
-                    hasher.update(b);
-                    cur.advance(b.len());
-                }
-            }
-        }
+        let _ = self.each_chunk(|chunk| {
+            hasher.update(chunk);
+            Ok(())
+        });
 
         let bytes: [u8; Sha1::len()] = hasher.finalize().into();
         Sha1::from(bytes)
@@ -105,24 +94,35 @@ impl Blob {
 
         let mut hasher = Hasher::new_keyed(key);
 
-        match self {
-            Self::Bytes(bytes) => {
-                hasher.update(bytes);
-            }
-            #[cfg(fbcode_build)]
-            Self::IOBuf(buf) => {
-                let mut cur = buf.clone().cursor();
-
-                while cur.has_remaining() {
-                    let b = cur.chunk();
-                    hasher.update(b);
-                    cur.advance(b.len());
-                }
-            }
-        }
+        let _ = self.each_chunk(|chunk| {
+            hasher.update(chunk);
+            Ok(())
+        });
 
         let hashed_bytes: [u8; Blake3::len()] = hasher.finalize().into();
         Blake3::from(hashed_bytes)
+    }
+
+    pub fn each_chunk(
+        &self,
+        mut f: impl FnMut(&[u8]) -> std::io::Result<()>,
+    ) -> std::io::Result<()> {
+        match self {
+            Self::Bytes(bytes) => f(bytes),
+            #[cfg(fbcode_build)]
+            Self::IOBuf(buf) => {
+                let mut cur = buf.clone().cursor();
+                loop {
+                    let chunk = cur.chunk();
+                    // bytes::Buf::chunk() is documented to only return a zero length slice iff there is no more data.
+                    if chunk.is_empty() {
+                        return Ok(());
+                    }
+                    f(chunk)?;
+                    cur.advance(chunk.len());
+                }
+            }
+        }
     }
 }
 
@@ -263,5 +263,39 @@ mod test {
         b.append(Bytes::from_static(b"hello"));
         b.append(Bytes::from_static(b" there"));
         assert_eq!(b.into_blob().into_bytes(), b"hello there");
+    }
+
+    #[test]
+    fn test_each_chunk() {
+        let a = Blob::Bytes(minibytes::Bytes::from("foo"));
+
+        let mut got = Vec::new();
+        let res = a.each_chunk(|chunk| {
+            got.extend_from_slice(chunk);
+            Ok(())
+        });
+        assert_eq!(got, b"foo");
+        assert!(res.is_ok());
+
+        // Test error propagation.
+        let res = a.each_chunk(|_| Err(std::io::Error::other("oops")));
+        assert!(res.is_err());
+
+        #[cfg(fbcode_build)]
+        {
+            let mut iobuf = iobuf::IOBufShared::from("hello");
+            iobuf.append_to_end(iobuf::IOBufShared::from(""));
+            iobuf.append_to_end(iobuf::IOBufShared::from(" world!"));
+
+            let a = Blob::IOBuf(iobuf);
+
+            let mut got = Vec::new();
+            let res = a.each_chunk(|chunk| {
+                got.extend_from_slice(chunk);
+                Ok(())
+            });
+            assert_eq!(got, b"hello world!");
+            assert!(res.is_ok());
+        }
     }
 }
