@@ -100,7 +100,6 @@ impl DefaultEdenapiSenderBuilder {
             .http_config(http_config.clone())
             .http_version(HttpVersion::V11)
             .timeout(Duration::from_secs(timeout))
-            .use_bookmarks2(true)
             .build()
             .with_context(|| "building http client")?;
 

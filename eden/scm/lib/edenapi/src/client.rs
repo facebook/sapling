@@ -27,7 +27,6 @@ use edenapi_types::BlameRequest;
 use edenapi_types::BlameResult;
 use edenapi_types::BonsaiChangesetContent;
 use edenapi_types::BookmarkEntry;
-use edenapi_types::BookmarkRequest;
 use edenapi_types::BookmarkResult;
 use edenapi_types::CloudShareWorkspaceRequest;
 use edenapi_types::CloudShareWorkspaceResponse;
@@ -171,7 +170,6 @@ pub static RECENT_DOGFOODING_REQUESTS: Lazy<ExpiringBool> =
 pub mod paths {
     pub const ALTER_SNAPSHOT: &str = "snapshot/alter";
     pub const BLAME: &str = "blame";
-    pub const BOOKMARKS: &str = "bookmarks";
     pub const BOOKMARKS2: &str = "bookmarks2";
     pub const CAPABILITIES: &str = "capabilities";
     pub const CLOUD_HISTORICAL_VERSIONS: &str = "cloud/historical_versions";
@@ -1541,61 +1539,24 @@ impl SaplingRemoteApi for Client {
         bookmarks: Vec<String>,
         freshness: Option<Freshness>,
     ) -> Result<Vec<BookmarkEntry>, SaplingRemoteApiError> {
-        let request_len = bookmarks.len();
         tracing::info!("Requesting {} bookmarks", bookmarks.len());
 
-        if !self.inner.config.use_bookmarks2 && freshness.is_some() {
-            tracing::warn!(
-                "Attempting to specify freshness on legacy bookmarks endpoint implementation"
-            );
-        }
-        if self.inner.config.use_bookmarks2 {
-            let request_len = bookmarks.len();
-            let url = self.build_url(paths::BOOKMARKS2)?;
-            let bookmark_req = Bookmark2Request {
-                bookmarks,
-                freshness: freshness.unwrap_or(Freshness::MaybeStale),
-            };
-            self.log_request(&bookmark_req, "bookmarks2");
-            let bookmarks_wire = bookmark_req.to_wire();
-            let req = self
-                .configure_request(paths::BOOKMARKS2, self.inner.client.post(url))?
-                .cbor(&bookmarks_wire)
-                .map_err(SaplingRemoteApiError::RequestSerializationFailed)?;
+        let request_len = bookmarks.len();
+        let url = self.build_url(paths::BOOKMARKS2)?;
+        let bookmark_req = Bookmark2Request {
+            bookmarks,
+            freshness: freshness.unwrap_or(Freshness::MaybeStale),
+        };
 
-            let response = self
-                .fetch_vec_with_retry::<BookmarkResult>(vec![req])
-                .await?;
-            if response.len() != request_len {
-                let bookmarks = bookmarks_wire.bookmarks;
-                let message = format!(
-                    "Requested bookmarks {:?} but only got {:?}.",
-                    bookmarks, &response
-                );
-                return Err(SaplingRemoteApiError::IncompleteResponse(message));
-            }
-
-            let flattened_response = response
-                .into_iter()
-                .map(|res| {
-                    res.data.map_err(|err| {
-                        SaplingRemoteApiError::ServerError(SaplingRemoteApiServerError::new(err))
-                    })
-                })
-                .collect::<Result<Vec<BookmarkEntry>, _>>();
-            return flattened_response;
-        }
-        let url = self.build_url(paths::BOOKMARKS)?;
-        let bookmark_req = BookmarkRequest { bookmarks };
-        self.log_request(&bookmark_req, "bookmarks");
+        self.log_request(&bookmark_req, "bookmarks2");
         let bookmarks_wire = bookmark_req.to_wire();
         let req = self
-            .configure_request(paths::BOOKMARKS, self.inner.client.post(url))?
+            .configure_request(paths::BOOKMARKS2, self.inner.client.post(url))?
             .cbor(&bookmarks_wire)
             .map_err(SaplingRemoteApiError::RequestSerializationFailed)?;
 
         let response = self
-            .fetch_vec_with_retry::<BookmarkEntry>(vec![req])
+            .fetch_vec_with_retry::<BookmarkResult>(vec![req])
             .await?;
         if response.len() != request_len {
             let bookmarks = bookmarks_wire.bookmarks;
@@ -1605,7 +1566,16 @@ impl SaplingRemoteApi for Client {
             );
             return Err(SaplingRemoteApiError::IncompleteResponse(message));
         }
-        Ok(response)
+
+        let flattened_response = response
+            .into_iter()
+            .map(|res| {
+                res.data.map_err(|err| {
+                    SaplingRemoteApiError::ServerError(SaplingRemoteApiServerError::new(err))
+                })
+            })
+            .collect::<Result<Vec<BookmarkEntry>, _>>();
+        return flattened_response;
     }
 
     async fn set_bookmark(
