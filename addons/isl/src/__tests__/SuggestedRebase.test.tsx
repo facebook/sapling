@@ -7,6 +7,8 @@
 
 import {act, fireEvent, render, screen, within} from '@testing-library/react';
 import App from '../App';
+import {bookmarksDataStorage} from '../BookmarksData';
+import {writeAtom} from '../jotaiUtils';
 import {
   COMMIT,
   closeCommitInfoSidebar,
@@ -230,6 +232,11 @@ describe('Suggested Rebase button', () => {
 
   it('deselected remote bookmarks in bookmark manager hides them as suggested rebases', () => {
     act(() => {
+      writeAtom(bookmarksDataStorage, data => ({
+        ...data,
+        useRecommendedBookmark: false,
+      }));
+
       simulateCommits({
         value: [
           COMMIT('3', 'main', '000', {phase: 'public', remoteBookmarks: ['remote/main']}),

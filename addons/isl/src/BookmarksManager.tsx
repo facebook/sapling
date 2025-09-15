@@ -96,10 +96,13 @@ function BookmarksManager(_props: {dismiss: () => void}) {
   const bookmarks = useAtomValue(remoteBookmarks);
   const bookmarksData = useAtomValue(bookmarksDataStorage);
   const recommendedBookmarks = new Set(Internal.getRecommendedBookmarks?.() || []);
+  const enableRecommended =
+    useFeatureFlagSync(Internal.featureFlags?.RecommendedBookmarks) &&
+    bookmarksData.useRecommendedBookmark;
 
-  // Order recommended bookmarks first, then the rest
+  // Order recommended bookmarks first if enabled, then the rest
   const orderedBookmarks =
-    bookmarksData.useRecommendedBookmark && recommendedBookmarks.size > 0
+    enableRecommended && recommendedBookmarks.size > 0
       ? [
           ...bookmarks.filter(b => recommendedBookmarks.has(b)),
           ...bookmarks.filter(b => !recommendedBookmarks.has(b)),
@@ -357,6 +360,7 @@ function BookmarksList({
           }
           const name = typeof bookmark === 'string' ? bookmark : bookmark.name;
           const extra = typeof bookmark === 'string' ? undefined : bookmark.extra;
+          const enableRecommended = recommendedBookmarksGK && bookmarksData.useRecommendedBookmark;
           const isRecommended = recommendedBookmarksGK && recommendedBookmarks.has(name);
           const tooltip =
             typeof bookmark === 'string'
@@ -364,9 +368,7 @@ function BookmarksList({
                 ? Internal.recommendedBookmarkInfo
                 : undefined
               : bookmark.info;
-
-          const disabled =
-            kind === 'remote' && bookmarksData.useRecommendedBookmark && !isRecommended;
+          const disabled = kind === 'remote' && enableRecommended && !isRecommended;
 
           return (
             <Checkbox

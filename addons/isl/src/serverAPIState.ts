@@ -24,7 +24,11 @@ import {DEFAULT_DAYS_OF_COMMITS_TO_LOAD} from 'isl-server/src/constants';
 import {atom} from 'jotai';
 import {reuseEqualObjects} from 'shared/deepEqualExt';
 import {randomId} from 'shared/utils';
-import {type BookmarksData, bookmarksDataStorage} from './BookmarksData';
+import {
+  type BookmarksData,
+  bookmarksDataStorage,
+  recommendedBookmarksGKAtom,
+} from './BookmarksData';
 import serverAPI from './ClientToServerAPI';
 import {Internal} from './Internal';
 import {latestSuccessorsMapAtom, successionTracker} from './SuccessionTracker';
@@ -295,18 +299,26 @@ export const latestDag = atom(get => {
   const commits = get(latestCommits);
   const successorMap = get(latestSuccessorsMapAtom);
   const bookmarksData = get(bookmarksDataStorage);
+  const enableRecommended = get(recommendedBookmarksGKAtom) && bookmarksData.useRecommendedBookmark;
   const commitDag = undefined; // will be populated from `commits`
+
   const dag = Dag.fromDag(commitDag, successorMap)
     .add(
       commits.map(c => {
-        return DagCommitInfo.fromCommitInfo(filterBookmarks(bookmarksData, c));
+        return DagCommitInfo.fromCommitInfo(
+          filterBookmarks(bookmarksData, c, Boolean(enableRecommended)),
+        );
       }),
     )
     .maybeForceConnectPublic();
   return dag;
 });
 
-function filterBookmarks(bookmarksData: BookmarksData, commit: CommitInfo): CommitInfo {
+function filterBookmarks(
+  bookmarksData: BookmarksData,
+  commit: CommitInfo,
+  enableRecommended: boolean,
+): CommitInfo {
   if (commit.phase !== 'public') {
     return commit;
   }
@@ -314,10 +326,9 @@ function filterBookmarks(bookmarksData: BookmarksData, commit: CommitInfo): Comm
   const hiddenBookmarks = new Set(bookmarksData.hiddenRemoteBookmarks);
   const recommendedBookmarks = new Set(Internal.getRecommendedBookmarks?.() || []);
 
-  // Filter by recommended bookmarks or hidden remote bookmarks
+  // Show only bookmarks that are not hidden AND are recommended (unless recommended bookmarks are off)
   const bookmarkFilter = (b: string) =>
-    !hiddenBookmarks.has(b) &&
-    (!bookmarksData.useRecommendedBookmark || recommendedBookmarks.has(b));
+    !hiddenBookmarks.has(b) && (!enableRecommended || recommendedBookmarks.has(b));
 
   return {
     ...commit,

@@ -9,6 +9,8 @@ import type {StableLocationData} from './types';
 
 import {atom} from 'jotai';
 import serverAPI from './ClientToServerAPI';
+import {featureFlagLoadable} from './featureFlags';
+import {Internal} from './Internal';
 import {localStorageBackedAtom, readAtom, writeAtom} from './jotaiUtils';
 import {latestCommits} from './serverAPIState';
 import {registerDisposable} from './utils';
@@ -24,7 +26,7 @@ export type BookmarksData = {
 export const bookmarksDataStorage = localStorageBackedAtom<BookmarksData>('isl.bookmarks', {
   hiddenRemoteBookmarks: [],
   additionalStables: [],
-  useRecommendedBookmark: false,
+  useRecommendedBookmark: true,
 });
 export const hiddenRemoteBookmarksAtom = atom(get => {
   return new Set(get(bookmarksDataStorage).hiddenRemoteBookmarks);
@@ -100,4 +102,9 @@ export const recommendedBookmarksReminder = localStorageBackedAtom<{
 }>('isl.recommended-bookmarks-reminder', {
   shouldShow: true,
   lastShown: 0,
+});
+
+export const recommendedBookmarksGKAtom = atom(get => {
+  const flag = get(featureFlagLoadable(Internal.featureFlags?.RecommendedBookmarks));
+  return flag.state === 'hasData' ? flag.data : false;
 });

@@ -46,7 +46,7 @@ export const qeFlagAsync = atomFamilyWeak((name?: string) => {
   return atom(fetchQeFlag(name));
 });
 
-const featureFlagLoadable = atomFamilyWeak((name?: string) => {
+export const featureFlagLoadable = atomFamilyWeak((name?: string) => {
   return loadable(featureFlagAsync(name));
 });
 
