@@ -464,7 +464,7 @@ fn parse_common_config(
         local_path: scuba_censored_local_path,
     };
 
-    let get_blobstore = |name| -> Result<BlobConfig> {
+    let get_mutable_blobstore = |name| -> Result<BlobConfig> {
         Ok(common_storage_config
             .get(name)
             .cloned()
@@ -475,12 +475,12 @@ fn parse_common_config(
                 ))
             })?
             .convert()?
-            .blobstore)
+            .mutable_blobstore)
     };
 
     let redaction_config = common.redaction_config;
     let redaction_config = RedactionConfig {
-        blobstore: get_blobstore(&redaction_config.blobstore)?,
+        blobstore: get_mutable_blobstore(&redaction_config.blobstore)?,
         redaction_sets_location: redaction_config.redaction_sets_location,
     };
 
