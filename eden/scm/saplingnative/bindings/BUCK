@@ -36,6 +36,7 @@ rust_python_library(
         "//eden/scm/saplingnative/bindings/modules/pydrawdag:pydrawdag",
         "//eden/scm/saplingnative/bindings/modules/pyeagerepo:pyeagerepo",
         "//eden/scm/saplingnative/bindings/modules/pyedenapi:pyedenapi",
+        "//eden/scm/saplingnative/bindings/modules/pyedenfsassertedstates:pyedenfsassertedstates",
         "//eden/scm/saplingnative/bindings/modules/pyerror:pyerror",
         "//eden/scm/saplingnative/bindings/modules/pyexchange:pyexchange",
         "//eden/scm/saplingnative/bindings/modules/pyfail:pyfail",

@@ -1,0 +1,19 @@
+load("@fbcode_macros//build_defs/lib:rust_oss.bzl", "rust_oss")
+load("//eden/scm:targets.bzl", "rust_python_library")
+
+oncall("sapling")
+
+rust_python_library(
+    name = "pyedenfsassertedstates",
+    srcs = glob(["src/**/*.rs"]),
+    crate_root = "src/lib.rs",
+    features = ["fb"],
+    deps = [
+        "//eden/scm/lib/config/model:configmodel",
+        "//eden/scm/lib/cpython-ext:cpython-ext",
+    ] + ([
+        "//eden/fs/rust/edenfs-asserted-states-client:edenfs-asserted-states-client",
+    ] if not rust_oss.is_oss_build() else [
+        "fbsource//third-party/rust:anyhow",
+    ]),
+)

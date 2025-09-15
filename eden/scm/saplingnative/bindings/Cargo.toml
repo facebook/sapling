@@ -29,6 +29,7 @@ pydoctor = { version = "0.1.0", path = "modules/pydoctor" }
 pydrawdag = { version = "0.1.0", path = "modules/pydrawdag" }
 pyeagerepo = { version = "0.1.0", path = "modules/pyeagerepo" }
 pyedenapi = { version = "0.1.0", path = "modules/pyedenapi" }
+pyedenfsassertedstates = { version = "0.1.0", path = "modules/pyedenfsassertedstates" }
 pyerror = { version = "0.1.0", path = "modules/pyerror" }
 pyexchange = { version = "0.1.0", path = "modules/pyexchange" }
 pyfail = { version = "0.1.0", path = "modules/pyfail" }

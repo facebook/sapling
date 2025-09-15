@@ -232,6 +232,7 @@ members = [
   "saplingnative/bindings/modules/pydrawdag",
   "saplingnative/bindings/modules/pyeagerepo",
   "saplingnative/bindings/modules/pyedenapi",
+  "saplingnative/bindings/modules/pyedenfsassertedstates",
   "saplingnative/bindings/modules/pyerror",
   "saplingnative/bindings/modules/pyexchange",
   "saplingnative/bindings/modules/pyfail",

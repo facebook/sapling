@@ -7,10 +7,14 @@
 
 #![feature(type_alias_impl_trait)]
 
+use std::cmp::min;
 use std::collections::HashSet;
 use std::fmt;
 use std::path::Path;
 use std::path::PathBuf;
+use std::thread::sleep;
+use std::time::Duration;
+use std::time::Instant;
 
 use fs_err as fs;
 use serde::Serialize;
@@ -81,6 +85,32 @@ impl AssertedStatesClient {
                 Err(StateError::StateAlreadyAsserted(state.to_string()))
             }
             Err(ContentLockError::Io(err)) => Err(err.into()),
+        }
+    }
+
+    pub fn enter_state_with_deadline(
+        &self,
+        state: &str,
+        deadline: Duration,
+        backoff: Duration,
+    ) -> Result<ContentLockGuard, StateError> {
+        let start = Instant::now();
+        let mut current_backoff = backoff;
+        loop {
+            match self.enter_state(state) {
+                Ok(lock) => return Ok(lock),
+                Err(err) => match err {
+                    StateError::StateAlreadyAsserted(_) => {
+                        let elapsed = start.elapsed();
+                        if elapsed >= deadline {
+                            return Err(err);
+                        }
+                        sleep(current_backoff);
+                        current_backoff = min(deadline, 2 * current_backoff);
+                    }
+                    _ => return Err(err),
+                },
+            }
         }
     }
 
