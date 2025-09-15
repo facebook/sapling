@@ -1375,13 +1375,14 @@ def setup_environment_variables(stderr: BinaryIO, fs: ShellFS, env: Env) -> int:
         )
 
         env.setenv("SILENCE_SR_DEBUG_PERF_WARNING", "1")
-        env.setenv("ENABLE_LOCAL_CACHE", "1")
         env.setenv(
             "MONONOKE_INTEGRATION_TEST_EXPECTED_THRIFT_SERVER_IDENTITY",
             "MACHINE:mononoke-test-server-000.vll0.facebook.com",
         )
 
         env.setenv("MONONOKE_INTEGRATION_TEST_DISABLE_SR", "true")
+    else:
+        env.setenv("DISABLE_LOCAL_CACHE", "1")
 
     # Setting up proxy and client identity types and data
     env.setenv("PROXY_ID_TYPE", env.getenv("FB_PROXY_ID_TYPE", "X509_SUBJECT_NAME"))
@@ -1466,16 +1467,16 @@ def setup_environment_variables(stderr: BinaryIO, fs: ShellFS, env: Env) -> int:
         mononoke_just_knobs_overrides_path,
     )
 
-    # Setup cache arguments based on ENABLE_LOCAL_CACHE
-    enable_local_cache = env.getenv("ENABLE_LOCAL_CACHE")
-    if enable_local_cache:
+    # Setup cache arguments based on DISABLE_LOCAL_CACHE
+    disable_local_cache = env.getenv("DISABLE_LOCAL_CACHE")
+    if disable_local_cache:
+        cache_args = ["--cache-mode=disabled"]
+    else:
         cache_args = [
             "--cache-mode=local-only",
             "--cache-size-gb=1",
             "--cachelib-disable-cacheadmin",
         ]
-    else:
-        cache_args = ["--cache-mode=disabled"]
     all_args = " ".join(cache_args)
     env.setenv("CACHE_ARGS_U", all_args)
     env.setenv("CACHE_ARGS", "(" + all_args + ")")
