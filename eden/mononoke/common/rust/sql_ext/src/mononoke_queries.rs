@@ -98,13 +98,30 @@ macro_rules! mononoke_queries {
                 #[allow(unused_imports)]
                 use $crate::_macro_internal::*;
 
-                #[allow(dead_code)]
+                 #[allow(dead_code)]
                 pub async fn query(
                     connection: &Connection,
                     sql_query_tel: SqlQueryTelemetry,
                     $( $pname: &$ptype, )*
                     $( $lname: &[ $ltype ], )*
                 ) -> Result<Vec<($( $rtype, )*)>> {
+                    let res = query_impl(
+                        connection,
+                        sql_query_tel,
+                        $( $pname, )*
+                        $( $lname, )*
+                    )
+                    .await?;
+
+                    Ok(res.0)
+                }
+                #[allow(dead_code)]
+                async fn query_impl(
+                    connection: &Connection,
+                    sql_query_tel: SqlQueryTelemetry,
+                    $( $pname: &$ptype, )*
+                    $( $lname: &[ $ltype ], )*
+                ) -> Result<(Vec<($( $rtype, )*)>, Option<QueryTelemetry>)> {
                     let query_name = stringify!($name);
                     let shard_name = connection.shard_name();
                     query_with_retry_no_cache(
@@ -137,7 +154,7 @@ macro_rules! mononoke_queries {
                                 })?;
 
                                 log_query_telemetry(
-                                    opt_tel,
+                                    opt_tel.clone(),
                                     &sql_query_tel,
                                     granularity,
                                     repo_ids,
@@ -146,7 +163,7 @@ macro_rules! mononoke_queries {
                                 )?;
 
 
-                                Ok(res)
+                                Ok((res, opt_tel))
                             }
                         },
                         shard_name,

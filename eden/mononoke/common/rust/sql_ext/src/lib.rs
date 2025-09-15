@@ -52,6 +52,7 @@ pub mod _macro_internal {
     pub use mononoke_types::RepositoryId;
     pub use paste;
     pub use serde_json;
+    pub use sql::QueryTelemetry;
     pub use sql::WriteResult;
     pub use sql::queries;
     pub use sql_ext_proc_macros::extract_repo_ids_from_values;
