@@ -69,7 +69,7 @@ import platform from '../platform';
 import {CommitPreview, dagWithPreviews, uncommittedChangesWithPreviews} from '../previews';
 import {repoRelativeCwd, useIsIrrelevantToCwd} from '../repositoryData';
 import {selectedCommits} from '../selection';
-import {commitByHash, latestHeadCommit, repositoryInfo} from '../serverAPIState';
+import {authorString, commitByHash, latestHeadCommit, repositoryInfo} from '../serverAPIState';
 import {SplitButton} from '../stackEdit/ui/SplitButton';
 import {SubmitSelectionButton} from '../SubmitSelectionButton';
 import {SubmitUpdateMessageInput} from '../SubmitUpdateMessageInput';
@@ -706,12 +706,11 @@ function ActionsBar({
   const doAmendOrCommit = () => {
     const updatedMessage = applyEditedFields(latestMessage, editedMessage);
     const message = commitMessageFieldsToString(schema, updatedMessage);
-    const headHash = headCommit?.hash ?? '.';
     const allFiles = uncommittedChanges.map(file => file.path);
 
     const operation = isCommitMode
-      ? getCommitOperation(message, headHash, selection.selection, allFiles)
-      : getAmendOperation(message, headHash, selection.selection, allFiles);
+      ? getCommitOperation(message, headCommit, selection.selection, allFiles)
+      : getAmendOperation(message, headCommit, selection.selection, allFiles);
 
     selection.discardPartialSelections();
 
@@ -843,9 +842,17 @@ function ActionsBar({
                     return;
                   }
                 }
+
+                const intendedAuthor = readAtom(authorString);
+                const authorArg =
+                  intendedAuthor != null && commit.author !== intendedAuthor
+                    ? intendedAuthor
+                    : undefined;
+
                 const operation = new AmendMessageOperation(
                   latestSuccessorUnlessExplicitlyObsolete(commit),
                   stringifiedMessage,
+                  authorArg,
                 );
                 clearEditedCommitMessage(/* skip confirmation */ true);
                 return operation;

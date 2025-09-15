@@ -13,11 +13,12 @@ import type {
   Dag,
   UncommittedChangesPreviewContext,
 } from '../previews';
-import type {CommandArg, Hash, RepoRelativePath, UncommittedChanges} from '../types';
+import type {CommandArg, CommitInfo, Hash, RepoRelativePath, UncommittedChanges} from '../types';
 
 import {restackBehaviorAtom} from '../RestackBehavior';
 import {t} from '../i18n';
 import {readAtom} from '../jotaiUtils';
+import {authorString} from '../serverAPIState';
 import {Operation} from './Operation';
 
 export class AmendOperation extends Operation {
@@ -28,6 +29,7 @@ export class AmendOperation extends Operation {
   constructor(
     private filePathsToAmend?: Array<RepoRelativePath>,
     public message?: string,
+    public author?: string,
   ) {
     super(filePathsToAmend ? 'AmendFileSubsetOperation' : 'AmendOperation');
 
@@ -54,6 +56,10 @@ export class AmendOperation extends Operation {
           }),
         ),
       );
+    }
+
+    if (this.author) {
+      args.push('--user', this.author);
     }
     if (this.message) {
       args.push('--message', this.message);
@@ -154,16 +160,20 @@ export class PartialAmendOperation extends Operation {
 /** Choose `PartialAmendOperation` or `AmendOperation` based on input. */
 export function getAmendOperation(
   message: string | undefined,
-  originalHeadHash: Hash,
+  originalHead: CommitInfo | undefined,
   selection: PartialSelection,
   allFiles: Array<RepoRelativePath>,
 ): AmendOperation | PartialAmendOperation {
+  const originalHeadHash = originalHead?.hash ?? '.';
+  const intendedAuthor = readAtom(authorString);
+  const authorArg =
+    intendedAuthor != null && originalHead?.author !== intendedAuthor ? intendedAuthor : undefined;
   if (selection.hasChunkSelection()) {
     return new PartialAmendOperation(message, originalHeadHash, selection, allFiles);
   } else if (selection.isEverythingSelected(() => allFiles)) {
-    return new AmendOperation(undefined, message);
+    return new AmendOperation(undefined, message, authorArg);
   } else {
     const selectedFiles = allFiles.filter(path => selection.isFullyOrPartiallySelected(path));
-    return new AmendOperation(selectedFiles, message);
+    return new AmendOperation(selectedFiles, message, authorArg);
   }
 }

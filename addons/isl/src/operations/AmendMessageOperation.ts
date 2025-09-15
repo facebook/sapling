@@ -14,6 +14,7 @@ export class AmendMessageOperation extends Operation {
   constructor(
     public revset: SucceedableRevset | ExactRevset | OptimisticRevset,
     public message: string,
+    public author?: string,
   ) {
     super('AmendMessageOperation');
   }
@@ -33,6 +34,9 @@ export class AmendMessageOperation extends Operation {
 
   getArgs() {
     const args: Array<CommandArg> = ['metaedit', '--rev', this.revset, '--message', this.message];
+    if (this.author) {
+      args.push('--user', this.author);
+    }
     return args;
   }
 

@@ -12,7 +12,14 @@ import type {
   Dag,
   UncommittedChangesPreviewContext,
 } from '../previews';
-import type {ChangedFile, CommandArg, Hash, RepoRelativePath, UncommittedChanges} from '../types';
+import type {
+  ChangedFile,
+  CommandArg,
+  CommitInfo,
+  Hash,
+  RepoRelativePath,
+  UncommittedChanges,
+} from '../types';
 
 import {DagCommitInfo} from '../dag/dagCommitInfo';
 import {t} from '../i18n';
@@ -182,10 +189,11 @@ export class PartialCommitOperation extends Operation {
 /** Choose `PartialCommitOperation` or `CommitOperation` based on input. */
 export function getCommitOperation(
   message: string,
-  originalHeadHash: Hash,
+  originalHead: CommitInfo | undefined,
   selection: PartialSelection,
   allFiles: Array<RepoRelativePath>,
 ): CommitOperation | PartialCommitOperation {
+  const originalHeadHash = originalHead?.hash ?? '.';
   if (selection.hasChunkSelection()) {
     return new PartialCommitOperation(message, originalHeadHash, selection, allFiles);
   } else if (selection.isEverythingSelected(() => allFiles)) {

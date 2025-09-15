@@ -547,9 +547,8 @@ export function UncommittedChanges({place}: {place: Place}) {
     // use the template, unless a specific quick title is given
     const fields: CommitMessageFields = {...template, Title: title};
     const message = commitMessageFieldsToString(schema, fields);
-    const hash = headCommit?.hash ?? '.';
     const allFiles = uncommittedChanges.map(file => file.path);
-    const operation = getCommitOperation(message, hash, selection.selection, allFiles);
+    const operation = getCommitOperation(message, headCommit, selection.selection, allFiles);
     selection.discardPartialSelections();
     runOperation(operation);
     if (titleEl) {
@@ -829,11 +828,10 @@ export function UncommittedChanges({place}: {place: Place}) {
                     return;
                   }
 
-                  const hash = headCommit?.hash ?? '.';
                   const allFiles = uncommittedChanges.map(file => file.path);
                   const operation = getAmendOperation(
                     undefined,
-                    hash,
+                    headCommit,
                     selection.selection,
                     allFiles,
                   );
