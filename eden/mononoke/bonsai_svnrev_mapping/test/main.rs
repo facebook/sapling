@@ -5,6 +5,7 @@
  * GNU General Public License version 2.
  */
 
+use std::slice::from_ref;
 use std::sync::Arc;
 
 use anyhow::Error;
@@ -31,7 +32,7 @@ async fn test_add_and_get(fb: FacebookInit) -> Result<(), Error> {
         svnrev: SVNREV_ZERO,
     };
 
-    mapping.bulk_import(&ctx, &[entry.clone()]).await?;
+    mapping.bulk_import(&ctx, from_ref(&entry)).await?;
 
     let result = mapping
         .get(&ctx, BonsaisOrSvnrevs::Bonsai(vec![bonsai::ONES_CSID]))

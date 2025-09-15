@@ -5,6 +5,7 @@
  * GNU General Public License version 2.
  */
 
+use std::slice::from_ref;
 use std::sync::Arc;
 use std::sync::atomic::AtomicUsize;
 use std::sync::atomic::Ordering;
@@ -115,7 +116,7 @@ async fn test_add_and_get(fb: FacebookInit) -> Result<(), Error> {
         git_sha1: ONES_GIT_SHA1,
     };
 
-    mapping.bulk_add(&ctx, &[entry.clone()]).await?;
+    mapping.bulk_add(&ctx, from_ref(&entry)).await?;
 
     let result = mapping
         .get(&ctx, BonsaisOrGitShas::Bonsai(vec![bonsai::ONES_CSID]))
@@ -144,8 +145,8 @@ async fn test_add_duplicate(fb: FacebookInit) -> Result<(), Error> {
         git_sha1: ONES_GIT_SHA1,
     };
 
-    mapping.bulk_add(&ctx, &[entry.clone()]).await?;
-    mapping.bulk_add(&ctx, &[entry.clone()]).await?;
+    mapping.bulk_add(&ctx, from_ref(&entry)).await?;
+    mapping.bulk_add(&ctx, from_ref(&entry)).await?;
 
     let result = mapping
         .get_git_sha1_from_bonsai(&ctx, bonsai::ONES_CSID)
@@ -167,7 +168,7 @@ async fn test_add_conflict(fb: FacebookInit) -> Result<(), Error> {
         git_sha1: ONES_GIT_SHA1,
     };
 
-    mapping.bulk_add(&ctx, &[entry.clone()]).await?;
+    mapping.bulk_add(&ctx, from_ref(&entry)).await?;
 
     let entries = vec![
         BonsaiGitMappingEntry {
@@ -276,7 +277,7 @@ async fn test_add_with_transaction(fb: FacebookInit) -> Result<(), Error> {
 
     let txn = conn.start_transaction(ctx.sql_query_telemetry()).await?;
     mapping
-        .bulk_add_git_mapping_in_transaction(&ctx, &[entry1.clone()], txn)
+        .bulk_add_git_mapping_in_transaction(&ctx, from_ref(&entry1), txn)
         .await?
         .commit()
         .await?;
@@ -290,7 +291,7 @@ async fn test_add_with_transaction(fb: FacebookInit) -> Result<(), Error> {
 
     let txn = conn.start_transaction(ctx.sql_query_telemetry()).await?;
     mapping
-        .bulk_add_git_mapping_in_transaction(&ctx, &[entry2.clone()], txn)
+        .bulk_add_git_mapping_in_transaction(&ctx, from_ref(&entry2), txn)
         .await?
         .commit()
         .await?;

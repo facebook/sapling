@@ -5,6 +5,7 @@
  * GNU General Public License version 2.
  */
 
+use std::slice::from_ref;
 use std::sync::Arc;
 
 use anyhow::Error;
@@ -40,7 +41,7 @@ async fn test_add_and_get(fb: FacebookInit) -> Result<(), Error> {
         globalrev: GLOBALREV_ZERO,
     };
 
-    mapping.bulk_import(&ctx, &[entry.clone()]).await?;
+    mapping.bulk_import(&ctx, from_ref(&entry)).await?;
 
     let result: Vec<_> = mapping
         .get(&ctx, BonsaisOrGlobalrevs::Bonsai(vec![bonsai::ONES_CSID]))
@@ -112,14 +113,14 @@ async fn test_get_max(fb: FacebookInit) -> Result<(), Error> {
         bcs_id: bonsai::ONES_CSID,
         globalrev: GLOBALREV_ZERO,
     };
-    mapping.bulk_import(&ctx, &[e0.clone()]).await?;
+    mapping.bulk_import(&ctx, from_ref(&e0)).await?;
     assert_eq!(Some(GLOBALREV_ZERO), mapping.get_max(&ctx).await?);
 
     let e1 = BonsaiGlobalrevMappingEntry {
         bcs_id: bonsai::TWOS_CSID,
         globalrev: GLOBALREV_ONE,
     };
-    mapping.bulk_import(&ctx, &[e1.clone()]).await?;
+    mapping.bulk_import(&ctx, from_ref(&e1)).await?;
     assert_eq!(Some(GLOBALREV_ONE), mapping.get_max(&ctx).await?);
 
     Ok(())
@@ -148,7 +149,7 @@ async fn test_add_globalrevs(fb: FacebookInit) -> Result<(), Error> {
     };
 
     let txn = conn.start_transaction(ctx.sql_query_telemetry()).await?;
-    let txn = add_globalrevs(&ctx, txn, REPO_ZERO, &[e0.clone()]).await?;
+    let txn = add_globalrevs(&ctx, txn, REPO_ZERO, from_ref(&e0)).await?;
     txn.commit().await?;
 
     assert_eq!(
@@ -159,7 +160,7 @@ async fn test_add_globalrevs(fb: FacebookInit) -> Result<(), Error> {
     );
 
     let txn = conn.start_transaction(ctx.sql_query_telemetry()).await?;
-    let txn = add_globalrevs(&ctx, txn, REPO_ZERO, &[e1.clone()]).await?;
+    let txn = add_globalrevs(&ctx, txn, REPO_ZERO, from_ref(&e1)).await?;
     txn.commit().await?;
 
     assert_eq!(
@@ -176,7 +177,7 @@ async fn test_add_globalrevs(fb: FacebookInit) -> Result<(), Error> {
         .start_transaction(ctx_new.sql_query_telemetry())
         .await?;
     let res = async move {
-        let txn = add_globalrevs(&ctx_new, txn, REPO_ZERO, &[e1.clone()]).await?;
+        let txn = add_globalrevs(&ctx_new, txn, REPO_ZERO, from_ref(&e1)).await?;
         txn.commit().await?;
         Result::<_, AddGlobalrevsErrorKind>::Ok(())
     }
@@ -441,7 +442,7 @@ async fn test_globalrev_gaps(fb: FacebookInit) -> Result<(), Error> {
         globalrev: GLOBALREV_FOUR,
     };
 
-    mapping.bulk_import(&ctx, &[e4.clone()]).await?;
+    mapping.bulk_import(&ctx, from_ref(&e4)).await?;
     assert_eq!(Some(GLOBALREV_FOUR), mapping.get_max(&ctx).await?);
     let result: Vec<_> = caching
         .get(&ctx, BonsaisOrGlobalrevs::Globalrev(vec![GLOBALREV_THREE]))

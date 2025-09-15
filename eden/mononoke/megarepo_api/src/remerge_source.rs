@@ -5,6 +5,7 @@
  * GNU General Public License version 2.
  */
 
+use std::slice::from_ref;
 use std::sync::Arc;
 
 use anyhow::anyhow;
@@ -104,7 +105,7 @@ impl<'a, R: MononokeRepo> RemergeSource<'a, R> {
             .create_move_commits(
                 ctx,
                 target_repo.repo(),
-                &[source_config.clone()],
+                from_ref(source_config),
                 new_remapping_state.get_all_latest_synced_changesets(),
             )
             .await?;
