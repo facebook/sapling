@@ -20,6 +20,9 @@ to support SCM-aware subscriptions:
 https://facebook.github.io/watchman/docs/scm-query.html.
 """
 
+import contextlib
+
+from bindings import edenfsassertedstates
 from sapling import extensions, filemerge, merge, perftrace, util
 from sapling.i18n import _
 
@@ -53,6 +56,14 @@ def reposetup(ui, repo):
     # Ensure there is a Watchman client associated with the repo that
     # state_update() can use later.
     watchmanclient.createclientforrepo(repo)
+    if (
+        "eden" in repo.requirements
+        and ui.configbool("experimental", "enable-edenfs-asserted-states")
+        and not hasattr(repo, "_asserted_states_client")
+    ):
+        repo._asserted_states_client = edenfsassertedstates.AssertedStatesClient(
+            repo.root
+        )
 
     class hgeventsrepo(repo.__class__):
         def wlocknostateupdate(self, *args, **kwargs):
@@ -77,10 +88,27 @@ def reposetup(ui, repo):
                     with perftrace.trace("Watchman State Exit"):
                         l.stateupdate.exit()
                     l.stateupdate = None
+                if hasattr(l, "edenfs_asserted_state"):
+                    del l.edenfs_asserted_state
 
             try:
                 l.stateupdate = None
                 l.stateupdate = watchmanclient.state_update(self, name="hg.transaction")
+                l.edenfs_asserted_state = None
+                if "eden" in repo.requirements and self.ui.configbool(
+                    "experimental", "enable-edenfs-asserted-states"
+                ):
+                    l.edenfs_asserted_state = (
+                        repo._asserted_states_client.enter_state_with_deadline(
+                            "hg.transaction",
+                            self.ui.configwith(
+                                str, "edenfs", "eden-state-timeout", default="1s"
+                            ),
+                            self.ui.configwith(
+                                str, "devel", "lock_backoff", default="0.1s"
+                            ),
+                        )
+                    )
                 with perftrace.trace("Watchman State Enter"):
                     l.stateupdate.enter()
                 l.releasefn = staterelease
@@ -122,6 +150,25 @@ def wrapmerge(
     oldnode = to_repo["."].node()
     newnode = to_repo[node].node()
     distance = watchmanclient.calcdistance(to_repo, oldnode, newnode)
+    if (
+        "eden" in to_repo.requirements
+        and to_repo.ui.configbool("experimental", "enable-edenfs-asserted-states")
+        and hasattr(to_repo, "_asserted_states_client")
+    ):
+        try:
+            cm = to_repo._asserted_states_client.enter_state_with_deadline(
+                "hg.update",
+                to_repo.ui.configwith(
+                    str, "edenfs", "eden-state-timeout", default="1s"
+                ),
+                to_repo.ui.configwith(str, "devel", "lock_backoff", default="0.1s"),
+            )
+        except:
+            # For now, log and ignore errors.
+            to_repo.ui.warn("Failed to set edenfs notifications state 'hg.update'")
+            cm = contextlib.nullcontext()
+    else:
+        cm = contextlib.nullcontext()
 
     with watchmanclient.state_update(
         to_repo,
@@ -131,13 +178,14 @@ def wrapmerge(
         distance=distance,
         metadata={"merge": True},
     ):
-        return orig(
-            to_repo,
-            node,
-            wc=wc,
-            from_repo=from_repo,
-            **kwargs,
-        )
+        with cm:
+            return orig(
+                to_repo,
+                node,
+                wc=wc,
+                from_repo=from_repo,
+                **kwargs,
+            )
 
 
 def wrapgoto(
@@ -152,6 +200,23 @@ def wrapgoto(
     oldnode = repo["."].node()
     newnode = repo[node].node()
     distance = watchmanclient.calcdistance(repo, oldnode, newnode)
+    if (
+        "eden" in repo.requirements
+        and repo.ui.configbool("experimental", "enable-edenfs-asserted-states")
+        and hasattr(repo, "_asserted_states_client")
+    ):
+        try:
+            cm = repo._asserted_states_client.enter_state_with_deadline(
+                "hg.update",
+                repo.ui.configwith(str, "edenfs", "eden-state-timeout", default="1s"),
+                repo.ui.configwith(str, "devel", "lock_backoff", default="0.1s"),
+            )
+        except:
+            # For now, log and ignore errors.
+            repo.ui.warn("Failed to set edenfs notifications state 'hg.update'")
+            cm = contextlib.nullcontext()
+    else:
+        cm = contextlib.nullcontext()
 
     with watchmanclient.state_update(
         repo,
@@ -161,7 +226,8 @@ def wrapgoto(
         distance=distance,
         metadata={"merge": False},
     ):
-        return orig(repo, node, force=force, updatecheck=updatecheck, **kwargs)
+        with cm:
+            return orig(repo, node, force=force, updatecheck=updatecheck, **kwargs)
 
 
 def _xmerge(origfunc, repo, mynode, orig, fcd, fco, fca, toolconf, files, labels=None):
