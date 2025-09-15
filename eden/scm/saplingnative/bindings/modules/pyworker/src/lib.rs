@@ -148,9 +148,9 @@ fn update(state: &WriterState, key: Key, flag: UpdateFlag) -> Result<usize> {
         .store
         .get_content(FetchContext::default(), &key.path, key.hgid)?;
 
-    let content = redact_if_needed(content.into_bytes());
+    let content = redact_if_needed(content);
 
-    state.working_copy.write(&key.path, &content, flag)
+    state.working_copy.write(&key.path, content, flag)
 }
 
 fn threaded_writer(

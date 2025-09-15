@@ -42,6 +42,7 @@ rust_library(
         "fbsource//third-party/rust:thiserror",
         "fbsource//third-party/rust:tokio",
         "fbsource//third-party/rust:tracing",
+        "//eden/scm/lib/blob:blob",
         "//eden/scm/lib/fsinfo:fsinfo",
         "//eden/scm/lib/identity:identity",
         "//eden/scm/lib/minibytes:minibytes",

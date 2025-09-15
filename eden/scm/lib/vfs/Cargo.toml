@@ -14,6 +14,7 @@ name = "vfs"
 
 [dependencies]
 anyhow = "1.0.98"
+blob = { version = "0.1.0", path = "../blob" }
 crossbeam = "0.8"
 dashmap = { version = "5.5.3", features = ["rayon", "serde"] }
 fs-err = { version = "3", features = ["tokio"] }

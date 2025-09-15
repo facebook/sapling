@@ -158,7 +158,7 @@ pub struct CheckoutStats {
 }
 
 enum Work {
-    Write(Key, Bytes, UpdateFlag, Option<UpdateFlag>),
+    Write(Key, blob::Blob, UpdateFlag, Option<UpdateFlag>),
     SetExec(RepoPathBuf, bool),
     Remove(RepoPathBuf),
 }
@@ -315,9 +315,10 @@ impl CheckoutPlan {
                             Work::Write(key, data, flag, from_flag) => {
                                 if matches!(from_flag, Some(UpdateFlag::Symlink)) {
                                     // Take special care if we are writing over a symlink.
-                                    vfs.rewrite_symlink(&key.path, data, *flag).map(|_| ())
+                                    vfs.rewrite_symlink(&key.path, data.clone(), *flag)
+                                        .map(|_| ())
                                 } else {
-                                    vfs.write(&key.path, data, *flag).map(|_| ())
+                                    vfs.write(&key.path, data.clone(), *flag).map(|_| ())
                                 }
                             }
                             Work::SetExec(path, exec) => {
@@ -353,10 +354,12 @@ impl CheckoutPlan {
 
             // Read loop for writer threads.
             for path in &self.remove {
-                tx.send(Work::Remove(path.to_owned()))?;
+                tx.send(Work::Remove(path.to_owned()))
+                    .map_err(|_| anyhow!("remove send failed"))?;
             }
             for action in &self.update_meta {
-                tx.send(Work::SetExec(action.path.to_owned(), action.set_x_flag))?;
+                tx.send(Work::SetExec(action.path.to_owned(), action.set_x_flag))
+                    .map_err(|_| anyhow!("update_meta send failed"))?;
             }
             for entry in fetch_data_iter {
                 let (key, data) = match entry {
@@ -368,7 +371,7 @@ impl CheckoutPlan {
                     Ok(v) => v,
                 };
 
-                let data = redact_if_needed(data.into_bytes());
+                let data = redact_if_needed(data);
 
                 let action = actions
                     .get(&key)
@@ -379,16 +382,17 @@ impl CheckoutPlan {
                     data,
                     flag,
                     action.from_file_type.as_ref().map(type_to_flag),
-                ))?;
+                ))
+                .map_err(|_| anyhow!("write send failed"))?;
             }
             drop(tx);
 
             // Error.
             if fail::eval("checkout-post-progress", |_| ()).is_some() {
-                err_tx.send((
+                let _ = err_tx.send((
                     None,
                     anyhow::format_err!("Error set by checkout-post-progress FAILPOINTS"),
-                ))?;
+                ));
             }
             drop(err_tx);
 
@@ -1823,7 +1827,11 @@ mod test {
         let path = tempdir.path().to_path_buf().join("updateprogress");
         let mut progress = CheckoutProgress::new(&path, vfs.clone())?;
         let file_path = RepoPathBuf::from_string("file".to_string())?;
-        vfs.write(file_path.as_repo_path(), &[0b0, 0b01], UpdateFlag::Regular)?;
+        vfs.write(
+            file_path.as_repo_path(),
+            Blob::from_static(&[0b0, 0b01]),
+            UpdateFlag::Regular,
+        )?;
         let id = hgid(1);
         progress.record_writes(&[(id, file_path.clone())]);
 
@@ -1926,7 +1934,7 @@ mod test {
         for (path, meta) in files {
             let flag = type_to_flag(&meta.file_type);
             let data = hgid_file(&meta.hgid);
-            vfs.write(path.as_repo_path(), &data, flag)?;
+            vfs.write(path.as_repo_path(), data.into(), flag)?;
         }
         Ok(())
     }

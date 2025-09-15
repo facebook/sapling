@@ -23,9 +23,9 @@ pub fn is_redacted(data: &Blob) -> bool {
     data == &Blob::from(Bytes::from_static(REDACTED_CONTENT))
 }
 
-pub fn redact_if_needed(data: Bytes) -> Bytes {
-    if is_redacted(&data.clone().into()) {
-        Bytes::from_static(REDACTED_MESSAGE)
+pub fn redact_if_needed(data: Blob) -> Blob {
+    if is_redacted(&data) {
+        Blob::from_static(REDACTED_MESSAGE)
     } else {
         data
     }

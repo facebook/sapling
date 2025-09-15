@@ -163,7 +163,7 @@ impl VFS {
     fn write_mode(
         &self,
         filepath: &Path,
-        content: &[u8],
+        content: blob::Blob,
         #[allow(unused_variables)] exec: bool,
     ) -> Result<usize> {
         let mut options = OpenOptions::new();
@@ -191,8 +191,12 @@ impl VFS {
             }
         }
 
-        f.write_all(content)?;
-        Ok(content.len())
+        let mut total = 0;
+        content.each_chunk(|chunk| {
+            total += chunk.len();
+            f.write_all(chunk)
+        })?;
+        Ok(total)
     }
 
     #[cfg(unix)]
@@ -250,8 +254,10 @@ impl VFS {
     }
 
     /// Write a symlink file at `filepath`. The destination is represented by `content`.
-    fn write_symlink(&self, filepath: &Path, content: &[u8]) -> Result<usize> {
-        let link_dest = Path::new(std::str::from_utf8(content)?);
+    fn write_symlink(&self, filepath: &Path, content: blob::Blob) -> Result<usize> {
+        // This is zero-copy assuming blob contains a Bytes.
+        let content = content.to_bytes();
+        let link_dest = Path::new(std::str::from_utf8(content.as_ref())?);
 
         self.symlink(filepath, link_dest)?;
         Ok(filepath.as_os_str().len())
@@ -259,7 +265,7 @@ impl VFS {
 
     /// Overwrite the content of the file at `path` with `data`. The number of bytes written on
     /// disk will be returned.
-    fn write_inner(&self, path: &RepoPath, data: &[u8], flags: UpdateFlag) -> Result<usize> {
+    fn write_inner(&self, path: &RepoPath, data: blob::Blob, flags: UpdateFlag) -> Result<usize> {
         let filepath = self.inner.auditor.audit(path)?;
 
         match flags {
@@ -272,9 +278,9 @@ impl VFS {
     /// Overwrite content of the file, try to clear conflicts if attempt fails
     ///
     /// Return an error if fails to overwrite after clearing conflicts, or if clear conflicts fail
-    pub fn write(&self, path: &RepoPath, data: &[u8], flag: UpdateFlag) -> Result<usize> {
+    pub fn write(&self, path: &RepoPath, data: blob::Blob, flag: UpdateFlag) -> Result<usize> {
         // Fast path: let's try to open the file directly, we'll handle the failure only if this fails.
-        match self.write_inner(path, data, flag) {
+        match self.write_inner(path, data.clone(), flag) {
             Ok(size) => Ok(size),
             Err(e) => {
                 // Ideally, we shouldn't need to retry for some failures, but this is the slow path, any
@@ -321,7 +327,12 @@ impl VFS {
     /// Rewrite over a symlink that already exists.
     ///
     /// Care is taken to not accidentally write _through_ the symlink.
-    pub fn rewrite_symlink(&self, path: &RepoPath, data: &[u8], flag: UpdateFlag) -> Result<usize> {
+    pub fn rewrite_symlink(
+        &self,
+        path: &RepoPath,
+        data: blob::Blob,
+        flag: UpdateFlag,
+    ) -> Result<usize> {
         if !cfg!(unix) {
             // unix supports O_NOFOLLOW when opening. For Windows, just remove the file first.
             let filepath = self.inner.auditor.audit(path)?;
@@ -392,6 +403,8 @@ impl VFS {
 mod unix_tests {
     use std::fs;
 
+    use blob::Blob;
+
     use super::*;
 
     #[test]
@@ -399,8 +412,10 @@ mod unix_tests {
         let tmp = tempfile::tempdir().unwrap();
         let vfs = VFS::new(tmp.path().to_path_buf()).unwrap();
         let path = RepoPath::from_str("a").unwrap();
-        vfs.write(path, b"abc", UpdateFlag::Symlink).unwrap();
-        vfs.write(path, &[1, 2, 3], UpdateFlag::Regular).unwrap();
+        vfs.write(path, Blob::from_static(b"abc"), UpdateFlag::Symlink)
+            .unwrap();
+        vfs.write(path, Blob::from_static(&[1, 2, 3]), UpdateFlag::Regular)
+            .unwrap();
         let metadata = fs::symlink_metadata(vfs.join(path)).unwrap();
         assert!(metadata.file_type().is_file())
     }
@@ -413,8 +428,10 @@ mod unix_tests {
         let dir = RepoPath::from_str("a").unwrap();
         let file = RepoPath::from_str("a/b").unwrap();
 
-        vfs.write(dir, b"abc", UpdateFlag::Symlink).unwrap();
-        vfs.write(file, &[1, 2, 3], UpdateFlag::Regular).unwrap();
+        vfs.write(dir, Blob::from_static(b"abc"), UpdateFlag::Symlink)
+            .unwrap();
+        vfs.write(file, Blob::from_static(&[1, 2, 3]), UpdateFlag::Regular)
+            .unwrap();
         let metadata = fs::symlink_metadata(vfs.join(file)).unwrap();
         assert!(metadata.file_type().is_file())
     }
@@ -424,7 +441,8 @@ mod unix_tests {
         let tmp = tempfile::tempdir().unwrap();
         let vfs = VFS::new(tmp.path().to_path_buf()).unwrap();
         let path = RepoPath::from_str("a").unwrap();
-        vfs.write(path, b"abc", UpdateFlag::Symlink).unwrap();
+        vfs.write(path, Blob::from_static(b"abc"), UpdateFlag::Symlink)
+            .unwrap();
         let buf = vfs.read(path).unwrap();
         assert_eq!(buf, b"abc")
     }
@@ -436,9 +454,10 @@ mod unix_tests {
         let tmp = tempfile::tempdir().unwrap();
         let vfs = VFS::new(tmp.path().to_path_buf()).unwrap();
         let path = RepoPath::from_str("a").unwrap();
-        vfs.write(path, "abc".as_bytes(), UpdateFlag::Executable)
+        vfs.write(path, Blob::from_static(b"abc"), UpdateFlag::Executable)
             .unwrap();
-        vfs.write(path, &[1, 2, 3], UpdateFlag::Regular).unwrap();
+        vfs.write(path, Blob::from_static(&[1, 2, 3]), UpdateFlag::Regular)
+            .unwrap();
         let mut buf = tmp.path().to_path_buf();
         buf.push("a");
         let metadata = fs::symlink_metadata(buf).unwrap();

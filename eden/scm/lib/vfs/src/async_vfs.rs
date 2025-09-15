@@ -122,7 +122,7 @@ fn execute_action(vfs: &VFS, action: Action) -> Result<ActionResult> {
     let mut remove_errors = Vec::new();
 
     match action {
-        Action::Write(path, data, flag) => bytes_written += vfs.write(&path, &data, flag)?,
+        Action::Write(path, data, flag) => bytes_written += vfs.write(&path, data.into(), flag)?,
         Action::Remove(path) => {
             if let Err(err) = vfs.remove(&path) {
                 remove_errors.push((path, err));

@@ -51,6 +51,7 @@ rust_library(
         "fbsource//third-party/rust:toml",
         "fbsource//third-party/rust:tracing",
         "//eden/scm/lib/async-runtime:async-runtime",
+        "//eden/scm/lib/blob:blob",
         "//eden/scm/lib/config/model:configmodel",
         "//eden/scm/lib/context:context",
         "//eden/scm/lib/dag:dag",

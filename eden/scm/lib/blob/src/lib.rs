@@ -21,6 +21,10 @@ pub enum Blob {
 }
 
 impl Blob {
+    pub const fn from_static(data: &'static [u8]) -> Self {
+        Self::Bytes(minibytes::Bytes::from_static(data))
+    }
+
     pub fn to_bytes(&self) -> minibytes::Bytes {
         match self {
             Self::Bytes(bytes) => bytes.clone(),
@@ -123,6 +127,12 @@ impl Blob {
                 }
             }
         }
+    }
+}
+
+impl From<Vec<u8>> for Blob {
+    fn from(value: Vec<u8>) -> Self {
+        Self::Bytes(value.into())
     }
 }
 
