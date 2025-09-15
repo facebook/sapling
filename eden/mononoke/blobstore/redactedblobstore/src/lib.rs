@@ -19,7 +19,6 @@ use blobstore::Blobstore;
 use blobstore::BlobstoreGetData;
 use blobstore::BlobstoreIsPresent;
 use blobstore::BlobstorePutOps;
-use blobstore::BlobstoreUnlinkOps;
 use blobstore::OverwriteStatus;
 use blobstore::PutBehaviour;
 use context::CoreContext;
@@ -233,6 +232,11 @@ impl<B: Blobstore> Blobstore for RedactedBlobstoreInner<B> {
         self.access_blobstore(ctx, &new_key, config::PUT_OPERATION)?;
         blobstore.copy(ctx, old_key, new_key).await
     }
+
+    async fn unlink<'a>(&'a self, ctx: &'a CoreContext, key: &'a str) -> Result<()> {
+        let blobstore = self.access_blobstore(ctx, key, config::PUT_OPERATION)?;
+        blobstore.unlink(ctx, key).await
+    }
 }
 
 #[async_trait]
@@ -255,14 +259,6 @@ impl<B: BlobstorePutOps> BlobstorePutOps for RedactedBlobstoreInner<B> {
     ) -> Result<OverwriteStatus> {
         let blobstore = self.access_blobstore(ctx, &key, config::PUT_OPERATION)?;
         blobstore.put_with_status(ctx, key, value).await
-    }
-}
-
-#[async_trait]
-impl<B: BlobstoreUnlinkOps> BlobstoreUnlinkOps for RedactedBlobstoreInner<B> {
-    async fn unlink<'a>(&'a self, ctx: &'a CoreContext, key: &'a str) -> Result<()> {
-        let blobstore = self.access_blobstore(ctx, key, config::PUT_OPERATION)?;
-        blobstore.unlink(ctx, key).await
     }
 }
 
@@ -290,6 +286,10 @@ impl<B: Blobstore> Blobstore for RedactedBlobstore<B> {
     ) -> Result<BlobstoreIsPresent> {
         self.inner.is_present(ctx, key).await
     }
+
+    async fn unlink<'a>(&'a self, ctx: &'a CoreContext, key: &'a str) -> Result<()> {
+        self.inner.unlink(ctx, key).await
+    }
 }
 
 #[async_trait]
@@ -312,13 +312,6 @@ impl<B: BlobstorePutOps> BlobstorePutOps for RedactedBlobstore<B> {
         value: BlobstoreBytes,
     ) -> Result<OverwriteStatus> {
         self.inner.put_with_status(ctx, key, value).await
-    }
-}
-
-#[async_trait]
-impl<B: BlobstoreUnlinkOps> BlobstoreUnlinkOps for RedactedBlobstore<B> {
-    async fn unlink<'a>(&'a self, ctx: &'a CoreContext, key: &'a str) -> Result<()> {
-        self.inner.unlink(ctx, key).await
     }
 }
 

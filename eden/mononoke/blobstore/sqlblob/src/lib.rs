@@ -40,7 +40,6 @@ use blobstore::BlobstoreGetData;
 use blobstore::BlobstoreIsPresent;
 use blobstore::BlobstoreMetadata;
 use blobstore::BlobstorePutOps;
-use blobstore::BlobstoreUnlinkOps;
 use blobstore::CountedBlobstore;
 use blobstore::OverwriteStatus;
 use blobstore::PutBehaviour;
@@ -639,6 +638,16 @@ impl Blobstore for Sqlblob {
             )
             .await
     }
+
+    async fn unlink<'a>(&'a self, ctx: &'a CoreContext, key: &'a str) -> Result<()> {
+        if !self.data_store.is_present(ctx, key).await? {
+            bail!(
+                "Sqlblob::unlink: key {} does not exist in the blobstore",
+                key
+            )
+        };
+        self.data_store.unlink(ctx, key).await
+    }
 }
 
 #[async_trait]
@@ -784,19 +793,6 @@ impl BlobstorePutOps for Sqlblob {
         value: BlobstoreBytes,
     ) -> Result<OverwriteStatus> {
         self.put_explicit(ctx, key, value, self.put_behaviour).await
-    }
-}
-
-#[async_trait]
-impl BlobstoreUnlinkOps for Sqlblob {
-    async fn unlink<'a>(&'a self, ctx: &'a CoreContext, key: &'a str) -> Result<()> {
-        if !self.data_store.is_present(ctx, key).await? {
-            bail!(
-                "Sqlblob::unlink: key {} does not exist in the blobstore",
-                key
-            )
-        };
-        self.data_store.unlink(ctx, key).await
     }
 }
 

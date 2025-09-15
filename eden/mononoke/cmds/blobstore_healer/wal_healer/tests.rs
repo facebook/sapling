@@ -60,6 +60,12 @@ impl Blobstore for GoodBlob {
         let bytes = inner.get(key).map(|bytes| bytes.clone().into());
         Ok(bytes)
     }
+
+    async fn unlink<'a>(&'a self, _ctx: &'a CoreContext, key: &'a str) -> Result<()> {
+        let mut inner = self.inner.lock().expect("lock poison");
+        inner.remove(key);
+        Ok(())
+    }
 }
 
 #[derive(Clone, Debug)]
@@ -88,6 +94,10 @@ impl Blobstore for FailingBlob {
         _key: &'a str,
     ) -> Result<Option<BlobstoreGetData>> {
         anyhow::bail!("Failed get!");
+    }
+
+    async fn unlink<'a>(&'a self, _ctx: &'a CoreContext, _key: &'a str) -> Result<()> {
+        anyhow::bail!("Failed unlink!");
     }
 }
 

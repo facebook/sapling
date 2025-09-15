@@ -24,7 +24,6 @@ use blobstore::BlobstoreKeyParam;
 use blobstore::BlobstoreKeySource;
 use blobstore::BlobstoreMetadata;
 use blobstore::BlobstorePutOps;
-use blobstore::BlobstoreUnlinkOps;
 use blobstore::OverwriteStatus;
 use blobstore::PutBehaviour;
 use context::CoreContext;
@@ -234,10 +233,7 @@ impl Blobstore for Fileblob {
         })
         .await??)
     }
-}
 
-#[async_trait]
-impl BlobstoreUnlinkOps for Fileblob {
     async fn unlink<'a>(&'a self, _ctx: &'a CoreContext, key: &'a str) -> Result<()> {
         let path = self.path(key);
         Ok(remove_file(path).await?)

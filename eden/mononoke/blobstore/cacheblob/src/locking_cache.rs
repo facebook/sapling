@@ -252,6 +252,10 @@ where
             self.blobstore.is_present(ctx, key).await
         }
     }
+
+    async fn unlink<'a>(&'a self, ctx: &'a CoreContext, key: &'a str) -> Result<()> {
+        self.blobstore.unlink(ctx, key).await
+    }
 }
 
 #[async_trait]

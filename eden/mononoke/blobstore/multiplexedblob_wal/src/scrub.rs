@@ -17,7 +17,6 @@ use blobstore::BlobstoreBytes;
 use blobstore::BlobstoreGetData;
 use blobstore::BlobstoreIsPresent;
 use blobstore::BlobstorePutOps;
-use blobstore::BlobstoreUnlinkOps;
 use blobstore::OverwriteStatus;
 use blobstore::PutBehaviour;
 use blobstore_stats::OperationType;
@@ -84,7 +83,7 @@ impl WalMultiplexedBlobstore {
 #[derive(Clone, Debug)]
 pub struct WalScrubBlobstore {
     inner: WalMultiplexedBlobstore,
-    all_blobstores: Arc<HashMap<BlobstoreId, Arc<dyn BlobstoreUnlinkOps>>>,
+    all_blobstores: Arc<HashMap<BlobstoreId, Arc<dyn BlobstorePutOps>>>,
     scrub_options: ScrubOptions,
     scrub_handler: Arc<dyn ScrubHandler>,
 }
@@ -99,8 +98,8 @@ impl WalScrubBlobstore {
     pub fn new(
         multiplex_id: MultiplexId,
         wal_queue: Arc<dyn BlobstoreWal>,
-        blobstores: Vec<(BlobstoreId, Arc<dyn BlobstoreUnlinkOps>)>,
-        write_only_blobstores: Vec<(BlobstoreId, Arc<dyn BlobstoreUnlinkOps>)>,
+        blobstores: Vec<(BlobstoreId, Arc<dyn BlobstorePutOps>)>,
+        write_only_blobstores: Vec<(BlobstoreId, Arc<dyn BlobstorePutOps>)>,
         write_quorum: usize,
         timeout: Option<MultiplexTimeout>,
         scuba: Scuba,
@@ -198,6 +197,10 @@ impl Blobstore for WalScrubBlobstore {
     ) -> Result<()> {
         self.inner.put(ctx, key, value).await
     }
+
+    async fn unlink<'a>(&'a self, ctx: &'a CoreContext, key: &'a str) -> Result<()> {
+        self.inner.unlink(ctx, key).await
+    }
 }
 
 #[async_trait]
@@ -221,12 +224,5 @@ impl BlobstorePutOps for WalScrubBlobstore {
         value: BlobstoreBytes,
     ) -> Result<OverwriteStatus> {
         self.inner.put_with_status(ctx, key, value).await
-    }
-}
-
-#[async_trait]
-impl BlobstoreUnlinkOps for WalScrubBlobstore {
-    async fn unlink<'a>(&'a self, ctx: &'a CoreContext, key: &'a str) -> Result<()> {
-        self.inner.unlink(ctx, key).await
     }
 }

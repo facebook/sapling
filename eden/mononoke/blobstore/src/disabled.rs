@@ -14,7 +14,6 @@ use super::Blobstore;
 use super::BlobstoreBytes;
 use super::BlobstoreGetData;
 use super::BlobstorePutOps;
-use super::BlobstoreUnlinkOps;
 use super::OverwriteStatus;
 use super::PutBehaviour;
 
@@ -67,6 +66,10 @@ impl Blobstore for DisabledBlob {
     ) -> Result<()> {
         Err(anyhow!("Blobstore disabled: {}", self.reason))
     }
+
+    async fn unlink<'a>(&'a self, _ctx: &'a CoreContext, _key: &'a str) -> Result<()> {
+        Err(anyhow!("Blobstore disabled: {}", self.reason))
+    }
 }
 
 #[async_trait]
@@ -87,13 +90,6 @@ impl BlobstorePutOps for DisabledBlob {
         _key: String,
         _value: BlobstoreBytes,
     ) -> Result<OverwriteStatus> {
-        Err(anyhow!("Blobstore disabled: {}", self.reason))
-    }
-}
-
-#[async_trait]
-impl BlobstoreUnlinkOps for DisabledBlob {
-    async fn unlink<'a>(&'a self, _ctx: &'a CoreContext, _key: &'a str) -> Result<()> {
         Err(anyhow!("Blobstore disabled: {}", self.reason))
     }
 }

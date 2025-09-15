@@ -15,7 +15,6 @@ use blobstore::BlobstoreKeyParam;
 use blobstore::BlobstoreKeyRange;
 use blobstore::BlobstoreKeySource;
 use blobstore::BlobstorePutOps;
-use blobstore::BlobstoreUnlinkOps;
 use blobstore::OverwriteStatus;
 use blobstore::PutBehaviour;
 use context::CoreContext;
@@ -107,6 +106,10 @@ impl<T: Blobstore> Blobstore for PrefixBlobstore<T> {
             .copy(ctx, &self.prepend(old_key), self.prepend(new_key))
             .await
     }
+
+    async fn unlink<'a>(&'a self, ctx: &'a CoreContext, key: &'a str) -> Result<()> {
+        self.blobstore.unlink(ctx, &self.prepend(key)).await
+    }
 }
 
 #[async_trait]
@@ -132,13 +135,6 @@ impl<T: BlobstorePutOps> BlobstorePutOps for PrefixBlobstore<T> {
         self.blobstore
             .put_with_status(ctx, self.prepend(key), value)
             .await
-    }
-}
-
-#[async_trait]
-impl<T: BlobstoreUnlinkOps> BlobstoreUnlinkOps for PrefixBlobstore<T> {
-    async fn unlink<'a>(&'a self, ctx: &'a CoreContext, key: &'a str) -> Result<()> {
-        self.blobstore.unlink(ctx, &self.prepend(key)).await
     }
 }
 

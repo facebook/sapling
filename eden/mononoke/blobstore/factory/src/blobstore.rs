@@ -16,7 +16,6 @@ use anyhow::bail;
 use blobstore::Blobstore;
 use blobstore::BlobstoreEnumerableWithUnlink;
 use blobstore::BlobstorePutOps;
-use blobstore::BlobstoreUnlinkOps;
 use blobstore::DEFAULT_PUT_BEHAVIOUR;
 use blobstore::DisabledBlob;
 use blobstore::ErrorKind;
@@ -58,7 +57,7 @@ use readonlyblob::ReadOnlyBlobstore;
 use s3blob::awss3client::AwsS3ClientPool;
 use s3blob::store::S3Blob;
 use samplingblob::ComponentSamplingHandler;
-use samplingblob::SamplingBlobstoreUnlinkOps;
+use samplingblob::SamplingBlobstoreSamplingComponentBlobstore;
 use scuba_ext::MononokeScubaSampleBuilder;
 use slog::Logger;
 use sql_construct::SqlConstructFromShardedDatabaseConfig;
@@ -199,7 +198,7 @@ pub fn make_blobstore<'a>(
     component_sampler: Option<&'a Arc<dyn ComponentSamplingHandler>>,
 ) -> BoxFuture<'a, Result<Arc<dyn Blobstore>, Error>> {
     async move {
-        let store = make_blobstore_unlink_ops(
+        let store = make_blobstore_put_ops(
             fb,
             blobconfig,
             mysql_options,
@@ -215,39 +214,6 @@ pub fn make_blobstore<'a>(
         // Workaround for trait A {} trait B:A {} but Arc<dyn B> is not a Arc<dyn A>
         // See https://github.com/rust-lang/rfcs/issues/2765 if interested
         Ok(Arc::new(store) as Arc<dyn Blobstore>)
-    }
-    .boxed()
-}
-
-pub fn make_blobstore_put_ops<'a>(
-    fb: FacebookInit,
-    blobconfig: BlobConfig,
-    mysql_options: &'a MysqlOptions,
-    readonly_storage: ReadOnlyStorage,
-    blobstore_options: &'a BlobstoreOptions,
-    logger: &'a Logger,
-    config_store: &'a ConfigStore,
-    scrub_handler: &'a Arc<dyn ScrubHandler>,
-    component_sampler: Option<&'a Arc<dyn ComponentSamplingHandler>>,
-    blobstore_id: Option<BlobstoreId>,
-) -> BoxFuture<'a, Result<Arc<dyn BlobstorePutOps>, Error>> {
-    async move {
-        let store = make_blobstore_unlink_ops(
-            fb,
-            blobconfig,
-            mysql_options,
-            readonly_storage,
-            blobstore_options,
-            logger,
-            config_store,
-            scrub_handler,
-            component_sampler,
-            blobstore_id,
-        )
-        .await?;
-        // Workaround for trait A {} trait B:A {} but Arc<dyn B> is not a Arc<dyn A>
-        // See https://github.com/rust-lang/rfcs/issues/2765 if interested
-        Ok(Arc::new(store) as Arc<dyn BlobstorePutOps>)
     }
     .boxed()
 }
@@ -352,7 +318,7 @@ pub async fn make_packblob<'a>(
     blobstore_options: &'a BlobstoreOptions,
     logger: &'a Logger,
     config_store: &'a ConfigStore,
-) -> Result<PackBlob<Arc<dyn BlobstoreUnlinkOps>>, Error> {
+) -> Result<PackBlob<Arc<dyn BlobstorePutOps>>, Error> {
     if let BlobConfig::Pack {
         pack_config,
         blobconfig,
@@ -468,7 +434,7 @@ async fn make_physical_blobstore_unlink_ops<'a>(
     blobstore_options: &'a BlobstoreOptions,
     logger: &'a Logger,
     config_store: &'a ConfigStore,
-) -> Result<Arc<dyn BlobstoreUnlinkOps>, Error> {
+) -> Result<Arc<dyn BlobstorePutOps>, Error> {
     use BlobConfig::*;
     match blobconfig {
         Sqlite { .. } | Mysql { .. } => make_sql_blobstore(
@@ -480,16 +446,16 @@ async fn make_physical_blobstore_unlink_ops<'a>(
         )
         .watched(logger)
         .await
-        .map(|store| Arc::new(store) as Arc<dyn BlobstoreUnlinkOps>),
+        .map(|store| Arc::new(store) as Arc<dyn BlobstorePutOps>),
         Manifold { .. } | ManifoldWithTtl { .. } => {
             make_manifold_blobstore_enumerable_with_unlink(fb, blobconfig, blobstore_options)
                 .watched(logger)
                 .await
-                .map(|store| Arc::new(store) as Arc<dyn BlobstoreUnlinkOps>)
+                .map(|store| Arc::new(store) as Arc<dyn BlobstorePutOps>)
         }
         Files { .. } => make_files_blobstore(blobconfig, blobstore_options)
             .await
-            .map(|store| Arc::new(store) as Arc<dyn BlobstoreUnlinkOps>),
+            .map(|store| Arc::new(store) as Arc<dyn BlobstorePutOps>),
         AwsS3 {
             bucket,
             region,
@@ -502,7 +468,7 @@ async fn make_physical_blobstore_unlink_ops<'a>(
                 .watched(logger)
                 .await
                 .context(ErrorKind::StateOpen)
-                .map(|store| Arc::new(store) as Arc<dyn BlobstoreUnlinkOps>)
+                .map(|store| Arc::new(store) as Arc<dyn BlobstorePutOps>)
         }
         _ => bail!("Not a physical blobstore"),
     }
@@ -557,8 +523,8 @@ pub async fn raw_blobstore_enumerable_with_unlink<'a>(
     }
 }
 
-// Constructs the BlobstoreUnlinkOps store implementations for low level blobstore access
-pub fn make_blobstore_unlink_ops<'a>(
+// Constructs the BlobstorePutOps store implementations for low level blobstore access
+pub fn make_blobstore_put_ops<'a>(
     fb: FacebookInit,
     blobconfig: BlobConfig,
     mysql_options: &'a MysqlOptions,
@@ -569,7 +535,7 @@ pub fn make_blobstore_unlink_ops<'a>(
     scrub_handler: &'a Arc<dyn ScrubHandler>,
     component_sampler: Option<&'a Arc<dyn ComponentSamplingHandler>>,
     blobstore_id: Option<BlobstoreId>,
-) -> BoxFuture<'a, Result<Arc<dyn BlobstoreUnlinkOps>, Error>> {
+) -> BoxFuture<'a, Result<Arc<dyn BlobstorePutOps>, Error>> {
     // NOTE: This needs to return a BoxFuture because it recurses.
     async move {
         use BlobConfig::*;
@@ -590,7 +556,7 @@ pub fn make_blobstore_unlink_ops<'a>(
                 config_store,
             )
             .await
-            .map(|store| Arc::new(store) as Arc<dyn BlobstoreUnlinkOps>)?,
+            .map(|store| Arc::new(store) as Arc<dyn BlobstorePutOps>)?,
             AwsS3 {
                 bucket,
                 region,
@@ -604,12 +570,13 @@ pub fn make_blobstore_unlink_ops<'a>(
                     .watched(logger)
                     .await
                     .context(ErrorKind::StateOpen)
-                    .map(|store| Arc::new(store) as Arc<dyn BlobstoreUnlinkOps>)?
+                    .map(|store| Arc::new(store) as Arc<dyn BlobstorePutOps>)?
             }
 
             // Special case
-            Disabled => Arc::new(DisabledBlob::new("Disabled by configuration"))
-                as Arc<dyn BlobstoreUnlinkOps>,
+            Disabled => {
+                Arc::new(DisabledBlob::new("Disabled by configuration")) as Arc<dyn BlobstorePutOps>
+            }
 
             // Wrapper blobstores
             MultiplexedWal {
@@ -648,7 +615,7 @@ pub fn make_blobstore_unlink_ops<'a>(
                 scuba_sample_rate,
             } => {
                 needs_wrappers = false;
-                let store = make_blobstore_unlink_ops(
+                let store = make_blobstore_put_ops(
                     fb,
                     *blobconfig,
                     mysql_options,
@@ -667,8 +634,7 @@ pub fn make_blobstore_unlink_ops<'a>(
                     .map_or(Ok(MononokeScubaSampleBuilder::with_discard()), |table| {
                         MononokeScubaSampleBuilder::new(fb, &table)
                     })?;
-                Arc::new(LogBlob::new(store, scuba, scuba_sample_rate))
-                    as Arc<dyn BlobstoreUnlinkOps>
+                Arc::new(LogBlob::new(store, scuba, scuba_sample_rate)) as Arc<dyn BlobstorePutOps>
             }
             Pack { .. } => {
                 // NB packblob does not apply the wrappers internally
@@ -682,23 +648,23 @@ pub fn make_blobstore_unlink_ops<'a>(
                 )
                 .watched(logger)
                 .await
-                .map(|store| Arc::new(store) as Arc<dyn BlobstoreUnlinkOps>)?
+                .map(|store| Arc::new(store) as Arc<dyn BlobstorePutOps>)?
             }
         };
 
         let store = if needs_wrappers {
             let store = if let Some(component_sampler) = component_sampler {
-                Arc::new(SamplingBlobstoreUnlinkOps::new(
+                Arc::new(SamplingBlobstoreSamplingComponentBlobstore::new(
                     store,
                     blobstore_id,
                     component_sampler.clone(),
-                )) as Arc<dyn BlobstoreUnlinkOps>
+                )) as Arc<dyn BlobstorePutOps>
             } else {
                 store
             };
 
             let store = if readonly_storage.0 {
-                Arc::new(ReadOnlyBlobstore::new(store)) as Arc<dyn BlobstoreUnlinkOps>
+                Arc::new(ReadOnlyBlobstore::new(store)) as Arc<dyn BlobstorePutOps>
             } else {
                 store
             };
@@ -708,14 +674,14 @@ pub fn make_blobstore_unlink_ops<'a>(
                     ThrottledBlob::new(store, blobstore_options.throttle_options)
                         .watched(logger)
                         .await,
-                ) as Arc<dyn BlobstoreUnlinkOps>
+                ) as Arc<dyn BlobstorePutOps>
             } else {
                 store
             };
 
             let store = if blobstore_options.chaos_options.has_chaos() {
                 Arc::new(ChaosBlobstore::new(store, blobstore_options.chaos_options))
-                    as Arc<dyn BlobstoreUnlinkOps>
+                    as Arc<dyn BlobstorePutOps>
             } else {
                 store
             };
@@ -724,7 +690,7 @@ pub fn make_blobstore_unlink_ops<'a>(
                 Arc::new(DelayedBlobstore::from_options(
                     store,
                     blobstore_options.delay_options,
-                )) as Arc<dyn BlobstoreUnlinkOps>
+                )) as Arc<dyn BlobstorePutOps>
             } else {
                 store
             }
@@ -758,7 +724,7 @@ async fn make_multiplexed_wal<'a>(
     config_store: &'a ConfigStore,
     scrub_handler: &'a Arc<dyn ScrubHandler>,
     component_sampler: Option<&'a Arc<dyn ComponentSamplingHandler>>,
-) -> Result<Arc<dyn BlobstoreUnlinkOps>, Error> {
+) -> Result<Arc<dyn BlobstorePutOps>, Error> {
     let (normal_components, write_only_components) = setup_inner_blobstores(
         fb,
         inner_config,
@@ -801,7 +767,7 @@ async fn make_multiplexed_wal<'a>(
                 scuba,
                 scrub_options.clone(),
                 scrub_handler.clone(),
-            )?) as Arc<dyn BlobstoreUnlinkOps>
+            )?) as Arc<dyn BlobstorePutOps>
         }
         None => Arc::new(WalMultiplexedBlobstore::new(
             multiplex_id,
@@ -811,13 +777,13 @@ async fn make_multiplexed_wal<'a>(
             write_quorum,
             None, // use default timeouts
             scuba,
-        )?) as Arc<dyn BlobstoreUnlinkOps>,
+        )?) as Arc<dyn BlobstorePutOps>,
     };
 
     Ok(blobstore)
 }
 
-type InnerBlobstore = (BlobstoreId, Arc<dyn BlobstoreUnlinkOps>);
+type InnerBlobstore = (BlobstoreId, Arc<dyn BlobstorePutOps>);
 
 async fn setup_inner_blobstores<'a>(
     fb: FacebookInit,
@@ -853,7 +819,7 @@ async fn setup_inner_blobstores<'a>(
             }
 
             async move {
-                let store = make_blobstore_unlink_ops(
+                let store = make_blobstore_put_ops(
                     fb,
                     config,
                     mysql_options,

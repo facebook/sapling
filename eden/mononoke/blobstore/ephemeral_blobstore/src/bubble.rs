@@ -22,7 +22,6 @@ use blobstore::BlobstoreGetData;
 use blobstore::BlobstoreIsPresent;
 use blobstore::BlobstoreKeyParam;
 use blobstore::BlobstoreKeySource;
-use blobstore::BlobstoreUnlinkOps;
 use bonsai_globalrev_mapping::BonsaiGlobalrevMappingArc;
 use commit_graph::ArcCommitGraphWriter;
 use commit_graph::BaseCommitGraphWriter;

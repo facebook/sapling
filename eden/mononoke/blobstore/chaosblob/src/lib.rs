@@ -13,7 +13,6 @@ use blobstore::Blobstore;
 use blobstore::BlobstoreGetData;
 use blobstore::BlobstoreIsPresent;
 use blobstore::BlobstorePutOps;
-use blobstore::BlobstoreUnlinkOps;
 use blobstore::OverwriteStatus;
 use blobstore::PutBehaviour;
 use context::CoreContext;
@@ -133,6 +132,17 @@ impl<T: Blobstore + BlobstorePutOps> Blobstore for ChaosBlobstore<T> {
             is_present.await
         }
     }
+
+    #[inline]
+    async fn unlink<'a>(&'a self, ctx: &'a CoreContext, key: &'a str) -> Result<()> {
+        let should_error = thread_rng().r#gen::<f32>() > self.sample_threshold_read;
+        let unlink = self.blobstore.unlink(ctx, key);
+        if should_error {
+            Err(ErrorKind::InjectedChaosUnlink(key.to_owned()).into())
+        } else {
+            unlink.await
+        }
+    }
 }
 
 impl<T: BlobstorePutOps> ChaosBlobstore<T> {
@@ -158,20 +168,6 @@ impl<T: BlobstorePutOps> ChaosBlobstore<T> {
         match put {
             None => Err(ErrorKind::InjectedChaosPut(key).into()),
             Some(put) => put.await,
-        }
-    }
-}
-
-#[async_trait]
-impl<T: BlobstoreUnlinkOps> BlobstoreUnlinkOps for ChaosBlobstore<T> {
-    #[inline]
-    async fn unlink<'a>(&'a self, ctx: &'a CoreContext, key: &'a str) -> Result<()> {
-        let should_error = thread_rng().r#gen::<f32>() > self.sample_threshold_read;
-        let unlink = self.blobstore.unlink(ctx, key);
-        if should_error {
-            Err(ErrorKind::InjectedChaosUnlink(key.to_owned()).into())
-        } else {
-            unlink.await
         }
     }
 }

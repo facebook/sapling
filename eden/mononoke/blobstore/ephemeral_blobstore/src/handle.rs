@@ -8,6 +8,7 @@
 use std::fmt;
 
 use anyhow::Result;
+use anyhow::anyhow;
 use async_trait::async_trait;
 use blobstore::Blobstore;
 use blobstore::BlobstoreBytes;
@@ -78,5 +79,9 @@ impl<B: Blobstore> Blobstore for EphemeralHandle<B> {
             }
             BlobstoreIsPresent::Present => BlobstoreIsPresent::Present,
         })
+    }
+
+    async fn unlink<'a>(&'a self, _ctx: &'a CoreContext, _key: &'a str) -> Result<()> {
+        Err(anyhow!("EphemeralHandle does not implement unlink"))
     }
 }

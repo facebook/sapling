@@ -15,7 +15,7 @@ use anyhow::anyhow;
 use blobstore::Blobstore;
 use blobstore::BlobstoreGetData;
 use blobstore::BlobstoreIsPresent;
-use blobstore::BlobstoreUnlinkOps;
+use blobstore::BlobstorePutOps;
 use blobstore::OverwriteStatus;
 use blobstore::PutBehaviour;
 use blobstore_stats::OperationType;
@@ -60,7 +60,7 @@ impl MultiplexTimeout {
 #[derive(Clone)]
 pub(crate) struct TimedStore {
     id: BlobstoreId,
-    inner: Arc<dyn BlobstoreUnlinkOps>,
+    inner: Arc<dyn BlobstorePutOps>,
     /// Timeout enforced on the read/write futures, including those running in the background
     timeout: MultiplexTimeout,
 }
@@ -80,7 +80,7 @@ impl std::fmt::Display for TimedStore {
 impl TimedStore {
     pub(crate) fn new(
         id: BlobstoreId,
-        inner: Arc<dyn BlobstoreUnlinkOps>,
+        inner: Arc<dyn BlobstorePutOps>,
         timeout: MultiplexTimeout,
     ) -> Self {
         Self { id, inner, timeout }
@@ -211,7 +211,7 @@ impl TimedStore {
 }
 
 pub(crate) fn with_timed_stores(
-    blobstores: Vec<(BlobstoreId, Arc<dyn BlobstoreUnlinkOps>)>,
+    blobstores: Vec<(BlobstoreId, Arc<dyn BlobstorePutOps>)>,
     to: MultiplexTimeout,
 ) -> Vec<TimedStore> {
     blobstores

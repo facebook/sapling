@@ -72,4 +72,8 @@ impl<T: Blobstore> Blobstore for TracingBlobstore<T> {
     ) -> Result<BlobstoreIsPresent> {
         self.inner.is_present(ctx, key).await
     }
+
+    async fn unlink<'a>(&'a self, ctx: &'a CoreContext, key: &'a str) -> Result<()> {
+        self.inner.unlink(ctx, key).await
+    }
 }

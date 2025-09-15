@@ -18,7 +18,6 @@ use blobstore::Blobstore;
 use blobstore::BlobstoreGetData;
 use blobstore::BlobstoreIsPresent;
 use blobstore::BlobstorePutOps;
-use blobstore::BlobstoreUnlinkOps;
 use blobstore::CountedBlobstore;
 use blobstore::OverwriteStatus;
 use blobstore::PutBehaviour;
@@ -164,6 +163,20 @@ impl<ClientBackend: S3ClientBackend + Send + Sync> Blobstore for S3Blob<ClientBa
         BlobstorePutOps::put_with_status(self, ctx, key, value).await?;
         Ok(())
     }
+
+    async fn unlink<'a>(&'a self, ctx: &'a CoreContext, key: &'a str) -> Result<()> {
+        retry(ctx, || {
+            let key = ClientBackend::get_sharded_key(key);
+            let request = DeleteObjectRequest {
+                bucket: self.bucket.to_string(),
+                key,
+                ..Default::default()
+            };
+
+            async move { self.client_pool.get_client().unlink(ctx, request).await }
+        })
+        .await
+    }
 }
 
 #[async_trait]
@@ -221,22 +234,5 @@ impl<ClientBackend: S3ClientBackend + Send + Sync> BlobstorePutOps for S3Blob<Cl
         value: BlobstoreBytes,
     ) -> Result<OverwriteStatus> {
         self.put_explicit(ctx, key, value, self.put_behaviour).await
-    }
-}
-
-#[async_trait]
-impl<ClientBackend: S3ClientBackend + Send + Sync> BlobstoreUnlinkOps for S3Blob<ClientBackend> {
-    async fn unlink<'a>(&'a self, ctx: &'a CoreContext, key: &'a str) -> Result<()> {
-        retry(ctx, || {
-            let key = ClientBackend::get_sharded_key(key);
-            let request = DeleteObjectRequest {
-                bucket: self.bucket.to_string(),
-                key,
-                ..Default::default()
-            };
-
-            async move { self.client_pool.get_client().unlink(ctx, request).await }
-        })
-        .await
     }
 }

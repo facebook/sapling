@@ -16,7 +16,6 @@ use blobstore::BlobstoreKeyParam;
 use blobstore::BlobstoreKeySource;
 use blobstore::BlobstoreMetadata;
 use blobstore::BlobstorePutOps;
-use blobstore::BlobstoreUnlinkOps;
 use blobstore::OverwriteStatus;
 use blobstore::PutBehaviour;
 use context::CoreContext;
@@ -110,6 +109,11 @@ impl<T: Blobstore + BlobstorePutOps> Blobstore for PackBlob<T> {
         BlobstorePutOps::put_with_status(self, ctx, key, value).await?;
         Ok(())
     }
+
+    async fn unlink<'a>(&'a self, ctx: &'a CoreContext, key: &'a str) -> Result<()> {
+        let inner_key = &[key, ENVELOPE_SUFFIX].concat();
+        self.inner.unlink(ctx, inner_key).await
+    }
 }
 
 impl<T: BlobstorePutOps> PackBlob<T> {
@@ -190,15 +194,7 @@ impl<B: BlobstoreKeySource + BlobstorePutOps> BlobstoreKeySource for PackBlob<B>
     }
 }
 
-#[async_trait]
-impl<T: BlobstoreUnlinkOps> BlobstoreUnlinkOps for PackBlob<T> {
-    async fn unlink<'a>(&'a self, ctx: &'a CoreContext, key: &'a str) -> Result<()> {
-        let inner_key = &[key, ENVELOPE_SUFFIX].concat();
-        self.inner.unlink(ctx, inner_key).await
-    }
-}
-
-impl<T: Blobstore + BlobstoreUnlinkOps> PackBlob<T> {
+impl<T: Blobstore + BlobstorePutOps> PackBlob<T> {
     /// Put packed content, returning the pack's key if successful.
     ///
     /// `key_prefix` is prefixed to all keys within the pack and used to

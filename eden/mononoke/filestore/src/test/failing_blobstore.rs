@@ -81,4 +81,12 @@ impl<B: Blobstore> Blobstore for FailingBlobstore<B> {
             Err(FailingBlobstoreError.into())
         }
     }
+
+    async fn unlink<'a>(&'a self, ctx: &'a CoreContext, key: &'a str) -> Result<()> {
+        if thread_rng().gen_bool(self.read_success_probability) {
+            self.inner.unlink(ctx, key).await
+        } else {
+            Err(FailingBlobstoreError.into())
+        }
+    }
 }

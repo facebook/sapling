@@ -13,7 +13,6 @@ use blobstore::Blobstore;
 use blobstore::BlobstoreGetData;
 use blobstore::BlobstoreIsPresent;
 use blobstore::BlobstorePutOps;
-use blobstore::BlobstoreUnlinkOps;
 use blobstore::OverwriteStatus;
 use blobstore::PutBehaviour;
 use context::CoreContext;
@@ -95,6 +94,11 @@ impl<B: BlobstorePutOps> Blobstore for DelayedBlobstore<B> {
         delay(self.get_dist).await;
         self.inner.is_present(ctx, key).await
     }
+
+    async fn unlink<'a>(&'a self, ctx: &'a CoreContext, key: &'a str) -> Result<()> {
+        delay(self.put_dist).await;
+        self.inner.unlink(ctx, key).await
+    }
 }
 
 impl<T: BlobstorePutOps> DelayedBlobstore<T> {
@@ -136,14 +140,6 @@ impl<T: BlobstorePutOps> BlobstorePutOps for DelayedBlobstore<T> {
         value: BlobstoreBytes,
     ) -> Result<OverwriteStatus> {
         self.put_impl(ctx, key, value, None).await
-    }
-}
-
-#[async_trait]
-impl<T: BlobstoreUnlinkOps> BlobstoreUnlinkOps for DelayedBlobstore<T> {
-    async fn unlink<'a>(&'a self, ctx: &'a CoreContext, key: &'a str) -> Result<()> {
-        delay(self.put_dist).await;
-        self.inner.unlink(ctx, key).await
     }
 }
 

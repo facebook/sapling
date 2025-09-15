@@ -22,7 +22,7 @@ use anyhow::Context;
 use anyhow::Error;
 use anyhow::Result;
 use anyhow::bail;
-use blobstore::BlobstoreUnlinkOps;
+use blobstore::Blobstore;
 use clap::ArgAction;
 use clap::Parser;
 use cloned::cloned;
@@ -108,7 +108,7 @@ async fn unlink_the_key_from_blobstore(
     context: CoreContext,
     sanitise_regex: &str,
     dry_run: bool,
-    repo_to_blobstore: &HashMap<RepositoryId, Arc<dyn BlobstoreUnlinkOps>>,
+    repo_to_blobstore: &HashMap<RepositoryId, Arc<dyn Blobstore>>,
 ) -> Result<()> {
     if let (Ok(repo_id), Ok(blobstore_key)) = (
         extract_repo_id_from_key(key),
@@ -157,7 +157,7 @@ struct BlobstoreBulkUnlinker {
     keys_dir: String,
     dry_run: bool,
     sanitise_regex: String,
-    repo_to_blobstore: HashMap<RepositoryId, Arc<dyn BlobstoreUnlinkOps>>,
+    repo_to_blobstore: HashMap<RepositoryId, Arc<dyn Blobstore>>,
     max_parallelism: usize,
 }
 
@@ -262,7 +262,7 @@ impl BlobstoreBulkUnlinker {
                 let blob_config = get_blobconfig(repo_config.storage_config.blobstore, None)?;
                 if let Ok(blobstore) = self
                     .app
-                    .open_blobstore_unlink_ops_with_overridden_blob_config(&blob_config)
+                    .open_blobstore_with_overridden_blob_config(&blob_config)
                     .await
                 {
                     e.insert(blobstore);

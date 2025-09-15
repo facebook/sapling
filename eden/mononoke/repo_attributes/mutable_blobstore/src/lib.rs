@@ -12,10 +12,6 @@ use async_trait::async_trait;
 use blobstore::Blobstore;
 use blobstore::BlobstoreGetData;
 use blobstore::BlobstoreIsPresent;
-use blobstore::BlobstorePutOps;
-use blobstore::BlobstoreUnlinkOps;
-use blobstore::OverwriteStatus;
-use blobstore::PutBehaviour;
 use context::CoreContext;
 use mononoke_types::BlobstoreBytes;
 use mononoke_types::RepositoryId;
@@ -110,89 +106,7 @@ impl Blobstore for MutableRepoBlobstore {
     ) -> Result<BlobstoreIsPresent> {
         self.0.0.is_present(ctx, key).await
     }
-}
 
-#[facet::facet]
-#[derive(Clone, Debug)]
-pub struct MutableRepoBlobstoreUnlinkOps(AbstractMutableRepoBlobstore<Arc<dyn BlobstoreUnlinkOps>>);
-
-impl MutableRepoBlobstoreUnlinkOps {
-    pub fn new(blobstore: Arc<dyn BlobstoreUnlinkOps>, repoid: RepositoryId) -> Self {
-        Self::build(blobstore, repoid.prefix())
-    }
-
-    #[allow(clippy::let_and_return)]
-    fn build(blobstore: Arc<dyn BlobstoreUnlinkOps>, prefix: String) -> Self {
-        let blobstore = PrefixBlobstore::new(blobstore, prefix);
-        let blobstore = MutableRepoBlobstoreUnlinkOps(AbstractMutableRepoBlobstore(blobstore));
-
-        blobstore
-    }
-}
-
-impl std::fmt::Display for MutableRepoBlobstoreUnlinkOps {
-    fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
-        write!(f, "MutableRepoBlobstoreUnlinkOps<{}>", self.0.0)
-    }
-}
-
-#[async_trait]
-impl Blobstore for MutableRepoBlobstoreUnlinkOps {
-    async fn get<'a>(
-        &'a self,
-        ctx: &'a CoreContext,
-        key: &'a str,
-    ) -> Result<Option<BlobstoreGetData>> {
-        self.0.0.get(ctx, key).await
-    }
-    async fn put<'a>(
-        &'a self,
-        ctx: &'a CoreContext,
-        key: String,
-        value: BlobstoreBytes,
-    ) -> Result<()> {
-        self.0.0.put(ctx, key, value).await
-    }
-    async fn is_present<'a>(
-        &'a self,
-        ctx: &'a CoreContext,
-        key: &'a str,
-    ) -> Result<BlobstoreIsPresent> {
-        self.0.0.is_present(ctx, key).await
-    }
-    async fn copy<'a>(
-        &'a self,
-        ctx: &'a CoreContext,
-        old_key: &'a str,
-        new_key: String,
-    ) -> Result<()> {
-        self.0.0.copy(ctx, old_key, new_key).await
-    }
-}
-
-#[async_trait]
-impl BlobstorePutOps for MutableRepoBlobstoreUnlinkOps {
-    async fn put_explicit<'a>(
-        &'a self,
-        ctx: &'a CoreContext,
-        key: String,
-        value: BlobstoreBytes,
-        put_behaviour: PutBehaviour,
-    ) -> Result<OverwriteStatus> {
-        self.0.0.put_explicit(ctx, key, value, put_behaviour).await
-    }
-    async fn put_with_status<'a>(
-        &'a self,
-        ctx: &'a CoreContext,
-        key: String,
-        value: BlobstoreBytes,
-    ) -> Result<OverwriteStatus> {
-        self.0.0.put_with_status(ctx, key, value).await
-    }
-}
-
-#[async_trait]
-impl BlobstoreUnlinkOps for MutableRepoBlobstoreUnlinkOps {
     async fn unlink<'a>(&'a self, ctx: &'a CoreContext, key: &'a str) -> Result<()> {
         self.0.0.unlink(ctx, key).await
     }

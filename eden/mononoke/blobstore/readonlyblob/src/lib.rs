@@ -11,7 +11,6 @@ use blobstore::Blobstore;
 use blobstore::BlobstoreGetData;
 use blobstore::BlobstoreIsPresent;
 use blobstore::BlobstorePutOps;
-use blobstore::BlobstoreUnlinkOps;
 use blobstore::OverwriteStatus;
 use blobstore::PutBehaviour;
 use context::CoreContext;
@@ -66,6 +65,10 @@ impl<T: Blobstore> Blobstore for ReadOnlyBlobstore<T> {
     ) -> Result<BlobstoreIsPresent> {
         self.blobstore.is_present(ctx, key).await
     }
+
+    async fn unlink<'a>(&'a self, _ctx: &'a CoreContext, key: &'a str) -> Result<()> {
+        Err(ErrorKind::ReadOnlyPut(key.to_string()).into())
+    }
 }
 
 #[async_trait]
@@ -87,13 +90,6 @@ impl<T: BlobstorePutOps> BlobstorePutOps for ReadOnlyBlobstore<T> {
         _value: BlobstoreBytes,
     ) -> Result<OverwriteStatus> {
         Err(ErrorKind::ReadOnlyPut(key).into())
-    }
-}
-
-#[async_trait]
-impl<T: BlobstoreUnlinkOps> BlobstoreUnlinkOps for ReadOnlyBlobstore<T> {
-    async fn unlink<'a>(&'a self, _ctx: &'a CoreContext, key: &'a str) -> Result<()> {
-        Err(ErrorKind::ReadOnlyPut(key.to_string()).into())
     }
 }
 

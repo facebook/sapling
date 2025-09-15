@@ -72,6 +72,11 @@ impl<B: Blobstore> Blobstore for DummyBlobstore<B> {
     ) -> Result<BlobstoreIsPresent> {
         self.inner.is_present(ctx, key).await
     }
+
+    async fn unlink<'a>(&'a self, _ctx: &'a CoreContext, key: &'a str) -> Result<()> {
+        info!(self.logger, "I would have unlinked blob {}", key);
+        Ok(())
+    }
 }
 
 pub struct DummyBlobstoreWal<Q> {

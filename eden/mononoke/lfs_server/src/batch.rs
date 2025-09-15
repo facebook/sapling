@@ -1041,6 +1041,10 @@ mod test {
         ) -> Result<(), Error> {
             self.inner.put(ctx, key, value).await
         }
+
+        async fn unlink<'a>(&'a self, ctx: &'a CoreContext, key: &'a str) -> Result<(), Error> {
+            self.inner.unlink(ctx, key).await
+        }
     }
 
     #[mononoke::fbinit_test]

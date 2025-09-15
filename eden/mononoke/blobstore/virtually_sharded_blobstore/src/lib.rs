@@ -598,6 +598,10 @@ impl<T: Blobstore + 'static> Blobstore for VirtuallyShardedBlobstore<T> {
 
         Ok(result)
     }
+
+    async fn unlink<'a>(&'a self, ctx: &'a CoreContext, key: &'a str) -> Result<()> {
+        self.inner.blobstore.unlink(ctx, key).await
+    }
 }
 
 #[cfg(all(test, fbcode_build))]
@@ -809,6 +813,10 @@ mod test {
                     BlobstoreMetadata::default(),
                     bytes,
                 )))
+            }
+
+            async fn unlink<'a>(&'a self, _ctx: &'a CoreContext, _key: &'a str) -> Result<()> {
+                unimplemented!("TestBlobstore doesn't not support unlink")
             }
         }
 
@@ -1235,6 +1243,10 @@ mod test {
                 _key: &'a str,
             ) -> Result<BlobstoreIsPresent> {
                 Ok(BlobstoreIsPresent::Present)
+            }
+
+            async fn unlink<'a>(&'a self, _ctx: &'a CoreContext, _key: &'a str) -> Result<()> {
+                Ok(())
             }
         }
 

@@ -57,4 +57,8 @@ impl Blobstore for RedactionConfigBlobstore {
     ) -> Result<BlobstoreIsPresent> {
         self.0.is_present(ctx, key).await
     }
+
+    async fn unlink<'a>(&'a self, ctx: &'a CoreContext, key: &'a str) -> Result<()> {
+        self.0.unlink(ctx, key).await
+    }
 }

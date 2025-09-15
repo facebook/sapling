@@ -21,7 +21,6 @@ use blobstore::BlobstoreGetData;
 use blobstore::BlobstoreKeyParam;
 use blobstore::BlobstoreKeySource;
 use blobstore::BlobstorePutOps;
-use blobstore::BlobstoreUnlinkOps;
 use blobstore::DEFAULT_PUT_BEHAVIOUR;
 use blobstore::OverwriteStatus;
 use blobstore::PutBehaviour;
@@ -189,10 +188,7 @@ impl Blobstore for Memblob {
         let mut inner = state.lock().expect("lock poison");
         inner.link(old_key, new_key)
     }
-}
 
-#[async_trait]
-impl BlobstoreUnlinkOps for Memblob {
     async fn unlink<'a>(&'a self, _ctx: &'a CoreContext, key: &'a str) -> Result<()> {
         let state = self.state.clone();
         let mut inner = state.lock().expect("lock poison");

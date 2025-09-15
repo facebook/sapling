@@ -15,7 +15,6 @@ use std::sync::Arc;
 use anyhow::Error;
 use blobstore::Blobstore;
 use blobstore::BlobstorePutOps;
-use blobstore::BlobstoreUnlinkOps;
 use blobstore::OverwriteStatus;
 use blobstore::PutBehaviour;
 use borrowed::borrowed;
@@ -101,7 +100,7 @@ async fn overwrite<B: Blobstore + BlobstorePutOps>(
     Ok(())
 }
 
-async fn roundtrip_and_link<B: BlobstoreUnlinkOps>(
+async fn roundtrip_and_link<B: Blobstore>(
     fb: FacebookInit,
     blobstore: B,
     has_ctime: bool,

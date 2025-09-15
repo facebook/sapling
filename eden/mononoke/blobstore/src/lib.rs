@@ -373,6 +373,10 @@ pub trait Blobstore: fmt::Display + fmt::Debug + Send + Sync {
             .with_context(|| format!("key {} not present", old_key))?;
         Ok(self.put(ctx, new_key, value.bytes).await?)
     }
+
+    /// Similar to unlink(2), this removes a key, resulting in content being removed if its the last key pointing to it.
+    /// An error is returned if the key does not exist
+    async fn unlink<'a>(&'a self, ctx: &'a CoreContext, key: &'a str) -> Result<()>;
 }
 
 /// Mononoke binaries will not overwrite existing blobstore keys by default
@@ -461,15 +465,6 @@ pub trait BlobstorePutOps: Blobstore {
     ) -> Result<OverwriteStatus>;
 }
 
-/// Mixin trait for blobstores that support the `unlink()` operation
-#[async_trait]
-#[auto_impl(Arc, Box)]
-pub trait BlobstoreUnlinkOps: Blobstore + BlobstorePutOps {
-    /// Similar to unlink(2), this removes a key, resulting in content being removed if its the last key pointing to it.
-    /// An error is returned if the key does not exist
-    async fn unlink<'a>(&'a self, ctx: &'a CoreContext, key: &'a str) -> Result<()>;
-}
-
 /// BlobstoreKeySource Interface
 /// Abstract for use with populate_healer
 #[async_trait]
@@ -486,7 +481,7 @@ trait_set! {
     /// A trait alias that represents blobstores that can be enumerated,
     /// updated and have their keys unlinked.
     #[auto_impl(Arc, Box)]
-    pub trait BlobstoreEnumerableWithUnlink = BlobstoreKeySource + BlobstoreUnlinkOps;
+    pub trait BlobstoreEnumerableWithUnlink = BlobstoreKeySource + BlobstorePutOps;
 }
 
 /// Range of keys.  The range is inclusive (both start and end key are

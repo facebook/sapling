@@ -163,6 +163,10 @@ impl<T: Blobstore + Clone> Blobstore for MemWritesBlobstore<T> {
             }
         }
     }
+
+    async fn unlink<'a>(&'a self, _ctx: &'a CoreContext, _key: &'a str) -> Result<()> {
+        Err(anyhow!("MemWritesBlobstore does not support unlink"))
+    }
 }
 
 #[cfg(test)]
@@ -326,6 +330,10 @@ mod test {
             key: &'a str,
         ) -> Result<Option<BlobstoreGetData>> {
             self.inner.get(ctx, key).await
+        }
+
+        async fn unlink<'a>(&'a self, _ctx: &'a CoreContext, _key: &'a str) -> Result<()> {
+            unimplemented!("GatedBlobstore does not support unlink")
         }
     }
 

@@ -21,7 +21,6 @@ use crate::BlobstoreIsPresent;
 use crate::BlobstoreKeyParam;
 use crate::BlobstoreKeySource;
 use crate::BlobstorePutOps;
-use crate::BlobstoreUnlinkOps;
 use crate::OverwriteStatus;
 use crate::PutBehaviour;
 
@@ -139,6 +138,16 @@ impl<T: Blobstore> Blobstore for CountedBlobstore<T> {
         }
         res
     }
+
+    async fn unlink<'a>(&'a self, ctx: &'a CoreContext, key: &'a str) -> Result<()> {
+        self.stats.unlink.add_value(1);
+        let res = self.blobstore.unlink(ctx, key).await;
+        match res {
+            Ok(()) => self.stats.unlink_ok.add_value(1),
+            Err(_) => self.stats.unlink_err.add_value(1),
+        }
+        res
+    }
 }
 
 impl<T: BlobstorePutOps> CountedBlobstore<T> {
@@ -192,19 +201,6 @@ impl<T: BlobstorePutOps> BlobstorePutOps for CountedBlobstore<T> {
         value: BlobstoreBytes,
     ) -> Result<OverwriteStatus> {
         self.put_impl(ctx, key, value, None).await
-    }
-}
-
-#[async_trait]
-impl<T: BlobstoreUnlinkOps> BlobstoreUnlinkOps for CountedBlobstore<T> {
-    async fn unlink<'a>(&'a self, ctx: &'a CoreContext, key: &'a str) -> Result<()> {
-        self.stats.unlink.add_value(1);
-        let res = self.blobstore.unlink(ctx, key).await;
-        match res {
-            Ok(()) => self.stats.unlink_ok.add_value(1),
-            Err(_) => self.stats.unlink_err.add_value(1),
-        }
-        res
     }
 }
 

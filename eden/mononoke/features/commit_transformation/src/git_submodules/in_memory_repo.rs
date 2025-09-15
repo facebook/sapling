@@ -10,6 +10,7 @@ use std::fmt::Debug;
 use std::sync::Arc;
 
 use anyhow::Result;
+use anyhow::anyhow;
 use async_trait::async_trait;
 use blobstore::Blobstore;
 use blobstore::BlobstoreBytes;
@@ -186,6 +187,12 @@ impl<T: Blobstore + Clone, R: Repo + Clone> Blobstore for MemWritesBlobstoreWith
                 fallback_value.transpose()
             }
         }
+    }
+
+    async fn unlink<'a>(&'a self, _ctx: &'a CoreContext, _key: &'a str) -> Result<()> {
+        Err(anyhow!(
+            "MemWritesBlobstoreWithFallback does not support unlink"
+        ))
     }
 }
 impl<T: Blobstore + Clone, R: Repo + Clone> std::fmt::Display
