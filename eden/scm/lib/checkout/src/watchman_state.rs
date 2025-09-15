@@ -11,10 +11,14 @@ use std::time::Duration;
 
 use anyhow::Result;
 use anyhow::bail;
+use configmodel::ConfigExt;
+use edenfs_asserted_states_client::AssertedStatesClient;
+use edenfs_asserted_states_client::ContentLockGuard;
 use tracing::instrument;
 use types::HgId;
 use watchman_client::Value;
 use watchman_client::prelude::*;
+use workingcopy::filesystem::FileSystemType;
 use workingcopy::workingcopy::LockedWorkingCopy;
 
 #[derive(Default)]
@@ -22,6 +26,8 @@ pub struct WatchmanStateChange {
     client: Option<(Arc<Client>, ResolvedRoot)>,
     target: HgId,
     success: bool,
+    #[allow(dead_code)] // This object hold the lock, and does not need to be accessed
+    lock: Option<ContentLockGuard>,
 }
 
 impl WatchmanStateChange {
@@ -59,9 +65,39 @@ impl WatchmanStateChange {
                 Some(metadata.into()),
             ))?;
 
+            let mut lock = None;
+            if cfg!(feature = "eden")
+                && wc
+                    .config()
+                    .get_or("experimental", "enable-edenfs-asserted-states", || false)?
+                && wc.file_system_type == FileSystemType::Eden
+            {
+                let asserted_states_client = AssertedStatesClient::new(wc.vfs().root())?;
+                let content_lock_guard = asserted_states_client.enter_state_with_deadline(
+                    "hg.update",
+                    wc.config()
+                        .get_or::<Duration>("edenfs", "eden-state-timeout", || {
+                            Duration::from_secs(1)
+                        })?,
+                    wc.config()
+                        .get_or::<Duration>("devel", "lock_backoff", || {
+                            Duration::from_secs_f64(0.1)
+                        })?,
+                );
+                // (T237640498) Currently we have watchman propagate its error, and edenfs state lock just logs.
+                // Long term we'll want to switch these
+                match content_lock_guard {
+                    Ok(guard) => lock = Some(guard),
+                    Err(err) => {
+                        tracing::error!("failed to acquire edenfs content lock: {:?}", err);
+                    }
+                }
+            }
+
             Ok(Self {
                 client: Some((client, root)),
                 target,
+                lock,
                 ..Default::default()
             })
         })()
@@ -101,5 +137,7 @@ impl Drop for WatchmanStateChange {
             SyncTimeout::Duration(Duration::from_secs(1)),
             Some(metadata.into()),
         ));
+
+        // Dropping the object implicitly drops the eden notifications lock
     }
 }

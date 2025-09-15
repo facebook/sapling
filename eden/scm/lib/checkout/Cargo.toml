@@ -15,6 +15,7 @@ name = "checkout"
 [dependencies]
 anyhow = "1.0.98"
 blob = { version = "0.1.0", path = "../blob" }
+edenfs-asserted-states-client = { version = "0.1.0", path = "../../../fs/rust/edenfs-asserted-states-client" }
 fail = { version = "0.4", features = ["failpoints"] }
 flume = "0.11.1"
 parking_lot = { version = "0.12.1", features = ["send_guard"] }
