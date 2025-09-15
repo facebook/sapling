@@ -21,7 +21,7 @@ pub mod edenfs;
 #[cfg(feature = "eden")]
 pub use edenfs::EdenFileSystem;
 
-#[derive(PartialEq)]
+#[derive(Clone, PartialEq)]
 pub enum FileSystemType {
     Normal,
     Watchman,

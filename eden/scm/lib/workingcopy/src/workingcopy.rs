@@ -101,6 +101,7 @@ pub struct WorkingCopy {
     watchman_client: Arc<DeferredWatchmanClient>,
     notify_parents_change_func: Option<Box<dyn Fn(&[HgId]) -> Result<()> + Send + Sync>>,
     support_submodules: bool,
+    pub file_system_type: FileSystemType,
 }
 
 const ACTIVE_BOOKMARK_FILE: &str = "bookmarks.current";
@@ -177,7 +178,7 @@ impl WorkingCopy {
             vfs.clone(),
             dot_dir,
             config,
-            file_system_type,
+            file_system_type.clone(),
             tree_resolver.clone(),
             filestore.clone(),
             locker.clone(),
@@ -212,6 +213,7 @@ impl WorkingCopy {
             watchman_client,
             notify_parents_change_func: None,
             support_submodules,
+            file_system_type,
         })
     }
 
