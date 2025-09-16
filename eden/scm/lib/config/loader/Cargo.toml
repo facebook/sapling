@@ -23,7 +23,6 @@ dirs = "6.0"
 faccess = "0.2.4"
 fbinit = { version = "0.2.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 filetime = { version = "0.2.25", optional = true }
-futures = { version = "0.3.31", features = ["async-await", "compat"] }
 hostcaps = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 hostname = "0.3"
 parking_lot = { version = "0.12.1", features = ["send_guard"] }
