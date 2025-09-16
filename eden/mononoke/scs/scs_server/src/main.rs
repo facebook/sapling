@@ -245,7 +245,7 @@ async fn create_git_source_of_truth_config(
     let mononoke_production_xdb = xdb_factory
         .create_or_get_shard(MONONOKE_PRODUCTION_SHARD_NAME)
         .await?;
-    let connections = mononoke_production_xdb.read_conns().await?;
+    let connections = mononoke_production_xdb.write_conns().await?;
     Ok(Arc::new(
         SqlGitSourceOfTruthConfigBuilder::from_sql_connections(connections).build(),
     ))
