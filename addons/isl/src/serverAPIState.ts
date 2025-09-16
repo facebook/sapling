@@ -27,10 +27,10 @@ import {randomId} from 'shared/utils';
 import {
   type BookmarksData,
   bookmarksDataStorage,
+  recommendedBookmarksAtom,
   recommendedBookmarksGKAtom,
 } from './BookmarksData';
 import serverAPI from './ClientToServerAPI';
-import {Internal} from './Internal';
 import {latestSuccessorsMapAtom, successionTracker} from './SuccessionTracker';
 import {Dag, DagCommitInfo} from './dag/dag';
 import {readInterestingAtoms, serializeAtomsState} from './debug/getInterestingAtoms';
@@ -300,13 +300,14 @@ export const latestDag = atom(get => {
   const successorMap = get(latestSuccessorsMapAtom);
   const bookmarksData = get(bookmarksDataStorage);
   const enableRecommended = get(recommendedBookmarksGKAtom) && bookmarksData.useRecommendedBookmark;
+  const recommendedBookmarks = get(recommendedBookmarksAtom);
   const commitDag = undefined; // will be populated from `commits`
 
   const dag = Dag.fromDag(commitDag, successorMap)
     .add(
       commits.map(c => {
         return DagCommitInfo.fromCommitInfo(
-          filterBookmarks(bookmarksData, c, Boolean(enableRecommended)),
+          filterBookmarks(bookmarksData, c, Boolean(enableRecommended), recommendedBookmarks),
         );
       }),
     )
@@ -318,13 +319,13 @@ function filterBookmarks(
   bookmarksData: BookmarksData,
   commit: CommitInfo,
   enableRecommended: boolean,
+  recommendedBookmarks: Set<string>,
 ): CommitInfo {
   if (commit.phase !== 'public') {
     return commit;
   }
 
   const hiddenBookmarks = new Set(bookmarksData.hiddenRemoteBookmarks);
-  const recommendedBookmarks = new Set(Internal.getRecommendedBookmarks?.() || []);
 
   // Show only bookmarks that are not hidden AND are recommended (unless recommended bookmarks are off)
   const bookmarkFilter = (b: string) =>

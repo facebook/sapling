@@ -11,7 +11,7 @@ import {atom} from 'jotai';
 import serverAPI from './ClientToServerAPI';
 import {featureFlagLoadable} from './featureFlags';
 import {Internal} from './Internal';
-import {localStorageBackedAtom, readAtom, writeAtom} from './jotaiUtils';
+import {lazyAtom, localStorageBackedAtom, readAtom, writeAtom} from './jotaiUtils';
 import {latestCommits} from './serverAPIState';
 import {registerDisposable} from './utils';
 
@@ -108,3 +108,8 @@ export const recommendedBookmarksGKAtom = atom(get => {
   const flag = get(featureFlagLoadable(Internal.featureFlags?.RecommendedBookmarks));
   return flag.state === 'hasData' ? flag.data : false;
 });
+
+export const recommendedBookmarksAtom = lazyAtom(
+  _get => Internal.getRecommendedBookmarks?.() ?? Promise.resolve(new Set<string>()),
+  new Set<string>(),
+);

@@ -31,6 +31,7 @@ import {
   addManualStable,
   bookmarksDataStorage,
   fetchedStablesAtom,
+  recommendedBookmarksAtom,
   remoteBookmarks,
   removeManualStable,
 } from './BookmarksData';
@@ -95,7 +96,7 @@ export function BookmarksManagerMenu() {
 function BookmarksManager(_props: {dismiss: () => void}) {
   const bookmarks = useAtomValue(remoteBookmarks);
   const bookmarksData = useAtomValue(bookmarksDataStorage);
-  const recommendedBookmarks = new Set(Internal.getRecommendedBookmarks?.() || []);
+  const recommendedBookmarks = useAtomValue(recommendedBookmarksAtom);
   const enableRecommended =
     useFeatureFlagSync(Internal.featureFlags?.RecommendedBookmarks) &&
     bookmarksData.useRecommendedBookmark;
@@ -345,12 +346,11 @@ function BookmarksList({
 }) {
   const [bookmarksData, setBookmarksData] = useAtom(bookmarksDataStorage);
   const recommendedBookmarksGK = useFeatureFlagSync(Internal.featureFlags?.RecommendedBookmarks);
+  const recommendedBookmarks = useAtomValue(recommendedBookmarksAtom);
 
   if (bookmarks.length == 0) {
     return null;
   }
-  const recommendedBookmarks = new Set(Internal.getRecommendedBookmarks?.() || []);
-
   return (
     <ScrollY maxSize={300}>
       <Column xstyle={styles.bookmarkGroup}>

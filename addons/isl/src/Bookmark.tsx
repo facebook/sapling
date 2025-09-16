@@ -20,7 +20,7 @@ import {useState} from 'react';
 import {useContextMenu} from 'shared/ContextMenu';
 import {spacing} from '../../components/theme/tokens.stylex';
 import {tracker} from './analytics';
-import {bookmarksDataStorage} from './BookmarksData';
+import {bookmarksDataStorage, recommendedBookmarksAtom} from './BookmarksData';
 import {Row} from './ComponentUtils';
 import {useFeatureFlagSync} from './featureFlags';
 import {T, t} from './i18n';
@@ -120,7 +120,7 @@ export function AllBookmarksTruncated({
   local: ReadonlyArray<string>;
 }) {
   const bookmarksData = useAtomValue(bookmarksDataStorage);
-  const recommendedBookmarks = new Set(Internal.getRecommendedBookmarks?.() || []);
+  const recommendedBookmarks = useAtomValue(recommendedBookmarksAtom);
   const recommendedBookmarksGK = useFeatureFlagSync(Internal.featureFlags?.RecommendedBookmarks);
 
   const finalBookmarks = (
