@@ -36,7 +36,6 @@ use infrasec_authorization_review::AclPermissionChange;
 use infrasec_authorization_review::ChangeContents;
 use infrasec_authorization_review::ChangeOperation;
 use infrasec_authorization_review::EntryChange;
-use infrasec_authorization_review::GroupChange;
 use infrasec_authorization_service::CommitChangeSpecificationRequest;
 use infrasec_authorization_service_srclients::make_AuthorizationService_srclient;
 use infrasec_authorization_service_srclients::thrift::ChangeSpecification;
@@ -83,7 +82,7 @@ fn initial_acl_grants(hipster_group: &str) -> Vec<AclPermissionChange> {
                 (SERVICE_IDENTITY, "gitremoteimport"),
                 (SERVICE_IDENTITY, "scm_service_identity"),
                 (SANDCASTLE_TAG, "skycastle_gitimport"),
-                (SANDCASTLE_TAG, "skycastle_gitimport"),
+                (SANDCASTLE_TAG, "tpms_sandcastle_tag"),
                 (SANDCASTLE_CMD, "SandcastleLandCommand"),
                 (SANDCASTLE_CMD, "SandcastlePushCommand"),
             ],
@@ -105,7 +104,7 @@ fn initial_acl_grants(hipster_group: &str) -> Vec<AclPermissionChange> {
     .into_iter()
     .map(|(action, identities)| AclPermissionChange {
         action: action.to_string(),
-        operation: ChangeOperation::UPDATE,
+        operation: ChangeOperation::ADD,
         entry_changes: identities
             .into_iter()
             .map(|(id_type, id_data)| EntryChange {
@@ -114,7 +113,7 @@ fn initial_acl_grants(hipster_group: &str) -> Vec<AclPermissionChange> {
                     id_data: id_data.to_string(),
                     ..Default::default()
                 },
-                operation: ChangeOperation::UPDATE,
+                operation: ChangeOperation::ADD,
                 ..Default::default()
             })
             .collect(),
@@ -138,19 +137,15 @@ fn make_initial_acl_creation_request(
     let acl_change = AclChange {
         acl: repo_group,
         permission_changes: grants,
-        operation: ChangeOperation::UPDATE,
+        operation: ChangeOperation::ADD,
         metadata_update: Some(AclMetadata {
             oncall: Some(oncall_name.to_string()),
             ..Default::default()
         }),
         ..Default::default()
     };
-    let group_change = GroupChange {
-        change_data: acl_change,
-        ..Default::default()
-    };
     let change_contents = ChangeContents {
-        group_changes: vec![group_change],
+        acl_changes: vec![acl_change],
         ..Default::default()
     };
     let spec = ChangeSpecification::contents(change_contents);
@@ -232,13 +227,8 @@ async fn is_valid_hipster_group(
         // Validate the hipster group actually exists
         let thrift_client = make_AuthorizationService_srclient!(ctx.fb)
             .map_err(|e| scs_errors::internal_error(format!("{e:#}")))?;
-        let hipster_group_identity = Identity {
-            id_type: AUTH_SET.to_string(),
-            id_data: hipster_group.to_string(),
-            ..Default::default()
-        };
         let exists = thrift_client
-            .aclExists(&hipster_group_identity)
+            .groupExists(hipster_group)
             .await
             .map_err(|e| scs_errors::internal_error(format!("{e:#}")))?;
         if exists {
@@ -308,13 +298,13 @@ async fn try_fetching_repo_acl(
 
 #[cfg(fbcode_build)]
 fn make_full_acl_name_from_repo_name(repo_name: &str) -> String {
-    format!("REPOS:repos/git/{}", repo_name)
+    format!("repos/git/{}", repo_name)
 }
 
 #[cfg(fbcode_build)]
 fn make_top_level_acl_name_from_repo_name(repo_name: &str) -> String {
     let (top_level, _rest) = repo_name.split_once('/').unwrap_or((repo_name, ""));
-    format!("REPOS:repos/git/{}", top_level)
+    format!("repos/git/{}", top_level)
 }
 
 /// Ensure all repos have the necessary ACLs set-up.
