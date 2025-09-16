@@ -23,6 +23,7 @@ dirs = "6.0"
 faccess = "0.2.4"
 fbinit = { version = "0.2.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 filetime = { version = "0.2.25", optional = true }
+futures = { version = "0.3.31", features = ["async-await", "compat"] }
 hostcaps = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 hostname = "0.3"
 parking_lot = { version = "0.12.1", features = ["send_guard"] }
@@ -40,6 +41,7 @@ sapling-repo-minimal-info = { version = "0.1.0", path = "../../repo/repo-minimal
 sapling-repourl = { version = "0.1.0", path = "../../repo/url" }
 sapling-spawn-ext = { version = "0.1.0", path = "../../spawn-ext" }
 sapling-staticconfig = { version = "0.1.0", path = "../static" }
+sapling-thrift-types = { version = "0.1.0", path = "../../thrift-types" }
 sapling-types = { version = "0.1.0", path = "../../types", optional = true }
 sapling-unionconfig = { version = "0.1.0", path = "../union" }
 sapling-util = { version = "0.1.0", path = "../../util" }
