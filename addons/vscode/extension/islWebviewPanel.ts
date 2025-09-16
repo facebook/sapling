@@ -356,10 +356,12 @@ function populateAndSetISLWebview<W extends vscode.WebviewPanel | vscode.Webview
     rootClass: `webview-${isPanel(panelOrView) ? 'panel' : 'view'}`,
     webview: panelOrView.webview,
     extraStyles: '',
-    initialScript: `
+    initialScript: nonce => `
+    <script nonce="${nonce}" type="text/javascript">
       window.saplingLanguage = "${locale /* important: locale has already been validated */}";
       window.islAppMode = ${JSON.stringify(mode)};
-      ${getInitialStateJs(context, logger)}
+    </script>
+    ${getInitialStateJs(context, logger, nonce)}
     `,
   });
   const updatedPlatform = {...platform, panelOrView} as VSCodeServerPlatform as ServerPlatform;
@@ -426,7 +428,7 @@ export function fetchUIState(): Promise<{state: string} | undefined> {
  * we need to inject this initial state into the webview HTML.
  * This gives the javascript snippet that can be safely put into a webview HTML <script> tag.
  */
-function getInitialStateJs(context: vscode.ExtensionContext, logger: Logger) {
+function getInitialStateJs(context: vscode.ExtensionContext, logger: Logger, nonce: string) {
   // Previously, all state was stored in a single global storage key.
   // This meant we read and wrote the entire state on every change,
   // notably the webview sent the entire state to the extension on every change.
@@ -491,12 +493,23 @@ function getInitialStateJs(context: vscode.ExtensionContext, logger: Logger) {
   }
 
   try {
-    // validated is injected not as a string, but directly as a javascript object (since JSON is a subset of js)
+    // validated is injected not as a string, but directly as a javascript object into a dedicated tag
     const validated = JSON.stringify(parsed);
+    const escaped = validated.replace(/</g, '\\u003c');
     logger.info('Found valid initial persisted state for webview: ', validated);
-    return `try {
-      window.islInitialPersistedState = ${validated};
-    } catch (e) {}
+    return `
+    <script type="application/json" id="isl-persisted-state">
+      ${escaped}
+    </script>
+    <script nonce="${nonce}" type="text/javascript">
+      try {
+          const stateElement = document.getElementById('isl-persisted-state');
+          window.islInitialPersistedState = JSON.parse(stateElement.textContent);
+        } catch (e) {
+          console.error('Failed to parse initial persisted state: ', e);
+          window.islInitialPersistedState = {};
+        }
+     </script>
     `;
   } catch {
     logger.info('Found INVALID initial persisted state for webview: ', parsed);

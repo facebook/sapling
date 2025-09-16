@@ -78,7 +78,7 @@ function devModeHtmlForWebview(
    * javascript to inject into the HTML in a <script> tag
    * IMPORTANT: this MUST be sanitized to avoid XSS attacks
    */
-  initialScript: string,
+  initialScript: (nonce: string) => string,
   devModeScripts: Array<string>,
   rootClass: string,
   placeholderHtml?: string,
@@ -105,12 +105,8 @@ function devModeHtmlForWebview(
         ${getVSCodeCompatibilityStyles()}
         ${extraStyles}
     </style>
-    <script>
-        ${initialScript}
-    </script>
-        ${devModeScripts
-          .map(script => `<script type="module" src="${script}"></script>`)
-          .join('\n')}
+    ${initialScript('')}
+    ${devModeScripts.map(script => `<script type="module" src="${script}"></script>`).join('\n')}
 	</head>
 	<body>
 		<div id="root" class="${rootClass}">
@@ -144,7 +140,7 @@ export function htmlForWebview({
    * javascript to inject into the HTML in a <script> tag
    * IMPORTANT: this MUST be sanitized to avoid XSS attacks
    */
-  initialScript: string;
+  initialScript: (nonce: string) => string;
   /** <head>'s <title> of the webview */
   title: string;
   /** className to apply to the root <div> */
@@ -204,13 +200,11 @@ export function htmlForWebview({
 
 		<link href="${cssEntryPointFile}" rel="stylesheet">
 		<link href="res/stylex.css" rel="stylesheet">
-        <style>
-            ${getVSCodeCompatibilityStyles()}
-            ${extraStyles}
-        </style>
-        <script nonce="${nonce}">
-            ${initialScript}
-        </script>
+    <style>
+        ${getVSCodeCompatibilityStyles()}
+        ${extraStyles}
+    </style>
+    ${initialScript(nonce)}
 		<script type="module" defer="defer" nonce="${nonce}" src="${scriptUri}"></script>
 	</head>
 	<body>
