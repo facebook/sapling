@@ -70,7 +70,7 @@ import {CommitPreview, dagWithPreviews, uncommittedChangesWithPreviews} from './
 import {RelativeDate, relativeDate} from './relativeDate';
 import {repoRelativeCwd, useIsIrrelevantToCwd} from './repositoryData';
 import {isNarrowCommitTree} from './responsive';
-import {selectedCommits, useCommitCallbacks} from './selection';
+import {selectedCommitInfos, selectedCommits, useCommitCallbacks} from './selection';
 import {inMergeConflicts, mergeConflicts} from './serverAPIState';
 import {useConfirmUnsavedEditsBeforeSplit} from './stackEdit/ui/ConfirmUnsavedEditsBeforeSplit';
 import {SplitButton} from './stackEdit/ui/SplitButton';
@@ -196,7 +196,22 @@ export const Commit = memo(
           },
         });
       }
-      if (!isPublic && commit.diffId != null) {
+      const selectedDiffIDs = readAtom(selectedCommitInfos)
+        .map(info => info.diffId)
+        .filter(notEmpty);
+      if (selectedDiffIDs.length > 1) {
+        items.push({
+          label: (
+            <T replace={{$count: selectedDiffIDs.length < 10 ? selectedDiffIDs.length : '9+'}}>
+              Copy $count Selected Diff Numbers
+            </T>
+          ),
+          onClick: () => {
+            const text = selectedDiffIDs.join(' ');
+            clipboardCopy(text);
+          },
+        });
+      } else if (!isPublic && commit.diffId != null) {
         items.push({
           label: <T replace={{$number: commit.diffId}}>Copy Diff Number "$number"</T>,
           onClick: () => {
