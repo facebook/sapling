@@ -6,6 +6,7 @@
  */
 
 use std::sync::Arc;
+use std::time::Duration;
 use std::time::Instant;
 
 #[cfg(fbcode_build)]
@@ -20,6 +21,7 @@ use facet::AsyncBuildable;
 use futures::stream;
 use futures::stream::AbortHandle;
 use futures::stream::StreamExt;
+use futures_retry::retry;
 use itertools::Itertools;
 use metaconfig_parser::RepoConfigs;
 use metaconfig_parser::StorageConfigs;
@@ -322,7 +324,10 @@ impl<Repo> MononokeConfigUpdateReceiver<Repo> {
 #[async_trait]
 impl<Repo> ConfigUpdateReceiver for MononokeConfigUpdateReceiver<Repo>
 where
-    Repo: for<'builder> AsyncBuildable<'builder, RepoFactoryBuilder<'builder>> + Send + Sync,
+    Repo: for<'builder> AsyncBuildable<'builder, RepoFactoryBuilder<'builder>>
+        + Send
+        + Sync
+        + 'static,
 {
     async fn apply_update(
         &self,
@@ -340,10 +345,21 @@ where
                 async move {
                     let repo_id = repo_config.repoid.id();
                     info!(logger, "Reloading repo: {}", &repo_name);
-                    let repo = repo_factory
-                        .build(name, repo_config, common_config)
-                        .await
-                        .with_context(|| format!("Failed to reload repo '{}'", &repo_name))?;
+                    let repo = retry(
+                        |_| {
+                            repo_factory.build(
+                                name.clone(),
+                                repo_config.clone(),
+                                common_config.clone(),
+                            )
+                        },
+                        Duration::from_millis(100),
+                    )
+                    .binary_exponential_backoff()
+                    .max_attempts(5)
+                    .await
+                    .with_context(|| format!("Failed to reload repo '{}'", &repo_name))?
+                    .0;
                     info!(logger, "Reloaded repo: {}", &repo_name);
 
                     anyhow::Ok((repo_id, repo_name, repo))
