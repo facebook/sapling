@@ -92,6 +92,7 @@ rust_library(
         "//common/rust/shed/fbinit:fbinit",
         "//common/rust/shed/hostcaps:hostcaps",
         "//configerator/structs/infrasec/if:acl-rust",
+        "//eden/scm/lib/async-runtime:async-runtime",
         "//eden/scm/lib/config/remote-loader:remote-loader",
         "//eden/scm/lib/hgtime:hgtime",
         "//eden/scm/lib/http-client:http-client",

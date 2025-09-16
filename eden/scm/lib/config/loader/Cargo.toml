@@ -28,6 +28,7 @@ hostcaps = { version = "0.1.0", git = "https://github.com/facebookexperimental/r
 hostname = "0.3"
 parking_lot = { version = "0.12.1", features = ["send_guard"] }
 regex = { version = "1.11.1", optional = true }
+sapling-async-runtime = { version = "0.1.0", path = "../../async-runtime" }
 sapling-config-remote-loader = { version = "0.1.0", path = "../remote-loader" }
 sapling-configmodel = { version = "0.1.0", path = "../model" }
 sapling-configset = { version = "0.1.0", path = "../set" }
