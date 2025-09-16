@@ -177,10 +177,11 @@ export const Commit = memo(
       const hasUncommittedChanges = (readAtom(uncommittedChangesWithPreviews).length ?? 0) > 0;
       const syncStatus = readAtom(syncStatusAtom)?.get(commit.hash);
 
-      const items: Array<ContextMenuItem> = [
+      const items: Array<ContextMenuItem & {loggingLabel?: string}> = [
         {
           label: <T replace={{$hash: short(commit?.hash)}}>Copy Commit Hash "$hash"</T>,
           onClick: () => clipboardCopy(commit.hash),
+          loggingLabel: 'Copy Commit Hash',
         },
       ];
       if (isPublic && readAtom(supportsBrowseUrlForHash)) {
@@ -194,6 +195,7 @@ export const Commit = memo(
           onClick: () => {
             openBrowseUrlForHash(commit.hash);
           },
+          loggingLabel: 'Browse Repo At This Commit',
         });
       }
       const selectedDiffIDs = readAtom(selectedCommitInfos)
@@ -210,6 +212,7 @@ export const Commit = memo(
             const text = selectedDiffIDs.join(' ');
             clipboardCopy(text);
           },
+          loggingLabel: 'Copy Selected Diff Numbers',
         });
       } else if (!isPublic && commit.diffId != null) {
         items.push({
@@ -219,12 +222,14 @@ export const Commit = memo(
             const url = info?.value?.url;
             clipboardCopy(commit.diffId ?? '', url);
           },
+          loggingLabel: 'Copy Diff Number',
         });
       }
       if (!isPublic) {
         items.push({
           label: <T>View Changes in Commit</T>,
           onClick: () => showComparison({type: ComparisonType.Committed, hash: commit.hash}),
+          loggingLabel: 'View Changes in Commit',
         });
       }
       if (!isPublic && syncStatus != null && syncStatus !== SyncStatus.InSync) {
@@ -235,6 +240,7 @@ export const Commit = memo(
             onClick: () => {
               showComparison({type: ComparisonType.SinceLastCodeReviewSubmit, hash: commit.hash});
             },
+            loggingLabel: 'Compare with Provider',
           });
         }
       }
@@ -288,6 +294,7 @@ export const Commit = memo(
               <T>Split...</T>
             ),
             onClick: hasUncommittedChanges ? () => null : handleSplit,
+            loggingLabel: 'Split',
           });
         }
         items.push({
@@ -295,6 +302,7 @@ export const Commit = memo(
           onClick: () => {
             createBookmarkAtCommit(commit);
           },
+          loggingLabel: 'Create Bookmark',
         });
         items.push({
           label: hasChildren ? <T>Hide Commit and Descendants</T> : <T>Hide Commit</T>,
@@ -303,6 +311,7 @@ export const Commit = memo(
               operationBeingPreviewed,
               new HideOperation(latestSuccessorUnlessExplicitlyObsolete(commit)),
             ),
+          loggingLabel: 'Hide Commit',
         });
       }
       if (!actionsPrevented && !commit.isDot) {
@@ -311,12 +320,28 @@ export const Commit = memo(
           onClick: async () => {
             await gotoAction(runOperation, commit);
           },
+          loggingLabel: 'Goto',
         });
       }
       return items;
     };
 
-    const contextMenu = useContextMenu(makeContextMenuOptions);
+    const contextMenu = useContextMenu((): Array<ContextMenuItem> => {
+      return makeContextMenuOptions().map((item: ContextMenuItem & {loggingLabel?: string}) => {
+        if (item.type == null && notEmpty(item.loggingLabel)) {
+          return {
+            ...item,
+            onClick: () => {
+              tracker.track('CommitContextMenuItemClick', {
+                extras: {choice: item.loggingLabel},
+              });
+              item.onClick?.();
+            },
+          };
+        }
+        return item;
+      });
+    });
 
     const commitActions = [];
 

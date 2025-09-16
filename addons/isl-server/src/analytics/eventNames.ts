@@ -6,6 +6,7 @@
  */
 
 export type TrackEventName =
+  | 'CommitContextMenuItemClick'
   | 'ClickedRefresh'
   | 'ClientConnection'
   | 'LoadMoreCommits'
