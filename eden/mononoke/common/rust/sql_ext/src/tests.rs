@@ -82,16 +82,18 @@ mod facebook {
     use itertools::Itertools;
     use maplit::hashmap;
     use maplit::hashset;
+    use mysql_client::InstanceRequirement;
     use sql::mysql::MysqlQueryTelemetry;
     use sql_tests_lib::mysql_test_lib::TEST_XDB_NAME;
     use sql_tests_lib::mysql_test_lib::setup_mysql_test_connection;
 
     use super::*;
     use crate::Connection;
+    use crate::SqlConnections;
     use crate::telemetry::TelemetryGranularity;
 
     struct TelemetryTestData {
-        connection: Connection,
+        connections: SqlConnections,
         sql_query_tel: SqlQueryTelemetry,
         cri: ClientRequestInfo,
         temp_path: String,
@@ -111,11 +113,13 @@ mod facebook {
     #[mononoke::fbinit_test]
     async fn test_basic_scuba_logging(fb: FacebookInit) -> Result<()> {
         let TelemetryTestData {
-            connection,
+            connections,
             sql_query_tel,
             cri,
             temp_path,
         } = setup_scuba_logging_test(fb).await?;
+
+        let connection = connections.write_connection;
 
         let _res =
             WriteQuery1::query(&connection, sql_query_tel.clone(), &[(&1i64,), (&2i64,)]).await?;
@@ -206,11 +210,13 @@ mod facebook {
     #[mononoke::fbinit_test]
     async fn test_transaction_scuba_logging(fb: FacebookInit) -> Result<()> {
         let TelemetryTestData {
-            connection,
+            connections,
             sql_query_tel,
             temp_path,
             ..
         } = setup_scuba_logging_test(fb).await?;
+
+        let connection = connections.write_connection;
 
         let _res =
             WriteQuery1::query(&connection, sql_query_tel.clone(), &[(&1i64,), (&2i64,)]).await?;
@@ -297,14 +303,17 @@ mod facebook {
 
         Ok(())
     }
+
     #[mononoke::fbinit_test]
     async fn test_multiple_repo_ids_in_write_query(fb: FacebookInit) -> Result<()> {
         let TelemetryTestData {
-            connection,
+            connections,
             sql_query_tel,
             temp_path,
             ..
         } = setup_scuba_logging_test(fb).await?;
+
+        let connection = connections.write_connection;
 
         let _res = WriteQuery2::query(
             &connection,
@@ -399,9 +408,10 @@ mod facebook {
             std::env::set_var("SQL_TELEMETRY_SCUBA_FILE_PATH", &temp_path);
         }
 
-        let sql_connection: sql::Connection = setup_mysql_test_connection(
+        let master_sql_connection: sql::Connection = setup_mysql_test_connection(
             fb,
-            "CREATE TABLE IF NOT EXISTS mononoke_queries_test_v3(
+            Some(
+                "CREATE TABLE IF NOT EXISTS mononoke_queries_test_v3(
                      x INT,
                      repo_id INT UNSIGNED,
                      y DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
@@ -414,14 +424,31 @@ mod facebook {
                      e INT,
                      f INT,
                      PRIMARY KEY(id)
-                 )",
+                 );",
+            ),
+            InstanceRequirement::Master,
         )
         .await?;
 
-        let connection = Connection {
-            inner: sql_connection,
+        let master_connection = Connection {
+            inner: master_sql_connection,
             shard_name: TEST_XDB_NAME.to_string(),
         };
+
+        // TODO(T237287313): try InstanceRequirement::ReadAfterWriteConsistency
+        let read_sql_connection =
+            setup_mysql_test_connection(fb, None, InstanceRequirement::ReplicaOnly).await?;
+
+        let read_connection = Connection {
+            inner: read_sql_connection,
+            shard_name: TEST_XDB_NAME.to_string(),
+        };
+        let connections = SqlConnections {
+            write_connection: master_connection.clone(),
+            read_master_connection: master_connection,
+            read_connection,
+        };
+
         let client_info = ClientInfo::new_with_entry_point(ClientEntryPoint::Tests)?;
         let cri = client_info
             .request_info
@@ -436,7 +463,7 @@ mod facebook {
         let sql_query_tel = SqlQueryTelemetry::new(fb, metadata);
 
         Ok(TelemetryTestData {
-            connection,
+            connections,
             sql_query_tel,
             cri,
             temp_path,
