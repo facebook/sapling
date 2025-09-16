@@ -15,6 +15,8 @@
 //! If you're looking for reading configs and some extra features like setting
 //! configs, use `configset::ConfigSet`.
 
+#![feature(once_cell_try)]
+
 pub mod hg;
 
 pub use configmodel;
