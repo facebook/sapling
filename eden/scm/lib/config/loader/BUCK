@@ -49,6 +49,12 @@ rust_library(
     features = [
         "fb",
     ],
+    os_deps = [
+        (
+            "linux",
+            ["//infrasec/authorization/if:if-aclchecker-rust-srclients"],
+        ),
+    ],
     test_deps = [
         "fbsource//third-party/rust:once_cell",
         "fbsource//third-party/rust:tempfile",
@@ -82,6 +88,7 @@ rust_library(
         "fbsource//third-party/rust:serde_urlencoded",
         "fbsource//third-party/rust:url",
         "//common/rust/fbwhoami:fbwhoami",
+        "//common/rust/shed/fbinit:fbinit",
         "//common/rust/shed/hostcaps:hostcaps",
         "//eden/scm/lib/config/remote-loader:remote-loader",
         "//eden/scm/lib/hgtime:hgtime",
@@ -90,6 +97,8 @@ rust_library(
         "//eden/scm/lib/types:types",
         "//eden/scm/lib/util:util",
         "//eden/scm/lib/version:rust_version",
+        "//infrasec/authorization/if:if-aclchecker-rust-clients",
+        "//infrasec/authorization/if:if-aclchecker-rust-x2pclients",
     ]),
 )
 

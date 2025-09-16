@@ -19,6 +19,7 @@ pub(crate) mod remote_config_snapshot;
 /// Modify this module for static (unconditional) system config.
 pub(crate) mod static_system;
 
+pub(crate) mod acl_evaluator;
 /// Supporting libraries.
 pub(crate) mod internalconfig;
 pub(crate) mod internalconfigs;
