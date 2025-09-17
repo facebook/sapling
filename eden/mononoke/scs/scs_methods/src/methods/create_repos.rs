@@ -710,7 +710,11 @@ impl SourceControlServiceImpl {
             create_repos_in_mononoke(ctx, self.git_source_of_truth_config.as_ref(), &params)
                 .await?;
         }
-        create_repos_in_metagit(params).await?;
+        if justknobs::eval("scm/mononoke:scs_create_repos_in_metagit", None, None)
+            .map_err(|e| scs_errors::internal_error(format!("{e:#}")))?
+        {
+            create_repos_in_metagit(params).await?;
+        }
 
         Ok(thrift::CreateReposToken {
             ..Default::default()
