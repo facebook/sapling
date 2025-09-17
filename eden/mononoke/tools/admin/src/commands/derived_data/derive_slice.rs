@@ -132,6 +132,7 @@ async fn derive_boundaries(
             cloned!(ctx, manager, completed, rederivation);
             async move {
                 mononoke::spawn_task(async move {
+                    debug!(ctx.logger(), "deriving csid {}", csid);
                     let (derive_boundary_stats, ()) = BulkDerivation::derive_from_predecessor(
                         &manager,
                         &ctx,
