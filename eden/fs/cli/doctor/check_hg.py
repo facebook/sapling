@@ -352,13 +352,16 @@ class AbandonedTransactionChecker(HgChecker):
             raise ex
 
 
-class PreviousEdenFSCrashedDuringCheckout(Problem):
-    def __init__(self, checkout: EdenCheckout, ex: Exception) -> None:
+class EdenFsInterruptedCheckout(Problem):
+    def __init__(self, checkout: EdenCheckout, ex: InProgressCheckoutError) -> None:
         remediation = f"""\
-EdenFS was killed or crashed during a checkout/update operation. This is unfortunately not recoverable at this time and recloning the repository is necessary.
-{reclone_remediation(checkout.path)}"""
-
-        super().__init__(f"{str(ex)}", remediation=remediation)
+Please run `hg go {ex.to_commit}` to resume the checkout.
+If there are conflicts, run `hg go --clean {ex.to_commit}` to discard changes, or `hg go --merge {ex.to_commit}` to merge.
+"""
+        super().__init__(
+            f"EdenFS was killed or crashed while updating from {ex.from_commit} to {ex.to_commit}.",
+            remediation=remediation,
+        )
 
 
 def check_in_progress_checkout(tracker: ProblemTracker, checkout: EdenCheckout) -> None:
@@ -368,7 +371,7 @@ def check_in_progress_checkout(tracker: ProblemTracker, checkout: EdenCheckout) 
         if proc_utils.new().is_edenfs_process(ex.pid):
             return
 
-        tracker.add_problem(PreviousEdenFSCrashedDuringCheckout(checkout, ex))
+        tracker.add_problem(EdenFsInterruptedCheckout(checkout, ex))
 
 
 def check_hg(tracker: ProblemTracker, checkout: EdenCheckout) -> None:
