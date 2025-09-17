@@ -14,12 +14,15 @@ mod telemetry;
 #[cfg(test)]
 mod tests;
 
+use std::sync::Arc;
+
 use anyhow::Result;
 use mononoke_types::RepositoryId;
 use rusqlite::Connection as SqliteConnection;
 use sql::Connection as SqlConnection;
 use sql::QueryTelemetry;
 use sql::Transaction as SqlTransaction;
+use sql::sqlite::SqliteHlcProvider;
 use sql_common::sqlite::SqliteCallbacks;
 pub use sql_query_telemetry::SqlQueryTelemetry;
 pub use sqlite::open_existing_sqlite_path;
@@ -301,6 +304,17 @@ impl Connection {
     ) -> Result<Self> {
         let shard_name = con.db_name(0)?;
         let inner = SqlConnection::with_sqlite_callbacks(con, callbacks);
+        Ok(Connection { inner, shard_name })
+    }
+
+    pub fn with_sqlite_hlc_provider_and_callbacks(
+        con: SqliteConnection,
+        hlc_provider: Arc<Box<SqliteHlcProvider>>,
+        callbacks: Box<dyn SqliteCallbacks>,
+    ) -> Result<Self> {
+        let shard_name = con.db_name(0)?;
+        let inner =
+            SqlConnection::with_sqlite_hlc_provider_and_callbacks(con, hlc_provider, callbacks);
         Ok(Connection { inner, shard_name })
     }
 }

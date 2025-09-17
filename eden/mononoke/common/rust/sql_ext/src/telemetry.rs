@@ -151,6 +151,7 @@ fn log_query_telemetry_impl(
                 shard_name,
             )
         }
+        QueryTelemetry::Sqlite(_) => Ok(()),
         _ => Err(anyhow!("Unsupported query telemetry type")),
     }
 }
