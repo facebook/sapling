@@ -48,6 +48,10 @@ define_stats! {
     gets_master: timeseries(Rate, Sum),
     adds: timeseries(Rate, Sum),
     get_many_hg_by_prefix: timeseries(Rate, Sum),
+    // Number of mappings that were not found in the replica
+    left_to_fetch: timeseries(Sum, Average, Count),
+    // Number of mappings that were fetched from the master
+    fetched_from_master: timeseries(Sum, Average, Count),
 }
 
 #[derive(Clone, Debug, Hash, Eq, PartialEq)]
@@ -67,6 +71,13 @@ impl BonsaiOrHgChangesetIds {
         match self {
             BonsaiOrHgChangesetIds::Bonsai(v) => v.is_empty(),
             BonsaiOrHgChangesetIds::Hg(v) => v.is_empty(),
+        }
+    }
+
+    pub fn count(&self) -> usize {
+        match self {
+            BonsaiOrHgChangesetIds::Bonsai(v) => v.len(),
+            BonsaiOrHgChangesetIds::Hg(v) => v.len(),
         }
     }
 }
@@ -467,6 +478,9 @@ impl BonsaiHgMapping for SqlBonsaiHgMapping {
         let (mut mappings, left_to_fetch) =
             select_mapping(ctx, &self.read_connection, self.repo_id, ids).await?;
 
+        let left_to_fetch_count = left_to_fetch.count().try_into().map_err(Error::from)?;
+        STATS::left_to_fetch.add_value(left_to_fetch_count);
+
         if left_to_fetch.is_empty() {
             return Ok(mappings);
         }
@@ -481,6 +495,9 @@ impl BonsaiHgMapping for SqlBonsaiHgMapping {
             left_to_fetch,
         )
         .await?;
+
+        let fetched_from_master_count = master_mappings.len().try_into().map_err(Error::from)?;
+        STATS::fetched_from_master.add_value(fetched_from_master_count);
 
         mappings.append(&mut master_mappings);
         Ok(mappings)
