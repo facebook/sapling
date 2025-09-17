@@ -79,7 +79,7 @@ void ensureEmptyDirectory(AbsolutePathPiece path) {
 
 int main(int argc, char** argv) {
   // Make sure to run this before any flag values are read.
-  folly::init(&argc, &argv);
+  const folly::Init init(&argc, &argv);
   if (argc != 2) {
     fprintf(stderr, "usage: test_mount PATH\n");
     return EX_NOPERM;

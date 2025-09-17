@@ -921,7 +921,7 @@ int main(int argc, char** argv) {
   // Don't buffer stdout, even if piped to a file.
   setbuf(stdout, nullptr);
 
-  folly::init(&argc, &argv);
+  const folly::Init init(&argc, &argv);
 
   folly::ScopedEventBaseThread evbThread;
 

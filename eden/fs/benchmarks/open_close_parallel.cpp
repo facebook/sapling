@@ -26,7 +26,7 @@ DEFINE_uint64(iterations, 100000, "Number of open/close iterations per thread");
 using namespace facebook::eden;
 
 int main(int argc, char** argv) {
-  folly::init(&argc, &argv);
+  const folly::Init init(&argc, &argv);
 
   if (argc <= 1) {
     fprintf(
