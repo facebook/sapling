@@ -5,6 +5,7 @@
  * GNU General Public License version 2.
  */
 
+use std::collections::BTreeMap;
 use std::collections::HashSet;
 use std::env;
 use std::process::Command;
@@ -21,6 +22,7 @@ use auth_consts::SERVICE_IDENTITY;
 #[cfg(fbcode_build)]
 use configo::ConfigoClient;
 use configo_thrift_srclients::make_ConfigoService_srclient;
+use configo_thrift_srclients::thrift::CryptoProject;
 use context::CoreContext;
 use futures::future::try_join_all;
 use futures_retry::retry;
@@ -559,6 +561,37 @@ async fn create_repo_configs_in_mononoke(
         .map_err(|e| scs_errors::internal_error(format!("{e:#}")))?;
 
     if !dry_run {
+        let content = mutation
+            .content()
+            .await
+            .map_err(|e| scs_errors::internal_error(format!("{e:#}")))?;
+        let mut signatures = BTreeMap::new();
+        let crypto_project = CryptoProject {
+            name: "SCM".to_owned(),
+            ..Default::default()
+        };
+
+        let crypto_service = crypto_service_srclients::make_CryptoService_srclient!(ctx.fb)
+            .map_err(|e| scs_errors::internal_error(format!("{e:#}")))?;
+
+        for file in content.modifiedFiles {
+            if let Some((path, sig)) = configo_crypto_utils::sign_config(
+                ctx.fb,
+                &crypto_service,
+                &file,
+                crypto_project.clone(),
+            )
+            .await
+            .map_err(|e| scs_errors::internal_error(format!("{e:#}")))?
+            {
+                signatures.insert(path, sig);
+            }
+        }
+        mutation
+            .attach_signatures(signatures)
+            .await
+            .map_err(|e| scs_errors::internal_error(format!("{e:#}")))?;
+
         mutation
             .land(LAND_TIMEOUT)
             .await
