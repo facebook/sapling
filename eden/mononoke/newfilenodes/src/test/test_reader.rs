@@ -6,9 +6,13 @@
  */
 
 use std::sync::Arc;
+use std::sync::atomic::AtomicI64;
 
 use anyhow::Error;
+use anyhow::Result;
 use anyhow::format_err;
+use async_trait::async_trait;
+use cloned::cloned;
 use context::CoreContext;
 use fbinit::FacebookInit;
 use filenodes::FilenodeInfo;
@@ -25,8 +29,12 @@ use mononoke_macros::mononoke;
 use mononoke_types::NonRootMPath;
 use mononoke_types::RepoPath;
 use mononoke_types::RepositoryId;
+use mononoke_types::Timestamp;
 use mononoke_types_mocks::repo::REPO_ONE;
 use mononoke_types_mocks::repo::REPO_ZERO;
+use sql::sqlite::SqliteCallbacks;
+use sql::sqlite::SqliteHlcProvider;
+use sql::sqlite::SqliteQueryType;
 use sql_ext::Connection;
 use sql_ext::mononoke_queries;
 use vec1::Vec1;
@@ -37,6 +45,7 @@ use super::util::build_shard;
 use crate::builder::SQLITE_INSERT_CHUNK_SIZE;
 use crate::local_cache::LocalCache;
 use crate::reader::FilenodesReader;
+use crate::test::util::build_shard_with_hlc_provider;
 use crate::writer::FilenodesWriter;
 
 async fn check_roundtrip(
@@ -182,12 +191,98 @@ mononoke_queries! {
     }
 }
 
+#[derive(Clone, Debug)]
+struct QueryCounter {
+    label: String,
+    reads: Arc<AtomicI64>,
+    writes: Arc<AtomicI64>,
+}
+
+impl QueryCounter {
+    fn new(label: &str) -> Self {
+        Self {
+            label: label.to_string(),
+            reads: Arc::new(AtomicI64::new(0)),
+            writes: Arc::new(AtomicI64::new(0)),
+        }
+    }
+
+    fn reads(&self) -> i64 {
+        self.reads.load(std::sync::atomic::Ordering::SeqCst)
+    }
+
+    fn writes(&self) -> i64 {
+        self.writes.load(std::sync::atomic::Ordering::SeqCst)
+    }
+
+    fn values(&self) -> (i64, i64) {
+        (self.reads(), self.writes())
+    }
+}
+
+#[async_trait]
+impl SqliteCallbacks for QueryCounter {
+    async fn query_start(&self, query_type: SqliteQueryType) -> Result<(), Error> {
+        match query_type {
+            SqliteQueryType::Read => {
+                let _ = self.reads.fetch_add(1, std::sync::atomic::Ordering::SeqCst);
+            }
+            SqliteQueryType::Write => {
+                let _ = self
+                    .writes
+                    .fetch_add(1, std::sync::atomic::Ordering::SeqCst);
+            }
+            _ => (),
+        }
+        Ok(())
+    }
+}
+
+fn setup_fallback_test() -> Result<(
+    Arc<AtomicI64>,
+    // master and replica connections
+    (Connection, Connection),
+    // master and replica query counters
+    (QueryCounter, QueryCounter),
+)> {
+    // Create a shared timestamp that can be updated
+    let last_write_time = Arc::new(AtomicI64::new(Timestamp::now().timestamp_nanos()));
+
+    // Create an HLC provider that reads from the shared timestamp
+    let replica_hlc_provider: Arc<Box<SqliteHlcProvider>> = {
+        let time_ref = last_write_time.clone();
+        Arc::new(Box::new(move || {
+            time_ref.load(std::sync::atomic::Ordering::SeqCst)
+        }))
+    };
+
+    println!("Building master");
+    let master_counter = QueryCounter::new("master");
+    let master = build_shard_with_hlc_provider(
+        replica_hlc_provider.clone(),
+        Box::new(master_counter.clone()),
+    )?;
+
+    println!("Building replica");
+    let replica_counter = QueryCounter::new("replica");
+    let replica = build_shard_with_hlc_provider(
+        replica_hlc_provider.clone(),
+        Box::new(replica_counter.clone()),
+    )?;
+
+    Ok((
+        last_write_time,
+        (master, replica),
+        (master_counter, replica_counter),
+    ))
+}
+
 #[mononoke::fbinit_test]
 async fn test_fallback_on_missing_copy_info(fb: FacebookInit) -> Result<(), Error> {
     let ctx = CoreContext::test_mock(fb);
 
-    let master = build_shard()?;
-    let replica = build_shard()?;
+    let (last_write_time, (master, replica), (master_counter, replica_counter)) =
+        setup_fallback_test()?;
 
     // Populate both master and replica with the same filenodes (to simulate replication).
     FilenodesWriter::new(
@@ -204,26 +299,44 @@ async fn test_fallback_on_missing_copy_info(fb: FacebookInit) -> Result<(), Erro
     .await?
     .do_not_handle_disabled_filenodes()?;
 
-    FilenodesWriter::new(
-        SQLITE_INSERT_CHUNK_SIZE,
-        vec1![replica.clone()],
-        vec1![replica.clone()],
-    )
-    .insert_filenodes(
-        &ctx,
-        REPO_ZERO,
-        vec![copied_from_filenode(), copied_filenode()],
-        false,
-    )
-    .await?
-    .do_not_handle_disabled_filenodes()?;
+    // Spawn a separate task to write to replica, introducing an artificial
+    // replication lag of ~10ms.
+    let replica_write_future = {
+        cloned!(ctx, replica, last_write_time);
+        async move {
+            tokio::time::sleep(std::time::Duration::from_millis(10)).await;
+            println!("Writing to replica");
+            FilenodesWriter::new(
+                SQLITE_INSERT_CHUNK_SIZE,
+                vec1![replica.clone()],
+                vec1![replica],
+            )
+            .insert_filenodes(
+                &ctx,
+                REPO_ZERO,
+                vec![copied_from_filenode(), copied_filenode()],
+                false,
+            )
+            .await?
+            .do_not_handle_disabled_filenodes()?;
 
-    // Now, delete the copy info from the replica.
-    DeleteCopyInfo::query(&replica, ctx.sql_query_telemetry()).await?;
+            // Update the timestamp after writing to replica
+            last_write_time.store(
+                Timestamp::now().timestamp_nanos(),
+                std::sync::atomic::Ordering::SeqCst,
+            );
 
+            Ok::<_, Error>(())
+        }
+    };
+
+    // Spawn the future as a separate task (don't await it)
+    tokio::spawn(replica_write_future);
+
+    println!("Reading filenodes");
     let reader = Arc::new(FilenodesReader::new(vec1![replica], vec1![master])?);
     let prepared = copied_filenode();
-    assert_filenode(
+    let res = assert_filenode(
         &ctx,
         reader,
         &prepared.path,
@@ -231,8 +344,29 @@ async fn test_fallback_on_missing_copy_info(fb: FacebookInit) -> Result<(), Erro
         REPO_ZERO,
         prepared.info.clone(),
     )
-    .await?;
+    .await;
 
+    println!("master counter: {0:?}", master_counter.values());
+    println!("replica counter: {0:?}", replica_counter.values());
+
+    assert_eq!(
+        master_counter.values(),
+        (3, 3),
+        "unexpected number of reads/writes to master"
+    );
+    // Can't make assertions on writes to replica because in some test runs the
+    // write might run and others it might not
+    // assert_eq!(
+    //     replica_counter.writes(),
+    //     3,
+    //     "unexpected number of writes to replica"
+    // );
+    assert!(
+        replica_counter.reads() == 1,
+        "unexpected number of reads to replica"
+    );
+
+    res?;
     Ok(())
 }
 
@@ -240,8 +374,8 @@ async fn test_fallback_on_missing_copy_info(fb: FacebookInit) -> Result<(), Erro
 async fn test_fallback_on_missing_paths(fb: FacebookInit) -> Result<(), Error> {
     let ctx = CoreContext::test_mock(fb);
 
-    let master = build_shard()?;
-    let replica = build_shard()?;
+    let (last_write_time, (master, replica), (master_counter, replica_counter)) =
+        setup_fallback_test()?;
 
     // Populate both master and replica with the same filenodes (to simulate replication).
     FilenodesWriter::new(
@@ -258,26 +392,42 @@ async fn test_fallback_on_missing_paths(fb: FacebookInit) -> Result<(), Error> {
     .await?
     .do_not_handle_disabled_filenodes()?;
 
-    FilenodesWriter::new(
-        SQLITE_INSERT_CHUNK_SIZE,
-        vec1![replica.clone()],
-        vec1![replica.clone()],
-    )
-    .insert_filenodes(
-        &ctx,
-        REPO_ZERO,
-        vec![copied_from_filenode(), copied_filenode()],
-        false,
-    )
-    .await?
-    .do_not_handle_disabled_filenodes()?;
+    // Spawn a separate task to write to replica, introducing an artificial
+    // replication lag of ~10ms.
+    let replica_write_future = {
+        cloned!(ctx, replica, last_write_time);
+        async move {
+            tokio::time::sleep(std::time::Duration::from_millis(10)).await;
+            FilenodesWriter::new(
+                SQLITE_INSERT_CHUNK_SIZE,
+                vec1![replica.clone()],
+                vec1![replica.clone()],
+            )
+            .insert_filenodes(
+                &ctx,
+                REPO_ZERO,
+                vec![copied_from_filenode(), copied_filenode()],
+                false,
+            )
+            .await?
+            .do_not_handle_disabled_filenodes()?;
 
-    // Now, delete the copy info from the replica.
-    DeletePaths::query(&replica, ctx.sql_query_telemetry()).await?;
+            // Update the timestamp after writing to replica
+            last_write_time.store(
+                Timestamp::now().timestamp_nanos(),
+                std::sync::atomic::Ordering::SeqCst,
+            );
+
+            Ok::<_, Error>(())
+        }
+    };
+
+    // Spawn the future as a separate task
+    tokio::spawn(replica_write_future);
 
     let reader = Arc::new(FilenodesReader::new(vec1![replica], vec1![master])?);
     let prepared = copied_filenode();
-    assert_filenode(
+    let res = assert_filenode(
         &ctx,
         reader,
         &prepared.path,
@@ -285,8 +435,26 @@ async fn test_fallback_on_missing_paths(fb: FacebookInit) -> Result<(), Error> {
         REPO_ZERO,
         prepared.info.clone(),
     )
-    .await?;
+    .await;
 
+    assert_eq!(
+        master_counter.values(),
+        (3, 3),
+        "unexpected number of reads/writes to master"
+    );
+    // Can't make assertions on writes to replica because in some test runs the
+    // write might run and others it might not
+    // assert_eq!(
+    //     replica_counter.writes(),
+    //     3,
+    //     "unexpected number of writes to replica"
+    // );
+    assert!(
+        replica_counter.reads() == 1,
+        "unexpected number of reads to replica"
+    );
+
+    res?;
     Ok(())
 }
 

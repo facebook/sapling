@@ -5,8 +5,12 @@
  * GNU General Public License version 2.
  */
 
+use std::sync::Arc;
+
 use anyhow::Error;
 use sql::rusqlite::Connection as SqliteConnection;
+use sql::sqlite::SqliteCallbacks;
+use sql::sqlite::SqliteHlcProvider;
 use sql_construct::SqlConstruct;
 use sql_ext::Connection;
 use vec1::Vec1;
@@ -20,6 +24,15 @@ pub fn build_shard() -> Result<Connection, Error> {
     let con = SqliteConnection::open_in_memory()?;
     con.execute_batch(NewFilenodesBuilder::CREATION_QUERY)?;
     Connection::with_sqlite(con)
+}
+
+pub fn build_shard_with_hlc_provider(
+    hlc_provider: Arc<Box<SqliteHlcProvider>>,
+    callbacks: Box<dyn SqliteCallbacks>,
+) -> Result<Connection, Error> {
+    let con = SqliteConnection::open_in_memory()?;
+    con.execute_batch(NewFilenodesBuilder::CREATION_QUERY)?;
+    Connection::with_sqlite_hlc_provider_and_callbacks(con, hlc_provider, callbacks)
 }
 
 pub fn build_reader_writer(shards: Vec1<Connection>) -> (FilenodesReader, FilenodesWriter) {

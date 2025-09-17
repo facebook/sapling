@@ -10,6 +10,7 @@ rust_library(
     ]),
     test_deps = [
         "fbsource//third-party/rust:tokio",
+        "//common/rust/shed/cloned:cloned",
         "//common/rust/shed/fbinit:fbinit",
         "//common/rust/shed/fbinit:fbinit-tokio",
         "//common/rust/shed/sql:sql",
