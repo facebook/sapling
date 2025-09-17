@@ -58,6 +58,7 @@ pushrebase = { version = "0.1.0", path = "../../pushrebase" }
 pushrebase_mutation_mapping = { version = "0.1.0", path = "../../pushrebase_mutation_mapping" }
 repo_authorization = { version = "0.1.0", path = "../../repo_authorization" }
 repo_identity = { version = "0.1.0", path = "../../repo_attributes/repo_identity" }
+repos = { version = "0.1.0", path = "../../../../configerator/structs/scm/mononoke/repos/repos" }
 sapling-clientinfo = { version = "0.1.0", path = "../../../scm/lib/clientinfo" }
 scribe_ext = { version = "0.1.0", path = "../../common/scribe_ext" }
 scs_errors = { version = "0.1.0", path = "../scs_errors" }

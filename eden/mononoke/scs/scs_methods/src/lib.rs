@@ -5,6 +5,8 @@
  * GNU General Public License version 2.
  */
 
+#![feature(string_into_chars)]
+
 mod async_requests;
 mod commit_id;
 pub mod from_request;

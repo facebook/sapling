@@ -19,8 +19,8 @@ use auth_consts::SANDCASTLE_CMD;
 use auth_consts::SANDCASTLE_TAG;
 use auth_consts::SERVICE_IDENTITY;
 #[cfg(fbcode_build)]
-#[allow(unused)]
 use configo::ConfigoClient;
+use configo_thrift_srclients::make_ConfigoService_srclient;
 use context::CoreContext;
 use futures::future::try_join_all;
 use futures_retry::retry;
@@ -45,13 +45,21 @@ use mononoke_api::RepositoryId;
 use oncall::OncallClient;
 use permission_checker::AclProvider;
 use repo_authorization::AuthorizationContext;
+use repos::QuickRepoDefinition;
+use repos::QuickRepoDefinitionShardingConfig;
+use repos::QuickRepoDefinitionTShirtSize;
+use repos::QuickRepoDefinitions;
+use repos::RawCommitIdentityScheme;
 use source_control as thrift;
+use thrift::RepoSizeBucket;
 
 use crate::source_control_impl::SourceControlServiceImpl;
 
-/// See https://www.internalfb.com/wiki/Configerator/Configerator_Get_Started/Configerator_Concepts_&_Terms/Configerator_Config_Name/
-#[allow(unused)]
-const QUICK_REPO_DEFINITIONS_CONFIG_NAME: &str = "scm/mononoke/repos/quick_repo_definitions";
+const QUICK_REPO_DEFINITIONS_CONFIG_NAME: &str =
+    "source/scm/mononoke/repos/quick_repo_definitions.cconf";
+const DIFF_AUTHOR: &str = "scm_server_infra <oncall+scm_server_infra@xmail.facebook.com>";
+const PREPARE_TIMEOUT: Duration = Duration::from_secs(60 * 20);
+const LAND_TIMEOUT: Duration = Duration::from_secs(60 * 20);
 
 async fn ensure_acls_allow_repo_creation(
     ctx: CoreContext,
@@ -397,31 +405,38 @@ async fn reserve_repos_ids(
     ctx: CoreContext,
     git_source_of_truth_config: &dyn GitSourceOfTruthConfig,
     params: &thrift::CreateReposParams,
-) -> Result<Vec<(RepositoryId, RepositoryName)>, scs_errors::ServiceError> {
+) -> Result<Vec<(RepositoryId, thrift::RepoCreationRequest)>, scs_errors::ServiceError> {
     let max_id = git_source_of_truth_config
         .get_max_id(&ctx)
         .await
         .map_err(|e| scs_errors::internal_error(format!("{e:#}")))?;
     if let Some(max_id) = max_id {
         let mut repo_id = max_id.id();
-        let repos = params
+        let repo_ids_and_requests = params
             .repos
             .iter()
             .map(|request| {
                 repo_id += 1;
-                (
-                    RepositoryId::new(repo_id),
-                    RepositoryName(request.repo_name.clone()),
-                    GitSourceOfTruth::Reserved,
-                )
+                (RepositoryId::new(repo_id), request.clone())
             })
             .collect::<Vec<_>>();
-        let result = git_source_of_truth_config.insert_repos(&ctx, &repos).await;
+        let result = git_source_of_truth_config
+            .insert_repos(
+                &ctx,
+                &repo_ids_and_requests
+                    .iter()
+                    .map(|(id, request)| {
+                        (
+                            id.clone(),
+                            RepositoryName(request.repo_name.clone()),
+                            GitSourceOfTruth::Reserved,
+                        )
+                    })
+                    .collect::<Vec<_>>(),
+            )
+            .await;
         match result {
-            Ok(_) => Ok(repos
-                .into_iter()
-                .map(|(repo_id, repo_name, _sot)| (repo_id, repo_name))
-                .collect()),
+            Ok(_) => Ok(repo_ids_and_requests),
             Err(e) => {
                 let error_trace = format!("{e:#}");
                 if error_trace.contains("UNIQUE constraint failed")
@@ -447,12 +462,109 @@ async fn reserve_repos_ids(
     }
 }
 
-async fn create_repo_configs_in_mononoke() -> Result<(), scs_errors::ServiceError> {
-    // TODO (Pierre) Implement
-    Err(
-        scs_errors::internal_error("Creating the repo in configerator is still unimplemented")
-            .into(),
-    )
+fn to_tshirt_size(
+    size_bucket: RepoSizeBucket,
+) -> Result<QuickRepoDefinitionTShirtSize, scs_errors::ServiceError> {
+    match size_bucket {
+        // < 100 MB
+        RepoSizeBucket::EXTRA_SMALL => Ok(QuickRepoDefinitionTShirtSize::SMALL),
+        // < 1 GB | < 10 GB
+        RepoSizeBucket::SMALL | RepoSizeBucket::MEDIUM => Ok(QuickRepoDefinitionTShirtSize::MEDIUM),
+        // < 100 GB
+        RepoSizeBucket::LARGE => Ok(QuickRepoDefinitionTShirtSize::LARGE),
+        // >= 100 GB
+        RepoSizeBucket::EXTRA_LARGE => Ok(QuickRepoDefinitionTShirtSize::HUGE),
+        _ => Err(scs_errors::internal_error(format!(
+            "Unsupported RepoSizeBucket: {size_bucket:?}"
+        ))
+        .into()),
+    }
+}
+
+fn make_quick_repo_definition(
+    (repo_id, request): &(RepositoryId, thrift::RepoCreationRequest),
+) -> Result<QuickRepoDefinition, scs_errors::ServiceError> {
+    Ok(QuickRepoDefinition {
+        repo_id: repo_id.id(),
+        repo_name: request.repo_name.clone(),
+        config_tiers: vec![
+            "gitimport".to_string(),
+            "gitimport_content".to_string(),
+            "scs".to_string(),
+        ],
+        enabled: true,
+        readonly: false,
+        default_commit_identity_scheme: RawCommitIdentityScheme::GIT,
+        custom_repo_config: None,
+        git_lfs_interpret_pointers: true,
+        use_upstream_lfs_server: true,
+        custom_storage_config: None,
+        t_shirt_size: to_tshirt_size(request.size_bucket)?,
+        sharding_config: QuickRepoDefinitionShardingConfig::BGM_ONLY_REGIONS,
+        custom_acl_name: None,
+        preloaded_commit_graph_blobstore_key: None,
+        git_concurrency: None,
+        enable_git_bundle_uri: None,
+        ..Default::default()
+    })
+}
+
+async fn create_repo_configs_in_mononoke(
+    ctx: CoreContext,
+    dry_run: bool,
+    repos_ids_and_requests: Vec<(RepositoryId, thrift::RepoCreationRequest)>,
+) -> Result<(), scs_errors::ServiceError> {
+    let configo_client = ConfigoClient::with_client(
+        ctx.fb,
+        make_ConfigoService_srclient!(ctx.fb)
+            .map_err(|e| scs_errors::internal_error(format!("{e:#}")))?,
+    );
+    let mut txn = configo_client.managed_transaction();
+    {
+        let mut thrift_object = txn
+            .get_thrift_object::<QuickRepoDefinitions>(
+                QUICK_REPO_DEFINITIONS_CONFIG_NAME.to_string(),
+            )
+            .await
+            .map_err(|e| scs_errors::internal_error(format!("{e:#}")))?;
+
+        let new_repo_definitions = repos_ids_and_requests
+            .iter()
+            .map(make_quick_repo_definition)
+            .collect::<Result<Vec<_>, _>>()?;
+
+        thrift_object
+            .quick_repo_definitions
+            .extend_from_slice(&new_repo_definitions);
+    }
+
+    let summary = repos_ids_and_requests
+        .iter()
+        .flat_map(|(repo_id, request)| format!("|{}|{}|", repo_id, request.repo_name).into_chars())
+        .collect::<String>();
+    let mutation = txn
+        .prepare_mutation_request()
+        .map_err(|e| scs_errors::internal_error(format!("{e:#}")))?
+        .add_author(DIFF_AUTHOR.to_string())
+        .add_commit_message(
+            format!(
+                "[mononoke]: Create {} git repositories (automated)",
+                repos_ids_and_requests.len()
+            ),
+            summary,
+        )
+        // Give it 10 mins to conf build
+        .prepare(PREPARE_TIMEOUT)
+        .await
+        .map_err(|e| scs_errors::internal_error(format!("{e:#}")))?;
+
+    if !dry_run {
+        mutation
+            .land(LAND_TIMEOUT)
+            .await
+            .map_err(|e| scs_errors::internal_error(format!("{e:#}")))?;
+    }
+    Ok(())
 }
 
 async fn update_source_of_truth_to_mononoke(
@@ -493,14 +605,11 @@ async fn create_repos_in_mononoke(
     //   configerator to add the to Mononoke.
     //   Use configo to make a diff adding these repositories to quick_repo_definitions using
     //   the parameters passed in to `create_repos`via thrift
-    //   Note: for authoring a config change, the configo API is what I need:
-    //   https://www.internalfb.com/intern/rustdoc/fbcode/common/rust/configo:configo/configo/index.html
-    //   Create the mutation, validate it and land it.
     // * c) Repo creation was successful, overwrite "reserved" with "mononoke" for these
     //   repositories. At this point, the repos were created and empty, so it's OK for their Source
     //   Of Truth to be in Mononoke already, ahead of creating them in Metagit and allowing pushes.
 
-    let _repo_ids_and_names = retry(
+    let (repo_ids_and_requests, _attempts) = retry(
         |_| reserve_repos_ids(ctx.clone(), git_source_of_truth_config, params),
         Duration::from_millis(1_000),
     )
@@ -517,7 +626,7 @@ async fn create_repos_in_mononoke(
 
     // We have reserved the repo ids. Now it's time to actually create the repos, safe in the
     // knowledge that no-one will compete with us
-    create_repo_configs_in_mononoke().await?;
+    create_repo_configs_in_mononoke(ctx.clone(), params.dry_run, repo_ids_and_requests).await?;
 
     retry(
         |_| update_source_of_truth_to_mononoke(ctx.clone(), git_source_of_truth_config, params),
@@ -532,6 +641,8 @@ async fn create_repos_in_mononoke(
 
 #[cfg(not(fbcode_build))]
 async fn create_repos_in_mononoke(
+    _ctx: CoreContext,
+    _git_source_of_truth_config: &dyn GitSourceOfTruthConfig,
     _params: &thrift::CreateReposParams,
 ) -> Result<(), scs_errors::ServiceError> {
     println!("No access to configo in oss build");
