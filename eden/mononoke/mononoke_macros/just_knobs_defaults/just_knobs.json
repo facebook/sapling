@@ -53,7 +53,7 @@
     "scm/mononoke:derivation_queue_enable_automated_eviction": true,
     "scm/mononoke:read_bookmarks_from_xdb_replica": true,
     "scm/mononoke:use_maybe_stale_freshness_for_bookmarks": true,
-    "scm/mononoke:disable_bonsai_mapping_read_fallback_to_primary": true,
+    "scm/mononoke:disable_bonsai_mapping_read_fallback_to_primary": false,
     "scm/mononoke:retry_query_from_replica_with_consistency_check": true
   },
   "ints": {

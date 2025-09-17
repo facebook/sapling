@@ -1483,7 +1483,6 @@ def setup_environment_variables(stderr: BinaryIO, fs: ShellFS, env: Env) -> int:
 
     # Common arguments
     common_args = [
-        "--mysql-master-only",
         "--just-knobs-config-path",
         get_configerator_relative_path(mononoke_just_knobs_overrides_path, env),
         "--local-configerator-path",
@@ -1496,6 +1495,12 @@ def setup_environment_variables(stderr: BinaryIO, fs: ShellFS, env: Env) -> int:
         "--runtime-threads",
         "6",
     ]
+    mysql_master_only = env.getenv("MYSQL_MASTER_ONLY")
+    if mysql_master_only:
+        common_args.append(
+            "--mysql-master-only",
+        )
+
     all_args = " ".join(common_args)
     env.setenv("COMMON_ARGS_U", all_args)
     env.setenv("COMMON_ARGS", "(" + " ".join(common_args) + ")")
