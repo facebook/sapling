@@ -113,3 +113,13 @@ export const recommendedBookmarksAtom = lazyAtom(
   _get => Internal.getRecommendedBookmarks?.() ?? Promise.resolve(new Set<string>()),
   new Set<string>(),
 );
+
+/** Checks if recommended bookmarks are available in remoteBookmarks */
+export const recommendedBookmarksAvailableAtom = atom(get => {
+  const recommendedBookmarks = get(recommendedBookmarksAtom);
+  const allRemoteBookmarks = get(remoteBookmarks);
+  return (
+    recommendedBookmarks.size > 0 &&
+    [...recommendedBookmarks].some(b => allRemoteBookmarks.includes(b))
+  );
+});

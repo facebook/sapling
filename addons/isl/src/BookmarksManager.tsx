@@ -32,6 +32,7 @@ import {
   bookmarksDataStorage,
   fetchedStablesAtom,
   recommendedBookmarksAtom,
+  recommendedBookmarksAvailableAtom,
   remoteBookmarks,
   removeManualStable,
 } from './BookmarksData';
@@ -97,9 +98,11 @@ function BookmarksManager(_props: {dismiss: () => void}) {
   const bookmarks = useAtomValue(remoteBookmarks);
   const bookmarksData = useAtomValue(bookmarksDataStorage);
   const recommendedBookmarks = useAtomValue(recommendedBookmarksAtom);
+  const recommendedBookmarksAvailable = useAtomValue(recommendedBookmarksAvailableAtom);
   const enableRecommended =
     useFeatureFlagSync(Internal.featureFlags?.RecommendedBookmarks) &&
-    bookmarksData.useRecommendedBookmark;
+    bookmarksData.useRecommendedBookmark &&
+    recommendedBookmarksAvailable;
 
   // Order recommended bookmarks first if enabled, then the rest
   const orderedBookmarks =
@@ -347,6 +350,7 @@ function BookmarksList({
   const [bookmarksData, setBookmarksData] = useAtom(bookmarksDataStorage);
   const recommendedBookmarksGK = useFeatureFlagSync(Internal.featureFlags?.RecommendedBookmarks);
   const recommendedBookmarks = useAtomValue(recommendedBookmarksAtom);
+  const recommendedBookmarksAvailable = useAtomValue(recommendedBookmarksAvailableAtom);
 
   if (bookmarks.length == 0) {
     return null;
@@ -360,7 +364,10 @@ function BookmarksList({
           }
           const name = typeof bookmark === 'string' ? bookmark : bookmark.name;
           const extra = typeof bookmark === 'string' ? undefined : bookmark.extra;
-          const enableRecommended = recommendedBookmarksGK && bookmarksData.useRecommendedBookmark;
+          const enableRecommended =
+            recommendedBookmarksGK &&
+            bookmarksData.useRecommendedBookmark &&
+            recommendedBookmarksAvailable;
           const isRecommended = recommendedBookmarksGK && recommendedBookmarks.has(name);
           const tooltip =
             typeof bookmark === 'string'
