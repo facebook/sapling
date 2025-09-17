@@ -246,26 +246,31 @@ impl AsyncResponse {
             done_rx,
         } = streams;
 
-        let header_lines = headers_rx
-            .into_stream()
-            .take_while(|h| future::ready(h != &Header::EndOfHeaders))
-            .collect::<Vec<_>>()
-            .await;
-
+        // We need to process all headers in the stream, including from redirects.
+        // Each redirect hop will have its own status line and headers followed by EndOfHeaders.
         let mut version = None;
         let mut status = None;
         let mut headers = HeaderMap::new();
 
-        for line in header_lines {
-            match line {
+        let mut headers_stream = headers_rx.into_stream();
+        while let Some(header) = headers_stream.next().await {
+            match header {
                 Header::Status(v, s) => {
+                    // Reset current state for new response
                     version = Some(v);
                     status = Some(s);
+                    headers.clear();
                 }
                 Header::Header(k, v) => {
                     headers.insert(k, v);
                 }
-                Header::EndOfHeaders => unreachable!(),
+                Header::EndOfHeaders => {
+                    // Check if this is a redirect status code and if so, continue
+                    let is_redirect = status.map_or(false, |s| s.is_redirection());
+                    if !is_redirect {
+                        break;
+                    }
+                }
             }
         }
 
