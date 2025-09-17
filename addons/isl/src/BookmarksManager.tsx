@@ -372,7 +372,7 @@ function BookmarksList({
           const tooltip =
             typeof bookmark === 'string'
               ? isRecommended
-                ? Internal.recommendedBookmarkInfo
+                ? Internal.RecommendedBookmarkInfo?.()
                 : undefined
               : bookmark.info;
           const disabled = kind === 'remote' && enableRecommended && !isRecommended;

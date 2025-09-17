@@ -71,7 +71,7 @@ export function Bookmark({
   children: string;
   kind: BookmarkKind;
   fullLength?: boolean;
-  tooltip?: string;
+  tooltip?: string | React.ReactNode;
   isRecommended?: boolean;
 }) {
   const bookmark = children;
@@ -144,7 +144,7 @@ export function AllBookmarksTruncated({
           const tooltip =
             typeof bookmark === 'string'
               ? isRecommended
-                ? Internal.recommendedBookmarkInfo
+                ? Internal.RecommendedBookmarkInfo?.()
                 : undefined
               : bookmark.description;
 
