@@ -52,12 +52,10 @@ Restart eden without injected network error.
   $ eden stop >/dev/null 2>&1
   $ eden start >/dev/null 2>&1
 
-FIXME We are still in interrupted checkout state:
+We are still in interrupted checkout state:
   $ hg st
-  abort: EdenError: a previous checkout was interrupted - please run `hg go (62236523d20eb09473170bc922c224800a9ec819null` to resume it. (filtered !)
-  If there are conflicts, run `hg go --clean (62236523d20eb09473170bc922c224800a9ec819null` to discard changes, or `hg go --merge (62236523d20eb09473170bc922c224800a9ec819null` to merge. (filtered !)
-  abort: EdenError: a previous checkout was interrupted - please run `hg go 62236523d20eb09473170bc922c224800a9ec819` to resume it. (unfiltered !)
-  If there are conflicts, run `hg go --clean 62236523d20eb09473170bc922c224800a9ec819` to discard changes, or `hg go --merge 62236523d20eb09473170bc922c224800a9ec819` to merge. (unfiltered !)
+  abort: EdenError: a previous checkout was interrupted - please run `hg go 62236523d20eb09473170bc922c224800a9ec819` to resume it.
+  If there are conflicts, run `hg go --clean 62236523d20eb09473170bc922c224800a9ec819` to discard changes, or `hg go --merge 62236523d20eb09473170bc922c224800a9ec819` to merge.
   [255]
 
 Try without --clean:

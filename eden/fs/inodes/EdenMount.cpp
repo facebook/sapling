@@ -1453,7 +1453,9 @@ ImmediateFuture<CheckoutResult> EdenMount::checkout(
           return makeFuture<CheckoutResult>(newEdenError(
               EdenErrorType::CHECKOUT_IN_PROGRESS,
               fmt::format(
-                  interruptedCheckoutAdvice, interruptedCheckout.toCommit)));
+                  interruptedCheckoutAdvice,
+                  folly::hexlify(objectStore_->renderRootId(
+                      interruptedCheckout.toCommit)))));
         } else {
           oldParent = interruptedCheckout.fromCommit;
           oldState = interruptedCheckout;
@@ -1973,7 +1975,10 @@ ImmediateFuture<Unit> EdenMount::diff(
                   &parentInfo->checkoutState)) {
         return makeImmediateFuture<Unit>(newEdenError(
             EdenErrorType::CHECKOUT_IN_PROGRESS,
-            fmt::format(interruptedCheckoutAdvice, interrupted->toCommit)));
+            fmt::format(
+                interruptedCheckoutAdvice,
+                folly::hexlify(
+                    objectStore_->renderRootId(interrupted->toCommit)))));
       }
 
       if (currentWorkingCopyParentRootId != commitId) {
