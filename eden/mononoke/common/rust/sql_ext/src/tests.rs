@@ -78,7 +78,9 @@ mod facebook {
     use std::collections::HashMap;
     use std::collections::HashSet;
 
+    use anyhow::Context;
     use anyhow::anyhow;
+    use anyhow::bail;
     use itertools::Itertools;
     use maplit::hashmap;
     use maplit::hashset;
@@ -89,6 +91,8 @@ mod facebook {
 
     use super::*;
     use crate::Connection;
+    use crate::ConsistentReadError;
+    use crate::ConsistentReadOptions;
     use crate::SqlConnections;
     use crate::telemetry::TelemetryGranularity;
 
@@ -400,6 +404,70 @@ mod facebook {
         Ok(())
     }
 
+    #[mononoke::fbinit_test]
+    async fn test_query_with_consistency(fb: FacebookInit) -> Result<()> {
+        let TelemetryTestData {
+            connections,
+            sql_query_tel,
+            temp_path,
+            ..
+        } = setup_scuba_logging_test(fb).await?;
+        let connection = connections.read_connection;
+
+        let expected_repo_id = 1;
+        let repo_id = RepositoryId::new(expected_repo_id);
+        const MAX_ATTEMPTS: usize = 3;
+        let retry_opts = ConsistentReadOptions {
+            hlc_drift_tolerance_ns: -2000,
+            max_attempts: MAX_ATTEMPTS,
+            ..ConsistentReadOptions::default()
+        };
+        let res =
+            ReadQuery1::query_with_consistency(&connection, sql_query_tel, retry_opts, &repo_id)
+                .await;
+
+        let err = res
+            .err()
+            .ok_or(anyhow!("Query should have failed with replica lagging"))?;
+
+        let retry_err = err
+            .downcast::<ConsistentReadError>()
+            .context("downcasting to ConsistentReadError")?;
+        match retry_err {
+            ConsistentReadError::ReplicaLagging => (),
+            _ => bail!("Query should have failed with replica lagging"),
+        };
+
+        let scuba_logs = deserialize_scuba_log_file(&temp_path)?;
+
+        println!("scuba_logs: {:#?}", scuba_logs);
+
+        let expected_log_for_each_attempt = ScubaTelemetryLogSample {
+            success: true,
+            repo_ids: vec![1.into()],
+            granularity: TelemetryGranularity::ConsistentReadQuery,
+            query_name: Some("ReadQuery1".to_string()),
+            shard_name: TEST_XDB_NAME.to_string(),
+            mysql_telemetry: MysqlQueryTelemetry {
+                write_tables: hashset! {},
+                read_tables: hashset! {"mononoke_queries_test_v3".to_string()},
+                ..Default::default()
+            },
+            transaction_query_names: vec![],
+        };
+
+        let expected_logs = vec![
+            // All attempts generate the exact same log
+            expected_log_for_each_attempt.clone(),
+            expected_log_for_each_attempt.clone(),
+            expected_log_for_each_attempt,
+        ];
+
+        pretty_assertions::assert_eq!(scuba_logs, expected_logs);
+
+        Ok(())
+    }
+
     async fn setup_scuba_logging_test(fb: FacebookInit) -> Result<TelemetryTestData> {
         // Set log file in SQL_TELEMETRY_SCUBA_FILE_PATH environment variable
         let temp_file = tempfile::NamedTempFile::new()?;
@@ -454,8 +522,6 @@ mod facebook {
             .request_info
             .clone()
             .expect("client request info missing");
-
-        println!("cri: {:#?}", cri);
 
         let mut metadata = Metadata::default();
         metadata.add_client_info(client_info);
