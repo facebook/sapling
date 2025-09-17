@@ -7,6 +7,7 @@ cpp_unittest(
     srcs = glob(["*Test.cpp"]),
     supports_static_listing = False,
     deps = [
+        "fbsource//third-party/googletest:gtest",
         "//eden/common/telemetry:structured_logger",
         "//eden/fs/nfs/rpc:rpc",
         "//eden/fs/nfs/rpc:server",

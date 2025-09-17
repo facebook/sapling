@@ -158,7 +158,7 @@ cpp_library(
         "//folly:varint",
     ],
     exported_deps = [
-        "fbsource//third-party/googletest:gtest_headers",
+        "fbsource//third-party/googletest:gtest",
         ":backing_store_interface",
         "//eden/common/utils:ref_ptr",
         "//eden/common/utils:utils",
@@ -197,7 +197,7 @@ cpp_library(
         "//folly/lang:bits",
     ],
     exported_deps = [
-        "fbsource//third-party/googletest:gtest_headers",
+        "fbsource//third-party/googletest:gtest",
         ":backing_store_interface",
         ":context",
         "//eden/common/utils:case_sensitivity",

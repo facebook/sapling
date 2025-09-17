@@ -133,7 +133,7 @@ cpp_unittest(
     ],
     supports_static_listing = False,
     deps = [
-        ":backingstore",
+        "fbsource//third-party/googletest:gtest",
         ":sapling_native_backingstore",
         "//eden/common/utils:path",
         "//eden/fs/config:config",

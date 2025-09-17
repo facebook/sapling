@@ -203,6 +203,7 @@ cpp_library(
         "//thrift/lib/cpp2/protocol:protocol",
     ],
     exported_deps = [
+        "fbsource//third-party/googletest:gtest",
         "fbsource//third-party/googletest:gtest_headers",
         ":fs_channel",
         ":inode_metadata",

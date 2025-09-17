@@ -7,6 +7,7 @@ cpp_unittest(
     srcs = glob(["*Test.cpp"]),
     supports_static_listing = False,
     deps = [
+        "fbsource//third-party/googletest:gtest",
         "//eden/fs/digest:blake3_hash",
         "//folly:range",
         "//folly:string",

@@ -18,7 +18,7 @@ cpp_library(
     ],
     exported_deps = [
         "fbsource//third-party/fmt:fmt",
-        "fbsource//third-party/googletest:gtest_headers",
+        "fbsource//third-party/googletest:gtest",
         "//eden/common/utils:path",
         "//eden/fs/sqlite:sqlite",
     ],
@@ -78,7 +78,7 @@ cpp_library(
         "//thrift/lib/cpp2/protocol:protocol",
     ],
     exported_deps = [
-        "fbsource//third-party/googletest:gtest_headers",
+        "fbsource//third-party/googletest:gtest",
         ":sqliteinodecatalog",
         "//eden/fs/inodes/overlay:serialization-cpp2-types",
         "//folly:function",

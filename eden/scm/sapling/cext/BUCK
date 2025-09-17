@@ -76,6 +76,7 @@ cpp_library(
         "-Wno-sign-compare",
     ],
     deps = [
+        "fbsource//third-party/python:python",
         ":util",
     ],
     exported_deps = [

@@ -11,6 +11,7 @@ cpp_unittest(
     ],
     deps = [
         "fbsource//third-party/googletest:gmock",
+        "fbsource//third-party/googletest:gtest",
         "//eden/common/testharness:temp_file",
         "//eden/fs/monitor:edenfs_monitor_lib",
         "//eden/fs/testharness:fake_clock",
