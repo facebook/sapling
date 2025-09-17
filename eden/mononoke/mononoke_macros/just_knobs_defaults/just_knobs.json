@@ -53,7 +53,8 @@
     "scm/mononoke:derivation_queue_enable_automated_eviction": true,
     "scm/mononoke:read_bookmarks_from_xdb_replica": true,
     "scm/mononoke:use_maybe_stale_freshness_for_bookmarks": true,
-    "scm/mononoke:disable_bonsai_mapping_read_fallback_to_primary": true
+    "scm/mononoke:disable_bonsai_mapping_read_fallback_to_primary": true,
+    "scm/mononoke:retry_query_from_replica_with_consistency_check": true
   },
   "ints": {
     "scm/mononoke_timeouts:repo_client_clone_timeout_secs": 14400,
@@ -96,6 +97,10 @@
     "scm/mononoke:git_server_max_packfile_size": 7516192768,
     "scm/mononoke:sql_telemetry_sample_rate": 1,
     "scm/mononoke:derivation_queue_max_retry_count": 20,
-    "scm/mononoke:bookmark_creation_delay_ms": 500
+    "scm/mononoke:bookmark_creation_delay_ms": 500,
+    "scm/mononoke:retry_query_from_replica_with_consistency_check_max_attempts": 10,
+    "scm/mononoke:retry_query_from_replica_with_consistency_check_jitter": 50,
+    "scm/mononoke:retry_query_from_replica_with_consistency_check_interval_ms": 200,
+    "scm/mononoke:retry_query_from_replica_with_consistency_check_hlc_drift_tolerance_ns": 0
   }
 }
