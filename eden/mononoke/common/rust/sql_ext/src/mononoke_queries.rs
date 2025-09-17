@@ -22,11 +22,15 @@ use itertools::Itertools;
 use maplit::hashmap;
 use maplit::hashset;
 use memcache::KeyGen;
+use mononoke_types::Timestamp;
 #[cfg(fbcode_build)]
 use mysql_client::MysqlError;
+use sql::QueryTelemetry;
 use sql_query_config::CachingConfig;
 use stats::prelude::DynamicTimeseries;
 
+use crate::ConsistentReadError;
+use crate::ConsistentReadOptions;
 use crate::telemetry::STATS;
 
 const RETRY_ATTEMPTS: usize = 2;
@@ -112,6 +116,7 @@ macro_rules! mononoke_queries {
                     let res = query_impl(
                         connection,
                         sql_query_tel,
+                        TelemetryGranularity::Query,
                         $( $pname, )*
                         $( $lname, )*
                     )
@@ -123,6 +128,7 @@ macro_rules! mononoke_queries {
                 async fn query_impl(
                     connection: &Connection,
                     sql_query_tel: SqlQueryTelemetry,
+                    granularity: TelemetryGranularity,
                     $( $pname: &$ptype, )*
                     $( $lname: &[ $ltype ], )*
                 ) -> Result<(Vec<($( $rtype, )*)>, Option<QueryTelemetry>)> {
@@ -135,8 +141,6 @@ macro_rules! mononoke_queries {
                                 let cri = sql_query_tel.client_request_info();
                                 // Convert ClientRequestInfo to string if present
                                 let cri_str = cri.map(|cri| serde_json::to_string(cri)).transpose()?;
-
-                                let granularity = TelemetryGranularity::Query;
 
                                 // Check if any parameter is a RepositoryId and pass it to telemetry
                                 let repo_ids = $crate::extract_repo_ids_from_queries!($($pname: $ptype; )*);
@@ -191,6 +195,45 @@ macro_rules! mononoke_queries {
                         ($( $pname: $ptype ),*),
                         ($( $lname: $ltype )*)
                     )
+                }
+
+
+                #[allow(dead_code)]
+                pub async fn query_with_consistency<'a>(
+                    connection: &Connection,
+                    sql_query_tel: SqlQueryTelemetry,
+                    cons_read_opts: ConsistentReadOptions,
+                    $( $pname: &'a $ptype, )*
+                    $( $lname: &'a [ $ltype ], )*
+                ) -> Result<Vec<($( $rtype, )*)>> {
+                    // TODO(T237287313): when we're able to manually set the
+                    // `hlc_ts_lower_bound` attribute **in the query**, take a
+                    // `SqlConnections` to use one with a DbLocator with
+                    // `InstanceRequirement::ReadAfterWriteConsistency`.
+                    // This means that the query will wait a specific time to
+                    // allow the replica to catch up with the master.
+
+                    let query_name = stringify!($name);
+                    let shard_name = connection.shard_name();
+
+                    query_with_consistency_no_cache(
+                        || {
+                            cloned!(sql_query_tel);
+
+                            async move {
+                                query_impl(
+                                    connection,
+                                    sql_query_tel,
+                                    TelemetryGranularity::ConsistentReadQuery,
+                                    $( $pname, )*
+                                    $( $lname, )*
+                                ).await
+                            }
+                        },
+                        cons_read_opts,
+                        shard_name,
+                        query_name,
+                    ).await
                 }
 
             }
@@ -911,6 +954,89 @@ where
         fetch().await
     }
 }
+
+/// Use the HLC from Read Your Own Writes feature (https://fburl.com/wiki/bvaobxgp)
+/// to determine if the replica was up to date when it served the query.
+pub async fn query_with_consistency_no_cache<T, Fut>(
+    do_query: impl Fn() -> Fut + Send + Sync,
+    cons_read_opts: ConsistentReadOptions,
+    shard_name: &str,
+    query_name: &str,
+) -> Result<T>
+where
+    T: Send + 'static,
+    Fut: Future<Output = Result<(T, Option<QueryTelemetry>)>>,
+{
+    // The minimum HLC that the replica must have for the result to be considered
+    // up to date.
+    let target_lower_bound_hlc = Timestamp::now();
+
+    let result = retry(
+        |_| async {
+            let (res, opt_tel) = do_query().await?;
+            let response_hlc = match opt_tel {
+                #[cfg(fbcode_build)]
+                Some(QueryTelemetry::MySQL(mysql_tel)) => mysql_tel
+                    .hlc_ts_lower_bound
+                    .ok_or(ConsistentReadError::MissingHLC),
+                Some(QueryTelemetry::Sqlite(sqlite_tel)) => Ok(sqlite_tel.hlc_ts_lower_bound),
+                // HLC is needed to use query_with_consistency, otherwise the
+                // result can't be trusted be up-to-date.
+                _ => Err(ConsistentReadError::MissingHLC),
+            }?;
+
+            if replica_was_up_to_date(
+                target_lower_bound_hlc,
+                response_hlc,
+                cons_read_opts.hlc_drift_tolerance_ns,
+            )? {
+                Ok(res)
+            } else {
+                Err(ConsistentReadError::ReplicaLagging)
+            }
+        },
+        cons_read_opts.interval,
+    )
+    .exponential_backoff(cons_read_opts.exp_backoff_base)
+    .jitter(cons_read_opts.jitter)
+    .max_attempts(cons_read_opts.max_attempts)
+    .retry_if(|_attempt, err| {
+        match err {
+            ConsistentReadError::ReplicaLagging => true,
+            // In this case we don't want to retry, but we'll want to log something
+            ConsistentReadError::MissingHLC => false,
+            // Don't retry on actual errors to avoid masking them.
+            // The retries are intended for
+            ConsistentReadError::QueryError(_e) => false,
+        }
+    })
+    .inspect_err(|attempt, cons_read_err| match cons_read_err {
+        ConsistentReadError::ReplicaLagging => {
+            STATS::replica_lagging.add_value(1, (shard_name.to_string(), query_name.to_string()));
+        }
+        ConsistentReadError::MissingHLC => {
+            STATS::missing_hlc.add_value(1, (shard_name.to_string(), query_name.to_string()));
+        }
+        ConsistentReadError::QueryError(e) => {
+            bump_error_counters(e, attempt, shard_name, query_name);
+        }
+    })
+    .await?
+    .0;
+
+    Ok(result)
+}
+
+fn replica_was_up_to_date(
+    target_lower_bound_hlc: Timestamp,
+    hlc: i64,
+    hlc_drift_tolerance_ns: i64,
+) -> Result<bool> {
+    let hlc_time = Timestamp::from_timestamp_nanos(hlc + hlc_drift_tolerance_ns as i64);
+
+    Ok(hlc_time >= target_lower_bound_hlc)
+}
+
 fn bump_error_counters(e: &Error, attempt: usize, shard_name: &str, query_name: &str) {
     #[cfg(fbcode_build)]
     if let Some(e) = e.downcast_ref::<MysqlError>() {

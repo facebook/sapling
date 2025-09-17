@@ -9,14 +9,17 @@ mod mononoke_queries;
 #[cfg(not(fbcode_build))]
 mod oss;
 pub mod replication;
+
 mod sqlite;
 mod telemetry;
 #[cfg(test)]
 mod tests;
 
 use std::sync::Arc;
+use std::time::Duration;
 
 use anyhow::Result;
+use derivative::Derivative;
 use mononoke_types::RepositoryId;
 use rusqlite::Connection as SqliteConnection;
 use sql::Connection as SqlConnection;
@@ -28,6 +31,7 @@ pub use sql_query_telemetry::SqlQueryTelemetry;
 pub use sqlite::open_existing_sqlite_path;
 pub use sqlite::open_sqlite_in_memory;
 pub use sqlite::open_sqlite_path;
+use thiserror::Error;
 use vec1::Vec1;
 
 pub use crate::mononoke_queries::should_retry_mysql_query as should_retry_query;
@@ -52,6 +56,7 @@ pub mod _macro_internal {
     pub use borrowed::borrowed;
     pub use clientinfo::ClientEntryPoint;
     pub use clientinfo::ClientRequestInfo;
+    pub use cloned::cloned;
     pub use mononoke_types::RepositoryId;
     pub use paste;
     pub use serde_json;
@@ -65,9 +70,12 @@ pub mod _macro_internal {
     pub use twox_hash::xxh3::HasherExt;
 
     pub use crate::Connection;
+    pub use crate::ConsistentReadOptions;
+    pub use crate::SqlConnections;
     pub use crate::Transaction;
     pub use crate::mononoke_queries::CacheData;
     pub use crate::mononoke_queries::CachedQueryResult;
+    pub use crate::mononoke_queries::query_with_consistency_no_cache;
     pub use crate::mononoke_queries::query_with_retry;
     pub use crate::mononoke_queries::query_with_retry_no_cache;
     pub use crate::telemetry::TelemetryGranularity;
@@ -383,4 +391,67 @@ impl From<Vec1<SqlConnections>> for SqlShardedConnections {
             write_connections: Vec1::from_vec_push(write_connections, last.write_connection),
         }
     }
+}
+
+#[derive(Debug, Derivative)]
+#[derivative(Default)]
+pub struct ConsistentReadOptions {
+    /// Maximum number of retry attempts.
+    #[derivative(Default(value = "3"))]
+    pub max_attempts: usize,
+
+    /// Interval between retry attemps (in milliseconds)
+    #[derivative(Default(value = "Duration::from_millis(50)"))]
+    pub interval: Duration,
+
+    /// Random delay added to retry backoff.
+    #[derivative(Default(value = "Duration::from_millis(10)"))]
+    pub jitter: Duration,
+
+    /// Base multiplier for exponential backoff.
+    #[derivative(Default(value = "1.2"))]
+    pub exp_backoff_base: f64,
+
+    /// Buffer added to replica's HLC timestamp for testing (in nanoseconds).
+    ///
+    /// Used to simulate replication lag in tests by artificially lowering
+    /// the replica's timestamp. Set to a negative value to trigger "fake
+    /// replication lag" conditions for testing retry logic.
+    #[derivative(Default(value = "0"))]
+    pub hlc_drift_tolerance_ns: i64,
+}
+
+/// Errors that can occur during consistent read operations using HLC (Hybrid Logical Clock)
+///
+/// This error type is used by `query_with_consistency_no_cache` to handle scenarios where
+/// we need to ensure that a replica has caught up to the master's state before serving reads.
+/// The function uses HLC timestamps to determine if the replica is sufficiently up-to-date
+/// and retries the query if needed.
+#[derive(Debug, Error)]
+enum ConsistentReadError {
+    /// The replica has not yet caught up to the required HLC timestamp.
+    ///
+    /// This error is returned when the replica's HLC timestamp is older than the start
+    /// time of the operation plus the configured buffer. When this error occurs, the
+    /// query is retried with exponential backoff until the replica catches up or the
+    /// maximum number of attempts is reached.
+    #[error("Replica was not yet up-to-date")]
+    ReplicaLagging,
+
+    /// The MySQL query response did not include an HLC timestamp.
+    ///
+    /// This error occurs when the database doesn't provide HLC information needed
+    /// for consistency checks. Unlike `ReplicaLagging`, this error is not retried
+    /// as it indicates a configuration or infrastructure issue rather than a
+    /// temporary state.
+    #[error("Responses were missing HLC")]
+    MissingHLC,
+
+    /// An underlying query error occurred during the consistent read operation.
+    ///
+    /// This wraps any other errors that can occur during query execution, such as
+    /// network errors, SQL syntax errors, or database connection issues. These
+    /// errors are not retried to avoid masking the underlying problem.
+    #[error("Underlying error: {0}")]
+    QueryError(#[from] anyhow::Error),
 }

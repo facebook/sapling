@@ -30,6 +30,9 @@ pub enum TelemetryGranularity {
     TransactionQuery,
     /// From a transaction (i.e. when committing it)
     Transaction,
+    /// Read query to replica with intelligent retries based on its HLC
+    /// See https://fburl.com/wiki/t98rfhqv
+    ConsistentReadQuery,
 }
 
 /// Telemetry we would like to keep track of for a transaction
@@ -444,6 +447,17 @@ define_stats! {
     query_retry_attempts: dynamic_timeseries(
         "{}.{}.{}.retry_attempts",
         (shard_name: String, query_name: String, error_key: String);
+        Sum, Average, Count;
+    ),
+
+    replica_lagging: dynamic_timeseries(
+        "{}.{}.consistent_read.replica_lagging",
+        (shard_name: String, query_name: String);
+        Sum, Average, Count;
+    ),
+    missing_hlc: dynamic_timeseries(
+        "{}.{}.consistent_read.missing_hlc",
+        (shard_name: String, query_name: String);
         Sum, Average, Count;
     ),
 
