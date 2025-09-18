@@ -567,6 +567,9 @@ impl ChangeEvents {
 
 #[cfg(test)]
 mod tests {
+    use edenfs_client::changes_since::*;
+    use edenfs_client::types::Dtype;
+
     use crate::*;
 
     #[test]
@@ -736,6 +739,116 @@ mod tests {
         drop(guard_result);
         let states_asserted = client.which_states_asserted(&[state.to_string()])?;
         assert!(states_asserted.is_empty());
+        Ok(())
+    }
+
+    #[test]
+    fn test_insert_change_events() -> anyhow::Result<()> {
+        let bytify = |str: &str| str.as_bytes().to_vec();
+
+        let mount_point = std::env::temp_dir().join("test_mount10");
+        let client = StreamingChangesClient::new(&mount_point)?;
+
+        let journal_pos = JournalPosition {
+            mount_generation: 0,
+            sequence_number: 0,
+            snapshot_hash: vec![0, 1, 2, 3, 4],
+        };
+
+        let tracked_states = vec!["test-state1".to_string(), "test-state2".to_string()];
+        let mut asserted_states = HashSet::from(["test-state1".to_string()]);
+
+        use ChangeNotification::SmallChange as SC;
+        use ChangeNotification::StateChange as STC;
+        use edenfs_client::changes_since::SmallChangeNotification as SCN;
+        use edenfs_client::changes_since::StateChangeNotification as STCN;
+
+        let changes_since = ChangesSinceV2Result {
+            to_position: journal_pos.clone(),
+            changes: vec![
+                SC(SCN::Added(Added {
+                    file_type: Dtype::Regular,
+                    path: bytify("file1.txt"),
+                })),
+                SC(SCN::Added(Added {
+                    file_type: Dtype::Regular,
+                    path: bytify("file2.txt"),
+                })),
+                STC(STCN::StateLeft(StateLeft {
+                    name: "test-state1".into(),
+                })),
+                SC(SCN::Added(Added {
+                    file_type: Dtype::Regular,
+                    path: bytify("file3.txt"),
+                })),
+                SC(SCN::Added(Added {
+                    file_type: Dtype::Regular,
+                    path: bytify("file4.txt"),
+                })),
+                STC(STCN::StateEntered(StateEntered {
+                    name: "test-state2".into(),
+                })),
+                SC(SCN::Removed(Removed {
+                    file_type: Dtype::Regular,
+                    path: bytify("file5.txt"),
+                })),
+            ],
+        };
+
+        let result =
+            client.insert_change_events(&tracked_states, &mut asserted_states, changes_since);
+
+        assert_eq!(
+            result,
+            vec![
+                Changes::ChangesSince(ChangesSinceV2Result {
+                    to_position: journal_pos.clone(),
+                    changes: vec![
+                        SC(SCN::Added(Added {
+                            file_type: Dtype::Regular,
+                            path: bytify("file1.txt"),
+                        })),
+                        SC(SCN::Added(Added {
+                            file_type: Dtype::Regular,
+                            path: bytify("file2.txt"),
+                        })),
+                    ]
+                }),
+                Changes::ChangeEvent(ChangeEvent {
+                    event_type: StateChange::Left,
+                    state: "test-state1".to_string(),
+                    position: journal_pos.clone()
+                }),
+                Changes::ChangesSince(ChangesSinceV2Result {
+                    to_position: journal_pos.clone(),
+                    changes: vec![
+                        SC(SCN::Added(Added {
+                            file_type: Dtype::Regular,
+                            path: bytify("file3.txt"),
+                        })),
+                        SC(SCN::Added(Added {
+                            file_type: Dtype::Regular,
+                            path: bytify("file4.txt"),
+                        })),
+                    ]
+                }),
+                Changes::ChangeEvent(ChangeEvent {
+                    event_type: StateChange::Entered,
+                    state: "test-state2".to_string(),
+                    position: journal_pos.clone()
+                }),
+                Changes::ChangesSince(ChangesSinceV2Result {
+                    to_position: journal_pos.clone(),
+                    changes: vec![SC(SCN::Removed(Removed {
+                        file_type: Dtype::Regular,
+                        path: bytify("file5.txt"),
+                    })),]
+                }),
+            ]
+        );
+
+        assert_eq!(asserted_states, HashSet::from(["test-state2".to_string()]));
+
         Ok(())
     }
 }
