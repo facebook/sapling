@@ -12,7 +12,7 @@ use anyhow::Context;
 use anyhow::Error;
 use anyhow::anyhow;
 use blobstore::Blobstore;
-use blobstore::KeyedLoadable;
+use blobstore::Loadable;
 use bonsai_hg_mapping::BonsaiHgMappingRef;
 use cloned::cloned;
 use commit_graph::CommitGraphRef;

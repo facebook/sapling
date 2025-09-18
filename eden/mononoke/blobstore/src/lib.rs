@@ -681,17 +681,6 @@ pub trait Loadable {
 }
 
 #[async_trait]
-pub trait KeyedLoadable {
-    type Value: Sized + 'static;
-
-    async fn load<'a, B: KeyedBlobstore>(
-        &'a self,
-        ctx: &'a CoreContext,
-        blobstore: &'a B,
-    ) -> Result<Self::Value, LoadableError>;
-}
-
-#[async_trait]
 pub trait Storable: Sized {
     type Key: 'static;
 

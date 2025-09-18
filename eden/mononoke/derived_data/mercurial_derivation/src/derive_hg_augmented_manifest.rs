@@ -12,7 +12,6 @@ use std::sync::Arc;
 use anyhow::Result;
 use anyhow::anyhow;
 use blobstore::Blobstore;
-use blobstore::KeyedLoadable;
 use blobstore::Storable;
 use blobstore::StoreLoadable;
 use cloned::cloned;

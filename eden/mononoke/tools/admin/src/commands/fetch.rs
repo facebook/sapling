@@ -10,7 +10,6 @@ use std::io::Write;
 use anyhow::Context;
 use anyhow::Result;
 use anyhow::anyhow;
-use blobstore::KeyedLoadable;
 use blobstore::Loadable;
 use bonsai_git_mapping::BonsaiGitMapping;
 use bonsai_globalrev_mapping::BonsaiGlobalrevMapping;

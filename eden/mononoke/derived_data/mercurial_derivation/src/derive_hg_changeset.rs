@@ -16,7 +16,6 @@ use anyhow::ensure;
 use async_trait::async_trait;
 use blobrepo_common::changed_files::compute_changed_files;
 use blobstore::Blobstore;
-use blobstore::KeyedLoadable;
 use blobstore::Loadable;
 use borrowed::borrowed;
 use bytes::Bytes;

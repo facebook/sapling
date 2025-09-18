@@ -9,7 +9,6 @@ mod errors;
 
 use anyhow::Error;
 use blobstore::Blobstore;
-use blobstore::KeyedLoadable;
 use blobstore::Loadable;
 use blobstore::LoadableError;
 use bytes::BytesMut;

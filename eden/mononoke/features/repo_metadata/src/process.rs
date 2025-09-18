@@ -8,7 +8,6 @@
 use anyhow::Result;
 use anyhow::anyhow;
 use blame::RootBlameV2;
-use blobstore::KeyedLoadable;
 use blobstore::Loadable;
 use bookmarks::BookmarkKey;
 use changeset_info::ChangesetInfo;

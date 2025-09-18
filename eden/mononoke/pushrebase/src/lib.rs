@@ -1294,7 +1294,6 @@ mod tests {
     use anyhow::format_err;
     use async_trait::async_trait;
     use blobrepo_hg::BlobRepoHg;
-    use blobstore::KeyedLoadable;
     use bonsai_hg_mapping::BonsaiHgMapping;
     use bookmarks::BookmarkTransactionError;
     use bookmarks::Bookmarks;

@@ -18,7 +18,7 @@ use std::sync::Arc;
 use anyhow::Result;
 use blobrepo_override::DangerousOverride;
 use blobstore::Blobstore;
-use blobstore::KeyedLoadable;
+use blobstore::Loadable;
 use bonsai_hg_mapping::BonsaiHgMappingRef;
 use commit_graph::CommitGraphRef;
 use context::CoreContext;

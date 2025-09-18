@@ -26,7 +26,6 @@ use anyhow::Error;
 use async_trait::async_trait;
 use blobrepo_hg::repo_commit::UploadEntries;
 use blobrepo_hg::repo_commit::compute_changed_files;
-use blobstore::KeyedLoadable;
 use blobstore::Loadable;
 use blobstore::Storable;
 use bonsai_hg_mapping::BonsaiHgMapping;

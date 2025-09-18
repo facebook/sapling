@@ -19,7 +19,6 @@ use anyhow::format_err;
 pub use blobrepo_common::changed_files::compute_changed_files;
 use blobstore::Blobstore;
 use blobstore::ErrorKind as BlobstoreError;
-use blobstore::KeyedLoadable;
 use blobstore::Loadable;
 use bonsai_hg_mapping::BonsaiHgMappingRef;
 use cloned::cloned;

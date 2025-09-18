@@ -20,7 +20,6 @@ use anyhow::Result;
 use anyhow::bail;
 use anyhow::format_err;
 use async_trait::async_trait;
-use blobstore::KeyedLoadable;
 use blobstore::Loadable;
 use blobstore::Storable;
 use bytes::Bytes;

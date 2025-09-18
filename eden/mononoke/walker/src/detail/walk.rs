@@ -17,7 +17,6 @@ use async_trait::async_trait;
 use auto_impl::auto_impl;
 use blame::RootBlameV2;
 use blobrepo_hg::BlobRepoHg;
-use blobstore::KeyedLoadable;
 use blobstore::Loadable;
 use blobstore::LoadableError;
 use bonsai_hg_mapping::BonsaiHgMapping;

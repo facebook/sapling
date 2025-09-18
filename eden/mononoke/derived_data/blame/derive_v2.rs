@@ -11,7 +11,6 @@ use anyhow::Error;
 use anyhow::Result;
 use anyhow::anyhow;
 use blobstore::Blobstore;
-use blobstore::KeyedLoadable;
 use blobstore::Loadable;
 use bytes::Bytes;
 use cloned::cloned;

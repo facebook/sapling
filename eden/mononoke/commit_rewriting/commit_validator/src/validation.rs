@@ -14,7 +14,6 @@ use std::time::Duration;
 
 use anyhow::Error;
 use anyhow::format_err;
-use blobstore::KeyedLoadable;
 use blobstore::Loadable;
 use bookmarks::BookmarkKey;
 use bookmarks::BookmarkUpdateLogEntry;
