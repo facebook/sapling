@@ -21,6 +21,7 @@ use anyhow::Error;
 use async_trait::async_trait;
 use blobrepo_hg::BlobRepoHg;
 use blobstore::Blobstore;
+use blobstore::KeyedLoadable;
 use blobstore::Loadable;
 use bonsai_hg_mapping::BonsaiHgMapping;
 use bookmarks::BookmarkKey;

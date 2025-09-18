@@ -11,6 +11,7 @@ use std::num::NonZeroU64;
 
 use anyhow::Error;
 use anyhow::anyhow;
+use blobstore::KeyedLoadable;
 use blobstore::Loadable;
 use bonsai_hg_mapping::BonsaiHgMappingRef;
 use bookmarks::BookmarksRef;

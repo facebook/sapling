@@ -16,6 +16,7 @@ use anyhow::Error;
 use anyhow::Result;
 use anyhow::anyhow;
 use blobrepo_hg::BlobRepoHg;
+use blobstore::KeyedLoadable;
 use blobstore::Loadable;
 use bonsai_hg_mapping::BonsaiHgMappingRef;
 use bytes::Bytes;

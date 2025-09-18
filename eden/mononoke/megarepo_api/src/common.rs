@@ -15,6 +15,7 @@ use anyhow::Context;
 use anyhow::Error;
 use anyhow::anyhow;
 use async_trait::async_trait;
+use blobstore::KeyedLoadable;
 use blobstore::Loadable;
 use bookmarks::BookmarkKey;
 use bookmarks::BookmarkUpdateReason;

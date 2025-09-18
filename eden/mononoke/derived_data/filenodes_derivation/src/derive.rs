@@ -7,6 +7,7 @@
 
 use anyhow::Result;
 use anyhow::format_err;
+use blobstore::KeyedLoadable;
 use blobstore::Loadable;
 use context::CoreContext;
 use derived_data_manager::DerivationContext;

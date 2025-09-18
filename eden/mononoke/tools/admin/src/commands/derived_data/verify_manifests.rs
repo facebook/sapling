@@ -11,6 +11,7 @@ use std::fmt;
 
 use anyhow::Result;
 use anyhow::anyhow;
+use blobstore::KeyedLoadable;
 use blobstore::Loadable;
 use bytes::Bytes;
 use clap::Args;

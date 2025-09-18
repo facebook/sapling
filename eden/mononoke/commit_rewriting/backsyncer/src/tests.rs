@@ -17,6 +17,7 @@ use anyhow::anyhow;
 use ascii::AsciiString;
 use assert_matches::assert_matches;
 use blobrepo_hg::BlobRepoHg;
+use blobstore::KeyedLoadable;
 use blobstore::Loadable;
 use bonsai_hg_mapping::BonsaiHgMappingRef;
 use bookmarks::BookmarkKey;

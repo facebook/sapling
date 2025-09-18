@@ -10,7 +10,7 @@ use std::fmt;
 
 use anyhow::Result;
 use blobrepo_hg::file_history::get_file_history_maybe_incomplete;
-use blobstore::Loadable;
+use blobstore::KeyedLoadable;
 use bonsai_hg_mapping::BonsaiHgMappingRef;
 use bytes::Bytes;
 use bytes::BytesMut;
@@ -375,6 +375,7 @@ fn prepare_blob_lfs_file(
 mod test {
     use anyhow::Error;
     use assert_matches::assert_matches;
+    use blobstore::Loadable;
     use borrowed::borrowed;
     use fbinit::FacebookInit;
     use manifest::Entry;

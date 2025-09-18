@@ -7,7 +7,7 @@
 
 use anyhow::Result;
 use anyhow::anyhow;
-use blobstore::Loadable;
+use blobstore::KeyedLoadable;
 use clap::Args;
 use context::CoreContext;
 use filestore::FetchKey;

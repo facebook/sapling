@@ -9,7 +9,7 @@ use anyhow::Context;
 use anyhow::Error;
 use anyhow::Result;
 use blobstore::Blobstore;
-use blobstore::Loadable;
+use blobstore::KeyedLoadable;
 use cloned::cloned;
 use context::CoreContext;
 use futures::stream;

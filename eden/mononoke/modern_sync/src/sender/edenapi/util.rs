@@ -8,7 +8,7 @@
 use anyhow::Error;
 use anyhow::Result;
 use anyhow::ensure;
-use blobstore::Loadable;
+use blobstore::KeyedLoadable;
 use cloned::cloned;
 use context::CoreContext;
 use edenapi_service::utils::to_hg_path;
