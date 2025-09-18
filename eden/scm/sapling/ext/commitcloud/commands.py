@@ -1607,6 +1607,44 @@ def debugcloudstate(ui, repo, **opts):
     return
 
 
+@subcmd(
+    "debugsearchworkspaces",
+    [
+        (
+            "p",
+            "prefix",
+            "",
+            _("use the given prefix for the workspace name"),
+        ),
+    ],
+)
+def debugsearchworkspaces(ui, repo, **opts):
+    """search all workspaces for a given prefix"""
+
+    workspacenameprefix = opts.get("prefix")
+    if not workspacenameprefix:
+        raise error.Abort(_("no prefix specified"))
+
+    reponame = ccutil.getreponame(repo)
+
+    ui.status(
+        _("searching workspaces for the '%s' repo\n") % reponame,
+        component="commitcloud",
+    )
+
+    serv = service.get(ui, repo)
+    winfos = serv.getworkspaces(reponame, workspacenameprefix)
+    if not winfos:
+        ui.write(_("no workspaces found with the prefix %s\n") % workspacenameprefix)
+        return
+
+    ui.write(
+        ui.label(_("the following commitcloud workspaces are available:\n"), "bold")
+    )
+    for winfo in winfos:
+        ui.write(_("        %s\n") % (winfo.name))
+
+
 @command("debugwaitbackup", [("", "timeout", "", "timeout value")])
 def waitbackup(ui, repo, timeout):
     """wait for backup operations to complete"""
