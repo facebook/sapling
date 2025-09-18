@@ -37,7 +37,7 @@ int main(int, char**) {
 #else
 
 int main(int argc, char** argv) {
-  folly::init(&argc, &argv);
+  const folly::Init init(&argc, &argv);
 
   auto loggingConfig = folly::parseLogConfig("eden=DBG2; default:async=true");
   folly::LoggerDB::get().updateConfig(loggingConfig);

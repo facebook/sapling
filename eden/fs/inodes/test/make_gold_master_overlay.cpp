@@ -77,7 +77,7 @@ void createGoldMasterOverlay(AbsolutePath overlayPath) {
 }
 
 int main(int argc, char* argv[]) {
-  folly::init(&argc, &argv);
+  const folly::Init init(&argc, &argv);
 
   if (FLAGS_overlayPath.empty()) {
     fprintf(stderr, "overlayPath is required");

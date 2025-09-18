@@ -36,7 +36,7 @@ DEFINE_int64(
 using namespace facebook::eden;
 
 int main(int argc, char** argv) {
-  folly::init(&argc, &argv);
+  const folly::Init init(&argc, &argv);
   if (argc != 2) {
     fprintf(stderr, "error: no overlay path provided\n");
     fprintf(stderr, "usage: eden_fsck PATH [ARGS]\n");

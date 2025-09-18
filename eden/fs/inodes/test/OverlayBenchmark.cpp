@@ -113,7 +113,7 @@ void benchmarkOverlayTreeWrites(
 } // namespace
 
 int main(int argc, char* argv[]) {
-  folly::init(&argc, &argv);
+  const folly::Init init(&argc, &argv);
 
   if (FLAGS_overlayPath.empty()) {
     fprintf(stderr, "error: overlayPath is required\n");
