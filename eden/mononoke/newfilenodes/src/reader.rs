@@ -27,10 +27,14 @@ use mercurial_types::HgChangesetId;
 use mercurial_types::HgFileNodeId;
 use mononoke_types::RepoPath;
 use mononoke_types::RepositoryId;
+use mononoke_types::Timestamp;
 use path_hash::PathBytes;
 use path_hash::PathHashBytes;
 use path_hash::PathWithHash;
 use sql_ext::Connection;
+use sql_ext::ConsistentReadOptions;
+use sql_ext::SqlConnections;
+use sql_ext::consistent_read_options;
 use sql_ext::mononoke_queries;
 use stats::prelude::*;
 use thiserror::Error;
@@ -156,9 +160,14 @@ pub fn history_cache_key(
         value: PhantomData,
     }
 }
-pub struct FilenodesReader {
+
+struct ReadConnections {
     read_connections: Connections,
     read_master_connections: Connections,
+}
+
+pub struct FilenodesReader {
+    connections: ReadConnections,
     shards: Arc<Shards>,
     pub local_cache: LocalCache,
     pub remote_cache: RemoteCache,
@@ -171,8 +180,10 @@ impl FilenodesReader {
     ) -> Result<Self> {
         Ok(Self {
             shards: Arc::new(Shards::new(1000, 1000)),
-            read_connections: Connections::new(read_connections),
-            read_master_connections: Connections::new(read_master_connections),
+            connections: ReadConnections {
+                read_connections: Connections::new(read_connections),
+                read_master_connections: Connections::new(read_master_connections),
+            },
             local_cache: LocalCache::new_noop(),
             remote_cache: RemoteCache::new_noop()?,
         })
@@ -220,10 +231,17 @@ impl FilenodesReader {
                         key: &key,
                     };
 
-                    match select_filenode_from_sql(
+                    let cons_read_opts = consistent_read_options(
+                        ctx.client_correlator(),
+                        Some("newfilenodes::reader"),
+                    );
+
+                    let used_consistent_reads = cons_read_opts.is_some();
+
+                    let read_result = select_filenode_from_sql(
                         &ctx,
                         cache_filler,
-                        &self.read_connections,
+                        &self.connections,
                         repo_id,
                         &pwh,
                         filenode,
@@ -231,31 +249,43 @@ impl FilenodesReader {
                             ctx: &ctx,
                             counter: PerfCounterType::SqlReadsReplica,
                         },
+                        cons_read_opts,
                     )
-                    .await
-                    {
-                        Ok(FilenodeResult::Present(None))
-                        | Err(ErrorKind::FixedCopyInfoMissing(_))
-                        | Err(ErrorKind::PathNotFound(_)) => {
-                            // If the filenode wasn't found, or its copy info was missing, it might be present
-                            // on the master.
-                            STATS::gets_master.add_value(1);
+                    .await;
 
-                            Ok(select_filenode_from_sql(
-                                &ctx,
-                                cache_filler,
-                                &self.read_master_connections,
-                                repo_id,
-                                &pwh,
-                                filenode,
-                                &PerfCounterRecorder {
-                                    ctx: &ctx,
-                                    counter: PerfCounterType::SqlReadsMaster,
-                                },
-                            )
-                            .await?)
+                    if used_consistent_reads {
+                        // If we used consistent reads, then we should always
+                        // get the correct result back and the fallback to master
+                        // is not needed.
+                        Ok(read_result?)
+                    } else {
+                        // If consistent read query was not used, then check
+                        // the result and possibly fallback to reading from master
+                        match read_result {
+                            Ok(FilenodeResult::Present(None))
+                            | Err(ErrorKind::FixedCopyInfoMissing(_))
+                            | Err(ErrorKind::PathNotFound(_)) => {
+                                // If the filenode wasn't found, or its copy info was missing, it might be present
+                                // on the master.
+                                STATS::gets_master.add_value(1);
+
+                                Ok(select_filenode_from_sql(
+                                    &ctx,
+                                    cache_filler,
+                                    &self.connections,
+                                    repo_id,
+                                    &pwh,
+                                    filenode,
+                                    &PerfCounterRecorder {
+                                        ctx: &ctx,
+                                        counter: PerfCounterType::SqlReadsMaster,
+                                    },
+                                    None,
+                                )
+                                .await?)
+                            }
+                            res => Ok(res?),
                         }
-                        res => Ok(res?),
                     }
                 }
             })
@@ -306,7 +336,7 @@ impl FilenodesReader {
                     select_history_from_sql(
                         &ctx,
                         &cache_filler,
-                        &self.read_connections,
+                        &self.connections.read_connections,
                         repo_id,
                         &pwh,
                         &PerfCounterRecorder {
@@ -360,14 +390,23 @@ struct PartialFilenode {
 async fn select_filenode_from_sql(
     ctx: &CoreContext,
     filler: FilenodeCacheFiller<'_>,
-    connections: &Connections,
+    connections: &ReadConnections,
     repo_id: RepositoryId,
     pwh: &PathWithHash<'_>,
     filenode: HgFileNodeId,
     recorder: &PerfCounterRecorder<'_>,
+    cons_read_opts: Option<ConsistentReadOptions>,
 ) -> Result<FilenodeResult<Option<FilenodeInfo>>, ErrorKind> {
-    let partial =
-        select_partial_filenode(ctx, connections, repo_id, pwh, filenode, recorder).await?;
+    let partial = select_partial_filenode(
+        ctx,
+        &connections,
+        repo_id,
+        pwh,
+        filenode,
+        recorder,
+        cons_read_opts,
+    )
+    .await?;
 
     let partial = match partial {
         Some(partial) => partial,
@@ -376,10 +415,17 @@ async fn select_filenode_from_sql(
         }
     };
 
-    let ret = match fill_paths(ctx, connections, pwh, repo_id, vec![partial], recorder)
-        .await?
-        .into_iter()
-        .next()
+    let ret = match fill_paths(
+        ctx,
+        &connections.read_connections,
+        pwh,
+        repo_id,
+        vec![partial],
+        recorder,
+    )
+    .await?
+    .into_iter()
+    .next()
     {
         Some(ret) => ret,
         None => {
@@ -394,25 +440,66 @@ async fn select_filenode_from_sql(
 
 async fn select_partial_filenode(
     ctx: &CoreContext,
-    connections: &Connections,
+    connections: &ReadConnections,
     repo_id: RepositoryId,
     pwh: &PathWithHash<'_>,
     filenode: HgFileNodeId,
     recorder: &PerfCounterRecorder<'_>,
+    cons_read_opts: Option<ConsistentReadOptions>,
 ) -> Result<Option<PartialFilenode>, ErrorKind> {
-    let connection = connections.checkout(pwh, AcquireReason::Filenodes);
+    let connection = connections
+        .read_connections
+        .checkout(pwh, AcquireReason::Filenodes);
 
     recorder.increment();
 
-    let rows = enforce_sql_timeout(SelectFilenode::query(
-        connection,
-        ctx.sql_query_telemetry(),
-        &repo_id,
-        &pwh.hash,
-        pwh.sql_is_tree(),
-        &filenode,
-    ))
-    .await?;
+    let rows = if let Some(cons_read_opts) = cons_read_opts {
+        // Create SqlConnections where write_connection has the read connection
+        // to ensure writes would never succeed if somebody tries to use it later
+        let read_master_connection = connections
+            .read_master_connections
+            .checkout(pwh, AcquireReason::Filenodes);
+        let sql_connections = SqlConnections {
+            // The write connections won't be used, but pass the read-only
+            // connection to ensure that it can't be used by accident in the future.
+            write_connection: connection.clone(),
+            read_connection: connection.clone(),
+            read_master_connection: read_master_connection.clone(),
+        };
+
+        // Return early if filenode is present in the replica
+        let return_early_if: Arc<Box<dyn for<'a> Fn(&'a Vec<FilenodeRow>) -> bool + Send + Sync>> =
+            Arc::new(Box::new(|rows| {
+                rows.iter()
+                    .next()
+                    .and_then(|row| convert_row_to_partial_filenode(row.clone()).ok())
+                    .is_some()
+            }));
+
+        enforce_sql_timeout(SelectFilenode::query_with_consistency(
+            &sql_connections,
+            ctx.sql_query_telemetry(),
+            // TODO(T237806453): should we specify a `target_lower_bound_hlc`?
+            None,
+            Some(return_early_if),
+            cons_read_opts,
+            &repo_id,
+            &pwh.hash,
+            pwh.sql_is_tree(),
+            &filenode,
+        ))
+        .await?
+    } else {
+        enforce_sql_timeout(SelectFilenode::query(
+            connection,
+            ctx.sql_query_telemetry(),
+            &repo_id,
+            &pwh.hash,
+            pwh.sql_is_tree(),
+            &filenode,
+        ))
+        .await?
+    };
 
     match rows.into_iter().next() {
         Some(row) => {

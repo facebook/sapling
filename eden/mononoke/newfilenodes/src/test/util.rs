@@ -35,6 +35,14 @@ pub fn build_shard_with_hlc_provider(
     Connection::with_sqlite_hlc_provider_and_callbacks(con, hlc_provider, callbacks)
 }
 
+pub fn build_shard_with_callbacks(
+    callbacks: Box<dyn SqliteCallbacks>,
+) -> Result<Connection, Error> {
+    let con = SqliteConnection::open_in_memory()?;
+    con.execute_batch(NewFilenodesBuilder::CREATION_QUERY)?;
+    Connection::with_sqlite_callbacks(con, callbacks)
+}
+
 pub fn build_reader_writer(shards: Vec1<Connection>) -> (FilenodesReader, FilenodesWriter) {
     let reader = FilenodesReader::new(shards.clone(), shards.clone()).unwrap();
     let writer = FilenodesWriter::new(SQLITE_INSERT_CHUNK_SIZE, shards.clone(), shards);

@@ -200,10 +200,16 @@ impl MononokeScubaSampleBuilder {
         // against client correlator, so all Scuba logs can be split by
         // feature being enabled or disabled.
         // This generalizes what was done in D76728908 and D81212709.
-        let jk_and_switches: Vec<(&'static str, Vec<&'static str>)> = vec![(
-            "scm/mononoke:disable_bonsai_mapping_read_fallback_to_primary",
-            vec!["git"],
-        )];
+        let jk_and_switches: Vec<(&'static str, Vec<&'static str>)> = vec![
+            (
+                "scm/mononoke:disable_bonsai_mapping_read_fallback_to_primary",
+                vec!["git"],
+            ),
+            (
+                "scm/mononoke:retry_query_from_replica_with_consistency_check",
+                vec!["newfilenodes::reader"],
+            ),
+        ];
         let enabled_experiments_jk: Vec<String> = jk_and_switches
             .into_iter()
             .flat_map(|(jk, opt_switches)| {

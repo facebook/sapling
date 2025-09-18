@@ -45,6 +45,7 @@ use super::util::build_shard;
 use crate::builder::SQLITE_INSERT_CHUNK_SIZE;
 use crate::local_cache::LocalCache;
 use crate::reader::FilenodesReader;
+use crate::test::util::build_shard_with_callbacks;
 use crate::test::util::build_shard_with_hlc_provider;
 use crate::writer::FilenodesWriter;
 
@@ -191,9 +192,10 @@ mononoke_queries! {
     }
 }
 
+/// Keeps track of how many read and write queries ran through a Sqlite connection
 #[derive(Clone, Debug)]
 struct QueryCounter {
-    label: String,
+    _label: String,
     reads: Arc<AtomicI64>,
     writes: Arc<AtomicI64>,
 }
@@ -201,7 +203,7 @@ struct QueryCounter {
 impl QueryCounter {
     fn new(label: &str) -> Self {
         Self {
-            label: label.to_string(),
+            _label: label.to_string(),
             reads: Arc::new(AtomicI64::new(0)),
             writes: Arc::new(AtomicI64::new(0)),
         }
@@ -351,22 +353,103 @@ async fn test_fallback_on_missing_copy_info(fb: FacebookInit) -> Result<(), Erro
 
     assert_eq!(
         master_counter.values(),
-        (3, 3),
+        // No need to do extra reads from master
+        (1, 3),
         "unexpected number of reads/writes to master"
     );
-    // Can't make assertions on writes to replica because in some test runs the
-    // write might run and others it might not
-    // assert_eq!(
-    //     replica_counter.writes(),
-    //     3,
-    //     "unexpected number of writes to replica"
-    // );
+    // Because of the retries with exponential backoff, the writes to the
+    // replica always finish before the read_with_consistency query finishes.
+    assert_eq!(
+        replica_counter.writes(),
+        3,
+        "unexpected number of writes to replica"
+    );
     assert!(
-        replica_counter.reads() == 1,
+        replica_counter.reads() > 1,
         "unexpected number of reads to replica"
     );
 
     res?;
+    Ok(())
+}
+
+/// Tests that if HLC is not provided, `query_with_consistency` falls back to
+/// the primary
+#[mononoke::fbinit_test]
+async fn test_fallback_on_missing_copy_info_no_hlc(fb: FacebookInit) -> Result<(), Error> {
+    let ctx = CoreContext::test_mock(fb);
+
+    println!("Building master");
+    let master_counter = QueryCounter::new("master");
+    let master = build_shard_with_callbacks(Box::new(master_counter.clone()))?;
+
+    println!("Building replica");
+    let replica_counter = QueryCounter::new("replica");
+    let replica = build_shard_with_callbacks(Box::new(replica_counter.clone()))?;
+
+    println!("Writing to master");
+    // Populate only master. The query to the replica will fail with MissingHLC,
+    // so the query should fallback to master.
+    FilenodesWriter::new(
+        SQLITE_INSERT_CHUNK_SIZE,
+        vec1![master.clone()],
+        vec1![master.clone()],
+    )
+    .insert_filenodes(
+        &ctx,
+        REPO_ZERO,
+        vec![copied_from_filenode(), copied_filenode()],
+        false,
+    )
+    .await?
+    .do_not_handle_disabled_filenodes()?;
+
+    println!("Reading filenodes");
+    let reader = Arc::new(FilenodesReader::new(vec1![replica], vec1![master])?);
+    let prepared = copied_filenode();
+
+    // Intentionally ignoring the result, because it will be an error:
+    // `Error: Filenodes internal error: path is not found: PathHashBytes(..)`
+    // This error will be from the `SelectPaths` run by the reader after the
+    // `SelectFilenode`, which will success since it will fallback to master.
+    let _res = assert_filenode(
+        &ctx,
+        reader,
+        &prepared.path,
+        prepared.info.filenode,
+        REPO_ZERO,
+        prepared.info.clone(),
+    )
+    .await;
+
+    println!("master counter: {0:?}", master_counter.values());
+    println!("replica counter: {0:?}", replica_counter.values());
+
+    assert_eq!(
+        master_counter.values(),
+        // Every filenode write should run one `SelectAllPaths` read query.
+        // The other read should be from the fallback.
+        // The other read is the `SelectFilenode` query, which is a fallback
+        // from the replica
+        // Writes queries are InsertPaths, InsertFilenodes,InsertFixedcopyinfo.
+        (2, 3),
+        "unexpected number of reads/writes to master"
+    );
+
+    assert_eq!(
+        replica_counter.reads(),
+        // One if `SelectFilenode` query_with_consistency, which falls back to
+        // master. The other is `SelectPaths` with normal `query` method and is
+        // always expected.
+        2,
+        "unexpected number of reads to replica"
+    );
+    assert_eq!(
+        replica_counter.writes(),
+        0, // We didn't write anything to the replica
+        "unexpected number of writes to replica"
+    );
+
     Ok(())
 }
 
@@ -439,18 +522,19 @@ async fn test_fallback_on_missing_paths(fb: FacebookInit) -> Result<(), Error> {
 
     assert_eq!(
         master_counter.values(),
-        (3, 3),
+        // No need to do extra reads from master
+        (1, 3),
         "unexpected number of reads/writes to master"
     );
-    // Can't make assertions on writes to replica because in some test runs the
-    // write might run and others it might not
-    // assert_eq!(
-    //     replica_counter.writes(),
-    //     3,
-    //     "unexpected number of writes to replica"
-    // );
+    // Because of the retries with exponential backoff, the writes to the
+    // replica always finish before the read_with_consistency query finishes.
+    assert_eq!(
+        replica_counter.writes(),
+        3,
+        "unexpected number of writes to replica"
+    );
     assert!(
-        replica_counter.reads() == 1,
+        replica_counter.reads() > 1,
         "unexpected number of reads to replica"
     );
 
