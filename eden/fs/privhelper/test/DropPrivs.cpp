@@ -28,7 +28,7 @@ using namespace facebook::eden;
  * If no command was given, /bin/sh is run.
  */
 int main(int argc, char** argv) {
-  folly::init(&argc, &argv);
+  const folly::Init init(&argc, &argv);
 
   auto loggingConfig = folly::parseLogConfig("eden=INFO");
   folly::LoggerDB::get().updateConfig(loggingConfig);

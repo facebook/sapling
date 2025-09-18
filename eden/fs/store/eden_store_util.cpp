@@ -232,7 +232,7 @@ std::unique_ptr<Command> createCommand(StringPiece name) {
 } // namespace
 
 int main(int argc, char** argv) {
-  folly::init(&argc, &argv);
+  const folly::Init init(&argc, &argv);
   if (argc != 2) {
     fprintf(stderr, "error: no command specified\n");
     fprintf(stderr, "usage: eden_store_util COMMAND\n");

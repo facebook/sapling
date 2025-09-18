@@ -129,7 +129,7 @@ int main(int argc, char* argv[]) {
   for (int n = 0; n < argc; ++n) {
     initialArgv.emplace_back(argv[n]);
   }
-  folly::init(&argc, &argv);
+  const folly::Init init(&argc, &argv);
 
   // If we happen to have been started attached to a controlling TTY,
   // fork once and run the monitor in its own process group, to avoid

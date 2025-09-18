@@ -14,7 +14,7 @@
 using namespace facebook::eden;
 
 int main(int argc, char** argv) {
-  folly::init(&argc, &argv);
+  const folly::Init init(&argc, &argv);
 
   auto loggingConfig = folly::parseLogConfig("eden=DBG9");
   folly::LoggerDB::get().updateConfig(loggingConfig);

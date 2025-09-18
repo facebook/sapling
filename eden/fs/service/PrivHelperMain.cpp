@@ -28,7 +28,7 @@ DEFINE_int32(
     "The gid of the owner of this eden instance");
 
 int main(int argc, char** argv) {
-  folly::init(&argc, &argv);
+  const folly::Init init(&argc, &argv);
 
   auto loggingConfig = folly::parseLogConfig(
       "WARN:default, eden=DBG2; default:stream=stderr,async=false");
