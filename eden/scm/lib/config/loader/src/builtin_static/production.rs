@@ -394,17 +394,20 @@ sl_file_change_summary = '{ifeq(sl_show_file_change_summary,"true",ifeq(phase, "
 # Whether to show the file change summary. Set by `--commit-info` of `sl`.
 sl_show_file_change_summary='false'
 
+# Whether to include a blank line between revisions in `sl` / `ssl`.
+sl_revision_separator = "\n"
+
 # Additional lines to be rendered after the commit summary
 sl_extra = "{sl_file_info}{ifeq(sl_file_count,0,sl_file_change_summary)}"
 
 # Normal smartlog
-sl = "{label(sl_label, if(sl_use_short_header, sl_header_short, separate('\n', sl_header_normal, sl_desc, '\n')))}{sl_extra}"
+sl = "{label(sl_label, if(sl_use_short_header, sl_header_short, separate('\n', sl_header_normal, sl_desc, sl_revision_separator)))}{sl_extra}"
 
 # Super-smartlog.  Includes phabricator information.
-ssl = "{label(sl_label, if(sl_use_short_header, sl_header_short, separate('\n', sl_header_super, sl_desc, '\n')))}{sl_extra}"
+ssl = "{label(sl_label, if(sl_use_short_header, sl_header_short, separate('\n', sl_header_super, sl_desc, sl_revision_separator)))}{sl_extra}"
 
 # Like super-smartlog, but only colorizes the diff number.
-csl = "{label(sl_label, if(sl_use_short_header, sl_header_short, separate('\n', sl_header_colors, sl_desc, '\n')))}{sl_extra}"
+csl = "{label(sl_label, if(sl_use_short_header, sl_header_short, separate('\n', sl_header_colors, sl_desc, sl_revision_separator)))}{sl_extra}"
 
 # Smartlog with debug information.  Used by hg rage.
 sl_debug = "{label(sl_label, separate('\n', sl_header_debug, sl_desc, '\n'))}"
