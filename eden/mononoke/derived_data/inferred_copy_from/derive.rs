@@ -50,6 +50,9 @@ const BASENAME_MATCH_MAX_CANDIDATES: usize = 10_000;
 const PARTIAL_MATCH_MAX_FILE_SIZE: u64 = 4 * 1024 * 1024; // 4MB
 // Ref: https://fburl.com/lkfjeka4
 const CONTENT_SIMILARITY_RATIO_THRESHOLD: f64 = 0.5;
+// This is P99.9 of changed_files_count per commit across all repos
+// Ref: https://fburl.com/daiquery/1vuem3ap
+const MAX_NUM_CHANGED_FILES: usize = 6_000;
 
 #[derive(Clone, Debug)]
 struct CopyFromCandidate {
@@ -250,8 +253,9 @@ async fn find_exact_renames(
     Vec<(MPath, InferredCopyFromEntry)>,
     HashMap<ContentId, Vec<CopyFromCandidate>>,
 )> {
+    let max_num_changed_files = get_max_num_changed_files(derivation_ctx);
     let mut content_to_paths = HashMap::new();
-    for (path, file_change) in bonsai.simplified_file_changes() {
+    for (path, file_change) in bonsai.simplified_file_changes().take(max_num_changed_files) {
         if let Some(fc) = file_change {
             content_to_paths
                 .entry(fc.content_id())
@@ -262,6 +266,7 @@ async fn find_exact_renames(
 
     let deleted_paths = bonsai
         .simplified_file_changes()
+        .take(max_num_changed_files)
         .filter_map(|(path, fc)| {
             if fc.is_none() {
                 Some(path.clone())
@@ -326,6 +331,7 @@ async fn find_basename_matched_copies(
     Vec<(MPath, InferredCopyFromEntry)>,
     HashMap<ContentId, Vec<CopyFromCandidate>>,
 )> {
+    let max_num_changed_files = get_max_num_changed_files(derivation_ctx);
     let mut content_to_paths = HashMap::new();
     let mut basenames = HashSet::new();
     let mut path_prefixes = HashSet::new();
@@ -336,7 +342,7 @@ async fn find_basename_matched_copies(
             c.dir_level_for_basename_lookup
         });
 
-    for (path, file_change) in bonsai.simplified_file_changes() {
+    for (path, file_change) in bonsai.simplified_file_changes().take(max_num_changed_files) {
         if !paths_to_ignore.contains(path.into()) {
             if let Some(fc) = file_change {
                 content_to_paths
@@ -427,9 +433,10 @@ async fn find_partial_matches(
     paths_to_ignore: &HashSet<MPath>,
     content_to_candidates: &HashMap<ContentId, Vec<CopyFromCandidate>>,
 ) -> Result<Vec<(MPath, InferredCopyFromEntry)>> {
+    let max_num_changed_files = get_max_num_changed_files(derivation_ctx);
     let mut content_to_paths = HashMap::new();
     let mut content_to_metadata = HashMap::new();
-    for (path, file_change) in bonsai.simplified_file_changes() {
+    for (path, file_change) in bonsai.simplified_file_changes().take(max_num_changed_files) {
         if !paths_to_ignore.contains(path.into()) {
             if let Some(fc) = file_change {
                 content_to_paths
@@ -498,6 +505,13 @@ async fn find_partial_matches(
         }
     }
     Ok(matched)
+}
+
+fn get_max_num_changed_files(derivation_ctx: &DerivationContext) -> usize {
+    derivation_ctx
+        .config()
+        .inferred_copy_from_config
+        .map_or(MAX_NUM_CHANGED_FILES, |c| c.max_num_changed_files)
 }
 
 // TODO: add more cases
