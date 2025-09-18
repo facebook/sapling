@@ -218,7 +218,7 @@ impl StreamingChangesClient {
                                         if asserted_states.is_empty() {
                                             state_data.state = IsStateCurrentlyAsserted::NotAsserted;
                                         }
-                                        let results = stream::iter(change_events.into_iter().map(|change_event| Result::Ok(Changes::ChangeEvent(change_event)))).boxed();
+                                        let results = stream::iter(change_events.into_iter().map(|change_event| Ok(Changes::ChangeEvent(change_event)))).boxed();
                                         return Some((results, state_data));
                                     }
                                 }
@@ -281,8 +281,54 @@ impl StreamingChangesClient {
             }
         };
 
-        let nested = stream::iter(changes_with_events.into_iter().map(Result::Ok)).boxed();
+        let nested = stream::iter(changes_with_events.into_iter().map(Ok)).boxed();
         (nested, output_state)
+    }
+
+    /// Like [`stream_changes_since_with_states_wrapper`], but defers changes as long as any state in
+    /// `states` is asserted.
+    pub async fn stream_changes_since_with_deferral<'a>(
+        &'a self,
+        inner_stream: BoxStream<'a, Result<ChangesSinceV2Result>>,
+        states: &'a [String],
+        known_asserted_states: Option<&HashSet<String>>,
+    ) -> Result<BoxStream<'a, Result<Changes>>> {
+        let mut deferred_changes: Vec<ChangeNotification> = Vec::new();
+        let mut asserted_states = HashSet::new();
+
+        let stream = self
+            .stream_changes_since_with_states_wrapper(inner_stream, states, known_asserted_states)
+            .await?;
+        let stream = stream.flat_map(move |from_stream| match from_stream {
+            Ok(changes) => match changes {
+                Changes::ChangeEvent(ref change_event) => {
+                    match change_event.event_type {
+                        StateChange::Entered => asserted_states.insert(change_event.state.clone()),
+                        StateChange::Left => asserted_states.remove(&change_event.state),
+                    };
+                    if asserted_states.is_empty() && !deferred_changes.is_empty() {
+                        let deferred_changes_since =
+                            Ok(Changes::ChangesSince(ChangesSinceV2Result {
+                                to_position: change_event.position.clone(),
+                                changes: std::mem::take(&mut deferred_changes),
+                            }));
+                        stream::iter([Ok(changes), deferred_changes_since]).boxed()
+                    } else {
+                        stream::once(async { Ok(changes) }).boxed()
+                    }
+                }
+                Changes::ChangesSince(changes_since) => {
+                    if asserted_states.is_empty() {
+                        stream::once(async { Ok(Changes::ChangesSince(changes_since)) }).boxed()
+                    } else {
+                        deferred_changes.extend(changes_since.changes);
+                        stream::empty().boxed()
+                    }
+                }
+            },
+            Err(_) => stream::once(async { from_stream }).boxed(),
+        });
+        Ok(stream.boxed())
     }
 
     fn which_states_asserted(&self, states: &[String]) -> Result<HashSet<String>> {

@@ -147,7 +147,6 @@ impl crate::Subcommand for ChangesSinceCmd {
         self.print_result(&result);
         let mut rc = 0;
         if self.subscribe {
-            let stream_client = StreamingChangesClient::new(&get_mount_point(&self.mount_point)?)?;
             let stream = client
                 .stream_changes_since(
                     &self.mount_point,
@@ -163,8 +162,10 @@ impl crate::Subcommand for ChangesSinceCmd {
                 )
                 .await?;
             if !self.states.is_empty() {
+                let stream_client =
+                    StreamingChangesClient::new(&get_mount_point(&self.mount_point)?)?;
                 let wrapped_stream = stream_client
-                    .stream_changes_since_with_states_wrapper(stream, &self.states, None)
+                    .stream_changes_since_with_deferral(stream, &self.states, None)
                     .await?;
                 wrapped_stream
                     .for_each(|result| async {
