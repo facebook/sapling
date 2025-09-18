@@ -379,6 +379,99 @@ pub trait Blobstore: fmt::Display + fmt::Debug + Send + Sync {
     async fn unlink<'a>(&'a self, ctx: &'a CoreContext, key: &'a str) -> Result<()>;
 }
 
+#[async_trait]
+pub trait KeyedBlobstore: fmt::Display + fmt::Debug + Send + Sync {
+    /// Fetch the value associated with `key`, or None if no value is present
+    async fn get<'a>(
+        &'a self,
+        ctx: &'a CoreContext,
+        key: &'a str,
+    ) -> Result<Option<BlobstoreGetData>>;
+    /// Associate `value` with `key` for future gets; if `put` is called with different `value`s
+    /// for the same key, the implementation may return any `value` it's been given in response
+    /// to a `get` for that `key`.
+    async fn put<'a>(
+        &'a self,
+        ctx: &'a CoreContext,
+        key: String,
+        value: BlobstoreBytes,
+    ) -> Result<()>;
+    /// Check that `get` will return a value for a given `key`, and not None. The provided
+    /// implementation just calls `get`, and discards the return value; this can be overridden to
+    /// avoid transferring data. In the absence of concurrent `put` calls, this must return
+    /// `BlobstoreIsPresent::Absent` if `get` would return `None`, and `BlobstoreIsPresent::Present`
+    /// if `get` would return `Some(_)`.
+    /// In some cases, when it couldn't determine whether the key exists or not, it would
+    /// return `BlobstoreIsPresent::ProbablyNotPresent`.
+    async fn is_present<'a>(
+        &'a self,
+        ctx: &'a CoreContext,
+        key: &'a str,
+    ) -> Result<BlobstoreIsPresent>;
+    /// Copy the value from one key to another. The default behaviour is to `get` and `put` the
+    /// value, though some blobstores might have more efficient implementations that avoid
+    /// transferring data.
+    async fn copy<'a>(
+        &'a self,
+        ctx: &'a CoreContext,
+        old_key: &'a str,
+        new_key: String,
+    ) -> Result<()>;
+
+    /// Similar to unlink(2), this removes a key, resulting in content being removed if its the last key pointing to it.
+    /// An error is returned if the key does not exist
+    async fn unlink<'a>(&'a self, ctx: &'a CoreContext, key: &'a str) -> Result<()>;
+}
+
+#[async_trait]
+impl<T: Blobstore> KeyedBlobstore for T {
+    async fn get<'a>(
+        &'a self,
+        ctx: &'a CoreContext,
+        key: &'a str,
+    ) -> Result<Option<BlobstoreGetData>> {
+        self.get(ctx, key).await
+    }
+
+    async fn put<'a>(
+        &'a self,
+        ctx: &'a CoreContext,
+        key: String,
+        value: BlobstoreBytes,
+    ) -> Result<()> {
+        self.put(ctx, key, value).await
+    }
+
+    async fn is_present<'a>(
+        &'a self,
+        ctx: &'a CoreContext,
+        key: &'a str,
+    ) -> Result<BlobstoreIsPresent> {
+        Ok(if self.get(ctx, key).await?.is_some() {
+            BlobstoreIsPresent::Present
+        } else {
+            BlobstoreIsPresent::Absent
+        })
+    }
+
+    async fn copy<'a>(
+        &'a self,
+        ctx: &'a CoreContext,
+        old_key: &'a str,
+        new_key: String,
+    ) -> Result<()> {
+        let value = self
+            .get(ctx, old_key)
+            .await?
+            .with_context(|| format!("key {} not present", old_key))?;
+        Ok(self.put(ctx, new_key, value.bytes).await?)
+    }
+
+    async fn unlink<'a>(&'a self, ctx: &'a CoreContext, key: &'a str) -> Result<()> {
+        self.unlink(ctx, key).await
+    }
+}
+
 /// Mononoke binaries will not overwrite existing blobstore keys by default
 pub const DEFAULT_PUT_BEHAVIOUR: PutBehaviour = PutBehaviour::IfAbsent;
 
@@ -581,6 +674,17 @@ pub trait Loadable {
     type Value: Sized + 'static;
 
     async fn load<'a, B: Blobstore>(
+        &'a self,
+        ctx: &'a CoreContext,
+        blobstore: &'a B,
+    ) -> Result<Self::Value, LoadableError>;
+}
+
+#[async_trait]
+pub trait KeyedLoadable {
+    type Value: Sized + 'static;
+
+    async fn load<'a, B: KeyedBlobstore>(
         &'a self,
         ctx: &'a CoreContext,
         blobstore: &'a B,
