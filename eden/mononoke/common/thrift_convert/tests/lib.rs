@@ -25,6 +25,7 @@ struct TestStruct {
 struct SubTestStruct {
     x: u64,
     y: String,
+    z: Option<String>,
 }
 
 #[derive(ThriftConvert, Debug, Eq, PartialEq, Clone)]
@@ -52,15 +53,18 @@ fn test_derive_thrift_convert() {
         e: SubTestStruct {
             x: 3,
             y: "olleh".to_string(),
+            z: None,
         },
         f: vec![
             SubTestStruct {
                 x: 1,
                 y: "world".to_string(),
+                z: None,
             },
             SubTestStruct {
                 x: 2,
                 y: "dlrow".to_string(),
+                z: Some("goodbye".to_string()),
             },
         ],
     };

@@ -21,6 +21,7 @@ struct ThriftStruct {
 struct ThriftSecondStruct {
   1: i64 x;
   2: string y;
+  3: optional string z;
 }
 
 union ThriftUnion {

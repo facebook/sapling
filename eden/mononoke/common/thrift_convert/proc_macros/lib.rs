@@ -105,14 +105,45 @@ fn struct_named_fields_impl(s: ItemStruct) -> Result<ThriftConvertImpl, Error> {
     })
 }
 
+/// If this type is an Option, returns the inner type. Otherwise, returns None.
+fn option_inner_type(type_path: &TypePath) -> Result<Option<&Type>, Error> {
+    let Some(last_path_segment) = type_path.path.segments.last() else {
+        return Ok(None);
+    };
+    if last_path_segment.ident != "Option" {
+        return Ok(None);
+    }
+    let syn::PathArguments::AngleBracketed(ref args) = last_path_segment.arguments else {
+        return Err(Error::new(
+            type_path.span(),
+            "Option must be a generic type",
+        ));
+    };
+    let syn::GenericArgument::Type(inner_type) = args
+        .args
+        .first()
+        .ok_or_else(|| Error::new(type_path.span(), "Option must have an inner type"))?
+    else {
+        return Err(Error::new(type_path.span(), "Option must contain a type"));
+    };
+    Ok(Some(inner_type))
+}
+
 fn struct_named_fields_from_thrift(s: &ItemStruct) -> Result<TokenStream, Error> {
     let fields = find_struct_named_fields(s)?;
 
     let mut from_thrift_fields = vec![];
     for (field_name, type_path) in fields {
-        from_thrift_fields.push(quote! {
-            #field_name: <#type_path as ThriftConvert>::from_thrift(t.#field_name)?
-        });
+        if let Some(inner_type) = option_inner_type(type_path)? {
+            // Special case for Option<T>
+            from_thrift_fields.push(quote! {
+                #field_name: t.#field_name.map(<#inner_type as ThriftConvert>::from_thrift).transpose()?
+            });
+        } else {
+            from_thrift_fields.push(quote! {
+                #field_name: <#type_path as ThriftConvert>::from_thrift(t.#field_name)?
+            });
+        }
     }
 
     Ok(quote! {
@@ -129,9 +160,16 @@ fn struct_named_fields_into_thrift(s: &ItemStruct) -> Result<TokenStream, Error>
 
     let mut into_thrift_fields = vec![];
     for (field_name, type_path) in fields {
-        into_thrift_fields.push(quote! {
-            #field_name: <#type_path as ThriftConvert>::into_thrift(self.#field_name)
-        });
+        if let Some(inner_type) = option_inner_type(type_path)? {
+            // Special case for Option<T>
+            into_thrift_fields.push(quote! {
+                #field_name: self.#field_name.map(<#inner_type as ThriftConvert>::into_thrift)
+            });
+        } else {
+            into_thrift_fields.push(quote! {
+                #field_name: <#type_path as ThriftConvert>::into_thrift(self.#field_name)
+            });
+        }
     }
 
     Ok(quote! {
