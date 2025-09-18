@@ -20,6 +20,7 @@ use std::time::Duration;
 
 use anyhow::Result;
 use derivative::Derivative;
+use futures_stats::FutureStats;
 use mononoke_types::RepositoryId;
 use rusqlite::Connection as SqliteConnection;
 use sql::Connection as SqlConnection;
@@ -57,6 +58,7 @@ pub mod _macro_internal {
     pub use clientinfo::ClientEntryPoint;
     pub use clientinfo::ClientRequestInfo;
     pub use cloned::cloned;
+    pub use futures_stats::TimedTryFutureExt;
     pub use mononoke_types::RepositoryId;
     pub use mononoke_types::Timestamp;
     pub use paste;
@@ -148,6 +150,7 @@ impl Transaction {
         granularity: TelemetryGranularity,
         query_name: &str,
         shard_name: String,
+        fut_stats: FutureStats,
     ) -> Result<Self> {
         if let Some(tel) = opt_tel.as_ref() {
             txn_telemetry.add_query_telemetry(tel.clone())
@@ -163,6 +166,7 @@ impl Transaction {
             query_repo_ids,
             query_name,
             shard_name.as_ref(),
+            fut_stats,
         )?;
 
         Ok(Transaction::new(

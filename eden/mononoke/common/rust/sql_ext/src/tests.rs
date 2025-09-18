@@ -159,6 +159,7 @@ mod facebook {
           "client_entry_point",
           "client_identities",
           "client_main_id",
+          "completion_time_us",
           "cpu_rru",
           "datacenter",
           "delay_rru",

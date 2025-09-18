@@ -146,12 +146,15 @@ macro_rules! mononoke_queries {
                                 // Check if any parameter is a RepositoryId and pass it to telemetry
                                 let repo_ids = $crate::extract_repo_ids_from_queries!($($pname: $ptype; )*);
 
-                                let (res, opt_tel) = [<$name Impl>]::commented_query(
+                                let (fut_stats, (res, opt_tel)) = [<$name Impl>]::commented_query(
                                     connection.sql_connection(),
                                     cri_str.as_deref(),
                                     $( $pname, )*
                                     $( $lname, )*
-                                ).await.inspect_err(|e| {
+                                )
+                                .try_timed()
+                                .await
+                                .inspect_err(|e| {
                                     log_query_error(
                                         &sql_query_tel,
                                         &e,
@@ -169,6 +172,7 @@ macro_rules! mononoke_queries {
                                     repo_ids,
                                     query_name,
                                     shard_name.as_ref(),
+                                    fut_stats,
                                 )?;
 
 
@@ -359,13 +363,16 @@ macro_rules! mononoke_queries {
                                 // Check if any parameter is a RepositoryId and pass it to telemetry
                                 let repo_ids = $crate::extract_repo_ids_from_queries!($($pname: $ptype; )*);
 
-                                let (res, opt_tel) = [<$name Impl>]::commented_query(
+                                let (fut_stats, (res, opt_tel)) = [<$name Impl>]::commented_query(
                                     connection.sql_connection(),
                                     cri_str.as_deref(),
                                     $( $pname, )*
                                     $( $lname, )*
 
-                                ).await.inspect_err(|e| {
+                                )
+                                .try_timed()
+                                .await
+                                .inspect_err(|e| {
                                     log_query_error(
                                         &sql_query_tel,
                                         &e,
@@ -384,6 +391,7 @@ macro_rules! mononoke_queries {
                                     repo_ids,
                                     query_name,
                                     shard_name.as_ref(),
+                                    fut_stats,
                                 )?;
                                 Ok(CachedQueryResult(res))
                             }
@@ -486,7 +494,7 @@ macro_rules! mononoke_queries {
                         .collect();
 
 
-                    let write_res = query_with_retry_no_cache(
+                    let (fut_stats, write_res) = query_with_retry_no_cache(
                         || [<$name Impl>]::commented_query(
                             connection.sql_connection(),
                             cri_str.as_deref(),
@@ -495,7 +503,10 @@ macro_rules! mononoke_queries {
                         ),
                         shard_name,
                         query_name,
-                    ).await.inspect_err(|e| {
+                    )
+                    .try_timed()
+                    .await
+                    .inspect_err(|e| {
                         log_query_error(
                             &sql_query_tel,
                             &e,
@@ -515,6 +526,7 @@ macro_rules! mononoke_queries {
                         repo_ids,
                         &query_name,
                         shard_name.as_ref(),
+                        fut_stats,
                     )?;
 
                     Ok(write_res)
@@ -553,12 +565,15 @@ macro_rules! mononoke_queries {
                         .collect();
 
 
-                    let (sql_txn, write_res) = [<$name Impl>]::commented_query_with_transaction(
+                    let (fut_stats, (sql_txn, write_res)) = [<$name Impl>]::commented_query_with_transaction(
                         sql_txn,
                         cri_str.as_deref(),
                         values
                         $( , $pname )*
-                    ).await.inspect_err(|e| {
+                    )
+                    .try_timed()
+                    .await
+                    .inspect_err(|e| {
                         log_query_error(
                             &sql_query_tel,
                             &e,
@@ -580,6 +595,7 @@ macro_rules! mononoke_queries {
                         granularity,
                         query_name,
                         shard_name,
+                        fut_stats,
                     )?;
 
                     Ok((txn, write_res))
@@ -650,7 +666,7 @@ macro_rules! mononoke_queries {
                     // Check if any parameter is a RepositoryId and pass it to telemetry
                     let repo_ids = $crate::extract_repo_ids_from_queries!($($pname: $ptype; )*);
 
-                    let write_res = query_with_retry_no_cache(
+                    let (fut_stats, write_res) = query_with_retry_no_cache(
                         || [<$name Impl>]::commented_query(
                             connection.sql_connection(),
                             cri_str.as_deref(),
@@ -659,7 +675,10 @@ macro_rules! mononoke_queries {
                         ),
                         shard_name,
                         query_name,
-                    ).await.inspect_err(|e| {
+                    )
+                    .try_timed()
+                    .await
+                    .inspect_err(|e| {
                         log_query_error(
                             &sql_query_tel,
                             &e,
@@ -679,6 +698,7 @@ macro_rules! mononoke_queries {
                         repo_ids,
                         &query_name,
                         shard_name.as_ref(),
+                        fut_stats,
                     )?;
 
                     Ok(write_res)
@@ -711,12 +731,16 @@ macro_rules! mononoke_queries {
                     let query_repo_ids = $crate::extract_repo_ids_from_queries!($($pname: $ptype; )*);
 
 
-                    let (sql_txn, write_res) = [<$name Impl>]::commented_query_with_transaction(
-                        sql_txn,
-                        cri_str.as_deref()
-                        $( , $pname )*
-                        $( , $lname )*
-                    ).await.inspect_err(|e| {
+                    let (fut_stats, (sql_txn, write_res)) =
+                        [<$name Impl>]::commented_query_with_transaction(
+                            sql_txn,
+                            cri_str.as_deref()
+                            $( , $pname )*
+                            $( , $lname )*
+                        )
+                        .try_timed()
+                        .await
+                        .inspect_err(|e| {
                         log_query_error(
                             &sql_query_tel,
                             &e,
@@ -738,6 +762,7 @@ macro_rules! mononoke_queries {
                         granularity,
                         &query_name,
                         shard_name,
+                        fut_stats,
                     )?;
 
                     Ok((txn, write_res))
@@ -773,14 +798,17 @@ macro_rules! read_query_with_transaction {
         let cri = sql_query_tel.client_request_info();
         let cri_str = cri.map(|cri| serde_json::to_string(&cri)).transpose()?;
 
-        let (sql_txn, (res, opt_tel)) = paste::expr! {
+        let (fut_stats, (sql_txn, (res, opt_tel))) = paste::expr! {
             [<$name Impl>]::commented_query_with_transaction(
                 sql_txn,
                 cri_str.as_deref(),
                 $( $pname, )*
                 $( $lname, )*
             )
-        }.await.inspect_err(|e| {
+        }
+        .try_timed()
+        .await
+        .inspect_err(|e| {
             log_query_error(
                 &sql_query_tel,
                 &e,
@@ -800,6 +828,7 @@ macro_rules! read_query_with_transaction {
             granularity,
             $query_name,
             shard_name,
+            fut_stats,
         )?;
 
         Ok((txn, res))

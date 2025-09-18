@@ -11,6 +11,7 @@ use std::num::NonZeroU64;
 use anyhow::Error;
 use anyhow::Result;
 use anyhow::anyhow;
+use futures_stats::FutureStats;
 use itertools::Itertools;
 use mononoke_types::RepositoryId;
 use scuba_ext::MononokeScubaSampleBuilder;
@@ -57,6 +58,7 @@ pub fn log_query_telemetry(
     repo_ids: Vec<RepositoryId>,
     query_name: &str,
     shard_name: &str,
+    fut_stats: FutureStats,
 ) -> Result<()> {
     match opt_tel {
         Some(query_tel) => log_query_telemetry_impl(
@@ -66,6 +68,7 @@ pub fn log_query_telemetry(
             repo_ids,
             query_name,
             shard_name,
+            fut_stats,
         ),
         // TODO(T223577767): handle case when there's no telemetry
         None => Ok(()),
@@ -134,6 +137,7 @@ fn log_query_telemetry_impl(
     repo_ids: Vec<RepositoryId>,
     query_name: &str,
     shard_name: &str,
+    fut_stats: FutureStats,
 ) -> Result<()> {
     #[cfg(not(fbcode_build))]
     {
@@ -153,6 +157,7 @@ fn log_query_telemetry_impl(
                 repo_ids,
                 query_name,
                 shard_name,
+                fut_stats,
             )
         }
         QueryTelemetry::Sqlite(_) => Ok(()),
@@ -168,6 +173,7 @@ fn log_mysql_query_telemetry(
     repo_ids: Vec<RepositoryId>,
     query_name: &str,
     shard_name: &str,
+    fut_stats: FutureStats,
 ) -> Result<()> {
     let jk_sample_rate =
         justknobs::get_as::<u64>("scm/mononoke:sql_telemetry_sample_rate", Some(shard_name))
@@ -185,6 +191,17 @@ fn log_mysql_query_telemetry(
     scuba.add("success", 1);
     STATS::success.add_value(1, (shard_name.to_string(),));
     STATS::success_query.add_value(1, (shard_name.to_string(), query_name.to_string()));
+
+    scuba.add_future_stats(&fut_stats);
+
+    STATS::query_completion_time.add_value(
+        fut_stats.completion_time.as_micros() as i64,
+        (
+            shard_name.to_string(),
+            query_name.to_string(),
+            format!("{:?}", granularity),
+        ),
+    );
 
     let opt_instance_type = query_tel.instance_type().cloned();
 
@@ -454,6 +471,12 @@ define_stats! {
         "{}.{}.{}.retry_attempts",
         (shard_name: String, query_name: String, error_key: String);
         Sum, Average, Count;
+    ),
+
+    query_completion_time: dynamic_timeseries(
+        "{}.query.granularity.completion_time_us.{}.{}",
+        (shard_name: String, query_name: String, granularity: String);
+        Sum, Average
     ),
 
     replica_lagging: dynamic_timeseries(
