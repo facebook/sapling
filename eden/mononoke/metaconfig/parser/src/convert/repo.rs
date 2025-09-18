@@ -568,6 +568,9 @@ impl Convert for RawInferredCopyFromConfig {
     fn convert(self) -> Result<Self::Output> {
         Ok(InferredCopyFromConfig {
             dir_level_for_basename_lookup: self.dir_level_for_basename_lookup as usize,
+            basename_match_max_candidates: self.basename_match_max_candidates as usize,
+            partial_match_max_file_size: self.partial_match_max_file_size as u64,
+            max_num_changed_files: self.max_num_changed_files as usize,
         })
     }
 }

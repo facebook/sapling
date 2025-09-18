@@ -521,6 +521,15 @@ pub struct InferredCopyFromConfig {
     /// When trying to find file copies using basename, how many levels of
     /// directories from the repo root should we perform the search?
     pub dir_level_for_basename_lookup: usize,
+    /// When trying to find file copies using basename, only examine up to
+    /// this number of basename-matched files
+    pub basename_match_max_candidates: usize,
+    /// When calculating file content similarity, skip comparison if files
+    /// on either side is larger than this threshold
+    pub partial_match_max_file_size: u64,
+    /// Maximum number of changed files to consider when inferring any forms
+    /// of copy/rename
+    pub max_num_changed_files: usize,
 }
 
 /// Config for remote derivation

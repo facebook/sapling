@@ -197,6 +197,9 @@ pub fn default_test_repo_derived_data_types_config() -> DerivedDataTypesConfig {
         }),
         inferred_copy_from_config: Some(InferredCopyFromConfig {
             dir_level_for_basename_lookup: 1,
+            basename_match_max_candidates: 10_000,
+            partial_match_max_file_size: 4 * 1024 * 1024,
+            max_num_changed_files: 6_000,
         }),
         ..Default::default()
     }

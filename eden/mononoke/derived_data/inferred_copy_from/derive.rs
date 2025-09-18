@@ -43,6 +43,7 @@ use vec1::Vec1;
 use crate::RootInferredCopyFromId;
 use crate::similarity::estimate_similarity;
 
+const DIR_LEVEL_FOR_BASENAME_LOOKUP: usize = 1;
 const BASENAME_MATCH_MAX_CANDIDATES: usize = 10_000;
 // This roughly follows our file content chunk size
 // Ref: https://fburl.com/code/qudh1g07
@@ -88,6 +89,7 @@ fn should_skip_file_type(file_type: &FileType) -> bool {
 
 // Basic file metadata check to filter out pairs that are unlikely to match.
 fn filter_by_metadata(
+    derivation_ctx: &DerivationContext,
     dst_file_change: &BasicFileChange,
     src_candidate: &CopyFromCandidate,
 ) -> bool {
@@ -110,7 +112,13 @@ fn filter_by_metadata(
     let max_size = dst_file_size.max(candidate_file_size);
     let min_size = dst_file_size.min(candidate_file_size);
     // Skip if files are too large or too different in sizes
-    max_size <= PARTIAL_MATCH_MAX_FILE_SIZE
+    let partial_match_max_file_size = derivation_ctx
+        .config()
+        .inferred_copy_from_config
+        .map_or(PARTIAL_MATCH_MAX_FILE_SIZE, |c| {
+            c.partial_match_max_file_size
+        });
+    max_size <= partial_match_max_file_size
         && (max_size - min_size) as f64 / (max_size as f64) < CONTENT_SIMILARITY_RATIO_THRESHOLD
 }
 
@@ -321,10 +329,12 @@ async fn find_basename_matched_copies(
     let mut content_to_paths = HashMap::new();
     let mut basenames = HashSet::new();
     let mut path_prefixes = HashSet::new();
-    let dir_lookup_level = match derivation_ctx.config().inferred_copy_from_config {
-        Some(config) => config.dir_level_for_basename_lookup,
-        None => 1,
-    };
+    let dir_lookup_level = derivation_ctx
+        .config()
+        .inferred_copy_from_config
+        .map_or(DIR_LEVEL_FOR_BASENAME_LOOKUP, |c| {
+            c.dir_level_for_basename_lookup
+        });
 
     for (path, file_change) in bonsai.simplified_file_changes() {
         if !paths_to_ignore.contains(path.into()) {
@@ -350,6 +360,12 @@ async fn find_basename_matched_copies(
     let path_prefixes_vec = path_prefixes.into_iter().collect::<Vec<_>>();
     let mut content_to_candidates_vec = vec![];
 
+    let basename_match_max_candidates = derivation_ctx
+        .config()
+        .inferred_copy_from_config
+        .map_or(BASENAME_MATCH_MAX_CANDIDATES, |c| {
+            c.basename_match_max_candidates
+        });
     for parent_cs_id in bonsai.parents() {
         content_to_candidates_vec.push(
             get_matched_paths_by_basenames_from_changeset(
@@ -361,7 +377,7 @@ async fn find_basename_matched_copies(
             )
             .await?
             .try_filter_map(async move |path| Ok(path.into_optional_non_root_path()))
-            .take(BASENAME_MATCH_MAX_CANDIDATES)
+            .take(basename_match_max_candidates)
             .try_chunks(100)
             .try_fold(HashMap::new(), |mut acc, paths| async move {
                 let hashmap =
@@ -447,7 +463,7 @@ async fn find_partial_matches(
                             }
                         }
                         // Filter out candidates whose metadata are too different from dest
-                        filter_by_metadata(fc, candidate)
+                        filter_by_metadata(derivation_ctx, fc, candidate)
                     })
                     .collect::<Vec<_>>();
                 if filtered.is_empty() {
