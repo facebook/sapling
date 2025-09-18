@@ -22,6 +22,9 @@ from eden.fs.service.eden.thrift_types import (
     Renamed,
     Replaced,
     SmallChangeNotification,
+    StateChangeNotification,
+    StateEntered,
+    StateLeft,
 )
 
 from thrift.python.types import StructMeta
@@ -122,5 +125,17 @@ def buildLargeChange(
             largeChange=LargeChangeNotification(
                 lostChanges=LostChanges(reason=lost_change_reason)
             )
+        )
+    return ChangeNotification()
+
+
+def buildStateChange(changeType: StructMeta, name: str) -> ChangeNotification:
+    if changeType is StateEntered:
+        return ChangeNotification(
+            stateChange=StateChangeNotification(stateEntered=StateEntered(name=name))
+        )
+    elif changeType is StateLeft:
+        return ChangeNotification(
+            stateChange=StateChangeNotification(stateLeft=StateLeft(name=name))
         )
     return ChangeNotification()

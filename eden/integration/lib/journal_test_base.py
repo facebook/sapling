@@ -35,6 +35,7 @@ class JournalTestBase(testcase.EdenRepoTest):
         return configs
 
     def edenfs_logging_settings(self) -> Dict[str, str]:
+        # This is somehow broken. T238177645 to investigate and fix
         return {"eden": "DBG3"}
 
     def populate_repo(self) -> None:
@@ -51,7 +52,45 @@ class JournalTestBase(testcase.EdenRepoTest):
 
         super().setUp()
 
-    def check_changes(
+    def check_changes(self, changes, expected_changes) -> bool:
+        expected_changes_index = 0
+        for change in changes:
+            if self.check_changeNotification(
+                change, expected_changes[expected_changes_index]
+            ):
+                expected_changes_index += 1
+                if expected_changes_index == len(expected_changes):
+                    return True
+        print("Expected changes not found:")
+        for i in range(expected_changes_index, len(expected_changes)):
+            print(expected_changes[i])
+        print("in:")
+        print(changes)
+        return False
+
+    def check_changes_exact(self, changes, expected_changes) -> bool:
+        num_changes = len(expected_changes)
+        if len(changes) != num_changes:
+            print(f"Expected {num_changes} changes, got {len(changes)}: {changes}")
+            return False
+        expected_changes_index = 0
+        for change in changes:
+            if self.check_changeNotification(
+                change, expected_changes[expected_changes_index]
+            ):
+                expected_changes_index += 1
+                if expected_changes_index == len(expected_changes):
+                    return True
+            else:
+                break
+        print("Expected changes not found:")
+        for i in range(expected_changes_index, len(expected_changes)):
+            print(expected_changes[i])
+        print("in:")
+        print(changes)
+        return False
+
+    def check_changeNotification(
         self,
         actual: ChangeNotification,
         expected: ChangeNotification,
@@ -59,22 +98,45 @@ class JournalTestBase(testcase.EdenRepoTest):
         """Compare two ChangeNotification objects for equality."""
         # Check if both have smallChange
         if hasattr(actual, "smallChange") and actual.smallChange is not None:
-            if not (hasattr(expected, "smallChange") and expected.smallChange is None):
+            if not (
+                hasattr(expected, "smallChange") and expected.smallChange is not None
+            ):
                 return False
-            return self._small_changes_equal(actual.smallChange, expected.smallChange)
-
+            if not self._small_changes_equal(actual.smallChange, expected.smallChange):
+                return False
         # Check if both have largeChange
-        if hasattr(actual, "largeChange") and actual.largeChange is not None:
+        elif hasattr(actual, "largeChange") and actual.largeChange is not None:
             if not (
                 hasattr(expected, "largeChange") and expected.largeChange is not None
             ):
                 return False
-            return self._large_changes_equal(actual.largeChange, expected.largeChange)
-
-        # Both should be empty
-        return (
-            not hasattr(expected, "smallChange") or expected.smallChange is None
-        ) and (not hasattr(expected, "largeChange") or expected.largeChange is None)
+            if not self._large_changes_equal(actual.largeChange, expected.largeChange):
+                return False
+        # Check if both have stateChange
+        elif hasattr(actual, "stateChange") and actual.stateChange is not None:
+            if not (
+                hasattr(expected, "stateChange") and expected.stateChange is not None
+            ):
+                return False
+            if not self._state_changes_equal(actual.stateChange, expected.stateChange):
+                return False
+        else:
+            # For catching any possible additions.
+            # At this point, we know that actual doesn't have one of the checked for changes.
+            # If expected has one of the checked for changes, then we know that they are not equal.
+            if (
+                (hasattr(expected, "smallChange") and expected.smallChange is not None)
+                or (
+                    hasattr(expected, "largeChange")
+                    and expected.largeChange is not None
+                )
+                or (
+                    hasattr(expected, "stateChange")
+                    and expected.stateChange is not None
+                )
+            ):
+                return False
+        return True
 
     def _small_changes_equal(self, actual, expected) -> bool:
         """Compare two SmallChangeNotification objects for equality."""
@@ -140,6 +202,23 @@ class JournalTestBase(testcase.EdenRepoTest):
 
         return False
 
+    def _state_changes_equal(self, actual, expected) -> bool:
+        """Compare two StateChangeNotification objects for equality."""
+        # Check entered
+        if hasattr(actual, "stateEntered") and actual.stateEntered is not None:
+            if not (
+                hasattr(expected, "stateEntered") and expected.stateEntered is not None
+            ):
+                return False
+            return actual.stateEntered == expected.stateEntered
+
+        # Check left
+        if hasattr(actual, "stateLeft") and actual.stateLeft is not None:
+            if not (hasattr(expected, "stateLeft") and expected.stateLeft is not None):
+                return False
+            return actual.stateLeft == expected.stateLeft
+        return False
+
     async def getChangesSinceV2(
         self,
         position,
@@ -148,6 +227,8 @@ class JournalTestBase(testcase.EdenRepoTest):
         included_suffixes=None,
         excluded_suffixes=None,
         root=None,
+        includeVCSRoots=False,
+        includeStateChanges=False,
     ) -> ChangesSinceV2Result:
         # Convert parameters to correct types for Thrift interface
         # includedRoots and excludedRoots expect bytes (PathString)
@@ -192,6 +273,8 @@ class JournalTestBase(testcase.EdenRepoTest):
                     includedSuffixes=included_suffixes,
                     excludedSuffixes=excluded_suffixes,
                     root=root,
+                    includeVCSRoots=includeVCSRoots,
+                    includeStateChanges=includeStateChanges,
                 )
             )
 

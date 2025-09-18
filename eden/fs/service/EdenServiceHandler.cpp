@@ -2233,9 +2233,6 @@ buildIncludedAndExcludedRoots(
     // it as an includedRoot
     outIncludedRoots.emplace_back(root);
   }
-  if (includeStateChanges) {
-    outIncludedRoots.emplace_back(notificationsStateDirectory);
-  }
 
   std::vector<RelativePath> outExcludedRoots(excludedRoots.size());
   std::transform(
@@ -2246,12 +2243,18 @@ buildIncludedAndExcludedRoots(
         return root + relpathPieceFromUserPath(excludedRoot);
       });
 
-  if (includeVCSRoots) {
-    outIncludedRoots.insert(
-        outIncludedRoots.end(), vcsDirectories.begin(), vcsDirectories.end());
-  } else {
+  if (!includeVCSRoots) {
     outExcludedRoots.insert(
         outExcludedRoots.end(), vcsDirectories.begin(), vcsDirectories.end());
+  } else if (!outIncludedRoots.empty()) {
+    outIncludedRoots.insert(
+        outIncludedRoots.end(), vcsDirectories.begin(), vcsDirectories.end());
+  }
+
+  if (!includeStateChanges) {
+    outExcludedRoots.emplace_back(notificationsStateDirectory);
+  } else if (!outIncludedRoots.empty()) {
+    outIncludedRoots.emplace_back(notificationsStateDirectory);
   }
 
   return std::make_pair(
@@ -2353,6 +2356,10 @@ void EdenServiceHandler::sync_changesSinceV2(
       ? params->excludedSuffixes().value()
       : std::vector<std::string>{};
 
+  bool includeVCSRoots = params->includeVCSRoots().has_value()
+      ? params->includeVCSRoots().value()
+      : false;
+
   auto includeStateChanges = params->includeStateChanges().has_value()
       ? params->includeStateChanges().value()
       : false;
@@ -2361,13 +2368,14 @@ void EdenServiceHandler::sync_changesSinceV2(
       DBG3,
       *params->mountPoint(),
       fmt::format(
-          "fromPosition={}, root:{}, includedRoots:{}, excludedRoots:{}, includedSuffixes:{}, excludedSuffixes:{}, includeStateChanges: {}",
+          "fromPosition={}, root:{}, includedRoots:{}, excludedRoots:{}, includedSuffixes:{}, excludedSuffixes:{}, includeVCSRoots: {}, includeStateChanges: {}",
           logPosition(fromPosition),
           root,
           toLogArg(includedRoots),
           toLogArg(excludedRoots),
           toLogArg(includedSuffixes),
           toLogArg(excludedSuffixes),
+          includeVCSRoots,
           includeStateChanges));
 
   auto latestJournalEntry = mountHandle.getJournal().getLatest();
@@ -2408,9 +2416,6 @@ void EdenServiceHandler::sync_changesSinceV2(
     }
   }
 
-  bool includeVCSRoots = params->includeVCSRoots().has_value()
-      ? params->includeVCSRoots().value()
-      : false;
   // Has EdenFS restarted or remounted
   if (folly::to_unsigned(*fromPosition.mountGeneration()) !=
       mountHandle.getEdenMount().getMountGeneration()) {
@@ -2650,8 +2655,8 @@ void EdenServiceHandler::sync_changesSinceV2(
             // mac/windows
             RelativePathPiece pathString = current.path1;
 
-            // if state change, skip over roots truncation
-            if (!root.empty()) {
+            // if state change, or VCS entry, skip over roots truncation
+            if (!root.empty() && pathString.isSubDirOf(root)) {
               pathString = pathString.substr(root.view().size());
             }
             if (!info.existedBefore) {

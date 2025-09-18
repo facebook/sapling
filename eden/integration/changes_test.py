@@ -24,11 +24,17 @@ from eden.fs.service.eden.thrift_types import (
     Removed,
     Renamed,
     Replaced,
+    StateEntered,
 )
 
 from .lib import testcase
 from .lib.journal_test_base import JournalTestBase, WindowsJournalTestBase
-from .lib.thrift_objects import buildLargeChange, buildSmallChange, getLargeChangeSafe
+from .lib.thrift_objects import (
+    buildLargeChange,
+    buildSmallChange,
+    buildStateChange,
+    getLargeChangeSafe,
+)
 
 if sys.platform == "win32":
     testBase = WindowsJournalTestBase
@@ -560,38 +566,6 @@ class ChangesTestCommon(testBase):
             ]
             self.assertTrue(self.check_changes(changes.changes, expected_changes))
 
-    async def test_rename_folder_root_in_to_out(self):
-        self.mkdir("root/test_folder")
-        self.mkdir("out/")
-        async with self.get_thrift_client() as client:
-            position = await client.getCurrentJournalPosition(self.mount_path_bytes)
-            await self.rename_async("root/test_folder", "out/test_folder")
-            changes = await self.getChangesSinceV2(position=position, root=b"root")
-            expected_changes = [
-                buildSmallChange(
-                    Removed,
-                    Dtype.DIR,
-                    path=b"test_folder",
-                )
-            ]
-            self.assertTrue(self.check_changes(changes.changes, expected_changes))
-
-    async def test_rename_folder_root_out_to_in(self):
-        self.mkdir("out/test_folder")
-        self.mkdir("root/")
-        async with self.get_thrift_client() as client:
-            position = await client.getCurrentJournalPosition(self.mount_path_bytes)
-            await self.rename_async("out/test_folder", "root/test_folder")
-            changes = await self.getChangesSinceV2(position=position, root=b"root")
-            expected_changes = [
-                buildSmallChange(
-                    Added,
-                    Dtype.DIR,
-                    path=b"test_folder",
-                )
-            ]
-            self.assertTrue(self.check_changes(changes.changes, expected_changes))
-
     async def test_root_not_included_in_result(self):
         async with self.get_thrift_client() as client:
             position = await client.getCurrentJournalPosition(self.mount_path_bytes)
@@ -734,6 +708,68 @@ class ChangesTestNix(JournalTestBase):
             self.assertTrue(self.check_changes(changes.changes, expected_changes))
             self.assertEqual("test_contents", self.read_file("gone_file"))
 
+    async def test_rename_folder(self):
+        self.mkdir("test_folder")
+        async with self.get_thrift_client() as client:
+            position = await client.getCurrentJournalPosition(self.mount_path_bytes)
+            await self.rename_async("test_folder", "best_folder")
+            changes = await self.getChangesSinceV2(position=position)
+            expected_changes = [
+                buildLargeChange(
+                    DirectoryRenamed,
+                    from_bytes=b"test_folder",
+                    to_bytes=b"best_folder",
+                ),
+            ]
+            self.assertTrue(self.check_changes(changes.changes, expected_changes))
+
+    async def test_rename_folder_root(self):
+        self.mkdir("root/test_folder")
+        async with self.get_thrift_client() as client:
+            position = await client.getCurrentJournalPosition(self.mount_path_bytes)
+            await self.rename_async("root/test_folder", "root/best_folder")
+            changes = await self.getChangesSinceV2(position=position, root=b"root")
+            expected_changes = [
+                buildLargeChange(
+                    DirectoryRenamed,
+                    from_bytes=b"test_folder",
+                    to_bytes=b"best_folder",
+                ),
+            ]
+            self.assertTrue(self.check_changes(changes.changes, expected_changes))
+
+    async def test_rename_folder_root_in_to_out(self):
+        self.mkdir("root/test_folder")
+        self.mkdir("out/")
+        async with self.get_thrift_client() as client:
+            position = await client.getCurrentJournalPosition(self.mount_path_bytes)
+            await self.rename_async("root/test_folder", "out/test_folder")
+            changes = await self.getChangesSinceV2(position=position, root=b"root")
+            expected_changes = [
+                buildSmallChange(
+                    Removed,
+                    Dtype.DIR,
+                    path=b"test_folder",
+                )
+            ]
+            self.assertTrue(self.check_changes(changes.changes, expected_changes))
+
+    async def test_rename_folder_root_out_to_in(self):
+        self.mkdir("out/test_folder")
+        self.mkdir("root/")
+        async with self.get_thrift_client() as client:
+            position = await client.getCurrentJournalPosition(self.mount_path_bytes)
+            await self.rename_async("out/test_folder", "root/test_folder")
+            changes = await self.getChangesSinceV2(position=position, root=b"root")
+            expected_changes = [
+                buildSmallChange(
+                    Added,
+                    Dtype.DIR,
+                    path=b"test_folder",
+                )
+            ]
+            self.assertTrue(self.check_changes(changes.changes, expected_changes))
+
     async def test_replace_folder(self):
         self.eden_repo.mkdir("test_folder")
         self.eden_repo.mkdir("gone_folder")
@@ -798,36 +834,6 @@ class ChangesTestNix(JournalTestBase):
                     Modified,
                     Dtype.DIR,
                     path=b"test_folder_chown",
-                ),
-            ]
-            self.assertTrue(self.check_changes(changes.changes, expected_changes))
-
-    async def test_rename_folder(self):
-        self.mkdir("test_folder")
-        async with self.get_thrift_client() as client:
-            position = await client.getCurrentJournalPosition(self.mount_path_bytes)
-            await self.rename_async("test_folder", "best_folder")
-            changes = await self.getChangesSinceV2(position=position)
-            expected_changes = [
-                buildLargeChange(
-                    DirectoryRenamed,
-                    from_bytes=b"test_folder",
-                    to_bytes=b"best_folder",
-                ),
-            ]
-            self.assertTrue(self.check_changes(changes.changes, expected_changes))
-
-    async def test_rename_folder_root(self):
-        self.mkdir("root/test_folder")
-        async with self.get_thrift_client() as client:
-            position = await client.getCurrentJournalPosition(self.mount_path_bytes)
-            await self.rename_async("root/test_folder", "root/best_folder")
-            changes = await self.getChangesSinceV2(position=position, root=b"root")
-            expected_changes = [
-                buildLargeChange(
-                    DirectoryRenamed,
-                    from_bytes=b"test_folder",
-                    to_bytes=b"best_folder",
                 ),
             ]
             self.assertTrue(self.check_changes(changes.changes, expected_changes))
@@ -1037,6 +1043,199 @@ class ChangesTestNix(JournalTestBase):
                 )
             )
 
+    async def test_include_vcs_roots_false(self):
+        async with self.get_thrift_client() as client:
+            self.mkdir("root")
+            # .git and .hg are symlinked so test with .sl
+            self.mkdir(".sl")
+            position = await client.getCurrentJournalPosition(self.mount_path_bytes)
+            await self.repo_write_file("root/test_file", "", add=False)
+            await self.repo_write_file(".sl/vcs_file", "", add=False)
+
+            changes = await self.getChangesSinceV2(
+                position=position,
+            )
+            expected_changes = [
+                buildSmallChange(
+                    Added,
+                    Dtype.REGULAR,
+                    path=b"root/test_file",
+                ),
+                buildSmallChange(
+                    Modified,
+                    Dtype.REGULAR,
+                    path=b"root/test_file",
+                ),
+            ]
+
+            self.assertTrue(self.check_changes_exact(changes.changes, expected_changes))
+
+    async def test_include_vcs_roots_without_root(self):
+        async with self.get_thrift_client() as client:
+            self.mkdir("root")
+            # .git and .hg are symlinked so test with .sl
+            self.mkdir(".sl")
+            position = await client.getCurrentJournalPosition(self.mount_path_bytes)
+            await self.repo_write_file("root/test_file", "", add=False)
+            await self.repo_write_file(".sl/vcs_file", "", add=False)
+
+            changes = await self.getChangesSinceV2(
+                position=position, includeVCSRoots=True
+            )
+            expected_changes = [
+                buildSmallChange(
+                    Added,
+                    Dtype.REGULAR,
+                    path=b"root/test_file",
+                ),
+                buildSmallChange(
+                    Modified,
+                    Dtype.REGULAR,
+                    path=b"root/test_file",
+                ),
+                buildSmallChange(
+                    Added,
+                    Dtype.REGULAR,
+                    path=b".sl/vcs_file",
+                ),
+                buildSmallChange(
+                    Modified,
+                    Dtype.REGULAR,
+                    path=b".sl/vcs_file",
+                ),
+            ]
+
+            self.assertTrue(self.check_changes(changes.changes, expected_changes))
+
+    async def test_include_vcs_roots_with_root(self):
+        async with self.get_thrift_client() as client:
+            self.mkdir("root")
+            # .git and .hg are symlinked so test with .sl
+            self.mkdir(".sl")
+            position = await client.getCurrentJournalPosition(self.mount_path_bytes)
+            await self.repo_write_file("root/test_file", "", add=False)
+            await self.repo_write_file(".sl/vcs_file", "", add=False)
+
+            changes = await self.getChangesSinceV2(
+                position=position, root="root", includeVCSRoots=True
+            )
+            expected_changes = [
+                buildSmallChange(
+                    Added,
+                    Dtype.REGULAR,
+                    path=b"test_file",
+                ),
+                buildSmallChange(
+                    Modified,
+                    Dtype.REGULAR,
+                    path=b"test_file",
+                ),
+                buildSmallChange(
+                    Added,
+                    Dtype.REGULAR,
+                    path=b".sl/vcs_file",
+                ),
+                buildSmallChange(
+                    Modified,
+                    Dtype.REGULAR,
+                    path=b".sl/vcs_file",
+                ),
+            ]
+
+            self.assertTrue(self.check_changes(changes.changes, expected_changes))
+
+    async def test_include_state_changes_false(self):
+        async with self.get_thrift_client() as client:
+            self.mkdir("root")
+            self.mkdir(".edenfs-notifications-state/state")
+            position = await client.getCurrentJournalPosition(self.mount_path_bytes)
+            await self.repo_write_file("root/test_file", "", add=False)
+            await self.repo_write_file(
+                ".edenfs-notifications-state/state/state.notify", "", add=False
+            )
+
+            changes = await self.getChangesSinceV2(
+                position=position,
+            )
+            expected_changes = [
+                buildSmallChange(
+                    Added,
+                    Dtype.REGULAR,
+                    path=b"root/test_file",
+                ),
+                buildSmallChange(
+                    Modified,
+                    Dtype.REGULAR,
+                    path=b"root/test_file",
+                ),
+            ]
+
+            self.assertTrue(self.check_changes_exact(changes.changes, expected_changes))
+
+    async def test_include_states_without_root(self):
+        async with self.get_thrift_client() as client:
+            self.mkdir("root")
+            self.mkdir(".edenfs-notifications-state")
+            position = await client.getCurrentJournalPosition(self.mount_path_bytes)
+            await self.repo_write_file("root/test_file", "", add=False)
+            await self.repo_write_file(
+                ".edenfs-notifications-state/state/state.notify", "", add=False
+            )
+
+            changes = await self.getChangesSinceV2(
+                position=position, includeStateChanges=True
+            )
+            expected_changes = [
+                buildSmallChange(
+                    Added,
+                    Dtype.REGULAR,
+                    path=b"root/test_file",
+                ),
+                buildSmallChange(
+                    Modified,
+                    Dtype.REGULAR,
+                    path=b"root/test_file",
+                ),
+                buildStateChange(
+                    StateEntered,
+                    "state",
+                ),
+            ]
+
+            self.assertTrue(self.check_changes(changes.changes, expected_changes))
+
+    async def test_include_states_with_root(self):
+        async with self.get_thrift_client() as client:
+            self.mkdir("root")
+            self.mkdir(".edenfs-notifications-state")
+            position = await client.getCurrentJournalPosition(self.mount_path_bytes)
+            await self.repo_write_file("root/test_file", "", add=False)
+            await self.repo_write_file(
+                ".edenfs-notifications-state/state/state.notify", "", add=False
+            )
+
+            changes = await self.getChangesSinceV2(
+                position=position, includeStateChanges=True
+            )
+            expected_changes = [
+                buildSmallChange(
+                    Added,
+                    Dtype.REGULAR,
+                    path=b"root/test_file",
+                ),
+                buildSmallChange(
+                    Modified,
+                    Dtype.REGULAR,
+                    path=b"root/test_file",
+                ),
+                buildStateChange(
+                    StateEntered,
+                    "state",
+                ),
+            ]
+
+            self.assertTrue(self.check_changes(changes.changes, expected_changes))
+
 
 @testcase.eden_repo_test
 class ChangesTestWin(WindowsJournalTestBase):
@@ -1086,7 +1285,11 @@ class ChangesTestWin(WindowsJournalTestBase):
         self.mkdir("test_folder")
         async with self.get_thrift_client() as client:
             position = await client.getCurrentJournalPosition(self.mount_path_bytes)
+            # ensure that the file change is synced to the new folder
+            await self.syncProjFS(position)
             self.rename("test_folder", "best_folder")
+            position2 = await client.getCurrentJournalPosition(self.mount_path_bytes)
+            await self.syncProjFS(position2)
             changes = await self.getChangesSinceV2(position=position)
             expected_changes = [
                 buildSmallChange(Removed, Dtype.DIR, path=b"test_folder"),
@@ -1098,7 +1301,11 @@ class ChangesTestWin(WindowsJournalTestBase):
         self.mkdir("root/test_folder")
         async with self.get_thrift_client() as client:
             position = await client.getCurrentJournalPosition(self.mount_path_bytes)
+            # ensure that the file change is synced to the new folder
+            await self.syncProjFS(position)
             self.rename("root/test_folder", "root/best_folder")
+            position2 = await client.getCurrentJournalPosition(self.mount_path_bytes)
+            await self.syncProjFS(position2)
             changes = await self.getChangesSinceV2(position=position, root=b"root")
             expected_changes = [
                 buildSmallChange(Removed, Dtype.DIR, path=b"test_folder"),
@@ -1111,7 +1318,11 @@ class ChangesTestWin(WindowsJournalTestBase):
         self.mkdir("out/")
         async with self.get_thrift_client() as client:
             position = await client.getCurrentJournalPosition(self.mount_path_bytes)
+            # ensure that the file change is synced to the new folder
+            await self.syncProjFS(position)
             self.rename("root/test_folder", "out/test_folder")
+            position2 = await client.getCurrentJournalPosition(self.mount_path_bytes)
+            await self.syncProjFS(position2)
             changes = await self.getChangesSinceV2(position=position, root=b"root")
             expected_changes = [
                 buildSmallChange(
@@ -1127,7 +1338,12 @@ class ChangesTestWin(WindowsJournalTestBase):
         self.mkdir("root/")
         async with self.get_thrift_client() as client:
             position = await client.getCurrentJournalPosition(self.mount_path_bytes)
+            # ensure that the file change is synced to the new folder
+            await self.syncProjFS(position)
             self.rename("out/test_folder", "root/test_folder")
+            position2 = await client.getCurrentJournalPosition(self.mount_path_bytes)
+            # ensure that the file change is synced to the new folder
+            await self.syncProjFS(position2)
             changes = await self.getChangesSinceV2(position=position, root=b"root")
             expected_changes = [
                 buildSmallChange(
@@ -1178,3 +1394,165 @@ class ChangesTestWin(WindowsJournalTestBase):
 
         with self.assertRaises(OSError):
             self.rename(self.get_path("test_folder"), self.get_path("best_folder"))
+
+    async def test_include_vcs_roots_false(self):
+        async with self.get_thrift_client() as client:
+            self.mkdir("root")
+            # .git and .hg are symlinked so test with .sl
+            self.mkdir(".sl")
+            start_position = await client.getCurrentJournalPosition(
+                self.mount_path_bytes
+            )
+            await self.syncProjFS(start_position)
+            position = await client.getCurrentJournalPosition(self.mount_path_bytes)
+            await self.repo_write_file("root/test_file", "", add=False)
+            await self.repo_write_file(".sl/vcs_file", "", add=False)
+            position2 = await client.getCurrentJournalPosition(self.mount_path_bytes)
+            await self.syncProjFS(position2)
+            changes = await self.getChangesSinceV2(
+                position=position,
+            )
+            expected_changes = [
+                buildSmallChange(
+                    Added,
+                    Dtype.REGULAR,
+                    path=b"root/test_file",
+                ),
+            ]
+
+            self.assertTrue(self.check_changes_exact(changes.changes, expected_changes))
+
+    async def test_include_vcs_roots_without_root(self):
+        async with self.get_thrift_client() as client:
+            self.mkdir("root")
+            # .git and .hg are symlinked so test with .sl
+            self.mkdir(".sl")
+            position = await client.getCurrentJournalPosition(self.mount_path_bytes)
+            await self.repo_write_file("root/test_file", "", add=False)
+            await self.repo_write_file(".sl/vcs_file", "", add=False)
+
+            changes = await self.getChangesSinceV2(
+                position=position, includeVCSRoots=True
+            )
+            expected_changes = [
+                buildSmallChange(
+                    Added,
+                    Dtype.REGULAR,
+                    path=b"root/test_file",
+                ),
+                buildSmallChange(
+                    Added,
+                    Dtype.REGULAR,
+                    path=b".sl/vcs_file",
+                ),
+            ]
+
+            self.assertTrue(self.check_changes(changes.changes, expected_changes))
+
+    async def test_include_vcs_roots_with_root(self):
+        async with self.get_thrift_client() as client:
+            self.mkdir("root")
+            # .git and .hg are symlinked so test with .sl
+            self.mkdir(".sl")
+            position = await client.getCurrentJournalPosition(self.mount_path_bytes)
+            await self.repo_write_file("root/test_file", "", add=False)
+            await self.repo_write_file(".sl/vcs_file", "", add=False)
+
+            changes = await self.getChangesSinceV2(
+                position=position, root="root", includeVCSRoots=True
+            )
+            expected_changes = [
+                buildSmallChange(
+                    Added,
+                    Dtype.REGULAR,
+                    path=b"test_file",
+                ),
+                buildSmallChange(
+                    Added,
+                    Dtype.REGULAR,
+                    path=b".sl/vcs_file",
+                ),
+            ]
+
+            self.assertTrue(self.check_changes(changes.changes, expected_changes))
+
+    async def test_include_state_changes_false(self):
+        async with self.get_thrift_client() as client:
+            self.mkdir("root")
+            self.mkdir(".edenfs-notifications-state/state")
+            start_position = await client.getCurrentJournalPosition(
+                self.mount_path_bytes
+            )
+            await self.syncProjFS(start_position)
+            position = await client.getCurrentJournalPosition(self.mount_path_bytes)
+            await self.repo_write_file("root/test_file", "", add=False)
+            await self.repo_write_file(
+                ".edenfs-notifications-state/state/state.notify", "", add=False
+            )
+
+            changes = await self.getChangesSinceV2(
+                position=position,
+            )
+            expected_changes = [
+                buildSmallChange(
+                    Added,
+                    Dtype.REGULAR,
+                    path=b"root/test_file",
+                ),
+            ]
+
+            self.assertTrue(self.check_changes_exact(changes.changes, expected_changes))
+
+    async def test_include_states_without_root(self):
+        async with self.get_thrift_client() as client:
+            self.mkdir("root")
+            self.mkdir(".edenfs-notifications-state")
+            position = await client.getCurrentJournalPosition(self.mount_path_bytes)
+            await self.repo_write_file("root/test_file", "", add=False)
+            await self.repo_write_file(
+                ".edenfs-notifications-state/state/state.notify", "", add=False
+            )
+
+            changes = await self.getChangesSinceV2(
+                position=position, includeStateChanges=True
+            )
+            expected_changes = [
+                buildSmallChange(
+                    Added,
+                    Dtype.REGULAR,
+                    path=b"root/test_file",
+                ),
+                buildStateChange(
+                    StateEntered,
+                    "state",
+                ),
+            ]
+
+            self.assertTrue(self.check_changes(changes.changes, expected_changes))
+
+    async def test_include_states_with_root(self):
+        async with self.get_thrift_client() as client:
+            self.mkdir("root")
+            self.mkdir(".edenfs-notifications-state")
+            position = await client.getCurrentJournalPosition(self.mount_path_bytes)
+            await self.repo_write_file("root/test_file", "", add=False)
+            await self.repo_write_file(
+                ".edenfs-notifications-state/state/state.notify", "", add=False
+            )
+
+            changes = await self.getChangesSinceV2(
+                position=position, includeStateChanges=True
+            )
+            expected_changes = [
+                buildSmallChange(
+                    Added,
+                    Dtype.REGULAR,
+                    path=b"root/test_file",
+                ),
+                buildStateChange(
+                    StateEntered,
+                    "state",
+                ),
+            ]
+
+            self.assertTrue(self.check_changes(changes.changes, expected_changes))
