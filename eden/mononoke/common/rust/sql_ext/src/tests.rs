@@ -420,7 +420,6 @@ mod facebook {
             temp_path,
             ..
         } = setup_scuba_logging_test(fb).await?;
-        let connection = connections.read_connection;
 
         let repo_id = RepositoryId::new(1);
         let cons_read_opts = ConsistentReadOptions {
@@ -435,7 +434,7 @@ mod facebook {
             Arc::new(Box::new(|_: &Vec<_>| false));
 
         let res = ReadQuery1::query_with_consistency(
-            &connection,
+            &connections,
             sql_query_tel,
             Some(target_lower_bound_hlc),
             Some(return_early_if),
@@ -499,7 +498,6 @@ mod facebook {
             temp_path,
             ..
         } = setup_scuba_logging_test(fb).await?;
-        let connection = connections.read_connection;
 
         let repo_id = RepositoryId::new(1);
         let cons_read_opts = ConsistentReadOptions {
@@ -515,7 +513,7 @@ mod facebook {
             Arc::new(Box::new(|_: &Vec<_>| true));
 
         let res = ReadQuery1::query_with_consistency(
-            &connection,
+            &connections,
             sql_query_tel,
             Some(target_lower_bound_hlc),
             Some(return_early_if),
@@ -566,7 +564,6 @@ mod facebook {
             temp_path,
             ..
         } = setup_scuba_logging_test(fb).await?;
-        let connection = connections.read_connection;
 
         let repo_id = RepositoryId::new(1);
 
@@ -592,7 +589,7 @@ mod facebook {
         };
 
         let res = ReadQuery1::query_with_consistency(
-            &connection,
+            &connections,
             sql_query_tel,
             Some(target_lower_bound_hlc),
             Some(return_early_if),

@@ -71,6 +71,7 @@ pub mod _macro_internal {
     pub use twox_hash::xxh3::HasherExt;
 
     pub use crate::Connection;
+    pub use crate::ConsistentReadError;
     pub use crate::ConsistentReadOptions;
     pub use crate::SqlConnections;
     pub use crate::Transaction;
@@ -429,7 +430,7 @@ pub struct ConsistentReadOptions {
 /// The function uses HLC timestamps to determine if the replica is sufficiently up-to-date
 /// and retries the query if needed.
 #[derive(Debug, Error)]
-enum ConsistentReadError {
+pub enum ConsistentReadError {
     /// The replica has not yet caught up to the required HLC timestamp.
     ///
     /// This error is returned when the replica's HLC timestamp is older than the start
@@ -445,7 +446,7 @@ enum ConsistentReadError {
     /// for consistency checks. Unlike `ReplicaLagging`, this error is not retried
     /// as it indicates a configuration or infrastructure issue rather than a
     /// temporary state.
-    #[error("Responses were missing HLC")]
+    #[error("Response was missing HLC attribute")]
     MissingHLC,
 
     /// An underlying query error occurred during the consistent read operation.

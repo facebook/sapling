@@ -222,7 +222,7 @@ macro_rules! mononoke_queries {
                 ///   on the actual data returned (e.g. checking if a specific record exists).
                 #[allow(dead_code)]
                 pub async fn query_with_consistency<'a>(
-                    connection: &Connection,
+                    connections: &SqlConnections,
                     sql_query_tel: SqlQueryTelemetry,
                     target_lower_bound_hlc: Option<Timestamp>,
                     return_early_if: Option<Arc<Box<dyn Fn(&Vec<($( $rtype, )*)>) -> bool + Send + Sync>>>,
@@ -236,11 +236,12 @@ macro_rules! mononoke_queries {
                     // `InstanceRequirement::ReadAfterWriteConsistency`.
                     // This means that the query will wait a specific time to
                     // allow the replica to catch up with the master.
+                    let connection = &connections.read_connection;
 
                     let query_name = stringify!($name);
                     let shard_name = connection.shard_name();
 
-                    query_with_consistency_no_cache(
+                    let res = query_with_consistency_no_cache(
                         || {
                             cloned!(sql_query_tel);
 
@@ -259,7 +260,33 @@ macro_rules! mononoke_queries {
                         cons_read_opts,
                         shard_name,
                         query_name,
-                    ).await
+                    ).await;
+
+                    if let Err(ConsistentReadError::MissingHLC) = res {
+                        // If the query failed because the HLC was missing,
+                        // fallback to the primary connection
+
+                        let repo_ids = $crate::extract_repo_ids_from_queries!($($pname: $ptype; )*);
+
+                        log_query_error(
+                            &sql_query_tel,
+                            &ConsistentReadError::MissingHLC.into(),
+                            TelemetryGranularity::ConsistentReadQuery,
+                            repo_ids,
+                            query_name.as_ref(),
+                            shard_name.as_ref(),
+                        );
+
+                        return query(
+                            &connections.read_master_connection,
+                            sql_query_tel,
+                            $( $pname, )*
+                            $( $lname, )*
+                        ).await;
+                    };
+
+                    Ok(res?)
+
                 }
 
             }
@@ -990,7 +1017,7 @@ pub async fn query_with_consistency_no_cache<T, Fut>(
     cons_read_opts: ConsistentReadOptions,
     shard_name: &str,
     query_name: &str,
-) -> Result<T>
+) -> Result<T, ConsistentReadError>
 where
     T: Send + 'static,
     Fut: Future<Output = Result<(T, Option<QueryTelemetry>)>>,
