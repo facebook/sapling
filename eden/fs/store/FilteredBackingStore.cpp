@@ -18,14 +18,21 @@
 #include "eden/fs/store/BackingStore.h"
 #include "eden/fs/store/filter/Filter.h"
 #include "eden/fs/store/filter/FilteredObjectId.h"
+#include "eden/fs/store/hg/SaplingBackingStore.h"
 #include "eden/fs/utils/FilterUtils.h"
 
 namespace facebook::eden {
 
 FilteredBackingStore::FilteredBackingStore(
     std::shared_ptr<BackingStore> backingStore,
-    std::unique_ptr<Filter> filter)
-    : backingStore_{std::move(backingStore)}, filter_{std::move(filter)} {}
+    std::unique_ptr<Filter> filter,
+    bool optimizeUnfilteredTrees)
+    : backingStore_{std::move(backingStore)},
+      optimizeUnfilteredTrees_{optimizeUnfilteredTrees},
+      filter_{std::move(filter)} {
+  isSaplingBackingStore_ =
+      dynamic_cast<SaplingBackingStore*>(backingStore_.get()) != nullptr;
+}
 
 FilteredBackingStore::~FilteredBackingStore() = default;
 
@@ -68,6 +75,14 @@ FilteredBackingStore::pathAffectedByFilterChange(
       });
 }
 
+bool FilteredBackingStore::isSlOid(const ObjectId& oid) {
+  if (!isSaplingBackingStore_) {
+    return false;
+  }
+
+  return HgProxyHash::hasValidType(oid);
+}
+
 ObjectComparison FilteredBackingStore::compareObjectsById(
     const ObjectId& one,
     const ObjectId& two) {
@@ -75,6 +90,29 @@ ObjectComparison FilteredBackingStore::compareObjectsById(
   // filter and must be equal.
   if (one == two) {
     return ObjectComparison::Identical;
+  }
+
+  bool oneIsSlOid = isSlOid(one);
+  bool twoIsSlOid = isSlOid(two);
+  if (oneIsSlOid && twoIsSlOid) {
+    // Both ids are "raw" unfiltered backingstore ids - delegate to underlying
+    // backingstore.
+    return backingStore_->compareObjectsById(one, two);
+  } else if (oneIsSlOid || twoIsSlOid) {
+    // One id is an unfiltered backingstore id, the other is filtered.
+    auto slOid = oneIsSlOid ? one : two;
+    auto filteredOid = FilteredObjectId::fromObjectId(oneIsSlOid ? two : one);
+    auto type = filteredOid.objectType();
+    if (type == FilteredObjectIdType::OBJECT_TYPE_BLOB ||
+        type == FilteredObjectIdType::OBJECT_TYPE_UNFILTERED_TREE) {
+      // Blob and unfiltered trees both just use "normal" comparison, so fall
+      // back to underlying backing store to perform that comparison.
+      return backingStore_->compareObjectsById(slOid, filteredOid.object());
+    } else {
+      // We know we have a filtered tree and an unfiltered underlying id
+      // (presumably also a tree). They must be different since one is filtered.
+      return ObjectComparison::Different;
+    }
   }
 
   // We must interpret the ObjectIds as FilteredIds (FOIDs) so we can access
@@ -315,6 +353,12 @@ FilteredBackingStore::getTreeEntryForObjectId(
     const ObjectId& objectId,
     TreeEntryType treeEntryType,
     const ObjectFetchContextPtr& context) {
+  if (isSlOid(objectId)) {
+    // Raw id from underlying backingstore, meaning unfiltered fast path.
+    return backingStore_->getTreeEntryForObjectId(
+        objectId, treeEntryType, context);
+  }
+
   FilteredObjectId filteredId = FilteredObjectId::fromObjectId(objectId);
   return backingStore_->getTreeEntryForObjectId(
       filteredId.object(), treeEntryType, context);
@@ -324,6 +368,11 @@ folly::SemiFuture<BackingStore::GetTreeAuxResult>
 FilteredBackingStore::getTreeAuxData(
     const ObjectId& id,
     const ObjectFetchContextPtr& context) {
+  if (isSlOid(id)) {
+    // Raw id from underlying backingstore, meaning unfiltered fast path.
+    return backingStore_->getTreeAuxData(id, context);
+  }
+
   // TODO(cuev): This is wrong. This is only correct for the case where the
   // user doesn't care about the filter-ness of the tree. We should figure out
   // what the optimal behavior of this function is (i.e. if it should respect
@@ -335,12 +384,29 @@ FilteredBackingStore::getTreeAuxData(
 folly::SemiFuture<BackingStore::GetTreeResult> FilteredBackingStore::getTree(
     const ObjectId& id,
     const ObjectFetchContextPtr& context) {
+  if (isSlOid(id)) {
+    // Raw id from underlying backingstore, meaning unfiltered fast path.
+    return backingStore_->getTree(id, context);
+  }
+
   auto filteredId = FilteredObjectId::fromObjectId(id);
   auto unfilteredTree = backingStore_->getTree(filteredId.object(), context);
   return std::move(unfilteredTree)
       .deferValue([self = shared_from_this(),
                    filteredId = std::move(filteredId)](GetTreeResult&& result) {
         auto treeType = filteredId.objectType();
+        if (treeType == FilteredObjectIdType::OBJECT_TYPE_UNFILTERED_TREE &&
+            self->isSaplingBackingStore_ && self->optimizeUnfilteredTrees_) {
+          // Tree is recursively unfiltered - activate fast path by not
+          // rewriting ids within the tree entries. We still copy the tree so we
+          // can modify its oid to match the requested oid.
+          result.tree = std::make_shared<Tree>(Tree{
+              ObjectId{filteredId.getValue()},
+              result.tree->entries(),
+              result.tree->getAuxData()});
+          return ImmediateFuture<GetTreeResult>{std::move(result)}.semi();
+        }
+
         auto filterRes = treeType == FilteredObjectIdType::OBJECT_TYPE_TREE
             ? self->filterImpl(
                   result.tree, filteredId.path(), filteredId.filter(), treeType)
@@ -361,6 +427,11 @@ folly::SemiFuture<BackingStore::GetBlobAuxResult>
 FilteredBackingStore::getBlobAuxData(
     const ObjectId& id,
     const ObjectFetchContextPtr& context) {
+  if (isSlOid(id)) {
+    // Raw id from underlying backingstore, meaning unfiltered fast path.
+    return backingStore_->getBlobAuxData(id, context);
+  }
+
   auto filteredId = FilteredObjectId::fromObjectId(id);
   return backingStore_->getBlobAuxData(filteredId.object(), context);
 }
@@ -368,6 +439,11 @@ FilteredBackingStore::getBlobAuxData(
 folly::SemiFuture<BackingStore::GetBlobResult> FilteredBackingStore::getBlob(
     const ObjectId& id,
     const ObjectFetchContextPtr& context) {
+  if (isSlOid(id)) {
+    // Raw id from underlying backingstore, meaning unfiltered fast path.
+    return backingStore_->getBlob(id, context);
+  }
+
   auto filteredId = FilteredObjectId::fromObjectId(id);
   return backingStore_->getBlob(filteredId.object(), context);
 }
@@ -378,7 +454,14 @@ folly::SemiFuture<folly::Unit> FilteredBackingStore::prefetchBlobs(
   std::vector<ObjectId> unfilteredIds;
   unfilteredIds.reserve(ids.size());
   std::transform(
-      ids.begin(), ids.end(), std::back_inserter(unfilteredIds), [](auto& id) {
+      ids.begin(),
+      ids.end(),
+      std::back_inserter(unfilteredIds),
+      [self = this](auto& id) {
+        if (self->isSlOid(id)) {
+          // Raw id from underlying backingstore.
+          return id;
+        }
         return FilteredObjectId::fromObjectId(id).object();
       });
   // prefetchBlobs() expects that the caller guarantees the ids live at least
@@ -480,6 +563,11 @@ ObjectId FilteredBackingStore::parseObjectId(folly::StringPiece objectId) {
 
 std::string FilteredBackingStore::renderObjectId(const ObjectId& id) {
   XLOGF(DBG8, "Rendering FilteredObjectId: {}", id.asString());
+  if (isSlOid(id)) {
+    // Raw id from underlying backingstore.
+    return backingStore_->renderObjectId(id);
+  }
+
   auto filteredId = FilteredObjectId::fromObjectId(id);
   auto object = filteredId.object();
   auto underlyingOid = backingStore_->renderObjectId(object);

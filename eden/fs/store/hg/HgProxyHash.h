@@ -155,6 +155,11 @@ class HgProxyHash {
    */
   static ObjectId makeEmbeddedProxyHash2(const Hash20& hgRevHash);
 
+  /**
+   * Return whether oid starts with a valid HgProxyHash type byte.
+   */
+  static bool hasValidType(const ObjectId& oid);
+
  private:
   HgProxyHash(
       ObjectId edenBlobHash,

@@ -121,7 +121,7 @@ class ReaddirTest(testcase.EdenRepoTest):
         assert p.returncode == 0, "0 exit code is expected for blake3_sum"
         return bytes.fromhex(p.stdout)
 
-    def convert_raw_oid_to_foid(self, oid: RawObjectId) -> bytes:
+    def convert_raw_oid_to_foid(self, path: Path, oid: RawObjectId) -> bytes:
         """Converts an expected ObjectID into a FilteredObjectID. For non-FFS
         repos, this is a no-op. For FFS repos, we attach the appropriate type
         and filter_id to the oid. We assume no filter_id is active in our
@@ -148,9 +148,13 @@ class ReaddirTest(testcase.EdenRepoTest):
                 return kUnfilteredBlobType.encode("utf-8")
 
         if self.backing_store_type == "filteredhg":
+            if path.parent != Path("."):
+                # With unfiltered fast path (see D82507321), filteredfs uses the underlying ObjectId for
+                # unfiltered trees. But, the root tree is always wrapped, so return underlying id if we
+                # aren't in the root tree.
+                return oid.raw_oid
             type_bytes = get_type_bytes(oid.raw_scm_type)
             return type_bytes + ":".encode("utf-8") + oid.raw_oid
-
         else:
             return oid.raw_oid
 
@@ -180,50 +184,55 @@ class ReaddirTest(testcase.EdenRepoTest):
 
         self.adir_file_id = {
             "hg": self.convert_raw_oid_to_foid(
+                Path("adir/file"),
                 RawObjectId(
                     b"41825fd37af5796284289a1e0770ccd3d27d4832:adir/file",
                     SourceControlType.REGULAR_FILE,
-                )
+                ),
             ),
             "git": b"929efb30534598535198700b994ee438d441d1af",
         }[self.repo_type]
 
         self.bdir_file_id = {
             "hg": self.convert_raw_oid_to_foid(
+                Path("bdir/file"),
                 RawObjectId(
                     b"e5336dae10d1e7590fc25db9d417d089295875e0:bdir/file",
                     SourceControlType.REGULAR_FILE,
-                )
+                ),
             ),
             "git": b"e50a49f9558d09d4d3bfc108363bb24c127ed263",
         }[self.repo_type]
 
         self.hello_id = {
             "hg": self.convert_raw_oid_to_foid(
+                Path("hello"),
                 RawObjectId(
                     b"edd9bdab9ab7a84b21a7a19fffe7a29709ac3b47:hello",
                     SourceControlType.REGULAR_FILE,
-                )
+                ),
             ),
             "git": b"5c1b14949828006ed75a3e8858957f86a2f7e2eb",
         }[self.repo_type]
 
         self.slink_id = {
             "hg": self.convert_raw_oid_to_foid(
+                Path("slink"),
                 RawObjectId(
                     b"7fac34a232926c628f2d890d3eed95be7ab57f34:slink",
                     SourceControlType.SYMLINK,
-                )
+                ),
             ),
             "git": b"b6fc4c620b67d95f953a5c1c1230aaab5db5a1b0",
         }[self.repo_type]
 
         self.adir_id = {
             "hg": self.convert_raw_oid_to_foid(
+                Path("adir"),
                 RawObjectId(
                     b"6ae9e90c9c90aa85adbdab16808203e64a5163cb:adir",
                     SourceControlType.TREE,
-                )
+                ),
             ),
             "git": b"aa0e79d49fe12527662d2d73ea839691eb472c9a",
         }[self.repo_type]
@@ -256,10 +265,11 @@ class ReaddirTest(testcase.EdenRepoTest):
 
         self.cdir_subdir_id = {
             "hg": self.convert_raw_oid_to_foid(
+                Path("cdir/subdir"),
                 RawObjectId(
                     b"cd765cb479197becdca10a4baa87e983244bf24f:cdir/subdir",
                     SourceControlType.TREE,
-                )
+                ),
             ),
             "git": b"f5497927ddcc19b41c4ca57e01ff99339f93db13",
         }[self.repo_type]

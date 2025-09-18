@@ -33,7 +33,8 @@ class FilteredBackingStore
  public:
   FilteredBackingStore(
       std::shared_ptr<BackingStore> backingStore,
-      std::unique_ptr<Filter> filter);
+      std::unique_ptr<Filter> filter,
+      bool optimizeUnfilteredTrees);
 
   ~FilteredBackingStore() override;
 
@@ -104,6 +105,13 @@ class FilteredBackingStore
 
  private:
   std::shared_ptr<BackingStore> backingStore_;
+  // Whether backingStore_ is a SaplingBackingStore. Used to optimized
+  // unfiltered trees.
+  bool isSaplingBackingStore_ = false;
+
+  // Whether we should optimize unfiltered trees to directly use underlying
+  // SaplingBackingStore's ObjectIds.
+  bool optimizeUnfilteredTrees_ = false;
 
   // Allows FilteredBackingStore creator to specify how they want to filter
   // paths. This returns true if the given path is filtered in the given
@@ -177,6 +185,18 @@ class FilteredBackingStore
       RelativePathPiece pathTwo,
       folly::StringPiece filterIdOne,
       folly::StringPiece filterIdTwo);
+
+  /*
+   * Returns whether oid a SaplingBackingStore oid (i.e. not wrapped in a
+   * FilteredObjectId).
+   *
+   * This is a special case of a more general "which BackingStore made this
+   * ObjectId?" check. The convention between FilteredBackingStore and
+   * SaplingBackingStore is to use a unique "type" byte at the start of the
+   * ObjectId. Perhaps we should make that an official rule where BackingStores
+   * "register" their type bytes.
+   */
+  bool isSlOid(const ObjectId& oid);
 };
 
 } // namespace facebook::eden

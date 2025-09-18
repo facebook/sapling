@@ -89,6 +89,10 @@ class Tree {
     return entries_.size();
   }
 
+  const container& entries() const {
+    return entries_;
+  }
+
   /**
    * Returns the case sensitivity of this tree.
    */

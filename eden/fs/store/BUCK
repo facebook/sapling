@@ -154,6 +154,7 @@ cpp_library(
     deps = [
         "//eden/common/utils:immediate_future",
         "//eden/fs/model:model",
+        "//eden/fs/store/hg:sapling_backing_store",
         "//eden/fs/utils:filter_utils",
         "//folly:varint",
     ],

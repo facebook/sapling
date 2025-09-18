@@ -191,7 +191,10 @@ void EdenMain::registerStandardBackingStores() {
             reloadableConfig,
             std::move(options));
         return std::make_shared<FilteredBackingStore>(
-            std::move(saplingBackingStore), std::move(hgSparseFilter));
+            std::move(saplingBackingStore),
+            std::move(hgSparseFilter),
+            reloadableConfig->getEdenConfig()
+                ->filteredfsOptimizeUnfiltered.getValue());
       });
 
   registerBackingStore(

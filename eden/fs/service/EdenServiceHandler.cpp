@@ -2914,7 +2914,8 @@ EdenServiceHandler::streamSelectedChangesSince(
     std::shared_ptr<FilteredBackingStore> backingStore =
         std::make_shared<FilteredBackingStore>(
             mountHandle.getEdenMountPtr()->getObjectStore()->getBackingStore(),
-            std::move(filter));
+            std::move(filter),
+            false);
     // pass filtered backing store to object store
     auto objectStore = ObjectStore::create(
         backingStore,

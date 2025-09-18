@@ -88,7 +88,7 @@ class FakeSubstringFilteredBackingStoreTest : public ::testing::Test {
         BackingStore::LocalStoreCachingPolicy::Anything);
     auto fakeFilter = std::make_unique<FakeSubstringFilter>();
     filteredStore_ = std::make_shared<FilteredBackingStore>(
-        wrappedStore_, std::move(fakeFilter));
+        wrappedStore_, std::move(fakeFilter), true);
   }
 
   void TearDown() override {
@@ -106,7 +106,7 @@ class FakePrefixFilteredBackingStoreTest : public ::testing::Test {
         BackingStore::LocalStoreCachingPolicy::Anything);
     auto fakeFilter = std::make_unique<FakePrefixFilter>();
     filteredStore_ = std::make_shared<FilteredBackingStore>(
-        wrappedStore_, std::move(fakeFilter));
+        wrappedStore_, std::move(fakeFilter), true);
   }
 
   void TearDown() override {
@@ -123,7 +123,7 @@ struct SaplingFilteredBackingStoreTest : TestRepo, ::testing::Test {
   void SetUp() override {
     auto hgFilter = std::make_unique<HgSparseFilter>(repo.path().copy());
     filteredStoreFFI_ = std::make_shared<FilteredBackingStore>(
-        wrappedStore_, std::move(hgFilter));
+        wrappedStore_, std::move(hgFilter), true);
   }
 
   void TearDown() override {
@@ -1051,22 +1051,18 @@ TEST_F(SaplingFilteredBackingStoreTest, testMercurialFFIInvalidFOID) {
   auto fooFindRes = rootDirRes.tree->find("foo"_pc);
   auto filteredOutFindRes = rootDirRes.tree->find("filtered_out"_pc);
 
-  // Get all the files from the trees from commit 1. We intentionally use the
-  // wrapped ObjectId instead of the FilteredObjectId to test whether we handle
-  // invalid FOIDs correctly.
+  // Passing underlying ObjectId works due to unfiltered tree fast path
+  // (D82507321). In practice, nothing should reference a should-be-filtered
+  // tree id.
   auto dir2OID =
       FilteredObjectId::fromObjectId(dir2Entry.getObjectId()).object();
-  EXPECT_THROW_RE(
-      filteredStoreFFI_->getTree(dir2OID, ObjectFetchContext::getNullContext()),
-      std::invalid_argument,
-      ".*Invalid FilteredObjectId type byte 1.*");
+  EXPECT_NO_THROW(filteredStoreFFI_->getTree(
+      dir2OID, ObjectFetchContext::getNullContext()));
 
   auto src2OID =
       FilteredObjectId::fromObjectId(srcEntry.getObjectId()).object();
-  EXPECT_THROW_RE(
-      filteredStoreFFI_->getTree(src2OID, ObjectFetchContext::getNullContext()),
-      std::invalid_argument,
-      ".*Invalid FilteredObjectId type byte 1.*");
+  EXPECT_NO_THROW(filteredStoreFFI_->getTree(
+      src2OID, ObjectFetchContext::getNullContext()));
 
   // We still expect foo and filtered_out to be filtered.
   EXPECT_EQ(fooFindRes, rootDirRes.tree->cend());

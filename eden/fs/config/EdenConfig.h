@@ -1623,6 +1623,20 @@ class EdenConfig : private ConfigSettingManager {
       this};
 
   /**
+   * Controls whether FilteredBackingStore uses the underlying BackingStore's
+   * ObjectIds for unfiltered trees. This speeds up tree fetching a lot, but is
+   * somewhat risky.
+   *
+   * Note that once we start using the optimization, we can't downgrade EdenFS
+   * to before this change since the old version of EdenFS won't understand the
+   * underlying BackingStore's ObjectIds.
+   */
+  ConfigSetting<bool> filteredfsOptimizeUnfiltered{
+      "experimental:filteredfs-optimize-unfiltered",
+      false,
+      this};
+
+  /**
    * Controls whether eden rm command attempts to clean up mount directory
    * recursively. eden rm currently assumes nothing exist after unmounting and
    * directly removes the directory, which leads to ENOTEMPTY for lots of users.

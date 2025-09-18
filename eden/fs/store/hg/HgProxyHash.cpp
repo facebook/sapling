@@ -210,6 +210,12 @@ ObjectId HgProxyHash::makeEmbeddedProxyHash2(const Hash20& hgRevHash) {
   return ObjectId{std::move(str)};
 }
 
+bool HgProxyHash::hasValidType(const ObjectId& oid) {
+  folly::ByteRange bytes = oid.getBytes();
+  return bytes.size() > 0 &&
+      (bytes[0] == TYPE_HG_ID_WITH_PATH || bytes[0] == TYPE_HG_ID_NO_PATH);
+}
+
 HgProxyHash::HgProxyHash(
     ObjectId edenBlobHash,
     StoreResult& infoResult,
