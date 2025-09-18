@@ -443,6 +443,18 @@ impl AddScubaParams for thrift::CommitPathHistoryParams {
 
 impl AddScubaParams for thrift::CommitHgMutationHistoryParams {}
 
+impl AddScubaParams for thrift::CommitDirectoryBranchClustersParams {
+    fn add_scuba_params(&self, scuba: &mut MononokeScubaSampleBuilder) {
+        if let Some(paths) = &self.paths {
+            scuba.add("param_paths", paths.iter().collect::<ScubaValue>());
+        }
+        if let Some(after_path) = &self.after_path {
+            scuba.add("param_after_path", after_path.as_str());
+        }
+        scuba.add("param_limit", self.limit);
+    }
+}
+
 impl AddScubaParams for thrift::CommitPathExistsParams {}
 
 impl AddScubaParams for thrift::CommitPathInfoParams {}

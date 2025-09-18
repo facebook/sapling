@@ -1492,6 +1492,22 @@ struct CommitHgMutationHistoryParams {
   1: MutationHistoryFormat format;
 }
 
+const i64 DIRECTORY_BRANCH_CLUSTERS_MAX_LIMIT = 1000;
+
+struct CommitDirectoryBranchClustersParams {
+  // List of paths to return directory branch clusters for.  If omitted, all clusters
+  // are returned.  If provided, only clusters which are a path prefix of the given
+  // path are returned.
+  1: optional list<Path> paths;
+
+  // Pagination.  If provided, continue listing clusters after this path.
+  // Set this to the value of `last_path` from the previous request.
+  2: optional Path after_path;
+
+  // Pagination.  Limit the number of returned clusters.
+  3: i64 limit;
+}
+
 struct CommitPathExistsParams {}
 
 struct CommitPathInfoParams {}
@@ -2170,6 +2186,23 @@ struct CommitHgMutationHistoryResponse {
 @hack.MigrationBlockingLegacyJSONSerialization
 union HgMutationHistory {
   1: list<CommitId> commit_ids;
+}
+
+struct DirectoryBranchCluster {
+  // The primary path of this cluster.  This should be considered the "main" branch.
+  1: Path primary_path;
+
+  // Additional directory branches that have been branched from or merged to this branch.
+  2: list<Path> secondary_paths;
+}
+
+struct CommitDirectoryBranchClustersResponse {
+  1: list<DirectoryBranchCluster> clusters;
+
+  /// Pagination.  Set if the limit is reached.  This is the last path that
+  /// was produced, and is suitable for passing into the `after_path` parameter
+  /// of a subsequent request to continue the list.
+  2: optional Path last_path;
 }
 
 struct CommitPathExistsResponse {
@@ -2984,6 +3017,15 @@ service SourceControlService extends fb303_core.BaseService {
   CommitHgMutationHistoryResponse commit_hg_mutation_history(
     1: CommitSpecifier commit,
     2: CommitHgMutationHistoryParams params,
+  ) throws (
+    1: RequestError request_error,
+    2: InternalError internal_error,
+    3: OverloadError overload_error,
+  );
+
+  CommitDirectoryBranchClustersResponse commit_directory_branch_clusters(
+    1: CommitSpecifier commit,
+    2: CommitDirectoryBranchClustersParams params,
   ) throws (
     1: RequestError request_error,
     2: InternalError internal_error,

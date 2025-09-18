@@ -1495,4 +1495,58 @@ impl SourceControlServiceImpl {
             ..Default::default()
         })
     }
+
+    /// Returns the directory branch clusters for a commit
+    pub(crate) async fn commit_directory_branch_clusters(
+        &self,
+        ctx: CoreContext,
+        commit: thrift::CommitSpecifier,
+        params: thrift::CommitDirectoryBranchClustersParams,
+    ) -> Result<thrift::CommitDirectoryBranchClustersResponse, scs_errors::ServiceError> {
+        let (_repo, changeset) = self.repo_changeset(ctx, &commit).await?;
+
+        let limit: usize = check_range_and_convert(
+            "limit",
+            params.limit,
+            1..=source_control::DIRECTORY_BRANCH_CLUSTERS_MAX_LIMIT,
+        )?;
+        let paths = params
+            .paths
+            .map(|paths| paths.iter().map(MPath::new).collect::<Result<Vec<_>, _>>())
+            .transpose()
+            .map_err(|error| MononokeError::InvalidRequest(error.to_string()))?;
+        let after = params
+            .after_path
+            .map(|p| MPath::new(&p))
+            .transpose()
+            .map_err(|error| MononokeError::InvalidRequest(error.to_string()))?;
+
+        // Take one extra cluster so that we know if the limit has been reached.
+        let mut clusters = changeset
+            .directory_branch_clusters(paths, after)
+            .await?
+            .take(limit + 1)
+            .collect::<Vec<_>>();
+
+        let mut last_path = None;
+        if clusters.len() > limit {
+            // We have reached the limit, so remove any additional clusters and
+            // set the last path to be returned to the caller.
+            clusters.truncate(limit);
+            last_path = clusters.last().map(|c| c.cluster_primary.clone());
+        }
+
+        Ok(thrift::CommitDirectoryBranchClustersResponse {
+            clusters: clusters
+                .into_iter()
+                .map(|c| thrift::DirectoryBranchCluster {
+                    primary_path: c.cluster_primary.to_string(),
+                    secondary_paths: c.secondaries.into_iter().map(|p| p.to_string()).collect(),
+                    ..Default::default()
+                })
+                .collect(),
+            last_path: last_path.map(|p| p.to_string()),
+            ..Default::default()
+        })
+    }
 }

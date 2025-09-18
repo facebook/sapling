@@ -55,6 +55,7 @@ use manifest::ManifestOrderedOps;
 use manifest::PathOrPrefix;
 use mercurial_derivation::MappedHgChangesetId;
 use mercurial_types::Globalrev;
+use metaconfig_types::RepoConfigRef;
 use mononoke_types::BonsaiChangeset;
 use mononoke_types::FileChange;
 pub use mononoke_types::Generation;
@@ -120,6 +121,20 @@ impl PathMutableHistory {
         match self {
             Self::NoChange => None,
             Self::PathAndChangeset(cs_id, path) => Some((*cs_id, path)),
+        }
+    }
+}
+
+pub struct DirectoryBranchCluster {
+    pub cluster_primary: MPath,
+    pub secondaries: Vec<MPath>,
+}
+
+impl From<metaconfig_types::DirectoryBranchClusterFixedCluster> for DirectoryBranchCluster {
+    fn from(cluster: metaconfig_types::DirectoryBranchClusterFixedCluster) -> Self {
+        Self {
+            cluster_primary: MPath::from(cluster.cluster_primary),
+            secondaries: cluster.secondaries.into_iter().map(MPath::from).collect(),
         }
     }
 }
@@ -1580,5 +1595,95 @@ impl<R: MononokeRepo> ChangesetContext<R> {
                 PushAuthoredBy::User,
             )
             .await?)
+    }
+
+    pub async fn directory_branch_clusters(
+        &self,
+        filter_path_prefixes: Option<Vec<MPath>>,
+        after: Option<MPath>,
+    ) -> Result<impl Iterator<Item = DirectoryBranchCluster>, MononokeError> {
+        let Some(fixed_config) = self
+            .repo_ctx()
+            .repo()
+            .repo_config()
+            .directory_branch_cluster_config
+            .as_ref()
+            .map(|config| &config.fixed_config)
+        else {
+            return Ok(vec![].into_iter());
+        };
+
+        let root_manifest_id = self
+            .root_skeleton_manifest_id()
+            .await?
+            .into_skeleton_manifest_id();
+
+        // Find which paths in the cluster config exist in this commit.  We will
+        // filter out any primary or secondary paths that don't exist.
+        let cluster_paths: HashSet<MPath> = fixed_config
+            .clusters
+            .iter()
+            .flat_map(|cluster| {
+                std::iter::once(&cluster.cluster_primary).chain(cluster.secondaries.iter())
+            })
+            .cloned()
+            .map(MPath::from)
+            .collect();
+        let existing_paths = root_manifest_id
+            .find_entries(
+                self.ctx().clone(),
+                self.repo_ctx().repo().repo_blobstore().clone(),
+                cluster_paths.into_iter().map(PathOrPrefix::Path),
+            )
+            .map_ok(|(path, _entry)| path)
+            .try_collect::<HashSet<_>>()
+            .await?;
+
+        let mut clusters = vec![];
+        for cluster in fixed_config.clusters.iter() {
+            // Apply fixed cluster config to the requested commit.   We need to filter out
+            // the parts of the cluster config that don't apply to this commit by removing
+            // any paths that don't exist in the commit.
+
+            let mut cluster = DirectoryBranchCluster::from(cluster.clone());
+
+            // Filter out any secondary paths that don't exist.
+            cluster
+                .secondaries
+                .retain(|path| existing_paths.contains(path));
+
+            if !existing_paths.contains(&cluster.cluster_primary) && !cluster.secondaries.is_empty()
+            {
+                // If the primary path doesn't exist, promote the first secondary (if any) to be the primary.
+                cluster.cluster_primary = cluster.secondaries.remove(0);
+            }
+            // If the cluster no longer has any secondary paths, skip it.
+            if cluster.secondaries.is_empty() {
+                continue;
+            }
+            // Now that we know what the (possibly promoted) primary is at this commit, if the
+            // cluster primary is before the `after` parameter, skip it.
+            if let Some(after) = after.as_ref()
+                && &cluster.cluster_primary <= after
+            {
+                continue;
+            }
+            // If there are path prefix filters, and none of the paths in the cluster match, skip it.
+            if let Some(filter_path_prefixes) = &filter_path_prefixes
+                && !filter_path_prefixes.iter().any(|prefix| {
+                    prefix.is_prefix_of(&cluster.cluster_primary)
+                        || cluster.secondaries.iter().any(|s| prefix.is_prefix_of(s))
+                })
+            {
+                continue;
+            }
+
+            clusters.push(cluster);
+        }
+
+        // Sort the clusters by primary path.
+        clusters.sort_by(|a, b| a.cluster_primary.cmp(&b.cluster_primary));
+
+        Ok(clusters.into_iter())
     }
 }
