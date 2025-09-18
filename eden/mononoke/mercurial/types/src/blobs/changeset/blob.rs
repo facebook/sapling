@@ -15,6 +15,7 @@ use anyhow::Result;
 use anyhow::bail;
 use async_trait::async_trait;
 use blobstore::Blobstore;
+use blobstore::KeyedBlobstore;
 use blobstore::Loadable;
 use blobstore::LoadableError;
 use bytes::Bytes;
@@ -215,7 +216,7 @@ impl HgBlobChangeset {
         self.changesetid
     }
 
-    pub async fn load<'a, B: Blobstore>(
+    pub async fn load<'a, B: KeyedBlobstore>(
         ctx: &'a CoreContext,
         blobstore: &'a B,
         changesetid: HgChangesetId,
@@ -311,7 +312,7 @@ impl HgBlobChangeset {
 impl Loadable for HgChangesetId {
     type Value = HgBlobChangeset;
 
-    async fn load<'a, B: Blobstore>(
+    async fn load<'a, B: KeyedBlobstore>(
         &'a self,
         ctx: &'a CoreContext,
         blobstore: &'a B,

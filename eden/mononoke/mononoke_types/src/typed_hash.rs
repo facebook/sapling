@@ -14,7 +14,7 @@ use std::str::FromStr;
 
 use anyhow::Result;
 use async_trait::async_trait;
-use blobstore::Blobstore;
+use blobstore::KeyedBlobstore;
 use blobstore::Loadable;
 use blobstore::LoadableError;
 use context::CoreContext;
@@ -443,7 +443,7 @@ macro_rules! impl_typed_hash_loadable {
         {
             type Value = $value_type;
 
-            async fn load<'a, B: Blobstore>(
+            async fn load<'a, B: KeyedBlobstore>(
                 &'a self,
                 ctx: &'a CoreContext,
                 blobstore: &'a B,

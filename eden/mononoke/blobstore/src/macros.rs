@@ -79,7 +79,7 @@ macro_rules! impl_loadable_storable {
         impl $crate::private::Loadable for $handle {
             type Value = $ty;
 
-            async fn load<'a, B: $crate::private::Blobstore>(
+            async fn load<'a, B: $crate::private::KeyedBlobstore>(
                 &'a self,
                 ctx: &'a $crate::private::CoreContext,
                 blobstore: &'a B,

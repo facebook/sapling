@@ -10,7 +10,7 @@ use std::hash::Hasher;
 
 use anyhow::Result;
 use async_trait::async_trait;
-use blobstore::Blobstore;
+use blobstore::KeyedBlobstore;
 use blobstore::Loadable;
 use blobstore::LoadableError;
 use context::CoreContext;
@@ -195,7 +195,7 @@ where
 impl<I: Clone + 'static + Send + Sync, M: Loadable + Send + Sync> Loadable for Traced<I, M> {
     type Value = Traced<I, <M as Loadable>::Value>;
 
-    async fn load<'a, B: Blobstore>(
+    async fn load<'a, B: KeyedBlobstore>(
         &'a self,
         ctx: &'a CoreContext,
         blobstore: &'a B,

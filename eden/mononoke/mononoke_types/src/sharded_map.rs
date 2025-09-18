@@ -1133,6 +1133,7 @@ mod test {
     use blobstore::BlobstoreKeyParam;
     use blobstore::BlobstoreKeyRange;
     use blobstore::BlobstoreKeySource;
+    use blobstore::KeyedBlobstore;
     use blobstore::LoadableError;
     use context::CoreContext;
     use fbinit::FacebookInit;

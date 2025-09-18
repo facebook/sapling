@@ -8,6 +8,7 @@
 use anyhow::Result;
 use async_trait::async_trait;
 use blobstore::Blobstore;
+use blobstore::KeyedBlobstore;
 use blobstore::Loadable;
 use blobstore::LoadableError;
 use context::CoreContext;
@@ -73,7 +74,7 @@ impl ThriftConvert for TestShardedManifestDirectory {
 impl Loadable for TestShardedManifestDirectory {
     type Value = TestShardedManifest;
 
-    async fn load<'a, B: Blobstore>(
+    async fn load<'a, B: KeyedBlobstore>(
         &'a self,
         ctx: &'a CoreContext,
         blobstore: &'a B,

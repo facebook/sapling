@@ -13,6 +13,7 @@ use anyhow::Context;
 use anyhow::Result;
 use async_trait::async_trait;
 use blobstore::Blobstore;
+use blobstore::KeyedBlobstore;
 use blobstore::Loadable;
 use blobstore::LoadableError;
 use blobstore::Storable;

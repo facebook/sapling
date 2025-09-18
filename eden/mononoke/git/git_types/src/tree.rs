@@ -11,6 +11,7 @@ use anyhow::Result;
 use anyhow::bail;
 use async_trait::async_trait;
 use blobstore::Blobstore;
+use blobstore::KeyedBlobstore;
 use blobstore::Loadable;
 use blobstore::LoadableError;
 use cloned::cloned;
@@ -316,7 +317,7 @@ impl From<GitTree> for Tree {
 impl Loadable for GitTreeId {
     type Value = GitTree;
 
-    async fn load<'a, B: Blobstore>(
+    async fn load<'a, B: KeyedBlobstore>(
         &'a self,
         ctx: &'a CoreContext,
         blobstore: &'a B,

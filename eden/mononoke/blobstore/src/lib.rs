@@ -58,6 +58,7 @@ pub mod private {
     pub use crate::Blobstore;
     pub use crate::BlobstoreBytes;
     pub use crate::BlobstoreGetData;
+    pub use crate::KeyedBlobstore;
     pub use crate::Loadable;
     pub use crate::LoadableError;
     pub use crate::Storable;
@@ -673,7 +674,7 @@ pub enum LoadableError {
 pub trait Loadable {
     type Value: Sized + 'static;
 
-    async fn load<'a, B: Blobstore>(
+    async fn load<'a, B: KeyedBlobstore>(
         &'a self,
         ctx: &'a CoreContext,
         blobstore: &'a B,
@@ -699,7 +700,7 @@ where
 {
     type Value = Either<L::Value, R::Value>;
 
-    async fn load<'a, B: Blobstore>(
+    async fn load<'a, B: KeyedBlobstore>(
         &'a self,
         ctx: &'a CoreContext,
         blobstore: &'a B,
@@ -791,7 +792,7 @@ where
 {
     type Value = (T, L::Value);
 
-    async fn load<'a, B: Blobstore>(
+    async fn load<'a, B: KeyedBlobstore>(
         &'a self,
         ctx: &'a CoreContext,
         blobstore: &'a B,

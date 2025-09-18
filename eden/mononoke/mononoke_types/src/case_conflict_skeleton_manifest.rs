@@ -8,6 +8,7 @@
 use anyhow::Result;
 use async_trait::async_trait;
 use blobstore::Blobstore;
+use blobstore::KeyedBlobstore;
 use blobstore::Loadable;
 use blobstore::LoadableError;
 use cloned::cloned;
@@ -81,7 +82,7 @@ impl CcsmEntry {
 impl Loadable for CaseConflictSkeletonManifest {
     type Value = CaseConflictSkeletonManifest;
 
-    async fn load<'a, B: Blobstore>(
+    async fn load<'a, B: KeyedBlobstore>(
         &'a self,
         _ctx: &'a CoreContext,
         _blobstore: &'a B,

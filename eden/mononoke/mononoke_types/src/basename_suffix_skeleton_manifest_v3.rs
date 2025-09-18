@@ -8,6 +8,7 @@
 use anyhow::Result;
 use async_trait::async_trait;
 use blobstore::Blobstore;
+use blobstore::KeyedBlobstore;
 use blobstore::Loadable;
 use blobstore::LoadableError;
 use context::CoreContext;
@@ -67,7 +68,7 @@ impl BssmV3Entry {
 impl Loadable for BssmV3Directory {
     type Value = BssmV3Directory;
 
-    async fn load<'a, B: Blobstore>(
+    async fn load<'a, B: KeyedBlobstore>(
         &'a self,
         _ctx: &'a CoreContext,
         _blobstore: &'a B,

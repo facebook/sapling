@@ -14,7 +14,7 @@ use std::str::FromStr;
 
 use anyhow::Result;
 use async_trait::async_trait;
-use blobstore::Blobstore;
+use blobstore::KeyedBlobstore;
 use blobstore::Loadable;
 use blobstore::LoadableError;
 use bytes::Bytes;
@@ -35,7 +35,7 @@ use crate::NonRootMPath;
 impl Loadable for HgFileNodeId {
     type Value = HgFileEnvelope;
 
-    async fn load<'a, B: Blobstore>(
+    async fn load<'a, B: KeyedBlobstore>(
         &'a self,
         ctx: &'a CoreContext,
         blobstore: &'a B,

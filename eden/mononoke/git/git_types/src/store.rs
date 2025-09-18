@@ -10,6 +10,7 @@ use std::sync::Arc;
 
 use anyhow::Result;
 use blobstore::Blobstore;
+use blobstore::KeyedBlobstore;
 use bytes::Bytes;
 use context::CoreContext;
 use filestore::Sha1IncrementalHasher;
@@ -75,7 +76,7 @@ pub async fn fetch_non_blob_git_object_bytes<B>(
     git_hash: &gix_hash::oid,
 ) -> Result<Bytes, GitError>
 where
-    B: Blobstore,
+    B: KeyedBlobstore,
 {
     let blobstore_key = format!("{}{}{}", GIT_OBJECT_PREFIX, SEPARATOR, git_hash.to_hex());
     let object_bytes = blobstore
@@ -94,7 +95,7 @@ pub async fn fetch_non_blob_git_object<B>(
     git_hash: &gix_hash::oid,
 ) -> Result<ObjectContent, GitError>
 where
-    B: Blobstore,
+    B: KeyedBlobstore,
 {
     // In git, empty tree is a special object: it's present in every git repo and not persisted in
     // the storage.

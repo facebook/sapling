@@ -16,6 +16,7 @@ use base64::Engine;
 use blake3::Hasher as Blake3Hasher;
 use blobstore::Blobstore;
 use blobstore::BlobstoreBytes;
+use blobstore::KeyedBlobstore;
 use blobstore::Loadable;
 use blobstore::LoadableError;
 use blobstore::Storable;
@@ -563,7 +564,7 @@ impl HgAugmentedManifestEnvelope {
         Self::from_thrift(thrift_tc)
     }
 
-    pub async fn load<B: Blobstore>(
+    pub async fn load<B: KeyedBlobstore>(
         ctx: &CoreContext,
         blobstore: &B,
         manifestid: HgAugmentedManifestId,
@@ -665,7 +666,7 @@ pub async fn fetch_augmented_manifest_envelope_opt<B: Blobstore>(
 impl Loadable for HgAugmentedManifestId {
     type Value = HgAugmentedManifestEnvelope;
 
-    async fn load<'a, B: Blobstore>(
+    async fn load<'a, B: KeyedBlobstore>(
         &'a self,
         ctx: &'a CoreContext,
         blobstore: &'a B,

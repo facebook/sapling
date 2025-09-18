@@ -15,7 +15,7 @@ use anyhow::Result;
 use anyhow::bail;
 use anyhow::ensure;
 use async_trait::async_trait;
-use blobstore::Blobstore;
+use blobstore::KeyedBlobstore;
 use blobstore::Loadable;
 use blobstore::LoadableError;
 use context::CoreContext;
@@ -105,7 +105,7 @@ impl ManifestContent {
     }
 }
 
-pub async fn fetch_raw_manifest_bytes<B: Blobstore>(
+pub async fn fetch_raw_manifest_bytes<B: KeyedBlobstore>(
     ctx: &CoreContext,
     blobstore: &B,
     manifest_id: HgManifestId,
@@ -115,7 +115,7 @@ pub async fn fetch_raw_manifest_bytes<B: Blobstore>(
     Ok(HgBlob::from(envelope.contents))
 }
 
-pub async fn fetch_manifest_envelope<B: Blobstore>(
+pub async fn fetch_manifest_envelope<B: KeyedBlobstore>(
     ctx: &CoreContext,
     blobstore: &B,
     manifest_id: HgManifestId,
@@ -132,7 +132,7 @@ pub async fn fetch_manifest_envelope<B: Blobstore>(
 }
 
 /// Like `fetch_manifest_envelope`, but returns None if the manifest wasn't found.
-pub async fn fetch_manifest_envelope_opt<B: Blobstore>(
+pub async fn fetch_manifest_envelope_opt<B: KeyedBlobstore>(
     ctx: &CoreContext,
     blobstore: &B,
     node_id: HgManifestId,
@@ -176,7 +176,7 @@ pub struct HgBlobManifest {
 }
 
 impl HgBlobManifest {
-    pub async fn load<B: Blobstore>(
+    pub async fn load<B: KeyedBlobstore>(
         ctx: &CoreContext,
         blobstore: &B,
         manifestid: HgManifestId,
@@ -270,7 +270,7 @@ impl HgBlobManifest {
 impl Loadable for HgManifestId {
     type Value = HgBlobManifest;
 
-    async fn load<'a, B: Blobstore>(
+    async fn load<'a, B: KeyedBlobstore>(
         &'a self,
         ctx: &'a CoreContext,
         blobstore: &'a B,

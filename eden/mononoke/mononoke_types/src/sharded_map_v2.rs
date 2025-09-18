@@ -1032,7 +1032,7 @@ impl<Value: ShardedMapV2Value> ShardedMapV2Node<Value> {
                     accumulated_prefix.extend_from_slice(lcp.as_ref());
 
                     // Check if there's a value at the current prefix in the map,
-                    // and check that it's different from the values in all `other_maps`.                    
+                    // and check that it's different from the values in all `other_maps`.
                     let item = match (current_map.value.take(), current_map.prefix.is_empty()) {
                         (Some(value), true) => {
                             let previous_values = other_maps
@@ -1158,6 +1158,7 @@ mod test {
     use blobstore::BlobstoreKeyParam;
     use blobstore::BlobstoreKeyRange;
     use blobstore::BlobstoreKeySource;
+    use blobstore::KeyedBlobstore;
     use blobstore::LoadableError;
     use blobstore::Storable;
     use context::CoreContext;

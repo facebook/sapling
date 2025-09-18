@@ -15,7 +15,7 @@ use anyhow::Context;
 use anyhow::Error;
 use anyhow::Result;
 use anyhow::bail;
-use blobstore::Blobstore;
+use blobstore::KeyedBlobstore;
 use bytes::Bytes;
 use context::CoreContext;
 use mononoke_types::DateTime;
@@ -218,7 +218,7 @@ impl RevlogChangeset {
         )
     }
 
-    pub async fn load<'a, B: Blobstore>(
+    pub async fn load<'a, B: KeyedBlobstore>(
         ctx: &'a CoreContext,
         blobstore: &'a B,
         changesetid: HgChangesetId,
