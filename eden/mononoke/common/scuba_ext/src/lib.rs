@@ -207,7 +207,7 @@ impl MononokeScubaSampleBuilder {
             ),
             (
                 "scm/mononoke:retry_query_from_replica_with_consistency_check",
-                vec!["newfilenodes::reader"],
+                vec!["newfilenodes::reader", "bonsai_hg_mapping"],
             ),
         ];
         let enabled_experiments_jk: Vec<String> = jk_and_switches

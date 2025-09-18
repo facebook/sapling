@@ -28,8 +28,10 @@ use rendezvous::RendezVousStats;
 use sql_construct::SqlConstruct;
 use sql_construct::SqlConstructFromMetadataDatabaseConfig;
 use sql_ext::Connection;
+use sql_ext::ConsistentReadOptions;
 use sql_ext::SqlConnections;
 use sql_ext::SqlQueryTelemetry;
+use sql_ext::consistent_read_options;
 use sql_ext::mononoke_queries;
 use stats::prelude::*;
 
@@ -475,13 +477,28 @@ impl BonsaiHgMapping for SqlBonsaiHgMapping {
         STATS::gets.add_value(1);
         ctx.perf_counters()
             .increment_counter(PerfCounterType::SqlReadsReplica);
-        let (mut mappings, left_to_fetch) =
-            select_mapping(ctx, &self.read_connection, self.repo_id, ids).await?;
+
+        let cons_read_opts =
+            consistent_read_options(ctx.client_correlator(), Some("bonsai_hg_mapping"));
+
+        let used_consistent_reads = cons_read_opts.is_some();
+
+        let (mut mappings, left_to_fetch) = select_mapping(
+            ctx,
+            &self.read_connection,
+            &self.read_master_connection,
+            self.repo_id,
+            ids,
+            cons_read_opts,
+        )
+        .await?;
 
         let left_to_fetch_count = left_to_fetch.count().try_into().map_err(Error::from)?;
         STATS::left_to_fetch.add_value(left_to_fetch_count);
 
-        if left_to_fetch.is_empty() {
+        if left_to_fetch.is_empty() || used_consistent_reads {
+            // If consistent reads were used, the replica that served the request
+            // was up-to-date, so any mappings left to fetch don't exist.
             return Ok(mappings);
         }
 
@@ -491,8 +508,10 @@ impl BonsaiHgMapping for SqlBonsaiHgMapping {
         let (mut master_mappings, _) = select_mapping(
             ctx,
             &self.read_master_connection,
+            &self.read_master_connection,
             self.repo_id,
             left_to_fetch,
+            None,
         )
         .await?;
 
@@ -548,8 +567,10 @@ impl BonsaiHgMapping for SqlBonsaiHgMapping {
 async fn select_mapping(
     ctx: &CoreContext,
     connection: &RendezVousConnection,
+    read_master_connection: &RendezVousConnection,
     repo_id: RepositoryId,
     cs_ids: BonsaiOrHgChangesetIds,
+    cons_read_opts: Option<ConsistentReadOptions>,
 ) -> Result<(Vec<BonsaiHgMappingEntry>, BonsaiOrHgChangesetIds), Error> {
     if cs_ids.is_empty() {
         return Ok((vec![], cs_ids));
@@ -562,16 +583,49 @@ async fn select_mapping(
                 .bonsai
                 .dispatch(ctx.fb, bcs_ids.into_iter().collect(), || {
                     let conn = connection.conn.clone();
+                    let read_master_conn = read_master_connection.conn.clone();
                     move |bcs_ids| async move {
                         let bcs_ids = bcs_ids.into_iter().collect::<Vec<_>>();
 
-                        let res = SelectMappingByBonsai::query(
-                            &conn,
-                            sql_query_tel.clone(),
-                            &repo_id,
-                            &bcs_ids[..],
-                        )
-                        .await?;
+                        let res = if let Some(cons_read_opts) = cons_read_opts {
+                            let sql_connections = SqlConnections {
+                                // The write connections won't be used, but pass the read-only
+                                // connection to ensure that it can't be used by accident in the future.
+                                write_connection: conn.clone(),
+                                read_connection: conn,
+                                read_master_connection: read_master_conn,
+                            };
+
+                            let return_early_if: Arc<
+                                Box<
+                                    dyn for<'a> Fn(&'a Vec<(HgChangesetId, ChangesetId)>) -> bool
+                                        + Send
+                                        + Sync,
+                                >,
+                            > = Arc::new(Box::new(|_| {
+                                // TODO: implement this
+                                false
+                            }));
+
+                            SelectMappingByBonsai::query_with_consistency(
+                                &sql_connections,
+                                sql_query_tel.clone(),
+                                None, // TODO: set it to Timestamp::now()
+                                Some(return_early_if),
+                                cons_read_opts,
+                                &repo_id,
+                                &bcs_ids[..],
+                            )
+                            .await?
+                        } else {
+                            SelectMappingByBonsai::query(
+                                &conn,
+                                sql_query_tel.clone(),
+                                &repo_id,
+                                &bcs_ids[..],
+                            )
+                            .await?
+                        };
 
                         Ok(res
                             .into_iter()
@@ -600,17 +654,51 @@ async fn select_mapping(
                 .hg
                 .dispatch(ctx.fb, hg_cs_ids.into_iter().collect(), || {
                     let conn = connection.conn.clone();
+                    let read_master_conn = read_master_connection.conn.clone();
                     move |hg_cs_ids| async move {
                         let hg_cs_ids = hg_cs_ids.into_iter().collect::<Vec<_>>();
-                        Ok(SelectMappingByHg::query(
-                            &conn,
-                            sql_query_tel.clone(),
-                            &repo_id,
-                            &hg_cs_ids[..],
-                        )
-                        .await?
-                        .into_iter()
-                        .collect())
+
+                        let res = if let Some(cons_read_opts) = cons_read_opts {
+                            let sql_connections = SqlConnections {
+                                // The write connections won't be used, but pass the read-only
+                                // connection to ensure that it can't be used by accident in the future.
+                                write_connection: conn.clone(),
+                                read_connection: conn,
+                                read_master_connection: read_master_conn,
+                            };
+
+                            let return_early_if: Arc<
+                                Box<
+                                    dyn for<'a> Fn(&'a Vec<(HgChangesetId, ChangesetId)>) -> bool
+                                        + Send
+                                        + Sync,
+                                >,
+                            > = Arc::new(Box::new(|_| {
+                                // TODO: implement this
+                                false
+                            }));
+
+                            SelectMappingByHg::query_with_consistency(
+                                &sql_connections,
+                                sql_query_tel.clone(),
+                                None, // TODO: set it to Timestamp::now()
+                                Some(return_early_if),
+                                cons_read_opts,
+                                &repo_id,
+                                &hg_cs_ids[..],
+                            )
+                            .await?
+                        } else {
+                            SelectMappingByHg::query(
+                                &conn,
+                                sql_query_tel.clone(),
+                                &repo_id,
+                                &hg_cs_ids[..],
+                            )
+                            .await?
+                        };
+
+                        Ok(res.into_iter().collect())
                     }
                 })
                 .await?;
