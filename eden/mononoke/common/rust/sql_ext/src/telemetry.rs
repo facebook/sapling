@@ -116,6 +116,7 @@ pub fn log_query_error(
     scuba.add("error", format!("{:?}", err));
     scuba.add("success", 0);
     STATS::success.add_value(0, (shard_name.to_string(),));
+    STATS::success_query.add_value(0, (shard_name.to_string(), query_name.to_string()));
 
     // Log the Scuba sample for debugging when log-level is set to trace.
     tracing::trace!(
@@ -183,6 +184,7 @@ fn log_mysql_query_telemetry(
 
     scuba.add("success", 1);
     STATS::success.add_value(1, (shard_name.to_string(),));
+    STATS::success_query.add_value(1, (shard_name.to_string(), query_name.to_string()));
 
     let opt_instance_type = query_tel.instance_type().cloned();
 
@@ -443,6 +445,10 @@ define_stats! {
     success_instance: dynamic_timeseries(
         "{}.success.instance.{}", (shard_name: String, instance_type: String);
         Sum, Average
+    ),
+    success_query: dynamic_timeseries(
+        "{}.success.query.{}", (shard_name: String, query_name: String);
+        Sum, Average, Count
     ),
     query_retry_attempts: dynamic_timeseries(
         "{}.{}.{}.retry_attempts",
