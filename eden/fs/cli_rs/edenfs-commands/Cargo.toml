@@ -18,6 +18,7 @@ crossterm = { version = "0.28", features = ["event-stream", "serde"] }
 dialoguer = { version = "0.10.4", features = ["fuzzy-select"] }
 dunce = "1.0.5"
 edenfs-asserted-states = { version = "0.1.0", path = "../../rust/edenfs-asserted-states" }
+edenfs-asserted-states-client = { version = "0.1.0", path = "../../rust/edenfs-asserted-states-client" }
 edenfs-client = { version = "0.1.0", path = "../edenfs-client" }
 edenfs-error = { version = "0.1.0", path = "../edenfs-error" }
 edenfs-utils = { version = "0.1.0", path = "../edenfs-utils" }

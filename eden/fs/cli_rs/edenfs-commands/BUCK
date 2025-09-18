@@ -58,6 +58,7 @@ rust_library(
         "//eden/fs/cli_rs/edenfs-error:edenfs-error",
         "//eden/fs/cli_rs/edenfs-utils:edenfs-utils",
         "//eden/fs/rust/edenfs-asserted-states:edenfs-asserted-states",
+        "//eden/fs/rust/edenfs-asserted-states-client:edenfs-asserted-states-client",
         "//eden/fs/rust/facebook/edenfs-telemetry:edenfs-telemetry",
         "//eden/scm/lib/io:io",
         "//eden/scm/lib/io/term/logger:termlogger",

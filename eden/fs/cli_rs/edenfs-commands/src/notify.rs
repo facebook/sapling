@@ -15,6 +15,7 @@ use crate::ExitCode;
 use crate::Subcommand;
 
 mod changes_since;
+mod enter_state;
 mod get_position;
 
 #[derive(Parser, Debug)]
@@ -28,6 +29,7 @@ pub struct NotifyCmd {
 pub enum NotifySubcommand {
     GetPosition(get_position::GetPositionCmd),
     ChangesSince(changes_since::ChangesSinceCmd),
+    EnterState(enter_state::EnterStateCmd),
 }
 
 #[async_trait]
@@ -37,6 +39,7 @@ impl Subcommand for NotifyCmd {
         let sc: &(dyn Subcommand + Send + Sync) = match &self.subcommand {
             GetPosition(cmd) => cmd,
             ChangesSince(cmd) => cmd,
+            EnterState(cmd) => cmd,
         };
         sc.run().await
     }
