@@ -25,7 +25,7 @@ DEFINE_string(file, "", "A file for which to compute the digest");
 DEFINE_string(key, "", "Blake3 key to use");
 
 int main(int argc, char** argv) {
-  folly::init(&argc, &argv);
+  const folly::Init init(&argc, &argv);
 
   auto blake3 = Blake3::create(
       FLAGS_key.empty() ? std::nullopt

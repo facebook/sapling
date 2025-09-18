@@ -21,7 +21,7 @@ DEFINE_string(path, "", "The path to the file to check for rename.");
 using namespace facebook::eden;
 
 int main(int argc, char* argv[]) {
-  folly::init(&argc, &argv);
+  const folly::Init init(&argc, &argv);
   if (FLAGS_path.empty()) {
     fmt::print(stderr, "error: the --path argument is required\n");
     return 1;

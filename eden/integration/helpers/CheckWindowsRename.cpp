@@ -22,7 +22,7 @@ DEFINE_bool(
     "Use the sparse attribute to limit rename checks.");
 
 int main(int argc, char* argv[]) {
-  folly::init(&argc, &argv);
+  const folly::Init init(&argc, &argv);
 #ifdef _WIN32
   if (FLAGS_path.empty()) {
     fmt::print(stderr, "error: the --path argument is required\n");
