@@ -16,7 +16,7 @@ mod mapping_v2;
 mod tests;
 
 use anyhow::Error;
-use blobstore::Loadable;
+use blobstore::KeyedLoadable;
 use blobstore::LoadableError;
 use context::CoreContext;
 use derived_data::SharedDerivationError;

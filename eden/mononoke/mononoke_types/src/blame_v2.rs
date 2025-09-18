@@ -22,7 +22,8 @@ use async_trait::async_trait;
 use bit_set::BitSet;
 use blobstore::Blobstore;
 use blobstore::BlobstoreBytes;
-use blobstore::Loadable;
+use blobstore::KeyedBlobstore;
+use blobstore::KeyedLoadable;
 use blobstore::LoadableError;
 use context::CoreContext;
 use fbthrift::compact_protocol;
@@ -78,10 +79,10 @@ impl AsRef<FileUnodeId> for BlameV2Id {
 }
 
 #[async_trait]
-impl Loadable for BlameV2Id {
+impl KeyedLoadable for BlameV2Id {
     type Value = BlameV2;
 
-    async fn load<'a, B: Blobstore>(
+    async fn load<'a, B: KeyedBlobstore>(
         &'a self,
         ctx: &'a CoreContext,
         blobstore: &'a B,
