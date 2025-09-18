@@ -58,6 +58,7 @@ pub mod _macro_internal {
     pub use clientinfo::ClientRequestInfo;
     pub use cloned::cloned;
     pub use mononoke_types::RepositoryId;
+    pub use mononoke_types::Timestamp;
     pub use paste;
     pub use serde_json;
     pub use sql::QueryTelemetry;

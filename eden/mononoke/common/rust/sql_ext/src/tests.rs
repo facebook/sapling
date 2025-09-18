@@ -5,6 +5,8 @@
  * GNU General Public License version 2.
  */
 
+use std::time::Duration;
+
 use anyhow::Result;
 use clientinfo::ClientEntryPoint;
 use clientinfo::ClientInfo;
@@ -77,6 +79,7 @@ mononoke_queries! {
 mod facebook {
     use std::collections::HashMap;
     use std::collections::HashSet;
+    use std::sync::Arc;
 
     use anyhow::Context;
     use anyhow::anyhow;
@@ -84,6 +87,7 @@ mod facebook {
     use itertools::Itertools;
     use maplit::hashmap;
     use maplit::hashset;
+    use mononoke_types::Timestamp;
     use mysql_client::InstanceRequirement;
     use sql::mysql::MysqlQueryTelemetry;
     use sql_tests_lib::mysql_test_lib::TEST_XDB_NAME;
@@ -404,8 +408,12 @@ mod facebook {
         Ok(())
     }
 
+    // Tests that the query is retried to the replica the max amount of times
+    // provided if the replica is significantly stale.
     #[mononoke::fbinit_test]
-    async fn test_query_with_consistency(fb: FacebookInit) -> Result<()> {
+    async fn test_query_with_consistency_fails_with_replica_lagging(
+        fb: FacebookInit,
+    ) -> Result<()> {
         let TelemetryTestData {
             connections,
             sql_query_tel,
@@ -414,17 +422,27 @@ mod facebook {
         } = setup_scuba_logging_test(fb).await?;
         let connection = connections.read_connection;
 
-        let expected_repo_id = 1;
-        let repo_id = RepositoryId::new(expected_repo_id);
-        const MAX_ATTEMPTS: usize = 3;
-        let retry_opts = ConsistentReadOptions {
-            hlc_drift_tolerance_ns: -2000,
-            max_attempts: MAX_ATTEMPTS,
+        let repo_id = RepositoryId::new(1);
+        let cons_read_opts = ConsistentReadOptions {
+            max_attempts: 3,
             ..ConsistentReadOptions::default()
         };
-        let res =
-            ReadQuery1::query_with_consistency(&connection, sql_query_tel, retry_opts, &repo_id)
-                .await;
+
+        // Date in 2050 to ensure that the HLC check will never succeed.
+        let target_lower_bound_hlc = Timestamp::from_timestamp_secs(2547031987);
+
+        let return_early_if: Arc<Box<dyn for<'a> Fn(&'a Vec<_>) -> bool + Send + Sync>> =
+            Arc::new(Box::new(|_: &Vec<_>| false));
+
+        let res = ReadQuery1::query_with_consistency(
+            &connection,
+            sql_query_tel,
+            Some(target_lower_bound_hlc),
+            Some(return_early_if),
+            cons_read_opts,
+            &repo_id,
+        )
+        .await;
 
         let err = res
             .err()
@@ -464,6 +482,156 @@ mod facebook {
         ];
 
         pretty_assertions::assert_eq!(scuba_logs, expected_logs);
+
+        Ok(())
+    }
+
+    // Tests that the result is returned early when the `return_early_if` callback
+    // evaluates to true (i.e. result matches caller expectations) regardless
+    // of the replica's HLC.
+    #[mononoke::fbinit_test]
+    async fn test_query_with_consistency_returns_early_when_data_is_found(
+        fb: FacebookInit,
+    ) -> Result<()> {
+        let TelemetryTestData {
+            connections,
+            sql_query_tel,
+            temp_path,
+            ..
+        } = setup_scuba_logging_test(fb).await?;
+        let connection = connections.read_connection;
+
+        let repo_id = RepositoryId::new(1);
+        let cons_read_opts = ConsistentReadOptions {
+            max_attempts: 3,
+            ..ConsistentReadOptions::default()
+        };
+        // Date in 2050 to ensure that the HLC check will never succeed.
+        let target_lower_bound_hlc = Timestamp::from_timestamp_secs(2547031987);
+
+        let return_early_if: Arc<Box<dyn for<'a> Fn(&'a Vec<_>) -> bool + Send + Sync>> =
+            // Callback to always return and simulate scenario where the data
+            // requested were found on the first try
+            Arc::new(Box::new(|_: &Vec<_>| true));
+
+        let res = ReadQuery1::query_with_consistency(
+            &connection,
+            sql_query_tel,
+            Some(target_lower_bound_hlc),
+            Some(return_early_if),
+            cons_read_opts,
+            &repo_id,
+        )
+        .await;
+
+        let res = res.ok().ok_or(anyhow!("Query should have succeeded"))?;
+        println!("res: {res:?}");
+        assert_eq!(res.len(), 10, "query should return 10 rows");
+
+        let scuba_logs = deserialize_scuba_log_file(&temp_path)?;
+
+        println!("scuba_logs: {:#?}", scuba_logs);
+
+        let expected_logs = vec![
+            // Single log for the one and only query that ran
+            ScubaTelemetryLogSample {
+                success: true,
+                repo_ids: vec![1.into()],
+                granularity: TelemetryGranularity::ConsistentReadQuery,
+                query_name: Some("ReadQuery1".to_string()),
+                shard_name: TEST_XDB_NAME.to_string(),
+                mysql_telemetry: MysqlQueryTelemetry {
+                    write_tables: hashset! {},
+                    read_tables: hashset! {"mononoke_queries_test_v3".to_string()},
+                    ..Default::default()
+                },
+                transaction_query_names: vec![],
+            },
+        ];
+
+        pretty_assertions::assert_eq!(scuba_logs, expected_logs);
+
+        Ok(())
+    }
+
+    // Test one of the happy paths, where the query is retried multiple times
+    // until the replica has caught up.
+    #[mononoke::fbinit_test]
+    async fn test_query_with_consistency_retries_until_replica_has_caught_up(
+        fb: FacebookInit,
+    ) -> Result<()> {
+        let TelemetryTestData {
+            connections,
+            sql_query_tel,
+            temp_path,
+            ..
+        } = setup_scuba_logging_test(fb).await?;
+        let connection = connections.read_connection;
+
+        let repo_id = RepositoryId::new(1);
+
+        // Set a lower bound HLC of query start time + 200 ms. With the right
+        // retry options(e.g. delay, max_attempts), we can ensure the number of
+        // queries is always greater than 1 and less than MAX_ATTEMPTS.
+        const ARTIFICIAL_DELAY_MS: i64 = 200;
+        let now = Timestamp::now().timestamp_nanos();
+        let target_lower_bound_hlc =
+            Timestamp::from_timestamp_nanos(now + (ARTIFICIAL_DELAY_MS * (1000 * 1000)));
+
+        let return_early_if: Arc<Box<dyn for<'a> Fn(&'a Vec<_>) -> bool + Send + Sync>> =
+            // Don't return early to ensure the query finishes only based on the
+            // replica's HLC
+            Arc::new(Box::new(|_: &Vec<_>| false));
+
+        const MAX_ATTEMPTS: usize = 10;
+        let cons_read_opts = ConsistentReadOptions {
+            // Higher max attempts just to be safe
+            max_attempts: MAX_ATTEMPTS,
+            interval: Duration::from_millis(100),
+            ..ConsistentReadOptions::default()
+        };
+
+        let res = ReadQuery1::query_with_consistency(
+            &connection,
+            sql_query_tel,
+            Some(target_lower_bound_hlc),
+            Some(return_early_if),
+            cons_read_opts,
+            &repo_id,
+        )
+        .await;
+
+        let res = res.ok().ok_or(anyhow!("Query should have succeeded"))?;
+        println!("res: {res:?}");
+        assert_eq!(res.len(), 10, "query should return 10 rows");
+
+        let scuba_logs = deserialize_scuba_log_file(&temp_path)?;
+
+        println!("scuba_logs: {:#?}", scuba_logs);
+
+        assert!(scuba_logs.len() > 1, "Expected at least 2 queries to run");
+        assert!(
+            scuba_logs.len() <= MAX_ATTEMPTS,
+            "Expected at most{MAX_ATTEMPTS} queries to run"
+        );
+
+        let expected_log = ScubaTelemetryLogSample {
+            success: true,
+            repo_ids: vec![1.into()],
+            granularity: TelemetryGranularity::ConsistentReadQuery,
+            query_name: Some("ReadQuery1".to_string()),
+            shard_name: TEST_XDB_NAME.to_string(),
+            mysql_telemetry: MysqlQueryTelemetry {
+                write_tables: hashset! {},
+                read_tables: hashset! {"mononoke_queries_test_v3".to_string()},
+                ..Default::default()
+            },
+            transaction_query_names: vec![],
+        };
+
+        scuba_logs
+            .iter()
+            .for_each(|log| pretty_assertions::assert_eq!(*log, expected_log));
 
         Ok(())
     }

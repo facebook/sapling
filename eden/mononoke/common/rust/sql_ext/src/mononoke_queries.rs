@@ -8,6 +8,7 @@
 use std::collections::HashMap;
 use std::collections::HashSet;
 use std::future::Future;
+use std::sync::Arc;
 use std::time::Duration;
 
 use anyhow::Error;
@@ -197,11 +198,34 @@ macro_rules! mononoke_queries {
                     )
                 }
 
-
+                /// Read query that ensures the result is "consistent" by ensuring
+                /// **at least** one of the following assumptions hold:
+                ///
+                /// 1. The result was served from a replica that was updated
+                /// at a timestamp equal to or higher the provided `target_lower_bound_hlc`.
+                ///
+                /// 2. The result matches the expectation defined in the
+                /// `return_early_if` callback.
+                ///
+                /// # Arguments
+                ///
+                /// * `target_lower_bound_hlc` - The minimum HLC (Hybrid Logical Clock) timestamp
+                ///   that the replica must have for the result to be considered up-to-date. If `None`,
+                ///   defaults to `Timestamp::now()`. Used to ensure read-after-write consistency by
+                ///   verifying that the replica has caught up to at least this timestamp before
+                ///   serving the query result.
+                ///
+                /// * `return_early_if` - Optional callback function that can bypass HLC consistency
+                ///   checks by evaluating the query result directly. If provided and returns `true`
+                ///   for the result, the function will return immediately without checking HLC
+                ///   timestamps. This allows callers to define custom consistency conditions based
+                ///   on the actual data returned (e.g. checking if a specific record exists).
                 #[allow(dead_code)]
                 pub async fn query_with_consistency<'a>(
                     connection: &Connection,
                     sql_query_tel: SqlQueryTelemetry,
+                    target_lower_bound_hlc: Option<Timestamp>,
+                    return_early_if: Option<Arc<Box<dyn Fn(&Vec<($( $rtype, )*)>) -> bool + Send + Sync>>>,
                     cons_read_opts: ConsistentReadOptions,
                     $( $pname: &'a $ptype, )*
                     $( $lname: &'a [ $ltype ], )*
@@ -230,6 +254,8 @@ macro_rules! mononoke_queries {
                                 ).await
                             }
                         },
+                        target_lower_bound_hlc,
+                        return_early_if,
                         cons_read_opts,
                         shard_name,
                         query_name,
@@ -959,6 +985,8 @@ where
 /// to determine if the replica was up to date when it served the query.
 pub async fn query_with_consistency_no_cache<T, Fut>(
     do_query: impl Fn() -> Fut + Send + Sync,
+    target_lower_bound_hlc: Option<Timestamp>,
+    return_early_if: Option<Arc<Box<dyn Fn(&T) -> bool + Send + Sync>>>,
     cons_read_opts: ConsistentReadOptions,
     shard_name: &str,
     query_name: &str,
@@ -969,11 +997,19 @@ where
 {
     // The minimum HLC that the replica must have for the result to be considered
     // up to date.
-    let target_lower_bound_hlc = Timestamp::now();
+    let target_lower_bound_hlc = target_lower_bound_hlc.unwrap_or(Timestamp::now());
+
+    let hlc_drift_tolerance_ns = cons_read_opts.hlc_drift_tolerance_ns;
 
     let result = retry(
         |_| async {
             let (res, opt_tel) = do_query().await?;
+
+            if let Some(ref early_check) = return_early_if {
+                if early_check(&res) {
+                    return Ok(res);
+                };
+            };
             let response_hlc = match opt_tel {
                 #[cfg(fbcode_build)]
                 Some(QueryTelemetry::MySQL(mysql_tel)) => mysql_tel
@@ -985,11 +1021,8 @@ where
                 _ => Err(ConsistentReadError::MissingHLC),
             }?;
 
-            if replica_was_up_to_date(
-                target_lower_bound_hlc,
-                response_hlc,
-                cons_read_opts.hlc_drift_tolerance_ns,
-            )? {
+            if replica_was_up_to_date(target_lower_bound_hlc, response_hlc, hlc_drift_tolerance_ns)?
+            {
                 Ok(res)
             } else {
                 Err(ConsistentReadError::ReplicaLagging)
@@ -1032,7 +1065,7 @@ fn replica_was_up_to_date(
     hlc: i64,
     hlc_drift_tolerance_ns: i64,
 ) -> Result<bool> {
-    let hlc_time = Timestamp::from_timestamp_nanos(hlc + hlc_drift_tolerance_ns as i64);
+    let hlc_time = Timestamp::from_timestamp_nanos(hlc + hlc_drift_tolerance_ns);
 
     Ok(hlc_time >= target_lower_bound_hlc)
 }
