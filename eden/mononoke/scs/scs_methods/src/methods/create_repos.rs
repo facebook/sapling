@@ -575,6 +575,16 @@ async fn create_repo_configs_in_mononoke(
             .map_err(|e| scs_errors::internal_error(format!("{e:#}")))?;
 
         for file in content.modifiedFiles {
+            if &file.path
+                == "materialized_configs/scm/mononoke/repos/quick_repo_definitions.materialized_JSON"
+                || file
+                    .path
+                    .starts_with("materialized_configs/shardmanager/spec/user/mononoke")
+            {
+                // These files are not signed, so do not sign them or landing the mutation will
+                // fail with "Error attaching signatures for mutation"
+                continue;
+            }
             if let Some((path, sig)) = configo_crypto_utils::sign_config(
                 ctx.fb,
                 &crypto_service,
