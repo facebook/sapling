@@ -12,7 +12,8 @@ use std::path::PathBuf;
 use anyhow::Result;
 use async_trait::async_trait;
 use clap::Parser;
-use edenfs_asserted_states::ChangeEvents;
+use edenfs_asserted_states::ChangeEvent;
+use edenfs_asserted_states::Changes;
 use edenfs_asserted_states::StreamingChangesClient;
 use edenfs_client::changes_since::ChangesSinceV2Result;
 use edenfs_client::types::JournalPosition;
@@ -101,7 +102,7 @@ impl ChangesSinceCmd {
     }
 
     #[allow(dead_code)]
-    fn print_change_events(&self, result: &ChangeEvents) {
+    fn print_change_event(&self, result: &ChangeEvent) {
         println!(
             "{}",
             if self.json {
@@ -162,16 +163,17 @@ impl crate::Subcommand for ChangesSinceCmd {
                 )
                 .await?;
             if !self.states.is_empty() {
-                self.print_change_events(&ChangeEvents::new());
                 let wrapped_stream = stream_client
-                    .stream_changes_since_with_states_wrapper(stream, &self.states)
+                    .stream_changes_since_with_states_wrapper(stream, &self.states, None)
                     .await?;
                 wrapped_stream
                     .for_each(|result| async {
                         match result {
-                            Ok(result) => {
-                                self.print_result(&result.0);
-                                self.print_change_events(&result.1);
+                            Ok(Changes::ChangesSince(result)) => {
+                                self.print_result(&result);
+                            }
+                            Ok(Changes::ChangeEvent(result)) => {
+                                self.print_change_event(&result);
                             }
                             Err(e) => {
                                 eprintln!("Error: {}", e);

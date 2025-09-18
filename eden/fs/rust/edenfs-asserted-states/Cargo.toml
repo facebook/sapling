@@ -11,9 +11,9 @@ license = "GPLv2+"
 anyhow = "1.0.98"
 edenfs-client = { version = "0.1.0", path = "../../cli_rs/edenfs-client" }
 edenfs-error = { version = "0.1.0", path = "../../cli_rs/edenfs-error" }
-edenfs-utils = { version = "0.1.0", path = "../../cli_rs/edenfs-utils" }
 fs-err = { version = "3", features = ["tokio"] }
 futures = { version = "0.3.31", features = ["async-await", "compat"] }
+itertools = "0.14.0"
 sapling-util = { version = "0.1.0", path = "../../../scm/lib/util" }
 serde = { version = "1.0.219", features = ["derive", "rc"] }
 thiserror = "2.0.12"

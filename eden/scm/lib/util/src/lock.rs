@@ -233,6 +233,11 @@ pub fn sanitize_lock_name(name: &str) -> String {
     name.replace('.', "_")
 }
 
+pub fn unsanitize_lock_name(name: &str) -> String {
+    // Undo above sanitization
+    name.replace('_', ".")
+}
+
 #[cfg(test)]
 mod tests {
     use std::sync::mpsc::channel;
