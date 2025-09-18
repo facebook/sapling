@@ -54,11 +54,18 @@ const CONTENT_SIMILARITY_RATIO_THRESHOLD: f64 = 0.5;
 // Ref: https://fburl.com/daiquery/1vuem3ap
 const MAX_NUM_CHANGED_FILES: usize = 6_000;
 
+#[derive(Clone, Debug, Copy)]
+enum CopyFromCandidateSource {
+    Deleted,
+    BasenameMatched,
+}
+
 #[derive(Clone, Debug)]
 struct CopyFromCandidate {
     cs_id: ChangesetId,
     path: MPath,
     fsnode: FsnodeFile,
+    source: CopyFromCandidateSource,
 }
 
 // It's possible to have multiple source files that match,
@@ -192,6 +199,7 @@ async fn get_candidates_from_changeset(
     derivation_ctx: &DerivationContext,
     cs_id: ChangesetId,
     paths: Vec<NonRootMPath>,
+    candidate_source: CopyFromCandidateSource,
 ) -> Result<HashMap<ContentId, Vec<CopyFromCandidate>>> {
     let mut content_to_candidates = HashMap::new();
 
@@ -212,6 +220,7 @@ async fn get_candidates_from_changeset(
                     cs_id,
                     path,
                     fsnode,
+                    source: candidate_source,
                 });
         }
     }
@@ -278,14 +287,20 @@ async fn find_exact_renames(
     let content_to_candidates_vec = try_join_all(bonsai.parents().map(|parent_cs_id| {
         cloned!(deleted_paths);
         async move {
-            get_candidates_from_changeset(ctx, derivation_ctx, parent_cs_id, deleted_paths)
-                .await
-                .with_context(|| {
-                    format!(
-                        "Failed to get content for deleted paths from parent {:?}",
-                        parent_cs_id
-                    )
-                })
+            get_candidates_from_changeset(
+                ctx,
+                derivation_ctx,
+                parent_cs_id,
+                deleted_paths,
+                CopyFromCandidateSource::Deleted,
+            )
+            .await
+            .with_context(|| {
+                format!(
+                    "Failed to get content for deleted paths from parent {:?}",
+                    parent_cs_id
+                )
+            })
         }
     }))
     .await?;
@@ -386,8 +401,14 @@ async fn find_basename_matched_copies(
             .take(basename_match_max_candidates)
             .try_chunks(100)
             .try_fold(HashMap::new(), |mut acc, paths| async move {
-                let hashmap =
-                    get_candidates_from_changeset(ctx, derivation_ctx, parent_cs_id, paths).await;
+                let hashmap = get_candidates_from_changeset(
+                    ctx,
+                    derivation_ctx,
+                    parent_cs_id,
+                    paths,
+                    CopyFromCandidateSource::BasenameMatched,
+                )
+                .await;
                 if let Ok(hashmap) = hashmap {
                     for (k, v) in hashmap {
                         acc.entry(k).or_insert(vec![]).extend(v);
@@ -450,57 +471,75 @@ async fn find_partial_matches(
 
     let mut matched = vec![];
     for (dst_content_id, fc) in content_to_metadata {
-        let dst_paths = content_to_paths.get(&dst_content_id);
-        // Trim candidate list by comparing file metadata (e.g. type, size)
-        let filtered_content_to_candidates = content_to_candidates
-            .iter()
-            .filter_map(|(src_content_id, candidates)| {
-                let filtered = candidates
-                    .iter()
-                    .filter(|candidate| {
-                        // Make sure we don't include the dest path itself as candidate
-                        let candidate_non_root_path =
-                            candidate.path.clone().into_optional_non_root_path();
-                        if let (Some(dst_paths), Some(candidate_path)) =
-                            (dst_paths, candidate_non_root_path)
-                        {
-                            if dst_paths.contains(&candidate_path) {
-                                // Skip if the candidate path is the same as the dest
+        if let Some(dst_paths) = content_to_paths.get(&dst_content_id) {
+            // Trim candidate list by comparing file metadata (e.g. type, size)
+            let filtered_content_to_candidates = content_to_candidates
+                .iter()
+                .filter_map(|(src_content_id, candidates)| {
+                    let filtered = candidates
+                        .iter()
+                        .filter(|candidate| {
+                            let candidate_non_root_path =
+                                candidate.path.clone().into_optional_non_root_path();
+                            if let Some(candidate_path) = candidate_non_root_path {
+                                // Make sure we don't include the dest path itself as candidate
+                                if dst_paths.contains(&candidate_path) {
+                                    // Skip if the candidate path is the same as the dest
+                                    return false;
+                                }
+
+                                // If candidate is from basename match, recheck basename
+                                // This is because we used batch query when fetching candidates by all available basenames,
+                                // we lost the info which exact basename the current candidate was matched on
+                                if let CopyFromCandidateSource::BasenameMatched = candidate.source {
+                                    let dst_basenames = dst_paths
+                                        .iter()
+                                        .map(|p| p.basename().to_string())
+                                        .collect::<HashSet<_>>();
+                                    if !dst_basenames
+                                        .contains(&candidate_path.basename().to_string())
+                                    {
+                                        return false;
+                                    }
+                                }
+                            } else {
+                                // Skip if the candidate path is root
                                 return false;
                             }
-                        }
-                        // Filter out candidates whose metadata are too different from dest
-                        filter_by_metadata(derivation_ctx, fc, candidate)
-                    })
-                    .collect::<Vec<_>>();
-                if filtered.is_empty() {
-                    None
-                } else {
-                    Some((src_content_id.clone(), filtered))
+
+                            // Filter out candidates whose metadata are too different from dest
+                            filter_by_metadata(derivation_ctx, fc, candidate)
+                        })
+                        .collect::<Vec<_>>();
+                    if filtered.is_empty() {
+                        None
+                    } else {
+                        Some((src_content_id.clone(), filtered))
+                    }
+                })
+                .collect::<HashMap<_, _>>();
+
+            if filtered_content_to_candidates.is_empty() {
+                continue;
+            }
+
+            let candidate = find_best_candidate_by_partial_content_match(
+                ctx,
+                derivation_ctx,
+                dst_content_id,
+                &filtered_content_to_candidates,
+            )
+            .await?;
+            if let Some(from) = candidate {
+                for path in &content_to_paths[&dst_content_id] {
+                    matched.push((
+                        MPath::from(path.clone()),
+                        InferredCopyFromEntry {
+                            from_csid: from.cs_id,
+                            from_path: from.path.clone(),
+                        },
+                    ));
                 }
-            })
-            .collect::<HashMap<_, _>>();
-
-        if filtered_content_to_candidates.is_empty() {
-            continue;
-        }
-
-        let candidate = find_best_candidate_by_partial_content_match(
-            ctx,
-            derivation_ctx,
-            dst_content_id,
-            &filtered_content_to_candidates,
-        )
-        .await?;
-        if let Some(from) = candidate {
-            for path in &content_to_paths[&dst_content_id] {
-                matched.push((
-                    MPath::from(path.clone()),
-                    InferredCopyFromEntry {
-                        from_csid: from.cs_id,
-                        from_path: from.path.clone(),
-                    },
-                ));
             }
         }
     }
