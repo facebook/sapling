@@ -273,6 +273,8 @@ pub struct RepoConfig {
     /// Configuration whether we should advertise bundle-uri capability and serve bundle-uri
     /// endpoint.
     pub enable_git_bundle_uri: bool,
+    /// Configuration for directory branch clusters.
+    pub directory_branch_cluster_config: Option<DirectoryBranchClusterConfig>,
 }
 
 /// Config determining if the repo is deep sharded in the context of a service.
@@ -2112,4 +2114,27 @@ impl MetadataCacheConfig {
             _ => None,
         }
     }
+}
+
+/// Configuration for directory branch clusters
+#[derive(Debug, Default, Clone, Eq, PartialEq)]
+pub struct DirectoryBranchClusterConfig {
+    /// Fixed configuration for directory branch clusters
+    pub fixed_config: DirectoryBranchClusterFixedConfig,
+}
+
+/// Fixed configuration for directory branch clusters
+#[derive(Debug, Default, Clone, Eq, PartialEq)]
+pub struct DirectoryBranchClusterFixedConfig {
+    /// List of clusters
+    pub clusters: Vec<DirectoryBranchClusterFixedCluster>,
+}
+
+/// A fixed cluster with primary and secondary paths
+#[derive(Debug, Clone, Eq, PartialEq)]
+pub struct DirectoryBranchClusterFixedCluster {
+    /// Cluster primary path
+    pub cluster_primary: NonRootMPath,
+    /// Secondary paths
+    pub secondaries: Vec<NonRootMPath>,
 }

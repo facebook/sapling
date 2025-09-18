@@ -230,6 +230,7 @@ fn parse_with_repo_definition(
         modern_sync_config,
         log_repo_stats,
         metadata_cache_config,
+        directory_branch_cluster_config,
         ..
     } = named_repo_config;
 
@@ -357,6 +358,7 @@ fn parse_with_repo_definition(
     let metadata_cache_config = metadata_cache_config
         .map(|cache_config| cache_config.convert())
         .transpose()?;
+    let directory_branch_cluster_config = directory_branch_cluster_config.convert()?;
     Ok(RepoConfig {
         enabled,
         storage_config,
@@ -409,6 +411,7 @@ fn parse_with_repo_definition(
         log_repo_stats,
         metadata_cache_config,
         enable_git_bundle_uri,
+        directory_branch_cluster_config,
     })
 }
 
@@ -1156,6 +1159,7 @@ mod test {
                 enable_git_bundle_uri: false,
                 enabled: true,
                 default_commit_identity_scheme: CommitIdentityScheme::default(),
+                directory_branch_cluster_config: None,
                 storage_config: main_storage_config.clone(),
                 generation_cache_size: 1024 * 1024,
                 repoid: RepositoryId::new(0),
@@ -1420,6 +1424,7 @@ mod test {
             RepoConfig {
                 enable_git_bundle_uri: false,
                 default_commit_identity_scheme: CommitIdentityScheme::default(),
+                directory_branch_cluster_config: None,
                 enabled: true,
                 storage_config: StorageConfig {
                     metadata: MetadataDatabaseConfig::Local(LocalDatabaseConfig {
@@ -1724,6 +1729,7 @@ mod test {
         let expected = hashmap! {
             "test".into() => RepoConfig {
                 enabled: true,
+                directory_branch_cluster_config: None,
                 storage_config: StorageConfig {
                     blobstore: BlobConfig::MultiplexedWal {
                         multiplex_id: MultiplexId::new(1),
@@ -1891,6 +1897,7 @@ mod test {
         let expected = hashmap! {
             "test".into() => RepoConfig {
                 enabled: true,
+                directory_branch_cluster_config: None,
                 storage_config: StorageConfig {
                     blobstore: BlobConfig::Disabled,
                     metadata: MetadataDatabaseConfig::Remote( RemoteMetadataDatabaseConfig {

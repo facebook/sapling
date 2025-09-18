@@ -26,6 +26,9 @@ use metaconfig_types::ComparableRegex;
 use metaconfig_types::CrossRepoCommitValidation;
 use metaconfig_types::DerivedDataConfig;
 use metaconfig_types::DerivedDataTypesConfig;
+use metaconfig_types::DirectoryBranchClusterConfig;
+use metaconfig_types::DirectoryBranchClusterFixedCluster;
+use metaconfig_types::DirectoryBranchClusterFixedConfig;
 use metaconfig_types::GitBundleURIConfig;
 use metaconfig_types::GitConcurrencyParams;
 use metaconfig_types::GitConfigs;
@@ -88,6 +91,9 @@ use repos::RawDerivedDataBlockedChangesetDerivation;
 use repos::RawDerivedDataBlockedDerivation;
 use repos::RawDerivedDataConfig;
 use repos::RawDerivedDataTypesConfig;
+use repos::RawDirectoryBranchClusterConfig;
+use repos::RawDirectoryBranchClusterFixedCluster;
+use repos::RawDirectoryBranchClusterFixedConfig;
 use repos::RawGitBundleURIConfig;
 use repos::RawGitConcurrencyParams;
 use repos::RawGitConfigs;
@@ -1062,6 +1068,49 @@ impl Convert for RawMetadataCacheConfig {
                 .content_refs_update_mode
                 .map(|mode| mode.convert())
                 .transpose()?,
+        })
+    }
+}
+
+impl Convert for RawDirectoryBranchClusterFixedCluster {
+    type Output = DirectoryBranchClusterFixedCluster;
+
+    fn convert(self) -> Result<Self::Output> {
+        let cluster_primary =
+            NonRootMPath::new(self.cluster_primary).context("Invalid cluster primary path")?;
+        let secondaries = self
+            .secondaries
+            .into_iter()
+            .map(|path| NonRootMPath::new(path).context("Invalid secondary path"))
+            .collect::<Result<Vec<_>>>()?;
+
+        Ok(DirectoryBranchClusterFixedCluster {
+            cluster_primary,
+            secondaries,
+        })
+    }
+}
+
+impl Convert for RawDirectoryBranchClusterFixedConfig {
+    type Output = DirectoryBranchClusterFixedConfig;
+
+    fn convert(self) -> Result<Self::Output> {
+        let clusters = self
+            .clusters
+            .into_iter()
+            .map(|cluster| cluster.convert())
+            .collect::<Result<Vec<_>>>()?;
+
+        Ok(DirectoryBranchClusterFixedConfig { clusters })
+    }
+}
+
+impl Convert for RawDirectoryBranchClusterConfig {
+    type Output = DirectoryBranchClusterConfig;
+
+    fn convert(self) -> Result<Self::Output> {
+        Ok(DirectoryBranchClusterConfig {
+            fixed_config: self.fixed_config.convert()?,
         })
     }
 }
