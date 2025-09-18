@@ -16,7 +16,7 @@ use anyhow::format_err;
 use blobrepo_hg::BlobRepoHg;
 use blobrepo_hg::ChangesetHandle;
 use blobstore::Blobstore;
-use blobstore::Loadable;
+use blobstore::KeyedLoadable;
 use blobstore::LoadableError;
 use bonsai_hg_mapping::BonsaiHgMappingRef;
 use bookmarks::BookmarkKey;

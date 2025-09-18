@@ -13,7 +13,7 @@ use std::borrow::Borrow;
 use anyhow::Error;
 use anyhow::anyhow;
 use blobstore::Blobstore;
-use blobstore::Loadable;
+use blobstore::KeyedLoadable;
 use blobstore::LoadableError;
 use bytes::Bytes;
 use bytes::BytesMut;

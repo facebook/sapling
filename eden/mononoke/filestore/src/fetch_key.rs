@@ -11,7 +11,8 @@ use anyhow::Context;
 use anyhow::Result;
 use async_trait::async_trait;
 use blobstore::Blobstore;
-use blobstore::Loadable;
+use blobstore::KeyedBlobstore;
+use blobstore::KeyedLoadable;
 use blobstore::LoadableError;
 use blobstore::Storable;
 use context::CoreContext;
@@ -122,7 +123,7 @@ impl Display for Alias {
 }
 
 #[async_trait]
-impl Loadable for FetchKey {
+impl KeyedLoadable for FetchKey {
     type Value = ContentId;
 
     /// Return the canonical ID for a key. It doesn't check if the corresponding content actually
@@ -130,7 +131,7 @@ impl Loadable for FetchKey {
     /// - When called with content_id, it doesn't check the content id is stored in the blobstore
     /// - It is possible for an alias to exist before the ID if there was an interrupted store
     /// operation.
-    async fn load<'a, B: Blobstore>(
+    async fn load<'a, B: KeyedBlobstore>(
         &'a self,
         ctx: &'a CoreContext,
         blobstore: &'a B,
@@ -170,10 +171,10 @@ impl Alias {
 }
 
 #[async_trait]
-impl Loadable for Alias {
+impl KeyedLoadable for Alias {
     type Value = ContentId;
 
-    async fn load<'a, B: Blobstore>(
+    async fn load<'a, B: KeyedBlobstore>(
         &'a self,
         ctx: &'a CoreContext,
         blobstore: &'a B,

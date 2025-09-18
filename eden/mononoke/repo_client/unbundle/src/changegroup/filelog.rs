@@ -12,7 +12,7 @@ use anyhow::Context;
 use anyhow::Error;
 use anyhow::Result;
 use anyhow::bail;
-use blobstore::Loadable;
+use blobstore::KeyedLoadable;
 use bytes::Bytes;
 use cloned::cloned;
 use context::CoreContext;

@@ -12,7 +12,7 @@ use std::time::Instant;
 use anyhow::Context;
 use anyhow::Error;
 use blobstore::Blobstore;
-use blobstore::Loadable;
+use blobstore::KeyedLoadable;
 use blobstore::LoadableError;
 use filestore::Alias;
 use futures::future;
