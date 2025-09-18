@@ -33,7 +33,7 @@ using folly::IOBuf;
  * with bogus blob contents in the LocalStore.
  */
 int main(int argc, char* argv[]) {
-  folly::init(&argc, &argv);
+  const folly::Init init(&argc, &argv);
 
   auto loggingConfig = folly::parseLogConfig("eden=DBG2");
   folly::LoggerDB::get().updateConfig(loggingConfig);

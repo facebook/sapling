@@ -45,7 +45,7 @@ using namespace facebook::eden::path_literals;
  * need to be manually unmounted afterwards.
  */
 int main(int argc, char* argv[]) {
-  folly::init(&argc, &argv);
+  const folly::Init init(&argc, &argv);
 
   auto loggingConfig = folly::parseLogConfig("eden=DBG2");
   folly::LoggerDB::get().updateConfig(loggingConfig);

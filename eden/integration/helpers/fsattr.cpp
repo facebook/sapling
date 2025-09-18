@@ -18,7 +18,7 @@ DEFINE_string(
     "the name of the attribute to return, else list all of them");
 
 int main(int argc, char** argv) {
-  folly::init(&argc, &argv);
+  const folly::Init init(&argc, &argv);
 
   folly::dynamic result;
 
