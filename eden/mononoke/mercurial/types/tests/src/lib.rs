@@ -319,6 +319,7 @@ fn test_get_lfs_struct_0() {
                 .unwrap(),
             17,
             None,
+            None,
         )
     )
 }
@@ -372,7 +373,7 @@ fn test_roundtrip_lfs_content() {
         .unwrap();
     let size = 10;
 
-    let generated_file = File::generate_lfs_file(oid, size, None).unwrap();
+    let generated_file = File::generate_lfs_file(oid, size, None, None).unwrap();
     let lfs_struct = File::data_only(generated_file).get_lfs_content().unwrap();
 
     let expected_lfs_struct = LFSContent::new(
@@ -380,8 +381,52 @@ fn test_roundtrip_lfs_content() {
         oid,
         size,
         None,
+        None,
     );
     assert_eq!(lfs_struct, expected_lfs_struct)
+}
+
+#[mononoke::test]
+fn test_lfs_is_binary() {
+    let oid = Sha256::from_str("27c0a92fc51290e3227bea4dd9e780c5035f017de8d5ddfa35b269ed82226d97")
+        .unwrap();
+    let size = 10;
+
+    // is_binary=true
+    {
+        let generated_file = File::generate_lfs_file(oid, size, None, Some(true)).unwrap();
+
+        assert_eq!(generated_file.as_ref(), b"version https://git-lfs.github.com/spec/v1\noid sha256:27c0a92fc51290e3227bea4dd9e780c5035f017de8d5ddfa35b269ed82226d97\nsize 10\nx-is-binary 1\n");
+
+        let lfs_struct = File::data_only(generated_file).get_lfs_content().unwrap();
+
+        let expected_lfs_struct = LFSContent::new(
+            "https://git-lfs.github.com/spec/v1".to_string(),
+            oid,
+            size,
+            None,
+            Some(true),
+        );
+        assert_eq!(lfs_struct, expected_lfs_struct);
+    }
+
+    // is_binary=false
+    {
+        let generated_file = File::generate_lfs_file(oid, size, None, Some(false)).unwrap();
+
+        assert_eq!(generated_file.as_ref(), b"version https://git-lfs.github.com/spec/v1\noid sha256:27c0a92fc51290e3227bea4dd9e780c5035f017de8d5ddfa35b269ed82226d97\nsize 10\nx-is-binary 0\n");
+
+        let lfs_struct = File::data_only(generated_file).get_lfs_content().unwrap();
+
+        let expected_lfs_struct = LFSContent::new(
+            "https://git-lfs.github.com/spec/v1".to_string(),
+            oid,
+            size,
+            None,
+            Some(false),
+        );
+        assert_eq!(lfs_struct, expected_lfs_struct);
+    }
 }
 
 quickcheck! {
@@ -407,7 +452,7 @@ quickcheck! {
         size: u64,
         copy_from: Option<(NonRootMPath, HgFileNodeId)>
     ) -> bool {
-        let result = File::generate_lfs_file(oid, size, copy_from.clone())
+        let result = File::generate_lfs_file(oid, size, copy_from.clone(), None)
             .and_then(|bytes| File::data_only(bytes).get_lfs_content());
 
         match result {

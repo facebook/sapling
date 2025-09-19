@@ -363,7 +363,7 @@ fn prepare_blob_lfs_file(
             .ok_or(ErrorKind::MissingContent(key))?
             .sha256;
         let copy_from = File::extract_copied_from(envelope.metadata())?;
-        let bytes = File::generate_lfs_file(oid, file_size, copy_from)?;
+        let bytes = File::generate_lfs_file(oid, file_size, copy_from, None)?;
         Ok((Bytes::new(), FileBytes(bytes)))
     }
     .boxed();

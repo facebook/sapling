@@ -843,7 +843,7 @@ fn generate_lfs_file(
     metadata: &Bytes,
 ) -> Result<HgBlobNode, Error> {
     let copy_from = File::extract_copied_from(metadata)?;
-    let bytes = File::generate_lfs_file(oid, file_size, copy_from)?;
+    let bytes = File::generate_lfs_file(oid, file_size, copy_from, None)?;
 
     let mut parents = parents.into_iter();
     let p1 = parents.next();

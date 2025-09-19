@@ -274,16 +274,15 @@ impl File {
     }
 
     pub fn get_lfs_struct(contents: &HashMap<&[u8], &[u8]>) -> Result<LFSContent> {
-        Self::parse_mandatory_lfs(contents)
-            .and_then(|(version, oid, size)| {
-                Self::get_copied_lfs(contents).map(move |copy_from| (version, oid, size, copy_from))
-            })
-            .map(|(version, oid, size, copy_from)| LFSContent {
+        Self::parse_mandatory_lfs(contents).and_then(|(version, oid, size)| {
+            Ok(LFSContent {
                 version,
                 oid,
                 size,
-                copy_from,
+                copy_from: Self::get_copied_lfs(contents)?,
+                is_binary: contents.get(IS_BINARY).map(|b| b == b"1"),
             })
+        })
     }
 
     fn get_copied_lfs(
@@ -296,6 +295,7 @@ impl File {
         oid: Sha256,
         size: u64,
         copy_from: Option<(NonRootMPath, HgFileNodeId)>,
+        is_binary: Option<bool>,
     ) -> Result<Bytes> {
         let git_version = String::from_utf8(GIT_VERSION.to_vec())?;
         let lfs_content = LFSContent {
@@ -303,6 +303,7 @@ impl File {
             oid,
             size,
             copy_from,
+            is_binary,
         };
         lfs_content.into_bytes()
     }
@@ -313,7 +314,7 @@ const OID: &[u8] = b"oid";
 const SIZE: &[u8] = b"size";
 const HGCOPY: &[u8] = b"x-hg-copy";
 const HGCOPYREV: &[u8] = b"x-hg-copyrev";
-const _ISBINARY: &[u8] = b"x-is-binary";
+const IS_BINARY: &[u8] = b"x-is-binary";
 const GIT_VERSION: &[u8] = b"https://git-lfs.github.com/spec/v1";
 const SHA256_PREFIX: &[u8] = b"sha256:";
 
@@ -327,6 +328,8 @@ pub struct LFSContent {
 
     // copy fields
     copy_from: Option<(NonRootMPath, HgFileNodeId)>,
+    // file content is binary (i.e. contains null byte)
+    is_binary: Option<bool>,
 }
 
 impl LFSContent {
@@ -335,12 +338,14 @@ impl LFSContent {
         oid: Sha256,
         size: u64,
         copy_from: Option<(NonRootMPath, HgFileNodeId)>,
+        is_binary: Option<bool>,
     ) -> Self {
         Self {
             version,
             oid,
             size,
             copy_from,
+            is_binary,
         }
     }
 
@@ -384,6 +389,13 @@ impl LFSContent {
             out.write_all(HGCOPYREV)?;
             out.write_all(b" ")?;
             out.write_all(nodehash.to_hex().as_ref())?;
+            out.write_all(b"\n")?;
+        }
+
+        if let Some(is_binary) = self.is_binary {
+            out.write_all(IS_BINARY)?;
+            out.write_all(b" ")?;
+            out.write_all(if is_binary { b"1" } else { b"0" })?;
             out.write_all(b"\n")?;
         }
 
