@@ -325,6 +325,31 @@ export const getVSCodePlatform = (context: vscode.ExtensionContext): VSCodeServe
           );
           break;
         }
+        case 'platform/runFirstPassCodeReview': {
+          const {reviewId, cwd} = message;
+          try {
+            const results = await Internal.runCodeReview?.(cwd);
+            if (results != null) {
+              postMessage({
+                type: 'platform/firstPassCodeReviewResult',
+                reviewId,
+                result: {
+                  value: results,
+                },
+              });
+              vscode.commands.executeCommand('sapling.refresh-first-pass-comments');
+            }
+          } catch (err) {
+            postMessage({
+              type: 'platform/firstPassCodeReviewResult',
+              reviewId,
+              result: {
+                error: err as Error,
+              },
+            });
+          }
+          break;
+        }
         case 'platform/setFirstPassCodeReviewComments': {
           vscode.commands.executeCommand('sapling.refresh-first-pass-comments');
           break;

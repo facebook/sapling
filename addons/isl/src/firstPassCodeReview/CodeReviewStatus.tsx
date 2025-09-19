@@ -15,8 +15,8 @@ import {T} from '../i18n';
 import {atomFamilyWeak} from '../jotaiUtils';
 import {serverCwd} from '../repositoryData';
 import type {CommitInfo, Hash} from '../types';
-import {runCodeReview} from './runCodeReview';
 
+import {randomId} from 'shared/utils';
 import './CodeReviewStatus.css';
 import {firstPassCommentData} from './firstPassCodeReviewAtoms';
 
@@ -38,19 +38,23 @@ export function CodeReviewStatus({commit}: {commit: CommitInfo}): JSX.Element {
   const button = (
     <Button
       onClick={async () => {
-        let results;
+        const reviewId = randomId();
         setStatus('running');
-        try {
-          results = await runCodeReview(cwd);
-        } catch (e) {
+        clientToServerAPI.postMessage({
+          type: 'platform/runFirstPassCodeReview',
+          cwd,
+          reviewId,
+        });
+        const response = await clientToServerAPI.nextMessageMatching(
+          'platform/firstPassCodeReviewResult',
+          msg => msg.reviewId === reviewId,
+        );
+        if (response.result.error) {
           setStatus('error');
           return;
         }
+        const results = response.result.value;
         setIssues([...results.values()].flat());
-        clientToServerAPI.postMessage({
-          type: 'platform/setFirstPassCodeReviewDiagnostics',
-          issueMap: results,
-        });
         clientToServerAPI.postMessage({
           type: 'platform/setFirstPassCodeReviewComments',
         });

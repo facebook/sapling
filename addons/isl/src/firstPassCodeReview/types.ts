@@ -7,8 +7,10 @@
 
 /* Format is subject to change */
 export type CodeReviewResult = {
-  reviewerName: string;
-  codeIssues: Array<CodeReviewIssue>;
+  reviews: Array<{
+    reviewerName: string;
+    codeIssues: Array<CodeReviewIssue>;
+  }>;
 };
 
 export type CodeReviewIssue = {
