@@ -303,16 +303,6 @@ export const getVSCodePlatform = (context: vscode.ExtensionContext): VSCodeServe
           Internal.promptTestGeneration?.();
           break;
         }
-        case 'platform/setFirstPassCodeReviewDiagnostics': {
-          const {issueMap} = message;
-          for (const filePath of issueMap.keys()) {
-            Internal.firstPassCodeReviewDiagnosticsProvider?.().setCodeReviewDiagnostics(
-              filePath,
-              issueMap.get(filePath) ?? [],
-            );
-          }
-          break;
-        }
         case 'platform/devmateValidateChanges': {
           Internal.promptAIAgent?.({type: 'validateChanges'}, ActionTriggerType.ISL2SmartActions);
           break;

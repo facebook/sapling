@@ -738,10 +738,6 @@ export type PlatformSpecificClientToServerMessages =
       type: 'platform/devmateCreateTestForModifiedCode';
     }
   | {
-      type: 'platform/setFirstPassCodeReviewDiagnostics';
-      issueMap: Map<string, Array<CodeReviewIssue>>;
-    }
-  | {
       type: 'platform/devmateValidateChanges';
     }
   | {
