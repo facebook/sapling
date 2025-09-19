@@ -944,6 +944,7 @@ impl Convert for RawShardedService {
             RawShardedService::MONONOKE_GIT_SERVER => ShardedService::MononokeGitServer,
             RawShardedService::REPO_METADATA_LOGGER => ShardedService::RepoMetadataLogger,
             RawShardedService::BOOKMARK_SERVICE => ShardedService::BookmarkService,
+            RawShardedService::DIFF_SERVICE => ShardedService::DiffService,
             v => return Err(anyhow!("Invalid value {} for enum ShardedService", v)),
         };
         Ok(service)
