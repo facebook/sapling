@@ -141,6 +141,9 @@ Create a new client repository, using getpack (with its own cachepath)
     lfs-largefile-for-rename
   R lfs-largefile-for-rename
 
+FIXME: it isn't binary!
+  $ hg blame lfs-largefile | head -n 1
+  lfs-largefile: binary file
 
 Now try with a small LFS cache size:
   $ hg clone -q mono:repo repo-lfs4 --noupdate
