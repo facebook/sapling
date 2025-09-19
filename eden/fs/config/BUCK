@@ -48,6 +48,7 @@ cpp_library(
     ],
     external_deps = [
         ("boost", None, "boost_filesystem"),
+        "re2",
     ],
     exported_external_deps = [
         "re2",

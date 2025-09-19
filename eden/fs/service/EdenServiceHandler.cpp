@@ -3737,7 +3737,7 @@ folly::SemiFuture<std::unique_ptr<ReturnType>> serialDetachIfBackgrounded(
   if (server->getServerState()
           ->getEdenConfig()
           ->thriftUseSmallSerialExecutor.getValue()) {
-    serial = folly::SmallSerialExecutor::create(
+    serial = folly::SerialExecutor::create(
         server->getServer()->getThreadManager().get());
   } else {
     serial = folly::SerialExecutor::create(
@@ -3786,7 +3786,7 @@ folly::SemiFuture<folly::Unit> serialDetachIfBackgrounded(
   if (server->getServerState()
           ->getEdenConfig()
           ->thriftUseSmallSerialExecutor.getValue()) {
-    serial = folly::SmallSerialExecutor::create(
+    serial = folly::SerialExecutor::create(
         server->getServer()->getThreadManager().get());
   } else {
     serial = folly::SerialExecutor::create(
