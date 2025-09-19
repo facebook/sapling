@@ -75,5 +75,5 @@ Pull changes from Mononoke
 
   $ hg debugfilerevision
   a231a19086bc: copy and move large
-   largeCopy: bin=1 lnk=0 flag=0 size=2000 copied='large'
-   largeNew: bin=1 lnk=0 flag=0 size=2000 copied='large'
+   largeCopy: bin=0 lnk=0 flag=0 size=2000 copied='large'
+   largeNew: bin=0 lnk=0 flag=0 size=2000 copied='large'

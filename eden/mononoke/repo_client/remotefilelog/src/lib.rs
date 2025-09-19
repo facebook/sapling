@@ -358,12 +358,16 @@ fn prepare_blob_lfs_file(
     let blobstore = repo.repo_blobstore_arc();
     let data = async move {
         let key = FetchKey::from(envelope.content_id());
-        let oid = filestore::get_metadata(&blobstore, &ctx, &key)
+        let metadata = filestore::get_metadata(&blobstore, &ctx, &key)
             .await?
-            .ok_or(ErrorKind::MissingContent(key))?
-            .sha256;
+            .ok_or(ErrorKind::MissingContent(key))?;
         let copy_from = File::extract_copied_from(envelope.metadata())?;
-        let bytes = File::generate_lfs_file(oid, file_size, copy_from, None)?;
+        let bytes = File::generate_lfs_file(
+            metadata.sha256,
+            file_size,
+            copy_from,
+            Some(metadata.is_binary),
+        )?;
         Ok((Bytes::new(), FileBytes(bytes)))
     }
     .boxed();

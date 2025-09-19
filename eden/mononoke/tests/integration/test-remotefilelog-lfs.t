@@ -43,14 +43,21 @@ Perform LFS push
   $ LONG="$(yes A 2>/dev/null | head -c 2000)"
   $ echo "$LONG" > lfs-largefile
   $ echo "${LONG}for-rename" > lfs-largefile-for-rename
+  $ printf "$LONG\0\n" > lfs-binaryfile
   $ hg commit -Aqm "add lfs-large files"
+  $ hg debugfilerevision
+  *: add lfs-large files (glob)
+   lfs-binaryfile: bin=1 lnk=0 flag=0 size=2001 copied=''
+   lfs-largefile: bin=0 lnk=0 flag=0 size=2000 copied=''
+   lfs-largefile-for-rename: bin=0 lnk=0 flag=0 size=2010 copied=''
   $ hg push -r . --to master_bookmark -v
-  pushing rev f6c155f8a2ce to destination mono:repo bookmark master_bookmark
+  pushing rev * to destination mono:repo bookmark master_bookmark (glob)
   searching for changes
   validated revset for rebase
   1 changesets found
   uncompressed size of bundle content:
-       231 (changelog)
+       246 (changelog)
+       283  lfs-binaryfile
        282  lfs-largefile
        293  lfs-largefile-for-rename
   adding changesets
@@ -59,8 +66,9 @@ Perform LFS push
   updating bookmark master_bookmark
 
 # Check LFS logs
-  $ wait_for_json_record_count "$TESTTMP/scuba.json" 3
+  $ wait_for_json_record_count "$TESTTMP/scuba.json" 4
   $ jq .int.client_attempt < "$TESTTMP/scuba.json"
+  1
   1
   1
   1
@@ -69,7 +77,7 @@ Perform LFS push
   $ hg mv lfs-largefile-for-rename lfs-largefile-renamed
   $ hg commit -Aqm "rename"
   $ hg push -r . --to master_bookmark -v
-  pushing rev 2405b346087f to destination mono:repo bookmark master_bookmark
+  pushing rev * to destination mono:repo bookmark master_bookmark (glob)
   searching for changes
   validated revset for rebase
   1 changesets found
@@ -90,7 +98,7 @@ Verify that if we fail to upload LFS blobs first, the push fails
   $ echo "${LONG}ANOTHER-LFS" > f
   $ hg commit -m f -A f
   $ hg push -r . --to master_bookmark -v
-  pushing rev 145d09aad162 to destination mono:repo bookmark master_bookmark
+  pushing rev * to destination mono:repo bookmark master_bookmark (glob)
   searching for changes
   validated revset for rebase
   1 changesets found
@@ -128,7 +136,7 @@ Create a new client repository, using getpack (with its own cachepath)
   pulling from mono:repo
  
   $ hg update -r master_bookmark -v
-  3 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  4 files updated, 0 files merged, 0 files removed, 0 files unresolved
 
   $ sha256sum lfs-largefile
   e2fff2ce58d585b4b0572e0a323f9e7e5f98cc641489e12c03c401d05d0e350d  lfs-largefile
@@ -141,9 +149,19 @@ Create a new client repository, using getpack (with its own cachepath)
     lfs-largefile-for-rename
   R lfs-largefile-for-rename
 
-FIXME: it isn't binary!
+  $ hg debugfilerevision -r .^
+  *: add lfs-large files (glob)
+   lfs-binaryfile: bin=1 lnk=0 flag=0 size=2001 copied=''
+   lfs-largefile: bin=0 lnk=0 flag=0 size=2000 copied=''
+   lfs-largefile-for-rename: bin=0 lnk=0 flag=0 size=2010 copied=''
+
+Make sure lfs-largefile isn't marked as is_binary by running blame:
   $ hg blame lfs-largefile | head -n 1
-  lfs-largefile: binary file
+  *: A (glob)
+
+Make sure lfs-binaryfile is marked as is_binary by running blame:
+  $ hg blame lfs-binaryfile
+  lfs-binaryfile: binary file
 
 Now try with a small LFS cache size:
   $ hg clone -q mono:repo repo-lfs4 --noupdate
@@ -163,4 +181,4 @@ Now try with a small LFS cache size:
  
  Works even though the cache rotated out from under us.
   $ hg update -r master_bookmark -v
-  3 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  4 files updated, 0 files merged, 0 files removed, 0 files unresolved
