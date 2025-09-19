@@ -4750,6 +4750,12 @@ void EdenServiceHandler::debugGetScmTree(
 folly::SemiFuture<std::unique_ptr<DebugGetScmBlobResponse>>
 EdenServiceHandler::semifuture_debugGetBlob(
     std::unique_ptr<DebugGetScmBlobRequest> request) {
+  return debugGetBlobImpl(std::move(request));
+}
+
+folly::SemiFuture<std::unique_ptr<DebugGetScmBlobResponse>>
+EdenServiceHandler::debugGetBlobImpl(
+    std::unique_ptr<DebugGetScmBlobRequest> request) {
   const auto& mountid = request->mountId();
   const auto& idStr = request->id();
   const auto& origins = request->origins();
