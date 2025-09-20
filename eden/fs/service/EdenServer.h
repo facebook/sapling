@@ -359,6 +359,12 @@ class EdenServer : private TakeoverHandler {
       std::chrono::system_clock::time_point cutoff,
       const ObjectFetchContextPtr& context);
 
+  /**
+   * Cancel any currently running garbage collection operations.
+   * This will cause any in-progress GC operations to terminate early.
+   */
+  void cancelAllGarbageCollections();
+
   bool isWorkingCopyGCRunningForAnyMount() const;
 
   std::shared_ptr<LocalStore> getLocalStore() const {

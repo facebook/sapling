@@ -2708,7 +2708,10 @@ folly::Future<TakeoverData> EdenServer::startTakeoverShutdown() {
     // restart.
     // First stop the periodic GC
     gcTask_.updateInterval(std::chrono::seconds(0));
-    // Also, wait for any running GC to finish.
+    // By default, folly futures and thread pools do not provide a built-in way
+    // to forcibly stop a running task. We can cancel any running GC and wait
+    // for them to stop.
+    cancelAllGarbageCollections();
     bool isGCRunning = isWorkingCopyGCRunningForAnyMount();
     uint8_t checkingGCAttempts = 0;
     while (isGCRunning && checkingGCAttempts < 3) {
@@ -3005,6 +3008,13 @@ void EdenServer::garbageCollectAllMounts() {
         })
         .ensure([mountHandle] {});
   }
+}
+
+void EdenServer::cancelAllGarbageCollections() {
+  // Cancel any ongoing garbage collection operations
+  gcCancelSource_.requestCancellation();
+
+  XLOGF(DBG1, "Cancelled all garbage collection operations");
 }
 
 bool EdenServer::isWorkingCopyGCRunningForAnyMount() const {
