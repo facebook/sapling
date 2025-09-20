@@ -2908,7 +2908,13 @@ ImmediateFuture<uint64_t> EdenServer::garbageCollectWorkingCopy(
       "Starting GC for: {} total number of inodes {}",
       mountPath,
       totalNumberOfInodesBeforeGC);
-  return inode->invalidateChildrenNotMaterialized(cutoff, context)
+  // Use the member cancellation source for this operation
+
+  return inode
+
+      ->invalidateChildrenNotMaterialized(
+          cutoff, context, gcCancelSource_.getToken())
+
       .ensure([inode, lease = std::move(lease)] {
         inode->unloadChildrenUnreferencedByFs();
       })

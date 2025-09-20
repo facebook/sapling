@@ -450,6 +450,7 @@ cpp_library(
         "//eden/fs/telemetry:activity_recorder",
         "//eden/fs/telemetry:stats",
         "//fb303:base_service",
+        "//folly:cancellation_token",
         "//folly:executor",
         "//folly:file",
         "//folly:network_address",

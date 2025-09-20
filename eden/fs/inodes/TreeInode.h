@@ -7,6 +7,7 @@
 
 #pragma once
 
+#include <folly/CancellationToken.h>
 #include <folly/File.h>
 #include <folly/Portability.h>
 #include <folly/Synchronized.h>
@@ -488,7 +489,8 @@ class TreeInode final : public InodeBaseMetadata<DirContents> {
       bool /* allDescendantsInvalidated */>>
   invalidateChildrenNotMaterialized(
       std::chrono::system_clock::time_point cutoff,
-      const ObjectFetchContextPtr& context);
+      const ObjectFetchContextPtr& context,
+      folly::CancellationToken cancellationToken = {});
 
   /*
    * Update a tree entry as part of a checkout operation.

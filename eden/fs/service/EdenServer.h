@@ -16,6 +16,7 @@
 #include <unordered_map>
 #include <vector>
 
+#include <folly/CancellationToken.h>
 #include <folly/Executor.h>
 #include <folly/File.h>
 #include <folly/Portability.h>
@@ -948,5 +949,11 @@ class EdenServer : private TakeoverHandler {
   PeriodicFnTask<&EdenServer::createOrUpdateEdenHeartbeatFile>
       updateEdenHeartbeatFileTask_{this, "update-eden-heartbeat"};
 #endif
+
+  /**
+   * Cancellation source for garbage collection operations.
+   * This allows cancelling any in-progress GC operations.
+   */
+  folly::CancellationSource gcCancelSource_;
 };
 } // namespace facebook::eden

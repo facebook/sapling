@@ -4472,29 +4472,46 @@ ImmediateFuture<std::pair<
     bool /* allDescendantsInvalidated */>>
 TreeInode::invalidateChildrenNotMaterialized(
     std::chrono::system_clock::time_point cutoff,
-    const ObjectFetchContextPtr& context) {
+    const ObjectFetchContextPtr& context,
+    folly::CancellationToken cancellationToken) {
   // When the mount is shutting down, let's make sure to terminate quickly so
   // unmount is not blocked for a potential very long amount of time.
   if (getMount()->getState() == EdenMount::State::SHUTTING_DOWN) {
     return std::make_pair(0u, false);
   }
 
+  // Check for cancellation early
+  if (cancellationToken.isCancellationRequested()) {
+    return std::make_pair(uint64_t{0}, false);
+  }
+
   return getLoadedOrRememberedTreeChildren(this, getInodeMap(), context)
-      .thenValue([context = context.copy(),
-                  cutoff](const std::vector<TreeInodePtr>& treeChildren) {
+      .thenValue([context = context.copy(), cutoff, cancellationToken](
+                     const std::vector<TreeInodePtr>& treeChildren) {
+        // Check for cancellation before processing children
+        if (cancellationToken.isCancellationRequested()) {
+          return ImmediateFuture<std::vector<std::pair<uint64_t, bool>>>(
+              std::vector<std::pair<uint64_t, bool>>());
+        }
+
         std::vector<ImmediateFuture<std::pair<uint64_t, bool>>> futures;
 
         futures.reserve(treeChildren.size());
         for (auto& tree : treeChildren) {
-          futures.push_back(
-              tree->invalidateChildrenNotMaterialized(cutoff, context));
+          futures.push_back(tree->invalidateChildrenNotMaterialized(
+              cutoff, context, cancellationToken));
         }
 
         return collectAllSafe(std::move(futures));
       })
-      .thenValue([self = inodePtrFromThis(),
-                  cutoff](const std::vector<std::pair<uint64_t, bool>>&
-                              invalidations) {
+      .thenValue([self = inodePtrFromThis(), cutoff, cancellationToken](
+                     const std::vector<std::pair<uint64_t, bool>>&
+                         invalidations) {
+        // Check for cancellation before processing results
+        if (cancellationToken.isCancellationRequested()) {
+          return std::make_pair(uint64_t{0}, false);
+        }
+
         uint64_t numInvalidated = 0;
         bool allDescendantsInvalidated = true;
         bool isThisTreeInvalidated = false;

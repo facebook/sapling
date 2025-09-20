@@ -266,9 +266,10 @@ cpp_library(
         "//folly/synchronization:lifo_sem",
     ],
     external_deps = [
-        "boost",
-        "re2",
         ("boost", None, "boost_filesystem"),
+        "boost",
+        "gflags",
+        "re2",
     ],
     exported_external_deps = [
         "gflags",
