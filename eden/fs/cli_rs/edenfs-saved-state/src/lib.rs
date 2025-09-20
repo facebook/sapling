@@ -5,7 +5,6 @@
  * GNU General Public License version 2.
  */
 
-use std::ops::Add;
 
 use anyhow::Context;
 use mysql_client::DbLocator;

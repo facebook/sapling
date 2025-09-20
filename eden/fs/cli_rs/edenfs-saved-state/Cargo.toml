@@ -10,6 +10,7 @@ license = "GPLv2+"
 [dependencies]
 anyhow = "1.0.98"
 fbinit = { version = "0.2.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
+mysql_client = { package = "oss_mysql_client", version = "0.1.0", path = "../oss_mysql_client" }
 sapling-client = { version = "0.1.0", path = "../sapling-client" }
 serde = { version = "1.0.219", features = ["derive", "rc"] }
 
