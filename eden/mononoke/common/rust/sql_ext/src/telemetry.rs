@@ -14,6 +14,8 @@ use anyhow::anyhow;
 use futures_stats::FutureStats;
 use itertools::Itertools;
 use mononoke_types::RepositoryId;
+#[cfg(fbcode_build)]
+use mysql_client::MysqlError;
 use scuba_ext::MononokeScubaSampleBuilder;
 use sql::QueryTelemetry;
 #[cfg(fbcode_build)]
@@ -85,27 +87,55 @@ pub fn log_transaction_telemetry(
     log_transaction_telemetry_impl(txn_tel, &sql_query_tel, shard_name)
 }
 
-/// Log query errors to Scuba on a best-effort basis.
-pub fn log_query_error(
+fn setup_error_logging(
     sql_query_tel: &SqlQueryTelemetry,
-    err: &Error,
     granularity: TelemetryGranularity,
-    repo_ids: Vec<RepositoryId>,
+    repo_ids: &[RepositoryId],
     query_name: &str,
     shard_name: &str,
-) {
+    attempt: usize,
+    will_retry: bool,
+) -> Result<MononokeScubaSampleBuilder> {
     let jk_sample_rate = justknobs::get_as::<u64>(
         "scm/mononoke:sql_telemetry_error_sample_rate",
         Some(shard_name),
     )
     .unwrap_or(10);
-    let mut scuba = match setup_scuba_sample(
+
+    let mut scuba = setup_scuba_sample(
         sql_query_tel,
         granularity,
-        repo_ids,
+        repo_ids.to_vec(),
         Some(query_name),
         shard_name,
         jk_sample_rate,
+    )?;
+
+    scuba.add("attempt", attempt);
+    scuba.add("will_retry", if will_retry { 1 } else { 0 });
+
+    Ok(scuba)
+}
+
+/// Log query errors to Scuba on a best-effort basis.
+pub fn log_query_error(
+    sql_query_tel: &SqlQueryTelemetry,
+    err: &Error,
+    granularity: TelemetryGranularity,
+    repo_ids: &[RepositoryId],
+    query_name: &str,
+    shard_name: &str,
+    attempt: usize,
+    will_retry: bool,
+) {
+    let mut scuba = match setup_error_logging(
+        sql_query_tel,
+        granularity,
+        repo_ids,
+        query_name,
+        shard_name,
+        attempt,
+        will_retry,
     ) {
         Ok(scuba) => scuba,
         // This is the only call that can return an Err, but errors will be
@@ -117,9 +147,25 @@ pub fn log_query_error(
     };
 
     scuba.add("error", format!("{:?}", err));
-    scuba.add("success", 0);
-    STATS::success.add_value(0, (shard_name.to_string(),));
-    STATS::success_query.add_value(0, (shard_name.to_string(), query_name.to_string()));
+
+    #[cfg(fbcode_build)]
+    if let Some(e) = err.downcast_ref::<MysqlError>() {
+        // Get just the enum variant name using std::any::type_name
+        let error_type = std::any::type_name_of_val(e)
+            .split("::")
+            .last()
+            .unwrap_or("Unknown");
+
+        let error_key = if let Some(mysql_errno) = e.mysql_errno() {
+            format!("{error_type}.{mysql_errno}")
+        } else {
+            error_type.to_string()
+        };
+        STATS::query_retry_attempts.add_value(
+            attempt as i64,
+            (shard_name.to_string(), query_name.to_string(), error_key),
+        );
+    };
 
     // Log the Scuba sample for debugging when log-level is set to trace.
     tracing::trace!(

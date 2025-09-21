@@ -11,7 +11,6 @@ use std::future::Future;
 use std::sync::Arc;
 use std::time::Duration;
 
-use anyhow::Error;
 use anyhow::Result;
 use anyhow::anyhow;
 use async_trait::async_trait;
@@ -23,16 +22,20 @@ use itertools::Itertools;
 use maplit::hashmap;
 use maplit::hashset;
 use memcache::KeyGen;
+use mononoke_types::RepositoryId;
 use mononoke_types::Timestamp;
 #[cfg(fbcode_build)]
 use mysql_client::MysqlError;
 use sql::QueryTelemetry;
 use sql_query_config::CachingConfig;
+use sql_query_telemetry::SqlQueryTelemetry;
 use stats::prelude::DynamicTimeseries;
 
 use crate::ConsistentReadError;
 use crate::ConsistentReadOptions;
+use crate::TelemetryGranularity;
 use crate::telemetry::STATS;
+use crate::telemetry::log_query_error;
 
 const RETRY_ATTEMPTS: usize = 2;
 
@@ -154,17 +157,7 @@ macro_rules! mononoke_queries {
                                     $( $lname, )*
                                 )
                                 .try_timed()
-                                .await
-                                .inspect_err(|e| {
-                                    log_query_error(
-                                        &sql_query_tel,
-                                        &e,
-                                        granularity,
-                                        repo_ids.clone(),
-                                        query_name,
-                                        shard_name.as_ref(),
-                                    )
-                                })?;
+                                .await?;
 
                                 log_query_telemetry(
                                     opt_tel.clone(),
@@ -182,6 +175,9 @@ macro_rules! mononoke_queries {
                         },
                         shard_name,
                         query_name,
+                        &sql_query_tel,
+                        granularity,
+                        &repo_ids,
                     ).await
                 }
 
@@ -242,10 +238,11 @@ macro_rules! mononoke_queries {
                     // This means that the query will wait a specific time to
                     // allow the replica to catch up with the master.
                     let connection = &connections.read_connection;
-                    let granularity = TelemetryGranularity::ConsistentReadQuery;
 
                     let query_name = stringify!($name);
                     let shard_name = connection.shard_name();
+                    // Check if any parameter is a RepositoryId and pass it to telemetry
+                    let repo_ids = $crate::extract_repo_ids_from_queries!($($pname: $ptype; )*);
 
                     let res = query_with_consistency_no_cache(
                         || {
@@ -255,7 +252,7 @@ macro_rules! mononoke_queries {
                                 query_impl(
                                     connection,
                                     sql_query_tel,
-                                    granularity,
+                                    TelemetryGranularity::ConsistentReadQuery,
                                     $( $pname, )*
                                     $( $lname, )*
                                 ).await
@@ -266,6 +263,9 @@ macro_rules! mononoke_queries {
                         cons_read_opts,
                         shard_name,
                         query_name,
+                        &sql_query_tel,
+                        TelemetryGranularity::ConsistentReadQuery,
+                        &repo_ids,
                     ).await;
 
                     if let Err(ConsistentReadError::MissingHLC) = res {
@@ -278,9 +278,11 @@ macro_rules! mononoke_queries {
                             &sql_query_tel,
                             &ConsistentReadError::MissingHLC.into(),
                             TelemetryGranularity::ConsistentReadQuery,
-                            repo_ids,
+                            &repo_ids,
                             query_name.as_ref(),
                             shard_name.as_ref(),
+                            1,
+                            false, // No more retries to replicas
                         );
 
                         return query(
@@ -375,18 +377,7 @@ macro_rules! mononoke_queries {
 
                                 )
                                 .try_timed()
-                                .await
-                                .inspect_err(|e| {
-                                    log_query_error(
-                                        &sql_query_tel,
-                                        &e,
-                                        granularity,
-                                        repo_ids.clone(),
-                                        &query_name,
-                                        shard_name.as_ref(),
-
-                                    )
-                                })?;
+                                .await?;
 
                                 log_query_telemetry(
                                     opt_tel,
@@ -402,6 +393,9 @@ macro_rules! mononoke_queries {
                         },
                         shard_name,
                         query_name,
+                        &sql_query_tel,
+                        granularity,
+                        &repo_ids,
                     ).await?.0;
 
                     Ok(res)
@@ -507,19 +501,12 @@ macro_rules! mononoke_queries {
                         ),
                         shard_name,
                         query_name,
+                        &sql_query_tel,
+                        granularity,
+                        &repo_ids,
                     )
                     .try_timed()
-                    .await
-                    .inspect_err(|e| {
-                        log_query_error(
-                            &sql_query_tel,
-                            &e,
-                            granularity,
-                            repo_ids.clone(),
-                            &query_name,
-                            shard_name.as_ref(),
-                        )
-                    })?;
+                    .await?;
 
                     let opt_tel = write_res.query_telemetry().clone();
 
@@ -582,9 +569,11 @@ macro_rules! mononoke_queries {
                             &sql_query_tel,
                             &e,
                             granularity,
-                            query_repo_ids.clone(),
+                            &query_repo_ids,
                             &query_name,
                             shard_name.as_ref(),
+                            1, // attempt number
+                            false,
                         )
                     })?;
 
@@ -679,20 +668,12 @@ macro_rules! mononoke_queries {
                         ),
                         shard_name,
                         query_name,
+                        &sql_query_tel,
+                        granularity,
+                        &repo_ids,
                     )
                     .try_timed()
-                    .await
-                    .inspect_err(|e| {
-                        log_query_error(
-                            &sql_query_tel,
-                            &e,
-                            granularity,
-                            repo_ids.clone(),
-                            &query_name,
-                            shard_name.as_ref(),
-                        )
-                    })?;
-
+                    .await?;
                     let opt_tel = write_res.query_telemetry().clone();
 
                     log_query_telemetry(
@@ -749,9 +730,11 @@ macro_rules! mononoke_queries {
                             &sql_query_tel,
                             &e,
                             granularity,
-                            query_repo_ids.clone(),
+                            &query_repo_ids,
                             &query_name,
                             shard_name.as_ref(),
+                            1, // attempt number
+                            false,
                         )
                     })?;
 
@@ -817,9 +800,11 @@ macro_rules! read_query_with_transaction {
                 &sql_query_tel,
                 &e,
                 granularity,
-                $query_repo_ids.clone(),
+                &$query_repo_ids,
                 &$query_name,
                 shard_name.as_ref(),
+                1, // attempt number
+                false,
             )
         })?;
 
@@ -986,6 +971,9 @@ pub async fn query_with_retry_no_cache<T, Fut>(
     do_query: impl Fn() -> Fut + Send + Sync,
     shard_name: &str,
     query_name: &str,
+    sql_query_tel: &SqlQueryTelemetry,
+    granularity: TelemetryGranularity,
+    repo_ids: &[RepositoryId],
 ) -> Result<T>
 where
     T: Send + 'static,
@@ -999,7 +987,16 @@ where
         .jitter(Duration::from_secs(5))
         .max_attempts(RETRY_ATTEMPTS)
         .inspect_err(|attempt, e| {
-            bump_error_counters(e, attempt, shard_name, query_name);
+            log_query_error(
+                sql_query_tel,
+                e,
+                granularity,
+                repo_ids,
+                query_name,
+                shard_name,
+                attempt,
+                attempt < RETRY_ATTEMPTS,
+            )
         })
         .await?
         .0)
@@ -1010,6 +1007,9 @@ pub async fn query_with_retry<T, Fut>(
     do_query: impl Fn() -> Fut + Send + Sync,
     shard_name: &str,
     query_name: &str,
+    sql_query_tel: &SqlQueryTelemetry,
+    granularity: TelemetryGranularity,
+    repo_ids: &[RepositoryId],
 ) -> Result<CachedQueryResult<Vec<T>>>
 where
     T: Send + bincode::Encode + bincode::Decode<()> + Clone + 'static,
@@ -1017,9 +1017,26 @@ where
     Fut: Future<Output = Result<CachedQueryResult<Vec<T>>>> + Send,
 {
     if let Ok(true) = justknobs::eval("scm/mononoke:sql_disable_auto_cache", None, None) {
-        return query_with_retry_no_cache(&do_query, shard_name, query_name).await;
+        return query_with_retry_no_cache(
+            &do_query,
+            shard_name,
+            query_name,
+            sql_query_tel,
+            granularity,
+            repo_ids,
+        )
+        .await;
     }
-    let fetch = || query_with_retry_no_cache(&do_query, shard_name, query_name);
+    let fetch = || {
+        query_with_retry_no_cache(
+            &do_query,
+            shard_name,
+            query_name,
+            sql_query_tel,
+            granularity,
+            repo_ids,
+        )
+    };
     let key = cache_data.key;
     if let Some(config) = cache_data.config.as_ref() {
         let store = QueryCacheStore {
@@ -1050,6 +1067,9 @@ pub async fn query_with_consistency_no_cache<T, Fut>(
     cons_read_opts: ConsistentReadOptions,
     shard_name: &str,
     query_name: &str,
+    sql_query_tel: &SqlQueryTelemetry,
+    granularity: TelemetryGranularity,
+    repo_ids: &[RepositoryId],
 ) -> Result<T, ConsistentReadError>
 where
     T: Send + 'static,
@@ -1110,9 +1130,16 @@ where
         ConsistentReadError::MissingHLC => {
             STATS::missing_hlc.add_value(1, (shard_name.to_string(), query_name.to_string()));
         }
-        ConsistentReadError::QueryError(e) => {
-            bump_error_counters(e, attempt, shard_name, query_name);
-        }
+        ConsistentReadError::QueryError(e) => log_query_error(
+            sql_query_tel,
+            e,
+            granularity,
+            repo_ids,
+            query_name,
+            shard_name,
+            attempt,
+            attempt < RETRY_ATTEMPTS,
+        ),
     })
     .await?
     .0;
@@ -1128,27 +1155,4 @@ fn replica_was_up_to_date(
     let hlc_time = Timestamp::from_timestamp_nanos(hlc + hlc_drift_tolerance_ns);
 
     Ok(hlc_time >= target_lower_bound_hlc)
-}
-
-fn bump_error_counters(e: &Error, attempt: usize, shard_name: &str, query_name: &str) {
-    #[cfg(fbcode_build)]
-    if let Some(e) = e.downcast_ref::<MysqlError>() {
-        // Get just the enum variant name using std::any::type_name
-        let error_type = std::any::type_name_of_val(e)
-            .split("::")
-            .last()
-            .unwrap_or("Unknown");
-
-        let error_key = if let Some(mysql_errno) = e.mysql_errno() {
-            format!("{error_type}.{mysql_errno}")
-        } else {
-            error_type.to_string()
-        };
-        STATS::query_retry_attempts.add_value(
-            attempt as i64,
-            (shard_name.to_string(), query_name.to_string(), error_key),
-        );
-    };
-    #[cfg(not(fbcode_build))]
-    let _ = (attempt, shard_name, query_name, e);
 }
