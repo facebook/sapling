@@ -254,10 +254,30 @@ fn log_mysql_query_telemetry(
     let read_tables = query_tel.read_tables().iter().collect::<Vec<_>>();
     let write_tables = query_tel.write_tables().iter().collect::<Vec<_>>();
 
+    let read_or_write = if write_tables.is_empty() {
+        "READ"
+    } else {
+        "WRITE"
+    };
+
     scuba.add("instance_type", opt_instance_type.clone());
+
+    scuba.add("read_or_write", read_or_write.to_string());
+
     if let Some(instance_type) = opt_instance_type {
         // Success
         STATS::success_instance.add_value(1, (shard_name.to_string(), instance_type.clone()));
+
+        STATS::query_instance_completion_time.add_value(
+            fut_stats.completion_time.as_micros() as i64,
+            (
+                shard_name.to_string(),
+                query_name.to_string(),
+                format!("{:?}", granularity),
+                format!("{:?}", instance_type),
+                read_or_write.to_string(),
+            ),
+        );
 
         // CPU and Delay RRU by instance type
         if let Some(client_stats) = query_tel.client_stats() {
@@ -520,10 +540,23 @@ define_stats! {
     ),
 
     query_completion_time: dynamic_timeseries(
-        "{}.query.granularity.completion_time_us.{}.{}",
+        "{}.query.{}.granularity.{}.completion_time_us",
         (shard_name: String, query_name: String, granularity: String);
         Sum, Average
     ),
+
+    query_instance_completion_time: dynamic_timeseries(
+        "{}.query.{}.granularity.{}.instance_type.{}.{}.completion_time_us",
+        (
+            shard_name: String,
+            query_name: String,
+            granularity: String,
+            instance_type: String,
+            read_or_write: String
+        );
+        Sum, Average
+    ),
+
 
     replica_lagging: dynamic_timeseries(
         "{}.{}.consistent_read.replica_lagging",
