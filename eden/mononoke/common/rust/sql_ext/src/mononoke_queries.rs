@@ -135,16 +135,17 @@ macro_rules! mononoke_queries {
                 ) -> Result<(Vec<($( $rtype, )*)>, Option<QueryTelemetry>)> {
                     let query_name = stringify!($name);
                     let shard_name = connection.shard_name();
+                    // Check if any parameter is a RepositoryId and pass it to telemetry
+                    let repo_ids = $crate::extract_repo_ids_from_queries!($($pname: $ptype; )*);
+
                     query_with_retry_no_cache(
                         || {
                             borrowed!(sql_query_tel);
+                            cloned!(repo_ids);
                             async move {
                                 let cri = sql_query_tel.client_request_info();
                                 // Convert ClientRequestInfo to string if present
                                 let cri_str = cri.map(|cri| serde_json::to_string(cri)).transpose()?;
-
-                                // Check if any parameter is a RepositoryId and pass it to telemetry
-                                let repo_ids = $crate::extract_repo_ids_from_queries!($($pname: $ptype; )*);
 
                                 let (fut_stats, (res, opt_tel)) = [<$name Impl>]::commented_query(
                                     connection.sql_connection(),
@@ -241,6 +242,7 @@ macro_rules! mononoke_queries {
                     // This means that the query will wait a specific time to
                     // allow the replica to catch up with the master.
                     let connection = &connections.read_connection;
+                    let granularity = TelemetryGranularity::ConsistentReadQuery;
 
                     let query_name = stringify!($name);
                     let shard_name = connection.shard_name();
@@ -253,7 +255,7 @@ macro_rules! mononoke_queries {
                                 query_impl(
                                     connection,
                                     sql_query_tel,
-                                    TelemetryGranularity::ConsistentReadQuery,
+                                    granularity,
                                     $( $pname, )*
                                     $( $lname, )*
                                 ).await
@@ -348,20 +350,22 @@ macro_rules! mononoke_queries {
 
                     let query_name = stringify!($name);
                     let shard_name = connection.shard_name();
+                    let granularity = TelemetryGranularity::Query;
+
+                    // Check if any parameter is a RepositoryId and pass it to telemetry
+                    let repo_ids = $crate::extract_repo_ids_from_queries!($($pname: $ptype; )*);
+
                     // Execute query with caching
                     let res = query_with_retry(
                         data,
                         || {
                             borrowed!(sql_query_tel);
+                            cloned!(repo_ids);
                             let cri = sql_query_tel.client_request_info();
                             async move {
                                 // Convert ClientRequestInfo to string if present
                                 let cri_str = cri.map(|cri| serde_json::to_string(&cri)).transpose()?;
 
-                                let granularity = TelemetryGranularity::Query;
-
-                                // Check if any parameter is a RepositoryId and pass it to telemetry
-                                let repo_ids = $crate::extract_repo_ids_from_queries!($($pname: $ptype; )*);
 
                                 let (fut_stats, (res, opt_tel)) = [<$name Impl>]::commented_query(
                                     connection.sql_connection(),
