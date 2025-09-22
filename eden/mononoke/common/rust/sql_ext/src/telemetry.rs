@@ -23,6 +23,8 @@ use sql::mysql::MysqlQueryTelemetry;
 use sql_query_telemetry::SqlQueryTelemetry;
 use stats::prelude::*;
 
+use crate::ConsistentReadError;
+
 const SQL_TELEMETRY_SCUBA_TABLE: &str = "mononoke_sql_telemetry";
 
 #[derive(Clone, Debug, Eq, PartialEq, Copy, serde::Deserialize)]
@@ -33,9 +35,12 @@ pub enum TelemetryGranularity {
     TransactionQuery,
     /// From a transaction (i.e. when committing it)
     Transaction,
-    /// Read query to replica with intelligent retries based on its HLC
-    /// See https://fburl.com/wiki/t98rfhqv
+    /// A single query from a ConsistentRead operation. Similar, to TransactionQuery,
+    /// this is used to track telemetry at the individual query level.
     ConsistentReadQuery,
+    /// An entire ConsistentRead operation. This will aggregate telemetry for
+    /// all the queries involved, e.g. retries, fallback to master.
+    ConsistentRead,
 }
 
 /// Telemetry we would like to keep track of for a transaction
@@ -116,7 +121,6 @@ fn setup_error_logging(
 
     Ok(scuba)
 }
-
 /// Log query errors to Scuba on a best-effort basis.
 pub fn log_query_error(
     sql_query_tel: &SqlQueryTelemetry,
@@ -166,6 +170,70 @@ pub fn log_query_error(
             (shard_name.to_string(), query_name.to_string(), error_key),
         );
     };
+
+    // Log the Scuba sample for debugging when log-level is set to trace.
+    tracing::trace!(
+        "Logging query telemetry to scuba: {0:#?}",
+        scuba.get_sample()
+    );
+
+    scuba.log();
+}
+
+pub fn log_consistent_read_query_error(
+    sql_query_tel: &SqlQueryTelemetry,
+    cons_read_err: &ConsistentReadError,
+    granularity: TelemetryGranularity,
+    repo_ids: &[RepositoryId],
+    query_name: &str,
+    shard_name: &str,
+    attempt: usize,
+    will_retry: bool,
+) {
+    match cons_read_err {
+        ConsistentReadError::QueryError(err) => {
+            // Underlying query errors are treated the same as other queries.
+            STATS::replica_lagging.add_value(1, (shard_name.to_string(), query_name.to_string()));
+            return log_query_error(
+                sql_query_tel,
+                err,
+                granularity,
+                repo_ids,
+                query_name,
+                shard_name,
+                attempt,
+                will_retry,
+            );
+        }
+        ConsistentReadError::ReplicaLagging => {
+            STATS::replica_lagging.add_value(1, (shard_name.to_string(), query_name.to_string()));
+        }
+        ConsistentReadError::MissingHLC => {
+            STATS::missing_hlc.add_value(1, (shard_name.to_string(), query_name.to_string()));
+        }
+    };
+
+    let mut scuba = match setup_error_logging(
+        sql_query_tel,
+        granularity,
+        repo_ids,
+        query_name,
+        shard_name,
+        attempt,
+        will_retry,
+    ) {
+        Ok(scuba) => scuba,
+        // This is the only call that can return an Err, but errors will be
+        // ignored and logged to stderr instead.
+        Err(e) => {
+            tracing::error!("Failed to setup scuba sample: {e}");
+            return;
+        }
+    };
+
+    scuba.add("success", 1);
+    STATS::success.add_value(1, (shard_name.to_string(),));
+    STATS::success_query.add_value(1, (shard_name.to_string(), query_name.to_string()));
 
     // Log the Scuba sample for debugging when log-level is set to trace.
     tracing::trace!(

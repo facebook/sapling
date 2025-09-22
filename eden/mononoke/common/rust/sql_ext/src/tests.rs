@@ -546,6 +546,19 @@ mod facebook {
                 },
                 transaction_query_names: vec![],
             },
+            ScubaTelemetryLogSample {
+                success: true,
+                repo_ids: vec![1.into()],
+                granularity: TelemetryGranularity::ConsistentRead,
+                query_name: Some("ReadQuery1".to_string()),
+                shard_name: TEST_XDB_NAME.to_string(),
+                mysql_telemetry: MysqlQueryTelemetry {
+                    write_tables: hashset! {},
+                    read_tables: hashset! {"mononoke_queries_test_v3".to_string()},
+                    ..Default::default()
+                },
+                transaction_query_names: vec![],
+            },
         ];
 
         pretty_assertions::assert_eq!(scuba_logs, expected_logs);
@@ -603,7 +616,7 @@ mod facebook {
         println!("res: {res:?}");
         assert_eq!(res.len(), 10, "query should return 10 rows");
 
-        let scuba_logs = deserialize_scuba_log_file(&temp_path)?;
+        let mut scuba_logs = deserialize_scuba_log_file(&temp_path)?;
 
         println!("scuba_logs: {:#?}", scuba_logs);
 
@@ -627,9 +640,35 @@ mod facebook {
             transaction_query_names: vec![],
         };
 
+        let expected_cons_read_log = ScubaTelemetryLogSample {
+            success: true,
+            repo_ids: vec![1.into()],
+            granularity: TelemetryGranularity::ConsistentRead,
+            query_name: Some("ReadQuery1".to_string()),
+            shard_name: TEST_XDB_NAME.to_string(),
+            mysql_telemetry: MysqlQueryTelemetry {
+                write_tables: hashset! {},
+                read_tables: hashset! {"mononoke_queries_test_v3".to_string()},
+                ..Default::default()
+            },
+            transaction_query_names: vec![],
+        };
+
+        // Pop the last log for ConsistentRead granularity
+        let cons_read_log = scuba_logs
+            .pop()
+            .ok_or(anyhow!("Expected ConsistentRead log"))?;
+
+        // Check all the query logs
         scuba_logs
             .iter()
             .for_each(|log| pretty_assertions::assert_eq!(*log, expected_log));
+
+        pretty_assertions::assert_eq!(
+            cons_read_log,
+            expected_cons_read_log,
+            "ConsistentRead log doesn't match expectation"
+        );
 
         Ok(())
     }
@@ -799,7 +838,7 @@ mod facebook {
                             })
                             .collect::<serde_json::Value>();
 
-                        println!("flattened_log: {flattened_log:#?}");
+                        // println!("flattened_log: {flattened_log:#?}");
 
                         let success: bool = flattened_log["success"]
                             .as_i64()
@@ -845,7 +884,8 @@ mod facebook {
 
                         // Now deserialize that into a MysqlQueryTelemetry object
                         let mysql_tel =
-                            serde_json::from_value::<MysqlQueryTelemetry>(flattened_log)?;
+                            serde_json::from_value::<MysqlQueryTelemetry>(flattened_log)
+                                .context("Deserializing MysqlQueryTelemetry")?;
 
                         Ok(ScubaTelemetryLogSample {
                             mysql_telemetry: mysql_tel,

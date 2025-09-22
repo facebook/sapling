@@ -29,12 +29,11 @@ use mysql_client::MysqlError;
 use sql::QueryTelemetry;
 use sql_query_config::CachingConfig;
 use sql_query_telemetry::SqlQueryTelemetry;
-use stats::prelude::DynamicTimeseries;
 
 use crate::ConsistentReadError;
 use crate::ConsistentReadOptions;
 use crate::TelemetryGranularity;
-use crate::telemetry::STATS;
+use crate::telemetry::log_consistent_read_query_error;
 use crate::telemetry::log_query_error;
 
 const RETRY_ATTEMPTS: usize = 2;
@@ -238,62 +237,69 @@ macro_rules! mononoke_queries {
                     // This means that the query will wait a specific time to
                     // allow the replica to catch up with the master.
                     let connection = &connections.read_connection;
+                    let granularity = TelemetryGranularity::ConsistentReadQuery;
 
                     let query_name = stringify!($name);
                     let shard_name = connection.shard_name();
                     // Check if any parameter is a RepositoryId and pass it to telemetry
                     let repo_ids = $crate::extract_repo_ids_from_queries!($($pname: $ptype; )*);
 
-                    let res = query_with_consistency_no_cache(
-                        || {
-                            cloned!(sql_query_tel);
+                    let (fut_stats, (final_res, opt_tel)) = {
+                        cloned!(sql_query_tel);
+                        async {
+                            let res = query_with_consistency_no_cache(
+                                || {
 
-                            async move {
-                                query_impl(
-                                    connection,
+                                    cloned!(sql_query_tel);
+                                    async move {
+                                        query_impl(
+                                            connection,
+                                            sql_query_tel,
+                                            granularity,
+                                            $( $pname, )*
+                                            $( $lname, )*
+                                        ).await
+                                    }
+                                },
+                                target_lower_bound_hlc,
+                                return_early_if,
+                                cons_read_opts,
+                                shard_name,
+                                query_name,
+                                &sql_query_tel,
+                                granularity,
+                                &repo_ids,
+                            ).await;
+
+                            if let Err(ConsistentReadError::MissingHLC) = res {
+                                // If the query failed because the HLC was missing,
+                                // fallback to the primary connection
+                                return query_impl(
+                                    &connections.read_master_connection,
                                     sql_query_tel,
-                                    TelemetryGranularity::ConsistentReadQuery,
+                                    granularity,
                                     $( $pname, )*
                                     $( $lname, )*
-                                ).await
-                            }
-                        },
-                        target_lower_bound_hlc,
-                        return_early_if,
-                        cons_read_opts,
-                        shard_name,
-                        query_name,
+                                ).await;
+                            };
+
+                            Ok(res?)
+                        }
+                    }
+                    .try_timed()
+                    .await?;
+
+                    log_query_telemetry(
+                        opt_tel,
                         &sql_query_tel,
-                        TelemetryGranularity::ConsistentReadQuery,
-                        &repo_ids,
-                    ).await;
+                        TelemetryGranularity::ConsistentRead,
+                        repo_ids,
+                        query_name,
+                        shard_name.as_ref(),
+                        fut_stats,
+                    )?;
 
-                    if let Err(ConsistentReadError::MissingHLC) = res {
-                        // If the query failed because the HLC was missing,
-                        // fallback to the primary connection
-
-                        let repo_ids = $crate::extract_repo_ids_from_queries!($($pname: $ptype; )*);
-
-                        log_query_error(
-                            &sql_query_tel,
-                            &ConsistentReadError::MissingHLC.into(),
-                            TelemetryGranularity::ConsistentReadQuery,
-                            &repo_ids,
-                            query_name.as_ref(),
-                            shard_name.as_ref(),
-                            1,
-                            false, // No more retries to replicas
-                        );
-
-                        return query(
-                            &connections.read_master_connection,
-                            sql_query_tel,
-                            $( $pname, )*
-                            $( $lname, )*
-                        ).await;
-                    };
-
-                    Ok(res?)
+                    Ok(final_res)
 
                 }
 
@@ -1070,7 +1076,7 @@ pub async fn query_with_consistency_no_cache<T, Fut>(
     sql_query_tel: &SqlQueryTelemetry,
     granularity: TelemetryGranularity,
     repo_ids: &[RepositoryId],
-) -> Result<T, ConsistentReadError>
+) -> Result<(T, Option<QueryTelemetry>), ConsistentReadError>
 where
     T: Send + 'static,
     Fut: Future<Output = Result<(T, Option<QueryTelemetry>)>>,
@@ -1087,15 +1093,15 @@ where
 
             if let Some(ref early_check) = return_early_if {
                 if early_check(&res) {
-                    return Ok(res);
+                    return Ok((res, opt_tel));
                 };
             };
             let response_hlc = match opt_tel {
                 #[cfg(fbcode_build)]
-                Some(QueryTelemetry::MySQL(mysql_tel)) => mysql_tel
+                Some(QueryTelemetry::MySQL(ref mysql_tel)) => mysql_tel
                     .hlc_ts_lower_bound
                     .ok_or(ConsistentReadError::MissingHLC),
-                Some(QueryTelemetry::Sqlite(sqlite_tel)) => Ok(sqlite_tel.hlc_ts_lower_bound),
+                Some(QueryTelemetry::Sqlite(ref sqlite_tel)) => Ok(sqlite_tel.hlc_ts_lower_bound),
                 // HLC is needed to use query_with_consistency, otherwise the
                 // result can't be trusted be up-to-date.
                 _ => Err(ConsistentReadError::MissingHLC),
@@ -1103,7 +1109,7 @@ where
 
             if replica_was_up_to_date(target_lower_bound_hlc, response_hlc, hlc_drift_tolerance_ns)?
             {
-                Ok(res)
+                Ok((res, opt_tel))
             } else {
                 Err(ConsistentReadError::ReplicaLagging)
             }
@@ -1123,23 +1129,17 @@ where
             ConsistentReadError::QueryError(_e) => false,
         }
     })
-    .inspect_err(|attempt, cons_read_err| match cons_read_err {
-        ConsistentReadError::ReplicaLagging => {
-            STATS::replica_lagging.add_value(1, (shard_name.to_string(), query_name.to_string()));
-        }
-        ConsistentReadError::MissingHLC => {
-            STATS::missing_hlc.add_value(1, (shard_name.to_string(), query_name.to_string()));
-        }
-        ConsistentReadError::QueryError(e) => log_query_error(
+    .inspect_err(|attempt, cons_read_err| {
+        log_consistent_read_query_error(
             sql_query_tel,
-            e,
+            cons_read_err,
             granularity,
             repo_ids,
             query_name,
             shard_name,
             attempt,
-            attempt < RETRY_ATTEMPTS,
-        ),
+            attempt < cons_read_opts.max_attempts,
+        );
     })
     .await?
     .0;
