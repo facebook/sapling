@@ -48,6 +48,20 @@ Status and diff can include submodule:
   -Subproject commit 838d36ce8147047ed2fb694a88ea81cdfa5041b0
   +Subproject commit 7e03c5d593048a97b91470d7c33dc07e007aa5a4
 
+"debugexportstack -wdir()" works too:
+
+  $ sl debugexportstack -r 'wdir()' --config paths.default=file://$TESTTMP/non-existed
+  ...
+  error.HttpError: Command exited with code 128
+    git * (glob)
+      fatal: '$TESTTMP/non-existed' does not appear to be a git repository
+      fatal: Could not read from remote repository.
+      
+      Please make sure you have the correct access rights
+      and the repository exists.
+  
+  [1]
+
 Status from submodule:
 
   $ cd sub
