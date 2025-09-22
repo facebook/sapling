@@ -151,6 +151,7 @@ pub fn log_query_error(
     };
 
     scuba.add("error", format!("{:?}", err));
+    scuba.add("success", 0);
 
     #[cfg(fbcode_build)]
     if let Some(e) = err.downcast_ref::<MysqlError>() {
