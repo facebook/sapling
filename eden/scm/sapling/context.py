@@ -1453,14 +1453,10 @@ class filectx(basefilectx):
             )
 
     def size(self) -> int:
-        try:
-            return self._filelog.size(self._filerev)
-        except error.UncategorizedNativeError:
-            # For submodule, this raises "object not found" error.
-            # Let's just return a dummy size.
-            if self.flags() == "m":
-                return 0
-            raise
+        # Let's just return a dummy size for a submodule.
+        if self.flags() == "m":
+            return 0
+        return self._filelog.size(self._filerev)
 
     @propertycache
     def _copied(self):
