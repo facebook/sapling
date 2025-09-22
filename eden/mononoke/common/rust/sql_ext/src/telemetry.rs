@@ -342,7 +342,7 @@ fn log_mysql_query_telemetry(
                 shard_name.to_string(),
                 query_name.to_string(),
                 format!("{:?}", granularity),
-                format!("{:?}", instance_type),
+                instance_type.clone(),
                 read_or_write.to_string(),
             ),
         );
