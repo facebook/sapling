@@ -959,6 +959,11 @@ export default class ServerToClientAPI {
         );
         break;
       }
+      case 'fetchRecommendedBookmarks': {
+        repo.recommendedBookmarks = data.recommendedBookmarks;
+        repo.fetchSmartlogCommits();
+        break;
+      }
       case 'fetchDevEnvType': {
         if (Internal.getDevEnvType == null) {
           break;

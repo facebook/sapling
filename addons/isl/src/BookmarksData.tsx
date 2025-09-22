@@ -93,6 +93,15 @@ export const remoteBookmarks = atom(get => {
   return commits.flatMap(commit => commit.remoteBookmarks);
 });
 
+function fetchRecommendedBookmarks(recommendedBookmarks: Array<string>) {
+  if (recommendedBookmarks) {
+    serverAPI.postMessage({
+      type: 'fetchRecommendedBookmarks',
+      recommendedBookmarks,
+    });
+  }
+}
+
 /**
  * Tracks when the user was last shown the bookmark recommendation prompt.
  */
@@ -109,10 +118,17 @@ export const recommendedBookmarksGKAtom = atom(get => {
   return flag.state === 'hasData' ? flag.data : false;
 });
 
-export const recommendedBookmarksAtom = lazyAtom(
-  _get => Internal.getRecommendedBookmarks?.() ?? Promise.resolve(new Set<string>()),
-  new Set<string>(),
-);
+export const recommendedBookmarksAtom = lazyAtom(async _get => {
+  const recommendedBookmarks = await (Internal.getRecommendedBookmarks?.() ??
+    Promise.resolve(new Set<string>()));
+
+  // Also fetch the recommended bookmarks from server
+  if (recommendedBookmarks.size > 0) {
+    fetchRecommendedBookmarks(Array.from(recommendedBookmarks));
+  }
+
+  return recommendedBookmarks;
+}, new Set<string>());
 
 /** Checks if recommended bookmarks are available in remoteBookmarks */
 export const recommendedBookmarksAvailableAtom = atom(get => {

@@ -167,6 +167,13 @@ export class Repository {
   public stableLocations: Array<StableInfo> = [];
 
   /**
+   * Recommended remote bookmarks to be included in batched `log` fetch.
+   * Ensures that the recommended bookmark is included in the fetched remoteBookmarks,
+   * even if it was not included by default.
+   */
+  public recommendedBookmarks: Array<string> = [];
+
+  /**
    * The context used when the repository was created.
    * This is needed for subscriptions to have access to ANY logger, etc.
    * Avoid using this, and prefer using the correct context for a given connection.
@@ -943,6 +950,7 @@ export class Repository {
         '.', // always include wdir parent
         // stable locations hashes may be newer than the repo has, wrap in `present()` to only include if available.
         ...this.stableLocations.map(location => `present(${location.hash})`),
+        ...this.recommendedBookmarks.map(bookmark => `present(${bookmark})`),
       ]
         .filter(notEmpty)
         .join(' + ')})`;
