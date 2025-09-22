@@ -266,12 +266,20 @@ export const Commit = memo(
           children:
             suggestedRebases?.map(([dest, name]) => ({
               label: name,
-              onClick: () => {
+              onClick: async () => {
                 const operation = getSuggestedRebaseOperation(
                   dest,
                   latestSuccessorUnlessExplicitlyObsolete(commit),
                 );
-                runOperation(operation);
+
+                const shouldProceed = await runWarningChecks([
+                  () => maybeWarnAboutRebaseOntoMaster(dest),
+                  () => maybeWarnAboutRebaseOffWarm(dest),
+                ]);
+
+                if (shouldProceed) {
+                  runOperation(operation);
+                }
               },
             })) ?? [],
         });
