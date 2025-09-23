@@ -330,6 +330,8 @@ replace-with = "vendored-sources"
         env.pop("HOMEBREW_CCCFG", None)
         env = self.update_cargo_env(env)
 
+        env["RUSTFLAGS"] = env.get("RUSTFLAGS", "") + " -Anon_local_definitions"
+
         if target.cfgs:
             env["RUSTFLAGS"] = (
                 env.get("RUSTFLAGS", "")
