@@ -1470,7 +1470,7 @@ impl SourceControlServiceImpl {
         &self,
         ctx: CoreContext,
         commit: thrift::CommitSpecifier,
-        _params: thrift::CommitHgMutationHistoryParams,
+        params: thrift::CommitHgMutationHistoryParams,
     ) -> Result<thrift::CommitHgMutationHistoryResponse, scs_errors::ServiceError> {
         let (repo, changeset) = self.repo_changeset(ctx.clone(), &commit).await?;
         let changeset_id = changeset
@@ -1478,20 +1478,60 @@ impl SourceControlServiceImpl {
             .await?
             .ok_or_else(|| scs_errors::invalid_request("commit is not a hg commit".to_string()))?;
 
-        let commit_ids = repo
+        let mutations = repo
             .hg()
             .fetch_mutations(HashSet::from_iter([changeset_id]))
-            .await?
-            .into_iter()
-            .flat_map(|mutation| {
-                mutation
-                    .predecessors()
-                    .map(|pred| thrift::CommitId::hg(pred.as_bytes().to_vec()))
-                    .collect::<Vec<_>>()
-            })
-            .collect();
+            .await?;
+
+        let hg_mutation_history = match params.format {
+            thrift::MutationHistoryFormat::COMMIT_ID => {
+                let commit_ids = mutations
+                    .into_iter()
+                    .flat_map(|mutation| {
+                        mutation
+                            .predecessors()
+                            .map(|pred| thrift::CommitId::hg(pred.as_bytes().to_vec()))
+                            .collect::<Vec<_>>()
+                    })
+                    .collect();
+                thrift::HgMutationHistory::commit_ids(commit_ids)
+            }
+            thrift::MutationHistoryFormat::HG_MUTATION => {
+                let hg_mutations = mutations
+                    .into_iter()
+                    .map(|mutation| thrift::HgMutation {
+                        successor: thrift::CommitId::hg(mutation.successor().as_bytes().to_vec()),
+                        predecessors: mutation
+                            .predecessors()
+                            .map(|pred| thrift::CommitId::hg(pred.as_bytes().to_vec()))
+                            .collect(),
+                        split: mutation
+                            .split()
+                            .map(|split| thrift::CommitId::hg(split.as_bytes().to_vec()))
+                            .collect(),
+                        op: mutation.op().to_string(),
+                        user: mutation.user().to_string(),
+                        date: thrift::DateTime {
+                            timestamp: mutation.timestamp(),
+                            tz: mutation.timezone(),
+                            ..Default::default()
+                        },
+                        ..Default::default()
+                    })
+                    .collect();
+                thrift::HgMutationHistory::hg_mutations(hg_mutations)
+            }
+            unknown => {
+                return Err(scs_errors::invalid_request(format!(
+                    "invalid mutation history format: {:?}",
+                    unknown
+                ))
+                .into());
+            }
+        };
+
         Ok(thrift::CommitHgMutationHistoryResponse {
-            hg_mutation_history: thrift::HgMutationHistory::commit_ids(commit_ids),
+            hg_mutation_history,
             ..Default::default()
         })
     }

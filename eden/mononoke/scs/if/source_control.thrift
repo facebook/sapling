@@ -732,6 +732,7 @@ enum HistoryFormat {
 
 enum MutationHistoryFormat {
   COMMIT_ID = 1,
+  HG_MUTATION = 2,
 }
 
 @hack.MigrationBlockingLegacyJSONSerialization
@@ -2186,6 +2187,16 @@ struct CommitHgMutationHistoryResponse {
 @hack.MigrationBlockingLegacyJSONSerialization
 union HgMutationHistory {
   1: list<CommitId> commit_ids;
+  2: list<HgMutation> hg_mutations;
+}
+
+struct HgMutation {
+  1: CommitId successor;
+  2: list<CommitId> predecessors;
+  3: list<CommitId> split;
+  4: string op;
+  5: string user;
+  6: DateTime date;
 }
 
 struct DirectoryBranchCluster {
