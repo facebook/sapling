@@ -16,6 +16,7 @@ use async_trait::async_trait;
 use context::CoreContext;
 use context::PerfCounterType;
 use futures::future;
+use futures_stats::TimedTryFutureExt;
 use mercurial_types::HgChangesetId;
 use mercurial_types::HgChangesetIdPrefix;
 use mercurial_types::HgChangesetIdsResolvedFromPrefix;
@@ -25,6 +26,7 @@ use rendezvous::ConfigurableRendezVousController;
 use rendezvous::RendezVous;
 use rendezvous::RendezVousOptions;
 use rendezvous::RendezVousStats;
+use scuba_ext::FutureStatsScubaExt;
 use sql_construct::SqlConstruct;
 use sql_construct::SqlConstructFromMetadataDatabaseConfig;
 use sql_ext::Connection;
@@ -34,6 +36,7 @@ use sql_ext::SqlQueryTelemetry;
 use sql_ext::consistent_read_options;
 use sql_ext::mononoke_queries;
 use stats::prelude::*;
+use time_ext::DurationExt;
 
 mod caching;
 mod errors;
@@ -54,6 +57,10 @@ define_stats! {
     left_to_fetch: timeseries(Sum, Average, Count),
     // Number of mappings that were fetched from the master
     fetched_from_master: timeseries(Sum, Average, Count),
+    // Duration of fetches
+    get_duration_us: timeseries(Average, Count),
+    // Duration of fetches using consistent read queries
+    cons_read_get_duration_us: timeseries(Average, Count),
 }
 
 #[derive(Clone, Debug, Hash, Eq, PartialEq)]
@@ -473,53 +480,70 @@ impl BonsaiHgMapping for SqlBonsaiHgMapping {
         &self,
         ctx: &CoreContext,
         ids: BonsaiOrHgChangesetIds,
-    ) -> Result<Vec<BonsaiHgMappingEntry>, Error> {
-        STATS::gets.add_value(1);
-        ctx.perf_counters()
-            .increment_counter(PerfCounterType::SqlReadsReplica);
-
+    ) -> Result<Vec<BonsaiHgMappingEntry>> {
         let cons_read_opts =
             consistent_read_options(ctx.client_correlator(), Some("bonsai_hg_mapping"));
 
         let used_consistent_reads = cons_read_opts.is_some();
+        let timed_res = async move {
+            STATS::gets.add_value(1);
+            ctx.perf_counters()
+                .increment_counter(PerfCounterType::SqlReadsReplica);
 
-        let (mut mappings, left_to_fetch) = select_mapping(
-            ctx,
-            &self.read_connection,
-            &self.read_master_connection,
-            self.repo_id,
-            ids,
-            cons_read_opts,
-        )
-        .await?;
+            let (mut mappings, left_to_fetch) = select_mapping(
+                ctx,
+                &self.read_connection,
+                &self.read_master_connection,
+                self.repo_id,
+                ids,
+                cons_read_opts,
+            )
+            .await?;
 
-        let left_to_fetch_count = left_to_fetch.count().try_into().map_err(Error::from)?;
-        STATS::left_to_fetch.add_value(left_to_fetch_count);
+            let left_to_fetch_count = left_to_fetch.count().try_into().map_err(Error::from)?;
+            STATS::left_to_fetch.add_value(left_to_fetch_count);
 
-        if left_to_fetch.is_empty() || used_consistent_reads {
-            // If consistent reads were used, the replica that served the request
-            // was up-to-date, so any mappings left to fetch don't exist.
-            return Ok(mappings);
+            if left_to_fetch.is_empty() || used_consistent_reads {
+                // If consistent reads were used, the replica that served the request
+                // was up-to-date, so any mappings left to fetch don't exist.
+                return anyhow::Ok::<Vec<BonsaiHgMappingEntry>>(mappings);
+            }
+
+            STATS::gets_master.add_value(1);
+            ctx.perf_counters()
+                .increment_counter(PerfCounterType::SqlReadsMaster);
+            let (mut master_mappings, _) = select_mapping(
+                ctx,
+                &self.read_master_connection,
+                &self.read_master_connection,
+                self.repo_id,
+                left_to_fetch,
+                None,
+            )
+            .await?;
+
+            let fetched_from_master_count =
+                master_mappings.len().try_into().map_err(Error::from)?;
+            STATS::fetched_from_master.add_value(fetched_from_master_count);
+
+            mappings.append(&mut master_mappings);
+            Ok(mappings)
         }
-
-        STATS::gets_master.add_value(1);
-        ctx.perf_counters()
-            .increment_counter(PerfCounterType::SqlReadsMaster);
-        let (mut master_mappings, _) = select_mapping(
-            ctx,
-            &self.read_master_connection,
-            &self.read_master_connection,
-            self.repo_id,
-            left_to_fetch,
-            None,
-        )
+        .try_timed()
         .await?;
 
-        let fetched_from_master_count = master_mappings.len().try_into().map_err(Error::from)?;
-        STATS::fetched_from_master.add_value(fetched_from_master_count);
+        if let Ok(completion_time_us) = timed_res.0.completion_time.as_micros_unchecked().try_into()
+        {
+            if used_consistent_reads {
+                STATS::cons_read_get_duration_us.add_value(completion_time_us);
+            } else {
+                STATS::get_duration_us.add_value(completion_time_us);
+            };
+        };
 
-        mappings.append(&mut master_mappings);
-        Ok(mappings)
+        let res = timed_res.log_future_stats(ctx.scuba().clone(), "Get BonsaiHgMapping", None);
+
+        Ok(res)
     }
 
     /// Return [`HgChangesetId`] entries in the inclusive range described by `low` and `high`.
