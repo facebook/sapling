@@ -17,6 +17,7 @@ use anyhow::anyhow;
 use async_runtime::block_on;
 use clientinfo::get_client_request_info;
 use fbthrift_socket::SocketTransport;
+use parking_lot::Mutex;
 use serde::Deserialize;
 use thrift_types::edenfs;
 use thrift_types::edenfs::CheckoutProgressInfoRequest;
@@ -40,7 +41,7 @@ use crate::types::ProgressInfo;
 /// EdenFS client for Sapling CLI integration.
 pub struct EdenFsClient {
     eden_config: EdenConfig,
-    filter_generator: Option<FilterGenerator>,
+    filter_generator: Option<Mutex<FilterGenerator>>,
 }
 
 impl EdenFsClient {
@@ -52,13 +53,19 @@ impl EdenFsClient {
         let filter_generator = FilterGenerator::new(dot_dir);
         Ok(Self {
             eden_config,
-            filter_generator: Some(filter_generator),
+            filter_generator: Some(Mutex::new(filter_generator)),
         })
     }
 
     pub fn get_active_filter_id(&self, commit: HgId) -> Result<Option<String>, anyhow::Error> {
         match &self.filter_generator {
-            Some(r#gen) => r#gen.active_filter_id(commit),
+            Some(r#gen) => {
+                let lock = r#gen.lock();
+                match lock.active_filter_id(commit)? {
+                    Some(id) => Ok(Some(id)),
+                    None => Ok(None),
+                }
+            }
             None => Ok(None),
         }
     }
