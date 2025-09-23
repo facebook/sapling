@@ -279,7 +279,9 @@ async fn ignored_usage_counts_for_mount(checkout: &EdenFsCheckout) -> Result<u64
     let snapshot_info = client.get_current_snapshot_info(checkout.path()).await;
 
     if let Ok(snapshot_info) = snapshot_info {
+        // TODO(T238835643): deprecate filterId field
         root_id_options.filter_id = snapshot_info.filter_id;
+        root_id_options.fid = snapshot_info.fid;
     }
 
     let scm_status = client

@@ -111,7 +111,11 @@ impl EdenFsClient {
         list_ignored: bool,
     ) -> anyhow::Result<BTreeMap<RepoPathBuf, FileStatus>> {
         let thrift_client = block_on(self.get_thrift_client())?;
+        // TODO(T238835643): deprecate filterId field
         let filter_id = self.get_active_filter_id(commit.clone())?;
+        let fid = filter_id
+            .as_ref()
+            .map(|fid| fid.clone().as_bytes().to_vec());
 
         let start_time = Instant::now();
 
@@ -123,6 +127,7 @@ impl EdenFsClient {
                 cri: Some(self.get_client_request_info()),
                 rootIdOptions: Some(edenfs::RootIdOptions {
                     filterId: filter_id,
+                    fid,
                     ..Default::default()
                 }),
                 ..Default::default()
@@ -177,13 +182,19 @@ impl EdenFsClient {
             parent2: p2.map(|n| n.into_byte_array().into()),
             ..Default::default()
         };
+
+        // TODO(T238835643): deprecate filterId field
         let filter_id: Option<String> = self.get_active_filter_id(p1.clone())?;
+        let fid = filter_id
+            .as_ref()
+            .map(|fid| fid.clone().as_bytes().to_vec());
         let root_vec = self.root_vec();
         let params = edenfs::ResetParentCommitsParams {
             hgRootManifest: Some(p1_tree.into_byte_array().into()),
             cri: Some(self.get_client_request_info()),
             rootIdOptions: Some(edenfs::RootIdOptions {
                 filterId: filter_id,
+                fid,
                 ..Default::default()
             }),
             ..Default::default()
@@ -233,11 +244,17 @@ impl EdenFsClient {
         let tree_vec = tree.into_byte_array().into();
         let thrift_client = block_on(self.get_thrift_client())?;
         let filter_id: Option<String> = self.get_active_filter_id(node.clone())?;
+
+        // TODO(T238835643): deprecate filterId field
+        let fid = filter_id
+            .as_ref()
+            .map(|fid| fid.clone().as_bytes().to_vec());
         let params = edenfs::CheckOutRevisionParams {
             hgRootManifest: Some(tree_vec),
             cri: Some(self.get_client_request_info()),
             rootIdOptions: Some(edenfs::RootIdOptions {
                 filterId: filter_id,
+                fid,
                 ..Default::default()
             }),
             ..Default::default()
