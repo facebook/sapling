@@ -62,7 +62,8 @@ ImmediateFuture<FilterCoverage> HgSparseFilter::getFilterCoverageForPath(
   }
   XLOGF(DBG8, "New filter id {}. Fetching from Mercurial.", id);
 
-  auto filterId = rust::Str{id.data(), id.size()};
+  rust::Slice<const uint8_t> filterId{
+      reinterpret_cast<const uint8_t*>(id.data()), id.size()};
   auto pathToMount =
       rust::Str{checkoutPath_.view().data(), checkoutPath_.view().size()};
   auto [promise, rootFuture] =

@@ -205,7 +205,7 @@ mod ffi {
         // Note: The corresponding call in C++ will throw if the Rust function
         // returns an error result.
         fn profile_from_filter_id(
-            id: &str,
+            id: &[u8],
             checkout_path: &str,
             promise: UniquePtr<MatcherPromise>,
         ) -> Result<()>;
@@ -371,14 +371,16 @@ fn _profile_contents_from_repo(
 // CXX doesn't allow async functions to be exposed to C++. This function wraps the bulk of the
 // Sparse Profile creation logic.
 pub fn profile_from_filter_id(
-    id: &str,
+    id: &[u8],
     checkout_path: &str,
     promise: UniquePtr<MatcherPromise>,
 ) -> Result<(), anyhow::Error> {
     LOOKUPS.increment();
 
+    // TODO(cuev): This is safe to do for now, because we always pass valid UTF-8 FilterIds from
+    // C++. This invariant will change soon, but changes later in this stack will address that.
     // Parse the FilterID
-    let filter_id = FilterId::from_str(id)?;
+    let filter_id = FilterId::from_str(str::from_utf8(id)?)?;
 
     // We need to verify the checkout exists. The passed in checkout_path
     // should correspond to a valid hg/sl repo that Mercurial is aware of.
