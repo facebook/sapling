@@ -280,13 +280,16 @@ impl From<JournalPosition> for thrift_types::edenfs::JournalPosition {
 
 #[derive(Clone, Debug, Default)]
 pub struct RootIdOptions {
+    // TODO(T238835643): deprecate filterId field
     pub filter_id: Option<String>,
+    pub fid: Option<Vec<u8>>,
 }
 
 impl From<thrift_types::edenfs::RootIdOptions> for RootIdOptions {
     fn from(from: thrift_types::edenfs::RootIdOptions) -> Self {
         Self {
             filter_id: from.filterId,
+            fid: from.fid,
         }
     }
 }
@@ -295,6 +298,7 @@ impl From<RootIdOptions> for thrift_types::edenfs::RootIdOptions {
     fn from(from: RootIdOptions) -> thrift_types::edenfs::RootIdOptions {
         thrift_types::edenfs::RootIdOptions {
             filterId: from.filter_id,
+            fid: from.fid,
             ..Default::default()
         }
     }

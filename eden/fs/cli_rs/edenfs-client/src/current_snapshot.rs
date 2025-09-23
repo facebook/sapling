@@ -18,13 +18,16 @@ use crate::methods::EdenThriftMethod;
 
 #[derive(Clone, Debug)]
 pub struct CurrentSnapshotInfo {
+    // TODO(T238835643): deprecate filterId field
     pub filter_id: Option<String>,
+    pub fid: Option<Vec<u8>>,
 }
 
 impl From<thrift_types::edenfs::GetCurrentSnapshotInfoResponse> for CurrentSnapshotInfo {
     fn from(from: thrift_types::edenfs::GetCurrentSnapshotInfoResponse) -> Self {
         Self {
             filter_id: from.filterId,
+            fid: from.fid,
         }
     }
 }
