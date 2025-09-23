@@ -18,8 +18,6 @@
 //!
 //! See also codegen::codegen and pycompile.py for details.
 
-mod codegen;
-
 use std::env;
 use std::path::Path;
 
@@ -42,7 +40,7 @@ fn main() {
     let python = python.as_ref().map(Path::new);
     let sys_path = sys_path.as_ref().map(Path::new);
     let out = out.expect("--out is required");
-    let code = crate::codegen::generate_code(python.expect("--python is missing"), sys_path);
+    let code = codegen::generate_code(python.expect("--python is missing"), sys_path);
 
     // Write results.
     std::fs::write(out, code).unwrap();

@@ -1,15 +1,15 @@
-load("@fbsource//tools/build_defs:rust_binary.bzl", "rust_binary")
+load("@fbsource//tools/build_defs:rust_library.bzl", "rust_library")
 
 oncall("sapling")
 
-rust_binary(
+rust_library(
     name = "codegen",
     srcs = [
         "src/codegen.rs",
-        "src/main.rs",
+        "src/lib.rs",
         "src/pycompile.py",
     ],
-    crate_root = "src/main.rs",
+    crate_root = "src/lib.rs",
     deps = [
         "//eden/scm/lib/zstdelta:zstdelta",
     ],

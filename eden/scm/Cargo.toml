@@ -150,6 +150,7 @@ members = [
   "lib/progress/render",
   "lib/python-modules",
   "lib/python-modules/codegen",
+  "lib/python-modules/codegen-exe",
   "lib/radixbuf",
   "lib/refencode",
   "lib/renderdag",
