@@ -20,7 +20,7 @@ fn main() {
     let out_dir = env::var_os("OUT_DIR").expect("OUT_DIR env not provided");
     let cratemap_path = Path::new(&out_dir).join("cratemap");
     fs::write(cratemap_path, CRATEMAP).expect("Failed to write cratemap");
-    Config::from_env(GenContext::Services)
+    Config::from_env(GenContext::Types)
         .expect("Failed to instantiate thrift_compiler::Config")
         .base_path("../../../..")
         .types_crate("thrift__types")
