@@ -8,7 +8,6 @@ build = "build.rs"
 
 [dependencies]
 commands = { version = "0.1.0", path = "../../lib/commands", default-features = false }
-configparser = { package = "sapling-configloader", version = "0.1.0", path = "../../lib/config/loader" }
 pyblackbox = { path = "../../saplingnative/bindings/modules/pyblackbox" }
 sapling-atexit = { version = "0.1.0", path = "../../lib/util/atexit" }
 sapling-clidispatch = { version = "0.1.0", path = "../../lib/clidispatch" }

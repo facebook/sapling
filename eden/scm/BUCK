@@ -144,7 +144,6 @@ hg_binary(
                 ],
                 "dependencies": [
                     (None, "//common/rust/shed/fbinit:fbinit"),
-                    ("configparser", "//eden/scm/lib/config/loader:configloader"),
                 ],
             },
             "features": {
