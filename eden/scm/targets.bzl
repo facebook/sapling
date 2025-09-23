@@ -12,9 +12,6 @@ def _set_default(obj, *keys):
     return obj
 
 def rust_python_library(deps = None, include_python_sys = False, include_cpython = True, **kwargs):
-    if "versions" not in kwargs:
-        kwargs["versions"] = {}
-
     # Python 3 target
     kwargs3 = dict(kwargs)
 
@@ -34,7 +31,6 @@ def rust_python_library(deps = None, include_python_sys = False, include_cpython
     kwargs3["name"] = kwargs["name"]
     kwargs3["crate"] = kwargs["name"].replace("-", "_")
     kwargs3["deps"] = deps3
-    kwargs3["versions"]["python"] = "3.10"
     rust_library(**kwargs3)
 
 def gen_hgpython(hg_target, suffix = ""):
@@ -116,7 +112,6 @@ def hg_binary(name, extra_deps = [], extra_features = [], **kwargs):
                 ],
             ),
         ],
-        versions = {"python": "3.10"},
         deps = [
             "fbsource//third-party/rust:tracing",
             "//eden/scm/lib/clidispatch:clidispatch",
