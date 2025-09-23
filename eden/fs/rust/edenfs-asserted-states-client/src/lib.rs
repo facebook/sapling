@@ -5,8 +5,6 @@
  * GNU General Public License version 2.
  */
 
-#![feature(type_alias_impl_trait)]
-
 use std::cmp::min;
 use std::collections::HashSet;
 use std::fmt;
