@@ -1,4 +1,4 @@
-  $ enable commitcloud
+  $ enable commitcloud rebase
   $ setconfig infinitepush.branchpattern="re:scratch/.+"
 
   $ newclientrepo
@@ -46,6 +46,40 @@ Don't try push rebase:
   $ hg push -r $C --to scratch/test --force
   pushing rev dc0947a82db8 to destination eager:$TESTTMP/repo1_server bookmark scratch/test
   moving remote bookmark scratch/test from 112478962961 to dc0947a82db8
+
+  $ log() {
+  > hg log -G -T "{node|short} '{desc|firstline}' {remotenames} {join(mutations % '(Rewritten using {operation} into {join(successors % \'{node|short}\', \', \')})', ' ')}" "$@"
+  > }
+
+  $ log
+  o  dc0947a82db8 'C' remote/scratch/test
+  │
+  │ o  112478962961 'B'
+  ├─╯
+  o  426bada5c675 'A'
+
+  $ hg rebase -qr $C -d $B
+
+  $ log
+  o  bbfdd6cb49aa 'C'
+  │
+  │ x  dc0947a82db8 'C' remote/scratch/test (Rewritten using rebase into bbfdd6cb49aa)
+  │ │
+  o │  112478962961 'B'
+  ├─╯
+  o  426bada5c675 'A'
+
+  $ hg push -q -r bbfdd6cb49aa --to scratch/test --force
+
+FIXME: dc0947a82db8 should not be visible
+  $ log
+  o  bbfdd6cb49aa 'C' remote/scratch/test
+  │
+  │ x  dc0947a82db8 'C'  (Rewritten using rebase into bbfdd6cb49aa)
+  │ │
+  o │  112478962961 'B'
+  ├─╯
+  o  426bada5c675 'A'
 
   $ hg push --delete scratch/test
   deleting remote bookmark scratch/test
