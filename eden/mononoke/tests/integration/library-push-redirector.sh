@@ -10,6 +10,7 @@
 function verify_wc() {
    local large_repo_commit
    large_repo_commit="$1"
+   GLOG_minloglevel=5 \
    "$MONONOKE_ADMIN" \
      "${CACHE_ARGS[@]}" \
      "${COMMON_ARGS[@]}" --log-level ERROR \
