@@ -76,6 +76,8 @@ def hg_binary(name, extra_deps = [], extra_features = [], **kwargs):
                 "/MANIFESTINPUT:$(location :windows-manifest)",
             ],
         }),
+        # hgmain should be buildable by stable Rust (via cargo). Disallow nightly Rust features.
+        rustc_flags = ["-Zallow-features="],
         os_deps = [
             (
                 "linux",
