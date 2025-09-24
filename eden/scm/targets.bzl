@@ -11,6 +11,45 @@ def _set_default(obj, *keys):
         obj = obj[key]
     return obj
 
+def exec_compatible_with_target():
+    """Intended to be used by genrule's exec_compatible_with to force
+    execution platform to match target platform. Without this, one
+    might get "exec format error" when target platform (ex. macos)
+    binary is run on incompatible execution platform (ex. linux).
+
+    This function provides a shorter way for code like:
+
+        exec_compatible_with = select({
+            "ovr_config//os:linux": ["ovr_config//os:linux"],
+            "ovr_config//os:macos": ["ovr_config//os:macos"],
+            ...
+            "DEFAULT": [],
+        }) + select({
+            "ovr_config//cpu:x86_64": ["ovr_config//cpu:x86_64"],
+            "ovr_config//cpu:arm64": ["ovr_config//cpu:arm64"],
+            ...
+            "DEFAULT": [],
+        })
+    """
+
+    # To list low-level constraints (could be noisy), use:
+    #     buck uquery "attrfilter(constraint_setting, 'ovr_config//os/constraints:os', deps('ovr_config//os/constraints:'))"
+    #     buck uquery "attrfilter(constraint_setting, 'ovr_config//cpu/constraints:cpu', deps('ovr_config//cpu/constraints:'))"
+    # To list high-level constraints (that might mix OS and CPU like "windows-arm64"), use:
+    #     buck uquery "deps('ovr_config//os:', 0)"
+    #     buck uquery "deps('ovr_config//cpu:', 0)"
+    os_list = ["emscripten", "freebsd", "linux", "macos", "wasi", "windows"]
+    cpu_list = ["arm", "arm32", "arm64", "riscv32", "riscv64", "wasm32", "x86_32", "x86_64", "xtensa"]
+
+    def select_with(prefix, names):
+        choices = {"DEFAULT": []}
+        for name in names:
+            full_name = prefix + name
+            choices[full_name] = [full_name]
+        return select(choices)
+
+    return select_with("ovr_config//os/constraints:", os_list) + select_with("ovr_config//cpu/constraints:", cpu_list)
+
 def rust_python_library(deps = None, include_python_sys = False, include_cpython = True, **kwargs):
     # Python 3 target
     kwargs3 = dict(kwargs)
