@@ -13,7 +13,9 @@ use std::path::PathBuf;
 use anyhow::Result;
 use async_trait::async_trait;
 use clap::Parser;
+#[cfg(fbcode_build)]
 use edenfs_telemetry::collect_system_info;
+#[cfg(fbcode_build)]
 use edenfs_telemetry::edenfs_events_mapper;
 use edenfs_utils::path_from_bytes;
 
@@ -49,6 +51,7 @@ pub struct PrefetchCmd {
 }
 
 impl PrefetchCmd {
+    #[cfg(fbcode_build)]
     fn new_sample(&self, mount_point: &Path) -> edenfs_telemetry::EdenSample {
         let mut sample = edenfs_telemetry::EdenSample::new();
         collect_system_info(&mut sample, edenfs_events_mapper);
@@ -81,6 +84,7 @@ impl crate::Subcommand for PrefetchCmd {
         let client = instance.get_client();
         let (mount_point, _search_root) = self.common.get_mount_point_and_search_root()?;
 
+        #[cfg(fbcode_build)]
         let mut sample = self.new_sample(&mount_point);
 
         let patterns = self.common.load_patterns()?;
@@ -101,17 +105,21 @@ impl crate::Subcommand for PrefetchCmd {
             .await
         {
             Ok(r) => {
+                #[cfg(fbcode_build)]
                 sample.add_bool("success", true);
                 Ok(r)
             }
             Err(e) => {
+                #[cfg(fbcode_build)]
                 sample.add_bool("success", false);
+                #[cfg(fbcode_build)]
                 sample.add_string("error", format!("{:#}", e).as_str());
                 Err(e)
             }
         }?;
 
         // NOTE: Is the really still needed? We should not be falling back at all anymore.
+        #[cfg(fbcode_build)]
         sample.add_bool("prefetchV2_fallback", false);
 
         if return_prefetched_files {
@@ -129,6 +137,7 @@ impl crate::Subcommand for PrefetchCmd {
             }
 
             if let Some(prefetched_files) = &result.prefetched_files {
+                #[cfg(fbcode_build)]
                 sample.add_int(
                     "files_fetched",
                     prefetched_files.matching_files.len() as i64,
@@ -142,6 +151,7 @@ impl crate::Subcommand for PrefetchCmd {
             }
         }
 
+        #[cfg(fbcode_build)]
         edenfs_telemetry::send(edenfs_telemetry::EDEN_EVENTS_SCUBA.to_string(), sample);
         Ok(0)
     }

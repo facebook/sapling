@@ -158,9 +158,11 @@ SaplingBackingStore::SaplingBackingStore(
       folly::to<std::string>("hg-activitybuffer-", getRepoName().value_or("")),
       [this](const HgImportTraceEvent& event) { this->processHgEvent(event); });
 
+#ifdef EDEN_HAVE_MONITORING
   if (config_->getEdenConfig()->enableOBCOnEden.getValue()) {
     initializeOBCCounters();
   }
+#endif // EDEN_HAVE_MONITORING
 }
 
 /**
@@ -217,9 +219,11 @@ SaplingBackingStore::SaplingBackingStore(
       folly::to<std::string>("hg-activitybuffer-", getRepoName().value_or("")),
       [this](const HgImportTraceEvent& event) { this->processHgEvent(event); });
 
+#ifdef EDEN_HAVE_MONITORING
   if (config_->getEdenConfig()->enableOBCOnEden.getValue()) {
     initializeOBCCounters();
   }
+#endif // EDEN_HAVE_MONITORING
 }
 
 SaplingBackingStore::~SaplingBackingStore() {
@@ -229,6 +233,7 @@ SaplingBackingStore::~SaplingBackingStore() {
   }
 }
 
+#ifdef EDEN_HAVE_MONITORING
 void SaplingBackingStore::initializeOBCCounters() {
   std::string repoName = store_.getRepoName().data();
   // Get the hostname without the ".facebook.com" suffix
@@ -243,6 +248,7 @@ void SaplingBackingStore::initializeOBCCounters() {
       {hostname});
   isOBCEnabled_ = true;
 }
+#endif // EDEN_HAVE_MONITORING
 
 BackingStore::LocalStoreCachingPolicy
 SaplingBackingStore::constructLocalStoreCachingPolicy() {
@@ -342,9 +348,11 @@ void SaplingBackingStore::setFetchBlobCounters(
     return;
   }
 
+#ifdef EDEN_HAVE_MONITORING
   if (isOBCEnabled_) {
     getBlobPerRepoLatencies_ += watch.elapsed().count();
   }
+#endif // EDEN_HAVE_MONITORING
   stats_->addDuration(&SaplingBackingStoreStats::fetchBlob, watch.elapsed());
 
   if (fetchResult == ObjectFetchContext::FetchResult::Success) {
@@ -553,9 +561,11 @@ void SaplingBackingStore::getTreeBatch(
           }
         }
 
+#ifdef EDEN_HAVE_MONITORING
         if (isOBCEnabled_) {
           getTreePerRepoLatencies_ += batchWatch.elapsed().count();
         }
+#endif // EDEN_HAVE_MONITORING
         stats_->addDuration(
             &SaplingBackingStoreStats::fetchTree, batchWatch.elapsed());
 

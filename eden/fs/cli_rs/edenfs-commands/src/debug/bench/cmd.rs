@@ -133,15 +133,19 @@ impl crate::Subcommand for BenchCmd {
                         random_data.chunk_size as f64 / types::BYTES_IN_KILOBYTE as f64,
                         random_data.total_size() as f64 / types::BYTES_IN_GIGABYTE as f64
                     );
+                    #[cfg(fbcode_build)]
                     println!(
                         "{}",
                         dbio::bench_rocksdb_write_mfmd(&test_dir, &random_data)?
                     );
+                    #[cfg(fbcode_build)]
                     println!(
                         "{}",
                         dbio::bench_rocksdb_read_mfmd(&test_dir, &random_data)?
                     );
+                    #[cfg(fbcode_build)]
                     println!("{}", dbio::bench_lmdb_write_mfmd(&test_dir, &random_data)?);
+                    #[cfg(fbcode_build)]
                     println!("{}", dbio::bench_lmdb_read_mfmd(&test_dir, &random_data)?);
                     println!(
                         "{}",
