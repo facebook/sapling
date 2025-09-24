@@ -2529,13 +2529,13 @@ folly::Future<folly::Unit> EdenMount::startFsChannel(bool readOnly) {
                XLOGF(
                    ERR,
                    "Failed to create mount point (hanging mount): {}: {}",
-                   e.code(),
+                   e.code().value(),
                    e.what());
              } else {
                XLOGF(
                    ERR,
                    "Failed to create mount point: {}: {}",
-                   e.code(),
+                   e.code().value(),
                    e.what());
                throw;
              }

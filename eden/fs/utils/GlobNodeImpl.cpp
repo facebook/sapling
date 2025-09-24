@@ -28,7 +28,7 @@ struct fmt::formatter<facebook::eden::detail::Indentation> {
   template <typename FormatContext>
   auto format(
       const facebook::eden::detail::Indentation& indentation,
-      FormatContext& ctx) {
+      FormatContext& ctx) const {
     return std::fill_n(ctx.out(), indentation.width, ' ');
   }
 };

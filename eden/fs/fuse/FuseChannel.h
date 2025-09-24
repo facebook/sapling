@@ -1004,7 +1004,7 @@ struct formatter<facebook::eden::FuseChannel::InvalidationEntry>
   template <typename FormatContext>
   auto format(
       const facebook::eden::FuseChannel::InvalidationEntry& entry,
-      FormatContext& ctx) {
+      FormatContext& ctx) const {
     auto out = ctx.out();
     switch (entry.type) {
       case facebook::eden::FuseChannel::InvalidationType::INODE:
