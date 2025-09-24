@@ -22,6 +22,7 @@ use mercurial_types::HgChangesetIdPrefix;
 use mercurial_types::HgChangesetIdsResolvedFromPrefix;
 use mononoke_types::ChangesetId;
 use mononoke_types::RepositoryId;
+use mononoke_types::Timestamp;
 use rendezvous::ConfigurableRendezVousController;
 use rendezvous::RendezVous;
 use rendezvous::RendezVousOptions;
@@ -601,6 +602,8 @@ async fn select_mapping(
     }
     let sql_query_tel: SqlQueryTelemetry = ctx.sql_query_telemetry();
 
+    let num_ids_requested = cs_ids.count();
+
     let (found, missing): (Vec<_>, _) = match cs_ids {
         BonsaiOrHgChangesetIds::Bonsai(bcs_ids) => {
             let ret = connection
@@ -608,6 +611,7 @@ async fn select_mapping(
                 .dispatch(ctx.fb, bcs_ids.into_iter().collect(), || {
                     let conn = connection.conn.clone();
                     let read_master_conn = read_master_connection.conn.clone();
+
                     move |bcs_ids| async move {
                         let bcs_ids = bcs_ids.into_iter().collect::<Vec<_>>();
 
@@ -626,15 +630,14 @@ async fn select_mapping(
                                         + Send
                                         + Sync,
                                 >,
-                            > = Arc::new(Box::new(|_| {
-                                // TODO: implement this
-                                false
+                            > = Arc::new(Box::new(move |query_res| {
+                                query_res.len() == num_ids_requested
                             }));
 
                             SelectMappingByBonsai::query_with_consistency(
                                 &sql_connections,
                                 sql_query_tel.clone(),
-                                None, // TODO: set it to Timestamp::now()
+                                Some(Timestamp::now()),
                                 Some(return_early_if),
                                 cons_read_opts,
                                 &repo_id,
@@ -697,15 +700,14 @@ async fn select_mapping(
                                         + Send
                                         + Sync,
                                 >,
-                            > = Arc::new(Box::new(|_| {
-                                // TODO: implement this
-                                false
+                            > = Arc::new(Box::new(move |query_res| {
+                                query_res.len() == num_ids_requested
                             }));
 
                             SelectMappingByHg::query_with_consistency(
                                 &sql_connections,
                                 sql_query_tel.clone(),
-                                None, // TODO: set it to Timestamp::now()
+                                Some(Timestamp::now()),
                                 Some(return_early_if),
                                 cons_read_opts,
                                 &repo_id,
