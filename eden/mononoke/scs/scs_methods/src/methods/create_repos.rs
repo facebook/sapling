@@ -59,9 +59,9 @@ use crate::source_control_impl::SourceControlServiceImpl;
 
 const QUICK_REPO_DEFINITIONS_CONFIG_NAME: &str =
     "source/scm/mononoke/repos/quick_repo_definitions.cconf";
-const DIFF_AUTHOR: &str = "scm_server_infra <oncall+scm_server_infra@xmail.facebook.com>";
-const PREPARE_TIMEOUT: Duration = Duration::from_secs(60 * 20);
-const LAND_TIMEOUT: Duration = Duration::from_secs(60 * 20);
+const DIFF_AUTHOR: &str = "scm_server_infra";
+const PREPARE_TIMEOUT: Duration = Duration::from_secs(60 * 30);
+const LAND_TIMEOUT: Duration = Duration::from_secs(60 * 90);
 
 async fn ensure_acls_allow_repo_creation(
     ctx: CoreContext,
@@ -550,12 +550,11 @@ async fn create_repo_configs_in_mononoke(
         .add_author(DIFF_AUTHOR.to_string())
         .add_commit_message(
             format!(
-                "[mononoke]: Create {} git repositories (automated)",
+                "[mononoke]: Create {} git repositories (automated)\n@bypass_size_limit",
                 repos_ids_and_requests.len()
             ),
             summary,
         )
-        // Give it 10 mins to conf build
         .prepare(PREPARE_TIMEOUT)
         .await
         .map_err(|e| scs_errors::internal_error(format!("{e:#}")))?;
