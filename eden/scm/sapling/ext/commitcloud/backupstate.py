@@ -9,6 +9,8 @@ import os
 
 from sapling import error, node as nodemod, util
 
+from . import util as ccutil
+
 
 FORMAT_VERSION = "v2"
 
@@ -66,6 +68,9 @@ class BackupState:
         ]
         if not unknown:
             return
+
+        if not ccutil.is_supported(repo):
+            raise error.Abort("this repository's remote does not support commit cloud")
 
         try:
             unknown = [nodemod.bin(node) for node in unknown]
