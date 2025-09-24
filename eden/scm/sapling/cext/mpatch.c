@@ -55,34 +55,35 @@ static void setpyerr(int r) {
 }
 
 struct mpatch_flist* cpygetitem(void* bins, ssize_t pos) {
-  const char* buffer;
-  struct mpatch_flist* res;
-  ssize_t blen;
+  Py_buffer buffer;
+  struct mpatch_flist* res = NULL;
   int r;
 
   PyObject* tmp = PyList_GetItem((PyObject*)bins, pos);
   if (!tmp) {
     return NULL;
   }
-  if (PyObject_AsCharBuffer(tmp, &buffer, (Py_ssize_t*)&blen)) {
+  if (PyObject_GetBuffer(tmp, &buffer, PyBUF_CONTIG_RO)) {
     return NULL;
   }
-  if ((r = mpatch_decode(buffer, blen, &res)) < 0) {
+  if ((r = mpatch_decode(buffer.buf, buffer.len, &res)) < 0) {
     if (!PyErr_Occurred()) {
       setpyerr(r);
     }
-    return NULL;
+    res = NULL;
   }
+
+  PyBuffer_Release(&buffer);
   return res;
 }
 
 static PyObject* patches(PyObject* self, PyObject* args) {
   PyObject *text, *bins, *result;
   struct mpatch_flist* patch;
-  const char* in;
+  Py_buffer buffer;
   int r = 0;
   char* out;
-  Py_ssize_t len, outlen, inlen;
+  Py_ssize_t len, outlen;
 
   if (!PyArg_ParseTuple(args, "OO:mpatch", &text, &bins)) {
     return NULL;
@@ -95,7 +96,7 @@ static PyObject* patches(PyObject* self, PyObject* args) {
     return text;
   }
 
-  if (PyObject_AsCharBuffer(text, &in, &inlen)) {
+  if (PyObject_GetBuffer(text, &buffer, PyBUF_CONTIG_RO)) {
     return NULL;
   }
 
@@ -104,10 +105,11 @@ static PyObject* patches(PyObject* self, PyObject* args) {
     if (!PyErr_Occurred()) {
       PyErr_NoMemory();
     }
-    return NULL;
+    result = NULL;
+    goto cleanup;
   }
 
-  outlen = mpatch_calcsize(inlen, patch);
+  outlen = mpatch_calcsize(buffer.len, patch);
   if (outlen < 0) {
     r = (int)outlen;
     result = NULL;
@@ -119,12 +121,14 @@ static PyObject* patches(PyObject* self, PyObject* args) {
     goto cleanup;
   }
   out = PyBytes_AsString(result);
-  if ((r = mpatch_apply(out, in, inlen, patch)) < 0) {
+  r = mpatch_apply(out, buffer.buf, buffer.len, patch);
+  if (r < 0) {
     Py_DECREF(result);
     result = NULL;
   }
 cleanup:
   mpatch_lfree(patch);
+  PyBuffer_Release(&buffer);
   if (!result && !PyErr_Occurred()) {
     setpyerr(r);
   }
@@ -137,7 +141,7 @@ static PyObject* patchedsize(PyObject* self, PyObject* args) {
   Py_ssize_t patchlen;
   char* bin;
 
-  if (!PyArg_ParseTuple(args, "ls#", &orig, &bin, &patchlen)) {
+  if (!PyArg_ParseTuple(args, "ly#", &orig, &bin, &patchlen)) {
     return NULL;
   }
 
