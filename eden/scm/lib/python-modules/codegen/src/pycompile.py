@@ -308,14 +308,16 @@ if os.name != "nt":
     STDLIB_MODULE_NAMES.add(sysconfig._get_sysconfigdata_name())
 
 
-def main():
-    root_modules = (os.getenv("ROOT_MODULES") or "").split() or default_root_modules()
-    sys_path0 = os.getenv("SYS_PATH0")
+def get_version() -> tuple[int, int]:
+    return sys.version_info[:2]
+
+
+def compile_modules(sys_path0=None) -> list[tuple[str, str, bytes, bytes, bool]]:
+    root_modules = default_root_modules()
     if sys_path0:
         sys.path[0:0] = [sys_path0]
 
-    print(sys.version_info.major)
-    print(sys.version_info.minor)
+    out = []
     stdlib_names = STDLIB_MODULE_NAMES
 
     for module_name, path, source, code in find_modules(root_modules):
@@ -331,13 +333,15 @@ def main():
                     continue
                 raise
             code = marshal.dumps(code_obj)
-        print(module_name)
-        print(hex(path.encode()))
-        print(hex(source.decode(errors="replace").encode()))
-        print(hex(code))
         is_stdlib = module_name.split(".", 1)[0] in stdlib_names
-        print(is_stdlib)
-        print()
+        out.append(
+            (
+                module_name,
+                path,
+                source.decode(errors="replace").encode(),
+                code,
+                is_stdlib,
+            )
+        )
 
-
-main()
+    return out

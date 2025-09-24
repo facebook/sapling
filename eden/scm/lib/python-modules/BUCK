@@ -1,5 +1,5 @@
+load("@fbcode//eden/scm:targets.bzl", "exec_compatible_with_target")
 load("@fbcode_macros//build_defs:native_rules.bzl", "buck_genrule")
-load("@fbcode_macros//build_defs:python_binary.bzl", "python_binary")
 load("@fbsource//tools/build_defs:rust_library.bzl", "rust_library")
 
 oncall("sapling")
@@ -7,14 +7,11 @@ oncall("sapling")
 buck_genrule(
     name = "gen=compiled.rs",
     out = "compiled.rs",
-    cmd = '$(exe //eden/scm/lib/python-modules/codegen-exe:codegen-exe) --out $OUT --python "$(exe :pymain)" --sys-path $(location //eden/scm:pure-modules)',
-)
-
-# alternatively, if we know the buck target to the "python", we can use that instead.
-python_binary(
-    name = "pymain",
-    main_src = "buck_pymain.py",
-    versions = {"python": "3.10"},
+    # exe_target respects PACKAGE Python version override. exe does not.
+    cmd = "$(exe_target //eden/scm/lib/python-modules/codegen-exe:codegen-exe) --out $OUT --sys-path $(location //eden/scm:pure-modules)",
+    # Force execution platform to match target platform to avoid "exec format error".
+    # See docstring of exec_compatible_with_target.
+    exec_compatible_with = exec_compatible_with_target(),
 )
 
 rust_library(
@@ -24,7 +21,6 @@ rust_library(
         "extra_buck_dependencies": {
             "build-dependencies": [
                 "//eden/scm/lib/python-modules/codegen:codegen",
-                "//eden/scm/lib/util/python-sysconfig:python-sysconfig",
             ],
         },
         "lib": {"name": "python-modules"},

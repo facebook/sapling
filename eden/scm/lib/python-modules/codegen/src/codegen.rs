@@ -6,10 +6,13 @@
  */
 
 use std::env;
-use std::io::Write;
 use std::path::Path;
-use std::process::Command;
-use std::process::Stdio;
+
+use cpython::NoArgs;
+use cpython::PyBytes;
+use cpython::PyModule;
+use cpython::PyResult;
+use cpython::Python;
 
 /// Return generated Rust code containing pre-compiled pure Python modules:
 ///
@@ -30,53 +33,33 @@ use std::process::Stdio;
 /// ```
 ///
 /// Input:
-/// - `python` is the path to the Python interpreter.
+/// - The Python interpreter is decided by the rust-cpython crate.
+///   It typically respects the `PYTHON_SYS_EXECUTABLE` env var.
 /// - `sys_path` will be inserted to Python's `sys.path[0:0]`.
 ///   If None, then pycompile.py reads $SYS_ARG0.
-pub fn generate_code(python: &Path, sys_path: Option<&Path>) -> String {
+pub fn generate_code(sys_path: Option<&Path>) -> PyResult<String> {
     let is_cargo = is_cargo();
 
-    // Run the Python script using the specified Python.
-    let mut cmd = if cfg!(windows) && python.to_str().unwrap().contains(' ') {
-        // On Windows, buck might pass "python.exe something.par" here.
-        // Run it using cmd.exe.
-        let cmd = env::var("ComSpec").unwrap_or_else(|_| "cmd.exe".to_string());
-        let mut cmd = Command::new(cmd);
-        cmd.arg("/c");
-        #[cfg(windows)]
-        {
-            use std::os::windows::process::CommandExt;
-            cmd.raw_arg(python);
-        }
-        cmd
-    } else {
-        Command::new(python)
-    };
-    cmd.stdin(Stdio::piped()).stdout(Stdio::piped());
-    if let Some(path) = sys_path {
-        cmd.env("SYS_PATH0", path);
-    } else if is_cargo {
-        println!("cargo:rerun-if-env-changed=SYS_PATH0");
-    }
-    cmd.env("ROOT_MODULES", "");
-    let mut child = cmd.spawn().unwrap();
-    {
-        let stdin = child.stdin.as_mut().unwrap();
-        stdin.write_all(PYCOMPILE_SCRIPT.as_bytes()).unwrap();
-    }
+    // Prepare the module.
+    let gil = Python::acquire_gil();
+    let py = gil.python();
+    let module = PyModule::new(py, "sapling_codegen")?;
+    let globals = module.dict(py);
+    py.run(PYCOMPILE_SCRIPT, Some(&globals), None)?;
 
-    // Parse output into ModuleInfos.
-    let waited = child.wait_with_output().unwrap();
-    if !waited.status.success() {
-        panic!("python failed to run: {:#?}", waited.status);
-    }
-    let output = String::from_utf8(waited.stdout).unwrap();
-    let output_lines = output.lines().collect::<Vec<_>>();
-    let version_major: usize = output_lines[0].trim().parse().unwrap();
-    let version_minor: usize = output_lines[1].trim().parse().unwrap();
-    let module_infos: Vec<ModuleInfo> = output_lines[2..]
-        .chunks_exact(6)
-        .map(ModuleInfo::from_lines)
+    // Get the version numbers for bytecode ABI check.
+    let (version_major, version_minor) = module
+        .call(py, "get_version", NoArgs, None)?
+        .extract::<(usize, usize)>(py)?;
+
+    // Compile modules.
+    let sys_path0 = sys_path.map(|p| p.to_str().unwrap());
+    let module_tuples = module
+        .call(py, "compile_modules", (sys_path0,), None)?
+        .extract::<Vec<ModuleInfoTuple>>(py)?;
+    let module_infos: Vec<ModuleInfo> = module_tuples
+        .into_iter()
+        .map(|t| ModuleInfo::from_tuple(py, t))
         .collect();
 
     if is_cargo {
@@ -130,7 +113,9 @@ pub fn generate_code(python: &Path, sys_path: Option<&Path>) -> String {
     ));
     generated_lines.push(String::new());
 
-    generated_lines.join("\n")
+    let generated_code = generated_lines.join("\n");
+
+    Ok(generated_code)
 }
 
 pub(crate) fn is_cargo() -> bool {
@@ -145,14 +130,12 @@ struct ModuleInfo {
     is_stdlib: bool,
 }
 
+type ModuleInfoTuple = (String, String, PyBytes, PyBytes, bool);
+
 impl ModuleInfo {
-    fn from_lines(lines: &[&str]) -> Self {
-        let name = lines[0].to_string();
-        let path = String::from_utf8(from_hex(lines[1].as_bytes())).unwrap();
-        let source = from_hex(lines[2].as_bytes());
-        let byte_code = from_hex(lines[3].as_bytes());
-        let is_stdlib = lines[4].starts_with('T');
-        assert!(lines[5].is_empty());
+    fn from_tuple(py: Python, (name, path, source, byte_code, is_stdlib): ModuleInfoTuple) -> Self {
+        let source = source.data(py).to_vec();
+        let byte_code = byte_code.data(py).to_vec();
         Self {
             name,
             path,
@@ -165,15 +148,6 @@ impl ModuleInfo {
     fn is_package(&self) -> bool {
         self.path.ends_with("__init__.py") || self.path.ends_with("__init__.pyc")
     }
-}
-
-fn from_hex(hex: &[u8]) -> Vec<u8> {
-    hex.chunks_exact(2)
-        .map(|chunk| {
-            let s = std::str::from_utf8(chunk).unwrap();
-            u8::from_str_radix(s, 16).unwrap()
-        })
-        .collect()
 }
 
 fn escape_bytes(bytes: &[u8]) -> String {
