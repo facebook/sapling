@@ -132,6 +132,8 @@ def get_draft_nodes(repo, dest, head_node, remote_bookmark, curr_bookmark_val):
             source=dest,
             bookmarknames=(remote_bookmark,),
             remotebookmarks={remote_bookmark: bookmark_node},
+            # Don't update visibility since we don't want to bookmark_node to be added to visible heads.
+            visible=False,
         )
     draft_nodes = repo.dageval(lambda: only([head_node], public()))
     if repo.dageval(lambda: merges(draft_nodes)):

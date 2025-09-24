@@ -71,14 +71,12 @@ Don't try push rebase:
 
   $ hg push -q -r bbfdd6cb49aa --to scratch/test --force
 
-FIXME: dc0947a82db8 should not be visible
+dc0947a82db8 should not be visible anymore:
   $ log
   o  bbfdd6cb49aa 'C' remote/scratch/test
   │
-  │ x  dc0947a82db8 'C'  (Rewritten using rebase into bbfdd6cb49aa)
-  │ │
-  o │  112478962961 'B'
-  ├─╯
+  o  112478962961 'B'
+  │
   o  426bada5c675 'A'
 
   $ hg push --delete scratch/test
