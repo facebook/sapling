@@ -6,12 +6,12 @@
  */
 
 use std::collections::BTreeMap;
-use std::fmt;
 use std::path::PathBuf;
 use std::str::FromStr;
 
 use anyhow::Context;
 use blake3::Hasher as Blake3Hasher;
+use derivative::Derivative;
 use indexedlog::log::IndexOutput;
 use revisionstore::indexedlogutil::Store;
 use revisionstore::indexedlogutil::StoreOpenOptions;
@@ -22,7 +22,6 @@ use serde::Serializer;
 use types::Blake3;
 use types::HgId;
 use types::RepoPathBuf;
-use types::sha::to_hex;
 
 #[derive(Clone, Copy, PartialEq, Debug)]
 #[repr(u8)]
@@ -70,15 +69,6 @@ impl<'de> Deserialize<'de> for FilterVersion {
                 "Unknown filter version: {}",
                 v
             ))),
-        }
-    }
-}
-
-impl fmt::Display for FilterVersion {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        match self {
-            FilterVersion::V1 => write!(f, "V1"),
-            FilterVersion::Legacy => write!(f, "Legacy"),
         }
     }
 }
@@ -150,6 +140,7 @@ impl FilterId {
         }
     }
 
+    #[allow(dead_code)]
     pub fn version(&self) -> FilterVersion {
         match self {
             FilterId::Legacy(_) => FilterVersion::Legacy,
@@ -168,22 +159,6 @@ impl FilterId {
                 } else {
                     Ok(FilterId::Legacy(b.to_vec()))
                 }
-            }
-        }
-    }
-}
-
-impl fmt::Display for FilterId {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        match self {
-            FilterId::Legacy(id) => write!(
-                f,
-                "FilterId::Legacy({})",
-                str::from_utf8(id).unwrap_or("invalid filterid")
-            ),
-            FilterId::V1(_, id) => {
-                let hash: String = id.iter().map(|b| format!("{:02x}", b)).collect();
-                write!(f, "FilterId::V1({})", hash)
             }
         }
     }
@@ -229,28 +204,11 @@ impl FilterId {
     }
 }
 
-#[derive(Serialize, Deserialize)]
+#[derive(Serialize, Deserialize, Debug)]
 pub struct Filter {
     filter_id: FilterId,
     filter_paths: Vec<RepoPathBuf>,
     commit_id: HgId,
-}
-
-impl fmt::Display for Filter {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(
-            f,
-            "Filter {{ version: {}, filter_id: {}, commit_id: {}, filter_paths: [{}] }}",
-            self.filter_id.version(),
-            self.filter_id,
-            self.commit_id,
-            self.filter_paths
-                .iter()
-                .map(|p| p.to_string())
-                .collect::<Vec<_>>()
-                .join(", ")
-        )
-    }
 }
 
 impl Filter {
@@ -287,24 +245,15 @@ impl Filter {
     }
 }
 
+#[derive(Derivative)]
+#[derivative(Debug)]
 pub(crate) struct FilterGenerator {
     dot_hg_path: PathBuf,
+    #[derivative(Debug = "ignore")]
     filter_store: Option<Store>,
     hash_key: [u8; 32],
     // Allows slow rollout of new filter versions
     default_filter_version: FilterVersion,
-}
-
-impl fmt::Display for FilterGenerator {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(
-            f,
-            "FilterGenerator {{ dot_hg_path: {:?}, hash_key: {}, default_filter_version: {:?} }}",
-            self.dot_hg_path,
-            to_hex(&self.hash_key),
-            self.default_filter_version
-        )
-    }
 }
 
 impl FilterGenerator {
@@ -428,7 +377,7 @@ impl FilterGenerator {
                     }),
                 Some(Err(e)) => Err(e),
                 None => Err(anyhow::anyhow!(
-                    "Failed to find a stored Filter for ID: {}",
+                    "Failed to find a stored Filter for ID: {:?}",
                     id
                 )),
             }
@@ -553,12 +502,6 @@ mod tests {
     }
 
     #[test]
-    fn test_filter_version_display() {
-        assert_eq!(FilterVersion::Legacy.to_string(), "Legacy");
-        assert_eq!(FilterVersion::V1.to_string(), "V1");
-    }
-
-    #[test]
     fn test_filter_version_serialize() {
         let mut buffer = Vec::new();
         serialize_into(&mut buffer, &FilterVersion::V1).unwrap();
@@ -658,15 +601,6 @@ mod tests {
     }
 
     #[test]
-    fn test_filter_id_display() {
-        // Test Legacy display
-        let legacy_id_str = format!("{}:{}", DEFAULT_FILTER_PATH, TEST_COMMIT_ID_STR);
-        let legacy_id = FilterId::Legacy(legacy_id_str.as_bytes().into());
-        let display_str = legacy_id.to_string();
-        assert_eq!(format!("FilterId::Legacy({})", legacy_id_str), display_str);
-    }
-
-    #[test]
     fn test_filter_new_legacy() {
         let filter_path = RepoPathBuf::from_utf8("test.txt".into()).unwrap();
         let commit_id = HgId::from_hex(TEST_COMMIT_ID).unwrap();
@@ -680,31 +614,6 @@ mod tests {
             filter.filter_id.id().unwrap(),
             format!("{}:{}", filter_path, TEST_COMMIT_ID_STR).as_bytes()
         );
-    }
-
-    #[test]
-    fn test_filter_display() {
-        let filter_path = RepoPathBuf::from_utf8("test.txt".into()).unwrap();
-        let commit_id = HgId::from_hex(TEST_COMMIT_ID).unwrap();
-
-        let filter = Filter::new_legacy(filter_path, commit_id).unwrap();
-        let display_str = filter.to_string();
-
-        assert!(display_str.contains("Filter"));
-        assert!(display_str.contains("Legacy"));
-        assert!(display_str.contains("test.txt"));
-        assert!(display_str.contains(TEST_COMMIT_ID_STR));
-    }
-
-    #[test]
-    fn test_filter_generator_display() {
-        let (_tmp_dir, filter_gen) = create_test_filter_generator(FilterVersion::Legacy);
-        let display_str = filter_gen.to_string();
-
-        assert!(display_str.contains("FilterGenerator"));
-        assert!(display_str.contains("dot_hg_path"));
-        assert!(display_str.contains("hash_key"));
-        assert!(display_str.contains("Legacy"));
     }
 
     #[test]

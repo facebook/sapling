@@ -15,6 +15,7 @@ name = "edenfs_client"
 [dependencies]
 anyhow = "1.0.98"
 blake3 = { version = "=1.8.2", features = ["mmap", "rayon", "traits-preview"] }
+derivative = "2.2"
 fbthrift_socket = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 fs-err = { version = "3", features = ["tokio"] }
 parking_lot = { version = "0.12.1", features = ["send_guard"] }
