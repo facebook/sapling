@@ -54,14 +54,16 @@ impl EdenFsClient {
     pub fn from_wdir(wdir_root: &Path, config: &dyn Config) -> anyhow::Result<Self> {
         let dot_dir = wdir_root.join(identity::must_sniff_dir(wdir_root)?.dot_dir());
         let eden_config = EdenConfig::from_root(wdir_root)?;
-        let config_version: Option<String> = config.get_opt("experimental", "filter-version")?;
-        let filter_version = config_version.map_or(FilterVersion::Legacy, |v| {
+        let version_config: Option<String> = config.get_opt("experimental", "filter-version")?;
+        let use_filter_storage = config.get_or("experimental", "use-filter-storage", || true)?;
+        let filter_version = version_config.map_or(FilterVersion::Legacy, |v| {
             FilterVersion::from_str(&v).unwrap_or_else(|e| {
                 tracing::warn!("provided filter version is invalid: {:?}", e);
                 FilterVersion::Legacy
             })
         });
-        let filter_generator = FilterGenerator::new(dot_dir, filter_version, None, None)?;
+        let filter_generator =
+            FilterGenerator::new(dot_dir, filter_version, use_filter_storage, None, None)?;
         Ok(Self {
             eden_config,
             filter_generator: Some(Mutex::new(filter_generator)),

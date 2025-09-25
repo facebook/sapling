@@ -260,32 +260,36 @@ impl FilterGenerator {
     pub fn new(
         dot_hg_path: PathBuf,
         default_filter_version: FilterVersion,
+        use_filter_store: bool,
         filter_store_path: Option<PathBuf>,
         key: Option<&[u8; Blake3::len()]>,
     ) -> anyhow::Result<Self> {
         // Filter content can be exceptionally long, so we store the actual filter content in an
         // indexedlog store and use a blake3 hash as the index to the filter contents. We avoid
         // long filter ids since EdenFS performance can degrade when ObjectID size grows too large.
-        let filter_store = if default_filter_version == FilterVersion::Legacy {
-            // Using Legacy FilterVersion turns off usage of indexedlog
-            None
-        } else {
+        let (filter_store, default_version) = if use_filter_store {
             let filter_store_path =
                 filter_store_path.unwrap_or_else(|| dot_hg_path.join("filters"));
             let config = BTreeMap::<&str, &str>::new();
-            Some(
-                StoreOpenOptions::new(&config)
-                    .index("v1_filter_index", |_| {
-                        vec![IndexOutput::Reference(0..(Blake3::len() / 4) as u64)]
-                    })
-                    .permanent(&filter_store_path)
-                    .with_context(|| {
-                        anyhow::anyhow!(
-                            "Failed to open filter index store at {:?}",
-                            filter_store_path
-                        )
-                    })?,
+            (
+                Some(
+                    StoreOpenOptions::new(&config)
+                        .index("v1_filter_index", |_| {
+                            vec![IndexOutput::Reference(0..(Blake3::len() / 4) as u64)]
+                        })
+                        .permanent(&filter_store_path)
+                        .with_context(|| {
+                            anyhow::anyhow!(
+                                "Failed to open filter index store at {:?}",
+                                filter_store_path
+                            )
+                        })?,
+                ),
+                default_filter_version,
             )
+        } else {
+            // If filter storage is disabled, we shouldn't try to construct new V1 filter IDs
+            (None, FilterVersion::Legacy)
         };
 
         #[cfg(fbcode_build)]
@@ -300,7 +304,7 @@ impl FilterGenerator {
             dot_hg_path,
             filter_store,
             hash_key,
-            default_filter_version,
+            default_filter_version: default_version,
         })
     }
 
@@ -483,7 +487,10 @@ mod tests {
 
     const DEFAULT_FILTER_PATH: &str = "path/to/filter.txt";
 
-    fn create_test_filter_generator(filter_version: FilterVersion) -> (TempDir, FilterGenerator) {
+    fn create_test_filter_generator(
+        filter_version: FilterVersion,
+        use_storage: Option<bool>,
+    ) -> (TempDir, FilterGenerator) {
         let temp_dir = TempDir::new().unwrap();
         let dot_hg_path = temp_dir.path().join(".hg");
         std::fs::create_dir_all(&dot_hg_path).unwrap();
@@ -493,6 +500,7 @@ mod tests {
         let filter_gen = FilterGenerator::new(
             dot_hg_path,
             filter_version,
+            use_storage.unwrap_or(true),
             Some(filter_store_path),
             Some(TEST_HASH_KEY),
         )
@@ -625,7 +633,7 @@ mod tests {
 
     #[test]
     fn test_read_filter_config_no_sparse_file() {
-        let (_tmp_dir, filter_gen) = create_test_filter_generator(FilterVersion::Legacy);
+        let (_tmp_dir, filter_gen) = create_test_filter_generator(FilterVersion::Legacy, None);
         // No sparse file exists
         let result = filter_gen.read_filter_config().unwrap();
         assert!(result.is_none());
@@ -633,7 +641,7 @@ mod tests {
 
     #[test]
     fn test_read_filter_config_empty_file() {
-        let (_tmp_dir, filter_gen) = create_test_filter_generator(FilterVersion::Legacy);
+        let (_tmp_dir, filter_gen) = create_test_filter_generator(FilterVersion::Legacy, None);
         create_sparse_file(&filter_gen.dot_hg_path, "").unwrap();
         let result = filter_gen.read_filter_config().unwrap();
         assert!(result.is_none());
@@ -641,7 +649,7 @@ mod tests {
 
     #[test]
     fn test_read_filter_config_whitespace_only() {
-        let (_tmp_dir, filter_gen) = create_test_filter_generator(FilterVersion::Legacy);
+        let (_tmp_dir, filter_gen) = create_test_filter_generator(FilterVersion::Legacy, None);
         create_sparse_file(&filter_gen.dot_hg_path, "   \n\t  \n").unwrap();
         let result = filter_gen.read_filter_config().unwrap();
         assert!(result.is_none());
@@ -649,7 +657,7 @@ mod tests {
 
     #[test]
     fn test_read_filter_config_valid_includes() {
-        let (_tmp_dir, filter_gen) = create_test_filter_generator(FilterVersion::Legacy);
+        let (_tmp_dir, filter_gen) = create_test_filter_generator(FilterVersion::Legacy, None);
         let contents = "%include path/to/filter1.txt\n%include path/to/filter2.txt\n";
         create_sparse_file(&filter_gen.dot_hg_path, contents).unwrap();
         let result = filter_gen.read_filter_config().unwrap().unwrap();
@@ -660,7 +668,7 @@ mod tests {
 
     #[test]
     fn test_read_filter_config_invalid_format() {
-        let (_tmp_dir, filter_gen) = create_test_filter_generator(FilterVersion::Legacy);
+        let (_tmp_dir, filter_gen) = create_test_filter_generator(FilterVersion::Legacy, None);
 
         // Create sparse file with invalid line (not starting with %include)
         let contents = "invalid line\n%include valid.txt\n";
@@ -679,7 +687,7 @@ mod tests {
 
     #[test]
     fn test_active_filter_id_no_config() {
-        let (_tmp_dir, mut filter_gen) = create_test_filter_generator(FilterVersion::Legacy);
+        let (_tmp_dir, mut filter_gen) = create_test_filter_generator(FilterVersion::Legacy, None);
         let commit_id = HgId::from_hex(TEST_COMMIT_ID).unwrap();
 
         let result = filter_gen.active_filter_id(&commit_id).unwrap();
@@ -688,7 +696,7 @@ mod tests {
 
     #[test]
     fn test_active_filter_id_with_filters() {
-        let (_tmp_dir, mut filter_gen) = create_test_filter_generator(FilterVersion::V1);
+        let (_tmp_dir, mut filter_gen) = create_test_filter_generator(FilterVersion::V1, None);
         let commit_id = HgId::from_hex(TEST_COMMIT_ID).unwrap();
 
         // Create sparse file with filters
@@ -711,7 +719,7 @@ mod tests {
 
     #[test]
     fn test_get_filter_legacy() {
-        let (_tmp_dir, filter_gen) = create_test_filter_generator(FilterVersion::Legacy);
+        let (_tmp_dir, filter_gen) = create_test_filter_generator(FilterVersion::Legacy, None);
 
         let legacy_id_str = &format!("{}:{}", DEFAULT_FILTER_PATH, TEST_COMMIT_ID_STR);
         let filter = filter_gen
@@ -729,7 +737,7 @@ mod tests {
 
     #[test]
     fn test_filter_roundtrip_v1() {
-        let (_tmp_dir, mut filter_gen) = create_test_filter_generator(FilterVersion::V1);
+        let (_tmp_dir, mut filter_gen) = create_test_filter_generator(FilterVersion::V1, None);
 
         // Create a V1 filter
         let filter_paths = vec![RepoPathBuf::from_string("test/filter.txt".to_string()).unwrap()];
@@ -757,7 +765,7 @@ mod tests {
 
     #[test]
     fn test_new_filter_multiple_inserts() {
-        let (_tmp_dir, mut filter_gen) = create_test_filter_generator(FilterVersion::V1);
+        let (_tmp_dir, mut filter_gen) = create_test_filter_generator(FilterVersion::V1, None);
 
         let filter_paths = vec![RepoPathBuf::from_string("test/filter.txt".to_string()).unwrap()];
         let commit_id = HgId::from_hex(TEST_COMMIT_ID).unwrap();
@@ -785,7 +793,7 @@ mod tests {
 
     #[test]
     fn test_filter_with_multiple_paths() {
-        let (_tmp_dir, mut filter_gen) = create_test_filter_generator(FilterVersion::V1);
+        let (_tmp_dir, mut filter_gen) = create_test_filter_generator(FilterVersion::V1, None);
 
         let filter_paths = vec![
             RepoPathBuf::from_utf8("path1.txt".into()).unwrap(),
@@ -810,7 +818,7 @@ mod tests {
 
     #[test]
     fn test_active_filter_id_legacy_single_path() {
-        let (_tmp_dir, mut filter_gen) = create_test_filter_generator(FilterVersion::Legacy);
+        let (_tmp_dir, mut filter_gen) = create_test_filter_generator(FilterVersion::Legacy, None);
         let commit_id = HgId::from_hex(TEST_COMMIT_ID).unwrap();
         let contents = "%include path/to/filter.txt\n";
         create_sparse_file(&filter_gen.dot_hg_path, contents).unwrap();
@@ -827,8 +835,9 @@ mod tests {
     }
 
     #[test]
-    fn test_active_filter_id_legacy_multiple_paths_with_legacy_default() {
-        let (_tmp_dir, mut filter_gen) = create_test_filter_generator(FilterVersion::Legacy);
+    fn test_active_filter_id_legacy_multiple_paths_with_no_storage() {
+        let (_tmp_dir, mut filter_gen) =
+            create_test_filter_generator(FilterVersion::V1, Some(false));
         let commit_id = HgId::from_hex(TEST_COMMIT_ID).unwrap();
         let contents = "%include path/to/filter1.txt\n%include path/to/filter2.txt\n";
         create_sparse_file(&filter_gen.dot_hg_path, contents).unwrap();
@@ -848,7 +857,7 @@ mod tests {
 
     #[test]
     fn test_active_filter_id_v1_single_path() {
-        let (_tmp_dir, mut filter_gen) = create_test_filter_generator(FilterVersion::V1);
+        let (_tmp_dir, mut filter_gen) = create_test_filter_generator(FilterVersion::V1, None);
         let commit_id = HgId::from_hex(TEST_COMMIT_ID).unwrap();
 
         // Create sparse file with a single filter path
