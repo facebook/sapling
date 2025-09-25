@@ -23,6 +23,7 @@ use serde::Deserialize;
 use thrift_types::edenfs;
 use thrift_types::edenfs::CheckoutProgressInfoRequest;
 use thrift_types::edenfs::CheckoutProgressInfoResponse;
+use thrift_types::edenfs::RootIdOptions;
 use thrift_types::edenfs_clients::EdenService;
 use thrift_types::fbthrift::binary_protocol::BinaryProtocol;
 use tokio_uds_compat::UnixStream;
@@ -31,6 +32,7 @@ use types::HgId;
 use types::RepoPathBuf;
 
 use crate::filter::FilterGenerator;
+use crate::filter::FilterId;
 use crate::types::CheckoutConflict;
 use crate::types::CheckoutMode;
 use crate::types::EdenError;
@@ -58,14 +60,11 @@ impl EdenFsClient {
         })
     }
 
-    pub fn get_active_filter_id(&self, commit: &HgId) -> Result<Option<String>, anyhow::Error> {
+    pub fn get_active_filter_id(&self, commit: &HgId) -> Result<Option<FilterId>, anyhow::Error> {
         match &self.filter_generator {
             Some(r#gen) => {
                 let mut lock = r#gen.lock();
-                match lock.active_filter_id(commit)? {
-                    Some(id) => Ok(Some(String::from_utf8(id.id()?)?)),
-                    None => Ok(None),
-                }
+                lock.active_filter_id(commit)
             }
             None => Ok(None),
         }
@@ -104,6 +103,26 @@ impl EdenFsClient {
         self.eden_config.root.clone().into_bytes()
     }
 
+    fn root_options_from_filter(filter: Option<FilterId>) -> RootIdOptions {
+        // TODO(T238835643): deprecate filterId field
+        let (filter_id, fid) = match filter {
+            Some(filter) => {
+                let fid = filter.id().ok();
+                let filter_id = match fid.as_ref() {
+                    None => None,
+                    Some(fid) => String::from_utf8(fid.to_vec()).ok(),
+                };
+                (filter_id, fid)
+            }
+            None => (None, None),
+        };
+        edenfs::RootIdOptions {
+            filterId: filter_id,
+            fid,
+            ..Default::default()
+        }
+    }
+
     /// Get file status. Normalized to non-Thrift types.
     #[tracing::instrument(skip(self))]
     pub fn get_status(
@@ -112,25 +131,16 @@ impl EdenFsClient {
         list_ignored: bool,
     ) -> anyhow::Result<BTreeMap<RepoPathBuf, FileStatus>> {
         let thrift_client = block_on(self.get_thrift_client())?;
-        // TODO(T238835643): deprecate filterId field
-        let filter_id = self.get_active_filter_id(&commit)?;
-        let fid = filter_id
-            .as_ref()
-            .map(|fid| fid.clone().as_bytes().to_vec());
 
         let start_time = Instant::now();
-
+        let root_id_options = Self::root_options_from_filter(self.get_active_filter_id(&commit)?);
         let thrift_result = extract_error(block_on(thrift_client.getScmStatusV2(
             &edenfs::GetScmStatusParams {
                 mountPoint: self.root_vec(),
                 commit: commit.into_byte_array().into(),
                 listIgnored: list_ignored,
                 cri: Some(self.get_client_request_info()),
-                rootIdOptions: Some(edenfs::RootIdOptions {
-                    filterId: filter_id,
-                    fid,
-                    ..Default::default()
-                }),
+                rootIdOptions: Some(root_id_options),
                 ..Default::default()
             },
         )))?;
@@ -184,20 +194,12 @@ impl EdenFsClient {
             ..Default::default()
         };
 
-        // TODO(T238835643): deprecate filterId field
-        let filter_id: Option<String> = self.get_active_filter_id(&p1)?;
-        let fid = filter_id
-            .as_ref()
-            .map(|fid| fid.clone().as_bytes().to_vec());
+        let root_id_options = Self::root_options_from_filter(self.get_active_filter_id(&p1)?);
         let root_vec = self.root_vec();
         let params = edenfs::ResetParentCommitsParams {
             hgRootManifest: Some(p1_tree.into_byte_array().into()),
             cri: Some(self.get_client_request_info()),
-            rootIdOptions: Some(edenfs::RootIdOptions {
-                filterId: filter_id,
-                fid,
-                ..Default::default()
-            }),
+            rootIdOptions: Some(root_id_options),
             ..Default::default()
         };
         extract_error(block_on(
@@ -244,20 +246,12 @@ impl EdenFsClient {
     ) -> anyhow::Result<Vec<CheckoutConflict>> {
         let tree_vec = tree.into_byte_array().into();
         let thrift_client = block_on(self.get_thrift_client())?;
-        let filter_id: Option<String> = self.get_active_filter_id(&node)?;
 
-        // TODO(T238835643): deprecate filterId field
-        let fid = filter_id
-            .as_ref()
-            .map(|fid| fid.clone().as_bytes().to_vec());
+        let root_id_options = Self::root_options_from_filter(self.get_active_filter_id(&node)?);
         let params = edenfs::CheckOutRevisionParams {
             hgRootManifest: Some(tree_vec),
             cri: Some(self.get_client_request_info()),
-            rootIdOptions: Some(edenfs::RootIdOptions {
-                filterId: filter_id,
-                fid,
-                ..Default::default()
-            }),
+            rootIdOptions: Some(root_id_options),
             ..Default::default()
         };
         let root_vec = self.root_vec();
