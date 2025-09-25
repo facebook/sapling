@@ -250,7 +250,7 @@ impl Filter {
 
 #[derive(Derivative)]
 #[derivative(Debug)]
-pub(crate) struct FilterGenerator {
+pub struct FilterGenerator {
     dot_dir: PathBuf,
     #[derivative(Debug = "ignore")]
     filter_store: Option<Store>,

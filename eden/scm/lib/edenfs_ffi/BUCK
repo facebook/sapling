@@ -39,6 +39,7 @@ rust_library(
         "fbsource//third-party/rust:tracing",
         "//eden/scm/lib/async-runtime:async-runtime",
         "//eden/scm/lib/config/model:configmodel",
+        "//eden/scm/lib/edenfs-client:edenfs-client",
         "//eden/scm/lib/identity:identity",
         "//eden/scm/lib/manifest:manifest",
         "//eden/scm/lib/metrics:metrics",
@@ -56,7 +57,7 @@ cpp_library(
     preferred_linkage = "static",
     undefined_symbols = True,
     exported_deps = [
-        "fbsource//third-party/rust:cxx-core",
+        "fbsource//third-party/rust:cxx-1.0.160-cxx-core",
         ":edenfs_ffi@header",  # @manual
         "//folly/futures:core",
     ],

@@ -18,6 +18,7 @@ use anyhow::anyhow;
 use configmodel::config::ConfigExt;
 use cxx::SharedPtr;
 use cxx::UniquePtr;
+use edenfs_client::filter::FilterGenerator;
 use manifest::FileMetadata;
 use manifest::FsNodeMetadata;
 use manifest::Manifest;
@@ -44,6 +45,7 @@ use crate::ffi::set_matcher_result;
 struct CachedObjects {
     expiration: Option<Instant>,
     repo: Repo,
+    filter_gen: FilterGenerator,
 }
 
 static OBJECT_CACHE: Lazy<Mutex<HashMap<PathBuf, CachedObjects>>> = Lazy::new(|| {
@@ -281,6 +283,10 @@ fn _profile_contents_from_repo(
         let repo = Repo::load(&abs_repo_path, &[]).with_context(|| {
             anyhow!("failed to load Repo object for {}", abs_repo_path.display())
         })?;
+
+        let config = repo.config();
+        let filter_gen = FilterGenerator::from_dot_dir(repo.dot_hg_path(), config)?;
+
         let ttl = repo
             .config()
             .must_get("edenfs", "ffs-repo-cache-ttl")
@@ -291,7 +297,14 @@ fn _profile_contents_from_repo(
             Some(Instant::now() + ttl)
         };
 
-        object_map.insert(abs_repo_path.clone(), CachedObjects { expiration, repo });
+        object_map.insert(
+            abs_repo_path.clone(),
+            CachedObjects {
+                expiration,
+                repo,
+                filter_gen,
+            },
+        );
     } else {
         OBJECT_CACHE_HITS.increment();
     }
