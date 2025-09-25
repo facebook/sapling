@@ -207,6 +207,7 @@ impl FilterId {
 }
 
 #[allow(dead_code)]
+#[derive(Serialize, Deserialize)]
 pub struct Filter {
     filter_id: FilterId,
     filter_paths: Vec<RepoPathBuf>,
@@ -530,5 +531,58 @@ mod tests {
 
         let result = filter_gen.active_filter_id(commit_id).unwrap();
         assert!(result.is_none());
+    }
+
+    #[test]
+    fn test_filter_roundtrip_v1() {
+        let (_tmp_dir, mut filter_gen) = create_test_filter_generator();
+
+        // Create a V1 filter
+        let filter_paths = vec![RepoPathBuf::from_string("test/filter.txt".to_string()).unwrap()];
+        let commit_id = HgId::from_hex(TEST_COMMIT_ID).unwrap();
+
+        let filter = Filter::new(filter_paths, commit_id, &mut filter_gen).unwrap();
+
+        // Serialize and deserialize
+        let ser = mincode::serialize(&filter).unwrap();
+        let deserialized: Filter = deserialize(&ser).unwrap();
+
+        // Verify the deserialized filter matches
+        assert!(matches!(
+            deserialized.filter_id.version(),
+            FilterVersion::V1
+        ));
+        assert_eq!(deserialized.commit_id, filter.commit_id);
+        assert_eq!(deserialized.filter_paths, filter.filter_paths);
+        assert_eq!(
+            deserialized.filter_id.id().unwrap(),
+            filter.filter_id.id().unwrap()
+        );
+        assert_eq!(deserialized.filter_id.index(), filter.filter_id.index());
+    }
+
+    #[test]
+    fn test_new_filter_multiple_inserts() {
+        let (_tmp_dir, mut filter_gen) = create_test_filter_generator();
+
+        let filter_paths = vec![RepoPathBuf::from_string("test/filter.txt".to_string()).unwrap()];
+        let commit_id = HgId::from_hex(TEST_COMMIT_ID).unwrap();
+        let filter = Filter::new(filter_paths.clone(), commit_id.clone(), &mut filter_gen).unwrap();
+
+        // Serialize and deserialize
+        let ser = mincode::serialize(&filter).unwrap();
+        let deserialized: Filter = mincode::deserialize(&ser).unwrap();
+
+        // Verify the deserialized filter matches
+        assert!(matches!(
+            deserialized.filter_id.version(),
+            FilterVersion::V1
+        ));
+        assert_eq!(deserialized.commit_id, filter.commit_id);
+        assert_eq!(deserialized.filter_paths, filter.filter_paths);
+        assert_eq!(
+            deserialized.filter_id.id().unwrap(),
+            filter.filter_id.id().unwrap()
+        );
     }
 }
