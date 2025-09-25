@@ -352,6 +352,7 @@ impl Convert for RawMetadataConfig {
                     commit_cloud: raw.commit_cloud.convert()?,
                     git_bundle_metadata: raw.git_bundles.convert()?,
                     repo_metadata: raw.repo_metadata.convert()?,
+                    restricted_paths: raw.restricted_paths.convert()?,
                 },
             )),
             RawMetadataConfig::oss_remote(raw) => Ok(MetadataDatabaseConfig::OssRemote(

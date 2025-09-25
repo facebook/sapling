@@ -1023,6 +1023,7 @@ mod test {
         commit_cloud = { db_address = "commit_cloud_db_address" }
         git_bundles = { db_address = "git_bundles" }
         repo_metadata = { db_address = "repo_metadata" }
+        restricted_paths = { db_address = "restricted_paths" }
 
         [main.blobstore.multiplexed_wal]
         multiplex_id = 1
@@ -1155,6 +1156,9 @@ mod test {
                 }),
                 repo_metadata: Some(RemoteDatabaseConfig {
                     db_address: "repo_metadata".into(),
+                }),
+                restricted_paths: Some(RemoteDatabaseConfig {
+                    db_address: "restricted_paths".into(),
                 }),
             }),
             ephemeral_blobstore: None,
@@ -1679,6 +1683,7 @@ mod test {
         commit_cloud = { db_address = "some_db" }
         git_bundles = { db_address = "git_bundles" }
         repo_metadata = { db_address = "repo_metadata" }
+        restricted_paths = { db_address = "restricted_paths" }
 
         [multiplex_store.blobstore.multiplexed_wal]
         multiplex_id = 1
@@ -1783,7 +1788,10 @@ mod test {
                         }),
                         repo_metadata: Some(RemoteDatabaseConfig {
                             db_address: "repo_metadata".into(),
-                        })
+                        }),
+                        restricted_paths: Some(RemoteDatabaseConfig {
+                            db_address: "restricted_paths".into(),
+                        }),
                     }),
                     ephemeral_blobstore: None,
                     mutable_blobstore: BlobConfig::MultiplexedWal {
@@ -1869,6 +1877,7 @@ mod test {
         commit_cloud = { db_address = "other_other_other_mutation_db" }
         git_bundles = { db_address = "git_bundles" }
         repo_metadata = { db_address = "repo_metadata" }
+        restricted_paths = { db_address = "restricted_paths" }
 
         [storage.multiplex_store.blobstore]
         disabled = {}
@@ -1920,7 +1929,8 @@ mod test {
                         deletion_log: None,
                         git_bundle_metadata: Some(RemoteDatabaseConfig { db_address: "git_bundles".into(), }),
                         commit_cloud: Some(RemoteDatabaseConfig { db_address: "other_other_other_mutation_db".into(), }),
-                        repo_metadata: Some(RemoteDatabaseConfig { db_address: "repo_metadata".into() })
+                        repo_metadata: Some(RemoteDatabaseConfig { db_address: "repo_metadata".into() }),
+                        restricted_paths: Some(RemoteDatabaseConfig { db_address: "restricted_paths".into(), })
                     }),
 
                     ephemeral_blobstore: None,

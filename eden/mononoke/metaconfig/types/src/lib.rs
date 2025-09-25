@@ -1232,6 +1232,8 @@ pub struct RemoteMetadataDatabaseConfig {
     pub git_bundle_metadata: Option<RemoteDatabaseConfig>,
     /// Database for repo metadata logger checkpointing
     pub repo_metadata: Option<RemoteDatabaseConfig>,
+    /// Database for restricted paths manifest ids storage
+    pub restricted_paths: Option<RemoteDatabaseConfig>,
 }
 
 /// Configuration for the Metadata database when it is remote.
