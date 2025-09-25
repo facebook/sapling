@@ -260,7 +260,7 @@ impl FilterGenerator {
     pub fn new(
         dot_hg_path: PathBuf,
         filter_store_path: PathBuf,
-        key: &[u8; Blake3::len()],
+        key: Option<&[u8; Blake3::len()]>,
         default_filter_version: FilterVersion,
     ) -> anyhow::Result<Self> {
         // Filter content can be exceptionally long, so we store the actual filter content in an
@@ -285,6 +285,11 @@ impl FilterGenerator {
                     })?,
             )
         };
+
+        #[cfg(fbcode_build)]
+        let key = key.unwrap_or(blake3_constants::BLAKE3_HASH_KEY);
+        #[cfg(not(fbcode_build))]
+        let key = key.unwrap_or(b"20220728-2357111317192329313741#");
 
         let mut hash_key = [0u8; 32];
         hash_key.copy_from_slice(key);
@@ -486,7 +491,7 @@ mod tests {
         let filter_gen = FilterGenerator::new(
             dot_hg_path,
             filter_store_path,
-            TEST_HASH_KEY,
+            Some(TEST_HASH_KEY),
             filter_version,
         )
         .unwrap();

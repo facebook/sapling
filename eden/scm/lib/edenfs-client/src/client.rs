@@ -56,10 +56,6 @@ impl EdenFsClient {
         let eden_config = EdenConfig::from_root(wdir_root)?;
         let filter_index_path: PathBuf = dot_dir.join("filters");
         let config_version: Option<String> = config.get_opt("experimental", "filter-version")?;
-        #[cfg(fbcode_build)]
-        let blake3_hash_key = blake3_constants::BLAKE3_HASH_KEY;
-        #[cfg(not(fbcode_build))]
-        let blake3_hash_key = b"20220728-2357111317192329313741#";
         let filter_version = config_version.map_or(FilterVersion::Legacy, |v| {
             FilterVersion::from_str(&v).unwrap_or_else(|e| {
                 tracing::warn!("provided filter version is invalid: {:?}", e);
@@ -67,7 +63,7 @@ impl EdenFsClient {
             })
         });
         let filter_generator =
-            FilterGenerator::new(dot_dir, filter_index_path, blake3_hash_key, filter_version)?;
+            FilterGenerator::new(dot_dir, filter_index_path, None, filter_version)?;
         Ok(Self {
             eden_config,
             filter_generator: Some(Mutex::new(filter_generator)),
