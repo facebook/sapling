@@ -108,7 +108,6 @@ struct V1FilterComponents<'a> {
 // reconstruct the original filtered object at any future point in time. To do this, we
 // associate a commit ID to each Filter Path which allows us to read Filter file contents from
 // the repo and reconstruct any filtered object.
-#[allow(dead_code)]
 #[derive(Debug, Serialize, Deserialize)]
 pub enum FilterId {
     /// Legacy FilterIDs are in the form:
@@ -133,7 +132,6 @@ pub enum FilterId {
     V1(FilterVersion, Vec<u8>),
 }
 
-#[allow(dead_code)]
 impl FilterId {
     pub fn id(&self) -> anyhow::Result<Vec<u8>> {
         match self {
@@ -158,6 +156,21 @@ impl FilterId {
             FilterId::V1(_, _) => FilterVersion::V1,
         }
     }
+
+    pub fn from_bytes(b: &[u8]) -> anyhow::Result<Self> {
+        match mincode::deserialize(b) {
+            Ok(filter) => Ok(filter),
+            Err(_) => {
+                let filter = str::from_utf8(b)?;
+                let parts = filter.split(":");
+                if parts.count() != 2 {
+                    Err(anyhow::anyhow!("Unknown filter id type: {:?}", b))
+                } else {
+                    Ok(FilterId::Legacy(b.to_vec()))
+                }
+            }
+        }
+    }
 }
 
 impl fmt::Display for FilterId {
@@ -176,7 +189,6 @@ impl fmt::Display for FilterId {
     }
 }
 
-#[allow(dead_code)]
 impl FilterId {
     fn new(
         version: FilterVersion,
@@ -217,7 +229,6 @@ impl FilterId {
     }
 }
 
-#[allow(dead_code)]
 #[derive(Serialize, Deserialize)]
 pub struct Filter {
     filter_id: FilterId,
@@ -242,7 +253,6 @@ impl fmt::Display for Filter {
     }
 }
 
-#[allow(dead_code)]
 impl Filter {
     // Default New constructor creates V1 Filters
     fn new(
@@ -297,7 +307,6 @@ impl fmt::Display for FilterGenerator {
     }
 }
 
-#[allow(dead_code)]
 impl FilterGenerator {
     pub fn new(
         dot_hg_path: PathBuf,
@@ -381,6 +390,52 @@ impl FilterGenerator {
             Err(anyhow::anyhow!(
                 "Tried to store V1 filter {:?}, but filter storage is disabled",
                 filter.filter_id,
+            ))
+        }
+    }
+
+    /// Get Filter content from a filter str
+    #[allow(dead_code)]
+    pub fn get_filter_from_bytes<T: AsRef<[u8]>>(&self, filter_id: T) -> anyhow::Result<Filter> {
+        let parsed_id = FilterId::from_bytes(filter_id.as_ref())?;
+        match parsed_id {
+            FilterId::Legacy(id) => unsafe {
+                // from_bytes guarantees that the bytes are valid utf8 and contains just 1 ":"
+                let s = str::from_utf8_unchecked(&id);
+                let mut it = s.split(":");
+                let path_str = it.next().expect("Legacy filter id has 2 components");
+                let filter_path = RepoPathBuf::from_string(path_str.into())?;
+                let commit_str = it.next().expect("Legacy filter id has 2 components");
+                let commit_id = HgId::from_str(commit_str)?;
+                Filter::new_legacy(filter_path, commit_id)
+            },
+            FilterId::V1 { .. } => self.get_filter_from_storage(&parsed_id),
+        }
+    }
+
+    /// Get stored Filter content using a FilterID
+    fn get_filter_from_storage(&self, id: &FilterId) -> anyhow::Result<Filter> {
+        if let Some(filter_store) = &self.filter_store {
+            let store = filter_store.read();
+            let mut lookup_iter = store.lookup(0, id.index()).with_context(|| {
+                anyhow::anyhow!("Failed to find filter with index {:?}", id.index())
+            })?;
+
+            match lookup_iter.next() {
+                Some(Ok(entry)) => mincode::deserialize(&entry[id.index().iter().count()..])
+                    .with_context(|| {
+                        anyhow::anyhow!("Invalid stored filter with index ({:?})", id.index())
+                    }),
+                Some(Err(e)) => Err(e),
+                None => Err(anyhow::anyhow!(
+                    "Failed to find a stored Filter for ID: {}",
+                    id
+                )),
+            }
+        } else {
+            Err(anyhow::anyhow!(
+                "Tried to fetch V1 filter {:?}, but filter storage is disabled",
+                id,
             ))
         }
     }
@@ -716,6 +771,47 @@ mod tests {
     }
 
     #[test]
+    fn test_active_filter_id_with_filters() {
+        let (_tmp_dir, mut filter_gen) = create_test_filter_generator(FilterVersion::V1);
+        let commit_id = HgId::from_hex(TEST_COMMIT_ID).unwrap();
+
+        // Create sparse file with filters
+        let contents = format!("%include {}\n", DEFAULT_FILTER_PATH);
+        create_sparse_file(&filter_gen.dot_hg_path, &contents).unwrap();
+
+        let result = filter_gen.active_filter_id(&commit_id).unwrap();
+        assert!(result.is_some());
+
+        // Verify the filter was stored correctly
+        if let Some(active_fid) = result {
+            let id = active_fid.id().unwrap();
+            let stored_filter = filter_gen.get_filter_from_bytes(id.clone()).unwrap();
+            assert_eq!(stored_filter.filter_id.id().unwrap(), id);
+            assert_eq!(stored_filter.commit_id, commit_id);
+        } else {
+            panic!("Expected V1 FilterId");
+        }
+    }
+
+    #[test]
+    fn test_get_filter_legacy() {
+        let (_tmp_dir, filter_gen) = create_test_filter_generator(FilterVersion::Legacy);
+
+        let legacy_id_str = &format!("{}:{}", DEFAULT_FILTER_PATH, TEST_COMMIT_ID_STR);
+        let filter = filter_gen
+            .get_filter_from_bytes(legacy_id_str.as_bytes())
+            .unwrap();
+
+        assert!(matches!(filter.filter_id.version(), FilterVersion::Legacy));
+        assert_eq!(filter.filter_paths[0].to_string(), DEFAULT_FILTER_PATH);
+        assert_eq!(filter.commit_id, HgId::from_hex(TEST_COMMIT_ID).unwrap());
+        assert_eq!(
+            &filter.filter_id.id().expect("to be valid utf8"),
+            legacy_id_str.as_bytes()
+        );
+    }
+
+    #[test]
     fn test_filter_roundtrip_v1() {
         let (_tmp_dir, mut filter_gen) = create_test_filter_generator(FilterVersion::V1);
 
@@ -767,6 +863,31 @@ mod tests {
         assert_eq!(deserialized.filter_paths, filter.filter_paths);
         assert_eq!(
             deserialized.filter_id.id().unwrap(),
+            filter.filter_id.id().unwrap()
+        );
+    }
+
+    #[test]
+    fn test_filter_with_multiple_paths() {
+        let (_tmp_dir, mut filter_gen) = create_test_filter_generator(FilterVersion::V1);
+
+        let filter_paths = vec![
+            RepoPathBuf::from_utf8("path1.txt".into()).unwrap(),
+            RepoPathBuf::from_utf8("path2.txt".into()).unwrap(),
+            RepoPathBuf::from_utf8("path3.txt".into()).unwrap(),
+        ];
+        let commit_id = HgId::from_hex(TEST_COMMIT_ID).unwrap();
+
+        let filter = Filter::new(filter_paths.clone(), commit_id.clone(), &mut filter_gen).unwrap();
+        let stored_filter = filter_gen
+            .get_filter_from_bytes(filter.filter_id.id().unwrap())
+            .expect("to be stored");
+
+        assert_eq!(filter.filter_paths, filter_paths);
+        assert_eq!(filter.commit_id, commit_id);
+        assert!(matches!(filter.filter_id.version(), FilterVersion::V1));
+        assert_eq!(
+            stored_filter.filter_id.id().unwrap(),
             filter.filter_id.id().unwrap()
         );
     }
