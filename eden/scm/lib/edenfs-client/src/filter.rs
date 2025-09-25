@@ -8,6 +8,7 @@
 use std::fmt;
 use std::path::PathBuf;
 
+use anyhow::Context;
 use blake3::Hasher as Blake3Hasher;
 use serde::Deserialize;
 use serde::Deserializer;
@@ -113,6 +114,49 @@ pub enum FilterId {
     /// Filter IDs are serialized with mincode::serialize when they are passed to EdenFS. When used
     /// as an index in the Filter IndexedLog, only the 8 byte Blake3 hash of the filter is used.
     V1(FilterVersion, Vec<u8>),
+}
+
+#[allow(dead_code)]
+impl FilterId {
+    pub fn id(&self) -> anyhow::Result<Vec<u8>> {
+        match self {
+            FilterId::Legacy(id) => Ok(id.clone()),
+            FilterId::V1(_, _) => {
+                mincode::serialize(self).with_context(|| anyhow::anyhow!("Serialization failed"))
+            }
+        }
+    }
+
+    // TODO(cuev): Strongly type the index after Legacy filters are removed
+    pub fn index(&self) -> &[u8] {
+        match self {
+            FilterId::Legacy(id) => id.as_ref(),
+            FilterId::V1(_, index) => index.as_ref(),
+        }
+    }
+
+    pub fn version(&self) -> FilterVersion {
+        match self {
+            FilterId::Legacy(_) => FilterVersion::Legacy,
+            FilterId::V1(_, _) => FilterVersion::V1,
+        }
+    }
+}
+
+impl fmt::Display for FilterId {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            FilterId::Legacy(id) => write!(
+                f,
+                "FilterId::Legacy({})",
+                str::from_utf8(id).unwrap_or("invalid filterid")
+            ),
+            FilterId::V1(_, id) => {
+                let hash: String = id.iter().map(|b| format!("{:02x}", b)).collect();
+                write!(f, "FilterId::V1({})", hash)
+            }
+        }
+    }
 }
 
 #[allow(dead_code)]
@@ -328,5 +372,14 @@ mod tests {
         } else {
             panic!("Expected V1 FilterId");
         }
+    }
+
+    #[test]
+    fn test_filter_id_display() {
+        // Test Legacy display
+        let legacy_id_str = format!("{}:{}", DEFAULT_FILTER_PATH, TEST_COMMIT_ID_STR);
+        let legacy_id = FilterId::Legacy(legacy_id_str.as_bytes().into());
+        let display_str = legacy_id.to_string();
+        assert_eq!(format!("FilterId::Legacy({})", legacy_id_str), display_str);
     }
 }
