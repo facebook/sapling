@@ -70,7 +70,7 @@ export async function activate(
         features.push('inlineCommentAIResolve');
       }
       if (enabledSCMApiFeatures.has('newInlineComments')) {
-        Internal.registerNewInlineCommentsProvider?.(context, reposList);
+        Internal.registerNewInlineCommentsProvider?.(context, extensionTracker, reposList);
       } else {
         inlineCommentsProvider = Internal.inlineCommentsProvider(context, reposList, ctx, features);
         if (inlineCommentsProvider != null) {
