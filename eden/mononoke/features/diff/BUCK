@@ -1,0 +1,13 @@
+load("@fbsource//tools/build_defs:rust_library.bzl", "rust_library")
+
+oncall("scm_server_infra")
+
+rust_library(
+    name = "diff",
+    srcs = glob(["src/**/*.rs"]),
+    deps = [
+        "fbsource//third-party/rust:bytes",
+        "//eden/mononoke/mononoke_types:mononoke_types",
+        "//eden/scm/lib/xdiff:xdiff",
+    ],
+)

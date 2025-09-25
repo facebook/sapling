@@ -314,6 +314,7 @@ members = [
   "edenapi_service",
   "features/commit_transformation/commit_transformation",
   "features/cross_repo_sync",
+  "features/diff",
   "features/history_traversal",
   "features/redaction",
   "features/repo_metadata",
