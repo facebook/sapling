@@ -9,6 +9,7 @@ use std::collections::BTreeMap;
 use std::io;
 use std::path::Path;
 use std::path::PathBuf;
+use std::str::FromStr;
 use std::sync::Arc;
 use std::time::Instant;
 
@@ -16,6 +17,8 @@ use anyhow::Result;
 use anyhow::anyhow;
 use async_runtime::block_on;
 use clientinfo::get_client_request_info;
+use configmodel::Config;
+use configmodel::ConfigExt;
 use fbthrift_socket::SocketTransport;
 use parking_lot::Mutex;
 use serde::Deserialize;
@@ -30,6 +33,7 @@ use types::HgId;
 use types::RepoPathBuf;
 
 use crate::filter::FilterGenerator;
+use crate::filter::FilterVersion;
 use crate::types::CheckoutConflict;
 use crate::types::CheckoutMode;
 use crate::types::EdenError;
@@ -47,15 +51,23 @@ pub struct EdenFsClient {
 impl EdenFsClient {
     /// Construct a client and FilterGenerator using the supplied working dir
     /// root. The latter is used to pass a FilterId to each thrift call.
-    pub fn from_wdir(wdir_root: &Path) -> anyhow::Result<Self> {
+    pub fn from_wdir(wdir_root: &Path, config: &dyn Config) -> anyhow::Result<Self> {
         let dot_dir = wdir_root.join(identity::must_sniff_dir(wdir_root)?.dot_dir());
         let eden_config = EdenConfig::from_root(wdir_root)?;
         let filter_index_path: PathBuf = dot_dir.join("filters");
+        let config_version: Option<String> = config.get_opt("experimental", "filter-version")?;
         #[cfg(fbcode_build)]
         let blake3_hash_key = blake3_constants::BLAKE3_HASH_KEY;
         #[cfg(not(fbcode_build))]
         let blake3_hash_key = b"20220728-2357111317192329313741#";
-        let filter_generator = FilterGenerator::new(dot_dir, filter_index_path, blake3_hash_key)?;
+        let filter_version = config_version.map_or(FilterVersion::Legacy, |v| {
+            FilterVersion::from_str(&v).unwrap_or_else(|e| {
+                tracing::warn!("provided filter version is invalid: {:?}", e);
+                FilterVersion::Legacy
+            })
+        });
+        let filter_generator =
+            FilterGenerator::new(dot_dir, filter_index_path, blake3_hash_key, filter_version)?;
         Ok(Self {
             eden_config,
             filter_generator: Some(Mutex::new(filter_generator)),

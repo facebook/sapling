@@ -8,6 +8,7 @@
 use std::collections::BTreeMap;
 use std::fmt;
 use std::path::PathBuf;
+use std::str::FromStr;
 
 use anyhow::Context;
 use blake3::Hasher as Blake3Hasher;
@@ -25,7 +26,6 @@ use types::RepoPathBuf;
 use types::sha::to_hex;
 
 #[derive(Clone, Copy, PartialEq, Debug)]
-#[allow(dead_code)]
 #[repr(u8)]
 pub enum FilterVersion {
     /// Legacy Filters could only support having a single active filter. The filter content was
@@ -80,6 +80,18 @@ impl fmt::Display for FilterVersion {
         match self {
             FilterVersion::V1 => write!(f, "V1"),
             FilterVersion::Legacy => write!(f, "Legacy"),
+        }
+    }
+}
+
+impl FromStr for FilterVersion {
+    type Err = anyhow::Error;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        match s {
+            "V1" => Ok(FilterVersion::V1),
+            "Legacy" => Ok(FilterVersion::Legacy),
+            _ => Err(anyhow::anyhow!("Invalid FilterVersion: {}", s)),
         }
     }
 }
@@ -267,17 +279,20 @@ impl Filter {
 
 pub(crate) struct FilterGenerator {
     dot_hg_path: PathBuf,
-    filter_store: Store,
+    filter_store: Option<Store>,
     hash_key: [u8; 32],
+    // Allows slow rollout of new filter versions
+    default_filter_version: FilterVersion,
 }
 
 impl fmt::Display for FilterGenerator {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(
             f,
-            "FilterGenerator {{ dot_hg_path: {:?}, hash_key: {} }}",
+            "FilterGenerator {{ dot_hg_path: {:?}, hash_key: {}, default_filter_version: {:?} }}",
             self.dot_hg_path,
-            to_hex(&self.hash_key)
+            to_hex(&self.hash_key),
+            self.default_filter_version
         )
     }
 }
@@ -288,23 +303,30 @@ impl FilterGenerator {
         dot_hg_path: PathBuf,
         filter_store_path: PathBuf,
         key: &[u8; Blake3::len()],
+        default_filter_version: FilterVersion,
     ) -> anyhow::Result<Self> {
         // Filter content can be exceptionally long, so we store the actual filter content in an
         // indexedlog store and use a blake3 hash as the index to the filter contents. We avoid
         // long filter ids since EdenFS performance can degrade when ObjectID size grows too large.
-        let config = BTreeMap::<&str, &str>::new();
-        let filter_store = StoreOpenOptions::new(&config)
-            .index("v1_filter_index", |_| {
-                vec![IndexOutput::Reference(0..(Blake3::len() / 4) as u64)]
-            })
-            .permanent(&filter_store_path)
-            .map_err(|e| {
-                anyhow::anyhow!(
-                    "Failed to open filter index store at {:?}: {:?}",
-                    filter_store_path,
-                    e
-                )
-            })?;
+        let filter_store = if default_filter_version == FilterVersion::Legacy {
+            // Using Legacy FilterVersion turns off usage of indexedlog
+            None
+        } else {
+            let config = BTreeMap::<&str, &str>::new();
+            Some(
+                StoreOpenOptions::new(&config)
+                    .index("v1_filter_index", |_| {
+                        vec![IndexOutput::Reference(0..(Blake3::len() / 4) as u64)]
+                    })
+                    .permanent(&filter_store_path)
+                    .with_context(|| {
+                        anyhow::anyhow!(
+                            "Failed to open filter index store at {:?}",
+                            filter_store_path
+                        )
+                    })?,
+            )
+        };
 
         let mut hash_key = [0u8; 32];
         hash_key.copy_from_slice(key);
@@ -313,17 +335,25 @@ impl FilterGenerator {
             dot_hg_path,
             filter_store,
             hash_key,
+            default_filter_version,
         })
     }
 
     /// Check if a filter hash already exists in the store
     fn filter_exists(&self, filter_index: &[u8]) -> anyhow::Result<bool> {
-        let store = self.filter_store.read();
-        let lookup_iter = store
-            .lookup(0, filter_index)
-            .map_err(|e| anyhow::anyhow!("Failed to lookup filter hash in store: {:?}", e))?;
+        if let Some(filter_store) = &self.filter_store {
+            let store = filter_store.read();
+            let lookup_iter = store
+                .lookup(0, filter_index)
+                .with_context(|| anyhow::anyhow!("Failed to lookup filter hash in store"))?;
 
-        Ok(!lookup_iter.is_empty()?)
+            Ok(!lookup_iter.is_empty()?)
+        } else {
+            Err(anyhow::anyhow!(
+                "Tried to check for existing filter {:?}, but filter storage is disabled",
+                filter_index
+            ))
+        }
     }
 
     // Takes a commit and returns the corresponding FilterID that should be passed to Eden.
@@ -389,15 +419,20 @@ mod tests {
 
     const DEFAULT_FILTER_PATH: &str = "path/to/filter.txt";
 
-    fn create_test_filter_generator() -> (TempDir, FilterGenerator) {
+    fn create_test_filter_generator(filter_version: FilterVersion) -> (TempDir, FilterGenerator) {
         let temp_dir = TempDir::new().unwrap();
         let dot_hg_path = temp_dir.path().join(".hg");
         std::fs::create_dir_all(&dot_hg_path).unwrap();
 
         let filter_store_path = temp_dir.path().join("filter_store");
 
-        let filter_gen =
-            FilterGenerator::new(dot_hg_path, filter_store_path, TEST_HASH_KEY).unwrap();
+        let filter_gen = FilterGenerator::new(
+            dot_hg_path,
+            filter_store_path,
+            TEST_HASH_KEY,
+            filter_version,
+        )
+        .unwrap();
 
         (temp_dir, filter_gen)
     }
@@ -547,17 +582,18 @@ mod tests {
 
     #[test]
     fn test_filter_generator_display() {
-        let (_tmp_dir, filter_gen) = create_test_filter_generator();
+        let (_tmp_dir, filter_gen) = create_test_filter_generator(FilterVersion::Legacy);
         let display_str = filter_gen.to_string();
 
         assert!(display_str.contains("FilterGenerator"));
         assert!(display_str.contains("dot_hg_path"));
         assert!(display_str.contains("hash_key"));
+        assert!(display_str.contains("Legacy"));
     }
 
     #[test]
     fn test_active_filter_id_no_config() {
-        let (_tmp_dir, filter_gen) = create_test_filter_generator();
+        let (_tmp_dir, mut filter_gen) = create_test_filter_generator(FilterVersion::Legacy);
         let commit_id = HgId::from_hex(TEST_COMMIT_ID).unwrap();
 
         let result = filter_gen.active_filter_id(commit_id).unwrap();
@@ -566,7 +602,7 @@ mod tests {
 
     #[test]
     fn test_filter_roundtrip_v1() {
-        let (_tmp_dir, mut filter_gen) = create_test_filter_generator();
+        let (_tmp_dir, mut filter_gen) = create_test_filter_generator(FilterVersion::V1);
 
         // Create a V1 filter
         let filter_paths = vec![RepoPathBuf::from_string("test/filter.txt".to_string()).unwrap()];
@@ -594,7 +630,7 @@ mod tests {
 
     #[test]
     fn test_new_filter_multiple_inserts() {
-        let (_tmp_dir, mut filter_gen) = create_test_filter_generator();
+        let (_tmp_dir, mut filter_gen) = create_test_filter_generator(FilterVersion::V1);
 
         let filter_paths = vec![RepoPathBuf::from_string("test/filter.txt".to_string()).unwrap()];
         let commit_id = HgId::from_hex(TEST_COMMIT_ID).unwrap();

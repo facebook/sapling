@@ -323,7 +323,7 @@ impl WorkingCopy {
                 panic!("cannot use EdenFS in a non-EdenFS build");
                 #[cfg(feature = "eden")]
                 {
-                    let client = Arc::new(EdenFsClient::from_wdir(vfs.root())?);
+                    let client = Arc::new(EdenFsClient::from_wdir(vfs.root(), config)?);
                     Box::new(EdenFileSystem::new(
                         config,
                         client,
