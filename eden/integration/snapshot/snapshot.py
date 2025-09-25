@@ -68,6 +68,12 @@ class BaseSnapshot(metaclass=abc.ABCMeta):
     ) -> None:
         pass
 
+    @property
+    @abc.abstractmethod
+    def repo_dir_name(self) -> str:
+        """Return the name of the repo state directory."""
+        pass
+
     def create_tarball(self, output_path: Path) -> None:
         """Create a tarball from the snapshot contents.
 
@@ -212,7 +218,7 @@ class BaseSnapshot(metaclass=abc.ABCMeta):
 
     def _update_hg_state(self, base_dir: Path) -> None:
         """Update hgrc so that it matches the location of the unpacked snapshot."""
-        hgrc_dir = self.data_dir / "repo/.hg/hgrc"
+        hgrc_dir = self.data_dir / "repo" / self.repo_dir_name / "hgrc"
         with hgrc_dir.open("r") as f:
             match = re.search(r"\/tmp/eden_data\.\w+", f.read())
             old_dir = match.group(0) if match is not None else None
@@ -416,6 +422,17 @@ class HgSnapshot(BaseSnapshot, metaclass=abc.ABCMeta):
     def checkout_path(self) -> Path:
         """Return the path to the checkout root."""
         return self.data_dir / "checkout"
+
+    @property
+    def repo_dir_name(self) -> str:
+        """Return the name of the repo state directory."""
+        # TODO: Conditionally use ".hg" or ".sl" based on OSS or internal repo
+        return ".hg"
+
+    @property
+    def checkout_scm_dir(self) -> Path:
+        """Return the path to the checkout's .hg directory."""
+        return self.checkout_path / self.repo_dir_name
 
     def read_file(self, path: Union[Path, str]) -> bytes:
         """Helper function to read a file in the checkout.

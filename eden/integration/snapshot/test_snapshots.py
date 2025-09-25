@@ -114,7 +114,9 @@ class InfraTests(unittest.TestCase):
             snapshot.mkdir("a/b/c/extra_dir", 0o755)
 
             verifier = verify_mod.SnapshotVerifier()
-            verifier.verify_directory(snapshot.checkout_path, expected)
+            verifier.verify_directory(
+                snapshot.checkout_path, expected, [snapshot.checkout_scm_dir]
+            )
 
         expected_errors = [
             "a/b/missing.txt: file not present in snapshot",

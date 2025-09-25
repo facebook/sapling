@@ -202,33 +202,36 @@ class SnapshotVerifier:
         if not self.quiet:
             print(f"==ERROR== {message}")
 
-    def verify_directory(self, path: Path, expected: ExpectedFileSet) -> None:
+    def verify_directory(
+        self, checkout_path: Path, expected: ExpectedFileSet, ignored_dirs: List[Path]
+    ) -> None:
         """Confirm that the contents of a directory match the expected file state."""
-        found_files = enumerate_directory(path)
+        found_files = enumerate_directory(checkout_path)
         for expected_entry in expected.values():
             file_stat = found_files.pop(expected_entry.path, None)
             if file_stat is None:
                 self.error(f"{expected_entry.path}: file not present in snapshot")
                 continue
 
-            full_path = path / expected_entry.path
+            full_path = checkout_path / expected_entry.path
             try:
                 expected_entry.verify(self, full_path, file_stat)
             except AssertionError as ex:
                 self.error(f"{expected_entry.path}: {ex}")
                 continue
 
-        for path, stat_info in found_files.items():
+        for found_path, stat_info in found_files.items():
             if stat_mod.S_ISDIR(stat_info.st_mode):
                 # Don't require directories to be listed explicitly in the input files
                 continue
-            if str(path.parents[0]) == ".hg":
+            abs_path = checkout_path / found_path
+            if any(abs_path.is_relative_to(d) for d in ignored_dirs):
                 # Don't complain about files inside the .hg directory that the caller
                 # did not explicitly specify.  Mercurial can create a variety of files
                 # here, and we don't care about checking the exact list of files it
                 # happened to create when the snapshot was generated.
                 continue
-            self.error(f"{path}: unexpected file present in snapshot")
+            self.error(f"{found_path}: unexpected file present in snapshot")
 
     def verify_hg_status(
         self,

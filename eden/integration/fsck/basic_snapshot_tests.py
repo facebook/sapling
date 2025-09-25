@@ -330,7 +330,11 @@ class SnapshotTestBase(
         verifier = verify_mod.SnapshotVerifier()
         with self.snapshot.edenfs() as eden:
             eden.start()
-            verifier.verify_directory(self.snapshot.checkout_path, expected_files)
+            verifier.verify_directory(
+                self.snapshot.checkout_path,
+                expected_files,
+                [self.snapshot.checkout_scm_dir],
+            )
 
         if verifier.errors:
             self.fail(

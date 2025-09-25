@@ -165,7 +165,9 @@ class BasicSnapshot(HgSnapshot):
         self.verify_hg_status(verifier)
 
         expected_files = self.get_expected_files()
-        verifier.verify_directory(self.checkout_path, expected_files)
+        verifier.verify_directory(
+            self.checkout_path, expected_files, [self.checkout_scm_dir]
+        )
 
     def verify_hg_status(self, verifier: verify_mod.SnapshotVerifier) -> None:
         expected_status = {
