@@ -28,8 +28,15 @@ std::tuple<RootId, std::string> parseFilterIdFromRootId(const RootId& rootId) {
         "the form of <idLengthVarint><scmId><filterId>, got {}",
         rootId.value());
   }
+  if (UNLIKELY(rootRange.size() < expectedLength.value())) {
+    throwf<std::invalid_argument>(
+        "Expected length of RootId is greater than the actual length: {} vs {}",
+        expectedLength.value(),
+        rootRange.size());
+  }
   auto root = RootId{std::string{rootRange.begin(), expectedLength.value()}};
-  auto filterId = std::string{rootRange.begin() + expectedLength.value()};
+  auto filterId =
+      std::string{rootRange.begin() + expectedLength.value(), rootRange.end()};
   XLOGF(
       DBG7,
       "Decoded Original RootId Length: {}, Original RootId: {}, FilterID: {}",

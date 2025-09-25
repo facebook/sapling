@@ -18,7 +18,7 @@ TEST(FilterUtilsTest, filterContainsNullByte) {
       startingRootId, filterWithNullByte);
   auto [rootId, filter] = parseFilterIdFromRootId(RootId{filteredRootId});
   EXPECT_EQ(startingRootId, rootId.value());
-  EXPECT_NE(filter, filterWithNullByte);
+  EXPECT_EQ(filter, filterWithNullByte);
 }
 
 TEST(FilterUtilsTest, basic) {
