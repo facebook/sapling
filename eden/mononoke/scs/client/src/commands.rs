@@ -18,6 +18,7 @@ base_app::subcommands! {
     mod create_bookmark if "SCSC_WRITES_ENABLED";
     mod delete_bookmark if "SCSC_WRITES_ENABLED";
     mod diff;
+    mod file_diff;
     mod export;
     mod find_files;
     mod info;
