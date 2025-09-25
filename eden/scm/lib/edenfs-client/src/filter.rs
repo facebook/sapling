@@ -214,6 +214,23 @@ pub struct Filter {
     commit_id: HgId,
 }
 
+impl fmt::Display for Filter {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(
+            f,
+            "Filter {{ version: {}, filter_id: {}, commit_id: {}, filter_paths: [{}] }}",
+            self.filter_id.version(),
+            self.filter_id,
+            self.commit_id,
+            self.filter_paths
+                .iter()
+                .map(|p| p.to_string())
+                .collect::<Vec<_>>()
+                .join(", ")
+        )
+    }
+}
+
 #[allow(dead_code)]
 impl Filter {
     // Default New constructor creates V1 Filters
@@ -512,6 +529,20 @@ mod tests {
             filter.filter_id.id().unwrap(),
             format!("{}:{}", filter_path, TEST_COMMIT_ID_STR).as_bytes()
         );
+    }
+
+    #[test]
+    fn test_filter_display() {
+        let filter_path = RepoPathBuf::from_utf8("test.txt".into()).unwrap();
+        let commit_id = HgId::from_hex(TEST_COMMIT_ID).unwrap();
+
+        let filter = Filter::new_legacy(filter_path, commit_id).unwrap();
+        let display_str = filter.to_string();
+
+        assert!(display_str.contains("Filter"));
+        assert!(display_str.contains("Legacy"));
+        assert!(display_str.contains("test.txt"));
+        assert!(display_str.contains(TEST_COMMIT_ID_STR));
     }
 
     #[test]
