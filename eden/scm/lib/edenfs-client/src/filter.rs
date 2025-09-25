@@ -261,7 +261,8 @@ impl Filter {
             filter_paths,
             commit_id,
         };
-        // TODO: Store the newly created filter
+        // Enforce that filters are persisted in storage. No-op if filter is already stored.
+        filter_gen.store_filter(&filter)?;
         Ok(filter)
     }
 
@@ -351,6 +352,35 @@ impl FilterGenerator {
             Err(anyhow::anyhow!(
                 "Tried to check for existing filter {:?}, but filter storage is disabled",
                 filter_index
+            ))
+        }
+    }
+
+    fn store_filter(&mut self, filter: &Filter) -> anyhow::Result<()> {
+        if let Some(filter_store) = &self.filter_store {
+            if self.filter_exists(filter.filter_id.index())? {
+                Ok(())
+            } else {
+                // Store the entry
+                filter_store
+                    .append_direct(|buffer| {
+                        buffer.extend_from_slice(filter.filter_id.index());
+                        mincode::serialize_into(buffer, &filter)?;
+                        Ok(())
+                    })
+                    .with_context(|| anyhow::anyhow!("Failed to add filter to store"))?;
+
+                // Flush to ensure it's written to disk
+                filter_store
+                    .flush()
+                    .with_context(|| anyhow::anyhow!("Failed to flush filter store to disk"))?;
+
+                Ok(())
+            }
+        } else {
+            Err(anyhow::anyhow!(
+                "Tried to store V1 filter {:?}, but filter storage is disabled",
+                filter.filter_id,
             ))
         }
     }
@@ -720,6 +750,9 @@ mod tests {
         let filter_paths = vec![RepoPathBuf::from_string("test/filter.txt".to_string()).unwrap()];
         let commit_id = HgId::from_hex(TEST_COMMIT_ID).unwrap();
         let filter = Filter::new(filter_paths.clone(), commit_id.clone(), &mut filter_gen).unwrap();
+
+        // Create the filter again, which causes it to be "stored" again (should be no-op)
+        let _ = Filter::new(filter_paths.clone(), commit_id.clone(), &mut filter_gen).unwrap();
 
         // Serialize and deserialize
         let ser = mincode::serialize(&filter).unwrap();
