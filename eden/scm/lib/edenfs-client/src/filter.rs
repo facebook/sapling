@@ -91,7 +91,7 @@ struct V1FilterComponents<'a> {
 // associate a commit ID to each Filter Path which allows us to read Filter file contents from
 // the repo and reconstruct any filtered object.
 #[allow(dead_code)]
-#[derive(Debug)]
+#[derive(Debug, Serialize, Deserialize)]
 pub enum FilterId {
     /// Legacy FilterIDs are in the form:
     ///
@@ -101,6 +101,7 @@ pub enum FilterId {
     /// and commit_hash indicates the version of the filter file when it was applied. This format
     /// assumes that neither the filter files nor the commit hash will have ":" in them. The second
     /// restriction is guaranteed (hex), the first one needs to be enforced by us.
+    #[serde(skip_serializing)]
     Legacy(Vec<u8>),
     /// V1 Filter IDs contain:
     ///
