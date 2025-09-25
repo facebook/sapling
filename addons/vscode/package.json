@@ -191,6 +191,11 @@
         "command": "sapling.toggle-inline-comments",
         "title": "%sapling.toggle-inline-comments-command%",
         "enablement": "isl.inlineCommentSidePanelEnabled"
+      },
+      {
+        "command": "sapling.debug.interpret-file-as-comments",
+        "title": "Debug: Load file as inline comments JSON",
+        "enablement": "sapling.isDev"
       }
     ],
     "keybindings": [
