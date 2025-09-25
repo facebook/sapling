@@ -10,6 +10,23 @@ use std::path::PathBuf;
 use tracing::warn;
 use types::HgId;
 
+#[repr(u32)]
+#[allow(dead_code)]
+enum FilterVersion {
+    /// Legacy Filters could only support having a single active filter. The filter content was
+    /// stored inside the FilterID itself.
+    Legacy = 0,
+    /// V1 filters support multiple active filters. The filter content is stored on disk in an
+    /// indexedlog where the partial Blake3 hash of the filter content is used to access the log
+    /// entries. V1 Filters are in the form:
+    ///
+    /// - List of Filter Paths that should be used to construct a sparse matcher
+    /// - HgId of the commit that the filter was activated at
+    /// - Id of the filter, which contains the FilterVersion and the first 8 bytes of the
+    ///   Filter's Blake3 hash which is used as an index for filter storage.
+    V1 = 1,
+}
+
 pub(crate) struct FilterGenerator {
     dot_hg_path: PathBuf,
 }
