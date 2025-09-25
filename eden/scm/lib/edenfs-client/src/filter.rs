@@ -207,6 +207,46 @@ impl FilterId {
 }
 
 #[allow(dead_code)]
+pub struct Filter {
+    filter_id: FilterId,
+    filter_paths: Vec<RepoPathBuf>,
+    commit_id: HgId,
+}
+
+#[allow(dead_code)]
+impl Filter {
+    // Default New constructor creates V1 Filters
+    fn new(
+        filter_paths: Vec<RepoPathBuf>,
+        commit_id: HgId,
+        filter_gen: &mut FilterGenerator,
+    ) -> Result<Filter, anyhow::Error> {
+        let filter_id = FilterId::new(
+            FilterVersion::V1,
+            &filter_paths,
+            &commit_id,
+            &filter_gen.hash_key,
+        )?;
+        let filter = Filter {
+            filter_id,
+            filter_paths,
+            commit_id,
+        };
+        // TODO: Store the newly created filter
+        Ok(filter)
+    }
+
+    fn new_legacy(filter_path: RepoPathBuf, commit_id: HgId) -> Result<Filter, anyhow::Error> {
+        let filter_paths = vec![filter_path];
+        let filter_id = FilterId::new(FilterVersion::Legacy, &filter_paths, &commit_id, &[0; 32])?;
+        Ok(Filter {
+            filter_id,
+            commit_id,
+            filter_paths,
+        })
+    }
+}
+
 pub(crate) struct FilterGenerator {
     dot_hg_path: PathBuf,
     filter_store: Store,
@@ -458,6 +498,22 @@ mod tests {
     }
 
     #[test]
+    fn test_filter_new_legacy() {
+        let filter_path = RepoPathBuf::from_utf8("test.txt".into()).unwrap();
+        let commit_id = HgId::from_hex(TEST_COMMIT_ID).unwrap();
+
+        let filter = Filter::new_legacy(filter_path.clone(), commit_id.clone()).unwrap();
+
+        assert!(matches!(filter.filter_id.version(), FilterVersion::Legacy));
+        assert_eq!(filter.commit_id, commit_id);
+        assert_eq!(filter.filter_paths, vec![filter_path.clone()]);
+        assert_eq!(
+            filter.filter_id.id().unwrap(),
+            format!("{}:{}", filter_path, TEST_COMMIT_ID_STR).as_bytes()
+        );
+    }
+
+    #[test]
     fn test_filter_generator_display() {
         let (_tmp_dir, filter_gen) = create_test_filter_generator();
         let display_str = filter_gen.to_string();
@@ -465,5 +521,14 @@ mod tests {
         assert!(display_str.contains("FilterGenerator"));
         assert!(display_str.contains("dot_hg_path"));
         assert!(display_str.contains("hash_key"));
+    }
+
+    #[test]
+    fn test_active_filter_id_no_config() {
+        let (_tmp_dir, filter_gen) = create_test_filter_generator();
+        let commit_id = HgId::from_hex(TEST_COMMIT_ID).unwrap();
+
+        let result = filter_gen.active_filter_id(commit_id).unwrap();
+        assert!(result.is_none());
     }
 }
