@@ -74,12 +74,12 @@ impl EdenFsClient {
         })
     }
 
-    pub fn get_active_filter_id(&self, commit: HgId) -> Result<Option<String>, anyhow::Error> {
+    pub fn get_active_filter_id(&self, commit: &HgId) -> Result<Option<String>, anyhow::Error> {
         match &self.filter_generator {
             Some(r#gen) => {
-                let lock = r#gen.lock();
+                let mut lock = r#gen.lock();
                 match lock.active_filter_id(commit)? {
-                    Some(id) => Ok(Some(id)),
+                    Some(id) => Ok(Some(String::from_utf8(id.id()?)?)),
                     None => Ok(None),
                 }
             }
@@ -129,7 +129,7 @@ impl EdenFsClient {
     ) -> anyhow::Result<BTreeMap<RepoPathBuf, FileStatus>> {
         let thrift_client = block_on(self.get_thrift_client())?;
         // TODO(T238835643): deprecate filterId field
-        let filter_id = self.get_active_filter_id(commit.clone())?;
+        let filter_id = self.get_active_filter_id(&commit)?;
         let fid = filter_id
             .as_ref()
             .map(|fid| fid.clone().as_bytes().to_vec());
@@ -201,7 +201,7 @@ impl EdenFsClient {
         };
 
         // TODO(T238835643): deprecate filterId field
-        let filter_id: Option<String> = self.get_active_filter_id(p1.clone())?;
+        let filter_id: Option<String> = self.get_active_filter_id(&p1)?;
         let fid = filter_id
             .as_ref()
             .map(|fid| fid.clone().as_bytes().to_vec());
@@ -260,7 +260,7 @@ impl EdenFsClient {
     ) -> anyhow::Result<Vec<CheckoutConflict>> {
         let tree_vec = tree.into_byte_array().into();
         let thrift_client = block_on(self.get_thrift_client())?;
-        let filter_id: Option<String> = self.get_active_filter_id(node.clone())?;
+        let filter_id: Option<String> = self.get_active_filter_id(&node)?;
 
         // TODO(T238835643): deprecate filterId field
         let fid = filter_id

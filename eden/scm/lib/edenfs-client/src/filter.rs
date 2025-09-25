@@ -19,7 +19,6 @@ use serde::Deserialize;
 use serde::Deserializer;
 use serde::Serialize;
 use serde::Serializer;
-use tracing::warn;
 use types::Blake3;
 use types::HgId;
 use types::RepoPathBuf;
@@ -356,53 +355,77 @@ impl FilterGenerator {
         }
     }
 
-    // Takes a commit and returns the corresponding FilterID that should be passed to Eden.
-    pub fn active_filter_id(&self, commit: HgId) -> Result<Option<String>, anyhow::Error> {
+    // Parses the filter file and returns a list of active filter paths. Returns an error when the
+    // filter file is malformed or can't be read.
+    fn read_filter_config(&self) -> anyhow::Result<Option<Vec<RepoPathBuf>>> {
         // The filter file may be in 3 different states:
         //
         // 1) It may not exist, which indicates FilteredFS is not active
-        // 2) It may contain nothing which indicates that FFS is in use, but no filter is active.
-        // 3) It may contain the path to the active filter.
+        // 2) It may contain nothing which indicates that FFS is in use, but no filters are active.
+        // 3) It may contain the paths to the active filters (one per line, each starting with "%include").
         //
-        // We error out if the path exists but we can't read the file.
+        // We error out if the path exists, but we can't read the file.
         let config_contents = std::fs::read_to_string(self.dot_hg_path.join("sparse"));
-        let filter_path = match config_contents {
+        let filter_contents = match config_contents {
             Ok(c) => c,
             Err(e) if e.kind() == std::io::ErrorKind::NotFound => return Ok(None),
             Err(e) => return Err(anyhow::anyhow!(e)),
         };
 
-        let filter_path = filter_path.trim();
+        let filter_contents = filter_contents.trim();
 
-        if filter_path.is_empty() {
-            return Ok(None);
-        }
-
-        let filter_path = match filter_path.strip_prefix("%include ") {
-            Some(p) => p,
-            None => {
-                warn!("Unexpected edensparse config format: {}", filter_path);
-                return Ok(None);
+        if filter_contents.is_empty() {
+            Ok(None)
+        } else {
+            // Parse each line that starts with "%include" to extract filter paths
+            let mut filter_paths = Vec::new();
+            for line in filter_contents.lines() {
+                if line.starts_with("%include ") {
+                    if let Some(path) = line.strip_prefix("%include ") {
+                        filter_paths.push(RepoPathBuf::from_string(path.trim().into())?);
+                    }
+                } else if !line.is_empty() {
+                    return Err(anyhow::anyhow!(
+                        "Unexpected edensparse config format: {}",
+                        line
+                    ));
+                }
             }
-        };
 
-        // Eden's ObjectIDs must be durable (once they exist, Eden must always be able to derive
-        // the underlying object from them). FilteredObjectIDs contain FilterIDs, and therefore we
-        // must be able to re-derive the filter contents from any FilterID so that we can properly
-        // reconstruct the original filtered object at any future point in time. To do this, we
-        // attach a commit ID to each FilterID which allows us to read Filter file contents from
-        // the repo and reconstruct any filtered object.
-        //
-        // We construct a FilterID in the form {filter_file_path}:{hex_commit_hash}. We need to
-        // parse this later to separate the path and commit hash, so this format assumes that
-        // neither the filter file or the commit hash will have ":" in them. The second restriction
-        // is guaranteed (hex), the first one will need to be enforced by us.
-        Ok(Some(format!("{}:{}", filter_path, commit.to_hex())))
+            Ok(Some(filter_paths))
+        }
+    }
+
+    // Takes a commit and returns the corresponding FilterID that should be passed to Eden.
+    pub fn active_filter_id(
+        &mut self,
+        commit_id: &HgId,
+    ) -> Result<Option<FilterId>, anyhow::Error> {
+        if let Some(filter_paths) = self.read_filter_config()? {
+            let filter = match self.default_filter_version {
+                FilterVersion::Legacy if filter_paths.len() == 1 => {
+                    // Legacy filters only support a single filter path
+                    Filter::new_legacy(filter_paths[0].clone(), commit_id.clone())?
+                }
+                FilterVersion::V1 => Filter::new(filter_paths, commit_id.clone(), self)?,
+                FilterVersion::Legacy => {
+                    return Err(anyhow::anyhow!(
+                        "V1 filters are disabled, but multiple filter paths are specified"
+                    ));
+                }
+            };
+            Ok(Some(filter.filter_id))
+        } else {
+            Ok(None)
+        }
     }
 }
 
 #[cfg(test)]
 mod tests {
+    use std::fs::File;
+    use std::io::Write;
+    use std::path::Path;
 
     use mincode::deserialize;
     use mincode::serialize_into;
@@ -436,6 +459,14 @@ mod tests {
 
         (temp_dir, filter_gen)
     }
+
+    fn create_sparse_file(dot_hg_path: &Path, contents: &str) -> std::io::Result<()> {
+        let sparse_path = dot_hg_path.join("sparse");
+        let mut file = File::create(&sparse_path)?;
+        file.write_all(contents.as_bytes())?;
+        Ok(())
+    }
+
     #[test]
     fn test_filter_version_display() {
         assert_eq!(FilterVersion::Legacy.to_string(), "Legacy");
@@ -592,11 +623,65 @@ mod tests {
     }
 
     #[test]
+    fn test_read_filter_config_no_sparse_file() {
+        let (_tmp_dir, filter_gen) = create_test_filter_generator(FilterVersion::Legacy);
+        // No sparse file exists
+        let result = filter_gen.read_filter_config().unwrap();
+        assert!(result.is_none());
+    }
+
+    #[test]
+    fn test_read_filter_config_empty_file() {
+        let (_tmp_dir, filter_gen) = create_test_filter_generator(FilterVersion::Legacy);
+        create_sparse_file(&filter_gen.dot_hg_path, "").unwrap();
+        let result = filter_gen.read_filter_config().unwrap();
+        assert!(result.is_none());
+    }
+
+    #[test]
+    fn test_read_filter_config_whitespace_only() {
+        let (_tmp_dir, filter_gen) = create_test_filter_generator(FilterVersion::Legacy);
+        create_sparse_file(&filter_gen.dot_hg_path, "   \n\t  \n").unwrap();
+        let result = filter_gen.read_filter_config().unwrap();
+        assert!(result.is_none());
+    }
+
+    #[test]
+    fn test_read_filter_config_valid_includes() {
+        let (_tmp_dir, filter_gen) = create_test_filter_generator(FilterVersion::Legacy);
+        let contents = "%include path/to/filter1.txt\n%include path/to/filter2.txt\n";
+        create_sparse_file(&filter_gen.dot_hg_path, contents).unwrap();
+        let result = filter_gen.read_filter_config().unwrap().unwrap();
+        assert_eq!(result.len(), 2);
+        assert_eq!(result[0].to_string(), "path/to/filter1.txt");
+        assert_eq!(result[1].to_string(), "path/to/filter2.txt");
+    }
+
+    #[test]
+    fn test_read_filter_config_invalid_format() {
+        let (_tmp_dir, filter_gen) = create_test_filter_generator(FilterVersion::Legacy);
+
+        // Create sparse file with invalid line (not starting with %include)
+        let contents = "invalid line\n%include valid.txt\n";
+        create_sparse_file(&filter_gen.dot_hg_path, contents).unwrap();
+
+        let result = filter_gen.read_filter_config();
+        assert!(result.is_err());
+        match result {
+            Ok(_) => panic!("result should be an error"),
+            Err(e) => assert!(
+                e.to_string()
+                    .contains("Unexpected edensparse config format")
+            ),
+        };
+    }
+
+    #[test]
     fn test_active_filter_id_no_config() {
         let (_tmp_dir, mut filter_gen) = create_test_filter_generator(FilterVersion::Legacy);
         let commit_id = HgId::from_hex(TEST_COMMIT_ID).unwrap();
 
-        let result = filter_gen.active_filter_id(commit_id).unwrap();
+        let result = filter_gen.active_filter_id(&commit_id).unwrap();
         assert!(result.is_none());
     }
 
@@ -651,5 +736,65 @@ mod tests {
             deserialized.filter_id.id().unwrap(),
             filter.filter_id.id().unwrap()
         );
+    }
+
+    #[test]
+    fn test_active_filter_id_legacy_single_path() {
+        let (_tmp_dir, mut filter_gen) = create_test_filter_generator(FilterVersion::Legacy);
+        let commit_id = HgId::from_hex(TEST_COMMIT_ID).unwrap();
+        let contents = "%include path/to/filter.txt\n";
+        create_sparse_file(&filter_gen.dot_hg_path, contents).unwrap();
+
+        let result = filter_gen.active_filter_id(&commit_id).unwrap().unwrap();
+
+        // With Legacy version and single path, should create a Legacy FilterId
+        if let FilterId::Legacy(id) = result {
+            assert!(str::from_utf8(&id).unwrap().contains("path/to/filter.txt"));
+            assert!(str::from_utf8(&id).unwrap().contains(&commit_id.to_hex()));
+        } else {
+            panic!("Expected Legacy FilterId for single path with Legacy version");
+        }
+    }
+
+    #[test]
+    fn test_active_filter_id_legacy_multiple_paths_with_legacy_default() {
+        let (_tmp_dir, mut filter_gen) = create_test_filter_generator(FilterVersion::Legacy);
+        let commit_id = HgId::from_hex(TEST_COMMIT_ID).unwrap();
+        let contents = "%include path/to/filter1.txt\n%include path/to/filter2.txt\n";
+        create_sparse_file(&filter_gen.dot_hg_path, contents).unwrap();
+
+        let result = filter_gen.active_filter_id(&commit_id);
+
+        // With Legacy version but multiple paths, active_filter_id will fail
+        match result {
+            Ok(_) => {
+                panic!("Legacy filters should not support multiple paths");
+            }
+            Err(e) => {
+                assert!(e.to_string().contains("V1 filters are disabled"));
+            }
+        }
+    }
+
+    #[test]
+    fn test_active_filter_id_v1_single_path() {
+        let (_tmp_dir, mut filter_gen) = create_test_filter_generator(FilterVersion::V1);
+        let commit_id = HgId::from_hex(TEST_COMMIT_ID).unwrap();
+
+        // Create sparse file with a single filter path
+        let contents = "%include path/to/filter.txt\n";
+        create_sparse_file(&filter_gen.dot_hg_path, contents).unwrap();
+
+        let result = filter_gen.active_filter_id(&commit_id).unwrap().unwrap();
+
+        // With V1 version, should always create V1 FilterId regardless of path count
+        match result {
+            FilterId::V1(ver, _) => {
+                assert_eq!(ver, FilterVersion::V1);
+            }
+            FilterId::Legacy { .. } => {
+                panic!("Expected V1 FilterId when using V1 version");
+            }
+        }
     }
 }
