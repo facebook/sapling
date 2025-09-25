@@ -6,9 +6,7 @@
  */
 
 use std::collections::HashMap;
-use std::fmt;
 use std::path::PathBuf;
-use std::str::FromStr;
 use std::thread;
 use std::time::Duration;
 use std::time::Instant;
@@ -31,9 +29,7 @@ use repo::repo::Repo;
 use sparse::Matcher;
 use sparse::Root;
 use types::FetchContext;
-use types::HgId;
 use types::RepoPath;
-use types::RepoPathBuf;
 
 use crate::ffi::MatcherPromise;
 use crate::ffi::MatcherWrapper;
@@ -91,42 +87,6 @@ fn cleanup_expired_objects() {
             );
             OBJECT_CACHE_CLEANUPS.add(cleaned_count);
         }
-    }
-}
-
-// A helper class to parse/validate FilterIDs that are passed to Mercurial
-struct FilterId {
-    pub repo_path: RepoPathBuf,
-    pub hg_id: HgId,
-}
-
-impl fmt::Display for FilterId {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(f, "{}:{}", &self.repo_path, &self.hg_id)
-    }
-}
-
-impl FromStr for FilterId {
-    type Err = anyhow::Error;
-
-    fn from_str(s: &str) -> Result<Self, Self::Err> {
-        let id_components = s.split(':').collect::<Vec<_>>();
-        if id_components.len() != 2 {
-            return Err(anyhow!(
-                "Invalid filter id, must be in the form {{filter_path}}:{{hgid}}. Found: {}",
-                s
-            ));
-        }
-        let repo_path =
-            RepoPathBuf::from_string(id_components[0].to_string()).with_context(|| {
-                anyhow!(
-                    "Invalid repo path found in FilterId: {:?}",
-                    id_components[0]
-                )
-            })?;
-        let hg_id = HgId::from_str(id_components[1])
-            .with_context(|| anyhow!("Invalid HgID found in FilterId: {:?}", id_components[1]))?;
-        Ok(FilterId { repo_path, hg_id })
     }
 }
 
@@ -257,7 +217,7 @@ fn create_tree_matcher(
 // limitations in CXX. This function wraps the bulk of the Sparse logic and provides a single
 // place for returning result/error info via the MatcherPromise.
 fn profile_contents_from_repo(
-    id: FilterId,
+    id: &[u8],
     abs_repo_path: PathBuf,
     promise: UniquePtr<MatcherPromise>,
 ) {
@@ -273,7 +233,7 @@ fn profile_contents_from_repo(
 
 // Fetches the content of a filter file and turns it into a MercurialMatcher
 fn _profile_contents_from_repo(
-    id: FilterId,
+    id: &[u8],
     abs_repo_path: PathBuf,
 ) -> Result<Box<MercurialMatcher>, anyhow::Error> {
     let mut object_map = OBJECT_CACHE.lock();
@@ -311,22 +271,29 @@ fn _profile_contents_from_repo(
 
     let cached_objects = object_map.get_mut(&abs_repo_path).context("loading repo")?;
     let repo = &mut cached_objects.repo;
+    let filter_gen = &mut cached_objects.filter_gen;
+
+    let filter = filter_gen
+        .get_filter_from_bytes(id)
+        .with_context(|| anyhow!("failed to interpret bytes as valid filter: {:?}", id))?;
 
     // Create the tree manifest for the root tree of the repo
-    let tree_manifest = match repo.tree_resolver()?.get(&id.hg_id) {
+    let tree_manifest = match repo.tree_resolver()?.get(&filter.commit_id) {
         Ok(manifest_id) => manifest_id,
         Err(e) => {
             // It's possible that the commit exists but was only recently
             // created. Invalidate the in-memory commit graph and force a read
             // from disk. Note: This can be slow, so only do it on error.
             repo.invalidate_all()?;
-            repo.tree_resolver()?.get(&id.hg_id).with_context(|| {
-                anyhow!(
-                    "Failed to get root tree id for commit {:?}: {:?}",
-                    &id.hg_id,
-                    e
-                )
-            })?
+            repo.tree_resolver()?
+                .get(&filter.commit_id)
+                .with_context(|| {
+                    anyhow!(
+                        "Failed to get root tree id for commit {:?}: {:?}",
+                        &filter.commit_id,
+                        e
+                    )
+                })?
         }
     };
 
@@ -335,33 +302,37 @@ fn _profile_contents_from_repo(
         .context("failed to get FileStore from Repo object")?;
 
     // Get the metadata of the filter file and verify it's a valid file.
-    let p = id.repo_path.clone();
+    let paths = filter.filter_paths.clone();
 
     let matcher = async_runtime::block_in_place(|| -> anyhow::Result<_> {
-        let metadata = tree_manifest.get(&p)?;
-        let file_id = match metadata {
-            None => {
-                return Err(anyhow!("{:?} is not a valid filter file", id.repo_path));
-            }
-            Some(fs_node) => match fs_node {
-                FsNodeMetadata::File(FileMetadata { hgid, .. }) => hgid,
-                FsNodeMetadata::Directory(_) => {
-                    return Err(anyhow!(
-                        "{:?} is a directory, not a valid filter file",
-                        id.repo_path
-                    ));
+        let mut profiles = Vec::with_capacity(paths.len());
+        for path in paths {
+            let metadata = tree_manifest.get(&path)?;
+            let file_id = match metadata {
+                None => {
+                    return Err(anyhow!("{:?} is not a valid filter file", path));
                 }
-            },
-        };
-
-        let data = repo_store
-            .get_content(FetchContext::default(), &id.repo_path, file_id)?
-            .into_bytes();
+                Some(fs_node) => match fs_node {
+                    FsNodeMetadata::File(FileMetadata { hgid, .. }) => hgid,
+                    FsNodeMetadata::Directory(_) => {
+                        return Err(anyhow!(
+                            "{:?} is a directory, not a valid filter file",
+                            path
+                        ));
+                    }
+                },
+            };
+            profiles.push(
+                repo_store
+                    .get_content(FetchContext::default(), &path, file_id)?
+                    .into_bytes(),
+            );
+        }
 
         // We no longer need to hold the lock on the object_map
         drop(object_map);
 
-        let mut root = Root::from_profiles(vec![data], id.repo_path.to_string())?;
+        let mut root = Root::from_profiles(profiles, "edensparse".to_string())?;
         root.set_version_override(Some("2".to_owned()));
         let matcher = root.matcher(|_| Ok(Some(vec![])))?;
         Ok(matcher)
@@ -392,11 +363,6 @@ pub fn profile_from_filter_id(
 ) -> Result<(), anyhow::Error> {
     LOOKUPS.increment();
 
-    // TODO(cuev): This is safe to do for now, because we always pass valid UTF-8 FilterIds from
-    // C++. This invariant will change soon, but changes later in this stack will address that.
-    // Parse the FilterID
-    let filter_id = FilterId::from_str(str::from_utf8(id)?)?;
-
     // We need to verify the checkout exists. The passed in checkout_path
     // should correspond to a valid hg/sl repo that Mercurial is aware of.
     let abs_repo_path = PathBuf::from(checkout_path);
@@ -411,7 +377,7 @@ pub fn profile_from_filter_id(
     // If we've already loaded a filter from this repo before, we can skip Repo
     // object creation. Otherwise, we need to pay the 1 time cost of creating
     // the Repo object.
-    profile_contents_from_repo(filter_id, abs_repo_path, promise);
+    profile_contents_from_repo(id, abs_repo_path, promise);
 
     Ok(())
 }

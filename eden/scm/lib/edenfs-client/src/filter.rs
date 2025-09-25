@@ -209,9 +209,9 @@ impl FilterId {
 
 #[derive(Serialize, Deserialize, Debug)]
 pub struct Filter {
-    filter_id: FilterId,
-    filter_paths: Vec<RepoPathBuf>,
-    commit_id: HgId,
+    pub filter_id: FilterId,
+    pub filter_paths: Vec<RepoPathBuf>,
+    pub commit_id: HgId,
 }
 
 impl Filter {
