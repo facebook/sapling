@@ -70,6 +70,9 @@ impl<R: MononokeRepo> TreeContext<R> {
             .authorization_context()
             .require_full_repo_read(repo_ctx.ctx(), repo_ctx.repo())
             .await?;
+
+        // TODO(T239041722): check if tree belongs to restricted path
+
         // Try to load the fsnode immediately to see if it exists. Unlike
         // `new`, if the fsnode is missing, we simply return `Ok(None)`.
         match id

@@ -165,6 +165,9 @@ impl<R: MononokeRepo> ChangesetPathContentContext<R> {
                 &path,
             )
             .await?;
+
+        // TODO(T239041722): check if path is restricted
+
         Ok(Self {
             changeset,
             path,

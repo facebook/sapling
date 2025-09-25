@@ -90,6 +90,9 @@ impl<R: MononokeRepo> HgAugmentedTreeContext<R> {
         let blobstore = repo_ctx.repo().repo_blobstore();
         let envelope =
             fetch_augmented_manifest_envelope_opt(ctx, blobstore, augmented_manifest_id).await?;
+
+        // TODO(T239041722): check if tree belongs to restricted path
+
         if let Some(envelope) = envelope {
             let preloaded_manifest =
                 HgPreloadedAugmentedManifest::load_from_sharded(envelope, ctx, blobstore).await?;
