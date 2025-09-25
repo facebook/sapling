@@ -20,6 +20,7 @@ import type {
 } from './types';
 
 import {browserPlatform} from './BrowserPlatform';
+import type {CodeReviewIssue} from './firstPassCodeReview/types';
 
 export type InitialParamKeys = 'token' | string;
 
@@ -85,6 +86,14 @@ export interface Platform {
   messageBus: MessageBus;
   /** In browser-like platforms, some ISL parameters are passed via URL query params */
   initialUrlParams?: Map<InitialParamKeys, string>;
+
+  /** If the platform has a notion of AI code review, methods for listening to them. */
+  aiCodeReview?: {
+    /** listen for new comments so ISL can render them */
+    onDidChangeAIReviewComments(
+      callback: (aiReviewComments: Array<CodeReviewIssue>) => void,
+    ): Disposable;
+  };
 }
 
 declare global {

@@ -158,6 +158,19 @@ const vscodeWebviewPlatform: Platform = {
     },
   },
 
+  aiCodeReview: {
+    onDidChangeAIReviewComments(callback) {
+      window.clientToServerAPI?.postMessage({
+        type: 'platform/subscribeToAIReviewComments',
+      });
+      return (
+        window.clientToServerAPI?.onMessageOfType('platform/gotAIReviewComments', event => {
+          callback(event.comments.value ?? []);
+        }) ?? {dispose: () => {}}
+      );
+    },
+  },
+
   AddMoreCwdsHint,
   Settings: VSCodeSettings,
 

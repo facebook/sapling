@@ -745,9 +745,11 @@ export type PlatformSpecificClientToServerMessages =
       conflicts: MergeConflicts;
     }
   | {
-      type: 'platform/runFirstPassCodeReview';
+      type: 'platform/runAICodeReview';
       cwd: string;
-      reviewId: string;
+    }
+  | {
+      type: 'platform/subscribeToAIReviewComments';
     }
   | {
       type: 'platform/setFirstPassCodeReviewComments';
@@ -779,9 +781,8 @@ export type PlatformSpecificServerToClientMessages =
       value: Json | undefined;
     }
   | {
-      type: 'platform/firstPassCodeReviewResult';
-      reviewId: string;
-      result: Result<Map<string, CodeReviewIssue[]>>;
+      type: 'platform/gotAIReviewComments';
+      comments: Result<CodeReviewIssue[]>;
     };
 
 export type CodeReviewProviderSpecificClientToServerMessages =

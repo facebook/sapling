@@ -12,11 +12,11 @@ import {Tooltip} from 'isl-components/Tooltip';
 import {atom, useAtom, useAtomValue} from 'jotai';
 import clientToServerAPI from '../ClientToServerAPI';
 import {T} from '../i18n';
-import {atomFamilyWeak} from '../jotaiUtils';
+import {writeAtom} from '../jotaiUtils';
 import {serverCwd} from '../repositoryData';
-import type {CommitInfo, Hash} from '../types';
+import type {CommitInfo} from '../types';
 
-import {randomId} from 'shared/utils';
+import {registerDisposable} from '../utils';
 import './CodeReviewStatus.css';
 import {firstPassCommentData} from './firstPassCodeReviewAtoms';
 
@@ -26,39 +26,32 @@ type CodeReviewProgressStatus = 'running' | 'success' | 'error';
  * Atom family to store code review status per commit hash.
  * Each commit gets its own atom to track its code review progress.
  */
-const codeReviewStatusAtom = atomFamilyWeak((_hash: Hash) =>
-  atom<CodeReviewProgressStatus | null>(null),
+const codeReviewStatusAtom = atom<CodeReviewProgressStatus | null>(null);
+
+registerDisposable(
+  firstPassCommentData,
+  clientToServerAPI.onMessageOfType('platform/gotAIReviewComments', data => {
+    const result = data.comments;
+    if (result.error) {
+      writeAtom(codeReviewStatusAtom, 'error');
+    }
+    writeAtom(codeReviewStatusAtom, 'success');
+  }),
+  import.meta.hot,
 );
 
 export function CodeReviewStatus({commit}: {commit: CommitInfo}): JSX.Element {
   const cwd = useAtomValue(serverCwd);
-  const [status, setStatus] = useAtom(codeReviewStatusAtom(commit.hash));
-  const [, setIssues] = useAtom(firstPassCommentData(commit.hash));
+  const [status, setStatus] = useAtom(codeReviewStatusAtom);
 
   const button = (
     <Button
-      onClick={async () => {
-        const reviewId = randomId();
+      onClick={() => {
         setStatus('running');
         clientToServerAPI.postMessage({
-          type: 'platform/runFirstPassCodeReview',
+          type: 'platform/runAICodeReview',
           cwd,
-          reviewId,
         });
-        const response = await clientToServerAPI.nextMessageMatching(
-          'platform/firstPassCodeReviewResult',
-          msg => msg.reviewId === reviewId,
-        );
-        if (response.result.error) {
-          setStatus('error');
-          return;
-        }
-        const results = response.result.value;
-        setIssues([...results.values()].flat());
-        clientToServerAPI.postMessage({
-          type: 'platform/setFirstPassCodeReviewComments',
-        });
-        setStatus('success');
       }}
       disabled={!commit.isDot}>
       {status == null ? <T>Try it!</T> : <T>Try again</T>}

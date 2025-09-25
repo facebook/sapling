@@ -5,11 +5,18 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-import {localStorageBackedAtomFamily} from '../jotaiUtils';
-import type {Hash} from '../types';
+import {atom} from 'jotai';
+import {writeAtom} from '../jotaiUtils';
+import platform from '../platform';
+import {registerDisposable} from '../utils';
 import type {CodeReviewIssue} from './types';
 
-export const firstPassCommentData = localStorageBackedAtomFamily<Hash, CodeReviewIssue[]>(
-  'isl.first-pass-comments:',
-  () => [],
+export const firstPassCommentData = atom<CodeReviewIssue[]>([]);
+
+registerDisposable(
+  firstPassCommentData,
+  platform.aiCodeReview?.onDidChangeAIReviewComments(comments => {
+    writeAtom(firstPassCommentData, comments);
+  }) ?? {dispose: () => {}},
+  import.meta.hot,
 );
