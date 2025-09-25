@@ -9,7 +9,6 @@ use std::collections::BTreeMap;
 use std::io;
 use std::path::Path;
 use std::path::PathBuf;
-use std::str::FromStr;
 use std::sync::Arc;
 use std::time::Instant;
 
@@ -18,7 +17,6 @@ use anyhow::anyhow;
 use async_runtime::block_on;
 use clientinfo::get_client_request_info;
 use configmodel::Config;
-use configmodel::ConfigExt;
 use fbthrift_socket::SocketTransport;
 use parking_lot::Mutex;
 use serde::Deserialize;
@@ -33,7 +31,6 @@ use types::HgId;
 use types::RepoPathBuf;
 
 use crate::filter::FilterGenerator;
-use crate::filter::FilterVersion;
 use crate::types::CheckoutConflict;
 use crate::types::CheckoutMode;
 use crate::types::EdenError;
@@ -54,16 +51,7 @@ impl EdenFsClient {
     pub fn from_wdir(wdir_root: &Path, config: &dyn Config) -> anyhow::Result<Self> {
         let dot_dir = wdir_root.join(identity::must_sniff_dir(wdir_root)?.dot_dir());
         let eden_config = EdenConfig::from_root(wdir_root)?;
-        let version_config: Option<String> = config.get_opt("experimental", "filter-version")?;
-        let use_filter_storage = config.get_or("experimental", "use-filter-storage", || true)?;
-        let filter_version = version_config.map_or(FilterVersion::Legacy, |v| {
-            FilterVersion::from_str(&v).unwrap_or_else(|e| {
-                tracing::warn!("provided filter version is invalid: {:?}", e);
-                FilterVersion::Legacy
-            })
-        });
-        let filter_generator =
-            FilterGenerator::new(dot_dir, filter_version, use_filter_storage, None, None)?;
+        let filter_generator = FilterGenerator::from_dot_dir(&dot_dir, config)?;
         Ok(Self {
             eden_config,
             filter_generator: Some(Mutex::new(filter_generator)),

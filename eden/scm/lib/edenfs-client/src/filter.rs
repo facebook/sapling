@@ -6,11 +6,14 @@
  */
 
 use std::collections::BTreeMap;
+use std::path::Path;
 use std::path::PathBuf;
 use std::str::FromStr;
 
 use anyhow::Context;
 use blake3::Hasher as Blake3Hasher;
+use configmodel::Config;
+use configmodel::ConfigExt;
 use derivative::Derivative;
 use indexedlog::log::IndexOutput;
 use revisionstore::indexedlogutil::Store;
@@ -248,7 +251,7 @@ impl Filter {
 #[derive(Derivative)]
 #[derivative(Debug)]
 pub(crate) struct FilterGenerator {
-    dot_hg_path: PathBuf,
+    dot_dir: PathBuf,
     #[derivative(Debug = "ignore")]
     filter_store: Option<Store>,
     hash_key: [u8; 32],
@@ -257,8 +260,26 @@ pub(crate) struct FilterGenerator {
 }
 
 impl FilterGenerator {
+    pub fn from_dot_dir(dot_dir: &Path, config: &dyn Config) -> anyhow::Result<Self> {
+        let version_config: Option<String> = config.get_opt("experimental", "filter-version")?;
+        let use_filter_storage = config.get_or("experimental", "use-filter-storage", || true)?;
+        let filter_version = version_config.map_or(FilterVersion::Legacy, |v| {
+            FilterVersion::from_str(&v).unwrap_or_else(|e| {
+                tracing::warn!("provided filter version is invalid: {:?}", e);
+                FilterVersion::Legacy
+            })
+        });
+        FilterGenerator::new(
+            dot_dir.to_path_buf(),
+            filter_version,
+            use_filter_storage,
+            None,
+            None,
+        )
+    }
+
     pub fn new(
-        dot_hg_path: PathBuf,
+        dot_dir: PathBuf,
         default_filter_version: FilterVersion,
         use_filter_store: bool,
         filter_store_path: Option<PathBuf>,
@@ -268,8 +289,7 @@ impl FilterGenerator {
         // indexedlog store and use a blake3 hash as the index to the filter contents. We avoid
         // long filter ids since EdenFS performance can degrade when ObjectID size grows too large.
         let (filter_store, default_version) = if use_filter_store {
-            let filter_store_path =
-                filter_store_path.unwrap_or_else(|| dot_hg_path.join("filters"));
+            let filter_store_path = filter_store_path.unwrap_or_else(|| dot_dir.join("filters"));
             let config = BTreeMap::<&str, &str>::new();
             (
                 Some(
@@ -301,7 +321,7 @@ impl FilterGenerator {
         hash_key.copy_from_slice(key);
 
         Ok(FilterGenerator {
-            dot_hg_path,
+            dot_dir,
             filter_store,
             hash_key,
             default_filter_version: default_version,
@@ -410,7 +430,7 @@ impl FilterGenerator {
         // 3) It may contain the paths to the active filters (one per line, each starting with "%include").
         //
         // We error out if the path exists, but we can't read the file.
-        let config_contents = std::fs::read_to_string(self.dot_hg_path.join("sparse"));
+        let config_contents = std::fs::read_to_string(self.dot_dir.join("sparse"));
         let filter_contents = match config_contents {
             Ok(c) => c,
             Err(e) if e.kind() == std::io::ErrorKind::NotFound => return Ok(None),
@@ -492,13 +512,13 @@ mod tests {
         use_storage: Option<bool>,
     ) -> (TempDir, FilterGenerator) {
         let temp_dir = TempDir::new().unwrap();
-        let dot_hg_path = temp_dir.path().join(".hg");
-        std::fs::create_dir_all(&dot_hg_path).unwrap();
+        let dot_dir = temp_dir.path().join(".hg");
+        std::fs::create_dir_all(&dot_dir).unwrap();
 
         let filter_store_path = temp_dir.path().join("filter_store");
 
         let filter_gen = FilterGenerator::new(
-            dot_hg_path,
+            dot_dir,
             filter_version,
             use_storage.unwrap_or(true),
             Some(filter_store_path),
@@ -509,8 +529,8 @@ mod tests {
         (temp_dir, filter_gen)
     }
 
-    fn create_sparse_file(dot_hg_path: &Path, contents: &str) -> std::io::Result<()> {
-        let sparse_path = dot_hg_path.join("sparse");
+    fn create_sparse_file(dot_dir: &Path, contents: &str) -> std::io::Result<()> {
+        let sparse_path = dot_dir.join("sparse");
         let mut file = File::create(&sparse_path)?;
         file.write_all(contents.as_bytes())?;
         Ok(())
@@ -642,7 +662,7 @@ mod tests {
     #[test]
     fn test_read_filter_config_empty_file() {
         let (_tmp_dir, filter_gen) = create_test_filter_generator(FilterVersion::Legacy, None);
-        create_sparse_file(&filter_gen.dot_hg_path, "").unwrap();
+        create_sparse_file(&filter_gen.dot_dir, "").unwrap();
         let result = filter_gen.read_filter_config().unwrap();
         assert!(result.is_none());
     }
@@ -650,7 +670,7 @@ mod tests {
     #[test]
     fn test_read_filter_config_whitespace_only() {
         let (_tmp_dir, filter_gen) = create_test_filter_generator(FilterVersion::Legacy, None);
-        create_sparse_file(&filter_gen.dot_hg_path, "   \n\t  \n").unwrap();
+        create_sparse_file(&filter_gen.dot_dir, "   \n\t  \n").unwrap();
         let result = filter_gen.read_filter_config().unwrap();
         assert!(result.is_none());
     }
@@ -659,7 +679,7 @@ mod tests {
     fn test_read_filter_config_valid_includes() {
         let (_tmp_dir, filter_gen) = create_test_filter_generator(FilterVersion::Legacy, None);
         let contents = "%include path/to/filter1.txt\n%include path/to/filter2.txt\n";
-        create_sparse_file(&filter_gen.dot_hg_path, contents).unwrap();
+        create_sparse_file(&filter_gen.dot_dir, contents).unwrap();
         let result = filter_gen.read_filter_config().unwrap().unwrap();
         assert_eq!(result.len(), 2);
         assert_eq!(result[0].to_string(), "path/to/filter1.txt");
@@ -672,7 +692,7 @@ mod tests {
 
         // Create sparse file with invalid line (not starting with %include)
         let contents = "invalid line\n%include valid.txt\n";
-        create_sparse_file(&filter_gen.dot_hg_path, contents).unwrap();
+        create_sparse_file(&filter_gen.dot_dir, contents).unwrap();
 
         let result = filter_gen.read_filter_config();
         assert!(result.is_err());
@@ -701,7 +721,7 @@ mod tests {
 
         // Create sparse file with filters
         let contents = format!("%include {}\n", DEFAULT_FILTER_PATH);
-        create_sparse_file(&filter_gen.dot_hg_path, &contents).unwrap();
+        create_sparse_file(&filter_gen.dot_dir, &contents).unwrap();
 
         let result = filter_gen.active_filter_id(&commit_id).unwrap();
         assert!(result.is_some());
@@ -821,7 +841,7 @@ mod tests {
         let (_tmp_dir, mut filter_gen) = create_test_filter_generator(FilterVersion::Legacy, None);
         let commit_id = HgId::from_hex(TEST_COMMIT_ID).unwrap();
         let contents = "%include path/to/filter.txt\n";
-        create_sparse_file(&filter_gen.dot_hg_path, contents).unwrap();
+        create_sparse_file(&filter_gen.dot_dir, contents).unwrap();
 
         let result = filter_gen.active_filter_id(&commit_id).unwrap().unwrap();
 
@@ -840,7 +860,7 @@ mod tests {
             create_test_filter_generator(FilterVersion::V1, Some(false));
         let commit_id = HgId::from_hex(TEST_COMMIT_ID).unwrap();
         let contents = "%include path/to/filter1.txt\n%include path/to/filter2.txt\n";
-        create_sparse_file(&filter_gen.dot_hg_path, contents).unwrap();
+        create_sparse_file(&filter_gen.dot_dir, contents).unwrap();
 
         let result = filter_gen.active_filter_id(&commit_id);
 
@@ -862,7 +882,7 @@ mod tests {
 
         // Create sparse file with a single filter path
         let contents = "%include path/to/filter.txt\n";
-        create_sparse_file(&filter_gen.dot_hg_path, contents).unwrap();
+        create_sparse_file(&filter_gen.dot_dir, contents).unwrap();
 
         let result = filter_gen.active_filter_id(&commit_id).unwrap().unwrap();
 
