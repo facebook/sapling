@@ -22,8 +22,11 @@
   width: 100%;
 }
 
-.comment-list {
+.comment-content-container {
   margin: 0 20px;
+}
+
+.comment-list {
   display: flex;
   flex-direction: column;
   gap: 16px;

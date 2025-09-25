@@ -23,6 +23,8 @@ export const firstPassCommentData = atom<CodeReviewIssue[]>([]);
 
 export const firstPassCommentDataCount = atom(get => get(firstPassCommentData).length);
 
+export const firstPassCommentError = atom<Error | undefined>(undefined);
+
 /**
  * Derived atom that maps comments by file path.
  * The resulting object has file paths as keys and arrays of CodeReviewIssue as values.

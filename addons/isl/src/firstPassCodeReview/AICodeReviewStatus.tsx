@@ -10,6 +10,7 @@ import clientToServerAPI from '../ClientToServerAPI';
 import {T} from '../i18n';
 import {writeAtom} from '../jotaiUtils';
 
+import {ErrorNotice} from 'isl-components/ErrorNotice';
 import {Icon} from 'isl-components/Icon';
 import {minimalDisambiguousPaths} from 'shared/minimalDisambiguousPaths';
 import {Collapsable} from '../Collapsable';
@@ -24,6 +25,7 @@ import {
   commentsByFilePathAtom,
   firstPassCommentData,
   firstPassCommentDataCount,
+  firstPassCommentError,
 } from './firstPassCodeReviewAtoms';
 
 registerDisposable(
@@ -32,8 +34,10 @@ registerDisposable(
     const result = data.comments;
     if (result.error) {
       writeAtom(codeReviewStatusAtom, 'error');
+      writeAtom(firstPassCommentError, result.error);
+    } else {
+      writeAtom(codeReviewStatusAtom, 'success');
     }
-    writeAtom(codeReviewStatusAtom, 'success');
   }),
   import.meta.hot,
 );
@@ -43,6 +47,7 @@ export function AICodeReviewStatus(): JSX.Element | null {
   const status = useAtomValue(codeReviewStatusAtom);
   const commentCount = useAtomValue(firstPassCommentDataCount);
   const commentsByFilePath = useAtomValue(commentsByFilePathAtom);
+  const error = useAtomValue(firstPassCommentError);
   const disambiguatedPaths = minimalDisambiguousPaths(Object.keys(commentsByFilePath));
 
   if (status == null) {
@@ -72,26 +77,41 @@ export function AICodeReviewStatus(): JSX.Element | null {
           </div>
         </div>
       }>
-      <div className="comment-list">
-        {Object.entries(commentsByFilePath).map(([filepath, comments], i) =>
-          comments.map((comment, j) => (
-            <div className="comment-container" key={comment.issueID || `${filepath}-${j}`}>
-              <div className="comment-header">
-                <Link
-                  onClick={() =>
-                    platform.openFile(relativePath(repoRoot, filepath), {line: comment.startLine})
-                  }>
-                  <b>
-                    {disambiguatedPaths[i]}:{comment.startLine}
-                  </b>
-                </Link>
-              </div>
-              <div className="comment-body">
-                <T>{comment.description}</T>
-              </div>
-            </div>
-          )),
+      <div className="comment-content-container">
+        {status === 'running' && (
+          <div className="comment-loading">Devmate is reviewing your code...</div>
         )}
+        {status === 'success' &&
+          (commentCount > 0 ? (
+            <div className="comment-list">
+              {Object.entries(commentsByFilePath).map(([filepath, comments], i) =>
+                comments.map((comment, j) => (
+                  <div className="comment-container" key={comment.issueID || `${filepath}-${j}`}>
+                    <div className="comment-header">
+                      <Link
+                        onClick={() =>
+                          platform.openFile(relativePath(repoRoot, filepath), {
+                            line: comment.startLine,
+                          })
+                        }>
+                        <b>
+                          {disambiguatedPaths[i]}:{comment.startLine}
+                        </b>
+                      </Link>
+                    </div>
+                    <div className="comment-body">
+                      <T>{comment.description}</T>
+                    </div>
+                  </div>
+                )),
+              )}
+            </div>
+          ) : (
+            <div>
+              <T>Everything looks good! Devmate didn't find any issues.</T>
+            </div>
+          ))}
+        {status === 'error' && <ErrorNotice title="Failed to load comments" error={error} />}
       </div>
     </Collapsable>
   );
