@@ -22,6 +22,7 @@ use tracing::warn;
 use types::Blake3;
 use types::HgId;
 use types::RepoPathBuf;
+use types::sha::to_hex;
 
 #[derive(Clone, Copy, PartialEq, Debug)]
 #[allow(dead_code)]
@@ -212,6 +213,17 @@ pub(crate) struct FilterGenerator {
     hash_key: [u8; 32],
 }
 
+impl fmt::Display for FilterGenerator {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(
+            f,
+            "FilterGenerator {{ dot_hg_path: {:?}, hash_key: {} }}",
+            self.dot_hg_path,
+            to_hex(&self.hash_key)
+        )
+    }
+}
+
 #[allow(dead_code)]
 impl FilterGenerator {
     pub fn new(
@@ -244,6 +256,16 @@ impl FilterGenerator {
             filter_store,
             hash_key,
         })
+    }
+
+    /// Check if a filter hash already exists in the store
+    fn filter_exists(&self, filter_index: &[u8]) -> anyhow::Result<bool> {
+        let store = self.filter_store.read();
+        let lookup_iter = store
+            .lookup(0, filter_index)
+            .map_err(|e| anyhow::anyhow!("Failed to lookup filter hash in store: {:?}", e))?;
+
+        Ok(!lookup_iter.is_empty()?)
     }
 
     // Takes a commit and returns the corresponding FilterID that should be passed to Eden.

@@ -26,7 +26,6 @@ use thrift_types::edenfs_clients::EdenService;
 use thrift_types::fbthrift::binary_protocol::BinaryProtocol;
 use tokio_uds_compat::UnixStream;
 use tracing::error;
-use types::Blake3;
 use types::HgId;
 use types::RepoPathBuf;
 
