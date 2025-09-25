@@ -139,10 +139,22 @@ impl Root {
     /// Load a single top-level-profile as if you had a root profile that simply %include'd it.
     /// This allows you to create an adhoc v2 profile without needing a root config.
     pub fn single_profile(data: impl AsRef<[u8]>, source: String) -> Result<Self, io::Error> {
+        Root::from_profiles(vec![data], source)
+    }
+
+    pub fn from_profiles(
+        profs: Vec<impl AsRef<[u8]>>, // Profiles to %include
+        source: String,
+    ) -> Result<Self, io::Error> {
+        let profiles: Vec<Profile> = profs
+            .into_iter()
+            .map(|p| Profile::from_bytes(p, source.clone()))
+            .collect::<Result<Vec<_>, _>>()?;
+        let entries = profiles.into_iter().map(ProfileEntry::Profile).collect();
         Ok(Self {
             prof: Profile {
                 source: "dummy root".to_string(),
-                entries: vec![ProfileEntry::Profile(Profile::from_bytes(data, source)?)],
+                entries,
                 ..Default::default()
             },
             version_override: None,
@@ -1257,5 +1269,41 @@ foo
         let single = Root::single_profile(single, "base".to_string()).unwrap();
         let matcher = single.matcher(|_| async { unreachable!() }).await.unwrap();
         assert!(matcher.matches("foo/bar".try_into().unwrap()).unwrap());
+    }
+
+    #[tokio::test]
+    async fn test_from_profiles() {
+        let one = String::from(
+            "
+[metadata]
+version = 2
+
+[exclude]
+foo/bar
+
+[include]
+foo
+",
+        );
+
+        let two = String::from(
+            "
+[metadata]
+version = 2
+
+[exclude]
+bar
+
+[include]
+baz
+",
+        );
+
+        // Using from_profiles includes both profiles.
+        let root = Root::from_profiles(vec![one, two], "base".to_string()).unwrap();
+        let matcher = root.matcher(|_| async { unreachable!() }).await.unwrap();
+        assert!(matcher.matches("foo/bar".try_into().unwrap()).unwrap());
+        assert!(matcher.matches("baz".try_into().unwrap()).unwrap());
+        assert!(!matcher.matches("bar".try_into().unwrap()).unwrap());
     }
 }

@@ -346,7 +346,7 @@ fn _profile_contents_from_repo(
         // We no longer need to hold the lock on the repo_map
         drop(repo_map);
 
-        let mut root = Root::single_profile(data, id.repo_path.to_string())?;
+        let mut root = Root::from_profiles(vec![data], id.repo_path.to_string())?;
         root.set_version_override(Some("2".to_owned()));
         let matcher = root.matcher(|_| Ok(Some(vec![])))?;
         Ok(matcher)
