@@ -15,6 +15,7 @@ use sql::sql_common::mysql::RowField;
 use sql::sql_common::mysql::ValueError;
 use sql::sql_common::mysql::opt_try_from_rowfield;
 
+use crate::NonRootMPath;
 use crate::datetime::Timestamp;
 use crate::globalrev::Globalrev;
 use crate::hash::Blake2;
@@ -212,4 +213,39 @@ impl ConvIr<Blake2> for Blake2 {
 
 impl FromValue for Blake2 {
     type Intermediate = Blake2;
+}
+
+impl From<NonRootMPath> for Value {
+    fn from(path: NonRootMPath) -> Self {
+        Value::Bytes(path.to_vec())
+    }
+}
+
+impl ConvIr<NonRootMPath> for NonRootMPath {
+    fn new(v: Value) -> FromValueResult<Self> {
+        match v {
+            Value::Bytes(bytes) => {
+                NonRootMPath::new(&bytes).map_err(move |_| FromValueError(Value::Bytes(bytes)))
+            }
+            v => Err(FromValueError(v)),
+        }
+    }
+
+    fn commit(self) -> Self {
+        self
+    }
+
+    fn rollback(self) -> Value {
+        self.into()
+    }
+}
+
+impl FromValue for NonRootMPath {
+    type Intermediate = NonRootMPath;
+}
+
+impl OptionalTryFromRowField for NonRootMPath {
+    fn try_from_opt(field: RowField) -> Result<Option<Self>, ValueError> {
+        opt_try_from_rowfield(field)
+    }
 }
