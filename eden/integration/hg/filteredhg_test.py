@@ -345,7 +345,7 @@ class FilteredFSBasic(FilteredFSBase):
         counters = self.get_counters()
         expected_counters = [
             "edenffi.ffs.lookups",
-            "edenffi.ffs.repo_cache_misses",
+            "edenffi.ffs.object_cache_misses",
         ]
         for ec in expected_counters:
             self.assertIn(ec, counters)
@@ -392,7 +392,7 @@ class FilteredFSRepoCacheTest(FilteredFSBase):
         # Check initial counters
         counters_initial = self.get_counters()
         initial_cache_cleanups = counters_initial.get(
-            "edenffi.ffs.repo_cache_cleanups", 0
+            "edenffi.ffs.object_cache_cleanups", 0
         )
 
         # Make an initial request to populate the cache
@@ -400,7 +400,7 @@ class FilteredFSRepoCacheTest(FilteredFSBase):
 
         counters_intermediate = self.get_counters()
         intermediate_cache_cleanups = counters_intermediate.get(
-            "edenffi.ffs.repo_cache_cleanups", 0
+            "edenffi.ffs.object_cache_cleanups", 0
         )
         self.assertEqual(initial_cache_cleanups, intermediate_cache_cleanups)
 
@@ -412,7 +412,9 @@ class FilteredFSRepoCacheTest(FilteredFSBase):
         self.set_active_filter("top_level_filter")
 
         counters_final = self.get_counters()
-        final_cache_cleanups = counters_final.get("edenffi.ffs.repo_cache_cleanups", 0)
+        final_cache_cleanups = counters_final.get(
+            "edenffi.ffs.object_cache_cleanups", 0
+        )
 
         # We should see cache cleanups have occurred
         self.assertGreater(final_cache_cleanups, initial_cache_cleanups)
@@ -433,7 +435,7 @@ class FilteredFSRepoCacheNeverExpiresTest(FilteredFSBase):
         # Check initial counters
         counters_initial = self.get_counters()
         initial_cache_cleanups = counters_initial.get(
-            "edenffi.ffs.repo_cache_cleanups", 0
+            "edenffi.ffs.object_cache_cleanups", 0
         )
 
         # Make an initial request to populate the cache
@@ -447,7 +449,9 @@ class FilteredFSRepoCacheNeverExpiresTest(FilteredFSBase):
         self.set_active_filter("top_level_filter")
 
         counters_final = self.get_counters()
-        final_cache_cleanups = counters_final.get("edenffi.ffs.repo_cache_cleanups", 0)
+        final_cache_cleanups = counters_final.get(
+            "edenffi.ffs.object_cache_cleanups", 0
+        )
 
         # We should see cache cleanups have occurred
         self.assertEqual(final_cache_cleanups, initial_cache_cleanups)

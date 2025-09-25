@@ -41,16 +41,16 @@ use crate::ffi::set_matcher_promise_error;
 use crate::ffi::set_matcher_promise_result;
 use crate::ffi::set_matcher_result;
 
-struct CachedRepo {
-    repo: Repo,
+struct CachedObjects {
     expiration: Option<Instant>,
+    repo: Repo,
 }
 
-static REPO_HASHMAP: Lazy<Mutex<HashMap<PathBuf, CachedRepo>>> = Lazy::new(|| {
+static OBJECT_CACHE: Lazy<Mutex<HashMap<PathBuf, CachedObjects>>> = Lazy::new(|| {
     let map = Mutex::new(HashMap::new());
 
     // Start the cleanup thread that checks for evictions every ~15 seconds
-    thread::spawn(cleanup_expired_repos);
+    thread::spawn(cleanup_expired_objects);
 
     map
 });
@@ -58,35 +58,36 @@ static REPO_HASHMAP: Lazy<Mutex<HashMap<PathBuf, CachedRepo>>> = Lazy::new(|| {
 static LOOKUPS: Counter = Counter::new_counter("edenffi.ffs.lookups");
 static LOOKUP_FAILURES: Counter = Counter::new_counter("edenffi.ffs.lookup_failures");
 static INVALID_REPO: Counter = Counter::new_counter("edenffi.ffs.invalid_repo");
-static REPO_CACHE_MISSES: Counter = Counter::new_counter("edenffi.ffs.repo_cache_misses");
-static REPO_CACHE_HITS: Counter = Counter::new_counter("edenffi.ffs.repo_cache_hits");
-static REPO_CACHE_CLEANUPS: Counter = Counter::new_counter("edenffi.ffs.repo_cache_cleanups");
+static OBJECT_CACHE_MISSES: Counter = Counter::new_counter("edenffi.ffs.object_cache_misses");
+static OBJECT_CACHE_HITS: Counter = Counter::new_counter("edenffi.ffs.object_cache_hits");
+static OBJECT_CACHE_CLEANUPS: Counter = Counter::new_counter("edenffi.ffs.object_cache_cleanups");
 
 const DEFAULT_CACHE_EXPIRY_DURATION: Duration = Duration::from_secs(300); // 5 minutes
 
-// Background thread to clean up expired repos
-fn cleanup_expired_repos() {
+// Background thread to clean up expired objects
+fn cleanup_expired_objects() {
     loop {
         // Check for expired cache entries every 15 seconds
         thread::sleep(Duration::from_secs(15));
 
-        let mut repo_map = REPO_HASHMAP.lock();
+        let mut object_map = OBJECT_CACHE.lock();
         let now = Instant::now();
-        let initial_count = repo_map.len();
+        let initial_count = object_map.len();
 
-        // Only keep repos that aren't expired
-        repo_map.retain(|_path, cached_repo| cached_repo.expiration.is_none_or(|exp| now < exp));
+        // Only keep objects that aren't expired
+        object_map
+            .retain(|_path, cached_object| cached_object.expiration.is_none_or(|exp| now < exp));
 
-        let final_count = repo_map.len();
-        drop(repo_map);
+        let final_count = object_map.len();
+        drop(object_map);
 
         let cleaned_count = initial_count.saturating_sub(final_count);
         if cleaned_count > 0 {
             tracing::info!(
-                "Cleaned up {} expired repo entries from cache",
+                "Cleaned up {} expired object entries from cache",
                 cleaned_count
             );
-            REPO_CACHE_CLEANUPS.add(cleaned_count);
+            OBJECT_CACHE_CLEANUPS.add(cleaned_count);
         }
     }
 }
@@ -273,10 +274,10 @@ fn _profile_contents_from_repo(
     id: FilterId,
     abs_repo_path: PathBuf,
 ) -> Result<Box<MercurialMatcher>, anyhow::Error> {
-    let mut repo_map = REPO_HASHMAP.lock();
-    if !repo_map.contains_key(&abs_repo_path) {
-        // Load the repo and store it for later use
-        REPO_CACHE_MISSES.increment();
+    let mut object_map = OBJECT_CACHE.lock();
+    if !object_map.contains_key(&abs_repo_path) {
+        OBJECT_CACHE_MISSES.increment();
+
         let repo = Repo::load(&abs_repo_path, &[]).with_context(|| {
             anyhow!("failed to load Repo object for {}", abs_repo_path.display())
         })?;
@@ -289,13 +290,14 @@ fn _profile_contents_from_repo(
         } else {
             Some(Instant::now() + ttl)
         };
-        repo_map.insert(abs_repo_path.clone(), CachedRepo { repo, expiration });
+
+        object_map.insert(abs_repo_path.clone(), CachedObjects { expiration, repo });
     } else {
-        REPO_CACHE_HITS.increment();
+        OBJECT_CACHE_HITS.increment();
     }
 
-    let cached_repo = repo_map.get_mut(&abs_repo_path).context("loading repo")?;
-    let repo = &mut cached_repo.repo;
+    let cached_objects = object_map.get_mut(&abs_repo_path).context("loading repo")?;
+    let repo = &mut cached_objects.repo;
 
     // Create the tree manifest for the root tree of the repo
     let tree_manifest = match repo.tree_resolver()?.get(&id.hg_id) {
@@ -343,8 +345,8 @@ fn _profile_contents_from_repo(
             .get_content(FetchContext::default(), &id.repo_path, file_id)?
             .into_bytes();
 
-        // We no longer need to hold the lock on the repo_map
-        drop(repo_map);
+        // We no longer need to hold the lock on the object_map
+        drop(object_map);
 
         let mut root = Root::from_profiles(vec![data], id.repo_path.to_string())?;
         root.set_version_override(Some("2".to_owned()));
