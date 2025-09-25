@@ -245,7 +245,19 @@ fn _profile_contents_from_repo(
         })?;
 
         let config = repo.config();
-        let filter_gen = FilterGenerator::from_dot_dir(repo.dot_hg_path(), config)?;
+        // NOTE: This is technically wrong. The repository at abs_repo_path *is* the shared repo,
+        // so we're passing in the same path for both arguments. This is only okay since the FFI
+        // code never tries to read/write the .hg/sparse file directly.
+        //
+        // We *cannot* use the checkout's mount path to load the repo, since that leads to
+        // deadlocks. Sapling acquires the lock for checkout, then the FFI layer tries to acquire
+        // the lock for filter evaluation, and a deadlock occurs. Using the shared repo for filter
+        // evaluation prevents this deadlock from occurring.
+        let filter_gen = FilterGenerator::from_dot_dirs(
+            repo.shared_dot_hg_path(),
+            repo.shared_dot_hg_path(),
+            config,
+        )?;
 
         let ttl = repo
             .config()

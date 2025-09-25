@@ -115,6 +115,8 @@ impl WorkingCopy {
         locker: Arc<RepoLocker>,
         // For dirstate
         dot_dir: &Path,
+        // For FilterGenerator
+        shared_dot_dir: &Path,
         has_requirement: &dyn Fn(&str) -> bool,
     ) -> Result<Self> {
         tracing::trace!("initializing vfs at {path:?}");
@@ -177,6 +179,7 @@ impl WorkingCopy {
         let filesystem = Self::construct_file_system(
             vfs.clone(),
             dot_dir,
+            shared_dot_dir,
             config,
             file_system_type.clone(),
             tree_resolver.clone(),
@@ -295,6 +298,7 @@ impl WorkingCopy {
     fn construct_file_system(
         vfs: VFS,
         dot_dir: &Path,
+        shared_dot_dir: &Path,
         config: &dyn Config,
         file_system_type: FileSystemType,
         tree_resolver: ArcReadTreeManifest,
@@ -323,7 +327,8 @@ impl WorkingCopy {
                 panic!("cannot use EdenFS in a non-EdenFS build");
                 #[cfg(feature = "eden")]
                 {
-                    let client = Arc::new(EdenFsClient::from_wdir(vfs.root(), config)?);
+                    let client =
+                        Arc::new(EdenFsClient::from_wdir(vfs.root(), shared_dot_dir, config)?);
                     Box::new(EdenFileSystem::new(
                         config,
                         client,

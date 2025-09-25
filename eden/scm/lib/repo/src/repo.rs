@@ -733,6 +733,7 @@ impl Repo {
             file_store,
             self.locker.clone(),
             &self.dot_hg_path,
+            &self.shared_dot_hg_path,
             &has_requirement,
         )
         .map_err(errors::InvalidWorkingCopy::from)?;

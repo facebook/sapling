@@ -260,7 +260,15 @@ pub struct FilterGenerator {
 }
 
 impl FilterGenerator {
-    pub fn from_dot_dir(dot_dir: &Path, config: &dyn Config) -> anyhow::Result<Self> {
+    /// Creates a filter generator that looks for the .{hg,sl}/sparse file in the repo dir, but
+    /// places the filter storage indexedlog in the shared dot dir. This allows filter storage to
+    /// be shared amongst EdenFS repos of the same type, while allowing spareness to be determined
+    /// per repository.
+    pub fn from_dot_dirs(
+        dot_dir: &Path,
+        shared_dot_dir: &Path,
+        config: &dyn Config,
+    ) -> anyhow::Result<Self> {
         let version_config: Option<String> = config.get_opt("experimental", "filter-version")?;
         let use_filter_storage = config.get_or("experimental", "use-filter-storage", || true)?;
         let filter_version = version_config.map_or(FilterVersion::Legacy, |v| {
@@ -273,7 +281,7 @@ impl FilterGenerator {
             dot_dir.to_path_buf(),
             filter_version,
             use_filter_storage,
-            None,
+            Some(shared_dot_dir.join("filters")),
             None,
         )
     }
@@ -518,7 +526,7 @@ mod tests {
         let filter_store_path = temp_dir.path().join("filter_store");
 
         let filter_gen = FilterGenerator::new(
-            dot_dir,
+            dot_dir.clone(),
             filter_version,
             use_storage.unwrap_or(true),
             Some(filter_store_path),
