@@ -106,8 +106,8 @@ import {FillCommitMessage} from './FillCommitMessage';
 import {CommitTitleByline, getFieldToAutofocus, Section, SmallCapsTitle} from './utils';
 
 import {useFeatureFlagSync} from '../featureFlags';
+import {AICodeReviewStatus} from '../firstPassCodeReview/AICodeReviewStatus';
 import {AICodeReviewUpsell} from '../firstPassCodeReview/AICodeReviewUpsell';
-import {CodeReviewStatus} from '../firstPassCodeReview/CodeReviewStatus';
 import {Internal} from '../Internal';
 import {confirmSuggestedEditsForFiles} from '../SuggestedEdits';
 import './CommitInfoView.css';
@@ -424,7 +424,7 @@ export function CommitInfoDetails({commit}: {commit: CommitInfo}) {
             <FoldPreviewActions />
           ) : (
             <>
-              {aiFirstPassCodeReviewEnabled && <CodeReviewStatus commit={commit} />}
+              {aiFirstPassCodeReviewEnabled && <AICodeReviewStatus />}
               <ActionsBar
                 commit={commit}
                 latestMessage={parsedFields}

@@ -21,6 +21,23 @@ export const codeReviewStatusAtom = atom<CodeReviewProgressStatus | null>(null);
  */
 export const firstPassCommentData = atom<CodeReviewIssue[]>([]);
 
+export const firstPassCommentDataCount = atom(get => get(firstPassCommentData).length);
+
+/**
+ * Derived atom that maps comments by file path.
+ * The resulting object has file paths as keys and arrays of CodeReviewIssue as values.
+ */
+export const commentsByFilePathAtom = atom(get => {
+  const comments = get(firstPassCommentData);
+  return comments.reduce<Record<string, CodeReviewIssue[]>>((acc, comment) => {
+    if (!acc[comment.filepath]) {
+      acc[comment.filepath] = [];
+    }
+    acc[comment.filepath].push(comment);
+    return acc;
+  }, {});
+});
+
 registerDisposable(
   firstPassCommentData,
   platform.aiCodeReview?.onDidChangeAIReviewComments(comments => {

@@ -1,0 +1,76 @@
+/**
+ * Copyright (c) Meta Platforms, Inc. and affiliates.
+ *
+ * This source code is licensed under the MIT license found in the
+ * LICENSE file in the root directory of this source tree.
+ */
+
+import {useAtomValue} from 'jotai';
+import clientToServerAPI from '../ClientToServerAPI';
+import {T} from '../i18n';
+import {writeAtom} from '../jotaiUtils';
+
+import {minimalDisambiguousPaths} from 'shared/minimalDisambiguousPaths';
+import {Collapsable} from '../Collapsable';
+import {registerDisposable} from '../utils';
+import './AICodeReviewStatus.css';
+import {
+  codeReviewStatusAtom,
+  commentsByFilePathAtom,
+  firstPassCommentData,
+  firstPassCommentDataCount,
+} from './firstPassCodeReviewAtoms';
+
+registerDisposable(
+  firstPassCommentData,
+  clientToServerAPI.onMessageOfType('platform/gotAIReviewComments', data => {
+    const result = data.comments;
+    if (result.error) {
+      writeAtom(codeReviewStatusAtom, 'error');
+    }
+    writeAtom(codeReviewStatusAtom, 'success');
+  }),
+  import.meta.hot,
+);
+
+export function AICodeReviewStatus(): JSX.Element | null {
+  const status = useAtomValue(codeReviewStatusAtom);
+  const commentCount = useAtomValue(firstPassCommentDataCount);
+  const commentsByFilePath = useAtomValue(commentsByFilePathAtom);
+  const disambiguatedPaths = minimalDisambiguousPaths(Object.keys(commentsByFilePath));
+
+  if (status == null) {
+    return null;
+  }
+
+  return (
+    <Collapsable
+      className="comment-collapsable"
+      title={
+        <div>
+          <b>
+            <T>Devmate Code Review</T> {commentCount > 0 && `(${commentCount})`}
+          </b>
+        </div>
+      }>
+      <div className="comment-list">
+        {Object.entries(commentsByFilePath).map(([filepath, comments], i) =>
+          comments.map((comment, j) => (
+            <div className="comment-container" key={comment.issueID || `${filepath}-${j}`}>
+              <div className="comment-header">
+                <a>
+                  <b>
+                    {disambiguatedPaths[i]}:{comment.startLine}
+                  </b>
+                </a>
+              </div>
+              <div className="comment-body">
+                <T>{comment.description}</T>
+              </div>
+            </div>
+          )),
+        )}
+      </div>
+    </Collapsable>
+  );
+}

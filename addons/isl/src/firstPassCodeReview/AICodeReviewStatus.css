@@ -1,0 +1,35 @@
+/**
+ * Copyright (c) Meta Platforms, Inc. and affiliates.
+ *
+ * This source code is licensed under the MIT license found in the
+ * LICENSE file in the root directory of this source tree.
+ */
+
+.comment-collapsable {
+  padding: 10px;
+}
+
+.comment-list {
+  margin: 0 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.comment-container {
+  display: flex;
+  gap: 4px;
+  flex-direction: column;
+}
+
+.comment-header {
+  font-size: 90%;
+}
+
+.comment-body {
+  line-clamp: 2;
+  -webkit-line-clamp: 2;
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
