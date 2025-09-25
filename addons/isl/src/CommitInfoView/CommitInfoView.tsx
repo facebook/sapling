@@ -106,6 +106,7 @@ import {FillCommitMessage} from './FillCommitMessage';
 import {CommitTitleByline, getFieldToAutofocus, Section, SmallCapsTitle} from './utils';
 
 import {useFeatureFlagSync} from '../featureFlags';
+import {AICodeReviewUpsell} from '../firstPassCodeReview/AICodeReviewUpsell';
 import {CodeReviewStatus} from '../firstPassCodeReview/CodeReviewStatus';
 import {Internal} from '../Internal';
 import {confirmSuggestedEditsForFiles} from '../SuggestedEdits';
@@ -294,6 +295,7 @@ export function CommitInfoDetails({commit}: {commit: CommitInfo}) {
         className="commit-info-view-main-content"
         // remount this if we change to commit mode
         key={mode}>
+        {aiFirstPassCodeReviewEnabled && commit.isDot && <AICodeReviewUpsell />}
         {schema
           .filter(field => !isCommitMode || field.type !== 'read-only')
           .map(field => {

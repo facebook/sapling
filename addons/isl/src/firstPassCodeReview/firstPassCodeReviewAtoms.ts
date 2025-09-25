@@ -9,8 +9,16 @@ import {atom} from 'jotai';
 import {writeAtom} from '../jotaiUtils';
 import platform from '../platform';
 import {registerDisposable} from '../utils';
-import type {CodeReviewIssue} from './types';
+import type {CodeReviewIssue, CodeReviewProgressStatus} from './types';
 
+/**
+ * Atom that stores the current status of the AI code review.
+ */
+export const codeReviewStatusAtom = atom<CodeReviewProgressStatus | null>(null);
+
+/**
+ * Atom that stores comments for the current review.
+ */
 export const firstPassCommentData = atom<CodeReviewIssue[]>([]);
 
 registerDisposable(

@@ -21,3 +21,5 @@ export type CodeReviewIssue = {
   endLine: number;
   severity: 'high' | 'medium' | 'low';
 };
+
+export type CodeReviewProgressStatus = 'running' | 'success' | 'error';

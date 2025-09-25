@@ -9,7 +9,7 @@ import {Banner, BannerKind} from 'isl-components/Banner';
 import {Button} from 'isl-components/Button';
 import {Icon} from 'isl-components/Icon';
 import {Tooltip} from 'isl-components/Tooltip';
-import {atom, useAtom, useAtomValue} from 'jotai';
+import {useAtom, useAtomValue} from 'jotai';
 import clientToServerAPI from '../ClientToServerAPI';
 import {T} from '../i18n';
 import {writeAtom} from '../jotaiUtils';
@@ -18,15 +18,8 @@ import type {CommitInfo} from '../types';
 
 import {registerDisposable} from '../utils';
 import './CodeReviewStatus.css';
-import {firstPassCommentData} from './firstPassCodeReviewAtoms';
-
-type CodeReviewProgressStatus = 'running' | 'success' | 'error';
-
-/**
- * Atom family to store code review status per commit hash.
- * Each commit gets its own atom to track its code review progress.
- */
-const codeReviewStatusAtom = atom<CodeReviewProgressStatus | null>(null);
+import {codeReviewStatusAtom, firstPassCommentData} from './firstPassCodeReviewAtoms';
+import type {CodeReviewProgressStatus} from './types';
 
 registerDisposable(
   firstPassCommentData,
