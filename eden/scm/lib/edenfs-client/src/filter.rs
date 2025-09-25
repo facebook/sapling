@@ -7,13 +7,15 @@
 
 use std::path::PathBuf;
 
+use serde::Deserialize;
+use serde::Deserializer;
 use serde::Serialize;
 use serde::Serializer;
 use tracing::warn;
 use types::HgId;
 
+#[derive(Clone, Copy, PartialEq, Debug)]
 #[allow(dead_code)]
-#[derive(Clone)]
 enum FilterVersion {
     /// Legacy Filters could only support having a single active filter. The filter content was
     /// stored inside the FilterID itself.
@@ -39,6 +41,25 @@ impl Serialize for FilterVersion {
                 "Serializing Legacy FilterVersions is not permitted",
             )),
             FilterVersion::V1 => serializer.serialize_u8(self.clone() as u8),
+        }
+    }
+}
+
+impl<'de> Deserialize<'de> for FilterVersion {
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    where
+        D: Deserializer<'de>,
+    {
+        let s = u8::deserialize(deserializer)?;
+        match s {
+            0 => Err(serde::de::Error::custom(
+                "Deserializing Legacy FilterVersions is not permitted",
+            )),
+            1 => Ok(FilterVersion::V1),
+            v => Err(serde::de::Error::custom(format!(
+                "Unknown filter version: {}",
+                v
+            ))),
         }
     }
 }
@@ -100,6 +121,7 @@ impl FilterGenerator {
 #[cfg(test)]
 mod tests {
 
+    use mincode::deserialize;
     use mincode::serialize_into;
 
     use super::*;
@@ -116,5 +138,36 @@ mod tests {
         let res = serialize_into(&mut buffer, &FilterVersion::Legacy);
         assert!(res.is_err());
         assert!(res.unwrap_err().to_string().contains("permitted"));
+    }
+
+    #[test]
+    fn test_filter_version_deserialize() {
+        let v1_bytes = vec![1];
+        let version: FilterVersion = deserialize(&v1_bytes).unwrap();
+        assert_eq!(version, FilterVersion::V1);
+
+        let legacy_bytes = vec![0];
+        let result: Result<FilterVersion, _> = deserialize(&legacy_bytes);
+        assert!(result.is_err());
+        assert!(result.unwrap_err().to_string().contains("permitted"));
+
+        let unknown_bytes = vec![7, b'U', b'n', b'k', b'n', b'o', b'w', b'n'];
+        let result: Result<FilterVersion, _> = deserialize(&unknown_bytes);
+        assert!(result.is_err());
+        assert!(
+            result
+                .unwrap_err()
+                .to_string()
+                .contains("Unknown filter version: 7")
+        );
+    }
+
+    #[test]
+    fn test_filter_version_round_trip() {
+        let original_v1 = FilterVersion::V1;
+        let mut buffer = Vec::new();
+        serialize_into(&mut buffer, &original_v1).unwrap();
+        let deserialized: FilterVersion = deserialize(&buffer).unwrap();
+        assert_eq!(original_v1, deserialized);
     }
 }
