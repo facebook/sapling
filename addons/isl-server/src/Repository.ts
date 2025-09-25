@@ -167,9 +167,8 @@ export class Repository {
   public stableLocations: Array<StableInfo> = [];
 
   /**
-   * Recommended remote bookmarks to be included in batched `log` fetch.
-   * Ensures that the recommended bookmark is included in the fetched remoteBookmarks,
-   * even if it was not included by default.
+   * Recommended remote bookmarks to be include in batched `log` fetch.
+   * If a bookmark is not in the subscriptions list yet, then it will be pulled explicitly.
    */
   public recommendedBookmarks: Array<string> = [];
 
@@ -1000,6 +999,46 @@ export class Repository {
     }
   });
 
+  async pullRecommendedBookmarks(ctx: RepositoryContext) {
+    if (!this.recommendedBookmarks.length) {
+      return;
+    }
+
+    try {
+      const result = await this.runCommand(
+        ['bookmarks', '--list-subscriptions'],
+        'BookmarksCommand',
+        ctx,
+      );
+      const subscribed = this.parseSubscribedBookmarks(result.stdout);
+      const missingBookmarks = this.recommendedBookmarks.filter(
+        bookmark => !subscribed.has(bookmark),
+      );
+
+      if (missingBookmarks.length > 0) {
+        // ISL prefixes bookmarks with remote/, so we need to strip this to pull the remote names
+        const missingRemoteNames = missingBookmarks.map(bookmark =>
+          bookmark.replace(/^remote\//, ''),
+        );
+
+        const pullBookmarkOperation = this.createPullBookmarksOperation(missingRemoteNames);
+        await this.runOrQueueOperation(ctx, pullBookmarkOperation, () => {});
+        ctx.logger.info(`Ran pull on new recommended bookmarks: ${missingRemoteNames.join(', ')}`);
+      } else {
+        // Fetch again as recommended bookmarks likely would not have been set before the startup fetch
+        // If bookmarks were pulled, this is automatically called
+        this.fetchSmartlogCommits();
+      }
+    } catch (err) {
+      let error = err;
+      if (isEjecaError(error)) {
+        error = simplifyEjecaError(error);
+      }
+
+      ctx.logger.error('Unable to pull new recommended bookmark(s): ', error);
+    }
+  }
+
   /** Get the current head commit if loaded */
   getHeadCommit(): CommitInfo | undefined {
     return this.smartlogCommits?.commits.value?.find(commit => commit.isDot);
@@ -1359,6 +1398,32 @@ export class Repository {
     const deletions = parseInt(diffStatMatch?.[2] ?? '0', 10);
     const sloc = insertions + deletions;
     return sloc;
+  }
+
+  private parseSubscribedBookmarks(output: string): Set<string> {
+    return new Set(
+      output
+        .split('\n')
+        .filter(line => line.trim())
+        .map(line => line.trim().split(/\s+/)[0]),
+    );
+  }
+
+  /**
+   * Create a runnable operation for pulling bookmarks.
+   */
+  private createPullBookmarksOperation(bookmarks: Array<string>): RunnableOperation {
+    const args = ['pull'];
+    for (const bookmark of bookmarks) {
+      args.push('-B', bookmark);
+    }
+
+    return {
+      args,
+      id: randomId(),
+      runner: CommandRunner.Sapling,
+      trackEventName: 'PullOperation',
+    };
   }
 
   public async getAllChangedFiles(ctx: RepositoryContext, hash: Hash): Promise<Array<ChangedFile>> {

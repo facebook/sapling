@@ -961,7 +961,7 @@ export default class ServerToClientAPI {
       }
       case 'fetchRecommendedBookmarks': {
         repo.recommendedBookmarks = data.recommendedBookmarks;
-        repo.fetchSmartlogCommits();
+        repo.pullRecommendedBookmarks(ctx);
         break;
       }
       case 'fetchDevEnvType': {
