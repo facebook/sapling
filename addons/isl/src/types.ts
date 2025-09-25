@@ -750,9 +750,6 @@ export type PlatformSpecificClientToServerMessages =
     }
   | {
       type: 'platform/subscribeToAIReviewComments';
-    }
-  | {
-      type: 'platform/setFirstPassCodeReviewComments';
     };
 
 /**

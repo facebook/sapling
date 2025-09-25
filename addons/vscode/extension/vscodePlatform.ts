@@ -321,14 +321,6 @@ export const getVSCodePlatform = (context: vscode.ExtensionContext): VSCodeServe
           try {
             const results = await Internal.runAICodeReview?.(cwd);
             if (results != null) {
-              // postMessage({
-              //   type: 'platform/firstPassCodeReviewResult',
-              //   reviewId,
-              //   result: {
-              //     value: results,
-              //   },
-              // });
-              // vscode.commands.executeCommand('sapling.refresh-first-pass-comments');
               const aiReviewCommentGroup = Internal.aiReviewCommentGroup?.();
               if (aiReviewCommentGroup == null) {
                 break;
@@ -387,10 +379,6 @@ export const getVSCodePlatform = (context: vscode.ExtensionContext): VSCodeServe
               });
             },
           );
-          break;
-        }
-        case 'platform/setFirstPassCodeReviewComments': {
-          vscode.commands.executeCommand('sapling.refresh-first-pass-comments');
           break;
         }
       }
