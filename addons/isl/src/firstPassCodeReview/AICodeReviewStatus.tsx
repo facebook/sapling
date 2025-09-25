@@ -12,6 +12,10 @@ import {writeAtom} from '../jotaiUtils';
 
 import {minimalDisambiguousPaths} from 'shared/minimalDisambiguousPaths';
 import {Collapsable} from '../Collapsable';
+import {relativePath} from '../CwdSelector';
+import {Link} from '../Link';
+import platform from '../platform';
+import {repoRelativeCwd} from '../repositoryData';
 import {registerDisposable} from '../utils';
 import './AICodeReviewStatus.css';
 import {
@@ -34,6 +38,7 @@ registerDisposable(
 );
 
 export function AICodeReviewStatus(): JSX.Element | null {
+  const repoRoot = useAtomValue(repoRelativeCwd);
   const status = useAtomValue(codeReviewStatusAtom);
   const commentCount = useAtomValue(firstPassCommentDataCount);
   const commentsByFilePath = useAtomValue(commentsByFilePathAtom);
@@ -58,11 +63,14 @@ export function AICodeReviewStatus(): JSX.Element | null {
           comments.map((comment, j) => (
             <div className="comment-container" key={comment.issueID || `${filepath}-${j}`}>
               <div className="comment-header">
-                <a>
+                <Link
+                  onClick={() =>
+                    platform.openFile(relativePath(repoRoot, filepath), {line: comment.startLine})
+                  }>
                   <b>
                     {disambiguatedPaths[i]}:{comment.startLine}
                   </b>
-                </a>
+                </Link>
               </div>
               <div className="comment-body">
                 <T>{comment.description}</T>

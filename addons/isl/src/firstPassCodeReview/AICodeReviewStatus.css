@@ -26,6 +26,10 @@
   font-size: 90%;
 }
 
+.comment-link {
+  cursor: pointer;
+}
+
 .comment-body {
   line-clamp: 2;
   -webkit-line-clamp: 2;
