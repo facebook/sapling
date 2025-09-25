@@ -126,6 +126,10 @@ use repo_sparse_profiles::RepoSparseProfiles;
 use repo_sparse_profiles::SqlSparseProfilesSizes;
 use repo_stats_logger::ArcRepoStatsLogger;
 use repo_stats_logger::RepoStatsLogger;
+use restricted_paths::ArcRestrictedPaths;
+use restricted_paths::ArcRestrictedPathsManifestIdStore;
+use restricted_paths::RestrictedPaths;
+use restricted_paths::SqlRestrictedPathsManifestIdStoreBuilder;
 use scuba_ext::MononokeScubaSampleBuilder;
 use sql::rusqlite::Connection as SqliteConnection;
 use sql::sqlite::SqliteCallbacks;
@@ -174,6 +178,7 @@ pub struct TestRepoFactory {
     permission_checker: Option<ArcRepoPermissionChecker>,
     derived_data_lease: Option<Box<dyn Fn() -> Arc<dyn LeaseOps> + Send + Sync>>,
     filenodes_override: Option<Box<dyn Fn(ArcFilenodes) -> ArcFilenodes + Send + Sync>>,
+    restricted_paths: Option<ArcRestrictedPaths>,
 }
 
 /// The default derived data types configuration for test repositories.
@@ -296,6 +301,8 @@ impl TestRepoFactory {
         metadata_con.execute_batch(StreamingCloneBuilder::CREATION_QUERY)?;
         metadata_con.execute_batch(SqlCommitGraphStorageBuilder::CREATION_QUERY)?;
         metadata_con.execute_batch(SqlCommitCloudBuilder::CREATION_QUERY)?;
+        metadata_con.execute_batch(SqlRestrictedPathsManifestIdStoreBuilder::CREATION_QUERY)?;
+
         let metadata_db = SqlConnections::new_single(match callbacks {
             Some(callbacks) => Connection::with_sqlite_callbacks(metadata_con, callbacks)?,
             None => Connection::with_sqlite(metadata_con)?,
@@ -320,6 +327,7 @@ impl TestRepoFactory {
             live_commit_sync_config: None,
             bookmarks_cache: None,
             git_symbolic_refs: None,
+            restricted_paths: None,
         })
     }
 
@@ -349,6 +357,12 @@ impl TestRepoFactory {
     /// Set the bookmarks cache for repos built by this factory.
     pub fn with_bookmarks_cache(&mut self, bookmarks_cache: ArcBookmarksCache) -> &mut Self {
         self.bookmarks_cache = Some(bookmarks_cache);
+        self
+    }
+
+    /// Set the restricted paths for repos built by this factory.
+    pub fn with_restricted_paths(&mut self, restricted_paths: ArcRestrictedPaths) -> &mut Self {
+        self.restricted_paths = Some(restricted_paths);
         self
     }
 
@@ -648,6 +662,7 @@ impl TestRepoFactory {
         filenodes: &ArcFilenodes,
         repo_blobstore: &ArcRepoBlobstore,
         filestore_config: &ArcFilestoreConfig,
+        restricted_paths: &ArcRestrictedPaths,
     ) -> Result<ArcRepoDerivedData> {
         let lease = self.derived_data_lease.as_ref().map_or_else(
             || Arc::new(InProcessLease::new()) as Arc<dyn LeaseOps>,
@@ -667,6 +682,7 @@ impl TestRepoFactory {
             MononokeScubaSampleBuilder::with_discard(),
             repo_config.derived_data_config.clone(),
             None, // derivation_service_client = None
+            restricted_paths.clone(),
         )?))
     }
 
@@ -715,6 +731,34 @@ impl TestRepoFactory {
             repo_identity.id(),
             sql_store,
         )))
+    }
+
+    /// Restricted paths
+    pub fn restricted_paths(
+        &self,
+        repo_config: &ArcRepoConfig,
+        restricted_paths_manifest_id_store: &ArcRestrictedPathsManifestIdStore,
+    ) -> ArcRestrictedPaths {
+        if let Some(restricted_paths) = &self.restricted_paths {
+            return restricted_paths.clone();
+        }
+        Arc::new(RestrictedPaths::new(
+            repo_config.restricted_paths_config.clone(),
+            restricted_paths_manifest_id_store.clone(),
+        ))
+    }
+
+    /// Restricted paths root ids store
+    pub fn restricted_paths_manifest_id_store(
+        &self,
+        repo_identity: &ArcRepoIdentity,
+    ) -> ArcRestrictedPathsManifestIdStore {
+        Arc::new(
+            SqlRestrictedPathsManifestIdStoreBuilder::from_sql_connections(
+                self.metadata_db.clone(),
+            )
+            .with_repo_id(repo_identity.id()),
+        )
     }
 
     /// The commit mapping between repos for synced commits.
@@ -869,6 +913,7 @@ impl TestRepoFactory {
         }
         #[cfg(not(fbcode_build))]
         {
+            let _ = repo_config;
             Ok(Arc::new(UnsupportedRepoEventPublisher {}))
         }
     }

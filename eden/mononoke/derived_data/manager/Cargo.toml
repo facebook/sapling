@@ -38,6 +38,7 @@ metadata = { version = "0.1.0", path = "../../common/metadata" }
 mononoke_types = { version = "0.1.0", path = "../../mononoke_types" }
 rand = { version = "0.8", features = ["small_rng"] }
 repo_blobstore = { version = "0.1.0", path = "../../repo_attributes/repo_blobstore" }
+restricted_paths = { version = "0.1.0", path = "../../repo_attributes/restricted_paths" }
 scuba_ext = { version = "0.1.0", path = "../../common/scuba_ext" }
 shared_error = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 slog = { package = "tracing_slog_compat", version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }

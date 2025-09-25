@@ -22,6 +22,7 @@ use futures::future::try_join_all;
 use metaconfig_types::DerivedDataTypesConfig;
 use mononoke_types::BonsaiChangeset;
 use mononoke_types::ChangesetId;
+use restricted_paths::ArcRestrictedPaths;
 
 use crate::derivable::BonsaiDerivable;
 use crate::manager::derive::Rederivation;
@@ -49,6 +50,7 @@ pub struct DerivationContext {
         Arc<dyn Blobstore>,
         Arc<MemWritesBlobstore<Arc<dyn Blobstore>>>,
     )>,
+    restricted_paths: ArcRestrictedPaths,
 }
 
 impl DerivationContext {
@@ -60,6 +62,7 @@ impl DerivationContext {
         config: DerivedDataTypesConfig,
         blobstore: Arc<dyn Blobstore>,
         filestore_config: FilestoreConfig,
+        restricted_paths: ArcRestrictedPaths,
     ) -> Self {
         // Start with None. Use with_rederivation later if needed
         let rederivation = None;
@@ -73,6 +76,7 @@ impl DerivationContext {
             blobstore,
             filestore_config,
             blobstore_write_cache: None,
+            restricted_paths,
         }
     }
 
@@ -290,6 +294,10 @@ impl DerivationContext {
 
     pub fn config_name(&self) -> String {
         self.config_name.clone()
+    }
+
+    pub fn restricted_paths(&self) -> ArcRestrictedPaths {
+        self.restricted_paths.clone()
     }
 
     /// The config that should be used for derivation.

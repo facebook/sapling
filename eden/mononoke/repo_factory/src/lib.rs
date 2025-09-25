@@ -22,6 +22,7 @@ use acl_regions::ArcAclRegions;
 use acl_regions::build_acl_regions;
 use anyhow::Context;
 use anyhow::Result;
+#[cfg(fbcode_build)]
 use anyhow::anyhow;
 use async_once_cell::AsyncOnceCell;
 use blobstore::Blobstore;
@@ -192,6 +193,10 @@ use repo_sparse_profiles::RepoSparseProfiles;
 use repo_sparse_profiles::SqlSparseProfilesSizes;
 use repo_stats_logger::ArcRepoStatsLogger;
 use repo_stats_logger::RepoStatsLogger;
+use restricted_paths::ArcRestrictedPaths;
+use restricted_paths::ArcRestrictedPathsManifestIdStore;
+use restricted_paths::RestrictedPaths;
+use restricted_paths::SqlRestrictedPathsManifestIdStoreBuilder;
 use scuba_ext::MononokeScubaSampleBuilder;
 use slog::debug;
 use slog::error;
@@ -857,6 +862,12 @@ pub enum RepoFactoryError {
     #[error("Error opening deletion log DB")]
     SqlDeletionLog,
 
+    #[error("Error opening restricted paths manifest id DB")]
+    SqlRestrictedPathsManifestIdStore,
+
+    #[error("Error creating SqlRestrictedPaths")]
+    SqlRestrictedPaths,
+
     #[error("Error opening commit cloud DB")]
     SqlCommitCloud,
 
@@ -1306,6 +1317,7 @@ impl RepoFactory {
         filenodes: &ArcFilenodes,
         repo_blobstore: &ArcRepoBlobstore,
         filestore_config: &ArcFilestoreConfig,
+        restricted_paths: &ArcRestrictedPaths,
     ) -> Result<ArcRepoDerivedData> {
         let config = repo_config.derived_data_config.clone();
         let scuba_table = self
@@ -1334,6 +1346,7 @@ impl RepoFactory {
             scuba,
             config,
             derivation_service_client,
+            restricted_paths.clone(),
         )?))
     }
 
@@ -1431,6 +1444,33 @@ impl RepoFactory {
         )?))
     }
 
+    /// Restricted paths
+    pub fn restricted_paths(
+        &self,
+        repo_config: &ArcRepoConfig,
+        restricted_paths_manifest_id_store: &ArcRestrictedPathsManifestIdStore,
+    ) -> ArcRestrictedPaths {
+        Arc::new(RestrictedPaths::new(
+            repo_config.restricted_paths_config.clone(),
+            restricted_paths_manifest_id_store.clone(),
+        ))
+    }
+
+    /// Restricted paths root ids store
+    pub async fn restricted_paths_manifest_id_store(
+        &self,
+        repo_identity: &ArcRepoIdentity,
+        repo_config: &ArcRepoConfig,
+    ) -> Result<ArcRestrictedPathsManifestIdStore> {
+        let restricted_paths_manifest_id_store = self
+            .open_sql::<SqlRestrictedPathsManifestIdStoreBuilder>(repo_config)
+            .await
+            .context(RepoFactoryError::SqlRestrictedPathsManifestIdStore)?
+            .with_repo_id(repo_identity.id());
+
+        Ok(Arc::new(restricted_paths_manifest_id_store))
+    }
+
     pub async fn repo_derivation_queues(
         &self,
         repo_identity: &ArcRepoIdentity,
@@ -1441,6 +1481,7 @@ impl RepoFactory {
         filenodes: &ArcFilenodes,
         repo_blobstore: &ArcRepoBlobstore,
         filestore_config: &FilestoreConfig,
+        restricted_paths: &ArcRestrictedPaths,
     ) -> Result<ArcRepoDerivationQueues> {
         #[cfg(not(fbcode_build))]
         {
@@ -1453,6 +1494,7 @@ impl RepoFactory {
                 repo_blobstore,
                 filestore_config,
                 filenodes,
+                restricted_paths,
             );
             anyhow::bail!("RepoDerivationQueues is not supported in non-fbcode builds")
         }
@@ -1496,6 +1538,7 @@ impl RepoFactory {
                     derived_data_scuba,
                     config,
                     zelos_client,
+                    restricted_paths.clone(),
                 )
                 .await?,
             ))

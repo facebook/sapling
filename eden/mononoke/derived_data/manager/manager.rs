@@ -22,6 +22,7 @@ use metaconfig_types::RepoConfig;
 use mononoke_types::ChangesetId;
 use mononoke_types::RepositoryId;
 use repo_blobstore::RepoBlobstore;
+use restricted_paths::ArcRestrictedPaths;
 use scuba_ext::MononokeScubaSampleBuilder;
 
 use crate::DerivationContext;
@@ -100,6 +101,7 @@ impl DerivedDataManager {
         config_name: String,
         config: DerivedDataTypesConfig,
         derivation_service_client: Option<Arc<dyn DerivationClient>>,
+        restricted_paths: ArcRestrictedPaths,
     ) -> Self {
         let lease = DerivedDataLease::new(lease);
         DerivedDataManager {
@@ -122,6 +124,7 @@ impl DerivedDataManager {
                     config,
                     repo_blobstore.boxed(),
                     filestore_config,
+                    restricted_paths,
                 ),
             }),
         }

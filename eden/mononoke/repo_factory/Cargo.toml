@@ -76,6 +76,7 @@ repo_metadata_checkpoint = { version = "0.1.0", path = "../repo_metadata_checkpo
 repo_permission_checker = { version = "0.1.0", path = "../repo_attributes/repo_permission_checker" }
 repo_sparse_profiles = { version = "0.1.0", path = "../repo_attributes/repo_sparse_profiles" }
 repo_stats_logger = { version = "0.1.0", path = "../repo_stats_logger" }
+restricted_paths = { version = "0.1.0", path = "../repo_attributes/restricted_paths" }
 sapling-clientinfo = { version = "0.1.0", path = "../../scm/lib/clientinfo" }
 scuba_ext = { version = "0.1.0", path = "../common/scuba_ext" }
 slog = { package = "tracing_slog_compat", version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }

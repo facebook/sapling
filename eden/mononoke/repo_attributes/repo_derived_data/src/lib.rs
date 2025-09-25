@@ -33,6 +33,7 @@ use metaconfig_types::RepoConfig;
 use mononoke_types::ChangesetId;
 use mononoke_types::RepositoryId;
 use repo_blobstore::RepoBlobstore;
+use restricted_paths::ArcRestrictedPaths;
 use scuba_ext::MononokeScubaSampleBuilder;
 
 /// Repository derived data management.
@@ -64,6 +65,7 @@ impl RepoDerivedData {
         scuba: MononokeScubaSampleBuilder,
         config: DerivedDataConfig,
         derivation_service_client: Option<Arc<dyn DerivationClient>>,
+        restricted_paths: ArcRestrictedPaths,
     ) -> Result<RepoDerivedData> {
         let managers = config
             .available_configs
@@ -86,6 +88,7 @@ impl RepoDerivedData {
                         config_name.to_string(),
                         config.clone(),
                         derivation_service_client.clone(),
+                        restricted_paths.clone(),
                     ),
                 )
             })
