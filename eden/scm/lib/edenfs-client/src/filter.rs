@@ -259,9 +259,9 @@ pub(crate) struct FilterGenerator {
 impl FilterGenerator {
     pub fn new(
         dot_hg_path: PathBuf,
-        filter_store_path: PathBuf,
-        key: Option<&[u8; Blake3::len()]>,
         default_filter_version: FilterVersion,
+        filter_store_path: Option<PathBuf>,
+        key: Option<&[u8; Blake3::len()]>,
     ) -> anyhow::Result<Self> {
         // Filter content can be exceptionally long, so we store the actual filter content in an
         // indexedlog store and use a blake3 hash as the index to the filter contents. We avoid
@@ -270,6 +270,8 @@ impl FilterGenerator {
             // Using Legacy FilterVersion turns off usage of indexedlog
             None
         } else {
+            let filter_store_path =
+                filter_store_path.unwrap_or_else(|| dot_hg_path.join("filters"));
             let config = BTreeMap::<&str, &str>::new();
             Some(
                 StoreOpenOptions::new(&config)
@@ -490,9 +492,9 @@ mod tests {
 
         let filter_gen = FilterGenerator::new(
             dot_hg_path,
-            filter_store_path,
-            Some(TEST_HASH_KEY),
             filter_version,
+            Some(filter_store_path),
+            Some(TEST_HASH_KEY),
         )
         .unwrap();
 
