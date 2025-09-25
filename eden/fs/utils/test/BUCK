@@ -95,6 +95,17 @@ cpp_unittest(
     ],
 )
 
+cpp_unittest(
+    name = "filter_utils_test",
+    srcs = ["FilterUtilsTest.cpp"],
+    supports_static_listing = False,
+    deps = [
+        "//eden/fs/store:filtered_backing_store",
+        "//eden/fs/utils:filter_utils",
+        "//folly/portability:gtest",
+    ],
+)
+
 cpp_benchmark(
     name = "bench",
     srcs = [
