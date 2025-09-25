@@ -5,6 +5,7 @@
  * LICENSE file in the root directory of this source tree.
  */
 
+use std::fmt;
 use std::path::PathBuf;
 
 use serde::Deserialize;
@@ -60,6 +61,15 @@ impl<'de> Deserialize<'de> for FilterVersion {
                 "Unknown filter version: {}",
                 v
             ))),
+        }
+    }
+}
+
+impl fmt::Display for FilterVersion {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            FilterVersion::V1 => write!(f, "V1"),
+            FilterVersion::Legacy => write!(f, "Legacy"),
         }
     }
 }
@@ -125,6 +135,12 @@ mod tests {
     use mincode::serialize_into;
 
     use super::*;
+
+    #[test]
+    fn test_filter_version_display() {
+        assert_eq!(FilterVersion::Legacy.to_string(), "Legacy");
+        assert_eq!(FilterVersion::V1.to_string(), "V1");
+    }
 
     #[test]
     fn test_filter_version_serialize() {
