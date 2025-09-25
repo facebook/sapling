@@ -16,3 +16,10 @@ futures = { version = "0.3.31", features = ["async-await", "compat"] }
 mononoke_api = { version = "0.1.0", path = "../../mononoke_api" }
 mononoke_types = { version = "0.1.0", path = "../../mononoke_types" }
 sapling-xdiff = { version = "0.1.0", path = "../../../scm/lib/xdiff" }
+
+[dev-dependencies]
+fbinit = { version = "0.2.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
+fbinit-tokio = { version = "0.1.2", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
+mononoke_macros = { version = "0.1.0", path = "../../mononoke_macros" }
+test_repo_factory = { version = "0.1.0", path = "../../repo_factory/test_repo_factory" }
+tests_utils = { version = "0.1.0", path = "../../tests/utils" }

@@ -5,6 +5,13 @@ oncall("scm_server_infra")
 rust_library(
     name = "diff",
     srcs = glob(["src/**/*.rs"]),
+    test_deps = [
+        "//common/rust/shed/fbinit:fbinit",
+        "//common/rust/shed/fbinit:fbinit-tokio",
+        "//eden/mononoke/mononoke_macros:mononoke_macros",
+        "//eden/mononoke/repo_factory:test_repo_factory",
+        "//eden/mononoke/tests/utils:tests_utils",
+    ],
     deps = [
         "fbsource//third-party/rust:anyhow",
         "fbsource//third-party/rust:bytes",
