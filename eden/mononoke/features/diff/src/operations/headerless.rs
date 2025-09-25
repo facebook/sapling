@@ -6,6 +6,7 @@
  */
 
 use anyhow::Error;
+use anyhow::anyhow;
 use bytes::Bytes;
 use context::CoreContext;
 use futures::try_join;
@@ -20,17 +21,33 @@ use crate::utils::content::load_content;
 pub async fn headerless_unified<R: MononokeRepo>(
     ctx: &CoreContext,
     repo: &RepoContext<R>,
-    base: DiffSingleInput,
-    other: DiffSingleInput,
+    base: Option<DiffSingleInput>,
+    other: Option<DiffSingleInput>,
     context: usize,
 ) -> Result<HeaderlessUnifiedDiff, Error> {
     let (base_bytes, other_bytes) = try_join!(
-        load_content(ctx, repo, base),
-        load_content(ctx, repo, other)
+        async {
+            if let Some(base_input) = &base {
+                load_content(ctx, repo, base_input.clone()).await
+            } else {
+                Ok(None)
+            }
+        },
+        async {
+            if let Some(other_input) = &other {
+                load_content(ctx, repo, other_input.clone()).await
+            } else {
+                Ok(None)
+            }
+        }
     )?;
 
-    let base_content = base_bytes.unwrap_or_else(Bytes::new);
-    let other_content = other_bytes.unwrap_or_else(Bytes::new);
+    let (base_content, other_content) = match (base_bytes, other_bytes) {
+        (None, None) => return Err(anyhow!("All inputs to the headerless diff were empty")),
+        (Some(base), None) => (base, Bytes::new()),
+        (None, Some(other)) => (Bytes::new(), other),
+        (Some(base), Some(other)) => (base, other),
+    };
 
     let is_binary = xdiff::file_is_binary(&Some(xdiff::DiffFile {
         path: "base".to_string(),
@@ -112,7 +129,8 @@ mod tests {
             replacement_path: None,
         });
 
-        let diff = headerless_unified(&ctx, &repo_ctx, base_input, other_input, 3).await?;
+        let diff =
+            headerless_unified(&ctx, &repo_ctx, Some(base_input), Some(other_input), 3).await?;
 
         let expected_diff = "@@ -1,3 +1,3 @@\n line1\n-modified line2\n+line2\n line3\n";
 
@@ -150,7 +168,8 @@ mod tests {
             replacement_path: None,
         });
 
-        let diff = headerless_unified(&ctx, &repo_ctx, base_input, other_input, 3).await?;
+        let diff =
+            headerless_unified(&ctx, &repo_ctx, Some(base_input), Some(other_input), 3).await?;
 
         let expected_diff = "Binary files differ\n";
         let diff_str = String::from_utf8_lossy(&diff.raw_diff);
@@ -186,12 +205,54 @@ mod tests {
             replacement_path: None,
         });
 
-        let diff = headerless_unified(&ctx, &repo_ctx, base_input, other_input, 3).await?;
+        let diff =
+            headerless_unified(&ctx, &repo_ctx, Some(base_input), Some(other_input), 3).await?;
 
         let expected_diff = "@@ -1,2 +0,0 @@\n-new content\n-line2\n";
         let diff_str = String::from_utf8_lossy(&diff.raw_diff);
         assert_eq!(diff_str, expected_diff);
         assert!(!diff.is_binary);
+
+        Ok(())
+    }
+
+    #[mononoke::fbinit_test]
+    async fn test_headerless_unified_with_none_inputs(fb: FacebookInit) -> Result<(), Error> {
+        let ctx = CoreContext::test_mock(fb);
+        let repo_ctx = init_test_repo(&ctx).await?;
+
+        // Create a test commit with content
+        let cs = CreateCommitContext::new_root(&ctx, repo_ctx.repo())
+            .add_file("file.txt", "some content\nline2\n")
+            .commit()
+            .await?;
+
+        let input = DiffSingleInput::ChangesetPath(DiffInputChangesetPath {
+            changeset_id: cs,
+            path: create_non_root_path("file.txt")?,
+            replacement_path: None,
+        });
+
+        // Test None vs Some - should show addition
+        let diff = headerless_unified(&ctx, &repo_ctx, None, Some(input.clone()), 3).await?;
+        let diff_str = String::from_utf8_lossy(&diff.raw_diff);
+        assert!(!diff.is_binary);
+        assert_eq!(diff_str, "@@ -1,2 +0,0 @@\n-some content\n-line2\n");
+
+        // Test Some vs None - should show deletion
+        let diff = headerless_unified(&ctx, &repo_ctx, Some(input), None, 3).await?;
+        let diff_str = String::from_utf8_lossy(&diff.raw_diff);
+        assert!(!diff.is_binary);
+        assert_eq!(diff_str, "@@ -0,0 +1,2 @@\n+some content\n+line2\n");
+
+        // Test None vs None - should return an error
+        let result = headerless_unified(&ctx, &repo_ctx, None, None, 3).await;
+        assert!(result.is_err());
+        let error_message = result.unwrap_err().to_string();
+        assert_eq!(
+            error_message,
+            "All inputs to the headerless diff were empty"
+        );
 
         Ok(())
     }
