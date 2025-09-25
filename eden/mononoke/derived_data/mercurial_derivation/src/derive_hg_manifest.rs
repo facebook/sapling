@@ -47,6 +47,9 @@ use mononoke_types::RepoPath;
 use mononoke_types::SortedVectorTrieMap;
 use mononoke_types::TrackedFileChange;
 use mononoke_types::path::MPath;
+use restricted_paths::ArcRestrictedPaths;
+use restricted_paths::ManifestType;
+use restricted_paths::RestrictedPathManifestIdEntry;
 use sorted_vector_map::SortedVectorMap;
 
 use crate::derive_hg_changeset::store_file_change;
@@ -59,6 +62,7 @@ pub async fn derive_simple_hg_manifest_stack_without_copy_info(
     blobstore: Arc<dyn Blobstore>,
     manifest_changes: Vec<ManifestChanges<TrackedFileChange>>,
     parent: Option<HgManifestId>,
+    restricted_paths: ArcRestrictedPaths,
 ) -> Result<HashMap<ChangesetId, HgManifestId>, Error> {
     let res = derive_manifests_for_simple_stack_of_commits(
         ctx.clone(),
@@ -68,14 +72,14 @@ pub async fn derive_simple_hg_manifest_stack_without_copy_info(
         {
             cloned!(blobstore, ctx);
             move |mut tree_info, _cs_id| {
-                cloned!(blobstore, ctx);
+                cloned!(blobstore, ctx, restricted_paths);
                 async move {
                     tree_info.parents = tree_info
                         .parents
                         .into_iter()
                         .map(|p| Traced::assign(ParentIndex(0), p.into_untraced()))
                         .collect();
-                    create_hg_manifest(ctx.clone(), blobstore.clone(), None, tree_info).await
+                    create_hg_manifest(ctx.clone(), blobstore.clone(), None, tree_info, restricted_paths).await
                 }
             }
         },
@@ -139,6 +143,7 @@ pub async fn derive_simple_hg_manifest_stack_without_copy_info(
 pub async fn derive_hg_manifest(
     ctx: CoreContext,
     blobstore: Arc<dyn Blobstore>,
+    restricted_paths: ArcRestrictedPaths,
     parents: impl IntoIterator<Item = HgManifestId>,
     changes: impl IntoIterator<Item = (NonRootMPath, Option<(FileType, HgFileNodeId)>)> + 'static,
     subtree_changes: Option<&HgSubtreeChanges>,
@@ -166,9 +171,15 @@ pub async fn derive_hg_manifest(
         changes,
         subtree_changes,
         {
-            cloned!(ctx, blobstore);
+            cloned!(ctx, blobstore, restricted_paths);
             move |tree_info, sender| {
-                create_hg_manifest(ctx.clone(), blobstore.clone(), Some(sender), tree_info)
+                create_hg_manifest(
+                    ctx.clone(),
+                    blobstore.clone(),
+                    Some(sender),
+                    tree_info,
+                    restricted_paths.clone(),
+                )
             }
         },
         {
@@ -187,7 +198,8 @@ pub async fn derive_hg_manifest(
                 parents,
                 subentries: Default::default(),
             };
-            let (_, traced_tree_id) = create_hg_manifest(ctx, blobstore, None, tree_info).await?;
+            let (_, traced_tree_id) =
+                create_hg_manifest(ctx, blobstore, None, tree_info, restricted_paths).await?;
             Ok(traced_tree_id.into_untraced())
         }
     }
@@ -207,6 +219,7 @@ async fn create_hg_manifest(
             Entry<Traced<ParentIndex, HgManifestId>, Traced<ParentIndex, (FileType, HgFileNodeId)>>,
         >,
     >,
+    restricted_paths: ArcRestrictedPaths,
 ) -> Result<((), Traced<ParentIndex, HgManifestId>), Error> {
     let TreeInfo {
         subentries,
@@ -299,15 +312,60 @@ async fn create_hg_manifest(
         contents: contents.into(),
         p1,
         p2,
-        path,
+        path: path.clone(),
         computed_node_id: None,
     }
-    .upload(ctx, blobstore);
+    .upload(ctx.clone(), blobstore);
 
     let (mfid, upload_fut) = match uploader {
         Ok((mfid, fut)) => (mfid, fut.map_ok(|_| ())),
         Err(e) => return Err(e),
     };
+
+    let restricted_paths_enabled = justknobs::eval(
+        "scm/mononoke:enabled_restricted_paths_access_logging",
+        None, // hashing
+        // Adding a switch value to be able to disable writes only
+        Some("hg_manifest_write"),
+    )?;
+    // Track restricted paths by storing manifest IDs for directories that match restricted path prefixes
+    if restricted_paths_enabled
+        && let RepoPath::DirectoryPath(non_root_path) = &path
+        && restricted_paths.is_restricted_path(non_root_path)
+    {
+        let entry = RestrictedPathManifestIdEntry::new(
+            ManifestType::Hg,
+            mfid.to_string().into(),
+            non_root_path.clone(),
+        );
+
+        // Add to restricted paths database asynchronously
+        // We don't await this to avoid blocking manifest derivation
+        let restricted_paths_fut = {
+            cloned!(ctx, restricted_paths);
+            async move {
+                if let Err(e) = restricted_paths
+                    .manifest_id_store()
+                    .add_entry(&ctx, entry)
+                    .await
+                {
+                    // Log error but don't fail manifest derivation
+                    slog::warn!(ctx.logger(), "Failed to track restricted path: {}", e);
+                }
+                Ok(())
+            }
+        };
+
+        // Send the future to be executed along with the manifest upload
+        if let Some(ref sender) = sender {
+            sender
+                .unbounded_send(restricted_paths_fut.boxed())
+                .map_err(|err| format_err!("failed to send restricted paths future {}", err))?;
+        } else {
+            // If no sender, execute immediately
+            let _ = restricted_paths_fut.await;
+        }
+    }
 
     match sender {
         Some(sender) => {

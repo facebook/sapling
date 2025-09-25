@@ -30,6 +30,7 @@ use mononoke_types::NonRootMPath;
 use repo_blobstore::RepoBlobstoreArc;
 use repo_blobstore::RepoBlobstoreRef;
 use repo_derived_data::RepoDerivedDataRef;
+use restricted_paths::RestrictedPathsArc;
 
 pub use crate::bonsai::BonsaiMFVerify;
 pub use crate::bonsai::BonsaiMFVerifyDifference;
@@ -41,6 +42,7 @@ pub trait Repo = BonsaiHgMappingRef
     + CommitGraphRef
     + RepoDerivedDataRef
     + RepoBlobstoreArc
+    + RestrictedPathsArc
     + DangerousOverride<Arc<dyn Blobstore>>
     + Send
     + Sync

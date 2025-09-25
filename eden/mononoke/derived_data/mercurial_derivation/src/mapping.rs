@@ -90,6 +90,7 @@ impl BonsaiDerivable for MappedHgChangesetId {
             parents,
             subtree_change_sources,
             &derivation_opts,
+            derivation_ctx.restricted_paths(),
         )
         .await
     }
@@ -161,6 +162,7 @@ impl BonsaiDerivable for MappedHgChangesetId {
                         parents,
                         subtree_change_sources,
                         &derivation_opts,
+                        derivation_ctx.restricted_paths(),
                     )
                     .await?;
                     res.insert(cs_id, derived);
@@ -175,6 +177,7 @@ impl BonsaiDerivable for MappedHgChangesetId {
                         bonsais,
                         derived_parents.first().cloned(),
                         &derivation_opts,
+                        derivation_ctx.restricted_paths(),
                     )
                     .await
                     .with_context(|| {

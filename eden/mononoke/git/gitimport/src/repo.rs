@@ -24,6 +24,7 @@ use metaconfig_types::RepoConfig;
 use repo_blobstore::RepoBlobstore;
 use repo_derived_data::RepoDerivedData;
 use repo_identity::RepoIdentity;
+use restricted_paths::RestrictedPaths;
 
 #[facet::container]
 #[derive(Clone)]
@@ -66,6 +67,9 @@ pub(crate) struct Repo {
 
     #[facet]
     bookmarks: dyn Bookmarks,
+
+    #[facet]
+    restricted_paths: RestrictedPaths,
 }
 
 impl DangerousOverride<Arc<dyn Blobstore>> for Repo {

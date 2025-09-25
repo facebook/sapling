@@ -48,6 +48,8 @@ use repo_blobstore::RepoBlobstore;
 use repo_blobstore::RepoBlobstoreArc;
 use repo_blobstore::RepoBlobstoreRef;
 use repo_derived_data::RepoDerivedData;
+use restricted_paths::RestrictedPaths;
+use restricted_paths::RestrictedPathsArc;
 use slog::Logger;
 use slog::debug;
 use slog::error;
@@ -68,6 +70,9 @@ struct Repo {
 
     #[facet]
     repo_blobstore: RepoBlobstore,
+
+    #[facet]
+    restricted_paths: RestrictedPaths,
 }
 
 impl DangerousOverride<Arc<dyn Blobstore>> for Repo {
@@ -414,6 +419,7 @@ fn subcommmand_hg_manifest_verify(
                         get_manifest_from_bonsai(
                             ctx.clone(),
                             repo.repo_blobstore_arc(),
+                            repo.restricted_paths_arc(),
                             bonsai.clone(),
                             parents,
                             None,

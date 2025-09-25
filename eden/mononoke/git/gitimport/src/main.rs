@@ -78,6 +78,7 @@ use repo_authorization::AuthorizationContext;
 use repo_blobstore::RepoBlobstoreArc;
 use repo_derived_data::RepoDerivedDataRef;
 use repo_identity::RepoIdentityRef;
+use restricted_paths::RestrictedPathsArc;
 use slog::info;
 use slog::warn;
 
@@ -91,7 +92,9 @@ const LFS_SIMULTANEOUS_CONNECTION_LIMIT: usize = 20;
 
 async fn derive_hg(
     ctx: &CoreContext,
-    repo: &(impl RepoBlobstoreArc + RepoDerivedDataRef + RepoIdentityRef + Send + Sync),
+    repo: &(
+         impl RepoBlobstoreArc + RepoDerivedDataRef + RepoIdentityRef + RestrictedPathsArc + Send + Sync
+     ),
     import_map: impl Iterator<Item = (&gix_hash::ObjectId, &ChangesetId)>,
 ) -> Result<(), Error> {
     let mut hg_manifests = HashMap::new();
@@ -118,6 +121,7 @@ async fn derive_hg(
         let manifest = get_manifest_from_bonsai(
             ctx.clone(),
             repo.repo_blobstore_arc(),
+            repo.restricted_paths_arc(),
             bcs.clone(),
             parent_manifests,
             None,

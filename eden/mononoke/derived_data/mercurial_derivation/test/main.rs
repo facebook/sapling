@@ -84,6 +84,8 @@ use repo_blobstore::RepoBlobstoreArc;
 use repo_blobstore::RepoBlobstoreRef;
 use repo_derived_data::RepoDerivedData;
 use repo_identity::RepoIdentity;
+use restricted_paths::RestrictedPaths;
+use restricted_paths::RestrictedPathsArc;
 use scuba_ext::MononokeScubaSampleBuilder;
 use test_repo_factory::TestRepoFactory;
 use tests_utils::CreateCommitContext;
@@ -128,6 +130,9 @@ pub(crate) struct Repo {
 
     #[facet]
     filenodes: dyn Filenodes,
+
+    #[facet]
+    restricted_paths: RestrictedPaths,
 }
 
 async fn get_content(
@@ -799,6 +804,7 @@ async fn test_get_manifest_from_bonsai(fb: FacebookInit) {
         let ms_hash = (get_manifest_from_bonsai(
             ctx.clone(),
             repo.repo_blobstore_arc(),
+            repo.restricted_paths_arc(),
             make_bonsai_changeset(None, None, vec![]),
             vec![ms1, ms2],
             None,
@@ -817,6 +823,7 @@ async fn test_get_manifest_from_bonsai(fb: FacebookInit) {
         let ms_hash = (get_manifest_from_bonsai(
             ctx.clone(),
             repo.repo_blobstore_arc(),
+            repo.restricted_paths_arc(),
             make_bonsai_changeset(None, None, vec![("base", FileChange::Deletion)]),
             vec![ms1, ms2],
             None,
@@ -856,6 +863,7 @@ async fn test_get_manifest_from_bonsai(fb: FacebookInit) {
         let ms_hash = (get_manifest_from_bonsai(
             ctx.clone(),
             repo.repo_blobstore_arc(),
+            repo.restricted_paths_arc(),
             bcs,
             vec![ms1, ms2],
             None,

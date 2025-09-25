@@ -36,6 +36,7 @@ mod test {
                 use repo_blobstore::RepoBlobstore;
                 use repo_derived_data::RepoDerivedData;
                 use repo_identity::RepoIdentity;
+                use restricted_paths::RestrictedPaths;
 
                 use crate::$repo;
 
@@ -65,6 +66,9 @@ mod test {
 
                     #[facet]
                     filestore_config: FilestoreConfig,
+
+                    #[facet]
+                    restricted_paths: RestrictedPaths,
                 }
 
                 impl DangerousOverride<Arc<dyn Blobstore>> for TestRepo {

@@ -51,6 +51,7 @@ use mononoke_types::NonRootMPath;
 use mononoke_types::TrackedFileChange;
 use repo_derived_data::RepoDerivedData;
 use repo_derived_data::RepoDerivedDataRef;
+use restricted_paths::ArcRestrictedPaths;
 use stats::prelude::*;
 
 use crate::derive_hg_manifest::derive_hg_manifest;
@@ -202,6 +203,7 @@ async fn resolve_paths(
 pub async fn get_manifest_from_bonsai(
     ctx: CoreContext,
     blobstore: Arc<dyn Blobstore>,
+    restricted_paths: ArcRestrictedPaths,
     bcs: BonsaiChangeset,
     parent_manifests: Vec<HgManifestId>,
     subtree_changes: Option<&HgSubtreeChanges>,
@@ -315,6 +317,7 @@ pub async fn get_manifest_from_bonsai(
     let manifest_id = derive_hg_manifest(
         ctx.clone(),
         blobstore,
+        restricted_paths,
         parent_manifests,
         changes,
         subtree_changes,
@@ -331,6 +334,7 @@ pub(crate) async fn derive_from_parents(
     parents: Vec<MappedHgChangesetId>,
     subtree_change_sources: HashMap<ChangesetId, HgChangesetId>,
     options: &HgChangesetDeriveOptions,
+    restricted_paths: ArcRestrictedPaths,
 ) -> Result<MappedHgChangesetId, Error> {
     let parents = {
         borrowed!(ctx);
@@ -351,6 +355,7 @@ pub(crate) async fn derive_from_parents(
     let manifest_id = get_manifest_from_bonsai(
         ctx.clone(),
         blobstore.clone(),
+        restricted_paths,
         bonsai.clone(),
         parent_manifests,
         subtree_changes.as_ref(),
@@ -376,6 +381,7 @@ pub async fn derive_simple_hg_changeset_stack_without_copy_info(
     bonsais: Vec<BonsaiChangeset>,
     parent: Option<MappedHgChangesetId>,
     options: &HgChangesetDeriveOptions,
+    restricted_paths: ArcRestrictedPaths,
 ) -> Result<HashMap<ChangesetId, MappedHgChangesetId>, Error> {
     let parent = match parent {
         Some(parent) => Some(parent.hg_changeset_id().load(ctx, blobstore).await?),
@@ -422,6 +428,7 @@ pub async fn derive_simple_hg_changeset_stack_without_copy_info(
         blobstore.clone(),
         file_changes,
         parent.clone().map(|p| p.manifestid()),
+        restricted_paths,
     )
     .await?;
     let mut parents = parent.into_iter().collect::<Vec<_>>();

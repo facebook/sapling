@@ -99,21 +99,14 @@ async fn test_mercurial_manifest_single_dir_single_restricted_change(
         vec!["restricted/dir/a"],
     )
     .await?;
-
-    // TODO(T239041722): update test after supporting hg manfests
-    // assert!(
-    //     !all_entries.is_empty(),
-    //     "Expected restricted paths manifest ids to be stored"
-    // );
+    assert!(
+        !all_entries.is_empty(),
+        "Expected restricted paths manifest ids to be stored"
+    );
 
     pretty_assertions::assert_eq!(
         all_entries,
-        vec![],
-        // vec![RestrictedPathManifestIdEntry::new(
-        //     ManifestType::Hg,
-        //     "0e3837eaab4fb0454c78f290aeb747a201ccd05b".to_string(),
-        //     NonRootMPath::new("restricted/dir")?
-        // )]
+        vec![(ManifestType::Hg, "restricted/dir".to_string())]
     );
 
     Ok(())
@@ -136,21 +129,14 @@ async fn test_mercurial_manifest_single_dir_many_restricted_changes(
         vec!["restricted/dir/a", "restricted/dir/b"],
     )
     .await?;
-
-    // TODO(T239041722): update test after supporting hg manfests
-    // assert!(
-    //     !all_entries.is_empty(),
-    //     "Expected restricted paths manifest ids to be stored"
-    // );
+    assert!(
+        !all_entries.is_empty(),
+        "Expected restricted paths manifest ids to be stored"
+    );
 
     pretty_assertions::assert_eq!(
         all_entries,
-        vec![],
-        // vec![RestrictedPathManifestIdEntry::new(
-        //     ManifestType::Hg,
-        //     "3132e75d8439632fc89f193cbf4f02b2b5428c6e".to_string(),
-        //     NonRootMPath::new("restricted/dir")?
-        // )]
+        vec![(ManifestType::Hg, "restricted/dir".to_string())]
     );
 
     Ok(())
@@ -171,21 +157,14 @@ async fn test_mercurial_manifest_single_dir_restricted_and_unrestricted(
         vec!["restricted/dir/a", "unrestricted/dir/b"],
     )
     .await?;
-
-    // TODO(T239041722): update test after supporting hg manfests
-    // assert!(
-    //     !all_entries.is_empty(),
-    //     "Expected restricted paths manifest ids to be stored"
-    // );
+    assert!(
+        !all_entries.is_empty(),
+        "Expected restricted paths manifest ids to be stored"
+    );
 
     pretty_assertions::assert_eq!(
         all_entries,
-        vec![],
-        // vec![RestrictedPathManifestIdEntry::new(
-        //     ManifestType::Hg,
-        //     "0e3837eaab4fb0454c78f290aeb747a201ccd05b".to_string(),
-        //     NonRootMPath::new("restricted/dir")?
-        // ),]
+        vec![(ManifestType::Hg, "restricted/dir".to_string())]
     );
 
     Ok(())
@@ -212,27 +191,17 @@ async fn test_mercurial_manifest_multiple_restricted_dirs(fb: FacebookInit) -> R
     )
     .await?;
 
-    // TODO(T239041722): update test after supporting hg manfests
-    // assert!(
-    //     !all_entries.is_empty(),
-    //     "Expected restricted paths manifest ids to be stored"
-    // );
+    assert!(
+        !all_entries.is_empty(),
+        "Expected restricted paths manifest ids to be stored"
+    );
 
     pretty_assertions::assert_eq!(
         all_entries,
-        vec![],
-        // vec![
-        //     RestrictedPathManifestIdEntry::new(
-        //         ManifestType::Hg,
-        //         "f5ca206223b4d531f0d65ff422273f901bc7a024".to_string(),
-        //         NonRootMPath::new("restricted/two")?
-        //     ),
-        //     RestrictedPathManifestIdEntry::new(
-        //         ManifestType::Hg,
-        //         "e53be16502cbc6afeb30ef30de7f6d9841fd4cb1".to_string(),
-        //         NonRootMPath::new("restricted/one")?
-        //     )
-        // ]
+        vec![
+            (ManifestType::Hg, "restricted/one".to_string()),
+            (ManifestType::Hg, "restricted/two".to_string()),
+        ]
     );
 
     Ok(())
