@@ -33,6 +33,7 @@ use repos::RawCommonConfig;
 use repos::RawRepoConfig;
 use repos::RawRepoConfigs;
 use repos::RawRepoDefinition;
+use repos::RawRestrictedPathsConfig;
 use repos::RawStorageConfig;
 
 use crate::convert::Convert;
@@ -231,6 +232,7 @@ fn parse_with_repo_definition(
         log_repo_stats,
         metadata_cache_config,
         directory_branch_cluster_config,
+        restricted_paths_config,
         ..
     } = named_repo_config;
 
@@ -359,6 +361,11 @@ fn parse_with_repo_definition(
         .map(|cache_config| cache_config.convert())
         .transpose()?;
     let directory_branch_cluster_config = directory_branch_cluster_config.convert()?;
+    let restricted_paths_config = restricted_paths_config
+        .map(RawRestrictedPathsConfig::convert)
+        .transpose()?
+        .unwrap_or_default();
+
     Ok(RepoConfig {
         enabled,
         storage_config,
@@ -412,6 +419,7 @@ fn parse_with_repo_definition(
         metadata_cache_config,
         enable_git_bundle_uri,
         directory_branch_cluster_config,
+        restricted_paths_config,
     })
 }
 
@@ -579,6 +587,7 @@ mod test {
     use metaconfig_types::RemoteDatabaseConfig;
     use metaconfig_types::RemoteMetadataDatabaseConfig;
     use metaconfig_types::RepoClientKnobs;
+    use metaconfig_types::RestrictedPathsConfig;
     use metaconfig_types::ShardableRemoteDatabaseConfig;
     use metaconfig_types::ShardedDatabaseConfig;
     use metaconfig_types::ShardedRemoteDatabaseConfig;
@@ -1416,6 +1425,7 @@ mod test {
                     tags_update_mode: Some(MetadataCacheUpdateMode::Polling),
                     content_refs_update_mode: None,
                 }),
+                restricted_paths_config: RestrictedPathsConfig::default(),
             },
         );
 
@@ -1500,6 +1510,7 @@ mod test {
                 modern_sync_config: None,
                 log_repo_stats: false,
                 metadata_cache_config: None,
+                restricted_paths_config: RestrictedPathsConfig::default(),
             },
         );
         assert_eq!(

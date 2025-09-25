@@ -17,6 +17,7 @@ itertools = "0.14.0"
 metaconfig_types = { version = "0.1.0", path = "../types" }
 mononoke_types = { version = "0.1.0", path = "../../mononoke_types" }
 nonzero_ext = "0.2"
+permission_checker = { version = "0.1.0", path = "../../permission_checker" }
 regex = "1.11.1"
 repos = { version = "0.1.0", path = "../../../../configerator/structs/scm/mononoke/repos/repos" }
 rusoto_core = "0.48.0"

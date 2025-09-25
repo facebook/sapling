@@ -57,6 +57,7 @@ use metaconfig_types::PushrebaseParams;
 use metaconfig_types::PushrebaseRemoteMode;
 use metaconfig_types::RemoteDerivationConfig;
 use metaconfig_types::RepoClientKnobs;
+use metaconfig_types::RestrictedPathsConfig;
 use metaconfig_types::ServiceWriteRestrictions;
 use metaconfig_types::ShardedService;
 use metaconfig_types::ShardingModeConfig;
@@ -78,6 +79,7 @@ use mononoke_types::NonRootMPath;
 use mononoke_types::PrefixTrie;
 use mononoke_types::RepositoryId;
 use mononoke_types::path::MPath;
+use permission_checker::MononokeIdentity;
 use regex::Regex;
 use repos::ModernSyncChannelConfig as RawModernSyncChannelConfig;
 use repos::RawBookmarkConfig;
@@ -116,6 +118,7 @@ use repos::RawPushrebaseRemoteMode;
 use repos::RawPushrebaseRemoteModeRemote;
 use repos::RawRemoteDerivationConfig;
 use repos::RawRepoClientKnobs;
+use repos::RawRestrictedPathsConfig;
 use repos::RawServiceWriteRestrictions;
 use repos::RawShardedService;
 use repos::RawShardingModeConfig;
@@ -1113,5 +1116,28 @@ impl Convert for RawDirectoryBranchClusterConfig {
         Ok(DirectoryBranchClusterConfig {
             fixed_config: self.fixed_config.convert()?,
         })
+    }
+}
+
+impl Convert for RawRestrictedPathsConfig {
+    type Output = RestrictedPathsConfig;
+
+    fn convert(self) -> Result<Self::Output> {
+        let path_acls = self
+            .path_acls
+            .into_iter()
+            .map(|(path, acl)| {
+                let non_root_path = NonRootMPath::new(path.as_bytes()).with_context(|| {
+                    format!("Invalid path for restricted path config: {}", path)
+                })?;
+                Ok((
+                    non_root_path,
+                    MononokeIdentity::from_str(&acl)
+                        .with_context(|| format!("Failed to parse MononokeIdentity for {path}"))?,
+                ))
+            })
+            .collect::<Result<HashMap<_, _>>>()?;
+
+        Ok(RestrictedPathsConfig { path_acls })
     }
 }

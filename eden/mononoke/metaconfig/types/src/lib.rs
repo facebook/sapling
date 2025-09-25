@@ -41,6 +41,7 @@ use mononoke_types::path::MPath;
 use mysql_common::value::convert::ConvIr;
 use mysql_common::value::convert::FromValue;
 use mysql_common::value::convert::ParseIr;
+use permission_checker::MononokeIdentity;
 use regex::Regex;
 use rusoto_core::Region;
 use scuba::ScubaValue;
@@ -275,6 +276,8 @@ pub struct RepoConfig {
     pub enable_git_bundle_uri: bool,
     /// Configuration for directory branch clusters.
     pub directory_branch_cluster_config: Option<DirectoryBranchClusterConfig>,
+    /// Configuration of restricted paths and their ACLs.
+    pub restricted_paths_config: RestrictedPathsConfig,
 }
 
 /// Config determining if the repo is deep sharded in the context of a service.
@@ -2137,4 +2140,11 @@ pub struct DirectoryBranchClusterFixedCluster {
     pub cluster_primary: NonRootMPath,
     /// Secondary paths
     pub secondaries: Vec<NonRootMPath>,
+}
+
+/// Configuration for restricted paths and their associated ACLs
+#[derive(Debug, Clone, Eq, PartialEq, Default)]
+pub struct RestrictedPathsConfig {
+    /// Map from path prefixes to ACL names for restricted path restrictions
+    pub path_acls: HashMap<NonRootMPath, MononokeIdentity>,
 }
