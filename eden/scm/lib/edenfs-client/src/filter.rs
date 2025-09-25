@@ -318,8 +318,12 @@ mod tests {
 
     use mincode::deserialize;
     use mincode::serialize_into;
+    use tempfile::TempDir;
 
     use super::*;
+
+    // 32-byte test hash key for filter generator tests
+    const TEST_HASH_KEY: &[u8; Blake3::len()] = b"01234567890123456789012345678901";
 
     // 40-character hex commit ID for tests
     const TEST_COMMIT_ID: &[u8] = b"1234567890123456789012345678901234567890";
@@ -327,6 +331,18 @@ mod tests {
 
     const DEFAULT_FILTER_PATH: &str = "path/to/filter.txt";
 
+    fn create_test_filter_generator() -> (TempDir, FilterGenerator) {
+        let temp_dir = TempDir::new().unwrap();
+        let dot_hg_path = temp_dir.path().join(".hg");
+        std::fs::create_dir_all(&dot_hg_path).unwrap();
+
+        let filter_store_path = temp_dir.path().join("filter_store");
+
+        let filter_gen =
+            FilterGenerator::new(dot_hg_path, filter_store_path, TEST_HASH_KEY).unwrap();
+
+        (temp_dir, filter_gen)
+    }
     #[test]
     fn test_filter_version_display() {
         assert_eq!(FilterVersion::Legacy.to_string(), "Legacy");
@@ -439,5 +455,15 @@ mod tests {
         let legacy_id = FilterId::Legacy(legacy_id_str.as_bytes().into());
         let display_str = legacy_id.to_string();
         assert_eq!(format!("FilterId::Legacy({})", legacy_id_str), display_str);
+    }
+
+    #[test]
+    fn test_filter_generator_display() {
+        let (_tmp_dir, filter_gen) = create_test_filter_generator();
+        let display_str = filter_gen.to_string();
+
+        assert!(display_str.contains("FilterGenerator"));
+        assert!(display_str.contains("dot_hg_path"));
+        assert!(display_str.contains("hash_key"));
     }
 }

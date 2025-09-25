@@ -21,6 +21,9 @@ rust_library(
     named_deps = {
         "blake3-constants": "//blake3:blake3-constants-rust-nothrift",
     },
+    test_deps = [
+        "fbsource//third-party/rust:tempfile",
+    ],
     deps = [
         "fbsource//third-party/rust:anyhow",
         "fbsource//third-party/rust:blake3",
