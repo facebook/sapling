@@ -9,6 +9,19 @@
   padding: 10px;
 }
 
+.comment-collapsible-title {
+  display: flex;
+  gap: 10px;
+}
+
+.comment-count {
+  font-size: 90%;
+  align-items: center;
+  display: flex;
+  gap: 2px;
+  width: 100%;
+}
+
 .comment-list {
   margin: 0 20px;
   display: flex;

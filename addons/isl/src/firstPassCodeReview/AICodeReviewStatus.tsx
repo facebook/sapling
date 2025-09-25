@@ -10,6 +10,7 @@ import clientToServerAPI from '../ClientToServerAPI';
 import {T} from '../i18n';
 import {writeAtom} from '../jotaiUtils';
 
+import {Icon} from 'isl-components/Icon';
 import {minimalDisambiguousPaths} from 'shared/minimalDisambiguousPaths';
 import {Collapsable} from '../Collapsable';
 import {relativePath} from '../CwdSelector';
@@ -52,10 +53,23 @@ export function AICodeReviewStatus(): JSX.Element | null {
     <Collapsable
       className="comment-collapsable"
       title={
-        <div>
+        <div className="comment-collapsible-title">
           <b>
-            <T>Devmate Code Review</T> {commentCount > 0 && `(${commentCount})`}
+            <T>Devmate Code Review</T>
           </b>
+          <div className="comment-collapsible-title-status">
+            {status === 'success' &&
+              (commentCount > 0 ? (
+                <div className="comment-count">
+                  {commentCount}
+                  <Icon icon="comment" />
+                </div>
+              ) : (
+                <Icon icon="check" />
+              ))}
+            {status === 'error' && <Icon icon="error" color="red" />}
+            {status === 'running' && <Icon icon="loading" />}
+          </div>
         </div>
       }>
       <div className="comment-list">
