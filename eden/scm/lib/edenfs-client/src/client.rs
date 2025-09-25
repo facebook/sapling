@@ -26,6 +26,7 @@ use thrift_types::edenfs_clients::EdenService;
 use thrift_types::fbthrift::binary_protocol::BinaryProtocol;
 use tokio_uds_compat::UnixStream;
 use tracing::error;
+use types::Blake3;
 use types::HgId;
 use types::RepoPathBuf;
 
@@ -50,7 +51,12 @@ impl EdenFsClient {
     pub fn from_wdir(wdir_root: &Path) -> anyhow::Result<Self> {
         let dot_dir = wdir_root.join(identity::must_sniff_dir(wdir_root)?.dot_dir());
         let eden_config = EdenConfig::from_root(wdir_root)?;
-        let filter_generator = FilterGenerator::new(dot_dir);
+        let filter_index_path: PathBuf = dot_dir.join("filters");
+        #[cfg(fbcode_build)]
+        let blake3_hash_key = blake3_constants::BLAKE3_HASH_KEY;
+        #[cfg(not(fbcode_build))]
+        let blake3_hash_key = b"20220728-2357111317192329313741#";
+        let filter_generator = FilterGenerator::new(dot_dir, filter_index_path, blake3_hash_key)?;
         Ok(Self {
             eden_config,
             filter_generator: Some(Mutex::new(filter_generator)),

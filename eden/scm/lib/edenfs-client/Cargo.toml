@@ -22,7 +22,9 @@ sapling-async-runtime = { version = "0.1.0", path = "../async-runtime" }
 sapling-clientinfo = { version = "0.1.0", path = "../clientinfo" }
 sapling-hg-metrics = { version = "0.1.0", path = "../hg-metrics" }
 sapling-identity = { version = "0.1.0", path = "../identity" }
+sapling-indexedlog = { version = "0.1.0", path = "../indexedlog" }
 sapling-mincode = { version = "0.1.0", path = "../mincode" }
+sapling-revisionstore = { version = "0.1.0", path = "../revisionstore" }
 sapling-thrift-types = { version = "0.1.0", path = "../thrift-types" }
 sapling-types = { version = "0.1.0", path = "../types" }
 serde = { version = "1.0.219", features = ["derive", "rc"] }

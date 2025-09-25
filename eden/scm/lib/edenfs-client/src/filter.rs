@@ -5,11 +5,15 @@
  * LICENSE file in the root directory of this source tree.
  */
 
+use std::collections::BTreeMap;
 use std::fmt;
 use std::path::PathBuf;
 
 use anyhow::Context;
 use blake3::Hasher as Blake3Hasher;
+use indexedlog::log::IndexOutput;
+use revisionstore::indexedlogutil::Store;
+use revisionstore::indexedlogutil::StoreOpenOptions;
 use serde::Deserialize;
 use serde::Deserializer;
 use serde::Serialize;
@@ -21,6 +25,7 @@ use types::RepoPathBuf;
 
 #[derive(Clone, Copy, PartialEq, Debug)]
 #[allow(dead_code)]
+#[repr(u8)]
 pub enum FilterVersion {
     /// Legacy Filters could only support having a single active filter. The filter content was
     /// stored inside the FilterID itself.
@@ -203,11 +208,42 @@ impl FilterId {
 #[allow(dead_code)]
 pub(crate) struct FilterGenerator {
     dot_hg_path: PathBuf,
+    filter_store: Store,
+    hash_key: [u8; 32],
 }
 
+#[allow(dead_code)]
 impl FilterGenerator {
-    pub fn new(dot_hg_path: PathBuf) -> Self {
-        FilterGenerator { dot_hg_path }
+    pub fn new(
+        dot_hg_path: PathBuf,
+        filter_store_path: PathBuf,
+        key: &[u8; Blake3::len()],
+    ) -> anyhow::Result<Self> {
+        // Filter content can be exceptionally long, so we store the actual filter content in an
+        // indexedlog store and use a blake3 hash as the index to the filter contents. We avoid
+        // long filter ids since EdenFS performance can degrade when ObjectID size grows too large.
+        let config = BTreeMap::<&str, &str>::new();
+        let filter_store = StoreOpenOptions::new(&config)
+            .index("v1_filter_index", |_| {
+                vec![IndexOutput::Reference(0..(Blake3::len() / 4) as u64)]
+            })
+            .permanent(&filter_store_path)
+            .map_err(|e| {
+                anyhow::anyhow!(
+                    "Failed to open filter index store at {:?}: {:?}",
+                    filter_store_path,
+                    e
+                )
+            })?;
+
+        let mut hash_key = [0u8; 32];
+        hash_key.copy_from_slice(key);
+
+        Ok(FilterGenerator {
+            dot_hg_path,
+            filter_store,
+            hash_key,
+        })
     }
 
     // Takes a commit and returns the corresponding FilterID that should be passed to Eden.
