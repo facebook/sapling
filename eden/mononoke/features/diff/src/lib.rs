@@ -11,7 +11,6 @@
 //! the underlying xdiff library to provide compatibility with the diff service
 //! and future migration paths.
 
+pub mod operations;
 pub mod types;
-
-// Re-export important types and functions for convenience
-pub use types::*;
+pub mod utils;

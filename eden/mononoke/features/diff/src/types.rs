@@ -8,6 +8,7 @@
 use bytes::Bytes;
 use mononoke_types::ChangesetId;
 use mononoke_types::ContentId;
+use mononoke_types::NonRootMPath;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum DiffFileType {
@@ -17,7 +18,6 @@ pub enum DiffFileType {
     GitSubmodule,
 }
 
-/// Copy information for diffs
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum DiffCopyInfo {
     None,
@@ -25,36 +25,28 @@ pub enum DiffCopyInfo {
     Copy,
 }
 
-/// File content for diffs - matches the xdiff FileContent enum
 #[derive(Debug, Clone)]
 pub enum DiffFileContent {
-    /// Inline content stored as bytes
     Inline(Bytes),
-    /// Omitted content with content hash and optional LFS pointer
     Omitted {
         content_hash: String,
         git_lfs_pointer: Option<String>,
     },
-    /// Git submodule with commit hash
-    Submodule { commit_hash: String },
+    Submodule {
+        commit_hash: String,
+    },
 }
 
-/// Options for headerless unified diff generation
 #[derive(Debug, Clone)]
 pub struct HeaderlessDiffOpts {
     pub context: usize,
 }
 
-/// A headerless unified diff result
 #[derive(Debug, Clone)]
 pub struct HeaderlessUnifiedDiff {
-    /// Raw diff as bytes
     pub raw_diff: Vec<u8>,
-    /// One of the diffed files is binary, raw diff contains just a placeholder
     pub is_binary: bool,
 }
-
-// Conversion functions to/from xdiff types
 
 impl From<DiffFileType> for xdiff::FileType {
     fn from(file_type: DiffFileType) -> Self {
@@ -142,14 +134,12 @@ impl From<HeaderlessDiffOpts> for xdiff::HeaderlessDiffOpts {
     }
 }
 
-// LFS pointer structure with sha256 and size
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct LfsPointer {
     pub sha256: String,
     pub size: i64,
 }
 
-// General diff input structures
 #[derive(Debug, Clone)]
 pub enum DiffSingleInput {
     ChangesetPath(DiffInputChangesetPath),
@@ -159,13 +149,13 @@ pub enum DiffSingleInput {
 #[derive(Debug, Clone)]
 pub struct DiffInputChangesetPath {
     pub changeset_id: ChangesetId,
-    pub path: String,
-    pub replacement_path: Option<String>,
+    pub path: NonRootMPath,
+    pub replacement_path: Option<NonRootMPath>,
 }
 
 #[derive(Debug, Clone)]
 pub struct DiffInputContent {
     pub content_id: ContentId,
-    pub path: Option<String>,
+    pub path: Option<NonRootMPath>,
     pub lfs_pointer: Option<LfsPointer>,
 }
