@@ -18,6 +18,9 @@ rust_library(
         },
     }},
     features = ["fb"],
+    test_deps = [
+        "//eden/scm/lib/mincode:mincode",
+    ],
     deps = [
         "fbsource//third-party/rust:anyhow",
         "fbsource//third-party/rust:fs-err",

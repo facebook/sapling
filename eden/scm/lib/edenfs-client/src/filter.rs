@@ -7,11 +7,13 @@
 
 use std::path::PathBuf;
 
+use serde::Serialize;
+use serde::Serializer;
 use tracing::warn;
 use types::HgId;
 
-#[repr(u32)]
 #[allow(dead_code)]
+#[derive(Clone)]
 enum FilterVersion {
     /// Legacy Filters could only support having a single active filter. The filter content was
     /// stored inside the FilterID itself.
@@ -25,6 +27,20 @@ enum FilterVersion {
     /// - Id of the filter, which contains the FilterVersion and the first 8 bytes of the
     ///   Filter's Blake3 hash which is used as an index for filter storage.
     V1 = 1,
+}
+
+impl Serialize for FilterVersion {
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: Serializer,
+    {
+        match self {
+            FilterVersion::Legacy => Err(serde::ser::Error::custom(
+                "Serializing Legacy FilterVersions is not permitted",
+            )),
+            FilterVersion::V1 => serializer.serialize_u8(self.clone() as u8),
+        }
+    }
 }
 
 pub(crate) struct FilterGenerator {
@@ -78,5 +94,27 @@ impl FilterGenerator {
         // neither the filter file or the commit hash will have ":" in them. The second restriction
         // is guaranteed (hex), the first one will need to be enforced by us.
         Ok(Some(format!("{}:{}", filter_path, commit.to_hex())))
+    }
+}
+
+#[cfg(test)]
+mod tests {
+
+    use mincode::serialize_into;
+
+    use super::*;
+
+    #[test]
+    fn test_filter_version_serialize() {
+        let mut buffer = Vec::new();
+        serialize_into(&mut buffer, &FilterVersion::V1).unwrap();
+        assert!(!buffer.is_empty());
+        // mincode serializer prefixes strings with their length (VLQ encoded)
+        assert_eq!(buffer, vec![1]);
+
+        let mut buffer = Vec::new();
+        let res = serialize_into(&mut buffer, &FilterVersion::Legacy);
+        assert!(res.is_err());
+        assert!(res.unwrap_err().to_string().contains("permitted"));
     }
 }
