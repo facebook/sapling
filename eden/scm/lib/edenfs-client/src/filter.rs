@@ -8,16 +8,19 @@
 use std::fmt;
 use std::path::PathBuf;
 
+use blake3::Hasher as Blake3Hasher;
 use serde::Deserialize;
 use serde::Deserializer;
 use serde::Serialize;
 use serde::Serializer;
 use tracing::warn;
+use types::Blake3;
 use types::HgId;
+use types::RepoPathBuf;
 
 #[derive(Clone, Copy, PartialEq, Debug)]
 #[allow(dead_code)]
-enum FilterVersion {
+pub enum FilterVersion {
     /// Legacy Filters could only support having a single active filter. The filter content was
     /// stored inside the FilterID itself.
     Legacy = 0,
@@ -74,6 +77,85 @@ impl fmt::Display for FilterVersion {
     }
 }
 
+#[derive(Debug, Serialize)]
+struct V1FilterComponents<'a> {
+    version: FilterVersion,
+    filter_paths: &'a [RepoPathBuf],
+    commit_id: &'a HgId,
+}
+
+// Eden's ObjectIDs must be durable (once they exist, Eden must always be able to derive
+// the underlying object from them). FilteredObjectIDs contain FilterIDs, and therefore we
+// must be able to re-derive the filter contents from any FilterID so that we can properly
+// reconstruct the original filtered object at any future point in time. To do this, we
+// associate a commit ID to each Filter Path which allows us to read Filter file contents from
+// the repo and reconstruct any filtered object.
+#[allow(dead_code)]
+#[derive(Debug)]
+pub enum FilterId {
+    /// Legacy FilterIDs are in the form:
+    ///
+    /// [filter_file_paths]:[hex_commit_hash]
+    ///
+    /// Where the filter_file_path indicates the path to the filter file relative to the repo root,
+    /// and commit_hash indicates the version of the filter file when it was applied. This format
+    /// assumes that neither the filter files nor the commit hash will have ":" in them. The second
+    /// restriction is guaranteed (hex), the first one needs to be enforced by us.
+    Legacy(Vec<u8>),
+    /// V1 Filter IDs contain:
+    ///
+    /// - FilterID Version
+    /// - Partial Blake3 Hash (index)
+    ///
+    /// Where the version is "V1" and the hash is the first 8 bytes of the Filter's Blake3 hash.
+    ///
+    /// Filter IDs are serialized with mincode::serialize when they are passed to EdenFS. When used
+    /// as an index in the Filter IndexedLog, only the 8 byte Blake3 hash of the filter is used.
+    V1(FilterVersion, Vec<u8>),
+}
+
+#[allow(dead_code)]
+impl FilterId {
+    fn new(
+        version: FilterVersion,
+        filter_paths: &[RepoPathBuf],
+        commit_id: &HgId,
+        hash_key: &[u8; 32],
+    ) -> Result<FilterId, anyhow::Error> {
+        match version {
+            FilterVersion::Legacy => {
+                if filter_paths.len() != 1 {
+                    Err(anyhow::anyhow!(
+                        "Legacy FilterIDs must only contain a single filter path"
+                    ))
+                } else {
+                    let id = format!("{}:{}", filter_paths[0], commit_id);
+                    Ok(FilterId::Legacy(id.into()))
+                }
+            }
+            FilterVersion::V1 => {
+                let v1_components = V1FilterComponents {
+                    version,
+                    filter_paths,
+                    commit_id,
+                };
+
+                // Create a hash out of the serialized V1 filter components.
+                let mut hasher = Blake3Hasher::new_keyed(hash_key);
+                let filter_bytes = mincode::serialize(&v1_components)?;
+                hasher.update(&filter_bytes);
+                let index = hasher.finalize();
+
+                Ok(FilterId::V1(
+                    FilterVersion::V1,
+                    index.as_bytes()[..Blake3::len() / 4].into(),
+                ))
+            }
+        }
+    }
+}
+
+#[allow(dead_code)]
 pub(crate) struct FilterGenerator {
     dot_hg_path: PathBuf,
 }
@@ -136,6 +218,12 @@ mod tests {
 
     use super::*;
 
+    // 40-character hex commit ID for tests
+    const TEST_COMMIT_ID: &[u8] = b"1234567890123456789012345678901234567890";
+    const TEST_COMMIT_ID_STR: &str = "1234567890123456789012345678901234567890";
+
+    const DEFAULT_FILTER_PATH: &str = "path/to/filter.txt";
+
     #[test]
     fn test_filter_version_display() {
         assert_eq!(FilterVersion::Legacy.to_string(), "Legacy");
@@ -185,5 +273,59 @@ mod tests {
         serialize_into(&mut buffer, &original_v1).unwrap();
         let deserialized: FilterVersion = deserialize(&buffer).unwrap();
         assert_eq!(original_v1, deserialized);
+    }
+
+    #[test]
+    fn test_filter_id_legacy_creation() {
+        let filter_paths = vec![RepoPathBuf::from_utf8(DEFAULT_FILTER_PATH.into()).unwrap()];
+        let commit_id = HgId::from_hex(TEST_COMMIT_ID).unwrap();
+
+        let filter_id =
+            FilterId::new(FilterVersion::Legacy, &filter_paths, &commit_id, &[0; 32]).unwrap();
+
+        if let FilterId::Legacy(id) = filter_id {
+            assert_eq!(
+                id,
+                format!("{}:{}", DEFAULT_FILTER_PATH, TEST_COMMIT_ID_STR).as_bytes()
+            );
+        } else {
+            panic!("Expected Legacy FilterId");
+        }
+    }
+
+    #[test]
+    fn test_filter_id_legacy_multiple_paths_error() {
+        let filter_paths = vec![
+            RepoPathBuf::from_utf8("path1.txt".into()).unwrap(),
+            RepoPathBuf::from_utf8("path2.txt".into()).unwrap(),
+        ];
+        let commit_id = HgId::from_hex(TEST_COMMIT_ID).unwrap();
+
+        let result = FilterId::new(FilterVersion::Legacy, &filter_paths, &commit_id, &[0; 32]);
+        assert!(result.is_err());
+        assert!(
+            result
+                .unwrap_err()
+                .to_string()
+                .contains("Legacy FilterIDs must only contain a single filter path")
+        );
+    }
+
+    #[test]
+    fn test_filter_id_v1_creation() {
+        let filter_paths = vec![RepoPathBuf::from_utf8(DEFAULT_FILTER_PATH.into()).unwrap()];
+        let commit_id = HgId::from_hex(TEST_COMMIT_ID).unwrap();
+        let hash_key = [42u8; 32];
+
+        let filter_id =
+            FilterId::new(FilterVersion::V1, &filter_paths, &commit_id, &hash_key).unwrap();
+
+        if let FilterId::V1(_, index) = filter_id {
+            // ID Should be 8 bytes long
+            assert!(index.len() == (Blake3::len() / 4));
+            assert_eq!(index, [160, 95, 149, 78, 3, 46, 174, 41]);
+        } else {
+            panic!("Expected V1 FilterId");
+        }
     }
 }

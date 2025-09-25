@@ -18,11 +18,9 @@ rust_library(
         },
     }},
     features = ["fb"],
-    test_deps = [
-        "//eden/scm/lib/mincode:mincode",
-    ],
     deps = [
         "fbsource//third-party/rust:anyhow",
+        "fbsource//third-party/rust:blake3",
         "fbsource//third-party/rust:fs-err",
         "fbsource//third-party/rust:parking_lot",
         "fbsource//third-party/rust:serde",
@@ -34,6 +32,7 @@ rust_library(
         "//eden/scm/lib/clientinfo:clientinfo",
         "//eden/scm/lib/hg-metrics:hg-metrics",
         "//eden/scm/lib/identity:identity",
+        "//eden/scm/lib/mincode:mincode",
         "//eden/scm/lib/thrift-types:thrift-types",
         "//eden/scm/lib/types:types",
     ],
