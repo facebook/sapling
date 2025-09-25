@@ -15,7 +15,6 @@ export type EnabledSCMApiFeature =
   | 'blame'
   | 'sidebar'
   | 'comments'
-  | 'inlineCommentAIResolve'
   | 'newInlineComments'
   | 'aiFirstPassCodeReview';
 

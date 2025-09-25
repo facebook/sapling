@@ -65,14 +65,10 @@ export async function activate(
     context.subscriptions.push(new DeletedFileContentProvider());
     let inlineCommentsProvider;
     if (enabledSCMApiFeatures.has('comments') && Internal.inlineCommentsProvider) {
-      const features = [];
-      if (enabledSCMApiFeatures.has('inlineCommentAIResolve')) {
-        features.push('inlineCommentAIResolve');
-      }
       if (enabledSCMApiFeatures.has('newInlineComments')) {
         Internal.registerNewInlineCommentsProvider?.(context, extensionTracker, reposList);
       } else {
-        inlineCommentsProvider = Internal.inlineCommentsProvider(context, reposList, ctx, features);
+        inlineCommentsProvider = Internal.inlineCommentsProvider(context, reposList, ctx, []);
         if (inlineCommentsProvider != null) {
           context.subscriptions.push(inlineCommentsProvider);
         }
