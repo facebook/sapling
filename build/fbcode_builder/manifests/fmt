@@ -10,6 +10,7 @@ builder = cmake
 subdir = fmt-11.0.2
 
 [cmake.defines]
+BUILD_SHARED_LIBS = ON
 FMT_TEST = OFF
 FMT_DOC = OFF
 

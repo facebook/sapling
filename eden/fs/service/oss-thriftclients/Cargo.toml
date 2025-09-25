@@ -1,0 +1,13 @@
+[package]
+name = "thrift_thriftclients" # this crate’s name
+version = "0.1.0"
+
+[dependencies]
+# thrift_clients = { version = "0.1.0", path = "../clients" }
+thrift__types = { package = "thrift_clients", version = "0.1.0", path = "../thrift/clients" }
+
+[lib]
+path = "lib.rs"
+test = false
+doctest = false
+doc = false
