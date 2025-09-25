@@ -16,6 +16,7 @@ export type EnabledSCMApiFeature =
   | 'sidebar'
   | 'comments'
   | 'inlineCommentAIResolve'
+  | 'newInlineComments'
   | 'aiFirstPassCodeReview';
 
 export enum ActionTriggerType {
