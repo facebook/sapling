@@ -214,7 +214,7 @@ Test conflicted merge state
   # 
   # To mark files as resolved:  hg resolve --mark FILE
   # To continue:                hg commit
-  # To abort:                   hg goto --clean .    (warning: this will discard uncommitted changes)
+  # To abort:                   hg goto . --clean    (warning: this will discard uncommitted changes)
 
 
 Test if listed files have a relative path to current location
@@ -231,7 +231,7 @@ Test if listed files have a relative path to current location
   # 
   # To mark files as resolved:  hg resolve --mark FILE
   # To continue:                hg commit
-  # To abort:                   hg goto --clean .    (warning: this will discard uncommitted changes)
+  # To abort:                   hg goto . --clean    (warning: this will discard uncommitted changes)
 
   $ cd ../..
 
@@ -252,7 +252,7 @@ Test non-conflicted merge state
   
   # The repository is in an unfinished *merge* state.
   # To continue:                hg commit
-  # To abort:                   hg goto --clean .    (warning: this will discard uncommitted changes)
+  # To abort:                   hg goto . --clean    (warning: this will discard uncommitted changes)
 
 
 Test hg status is normal after merge commit (no output)
@@ -266,7 +266,7 @@ Test interrupted update state, without active bookmark and REV is a hash
   
   # The repository is in an unfinished *update* state.
   # To continue:                hg goto -C 2977a57ce863
-  # To abort:                   hg goto --clean .    (warning: this will discard uncommitted changes)
+  # To abort:                   hg goto . --clean    (warning: this will discard uncommitted changes)
 
 
 Test interrupted update state, with active bookmark and REV is a bookmark
@@ -277,7 +277,7 @@ Test interrupted update state, with active bookmark and REV is a bookmark
   
   # The repository is in an unfinished *update* state.
   # To continue:                hg goto b2
-  # To abort:                   hg goto --clean b1    (warning: this will discard uncommitted changes)
+  # To abort:                   hg goto b1 --clean    (warning: this will discard uncommitted changes)
 
 
 Test update state can be reset using bookmark
@@ -293,7 +293,7 @@ Test interrupted update state, without active bookmark and REV is specified usin
   
   # The repository is in an unfinished *update* state.
   # To continue:                hg goto --date 1970-1-1 -q
-  # To abort:                   hg goto --clean .    (warning: this will discard uncommitted changes)
+  # To abort:                   hg goto . --clean    (warning: this will discard uncommitted changes)
 
 
   $ unbreakupdate
@@ -310,7 +310,7 @@ Test args escaping in continue command
   
   # The repository is in an unfinished *update* state.
   # To continue:                hg --config 'extensions.fsmonitor=!' --config 'ui.ssh=ssh -oControlMaster=no' update -C 2977a57ce863
-  # To abort:                   hg goto --clean b1    (warning: this will discard uncommitted changes)
+  # To abort:                   hg goto b1 --clean    (warning: this will discard uncommitted changes)
 
 
   $ unbreakupdate

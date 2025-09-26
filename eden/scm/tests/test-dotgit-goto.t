@@ -55,7 +55,7 @@ tofix: should have a way to get out of the unfinished *update* state
   
   # The repository is in an unfinished *update* state.
   # To continue:                sl go 'desc(B)'
-  # To abort:                   sl goto --clean .    (warning: this will discard uncommitted changes)
+  # To abort:                   sl goto . --clean    (warning: this will discard uncommitted changes)
   $ sl shelve
   abort: interrupted goto
   (use 'sl goto --continue' to continue or

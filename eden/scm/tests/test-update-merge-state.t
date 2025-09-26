@@ -62,7 +62,7 @@ Python utility:
   # 
   # To mark files as resolved:  hg resolve --mark FILE
   # To continue:                hg goto --continue
-  # To abort:                   hg goto --clean .    (warning: this will discard uncommitted changes)
+  # To abort:                   hg goto . --clean    (warning: this will discard uncommitted changes)
 
 # Cannot --continue right now
 
@@ -83,7 +83,7 @@ Python utility:
   # The repository is in an unfinished *update* state.
   # No unresolved merge conflicts.
   # To continue:                hg goto --continue
-  # To abort:                   hg goto --clean .    (warning: this will discard uncommitted changes)
+  # To abort:                   hg goto . --clean    (warning: this will discard uncommitted changes)
 
 # To get rid of the state
 
@@ -135,7 +135,7 @@ Python utility:
   # The repository is in an unfinished *merge* state.
   # No unresolved merge conflicts.
   # To continue:                hg continue, then hg commit
-  # To abort:                   hg goto --clean .    (warning: this will discard uncommitted changes)
+  # To abort:                   hg goto . --clean    (warning: this will discard uncommitted changes)
 
 # The state is confusing, but 'hg continue' can resolve it.
 

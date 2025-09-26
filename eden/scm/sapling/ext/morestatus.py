@@ -101,7 +101,7 @@ def rebasemsg(repo, ui):
 
 def updatecleanmsg(dest=None):
     warning = _("warning: this will discard uncommitted changes")
-    return _("@prog@ goto --clean %s    (%s)") % (dest or ".", warning)
+    return _("@prog@ goto %s --clean    (%s)") % (dest or ".", warning)
 
 
 def updatemsg(repo, ui):

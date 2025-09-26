@@ -66,7 +66,7 @@
   # 
   # To mark files as resolved:  hg resolve --mark FILE
   # To continue:                hg commit
-  # To abort:                   hg goto --clean .    (warning: this will discard uncommitted changes)
+  # To abort:                   hg goto . --clean    (warning: this will discard uncommitted changes)
 
   $ cat a
   Small Mathematical Series.
