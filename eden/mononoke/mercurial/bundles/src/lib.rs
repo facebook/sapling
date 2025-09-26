@@ -5,7 +5,6 @@
  * GNU General Public License version 2.
  */
 
-#![feature(let_chains)]
 use mononoke_macros::mononoke;
 pub mod bundle2;
 pub mod bundle2_encode;

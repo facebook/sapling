@@ -159,8 +159,13 @@ where
                 yield frame;
             }
         }
-        while !buf.is_empty() && let Some(frame) = decoder.decode_eof(&mut buf)? {
-            yield frame;
+        while !buf.is_empty()
+        {
+            if let Some(frame) = decoder.decode_eof(&mut buf)? {
+                yield frame;
+            } else {
+                break
+            }
         }
     }
 }
