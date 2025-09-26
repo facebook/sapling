@@ -1337,6 +1337,7 @@ filenodes = {{ unsharded = {{ db_address = "{db_shard_name}" }} }}
 mutation = {{ db_address = "{db_shard_name}" }}
 commit_cloud = {{ db_address = "{db_shard_name}" }}
 git_bundles = {{ db_address = "{db_shard_name}" }}
+restricted_paths = {{ db_address = "{db_shard_name}" }}
 """
     else:
         return f"""[{blobstore_name}.metadata.local]
