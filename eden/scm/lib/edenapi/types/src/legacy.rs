@@ -50,9 +50,9 @@ impl Default for StreamingChangelogData {
 #[derive(Clone, Debug, Deserialize, Serialize, Eq, PartialEq)]
 pub struct StreamingChangelogBlob {
     #[id(0)]
-    chunk: Bytes,
+    pub chunk: Bytes,
     #[id(1)]
-    chunk_id: u64,
+    pub chunk_id: u64,
 }
 
 #[auto_wire]
@@ -60,9 +60,9 @@ pub struct StreamingChangelogBlob {
 #[cfg_attr(any(test, feature = "for-tests"), derive(Arbitrary))]
 pub struct Metadata {
     #[id(0)]
-    index_size: u64,
+    pub index_size: u64,
     #[id(1)]
-    data_size: u64,
+    pub data_size: u64,
 }
 
 #[cfg(any(test, feature = "for-tests"))]
