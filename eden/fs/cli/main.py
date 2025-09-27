@@ -74,7 +74,19 @@ except ImportError:
 
 from eden.fs.cli.buck import get_buck_command, run_buck_command
 from eden.fs.cli.config import HG_REPO_TYPES
-from eden.fs.cli.doctor.facebook import check_x509
+try:
+    from eden.fs.cli.doctor.facebook import check_x509
+except ImportError:
+    # in OSS define a stub
+    class check_x509:
+        @staticmethod
+        def find_x509_path() -> Optional[str]:
+            return ""
+        @staticmethod
+        def validate_x509(cert: str) -> str:
+            return ""
+    
+
 from eden.fs.cli.telemetry import TelemetrySample
 from eden.fs.cli.util import (
     check_health_using_lockfile,
