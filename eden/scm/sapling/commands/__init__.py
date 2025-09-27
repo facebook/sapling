@@ -455,6 +455,12 @@ def annotate(ui, repo, *pats, **opts):
             hex, annotated_line = args
             return format_changeset_helper(hex, annotated_line)
 
+    def getphabdiff(annotated_line):
+        d = annotated_line.ctx().description()
+        pat = r"https://.*/(D\d+)"
+        m = re.search(pat, d)
+        return m.group(1) if m else ""
+
     now = time.time()
 
     def agebucket(
@@ -502,8 +508,9 @@ def annotate(ui, repo, *pats, **opts):
         ("file", " ", lambda x: x.path(), str),
         ("line_number", ":", lambda x: x.lineno, str),
         ("age_bucket", "", lambda x: agebucket(x), lambda x: ""),
+        ("phabdiff", " ", getphabdiff, str),
     ]
-    fieldnamemap = {"number": "rev", "changeset": "node"}
+    fieldnamemap = {"number": "rev", "changeset": "node", "phabdiff": "blame_phabdiff"}
 
     if (
         not opts.get("user")

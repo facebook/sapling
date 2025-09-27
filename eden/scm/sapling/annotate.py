@@ -25,6 +25,9 @@ class annotateline:
         self._path = path or fctx.path()
         self.lineno = lineno
 
+    def ctx(self):
+        return self._ctx
+
     def date(self):
         # Prefer fctx.date() since that can differ for wdir files.
         return (self._fctx or self._ctx).date()

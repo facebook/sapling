@@ -398,6 +398,8 @@ def wrapblame() -> None:
 def phabdiff(context, mapping, args):
     """Fetch the Phab Diff Id from the node in mapping"""
     res = ""
+    if "blame_phabdiff" in mapping:
+        return mapping["blame_phabdiff"]
     try:
         repo = mapping["ctx"].repo()
         d = repo[mapping["rev"]].description()
