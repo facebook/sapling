@@ -17,6 +17,7 @@ import type {PartialSelection} from './partialSelection';
 import platform from './platform';
 import {repoRootAtom} from './repositoryData';
 import type {AbsolutePath, RepoRelativePath} from './types';
+import {ChangedFileMode} from './UncommittedChanges';
 import {showModal} from './useModal';
 import {registerDisposable} from './utils';
 
@@ -139,6 +140,9 @@ function SimpleChangedFilesList({files}: {files: Array<string>}) {
               // These are wrong, but we don't have the full context of the file to know if it's added, removed, etc
               visualStatus: 'M',
               status: 'M',
+              // Similar to the above, we assume it's a regular change
+              // rather than a submodule update, which is unlikely to be suggested
+              type: ChangedFileMode.Regular,
             }}
             key={path}
             displayType="short"

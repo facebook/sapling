@@ -88,14 +88,26 @@ import {
   uncommittedChangesWithPreviews,
   useIsOperationRunningOrQueued,
 } from './previews';
+import {repoRootAtom} from './repositoryData';
 import {selectedCommits} from './selection';
-import {latestHeadCommit, uncommittedChangesFetchError} from './serverAPIState';
+import {latestHeadCommit, submodulesByRoot, uncommittedChangesFetchError} from './serverAPIState';
 import {GeneratedStatus} from './types';
 
 import './UncommittedChanges.css';
 
+export enum ChangedFileMode {
+  // "Regular" is from the perspective of the ISL - it's a file that's not a submodule.
+  // This can be different from more granular categorizations in the underlying
+  // source control system, such as symlinks, executables, and gitlinks.
+  Regular = 'regular',
+  Submodule = 'submodule',
+}
+
 export type UIChangedFile = {
   path: RepoRelativePath;
+  // Compute file mode here rather than in the isl-server,
+  // as the info is not directly available from the `status` command
+  type: ChangedFileMode;
   // disambiguated path, or rename with arrow
   label: string;
   status: ChangedFileStatus;
@@ -105,15 +117,22 @@ export type UIChangedFile = {
   tooltip: string;
 };
 
-function processCopiesAndRenames(files: Array<ChangedFile>): Array<UIChangedFile> {
+function processChangedFiles(
+  files: Array<ChangedFile>,
+  submodulePaths: RepoRelativePath[] | undefined,
+): Array<UIChangedFile> {
   const disambiguousPaths = minimalDisambiguousPaths(files.map(file => file.path));
   const copySources = new Set(files.map(file => file.copy).filter(notEmpty));
   const removedFiles = new Set(files.filter(file => file.status === 'R').map(file => file.path));
+  const submodulePathSet = new Set(submodulePaths);
 
   return (
     files
       .map((file, i) => {
         const minimalName = disambiguousPaths[i];
+        const type = submodulePathSet.has(file.path)
+          ? ChangedFileMode.Submodule
+          : ChangedFileMode.Regular;
         let fileLabel = minimalName;
         let tooltip = `${nameForStatus(file.status)}: ${file.path}`;
         let copiedFrom;
@@ -143,6 +162,7 @@ function processCopiesAndRenames(files: Array<ChangedFile>): Array<UIChangedFile
           path: file.path,
           label: fileLabel,
           status: file.status,
+          type,
           visualStatus,
           copiedFrom,
           renamedFrom,
@@ -296,7 +316,12 @@ export function ChangedFiles(props: {
     return genStatA - genStatB;
   });
   const filesToShow = filesToSort.slice(rangeStart - fetchRangeStart, rangeEnd - fetchRangeStart);
-  const processedFiles = useDeepMemo(() => processCopiesAndRenames(filesToShow), [filesToShow]);
+  const root = useAtomValue(repoRootAtom);
+  const currSubmodulePaths = useAtomGet(submodulesByRoot, root)?.value?.map(m => m.path);
+  const processedFiles = useDeepMemo(
+    () => processChangedFiles(filesToShow, currSubmodulePaths),
+    [filesToShow, currSubmodulePaths],
+  );
 
   const prefixes: {key: string; prefix: string}[] = useMemo(
     () => Internal.repoPrefixes ?? [{key: 'default', prefix: ''}],
