@@ -5,7 +5,7 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-import type {ChangedFileType, RepoRelativePath, UncommittedChanges} from '../types';
+import type {ChangedFileStatus, RepoRelativePath, UncommittedChanges} from '../types';
 
 import {act, fireEvent, render, screen} from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
@@ -74,7 +74,7 @@ describe('Changed Files', () => {
     });
   });
 
-  function openChangedFileTypePicker() {
+  function openChangedFileStatusPicker() {
     const picker = screen.getByTestId('changed-file-display-type-picker');
     expect(picker).toBeInTheDocument();
 
@@ -84,7 +84,7 @@ describe('Changed Files', () => {
   }
 
   it('Allows picking changed files display type', () => {
-    openChangedFileTypePicker();
+    openChangedFileStatusPicker();
     expect(screen.getByText('Short file names')).toBeInTheDocument();
     expect(screen.getByText('Full file paths')).toBeInTheDocument();
     expect(screen.getByText('Tree')).toBeInTheDocument();
@@ -92,7 +92,7 @@ describe('Changed Files', () => {
   });
 
   it('Persists choice for display type', () => {
-    openChangedFileTypePicker();
+    openChangedFileStatusPicker();
     act(() => {
       fireEvent.click(screen.getByText('Tree'));
     });
@@ -104,7 +104,7 @@ describe('Changed Files', () => {
   });
 
   it('Updates when config is fetched', () => {
-    openChangedFileTypePicker();
+    openChangedFileStatusPicker();
     act(() => {
       simulateMessageFromServer({
         type: 'gotConfig',
@@ -141,7 +141,7 @@ describe('Changed Files', () => {
 
   describe('full file paths', () => {
     it('shows full paths', () => {
-      openChangedFileTypePicker();
+      openChangedFileStatusPicker();
       act(() => {
         fireEvent.click(screen.getByText('Full file paths'));
       });
@@ -172,7 +172,7 @@ describe('Changed Files', () => {
 
   describe('one-letter-per-directory file paths', () => {
     it('shows one-letter-per-directory file paths', () => {
-      openChangedFileTypePicker();
+      openChangedFileStatusPicker();
       act(() => {
         fireEvent.click(screen.getByText('One-letter directories'));
       });
@@ -188,7 +188,7 @@ describe('Changed Files', () => {
 
   describe('tree', () => {
     beforeEach(() => {
-      openChangedFileTypePicker();
+      openChangedFileStatusPicker();
       act(() => {
         fireEvent.click(screen.getByText('Tree'));
       });
@@ -249,7 +249,7 @@ describe('Changed Files', () => {
 
     function withStatus(
       changes: Array<RepoRelativePath>,
-      status: ChangedFileType,
+      status: ChangedFileStatus,
     ): UncommittedChanges {
       return changes.map(path => ({path, status}));
     }

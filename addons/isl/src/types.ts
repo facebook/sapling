@@ -397,10 +397,10 @@ export type SuccessorInfo = {
   type: string;
 };
 export type CommitPhaseType = 'public' | 'draft';
-export type ChangedFileType = 'A' | 'M' | 'R' | '?' | '!' | 'U' | 'Resolved';
+export type ChangedFileStatus = 'A' | 'M' | 'R' | '?' | '!' | 'U' | 'Resolved';
 export type ChangedFile = {
   path: RepoRelativePath;
-  status: ChangedFileType;
+  status: ChangedFileStatus;
   /**
    * If this file is copied from another, this is the path of the original file
    * If this file is renamed from another, this is the path of the original file, and another change of type 'R' will exist.

@@ -7,9 +7,9 @@
 
 import type {ReactNode} from 'react';
 import type {Comparison} from 'shared/Comparison';
-import type {Place, UIChangedFile, VisualChangedFileType} from './UncommittedChanges';
+import type {Place, UIChangedFile, VisualChangedFileStatus} from './UncommittedChanges';
 import type {UseUncommittedSelection} from './partialSelection';
-import type {ChangedFileType, GeneratedStatus} from './types';
+import type {ChangedFileStatus, GeneratedStatus} from './types';
 
 import {Button} from 'isl-components/Button';
 import {Checkbox} from 'isl-components/Checkbox';
@@ -189,7 +189,7 @@ export function File({
 }
 
 const revertableStatues = new Set(['M', 'R', '!']);
-const conflictStatuses = new Set<ChangedFileType>(['U', 'Resolved']);
+const conflictStatuses = new Set<ChangedFileStatus>(['U', 'Resolved']);
 function FileActions({
   comparison,
   file,
@@ -557,7 +557,7 @@ function PartialSelectionPanel({file}: {file: UIChangedFile}) {
 /**
  * Map for changed files statuses into classNames (for color & styles) and icon names.
  */
-const nameAndIconForFileStatus: Record<VisualChangedFileType, [string, string]> = {
+const nameAndIconForFileStatus: Record<VisualChangedFileStatus, [string, string]> = {
   A: ['added', 'diff-added'],
   M: ['modified', 'diff-modified'],
   R: ['removed', 'diff-removed'],

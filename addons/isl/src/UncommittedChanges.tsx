@@ -8,7 +8,7 @@
 import type {Comparison} from 'shared/Comparison';
 import type {CommitMessageFields} from './CommitInfoView/types';
 import type {UseUncommittedSelection} from './partialSelection';
-import type {ChangedFile, ChangedFileType, MergeConflicts, RepoRelativePath} from './types';
+import type {ChangedFile, ChangedFileStatus, MergeConflicts, RepoRelativePath} from './types';
 
 import * as stylex from '@stylexjs/stylex';
 import {Badge} from 'isl-components/Badge';
@@ -98,8 +98,8 @@ export type UIChangedFile = {
   path: RepoRelativePath;
   // disambiguated path, or rename with arrow
   label: string;
-  status: ChangedFileType;
-  visualStatus: VisualChangedFileType;
+  status: ChangedFileStatus;
+  visualStatus: VisualChangedFileStatus;
   copiedFrom?: RepoRelativePath;
   renamedFrom?: RepoRelativePath;
   tooltip: string;
@@ -118,7 +118,7 @@ function processCopiesAndRenames(files: Array<ChangedFile>): Array<UIChangedFile
         let tooltip = `${nameForStatus(file.status)}: ${file.path}`;
         let copiedFrom;
         let renamedFrom;
-        let visualStatus: VisualChangedFileType = file.status;
+        let visualStatus: VisualChangedFileStatus = file.status;
         if (file.copy != null) {
           // Disambiguate between original file and the newly copy's name,
           // instead of disambiguating among all file names.
@@ -159,9 +159,9 @@ function processCopiesAndRenames(files: Array<ChangedFile>): Array<UIChangedFile
   );
 }
 
-export type VisualChangedFileType = ChangedFileType | 'Renamed' | 'Copied';
+export type VisualChangedFileStatus = ChangedFileStatus | 'Renamed' | 'Copied';
 
-const sortKeyForStatus: Record<VisualChangedFileType, number> = {
+const sortKeyForStatus: Record<VisualChangedFileStatus, number> = {
   M: 0,
   Renamed: 1,
   A: 2,
@@ -173,7 +173,7 @@ const sortKeyForStatus: Record<VisualChangedFileType, number> = {
   Resolved: 8,
 };
 
-function nameForStatus(status: ChangedFileType): string {
+function nameForStatus(status: ChangedFileStatus): string {
   switch (status) {
     case '!':
       return t('Missing');

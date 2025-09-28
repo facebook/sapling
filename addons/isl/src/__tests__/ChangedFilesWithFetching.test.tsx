@@ -5,7 +5,7 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-import type {ChangedFile, ChangedFileType, RepoRelativePath} from '../types';
+import type {ChangedFile, ChangedFileStatus, RepoRelativePath} from '../types';
 
 import {act, fireEvent, render, screen, waitFor} from '@testing-library/react';
 import App from '../App';
@@ -24,7 +24,7 @@ import {leftPad} from '../utils';
 function makeFiles(n: number): Array<RepoRelativePath> {
   return new Array(n).fill(null).map((_, i) => `file${leftPad(i, 3, '0')}.txt`);
 }
-function withStatus(files: Array<RepoRelativePath>, status: ChangedFileType): Array<ChangedFile> {
+function withStatus(files: Array<RepoRelativePath>, status: ChangedFileStatus): Array<ChangedFile> {
   return files.map(path => ({path, status}));
 }
 
