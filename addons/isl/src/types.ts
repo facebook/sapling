@@ -555,19 +555,18 @@ export type CommitCloudSyncState = {
   isDisabled?: boolean;
 };
 
-export type SubmoduleInfo = {
+export type Submodule = {
   name: string;
   path: RepoRelativePath;
   url: string;
   ref?: string;
   active: boolean;
 };
-export type Submodules = Array<SubmoduleInfo>;
 /**
  * An undefined value if git submodules are not supported by the repo.
  * An error if unexpected errors occurred during the fetch process.
  */
-export type FetchedSubmodules = Result<Submodules | undefined>;
+export type FetchedSubmodules = Result<Submodule[] | undefined>;
 export type SubmodulesByRoot = Map<AbsolutePath, FetchedSubmodules>;
 
 export type AlertSeverity = 'SEV 0' | 'SEV 1' | 'SEV 2' | 'SEV 3' | 'SEV 4' | 'UBN';

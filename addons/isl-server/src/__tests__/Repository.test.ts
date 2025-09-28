@@ -5,7 +5,7 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-import type {AbsolutePath, RunnableOperation, Submodules} from 'isl/src/types';
+import type {AbsolutePath, RunnableOperation, Submodule} from 'isl/src/types';
 import type {ResolveCommandConflictOutput} from '../commands';
 import type {ServerPlatform} from '../serverPlatform';
 import type {RepositoryContext} from '../serverTypes';
@@ -1063,7 +1063,7 @@ describe('fetchSubmoduleMap', () => {
   });
 
   it('simple', async () => {
-    const submodules: Submodules = [
+    const submodules: Submodule[] = [
       {
         name: 'submoduleA',
         url: 'https://ghe.myCompany.com/myUsername/myRepo/submoduleA',
@@ -1092,7 +1092,7 @@ describe('fetchSubmoduleMap', () => {
   });
 
   it('no submodules', async () => {
-    const submodules: Submodules = [];
+    const submodules: Submodule[] = [];
     const submodulesJson = JSON.stringify(submodules);
     mockEjeca([
       [/^sl root/, {stdout: myRepoRoot}],
@@ -1108,7 +1108,7 @@ describe('fetchSubmoduleMap', () => {
   });
 
   it('nested', async () => {
-    const submodulesOfMyRepo: Submodules = [
+    const submodulesOfMyRepo: Submodule[] = [
       {
         name: 'submoduleA',
         url: 'https://ghe.myCompany.com/myUsername/myRepo/submoduleA',
@@ -1117,7 +1117,7 @@ describe('fetchSubmoduleMap', () => {
       },
     ];
     const submoduleARoot = myRepoRoot + '/submoduleA';
-    const submodulesOfA: Submodules = [
+    const submodulesOfA: Submodule[] = [
       {
         name: 'submoduleB',
         url: 'https://ghe.myCompany.com/myUsername/myRepo/submoduleA/submoduleB',

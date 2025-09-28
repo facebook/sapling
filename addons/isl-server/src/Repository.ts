@@ -31,7 +31,7 @@ import type {
   SettableConfigName,
   ShelvedChange,
   StableInfo,
-  Submodules,
+  Submodule,
   SubmodulesByRoot,
   UncommittedChanges,
   ValidatedRepoInfo,
@@ -1082,7 +1082,7 @@ export class Repository {
             'LogCommand',
             this.initialConnectionContext,
           );
-          const submodules = JSON.parse(proc.stdout) as Submodules;
+          const submodules = JSON.parse(proc.stdout) as Submodule[];
           submoduleMap.set(root, {value: submodules?.length === 0 ? undefined : submodules});
         } catch (err) {
           let error = err;
