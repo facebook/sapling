@@ -8,6 +8,7 @@
 import type {ReactNode} from 'react';
 import type {Comparison} from 'shared/Comparison';
 import type {Place, UIChangedFile, VisualChangedFileStatus} from './UncommittedChanges';
+import {ChangedFileMode} from './UncommittedChanges';
 import type {UseUncommittedSelection} from './partialSelection';
 import type {ChangedFileStatus, GeneratedStatus} from './types';
 
@@ -123,6 +124,9 @@ export function File({
     .join('\n\n');
 
   const openFile = () => {
+    if (file.type === ChangedFileMode.Submodule) {
+      return;
+    }
     if (file.visualStatus === 'U') {
       const tool = readAtom(externalMergeToolAtom);
       if (tool != null) {
@@ -181,9 +185,9 @@ export function File({
         </span>
         {comparison != null && <FileActions file={file} comparison={comparison} place={place} />}
       </div>
-      {place === 'main' && selection?.isExpanded(file.path) && (
-        <MaybePartialSelection file={file} />
-      )}
+      {place === 'main' &&
+        selection?.isExpanded(file.path) &&
+        file.type !== ChangedFileMode.Submodule && <MaybePartialSelection file={file} />}
     </>
   );
 }
@@ -211,7 +215,12 @@ function FileActions({
 
   const actions: Array<React.ReactNode> = [];
 
-  if (platform.openDiff != null && !conflictStatuses.has(file.status)) {
+  if (
+    platform.openDiff != null &&
+    !conflictStatuses.has(file.status) &&
+    // Disable for now until vscode.diff no longer attempts to open paths as files for uncommitted submodule changes
+    file.type !== ChangedFileMode.Submodule
+  ) {
     actions.push(
       <Tooltip title={t('Open diff view')} key="open-diff-view" delayMs={1000}>
         <Button
@@ -418,7 +427,7 @@ function FileActions({
       }
     }
 
-    if (place === 'main' && conflicts == null) {
+    if (place === 'main' && conflicts == null && file.type !== ChangedFileMode.Submodule) {
       actions.push(<PartialSelectionAction file={file} key="partial-selection" />);
     }
   }
