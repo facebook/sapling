@@ -23,6 +23,7 @@ import {
   latestUncommittedChangesData,
   mergeConflicts,
   repositoryData,
+  submodulesByRoot,
 } from '../serverAPIState';
 
 export type UIStateSnapshot = {[key: string]: Json};
@@ -47,6 +48,7 @@ function listInterestingAtoms(): Array<AtomOrFamily> {
     uncommittedSelection,
     // These are atomFamilies.
     editedCommitMessages,
+    submodulesByRoot,
   ];
 }
 
