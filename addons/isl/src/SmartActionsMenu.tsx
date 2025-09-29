@@ -23,6 +23,7 @@ import {BaseSplitButton} from './stackEdit/ui/BaseSplitButton';
 import type {CommitInfo} from './types';
 
 import platform from './platform';
+import {serverCwd} from './repositoryData';
 import {repositoryInfo} from './serverAPIState';
 import './SmartActionsMenu.css';
 
@@ -130,6 +131,23 @@ function SmartActions({commit, dismiss}: {commit?: CommitInfo; dismiss: () => vo
   // For now, only support this in VS Code
   if (!commit && devmateValidateChangesEnabled && platform.platformName === 'vscode') {
     actions.push(<ValidateChangesButton key="validate-changes" dismiss={dismiss} />);
+  }
+
+  const devmateReviewCodeEnabled = useFeatureFlagAsync(
+    Internal.featureFlags?.AIFirstPassCodeReview,
+  );
+  // For now, only support this in VS Code
+  if (devmateReviewCodeEnabled && platform.platformName === 'vscode') {
+    const enabled = !commit || commit.isDot; // Enabled for `uncommitted changes` or the `current commit`.
+    actions.push(
+      <ReviewCodeButton
+        key="review-commit"
+        commit={commit}
+        dismiss={dismiss}
+        disabled={!enabled}
+        disabledReason="This action is only available for the current commit and uncommitted changes."
+      />,
+    );
   }
 
   return (
@@ -324,4 +342,39 @@ function ValidateChangesButton({dismiss}: {dismiss: () => void}) {
       <T>Validate Changes</T>
     </Button>
   );
+}
+
+/** Prompt Devmate to review the current commit and add comments */
+function ReviewCodeButton({
+  commit,
+  dismiss,
+  disabled,
+  disabledReason,
+}: {
+  commit?: CommitInfo;
+  dismiss: () => void;
+  disabled?: boolean;
+  disabledReason?: string;
+}) {
+  const cwd = useAtomValue(serverCwd);
+
+  const button = (
+    <Button
+      data-testid="review-commit-button"
+      onClick={e => {
+        tracker.track('SmartActionClicked', {extras: {action: 'ReviewCommit'}});
+        serverAPI.postMessage({
+          type: 'platform/runAICodeReview',
+          cwd,
+        });
+        dismiss();
+        e.stopPropagation();
+      }}
+      disabled={disabled}>
+      <Icon icon="sparkle" />
+      <T>{commit ? 'Review commit' : 'Review changes'}</T>
+    </Button>
+  );
+
+  return disabled ? <Tooltip title={disabledReason}>{button}</Tooltip> : button;
 }
