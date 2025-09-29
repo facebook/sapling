@@ -74,7 +74,18 @@ except ImportError:
 
 from eden.fs.cli.buck import get_buck_command, run_buck_command
 from eden.fs.cli.config import HG_REPO_TYPES
-from eden.fs.cli.doctor.facebook import check_x509
+
+try:
+    from eden.fs.cli.doctor.facebook.check_x509 import find_x509_path, validate_x509
+except ImportError:
+    # in OSS define a stub
+    def find_x509_path() -> Optional[Path]:
+        return None
+
+    def validate_x509(path: Path) -> str:
+        return ""
+
+
 from eden.fs.cli.telemetry import TelemetrySample
 from eden.fs.cli.util import (
     check_health_using_lockfile,
@@ -1392,10 +1403,10 @@ class HealthReportCmd(Subcmd):
         if util.is_sandcastle() or util.x2p_enabled():
             return True
 
-        if not (cert := check_x509.find_x509_path()):
+        if not (cert := find_x509_path()):
             error_str = "Could not find x509 certificate path"
         else:
-            error_str = check_x509.validate_x509(cert)
+            error_str = validate_x509(cert)
 
         if error_str == "":
             return True
