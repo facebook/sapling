@@ -13,6 +13,7 @@ import {writeAtom} from '../jotaiUtils';
 import {ErrorNotice} from 'isl-components/ErrorNotice';
 import {Icon} from 'isl-components/Icon';
 import {minimalDisambiguousPaths} from 'shared/minimalDisambiguousPaths';
+import {tracker} from '../analytics';
 import {Collapsable} from '../Collapsable';
 import {relativePath} from '../CwdSelector';
 import {Link} from '../Link';
@@ -35,8 +36,10 @@ registerDisposable(
     if (result.error) {
       writeAtom(codeReviewStatusAtom, 'error');
       writeAtom(firstPassCommentError, result.error);
+      tracker.error('AICodeReviewCompleted', 'AICodeReviewError', result.error);
     } else {
       writeAtom(codeReviewStatusAtom, 'success');
+      tracker.track('AICodeReviewCompleted', {extras: {commentCount: result.value.length}});
     }
   }),
   import.meta.hot,

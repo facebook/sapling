@@ -14,6 +14,7 @@ import {T} from '../i18n';
 import {serverCwd} from '../repositoryData';
 import {codeReviewStatusAtom} from './firstPassCodeReviewAtoms';
 
+import {tracker} from '../analytics';
 import './AICodeReviewUpsell.css';
 
 export function AICodeReviewUpsell(): JSX.Element {
@@ -34,6 +35,7 @@ export function AICodeReviewUpsell(): JSX.Element {
               type: 'platform/runAICodeReview',
               cwd,
             });
+            tracker.track('AICodeReviewInitiatedFromISL');
           }}
           disabled={status === 'running'}>
           {<T>Start review</T>}

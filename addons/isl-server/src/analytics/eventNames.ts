@@ -19,6 +19,8 @@ export type TrackEventName =
   | 'PushOperation'
   | 'AddOperation'
   | 'AddRemoveOperation'
+  | 'AICodeReviewInitiatedFromISL'
+  | 'AICodeReviewCompleted'
   | 'AlertShown'
   | 'AlertDismissed'
   | 'AmendMessageOperation'
@@ -208,4 +210,5 @@ export type TrackErrorName =
   | 'VSCodeCommandError'
   | 'VSCodeActivationError'
   | 'SplitSuggestionError'
-  | 'FileReadError';
+  | 'FileReadError'
+  | 'AICodeReviewError';
