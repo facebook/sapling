@@ -82,7 +82,7 @@ Specify a bookmark
 Specify a changeset id
 # This run can't use the `test_gitexport` abbreviation because it uses the `-i`
 # flag and it conflicts with the default `-B "master_bookmark"` arg used in the abbreviation.
-  $ gitexport -R "repo" --scuba-log-file "$SCUBA_LOG_FILE" -o "$GIT_BUNDLE_OUTPUT" --log-level ERROR -p $EXPORT_DIR -i "$C"
+  $ GLOG_minloglevel=5 gitexport -R "repo" --scuba-log-file "$SCUBA_LOG_FILE" -o "$GIT_BUNDLE_OUTPUT" --log-level ERROR -p $EXPORT_DIR -i "$C"
   $ git clone $GIT_BUNDLE_OUTPUT $GIT_REPO
   Cloning into '$TESTTMP/git_repo'...
 
@@ -139,7 +139,7 @@ Test oldest commit timestamp arg
 Test both latest changeset and commit timestamp arg
 # This run can't use the `test_gitexport` abbreviation because it uses the `-i`
 # flag and it conflicts with the default `-B "master_bookmark"` arg used in the abbreviation.
-  $ gitexport --log-level ERROR -R "repo" -p $EXPORT_DIR -i "$C" --oldest-commit-ts $B_AUTHOR_TS -o "$GIT_BUNDLE_OUTPUT"
+  $ GLOG_minloglevel=5 gitexport --log-level ERROR -R "repo" -p $EXPORT_DIR -i "$C" --oldest-commit-ts $B_AUTHOR_TS -o "$GIT_BUNDLE_OUTPUT"
   $ git clone $GIT_BUNDLE_OUTPUT $GIT_REPO
   Cloning into '$TESTTMP/git_repo'...
   $ diff_hg_and_git_repos

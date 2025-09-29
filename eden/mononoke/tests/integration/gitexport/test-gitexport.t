@@ -81,7 +81,7 @@ Set location of binary, resources and options (e.g. output path, directories)
 
 Test the unhappy path: what happens if we provide a bookmark that does not exist?
 We fail with a helpful error message.
-  $ gitexport -R "repo" -p $EXPORT_DIR --git-output $GIT_BUNDLE_OUTPUT -B i_made_this_up_would_you_believe_it
+  $ GLOG_minloglevel=5 gitexport -R "repo" -p $EXPORT_DIR --git-output $GIT_BUNDLE_OUTPUT -B i_made_this_up_would_you_believe_it
   * Starting session with id * (glob)
   * Execution error: Expected the repo to contain the bookmark: i_made_this_up_would_you_believe_it. It didn't (glob)
   Error: Execution failed
