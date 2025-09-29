@@ -1640,7 +1640,7 @@ function repo_import() {
     git_cmd="git"
   fi
 
-  "$MONONOKE_REPO_IMPORT" \
+  GLOG_minloglevel=5 "$MONONOKE_REPO_IMPORT" \
     "${CACHE_ARGS[@]}" \
     "${COMMON_ARGS[@]}" \
     --git-command-path "$git_cmd"\
