@@ -107,7 +107,7 @@ export type UIChangedFile = {
   path: RepoRelativePath;
   // Compute file mode here rather than in the isl-server,
   // as the info is not directly available from the `status` command
-  type: ChangedFileMode;
+  mode: ChangedFileMode;
   // disambiguated path, or rename with arrow
   label: string;
   status: ChangedFileStatus;
@@ -130,7 +130,7 @@ function processChangedFiles(
     files
       .map((file, i) => {
         const minimalName = disambiguousPaths[i];
-        const type = submodulePathSet.has(file.path)
+        const mode = submodulePathSet.has(file.path)
           ? ChangedFileMode.Submodule
           : ChangedFileMode.Regular;
         let fileLabel = minimalName;
@@ -162,7 +162,7 @@ function processChangedFiles(
           path: file.path,
           label: fileLabel,
           status: file.status,
-          type,
+          mode,
           visualStatus,
           copiedFrom,
           renamedFrom,

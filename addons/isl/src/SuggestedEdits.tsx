@@ -142,7 +142,7 @@ function SimpleChangedFilesList({files}: {files: Array<string>}) {
               status: 'M',
               // Similar to the above, we assume it's a regular change
               // rather than a submodule update, which is unlikely to be suggested
-              type: ChangedFileMode.Regular,
+              mode: ChangedFileMode.Regular,
             }}
             key={path}
             displayType="short"

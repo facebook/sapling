@@ -124,7 +124,7 @@ export function File({
     .join('\n\n');
 
   const openFile = () => {
-    if (file.type === ChangedFileMode.Submodule) {
+    if (file.mode === ChangedFileMode.Submodule) {
       return;
     }
     if (file.visualStatus === 'U') {
@@ -187,7 +187,7 @@ export function File({
       </div>
       {place === 'main' &&
         selection?.isExpanded(file.path) &&
-        file.type !== ChangedFileMode.Submodule && <MaybePartialSelection file={file} />}
+        file.mode !== ChangedFileMode.Submodule && <MaybePartialSelection file={file} />}
     </>
   );
 }
@@ -219,7 +219,7 @@ function FileActions({
     platform.openDiff != null &&
     !conflictStatuses.has(file.status) &&
     // Disable for now until vscode.diff no longer attempts to open paths as files for uncommitted submodule changes
-    file.type !== ChangedFileMode.Submodule
+    file.mode !== ChangedFileMode.Submodule
   ) {
     actions.push(
       <Tooltip title={t('Open diff view')} key="open-diff-view" delayMs={1000}>
@@ -427,7 +427,7 @@ function FileActions({
       }
     }
 
-    if (place === 'main' && conflicts == null && file.type !== ChangedFileMode.Submodule) {
+    if (place === 'main' && conflicts == null && file.mode !== ChangedFileMode.Submodule) {
       actions.push(<PartialSelectionAction file={file} key="partial-selection" />);
     }
   }
