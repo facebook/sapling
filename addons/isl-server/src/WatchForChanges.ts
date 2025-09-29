@@ -20,10 +20,10 @@ const DEFAULT_POLL_INTERVAL = 5 * ONE_MINUTE_MS;
 // When the page is hidden, aggressively reduce polling.
 const HIDDEN_POLL_INTERVAL = 60 * ONE_MINUTE_MS;
 // When visible or focused, poll frequently
-const VISIBLE_POLL_INTERVAL = 1 * ONE_MINUTE_MS;
-const FOCUSED_POLL_INTERVAL = 0.25 * ONE_MINUTE_MS;
-const ON_FOCUS_REFETCH_THROTTLE = 10_000;
-const ON_VISIBLE_REFETCH_THROTTLE = 20_000;
+const VISIBLE_POLL_INTERVAL = 2 * ONE_MINUTE_MS;
+const FOCUSED_POLL_INTERVAL = 0.5 * ONE_MINUTE_MS;
+const ON_FOCUS_REFETCH_THROTTLE = 15_000;
+const ON_VISIBLE_REFETCH_THROTTLE = 30_000;
 
 export type KindOfChange = 'uncommitted changes' | 'commits' | 'merge conflicts' | 'everything';
 export type PollKind = PageVisibility | 'force';
