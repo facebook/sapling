@@ -620,28 +620,11 @@ class unionmatcher(basematcher):
         return r
 
     def explain(self, f):
-        include_explains = []
-        exclude_explains = []
+        # This is for the special case of unioning two sparse matchers during a checkout operation.
         for match in self._matchers:
-            explanation = match.explain(f)
-            if explanation:
-                if match(f):
-                    include_explains.append(explanation)
-                else:
-                    exclude_explains.append(explanation)
-        if include_explains:
-            summary = "\n".join(include_explains)
-            if exclude_explains:
-                exclude_summary = "\n".join(
-                    f"{e} (overridden by rules above)" for e in exclude_explains
-                )
-                summary += "\n" + exclude_summary
-            return summary
-        elif exclude_explains:
-            exclude_summary = "\n".join(exclude_explains)
-            return exclude_summary
-        else:
-            return None
+            if match(f):
+                return match.explain(f)
+        return None
 
     def __repr__(self):
         return "<unionmatcher matchers=%r>" % self._matchers
