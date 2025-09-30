@@ -22,7 +22,7 @@ use termwiz::input::InputEvent;
 use termwiz::input::KeyEvent;
 use termwiz::input::MouseEvent;
 use termwiz::input::PixelMouseEvent;
-use termwiz::surface::Change;
+use termwiz::surface::Change as NativeChange;
 use termwiz::surface::CursorVisibility;
 use termwiz::surface::SequenceNo;
 use termwiz::terminal::SystemTerminal;
@@ -33,6 +33,7 @@ pub fn init_module(py: Python, package: &str) -> PyResult<PyModule> {
     let name = [package, "termwiz"].join(".");
     let m = PyModule::new(py, &name)?;
     m.add_class::<BufferedTerminal>(py)?;
+    m.add_class::<Change>(py)?;
     Ok(m)
 }
 
@@ -101,15 +102,17 @@ py_class!(pub class BufferedTerminal |py| {
         Ok(PyNone)
     }
 
-    def add_changes(&self, changes: Serde<Vec<Change>>) -> PyResult<SequenceNo> {
+    def add_changes(&self, changes: Vec<Change>) -> PyResult<SequenceNo> {
         let mut inner = self.inner(py).write().unwrap();
-        let result = inner.add_changes(changes.0);
+        let changes = changes.into_iter().map(|v| v.inner(py).clone()).collect();
+        let result = inner.add_changes(changes);
         Ok(result)
     }
 
-    def add_change(&self, change: Serde<Change>) -> PyResult<SequenceNo> {
+    def add_change(&self, change: Change) -> PyResult<SequenceNo> {
         let mut inner = self.inner(py).write().unwrap();
-        let result = inner.add_change(change.0);
+        let change = change.inner(py).clone();
+        let result = inner.add_change(change);
         Ok(result)
     }
 
@@ -163,6 +166,27 @@ py_class!(pub class BufferedTerminal |py| {
         let result = inner.terminal().poll_input(wait).pyerr(py)?;
         let result = result.map(|v| Serde(InputEventSerde::from(v)));
         Ok(result)
+    }
+});
+
+py_class!(pub class Change |py| {
+    data inner: NativeChange;
+
+    def __new__(_cls, change: Serde<NativeChange>) -> PyResult<Self> {
+        Self::create_instance(py, change.0)
+    }
+
+    def __repr__(&self) -> PyResult<String> {
+        let repr = format!("<Change {:?}>", self.inner(py));
+        Ok(repr)
+    }
+
+    def is_text(&self) -> PyResult<bool> {
+        Ok(self.inner(py).is_text())
+    }
+
+    def text(&self) -> PyResult<String> {
+        Ok(self.inner(py).text().to_string())
     }
 });
 
