@@ -12,7 +12,6 @@ use termwiz::surface::CursorVisibility;
 use termwiz::surface::SequenceNo;
 use termwiz::surface::Surface as NativeSurface;
 
-use crate::BufferedTerminal;
 use crate::Change;
 
 py_class!(pub class Surface |py| {
@@ -69,7 +68,7 @@ py_class!(pub class Surface |py| {
     def add_changes(&self, changes: Vec<Change>) -> PyResult<SequenceNo> {
         let mut result = 0;
         self.inner(py).with_surface_mut(py, &mut |surface| {
-            let changes = changes.iter().map(|v| v.inner(py).clone()).collect();
+            let changes = changes.iter().map(|v| v.to_native(py)).collect();
             result = surface.add_changes(changes).to_owned();
         });
         Ok(result)
@@ -78,7 +77,7 @@ py_class!(pub class Surface |py| {
     def add_change(&self, change: Change) -> PyResult<SequenceNo> {
         let mut result = 0;
         self.inner(py).with_surface_mut(py, &mut |surface| {
-            let change = change.inner(py).clone();
+            let change = change.to_native(py);
             result = surface.add_change(change).to_owned();
         });
         Ok(result)
@@ -125,19 +124,5 @@ impl WithSurface for RwLock<NativeSurface> {
     fn with_surface_mut(&self, _py: Python, f: &mut dyn for<'a> FnMut(&'a mut NativeSurface)) {
         let mut surface = self.write().unwrap();
         f(&mut surface)
-    }
-}
-
-impl WithSurface for BufferedTerminal {
-    fn with_surface(&self, py: Python, f: &mut dyn for<'a> FnMut(&'a NativeSurface)) {
-        let inner = self.inner(py);
-        let inner = inner.read().unwrap();
-        f(&inner)
-    }
-
-    fn with_surface_mut(&self, py: Python, f: &mut dyn for<'a> FnMut(&'a mut NativeSurface)) {
-        let inner = self.inner(py);
-        let mut inner = inner.write().unwrap();
-        f(&mut inner)
     }
 }
