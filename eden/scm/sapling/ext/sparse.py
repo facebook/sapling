@@ -1340,20 +1340,21 @@ def computesparsematcher(
     debugversion=None,
     nocatchall: bool = False,
 ):
-    treematchers = repo._rsrepo.workingcopy().sparsematchers(
+    sparsematchers = repo._rsrepo.workingcopy().sparsematchers(
         nodes=[repo[rev].node() for rev in revs],
         raw_config=(rawconfig.raw, rawconfig.path) if rawconfig else None,
         debug_version=debugversion,
         no_catch_all=nocatchall,
     )
-    if not treematchers:
+    if not sparsematchers:
         return matchmod.always(repo.root, "")
     else:
-        treematchers = [
-            matchmod.treematcher(repo.root, "", matcher=tm, ruledetails=details)
-            for (tm, details) in treematchers
-        ]
-        return matchmod.union(treematchers, repo.root, "")
+        m = matchmod.union(
+            [matchmod.sparsematcher(m, repo.root, "") for m in sparsematchers],
+            repo.root,
+            "",
+        )
+        return m
 
 
 def getsparsepatterns(
@@ -2300,11 +2301,7 @@ def debugsparseexplainmatch(ui, repo, *args, **opts) -> None:
         if not explanation:
             ui.write(_("{}: excluded by default\n".format(f)))
         else:
-            if "\n" in explanation:
-                ui.write(_("%s:\n  %s\n") % (f, explanation.replace("\n", "\n  ")))
-            else:
-                verb = "excluded" if explanation[0] == "!" else "included"
-                ui.write(_("%s: %s by rule %s\n") % (f, verb, explanation))
+            ui.write(_("%s:\n") % explanation)
 
 
 def _contains_files(load_matcher, profile, files) -> bool:

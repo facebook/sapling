@@ -46,10 +46,10 @@ test sparse
 
 
   $ hg debugsparseexplainmatch inc/exc/incfile.txt
-  inc/exc/incfile.txt: excluded by rule !inc/exc/** ($TESTTMP/myrepo/.hg/sparse -> main.sparse -> base.sparse)
+  FALSE by rule !inc/exc/** ($TESTTMP/myrepo/.hg/sparse -> main.sparse -> base.sparse):
 
   $ hg debugsparseexplainmatch -s main.sparse inc/exc/incfile.txt
-  inc/exc/incfile.txt: excluded by rule !inc/exc/** (<cli> -> main.sparse -> base.sparse)
+  FALSE by rule !inc/exc/** (<cli> -> main.sparse -> base.sparse):
 
 # Upgrade main.sparse to v2
   $ cat > main.sparse <<EOF
@@ -74,7 +74,7 @@ test sparse
   incfile.txt
 
   $ hg debugsparseexplainmatch inc/exc/incfile.txt
-  inc/exc/incfile.txt: included by rule inc/exc/incfile.txt/** ($TESTTMP/myrepo/.hg/sparse -> main.sparse)
+  TRUE by rule inc/exc/incfile.txt/** ($TESTTMP/myrepo/.hg/sparse -> main.sparse):
 
 
   $ hg debugsparseprofilev2 main.sparse
@@ -152,17 +152,19 @@ Test that multiple profiles do not clobber each others includes
   $ hg sparse enable s1.sparse s4.sparse
 
   $ hg debugsparseexplainmatch ab.sparse
-  ab.sparse:
-    !a*.sparse/** ($TESTTMP/repo1/.hg/sparse -> s1.sparse)
-    !*b.sparse/** ($TESTTMP/repo1/.hg/sparse -> s4.sparse)
+  OR(
+    FALSE by rule !a*.sparse/** ($TESTTMP/repo1/.hg/sparse -> s1.sparse)
+    FALSE by rule !*b.sparse/** ($TESTTMP/repo1/.hg/sparse -> s4.sparse)
+  ):
 
   $ hg sparse enable s2.sparse s3.sparse
   $ hg debugsparseexplainmatch ab.sparse
-  ab.sparse:
-    a*.sparse/** ($TESTTMP/repo1/.hg/sparse -> s2.sparse)
-    *b.sparse/** ($TESTTMP/repo1/.hg/sparse -> s3.sparse)
-    !a*.sparse/** ($TESTTMP/repo1/.hg/sparse -> s1.sparse) (overridden by rules above)
-    !*b.sparse/** ($TESTTMP/repo1/.hg/sparse -> s4.sparse) (overridden by rules above)
+  OR(
+    FALSE by rule !a*.sparse/** ($TESTTMP/repo1/.hg/sparse -> s1.sparse)
+    TRUE by rule a*.sparse/** ($TESTTMP/repo1/.hg/sparse -> s2.sparse)
+    TRUE by rule *b.sparse/** ($TESTTMP/repo1/.hg/sparse -> s3.sparse)
+    FALSE by rule !*b.sparse/** ($TESTTMP/repo1/.hg/sparse -> s4.sparse)
+  ):
 
 
   $ newclientrepo

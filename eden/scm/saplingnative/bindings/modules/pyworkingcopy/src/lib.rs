@@ -26,7 +26,7 @@ use parking_lot::RwLock;
 use pathmatcher::Matcher;
 use pypathmatcher::extract_matcher;
 use pypathmatcher::extract_option_matcher;
-use pypathmatcher::treematcher;
+use pypathmatcher::sparsematcher;
 use pytreestate::treestate;
 use pyworkingcopyclient::WorkingCopyClient as PyWorkingCopyClient;
 use repostate::SubtreeMerge;
@@ -131,7 +131,7 @@ py_class!(pub class workingcopy |py| {
         raw_config: Option<(String, String)>,
         debug_version: Option<String>,
         no_catch_all: bool,
-    ) -> PyResult<Vec<(treematcher, Vec<String>)>> {
+    ) -> PyResult<Vec<sparsematcher>> {
         let wc = self.inner(py).read();
 
         let mut prof = match raw_config {
@@ -154,20 +154,13 @@ py_class!(pub class workingcopy |py| {
 
         let overrides = rsworkingcopy::sparse::disk_overrides(wc.dot_hg_path()).map_pyerr(py)?;
 
-        let mut all_tree_matchers = Vec::new();
+        let mut matchers = Vec::new();
         for node in &*nodes {
             let mf = wc.tree_resolver().get(node).map_pyerr(py)?;
             let matcher = rsworkingcopy::sparse::build_matcher(&prof, &mf, wc.filestore(), &overrides).map_pyerr(py)?.0;
-            let tree_matchers = matcher.into_matchers();
-            if tree_matchers.is_empty() {
-                return Ok(Vec::new());
-            }
-            all_tree_matchers.extend(tree_matchers.into_iter());
+            matchers.push(sparsematcher::create_instance(py, Arc::new(matcher))?);
         }
-        all_tree_matchers
-            .into_iter()
-            .map(|(tm, origins)| Ok((treematcher::create_instance(py, Arc::new(tm))?, origins)))
-            .collect::<PyResult<Vec<_>>>()
+        Ok(matchers)
     }
 
     def working_copy_client(&self) -> PyResult<PyWorkingCopyClient> {

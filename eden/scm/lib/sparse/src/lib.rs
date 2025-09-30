@@ -561,10 +561,6 @@ impl Matcher {
 
         Ok(explanation)
     }
-
-    pub fn into_matchers(self) -> Vec<(TreeMatcher, Vec<String>)> {
-        self.matchers.into_iter().zip(self.rule_origins).collect()
-    }
 }
 
 impl MatcherTrait for Matcher {
