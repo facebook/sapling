@@ -76,6 +76,7 @@ rust_python_library(
         "//eden/scm/saplingnative/bindings/modules/pystatus:pystatus",
         "//eden/scm/saplingnative/bindings/modules/pystoremodel:pystoremodel",
         "//eden/scm/saplingnative/bindings/modules/pysubmodule:pysubmodule",
+        "//eden/scm/saplingnative/bindings/modules/pytermwiz:pytermwiz",
         "//eden/scm/saplingnative/bindings/modules/pythreading:pythreading",
         "//eden/scm/saplingnative/bindings/modules/pytracing:pytracing",
         "//eden/scm/saplingnative/bindings/modules/pytreestate:pytreestate",

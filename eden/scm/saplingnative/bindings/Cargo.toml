@@ -69,6 +69,7 @@ pysptui = { version = "0.1.0", path = "modules/pysptui" }
 pystatus = { version = "0.1.0", path = "modules/pystatus" }
 pystoremodel = { version = "0.1.0", path = "modules/pystoremodel" }
 pysubmodule = { version = "0.1.0", path = "modules/pysubmodule" }
+pytermwiz = { version = "0.1.0", path = "modules/pytermwiz" }
 pythreading = { version = "0.1.0", path = "modules/pythreading" }
 pytracing = { version = "0.1.0", path = "modules/pytracing" }
 pytreestate = { version = "0.1.0", path = "modules/pytreestate" }

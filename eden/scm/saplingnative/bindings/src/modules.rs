@@ -98,6 +98,7 @@ pub(crate) fn populate_module(py: Python<'_>, module: &PyModule) -> PyResult<PyN
             status,
             storemodel,
             submodule,
+            termwiz,
             threading,
             tracing,
             treestate,
