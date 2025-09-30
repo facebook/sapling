@@ -90,9 +90,9 @@ pub fn fetch_sparse_profile_content(
     overrides: &HashMap<String, String>,
     hasher: Option<&Mutex<DefaultHasher>>,
 ) -> anyhow::Result<Option<Vec<u8>>> {
-    let file_id = {
-        let repo_path = RepoPathBuf::from_string(path.clone())?;
+    let repo_path = RepoPathBuf::from_string(path.clone())?;
 
+    let file_id = {
         // This might block.
         match manifest.get(&repo_path)? {
             None => {
@@ -114,7 +114,6 @@ pub fn fetch_sparse_profile_content(
         None => return Ok(None),
     };
 
-    let repo_path = RepoPathBuf::from_string(path.clone())?;
     let blob = store.get_content(FetchContext::default(), &repo_path, file_id)?;
     let mut bytes = blob.into_bytes().into_vec();
     if let Some(extra) = overrides.get(&path) {
