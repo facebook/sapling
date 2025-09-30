@@ -76,13 +76,13 @@ filtered
         for u in unfiltered_paths:
             self.assertTrue(
                 os.path.exists(os.path.join(repo, u)),
-                "unfiltered path should be present in the repo",
+                f"unfiltered path {u} should be present in the repo",
             )
 
         for f in filtered_paths:
             self.assertFalse(
                 os.path.exists(os.path.join(repo, f)),
-                "filtered path should not be present in the repo",
+                f"filtered path {f} should not be present in the repo",
             )
 
     def hg_clone_filteredhg_repo(
