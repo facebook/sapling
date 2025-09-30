@@ -132,7 +132,7 @@ Verification function
   $ function verify_wc() {
   >   local large_repo_commit
   >   large_repo_commit="$1"
-  >   "$MONONOKE_ADMIN" "${CACHE_ARGS[@]}" "${COMMON_ARGS[@]}" --log-level ERROR --mononoke-config-path "$TESTTMP"/mononoke-config cross-repo --source-repo-id="$REPOIDLARGE" --target-repo-id="$REPOIDSMALL1" verify-working-copy $large_repo_commit
+  >   GLOG_minloglevel=5 "$MONONOKE_ADMIN" "${CACHE_ARGS[@]}" "${COMMON_ARGS[@]}" --log-level ERROR --mononoke-config-path "$TESTTMP"/mononoke-config cross-repo --source-repo-id="$REPOIDLARGE" --target-repo-id="$REPOIDSMALL1" verify-working-copy $large_repo_commit
   > }
 
 setup hg server repos
