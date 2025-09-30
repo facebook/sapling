@@ -5,6 +5,9 @@
  * GNU General Public License version 2.
  */
 
+use std::fmt;
+use std::fmt::Display;
+
 use anyhow::Result;
 use async_trait::async_trait;
 use context::CoreContext;
@@ -26,16 +29,16 @@ use sql_construct::SqlConstructFromMetadataDatabaseConfig;
 use sql_ext::Connection;
 use sql_ext::SqlConnections;
 use sql_ext::mononoke_queries;
-use strum::Display;
+use strum::Display as EnumDisplay;
 use strum::EnumString;
 
 type FromValueResult<T> = Result<T, FromValueError>;
 
 // Create a newtype wrapper for SmallVec<[u8; 32]> to implement SQL traits
-#[derive(Clone, Debug, PartialEq, Eq, Hash)]
+#[derive(Clone, PartialEq, Eq, Hash)]
 pub struct ManifestId(SmallVec<[u8; 32]>);
 
-#[derive(Clone, Debug, PartialEq, Eq, Hash, EnumString, Display)]
+#[derive(Clone, Debug, PartialEq, Eq, Hash, EnumString, EnumDisplay)]
 pub enum ManifestType {
     Hg,
 }
@@ -300,6 +303,19 @@ impl ManifestId {
 
     pub fn as_inner(&self) -> &SmallVec<[u8; 32]> {
         &self.0
+    }
+}
+
+impl Display for ManifestId {
+    fn fmt(&self, fmt: &mut fmt::Formatter) -> fmt::Result {
+        let st = hex::encode(&self.0);
+        st.fmt(fmt)
+    }
+}
+
+impl fmt::Debug for ManifestId {
+    fn fmt(&self, fmt: &mut fmt::Formatter) -> fmt::Result {
+        write!(fmt, "ManifestId({})", self)
     }
 }
 
