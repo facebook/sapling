@@ -19,6 +19,7 @@ use mononoke_types::NonRootMPath;
 use permission_checker::MononokeIdentity;
 
 pub use crate::manifest_id_store::ArcRestrictedPathsManifestIdStore;
+pub use crate::manifest_id_store::ManifestId;
 pub use crate::manifest_id_store::ManifestType;
 pub use crate::manifest_id_store::RestrictedPathManifestIdEntry;
 pub use crate::manifest_id_store::RestrictedPathsManifestIdStore;

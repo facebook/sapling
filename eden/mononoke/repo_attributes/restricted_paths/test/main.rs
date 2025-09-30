@@ -24,19 +24,22 @@ use sql_construct::SqlConstruct;
 use test_repo_factory::TestRepoFactory;
 use tests_utils::CreateCommitContext;
 
+struct RestrictedPathsTestData {
+    ctx: CoreContext,
+    repo: TestRepo,
+}
+
 #[mononoke::fbinit_test]
 async fn test_mercurial_manifest_no_restricted_change(fb: FacebookInit) -> Result<()> {
-    let ctx = CoreContext::test_mock(fb);
+    let restricted_paths = vec![(
+        NonRootMPath::new("restricted/dir").unwrap(),
+        MononokeIdentity::from_str("SERVICE_IDENTITY:restricted_acl")?,
+    )];
+    let RestrictedPathsTestData { ctx, repo } =
+        setup_restricted_paths_test(fb, restricted_paths).await?;
 
-    let all_entries = hg_manifest_test_with_restricted_paths(
-        &ctx,
-        vec![(
-            NonRootMPath::new("restricted/dir").unwrap(),
-            MononokeIdentity::from_str("SERVICE_IDENTITY:restricted_acl")?,
-        )],
-        vec!["unrestricted/dir/a"],
-    )
-    .await?;
+    let all_entries =
+        hg_manifest_test_with_restricted_paths(&ctx, &repo, vec!["unrestricted/dir/a"]).await?;
 
     assert!(all_entries.is_empty(), "Manifest id store should be empty");
 
@@ -47,17 +50,16 @@ async fn test_mercurial_manifest_no_restricted_change(fb: FacebookInit) -> Resul
 async fn test_mercurial_manifest_single_dir_single_restricted_change(
     fb: FacebookInit,
 ) -> Result<()> {
-    let ctx = CoreContext::test_mock(fb);
+    let restricted_paths = vec![(
+        NonRootMPath::new("restricted/dir").unwrap(),
+        MononokeIdentity::from_str("SERVICE_IDENTITY:restricted_acl")?,
+    )];
+    let RestrictedPathsTestData { ctx, repo } =
+        setup_restricted_paths_test(fb, restricted_paths).await?;
 
-    let all_entries = hg_manifest_test_with_restricted_paths(
-        &ctx,
-        vec![(
-            NonRootMPath::new("restricted/dir").unwrap(),
-            MononokeIdentity::from_str("SERVICE_IDENTITY:restricted_acl")?,
-        )],
-        vec!["restricted/dir/a"],
-    )
-    .await?;
+    let all_entries =
+        hg_manifest_test_with_restricted_paths(&ctx, &repo, vec!["restricted/dir/a"]).await?;
+
     assert!(
         !all_entries.is_empty(),
         "Expected restricted paths manifest ids to be stored"
@@ -65,7 +67,11 @@ async fn test_mercurial_manifest_single_dir_single_restricted_change(
 
     pretty_assertions::assert_eq!(
         all_entries,
-        vec![(ManifestType::Hg, "restricted/dir".to_string())]
+        vec![RestrictedPathManifestIdEntry::new(
+            ManifestType::Hg,
+            ManifestId::from("0e3837eaab4fb0454c78f290aeb747a201ccd05b"),
+            NonRootMPath::new("restricted/dir")?
+        )]
     );
 
     Ok(())
@@ -77,14 +83,16 @@ async fn test_mercurial_manifest_single_dir_single_restricted_change(
 async fn test_mercurial_manifest_single_dir_many_restricted_changes(
     fb: FacebookInit,
 ) -> Result<()> {
-    let ctx = CoreContext::test_mock(fb);
+    let restricted_paths = vec![(
+        NonRootMPath::new("restricted/dir").unwrap(),
+        MononokeIdentity::from_str("SERVICE_IDENTITY:restricted_acl")?,
+    )];
+    let RestrictedPathsTestData { ctx, repo } =
+        setup_restricted_paths_test(fb, restricted_paths).await?;
 
     let all_entries = hg_manifest_test_with_restricted_paths(
         &ctx,
-        vec![(
-            NonRootMPath::new("restricted/dir").unwrap(),
-            MononokeIdentity::from_str("SERVICE_IDENTITY:restricted_acl")?,
-        )],
+        &repo,
         vec!["restricted/dir/a", "restricted/dir/b"],
     )
     .await?;
@@ -95,7 +103,11 @@ async fn test_mercurial_manifest_single_dir_many_restricted_changes(
 
     pretty_assertions::assert_eq!(
         all_entries,
-        vec![(ManifestType::Hg, "restricted/dir".to_string())]
+        vec![RestrictedPathManifestIdEntry::new(
+            ManifestType::Hg,
+            ManifestId::from("3132e75d8439632fc89f193cbf4f02b2b5428c6e"),
+            NonRootMPath::new("restricted/dir")?
+        )]
     );
 
     Ok(())
@@ -105,14 +117,16 @@ async fn test_mercurial_manifest_single_dir_many_restricted_changes(
 async fn test_mercurial_manifest_single_dir_restricted_and_unrestricted(
     fb: FacebookInit,
 ) -> Result<()> {
-    let ctx = CoreContext::test_mock(fb);
+    let restricted_paths = vec![(
+        NonRootMPath::new("restricted/dir").unwrap(),
+        MononokeIdentity::from_str("SERVICE_IDENTITY:restricted_acl")?,
+    )];
+    let RestrictedPathsTestData { ctx, repo } =
+        setup_restricted_paths_test(fb, restricted_paths).await?;
 
     let all_entries = hg_manifest_test_with_restricted_paths(
         &ctx,
-        vec![(
-            NonRootMPath::new("restricted/dir").unwrap(),
-            MononokeIdentity::from_str("SERVICE_IDENTITY:restricted_acl")?,
-        )],
+        &repo,
         vec!["restricted/dir/a", "unrestricted/dir/b"],
     )
     .await?;
@@ -123,7 +137,11 @@ async fn test_mercurial_manifest_single_dir_restricted_and_unrestricted(
 
     pretty_assertions::assert_eq!(
         all_entries,
-        vec![(ManifestType::Hg, "restricted/dir".to_string())]
+        vec![RestrictedPathManifestIdEntry::new(
+            ManifestType::Hg,
+            ManifestId::from("0e3837eaab4fb0454c78f290aeb747a201ccd05b"),
+            NonRootMPath::new("restricted/dir")?
+        ),]
     );
 
     Ok(())
@@ -132,20 +150,22 @@ async fn test_mercurial_manifest_single_dir_restricted_and_unrestricted(
 // Multiple restricted directories generate multiple entries in the manifest
 #[mononoke::fbinit_test]
 async fn test_mercurial_manifest_multiple_restricted_dirs(fb: FacebookInit) -> Result<()> {
-    let ctx = CoreContext::test_mock(fb);
+    let restricted_paths = vec![
+        (
+            NonRootMPath::new("restricted/one").unwrap(),
+            MononokeIdentity::from_str("SERVICE_IDENTITY:restricted_acl")?,
+        ),
+        (
+            NonRootMPath::new("restricted/two").unwrap(),
+            MononokeIdentity::from_str("SERVICE_IDENTITY:another_acl")?,
+        ),
+    ];
+    let RestrictedPathsTestData { ctx, repo } =
+        setup_restricted_paths_test(fb, restricted_paths).await?;
 
     let all_entries = hg_manifest_test_with_restricted_paths(
         &ctx,
-        vec![
-            (
-                NonRootMPath::new("restricted/one").unwrap(),
-                MononokeIdentity::from_str("SERVICE_IDENTITY:restricted_acl")?,
-            ),
-            (
-                NonRootMPath::new("restricted/two").unwrap(),
-                MononokeIdentity::from_str("SERVICE_IDENTITY:another_acl")?,
-            ),
-        ],
+        &repo,
         vec!["restricted/one/a", "restricted/two/b"],
     )
     .await?;
@@ -158,8 +178,16 @@ async fn test_mercurial_manifest_multiple_restricted_dirs(fb: FacebookInit) -> R
     pretty_assertions::assert_eq!(
         all_entries,
         vec![
-            (ManifestType::Hg, "restricted/one".to_string()),
-            (ManifestType::Hg, "restricted/two".to_string()),
+            RestrictedPathManifestIdEntry::new(
+                ManifestType::Hg,
+                ManifestId::from("e53be16502cbc6afeb30ef30de7f6d9841fd4cb1"),
+                NonRootMPath::new("restricted/one")?
+            ),
+            RestrictedPathManifestIdEntry::new(
+                ManifestType::Hg,
+                ManifestId::from("f5ca206223b4d531f0d65ff422273f901bc7a024"),
+                NonRootMPath::new("restricted/two")?
+            ),
         ]
     );
 
@@ -168,6 +196,9 @@ async fn test_mercurial_manifest_multiple_restricted_dirs(fb: FacebookInit) -> R
 
 // TODO(T239041722): test overlapping restricted directories. Top-level ACL should
 // be enforced.
+
+// TODO(T239041722): test different paths with same manifest id, where one
+// is restricted and the other isn't.
 
 //
 // ----------------------------------------------------------------
@@ -178,10 +209,9 @@ async fn test_mercurial_manifest_multiple_restricted_dirs(fb: FacebookInit) -> R
 /// in the manifest id store.
 async fn hg_manifest_test_with_restricted_paths(
     ctx: &CoreContext,
-    restricted_paths: Vec<(NonRootMPath, MononokeIdentity)>,
+    repo: &TestRepo,
     file_paths: Vec<&str>,
-) -> Result<Vec<(ManifestType, String)>> {
-    let repo = setup_test_repo(ctx, restricted_paths).await?;
+) -> Result<Vec<RestrictedPathManifestIdEntry>> {
     let mut commit_ctx = CreateCommitContext::new_root(ctx, &repo);
     for path in file_paths {
         commit_ctx = commit_ctx.add_file(path, path.to_string());
@@ -200,11 +230,9 @@ async fn hg_manifest_test_with_restricted_paths(
 
     println!("{:?}", all_entries);
 
-    Ok(all_entries
-        .into_iter()
-        .map(|e| (e.manifest_type, e.path.to_string()))
-        .collect())
+    Ok(all_entries)
 }
+
 async fn setup_test_repo(
     ctx: &CoreContext,
     restricted_paths: Vec<(NonRootMPath, MononokeIdentity)>,
@@ -229,4 +257,13 @@ async fn setup_test_repo(
         .build()
         .await?;
     Ok(repo)
+}
+async fn setup_restricted_paths_test(
+    fb: FacebookInit,
+    restricted_paths: Vec<(NonRootMPath, MononokeIdentity)>,
+) -> Result<RestrictedPathsTestData> {
+    let ctx = CoreContext::test_mock(fb);
+    let repo = setup_test_repo(&ctx, restricted_paths).await?;
+
+    Ok(RestrictedPathsTestData { ctx, repo })
 }
