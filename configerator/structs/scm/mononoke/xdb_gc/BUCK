@@ -8,6 +8,7 @@ thrift_library(
         "rust",
         "py-deprecated",
     ],
+    py3_namespace = "configerator.mononoke",
     py_base_module = "configerator.mononoke",
     thrift_py_options = "json",
     thrift_rust_options = "serde",

@@ -6,6 +6,7 @@ thrift_library(
     name = "blobimport_state",
     languages = ["py-deprecated"],
     no_plugin_deps = ["//thrift/annotation:all"],
+    py3_namespace = "configerator.blobimport_state",
     py_base_module = "configerator.blobimport_state",
     thrift_py_options = "json",
     thrift_srcs = {"state.thrift": None},
