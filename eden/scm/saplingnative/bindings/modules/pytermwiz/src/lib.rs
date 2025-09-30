@@ -23,17 +23,20 @@ use termwiz::input::KeyEvent;
 use termwiz::input::MouseEvent;
 use termwiz::input::PixelMouseEvent;
 use termwiz::surface::Change as NativeChange;
-use termwiz::surface::CursorVisibility;
-use termwiz::surface::SequenceNo;
 use termwiz::terminal::SystemTerminal;
 use termwiz::terminal::Terminal;
 use termwiz::terminal::buffered::BufferedTerminal as NativeBufferedTerminal;
+
+mod surface;
+
+pub use surface::Surface;
 
 pub fn init_module(py: Python, package: &str) -> PyResult<PyModule> {
     let name = [package, "termwiz"].join(".");
     let m = PyModule::new(py, &name)?;
     m.add_class::<BufferedTerminal>(py)?;
     m.add_class::<Change>(py)?;
+    m.add_class::<Surface>(py)?;
     Ok(m)
 }
 
@@ -70,68 +73,10 @@ py_class!(pub class BufferedTerminal |py| {
 
     // Deref<Target=Surface>
 
-    def dimensions(&self) -> PyResult<(usize, usize)> {
-        let inner = self.inner(py).read().unwrap();
-        Ok(inner.dimensions())
-    }
-
-    def cursor_position(&self) -> PyResult<(usize, usize)> {
-        let inner = self.inner(py).read().unwrap();
-        Ok(inner.cursor_position())
-    }
-
-    def cursor_visibility(&self) -> PyResult<bool> {
-        let inner = self.inner(py).read().unwrap();
-        let result = inner.cursor_visibility();
-        let result = match result {
-            CursorVisibility::Hidden => false,
-            CursorVisibility::Visible => true,
-        };
-        Ok(result)
-    }
-
-    def title(&self) -> PyResult<String> {
-        let inner = self.inner(py).read().unwrap();
-        let result = inner.title();
-        Ok(result.to_owned())
-    }
-
-    def resize(&self, width: usize, height: usize) -> PyResult<PyNone> {
-        let mut inner = self.inner(py).write().unwrap();
-        inner.resize(width, height);
-        Ok(PyNone)
-    }
-
-    def add_changes(&self, changes: Vec<Change>) -> PyResult<SequenceNo> {
-        let mut inner = self.inner(py).write().unwrap();
-        let changes = changes.into_iter().map(|v| v.inner(py).clone()).collect();
-        let result = inner.add_changes(changes);
-        Ok(result)
-    }
-
-    def add_change(&self, change: Change) -> PyResult<SequenceNo> {
-        let mut inner = self.inner(py).write().unwrap();
-        let change = change.inner(py).clone();
-        let result = inner.add_change(change);
-        Ok(result)
-    }
-
-    def screen_chars_to_string(&self) -> PyResult<String> {
-        let inner = self.inner(py).read().unwrap();
-        let result = inner.screen_chars_to_string();
-        Ok(result)
-    }
-
-    def has_changes(&self, seq: SequenceNo) -> PyResult<bool> {
-        let inner = self.inner(py).read().unwrap();
-        let result = inner.has_changes(seq);
-        Ok(result)
-    }
-
-    def current_seqno(&self) -> PyResult<SequenceNo> {
-        let inner = self.inner(py).read().unwrap();
-        let result = inner.current_seqno();
-        Ok(result)
+    @property
+    def surface(&self) -> PyResult<Surface> {
+        let inner = self.clone_ref(py);
+        Surface::create_instance(py, Box::new(inner))
     }
 
     // trait Terminal
