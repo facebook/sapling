@@ -66,7 +66,7 @@ export async function activate(
     let inlineCommentsProvider;
     if (enabledSCMApiFeatures.has('comments') && Internal.inlineCommentsProvider) {
       if (enabledSCMApiFeatures.has('newInlineComments')) {
-        Internal.registerNewInlineCommentsProvider?.(context, extensionTracker, reposList);
+        Internal.registerNewInlineCommentsProvider?.(context, extensionTracker, logger, reposList);
       } else {
         inlineCommentsProvider = Internal.inlineCommentsProvider(context, reposList, ctx, []);
         if (inlineCommentsProvider != null) {
