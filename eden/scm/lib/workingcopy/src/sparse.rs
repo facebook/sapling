@@ -83,6 +83,50 @@ pub fn repo_matcher_with_overrides(
     Ok(Some((matcher, hasher.finish())))
 }
 
+fn fetch_sparse_profile_content(
+    path: String,
+    manifest: &impl Manifest,
+    store: Arc<dyn FileStore>,
+    overrides: &HashMap<String, String>,
+    hasher: &Mutex<DefaultHasher>,
+) -> anyhow::Result<Option<Vec<u8>>> {
+    let file_id = {
+        let repo_path = RepoPathBuf::from_string(path.clone())?;
+
+        // This might block.
+        match manifest.get(&repo_path)? {
+            None => {
+                tracing::warn!(?repo_path, "non-existent sparse profile include");
+                Ok::<_, Error>(None)
+            }
+            Some(fs_node) => match fs_node {
+                FsNodeMetadata::File(FileMetadata { hgid, .. }) => Ok(Some(hgid)),
+                FsNodeMetadata::Directory(_) => {
+                    tracing::warn!(?repo_path, "sparse profile include is a directory");
+                    Ok(None)
+                }
+            },
+        }
+    };
+
+    let file_id = match file_id? {
+        Some(id) => id,
+        None => return Ok(None),
+    };
+
+    let repo_path = RepoPathBuf::from_string(path.clone())?;
+    let blob = store.get_content(FetchContext::default(), &repo_path, file_id)?;
+    let mut bytes = blob.into_bytes().into_vec();
+    if let Some(extra) = overrides.get(&path) {
+        bytes.append(&mut extra.to_string().into_bytes());
+    }
+    bytes.hash(hasher.lock().deref_mut());
+
+    tracing::debug!(path, size = bytes.len(), "fetched included profile");
+
+    Ok(Some(bytes))
+}
+
 #[tracing::instrument(skip_all)]
 pub fn build_matcher(
     prof: &sparse::Root,
@@ -94,41 +138,7 @@ pub fn build_matcher(
     prof.hash(hasher.lock().deref_mut());
 
     let matcher = prof.matcher(|path| {
-        let file_id = {
-            let repo_path = RepoPathBuf::from_string(path.clone())?;
-
-            // This might block.
-            match manifest.get(&repo_path)? {
-                None => {
-                    tracing::warn!(?repo_path, "non-existent sparse profile include");
-                    Ok::<_, Error>(None)
-                }
-                Some(fs_node) => match fs_node {
-                    FsNodeMetadata::File(FileMetadata { hgid, .. }) => Ok(Some(hgid)),
-                    FsNodeMetadata::Directory(_) => {
-                        tracing::warn!(?repo_path, "sparse profile include is a directory");
-                        Ok(None)
-                    }
-                },
-            }
-        };
-
-        let file_id = match file_id? {
-            Some(id) => id,
-            None => return Ok(None),
-        };
-
-        let repo_path = RepoPathBuf::from_string(path.clone())?;
-        let blob = store.get_content(FetchContext::default(), &repo_path, file_id)?;
-        let mut bytes = blob.into_bytes().into_vec();
-        if let Some(extra) = overrides.get(&path) {
-            bytes.append(&mut extra.to_string().into_bytes());
-        }
-        bytes.hash(hasher.lock().deref_mut());
-
-        tracing::debug!(path, size = bytes.len(), "fetched included profile");
-
-        Ok(Some(bytes))
+        fetch_sparse_profile_content(path, manifest, store.clone(), overrides, &hasher)
     })?;
 
     Ok((matcher, hasher.into_inner()))
