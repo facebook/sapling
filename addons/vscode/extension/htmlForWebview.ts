@@ -8,7 +8,7 @@
 import * as crypto from 'crypto';
 import * as vscode from 'vscode';
 
-export const devPort = 3005;
+export const devPort = 3015;
 export const devUri = `http://localhost:${devPort}`;
 
 export function getWebviewOptions(

@@ -168,7 +168,7 @@ export default defineConfig(({mode}) => ({
   server: {
     // No need to open the browser, we run inside vscode and don't really connect to the server.
     open: false,
-    port: 3005,
+    port: 3015,
     cors: {
       origin: /^vscode-webview:\/\/.*/,
     },
