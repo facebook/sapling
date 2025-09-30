@@ -106,6 +106,51 @@ py_class!(pub class Surface |py| {
         });
         Ok(result)
     }
+
+    def diff_screens(&self, other: Surface) -> PyResult<Vec<Change>> {
+        let mut result: PyResult<Vec::<Change>> = Ok(Vec::new());
+        self.inner(py).with_surface(py, &mut |self_surface| {
+            other.inner(py).with_surface(py, &mut |other_surface| {
+                let native_changes = self_surface.diff_screens(other_surface);
+                result = native_changes.into_iter().map(|c| Change::create_instance(py, c)).collect();
+            });
+        });
+        result
+    }
+
+    def diff_region(&self, x: usize, y: usize, width: usize, height: usize, other: Surface, other_x: usize, other_y: usize) -> PyResult<Vec<Change>> {
+        let mut result: PyResult<Vec::<Change>> = Ok(Vec::new());
+        self.inner(py).with_surface(py, &mut |self_surface| {
+            other.inner(py).with_surface(py, &mut |other_surface| {
+                let native_changes = self_surface.diff_region(x, y, width, height, other_surface, other_x, other_y);
+                result = native_changes.into_iter().map(|c| Change::create_instance(py, c)).collect();
+            });
+        });
+        result
+    }
+
+    /// Draw the contents of other into self at the specified coordinates.
+    /// Size is decided by the other surface. Calls `diff_region` under the hood.
+    def draw_from_screen(&self, other: Surface, x: usize = 0, y: usize = 0) -> PyResult<SequenceNo> {
+        // sanity check to avoid deadlock.
+        let mut same_surface = false;
+        self.inner(py).with_surface(py, &mut |self_surface| {
+            other.inner(py).with_surface(py, &mut |other_surface| {
+                same_surface = std::ptr::eq(self_surface, other_surface);
+            });
+        });
+        if same_surface {
+            return Err(PyErr::new::<exc::ValueError, _>(py, "cannot draw to the same surface"));
+        }
+
+        let mut result = 0;
+        self.inner(py).with_surface_mut(py, &mut |self_surface| {
+            other.inner(py).with_surface(py, &mut |other_surface| {
+                result = self_surface.draw_from_screen(other_surface, x, y);
+            });
+        });
+        Ok(result)
+    }
 });
 
 /// Abstraction to get a `Surface` reference.
