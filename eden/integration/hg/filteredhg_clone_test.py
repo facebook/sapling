@@ -30,6 +30,7 @@ class FilteredFSCloneBase(FilteredHgTestCase):
     test_filter0: str = """
 [exclude]
 foo
+filtered
 [include]
 bar
 """

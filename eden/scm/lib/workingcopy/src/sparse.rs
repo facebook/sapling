@@ -83,7 +83,7 @@ pub fn repo_matcher_with_overrides(
     Ok(Some((matcher, hasher.finish())))
 }
 
-fn fetch_sparse_profile_content(
+pub fn fetch_sparse_profile_content(
     path: String,
     manifest: &impl Manifest,
     store: Arc<dyn FileStore>,

@@ -17,9 +17,6 @@ use configmodel::config::ConfigExt;
 use cxx::SharedPtr;
 use cxx::UniquePtr;
 use edenfs_client::filter::FilterGenerator;
-use manifest::FileMetadata;
-use manifest::FsNodeMetadata;
-use manifest::Manifest;
 use metrics::Counter;
 use once_cell::sync::Lazy;
 use parking_lot::Mutex;
@@ -28,8 +25,8 @@ use pathmatcher::DirectoryMatch;
 use pathmatcher::TreeMatcher;
 use repo::repo::Repo;
 use sparse::Root;
-use types::FetchContext;
 use types::RepoPath;
+use workingcopy::sparse::fetch_sparse_profile_content;
 
 use crate::ffi::MatcherPromise;
 use crate::ffi::MatcherWrapper;
@@ -317,34 +314,27 @@ fn _profile_contents_from_repo(
     let paths = filter.filter_paths.clone();
 
     let matcher = async_runtime::block_in_place(|| -> anyhow::Result<_> {
-        let mut profiles = Vec::with_capacity(paths.len());
+        let mut filters = Vec::with_capacity(paths.len());
         for path in paths {
-            let metadata = tree_manifest.get(&path)?;
-            let file_id = match metadata {
-                None => {
-                    return Err(anyhow!("{:?} is not a valid filter file", path));
-                }
-                Some(fs_node) => match fs_node {
-                    FsNodeMetadata::File(FileMetadata { hgid, .. }) => hgid,
-                    FsNodeMetadata::Directory(_) => {
-                        return Err(anyhow!(
-                            "{:?} is a directory, not a valid filter file",
-                            path
-                        ));
-                    }
-                },
-            };
-            profiles.push(
-                repo_store
-                    .get_content(FetchContext::default(), &path, file_id)?
-                    .into_bytes(),
-            );
+            if let Some(entry_bytes) = fetch_sparse_profile_content(
+                path.to_string(),
+                &tree_manifest,
+                repo_store.clone(),
+                &HashMap::new(),
+                None,
+            )
+            .with_context(|| format!("fetching content for filter: {}", path))?
+            {
+                filters.push(entry_bytes)
+            } else {
+                return Err(anyhow!("{:?} is not a valid filter file", path));
+            }
         }
 
         // We no longer need to hold the lock on the object_map
         drop(object_map);
 
-        let mut root = Root::from_profiles(profiles, "edensparse".to_string())?;
+        let mut root = Root::from_profiles(filters, "edensparse".to_string())?;
         root.set_version_override(Some("2".to_owned()));
         let matcher = root.matcher(|_| Ok(Some(vec![])))?;
         Ok(matcher)
