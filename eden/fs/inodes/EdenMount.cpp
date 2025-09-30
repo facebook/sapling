@@ -2482,18 +2482,17 @@ folly::Future<folly::Unit> EdenMount::fsChannelMount(bool readOnly) {
                     fuseDevice->close();
                     return serverState_->getPrivHelper()
                         ->fuseUnmount(mountPath.view(), {})
-                        .thenError(
-                            folly::tag<std::exception>,
-                            [](std::exception&& unmountError) {
-                              // TODO(strager): Should we make
-                              // EdenMount::unmount() also fail with the same
-                              // exception?
-                              XLOGF(
-                                  ERR,
-                                  "fuseMount was cancelled, but rollback (fuseUnmount) failed: {}",
-                                  unmountError.what());
-                              throw std::move(unmountError);
-                            })
+                        .thenError([](folly::exception_wrapper unmountError) {
+                          // TODO(strager): Should we make
+                          // EdenMount::unmount() also fail with the same
+                          // exception?
+                          XLOGF(
+                              ERR,
+                              "fuseMount was cancelled, but rollback (fuseUnmount) failed: {}",
+                              unmountError.what());
+                          return folly::makeFuture<folly::Unit>(
+                              std::move(unmountError));
+                        })
                         .thenValue([mountPath, mountPromise](folly::Unit&&) {
                           auto error = FuseDeviceUnmountedDuringInitialization{
                               mountPath};
