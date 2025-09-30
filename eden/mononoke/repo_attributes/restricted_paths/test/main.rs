@@ -9,61 +9,20 @@ use std::str::FromStr;
 use std::sync::Arc;
 
 use anyhow::Result;
-use bonsai_hg_mapping::BonsaiHgMapping;
-use bookmarks::Bookmarks;
-use commit_graph::CommitGraph;
-use commit_graph::CommitGraphWriter;
 use context::CoreContext;
 use fbinit::FacebookInit;
-use filestore::FilestoreConfig;
 use mercurial_derivation::derive_hg_changeset::DeriveHgChangeset;
-use metaconfig_types::RepoConfig;
 use metaconfig_types::RestrictedPathsConfig;
+use mononoke_api::Repo as TestRepo;
 use mononoke_macros::mononoke;
 use mononoke_types::NonRootMPath;
 use mononoke_types::RepositoryId;
 use permission_checker::MononokeIdentity;
-use repo_blobstore::RepoBlobstore;
-use repo_derived_data::RepoDerivedData;
-use repo_identity::RepoIdentity;
 use restricted_paths::SqlRestrictedPathsManifestIdStoreBuilder;
 use restricted_paths::*;
 use sql_construct::SqlConstruct;
 use test_repo_factory::TestRepoFactory;
 use tests_utils::CreateCommitContext;
-
-#[facet::container]
-pub struct TestRepo {
-    #[facet]
-    repo_derived_data: RepoDerivedData,
-
-    #[facet]
-    repo_config: RepoConfig,
-
-    #[facet]
-    restricted_paths: RestrictedPaths,
-
-    #[facet]
-    bonsai_hg_mapping: dyn BonsaiHgMapping,
-
-    #[facet]
-    bookmarks: dyn Bookmarks,
-
-    #[facet]
-    commit_graph: CommitGraph,
-
-    #[facet]
-    repo_identity: RepoIdentity,
-
-    #[facet]
-    repo_blobstore: RepoBlobstore,
-
-    #[facet]
-    filestore_config: FilestoreConfig,
-
-    #[facet]
-    commit_graph_writer: dyn CommitGraphWriter,
-}
 
 #[mononoke::fbinit_test]
 async fn test_mercurial_manifest_no_restricted_change(fb: FacebookInit) -> Result<()> {

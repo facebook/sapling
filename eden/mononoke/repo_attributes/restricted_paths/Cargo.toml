@@ -27,17 +27,11 @@ sql_ext = { version = "0.1.0", path = "../../common/rust/sql_ext" }
 strum = { version = "0.27.1", features = ["derive"] }
 
 [dev-dependencies]
-bonsai_hg_mapping = { version = "0.1.0", path = "../../bonsai_hg_mapping" }
-bookmarks = { version = "0.1.0", path = "../../bookmarks" }
-commit_graph = { version = "0.1.0", path = "../commit_graph/commit_graph" }
 fbinit = { version = "0.2.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 fbinit-tokio = { version = "0.1.2", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
-filestore = { version = "0.1.0", path = "../../filestore" }
 mercurial_derivation = { version = "0.1.0", path = "../../derived_data/mercurial_derivation" }
+mononoke_api = { version = "0.1.0", path = "../../mononoke_api" }
 mononoke_macros = { version = "0.1.0", path = "../../mononoke_macros" }
 pretty_assertions = { version = "1.2", features = ["alloc"], default-features = false }
-repo_blobstore = { version = "0.1.0", path = "../repo_blobstore" }
-repo_derived_data = { version = "0.1.0", path = "../repo_derived_data" }
-repo_identity = { version = "0.1.0", path = "../repo_identity" }
 test_repo_factory = { version = "0.1.0", path = "../../repo_factory/test_repo_factory" }
 tests_utils = { version = "0.1.0", path = "../../tests/utils" }
