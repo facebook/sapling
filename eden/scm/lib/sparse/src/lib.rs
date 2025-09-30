@@ -13,10 +13,12 @@ use std::hash::Hasher;
 use std::io;
 use std::io::BufRead;
 use std::io::BufReader;
+use std::sync::Arc;
 
 use once_cell::sync::Lazy;
 use pathmatcher::DirectoryMatch;
 use pathmatcher::DynMatcher;
+use pathmatcher::IntersectMatcher;
 use pathmatcher::Matcher as MatcherTrait;
 use pathmatcher::PatternKind;
 use pathmatcher::TreeMatcher;
@@ -53,6 +55,7 @@ pub struct Profile {
     description: Option<String>,
     hidden: Option<String>,
     version: Option<String>,
+    required: Option<String>,
 
     case_sensitive: bool,
 }
@@ -175,10 +178,15 @@ impl Root {
         &self,
         mut fetch: impl FnMut(String) -> B + Send + Sync,
     ) -> Result<Matcher, Error> {
-        let mut matchers: Vec<TreeMatcher> = Vec::new();
+        // Matchers that should be intersected.
+        let mut anded_matchers: Vec<TreeMatcher> = Vec::new();
+        // List of rule origins per-and'd matcher.
+        let mut anded_origins: Vec<Vec<String>> = Vec::new();
 
-        // List of rule origins per-matcher.
-        let mut rule_origins: Vec<Vec<String>> = Vec::new();
+        // Matchers that should be unioned.
+        let mut ored_matchers: Vec<TreeMatcher> = Vec::new();
+        // List of rule origins per-or'd matcher.
+        let mut ored_origins: Vec<Vec<String>> = Vec::new();
 
         let mut rules: VecDeque<(Pattern, String)> = VecDeque::new();
 
@@ -242,10 +250,17 @@ impl Root {
                 only_v1 = false;
 
                 let (matcher_rules, origins) = prepare_rules(child_rules)?;
-                matchers.push(
-                    build_tree_matcher_from_rules(matcher_rules, self.prof.case_sensitive).await?,
-                );
-                rule_origins.push(origins);
+
+                let matcher =
+                    build_tree_matcher_from_rules(matcher_rules, self.prof.case_sensitive).await?;
+
+                if child.required.is_some() {
+                    anded_matchers.push(matcher);
+                    anded_origins.push(origins);
+                } else {
+                    ored_matchers.push(matcher);
+                    ored_origins.push(origins);
+                }
             } else {
                 for rule in child_rules {
                     push_rule(rule);
@@ -262,18 +277,30 @@ impl Root {
             rules.push_front((Pattern::Include("**".to_string()), "<builtin>".to_string()))
         }
 
+        if !rules.is_empty() {
+            let (matcher_rules, origins) = prepare_rules(rules)?;
+            ored_matchers.push(
+                build_tree_matcher_from_rules(matcher_rules, self.prof.case_sensitive).await?,
+            );
+            ored_origins.push(origins);
+        }
+
         // This is for files such as .hgignore and .hgsparse-base, unrelated to the .hg directory.
-        rules.push_front((
+        let (always_rules, always_origins) = prepare_rules(VecDeque::from([(
             Pattern::Include("glob:.hg*".to_string()),
             "<builtin>".to_string(),
-        ));
+        )]))?;
+        let always_allow =
+            build_tree_matcher_from_rules(always_rules, self.prof.case_sensitive).await?;
 
-        let (matcher_rules, origins) = prepare_rules(rules)?;
-        matchers
-            .push(build_tree_matcher_from_rules(matcher_rules, self.prof.case_sensitive).await?);
-        rule_origins.push(origins);
-
-        Ok(Matcher::new(matchers, rule_origins))
+        Ok(Matcher::new(
+            anded_matchers,
+            anded_origins,
+            ored_matchers,
+            ored_origins,
+            always_allow,
+            always_origins,
+        ))
     }
 
     // Returns true if the profile excludes the given path.
@@ -283,7 +310,7 @@ impl Root {
         let matcher =
             executor::block_on(self.matcher(|_| async move { Ok(Some(vec![])) })).unwrap();
         let repo_path = RepoPath::from_str(path).unwrap();
-        !matcher.matches(repo_path).unwrap_or(true)
+        !matcher.matches_file(repo_path).unwrap_or(true)
     }
 }
 
@@ -383,6 +410,7 @@ impl Profile {
                             "title" => &mut prof.title,
                             "hidden" => &mut prof.hidden,
                             "version" => &mut prof.version,
+                            "required" => &mut prof.required,
                             _ => {
                                 tracing::info!(%line, %source, line_num, "ignoring uninteresting metadata key");
                                 // Use a dummy value to maintain parser state (i.e. avoid
@@ -523,63 +551,162 @@ fn join_source(main_source: String, opt_source: Option<&str>) -> String {
 }
 
 pub struct Matcher {
-    matchers: Vec<TreeMatcher>,
-    // List of rule origins per-matcher.
-    rule_origins: Vec<Vec<String>>,
+    // Combination of and'd and or'd matchers - used for actual Matcher impl.
+    matcher: DynMatcher,
+
+    // Keep the constituent matchers so we can "explain()" things.
+
+    // Matchers to be intersected.
+    anded_matchers: Vec<TreeMatcher>,
+    // List of rule origins per-and'd matcher.
+    anded_origins: Vec<Vec<String>>,
+    // Matchers to be unioned (and then intersected with anded_matchers).
+    ored_matchers: Vec<TreeMatcher>,
+    // List of rule origins per-or'd matcher.
+    ored_origins: Vec<Vec<String>>,
+    // Built in matcher that always allows certain files.
+    always_allow: TreeMatcher,
+    // Rule origins for builtin matcher.
+    always_origins: Vec<String>,
 }
 
 impl Matcher {
-    pub fn matches(&self, path: &RepoPath) -> anyhow::Result<bool> {
-        let result = UnionMatcher::matches_file(self.matchers.iter(), path);
-        tracing::trace!(%path, ?result, "matches");
-        result
-    }
-
     pub fn explain(&self, path: &RepoPath) -> anyhow::Result<String> {
-        let mut explanations = Vec::new();
-        for (i, m) in self.matchers.iter().enumerate() {
+        if self.always_allow.matches(path.as_str()) {
+            // This will be rare for v2 profiles - handle as a special case to make normal explanations simpler.
+            let origin = self
+                .always_allow
+                .matching_rule_indexes(path.as_str())
+                .last()
+                .and_then(|idx| self.always_origins.get(*idx).cloned())
+                .unwrap_or_else(|| "(unknown)".to_string());
+            return Ok(format!("TRUE by rule {origin}"));
+        }
+
+        let mut and_explanations = Vec::new();
+        for (i, m) in self.anded_matchers.iter().enumerate() {
             if let Some(idx) = m.matching_rule_indexes(path.as_str()).last() {
                 let rule_origin = self
-                    .rule_origins
+                    .anded_origins
                     .get(i)
                     .and_then(|o| o.get(*idx))
                     .map_or("(unknown)".to_string(), |o| o.clone());
 
                 if m.matches(path.as_str()) {
-                    explanations.push(format!("TRUE by rule {rule_origin}"));
+                    and_explanations.push(format!("TRUE by rule {rule_origin}"));
                 } else {
-                    explanations.push(format!("FALSE by rule {rule_origin}"));
+                    and_explanations.push(format!("FALSE by rule {rule_origin}"));
                 }
+            } else {
+                and_explanations.push("FALSE since no matching rules".to_string());
             }
         }
 
-        let explanation = match explanations.len() {
-            0 => "no rules matched".to_string(),
-            1 => explanations.pop().unwrap(),
-            _ => format!("OR(\n  {}\n)", explanations.join("\n  ")),
+        let mut or_explanations = Vec::new();
+        for (i, m) in self.ored_matchers.iter().enumerate() {
+            if let Some(idx) = m.matching_rule_indexes(path.as_str()).last() {
+                let rule_origin = self
+                    .ored_origins
+                    .get(i)
+                    .and_then(|o| o.get(*idx))
+                    .map_or("(unknown)".to_string(), |o| o.clone());
+
+                if m.matches(path.as_str()) {
+                    or_explanations.push(format!("TRUE by rule {rule_origin}"));
+                } else {
+                    or_explanations.push(format!("FALSE by rule {rule_origin}"));
+                }
+            } else {
+                or_explanations.push("FALSE since no matching rules".to_string());
+            }
+        }
+
+        let join_rules = |op: &str, mut expls: Vec<String>| -> String {
+            match expls.len() {
+                0 => String::new(),
+                1 => expls.pop().unwrap(),
+                _ => format!("{op}(\n  {}\n)", expls.join("\n  ")),
+            }
         };
 
-        Ok(explanation)
+        let or = join_rules("OR", or_explanations);
+        if !and_explanations.is_empty() {
+            if !or.is_empty() {
+                and_explanations.push(or.replace("\n", "\n  "));
+            }
+            Ok(join_rules("AND", and_explanations))
+        } else if !or.is_empty() {
+            Ok(or)
+        } else {
+            Ok("no rules matched".to_string())
+        }
     }
 }
 
 impl MatcherTrait for Matcher {
     fn matches_directory(&self, path: &RepoPath) -> anyhow::Result<DirectoryMatch> {
-        let result = UnionMatcher::matches_directory(self.matchers.iter(), path);
-        tracing::trace!(%path, ?result, "matches_directory");
-        result
+        self.matcher.matches_directory(path)
     }
 
     fn matches_file(&self, path: &RepoPath) -> anyhow::Result<bool> {
-        self.matches(path)
+        self.matcher.matches_file(path)
     }
 }
 
 impl Matcher {
-    pub fn new(matchers: Vec<TreeMatcher>, rule_origins: Vec<Vec<String>>) -> Self {
+    pub fn new(
+        anded_matchers: Vec<TreeMatcher>,
+        anded_origins: Vec<Vec<String>>,
+        ored_matchers: Vec<TreeMatcher>,
+        ored_origins: Vec<Vec<String>>,
+        always_allow: TreeMatcher,
+        always_origins: Vec<String>,
+    ) -> Self {
+        // Combine constituent matchers into a single Matcher.
+        let matcher: DynMatcher = if !anded_matchers.is_empty() && !ored_matchers.is_empty() {
+            Arc::new(IntersectMatcher::new(vec![
+                Arc::new(UnionMatcher::new(
+                    ored_matchers
+                        .iter()
+                        .map(|m| Arc::new(m.clone()) as DynMatcher)
+                        .collect(),
+                )),
+                Arc::new(IntersectMatcher::new(
+                    anded_matchers
+                        .iter()
+                        .map(|m| Arc::new(m.clone()) as DynMatcher)
+                        .collect(),
+                )),
+            ]))
+        } else if !anded_matchers.is_empty() {
+            Arc::new(IntersectMatcher::new(
+                anded_matchers
+                    .iter()
+                    .map(|m| Arc::new(m.clone()) as DynMatcher)
+                    .collect(),
+            ))
+        } else {
+            Arc::new(UnionMatcher::new(
+                ored_matchers
+                    .iter()
+                    .map(|m| Arc::new(m.clone()) as DynMatcher)
+                    .collect(),
+            ))
+        };
+
+        let matcher = Arc::new(UnionMatcher::new(vec![
+            matcher,
+            Arc::new(always_allow.clone()) as DynMatcher,
+        ]));
+
         Self {
-            matchers,
-            rule_origins,
+            anded_matchers,
+            anded_origins,
+            ored_matchers,
+            ored_origins,
+            always_allow,
+            always_origins,
+            matcher,
         }
     }
 }
@@ -918,10 +1045,10 @@ path:exc
         let matcher = prof.matcher(|_| async { Ok(Some(vec![])) }).await?;
 
         // Show we got an implicit rule that includes everything.
-        assert!(matcher.matches("a/b".try_into()?)?);
+        assert!(matcher.matches_file("a/b".try_into()?)?);
 
         // Sanity that exclude works.
-        assert!(!matcher.matches("exc/foo".try_into()?)?);
+        assert!(!matcher.matches_file("exc/foo".try_into()?)?);
 
         Ok(())
     }
@@ -950,10 +1077,10 @@ path:b
         let matcher = prof.matcher(|_| async { Ok(Some(child.to_vec())) }).await?;
 
         // Exclude rule "wins" for v1 despite order in config.
-        assert!(!matcher.matches("a/exc".try_into()?)?);
-        assert!(!matcher.matches("b/exc".try_into()?)?);
-        assert!(matcher.matches("a/inc".try_into()?)?);
-        assert!(matcher.matches("b/inc".try_into()?)?);
+        assert!(!matcher.matches_file("a/exc".try_into()?)?);
+        assert!(!matcher.matches_file("b/exc".try_into()?)?);
+        assert!(matcher.matches_file("a/inc".try_into()?)?);
+        assert!(matcher.matches_file("b/inc".try_into()?)?);
 
         Ok(())
     }
@@ -1004,15 +1131,15 @@ version = 2
             .await?;
 
         // Rules directly in root profile still get excludes-go-last ordering.
-        assert!(!matcher.matches("a/exc".try_into()?)?);
-        assert!(matcher.matches("a/inc".try_into()?)?);
+        assert!(!matcher.matches_file("a/exc".try_into()?)?);
+        assert!(matcher.matches_file("a/inc".try_into()?)?);
 
         // Order for v2 child profile is maintained - include rule wins.
-        assert!(matcher.matches("b/exc".try_into()?)?);
-        assert!(matcher.matches("b/inc".try_into()?)?);
+        assert!(matcher.matches_file("b/exc".try_into()?)?);
+        assert!(matcher.matches_file("b/inc".try_into()?)?);
 
         // "c" is included due to unioning of v2 profiles.
-        assert!(matcher.matches("c".try_into()?)?);
+        assert!(matcher.matches_file("c".try_into()?)?);
 
         assert_eq!(
             matcher.explain("c".try_into()?).unwrap(),
@@ -1040,7 +1167,123 @@ foo
         // We ignore missing includes so that things don't completely
         // break if someone accidentally deletes an in-use sparse
         // profile.
-        assert!(matcher.matches("foo".try_into()?)?);
+        assert!(matcher.matches_file("foo".try_into()?)?);
+
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn test_matcher_v2_required() -> anyhow::Result<()> {
+        let base = b"
+%include child_1
+%include child_2
+%include child_3
+%include child_4
+";
+
+        let child_1 = b"
+[include]
+path:a
+
+[metadata]
+version = 2
+required = true
+";
+
+        let child_2 = b"
+[include]
+path:a
+path:b
+
+[metadata]
+version = 2
+required = true
+";
+
+        let child_3 = b"
+[include]
+path:a
+path:c
+
+[metadata]
+version = 2
+# not required
+";
+
+        let child_4 = b"
+[include]
+path:d
+
+[metadata]
+version = 2
+# not required
+";
+
+        let prof = Root::from_bytes(base, "test".to_string())?;
+        let matcher = prof
+            .matcher(|path| async move {
+                match path.as_ref() {
+                    "child_1" => Ok(Some(child_1.to_vec())),
+                    "child_2" => Ok(Some(child_2.to_vec())),
+                    "child_3" => Ok(Some(child_3.to_vec())),
+                    "child_4" => Ok(Some(child_4.to_vec())),
+                    _ => unreachable!(),
+                }
+            })
+            .await?;
+
+        // "a" is included in all required profiles, and one of the non-required profiles.
+        assert!(matcher.matches_file("a".try_into()?)?);
+
+        // "b" is only in child_2.
+        assert!(!matcher.matches_file("b".try_into()?)?);
+
+        // "c" is only in child_3.
+        assert!(!matcher.matches_file("c".try_into()?)?);
+
+        // "d" is only in child_4.
+        assert!(!matcher.matches_file("d".try_into()?)?);
+
+        assert_eq!(
+            matcher.explain("a".try_into()?)?,
+            "AND(
+  TRUE by rule a/** (test -> child_1)
+  TRUE by rule a/** (test -> child_2)
+  OR(
+    TRUE by rule a/** (test -> child_3)
+    FALSE since no matching rules
+  )
+)"
+        );
+
+        assert_eq!(
+            matcher.explain("d".try_into()?)?,
+            "AND(
+  FALSE since no matching rules
+  FALSE since no matching rules
+  OR(
+    FALSE since no matching rules
+    TRUE by rule d/** (test -> child_4)
+  )
+)"
+        );
+
+        assert_eq!(
+            matcher.explain("nomatch".try_into()?)?,
+            "AND(
+  FALSE since no matching rules
+  FALSE since no matching rules
+  OR(
+    FALSE since no matching rules
+    FALSE since no matching rules
+  )
+)"
+        );
+
+        assert_eq!(
+            matcher.explain(".hgignore".try_into()?)?,
+            "TRUE by rule .hg*/** (<builtin>)"
+        );
 
         Ok(())
     }
@@ -1058,8 +1301,8 @@ foo
         // Can still get a matcher, skipping unsupported patterns.
         let matcher = prof.matcher(|_| async { Ok(None) }).await?;
 
-        assert!(matcher.matches("foo".try_into()?)?);
-        assert!(!matcher.matches("bar".try_into()?)?);
+        assert!(matcher.matches_file("foo".try_into()?)?);
+        assert!(!matcher.matches_file("bar".try_into()?)?);
 
         Ok(())
     }
@@ -1081,12 +1324,12 @@ re:^bar/bad/(?:.*/)?IMPORTANT.ext(?:/|$)
             .matcher(|_| async { Ok(Some(config.to_vec())) })
             .await?;
 
-        assert!(matcher.matches("foo/.blah".try_into()?)?);
-        assert!(!matcher.matches("foo/not-dot".try_into()?)?);
+        assert!(matcher.matches_file("foo/.blah".try_into()?)?);
+        assert!(!matcher.matches_file("foo/not-dot".try_into()?)?);
 
-        assert!(matcher.matches("bar/ok".try_into()?)?);
-        assert!(!matcher.matches("bar/bad/nono".try_into()?)?);
-        assert!(matcher.matches("bar/bad/well/jk/IMPORTANT.ext".try_into()?)?);
+        assert!(matcher.matches_file("bar/ok".try_into()?)?);
+        assert!(!matcher.matches_file("bar/bad/nono".try_into()?)?);
+        assert!(matcher.matches_file("bar/bad/well/jk/IMPORTANT.ext".try_into()?)?);
 
         Ok(())
     }
@@ -1115,7 +1358,7 @@ re:^bar/bad/(?:.*/)?IMPORTANT.ext(?:/|$)
 
         assert_eq!(
             matcher.explain("b".try_into().unwrap()).unwrap(),
-            "no rules matched",
+            "FALSE since no matching rules",
         );
     }
 
@@ -1198,18 +1441,18 @@ four
         let mut prof = Root::from_bytes(base, "base".to_string()).unwrap();
 
         let matcher = prof.matcher(|_| async { unreachable!() }).await.unwrap();
-        assert!(matcher.matches("bar".try_into().unwrap()).unwrap());
+        assert!(matcher.matches_file("bar".try_into().unwrap()).unwrap());
 
         prof.set_skip_catch_all(true);
         let matcher = prof.matcher(|_| async { unreachable!() }).await.unwrap();
-        assert!(!matcher.matches("bar".try_into().unwrap()).unwrap());
+        assert!(!matcher.matches_file("bar".try_into().unwrap()).unwrap());
 
         // Skip catch-all for empty profile as well.
         let base = b"";
         let mut prof = Root::from_bytes(base, "base".to_string()).unwrap();
         prof.set_skip_catch_all(true);
         let matcher = prof.matcher(|_| async { unreachable!() }).await.unwrap();
-        assert!(!matcher.matches("bar".try_into().unwrap()).unwrap());
+        assert!(!matcher.matches_file("bar".try_into().unwrap()).unwrap());
     }
 
     #[tokio::test]
@@ -1245,7 +1488,7 @@ path:foo
             })
             .await
             .unwrap();
-        assert!(matcher.matches("foo".try_into().unwrap()).unwrap());
+        assert!(matcher.matches_file("foo".try_into().unwrap()).unwrap());
 
         prof.set_version_override(Some("1".to_string()));
 
@@ -1259,7 +1502,7 @@ path:foo
             })
             .await
             .unwrap();
-        assert!(!matcher.matches("foo".try_into().unwrap()).unwrap());
+        assert!(!matcher.matches_file("foo".try_into().unwrap()).unwrap());
     }
 
     #[tokio::test]
@@ -1281,12 +1524,12 @@ foo
             .matcher(|_| async { unreachable!() })
             .await
             .unwrap();
-        assert!(!matcher.matches("foo/bar".try_into().unwrap()).unwrap());
+        assert!(!matcher.matches_file("foo/bar".try_into().unwrap()).unwrap());
 
         // Using single_profile gets v2 semantics.
         let single = Root::single_profile(single, "base".to_string()).unwrap();
         let matcher = single.matcher(|_| async { unreachable!() }).await.unwrap();
-        assert!(matcher.matches("foo/bar".try_into().unwrap()).unwrap());
+        assert!(matcher.matches_file("foo/bar".try_into().unwrap()).unwrap());
     }
 
     #[tokio::test]
@@ -1320,8 +1563,8 @@ baz
         // Using from_profiles includes both profiles.
         let root = Root::from_profiles(vec![one, two], "base".to_string()).unwrap();
         let matcher = root.matcher(|_| async { unreachable!() }).await.unwrap();
-        assert!(matcher.matches("foo/bar".try_into().unwrap()).unwrap());
-        assert!(matcher.matches("baz".try_into().unwrap()).unwrap());
-        assert!(!matcher.matches("bar".try_into().unwrap()).unwrap());
+        assert!(matcher.matches_file("foo/bar".try_into().unwrap()).unwrap());
+        assert!(matcher.matches_file("baz".try_into().unwrap()).unwrap());
+        assert!(!matcher.matches_file("bar".try_into().unwrap()).unwrap());
     }
 }
