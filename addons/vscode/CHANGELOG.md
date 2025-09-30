@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.1.70
+
+- Reduced fetching frequency for better performance
+- Go to time in download commit menu
+
 ## 0.1.69
 
 - More efficient queries for information from Github
