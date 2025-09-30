@@ -347,6 +347,12 @@ impl StoreOpenOptions {
         self
     }
 
+    /// Whether sync should be called on the store if it has changed on disk.
+    pub fn sync_if_changed_on_disk(mut self, sync: bool) -> Self {
+        self.sync_if_changed_on_disk = sync;
+        self
+    }
+
     /// Rely on btrfs compression.
     pub fn btrfs_compression(mut self, btrfs: bool) -> Self {
         self.btrfs_compression = btrfs;

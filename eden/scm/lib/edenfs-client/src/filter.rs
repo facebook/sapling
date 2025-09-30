@@ -305,6 +305,9 @@ impl FilterGenerator {
                         .index("v1_filter_index", |_| {
                             vec![IndexOutput::Reference(0..(Blake3::len() / 4) as u64)]
                         })
+                        // Must flush to ensure out-of-process writes are observed by this process.
+                        // Ex: Sl creates a filter, and EdenFS performs a lookup for that filter.
+                        .sync_if_changed_on_disk(true)
                         .permanent(&filter_store_path)
                         .with_context(|| {
                             anyhow::anyhow!(
@@ -405,6 +408,7 @@ impl FilterGenerator {
     fn get_filter_from_storage(&self, id: &FilterId) -> anyhow::Result<Filter> {
         if let Some(filter_store) = &self.filter_store {
             let store = filter_store.read();
+
             let mut lookup_iter = store.lookup(0, id.index()).with_context(|| {
                 anyhow::anyhow!("Failed to find filter with index {:?}", id.index())
             })?;
