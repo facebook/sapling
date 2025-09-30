@@ -147,6 +147,7 @@ use repo_sparse_profiles::ArcRepoSparseProfiles;
 use repo_sparse_profiles::RepoSparseProfiles;
 use repo_sparse_profiles::RepoSparseProfilesArc;
 use repo_stats_logger::RepoStatsLogger;
+use restricted_paths::RestrictedPaths;
 use slog::debug;
 use slog::error;
 use sql_commit_graph_storage::CommitGraphBulkFetcher;
@@ -332,6 +333,9 @@ pub struct Repo {
 
     #[facet]
     pub commit_graph_bulk_fetcher: CommitGraphBulkFetcher,
+
+    #[facet]
+    restricted_paths: RestrictedPaths,
 }
 
 pub trait MononokeRepo = RepoLike + RepoWithBubble + Clone + 'static;

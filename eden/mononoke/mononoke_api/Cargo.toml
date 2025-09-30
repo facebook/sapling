@@ -95,6 +95,7 @@ repo_permission_checker = { version = "0.1.0", path = "../repo_attributes/repo_p
 repo_sparse_profiles = { version = "0.1.0", path = "../repo_attributes/repo_sparse_profiles" }
 repo_stats_logger = { version = "0.1.0", path = "../repo_stats_logger" }
 repo_update_logger = { version = "0.1.0", path = "../features/repo_update_logger" }
+restricted_paths = { version = "0.1.0", path = "../repo_attributes/restricted_paths" }
 sapling-dag-types = { version = "0.1.0", path = "../../scm/lib/dag/dag-types" }
 sapling-edenapi_types = { version = "0.1.0", path = "../../scm/lib/edenapi/types" }
 sapling-pathmatcher = { version = "0.1.0", path = "../../scm/lib/pathmatcher" }
