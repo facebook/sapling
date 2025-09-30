@@ -23,10 +23,10 @@ use manifest::Manifest;
 use metrics::Counter;
 use once_cell::sync::Lazy;
 use parking_lot::Mutex;
+use pathmatcher::AlwaysMatcher;
 use pathmatcher::DirectoryMatch;
 use pathmatcher::TreeMatcher;
 use repo::repo::Repo;
-use sparse::Matcher;
 use sparse::Root;
 use types::FetchContext;
 use types::RepoPath;
@@ -352,18 +352,16 @@ fn _profile_contents_from_repo(
 
     // If the result is an error, then the filter file doesn't exist or is
     // invalid. Return an always matcher instead of erroring out.
-    let sparse_matcher = matcher.unwrap_or_else(|e| {
-        tracing::warn!("Failed to get sparse matcher for active filter: {:?}", e);
-        LOOKUP_FAILURES.increment();
-        Matcher::new(
-            vec![TreeMatcher::always()],
-            vec![vec!["always_matcher".to_string()]],
-        )
-    });
+    let matcher = match matcher {
+        Ok(m) => Box::new(m) as Box<dyn pathmatcher::Matcher>,
+        Err(e) => {
+            tracing::warn!("Failed to get sparse matcher for active filter: {:?}", e);
+            LOOKUP_FAILURES.increment();
+            Box::new(AlwaysMatcher::new()) as Box<dyn pathmatcher::Matcher>
+        }
+    };
 
-    Ok(Box::new(MercurialMatcher {
-        matcher: Box::new(sparse_matcher),
-    }))
+    Ok(Box::new(MercurialMatcher { matcher }))
 }
 
 // CXX doesn't allow async functions to be exposed to C++. This function wraps the bulk of the
