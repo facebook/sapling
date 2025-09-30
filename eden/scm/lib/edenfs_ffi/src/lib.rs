@@ -321,7 +321,6 @@ fn _profile_contents_from_repo(
                 &tree_manifest,
                 repo_store.clone(),
                 &HashMap::new(),
-                None,
             )
             .with_context(|| format!("fetching content for filter: {}", path))?
             {

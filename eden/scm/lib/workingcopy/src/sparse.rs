@@ -88,7 +88,6 @@ pub fn fetch_sparse_profile_content(
     manifest: &impl Manifest,
     store: Arc<dyn FileStore>,
     overrides: &HashMap<String, String>,
-    hasher: Option<&Mutex<DefaultHasher>>,
 ) -> anyhow::Result<Option<Vec<u8>>> {
     let repo_path = RepoPathBuf::from_string(path.clone())?;
 
@@ -119,9 +118,6 @@ pub fn fetch_sparse_profile_content(
     if let Some(extra) = overrides.get(&path) {
         bytes.append(&mut extra.to_string().into_bytes());
     }
-    if let Some(hasher) = hasher {
-        bytes.hash(hasher.lock().deref_mut());
-    }
 
     tracing::debug!(path, size = bytes.len(), "fetched included profile");
 
@@ -139,7 +135,11 @@ pub fn build_matcher(
     prof.hash(hasher.lock().deref_mut());
 
     let matcher = prof.matcher(|path| {
-        fetch_sparse_profile_content(path, manifest, store.clone(), overrides, Some(&hasher))
+        fetch_sparse_profile_content(path, manifest, store.clone(), overrides).inspect(|content| {
+            if let Some(bytes) = content {
+                bytes.hash(hasher.lock().deref_mut());
+            }
+        })
     })?;
 
     Ok((matcher, hasher.into_inner()))
