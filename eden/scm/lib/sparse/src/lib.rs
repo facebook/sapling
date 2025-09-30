@@ -534,7 +534,8 @@ impl Matcher {
         result
     }
 
-    pub fn explain(&self, path: &RepoPath) -> anyhow::Result<(bool, String)> {
+    pub fn explain(&self, path: &RepoPath) -> anyhow::Result<String> {
+        let mut explanations = Vec::new();
         for (i, m) in self.matchers.iter().enumerate() {
             if let Some(idx) = m.matching_rule_indexes(path.as_str()).last() {
                 let rule_origin = self
@@ -542,11 +543,22 @@ impl Matcher {
                     .get(i)
                     .and_then(|o| o.get(*idx))
                     .map_or("(unknown)".to_string(), |o| o.clone());
-                return Ok((m.matches(path.as_str()), rule_origin));
+
+                if m.matches(path.as_str()) {
+                    explanations.push(format!("TRUE by rule {rule_origin}"));
+                } else {
+                    explanations.push(format!("FALSE by rule {rule_origin}"));
+                }
             }
         }
 
-        Ok((false, "no rules matched".to_string()))
+        let explanation = match explanations.len() {
+            0 => "no rules matched".to_string(),
+            1 => explanations.pop().unwrap(),
+            _ => format!("OR(\n  {}\n)", explanations.join("\n  ")),
+        };
+
+        Ok(explanation)
     }
 
     pub fn into_matchers(self) -> Vec<(TreeMatcher, Vec<String>)> {
@@ -1005,6 +1017,15 @@ version = 2
         // "c" is included due to unioning of v2 profiles.
         assert!(matcher.matches("c".try_into()?)?);
 
+        assert_eq!(
+            matcher.explain("c".try_into()?).unwrap(),
+            "OR(
+  TRUE by rule c/** (test -> child_1)
+  FALSE by rule !c/** (test -> child_2)
+  FALSE by rule !c/** (test)
+)"
+        );
+
         Ok(())
     }
 
@@ -1083,7 +1104,7 @@ re:^bar/bad/(?:.*/)?IMPORTANT.ext(?:/|$)
 
         assert_eq!(
             matcher.explain("a/b".try_into().unwrap()).unwrap(),
-            (true, "**/** (<builtin>)".to_string())
+            "TRUE by rule **/** (<builtin>)",
         );
     }
 
@@ -1097,7 +1118,7 @@ re:^bar/bad/(?:.*/)?IMPORTANT.ext(?:/|$)
 
         assert_eq!(
             matcher.explain("b".try_into().unwrap()).unwrap(),
-            (false, "no rules matched".to_string())
+            "no rules matched",
         );
     }
 
@@ -1127,12 +1148,12 @@ path:d
 
         assert_eq!(
             matcher.explain("b".try_into().unwrap()).unwrap(),
-            (true, "b/** (base -> child_1 -> child_2)".to_string())
+            "TRUE by rule b/** (base -> child_1 -> child_2)",
         );
 
         assert_eq!(
             matcher.explain("d".try_into().unwrap()).unwrap(),
-            (false, "!d/** (base -> child_1 -> child_2)".to_string())
+            "FALSE by rule !d/** (base -> child_1 -> child_2)",
         );
     }
 
@@ -1155,22 +1176,22 @@ four
 
         assert_eq!(
             matcher.explain("one".try_into().unwrap()).unwrap(),
-            (true, "one/** (base)".to_string())
+            "TRUE by rule one/** (base)",
         );
 
         assert_eq!(
             matcher.explain("two".try_into().unwrap()).unwrap(),
-            (true, "two/** (base (banana))".to_string())
+            "TRUE by rule two/** (base (banana))",
         );
 
         assert_eq!(
             matcher.explain("three".try_into().unwrap()).unwrap(),
-            (true, "three/** (base (banana))".to_string())
+            "TRUE by rule three/** (base (banana))",
         );
 
         assert_eq!(
             matcher.explain("four".try_into().unwrap()).unwrap(),
-            (true, "four/** (base)".to_string())
+            "TRUE by rule four/** (base)",
         );
     }
 
