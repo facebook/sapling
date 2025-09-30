@@ -489,6 +489,13 @@ class FilteredHgTestCase(EdenHgTestCase, metaclass=abc.ABCMeta):
         self.backing_store_type = "filteredhg"
         super().setup_eden_test()
 
+    def apply_hg_config_variant(self, hgrc: configparser.ConfigParser) -> None:
+        super().apply_hg_config_variant(hgrc)
+
+        # Add FilteredHg-specific configs that enable V1 filters
+        hgrc["experimental"]["filter-version"] = "V1"
+        hgrc["experimental"]["use-filter-storage"] = "True"
+
 
 class JournalEntry:
     """

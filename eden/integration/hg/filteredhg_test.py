@@ -63,6 +63,28 @@ bdir
 bdir/README.md
 """
 
+    testV1Filter1: str = """
+[metadata]
+version: 2
+required: true
+[include]
+*
+[exclude]
+bdir
+[include]
+bdir/README.md
+"""
+
+    testV1Filter2: str = """
+[metadata]
+version: 2
+required: true
+[include]
+*
+[exclude]
+adir/file
+"""
+
     initial_commit: str
 
     def populate_backing_repo(self, repo: hgrepo.HgRepository) -> None:
@@ -97,6 +119,8 @@ bdir/README.md
         repo.write_file("filters/empty_filter", self.testFilterEmpty)
         repo.write_file("filters/metadata_only", self.testFilterOnlyMetadata)
         repo.write_file("filters/v2", self.testFilterV2)
+        repo.write_file("filters/v1_filter1", self.testV1Filter1)
+        repo.write_file("filters/v1_filter2", self.testV1Filter2)
 
         self.initial_commit = repo.commit("Initial commit.")
 
@@ -222,6 +246,36 @@ class FilteredFSBasic(FilteredFSBase):
 
         # Files are omitted after enabling filter
         self.set_active_filter("filters/v2")
+        self.ensure_filtered_and_unfiltered(
+            filtered_files, initial_files.difference(filtered_files)
+        )
+
+    def test_multiple_active_filters(self) -> None:
+        initial_files = {
+            "bdir",
+            "bdir/README.md",
+            "bdir/noexec.sh",
+            "bdir/test.sh",
+            "adir/file",
+            "hello",
+        }
+        filtered_files = {"bdir/noexec.sh", "bdir/test.sh", "adir/file"}
+
+        # Files exist initially
+        self.ensure_filtered_and_unfiltered(set(), initial_files)
+
+        # Files are omitted after enabling filter
+        # TODO: Modify `hg filteredfs enable` to allow multiple active filters.
+        #       For now we'll manually enable the filters by writing .hg/sparse
+        #       ourselves and then checking out the current commit.
+        # self.set_active_filter("filters/v1_filter1")
+        # self.set_active_filter("filters/v1_filter2")
+        self.write_file(
+            self._get_relative_filter_config_path(),
+            "%include filters/v1_filter1\n%include filters/v1_filter2\n",
+        )
+        self.hg("checkout", ".")
+
         self.ensure_filtered_and_unfiltered(
             filtered_files, initial_files.difference(filtered_files)
         )
