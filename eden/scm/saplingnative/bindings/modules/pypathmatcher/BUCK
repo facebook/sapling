@@ -12,6 +12,7 @@ rust_python_library(
         "//eden/scm/lib/cpython-ext:cpython-ext",
         "//eden/scm/lib/io:io",
         "//eden/scm/lib/pathmatcher:pathmatcher",
+        "//eden/scm/lib/sparse:sparse",
         "//eden/scm/lib/types:types",
     ],
 )

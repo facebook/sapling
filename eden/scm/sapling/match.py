@@ -374,6 +374,41 @@ class treematcher(basematcher):
         return "<treematcher rules=%r>" % self._rules
 
 
+class sparsematcher(basematcher):
+    """Wrapper for Rust sparse::Matcher.
+
+    Contains treematchers with various and/or logic."""
+
+    def __init__(
+        self,
+        matcher: pathmatcher.sparsematcher,
+        root,
+        cwd,
+        badfn=None,
+    ):
+        super(sparsematcher, self).__init__(root, cwd, badfn)
+        self._matcher = matcher
+
+    def matchfn(self, f):
+        return self._matcher.matches(f)
+
+    def visitdir(self, dir):
+        matched = self._matcher.match_recursive(dir)
+        if matched is None:
+            return True
+        elif matched is True:
+            return "all"
+        else:
+            assert matched is False
+            return False
+
+    def explain(self, f):
+        return self._matcher.explain(f)
+
+    def __repr__(self):
+        return "<sparsematcher>"
+
+
 class hintedmatcher(basematcher):
     """Rust matcher fully implementing Python API."""
 

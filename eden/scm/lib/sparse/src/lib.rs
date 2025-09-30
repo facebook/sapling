@@ -16,6 +16,7 @@ use std::io::BufReader;
 
 use once_cell::sync::Lazy;
 use pathmatcher::DirectoryMatch;
+use pathmatcher::DynMatcher;
 use pathmatcher::Matcher as MatcherTrait;
 use pathmatcher::PatternKind;
 use pathmatcher::TreeMatcher;

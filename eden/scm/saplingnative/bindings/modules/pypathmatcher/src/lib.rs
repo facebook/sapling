@@ -44,6 +44,7 @@ pub fn init_module(py: Python, package: &str) -> PyResult<PyModule> {
     m.add_class::<gitignorematcher>(py)?;
     m.add_class::<treematcher>(py)?;
     m.add_class::<hintedmatcher>(py)?;
+    m.add_class::<sparsematcher>(py)?;
     m.add(py, "normalizeglob", py_fn!(py, normalize_glob(path: &str)))?;
     m.add(py, "plaintoglob", py_fn!(py, plain_to_glob(path: &str)))?;
     m.add(
@@ -212,6 +213,26 @@ fn expand_curly_brackets(_py: Python, pattern: &str) -> PyResult<Vec<String>> {
     Ok(pathmatcher::expand_curly_brackets(pattern))
 }
 
+py_class!(pub class sparsematcher |py| {
+    data matcher: Arc<sparse::Matcher>;
+
+    def matches(&self, path: &PyPath) -> PyResult<bool> {
+        self.matcher(py).matches_file(path.to_repo_path().map_pyerr(py)?).map_pyerr(py)
+    }
+
+    def match_recursive(&self, path: &PyPath) -> PyResult<Option<bool>> {
+        Ok(match self.matcher(py).matches_directory(path.to_repo_path().map_pyerr(py)?).map_pyerr(py)? {
+            DirectoryMatch::Everything => Some(true),
+            DirectoryMatch::Nothing => Some(false),
+            DirectoryMatch::ShouldTraverse => None,
+        })
+    }
+
+    def explain(&self, path: &PyPath) -> PyResult<String> {
+        self.matcher(py).explain(path.to_repo_path().map_pyerr(py)?).map_pyerr(py)
+    }
+});
+
 pub struct PythonMatcher<'a> {
     py: Python<'a>,
     py_matcher: PyObject,
@@ -304,14 +325,17 @@ pub fn extract_matcher(
         debug!("hintedmatcher downcast");
         return Ok((matcher.extract_inner(py), true));
     }
-
+    if let Ok(matcher) = sparsematcher::downcast_from(py, matcher.clone_ref(py)) {
+        debug!("sparsematcher downcast");
+        return Ok((matcher.matcher(py).clone(), true));
+    }
     let py_type = matcher.get_type(py);
     let type_name = py_type.name(py);
 
     debug!(%type_name);
 
     match type_name.as_ref() {
-        "treematcher" | "gitignorematcher" | "hintedmatcher" => {
+        "treematcher" | "gitignorematcher" | "hintedmatcher" | "sparsematcher" => {
             extract_matcher(py, matcher.getattr(py, "_matcher")?)
         }
         "unionmatcher" => {
