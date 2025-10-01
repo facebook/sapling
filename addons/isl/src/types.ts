@@ -729,18 +729,18 @@ export type PlatformSpecificClientToServerMessages =
       repoPath?: string;
     }
   | {
-      type: 'platform/fillDevmateCommitMessage';
+      type: 'platform/fillCommitMessageWithAI';
       id: string;
       source: 'commitInfoView' | 'smartAction';
     }
   | {
-      type: 'platform/devmateCreateTestForModifiedCode';
+      type: 'platform/createTestForModifiedCodeWithAI';
     }
   | {
-      type: 'platform/devmateValidateChanges';
+      type: 'platform/validateChangesWithAI';
     }
   | {
-      type: 'platform/devmateResolveAllConflicts';
+      type: 'platform/resolveAllConflictsWithAI';
       conflicts: MergeConflicts;
     }
   | {

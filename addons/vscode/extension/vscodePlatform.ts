@@ -289,9 +289,9 @@ export const getVSCodePlatform = (context: vscode.ExtensionContext): VSCodeServe
           );
           break;
         }
-        case 'platform/fillDevmateCommitMessage': {
+        case 'platform/fillCommitMessageWithAI': {
           const {source} = message;
-          // Call Devmate to generate a commit message based on the current changes
+          // Prompt AI to generate a commit message based on the current changes
           Internal.promptAIAgent?.(
             {type: 'fillCommitMessage'},
             source === 'commitInfoView'
@@ -300,15 +300,15 @@ export const getVSCodePlatform = (context: vscode.ExtensionContext): VSCodeServe
           );
           break;
         }
-        case 'platform/devmateCreateTestForModifiedCode': {
+        case 'platform/createTestForModifiedCodeWithAI': {
           Internal.promptTestGeneration?.();
           break;
         }
-        case 'platform/devmateValidateChanges': {
+        case 'platform/validateChangesWithAI': {
           Internal.promptAIAgent?.({type: 'validateChanges'}, ActionTriggerType.ISL2SmartActions);
           break;
         }
-        case 'platform/devmateResolveAllConflicts': {
+        case 'platform/resolveAllConflictsWithAI': {
           const {conflicts} = message;
           Internal.promptAIAgent?.(
             {type: 'resolveAllConflicts', conflicts, repoPath: repo?.info.repoRoot},

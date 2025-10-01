@@ -68,11 +68,11 @@ function SmartActions({commit, dismiss}: {commit?: CommitInfo; dismiss: () => vo
     actions.push(<AutoSplitButton key="auto-split" commit={commit} dismiss={dismiss} />);
   }
 
-  const devmateResolveCommentsEnabled = useFeatureFlagAsync(
-    Internal.featureFlags?.InlineCommentDevmateResolve,
+  const aiResolveCommentsEnabled = useFeatureFlagAsync(
+    Internal.featureFlags?.InlineCommentAIResolve,
   );
   // For now, only support this in VS Code
-  if (devmateResolveCommentsEnabled && commit?.diffId && platform.platformName === 'vscode') {
+  if (aiResolveCommentsEnabled && commit?.diffId && platform.platformName === 'vscode') {
     actions.push(
       <ResolveCommentsButton
         key="resolve-comments"
@@ -85,11 +85,11 @@ function SmartActions({commit, dismiss}: {commit?: CommitInfo; dismiss: () => vo
     );
   }
 
-  const devmateResolveFailedSignalsEnabled = useFeatureFlagAsync(
-    Internal.featureFlags?.DevmateResolveFailedSignals,
+  const aiResolveFailedSignalsEnabled = useFeatureFlagAsync(
+    Internal.featureFlags?.AIResolveFailedSignals,
   );
   // For now, only support this in VS Code
-  if (devmateResolveFailedSignalsEnabled && commit?.diffId && platform.platformName === 'vscode') {
+  if (aiResolveFailedSignalsEnabled && commit?.diffId && platform.platformName === 'vscode') {
     actions.push(
       <ResolveFailedSignalsButton
         key="resolve-failed-signals"
@@ -101,11 +101,11 @@ function SmartActions({commit, dismiss}: {commit?: CommitInfo; dismiss: () => vo
     );
   }
 
-  const devmateGenerateTestsForModifiedCodeEnabled = useFeatureFlagAsync(
-    Internal.featureFlags?.DevmateGenerateTestsForModifiedCode,
+  const aiGenerateTestsForModifiedCodeEnabled = useFeatureFlagAsync(
+    Internal.featureFlags?.AIGenerateTestsForModifiedCode,
   );
-  // For now, only support this in VS Code since the devmate can only be triggered from VS Code
-  if (devmateGenerateTestsForModifiedCodeEnabled && platform.platformName === 'vscode') {
+  // For now, only support this in VS Code
+  if (aiGenerateTestsForModifiedCodeEnabled && platform.platformName === 'vscode') {
     const enabled = !commit || commit.isDot; // Enabled for `uncommitted changes` or the `current commit`.
     actions.push(
       <GenerateTestsForModifiedCodeButton
@@ -117,27 +117,23 @@ function SmartActions({commit, dismiss}: {commit?: CommitInfo; dismiss: () => vo
     );
   }
 
-  const devmateGenerateCommitMessageEnabled = useFeatureFlagAsync(
-    Internal.featureFlags?.DevmateGenerateCommitMessage,
+  const aiGenerateCommitMessageEnabled = useFeatureFlagAsync(
+    Internal.featureFlags?.AIGenerateCommitMessage,
   );
   // For now, only support this in VS Code
-  if (!commit && devmateGenerateCommitMessageEnabled && platform.platformName === 'vscode') {
+  if (!commit && aiGenerateCommitMessageEnabled && platform.platformName === 'vscode') {
     actions.push(<FillCommitInfoButton key="fill-commit-info" dismiss={dismiss} />);
   }
 
-  const devmateValidateChangesEnabled = useFeatureFlagAsync(
-    Internal.featureFlags?.DevmateValidateChanges,
-  );
+  const aiValidateChangesEnabled = useFeatureFlagAsync(Internal.featureFlags?.AIValidateChanges);
   // For now, only support this in VS Code
-  if (!commit && devmateValidateChangesEnabled && platform.platformName === 'vscode') {
+  if (!commit && aiValidateChangesEnabled && platform.platformName === 'vscode') {
     actions.push(<ValidateChangesButton key="validate-changes" dismiss={dismiss} />);
   }
 
-  const devmateReviewCodeEnabled = useFeatureFlagAsync(
-    Internal.featureFlags?.AIFirstPassCodeReview,
-  );
+  const aiReviewCodeEnabled = useFeatureFlagAsync(Internal.featureFlags?.AIFirstPassCodeReview);
   // For now, only support this in VS Code
-  if (devmateReviewCodeEnabled && platform.platformName === 'vscode') {
+  if (aiReviewCodeEnabled && platform.platformName === 'vscode') {
     const enabled = !commit || commit.isDot; // Enabled for `uncommitted changes` or the `current commit`.
     actions.push(
       <ReviewCodeButton
@@ -178,7 +174,7 @@ function AutoSplitButton({commit, dismiss}: {commit: CommitInfo; dismiss: () => 
   );
 }
 
-/** Prompt Devmate to resolve all comments on a diff. */
+/** Prompt AI to resolve all comments on a diff. */
 function ResolveCommentsButton({
   diffId,
   filePathsSample,
@@ -226,7 +222,7 @@ function ResolveCommentsButton({
   return disabled ? <Tooltip title={disabledReason}>{button}</Tooltip> : button;
 }
 
-/** Prompt Devmate to fill commit info. */
+/** Prompt AI to fill commit info. */
 function FillCommitInfoButton({dismiss}: {dismiss: () => void}) {
   return (
     <Button
@@ -234,7 +230,7 @@ function FillCommitInfoButton({dismiss}: {dismiss: () => void}) {
       onClick={e => {
         tracker.track('SmartActionClicked', {extras: {action: 'FillCommitMessage'}});
         serverAPI.postMessage({
-          type: 'platform/fillDevmateCommitMessage',
+          type: 'platform/fillCommitMessageWithAI',
           id: randomId(),
           source: 'smartAction',
         });
@@ -247,7 +243,7 @@ function FillCommitInfoButton({dismiss}: {dismiss: () => void}) {
   );
 }
 
-/** Prompt Devmate to resolve failed signals on a diff. */
+/** Prompt AI to resolve failed signals on a diff. */
 function ResolveFailedSignalsButton({
   diffId,
   dismiss,
@@ -311,7 +307,7 @@ function GenerateTestsForModifiedCodeButton({
       onClick={e => {
         tracker.track('SmartActionClicked', {extras: {action: 'GenerateTests'}});
         serverAPI.postMessage({
-          type: 'platform/devmateCreateTestForModifiedCode',
+          type: 'platform/createTestForModifiedCodeWithAI',
         });
         dismiss();
         e.stopPropagation();
@@ -325,7 +321,7 @@ function GenerateTestsForModifiedCodeButton({
   return disabled ? <Tooltip title={disabledReason}>{button}</Tooltip> : button;
 }
 
-/** Prompt Devmate to validate code and fix errors in the working copy. */
+/** Prompt AI to validate code and fix errors in the working copy. */
 function ValidateChangesButton({dismiss}: {dismiss: () => void}) {
   return (
     <Button
@@ -333,7 +329,7 @@ function ValidateChangesButton({dismiss}: {dismiss: () => void}) {
       onClick={e => {
         tracker.track('SmartActionClicked', {extras: {action: 'ValidateChanges'}});
         serverAPI.postMessage({
-          type: 'platform/devmateValidateChanges',
+          type: 'platform/validateChangesWithAI',
         });
         dismiss();
         e.stopPropagation();
@@ -344,7 +340,7 @@ function ValidateChangesButton({dismiss}: {dismiss: () => void}) {
   );
 }
 
-/** Prompt Devmate to review the current commit and add comments */
+/** Prompt AI to review the current commit and add comments */
 function ReviewCodeButton({
   commit,
   dismiss,
