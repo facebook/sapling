@@ -13,11 +13,16 @@ import clientToServerAPI from '../ClientToServerAPI';
 import {T} from '../i18n';
 import {codeReviewStatusAtom} from './firstPassCodeReviewAtoms';
 
+import {Internal} from '../Internal';
 import {tracker} from '../analytics';
+import {useFeatureFlagSync} from '../featureFlags';
 import './AICodeReviewUpsell.css';
 
 export function AICodeReviewUpsell(): JSX.Element {
   const [status, setStatus] = useAtom(codeReviewStatusAtom);
+  const aiFirstPassCodeReviewEnabled = useFeatureFlagSync(
+    Internal.featureFlags?.AIFirstPassCodeReview,
+  );
 
   return (
     <Banner kind={BannerKind.default}>
@@ -35,7 +40,7 @@ export function AICodeReviewUpsell(): JSX.Element {
             });
             tracker.track('AICodeReviewInitiatedFromISL');
           }}
-          disabled={status === 'running'}>
+          disabled={aiFirstPassCodeReviewEnabled && status === 'running'}>
           {<T>Start review</T>}
         </Button>
       </div>

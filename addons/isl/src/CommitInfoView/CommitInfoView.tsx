@@ -186,6 +186,7 @@ function useFetchActiveDiffDetails(diffId?: string) {
 
 export function CommitInfoDetails({commit}: {commit: CommitInfo}) {
   const rollbackFeatureEnabled = useFeatureFlagSync(Internal.featureFlags?.ShowRollbackPlan);
+  const aiCodeReviewUpsellEnabled = useFeatureFlagSync(Internal.featureFlags?.AICodeReviewUpsell);
   const aiFirstPassCodeReviewEnabled = useFeatureFlagSync(
     Internal.featureFlags?.AIFirstPassCodeReview,
   );
@@ -295,7 +296,7 @@ export function CommitInfoDetails({commit}: {commit: CommitInfo}) {
         className="commit-info-view-main-content"
         // remount this if we change to commit mode
         key={mode}>
-        {aiFirstPassCodeReviewEnabled && commit.isDot && <AICodeReviewUpsell />}
+        {aiCodeReviewUpsellEnabled && commit.isDot && <AICodeReviewUpsell />}
         {schema
           .filter(field => !isCommitMode || field.type !== 'read-only')
           .map(field => {
@@ -424,7 +425,7 @@ export function CommitInfoDetails({commit}: {commit: CommitInfo}) {
             <FoldPreviewActions />
           ) : (
             <>
-              {aiFirstPassCodeReviewEnabled && <AICodeReviewStatus />}
+              {aiCodeReviewUpsellEnabled && aiFirstPassCodeReviewEnabled && <AICodeReviewStatus />}
               <ActionsBar
                 commit={commit}
                 latestMessage={parsedFields}
