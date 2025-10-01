@@ -56,4 +56,5 @@ mononoke_app::subcommands! {
     mod phases;
     mod redaction;
     mod repo_info;
+    mod slow_bookmark_mover;
 }

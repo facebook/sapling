@@ -80,6 +80,7 @@ maplit = "1.0"
 megarepo_error = { version = "0.1.0", path = "../../megarepo_api/megarepo_error" }
 megarepolib = { version = "0.1.0", path = "../../commit_rewriting/megarepo" }
 mercurial_derivation = { version = "0.1.0", path = "../../derived_data/mercurial_derivation" }
+mercurial_mutation = { version = "0.1.0", path = "../../mercurial/mutation" }
 mercurial_types = { version = "0.1.0", path = "../../mercurial/types" }
 metaconfig_types = { version = "0.1.0", path = "../../metaconfig/types" }
 mononoke_api = { version = "0.1.0", path = "../../mononoke_api" }
@@ -127,9 +128,11 @@ sql_ext = { version = "0.1.0", path = "../../common/rust/sql_ext" }
 sql_query_config = { version = "0.1.0", path = "../../repo_attributes/sql_query_config" }
 synced_commit_mapping = { version = "0.1.0", path = "../../commit_rewriting/synced_commit_mapping" }
 thiserror = "2.0.12"
+time_measuring = { version = "0.1.0", path = "../../common/time_measuring" }
 tokio = { version = "1.47.1", features = ["full", "test-util", "tracing"] }
 tokio-stream = { version = "0.1.17", features = ["fs", "io-util", "net", "signal", "sync", "time"] }
 tokio-util = { version = "0.7.15", features = ["full"] }
+topo_sort = { version = "0.1.0", path = "../../common/topo_sort" }
 unodes = { version = "0.1.0", path = "../../derived_data/unodes" }
 walkdir = "2.3"
 
