@@ -61,7 +61,7 @@ class EmptyBackingStore final : public BijectiveBackingStore {
       const ObjectFetchContextPtr& context) override;
   folly::coro::Task<GetBlobResult> co_getBlob(
       const ObjectId& id,
-      const ObjectFetchContextPtr& context);
+      const ObjectFetchContextPtr& context) override;
   folly::SemiFuture<GetBlobAuxResult> getBlobAuxData(
       const ObjectId& /*id*/,
       const ObjectFetchContextPtr& /*context*/) override;

@@ -8,7 +8,6 @@
 #pragma once
 
 #include <folly/Range.h>
-#include <folly/coro/Task.h>
 
 #include "eden/common/utils/PathFuncs.h"
 #include "eden/fs/store/BackingStore.h"
@@ -82,7 +81,7 @@ class GitBackingStore final : public BijectiveBackingStore {
       const ObjectFetchContextPtr& context) override;
   folly::coro::Task<BackingStore::GetBlobResult> co_getBlob(
       const ObjectId& id,
-      const ObjectFetchContextPtr& context);
+      const ObjectFetchContextPtr& context) override;
   folly::SemiFuture<BackingStore::GetBlobAuxResult> getBlobAuxData(
       const ObjectId& id,
       const ObjectFetchContextPtr& context) override;

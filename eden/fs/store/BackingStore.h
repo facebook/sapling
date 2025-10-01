@@ -8,6 +8,7 @@
 #pragma once
 
 #include <folly/Range.h>
+#include <folly/coro/Task.h>
 #include <folly/futures/Future.h>
 #include <folly/memory/not_null.h>
 #include <memory>
@@ -265,6 +266,15 @@ class BackingStore : public RootIdCodec, public ObjectIdCodec {
    * Return the blob and where it was found.
    */
   virtual folly::SemiFuture<GetBlobResult> getBlob(
+      const ObjectId& id,
+      const ObjectFetchContextPtr& context) = 0;
+
+  /**
+   * Fetch a blob from the backing store.
+   *
+   * Return the blob and where it was found.
+   */
+  virtual folly::coro::Task<GetBlobResult> co_getBlob(
       const ObjectId& id,
       const ObjectFetchContextPtr& context) = 0;
 

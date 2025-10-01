@@ -138,6 +138,7 @@ cpp_library(
         "//eden/fs/model:model",
         "//eden/fs/model:model-fwd",
         "//folly:range",
+        "//folly/coro:task",
         "//folly/futures:core",
         "//folly/memory:not_null",
     ],

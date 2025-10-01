@@ -441,7 +441,7 @@ class SaplingBackingStore final : public BackingStore {
 
   folly::coro::Task<GetBlobResult> co_getBlob(
       const ObjectId& id,
-      const ObjectFetchContextPtr& context);
+      const ObjectFetchContextPtr& context) override;
 
   /**
    * Import multiple blobs at once. The vector parameters have to be the same
