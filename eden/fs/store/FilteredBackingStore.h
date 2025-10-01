@@ -7,6 +7,7 @@
 
 #pragma once
 
+#include <folly/coro/Task.h>
 #include <gtest/gtest_prod.h>
 
 #include "eden/common/utils/PathMap.h"
@@ -153,6 +154,10 @@ class FilteredBackingStore
   folly::SemiFuture<GetBlobResult> getBlob(
       const ObjectId& id,
       const ObjectFetchContextPtr& context) override;
+
+  folly::coro::Task<GetBlobResult> co_getBlob(
+      const ObjectId& id,
+      const ObjectFetchContextPtr& context);
 
   folly::SemiFuture<GetBlobAuxResult> getBlobAuxData(
       const ObjectId& id,

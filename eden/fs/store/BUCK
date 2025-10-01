@@ -165,6 +165,7 @@ cpp_library(
         "//eden/common/utils:utils",
         "//eden/fs/store/filter:filtered_object_id",
         "//eden/fs/store/filter:filters",
+        "//folly/coro:task",
     ],
 )
 

@@ -448,6 +448,18 @@ folly::SemiFuture<BackingStore::GetBlobResult> FilteredBackingStore::getBlob(
   return backingStore_->getBlob(filteredId.object(), context);
 }
 
+folly::coro::Task<BackingStore::GetBlobResult> FilteredBackingStore::co_getBlob(
+    const ObjectId& id,
+    const ObjectFetchContextPtr& context) {
+  if (isSlOid(id)) {
+    // Raw id from underlying backingstore, meaning unfiltered fast path.
+    co_return co_await backingStore_->getBlob(id, context);
+  }
+
+  auto filteredId = FilteredObjectId::fromObjectId(id);
+  co_return co_await backingStore_->getBlob(filteredId.object(), context);
+}
+
 folly::SemiFuture<folly::Unit> FilteredBackingStore::prefetchBlobs(
     ObjectIdRange ids,
     const ObjectFetchContextPtr& context) {
