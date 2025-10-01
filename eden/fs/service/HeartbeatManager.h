@@ -7,6 +7,7 @@
 
 #pragma once
 
+#include <folly/Try.h>
 #include <optional>
 #include <string>
 
@@ -61,7 +62,8 @@ class HeartbeatManager {
   bool checkForPreviousHeartbeat(
       bool takeover,
       const std::optional<std::string>& oldEdenHeartbeatFileNameStr =
-          std::nullopt);
+          std::nullopt,
+      bool logMemoryPressure = false);
 
 #ifndef _WIN32
   /**
@@ -101,6 +103,8 @@ class HeartbeatManager {
    * Helper function to convert integer to string in async-signal-safe way
    */
   static int intToStrSafe(int val, char* buf, size_t buf_size);
+  std::string timestampToDateTimeString(uint64_t timestamp);
+  folly::Try<bool> isMemoryPressureInSystemLog(uint64_t latestDaemonHeartbeat);
 };
 
 } // namespace facebook::eden

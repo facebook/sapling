@@ -1253,8 +1253,11 @@ void EdenServer::removeEdenHeartbeatFile() const {
 }
 
 bool EdenServer::checkForPreviousHeartbeat(bool takeover) {
+  auto config = serverState_->getReloadableConfig()->getEdenConfig();
   return heartbeatManager_->checkForPreviousHeartbeat(
-      takeover, getOldEdenHeartbeatFileNameStr());
+      takeover,
+      getOldEdenHeartbeatFileNameStr(),
+      config->silentDaemonExitLogShow.getValue());
 }
 #endif
 
