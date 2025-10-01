@@ -617,6 +617,21 @@ ImmediateFuture<shared_ptr<const Blob>> ObjectStore::getBlob(
           });
 }
 
+folly::coro::Task<std::shared_ptr<const Blob>> ObjectStore::co_getBlob(
+    const ObjectId& id,
+    const ObjectFetchContextPtr& fetchContext) const {
+  DurationScope<EdenStats> statScope{stats_, &ObjectStoreStats::getBlob};
+  deprioritizeWhenFetchHeavy(*fetchContext);
+  try {
+    auto result = co_await co_getBlobImpl(id, fetchContext);
+    updateProcessFetch(*fetchContext);
+    fetchContext->didFetch(ObjectFetchContext::Blob, id, result.origin);
+    co_return std::move(result.blob);
+  } catch (const std::exception&) {
+    throw;
+  }
+}
+
 folly::SemiFuture<BackingStore::GetBlobResult> ObjectStore::getBlobImpl(
     const ObjectId& id,
     const ObjectFetchContextPtr& context) const {
@@ -662,6 +677,36 @@ folly::SemiFuture<BackingStore::GetBlobResult> ObjectStore::getBlobImpl(
                     });
           })
       .semi();
+}
+
+folly::coro::Task<BackingStore::GetBlobResult> ObjectStore::co_getBlobImpl(
+    const ObjectId& id,
+    const ObjectFetchContextPtr& context) const {
+  BlobPtr blob = nullptr;
+  if (shouldCacheOnDisk(BackingStore::LocalStoreCachingPolicy::Blobs)) {
+    // Check in the LocalStore first
+    blob = co_await localStore_->co_getBlob(id);
+  }
+  if (blob) {
+    stats_->increment(&ObjectStoreStats::getBlobFromLocalStore);
+    co_return BackingStore::GetBlobResult{
+        std::move(blob), ObjectFetchContext::FromDiskCache};
+  }
+
+  // If we didn't find the blob in the LocalStore, then fetch it
+  // from the BackingStore.
+  try {
+    auto result = co_await backingStore_->getBlob(id, context);
+    if (shouldCacheOnDisk(BackingStore::LocalStoreCachingPolicy::Blobs)) {
+      localStore_->putBlob(id, result.blob.get());
+    }
+    stats_->increment(&ObjectStoreStats::getBlobFromBackingStore);
+    co_return result;
+  } catch (const std::exception&) {
+    stats_->increment(&ObjectStoreStats::getBlobFailed);
+    XLOGF(DBG4, "unable to find blob {}", id);
+    throw;
+  }
 }
 
 std::optional<BlobAuxData> ObjectStore::getBlobAuxDataFromInMemoryCache(

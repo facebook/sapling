@@ -4869,12 +4869,19 @@ EdenServiceHandler::co_debugGetBlobImpl(
     blobTasks.push_back(folly::coro::co_invoke(
         [edenMount, id, store, &context]()
             -> folly::coro::Task<ScmBlobWithOrigin> {
-          auto blob = co_await store->getBlob(id, context).semi();
-          co_return transformToBlobFromOrigin(
-              edenMount,
-              id,
-              folly::Try<std::shared_ptr<const Blob>>{blob},
-              DataFetchOrigin::ANYWHERE);
+          try {
+            auto blob = co_await store->co_getBlob(id, context);
+            co_return transformToBlobFromOrigin(
+                edenMount,
+                id,
+                folly::Try<std::shared_ptr<const Blob>>{blob},
+                DataFetchOrigin::ANYWHERE);
+          } catch (const std::exception&) {
+            folly::Try<std::shared_ptr<const Blob>> blobTry;
+            blobTry.emplaceException(std::current_exception());
+            co_return transformToBlobFromOrigin(
+                edenMount, id, std::move(blobTry), DataFetchOrigin::ANYWHERE);
+          }
         }));
   }
   auto blobs = co_await folly::coro::collectAllRange(std::move(blobTasks));

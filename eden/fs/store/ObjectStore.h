@@ -8,6 +8,7 @@
 #pragma once
 
 #include <folly/Synchronized.h>
+#include <folly/coro/Task.h>
 #include <atomic>
 #include <memory>
 #include <unordered_map>
@@ -266,6 +267,17 @@ class ObjectStore : public IObjectStore,
       const ObjectFetchContextPtr& context) const override;
 
   /**
+   * Get a Blob by ID.
+   *
+   * This returns a Future object that will produce the Blob when it is ready.
+   * It may result in a std::domain_error if the specified blob ID does not
+   * exist, or possibly other exceptions on error.
+   */
+  folly::coro::Task<std::shared_ptr<const Blob>> co_getBlob(
+      const ObjectId& id,
+      const ObjectFetchContextPtr& fetchContext) const;
+
+  /**
    * Get aux data about a Blob.
    *
    * This returns an ImmediateFuture object that will produce the BlobAuxData
@@ -436,6 +448,10 @@ class ObjectStore : public IObjectStore,
       folly::stop_watch<std::chrono::milliseconds> watch) const;
 
   folly::SemiFuture<BackingStore::GetBlobResult> getBlobImpl(
+      const ObjectId& id,
+      const ObjectFetchContextPtr& context) const;
+
+  folly::coro::Task<BackingStore::GetBlobResult> co_getBlobImpl(
       const ObjectId& id,
       const ObjectFetchContextPtr& context) const;
 
