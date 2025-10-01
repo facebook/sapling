@@ -1424,6 +1424,18 @@ class EdenConfig : private ConfigSettingManager {
       25000,
       this};
 
+  /**
+   * Controls whether, after a silent daemon exit, the "log show" command is run
+   * to determine if the exit was caused by memory pressure. Running "log show"
+   * is time-consuming, so it is executed asynchronously and does not block
+   * EdenFS startup.
+   * Note: Only works on macOS.
+   */
+  ConfigSetting<bool> silentDaemonExitLogShow{
+      "telemetry:silent-daemon-exit-log-show",
+      false,
+      this};
+
   ConfigSetting<size_t> HgTraceBusCapacity{
       "telemetry:hg-tracebus-capacity",
       100000,
