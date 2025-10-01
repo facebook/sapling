@@ -323,6 +323,12 @@ class EdenTestCase(EdenTestCaseBase):
             # framework runs tests on each CPU core.
             "hg": ['num-retry-threads = "2"'],
         }
+
+        # Collect experimental configs from mixins
+        experimental_configs = self.get_experimental_configs()
+        if experimental_configs:
+            configs["experimental"].extend(experimental_configs)
+
         if self.use_nfs():
             configs["clone"] = ['default-mount-protocol = "NFS"']
         # The number of concurrent APFS volumes we can create on macOS
@@ -501,6 +507,10 @@ class EdenTestCase(EdenTestCaseBase):
         from running with NFS via skip lists in eden/integration/lib/skip.py.
         """
         return sys.platform == "darwin"
+
+    def get_experimental_configs(self) -> List[str]:
+        """Default implementation returns no additional configs."""
+        return []
 
     def remove_fault(
         self,
@@ -811,7 +821,11 @@ def test_replicator(
 
 def _replicate_eden_nfs_repo_test(
     test_class: Type[EdenRepoTest],
+    run_coroutines: bool = False,
 ) -> Iterable[Tuple[str, Type[EdenRepoTest]]]:
+    class CoroRepoTest(CoroutinesTestMixin, test_class):
+        pass
+
     class NFSRepoTest(NFSTestMixin, test_class):
         pass
 
@@ -822,6 +836,9 @@ def _replicate_eden_nfs_repo_test(
     # Only run the nfs tests if EdenFS was built with nfs support.
     if eden.config.HAVE_NFS:
         variants.append(("NFS", typing.cast(Type[EdenRepoTest], NFSRepoTest)))
+
+    if run_coroutines:
+        variants.append(("Coroutines", typing.cast(Type[EdenRepoTest], CoroRepoTest)))
 
     return variants
 
@@ -946,6 +963,11 @@ class CaseSensitiveTestMixin:
 
 class CaseInsensitiveTestMixin:
     is_case_sensitive = False
+
+
+class CoroutinesTestMixin:
+    def get_experimental_configs(self) -> List[str]:
+        return ["enable-coroutines-debug-get-blob = true"]
 
 
 def _replicate_eden_test(

@@ -61,7 +61,7 @@ class DebugBlobTest(testcase.EdenRepoTest):
         self.assertEqual(b"\xff\xfe\xfd\xfc", output)
 
 
-@testcase.eden_nfs_repo_test
+@testcase.eden_nfs_repo_test(run_coroutines=True)
 class DebugBlobHgTest(testcase.HgRepoTestMixin, testcase.EdenRepoTest):
     def populate_repo(self) -> None:
         self.repo.write_file("binary", b"\xff\xfe\xfd\xfc")
