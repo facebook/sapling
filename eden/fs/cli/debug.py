@@ -42,6 +42,7 @@ from eden.fs.cli.cmd_util import get_eden_instance
 from eden.thrift.legacy import EdenClient
 from facebook.eden import EdenService
 from facebook.eden.constants import (
+    DIS_COMPUTE_ACCURATE_MODE,
     DIS_COMPUTE_BLOB_SIZES,
     DIS_NOT_RECURSIVE,
     DIS_REQUIRE_LOADED,
@@ -962,6 +963,12 @@ class InodeCmd(Subcmd):
             default=False,
             help="Report data on all subdirectories recursively.",
         )
+        parser.add_argument(
+            "--show-permission",
+            action="store_true",
+            default=False,
+            help="Show accurate file permissions for each inode. (Not available on Windows)",
+        )
 
     def run(self, args: argparse.Namespace) -> int:
         out = sys.stdout.buffer
@@ -970,6 +977,8 @@ class InodeCmd(Subcmd):
             flags = DIS_REQUIRE_LOADED | DIS_COMPUTE_BLOB_SIZES
             if not args.recursive:
                 flags |= DIS_NOT_RECURSIVE
+            if args.show_permission:
+                flags |= DIS_COMPUTE_ACCURATE_MODE
 
             results = client.debugInodeStatus(
                 bytes(checkout.path),
