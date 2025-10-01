@@ -10,6 +10,8 @@
 #include "eden/fs/store/SqliteLocalStore.h"
 #include "eden/fs/telemetry/EdenStats.h"
 
+#include <folly/experimental/coro/GtestHelpers.h>
+
 namespace {
 
 using namespace facebook::eden;
@@ -265,6 +267,35 @@ TEST_P(LocalStoreTest, testClearKeySpace) {
   EXPECT_FALSE(store_->hasKey(KeySpace::BlobFamily, "key1"_sp));
   EXPECT_FALSE(store_->hasKey(KeySpace::BlobFamily, "key2"_sp));
   EXPECT_TRUE(store_->hasKey(KeySpace::TreeFamily, "tree"_sp));
+}
+
+CO_TEST_P(LocalStoreTest, co_testReadAndWriteBlob) {
+  ObjectId id = ObjectId::fromHex("3a8f8eb91101860fd8484154885838bf322964d0");
+
+  StringPiece contents("{\n  \"breakConfig\": true\n}\n");
+  auto buf =
+      folly::IOBuf{folly::IOBuf::WRAP_BUFFER, folly::ByteRange{contents}};
+
+  auto inBlob = Blob{std::move(buf)};
+  store_->putBlob(id, &inBlob);
+
+  auto outBlob = co_await store_->co_getBlob(id);
+  EXPECT_EQ(contents, outBlob->getContents().clone()->to<std::string>());
+
+  {
+    auto retrievedAuxData = store_->getBlobAuxData(id).get(10s);
+    EXPECT_EQ(retrievedAuxData, nullptr);
+  }
+}
+
+CO_TEST_P(LocalStoreTest, co_testReadNonexistent) {
+  using namespace std::chrono_literals;
+
+  ObjectId id = ObjectId::fromHex("aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa");
+  auto result = co_await store_->co_getBlob(id);
+  EXPECT_EQ(result, nullptr);
+  auto retrievedAuxData = store_->getBlobAuxData(id).get(10s);
+  EXPECT_EQ(retrievedAuxData, nullptr);
 }
 
 #pragma clang diagnostic push

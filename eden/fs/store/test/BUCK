@@ -96,6 +96,7 @@ cpp_unittest(
         "//eden/fs/testharness:test_util",
         "//eden/fs/utils:static_assert",
         "//folly/executors:manual_executor",
+        "//folly/experimental/coro:gtest_helpers",
         "//folly/io:iobuf",
         "//folly/logging:logging",
         "//folly/test:test_utils",
