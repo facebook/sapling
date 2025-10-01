@@ -94,8 +94,10 @@ void HeartbeatManager::removeHeartbeatFile() {
 bool HeartbeatManager::checkForPreviousHeartbeat(
     bool takeover,
     const std::optional<std::string>& oldEdenHeartbeatFileNameStr,
-    bool logMemoryPressure) {
+    bool logMemoryPressure,
+    folly::Executor* threadPool) {
 #ifdef _WIN32
+  (void)threadPool;
   return false;
 #else
   bool crashDetected = false;
@@ -143,37 +145,46 @@ bool HeartbeatManager::checkForPreviousHeartbeat(
 #else
         time_t bootTime = 0;
 #endif
-        std::optional<bool> maybeMemoryPressure = std::nullopt;
-        std::string memoryPressureErrorStr = "";
-        if (logMemoryPressure) {
-          auto isMemoryPressure =
-              isMemoryPressureInSystemLog(latestDaemonHeartbeat);
-          if (!isMemoryPressure.hasException()) {
-            maybeMemoryPressure = isMemoryPressure.value();
-          } else {
-            memoryPressureErrorStr =
-                isMemoryPressure.exception().what().toStdString();
-            XLOGF(
-                WARN,
-                "Failed to check memory pressure in system log: {}",
-                memoryPressureErrorStr);
-          }
-        }
-        XLOGF(
-            ERR,
-            "ERROR: The previous edenFS daemon exited silently with signal {} and memory pressure was {}",
-            daemon_exit_signal == 0 ? "Unknown"
-                                    : std::to_string(daemon_exit_signal),
-            maybeMemoryPressure.has_value()
-                ? (maybeMemoryPressure.value() ? "true" : "false")
-                : "unknown");
-        structuredLogger_->logEvent(SilentDaemonExit{
-            latestDaemonHeartbeat,
-            daemon_exit_signal,
-            static_cast<uint64_t>(bootTime),
-            maybeMemoryPressure,
-            memoryPressureErrorStr});
-
+        // Log the event to Scuba
+        // Run the time-consuming operation in the background
+        folly::futures::detachOn(
+            threadPool,
+            folly::makeSemiFuture().deferValue([self = shared_from_this(),
+                                                latestDaemonHeartbeat,
+                                                daemon_exit_signal,
+                                                bootTime,
+                                                logMemoryPressure](auto&&) {
+              std::optional<bool> maybeMemoryPressure = std::nullopt;
+              std::string memoryPressureErrorStr = "";
+              if (logMemoryPressure) {
+                auto isMemoryPressure =
+                    self->isMemoryPressureInSystemLog(latestDaemonHeartbeat);
+                if (!isMemoryPressure.hasException()) {
+                  maybeMemoryPressure = isMemoryPressure.value();
+                } else {
+                  memoryPressureErrorStr =
+                      isMemoryPressure.exception().what().toStdString();
+                  XLOGF(
+                      WARN,
+                      "Failed to check memory pressure in system log: {}",
+                      memoryPressureErrorStr);
+                }
+              }
+              XLOGF(
+                  ERR,
+                  "ERROR: The previous edenFS daemon exited silently with signal {} and memory pressure was {}",
+                  daemon_exit_signal == 0 ? "Unknown"
+                                          : std::to_string(daemon_exit_signal),
+                  maybeMemoryPressure.has_value()
+                      ? (maybeMemoryPressure.value() ? "true" : "false")
+                      : "unknown");
+              self->structuredLogger_->logEvent(SilentDaemonExit{
+                  latestDaemonHeartbeat,
+                  daemon_exit_signal,
+                  static_cast<uint64_t>(bootTime),
+                  maybeMemoryPressure,
+                  memoryPressureErrorStr});
+            }));
         // Remove the heartbeat file for clean up
         std::remove(entry.path().string().c_str());
         // Remove any existing daemon exit signal file to clean up

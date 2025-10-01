@@ -8,6 +8,8 @@
 #pragma once
 
 #include <folly/Try.h>
+#include <folly/executors/SerialExecutor.h>
+#include <folly/futures/Future.h>
 #include <optional>
 #include <string>
 
@@ -27,7 +29,7 @@ class StructuredLogger;
  * - Delete it on clean shutdown
  * - Check for previous heartbeat files on startup to detect crashes
  */
-class HeartbeatManager {
+class HeartbeatManager : public std::enable_shared_from_this<HeartbeatManager> {
  public:
   explicit HeartbeatManager(
       const EdenStateDir& edenDir,
@@ -57,13 +59,15 @@ class HeartbeatManager {
    *
    * @param takeover Whether this is a takeover operation
    * @param oldDaemonPid Optional PID of old daemon (for takeover)
+   * @param logMemoryPressure Whether to log memory pressure information
+   * @param threadPool Thread pool for background operations (required)
    * @return True if a crash was detected
    */
   bool checkForPreviousHeartbeat(
       bool takeover,
-      const std::optional<std::string>& oldEdenHeartbeatFileNameStr =
-          std::nullopt,
-      bool logMemoryPressure = false);
+      const std::optional<std::string>& oldEdenHeartbeatFileNameStr,
+      bool logMemoryPressure,
+      folly::Executor* threadPool);
 
 #ifndef _WIN32
   /**

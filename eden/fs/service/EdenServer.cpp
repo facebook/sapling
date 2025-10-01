@@ -1257,7 +1257,8 @@ bool EdenServer::checkForPreviousHeartbeat(bool takeover) {
   return heartbeatManager_->checkForPreviousHeartbeat(
       takeover,
       getOldEdenHeartbeatFileNameStr(),
-      config->silentDaemonExitLogShow.getValue());
+      config->silentDaemonExitLogShow.getValue(),
+      serverState_->getThreadPool().get());
 }
 #endif
 

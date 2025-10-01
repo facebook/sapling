@@ -460,6 +460,8 @@ cpp_library(
         "//folly:synchronized",
         "//folly:thread_local",
         "//folly:try",
+        "//folly/executors:serial_executor",
+        "//folly/futures:core",
         "//folly/futures:shared_promise",
         "//folly/io/async:async_base",
         "//folly/portability:sys_stat",
