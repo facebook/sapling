@@ -7,6 +7,7 @@
 
 #pragma once
 
+#include <folly/coro/Task.h>
 #include "eden/fs/model/RootId.h"
 #include "eden/fs/store/BackingStore.h"
 #include "eden/fs/store/ObjectFetchContext.h"
@@ -58,6 +59,9 @@ class EmptyBackingStore final : public BijectiveBackingStore {
   folly::SemiFuture<GetBlobResult> getBlob(
       const ObjectId& id,
       const ObjectFetchContextPtr& context) override;
+  folly::coro::Task<GetBlobResult> co_getBlob(
+      const ObjectId& id,
+      const ObjectFetchContextPtr& context);
   folly::SemiFuture<GetBlobAuxResult> getBlobAuxData(
       const ObjectId& /*id*/,
       const ObjectFetchContextPtr& /*context*/) override;
