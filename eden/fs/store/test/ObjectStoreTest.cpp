@@ -8,6 +8,8 @@
 #include <folly/test/TestUtils.h>
 #include <gtest/gtest.h>
 
+#include <folly/experimental/coro/GtestHelpers.h>
+
 #include "eden/common/telemetry/NullStructuredLogger.h"
 #include "eden/common/utils/ImmediateFuture.h"
 #include "eden/common/utils/ProcessInfoCache.h"
@@ -710,6 +712,45 @@ TEST_P(ObjectStoreTest, get_tree_with_different_sensitivities) {
       oppositeSensitivityTreeFromOppositeObjectStoreResult
           ->getCaseSensitivity(),
       getOppositeCaseSensitivity());
+}
+
+CO_TEST_P(ObjectStoreTest, co_getBlob_tracks_backing_store_read) {
+  co_await objectStore->co_getBlob(readyBlobId, context);
+  EXPECT_EQ(1, loggingContext->requests.size());
+  auto& request = loggingContext->requests[0];
+  EXPECT_EQ(ObjectFetchContext::Blob, request.type);
+  EXPECT_EQ(readyBlobId, request.id);
+  EXPECT_EQ(ObjectFetchContext::FromNetworkFetch, request.origin);
+}
+
+CO_TEST_P(ObjectStoreTest, co_getBlob_tracks_second_read_from_cache) {
+  co_await objectStore->co_getBlob(readyBlobId, context);
+  co_await objectStore->co_getBlob(readyBlobId, context);
+  EXPECT_EQ(2, loggingContext->requests.size());
+  auto& request = loggingContext->requests[1];
+  EXPECT_EQ(ObjectFetchContext::Blob, request.type);
+  EXPECT_EQ(readyBlobId, request.id);
+  EXPECT_EQ(ObjectFetchContext::FromDiskCache, request.origin);
+}
+
+CO_TEST_P(ObjectStoreTest, co_test_process_access_counts) {
+  auto pid0 = ProcessId(10000);
+  ObjectFetchContextPtr pidContext0 = makeRefPtr<PidFetchContext>(pid0);
+  auto pid1 = ProcessId(10001);
+  ObjectFetchContextPtr pidContext1 = makeRefPtr<PidFetchContext>(pid1);
+
+  // first fetch increments fetch count for pid0
+  co_await objectStore->co_getBlob(readyBlobId, pidContext0);
+  EXPECT_EQ(1, objectStore->getPidFetches().rlock()->at(pid0));
+
+  // local fetch also increments fetch count for pid0
+  co_await objectStore->co_getBlob(readyBlobId, pidContext0);
+  EXPECT_EQ(2, objectStore->getPidFetches().rlock()->at(pid0));
+
+  // increments fetch count for pid1
+  co_await objectStore->co_getBlob(readyBlobId, pidContext1);
+  EXPECT_EQ(2, objectStore->getPidFetches().rlock()->at(pid0));
+  EXPECT_EQ(1, objectStore->getPidFetches().rlock()->at(pid1));
 }
 
 INSTANTIATE_TEST_SUITE_P(
