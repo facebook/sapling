@@ -7,7 +7,6 @@
 
 #![recursion_limit = "256"]
 #![feature(never_type)]
-#![feature(let_chains)]
 #![feature(cursor_split)]
 #![feature(try_blocks)]
 

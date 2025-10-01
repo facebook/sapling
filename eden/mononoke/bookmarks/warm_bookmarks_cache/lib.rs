@@ -5,8 +5,6 @@
  * GNU General Public License version 2.
  */
 
-#![feature(let_chains)]
-
 use std::borrow::Cow;
 use std::collections::HashMap;
 use std::collections::HashSet;
