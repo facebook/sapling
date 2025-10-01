@@ -614,19 +614,31 @@ struct SilentDaemonExit : public EdenFSEvent {
   uint64_t last_daemon_heartbeat = 0;
   uint8_t daemon_exit_signal = 0;
   uint64_t last_mac_boot_timestamp = 0;
+  std::optional<bool> is_memory_pressure_kill = std::nullopt;
+  std::string is_memory_pressure_error_msg;
 
   SilentDaemonExit(
       uint64_t last_daemon_heartbeat,
       uint8_t daemon_exit_signal,
-      uint64_t last_mac_boot_timestamp = 0)
+      uint64_t last_mac_boot_timestamp = 0,
+      std::optional<bool> is_memory_pressure_kill = std::nullopt,
+      std::string is_memory_pressure_error_msg = "")
       : last_daemon_heartbeat(last_daemon_heartbeat),
         daemon_exit_signal(daemon_exit_signal),
-        last_mac_boot_timestamp(last_mac_boot_timestamp) {}
+        last_mac_boot_timestamp(last_mac_boot_timestamp),
+        is_memory_pressure_kill(is_memory_pressure_kill),
+        is_memory_pressure_error_msg(is_memory_pressure_error_msg) {}
 
   void populate(DynamicEvent& event) const override {
     event.addInt("last_daemon_heartbeat", last_daemon_heartbeat);
     event.addInt("exit_signal", daemon_exit_signal);
     event.addInt("last_mac_boot_timestamp", last_mac_boot_timestamp);
+    if (is_memory_pressure_kill.has_value()) {
+      event.addBool("is_memory_pressure_kill", is_memory_pressure_kill.value());
+    }
+    if (!is_memory_pressure_error_msg.empty()) {
+      event.addString("is_memory_pressure_error", is_memory_pressure_error_msg);
+    }
   }
 
   const char* getType() const override {
