@@ -28,8 +28,10 @@ export function AICodeReviewUpsell(): JSX.Element {
     <Banner kind={BannerKind.default}>
       <div className="code-review-upsell-inner">
         <div className="code-review-upsell-icon-text">
-          <Icon icon="info" color="blue" />
-          Get a code review from Devmate
+          <Icon icon="sparkle" />
+          {Internal.aiCodeReview
+            ? `Get a code review from ${Internal.aiCodeReview.provider}`
+            : 'Get an AI code review'}
         </div>
         <Button // TODO: Replace with dropdown to choose between quick/thorough review
           onClick={() => {

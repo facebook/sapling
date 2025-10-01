@@ -296,7 +296,6 @@ export function CommitInfoDetails({commit}: {commit: CommitInfo}) {
         className="commit-info-view-main-content"
         // remount this if we change to commit mode
         key={mode}>
-        {aiCodeReviewUpsellEnabled && commit.isDot && <AICodeReviewUpsell />}
         {schema
           .filter(field => !isCommitMode || field.type !== 'read-only')
           .map(field => {
@@ -338,6 +337,9 @@ export function CommitInfoDetails({commit}: {commit: CommitInfo}) {
                         latestFields={parsedFields}
                         editedCommitMessageKey={isCommitMode ? 'head' : commit.hash}
                       />
+                      {aiCodeReviewUpsellEnabled &&
+                        Internal.aiCodeReview?.enabled &&
+                        commit.isDot && <AICodeReviewUpsell />}
                       {!isPublic && isIrrelevantToCwd ? (
                         <Tooltip
                           title={
