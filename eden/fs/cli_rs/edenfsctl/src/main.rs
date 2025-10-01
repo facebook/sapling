@@ -157,9 +157,11 @@ fn wrapper_main(telemetry_sample: &mut CliUsageSample) -> Result<i32> {
                 }
                 rust_main(cmd)
             }
-            // We failed to parse the command. We should exit with the same
-            // exit code that Python exits with for parse failures.
+            // We failed to parse the command due to unknown argument/flag.
+            // Print the clap-generated error message (which includes helpful usage info)
+            // and exit with the same exit code that Python exits with for parse failures.
             Err(e) if e.kind() == clap::ErrorKind::UnknownArgument => {
+                e.print().ok();
                 std::process::exit(PYTHON_EDENFSCTL_EX_USAGE)
             }
             // Some other error occurred during parsing. Let's exit like normal
