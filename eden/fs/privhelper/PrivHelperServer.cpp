@@ -1223,6 +1223,11 @@ UnixSocket::Message PrivHelperServer::processStartFam(
 }
 
 UnixSocket::Message PrivHelperServer::processStopFam() {
+  if (!famProcess_) {
+    XLOG(ERR, "FAM process is not running or is not managed by edenfs");
+    throwf<std::runtime_error>("FAM process is not running");
+  }
+
   string tmpOutputPath = std::move(famProcess_->tmpOutputPath);
   string specifiedOutputPath = std::move(famProcess_->specifiedOutputPath);
   bool shouldUpload = famProcess_->shouldUpload;
@@ -1238,6 +1243,8 @@ UnixSocket::Message PrivHelperServer::processStopFam() {
     XLOGF(ERR, "Failed to terminate FAM pid: {}", pid);
     XLOGF(ERR, "FAM process status: {}", status.str());
 
+    // We failed to terminate the process, there is no need to keep it lingering
+    famProcess_.reset();
     throwf<std::runtime_error>("Failed to terminate FAM pid: {}", pid);
   }
 
