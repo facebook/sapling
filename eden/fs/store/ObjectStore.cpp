@@ -696,7 +696,7 @@ folly::coro::Task<BackingStore::GetBlobResult> ObjectStore::co_getBlobImpl(
   // If we didn't find the blob in the LocalStore, then fetch it
   // from the BackingStore.
   try {
-    auto result = co_await backingStore_->getBlob(id, context);
+    auto result = co_await backingStore_->co_getBlob(id, context);
     if (shouldCacheOnDisk(BackingStore::LocalStoreCachingPolicy::Blobs)) {
       localStore_->putBlob(id, result.blob.get());
     }
