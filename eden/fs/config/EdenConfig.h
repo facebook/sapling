@@ -1609,6 +1609,16 @@ class EdenConfig : private ConfigSettingManager {
       this};
 
   /**
+   * Controls whether EdenFS uses coroutines for debugGetBlob thrift endpoint.
+   * This allows for gradual rollout of coroutine-based implementation.
+   * Default is false for conservative rollout strategy.
+   */
+  ConfigSetting<bool> enableCoroutinesInDebugGetBlob{
+      "experimental:enable-coroutines-debug-get-blob",
+      false,
+      this};
+
+  /**
    * Controls whether EdenFS symlinks are enabled on Windows.
    *
    * Currently this is disabled because of a Windows bug. Directories with
