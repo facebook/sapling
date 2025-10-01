@@ -205,6 +205,7 @@ cpp_library(
         "//eden/fs/store:context",
         "//folly:exception_wrapper",
         "//folly:range",
+        "//folly/coro:task",
     ],
 )
 

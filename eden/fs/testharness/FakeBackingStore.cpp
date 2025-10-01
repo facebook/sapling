@@ -149,6 +149,21 @@ SemiFuture<BackingStore::GetBlobResult> FakeBackingStore::getBlob(
       .semi();
 }
 
+folly::coro::Task<BackingStore::GetBlobResult> FakeBackingStore::co_getBlob(
+    const ObjectId& id,
+    const ObjectFetchContextPtr& /*context*/) {
+  auto data = data_.wlock();
+  ++data->accessCounts[id];
+  auto it = data->blobs.find(id);
+  if (it == data->blobs.end()) {
+    // Throw immediately, for the same reasons mentioned in getTree()
+    throw std::domain_error(fmt::format("blob {} not found", id));
+  }
+  auto blob = co_await std::move(it->second->getFuture()).semi();
+  co_return BackingStore::GetBlobResult{
+      std::move(blob), ObjectFetchContext::Origin::FromNetworkFetch};
+}
+
 folly::SemiFuture<BackingStore::GetBlobAuxResult>
 FakeBackingStore::getBlobAuxData(
     const ObjectId& id,
