@@ -416,6 +416,9 @@ fn create_runtime(runtime_args: &RuntimeArgs) -> Result<Runtime> {
     if let Some(threads) = runtime_args.runtime_threads {
         builder.worker_threads(threads);
     }
+    if let Some(thread_stack_size) = runtime_args.runtime_thread_stack_size {
+        builder.thread_stack_size(thread_stack_size);
+    }
     let runtime = builder.build()?;
     Ok(runtime)
 }
