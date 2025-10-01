@@ -27,11 +27,20 @@ sql_ext = { version = "0.1.0", path = "../../common/rust/sql_ext" }
 strum = { version = "0.27.1", features = ["derive"] }
 
 [dev-dependencies]
+blobstore = { version = "0.1.0", path = "../../blobstore" }
 fbinit = { version = "0.2.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 fbinit-tokio = { version = "0.1.2", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
+futures = { version = "0.3.31", features = ["async-await", "compat"] }
+itertools = "0.14.0"
+manifest = { version = "0.1.0", path = "../../manifest" }
 mercurial_derivation = { version = "0.1.0", path = "../../derived_data/mercurial_derivation" }
 mononoke_api = { version = "0.1.0", path = "../../mononoke_api" }
+mononoke_api_hg = { version = "0.1.0", path = "../../mononoke_api_hg" }
 mononoke_macros = { version = "0.1.0", path = "../../mononoke_macros" }
 pretty_assertions = { version = "1.2", features = ["alloc"], default-features = false }
+repo_blobstore = { version = "0.1.0", path = "../repo_blobstore" }
+sapling-clientinfo = { version = "0.1.0", path = "../../../scm/lib/clientinfo" }
+serde_json = { version = "1.0.140", features = ["alloc", "float_roundtrip", "raw_value", "unbounded_depth"] }
+tempfile = "3.22"
 test_repo_factory = { version = "0.1.0", path = "../../repo_factory/test_repo_factory" }
 tests_utils = { version = "0.1.0", path = "../../tests/utils" }

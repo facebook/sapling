@@ -9,15 +9,28 @@ use std::str::FromStr;
 use std::sync::Arc;
 
 use anyhow::Result;
+use anyhow::anyhow;
+use blobstore::Loadable;
+use clientinfo::ClientEntryPoint;
+use clientinfo::ClientInfo;
+use clientinfo::ClientRequestInfo;
 use context::CoreContext;
+use context::SessionContainer;
 use fbinit::FacebookInit;
+use futures::TryStreamExt;
+use itertools::Itertools;
+use manifest::ManifestOps;
 use mercurial_derivation::derive_hg_changeset::DeriveHgChangeset;
 use metaconfig_types::RestrictedPathsConfig;
 use mononoke_api::Repo as TestRepo;
+use mononoke_api::RepoContext;
+use mononoke_api_hg::HgTreeContext;
+use mononoke_api_hg::RepoContextHgExt;
 use mononoke_macros::mononoke;
 use mononoke_types::NonRootMPath;
 use mononoke_types::RepositoryId;
 use permission_checker::MononokeIdentity;
+use repo_blobstore::RepoBlobstoreRef;
 use restricted_paths::SqlRestrictedPathsManifestIdStoreBuilder;
 use restricted_paths::*;
 use sql_construct::SqlConstruct;
@@ -27,21 +40,53 @@ use tests_utils::CreateCommitContext;
 struct RestrictedPathsTestData {
     ctx: CoreContext,
     repo: TestRepo,
+    log_file_path: std::path::PathBuf,
 }
+
+#[derive(Debug, Clone, PartialEq)]
+struct ScubaAccessLogSample {
+    repo_id: RepositoryId,
+    restricted_paths: Vec<NonRootMPath>,
+    manifest_id: ManifestId,
+    manifest_type: ManifestType,
+    client_identities: Vec<String>,
+    client_main_id: String,
+    unauthorized_access: bool,
+}
+
+const TEST_CLIENT_MAIN_ID: &str = "user:test_user";
 
 #[mononoke::fbinit_test]
 async fn test_mercurial_manifest_no_restricted_change(fb: FacebookInit) -> Result<()> {
     let restricted_paths = vec![(
         NonRootMPath::new("restricted/dir").unwrap(),
-        MononokeIdentity::from_str("SERVICE_IDENTITY:restricted_acl")?,
+        MononokeIdentity::from_str("REPO_REGION:restricted_acl")?,
     )];
-    let RestrictedPathsTestData { ctx, repo } =
-        setup_restricted_paths_test(fb, restricted_paths).await?;
+    let RestrictedPathsTestData {
+        ctx,
+        repo,
+        log_file_path,
+    } = setup_restricted_paths_test(fb, restricted_paths).await?;
 
-    let all_entries =
-        hg_manifest_test_with_restricted_paths(&ctx, &repo, vec!["unrestricted/dir/a"]).await?;
+    let (manifest_id_store_entries, scuba_logs) = hg_manifest_test_with_restricted_paths(
+        &ctx,
+        repo,
+        vec!["unrestricted/dir/a"],
+        &log_file_path,
+    )
+    .await?;
 
-    assert!(all_entries.is_empty(), "Manifest id store should be empty");
+    assert!(
+        manifest_id_store_entries.is_empty(),
+        "Manifest id store should be empty"
+    );
+
+    // TODO(T239041722): ensure access to restricted paths is logged to scuba
+    pretty_assertions::assert_eq!(
+        scuba_logs,
+        vec![],
+        "Scuba access logs don't match expectation"
+    );
 
     Ok(())
 }
@@ -52,26 +97,41 @@ async fn test_mercurial_manifest_single_dir_single_restricted_change(
 ) -> Result<()> {
     let restricted_paths = vec![(
         NonRootMPath::new("restricted/dir").unwrap(),
-        MononokeIdentity::from_str("SERVICE_IDENTITY:restricted_acl")?,
+        MononokeIdentity::from_str("REPO_REGION:restricted_acl")?,
     )];
-    let RestrictedPathsTestData { ctx, repo } =
-        setup_restricted_paths_test(fb, restricted_paths).await?;
+    let RestrictedPathsTestData {
+        ctx,
+        repo,
+        log_file_path,
+    } = setup_restricted_paths_test(fb, restricted_paths).await?;
 
-    let all_entries =
-        hg_manifest_test_with_restricted_paths(&ctx, &repo, vec!["restricted/dir/a"]).await?;
+    let (manifest_id_store_entries, scuba_logs) = hg_manifest_test_with_restricted_paths(
+        &ctx,
+        repo,
+        vec!["restricted/dir/a"],
+        &log_file_path,
+    )
+    .await?;
 
     assert!(
-        !all_entries.is_empty(),
+        !manifest_id_store_entries.is_empty(),
         "Expected restricted paths manifest ids to be stored"
     );
 
     pretty_assertions::assert_eq!(
-        all_entries,
+        manifest_id_store_entries,
         vec![RestrictedPathManifestIdEntry::new(
             ManifestType::Hg,
             ManifestId::from("0e3837eaab4fb0454c78f290aeb747a201ccd05b"),
             NonRootMPath::new("restricted/dir")?
         )]
+    );
+
+    // TODO(T239041722): ensure access to restricted paths is logged to scuba
+    pretty_assertions::assert_eq!(
+        scuba_logs,
+        vec![],
+        "Scuba access logs don't match expectation"
     );
 
     Ok(())
@@ -85,29 +145,40 @@ async fn test_mercurial_manifest_single_dir_many_restricted_changes(
 ) -> Result<()> {
     let restricted_paths = vec![(
         NonRootMPath::new("restricted/dir").unwrap(),
-        MononokeIdentity::from_str("SERVICE_IDENTITY:restricted_acl")?,
+        MononokeIdentity::from_str("REPO_REGION:restricted_acl")?,
     )];
-    let RestrictedPathsTestData { ctx, repo } =
-        setup_restricted_paths_test(fb, restricted_paths).await?;
+    let RestrictedPathsTestData {
+        ctx,
+        repo,
+        log_file_path,
+    } = setup_restricted_paths_test(fb, restricted_paths).await?;
 
-    let all_entries = hg_manifest_test_with_restricted_paths(
+    let (manifest_id_store_entries, scuba_logs) = hg_manifest_test_with_restricted_paths(
         &ctx,
-        &repo,
+        repo,
         vec!["restricted/dir/a", "restricted/dir/b"],
+        &log_file_path,
     )
     .await?;
     assert!(
-        !all_entries.is_empty(),
+        !manifest_id_store_entries.is_empty(),
         "Expected restricted paths manifest ids to be stored"
     );
 
     pretty_assertions::assert_eq!(
-        all_entries,
+        manifest_id_store_entries,
         vec![RestrictedPathManifestIdEntry::new(
             ManifestType::Hg,
             ManifestId::from("3132e75d8439632fc89f193cbf4f02b2b5428c6e"),
             NonRootMPath::new("restricted/dir")?
         )]
+    );
+
+    // TODO(T239041722): ensure access to restricted paths is logged to scuba
+    pretty_assertions::assert_eq!(
+        scuba_logs,
+        vec![],
+        "Scuba access logs don't match expectation"
     );
 
     Ok(())
@@ -119,29 +190,40 @@ async fn test_mercurial_manifest_single_dir_restricted_and_unrestricted(
 ) -> Result<()> {
     let restricted_paths = vec![(
         NonRootMPath::new("restricted/dir").unwrap(),
-        MononokeIdentity::from_str("SERVICE_IDENTITY:restricted_acl")?,
+        MononokeIdentity::from_str("REPO_REGION:restricted_acl")?,
     )];
-    let RestrictedPathsTestData { ctx, repo } =
-        setup_restricted_paths_test(fb, restricted_paths).await?;
+    let RestrictedPathsTestData {
+        ctx,
+        repo,
+        log_file_path,
+    } = setup_restricted_paths_test(fb, restricted_paths).await?;
 
-    let all_entries = hg_manifest_test_with_restricted_paths(
+    let (manifest_id_store_entries, scuba_logs) = hg_manifest_test_with_restricted_paths(
         &ctx,
-        &repo,
+        repo,
         vec!["restricted/dir/a", "unrestricted/dir/b"],
+        &log_file_path,
     )
     .await?;
     assert!(
-        !all_entries.is_empty(),
+        !manifest_id_store_entries.is_empty(),
         "Expected restricted paths manifest ids to be stored"
     );
 
     pretty_assertions::assert_eq!(
-        all_entries,
+        manifest_id_store_entries,
         vec![RestrictedPathManifestIdEntry::new(
             ManifestType::Hg,
             ManifestId::from("0e3837eaab4fb0454c78f290aeb747a201ccd05b"),
             NonRootMPath::new("restricted/dir")?
         ),]
+    );
+
+    // TODO(T239041722): ensure access to restricted paths is logged to scuba
+    pretty_assertions::assert_eq!(
+        scuba_logs,
+        vec![],
+        "Scuba access logs don't match expectation"
     );
 
     Ok(())
@@ -153,30 +235,34 @@ async fn test_mercurial_manifest_multiple_restricted_dirs(fb: FacebookInit) -> R
     let restricted_paths = vec![
         (
             NonRootMPath::new("restricted/one").unwrap(),
-            MononokeIdentity::from_str("SERVICE_IDENTITY:restricted_acl")?,
+            MononokeIdentity::from_str("REPO_REGION:restricted_acl")?,
         ),
         (
             NonRootMPath::new("restricted/two").unwrap(),
-            MononokeIdentity::from_str("SERVICE_IDENTITY:another_acl")?,
+            MononokeIdentity::from_str("REPO_REGION:another_acl")?,
         ),
     ];
-    let RestrictedPathsTestData { ctx, repo } =
-        setup_restricted_paths_test(fb, restricted_paths).await?;
+    let RestrictedPathsTestData {
+        ctx,
+        repo,
+        log_file_path,
+    } = setup_restricted_paths_test(fb, restricted_paths).await?;
 
-    let all_entries = hg_manifest_test_with_restricted_paths(
+    let (manifest_id_store_entries, scuba_logs) = hg_manifest_test_with_restricted_paths(
         &ctx,
-        &repo,
+        repo,
         vec!["restricted/one/a", "restricted/two/b"],
+        &log_file_path,
     )
     .await?;
 
     assert!(
-        !all_entries.is_empty(),
+        !manifest_id_store_entries.is_empty(),
         "Expected restricted paths manifest ids to be stored"
     );
 
     pretty_assertions::assert_eq!(
-        all_entries,
+        manifest_id_store_entries,
         vec![
             RestrictedPathManifestIdEntry::new(
                 ManifestType::Hg,
@@ -189,6 +275,13 @@ async fn test_mercurial_manifest_multiple_restricted_dirs(fb: FacebookInit) -> R
                 NonRootMPath::new("restricted/two")?
             ),
         ]
+    );
+
+    // TODO(T239041722): ensure access to restricted paths is logged to scuba
+    pretty_assertions::assert_eq!(
+        scuba_logs,
+        vec![],
+        "Scuba access logs don't match expectation"
     );
 
     Ok(())
@@ -209,28 +302,66 @@ async fn test_mercurial_manifest_multiple_restricted_dirs(fb: FacebookInit) -> R
 /// in the manifest id store.
 async fn hg_manifest_test_with_restricted_paths(
     ctx: &CoreContext,
-    repo: &TestRepo,
-    file_paths: Vec<&str>,
-) -> Result<Vec<RestrictedPathManifestIdEntry>> {
+    repo: TestRepo,
+    file_path_changes: Vec<&str>,
+    log_file_path: &std::path::Path,
+) -> Result<(
+    Vec<RestrictedPathManifestIdEntry>,
+    Vec<ScubaAccessLogSample>,
+)> {
     let mut commit_ctx = CreateCommitContext::new_root(ctx, &repo);
-    for path in file_paths {
-        commit_ctx = commit_ctx.add_file(path, path.to_string());
+    for path in &file_path_changes {
+        commit_ctx = commit_ctx.add_file(*path, path.to_string());
     }
 
     let bcs_id = commit_ctx.commit().await?;
 
     // Get the hg changeset id for the commit, to trigger hg manifest derivation
-    let _hg_cs_id = repo.derive_hg_changeset(ctx, bcs_id).await?;
+    let hg_cs_id = repo.derive_hg_changeset(ctx, bcs_id).await?;
 
-    let all_entries = repo
+    // Get all entries in the manifest id store
+    let manifest_id_store_entries = repo
         .restricted_paths()
         .manifest_id_store()
         .get_all_entries(ctx)
         .await?;
 
-    println!("{:?}", all_entries);
+    println!(
+        "manifest_id_store_entries: {:#?}",
+        manifest_id_store_entries
+    );
 
-    Ok(all_entries)
+    let repo = Arc::new(repo);
+    let repo_ctx = RepoContext::new_test(ctx.clone(), repo.clone()).await?;
+    let hg_repo_ctx = repo_ctx.hg();
+
+    let _files_added = file_path_changes
+        .into_iter()
+        .map(NonRootMPath::new)
+        .collect::<Result<Vec<_>>>()?;
+
+    // Derive hg changeset to add entry for restricted paths
+    let hg_cs = hg_cs_id.load(ctx, repo.repo_blobstore()).await?;
+    let blobstore = Arc::new(repo.repo_blobstore().clone());
+
+    // Then get the root manifest id, get all the trees and run
+    // `HgTreeContext::new_check_exists` to simulate a directory access
+    let hg_manif_id = hg_cs.manifestid();
+    let _all_directories = hg_manif_id
+        .list_tree_entries(ctx.clone(), blobstore.clone())
+        .and_then(async |(path, hg_manifest_id)| {
+            HgTreeContext::new_check_exists(hg_repo_ctx.clone(), hg_manifest_id).await?;
+
+            Ok(path)
+        })
+        .try_collect::<Vec<_>>()
+        .await?;
+
+    let scuba_logs = deserialize_scuba_log_file(&log_file_path)?;
+
+    println!("scuba_logs: {scuba_logs:#?}");
+
+    Ok((manifest_id_store_entries, scuba_logs))
 }
 
 async fn setup_test_repo(
@@ -258,12 +389,141 @@ async fn setup_test_repo(
         .await?;
     Ok(repo)
 }
+
 async fn setup_restricted_paths_test(
     fb: FacebookInit,
     restricted_paths: Vec<(NonRootMPath, MononokeIdentity)>,
 ) -> Result<RestrictedPathsTestData> {
-    let ctx = CoreContext::test_mock(fb);
+    let mut cri = ClientRequestInfo::new(ClientEntryPoint::Tests);
+    cri.set_main_id(TEST_CLIENT_MAIN_ID.to_string());
+    let client_info = ClientInfo::new_with_client_request_info(cri);
+    let session_container = SessionContainer::new_with_client_info(fb, client_info);
+    let ctx = CoreContext::test_mock_session(session_container);
     let repo = setup_test_repo(&ctx, restricted_paths).await?;
 
-    Ok(RestrictedPathsTestData { ctx, repo })
+    let temp_file = tempfile::NamedTempFile::new()?;
+    let log_file_path = temp_file.path().to_path_buf();
+
+    unsafe {
+        std::env::set_var("ACCESS_LOG_SCUBA_FILE_PATH", &log_file_path);
+    }
+
+    Ok(RestrictedPathsTestData {
+        ctx,
+        repo,
+        log_file_path,
+    })
+}
+
+/// Reads the scuba log file and parses all samples as ScubaAccessLogSample
+fn deserialize_scuba_log_file(
+    scuba_log_file: &std::path::Path,
+) -> Result<Vec<ScubaAccessLogSample>> {
+    use std::fs::File;
+    use std::io::BufRead;
+    use std::io::BufReader;
+
+    let file = match File::open(scuba_log_file) {
+        Ok(file) => file,
+        // If nothing is logged, file won't be created
+        Err(_e) => return Ok(vec![]),
+    };
+    let reader = BufReader::new(file);
+
+    // Collect all lines first (not efficient for very large files, but works for test logs)
+    let lines: Vec<String> = reader.lines().collect::<std::io::Result<_>>()?;
+
+    // Parse each line as a ScubaTelemetryLogSample object
+    let log_samples: Vec<ScubaAccessLogSample> = lines
+        .into_iter()
+        .map(|line| {
+            serde_json::from_str::<serde_json::Value>(&line)
+                .map_err(anyhow::Error::from)
+                .map(|json| {
+                    // Scuba groups the logs by type (e.g. int, normal), so
+                    // let's remove those and flatten the sample into a single
+                    // json object.
+                    let flattened_log =
+                        json.as_object()
+                            .iter()
+                            .flat_map(|obj| {
+                                obj.iter().flat_map(|(_, category_values)| {
+                                    category_values.as_object().into_iter().flat_map(
+                                        |category_obj| {
+                                            category_obj.iter().map(|(k, v)| (k.clone(), v.clone()))
+                                        },
+                                    )
+                                })
+                            })
+                            .collect::<serde_json::Value>();
+
+                    println!("flattened_log: {flattened_log:#?}");
+
+                    let repo_id: RepositoryId = flattened_log["repo_id"]
+                        .as_number()
+                        .and_then(|s| s.as_i64())
+                        .and_then(|i| i.try_into().ok())
+                        .map(RepositoryId::new)
+                        .ok_or(anyhow!("missing repo_id"))?;
+
+                    let client_main_id: String = flattened_log["client_main_id"]
+                        .as_str()
+                        .map(String::from)
+                        .ok_or(anyhow!("missing client_main_id"))?;
+
+                    let manifest_id: ManifestId = flattened_log["manifest_id"]
+                        .as_str()
+                        .map(String::from)
+                        .map(ManifestId::from)
+                        .ok_or(anyhow!("missing manifest_id"))?;
+
+                    let manifest_type: ManifestType = flattened_log["manifest_type"]
+                        .as_str()
+                        .map(ManifestType::from_str)
+                        .transpose()?
+                        .ok_or(anyhow!("missing manifest_type"))?;
+
+                    let unauthorized_access: bool = flattened_log["unauthorized_access"]
+                        .as_str()
+                        .map(|st| st.parse::<bool>())
+                        .transpose()?
+                        .ok_or(anyhow!("missing unauthorized_access"))?;
+
+                    let restricted_paths: Vec<NonRootMPath> = flattened_log["restricted_paths"]
+                        .as_array()
+                        .map(|ids| {
+                            ids.iter()
+                                .filter_map(|id| id.as_str())
+                                .sorted()
+                                .map(NonRootMPath::new)
+                                .collect::<Result<Vec<_>>>()
+                        })
+                        .transpose()?
+                        .ok_or(anyhow!("missing restricted_paths"))?;
+
+                    let client_identities: Vec<String> = flattened_log["client_identities"]
+                        .as_array()
+                        .map(|ids| {
+                            ids.iter()
+                                .filter_map(|id| id.as_str())
+                                .map(String::from)
+                                .sorted()
+                                .collect()
+                        })
+                        .unwrap_or_default();
+
+                    Ok(ScubaAccessLogSample {
+                        repo_id,
+                        restricted_paths,
+                        manifest_id,
+                        manifest_type,
+                        client_identities,
+                        unauthorized_access,
+                        client_main_id,
+                    })
+                })?
+        })
+        .collect::<Result<Vec<_>>>()?;
+
+    Ok(log_samples)
 }
