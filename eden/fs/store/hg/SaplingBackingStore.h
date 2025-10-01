@@ -466,6 +466,19 @@ class SaplingBackingStore final : public BackingStore {
       const SaplingImportRequest::FetchType fetch_type);
 
   /**
+   * Create a blob fetch request and enqueue it to the SaplingImportRequestQueue
+   *
+   * For latency sensitive context, the caller is responsible for checking if
+   * the blob is present locally, as this function will always push the request
+   * at the end of the queue.
+   */
+  folly::coro::Task<GetBlobResult> co_getBlobEnqueue(
+      const ObjectId& id,
+      const HgProxyHash& proxyHash,
+      const ObjectFetchContextPtr& context,
+      const SaplingImportRequest::FetchType fetch_type);
+
+  /**
    * Imports the blob identified by the given hash from the backing store.
    * If localOnly is set to true, only fetch the blob from local (memory or
    * disk) store.

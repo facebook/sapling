@@ -1316,10 +1316,8 @@ folly::coro::Task<BackingStore::GetBlobResult> SaplingBackingStore::co_getBlob(
     co_return BackingStore::GetBlobResult{
         std::move(blob.value()), ObjectFetchContext::Origin::FromDiskCache};
   }
-  co_return co_await getBlobEnqueue(
-      id, proxyHash, context, SaplingImportRequest::FetchType::Fetch)
-      .ensure([scope = std::move(scope)] {})
-      .semi();
+  co_return co_await co_getBlobEnqueue(
+      id, proxyHash, context, SaplingImportRequest::FetchType::Fetch);
 }
 
 ImmediateFuture<BackingStore::GetBlobResult>
@@ -1382,6 +1380,70 @@ SaplingBackingStore::getBlobEnqueue(
         return GetBlobResult{
             std::move(blob), ObjectFetchContext::Origin::FromNetworkFetch};
       });
+}
+
+folly::coro::Task<BackingStore::GetBlobResult>
+SaplingBackingStore::co_getBlobEnqueue(
+    const ObjectId& id,
+    const HgProxyHash& proxyHash,
+    const ObjectFetchContextPtr& context,
+    const SaplingImportRequest::FetchType fetch_type) {
+  XLOGF(
+      DBG4,
+      "making blob import request for {}, id is: {}",
+      proxyHash.path(),
+      id);
+  auto requestContext = context.copy();
+  auto request = SaplingImportRequest::makeBlobImportRequest(
+      id, proxyHash, requestContext);
+  request->setFetchType(fetch_type);
+  auto unique = request->getUnique();
+  std::unique_ptr<RequestMetricsScope> importTracker;
+  switch (fetch_type) {
+    case SaplingImportRequest::FetchType::Fetch:
+      importTracker =
+          std::make_unique<RequestMetricsScope>(&pendingImportBlobWatches_);
+      break;
+    case SaplingImportRequest::FetchType::Prefetch:
+      importTracker =
+          std::make_unique<RequestMetricsScope>(&pendingImportPrefetchWatches_);
+      break;
+  }
+
+  traceBus_->publish(HgImportTraceEvent::queue(
+      unique,
+      HgImportTraceEvent::BLOB,
+      proxyHash,
+      context->getPriority().getClass(),
+      context->getCause(),
+      context->getClientPid()));
+  // Setup guard to publish 'finish' event when current scope is destroyed
+  auto guard = folly::makeGuard([&] {
+    traceBus_->publish(HgImportTraceEvent::finish(
+        unique,
+        HgImportTraceEvent::BLOB,
+        proxyHash,
+        context->getPriority().getClass(),
+        context->getCause(),
+        context->getClientPid(),
+        context->getFetchedSource()));
+  });
+
+  folly::Try<BlobPtr> result;
+  try {
+    auto blob =
+        co_await std::move(queue_.enqueueBlob(std::move(request))).semi();
+    result = folly::Try<BlobPtr>{blob};
+
+    this->queue_.markImportAsFinished<BlobPtr::element_type>(id, result);
+
+    co_return BackingStore::GetBlobResult{
+        std::move(blob), ObjectFetchContext::Origin::FromNetworkFetch};
+  } catch (const std::exception&) {
+    result.emplaceException(std::current_exception());
+    this->queue_.markImportAsFinished<BlobPtr::element_type>(id, result);
+    throw;
+  }
 }
 
 folly::SemiFuture<BackingStore::GetBlobAuxResult>
