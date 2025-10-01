@@ -451,13 +451,14 @@ function OpenAllFilesButton({commit}: {commit: CommitInfo}) {
   const statuses = useGeneratedFileStatuses(paths);
   const allAreGenerated = paths.every(file => statuses[file] === GeneratedStatus.Generated);
   const someAreGenerated = paths.some(file => statuses[file] === GeneratedStatus.Generated);
-  const skipsGenerated = someAreGenerated && !allAreGenerated;
   return (
     <Tooltip
       title={
-        skipsGenerated
-          ? t('Open all non-generated files for editing')
-          : t('Opens all files for editing.\nNote: All files are generated.')
+        someAreGenerated
+          ? allAreGenerated
+            ? t('Opens all files for editing.\nNote: All files are generated.')
+            : t('Open all non-generated files for editing')
+          : t('Open all files for editing')
       }>
       <Button
         icon
