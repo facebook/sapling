@@ -4816,7 +4816,7 @@ EdenServiceHandler::co_debugGetBlobImpl(
     auto localStore = server_->getLocalStore();
     blobTasks.push_back(folly::coro::co_invoke(
         [edenMount, id, localStore]() -> folly::coro::Task<ScmBlobWithOrigin> {
-          auto blob = co_await localStore->getBlob(id).semi();
+          auto blob = co_await localStore->co_getBlob(id);
           co_return transformToBlobFromOrigin(
               edenMount,
               id,

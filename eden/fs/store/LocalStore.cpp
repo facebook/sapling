@@ -164,6 +164,25 @@ ImmediateFuture<BlobPtr> LocalStore::getBlob(const ObjectId& id) const {
           });
 }
 
+folly::coro::Task<BlobPtr> LocalStore::co_getBlob(const ObjectId& id) const {
+  DurationScope<EdenStats> stat{stats_, &LocalStoreStats::getBlob};
+  auto data = get(KeySpace::BlobFamily, id);
+  if (data.isValid()) {
+    co_return parse<const Blob>(
+        id,
+        "Blob",
+        stats_.copy(),
+        &LocalStoreStats::getBlobSuccess,
+        &LocalStoreStats::getBlobError,
+        [&data]() {
+          auto buf = data.extractIOBuf();
+          return deserializeGitBlob(&buf);
+        });
+  }
+  stats_->increment(&LocalStoreStats::getBlobFailure);
+  co_return nullptr;
+}
+
 ImmediateFuture<BlobAuxDataPtr> LocalStore::getBlobAuxData(
     const ObjectId& id) const {
   DurationScope<EdenStats> stat{stats_, &LocalStoreStats::getBlobAuxData};

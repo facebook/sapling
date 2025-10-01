@@ -8,6 +8,7 @@
 #pragma once
 
 #include <folly/Range.h>
+#include <folly/coro/Task.h>
 #include <atomic>
 #include <memory>
 #include <optional>
@@ -143,6 +144,17 @@ class LocalStore : public std::enable_shared_from_this<LocalStore> {
    * object).
    */
   ImmediateFuture<BlobPtr> getBlob(const ObjectId& id) const;
+
+  /**
+   * Get a Blob from the store.
+   *
+   * Blob objects store file data.
+   *
+   * Returns nullptr if this key is not present in the store.
+   * May throw exceptions on error (e.g., if this ID refers to a non-blob
+   * object).
+   */
+  folly::coro::Task<BlobPtr> co_getBlob(const ObjectId& id) const;
 
   /**
    * Get the size of a blob and the SHA-1 hash of its contents.

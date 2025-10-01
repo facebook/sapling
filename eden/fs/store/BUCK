@@ -221,6 +221,7 @@ cpp_library(
         "//folly:synchronized",
         "//folly/container:evicting_cache_map",
         "//folly/container:f14_hash",
+        "//folly/coro:task",
         "//folly/futures:core",
         "//folly/futures:shared_promise",
         "//folly/logging:logging",
