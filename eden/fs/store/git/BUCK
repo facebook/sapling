@@ -16,9 +16,6 @@ cpp_library(
         "//eden/fs/model:model",
         "//eden/fs/service:thrift_util",
         "//folly:string",
-        # TODO(T168360028): This dependency comes from third-party/rust/BUCK
-        # which includes a bunch of buck-built libgit2 targets for each
-        # platform. We are only using Linux for now. See task for the real fix.
         "//folly/futures:core",
         "//folly/logging:logging",
     ],
@@ -27,5 +24,6 @@ cpp_library(
         "//eden/fs/store:backing_store_interface",
         "//eden/fs/store:context",
         "//folly:range",
+        "//folly/coro:task",
     ],
 )

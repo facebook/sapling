@@ -222,6 +222,14 @@ SemiFuture<BackingStore::GetBlobResult> GitBackingStore::getBlob(
       getBlobImpl(id), ObjectFetchContext::Origin::FromDiskCache});
 }
 
+folly::coro::Task<BackingStore::GetBlobResult> GitBackingStore::co_getBlob(
+    const ObjectId& id,
+    const ObjectFetchContextPtr& /*context*/) {
+  // TODO: Use a separate thread pool to do the git I/O
+  co_return BackingStore::GetBlobResult{
+      getBlobImpl(id), ObjectFetchContext::Origin::FromDiskCache};
+}
+
 BlobPtr GitBackingStore::getBlobImpl(const ObjectId& id) {
   XLOGF(DBG5, "importing blob {}", id);
 
