@@ -36,6 +36,7 @@ cpp_library(
         "//folly:synchronized",
         "//folly:try",
         "//folly/container:f14_hash",
+        "//folly/coro:task",
     ],
 )
 

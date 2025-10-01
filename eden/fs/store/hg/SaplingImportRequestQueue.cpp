@@ -27,6 +27,12 @@ ImmediateFuture<BlobPtr> SaplingImportRequestQueue::enqueueBlob(
   return enqueue<Blob, SaplingImportRequest::BlobImport>(std::move(request));
 }
 
+folly::coro::Task<BlobPtr> SaplingImportRequestQueue::co_enqueueBlob(
+    std::shared_ptr<SaplingImportRequest> request) {
+  co_return co_await co_enqueue<Blob, SaplingImportRequest::BlobImport>(
+      std::move(request));
+}
+
 ImmediateFuture<TreePtr> SaplingImportRequestQueue::enqueueTree(
     std::shared_ptr<SaplingImportRequest> request) {
   return enqueue<Tree, SaplingImportRequest::TreeImport>(std::move(request));
@@ -97,6 +103,60 @@ ImmediateFuture<std::shared_ptr<const T>> SaplingImportRequestQueue::enqueue(
   queueCV_.notify_one();
 
   return promise->getSemiFuture();
+}
+
+template <typename T, typename ImportType>
+folly::coro::Task<std::shared_ptr<const T>>
+SaplingImportRequestQueue::co_enqueue(
+    std::shared_ptr<SaplingImportRequest> request) {
+  auto state = state_.lock();
+  auto* importQueue = getImportQueue<const T>(state);
+  auto* requestQueue = &importQueue->queue;
+
+  const auto& id = request->getRequest<ImportType>()->id;
+  if (auto* existingRequestPtr =
+          folly::get_ptr(importQueue->requestTracker, id)) {
+    auto& existingRequest = *existingRequestPtr;
+    auto* trackedImport = existingRequest->template getRequest<ImportType>();
+
+    auto [promise, future] =
+        folly::makePromiseContract<std::shared_ptr<const T>>();
+    trackedImport->promises.emplace_back(std::move(promise));
+
+    if (existingRequest->getPriority() < request->getPriority()) {
+      existingRequest->setPriority(request->getPriority());
+      // Since the new request has a higher priority than the already present
+      // one, we need to re-order the heap.
+      //
+      // TODO(xavierd): this has a O(n) complexity, and enqueuing tons of
+      // duplicated requests will thus lead to a quadratic complexity.
+      std::make_heap(
+          requestQueue->begin(),
+          requestQueue->end(),
+          [](const std::shared_ptr<SaplingImportRequest>& lhs,
+             const std::shared_ptr<SaplingImportRequest>& rhs) {
+            return (*lhs) < (*rhs);
+          });
+    }
+    co_return co_await std::move(future);
+  }
+
+  requestQueue->emplace_back(request);
+  auto promise = request->getPromise<std::shared_ptr<const T>>();
+
+  importQueue->requestTracker.emplace(id, std::move(request));
+
+  std::push_heap(
+      requestQueue->begin(),
+      requestQueue->end(),
+      [](const std::shared_ptr<SaplingImportRequest>& lhs,
+         const std::shared_ptr<SaplingImportRequest>& rhs) {
+        return (*lhs) < (*rhs);
+      });
+
+  queueCV_.notify_one();
+
+  co_return co_await promise->getSemiFuture();
 }
 
 std::vector<std::shared_ptr<SaplingImportRequest>>

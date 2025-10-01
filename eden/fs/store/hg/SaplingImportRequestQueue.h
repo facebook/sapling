@@ -10,6 +10,7 @@
 #include <folly/Synchronized.h>
 #include <folly/Try.h>
 #include <folly/container/F14Map.h>
+#include <folly/coro/Task.h>
 #include <condition_variable>
 #include <mutex>
 #include <vector>
@@ -33,6 +34,14 @@ class SaplingImportRequestQueue {
    * Return a future that will complete when the blob request completes.
    */
   ImmediateFuture<BlobPtr> enqueueBlob(
+      std::shared_ptr<SaplingImportRequest> request);
+
+  /**
+   * Enqueue a blob request to the queue.
+   *
+   * Return a future that will complete when the blob request completes.
+   */
+  folly::coro::Task<BlobPtr> co_enqueueBlob(
       std::shared_ptr<SaplingImportRequest> request);
 
   /**
@@ -100,6 +109,13 @@ class SaplingImportRequestQueue {
    */
   template <typename T, typename ImportType>
   ImmediateFuture<std::shared_ptr<const T>> enqueue(
+      std::shared_ptr<SaplingImportRequest> request);
+
+  /**
+   * Puts an item into the queue.
+   */
+  template <typename T, typename ImportType>
+  folly::coro::Task<std::shared_ptr<const T>> co_enqueue(
       std::shared_ptr<SaplingImportRequest> request);
 
   SaplingImportRequestQueue(SaplingImportRequestQueue&&) = delete;

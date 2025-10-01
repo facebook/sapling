@@ -1431,8 +1431,7 @@ SaplingBackingStore::co_getBlobEnqueue(
 
   folly::Try<BlobPtr> result;
   try {
-    auto blob =
-        co_await std::move(queue_.enqueueBlob(std::move(request))).semi();
+    auto blob = co_await queue_.co_enqueueBlob(std::move(request));
     result = folly::Try<BlobPtr>{blob};
 
     this->queue_.markImportAsFinished<BlobPtr::element_type>(id, result);
