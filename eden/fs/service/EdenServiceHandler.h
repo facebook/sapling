@@ -8,6 +8,7 @@
 #pragma once
 
 #include <fb303/BaseService.h>
+#include <folly/coro/Task.h>
 #include <optional>
 #include "eden/common/os/ProcessId.h"
 #include "eden/common/telemetry/TraceBus.h"
@@ -291,6 +292,9 @@ class EdenServiceHandler : virtual public StreamingEdenServiceSvIf,
 
   folly::SemiFuture<std::unique_ptr<DebugGetScmBlobResponse>> debugGetBlobImpl(
       std::unique_ptr<DebugGetScmBlobRequest> request);
+
+  folly::coro::Task<std::unique_ptr<DebugGetScmBlobResponse>>
+  co_debugGetBlobImpl(std::unique_ptr<DebugGetScmBlobRequest> request);
 
   folly::SemiFuture<std::unique_ptr<DebugGetBlobMetadataResponse>>
   semifuture_debugGetBlobMetadata(

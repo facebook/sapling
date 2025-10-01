@@ -20,6 +20,7 @@
 #include <folly/Portability.h>
 #include <folly/String.h>
 #include <folly/chrono/Conv.h>
+#include <folly/coro/Collect.h>
 #include <folly/executors/SerialExecutor.h>
 #include <folly/futures/Future.h>
 #include <folly/logging/Logger.h>
@@ -4768,7 +4769,118 @@ void EdenServiceHandler::debugGetScmTree(
 folly::SemiFuture<std::unique_ptr<DebugGetScmBlobResponse>>
 EdenServiceHandler::semifuture_debugGetBlob(
     std::unique_ptr<DebugGetScmBlobRequest> request) {
-  return debugGetBlobImpl(std::move(request));
+  auto config = server_->getServerState()->getEdenConfig();
+  bool use_coroutines = config->enableCoroutinesInDebugGetBlob.getValue();
+
+  // Add instrumentation for monitoring rollout
+  XLOG(DBG2) << "debugGetBlob using coroutines: " << use_coroutines;
+
+  if (use_coroutines) {
+    return co_debugGetBlobImpl(std::move(request)).semi();
+  } else {
+    return debugGetBlobImpl(std::move(request));
+  }
+}
+
+folly::coro::Task<std::unique_ptr<DebugGetScmBlobResponse>>
+EdenServiceHandler::co_debugGetBlobImpl(
+    std::unique_ptr<DebugGetScmBlobRequest> request) {
+  const auto& mountid = request->mountId();
+  const auto& idStr = request->id();
+  const auto& origins = request->origins();
+  auto helper =
+      INSTRUMENT_THRIFT_CALL(DBG2, *mountid, logHash(*idStr), *origins);
+  auto mountHandle = lookupMount(*mountid);
+  auto edenMount = mountHandle.getEdenMountPtr();
+  auto id = edenMount->getObjectStore()->parseObjectId(*idStr);
+  auto originFlags = DataFetchOriginFlags::raw(*origins);
+  auto store = edenMount->getObjectStore();
+  std::vector<folly::coro::Task<ScmBlobWithOrigin>> blobTasks;
+
+  // We use co_invoke to have the same collectAll pattern from the Futures-based
+  // getBlob.
+  // co_invoke is not recommend for 'hot paths' due to overhead.
+  // From benchmarking, no performance regressions were found.
+  if (originFlags.contains(FROMWHERE_MEMORY_CACHE)) {
+    blobTasks.push_back(folly::coro::co_invoke(
+        [edenMount, id]() -> folly::coro::Task<ScmBlobWithOrigin> {
+          co_return transformToBlobFromOrigin(
+              edenMount,
+              id,
+              folly::Try<std::shared_ptr<const Blob>>{
+                  edenMount->getBlobCache()->get(id).object},
+              DataFetchOrigin::MEMORY_CACHE);
+        }));
+  }
+  if (originFlags.contains(FROMWHERE_DISK_CACHE)) {
+    auto localStore = server_->getLocalStore();
+    blobTasks.push_back(folly::coro::co_invoke(
+        [edenMount, id, localStore]() -> folly::coro::Task<ScmBlobWithOrigin> {
+          auto blob = co_await localStore->getBlob(id).semi();
+          co_return transformToBlobFromOrigin(
+              edenMount,
+              id,
+              folly::Try<std::shared_ptr<const Blob>>{blob},
+              DataFetchOrigin::DISK_CACHE);
+        }));
+  }
+  auto& context = helper->getFetchContext();
+  if (originFlags.contains(FROMWHERE_LOCAL_BACKING_STORE)) {
+    auto proxyHash = HgProxyHash::load(
+        server_->getLocalStore().get(),
+        id,
+        "debugGetScmBlob",
+        *server_->getServerState()->getStats());
+    auto backingStore = edenMount->getObjectStore()->getBackingStore();
+    std::shared_ptr<SaplingBackingStore> saplingBackingStore =
+        castToSaplingBackingStore(backingStore, edenMount->getPath());
+    blobTasks.push_back(folly::coro::co_invoke(
+        [edenMount, id, saplingBackingStore, proxyHash, &context]()
+            -> folly::coro::Task<ScmBlobWithOrigin> {
+          auto blob = saplingBackingStore->getBlobLocal(proxyHash, context);
+          co_return transformToBlobFromOrigin(
+              edenMount,
+              id,
+              std::move(blob),
+              DataFetchOrigin::LOCAL_BACKING_STORE);
+        }));
+  }
+  if (originFlags.contains(FROMWHERE_REMOTE_BACKING_STORE)) {
+    auto proxyHash = HgProxyHash::load(
+        server_->getLocalStore().get(),
+        id,
+        "debugGetScmBlob",
+        *server_->getServerState()->getStats());
+    auto backingStore = edenMount->getObjectStore()->getBackingStore();
+    std::shared_ptr<SaplingBackingStore> saplingBackingStore =
+        castToSaplingBackingStore(backingStore, edenMount->getPath());
+    blobTasks.push_back(folly::coro::co_invoke(
+        [edenMount, id, saplingBackingStore, proxyHash, &context]()
+            -> folly::coro::Task<ScmBlobWithOrigin> {
+          auto blob = saplingBackingStore->getBlobRemote(proxyHash, context);
+          co_return transformToBlobFromOrigin(
+              edenMount,
+              id,
+              std::move(blob),
+              DataFetchOrigin::REMOTE_BACKING_STORE);
+        }));
+  }
+  if (originFlags.contains(FROMWHERE_ANYWHERE)) {
+    blobTasks.push_back(folly::coro::co_invoke(
+        [edenMount, id, store, &context]()
+            -> folly::coro::Task<ScmBlobWithOrigin> {
+          auto blob = co_await store->getBlob(id, context).semi();
+          co_return transformToBlobFromOrigin(
+              edenMount,
+              id,
+              folly::Try<std::shared_ptr<const Blob>>{blob},
+              DataFetchOrigin::ANYWHERE);
+        }));
+  }
+  auto blobs = co_await folly::coro::collectAllRange(std::move(blobTasks));
+  auto response = std::make_unique<DebugGetScmBlobResponse>();
+  response->blobs() = std::move(blobs);
+  co_return response;
 }
 
 folly::SemiFuture<std::unique_ptr<DebugGetScmBlobResponse>>
