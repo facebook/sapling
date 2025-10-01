@@ -23,7 +23,6 @@ import {BaseSplitButton} from './stackEdit/ui/BaseSplitButton';
 import type {CommitInfo} from './types';
 
 import platform from './platform';
-import {serverCwd} from './repositoryData';
 import {repositoryInfo} from './serverAPIState';
 import './SmartActionsMenu.css';
 
@@ -352,16 +351,14 @@ function ReviewCodeButton({
   disabled?: boolean;
   disabledReason?: string;
 }) {
-  const cwd = useAtomValue(serverCwd);
-
   const button = (
     <Button
       data-testid="review-commit-button"
       onClick={e => {
         tracker.track('SmartActionClicked', {extras: {action: 'ReviewCommit'}});
         serverAPI.postMessage({
-          type: 'platform/runAICodeReview',
-          cwd,
+          type: 'platform/runAICodeReviewChat',
+          source: 'smartAction',
         });
         dismiss();
         e.stopPropagation();

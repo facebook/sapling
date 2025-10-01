@@ -744,8 +744,12 @@ export type PlatformSpecificClientToServerMessages =
       conflicts: MergeConflicts;
     }
   | {
-      type: 'platform/runAICodeReview';
+      type: 'platform/runAICodeReviewPlatform';
       cwd: string;
+    }
+  | {
+      type: 'platform/runAICodeReviewChat';
+      source: 'commitInfoView' | 'smartAction';
     }
   | {
       type: 'platform/subscribeToAIReviewComments';

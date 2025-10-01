@@ -8,17 +8,15 @@
 import {Banner, BannerKind} from 'isl-components/Banner';
 import {Button} from 'isl-components/Button';
 import {Icon} from 'isl-components/Icon';
-import {useAtom, useAtomValue} from 'jotai';
+import {useAtom} from 'jotai';
 import clientToServerAPI from '../ClientToServerAPI';
 import {T} from '../i18n';
-import {serverCwd} from '../repositoryData';
 import {codeReviewStatusAtom} from './firstPassCodeReviewAtoms';
 
 import {tracker} from '../analytics';
 import './AICodeReviewUpsell.css';
 
 export function AICodeReviewUpsell(): JSX.Element {
-  const cwd = useAtomValue(serverCwd); // TODO: Remove this once we are running through DVSC
   const [status, setStatus] = useAtom(codeReviewStatusAtom);
 
   return (
@@ -32,8 +30,8 @@ export function AICodeReviewUpsell(): JSX.Element {
           onClick={() => {
             setStatus('running');
             clientToServerAPI.postMessage({
-              type: 'platform/runAICodeReview',
-              cwd,
+              type: 'platform/runAICodeReviewChat',
+              source: 'commitInfoView',
             });
             tracker.track('AICodeReviewInitiatedFromISL');
           }}

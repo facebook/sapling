@@ -316,7 +316,7 @@ export const getVSCodePlatform = (context: vscode.ExtensionContext): VSCodeServe
           );
           break;
         }
-        case 'platform/runAICodeReview': {
+        case 'platform/runAICodeReviewPlatform': {
           const {cwd} = message;
           try {
             const results = await Internal.runAICodeReview?.(cwd);
@@ -342,6 +342,16 @@ export const getVSCodePlatform = (context: vscode.ExtensionContext): VSCodeServe
               },
             });
           }
+          break;
+        }
+        case 'platform/runAICodeReviewChat': {
+          const {source} = message;
+          await Internal.promptAIAgent?.(
+            {type: 'reviewCode', repoPath: repo?.info.repoRoot},
+            source === 'commitInfoView'
+              ? ActionTriggerType.ISL2CommitInfoView
+              : ActionTriggerType.ISL2SmartActions,
+          );
           break;
         }
         case 'platform/subscribeToAIReviewComments': {
