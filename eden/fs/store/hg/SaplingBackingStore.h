@@ -9,6 +9,7 @@
 
 #include <folly/Range.h>
 #include <folly/Synchronized.h>
+#include <folly/coro/Task.h>
 #include <gtest/gtest_prod.h>
 #include <sys/types.h>
 #include <atomic>
@@ -437,6 +438,10 @@ class SaplingBackingStore final : public BackingStore {
   folly::SemiFuture<GetBlobResult> getBlob(
       const ObjectId& id,
       const ObjectFetchContextPtr& context) override;
+
+  folly::coro::Task<GetBlobResult> co_getBlob(
+      const ObjectId& id,
+      const ObjectFetchContextPtr& context);
 
   /**
    * Import multiple blobs at once. The vector parameters have to be the same

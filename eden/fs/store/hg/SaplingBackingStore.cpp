@@ -1288,6 +1288,40 @@ folly::SemiFuture<BackingStore::GetBlobResult> SaplingBackingStore::getBlob(
       .semi();
 }
 
+folly::coro::Task<BackingStore::GetBlobResult> SaplingBackingStore::co_getBlob(
+    const ObjectId& id,
+    const ObjectFetchContextPtr& context) {
+  DurationScope<EdenStats> scope{stats_, &SaplingBackingStoreStats::getBlob};
+
+  HgProxyHash proxyHash;
+  try {
+    proxyHash = HgProxyHash::load(localStore_.get(), id, "getBlob", *stats_);
+  } catch (const std::exception&) {
+    logMissingProxyHash();
+    throw;
+  }
+
+  logBackingStoreFetch(
+      *context,
+      folly::Range{&proxyHash, 1},
+      ObjectFetchContext::ObjectType::Blob);
+
+  auto blob = getBlobLocal(proxyHash, context);
+  if (blob.hasValue() && blob.value()) {
+    stats_->increment(&SaplingBackingStoreStats::fetchBlobSuccess);
+    if (store_.dogfoodingHost()) {
+      stats_->increment(&SaplingBackingStoreStats::fetchBlobSuccessDogfooding);
+    }
+    stats_->increment(&SaplingBackingStoreStats::fetchBlobLocal);
+    co_return BackingStore::GetBlobResult{
+        std::move(blob.value()), ObjectFetchContext::Origin::FromDiskCache};
+  }
+  co_return co_await getBlobEnqueue(
+      id, proxyHash, context, SaplingImportRequest::FetchType::Fetch)
+      .ensure([scope = std::move(scope)] {})
+      .semi();
+}
+
 ImmediateFuture<BackingStore::GetBlobResult>
 SaplingBackingStore::getBlobEnqueue(
     const ObjectId& id,
