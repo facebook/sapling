@@ -222,8 +222,8 @@ ImmediateFuture<std::optional<TreeEntryType>> VirtualInode::getTreeEntryType(
 #ifdef _WIN32
         (void)fetchContext;
         // stat does not have real data for an inode on Windows, so we can not
-        // directly use the mode bits. Further inodes are only tree or regular
-        // files on windows see treeEntryTypeFromMode.
+        // directly use the mode bits. Further inodes are only tree, regular
+        // files or symlink on windows see treeEntryTypeFromMode.
         switch (inode->getType()) {
           case dtype_t::Dir:
             return TreeEntryType::TREE;
