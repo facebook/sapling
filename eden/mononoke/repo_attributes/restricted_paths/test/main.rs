@@ -5,9 +5,11 @@
  * GNU General Public License version 2.
  */
 
+use std::collections::BTreeSet;
 use std::str::FromStr;
 use std::sync::Arc;
 
+use anyhow::Context;
 use anyhow::Result;
 use anyhow::anyhow;
 use blobstore::Loadable;
@@ -22,6 +24,7 @@ use itertools::Itertools;
 use manifest::ManifestOps;
 use mercurial_derivation::derive_hg_changeset::DeriveHgChangeset;
 use metaconfig_types::RestrictedPathsConfig;
+use metadata::Metadata;
 use mononoke_api::Repo as TestRepo;
 use mononoke_api::RepoContext;
 use mononoke_api_hg::HgTreeContext;
@@ -29,6 +32,7 @@ use mononoke_api_hg::RepoContextHgExt;
 use mononoke_macros::mononoke;
 use mononoke_types::NonRootMPath;
 use mononoke_types::RepositoryId;
+use permission_checker::InternalAclProvider;
 use permission_checker::MononokeIdentity;
 use repo_blobstore::RepoBlobstoreRef;
 use restricted_paths::SqlRestrictedPathsManifestIdStoreBuilder;
@@ -54,7 +58,7 @@ struct ScubaAccessLogSample {
     unauthorized_access: bool,
 }
 
-const TEST_CLIENT_MAIN_ID: &str = "user:test_user";
+const TEST_CLIENT_MAIN_ID: &str = "user:myusername0";
 
 #[mononoke::fbinit_test]
 async fn test_mercurial_manifest_no_restricted_change(fb: FacebookInit) -> Result<()> {
@@ -357,11 +361,46 @@ async fn hg_manifest_test_with_restricted_paths(
         .try_collect::<Vec<_>>()
         .await?;
 
-    let scuba_logs = deserialize_scuba_log_file(&log_file_path)?;
+    let scuba_logs = deserialize_scuba_log_file(log_file_path)?;
 
     println!("scuba_logs: {scuba_logs:#?}");
 
     Ok((manifest_id_store_entries, scuba_logs))
+}
+
+/// Sets up an ACL file that will be used to create an ACL checker.
+/// The ACL provides the test user access to all repos and
+fn setup_acl_file() -> Result<std::path::PathBuf> {
+    use std::io::Write;
+
+    let mut temp_file = tempfile::NamedTempFile::new()?;
+    let acl_content = r#"{
+  "repos": {
+    "default": {
+      "actions": {
+        "read": ["USER:myusername0"],
+        "write": ["USER:myusername0"]
+      }
+    }
+  },
+  "repo_regions": {
+    "myusername_project": {
+      "actions": {
+        "read": ["USER:myusername0"]
+      }
+    },
+    "restricted_acl": {
+      "actions": {
+        "read": ["USER:another_user"]
+      }
+    }
+  }
+}"#;
+
+    temp_file.write_all(acl_content.as_bytes())?;
+    temp_file.flush()?;
+    let acl_path = temp_file.into_temp_path().keep()?;
+    Ok(acl_path.to_path_buf())
 }
 
 async fn setup_test_repo(
@@ -369,6 +408,10 @@ async fn setup_test_repo(
     restricted_paths: Vec<(NonRootMPath, MononokeIdentity)>,
 ) -> Result<TestRepo> {
     let repo_id = RepositoryId::new(0);
+    let acl_file = setup_acl_file()?;
+
+    let acl_provider = InternalAclProvider::from_file(&acl_file)
+        .with_context(|| format!("Failed to load ACLs from '{}'", acl_file.to_string_lossy()))?;
 
     let path_acls = restricted_paths.into_iter().collect();
 
@@ -397,7 +440,24 @@ async fn setup_restricted_paths_test(
     let mut cri = ClientRequestInfo::new(ClientEntryPoint::Tests);
     cri.set_main_id(TEST_CLIENT_MAIN_ID.to_string());
     let client_info = ClientInfo::new_with_client_request_info(cri);
-    let session_container = SessionContainer::new_with_client_info(fb, client_info);
+
+    let identities = BTreeSet::from([MononokeIdentity::new("USER", "myusername0")]);
+    let metadata = {
+        let mut md = Metadata::new(
+            Some(&"restricted_paths_test".to_string()),
+            identities,
+            false,
+            false,
+            None,
+            None,
+        )
+        .await;
+        md.add_client_info(client_info);
+        md
+    };
+    let session_container = SessionContainer::builder(fb)
+        .metadata(Arc::new(metadata))
+        .build();
     let ctx = CoreContext::test_mock_session(session_container);
     let repo = setup_test_repo(&ctx, restricted_paths).await?;
 

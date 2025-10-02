@@ -34,6 +34,7 @@ futures = { version = "0.3.31", features = ["async-await", "compat"] }
 itertools = "0.14.0"
 manifest = { version = "0.1.0", path = "../../manifest" }
 mercurial_derivation = { version = "0.1.0", path = "../../derived_data/mercurial_derivation" }
+metadata = { version = "0.1.0", path = "../../common/metadata" }
 mononoke_api = { version = "0.1.0", path = "../../mononoke_api" }
 mononoke_api_hg = { version = "0.1.0", path = "../../mononoke_api_hg" }
 mononoke_macros = { version = "0.1.0", path = "../../mononoke_macros" }
