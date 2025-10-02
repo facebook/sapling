@@ -157,6 +157,9 @@ struct LfsServerArgs {
     max_upload_size: Option<u64>,
     #[clap(flatten)]
     readonly: ReadonlyArgs,
+    /// Whether to require the client-info header or not.
+    #[clap(long, default_value = "false")]
+    dont_require_client_info: bool,
 }
 
 #[derive(Clone)]
@@ -323,6 +326,7 @@ fn main(fb: FacebookInit) -> Result<(), Error> {
                     internal_identity,
                     ClientEntryPoint::LfsServer,
                     false,
+                    !args.dont_require_client_info,
                 ))
                 .add(PostResponseMiddleware::with_config(config_handle))
                 .add(<ScubaMiddleware<LfsScubaHandler>>::new(scuba_logger))

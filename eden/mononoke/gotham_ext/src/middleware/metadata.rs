@@ -58,6 +58,7 @@ pub struct MetadataMiddleware {
     internal_identity: Identity,
     entry_point: ClientEntryPoint,
     mtls_disabled: bool,
+    requires_client_info: bool,
 }
 
 impl MetadataMiddleware {
@@ -67,6 +68,7 @@ impl MetadataMiddleware {
         internal_identity: Identity,
         entry_point: ClientEntryPoint,
         mtls_disabled: bool,
+        requires_client_info: bool,
     ) -> Self {
         Self {
             fb,
@@ -74,6 +76,7 @@ impl MetadataMiddleware {
             internal_identity,
             entry_point,
             mtls_disabled,
+            requires_client_info,
         }
     }
 
@@ -94,10 +97,12 @@ impl MetadataMiddleware {
     }
 
     fn require_client_info(&self, state: &State) -> bool {
+        if !self.requires_client_info {
+            return false;
+        }
         let is_health_check =
             Uri::try_borrow_from(state).is_some_and(|uri| uri.path().ends_with("/health_check"));
-        let is_git_server = self.entry_point == ClientEntryPoint::MononokeGitServer;
-        !is_health_check && !is_git_server
+        !is_health_check
     }
 }
 

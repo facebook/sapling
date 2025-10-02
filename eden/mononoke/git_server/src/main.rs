@@ -301,6 +301,7 @@ fn main(fb: FacebookInit) -> Result<(), Error> {
                     common.internal_identity.clone(),
                     ClientEntryPoint::MononokeGitServer,
                     false,
+                    false,
                 ))
                 .add(RequestContentEncodingMiddleware {})
                 .add(RequestContextMiddleware::new(
