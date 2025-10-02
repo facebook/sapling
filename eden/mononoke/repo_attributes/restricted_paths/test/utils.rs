@@ -478,3 +478,11 @@ fn deserialize_scuba_log_file(
 
     Ok(log_samples)
 }
+
+pub(crate) fn cast_to_non_root_mpaths(paths: Vec<&str>) -> Vec<NonRootMPath> {
+    paths
+        .into_iter()
+        .map(NonRootMPath::new)
+        .collect::<Result<Vec<_>>>()
+        .expect("Failed to cast to NonRootMPath")
+}

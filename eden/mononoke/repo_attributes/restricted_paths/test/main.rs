@@ -59,10 +59,7 @@ async fn test_mercurial_manifest_change_to_restricted_with_access_is_logged(
         .expecting_scuba_access_logs(vec![ScubaAccessLogSample {
             repo_id: RepositoryId::new(0),
             // The restricted path root is logged, not the full path
-            restricted_paths: vec!["user_project/foo"]
-                .into_iter()
-                .map(NonRootMPath::new)
-                .collect::<Result<Vec<_>>>()?,
+            restricted_paths: cast_to_non_root_mpaths(vec!["user_project/foo"]),
             manifest_id: expected_manifest_id,
             manifest_type: ManifestType::Hg,
             client_identities: vec!["USER:myusername0"]
@@ -101,10 +98,7 @@ async fn test_mercurial_manifest_single_dir_single_restricted_change(
         )])
         .expecting_scuba_access_logs(vec![ScubaAccessLogSample {
             repo_id: RepositoryId::new(0),
-            restricted_paths: vec!["restricted/dir"]
-                .into_iter()
-                .map(NonRootMPath::new)
-                .collect::<Result<Vec<_>>>()?,
+            restricted_paths: cast_to_non_root_mpaths(vec!["restricted/dir"]),
             manifest_id: expected_manifest_id,
             manifest_type: ManifestType::Hg,
             client_identities: vec!["USER:myusername0"]
@@ -148,10 +142,7 @@ async fn test_mercurial_manifest_single_dir_many_restricted_changes(
             // restricted directory
             ScubaAccessLogSample {
                 repo_id: RepositoryId::new(0),
-                restricted_paths: vec!["restricted/dir"]
-                    .into_iter()
-                    .map(NonRootMPath::new)
-                    .collect::<Result<Vec<_>>>()?,
+                restricted_paths: cast_to_non_root_mpaths(vec!["restricted/dir"]),
                 manifest_id: expected_manifest_id,
                 manifest_type: ManifestType::Hg,
                 client_identities: vec!["USER:myusername0"]
@@ -194,10 +185,7 @@ async fn test_mercurial_manifest_single_dir_restricted_and_unrestricted(
         )])
         .expecting_scuba_access_logs(vec![ScubaAccessLogSample {
             repo_id: RepositoryId::new(0),
-            restricted_paths: vec!["restricted/dir"]
-                .into_iter()
-                .map(NonRootMPath::new)
-                .collect::<Result<Vec<_>>>()?,
+            restricted_paths: cast_to_non_root_mpaths(vec!["restricted/dir"]),
             manifest_id: expected_manifest_id,
             manifest_type: ManifestType::Hg,
             client_identities: vec!["USER:myusername0"]
@@ -249,10 +237,7 @@ async fn test_mercurial_manifest_multiple_restricted_dirs(fb: FacebookInit) -> R
         .expecting_scuba_access_logs(vec![
             ScubaAccessLogSample {
                 repo_id: RepositoryId::new(0),
-                restricted_paths: vec!["restricted/two"]
-                    .into_iter()
-                    .map(NonRootMPath::new)
-                    .collect::<Result<Vec<_>>>()?,
+                restricted_paths: cast_to_non_root_mpaths(vec!["restricted/two"]),
                 manifest_id: expected_manifest_id_two,
                 manifest_type: ManifestType::Hg,
                 client_identities: vec!["USER:myusername0"]
@@ -264,10 +249,7 @@ async fn test_mercurial_manifest_multiple_restricted_dirs(fb: FacebookInit) -> R
             },
             ScubaAccessLogSample {
                 repo_id: RepositoryId::new(0),
-                restricted_paths: vec!["restricted/one"]
-                    .into_iter()
-                    .map(NonRootMPath::new)
-                    .collect::<Result<Vec<_>>>()?,
+                restricted_paths: cast_to_non_root_mpaths(vec!["restricted/one"]),
                 manifest_id: expected_manifest_id_one,
                 manifest_type: ManifestType::Hg,
                 client_identities: vec!["USER:myusername0"]
@@ -328,10 +310,7 @@ async fn test_mercurial_manifest_multiple_restricted_dirs_with_partial_access(
         .expecting_scuba_access_logs(vec![
             ScubaAccessLogSample {
                 repo_id: RepositoryId::new(0),
-                restricted_paths: vec!["user_project/foo"]
-                    .into_iter()
-                    .map(NonRootMPath::new)
-                    .collect::<Result<Vec<_>>>()?,
+                restricted_paths: cast_to_non_root_mpaths(vec!["user_project/foo"]),
                 manifest_id: expected_manifest_id_user,
                 manifest_type: ManifestType::Hg,
                 client_identities: vec!["USER:myusername0"]
@@ -344,10 +323,7 @@ async fn test_mercurial_manifest_multiple_restricted_dirs_with_partial_access(
             },
             ScubaAccessLogSample {
                 repo_id: RepositoryId::new(0),
-                restricted_paths: vec!["restricted/one"]
-                    .into_iter()
-                    .map(NonRootMPath::new)
-                    .collect::<Result<Vec<_>>>()?,
+                restricted_paths: cast_to_non_root_mpaths(vec!["restricted/one"]),
                 manifest_id: expected_manifest_id_restricted,
                 manifest_type: ManifestType::Hg,
                 client_identities: vec!["USER:myusername0"]
@@ -409,10 +385,7 @@ async fn test_mercurial_manifest_overlapping_restricted_directories(
         .expecting_scuba_access_logs(vec![
             ScubaAccessLogSample {
                 repo_id: RepositoryId::new(0),
-                restricted_paths: vec!["project"]
-                    .into_iter()
-                    .map(NonRootMPath::new)
-                    .collect::<Result<Vec<_>>>()?,
+                restricted_paths: cast_to_non_root_mpaths(vec!["project"]),
                 manifest_id: expected_manifest_id_root,
                 manifest_type: ManifestType::Hg,
                 client_identities: vec!["USER:myusername0"]
@@ -425,10 +398,7 @@ async fn test_mercurial_manifest_overlapping_restricted_directories(
             },
             ScubaAccessLogSample {
                 repo_id: RepositoryId::new(0),
-                restricted_paths: vec!["project/restricted"]
-                    .into_iter()
-                    .map(NonRootMPath::new)
-                    .collect::<Result<Vec<_>>>()?,
+                restricted_paths: cast_to_non_root_mpaths(vec!["project/restricted"]),
                 manifest_id: expected_manifest_id_subdir,
                 manifest_type: ManifestType::Hg,
                 client_identities: vec!["USER:myusername0"]
@@ -480,10 +450,7 @@ async fn test_mercurial_manifest_same_manifest_id_restricted_and_unrestricted_pa
         .expecting_scuba_access_logs(vec![
             ScubaAccessLogSample {
                 repo_id: RepositoryId::new(0),
-                restricted_paths: vec!["restricted"]
-                    .into_iter()
-                    .map(NonRootMPath::new)
-                    .collect::<Result<Vec<_>>>()?,
+                restricted_paths: cast_to_non_root_mpaths(vec!["restricted"]),
                 manifest_id: expected_manifest_id.clone(),
                 manifest_type: ManifestType::Hg,
                 client_identities: vec!["USER:myusername0"]
@@ -496,10 +463,7 @@ async fn test_mercurial_manifest_same_manifest_id_restricted_and_unrestricted_pa
             },
             ScubaAccessLogSample {
                 repo_id: RepositoryId::new(0),
-                restricted_paths: vec!["restricted"]
-                    .into_iter()
-                    .map(NonRootMPath::new)
-                    .collect::<Result<Vec<_>>>()?,
+                restricted_paths: cast_to_non_root_mpaths(vec!["restricted"]),
                 manifest_id: expected_manifest_id,
                 manifest_type: ManifestType::Hg,
                 client_identities: vec!["USER:myusername0"]
