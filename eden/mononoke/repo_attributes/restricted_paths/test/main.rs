@@ -11,6 +11,7 @@ use anyhow::Result;
 use fbinit::FacebookInit;
 use mononoke_macros::mononoke;
 use mononoke_types::NonRootMPath;
+use mononoke_types::RepoPath;
 use mononoke_types::RepositoryId;
 use permission_checker::MononokeIdentity;
 use restricted_paths::*;
@@ -54,8 +55,8 @@ async fn test_mercurial_manifest_change_to_restricted_with_access_is_logged(
         .expecting_manifest_id_store_entries(vec![RestrictedPathManifestIdEntry::new(
             ManifestType::Hg,
             expected_manifest_id.clone(),
-            NonRootMPath::new("user_project/foo")?,
-        )])
+            RepoPath::dir("user_project/foo")?,
+        )?])
         .expecting_scuba_access_logs(vec![ScubaAccessLogSample {
             repo_id: RepositoryId::new(0),
             // The restricted path root is logged, not the full path
@@ -94,8 +95,8 @@ async fn test_mercurial_manifest_single_dir_single_restricted_change(
         .expecting_manifest_id_store_entries(vec![RestrictedPathManifestIdEntry::new(
             ManifestType::Hg,
             expected_manifest_id.clone(),
-            NonRootMPath::new("restricted/dir")?,
-        )])
+            RepoPath::dir("restricted/dir")?,
+        )?])
         .expecting_scuba_access_logs(vec![ScubaAccessLogSample {
             repo_id: RepositoryId::new(0),
             restricted_paths: cast_to_non_root_mpaths(vec!["restricted/dir"]),
@@ -135,8 +136,8 @@ async fn test_mercurial_manifest_single_dir_many_restricted_changes(
         .expecting_manifest_id_store_entries(vec![RestrictedPathManifestIdEntry::new(
             ManifestType::Hg,
             expected_manifest_id.clone(),
-            NonRootMPath::new("restricted/dir")?,
-        )])
+            RepoPath::dir("restricted/dir")?,
+        )?])
         .expecting_scuba_access_logs(vec![
             // Single log entry for both files, because they're under the same
             // restricted directory
@@ -181,8 +182,8 @@ async fn test_mercurial_manifest_single_dir_restricted_and_unrestricted(
         .expecting_manifest_id_store_entries(vec![RestrictedPathManifestIdEntry::new(
             ManifestType::Hg,
             expected_manifest_id.clone(),
-            NonRootMPath::new("restricted/dir")?,
-        )])
+            RepoPath::dir("restricted/dir")?,
+        )?])
         .expecting_scuba_access_logs(vec![ScubaAccessLogSample {
             repo_id: RepositoryId::new(0),
             restricted_paths: cast_to_non_root_mpaths(vec!["restricted/dir"]),
@@ -226,13 +227,13 @@ async fn test_mercurial_manifest_multiple_restricted_dirs(fb: FacebookInit) -> R
             RestrictedPathManifestIdEntry::new(
                 ManifestType::Hg,
                 expected_manifest_id_one.clone(),
-                NonRootMPath::new("restricted/one")?,
-            ),
+                RepoPath::dir("restricted/one")?,
+            )?,
             RestrictedPathManifestIdEntry::new(
                 ManifestType::Hg,
                 expected_manifest_id_two.clone(),
-                NonRootMPath::new("restricted/two")?,
-            ),
+                RepoPath::dir("restricted/two")?,
+            )?,
         ])
         .expecting_scuba_access_logs(vec![
             ScubaAccessLogSample {
@@ -299,13 +300,13 @@ async fn test_mercurial_manifest_multiple_restricted_dirs_with_partial_access(
             RestrictedPathManifestIdEntry::new(
                 ManifestType::Hg,
                 expected_manifest_id_user.clone(),
-                NonRootMPath::new("user_project/foo")?,
-            ),
+                RepoPath::dir("user_project/foo")?,
+            )?,
             RestrictedPathManifestIdEntry::new(
                 ManifestType::Hg,
                 expected_manifest_id_restricted.clone(),
-                NonRootMPath::new("restricted/one")?,
-            ),
+                RepoPath::dir("restricted/one")?,
+            )?,
         ])
         .expecting_scuba_access_logs(vec![
             ScubaAccessLogSample {
@@ -374,13 +375,13 @@ async fn test_mercurial_manifest_overlapping_restricted_directories(
             RestrictedPathManifestIdEntry::new(
                 ManifestType::Hg,
                 expected_manifest_id_root.clone(),
-                NonRootMPath::new("project")?,
-            ),
+                RepoPath::dir("project")?,
+            )?,
             RestrictedPathManifestIdEntry::new(
                 ManifestType::Hg,
                 expected_manifest_id_subdir.clone(),
-                NonRootMPath::new("project/restricted")?,
-            ),
+                RepoPath::dir("project/restricted")?,
+            )?,
         ])
         .expecting_scuba_access_logs(vec![
             ScubaAccessLogSample {
@@ -445,8 +446,8 @@ async fn test_mercurial_manifest_same_manifest_id_restricted_and_unrestricted_pa
         .expecting_manifest_id_store_entries(vec![RestrictedPathManifestIdEntry::new(
             ManifestType::Hg,
             expected_manifest_id.clone(),
-            NonRootMPath::new("restricted")?,
-        )])
+            RepoPath::dir("restricted")?,
+        )?])
         .expecting_scuba_access_logs(vec![
             ScubaAccessLogSample {
                 repo_id: RepositoryId::new(0),

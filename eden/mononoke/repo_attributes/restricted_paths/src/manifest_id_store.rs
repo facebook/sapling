@@ -14,7 +14,11 @@ use context::CoreContext;
 use metaconfig_types::RemoteDatabaseConfig;
 use metaconfig_types::RemoteMetadataDatabaseConfig;
 use mononoke_types::NonRootMPath;
+use mononoke_types::RepoPath;
 use mononoke_types::RepositoryId;
+use path_hash::PathBytes;
+use path_hash::PathHash;
+use path_hash::PathHashBytes;
 use smallvec::SmallVec;
 use sql::mysql_async::FromValueError;
 use sql::mysql_async::Value;
@@ -43,22 +47,44 @@ pub enum ManifestType {
     Hg,
 }
 
-/// Entry representing a restricted path with its manifest type and id  
+/// Entry representing a restricted path with its manifest type and id
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
 pub struct RestrictedPathManifestIdEntry {
-    pub manifest_type: ManifestType,
-    pub manifest_id: ManifestId,
-    pub path: NonRootMPath,
+    manifest_type: ManifestType,
+    manifest_id: ManifestId,
+    path: PathBytes,
+    path_hash: PathHashBytes,
     // TODO(T239041722): add changeset id to log changeset to which the manifest belongs to
 }
 
 impl RestrictedPathManifestIdEntry {
-    pub fn new(manifest_type: ManifestType, manifest_id: ManifestId, path: NonRootMPath) -> Self {
-        Self {
+    pub fn new(
+        manifest_type: ManifestType,
+        manifest_id: ManifestId,
+        repo_path: RepoPath,
+    ) -> Result<Self> {
+        // Ensure that only directory paths are stored
+        anyhow::ensure!(
+            matches!(&repo_path, RepoPath::DirectoryPath(_)),
+            "Path {repo_path} is not a non-root directory, so it can't be stored in the manifest store id"
+        );
+
+        let PathHash {
+            path_bytes: path,
+            hash: path_hash,
+            ..
+        } = PathHash::from_repo_path(&repo_path);
+        Ok(Self {
             manifest_type,
             manifest_id,
             path,
-        }
+            path_hash,
+        })
+    }
+
+    /// Convert the stored PathBytes back to RepoPath (assumes DirectoryPath)
+    pub fn repo_path(&self) -> Result<RepoPath> {
+        RepoPath::dir(NonRootMPath::new(&self.path.0)?)
     }
 }
 
@@ -77,7 +103,7 @@ pub trait RestrictedPathsManifestIdStore: Send + Sync {
     async fn add_entries(
         &self,
         ctx: &CoreContext,
-        entries: Vec<RestrictedPathManifestIdEntry>,
+        entries: &[RestrictedPathManifestIdEntry],
     ) -> Result<bool>;
 
     /// Get all restricted paths that match a specific manifest id
@@ -104,10 +130,14 @@ mononoke_queries! {
         repo_id: RepositoryId,
         manifest_type: ManifestType,
         manifest_id: ManifestId,
-        path: NonRootMPath,
+        path: PathBytes,
+        path_hash: PathHashBytes,
     )) {
         insert_or_ignore,
-        "{insert_or_ignore} INTO restricted_paths_manifest_ids (repo_id, manifest_type, manifest_id, path) VALUES {values}"
+        "{insert_or_ignore} INTO restricted_paths_manifest_ids
+        (repo_id, manifest_type, manifest_id, path, path_hash) 
+        VALUES {values}
+        "
     }
 
     read SelectPathsByManifestId(
@@ -161,13 +191,13 @@ impl RestrictedPathsManifestIdStore for SqlRestrictedPathsManifestIdStore {
         ctx: &CoreContext,
         entry: RestrictedPathManifestIdEntry,
     ) -> Result<bool> {
-        self.add_entries(ctx, vec![entry]).await
+        self.add_entries(ctx, &[entry]).await
     }
 
     async fn add_entries(
         &self,
         ctx: &CoreContext,
-        entries: Vec<RestrictedPathManifestIdEntry>,
+        entries: &[RestrictedPathManifestIdEntry],
     ) -> Result<bool> {
         let values: Vec<_> = entries
             .iter()
@@ -177,6 +207,7 @@ impl RestrictedPathsManifestIdStore for SqlRestrictedPathsManifestIdStore {
                     &entry.manifest_type,
                     &entry.manifest_id,
                     &entry.path,
+                    &entry.path_hash,
                 )
             })
             .collect();
@@ -206,7 +237,8 @@ impl RestrictedPathsManifestIdStore for SqlRestrictedPathsManifestIdStore {
         )
         .await?;
 
-        Ok(rows.into_iter().map(|row| row.0).collect())
+        let result: Vec<NonRootMPath> = rows.into_iter().map(|row| row.0).collect();
+        Ok(result)
     }
 
     async fn get_all_entries(
@@ -220,12 +252,12 @@ impl RestrictedPathsManifestIdStore for SqlRestrictedPathsManifestIdStore {
         )
         .await?;
 
-        Ok(rows
-            .into_iter()
-            .map(|(manifest_type, manifest_id, path)| {
-                RestrictedPathManifestIdEntry::new(manifest_type, manifest_id, path)
+        rows.into_iter()
+            .map(|(manifest_type, manifest_id, non_root_mpath)| {
+                let repo_path = RepoPath::DirectoryPath(non_root_mpath);
+                RestrictedPathManifestIdEntry::new(manifest_type, manifest_id, repo_path)
             })
-            .collect())
+            .collect::<Result<_>>()
     }
 
     fn repo_id(&self) -> RepositoryId {
@@ -399,12 +431,5 @@ impl FromValue for ManifestId {
 impl OptionalTryFromRowField for ManifestId {
     fn try_from_opt(field: RowField) -> Result<Option<Self>, ValueError> {
         opt_try_from_rowfield(field)
-    }
-}
-
-// Implement conversion from tuple (which is what the SQL query returns)
-impl From<(ManifestType, ManifestId, NonRootMPath)> for RestrictedPathManifestIdEntry {
-    fn from((manifest_type, manifest_id, path): (ManifestType, ManifestId, NonRootMPath)) -> Self {
-        Self::new(manifest_type, manifest_id, path)
     }
 }
