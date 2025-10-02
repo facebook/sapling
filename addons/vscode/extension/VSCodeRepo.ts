@@ -441,6 +441,15 @@ export class VSCodeRepo implements vscode.QuickDiffProvider, SaplingRepository {
       throw new Error(result.stderr);
     }
   }
+
+  async commit(title: string, commitMessage: string): Promise<void> {
+    const message = `${title}\n\n${commitMessage}`;
+    const result = await this.runSlCommand(['commit', '-m', message]);
+
+    if (result.exitCode !== 0) {
+      throw new Error(result.stderr);
+    }
+  }
 }
 
 const themeColors = {

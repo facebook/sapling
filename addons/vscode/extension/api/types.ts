@@ -100,6 +100,11 @@ export interface SaplingRepository {
    */
   getDiff(commit?: string): Promise<string>;
 
+  /**
+   * Commit uncommitted changes with the provided title and commit message.
+   */
+  commit(title: string, commitMessage: string): Promise<void>;
+
   // TODO: refresh
   // TODO: moveFile / copyFile
   // TODO: run operations (commit, amend, discard, purge, rebase, pull, ...)
