@@ -115,11 +115,13 @@ async fn test_mercurial_manifest_change_to_restricted_with_access_is_logged(
     )
     .await?;
 
+    let expected_manifest_id = ManifestId::from("f15543536ef8c0578589b6aa5a85e49233f38a6b");
+
     pretty_assertions::assert_eq!(
         manifest_id_store_entries,
         vec![RestrictedPathManifestIdEntry::new(
             ManifestType::Hg,
-            ManifestId::from("f15543536ef8c0578589b6aa5a85e49233f38a6b"),
+            expected_manifest_id.clone(),
             NonRootMPath::new("user_project/foo")?
         )]
     );
@@ -133,7 +135,7 @@ async fn test_mercurial_manifest_change_to_restricted_with_access_is_logged(
                 .into_iter()
                 .map(NonRootMPath::new)
                 .collect::<Result<Vec<_>>>()?,
-            manifest_id: ManifestId::from("f15543536ef8c0578589b6aa5a85e49233f38a6b"),
+            manifest_id: expected_manifest_id,
             manifest_type: ManifestType::Hg,
             client_identities: vec!["USER:myusername0"]
                 .into_iter()
@@ -169,16 +171,13 @@ async fn test_mercurial_manifest_single_dir_single_restricted_change(
     )
     .await?;
 
-    assert!(
-        !manifest_id_store_entries.is_empty(),
-        "Expected restricted paths manifest ids to be stored"
-    );
+    let expected_manifest_id = ManifestId::from("0e3837eaab4fb0454c78f290aeb747a201ccd05b");
 
     pretty_assertions::assert_eq!(
         manifest_id_store_entries,
         vec![RestrictedPathManifestIdEntry::new(
             ManifestType::Hg,
-            ManifestId::from("0e3837eaab4fb0454c78f290aeb747a201ccd05b"),
+            expected_manifest_id.clone(),
             NonRootMPath::new("restricted/dir")?
         )]
     );
@@ -191,7 +190,7 @@ async fn test_mercurial_manifest_single_dir_single_restricted_change(
                 .into_iter()
                 .map(NonRootMPath::new)
                 .collect::<Result<Vec<_>>>()?,
-            manifest_id: ManifestId::from("0e3837eaab4fb0454c78f290aeb747a201ccd05b"),
+            manifest_id: expected_manifest_id,
             manifest_type: ManifestType::Hg,
             client_identities: vec!["USER:myusername0"]
                 .into_iter()
@@ -228,16 +227,14 @@ async fn test_mercurial_manifest_single_dir_many_restricted_changes(
         &log_file_path,
     )
     .await?;
-    assert!(
-        !manifest_id_store_entries.is_empty(),
-        "Expected restricted paths manifest ids to be stored"
-    );
+
+    let expected_manifest_id = ManifestId::from("3132e75d8439632fc89f193cbf4f02b2b5428c6e");
 
     pretty_assertions::assert_eq!(
         manifest_id_store_entries,
         vec![RestrictedPathManifestIdEntry::new(
             ManifestType::Hg,
-            ManifestId::from("3132e75d8439632fc89f193cbf4f02b2b5428c6e"),
+            expected_manifest_id.clone(),
             NonRootMPath::new("restricted/dir")?
         )]
     );
@@ -253,7 +250,7 @@ async fn test_mercurial_manifest_single_dir_many_restricted_changes(
                     .into_iter()
                     .map(NonRootMPath::new)
                     .collect::<Result<Vec<_>>>()?,
-                manifest_id: ManifestId::from("3132e75d8439632fc89f193cbf4f02b2b5428c6e"),
+                manifest_id: expected_manifest_id,
                 manifest_type: ManifestType::Hg,
                 client_identities: vec!["USER:myusername0"]
                     .into_iter()
@@ -289,16 +286,14 @@ async fn test_mercurial_manifest_single_dir_restricted_and_unrestricted(
         &log_file_path,
     )
     .await?;
-    assert!(
-        !manifest_id_store_entries.is_empty(),
-        "Expected restricted paths manifest ids to be stored"
-    );
+
+    let expected_manifest_id = ManifestId::from("0e3837eaab4fb0454c78f290aeb747a201ccd05b");
 
     pretty_assertions::assert_eq!(
         manifest_id_store_entries,
         vec![RestrictedPathManifestIdEntry::new(
             ManifestType::Hg,
-            ManifestId::from("0e3837eaab4fb0454c78f290aeb747a201ccd05b"),
+            expected_manifest_id.clone(),
             NonRootMPath::new("restricted/dir")?
         ),]
     );
@@ -311,7 +306,7 @@ async fn test_mercurial_manifest_single_dir_restricted_and_unrestricted(
                 .into_iter()
                 .map(NonRootMPath::new)
                 .collect::<Result<Vec<_>>>()?,
-            manifest_id: ManifestId::from("0e3837eaab4fb0454c78f290aeb747a201ccd05b"),
+            manifest_id: expected_manifest_id,
             manifest_type: ManifestType::Hg,
             client_identities: vec!["USER:myusername0"]
                 .into_iter()
@@ -352,22 +347,20 @@ async fn test_mercurial_manifest_multiple_restricted_dirs(fb: FacebookInit) -> R
     )
     .await?;
 
-    assert!(
-        !manifest_id_store_entries.is_empty(),
-        "Expected restricted paths manifest ids to be stored"
-    );
+    let expected_manifest_id_one = ManifestId::from("e53be16502cbc6afeb30ef30de7f6d9841fd4cb1");
+    let expected_manifest_id_two = ManifestId::from("f5ca206223b4d531f0d65ff422273f901bc7a024");
 
     pretty_assertions::assert_eq!(
         manifest_id_store_entries,
         vec![
             RestrictedPathManifestIdEntry::new(
                 ManifestType::Hg,
-                ManifestId::from("e53be16502cbc6afeb30ef30de7f6d9841fd4cb1"),
+                expected_manifest_id_one.clone(),
                 NonRootMPath::new("restricted/one")?
             ),
             RestrictedPathManifestIdEntry::new(
                 ManifestType::Hg,
-                ManifestId::from("f5ca206223b4d531f0d65ff422273f901bc7a024"),
+                expected_manifest_id_two.clone(),
                 NonRootMPath::new("restricted/two")?
             ),
         ]
@@ -382,7 +375,7 @@ async fn test_mercurial_manifest_multiple_restricted_dirs(fb: FacebookInit) -> R
                     .into_iter()
                     .map(NonRootMPath::new)
                     .collect::<Result<Vec<_>>>()?,
-                manifest_id: ManifestId::from("f5ca206223b4d531f0d65ff422273f901bc7a024"),
+                manifest_id: expected_manifest_id_two,
                 manifest_type: ManifestType::Hg,
                 client_identities: vec!["USER:myusername0"]
                     .into_iter()
@@ -397,7 +390,7 @@ async fn test_mercurial_manifest_multiple_restricted_dirs(fb: FacebookInit) -> R
                     .into_iter()
                     .map(NonRootMPath::new)
                     .collect::<Result<Vec<_>>>()?,
-                manifest_id: ManifestId::from("e53be16502cbc6afeb30ef30de7f6d9841fd4cb1"),
+                manifest_id: expected_manifest_id_one,
                 manifest_type: ManifestType::Hg,
                 client_identities: vec!["USER:myusername0"]
                     .into_iter()
