@@ -70,7 +70,7 @@ async fn test_mercurial_manifest_no_restricted_change(fb: FacebookInit) -> Resul
         ctx,
         repo,
         log_file_path,
-    } = setup_restricted_paths_test(fb, restricted_paths).await?;
+    } = setup_restricted_paths_test(fb, restricted_paths, None).await?;
 
     let (manifest_id_store_entries, scuba_logs) = hg_manifest_test_with_restricted_paths(
         &ctx,
@@ -105,7 +105,7 @@ async fn test_mercurial_manifest_change_to_restricted_with_access_is_logged(
         ctx,
         repo,
         log_file_path,
-    } = setup_restricted_paths_test(fb, restricted_paths).await?;
+    } = setup_restricted_paths_test(fb, restricted_paths, None).await?;
 
     let (manifest_id_store_entries, scuba_logs) = hg_manifest_test_with_restricted_paths(
         &ctx,
@@ -159,7 +159,7 @@ async fn test_mercurial_manifest_single_dir_single_restricted_change(
         ctx,
         repo,
         log_file_path,
-    } = setup_restricted_paths_test(fb, restricted_paths).await?;
+    } = setup_restricted_paths_test(fb, restricted_paths, None).await?;
 
     let (manifest_id_store_entries, scuba_logs) = hg_manifest_test_with_restricted_paths(
         &ctx,
@@ -219,7 +219,7 @@ async fn test_mercurial_manifest_single_dir_many_restricted_changes(
         ctx,
         repo,
         log_file_path,
-    } = setup_restricted_paths_test(fb, restricted_paths).await?;
+    } = setup_restricted_paths_test(fb, restricted_paths, None).await?;
 
     let (manifest_id_store_entries, scuba_logs) = hg_manifest_test_with_restricted_paths(
         &ctx,
@@ -280,7 +280,7 @@ async fn test_mercurial_manifest_single_dir_restricted_and_unrestricted(
         ctx,
         repo,
         log_file_path,
-    } = setup_restricted_paths_test(fb, restricted_paths).await?;
+    } = setup_restricted_paths_test(fb, restricted_paths, None).await?;
 
     let (manifest_id_store_entries, scuba_logs) = hg_manifest_test_with_restricted_paths(
         &ctx,
@@ -342,7 +342,7 @@ async fn test_mercurial_manifest_multiple_restricted_dirs(fb: FacebookInit) -> R
         ctx,
         repo,
         log_file_path,
-    } = setup_restricted_paths_test(fb, restricted_paths).await?;
+    } = setup_restricted_paths_test(fb, restricted_paths, None).await?;
 
     let (manifest_id_store_entries, scuba_logs) = hg_manifest_test_with_restricted_paths(
         &ctx,
@@ -495,11 +495,12 @@ async fn hg_manifest_test_with_restricted_paths(
 
 /// Sets up an ACL file that will be used to create an ACL checker.
 /// The ACL provides the test user access to all repos and
-fn setup_acl_file() -> Result<std::path::PathBuf> {
+fn setup_acl_file(acl_json: Option<&str>) -> Result<std::path::PathBuf> {
     use std::io::Write;
 
     let mut temp_file = tempfile::NamedTempFile::new()?;
-    let acl_content = r#"{
+    let acl_content = acl_json.unwrap_or(
+        r#"{
   "repos": {
     "default": {
       "actions": {
@@ -520,7 +521,8 @@ fn setup_acl_file() -> Result<std::path::PathBuf> {
       }
     }
   }
-}"#;
+}"#,
+    );
 
     temp_file.write_all(acl_content.as_bytes())?;
     temp_file.flush()?;
@@ -531,9 +533,10 @@ fn setup_acl_file() -> Result<std::path::PathBuf> {
 async fn setup_test_repo(
     ctx: &CoreContext,
     restricted_paths: Vec<(NonRootMPath, MononokeIdentity)>,
+    acl_json: Option<&str>,
 ) -> Result<TestRepo> {
     let repo_id = RepositoryId::new(0);
-    let acl_file = setup_acl_file()?;
+    let acl_file = setup_acl_file(acl_json)?;
 
     let acl_provider = InternalAclProvider::from_file(&acl_file)
         .with_context(|| format!("Failed to load ACLs from '{}'", acl_file.to_string_lossy()))?;
@@ -565,6 +568,7 @@ async fn setup_test_repo(
 async fn setup_restricted_paths_test(
     fb: FacebookInit,
     restricted_paths: Vec<(NonRootMPath, MononokeIdentity)>,
+    acl_json: Option<&str>,
 ) -> Result<RestrictedPathsTestData> {
     let mut cri = ClientRequestInfo::new(ClientEntryPoint::Tests);
     cri.set_main_id(TEST_CLIENT_MAIN_ID.to_string());
@@ -588,7 +592,7 @@ async fn setup_restricted_paths_test(
         .metadata(Arc::new(metadata))
         .build();
     let ctx = CoreContext::test_mock_session(session_container);
-    let repo = setup_test_repo(&ctx, restricted_paths).await?;
+    let repo = setup_test_repo(&ctx, restricted_paths, acl_json).await?;
 
     let temp_file = tempfile::NamedTempFile::new()?;
     let log_file_path = temp_file.path().to_path_buf();
