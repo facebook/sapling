@@ -33,6 +33,7 @@ use mononoke_types::NonRootMPath;
 use mononoke_types::RepositoryId;
 use permission_checker::InternalAclProvider;
 use permission_checker::MononokeIdentity;
+use pretty_assertions::assert_eq;
 use repo_blobstore::RepoBlobstoreRef;
 use restricted_paths::SqlRestrictedPathsManifestIdStoreBuilder;
 use restricted_paths::*;
@@ -48,12 +49,18 @@ pub struct RestrictedPathsTestData {
     // a file to be created, along with its optional content. If no content is
     // provided, the file path itself is used as the content.
     pub file_path_changes: Vec<(String, Option<String>)>,
+    // The entries you expect in the manifest id store after the test runs
+    expected_manifest_entries: Option<Vec<RestrictedPathManifestIdEntry>>,
+    // The scuba logs you expect to be logged after the test runs
+    expected_scuba_logs: Option<Vec<ScubaAccessLogSample>>,
 }
 
 pub struct RestrictedPathsTestDataBuilder {
     restricted_paths: Vec<(NonRootMPath, MononokeIdentity)>,
     acl_json: Option<String>,
     file_path_changes: Vec<(String, Option<String>)>,
+    expected_manifest_entries: Option<Vec<RestrictedPathManifestIdEntry>>,
+    expected_scuba_logs: Option<Vec<ScubaAccessLogSample>>,
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -75,6 +82,8 @@ impl RestrictedPathsTestDataBuilder {
             restricted_paths: vec![],
             acl_json: None,
             file_path_changes: vec![],
+            expected_manifest_entries: None,
+            expected_scuba_logs: None,
         }
     }
 
@@ -96,6 +105,24 @@ impl RestrictedPathsTestDataBuilder {
             .into_iter()
             .map(|(path, content)| (path.to_string(), content.map(|s| s.to_string())))
             .collect();
+        self
+    }
+
+    // Set entries you expect in the manifest id store after the test runs
+    pub fn expecting_manifest_id_store_entries(
+        mut self,
+        expected_manifest_entries: Vec<RestrictedPathManifestIdEntry>,
+    ) -> Self {
+        self.expected_manifest_entries = Some(expected_manifest_entries);
+        self
+    }
+
+    // Set the scuba logs you expect to be logged after the test runs
+    pub fn expecting_scuba_access_logs(
+        mut self,
+        expected_scuba_logs: Vec<ScubaAccessLogSample>,
+    ) -> Self {
+        self.expected_scuba_logs = Some(expected_scuba_logs);
         self
     }
 
@@ -136,6 +163,8 @@ impl RestrictedPathsTestDataBuilder {
             repo,
             log_file_path,
             file_path_changes: self.file_path_changes,
+            expected_manifest_entries: self.expected_manifest_entries,
+            expected_scuba_logs: self.expected_scuba_logs,
         })
     }
 }
@@ -145,19 +174,13 @@ impl RestrictedPathsTestData {
     /// modifying those paths, derive the hg manifest and fetch all the hg manifests
     /// from the last changeset, to simulate access to all directories in the repo.
     ///
-    /// Returns:
-    /// - All the entries in the manifest id store, to check that the manifest ids
-    /// from restricted paths were stored after derivation.
-    /// - All Scuba logs from accessing restricted paths.
+    /// If expectations are set via the builder, this method will automatically verify
+    /// them against the actual results. Otherwise, it will just run the test without
+    /// any assertions.
     ///
     /// Each file path can optionally specify content. If no content is provided,
     /// the file path itself is used as the content.
-    pub async fn run_hg_manifest_test(
-        &self,
-    ) -> Result<(
-        Vec<RestrictedPathManifestIdEntry>,
-        Vec<ScubaAccessLogSample>,
-    )> {
+    pub async fn run_hg_manifest_test(&self) -> Result<()> {
         let mut commit_ctx = CreateCommitContext::new_root(&self.ctx, &self.repo);
         for (path, content) in &self.file_path_changes {
             let file_content = content.as_deref().unwrap_or(path.as_str());
@@ -213,7 +236,16 @@ impl RestrictedPathsTestData {
 
         println!("scuba_logs: {scuba_logs:#?}");
 
-        Ok((manifest_id_store_entries, scuba_logs))
+        // Verify expectations if they were set
+        if let Some(expected_manifest_entries) = &self.expected_manifest_entries {
+            assert_eq!(manifest_id_store_entries, *expected_manifest_entries);
+        }
+
+        if let Some(expected_scuba_logs) = &self.expected_scuba_logs {
+            assert_eq!(scuba_logs, *expected_scuba_logs);
+        }
+
+        Ok(())
     }
 }
 
