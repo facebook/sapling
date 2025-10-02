@@ -85,11 +85,63 @@ async fn test_mercurial_manifest_no_restricted_change(fb: FacebookInit) -> Resul
         "Manifest id store should be empty"
     );
 
-    // TODO(T239041722): ensure access to restricted paths is logged to scuba
+    assert!(
+        scuba_logs.is_empty(),
+        "No restricted paths being accessed, so there shouldn't be any scuba logs"
+    );
+
+    Ok(())
+}
+
+#[mononoke::fbinit_test]
+async fn test_mercurial_manifest_change_to_restricted_with_access_is_logged(
+    fb: FacebookInit,
+) -> Result<()> {
+    let restricted_paths = vec![(
+        NonRootMPath::new("user_project/foo").unwrap(),
+        MononokeIdentity::from_str("REPO_REGION:myusername_project")?,
+    )];
+    let RestrictedPathsTestData {
+        ctx,
+        repo,
+        log_file_path,
+    } = setup_restricted_paths_test(fb, restricted_paths).await?;
+
+    let (manifest_id_store_entries, scuba_logs) = hg_manifest_test_with_restricted_paths(
+        &ctx,
+        repo,
+        vec!["user_project/foo/bar/a"],
+        &log_file_path,
+    )
+    .await?;
+
+    pretty_assertions::assert_eq!(
+        manifest_id_store_entries,
+        vec![RestrictedPathManifestIdEntry::new(
+            ManifestType::Hg,
+            ManifestId::from("f15543536ef8c0578589b6aa5a85e49233f38a6b"),
+            NonRootMPath::new("user_project/foo")?
+        )]
+    );
+
     pretty_assertions::assert_eq!(
         scuba_logs,
-        vec![],
-        "Scuba access logs don't match expectation"
+        vec![ScubaAccessLogSample {
+            repo_id: RepositoryId::new(0),
+            // The restricted path root is logged, not the full path
+            restricted_paths: vec!["user_project/foo"]
+                .into_iter()
+                .map(NonRootMPath::new)
+                .collect::<Result<Vec<_>>>()?,
+            manifest_id: ManifestId::from("f15543536ef8c0578589b6aa5a85e49233f38a6b"),
+            manifest_type: ManifestType::Hg,
+            client_identities: vec!["USER:myusername0"]
+                .into_iter()
+                .map(String::from)
+                .collect::<Vec<_>>(),
+            has_authorization: true,
+            client_main_id: TEST_CLIENT_MAIN_ID.to_string(),
+        },]
     );
 
     Ok(())
@@ -131,11 +183,23 @@ async fn test_mercurial_manifest_single_dir_single_restricted_change(
         )]
     );
 
-    // TODO(T239041722): ensure access to restricted paths is logged to scuba
     pretty_assertions::assert_eq!(
         scuba_logs,
-        vec![],
-        "Scuba access logs don't match expectation"
+        vec![ScubaAccessLogSample {
+            repo_id: RepositoryId::new(0),
+            restricted_paths: vec!["restricted/dir"]
+                .into_iter()
+                .map(NonRootMPath::new)
+                .collect::<Result<Vec<_>>>()?,
+            manifest_id: ManifestId::from("0e3837eaab4fb0454c78f290aeb747a201ccd05b"),
+            manifest_type: ManifestType::Hg,
+            client_identities: vec!["USER:myusername0"]
+                .into_iter()
+                .map(String::from)
+                .collect::<Vec<_>>(),
+            has_authorization: false,
+            client_main_id: TEST_CLIENT_MAIN_ID.to_string(),
+        },]
     );
 
     Ok(())
@@ -178,11 +242,27 @@ async fn test_mercurial_manifest_single_dir_many_restricted_changes(
         )]
     );
 
-    // TODO(T239041722): ensure access to restricted paths is logged to scuba
     pretty_assertions::assert_eq!(
         scuba_logs,
-        vec![],
-        "Scuba access logs don't match expectation"
+        vec![
+            // Single log entry for both files, because they're under the same
+            // restricted directory
+            ScubaAccessLogSample {
+                repo_id: RepositoryId::new(0),
+                restricted_paths: vec!["restricted/dir"]
+                    .into_iter()
+                    .map(NonRootMPath::new)
+                    .collect::<Result<Vec<_>>>()?,
+                manifest_id: ManifestId::from("3132e75d8439632fc89f193cbf4f02b2b5428c6e"),
+                manifest_type: ManifestType::Hg,
+                client_identities: vec!["USER:myusername0"]
+                    .into_iter()
+                    .map(String::from)
+                    .collect::<Vec<_>>(),
+                has_authorization: false,
+                client_main_id: TEST_CLIENT_MAIN_ID.to_string(),
+            },
+        ]
     );
 
     Ok(())
@@ -223,11 +303,23 @@ async fn test_mercurial_manifest_single_dir_restricted_and_unrestricted(
         ),]
     );
 
-    // TODO(T239041722): ensure access to restricted paths is logged to scuba
     pretty_assertions::assert_eq!(
         scuba_logs,
-        vec![],
-        "Scuba access logs don't match expectation"
+        vec![ScubaAccessLogSample {
+            repo_id: RepositoryId::new(0),
+            restricted_paths: vec!["restricted/dir"]
+                .into_iter()
+                .map(NonRootMPath::new)
+                .collect::<Result<Vec<_>>>()?,
+            manifest_id: ManifestId::from("0e3837eaab4fb0454c78f290aeb747a201ccd05b"),
+            manifest_type: ManifestType::Hg,
+            client_identities: vec!["USER:myusername0"]
+                .into_iter()
+                .map(String::from)
+                .collect::<Vec<_>>(),
+            has_authorization: false,
+            client_main_id: TEST_CLIENT_MAIN_ID.to_string(),
+        },]
     );
 
     Ok(())
@@ -281,15 +373,48 @@ async fn test_mercurial_manifest_multiple_restricted_dirs(fb: FacebookInit) -> R
         ]
     );
 
-    // TODO(T239041722): ensure access to restricted paths is logged to scuba
     pretty_assertions::assert_eq!(
         scuba_logs,
-        vec![],
-        "Scuba access logs don't match expectation"
+        vec![
+            ScubaAccessLogSample {
+                repo_id: RepositoryId::new(0),
+                restricted_paths: vec!["restricted/two"]
+                    .into_iter()
+                    .map(NonRootMPath::new)
+                    .collect::<Result<Vec<_>>>()?,
+                manifest_id: ManifestId::from("f5ca206223b4d531f0d65ff422273f901bc7a024"),
+                manifest_type: ManifestType::Hg,
+                client_identities: vec!["USER:myusername0"]
+                    .into_iter()
+                    .map(String::from)
+                    .collect::<Vec<_>>(),
+                has_authorization: false,
+                client_main_id: TEST_CLIENT_MAIN_ID.to_string(),
+            },
+            ScubaAccessLogSample {
+                repo_id: RepositoryId::new(0),
+                restricted_paths: vec!["restricted/one"]
+                    .into_iter()
+                    .map(NonRootMPath::new)
+                    .collect::<Result<Vec<_>>>()?,
+                manifest_id: ManifestId::from("e53be16502cbc6afeb30ef30de7f6d9841fd4cb1"),
+                manifest_type: ManifestType::Hg,
+                client_identities: vec!["USER:myusername0"]
+                    .into_iter()
+                    .map(String::from)
+                    .collect::<Vec<_>>(),
+                has_authorization: false,
+                client_main_id: TEST_CLIENT_MAIN_ID.to_string(),
+            },
+        ]
     );
 
     Ok(())
 }
+
+// TODO(T239041722): find a way to test access to the restricted paths **with
+// the proper authorization**, i.e. `has_authorization` should be logged as
+// `false`.
 
 // TODO(T239041722): test overlapping restricted directories. Top-level ACL should
 // be enforced.

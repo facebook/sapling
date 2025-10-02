@@ -24,6 +24,9 @@ use mononoke_api::errors::MononokeError;
 use mononoke_types::MPathElement;
 use mononoke_types::hash::Blake3;
 use repo_blobstore::RepoBlobstoreRef;
+use restricted_paths::ManifestId;
+use restricted_paths::ManifestType;
+use restricted_paths::RestrictedPathsArc;
 use revisionstore_types::Metadata;
 
 use super::HgDataContext;
@@ -59,6 +62,22 @@ impl<R: MononokeRepo> HgTreeContext<R> {
         let ctx = repo_ctx.ctx();
         let blobstore = repo_ctx.repo().repo_blobstore();
         let envelope = fetch_manifest_envelope_opt(ctx, blobstore, manifest_id).await?;
+
+        let restricted_paths_enabled = justknobs::eval(
+            "scm/mononoke:enabled_restricted_paths_access_logging",
+            None, // hashing
+            // Adding a switch value to be able to disable writes only
+            Some("hg_tree_context_new_check_exists"),
+        )?;
+        if restricted_paths_enabled {
+            // TODO(T239041722): check if tree belongs to restricted path
+            let manifest_id = ManifestId::new(manifest_id.as_bytes().into());
+            let restricted_paths = repo_ctx.repo_ctx().repo().restricted_paths_arc();
+            let _is_retricted = restricted_paths
+                .log_access_if_restricted(ctx, manifest_id, ManifestType::Hg)
+                .await?;
+        }
+
         Ok(envelope.map(move |envelope| Self { repo_ctx, envelope }))
     }
 
