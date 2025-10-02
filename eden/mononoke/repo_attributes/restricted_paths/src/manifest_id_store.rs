@@ -49,6 +49,7 @@ pub struct RestrictedPathManifestIdEntry {
     pub manifest_type: ManifestType,
     pub manifest_id: ManifestId,
     pub path: NonRootMPath,
+    // TODO(T239041722): add changeset id to log changeset to which the manifest belongs to
 }
 
 impl RestrictedPathManifestIdEntry {
@@ -83,8 +84,9 @@ pub trait RestrictedPathsManifestIdStore: Send + Sync {
     async fn get_paths_by_manifest_id(
         &self,
         ctx: &CoreContext,
-        manifest_id: ManifestId,
-        manifest_type: ManifestType,
+        manifest_id: &ManifestId,
+        manifest_type: &ManifestType,
+        // TODO(T239041722): handle different paths with the same manifest id
     ) -> Result<Vec<NonRootMPath>>;
 
     /// Get all entries from the database
@@ -93,6 +95,8 @@ pub trait RestrictedPathsManifestIdStore: Send + Sync {
         ctx: &CoreContext,
         // TODO(T239041722): add limit
     ) -> Result<Vec<RestrictedPathManifestIdEntry>>;
+
+    fn repo_id(&self) -> RepositoryId;
 }
 
 mononoke_queries! {
@@ -190,15 +194,15 @@ impl RestrictedPathsManifestIdStore for SqlRestrictedPathsManifestIdStore {
     async fn get_paths_by_manifest_id(
         &self,
         ctx: &CoreContext,
-        manifest_id: ManifestId,
-        manifest_type: ManifestType,
+        manifest_id: &ManifestId,
+        manifest_type: &ManifestType,
     ) -> Result<Vec<NonRootMPath>> {
         let rows = SelectPathsByManifestId::query(
             &self.connections.read_connection,
             ctx.sql_query_telemetry(),
             &self.repo_id,
-            &manifest_id,
-            &manifest_type,
+            manifest_id,
+            manifest_type,
         )
         .await?;
 
@@ -222,6 +226,10 @@ impl RestrictedPathsManifestIdStore for SqlRestrictedPathsManifestIdStore {
                 RestrictedPathManifestIdEntry::new(manifest_type, manifest_id, path)
             })
             .collect())
+    }
+
+    fn repo_id(&self) -> RepositoryId {
+        self.repo_id
     }
 }
 

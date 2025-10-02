@@ -55,7 +55,7 @@ struct ScubaAccessLogSample {
     manifest_type: ManifestType,
     client_identities: Vec<String>,
     client_main_id: String,
-    unauthorized_access: bool,
+    has_authorization: bool,
 }
 
 const TEST_CLIENT_MAIN_ID: &str = "user:myusername0";
@@ -422,7 +422,11 @@ async fn setup_test_repo(
     );
 
     let config = RestrictedPathsConfig { path_acls };
-    let repo_restricted_paths = Arc::new(RestrictedPaths::new(config, manifest_id_store));
+    let repo_restricted_paths = Arc::new(RestrictedPaths::new(
+        config,
+        manifest_id_store,
+        acl_provider,
+    ));
 
     // Create the test repo
     let mut factory = TestRepoFactory::new(ctx.fb)?;
@@ -543,11 +547,11 @@ fn deserialize_scuba_log_file(
                         .transpose()?
                         .ok_or(anyhow!("missing manifest_type"))?;
 
-                    let unauthorized_access: bool = flattened_log["unauthorized_access"]
+                    let has_authorization: bool = flattened_log["has_authorization"]
                         .as_str()
                         .map(|st| st.parse::<bool>())
                         .transpose()?
-                        .ok_or(anyhow!("missing unauthorized_access"))?;
+                        .ok_or(anyhow!("missing has_authorization"))?;
 
                     let restricted_paths: Vec<NonRootMPath> = flattened_log["restricted_paths"]
                         .as_array()
@@ -578,7 +582,7 @@ fn deserialize_scuba_log_file(
                         manifest_id,
                         manifest_type,
                         client_identities,
-                        unauthorized_access,
+                        has_authorization,
                         client_main_id,
                     })
                 })?

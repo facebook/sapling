@@ -738,14 +738,17 @@ impl TestRepoFactory {
         &self,
         repo_config: &ArcRepoConfig,
         restricted_paths_manifest_id_store: &ArcRestrictedPathsManifestIdStore,
-    ) -> ArcRestrictedPaths {
+    ) -> Result<ArcRestrictedPaths> {
         if let Some(restricted_paths) = &self.restricted_paths {
-            return restricted_paths.clone();
+            return Ok(restricted_paths.clone());
         }
-        Arc::new(RestrictedPaths::new(
+
+        let acl_provider = DummyAclProvider::new(self.fb)?;
+        Ok(Arc::new(RestrictedPaths::new(
             repo_config.restricted_paths_config.clone(),
             restricted_paths_manifest_id_store.clone(),
-        ))
+            acl_provider,
+        )))
     }
 
     /// Restricted paths root ids store

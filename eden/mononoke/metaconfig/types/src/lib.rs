@@ -2150,3 +2150,10 @@ pub struct RestrictedPathsConfig {
     /// Map from path prefixes to ACL names for restricted path restrictions
     pub path_acls: HashMap<NonRootMPath, MononokeIdentity>,
 }
+
+impl RestrictedPathsConfig {
+    /// Checks if the config has any restricted paths
+    pub fn is_empty(&self) -> bool {
+        self.path_acls.is_empty()
+    }
+}

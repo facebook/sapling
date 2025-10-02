@@ -10,14 +10,19 @@
 //! Abstractions to track a repo's restricted paths, along with their ACLs,
 //! and to store the manifest ids of these paths from every revision.
 
+mod access_log;
 mod manifest_id_store;
 
 use std::sync::Arc;
 
+use anyhow::Result;
+use context::CoreContext;
 use metaconfig_types::RestrictedPathsConfig;
 use mononoke_types::NonRootMPath;
+use permission_checker::AclProvider;
 use permission_checker::MononokeIdentity;
 
+use crate::access_log::log_access_to_restricted_path;
 pub use crate::manifest_id_store::ArcRestrictedPathsManifestIdStore;
 pub use crate::manifest_id_store::ManifestId;
 pub use crate::manifest_id_store::ManifestType;
@@ -34,16 +39,20 @@ pub struct RestrictedPaths {
     config: RestrictedPathsConfig,
     /// Storage for the manifest ids of the restricted paths.
     manifest_id_store: ArcRestrictedPathsManifestIdStore,
+    /// ACL provider for authorization checks
+    acl_provider: Arc<dyn AclProvider>,
 }
 
 impl RestrictedPaths {
     pub fn new(
         config: RestrictedPathsConfig,
         manifest_id_store: Arc<dyn RestrictedPathsManifestIdStore>,
+        acl_provider: Arc<dyn AclProvider>,
     ) -> Self {
         Self {
             config,
             manifest_id_store,
+            acl_provider,
         }
     }
 
@@ -70,6 +79,13 @@ impl RestrictedPaths {
         }
 
         None
+    }
+
+    pub fn get_acls_for_paths(&self, paths: &[NonRootMPath]) -> Vec<&MononokeIdentity> {
+        paths
+            .iter()
+            .filter_map(|path| self.get_acl_for_path(path))
+            .collect()
     }
 
     /// If the **exact** path is considered restricted according to the
@@ -101,43 +117,94 @@ impl RestrictedPaths {
     pub fn has_restricted_paths(&self) -> bool {
         !self.config.path_acls.is_empty()
     }
+
+    /// Check if a manifest id belongs to a restricted path and log access it it.
+    ///
+    /// Returns true if caller is authorized to access it.
+    pub async fn log_access_if_restricted(
+        &self,
+        ctx: &CoreContext,
+        manifest_id: ManifestId,
+        manifest_type: ManifestType,
+    ) -> Result<bool> {
+        // No need to query the DB if the config is empty, i.e. the repo doesn't
+        // have any restricted paths.
+
+        if self.config().is_empty() {
+            return Ok(true);
+        }
+
+        let paths = self
+            .manifest_id_store
+            .get_paths_by_manifest_id(ctx, &manifest_id, &manifest_type)
+            .await?;
+
+        if paths.is_empty() {
+            return Ok(true);
+        }
+
+        let acls = self.get_acls_for_paths(paths.as_slice());
+
+        log_access_to_restricted_path(
+            ctx,
+            self.manifest_id_store.repo_id(),
+            paths,
+            acls,
+            manifest_id,
+            manifest_type,
+            self.acl_provider.clone(),
+        )
+        .await
+    }
 }
 
 #[cfg(test)]
 mod tests {
     use std::collections::HashMap;
     use std::str::FromStr;
+    use std::sync::Arc;
 
     use anyhow::Result;
+    use fbinit::FacebookInit;
     use mononoke_macros::mononoke;
     use mononoke_types::NonRootMPath;
     use mononoke_types::RepositoryId;
+    use permission_checker::dummy::DummyAclProvider;
     use sql_construct::SqlConstruct;
 
     use super::*;
     use crate::SqlRestrictedPathsManifestIdStoreBuilder;
 
-    #[mononoke::test]
-    fn test_empty_config() {
+    #[mononoke::fbinit_test]
+    fn test_empty_config(fb: FacebookInit) -> Result<()> {
         let repo_id = RepositoryId::new(0);
+
+        let acl_provider = DummyAclProvider::new(fb)?;
         let manifest_id_store = Arc::new(
             SqlRestrictedPathsManifestIdStoreBuilder::with_sqlite_in_memory()
                 .expect("Failed to create Sqlite connection")
                 .with_repo_id(repo_id),
         );
-        let repo_restricted_paths =
-            RestrictedPaths::new(RestrictedPathsConfig::default(), manifest_id_store);
+        let repo_restricted_paths = RestrictedPaths::new(
+            RestrictedPathsConfig::default(),
+            manifest_id_store,
+            acl_provider,
+        );
 
         assert!(!repo_restricted_paths.has_restricted_paths());
 
         let test_path = NonRootMPath::new("test/path").unwrap();
         assert!(repo_restricted_paths.get_acl_for_path(&test_path).is_none());
+
+        Ok(())
     }
 
-    #[mononoke::test]
-    fn test_with_config() -> Result<()> {
+    #[mononoke::fbinit_test]
+    fn test_with_config(fb: FacebookInit) -> Result<()> {
         let repo_id = RepositoryId::new(0);
         let mut path_acls = HashMap::new();
+
+        let acl_provider = DummyAclProvider::new(fb)?;
         path_acls.insert(
             NonRootMPath::new("restricted/dir").unwrap(),
             MononokeIdentity::from_str("SERVICE_IDENTITY:restricted_acl")?,
@@ -153,16 +220,18 @@ mod tests {
                 .with_repo_id(repo_id),
         );
         let config = RestrictedPathsConfig { path_acls };
-        let repo_restricted_paths = RestrictedPaths::new(config, manifest_id_store);
+        let repo_restricted_paths = RestrictedPaths::new(config, manifest_id_store, acl_provider);
 
         assert!(repo_restricted_paths.has_restricted_paths());
         Ok(())
     }
 
-    #[mononoke::test]
-    fn test_path_matching() -> Result<()> {
+    #[mononoke::fbinit_test]
+    fn test_path_matching(fb: FacebookInit) -> Result<()> {
         let repo_id = RepositoryId::new(0);
         let mut path_acls = HashMap::new();
+
+        let acl_provider = DummyAclProvider::new(fb)?;
         let restricted_acl = MononokeIdentity::from_str("SERVICE_IDENTITY:restricted_acl")?;
         path_acls.insert(
             NonRootMPath::new("restricted/dir").unwrap(),
@@ -176,7 +245,7 @@ mod tests {
         );
 
         let config = RestrictedPathsConfig { path_acls };
-        let repo_restricted_paths = RestrictedPaths::new(config, manifest_id_store);
+        let repo_restricted_paths = RestrictedPaths::new(config, manifest_id_store, acl_provider);
 
         // Test exact match
         let exact_path = NonRootMPath::new("restricted/dir").unwrap();

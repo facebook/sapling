@@ -16,10 +16,12 @@ anyhow = "1.0.98"
 async-trait = "0.1.86"
 context = { version = "0.1.0", path = "../../server/context" }
 facet = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
+futures = { version = "0.3.31", features = ["async-await", "compat"] }
 hex = { version = "0.4.3", features = ["alloc"] }
 metaconfig_types = { version = "0.1.0", path = "../../metaconfig/types" }
 mononoke_types = { version = "0.1.0", path = "../../mononoke_types" }
 permission_checker = { version = "0.1.0", path = "../../permission_checker" }
+scuba_ext = { version = "0.1.0", path = "../../common/scuba_ext" }
 smallvec = { version = "1.15", features = ["impl_bincode", "serde", "specialization", "union"] }
 sql = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 sql_construct = { version = "0.1.0", path = "../../common/sql_construct" }
@@ -30,7 +32,6 @@ strum = { version = "0.27.1", features = ["derive"] }
 blobstore = { version = "0.1.0", path = "../../blobstore" }
 fbinit = { version = "0.2.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 fbinit-tokio = { version = "0.1.2", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
-futures = { version = "0.3.31", features = ["async-await", "compat"] }
 itertools = "0.14.0"
 manifest = { version = "0.1.0", path = "../../manifest" }
 mercurial_derivation = { version = "0.1.0", path = "../../derived_data/mercurial_derivation" }

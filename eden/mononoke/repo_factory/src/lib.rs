@@ -1453,6 +1453,7 @@ impl RepoFactory {
         Arc::new(RestrictedPaths::new(
             repo_config.restricted_paths_config.clone(),
             restricted_paths_manifest_id_store.clone(),
+            self.env.acl_provider.clone(),
         ))
     }
 
