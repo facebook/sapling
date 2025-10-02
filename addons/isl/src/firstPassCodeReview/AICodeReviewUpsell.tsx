@@ -13,16 +13,22 @@ import clientToServerAPI from '../ClientToServerAPI';
 import {T} from '../i18n';
 import {codeReviewStatusAtom} from './firstPassCodeReviewAtoms';
 
-import {Internal} from '../Internal';
 import {tracker} from '../analytics';
 import {useFeatureFlagSync} from '../featureFlags';
+import {Internal} from '../Internal';
+import platform from '../platform';
 import './AICodeReviewUpsell.css';
 
-export function AICodeReviewUpsell(): JSX.Element {
+export function AICodeReviewUpsell(): JSX.Element | null {
   const [status, setStatus] = useAtom(codeReviewStatusAtom);
   const aiFirstPassCodeReviewEnabled = useFeatureFlagSync(
     Internal.featureFlags?.AIFirstPassCodeReview,
   );
+
+  // TODO: move this component to vscode/webview
+  if (platform.platformName !== 'vscode') {
+    return null;
+  }
 
   return (
     <Banner kind={BannerKind.default}>

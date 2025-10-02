@@ -53,7 +53,8 @@ export function AICodeReviewStatus(): JSX.Element | null {
   const error = useAtomValue(firstPassCommentError);
   const disambiguatedPaths = minimalDisambiguousPaths(Object.keys(commentsByFilePath));
 
-  if (status == null) {
+  // TODO: move this component to vscode/webview
+  if (platform.platformName !== 'vscode' || status == null) {
     return null;
   }
 
