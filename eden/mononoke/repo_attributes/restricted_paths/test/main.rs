@@ -75,7 +75,7 @@ async fn test_mercurial_manifest_no_restricted_change(fb: FacebookInit) -> Resul
     let (manifest_id_store_entries, scuba_logs) = hg_manifest_test_with_restricted_paths(
         &ctx,
         repo,
-        vec!["unrestricted/dir/a"],
+        vec![("unrestricted/dir/a", None)],
         &log_file_path,
     )
     .await?;
@@ -110,7 +110,7 @@ async fn test_mercurial_manifest_change_to_restricted_with_access_is_logged(
     let (manifest_id_store_entries, scuba_logs) = hg_manifest_test_with_restricted_paths(
         &ctx,
         repo,
-        vec!["user_project/foo/bar/a"],
+        vec![("user_project/foo/bar/a", None)],
         &log_file_path,
     )
     .await?;
@@ -164,7 +164,7 @@ async fn test_mercurial_manifest_single_dir_single_restricted_change(
     let (manifest_id_store_entries, scuba_logs) = hg_manifest_test_with_restricted_paths(
         &ctx,
         repo,
-        vec!["restricted/dir/a"],
+        vec![("restricted/dir/a", None)],
         &log_file_path,
     )
     .await?;
@@ -224,7 +224,7 @@ async fn test_mercurial_manifest_single_dir_many_restricted_changes(
     let (manifest_id_store_entries, scuba_logs) = hg_manifest_test_with_restricted_paths(
         &ctx,
         repo,
-        vec!["restricted/dir/a", "restricted/dir/b"],
+        vec![("restricted/dir/a", None), ("restricted/dir/b", None)],
         &log_file_path,
     )
     .await?;
@@ -285,7 +285,7 @@ async fn test_mercurial_manifest_single_dir_restricted_and_unrestricted(
     let (manifest_id_store_entries, scuba_logs) = hg_manifest_test_with_restricted_paths(
         &ctx,
         repo,
-        vec!["restricted/dir/a", "unrestricted/dir/b"],
+        vec![("restricted/dir/a", None), ("unrestricted/dir/b", None)],
         &log_file_path,
     )
     .await?;
@@ -347,7 +347,7 @@ async fn test_mercurial_manifest_multiple_restricted_dirs(fb: FacebookInit) -> R
     let (manifest_id_store_entries, scuba_logs) = hg_manifest_test_with_restricted_paths(
         &ctx,
         repo,
-        vec!["restricted/one/a", "restricted/two/b"],
+        vec![("restricted/one/a", None), ("restricted/two/b", None)],
         &log_file_path,
     )
     .await?;
@@ -429,18 +429,21 @@ async fn test_mercurial_manifest_multiple_restricted_dirs(fb: FacebookInit) -> R
 /// Given a list of restricted paths and a list of file paths, create a changeset
 /// modifying those paths, derive the hg manifest and return all the entries
 /// in the manifest id store.
+/// Each file path can optionally specify content. If no content is provided,
+/// the file path itself is used as the content.
 async fn hg_manifest_test_with_restricted_paths(
     ctx: &CoreContext,
     repo: TestRepo,
-    file_path_changes: Vec<&str>,
+    file_path_changes: Vec<(&str, Option<&str>)>,
     log_file_path: &std::path::Path,
 ) -> Result<(
     Vec<RestrictedPathManifestIdEntry>,
     Vec<ScubaAccessLogSample>,
 )> {
     let mut commit_ctx = CreateCommitContext::new_root(ctx, &repo);
-    for path in &file_path_changes {
-        commit_ctx = commit_ctx.add_file(*path, path.to_string());
+    for (path, content) in &file_path_changes {
+        let file_content = content.unwrap_or(path);
+        commit_ctx = commit_ctx.add_file(*path, file_content.to_string());
     }
 
     let bcs_id = commit_ctx.commit().await?;
@@ -466,7 +469,7 @@ async fn hg_manifest_test_with_restricted_paths(
 
     let _files_added = file_path_changes
         .into_iter()
-        .map(NonRootMPath::new)
+        .map(|(path, _content)| NonRootMPath::new(path))
         .collect::<Result<Vec<_>>>()?;
 
     // Derive hg changeset to add entry for restricted paths
