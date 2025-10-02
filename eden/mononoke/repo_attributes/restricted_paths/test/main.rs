@@ -24,19 +24,13 @@ async fn test_mercurial_manifest_no_restricted_change(fb: FacebookInit) -> Resul
         NonRootMPath::new("restricted/dir").unwrap(),
         MononokeIdentity::from_str("REPO_REGION:restricted_acl")?,
     )];
-    let RestrictedPathsTestData {
-        ctx,
-        repo,
-        log_file_path,
-    } = setup_restricted_paths_test(fb, restricted_paths, None).await?;
+    let test_data = RestrictedPathsTestDataBuilder::new()
+        .with_restricted_paths(restricted_paths)
+        .with_file_path_changes(vec![("unrestricted/dir/a", None)])
+        .build(fb)
+        .await?;
 
-    let (manifest_id_store_entries, scuba_logs) = hg_manifest_test_with_restricted_paths(
-        &ctx,
-        repo,
-        vec![("unrestricted/dir/a", None)],
-        &log_file_path,
-    )
-    .await?;
+    let (manifest_id_store_entries, scuba_logs) = test_data.run_hg_manifest_test().await?;
 
     assert!(
         manifest_id_store_entries.is_empty(),
@@ -59,19 +53,13 @@ async fn test_mercurial_manifest_change_to_restricted_with_access_is_logged(
         NonRootMPath::new("user_project/foo").unwrap(),
         MononokeIdentity::from_str("REPO_REGION:myusername_project")?,
     )];
-    let RestrictedPathsTestData {
-        ctx,
-        repo,
-        log_file_path,
-    } = setup_restricted_paths_test(fb, restricted_paths, None).await?;
+    let test_data = RestrictedPathsTestDataBuilder::new()
+        .with_restricted_paths(restricted_paths)
+        .with_file_path_changes(vec![("user_project/foo/bar/a", None)])
+        .build(fb)
+        .await?;
 
-    let (manifest_id_store_entries, scuba_logs) = hg_manifest_test_with_restricted_paths(
-        &ctx,
-        repo,
-        vec![("user_project/foo/bar/a", None)],
-        &log_file_path,
-    )
-    .await?;
+    let (manifest_id_store_entries, scuba_logs) = test_data.run_hg_manifest_test().await?;
 
     let expected_manifest_id = ManifestId::from("f15543536ef8c0578589b6aa5a85e49233f38a6b");
 
@@ -115,19 +103,13 @@ async fn test_mercurial_manifest_single_dir_single_restricted_change(
         NonRootMPath::new("restricted/dir").unwrap(),
         MononokeIdentity::from_str("REPO_REGION:restricted_acl")?,
     )];
-    let RestrictedPathsTestData {
-        ctx,
-        repo,
-        log_file_path,
-    } = setup_restricted_paths_test(fb, restricted_paths, None).await?;
+    let test_data = RestrictedPathsTestDataBuilder::new()
+        .with_restricted_paths(restricted_paths)
+        .with_file_path_changes(vec![("restricted/dir/a", None)])
+        .build(fb)
+        .await?;
 
-    let (manifest_id_store_entries, scuba_logs) = hg_manifest_test_with_restricted_paths(
-        &ctx,
-        repo,
-        vec![("restricted/dir/a", None)],
-        &log_file_path,
-    )
-    .await?;
+    let (manifest_id_store_entries, scuba_logs) = test_data.run_hg_manifest_test().await?;
 
     let expected_manifest_id = ManifestId::from("0e3837eaab4fb0454c78f290aeb747a201ccd05b");
 
@@ -172,19 +154,13 @@ async fn test_mercurial_manifest_single_dir_many_restricted_changes(
         NonRootMPath::new("restricted/dir").unwrap(),
         MononokeIdentity::from_str("REPO_REGION:restricted_acl")?,
     )];
-    let RestrictedPathsTestData {
-        ctx,
-        repo,
-        log_file_path,
-    } = setup_restricted_paths_test(fb, restricted_paths, None).await?;
+    let test_data = RestrictedPathsTestDataBuilder::new()
+        .with_restricted_paths(restricted_paths)
+        .with_file_path_changes(vec![("restricted/dir/a", None), ("restricted/dir/b", None)])
+        .build(fb)
+        .await?;
 
-    let (manifest_id_store_entries, scuba_logs) = hg_manifest_test_with_restricted_paths(
-        &ctx,
-        repo,
-        vec![("restricted/dir/a", None), ("restricted/dir/b", None)],
-        &log_file_path,
-    )
-    .await?;
+    let (manifest_id_store_entries, scuba_logs) = test_data.run_hg_manifest_test().await?;
 
     let expected_manifest_id = ManifestId::from("3132e75d8439632fc89f193cbf4f02b2b5428c6e");
 
@@ -231,19 +207,16 @@ async fn test_mercurial_manifest_single_dir_restricted_and_unrestricted(
         NonRootMPath::new("restricted/dir").unwrap(),
         MononokeIdentity::from_str("REPO_REGION:restricted_acl")?,
     )];
-    let RestrictedPathsTestData {
-        ctx,
-        repo,
-        log_file_path,
-    } = setup_restricted_paths_test(fb, restricted_paths, None).await?;
+    let test_data = RestrictedPathsTestDataBuilder::new()
+        .with_restricted_paths(restricted_paths)
+        .with_file_path_changes(vec![
+            ("restricted/dir/a", None),
+            ("unrestricted/dir/b", None),
+        ])
+        .build(fb)
+        .await?;
 
-    let (manifest_id_store_entries, scuba_logs) = hg_manifest_test_with_restricted_paths(
-        &ctx,
-        repo,
-        vec![("restricted/dir/a", None), ("unrestricted/dir/b", None)],
-        &log_file_path,
-    )
-    .await?;
+    let (manifest_id_store_entries, scuba_logs) = test_data.run_hg_manifest_test().await?;
 
     let expected_manifest_id = ManifestId::from("0e3837eaab4fb0454c78f290aeb747a201ccd05b");
 
@@ -291,19 +264,13 @@ async fn test_mercurial_manifest_multiple_restricted_dirs(fb: FacebookInit) -> R
             MononokeIdentity::from_str("REPO_REGION:another_acl")?,
         ),
     ];
-    let RestrictedPathsTestData {
-        ctx,
-        repo,
-        log_file_path,
-    } = setup_restricted_paths_test(fb, restricted_paths, None).await?;
+    let test_data = RestrictedPathsTestDataBuilder::new()
+        .with_restricted_paths(restricted_paths)
+        .with_file_path_changes(vec![("restricted/one/a", None), ("restricted/two/b", None)])
+        .build(fb)
+        .await?;
 
-    let (manifest_id_store_entries, scuba_logs) = hg_manifest_test_with_restricted_paths(
-        &ctx,
-        repo,
-        vec![("restricted/one/a", None), ("restricted/two/b", None)],
-        &log_file_path,
-    )
-    .await?;
+    let (manifest_id_store_entries, scuba_logs) = test_data.run_hg_manifest_test().await?;
 
     let expected_manifest_id_one = ManifestId::from("e53be16502cbc6afeb30ef30de7f6d9841fd4cb1");
     let expected_manifest_id_two = ManifestId::from("f5ca206223b4d531f0d65ff422273f901bc7a024");
@@ -380,19 +347,16 @@ async fn test_mercurial_manifest_multiple_restricted_dirs_with_partial_access(
             MononokeIdentity::from_str("REPO_REGION:myusername_project")?,
         ),
     ];
-    let RestrictedPathsTestData {
-        ctx,
-        repo,
-        log_file_path,
-    } = setup_restricted_paths_test(fb, restricted_paths, None).await?;
+    let test_data = RestrictedPathsTestDataBuilder::new()
+        .with_restricted_paths(restricted_paths)
+        .with_file_path_changes(vec![
+            ("restricted/one/a", None),
+            ("user_project/foo/b", None),
+        ])
+        .build(fb)
+        .await?;
 
-    let (manifest_id_store_entries, scuba_logs) = hg_manifest_test_with_restricted_paths(
-        &ctx,
-        repo,
-        vec![("restricted/one/a", None), ("user_project/foo/b", None)],
-        &log_file_path,
-    )
-    .await?;
+    let (manifest_id_store_entries, scuba_logs) = test_data.run_hg_manifest_test().await?;
 
     let expected_authorized_manifest_id =
         ManifestId::from("5d30a65c45e695416c96abfbd745f43c711879bb");
@@ -495,20 +459,15 @@ async fn test_mercurial_manifest_overlapping_restricted_directories(
   }
 }"#;
 
-    let RestrictedPathsTestData {
-        ctx,
-        repo,
-        log_file_path,
-    } = setup_restricted_paths_test(fb, restricted_paths, Some(custom_acl)).await?;
+    let test_data = RestrictedPathsTestDataBuilder::new()
+        .with_restricted_paths(restricted_paths)
+        .with_acl_json(Some(custom_acl))
+        .with_file_path_changes(vec![("project/restricted/sensitive_file.txt", None)])
+        .build(fb)
+        .await?;
 
     // Access a file in the more restricted nested path - this should trigger both ACL checks
-    let (manifest_id_store_entries, scuba_logs) = hg_manifest_test_with_restricted_paths(
-        &ctx,
-        repo,
-        vec![("project/restricted/sensitive_file.txt", None)],
-        &log_file_path,
-    )
-    .await?;
+    let (manifest_id_store_entries, scuba_logs) = test_data.run_hg_manifest_test().await?;
 
     let expected_manifest_id_root = ManifestId::from("0825286967058d61feb5b0031f4c23fa0a999965");
     let expected_manifest_id_subdir = ManifestId::from("5629398cf56074c359a05b1f170eb2590efe11c3");
@@ -584,27 +543,21 @@ async fn test_mercurial_manifest_same_manifest_id_restricted_and_unrestricted_pa
         MononokeIdentity::from_str("REPO_REGION:restricted_acl")?,
     )];
 
-    let RestrictedPathsTestData {
-        ctx,
-        repo,
-        log_file_path,
-    } = setup_restricted_paths_test(fb, restricted_paths, None).await?;
-
     // Create two files with the same content in directories that should have the same manifest ID:
     // - restricted/foo/bar (under restricted path)
     // - unrestricted/foo/bar (not under restricted path)
     // Both foo/bar subdirectories should have identical manifest IDs since they contain identical content
     let identical_content = "same file content";
-    let (manifest_id_store_entries, scuba_logs) = hg_manifest_test_with_restricted_paths(
-        &ctx,
-        repo,
-        vec![
+    let test_data = RestrictedPathsTestDataBuilder::new()
+        .with_restricted_paths(restricted_paths)
+        .with_file_path_changes(vec![
             ("restricted/foo/bar", Some(identical_content)),
             ("unrestricted/foo/bar", Some(identical_content)),
-        ],
-        &log_file_path,
-    )
-    .await?;
+        ])
+        .build(fb)
+        .await?;
+
+    let (manifest_id_store_entries, scuba_logs) = test_data.run_hg_manifest_test().await?;
 
     let expected_manifest_id = ManifestId::from("0464bc4205fd3b4651678b66778299a352bac0d8");
 

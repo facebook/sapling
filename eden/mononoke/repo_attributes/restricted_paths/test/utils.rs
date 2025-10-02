@@ -44,6 +44,16 @@ pub struct RestrictedPathsTestData {
     pub ctx: CoreContext,
     pub repo: TestRepo,
     pub log_file_path: std::path::PathBuf,
+    // The changes that should be made in the test's commit. Each entry represents
+    // a file to be created, along with its optional content. If no content is
+    // provided, the file path itself is used as the content.
+    pub file_path_changes: Vec<(String, Option<String>)>,
+}
+
+pub struct RestrictedPathsTestDataBuilder {
+    restricted_paths: Vec<(NonRootMPath, MononokeIdentity)>,
+    acl_json: Option<String>,
+    file_path_changes: Vec<(String, Option<String>)>,
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -59,123 +69,152 @@ pub struct ScubaAccessLogSample {
 
 pub const TEST_CLIENT_MAIN_ID: &str = "user:myusername0";
 
-/// Given a list of restricted paths and a list of file paths, create a changeset
-/// modifying those paths, derive the hg manifest and fetch all the hg manifests
-/// from the last changeset, to simulate access to all directories in the repo.
-///
-/// Returns:
-/// - All the entries in the manifest id store, to check that the manifest ids
-/// from restricted paths were stored after derivation.
-/// - All Scuba logs from accessing restricted paths.
-///
-/// Each file path can optionally specify content. If no content is provided,
-/// the file path itself is used as the content.
-pub async fn hg_manifest_test_with_restricted_paths(
-    ctx: &CoreContext,
-    repo: TestRepo,
-    file_path_changes: Vec<(&str, Option<&str>)>,
-    log_file_path: &std::path::Path,
-) -> Result<(
-    Vec<RestrictedPathManifestIdEntry>,
-    Vec<ScubaAccessLogSample>,
-)> {
-    let mut commit_ctx = CreateCommitContext::new_root(ctx, &repo);
-    for (path, content) in &file_path_changes {
-        let file_content = content.unwrap_or(path);
-        commit_ctx = commit_ctx.add_file(*path, file_content.to_string());
+impl RestrictedPathsTestDataBuilder {
+    pub fn new() -> Self {
+        Self {
+            restricted_paths: vec![],
+            acl_json: None,
+            file_path_changes: vec![],
+        }
     }
 
-    let bcs_id = commit_ctx.commit().await?;
+    pub fn with_restricted_paths(
+        mut self,
+        restricted_paths: Vec<(NonRootMPath, MononokeIdentity)>,
+    ) -> Self {
+        self.restricted_paths = restricted_paths;
+        self
+    }
 
-    // Get the hg changeset id for the commit, to trigger hg manifest derivation
-    let hg_cs_id = repo.derive_hg_changeset(ctx, bcs_id).await?;
+    pub fn with_acl_json<S: Into<String>>(mut self, acl_json: Option<S>) -> Self {
+        self.acl_json = acl_json.map(|s| s.into());
+        self
+    }
 
-    // Get all entries in the manifest id store
-    let manifest_id_store_entries = repo
-        .restricted_paths()
-        .manifest_id_store()
-        .get_all_entries(ctx)
-        .await?;
+    pub fn with_file_path_changes(mut self, file_path_changes: Vec<(&str, Option<&str>)>) -> Self {
+        self.file_path_changes = file_path_changes
+            .into_iter()
+            .map(|(path, content)| (path.to_string(), content.map(|s| s.to_string())))
+            .collect();
+        self
+    }
 
-    println!(
-        "manifest_id_store_entries: {:#?}",
-        manifest_id_store_entries
-    );
+    pub async fn build(self, fb: FacebookInit) -> Result<RestrictedPathsTestData> {
+        let mut cri = ClientRequestInfo::new(ClientEntryPoint::Tests);
+        cri.set_main_id(TEST_CLIENT_MAIN_ID.to_string());
+        let client_info = ClientInfo::new_with_client_request_info(cri);
 
-    let repo = Arc::new(repo);
-    let repo_ctx = RepoContext::new_test(ctx.clone(), repo.clone()).await?;
-    let hg_repo_ctx = repo_ctx.hg();
+        let identities = BTreeSet::from([MononokeIdentity::new("USER", "myusername0")]);
+        let metadata = {
+            let mut md = Metadata::new(
+                Some(&"restricted_paths_test".to_string()),
+                identities,
+                false,
+                false,
+                None,
+                None,
+            )
+            .await;
+            md.add_client_info(client_info);
+            md
+        };
+        let session_container = SessionContainer::builder(fb)
+            .metadata(Arc::new(metadata))
+            .build();
+        let ctx = CoreContext::test_mock_session(session_container);
+        let repo = setup_test_repo(&ctx, self.restricted_paths, self.acl_json.as_deref()).await?;
 
-    let _files_added = file_path_changes
-        .into_iter()
-        .map(|(path, _content)| NonRootMPath::new(path))
-        .collect::<Result<Vec<_>>>()?;
+        let temp_file = tempfile::NamedTempFile::new()?;
+        let log_file_path = temp_file.path().to_path_buf();
 
-    // Derive hg changeset to add entry for restricted paths
-    let hg_cs = hg_cs_id.load(ctx, repo.repo_blobstore()).await?;
-    let blobstore = Arc::new(repo.repo_blobstore().clone());
+        unsafe {
+            std::env::set_var("ACCESS_LOG_SCUBA_FILE_PATH", &log_file_path);
+        }
 
-    // Then get the root manifest id, get all the trees and run
-    // `HgTreeContext::new_check_exists` to simulate a directory access
-    let hg_manif_id = hg_cs.manifestid();
-    let _all_directories = hg_manif_id
-        .list_tree_entries(ctx.clone(), blobstore.clone())
-        .and_then(async |(path, hg_manifest_id)| {
-            HgTreeContext::new_check_exists(hg_repo_ctx.clone(), hg_manifest_id).await?;
-
-            Ok(path)
+        Ok(RestrictedPathsTestData {
+            ctx,
+            repo,
+            log_file_path,
+            file_path_changes: self.file_path_changes,
         })
-        .try_collect::<Vec<_>>()
-        .await?;
-
-    let scuba_logs = deserialize_scuba_log_file(log_file_path)?;
-
-    println!("scuba_logs: {scuba_logs:#?}");
-
-    Ok((manifest_id_store_entries, scuba_logs))
+    }
 }
 
-pub async fn setup_restricted_paths_test(
-    fb: FacebookInit,
-    restricted_paths: Vec<(NonRootMPath, MononokeIdentity)>,
-    acl_json: Option<&str>,
-) -> Result<RestrictedPathsTestData> {
-    let mut cri = ClientRequestInfo::new(ClientEntryPoint::Tests);
-    cri.set_main_id(TEST_CLIENT_MAIN_ID.to_string());
-    let client_info = ClientInfo::new_with_client_request_info(cri);
+impl RestrictedPathsTestData {
+    /// Given a list of restricted paths and a list of file paths, create a changeset
+    /// modifying those paths, derive the hg manifest and fetch all the hg manifests
+    /// from the last changeset, to simulate access to all directories in the repo.
+    ///
+    /// Returns:
+    /// - All the entries in the manifest id store, to check that the manifest ids
+    /// from restricted paths were stored after derivation.
+    /// - All Scuba logs from accessing restricted paths.
+    ///
+    /// Each file path can optionally specify content. If no content is provided,
+    /// the file path itself is used as the content.
+    pub async fn run_hg_manifest_test(
+        &self,
+    ) -> Result<(
+        Vec<RestrictedPathManifestIdEntry>,
+        Vec<ScubaAccessLogSample>,
+    )> {
+        let mut commit_ctx = CreateCommitContext::new_root(&self.ctx, &self.repo);
+        for (path, content) in &self.file_path_changes {
+            let file_content = content.as_deref().unwrap_or(path.as_str());
+            commit_ctx = commit_ctx.add_file(path.as_str(), file_content.to_string());
+        }
 
-    let identities = BTreeSet::from([MononokeIdentity::new("USER", "myusername0")]);
-    let metadata = {
-        let mut md = Metadata::new(
-            Some(&"restricted_paths_test".to_string()),
-            identities,
-            false,
-            false,
-            None,
-            None,
-        )
-        .await;
-        md.add_client_info(client_info);
-        md
-    };
-    let session_container = SessionContainer::builder(fb)
-        .metadata(Arc::new(metadata))
-        .build();
-    let ctx = CoreContext::test_mock_session(session_container);
-    let repo = setup_test_repo(&ctx, restricted_paths, acl_json).await?;
+        let bcs_id = commit_ctx.commit().await?;
 
-    let temp_file = tempfile::NamedTempFile::new()?;
-    let log_file_path = temp_file.path().to_path_buf();
+        // Get the hg changeset id for the commit, to trigger hg manifest derivation
+        let hg_cs_id = self.repo.derive_hg_changeset(&self.ctx, bcs_id).await?;
 
-    unsafe {
-        std::env::set_var("ACCESS_LOG_SCUBA_FILE_PATH", &log_file_path);
+        // Get all entries in the manifest id store
+        let manifest_id_store_entries = self
+            .repo
+            .restricted_paths()
+            .manifest_id_store()
+            .get_all_entries(&self.ctx)
+            .await?;
+
+        println!(
+            "manifest_id_store_entries: {:#?}",
+            manifest_id_store_entries
+        );
+
+        let repo = Arc::new(self.repo.clone());
+        let repo_ctx = RepoContext::new_test(self.ctx.clone(), repo.clone()).await?;
+        let hg_repo_ctx = repo_ctx.hg();
+
+        let _files_added = self
+            .file_path_changes
+            .iter()
+            .map(|(path, _content)| NonRootMPath::new(path))
+            .collect::<Result<Vec<_>>>()?;
+
+        // Derive hg changeset to add entry for restricted paths
+        let hg_cs = hg_cs_id.load(&self.ctx, self.repo.repo_blobstore()).await?;
+        let blobstore = Arc::new(self.repo.repo_blobstore().clone());
+
+        // Then get the root manifest id, get all the trees and run
+        // `HgTreeContext::new_check_exists` to simulate a directory access
+        let hg_manif_id = hg_cs.manifestid();
+        let _all_directories = hg_manif_id
+            .list_tree_entries(self.ctx.clone(), blobstore.clone())
+            .and_then(async |(path, hg_manifest_id)| {
+                HgTreeContext::new_check_exists(hg_repo_ctx.clone(), hg_manifest_id).await?;
+
+                Ok(path)
+            })
+            .try_collect::<Vec<_>>()
+            .await?;
+
+        let scuba_logs = deserialize_scuba_log_file(&self.log_file_path)?;
+
+        println!("scuba_logs: {scuba_logs:#?}");
+
+        Ok((manifest_id_store_entries, scuba_logs))
     }
-
-    Ok(RestrictedPathsTestData {
-        ctx,
-        repo,
-        log_file_path,
-    })
 }
 
 /// Sets up an ACL file that will be used to create an ACL checker.
