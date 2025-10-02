@@ -382,37 +382,17 @@ async fn test_mercurial_manifest_overlapping_restricted_directories(
         ),
     ];
 
-    // Custom ACL that gives access to project but NOT to project/restricted
-    let custom_acl = r#"{
-  "repos": {
-    "default": {
-      "actions": {
-        "read": ["USER:myusername0"],
-        "write": ["USER:myusername0"]
-      }
-    }
-  },
-  "repo_regions": {
-    "project_acl": {
-      "actions": {
-        "read": ["USER:myusername0"]
-      }
-    },
-    "more_restricted_acl": {
-      "actions": {
-        "read": ["USER:other_user"]
-      }
-    }
-  }
-}"#;
-
     let expected_manifest_id_root = ManifestId::from("0825286967058d61feb5b0031f4c23fa0a999965");
     let expected_manifest_id_subdir = ManifestId::from("5629398cf56074c359a05b1f170eb2590efe11c3");
 
     // Access a file in the more restricted nested path - this should trigger both ACL checks
+    // Custom ACL that gives access to project but NOT to project/restricted
     RestrictedPathsTestDataBuilder::new()
         .with_restricted_paths(restricted_paths)
-        .with_acl_json(Some(custom_acl))
+        .with_test_acls(vec![
+            ("project_acl", vec!["myusername0"]),
+            ("more_restricted_acl", vec!["other_user"]),
+        ])
         .with_file_path_changes(vec![("project/restricted/sensitive_file.txt", None)])
         .expecting_manifest_id_store_entries(vec![
             RestrictedPathManifestIdEntry::new(
@@ -520,7 +500,7 @@ async fn test_mercurial_manifest_same_manifest_id_restricted_and_unrestricted_pa
                     .into_iter()
                     .map(NonRootMPath::new)
                     .collect::<Result<Vec<_>>>()?,
-                manifest_id: expected_manifest_id.clone(),
+                manifest_id: expected_manifest_id,
                 manifest_type: ManifestType::Hg,
                 client_identities: vec!["USER:myusername0"]
                     .into_iter()

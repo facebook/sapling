@@ -23,6 +23,8 @@ pub use checker::PermissionCheckerBuilder;
 pub use identity::MononokeIdentity;
 pub use identity::MononokeIdentitySet;
 pub use identity::MononokeIdentitySetExt;
+pub use internal::Acl;
+pub use internal::Acls;
 pub use internal::InternalAclProvider;
 pub use membership::AlwaysMember;
 pub use membership::ArcMembershipChecker;

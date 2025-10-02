@@ -6,6 +6,7 @@
  */
 
 use std::collections::BTreeSet;
+use std::collections::HashMap;
 use std::str::FromStr;
 use std::sync::Arc;
 
@@ -22,6 +23,7 @@ use fbinit::FacebookInit;
 use futures::TryStreamExt;
 use itertools::Itertools;
 use manifest::ManifestOps;
+use maplit::hashmap;
 use mercurial_derivation::derive_hg_changeset::DeriveHgChangeset;
 use metaconfig_types::RestrictedPathsConfig;
 use metadata::Metadata;
@@ -31,8 +33,11 @@ use mononoke_api_hg::HgTreeContext;
 use mononoke_api_hg::RepoContextHgExt;
 use mononoke_types::NonRootMPath;
 use mononoke_types::RepositoryId;
+use permission_checker::Acl;
+use permission_checker::Acls;
 use permission_checker::InternalAclProvider;
 use permission_checker::MononokeIdentity;
+use permission_checker::MononokeIdentitySet;
 use pretty_assertions::assert_eq;
 use repo_blobstore::RepoBlobstoreRef;
 use restricted_paths::SqlRestrictedPathsManifestIdStoreBuilder;
@@ -57,7 +62,7 @@ pub struct RestrictedPathsTestData {
 
 pub struct RestrictedPathsTestDataBuilder {
     restricted_paths: Vec<(NonRootMPath, MononokeIdentity)>,
-    acl_json: Option<String>,
+    acls: Option<Acls>,
     file_path_changes: Vec<(String, Option<String>)>,
     expected_manifest_entries: Option<Vec<RestrictedPathManifestIdEntry>>,
     expected_scuba_logs: Option<Vec<ScubaAccessLogSample>>,
@@ -80,7 +85,7 @@ impl RestrictedPathsTestDataBuilder {
     pub fn new() -> Self {
         Self {
             restricted_paths: vec![],
-            acl_json: None,
+            acls: None,
             file_path_changes: vec![],
             expected_manifest_entries: None,
             expected_scuba_logs: None,
@@ -95,8 +100,8 @@ impl RestrictedPathsTestDataBuilder {
         self
     }
 
-    pub fn with_acl_json<S: Into<String>>(mut self, acl_json: Option<S>) -> Self {
-        self.acl_json = acl_json.map(|s| s.into());
+    pub fn with_test_acls(mut self, repo_regions_config: Vec<(&str, Vec<&str>)>) -> Self {
+        self.acls = Some(setup_test_acls(repo_regions_config).expect("Failed to create test ACLs"));
         self
     }
 
@@ -149,7 +154,7 @@ impl RestrictedPathsTestDataBuilder {
             .metadata(Arc::new(metadata))
             .build();
         let ctx = CoreContext::test_mock_session(session_container);
-        let repo = setup_test_repo(&ctx, self.restricted_paths, self.acl_json.as_deref()).await?;
+        let repo = setup_test_repo(&ctx, self.restricted_paths, self.acls).await?;
 
         let temp_file = tempfile::NamedTempFile::new()?;
         let log_file_path = temp_file.path().to_path_buf();
@@ -249,36 +254,76 @@ impl RestrictedPathsTestData {
     }
 }
 
+/// Creates an Acls structure for testing with specified repo regions and users.
+/// The ACL provides the test user access to all repos and specified repo regions.
+fn setup_test_acls(repo_regions_config: Vec<(&str, Vec<&str>)>) -> Result<Acls> {
+    let mut repo_regions = HashMap::new();
+
+    // Add each configured repo region
+    for (region_name, usernames) in repo_regions_config {
+        let mut users = MononokeIdentitySet::new();
+        for username in usernames {
+            users.insert(MononokeIdentity::from_str(&format!("USER:{}", username))?);
+        }
+
+        repo_regions.insert(
+            region_name.to_string(),
+            Arc::new(Acl {
+                actions: hashmap! {
+                    "read".to_string() => users,
+                },
+            }),
+        );
+    }
+
+    let default_user = MononokeIdentity::from_str("USER:myusername0")?;
+    let default_read_users = {
+        let mut users = MononokeIdentitySet::new();
+        users.insert(default_user.clone());
+        users
+    };
+    let default_write_users = {
+        let mut users = MononokeIdentitySet::new();
+        users.insert(default_user);
+        users
+    };
+
+    let repos = hashmap! {
+        "default".to_string() => Arc::new(Acl {
+            actions: hashmap! {
+                "read".to_string() => default_read_users,
+                "write".to_string() => default_write_users,
+            },
+        }),
+    };
+
+    Ok(Acls {
+        repos,
+        repo_regions,
+        tiers: HashMap::new(),
+        workspaces: HashMap::new(),
+        groups: HashMap::new(),
+    })
+}
+
+/// Creates a default Acls structure for testing.
+/// The ACL provides the test user access to all repos and appropriate repo regions.
+fn default_test_acls() -> Result<Acls> {
+    setup_test_acls(vec![
+        ("myusername_project", vec!["myusername0"]),
+        ("restricted_acl", vec!["another_user"]),
+    ])
+}
+
 /// Sets up an ACL file that will be used to create an ACL checker.
-/// The ACL provides the test user access to all repos and
-fn setup_acl_file(acl_json: Option<&str>) -> Result<std::path::PathBuf> {
+/// The ACL provides the test user access to all repos and appropriate repo regions.
+fn setup_acl_file(acls: Option<Acls>) -> Result<std::path::PathBuf> {
     use std::io::Write;
 
     let mut temp_file = tempfile::NamedTempFile::new()?;
-    let acl_content = acl_json.unwrap_or(
-        r#"{
-  "repos": {
-    "default": {
-      "actions": {
-        "read": ["USER:myusername0"],
-        "write": ["USER:myusername0"]
-      }
-    }
-  },
-  "repo_regions": {
-    "myusername_project": {
-      "actions": {
-        "read": ["USER:myusername0"]
-      }
-    },
-    "restricted_acl": {
-      "actions": {
-        "read": ["USER:another_user"]
-      }
-    }
-  }
-}"#,
-    );
+
+    let acls = acls.unwrap_or_else(|| default_test_acls().expect("Failed to create default ACLs"));
+    let acl_content = serde_json::to_string_pretty(&acls)?;
 
     temp_file.write_all(acl_content.as_bytes())?;
     temp_file.flush()?;
@@ -289,10 +334,10 @@ fn setup_acl_file(acl_json: Option<&str>) -> Result<std::path::PathBuf> {
 async fn setup_test_repo(
     ctx: &CoreContext,
     restricted_paths: Vec<(NonRootMPath, MononokeIdentity)>,
-    acl_json: Option<&str>,
+    acls: Option<Acls>,
 ) -> Result<TestRepo> {
     let repo_id = RepositoryId::new(0);
-    let acl_file = setup_acl_file(acl_json)?;
+    let acl_file = setup_acl_file(acls)?;
 
     let acl_provider = InternalAclProvider::from_file(&acl_file)
         .with_context(|| format!("Failed to load ACLs from '{}'", acl_file.to_string_lossy()))?;
