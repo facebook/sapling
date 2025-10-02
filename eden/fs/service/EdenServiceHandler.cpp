@@ -4772,9 +4772,6 @@ EdenServiceHandler::semifuture_debugGetBlob(
   auto config = server_->getServerState()->getEdenConfig();
   bool use_coroutines = config->enableCoroutinesInDebugGetBlob.getValue();
 
-  // Add instrumentation for monitoring rollout
-  XLOG(DBG2) << "debugGetBlob using coroutines: " << use_coroutines;
-
   if (use_coroutines) {
     return co_debugGetBlobImpl(std::move(request)).semi();
   } else {
