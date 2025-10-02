@@ -407,22 +407,18 @@ impl<Value: ShardedMapV2Value> ShardedMapV2Node<Value> {
         // node will be the number of children plus one if the current node has a value.
         let weight = &mut (current_value.as_ref().map_or(0, |v| v.weight()) + children.len());
 
-        let children_pre_inlining_futures = children
-            .into_iter()
+        let children_pre_inlining = stream::iter(children)
             .map(|(next_byte, entries)| async move {
                 let child = Self::from_entries_inner(ctx, blobstore, entries).await?;
                 anyhow::Ok((next_byte, child))
             })
-            .collect::<Vec<_>>();
-        let children_pre_inlining = stream::iter(children_pre_inlining_futures)
             .buffer_unordered(100)
             .try_collect::<SortedVectorMap<_, _>>()
             .await?;
 
         // Go through each child in order and check if inlining will not cause the weight
         // of the current node to go beyond the weight limit.
-        let children_futures = children_pre_inlining
-            .into_iter()
+        let children = stream::iter(children_pre_inlining)
             .map(|(next_byte, child)| {
                 if *weight + child.weight() - 1 <= Value::WEIGHT_LIMIT {
                     // Below limit: inline it.
@@ -437,8 +433,6 @@ impl<Value: ShardedMapV2Value> ShardedMapV2Node<Value> {
                     )
                 }
             })
-            .collect::<Vec<_>>();
-        let children = stream::iter(children_futures)
             .buffer_unordered(100)
             .try_collect::<SortedVectorMap<_, _>>()
             .await?;
