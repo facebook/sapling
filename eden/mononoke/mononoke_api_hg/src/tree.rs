@@ -21,6 +21,7 @@ use mercurial_types::fetch_manifest_envelope;
 use mercurial_types::fetch_manifest_envelope_opt;
 use mononoke_api::MononokeRepo;
 use mononoke_api::errors::MononokeError;
+use mononoke_macros::mononoke;
 use mononoke_types::MPathElement;
 use mononoke_types::hash::Blake3;
 use repo_blobstore::RepoBlobstoreRef;
@@ -70,13 +71,16 @@ impl<R: MononokeRepo> HgTreeContext<R> {
             Some("hg_tree_context_new_check_exists"),
         )?;
         if restricted_paths_enabled {
+            let ctx_clone = ctx.clone();
             let manifest_id = ManifestId::new(manifest_id.as_bytes().into());
             let restricted_paths = repo_ctx.repo_ctx().repo().restricted_paths_arc();
 
-            // TODO(T239041722): check  and log asynchronously
-            let _is_retricted = restricted_paths
-                .log_access_if_restricted(ctx, manifest_id, ManifestType::Hg)
-                .await?;
+            // Spawn asynchronous task for logging restricted path access
+            let _spawned_task = mononoke::spawn_task(async move {
+                let _is_restricted = restricted_paths
+                    .log_access_if_restricted(&ctx_clone, manifest_id, ManifestType::Hg)
+                    .await;
+            });
         }
 
         Ok(envelope.map(move |envelope| Self { repo_ctx, envelope }))

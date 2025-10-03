@@ -48,3 +48,4 @@ serde_json = { version = "1.0.140", features = ["alloc", "float_roundtrip", "raw
 tempfile = "3.22"
 test_repo_factory = { version = "0.1.0", path = "../../repo_factory/test_repo_factory" }
 tests_utils = { version = "0.1.0", path = "../../tests/utils" }
+tokio = { version = "1.47.1", features = ["full", "test-util", "tracing"] }

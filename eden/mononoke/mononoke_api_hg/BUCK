@@ -36,6 +36,7 @@ rust_library(
         "//eden/mononoke/mercurial:mercurial_types",
         "//eden/mononoke/metaconfig:metaconfig_types",
         "//eden/mononoke/mononoke_api:mononoke_api",
+        "//eden/mononoke/mononoke_macros:mononoke_macros",
         "//eden/mononoke/mononoke_types:mononoke_types",
         "//eden/mononoke/phases:phases",
         "//eden/mononoke/repo_attributes/commit_graph/commit_graph:commit_graph",

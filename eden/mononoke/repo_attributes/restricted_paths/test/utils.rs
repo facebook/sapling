@@ -237,6 +237,10 @@ impl RestrictedPathsTestData {
             .try_collect::<Vec<_>>()
             .await?;
 
+        // Access is logged asynchronously, so wait for a bit before reading
+        // the log file
+        tokio::time::sleep(std::time::Duration::from_millis(200)).await;
+
         let scuba_logs = deserialize_scuba_log_file(&self.log_file_path)?;
 
         println!("scuba_logs: {scuba_logs:#?}");
