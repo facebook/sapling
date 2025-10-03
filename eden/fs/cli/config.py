@@ -966,7 +966,7 @@ Do you want to run `eden mount %s` instead?"""
     def set_intentionally_unmounted_for_all_mounts(self) -> None:
         clients_dir = self._get_clients_dir()
         intentionally_unmounted_files = [
-            p / INTENTIONALLY_UNMOUNTED for p in clients_dir.glob("*")
+            p / INTENTIONALLY_UNMOUNTED for p in clients_dir.glob("*") if p.is_dir()
         ]
         for f in intentionally_unmounted_files:
             f.touch()
