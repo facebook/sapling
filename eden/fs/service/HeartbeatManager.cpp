@@ -155,7 +155,7 @@ bool HeartbeatManager::checkForPreviousHeartbeat(
                                                 bootTime,
                                                 logMemoryPressure](auto&&) {
               std::optional<bool> maybeMemoryPressure = std::nullopt;
-              std::string memoryPressureErrorStr = "";
+              std::string memoryPressureErrorStr;
               if (logMemoryPressure) {
                 auto isMemoryPressure =
                     self->isMemoryPressureInSystemLog(latestDaemonHeartbeat);
