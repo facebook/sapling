@@ -339,7 +339,8 @@ export function CommitInfoDetails({commit}: {commit: CommitInfo}) {
                       />
                       {aiCodeReviewUpsellEnabled &&
                         Internal.aiCodeReview?.enabled &&
-                        commit.isDot && <AICodeReviewUpsell />}
+                        commit.isDot &&
+                        !isPublic && <AICodeReviewUpsell />}
                       {!isPublic && isIrrelevantToCwd ? (
                         <Tooltip
                           title={
