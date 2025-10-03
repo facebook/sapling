@@ -934,11 +934,11 @@ class SparseMixin:
         raw = ""
         if _isedensparse(self):
             profiles = list(profiles)
-            if len(profiles) > 1 or len(include) != 0 or len(exclude) != 0:
+            if len(include) != 0 or len(exclude) != 0:
                 raise error.ProgrammingError(
-                    "the edensparse extension only supports 1 active profile (and no additional includes/excludes) at a time"
+                    "the edensparse extension does not support additional includes/excludes"
                 )
-            raw = f"%include {profiles[0]}" if len(profiles) == 1 else ""
+            raw = "".join([f"%include {p}\n" for p in sorted(profiles)])
         else:
             raw = "%s[include]\n%s\n[exclude]\n%s\n" % (
                 "".join(["%%include %s\n" % p for p in sorted(profiles)]),
@@ -1568,9 +1568,9 @@ def readsparseconfig(
     rawconfig = RawSparseConfig(raw, filename, lines, profiles, metadata)
     if _isedensparse(repo):
         include, exclude = rawconfig.toincludeexclude()
-        if depth == 0 and (len(profiles) > 1 or len(include) != 0 or len(exclude) != 0):
+        if depth == 0 and (len(include) != 0 or len(exclude) != 0):
             raise error.ProgrammingError(
-                "the edensparse extension only supports 1 active profile (and no additional includes/excludes) at a time"
+                "the edensparse extension does not support additional includes/excludes"
             )
         elif depth > 0 and len(profiles) > 0:
             raise error.ProgrammingError(
@@ -2939,12 +2939,7 @@ def _config(
             elif enableprofile:
                 newprofiles.update(pats)
             elif disableprofile:
-                if _isedensparse(repo):
-                    # There's only 1 profile active at a time for edensparse
-                    # checkouts, so we can simply disable it
-                    newprofiles = set()
-                else:
-                    newprofiles.difference_update(pats)
+                newprofiles.difference_update(pats)
             elif uninclude:
                 newinclude.difference_update(pats)
             elif unexclude:

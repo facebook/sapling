@@ -134,8 +134,7 @@ adir/file
         self.hg("filteredfs", "switch", *paths)
 
     def disable_filters(self, *paths: str) -> None:
-        # TODO: Make disable support paths
-        self.hg("filteredfs", "disable")
+        self.hg("filteredfs", "disable", *paths)
 
     def _get_relative_filter_config_path(self) -> str:
         return os.path.join(".hg", "sparse")

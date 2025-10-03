@@ -168,16 +168,27 @@ def show(ui, repo, **opts) -> None:
     _showsubcmdlogic(ui, repo, opts)
 
 
-@subcmd("disable|disableprofile|disablefilter|reset", _common_config_opts)
-def disablefiltersubcmd(ui, repo, **opts) -> None:
-    """disable the current active filter (i.e. activates the null filter)
+@subcmd("reset", _common_config_opts)
+def resetsubcmd(ui, repo, **opts) -> None:
+    """disable all filter profiles
 
     Note: This command does not switch you from a FilteredFS repo to a vanilla
-    EdenFS repo. It simply disables the active filter and applies the null
-    filter to the working copy.
+    EdenFS repo. It simply disables all filters and activates the null filter.
     """
     commonopts = getcommonopts(opts)
-    _config(ui, repo, [], opts, disableprofile=True, **commonopts)
+    _config(ui, repo, [], opts, reset=True, **commonopts)
+
+
+@subcmd("disable|disableprofile|disablefilter", _common_config_opts)
+def disablefiltersubcmd(ui, repo, *pats, **opts) -> None:
+    """disable the specified filter.
+
+    Note: This command does not switch you from a FilteredFS repo to a vanilla
+    EdenFS repo. It simply disables the specified filter. If all filters are
+    disabled, the null filter is activated.
+    """
+    commonopts = getcommonopts(opts)
+    _config(ui, repo, pats, opts, disableprofile=True, **commonopts)
 
 
 @subcmd(
