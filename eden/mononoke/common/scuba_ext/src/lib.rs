@@ -209,6 +209,10 @@ impl MononokeScubaSampleBuilder {
                 "scm/mononoke:retry_query_from_replica_with_consistency_check",
                 vec!["newfilenodes::reader", "bonsai_hg_mapping"],
             ),
+            (
+                "scm/mononoke:enabled_restricted_paths_access_logging",
+                vec!["hg_manifest_write", "hg_tree_context_new_check_exists"],
+            ),
         ];
         let enabled_experiments_jk: Vec<String> = jk_and_switches
             .into_iter()

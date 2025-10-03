@@ -70,9 +70,10 @@ impl<R: MononokeRepo> HgTreeContext<R> {
             Some("hg_tree_context_new_check_exists"),
         )?;
         if restricted_paths_enabled {
-            // TODO(T239041722): check if tree belongs to restricted path
             let manifest_id = ManifestId::new(manifest_id.as_bytes().into());
             let restricted_paths = repo_ctx.repo_ctx().repo().restricted_paths_arc();
+
+            // TODO(T239041722): check  and log asynchronously
             let _is_retricted = restricted_paths
                 .log_access_if_restricted(ctx, manifest_id, ManifestType::Hg)
                 .await?;
