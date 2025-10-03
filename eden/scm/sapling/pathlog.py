@@ -15,7 +15,7 @@ from .util import timer
 
 BATCH_SIZE = 500
 
-FASTLOG_MAX = 100
+FASTLOG_BATCH_SIZE = 100
 FASTLOG_TIMEOUT = 50
 
 
@@ -33,7 +33,6 @@ def pathlog(repo, node, path, is_prefetch_commit_text=False) -> Iterable[bytes]:
             repo,
             node,
             path,
-            batch_size=BATCH_SIZE,
             is_prefetch_commit_text=is_prefetch_commit_text,
             stats=PathlogStats(),
         )
@@ -92,7 +91,7 @@ def strategy_fastlog(
     repo,
     node,
     path,
-    batch_size=FASTLOG_MAX,
+    batch_size=None,
     is_prefetch_commit_text=False,
     stats=None,
     scm_type: str = "hg",
@@ -108,6 +107,9 @@ def strategy_fastlog(
     start_hex = hex(node)
     skip = 0
     use_mutable_history = repo.ui.configbool("fastlog", "followmutablehistory")
+    batch_size = batch_size or repo.ui.configint(
+        "fastlog", "batchsize", FASTLOG_BATCH_SIZE
+    )
     start_time = int(timer())
 
     while True:
