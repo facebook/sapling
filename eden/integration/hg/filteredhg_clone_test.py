@@ -157,8 +157,7 @@ filtered
                 )
             )
             self.assertEqual("null", result.filterId)
-            # FIXME: we should pass fid along with filterId
-            self.assertIsNone(result.fid)
+            self.assertEqual(b"null", result.fid)
 
     async def test_eden_get_filter(self) -> None:
         path = self.eden_clone_filteredhg_repo(
@@ -172,11 +171,13 @@ filtered
                 )
             )
             self.assertIsNotNone(result.filterId)
-            # FIXME: we should pass fid along with filterId
-            self.assertIsNone(result.fid)
+            self.assertIsNotNone(result.fid)
             expected_fid = f"tools/scm/filter/filter1:{self.initial_commit}"
-            if result.filterId is not None:
-                self.assertEqual(expected_fid, result.filterId)
+            self.assertEqual(expected_fid, result.filterId)
+            self.assertEqual(
+                expected_fid.encode("utf-8"),
+                result.fid,
+            )
 
 
 @hg_test

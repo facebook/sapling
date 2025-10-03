@@ -972,6 +972,8 @@ void EdenServiceHandler::getCurrentSnapshotInfo(
       mountHandle.getEdenMount().getCheckoutConfig()->getLastActiveFilter();
 
   if (filterId.has_value()) {
+    out.fid() = filterId.value();
+    // TODO(T238835643): deprecate filterId field
     out.filterId() = std::move(filterId.value());
   }
 }
