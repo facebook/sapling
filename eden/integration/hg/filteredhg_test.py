@@ -124,6 +124,12 @@ adir/file
 
         self.initial_commit = repo.commit("Initial commit.")
 
+    def reset_filters(self) -> None:
+        self.hg("filteredfs", "reset")
+
+    def switch_filters(self, path: str) -> None:
+        self.hg("filteredfs", "switch", path)
+
     def set_active_filter(self, path: str) -> None:
         self.hg("filteredfs", "enable", path)
 
@@ -214,6 +220,24 @@ class FilteredFSBasic(FilteredFSBase):
         # A second `disable` does nothing
         self.remove_active_filter()
         self.assertEqual(self.get_active_filter_path(), "")
+
+    def test_filter_reset(self) -> None:
+        self.assertEqual(self.get_active_filter_path(), "")
+
+        # Resetting a single active filter should work the same way
+        self.set_active_filter("top_level_filter")
+        self.assertEqual(self.get_active_filter_path(), "top_level_filter")
+        self.reset_filters()
+        self.assertEqual(self.get_active_filter_path(), "")
+
+    def test_filter_switch(self) -> None:
+        self.assertEqual(self.get_active_filter_path(), "")
+
+        # Switching from a single active filter should work the same way
+        self.set_active_filter("top_level_filter")
+        self.assertEqual(self.get_active_filter_path(), "top_level_filter")
+        self.switch_filters("a/nested_filter_file")
+        self.assertEqual(self.get_active_filter_path(), "a/nested_filter_file")
 
     def test_filter_enable_invalid_path(self) -> None:
         # Filters shouldn't have ":" in them
