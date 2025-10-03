@@ -48,6 +48,8 @@ bar
 filtered
 """
 
+    initial_commit: str = ""
+
     def populate_backing_repo(self, repo: hgrepo.HgRepository) -> None:
         repo.write_file("filter0", self.test_filter0)
         repo.write_file("tools/scm/filter/filter1", self.test_filter1)
@@ -55,7 +57,7 @@ filtered
         repo.write_file("foo", "foo")
         repo.write_file("bar", "bar")
         repo.write_file("filtered", "I should be filtered by filter2")
-        repo.commit("Initial commit.")
+        self.initial_commit = repo.commit("Initial commit.")
 
     def eden_clone_filteredhg_repo(
         self, backing_store: Optional[str] = None, filter_path: Optional[str] = None
@@ -155,6 +157,8 @@ filtered
                 )
             )
             self.assertEqual("null", result.filterId)
+            # FIXME: we should pass fid along with filterId
+            self.assertIsNone(result.fid)
 
     async def test_eden_get_filter(self) -> None:
         path = self.eden_clone_filteredhg_repo(
@@ -167,9 +171,12 @@ filtered
                     mountId=MountId(mountPoint=os.fsencode(path))
                 )
             )
-            self.assertNotEqual(None, result.filterId)
+            self.assertIsNotNone(result.filterId)
+            # FIXME: we should pass fid along with filterId
+            self.assertIsNone(result.fid)
+            expected_fid = f"tools/scm/filter/filter1:{self.initial_commit}"
             if result.filterId is not None:
-                self.assertIn("tools/scm/filter/filter1", result.filterId)
+                self.assertEqual(expected_fid, result.filterId)
 
 
 @hg_test
@@ -202,4 +209,5 @@ class NonFilteredTestCase(EdenHgTestCase):
                     mountId=MountId(mountPoint=os.fsencode(path))
                 )
             )
-            self.assertEqual(None, result.filterId)
+            self.assertIsNone(result.filterId)
+            self.assertIsNone(result.fid)
