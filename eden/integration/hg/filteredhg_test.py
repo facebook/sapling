@@ -124,16 +124,17 @@ adir/file
 
         self.initial_commit = repo.commit("Initial commit.")
 
+    def enable_filters(self, *paths: str) -> None:
+        self.hg("filteredfs", "enable", *paths)
+
     def reset_filters(self) -> None:
         self.hg("filteredfs", "reset")
 
-    def switch_filters(self, path: str) -> None:
-        self.hg("filteredfs", "switch", path)
+    def switch_filters(self, *paths: str) -> None:
+        self.hg("filteredfs", "switch", *paths)
 
-    def set_active_filter(self, path: str) -> None:
-        self.hg("filteredfs", "enable", path)
-
-    def remove_active_filter(self) -> None:
+    def disable_filters(self, *paths: str) -> None:
+        # TODO: Make disable support paths
         self.hg("filteredfs", "disable")
 
     def _get_relative_filter_config_path(self) -> str:
@@ -162,19 +163,22 @@ adir/file
                 f"{u} is expected to be unfiltered but it is not in the repo",
             )
 
-    def get_active_filter_path(self) -> str:
+    def get_active_filter_paths(self) -> Set[str]:
         # The filter file should always exist when FilteredFS is enabled, so
         # any failure to read the filter file is a legit error.
-        return self._read_file_from_repo(
+        lines = self._read_file_from_repo(
             self._get_relative_filter_config_path()
-        ).removeprefix("%include ")
+        ).splitlines()
+        return {line.removeprefix("%include ") for line in lines}
 
-    def read_active_filter(self) -> Optional[str]:
-        active_filter = self.get_active_filter_path()
+    def read_active_filters(self) -> Optional[Set[str]]:
         # Empty filter files are valid
-        return "" if active_filter == "" else self._read_file_from_repo(active_filter)
+        return {
+            "" if filt == "" else self._read_file_from_repo(filt)
+            for filt in self.get_active_filter_paths()
+        }
 
-    def show_active_filter(self) -> str:
+    def show_active_filters(self) -> str:
         return self.hg("filteredfs", "show")
 
 
@@ -182,67 +186,69 @@ adir/file
 # pyre-ignore[13]: T62487924
 class FilteredFSBasic(FilteredFSBase):
     def test_filter_enable(self) -> None:
-        self.set_active_filter("top_level_filter")
-        self.assertEqual(self.get_active_filter_path(), "top_level_filter")
-        self.assertEqual(self.read_active_filter(), self.testFilter1)
+        self.enable_filters("top_level_filter")
+        self.assertEqual(self.get_active_filter_paths(), {"top_level_filter"})
+        self.assertEqual(self.read_active_filters(), {self.testFilter1})
 
         # double activation does nothing
-        self.set_active_filter("top_level_filter")
-        self.set_active_filter("top_level_filter")
-        self.assertEqual(self.get_active_filter_path(), "top_level_filter")
-        self.assertEqual(self.read_active_filter(), self.testFilter1)
+        self.enable_filters("top_level_filter")
+        self.enable_filters("top_level_filter")
+        self.assertEqual(self.get_active_filter_paths(), {"top_level_filter"})
+        self.assertEqual(self.read_active_filters(), {self.testFilter1})
 
         # activating a different filter replaces the previous one
-        self.set_active_filter("a/nested_filter_file")
-        self.assertEqual(self.get_active_filter_path(), "a/nested_filter_file")
-        self.assertEqual(self.read_active_filter(), self.testFilter1)
+        self.enable_filters("a/nested_filter_file")
+        self.assertEqual(self.get_active_filter_paths(), {"a/nested_filter_file"})
+        self.assertEqual(self.read_active_filters(), {self.testFilter1})
 
         # A filter that's empty is still valid
-        self.set_active_filter("filters/empty_filter")
-        self.assertEqual(self.get_active_filter_path(), "filters/empty_filter")
+        self.reset_filters()
+        self.enable_filters("filters/empty_filter")
+        self.assertEqual(self.get_active_filter_paths(), {"filters/empty_filter"})
         # If this filter is successfully turned on, then the repo will be empty
         # (since v2 profiles allow empty [include]). Therefore we can't compare
         # the filter contents.
 
         # Filters with only metadata are also valid
-        self.set_active_filter("filters/metadata_only")
-        self.assertEqual(self.get_active_filter_path(), "filters/metadata_only")
+        self.reset_filters()
+        self.enable_filters("filters/metadata_only")
+        self.assertEqual(self.get_active_filter_paths(), {"filters/metadata_only"})
         # As mentioned above, this filter results in an empty repo. Therefore
         # no comparison can be done on the contents of the filter.
 
     def test_filter_disable(self) -> None:
-        self.set_active_filter("top_level_filter")
-        self.assertEqual(self.get_active_filter_path(), "top_level_filter")
+        self.enable_filters("top_level_filter")
+        self.assertEqual(self.get_active_filter_paths(), {"top_level_filter"})
 
-        self.remove_active_filter()
-        self.assertEqual(self.get_active_filter_path(), "")
+        self.disable_filters("top_level_filter")
+        self.assertEqual(self.get_active_filter_paths(), set())
 
         # A second `disable` does nothing
-        self.remove_active_filter()
-        self.assertEqual(self.get_active_filter_path(), "")
+        self.disable_filters("top_level_filter")
+        self.assertEqual(self.get_active_filter_paths(), set())
 
     def test_filter_reset(self) -> None:
-        self.assertEqual(self.get_active_filter_path(), "")
+        self.assertEqual(self.get_active_filter_paths(), set())
 
         # Resetting a single active filter should work the same way
-        self.set_active_filter("top_level_filter")
-        self.assertEqual(self.get_active_filter_path(), "top_level_filter")
+        self.enable_filters("top_level_filter")
+        self.assertEqual(self.get_active_filter_paths(), {"top_level_filter"})
         self.reset_filters()
-        self.assertEqual(self.get_active_filter_path(), "")
+        self.assertEqual(self.get_active_filter_paths(), set())
 
     def test_filter_switch(self) -> None:
-        self.assertEqual(self.get_active_filter_path(), "")
+        self.assertEqual(self.get_active_filter_paths(), set())
 
         # Switching from a single active filter should work the same way
-        self.set_active_filter("top_level_filter")
-        self.assertEqual(self.get_active_filter_path(), "top_level_filter")
+        self.enable_filters("top_level_filter")
+        self.assertEqual(self.get_active_filter_paths(), {"top_level_filter"})
         self.switch_filters("a/nested_filter_file")
-        self.assertEqual(self.get_active_filter_path(), "a/nested_filter_file")
+        self.assertEqual(self.get_active_filter_paths(), {"a/nested_filter_file"})
 
     def test_filter_enable_invalid_path(self) -> None:
         # Filters shouldn't have ":" in them
         with self.assertRaises(hgrepo.HgError):
-            self.set_active_filter("top:level:filter")
+            self.enable_filters("top:level:filter")
 
     def test_filtered_file_is_omitted(self) -> None:
         initial_files = {"foo"}
@@ -252,13 +258,13 @@ class FilteredFSBasic(FilteredFSBase):
         self.ensure_filtered_and_unfiltered(set(), initial_files)
 
         # File is omitted after enabling filter
-        self.set_active_filter("a/nested_filter_file")
+        self.enable_filters("a/nested_filter_file")
         self.ensure_filtered_and_unfiltered(
             filtered_files, initial_files.difference(filtered_files)
         )
 
         # File reappears after disabling filter
-        self.remove_active_filter()
+        self.reset_filters()
         self.ensure_filtered_and_unfiltered(set(), initial_files)
 
     def test_filters_follow_v2_rules(self) -> None:
@@ -269,7 +275,7 @@ class FilteredFSBasic(FilteredFSBase):
         self.ensure_filtered_and_unfiltered(set(), initial_files)
 
         # Files are omitted after enabling filter
-        self.set_active_filter("filters/v2")
+        self.enable_filters("filters/v2")
         self.ensure_filtered_and_unfiltered(
             filtered_files, initial_files.difference(filtered_files)
         )
@@ -317,13 +323,13 @@ class FilteredFSBasic(FilteredFSBase):
         self.ensure_filtered_and_unfiltered(set(), initial_files)
 
         # Directory and children are omitted after enabling filter
-        self.set_active_filter("a/nested_filter_file")
+        self.enable_filters("a/nested_filter_file")
         self.ensure_filtered_and_unfiltered(
             filtered_files, initial_files.difference(filtered_files)
         )
 
         # Directory and children reappear after disabling filter
-        self.remove_active_filter()
+        self.reset_filters()
         self.ensure_filtered_and_unfiltered(set(), initial_files)
 
     def test_some_children_filtered(self) -> None:
@@ -334,26 +340,26 @@ class FilteredFSBasic(FilteredFSBase):
         self.ensure_filtered_and_unfiltered(set(), initial_files)
 
         # Only one child is omitted after enabling filter
-        self.set_active_filter("a/nested_filter_file")
+        self.enable_filters("a/nested_filter_file")
         self.ensure_filtered_and_unfiltered(
             filtered_files, initial_files.difference(filtered_files)
         )
 
         # All children reappear after disabling filter
-        self.remove_active_filter()
+        self.reset_filters()
         self.ensure_filtered_and_unfiltered(set(), initial_files)
 
     def test_filter_shows_correct_include_exclude(self) -> None:
-        self.assertEqual(self.show_active_filter(), "")
+        self.assertEqual(self.show_active_filters(), "")
 
-        self.set_active_filter("top_level_filter")
-        self.assertIn("~ top_level_filter", self.show_active_filter())
+        self.enable_filters("top_level_filter")
+        self.assertIn("~ top_level_filter", self.show_active_filters())
 
     def test_filtered_file_not_in_status(self) -> None:
         self.assert_status_empty()
 
         # write to a filtered file
-        self.set_active_filter("top_level_filter")
+        self.enable_filters("top_level_filter")
         self.repo.write_file("foo", "a change")
 
         # Ensure the filtered file isn't reflected in status
@@ -368,7 +374,7 @@ class FilteredFSBasic(FilteredFSBase):
         new2 = self.repo.commit("Change contents of foo again")
 
         # enable the active filter so "foo" is filtered and attempt rebase
-        self.set_active_filter("top_level_filter")
+        self.enable_filters("top_level_filter")
         with self.assertRaises(hgrepo.HgError) as context:
             self.hg("rebase", "-s", new1, "-d", new2)
 
@@ -395,9 +401,9 @@ class FilteredFSBasic(FilteredFSBase):
         self.hg("rebase", "--continue")
         self.assertEqual(len(self.repo.log(revset="all()")), 3)
 
-    def test_enable_filter_dne(self) -> None:
+    def test_enable_filters_dne(self) -> None:
         initial_files = {"foo", "dir2/README", "filtered_out", "dir2/not_filtered"}
-        self.set_active_filter("does_not_exist")
+        self.enable_filters("does_not_exist")
         self.ensure_filtered_and_unfiltered(set(), initial_files)
 
     def test_checkout_old_commit(self) -> None:
@@ -408,7 +414,7 @@ class FilteredFSBasic(FilteredFSBase):
         # Filtering works as normal for a new filter file
         initial_files = {"foo", "dir2/README", "filtered_out", "dir2/not_filtered"}
         filtered_files = {"foo", "dir2/README", "filtered_out"}
-        self.set_active_filter("new_filter")
+        self.enable_filters("new_filter")
         self.ensure_filtered_and_unfiltered(
             filtered_files, initial_files.difference(filtered_files)
         )
@@ -419,7 +425,7 @@ class FilteredFSBasic(FilteredFSBase):
         self.ensure_filtered_and_unfiltered(set(), initial_files)
 
     def test_ods_counters_exist(self) -> None:
-        self.set_active_filter("top_level_filter")
+        self.enable_filters("top_level_filter")
         counters = self.get_counters()
         expected_counters = [
             "edenffi.ffs.lookups",
@@ -429,15 +435,15 @@ class FilteredFSBasic(FilteredFSBase):
             self.assertIn(ec, counters)
 
     def test_lookup_failure_counter(self) -> None:
-        self.set_active_filter("top_level_filter")
+        self.enable_filters("top_level_filter")
         counters = self.get_counters()
         self.assertNotIn("edenffi.ffs.lookup_failures", counters)
-        self.set_active_filter("does_not_exist")
+        self.enable_filters("does_not_exist")
         counters = self.get_counters()
         self.assertGreaterEqual(counters["edenffi.ffs.lookup_failures"], 1)
 
     def test_commit_filter_change(self) -> None:
-        self.set_active_filter("include_exclude_filter")
+        self.enable_filters("include_exclude_filter")
         self.assert_status_empty()
 
         # Modify the active filter file
@@ -474,7 +480,7 @@ class FilteredFSRepoCacheTest(FilteredFSBase):
         )
 
         # Make an initial request to populate the cache
-        self.set_active_filter("top_level_filter")
+        self.enable_filters("top_level_filter")
 
         counters_intermediate = self.get_counters()
         intermediate_cache_cleanups = counters_intermediate.get(
@@ -487,7 +493,7 @@ class FilteredFSRepoCacheTest(FilteredFSBase):
 
         # Make another request - this should be a cache miss since the entry expired
         # and the cleanup thread should have removed it
-        self.set_active_filter("top_level_filter")
+        self.enable_filters("top_level_filter")
 
         counters_final = self.get_counters()
         final_cache_cleanups = counters_final.get(
@@ -517,14 +523,14 @@ class FilteredFSRepoCacheNeverExpiresTest(FilteredFSBase):
         )
 
         # Make an initial request to populate the cache
-        self.set_active_filter("top_level_filter")
+        self.enable_filters("top_level_filter")
 
         # Wait for the TTL to expire (2 seconds + 15 second buffer for cleanup thread)
         time.sleep(17)
 
         # Make another request - this should be a cache miss since the entry expired
         # and the cleanup thread should have removed it
-        self.set_active_filter("top_level_filter")
+        self.enable_filters("top_level_filter")
 
         counters_final = self.get_counters()
         final_cache_cleanups = counters_final.get(
