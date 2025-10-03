@@ -16,6 +16,7 @@ futures = { version = "0.3.31", features = ["async-await", "compat"] }
 mononoke_api = { version = "0.1.0", path = "../../mononoke_api" }
 mononoke_types = { version = "0.1.0", path = "../../mononoke_types" }
 sapling-xdiff = { version = "0.1.0", path = "../../../scm/lib/xdiff" }
+thiserror = "2.0.12"
 
 [dev-dependencies]
 fbinit = { version = "0.2.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }

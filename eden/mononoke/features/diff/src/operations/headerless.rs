@@ -5,14 +5,13 @@
  * GNU General Public License version 2.
  */
 
-use anyhow::Error;
-use anyhow::anyhow;
 use bytes::Bytes;
 use context::CoreContext;
 use futures::try_join;
 use mononoke_api::MononokeRepo;
 use mononoke_api::RepoContext;
 
+use crate::error::DiffError;
 use crate::types::DiffSingleInput;
 use crate::types::HeaderlessDiffOpts;
 use crate::types::HeaderlessUnifiedDiff;
@@ -24,7 +23,7 @@ pub async fn headerless_unified<R: MononokeRepo>(
     base: Option<DiffSingleInput>,
     other: Option<DiffSingleInput>,
     context: usize,
-) -> Result<HeaderlessUnifiedDiff, Error> {
+) -> Result<HeaderlessUnifiedDiff, DiffError> {
     let (base_bytes, other_bytes) = try_join!(
         async {
             if let Some(base_input) = &base {
@@ -43,7 +42,7 @@ pub async fn headerless_unified<R: MononokeRepo>(
     )?;
 
     let (base_content, other_content) = match (base_bytes, other_bytes) {
-        (None, None) => return Err(anyhow!("All inputs to the headerless diff were empty")),
+        (None, None) => return Err(DiffError::empty_inputs()),
         (Some(base), None) => (base, Bytes::new()),
         (None, Some(other)) => (Bytes::new(), other),
         (Some(base), Some(other)) => (base, other),
@@ -89,20 +88,24 @@ mod tests {
     use crate::types::DiffInputChangesetPath;
     use crate::types::DiffSingleInput;
 
-    async fn init_test_repo(ctx: &CoreContext) -> Result<RepoContext<Repo>, Error> {
-        let repo: Repo = test_repo_factory::build_empty(ctx.fb).await?;
-        let repo_ctx = RepoContext::new_test(ctx.clone(), Arc::new(repo)).await?;
+    async fn init_test_repo(ctx: &CoreContext) -> Result<RepoContext<Repo>, DiffError> {
+        let repo: Repo = test_repo_factory::build_empty(ctx.fb)
+            .await
+            .map_err(DiffError::internal)?;
+        let repo_ctx = RepoContext::new_test(ctx.clone(), Arc::new(repo))
+            .await
+            .map_err(DiffError::internal)?;
         Ok(repo_ctx)
     }
 
-    fn create_non_root_path(path: &str) -> Result<mononoke_types::NonRootMPath, Error> {
+    fn create_non_root_path(path: &str) -> Result<mononoke_types::NonRootMPath, DiffError> {
         let mpath = mononoke_types::MPath::new(path)?;
         let non_root_mpath = mononoke_types::NonRootMPath::try_from(mpath)?;
         Ok(non_root_mpath)
     }
 
     #[mononoke::fbinit_test]
-    async fn test_headerless_unified_basic(fb: FacebookInit) -> Result<(), Error> {
+    async fn test_headerless_unified_basic(fb: FacebookInit) -> Result<(), DiffError> {
         let ctx = CoreContext::test_mock(fb);
         let repo_ctx = init_test_repo(&ctx).await?;
 
@@ -110,12 +113,14 @@ mod tests {
         let base_cs = CreateCommitContext::new_root(&ctx, repo_ctx.repo())
             .add_file("file.txt", "line1\nline2\nline3\n")
             .commit()
-            .await?;
+            .await
+            .map_err(DiffError::internal)?;
 
         let other_cs = CreateCommitContext::new(&ctx, repo_ctx.repo(), vec![base_cs])
             .add_file("file.txt", "line1\nmodified line2\nline3\n")
             .commit()
-            .await?;
+            .await
+            .map_err(DiffError::internal)?;
 
         // Test the headerless diff function
         let base_input = DiffSingleInput::ChangesetPath(DiffInputChangesetPath {
@@ -142,7 +147,7 @@ mod tests {
     }
 
     #[mononoke::fbinit_test]
-    async fn test_headerless_unified_binary_files(fb: FacebookInit) -> Result<(), Error> {
+    async fn test_headerless_unified_binary_files(fb: FacebookInit) -> Result<(), DiffError> {
         let ctx = CoreContext::test_mock(fb);
         let repo_ctx = init_test_repo(&ctx).await?;
 
@@ -150,12 +155,14 @@ mod tests {
         let base_cs = CreateCommitContext::new_root(&ctx, repo_ctx.repo())
             .add_file("binary.bin", b"binary\x00content\x01here".as_slice())
             .commit()
-            .await?;
+            .await
+            .map_err(DiffError::internal)?;
 
         let other_cs = CreateCommitContext::new(&ctx, repo_ctx.repo(), vec![base_cs])
             .add_file("binary.bin", b"different\x00binary\x02data".as_slice())
             .commit()
-            .await?;
+            .await
+            .map_err(DiffError::internal)?;
 
         let base_input = DiffSingleInput::ChangesetPath(DiffInputChangesetPath {
             changeset_id: base_cs,
@@ -180,19 +187,21 @@ mod tests {
     }
 
     #[mononoke::fbinit_test]
-    async fn test_headerless_unified_empty_files(fb: FacebookInit) -> Result<(), Error> {
+    async fn test_headerless_unified_empty_files(fb: FacebookInit) -> Result<(), DiffError> {
         let ctx = CoreContext::test_mock(fb);
         let repo_ctx = init_test_repo(&ctx).await?;
 
         // Test with one empty file and one with content
         let base_cs = CreateCommitContext::new_root(&ctx, repo_ctx.repo())
             .commit()
-            .await?;
+            .await
+            .map_err(DiffError::internal)?;
 
         let other_cs = CreateCommitContext::new(&ctx, repo_ctx.repo(), vec![base_cs])
             .add_file("new_file.txt", "new content\nline2\n")
             .commit()
-            .await?;
+            .await
+            .map_err(DiffError::internal)?;
 
         let base_input = DiffSingleInput::ChangesetPath(DiffInputChangesetPath {
             changeset_id: base_cs,
@@ -217,7 +226,7 @@ mod tests {
     }
 
     #[mononoke::fbinit_test]
-    async fn test_headerless_unified_with_none_inputs(fb: FacebookInit) -> Result<(), Error> {
+    async fn test_headerless_unified_with_none_inputs(fb: FacebookInit) -> Result<(), DiffError> {
         let ctx = CoreContext::test_mock(fb);
         let repo_ctx = init_test_repo(&ctx).await?;
 
@@ -225,7 +234,8 @@ mod tests {
         let cs = CreateCommitContext::new_root(&ctx, repo_ctx.repo())
             .add_file("file.txt", "some content\nline2\n")
             .commit()
-            .await?;
+            .await
+            .map_err(DiffError::internal)?;
 
         let input = DiffSingleInput::ChangesetPath(DiffInputChangesetPath {
             changeset_id: cs,

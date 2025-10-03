@@ -11,6 +11,7 @@
 //! the underlying xdiff library to provide compatibility with the diff service
 //! and future migration paths.
 
+pub mod error;
 pub mod operations;
 pub mod types;
 pub mod utils;

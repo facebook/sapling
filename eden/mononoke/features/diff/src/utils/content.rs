@@ -5,7 +5,6 @@
  * GNU General Public License version 2.
  */
 
-use anyhow::Error;
 use bytes::Bytes;
 use context::CoreContext;
 use filestore::FetchKey;
@@ -15,13 +14,14 @@ use mononoke_types::ChangesetId;
 use mononoke_types::ContentId;
 use mononoke_types::NonRootMPath;
 
+use crate::error::DiffError;
 use crate::types::DiffSingleInput;
 
 pub async fn load_content<R: MononokeRepo>(
     ctx: &CoreContext,
     repo: &RepoContext<R>,
     input: DiffSingleInput,
-) -> Result<Option<Bytes>, Error> {
+) -> Result<Option<Bytes>, DiffError> {
     let content_id = match input {
         DiffSingleInput::Content(content_input) => Some(content_input.content_id),
         DiffSingleInput::ChangesetPath(changeset_input) => {
@@ -46,11 +46,11 @@ pub async fn load_content<R: MononokeRepo>(
             Ok(Some(bytes)) => Ok(Some(bytes)),
             Ok(None) => {
                 // Content not found - this is a client error
-                Err(Error::msg(format!("Content not found: {}", content_id)))
+                Err(DiffError::content_not_found(content_id))
             }
             Err(e) => {
                 // Other errors (blobstore issues, etc.) are internal errors
-                Err(e.context("Failed to load content"))
+                Err(DiffError::internal(e.context("Failed to load content")))
             }
         }
     } else {
@@ -62,18 +62,22 @@ async fn get_content_id_from_changeset_path<R: MononokeRepo>(
     repo: &RepoContext<R>,
     changeset_id: ChangesetId,
     path: NonRootMPath,
-) -> Result<Option<ContentId>, Error> {
+) -> Result<Option<ContentId>, DiffError> {
     let changeset_ctx = repo
         .changeset(changeset_id)
-        .await?
-        .ok_or_else(|| Error::msg(format!("changeset not found: {}", changeset_id)))?;
+        .await
+        .map_err(DiffError::internal)?
+        .ok_or_else(|| DiffError::changeset_not_found(changeset_id))?;
 
-    let path_content_ctx = changeset_ctx.path_with_content(path).await?;
+    let path_content_ctx = changeset_ctx
+        .path_with_content(path)
+        .await
+        .map_err(DiffError::internal)?;
 
-    let file = path_content_ctx.file().await?;
+    let file = path_content_ctx.file().await.map_err(DiffError::internal)?;
 
     if let Some(file) = file {
-        let content_id = file.id().await?;
+        let content_id = file.id().await.map_err(DiffError::internal)?;
         Ok(Some(content_id))
     } else {
         // The file is not present, so it may be new or deleted
