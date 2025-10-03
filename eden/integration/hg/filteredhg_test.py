@@ -184,7 +184,7 @@ adir/file
 @filteredhg_test
 # pyre-ignore[13]: T62487924
 class FilteredFSBasic(FilteredFSBase):
-    def test_filter_enable(self) -> None:
+    def test_filter_enable_and_switch(self) -> None:
         self.enable_filters("top_level_filter")
         self.assertEqual(self.get_active_filter_paths(), {"top_level_filter"})
         self.assertEqual(self.read_active_filters(), {self.testFilter1})
@@ -195,22 +195,24 @@ class FilteredFSBasic(FilteredFSBase):
         self.assertEqual(self.get_active_filter_paths(), {"top_level_filter"})
         self.assertEqual(self.read_active_filters(), {self.testFilter1})
 
-        # activating a different filter replaces the previous one
-        self.enable_filters("a/nested_filter_file")
-        self.assertEqual(self.get_active_filter_paths(), {"a/nested_filter_file"})
-        self.assertEqual(self.read_active_filters(), {self.testFilter1})
+        # activating a different filter makes both active
+        self.enable_filters("filters/v2")
+        self.assertEqual(
+            self.get_active_filter_paths(), {"top_level_filter", "filters/v2"}
+        )
+        self.assertEqual(
+            self.read_active_filters(), {self.testFilter1, self.testFilterV2}
+        )
 
         # A filter that's empty is still valid
-        self.reset_filters()
-        self.enable_filters("filters/empty_filter")
+        self.switch_filters("filters/empty_filter")
         self.assertEqual(self.get_active_filter_paths(), {"filters/empty_filter"})
         # If this filter is successfully turned on, then the repo will be empty
         # (since v2 profiles allow empty [include]). Therefore we can't compare
         # the filter contents.
 
         # Filters with only metadata are also valid
-        self.reset_filters()
-        self.enable_filters("filters/metadata_only")
+        self.switch_filters("filters/metadata_only")
         self.assertEqual(self.get_active_filter_paths(), {"filters/metadata_only"})
         # As mentioned above, this filter results in an empty repo. Therefore
         # no comparison can be done on the contents of the filter.
@@ -227,6 +229,11 @@ class FilteredFSBasic(FilteredFSBase):
         self.assertEqual(self.get_active_filter_paths(), set())
 
     def test_filter_reset(self) -> None:
+        self.enable_filters("top_level_filter", "a/nested_filter_file")
+        self.assertEqual(
+            self.get_active_filter_paths(), {"top_level_filter", "a/nested_filter_file"}
+        )
+        self.reset_filters()
         self.assertEqual(self.get_active_filter_paths(), set())
 
         # Resetting a single active filter should work the same way
@@ -237,12 +244,24 @@ class FilteredFSBasic(FilteredFSBase):
 
     def test_filter_switch(self) -> None:
         self.assertEqual(self.get_active_filter_paths(), set())
+        self.enable_filters("top_level_filter", "a/nested_filter_file")
+        self.assertEqual(
+            self.get_active_filter_paths(), {"top_level_filter", "a/nested_filter_file"}
+        )
+        self.switch_filters("filters/v1_filter1", "filters/v1_filter2")
+        self.assertEqual(
+            self.get_active_filter_paths(), {"filters/v1_filter1", "filters/v1_filter2"}
+        )
+        self.switch_filters("top_level_filter")
 
         # Switching from a single active filter should work the same way
         self.enable_filters("top_level_filter")
         self.assertEqual(self.get_active_filter_paths(), {"top_level_filter"})
-        self.switch_filters("a/nested_filter_file")
-        self.assertEqual(self.get_active_filter_paths(), {"a/nested_filter_file"})
+        self.switch_filters("a/nested_filter_file", "filters/v1_filter1")
+        self.assertEqual(
+            self.get_active_filter_paths(),
+            {"a/nested_filter_file", "filters/v1_filter1"},
+        )
 
     def test_filter_enable_invalid_path(self) -> None:
         # Filters shouldn't have ":" in them
@@ -294,17 +313,7 @@ class FilteredFSBasic(FilteredFSBase):
         self.ensure_filtered_and_unfiltered(set(), initial_files)
 
         # Files are omitted after enabling filter
-        # TODO: Modify `hg filteredfs enable` to allow multiple active filters.
-        #       For now we'll manually enable the filters by writing .hg/sparse
-        #       ourselves and then checking out the current commit.
-        # self.set_active_filter("filters/v1_filter1")
-        # self.set_active_filter("filters/v1_filter2")
-        self.write_file(
-            self._get_relative_filter_config_path(),
-            "%include filters/v1_filter1\n%include filters/v1_filter2\n",
-        )
-        self.hg("checkout", ".")
-
+        self.enable_filters("filters/v1_filter1", "filters/v1_filter2")
         self.ensure_filtered_and_unfiltered(
             filtered_files, initial_files.difference(filtered_files)
         )

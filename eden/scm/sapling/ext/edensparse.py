@@ -192,16 +192,28 @@ def disablefiltersubcmd(ui, repo, *pats, **opts) -> None:
 
 
 @subcmd(
-    "enable|enableprofile|enablefilter|switch|switchprofile|switchfilter",
+    "enable|enableprofile|enablefilter",
     _common_config_opts,
     "[FILTER]...",
 )
-def enablefiltersubcmd(ui, repo, pat, **opts) -> None:
-    """enable a filter (disables the previously active filter, if any)"""
+def enablefiltersubcmd(ui, repo, *pats, **opts) -> None:
+    """enable a filter"""
     # Filters must not contain colons in their path
-    if ":" in pat:
+    # TODO(cuev): Once V1 profiles are used, we can remove this constraint
+    if any(":" in pat for pat in pats):
         raise error.Abort(_("filter file paths must not contain ':'"))
-    pat = [normalizeprofile(repo, pat)]
-    _checknonexistingprofiles(ui, repo, pat)
+    pats = [normalizeprofile(repo, p) for p in pats]
+    _checknonexistingprofiles(ui, repo, pats)
     commonopts = getcommonopts(opts)
-    _config(ui, repo, pat, opts, enableprofile=True, **commonopts)
+    _config(ui, repo, pats, opts, enableprofile=True, **commonopts)
+
+
+@subcmd("switch|switchprofile|switchfilter", _common_config_opts, "[FILTER]...")
+def switchprofilesubcmd(ui, repo, *pats, **opts) -> None:
+    """switch to another filter
+
+    Disables all other filters and enables the specified filter(s).
+    """
+    _checknonexistingprofiles(ui, repo, pats)
+    commonopts = getcommonopts(opts)
+    _config(ui, repo, pats, opts, reset=True, enableprofile=True, **commonopts)

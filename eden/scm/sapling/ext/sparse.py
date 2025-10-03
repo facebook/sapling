@@ -2891,9 +2891,8 @@ def _config(
             oldprofiles = set()
 
         try:
-            # edensparse only supports a single profile being active at time.
             # Start from scratch for every update.
-            if reset or _isedensparse(repo):
+            if reset:
                 newinclude = set()
                 newexclude = set()
                 newprofiles = set()
