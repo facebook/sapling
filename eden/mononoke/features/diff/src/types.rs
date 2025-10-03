@@ -159,3 +159,27 @@ pub struct DiffInputContent {
     pub path: Option<NonRootMPath>,
     pub lfs_pointer: Option<LfsPointer>,
 }
+
+#[derive(Debug, Clone)]
+pub struct UnifiedDiffOpts {
+    pub context: usize,
+    pub copy_info: DiffCopyInfo,
+    pub file_type: DiffFileType,
+    pub inspect_lfs_pointers: bool,
+    pub omit_content: bool,
+}
+
+#[derive(Debug, Clone)]
+pub struct UnifiedDiff {
+    pub raw_diff: Vec<u8>,
+    pub is_binary: bool,
+}
+
+impl From<UnifiedDiffOpts> for xdiff::DiffOpts {
+    fn from(opts: UnifiedDiffOpts) -> Self {
+        xdiff::DiffOpts {
+            context: opts.context,
+            copy_info: opts.copy_info.into(),
+        }
+    }
+}
