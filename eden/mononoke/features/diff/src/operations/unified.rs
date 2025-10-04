@@ -98,6 +98,19 @@ mod tests {
         Ok(repo_ctx)
     }
 
+    async fn init_test_repo_with_lfs(ctx: &CoreContext) -> Result<RepoContext<Repo>, DiffError> {
+        let mut factory =
+            test_repo_factory::TestRepoFactory::new(ctx.fb).map_err(DiffError::internal)?;
+        factory.with_config_override(|config| {
+            config.git_configs.git_lfs_interpret_pointers = true;
+        });
+        let repo: Repo = factory.build().await.map_err(DiffError::internal)?;
+        let repo_ctx = RepoContext::new_test(ctx.clone(), Arc::new(repo))
+            .await
+            .map_err(DiffError::internal)?;
+        Ok(repo_ctx)
+    }
+
     #[mononoke::fbinit_test]
     async fn test_unified_basic(fb: FacebookInit) -> Result<(), DiffError> {
         let ctx = CoreContext::test_mock(fb);
@@ -365,6 +378,118 @@ mod tests {
         let diff_str = String::from_utf8_lossy(&diff.raw_diff);
         // Empty diff between two empty files
         assert!(diff_str.is_empty() || diff_str.trim().is_empty());
+        assert!(!diff.is_binary);
+
+        Ok(())
+    }
+
+    #[mononoke::fbinit_test]
+    async fn test_unified_lfs_inspect_pointers(fb: FacebookInit) -> Result<(), DiffError> {
+        let ctx = CoreContext::test_mock(fb);
+        let repo_ctx = init_test_repo_with_lfs(&ctx).await?;
+
+        use mononoke_types::FileType;
+        use mononoke_types::GitLfs;
+
+        // Create test commits with LFS files containing different content
+        let base_cs = CreateCommitContext::new_root(&ctx, repo_ctx.repo())
+            .add_file_with_type_and_lfs(
+                "large_file.bin",
+                "large file content base",
+                FileType::Regular,
+                GitLfs::canonical_pointer(),
+            )
+            .commit()
+            .await?;
+
+        let other_cs = CreateCommitContext::new(&ctx, repo_ctx.repo(), vec![base_cs])
+            .add_file_with_type_and_lfs(
+                "large_file.bin",
+                "large file content modified",
+                FileType::Regular,
+                GitLfs::canonical_pointer(),
+            )
+            .commit()
+            .await?;
+
+        let base_input = DiffSingleInput::ChangesetPath(DiffInputChangesetPath {
+            changeset_id: base_cs,
+            path: to_non_root_path("large_file.bin")?,
+            replacement_path: None,
+        });
+        let other_input = DiffSingleInput::ChangesetPath(DiffInputChangesetPath {
+            changeset_id: other_cs,
+            path: to_non_root_path("large_file.bin")?,
+            replacement_path: None,
+        });
+
+        // Test with inspect_lfs_pointers = true (should load actual content and diff it)
+        let options_inspect_true = UnifiedDiffOpts {
+            context: 3,
+            copy_info: DiffCopyInfo::None,
+            file_type: DiffFileType::Regular,
+            inspect_lfs_pointers: true,
+            omit_content: false,
+        };
+
+        let diff = unified(
+            &ctx,
+            &repo_ctx,
+            Some(base_input.clone()),
+            Some(other_input.clone()),
+            options_inspect_true,
+        )
+        .await?;
+        let diff_str = String::from_utf8_lossy(&diff.raw_diff);
+
+        // Should show the actual content differences since inspect_lfs_pointers = true
+        assert_eq!(
+            r#"diff --git a/large_file.bin b/large_file.bin
+--- a/large_file.bin
++++ b/large_file.bin
+@@ -1,1 +1,1 @@
+-large file content base
+\ No newline at end of file
++large file content modified
+\ No newline at end of file
+"#,
+            diff_str
+        );
+        assert!(!diff.is_binary);
+
+        // Test with inspect_lfs_pointers = false (should compare LFS pointers, not content)
+        let options_inspect_false = UnifiedDiffOpts {
+            context: 3,
+            copy_info: DiffCopyInfo::None,
+            file_type: DiffFileType::Regular,
+            inspect_lfs_pointers: false,
+            omit_content: false,
+        };
+
+        let diff = unified(
+            &ctx,
+            &repo_ctx,
+            Some(base_input),
+            Some(other_input),
+            options_inspect_false,
+        )
+        .await?;
+        let diff_str = String::from_utf8_lossy(&diff.raw_diff);
+
+        // Should show the LFS pointer differences since inspect_lfs_pointers = false
+        assert_eq!(
+            r#"diff --git a/large_file.bin b/large_file.bin
+--- a/large_file.bin
++++ b/large_file.bin
+@@ -1,3 +1,3 @@
+ version https://git-lfs.github.com/spec/v1
+-oid sha256:a55ddf1043f65a451dfb9d14d9c5354684aaf85a67a9b26ddc2bc299ef564573
+-size 23
++oid sha256:999e168c7b0adface54baf4320162acc451ee5cea07461ddebc3b1ee68ef3733
++size 27
+"#,
+            diff_str
+        );
         assert!(!diff.is_binary);
 
         Ok(())
