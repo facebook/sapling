@@ -900,16 +900,12 @@ class CloneCmd(Subcmd):
             action="store_true",
             help="Enable symlink support for the cloned mount",
         )
-
-        parser.add_argument(
-            "--filter-path",
-            help=("DEPRECATED: USE --filter-paths INSTEAD."),
-        )
         parser.add_argument(
             "--filter-paths",
+            "--filter-path",
             nargs=argparse.ZERO_OR_MORE,
             help=(
-                "The FilteredFS filter to activate when "
+                "The FilteredFS filters to activate when "
                 "--backing-store=filteredhg. When this option is omitted, no "
                 "filter is applied to the repo but FilteredFS is still used. "
                 'Passing "" or "null" will result in similar behavior.'
@@ -1020,13 +1016,7 @@ is case-sensitive. This is not recommended and is intended only for testing."""
         #   3) Specifying --filter-paths as "null" (or any variation)
         filter_paths = []
         if args.filter_paths:
-            # Prefer using the non-deprecated --filter-paths option
             filter_paths = args.filter_paths or []
-        else:
-            if args.filter_path is not None:
-                filter_paths = [args.filter_path]
-            else:
-                filter_paths = []
 
         if (
             filter_paths == []

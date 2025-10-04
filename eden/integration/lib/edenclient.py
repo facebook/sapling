@@ -780,12 +780,7 @@ class EdenFS:
         if backing_store is not None:
             params.append("--backing-store")
             params.append(backing_store)
-        # FIXME: we should only use --filter-paths option in the future, even
-        # for single filter clones
-        if filter_paths is not None and len(filter_paths) == 1:
-            params.append("--filter-path")
-            params.append(filter_paths[0])
-        elif (
+        if (
             filter_paths is not None
             and len(filter_paths) != 0
             and any(p != "" for p in filter_paths)
