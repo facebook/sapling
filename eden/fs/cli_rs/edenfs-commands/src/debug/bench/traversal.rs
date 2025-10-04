@@ -43,8 +43,8 @@ struct InProgressTraversal {
     total_dir_entries: usize,
     max_files: usize,
     follow_symlinks: bool,
-    system: System,
-    pid: Pid,
+    system: Option<System>,
+    pid: Option<Pid>,
 }
 
 // Define a struct for the results from the finalize step
@@ -75,9 +75,15 @@ impl InProgressTraversal {
             Some(pb)
         };
 
-        let mut system = System::new_all();
-        let pid = sysinfo::get_current_pid().expect("Failed to get current process ID");
-        system.refresh_all();
+        // Only initialize system monitoring if progress reporting is enabled
+        let (system, pid) = if no_progress {
+            (None, None)
+        } else {
+            let mut sys = System::new_all();
+            let process_id = sysinfo::get_current_pid().expect("Failed to get current process ID");
+            sys.refresh_all();
+            (Some(sys), Some(process_id))
+        };
 
         Self {
             file_count: 0,
@@ -131,17 +137,22 @@ impl InProgressTraversal {
                 return;
             }
 
-            self.system
-                .refresh_processes(sysinfo::ProcessesToUpdate::Some(&[self.pid]), false);
-
             let files_per_second = self.file_count as f64 / elapsed;
-            let (memory_usage_mb, cpu_usage) = match self.system.process(self.pid) {
-                Some(process) => (
-                    process.memory() as f64 / 1024.0 / 1024.0,
-                    process.cpu_usage(),
-                ),
-                None => (0.0, 0.0),
-            };
+
+            // Only collect system metrics if system monitoring is enabled
+            let (memory_usage_mb, cpu_usage) =
+                if let (Some(system), Some(pid)) = (&mut self.system, &self.pid) {
+                    system.refresh_processes(sysinfo::ProcessesToUpdate::Some(&[*pid]), false);
+                    match system.process(*pid) {
+                        Some(process) => (
+                            process.memory() as f64 / 1024.0 / 1024.0,
+                            process.cpu_usage(),
+                        ),
+                        None => (0.0, 0.0),
+                    }
+                } else {
+                    (0.0, 0.0)
+                };
 
             pb.set_message(format!(
                 "{} files | {} dirs | {:.0} files/s | {:.2} MiB memory usage | {:.2}% CPU usage",
