@@ -79,6 +79,10 @@ pub enum BenchCmd {
         #[clap(long)]
         no_progress: bool,
 
+        /// Enable CPU and memory usage monitoring during traversal
+        #[clap(long)]
+        resource_usage: bool,
+
         /// Output results in JSON format
         #[clap(long)]
         json: bool,
@@ -158,6 +162,7 @@ impl crate::Subcommand for BenchCmd {
                 max_files,
                 follow_symlinks,
                 no_progress,
+                resource_usage,
                 json,
             } => {
                 if !*json {
@@ -173,6 +178,7 @@ impl crate::Subcommand for BenchCmd {
                         *max_files,
                         *follow_symlinks,
                         *no_progress,
+                        *resource_usage,
                         thrift_io.as_deref(),
                     )
                     .await?
@@ -182,6 +188,7 @@ impl crate::Subcommand for BenchCmd {
                         *max_files,
                         *follow_symlinks,
                         *no_progress,
+                        *resource_usage,
                     )?
                 };
 

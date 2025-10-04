@@ -61,7 +61,12 @@ pub struct FinalizedTraversal {
 }
 
 impl InProgressTraversal {
-    fn new(no_progress: bool, max_files: usize, follow_symlinks: bool) -> Self {
+    fn new(
+        no_progress: bool,
+        resource_usage: bool,
+        max_files: usize,
+        follow_symlinks: bool,
+    ) -> Self {
         let progress_bar = if no_progress {
             None
         } else {
@@ -75,14 +80,14 @@ impl InProgressTraversal {
             Some(pb)
         };
 
-        // Only initialize system monitoring if progress reporting is enabled
-        let (system, pid) = if no_progress {
-            (None, None)
-        } else {
+        // Only initialize system monitoring if resource usage monitoring is enabled
+        let (system, pid) = if resource_usage {
             let mut sys = System::new_all();
             let process_id = sysinfo::get_current_pid().expect("Failed to get current process ID");
             sys.refresh_all();
             (Some(sys), Some(process_id))
+        } else {
+            (None, None)
         };
 
         Self {
@@ -139,25 +144,32 @@ impl InProgressTraversal {
 
             let files_per_second = self.file_count as f64 / elapsed;
 
-            // Only collect system metrics if system monitoring is enabled
-            let (memory_usage_mb, cpu_usage) =
-                if let (Some(system), Some(pid)) = (&mut self.system, &self.pid) {
-                    system.refresh_processes(sysinfo::ProcessesToUpdate::Some(&[*pid]), false);
-                    match system.process(*pid) {
-                        Some(process) => (
-                            process.memory() as f64 / 1024.0 / 1024.0,
-                            process.cpu_usage(),
-                        ),
-                        None => (0.0, 0.0),
+            let message = if let (Some(system), Some(pid)) = (&mut self.system, &self.pid) {
+                system.refresh_processes(sysinfo::ProcessesToUpdate::Some(&[*pid]), false);
+                match system.process(*pid) {
+                    Some(process) => {
+                        let memory_mb = process.memory() as f64 / types::BYTES_IN_MEGABYTE as f64;
+                        let cpu_usage = process.cpu_usage();
+                        format!(
+                            "{} files | {} dirs | {:.0} files/s | {:.2} MiB memory usage | {:.2}% CPU usage",
+                            self.file_count, self.dir_count, files_per_second, memory_mb, cpu_usage
+                        )
                     }
-                } else {
-                    (0.0, 0.0)
-                };
+                    None => {
+                        format!(
+                            "{} files | {} dirs | {:.0} files/s",
+                            self.file_count, self.dir_count, files_per_second
+                        )
+                    }
+                }
+            } else {
+                format!(
+                    "{} files | {} dirs | {:.0} files/s",
+                    self.file_count, self.dir_count, files_per_second
+                )
+            };
 
-            pb.set_message(format!(
-                "{} files | {} dirs | {:.0} files/s | {:.2} MiB memory usage | {:.2}% CPU usage",
-                self.file_count, self.dir_count, files_per_second, memory_usage_mb, cpu_usage
-            ));
+            pb.set_message(message);
         }
     }
 
@@ -230,6 +242,7 @@ pub async fn bench_traversal_thrift_read(
     max_files: usize,
     follow_symlinks: bool,
     no_progress: bool,
+    resource_usage: bool,
     fbsource_path: Option<&str>,
 ) -> Result<Benchmark> {
     let path = Path::new(dir_path);
@@ -238,7 +251,7 @@ pub async fn bench_traversal_thrift_read(
     }
 
     let mut in_progress_traversal =
-        InProgressTraversal::new(no_progress, max_files, follow_symlinks);
+        InProgressTraversal::new(no_progress, resource_usage, max_files, follow_symlinks);
     in_progress_traversal.traverse_path(path)?;
 
     let ft = in_progress_traversal.finalize();
@@ -423,6 +436,7 @@ pub fn bench_traversal_fs_read(
     max_files: usize,
     follow_symlinks: bool,
     no_progress: bool,
+    resource_usage: bool,
 ) -> Result<Benchmark> {
     let path = Path::new(dir_path);
     if !path.exists() || !path.is_dir() {
@@ -430,7 +444,7 @@ pub fn bench_traversal_fs_read(
     }
 
     let mut in_progress_traversal =
-        InProgressTraversal::new(no_progress, max_files, follow_symlinks);
+        InProgressTraversal::new(no_progress, resource_usage, max_files, follow_symlinks);
 
     in_progress_traversal.traverse_path(path)?;
 
