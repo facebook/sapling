@@ -13,10 +13,12 @@ use bytes::Bytes;
 use context::CoreContext;
 use filestore::FetchKey;
 use git_types::git_lfs::format_lfs_pointer;
+use mononoke_api::ChangesetPathContentContext;
 use mononoke_api::MononokeRepo;
 use mononoke_api::RepoContext;
 use mononoke_types::ChangesetId;
 use mononoke_types::ContentId;
+use mononoke_types::ContentMetadataV2;
 use mononoke_types::NonRootMPath;
 use mononoke_types::hash::GitSha1;
 
@@ -95,6 +97,7 @@ async fn get_content_id_from_changeset_path<R: MononokeRepo>(
 
 /// Extract content ID, changeset ID, default path, and LFS pointer from a DiffSingleInput
 pub async fn extract_input_data<R: MononokeRepo>(
+    ctx: &CoreContext,
     repo: &RepoContext<R>,
     input: &DiffSingleInput,
     default_path: Option<NonRootMPath>,
@@ -115,6 +118,7 @@ pub async fn extract_input_data<R: MononokeRepo>(
                 changeset_input.path.clone(),
             )
             .await?;
+
             // It's mandatory to provide a path with Changeset inputs, so we don't consider the
             // default path.
             let path = changeset_input
@@ -122,11 +126,29 @@ pub async fn extract_input_data<R: MononokeRepo>(
                 .as_ref()
                 .unwrap_or(&changeset_input.path)
                 .clone();
+
+            let changeset_ctx = repo
+                .changeset(changeset_input.changeset_id)
+                .await
+                .map_err(DiffError::internal)?
+                .ok_or_else(|| DiffError::changeset_not_found(changeset_input.changeset_id))?;
+
+            let path_content_ctx = changeset_ctx
+                .path_with_content(changeset_input.path.clone())
+                .await
+                .map_err(DiffError::internal)?;
+
+            let lfs_pointer = if let Some(content_id) = &content_id {
+                get_lfs_pointer(ctx, repo, content_id, path.clone(), path_content_ctx).await?
+            } else {
+                None
+            };
+
             Ok((
                 content_id,
                 Some(changeset_input.changeset_id),
                 path,
-                None, // LFS pointer is implemented in a coming diff
+                lfs_pointer,
             ))
         }
         DiffSingleInput::Content(content_input) => {
@@ -144,6 +166,78 @@ pub async fn extract_input_data<R: MononokeRepo>(
     }
 }
 
+pub async fn get_lfs_pointer<R: MononokeRepo>(
+    ctx: &CoreContext,
+    repo: &RepoContext<R>,
+    content_id: &ContentId,
+    path: NonRootMPath,
+    path_content_ctx: ChangesetPathContentContext<R>,
+) -> Result<Option<LfsPointer>, DiffError> {
+    // Check if LFS pointer interpretation is enabled
+    if !repo.config().git_configs.git_lfs_interpret_pointers {
+        return Ok(None);
+    }
+
+    let file_change = match path_content_ctx
+        .file_change()
+        .await
+        .map_err(DiffError::internal)?
+    {
+        Some(file_change) => Some(file_change),
+        None => {
+            // If the file is not touched in the current changeset,
+            // try checking the last changeset that touched the file
+            let last_modified_cs = path_content_ctx
+                .changeset()
+                .path_with_history(path.clone())
+                .await
+                .map_err(DiffError::internal)?
+                .last_modified()
+                .await
+                .map_err(DiffError::internal)?;
+
+            match last_modified_cs {
+                Some(last_modified_cs) => {
+                    let file_changes = last_modified_cs
+                        .file_changes()
+                        .await
+                        .map_err(DiffError::internal)?;
+                    file_changes.get(&path).cloned()
+                }
+                None => None,
+            }
+        }
+    };
+
+    if let Some(fc) = file_change {
+        if let Some(git_lfs) = fc.git_lfs() {
+            if git_lfs.is_lfs_pointer() {
+                let metadata = get_content_metadata(ctx, repo, content_id).await?;
+                let size = fc.size().unwrap_or_default();
+                return Ok(Some(LfsPointer {
+                    sha256: metadata.sha256.to_string(),
+                    size: size as i64,
+                }));
+            }
+        }
+    }
+
+    Ok(None)
+}
+
+pub async fn get_content_metadata<R: MononokeRepo>(
+    ctx: &CoreContext,
+    repo: &RepoContext<R>,
+    content_id: &ContentId,
+) -> Result<ContentMetadataV2, DiffError> {
+    let blobstore = repo.repo_blobstore();
+    let metadata = filestore::get_metadata(&blobstore, ctx, &FetchKey::Canonical(*content_id))
+        .await
+        .map_err(DiffError::internal)?
+        .ok_or_else(|| DiffError::content_not_found(*content_id))?;
+    Ok(metadata)
+}
+
 pub struct DiffFileOpts {
     pub file_type: DiffFileType,
     pub inspect_lfs_pointers: bool,
@@ -158,7 +252,7 @@ pub async fn load_diff_file<R: MononokeRepo>(
     options: &DiffFileOpts,
 ) -> Result<Option<xdiff::DiffFile<String, Vec<u8>>>, Error> {
     let (content_id, _changeset_id, path, lfs_pointer) =
-        extract_input_data(repo, input, default_path).await?;
+        extract_input_data(ctx, repo, input, default_path).await?;
 
     if let Some(id) = content_id {
         let contents = if options.file_type == DiffFileType::GitSubmodule {
