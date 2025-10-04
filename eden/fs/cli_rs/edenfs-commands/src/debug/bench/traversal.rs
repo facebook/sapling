@@ -251,6 +251,7 @@ pub async fn bench_traversal_thrift_read(
     follow_symlinks: bool,
     no_progress: bool,
     resource_usage: bool,
+    skip_read: bool,
     fbsource_path: Option<&str>,
 ) -> Result<Benchmark> {
     let path = Path::new(dir_path);
@@ -314,6 +315,23 @@ pub async fn bench_traversal_thrift_read(
         types::Unit::Dirs,
         Some(0),
     );
+    result.add_metric(
+        "Total symlinks skipped",
+        ft.symlink_skipped_count as f64,
+        types::Unit::Symlinks,
+        Some(0),
+    );
+    result.add_metric(
+        "Total symlinks traversed",
+        ft.symlink_traversed_count as f64,
+        types::Unit::Symlinks,
+        Some(0),
+    );
+
+    // Return early if skip_read is true
+    if skip_read {
+        return Ok(result);
+    }
 
     let read_progress = if no_progress {
         None
@@ -445,6 +463,7 @@ pub fn bench_traversal_fs_read(
     follow_symlinks: bool,
     no_progress: bool,
     resource_usage: bool,
+    skip_read: bool,
 ) -> Result<Benchmark> {
     let path = Path::new(dir_path);
     if !path.exists() || !path.is_dir() {
@@ -520,6 +539,11 @@ pub fn bench_traversal_fs_read(
         types::Unit::Dirs,
         Some(0),
     );
+
+    // Return early if skip_read is true
+    if skip_read {
+        return Ok(result);
+    }
 
     let read_progress = if no_progress {
         None

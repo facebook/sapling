@@ -86,6 +86,10 @@ pub enum BenchCmd {
         /// Output results in JSON format
         #[clap(long)]
         json: bool,
+
+        /// Skip the file reading benchmark and display only traversal results
+        #[clap(long)]
+        skip_read: bool,
     },
 }
 
@@ -164,6 +168,7 @@ impl crate::Subcommand for BenchCmd {
                 no_progress,
                 resource_usage,
                 json,
+                skip_read,
             } => {
                 if !*json {
                     println!(
@@ -179,6 +184,7 @@ impl crate::Subcommand for BenchCmd {
                         *follow_symlinks,
                         *no_progress,
                         *resource_usage,
+                        *skip_read,
                         thrift_io.as_deref(),
                     )
                     .await?
@@ -189,6 +195,7 @@ impl crate::Subcommand for BenchCmd {
                         *follow_symlinks,
                         *no_progress,
                         *resource_usage,
+                        *skip_read,
                     )?
                 };
 
