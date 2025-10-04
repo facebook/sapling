@@ -170,14 +170,8 @@ filtered
                     mountId=MountId(mountPoint=os.fsencode(path))
                 )
             )
-            self.assertIsNotNone(result.filterId)
             self.assertIsNotNone(result.fid)
-            expected_fid = f"tools/scm/filter/filter1:{self.initial_commit}"
-            self.assertEqual(expected_fid, result.filterId)
-            self.assertEqual(
-                expected_fid.encode("utf-8"),
-                result.fid,
-            )
+            self.assertEqual(result.fid, b"\x01\x01\x083\x01\x84\xb2\xdbz\xb2C")
 
 
 @hg_test

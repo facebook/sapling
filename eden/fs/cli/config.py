@@ -687,7 +687,14 @@ Do you want to run `eden mount %s` instead?"""
         checkout = EdenCheckout(self, Path(path), Path(client_dir))
         if snapshot_id:
             if checkout_config.scm_type == "filteredhg":
-                filtered_root_id = util.create_filtered_rootid(snapshot_id, filter_path)
+                filter_paths = None
+                if filter_path is not None:
+                    filter_paths = [filter_path]
+                filter_id = (
+                    self._get_filter_id(snapshot_id, filter_paths, checkout_config)
+                    or b"null"
+                )
+                filtered_root_id = util.create_filtered_rootid(snapshot_id, filter_id)
                 checkout.save_snapshot(filtered_root_id)
             else:
                 checkout.save_snapshot(snapshot_id.encode())

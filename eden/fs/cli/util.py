@@ -979,7 +979,7 @@ def create_legacy_filter_id(root_id: str, filter_path: Optional[str]) -> bytes:
     )
 
 
-def create_filtered_rootid(root_id: str, filter_path: Optional[str] = None) -> bytes:
+def create_filtered_rootid(root_id: str, filter_id: bytes) -> bytes:
     """Create a FilteredRootId from a RootId and filter path pair.
 
     The FilteredRootId is in the form:
@@ -991,9 +991,8 @@ def create_filtered_rootid(root_id: str, filter_path: Optional[str] = None) -> b
     filter is provided, the "null" filter is used.
     """
     original_len = len(root_id)
-    filter_id = f"{filter_path}:{root_id}" if filter_path is not None else "null"
     varint = encode_varint(original_len)
-    return varint + root_id.encode() + filter_id.encode()
+    return varint + root_id.encode() + filter_id
 
 
 def get_enable_sqlite_overlay(overlay_type: Optional[str]) -> bool:
