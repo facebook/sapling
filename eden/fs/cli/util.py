@@ -971,6 +971,14 @@ def decode_varint(buf: bytes) -> typing.Tuple[int, int]:
     return result, bytes_read
 
 
+def create_legacy_filter_id(root_id: str, filter_path: Optional[str]) -> bytes:
+    return (
+        f"{filter_path}:{root_id}".encode("utf-8")
+        if filter_path is not None
+        else b"null"
+    )
+
+
 def create_filtered_rootid(root_id: str, filter_path: Optional[str] = None) -> bytes:
     """Create a FilteredRootId from a RootId and filter path pair.
 
