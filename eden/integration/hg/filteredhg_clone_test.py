@@ -8,7 +8,7 @@
 import os
 import subprocess
 from pathlib import Path
-from typing import List, Optional
+from typing import List, Optional, Tuple
 
 from eden.fs.service.eden.thrift_types import GetCurrentSnapshotInfoRequest, MountId
 
@@ -48,14 +48,48 @@ bar
 filtered
 """
 
+    test_filter_foo: str = """
+[metadata]
+version: 2
+required: true
+[include]
+*
+[exclude]
+foo
+"""
+
+    test_filter_bar: str = """
+[metadata]
+version: 2
+required: true
+[include]
+*
+[exclude]
+bar
+"""
+
+    test_filter_baz: str = """
+[metadata]
+version: 2
+required: true
+[include]
+*
+[exclude]
+baz
+"""
+
     initial_commit: str = ""
 
     def populate_backing_repo(self, repo: hgrepo.HgRepository) -> None:
         repo.write_file("filter0", self.test_filter0)
+        repo.write_file("filter_foo", self.test_filter_foo)
+        repo.write_file("filter_bar", self.test_filter_bar)
+        repo.write_file("filter_baz", self.test_filter_baz)
         repo.write_file("tools/scm/filter/filter1", self.test_filter1)
         repo.write_file("tools/scm/filter/filter2", self.test_filter2)
         repo.write_file("foo", "foo")
         repo.write_file("bar", "bar")
+        repo.write_file("baz", "baz")
         repo.write_file("filtered", "I should be filtered by filter2")
         self.initial_commit = repo.commit("Initial commit.")
 
@@ -89,7 +123,9 @@ filtered
             )
 
     def hg_clone_filteredhg_repo(
-        self, repo_name: str, filter_path: Optional[str] = ""
+        self,
+        repo_name: str,
+        filter_paths: Optional[List[Tuple[Optional[str], str]]] = None,
     ) -> hgrepo.HgRepository:
         """
         Uses the new method of cloning FilteredFS repositories (setting a string config value).
@@ -103,24 +139,97 @@ filtered
         This function assumes that FilteredFS should be used at all times and therefore always
         passes a config value.
         """
+        config_args = []
+        for config_key, filter_path in filter_paths or []:
+            if config_key is None:
+                # Use the legacy config option
+                config_args += [
+                    "--config",
+                    f"clone.eden-sparse-filter={filter_path}",
+                ]
+            else:
+                # Use the new/preferred way to specify filter paths
+                config_args += [
+                    "--config",
+                    f"clone.eden-sparse-filter.{config_key}={filter_path}",
+                ]
+
         return self.hg_clone_additional_repo(
-            "--config",
-            f"clone.eden-sparse-filter={filter_path}",
+            *config_args,
             backing_repo=self.backing_repo,
             client_name=repo_name,
         )
 
-    def test_filteredhg_clone_succeeds(self) -> None:
-        ffs_repo = self.hg_clone_filteredhg_repo(repo_name="ffs", filter_path="filter0")
+    def test_filteredhg_clone_succeeds_legacy_config(self) -> None:
+        ffs_repo = self.hg_clone_filteredhg_repo(
+            repo_name="ffs", filter_paths=[(None, "filter0")]
+        )
         self.assert_paths_filtered_unfiltered(
             Path(ffs_repo.path), ["foo", "filtered"], ["bar"]
         )
 
     def test_filteredhg_clone_succeeds_no_filter(self) -> None:
-        ffs_repo = self.hg_clone_filteredhg_repo(repo_name="ffs")
+        ffs_repo = self.hg_clone_filteredhg_repo(repo_name="ffs", filter_paths=[])
         self.assert_paths_filtered_unfiltered(
             Path(ffs_repo.path), [], ["bar", "foo", "filtered"]
         )
+
+    def test_filteredhg_clone_one_filter(self) -> None:
+        ffs_repo = self.hg_clone_filteredhg_repo(
+            repo_name="ffs", filter_paths=[("foo", "filter_foo")]
+        )
+        # FIXME: Sapling does not yet support filter configs in the form:
+        #   clone.eden-sparse-filter.<key>=<path>
+        # so no filter is applied
+        self.assert_paths_filtered_unfiltered(
+            Path(ffs_repo.path), [], ["bar", "foo", "filtered"]
+        )
+        # self.assert_paths_filtered_unfiltered(
+        #     Path(ffs_repo.path), ["foo"], ["bar", "baz"]
+        # )
+
+    def test_filteredhg_clone_two_filters(self) -> None:
+        # FIXME: 'eden clone' does not support multiple filters, so this will
+        # fail once Sapling tries to pass "--filter-paths" arg
+        ffs_repo = self.hg_clone_filteredhg_repo(
+            repo_name="ffs",
+            filter_paths=[
+                ("foo", "filter_foo"),
+                ("bar", "filter_bar"),
+            ],
+        )
+
+        # FIXME: Sapling does not yet support filter configs in the form:
+        #   clone.eden-sparse-filter.<key>=<path>
+        # so no filters are applied
+        self.assert_paths_filtered_unfiltered(
+            Path(ffs_repo.path), [], ["bar", "foo", "filtered"]
+        )
+        # self.assert_paths_filtered_unfiltered(
+        #     Path(ffs_repo.path), ["foo", "bar"], ["baz"]
+        # )
+
+    def test_filteredhg_clone_two_filters_one_legacy(self) -> None:
+        # FIXME: 'eden clone' does not support multiple filters, so this will
+        # fail once Sapling tries to pass "--filter-paths" arg
+        ffs_repo = self.hg_clone_filteredhg_repo(
+            repo_name="ffs",
+            filter_paths=[
+                ("foo", "filter_foo"),
+                ("bar", "filter_bar"),
+                (None, "filter_baz"),
+            ],
+        )
+
+        # FIXME: Sapling does not yet support filter configs in the form:
+        #   clone.eden-sparse-filter.<key>=<path>
+        # so no filters are applied
+        self.assert_paths_filtered_unfiltered(
+            Path(ffs_repo.path), [], ["bar", "foo", "filtered"]
+        )
+        # self.assert_paths_filtered_unfiltered(
+        #     Path(ffs_repo.path), ["foo", "bar", "baz"], []
+        # )
 
     def test_eden_clone_succeeds(self) -> None:
         self.eden_clone_filteredhg_repo(backing_store="filteredhg")
@@ -171,7 +280,15 @@ filtered
                 )
             )
             self.assertIsNotNone(result.fid)
-            self.assertEqual(result.fid, b"\x01\x01\x083\x01\x84\xb2\xdbz\xb2C")
+            dbgfid_result = self.repo.run_hg(
+                *[
+                    "debugfilterid",
+                    "-r",
+                    self.initial_commit,
+                    "tools/scm/filter/filter1",
+                ]
+            )
+            self.assertEqual(result.fid, dbgfid_result.stdout)
 
 
 @hg_test
