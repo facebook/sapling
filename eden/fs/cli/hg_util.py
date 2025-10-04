@@ -82,7 +82,7 @@ def get_filter_id(
 
 
 def setup_hg_dir(
-    checkout: EdenCheckout, commit_id: str, filter_path: Optional[str] = None
+    checkout: EdenCheckout, commit_id: str, filter_paths: Optional[List[str]] = None
 ) -> None:
     config = checkout.get_config()
 
@@ -145,7 +145,7 @@ def setup_hg_dir(
     # .hg/sparse file that indicates no filter is active.
     if checkout.get_config().scm_type == "filteredhg":
         (checkout_hg_dir / "sparse").write_text(
-            f"%include {filter_path}" if filter_path is not None else ""
+            "".join([f"%include {f}\n" for f in sorted(filter_paths or [])])
         )
 
 

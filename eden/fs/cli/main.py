@@ -1016,6 +1016,8 @@ is case-sensitive. This is not recommended and is intended only for testing."""
         filter_path = args.filter_path or ""
         if filter_path == "" or filter_path.lower() == "null":
             filter_path = None
+        else:
+            filter_path = [filter_path]
 
         # Filters are only valid for repos using FilteredFS
         if filter_path and not args.backing_store == "filteredhg":

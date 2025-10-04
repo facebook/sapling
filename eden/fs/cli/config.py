@@ -665,7 +665,7 @@ class EdenInstance(AbstractEdenInstance):
         checkout_config: CheckoutConfig,
         path: str,
         snapshot_id: str,
-        filter_path: Optional[str] = None,
+        filter_paths: Optional[List[str]] = None,
     ) -> None:
         if path in self._get_directory_map():
             raise Exception(
@@ -687,9 +687,6 @@ Do you want to run `eden mount %s` instead?"""
         checkout = EdenCheckout(self, Path(path), Path(client_dir))
         if snapshot_id:
             if checkout_config.scm_type == "filteredhg":
-                filter_paths = None
-                if filter_path is not None:
-                    filter_paths = [filter_path]
                 filter_id = (
                     self._get_filter_id(snapshot_id, filter_paths, checkout_config)
                     or b"null"
@@ -720,7 +717,7 @@ Do you want to run `eden mount %s` instead?"""
         with self.get_thrift_client_legacy(timeout=mount_timeout) as client:
             client.mount(mount_info)
 
-        self._post_clone_checkout_setup(checkout, snapshot_id, filter_path)
+        self._post_clone_checkout_setup(checkout, snapshot_id, filter_paths)
 
         # Add mapping of mount path to client directory in config.json
         self._add_path_to_directory_map(Path(path), os.path.basename(client_dir))
@@ -829,7 +826,7 @@ Do you want to run `eden mount %s` instead?"""
         self,
         checkout: "EdenCheckout",
         commit_id: str,
-        filter_path: Optional[str] = None,
+        filter_paths: Optional[List[str]] = None,
     ) -> None:
         # First, check to see if the post-clone setup has been run successfully
         # before.
@@ -838,7 +835,7 @@ Do you want to run `eden mount %s` instead?"""
         if is_initial_mount and checkout.get_config().scm_type in HG_REPO_TYPES:
             from . import hg_util
 
-            hg_util.setup_hg_dir(checkout, commit_id, filter_path)
+            hg_util.setup_hg_dir(checkout, commit_id, filter_paths)
 
         clone_success_path.touch()
 
