@@ -189,9 +189,10 @@ impl InProgressTraversal {
 
             for entry in entries {
                 let path = entry.path();
+                let file_type = entry.file_type()?;
 
-                if path.is_dir() {
-                    if path.is_symlink() {
+                if file_type.is_dir() {
+                    if file_type.is_symlink() {
                         if self.follow_symlinks {
                             self.add_traversed_symlink();
                             self.traverse_path(&path)?;
@@ -202,7 +203,7 @@ impl InProgressTraversal {
                         // Regular directory, ie, non symlink
                         self.traverse_path(&path)?;
                     }
-                } else if path.is_file() {
+                } else if file_type.is_file() {
                     if self.file_count < self.max_files {
                         self.add_file(path);
                     } else {
