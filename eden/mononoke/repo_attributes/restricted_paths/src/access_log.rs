@@ -48,7 +48,7 @@ pub(crate) async fn log_access_to_restricted_path(
 ) -> Result<bool> {
     // TODO(T239041722): store permission checkers in RestrictedPaths to improve
     // performance if needed.
-    let permission_checker = stream::iter(acls)
+    let permission_checker = stream::iter(acls.clone())
         .map(anyhow::Ok)
         .try_fold(PermissionCheckerBuilder::new(), async |builder, acl| {
             Ok(builder.allow(
@@ -74,6 +74,7 @@ pub(crate) async fn log_access_to_restricted_path(
         restricted_paths,
         access_data,
         has_authorization,
+        acls,
     )?;
 
     Ok(has_authorization)
@@ -85,6 +86,7 @@ fn log_access_to_scuba(
     restricted_paths: Vec<NonRootMPath>,
     access_data: RestrictedPathAccessData,
     has_authorization: bool,
+    acls: Vec<&MononokeIdentity>,
 ) -> Result<()> {
     // Log to file if ACCESS_LOG_SCUBA_FILE_PATH is set (for testing)
     let mut scuba = if let Ok(scuba_file_path) = std::env::var("ACCESS_LOG_SCUBA_FILE_PATH") {
@@ -110,6 +112,12 @@ fn log_access_to_scuba(
     );
 
     scuba.add("has_authorization", has_authorization);
+    scuba.add(
+        "acls",
+        acls.into_iter()
+            .map(|acl| acl.to_string())
+            .collect::<Vec<_>>(),
+    );
 
     // Log access data based on the type
     match access_data {

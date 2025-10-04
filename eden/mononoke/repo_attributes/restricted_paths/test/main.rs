@@ -40,9 +40,10 @@ async fn test_no_restricted_change(fb: FacebookInit) -> Result<()> {
 
 #[mononoke::fbinit_test]
 async fn test_change_to_restricted_with_access_is_logged(fb: FacebookInit) -> Result<()> {
+    let project_acl = MononokeIdentity::from_str("REPO_REGION:myusername_project")?;
     let restricted_paths = vec![(
         NonRootMPath::new("user_project/foo").unwrap(),
-        MononokeIdentity::from_str("REPO_REGION:myusername_project")?,
+        project_acl.clone(),
     )];
 
     let expected_manifest_id = ManifestId::from("f15543536ef8c0578589b6aa5a85e49233f38a6b");
@@ -70,6 +71,7 @@ async fn test_change_to_restricted_with_access_is_logged(fb: FacebookInit) -> Re
                     .collect::<Vec<_>>(),
                 has_authorization: true,
                 client_main_id: TEST_CLIENT_MAIN_ID.to_string(),
+                acls: vec![project_acl.clone()],
             },
             // Path access logs for directories traversed
             ScubaAccessLogSample {
@@ -84,6 +86,7 @@ async fn test_change_to_restricted_with_access_is_logged(fb: FacebookInit) -> Re
                     .collect::<Vec<_>>(),
                 has_authorization: true,
                 client_main_id: TEST_CLIENT_MAIN_ID.to_string(),
+                acls: vec![project_acl.clone()],
             },
             ScubaAccessLogSample {
                 repo_id: RepositoryId::new(0),
@@ -97,6 +100,7 @@ async fn test_change_to_restricted_with_access_is_logged(fb: FacebookInit) -> Re
                     .collect::<Vec<_>>(),
                 has_authorization: true,
                 client_main_id: TEST_CLIENT_MAIN_ID.to_string(),
+                acls: vec![project_acl],
             },
         ])
         .build(fb)
@@ -109,9 +113,10 @@ async fn test_change_to_restricted_with_access_is_logged(fb: FacebookInit) -> Re
 
 #[mononoke::fbinit_test]
 async fn test_single_dir_single_restricted_change(fb: FacebookInit) -> Result<()> {
+    let restricted_acl = MononokeIdentity::from_str("REPO_REGION:restricted_acl")?;
     let restricted_paths = vec![(
         NonRootMPath::new("restricted/dir").unwrap(),
-        MononokeIdentity::from_str("REPO_REGION:restricted_acl")?,
+        restricted_acl.clone(),
     )];
 
     let expected_manifest_id = ManifestId::from("0e3837eaab4fb0454c78f290aeb747a201ccd05b");
@@ -138,6 +143,7 @@ async fn test_single_dir_single_restricted_change(fb: FacebookInit) -> Result<()
                     .collect::<Vec<_>>(),
                 has_authorization: false,
                 client_main_id: TEST_CLIENT_MAIN_ID.to_string(),
+                acls: vec![restricted_acl.clone()],
             },
             // Path access log
             ScubaAccessLogSample {
@@ -152,6 +158,7 @@ async fn test_single_dir_single_restricted_change(fb: FacebookInit) -> Result<()
                     .collect::<Vec<_>>(),
                 has_authorization: false,
                 client_main_id: TEST_CLIENT_MAIN_ID.to_string(),
+                acls: vec![restricted_acl.clone()],
             },
         ])
         .build(fb)
@@ -166,9 +173,10 @@ async fn test_single_dir_single_restricted_change(fb: FacebookInit) -> Result<()
 // the manifest id store.
 #[mononoke::fbinit_test]
 async fn test_single_dir_many_restricted_changes(fb: FacebookInit) -> Result<()> {
+    let restricted_acl = MononokeIdentity::from_str("REPO_REGION:restricted_acl")?;
     let restricted_paths = vec![(
         NonRootMPath::new("restricted/dir").unwrap(),
-        MononokeIdentity::from_str("REPO_REGION:restricted_acl")?,
+        restricted_acl.clone(),
     )];
 
     let expected_manifest_id = ManifestId::from("3132e75d8439632fc89f193cbf4f02b2b5428c6e");
@@ -196,6 +204,7 @@ async fn test_single_dir_many_restricted_changes(fb: FacebookInit) -> Result<()>
                     .collect::<Vec<_>>(),
                 has_authorization: false,
                 client_main_id: TEST_CLIENT_MAIN_ID.to_string(),
+                acls: vec![restricted_acl.clone()],
             },
             // Path access log - for the directory containing both files
             ScubaAccessLogSample {
@@ -210,6 +219,7 @@ async fn test_single_dir_many_restricted_changes(fb: FacebookInit) -> Result<()>
                     .collect::<Vec<_>>(),
                 has_authorization: false,
                 client_main_id: TEST_CLIENT_MAIN_ID.to_string(),
+                acls: vec![restricted_acl.clone()],
             },
         ])
         .build(fb)
@@ -222,9 +232,10 @@ async fn test_single_dir_many_restricted_changes(fb: FacebookInit) -> Result<()>
 
 #[mononoke::fbinit_test]
 async fn test_single_dir_restricted_and_unrestricted(fb: FacebookInit) -> Result<()> {
+    let restricted_acl = MononokeIdentity::from_str("REPO_REGION:restricted_acl")?;
     let restricted_paths = vec![(
         NonRootMPath::new("restricted/dir").unwrap(),
-        MononokeIdentity::from_str("REPO_REGION:restricted_acl")?,
+        restricted_acl.clone(),
     )];
 
     let expected_manifest_id = ManifestId::from("0e3837eaab4fb0454c78f290aeb747a201ccd05b");
@@ -254,6 +265,7 @@ async fn test_single_dir_restricted_and_unrestricted(fb: FacebookInit) -> Result
                     .collect::<Vec<_>>(),
                 has_authorization: false,
                 client_main_id: TEST_CLIENT_MAIN_ID.to_string(),
+                acls: vec![restricted_acl.clone()],
             },
             // Path access log - only for restricted directory
             ScubaAccessLogSample {
@@ -268,6 +280,7 @@ async fn test_single_dir_restricted_and_unrestricted(fb: FacebookInit) -> Result
                     .collect::<Vec<_>>(),
                 has_authorization: false,
                 client_main_id: TEST_CLIENT_MAIN_ID.to_string(),
+                acls: vec![restricted_acl.clone()],
             },
         ])
         .build(fb)
@@ -281,14 +294,16 @@ async fn test_single_dir_restricted_and_unrestricted(fb: FacebookInit) -> Result
 // Multiple restricted directories generate multiple entries in the manifest
 #[mononoke::fbinit_test]
 async fn test_multiple_restricted_dirs(fb: FacebookInit) -> Result<()> {
+    let restricted_acl = MononokeIdentity::from_str("REPO_REGION:restricted_acl")?;
+    let another_acl = MononokeIdentity::from_str("REPO_REGION:another_acl")?;
     let restricted_paths = vec![
         (
             NonRootMPath::new("restricted/one").unwrap(),
-            MononokeIdentity::from_str("REPO_REGION:restricted_acl")?,
+            restricted_acl.clone(),
         ),
         (
             NonRootMPath::new("restricted/two").unwrap(),
-            MononokeIdentity::from_str("REPO_REGION:another_acl")?,
+            another_acl.clone(),
         ),
     ];
     let expected_manifest_id_one = ManifestId::from("e53be16502cbc6afeb30ef30de7f6d9841fd4cb1");
@@ -323,6 +338,7 @@ async fn test_multiple_restricted_dirs(fb: FacebookInit) -> Result<()> {
                     .collect::<Vec<_>>(),
                 has_authorization: false,
                 client_main_id: TEST_CLIENT_MAIN_ID.to_string(),
+                acls: vec![another_acl.clone()],
             },
             // restricted/two access - path log
             ScubaAccessLogSample {
@@ -337,6 +353,7 @@ async fn test_multiple_restricted_dirs(fb: FacebookInit) -> Result<()> {
                     .collect::<Vec<_>>(),
                 has_authorization: false,
                 client_main_id: TEST_CLIENT_MAIN_ID.to_string(),
+                acls: vec![another_acl.clone()],
             },
             // restricted/one access - manifest log
             ScubaAccessLogSample {
@@ -351,6 +368,7 @@ async fn test_multiple_restricted_dirs(fb: FacebookInit) -> Result<()> {
                     .collect::<Vec<_>>(),
                 has_authorization: false,
                 client_main_id: TEST_CLIENT_MAIN_ID.to_string(),
+                acls: vec![restricted_acl.clone()],
             },
             // restricted/one access - path log
             ScubaAccessLogSample {
@@ -365,6 +383,7 @@ async fn test_multiple_restricted_dirs(fb: FacebookInit) -> Result<()> {
                     .collect::<Vec<_>>(),
                 has_authorization: false,
                 client_main_id: TEST_CLIENT_MAIN_ID.to_string(),
+                acls: vec![restricted_acl.clone()],
             },
         ])
         .build(fb)
@@ -379,15 +398,17 @@ async fn test_multiple_restricted_dirs(fb: FacebookInit) -> Result<()> {
 // be a log entry for each one with the proper authorization result.
 #[mononoke::fbinit_test]
 async fn test_multiple_restricted_dirs_with_partial_access(fb: FacebookInit) -> Result<()> {
+    let restricted_acl = MononokeIdentity::from_str("REPO_REGION:restricted_acl")?;
+    let myusername_project_acl = MononokeIdentity::from_str("REPO_REGION:myusername_project")?;
     let restricted_paths = vec![
         (
             NonRootMPath::new("restricted/one").unwrap(),
-            MononokeIdentity::from_str("REPO_REGION:restricted_acl")?,
+            restricted_acl.clone(),
         ),
         (
             // User will have access to this path
             NonRootMPath::new("user_project/foo").unwrap(),
-            MononokeIdentity::from_str("REPO_REGION:myusername_project")?,
+            myusername_project_acl.clone(),
         ),
     ];
     let expected_manifest_id_user = ManifestId::from("5d30a65c45e695416c96abfbd745f43c711879bb");
@@ -427,6 +448,7 @@ async fn test_multiple_restricted_dirs_with_partial_access(fb: FacebookInit) -> 
                 // User had access to this restricted path
                 has_authorization: true,
                 client_main_id: TEST_CLIENT_MAIN_ID.to_string(),
+                acls: vec![myusername_project_acl.clone()],
             },
             // user_project/foo access - path log
             ScubaAccessLogSample {
@@ -442,6 +464,7 @@ async fn test_multiple_restricted_dirs_with_partial_access(fb: FacebookInit) -> 
                 // User had access to this restricted path
                 has_authorization: true,
                 client_main_id: TEST_CLIENT_MAIN_ID.to_string(),
+                acls: vec![myusername_project_acl.clone()],
             },
             // restricted/one access - manifest log
             ScubaAccessLogSample {
@@ -456,6 +479,7 @@ async fn test_multiple_restricted_dirs_with_partial_access(fb: FacebookInit) -> 
                     .collect::<Vec<_>>(),
                 has_authorization: false,
                 client_main_id: TEST_CLIENT_MAIN_ID.to_string(),
+                acls: vec![restricted_acl.clone()],
             },
             // restricted/one access - path log
             ScubaAccessLogSample {
@@ -470,6 +494,7 @@ async fn test_multiple_restricted_dirs_with_partial_access(fb: FacebookInit) -> 
                     .collect::<Vec<_>>(),
                 has_authorization: false,
                 client_main_id: TEST_CLIENT_MAIN_ID.to_string(),
+                acls: vec![restricted_acl.clone()],
             },
         ])
         .build(fb)
@@ -483,15 +508,14 @@ async fn test_multiple_restricted_dirs_with_partial_access(fb: FacebookInit) -> 
 #[mononoke::fbinit_test]
 async fn test_overlapping_restricted_directories(fb: FacebookInit) -> Result<()> {
     // Set up overlapping restricted paths: project/restricted is nested inside project
+    let more_restricted_acl = MononokeIdentity::from_str("REPO_REGION:more_restricted_acl")?;
+    let project_acl = MononokeIdentity::from_str("REPO_REGION:project_acl")?;
     let restricted_paths = vec![
         (
             NonRootMPath::new("project/restricted").unwrap(),
-            MononokeIdentity::from_str("REPO_REGION:more_restricted_acl")?,
+            more_restricted_acl.clone(),
         ),
-        (
-            NonRootMPath::new("project").unwrap(),
-            MononokeIdentity::from_str("REPO_REGION:project_acl")?,
-        ),
+        (NonRootMPath::new("project").unwrap(), project_acl.clone()),
     ];
 
     let expected_manifest_id_root = ManifestId::from("0825286967058d61feb5b0031f4c23fa0a999965");
@@ -533,6 +557,7 @@ async fn test_overlapping_restricted_directories(fb: FacebookInit) -> Result<()>
                 // User has access to the broader project ACL
                 has_authorization: true,
                 client_main_id: TEST_CLIENT_MAIN_ID.to_string(),
+                acls: vec![project_acl.clone()],
             },
             // project access - path log
             ScubaAccessLogSample {
@@ -548,6 +573,7 @@ async fn test_overlapping_restricted_directories(fb: FacebookInit) -> Result<()>
                 // User has access to the broader project ACL
                 has_authorization: true,
                 client_main_id: TEST_CLIENT_MAIN_ID.to_string(),
+                acls: vec![project_acl.clone()],
             },
             // project/restricted access - manifest log
             ScubaAccessLogSample {
@@ -563,6 +589,7 @@ async fn test_overlapping_restricted_directories(fb: FacebookInit) -> Result<()>
                 // User does NOT have access to the more restricted ACL
                 has_authorization: false,
                 client_main_id: TEST_CLIENT_MAIN_ID.to_string(),
+                acls: vec![more_restricted_acl.clone()],
             },
             // project/restricted access - path log (includes both ACLs)
             ScubaAccessLogSample {
@@ -578,6 +605,7 @@ async fn test_overlapping_restricted_directories(fb: FacebookInit) -> Result<()>
                 // User has access to project ACL, so overall authorization is true
                 has_authorization: true,
                 client_main_id: TEST_CLIENT_MAIN_ID.to_string(),
+                acls: vec![more_restricted_acl.clone(), project_acl.clone()],
             },
         ])
         .build(fb)
@@ -591,9 +619,10 @@ async fn test_overlapping_restricted_directories(fb: FacebookInit) -> Result<()>
 #[mononoke::fbinit_test]
 async fn test_same_manifest_id_restricted_and_unrestricted_paths(fb: FacebookInit) -> Result<()> {
     // Set up a restricted path for the "restricted" directory
+    let restricted_acl = MononokeIdentity::from_str("REPO_REGION:restricted_acl")?;
     let restricted_paths = vec![(
         NonRootMPath::new("restricted").unwrap(),
-        MononokeIdentity::from_str("REPO_REGION:restricted_acl")?,
+        restricted_acl.clone(),
     )];
 
     // Create two files with the same content in directories that should have the same manifest ID:
@@ -630,6 +659,7 @@ async fn test_same_manifest_id_restricted_and_unrestricted_paths(fb: FacebookIni
                 // User does NOT have access to restricted_acl
                 has_authorization: false,
                 client_main_id: TEST_CLIENT_MAIN_ID.to_string(),
+                acls: vec![restricted_acl.clone()],
             },
             ScubaAccessLogSample {
                 repo_id: RepositoryId::new(0),
@@ -644,6 +674,7 @@ async fn test_same_manifest_id_restricted_and_unrestricted_paths(fb: FacebookIni
                 // User does NOT have access to restricted_acl
                 has_authorization: false,
                 client_main_id: TEST_CLIENT_MAIN_ID.to_string(),
+                acls: vec![restricted_acl.clone()],
             },
             // Path access logs - for directories traversed
             ScubaAccessLogSample {
@@ -659,6 +690,7 @@ async fn test_same_manifest_id_restricted_and_unrestricted_paths(fb: FacebookIni
                 // User does NOT have access to restricted_acl
                 has_authorization: false,
                 client_main_id: TEST_CLIENT_MAIN_ID.to_string(),
+                acls: vec![restricted_acl.clone()],
             },
             ScubaAccessLogSample {
                 repo_id: RepositoryId::new(0),
@@ -673,6 +705,7 @@ async fn test_same_manifest_id_restricted_and_unrestricted_paths(fb: FacebookIni
                 // User does NOT have access to restricted_acl
                 has_authorization: false,
                 client_main_id: TEST_CLIENT_MAIN_ID.to_string(),
+                acls: vec![restricted_acl.clone()],
             },
         ])
         .build(fb)

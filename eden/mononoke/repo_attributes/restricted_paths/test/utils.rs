@@ -78,6 +78,7 @@ pub struct ScubaAccessLogSample {
     pub client_identities: Vec<String>,
     pub client_main_id: String,
     pub has_authorization: bool,
+    pub acls: Vec<MononokeIdentity>,
 }
 
 pub const TEST_CLIENT_MAIN_ID: &str = "user:myusername0";
@@ -469,6 +470,19 @@ fn deserialize_scuba_log_file(
                         })
                         .unwrap_or_default();
 
+                    let acls: Vec<MononokeIdentity> = flattened_log["acls"]
+                        .as_array()
+                        .map(|ids| {
+                            let mut acls: Vec<MononokeIdentity> = ids
+                                .iter()
+                                .filter_map(|id| id.as_str())
+                                .filter_map(|s| MononokeIdentity::from_str(s).ok())
+                                .collect();
+                            acls.sort();
+                            acls
+                        })
+                        .unwrap_or_default();
+
                     Ok(ScubaAccessLogSample {
                         repo_id,
                         restricted_paths,
@@ -478,6 +492,7 @@ fn deserialize_scuba_log_file(
                         client_identities,
                         has_authorization,
                         client_main_id,
+                        acls,
                     })
                 })?
         })
