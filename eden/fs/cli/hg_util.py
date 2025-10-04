@@ -8,11 +8,17 @@
 
 import binascii
 import os
+import subprocess
 import typing
 from pathlib import Path
-from typing import BinaryIO, Dict, Optional, Tuple
+from typing import BinaryIO, Dict, List, Optional, Tuple
 
 import eden.dirstate
+from eden.fs.cli.util import (
+    create_legacy_filter_id,
+    get_environment_suitable_for_subprocess,
+    print_stderr,
+)
 
 from .config import EdenCheckout
 
@@ -27,6 +33,52 @@ portablefilenames = ignore
 
 # Don't name ".hg" or ".sl" - we don't want the state dir to appear to be a repo itself.
 _OFF_MOUNT_REPO_DIR_NAME = "sl-repo-dir"
+
+
+def get_filter_id(
+    commit_id: str,
+    filter_paths: List[str],
+    backing_repo_path: Path,
+) -> Optional[bytes]:
+    # TODO: Add a helper for determining whether "hg" or "sl" should be used
+    args = [
+        os.environ.get("EDEN_HG_BINARY", "hg"),
+        "debugfilterid",
+        "-r",
+        commit_id,
+    ] + filter_paths
+
+    try:
+        result = subprocess.run(
+            args,
+            capture_output=True,
+            check=True,
+            env=get_environment_suitable_for_subprocess(),
+            cwd=backing_repo_path,
+            timeout=60,
+        )
+        return result.stdout
+    except subprocess.CalledProcessError as e:
+        # if the command does not exist, we must be running an old version of Sapling. Revert to Legacy filter IDs
+        if (
+            e.returncode == 255
+            and e.stderr is not None
+            and b"unknown command" in e.stderr
+        ):
+            if len(filter_paths) > 1:
+                raise Exception(
+                    f"'sl debugfilterid' is unavailable, but multiple filter paths were specified: {filter_paths}"
+                )
+            else:
+                print_stderr(
+                    "'sl debugfilterid' is unavailable. Falling back to legacy filter creation."
+                )
+                return create_legacy_filter_id(
+                    commit_id, filter_paths[0] if len(filter_paths) == 1 else None
+                )
+
+        # The command failed for some other reason. Throw since this is unexpected
+        raise Exception(f"Filter generation failed: {e.stderr}")
 
 
 def setup_hg_dir(
