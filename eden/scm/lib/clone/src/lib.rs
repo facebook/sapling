@@ -148,7 +148,7 @@ pub fn eden_clone(
     backing_repo: &Repo,
     working_copy: &Path,
     target: Option<HgId>,
-    filter: Option<Text>,
+    filters: Option<Vec<Text>>,
 ) -> Result<()> {
     let config = backing_repo.config();
 
@@ -191,16 +191,19 @@ pub fn eden_clone(
         clone_command.arg("--allow-empty-repo");
     }
 
-    // The current Eden installation may not yet support the --filter-path option. We will back-up
-    // the clone arguments and retry without --filter-path if our first clone attempt fails.
-    let args_without_filter = match filter {
-        Some(filter) if !filter.is_empty() => {
+    // The current Eden installation may not yet support the --filter-paths option. We will back-up
+    // the clone arguments and retry with legacy --filter-path if our first clone attempt fails and
+    // only a single filter path was supplied
+    let args_without_filter = match filters.clone() {
+        Some(filters) if filters.iter().any(|f| !f.is_empty()) => {
             clone_command.args(["--backing-store", "filteredhg"]);
             let args_without_filter = clone_command
                 .get_args()
                 .map(|v| v.to_os_string())
                 .collect::<Vec<_>>();
-            clone_command.args(["--filter-path", &filter]);
+            let mut filter_args = vec!["--filter-paths"];
+            filter_args.append(&mut filters.iter().map(|f| f.as_ref()).collect());
+            clone_command.args(&filter_args);
             Some(args_without_filter)
         }
         Some(_) => {
@@ -214,12 +217,23 @@ pub fn eden_clone(
 
     run_eden_clone_command(&mut clone_command).or_else(|err| {
         tracing::warn!(?err, "error performing eden clone");
-        // Retry the clone without the --filter-path argument
+        // Retry the clone with --filter-path instead of --filter-paths
         if let Some(args_without_filter) = args_without_filter {
-            let mut new_command = get_eden_clone_command(config)?;
-            new_command.args(args_without_filter);
-            tracing::debug!(target: "clone_info", empty_eden_filter=true);
-            run_eden_clone_command(&mut new_command).context(err)?;
+            let filters = filters.unwrap_or_default();
+            // Only 1 filter was supplied, so we can fall back to legacy --filter-path option
+            if filters.iter().len() == 1 {
+                let mut new_command = get_eden_clone_command(config)?;
+                new_command.args(args_without_filter);
+                let mut filter_args = vec!["--filter-path"];
+                filter_args.append(&mut filters.iter().map(|f| f.as_ref()).collect());
+                new_command.args(&filter_args);
+                tracing::debug!(target: "clone_info", filter_path_fallback=true, filter_count=filters.iter().len());
+                run_eden_clone_command(&mut new_command).context(err)?;
+            } else {
+                tracing::debug!(target: "clone_info", filter_path_fallback=true, filter_count=filters.iter().len());
+                tracing::error!("cannot fall back to legacy --filter-path option because multiple filters were supplied: {:?}", filters);
+                return Err(err);
+            }
             Ok(())
         } else {
             Err(err)

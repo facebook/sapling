@@ -27,6 +27,7 @@ sapling-exchange = { version = "0.1.0", path = "../../../exchange" }
 sapling-hgplain = { version = "0.1.0", path = "../../../util/hgplain" }
 sapling-identity = { version = "0.1.0", path = "../../../identity" }
 sapling-migration = { version = "0.1.0", path = "../../../migration" }
+sapling-minibytes = { version = "0.1.0", path = "../../../minibytes" }
 sapling-repo = { version = "0.1.0", path = "../../../repo" }
 sapling-repourl = { version = "0.1.0", path = "../../../repo/url" }
 sapling-types = { version = "0.1.0", path = "../../../types" }

@@ -40,6 +40,7 @@ rust_library(
         "//eden/scm/lib/exchange:exchange",
         "//eden/scm/lib/identity:identity",
         "//eden/scm/lib/migration:migration",
+        "//eden/scm/lib/minibytes:minibytes",
         "//eden/scm/lib/repo:repo",
         "//eden/scm/lib/repo/url:repourl",
         "//eden/scm/lib/types:types",

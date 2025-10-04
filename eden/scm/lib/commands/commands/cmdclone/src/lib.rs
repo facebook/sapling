@@ -5,6 +5,7 @@
  * GNU General Public License version 2.
  */
 
+use std::collections::HashSet;
 use std::path::Path;
 use std::path::PathBuf;
 use std::sync::Arc;
@@ -30,6 +31,7 @@ use configmodel::ConfigExt;
 use configmodel::ValueSource;
 use eagerepo::EagerRepo;
 use migration::feature::deprecate;
+use minibytes::Text;
 use regex::Regex;
 use repo::repo::Repo;
 use repourl::RepoUrl;
@@ -139,6 +141,36 @@ fn log_clone_info(clone_type_str: &str, reponame: &str, ctx: &ReqCtx<CloneOpts>)
     }
 }
 
+fn filter_paths_from_config(config: &mut impl Config) -> Option<Vec<Text>> {
+    // Get unique set of filter paths
+    let filter_paths = config
+        .keys("clone")
+        .iter()
+        .filter_map(|k| {
+            if k.starts_with("eden-sparse-filter") {
+                tracing::debug!("found filter config key: {}", k);
+                config.get("clone", k)
+            } else {
+                None
+            }
+        })
+        .collect::<HashSet<_>>();
+    if filter_paths.is_empty() {
+        None
+    } else if filter_paths.len() > 1 {
+        // If more than 1 filter path is supplied, remove "" as that represents the null filter and
+        // cannot be combined with other filters
+        Some(
+            filter_paths
+                .into_iter()
+                .filter(|e| !e.as_ref().is_empty())
+                .collect::<Vec<_>>(),
+        )
+    } else {
+        Some(filter_paths.into_iter().collect())
+    }
+}
+
 fn run_eden(
     reponame: &str,
     destination: &Path,
@@ -202,9 +234,9 @@ fn run_eden(
     }();
 
     let config_filter = if let Ok((_, ref backing_repo)) = backing_clone_result {
-        backing_repo.config().get("clone", "eden-sparse-filter")
+        filter_paths_from_config(&mut backing_repo.config())
     } else {
-        config.get("clone", "eden-sparse-filter")
+        filter_paths_from_config(&mut config)
     };
 
     let edenfs_filter = match (ctx.opts.enable_profile.len(), config_filter) {
@@ -215,7 +247,7 @@ fn run_eden(
                     "Ignoring clone.eden-sparse-filter because --enable-profile was specified",
                 );
             }
-            Some(ctx.opts.enable_profile[0].clone().into())
+            Some(vec![ctx.opts.enable_profile[0].clone().into()])
         }
         _ => None,
     };

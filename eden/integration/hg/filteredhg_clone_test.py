@@ -178,33 +178,30 @@ baz
         ffs_repo = self.hg_clone_filteredhg_repo(
             repo_name="ffs", filter_paths=[("foo", "filter_foo")]
         )
-        # FIXME: Sapling does not yet support filter configs in the form:
-        #   clone.eden-sparse-filter.<key>=<path>
-        # so no filter is applied
         self.assert_paths_filtered_unfiltered(
-            Path(ffs_repo.path), [], ["bar", "foo", "filtered"]
+            Path(ffs_repo.path), ["foo"], ["bar", "baz"]
         )
-        # self.assert_paths_filtered_unfiltered(
-        #     Path(ffs_repo.path), ["foo"], ["bar", "baz"]
-        # )
 
     def test_filteredhg_clone_two_filters(self) -> None:
         # FIXME: 'eden clone' does not support multiple filters, so this will
         # fail once Sapling tries to pass "--filter-paths" arg
-        ffs_repo = self.hg_clone_filteredhg_repo(
-            repo_name="ffs",
-            filter_paths=[
-                ("foo", "filter_foo"),
-                ("bar", "filter_bar"),
-            ],
+        with self.assertRaises(subprocess.CalledProcessError) as context:
+            ffs_repo = self.hg_clone_filteredhg_repo(  # noqa
+                repo_name="ffs",
+                filter_paths=[
+                    ("foo", "filter_foo"),
+                    ("bar", "filter_bar"),
+                ],
+            )
+        stderr = context.exception.stderr
+        self.assertIn(
+            b"error: unrecognized arguments",
+            stderr,
+            msg="passing two or more filters to old 'eden clone' should fail",
         )
 
-        # FIXME: Sapling does not yet support filter configs in the form:
-        #   clone.eden-sparse-filter.<key>=<path>
-        # so no filters are applied
-        self.assert_paths_filtered_unfiltered(
-            Path(ffs_repo.path), [], ["bar", "foo", "filtered"]
-        )
+        # FIXME: The repo isn't cloned because we tried to specify multiple
+        # filters, but 'eden clone' doesn't support that yet
         # self.assert_paths_filtered_unfiltered(
         #     Path(ffs_repo.path), ["foo", "bar"], ["baz"]
         # )
@@ -212,21 +209,24 @@ baz
     def test_filteredhg_clone_two_filters_one_legacy(self) -> None:
         # FIXME: 'eden clone' does not support multiple filters, so this will
         # fail once Sapling tries to pass "--filter-paths" arg
-        ffs_repo = self.hg_clone_filteredhg_repo(
-            repo_name="ffs",
-            filter_paths=[
-                ("foo", "filter_foo"),
-                ("bar", "filter_bar"),
-                (None, "filter_baz"),
-            ],
+        with self.assertRaises(subprocess.CalledProcessError) as context:
+            ffs_repo = self.hg_clone_filteredhg_repo(  # noqa
+                repo_name="ffs",
+                filter_paths=[
+                    ("foo", "filter_foo"),
+                    ("bar", "filter_bar"),
+                    (None, "filter_baz"),
+                ],
+            )
+        stderr = context.exception.stderr
+        self.assertIn(
+            b"error: unrecognized arguments",
+            stderr,
+            msg="passing two or more filters to old 'eden clone' should fail",
         )
 
-        # FIXME: Sapling does not yet support filter configs in the form:
-        #   clone.eden-sparse-filter.<key>=<path>
-        # so no filters are applied
-        self.assert_paths_filtered_unfiltered(
-            Path(ffs_repo.path), [], ["bar", "foo", "filtered"]
-        )
+        # FIXME: The repo isn't cloned because we tried to specify multiple
+        # filters, but 'eden clone' doesn't support that yet
         # self.assert_paths_filtered_unfiltered(
         #     Path(ffs_repo.path), ["foo", "bar", "baz"], []
         # )
