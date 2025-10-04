@@ -27,14 +27,14 @@ pub async fn headerless_unified<R: MononokeRepo>(
     let (base_bytes, other_bytes) = try_join!(
         async {
             if let Some(base_input) = &base {
-                load_content(ctx, repo, base_input.clone()).await
+                load_content(ctx, repo, base_input).await
             } else {
                 Ok(None)
             }
         },
         async {
             if let Some(other_input) = &other {
-                load_content(ctx, repo, other_input.clone()).await
+                load_content(ctx, repo, other_input).await
             } else {
                 Ok(None)
             }
@@ -243,13 +243,13 @@ mod tests {
             replacement_path: None,
         });
 
-        // Test None vs Some - should show addition
+        // Test None vs Some - Should show deletion
         let diff = headerless_unified(&ctx, &repo_ctx, None, Some(input.clone()), 3).await?;
         let diff_str = String::from_utf8_lossy(&diff.raw_diff);
         assert!(!diff.is_binary);
         assert_eq!(diff_str, "@@ -1,2 +0,0 @@\n-some content\n-line2\n");
 
-        // Test Some vs None - should show deletion
+        // Test Some vs None - Should show addition
         let diff = headerless_unified(&ctx, &repo_ctx, Some(input), None, 3).await?;
         let diff_str = String::from_utf8_lossy(&diff.raw_diff);
         assert!(!diff.is_binary);

@@ -13,6 +13,7 @@ bytes = { version = "1.10", features = ["serde"] }
 context = { version = "0.1.0", path = "../../server/context" }
 filestore = { version = "0.1.0", path = "../../filestore" }
 futures = { version = "0.3.31", features = ["async-await", "compat"] }
+git_types = { version = "0.1.0", path = "../../git/git_types" }
 mononoke_api = { version = "0.1.0", path = "../../mononoke_api" }
 mononoke_types = { version = "0.1.0", path = "../../mononoke_types" }
 sapling-xdiff = { version = "0.1.0", path = "../../../scm/lib/xdiff" }
