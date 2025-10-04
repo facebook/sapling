@@ -179,17 +179,13 @@ impl InProgressTraversal {
             let read_dir_duration = start_time.elapsed();
 
             let entries = read_dir_result?;
+            let mut entry_count = 0;
 
-            // Count entries in this directory
-            let entries: Vec<_> = entries.collect::<Result<Vec<_>, _>>()?;
-            let entry_count = entries.len();
-
-            // Add stats for this directory
-            self.add_read_dir_stats(read_dir_duration, entry_count);
-
-            for entry in entries {
+            for entry_result in entries {
+                let entry = entry_result?;
                 let path = entry.path();
                 let file_type = entry.file_type()?;
+                entry_count += 1;
 
                 if file_type.is_dir() {
                     if file_type.is_symlink() {
@@ -207,10 +203,12 @@ impl InProgressTraversal {
                     if self.file_count < self.max_files {
                         self.add_file(path);
                     } else {
+                        self.add_read_dir_stats(read_dir_duration, entry_count);
                         return Ok(());
                     }
                 }
             }
+            self.add_read_dir_stats(read_dir_duration, entry_count);
         }
         Ok(())
     }
