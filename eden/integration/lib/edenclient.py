@@ -763,7 +763,7 @@ class EdenFS:
         case_sensitive: Optional[bool] = None,
         enable_windows_symlinks: bool = False,
         backing_store: Optional[str] = None,
-        filter_path: Optional[str] = None,
+        filter_paths: Optional[List[str]] = None,
     ) -> None:
         """
         Run "eden clone"
@@ -780,9 +780,18 @@ class EdenFS:
         if backing_store is not None:
             params.append("--backing-store")
             params.append(backing_store)
-        if filter_path is not None:
+        # FIXME: we should only use --filter-paths option in the future, even
+        # for single filter clones
+        if filter_paths is not None and len(filter_paths) == 1:
             params.append("--filter-path")
-            params.append(filter_path)
+            params.append(filter_paths[0])
+        elif (
+            filter_paths is not None
+            and len(filter_paths) != 0
+            and any(p != "" for p in filter_paths)
+        ):
+            params.append("--filter-paths")
+            params += filter_paths
         self.run_cmd(*params)
 
     def is_case_sensitive(self, path: Union[str, os.PathLike]) -> bool:

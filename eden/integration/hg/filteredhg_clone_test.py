@@ -94,7 +94,9 @@ baz
         self.initial_commit = repo.commit("Initial commit.")
 
     def eden_clone_filteredhg_repo(
-        self, backing_store: Optional[str] = None, filter_path: Optional[str] = None
+        self,
+        backing_store: Optional[str] = None,
+        filter_paths: Optional[List[str]] = None,
     ) -> Path:
         tmp = self.make_temporary_directory()
         empty_dir = os.path.join(tmp, "foo/bar/baz")
@@ -103,7 +105,7 @@ baz
             self.repo.path,
             empty_dir,
             backing_store=backing_store,
-            filter_path=filter_path,
+            filter_paths=filter_paths,
         )
         return Path(empty_dir)
 
@@ -236,19 +238,19 @@ baz
 
     def test_eden_clone_with_filter_succeeds(self) -> None:
         repo_path = self.eden_clone_filteredhg_repo(
-            backing_store="filteredhg", filter_path="tools/scm/filter/filter1"
+            backing_store="filteredhg", filter_paths=["tools/scm/filter/filter1"]
         )
         self.assert_paths_filtered_unfiltered(repo_path, [], ["foo", "bar", "filtered"])
 
     def test_filter_active_after_eden_clone(self) -> None:
         repo_path = self.eden_clone_filteredhg_repo(
-            backing_store="filteredhg", filter_path="tools/scm/filter/filter2"
+            backing_store="filteredhg", filter_paths=["tools/scm/filter/filter2"]
         )
         self.assert_paths_filtered_unfiltered(repo_path, ["filtered"], ["foo", "bar"])
 
     def test_clone_filter_without_backing_store_arg_fails(self) -> None:
         with self.assertRaises(subprocess.CalledProcessError) as context:
-            self.eden_clone_filteredhg_repo(filter_path="tools/scm/filter/filter1")
+            self.eden_clone_filteredhg_repo(filter_paths=["tools/scm/filter/filter1"])
         stderr = context.exception.stderr
         self.assertIn(
             "error: --filter-path can only be used with",
@@ -270,7 +272,7 @@ baz
 
     async def test_eden_get_filter(self) -> None:
         path = self.eden_clone_filteredhg_repo(
-            backing_store="filteredhg", filter_path="tools/scm/filter/filter1"
+            backing_store="filteredhg", filter_paths=["tools/scm/filter/filter1"]
         )
 
         async with self.get_thrift_client() as client:
@@ -300,7 +302,8 @@ class NonFilteredTestCase(EdenHgTestCase):
         repo.commit("Initial commit.")
 
     def eden_clone_filteredhg_repo(
-        self, backing_store: Optional[str] = None, filter_path: Optional[str] = None
+        self,
+        backing_store: Optional[str] = None,
     ) -> Path:
         tmp = self.make_temporary_directory()
         empty_dir = os.path.join(tmp, "foo/bar/baz")
