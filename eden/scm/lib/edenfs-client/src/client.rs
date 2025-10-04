@@ -64,7 +64,7 @@ impl EdenFsClient {
         })
     }
 
-    pub fn get_active_filter_id(&self, commit: &HgId) -> Result<Option<FilterId>, anyhow::Error> {
+    pub fn get_active_filter_id(&self, commit: HgId) -> Result<Option<FilterId>, anyhow::Error> {
         match &self.filter_generator {
             Some(r#gen) => {
                 let mut lock = r#gen.lock();
@@ -137,7 +137,7 @@ impl EdenFsClient {
         let thrift_client = block_on(self.get_thrift_client())?;
 
         let start_time = Instant::now();
-        let root_id_options = Self::root_options_from_filter(self.get_active_filter_id(&commit)?);
+        let root_id_options = Self::root_options_from_filter(self.get_active_filter_id(commit)?);
         let thrift_result = extract_error(block_on(thrift_client.getScmStatusV2(
             &edenfs::GetScmStatusParams {
                 mountPoint: self.root_vec(),
@@ -198,7 +198,7 @@ impl EdenFsClient {
             ..Default::default()
         };
 
-        let root_id_options = Self::root_options_from_filter(self.get_active_filter_id(&p1)?);
+        let root_id_options = Self::root_options_from_filter(self.get_active_filter_id(p1)?);
         let root_vec = self.root_vec();
         let params = edenfs::ResetParentCommitsParams {
             hgRootManifest: Some(p1_tree.into_byte_array().into()),
@@ -251,7 +251,7 @@ impl EdenFsClient {
         let tree_vec = tree.into_byte_array().into();
         let thrift_client = block_on(self.get_thrift_client())?;
 
-        let root_id_options = Self::root_options_from_filter(self.get_active_filter_id(&node)?);
+        let root_id_options = Self::root_options_from_filter(self.get_active_filter_id(node)?);
         let params = edenfs::CheckOutRevisionParams {
             hgRootManifest: Some(tree_vec),
             cri: Some(self.get_client_request_info()),

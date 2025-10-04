@@ -217,7 +217,7 @@ pub struct Filter {
 impl Filter {
     // Default New constructor creates V1 Filters
     fn new(
-        filter_paths: Vec<RepoPathBuf>,
+        filter_paths: &[RepoPathBuf],
         commit_id: HgId,
         filter_gen: &mut FilterGenerator,
     ) -> Result<Filter, anyhow::Error> {
@@ -229,7 +229,7 @@ impl Filter {
         )?;
         let filter = Filter {
             filter_id,
-            filter_paths,
+            filter_paths: filter_paths.into(),
             commit_id,
         };
         // Enforce that filters are persisted in storage. No-op if filter is already stored.
@@ -386,7 +386,6 @@ impl FilterGenerator {
     }
 
     /// Get Filter content from a filter str
-    #[allow(dead_code)]
     pub fn get_filter_from_bytes<T: AsRef<[u8]>>(&self, filter_id: T) -> anyhow::Result<Filter> {
         let parsed_id = FilterId::from_bytes(filter_id.as_ref())?;
         match parsed_id {
@@ -473,25 +472,31 @@ impl FilterGenerator {
         }
     }
 
-    // Takes a commit and returns the corresponding FilterID that should be passed to Eden.
-    pub fn active_filter_id(
+    pub fn generate_filter_id(
         &mut self,
-        commit_id: &HgId,
-    ) -> Result<Option<FilterId>, anyhow::Error> {
+        commit_id: HgId,
+        filter_paths: &[RepoPathBuf],
+    ) -> Result<FilterId, anyhow::Error> {
+        let filter = match self.default_filter_version {
+            FilterVersion::Legacy if filter_paths.len() == 1 => {
+                // Legacy filters only support a single filter path
+                Filter::new_legacy(filter_paths[0].clone(), commit_id)?
+            }
+            FilterVersion::V1 => Filter::new(filter_paths, commit_id, self)?,
+            FilterVersion::Legacy => {
+                return Err(anyhow::anyhow!(
+                    "V1 filters are disabled, but multiple filter paths are specified"
+                ));
+            }
+        };
+        Ok(filter.filter_id)
+    }
+
+    // Takes a commit and returns the corresponding FilterID that should be passed to Eden.
+    pub fn active_filter_id(&mut self, commit_id: HgId) -> Result<Option<FilterId>, anyhow::Error> {
         if let Some(filter_paths) = self.read_filter_config()? {
-            let filter = match self.default_filter_version {
-                FilterVersion::Legacy if filter_paths.len() == 1 => {
-                    // Legacy filters only support a single filter path
-                    Filter::new_legacy(filter_paths[0].clone(), commit_id.clone())?
-                }
-                FilterVersion::V1 => Filter::new(filter_paths, commit_id.clone(), self)?,
-                FilterVersion::Legacy => {
-                    return Err(anyhow::anyhow!(
-                        "V1 filters are disabled, but multiple filter paths are specified"
-                    ));
-                }
-            };
-            Ok(Some(filter.filter_id))
+            let filter_id = self.generate_filter_id(commit_id, &filter_paths)?;
+            Ok(Some(filter_id))
         } else {
             Ok(None)
         }
@@ -722,7 +727,7 @@ mod tests {
         let (_tmp_dir, mut filter_gen) = create_test_filter_generator(FilterVersion::Legacy, None);
         let commit_id = HgId::from_hex(TEST_COMMIT_ID).unwrap();
 
-        let result = filter_gen.active_filter_id(&commit_id).unwrap();
+        let result = filter_gen.active_filter_id(commit_id).unwrap();
         assert!(result.is_none());
     }
 
@@ -735,7 +740,7 @@ mod tests {
         let contents = format!("%include {}\n", DEFAULT_FILTER_PATH);
         create_sparse_file(&filter_gen.dot_dir, &contents).unwrap();
 
-        let result = filter_gen.active_filter_id(&commit_id).unwrap();
+        let result = filter_gen.active_filter_id(commit_id).unwrap();
         assert!(result.is_some());
 
         // Verify the filter was stored correctly
@@ -775,7 +780,7 @@ mod tests {
         let filter_paths = vec![RepoPathBuf::from_string("test/filter.txt".to_string()).unwrap()];
         let commit_id = HgId::from_hex(TEST_COMMIT_ID).unwrap();
 
-        let filter = Filter::new(filter_paths, commit_id, &mut filter_gen).unwrap();
+        let filter = Filter::new(&filter_paths, commit_id, &mut filter_gen).unwrap();
 
         // Serialize and deserialize
         let ser = mincode::serialize(&filter).unwrap();
@@ -801,10 +806,10 @@ mod tests {
 
         let filter_paths = vec![RepoPathBuf::from_string("test/filter.txt".to_string()).unwrap()];
         let commit_id = HgId::from_hex(TEST_COMMIT_ID).unwrap();
-        let filter = Filter::new(filter_paths.clone(), commit_id.clone(), &mut filter_gen).unwrap();
+        let filter = Filter::new(&filter_paths, commit_id, &mut filter_gen).unwrap();
 
         // Create the filter again, which causes it to be "stored" again (should be no-op)
-        let _ = Filter::new(filter_paths.clone(), commit_id.clone(), &mut filter_gen).unwrap();
+        let _ = Filter::new(&filter_paths, commit_id, &mut filter_gen).unwrap();
 
         // Serialize and deserialize
         let ser = mincode::serialize(&filter).unwrap();
@@ -834,7 +839,7 @@ mod tests {
         ];
         let commit_id = HgId::from_hex(TEST_COMMIT_ID).unwrap();
 
-        let filter = Filter::new(filter_paths.clone(), commit_id.clone(), &mut filter_gen).unwrap();
+        let filter = Filter::new(&filter_paths.clone(), commit_id, &mut filter_gen).unwrap();
         let stored_filter = filter_gen
             .get_filter_from_bytes(filter.filter_id.id().unwrap())
             .expect("to be stored");
@@ -855,7 +860,7 @@ mod tests {
         let contents = "%include path/to/filter.txt\n";
         create_sparse_file(&filter_gen.dot_dir, contents).unwrap();
 
-        let result = filter_gen.active_filter_id(&commit_id).unwrap().unwrap();
+        let result = filter_gen.active_filter_id(commit_id).unwrap().unwrap();
 
         // With Legacy version and single path, should create a Legacy FilterId
         if let FilterId::Legacy(id) = result {
@@ -874,7 +879,7 @@ mod tests {
         let contents = "%include path/to/filter1.txt\n%include path/to/filter2.txt\n";
         create_sparse_file(&filter_gen.dot_dir, contents).unwrap();
 
-        let result = filter_gen.active_filter_id(&commit_id);
+        let result = filter_gen.active_filter_id(commit_id);
 
         // With Legacy version but multiple paths, active_filter_id will fail
         match result {
@@ -896,7 +901,7 @@ mod tests {
         let contents = "%include path/to/filter.txt\n";
         create_sparse_file(&filter_gen.dot_dir, contents).unwrap();
 
-        let result = filter_gen.active_filter_id(&commit_id).unwrap().unwrap();
+        let result = filter_gen.active_filter_id(commit_id).unwrap().unwrap();
 
         // With V1 version, should always create V1 FilterId regardless of path count
         match result {
