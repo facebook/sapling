@@ -99,14 +99,14 @@ impl InProgressTraversal {
     fn add_file(&mut self, path: PathBuf) {
         self.file_count += 1;
         self.file_paths.push(path);
-        if (self.file_count + self.dir_count) % 1000 == 0 {
+        if (self.file_count + self.dir_count).is_multiple_of(1000) {
             self.update_progress();
         }
     }
 
     fn add_dir(&mut self) {
         self.dir_count += 1;
-        if (self.file_count + self.dir_count) % 1000 == 0 {
+        if (self.file_count + self.dir_count).is_multiple_of(1000) {
             self.update_progress();
         }
     }
