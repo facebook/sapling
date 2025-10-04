@@ -198,45 +198,49 @@ impl InProgressTraversal {
     /// Recursively traverses a directory and collects file paths, displaying progress
     pub fn traverse_path(&mut self, path: &Path) -> Result<()> {
         if path.is_dir() {
-            self.add_dir();
+            self.traverse_directory(path)
+        } else {
+            Ok(())
+        }
+    }
 
-            // Measure read_dir latency
-            let start_time = Instant::now();
-            let read_dir_result = fs::read_dir(path);
-            let read_dir_duration = start_time.elapsed();
+    fn traverse_directory(&mut self, path: &Path) -> Result<()> {
+        self.add_dir();
 
-            let entries = read_dir_result?;
-            let mut entry_count = 0;
+        let start_time = Instant::now();
+        let read_dir_result = fs::read_dir(path);
+        let read_dir_duration = start_time.elapsed();
 
-            for entry_result in entries {
-                let entry = entry_result?;
-                let path = entry.path();
-                let file_type = entry.file_type()?;
-                entry_count += 1;
+        let entries = read_dir_result?;
+        let mut entry_count = 0;
 
-                if file_type.is_dir() {
-                    if file_type.is_symlink() {
-                        if self.follow_symlinks {
-                            self.add_traversed_symlink();
-                            self.traverse_path(&path)?;
-                        } else {
-                            self.add_skipped_symlink();
-                        }
+        for entry_result in entries {
+            let entry = entry_result?;
+            let path = entry.path();
+            let file_type = entry.file_type()?;
+            entry_count += 1;
+
+            if file_type.is_dir() {
+                if file_type.is_symlink() {
+                    if self.follow_symlinks {
+                        self.add_traversed_symlink();
+                        self.traverse_directory(&path)?;
                     } else {
-                        // Regular directory, ie, non symlink
-                        self.traverse_path(&path)?;
+                        self.add_skipped_symlink();
                     }
-                } else if file_type.is_file() {
-                    if self.file_count < self.max_files {
-                        self.add_file(path);
-                    } else {
-                        self.add_read_dir_stats(read_dir_duration, entry_count);
-                        return Ok(());
-                    }
+                } else {
+                    self.traverse_directory(&path)?;
+                }
+            } else if file_type.is_file() {
+                if self.file_count < self.max_files {
+                    self.add_file(path);
+                } else {
+                    self.add_read_dir_stats(read_dir_duration, entry_count);
+                    return Ok(());
                 }
             }
-            self.add_read_dir_stats(read_dir_duration, entry_count);
         }
+        self.add_read_dir_stats(read_dir_duration, entry_count);
         Ok(())
     }
 }
