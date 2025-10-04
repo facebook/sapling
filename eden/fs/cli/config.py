@@ -805,6 +805,19 @@ Do you want to run `eden mount %s` instead?"""
                     continue
                 raise
 
+    def _get_filter_id(
+        self,
+        commit_id: str,
+        filter_paths: Optional[List[str]],
+        config: CheckoutConfig,
+    ) -> Optional[bytes]:
+        if filter_paths is None or config.scm_type not in HG_REPO_TYPES:
+            return None
+        else:
+            from . import hg_util
+
+            return hg_util.get_filter_id(commit_id, filter_paths, config.backing_repo)
+
     def _post_clone_checkout_setup(
         self,
         checkout: "EdenCheckout",
