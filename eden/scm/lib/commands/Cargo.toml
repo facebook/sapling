@@ -20,6 +20,7 @@ cmddebugconfigtree = { version = "0.1.0", path = "debugcommands/cmddebugconfigtr
 cmddebugcurrentexe = { version = "0.1.0", path = "debugcommands/cmddebugcurrentexe" }
 cmddebugdumpindexedlog = { version = "0.1.0", path = "debugcommands/cmddebugdumpindexedlog" }
 cmddebugdumpinternalconfig = { version = "0.1.0", path = "debugcommands/cmddebugdumpinternalconfig" }
+cmddebugfilterid = { version = "0.1.0", path = "debugcommands/cmddebugfilterid" }
 cmddebugfsync = { version = "0.1.0", path = "debugcommands/cmddebugfsync" }
 cmddebuggitmodules = { version = "0.1.0", path = "debugcommands/cmddebuggitmodules" }
 cmddebughttp = { version = "0.1.0", path = "debugcommands/cmddebughttp" }

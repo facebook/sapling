@@ -44,6 +44,7 @@ external_commands![
     cmddebugcurrentexe,
     cmddebugdumpindexedlog,
     cmddebugdumpinternalconfig,
+    cmddebugfilterid,
     cmddebugfsync,
     cmddebuggitmodules,
     cmddebughttp,
