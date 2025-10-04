@@ -96,11 +96,11 @@ async fn get_content_id_from_changeset_path<R: MononokeRepo>(
 }
 
 /// Extract content ID, changeset ID, default path, and LFS pointer from a DiffSingleInput
-pub async fn extract_input_data<R: MononokeRepo>(
+async fn extract_input_data<R: MononokeRepo>(
     ctx: &CoreContext,
     repo: &RepoContext<R>,
     input: &DiffSingleInput,
-    default_path: Option<NonRootMPath>,
+    default_path: NonRootMPath,
 ) -> Result<
     (
         Option<ContentId>,
@@ -153,7 +153,7 @@ pub async fn extract_input_data<R: MononokeRepo>(
         }
         DiffSingleInput::Content(content_input) => {
             let path = match &content_input.path {
-                None => default_path.ok_or(DiffError::empty_inputs())?,
+                None => default_path,
                 Some(path) => path.clone(),
             };
             Ok((
@@ -248,7 +248,7 @@ pub async fn load_diff_file<R: MononokeRepo>(
     ctx: &CoreContext,
     repo: &RepoContext<R>,
     input: &DiffSingleInput,
-    default_path: Option<NonRootMPath>,
+    default_path: NonRootMPath,
     options: &DiffFileOpts,
 ) -> Result<Option<xdiff::DiffFile<String, Vec<u8>>>, Error> {
     let (content_id, _changeset_id, path, lfs_pointer) =
