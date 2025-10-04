@@ -124,6 +124,26 @@ baz
                 f"filtered path {f} should not be present in the repo",
             )
 
+    async def assert_fid_matches(
+        self, path: Path, commit: str, filter_paths: List[str]
+    ) -> None:
+        async with self.get_thrift_client() as client:
+            result = await client.getCurrentSnapshotInfo(
+                GetCurrentSnapshotInfoRequest(
+                    mountId=MountId(mountPoint=os.fsencode(path))
+                )
+            )
+            self.assertIsNotNone(result.fid)
+            dbgfid_result = self.repo.run_hg(
+                *[
+                    "debugfilterid",
+                    "-r",
+                    commit,
+                ]
+                + filter_paths
+            )
+            self.assertEqual(result.fid, dbgfid_result.stdout)
+
     def hg_clone_filteredhg_repo(
         self,
         repo_name: str,
@@ -236,6 +256,21 @@ baz
     def test_eden_clone_succeeds(self) -> None:
         self.eden_clone_filteredhg_repo(backing_store="filteredhg")
 
+    def test_eden_clone_multiple_filters(self) -> None:
+        # FIXME: "--filter-paths" arg is not yet supported by 'eden clone', so
+        # this will fail
+        with self.assertRaises(subprocess.CalledProcessError) as context:
+            self.eden_clone_filteredhg_repo(
+                backing_store="filteredhg",
+                filter_paths=["tools/scm/filter/filter1", "tools/scm/filter/filter2"],
+            )
+        stderr = context.exception.stderr
+        self.assertIn(
+            "error: unrecognized arguments",
+            stderr,
+            msg="passing two or more filters to old 'eden clone' should fail",
+        )
+
     def test_eden_clone_with_filter_succeeds(self) -> None:
         repo_path = self.eden_clone_filteredhg_repo(
             backing_store="filteredhg", filter_paths=["tools/scm/filter/filter1"]
@@ -271,26 +306,28 @@ baz
             self.assertEqual(b"null", result.fid)
 
     async def test_eden_get_filter(self) -> None:
+        filter_paths = ["tools/scm/filter/filter1"]
         path = self.eden_clone_filteredhg_repo(
-            backing_store="filteredhg", filter_paths=["tools/scm/filter/filter1"]
+            backing_store="filteredhg", filter_paths=filter_paths
         )
+        await self.assert_fid_matches(path, self.initial_commit, filter_paths)
 
-        async with self.get_thrift_client() as client:
-            result = await client.getCurrentSnapshotInfo(
-                GetCurrentSnapshotInfoRequest(
-                    mountId=MountId(mountPoint=os.fsencode(path))
-                )
+    async def test_eden_get_two_filters(self) -> None:
+        filter_paths = ["tools/scm/filter/filter1", "tools/scm/filter/filter2"]
+        # FIXME: "--filter-paths" arg is not yet supported by 'eden clone', so
+        # this will fail
+        with self.assertRaises(subprocess.CalledProcessError) as context:
+            path = self.eden_clone_filteredhg_repo(  # noqa
+                backing_store="filteredhg",
+                filter_paths=filter_paths,
             )
-            self.assertIsNotNone(result.fid)
-            dbgfid_result = self.repo.run_hg(
-                *[
-                    "debugfilterid",
-                    "-r",
-                    self.initial_commit,
-                    "tools/scm/filter/filter1",
-                ]
-            )
-            self.assertEqual(result.fid, dbgfid_result.stdout)
+        stderr = context.exception.stderr
+        self.assertIn(
+            "error: unrecognized arguments",
+            stderr,
+            msg="passing two or more filters to old 'eden clone' should fail",
+        )
+        # await self.assert_fid_matches(path, self.initial_commit, filter_paths)
 
 
 @hg_test
