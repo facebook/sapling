@@ -20,7 +20,7 @@ mod utils;
 use utils::*;
 
 #[mononoke::fbinit_test]
-async fn test_mercurial_manifest_no_restricted_change(fb: FacebookInit) -> Result<()> {
+async fn test_no_restricted_change(fb: FacebookInit) -> Result<()> {
     let restricted_paths = vec![(
         NonRootMPath::new("restricted/dir").unwrap(),
         MononokeIdentity::from_str("REPO_REGION:restricted_acl")?,
@@ -32,16 +32,14 @@ async fn test_mercurial_manifest_no_restricted_change(fb: FacebookInit) -> Resul
         .expecting_scuba_access_logs(vec![])
         .build(fb)
         .await?
-        .run_hg_manifest_test()
+        .run_restricted_paths_test()
         .await?;
 
     Ok(())
 }
 
 #[mononoke::fbinit_test]
-async fn test_mercurial_manifest_change_to_restricted_with_access_is_logged(
-    fb: FacebookInit,
-) -> Result<()> {
+async fn test_change_to_restricted_with_access_is_logged(fb: FacebookInit) -> Result<()> {
     let restricted_paths = vec![(
         NonRootMPath::new("user_project/foo").unwrap(),
         MononokeIdentity::from_str("REPO_REGION:myusername_project")?,
@@ -61,8 +59,8 @@ async fn test_mercurial_manifest_change_to_restricted_with_access_is_logged(
             repo_id: RepositoryId::new(0),
             // The restricted path root is logged, not the full path
             restricted_paths: cast_to_non_root_mpaths(vec!["user_project/foo"]),
-            manifest_id: expected_manifest_id,
-            manifest_type: ManifestType::Hg,
+            manifest_id: Some(expected_manifest_id),
+            manifest_type: Some(ManifestType::Hg),
             client_identities: vec!["USER:myusername0"]
                 .into_iter()
                 .map(String::from)
@@ -72,16 +70,14 @@ async fn test_mercurial_manifest_change_to_restricted_with_access_is_logged(
         }])
         .build(fb)
         .await?
-        .run_hg_manifest_test()
+        .run_restricted_paths_test()
         .await?;
 
     Ok(())
 }
 
 #[mononoke::fbinit_test]
-async fn test_mercurial_manifest_single_dir_single_restricted_change(
-    fb: FacebookInit,
-) -> Result<()> {
+async fn test_single_dir_single_restricted_change(fb: FacebookInit) -> Result<()> {
     let restricted_paths = vec![(
         NonRootMPath::new("restricted/dir").unwrap(),
         MononokeIdentity::from_str("REPO_REGION:restricted_acl")?,
@@ -100,8 +96,8 @@ async fn test_mercurial_manifest_single_dir_single_restricted_change(
         .expecting_scuba_access_logs(vec![ScubaAccessLogSample {
             repo_id: RepositoryId::new(0),
             restricted_paths: cast_to_non_root_mpaths(vec!["restricted/dir"]),
-            manifest_id: expected_manifest_id,
-            manifest_type: ManifestType::Hg,
+            manifest_id: Some(expected_manifest_id),
+            manifest_type: Some(ManifestType::Hg),
             client_identities: vec!["USER:myusername0"]
                 .into_iter()
                 .map(String::from)
@@ -111,7 +107,7 @@ async fn test_mercurial_manifest_single_dir_single_restricted_change(
         }])
         .build(fb)
         .await?
-        .run_hg_manifest_test()
+        .run_restricted_paths_test()
         .await?;
 
     Ok(())
@@ -120,9 +116,7 @@ async fn test_mercurial_manifest_single_dir_single_restricted_change(
 // Multiple files in a single restricted directory generate a single entry in
 // the manifest id store.
 #[mononoke::fbinit_test]
-async fn test_mercurial_manifest_single_dir_many_restricted_changes(
-    fb: FacebookInit,
-) -> Result<()> {
+async fn test_single_dir_many_restricted_changes(fb: FacebookInit) -> Result<()> {
     let restricted_paths = vec![(
         NonRootMPath::new("restricted/dir").unwrap(),
         MononokeIdentity::from_str("REPO_REGION:restricted_acl")?,
@@ -144,8 +138,8 @@ async fn test_mercurial_manifest_single_dir_many_restricted_changes(
             ScubaAccessLogSample {
                 repo_id: RepositoryId::new(0),
                 restricted_paths: cast_to_non_root_mpaths(vec!["restricted/dir"]),
-                manifest_id: expected_manifest_id,
-                manifest_type: ManifestType::Hg,
+                manifest_id: Some(expected_manifest_id),
+                manifest_type: Some(ManifestType::Hg),
                 client_identities: vec!["USER:myusername0"]
                     .into_iter()
                     .map(String::from)
@@ -156,16 +150,14 @@ async fn test_mercurial_manifest_single_dir_many_restricted_changes(
         ])
         .build(fb)
         .await?
-        .run_hg_manifest_test()
+        .run_restricted_paths_test()
         .await?;
 
     Ok(())
 }
 
 #[mononoke::fbinit_test]
-async fn test_mercurial_manifest_single_dir_restricted_and_unrestricted(
-    fb: FacebookInit,
-) -> Result<()> {
+async fn test_single_dir_restricted_and_unrestricted(fb: FacebookInit) -> Result<()> {
     let restricted_paths = vec![(
         NonRootMPath::new("restricted/dir").unwrap(),
         MononokeIdentity::from_str("REPO_REGION:restricted_acl")?,
@@ -187,8 +179,8 @@ async fn test_mercurial_manifest_single_dir_restricted_and_unrestricted(
         .expecting_scuba_access_logs(vec![ScubaAccessLogSample {
             repo_id: RepositoryId::new(0),
             restricted_paths: cast_to_non_root_mpaths(vec!["restricted/dir"]),
-            manifest_id: expected_manifest_id,
-            manifest_type: ManifestType::Hg,
+            manifest_id: Some(expected_manifest_id),
+            manifest_type: Some(ManifestType::Hg),
             client_identities: vec!["USER:myusername0"]
                 .into_iter()
                 .map(String::from)
@@ -198,7 +190,7 @@ async fn test_mercurial_manifest_single_dir_restricted_and_unrestricted(
         }])
         .build(fb)
         .await?
-        .run_hg_manifest_test()
+        .run_restricted_paths_test()
         .await?;
 
     Ok(())
@@ -206,7 +198,7 @@ async fn test_mercurial_manifest_single_dir_restricted_and_unrestricted(
 
 // Multiple restricted directories generate multiple entries in the manifest
 #[mononoke::fbinit_test]
-async fn test_mercurial_manifest_multiple_restricted_dirs(fb: FacebookInit) -> Result<()> {
+async fn test_multiple_restricted_dirs(fb: FacebookInit) -> Result<()> {
     let restricted_paths = vec![
         (
             NonRootMPath::new("restricted/one").unwrap(),
@@ -239,8 +231,8 @@ async fn test_mercurial_manifest_multiple_restricted_dirs(fb: FacebookInit) -> R
             ScubaAccessLogSample {
                 repo_id: RepositoryId::new(0),
                 restricted_paths: cast_to_non_root_mpaths(vec!["restricted/two"]),
-                manifest_id: expected_manifest_id_two,
-                manifest_type: ManifestType::Hg,
+                manifest_id: Some(expected_manifest_id_two),
+                manifest_type: Some(ManifestType::Hg),
                 client_identities: vec!["USER:myusername0"]
                     .into_iter()
                     .map(String::from)
@@ -251,8 +243,8 @@ async fn test_mercurial_manifest_multiple_restricted_dirs(fb: FacebookInit) -> R
             ScubaAccessLogSample {
                 repo_id: RepositoryId::new(0),
                 restricted_paths: cast_to_non_root_mpaths(vec!["restricted/one"]),
-                manifest_id: expected_manifest_id_one,
-                manifest_type: ManifestType::Hg,
+                manifest_id: Some(expected_manifest_id_one),
+                manifest_type: Some(ManifestType::Hg),
                 client_identities: vec!["USER:myusername0"]
                     .into_iter()
                     .map(String::from)
@@ -263,7 +255,7 @@ async fn test_mercurial_manifest_multiple_restricted_dirs(fb: FacebookInit) -> R
         ])
         .build(fb)
         .await?
-        .run_hg_manifest_test()
+        .run_restricted_paths_test()
         .await?;
 
     Ok(())
@@ -272,9 +264,7 @@ async fn test_mercurial_manifest_multiple_restricted_dirs(fb: FacebookInit) -> R
 // Test that if the user has access to one of the restricted paths, there will
 // be a log entry for each one with the proper authorization result.
 #[mononoke::fbinit_test]
-async fn test_mercurial_manifest_multiple_restricted_dirs_with_partial_access(
-    fb: FacebookInit,
-) -> Result<()> {
+async fn test_multiple_restricted_dirs_with_partial_access(fb: FacebookInit) -> Result<()> {
     let restricted_paths = vec![
         (
             NonRootMPath::new("restricted/one").unwrap(),
@@ -312,8 +302,8 @@ async fn test_mercurial_manifest_multiple_restricted_dirs_with_partial_access(
             ScubaAccessLogSample {
                 repo_id: RepositoryId::new(0),
                 restricted_paths: cast_to_non_root_mpaths(vec!["user_project/foo"]),
-                manifest_id: expected_manifest_id_user,
-                manifest_type: ManifestType::Hg,
+                manifest_id: Some(expected_manifest_id_user),
+                manifest_type: Some(ManifestType::Hg),
                 client_identities: vec!["USER:myusername0"]
                     .into_iter()
                     .map(String::from)
@@ -325,8 +315,8 @@ async fn test_mercurial_manifest_multiple_restricted_dirs_with_partial_access(
             ScubaAccessLogSample {
                 repo_id: RepositoryId::new(0),
                 restricted_paths: cast_to_non_root_mpaths(vec!["restricted/one"]),
-                manifest_id: expected_manifest_id_restricted,
-                manifest_type: ManifestType::Hg,
+                manifest_id: Some(expected_manifest_id_restricted),
+                manifest_type: Some(ManifestType::Hg),
                 client_identities: vec!["USER:myusername0"]
                     .into_iter()
                     .map(String::from)
@@ -337,16 +327,14 @@ async fn test_mercurial_manifest_multiple_restricted_dirs_with_partial_access(
         ])
         .build(fb)
         .await?
-        .run_hg_manifest_test()
+        .run_restricted_paths_test()
         .await?;
 
     Ok(())
 }
 
 #[mononoke::fbinit_test]
-async fn test_mercurial_manifest_overlapping_restricted_directories(
-    fb: FacebookInit,
-) -> Result<()> {
+async fn test_overlapping_restricted_directories(fb: FacebookInit) -> Result<()> {
     // Set up overlapping restricted paths: project/restricted is nested inside project
     let restricted_paths = vec![
         (
@@ -387,8 +375,8 @@ async fn test_mercurial_manifest_overlapping_restricted_directories(
             ScubaAccessLogSample {
                 repo_id: RepositoryId::new(0),
                 restricted_paths: cast_to_non_root_mpaths(vec!["project"]),
-                manifest_id: expected_manifest_id_root,
-                manifest_type: ManifestType::Hg,
+                manifest_id: Some(expected_manifest_id_root),
+                manifest_type: Some(ManifestType::Hg),
                 client_identities: vec!["USER:myusername0"]
                     .into_iter()
                     .map(String::from)
@@ -400,8 +388,8 @@ async fn test_mercurial_manifest_overlapping_restricted_directories(
             ScubaAccessLogSample {
                 repo_id: RepositoryId::new(0),
                 restricted_paths: cast_to_non_root_mpaths(vec!["project/restricted"]),
-                manifest_id: expected_manifest_id_subdir,
-                manifest_type: ManifestType::Hg,
+                manifest_id: Some(expected_manifest_id_subdir),
+                manifest_type: Some(ManifestType::Hg),
                 client_identities: vec!["USER:myusername0"]
                     .into_iter()
                     .map(String::from)
@@ -413,16 +401,14 @@ async fn test_mercurial_manifest_overlapping_restricted_directories(
         ])
         .build(fb)
         .await?
-        .run_hg_manifest_test()
+        .run_restricted_paths_test()
         .await?;
 
     Ok(())
 }
 
 #[mononoke::fbinit_test]
-async fn test_mercurial_manifest_same_manifest_id_restricted_and_unrestricted_paths(
-    fb: FacebookInit,
-) -> Result<()> {
+async fn test_same_manifest_id_restricted_and_unrestricted_paths(fb: FacebookInit) -> Result<()> {
     // Set up a restricted path for the "restricted" directory
     let restricted_paths = vec![(
         NonRootMPath::new("restricted").unwrap(),
@@ -452,8 +438,8 @@ async fn test_mercurial_manifest_same_manifest_id_restricted_and_unrestricted_pa
             ScubaAccessLogSample {
                 repo_id: RepositoryId::new(0),
                 restricted_paths: cast_to_non_root_mpaths(vec!["restricted"]),
-                manifest_id: expected_manifest_id.clone(),
-                manifest_type: ManifestType::Hg,
+                manifest_id: Some(expected_manifest_id.clone()),
+                manifest_type: Some(ManifestType::Hg),
                 client_identities: vec!["USER:myusername0"]
                     .into_iter()
                     .map(String::from)
@@ -465,8 +451,8 @@ async fn test_mercurial_manifest_same_manifest_id_restricted_and_unrestricted_pa
             ScubaAccessLogSample {
                 repo_id: RepositoryId::new(0),
                 restricted_paths: cast_to_non_root_mpaths(vec!["restricted"]),
-                manifest_id: expected_manifest_id,
-                manifest_type: ManifestType::Hg,
+                manifest_id: Some(expected_manifest_id),
+                manifest_type: Some(ManifestType::Hg),
                 client_identities: vec!["USER:myusername0"]
                     .into_iter()
                     .map(String::from)
@@ -478,7 +464,7 @@ async fn test_mercurial_manifest_same_manifest_id_restricted_and_unrestricted_pa
         ])
         .build(fb)
         .await?
-        .run_hg_manifest_test()
+        .run_restricted_paths_test()
         .await?;
 
     Ok(())

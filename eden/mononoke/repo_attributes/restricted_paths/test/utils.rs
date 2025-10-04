@@ -72,8 +72,8 @@ pub struct RestrictedPathsTestDataBuilder {
 pub struct ScubaAccessLogSample {
     pub repo_id: RepositoryId,
     pub restricted_paths: Vec<NonRootMPath>,
-    pub manifest_id: ManifestId,
-    pub manifest_type: ManifestType,
+    pub manifest_id: Option<ManifestId>,
+    pub manifest_type: Option<ManifestType>,
     pub client_identities: Vec<String>,
     pub client_main_id: String,
     pub has_authorization: bool,
@@ -185,7 +185,7 @@ impl RestrictedPathsTestData {
     ///
     /// Each file path can optionally specify content. If no content is provided,
     /// the file path itself is used as the content.
-    pub async fn run_hg_manifest_test(&self) -> Result<()> {
+    pub async fn run_restricted_paths_test(&self) -> Result<()> {
         let mut commit_ctx = CreateCommitContext::new_root(&self.ctx, &self.repo);
         for (path, content) in &self.file_path_changes {
             let file_content = content.as_deref().unwrap_or(path.as_str());
@@ -426,17 +426,15 @@ fn deserialize_scuba_log_file(
                         .map(String::from)
                         .ok_or(anyhow!("missing client_main_id"))?;
 
-                    let manifest_id: ManifestId = flattened_log["manifest_id"]
+                    let manifest_id = flattened_log["manifest_id"]
                         .as_str()
                         .map(String::from)
-                        .map(ManifestId::from)
-                        .ok_or(anyhow!("missing manifest_id"))?;
+                        .map(ManifestId::from);
 
-                    let manifest_type: ManifestType = flattened_log["manifest_type"]
+                    let manifest_type = flattened_log["manifest_type"]
                         .as_str()
                         .map(ManifestType::from_str)
-                        .transpose()?
-                        .ok_or(anyhow!("missing manifest_type"))?;
+                        .transpose()?;
 
                     let has_authorization: bool = flattened_log["has_authorization"]
                         .as_str()

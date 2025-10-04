@@ -27,13 +27,17 @@ use crate::manifest_id_store::ManifestType;
 
 const ACCESS_LOG_SCUBA_TABLE: &str = "mononoke_restricted_paths_access_test";
 
+pub(crate) enum RestrictedPathAccessData {
+    /// When the tree is accessed by manifest id
+    Manifest(ManifestId, ManifestType),
+}
+
 pub(crate) async fn log_access_to_restricted_path(
     ctx: &CoreContext,
     repo_id: RepositoryId,
     restricted_paths: Vec<NonRootMPath>,
     acls: Vec<&MononokeIdentity>,
-    manifest_id: ManifestId,
-    manifest_type: ManifestType,
+    access_data: RestrictedPathAccessData,
     acl_provider: Arc<dyn AclProvider>,
 ) -> Result<bool> {
     // TODO(T239041722): store permission checkers in RestrictedPaths to improve
@@ -62,8 +66,7 @@ pub(crate) async fn log_access_to_restricted_path(
         ctx,
         repo_id,
         restricted_paths,
-        manifest_id,
-        manifest_type,
+        access_data,
         has_authorization,
     )?;
 
@@ -74,8 +77,7 @@ fn log_access_to_scuba(
     ctx: &CoreContext,
     repo_id: RepositoryId,
     restricted_paths: Vec<NonRootMPath>,
-    manifest_id: ManifestId,
-    manifest_type: ManifestType,
+    access_data: RestrictedPathAccessData,
     has_authorization: bool,
 ) -> Result<()> {
     // Log to file if ACCESS_LOG_SCUBA_FILE_PATH is set (for testing)
@@ -103,9 +105,13 @@ fn log_access_to_scuba(
 
     scuba.add("has_authorization", has_authorization);
 
-    let manifest_id_str = manifest_id.to_string();
-    scuba.add("manifest_id", manifest_id_str);
-    scuba.add("manifest_type", manifest_type.to_string());
+    // Log access data based on the type
+    match access_data {
+        RestrictedPathAccessData::Manifest(manifest_id, manifest_type) => {
+            scuba.add("manifest_id", manifest_id.to_string());
+            scuba.add("manifest_type", manifest_type.to_string());
+        }
+    }
 
     scuba.log();
 

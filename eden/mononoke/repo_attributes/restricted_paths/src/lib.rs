@@ -121,7 +121,7 @@ impl RestrictedPaths {
     /// Check if a manifest id belongs to a restricted path and log access it it.
     ///
     /// Returns true if caller is authorized to access it.
-    pub async fn log_access_if_restricted(
+    pub async fn log_access_by_manifest_if_restricted(
         &self,
         ctx: &CoreContext,
         manifest_id: ManifestId,
@@ -150,8 +150,7 @@ impl RestrictedPaths {
             self.manifest_id_store.repo_id(),
             paths,
             acls,
-            manifest_id,
-            manifest_type,
+            crate::access_log::RestrictedPathAccessData::Manifest(manifest_id, manifest_type),
             self.acl_provider.clone(),
         )
         .await

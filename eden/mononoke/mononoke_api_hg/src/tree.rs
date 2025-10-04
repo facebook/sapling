@@ -78,7 +78,7 @@ impl<R: MononokeRepo> HgTreeContext<R> {
             // Spawn asynchronous task for logging restricted path access
             let _spawned_task = mononoke::spawn_task(async move {
                 let _is_restricted = restricted_paths
-                    .log_access_if_restricted(&ctx_clone, manifest_id, ManifestType::Hg)
+                    .log_access_by_manifest_if_restricted(&ctx_clone, manifest_id, ManifestType::Hg)
                     .await;
             });
         }
