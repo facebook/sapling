@@ -155,6 +155,50 @@ impl RestrictedPaths {
         )
         .await
     }
+
+    /// Log access to a restricted path, when it's accessed by the full path,
+    /// instead of a manifest id.
+    ///
+    /// Returns true if caller is authorized to access it.
+    pub async fn log_access_by_path_if_restricted(
+        &self,
+        ctx: &CoreContext,
+        path: NonRootMPath,
+    ) -> Result<bool> {
+        // Return early if the repo doesn't have any restricted paths.
+        if self.config().is_empty() {
+            return Ok(true);
+        }
+
+        // Find which restricted path roots match this path
+        let mut restricted_path_roots = Vec::new();
+        let mut matched_acls = Vec::new();
+
+        for (restricted_path_prefix, acl) in &self.config.path_acls {
+            if restricted_path_prefix.is_prefix_of(&path) {
+                restricted_path_roots.push(restricted_path_prefix.clone());
+                matched_acls.push(acl);
+            }
+        }
+
+        // If no restricted paths match, no need to log
+        if restricted_path_roots.is_empty() {
+            return Ok(true);
+        }
+
+        log_access_to_restricted_path(
+            ctx,
+            self.manifest_id_store.repo_id(),
+            restricted_path_roots.clone(),
+            matched_acls,
+            crate::access_log::RestrictedPathAccessData::FullPath {
+                restricted_path_roots,
+                full_path: path,
+            },
+            self.acl_provider.clone(),
+        )
+        .await
+    }
 }
 
 #[cfg(test)]

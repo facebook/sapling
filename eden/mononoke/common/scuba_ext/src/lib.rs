@@ -211,7 +211,12 @@ impl MononokeScubaSampleBuilder {
             ),
             (
                 "scm/mononoke:enabled_restricted_paths_access_logging",
-                vec!["hg_manifest_write", "hg_tree_context_new_check_exists"],
+                vec![
+                    "hg_manifest_write",
+                    "hg_tree_context_new_check_exists",
+                    "changeset_path_context_new",
+                    "changeset_path_content_context_new",
+                ],
             ),
         ];
         let enabled_experiments_jk: Vec<String> = jk_and_switches

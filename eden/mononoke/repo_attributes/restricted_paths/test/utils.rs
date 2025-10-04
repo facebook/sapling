@@ -74,6 +74,7 @@ pub struct ScubaAccessLogSample {
     pub restricted_paths: Vec<NonRootMPath>,
     pub manifest_id: Option<ManifestId>,
     pub manifest_type: Option<ManifestType>,
+    pub full_path: Option<NonRootMPath>,
     pub client_identities: Vec<String>,
     pub client_main_id: String,
     pub has_authorization: bool,
@@ -205,13 +206,12 @@ impl RestrictedPathsTestData {
             .get_all_entries(&self.ctx)
             .await?;
 
-        println!(
-            "manifest_id_store_entries: {:#?}",
-            manifest_id_store_entries
-        );
-
         let repo = Arc::new(self.repo.clone());
         let repo_ctx = RepoContext::new_test(self.ctx.clone(), repo.clone()).await?;
+        let cs_ctx = repo_ctx
+            .changeset(bcs_id)
+            .await?
+            .ok_or(anyhow!("failed to get changeset context"))?;
         let hg_repo_ctx = repo_ctx.hg();
 
         let _files_added = self
@@ -228,10 +228,11 @@ impl RestrictedPathsTestData {
         // `HgTreeContext::new_check_exists` to simulate a directory access
         let hg_manif_id = hg_cs.manifestid();
         let _all_directories = hg_manif_id
+            // TODO(T239041722): list files as well to ensure access is logged when a file is requested
             .list_tree_entries(self.ctx.clone(), blobstore.clone())
             .and_then(async |(path, hg_manifest_id)| {
                 HgTreeContext::new_check_exists(hg_repo_ctx.clone(), hg_manifest_id).await?;
-
+                cs_ctx.path(path.clone()).await?;
                 Ok(path)
             })
             .try_collect::<Vec<_>>()
@@ -412,8 +413,6 @@ fn deserialize_scuba_log_file(
                             })
                             .collect::<serde_json::Value>();
 
-                    println!("flattened_log: {flattened_log:#?}");
-
                     let repo_id: RepositoryId = flattened_log["repo_id"]
                         .as_number()
                         .and_then(|s| s.as_i64())
@@ -434,6 +433,11 @@ fn deserialize_scuba_log_file(
                     let manifest_type = flattened_log["manifest_type"]
                         .as_str()
                         .map(ManifestType::from_str)
+                        .transpose()?;
+
+                    let full_path = flattened_log["full_path"]
+                        .as_str()
+                        .map(NonRootMPath::new)
                         .transpose()?;
 
                     let has_authorization: bool = flattened_log["has_authorization"]
@@ -470,6 +474,7 @@ fn deserialize_scuba_log_file(
                         restricted_paths,
                         manifest_id,
                         manifest_type,
+                        full_path,
                         client_identities,
                         has_authorization,
                         client_main_id,

@@ -30,6 +30,12 @@ const ACCESS_LOG_SCUBA_TABLE: &str = "mononoke_restricted_paths_access_test";
 pub(crate) enum RestrictedPathAccessData {
     /// When the tree is accessed by manifest id
     Manifest(ManifestId, ManifestType),
+    /// When the tree is accessed by path
+    FullPath {
+        /// The restricted paths from the config that were matched
+        restricted_path_roots: Vec<NonRootMPath>,
+        full_path: NonRootMPath,
+    },
 }
 
 pub(crate) async fn log_access_to_restricted_path(
@@ -110,6 +116,9 @@ fn log_access_to_scuba(
         RestrictedPathAccessData::Manifest(manifest_id, manifest_type) => {
             scuba.add("manifest_id", manifest_id.to_string());
             scuba.add("manifest_type", manifest_type.to_string());
+        }
+        RestrictedPathAccessData::FullPath { full_path, .. } => {
+            scuba.add("full_path", full_path.to_string());
         }
     }
 

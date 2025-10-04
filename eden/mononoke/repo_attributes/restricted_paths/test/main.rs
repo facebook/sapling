@@ -55,19 +55,50 @@ async fn test_change_to_restricted_with_access_is_logged(fb: FacebookInit) -> Re
             expected_manifest_id.clone(),
             RepoPath::dir("user_project/foo")?,
         )?])
-        .expecting_scuba_access_logs(vec![ScubaAccessLogSample {
-            repo_id: RepositoryId::new(0),
-            // The restricted path root is logged, not the full path
-            restricted_paths: cast_to_non_root_mpaths(vec!["user_project/foo"]),
-            manifest_id: Some(expected_manifest_id),
-            manifest_type: Some(ManifestType::Hg),
-            client_identities: vec!["USER:myusername0"]
-                .into_iter()
-                .map(String::from)
-                .collect::<Vec<_>>(),
-            has_authorization: true,
-            client_main_id: TEST_CLIENT_MAIN_ID.to_string(),
-        }])
+        .expecting_scuba_access_logs(vec![
+            // Manifest access log
+            ScubaAccessLogSample {
+                repo_id: RepositoryId::new(0),
+                // The restricted path root is logged, not the full path
+                restricted_paths: cast_to_non_root_mpaths(vec!["user_project/foo"]),
+                manifest_id: Some(expected_manifest_id.clone()),
+                manifest_type: Some(ManifestType::Hg),
+                full_path: None,
+                client_identities: vec!["USER:myusername0"]
+                    .into_iter()
+                    .map(String::from)
+                    .collect::<Vec<_>>(),
+                has_authorization: true,
+                client_main_id: TEST_CLIENT_MAIN_ID.to_string(),
+            },
+            // Path access logs for directories traversed
+            ScubaAccessLogSample {
+                repo_id: RepositoryId::new(0),
+                restricted_paths: cast_to_non_root_mpaths(vec!["user_project/foo"]),
+                manifest_id: None,
+                manifest_type: None,
+                full_path: Some(NonRootMPath::new("user_project/foo")?),
+                client_identities: vec!["USER:myusername0"]
+                    .into_iter()
+                    .map(String::from)
+                    .collect::<Vec<_>>(),
+                has_authorization: true,
+                client_main_id: TEST_CLIENT_MAIN_ID.to_string(),
+            },
+            ScubaAccessLogSample {
+                repo_id: RepositoryId::new(0),
+                restricted_paths: cast_to_non_root_mpaths(vec!["user_project/foo"]),
+                manifest_id: None,
+                manifest_type: None,
+                full_path: Some(NonRootMPath::new("user_project/foo/bar")?),
+                client_identities: vec!["USER:myusername0"]
+                    .into_iter()
+                    .map(String::from)
+                    .collect::<Vec<_>>(),
+                has_authorization: true,
+                client_main_id: TEST_CLIENT_MAIN_ID.to_string(),
+            },
+        ])
         .build(fb)
         .await?
         .run_restricted_paths_test()
@@ -93,18 +124,36 @@ async fn test_single_dir_single_restricted_change(fb: FacebookInit) -> Result<()
             expected_manifest_id.clone(),
             RepoPath::dir("restricted/dir")?,
         )?])
-        .expecting_scuba_access_logs(vec![ScubaAccessLogSample {
-            repo_id: RepositoryId::new(0),
-            restricted_paths: cast_to_non_root_mpaths(vec!["restricted/dir"]),
-            manifest_id: Some(expected_manifest_id),
-            manifest_type: Some(ManifestType::Hg),
-            client_identities: vec!["USER:myusername0"]
-                .into_iter()
-                .map(String::from)
-                .collect::<Vec<_>>(),
-            has_authorization: false,
-            client_main_id: TEST_CLIENT_MAIN_ID.to_string(),
-        }])
+        .expecting_scuba_access_logs(vec![
+            // Manifest access log
+            ScubaAccessLogSample {
+                repo_id: RepositoryId::new(0),
+                restricted_paths: cast_to_non_root_mpaths(vec!["restricted/dir"]),
+                manifest_id: Some(expected_manifest_id.clone()),
+                manifest_type: Some(ManifestType::Hg),
+                full_path: None,
+                client_identities: vec!["USER:myusername0"]
+                    .into_iter()
+                    .map(String::from)
+                    .collect::<Vec<_>>(),
+                has_authorization: false,
+                client_main_id: TEST_CLIENT_MAIN_ID.to_string(),
+            },
+            // Path access log
+            ScubaAccessLogSample {
+                repo_id: RepositoryId::new(0),
+                restricted_paths: cast_to_non_root_mpaths(vec!["restricted/dir"]),
+                manifest_id: None,
+                manifest_type: None,
+                full_path: Some(NonRootMPath::new("restricted/dir")?),
+                client_identities: vec!["USER:myusername0"]
+                    .into_iter()
+                    .map(String::from)
+                    .collect::<Vec<_>>(),
+                has_authorization: false,
+                client_main_id: TEST_CLIENT_MAIN_ID.to_string(),
+            },
+        ])
         .build(fb)
         .await?
         .run_restricted_paths_test()
@@ -133,13 +182,28 @@ async fn test_single_dir_many_restricted_changes(fb: FacebookInit) -> Result<()>
             RepoPath::dir("restricted/dir")?,
         )?])
         .expecting_scuba_access_logs(vec![
-            // Single log entry for both files, because they're under the same
+            // Manifest access log - Single log entry for both files, because they're under the same
             // restricted directory
             ScubaAccessLogSample {
                 repo_id: RepositoryId::new(0),
                 restricted_paths: cast_to_non_root_mpaths(vec!["restricted/dir"]),
-                manifest_id: Some(expected_manifest_id),
+                manifest_id: Some(expected_manifest_id.clone()),
                 manifest_type: Some(ManifestType::Hg),
+                full_path: None,
+                client_identities: vec!["USER:myusername0"]
+                    .into_iter()
+                    .map(String::from)
+                    .collect::<Vec<_>>(),
+                has_authorization: false,
+                client_main_id: TEST_CLIENT_MAIN_ID.to_string(),
+            },
+            // Path access log - for the directory containing both files
+            ScubaAccessLogSample {
+                repo_id: RepositoryId::new(0),
+                restricted_paths: cast_to_non_root_mpaths(vec!["restricted/dir"]),
+                manifest_id: None,
+                manifest_type: None,
+                full_path: Some(NonRootMPath::new("restricted/dir")?),
                 client_identities: vec!["USER:myusername0"]
                     .into_iter()
                     .map(String::from)
@@ -176,18 +240,36 @@ async fn test_single_dir_restricted_and_unrestricted(fb: FacebookInit) -> Result
             expected_manifest_id.clone(),
             RepoPath::dir("restricted/dir")?,
         )?])
-        .expecting_scuba_access_logs(vec![ScubaAccessLogSample {
-            repo_id: RepositoryId::new(0),
-            restricted_paths: cast_to_non_root_mpaths(vec!["restricted/dir"]),
-            manifest_id: Some(expected_manifest_id),
-            manifest_type: Some(ManifestType::Hg),
-            client_identities: vec!["USER:myusername0"]
-                .into_iter()
-                .map(String::from)
-                .collect::<Vec<_>>(),
-            has_authorization: false,
-            client_main_id: TEST_CLIENT_MAIN_ID.to_string(),
-        }])
+        .expecting_scuba_access_logs(vec![
+            // Manifest access log
+            ScubaAccessLogSample {
+                repo_id: RepositoryId::new(0),
+                restricted_paths: cast_to_non_root_mpaths(vec!["restricted/dir"]),
+                manifest_id: Some(expected_manifest_id.clone()),
+                manifest_type: Some(ManifestType::Hg),
+                full_path: None,
+                client_identities: vec!["USER:myusername0"]
+                    .into_iter()
+                    .map(String::from)
+                    .collect::<Vec<_>>(),
+                has_authorization: false,
+                client_main_id: TEST_CLIENT_MAIN_ID.to_string(),
+            },
+            // Path access log - only for restricted directory
+            ScubaAccessLogSample {
+                repo_id: RepositoryId::new(0),
+                restricted_paths: cast_to_non_root_mpaths(vec!["restricted/dir"]),
+                manifest_id: None,
+                manifest_type: None,
+                full_path: Some(NonRootMPath::new("restricted/dir")?),
+                client_identities: vec!["USER:myusername0"]
+                    .into_iter()
+                    .map(String::from)
+                    .collect::<Vec<_>>(),
+                has_authorization: false,
+                client_main_id: TEST_CLIENT_MAIN_ID.to_string(),
+            },
+        ])
         .build(fb)
         .await?
         .run_restricted_paths_test()
@@ -228,11 +310,13 @@ async fn test_multiple_restricted_dirs(fb: FacebookInit) -> Result<()> {
             )?,
         ])
         .expecting_scuba_access_logs(vec![
+            // restricted/two access - manifest log
             ScubaAccessLogSample {
                 repo_id: RepositoryId::new(0),
                 restricted_paths: cast_to_non_root_mpaths(vec!["restricted/two"]),
-                manifest_id: Some(expected_manifest_id_two),
+                manifest_id: Some(expected_manifest_id_two.clone()),
                 manifest_type: Some(ManifestType::Hg),
+                full_path: None,
                 client_identities: vec!["USER:myusername0"]
                     .into_iter()
                     .map(String::from)
@@ -240,11 +324,41 @@ async fn test_multiple_restricted_dirs(fb: FacebookInit) -> Result<()> {
                 has_authorization: false,
                 client_main_id: TEST_CLIENT_MAIN_ID.to_string(),
             },
+            // restricted/two access - path log
+            ScubaAccessLogSample {
+                repo_id: RepositoryId::new(0),
+                restricted_paths: cast_to_non_root_mpaths(vec!["restricted/two"]),
+                manifest_id: None,
+                manifest_type: None,
+                full_path: Some(NonRootMPath::new("restricted/two")?),
+                client_identities: vec!["USER:myusername0"]
+                    .into_iter()
+                    .map(String::from)
+                    .collect::<Vec<_>>(),
+                has_authorization: false,
+                client_main_id: TEST_CLIENT_MAIN_ID.to_string(),
+            },
+            // restricted/one access - manifest log
             ScubaAccessLogSample {
                 repo_id: RepositoryId::new(0),
                 restricted_paths: cast_to_non_root_mpaths(vec!["restricted/one"]),
-                manifest_id: Some(expected_manifest_id_one),
+                manifest_id: Some(expected_manifest_id_one.clone()),
                 manifest_type: Some(ManifestType::Hg),
+                full_path: None,
+                client_identities: vec!["USER:myusername0"]
+                    .into_iter()
+                    .map(String::from)
+                    .collect::<Vec<_>>(),
+                has_authorization: false,
+                client_main_id: TEST_CLIENT_MAIN_ID.to_string(),
+            },
+            // restricted/one access - path log
+            ScubaAccessLogSample {
+                repo_id: RepositoryId::new(0),
+                restricted_paths: cast_to_non_root_mpaths(vec!["restricted/one"]),
+                manifest_id: None,
+                manifest_type: None,
+                full_path: Some(NonRootMPath::new("restricted/one")?),
                 client_identities: vec!["USER:myusername0"]
                     .into_iter()
                     .map(String::from)
@@ -299,11 +413,13 @@ async fn test_multiple_restricted_dirs_with_partial_access(fb: FacebookInit) -> 
             )?,
         ])
         .expecting_scuba_access_logs(vec![
+            // user_project/foo access - manifest log
             ScubaAccessLogSample {
                 repo_id: RepositoryId::new(0),
                 restricted_paths: cast_to_non_root_mpaths(vec!["user_project/foo"]),
-                manifest_id: Some(expected_manifest_id_user),
+                manifest_id: Some(expected_manifest_id_user.clone()),
                 manifest_type: Some(ManifestType::Hg),
+                full_path: None,
                 client_identities: vec!["USER:myusername0"]
                     .into_iter()
                     .map(String::from)
@@ -312,11 +428,42 @@ async fn test_multiple_restricted_dirs_with_partial_access(fb: FacebookInit) -> 
                 has_authorization: true,
                 client_main_id: TEST_CLIENT_MAIN_ID.to_string(),
             },
+            // user_project/foo access - path log
+            ScubaAccessLogSample {
+                repo_id: RepositoryId::new(0),
+                restricted_paths: cast_to_non_root_mpaths(vec!["user_project/foo"]),
+                manifest_id: None,
+                manifest_type: None,
+                full_path: Some(NonRootMPath::new("user_project/foo")?),
+                client_identities: vec!["USER:myusername0"]
+                    .into_iter()
+                    .map(String::from)
+                    .collect::<Vec<_>>(),
+                // User had access to this restricted path
+                has_authorization: true,
+                client_main_id: TEST_CLIENT_MAIN_ID.to_string(),
+            },
+            // restricted/one access - manifest log
             ScubaAccessLogSample {
                 repo_id: RepositoryId::new(0),
                 restricted_paths: cast_to_non_root_mpaths(vec!["restricted/one"]),
-                manifest_id: Some(expected_manifest_id_restricted),
+                manifest_id: Some(expected_manifest_id_restricted.clone()),
                 manifest_type: Some(ManifestType::Hg),
+                full_path: None,
+                client_identities: vec!["USER:myusername0"]
+                    .into_iter()
+                    .map(String::from)
+                    .collect::<Vec<_>>(),
+                has_authorization: false,
+                client_main_id: TEST_CLIENT_MAIN_ID.to_string(),
+            },
+            // restricted/one access - path log
+            ScubaAccessLogSample {
+                repo_id: RepositoryId::new(0),
+                restricted_paths: cast_to_non_root_mpaths(vec!["restricted/one"]),
+                manifest_id: None,
+                manifest_type: None,
+                full_path: Some(NonRootMPath::new("restricted/one")?),
                 client_identities: vec!["USER:myusername0"]
                     .into_iter()
                     .map(String::from)
@@ -372,11 +519,13 @@ async fn test_overlapping_restricted_directories(fb: FacebookInit) -> Result<()>
             )?,
         ])
         .expecting_scuba_access_logs(vec![
+            // project access - manifest log
             ScubaAccessLogSample {
                 repo_id: RepositoryId::new(0),
                 restricted_paths: cast_to_non_root_mpaths(vec!["project"]),
-                manifest_id: Some(expected_manifest_id_root),
+                manifest_id: Some(expected_manifest_id_root.clone()),
                 manifest_type: Some(ManifestType::Hg),
+                full_path: None,
                 client_identities: vec!["USER:myusername0"]
                     .into_iter()
                     .map(String::from)
@@ -385,17 +534,49 @@ async fn test_overlapping_restricted_directories(fb: FacebookInit) -> Result<()>
                 has_authorization: true,
                 client_main_id: TEST_CLIENT_MAIN_ID.to_string(),
             },
+            // project access - path log
+            ScubaAccessLogSample {
+                repo_id: RepositoryId::new(0),
+                restricted_paths: cast_to_non_root_mpaths(vec!["project"]),
+                manifest_id: None,
+                manifest_type: None,
+                full_path: Some(NonRootMPath::new("project")?),
+                client_identities: vec!["USER:myusername0"]
+                    .into_iter()
+                    .map(String::from)
+                    .collect::<Vec<_>>(),
+                // User has access to the broader project ACL
+                has_authorization: true,
+                client_main_id: TEST_CLIENT_MAIN_ID.to_string(),
+            },
+            // project/restricted access - manifest log
             ScubaAccessLogSample {
                 repo_id: RepositoryId::new(0),
                 restricted_paths: cast_to_non_root_mpaths(vec!["project/restricted"]),
-                manifest_id: Some(expected_manifest_id_subdir),
+                manifest_id: Some(expected_manifest_id_subdir.clone()),
                 manifest_type: Some(ManifestType::Hg),
+                full_path: None,
                 client_identities: vec!["USER:myusername0"]
                     .into_iter()
                     .map(String::from)
                     .collect::<Vec<_>>(),
                 // User does NOT have access to the more restricted ACL
                 has_authorization: false,
+                client_main_id: TEST_CLIENT_MAIN_ID.to_string(),
+            },
+            // project/restricted access - path log (includes both ACLs)
+            ScubaAccessLogSample {
+                repo_id: RepositoryId::new(0),
+                restricted_paths: cast_to_non_root_mpaths(vec!["project", "project/restricted"]),
+                manifest_id: None,
+                manifest_type: None,
+                full_path: Some(NonRootMPath::new("project/restricted")?),
+                client_identities: vec!["USER:myusername0"]
+                    .into_iter()
+                    .map(String::from)
+                    .collect::<Vec<_>>(),
+                // User has access to project ACL, so overall authorization is true
+                has_authorization: true,
                 client_main_id: TEST_CLIENT_MAIN_ID.to_string(),
             },
         ])
@@ -435,11 +616,13 @@ async fn test_same_manifest_id_restricted_and_unrestricted_paths(fb: FacebookIni
             RepoPath::dir("restricted")?,
         )?])
         .expecting_scuba_access_logs(vec![
+            // Manifest access logs - two entries because both files trigger the same manifest access
             ScubaAccessLogSample {
                 repo_id: RepositoryId::new(0),
                 restricted_paths: cast_to_non_root_mpaths(vec!["restricted"]),
                 manifest_id: Some(expected_manifest_id.clone()),
                 manifest_type: Some(ManifestType::Hg),
+                full_path: None,
                 client_identities: vec!["USER:myusername0"]
                     .into_iter()
                     .map(String::from)
@@ -451,8 +634,38 @@ async fn test_same_manifest_id_restricted_and_unrestricted_paths(fb: FacebookIni
             ScubaAccessLogSample {
                 repo_id: RepositoryId::new(0),
                 restricted_paths: cast_to_non_root_mpaths(vec!["restricted"]),
-                manifest_id: Some(expected_manifest_id),
+                manifest_id: Some(expected_manifest_id.clone()),
                 manifest_type: Some(ManifestType::Hg),
+                full_path: None,
+                client_identities: vec!["USER:myusername0"]
+                    .into_iter()
+                    .map(String::from)
+                    .collect::<Vec<_>>(),
+                // User does NOT have access to restricted_acl
+                has_authorization: false,
+                client_main_id: TEST_CLIENT_MAIN_ID.to_string(),
+            },
+            // Path access logs - for directories traversed
+            ScubaAccessLogSample {
+                repo_id: RepositoryId::new(0),
+                restricted_paths: cast_to_non_root_mpaths(vec!["restricted"]),
+                manifest_id: None,
+                manifest_type: None,
+                full_path: Some(NonRootMPath::new("restricted")?),
+                client_identities: vec!["USER:myusername0"]
+                    .into_iter()
+                    .map(String::from)
+                    .collect::<Vec<_>>(),
+                // User does NOT have access to restricted_acl
+                has_authorization: false,
+                client_main_id: TEST_CLIENT_MAIN_ID.to_string(),
+            },
+            ScubaAccessLogSample {
+                repo_id: RepositoryId::new(0),
+                restricted_paths: cast_to_non_root_mpaths(vec!["restricted"]),
+                manifest_id: None,
+                manifest_type: None,
+                full_path: Some(NonRootMPath::new("restricted/foo")?),
                 client_identities: vec!["USER:myusername0"]
                     .into_iter()
                     .map(String::from)
