@@ -1,0 +1,26 @@
+name: Eden SCM OSS
+
+on:
+  pull_request:
+  push:
+    branches:
+      - main
+
+jobs:
+  make-oss:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Show last 5 commits
+        run: git log -n 5
+
+      - name: Run make oss
+        working-directory: eden/scm
+        run: make oss
+
+      - name: Run Sapling
+        working-directory: eden/scm
+        run: ./sl --version
