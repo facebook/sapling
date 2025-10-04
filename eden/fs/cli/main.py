@@ -903,6 +903,11 @@ class CloneCmd(Subcmd):
 
         parser.add_argument(
             "--filter-path",
+            help=("DEPRECATED: USE --filter-paths INSTEAD."),
+        )
+        parser.add_argument(
+            "--filter-paths",
+            nargs=argparse.ZERO_OR_MORE,
             help=(
                 "The FilteredFS filter to activate when "
                 "--backing-store=filteredhg. When this option is omitted, no "
@@ -1010,19 +1015,30 @@ is case-sensitive. This is not recommended and is intended only for testing."""
             )
 
         # The null (empty) filter can be specified by:
-        #   1) Not supplying the --filter-path arg
-        #   2) Supplying an empty string to --filter-path
-        #   3) Specifying the --filter-path as "null" (or any variation)
-        filter_path = args.filter_path or ""
-        if filter_path == "" or filter_path.lower() == "null":
-            filter_path = None
+        #   1) Not supplying the --filter-paths arg
+        #   2) Supplying an empty string to --filter-paths
+        #   3) Specifying --filter-paths as "null" (or any variation)
+        filter_paths = []
+        if args.filter_paths:
+            # Prefer using the non-deprecated --filter-paths option
+            filter_paths = args.filter_paths or []
         else:
-            filter_path = [filter_path]
+            if args.filter_path is not None:
+                filter_paths = [args.filter_path]
+            else:
+                filter_paths = []
+
+        if (
+            filter_paths == []
+            or any(p == "" for p in filter_paths)
+            or any(p.lower() == "null" for p in filter_paths)
+        ):
+            filter_paths = None
 
         # Filters are only valid for repos using FilteredFS
-        if filter_path and not args.backing_store == "filteredhg":
+        if filter_paths and not args.backing_store == "filteredhg":
             print_stderr(
-                "error: --filter-path can only be used with --backing-store=filteredhg"
+                "error: --filter-paths can only be used with --backing-store=filteredhg"
             )
             return 1
 
@@ -1143,7 +1159,7 @@ is case-sensitive. This is not recommended and is intended only for testing."""
         print(f"Cloning new repository at {args.path}...")
 
         try:
-            instance.clone(repo_config, args.path, commit, filter_path)
+            instance.clone(repo_config, args.path, commit, filter_paths)
             print(f"Success.  Checked out commit {commit:.8}")
             # In the future it would probably be nice to fork a background
             # process here to prefetch files that we think the user is likely

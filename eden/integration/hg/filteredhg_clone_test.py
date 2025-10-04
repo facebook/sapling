@@ -205,71 +205,41 @@ baz
         )
 
     def test_filteredhg_clone_two_filters(self) -> None:
-        # FIXME: 'eden clone' does not support multiple filters, so this will
-        # fail once Sapling tries to pass "--filter-paths" arg
-        with self.assertRaises(subprocess.CalledProcessError) as context:
-            ffs_repo = self.hg_clone_filteredhg_repo(  # noqa
-                repo_name="ffs",
-                filter_paths=[
-                    ("foo", "filter_foo"),
-                    ("bar", "filter_bar"),
-                ],
-            )
-        stderr = context.exception.stderr
-        self.assertIn(
-            b"error: unrecognized arguments",
-            stderr,
-            msg="passing two or more filters to old 'eden clone' should fail",
+        ffs_repo = self.hg_clone_filteredhg_repo(
+            repo_name="ffs",
+            filter_paths=[
+                ("foo", "filter_foo"),
+                ("bar", "filter_bar"),
+            ],
         )
 
-        # FIXME: The repo isn't cloned because we tried to specify multiple
-        # filters, but 'eden clone' doesn't support that yet
-        # self.assert_paths_filtered_unfiltered(
-        #     Path(ffs_repo.path), ["foo", "bar"], ["baz"]
-        # )
+        self.assert_paths_filtered_unfiltered(
+            Path(ffs_repo.path), ["foo", "bar"], ["baz"]
+        )
 
     def test_filteredhg_clone_two_filters_one_legacy(self) -> None:
-        # FIXME: 'eden clone' does not support multiple filters, so this will
-        # fail once Sapling tries to pass "--filter-paths" arg
-        with self.assertRaises(subprocess.CalledProcessError) as context:
-            ffs_repo = self.hg_clone_filteredhg_repo(  # noqa
-                repo_name="ffs",
-                filter_paths=[
-                    ("foo", "filter_foo"),
-                    ("bar", "filter_bar"),
-                    (None, "filter_baz"),
-                ],
-            )
-        stderr = context.exception.stderr
-        self.assertIn(
-            b"error: unrecognized arguments",
-            stderr,
-            msg="passing two or more filters to old 'eden clone' should fail",
+        ffs_repo = self.hg_clone_filteredhg_repo(
+            repo_name="ffs",
+            filter_paths=[
+                ("foo", "filter_foo"),
+                ("bar", "filter_bar"),
+                (None, "filter_baz"),
+            ],
         )
 
-        # FIXME: The repo isn't cloned because we tried to specify multiple
-        # filters, but 'eden clone' doesn't support that yet
-        # self.assert_paths_filtered_unfiltered(
-        #     Path(ffs_repo.path), ["foo", "bar", "baz"], []
-        # )
+        self.assert_paths_filtered_unfiltered(
+            Path(ffs_repo.path), ["baz", "foo", "bar"], []
+        )
 
     def test_eden_clone_succeeds(self) -> None:
         self.eden_clone_filteredhg_repo(backing_store="filteredhg")
 
     def test_eden_clone_multiple_filters(self) -> None:
-        # FIXME: "--filter-paths" arg is not yet supported by 'eden clone', so
-        # this will fail
-        with self.assertRaises(subprocess.CalledProcessError) as context:
-            self.eden_clone_filteredhg_repo(
-                backing_store="filteredhg",
-                filter_paths=["tools/scm/filter/filter1", "tools/scm/filter/filter2"],
-            )
-        stderr = context.exception.stderr
-        self.assertIn(
-            "error: unrecognized arguments",
-            stderr,
-            msg="passing two or more filters to old 'eden clone' should fail",
+        repo_path = self.eden_clone_filteredhg_repo(
+            backing_store="filteredhg",
+            filter_paths=["filter_foo", "filter_bar"],
         )
+        self.assert_paths_filtered_unfiltered(repo_path, ["foo", "bar"], ["baz"])
 
     def test_eden_clone_with_filter_succeeds(self) -> None:
         repo_path = self.eden_clone_filteredhg_repo(
@@ -288,7 +258,7 @@ baz
             self.eden_clone_filteredhg_repo(filter_paths=["tools/scm/filter/filter1"])
         stderr = context.exception.stderr
         self.assertIn(
-            "error: --filter-path can only be used with",
+            "error: --filter-paths can only be used with",
             stderr,
             msg="passing a filter without specifying filteredhg as the backing store should fail",
         )
@@ -314,20 +284,11 @@ baz
 
     async def test_eden_get_two_filters(self) -> None:
         filter_paths = ["tools/scm/filter/filter1", "tools/scm/filter/filter2"]
-        # FIXME: "--filter-paths" arg is not yet supported by 'eden clone', so
-        # this will fail
-        with self.assertRaises(subprocess.CalledProcessError) as context:
-            path = self.eden_clone_filteredhg_repo(  # noqa
-                backing_store="filteredhg",
-                filter_paths=filter_paths,
-            )
-        stderr = context.exception.stderr
-        self.assertIn(
-            "error: unrecognized arguments",
-            stderr,
-            msg="passing two or more filters to old 'eden clone' should fail",
+        path = self.eden_clone_filteredhg_repo(
+            backing_store="filteredhg",
+            filter_paths=filter_paths,
         )
-        # await self.assert_fid_matches(path, self.initial_commit, filter_paths)
+        await self.assert_fid_matches(path, self.initial_commit, filter_paths)
 
 
 @hg_test
