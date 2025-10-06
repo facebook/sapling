@@ -9,7 +9,7 @@
   $ setup_common_config $REPOTYPE
 
 # Start up the Mononoke Git Service
-  $ mononoke_git_service --shutdown-grace-period 15
+  $ mononoke_git_service --shutdown-grace-period 20
 
   $ sslcurl -s "https://localhost:$MONONOKE_GIT_SERVICE_PORT/health_check"
   I_AM_ALIVE

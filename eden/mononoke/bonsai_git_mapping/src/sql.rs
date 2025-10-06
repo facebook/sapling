@@ -48,8 +48,8 @@ define_stats! {
 
 #[derive(Clone)]
 struct RendezVousConnection {
-    _bonsai: RendezVous<ChangesetId, GitSha1>,
-    _git: RendezVous<GitSha1, ChangesetId>,
+    bonsai: RendezVous<ChangesetId, GitSha1>,
+    git: RendezVous<GitSha1, ChangesetId>,
     conn: Connection,
 }
 
@@ -57,14 +57,14 @@ impl RendezVousConnection {
     fn new(conn: Connection, name: &str, opts: RendezVousOptions) -> Self {
         Self {
             conn,
-            _bonsai: RendezVous::new(
+            bonsai: RendezVous::new(
                 ConfigurableRendezVousController::new(opts),
                 Arc::new(RendezVousStats::new(format!(
                     "bonsai_git_mapping.bonsai.{}",
                     name,
                 ))),
             ),
-            _git: RendezVous::new(
+            git: RendezVous::new(
                 ConfigurableRendezVousController::new(opts),
                 Arc::new(RendezVousStats::new(format!(
                     "bonsai_git_mapping.git.{}",
@@ -242,7 +242,7 @@ impl BonsaiGitMapping for SqlBonsaiGitMapping {
             .increment_counter(PerfCounterType::SqlReadsReplica);
 
         let mut mappings =
-            select_mapping(ctx, &self.read_connection.conn, &self.repo_id, &objects).await?;
+            select_mapping(ctx, &self.read_connection, &self.repo_id, &objects).await?;
         let left_to_fetch = filter_fetched_ids(objects, &mappings);
         let left_to_fetch_count = left_to_fetch.count().try_into().map_err(Error::from)?;
 
@@ -265,7 +265,7 @@ impl BonsaiGitMapping for SqlBonsaiGitMapping {
                 .increment_counter(PerfCounterType::SqlReadsMaster);
             let mut master_mappings = select_mapping(
                 ctx,
-                &self.read_master_connection.conn,
+                &self.read_master_connection,
                 &self.repo_id,
                 &left_to_fetch,
             )
@@ -393,6 +393,95 @@ fn filter_fetched_ids(
 }
 
 async fn select_mapping(
+    ctx: &CoreContext,
+    connection: &RendezVousConnection,
+    repo_id: &RepositoryId,
+    objects: &BonsaisOrGitShas,
+) -> Result<Vec<BonsaiGitMappingEntry>> {
+    if objects.is_empty() {
+        return Ok(vec![]);
+    }
+
+    let use_rendezvous = justknobs::eval(
+        "scm/mononoke:rendezvous_bonsai_git_mapping",
+        ctx.client_correlator(),
+        None,
+    )?;
+
+    if use_rendezvous {
+        select_mapping_rendevous(ctx, connection, repo_id, objects).await
+    } else {
+        select_mapping_non_rendezvous(ctx, &connection.conn, repo_id, objects).await
+    }
+}
+
+async fn select_mapping_rendevous(
+    ctx: &CoreContext,
+    connection: &RendezVousConnection,
+    repo_id: &RepositoryId,
+    objects: &BonsaisOrGitShas,
+) -> Result<Vec<BonsaiGitMappingEntry>> {
+    let found = match objects {
+        BonsaisOrGitShas::Bonsai(bcs_ids) => {
+            let ret = connection
+                .bonsai
+                .dispatch(ctx.fb, bcs_ids.iter().copied().collect(), || {
+                    let repo_id = *repo_id;
+                    let conn = connection.conn.clone();
+                    let telemetry = ctx.sql_query_telemetry().clone();
+                    move |bcs_ids: HashSet<ChangesetId>| async move {
+                        let bcs_ids = bcs_ids.into_iter().collect::<Vec<_>>();
+                        let res =
+                            SelectMappingByBonsai::query(&conn, telemetry, &repo_id, &bcs_ids[..])
+                                .await?;
+                        Ok(res
+                            .into_iter()
+                            .map(|(git_sha1, bcs_id)| (bcs_id, git_sha1))
+                            .collect())
+                    }
+                })
+                .await?;
+
+            ret.into_iter()
+                .filter_map(|(bcs_id, git_sha1)| git_sha1.map(|git_sha1| (git_sha1, bcs_id)))
+                .collect()
+        }
+        BonsaisOrGitShas::GitSha1(git_sha1s) => {
+            let ret = connection
+                .git
+                .dispatch(ctx.fb, git_sha1s.iter().copied().collect(), || {
+                    let repo_id = *repo_id;
+                    let conn = connection.conn.clone();
+                    let telemetry = ctx.sql_query_telemetry().clone();
+                    move |git_shas: HashSet<GitSha1>| async move {
+                        let git_shas = git_shas.into_iter().collect::<Vec<_>>();
+                        let res = SelectMappingByGitSha1::query(
+                            &conn,
+                            telemetry,
+                            &repo_id,
+                            &git_shas[..],
+                        )
+                        .await?;
+                        Ok(res.into_iter().collect())
+                    }
+                })
+                .await?;
+
+            let found: Vec<(GitSha1, ChangesetId)> = ret
+                .into_iter()
+                .filter_map(|(git_sha1, bcs_id)| bcs_id.map(|bcs_id| (git_sha1, bcs_id)))
+                .collect();
+            found
+        }
+    };
+
+    Ok(found
+        .into_iter()
+        .map(move |(git_sha1, bcs_id)| BonsaiGitMappingEntry { git_sha1, bcs_id })
+        .collect())
+}
+
+async fn select_mapping_non_rendezvous(
     ctx: &CoreContext,
     connection: &Connection,
     repo_id: &RepositoryId,
