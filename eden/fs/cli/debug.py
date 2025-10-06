@@ -10,6 +10,7 @@
 import argparse
 import binascii
 import collections
+import datetime
 import json
 import os
 import re
@@ -2180,28 +2181,44 @@ class GetAttributesFromFilesV2Cmd(Subcmd):
         if mtime is not None:
             if mtime.getType() == mtime.MTIME:
                 mtime_val = mtime.get_mtime()
-                print(
-                    f"  Modification Time:    {mtime_val.seconds}.{mtime_val.nanoSeconds:09d}"
+                timestamp = mtime_val.seconds + mtime_val.nanoSeconds / 1e9
+                datetime_str = datetime.datetime.fromtimestamp(timestamp).strftime(
+                    "%Y-%m-%d %H:%M:%S"
                 )
+                print(f"  Modification Time:    {datetime_str}")
             else:
                 print(f"  Modification Time:    {mtime.get_error().message}")
         else:
             print("  Modification Time:    None")
 
-    def _print_file_attributes(self, attr_data: FileAttributeDataV2) -> None:
-        """Print all file attributes from attr_data."""
-        self._print_sha1_hash(attr_data.sha1)
-        self._print_blake3_hash(attr_data.blake3)
-        self._print_object_id(attr_data.objectId)
-        self._print_file_size(attr_data.size)
-        self._print_file_mode(attr_data.mode)
-        self._print_source_control_type(attr_data.sourceControlType)
-        self._print_digest_size(attr_data.digestSize)
-        self._print_digest_hash(attr_data.digestHash)
-        self._print_mtime(attr_data.mtime)
+    def _print_file_attributes(
+        self, attr_data: FileAttributeDataV2, requested_attributes: int
+    ) -> None:
+        """Print requested file attributes from attr_data."""
+        if requested_attributes & FileAttributes.SHA1_HASH:
+            self._print_sha1_hash(attr_data.sha1)
+        if requested_attributes & FileAttributes.BLAKE3_HASH:
+            self._print_blake3_hash(attr_data.blake3)
+        if requested_attributes & FileAttributes.OBJECT_ID:
+            self._print_object_id(attr_data.objectId)
+        if requested_attributes & FileAttributes.FILE_SIZE:
+            self._print_file_size(attr_data.size)
+        if requested_attributes & FileAttributes.MODE:
+            self._print_file_mode(attr_data.mode)
+        if requested_attributes & FileAttributes.SOURCE_CONTROL_TYPE:
+            self._print_source_control_type(attr_data.sourceControlType)
+        if requested_attributes & FileAttributes.DIGEST_SIZE:
+            self._print_digest_size(attr_data.digestSize)
+        if requested_attributes & FileAttributes.DIGEST_HASH:
+            self._print_digest_hash(attr_data.digestHash)
+        if requested_attributes & FileAttributes.MTIME:
+            self._print_mtime(attr_data.mtime)
 
     def _print_path_result(
-        self, path: str, attr_result: FileAttributeDataOrErrorV2
+        self,
+        path: str,
+        attr_result: FileAttributeDataOrErrorV2,
+        requested_attributes: int,
     ) -> None:
         """Print results for a single path."""
         print(f"\nPath: {path}")
@@ -2209,7 +2226,7 @@ class GetAttributesFromFilesV2Cmd(Subcmd):
 
         if attr_result.getType() == attr_result.FILEATTRIBUTEDATA:
             attr_data = attr_result.get_fileAttributeData()
-            self._print_file_attributes(attr_data)
+            self._print_file_attributes(attr_data, requested_attributes)
         else:
             error = attr_result.get_error()
             print(f"  ERROR: {error.message}")
@@ -2284,7 +2301,7 @@ class GetAttributesFromFilesV2Cmd(Subcmd):
                 result = client.getAttributesFromFilesV2(params)
                 for i, path in enumerate(args.paths):
                     attr_result = result.res[i]
-                    self._print_path_result(path, attr_result)
+                    self._print_path_result(path, attr_result, requested_attributes)
 
             return 0
         except EdenError as err:
