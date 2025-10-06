@@ -49,6 +49,7 @@ from facebook.eden.constants import (
     DIS_REQUIRE_MATERIALIZED,
 )
 from facebook.eden.ttypes import (
+    Blake3OrError,
     BlobMetadataOrError,
     BlobMetadataWithOrigin,
     DataFetchOrigin,
@@ -58,6 +59,8 @@ from facebook.eden.ttypes import (
     DebugGetScmTreeRequest,
     DebugInvalidateRequest,
     DebugJournalDelta,
+    DigestHashOrError,
+    DigestSizeOrError,
     EdenError,
     FileAttributeDataOrErrorV2,
     FileAttributeDataV2,
@@ -65,6 +68,7 @@ from facebook.eden.ttypes import (
     GetAttributesFromFilesParams,
     ModeOrError,
     MountId,
+    MtimeOrError,
     ObjectIdOrError,
     ScmBlobMetadata,
     ScmBlobOrError,
@@ -72,6 +76,7 @@ from facebook.eden.ttypes import (
     ScmTreeEntry,
     ScmTreeOrError,
     ScmTreeWithOrigin,
+    Sha1OrError,
     SizeOrError,
     SourceControlTypeOrError,
     SyncBehavior,
@@ -2013,6 +2018,59 @@ class GetAttributesFromFilesV2Cmd(Subcmd):
             help="File paths to get attributes for (relative to mount point)",
         )
 
+        # Attribute selection options
+        attr_group = parser.add_argument_group("attribute selection")
+        attr_group.add_argument(
+            "--all-attributes",
+            action="store_true",
+            help="Show all available attributes",
+        )
+        attr_group.add_argument(
+            "--sha1-hash",
+            action="store_true",
+            help="Include SHA1 hash attribute",
+        )
+        attr_group.add_argument(
+            "--blake3-hash",
+            action="store_true",
+            help="Include BLAKE3 hash attribute",
+        )
+        attr_group.add_argument(
+            "--file-size",
+            action="store_true",
+            help="Include file size attribute",
+        )
+        attr_group.add_argument(
+            "--source-control-type",
+            action="store_true",
+            help="Include source control type attribute",
+        )
+        attr_group.add_argument(
+            "--object-id",
+            action="store_true",
+            help="Include object ID attribute",
+        )
+        attr_group.add_argument(
+            "--digest-size",
+            action="store_true",
+            help="Include digest size attribute",
+        )
+        attr_group.add_argument(
+            "--digest-hash",
+            action="store_true",
+            help="Include digest hash attribute",
+        )
+        attr_group.add_argument(
+            "--mtime",
+            action="store_true",
+            help="Include modification time attribute",
+        )
+        attr_group.add_argument(
+            "--mode",
+            action="store_true",
+            help="Include file mode attribute",
+        )
+
     def _source_control_type_to_string(self, scm_type: int) -> str:
         """Convert SourceControlType enum value to string representation."""
         type_mapping = {
@@ -2073,12 +2131,74 @@ class GetAttributesFromFilesV2Cmd(Subcmd):
         else:
             print("  Source Control Type:   None")
 
+    def _print_sha1_hash(self, sha1: Optional[Sha1OrError]) -> None:
+        """Print SHA1 hash attribute."""
+        if sha1 is not None:
+            if sha1.getType() == sha1.SHA1:
+                print(f"  SHA1 Hash:            {hash_str(sha1.get_sha1())}")
+            else:
+                print(f"  SHA1 Hash:            {sha1.get_error().message}")
+        else:
+            print("  SHA1 Hash:            None")
+
+    def _print_blake3_hash(self, blake3: Optional[Blake3OrError]) -> None:
+        """Print BLAKE3 hash attribute."""
+        if blake3 is not None:
+            if blake3.getType() == blake3.BLAKE3:
+                print(f"  BLAKE3 Hash:          {hash_str(blake3.get_blake3())}")
+            else:
+                print(f"  BLAKE3 Hash:          {blake3.get_error().message}")
+        else:
+            print("  BLAKE3 Hash:          None")
+
+    def _print_digest_size(self, digest_size: Optional[DigestSizeOrError]) -> None:
+        """Print digest size attribute."""
+        if digest_size is not None:
+            if digest_size.getType() == digest_size.DIGESTSIZE:
+                print(
+                    f"  Digest Size:          {stats_print.format_size(digest_size.get_digestSize())}"
+                )
+            else:
+                print(f"  Digest Size:          {digest_size.get_error().message}")
+        else:
+            print("  Digest Size:          None")
+
+    def _print_digest_hash(self, digest_hash: Optional[DigestHashOrError]) -> None:
+        """Print digest hash attribute."""
+        if digest_hash is not None:
+            if digest_hash.getType() == digest_hash.DIGESTHASH:
+                print(
+                    f"  Digest Hash:          {hash_str(digest_hash.get_digestHash())}"
+                )
+            else:
+                print(f"  Digest Hash:          {digest_hash.get_error().message}")
+        else:
+            print("  Digest Hash:          None")
+
+    def _print_mtime(self, mtime: Optional[MtimeOrError]) -> None:
+        """Print modification time attribute."""
+        if mtime is not None:
+            if mtime.getType() == mtime.MTIME:
+                mtime_val = mtime.get_mtime()
+                print(
+                    f"  Modification Time:    {mtime_val.seconds}.{mtime_val.nanoSeconds:09d}"
+                )
+            else:
+                print(f"  Modification Time:    {mtime.get_error().message}")
+        else:
+            print("  Modification Time:    None")
+
     def _print_file_attributes(self, attr_data: FileAttributeDataV2) -> None:
         """Print all file attributes from attr_data."""
+        self._print_sha1_hash(attr_data.sha1)
+        self._print_blake3_hash(attr_data.blake3)
         self._print_object_id(attr_data.objectId)
         self._print_file_size(attr_data.size)
         self._print_file_mode(attr_data.mode)
         self._print_source_control_type(attr_data.sourceControlType)
+        self._print_digest_size(attr_data.digestSize)
+        self._print_digest_hash(attr_data.digestHash)
+        self._print_mtime(attr_data.mtime)
 
     def _print_path_result(
         self, path: str, attr_result: FileAttributeDataOrErrorV2
@@ -2094,20 +2214,69 @@ class GetAttributesFromFilesV2Cmd(Subcmd):
             error = attr_result.get_error()
             print(f"  ERROR: {error.message}")
 
+    def _get_requested_attributes(self, args: argparse.Namespace) -> int:
+        """Build the requested attributes bitmask based on command line arguments."""
+        if args.all_attributes:
+            # Request all available attributes
+            return (
+                FileAttributes.SHA1_HASH
+                | FileAttributes.BLAKE3_HASH
+                | FileAttributes.OBJECT_ID
+                | FileAttributes.FILE_SIZE
+                | FileAttributes.MODE
+                | FileAttributes.SOURCE_CONTROL_TYPE
+                | FileAttributes.DIGEST_SIZE
+                | FileAttributes.DIGEST_HASH
+                | FileAttributes.MTIME
+            )
+
+        # Check if any specific attributes were requested
+        requested_attrs = 0
+        if args.sha1_hash:
+            requested_attrs |= FileAttributes.SHA1_HASH
+        if args.blake3_hash:
+            requested_attrs |= FileAttributes.BLAKE3_HASH
+        if args.object_id:
+            requested_attrs |= FileAttributes.OBJECT_ID
+        if args.file_size:
+            requested_attrs |= FileAttributes.FILE_SIZE
+        if args.mode:
+            requested_attrs |= FileAttributes.MODE
+        if args.source_control_type:
+            requested_attrs |= FileAttributes.SOURCE_CONTROL_TYPE
+        if args.digest_size:
+            requested_attrs |= FileAttributes.DIGEST_SIZE
+        if args.digest_hash:
+            requested_attrs |= FileAttributes.DIGEST_HASH
+        if args.mtime:
+            requested_attrs |= FileAttributes.MTIME
+
+        # If no attributes were explicitly requested, use defaults
+        if requested_attrs == 0:
+            requested_attrs = (
+                FileAttributes.OBJECT_ID
+                | FileAttributes.MODE
+                | FileAttributes.FILE_SIZE
+                | FileAttributes.SOURCE_CONTROL_TYPE
+                | FileAttributes.MTIME
+            )
+
+        return requested_attrs
+
     def run(self, args: argparse.Namespace) -> int:
         instance, checkout, _ = cmd_util.require_checkout(args, args.mount)
 
         # Convert paths to bytes
         paths = [os.fsencode(path) for path in args.paths]
 
-        # Create the request
+        # Get the requested attributes based on command line arguments
+        requested_attributes = self._get_requested_attributes(args)
+
+        # Create the request params
         params = GetAttributesFromFilesParams(
             mountPoint=bytes(checkout.path),
             paths=paths,
-            requestedAttributes=FileAttributes.OBJECT_ID
-            | FileAttributes.MODE
-            | FileAttributes.FILE_SIZE
-            | FileAttributes.SOURCE_CONTROL_TYPE,
+            requestedAttributes=requested_attributes,
         )
 
         try:
