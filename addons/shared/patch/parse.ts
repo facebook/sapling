@@ -267,6 +267,38 @@ export function parsePatch(patch: string): ParsedDiff[] {
   return list;
 }
 
+/**
+ * Guess if it's a submodule change by the shape of the hunks.
+ * sl diff doesn't have file mode in the outputs yet.
+ *
+ * Diff pattern for a submodule change:
+ *
+ * diff --git a/path/to/submodule b/path/to/submodule
+ * --- a/path/to/submodule
+ * +++ b/path/to/submodule
+ * @@ -1,1 +1,1 @@
+ * -Subproject commit <hash>
+ * +Subproject commit <hash>
+ *
+ */
+export function guessIsSubmodule(patch: ParsedDiff): boolean {
+  if (patch.hunks.length !== 1) {
+    return false;
+  }
+  const hunk = patch.hunks[0];
+  const oldLine = /^-Subproject commit [0-9A-Fa-f]{7,64}$/;
+  const newLine = /^\+Subproject commit [0-9A-Fa-f]{7,64}$/;
+  return (
+    hunk.newLines === 1 &&
+    hunk.newStart === 1 &&
+    hunk.oldLines === 1 &&
+    hunk.oldStart === 1 &&
+    hunk.lines.length === 2 &&
+    oldLine.exec(hunk.lines[0]) !== null &&
+    newLine.exec(hunk.lines[1]) !== null
+  );
+}
+
 export function parseParsedDiff(
   oldCodeLines: string[],
   newCodeLines: string[],

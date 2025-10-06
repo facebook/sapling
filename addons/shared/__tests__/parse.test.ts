@@ -6,7 +6,7 @@
  */
 
 import {splitLines} from '../diff';
-import {parseParsedDiff, parsePatch} from '../patch/parse';
+import {guessIsSubmodule, parseParsedDiff, parsePatch} from '../patch/parse';
 
 describe('patch/parse', () => {
   it('should parse basic modified patch', () => {
@@ -255,6 +255,57 @@ old mode XXX
 new mode 100755
 `;
     expect(() => parsePatch(patch)).toThrow("invalid format 'old mode XXX'");
+  });
+});
+
+describe('guessSubmodule', () => {
+  it('valid submodule patches', () => {
+    const patch = `
+diff --git a/external/brotli b/external/brotli
+--- a/external/brotli
++++ b/external/brotli
+@@ -1,1 +1,1 @@
+-Subproject commit 892110204ccf44fcd493ae415c9a69c470c2a9cf
++Subproject commit 57de5cc4288565a9c3a7af978ef15f0abf0ada1b
+diff --git a/external/rust/cxx b/external/rust/cxx
+--- a/external/rust/cxx
++++ b/external/rust/cxx
+@@ -1,1 +1,1 @@
+-Subproject commit 862a23082a087566776280a5b1539d3b62701bcb
++Subproject commit 1869e93e54fa9d9425bd88bdb25073af9ed7e782
+`;
+    const parsed = parsePatch(patch);
+    expect(parsed.length).toEqual(2);
+    expect(guessIsSubmodule(parsed[0])).toEqual(true);
+    expect(guessIsSubmodule(parsed[1])).toEqual(true);
+  });
+
+  it('invalid file modification', () => {
+    const patch = `
+diff --git sapling/eden/scm/a sapling/eden/scm/a
+--- sapling/eden/scm/a
++++ sapling/eden/scm/a
+@@ -1,1 +1,2 @@
+ Subproject commit abcdef01234556789ABCDEF
++Subproject commit abcdef01234556789ABCDEF
+`;
+    const parsed = parsePatch(patch);
+    expect(parsed.length).toEqual(1);
+    expect(guessIsSubmodule(parsed[0])).toEqual(false);
+  });
+
+  it('invalid hash value', () => {
+    const patch = `
+diff --git a/external/rust/cxx b/external/rust/cxx
+--- a/external/rust/cxx
++++ b/external/rust/cxx
+@@ -1,1 +1,1 @@
+-Subproject commit ghijklmnGHIJKLMN
++Subproject commit ghijklmnGHIJKLMN
+`;
+    const parsed = parsePatch(patch);
+    expect(parsed.length).toEqual(1);
+    expect(guessIsSubmodule(parsed[0])).toEqual(false);
   });
 });
 
