@@ -55,7 +55,8 @@
     "scm/mononoke:use_maybe_stale_freshness_for_bookmarks": true,
     "scm/mononoke:disable_bonsai_mapping_read_fallback_to_primary": false,
     "scm/mononoke:retry_query_from_replica_with_consistency_check": true,
-    "scm/mononoke:enabled_restricted_paths_access_logging": true
+    "scm/mononoke:enabled_restricted_paths_access_logging": true,
+    "scm/mononoke:rendezvous_bonsai_git_mapping" : true
   },
   "ints": {
     "scm/mononoke_timeouts:repo_client_clone_timeout_secs": 14400,

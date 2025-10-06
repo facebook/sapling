@@ -218,6 +218,7 @@ impl MononokeScubaSampleBuilder {
                     "changeset_path_content_context_new",
                 ],
             ),
+            ("scm/mononoke:rendezvous_bonsai_git_mapping", vec![]),
         ];
         let enabled_experiments_jk: Vec<String> = jk_and_switches
             .into_iter()
