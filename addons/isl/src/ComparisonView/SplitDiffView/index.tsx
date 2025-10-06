@@ -7,7 +7,7 @@
 
 import './SplitDiffHunk.css';
 
-import type {ParsedDiff} from 'shared/patch/parse';
+import {guessIsSubmodule, type ParsedDiff} from 'shared/patch/parse';
 import type {Context} from './types';
 
 import {Button} from 'isl-components/Button';
@@ -54,7 +54,7 @@ export function SplitDiffView({
     );
   }
 
-  const iconType = diffTypeToIconType(patch.type);
+  const isSubmodule = guessIsSubmodule(patch);
   const fileActions = (
     <>
       {platform.openDiff == null ? null : (
@@ -69,20 +69,23 @@ export function SplitDiffView({
           </Button>
         </Tooltip>
       )}
-      <Tooltip title={t('Open file')} placement={'bottom'}>
-        <Button
-          icon
-          className="split-diff-view-file-header-open-button"
-          onClick={() => {
-            platform.openFile(path);
-          }}>
-          <Icon icon="go-to-file" />
-        </Button>
-      </Tooltip>
+      {!isSubmodule && (
+        <Tooltip title={t('Open file')} placement={'bottom'}>
+          <Button
+            icon
+            className="split-diff-view-file-header-open-button"
+            onClick={() => {
+              platform.openFile(path);
+            }}>
+            <Icon icon="go-to-file" />
+          </Button>
+        </Tooltip>
+      )}
     </>
   );
 
   const copyFrom = patch.oldFileName === fileName ? undefined : patch.oldFileName;
+  const iconType = diffTypeToIconType(patch.type);
   return (
     <div className="split-diff-view">
       <FileHeader
