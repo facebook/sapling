@@ -647,6 +647,11 @@ async fn check_addless_union_conflicts<R: MononokeRepo>(
     }
 }
 
+pub struct CreatedChangeset<R> {
+    pub hg_extras: SortedVectorMap<String, Vec<u8>>,
+    pub changeset_ctx: ChangesetContext<R>,
+}
+
 impl<R: MononokeRepo> RepoContext<R> {
     pub(crate) async fn save_changesets(
         &self,
@@ -699,7 +704,7 @@ impl<R: MononokeRepo> RepoContext<R> {
         // If some, this changeset is a snapshot. Currently unsupported to upload a
         // normal commit to a bubble, though can be easily added.
         bubble: Option<&Bubble>,
-    ) -> Result<(SortedVectorMap<String, Vec<u8>>, ChangesetContext<R>), MononokeError> {
+    ) -> Result<CreatedChangeset<R>, MononokeError> {
         let changesets = self
             .create_changeset_stack(parents, vec![info], vec![changes], bubble)
             .await?;
@@ -726,7 +731,7 @@ impl<R: MononokeRepo> RepoContext<R> {
         // If some, this changeset is a snapshot. Currently unsupported to upload a
         // normal commit to a bubble, though can be easily added.
         bubble: Option<&Bubble>,
-    ) -> Result<Vec<(SortedVectorMap<String, Vec<u8>>, ChangesetContext<R>)>, MononokeError> {
+    ) -> Result<Vec<CreatedChangeset<R>>, MononokeError> {
         self.start_write()?;
         self.authorization_context()
             .require_repo_write(self.ctx(), self.repo(), RepoWriteOperation::CreateChangeset)
@@ -1052,7 +1057,10 @@ impl<R: MononokeRepo> RepoContext<R> {
 
         Ok(new_changeset_ids
             .into_iter()
-            .map(|(hg_extras, id)| (hg_extras, ChangesetContext::new(self.clone(), id)))
+            .map(|(hg_extras, id)| CreatedChangeset {
+                hg_extras,
+                changeset_ctx: ChangesetContext::new(self.clone(), id),
+            })
             .collect())
     }
 }

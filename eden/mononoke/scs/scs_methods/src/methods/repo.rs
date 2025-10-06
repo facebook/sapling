@@ -516,7 +516,7 @@ impl SourceControlServiceImpl {
         let changes = Self::convert_create_commit_changes(&repo, params.changes).await?;
         let bubble = None;
 
-        let (hg_extra, changeset) = repo
+        let created_changeset = repo
             .create_changeset(parents, info, changes, bubble)
             .await?;
 
@@ -528,10 +528,14 @@ impl SourceControlServiceImpl {
             .identity_schemes
             .contains(&thrift::CommitIdentityScheme::GIT)
         {
-            repo.set_git_mapping_from_changeset(&changeset, &hg_extra)
-                .await?;
+            repo.set_git_mapping_from_changeset(
+                &created_changeset.changeset_ctx,
+                &created_changeset.hg_extras,
+            )
+            .await?;
         }
-        let ids = map_commit_identity(&changeset, &params.identity_schemes).await?;
+        let ids =
+            map_commit_identity(&created_changeset.changeset_ctx, &params.identity_schemes).await?;
         Ok(thrift::RepoCreateCommitResponse {
             ids,
             ..Default::default()
@@ -580,16 +584,19 @@ impl SourceControlServiceImpl {
             .identity_schemes
             .contains(&thrift::CommitIdentityScheme::GIT)
         {
-            for (hg_extra, changeset_ctx) in stack.iter() {
-                repo.set_git_mapping_from_changeset(changeset_ctx, hg_extra)
-                    .await?;
+            for created_changeset in stack.iter() {
+                repo.set_git_mapping_from_changeset(
+                    &created_changeset.changeset_ctx,
+                    &created_changeset.hg_extras,
+                )
+                .await?;
             }
         }
 
         if let Some(prepare_types) = &params.prepare_derived_data_types {
             let csids = stack
                 .iter()
-                .map(|(_hg_extra, c)| c.id())
+                .map(|created_changeset| created_changeset.changeset_ctx.id())
                 .collect::<Vec<_>>();
             let derived_data_types = prepare_types
                 .iter()
@@ -600,8 +607,8 @@ impl SourceControlServiceImpl {
         }
 
         let identity_schemes = &params.identity_schemes;
-        let commit_ids = stream::iter(stack.into_iter().map(|(_hg_extra, changeset)| async move {
-            map_commit_identity(&changeset, identity_schemes).await
+        let commit_ids = stream::iter(stack.into_iter().map(|created_changeset| async move {
+            map_commit_identity(&created_changeset.changeset_ctx, identity_schemes).await
         }))
         .buffered(10)
         .try_collect::<Vec<_>>()

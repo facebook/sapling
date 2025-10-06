@@ -221,10 +221,10 @@ impl<R: MononokeRepo> RepoContext<R> {
             submodule_expansion_path.into() => create_change
         };
 
-        let (_, new_commit) = small_repo_ctx
+        let created_changeset = small_repo_ctx
             .create_changeset(parents, create_info, changes, None)
             .await?;
-        Ok(new_commit)
+        Ok(created_changeset.changeset_ctx)
     }
 
     /// Get the id of the small repo where the submodule expansion is

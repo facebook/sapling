@@ -62,7 +62,7 @@ async fn create_changeset_stack<R: MononokeRepo>(
         .create_changeset_stack(stack_parents, info_stack, changes_stack, bubble)
         .await?
         .into_iter()
-        .map(|(_hg_extra, cs)| cs)
+        .map(|created_changeset| created_changeset.changeset_ctx)
         .collect())
 }
 
@@ -94,9 +94,10 @@ async fn create_changesets_sequentially<R: MononokeRepo>(
             extra: extra.clone(),
             git_extra_headers: git_extra_headers.clone(),
         };
-        let (_hg_extra, commit) = repo
+        let commit = repo
             .create_changeset(parents, info, changes, bubble)
-            .await?;
+            .await?
+            .changeset_ctx;
         parents = vec![commit.id()];
         result.push(commit);
         change_num += 1;

@@ -626,7 +626,7 @@ async fn upload_bonsai_changeset(
     bubble_id: Option<BubbleId>,
     parents: Vec<ChangesetId>,
 ) -> anyhow::Result<ChangesetId> {
-    let (_hg_extra, cs_ctx) = repo
+    let cs_ctx = repo
         .repo_ctx()
         .create_changeset(
             parents,
@@ -655,7 +655,8 @@ async fn upload_bonsai_changeset(
             .as_ref(),
         )
         .await
-        .with_context(|| anyhow!("When creating bonsai changeset"))?;
+        .with_context(|| anyhow!("When creating bonsai changeset"))?
+        .changeset_ctx;
 
     Ok(cs_ctx.id())
 }

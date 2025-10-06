@@ -97,7 +97,7 @@ async fn create_commit(
         )
         .await?;
 
-    let (_hg_extra, cs) = repo
+    let cs = repo
         .create_changeset(
             parents,
             CreateInfo {
@@ -112,7 +112,8 @@ async fn create_commit(
             changes.clone(),
             bubble,
         )
-        .await?;
+        .await?
+        .changeset_ctx;
 
     changes.insert(
         MPath::try_from("TEST_CREATE")?,
@@ -128,7 +129,7 @@ async fn create_commit(
             None,
         ),
     );
-    let (_hg_extra, second_cs) = repo
+    let second_cs = repo
         .create_changeset(
             vec![cs.id()],
             CreateInfo {
@@ -143,7 +144,8 @@ async fn create_commit(
             changes,
             bubble,
         )
-        .await?;
+        .await?
+        .changeset_ctx;
 
     validate_unnecessary_derived_data_is_not_derived(
         &ctx,
@@ -256,7 +258,7 @@ async fn create_commit_bad_changes(fb: FacebookInit) -> Result<(), Error> {
             bubble,
         )
         .await
-        .map(|(_hg_extra, cs)| cs)
+        .map(|created_changeset| created_changeset.changeset_ctx)
     }
 
     // Cannot delete a file that is not there
@@ -365,7 +367,7 @@ async fn test_create_merge_commit(fb: FacebookInit) -> Result<(), Error> {
             bubble,
         )
         .await
-        .map(|(_hg_extra, cs)| cs)
+        .map(|created_changeset| created_changeset.changeset_ctx)
     }
 
     let initial_hash = "7785606eb1f26ff5722c831de402350cf97052dc44bc175da6ac0d715a3dbbf6";
@@ -447,7 +449,7 @@ async fn test_merge_commit_parent_file_conflict(fb: FacebookInit) -> Result<(), 
             bubble,
         )
         .await
-        .map(|(_hg_extra, cs)| cs)
+        .map(|created_changeset| created_changeset.changeset_ctx)
     }
 
     let initial_hash = "7785606eb1f26ff5722c831de402350cf97052dc44bc175da6ac0d715a3dbbf6";
@@ -544,7 +546,7 @@ async fn test_merge_commit_parent_tree_file_conflict(fb: FacebookInit) -> Result
             bubble,
         )
         .await
-        .map(|(_hg_extra, cs)| cs)
+        .map(|created_changeset| created_changeset.changeset_ctx)
     }
 
     let initial_hash = "7785606eb1f26ff5722c831de402350cf97052dc44bc175da6ac0d715a3dbbf6";
