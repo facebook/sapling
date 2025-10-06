@@ -396,7 +396,7 @@ impl SourceControlServiceImpl {
                     Ok::<_, scs_errors::ServiceError>((commit_id, changeset_ctx_or_error))
                 }
             })
-            .buffer_unordered(CONCURRENCY_LIMIT)
+            .buffered(CONCURRENCY_LIMIT)
             .try_collect::<Vec<_>>()
             .await?;
 
