@@ -28,6 +28,7 @@ use mononoke_types::hash::GitSha1;
 use mononoke_types_mocks::changesetid as bonsai;
 use mononoke_types_mocks::hash::*;
 use mononoke_types_mocks::repo::REPO_ZERO;
+use rendezvous::RendezVousOptions;
 use sql_construct::SqlConstruct;
 use sql_ext::Connection;
 use sql_ext::SqlConnections;
@@ -109,7 +110,8 @@ impl BonsaiGitMapping for CountedBonsaiGitMapping {
 #[mononoke::fbinit_test]
 async fn test_add_and_get(fb: FacebookInit) -> Result<(), Error> {
     let ctx = CoreContext::test_mock(fb);
-    let mapping = SqlBonsaiGitMappingBuilder::with_sqlite_in_memory()?.build(REPO_ZERO);
+    let mapping = SqlBonsaiGitMappingBuilder::with_sqlite_in_memory()?
+        .build(REPO_ZERO, RendezVousOptions::for_test());
 
     let entry = BonsaiGitMappingEntry {
         bcs_id: bonsai::ONES_CSID,
@@ -138,7 +140,8 @@ async fn test_add_and_get(fb: FacebookInit) -> Result<(), Error> {
 async fn test_add_duplicate(fb: FacebookInit) -> Result<(), Error> {
     // Inserting duplicate entries should just be a successful no-op.
     let ctx = CoreContext::test_mock(fb);
-    let mapping = SqlBonsaiGitMappingBuilder::with_sqlite_in_memory()?.build(REPO_ZERO);
+    let mapping = SqlBonsaiGitMappingBuilder::with_sqlite_in_memory()?
+        .build(REPO_ZERO, RendezVousOptions::for_test());
 
     let entry = BonsaiGitMappingEntry {
         bcs_id: bonsai::ONES_CSID,
@@ -161,7 +164,8 @@ async fn test_add_conflict(fb: FacebookInit) -> Result<(), Error> {
     // Adding conflicting entries should fail. Other entries inserted in the
     // same bulk_add should be inserted.
     let ctx = CoreContext::test_mock(fb);
-    let mapping = SqlBonsaiGitMappingBuilder::with_sqlite_in_memory()?.build(REPO_ZERO);
+    let mapping = SqlBonsaiGitMappingBuilder::with_sqlite_in_memory()?
+        .build(REPO_ZERO, RendezVousOptions::for_test());
 
     let entry = BonsaiGitMappingEntry {
         bcs_id: bonsai::ONES_CSID,
@@ -219,7 +223,8 @@ async fn test_add_conflict(fb: FacebookInit) -> Result<(), Error> {
 #[mononoke::fbinit_test]
 async fn test_bulk_add(fb: FacebookInit) -> Result<(), Error> {
     let ctx = CoreContext::test_mock(fb);
-    let mapping = SqlBonsaiGitMappingBuilder::with_sqlite_in_memory()?.build(REPO_ZERO);
+    let mapping = SqlBonsaiGitMappingBuilder::with_sqlite_in_memory()?
+        .build(REPO_ZERO, RendezVousOptions::for_test());
 
     let entry1 = BonsaiGitMappingEntry {
         bcs_id: bonsai::ONES_CSID,
@@ -244,7 +249,8 @@ async fn test_bulk_add(fb: FacebookInit) -> Result<(), Error> {
 #[mononoke::fbinit_test]
 async fn test_missing(fb: FacebookInit) -> Result<(), Error> {
     let ctx = CoreContext::test_mock(fb);
-    let mapping = SqlBonsaiGitMappingBuilder::with_sqlite_in_memory()?.build(REPO_ZERO);
+    let mapping = SqlBonsaiGitMappingBuilder::with_sqlite_in_memory()?
+        .build(REPO_ZERO, RendezVousOptions::for_test());
 
     let result = mapping
         .get(&ctx, BonsaisOrGitShas::Bonsai(vec![bonsai::ONES_CSID]))
@@ -264,7 +270,7 @@ async fn test_add_with_transaction(fb: FacebookInit) -> Result<(), Error> {
 
     let mapping =
         SqlBonsaiGitMappingBuilder::from_sql_connections(SqlConnections::new_single(conn.clone()))
-            .build(REPO_ZERO);
+            .build(REPO_ZERO, RendezVousOptions::for_test());
 
     let entry1 = BonsaiGitMappingEntry {
         bcs_id: bonsai::ONES_CSID,
@@ -347,7 +353,7 @@ async fn test_get_with_caching(fb: FacebookInit) -> Result<(), Error> {
     let conn = Connection::with_sqlite(conn)?;
     let mapping =
         SqlBonsaiGitMappingBuilder::from_sql_connections(SqlConnections::new_single(conn.clone()))
-            .build(REPO_ZERO);
+            .build(REPO_ZERO, RendezVousOptions::for_test());
     let counted_mapping = CountedBonsaiGitMapping::new(Arc::new(mapping));
     let fetched_entries = counted_mapping.fetched_entries_counter();
     let caching_mapping = CachingBonsaiGitMapping::new_test(Arc::new(counted_mapping));

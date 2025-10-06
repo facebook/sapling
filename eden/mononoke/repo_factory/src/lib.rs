@@ -997,7 +997,7 @@ impl RepoFactory {
             .open_sql::<SqlBonsaiGitMappingBuilder>(repo_config)
             .await
             .context(RepoFactoryError::BonsaiGitMapping)?
-            .build(repo_identity.id());
+            .build(repo_identity.id(), self.env.rendezvous_options);
         if let Some(cache_handler_factory) = self.cache_handler_factory("bonsai_git_mapping")? {
             Ok(Arc::new(CachingBonsaiGitMapping::new(
                 Arc::new(bonsai_git_mapping),

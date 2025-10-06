@@ -7,6 +7,7 @@
 
 use std::collections::BTreeMap;
 use std::collections::HashSet;
+use std::sync::Arc;
 
 use ::sql_ext::Connection;
 use ::sql_ext::Transaction;
@@ -19,9 +20,14 @@ use context::PerfCounterType;
 use mononoke_types::ChangesetId;
 use mononoke_types::RepositoryId;
 use mononoke_types::hash::GitSha1;
+use rendezvous::ConfigurableRendezVousController;
+use rendezvous::RendezVous;
+use rendezvous::RendezVousOptions;
+use rendezvous::RendezVousStats;
 use sql_construct::SqlConstruct;
 use sql_construct::SqlConstructFromMetadataDatabaseConfig;
 use sql_ext::SqlConnections;
+use sql_ext::SqlQueryTelemetry;
 use stats::prelude::*;
 
 use crate::BonsaiGitMapping;
@@ -40,8 +46,39 @@ define_stats! {
     fetched_from_master: timeseries(Sum, Average, Count),
 }
 
+#[derive(Clone)]
+struct RendezVousConnection {
+    _bonsai: RendezVous<ChangesetId, GitSha1>,
+    _git: RendezVous<GitSha1, ChangesetId>,
+    conn: Connection,
+}
+
+impl RendezVousConnection {
+    fn new(conn: Connection, name: &str, opts: RendezVousOptions) -> Self {
+        Self {
+            conn,
+            _bonsai: RendezVous::new(
+                ConfigurableRendezVousController::new(opts),
+                Arc::new(RendezVousStats::new(format!(
+                    "bonsai_git_mapping.bonsai.{}",
+                    name,
+                ))),
+            ),
+            _git: RendezVous::new(
+                ConfigurableRendezVousController::new(opts),
+                Arc::new(RendezVousStats::new(format!(
+                    "bonsai_git_mapping.git.{}",
+                    name,
+                ))),
+            ),
+        }
+    }
+}
+
 pub struct SqlBonsaiGitMapping {
-    connections: SqlConnections,
+    write_connection: Connection,
+    read_connection: RendezVousConnection,
+    read_master_connection: RendezVousConnection,
     repo_id: RepositoryId,
 }
 
@@ -101,7 +138,6 @@ impl BonsaiGitMapping for SqlBonsaiGitMapping {
         entries: &[BonsaiGitMappingEntry],
     ) -> Result<(), AddGitMappingErrorKind> {
         let txn = self
-            .connections
             .write_connection
             .start_transaction(ctx.sql_query_telemetry())
             .await?;
@@ -205,16 +241,11 @@ impl BonsaiGitMapping for SqlBonsaiGitMapping {
         ctx.perf_counters()
             .increment_counter(PerfCounterType::SqlReadsReplica);
 
-        let mut mappings = select_mapping(
-            ctx,
-            &self.connections.read_connection,
-            &self.repo_id,
-            &objects,
-        )
-        .await?;
-        let left_to_fetch = filter_fetched_ids(objects, &mappings[..]);
-
+        let mut mappings =
+            select_mapping(ctx, &self.read_connection.conn, &self.repo_id, &objects).await?;
+        let left_to_fetch = filter_fetched_ids(objects, &mappings);
         let left_to_fetch_count = left_to_fetch.count().try_into().map_err(Error::from)?;
+
         STATS::left_to_fetch.add_value(left_to_fetch_count);
 
         let client_correlator = ctx.client_correlator();
@@ -234,12 +265,11 @@ impl BonsaiGitMapping for SqlBonsaiGitMapping {
                 .increment_counter(PerfCounterType::SqlReadsMaster);
             let mut master_mappings = select_mapping(
                 ctx,
-                &self.connections.read_master_connection,
+                &self.read_master_connection.conn,
                 &self.repo_id,
                 &left_to_fetch,
             )
             .await?;
-
             let fetched_from_master_count =
                 master_mappings.len().try_into().map_err(Error::from)?;
             STATS::fetched_from_master.add_value(fetched_from_master_count);
@@ -263,7 +293,7 @@ impl BonsaiGitMapping for SqlBonsaiGitMapping {
         ctx.perf_counters()
             .increment_counter(PerfCounterType::SqlReadsReplica);
         let rows = SelectGitSha1sByRange::query(
-            &self.connections.read_connection,
+            &self.read_connection.conn,
             ctx.sql_query_telemetry(),
             &self.repo_id,
             &low,
@@ -276,7 +306,7 @@ impl BonsaiGitMapping for SqlBonsaiGitMapping {
             ctx.perf_counters()
                 .increment_counter(PerfCounterType::SqlReadsMaster);
             let rows = SelectGitSha1sByRange::query(
-                &self.connections.read_master_connection,
+                &self.read_master_connection.conn,
                 ctx.sql_query_telemetry(),
                 &self.repo_id,
                 &low,
@@ -295,10 +325,16 @@ pub struct SqlBonsaiGitMappingBuilder {
 }
 
 impl SqlBonsaiGitMappingBuilder {
-    pub fn build(self, repo_id: RepositoryId) -> SqlBonsaiGitMapping {
+    pub fn build(self, repo_id: RepositoryId, opts: RendezVousOptions) -> SqlBonsaiGitMapping {
         let SqlBonsaiGitMappingBuilder { connections } = self;
         SqlBonsaiGitMapping {
-            connections,
+            write_connection: connections.write_connection,
+            read_connection: RendezVousConnection::new(connections.read_connection, "reader", opts),
+            read_master_connection: RendezVousConnection::new(
+                connections.read_master_connection,
+                "read_master",
+                opts,
+            ),
             repo_id,
         }
     }
