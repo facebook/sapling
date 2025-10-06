@@ -50,6 +50,7 @@ from facebook.eden.constants import (
     DIS_REQUIRE_MATERIALIZED,
 )
 from facebook.eden.ttypes import (
+    AttributesRequestScope,
     Blake3OrError,
     BlobMetadataOrError,
     BlobMetadataWithOrigin,
@@ -2072,6 +2073,31 @@ class GetAttributesFromFilesV2Cmd(Subcmd):
             help="Include file mode attribute",
         )
 
+        # Scope options - mutually exclusive
+        scope_group = parser.add_argument_group(
+            "scope options - by default it shows both files and trees"
+        )
+        scope_mutex = scope_group.add_mutually_exclusive_group()
+        scope_mutex.add_argument(
+            "--files-only",
+            action="store_true",
+            help="Only return attributes for files (not directories)",
+        )
+        scope_mutex.add_argument(
+            "--trees-only",
+            action="store_true",
+            help="Only return attributes for directories (not files)",
+        )
+
+        # Sync options
+        parser.add_argument(
+            "--sync-timeout",
+            type=int,
+            help="Timeout in seconds for working copy synchronization. "
+            "Use 0 to disable synchronization. "
+            "If not specified, EdenFS will use its default timeout.",
+        )
+
     def _source_control_type_to_string(self, scm_type: int) -> str:
         """Convert SourceControlType enum value to string representation."""
         type_mapping = {
@@ -2280,6 +2306,15 @@ class GetAttributesFromFilesV2Cmd(Subcmd):
 
         return requested_attrs
 
+    def _get_scope(self, args: argparse.Namespace) -> Optional[AttributesRequestScope]:
+        """Get the AttributesRequestScope based on command line arguments."""
+        if args.files_only:
+            return AttributesRequestScope.FILES
+        elif args.trees_only:
+            return AttributesRequestScope.TREES
+        else:
+            return None  # Default to TREES_AND_FILES (or no scope specified)
+
     def run(self, args: argparse.Namespace) -> int:
         instance, checkout, _ = cmd_util.require_checkout(args, args.mount)
 
@@ -2289,12 +2324,25 @@ class GetAttributesFromFilesV2Cmd(Subcmd):
         # Get the requested attributes based on command line arguments
         requested_attributes = self._get_requested_attributes(args)
 
+        # Get the scope based on command line arguments
+        scope = self._get_scope(args)
+
+        # Get the sync behavior based on command line arguments
+        sync_behavior = SyncBehavior()
+        if args.sync_timeout is not None:
+            sync_behavior.syncTimeoutSeconds = args.sync_timeout
+
         # Create the request params
         params = GetAttributesFromFilesParams(
             mountPoint=bytes(checkout.path),
             paths=paths,
             requestedAttributes=requested_attributes,
+            sync=sync_behavior,
         )
+
+        # Add scope if specified
+        if scope is not None:
+            params.scope = scope
 
         try:
             with instance.get_thrift_client_legacy() as client:
