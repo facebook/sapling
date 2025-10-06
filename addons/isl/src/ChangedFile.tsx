@@ -8,7 +8,6 @@
 import type {ReactNode} from 'react';
 import type {Comparison} from 'shared/Comparison';
 import type {Place, UIChangedFile, VisualChangedFileStatus} from './UncommittedChanges';
-import {ChangedFileMode} from './UncommittedChanges';
 import type {UseUncommittedSelection} from './partialSelection';
 import type {ChangedFileStatus, GeneratedStatus} from './types';
 
@@ -46,7 +45,7 @@ import {useUncommittedSelection} from './partialSelection';
 import platform from './platform';
 import {optimisticMergeConflicts} from './previews';
 import {copyAndShowToast} from './toast';
-import {ConflictType, succeedableRevset} from './types';
+import {ChangedFileMode, ConflictType, succeedableRevset} from './types';
 import {usePromise} from './usePromise';
 
 /**

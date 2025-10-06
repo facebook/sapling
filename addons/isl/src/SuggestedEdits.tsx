@@ -17,7 +17,7 @@ import type {PartialSelection} from './partialSelection';
 import platform from './platform';
 import {repoRootAtom} from './repositoryData';
 import type {AbsolutePath, RepoRelativePath} from './types';
-import {ChangedFileMode} from './UncommittedChanges';
+import {ChangedFileMode} from './types';
 import {showModal} from './useModal';
 import {registerDisposable} from './utils';
 

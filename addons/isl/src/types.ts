@@ -407,6 +407,14 @@ export type ChangedFile = {
    * */
   copy?: RepoRelativePath;
 };
+export enum ChangedFileMode {
+  // "Regular" is from the perspective of the ISL - it's a file that's not a submodule.
+  // This can be different from more granular categorizations in the underlying
+  // source control system, such as symlinks, executables, and gitlinks.
+  Regular = 'regular',
+  Submodule = 'submodule',
+}
+
 export type FilesSample = {
   filesSample: Array<ChangedFile>;
   totalFileCount: number;
