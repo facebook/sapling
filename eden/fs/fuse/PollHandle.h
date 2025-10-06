@@ -27,6 +27,7 @@ class PollHandle {
   PollHandle& operator=(const PollHandle&) = delete;
   PollHandle(PollHandle&&) = default;
   PollHandle& operator=(PollHandle&&) = default;
+  ~PollHandle() = default;
 
   explicit PollHandle(fuse_pollhandle* h);
 
