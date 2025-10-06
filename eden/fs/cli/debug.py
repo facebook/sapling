@@ -59,13 +59,21 @@ from facebook.eden.ttypes import (
     DebugInvalidateRequest,
     DebugJournalDelta,
     EdenError,
+    FileAttributeDataOrErrorV2,
+    FileAttributeDataV2,
+    FileAttributes,
+    GetAttributesFromFilesParams,
+    ModeOrError,
     MountId,
+    ObjectIdOrError,
     ScmBlobMetadata,
     ScmBlobOrError,
     ScmBlobWithOrigin,
     ScmTreeEntry,
     ScmTreeOrError,
     ScmTreeWithOrigin,
+    SizeOrError,
+    SourceControlTypeOrError,
     SyncBehavior,
     TimeSpec,
     TreeInodeDebugInfo,
@@ -1987,6 +1995,132 @@ class GCInodesCmd(Subcmd):
             except EdenError as err:
                 print(err, file=sys.stderr)
                 return 1
+
+
+@debug_cmd(
+    "getAttributesFromFilesV2",
+    "Get file attributes from EdenFS using the getAttributesFromFilesV2",
+)
+class GetAttributesFromFilesV2Cmd(Subcmd):
+    def setup_parser(self, parser: argparse.ArgumentParser) -> None:
+        parser.add_argument(
+            "mount",
+            help="The EdenFS mount point path.",
+        )
+        parser.add_argument(
+            "paths",
+            nargs="+",
+            help="File paths to get attributes for (relative to mount point)",
+        )
+
+    def _source_control_type_to_string(self, scm_type: int) -> str:
+        """Convert SourceControlType enum value to string representation."""
+        type_mapping = {
+            0: "TREE",
+            1: "REGULAR_FILE",
+            2: "EXECUTABLE_FILE",
+            3: "SYMLINK",
+            4: "UNKNOWN",
+        }
+        return type_mapping.get(scm_type, f"UNKNOWN({scm_type})")
+
+    def _print_object_id(self, object_id: Optional[ObjectIdOrError]) -> None:
+        """Print object ID attribute."""
+        if object_id is not None:
+            if object_id.getType() == object_id.OBJECTID:
+                print(
+                    f"  Object ID:             {object_id_str(object_id.get_objectId())}"
+                )
+            else:
+                print(f"  Object ID:             {object_id.get_error().message}")
+        else:
+            print("  Object ID:             None")
+
+    def _print_file_size(self, size: Optional[SizeOrError]) -> None:
+        """Print file size attribute."""
+        if size is not None:
+            if size.getType() == size.SIZE:
+                print(
+                    f"  File Size:             {stats_print.format_size(size.get_size())}"
+                )
+            else:
+                print(f"  File Size:             {size.get_error().message}")
+        else:
+            print("  File Size:             None")
+
+    def _print_file_mode(self, mode: Optional[ModeOrError]) -> None:
+        """Print file mode attribute."""
+        if mode is not None:
+            if mode.getType() == mode.MODE:
+                print(f"  File Mode:             {mode.get_mode():04o}")
+            else:
+                print(f"  File Mode:             {mode.get_error().message}")
+        else:
+            print("  File Mode:             None")
+
+    def _print_source_control_type(
+        self, scm_type: Optional[SourceControlTypeOrError]
+    ) -> None:
+        """Print source control type attribute."""
+        if scm_type is not None:
+            if scm_type.getType() == scm_type.SOURCECONTROLTYPE:
+                scm_type_str = self._source_control_type_to_string(
+                    scm_type.get_sourceControlType()
+                )
+                print(f"  Source Control Type:   {scm_type_str}")
+            else:
+                print(f"  Source Control Type:   {scm_type.get_error().message}")
+        else:
+            print("  Source Control Type:   None")
+
+    def _print_file_attributes(self, attr_data: FileAttributeDataV2) -> None:
+        """Print all file attributes from attr_data."""
+        self._print_object_id(attr_data.objectId)
+        self._print_file_size(attr_data.size)
+        self._print_file_mode(attr_data.mode)
+        self._print_source_control_type(attr_data.sourceControlType)
+
+    def _print_path_result(
+        self, path: str, attr_result: FileAttributeDataOrErrorV2
+    ) -> None:
+        """Print results for a single path."""
+        print(f"\nPath: {path}")
+        print("=" * (len(path) + 6))
+
+        if attr_result.getType() == attr_result.FILEATTRIBUTEDATA:
+            attr_data = attr_result.get_fileAttributeData()
+            self._print_file_attributes(attr_data)
+        else:
+            error = attr_result.get_error()
+            print(f"  ERROR: {error.message}")
+
+    def run(self, args: argparse.Namespace) -> int:
+        instance, checkout, _ = cmd_util.require_checkout(args, args.mount)
+
+        # Convert paths to bytes
+        paths = [os.fsencode(path) for path in args.paths]
+
+        # Create the request
+        params = GetAttributesFromFilesParams(
+            mountPoint=bytes(checkout.path),
+            paths=paths,
+            requestedAttributes=FileAttributes.OBJECT_ID
+            | FileAttributes.MODE
+            | FileAttributes.FILE_SIZE
+            | FileAttributes.SOURCE_CONTROL_TYPE,
+        )
+
+        try:
+            with instance.get_thrift_client_legacy() as client:
+                result = client.getAttributesFromFilesV2(params)
+                for i, path in enumerate(args.paths):
+                    attr_result = result.res[i]
+                    self._print_path_result(path, attr_result)
+
+            return 0
+        except EdenError as err:
+            print(f"EdenFS error: {err.message}", file=sys.stderr)
+            return 1
 
 
 @subcmd_mod.subcmd("debug", "Internal commands for examining EdenFS state")
