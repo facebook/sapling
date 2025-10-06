@@ -99,7 +99,7 @@ export function revsetForComparison(comparison: Comparison): string {
   }
 }
 
-/** Revset for an `sl cat` comparison, to get the content of the "before" side of this comparison. */
+/** Revset for an `sl cat` comparison, to get the content of the "before" (left) side of this comparison. */
 export function beforeRevsetForComparison(comparison: Comparison): string {
   switch (comparison.type) {
     case ComparisonType.UncommittedChanges:
@@ -112,6 +112,22 @@ export function beforeRevsetForComparison(comparison: Comparison): string {
       return comparison.hash + '^'; // before this commit
     case ComparisonType.SinceLastCodeReviewSubmit:
       return comparison.hash + '^';
+  }
+}
+
+/** Revset for an `sl cat` comparison, to get the content of the "current" (right) side of this comparison. */
+export function currRevsetForComparison(comparison: Comparison): string {
+  switch (comparison.type) {
+    case ComparisonType.UncommittedChanges:
+      return 'wdir()';
+    case ComparisonType.HeadChanges:
+      return 'wdir()';
+    case ComparisonType.StackChanges:
+      return 'wdir()';
+    case ComparisonType.Committed:
+      return comparison.hash;
+    case ComparisonType.SinceLastCodeReviewSubmit:
+      return comparison.hash;
   }
 }
 
