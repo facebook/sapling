@@ -6,7 +6,6 @@
  */
 
 use std::collections::BTreeMap;
-use std::str::FromStr;
 
 use anyhow::Context;
 use anyhow::Error;
@@ -134,8 +133,9 @@ async fn compare_create_stack<R: MononokeRepo>(
 #[mononoke::fbinit_test]
 async fn test_create_commit_stack(fb: FacebookInit) -> Result<(), Error> {
     let ctx = CoreContext::test_mock(fb);
+    let (test_stack_repo, commits, _) = Linear::get_repo_and_dag(fb).await;
     let mononoke = Mononoke::new_test(vec![
-        ("test_stack".to_string(), Linear::get_repo(fb).await),
+        ("test_stack".to_string(), test_stack_repo),
         ("test_seq".to_string(), Linear::get_repo(fb).await),
     ])
     .await?;
@@ -152,8 +152,7 @@ async fn test_create_commit_stack(fb: FacebookInit) -> Result<(), Error> {
         .build()
         .await?;
 
-    let initial_hash = "7785606eb1f26ff5722c831de402350cf97052dc44bc175da6ac0d715a3dbbf6";
-    let initial_parents = vec![ChangesetId::from_str(initial_hash)?];
+    let initial_parents = vec![commits["K"]];
 
     let changes = vec![
         btreemap! {
@@ -220,8 +219,9 @@ async fn test_create_commit_stack(fb: FacebookInit) -> Result<(), Error> {
 #[mononoke::fbinit_test]
 async fn test_create_commit_stack_delete_files(fb: FacebookInit) -> Result<(), Error> {
     let ctx = CoreContext::test_mock(fb);
+    let (test_stack_repo, commits, _) = Linear::get_repo_and_dag(fb).await;
     let mononoke = Mononoke::new_test(vec![
-        ("test_stack".to_string(), Linear::get_repo(fb).await),
+        ("test_stack".to_string(), test_stack_repo),
         ("test_seq".to_string(), Linear::get_repo(fb).await),
     ])
     .await?;
@@ -238,8 +238,7 @@ async fn test_create_commit_stack_delete_files(fb: FacebookInit) -> Result<(), E
         .build()
         .await?;
 
-    let initial_hash = "7785606eb1f26ff5722c831de402350cf97052dc44bc175da6ac0d715a3dbbf6";
-    let initial_parents = vec![ChangesetId::from_str(initial_hash)?];
+    let initial_parents = vec![commits["K"]];
 
     // Deleting a file that doesn't exist should fail.
     let changes = vec![
@@ -336,8 +335,10 @@ async fn test_create_commit_stack_delete_files(fb: FacebookInit) -> Result<(), E
 #[mononoke::fbinit_test]
 async fn test_create_commit_stack_path_conflicts(fb: FacebookInit) -> Result<(), Error> {
     let ctx = CoreContext::test_mock(fb);
+
+    let (test_stack_repo, commits, _) = Linear::get_repo_and_dag(fb).await;
     let mononoke = Mononoke::new_test(vec![
-        ("test_stack".to_string(), Linear::get_repo(fb).await),
+        ("test_stack".to_string(), test_stack_repo),
         ("test_seq".to_string(), Linear::get_repo(fb).await),
     ])
     .await?;
@@ -354,8 +355,7 @@ async fn test_create_commit_stack_path_conflicts(fb: FacebookInit) -> Result<(),
         .build()
         .await?;
 
-    let initial_hash = "7785606eb1f26ff5722c831de402350cf97052dc44bc175da6ac0d715a3dbbf6";
-    let initial_parents = vec![ChangesetId::from_str(initial_hash)?];
+    let initial_parents = vec![commits["K"]];
 
     // Attempting to create path conflicts in a stack should fail
     let changes = vec![
@@ -409,8 +409,9 @@ async fn test_create_commit_stack_path_conflicts(fb: FacebookInit) -> Result<(),
 #[mononoke::fbinit_test]
 async fn test_create_commit_stack_copy_from(fb: FacebookInit) -> Result<(), Error> {
     let ctx = CoreContext::test_mock(fb);
+    let (test_stack_repo, commits, _) = Linear::get_repo_and_dag(fb).await;
     let mononoke = Mononoke::new_test(vec![
-        ("test_stack".to_string(), Linear::get_repo(fb).await),
+        ("test_stack".to_string(), test_stack_repo),
         ("test_seq".to_string(), Linear::get_repo(fb).await),
     ])
     .await?;
@@ -427,8 +428,7 @@ async fn test_create_commit_stack_copy_from(fb: FacebookInit) -> Result<(), Erro
         .build()
         .await?;
 
-    let initial_hash = "7785606eb1f26ff5722c831de402350cf97052dc44bc175da6ac0d715a3dbbf6";
-    let initial_parents = vec![ChangesetId::from_str(initial_hash)?];
+    let initial_parents = vec![commits["K"]];
 
     // Copy from source must exist in the parent
     let mut changes = vec![
