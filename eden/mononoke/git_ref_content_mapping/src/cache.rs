@@ -72,10 +72,7 @@ async fn update_cache(
     logger: slog::Logger,
 ) {
     loop {
-        let fallible_notification = update_notification_receiver
-            .recv()
-            .await
-            .context("Error while receiving update notification");
+        let fallible_notification = update_notification_receiver.recv().await;
         match fallible_notification {
             Ok(_) => {
                 info!(
@@ -104,7 +101,8 @@ async fn update_cache(
             Err(e) => {
                 error!(
                     logger,
-                    "Failure in receiving notification from tags scribe category. Error: {:?}", e
+                    "Failure in receiving notification from git content ref scribe category. Error: {:?}",
+                    e
                 );
                 STATS::update_failure_count.add_value(1);
             }

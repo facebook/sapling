@@ -77,10 +77,7 @@ async fn update_cache(
     logger: slog::Logger,
 ) {
     loop {
-        let fallible_notification = update_notification_receiver
-            .recv()
-            .await
-            .context("Error while receiving update notification");
+        let fallible_notification = update_notification_receiver.recv().await;
         match fallible_notification {
             Ok(_) => {
                 info!(
