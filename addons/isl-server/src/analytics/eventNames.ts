@@ -186,6 +186,7 @@ export type TrackEventName =
   | 'SaplingISLUriHandlerHandle'
   | 'CommitInfoFieldEditFieldClick'
   | 'ReadWarmCommit'
+  | 'RecommendedBookmarksStatus'
   | 'RecommendedBookmarksToggle'
   | 'RecommendedBookmarksReminderShown'
   | 'RecommendedBookmarksReminderResponse';

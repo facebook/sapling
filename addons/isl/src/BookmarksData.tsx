@@ -8,6 +8,7 @@
 import type {StableLocationData} from './types';
 
 import {atom} from 'jotai';
+import {tracker} from './analytics';
 import serverAPI from './ClientToServerAPI';
 import {featureFlagLoadable} from './featureFlags';
 import {Internal} from './Internal';
@@ -122,9 +123,18 @@ export const recommendedBookmarksAtom = lazyAtom(async _get => {
   const recommendedBookmarks = await (Internal.getRecommendedBookmarks?.() ??
     Promise.resolve(new Set<string>()));
 
-  // Also fetch the recommended bookmarks from server
+  // Fetch the recommended bookmarks from server on startup
   if (recommendedBookmarks.size > 0) {
     fetchRecommendedBookmarks(Array.from(recommendedBookmarks));
+
+    // Track recommended bookmarks to approximate adoption
+    const bookmarksData = readAtom(bookmarksDataStorage);
+    tracker.track('RecommendedBookmarksStatus', {
+      extras: {
+        enabled: bookmarksData.useRecommendedBookmark ?? false,
+        recommendedBookmarks: Array.from(recommendedBookmarks),
+      },
+    });
   }
 
   return recommendedBookmarks;
