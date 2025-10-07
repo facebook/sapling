@@ -282,9 +282,9 @@ export const getVSCodePlatform = (context: vscode.ExtensionContext): VSCodeServe
           break;
         }
         case 'platform/resolveFailedSignalsWithAI': {
-          const {diffId, repoPath} = message;
+          const {diffId, diffVersionNumber, repoPath} = message;
           Internal.promptAIAgent?.(
-            {type: 'resolveFailedSignals', diffId, repoPath},
+            {type: 'resolveFailedSignals', diffId, diffVersionNumber, repoPath},
             ActionTriggerType.ISL2SmartActions,
           );
           break;

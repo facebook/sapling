@@ -92,6 +92,7 @@ function SmartActions({commit, dismiss}: {commit?: CommitInfo; dismiss: () => vo
     actions.push(
       <ResolveFailedSignalsButton
         key="resolve-failed-signals"
+        hash={commit.hash}
         diffId={commit.diffId}
         dismiss={dismiss}
         disabled={!commit.isDot}
@@ -244,11 +245,13 @@ function FillCommitInfoButton({dismiss}: {dismiss: () => void}) {
 
 /** Prompt AI to resolve failed signals on a diff. */
 function ResolveFailedSignalsButton({
+  hash,
   diffId,
   dismiss,
   disabled,
   disabledReason,
 }: {
+  hash: string;
   diffId: string;
   dismiss: () => void;
   disabled?: boolean;
@@ -259,36 +262,50 @@ function ResolveFailedSignalsButton({
   const diffSummaryResult = useAtomValue(diffSummary(diffId));
 
   // Only show the button if there are failed signals
-  if (diffSummaryResult.error) {
-    return null;
-  }
   if (
+    diffSummaryResult.error ||
     !diffSummaryResult.value?.signalSummary ||
     diffSummaryResult.value.signalSummary !== 'failed'
   ) {
     return null;
   }
 
+  const diffVersionNumber = Internal.getDiffVersionNumber?.(diffSummaryResult.value, hash);
+
   const button = (
     <Button
       data-testid="resolve-failed-signals-button"
       onClick={e => {
-        tracker.track('SmartActionClicked', {extras: {action: 'ResolveFailedSignals'}});
-        serverAPI.postMessage({
-          type: 'platform/resolveFailedSignalsWithAI',
-          diffId,
-          repoPath,
-        });
-        dismiss();
+        if (diffVersionNumber !== undefined) {
+          tracker.track('SmartActionClicked', {extras: {action: 'ResolveFailedSignals'}});
+          serverAPI.postMessage({
+            type: 'platform/resolveFailedSignalsWithAI',
+            diffId,
+            diffVersionNumber,
+            repoPath,
+          });
+          dismiss();
+        }
         e.stopPropagation();
       }}
-      disabled={disabled}>
+      disabled={disabled || diffVersionNumber === undefined}>
       <Icon icon="sparkle" />
       <T>Fix failed signals</T>
     </Button>
   );
 
-  return disabled ? <Tooltip title={disabledReason}>{button}</Tooltip> : button;
+  return disabled || diffVersionNumber === undefined ? (
+    <Tooltip
+      title={
+        diffVersionNumber === undefined
+          ? 'Unable to determine Phabricator version number for this commit'
+          : disabledReason
+      }>
+      {button}
+    </Tooltip>
+  ) : (
+    button
+  );
 }
 
 function GenerateTestsForModifiedCodeButton({

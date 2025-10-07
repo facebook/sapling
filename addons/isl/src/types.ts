@@ -734,6 +734,7 @@ export type PlatformSpecificClientToServerMessages =
   | {
       type: 'platform/resolveFailedSignalsWithAI';
       diffId: string;
+      diffVersionNumber: number;
       repoPath?: string;
     }
   | {
