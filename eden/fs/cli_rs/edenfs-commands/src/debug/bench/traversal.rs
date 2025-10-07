@@ -112,10 +112,11 @@ fn add_traversal_metrics(result: &mut Benchmark, ft: &FinalizedTraversal) -> Res
 }
 
 #[derive(Debug, PartialEq)]
-enum TraversalResult {
+enum TraversalStatus {
     Continue,
     LimitReached,
-    Interrupted,
+    Cancelled,
+    Finished,
 }
 
 struct InProgressTraversal {
@@ -303,27 +304,26 @@ impl InProgressTraversal {
         }
     }
 
-    /// Traverses and returns whether we completed successfully (Some) or were interrupted (None)
-    pub fn traverse_path_with_result(&mut self, path: &Path) -> Result<Option<TraversalResult>> {
+    pub fn traverse_path(&mut self, path: &Path) -> Result<TraversalStatus> {
         if path.is_dir() {
             let result = self.traverse_directory(path)?;
             match result {
-                TraversalResult::Interrupted => Ok(None),
-                other => Ok(Some(other)),
+                TraversalStatus::Continue => Ok(TraversalStatus::Finished),
+                other => Ok(other),
             }
         } else {
-            Ok(Some(TraversalResult::Continue))
+            Ok(TraversalStatus::Finished)
         }
     }
 
-    fn traverse_directory(&mut self, path: &Path) -> Result<TraversalResult> {
+    fn traverse_directory(&mut self, path: &Path) -> Result<TraversalStatus> {
         // Check for cancellation at the start of each directory traversal
         if self.cancellation_token.is_cancelled() {
             eprintln!(
                 "Directory traversal cancelled at dir_count={}, file_count={}",
                 self.dir_count, self.file_count
             );
-            return Ok(TraversalResult::Interrupted);
+            return Ok(TraversalStatus::Cancelled);
         }
 
         self.add_dir();
@@ -339,7 +339,7 @@ impl InProgressTraversal {
             // Check for cancellation while iterating on director entries
             if self.cancellation_token.is_cancelled() {
                 self.add_read_dir_stats(read_dir_duration, entry_count);
-                return Ok(TraversalResult::Interrupted);
+                return Ok(TraversalStatus::Cancelled);
             }
 
             let entry = entry_result?;
@@ -352,30 +352,32 @@ impl InProgressTraversal {
                     if self.follow_symlinks {
                         self.add_traversed_symlink();
                         match self.traverse_directory(&path)? {
-                            TraversalResult::LimitReached => {
+                            TraversalStatus::LimitReached => {
                                 self.add_read_dir_stats(read_dir_duration, entry_count);
-                                return Ok(TraversalResult::LimitReached);
+                                return Ok(TraversalStatus::LimitReached);
                             }
-                            TraversalResult::Interrupted => {
+                            TraversalStatus::Cancelled => {
                                 self.add_read_dir_stats(read_dir_duration, entry_count);
-                                return Ok(TraversalResult::Interrupted);
+                                return Ok(TraversalStatus::Cancelled);
                             }
-                            TraversalResult::Continue => {}
+                            TraversalStatus::Continue => {}
+                            TraversalStatus::Finished => {}
                         }
                     } else {
                         self.add_skipped_symlink();
                     }
                 } else {
                     match self.traverse_directory(&path)? {
-                        TraversalResult::LimitReached => {
+                        TraversalStatus::LimitReached => {
                             self.add_read_dir_stats(read_dir_duration, entry_count);
-                            return Ok(TraversalResult::LimitReached);
+                            return Ok(TraversalStatus::LimitReached);
                         }
-                        TraversalResult::Interrupted => {
+                        TraversalStatus::Cancelled => {
                             self.add_read_dir_stats(read_dir_duration, entry_count);
-                            return Ok(TraversalResult::Interrupted);
+                            return Ok(TraversalStatus::Cancelled);
                         }
-                        TraversalResult::Continue => {}
+                        TraversalStatus::Continue => {}
+                        TraversalStatus::Finished => {}
                     }
                 }
             } else if file_type.is_file() {
@@ -383,12 +385,12 @@ impl InProgressTraversal {
                     self.add_file(path);
                 } else {
                     self.add_read_dir_stats(read_dir_duration, entry_count);
-                    return Ok(TraversalResult::LimitReached);
+                    return Ok(TraversalStatus::LimitReached);
                 }
             }
         }
         self.add_read_dir_stats(read_dir_duration, entry_count);
-        Ok(TraversalResult::Continue)
+        Ok(TraversalStatus::Continue)
     }
 }
 
@@ -417,16 +419,16 @@ pub async fn bench_traversal_thrift_read(
         cancellation_token.clone(),
     );
 
-    let _traversal_result =
-        if let Some(result) = in_progress_traversal.traverse_path_with_result(path)? {
-            result
-        } else {
+    match in_progress_traversal.traverse_path(path)? {
+        TraversalStatus::Cancelled => {
             // Interrupted during traversal - return early with just traversal metrics
             let ft = in_progress_traversal.finalize();
             let mut result = Benchmark::new(BenchmarkType::FsTraversal);
             add_traversal_metrics(&mut result, &ft)?;
             return Ok(result);
-        };
+        }
+        _ => {}
+    }
 
     let ft = in_progress_traversal.finalize();
 
@@ -605,16 +607,16 @@ pub fn bench_traversal_fs_read(
         cancellation_token.clone(),
     );
 
-    let _traversal_result =
-        if let Some(result) = in_progress_traversal.traverse_path_with_result(path)? {
-            result
-        } else {
+    match in_progress_traversal.traverse_path(path)? {
+        TraversalStatus::Cancelled => {
             // Interrupted during traversal - return early with just traversal metrics
             let ft = in_progress_traversal.finalize();
             let mut result = Benchmark::new(BenchmarkType::FsTraversal);
             add_traversal_metrics(&mut result, &ft)?;
             return Ok(result);
-        };
+        }
+        _ => {}
+    }
 
     let ft = in_progress_traversal.finalize();
 
