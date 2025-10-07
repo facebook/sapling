@@ -685,7 +685,7 @@ pub trait Loadable {
 pub trait Storable: Sized {
     type Key: 'static;
 
-    async fn store<'a, B: Blobstore>(
+    async fn store<'a, B: KeyedBlobstore>(
         self,
         ctx: &'a CoreContext,
         blobstore: &'a B,

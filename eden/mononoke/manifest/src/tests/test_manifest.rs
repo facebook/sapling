@@ -84,7 +84,7 @@ impl Loadable for TestLeafId {
 impl Storable for TestLeaf {
     type Key = TestLeafId;
 
-    async fn store<'a, B: Blobstore>(
+    async fn store<'a, B: KeyedBlobstore>(
         self,
         ctx: &'a CoreContext,
         blobstore: &'a B,
@@ -148,7 +148,7 @@ impl Loadable for TestManifestId {
 impl Storable for TestManifest {
     type Key = TestManifestId;
 
-    async fn store<'a, B: Blobstore>(
+    async fn store<'a, B: KeyedBlobstore>(
         self,
         ctx: &'a CoreContext,
         blobstore: &'a B,

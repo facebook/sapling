@@ -682,7 +682,7 @@ impl Loadable for HgAugmentedManifestId {
 impl Storable for HgAugmentedManifestEnvelope {
     type Key = HgAugmentedManifestId;
 
-    async fn store<'a, B: Blobstore>(
+    async fn store<'a, B: KeyedBlobstore>(
         self,
         ctx: &'a CoreContext,
         blobstore: &'a B,

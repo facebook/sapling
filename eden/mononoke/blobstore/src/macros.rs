@@ -63,7 +63,7 @@ macro_rules! impl_loadable_storable {
         impl $crate::private::Storable for $ty {
             type Key = $handle;
 
-            async fn store<'a, B: $crate::private::Blobstore>(
+            async fn store<'a, B: $crate::private::KeyedBlobstore>(
                 self,
                 ctx: &'a $crate::private::CoreContext,
                 blobstore: &'a B,

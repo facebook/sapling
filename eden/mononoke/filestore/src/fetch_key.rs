@@ -10,7 +10,6 @@ use std::fmt::Display;
 use anyhow::Context;
 use anyhow::Result;
 use async_trait::async_trait;
-use blobstore::Blobstore;
 use blobstore::KeyedBlobstore;
 use blobstore::Loadable;
 use blobstore::LoadableError;
@@ -200,7 +199,7 @@ pub struct AliasBlob(pub Alias, pub ContentAlias);
 impl Storable for AliasBlob {
     type Key = ();
 
-    async fn store<'a, B: Blobstore>(
+    async fn store<'a, B: KeyedBlobstore>(
         self,
         ctx: &'a CoreContext,
         blobstore: &'a B,

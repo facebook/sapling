@@ -9,6 +9,7 @@ use std::collections::BTreeMap;
 
 use anyhow::Result;
 use blobstore::Blobstore;
+use blobstore::KeyedBlobstore;
 use blobstore::Storable;
 use bytes::Bytes;
 use context::CoreContext;
@@ -231,7 +232,7 @@ impl BlobstoreValue for DeletedManifestV2 {
 impl Storable for DeletedManifestV2 {
     type Key = DeletedManifestV2Id;
 
-    async fn store<'a, B: Blobstore>(
+    async fn store<'a, B: KeyedBlobstore>(
         self,
         ctx: &'a CoreContext,
         blobstore: &'a B,

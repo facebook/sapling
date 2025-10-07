@@ -9,8 +9,8 @@
 
 use anyhow::Result;
 use async_trait::async_trait;
-use blobstore::Blobstore;
 use blobstore::BlobstoreBytes;
+use blobstore::KeyedBlobstore;
 use blobstore::Storable;
 use bytes::Bytes;
 use context::CoreContext;
@@ -71,7 +71,7 @@ impl<Id: BlobstoreKey> Blob<Id> {
 impl<K: BlobstoreKey + Copy + Send + Sync + 'static> Storable for Blob<K> {
     type Key = K;
 
-    async fn store<'a, B: Blobstore>(
+    async fn store<'a, B: KeyedBlobstore>(
         self,
         ctx: &'a CoreContext,
         blobstore: &'a B,
