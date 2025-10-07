@@ -197,8 +197,7 @@ impl crate::Subcommand for BenchCmd {
                         *no_progress,
                         *resource_usage,
                         *skip_read,
-                    )
-                    .await?
+                    )?
                 };
 
                 if *json {

@@ -15,7 +15,6 @@ use std::path::PathBuf;
 use std::time::Instant;
 
 use anyhow::Result;
-use async_recursion::async_recursion;
 use edenfs_client::client::Client;
 use edenfs_client::methods::EdenThriftMethod;
 use edenfs_utils::bytes_from_path;
@@ -305,12 +304,9 @@ impl InProgressTraversal {
     }
 
     /// Traverses and returns whether we completed successfully (Some) or were interrupted (None)
-    pub async fn traverse_path_with_result(
-        &mut self,
-        path: &Path,
-    ) -> Result<Option<TraversalResult>> {
+    pub fn traverse_path_with_result(&mut self, path: &Path) -> Result<Option<TraversalResult>> {
         if path.is_dir() {
-            let result = self.traverse_directory(path).await?;
+            let result = self.traverse_directory(path)?;
             match result {
                 TraversalResult::Interrupted => Ok(None),
                 other => Ok(Some(other)),
@@ -320,8 +316,7 @@ impl InProgressTraversal {
         }
     }
 
-    #[async_recursion]
-    async fn traverse_directory(&mut self, path: &Path) -> Result<TraversalResult> {
+    fn traverse_directory(&mut self, path: &Path) -> Result<TraversalResult> {
         // Check for cancellation at the start of each directory traversal
         if self.cancellation_token.is_cancelled() {
             eprintln!(
@@ -356,7 +351,7 @@ impl InProgressTraversal {
                 if file_type.is_symlink() {
                     if self.follow_symlinks {
                         self.add_traversed_symlink();
-                        match self.traverse_directory(&path).await? {
+                        match self.traverse_directory(&path)? {
                             TraversalResult::LimitReached => {
                                 self.add_read_dir_stats(read_dir_duration, entry_count);
                                 return Ok(TraversalResult::LimitReached);
@@ -371,7 +366,7 @@ impl InProgressTraversal {
                         self.add_skipped_symlink();
                     }
                 } else {
-                    match self.traverse_directory(&path).await? {
+                    match self.traverse_directory(&path)? {
                         TraversalResult::LimitReached => {
                             self.add_read_dir_stats(read_dir_duration, entry_count);
                             return Ok(TraversalResult::LimitReached);
@@ -422,18 +417,16 @@ pub async fn bench_traversal_thrift_read(
         cancellation_token.clone(),
     );
 
-    let _traversal_result = if let Some(result) = in_progress_traversal
-        .traverse_path_with_result(path)
-        .await?
-    {
-        result
-    } else {
-        // Interrupted during traversal - return early with just traversal metrics
-        let ft = in_progress_traversal.finalize();
-        let mut result = Benchmark::new(BenchmarkType::FsTraversal);
-        add_traversal_metrics(&mut result, &ft)?;
-        return Ok(result);
-    };
+    let _traversal_result =
+        if let Some(result) = in_progress_traversal.traverse_path_with_result(path)? {
+            result
+        } else {
+            // Interrupted during traversal - return early with just traversal metrics
+            let ft = in_progress_traversal.finalize();
+            let mut result = Benchmark::new(BenchmarkType::FsTraversal);
+            add_traversal_metrics(&mut result, &ft)?;
+            return Ok(result);
+        };
 
     let ft = in_progress_traversal.finalize();
 
@@ -476,11 +469,6 @@ pub async fn bench_traversal_thrift_read(
                 pb.inc(1);
             }
             continue;
-        }
-
-        // Yield control occasionally to allow signal processing
-        if successful_reads % 1000 == 0 {
-            tokio::task::yield_now().await;
         }
 
         let start = Instant::now();
@@ -593,7 +581,7 @@ pub async fn bench_traversal_thrift_read(
 }
 
 /// Runs the filesystem traversal benchmark and returns the benchmark results
-pub async fn bench_traversal_fs_read(
+pub fn bench_traversal_fs_read(
     dir_path: &str,
     max_files: usize,
     follow_symlinks: bool,
@@ -617,18 +605,16 @@ pub async fn bench_traversal_fs_read(
         cancellation_token.clone(),
     );
 
-    let _traversal_result = if let Some(result) = in_progress_traversal
-        .traverse_path_with_result(path)
-        .await?
-    {
-        result
-    } else {
-        // Interrupted during traversal - return early with just traversal metrics
-        let ft = in_progress_traversal.finalize();
-        let mut result = Benchmark::new(BenchmarkType::FsTraversal);
-        add_traversal_metrics(&mut result, &ft)?;
-        return Ok(result);
-    };
+    let _traversal_result =
+        if let Some(result) = in_progress_traversal.traverse_path_with_result(path)? {
+            result
+        } else {
+            // Interrupted during traversal - return early with just traversal metrics
+            let ft = in_progress_traversal.finalize();
+            let mut result = Benchmark::new(BenchmarkType::FsTraversal);
+            add_traversal_metrics(&mut result, &ft)?;
+            return Ok(result);
+        };
 
     let ft = in_progress_traversal.finalize();
 
@@ -672,11 +658,6 @@ pub async fn bench_traversal_fs_read(
                 pb.inc(1);
             }
             continue;
-        }
-
-        // Yield control occasionally to allow signal processing
-        if successful_reads % 1000 == 0 {
-            tokio::task::yield_now().await;
         }
 
         let start = Instant::now();
