@@ -12,9 +12,6 @@ use std::fs::File;
 use std::io::Read;
 use std::path::Path;
 use std::path::PathBuf;
-use std::sync::Arc;
-use std::sync::atomic::AtomicBool;
-use std::sync::atomic::Ordering;
 use std::time::Instant;
 
 use anyhow::Result;
@@ -36,48 +33,17 @@ use super::types::Benchmark;
 use super::types::BenchmarkType;
 use crate::get_edenfs_instance;
 
-static GLOBAL_INTERRUPT_FLAG: std::sync::OnceLock<Arc<AtomicBool>> = std::sync::OnceLock::new();
-
-async fn setup_cancellation() -> CancellationToken {
+fn setup_cancellation() -> CancellationToken {
     let token = CancellationToken::new();
 
-    let interrupt_flag = GLOBAL_INTERRUPT_FLAG.get_or_init(|| Arc::new(AtomicBool::new(false)));
-
-    // Reset the flag for this benchmark run
-    interrupt_flag.store(false, Ordering::SeqCst);
-
-    // Use ctrlc crate which provides a more reliable signal handler
-    let flag_for_handler = interrupt_flag.clone();
+    let token_clone = token.clone();
     if let Err(err) = ctrlc::set_handler(move || {
-        // Just set the flag - detailed message will be printed later with actual results
-        flag_for_handler
-            .compare_exchange(false, true, Ordering::SeqCst, Ordering::SeqCst)
-            .ok();
+        token_clone.cancel();
     }) {
         eprintln!("Failed to set Ctrl+C handler: {}", err);
     }
 
-    // Background task that polls the atomic flag and cancels the token
-    let token_clone = token.clone();
-    let flag_clone = interrupt_flag.clone();
-    tokio::spawn(async move {
-        loop {
-            tokio::time::sleep(tokio::time::Duration::from_millis(50)).await;
-            if flag_clone.load(Ordering::SeqCst) {
-                token_clone.cancel();
-                break;
-            }
-        }
-    });
-
     token
-}
-
-/// Check if interrupt signal was received (works even when Tokio runtime is busy)
-fn is_interrupted() -> bool {
-    GLOBAL_INTERRUPT_FLAG
-        .get()
-        .is_some_and(|flag| flag.load(Ordering::SeqCst))
 }
 
 /// Build benchmark results with only traversal metrics (no file reading)
@@ -359,7 +325,7 @@ impl InProgressTraversal {
     #[async_recursion]
     async fn traverse_directory(&mut self, path: &Path) -> Result<TraversalResult> {
         // Check for cancellation at the start of each directory traversal
-        if self.cancellation_token.is_cancelled() || is_interrupted() {
+        if self.cancellation_token.is_cancelled() {
             eprintln!(
                 "Directory traversal cancelled at dir_count={}, file_count={}",
                 self.dir_count, self.file_count
@@ -378,7 +344,7 @@ impl InProgressTraversal {
 
         for entry_result in entries {
             // Check for cancellation while iterating on director entries
-            if self.cancellation_token.is_cancelled() || is_interrupted() {
+            if self.cancellation_token.is_cancelled() {
                 self.add_read_dir_stats(read_dir_duration, entry_count);
                 return Ok(TraversalResult::Interrupted);
             }
@@ -448,7 +414,7 @@ pub async fn bench_traversal_thrift_read(
     }
 
     // Set up signal handling for graceful interruption
-    let cancellation_token = setup_cancellation().await;
+    let cancellation_token = setup_cancellation();
 
     let mut in_progress_traversal = InProgressTraversal::new(
         no_progress,
@@ -558,7 +524,7 @@ pub async fn bench_traversal_thrift_read(
     let client = get_edenfs_instance().get_client();
     for path in ft.file_paths {
         // Check for cancellation during file reading
-        if cancellation_token.is_cancelled() || is_interrupted() {
+        if cancellation_token.is_cancelled() {
             if let Some(pb) = &read_progress {
                 pb.finish_and_clear(); // Immediate cleanup
             }
@@ -626,7 +592,7 @@ pub async fn bench_traversal_thrift_read(
             ScmBlobOrError::UnknownField(_) => {}
         }
 
-        if agg_read_dur.as_secs_f64() > 0.0 && read_progress.is_some() && !is_interrupted() {
+        if agg_read_dur.as_secs_f64() > 0.0 && read_progress.is_some() {
             if let Some(pb) = &read_progress {
                 pb.set_message(format!(
                     "{:.2} MiB/s",
@@ -642,20 +608,12 @@ pub async fn bench_traversal_thrift_read(
     }
 
     if successful_reads == 0 {
-        if cancellation_token.is_cancelled() || is_interrupted() {
+        if cancellation_token.is_cancelled() {
             eprintln!("No files were read before interruption - showing traversal-only results");
             return Ok(result);
         } else {
             return Err(anyhow::anyhow!("No files were successfully read."));
         }
-    }
-
-    // If interrupted, show what we actually accomplished
-    if is_interrupted() {
-        eprintln!(
-            "Ctrl+C received - returning partial results: successfully read {} of {} files",
-            successful_reads, ft.file_count
-        );
     }
 
     let avg_read_dur = agg_read_dur.as_secs_f64() / successful_reads as f64;
@@ -709,7 +667,7 @@ pub async fn bench_traversal_fs_read(
     }
 
     // Set up signal handling for graceful interruption
-    let cancellation_token = setup_cancellation().await;
+    let cancellation_token = setup_cancellation();
 
     let mut in_progress_traversal = InProgressTraversal::new(
         no_progress,
@@ -820,7 +778,7 @@ pub async fn bench_traversal_fs_read(
 
     for path in ft.file_paths {
         // Check for cancellation during file reading
-        if cancellation_token.is_cancelled() || is_interrupted() {
+        if cancellation_token.is_cancelled() {
             if let Some(pb) = &read_progress {
                 pb.finish_and_clear(); // Immediate cleanup
             }
@@ -862,7 +820,7 @@ pub async fn bench_traversal_fs_read(
             pb.inc(1);
         }
 
-        if agg_read_dur.as_secs_f64() > 0.0 && read_progress.is_some() && !is_interrupted() {
+        if agg_read_dur.as_secs_f64() > 0.0 && read_progress.is_some() {
             if let Some(pb) = &read_progress {
                 pb.set_message(format!(
                     "{:.2} MiB/s",
@@ -879,20 +837,12 @@ pub async fn bench_traversal_fs_read(
     }
 
     if successful_reads == 0 {
-        if cancellation_token.is_cancelled() || is_interrupted() {
+        if cancellation_token.is_cancelled() {
             eprintln!("No files were read before interruption - showing traversal-only results");
             return Ok(result);
         } else {
             return Err(anyhow::anyhow!("No files were successfully read."));
         }
-    }
-
-    // If interrupted, show what we actually accomplished
-    if is_interrupted() {
-        eprintln!(
-            "Ctrl+C received - returning partial results: successfully read {} of {} files",
-            successful_reads, ft.file_count
-        );
     }
 
     let avg_open_dur = agg_open_dur.as_secs_f64() / successful_reads as f64;
