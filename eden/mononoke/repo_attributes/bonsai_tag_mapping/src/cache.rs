@@ -24,6 +24,7 @@ use slog::info;
 use stats::define_stats;
 use stats::prelude::TimeseriesStatic;
 use tokio::sync::broadcast::Receiver;
+use tokio::sync::broadcast::error::RecvError;
 use tokio::task::JoinHandle;
 
 use crate::BonsaiTagMapping;
@@ -103,6 +104,13 @@ async fn update_cache(
                         STATS::update_failure_count.add_value(1);
                     }
                 }
+            }
+            Err(RecvError::Closed) => {
+                info!(
+                    logger,
+                    "Bonsai tag mapping update notification channel closed. Stop listening on notifications"
+                );
+                break;
             }
             Err(e) => {
                 error!(
