@@ -46,8 +46,14 @@ fn setup_cancellation() -> CancellationToken {
     token
 }
 
-/// Build benchmark results with only traversal metrics (no file reading)
-fn build_traversal_only_benchmark(ft: FinalizedTraversal) -> Result<Benchmark> {
+/// Add traversal metrics to a benchmark result
+fn add_traversal_metrics(result: &mut Benchmark, ft: &FinalizedTraversal) -> Result<()> {
+    if ft.duration <= 0.0 {
+        return Err(anyhow::anyhow!("Duration is less or equal to zero."));
+    }
+
+    let files_per_second = ft.file_count as f64 / ft.duration;
+
     let avg_read_dir_latency = if ft.dir_count > 0 {
         ft.total_read_dir_time.as_secs_f64() * 1000.0 / ft.dir_count as f64
     } else {
@@ -59,14 +65,6 @@ fn build_traversal_only_benchmark(ft: FinalizedTraversal) -> Result<Benchmark> {
     } else {
         0.0
     };
-
-    if ft.duration <= 0.0 {
-        return Err(anyhow::anyhow!("Duration is less or equal to zero."));
-    }
-
-    let files_per_second = ft.file_count as f64 / ft.duration;
-
-    let mut result = Benchmark::new(BenchmarkType::FsTraversal);
 
     result.add_metric(
         "Traversal throughput",
@@ -111,7 +109,7 @@ fn build_traversal_only_benchmark(ft: FinalizedTraversal) -> Result<Benchmark> {
         Some(0),
     );
 
-    Ok(result)
+    Ok(())
 }
 
 #[derive(Debug, PartialEq)]
@@ -432,73 +430,15 @@ pub async fn bench_traversal_thrift_read(
     } else {
         // Interrupted during traversal - return early with just traversal metrics
         let ft = in_progress_traversal.finalize();
-        return build_traversal_only_benchmark(ft);
+        let mut result = Benchmark::new(BenchmarkType::FsTraversal);
+        add_traversal_metrics(&mut result, &ft)?;
+        return Ok(result);
     };
 
     let ft = in_progress_traversal.finalize();
 
-    let avg_read_dir_latency = if ft.dir_count > 0 {
-        ft.total_read_dir_time.as_secs_f64() * 1000.0 / ft.dir_count as f64
-    } else {
-        0.0
-    };
-
-    let avg_dir_size = if ft.dir_count > 0 {
-        ft.total_dir_entries as f64 / ft.dir_count as f64
-    } else {
-        0.0
-    };
-
-    if ft.duration <= 0.0 {
-        return Err(anyhow::anyhow!("Duration is less or equal to zero."));
-    }
-
-    let files_per_second = ft.file_count as f64 / ft.duration;
-
     let mut result = Benchmark::new(BenchmarkType::FsTraversal);
-
-    result.add_metric(
-        "Traversal throughput",
-        files_per_second,
-        types::Unit::FilesPerSecond,
-        Some(0),
-    );
-    result.add_metric(
-        "Average read_dir() latency",
-        avg_read_dir_latency,
-        types::Unit::Ms,
-        Some(4),
-    );
-    result.add_metric(
-        "Average directory size",
-        avg_dir_size,
-        types::Unit::Files,
-        Some(2),
-    );
-    result.add_metric(
-        "Total files scanned",
-        ft.file_count as f64,
-        types::Unit::Files,
-        Some(0),
-    );
-    result.add_metric(
-        "Total directories",
-        ft.dir_count as f64,
-        types::Unit::Dirs,
-        Some(0),
-    );
-    result.add_metric(
-        "Total symlinks skipped",
-        ft.symlink_skipped_count as f64,
-        types::Unit::Symlinks,
-        Some(0),
-    );
-    result.add_metric(
-        "Total symlinks traversed",
-        ft.symlink_traversed_count as f64,
-        types::Unit::Symlinks,
-        Some(0),
-    );
+    add_traversal_metrics(&mut result, &ft)?;
 
     // Return early if skip_read is true
     if skip_read {
@@ -685,73 +625,15 @@ pub async fn bench_traversal_fs_read(
     } else {
         // Interrupted during traversal - return early with just traversal metrics
         let ft = in_progress_traversal.finalize();
-        return build_traversal_only_benchmark(ft);
+        let mut result = Benchmark::new(BenchmarkType::FsTraversal);
+        add_traversal_metrics(&mut result, &ft)?;
+        return Ok(result);
     };
 
     let ft = in_progress_traversal.finalize();
 
-    let avg_read_dir_latency = if ft.dir_count > 0 {
-        ft.total_read_dir_time.as_secs_f64() * 1000.0 / ft.dir_count as f64
-    } else {
-        0.0
-    };
-
-    let avg_dir_size = if ft.dir_count > 0 {
-        ft.total_dir_entries as f64 / ft.dir_count as f64
-    } else {
-        0.0
-    };
-
-    if ft.duration <= 0.0 {
-        return Err(anyhow::anyhow!("Duration is less or equal to zero."));
-    }
-
-    let files_per_second = ft.file_count as f64 / ft.duration;
-
     let mut result = Benchmark::new(BenchmarkType::FsTraversal);
-
-    result.add_metric(
-        "Traversal throughput",
-        files_per_second,
-        types::Unit::FilesPerSecond,
-        Some(0),
-    );
-    result.add_metric(
-        "Average read_dir() latency",
-        avg_read_dir_latency,
-        types::Unit::Ms,
-        Some(4),
-    );
-    result.add_metric(
-        "Average directory size",
-        avg_dir_size,
-        types::Unit::Files,
-        Some(2),
-    );
-    result.add_metric(
-        "Total files scanned",
-        ft.file_count as f64,
-        types::Unit::Files,
-        Some(0),
-    );
-    result.add_metric(
-        "Total symlinks skipped",
-        ft.symlink_skipped_count as f64,
-        types::Unit::Symlinks,
-        Some(0),
-    );
-    result.add_metric(
-        "Total symlinks traversed",
-        ft.symlink_traversed_count as f64,
-        types::Unit::Symlinks,
-        Some(0),
-    );
-    result.add_metric(
-        "Total directories",
-        ft.dir_count as f64,
-        types::Unit::Dirs,
-        Some(0),
-    );
+    add_traversal_metrics(&mut result, &ft)?;
 
     // Return early if skip_read is true
     if skip_read {
