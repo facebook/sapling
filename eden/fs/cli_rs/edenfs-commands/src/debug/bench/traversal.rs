@@ -12,9 +12,13 @@ use std::fs::File;
 use std::io::Read;
 use std::path::Path;
 use std::path::PathBuf;
+use std::sync::Arc;
+use std::sync::atomic::AtomicBool;
+use std::sync::atomic::Ordering;
 use std::time::Instant;
 
 use anyhow::Result;
+use async_recursion::async_recursion;
 use edenfs_client::client::Client;
 use edenfs_client::methods::EdenThriftMethod;
 use edenfs_utils::bytes_from_path;
@@ -25,16 +29,130 @@ use sysinfo::System;
 use thrift_types::edenfs::MountId;
 use thrift_types::edenfs::ScmBlobOrError;
 use thrift_types::edenfs::SyncBehavior;
+use tokio_util::sync::CancellationToken;
 
 use super::types;
 use super::types::Benchmark;
 use super::types::BenchmarkType;
 use crate::get_edenfs_instance;
 
+static GLOBAL_INTERRUPT_FLAG: std::sync::OnceLock<Arc<AtomicBool>> = std::sync::OnceLock::new();
+
+async fn setup_cancellation() -> CancellationToken {
+    let token = CancellationToken::new();
+
+    let interrupt_flag = GLOBAL_INTERRUPT_FLAG.get_or_init(|| Arc::new(AtomicBool::new(false)));
+
+    // Reset the flag for this benchmark run
+    interrupt_flag.store(false, Ordering::SeqCst);
+
+    // Use ctrlc crate which provides a more reliable signal handler
+    let flag_for_handler = interrupt_flag.clone();
+    if let Err(err) = ctrlc::set_handler(move || {
+        // Just set the flag - detailed message will be printed later with actual results
+        flag_for_handler
+            .compare_exchange(false, true, Ordering::SeqCst, Ordering::SeqCst)
+            .ok();
+    }) {
+        eprintln!("Failed to set Ctrl+C handler: {}", err);
+    }
+
+    // Background task that polls the atomic flag and cancels the token
+    let token_clone = token.clone();
+    let flag_clone = interrupt_flag.clone();
+    tokio::spawn(async move {
+        loop {
+            tokio::time::sleep(tokio::time::Duration::from_millis(50)).await;
+            if flag_clone.load(Ordering::SeqCst) {
+                token_clone.cancel();
+                break;
+            }
+        }
+    });
+
+    token
+}
+
+/// Check if interrupt signal was received (works even when Tokio runtime is busy)
+fn is_interrupted() -> bool {
+    GLOBAL_INTERRUPT_FLAG
+        .get()
+        .is_some_and(|flag| flag.load(Ordering::SeqCst))
+}
+
+/// Build benchmark results with only traversal metrics (no file reading)
+fn build_traversal_only_benchmark(ft: FinalizedTraversal) -> Result<Benchmark> {
+    let avg_read_dir_latency = if ft.dir_count > 0 {
+        ft.total_read_dir_time.as_secs_f64() * 1000.0 / ft.dir_count as f64
+    } else {
+        0.0
+    };
+
+    let avg_dir_size = if ft.dir_count > 0 {
+        ft.total_dir_entries as f64 / ft.dir_count as f64
+    } else {
+        0.0
+    };
+
+    if ft.duration <= 0.0 {
+        return Err(anyhow::anyhow!("Duration is less or equal to zero."));
+    }
+
+    let files_per_second = ft.file_count as f64 / ft.duration;
+
+    let mut result = Benchmark::new(BenchmarkType::FsTraversal);
+
+    result.add_metric(
+        "Traversal throughput",
+        files_per_second,
+        types::Unit::FilesPerSecond,
+        Some(0),
+    );
+    result.add_metric(
+        "Average read_dir() latency",
+        avg_read_dir_latency,
+        types::Unit::Ms,
+        Some(4),
+    );
+    result.add_metric(
+        "Average directory size",
+        avg_dir_size,
+        types::Unit::Files,
+        Some(2),
+    );
+    result.add_metric(
+        "Total files scanned",
+        ft.file_count as f64,
+        types::Unit::Files,
+        Some(0),
+    );
+    result.add_metric(
+        "Total directories",
+        ft.dir_count as f64,
+        types::Unit::Dirs,
+        Some(0),
+    );
+    result.add_metric(
+        "Total symlinks skipped",
+        ft.symlink_skipped_count as f64,
+        types::Unit::Symlinks,
+        Some(0),
+    );
+    result.add_metric(
+        "Total symlinks traversed",
+        ft.symlink_traversed_count as f64,
+        types::Unit::Symlinks,
+        Some(0),
+    );
+
+    Ok(result)
+}
+
 #[derive(Debug, PartialEq)]
 enum TraversalResult {
     Continue,
     LimitReached,
+    Interrupted,
 }
 
 struct InProgressTraversal {
@@ -51,6 +169,7 @@ struct InProgressTraversal {
     follow_symlinks: bool,
     system: Option<System>,
     pid: Option<Pid>,
+    cancellation_token: CancellationToken,
 }
 
 // Define a struct for the results from the finalize step
@@ -72,6 +191,7 @@ impl InProgressTraversal {
         resource_usage: bool,
         max_files: usize,
         follow_symlinks: bool,
+        cancellation_token: CancellationToken,
     ) -> Self {
         let progress_bar = if no_progress {
             None
@@ -82,7 +202,16 @@ impl InProgressTraversal {
                     .template("[{elapsed_precise}] {msg}")
                     .unwrap(),
             );
-            pb.set_message("0 files | 0 dirs | 0 files/s | 0 dirs/s");
+            // Set initial message with max files if limit is set
+            let initial_files_display = if max_files == usize::MAX {
+                "0".to_string()
+            } else {
+                format!("0/{}", max_files)
+            };
+            pb.set_message(format!(
+                "{} files | 0 dirs | 0 files/s",
+                initial_files_display
+            ));
             Some(pb)
         };
 
@@ -103,13 +232,16 @@ impl InProgressTraversal {
             symlink_traversed_count: 0,
             start_time: Instant::now(),
             progress_bar,
-            file_paths: Vec::with_capacity(max_files),
+            file_paths: Vec::with_capacity(
+                max_files.min(types::DEFAULT_MAX_NUMBER_OF_FILES_FOR_TRAVERSAL),
+            ),
             total_read_dir_time: std::time::Duration::new(0, 0),
             total_dir_entries: 0,
             max_files,
             follow_symlinks,
             system,
             pid,
+            cancellation_token,
         }
     }
 
@@ -154,6 +286,13 @@ impl InProgressTraversal {
 
             let files_per_second = self.file_count as f64 / elapsed;
 
+            // Format file count with max files if limit is set
+            let files_display = if self.max_files == usize::MAX {
+                self.file_count.to_string()
+            } else {
+                format!("{}/{}", self.file_count, self.max_files)
+            };
+
             let message = if let (Some(system), Some(pid)) = (&mut self.system, &self.pid) {
                 system.refresh_processes(sysinfo::ProcessesToUpdate::Some(&[*pid]), false);
                 match system.process(*pid) {
@@ -162,20 +301,20 @@ impl InProgressTraversal {
                         let cpu_usage = process.cpu_usage();
                         format!(
                             "{} files | {} dirs | {:.0} files/s | {:.2} MiB memory usage | {:.2}% CPU usage",
-                            self.file_count, self.dir_count, files_per_second, memory_mb, cpu_usage
+                            files_display, self.dir_count, files_per_second, memory_mb, cpu_usage
                         )
                     }
                     None => {
                         format!(
                             "{} files | {} dirs | {:.0} files/s",
-                            self.file_count, self.dir_count, files_per_second
+                            files_display, self.dir_count, files_per_second
                         )
                     }
                 }
             } else {
                 format!(
                     "{} files | {} dirs | {:.0} files/s",
-                    self.file_count, self.dir_count, files_per_second
+                    files_display, self.dir_count, files_per_second
                 )
             };
 
@@ -201,17 +340,33 @@ impl InProgressTraversal {
         }
     }
 
-    /// Recursively traverses a directory and collects file paths, displaying progress
-    pub fn traverse_path(&mut self, path: &Path) -> Result<()> {
+    /// Traverses and returns whether we completed successfully (Some) or were interrupted (None)
+    pub async fn traverse_path_with_result(
+        &mut self,
+        path: &Path,
+    ) -> Result<Option<TraversalResult>> {
         if path.is_dir() {
-            // We ignore the TraversalResult here since traverse_path is the entry point
-            // and the caller doesn't need to know if we hit the limit - that's handled internally
-            self.traverse_directory(path)?;
+            let result = self.traverse_directory(path).await?;
+            match result {
+                TraversalResult::Interrupted => Ok(None),
+                other => Ok(Some(other)),
+            }
+        } else {
+            Ok(Some(TraversalResult::Continue))
         }
-        Ok(())
     }
 
-    fn traverse_directory(&mut self, path: &Path) -> Result<TraversalResult> {
+    #[async_recursion]
+    async fn traverse_directory(&mut self, path: &Path) -> Result<TraversalResult> {
+        // Check for cancellation at the start of each directory traversal
+        if self.cancellation_token.is_cancelled() || is_interrupted() {
+            eprintln!(
+                "Directory traversal cancelled at dir_count={}, file_count={}",
+                self.dir_count, self.file_count
+            );
+            return Ok(TraversalResult::Interrupted);
+        }
+
         self.add_dir();
 
         let start_time = Instant::now();
@@ -222,6 +377,12 @@ impl InProgressTraversal {
         let mut entry_count = 0;
 
         for entry_result in entries {
+            // Check for cancellation while iterating on director entries
+            if self.cancellation_token.is_cancelled() || is_interrupted() {
+                self.add_read_dir_stats(read_dir_duration, entry_count);
+                return Ok(TraversalResult::Interrupted);
+            }
+
             let entry = entry_result?;
             let path = entry.path();
             let file_type = entry.file_type()?;
@@ -231,10 +392,14 @@ impl InProgressTraversal {
                 if file_type.is_symlink() {
                     if self.follow_symlinks {
                         self.add_traversed_symlink();
-                        match self.traverse_directory(&path)? {
+                        match self.traverse_directory(&path).await? {
                             TraversalResult::LimitReached => {
                                 self.add_read_dir_stats(read_dir_duration, entry_count);
                                 return Ok(TraversalResult::LimitReached);
+                            }
+                            TraversalResult::Interrupted => {
+                                self.add_read_dir_stats(read_dir_duration, entry_count);
+                                return Ok(TraversalResult::Interrupted);
                             }
                             TraversalResult::Continue => {}
                         }
@@ -242,10 +407,14 @@ impl InProgressTraversal {
                         self.add_skipped_symlink();
                     }
                 } else {
-                    match self.traverse_directory(&path)? {
+                    match self.traverse_directory(&path).await? {
                         TraversalResult::LimitReached => {
                             self.add_read_dir_stats(read_dir_duration, entry_count);
                             return Ok(TraversalResult::LimitReached);
+                        }
+                        TraversalResult::Interrupted => {
+                            self.add_read_dir_stats(read_dir_duration, entry_count);
+                            return Ok(TraversalResult::Interrupted);
                         }
                         TraversalResult::Continue => {}
                     }
@@ -278,9 +447,27 @@ pub async fn bench_traversal_thrift_read(
         return Err(anyhow::anyhow!("Invalid directory path: {}", dir_path));
     }
 
-    let mut in_progress_traversal =
-        InProgressTraversal::new(no_progress, resource_usage, max_files, follow_symlinks);
-    in_progress_traversal.traverse_path(path)?;
+    // Set up signal handling for graceful interruption
+    let cancellation_token = setup_cancellation().await;
+
+    let mut in_progress_traversal = InProgressTraversal::new(
+        no_progress,
+        resource_usage,
+        max_files,
+        follow_symlinks,
+        cancellation_token.clone(),
+    );
+
+    let _traversal_result = if let Some(result) = in_progress_traversal
+        .traverse_path_with_result(path)
+        .await?
+    {
+        result
+    } else {
+        // Interrupted during traversal - return early with just traversal metrics
+        let ft = in_progress_traversal.finalize();
+        return build_traversal_only_benchmark(ft);
+    };
 
     let ft = in_progress_traversal.finalize();
 
@@ -323,7 +510,7 @@ pub async fn bench_traversal_thrift_read(
         Some(2),
     );
     result.add_metric(
-        "Total files",
+        "Total files scanned",
         ft.file_count as f64,
         types::Unit::Files,
         Some(0),
@@ -370,11 +557,24 @@ pub async fn bench_traversal_thrift_read(
 
     let client = get_edenfs_instance().get_client();
     for path in ft.file_paths {
+        // Check for cancellation during file reading
+        if cancellation_token.is_cancelled() || is_interrupted() {
+            if let Some(pb) = &read_progress {
+                pb.finish_and_clear(); // Immediate cleanup
+            }
+            break;
+        }
+
         if !path.is_file() {
             if let Some(pb) = &read_progress {
                 pb.inc(1);
             }
             continue;
+        }
+
+        // Yield control occasionally to allow signal processing
+        if successful_reads % 1000 == 0 {
+            tokio::task::yield_now().await;
         }
 
         let start = Instant::now();
@@ -426,7 +626,7 @@ pub async fn bench_traversal_thrift_read(
             ScmBlobOrError::UnknownField(_) => {}
         }
 
-        if agg_read_dur.as_secs_f64() > 0.0 && read_progress.is_some() {
+        if agg_read_dur.as_secs_f64() > 0.0 && read_progress.is_some() && !is_interrupted() {
             if let Some(pb) = &read_progress {
                 pb.set_message(format!(
                     "{:.2} MiB/s",
@@ -442,7 +642,20 @@ pub async fn bench_traversal_thrift_read(
     }
 
     if successful_reads == 0 {
-        return Err(anyhow::anyhow!("No files were successfully read."));
+        if cancellation_token.is_cancelled() || is_interrupted() {
+            eprintln!("No files were read before interruption - showing traversal-only results");
+            return Ok(result);
+        } else {
+            return Err(anyhow::anyhow!("No files were successfully read."));
+        }
+    }
+
+    // If interrupted, show what we actually accomplished
+    if is_interrupted() {
+        eprintln!(
+            "Ctrl+C received - returning partial results: successfully read {} of {} files",
+            successful_reads, ft.file_count
+        );
     }
 
     let avg_read_dur = agg_read_dur.as_secs_f64() / successful_reads as f64;
@@ -453,6 +666,12 @@ pub async fn bench_traversal_thrift_read(
         total_bytes_read as f64 / types::BYTES_IN_MEGABYTE as f64 / agg_read_dur.as_secs_f64();
 
     result.add_metric("Throughput ", mb_per_second, types::Unit::MiBps, Some(2));
+    result.add_metric(
+        "Total files read",
+        successful_reads as f64,
+        types::Unit::Files,
+        Some(0),
+    );
     result.add_metric(
         "Average thrift read latency",
         avg_read_dur * 1000.0,
@@ -476,7 +695,7 @@ pub async fn bench_traversal_thrift_read(
 }
 
 /// Runs the filesystem traversal benchmark and returns the benchmark results
-pub fn bench_traversal_fs_read(
+pub async fn bench_traversal_fs_read(
     dir_path: &str,
     max_files: usize,
     follow_symlinks: bool,
@@ -489,10 +708,27 @@ pub fn bench_traversal_fs_read(
         return Err(anyhow::anyhow!("Invalid directory path: {}", dir_path));
     }
 
-    let mut in_progress_traversal =
-        InProgressTraversal::new(no_progress, resource_usage, max_files, follow_symlinks);
+    // Set up signal handling for graceful interruption
+    let cancellation_token = setup_cancellation().await;
 
-    in_progress_traversal.traverse_path(path)?;
+    let mut in_progress_traversal = InProgressTraversal::new(
+        no_progress,
+        resource_usage,
+        max_files,
+        follow_symlinks,
+        cancellation_token.clone(),
+    );
+
+    let _traversal_result = if let Some(result) = in_progress_traversal
+        .traverse_path_with_result(path)
+        .await?
+    {
+        result
+    } else {
+        // Interrupted during traversal - return early with just traversal metrics
+        let ft = in_progress_traversal.finalize();
+        return build_traversal_only_benchmark(ft);
+    };
 
     let ft = in_progress_traversal.finalize();
 
@@ -535,7 +771,7 @@ pub fn bench_traversal_fs_read(
         Some(2),
     );
     result.add_metric(
-        "Total files",
+        "Total files scanned",
         ft.file_count as f64,
         types::Unit::Files,
         Some(0),
@@ -583,11 +819,24 @@ pub fn bench_traversal_fs_read(
     let mut buffer = Vec::with_capacity(types::BYTES_IN_MEGABYTE);
 
     for path in ft.file_paths {
+        // Check for cancellation during file reading
+        if cancellation_token.is_cancelled() || is_interrupted() {
+            if let Some(pb) = &read_progress {
+                pb.finish_and_clear(); // Immediate cleanup
+            }
+            break;
+        }
+
         if !path.is_file() {
             if let Some(pb) = &read_progress {
                 pb.inc(1);
             }
             continue;
+        }
+
+        // Yield control occasionally to allow signal processing
+        if successful_reads % 1000 == 0 {
+            tokio::task::yield_now().await;
         }
 
         let start = Instant::now();
@@ -613,7 +862,7 @@ pub fn bench_traversal_fs_read(
             pb.inc(1);
         }
 
-        if agg_read_dur.as_secs_f64() > 0.0 && read_progress.is_some() {
+        if agg_read_dur.as_secs_f64() > 0.0 && read_progress.is_some() && !is_interrupted() {
             if let Some(pb) = &read_progress {
                 pb.set_message(format!(
                     "{:.2} MiB/s",
@@ -630,7 +879,20 @@ pub fn bench_traversal_fs_read(
     }
 
     if successful_reads == 0 {
-        return Err(anyhow::anyhow!("No files were successfully read."));
+        if cancellation_token.is_cancelled() || is_interrupted() {
+            eprintln!("No files were read before interruption - showing traversal-only results");
+            return Ok(result);
+        } else {
+            return Err(anyhow::anyhow!("No files were successfully read."));
+        }
+    }
+
+    // If interrupted, show what we actually accomplished
+    if is_interrupted() {
+        eprintln!(
+            "Ctrl+C received - returning partial results: successfully read {} of {} files",
+            successful_reads, ft.file_count
+        );
     }
 
     let avg_open_dur = agg_open_dur.as_secs_f64() / successful_reads as f64;
@@ -646,6 +908,12 @@ pub fn bench_traversal_fs_read(
         mb_per_second,
         types::Unit::MiBps,
         Some(2),
+    );
+    result.add_metric(
+        "Total files read",
+        successful_reads as f64,
+        types::Unit::Files,
+        Some(0),
     );
     result.add_metric(
         "open() latency",

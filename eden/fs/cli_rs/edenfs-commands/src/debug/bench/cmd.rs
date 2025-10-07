@@ -68,8 +68,8 @@ pub enum BenchCmd {
         thrift_io: Option<String>,
 
         /// Max number of files to read when traversing the file system
-        #[clap(long, default_value_t = types::DEFAULT_MAX_NUMBER_OF_FILES_FOR_TRAVERSAL)]
-        max_files: usize,
+        #[clap(long)]
+        max_files: Option<usize>,
 
         /// Whether to follow symbolic links during traversal
         #[clap(long)]
@@ -177,10 +177,11 @@ impl crate::Subcommand for BenchCmd {
                     );
                 }
 
+                let effective_max_files = max_files.unwrap_or(usize::MAX);
                 let benchmark_result = if thrift_io.is_some() {
                     traversal::bench_traversal_thrift_read(
                         dir,
-                        *max_files,
+                        effective_max_files,
                         *follow_symlinks,
                         *no_progress,
                         *resource_usage,
@@ -191,12 +192,13 @@ impl crate::Subcommand for BenchCmd {
                 } else {
                     traversal::bench_traversal_fs_read(
                         dir,
-                        *max_files,
+                        effective_max_files,
                         *follow_symlinks,
                         *no_progress,
                         *resource_usage,
                         *skip_read,
-                    )?
+                    )
+                    .await?
                 };
 
                 if *json {
