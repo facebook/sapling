@@ -425,8 +425,22 @@ where
                                     GitLfs::FullContent,
                                 );
                                 let path_in_sm = submodule_path.0.join(&path);
+                                let mut fcs =
+                                    vec![(path_in_sm.clone(), FileChange::Change(new_tfc))];
 
-                                let fcs = vec![(path_in_sm, FileChange::Change(new_tfc))];
+                                // This handles the scenario where a submodule is replaced by a
+                                // file which results in implicit submodule deletion. The only
+                                // extra thing we need to do to handle this scenario properly is to
+                                // remove the corresponding submodule metadata file.
+                                if sm_exp_data.submodule_deps.contains_key(&path_in_sm) {
+                                    let x_repo_sm_metadata_path =
+                                        get_x_repo_submodule_metadata_file_path(
+                                            &SubmodulePath(path_in_sm),
+                                            sm_exp_data.x_repo_submodule_metadata_file_prefix,
+                                        )?;
+                                    fcs.push((x_repo_sm_metadata_path, FileChange::Deletion));
+                                }
+
                                 return Ok(Left(fcs));
                             }
 

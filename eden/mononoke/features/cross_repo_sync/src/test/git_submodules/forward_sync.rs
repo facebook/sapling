@@ -1013,6 +1013,120 @@ async fn test_implicitly_deleting_submodule(fb: FacebookInit) -> Result<()> {
     Ok(())
 }
 
+/// Test that implicitly deleting a nested submodule also deletes its metadata file.
+#[mononoke::fbinit_test]
+async fn test_implicitly_deleting_nested_submodule(fb: FacebookInit) -> Result<()> {
+    let ctx = CoreContext::test_mock(fb.clone());
+    let (repo_c, repo_c_cs_map) = build_repo_c(fb).await?;
+
+    let c_master_git_sha1 = git_sha1_from_changeset(&ctx, &repo_c, repo_c_cs_map["C_B"]).await?;
+
+    let repo_c_submodule_path_in_repo_b = NonRootMPath::new("submodules/repo_c")?;
+    let (repo_b, repo_b_cs_map) =
+        build_repo_b_with_c_submodule(fb, c_master_git_sha1, &repo_c_submodule_path_in_repo_b)
+            .await?;
+
+    let repo_c_submodule_path =
+        NonRootMPath::new(REPO_B_SUBMODULE_PATH)?.join(&repo_c_submodule_path_in_repo_b);
+    let SubmoduleSyncTestData {
+        small_repo_info: (small_repo, small_repo_cs_map),
+        large_repo_info: (large_repo, _large_repo_master),
+        commit_sync_data,
+        ..
+    } = build_submodule_sync_test_data(
+        fb,
+        &repo_b,
+        vec![
+            (NonRootMPath::new(REPO_B_SUBMODULE_PATH)?, repo_b.clone()),
+            (repo_c_submodule_path, repo_c.clone()),
+        ],
+        vec![], // Known dangling submodule pointers
+    )
+    .await?;
+
+    // Implicitly delete repo_c submodule in repo_b
+    let repo_b_cs_id =
+        CreateCommitContext::new(&ctx, &repo_b, vec![*repo_b_cs_map.get("B_B").unwrap()])
+            .set_message("Implicitly deleting repo_c submodule in repo_b")
+            .add_file(
+                repo_c_submodule_path_in_repo_b,
+                "File implicitly deleting submodule",
+            )
+            .commit()
+            .await?;
+
+    let repo_b_git_commit_hash = git_sha1_from_changeset(&ctx, &repo_b, repo_b_cs_id).await?;
+
+    const MESSAGE: &str = "Update submodule after implicitly deleting repo_c submodule in repo_b";
+
+    let small_repo_cs_id =
+        CreateCommitContext::new(&ctx, &small_repo, vec![small_repo_cs_map["A_C"]])
+            .set_message(MESSAGE)
+            .add_file_with_type(
+                REPO_B_SUBMODULE_PATH,
+                repo_b_git_commit_hash.into_inner(),
+                FileType::GitSubmodule,
+            )
+            .commit()
+            .await?;
+
+    let (large_repo_cs_id, large_repo_changesets) = sync_changeset_and_derive_all_types(
+        ctx.clone(),
+        small_repo_cs_id,
+        &large_repo,
+        &commit_sync_data,
+    )
+    .await?;
+
+    compare_expected_changesets(
+        large_repo_changesets.last_chunk::<1>().unwrap(),
+        &[ExpectedChangeset::new(MESSAGE)
+            .with_regular_changes(vec![
+                // repo_b submodule metadata file is updated
+                "small_repo/submodules/.x-repo-submodule-repo_b",
+                "small_repo/submodules/repo_b/submodules/repo_c",
+            ])
+            .with_deletions(
+                // Files being deleted
+                vec![
+                    // NOTE: repo_c submodule metadata file has to be deleted too
+                    "small_repo/submodules/repo_b/submodules/.x-repo-submodule-repo_c",
+                    // NOTE: no need to have explicit deletions for these files, because
+                    // they're being deleted implicitly.
+                    // "small_repo/submodules/repo_b/submodules/repo_c/C_A",
+                    // "small_repo/submodules/repo_b/submodules/repo_c/C_B",
+                ],
+            )],
+    )?;
+
+    assert_working_copy_matches_expected(
+        &ctx,
+        &large_repo,
+        large_repo_cs_id,
+        vec![
+            "large_repo_root",
+            "small_repo/A_A",
+            "small_repo/A_B",
+            "small_repo/A_C",
+            "small_repo/submodules/.x-repo-submodule-repo_b",
+            "small_repo/submodules/repo_b/B_A",
+            "small_repo/submodules/repo_b/B_B",
+            "small_repo/submodules/repo_b/submodules/repo_c",
+        ],
+    )
+    .await?;
+
+    check_mapping(
+        ctx.clone(),
+        &commit_sync_data,
+        small_repo_cs_id,
+        Some(large_repo_cs_id),
+    )
+    .await;
+
+    Ok(())
+}
+
 /// Implicitly deleting files in the submodule repo (repo_b) should generate the
 /// proper deletions in its expansion.
 #[mononoke::fbinit_test]
