@@ -12,7 +12,6 @@ use std::collections::HashSet;
 use anyhow::anyhow;
 use blobstore::Loadable;
 use bonsai_globalrev_mapping::BonsaiGlobalrevMappingRef;
-use borrowed::borrowed;
 use bytes::Bytes;
 use chrono::DateTime;
 use chrono::FixedOffset;
@@ -416,7 +415,7 @@ async fn verify_deleted_files_existed_in_a_parent<R: MononokeRepo>(
         Ok(parent_ctx
             .paths(files.iter().cloned())
             .await?
-            .try_filter_map(|changeset_path| async move {
+            .try_filter_map(async |changeset_path| {
                 if changeset_path.is_file().await? {
                     Ok(Some(changeset_path.path().clone()))
                 } else {
@@ -458,7 +457,7 @@ async fn verify_deleted_files_existed_in_a_parent<R: MononokeRepo>(
     let parent_files: BTreeSet<_> = stream::iter(
         parent_ctxs
             .iter()
-            .map(|parent_ctx| async move { get_matching_files(parent_ctx, deleted_files).await }),
+            .map(async |parent_ctx| get_matching_files(parent_ctx, deleted_files).await),
     )
     .boxed()
     .buffered(10)
@@ -528,13 +527,12 @@ async fn verify_prefix_files_deleted<R: MononokeRepo>(
         }
     }
     // Check that any prefix path that exists in any parent is being deleted.
-    borrowed!(prefix_paths);
     stream::iter(parent_ctxs.iter().map(Ok))
-        .try_for_each_concurrent(10, |parent_ctx| async move {
+        .try_for_each_concurrent(10, async |parent_ctx| {
             parent_ctx
                 .paths(prefix_paths.iter().cloned())
                 .await?
-                .try_for_each(|prefix_path| async move {
+                .try_for_each(async |prefix_path| {
                     if prefix_path.is_file().await?
                         && path_changes.get(prefix_path.path()) != Some(&CreateChangeType::Deletion)
                     {
@@ -748,24 +746,19 @@ impl<R: MononokeRepo> RepoContext<R> {
         }
 
         // Obtain contexts for each of the parents (which should exist).
-        let stack_parent_ctxs: Vec<_> =
-            stream::iter(stack_parents.iter().map(|parent_id| async move {
-                let parent_ctx = self
-                    .changeset(ChangesetSpecifier::Bonsai(parent_id.clone()))
-                    .await?
-                    .ok_or_else(|| {
-                        MononokeError::InvalidRequest(format!(
-                            "Parent {} does not exist",
-                            parent_id
-                        ))
-                    })?;
-                Ok::<_, MononokeError>(parent_ctx)
-            }))
-            .boxed()
-            .buffered(10)
-            .try_collect()
-            .await?;
-        borrowed!(stack_parent_ctxs);
+        let stack_parent_ctxs: Vec<_> = stream::iter(stack_parents.iter().map(async |parent_id| {
+            let parent_ctx = self
+                .changeset(ChangesetSpecifier::Bonsai(parent_id.clone()))
+                .await?
+                .ok_or_else(|| {
+                    MononokeError::InvalidRequest(format!("Parent {} does not exist", parent_id))
+                })?;
+            Ok::<_, MononokeError>(parent_ctx)
+        }))
+        .boxed()
+        .buffered(10)
+        .try_collect()
+        .await?;
 
         // Collect together information about each new commit.
 
@@ -792,7 +785,6 @@ impl<R: MononokeRepo> RepoContext<R> {
                 )
             })
             .collect();
-        let path_changes_stack = path_changes_stack.as_slice();
 
         // Determine the prefixes of all changed files.
         let prefix_paths_stack: Vec<BTreeSet<_>> = changes_stack
@@ -857,7 +849,6 @@ impl<R: MononokeRepo> RepoContext<R> {
             }
             stack_changes_stack
         };
-        let stack_changes_stack = stack_changes_stack.as_slice();
 
         // Check that changes are valid according to bonsai rules:
         // (1) deletions and copy-from info must reference a real path in a
@@ -869,19 +860,19 @@ impl<R: MononokeRepo> RepoContext<R> {
         //     must be a delete for the file.
 
         // Check deleted files existed in a parent. (1)
-        let verify_deleted_files_existed_fut = async move {
+        let verify_deleted_files_existed_fut = async {
             stream::iter(
                 tracked_deletion_files_stack
                     .into_iter()
                     .zip(stack_changes_stack.iter())
                     .map(Ok),
             )
-            .try_for_each_concurrent(10, |(tracked_deletion_files, stack_changes)| async move {
+            .try_for_each_concurrent(10, async |(tracked_deletion_files, stack_changes)| {
                 // This does NOT consider "missing" (untracked deletion) files as it is NOT
                 // necessary for them to exist in a parent. If they don't exist on a parent,
                 // this means the file was "hg added" and then manually deleted.
                 verify_deleted_files_existed_in_a_parent(
-                    stack_parent_ctxs,
+                    &stack_parent_ctxs,
                     stack_changes.as_ref(),
                     tracked_deletion_files,
                 )
@@ -898,7 +889,7 @@ impl<R: MononokeRepo> RepoContext<R> {
 
         // Check changes that replace a file with a directory also delete
         // this replaced file. (3)
-        let verify_prefix_files_deleted_fut = async move {
+        let verify_prefix_files_deleted_fut = async {
             stream::iter(
                 prefix_paths_stack
                     .into_iter()
@@ -906,24 +897,21 @@ impl<R: MononokeRepo> RepoContext<R> {
                     .zip(stack_changes_stack.iter())
                     .map(Ok),
             )
-            .try_for_each_concurrent(
-                10,
-                |((prefix_paths, path_changes), stack_changes)| async move {
-                    verify_prefix_files_deleted(
-                        stack_parent_ctxs,
-                        stack_changes.as_ref(),
-                        prefix_paths,
-                        path_changes,
-                    )
-                    .timed()
-                    .await
-                    .log_future_stats(
-                        self.ctx().scuba().clone(),
-                        "Verify prefix files in parents have been deleted",
-                        None,
-                    )
-                },
-            )
+            .try_for_each_concurrent(10, async |((prefix_paths, path_changes), stack_changes)| {
+                verify_prefix_files_deleted(
+                    &stack_parent_ctxs,
+                    stack_changes.as_ref(),
+                    prefix_paths,
+                    path_changes,
+                )
+                .timed()
+                .await
+                .log_future_stats(
+                    self.ctx().scuba().clone(),
+                    "Verify prefix files in parents have been deleted",
+                    None,
+                )
+            })
             .await
         };
 
@@ -938,7 +926,7 @@ impl<R: MononokeRepo> RepoContext<R> {
                     }
                     None => self.repo().repo_blobstore().clone(),
                 },
-                stack_parent_ctxs,
+                &stack_parent_ctxs,
                 path_changes_stack
                     .first()
                     .ok_or_else(|| anyhow!("Should be at least one commit"))?,
@@ -958,22 +946,20 @@ impl<R: MononokeRepo> RepoContext<R> {
             Some(bubble) => bubble.wrap_repo_blobstore(self.repo().repo_blobstore().clone()),
             None => self.repo().repo_blobstore().clone(),
         };
-        borrowed!(blobstore);
-        let resolve_file_changes_fut = async move {
+        let resolve_file_changes_fut = async {
             stream::iter(
                 changes_stack
                     .into_iter()
                     .zip(stack_changes_stack.iter())
-                    .map(|(changes, stack_changes)| async move {
-                        let stack_changes = stack_changes.as_ref();
-                        stream::iter(changes.into_iter().map(|(path, mut change)| async move {
+                    .map(async |(changes, stack_changes)| {
+                        stream::iter(changes.into_iter().map(async |(path, mut change)| {
                             change
                                 .resolve(
                                     self.ctx(),
                                     *self.repo().filestore_config(),
                                     blobstore.clone(),
-                                    stack_changes,
-                                    stack_parent_ctxs,
+                                    stack_changes.as_ref(),
+                                    &stack_parent_ctxs,
                                 )
                                 .await?;
                             Ok::<_, MononokeError>((path, change))
