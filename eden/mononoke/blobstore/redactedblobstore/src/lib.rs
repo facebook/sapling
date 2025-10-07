@@ -31,6 +31,7 @@ pub use crate::redaction_config_blobstore::ArcRedactionConfigBlobstore;
 pub use crate::redaction_config_blobstore::RedactionConfigBlobstore;
 pub use crate::store::RedactedBlobs;
 pub use crate::store::RedactedMetadata;
+pub use crate::store::load;
 
 pub mod config {
     pub const GET_OPERATION: &str = "GET";

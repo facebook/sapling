@@ -14,13 +14,16 @@ use anyhow::Error;
 use anyhow::Result;
 use async_trait::async_trait;
 use blobstore::Blobstore;
-use blobstore::Loadable;
+use blobstore::LoadableError;
 use cached_config::ConfigHandle;
 use cached_config::ConfigStore;
 use context::CoreContext;
 use futures::stream;
 use futures::stream::StreamExt;
 use futures::stream::TryStreamExt;
+use mononoke_types::Blob;
+use mononoke_types::BlobstoreKey;
+use mononoke_types::BlobstoreValue;
 use mononoke_types::RedactionKeyList;
 use mononoke_types::typed_hash::RedactionKeyListId;
 use redaction_set::RedactionSets;
@@ -143,9 +146,9 @@ impl InnerConfig {
                 .all_redactions
                 .iter()
                 .map(|redaction| async move {
-                    let keylist: RedactionKeyList = RedactionKeyListId::from_str(&redaction.id)
-                        .with_context(|| format!("Invalid keylist id: {}", redaction.id))?
-                        .load(ctx, &blobstore)
+                    let keylist_id = RedactionKeyListId::from_str(&redaction.id)
+                        .with_context(|| format!("Invalid keylist id: {}", redaction.id))?;
+                    let keylist = load(ctx, keylist_id, &blobstore)
                         .await
                         .with_context(|| format!("Keylist with id {} not found", redaction.id))?;
                     let keys_with_metadata = keylist
@@ -178,4 +181,21 @@ impl InnerConfig {
             map: Arc::new(map),
         })
     }
+}
+
+pub async fn load<'a, B: Blobstore>(
+    ctx: &'a CoreContext,
+    keylist_id: RedactionKeyListId,
+    blobstore: &'a B,
+) -> Result<RedactionKeyList, LoadableError> {
+    let blobstore_key = keylist_id.blobstore_key();
+    let get = blobstore.get(ctx, &blobstore_key);
+
+    let bytes = get
+        .await?
+        .ok_or(LoadableError::Missing(blobstore_key.clone()))?;
+
+    let blob: Blob<RedactionKeyListId> = Blob::new(keylist_id, bytes.into_raw_bytes());
+    let ret = <RedactionKeyList as BlobstoreValue>::from_blob(blob).map_err(LoadableError::Error);
+    ret
 }
