@@ -594,7 +594,7 @@ class ui:
     def paths(self):
         return paths(self)
 
-    def pushbuffer(self, error=False, subproc=False, labeled=False):
+    def pushbuffer(self, error=False, subproc=False, labeled=False, tee=False):
         """install a buffer to capture standard output of the ui object
 
         If error is True, the error output will be captured too.
@@ -608,9 +608,14 @@ class ui:
         handle this argument and returned styled output. If output
         is being buffered so it can be captured and parsed or
         processed, labeled should not be set to True.
+
+        If tee is True, the buffer will be built up as normal, but the content
+        of the buffer will simultaneously printed to the ui. This mode allows
+        for output to be "responsive" (i.e. instantly streamed), but also
+        captured for later analysis (i.e. captured in telemetry).
         """
         self._buffers.append([])
-        self._bufferstates.append((error, subproc, labeled))
+        self._bufferstates.append((error, subproc, labeled, tee))
         self._bufferapplylabels = labeled
 
     def popbuffer(self, errors="strict") -> str:
@@ -706,6 +711,8 @@ class ui:
         elif self._buffers and not opts.get(r"prompt", False):
             msgs = self._addprefixesandlabels(args, opts, bool(self._bufferapplylabels))
             self._buffers[-1].extend(msgs)
+            if self._bufferstates[-1][3]:
+                self._write(*msgs)
         else:
             msgs = self._addprefixesandlabels(args, opts, bool(self._colormode))
             self._write(*msgs)
