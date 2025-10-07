@@ -31,6 +31,12 @@ use super::types::Benchmark;
 use super::types::BenchmarkType;
 use crate::get_edenfs_instance;
 
+#[derive(Debug, PartialEq)]
+enum TraversalResult {
+    Continue,
+    LimitReached,
+}
+
 struct InProgressTraversal {
     file_count: usize,
     dir_count: usize,
@@ -198,13 +204,14 @@ impl InProgressTraversal {
     /// Recursively traverses a directory and collects file paths, displaying progress
     pub fn traverse_path(&mut self, path: &Path) -> Result<()> {
         if path.is_dir() {
-            self.traverse_directory(path)
-        } else {
-            Ok(())
+            // We ignore the TraversalResult here since traverse_path is the entry point
+            // and the caller doesn't need to know if we hit the limit - that's handled internally
+            self.traverse_directory(path)?;
         }
+        Ok(())
     }
 
-    fn traverse_directory(&mut self, path: &Path) -> Result<()> {
+    fn traverse_directory(&mut self, path: &Path) -> Result<TraversalResult> {
         self.add_dir();
 
         let start_time = Instant::now();
@@ -224,24 +231,36 @@ impl InProgressTraversal {
                 if file_type.is_symlink() {
                     if self.follow_symlinks {
                         self.add_traversed_symlink();
-                        self.traverse_directory(&path)?;
+                        match self.traverse_directory(&path)? {
+                            TraversalResult::LimitReached => {
+                                self.add_read_dir_stats(read_dir_duration, entry_count);
+                                return Ok(TraversalResult::LimitReached);
+                            }
+                            TraversalResult::Continue => {}
+                        }
                     } else {
                         self.add_skipped_symlink();
                     }
                 } else {
-                    self.traverse_directory(&path)?;
+                    match self.traverse_directory(&path)? {
+                        TraversalResult::LimitReached => {
+                            self.add_read_dir_stats(read_dir_duration, entry_count);
+                            return Ok(TraversalResult::LimitReached);
+                        }
+                        TraversalResult::Continue => {}
+                    }
                 }
             } else if file_type.is_file() {
                 if self.file_count < self.max_files {
                     self.add_file(path);
                 } else {
                     self.add_read_dir_stats(read_dir_duration, entry_count);
-                    return Ok(());
+                    return Ok(TraversalResult::LimitReached);
                 }
             }
         }
         self.add_read_dir_stats(read_dir_duration, entry_count);
-        Ok(())
+        Ok(TraversalResult::Continue)
     }
 }
 
