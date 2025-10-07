@@ -103,7 +103,9 @@ export function Bookmark({
         styles.bookmarkTag,
         fullLength === true && styles.fullLength,
       ]}>
-      {isRecommended && <Icon icon="star-full" size="XS" style={{display: 'flex'}} />}
+      {isRecommended && (
+        <Icon icon="star-full" size="XS" style={{display: 'flex', height: '12px'}} />
+      )}
       {bookmark}
     </Tag>
   );
