@@ -7,6 +7,8 @@
 
 //! Types for benchmarking
 
+use num_format::Locale;
+use num_format::ToFormattedString;
 use serde::Serialize;
 
 // Constants
@@ -138,15 +140,42 @@ impl Benchmark {
 
 impl std::fmt::Display for Benchmark {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        let format_value_with_precision =
-            |value: f64, precision: u8| -> String { format!("{:.1$}", value, precision as usize) };
+        let format_value_with_precision = |value: f64, precision: u8, unit: &Unit| -> String {
+            // For count-based units (files, dirs, symlinks, files/s), use locale-aware integer formatting
+            match unit {
+                Unit::Files | Unit::Dirs | Unit::Symlinks | Unit::FilesPerSecond => {
+                    if precision == 0 {
+                        // Integer formatting with locale-aware separators
+                        (value as u64).to_formatted_string(&Locale::en)
+                    } else {
+                        // Decimal formatting but still with separators for the integer part
+                        let formatted_int = (value.trunc() as u64).to_formatted_string(&Locale::en);
+                        let decimal_part = value.fract();
+                        if decimal_part == 0.0 {
+                            formatted_int
+                        } else {
+                            format!(
+                                "{}.{:0width$}",
+                                formatted_int,
+                                (decimal_part * 10_f64.powi(precision as i32)) as u64,
+                                width = precision as usize
+                            )
+                        }
+                    }
+                }
+                // For other units (MiBps, Ms, KiB, MiB), use regular decimal formatting
+                _ => format!("{:.1$}", value, precision as usize),
+            }
+        };
 
         writeln!(f, "{}", self.benchmark_type)?;
 
         let max_value_len = self
             .metrics
             .iter()
-            .map(|metric| format_value_with_precision(metric.value, metric.precision).len())
+            .map(|metric| {
+                format_value_with_precision(metric.value, metric.precision, &metric.unit).len()
+            })
             .max()
             .map_or(0, |len| if len < 10 { 10 } else { len });
 
@@ -158,7 +187,8 @@ impl std::fmt::Display for Benchmark {
             .unwrap_or(0);
 
         for metric in &self.metrics {
-            let value_str = format_value_with_precision(metric.value, metric.precision);
+            let value_str =
+                format_value_with_precision(metric.value, metric.precision, &metric.unit);
 
             writeln!(
                 f,
