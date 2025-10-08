@@ -140,7 +140,7 @@ pub struct GDMV3Entry {
 }
 
 impl GDMV3Entry {
-    fn inlined_bytes_size(&self) -> usize {
+    pub fn inlined_bytes_size(&self) -> usize {
         self.full_object
             .inlined_bytes
             .as_ref()

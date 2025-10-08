@@ -7,13 +7,21 @@
 
 use std::collections::HashMap;
 use std::str::FromStr;
+use std::sync::Arc;
 
+use anyhow::Context;
 use anyhow::Result;
 use async_trait::async_trait;
+use blobstore::Blobstore;
 use blobstore::KeyedBlobstore;
 use blobstore::Loadable;
 use blobstore::LoadableError;
+use bonsai_git_mapping::BonsaiGitMapping;
+use bonsai_git_mapping::BonsaisOrGitShas;
 use context::CoreContext;
+use futures::StreamExt;
+use futures::TryStreamExt;
+use futures::stream;
 use mononoke_types::Blob;
 use mononoke_types::BlobstoreKey;
 use mononoke_types::BlobstoreValue;
@@ -24,8 +32,10 @@ use mononoke_types::hash::Blake2;
 use mononoke_types::impl_typed_hash;
 use mononoke_types::typed_hash::IdContext;
 
+use crate::BaseObject;
 use crate::GitPackfileBaseItem;
 use crate::delta_manifest_v3::GDMV3Entry;
+use crate::fetch_non_blob_git_object_bytes;
 use crate::thrift;
 
 #[derive(ThriftConvert, Clone, Debug, Eq, PartialEq, Hash)]
@@ -62,6 +72,41 @@ impl ThriftConvert for CGDMCommitPackfileItems {
                 .collect(),
             ..Default::default()
         }
+    }
+}
+
+impl CGDMCommitPackfileItems {
+    pub async fn new(
+        ctx: &CoreContext,
+        blobstore: Arc<dyn Blobstore>,
+        bonsai_git_mapping: Arc<dyn BonsaiGitMapping>,
+        cs_ids: &[ChangesetId],
+    ) -> Result<Self> {
+        let git_object_ids = bonsai_git_mapping
+            .get(ctx, BonsaisOrGitShas::Bonsai(cs_ids.to_vec()))
+            .await
+            .context("Failed to fetch bonsai_git_mapping when creating CGDMCommitPackfileItems")?
+            .into_iter()
+            .map(|entry| entry.git_sha1.to_object_id())
+            .collect::<Result<Vec<_>>>()
+            .context("Error while converting Git Sha1 to Git Object Id when creating CGDMCommitPackfileItems")?;
+
+        let commit_packfile_items = stream::iter(git_object_ids)
+            .map(async |git_object_id| {
+                let bytes =
+                    fetch_non_blob_git_object_bytes(ctx, &blobstore, &git_object_id).await?;
+
+                let packfile_base_item = GitPackfileBaseItem::try_from(BaseObject::new(bytes)?)?;
+
+                anyhow::Ok(packfile_base_item)
+            })
+            .buffered(1024)
+            .try_collect::<Vec<_>>()
+            .await?;
+
+        Ok(Self {
+            commit_packfile_items,
+        })
     }
 }
 
