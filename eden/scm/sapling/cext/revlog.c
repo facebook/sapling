@@ -714,9 +714,9 @@ static PyObject* index_headrevs(indexObject* self, PyObject* args) {
   if (heads == NULL)
     goto bail;
   if (len == 0) {
-    PyObject* nullid = PyInt_FromLong(-1);
-    if (nullid == NULL || PyList_Append(heads, nullid) == -1) {
-      Py_XDECREF(nullid);
+    PyObject* nullid_obj = PyInt_FromLong(-1);
+    if (nullid_obj == NULL || PyList_Append(heads, nullid_obj) == -1) {
+      Py_XDECREF(nullid_obj);
       goto bail;
     }
     goto done;
@@ -928,15 +928,15 @@ nt_find(indexObject* self, const char* node, Py_ssize_t nodelen, int hex) {
     int v = n->children[k];
 
     if (v < 0) {
-      const char* n;
+      const char* nv;
       Py_ssize_t i;
 
       v = -(v + 1);
-      n = index_node(self, v);
-      if (n == NULL)
+      nv = index_node(self, v);
+      if (nv == NULL)
         return -2;
       for (i = level; i < maxlevel; i++)
-        if (getnybble(node, i) != nt_level(n, i))
+        if (getnybble(node, i) != nt_level(nv, i))
           return -2;
       return v;
     }
