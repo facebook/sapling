@@ -31,6 +31,7 @@ const CONFIG_INDEX: &str = "scm_usecases_config";
 pub enum UseCaseId {
     #[strum(serialize = "buck2")]
     Buck2,
+    Debugging,
     #[strum(serialize = "edenfsctl")]
     EdenFsCtl,
     EdenFsTests,
