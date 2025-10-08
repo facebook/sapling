@@ -349,6 +349,7 @@ cpp_library(
     deps = [
         "fbsource//third-party/cpptoml:cpptoml",
         "fbsource//third-party/fmt:fmt",
+        "fbsource//third-party/re2:re2",
         ":startup_logger",
         ":startup_status_subscriber",
         ":thrift-streaming-cpp2-types",
@@ -472,7 +473,6 @@ cpp_library(
     ],
     external_deps = [
         "gflags",
-        "re2",
     ],
 )
 
