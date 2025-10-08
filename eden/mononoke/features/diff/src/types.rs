@@ -25,6 +25,20 @@ pub enum DiffCopyInfo {
     Copy,
 }
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum DiffContentType {
+    Text,
+    NonUtf8,
+    Binary,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum DiffGeneratedStatus {
+    NonGenerated,
+    Partially,
+    Fully,
+}
+
 #[derive(Debug, Clone)]
 pub enum DiffFileContent {
     Inline(Bytes),
@@ -46,6 +60,29 @@ pub struct HeaderlessDiffOpts {
 pub struct HeaderlessUnifiedDiff {
     pub raw_diff: Vec<u8>,
     pub is_binary: bool,
+}
+
+#[derive(Debug, Clone)]
+pub struct MetadataFileInfo {
+    pub file_type: Option<DiffFileType>,
+    pub content_type: Option<DiffContentType>,
+    pub generated_status: Option<DiffGeneratedStatus>,
+}
+
+#[derive(Debug, Clone)]
+pub struct MetadataLinesCount {
+    pub added_lines: i64,
+    pub deleted_lines: i64,
+    pub significant_added_lines: i64,
+    pub significant_deleted_lines: i64,
+    pub first_added_line_number: Option<i64>,
+}
+
+#[derive(Debug, Clone)]
+pub struct MetadataDiff {
+    pub base_file_info: MetadataFileInfo,
+    pub other_file_info: MetadataFileInfo,
+    pub lines_count: Option<MetadataLinesCount>,
 }
 
 impl From<DiffFileType> for xdiff::FileType {
