@@ -178,27 +178,16 @@ impl crate::Subcommand for BenchCmd {
                 }
 
                 let effective_max_files = max_files.unwrap_or(usize::MAX);
-                let benchmark_result = if thrift_io.is_some() {
-                    traversal::bench_traversal_thrift_read(
-                        dir,
-                        effective_max_files,
-                        *follow_symlinks,
-                        *no_progress,
-                        *resource_usage,
-                        *skip_read,
-                        thrift_io.as_deref(),
-                    )
-                    .await?
-                } else {
-                    traversal::bench_traversal_fs_read(
-                        dir,
-                        effective_max_files,
-                        *follow_symlinks,
-                        *no_progress,
-                        *resource_usage,
-                        *skip_read,
-                    )?
-                };
+                let benchmark_result = traversal::bench_traversal(
+                    dir,
+                    effective_max_files,
+                    *follow_symlinks,
+                    *no_progress,
+                    *resource_usage,
+                    *skip_read,
+                    thrift_io.as_deref(),
+                )
+                .await?;
 
                 if *json {
                     println!("{}", serde_json::to_string_pretty(&benchmark_result)?);

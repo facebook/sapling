@@ -18,13 +18,12 @@ pub const LMDB_FILE_NAME: &str = "__lmdb__";
 pub const SQLITE_FILE_NAME: &str = "__sqlite__";
 pub const COMBINED_DATA_FILE_NAME: &str = "__combined_data__";
 pub const DEFAULT_NUMBER_OF_FILES: usize = 64 * 1024;
-pub const DEFAULT_MAX_NUMBER_OF_FILES_FOR_TRAVERSAL: usize = 1024 * 1024;
 pub const DEFAULT_CHUNK_SIZE: usize = 4 * 1024;
 pub const NUMBER_OF_SUB_DIRS: usize = 256;
 pub const BYTES_IN_KILOBYTE: usize = 1024;
 pub const BYTES_IN_MEGABYTE: usize = 1024 * BYTES_IN_KILOBYTE;
 pub const BYTES_IN_GIGABYTE: usize = 1024 * BYTES_IN_MEGABYTE;
-pub const TRAVERSAL_PROGRESS_UPDATE_INTERVAL: usize = 10000;
+pub const TRAVERSAL_PROGRESS_UPDATE_INTERVAL: usize = 1000;
 
 /// Represents the type of benchmark being performed
 #[derive(Debug, Clone, Serialize)]
