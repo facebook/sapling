@@ -18,6 +18,7 @@ context = { version = "0.1.0", path = "../../server/context" }
 derived_data_manager = { version = "0.1.0", path = "../../derived_data/manager" }
 derived_data_service_if = { version = "0.1.0", path = "../../derived_data/remote/if" }
 digest = "0.10"
+facet = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 fbthrift = { version = "0.0.1+unstable", git = "https://github.com/facebook/fbthrift.git", branch = "main" }
 filestore = { version = "0.1.0", path = "../../filestore" }
 flate2 = { version = "1.0.33", features = ["rust_backend"], default-features = false }
@@ -30,6 +31,7 @@ gix-hash = "0.18.0"
 gix-object = "0.49.1"
 gix-pack = "0.59.1"
 itertools = "0.14.0"
+justknobs = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 lazy_static = "1.5"
 manifest = { version = "0.1.0", path = "../../manifest" }
 megarepo_error = { version = "0.1.0", path = "../../megarepo_api/megarepo_error" }
@@ -40,12 +42,14 @@ mononoke_types_serialization = { version = "0.1.0", path = "../../mononoke_types
 ouroboros = "0.18.5"
 quickcheck = "1.0"
 regex = "1.11.1"
+reloader = { version = "0.1.0", path = "../../common/reloader" }
 repo_derived_data = { version = "0.1.0", path = "../../repo_attributes/repo_derived_data" }
 sha1 = "0.10.5"
 smallvec = { version = "1.15", features = ["impl_bincode", "serde", "specialization", "union"] }
 sorted_vector_map = { version = "0.2.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 thiserror = "2.0.12"
 tokio = { version = "1.47.1", features = ["full", "test-util", "tracing"] }
+tracing = { version = "0.1.41", features = ["attributes", "valuable"] }
 
 [dev-dependencies]
 async-compression = { version = "0.4.9", features = ["brotli", "bzip2", "deflate", "futures-io", "gzip", "tokio", "zlib", "zstd", "zstdmt"] }
@@ -53,7 +57,6 @@ bonsai_hg_mapping = { version = "0.1.0", path = "../../bonsai_hg_mapping" }
 bookmarks = { version = "0.1.0", path = "../../bookmarks" }
 commit_graph = { version = "0.1.0", path = "../../repo_attributes/commit_graph/commit_graph" }
 delayblob = { version = "0.1.0", path = "../../blobstore/delayblob" }
-facet = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 fbinit = { version = "0.2.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 fbinit-tokio = { version = "0.1.2", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 fixtures = { version = "0.1.0", path = "../../tests/fixtures" }

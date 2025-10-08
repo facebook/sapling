@@ -18,10 +18,12 @@ use blobstore::Loadable;
 use blobstore::LoadableError;
 use bonsai_git_mapping::BonsaiGitMapping;
 use bonsai_git_mapping::BonsaisOrGitShas;
+use cloned::cloned;
 use context::CoreContext;
 use futures::StreamExt;
 use futures::TryStreamExt;
 use futures::stream;
+use mononoke_macros::mononoke;
 use mononoke_types::Blob;
 use mononoke_types::BlobstoreKey;
 use mononoke_types::BlobstoreValue;
@@ -31,6 +33,8 @@ use mononoke_types::ThriftConvert;
 use mononoke_types::hash::Blake2;
 use mononoke_types::impl_typed_hash;
 use mononoke_types::typed_hash::IdContext;
+use reloader::Loader;
+use reloader::Reloader;
 
 use crate::BaseObject;
 use crate::GitPackfileBaseItem;
@@ -196,6 +200,108 @@ impl ThriftConvert for CGDMComponents {
 
             ..Default::default()
         }
+    }
+}
+
+#[facet::facet]
+pub struct CGDMComponentsReloader {
+    pub components: Reloader<CGDMComponents>,
+}
+
+impl CGDMComponentsReloader {
+    pub async fn from_blobstore(
+        ctx: &CoreContext,
+        blobstore: Arc<dyn Blobstore>,
+        blobstore_key: String,
+    ) -> Result<CGDMComponentsReloader> {
+        let loader = CGDMComponentsLoader {
+            ctx: ctx.clone(),
+            blobstore_without_cache: blobstore,
+            blobstore_key,
+        };
+
+        let reloader = Reloader::reload_periodically(
+            ctx.clone(),
+            move || {
+                std::time::Duration::from_secs(
+                    justknobs::get_as::<u64>("scm/mononoke:cgdm_reloading_interval_secs", None)
+                        .unwrap(),
+                )
+            },
+            loader,
+        )
+        .await?;
+
+        Ok(CGDMComponentsReloader {
+            components: reloader,
+        })
+    }
+
+    pub fn component_id(&self, cs_id: ChangesetId) -> Option<u64> {
+        self.components
+            .load()
+            .changeset_to_component_id
+            .get(&cs_id)
+            .copied()
+    }
+
+    pub fn component_changeset_count(&self, component_id: u64) -> Option<u64> {
+        self.components
+            .load()
+            .components
+            .get(&component_id)
+            .map(|component| component.changeset_count)
+    }
+
+    pub fn cgdm_id(&self, component_id: u64) -> Option<CompactedGitDeltaManifestId> {
+        self.components
+            .load()
+            .components
+            .get(&component_id)
+            .and_then(|component| component.cgdm_id.clone())
+    }
+
+    pub fn cgdm_commits_id(&self, component_id: u64) -> Option<CGDMCommitPackfileItemsId> {
+        self.components
+            .load()
+            .components
+            .get(&component_id)
+            .and_then(|component| component.cgdm_commits_id.clone())
+    }
+}
+
+pub struct CGDMComponentsLoader {
+    ctx: CoreContext,
+    blobstore_without_cache: Arc<dyn Blobstore>,
+    blobstore_key: String,
+}
+
+#[async_trait]
+impl Loader<CGDMComponents> for CGDMComponentsLoader {
+    async fn load(&mut self) -> Result<Option<CGDMComponents>> {
+        mononoke::spawn_task({
+            cloned!(self.ctx, self.blobstore_without_cache, self.blobstore_key);
+            async move {
+                tracing::info!("Started loading CGDM components");
+                let maybe_bytes =
+                    Blobstore::get(&blobstore_without_cache, &ctx, &blobstore_key).await?;
+                match maybe_bytes {
+                    Some(bytes) => {
+                        let bytes = bytes.into_raw_bytes();
+                        let cgdm_components =
+                            tokio::task::spawn_blocking(move || CGDMComponents::from_bytes(&bytes))
+                                .await??;
+                        tracing::info!(
+                            "Finished loading CGDM components ({} changesets)",
+                            cgdm_components.changeset_to_component_id.len()
+                        );
+                        Ok(Some(cgdm_components))
+                    }
+                    None => Ok(Some(Default::default())),
+                }
+            }
+        })
+        .await?
     }
 }
 
