@@ -38,7 +38,6 @@ use crate::get_edenfs_instance;
 
 #[derive(Debug, PartialEq)]
 enum TraversalStatus {
-    Continue,
     LimitReached,
     Cancelled,
     Finished,
@@ -231,89 +230,59 @@ impl InProgressTraversal {
 
     pub fn traverse_path(&mut self, path: &Path) -> Result<TraversalStatus> {
         if path.is_dir() {
-            let result = self.traverse_directory(path)?;
-            match result {
-                TraversalStatus::Continue => Ok(TraversalStatus::Finished),
-                other => Ok(other),
-            }
+            self.traverse_directory(path)
         } else {
             Ok(TraversalStatus::Finished)
         }
     }
 
     fn traverse_directory(&mut self, path: &Path) -> Result<TraversalStatus> {
-        if self.cancellation_token.is_cancelled() {
-            eprintln!(
-                "Directory traversal cancelled at dir_count={}, file_count={}",
-                self.dir_count, self.file_count
-            );
-            return Ok(TraversalStatus::Cancelled);
-        }
+        let mut stack = vec![path.to_path_buf()];
 
-        self.add_dir();
-
-        let start_time = Instant::now();
-        let read_dir_result = fs::read_dir(path);
-        let read_dir_duration = start_time.elapsed();
-
-        let entries = read_dir_result?;
-        let mut entry_count = 0;
-
-        for entry_result in entries {
+        while let Some(current_path) = stack.pop() {
             if self.cancellation_token.is_cancelled() {
-                self.add_read_dir_stats(read_dir_duration, entry_count);
                 return Ok(TraversalStatus::Cancelled);
             }
 
-            let entry = entry_result?;
-            let path = entry.path();
-            let file_type = entry.file_type()?;
-            entry_count += 1;
+            self.add_dir();
 
-            if file_type.is_dir() {
-                if file_type.is_symlink() {
-                    if self.follow_symlinks {
-                        self.add_traversed_symlink();
-                        match self.traverse_directory(&path)? {
-                            TraversalStatus::LimitReached => {
-                                self.add_read_dir_stats(read_dir_duration, entry_count);
-                                return Ok(TraversalStatus::LimitReached);
-                            }
-                            TraversalStatus::Cancelled => {
-                                self.add_read_dir_stats(read_dir_duration, entry_count);
-                                return Ok(TraversalStatus::Cancelled);
-                            }
-                            TraversalStatus::Continue => {}
-                            TraversalStatus::Finished => {}
+            let start_time = Instant::now();
+            let entries = fs::read_dir(&current_path)?;
+            let read_dir_duration = start_time.elapsed();
+
+            let mut entry_count = 0;
+
+            for entry_result in entries {
+                let entry = entry_result?;
+                let entry_path = entry.path();
+                let file_type = entry.file_type()?;
+                entry_count += 1;
+
+                if file_type.is_dir() {
+                    if file_type.is_symlink() {
+                        if self.follow_symlinks {
+                            self.add_traversed_symlink();
+                            stack.push(entry_path);
+                        } else {
+                            self.add_skipped_symlink();
                         }
                     } else {
-                        self.add_skipped_symlink();
+                        stack.push(entry_path);
                     }
-                } else {
-                    match self.traverse_directory(&path)? {
-                        TraversalStatus::LimitReached => {
-                            self.add_read_dir_stats(read_dir_duration, entry_count);
-                            return Ok(TraversalStatus::LimitReached);
-                        }
-                        TraversalStatus::Cancelled => {
-                            self.add_read_dir_stats(read_dir_duration, entry_count);
-                            return Ok(TraversalStatus::Cancelled);
-                        }
-                        TraversalStatus::Continue => {}
-                        TraversalStatus::Finished => {}
+                } else if file_type.is_file() {
+                    if self.file_count < self.max_files {
+                        self.add_file(entry_path);
+                    } else {
+                        self.add_read_dir_stats(read_dir_duration, entry_count);
+                        return Ok(TraversalStatus::LimitReached);
                     }
-                }
-            } else if file_type.is_file() {
-                if self.file_count < self.max_files {
-                    self.add_file(path);
-                } else {
-                    self.add_read_dir_stats(read_dir_duration, entry_count);
-                    return Ok(TraversalStatus::LimitReached);
                 }
             }
+
+            self.add_read_dir_stats(read_dir_duration, entry_count);
         }
-        self.add_read_dir_stats(read_dir_duration, entry_count);
-        Ok(TraversalStatus::Continue)
+
+        Ok(TraversalStatus::Finished)
     }
 }
 
