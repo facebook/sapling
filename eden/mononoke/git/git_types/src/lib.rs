@@ -16,6 +16,7 @@ pub mod thrift {
 }
 
 mod commit;
+mod compacted_delta_manifest;
 mod delta_manifest_ops;
 mod delta_manifest_v2;
 mod delta_manifest_v3;
@@ -45,6 +46,10 @@ use sha1::Digest;
 use sha1::Sha1;
 
 pub use crate::commit::MappedGitCommitId;
+pub use crate::compacted_delta_manifest::CGDMCommitPackfileItems;
+pub use crate::compacted_delta_manifest::CGDMComponents;
+pub use crate::compacted_delta_manifest::CompactedGitDeltaManifest;
+pub use crate::compacted_delta_manifest::ComponentInfo;
 pub use crate::delta_manifest_ops::GitDeltaManifestEntryOps;
 pub use crate::delta_manifest_ops::GitDeltaManifestOps;
 pub use crate::delta_manifest_ops::ObjectDeltaOps;

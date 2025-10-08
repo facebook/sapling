@@ -179,6 +179,44 @@ typedef id.Id GDMV3InstructionsChunkId
 @rust.NewType
 typedef data.LargeBinary GDMV3InstructionsChunk
 
+/// CompactedGitDeltaManifest is an optimization of GitDeltaManifest to prevent fetching a large
+/// number of small blobs when serving read requests. CGDMComponents is stored in memory and updated
+/// periodically, and represents a grouping of commits into components. Every component stores Ids
+/// that point to two blobs, one stores the list of all GitDeltaManifests for the component, and
+/// the other stores all commit packfiles items.
+
+struct CGDMComponents {
+  1: list<ComponentMapping> component_mappings;
+  2: list<ComponentInfo> components;
+}
+
+struct CompactedGitDeltaManifest {
+  1: list<GDMV3Entry> entries;
+}
+
+struct CGDMCommitPackfileItems {
+  1: list<GitPackfileBaseItem> commit_packfile_items;
+}
+
+struct ComponentMapping {
+  1: id.ChangesetId cs_id;
+  2: i64 component_id;
+}
+
+struct ComponentInfo {
+  1: i64 component_id;
+  2: i64 total_inlined_size;
+  3: i64 changeset_count;
+  4: optional CompactedGitDeltaManifestId cgdm_id;
+  5: optional CGDMCommitPackfileItemsId cgdm_commits_id;
+}
+
+@rust.NewType
+typedef id.Id CompactedGitDeltaManifestId
+
+@rust.NewType
+typedef id.Id CGDMCommitPackfileItemsId
+
 /// Struct representing the raw packfile item for base objects in Git
 @rust.Exhaustive
 struct GitPackfileBaseItem {
