@@ -6,4 +6,5 @@
  */
 
 pub mod headerless;
+pub mod metadata;
 pub mod unified;
