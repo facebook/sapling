@@ -189,12 +189,9 @@ impl RestrictedPaths {
         log_access_to_restricted_path(
             ctx,
             self.manifest_id_store.repo_id(),
-            restricted_path_roots.clone(),
+            restricted_path_roots,
             matched_acls,
-            crate::access_log::RestrictedPathAccessData::FullPath {
-                restricted_path_roots,
-                full_path: path,
-            },
+            crate::access_log::RestrictedPathAccessData::FullPath { full_path: path },
             self.acl_provider.clone(),
         )
         .await

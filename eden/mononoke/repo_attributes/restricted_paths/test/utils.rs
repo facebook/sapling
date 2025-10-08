@@ -29,7 +29,7 @@ use metaconfig_types::RestrictedPathsConfig;
 use metadata::Metadata;
 use mononoke_api::Repo as TestRepo;
 use mononoke_api::RepoContext;
-use mononoke_api_hg::HgTreeContext;
+use mononoke_api_hg::HgDataId;
 use mononoke_api_hg::RepoContextHgExt;
 use mononoke_types::NonRootMPath;
 use mononoke_types::RepositoryId;
@@ -232,7 +232,7 @@ impl RestrictedPathsTestData {
             // TODO(T239041722): list files as well to ensure access is logged when a file is requested
             .list_tree_entries(self.ctx.clone(), blobstore.clone())
             .and_then(async |(path, hg_manifest_id)| {
-                HgTreeContext::new_check_exists(hg_repo_ctx.clone(), hg_manifest_id).await?;
+                let _tree_ctx = hg_manifest_id.context(hg_repo_ctx.clone()).await?;
                 cs_ctx.path(path.clone()).await?;
                 Ok(path)
             })
