@@ -45,6 +45,7 @@ cpp_library(
     srcs = ["SaplingBackingStore.cpp"],
     headers = ["SaplingBackingStore.h"],
     deps = [
+        "fbsource//third-party/re2:re2",
         ":hg_proxy_hash",
         ":sapling_import_request",
         "//common/fb303/cpp:thread_pool_executor_counters",  # @manual
@@ -93,7 +94,6 @@ cpp_library(
     ],
     external_deps = [
         "gflags",
-        "re2",
     ],
 )
 
