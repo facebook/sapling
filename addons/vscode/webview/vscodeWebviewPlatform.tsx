@@ -17,6 +17,8 @@ import {registerCleanup} from 'isl/src/utils';
 import {lazy} from 'react';
 import {vscodeApi} from './vscodeApi';
 
+import './uncaughtExceptions';
+
 const VSCodeSettings = lazy(() => import('./VSCodeSettings'));
 const AddMoreCwdsHint = lazy(() => import('./AddMoreCwdsHint'));
 
@@ -232,14 +234,6 @@ function isTextInputToPreserveFocusFor(el: Element | null) {
     return true;
   }
   return false;
-}
-
-declare global {
-  interface NodeModule {
-    hot?: {
-      decline(): void;
-    };
-  }
 }
 
 // We can't allow this file to hot reload, since it creates global state.
