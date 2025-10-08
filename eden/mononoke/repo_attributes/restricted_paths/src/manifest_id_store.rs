@@ -45,6 +45,7 @@ pub struct ManifestId(SmallVec<[u8; 32]>);
 #[derive(Clone, Debug, PartialEq, Eq, Hash, EnumString, EnumDisplay)]
 pub enum ManifestType {
     Hg,
+    HgAugmented,
 }
 
 /// Entry representing a restricted path with its manifest type and id
@@ -304,11 +305,13 @@ impl From<ManifestType> for Value {
 }
 
 const HG: &[u8] = b"Hg";
+const HG_AUGMENTED: &[u8] = b"HgAugmented";
 
 impl ConvIr<ManifestType> for ManifestType {
     fn new(v: Value) -> FromValueResult<Self> {
         match v {
             Value::Bytes(ref b) if b == HG => Ok(ManifestType::Hg),
+            Value::Bytes(ref b) if b == HG_AUGMENTED => Ok(ManifestType::HgAugmented),
             v => Err(FromValueError(v)),
         }
     }
