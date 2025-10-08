@@ -54,6 +54,10 @@ pub async fn unified<R: MononokeRepo>(
         }
     )?;
 
+    if base_file.is_none() && other_file.is_none() {
+        return Err(DiffError::empty_inputs());
+    }
+
     let is_binary = xdiff::file_is_binary(&base_file) || xdiff::file_is_binary(&other_file);
 
     let xdiff_opts = xdiff::DiffOpts::from(options);
@@ -373,13 +377,14 @@ mod tests {
         assert!(diff_str.contains("-line2"));
         assert!(!diff.is_binary);
 
-        // Test None vs None - should show no difference
-        let diff = unified(&ctx, &repo_ctx, None, None, options).await?;
-        let diff_str = String::from_utf8_lossy(&diff.raw_diff);
-        // Empty diff between two empty files
-        assert!(diff_str.is_empty() || diff_str.trim().is_empty());
-        assert!(!diff.is_binary);
-
+        // Test None vs None - should return an error
+        let result = unified(&ctx, &repo_ctx, None, None, options).await;
+        assert!(result.is_err());
+        let error_message = result.unwrap_err().to_string();
+        assert_eq!(
+            error_message,
+            "All inputs to the headerless diff were empty"
+        );
         Ok(())
     }
 
