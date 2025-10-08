@@ -11,6 +11,7 @@ use std::fmt::Display;
 use anyhow::Result;
 use async_trait::async_trait;
 use context::CoreContext;
+use derivative::Derivative;
 use metaconfig_types::RemoteDatabaseConfig;
 use metaconfig_types::RemoteMetadataDatabaseConfig;
 use mononoke_types::NonRootMPath;
@@ -39,21 +40,34 @@ use strum::EnumString;
 type FromValueResult<T> = Result<T, FromValueError>;
 
 // Create a newtype wrapper for SmallVec<[u8; 32]> to implement SQL traits
-#[derive(Clone, PartialEq, Eq, Hash)]
+#[derive(Clone, PartialEq, Eq, Hash, PartialOrd, Ord)]
 pub struct ManifestId(SmallVec<[u8; 32]>);
 
-#[derive(Clone, Debug, PartialEq, Eq, Hash, EnumString, EnumDisplay)]
+#[derive(
+    Clone,
+    Debug,
+    PartialEq,
+    Eq,
+    Hash,
+    EnumString,
+    EnumDisplay,
+    PartialOrd,
+    Ord
+)]
 pub enum ManifestType {
     Hg,
     HgAugmented,
 }
 
 /// Entry representing a restricted path with its manifest type and id
-#[derive(Clone, Debug, PartialEq, Eq, Hash)]
+#[derive(Clone, PartialEq, Eq, Hash, PartialOrd, Ord, Derivative)]
+#[derivative(Debug)]
 pub struct RestrictedPathManifestIdEntry {
     manifest_type: ManifestType,
     manifest_id: ManifestId,
+    #[derivative(Debug(format_with = "fmt_path_bytes"))]
     path: PathBytes,
+    #[derivative(Debug(format_with = "fmt_path_hash_bytes"))]
     path_hash: PathHashBytes,
     // TODO(T239041722): add changeset id to log changeset to which the manifest belongs to
 }
@@ -435,4 +449,15 @@ impl OptionalTryFromRowField for ManifestId {
     fn try_from_opt(field: RowField) -> Result<Option<Self>, ValueError> {
         opt_try_from_rowfield(field)
     }
+}
+
+fn fmt_path_bytes(path: &PathBytes, f: &mut fmt::Formatter) -> fmt::Result {
+    match std::str::from_utf8(&path.0) {
+        Ok(path_str) => write!(f, "\"{}\"", path_str),
+        Err(_) => write!(f, "PathBytes({:?})", path.0),
+    }
+}
+
+fn fmt_path_hash_bytes(path_hash: &PathHashBytes, f: &mut fmt::Formatter) -> fmt::Result {
+    write!(f, "\"{}\"", hex::encode(&path_hash.0))
 }
