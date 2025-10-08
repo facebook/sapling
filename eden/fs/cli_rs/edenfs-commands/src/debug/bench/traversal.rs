@@ -32,84 +32,9 @@ use super::types::Benchmark;
 use super::types::BenchmarkType;
 use crate::get_edenfs_instance;
 
-fn setup_cancellation() -> CancellationToken {
-    let token = CancellationToken::new();
-
-    let token_clone = token.clone();
-    if let Err(err) = ctrlc::set_handler(move || {
-        token_clone.cancel();
-    }) {
-        eprintln!("Failed to set Ctrl+C handler: {}", err);
-    }
-
-    token
-}
-
-/// Add traversal metrics to a benchmark result
-fn add_traversal_metrics(result: &mut Benchmark, ft: &FinalizedTraversal) -> Result<()> {
-    if ft.duration <= 0.0 {
-        return Err(anyhow::anyhow!("Duration is less or equal to zero."));
-    }
-
-    let files_per_second = ft.file_count as f64 / ft.duration;
-
-    let avg_read_dir_latency = if ft.dir_count > 0 {
-        ft.total_read_dir_time.as_secs_f64() * 1000.0 / ft.dir_count as f64
-    } else {
-        0.0
-    };
-
-    let avg_dir_size = if ft.dir_count > 0 {
-        ft.total_dir_entries as f64 / ft.dir_count as f64
-    } else {
-        0.0
-    };
-
-    result.add_metric(
-        "Traversal throughput",
-        files_per_second,
-        types::Unit::FilesPerSecond,
-        Some(0),
-    );
-    result.add_metric(
-        "Average read_dir() latency",
-        avg_read_dir_latency,
-        types::Unit::Ms,
-        Some(4),
-    );
-    result.add_metric(
-        "Average directory size",
-        avg_dir_size,
-        types::Unit::Files,
-        Some(2),
-    );
-    result.add_metric(
-        "Total files scanned",
-        ft.file_count as f64,
-        types::Unit::Files,
-        Some(0),
-    );
-    result.add_metric(
-        "Total directories",
-        ft.dir_count as f64,
-        types::Unit::Dirs,
-        Some(0),
-    );
-    result.add_metric(
-        "Total symlinks skipped",
-        ft.symlink_skipped_count as f64,
-        types::Unit::Symlinks,
-        Some(0),
-    );
-    result.add_metric(
-        "Total symlinks traversed",
-        ft.symlink_traversed_count as f64,
-        types::Unit::Symlinks,
-        Some(0),
-    );
-
-    Ok(())
-}
+// ============================================================================
+// Type Definitions
+// ============================================================================
 
 #[derive(Debug, PartialEq)]
 enum TraversalStatus {
@@ -136,7 +61,6 @@ struct InProgressTraversal {
     cancellation_token: CancellationToken,
 }
 
-// Define a struct for the results from the finalize step
 #[derive(Debug)]
 pub struct FinalizedTraversal {
     file_count: usize,
@@ -148,6 +72,10 @@ pub struct FinalizedTraversal {
     total_read_dir_time: std::time::Duration,
     total_dir_entries: usize,
 }
+
+// ============================================================================
+// Type Implementations
+// ============================================================================
 
 impl InProgressTraversal {
     fn new(
@@ -166,7 +94,6 @@ impl InProgressTraversal {
                     .template("[{elapsed_precise}] {msg}")
                     .unwrap(),
             );
-            // Set initial message with max files if limit is set
             let initial_files_display = if max_files == usize::MAX {
                 "0".to_string()
             } else {
@@ -179,7 +106,6 @@ impl InProgressTraversal {
             Some(pb)
         };
 
-        // Only initialize system monitoring if resource usage monitoring is enabled
         let (system, pid) = if resource_usage {
             let mut sys = System::new_all();
             let process_id = sysinfo::get_current_pid().expect("Failed to get current process ID");
@@ -250,7 +176,6 @@ impl InProgressTraversal {
 
             let files_per_second = self.file_count as f64 / elapsed;
 
-            // Format file count with max files if limit is set
             let files_display = if self.max_files == usize::MAX {
                 self.file_count.to_string()
             } else {
@@ -317,7 +242,6 @@ impl InProgressTraversal {
     }
 
     fn traverse_directory(&mut self, path: &Path) -> Result<TraversalStatus> {
-        // Check for cancellation at the start of each directory traversal
         if self.cancellation_token.is_cancelled() {
             eprintln!(
                 "Directory traversal cancelled at dir_count={}, file_count={}",
@@ -336,7 +260,6 @@ impl InProgressTraversal {
         let mut entry_count = 0;
 
         for entry_result in entries {
-            // Check for cancellation while iterating on director entries
             if self.cancellation_token.is_cancelled() {
                 self.add_read_dir_stats(read_dir_duration, entry_count);
                 return Ok(TraversalStatus::Cancelled);
@@ -394,6 +317,10 @@ impl InProgressTraversal {
     }
 }
 
+// ============================================================================
+// Public Functions
+// ============================================================================
+
 pub async fn bench_traversal_thrift_read(
     dir_path: &str,
     max_files: usize,
@@ -408,7 +335,6 @@ pub async fn bench_traversal_thrift_read(
         return Err(anyhow::anyhow!("Invalid directory path: {}", dir_path));
     }
 
-    // Set up signal handling for graceful interruption
     let cancellation_token = setup_cancellation();
 
     let mut in_progress_traversal = InProgressTraversal::new(
@@ -421,7 +347,6 @@ pub async fn bench_traversal_thrift_read(
 
     match in_progress_traversal.traverse_path(path)? {
         TraversalStatus::Cancelled => {
-            // Interrupted during traversal - return early with just traversal metrics
             let ft = in_progress_traversal.finalize();
             let mut result = Benchmark::new(BenchmarkType::FsTraversal);
             add_traversal_metrics(&mut result, &ft)?;
@@ -435,7 +360,6 @@ pub async fn bench_traversal_thrift_read(
     let mut result = Benchmark::new(BenchmarkType::FsTraversal);
     add_traversal_metrics(&mut result, &ft)?;
 
-    // Return early if skip_read is true
     if skip_read {
         return Ok(result);
     }
@@ -458,10 +382,9 @@ pub async fn bench_traversal_thrift_read(
 
     let client = get_edenfs_instance().get_client();
     for path in ft.file_paths {
-        // Check for cancellation during file reading
         if cancellation_token.is_cancelled() {
             if let Some(pb) = &read_progress {
-                pb.finish_and_clear(); // Immediate cleanup
+                pb.finish_and_clear();
             }
             break;
         }
@@ -477,7 +400,6 @@ pub async fn bench_traversal_thrift_read(
         let fbsource_path = fbsource_path
             .ok_or_else(|| anyhow::anyhow!("fbsource path is required for thrift IO"))?;
 
-        // Convert both paths to absolute paths
         let repo_path = PathBuf::from(fbsource_path)
             .canonicalize()
             .map_err(|e| anyhow::anyhow!("Failed to canonicalize fbsource path: {}", e))?;
@@ -485,7 +407,6 @@ pub async fn bench_traversal_thrift_read(
             .canonicalize()
             .map_err(|e| anyhow::anyhow!("Failed to canonicalize file path: {}", e))?;
 
-        // Now strip the prefix using absolute paths
         let rel_file_path = abs_path
             .strip_prefix(&repo_path)
             .map_err(|_| {
@@ -582,7 +503,6 @@ pub async fn bench_traversal_thrift_read(
     Ok(result)
 }
 
-/// Runs the filesystem traversal benchmark and returns the benchmark results
 pub fn bench_traversal_fs_read(
     dir_path: &str,
     max_files: usize,
@@ -596,7 +516,6 @@ pub fn bench_traversal_fs_read(
         return Err(anyhow::anyhow!("Invalid directory path: {}", dir_path));
     }
 
-    // Set up signal handling for graceful interruption
     let cancellation_token = setup_cancellation();
 
     let mut in_progress_traversal = InProgressTraversal::new(
@@ -609,7 +528,6 @@ pub fn bench_traversal_fs_read(
 
     match in_progress_traversal.traverse_path(path)? {
         TraversalStatus::Cancelled => {
-            // Interrupted during traversal - return early with just traversal metrics
             let ft = in_progress_traversal.finalize();
             let mut result = Benchmark::new(BenchmarkType::FsTraversal);
             add_traversal_metrics(&mut result, &ft)?;
@@ -623,7 +541,6 @@ pub fn bench_traversal_fs_read(
     let mut result = Benchmark::new(BenchmarkType::FsTraversal);
     add_traversal_metrics(&mut result, &ft)?;
 
-    // Return early if skip_read is true
     if skip_read {
         return Ok(result);
     }
@@ -647,10 +564,9 @@ pub fn bench_traversal_fs_read(
     let mut buffer = Vec::with_capacity(types::BYTES_IN_MEGABYTE);
 
     for path in ft.file_paths {
-        // Check for cancellation during file reading
         if cancellation_token.is_cancelled() {
             if let Some(pb) = &read_progress {
-                pb.finish_and_clear(); // Immediate cleanup
+                pb.finish_and_clear();
             }
             break;
         }
@@ -774,4 +690,86 @@ pub fn get_thrift_request(
         ..Default::default()
     };
     Ok(req)
+}
+
+// ============================================================================
+// Private Helper Functions
+// ============================================================================
+
+fn setup_cancellation() -> CancellationToken {
+    let token = CancellationToken::new();
+
+    let token_clone = token.clone();
+    if let Err(err) = ctrlc::set_handler(move || {
+        token_clone.cancel();
+    }) {
+        eprintln!("Failed to set Ctrl+C handler: {}", err);
+    }
+
+    token
+}
+
+fn add_traversal_metrics(result: &mut Benchmark, ft: &FinalizedTraversal) -> Result<()> {
+    if ft.duration <= 0.0 {
+        return Err(anyhow::anyhow!("Duration is less or equal to zero."));
+    }
+
+    let files_per_second = ft.file_count as f64 / ft.duration;
+
+    let avg_read_dir_latency = if ft.dir_count > 0 {
+        ft.total_read_dir_time.as_secs_f64() * 1000.0 / ft.dir_count as f64
+    } else {
+        0.0
+    };
+
+    let avg_dir_size = if ft.dir_count > 0 {
+        ft.total_dir_entries as f64 / ft.dir_count as f64
+    } else {
+        0.0
+    };
+
+    result.add_metric(
+        "Traversal throughput",
+        files_per_second,
+        types::Unit::FilesPerSecond,
+        Some(0),
+    );
+    result.add_metric(
+        "Average read_dir() latency",
+        avg_read_dir_latency,
+        types::Unit::Ms,
+        Some(4),
+    );
+    result.add_metric(
+        "Average directory size",
+        avg_dir_size,
+        types::Unit::Files,
+        Some(2),
+    );
+    result.add_metric(
+        "Total files scanned",
+        ft.file_count as f64,
+        types::Unit::Files,
+        Some(0),
+    );
+    result.add_metric(
+        "Total directories",
+        ft.dir_count as f64,
+        types::Unit::Dirs,
+        Some(0),
+    );
+    result.add_metric(
+        "Total symlinks skipped",
+        ft.symlink_skipped_count as f64,
+        types::Unit::Symlinks,
+        Some(0),
+    );
+    result.add_metric(
+        "Total symlinks traversed",
+        ft.symlink_traversed_count as f64,
+        types::Unit::Symlinks,
+        Some(0),
+    );
+
+    Ok(())
 }
