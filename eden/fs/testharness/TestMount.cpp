@@ -803,6 +803,7 @@ ImmediateFuture<Unit> TestMount::loadAllInodesFuture(
   std::vector<PathComponent> childNames;
   {
     auto contents = treeInode->getContents().rlock();
+    childNames.reserve(contents->entries.size());
     for (const auto& entry : contents->entries) {
       childNames.emplace_back(entry.first);
     }
@@ -810,6 +811,7 @@ ImmediateFuture<Unit> TestMount::loadAllInodesFuture(
 
   // Now start all the loads.
   std::vector<ImmediateFuture<Unit>> childFutures;
+  childFutures.reserve(childNames.size());
   for (const auto& name : childNames) {
     auto childFuture =
         treeInode->getOrLoadChild(name, ObjectFetchContext::getNullContext())

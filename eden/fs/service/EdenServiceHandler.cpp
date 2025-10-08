@@ -3513,6 +3513,7 @@ EdenServiceHandler::getEntryAttributes(
                   reqBitmask,
                   reqScope](auto&&) mutable {
         vector<ImmediateFuture<EntryAttributes>> futures;
+        futures.reserve(paths.size());
         for (const auto& path : paths) {
           futures.emplace_back(getEntryAttributesForPath(
               edenMount, reqBitmask, reqScope, path, fetchContext));

@@ -2871,6 +2871,7 @@ void EdenServer::refreshBackingStore() {
   std::vector<shared_ptr<BackingStore>> backingStores;
   {
     auto lockedStores = backingStores_.wlock();
+    backingStores.reserve(lockedStores->size());
     for (auto& [key, backingStore] : *lockedStores) {
       backingStores.emplace_back(backingStore);
     }

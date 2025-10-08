@@ -614,6 +614,7 @@ IOBuf TakeoverData::serializeThrift(uint64_t protocolCapabilities) {
   serializeHeader(protocolCapabilities, bufQ);
 
   std::vector<SerializedMountInfo> serializedMounts;
+  serializedMounts.reserve(mountPoints.size());
   for (const auto& mount : mountPoints) {
     auto mountProtocol = getTakeoverMountProtocol(mount);
 

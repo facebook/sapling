@@ -1823,6 +1823,7 @@ SaplingBackingStore::getGlobFiles(
   if (globFilesResult.hasValue()) {
     std::vector<std::string> files;
     auto globFiles = globFilesResult.value()->files;
+    files.reserve(globFiles.size());
     for (auto& file : globFiles) {
       files.emplace_back(file);
     }

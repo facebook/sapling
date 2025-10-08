@@ -867,6 +867,7 @@ ImmediateFuture<SetPathObjectIdResultAndTimes> EdenMount::setPathsToObjectIds(
 
     std::vector<ImmediateFuture<shared_ptr<TreeEntry>>> getTreeEntryFutures;
     if (!setOnRoot) {
+      getTreeEntryFutures.reserve(objs.size());
       for (auto& object : objs) {
         ImmediateFuture<shared_ptr<TreeEntry>> getTreeEntryFuture =
             objectStore_->getTreeEntryForObjectId(
