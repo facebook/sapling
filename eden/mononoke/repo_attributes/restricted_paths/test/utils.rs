@@ -24,7 +24,9 @@ use futures::TryStreamExt;
 use itertools::Itertools;
 use manifest::ManifestOps;
 use maplit::hashmap;
+use mercurial_derivation::RootHgAugmentedManifestId;
 use mercurial_derivation::derive_hg_changeset::DeriveHgChangeset;
+use mercurial_types::HgAugmentedManifestId;
 use metaconfig_types::RestrictedPathsConfig;
 use metadata::Metadata;
 use mononoke_api::Repo as TestRepo;
@@ -40,6 +42,7 @@ use permission_checker::MononokeIdentity;
 use permission_checker::MononokeIdentitySet;
 use pretty_assertions::assert_eq;
 use repo_blobstore::RepoBlobstoreRef;
+use repo_derived_data::RepoDerivedDataRef;
 use restricted_paths::SqlRestrictedPathsManifestIdStoreBuilder;
 use restricted_paths::*;
 use sql_construct::SqlConstruct;
@@ -194,18 +197,12 @@ impl RestrictedPathsTestData {
             commit_ctx = commit_ctx.add_file(path.as_str(), file_content.to_string());
         }
 
+        let blobstore = Arc::new(self.repo.repo_blobstore().clone());
+
         let bcs_id = commit_ctx.commit().await?;
 
         // Get the hg changeset id for the commit, to trigger hg manifest derivation
         let hg_cs_id = self.repo.derive_hg_changeset(&self.ctx, bcs_id).await?;
-
-        // Get all entries in the manifest id store
-        let manifest_id_store_entries = self
-            .repo
-            .restricted_paths()
-            .manifest_id_store()
-            .get_all_entries(&self.ctx)
-            .await?;
 
         let repo = Arc::new(self.repo.clone());
         let repo_ctx = RepoContext::new_test(self.ctx.clone(), repo.clone()).await?;
@@ -223,20 +220,42 @@ impl RestrictedPathsTestData {
 
         // Derive hg changeset to add entry for restricted paths
         let hg_cs = hg_cs_id.load(&self.ctx, self.repo.repo_blobstore()).await?;
-        let blobstore = Arc::new(self.repo.repo_blobstore().clone());
 
         // Then get the root manifest id, get all the trees and run
         // `HgTreeContext::new_check_exists` to simulate a directory access
-        let hg_manif_id = hg_cs.manifestid();
-        let _all_directories = hg_manif_id
+        let hg_mfid = hg_cs.manifestid();
+
+        // Derive HgAugmentedManifest
+        let _root_hg_aug_manifest_id = self
+            .repo
+            .repo_derived_data()
+            .derive::<RootHgAugmentedManifestId>(&self.ctx, bcs_id)
+            .await?;
+
+        let _all_directories = hg_mfid
             // TODO(T239041722): list files as well to ensure access is logged when a file is requested
             .list_tree_entries(self.ctx.clone(), blobstore.clone())
             .and_then(async |(path, hg_manifest_id)| {
+                // Access HgManifest
                 let _tree_ctx = hg_manifest_id.context(hg_repo_ctx.clone()).await?;
+                let hg_aug: HgAugmentedManifestId = hg_manifest_id.into();
+                // Access HgAugmentedManifest
+                let _aug_tree_ctx = hg_aug
+                    .context(hg_repo_ctx.clone())
+                    .await?
+                    .ok_or(anyhow!("No HgAugmentedManifest for path {path:?}"))?;
                 cs_ctx.path(path.clone()).await?;
                 Ok(path)
             })
             .try_collect::<Vec<_>>()
+            .await?;
+
+        // Get all entries in the manifest id store
+        let manifest_id_store_entries = self
+            .repo
+            .restricted_paths()
+            .manifest_id_store()
+            .get_all_entries(&self.ctx)
             .await?;
 
         // Access is logged asynchronously, so wait for a bit before reading
@@ -248,8 +267,17 @@ impl RestrictedPathsTestData {
         println!("scuba_logs: {scuba_logs:#?}");
 
         // Verify expectations if they were set
-        if let Some(expected_manifest_entries) = &self.expected_manifest_entries {
-            assert_eq!(manifest_id_store_entries, *expected_manifest_entries);
+        if let Some(expected_manifest_entries) = self.expected_manifest_entries.clone() {
+            assert_eq!(
+                manifest_id_store_entries
+                    .into_iter()
+                    .sorted()
+                    .collect::<Vec<_>>(),
+                expected_manifest_entries
+                    .into_iter()
+                    .sorted()
+                    .collect::<Vec<_>>()
+            );
         }
 
         if let Some(expected_scuba_logs) = &self.expected_scuba_logs {

@@ -38,12 +38,14 @@ itertools = "0.14.0"
 manifest = { version = "0.1.0", path = "../../manifest" }
 maplit = "1.0"
 mercurial_derivation = { version = "0.1.0", path = "../../derived_data/mercurial_derivation" }
+mercurial_types = { version = "0.1.0", path = "../../mercurial/types" }
 metadata = { version = "0.1.0", path = "../../common/metadata" }
 mononoke_api = { version = "0.1.0", path = "../../mononoke_api" }
 mononoke_api_hg = { version = "0.1.0", path = "../../mononoke_api_hg" }
 mononoke_macros = { version = "0.1.0", path = "../../mononoke_macros" }
 pretty_assertions = { version = "1.2", features = ["alloc"], default-features = false }
 repo_blobstore = { version = "0.1.0", path = "../repo_blobstore" }
+repo_derived_data = { version = "0.1.0", path = "../repo_derived_data" }
 sapling-clientinfo = { version = "0.1.0", path = "../../../scm/lib/clientinfo" }
 serde_json = { version = "1.0.140", features = ["alloc", "float_roundtrip", "raw_value", "unbounded_depth"] }
 tempfile = "3.22"
