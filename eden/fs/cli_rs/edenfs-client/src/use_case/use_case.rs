@@ -9,6 +9,7 @@ use std::path::Path;
 use std::path::PathBuf;
 
 use remote_loader::get_remote_configs;
+use strum::EnumString;
 use strum::IntoStaticStr;
 
 use crate::use_case::helpers;
@@ -24,7 +25,7 @@ const CONFIG_HASH_INDEX: &str = "scm_usecases_current_config_hash";
 const CONFIG_UP_TO_DATE_INDEX: &str = "scm_usecases_uptodate";
 const CONFIG_INDEX: &str = "scm_usecases_config";
 
-#[derive(Clone, Copy, Debug, Eq, IntoStaticStr, Hash, PartialEq)]
+#[derive(Clone, Copy, Debug, Eq, EnumString, IntoStaticStr, Hash, PartialEq)]
 #[strum(serialize_all = "kebab_case")]
 #[repr(u32)]
 pub enum UseCaseId {

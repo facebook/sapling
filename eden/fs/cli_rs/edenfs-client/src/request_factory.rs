@@ -16,7 +16,7 @@ use tokio::task::JoinSet;
 use crate::client::EdenFsClient;
 
 pub(crate) type RequestParam = Box<Arc<EdenFsClient>>;
-pub(crate) type RequestResult = Box<(dyn Future<Output = Result<()>> + Send)>;
+pub(crate) type RequestResult = Box<dyn Future<Output = Result<()>> + Send>;
 
 /// Each thrift endpoint that we want to stress test will have a corresponding request structure.
 /// To implement stress testing for a type, you simply have to implement the RequestFactory trait

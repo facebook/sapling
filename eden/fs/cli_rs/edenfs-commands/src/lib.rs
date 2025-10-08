@@ -10,6 +10,7 @@
 use std::fs::File;
 use std::io::BufReader;
 use std::path::PathBuf;
+use std::str::FromStr;
 use std::sync::OnceLock;
 
 use anyhow::Context;
@@ -59,17 +60,23 @@ pub(crate) fn get_edenfs_instance() -> &'static EdenFsInstance {
         .expect("EdenFsInstance is not initialized")
 }
 
-fn init_edenfs_instance(config_dir: PathBuf, etc_eden_dir: PathBuf, home_dir: Option<PathBuf>) {
+fn init_edenfs_instance(
+    config_dir: PathBuf,
+    etc_eden_dir: PathBuf,
+    home_dir: Option<PathBuf>,
+    use_case_id: UseCaseId,
+) {
     event!(
         Level::TRACE,
         ?config_dir,
         ?etc_eden_dir,
         ?home_dir,
+        ?use_case_id,
         "Creating EdenFsInstance"
     );
     EDENFS_INSTANCE
         .set(EdenFsInstance::new(
-            UseCaseId::EdenFsCtl,
+            use_case_id,
             config_dir,
             etc_eden_dir,
             home_dir,
@@ -109,6 +116,13 @@ pub struct MainCommand {
 
     #[clap(subcommand)]
     pub subcommand: TopLevelSubcommand,
+
+    #[clap(
+        global = true,
+        long,
+        help = "The use case for the CLI command. See https://fburl.com/code/98v1jxgk for valid use cases."
+    )]
+    use_case: Option<String>,
 }
 
 /// The first level of edenfsctl subcommands.
@@ -265,13 +279,25 @@ impl MainCommand {
     async fn dispatch(self) -> Result<ExitCode> {
         event!(Level::TRACE, cmd = ?self, "Dispatching");
 
-        init_edenfs_instance(
-            get_config_dir(&self.config_dir, &self.subcommand.get_mount_path_override())?,
-            get_etc_eden_dir(&self.etc_eden_dir),
-            get_home_dir(&self.home_dir),
-        );
-        // Use get_edenfs_instance() to access the instance from now on
-        self.subcommand.run().await
+        let use_case_string = self.use_case.unwrap_or_else(|| "edenfsctl".to_string());
+        let use_case_id = UseCaseId::from_str(&use_case_string);
+
+        match use_case_id {
+            Ok(use_case_id) => {
+                init_edenfs_instance(
+                    get_config_dir(&self.config_dir, &self.subcommand.get_mount_path_override())?,
+                    get_etc_eden_dir(&self.etc_eden_dir),
+                    get_home_dir(&self.home_dir),
+                    use_case_id,
+                );
+                // Use get_edenfs_instance() to access the instance from now on
+                self.subcommand.run().await
+            }
+            Err(_) => {
+                eprintln!("Unknown use case: {}", use_case_string);
+                Ok(1)
+            }
+        }
     }
 }
 
