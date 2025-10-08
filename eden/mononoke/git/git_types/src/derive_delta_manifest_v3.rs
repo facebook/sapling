@@ -102,7 +102,7 @@ async fn derive_single(
     )?;
 
     let entries = if parent_trees.is_empty() {
-        gdm_v3_entries_root(ctx, blobstore, current_tree).await?
+        gdm_v3_entries_root(ctx, blobstore, config, current_tree).await?
     } else {
         gdm_v3_entries_non_root(ctx, blobstore, config, current_tree, parent_trees).await?
     };
@@ -123,6 +123,7 @@ async fn derive_single(
 async fn gdm_v3_entries_root(
     ctx: &CoreContext,
     blobstore: &Arc<dyn Blobstore>,
+    config: &GitDeltaManifestV3Config,
     current_tree: GitTreeId,
 ) -> Result<Vec<GDMV3Entry>> {
     // For root commits we store an entry for each object in the tree with
@@ -139,8 +140,27 @@ async fn gdm_v3_entries_root(
             if entry.is_submodule() {
                 return Ok(None);
             }
+
+            let inlined_bytes = {
+                let new_object_bytes = fetch_git_object_bytes(
+                    ctx,
+                    blobstore.clone(),
+                    &entry.identifier()?,
+                    HeaderState::Included,
+                )
+                .await?;
+
+                if new_object_bytes.len() <= config.max_inlined_object_size {
+                    let packfile_item: GitPackfileBaseItem =
+                        BaseObject::new(new_object_bytes)?.try_into()?;
+                    Some(packfile_item.into_blobstore_bytes().into_bytes())
+                } else {
+                    None
+                }
+            };
+
             let full_object =
-                GDMV3ObjectEntry::from_tree_entry(ctx, blobstore, &entry, None).await?;
+                GDMV3ObjectEntry::from_tree_entry(ctx, blobstore, &entry, inlined_bytes).await?;
             Ok(Some(GDMV3Entry {
                 path,
                 full_object,
