@@ -75,6 +75,7 @@ rust_binary(
         "//eden/mononoke/server/context:context",
         "//eden/mononoke/time_window_counter:time_window_counter",
         "//eden/scm/lib/clientinfo:clientinfo",
+        "//eden/scm/lib/repo/url:repourl",
     ],
 )
 

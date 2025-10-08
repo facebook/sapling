@@ -56,6 +56,7 @@ use openssl::ssl::SslFiletype;
 use openssl::ssl::SslMethod;
 use repo_authorization::AuthorizationContext;
 use repo_permission_checker::RepoPermissionCheckerRef;
+use repourl::encode_repo_name;
 use slog::Logger;
 use slog::info;
 use tokio::runtime::Handle;
@@ -477,7 +478,10 @@ impl UriBuilder {
         self.pick_uri()?
             .build(format_args!(
                 "{}/upload/{}/{}?server_hostname={}",
-                &self.repository, object.oid, object.size, self.server_hostname,
+                encode_repo_name(&self.repository),
+                object.oid,
+                object.size,
+                self.server_hostname,
             ))
             .map_err(|e| ErrorKind::UriBuilderFailed("upload_uri", e))
     }
@@ -486,7 +490,9 @@ impl UriBuilder {
         self.pick_uri()?
             .build(format_args!(
                 "{}/download/{}?server_hostname={}",
-                &self.repository, content_id, self.server_hostname
+                encode_repo_name(&self.repository),
+                content_id,
+                self.server_hostname
             ))
             .map_err(|e| ErrorKind::UriBuilderFailed("download_uri", e))
     }
@@ -500,7 +506,7 @@ impl UriBuilder {
         self.pick_uri()?
             .build(format_args!(
                 "{}/download/{}?routing={}&server_hostname={}&tpc={}",
-                &self.repository,
+                encode_repo_name(&self.repository),
                 content_id,
                 routing_key,
                 self.server_hostname,
@@ -618,7 +624,7 @@ mod test {
             upstream_uri.map(|v| v.to_string()),
         )?;
         Ok(UriBuilder {
-            repository: "repo123".to_string(),
+            repository: "repo123/blah".to_string(),
             server: Arc::new(server),
             host,
             server_hostname: Arc::new(SERVER_HOSTNAME.to_string()),
@@ -729,7 +735,11 @@ mod test {
         )?;
         assert_eq!(
             b.upload_uri(&obj()?)?.to_string(),
-            build_url("http://foo.com/repo123/upload", ONES_HASH, Some(SIZE)),
+            build_url(
+                "http://foo.com/repo123%2Fblah/upload",
+                ONES_HASH,
+                Some(SIZE)
+            ),
         );
         Ok(())
     }
@@ -743,7 +753,11 @@ mod test {
         )?;
         assert_eq!(
             b.upload_uri(&obj()?)?.to_string(),
-            build_url("http://foo.com/repo123/upload", ONES_HASH, Some(SIZE)),
+            build_url(
+                "http://foo.com/repo123%2Fblah/upload",
+                ONES_HASH,
+                Some(SIZE)
+            ),
         );
         Ok(())
     }
@@ -757,7 +771,11 @@ mod test {
         )?;
         assert_eq!(
             b.upload_uri(&obj()?)?.to_string(),
-            build_url("http://foo.com/bar/repo123/upload", ONES_HASH, Some(SIZE)),
+            build_url(
+                "http://foo.com/bar/repo123%2Fblah/upload",
+                ONES_HASH,
+                Some(SIZE)
+            ),
         );
         Ok(())
     }
@@ -772,7 +790,11 @@ mod test {
         assert_eq!(
             b.upload_uri(&obj()?)?.to_string(),
             //format!("http://foo.com/bar/repo123/upload/{}/{}", ONES_HASH, SIZE),
-            build_url("http://foo.com/bar/repo123/upload", ONES_HASH, Some(SIZE)),
+            build_url(
+                "http://foo.com/bar/repo123%2Fblah/upload",
+                ONES_HASH,
+                Some(SIZE)
+            ),
         );
         Ok(())
     }
@@ -786,7 +808,7 @@ mod test {
         )?;
         assert_eq!(
             b.download_uri(&content_id()?)?.to_string(),
-            build_url("http://foo.com/repo123/download", ONES_HASH, None),
+            build_url("http://foo.com/repo123%2Fblah/download", ONES_HASH, None),
         );
         Ok(())
     }
@@ -800,7 +822,7 @@ mod test {
         )?;
         assert_eq!(
             b.download_uri(&content_id()?)?.to_string(),
-            build_url("http://foo.com/repo123/download", ONES_HASH, None),
+            build_url("http://foo.com/repo123%2Fblah/download", ONES_HASH, None),
         );
         Ok(())
     }
@@ -814,7 +836,11 @@ mod test {
         )?;
         assert_eq!(
             b.download_uri(&content_id()?)?.to_string(),
-            build_url("http://foo.com/bar/repo123/download", ONES_HASH, None),
+            build_url(
+                "http://foo.com/bar/repo123%2Fblah/download",
+                ONES_HASH,
+                None
+            ),
         );
         Ok(())
     }
@@ -828,7 +854,11 @@ mod test {
         )?;
         assert_eq!(
             b.download_uri(&content_id()?)?.to_string(),
-            build_url("http://foo.com/bar/repo123/download", ONES_HASH, None),
+            build_url(
+                "http://foo.com/bar/repo123%2Fblah/download",
+                ONES_HASH,
+                None
+            ),
         );
         Ok(())
     }
@@ -848,7 +878,7 @@ mod test {
             )?
             .to_string(),
             format!(
-                "http://foo.com/repo123/download/{}?routing={}&server_hostname={}&tpc=1",
+                "http://foo.com/repo123%2Fblah/download/{}?routing={}&server_hostname={}&tpc=1",
                 ONES_HASH, TWOS_HASH, SERVER_HOSTNAME
             ),
         );
