@@ -56,6 +56,7 @@ rust_library(
         "fbsource//third-party/rust:toml",
         "fbsource//third-party/rust:tracing",
         "fbsource//third-party/rust:uuid",
+        "fbsource//third-party/rust:whoami",
         "//common/rust/cpe:cpe",
         "//common/rust/shed/fbinit:fbinit",
         "//common/rust/shed/futures_stats:futures_stats",
