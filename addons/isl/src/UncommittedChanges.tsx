@@ -11,6 +11,7 @@ import type {UseUncommittedSelection} from './partialSelection';
 import type {ChangedFile, ChangedFileStatus, MergeConflicts, RepoRelativePath} from './types';
 
 import * as stylex from '@stylexjs/stylex';
+import type {Set as ImSet} from 'immutable';
 import {Badge} from 'isl-components/Badge';
 import {Banner, BannerKind} from 'isl-components/Banner';
 import {Button} from 'isl-components/Button';
@@ -90,7 +91,11 @@ import {
 } from './previews';
 import {repoRootAtom} from './repositoryData';
 import {selectedCommits} from './selection';
-import {latestHeadCommit, submodulesByRoot, uncommittedChangesFetchError} from './serverAPIState';
+import {
+  latestHeadCommit,
+  submodulePathsByRoot,
+  uncommittedChangesFetchError,
+} from './serverAPIState';
 import {ChangedFileMode, GeneratedStatus} from './types';
 
 import './UncommittedChanges.css';
@@ -111,20 +116,20 @@ export type UIChangedFile = {
 
 function processChangedFiles(
   files: Array<ChangedFile>,
-  submodulePaths: RepoRelativePath[] | undefined,
+  submodulePaths: ImSet<RepoRelativePath> | undefined,
 ): Array<UIChangedFile> {
   const disambiguousPaths = minimalDisambiguousPaths(files.map(file => file.path));
   const copySources = new Set(files.map(file => file.copy).filter(notEmpty));
   const removedFiles = new Set(files.filter(file => file.status === 'R').map(file => file.path));
-  const submodulePathSet = new Set(submodulePaths);
 
   return (
     files
       .map((file, i) => {
         const minimalName = disambiguousPaths[i];
-        const mode = submodulePathSet.has(file.path)
-          ? ChangedFileMode.Submodule
-          : ChangedFileMode.Regular;
+        const mode =
+          submodulePaths && submodulePaths.has(file.path)
+            ? ChangedFileMode.Submodule
+            : ChangedFileMode.Regular;
         let fileLabel = minimalName;
         let tooltip = `${nameForStatus(file.status)}: ${file.path}`;
         let copiedFrom;
@@ -309,7 +314,7 @@ export function ChangedFiles(props: {
   });
   const filesToShow = filesToSort.slice(rangeStart - fetchRangeStart, rangeEnd - fetchRangeStart);
   const root = useAtomValue(repoRootAtom);
-  const currSubmodulePaths = useAtomGet(submodulesByRoot, root)?.value?.map(m => m.path);
+  const currSubmodulePaths = useAtomValue(submodulePathsByRoot(root));
   const processedFiles = useDeepMemo(
     () => processChangedFiles(filesToShow, currSubmodulePaths),
     [filesToShow, currSubmodulePaths],

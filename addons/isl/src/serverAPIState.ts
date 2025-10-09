@@ -7,6 +7,7 @@
 
 import type {MessageBusStatus} from './MessageBus';
 import type {
+  AbsolutePath,
   ApplicationInfo,
   ChangedFile,
   CommitInfo,
@@ -20,7 +21,9 @@ import type {
   ValidatedRepoInfo,
 } from './types';
 
+import {Set as ImSet} from 'immutable';
 import {DEFAULT_DAYS_OF_COMMITS_TO_LOAD} from 'isl-server/src/constants';
+import type {Atom} from 'jotai';
 import {atom} from 'jotai';
 import {reuseEqualObjects} from 'shared/deepEqualExt';
 import {randomId} from 'shared/utils';
@@ -477,4 +480,14 @@ registerCleanup(
     });
   }),
   import.meta.hot,
+);
+
+export const submodulePathsByRoot = atomFamilyWeak<AbsolutePath, Atom<ImSet<string> | undefined>>(
+  (root: AbsolutePath) =>
+    atom(get => {
+      const paths = get(submodulesByRoot)
+        .get(root)
+        ?.value?.map(m => m.path);
+      return paths ? ImSet(paths) : undefined;
+    }),
 );
