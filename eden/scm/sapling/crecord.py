@@ -1388,7 +1388,7 @@ class curseschunkselector:
         numlines = len(patchdisplaystring) // self.xscreensize
         return numlines
 
-    def sigwinchhandler(self, n, frame):
+    def sigwinchhandler(self, n=None, frame=None):
         "handle window resizing"
         try:
             curses.endwin()
@@ -1501,7 +1501,11 @@ the following are valid keystrokes:
         helpwin.refresh()
         try:
             with self.ui.timeblockedsection("crecord"):
-                helpwin.getkey()
+                code = -1
+                while code < 0:
+                    code = helpwin.getch()
+                    if code == -2:
+                        self.sigwinchhandler()
         except curses.error:
             pass
 
@@ -1529,11 +1533,16 @@ the following are valid keystrokes:
             pass
         self.stdscr.refresh()
         confirmwin.refresh()
+        response = None
         try:
             with self.ui.timeblockedsection("crecord"):
-                response = chr(self.stdscr.getch())
+                c = self.stdscr.getch()
+                if c == -2:
+                    self.sigwinchhandler()
+                elif c >= 0:
+                    response = chr(c)
         except ValueError:
-            response = None
+            pass
 
         return response
 
@@ -1815,8 +1824,12 @@ are you sure you want to review/edit and confirm the selected changes [yn]?
             try:
                 with self.ui.timeblockedsection("crecord"):
                     char = self.statuswin.getch()
-                    if char == -1:
-                        # happens when resizing window, and it will cause
+                    if char == -2:
+                        # termwiz screen resize
+                        self.sigwinchhandler()
+                        continue
+                    elif char == -1:
+                        # non-keyboard event; try again, avoid
                         # "ValueError: invalid key number" in `keyname()`
                         continue
                     keypressed = curses.keyname(char).decode("utf-8")
