@@ -117,7 +117,7 @@ export function AllBookmarksTruncated({
   remote,
   local,
 }: {
-  stable: ReadonlyArray<string | {value: string; description: string}>;
+  stable: ReadonlyArray<string | {value: string; description: string; isRecommended?: boolean}>;
   remote: ReadonlyArray<string>;
   local: ReadonlyArray<string>;
 }) {
@@ -142,7 +142,10 @@ export function AllBookmarksTruncated({
         )
         .map(bookmark => {
           const value = typeof bookmark === 'string' ? bookmark : bookmark.value;
-          const isRecommended = recommendedBookmarksGK && recommendedBookmarks.has(value);
+          const isRecommended =
+            recommendedBookmarksGK &&
+            (recommendedBookmarks.has(value) ||
+              (typeof bookmark === 'object' && bookmark.isRecommended === true));
           const tooltip =
             typeof bookmark === 'string'
               ? isRecommended

@@ -294,6 +294,7 @@ export type PreferredSubmitCommand = 'pr' | 'ghstack' | 'push';
 export type StableCommitMetadata = {
   value: string;
   description: string;
+  isRecommended?: boolean;
 };
 
 export type StableCommitFetchConfig = {
