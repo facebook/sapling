@@ -1482,7 +1482,7 @@ the following are valid keystrokes:
                       ? : help (what you're currently reading)"""
         )
 
-        helpwin = curses.newwin(self.yscreensize, 0, 0, 0)
+        helpwin = curses.newwin(self.yscreensize, 0)
         helplines = helptext.split("\n")
         helplines = helplines + [" "] * (
             self.yscreensize - self.numstatuslines - len(helplines) - 1
@@ -1518,7 +1518,7 @@ the following are valid keystrokes:
     def confirmationwindow(self, windowtext):
         "display an informational window, then wait for and return a keypress."
 
-        confirmwin = curses.newwin(self.yscreensize, 0, 0, 0)
+        confirmwin = curses.newwin(self.yscreensize, 0)
         windowtext = windowtext.encode()
         try:
             lines = windowtext.split(b"\n")
@@ -1786,8 +1786,8 @@ are you sure you want to review/edit and confirm the selected changes [yn]?
         self.initcolorpair(curses.COLOR_GREEN, None, name="addition")
         self.initcolorpair(curses.COLOR_WHITE, curses.COLOR_BLUE, name="legend")
         self.initcolorpair(curses.COLOR_MAGENTA, None, name="hunk")
-        # newwin([height, width,] begin_y, begin_x)
-        self.statuswin = curses.newwin(self.numstatuslines, 0, 0, 0)
+        # newwin(height, width [, begin_y, begin_x])
+        self.statuswin = curses.newwin(self.numstatuslines, 0)
         self.statuswin.keypad(1)  # interpret arrow-key, etc. esc sequences
 
         # figure out how much space to allocate for the chunk-pad which is
