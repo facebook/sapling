@@ -2021,6 +2021,8 @@ pub struct GitConfigs {
     pub fetch_message: Option<String>,
     /// Config for the git's bundle-uri feature
     pub git_bundle_uri: Option<GitBundleURIConfig>,
+    /// Blobstore key for the preloaded CGDM blob
+    pub preloaded_cgdm_blobstore_key: Option<String>,
 }
 
 /// Configuration for x repo syncs

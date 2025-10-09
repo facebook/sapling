@@ -995,11 +995,14 @@ impl Convert for RawGitConfigs {
 
         let git_bundle_uri = self.git_bundle_uri_config.convert()?;
 
+        let preloaded_cgdm_blobstore_key = self.preloaded_cgdm_blobstore_key;
+
         Ok(GitConfigs {
             git_concurrency,
             git_lfs_interpret_pointers,
             fetch_message,
             git_bundle_uri,
+            preloaded_cgdm_blobstore_key,
         })
     }
 }
