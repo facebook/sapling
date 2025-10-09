@@ -39,7 +39,7 @@
 
 # A single Git clone involves three requests to the Git server. Check if we
 # have 3 scuba records corresponding to the request
-  $ cat "$SCUBA" | grep "MononokeGit Request Processed" | wc -l
+  $ jq -c 'select(.normal.log_tag == "MononokeGit Request Processed" and (.normvector | has("client_identities") and .client_identities != null))' "$SCUBA" | wc -l
   3
 
 # Verify the stream statistics get recorded in scuba
@@ -72,7 +72,7 @@
     "request_signature": "647444788fee66b8e43d7d5972a241adfc57b1cf",
 
 # Verify the method variants in scuba as a normvector
-  $ jq .normvector.method_variants "$SCUBA" | grep -v null 
+  $ jq .normvector.method_variants "$SCUBA" | grep -v null
   [
     "standard"
   ]

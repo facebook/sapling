@@ -203,7 +203,7 @@ impl MononokeGitScubaHandler {
         scuba.add_opt(MononokeGitScubaKey::ClientMainId, main_client_id);
         scuba.add(
             MononokeGitScubaKey::ClientIdentities,
-            identities.to_string(),
+            identities.iter().map(|i| i.to_string()).collect::<Vec<_>>(),
         );
         scuba.add("log_tag", "MononokeGit Request Rejected");
         scuba.unsampled();
