@@ -1396,6 +1396,7 @@ class curseschunkselector:
             self.statuswin.resize(self.numstatuslines, self.xscreensize)
             self.numpadlines = self.getnumlinesdisplayed(ignorefolding=True) + 1
             self.chunkpad = curses.newpad(self.numpadlines, self.xscreensize)
+            curses.raw()
         except curses.error:
             pass
 
