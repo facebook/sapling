@@ -15,7 +15,6 @@ use bookmarks::BookmarkKey;
 use bookmarks::Freshness;
 use bytes::Bytes;
 use edenapi_types::BookmarkEntry;
-use edenapi_types::BookmarkRequest;
 use edenapi_types::BookmarkResult;
 use edenapi_types::HgId;
 use edenapi_types::ServerError;
@@ -41,38 +40,8 @@ use crate::errors::ErrorKind;
 /// XXX: This number was chosen arbitrarily.
 const MAX_CONCURRENT_FETCHES_PER_REQUEST: usize = 100;
 
-/// Resolve the bookmarks requested by the client.
-pub struct BookmarksHandler;
+/// Resolve the bookmarks requested by the client
 pub struct Bookmarks2Handler;
-
-#[async_trait]
-impl SaplingRemoteApiHandler for BookmarksHandler {
-    type Request = BookmarkRequest;
-    type Response = BookmarkEntry;
-
-    const HTTP_METHOD: hyper::Method = hyper::Method::POST;
-    const API_METHOD: SaplingRemoteApiMethod = SaplingRemoteApiMethod::Bookmarks;
-    const ENDPOINT: &'static str = "/bookmarks";
-    const SUPPORTED_FLAVOURS: &'static [SlapiCommitIdentityScheme] = &[
-        SlapiCommitIdentityScheme::Hg,
-        SlapiCommitIdentityScheme::Git,
-    ];
-
-    async fn handler(
-        ectx: SaplingRemoteApiContext<Self::PathExtractor, Self::QueryStringExtractor, Repo>,
-        request: Self::Request,
-    ) -> HandlerResult<'async_trait, Self::Response> {
-        let slapi_flavour = ectx.slapi_flavour().clone();
-        let repo = ectx.repo();
-        let fetches = request.bookmarks.into_iter().map(move |bookmark| {
-            fetch_bookmark(repo.clone(), bookmark, slapi_flavour, Freshness::MaybeStale)
-        });
-
-        Ok(stream::iter(fetches)
-            .buffer_unordered(MAX_CONCURRENT_FETCHES_PER_REQUEST)
-            .boxed())
-    }
-}
 
 /// Fetch the value of a single bookmark.
 async fn fetch_bookmark<R: MononokeRepo>(

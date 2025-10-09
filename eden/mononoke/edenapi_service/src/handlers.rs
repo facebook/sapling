@@ -97,7 +97,6 @@ const REPORTING_LOOP_WAIT: u64 = 5;
 pub enum SaplingRemoteApiMethod {
     AlterSnapshot,
     Blame,
-    Bookmarks,
     Bookmarks2,
     Capabilities,
     CloudHistoricalVersions,
@@ -147,7 +146,6 @@ impl fmt::Display for SaplingRemoteApiMethod {
         let name = match self {
             Self::AlterSnapshot => "alter_snapshot",
             Self::Blame => "blame",
-            Self::Bookmarks => "bookmarks",
             Self::Bookmarks2 => "bookmarks2",
             Self::Capabilities => "capabilities",
             Self::CloudHistoricalVersions => "cloud_historical_versions",
@@ -502,7 +500,6 @@ pub fn build_router<R: Send + Sync + Clone + 'static>(ctx: ServerContext<R>) -> 
             .get("/proxygen/health_check")
             .to(proxygen_health_handler);
         Handlers::setup::<blame::BlameHandler>(route);
-        Handlers::setup::<bookmarks::BookmarksHandler>(route);
         Handlers::setup::<bookmarks::SetBookmarkHandler>(route);
         Handlers::setup::<bookmarks::Bookmarks2Handler>(route);
         Handlers::setup::<commit_cloud::CommitCloudHistoricalVersions>(route);
