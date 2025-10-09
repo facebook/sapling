@@ -17,7 +17,12 @@ import {findPublicAncestor} from 'isl-server/src/utils';
 import {RevertOperation} from 'isl/src/operations/RevertOperation';
 import fs from 'node:fs';
 import path from 'node:path';
-import {ComparisonType, labelForComparison} from 'shared/Comparison';
+import {
+  beforeRevsetForComparison,
+  ComparisonType,
+  labelForComparison,
+  revsetForComparison,
+} from 'shared/Comparison';
 import * as vscode from 'vscode';
 import {encodeDeletedFileUri} from './DeletedFileContentProvider';
 import {encodeSaplingDiffUri} from './DiffContentProvider';
@@ -162,7 +167,7 @@ function fileExists(uri: vscode.Uri): Promise<boolean> {
 async function openDiffView(uri: vscode.Uri, comparison: Comparison): Promise<unknown> {
   const {fsPath} = uri;
   const title = `${path.basename(fsPath)} (${t(labelForComparison(comparison))})`;
-  const uriForComparison = encodeSaplingDiffUri(uri, comparison);
+  const uriForComparison = encodeSaplingDiffUri(uri, revsetForComparison(comparison));
   if (comparison.type !== ComparisonType.Committed) {
     return executeVSCodeCommand(
       'vscode.diff',
@@ -172,10 +177,7 @@ async function openDiffView(uri: vscode.Uri, comparison: Comparison): Promise<un
       {viewColumn: shouldOpenBeside() ? vscode.ViewColumn.Beside : undefined},
     );
   }
-  const uriForComparisonParent = encodeSaplingDiffUri(uri, {
-    type: ComparisonType.Committed,
-    hash: `${comparison.hash}^`,
-  });
+  const uriForComparisonParent = encodeSaplingDiffUri(uri, beforeRevsetForComparison(comparison));
   return executeVSCodeCommand('vscode.diff', uriForComparisonParent, uriForComparison, title);
 }
 

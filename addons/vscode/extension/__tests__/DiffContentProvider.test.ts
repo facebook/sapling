@@ -11,7 +11,11 @@ import type {RepositoryContext} from 'isl-server/src/serverTypes';
 import type {CommitInfo} from 'isl/src/types';
 
 import {makeServerSideTracker} from 'isl-server/src/analytics/serverSideTracker';
-import {ComparisonType} from 'shared/Comparison';
+import {
+  beforeRevsetForComparison,
+  ComparisonType,
+  currRevsetForComparison,
+} from 'shared/Comparison';
 import {mockLogger} from 'shared/testUtils';
 import {nullthrows} from 'shared/utils';
 import * as vscode from 'vscode';
@@ -101,9 +105,10 @@ describe('DiffContentProvider', () => {
     };
   });
 
-  const encodedFile1 = encodeSaplingDiffUri(vscode.Uri.file('/path/to/repo/file1.txt'), {
-    type: ComparisonType.UncommittedChanges,
-  });
+  const encodedFile1 = encodeSaplingDiffUri(
+    vscode.Uri.file('/path/to/repo/file1.txt'),
+    beforeRevsetForComparison({type: ComparisonType.UncommittedChanges}),
+  );
 
   it('provides file contents', async () => {
     const provider = new SaplingDiffContentProvider(ctx);
@@ -256,13 +261,16 @@ describe('DiffContentProvider', () => {
 
 describe('SaplingDiffEncodedUri', () => {
   it('is reversible', () => {
-    const encoded = encodeSaplingDiffUri(vscode.Uri.file('/path/to/myRepo'), {
-      type: ComparisonType.UncommittedChanges,
-    });
+    const encoded = encodeSaplingDiffUri(
+      vscode.Uri.file('/path/to/myRepo'),
+      currRevsetForComparison({
+        type: ComparisonType.UncommittedChanges,
+      }),
+    );
     const decoded = decodeSaplingDiffUri(encoded);
     expect(decoded).toEqual({
       originalUri: expect.anything(),
-      comparison: {type: ComparisonType.UncommittedChanges},
+      revset: 'wdir()',
     });
     expect(decoded.originalUri.toString()).toEqual('file:///path/to/myRepo');
   });

@@ -24,7 +24,7 @@ import {repositoryCache} from 'isl-server/src/RepositoryCache';
 import {getMainFetchTemplate, parseCommitInfoOutput} from 'isl-server/src/templates';
 import {ResolveOperation, ResolveTool} from 'isl/src/operations/ResolveOperation';
 import * as path from 'path';
-import {ComparisonType} from 'shared/Comparison';
+import {beforeRevsetForComparison, ComparisonType} from 'shared/Comparison';
 import * as vscode from 'vscode';
 import {encodeSaplingDiffUri} from './DiffContentProvider';
 import SaplingFileDecorationProvider from './SaplingFileDecorationProvider';
@@ -386,7 +386,7 @@ export class VSCodeRepo implements vscode.QuickDiffProvider, SaplingRepository {
     // diff gutters to be either uncommitted changes / head changes / stack changes
     const comparison = {type: ComparisonType.UncommittedChanges} as Comparison;
 
-    return encodeSaplingDiffUri(uri, comparison);
+    return encodeSaplingDiffUri(uri, beforeRevsetForComparison(comparison));
   }
 
   ////////////////////////////////////////////////////////////////////////////////////

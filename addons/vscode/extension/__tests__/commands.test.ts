@@ -58,7 +58,8 @@ describe('open-file-diff', () => {
     const comparison: Comparison = {type: ComparisonType.UncommittedChanges};
     await openDiffView(fileUri, comparison);
 
-    const expectedLeftUri = encodeSaplingDiffUri(fileUri, comparison);
+    const expectedLeftRev = '.';
+    const expectedLeftUri = encodeSaplingDiffUri(fileUri, expectedLeftRev);
 
     expect(mockExecuteVSCodeCommand).toHaveBeenCalledWith(
       'vscode.diff',
@@ -75,7 +76,8 @@ describe('open-file-diff', () => {
     const comparison: Comparison = {type: ComparisonType.UncommittedChanges};
     await openDiffView(fileUri, comparison);
 
-    const expectedLeftUri = encodeSaplingDiffUri(fileUri, comparison);
+    const expectedLeftRev = '.';
+    const expectedLeftUri = encodeSaplingDiffUri(fileUri, expectedLeftRev);
     const expectedRightUri = encodeDeletedFileUri(fileUri);
 
     expect(mockExecuteVSCodeCommand).toHaveBeenCalledWith(
@@ -93,7 +95,8 @@ describe('open-file-diff', () => {
     const comparison: Comparison = {type: ComparisonType.HeadChanges};
     await openDiffView(fileUri, comparison);
 
-    const expectedLeftUri = encodeSaplingDiffUri(fileUri, comparison);
+    const expectedLeftRev = '.^';
+    const expectedLeftUri = encodeSaplingDiffUri(fileUri, expectedLeftRev);
 
     expect(mockExecuteVSCodeCommand).toHaveBeenCalledWith(
       'vscode.diff',
@@ -110,7 +113,8 @@ describe('open-file-diff', () => {
     const comparison: Comparison = {type: ComparisonType.StackChanges};
     await openDiffView(fileUri, comparison);
 
-    const expectedLeftUri = encodeSaplingDiffUri(fileUri, comparison);
+    const expectedLeftRev = 'ancestor(.,interestingmaster())';
+    const expectedLeftUri = encodeSaplingDiffUri(fileUri, expectedLeftRev);
 
     expect(mockExecuteVSCodeCommand).toHaveBeenCalledWith(
       'vscode.diff',
@@ -125,11 +129,10 @@ describe('open-file-diff', () => {
     const comparison: Comparison = {type: ComparisonType.Committed, hash: 'abc123'};
     await openDiffView(fileUri, comparison);
 
-    const expectedRightUri = encodeSaplingDiffUri(fileUri, comparison);
-    const expectedLeftUri = encodeSaplingDiffUri(fileUri, {
-      type: ComparisonType.Committed,
-      hash: 'abc123^',
-    });
+    const expectedLeftRev = 'abc123^';
+    const expectedLeftUri = encodeSaplingDiffUri(fileUri, expectedLeftRev);
+    const expectedRightRev = 'abc123';
+    const expectedRightUri = encodeSaplingDiffUri(fileUri, expectedRightRev);
 
     expect(mockExecuteVSCodeCommand).toHaveBeenCalledWith(
       'vscode.diff',

@@ -8,10 +8,8 @@
 import type {Repository} from 'isl-server/src/Repository';
 import type {RepositoryContext} from 'isl-server/src/serverTypes';
 import type {Disposable} from 'isl/src/types';
-import type {Comparison} from 'shared/Comparison';
 
 import {repositoryCache} from 'isl-server/src/RepositoryCache';
-import {revsetForComparison} from 'shared/Comparison';
 import {LRU} from 'shared/LRU';
 import {TypedEventEmitter} from 'shared/TypedEventEmitter';
 import {ensureTrailingPathSep} from 'shared/pathUtils';
@@ -153,14 +151,12 @@ export class SaplingDiffContentProvider implements vscode.TextDocumentContentPro
       return cachedFileContent;
     }
 
-    const revset = revsetForComparison(data.comparison);
-
     // Ensure we use a ctx appropriate for this repo. `this.ctx` may be an unrelated cwd.
     const ctx = repo?.initialConnectionContext;
 
     // fall back to fetching from the repo
     const fetchedFileContent = await repo
-      .cat(ctx, fsPath, revset)
+      .cat(ctx, fsPath, data.revset)
       // An error during `cat` usually means the right side of the comparison was added since the left,
       // so `cat` claims `no such file` at that revset.
       // TODO: it would be more accurate to check that the error is due to this, and return null if not.
@@ -191,7 +187,7 @@ export const SAPLING_DIFF_PROVIDER_SCHEME = 'sapling-diff';
 type SaplingDiffEncodedUri = vscode.Uri;
 
 type SaplingURIEncodedData = {
-  comparison: Comparison;
+  revset: string;
 };
 
 /**
@@ -200,17 +196,14 @@ type SaplingURIEncodedData = {
  * that file at that revset.
  * Decoded by {@link decodeSaplingDiffUri}.
  */
-export function encodeSaplingDiffUri(
-  uri: vscode.Uri,
-  comparison: Comparison,
-): SaplingDiffEncodedUri {
+export function encodeSaplingDiffUri(uri: vscode.Uri, revset: string): SaplingDiffEncodedUri {
   if (uri.scheme !== 'file') {
     throw new Error('encoding non-file:// uris as sapling diff uris is not supported');
   }
   return uri.with({
     scheme: SAPLING_DIFF_PROVIDER_SCHEME,
     query: JSON.stringify({
-      comparison,
+      revset,
     } as SaplingURIEncodedData),
   });
 }
@@ -221,11 +214,11 @@ export function encodeSaplingDiffUri(
  */
 export function decodeSaplingDiffUri(uri: SaplingDiffEncodedUri): {
   originalUri: vscode.Uri;
-  comparison: Comparison;
+  revset: string;
 } {
   const data = JSON.parse(uri.query) as SaplingURIEncodedData;
   return {
-    comparison: data.comparison,
     originalUri: uri.with({scheme: 'file', query: ''}),
+    revset: data.revset,
   };
 }
