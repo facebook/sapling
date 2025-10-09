@@ -139,9 +139,8 @@ ServerState::ServerState(
 
 ServerState::~ServerState() = default;
 
-std::shared_ptr<const EdenConfig> ServerState::getEdenConfig(
-    ConfigReloadBehavior reload) {
-  return config_->getEdenConfig(reload);
+folly::ReadMostlySharedPtr<const EdenConfig> ServerState::getEdenConfig() {
+  return config_->getEdenConfig();
 }
 
 std::unique_ptr<TopLevelIgnores> ServerState::getTopLevelIgnores() {

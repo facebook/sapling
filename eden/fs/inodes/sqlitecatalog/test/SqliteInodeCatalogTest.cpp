@@ -88,7 +88,10 @@ TEST(PlainSqliteInodeCatalogTest, new_overlay_is_clean) {
       makeRefPtr<EdenStats>(),
       true,
       *EdenConfig::createTestEdenConfig());
-  overlay->initialize(EdenConfig::createTestEdenConfig()).get();
+  overlay
+      ->initialize(std::make_shared<ReloadableConfig>(
+          EdenConfig::createTestEdenConfig()))
+      .get();
   EXPECT_TRUE(overlay->hadCleanStartup());
 }
 
@@ -103,7 +106,10 @@ TEST(PlainSqliteInodeCatalogTest, new_overlay_is_clean_buffered) {
       makeRefPtr<EdenStats>(),
       true,
       *EdenConfig::createTestEdenConfig());
-  overlay->initialize(EdenConfig::createTestEdenConfig()).get();
+  overlay
+      ->initialize(std::make_shared<ReloadableConfig>(
+          EdenConfig::createTestEdenConfig()))
+      .get();
   EXPECT_TRUE(overlay->hadCleanStartup());
 }
 
@@ -119,7 +125,10 @@ TEST(PlainSqliteInodeCatalogTest, reopened_overlay_is_clean) {
         makeRefPtr<EdenStats>(),
         true,
         *EdenConfig::createTestEdenConfig());
-    overlay->initialize(EdenConfig::createTestEdenConfig()).get();
+    overlay
+        ->initialize(std::make_shared<ReloadableConfig>(
+            EdenConfig::createTestEdenConfig()))
+        .get();
   }
   auto overlay = Overlay::create(
       canonicalPath(testDir.path().string()),
@@ -130,7 +139,10 @@ TEST(PlainSqliteInodeCatalogTest, reopened_overlay_is_clean) {
       makeRefPtr<EdenStats>(),
       true,
       *EdenConfig::createTestEdenConfig());
-  overlay->initialize(EdenConfig::createTestEdenConfig()).get();
+  overlay
+      ->initialize(std::make_shared<ReloadableConfig>(
+          EdenConfig::createTestEdenConfig()))
+      .get();
   EXPECT_TRUE(overlay->hadCleanStartup());
 }
 
@@ -146,7 +158,10 @@ TEST(PlainSqliteInodeCatalogTest, reopened_overlay_is_clean_buffered) {
         makeRefPtr<EdenStats>(),
         true,
         *EdenConfig::createTestEdenConfig());
-    overlay->initialize(EdenConfig::createTestEdenConfig()).get();
+    overlay
+        ->initialize(std::make_shared<ReloadableConfig>(
+            EdenConfig::createTestEdenConfig()))
+        .get();
   }
   auto overlay = Overlay::create(
       canonicalPath(testDir.path().string()),
@@ -157,7 +172,10 @@ TEST(PlainSqliteInodeCatalogTest, reopened_overlay_is_clean_buffered) {
       makeRefPtr<EdenStats>(),
       true,
       *EdenConfig::createTestEdenConfig());
-  overlay->initialize(EdenConfig::createTestEdenConfig()).get();
+  overlay
+      ->initialize(std::make_shared<ReloadableConfig>(
+          EdenConfig::createTestEdenConfig()))
+      .get();
   EXPECT_TRUE(overlay->hadCleanStartup());
 }
 
@@ -174,7 +192,10 @@ TEST(PlainSqliteInodeCatalogTest, close_overlay_with_no_capacity_buffered) {
       makeRefPtr<EdenStats>(),
       true,
       *config);
-  overlay->initialize(EdenConfig::createTestEdenConfig()).get();
+  overlay
+      ->initialize(std::make_shared<ReloadableConfig>(
+          EdenConfig::createTestEdenConfig()))
+      .get();
   overlay->close();
   EXPECT_TRUE(overlay->isClosed());
 }
@@ -194,7 +215,10 @@ TEST(
       makeRefPtr<EdenStats>(),
       true,
       *config);
-  overlay->initialize(EdenConfig::createTestEdenConfig()).get();
+  overlay
+      ->initialize(std::make_shared<ReloadableConfig>(
+          EdenConfig::createTestEdenConfig()))
+      .get();
 
   EXPECT_EQ(kRootNodeId, overlay->getMaxInodeNumber());
 
@@ -244,7 +268,10 @@ class RawSqliteInodeCatalogTest
         makeRefPtr<EdenStats>(),
         true,
         *EdenConfig::createTestEdenConfig());
-    overlay->initialize(EdenConfig::createTestEdenConfig()).get();
+    overlay
+        ->initialize(std::make_shared<ReloadableConfig>(
+            EdenConfig::createTestEdenConfig()))
+        .get();
   }
 
   AbsolutePath getLocalDir() {
@@ -421,7 +448,10 @@ class DebugDumpSqliteInodeCatalogInodesTest
         makeRefPtr<EdenStats>(),
         true,
         *EdenConfig::createTestEdenConfig());
-    overlay->initialize(EdenConfig::createTestEdenConfig()).get();
+    overlay
+        ->initialize(std::make_shared<ReloadableConfig>(
+            EdenConfig::createTestEdenConfig()))
+        .get();
   }
 
   void flush() {

@@ -11,7 +11,6 @@
 #include <folly/futures/Future.h>
 #include <folly/futures/Promise.h>
 #include <folly/synchronization/Baton.h>
-#include <array>
 #include <atomic>
 #include <condition_variable>
 #include <optional>
@@ -19,12 +18,11 @@
 
 #include "eden/common/telemetry/StructuredLogger.h"
 #include "eden/common/utils/CaseSensitivity.h"
-#include "eden/common/utils/DirType.h"
-#include "eden/common/utils/ImmediateFuture.h"
 #include "eden/common/utils/PathFuncs.h"
 #include "eden/common/utils/RefPtr.h"
 #include "eden/fs/config/InodeCatalogOptions.h"
 #include "eden/fs/config/InodeCatalogType.h"
+#include "eden/fs/config/ReloadableConfig.h"
 #include "eden/fs/inodes/InodeNumber.h"
 #include "eden/fs/inodes/overlay/OverlayChecker.h"
 #include "eden/fs/inodes/overlay/gen-cpp2/overlay_types.h"
@@ -121,7 +119,7 @@ class Overlay : public std::enable_shared_from_this<Overlay> {
    *   by an older version of the software.
    */
   FOLLY_NODISCARD folly::SemiFuture<folly::Unit> initialize(
-      std::shared_ptr<const EdenConfig> config,
+      const std::shared_ptr<ReloadableConfig>& config,
       std::optional<AbsolutePath> mountPath = std::nullopt,
       OverlayChecker::ProgressCallback&& progressCallback = [](auto) {},
       InodeCatalog::LookupCallback&& lookupCallback =
@@ -347,7 +345,7 @@ class Overlay : public std::enable_shared_from_this<Overlay> {
   };
 
   void initOverlay(
-      std::shared_ptr<const EdenConfig> config,
+      std::shared_ptr<ReloadableConfig> config,
       std::optional<AbsolutePath> mountPath,
       const OverlayChecker::ProgressCallback& progressCallback,
       InodeCatalog::LookupCallback& lookupCallback);

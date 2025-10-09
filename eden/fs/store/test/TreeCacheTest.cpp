@@ -92,8 +92,7 @@ struct TreeCacheTest : ::testing::Test {
     rawEdenConfig->inMemoryTreeCacheMinimumItems.setValue(
         cacheMinEntries, ConfigSourceType::Default, true);
 
-    edenConfig = std::make_shared<ReloadableConfig>(
-        rawEdenConfig, ConfigReloadBehavior::NoReload);
+    edenConfig = std::make_shared<ReloadableConfig>(rawEdenConfig);
 
     cache = TreeCache::create(edenConfig, makeRefPtr<EdenStats>());
   }

@@ -78,6 +78,6 @@ void updateTestEdenConfig(
   }
 
   configSource->setValues(nested);
-  (void)reloadableConfig->getEdenConfig(ConfigReloadBehavior::ForceReload);
+  reloadableConfig->maybeReload();
 }
 } // namespace facebook::eden

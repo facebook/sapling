@@ -8,14 +8,10 @@
 #pragma once
 
 #include "eden/common/telemetry/SessionInfo.h"
-#include "eden/common/utils/PathFuncs.h"
 #include "eden/fs/config/ReloadableConfig.h"
-#include "eden/fs/inodes/InodeNumber.h"
-#include "eden/fs/store/ObjectFetchContext.h"
 
 namespace facebook::eden {
 
-class EdenConfig;
 class EdenMount;
 
 /**
@@ -33,8 +29,9 @@ class IScribeLogger {
  public:
   IScribeLogger(
       SessionInfo sessionInfo,
-      std::shared_ptr<const EdenConfig> edenConfig)
-      : sessionInfo_{std::move(sessionInfo)}, reloadableConfig_{edenConfig} {}
+      std::shared_ptr<ReloadableConfig> config)
+      : sessionInfo_{std::move(sessionInfo)},
+        reloadableConfig_{std::move(config)} {}
   virtual ~IScribeLogger() = default;
 
   virtual void log(std::string_view category, std::string&& message) = 0;
@@ -49,7 +46,7 @@ class IScribeLogger {
 
  protected:
   SessionInfo sessionInfo_;
-  ReloadableConfig reloadableConfig_;
+  std::shared_ptr<ReloadableConfig> reloadableConfig_;
 };
 
 class NullScribeLogger : public IScribeLogger {

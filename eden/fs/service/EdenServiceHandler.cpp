@@ -6329,7 +6329,12 @@ void EdenServiceHandler::getConfig(
     EdenConfigData& result,
     unique_ptr<GetConfigParams> params) {
   auto state = server_->getServerState();
-  auto config = state->getEdenConfig(*params->reload());
+
+  if (params->reload() == ConfigReloadBehavior::ForceReload) {
+    state->getReloadableConfig()->maybeReload();
+  }
+
+  auto config = state->getEdenConfig();
 
   result = config->toThriftConfigData();
 }

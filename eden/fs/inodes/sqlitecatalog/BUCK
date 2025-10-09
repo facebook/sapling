@@ -42,6 +42,7 @@ cpp_library(
         "//eden/common/utils/windows:win_error",
         "//eden/fs/inodes:inode_number",
         "//eden/fs/inodes/overlay:serialization-cpp2-types",
+        "//eden/fs/model:model",
         "//eden/fs/prjfs:disk_state",
         "//eden/fs/utils:projfs_util",
         "//folly:file",
@@ -51,12 +52,10 @@ cpp_library(
     ],
     exported_deps = [
         ":sqlitetreestore",
-        "//eden/common/utils:immediate_future",
         "//eden/common/utils:path",
         "//eden/fs/config:config",
         "//eden/fs/inodes:inode_catalog",
         "//eden/fs/inodes/overlay:overlay_checker",
-        "//eden/fs/model:model",
         "//folly:range",
     ],
 )

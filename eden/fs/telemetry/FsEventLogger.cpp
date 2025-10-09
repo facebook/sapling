@@ -21,7 +21,8 @@ namespace {
 constexpr size_t kConfigsStringBufferSize = 500;
 constexpr auto kConfigsStringRefreshInterval = std::chrono::minutes(30);
 
-std::string getConfigsString(std::shared_ptr<const EdenConfig> config) {
+std::string getConfigsString(
+    folly::ReadMostlySharedPtr<const EdenConfig> config) {
   fmt::memory_buffer buffer;
   const auto inserter = std::back_inserter(buffer);
   // fmt::format_to will grow the buffer if it needs to be longer. However, we
@@ -58,7 +59,7 @@ void FsEventLogger::log(Event event) {
     return;
   }
 
-  auto config = edenConfig_->getEdenConfig(ConfigReloadBehavior::NoReload);
+  auto config = edenConfig_->getEdenConfig();
 
   const auto& denominators =
       config->requestSamplingGroupDenominators.getValue();

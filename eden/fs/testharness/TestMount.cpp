@@ -147,8 +147,7 @@ TestMount::TestMount(
   // Create treeCache
   edenConfig_ = EdenConfig::createTestEdenConfig();
 
-  auto edenConfig = std::make_shared<ReloadableConfig>(
-      edenConfig_, ConfigReloadBehavior::NoReload);
+  auto edenConfig = std::make_shared<ReloadableConfig>(edenConfig_);
   treeCache_ = TreeCache::create(edenConfig, makeRefPtr<EdenStats>());
   initialize(rootBuilder, startReady);
 }
@@ -176,8 +175,7 @@ TestMount::TestMount(
   edenConfig_ = EdenConfig::createTestEdenConfig();
 
   // Create treeCache
-  auto edenConfig = std::make_shared<ReloadableConfig>(
-      edenConfig_, ConfigReloadBehavior::NoReload);
+  auto edenConfig = std::make_shared<ReloadableConfig>(edenConfig_);
   treeCache_ = TreeCache::create(edenConfig, makeRefPtr<EdenStats>());
   initialize(initialCommitId, rootBuilder, startReady);
 }
@@ -274,8 +272,7 @@ void TestMount::createMount(
       stats_.copy(),
       std::make_shared<ProcessInfoCache>(),
       std::make_shared<NullStructuredLogger>(),
-      std::make_shared<ReloadableConfig>(
-          edenConfig_, ConfigReloadBehavior::NoReload),
+      std::make_shared<ReloadableConfig>(edenConfig_),
       config_->getEnableWindowsSymlinks(),
       config_->getCaseSensitive());
   auto journal = std::make_unique<Journal>(stats_.copy());
@@ -390,8 +387,7 @@ void TestMount::remount() {
       stats_.copy(),
       std::make_shared<ProcessInfoCache>(),
       std::make_shared<NullStructuredLogger>(),
-      std::make_shared<ReloadableConfig>(
-          edenConfig_, ConfigReloadBehavior::NoReload),
+      std::make_shared<ReloadableConfig>(edenConfig_),
       config->getEnableWindowsSymlinks(),
       config->getCaseSensitive());
 
@@ -434,8 +430,7 @@ void TestMount::remountGracefully() {
       stats_.copy(),
       std::make_shared<ProcessInfoCache>(),
       std::make_shared<NullStructuredLogger>(),
-      std::make_shared<ReloadableConfig>(
-          edenConfig_, ConfigReloadBehavior::NoReload),
+      std::make_shared<ReloadableConfig>(edenConfig_),
       config->getEnableWindowsSymlinks(),
       config->getCaseSensitive());
 

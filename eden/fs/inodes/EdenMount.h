@@ -12,6 +12,7 @@
 #include <folly/SharedMutex.h>
 #include <folly/Synchronized.h>
 #include <folly/ThreadLocal.h>
+#include <folly/concurrency/memory/ReadMostlySharedPtr.h>
 #include <folly/futures/Future.h>
 #include <folly/futures/Promise.h>
 #include <folly/futures/SharedPromise.h>
@@ -639,7 +640,7 @@ class EdenMount : public std::enable_shared_from_this<EdenMount> {
     return mountGeneration_;
   }
 
-  std::shared_ptr<const EdenConfig> getEdenConfig() const;
+  folly::ReadMostlySharedPtr<const EdenConfig> getEdenConfig() const;
 
   const CheckoutConfig* getCheckoutConfig() const {
     return checkoutConfig_.get();

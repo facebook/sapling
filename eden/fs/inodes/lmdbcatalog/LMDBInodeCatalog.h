@@ -11,14 +11,10 @@
 #include <folly/Range.h>
 #include <optional>
 
-#include "eden/common/utils/FileOffset.h"
-#include "eden/common/utils/ImmediateFuture.h"
 #include "eden/common/utils/PathFuncs.h"
-#include "eden/fs/inodes/FileContentStore.h"
 #include "eden/fs/inodes/InodeCatalog.h"
 #include "eden/fs/inodes/lmdbcatalog/LMDBStoreInterface.h"
 #include "eden/fs/inodes/overlay/OverlayChecker.h"
-#include "eden/fs/model/Tree.h"
 
 namespace folly {
 class File;
@@ -26,7 +22,7 @@ class File;
 
 namespace facebook::eden {
 
-class EdenConfig;
+class ReloadableConfig;
 namespace overlay {
 class OverlayDir;
 }
@@ -80,7 +76,7 @@ class LMDBInodeCatalog : public InodeCatalog {
   InodeNumber nextInodeNumber() override;
 
   InodeNumber scanLocalChanges(
-      std::shared_ptr<const EdenConfig> config,
+      std::shared_ptr<ReloadableConfig> config,
       AbsolutePathPiece mountPath,
       bool windowsSymlinksEnabled,
       InodeCatalog::LookupCallback& callback) override;

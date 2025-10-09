@@ -40,8 +40,7 @@ struct BlobCacheTest : ::testing::Test {
     std::shared_ptr<EdenConfig> rawEdenConfig{
         EdenConfig::createTestEdenConfig()};
 
-    edenConfig = std::make_shared<ReloadableConfig>(
-        rawEdenConfig, ConfigReloadBehavior::NoReload);
+    edenConfig = std::make_shared<ReloadableConfig>(rawEdenConfig);
   }
 };
 
@@ -132,8 +131,7 @@ TEST_F(BlobCacheTest, no_blob_caching) {
   std::shared_ptr<EdenConfig> rawEdenConfig{EdenConfig::createTestEdenConfig()};
   rawEdenConfig->enableInMemoryBlobCaching.setValue(
       false, ConfigSourceType::Default, true);
-  edenConfig = std::make_shared<ReloadableConfig>(
-      rawEdenConfig, ConfigReloadBehavior::NoReload);
+  edenConfig = std::make_shared<ReloadableConfig>(rawEdenConfig);
   auto cache = BlobCache::create(100, 0, edenConfig, makeRefPtr<EdenStats>());
 
   cache->insert(id3, blob3);

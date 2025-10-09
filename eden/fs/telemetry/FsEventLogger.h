@@ -9,7 +9,6 @@
 
 #include <atomic>
 #include <chrono>
-#include <vector>
 
 #include <folly/Synchronized.h>
 #include "folly/Range.h"

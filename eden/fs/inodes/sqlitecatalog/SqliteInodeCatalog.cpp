@@ -120,7 +120,7 @@ std::vector<InodeNumber> SqliteInodeCatalog::getAllParentInodeNumbers() {
 }
 
 InodeNumber SqliteInodeCatalog::scanLocalChanges(
-    std::shared_ptr<const EdenConfig> config,
+    std::shared_ptr<ReloadableConfig> config,
     AbsolutePathPiece mountPath,
     [[maybe_unused]] bool windowsSymlinksEnabled,
     [[maybe_unused]] InodeCatalog::LookupCallback& callback) {

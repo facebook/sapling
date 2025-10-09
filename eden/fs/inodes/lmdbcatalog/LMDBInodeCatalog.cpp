@@ -83,7 +83,7 @@ std::optional<fsck::InodeInfo> LMDBInodeCatalog::loadInodeInfo(
 }
 
 InodeNumber LMDBInodeCatalog::scanLocalChanges(
-    std::shared_ptr<const EdenConfig> /*config*/,
+    std::shared_ptr<ReloadableConfig> /*config*/,
     AbsolutePathPiece /*mountPath*/,
     bool /*windowsSymlinksEnabled*/,
     [[maybe_unused]] InodeCatalog::LookupCallback& /*callback*/) {

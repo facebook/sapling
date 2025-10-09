@@ -15,7 +15,7 @@
 
 namespace facebook::eden {
 
-class EdenConfig;
+class ReloadableConfig;
 
 /**
  * Walk the directory hierarchy for the given `mountPath` and fix the
@@ -52,7 +52,7 @@ class EdenConfig;
  *
  */
 void windowsFsckScanLocalChanges(
-    std::shared_ptr<const EdenConfig> config,
+    std::shared_ptr<ReloadableConfig> config,
     InodeCatalog& overlay,
     InodeCatalogType inodeCatalogType,
     AbsolutePathPiece mountPath,

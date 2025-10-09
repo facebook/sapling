@@ -14,6 +14,7 @@
 
 namespace facebook::eden {
 
+class ReloadableConfig;
 namespace overlay {
 class OverlayDir;
 }
@@ -104,7 +105,7 @@ class MemInodeCatalog : public InodeCatalog {
    * directory when EdenFS is not running.
    */
   InodeNumber scanLocalChanges(
-      std::shared_ptr<const EdenConfig> config,
+      std::shared_ptr<ReloadableConfig> config,
       AbsolutePathPiece mountPath,
       bool windowsSymlinksEnabled,
       InodeCatalog::LookupCallback& callback) override;

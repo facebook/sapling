@@ -58,10 +58,7 @@ cpp_library(
     ],
     exported_deps = [
         "//eden/common/telemetry:log_info",
-        "//eden/common/utils:path",
         "//eden/fs/config:config",
-        "//eden/fs/inodes:inode_number",
-        "//eden/fs/store:context",
     ],
 )
 

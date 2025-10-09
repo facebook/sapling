@@ -75,7 +75,10 @@ TEST(OverlayGoldMasterTest, can_load_overlay_v2) {
       makeRefPtr<EdenStats>(),
       true,
       *EdenConfig::createTestEdenConfig());
-  overlay->initialize(EdenConfig::createTestEdenConfig()).get();
+  overlay
+      ->initialize(std::make_shared<ReloadableConfig>(
+          EdenConfig::createTestEdenConfig()))
+      .get();
 
   ObjectId id1{folly::ByteRange{"abcdabcdabcdabcdabcd"_sp}};
   ObjectId id2{folly::ByteRange{"01234012340123401234"_sp}};
@@ -260,7 +263,10 @@ TEST(PlainOverlayTest, new_overlay_is_clean) {
       makeRefPtr<EdenStats>(),
       true,
       *EdenConfig::createTestEdenConfig());
-  overlay->initialize(EdenConfig::createTestEdenConfig()).get();
+  overlay
+      ->initialize(std::make_shared<ReloadableConfig>(
+          EdenConfig::createTestEdenConfig()))
+      .get();
   EXPECT_TRUE(overlay->hadCleanStartup());
 }
 
@@ -276,7 +282,10 @@ TEST(PlainOverlayTest, reopened_overlay_is_clean) {
         makeRefPtr<EdenStats>(),
         true,
         *EdenConfig::createTestEdenConfig());
-    overlay->initialize(EdenConfig::createTestEdenConfig()).get();
+    overlay
+        ->initialize(std::make_shared<ReloadableConfig>(
+            EdenConfig::createTestEdenConfig()))
+        .get();
   }
 
   auto overlay = Overlay::create(
@@ -288,7 +297,10 @@ TEST(PlainOverlayTest, reopened_overlay_is_clean) {
       makeRefPtr<EdenStats>(),
       true,
       *EdenConfig::createTestEdenConfig());
-  overlay->initialize(EdenConfig::createTestEdenConfig()).get();
+  overlay
+      ->initialize(std::make_shared<ReloadableConfig>(
+          EdenConfig::createTestEdenConfig()))
+      .get();
   EXPECT_TRUE(overlay->hadCleanStartup());
 }
 
@@ -306,7 +318,10 @@ TEST(PlainOverlayTest, unclean_overlay_is_dirty) {
         makeRefPtr<EdenStats>(),
         true,
         *EdenConfig::createTestEdenConfig());
-    overlay->initialize(EdenConfig::createTestEdenConfig()).get();
+    overlay
+        ->initialize(std::make_shared<ReloadableConfig>(
+            EdenConfig::createTestEdenConfig()))
+        .get();
   }
 
   if (unlink((localDir + "next-inode-number"_pc).c_str())) {
@@ -322,7 +337,10 @@ TEST(PlainOverlayTest, unclean_overlay_is_dirty) {
       makeRefPtr<EdenStats>(),
       true,
       *EdenConfig::createTestEdenConfig());
-  overlay->initialize(EdenConfig::createTestEdenConfig()).get();
+  overlay
+      ->initialize(std::make_shared<ReloadableConfig>(
+          EdenConfig::createTestEdenConfig()))
+      .get();
   EXPECT_FALSE(overlay->hadCleanStartup());
 }
 
@@ -367,7 +385,10 @@ class RawOverlayTest : public ::testing::TestWithParam<OverlayRestartMode> {
         makeRefPtr<EdenStats>(),
         true,
         *EdenConfig::createTestEdenConfig());
-    overlay->initialize(EdenConfig::createTestEdenConfig()).get();
+    overlay
+        ->initialize(std::make_shared<ReloadableConfig>(
+            EdenConfig::createTestEdenConfig()))
+        .get();
   }
 
   void corruptOverlayFile(InodeNumber inodeNumber) {
@@ -780,7 +801,10 @@ class DebugDumpOverlayInodesTest : public ::testing::Test {
             makeRefPtr<EdenStats>(),
             true,
             *EdenConfig::createTestEdenConfig())} {
-    overlay->initialize(EdenConfig::createTestEdenConfig()).get();
+    overlay
+        ->initialize(std::make_shared<ReloadableConfig>(
+            EdenConfig::createTestEdenConfig()))
+        .get();
   }
 
   folly::test::TemporaryDirectory testDir_;

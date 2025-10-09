@@ -52,7 +52,10 @@ class OverlayFileTest : public ::testing::Test {
         makeRefPtr<EdenStats>(),
         true,
         *EdenConfig::createTestEdenConfig());
-    fsOverlay->initialize(EdenConfig::createTestEdenConfig()).get();
+    fsOverlay
+        ->initialize(std::make_shared<ReloadableConfig>(
+            EdenConfig::createTestEdenConfig()))
+        .get();
 
     lmdbOverlay = Overlay::create(
         getLocalDir() + PathComponent("lmdb"),
@@ -63,7 +66,10 @@ class OverlayFileTest : public ::testing::Test {
         makeRefPtr<EdenStats>(),
         true,
         *EdenConfig::createTestEdenConfig());
-    lmdbOverlay->initialize(EdenConfig::createTestEdenConfig()).get();
+    lmdbOverlay
+        ->initialize(std::make_shared<ReloadableConfig>(
+            EdenConfig::createTestEdenConfig()))
+        .get();
   }
 
   AbsolutePath getLocalDir() {

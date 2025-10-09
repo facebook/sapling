@@ -2583,7 +2583,7 @@ folly::SemiFuture<Unit> EdenServer::createThriftServer() {
 
 #ifdef EDEN_HAVE_USAGE_SERVICE
   auto usageService = std::make_unique<EdenFSSmartPlatformServiceEndpoint>(
-      serverState_->getThreadPool(), serverState_->getEdenConfig());
+      serverState_->getThreadPool(), serverState_->getReloadableConfig());
 #else
   auto usageService = std::make_unique<NullUsageService>();
 #endif
@@ -2862,8 +2862,7 @@ void EdenServer::reportMemoryStats() {
 }
 
 void EdenServer::manageLocalStore() {
-  auto config = serverState_->getReloadableConfig()->getEdenConfig(
-      ConfigReloadBehavior::NoReload);
+  auto config = serverState_->getReloadableConfig()->getEdenConfig();
   localStore_->periodicManagementTask(*config);
 }
 
@@ -3256,9 +3255,9 @@ void EdenServer::detectNfsCrawl() {
 }
 
 void EdenServer::reloadConfig() {
-  // Get the config, forcing a reload now.
-  auto config = serverState_->getReloadableConfig()->getEdenConfig(
-      ConfigReloadBehavior::ForceReload);
+  // Reload the config, then get the new values.
+  serverState_->getReloadableConfig()->maybeReload();
+  auto config = serverState_->getReloadableConfig()->getEdenConfig();
 
   // Update all periodic tasks that are controlled by config settings.
   // This should be cheap, so for now we just block on this to finish rather

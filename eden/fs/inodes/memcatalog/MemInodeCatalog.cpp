@@ -190,7 +190,7 @@ std::optional<fsck::InodeInfo> MemInodeCatalog::loadInodeInfo(
 }
 
 InodeNumber MemInodeCatalog::scanLocalChanges(
-    [[maybe_unused]] std::shared_ptr<const EdenConfig> config,
+    [[maybe_unused]] std::shared_ptr<ReloadableConfig> config,
     [[maybe_unused]] AbsolutePathPiece mountPath,
     [[maybe_unused]] bool windowsSymlinksEnabled,
     [[maybe_unused]] InodeCatalog::LookupCallback& callback) {

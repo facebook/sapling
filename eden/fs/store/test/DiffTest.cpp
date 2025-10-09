@@ -70,8 +70,7 @@ class DiffTest : public ::testing::Test {
         kTreeCacheMaximumSize, ConfigSourceType::Default, true);
     rawEdenConfig->inMemoryTreeCacheMinimumItems.setValue(
         kTreeCacheMinimumEntries, ConfigSourceType::Default, true);
-    auto edenConfig = std::make_shared<ReloadableConfig>(
-        rawEdenConfig, ConfigReloadBehavior::NoReload);
+    auto edenConfig = std::make_shared<ReloadableConfig>(rawEdenConfig);
     auto treeCache = TreeCache::create(edenConfig, makeRefPtr<EdenStats>());
     localStore_ = make_shared<MemoryLocalStore>(makeRefPtr<EdenStats>());
     backingStore_ = make_shared<FakeBackingStore>(

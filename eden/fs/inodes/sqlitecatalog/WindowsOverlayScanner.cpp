@@ -16,6 +16,7 @@
 #include "eden/common/telemetry/NullStructuredLogger.h"
 #include "eden/common/utils/PathFuncs.h"
 #include "eden/fs/config/EdenConfig.h"
+#include "eden/fs/config/ReloadableConfig.h"
 #include "eden/fs/inodes/overlay/OverlayChecker.h"
 #include "eden/fs/inodes/sqlitecatalog/SqliteInodeCatalog.h"
 #include "eden/fs/utils/WinStackTrace.h"
@@ -61,7 +62,10 @@ int main(int argc, char** argv) {
         std::runtime_error("no lookup callback"));
   };
   inodeCatalog.scanLocalChanges(
-      EdenConfig::createTestEdenConfig(), mountPath, true, lookup);
+      std::make_shared<ReloadableConfig>(EdenConfig::createTestEdenConfig()),
+      mountPath,
+      true,
+      lookup);
   XLOG(INFO, "scanning end");
 
   return 0;

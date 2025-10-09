@@ -18,6 +18,7 @@
 #include "eden/common/utils/FileUtils.h"
 #include "eden/common/utils/windows/WinError.h"
 #include "eden/fs/config/EdenConfig.h"
+#include "eden/fs/config/ReloadableConfig.h"
 #include "eden/fs/inodes/InodeNumber.h"
 #include "eden/fs/inodes/overlay/gen-cpp2/overlay_types.h"
 #include "eden/fs/inodes/sqlitecatalog/SqliteInodeCatalog.h"
@@ -463,7 +464,7 @@ ImmediateFuture<bool> processChildren(
 } // namespace
 
 void windowsFsckScanLocalChanges(
-    std::shared_ptr<const EdenConfig> config,
+    std::shared_ptr<ReloadableConfig> config,
     InodeCatalog& inodeCatalog,
     InodeCatalogType inodeCatalogType,
     AbsolutePathPiece mountPath,
@@ -477,7 +478,7 @@ void windowsFsckScanLocalChanges(
     // TODO: Handler errors or no trees
 
     auto executor = folly::getGlobalCPUExecutor();
-    if (!config->multiThreadedFsck.getValue()) {
+    if (!config->getEdenConfig()->multiThreadedFsck.getValue()) {
       executor = folly::SerialExecutor::create();
     }
 
@@ -490,9 +491,11 @@ void windowsFsckScanLocalChanges(
              insensitiveOverlayDir = std::move(insensitiveOverlayDir),
              &traversedDirectories,
              &callback,
-             logFrequency = config->fsckLogFrequency.getValue(),
+             logFrequency =
+                 config->getEdenConfig()->fsckLogFrequency.getValue(),
              windowsSymlinksEnabled = windowsSymlinksEnabled,
-             fsckRenamedFiles = config->prjfsFsckDetectRenames.getValue()](
+             fsckRenamedFiles =
+                 config->getEdenConfig()->prjfsFsckDetectRenames.getValue()](
                 std::variant<std::shared_ptr<const Tree>, TreeEntry> scmEntry) {
               auto scmTree =
                   std::get<std::shared_ptr<const Tree>>(std::move(scmEntry));

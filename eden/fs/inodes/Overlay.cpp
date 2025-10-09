@@ -284,7 +284,7 @@ struct statfs Overlay::statFs() {
 #endif // !_WIN32
 
 folly::SemiFuture<Unit> Overlay::initialize(
-    std::shared_ptr<const EdenConfig> config,
+    const std::shared_ptr<ReloadableConfig>& config,
     std::optional<AbsolutePath> mountPath,
     OverlayChecker::ProgressCallback&& progressCallback,
     InodeCatalog::LookupCallback&& lookupCallback) {
@@ -297,7 +297,7 @@ folly::SemiFuture<Unit> Overlay::initialize(
   auto [initPromise, initFuture] = folly::makePromiseContract<Unit>();
 
   gcThread_ = std::thread([this,
-                           config = std::move(config),
+                           config,
                            mountPath = std::move(mountPath),
                            progressCallback = std::move(progressCallback),
                            lookupCallback = lookupCallback,
@@ -326,7 +326,7 @@ folly::SemiFuture<Unit> Overlay::initialize(
 }
 
 void Overlay::initOverlay(
-    std::shared_ptr<const EdenConfig> config,
+    std::shared_ptr<ReloadableConfig> config,
     std::optional<AbsolutePath> mountPath,
     [[maybe_unused]] const OverlayChecker::ProgressCallback& progressCallback,
     [[maybe_unused]] InodeCatalog::LookupCallback& lookupCallback) {
@@ -380,7 +380,7 @@ void Overlay::initOverlay(
         static_cast<FsFileContentStore*>(fileContentStore_.get()),
         std::nullopt,
         lookupCallback,
-        config->fsckNumErrorDiscoveryThreads.getValue());
+        config->getEdenConfig()->fsckNumErrorDiscoveryThreads.getValue());
     folly::stop_watch<> fsckRuntime;
     checker.scanForErrors(progressCallback);
     auto result = checker.repairErrors();

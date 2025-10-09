@@ -38,8 +38,7 @@ std::shared_ptr<SaplingImportRequest> makeBlobImportRequest(
 
 void enqueue(benchmark::State& state) {
   auto rawEdenConfig = EdenConfig::createTestEdenConfig();
-  auto edenConfig = std::make_shared<ReloadableConfig>(
-      rawEdenConfig, ConfigReloadBehavior::NoReload);
+  auto edenConfig = std::make_shared<ReloadableConfig>(rawEdenConfig);
 
   auto queue = SaplingImportRequestQueue{edenConfig};
 
@@ -58,8 +57,7 @@ void enqueue(benchmark::State& state) {
 
 void dequeue(benchmark::State& state) {
   auto rawEdenConfig = EdenConfig::createTestEdenConfig();
-  auto edenConfig = std::make_shared<ReloadableConfig>(
-      rawEdenConfig, ConfigReloadBehavior::NoReload);
+  auto edenConfig = std::make_shared<ReloadableConfig>(rawEdenConfig);
 
   auto queue = SaplingImportRequestQueue{edenConfig};
 

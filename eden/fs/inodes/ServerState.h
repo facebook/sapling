@@ -7,6 +7,7 @@
 
 #pragma once
 
+#include <folly/concurrency/memory/ReadMostlySharedPtr.h>
 #include <memory>
 
 #include "eden/common/utils/PathFuncs.h"
@@ -14,9 +15,6 @@
 #include "eden/common/utils/UserInfo.h"
 #include "eden/fs/config/CachedParsedFileMonitor.h"
 #include "eden/fs/model/git/GitIgnoreFileParser.h"
-
-// For ConfigReloadBehavior
-#include "eden/fs/config/gen-cpp2/eden_config_types.h"
 
 namespace folly {
 class EventBase;
@@ -109,12 +107,8 @@ class ServerState {
 
   /**
    * Get the EdenConfig data.
-   *
-   * The config data may be reloaded from disk depending on the value of the
-   * reload parameter.
    */
-  std::shared_ptr<const EdenConfig> getEdenConfig(
-      ConfigReloadBehavior reload = ConfigReloadBehavior::AutoReload);
+  folly::ReadMostlySharedPtr<const EdenConfig> getEdenConfig();
 
   /**
    * Get the TopLevelIgnores. It is based on the system and user git ignore

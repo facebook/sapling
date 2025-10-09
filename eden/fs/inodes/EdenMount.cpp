@@ -409,7 +409,7 @@ FOLLY_NODISCARD ImmediateFuture<folly::Unit> EdenMount::initialize(
             // allocate inode numbers, including creating the root TreeInode.
             return overlay_
                 ->initialize(
-                    getEdenConfig(),
+                    serverState_->getReloadableConfig(),
                     getPath(),
                     std::move(progressCallback),
                     [this](
@@ -1124,7 +1124,7 @@ const shared_ptr<UnboundedQueueExecutor>& EdenMount::getInvalidationThreadPool()
 }
 #endif
 
-std::shared_ptr<const EdenConfig> EdenMount::getEdenConfig() const {
+folly::ReadMostlySharedPtr<const EdenConfig> EdenMount::getEdenConfig() const {
   return serverState_->getReloadableConfig()->getEdenConfig();
 }
 
@@ -2797,7 +2797,7 @@ ImmediateFuture<TreeInodePtr> EdenMount::ensureDirectoryExists(
 std::optional<TreePrefetchLease> EdenMount::tryStartTreePrefetch(
     TreeInodePtr treeInode,
     const ObjectFetchContext& context) {
-  auto config = serverState_->getEdenConfig(ConfigReloadBehavior::NoReload);
+  auto config = serverState_->getEdenConfig();
   auto maxTreePrefetches = config->maxTreePrefetches.getValue();
   auto numInProgress =
       numPrefetchesInProgress_.fetch_add(1, std::memory_order_acq_rel);

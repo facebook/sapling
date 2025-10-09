@@ -31,6 +31,7 @@ class IOBuf;
 
 namespace facebook::eden {
 
+class ReloadableConfig;
 class EdenConfig;
 
 /**
@@ -170,7 +171,7 @@ class InodeCatalog {
    * directory when EdenFS is not running.
    */
   virtual InodeNumber scanLocalChanges(
-      [[maybe_unused]] std::shared_ptr<const EdenConfig> config,
+      [[maybe_unused]] std::shared_ptr<ReloadableConfig> config,
       [[maybe_unused]] AbsolutePathPiece mountPath,
       [[maybe_unused]] bool windowsSymlinksEnabled,
       [[maybe_unused]] LookupCallback& callback) {
