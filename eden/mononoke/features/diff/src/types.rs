@@ -63,6 +63,18 @@ pub struct HeaderlessUnifiedDiff {
 }
 
 #[derive(Debug, Clone)]
+pub struct HunkRange {
+    pub start: usize,
+    pub end: usize,
+}
+
+#[derive(Debug, Clone)]
+pub struct HunkData {
+    pub add_range: HunkRange,
+    pub delete_range: HunkRange,
+}
+
+#[derive(Debug, Clone)]
 pub struct MetadataFileInfo {
     pub file_type: Option<DiffFileType>,
     pub content_type: Option<DiffContentType>,
@@ -83,6 +95,25 @@ pub struct MetadataDiff {
     pub base_file_info: MetadataFileInfo,
     pub other_file_info: MetadataFileInfo,
     pub lines_count: Option<MetadataLinesCount>,
+}
+
+impl From<xdiff::Hunk> for HunkData {
+    fn from(hunk: xdiff::Hunk) -> Self {
+        let add_range = HunkRange {
+            start: hunk.add.start,
+            end: hunk.add.end,
+        };
+
+        let delete_range = HunkRange {
+            start: hunk.remove.start,
+            end: hunk.remove.end,
+        };
+
+        HunkData {
+            add_range,
+            delete_range,
+        }
+    }
 }
 
 impl From<DiffFileType> for xdiff::FileType {
