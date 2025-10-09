@@ -36,12 +36,17 @@ use mercurial_types::sharded_augmented_manifest::HgAugmentedDirectoryNode;
 use mercurial_types::sharded_augmented_manifest::HgAugmentedFileLeafNode;
 use mononoke_types::ContentId;
 use mononoke_types::ContentMetadataV2;
+use mononoke_types::MPath;
 use mononoke_types::MPathElement;
 use mononoke_types::MPathElementPrefix;
+use mononoke_types::RepoPath;
 use mononoke_types::TrieMap;
 use mononoke_types::hash::Blake3;
 use mononoke_types::sharded_map_v2::LookupKind;
 use mononoke_types::sharded_map_v2::ShardedMapV2Node;
+use restricted_paths::ManifestType;
+use restricted_paths::RestrictedPathManifestIdEntry;
+use restricted_paths::RestrictedPaths;
 
 /// Derive an HgAugmentedManifestId from an HgManifestId and parents.
 pub async fn derive_from_hg_manifest_and_parents(
@@ -50,13 +55,21 @@ pub async fn derive_from_hg_manifest_and_parents(
     hg_manifest_id: HgManifestId,
     parents: Vec<HgAugmentedManifestId>,
     content_metadata_cache: &HashMap<ContentId, ContentMetadataV2>,
+    restricted_paths: &RestrictedPaths,
 ) -> Result<HgAugmentedManifestId> {
+    let restricted_paths_enabled = justknobs::eval(
+        "scm/mononoke:enabled_restricted_paths_access_logging",
+        None, // hashing
+        // Adding a switch value to be able to disable writes only
+        Some("hg_augmented_manifest_write"),
+    )?;
     let parents = parents.into_iter().map(Some).collect::<Vec<_>>();
     let (_, root, _, _) = bounded_traversal::bounded_traversal(
         256,
-        (None, hg_manifest_id, parents),
-        |(name, hg_manifest_id, parents): (Option<MPathElement>, _, _)| {
+        (MPath::ROOT, None, hg_manifest_id, parents),
+        |(parent_path, name, hg_manifest_id, parents): (MPath, Option<MPathElement>, _, _)| {
             async move {
+                let path = parent_path.join_element(name.as_ref());
                 let (hg_manifest, parents) = future::try_join(
                     hg_manifest_id.load(ctx, blobstore),
                     future::try_join_all(parents.iter().map(|p| async move {
@@ -95,7 +108,7 @@ pub async fn derive_from_hg_manifest_and_parents(
                     match diff {
                         ManifestComparison::New(elem, entry) => match entry {
                             Entry::Tree(id) => {
-                                children.push((Some(elem), id, Vec::new()));
+                                children.push((path.clone(), Some(elem), id, Vec::new()));
                             }
                             Entry::Leaf((file_type, filenode)) => {
                                 new_subentries.push((elem, file_type, filenode));
@@ -136,7 +149,7 @@ pub async fn derive_from_hg_manifest_and_parents(
                                             .collect();
                                     future::try_join_all(child_parents_futs).await?
                                 };
-                                children.push((Some(elem), id, child_parents));
+                                children.push((path.clone(), Some(elem), id, child_parents));
                             }
                             Entry::Leaf((file_type, filenode)) => {
                                 new_subentries.push((elem, file_type, filenode));
@@ -159,6 +172,7 @@ pub async fn derive_from_hg_manifest_and_parents(
                                 match entry {
                                     Entry::Tree(id) => {
                                         children.push((
+                                            path.clone(),
                                             Some(prefix.clone().join_into_element(suffix)?),
                                             id,
                                             Vec::new(),
@@ -241,6 +255,7 @@ pub async fn derive_from_hg_manifest_and_parents(
 
                 anyhow::Ok((
                     (
+                        path,
                         name,
                         hg_manifest,
                         new_subentries,
@@ -251,7 +266,7 @@ pub async fn derive_from_hg_manifest_and_parents(
             }
             .boxed()
         },
-        |(name, hg_manifest, new_subentries, reused_subentries_and_partial_maps),
+        |(path, name, hg_manifest, new_subentries, reused_subentries_and_partial_maps),
          children: bounded_traversal::Iter<(
             Option<MPathElement>,
             HgAugmentedManifestId,
@@ -330,6 +345,26 @@ pub async fn derive_from_hg_manifest_and_parents(
                     augmented_manifest,
                 };
                 let hg_augmented_manifest_id = envelope.store(ctx, blobstore).await?;
+
+                if restricted_paths_enabled
+                    && let Some(non_root_path) = path.clone().into_optional_non_root_path()
+                    && restricted_paths.is_restricted_path(&non_root_path)
+                {
+                    let entry = RestrictedPathManifestIdEntry::new(
+                        ManifestType::HgAugmented,
+                        hg_augmented_manifest_id.to_string().into(),
+                        RepoPath::DirectoryPath(non_root_path),
+                    )?;
+
+                    if let Err(e) = restricted_paths
+                        .manifest_id_store()
+                        .add_entry(ctx, entry)
+                        .await
+                    {
+                        // Log error but don't fail manifest derivation
+                        slog::warn!(ctx.logger(), "Failed to track restricted path at {path}: {e}");
+                    }
+                }
                 Ok((
                     name,
                     hg_augmented_manifest_id,

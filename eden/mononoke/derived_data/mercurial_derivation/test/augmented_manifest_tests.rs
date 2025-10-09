@@ -22,6 +22,7 @@ use mercurial_types::HgManifestId;
 use mononoke_macros::mononoke;
 use mononoke_types::ChangesetId;
 use repo_blobstore::RepoBlobstoreRef;
+use restricted_paths::RestrictedPathsRef;
 use tests_utils::drawdag::extend_from_dag_with_actions;
 
 use crate::Repo;
@@ -56,6 +57,7 @@ async fn get_manifests(
         hg_id,
         parents,
         &Default::default(),
+        repo.restricted_paths(),
     )
     .await?;
     let aug = aug_id.load(ctx, repo.repo_blobstore()).await?;

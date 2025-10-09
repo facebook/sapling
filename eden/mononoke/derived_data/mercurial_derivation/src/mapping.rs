@@ -30,11 +30,19 @@ use derived_data_manager::BonsaiDerivable;
 use derived_data_manager::DerivableType;
 use derived_data_manager::DerivationContext;
 use derived_data_manager::dependencies;
+use futures::TryStreamExt;
 use futures::future;
+use manifest::Entry;
+use manifest::ManifestOps;
+use manifest::PathOrPrefix;
 use mercurial_types::HgAugmentedManifestId;
 use mercurial_types::HgChangesetId;
 use mononoke_types::BonsaiChangeset;
 use mononoke_types::ChangesetId;
+use mononoke_types::RepoPath;
+use restricted_paths::ArcRestrictedPaths;
+use restricted_paths::ManifestType;
+use restricted_paths::RestrictedPathManifestIdEntry;
 use slog::debug;
 use stats::prelude::*;
 
@@ -301,6 +309,84 @@ async fn get_subtree_change_sources(
     Ok(sources)
 }
 
+/// Asynchronously track HgAugmentedManifest IDs for all restricted paths in a commit.
+///
+/// This is used for derive_from_predecessor.  We don't know which restricted paths were changed
+/// or introduced by this commit as the parent may not have been derived yet.  Instead, we log all
+/// of them.  This is ok as derive_from_predecessor is only used for backfilling.
+async fn track_all_restricted_paths(
+    ctx: &CoreContext,
+    restricted_paths: ArcRestrictedPaths,
+    hg_cs_id: HgChangesetId,
+    root_hg_aug_mfid: HgAugmentedManifestId,
+    blobstore: Arc<dyn Blobstore>,
+) -> Result<()> {
+    // Check if restricted paths tracking is enabled via justknobs
+    let restricted_paths_enabled = justknobs::eval(
+        "scm/mononoke:enabled_restricted_paths_access_logging",
+        None, // hashing
+        // Adding a switch value to be able to disable writes only
+        Some("hg_augmented_manifest_write"),
+    )?;
+
+    if !restricted_paths_enabled {
+        return Ok(());
+    }
+
+    // Get the configured restricted paths
+    let restricted_dirs: Vec<PathOrPrefix> = restricted_paths
+        .config()
+        .path_acls
+        .keys()
+        .map(|non_root_mpath| PathOrPrefix::Path(non_root_mpath.clone().into()))
+        .collect();
+
+    if restricted_dirs.is_empty() {
+        return Ok(());
+    }
+
+    // Find all directory entries for the restricted paths and store their
+    // HgAugmentedManifest IDs in the manifest id store
+    let entries: Vec<RestrictedPathManifestIdEntry> = root_hg_aug_mfid
+        .find_entries(ctx.clone(), blobstore, restricted_dirs)
+        .try_filter_map(|(path, manif_entry)| async move {
+            match manif_entry {
+                Entry::Tree(hg_aug_manifest_id) => {
+                    let repo_path = RepoPath::dir(path).context("Expected NonRootMPath")?;
+
+                    let entry = RestrictedPathManifestIdEntry::new(
+                        ManifestType::HgAugmented,
+                        hg_aug_manifest_id.to_string().into(),
+                        repo_path,
+                    )?;
+                    Ok(Some(entry))
+                }
+                Entry::Leaf(_) => bail!("Path {path} is not a directory"),
+            }
+        })
+        .try_collect::<Vec<RestrictedPathManifestIdEntry>>()
+        .await
+        .context("Building restricted path manifest entries")?;
+
+    if entries.is_empty() {
+        return Ok(());
+    }
+
+    if let Err(e) = restricted_paths
+        .manifest_id_store()
+        .add_entries(ctx, &entries)
+        .await
+        .context("Failed to add entries to the manifest id store")
+    {
+        slog::warn!(
+            ctx.logger(),
+            "Failed to track restricted paths for changeset {hg_cs_id}: {e}"
+        );
+    }
+
+    Ok(())
+}
+
 #[derive(Debug, Clone, Eq, PartialEq, Hash)]
 pub struct RootHgAugmentedManifestId(HgAugmentedManifestId);
 
@@ -377,15 +463,18 @@ impl BonsaiDerivable for RootHgAugmentedManifestId {
             .into_iter()
             .map(|parent| parent.hg_augmented_manifest_id())
             .collect();
-        let root = crate::derive_hg_augmented_manifest::derive_from_hg_manifest_and_parents(
-            ctx,
-            blobstore,
-            hg_manifest_id,
-            parents,
-            &content_metadata,
-        )
-        .await?;
-        Ok(Self(root))
+        let root_hg_aug_mfid =
+            crate::derive_hg_augmented_manifest::derive_from_hg_manifest_and_parents(
+                ctx,
+                blobstore,
+                hg_manifest_id,
+                parents,
+                &content_metadata,
+                &derivation_ctx.restricted_paths(),
+            )
+            .await?;
+
+        Ok(Self(root_hg_aug_mfid))
     }
 
     async fn derive_from_predecessor(
@@ -407,6 +496,17 @@ impl BonsaiDerivable for RootHgAugmentedManifestId {
             hg_manifest_id,
         )
         .await?;
+
+        // Track restricted paths for the derived HgAugmentedManifest
+        track_all_restricted_paths(
+            ctx,
+            derivation_ctx.restricted_paths(),
+            hg_changeset_id,
+            root,
+            Arc::clone(derivation_ctx.blobstore()),
+        )
+        .await?;
+
         Ok(Self(root))
     }
 

@@ -51,11 +51,18 @@ async fn test_change_to_restricted_with_access_is_logged(fb: FacebookInit) -> Re
     RestrictedPathsTestDataBuilder::new()
         .with_restricted_paths(restricted_paths)
         .with_file_path_changes(vec![("user_project/foo/bar/a", None)])
-        .expecting_manifest_id_store_entries(vec![RestrictedPathManifestIdEntry::new(
-            ManifestType::Hg,
-            expected_manifest_id.clone(),
-            RepoPath::dir("user_project/foo")?,
-        )?])
+        .expecting_manifest_id_store_entries(vec![
+            RestrictedPathManifestIdEntry::new(
+                ManifestType::Hg,
+                expected_manifest_id.clone(),
+                RepoPath::dir("user_project/foo")?,
+            )?,
+            RestrictedPathManifestIdEntry::new(
+                ManifestType::HgAugmented,
+                expected_manifest_id.clone(),
+                RepoPath::dir("user_project/foo")?,
+            )?,
+        ])
         .expecting_scuba_access_logs(vec![
             // Manifest access log
             ScubaAccessLogSample {
@@ -124,11 +131,18 @@ async fn test_single_dir_single_restricted_change(fb: FacebookInit) -> Result<()
     RestrictedPathsTestDataBuilder::new()
         .with_restricted_paths(restricted_paths)
         .with_file_path_changes(vec![("restricted/dir/a", None)])
-        .expecting_manifest_id_store_entries(vec![RestrictedPathManifestIdEntry::new(
-            ManifestType::Hg,
-            expected_manifest_id.clone(),
-            RepoPath::dir("restricted/dir")?,
-        )?])
+        .expecting_manifest_id_store_entries(vec![
+            RestrictedPathManifestIdEntry::new(
+                ManifestType::Hg,
+                expected_manifest_id.clone(),
+                RepoPath::dir("restricted/dir")?,
+            )?,
+            RestrictedPathManifestIdEntry::new(
+                ManifestType::HgAugmented,
+                expected_manifest_id.clone(),
+                RepoPath::dir("restricted/dir")?,
+            )?,
+        ])
         .expecting_scuba_access_logs(vec![
             // Manifest access log
             ScubaAccessLogSample {
@@ -184,11 +198,18 @@ async fn test_single_dir_many_restricted_changes(fb: FacebookInit) -> Result<()>
     RestrictedPathsTestDataBuilder::new()
         .with_restricted_paths(restricted_paths)
         .with_file_path_changes(vec![("restricted/dir/a", None), ("restricted/dir/b", None)])
-        .expecting_manifest_id_store_entries(vec![RestrictedPathManifestIdEntry::new(
-            ManifestType::Hg,
-            expected_manifest_id.clone(),
-            RepoPath::dir("restricted/dir")?,
-        )?])
+        .expecting_manifest_id_store_entries(vec![
+            RestrictedPathManifestIdEntry::new(
+                ManifestType::Hg,
+                expected_manifest_id.clone(),
+                RepoPath::dir("restricted/dir")?,
+            )?,
+            RestrictedPathManifestIdEntry::new(
+                ManifestType::HgAugmented,
+                expected_manifest_id.clone(),
+                RepoPath::dir("restricted/dir")?,
+            )?,
+        ])
         .expecting_scuba_access_logs(vec![
             // Manifest access log - Single log entry for both files, because they're under the same
             // restricted directory
@@ -246,11 +267,18 @@ async fn test_single_dir_restricted_and_unrestricted(fb: FacebookInit) -> Result
             ("restricted/dir/a", None),
             ("unrestricted/dir/b", None),
         ])
-        .expecting_manifest_id_store_entries(vec![RestrictedPathManifestIdEntry::new(
-            ManifestType::Hg,
-            expected_manifest_id.clone(),
-            RepoPath::dir("restricted/dir")?,
-        )?])
+        .expecting_manifest_id_store_entries(vec![
+            RestrictedPathManifestIdEntry::new(
+                ManifestType::Hg,
+                expected_manifest_id.clone(),
+                RepoPath::dir("restricted/dir")?,
+            )?,
+            RestrictedPathManifestIdEntry::new(
+                ManifestType::HgAugmented,
+                expected_manifest_id.clone(),
+                RepoPath::dir("restricted/dir")?,
+            )?,
+        ])
         .expecting_scuba_access_logs(vec![
             // Manifest access log
             ScubaAccessLogSample {
@@ -306,21 +334,32 @@ async fn test_multiple_restricted_dirs(fb: FacebookInit) -> Result<()> {
             another_acl.clone(),
         ),
     ];
-    let expected_manifest_id_one = ManifestId::from("e53be16502cbc6afeb30ef30de7f6d9841fd4cb1");
-    let expected_manifest_id_two = ManifestId::from("f5ca206223b4d531f0d65ff422273f901bc7a024");
+
+    let expected_hg_manifest_id_one = ManifestId::from("e53be16502cbc6afeb30ef30de7f6d9841fd4cb1");
+    let expected_hg_manifest_id_two = ManifestId::from("f5ca206223b4d531f0d65ff422273f901bc7a024");
 
     RestrictedPathsTestDataBuilder::new()
         .with_restricted_paths(restricted_paths)
         .with_file_path_changes(vec![("restricted/one/a", None), ("restricted/two/b", None)])
         .expecting_manifest_id_store_entries(vec![
             RestrictedPathManifestIdEntry::new(
-                ManifestType::Hg,
-                expected_manifest_id_one.clone(),
+                ManifestType::HgAugmented,
+                expected_hg_manifest_id_two.clone(),
+                RepoPath::dir("restricted/two")?,
+            )?,
+            RestrictedPathManifestIdEntry::new(
+                ManifestType::HgAugmented,
+                expected_hg_manifest_id_one.clone(),
                 RepoPath::dir("restricted/one")?,
             )?,
             RestrictedPathManifestIdEntry::new(
                 ManifestType::Hg,
-                expected_manifest_id_two.clone(),
+                expected_hg_manifest_id_one.clone(),
+                RepoPath::dir("restricted/one")?,
+            )?,
+            RestrictedPathManifestIdEntry::new(
+                ManifestType::Hg,
+                expected_hg_manifest_id_two.clone(),
                 RepoPath::dir("restricted/two")?,
             )?,
         ])
@@ -329,7 +368,7 @@ async fn test_multiple_restricted_dirs(fb: FacebookInit) -> Result<()> {
             ScubaAccessLogSample {
                 repo_id: RepositoryId::new(0),
                 restricted_paths: cast_to_non_root_mpaths(vec!["restricted/two"]),
-                manifest_id: Some(expected_manifest_id_two.clone()),
+                manifest_id: Some(expected_hg_manifest_id_two.clone()),
                 manifest_type: Some(ManifestType::Hg),
                 full_path: None,
                 client_identities: vec!["USER:myusername0"]
@@ -359,7 +398,7 @@ async fn test_multiple_restricted_dirs(fb: FacebookInit) -> Result<()> {
             ScubaAccessLogSample {
                 repo_id: RepositoryId::new(0),
                 restricted_paths: cast_to_non_root_mpaths(vec!["restricted/one"]),
-                manifest_id: Some(expected_manifest_id_one.clone()),
+                manifest_id: Some(expected_hg_manifest_id_one.clone()),
                 manifest_type: Some(ManifestType::Hg),
                 full_path: None,
                 client_identities: vec!["USER:myusername0"]
@@ -411,8 +450,8 @@ async fn test_multiple_restricted_dirs_with_partial_access(fb: FacebookInit) -> 
             myusername_project_acl.clone(),
         ),
     ];
-    let expected_manifest_id_user = ManifestId::from("5d30a65c45e695416c96abfbd745f43c711879bb");
-    let expected_manifest_id_restricted =
+    let expected_hg_manifest_id_user = ManifestId::from("5d30a65c45e695416c96abfbd745f43c711879bb");
+    let expected_hg_manifest_id_restricted =
         ManifestId::from("e53be16502cbc6afeb30ef30de7f6d9841fd4cb1");
 
     RestrictedPathsTestDataBuilder::new()
@@ -424,13 +463,23 @@ async fn test_multiple_restricted_dirs_with_partial_access(fb: FacebookInit) -> 
         .expecting_manifest_id_store_entries(vec![
             RestrictedPathManifestIdEntry::new(
                 ManifestType::Hg,
-                expected_manifest_id_user.clone(),
+                expected_hg_manifest_id_user.clone(),
                 RepoPath::dir("user_project/foo")?,
             )?,
             RestrictedPathManifestIdEntry::new(
                 ManifestType::Hg,
-                expected_manifest_id_restricted.clone(),
+                expected_hg_manifest_id_restricted.clone(),
                 RepoPath::dir("restricted/one")?,
+            )?,
+            RestrictedPathManifestIdEntry::new(
+                ManifestType::HgAugmented,
+                expected_hg_manifest_id_restricted.clone(),
+                RepoPath::dir("restricted/one")?,
+            )?,
+            RestrictedPathManifestIdEntry::new(
+                ManifestType::HgAugmented,
+                expected_hg_manifest_id_user.clone(),
+                RepoPath::dir("user_project/foo")?,
             )?,
         ])
         .expecting_scuba_access_logs(vec![
@@ -438,7 +487,7 @@ async fn test_multiple_restricted_dirs_with_partial_access(fb: FacebookInit) -> 
             ScubaAccessLogSample {
                 repo_id: RepositoryId::new(0),
                 restricted_paths: cast_to_non_root_mpaths(vec!["user_project/foo"]),
-                manifest_id: Some(expected_manifest_id_user.clone()),
+                manifest_id: Some(expected_hg_manifest_id_user.clone()),
                 manifest_type: Some(ManifestType::Hg),
                 full_path: None,
                 client_identities: vec!["USER:myusername0"]
@@ -470,7 +519,7 @@ async fn test_multiple_restricted_dirs_with_partial_access(fb: FacebookInit) -> 
             ScubaAccessLogSample {
                 repo_id: RepositoryId::new(0),
                 restricted_paths: cast_to_non_root_mpaths(vec!["restricted/one"]),
-                manifest_id: Some(expected_manifest_id_restricted.clone()),
+                manifest_id: Some(expected_hg_manifest_id_restricted.clone()),
                 manifest_type: Some(ManifestType::Hg),
                 full_path: None,
                 client_identities: vec!["USER:myusername0"]
@@ -518,8 +567,9 @@ async fn test_overlapping_restricted_directories(fb: FacebookInit) -> Result<()>
         (NonRootMPath::new("project").unwrap(), project_acl.clone()),
     ];
 
-    let expected_manifest_id_root = ManifestId::from("0825286967058d61feb5b0031f4c23fa0a999965");
-    let expected_manifest_id_subdir = ManifestId::from("5629398cf56074c359a05b1f170eb2590efe11c3");
+    let expected_hg_manifest_id_root = ManifestId::from("0825286967058d61feb5b0031f4c23fa0a999965");
+    let expected_hg_manifest_id_subdir =
+        ManifestId::from("5629398cf56074c359a05b1f170eb2590efe11c3");
 
     // Access a file in the more restricted nested path - this should trigger both ACL checks
     // Custom ACL that gives access to project but NOT to project/restricted
@@ -532,13 +582,23 @@ async fn test_overlapping_restricted_directories(fb: FacebookInit) -> Result<()>
         .with_file_path_changes(vec![("project/restricted/sensitive_file.txt", None)])
         .expecting_manifest_id_store_entries(vec![
             RestrictedPathManifestIdEntry::new(
+                ManifestType::HgAugmented,
+                expected_hg_manifest_id_root.clone(),
+                RepoPath::dir("project")?,
+            )?,
+            RestrictedPathManifestIdEntry::new(
+                ManifestType::HgAugmented,
+                expected_hg_manifest_id_subdir.clone(),
+                RepoPath::dir("project/restricted")?,
+            )?,
+            RestrictedPathManifestIdEntry::new(
                 ManifestType::Hg,
-                expected_manifest_id_root.clone(),
+                expected_hg_manifest_id_root.clone(),
                 RepoPath::dir("project")?,
             )?,
             RestrictedPathManifestIdEntry::new(
                 ManifestType::Hg,
-                expected_manifest_id_subdir.clone(),
+                expected_hg_manifest_id_subdir.clone(),
                 RepoPath::dir("project/restricted")?,
             )?,
         ])
@@ -547,7 +607,7 @@ async fn test_overlapping_restricted_directories(fb: FacebookInit) -> Result<()>
             ScubaAccessLogSample {
                 repo_id: RepositoryId::new(0),
                 restricted_paths: cast_to_non_root_mpaths(vec!["project"]),
-                manifest_id: Some(expected_manifest_id_root.clone()),
+                manifest_id: Some(expected_hg_manifest_id_root.clone()),
                 manifest_type: Some(ManifestType::Hg),
                 full_path: None,
                 client_identities: vec!["USER:myusername0"]
@@ -579,7 +639,7 @@ async fn test_overlapping_restricted_directories(fb: FacebookInit) -> Result<()>
             ScubaAccessLogSample {
                 repo_id: RepositoryId::new(0),
                 restricted_paths: cast_to_non_root_mpaths(vec!["project/restricted"]),
-                manifest_id: Some(expected_manifest_id_subdir.clone()),
+                manifest_id: Some(expected_hg_manifest_id_subdir.clone()),
                 manifest_type: Some(ManifestType::Hg),
                 full_path: None,
                 client_identities: vec!["USER:myusername0"]
@@ -639,11 +699,18 @@ async fn test_same_manifest_id_restricted_and_unrestricted_paths(fb: FacebookIni
             ("restricted/foo/bar", Some(identical_content)),
             ("unrestricted/foo/bar", Some(identical_content)),
         ])
-        .expecting_manifest_id_store_entries(vec![RestrictedPathManifestIdEntry::new(
-            ManifestType::Hg,
-            expected_manifest_id.clone(),
-            RepoPath::dir("restricted")?,
-        )?])
+        .expecting_manifest_id_store_entries(vec![
+            RestrictedPathManifestIdEntry::new(
+                ManifestType::Hg,
+                expected_manifest_id.clone(),
+                RepoPath::dir("restricted")?,
+            )?,
+            RestrictedPathManifestIdEntry::new(
+                ManifestType::HgAugmented,
+                expected_manifest_id.clone(),
+                RepoPath::dir("restricted")?,
+            )?,
+        ])
         .expecting_scuba_access_logs(vec![
             // Manifest access logs - two entries because both files trigger the same manifest access
             ScubaAccessLogSample {
