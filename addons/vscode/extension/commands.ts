@@ -20,8 +20,8 @@ import path from 'node:path';
 import {
   beforeRevsetForComparison,
   ComparisonType,
+  currRevsetForComparison,
   labelForComparison,
-  revsetForComparison,
 } from 'shared/Comparison';
 import * as vscode from 'vscode';
 import {encodeDeletedFileUri} from './DeletedFileContentProvider';
@@ -165,20 +165,33 @@ function fileExists(uri: vscode.Uri): Promise<boolean> {
 }
 
 async function openDiffView(uri: vscode.Uri, comparison: Comparison): Promise<unknown> {
-  const {fsPath} = uri;
-  const title = `${path.basename(fsPath)} (${t(labelForComparison(comparison))})`;
-  const uriForComparison = encodeSaplingDiffUri(uri, revsetForComparison(comparison));
-  if (comparison.type !== ComparisonType.Committed) {
-    return executeVSCodeCommand(
-      'vscode.diff',
-      uriForComparison,
-      (await fileExists(uri)) ? uri : encodeDeletedFileUri(uri),
-      title,
-      {viewColumn: shouldOpenBeside() ? vscode.ViewColumn.Beside : undefined},
-    );
+  const leftUri = getLeftUri(uri, comparison);
+  const rightUri = await getRightUri(uri, comparison);
+  const title = `${path.basename(uri.fsPath)} (${t(labelForComparison(comparison))})`;
+  const opts = {viewColumn: shouldOpenBeside() ? vscode.ViewColumn.Beside : undefined};
+  return executeVSCodeCommand('vscode.diff', leftUri, rightUri, title, opts);
+}
+
+function getLeftUri(uri: vscode.Uri, comparison: Comparison): vscode.Uri {
+  const leftRev = beforeRevsetForComparison(comparison);
+  return encodeSaplingDiffUri(uri, leftRev);
+}
+
+/**
+ * Get the right side URI of the diff view.
+ *
+ * A raw file:// URI without encoding lets vscode directly open the file on disk.
+ * This is desirable as users can edit the file on the right side of the diff view.
+ *
+ * There are cases, however, where editable right side does NOT make sense:
+ * - comparing against a history commit (since changes on the right side may not be present)
+ */
+async function getRightUri(uri: vscode.Uri, comparison: Comparison): Promise<vscode.Uri> {
+  const rightRev = currRevsetForComparison(comparison);
+  if (comparison.type === ComparisonType.Committed) {
+    return encodeSaplingDiffUri(uri, rightRev);
   }
-  const uriForComparisonParent = encodeSaplingDiffUri(uri, beforeRevsetForComparison(comparison));
-  return executeVSCodeCommand('vscode.diff', uriForComparisonParent, uriForComparison, title);
+  return (await fileExists(uri)) ? uri : encodeDeletedFileUri(uri);
 }
 
 function openRemoteFileLink(

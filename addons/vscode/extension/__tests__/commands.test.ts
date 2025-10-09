@@ -139,6 +139,7 @@ describe('open-file-diff', () => {
       expectedLeftUri,
       expectedRightUri,
       'file (In abc123)',
+      {viewColumn: undefined},
     );
   });
 });
